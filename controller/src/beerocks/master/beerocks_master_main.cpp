@@ -223,6 +223,14 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
                    << bool(beerocks::bpl::DEFAULT_PERSISTENT_DB);
         master_conf.persistent_db = bool(beerocks::bpl::DEFAULT_PERSISTENT_DB);
     }
+    if (!beerocks::bpl::cfg_get_commit_changes_interval(
+            master_conf.persistent_db_commit_changes_interval_seconds)) {
+        LOG(DEBUG) << "failed to read commit_changes interval, setting to default value: "
+                   << beerocks::bpl::DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE_MS;
+
+        master_conf.persistent_db_aging_interval =
+            beerocks::bpl::DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE_MS;
+    }
     if (!beerocks::bpl::cfg_get_clients_persistent_db_max_size(
             master_conf.clients_persistent_db_max_size)) {
         LOG(DEBUG)
