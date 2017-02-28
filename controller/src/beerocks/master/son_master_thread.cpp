@@ -7,6 +7,7 @@
  */
 
 #include "son_master_thread.h"
+#include "periodic/persistent_commit_data_operation.h"
 #include "periodic/persistent_database_aging.h"
 #include "son_actions.h"
 #include "son_management.h"
@@ -111,6 +112,16 @@ bool master_thread::init()
                 aging_interval_seconds, database);
             operations.add_operation(new_operation);
         }
+
+        if (operations.is_operation_alive(database.get_persistent_db_data_commit_operation_id())) {
+            LOG(DEBUG) << "persistent DB data commit operation already running";
+        } else {
+            auto commit_interval_seconds =
+                std::chrono::seconds(database.config.persistent_db_commit_changes_interval_seconds);
+            auto commit_operation = std::make_shared<persistent_commit_data_operation>(
+                database, commit_interval_seconds);
+            operations.add_operation(commit_operation);
+        }
     }
 
     if (!transport_socket_thread::init()) {
@@ -143,7 +154,6 @@ bool master_thread::init()
         })) {
         LOG(ERROR) << "Failed subscribing to the Bus";
     }
-
 #ifndef BEEROCKS_LINUX
     auto new_statistics_polling_task =
         std::make_shared<statistics_polling_task>(database, cmdu_tx, tasks);
