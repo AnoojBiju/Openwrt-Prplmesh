@@ -47,8 +47,6 @@
 
 //#endif
 
-// #include <string>
-
 // Do not use this macro anywhere else in ire process
 // It should only be there in one place in each executable module
 BEEROCKS_INIT_BEEROCKS_VERSION
