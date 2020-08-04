@@ -1331,8 +1331,9 @@ bool backhaul_manager::backhaul_fsm_wireless(bool &skip_select)
     case EState::WAIT_FOR_SCAN_RESULTS: {
         if (std::chrono::steady_clock::now() > state_time_stamp_timeout) {
             LOG(DEBUG) << "scan timed out";
+            auto db = AgentDB::get();
             platform_notify_error(bpl::eErrorCode::BH_SCAN_TIMEOUT,
-                                  "SSID='" + m_sConfig.ssid + "'");
+                                  "SSID='" + std::string(db->device_conf.back_radio.ssid) + "'");
 
             state_attempts++;
             FSM_MOVE_STATE(INITIATE_SCAN);
@@ -1414,7 +1415,8 @@ bool backhaul_manager::backhaul_fsm_wireless(bool &skip_select)
             active_hal                       = get_wireless_hal();
         }
 
-        if (active_hal->connect(m_sConfig.ssid, m_sConfig.pass, m_sConfig.security_type,
+        if (active_hal->connect(db->device_conf.back_radio.ssid, db->device_conf.back_radio.pass,
+                                db->device_conf.back_radio.security_type_bwl,
                                 m_sConfig.mem_only_psk, selected_bssid, selected_bssid_channel,
                                 hidden_ssid)) {
             LOG(DEBUG) << "successful call to active_hal->connect(), bssid=" << selected_bssid
@@ -1445,7 +1447,7 @@ bool backhaul_manager::backhaul_fsm_wireless(bool &skip_select)
                     platform_notify_error(
                         bpl::eErrorCode::BH_SCAN_EXCEEDED_MAXIMUM_FAILED_SCAN_ATTEMPTS,
                         "attempts=" + std::to_string(MAX_FAILED_SCAN_ATTEMPTS) + ", SSID='" +
-                            m_sConfig.ssid + "'");
+                            db->device_conf.back_radio.ssid + "'");
                 } else {
                     FSM_MOVE_STATE(WIRELESS_ASSOCIATE_4ADDR);
                     break;
@@ -1460,8 +1462,8 @@ bool backhaul_manager::backhaul_fsm_wireless(bool &skip_select)
 
                 stop_on_failure_attempts--;
                 platform_notify_error(bpl::eErrorCode::BH_ASSOCIATE_4ADDR_TIMEOUT,
-                                      "SSID='" + m_sConfig.ssid + "', iface='" +
-                                          db->backhaul.selected_iface_name + "'");
+                                      "SSID='" + std::string(db->device_conf.back_radio.ssid) +
+                                          "', iface='" + db->backhaul.selected_iface_name + "'");
 
                 if (!selected_bssid.empty()) {
                     ap_blacklist_entry &entry = ap_blacklist[selected_bssid];
@@ -1747,10 +1749,8 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
                 } else {
 
                     m_sConfig.preferred_bssid = tlvf::mac_to_string(request->preferred_bssid());
-                    m_sConfig.ssid.assign(request->ssid(message::WIFI_SSID_MAX_LENGTH));
-                    m_sConfig.pass.assign(request->pass(message::WIFI_PASS_MAX_LENGTH));
-                    m_sConfig.security_type = static_cast<bwl::WiFiSec>(request->security_type());
-                    m_sConfig.mem_only_psk  = request->mem_only_psk();
+
+                    m_sConfig.mem_only_psk = request->mem_only_psk();
                     if (request->backhaul_preferred_radio_band() ==
                         beerocks::eFreqType::FREQ_UNKNOWN) {
                         LOG(DEBUG) << "Unknown backhaul preferred radio band, setting to auto";
@@ -1761,14 +1761,16 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
                     }
 
                     // Change mixed state to WPA2
-                    if (m_sConfig.security_type == bwl::WiFiSec::WPA_WPA2_PSK) {
-                        m_sConfig.security_type = bwl::WiFiSec::WPA2_PSK;
+                    if (db->device_conf.back_radio.security_type_bwl ==
+                        bwl::WiFiSec::WPA_WPA2_PSK) {
+                        db->device_conf.back_radio.security_type_bwl = bwl::WiFiSec::WPA2_PSK;
                     }
                     m_sConfig.wire_iface_type = (beerocks::eIfaceType)request->wire_iface_type();
 
                     LOG(DEBUG) << "All slaves ready, proceeding" << std::endl
-                               << "SSID: " << m_sConfig.ssid << ", Pass: ****"
-                               << ", Security: " << int(m_sConfig.security_type)
+                               << "SSID: " << db->device_conf.back_radio.ssid << ", Pass: ****"
+                               << ", Security: "
+                               << int(db->device_conf.back_radio.security_type_bwl)
                                << ", Bridge: " << db->bridge.iface_name
                                << ", Wired: " << db->ethernet.iface_name;
                 }
@@ -2953,8 +2955,8 @@ bool backhaul_manager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t eve
                     entry.attempts            = AP_BLACK_LIST_FAILED_ATTEMPTS_THRESHOLD;
                     ap_blacklist[local_bssid] = entry;
                     platform_notify_error(bpl::eErrorCode::BH_ASSOCIATE_4ADDR_FAILURE,
-                                          "SSID='" + m_sConfig.ssid + "', BSSID='" + local_bssid +
-                                              "', DEAUTH_REASON='" +
+                                          "SSID='" + std::string(db->device_conf.back_radio.ssid) +
+                                              "', BSSID='" + local_bssid + "', DEAUTH_REASON='" +
                                               std::to_string(msg->disconnect_reason));
                     stop_on_failure_attempts--;
                     FSM_MOVE_STATE(INITIATE_SCAN);
@@ -3082,7 +3084,7 @@ bool backhaul_manager::select_bssid()
 
     auto db = AgentDB::get();
 
-    LOG(DEBUG) << "select_bssid: SSID = " << m_sConfig.ssid;
+    LOG(DEBUG) << "select_bssid: SSID = " << db->device_conf.back_radio.ssid;
 
     for (auto soc : slaves_sockets) {
 
@@ -3094,7 +3096,8 @@ bool backhaul_manager::select_bssid()
         std::string iface = soc->sta_iface;
 
         LOG(DEBUG) << "select_bssid: iface  = " << iface;
-        int num_of_results = soc->sta_wlan_hal->get_scan_results(m_sConfig.ssid, scan_results);
+        int num_of_results =
+            soc->sta_wlan_hal->get_scan_results(db->device_conf.back_radio.ssid, scan_results);
         LOG(DEBUG) << "Scan Results: " << num_of_results;
 
         for (auto &scan_result : scan_results) {
@@ -3276,8 +3279,9 @@ void backhaul_manager::get_scan_measurement()
 {
     // Support up to 256 scan results
     std::vector<bwl::SScanResult> scan_results;
+    auto db = AgentDB::get();
 
-    LOG(DEBUG) << "get_scan_measurement: SSID = " << m_sConfig.ssid;
+    LOG(DEBUG) << "get_scan_measurement: SSID = " << db->device_conf.back_radio.ssid;
     scan_measurement_list.clear();
     for (auto &soc : slaves_sockets) {
 
@@ -3291,7 +3295,8 @@ void backhaul_manager::get_scan_measurement()
 
         std::string iface = soc->sta_iface;
         LOG(DEBUG) << "get_scan_measurement: iface  = " << iface;
-        int num_of_results = soc->sta_wlan_hal->get_scan_results(m_sConfig.ssid, scan_results);
+        int num_of_results =
+            soc->sta_wlan_hal->get_scan_results(db->device_conf.back_radio.ssid, scan_results);
         LOG(DEBUG) << "Scan Results: " << int(num_of_results);
         if (num_of_results < 0) {
             LOG(ERROR) << "get_scan_results failed!";
