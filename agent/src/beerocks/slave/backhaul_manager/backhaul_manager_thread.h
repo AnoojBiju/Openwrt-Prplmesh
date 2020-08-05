@@ -168,7 +168,6 @@ private:
         int ucc_listener_port;
         beerocks::eIfaceType wire_iface_type;
         beerocks::eIfaceType wireless_iface_type;
-        bool mem_only_psk;
         eFreqType backhaul_preferred_radio_band;
 
         // Slave handling the active wireless connection

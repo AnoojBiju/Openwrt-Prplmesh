@@ -1417,8 +1417,8 @@ bool backhaul_manager::backhaul_fsm_wireless(bool &skip_select)
 
         if (active_hal->connect(db->device_conf.back_radio.ssid, db->device_conf.back_radio.pass,
                                 db->device_conf.back_radio.security_type_bwl,
-                                m_sConfig.mem_only_psk, selected_bssid, selected_bssid_channel,
-                                hidden_ssid)) {
+                                db->device_conf.back_radio.mem_only_psk, selected_bssid,
+                                selected_bssid_channel, hidden_ssid)) {
             LOG(DEBUG) << "successful call to active_hal->connect(), bssid=" << selected_bssid
                        << ", channel=" << selected_bssid_channel
                        << ", iface=" << db->backhaul.selected_iface_name;
@@ -1750,7 +1750,6 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
 
                     m_sConfig.preferred_bssid = tlvf::mac_to_string(request->preferred_bssid());
 
-                    m_sConfig.mem_only_psk = request->mem_only_psk();
                     if (request->backhaul_preferred_radio_band() ==
                         beerocks::eFreqType::FREQ_UNKNOWN) {
                         LOG(DEBUG) << "Unknown backhaul preferred radio band, setting to auto";
