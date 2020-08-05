@@ -91,6 +91,8 @@ public:
             char pass[beerocks::message::WIFI_PASS_MAX_LENGTH];
             char security_type[beerocks::message::WIFI_SECURITY_TYPE_MAX_LENGTH];
             bwl::WiFiSec security_type_bwl;
+
+            bool mem_only_psk;
         } back_radio;
 
         bool local_gw;
