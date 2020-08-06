@@ -45,9 +45,6 @@ public:
         int stop_on_failure_attempts;
         int local_gw;
         int local_master;
-        int backhaul_max_vaps;
-        int backhaul_network_enabled;
-        int backhaul_preferred_radio_band;
         int dfs_reentry;
         int proprietary_repeater;
     };
