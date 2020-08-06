@@ -157,10 +157,12 @@ static bool fill_platform_settings(
         LOG(ERROR) << "Failed reading 'management_mode'";
         return false;
     }
-    if ((platform_common_conf.operating_mode = bpl::cfg_get_operating_mode()) < 0) {
+    if ((temp_int = bpl::cfg_get_operating_mode()) < 0) {
         LOG(ERROR) << "Failed reading 'operating_mode'";
         return false;
     }
+    db->device_conf.operating_mode = uint8_t(temp_int);
+
     if ((platform_common_conf.certification_mode = bpl::cfg_get_certification_mode()) < 0) {
         LOG(ERROR) << "Failed reading 'certification_mode'";
         return false;
@@ -195,8 +197,8 @@ static bool fill_platform_settings(
     }
 
     // Set local_gw flag
-    db->device_conf.local_gw = (platform_common_conf.operating_mode == BPL_OPER_MODE_GATEWAY ||
-                                platform_common_conf.operating_mode == BPL_OPER_MODE_GATEWAY_WISP);
+    db->device_conf.local_gw = (db->device_conf.operating_mode == BPL_OPER_MODE_GATEWAY ||
+                                db->device_conf.operating_mode == BPL_OPER_MODE_GATEWAY_WISP);
 
     msg->platform_settings().onboarding          = uint8_t(platform_common_conf.onboarding);
     msg->platform_settings().dfs_reentry_enabled = uint8_t(platform_common_conf.dfs_reentry);
@@ -210,7 +212,6 @@ static bool fill_platform_settings(
         0; // TODO add platform DB flag
     msg->platform_settings().client_11k_roaming_enabled =
         uint8_t(platform_common_conf.client_roaming || platform_common_conf.band_steering);
-    msg->platform_settings().operating_mode     = uint8_t(platform_common_conf.operating_mode);
     msg->platform_settings().management_mode    = uint8_t(platform_common_conf.management_mode);
     msg->platform_settings().certification_mode = uint8_t(platform_common_conf.certification_mode);
     msg->platform_settings().stop_on_failure_attempts =
