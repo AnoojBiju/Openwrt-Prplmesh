@@ -111,6 +111,7 @@ public:
         bool client_optimal_path_roaming_prefer_signal_strength_enabled;
         bool client_11k_roaming_enabled;
         bool load_balancing_enabled;
+        bool service_fairness_enabled;
     } device_conf;
 
     struct sControllerInfo {
