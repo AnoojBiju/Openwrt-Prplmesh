@@ -773,7 +773,8 @@ bool backhaul_manager::backhaul_fsm_main(bool &skip_select)
 
                 // Override backhaul_preferred_radio_band if UCC set it
                 if (!selected_ruid) {
-                    m_sConfig.backhaul_preferred_radio_band = selected_ruid->front.freq_type;
+                    db->device_conf.back_radio.backhaul_preferred_radio_band =
+                        selected_ruid->front.freq_type;
                 }
 
                 // Mark the connection as WIRELESS
@@ -1256,7 +1257,8 @@ bool backhaul_manager::backhaul_fsm_wireless(bool &skip_select)
         bool preferred_band_is_available = false;
 
         // Check if backhaul preferred band is supported (supporting radio is available)
-        if (m_sConfig.backhaul_preferred_radio_band == beerocks::eFreqType::FREQ_AUTO) {
+        if (db->device_conf.back_radio.backhaul_preferred_radio_band ==
+            beerocks::eFreqType::FREQ_AUTO) {
             preferred_band_is_available = true;
         } else {
             for (auto soc : slaves_sockets) {
@@ -1270,7 +1272,8 @@ bool backhaul_manager::backhaul_fsm_wireless(bool &skip_select)
                 if (!radio) {
                     continue;
                 }
-                if (m_sConfig.backhaul_preferred_radio_band == radio->front.freq_type) {
+                if (db->device_conf.back_radio.backhaul_preferred_radio_band ==
+                    radio->front.freq_type) {
                     preferred_band_is_available = true;
                 }
             }
@@ -1296,8 +1299,10 @@ bool backhaul_manager::backhaul_fsm_wireless(bool &skip_select)
             }
 
             if (preferred_band_is_available &&
-                m_sConfig.backhaul_preferred_radio_band != beerocks::eFreqType::FREQ_AUTO &&
-                m_sConfig.backhaul_preferred_radio_band != radio->front.freq_type) {
+                db->device_conf.back_radio.backhaul_preferred_radio_band !=
+                    beerocks::eFreqType::FREQ_AUTO &&
+                db->device_conf.back_radio.backhaul_preferred_radio_band !=
+                    radio->front.freq_type) {
                 LOG(DEBUG) << "slave iface=" << soc->sta_iface
                            << " is not of the preferred backhaul band";
                 continue;
@@ -1750,13 +1755,13 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
 
                     m_sConfig.preferred_bssid = tlvf::mac_to_string(request->preferred_bssid());
 
-                    if (request->backhaul_preferred_radio_band() ==
+                    if (db->device_conf.back_radio.backhaul_preferred_radio_band ==
                         beerocks::eFreqType::FREQ_UNKNOWN) {
                         LOG(DEBUG) << "Unknown backhaul preferred radio band, setting to auto";
                         m_sConfig.backhaul_preferred_radio_band = beerocks::eFreqType::FREQ_AUTO;
                     } else {
                         m_sConfig.backhaul_preferred_radio_band =
-                            (beerocks::eFreqType)request->backhaul_preferred_radio_band();
+                            db->device_conf.back_radio.backhaul_preferred_radio_band;
                     }
 
                     // Change mixed state to WPA2
