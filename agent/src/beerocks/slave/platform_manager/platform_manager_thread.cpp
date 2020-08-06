@@ -210,7 +210,7 @@ static bool fill_platform_settings(
     msg->platform_settings().onboarding = uint8_t(platform_common_conf.onboarding);
     msg->platform_settings().rdkb_extensions_enabled =
         uint8_t(platform_common_conf.rdkb_extensions);
-    msg->platform_settings().client_optimal_path_roaming_prefer_signal_strength_enabled =
+    db->device_conf.client_optimal_path_roaming_prefer_signal_strength_enabled =
         0; // TODO add platform DB flag
     msg->platform_settings().client_11k_roaming_enabled =
         (db->device_conf.client_optimal_path_roaming_enabled || db->device_conf.client_band_steering_enabled);
@@ -225,8 +225,8 @@ static bool fill_platform_settings(
     LOG(DEBUG) << "client_optimal_path_roaming_enabled: "
                << string_utils::bool_str(db->device_conf.client_optimal_path_roaming_enabled);
     LOG(DEBUG) << "client_optimal_path_roaming_prefer_signal_strength_enabled: "
-               << (unsigned)msg->platform_settings()
-                      .client_optimal_path_roaming_prefer_signal_strength_enabled;
+               << string_utils::bool_str(
+                      db->device_conf.client_optimal_path_roaming_prefer_signal_strength_enabled);
     LOG(DEBUG) << "band_enabled: " << (unsigned)msg->wlan_settings().band_enabled;
     LOG(DEBUG) << "local_gw: " << db->device_conf.local_gw;
     LOG(DEBUG) << "local_controller: " << db->device_conf.local_controller;
