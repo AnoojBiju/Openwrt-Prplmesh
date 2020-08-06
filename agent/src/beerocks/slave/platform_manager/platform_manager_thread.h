@@ -40,7 +40,6 @@ public:
         int client_roaming;
         int onboarding;
         int management_mode;
-        int operating_mode;
         int certification_mode;
         int stop_on_failure_attempts;
         int local_gw;
