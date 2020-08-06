@@ -102,6 +102,7 @@ public:
         bool local_controller;
         uint8_t operating_mode;
         uint8_t management_mode;
+        bool certification_mode;
     } device_conf;
 
     struct sControllerInfo {
