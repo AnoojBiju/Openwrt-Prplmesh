@@ -175,12 +175,19 @@ static bool fill_platform_settings(
         return false;
     }
 
-    if (bpl::cfg_get_backhaul_params(&platform_common_conf.backhaul_max_vaps,
-                                     &platform_common_conf.backhaul_network_enabled,
-                                     &platform_common_conf.backhaul_preferred_radio_band) < 0) {
+    int backhaul_max_vaps;
+    int backhaul_network_enabled;
+    int backhaul_preferred_radio_band;
+    if (bpl::cfg_get_backhaul_params(&backhaul_max_vaps, &backhaul_network_enabled,
+                                     &backhaul_preferred_radio_band) < 0) {
         LOG(ERROR) << "Failed reading 'backhaul_max_vaps, backhaul_network_enabled, "
                       "backhaul_preferred_radio_band'!";
     }
+    db->device_conf.back_radio.backhaul_max_vaps = static_cast<uint8_t>(backhaul_max_vaps);
+    db->device_conf.back_radio.backhaul_network_enabled =
+        static_cast<bool>(backhaul_network_enabled);
+    db->device_conf.back_radio.backhaul_preferred_radio_band =
+        bpl_band_to_freq_type(backhaul_preferred_radio_band);
 
     if (bpl::cfg_get_backhaul_vaps(back_vaps, back_vaps_buff_len) < 0) {
         LOG(ERROR) << "Failed reading beerocks backhaul_vaps parameters!";
@@ -208,11 +215,6 @@ static bool fill_platform_settings(
     msg->platform_settings().certification_mode = uint8_t(platform_common_conf.certification_mode);
     msg->platform_settings().stop_on_failure_attempts =
         uint8_t(platform_common_conf.stop_on_failure_attempts);
-    msg->platform_settings().backhaul_max_vaps = uint8_t(platform_common_conf.backhaul_max_vaps);
-    msg->platform_settings().backhaul_network_enabled =
-        uint8_t(platform_common_conf.backhaul_network_enabled);
-    msg->platform_settings().backhaul_preferred_radio_band =
-        uint8_t(bpl_band_to_freq_type(platform_common_conf.backhaul_preferred_radio_band));
 
     msg->platform_settings().load_balancing_enabled   = 0; // for v1.3 TODO read from CAL DB
     msg->platform_settings().service_fairness_enabled = 0; // for v1.3 TODO read from CAL DB
