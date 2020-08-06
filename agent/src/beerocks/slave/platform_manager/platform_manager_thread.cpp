@@ -153,10 +153,11 @@ static bool fill_platform_settings(
         return false;
     }
     db->device_conf.local_controller = temp_int;
-    if ((platform_common_conf.management_mode = bpl::cfg_get_management_mode()) < 0) {
+    if ((temp_int = bpl::cfg_get_management_mode()) < 0) {
         LOG(ERROR) << "Failed reading 'management_mode'";
         return false;
     }
+    db->device_conf.management_mode = temp_int;
     if ((temp_int = bpl::cfg_get_operating_mode()) < 0) {
         LOG(ERROR) << "Failed reading 'operating_mode'";
         return false;
@@ -212,7 +213,7 @@ static bool fill_platform_settings(
         0; // TODO add platform DB flag
     msg->platform_settings().client_11k_roaming_enabled =
         uint8_t(platform_common_conf.client_roaming || platform_common_conf.band_steering);
-    msg->platform_settings().management_mode    = uint8_t(platform_common_conf.management_mode);
+
     msg->platform_settings().certification_mode = uint8_t(platform_common_conf.certification_mode);
     msg->platform_settings().stop_on_failure_attempts =
         uint8_t(platform_common_conf.stop_on_failure_attempts);
