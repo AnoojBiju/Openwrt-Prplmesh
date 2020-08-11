@@ -193,7 +193,9 @@ def _docker_wait_for_log(container: str, programs: [str], regex: str, start_line
                          timeout: float, fail_on_mismatch: bool = True) -> bool:
     def logfilename(program):
         logfilename = os.path.join(rootdir, 'logs', container, 'beerocks_{}.log'.format(program))
+
         print(' --- logfilename: {}'.format(logfilename))
+
         # WSL doesn't support symlinks on NTFS, so resolve the symlink manually
         if on_wsl:
             logfilename = os.path.join(
@@ -318,7 +320,6 @@ class ALEntityDocker(ALEntity):
 
 class RadioDocker(Radio):
     '''Docker implementation of a radio.'''
-
     def __init__(self, agent: ALEntityDocker, iface_name: str):
         self.iface_name = iface_name
         ip_output = agent.command("ip", "-o",  "link", "list", "dev", self.iface_name).decode()
@@ -334,8 +335,8 @@ class RadioDocker(Radio):
                      fail_on_mismatch: bool = True) -> bool:
         '''Poll the radio's logfile until it contains "regex" or times out.'''
         programs = ("agent_" + self.iface_name, "ap_manager_" + self.iface_name)
-        return _docker_wait_for_log(self.agent.device.docker_name, programs, regex, start_line, timeout,
-                                    fail_on_mismatch=fail_on_mismatch)
+        return _docker_wait_for_log(self.agent.device.docker_name, programs, regex,
+                                    start_line, timeout, fail_on_mismatch=fail_on_mismatch)
 
     def send_bwl_event(self, event: str) -> None:
         # The file is only available within the docker container so we need to use an echo command.
