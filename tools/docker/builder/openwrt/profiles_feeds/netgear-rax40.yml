@@ -25,3 +25,6 @@
 - name: feed_pending
   uri: https://intel.prpl.dev/intel/feed-pending.git
   hash: 352365b31f968ab37e772b23c30ea32dbff9e337
+- name: sah
+  uri: https://gitlab.com/soft.at.home/buildsystems/openwrt/sah-packages.git
+  hash: cc3991bef565448e2c107c79d3efc3c759a0ca0a

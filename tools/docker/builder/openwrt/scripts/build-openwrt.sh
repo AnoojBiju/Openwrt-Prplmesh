@@ -22,12 +22,14 @@ case $TARGET_DEVICE in
     *)
         cp feeds.conf.default feeds.conf
         echo "src-git prpl $PRPL_FEED" >> feeds.conf
+        echo "src-git sah  $SAH_FEED" >> feeds.conf
         scripts/feeds update -a
         scripts/feeds install -a
         # Add optional prplMesh dependencies (or a different toolchain
         # for example) from our 'configs' directory:
         cat configs/* > .config
         printf '%s=%s\n' "PRPL_FEED" "$PRPL_FEED" >> files/etc/prplwrt-version
+        printf '%s=%s\n' "SAH_FEED" "$SAH_FEED" >> files/etc/prplwrt-version
         # Include our optional dependencies in prplwrt-version so that
         # prplwrt is flashed again if those dependencies are changes.
         printf 'custom packages:\n' >> files/etc/prplwrt-version
