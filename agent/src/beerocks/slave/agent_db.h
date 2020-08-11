@@ -113,6 +113,12 @@ public:
         bool load_balancing_enabled;
         bool service_fairness_enabled;
         bool rdkb_extensions_enabled;
+
+        struct sWlanSettings {
+            bool band_enabled;
+            uint8_t channel;
+        } wlan_settings;
+
     } device_conf;
 
     struct sControllerInfo {
