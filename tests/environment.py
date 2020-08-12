@@ -305,13 +305,13 @@ class ALEntityDocker(ALEntity):
 
     def command(self, *command: str) -> bytes:
         '''Execute `command` in docker container and return its output.'''
-        return subprocess.check_output(("docker", "exec", self.device.docker_name) + command)
+        return subprocess.check_output(("docker", "exec", self.name) + command)
 
     def wait_for_log(self, regex: str, start_line: int, timeout: float,
                      fail_on_mismatch: bool = True) -> bool:
         '''Poll the entity's logfile until it contains "regex" or times out.'''
         program = "controller" if self.is_controller else "agent"
-        return _docker_wait_for_log(self.device.docker_name, [program], regex, start_line, timeout,
+        return _docker_wait_for_log(self.name, [program], regex, start_line, timeout,
                                     fail_on_mismatch=fail_on_mismatch)
 
     def prprlmesh_status_check(self):
@@ -335,7 +335,7 @@ class RadioDocker(Radio):
                      fail_on_mismatch: bool = True) -> bool:
         '''Poll the radio's logfile until it contains "regex" or times out.'''
         programs = ("agent_" + self.iface_name, "ap_manager_" + self.iface_name)
-        return _docker_wait_for_log(self.agent.device.docker_name, programs, regex,
+        return _docker_wait_for_log(self.agent.name, programs, regex,
                                     start_line, timeout, fail_on_mismatch=fail_on_mismatch)
 
     def send_bwl_event(self, event: str) -> None:
