@@ -24,6 +24,14 @@ case $TARGET_DEVICE in
         echo "src-git prpl $PRPL_FEED" >> feeds.conf
         scripts/feeds update -a
         scripts/feeds install -a
+        # Add optional prplMesh dependencies (or a different toolchain
+        # for example) from our 'configs' directory:
+        cat configs/* > .config
+        printf '%s=%s\n' "PRPL_FEED" "$PRPL_FEED" >> files/etc/prplwrt-version
+        # Include our optional dependencies in prplwrt-version so that
+        # prplwrt is flashed again if those dependencies are changes.
+        printf 'custom packages:\n' >> files/etc/prplwrt-version
+        cat .config >> files/etc/prplwrt-version
         {
             # note that the result from diffconfig.sh with a minimal
             # configuration has the 3 CONFIG_TARGET items we set here, but NOT
@@ -36,7 +44,6 @@ case $TARGET_DEVICE in
             echo "CONFIG_PACKAGE_prplmesh${PRPLMESH_VARIANT}=y"
         } >> .config
         make defconfig
-        printf '%s=%s\n' "PRPL_FEED" "$PRPL_FEED" >> files/etc/prplwrt-version
     ;;
 esac
 
