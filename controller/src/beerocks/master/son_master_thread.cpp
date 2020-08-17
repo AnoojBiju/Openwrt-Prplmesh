@@ -2304,6 +2304,12 @@ bool master_thread::handle_intel_slave_join(
                              rdkb_wlan_task::events::STEERING_SLAVE_JOIN, &new_event);
         }
 #endif
+    } else {
+        // In the case where wireless-BH is lost and agents reconnect to the controller
+        // it is required to re-activate the AP in the nodes-map since it is set as not-active
+        // when the topology-response not containing it is received by the controller.
+        // When it joins the controller we need to activate it if not activated.
+        database.set_hostap_active(radio_mac, true);
     }
 
     //Update all (Slaves) last seen timestamp
