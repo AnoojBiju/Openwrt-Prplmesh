@@ -699,7 +699,7 @@ bool monitor_thread::update_sta_stats()
         if (!mon_wlan_hal->update_stations_stats(vap_node->get_iface(), sta_mac,
                                                  sta_stats.hal_stats)) {
             LOG(ERROR) << "Failed updating STA (" << sta_mac << ") statistics!";
-            return false;
+            continue;
         }
 
         // Reset STA poll data
