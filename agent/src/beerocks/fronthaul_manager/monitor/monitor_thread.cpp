@@ -94,9 +94,6 @@ void monitor_thread::stop_monitor_thread()
 
     if (received_error_notification_ack_retry > 0) {
 
-        auto radio_node   = mon_db.get_radio_node();
-        std::string iface = radio_node->get_iface();
-
         auto notification =
             message_com::create_vs_message<beerocks_message::cACTION_MONITOR_ERROR_NOTIFICATION>(
                 cmdu_tx);
@@ -788,9 +785,9 @@ bool monitor_thread::update_ap_stats()
 
     // Update the measurement timestamp
     auto now = std::chrono::steady_clock::now();
-    auto time_span =
+    auto time_span_radio =
         std::chrono::duration_cast<std::chrono::milliseconds>(now - radio_stats.last_update_time);
-    radio_stats.delta_ms         = float(time_span.count());
+    radio_stats.delta_ms         = float(time_span_radio.count());
     radio_stats.last_update_time = now;
 
     // VAP Statistics
@@ -828,9 +825,9 @@ bool monitor_thread::update_ap_stats()
         radio_stats.sta_count += vap_node->sta_get_count();
 
         // Update the measurement timestamp
-        auto time_span =
+        auto time_span_vap =
             std::chrono::duration_cast<std::chrono::milliseconds>(now - vap_stats.last_update_time);
-        vap_stats.delta_ms         = float(time_span.count());
+        vap_stats.delta_ms         = float(time_span_vap.count());
         vap_stats.last_update_time = now;
     }
 
