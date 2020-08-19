@@ -58,7 +58,9 @@ void son_actions::handle_completed_connection(db &database, ieee1905_1::CmduMess
         /*
          * send disassociate request to previous hostap to clear STA mac from its list
          */
-        if (!previous_hostap_mac.empty() && previous_hostap_mac != new_hostap_mac) {
+        if ((!previous_hostap_mac.empty()) &&
+            (previous_hostap_mac != network_utils::ZERO_MAC_STRING) &&
+            (previous_hostap_mac != new_hostap_mac)) {
             disconnect_client(database, cmdu_tx, client_mac, previous_hostap_mac,
                               eDisconnect_Type_Disassoc, 0);
         }
