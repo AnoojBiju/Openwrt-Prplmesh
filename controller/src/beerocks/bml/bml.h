@@ -657,6 +657,15 @@ int bml_client_set_client(BML_CTX ctx, const char *sta_mac,
  */
 int bml_client_get_client(BML_CTX ctx, const char *sta_mac, struct BML_CLIENT *client);
 
+/**
+ * @brief Delete client persistent DB info.
+ *
+ * @param [in] ctx BML Context.
+ * @param [in] sta_mac MAC address of a station.
+ * @return BML_RET_OK on success, BML_RET_OP_FAILED on failure.
+ */
+int bml_client_clear_client(BML_CTX ctx, const char *sta_mac);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

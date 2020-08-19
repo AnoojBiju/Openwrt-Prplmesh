@@ -716,3 +716,14 @@ int bml_client_get_client(BML_CTX ctx, const char *sta_mac, struct BML_CLIENT *c
     auto pBML = static_cast<bml_internal *>(ctx);
     return pBML->client_get_client(tlvf::mac_from_string(std::string(sta_mac)), client);
 }
+
+int bml_client_clear_client(BML_CTX ctx, const char *sta_mac)
+{
+    // Validate input parameters
+    if (!ctx || !sta_mac) {
+        return (-BML_RET_INVALID_ARGS);
+    }
+
+    auto pBML = static_cast<bml_internal *>(ctx);
+    return pBML->client_clear_client(tlvf::mac_from_string(std::string(sta_mac)));
+}

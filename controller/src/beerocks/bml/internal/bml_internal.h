@@ -288,6 +288,14 @@ public:
      */
     int client_get_client(const sMacAddr &sta_mac, BML_CLIENT *client);
 
+    /**
+     * @brief Delete client persistent DB info.
+     *
+     * @param [in] sta_mac MAC address of a station.
+     * @return BML_RET_OK on success, BML_RET_OP_FAILED on failure.
+     */
+    int client_clear_client(const sMacAddr &sta_mac);
+
     /*
  * Public static methods:
  */

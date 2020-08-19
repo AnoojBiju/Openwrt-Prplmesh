@@ -1248,6 +1248,29 @@ int bml_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beerocks_
             //Resolve promise to "true"
             m_prmClientGet->set_value(true);
         } break;
+        case beerocks_message::ACTION_BML_CLIENT_CLEAR_CLIENT_RESPONSE: {
+            LOG(DEBUG) << "ACTION_BML_CLIENT_CLEAR_CLIENT_RESPONSE received";
+
+            auto response =
+                beerocks_header
+                    ->addClass<beerocks_message::cACTION_BML_CLIENT_CLEAR_CLIENT_RESPONSE>();
+            if (!response) {
+                LOG(ERROR) << "addClass cACTION_BML_CLIENT_CLEAR_CLIENT_RESPONSE failed";
+                return (-BML_RET_OP_FAILED);
+            }
+
+            if (response->result() != 0) {
+                LOG(ERROR) << "cACTION_BML_CLIENT_CLEAR_CLIENT_RESPONSE failed with error: "
+                           << response->result();
+                break;
+            }
+
+            if (!wake_up(beerocks_message::ACTION_BML_CLIENT_CLEAR_CLIENT_REQUEST,
+                         response->result())) {
+                LOG(WARNING) << "Received cACTION_BML_CLIENT_CLEAR_CLIENT_REQUEST response, "
+                                "but no one is waiting...";
+            }
+        } break;
         default: {
             LOG(WARNING) << "unhandled header BML action type 0x" << std::hex
                          << int(beerocks_header->action_op());
@@ -2178,6 +2201,31 @@ int bml_internal::register_nw_map_update_cb(BML_NW_MAP_QUERY_CB pCB)
     }
 
     return (BML_RET_OK);
+}
+
+int bml_internal::client_clear_client(const sMacAddr &sta_mac)
+{
+    LOG(DEBUG) << "client_clear_client for mac:" << sta_mac;
+
+    auto request =
+        message_com::create_vs_message<beerocks_message::cACTION_BML_CLIENT_CLEAR_CLIENT_REQUEST>(
+            cmdu_tx);
+
+    if (!request) {
+        LOG(ERROR) << "Failed building cACTION_BML_CLIENT_CLEAR_CLIENT_REQUEST message!" << sta_mac;
+        return (-BML_RET_OP_FAILED);
+    }
+
+    request->sta_mac() = sta_mac;
+
+    int result = 0;
+    if (send_bml_cmdu(result, request->get_action_op()) != BML_RET_OK) {
+        LOG(ERROR) << "Send cACTION_BML_CLIENT_CLEAR_CLIENT_REQUEST failed " << sta_mac;
+        return (-BML_RET_OP_FAILED);
+    }
+
+    LOG(DEBUG) << "cACTION_BML_CLIENT_CLEAR_CLIENT_REQUEST sent for mac= " << sta_mac;
+    return BML_RET_OK;
 }
 
 int bml_internal::device_oper_radios_query(BML_DEVICE_DATA *device_data)
