@@ -567,6 +567,10 @@ void cli_bml::setFunctionsMapAndArray()
     insertCommandToMap("bml_client_get_client", "<sta_mac>", "Get client with the given STA MAC.",
                        static_cast<pFunction>(&cli_bml::client_get_client_caller), 1, 1,
                        STRING_ARG);
+    insertCommandToMap("bml_client_clear_client", "<sta_mac>",
+                       "Clear persistent configuration for the client with the given STA MAC",
+                       static_cast<pFunction>(&cli_bml::client_clear_client_caller), 1, 1,
+                       STRING_ARG);
     //bool insertCommandToMap(std::string command, std::string help_args, std::string help,  pFunction funcPtr, uint8_t minNumOfArgs, uint8_t maxNumOfArgs,
 }
 
@@ -1376,6 +1380,20 @@ int cli_bml::client_get_client_caller(int numOfArgs)
 {
     if (numOfArgs == 1) {
         return client_get_client(args.stringArgs[0]);
+    }
+    return -1;
+}
+
+/**
+ * @brief Caller function for client_clear_client_caller.
+ *
+ * @param [in] numOfArgs Number of received arguments
+ * @return 0 on success, -1 on failure.
+ */
+int cli_bml::client_clear_client_caller(int numOfArgs)
+{
+    if (numOfArgs == 1) {
+        return client_clear_client(args.stringArgs[0]);
     }
     return -1;
 }
@@ -2298,6 +2316,28 @@ int cli_bml::client_get_client(const std::string &sta_mac)
     printBmlReturnVals("bml_client_get_client", ret);
 
     return 0;
+}
+
+/**
+ * @brief clear persistent DB information for the specified client.
+ * 
+ * @param [in] sta_mac MAC address of requested client.
+ * @return 0 on success, -1 on failure.
+ */
+int cli_bml::client_clear_client(const std::string &sta_mac)
+{
+    int ret = bml_client_clear_client(ctx, sta_mac.c_str());
+
+    if (ret == BML_RET_OK) {
+        std::cout << "Client " << sta_mac
+                  << " has been removed from the persistent DB, successfully" << std::endl;
+    } else {
+        std::cout << "Failed to remove client persistent DB info for mac=" << sta_mac;
+    }
+
+    printBmlReturnVals("bml_client_clear_client", ret);
+
+    return ret;
 }
 
 template <typename T> const std::string cli_bml::string_from_int_array(T *arr, size_t arr_max_size)
