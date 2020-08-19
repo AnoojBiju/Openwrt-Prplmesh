@@ -209,10 +209,10 @@ For smaller contributions, you may take shortcuts.
 The workflow is explained in detail below. In summary, it consists of these steps.
 
 1. Create a branch
-2. Create a "WIP" (work in progress) merge request. This means that the MR title starts with "WIP:", and is treated specially by gitlab (for instance, by preventing it from getting merged while in "WIP" state)
+2. Create a "Draft" (work in progress) merge request. This means that the MR title starts with "Draft:", and is treated specially by gitlab (for instance, by preventing it from getting merged while in "Draft" state)
 3. Make the changes, commit with amend and rebase
 4. Push regularly
-5. Clean up the commits, push, and move the MR out of "WIP" state
+5. Clean up the commits, push, and move the MR out of "Draft" state
 6. Review starts - reviewer "Requests changes"
 7. Author addresses review comments in additional fixup commits.
    * If no more fixes are needed
@@ -229,22 +229,22 @@ We give branches a name following `<type>/<subject>`.
 Types are `feature` for feature development, `bugfix` for fixing bugs from the issues list, `hotfix` for small fixes without an issue, and `dev/<user>` for personal development branches that are not meant for merging.
 Both `bugfix` and `feature` branches should have a JIRA identifier in their branch name (e.g. feature/PPM-204-implement-dynamic-steering)
 
-This branch is immediately pushed, and a "WIP" (Work in progress) merge request is created for it.
+This branch is immediately pushed, and a "Draft" (Work in progress) merge request is created for it.
 This can be done in a number of ways: when using `git push` on the CLI, you will get a link to create a MR; alternatively, you can create a merge request from the gitlab UI, or [add options to git push](https://docs.gitlab.com/ee/user/project/push_options.html#push-options-for-merge-requests) to instruct gitlab to automatically create a MR for it.
-This WIP merge request signals the others that someone is working on this feature/bugfix.
+This "Draft" merge request signals the others that someone is working on this feature/bugfix.
 It allows others to see what you're doing before it is completed, and to give early feedback and suggestions.
-For such a WIP, it is not yet necessary that the commits are nicely split up.
+For such a "Draft", it is not yet necessary that the commits are nicely split up.
 
 Continue developing the code.
 Push your work regularly.
 You can make separate commits, or amend a single commit, or rebase and sort it into different commits, at your option.
 Every time you push, CI will run on the code and you will be informed of any issues with it.
-Also, even if the merge request is still WIP, maintainers may start giving comments on it.
+Also, even if the merge request is still in a "Draft" state, maintainers may start giving comments on it.
 The purpose of these comments is to make sure your work is aligned with expectations.
 It avoids that after a lot of work, you are asked to still make major changes.
 
 Once your feature is ready, use `git rebase -i` to organise it in clean commits and add a proper commit message to every commit, including a Signed-off-by.
-Force-push the branch and take the merge request out of "WIP" state.
+Force-push the branch and take the merge request out of "Draft" state.
 Other contributors will start reviewing your change and make suggestions for improvements.
 The review has the following goals:
 
@@ -261,7 +261,7 @@ Many of the review goals are more about having a discussion than about really fo
 Unfortunately, gitlab doesn't have an easy way to make such a distinction, so reviewers have to mention explicitly when a suggestion is optional.
 For issues that can be addressed later, it is acceptable to create a new JIRA task for them, then resolve the comment by pointing to the new JIRA task that will address those comments.
 
-If you make more changes after a merge request is moved out of "WIP" state, do not rebase or amend.
+If you make more changes after a merge request is moved out of "Draft" state, do not rebase or amend.
 This will allow reviewers to easily see the differences compared to their previous review.
 Instead, create additional commits with `git commit --fixup <sha1 of commit to fix> -e`.
 Do _not_ add a Signed-off-by to these commits.
@@ -307,8 +307,8 @@ The typical workflow for this is:
 * Push and create a merge request.
 * Check out the development branch and rebase on the hotfix branch. This will automatically remove the fix commit.
 
-If a MR is in WIP state and it becomes ready (i.e. you did the necessary fixups and rebased on master), please remember to remove the "WIP state".
-TODO: a good example of a merge request with review, discussion, and several iterations is https://gitlab.com/prpl-foundation/prplmesh/prplMesh/-/merge_requests/???
+If a MR is in "Draft" state and it becomes ready (i.e. you did the necessary fixups and rebased on master), please remember to remove the "Draft" state.
+TODO: a good example of a merge request with review, discussion, and several iterations is https://gitlab.com/prpl-foundation/prplmesh/prplMesh/-/merge\_requests/???
 
 ### Testing
 
