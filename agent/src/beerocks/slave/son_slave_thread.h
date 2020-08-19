@@ -42,9 +42,7 @@ public:
         int stop_on_failure_attempts;
         bool enable_repeater_mode;
         std::string backhaul_wire_iface;
-        beerocks::eIfaceType backhaul_wire_iface_type;
         std::string backhaul_wireless_iface;
-        beerocks::eIfaceType backhaul_wireless_iface_type;
         bool backhaul_wireless_iface_filter_low;
         std::string backhaul_preferred_bssid;
         std::string hostap_iface;

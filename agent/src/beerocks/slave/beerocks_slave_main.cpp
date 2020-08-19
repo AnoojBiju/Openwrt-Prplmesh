@@ -144,8 +144,6 @@ static void fill_son_slave_config(const beerocks::config_file::sConfigSlave &bee
     son_slave_conf.bridge_iface             = beerocks_slave_conf.bridge_iface;
     son_slave_conf.backhaul_preferred_bssid = beerocks_slave_conf.backhaul_preferred_bssid;
     son_slave_conf.backhaul_wire_iface      = beerocks_slave_conf.backhaul_wire_iface;
-    son_slave_conf.backhaul_wire_iface_type =
-        beerocks::utils::get_iface_type_from_string(beerocks_slave_conf.backhaul_wire_iface_type);
     son_slave_conf.enable_repeater_mode =
         beerocks_slave_conf.enable_repeater_mode[slave_num] == "1";
     son_slave_conf.hostap_iface_type = beerocks::utils::get_iface_type_from_string(
@@ -158,7 +156,6 @@ static void fill_son_slave_config(const beerocks::config_file::sConfigSlave &bee
         get_sta_iface_from_hostap_iface(son_slave_conf.hostap_iface);
     son_slave_conf.backhaul_wireless_iface_filter_low =
         beerocks::string_utils::stoi(beerocks_slave_conf.sta_iface_filter_low[slave_num]);
-    son_slave_conf.backhaul_wireless_iface_type = son_slave_conf.hostap_iface_type;
 
     // disable stopping on failure initially. Later on, it will be read from BPL as part of
     // cACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE

@@ -168,8 +168,6 @@ bool config_file::read_slave_config_file(const std::string &config_file_path, sC
     {
         tConfig slave_global_conf_args = {
             std::make_tuple("backhaul_preferred_bssid=", &conf.backhaul_preferred_bssid, 0),
-            std::make_tuple("backhaul_wire_iface_type=", &conf.backhaul_wire_iface_type,
-                            mandatory_slave),
             std::make_tuple("backhaul_wire_iface=", &conf.backhaul_wire_iface, mandatory_slave),
         };
         std::string config_type = "backhaul";

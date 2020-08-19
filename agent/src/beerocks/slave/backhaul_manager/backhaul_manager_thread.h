@@ -166,8 +166,6 @@ private:
         std::string vendor;
         std::string model;
         int ucc_listener_port;
-        beerocks::eIfaceType wire_iface_type;
-        beerocks::eIfaceType wireless_iface_type;
         eFreqType backhaul_preferred_radio_band;
 
         // Slave handling the active wireless connection

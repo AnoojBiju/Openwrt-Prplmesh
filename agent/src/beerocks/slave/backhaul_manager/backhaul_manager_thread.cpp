@@ -1768,7 +1768,6 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
                     if (db->device_conf.back_radio.security_type == bwl::WiFiSec::WPA_WPA2_PSK) {
                         db->device_conf.back_radio.security_type = bwl::WiFiSec::WPA2_PSK;
                     }
-                    m_sConfig.wire_iface_type = (beerocks::eIfaceType)request->wire_iface_type();
 
                     LOG(DEBUG) << "All slaves ready, proceeding" << std::endl
                                << "SSID: " << db->device_conf.back_radio.ssid << ", Pass: ****"

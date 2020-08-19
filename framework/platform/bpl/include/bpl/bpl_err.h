@@ -64,12 +64,10 @@ namespace bpl {
 /* 33 */ ERROR_CODE(MONITOR_HAL_DISCONNECTED)                                               \
 /* 34 */ ERROR_CODE(MONITOR_REPORT_PROCESS_FAIL)                                            \
 /* 35 */ ERROR_CODE(CONFIG_PLATFORM_REPORTED_INVALID_CONFIGURATION)                         \
-/* 36 */ ERROR_CODE(CONFIG_BACKHAUL_WIRED_INTERFACE_IS_UNSUPPORTED)                         \
-/* 37 */ ERROR_CODE(CONFIG_BACKHAUL_WIRELESS_INTERFACE_IS_UNSUPPORTED)                      \
-/* 38 */ ERROR_CODE(CONFIG_NO_VALID_BACKHAUL_INTERFACE)                                     \
-/* 39 */ ERROR_CODE(WATCHDOG_PROCESS_STUCK)                                                 \
-/* 40 */ ERROR_CODE(WATCHDOG_PROCESS_ZOMBIE)                                                \
-/* 41 */ ERROR_CODE(LAST)
+/* 36 */ ERROR_CODE(CONFIG_NO_VALID_BACKHAUL_INTERFACE)                                     \
+/* 37 */ ERROR_CODE(WATCHDOG_PROCESS_STUCK)                                                 \
+/* 38 */ ERROR_CODE(WATCHDOG_PROCESS_ZOMBIE)                                                \
+/* 39 */ ERROR_CODE(LAST)
 
 // clang-format on
 

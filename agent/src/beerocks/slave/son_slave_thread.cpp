@@ -3018,22 +3018,6 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
             break;
         }
 
-        if (!db->ethernet.iface_name.empty()) {
-            if (config.backhaul_wire_iface_type == beerocks::IFACE_TYPE_UNSUPPORTED) {
-                LOG(DEBUG) << "backhaul_wire_iface_type is UNSUPPORTED";
-                platform_notify_error(
-                    bpl::eErrorCode::CONFIG_BACKHAUL_WIRED_INTERFACE_IS_UNSUPPORTED, "");
-                error = true;
-            }
-        }
-        if (!config.backhaul_wireless_iface.empty()) {
-            if (config.backhaul_wireless_iface_type == beerocks::IFACE_TYPE_UNSUPPORTED) {
-                LOG(DEBUG) << "backhaul_wireless_iface is UNSUPPORTED";
-                platform_notify_error(
-                    bpl::eErrorCode::CONFIG_BACKHAUL_WIRELESS_INTERFACE_IS_UNSUPPORTED, "");
-                error = true;
-            }
-        }
         if (db->ethernet.iface_name.empty() && config.backhaul_wireless_iface.empty()) {
             LOG(DEBUG) << "No valid backhaul iface!";
             platform_notify_error(bpl::eErrorCode::CONFIG_NO_VALID_BACKHAUL_INTERFACE, "");
@@ -3077,9 +3061,6 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
 
             string_utils::copy_string(bh_enable->wire_iface(message::IFACE_NAME_LENGTH),
                                       db->ethernet.iface_name.c_str(), message::IFACE_NAME_LENGTH);
-
-            bh_enable->wire_iface_type()     = config.backhaul_wire_iface_type;
-            bh_enable->wireless_iface_type() = config.backhaul_wireless_iface_type;
         }
 
         bh_enable->iface_mac()       = radio->front.iface_mac;

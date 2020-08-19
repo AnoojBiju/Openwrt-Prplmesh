@@ -137,8 +137,6 @@ class cACTION_BACKHAUL_ENABLE : public BaseClass
         bool set_pass(const char buffer[], size_t size);
         uint32_t& security_type();
         sMacAddr& preferred_bssid();
-        uint8_t& wire_iface_type();
-        uint8_t& wireless_iface_type();
         uint8_t& mem_only_psk();
         uint8_t& backhaul_preferred_radio_band();
         beerocks::eFreqType& frequency_band();
@@ -173,8 +171,6 @@ class cACTION_BACKHAUL_ENABLE : public BaseClass
         size_t m_pass_idx__ = 0;
         uint32_t* m_security_type = nullptr;
         sMacAddr* m_preferred_bssid = nullptr;
-        uint8_t* m_wire_iface_type = nullptr;
-        uint8_t* m_wireless_iface_type = nullptr;
         uint8_t* m_mem_only_psk = nullptr;
         uint8_t* m_backhaul_preferred_radio_band = nullptr;
         beerocks::eFreqType* m_frequency_band = nullptr;

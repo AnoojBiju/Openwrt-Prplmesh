@@ -18,7 +18,6 @@ enable_system_hang_test=0 # 0 - disabled
 
 [backhaul]
 backhaul_preferred_bssid=
-backhaul_wire_iface_type=ETHERNET
 backhaul_wire_iface=@BEEROCKS_BH_WIRE_IFACE@
 
 [agent0]

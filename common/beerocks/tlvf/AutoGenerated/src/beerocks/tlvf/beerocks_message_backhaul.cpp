@@ -447,14 +447,6 @@ sMacAddr& cACTION_BACKHAUL_ENABLE::preferred_bssid() {
     return (sMacAddr&)(*m_preferred_bssid);
 }
 
-uint8_t& cACTION_BACKHAUL_ENABLE::wire_iface_type() {
-    return (uint8_t&)(*m_wire_iface_type);
-}
-
-uint8_t& cACTION_BACKHAUL_ENABLE::wireless_iface_type() {
-    return (uint8_t&)(*m_wireless_iface_type);
-}
-
 uint8_t& cACTION_BACKHAUL_ENABLE::mem_only_psk() {
     return (uint8_t&)(*m_mem_only_psk);
 }
@@ -621,8 +613,6 @@ size_t cACTION_BACKHAUL_ENABLE::get_initial_size()
     class_size += beerocks::message::WIFI_PASS_MAX_LENGTH * sizeof(char); // pass
     class_size += sizeof(uint32_t); // security_type
     class_size += sizeof(sMacAddr); // preferred_bssid
-    class_size += sizeof(uint8_t); // wire_iface_type
-    class_size += sizeof(uint8_t); // wireless_iface_type
     class_size += sizeof(uint8_t); // mem_only_psk
     class_size += sizeof(uint8_t); // backhaul_preferred_radio_band
     class_size += sizeof(beerocks::eFreqType); // frequency_band
@@ -684,16 +674,6 @@ bool cACTION_BACKHAUL_ENABLE::init()
         return false;
     }
     if (!m_parse__) { m_preferred_bssid->struct_init(); }
-    m_wire_iface_type = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
-        return false;
-    }
-    m_wireless_iface_type = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
-        return false;
-    }
     m_mem_only_psk = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
