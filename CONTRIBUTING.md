@@ -11,7 +11,7 @@ Thus, it is advisable to subscribe to (i.e. watch) the JIRA issues you are inter
 Daily conversations take place on [Slack](https://prplfoundation.slack.com/).
 You can ask for an invite to anyone currently involved, e.g. by sending a message to an active contributer on gitlab.
 
-Some issues are labelled as [good first issue](https://jira.prplfoundation.org/browse/PPM-305?jql=labels %3D good_first_issue).
+Some issues are labelled as [good first issue](https://jira.prplfoundation.org/browse/PPM-305?jql=labels%3Dgood_first_issue).
 Picking one of these to work on as your first contribution is recommended.
 
 The [prpl Foundation Code of Conduct](https://prplfoundation.org/about/code-of-conduct/) applies to all communication about prplMesh.
@@ -48,7 +48,7 @@ An exception is made for "hotfixes": small fixes that are uncontroversial, e.g. 
 
 To enable automatic tracking between JIRA and git, we ask that all branches (except for hotfixes) contain the JIRA id, and all commits contain it as well.
 This is unfortunately necessary for matching up the information between the two systems.
-Adding the JIRA key to pull/merge request names is also recommended, but not required.
+Adding the JIRA key to merge request names is also recommended, but not required.
 
 The JIRA issue should be created before any work is started.
 When work is started, the developer should transition the issue to "In progress" and assign his- or herself to the issue.
@@ -222,8 +222,7 @@ The workflow is explained in detail below. In summary, it consists of these step
 
 8. Review is approved by maintainers.
 9. Use `git rebase -i --autosquash master` to clean up the branch of the merge request.
-10. If everything is ready, add the "ready for merge" label.
-11. The merge request will be merged automatically when CI succeeds.
+10. The merge request will be merged automatically when CI succeeds.
 
 Start by creating a branch.
 We give branches a name following `<type>/<subject>`.
@@ -307,16 +306,6 @@ The typical workflow for this is:
 * Cherry-pick the fix commit.
 * Push and create a merge request.
 * Check out the development branch and rebase on the hotfix branch. This will automatically remove the fix commit.
-
-Sometimes a merge request looks like it's ready for review or merge (it is not in "WIP", it has an approval) but really it isn't.
-For this purpose, the "don't merge" tag can be added to it.
-Example use cases:
-
-- You found an issue and are going to push more commits.
-- A reviewer has some nitpick comments but already approves it, and the assignee still plans to apply the nitpicks.
-- A PR needs to be split up into several others so eventually it will be closed, but you want to keep it around for reference.
-- It's an oldish PR that needs to be rebased and conflicts need to be resolved.
-- It needs more testing before really approving it for merge.
 
 If a MR is in WIP state and it becomes ready (i.e. you did the necessary fixups and rebased on master), please remember to remove the "WIP state".
 TODO: a good example of a merge request with review, discussion, and several iterations is https://gitlab.com/prpl-foundation/prplmesh/prplMesh/-/merge_requests/???
