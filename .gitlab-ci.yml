@@ -49,6 +49,16 @@ image-build-boardfarm-ci:
     - docker
   needs: ["image-build-builder/ubuntu/bionic"]
 
+dco:
+  stage: build
+  needs: []
+  image: christophebedard/dco-check:latest
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+    - if: $CI_EXTERNAL_PULL_REQUEST_IID
+  script:
+    - dco-check --verbose
+
 cppcheck:
   stage: build
   image: $CI_REGISTRY_IMAGE/prplmesh-builder-alpine:$CI_PIPELINE_ID
