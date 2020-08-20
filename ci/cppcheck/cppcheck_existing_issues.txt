@@ -1,18 +1,7 @@
-agent/src/beerocks/fronthaul_manager/monitor/monitor_rssi.cpp: style: Local variable 'sta_vap_id' shadows outer variable [shadowVariable]            auto sta_vap_id = sta_node->get_vap_id();
-agent/src/beerocks/fronthaul_manager/monitor/monitor_rssi.cpp: style: Parameter 'sta_mac' can be declared with const [constParameter]void monitor_rssi::monitor_idle_station(std::string &sta_mac, monitor_sta_node *sta_node)
-agent/src/beerocks/fronthaul_manager/monitor/monitor_rssi.cpp: style: Parameter 'sta_mac' can be declared with const [constParameter]void monitor_rssi::send_rssi_measurement_response(std::string &sta_mac, monitor_sta_node *sta_node)
-agent/src/beerocks/fronthaul_manager/monitor/monitor_thread.cpp: style: Local variable 'time_span' shadows outer variable [shadowVariable]        auto time_span =
 agent/src/beerocks/fronthaul_manager/monitor/monitor_thread.cpp: style: The if condition is the same as the previous if condition [duplicateCondition]        if (poll_last) {
-agent/src/beerocks/fronthaul_manager/monitor/monitor_thread.cpp: style: Variable 'id' is assigned a value that is never used. [unreadVariable]        int id        = 0;
-agent/src/beerocks/fronthaul_manager/monitor/monitor_thread.cpp: style: Variable 'iface' is assigned a value that is never used. [unreadVariable]        std::string iface = radio_node->get_iface();
-agent/src/beerocks/fronthaul_manager/monitor/rdkb/monitor_rdkb_hal.cpp: style: Consecutive return, break, continue, goto or throw statements are unnecessary. [duplicateBreak]        break;
-agent/src/beerocks/slave/backhaul_manager/backhaul_manager_thread.cpp: style: Local variable 'iface_hal' shadows outer variable [shadowVariable]                            auto iface_hal = get_wireless_hal(sta_iface);
-agent/src/beerocks/slave/beerocks_slave_main.cpp: style: Parameter 'beerocks_slave_conf' can be declared with const [constParameter]start_son_slave_thread(int slave_num, beerocks::config_file::sConfigSlave &beerocks_slave_conf,
 agent/src/beerocks/slave/gate/unit_tests/gate_test.cpp: error: syntax error [syntaxError]TEST(gate_beacon_query_test, loading_vs_from_1905_beacon_query)
-agent/src/beerocks/slave/platform_manager/platform_manager_thread.cpp: warning: Comparison of a boolean expression with an integer. [compareBoolExpressionWithInt]    if (bpl::dhcp_mon_stop() == false) {
 agent/src/beerocks/slave/platform_manager/platform_manager_thread.cpp: warning: Redundant assignment of '*(volatile char*)pass' to itself. [selfAssignment]            *(volatile char *)pass = *(volatile char *)pass;
 agent/src/beerocks/slave/platform_manager/platform_manager_thread.cpp: warning: Redundant assignment of '*(volatile char*)pass' to itself. [selfAssignment]        *(volatile char *)pass = *(volatile char *)pass;
-agent/src/beerocks/slave/son_slave_thread.cpp: style: Local variable 'notification' shadows outer variable [shadowVariable]        auto notification = message_com::create_vs_message<
 common/beerocks/bcl/include/bcl/beerocks_logging.h: style: Class 'logging' has a constructor with 1 argument that is not explicit. [noExplicitConstructor]    logging(const std::string &module_name, const std::string &config_path = std::string(),
 common/beerocks/bcl/source/beerocks_logging.cpp: style: The class 'NetLogger' does not have a constructor although it has private member variables. [noConstructor]class NetLogger : public el::LogDispatchCallback {
 common/beerocks/bcl/source/beerocks_ucc_listener.cpp: style: Parameter 'tlv_hex_list' can be declared with const [constParameter]bool tlvPrefilledData::add_tlvs_from_list(std::list<beerocks_ucc_listener::tlv_hex_t> &tlv_hex_list,
