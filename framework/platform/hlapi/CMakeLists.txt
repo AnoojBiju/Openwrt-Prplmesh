@@ -20,10 +20,8 @@ message(STATUS "ENABLE_HLAPI: ${ENABLE_HLAPI}")
 find_package(amxb REQUIRED)
 find_package(amxc REQUIRED)
 find_package(amxd REQUIRED)
-find_package(amxj REQUIRED)
-find_package(amxo REQUIRED)
 find_package(amxp REQUIRED)
-list(APPEND HLAPI_LIBS amxb amxc amxd amxj amxo amxp)
+list(APPEND HLAPI_LIBS amxb amxc amxd amxp)
 
 
 # Build the library
