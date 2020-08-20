@@ -25,6 +25,7 @@ const std::string db::TIMELIFE_DELAY_STR       = "timelife";
 const std::string db::INITIAL_RADIO_ENABLE_STR = "initial_radio_enable";
 const std::string db::INITIAL_RADIO_STR        = "initial_radio";
 const std::string db::SELECTED_BANDS_STR       = "selected_bands";
+const std::string db::IS_FRIENDLY_STR          = "is_friendly";
 
 // static
 std::string db::type_to_string(beerocks::eType type)
@@ -2678,6 +2679,57 @@ int8_t db::get_client_selected_bands(const sMacAddr &mac)
     return node->client_selected_bands;
 }
 
+bool db::set_client_is_friendly(const sMacAddr &mac, bool client_is_friendly,
+                                bool save_to_persistent_db)
+{
+    auto node = get_node_verify_type(mac, beerocks::TYPE_CLIENT);
+    if (!node) {
+        LOG(ERROR) << "client node not found for mac " << mac;
+        return false;
+    }
+
+    LOG(DEBUG) << "Setting client " << mac
+               << " client_is_friendly = " << string_utils::bool_str(client_is_friendly);
+
+    auto timestamp = std::chrono::steady_clock::now();
+    if (save_to_persistent_db) {
+        // if persistent db is disabled
+        if (!config.persistent_db) {
+            LOG(DEBUG) << "persistent db is disabled";
+        } else {
+            LOG(DEBUG) << "Configuring persistent-db, client_is_friendly = " << client_is_friendly;
+
+            ValuesMap values_map;
+            // std::to_string(bool) would result in either "0" or "1"
+            values_map[IS_FRIENDLY_STR] = std::to_string(client_is_friendly);
+            values_map[TIMESTAMP_STR]   = timestamp_to_string_seconds(timestamp);
+
+            // update the persistent db
+            if (!update_client_entry_in_persistent_db(mac, values_map)) {
+                LOG(ERROR) << "failed to update client entry in persistent-db to for " << mac;
+                return false;
+            }
+        }
+    }
+
+    node->client_is_friendly = client_is_friendly ? eTriStateBool::TRUE : eTriStateBool::FALSE;
+    node->client_parameters_last_edit = timestamp;
+
+    return true;
+}
+
+eTriStateBool db::get_client_is_friendly(const sMacAddr &mac)
+{
+    auto node = get_node_verify_type(mac, beerocks::TYPE_CLIENT);
+    if (!node) {
+        LOG(ERROR) << "client node not found for mac " << mac;
+        // Clients are assumed friendly unless proven otherwise
+        return eTriStateBool::NOT_CONFIGURED;
+    }
+
+    return node->client_is_friendly;
+}
+
 bool db::clear_client_persistent_db(const sMacAddr &mac)
 {
     auto node = get_node_verify_type(mac, beerocks::TYPE_CLIENT);
@@ -2693,6 +2745,7 @@ bool db::clear_client_persistent_db(const sMacAddr &mac)
     node->client_stay_on_initial_radio = eTriStateBool::NOT_CONFIGURED;
     node->client_initial_radio         = network_utils::ZERO_MAC;
     node->client_selected_bands        = PARAMETER_NOT_CONFIGURED;
+    node->client_is_friendly           = eTriStateBool::NOT_CONFIGURED;
 
     // if persistent db is enabled
     if (config.persistent_db) {
@@ -2783,6 +2836,13 @@ bool db::update_client_persistent_db(const sMacAddr &mac)
         LOG(DEBUG) << "Setting client selected-bands in persistent-db to "
                    << node->client_selected_bands << " for " << mac;
         values_map[SELECTED_BANDS_STR] = std::to_string(node->client_selected_bands);
+    }
+
+    if (node->client_is_friendly != eTriStateBool::NOT_CONFIGURED) {
+        auto is_friendly = (node->client_is_friendly == eTriStateBool::TRUE);
+        LOG(DEBUG) << "Setting client is-friendly in persistent-db to " << is_friendly << " for "
+                   << mac;
+        values_map[IS_FRIENDLY_STR] = std::to_string(is_friendly);
     }
 
     // update the persistent db
@@ -4362,6 +4422,10 @@ bool db::set_node_params_from_map(const sMacAddr &mac, const ValuesMap &values_m
             LOG(DEBUG) << "Setting node client_selected_bands to " << param.second << " for "
                        << mac;
             node->client_selected_bands = string_utils::stoi(param.second);
+        } else if (param.first == IS_FRIENDLY_STR) {
+            LOG(DEBUG) << "Setting node client_is_friendly to " << param.second << " for " << mac;
+            node->client_is_friendly =
+                (param.second == std::to_string(true)) ? eTriStateBool::TRUE : eTriStateBool::FALSE;
         } else {
             LOG(WARNING) << "Unknown parameter, skipping: " << param.first << " for " << mac;
         }

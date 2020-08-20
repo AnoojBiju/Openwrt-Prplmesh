@@ -60,6 +60,7 @@ public:
     static const std::string INITIAL_RADIO_ENABLE_STR;
     static const std::string INITIAL_RADIO_STR;
     static const std::string SELECTED_BANDS_STR;
+    static const std::string IS_FRIENDLY_STR;
 
     // VAPs info list type
     typedef std::list<std::shared_ptr<beerocks_message::sConfigVapInfo>> vaps_list_t;
@@ -745,6 +746,25 @@ public:
      * @return Selected band/bands. Possible values are bitwise options of eClientSelectedBands.
      */
     int8_t get_client_selected_bands(const sMacAddr &mac);
+
+    /**
+     * @brief Set the client's friendly status.
+     * 
+     * @param mac MAC address of a client.
+     * @param is_friendly Whather a client is friendly or not.
+     * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
+     * @return true on success, otherwise false.
+     */
+    bool set_client_is_friendly(const sMacAddr &mac, bool is_friendly,
+                                bool save_to_persistent_db = true);
+
+    /**
+     * @brief Get the client's friendly status.
+     * 
+     * @param mac MAC address of a client.
+     * @return Whather a client is friendly or not.
+     */
+    eTriStateBool get_client_is_friendly(const sMacAddr &mac);
 
     /**
      * @brief Check if the radio's band is on one of the selected bands.
