@@ -1565,7 +1565,6 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
     case Event::RRM_Beacon_Response: {
 
         auto hal_data = static_cast<bwl::SBeaconResponse11k *>(data);
-        int id        = 0;
         LOG(INFO) << "Received beacon measurement response on BSSID: "
                   << (sMacAddr &)hal_data->bssid
                   << ", dialog_token: " << int(hal_data->dialog_token);
@@ -1576,7 +1575,7 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
             if ((it->second.dialog_token == hal_data->dialog_token) ||
                 (hal_data->dialog_token == 0)) {
 
-                id = it->second.id;
+                auto id = it->second.id;
 
                 auto response = message_com::create_vs_message<
                     beerocks_message::cACTION_MONITOR_CLIENT_BEACON_11K_RESPONSE>(cmdu_tx, id);
