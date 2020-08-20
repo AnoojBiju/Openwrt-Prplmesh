@@ -45,7 +45,7 @@ if (TARGET_PLATFORM STREQUAL "openwrt")
         link_directories(${LIBBRIDGE_INCLUDE_DIR})
 
         # UCI BPL
-        file(GLOB_RECURSE bpl_platform_sources ${MODULE_PATH}/uci/*.c*)
+        file(GLOB_RECURSE bpl_platform_sources ${MODULE_PATH}/*/uci/*.c*)
 
         # UGW specific libraries
         find_package(ubus REQUIRED)
@@ -61,7 +61,7 @@ if (TARGET_PLATFORM STREQUAL "openwrt")
     # Other OpenWRT based platforms (e.g. Turris-Omnia)
     else()
 
-        file(GLOB_RECURSE bpl_platform_sources ${MODULE_PATH}/linux/*.c*)
+        file(GLOB_RECURSE bpl_platform_sources ${MODULE_PATH}/*/linux/*.c*)
 
         add_definitions(-DPLATFORM_DB_PATH_TEMP="${TMP_PATH}/prplmesh_platform_db")
 
@@ -78,7 +78,7 @@ elseif (TARGET_PLATFORM STREQUAL "rdkb")
     include_directories(${PLATFORM_INCLUDE_DIR}/bridge-utils)
 
     # UCI BPL
-    file(GLOB_RECURSE bpl_platform_sources ${MODULE_PATH}/uci/*.c*)
+    file(GLOB_RECURSE bpl_platform_sources ${MODULE_PATH}/*/uci/*.c*)
 
     # RDKB specific libraries
     find_package(ubus REQUIRED)
@@ -87,7 +87,7 @@ elseif (TARGET_PLATFORM STREQUAL "rdkb")
     list(APPEND BPL_LIBS nl-3 nl-route-3 bridge dl swpal uci ubox ubus slibc)
 
     # Install the UCI DB files
-    file(GLOB_RECURSE bpl_uci_db_files ${MODULE_PATH}/uci/db/prplmesh_db*)
+    file(GLOB_RECURSE bpl_uci_db_files ${MODULE_PATH}/db/uci/prplmesh_db*)
     install(FILES ${bpl_uci_db_files} DESTINATION ${CMAKE_INSTALL_PREFIX}/share)
 
 elseif (TARGET_PLATFORM STREQUAL "linux")
@@ -95,7 +95,7 @@ elseif (TARGET_PLATFORM STREQUAL "linux")
     # Platform definitions
     add_definitions(-DBEEROCKS_LINUX)
 
-    file(GLOB_RECURSE bpl_platform_sources ${MODULE_PATH}/linux/*.c*)
+    file(GLOB_RECURSE bpl_platform_sources ${MODULE_PATH}/*/linux/*.c*)
 
     add_definitions(-DPLATFORM_DB_PATH_TEMP="${TMP_PATH}/prplmesh_platform_db")
 
