@@ -2956,11 +2956,22 @@ bool db::load_persistent_db_clients()
 
         /* TODO: aging validation against specific client configuration and unfriendly-device-max-timelife-delay:
          * 1. If client has timelife_delay_str param configured, it should be checked against it instead of global max-timelife-delay param.
-         * 2.a. If client is unfriendly - and timelife_delay_str is not configured - check against the global unfriendly-device-max-timelife-delay param.
-         * 2.b. Is "unfriendly" something we know at boot?
+         * 
+         * Clients are assumed friendly if not configured
          */
+        bool is_friendly    = true;
+        auto is_friendly_it = client_data_map.find(IS_FRIENDLY_STR);
+        if (is_friendly_it != client_data_map.end()) {
+            is_friendly = is_friendly_it->second == std::to_string(true);
+        }
+
         static const int max_timelife_delay_sec = config.max_timelife_delay_days * 24 * 3600;
-        auto client_remaining_timelife_sec = max_timelife_delay_sec - client_timelife_passed_sec;
+        static const int unfriendly_device_max_timelife_delay_sec =
+            config.unfriendly_device_max_timelife_delay_days * 24 * 3600;
+
+        auto client_remaining_timelife_sec =
+            (is_friendly ? max_timelife_delay_sec : unfriendly_device_max_timelife_delay_sec) -
+            client_timelife_passed_sec;
         if (client_remaining_timelife_sec <= 0) {
             LOG(ERROR) << "Invalid entry - configured data has aged for client entry "
                        << client_entry;
@@ -4507,6 +4518,8 @@ sMacAddr db::get_candidate_client_for_removal(sMacAddr client_to_skip)
 {
     const auto max_timelife_delay_sec =
         std::chrono::seconds(config.max_timelife_delay_days * 24 * 3600);
+    const auto unfriendly_device_max_timelife_delay_sec =
+        std::chrono::seconds(config.unfriendly_device_max_timelife_delay_days * 24 * 3600);
 
     sMacAddr candidate_client_to_be_removed  = network_utils::ZERO_MAC;
     bool is_disconnected_candidate_available = false;
@@ -4538,13 +4551,18 @@ sMacAddr db::get_candidate_client_for_removal(sMacAddr client_to_skip)
                 continue;
             }
 
+            // Max client timelife delay
+            // This is ditermined according to the friendliness status of the client.
+            // If a client is unfriendly we can
+            auto max_timelife_delay = client->client_is_friendly == eTriStateBool::FALSE
+                                          ? unfriendly_device_max_timelife_delay_sec
+                                          : max_timelife_delay_sec;
+
             // Client timelife delay
-            //TODO: use max_timelife_delay_sec/unfriendly_max_timelife_delay_sec according to "is_unfriendly" check which is yet-to-be-defined
             auto timelife_delay =
                 (client->client_time_life_delay_sec != std::chrono::seconds::zero())
                     ? client->client_time_life_delay_sec
-                    : max_timelife_delay_sec;
-
+                    : max_timelife_delay;
             // Calculate client expiry due time
             auto current_client_expiry_due = client->client_parameters_last_edit + timelife_delay;
 
