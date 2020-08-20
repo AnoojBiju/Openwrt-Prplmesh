@@ -3130,7 +3130,8 @@ bool backhaul_manager::select_bssid()
                     db->backhaul.selected_iface_name = iface;
                     return true;
                 }
-            } else if (!db->backhaul.preferred_bssid.empty() && bssid == db->backhaul.preferred_bssid) {
+            } else if ((db->backhaul.preferred_bssid != network_utils::ZERO_MAC) &&
+                       (tlvf::mac_from_string(bssid) == db->backhaul.preferred_bssid)) {
                 LOG(DEBUG) << "preferred bssid - found bssid match = " << bssid;
                 selected_bssid_channel           = scan_result.channel;
                 selected_bssid                   = bssid;

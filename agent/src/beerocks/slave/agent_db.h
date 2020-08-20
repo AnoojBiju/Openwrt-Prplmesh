@@ -145,7 +145,7 @@ public:
     struct sBackhaul {
         enum class eConnectionType { Invalid = 0, Wired, Wireless } connection_type;
         std::string selected_iface_name;
-        std::string preferred_bssid;
+        sMacAddr preferred_bssid;
     } backhaul;
 
     struct sEthernet {
