@@ -167,6 +167,7 @@ int arp_mon_get_ip_for_mac(BPL_ARP_MON_CTX ctx, const uint8_t mac[BPL_ARP_MON_MA
     return (pArpMon->get_ip_for_mac(mac, ip) ? 0 : -1);
 }
 
+
 int arp_get_bridge_iface(const char bridge[BPL_ARP_IFACE_NAME_LEN],
                          const uint8_t mac[BPL_ARP_MON_MAC_LEN], char iface[BPL_ARP_IFACE_NAME_LEN])
 {
