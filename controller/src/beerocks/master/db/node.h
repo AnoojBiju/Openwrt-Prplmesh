@@ -292,6 +292,11 @@ public:
     // Possible values are bitwise options of eClientSelectedBands.
     int8_t client_selected_bands = beerocks::PARAMETER_NOT_CONFIGURED;
 
+    // The friendly status indicates how we interact with the client.
+    // If the friendly status is not configured, the client is assumed friendly unless proven otherwise.
+    // The friendliness status affects how we handle the aging mechanism.
+    eTriStateBool client_is_friendly = eTriStateBool::NOT_CONFIGURED;
+
     /*
      * Persistent configurations - end
      */
