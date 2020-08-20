@@ -2857,13 +2857,13 @@ bool backhaul_manager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t eve
                         /* prevent unfiltered ("high") radio from connecting to low band, unless we have only 2 radios */
                         int sta_iface_count_5ghz = 0;
                         for (const auto &sta_iface : slave_sta_ifaces) {
-                            auto iface_hal = get_wireless_hal(sta_iface);
-                            if (!iface_hal)
+                            auto sta_iface_hal = get_wireless_hal(sta_iface);
+                            if (!sta_iface_hal)
                                 break;
 
-                            iface_hal->refresh_radio_info();
+                            sta_iface_hal->refresh_radio_info();
                             if (son::wireless_utils::which_freq(
-                                    iface_hal->get_radio_info().channel) == beerocks::FREQ_5G) {
+                                    sta_iface_hal->get_radio_info().channel) == beerocks::FREQ_5G) {
                                 sta_iface_count_5ghz++;
                             }
                         }
