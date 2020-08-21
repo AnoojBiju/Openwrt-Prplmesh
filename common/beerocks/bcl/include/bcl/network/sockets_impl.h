@@ -80,6 +80,7 @@ public:
     {
         m_address.sun_family = AF_UNIX;
         string_utils::copy_string(m_address.sun_path, path.c_str(), sizeof(m_address.sun_path));
+        m_length = path.length();
     }
 
     std::string path() const { return m_address.sun_path; }
@@ -88,11 +89,13 @@ public:
     {
         return reinterpret_cast<const struct sockaddr *>(&m_address);
     }
-    socklen_t length() const override { return m_length; }
+    const socklen_t &length() const override { return m_length; }
+    socklen_t size() const override { return m_size; }
 
 private:
-    sockaddr_un m_address = {};
-    socklen_t m_length    = sizeof(m_address);
+    sockaddr_un m_address  = {};
+    socklen_t m_length     = 0;
+    const socklen_t m_size = sizeof(m_address);
 };
 
 class InternetAddress : public Socket::Address {
@@ -108,11 +111,13 @@ public:
     {
         return reinterpret_cast<const struct sockaddr *>(&m_address);
     }
-    socklen_t length() const override { return m_length; }
+    const socklen_t &length() const override { return m_length; }
+    socklen_t size() const override { return m_size; }
 
 private:
-    sockaddr_in m_address = {};
-    socklen_t m_length    = sizeof(m_address);
+    sockaddr_in m_address  = {};
+    socklen_t m_length     = sizeof(m_address);
+    const socklen_t m_size = sizeof(m_address);
 };
 
 class LinkLevelAddress : public Socket::Address {
@@ -129,11 +134,13 @@ public:
     {
         return reinterpret_cast<const struct sockaddr *>(&m_address);
     }
-    socklen_t length() const override { return m_length; }
+    const socklen_t &length() const override { return m_length; }
+    socklen_t size() const override { return m_size; }
 
 private:
-    sockaddr_ll m_address = {};
-    socklen_t m_length    = sizeof(m_address);
+    sockaddr_ll m_address  = {};
+    socklen_t m_length     = sizeof(m_address);
+    const socklen_t m_size = sizeof(m_address);
 };
 
 class NetlinkAddress : public Socket::Address {
@@ -148,11 +155,13 @@ public:
     {
         return reinterpret_cast<const struct sockaddr *>(&m_address);
     }
-    socklen_t length() const override { return m_length; }
+    const socklen_t &length() const override { return m_length; }
+    socklen_t size() const override { return m_size; }
 
 private:
-    sockaddr_nl m_address = {};
-    socklen_t m_length    = sizeof(m_address);
+    sockaddr_nl m_address  = {};
+    socklen_t m_length     = sizeof(m_address);
+    const socklen_t m_size = sizeof(m_address);
 };
 
 /**
@@ -239,9 +248,9 @@ public:
      */
     int receive_from(Buffer &buffer, Socket::Address &address) override
     {
-        socklen_t address_length = address.length();
+        address.length() = address.size();
         return ::recvfrom(m_socket->fd(), buffer.data(), buffer.size(), MSG_DONTWAIT,
-                          address.sockaddr(), &address_length);
+                          address.sockaddr(), &address.length());
     }
 
     /**

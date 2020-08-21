@@ -41,7 +41,9 @@ public:
 class Socket : public FileDescriptor {
 public:
     /**
-     * Wrapper class around sockaddr (structure describing a generic socket address)
+     * Wrapper class around sockaddr (structure describing a generic socket address that contains a
+     * member `sa_family` that tells you whether it should be cast to `struct sockaddr_in`,
+     * `struct sockaddr_in6`, `struct sockaddr_ll` or something else)
      */
     class Address {
     public:
@@ -62,7 +64,14 @@ public:
          *
          * @return length of sockaddr
          */
-        virtual socklen_t length() const = 0;
+        virtual const socklen_t &length() const = 0;
+
+        /**
+         * @brief Returns the size of the sockaddr structure.
+         *
+         * @return size of sockaddr
+         */
+        virtual socklen_t size() const = 0;
 
         /**
          * @brief Returns address of sockaddr structure.
@@ -80,6 +89,18 @@ public:
              * implemented in the interface class, so available to all implementation classes for free.
              */
             return const_cast<struct sockaddr *>(const_cast<const Address *>(this)->sockaddr());
+        }
+
+        /**
+         * @brief Returns the length of the sockaddr structure.
+         *
+         * This is the non-const version of the method with the same name.
+         *
+         * @return length of sockaddr
+         */
+        socklen_t &length()
+        {
+            return const_cast<socklen_t &>(const_cast<const Address *>(this)->length());
         }
     };
 
