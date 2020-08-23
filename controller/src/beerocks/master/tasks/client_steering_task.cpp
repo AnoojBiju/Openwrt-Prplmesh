@@ -78,6 +78,8 @@ void client_steering_task::work()
             }
         }
 
+        database.set_client_is_friendly(tlvf::mac_from_string(sta_mac), steering_success);
+
         finish();
         break;
     }
