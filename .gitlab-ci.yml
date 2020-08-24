@@ -140,8 +140,10 @@ build-in-docker:
 build-in-docker-alpine:
   extends: build-in-docker
   image: $CI_REGISTRY_IMAGE/prplmesh-builder-alpine:$CI_PIPELINE_ID
-  only:
-    - schedules
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'   # Scheduled pipelines
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_SHA' # On a merge train
+    - when: manual                              # In all other cases: manual
   needs: ["image-build-builder/alpine"]
 
 build-in-docker-ubuntu-xenial:
@@ -271,6 +273,10 @@ boardfarm-tests:
       - "build/$TARGET_DEVICE/"
     expire_in: 4 weeks
     when: always
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'   # Scheduled pipelines
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_SHA' # On a merge train
+    - when: manual                              # In all other cases: manual
   tags:
     - shell
     - docker-build
