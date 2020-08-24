@@ -364,7 +364,17 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     auto amb_dm_obj = std::make_shared<beerocks::nbapi::AmbiorixDummy>();
 #endif //ENABLE_NBAPI
 
-    beerocks::AgentDB::get()->init_data_model(amb_dm_obj);
+    {
+        auto db = beerocks::AgentDB::get();
+
+        db->init_data_model(amb_dm_obj);
+
+        if (!beerocks::bpl::bpl_cfg_get_backhaul_wire_iface(db->ethernet.wan.iface_name)) {
+            LOG(ERROR) << "Failed reading 'backhaul_wire_iface'";
+            return false;
+        }
+        // Destroy `db` to unlock it.
+    }
 
     beerocks::PlatformManager platform_manager(beerocks_slave_conf, interfaces_map, *agent_logger,
                                                std::move(platform_manager_cmdu_server),
