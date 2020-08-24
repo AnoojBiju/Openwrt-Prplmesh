@@ -65,7 +65,7 @@ if (TARGET_PLATFORM STREQUAL "openwrt")
         file(GLOB_RECURSE bpl_platform_sources
           ${MODULE_PATH}/arp/linux/*.c*
           ${MODULE_PATH}/dhcp/linux/*.c*
-          ${MODULE_PATH}/db/linux/*.c*
+          ${MODULE_PATH}/db/uci/*.c*
           ${MODULE_PATH}/cfg/uci/*.c*)
 
         list(APPEND BPL_LIBS uci)
