@@ -2649,7 +2649,9 @@ bool db::set_client_selected_bands(const sMacAddr &mac, int8_t selected_bands,
 
             ValuesMap values_map;
             values_map[TIMESTAMP_STR]      = timestamp_to_string_seconds(timestamp);
-            values_map[SELECTED_BANDS_STR] = std::to_string(selected_bands);
+            values_map[SELECTED_BANDS_STR] = (selected_bands != PARAMETER_NOT_CONFIGURED)
+                                                 ? std::to_string(selected_bands)
+                                                 : std::string("");
 
             // update the persistent db
             if (!update_client_entry_in_persistent_db(mac, values_map)) {
@@ -2714,6 +2716,11 @@ bool db::is_hostap_on_client_selected_bands(const sMacAddr &client, const sMacAd
 {
     auto hostap_band    = wireless_utils::which_freq(get_node_channel(tlvf::mac_to_string(hostap)));
     auto selected_bands = get_client_selected_bands(client);
+
+    if (selected_bands == PARAMETER_NOT_CONFIGURED) {
+        LOG(WARNING) << "the frequency type that's used by the client is not supported";
+        return false;
+    }
 
     switch (hostap_band) {
     case beerocks::eFreqType::FREQ_24G:

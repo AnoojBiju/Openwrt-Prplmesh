@@ -2241,7 +2241,8 @@ void son_management::handle_bml_message(Socket *sd,
         // Initial radio
         response->client().initial_radio = database.get_client_initial_radio(client_mac);
         // Selected bands
-        response->client().selected_bands = database.get_client_selected_bands(client_mac);
+        response->client().selected_bands =
+            static_cast<eClientSelectedBands>(database.get_client_selected_bands(client_mac));
         // Timelife Delay - scaled from seconds to days
         auto timelife_delay_sec = database.get_client_time_life_delay(client_mac);
         response->client().time_life_delay_days =
