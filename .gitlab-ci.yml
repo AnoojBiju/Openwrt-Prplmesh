@@ -150,8 +150,10 @@ build-in-docker:
 build-in-docker-alpine:
   extends: build-in-docker
   image: $CI_REGISTRY_IMAGE/prplmesh-builder-alpine:$CI_PIPELINE_ID
-  only:
-    - schedules
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'   # Scheduled pipelines
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_SHA' # On a merge train
+    - when: manual                              # In all other cases: manual
   needs: ["image-build-builder/alpine"]
 
 build-in-docker-ubuntu-xenial:
@@ -274,6 +276,8 @@ boardfarm-tests:
 .build-for-openwrt:
   stage: build
   script:
+    - echo $CI_PIPELINE_SOURCE == "schedule"
+    - echo $CI_MERGE_REQUEST_LABELS != "ready for merge"
     - mkdir -p "build/$TARGET_DEVICE"
     - tools/docker/builder/openwrt/build.sh --verbose -d "$TARGET_DEVICE" -t "prplmesh-builder-$TARGET_DEVICE:$CI_COMMIT_SHORT_SHA-$CI_PIPELINE_ID" 2>&1 | tee "build/$TARGET_DEVICE/openwrt-build.log"
   artifacts:
@@ -281,6 +285,10 @@ boardfarm-tests:
       - "build/$TARGET_DEVICE/"
     expire_in: 4 weeks
     when: always
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_MERGE_REQUEST_LABELS !~ "ready for merge"'
+    - when: manual
   tags:
     - shell
     - docker-build
