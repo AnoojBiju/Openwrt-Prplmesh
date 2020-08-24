@@ -150,19 +150,29 @@ build-in-docker:
 build-in-docker-alpine:
   extends: build-in-docker
   image: $CI_REGISTRY_IMAGE/prplmesh-builder-alpine:$CI_PIPELINE_ID
-  only:
-    - schedules
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_MERGE_REQUEST_LABELS !~ "ready for merge"'
+    - when: manual
   needs: ["image-build-builder/alpine"]
 
 build-in-docker-ubuntu-xenial:
   extends: build-in-docker
   image: $CI_REGISTRY_IMAGE/prplmesh-builder-ubuntu-xenial:$CI_PIPELINE_ID
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_MERGE_REQUEST_LABELS !~ "ready for merge"'
+    - when: manual
   needs: ["image-build-builder/ubuntu/xenial"]
 
 build-in-docker-static:
   extends: build-in-docker
   variables:
     EXTRA_CMAKE_FLAGS: "-DBUILD_SHARED_LIBS=OFF"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_MERGE_REQUEST_LABELS !~ "ready for merge"'
+    - when: manual
 
 upload-artifacts:
   stage: upload
@@ -281,6 +291,10 @@ boardfarm-tests:
       - "build/$TARGET_DEVICE/"
     expire_in: 4 weeks
     when: always
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_MERGE_REQUEST_LABELS !~ "ready for merge"'
+    - when: manual
   tags:
     - shell
     - docker-build
