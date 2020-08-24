@@ -1358,6 +1358,7 @@ enum eClientSelectedBands: uint8_t {
     eSelectedBands_24G = 0x1,
     eSelectedBands_5G = 0x2,
     eSelectedBands_6G = 0x4,
+    eSelectedBands_Unknown = 0xff,
 };
 
 typedef struct sClientConfig {
@@ -1387,7 +1388,7 @@ typedef struct sClient {
     //1 for true, 0 for false, -1 for "not configured".
     int8_t stay_on_selected_device;
     //Bitset of selected bands supported by the client according to eClientSelectedBands
-    int8_t selected_bands;
+    eClientSelectedBands selected_bands;
     //1 for true, 0 for false, -1 for "not configured".
     int8_t single_band;
     //Optional parameter,
@@ -1405,6 +1406,7 @@ typedef struct sClient {
         timestamp_sec = 0x0;
         stay_on_initial_radio = -0x1;
         stay_on_selected_device = -0x1;
+        selected_bands = eClientSelectedBands::eSelectedBands_Unknown;
         single_band = -0x1;
         time_life_delay_days = -0x1;
     }

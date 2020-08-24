@@ -984,6 +984,7 @@ eClientSelectedBands:
   eSelectedBands_24G: 1
   eSelectedBands_5G: 2
   eSelectedBands_6G: 4
+  eSelectedBands_Unknown: 255
 
 sClientConfig:
   _type: struct
@@ -1020,7 +1021,8 @@ sClient:
     _value: -1
     _comment: 1 for true, 0 for false, -1 for "not configured".
   selected_bands:
-    _type: int8_t
+    _type: eClientSelectedBands
+    _value: eClientSelectedBands::eSelectedBands_Unknown
     _comment: Bitset of selected bands supported by the client according to eClientSelectedBands
   single_band:
     _type: int8_t
