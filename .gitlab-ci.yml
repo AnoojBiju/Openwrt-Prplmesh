@@ -266,6 +266,8 @@ boardfarm-tests:
 .build-for-openwrt:
   stage: build
   script:
+    - echo $CI_PIPELINE_SOURCE
+    - echo $CI_MERGE_REQUEST_TARGET_BRANCH_SHA
     - mkdir -p "build/$TARGET_DEVICE"
     - tools/docker/builder/openwrt/build.sh --verbose -d "$TARGET_DEVICE" -t "prplmesh-builder-$TARGET_DEVICE:$CI_COMMIT_SHORT_SHA-$CI_PIPELINE_ID" 2>&1 | tee "build/$TARGET_DEVICE/openwrt-build.log"
   artifacts:
