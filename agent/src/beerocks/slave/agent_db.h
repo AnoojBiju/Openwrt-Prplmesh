@@ -122,6 +122,9 @@ public:
         bool service_fairness_enabled;
         bool rdkb_extensions_enabled;
 
+        std::string vendor;
+        std::string model;
+        uint16_t ucc_listener_port;
     } device_conf;
 
     struct sControllerInfo {
