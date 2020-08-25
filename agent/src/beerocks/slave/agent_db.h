@@ -104,6 +104,9 @@ public:
         uint8_t management_mode;
         bool certification_mode;
         uint8_t stop_on_failure_attempts;
+
+        bool client_band_steering_enabled;
+        bool client_optimal_path_roaming_enabled;
     } device_conf;
 
     struct sControllerInfo {
