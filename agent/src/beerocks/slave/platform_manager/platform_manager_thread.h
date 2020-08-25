@@ -39,7 +39,6 @@ public:
         int band_steering;
         int client_roaming;
         int onboarding;
-        int stop_on_failure_attempts;
         int local_gw;
         int local_master;
         int dfs_reentry;
