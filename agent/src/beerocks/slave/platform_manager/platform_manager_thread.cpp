@@ -216,7 +216,7 @@ static bool fill_platform_settings(
         (db->device_conf.client_optimal_path_roaming_enabled ||
          db->device_conf.client_band_steering_enabled);
 
-    msg->platform_settings().load_balancing_enabled   = 0; // for v1.3 TODO read from CAL DB
+    db->device_conf.load_balancing_enabled            = 0; // for v1.3 TODO read from CAL DB
     msg->platform_settings().service_fairness_enabled = 0; // for v1.3 TODO read from CAL DB
 
     LOG(DEBUG) << "iface " << iface_name << " settings:";
