@@ -40,7 +40,6 @@ public:
         int onboarding;
         int local_gw;
         int local_master;
-        int dfs_reentry;
         int proprietary_repeater;
     };
 
