@@ -178,10 +178,11 @@ static bool fill_platform_settings(
     }
     db->device_conf.stop_on_failure_attempts = temp_int;
 
-    if ((platform_common_conf.dfs_reentry = bpl::cfg_get_dfs_reentry()) < 0) {
+    if ((temp_int = bpl::cfg_get_dfs_reentry()) < 0) {
         LOG(ERROR) << "Failed reading 'dfs_reentry'";
         return false;
     }
+    db->device_conf.dfs_reentry_enabled = temp_int;
 
     int backhaul_max_vaps;
     int backhaul_network_enabled;
@@ -206,8 +207,7 @@ static bool fill_platform_settings(
     db->device_conf.local_gw = (db->device_conf.operating_mode == BPL_OPER_MODE_GATEWAY ||
                                 db->device_conf.operating_mode == BPL_OPER_MODE_GATEWAY_WISP);
 
-    msg->platform_settings().onboarding          = uint8_t(platform_common_conf.onboarding);
-    msg->platform_settings().dfs_reentry_enabled = uint8_t(platform_common_conf.dfs_reentry);
+    msg->platform_settings().onboarding = uint8_t(platform_common_conf.onboarding);
     msg->platform_settings().rdkb_extensions_enabled =
         uint8_t(platform_common_conf.rdkb_extensions);
     msg->platform_settings().client_optimal_path_roaming_prefer_signal_strength_enabled =
@@ -230,7 +230,8 @@ static bool fill_platform_settings(
     LOG(DEBUG) << "band_enabled: " << (unsigned)msg->wlan_settings().band_enabled;
     LOG(DEBUG) << "local_gw: " << db->device_conf.local_gw;
     LOG(DEBUG) << "local_controller: " << db->device_conf.local_controller;
-    LOG(DEBUG) << "dfs_reentry_enabled: " << (unsigned)msg->platform_settings().dfs_reentry_enabled;
+    LOG(DEBUG) << "dfs_reentry_enabled: "
+               << string_utils::bool_str(db->device_conf.dfs_reentry_enabled);
     LOG(DEBUG) << "backhaul_preferred_radio_band: "
                << (unsigned)msg->platform_settings().backhaul_preferred_radio_band;
     LOG(DEBUG) << "rdkb_extensions: " << (unsigned)msg->platform_settings().rdkb_extensions_enabled;
