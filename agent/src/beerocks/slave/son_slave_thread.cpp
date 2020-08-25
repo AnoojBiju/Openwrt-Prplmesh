@@ -4012,10 +4012,10 @@ bool slave_thread::parse_intel_join_response(Socket *sd, beerocks::beerocks_head
     }
     message_com::send_cmdu(ap_manager_socket, cmdu_tx);
 
-    auto notification = message_com::create_vs_message<
+    auto client_notifications_request = message_com::create_vs_message<
         beerocks_message::
             cACTION_APMANAGER_HOSTAP_GENERATE_CLIENT_ASSOCIATION_NOTIFICATIONS_REQUEST>(cmdu_tx);
-    if (!notification) {
+    if (!client_notifications_request) {
         LOG(ERROR) << "Failed building message!";
         return false;
     }
