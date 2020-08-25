@@ -212,8 +212,9 @@ static bool fill_platform_settings(
         uint8_t(platform_common_conf.rdkb_extensions);
     db->device_conf.client_optimal_path_roaming_prefer_signal_strength_enabled =
         0; // TODO add platform DB flag
-    msg->platform_settings().client_11k_roaming_enabled =
-        (db->device_conf.client_optimal_path_roaming_enabled || db->device_conf.client_band_steering_enabled);
+    db->device_conf.client_11k_roaming_enabled =
+        (db->device_conf.client_optimal_path_roaming_enabled ||
+         db->device_conf.client_band_steering_enabled);
 
     msg->platform_settings().load_balancing_enabled   = 0; // for v1.3 TODO read from CAL DB
     msg->platform_settings().service_fairness_enabled = 0; // for v1.3 TODO read from CAL DB
