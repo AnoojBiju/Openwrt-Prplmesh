@@ -140,10 +140,11 @@ static bool fill_platform_settings(
         LOG(ERROR) << "Failed reading 'rdkb_extensions'";
         return false;
     }
-    if ((platform_common_conf.band_steering = bpl::cfg_get_band_steering()) < 0) {
+    if ((temp_int = bpl::cfg_get_band_steering()) < 0) {
         LOG(ERROR) << "Failed reading 'band_steering'";
         return false;
     }
+    db->device_conf.client_band_steering_enabled = temp_int;
     if ((platform_common_conf.client_roaming = bpl::cfg_get_client_roaming()) < 0) {
         LOG(ERROR) << "Failed reading 'client_roaming";
         return false;
@@ -208,14 +209,12 @@ static bool fill_platform_settings(
     msg->platform_settings().dfs_reentry_enabled = uint8_t(platform_common_conf.dfs_reentry);
     msg->platform_settings().rdkb_extensions_enabled =
         uint8_t(platform_common_conf.rdkb_extensions);
-    msg->platform_settings().client_band_steering_enabled =
-        uint8_t(platform_common_conf.band_steering);
     msg->platform_settings().client_optimal_path_roaming_enabled =
         uint8_t(platform_common_conf.client_roaming);
     msg->platform_settings().client_optimal_path_roaming_prefer_signal_strength_enabled =
         0; // TODO add platform DB flag
     msg->platform_settings().client_11k_roaming_enabled =
-        uint8_t(platform_common_conf.client_roaming || platform_common_conf.band_steering);
+        uint8_t(platform_common_conf.client_roaming || db->device_conf.client_band_steering_enabled);
 
     msg->platform_settings().load_balancing_enabled   = 0; // for v1.3 TODO read from CAL DB
     msg->platform_settings().service_fairness_enabled = 0; // for v1.3 TODO read from CAL DB
@@ -223,7 +222,7 @@ static bool fill_platform_settings(
     LOG(DEBUG) << "iface " << iface_name << " settings:";
     LOG(DEBUG) << "onboarding: " << (unsigned)msg->platform_settings().onboarding;
     LOG(DEBUG) << "client_band_steering_enabled: "
-               << (unsigned)msg->platform_settings().client_band_steering_enabled;
+               << string_utils::bool_str(db->device_conf.client_band_steering_enabled);
     LOG(DEBUG) << "client_optimal_path_roaming_enabled: "
                << (unsigned)msg->platform_settings().client_optimal_path_roaming_enabled;
     LOG(DEBUG) << "client_optimal_path_roaming_prefer_signal_strength_enabled: "
