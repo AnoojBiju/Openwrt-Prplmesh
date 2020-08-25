@@ -173,3 +173,14 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
 
         assert not packet_tlvs, "Packet has unexpected tlvs:\n {}".format(
             "\n ".join(map(str, packet_tlvs)))
+
+    def checkpoint(self) -> None:
+        '''Checkpoint the current state.
+
+        Any subsequent calls to functions that query cumulative state
+        (e.g. log files, packet captures) will not match any of the state that was
+        accumulated up till now, but only afterwards.
+
+        TODO: Implement for log functions.
+        '''
+        self.dev.DUT.wired_sniffer.checkpoint()
