@@ -170,11 +170,12 @@ static bool fill_platform_settings(
     }
     db->device_conf.certification_mode = temp_int;
 
-    if ((platform_common_conf.stop_on_failure_attempts = bpl::cfg_get_stop_on_failure_attempts()) <
-        0) {
+    if ((temp_int = bpl::cfg_get_stop_on_failure_attempts()) < 0) {
         LOG(ERROR) << "Failed reading 'stop_on_failure_attempts'";
         return false;
     }
+    db->device_conf.stop_on_failure_attempts = temp_int;
+
     if ((platform_common_conf.dfs_reentry = bpl::cfg_get_dfs_reentry()) < 0) {
         LOG(ERROR) << "Failed reading 'dfs_reentry'";
         return false;
@@ -215,9 +216,6 @@ static bool fill_platform_settings(
         0; // TODO add platform DB flag
     msg->platform_settings().client_11k_roaming_enabled =
         uint8_t(platform_common_conf.client_roaming || platform_common_conf.band_steering);
-
-    msg->platform_settings().stop_on_failure_attempts =
-        uint8_t(platform_common_conf.stop_on_failure_attempts);
 
     msg->platform_settings().load_balancing_enabled   = 0; // for v1.3 TODO read from CAL DB
     msg->platform_settings().service_fairness_enabled = 0; // for v1.3 TODO read from CAL DB
