@@ -107,6 +107,7 @@ public:
 
         bool client_band_steering_enabled;
         bool client_optimal_path_roaming_enabled;
+        bool dfs_reentry_enabled;
     } device_conf;
 
     struct sControllerInfo {
