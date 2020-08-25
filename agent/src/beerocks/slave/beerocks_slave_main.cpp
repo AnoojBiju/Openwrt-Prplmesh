@@ -240,7 +240,8 @@ static int system_hang_test(const beerocks::config_file::sConfigSlave &beerocks_
 }
 
 static std::shared_ptr<son::slave_thread>
-start_son_slave_thread(int slave_num, beerocks::config_file::sConfigSlave &beerocks_slave_conf,
+start_son_slave_thread(int slave_num,
+                       const beerocks::config_file::sConfigSlave &beerocks_slave_conf,
                        const std::string &fronthaul_iface, int argc, char *argv[])
 {
     std::string base_slave_name = std::string(BEEROCKS_AGENT) + "_" + fronthaul_iface;

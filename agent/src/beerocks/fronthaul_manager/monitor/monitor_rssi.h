@@ -39,8 +39,8 @@ public:
     bool is_5ghz                                = false;
 
 private:
-    void send_rssi_measurement_response(std::string &sta_mac, monitor_sta_node *sta_node);
-    void monitor_idle_station(std::string &sta_mac, monitor_sta_node *sta_node);
+    void send_rssi_measurement_response(const std::string &sta_mac, monitor_sta_node *sta_node);
+    void monitor_idle_station(const std::string &sta_mac, monitor_sta_node *sta_node);
 
     monitor_db *mon_db = nullptr;
     Socket *slave_socket;
