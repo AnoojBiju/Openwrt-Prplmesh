@@ -27,29 +27,30 @@ AgentDB::sRadio *AgentDB::radio(const std::string &iface_name)
     return radio_it == m_radios.end() ? nullptr : &(*radio_it);
 }
 
-bool AgentDB::add_radio(const std::string &front_iface_name, const std::string &back_iface_name)
+AgentDB::sRadio *AgentDB::add_radio(const std::string &front_iface_name,
+                                    const std::string &back_iface_name)
 {
     if (front_iface_name.empty() && back_iface_name.empty()) {
         LOG(ERROR) << "Both front and back interface names are empty!";
-        return false;
+        return nullptr;
     }
 
     if (!front_iface_name.empty() && radio(front_iface_name)) {
         LOG(DEBUG) << "Radio entry of front iface " << front_iface_name
                    << " already exists. Not adding.";
-        return false;
+        return nullptr;
     }
 
     if (!back_iface_name.empty() && radio(back_iface_name)) {
         LOG(DEBUG) << "Radio entry of back iface " << back_iface_name
                    << " already exists. Not adding.";
-        return false;
+        return nullptr;
     }
 
     m_radios.emplace_back(front_iface_name, back_iface_name);
     m_radios_list.push_back(&m_radios.back());
 
-    return true;
+    return &m_radios.back();
 }
 
 AgentDB::sRadio *AgentDB::get_radio_by_mac(const sMacAddr &mac, eMacType mac_type_hint)

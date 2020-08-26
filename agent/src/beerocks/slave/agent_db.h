@@ -217,13 +217,14 @@ public:
      * @brief Add radio node to the database. At least one of the input arguments must not be empty.
      * This function should be called only once with valid arguments. If called once and then called
      * again, the radio struct on the database will not be updated with new arguments, and the
-     * function will return false.
+     * function will return nullptr.
      * 
      * @param front_iface_name Front interface name.
      * @param back_iface_name Back interface name.
      * @return true if a radio struct has been added to the database, otherwise return false.
+     * @return pointer to the radio struct added to the database on success, nullptr otherwise.
      */
-    bool add_radio(const std::string &front_iface_name, const std::string &back_iface_name);
+    sRadio *add_radio(const std::string &front_iface_name, const std::string &back_iface_name);
 
     /**
      * @brief Get list of all radio objects on the database.
