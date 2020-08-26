@@ -89,7 +89,13 @@ slave_thread::slave_thread(sSlaveConfig conf, beerocks::logging &logger_)
     stop_on_failure_attempts                 = db->device_conf.stop_on_failure_attempts;
     db->bridge.iface_name                    = conf.bridge_iface;
     db->ethernet.iface_name                  = conf.backhaul_wire_iface;
-    db->add_radio(conf.hostap_iface, conf.backhaul_wireless_iface);
+
+    auto radio = db->add_radio(conf.hostap_iface, conf.backhaul_wireless_iface);
+    if (!radio) {
+        m_constructor_failed = true;
+        // No need to print here anything, 'add_radio()' does it internaly
+        return;
+    }
 
     slave_state = STATE_INIT;
     set_select_timeout(SELECT_TIMEOUT_MSEC);
@@ -106,6 +112,11 @@ bool slave_thread::init()
     LOG(INFO) << "Slave Info:";
     LOG(INFO) << "hostap_iface=" << config.hostap_iface;
     LOG(INFO) << "hostap_iface_type=" << config.hostap_iface_type;
+
+    if (m_constructor_failed) {
+        LOG(ERROR) << "Not initalizing slave_thread. There was an error in the constructor";
+        return false;
+    }
 
     if (config.hostap_iface_type == beerocks::IFACE_TYPE_UNSUPPORTED) {
         LOG(ERROR) << "hostap_iface_type '" << config.hostap_iface_type << "' UNSUPPORTED!";

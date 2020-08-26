@@ -209,6 +209,13 @@ private:
     uint8_t *m1_auth_buf   = nullptr;
     size_t m1_auth_buf_len = 0;
 
+    /**
+     * @brief check if there was an error in the constructor
+     *
+     * @return false if no errors occured in the constructor, true otherwise
+     */
+    bool m_constructor_failed = false;
+
     bool parse_intel_join_response(Socket *sd, beerocks::beerocks_header &beerocks_header);
     bool parse_non_intel_join_response(Socket *sd);
     bool handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
