@@ -132,10 +132,6 @@ static bool fill_platform_settings(
 
     int temp_int;
 
-    if ((platform_common_conf.onboarding = bpl::cfg_is_onboarding()) < 0) {
-        LOG(ERROR) << "Failed reading 'onboarding'";
-        return false;
-    }
     if ((platform_common_conf.rdkb_extensions = bpl::cfg_get_rdkb_extensions()) < 0) {
         LOG(ERROR) << "Failed reading 'rdkb_extensions'";
         return false;
@@ -207,7 +203,6 @@ static bool fill_platform_settings(
     db->device_conf.local_gw = (db->device_conf.operating_mode == BPL_OPER_MODE_GATEWAY ||
                                 db->device_conf.operating_mode == BPL_OPER_MODE_GATEWAY_WISP);
 
-    msg->platform_settings().onboarding = uint8_t(platform_common_conf.onboarding);
     msg->platform_settings().rdkb_extensions_enabled =
         uint8_t(platform_common_conf.rdkb_extensions);
     db->device_conf.client_optimal_path_roaming_prefer_signal_strength_enabled =
@@ -220,7 +215,6 @@ static bool fill_platform_settings(
     db->device_conf.service_fairness_enabled = 0; // for v1.3 TODO read from CAL DB
 
     LOG(DEBUG) << "iface " << iface_name << " settings:";
-    LOG(DEBUG) << "onboarding: " << (unsigned)msg->platform_settings().onboarding;
     LOG(DEBUG) << "client_band_steering_enabled: "
                << string_utils::bool_str(db->device_conf.client_band_steering_enabled);
     LOG(DEBUG) << "client_optimal_path_roaming_enabled: "
