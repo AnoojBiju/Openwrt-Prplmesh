@@ -183,9 +183,10 @@ backhaul_manager::backhaul_manager(const config_file::sConfigSlave &config,
     configuration_stop_on_failure_attempts = stop_on_failure_attempts_;
     stop_on_failure_attempts               = stop_on_failure_attempts_;
     LOG(DEBUG) << "stop_on_failure_attempts=" << stop_on_failure_attempts;
-    m_sConfig.ucc_listener_port = string_utils::stoi(config.ucc_listener_port);
-    m_sConfig.vendor            = config.vendor;
-    m_sConfig.model             = config.model;
+    auto db                           = AgentDB::get();
+    db->device_conf.ucc_listener_port = string_utils::stoi(config.ucc_listener_port);
+    db->device_conf.vendor            = config.vendor;
+    db->device_conf.model             = config.model;
 
     m_eFSMState = EState::INIT;
     set_select_timeout(SELECT_TIMEOUT_MSC);
@@ -1652,10 +1653,8 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
         m_sConfig.slave_iface_socket[soc->sta_iface] = soc;
 
         if (!m_agent_ucc_listener && request->certification_mode() &&
-            m_sConfig.ucc_listener_port != 0 && !db->device_conf.local_controller) {
-            m_agent_ucc_listener = std::make_unique<agent_ucc_listener>(
-                *this, m_sConfig.ucc_listener_port, m_sConfig.vendor, m_sConfig.model,
-                db->bridge.iface_name, cert_cmdu_tx);
+            db->device_conf.ucc_listener_port != 0 && !db->device_conf.local_controller) {
+            m_agent_ucc_listener = std::make_unique<agent_ucc_listener>(*this, cert_cmdu_tx);
             if (m_agent_ucc_listener && !m_agent_ucc_listener->start("ucc_listener")) {
                 LOG(ERROR) << "failed start agent_ucc_listener";
                 return false;

@@ -19,28 +19,11 @@
 using namespace beerocks;
 using namespace net;
 
-agent_ucc_listener::agent_ucc_listener(backhaul_manager &backhaul_manager_ctx, uint16_t port,
-                                       const std::string &vendor, const std::string &model,
-                                       const std::string &bridge_iface,
-                                       ieee1905_1::CmduMessageTx &cmdu)
-    : beerocks_ucc_listener(port, cmdu), m_backhaul_manager_ctx(backhaul_manager_ctx),
-      m_vendor(vendor), m_model(model), m_bridge_iface(bridge_iface)
+agent_ucc_listener::agent_ucc_listener(backhaul_manager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu)
+    : beerocks_ucc_listener(AgentDB::get()->device_conf.ucc_listener_port, cmdu), m_btl_ctx(btl_ctx)
+
 {
     m_ucc_listener_run_on = eUccListenerRunOn::AGENT;
-}
-
-bool agent_ucc_listener::init()
-{
-    network_utils::iface_info bridge_info;
-    if (network_utils::get_iface_info(bridge_info, m_bridge_iface) < 0) {
-        LOG(ERROR) << " failed getting iface info on bridge_mac '" << m_bridge_iface << "'";
-        should_stop = true;
-        return false;
-    }
-
-    m_bridge_mac = bridge_info.mac;
-
-    return beerocks_ucc_listener::init();
 }
 
 /**
@@ -50,8 +33,9 @@ bool agent_ucc_listener::init()
  */
 std::string agent_ucc_listener::fill_version_reply_string()
 {
-    return std::string("vendor,") + m_vendor + std::string(",model,") + m_model +
-           std::string(",version,") + BEEROCKS_VERSION;
+    auto db = AgentDB::get();
+    return std::string("vendor,") + db->device_conf.vendor + std::string(",model,") +
+           db->device_conf.model + std::string(",version,") + BEEROCKS_VERSION;
 }
 
 /**
@@ -100,7 +84,7 @@ bool agent_ucc_listener::handle_dev_get_param(std::unordered_map<std::string, st
 
     std::transform(parameter.begin(), parameter.end(), parameter.begin(), ::tolower);
     if (parameter == "alid") {
-        value = m_bridge_mac;
+        value = tlvf::mac_to_string(db->bridge.mac);
         return true;
     } else if (parameter == "macaddr") {
         if (params.find("ruid") == params.end()) {
@@ -166,7 +150,8 @@ bool agent_ucc_listener::handle_dev_get_param(std::unordered_map<std::string, st
 bool agent_ucc_listener::send_cmdu_to_destination(ieee1905_1::CmduMessageTx &cmdu_tx,
                                                   const std::string &dest_mac)
 {
-    return m_backhaul_manager_ctx.send_cmdu_to_broker(cmdu_tx, dest_mac, m_bridge_mac);
+    auto db = AgentDB::get();
+    return m_btl_ctx.send_cmdu_to_broker(cmdu_tx, dest_mac, tlvf::mac_to_string(db->bridge.mac));
 }
 
 static enum eFreqType band_to_freq(const std::string &band)
@@ -186,7 +171,7 @@ bool agent_ucc_listener::handle_start_wps_registration(const std::string &band,
                                                        std::string &err_string)
 {
     auto freq          = band_to_freq(band);
-    auto radio_mac_str = m_backhaul_manager_ctx.freq_to_radio_mac(freq);
+    auto radio_mac_str = m_btl_ctx.freq_to_radio_mac(freq);
     if (radio_mac_str.empty()) {
         err_string = "Failed to get radio for " + band;
         return false;
@@ -194,7 +179,7 @@ bool agent_ucc_listener::handle_start_wps_registration(const std::string &band,
 
     LOG(DEBUG) << "Trigger WPS PBC on radio mac " << radio_mac_str;
     err_string = "Failed to start wps pbc";
-    return m_backhaul_manager_ctx.start_wps_pbc(tlvf::mac_from_string(radio_mac_str));
+    return m_btl_ctx.start_wps_pbc(tlvf::mac_from_string(radio_mac_str));
 }
 
 /**
