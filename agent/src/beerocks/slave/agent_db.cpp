@@ -36,13 +36,14 @@ bool AgentDB::add_radio(const std::string &front_iface_name, const std::string &
 
     if (!front_iface_name.empty() && radio(front_iface_name)) {
         LOG(DEBUG) << "Radio entry of front iface " << front_iface_name
-                   << " already exists. Ignore.";
-        return true;
+                   << " already exists. Not adding.";
+        return false;
     }
 
     if (!back_iface_name.empty() && radio(back_iface_name)) {
-        LOG(DEBUG) << "Radio entry of back iface " << back_iface_name << " already exists. Ignore.";
-        return true;
+        LOG(DEBUG) << "Radio entry of back iface " << back_iface_name
+                   << " already exists. Not adding.";
+        return false;
     }
 
     m_radios.emplace_back(front_iface_name, back_iface_name);
