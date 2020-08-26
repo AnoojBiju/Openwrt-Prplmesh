@@ -97,8 +97,8 @@ static bool fill_platform_settings(
 
     LOG(DEBUG) << "Back Credentials:"
                << " ssid=" << db->device_conf.back_radio.ssid
-               << " sec=" << db->device_conf.back_radio.security_type << " mem_only_psk="
-               << string_utils::bool_str(db->device_conf.back_radio.mem_only_psk) << " pass=***";
+               << " sec=" << db->device_conf.back_radio.security_type
+               << " mem_only_psk=" << db->device_conf.back_radio.mem_only_psk << " pass=***";
 
     bpl::BPL_WLAN_PARAMS params;
     if (bpl::cfg_get_wifi_params(iface_name.c_str(), &params) < 0) {
@@ -110,8 +110,7 @@ static bool fill_platform_settings(
     db->device_conf.wlan_settings.channel      = params.channel;
 
     LOG(DEBUG) << "wlan settings:"
-               << " band_enabled="
-               << string_utils::bool_str(db->device_conf.wlan_settings.band_enabled)
+               << " band_enabled=" << db->device_conf.wlan_settings.band_enabled
                << " channel=" << int(db->device_conf.wlan_settings.channel);
 
     // initialize wlan params cache
@@ -218,23 +217,18 @@ static bool fill_platform_settings(
     db->device_conf.service_fairness_enabled = 0; // for v1.3 TODO read from CAL DB
 
     LOG(DEBUG) << "iface " << iface_name << " settings:";
-    LOG(DEBUG) << "client_band_steering_enabled: "
-               << string_utils::bool_str(db->device_conf.client_band_steering_enabled);
+    LOG(DEBUG) << "client_band_steering_enabled: " << db->device_conf.client_band_steering_enabled;
     LOG(DEBUG) << "client_optimal_path_roaming_enabled: "
-               << string_utils::bool_str(db->device_conf.client_optimal_path_roaming_enabled);
+               << db->device_conf.client_optimal_path_roaming_enabled;
     LOG(DEBUG) << "client_optimal_path_roaming_prefer_signal_strength_enabled: "
-               << string_utils::bool_str(
-                      db->device_conf.client_optimal_path_roaming_prefer_signal_strength_enabled);
-    LOG(DEBUG) << "band_enabled: "
-               << string_utils::bool_str(db->device_conf.wlan_settings.band_enabled);
+               << db->device_conf.client_optimal_path_roaming_prefer_signal_strength_enabled;
+    LOG(DEBUG) << "band_enabled: " << db->device_conf.wlan_settings.band_enabled;
     LOG(DEBUG) << "local_gw: " << db->device_conf.local_gw;
     LOG(DEBUG) << "local_controller: " << db->device_conf.local_controller;
-    LOG(DEBUG) << "dfs_reentry_enabled: "
-               << string_utils::bool_str(db->device_conf.dfs_reentry_enabled);
+    LOG(DEBUG) << "dfs_reentry_enabled: " << db->device_conf.dfs_reentry_enabled;
     LOG(DEBUG) << "backhaul_preferred_radio_band: "
                << db->device_conf.back_radio.backhaul_preferred_radio_band;
-    LOG(DEBUG) << "rdkb_extensions: "
-               << string_utils::bool_str(db->device_conf.rdkb_extensions_enabled);
+    LOG(DEBUG) << "rdkb_extensions: " << db->device_conf.rdkb_extensions_enabled;
 
     return true;
 }
