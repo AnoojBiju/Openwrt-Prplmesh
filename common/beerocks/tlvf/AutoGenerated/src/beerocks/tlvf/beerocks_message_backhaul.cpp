@@ -87,10 +87,6 @@ uint8_t& cACTION_BACKHAUL_REGISTER_REQUEST::local_gw() {
     return (uint8_t&)(*m_local_gw);
 }
 
-uint8_t& cACTION_BACKHAUL_REGISTER_REQUEST::sta_iface_filter_low() {
-    return (uint8_t&)(*m_sta_iface_filter_low);
-}
-
 uint8_t& cACTION_BACKHAUL_REGISTER_REQUEST::onboarding() {
     return (uint8_t&)(*m_onboarding);
 }
@@ -138,7 +134,6 @@ size_t cACTION_BACKHAUL_REGISTER_REQUEST::get_initial_size()
     class_size += beerocks::message::IFACE_NAME_LENGTH * sizeof(char); // hostap_iface
     class_size += sizeof(uint8_t); // local_master
     class_size += sizeof(uint8_t); // local_gw
-    class_size += sizeof(uint8_t); // sta_iface_filter_low
     class_size += sizeof(uint8_t); // onboarding
     class_size += sizeof(uint8_t); // certification_mode
     return class_size;
@@ -168,11 +163,6 @@ bool cACTION_BACKHAUL_REGISTER_REQUEST::init()
         return false;
     }
     m_local_gw = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
-        return false;
-    }
-    m_sta_iface_filter_low = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
@@ -443,10 +433,6 @@ uint32_t& cACTION_BACKHAUL_ENABLE::security_type() {
     return (uint32_t&)(*m_security_type);
 }
 
-sMacAddr& cACTION_BACKHAUL_ENABLE::preferred_bssid() {
-    return (sMacAddr&)(*m_preferred_bssid);
-}
-
 uint8_t& cACTION_BACKHAUL_ENABLE::mem_only_psk() {
     return (uint8_t&)(*m_mem_only_psk);
 }
@@ -566,7 +552,6 @@ void cACTION_BACKHAUL_ENABLE::class_swap()
     tlvf_swap(8*sizeof(eActionOp_BACKHAUL), reinterpret_cast<uint8_t*>(m_action_op));
     m_iface_mac->struct_swap();
     tlvf_swap(32, reinterpret_cast<uint8_t*>(m_security_type));
-    m_preferred_bssid->struct_swap();
     tlvf_swap(8*sizeof(beerocks::eFreqType), reinterpret_cast<uint8_t*>(m_frequency_band));
     tlvf_swap(8*sizeof(beerocks::eWiFiBandwidth), reinterpret_cast<uint8_t*>(m_max_bandwidth));
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_ht_capability));
@@ -612,7 +597,6 @@ size_t cACTION_BACKHAUL_ENABLE::get_initial_size()
     class_size += beerocks::message::WIFI_SSID_MAX_LENGTH * sizeof(char); // ssid
     class_size += beerocks::message::WIFI_PASS_MAX_LENGTH * sizeof(char); // pass
     class_size += sizeof(uint32_t); // security_type
-    class_size += sizeof(sMacAddr); // preferred_bssid
     class_size += sizeof(uint8_t); // mem_only_psk
     class_size += sizeof(uint8_t); // backhaul_preferred_radio_band
     class_size += sizeof(beerocks::eFreqType); // frequency_band
@@ -668,12 +652,6 @@ bool cACTION_BACKHAUL_ENABLE::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
         return false;
     }
-    m_preferred_bssid = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(sMacAddr))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";
-        return false;
-    }
-    if (!m_parse__) { m_preferred_bssid->struct_init(); }
     m_mem_only_psk = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";

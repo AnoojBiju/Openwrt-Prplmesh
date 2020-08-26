@@ -1648,8 +1648,7 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
 
         soc->sta_iface.assign(request->sta_iface(message::IFACE_NAME_LENGTH));
         soc->hostap_iface.assign(request->hostap_iface(message::IFACE_NAME_LENGTH));
-        soc->sta_iface_filter_low = request->sta_iface_filter_low();
-        onboarding                = request->onboarding();
+        onboarding = request->onboarding();
 
         // Add the slave socket to the backhaul configuration
         m_sConfig.slave_iface_socket[soc->sta_iface] = soc;
@@ -1752,9 +1751,6 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
                     LOG(DEBUG) << "All slaves ready, proceeding, local GW, Bridge: "
                                << db->bridge.iface_name;
                 } else {
-
-                    m_sConfig.preferred_bssid = tlvf::mac_to_string(request->preferred_bssid());
-
                     if (db->device_conf.back_radio.backhaul_preferred_radio_band ==
                         beerocks::eFreqType::FREQ_UNKNOWN) {
                         LOG(DEBUG) << "Unknown backhaul preferred radio band, setting to auto";
@@ -2869,10 +2865,14 @@ bool backhaul_manager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t eve
                 const auto &radio_info = iface_hal->get_radio_info();
                 for (auto soc : slaves_sockets) {
                     if (soc->sta_iface == iface) {
+                        auto radio = db->radio(iface);
+                        if (!radio) {
+                            continue;
+                        }
                         /* prevent low filter radio from connecting to high band in any case */
                         if (son::wireless_utils::which_freq(radio_info.channel) ==
                                 beerocks::FREQ_5G &&
-                            soc->sta_iface_filter_low &&
+                            radio->sta_iface_filter_low &&
                             !son::wireless_utils::is_low_subband(radio_info.channel)) {
                             LOG(DEBUG) << "iface " << iface
                                        << " is connected on low 5G band with filter, aborting";
@@ -2894,7 +2894,7 @@ bool backhaul_manager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t eve
                         }
                         if (son::wireless_utils::which_freq(radio_info.channel) ==
                                 beerocks::FREQ_5G &&
-                            !soc->sta_iface_filter_low &&
+                            !radio->sta_iface_filter_low &&
                             son::wireless_utils::is_low_subband(radio_info.channel) &&
                             sta_iface_count_5ghz > 1) {
                             LOG(DEBUG) << "iface " << iface
@@ -3130,14 +3130,18 @@ bool backhaul_manager::select_bssid()
                     db->backhaul.selected_iface_name = iface;
                     return true;
                 }
-            } else if (!m_sConfig.preferred_bssid.empty() && bssid == m_sConfig.preferred_bssid) {
+            } else if (!db->backhaul.preferred_bssid.empty() && bssid == db->backhaul.preferred_bssid) {
                 LOG(DEBUG) << "preferred bssid - found bssid match = " << bssid;
                 selected_bssid_channel           = scan_result.channel;
                 selected_bssid                   = bssid;
                 db->backhaul.selected_iface_name = iface;
                 return true;
             } else if (son::wireless_utils::which_freq(scan_result.channel) == eFreqType::FREQ_5G) {
-                if (soc->sta_iface_filter_low &&
+                auto radio = db->radio(soc->sta_iface);
+                if (!radio) {
+                    return false;
+                }
+                if (radio->sta_iface_filter_low &&
                     son::wireless_utils::which_subband(scan_result.channel) ==
                         beerocks::LOW_SUBBAND) {
                     // iface with low filter - best low
@@ -3148,7 +3152,7 @@ bool backhaul_manager::select_bssid()
                         best_5_low_sta_iface     = iface;
                     }
 
-                } else if (!soc->sta_iface_filter_low &&
+                } else if (!radio->sta_iface_filter_low &&
                            son::wireless_utils::which_subband(scan_result.channel) ==
                                beerocks::HIGH_SUBBAND) {
                     // iface without low filter (high filter or bypass) - best high

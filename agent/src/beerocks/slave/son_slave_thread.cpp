@@ -89,6 +89,7 @@ slave_thread::slave_thread(sSlaveConfig conf, beerocks::logging &logger_)
     stop_on_failure_attempts                 = db->device_conf.stop_on_failure_attempts;
     db->bridge.iface_name                    = conf.bridge_iface;
     db->ethernet.iface_name                  = conf.backhaul_wire_iface;
+    db->backhaul.preferred_bssid             = conf.backhaul_preferred_bssid;
 
     auto radio = db->add_radio(conf.hostap_iface, conf.backhaul_wireless_iface);
     if (!radio) {
@@ -96,6 +97,8 @@ slave_thread::slave_thread(sSlaveConfig conf, beerocks::logging &logger_)
         // No need to print here anything, 'add_radio()' does it internaly
         return;
     }
+
+    radio->sta_iface_filter_low = conf.backhaul_wireless_iface_filter_low;
 
     slave_state = STATE_INIT;
     set_select_timeout(SELECT_TIMEOUT_MSEC);
@@ -2963,9 +2966,8 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
         string_utils::copy_string(request->hostap_iface(message::IFACE_NAME_LENGTH),
                                   config.hostap_iface.c_str(), message::IFACE_NAME_LENGTH);
 
-        request->sta_iface_filter_low() = config.backhaul_wireless_iface_filter_low;
-        request->onboarding()           = 0;
-        request->certification_mode()   = db->device_conf.certification_mode;
+        request->onboarding()         = 0;
+        request->certification_mode() = db->device_conf.certification_mode;
 
         LOG(INFO) << "ACTION_BACKHAUL_REGISTER_REQUEST "
                   << " hostap_iface=" << request->hostap_iface(message::IFACE_NAME_LENGTH)
@@ -3074,8 +3076,7 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
                                       db->ethernet.iface_name.c_str(), message::IFACE_NAME_LENGTH);
         }
 
-        bh_enable->iface_mac()       = radio->front.iface_mac;
-        bh_enable->preferred_bssid() = tlvf::mac_from_string(config.backhaul_preferred_bssid);
+        bh_enable->iface_mac() = radio->front.iface_mac;
 
         string_utils::copy_string(bh_enable->sta_iface(message::IFACE_NAME_LENGTH),
                                   config.backhaul_wireless_iface.c_str(),

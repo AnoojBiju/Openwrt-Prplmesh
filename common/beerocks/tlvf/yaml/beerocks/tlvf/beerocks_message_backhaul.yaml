@@ -22,7 +22,6 @@ cACTION_BACKHAUL_REGISTER_REQUEST:
     _length: ["beerocks::message::IFACE_NAME_LENGTH"]
   local_master: uint8_t
   local_gw: uint8_t
-  sta_iface_filter_low: uint8_t
   onboarding: uint8_t
   certification_mode: uint8_t
 
@@ -49,7 +48,6 @@ cACTION_BACKHAUL_ENABLE:
     _type: char
     _length: ["beerocks::message::WIFI_PASS_MAX_LENGTH"]
   security_type: uint32_t # bwl::sta_wlan_hal::Security
-  preferred_bssid: sMacAddr
   mem_only_psk: uint8_t
   backhaul_preferred_radio_band: uint8_t
   frequency_band: beerocks::eFreqType

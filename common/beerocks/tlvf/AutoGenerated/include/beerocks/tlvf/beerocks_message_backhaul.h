@@ -46,7 +46,6 @@ class cACTION_BACKHAUL_REGISTER_REQUEST : public BaseClass
         bool set_hostap_iface(const char buffer[], size_t size);
         uint8_t& local_master();
         uint8_t& local_gw();
-        uint8_t& sta_iface_filter_low();
         uint8_t& onboarding();
         uint8_t& certification_mode();
         void class_swap() override;
@@ -63,7 +62,6 @@ class cACTION_BACKHAUL_REGISTER_REQUEST : public BaseClass
         size_t m_hostap_iface_idx__ = 0;
         uint8_t* m_local_master = nullptr;
         uint8_t* m_local_gw = nullptr;
-        uint8_t* m_sta_iface_filter_low = nullptr;
         uint8_t* m_onboarding = nullptr;
         uint8_t* m_certification_mode = nullptr;
 };
@@ -136,7 +134,6 @@ class cACTION_BACKHAUL_ENABLE : public BaseClass
         bool set_pass(const std::string& str);
         bool set_pass(const char buffer[], size_t size);
         uint32_t& security_type();
-        sMacAddr& preferred_bssid();
         uint8_t& mem_only_psk();
         uint8_t& backhaul_preferred_radio_band();
         beerocks::eFreqType& frequency_band();
@@ -170,7 +167,6 @@ class cACTION_BACKHAUL_ENABLE : public BaseClass
         char* m_pass = nullptr;
         size_t m_pass_idx__ = 0;
         uint32_t* m_security_type = nullptr;
-        sMacAddr* m_preferred_bssid = nullptr;
         uint8_t* m_mem_only_psk = nullptr;
         uint8_t* m_backhaul_preferred_radio_band = nullptr;
         beerocks::eFreqType* m_frequency_band = nullptr;

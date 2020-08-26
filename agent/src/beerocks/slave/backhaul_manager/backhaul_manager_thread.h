@@ -162,7 +162,6 @@ private:
     const std::string &beerocks_temp_path;
 
     struct SBackhaulConfig {
-        std::string preferred_bssid;
         std::string vendor;
         std::string model;
         int ucc_listener_port;
@@ -287,7 +286,6 @@ private:
         sMacAddr radio_mac;       /**< Radio ID (= radio MAC address) */
         std::string hostap_iface; /**< Name of the radio interface */
         std::string sta_iface;    /**< Name of the bSTA interface on the radio (if any) */
-        bool sta_iface_filter_low      = false;
         bool slave_is_backhaul_manager = false;
 
         std::shared_ptr<bwl::sta_wlan_hal> sta_wlan_hal;

@@ -145,6 +145,7 @@ public:
     struct sBackhaul {
         enum class eConnectionType { Invalid = 0, Wired, Wireless } connection_type;
         std::string selected_iface_name;
+        std::string preferred_bssid;
     } backhaul;
 
     struct sEthernet {
@@ -200,6 +201,9 @@ public:
             size_t association_frame_length;
             std::array<uint8_t, ASSOCIATION_FRAME_SIZE> association_frame;
         };
+
+        bool sta_iface_filter_low;
+
         // Associated clients grouped by Client MAC.
         std::unordered_map<sMacAddr, sClient> associated_clients;
     };
