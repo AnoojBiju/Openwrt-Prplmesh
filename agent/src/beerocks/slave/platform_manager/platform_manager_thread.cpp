@@ -57,7 +57,7 @@ static beerocks::eFreqType bpl_band_to_freq_type(int bpl_band)
 }
 
 static bool fill_platform_settings(
-    const std::string &iface_name, main_thread::platform_common_conf_t &platform_common_conf,
+    const std::string &iface_name,
     std::unordered_map<std::string, std::shared_ptr<beerocks_message::sWlanSettings>>
         &iface_wlan_params_map,
     Socket *sd)
@@ -649,8 +649,7 @@ bool main_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
             do {
                 LOG(TRACE) << "Trying to read settings of iface:" << strIfaceName
                            << ", attempt=" << int(retry_cnt);
-                if (fill_platform_settings(strIfaceName, platform_common_conf,
-                                           bpl_iface_wlan_params_map, sd)) {
+                if (fill_platform_settings(strIfaceName, bpl_iface_wlan_params_map, sd)) {
                     register_response->valid() = 1;
                 } else {
                     LOG(INFO) << "Reading settings of iface:" << strIfaceName

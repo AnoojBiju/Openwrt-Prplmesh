@@ -34,13 +34,6 @@ public:
                 const std::unordered_map<int, std::string> &interfaces_map, logging &logger_);
     ~main_thread();
 
-    struct platform_common_conf_t {
-        int client_roaming;
-        int local_gw;
-        int local_master;
-        int proprietary_repeater;
-    };
-
     virtual bool init() override;
     virtual bool work() override;
 
@@ -124,8 +117,6 @@ private:
     std::unordered_map<std::string, std::shared_ptr<beerocks_message::sWlanSettings>>
         bpl_iface_wlan_params_map;
     std::unordered_set<std::string> ap_ifaces;
-
-    platform_common_conf_t platform_common_conf;
 };
 
 } // namespace platform_manager
