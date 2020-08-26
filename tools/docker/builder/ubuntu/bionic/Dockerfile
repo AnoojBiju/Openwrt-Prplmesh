@@ -38,8 +38,7 @@ RUN apt-get update && apt-get install -y \
     bison \
     flex \
     libevent-dev \
-    libyajl-dev \
-    repo && \
+    libyajl-dev && \
 # We need liburiparser-dev > v. 9.0 which isn't avalaible in default
 # 18.04 Ubuntu repos. So add Ubuntu 19.10 repo which has v. 0.9.3-2
     echo "deb http://cz.archive.ubuntu.com/ubuntu eoan main universe" | tee -a  /etc/apt/sources.list && \
@@ -47,6 +46,10 @@ RUN apt-get update && apt-get install -y \
     apt-get install -y \
     liburiparser-dev && \
     rm -rf /var/lib/apt/lists/*
+
+RUN curl https://storage.googleapis.com/git-repo-downloads/repo > /usr/bin/repo && \
+    chmod +x /usr/bin/repo
+
 WORKDIR ambiorix
 # Fetch and intall Bus Agnostic API libs, applications.
 # As they have some internal dependencies - we should build & install
