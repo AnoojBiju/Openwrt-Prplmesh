@@ -11,22 +11,30 @@ RUN apt-get update && apt-get install -y \
     autoconf \
     autogen \
     binutils \
+    bridge-utils \
     clang-format \
     cmake \
     curl \
+    ebtables \
     gcc \
     gcovr \
+    gdb \
     git \
+    iproute2 \
+    iputils-ping \
     libjson-c-dev \
     libncurses-dev \
     libnl-3-dev \
-    libnl-route-3-dev \
     libnl-genl-3-dev \
+    libnl-route-3-dev \
     libreadline-dev \
     libssl-dev \
     libtool \
+    net-tools \
+    netcat \
     ninja-build \
     pkg-config \
+    psmisc \
     python \
     python-yaml \
     python3 \
