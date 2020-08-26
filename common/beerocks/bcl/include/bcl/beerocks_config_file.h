@@ -95,7 +95,6 @@ public:
         std::string enable_arp_monitor;
         std::string bridge_iface;
         std::string backhaul_preferred_bssid;
-        std::string backhaul_wire_iface;
         std::string enable_system_hang_test;
         std::string const_backhaul_slave;
         //[slaveX]

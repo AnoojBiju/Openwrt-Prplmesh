@@ -167,7 +167,6 @@ static void fill_son_slave_config(const beerocks::config_file::sConfigSlave &bee
             : static_cast<uint16_t>(beerocks::eGlobals::UCC_LISTENER_PORT);
     son_slave_conf.bridge_iface             = beerocks_slave_conf.bridge_iface;
     son_slave_conf.backhaul_preferred_bssid = beerocks_slave_conf.backhaul_preferred_bssid;
-    son_slave_conf.backhaul_wire_iface      = beerocks_slave_conf.backhaul_wire_iface;
     son_slave_conf.enable_repeater_mode =
         beerocks_slave_conf.enable_repeater_mode[slave_num] == "1";
     son_slave_conf.hostap_iface_type = beerocks::utils::get_iface_type_from_string(
