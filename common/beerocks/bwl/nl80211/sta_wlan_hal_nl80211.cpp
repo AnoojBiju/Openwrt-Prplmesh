@@ -49,7 +49,16 @@ sta_wlan_hal_nl80211::~sta_wlan_hal_nl80211() { sta_wlan_hal_nl80211::detach(); 
 
 bool sta_wlan_hal_nl80211::detach() { return true; }
 
-bool sta_wlan_hal_nl80211::start_wps_pbc() { return true; }
+bool sta_wlan_hal_nl80211::start_wps_pbc()
+{
+    LOG(DEBUG) << "Initiating wps_pbc on interface: " << get_iface_name();
+
+    if (!wpa_ctrl_send_msg("WPS_PBC multi_ap=1")) {
+        LOG(ERROR) << "start_wps_pbc - wpa_ctrl_send_msg failed for " << get_iface_name();
+        return false;
+    }
+    return true;
+}
 
 bool sta_wlan_hal_nl80211::initiate_scan() { return true; }
 
