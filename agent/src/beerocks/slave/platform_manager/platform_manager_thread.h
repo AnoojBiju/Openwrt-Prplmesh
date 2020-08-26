@@ -37,7 +37,6 @@ public:
     struct platform_common_conf_t {
         int rdkb_extensions;
         int client_roaming;
-        int onboarding;
         int local_gw;
         int local_master;
         int proprietary_repeater;
