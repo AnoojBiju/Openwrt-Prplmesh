@@ -112,6 +112,7 @@ public:
         bool client_11k_roaming_enabled;
         bool load_balancing_enabled;
         bool service_fairness_enabled;
+        bool rdkb_extensions_enabled;
     } device_conf;
 
     struct sControllerInfo {

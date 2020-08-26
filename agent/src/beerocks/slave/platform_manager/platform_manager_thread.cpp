@@ -132,10 +132,11 @@ static bool fill_platform_settings(
 
     int temp_int;
 
-    if ((platform_common_conf.rdkb_extensions = bpl::cfg_get_rdkb_extensions()) < 0) {
+    if ((temp_int = bpl::cfg_get_rdkb_extensions()) < 0) {
         LOG(ERROR) << "Failed reading 'rdkb_extensions'";
         return false;
     }
+    db->device_conf.rdkb_extensions_enabled = static_cast<bool>(temp_int);
     if ((temp_int = bpl::cfg_get_band_steering()) < 0) {
         LOG(ERROR) << "Failed reading 'band_steering'";
         return false;
@@ -203,8 +204,6 @@ static bool fill_platform_settings(
     db->device_conf.local_gw = (db->device_conf.operating_mode == BPL_OPER_MODE_GATEWAY ||
                                 db->device_conf.operating_mode == BPL_OPER_MODE_GATEWAY_WISP);
 
-    msg->platform_settings().rdkb_extensions_enabled =
-        uint8_t(platform_common_conf.rdkb_extensions);
     db->device_conf.client_optimal_path_roaming_prefer_signal_strength_enabled =
         0; // TODO add platform DB flag
     db->device_conf.client_11k_roaming_enabled =
@@ -228,8 +227,9 @@ static bool fill_platform_settings(
     LOG(DEBUG) << "dfs_reentry_enabled: "
                << string_utils::bool_str(db->device_conf.dfs_reentry_enabled);
     LOG(DEBUG) << "backhaul_preferred_radio_band: "
-               << (unsigned)msg->platform_settings().backhaul_preferred_radio_band;
-    LOG(DEBUG) << "rdkb_extensions: " << (unsigned)msg->platform_settings().rdkb_extensions_enabled;
+               << db->device_conf.back_radio.backhaul_preferred_radio_band;
+    LOG(DEBUG) << "rdkb_extensions: "
+               << string_utils::bool_str(db->device_conf.rdkb_extensions_enabled);
 
     return true;
 }

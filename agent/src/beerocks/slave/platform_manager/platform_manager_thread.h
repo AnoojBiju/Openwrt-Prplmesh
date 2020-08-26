@@ -35,7 +35,6 @@ public:
     ~main_thread();
 
     struct platform_common_conf_t {
-        int rdkb_extensions;
         int client_roaming;
         int local_gw;
         int local_master;
