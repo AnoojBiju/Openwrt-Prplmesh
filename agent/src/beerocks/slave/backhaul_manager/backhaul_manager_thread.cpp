@@ -1338,7 +1338,7 @@ bool backhaul_manager::backhaul_fsm_wireless(bool &skip_select)
             LOG(DEBUG) << "scan timed out";
             auto db = AgentDB::get();
             platform_notify_error(bpl::eErrorCode::BH_SCAN_TIMEOUT,
-                                  "SSID='" + std::string(db->device_conf.back_radio.ssid) + "'");
+                                  "SSID='" + db->device_conf.back_radio.ssid + "'");
 
             state_attempts++;
             FSM_MOVE_STATE(INITIATE_SCAN);
@@ -1467,8 +1467,8 @@ bool backhaul_manager::backhaul_fsm_wireless(bool &skip_select)
 
                 stop_on_failure_attempts--;
                 platform_notify_error(bpl::eErrorCode::BH_ASSOCIATE_4ADDR_TIMEOUT,
-                                      "SSID='" + std::string(db->device_conf.back_radio.ssid) +
-                                          "', iface='" + db->backhaul.selected_iface_name + "'");
+                                      "SSID='" + db->device_conf.back_radio.ssid + "', iface='" +
+                                          db->backhaul.selected_iface_name + "'");
 
                 if (!selected_bssid.empty()) {
                     ap_blacklist_entry &entry = ap_blacklist[selected_bssid];
@@ -2959,7 +2959,7 @@ bool backhaul_manager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t eve
                     entry.attempts            = AP_BLACK_LIST_FAILED_ATTEMPTS_THRESHOLD;
                     ap_blacklist[local_bssid] = entry;
                     platform_notify_error(bpl::eErrorCode::BH_ASSOCIATE_4ADDR_FAILURE,
-                                          "SSID='" + std::string(db->device_conf.back_radio.ssid) +
+                                          "SSID='" + db->device_conf.back_radio.ssid +
                                               "', BSSID='" + local_bssid + "', DEAUTH_REASON='" +
                                               std::to_string(msg->disconnect_reason));
                     stop_on_failure_attempts--;
