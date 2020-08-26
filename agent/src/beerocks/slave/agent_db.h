@@ -87,9 +87,9 @@ public:
         } front_radio;
 
         struct sBackRadio {
-            char ssid[beerocks::message::WIFI_SSID_MAX_LENGTH];
-            char pass[beerocks::message::WIFI_PASS_MAX_LENGTH];
-            char security_type[beerocks::message::WIFI_SECURITY_TYPE_MAX_LENGTH];
+            std::string ssid;
+            std::string pass;
+            std::string security_type;
             bwl::WiFiSec security_type_bwl;
 
             bool mem_only_psk;
