@@ -3352,8 +3352,6 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
                     db->device_conf.client_band_steering_enabled;
                 notification->platform_settings().client_optimal_path_roaming_enabled =
                     db->device_conf.client_optimal_path_roaming_enabled;
-                notification->platform_settings().dfs_reentry_enabled =
-                    db->device_conf.dfs_reentry_enabled;
                 notification->platform_settings()
                     .client_optimal_path_roaming_prefer_signal_strength_enabled =
                     db->device_conf.client_optimal_path_roaming_prefer_signal_strength_enabled;
