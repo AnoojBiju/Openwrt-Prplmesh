@@ -1317,16 +1317,13 @@ bool slave_thread::handle_cmdu_platform_manager_message(
                 return true;
             }
 
-            auto db                    = AgentDB::get();
-            wlan_settings.band_enabled = db->device_conf.wlan_settings.band_enabled;
-            wlan_settings.channel      = db->device_conf.wlan_settings.channel;
-
             /**
              * On GW platform the ethernet interface which is used for backhaul connection must be
              * empty since the GW doesn't need wired backhaul connection. Since it is being set on
              * the constructor from the agent configuration file, clear it here when we know if the
              * agent runs on a GW. 
              */
+            auto db = AgentDB::get();
             if (db->device_conf.local_gw) {
                 db->ethernet.iface_name.clear();
                 db->ethernet.mac = network_utils::ZERO_MAC;
@@ -1377,7 +1374,9 @@ bool slave_thread::handle_cmdu_platform_manager_message(
         }
 
         // slave only reacts to band_enabled change
-        if (wlan_settings.band_enabled != notification->wlan_settings().band_enabled) {
+        auto db = AgentDB::get();
+        if (db->device_conf.wlan_settings.band_enabled !=
+            notification->wlan_settings().band_enabled) {
             LOG(DEBUG) << "band_enabled changed - performing slave_reset()";
             slave_reset();
         }
@@ -1499,7 +1498,8 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             return false;
         }
 
-        config_msg->channel() = wlan_settings.channel;
+        auto db               = AgentDB::get();
+        config_msg->channel() = db->device_conf.wlan_settings.channel;
 
         message_com::send_cmdu(ap_manager_socket, cmdu_tx);
 
@@ -3002,7 +3002,7 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
     case STATE_JOIN_INIT: {
 
         auto db = AgentDB::get();
-        if (!wlan_settings.band_enabled) {
+        if (!db->device_conf.wlan_settings.band_enabled) {
             LOG(DEBUG) << "wlan_settings.band_enabled=false";
             LOG(TRACE) << "goto STATE_BACKHAUL_ENABLE";
             slave_state = STATE_BACKHAUL_ENABLE;
@@ -3163,7 +3163,7 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
         master_socket = backhaul_manager_socket;
 
         auto db = AgentDB::get();
-        if (!wlan_settings.band_enabled) {
+        if (!db->device_conf.wlan_settings.band_enabled) {
             LOG(TRACE) << "goto STATE_OPERATIONAL";
             slave_state = STATE_OPERATIONAL;
             break;
@@ -3370,7 +3370,9 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
                 notification->platform_settings().local_master = db->device_conf.local_controller;
 
                 //Wlan Settings
-                notification->wlan_settings() = wlan_settings;
+                notification->wlan_settings().band_enabled =
+                    db->device_conf.wlan_settings.band_enabled;
+                notification->wlan_settings().channel = db->device_conf.wlan_settings.channel;
                 // Hostap Params
                 notification->hostap()          = hostap_params;
                 notification->hostap().ant_gain = config.hostap_ant_gain;
