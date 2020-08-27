@@ -10,6 +10,7 @@
 #include <easylogging++.h>
 #include <fstream>
 #include <hostapd/configuration.h>
+#include <regex>
 
 namespace prplmesh {
 namespace hostapd {
@@ -91,14 +92,28 @@ bool Configuration::store()
         out_file << line << "\n";
     }
 
-    // store the vaps
+    // store the first vap (using 'interface=')
     for (auto &vap : m_hostapd_config_vaps) {
-
-        // add empty line for readability
-        out_file << "\n";
-
-        for (auto &line : vap.second) {
-            out_file << line << "\n";
+        if (std::find_if(vap.second.begin(), vap.second.end(), [&](std::string line) {
+                return line.rfind("interface=", 0) == 0;
+            }) != vap.second.end()) {
+            // add empty line for readability
+            out_file << "\n";
+            for (auto &line : vap.second) {
+                out_file << line << "\n";
+            }
+        }
+    }
+    // store the next ones ('bss=')
+    for (auto &vap : m_hostapd_config_vaps) {
+        if (std::find_if(vap.second.begin(), vap.second.end(), [&](std::string line) {
+                return line.rfind("bss=", 0) == 0;
+            }) != vap.second.end()) {
+            // add empty line for readability
+            out_file << "\n";
+            for (auto &line : vap.second) {
+                out_file << line << "\n";
+            }
         }
     }
 
