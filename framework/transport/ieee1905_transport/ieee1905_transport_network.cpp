@@ -125,39 +125,7 @@ void Ieee1905Transport::update_network_interfaces(
         }
 
         if (!interface.fd) {
-            // if the interface is not already open, try to open it and add it to the poller loop
-            if (!open_interface_socket(interface)) {
-                MAPF_WARN("cannot open interface " << ifname << ".");
-            }
-
-            // add interface raw socket fd to poller loop (unless it's a bridge interface)
-            if (!interface.is_bridge && interface.fd) {
-                // TODO: Move to a separate method
-                m_event_loop->register_handlers(
-                    interface.fd->getSocketFd(),
-                    {
-                        // Accept incoming connections
-                        .on_read =
-                            [&](int fd, EventLoop &loop) {
-                                LOG(DEBUG) << "Incoming message on interface fd: " << fd;
-                                handle_interface_pollin_event(fd);
-                                return true;
-                            },
-
-                        // Not implemented
-                        .on_write      = nullptr,
-                        .on_disconnect = nullptr,
-
-                        // Handle interface errors
-                        .on_error =
-                            [&](int fd, EventLoop &loop) {
-                                LOG(DEBUG) << "Error on interface fd: " << fd << " (disabling it).";
-
-                                handle_interface_status_change(ifname, false);
-                                return true;
-                            },
-                    });
-            }
+            activate_interface(interface);
         }
 
         if (interface.is_bridge) {
@@ -256,45 +224,61 @@ void Ieee1905Transport::handle_interface_status_change(const std::string &ifname
     }
     auto &interface = it->second;
 
-    MAPF_INFO("interface " << interface.ifname << " is now " << (is_active ? "active" : "inactive")
-                           << ".");
+    if (is_active) {
+        activate_interface(interface);
+    } else {
+        deactivate_interface(interface);
+    }
+}
 
-    if (!is_active && interface.fd) {
+void Ieee1905Transport::deactivate_interface(NetworkInterface &interface)
+{
+    MAPF_INFO("interface " << interface.ifname << " is deactivated.");
+
+    if (interface.fd) {
         m_event_loop->remove_handlers(interface.fd->getSocketFd());
         close(interface.fd->getSocketFd());
         interface.fd = nullptr;
     }
+}
 
-    if (is_active && !interface.fd) {
+void Ieee1905Transport::activate_interface(NetworkInterface &interface)
+{
+    MAPF_INFO("interface " << interface.ifname << " is activated.");
+
+    if (!interface.fd) {
         if (!open_interface_socket(interface)) {
-            MAPF_ERR("cannot open network interface " << ifname << ".");
+            MAPF_ERR("cannot open network interface " << interface.ifname << ".");
+            return;
         }
-        if (interface.fd)
-            // Handle network events
-            m_event_loop->register_handlers(
-                interface.fd->getSocketFd(),
-                {
-                    // Accept incoming connections
-                    .on_read =
-                        [&](int fd, EventLoop &loop) {
-                            LOG(DEBUG) << "Incoming message on interface fd: " << fd;
-                            handle_interface_pollin_event(fd);
-                            return true;
-                        },
+        // Handle network events, but not for bridges
+        if (!interface.is_bridge) {
+            EventLoop::EventHandlers handlers = {
+                // Accept incoming connections
+                .on_read =
+                    [&](int fd, EventLoop &loop) {
+                        LOG(DEBUG) << "Incoming message on interface " << interface.ifname
+                                   << " fd: " << fd;
+                        handle_interface_pollin_event(fd);
+                        return true;
+                    },
 
-                    // Not implemented
-                    .on_write      = nullptr,
-                    .on_disconnect = nullptr,
+                // Not implemented
+                .on_write      = nullptr,
+                .on_disconnect = nullptr,
 
-                    // Handle interface errors
-                    .on_error =
-                        [&](int fd, EventLoop &loop) {
-                            LOG(DEBUG) << "Error on interface fd: " << fd << " (disabling it).";
+                // Handle interface errors
+                .on_error =
+                    [&](int fd, EventLoop &loop) {
+                        LOG(DEBUG) << "Error on interface " << interface.ifname << " fd: " << fd
+                                   << " (disabling it).";
 
-                            handle_interface_status_change(ifname, false);
-                            return true;
-                        },
-                });
+                        deactivate_interface(interface);
+                        return true;
+                    },
+            };
+            m_event_loop->register_handlers(interface.fd->getSocketFd(), handlers);
+        }
     }
 }
 
