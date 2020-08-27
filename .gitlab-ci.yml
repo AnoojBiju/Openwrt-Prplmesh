@@ -290,6 +290,33 @@ boardfarm-tests:
     - docker-build
   needs: []
 
+.build-for-rdkb:
+  stage: build
+  script:
+    - mkdir -p "build/$TARGET_DEVICE"
+    - mkdir -p ~/rdk
+    # Clean up the cache directory from anything that hasn't been accessed for a week.
+    - find ~/rdk -type f -atime +7 -delete
+    - tools/docker/builder/rdk-b/build.sh --verbose --target-device "$TARGET_DEVICE" --tag "$CI_PIPELINE_ID" --cache ~/rdk
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_MERGE_REQUEST_LABELS =~ "ready for merge"'
+    - when: manual
+  artifacts:
+    paths:
+      - "build/$TARGET_DEVICE/"
+    expire_in: 4 weeks
+    when: always
+  tags:
+    - shell
+    - docker-build
+  needs: []
+
+build-for-rdkb-raspberrypi:
+  extends: .build-for-rdkb
+  variables:
+    TARGET_DEVICE: "raspberrypi"
+
 .test-on-target:
   stage: test
   before_script:
