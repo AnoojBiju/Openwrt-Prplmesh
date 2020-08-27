@@ -2149,7 +2149,7 @@ bool master_thread::handle_intel_slave_join(
         database.settings_load_balancing(notification->platform_settings().load_balancing_enabled);
         database.settings_service_fairness(
             notification->platform_settings().service_fairness_enabled);
-        database.settings_dfs_reentry(notification->platform_settings().dfs_reentry_enabled);
+        database.settings_dfs_reentry(false);
     }
 
     /*
