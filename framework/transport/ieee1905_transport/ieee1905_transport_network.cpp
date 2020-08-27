@@ -114,26 +114,27 @@ void Ieee1905Transport::update_network_interfaces(
         unsigned int if_index           = if_nametoindex(ifname.c_str());
 
         MAPF_INFO("interface " << ifname << " if_index " << if_index << " is used.");
-        network_interfaces_[ifname].ifname      = updated_network_interface.ifname;
-        network_interfaces_[ifname].bridge_name = updated_network_interface.bridge_name;
-        network_interfaces_[ifname].is_bridge   = updated_network_interface.is_bridge;
+        auto &interface       = network_interfaces_[ifname]; // Creates the interface object.
+        interface.ifname      = updated_network_interface.ifname;
+        interface.bridge_name = updated_network_interface.bridge_name;
+        interface.is_bridge   = updated_network_interface.is_bridge;
 
         // must be called before open_interface_socket (address is used for packet filtering)
-        if (!get_interface_mac_addr(if_index, network_interfaces_[ifname].addr)) {
+        if (!get_interface_mac_addr(if_index, interface.addr)) {
             MAPF_WARN("cannot get address of interface " << if_index << ".");
         }
 
-        if (!network_interfaces_[ifname].fd) {
+        if (!interface.fd) {
             // if the interface is not already open, try to open it and add it to the poller loop
-            if (!open_interface_socket(ifname)) {
+            if (!open_interface_socket(interface)) {
                 MAPF_WARN("cannot open interface " << ifname << ".");
             }
 
             // add interface raw socket fd to poller loop (unless it's a bridge interface)
-            if (!network_interfaces_[ifname].is_bridge && network_interfaces_[ifname].fd) {
+            if (!interface.is_bridge && interface.fd) {
                 // TODO: Move to a separate method
                 m_event_loop->register_handlers(
-                    network_interfaces_[ifname].fd->getSocketFd(),
+                    interface.fd->getSocketFd(),
                     {
                         // Accept incoming connections
                         .on_read =
@@ -159,21 +160,21 @@ void Ieee1905Transport::update_network_interfaces(
             }
         }
 
-        if (network_interfaces_[ifname].is_bridge) {
+        if (interface.is_bridge) {
             // use the last set bridge address as AL MAC address (there should be a single bridge interface configured at any given time)
             // TODO: let the Multi-AP Agent set the AL MAC address using proper API and remove this code
-            set_al_mac_addr(network_interfaces_[ifname].addr);
+            set_al_mac_addr(interface.addr);
         }
     }
 }
 
-bool Ieee1905Transport::open_interface_socket(const std::string &ifname)
+bool Ieee1905Transport::open_interface_socket(NetworkInterface &interface)
 {
-    MAPF_DBG("opening raw socket on interface " << ifname << ".");
+    MAPF_DBG("opening raw socket on interface " << interface.ifname << ".");
 
-    if (network_interfaces_[ifname].fd) {
-        close(network_interfaces_[ifname].fd->getSocketFd());
-        network_interfaces_[ifname].fd = nullptr;
+    if (interface.fd) {
+        close(interface.fd->getSocketFd());
+        interface.fd = nullptr;
     }
 
     // Note to developer: The current implementation uses AF_PACKET socket with SOCK_RAW protocol which means we receive
@@ -201,7 +202,7 @@ bool Ieee1905Transport::open_interface_socket(const std::string &ifname)
     memset(&sockaddr, 0, sizeof(struct sockaddr_ll));
     sockaddr.sll_family   = AF_PACKET;
     sockaddr.sll_protocol = htons(ETH_P_ALL);
-    sockaddr.sll_ifindex  = if_nametoindex(ifname.c_str());
+    sockaddr.sll_ifindex  = if_nametoindex(interface.ifname.c_str());
     if (bind(sockfd, (struct sockaddr *)&sockaddr, sizeof(sockaddr)) < 0) {
         MAPF_ERR("cannot bind socket to interface \"" << strerror(errno) << "\" (" << errno
                                                       << ").");
@@ -209,42 +210,36 @@ bool Ieee1905Transport::open_interface_socket(const std::string &ifname)
         return false;
     }
 
-    network_interfaces_[ifname].fd = std::make_shared<Socket>(sockfd);
+    interface.fd = std::make_shared<Socket>(sockfd);
     LOG_IF(!sockfd, FATAL) << "Failed creating new Socket for fd: " << sockfd;
 
-    attach_interface_socket_filter(ifname);
+    attach_interface_socket_filter(interface);
 
     return true;
 }
 
-bool Ieee1905Transport::attach_interface_socket_filter(const std::string &ifname)
+bool Ieee1905Transport::attach_interface_socket_filter(NetworkInterface &interface)
 {
-    if (!network_interfaces_.count(ifname)) {
-        MAPF_ERR("un-tracked interface " << ifname << ".");
-        return false;
-    }
-
     // 1st step is to put the interface in promiscuous mode.
     // promiscuous mode is required since we expect to receive packets destined to
     // the AL MAC address (which is different the the interfaces HW address)
     //
     struct packet_mreq mr = {0};
-    mr.mr_ifindex         = if_nametoindex(ifname.c_str());
+    mr.mr_ifindex         = if_nametoindex(interface.ifname.c_str());
     mr.mr_type            = PACKET_MR_PROMISC;
-    if (setsockopt(network_interfaces_[ifname].fd->getSocketFd(), SOL_PACKET, PACKET_ADD_MEMBERSHIP,
-                   &mr, sizeof(mr)) == -1) {
+    if (setsockopt(interface.fd->getSocketFd(), SOL_PACKET, PACKET_ADD_MEMBERSHIP, &mr,
+                   sizeof(mr)) == -1) {
         MAPF_ERR("cannot put interface in promiscuous mode \"" << strerror(errno) << "\" (" << errno
                                                                << ").");
         return false;
     }
 
     // prepare linux packet filter for this interface
-    struct sock_fprog fprog =
-        Ieee1905SocketFilter(al_mac_addr_, network_interfaces_[ifname].addr).sock_fprog();
+    struct sock_fprog fprog = Ieee1905SocketFilter(al_mac_addr_, interface.addr).sock_fprog();
 
     // attach filter
-    if (setsockopt(network_interfaces_[ifname].fd->getSocketFd(), SOL_SOCKET, SO_ATTACH_FILTER,
-                   &fprog, sizeof(fprog)) == -1) {
+    if (setsockopt(interface.fd->getSocketFd(), SOL_SOCKET, SO_ATTACH_FILTER, &fprog,
+                   sizeof(fprog)) == -1) {
         MAPF_ERR("cannot attach socket filter \"" << strerror(errno) << "\" (" << errno << ").");
         return false;
     }
@@ -254,27 +249,30 @@ bool Ieee1905Transport::attach_interface_socket_filter(const std::string &ifname
 
 void Ieee1905Transport::handle_interface_status_change(const std::string &ifname, bool is_active)
 {
-    if (!network_interfaces_.count(ifname)) {
+    auto it = network_interfaces_.find(ifname);
+    if (it == network_interfaces_.end()) {
         MAPF_ERR("un-tracked interface " << ifname << ".");
         return;
     }
+    auto &interface = it->second;
 
-    MAPF_INFO("interface " << ifname << " is now " << (is_active ? "active" : "inactive") << ".");
+    MAPF_INFO("interface " << interface.ifname << " is now " << (is_active ? "active" : "inactive")
+                           << ".");
 
-    if (!is_active && network_interfaces_[ifname].fd) {
-        m_event_loop->remove_handlers(network_interfaces_[ifname].fd->getSocketFd());
-        close(network_interfaces_[ifname].fd->getSocketFd());
-        network_interfaces_[ifname].fd = nullptr;
+    if (!is_active && interface.fd) {
+        m_event_loop->remove_handlers(interface.fd->getSocketFd());
+        close(interface.fd->getSocketFd());
+        interface.fd = nullptr;
     }
 
-    if (is_active && !network_interfaces_[ifname].fd) {
-        if (!open_interface_socket(ifname)) {
+    if (is_active && !interface.fd) {
+        if (!open_interface_socket(interface)) {
             MAPF_ERR("cannot open network interface " << ifname << ".");
         }
-        if (network_interfaces_[ifname].fd)
+        if (interface.fd)
             // Handle network events
             m_event_loop->register_handlers(
-                network_interfaces_[ifname].fd->getSocketFd(),
+                interface.fd->getSocketFd(),
                 {
                     // Accept incoming connections
                     .on_read =
@@ -441,7 +439,7 @@ void Ieee1905Transport::set_al_mac_addr(const uint8_t *addr)
         auto &network_interface = it->second;
 
         if (network_interface.fd) {
-            attach_interface_socket_filter(network_interface.ifname);
+            attach_interface_socket_filter(network_interface);
         }
     }
 }

@@ -302,8 +302,8 @@ private:
     //
     void
     update_network_interfaces(std::map<std::string, NetworkInterface> updated_network_interfaces);
-    bool open_interface_socket(const std::string &iface_name);
-    bool attach_interface_socket_filter(const std::string &iface_name);
+    bool open_interface_socket(NetworkInterface &interface);
+    bool attach_interface_socket_filter(NetworkInterface &iface_name);
     void handle_interface_status_change(const std::string &iface_name, bool is_active);
     void handle_interface_pollin_event(int fd);
     bool get_interface_mac_addr(unsigned int if_index, uint8_t *addr);
