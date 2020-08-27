@@ -178,12 +178,6 @@ static bool fill_platform_settings(
     }
     db->device_conf.stop_on_failure_attempts = temp_int;
 
-    if ((temp_int = bpl::cfg_get_dfs_reentry()) < 0) {
-        LOG(ERROR) << "Failed reading 'dfs_reentry'";
-        return false;
-    }
-    db->device_conf.dfs_reentry_enabled = temp_int;
-
     int backhaul_max_vaps;
     int backhaul_network_enabled;
     int backhaul_preferred_radio_band;
@@ -225,7 +219,6 @@ static bool fill_platform_settings(
     LOG(DEBUG) << "band_enabled: " << db->device_conf.wlan_settings.band_enabled;
     LOG(DEBUG) << "local_gw: " << db->device_conf.local_gw;
     LOG(DEBUG) << "local_controller: " << db->device_conf.local_controller;
-    LOG(DEBUG) << "dfs_reentry_enabled: " << db->device_conf.dfs_reentry_enabled;
     LOG(DEBUG) << "backhaul_preferred_radio_band: "
                << db->device_conf.back_radio.backhaul_preferred_radio_band;
     LOG(DEBUG) << "rdkb_extensions: " << db->device_conf.rdkb_extensions_enabled;
