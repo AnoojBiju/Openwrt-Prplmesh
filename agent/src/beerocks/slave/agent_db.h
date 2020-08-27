@@ -114,9 +114,11 @@ public:
         bool service_fairness_enabled;
         bool rdkb_extensions_enabled;
 
+        /* Front radio wlan settings */
         struct sWlanSettings {
             bool band_enabled;
-            uint8_t channel;
+            // Front radio configured channel, if 0 auto channel selection.
+            uint8_t configured_channel;
         } wlan_settings;
 
     } device_conf;

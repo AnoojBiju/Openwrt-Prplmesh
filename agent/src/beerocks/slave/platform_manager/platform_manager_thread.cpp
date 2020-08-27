@@ -106,12 +106,12 @@ static bool fill_platform_settings(
         return false;
     }
     /* update message */
-    db->device_conf.wlan_settings.band_enabled = params.enabled;
-    db->device_conf.wlan_settings.channel      = params.channel;
+    db->device_conf.wlan_settings.band_enabled       = params.enabled;
+    db->device_conf.wlan_settings.configured_channel = params.channel;
 
     LOG(DEBUG) << "wlan settings:"
                << " band_enabled=" << db->device_conf.wlan_settings.band_enabled
-               << " channel=" << int(db->device_conf.wlan_settings.channel);
+               << " channel=" << int(db->device_conf.wlan_settings.configured_channel);
 
     // initialize wlan params cache
     //erase interface cache from map if exists
