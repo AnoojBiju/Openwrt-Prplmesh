@@ -1499,7 +1499,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         }
 
         auto db               = AgentDB::get();
-        config_msg->channel() = db->device_conf.wlan_settings.channel;
+        config_msg->channel() = db->device_conf.wlan_settings.configured_channel;
 
         message_com::send_cmdu(ap_manager_socket, cmdu_tx);
 
@@ -3372,7 +3372,8 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
                 //Wlan Settings
                 notification->wlan_settings().band_enabled =
                     db->device_conf.wlan_settings.band_enabled;
-                notification->wlan_settings().channel = db->device_conf.wlan_settings.channel;
+                notification->wlan_settings().channel =
+                    db->device_conf.wlan_settings.configured_channel;
                 // Hostap Params
                 notification->hostap()          = hostap_params;
                 notification->hostap().ant_gain = config.hostap_ant_gain;
