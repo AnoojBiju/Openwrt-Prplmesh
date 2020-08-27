@@ -160,7 +160,6 @@ private:
     beerocks_message::sSonConfig son_config;
     beerocks::logging &logger;
     std::string master_version;
-    int configuration_stop_on_failure_attempts;
     int stop_on_failure_attempts;
     bool stopped                   = false;
     bool is_backhaul_disconnected  = false;

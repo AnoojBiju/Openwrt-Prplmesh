@@ -101,14 +101,14 @@ slave_thread::slave_thread(sSlaveConfig conf, beerocks::logging &logger_)
     monitor_socket          = nullptr;
     ap_manager_socket       = nullptr;
     platform_manager_socket = nullptr;
-    configuration_stop_on_failure_attempts = conf.stop_on_failure_attempts;
-    stop_on_failure_attempts               = configuration_stop_on_failure_attempts;
 
     // Set configuration on Agent database.
     auto db = AgentDB::get();
 
-    db->bridge.iface_name   = conf.bridge_iface;
-    db->ethernet.iface_name = conf.backhaul_wire_iface;
+    db->device_conf.stop_on_failure_attempts = conf.stop_on_failure_attempts;
+    stop_on_failure_attempts                 = db->device_conf.stop_on_failure_attempts;
+    db->bridge.iface_name                    = conf.bridge_iface;
+    db->ethernet.iface_name                  = conf.backhaul_wire_iface;
     db->add_radio(conf.hostap_iface, conf.backhaul_wireless_iface);
 
     slave_state = STATE_INIT;
@@ -168,7 +168,7 @@ void slave_thread::slave_reset()
         radio->front.iface_mac = network_utils::ZERO_MAC;
     }
 
-    if (configuration_stop_on_failure_attempts && !stop_on_failure_attempts) {
+    if (db->device_conf.stop_on_failure_attempts && !stop_on_failure_attempts) {
         LOG(ERROR) << "Reached to max stop on failure attempts!";
         stopped = true;
     }
@@ -818,10 +818,10 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
                 << "addClass cACTION_CONTROL_HOSTAP_UPDATE_STOP_ON_FAILURE_ATTEMPTS_REQUEST failed";
             return false;
         }
-        configuration_stop_on_failure_attempts = request_in->attempts();
-        stop_on_failure_attempts               = configuration_stop_on_failure_attempts;
+        db->device_conf.stop_on_failure_attempts = request_in->attempts();
+        stop_on_failure_attempts                 = db->device_conf.stop_on_failure_attempts;
         LOG(DEBUG) << "stop_on_failure_attempts new value: "
-                   << configuration_stop_on_failure_attempts;
+                   << db->device_conf.stop_on_failure_attempts;
 
         if (is_backhaul_manager) {
             auto request_out = message_com::create_vs_message<
@@ -1329,8 +1329,7 @@ bool slave_thread::handle_cmdu_platform_manager_message(
                 db->ethernet.mac = network_utils::ZERO_MAC;
             }
 
-            configuration_stop_on_failure_attempts = db->device_conf.stop_on_failure_attempts;
-            stop_on_failure_attempts               = configuration_stop_on_failure_attempts;
+            stop_on_failure_attempts = db->device_conf.stop_on_failure_attempts;
 
             LOG(TRACE) << "goto STATE_CONNECT_TO_BACKHAUL_MANAGER";
             slave_state = STATE_CONNECT_TO_BACKHAUL_MANAGER;
@@ -3419,7 +3418,8 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
         break;
     }
     case STATE_OPERATIONAL: {
-        stop_on_failure_attempts = configuration_stop_on_failure_attempts;
+        auto db                  = AgentDB::get();
+        stop_on_failure_attempts = db->device_conf.stop_on_failure_attempts;
         break;
     }
     case STATE_VERSION_MISMATCH: {
