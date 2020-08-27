@@ -217,8 +217,6 @@ int cfg_get_rdkb_extensions() { return 0; }
 
 int cfg_get_band_steering() { return 1; }
 
-int cfg_get_dfs_reentry() { return 0; }
-
 int cfg_get_client_roaming() { return 1; }
 
 int cfg_get_wifi_params(const char *iface, struct BPL_WLAN_PARAMS *wlan_params)

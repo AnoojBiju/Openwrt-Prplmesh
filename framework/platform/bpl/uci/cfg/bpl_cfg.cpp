@@ -212,17 +212,6 @@ int cfg_get_band_steering()
     return retVal;
 }
 
-int cfg_get_dfs_reentry()
-{
-    int retVal = -1;
-    if (cfg_get_prplmesh_param_int_default("dfs_reentry", &retVal, DEFAULT_DFS_REENTRY) ==
-        RETURN_ERR) {
-        MAPF_INFO("cfg_get_dfs_reentry: Failed to read DfsReentry parameter\n");
-        return RETURN_ERR;
-    }
-    return retVal;
-}
-
 int cfg_get_client_roaming()
 {
     int retVal = -1;

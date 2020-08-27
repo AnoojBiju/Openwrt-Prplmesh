@@ -300,15 +300,6 @@ int cfg_get_rdkb_extensions();
 int cfg_get_band_steering();
 
 /**
- * Checks the state of the DFS Reentry feature.
- *
- * @return 1 Enabled.
- * @return 0 Disabled.
- * @return -1 Error.
- */
-int cfg_get_dfs_reentry();
-
-/**
  * Checks the state of the Client Roaming feature.
  *
  * @return 1 Enabled.
