@@ -39,6 +39,8 @@ private:
     void handle_associated_sta_link_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                   const sMacAddr &src_mac);
     void handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac);
+    void handle_multi_ap_policy_config_request(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                               const sMacAddr &src_mac);
 
     /**
      * @brief Sends an AP Metrics Query message for each bssid on 'bssid_list' to the Fronthaul.
