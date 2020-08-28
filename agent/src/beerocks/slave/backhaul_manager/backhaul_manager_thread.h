@@ -124,8 +124,6 @@ private:
     bool handle_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac,
                                Socket *&forward_to);
     // 1905 messages handlers
-    bool handle_1905_beacon_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                          const std::string &src_mac, Socket *&forward_to);
     bool handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac);
     bool handle_client_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx,
                                         const std::string &src_mac);
@@ -295,6 +293,7 @@ private:
         bool he_supported = false; /**< Is HE supported flag */
     };
 
+public:
     /**
      * @brief Gets radio info for the radio with given MAC address
      *
@@ -303,7 +302,6 @@ private:
      */
     std::shared_ptr<sRadioInfo> get_radio(const sMacAddr &radio_mac) const;
 
-public:
     /**
      * @brief Interface in this device which connects to an interface in one or more neighbors.
      *

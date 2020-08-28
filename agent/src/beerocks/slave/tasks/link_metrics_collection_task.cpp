@@ -14,6 +14,7 @@
 #include <tlvf/ieee_1905_1/tlvLinkMetricResultCode.h>
 #include <tlvf/ieee_1905_1/tlvReceiverLinkMetric.h>
 #include <tlvf/ieee_1905_1/tlvTransmitterLinkMetric.h>
+#include <tlvf/wfa_map/tlvBeaconMetricsQuery.h>
 
 namespace beerocks {
 
@@ -34,6 +35,10 @@ bool LinkMetricsCollectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx,
     }
     case ieee1905_1::eMessageType::COMBINED_INFRASTRUCTURE_METRICS_MESSAGE: {
         handle_combined_infrastructure_metrics(cmdu_rx, src_mac);
+        break;
+    }
+    case ieee1905_1::eMessageType::BEACON_METRICS_QUERY_MESSAGE: {
+        handle_beacon_metrics_query(cmdu_rx, src_mac);
         break;
     }
     default: {
@@ -228,6 +233,83 @@ void LinkMetricsCollectionTask::handle_combined_infrastructure_metrics(
     }
     LOG(DEBUG) << "sending ACK message to the originator, mid=" << std::hex << mid;
     auto db = AgentDB::get();
+    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
+                                  tlvf::mac_to_string(db->bridge.mac));
+}
+
+void LinkMetricsCollectionTask::handle_beacon_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                                                 const sMacAddr &src_mac)
+{
+    LOG(DEBUG) << "now going to handle BEACON METRICS QUERY";
+
+    // extract the desired STA mac
+    auto tlvBeaconMetricsQuery = cmdu_rx.getClass<wfa_map::tlvBeaconMetricsQuery>();
+    if (!tlvBeaconMetricsQuery) {
+        LOG(ERROR) << "handle_1905_beacon_metrics_query should handle only tlvBeaconMetrics, but "
+                      "got something else: 0x"
+                   << std::hex << (uint16_t)cmdu_rx.getMessageType();
+        return;
+    }
+
+    const sMacAddr &requested_sta_mac = tlvBeaconMetricsQuery->associated_sta_mac();
+    LOG(DEBUG) << "the requested STA mac is: " << requested_sta_mac;
+
+    // build ACK message CMDU
+    const auto mid      = cmdu_rx.getMessageId();
+    auto cmdu_tx_header = m_cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE);
+    if (!cmdu_tx_header) {
+        LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
+        return;
+    }
+
+    auto db    = AgentDB::get();
+    auto radio = db->get_radio_by_mac(requested_sta_mac, AgentDB::eMacType::CLIENT);
+    if (!radio) {
+        LOG(DEBUG) << "STA with MAC [" << requested_sta_mac
+                   << "] is not associated with any BSS operated by the agent";
+
+        // add an Error Code TLV
+        auto error_code_tlv = m_cmdu_tx.addClass<wfa_map::tlvErrorCode>();
+        if (!error_code_tlv) {
+            LOG(ERROR) << "addClass wfa_map::tlvErrorCode has failed";
+            return;
+        }
+
+        error_code_tlv->reason_code() =
+            wfa_map::tlvErrorCode::STA_NOT_ASSOCIATED_WITH_ANY_BSS_OPERATED_BY_THE_AGENT;
+
+        error_code_tlv->sta_mac() = requested_sta_mac;
+
+        // report the error
+        std::stringstream errorSS;
+        auto error_tlv = m_cmdu_tx.getClass<wfa_map::tlvErrorCode>();
+        if (error_tlv) {
+            errorSS << "0x" << error_tlv->reason_code();
+        } else {
+            errorSS << "note: error constructing the error itself";
+        }
+
+        LOG(DEBUG) << "sending ACK message to the originator with an error, mid: " << std::hex
+                   << mid << " tlv error code: " << errorSS.str();
+
+        // send the error
+        m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
+                                      tlvf::mac_to_string(db->bridge.mac));
+        return;
+    }
+
+    auto radio_info = m_btl_ctx.get_radio(radio->front.iface_mac);
+    if (!radio_info) {
+        LOG(ERROR) << "Failed to get radio info for " << radio->front.iface_mac;
+        return;
+    }
+
+    LOG(DEBUG) << "Found the radio that has the sation. radio: " << radio->front.iface_mac
+               << "; station: " << requested_sta_mac;
+
+    LOG(DEBUG) << "BEACON METRICS QUERY: sending ACK message to the originator mid: " << std::hex
+               << mid; // USED IN TESTS
+
     m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
                                   tlvf::mac_to_string(db->bridge.mac));
 }
