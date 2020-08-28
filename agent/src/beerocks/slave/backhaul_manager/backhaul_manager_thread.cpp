@@ -62,11 +62,9 @@
 #include <tlvf/ieee_1905_1/tlvDeviceInformation.h>
 #include <tlvf/ieee_1905_1/tlvEndOfMessage.h>
 #include <tlvf/ieee_1905_1/tlvMacAddress.h>
-#include <tlvf/ieee_1905_1/tlvReceiverLinkMetric.h>
 #include <tlvf/ieee_1905_1/tlvSearchedRole.h>
 #include <tlvf/ieee_1905_1/tlvSupportedFreqBand.h>
 #include <tlvf/ieee_1905_1/tlvSupportedRole.h>
-#include <tlvf/ieee_1905_1/tlvTransmitterLinkMetric.h>
 #include <tlvf/wfa_map/tlvApCapability.h>
 #include <tlvf/wfa_map/tlvApHeCapabilities.h>
 #include <tlvf/wfa_map/tlvApHtCapabilities.h>
@@ -2932,91 +2930,6 @@ bool backhaul_manager::add_ap_he_capabilities(const sRadioInfo &radio_info)
 
     // TODO: Fetch the AP HE Capabilities from the Wi-Fi driver via the Netlink socket and include
     // them into AP HE Capabilities TLV (#1162)
-
-    return true;
-}
-
-bool backhaul_manager::add_link_metrics(const sMacAddr &reporter_al_mac,
-                                        const sLinkInterface &link_interface,
-                                        const sLinkNeighbor &link_neighbor,
-                                        const sLinkMetrics &link_metrics,
-                                        ieee1905_1::eLinkMetricsType link_metrics_type)
-{
-    /**
-     * Add Transmitter Link Metric TLV if specifically requested or both requested
-     */
-    if ((ieee1905_1::eLinkMetricsType::TX_LINK_METRICS_ONLY == link_metrics_type) ||
-        (ieee1905_1::eLinkMetricsType::BOTH_TX_AND_RX_LINK_METRICS == link_metrics_type)) {
-        auto tlvTransmitterLinkMetric = cmdu_tx.addClass<ieee1905_1::tlvTransmitterLinkMetric>();
-        if (!tlvTransmitterLinkMetric) {
-            LOG(ERROR) << "addClass ieee1905_1::tlvTransmitterLinkMetric failed";
-            return false;
-        }
-
-        tlvTransmitterLinkMetric->reporter_al_mac() = reporter_al_mac;
-        tlvTransmitterLinkMetric->neighbor_al_mac() = link_neighbor.al_mac;
-
-        if (!tlvTransmitterLinkMetric->alloc_interface_pair_info()) {
-            LOG(ERROR) << "alloc_interface_pair_info failed";
-            return false;
-        }
-        auto interface_pair_info = tlvTransmitterLinkMetric->interface_pair_info(0);
-        if (!std::get<0>(interface_pair_info)) {
-            LOG(ERROR) << "Failed accessing interface_pair_info";
-            return false;
-        }
-        auto interfacePairInfo                      = std::get<1>(interface_pair_info);
-        interfacePairInfo.rc_interface_mac          = link_interface.iface_mac;
-        interfacePairInfo.neighbor_interface_mac    = link_neighbor.iface_mac;
-        interfacePairInfo.link_metric_info.intfType = link_interface.media_type;
-        // TODO
-        //Indicates whether or not the 1905.1 link includes one or more IEEE 802.1 bridges
-        interfacePairInfo.link_metric_info.IEEE802_1BridgeFlag =
-            ieee1905_1::tlvTransmitterLinkMetric::LINK_DOES_NOT_INCLUDE_BRIDGE;
-        interfacePairInfo.link_metric_info.packet_errors = link_metrics.transmitter.packet_errors;
-        interfacePairInfo.link_metric_info.transmitted_packets =
-            link_metrics.transmitter.transmitted_packets;
-        interfacePairInfo.link_metric_info.mac_throughput_capacity =
-            std::min(link_metrics.transmitter.mac_throughput_capacity_mbps,
-                     static_cast<uint32_t>(UINT16_MAX));
-        interfacePairInfo.link_metric_info.link_availability =
-            link_metrics.transmitter.link_availability;
-        interfacePairInfo.link_metric_info.phy_rate =
-            std::min(link_metrics.transmitter.phy_rate_mbps, static_cast<uint32_t>(UINT16_MAX));
-    }
-
-    /**
-     * Add Receiver Link Metric TLV if specifically requested or both requested
-     */
-    if ((ieee1905_1::eLinkMetricsType::RX_LINK_METRICS_ONLY == link_metrics_type) ||
-        (ieee1905_1::eLinkMetricsType::BOTH_TX_AND_RX_LINK_METRICS == link_metrics_type)) {
-        auto tlvReceiverLinkMetric = cmdu_tx.addClass<ieee1905_1::tlvReceiverLinkMetric>();
-        if (!tlvReceiverLinkMetric) {
-            LOG(ERROR) << "addClass ieee1905_1::tlvReceiverLinkMetric failed";
-            return false;
-        }
-
-        tlvReceiverLinkMetric->reporter_al_mac() = reporter_al_mac;
-        tlvReceiverLinkMetric->neighbor_al_mac() = link_neighbor.al_mac;
-
-        if (!tlvReceiverLinkMetric->alloc_interface_pair_info()) {
-            LOG(ERROR) << "alloc_interface_pair_info failed";
-            return false;
-        }
-        auto interface_pair_info = tlvReceiverLinkMetric->interface_pair_info(0);
-        if (!std::get<0>(interface_pair_info)) {
-            LOG(ERROR) << "Failed accessing interface_pair_info";
-            return false;
-        }
-        auto interfacePairInfo                           = std::get<1>(interface_pair_info);
-        interfacePairInfo.rc_interface_mac               = link_interface.iface_mac;
-        interfacePairInfo.neighbor_interface_mac         = link_neighbor.iface_mac;
-        interfacePairInfo.link_metric_info.intfType      = link_interface.media_type;
-        interfacePairInfo.link_metric_info.packet_errors = link_metrics.receiver.packet_errors;
-        interfacePairInfo.link_metric_info.packets_received =
-            link_metrics.receiver.packets_received;
-        interfacePairInfo.link_metric_info.rssi_db = link_metrics.receiver.rssi;
-    }
 
     return true;
 }
