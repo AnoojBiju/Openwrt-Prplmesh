@@ -260,19 +260,6 @@ public:
      */
     std::shared_ptr<sRadioInfo> get_radio(const sMacAddr &radio_mac) const;
 
-    /**
-     * @brief Neighbor 1905.1 device which connects to an interface in this device.
-     *
-     * A neighbor is defined by its 1905.1 AL MAC address and the MAC address of the interface in
-     * the neighbor that connects to this device.
-     */
-    struct sLinkNeighbor {
-        sMacAddr al_mac =
-            beerocks::net::network_utils::ZERO_MAC; /**< The MAC address of the 1905.1 AL. */
-        sMacAddr iface_mac =
-            beerocks::net::network_utils::ZERO_MAC; /**< The MAC address of the interface. */
-    };
-
 private:
     /**
      * @brief Adds an AP HT Capabilities TLV to AP Capability Report message.
