@@ -72,10 +72,10 @@ public:
      */
     bool start_wps_pbc(const sMacAddr &radio_mac);
 
-private:
     // Forward declaration
     struct sRadioInfo;
 
+private:
     std::shared_ptr<bwl::sta_wlan_hal> get_selected_backhaul_sta_wlan_hal();
 
     virtual bool handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx) override;
@@ -113,8 +113,6 @@ private:
     bool handle_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac,
                                Socket *&forward_to);
     // 1905 messages handlers
-    bool handle_multi_ap_policy_config_request(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                               const std::string &src_mac);
     bool handle_slave_ap_metrics_response(ieee1905_1::CmduMessageRx &cmdu_rx,
                                           const std::string &src_mac);
     bool handle_channel_selection_request(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -293,7 +291,6 @@ public:
         uint32_t number_of_reports_in_last_minute = 0;
     } unsuccessful_association_policy;
 
-private:
     /**
      * @brief Information gathered about a radio (= slave).
      *
