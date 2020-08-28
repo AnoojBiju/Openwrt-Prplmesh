@@ -10,6 +10,7 @@
 
 #include "../agent_db.h"
 #include "../backhaul_manager/backhaul_manager_thread.h"
+#include "../helpers/media_type.h"
 #include "../link_metrics/ieee802_11_link_metrics_collector.h"
 #include "../link_metrics/ieee802_3_link_metrics_collector.h"
 
@@ -209,7 +210,7 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
      */
     std::map<backhaul_manager::sLinkInterface, std::vector<backhaul_manager::sLinkNeighbor>>
         neighbor_links_map;
-    if (!m_btl_ctx.get_neighbor_links(neighbor_al_mac, neighbor_links_map)) {
+    if (!get_neighbor_links(neighbor_al_mac, neighbor_links_map)) {
         LOG(ERROR) << "Failed to get the list of neighbor links";
         return;
     }
@@ -920,6 +921,83 @@ std::unique_ptr<link_metrics_collector> LinkMetricsCollectionTask::create_link_m
                << (int)media_type << ")";
 
     return nullptr;
+}
+
+bool LinkMetricsCollectionTask::get_neighbor_links(
+    const sMacAddr &neighbor_mac_filter,
+    std::map<backhaul_manager::sLinkInterface, std::vector<backhaul_manager::sLinkNeighbor>>
+        &neighbor_links_map)
+{
+    // TODO: Topology Database is required to implement this method.
+
+    // TODO: this is not accurate as we have made the assumption that there is a single interface.
+    // Note that when processing Topology Discovery message we must store the IEEE 1905.1 AL MAC
+    // address of the transmitting device together with the interface that such message is
+    // received through.
+    backhaul_manager::sLinkInterface wired_interface;
+    auto db = AgentDB::get();
+
+    wired_interface.iface_name = db->ethernet.iface_name;
+    wired_interface.iface_mac  = db->ethernet.mac;
+
+    if (!MediaType::get_media_type(wired_interface.iface_name,
+                                   ieee1905_1::eMediaTypeGroup::IEEE_802_3,
+                                   wired_interface.media_type)) {
+        LOG(ERROR) << "Unable to compute media type for interface " << wired_interface.iface_name;
+        return false;
+    }
+
+    for (const auto &neighbors_on_local_iface : db->neighbor_devices) {
+        auto &neighbors = neighbors_on_local_iface.second;
+        for (const auto &neighbor_entry : neighbors) {
+            backhaul_manager::sLinkNeighbor neighbor;
+            neighbor.al_mac    = neighbor_entry.first;
+            neighbor.iface_mac = neighbor_entry.second.transmitting_iface_mac;
+            if ((neighbor_mac_filter == net::network_utils::ZERO_MAC) ||
+                (neighbor_mac_filter == neighbor.al_mac)) {
+                neighbor_links_map[wired_interface].push_back(neighbor);
+            }
+        }
+    }
+
+    // Also include a link for each associated client
+    for (const auto radio : db->get_radios_list()) {
+        if (!radio) {
+            continue;
+        }
+
+        for (const auto &associated_client : radio->associated_clients) {
+            auto &bssid = associated_client.second.bssid;
+
+            backhaul_manager::sLinkInterface interface;
+
+            interface.iface_name = radio->front.iface_name;
+            interface.iface_mac  = bssid;
+            interface.media_type = MediaType::get_802_11_media_type(radio->freq_type,
+                                                                    radio->max_supported_bw);
+
+            if (ieee1905_1::eMediaType::UNKNOWN_MEDIA == interface.media_type) {
+                LOG(ERROR) << "Unknown media type for interface " << interface.iface_name;
+                return false;
+            }
+
+            LOG(TRACE) << "Getting neighbors connected to interface " << interface.iface_name
+                       << " with BSSID " << bssid;
+
+            // TODO: This is not correct... We actually have to get this from the topology
+            // discovery message, which will give us the neighbor interface and AL MAC addresses.
+            backhaul_manager::sLinkNeighbor neighbor;
+            neighbor.iface_mac = associated_client.first;
+            neighbor.al_mac    = neighbor.iface_mac;
+
+            if ((neighbor_mac_filter == net::network_utils::ZERO_MAC) ||
+                (neighbor_mac_filter == neighbor.al_mac)) {
+                neighbor_links_map[interface].push_back(neighbor);
+            }
+        }
+    }
+
+    return true;
 }
 
 } // namespace beerocks
