@@ -13,6 +13,8 @@
 
 #include <tlvf/CmduMessageTx.h>
 
+#include "bcl/network/socket.h"
+
 namespace beerocks {
 
 // Forward decleration for backhaul_manager context saving
@@ -75,6 +77,13 @@ private:
      * AP Metrics Reporting configuration and status information.
      */
     sApMetricsReportingInfo m_ap_metrics_reporting_info;
+
+    struct sApMetricsQuery {
+        Socket *soc;
+        sMacAddr bssid;
+    };
+
+    std::vector<sApMetricsQuery> m_ap_metric_query;
 };
 
 } // namespace beerocks
