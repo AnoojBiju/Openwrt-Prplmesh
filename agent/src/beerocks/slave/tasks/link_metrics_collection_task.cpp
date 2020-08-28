@@ -83,14 +83,13 @@ void LinkMetricsCollectionTask::work()
          * If periodic AP metrics reporting is enabled, check if time interval has elapsed and if
          * so, then report AP metrics.
          */
-        if (0 != m_btl_ctx.ap_metrics_reporting_info.reporting_interval_s) {
-            int elapsed_time_s =
-                std::chrono::duration_cast<std::chrono::seconds>(
-                    now - m_btl_ctx.ap_metrics_reporting_info.last_reporting_time_point)
-                    .count();
+        if (0 != ap_metrics_reporting_info.reporting_interval_s) {
+            int elapsed_time_s = std::chrono::duration_cast<std::chrono::seconds>(
+                                     now - ap_metrics_reporting_info.last_reporting_time_point)
+                                     .count();
 
-            if (elapsed_time_s >= m_btl_ctx.ap_metrics_reporting_info.reporting_interval_s) {
-                m_btl_ctx.ap_metrics_reporting_info.last_reporting_time_point = now;
+            if (elapsed_time_s >= ap_metrics_reporting_info.reporting_interval_s) {
+                ap_metrics_reporting_info.last_reporting_time_point = now;
 
                 // We must generate a new MID for the periodic AP Metrics Response messages that
                 // do not correspond to an AP Metrics Query message.
@@ -589,10 +588,9 @@ void LinkMetricsCollectionTask::handle_multi_ap_policy_config_request(
          * Reporting interval value works just for enabling/disabling auto sending AP Metrics Response,
          * which will be send every 500 ms.
          */
-        m_btl_ctx.ap_metrics_reporting_info.reporting_interval_s =
+        ap_metrics_reporting_info.reporting_interval_s =
             metric_reporting_policy_tlv->metrics_reporting_interval_sec();
-        m_btl_ctx.ap_metrics_reporting_info.last_reporting_time_point =
-            std::chrono::steady_clock::now();
+        ap_metrics_reporting_info.last_reporting_time_point = std::chrono::steady_clock::now();
     }
 
     // send ACK_MESSAGE back to the controller
