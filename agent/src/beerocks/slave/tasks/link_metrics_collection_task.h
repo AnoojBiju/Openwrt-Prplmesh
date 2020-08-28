@@ -38,6 +38,18 @@ private:
     void handle_associated_sta_link_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                   const sMacAddr &src_mac);
     void handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac);
+
+    /**
+     * @brief Sends an AP Metrics Query message for each bssid on 'bssid_list' to the Fronthaul.
+     * If the 'bssid_list' is empty, sends a query on each bssid that exists on the Agent.
+     *
+     * @param mid MID of the message to be sent.
+     * @param bssid_list List of bssids to send a query on.
+     * @return true on success, otherwise false.
+     */
+    bool send_ap_metric_query_message(
+        uint16_t mid,
+        const std::unordered_set<sMacAddr> &bssid_list = std::unordered_set<sMacAddr>());
 };
 
 } // namespace beerocks
