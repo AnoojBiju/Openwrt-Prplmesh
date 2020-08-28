@@ -1575,7 +1575,7 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
             if ((it->second.dialog_token == hal_data->dialog_token) ||
                 (hal_data->dialog_token == 0)) {
 
-                int id = it->second.id;
+                auto id = it->second.id;
 
                 auto response = message_com::create_vs_message<
                     beerocks_message::cACTION_MONITOR_CLIENT_BEACON_11K_RESPONSE>(cmdu_tx, id);
