@@ -550,7 +550,7 @@ bool LinkMetricsCollectionTask::send_ap_metric_query_message(
                 LOG(ERROR) << "Failed forwarding AP_METRICS_QUERY_MESSAGE message to fronthaul";
             }
 
-            m_btl_ctx.m_ap_metric_query.push_back({radio_info->slave, bssid.mac});
+            m_ap_metric_query.push_back({radio_info->slave, bssid.mac});
         }
     }
     return true;
@@ -679,12 +679,11 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
     }
 
     auto bssid_tlv = ap_metrics_tlv->bssid();
-    auto mac = std::find_if(m_btl_ctx.m_ap_metric_query.begin(), m_btl_ctx.m_ap_metric_query.end(),
-                            [&bssid_tlv](backhaul_manager::sApMetricsQuery const &query) {
-                                return query.bssid == bssid_tlv;
-                            });
+    auto mac       = std::find_if(
+        m_ap_metric_query.begin(), m_ap_metric_query.end(),
+        [&bssid_tlv](sApMetricsQuery const &query) { return query.bssid == bssid_tlv; });
 
-    if (mac == m_btl_ctx.m_ap_metric_query.end()) {
+    if (mac == m_ap_metric_query.end()) {
         LOG(ERROR) << "Failed search in ap_metric_query for bssid: " << bssid_tlv
                    << " from mid=" << std::hex << mid;
         return;
@@ -735,14 +734,12 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
         {metric, traffic_stats_response, link_metrics_response});
 
     // Remove an entry from the processed query
-    m_btl_ctx.m_ap_metric_query.erase(
-        std::remove_if(m_btl_ctx.m_ap_metric_query.begin(), m_btl_ctx.m_ap_metric_query.end(),
-                       [&](backhaul_manager::sApMetricsQuery const &query) {
-                           return mac->bssid == query.bssid;
-                       }),
-        m_btl_ctx.m_ap_metric_query.end());
+    m_ap_metric_query.erase(
+        std::remove_if(m_ap_metric_query.begin(), m_ap_metric_query.end(),
+                       [&](sApMetricsQuery const &query) { return mac->bssid == query.bssid; }),
+        m_ap_metric_query.end());
 
-    if (!m_btl_ctx.m_ap_metric_query.empty()) {
+    if (!m_ap_metric_query.empty()) {
         return;
     }
 
