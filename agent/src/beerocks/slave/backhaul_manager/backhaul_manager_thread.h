@@ -93,6 +93,7 @@ private:
     finalize_slaves_connect_state(bool fConnected,
                                   std::shared_ptr<sRadioInfo> pSocket = nullptr); // cmdu_duplicate
 
+public:
     /**
      * @brief Sends an AP Metrics Query message for each bssid on 'bssid_list' to the son_slaves.
      * If the 'bssid_list' is empty, sends a query on each bssid that exists on the Agent.
@@ -105,6 +106,7 @@ private:
         uint16_t mid,
         const std::unordered_set<sMacAddr> &bssid_list = std::unordered_set<sMacAddr>());
 
+private:
     /**
      * @brief Creates Backhaul STA Steering Response message with 2 tlvs Steering Response
      *        and Error Code.
@@ -129,7 +131,6 @@ private:
                                         const std::string &src_mac);
     bool handle_multi_ap_policy_config_request(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                const std::string &src_mac);
-    bool handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac);
     bool handle_slave_ap_metrics_response(ieee1905_1::CmduMessageRx &cmdu_rx,
                                           const std::string &src_mac);
     bool handle_channel_selection_request(ieee1905_1::CmduMessageRx &cmdu_rx,
