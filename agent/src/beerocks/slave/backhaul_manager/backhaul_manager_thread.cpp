@@ -36,6 +36,7 @@
 #include "../link_metrics/ieee802_3_link_metrics_collector.h"
 
 #include "../tasks/ap_autoconfiguration_task.h"
+#include "../tasks/link_metrics_collection_task.h"
 #include "../tasks/topology_task.h"
 #include "../tlvf_utils.h"
 
@@ -243,6 +244,13 @@ bool backhaul_manager::init()
         return false;
     }
     m_task_pool.add_task(ap_auto_configuration_task);
+
+    auto link_metrics_collection_task = std::make_shared<LinkMetricsCollectionTask>(*this, cmdu_tx);
+    if (!link_metrics_collection_task) {
+        LOG(ERROR) << "failed to allocate link_metrics_collection_task Task!";
+        return false;
+    }
+    m_task_pool.add_task(link_metrics_collection_task);
 
     return true;
 }
