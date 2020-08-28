@@ -10,6 +10,8 @@
 
 #include "../agent_db.h"
 #include "../backhaul_manager/backhaul_manager_thread.h"
+#include "../link_metrics/ieee802_11_link_metrics_collector.h"
+#include "../link_metrics/ieee802_3_link_metrics_collector.h"
 
 #include <beerocks/tlvf/beerocks_message_backhaul.h>
 
@@ -247,7 +249,7 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
         const auto &neighbors = entry.second;
 
         std::unique_ptr<link_metrics_collector> collector =
-            m_btl_ctx.create_link_metrics_collector(interface);
+            create_link_metrics_collector(interface);
         if (!collector) {
             continue;
         }
@@ -896,6 +898,28 @@ bool LinkMetricsCollectionTask::add_link_metrics_tlv(
     }
 
     return true;
+}
+
+std::unique_ptr<link_metrics_collector> LinkMetricsCollectionTask::create_link_metrics_collector(
+    const backhaul_manager::sLinkInterface &link_interface) const
+{
+    ieee1905_1::eMediaType media_type = link_interface.media_type;
+    ieee1905_1::eMediaTypeGroup media_type_group =
+        static_cast<ieee1905_1::eMediaTypeGroup>(media_type >> 8);
+
+    if (ieee1905_1::eMediaTypeGroup::IEEE_802_3 == media_type_group) {
+        return std::make_unique<ieee802_3_link_metrics_collector>();
+    }
+
+    if (ieee1905_1::eMediaTypeGroup::IEEE_802_11 == media_type_group) {
+        return std::make_unique<ieee802_11_link_metrics_collector>();
+    }
+
+    LOG(ERROR) << "Unable to create link metrics collector for interface '"
+               << link_interface.iface_name << "' (unsupported media type " << std::hex
+               << (int)media_type << ")";
+
+    return nullptr;
 }
 
 } // namespace beerocks
