@@ -114,8 +114,6 @@ private:
     bool handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac);
     bool handle_client_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx,
                                         const std::string &src_mac);
-    bool handle_slave_ap_metrics_response(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                          const std::string &src_mac);
     bool handle_backhaul_steering_request(ieee1905_1::CmduMessageRx &cmdu_rx,
                                           const std::string &src_mac);
 
@@ -381,7 +379,6 @@ public:
                           const sLinkNeighbor &link_neighbor, const sLinkMetrics &link_metrics,
                           ieee1905_1::eLinkMetricsType link_metrics_type);
 
-private:
     struct sStaTrafficStats {
         sMacAddr sta_mac;
         uint32_t byte_sent;
@@ -411,6 +408,7 @@ private:
         std::vector<uint8_t> estimated_service_info_field;
     };
 
+private:
     struct sApMetricsResponse {
         sApMetrics metric;
         std::vector<sStaTrafficStats> sta_traffic_stats;
@@ -420,9 +418,9 @@ private:
 public:
     std::vector<sApMetricsQuery> m_ap_metric_query;
 
-private:
     std::vector<sApMetricsResponse> m_ap_metric_response;
 
+private:
     bool m_backhaul_sta_steering_enable = false;
 
     /*

@@ -19,6 +19,7 @@
 #include <tlvf/ieee_1905_1/tlvTransmitterLinkMetric.h>
 #include <tlvf/wfa_map/tlvApMetricQuery.h>
 #include <tlvf/wfa_map/tlvAssociatedStaExtendedLinkMetrics.h>
+#include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
 #include <tlvf/wfa_map/tlvBeaconMetricsQuery.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
 #include <tlvf/wfa_map/tlvStaMacAddressType.h>
@@ -59,6 +60,10 @@ bool LinkMetricsCollectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx,
     }
     case ieee1905_1::eMessageType::MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE: {
         handle_multi_ap_policy_config_request(cmdu_rx, src_mac);
+        break;
+    }
+    case ieee1905_1::eMessageType::AP_METRICS_RESPONSE_MESSAGE: {
+        handle_ap_metrics_response(cmdu_rx, src_mac);
         break;
     }
     default: {
@@ -618,6 +623,199 @@ void LinkMetricsCollectionTask::handle_multi_ap_policy_config_request(
     }
 
     m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
+                                  tlvf::mac_to_string(db->bridge.mac));
+}
+
+void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                                           const sMacAddr &src_mac)
+{
+    auto mid = cmdu_rx.getMessageId();
+    LOG(DEBUG) << "Received AP_METRICS_RESPONSE_MESSAGE, mid=" << std::hex << mid;
+
+    auto db = AgentDB::get();
+
+    if (db->controller_info.bridge_mac == net::network_utils::ZERO_MAC) {
+        LOG(ERROR) << "controller_info.bridge_mac == ZERO_MAC. Skip AP_METRICS_RESPONSE_MESSAGE";
+        return;
+    }
+
+    /**
+     * If AP Metrics Response message does not correspond to a previously received and forwarded
+     * AP Metrics Query message (which we know because message id is not set), then forward message
+     * to controller.
+     * This might happen when channel utilization value has crossed configured threshold or when
+     * periodic metrics reporting interval has elapsed.
+     */
+    if (0 == mid) {
+        uint16_t length = message_com::get_uds_header(cmdu_rx)->length;
+        cmdu_rx.swap(); //swap back before forwarding
+        m_btl_ctx.send_cmdu_to_broker(cmdu_rx, tlvf::mac_to_string(db->controller_info.bridge_mac),
+                                      tlvf::mac_to_string(db->bridge.mac), length);
+        return;
+    }
+
+    /**
+     * When periodic metrics reporting interval has elapsed, we emulate that we have received an
+     * AP Metrics Query message from controller. To differentiate real queries from emulated ones,
+     * we use a "special" mid value.
+     * Note that this design is flaw as a real query might also have this special mid value. This
+     * is just a quick and dirty fix to pass 4.7.5 and 4.7.6 for M1
+     * TODO: to be fixed as part of #1328
+     */
+    if (UINT16_MAX == mid) {
+        mid = 0;
+    }
+
+    auto ap_metrics_tlv = cmdu_rx.getClass<wfa_map::tlvApMetrics>();
+    if (!ap_metrics_tlv) {
+        LOG(ERROR) << "Failed cmdu_rx.getClass<wfa_map::tlvApMetrics>(), mid=" << std::hex << mid;
+        return;
+    }
+
+    auto bssid_tlv = ap_metrics_tlv->bssid();
+    auto mac = std::find_if(m_btl_ctx.m_ap_metric_query.begin(), m_btl_ctx.m_ap_metric_query.end(),
+                            [&bssid_tlv](backhaul_manager::sApMetricsQuery const &query) {
+                                return query.bssid == bssid_tlv;
+                            });
+
+    if (mac == m_btl_ctx.m_ap_metric_query.end()) {
+        LOG(ERROR) << "Failed search in ap_metric_query for bssid: " << bssid_tlv
+                   << " from mid=" << std::hex << mid;
+        return;
+    }
+
+    backhaul_manager::sApMetrics metric;
+    // Copy data to the response vector
+    metric.bssid               = ap_metrics_tlv->bssid();
+    metric.channel_utilization = ap_metrics_tlv->channel_utilization();
+    metric.number_of_stas_currently_associated =
+        ap_metrics_tlv->number_of_stas_currently_associated();
+    metric.estimated_service_parameters = ap_metrics_tlv->estimated_service_parameters();
+    auto info                           = ap_metrics_tlv->estimated_service_info_field();
+    for (size_t i = 0; i < ap_metrics_tlv->estimated_service_info_field_length(); i++) {
+        metric.estimated_service_info_field.push_back(info[i]);
+    }
+    std::vector<backhaul_manager::sStaTrafficStats> traffic_stats_response;
+
+    for (auto &sta_traffic : cmdu_rx.getClassList<wfa_map::tlvAssociatedStaTrafficStats>()) {
+        if (!sta_traffic) {
+            LOG(ERROR) << "Failed to get class list for tlvAssociatedStaTrafficStats";
+            continue;
+        }
+
+        traffic_stats_response.push_back(
+            {sta_traffic->sta_mac(), sta_traffic->byte_sent(), sta_traffic->byte_recived(),
+             sta_traffic->packets_sent(), sta_traffic->packets_recived(),
+             sta_traffic->tx_packets_error(), sta_traffic->rx_packets_error(),
+             sta_traffic->retransmission_count()});
+    }
+
+    std::vector<backhaul_manager::sStaLinkMetrics> link_metrics_response;
+    for (auto &sta_link_metric : cmdu_rx.getClassList<wfa_map::tlvAssociatedStaLinkMetrics>()) {
+        if (!sta_link_metric) {
+            LOG(ERROR) << "Failed getClassList<wfa_map::tlvAssociatedStaLinkMetrics>";
+            continue;
+        }
+        if (sta_link_metric->bssid_info_list_length() != 1) {
+            LOG(ERROR) << "sta_link_metric->bssid_info_list_length() should be equal to 1";
+            continue;
+        }
+        auto response_list = sta_link_metric->bssid_info_list(0);
+        link_metrics_response.push_back({sta_link_metric->sta_mac(), std::get<1>(response_list)});
+    }
+
+    // Fill a response vector
+    m_btl_ctx.m_ap_metric_response.push_back(
+        {metric, traffic_stats_response, link_metrics_response});
+
+    // Remove an entry from the processed query
+    m_btl_ctx.m_ap_metric_query.erase(
+        std::remove_if(m_btl_ctx.m_ap_metric_query.begin(), m_btl_ctx.m_ap_metric_query.end(),
+                       [&](backhaul_manager::sApMetricsQuery const &query) {
+                           return mac->bssid == query.bssid;
+                       }),
+        m_btl_ctx.m_ap_metric_query.end());
+
+    if (!m_btl_ctx.m_ap_metric_query.empty()) {
+        return;
+    }
+
+    // We received all responses - prepare and send response message to the controller
+    auto cmdu_header = m_cmdu_tx.create(mid, ieee1905_1::eMessageType::AP_METRICS_RESPONSE_MESSAGE);
+
+    if (!cmdu_header) {
+        LOG(ERROR) << "Failed building IEEE1905 AP_METRICS_RESPONSE_MESSAGE";
+        return;
+    }
+
+    // Prepare tlvApMetrics for each processed query
+    for (const auto &response : m_btl_ctx.m_ap_metric_response) {
+        auto ap_metrics_response_tlv = m_cmdu_tx.addClass<wfa_map::tlvApMetrics>();
+        if (!ap_metrics_response_tlv) {
+            LOG(ERROR) << "Failed addClass<wfa_map::tlvApMetrics>";
+            return;
+        }
+
+        ap_metrics_response_tlv->bssid()               = response.metric.bssid;
+        ap_metrics_response_tlv->channel_utilization() = response.metric.channel_utilization;
+        ap_metrics_response_tlv->number_of_stas_currently_associated() =
+            response.metric.number_of_stas_currently_associated;
+        ap_metrics_response_tlv->estimated_service_parameters() =
+            response.metric.estimated_service_parameters;
+        if (!ap_metrics_response_tlv->alloc_estimated_service_info_field(
+                response.metric.estimated_service_info_field.size())) {
+            LOG(ERROR) << "Couldn't allocate "
+                          "ap_metrics_response_tlv->alloc_estimated_service_info_field";
+            return;
+        }
+        std::copy_n(response.metric.estimated_service_info_field.begin(),
+                    response.metric.estimated_service_info_field.size(),
+                    ap_metrics_response_tlv->estimated_service_info_field());
+
+        for (auto &stat : response.sta_traffic_stats) {
+            auto sta_traffic_response_tlv =
+                m_cmdu_tx.addClass<wfa_map::tlvAssociatedStaTrafficStats>();
+
+            if (!sta_traffic_response_tlv) {
+                LOG(ERROR) << "Failed addClass<wfa_map::tlvAssociatedStaTrafficStats>";
+                continue;
+            }
+
+            sta_traffic_response_tlv->sta_mac()              = stat.sta_mac;
+            sta_traffic_response_tlv->byte_sent()            = stat.byte_sent;
+            sta_traffic_response_tlv->byte_recived()         = stat.byte_recived;
+            sta_traffic_response_tlv->packets_sent()         = stat.packets_sent;
+            sta_traffic_response_tlv->packets_recived()      = stat.packets_recived;
+            sta_traffic_response_tlv->tx_packets_error()     = stat.tx_packets_error;
+            sta_traffic_response_tlv->rx_packets_error()     = stat.rx_packets_error;
+            sta_traffic_response_tlv->retransmission_count() = stat.retransmission_count;
+        }
+
+        for (auto &link_metric : response.sta_link_metrics) {
+            auto sta_link_metric_response_tlv =
+                m_cmdu_tx.addClass<wfa_map::tlvAssociatedStaLinkMetrics>();
+
+            if (!sta_link_metric_response_tlv) {
+                LOG(ERROR) << "Failed addClass<wfa_map::tlvAssociatedStaLinkMetrics>";
+                continue;
+            }
+
+            sta_link_metric_response_tlv->sta_mac() = link_metric.sta_mac;
+            if (!sta_link_metric_response_tlv->alloc_bssid_info_list(1)) {
+                LOG(ERROR) << "Failed alloc_bssid_info_list";
+                continue;
+            }
+            auto &sta_link_metric_response =
+                std::get<1>(sta_link_metric_response_tlv->bssid_info_list(0));
+            sta_link_metric_response = link_metric.bssid_info;
+        }
+    }
+
+    // Clear the m_ap_metric_response vector after preparing response to the controller
+    m_btl_ctx.m_ap_metric_response.clear();
+
+    LOG(DEBUG) << "Sending AP_METRICS_RESPONSE_MESSAGE, mid=" << std::hex << mid;
+    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(db->controller_info.bridge_mac),
                                   tlvf::mac_to_string(db->bridge.mac));
 }
 
