@@ -125,8 +125,6 @@ private:
     bool handle_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac,
                                Socket *&forward_to);
     // 1905 messages handlers
-    bool handle_associated_sta_link_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                                  const std::string &src_mac);
     bool handle_multi_ap_policy_config_request(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                const std::string &src_mac);
     bool handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac);
@@ -325,6 +323,7 @@ private:
         Socket *sta_hal_int_events = nullptr;
     };
 
+public:
     /**
      * @brief Gets radio info for the radio with given MAC address
      *
@@ -333,7 +332,6 @@ private:
      */
     std::shared_ptr<sRadioInfo> get_radio(const sMacAddr &radio_mac) const;
 
-public:
     /**
      * @brief Interface in this device which connects to an interface in one or more neighbors.
      *
