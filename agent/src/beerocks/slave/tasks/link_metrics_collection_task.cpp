@@ -208,7 +208,7 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
      * Get the list of neighbor links from the topology database.
      * Neighbors are grouped by the interface that connects to them.
      */
-    std::map<sLinkInterface, std::vector<backhaul_manager::sLinkNeighbor>> neighbor_links_map;
+    std::map<sLinkInterface, std::vector<sLinkNeighbor>> neighbor_links_map;
     if (!get_neighbor_links(neighbor_al_mac, neighbor_links_map)) {
         LOG(ERROR) << "Failed to get the list of neighbor links";
         return;
@@ -817,10 +817,11 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
                                   tlvf::mac_to_string(db->bridge.mac));
 }
 
-bool LinkMetricsCollectionTask::add_link_metrics(
-    const sMacAddr &reporter_al_mac, const sLinkInterface &link_interface,
-    const backhaul_manager::sLinkNeighbor &link_neighbor, const sLinkMetrics &link_metrics,
-    ieee1905_1::eLinkMetricsType link_metrics_type)
+bool LinkMetricsCollectionTask::add_link_metrics(const sMacAddr &reporter_al_mac,
+                                                 const sLinkInterface &link_interface,
+                                                 const sLinkNeighbor &link_neighbor,
+                                                 const sLinkMetrics &link_metrics,
+                                                 ieee1905_1::eLinkMetricsType link_metrics_type)
 {
     /**
      * Add Transmitter Link Metric TLV if specifically requested or both requested
@@ -925,7 +926,7 @@ LinkMetricsCollectionTask::create_link_metrics_collector(const sLinkInterface &l
 
 bool LinkMetricsCollectionTask::get_neighbor_links(
     const sMacAddr &neighbor_mac_filter,
-    std::map<sLinkInterface, std::vector<backhaul_manager::sLinkNeighbor>> &neighbor_links_map)
+    std::map<sLinkInterface, std::vector<sLinkNeighbor>> &neighbor_links_map)
 {
     // TODO: Topology Database is required to implement this method.
 
@@ -949,7 +950,7 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
     for (const auto &neighbors_on_local_iface : db->neighbor_devices) {
         auto &neighbors = neighbors_on_local_iface.second;
         for (const auto &neighbor_entry : neighbors) {
-            backhaul_manager::sLinkNeighbor neighbor;
+            sLinkNeighbor neighbor;
             neighbor.al_mac    = neighbor_entry.first;
             neighbor.iface_mac = neighbor_entry.second.transmitting_iface_mac;
             if ((neighbor_mac_filter == net::network_utils::ZERO_MAC) ||
@@ -985,7 +986,7 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
 
             // TODO: This is not correct... We actually have to get this from the topology
             // discovery message, which will give us the neighbor interface and AL MAC addresses.
-            backhaul_manager::sLinkNeighbor neighbor;
+            sLinkNeighbor neighbor;
             neighbor.iface_mac = associated_client.first;
             neighbor.al_mac    = neighbor.iface_mac;
 
