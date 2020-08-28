@@ -208,8 +208,7 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
      * Get the list of neighbor links from the topology database.
      * Neighbors are grouped by the interface that connects to them.
      */
-    std::map<backhaul_manager::sLinkInterface, std::vector<backhaul_manager::sLinkNeighbor>>
-        neighbor_links_map;
+    std::map<sLinkInterface, std::vector<backhaul_manager::sLinkNeighbor>> neighbor_links_map;
     if (!get_neighbor_links(neighbor_al_mac, neighbor_links_map)) {
         LOG(ERROR) << "Failed to get the list of neighbor links";
         return;
@@ -825,7 +824,7 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
 }
 
 bool LinkMetricsCollectionTask::add_link_metrics(
-    const sMacAddr &reporter_al_mac, const backhaul_manager::sLinkInterface &link_interface,
+    const sMacAddr &reporter_al_mac, const sLinkInterface &link_interface,
     const backhaul_manager::sLinkNeighbor &link_neighbor, const sLinkMetrics &link_metrics,
     ieee1905_1::eLinkMetricsType link_metrics_type)
 {
@@ -908,8 +907,8 @@ bool LinkMetricsCollectionTask::add_link_metrics(
     return true;
 }
 
-std::unique_ptr<link_metrics_collector> LinkMetricsCollectionTask::create_link_metrics_collector(
-    const backhaul_manager::sLinkInterface &link_interface) const
+std::unique_ptr<link_metrics_collector>
+LinkMetricsCollectionTask::create_link_metrics_collector(const sLinkInterface &link_interface) const
 {
     ieee1905_1::eMediaType media_type = link_interface.media_type;
     ieee1905_1::eMediaTypeGroup media_type_group =
@@ -952,8 +951,7 @@ static bool get_iface_name(const sMacAddr &iface_mac, std::string &iface_name)
 
 bool LinkMetricsCollectionTask::get_neighbor_links(
     const sMacAddr &neighbor_mac_filter,
-    std::map<backhaul_manager::sLinkInterface, std::vector<backhaul_manager::sLinkNeighbor>>
-        &neighbor_links_map)
+    std::map<sLinkInterface, std::vector<backhaul_manager::sLinkNeighbor>> &neighbor_links_map)
 {
     // TODO: Topology Database is required to implement this method.
 
@@ -961,7 +959,7 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
     // Note that when processing Topology Discovery message we must store the IEEE 1905.1 AL MAC
     // address of the transmitting device together with the interface that such message is
     // received through.
-    backhaul_manager::sLinkInterface wired_interface;
+    sLinkInterface wired_interface;
     auto db = AgentDB::get();
 
     wired_interface.iface_name = db->ethernet.iface_name;
@@ -996,7 +994,7 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
         for (const auto &associated_client : radio->associated_clients) {
             auto &bssid = associated_client.second.bssid;
 
-            backhaul_manager::sLinkInterface interface;
+            sLinkInterface interface;
             if (!get_iface_name(bssid, interface.iface_name)) {
                 LOG(ERROR) << "Unable to get interface name for BSSID " << bssid;
                 return false;
