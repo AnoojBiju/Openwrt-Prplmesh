@@ -23,6 +23,7 @@ namespace beerocks {
 enum eTaskType : uint8_t {
     TOPOLOGY,
     AP_AUTOCONFIGURATION,
+    CAPABILITY_REPORTING,
 };
 
 class Task {
