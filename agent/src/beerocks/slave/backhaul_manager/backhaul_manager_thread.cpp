@@ -31,8 +31,6 @@
 #include "backhaul_manager_thread.h"
 #include "../agent_db.h"
 
-#include "../helpers/media_type.h"
-
 #include "../tasks/ap_autoconfiguration_task.h"
 #include "../tasks/channel_selection_task.h"
 #include "../tasks/link_metrics_collection_task.h"
@@ -110,26 +108,6 @@ static bool get_iface_mac(const std::string &iface_name, sMacAddr &iface_mac)
 
     LOG(ERROR) << "Failed getting MAC address for interface: " << iface_name;
     iface_mac = network_utils::ZERO_MAC;
-
-    return false;
-}
-
-/**
- * @brief Gets the name of the interface with given MAC address.
- *
- * @param[in] iface_mac MAC address of the network interface.
- * @param[out] iface_name Name of the network interface on success and empty string on error.
- *
- * @return True on success and false otherwise.
- */
-static bool get_iface_name(const sMacAddr &iface_mac, std::string &iface_name)
-{
-    if (network_utils::linux_iface_get_name(iface_mac, iface_name)) {
-        return true;
-    }
-
-    LOG(ERROR) << "Failed getting interface name for MAC address: " << iface_mac;
-    iface_name.clear();
 
     return false;
 }
@@ -2708,88 +2686,6 @@ std::shared_ptr<bwl::sta_wlan_hal> backhaul_manager::get_wireless_hal(std::strin
     }
 
     return slave_sk->second->sta_wlan_hal;
-}
-
-bool backhaul_manager::get_neighbor_links(
-    const sMacAddr &neighbor_mac_filter,
-    std::map<sLinkInterface, std::vector<sLinkNeighbor>> &neighbor_links_map)
-{
-    // TODO: Topology Database is required to implement this method.
-
-    // TODO: this is not accurate as we have made the assumption that there is a single interface.
-    // Note that when processing Topology Discovery message we must store the IEEE 1905.1 AL MAC
-    // address of the transmitting device together with the interface that such message is
-    // received through.
-    sLinkInterface wired_interface;
-    auto db = AgentDB::get();
-
-    wired_interface.iface_name = db->ethernet.iface_name;
-
-    if (!MediaType::get_media_type(wired_interface.iface_name,
-                                   ieee1905_1::eMediaTypeGroup::IEEE_802_3,
-                                   wired_interface.media_type)) {
-        LOG(ERROR) << "Unable to compute media type for interface " << wired_interface.iface_name;
-        return false;
-    }
-
-    if (!get_iface_mac(wired_interface.iface_name, wired_interface.iface_mac)) {
-        return false;
-    }
-
-    for (const auto &neighbors_on_local_iface : db->neighbor_devices) {
-        auto &neighbors = neighbors_on_local_iface.second;
-        for (const auto &neighbor_entry : neighbors) {
-            sLinkNeighbor neighbor;
-            neighbor.al_mac    = neighbor_entry.first;
-            neighbor.iface_mac = neighbor_entry.second.transmitting_iface_mac;
-            if ((neighbor_mac_filter == network_utils::ZERO_MAC) ||
-                (neighbor_mac_filter == neighbor.al_mac)) {
-                neighbor_links_map[wired_interface].push_back(neighbor);
-            }
-        }
-    }
-
-    // Also include a link for each associated client
-    for (const auto radio : db->get_radios_list()) {
-        if (!radio) {
-            continue;
-        }
-
-        for (const auto &associated_client : radio->associated_clients) {
-            auto &bssid = associated_client.second.bssid;
-
-            sLinkInterface interface;
-            if (!get_iface_name(bssid, interface.iface_name)) {
-                LOG(ERROR) << "Unable to get interface name for BSSID " << bssid;
-                return false;
-            }
-
-            interface.iface_mac = bssid;
-            interface.media_type =
-                MediaType::get_802_11_media_type(radio->freq_type, radio->max_supported_bw);
-
-            if (ieee1905_1::eMediaType::UNKNOWN_MEDIA == interface.media_type) {
-                LOG(ERROR) << "Unknown media type for interface " << interface.iface_name;
-                return false;
-            }
-
-            LOG(TRACE) << "Getting neighbors connected to interface " << interface.iface_name
-                       << " with BSSID " << bssid;
-
-            // TODO: This is not correct... We actually have to get this from the topology
-            // discovery message, which will give us the neighbor interface and AL MAC addresses.
-            sLinkNeighbor neighbor;
-            neighbor.iface_mac = associated_client.first;
-            neighbor.al_mac    = neighbor.iface_mac;
-
-            if ((neighbor_mac_filter == network_utils::ZERO_MAC) ||
-                (neighbor_mac_filter == neighbor.al_mac)) {
-                neighbor_links_map[interface].push_back(neighbor);
-            }
-        }
-    }
-
-    return true;
 }
 
 bool backhaul_manager::add_ap_ht_capabilities(const sRadioInfo &radio_info)
