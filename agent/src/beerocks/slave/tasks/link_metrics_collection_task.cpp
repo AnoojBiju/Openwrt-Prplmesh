@@ -683,7 +683,7 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
         return;
     }
 
-    backhaul_manager::sApMetrics metric;
+    sApMetrics metric;
     // Copy data to the response vector
     metric.bssid               = ap_metrics_tlv->bssid();
     metric.channel_utilization = ap_metrics_tlv->channel_utilization();
@@ -694,7 +694,7 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
     for (size_t i = 0; i < ap_metrics_tlv->estimated_service_info_field_length(); i++) {
         metric.estimated_service_info_field.push_back(info[i]);
     }
-    std::vector<backhaul_manager::sStaTrafficStats> traffic_stats_response;
+    std::vector<sStaTrafficStats> traffic_stats_response;
 
     for (auto &sta_traffic : cmdu_rx.getClassList<wfa_map::tlvAssociatedStaTrafficStats>()) {
         if (!sta_traffic) {
@@ -709,7 +709,7 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
              sta_traffic->retransmission_count()});
     }
 
-    std::vector<backhaul_manager::sStaLinkMetrics> link_metrics_response;
+    std::vector<sStaLinkMetrics> link_metrics_response;
     for (auto &sta_link_metric : cmdu_rx.getClassList<wfa_map::tlvAssociatedStaLinkMetrics>()) {
         if (!sta_link_metric) {
             LOG(ERROR) << "Failed getClassList<wfa_map::tlvAssociatedStaLinkMetrics>";
@@ -724,8 +724,7 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
     }
 
     // Fill a response vector
-    m_btl_ctx.m_ap_metric_response.push_back(
-        {metric, traffic_stats_response, link_metrics_response});
+    m_ap_metric_response.push_back({metric, traffic_stats_response, link_metrics_response});
 
     // Remove an entry from the processed query
     m_ap_metric_query.erase(
@@ -746,7 +745,7 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
     }
 
     // Prepare tlvApMetrics for each processed query
-    for (const auto &response : m_btl_ctx.m_ap_metric_response) {
+    for (const auto &response : m_ap_metric_response) {
         auto ap_metrics_response_tlv = m_cmdu_tx.addClass<wfa_map::tlvApMetrics>();
         if (!ap_metrics_response_tlv) {
             LOG(ERROR) << "Failed addClass<wfa_map::tlvApMetrics>";
@@ -809,7 +808,7 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
     }
 
     // Clear the m_ap_metric_response vector after preparing response to the controller
-    m_btl_ctx.m_ap_metric_response.clear();
+    m_ap_metric_response.clear();
 
     LOG(DEBUG) << "Sending AP_METRICS_RESPONSE_MESSAGE, mid=" << std::hex << mid;
     m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(db->controller_info.bridge_mac),
