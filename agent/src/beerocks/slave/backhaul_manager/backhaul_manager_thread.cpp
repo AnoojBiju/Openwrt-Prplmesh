@@ -83,9 +83,7 @@
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
-#include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
 #include <tlvf/wfa_map/tlvSearchedService.h>
-#include <tlvf/wfa_map/tlvSteeringPolicy.h>
 #include <tlvf/wfa_map/tlvSupportedService.h>
 #include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
 
@@ -1890,9 +1888,6 @@ bool backhaul_manager::handle_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx,
     case ieee1905_1::eMessageType::CLIENT_CAPABILITY_QUERY_MESSAGE: {
         return handle_client_capability_query(cmdu_rx, src_mac);
     }
-    case ieee1905_1::eMessageType::MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE: {
-        return handle_multi_ap_policy_config_request(cmdu_rx, src_mac);
-    }
     case ieee1905_1::eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE: {
         return handle_channel_selection_request(cmdu_rx, src_mac);
     }
@@ -1955,75 +1950,6 @@ backhaul_manager::get_radio(const sMacAddr &radio_mac) const
                                return radio_info->radio_mac == radio_mac;
                            });
     return it != slaves_sockets.end() ? *it : nullptr;
-}
-
-bool backhaul_manager::handle_multi_ap_policy_config_request(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                                             const std::string &src_mac)
-{
-    auto mid = cmdu_rx.getMessageId();
-    LOG(DEBUG) << "Received MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE, mid=" << std::hex << int(mid);
-
-    auto steering_policy_tlv = cmdu_rx.getClass<wfa_map::tlvSteeringPolicy>();
-    if (steering_policy_tlv) {
-        // For the time being, agent doesn't do steering so steering policy is ignored.
-    }
-
-    auto db = AgentDB::get();
-
-    auto metric_reporting_policy_tlv = cmdu_rx.getClass<wfa_map::tlvMetricReportingPolicy>();
-    if (metric_reporting_policy_tlv) {
-        /**
-         * The Multi-AP Policy Config Request message containing a Metric Reporting Policy TLV is
-         * sent by the controller and received by the backhaul manager.
-         * The backhaul manager forwards the request message "as is" to all the slaves managing the
-         * radios which Radio Unique Identifier has been specified.
-         */
-        for (size_t i = 0; i < metric_reporting_policy_tlv->metrics_reporting_conf_list_length();
-             i++) {
-            auto tuple = metric_reporting_policy_tlv->metrics_reporting_conf_list(i);
-            if (!std::get<0>(tuple)) {
-                LOG(ERROR) << "Failed to get metrics_reporting_conf[" << i
-                           << "] from TLV_METRIC_REPORTING_POLICY";
-                return false;
-            }
-
-            auto metrics_reporting_conf = std::get<1>(tuple);
-
-            std::shared_ptr<sRadioInfo> radio = get_radio(metrics_reporting_conf.radio_uid);
-            if (radio) {
-                uint16_t length = message_com::get_uds_header(cmdu_rx)->length;
-                cmdu_rx.swap(); // swap back before forwarding
-                if (!message_com::forward_cmdu_to_uds(radio->slave, cmdu_rx, length)) {
-                    LOG(ERROR) << "Failed to forward message to slave " << radio->radio_mac;
-                }
-                cmdu_rx.swap(); // swap back to normal after forwarding, for next iteration
-            } else {
-                LOG(INFO) << "Radio Unique Identifier " << metrics_reporting_conf.radio_uid
-                          << " not found";
-            }
-        }
-
-        /**
-         * The AP Metrics Reporting Interval field indicates if periodic AP metrics reporting is
-         * to be enabled, and if so the cadence.
-         *
-         * Store configured interval value and restart the timer.
-         *
-         * Reporting interval value works just for enabling/disabling auto sending AP Metrics Response,
-         * which will be send every 500 ms.
-         */
-        ap_metrics_reporting_info.reporting_interval_s =
-            metric_reporting_policy_tlv->metrics_reporting_interval_sec();
-        ap_metrics_reporting_info.last_reporting_time_point = std::chrono::steady_clock::now();
-    }
-
-    // send ACK_MESSAGE back to the controller
-    if (!cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE)) {
-        LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
-        return false;
-    }
-
-    return send_cmdu_to_broker(cmdu_tx, src_mac, tlvf::mac_to_string(db->bridge.mac));
 }
 
 bool backhaul_manager::handle_client_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx,
