@@ -2045,9 +2045,6 @@ bool backhaul_manager::handle_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx,
     case ieee1905_1::eMessageType::AP_CAPABILITY_QUERY_MESSAGE: {
         return handle_ap_capability_query(cmdu_rx, src_mac);
     }
-    case ieee1905_1::eMessageType::COMBINED_INFRASTRUCTURE_METRICS_MESSAGE: {
-        return handle_1905_combined_infrastructure_metrics(cmdu_rx, src_mac);
-    }
     case ieee1905_1::eMessageType::CLIENT_CAPABILITY_QUERY_MESSAGE: {
         return handle_client_capability_query(cmdu_rx, src_mac);
     }
@@ -2635,28 +2632,6 @@ bool backhaul_manager::handle_slave_ap_metrics_response(ieee1905_1::CmduMessageR
     LOG(DEBUG) << "Sending AP_METRICS_RESPONSE_MESSAGE, mid=" << std::hex << mid;
     return send_cmdu_to_broker(cmdu_tx, tlvf::mac_to_string(db->controller_info.bridge_mac),
                                tlvf::mac_to_string(db->bridge.mac));
-}
-
-bool backhaul_manager::handle_1905_combined_infrastructure_metrics(
-    ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac)
-{
-    const auto mid = cmdu_rx.getMessageId();
-    LOG(DEBUG) << "Received COMBINED_INFRASTRUCTURE_METRICS message, mid=" << std::hex << mid;
-
-    if (cmdu_rx.getClass<ieee1905_1::tlvReceiverLinkMetric>())
-        LOG(DEBUG) << "Received TLV_RECEIVER_LINK_METRIC";
-    if (cmdu_rx.getClass<ieee1905_1::tlvTransmitterLinkMetric>())
-        LOG(DEBUG) << "Received TLV_TRANSMITTER_LINK_METRIC";
-
-    // build ACK message CMDU
-    auto cmdu_tx_header = cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE);
-    if (!cmdu_tx_header) {
-        LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
-        return false;
-    }
-    LOG(DEBUG) << "sending ACK message to the originator, mid=" << std::hex << mid;
-    auto db = AgentDB::get();
-    return send_cmdu_to_broker(cmdu_tx, src_mac, tlvf::mac_to_string(db->bridge.mac));
 }
 
 bool backhaul_manager::handle_1905_beacon_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx,
