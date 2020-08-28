@@ -36,6 +36,7 @@
 #include "../link_metrics/ieee802_3_link_metrics_collector.h"
 
 #include "../tasks/ap_autoconfiguration_task.h"
+#include "../tasks/capability_reporting_task.h"
 #include "../tasks/topology_task.h"
 #include "../tlvf_utils.h"
 
@@ -243,6 +244,13 @@ bool backhaul_manager::init()
         return false;
     }
     m_task_pool.add_task(ap_auto_configuration_task);
+
+    auto capability_reporing_task = std::make_shared<CapabilityReportingTask>(*this, cmdu_tx);
+    if (!capability_reporing_task) {
+        LOG(ERROR) << "failed to allocate capability_reporing_task!";
+        return false;
+    }
+    m_task_pool.add_task(capability_reporing_task);
 
     return true;
 }
