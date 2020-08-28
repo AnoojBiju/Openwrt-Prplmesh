@@ -60,8 +60,6 @@
 #include <tlvf/ieee_1905_1/tlvAutoconfigFreqBand.h>
 #include <tlvf/ieee_1905_1/tlvDeviceInformation.h>
 #include <tlvf/ieee_1905_1/tlvEndOfMessage.h>
-#include <tlvf/ieee_1905_1/tlvLinkMetricQuery.h>
-#include <tlvf/ieee_1905_1/tlvLinkMetricResultCode.h>
 #include <tlvf/ieee_1905_1/tlvMacAddress.h>
 #include <tlvf/ieee_1905_1/tlvReceiverLinkMetric.h>
 #include <tlvf/ieee_1905_1/tlvSearchedRole.h>
@@ -1972,9 +1970,6 @@ bool backhaul_manager::handle_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx,
     case ieee1905_1::eMessageType::AP_CAPABILITY_QUERY_MESSAGE: {
         return handle_ap_capability_query(cmdu_rx, src_mac);
     }
-    case ieee1905_1::eMessageType::LINK_METRIC_QUERY_MESSAGE: {
-        return handle_1905_link_metric_query(cmdu_rx, src_mac);
-    }
     case ieee1905_1::eMessageType::COMBINED_INFRASTRUCTURE_METRICS_MESSAGE: {
         return handle_1905_combined_infrastructure_metrics(cmdu_rx, src_mac);
     }
@@ -2573,165 +2568,6 @@ bool backhaul_manager::handle_slave_ap_metrics_response(ieee1905_1::CmduMessageR
     LOG(DEBUG) << "Sending AP_METRICS_RESPONSE_MESSAGE, mid=" << std::hex << int(mid);
     return send_cmdu_to_broker(cmdu_tx, tlvf::mac_to_string(db->controller_info.bridge_mac),
                                tlvf::mac_to_string(db->bridge.mac));
-}
-
-bool backhaul_manager::handle_1905_link_metric_query(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                                     const std::string &src_mac)
-{
-    const auto mid = cmdu_rx.getMessageId();
-    LOG(DEBUG) << "Received LINK_METRIC_QUERY_MESSAGE, mid=" << std::hex << int(mid);
-
-    /**
-     * The IEEE 1905.1 standard says about the Link Metric Query TLV and the neighbor type octet
-     * that "If the value is 0, then the EUI48 field is not present; if the value is 1, then the
-     * EUI-48 field shall be present."
-     *
-     * However, optional fields are not currently supported by TLVF.
-     *
-     * As a workaround, instead of defining a tlvLinkMetricQuery TLV with an optional field, we
-     * have defined two different TLVs: tlvLinkMetricQuery with the optional field and
-     * tlvLinkMetricQueryAllNeighbors without it. Application must check which of both TLVs has
-     * been received inside the message.
-     */
-    std::shared_ptr<ieee1905_1::tlvLinkMetricQueryAllNeighbors> tlvLinkMetricQueryAllNeighbors;
-    std::shared_ptr<ieee1905_1::tlvLinkMetricQuery> tlvLinkMetricQuery;
-
-    tlvLinkMetricQueryAllNeighbors = cmdu_rx.getClass<ieee1905_1::tlvLinkMetricQueryAllNeighbors>();
-    if (!tlvLinkMetricQueryAllNeighbors) {
-        tlvLinkMetricQuery = cmdu_rx.getClass<ieee1905_1::tlvLinkMetricQuery>();
-        if (!tlvLinkMetricQuery) {
-            LOG(ERROR) << "getClass ieee1905_1::tlvLinkMetricQueryAllNeighbors and "
-                          "ieee1905_1::tlvLinkMetricQuery failed";
-            return false;
-        }
-    }
-
-    auto db = AgentDB::get();
-
-    /**
-     * 1905.1 AL MAC address of the device that transmits the response message.
-     */
-    sMacAddr reporter_al_mac = db->bridge.mac;
-
-    /**
-     * 1905.1 AL MAC address of a neighbor of the receiving device.
-     * Query can specify a particular neighbor device or all neighbor devices.
-     */
-    sMacAddr neighbor_al_mac = network_utils::ZERO_MAC;
-
-    /**
-     * Obtain link metrics for either all neighbors or a specific neighbor
-     */
-    ieee1905_1::eLinkMetricNeighborType neighbor_type;
-
-    /**
-     * The link metrics type requested: TX, RX or both
-     */
-    ieee1905_1::eLinkMetricsType link_metrics_type;
-
-    if (tlvLinkMetricQuery) {
-        /**
-    	   * If tlvLinkMetricQuery has been included in message, we will be permissive enough to
-    	   * allow it specify ALL_NEIGHBORS and if so, then we will just ignore the field
-    	   * containing the MAC address of neighbor.
-    	   */
-        neighbor_type     = tlvLinkMetricQuery->neighbor_type();
-        neighbor_al_mac   = tlvLinkMetricQuery->mac_al_1905_device();
-        link_metrics_type = tlvLinkMetricQuery->link_metrics_type();
-    } else {
-        neighbor_type = tlvLinkMetricQueryAllNeighbors->neighbor_type();
-        if (ieee1905_1::eLinkMetricNeighborType::ALL_NEIGHBORS != neighbor_type) {
-            LOG(ERROR) << "Unexpected neighbor type: " << std::hex << int(neighbor_type);
-            return false;
-        }
-        link_metrics_type = tlvLinkMetricQueryAllNeighbors->link_metrics_type();
-    }
-
-    /**
-     * Set alias flag to true if link metrics for a specific neighbor have been requested
-     */
-    bool specific_neighbor =
-        ieee1905_1::eLinkMetricNeighborType::SPECIFIC_NEIGHBOR == neighbor_type;
-
-    /**
-     * Create response message
-     */
-    auto cmdu_tx_header =
-        cmdu_tx.create(mid, ieee1905_1::eMessageType::LINK_METRIC_RESPONSE_MESSAGE);
-    if (!cmdu_tx_header) {
-        LOG(ERROR) << "Failed creating LINK_METRIC_RESPONSE_MESSAGE header! mid=" << std::hex
-                   << (int)mid;
-        return false;
-    }
-
-    /**
-     * Get the list of neighbor links from the topology database.
-     * Neighbors are grouped by the interface that connects to them.
-     */
-    std::map<sLinkInterface, std::vector<sLinkNeighbor>> neighbor_links_map;
-    if (!get_neighbor_links(neighbor_al_mac, neighbor_links_map)) {
-        LOG(ERROR) << "Failed to get the list of neighbor links";
-        return false;
-    }
-
-    /**
-     * If the specified neighbor 1905.1 AL ID does not identify a neighbor of the receiving 1905.1
-     * AL, then a link metric ResultCode TLV (see Table 6-21) with a value set to “invalid
-     * neighbor” shall be included in this message.
-     */
-    bool invalid_neighbor = specific_neighbor && neighbor_links_map.empty();
-    if (invalid_neighbor) {
-        auto tlvLinkMetricResultCode = cmdu_tx.addClass<ieee1905_1::tlvLinkMetricResultCode>();
-        if (!tlvLinkMetricResultCode) {
-            LOG(ERROR) << "addClass ieee1905_1::tlvLinkMetricResultCode failed, mid=" << std::hex
-                       << (int)mid;
-            return false;
-        }
-
-        LOG(INFO) << "Invalid neighbor 1905.1 AL ID specified: "
-                  << tlvf::mac_to_string(neighbor_al_mac);
-
-        tlvLinkMetricResultCode->value() = ieee1905_1::tlvLinkMetricResultCode::INVALID_NEIGHBOR;
-    } else {
-
-        /**
-         * Report link metrics for the link with specific neighbor or for all neighbors, as
-         * obtained from topology database
-         */
-        for (const auto &entry : neighbor_links_map) {
-            auto interface        = entry.first;
-            const auto &neighbors = entry.second;
-
-            std::unique_ptr<link_metrics_collector> collector =
-                create_link_metrics_collector(interface);
-            if (!collector) {
-                continue;
-            }
-
-            for (const auto &neighbor : neighbors) {
-
-                LOG(TRACE) << "Getting link metrics for interface " << interface.iface_name
-                           << " (MediaType = " << std::hex << (int)interface.media_type
-                           << ") and neighbor " << neighbor.iface_mac;
-
-                sLinkMetrics link_metrics;
-                if (!collector->get_link_metrics(interface.iface_name, neighbor.iface_mac,
-                                                 link_metrics)) {
-                    LOG(ERROR) << "Unable to get link metrics for interface "
-                               << interface.iface_name << " and neighbor " << neighbor.iface_mac;
-                    return false;
-                }
-
-                if (!add_link_metrics(reporter_al_mac, interface, neighbor, link_metrics,
-                                      link_metrics_type)) {
-                    return false;
-                }
-            }
-        }
-    }
-
-    LOG(DEBUG) << "Sending LINK_METRIC_RESPONSE_MESSAGE, mid: " << std::hex << (int)mid;
-    return send_cmdu_to_broker(cmdu_tx, src_mac, tlvf::mac_to_string(db->bridge.mac));
 }
 
 bool backhaul_manager::handle_1905_combined_infrastructure_metrics(
