@@ -15,6 +15,8 @@
 #include <tlvf/wfa_map/tlvApMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
 
+#include "../backhaul_manager/backhaul_manager_thread.h"
+
 #include "bcl/network/socket.h"
 
 namespace beerocks {
@@ -57,6 +59,29 @@ private:
     bool send_ap_metric_query_message(
         uint16_t mid,
         const std::unordered_set<sMacAddr> &bssid_list = std::unordered_set<sMacAddr>());
+
+    /**
+     * @brief Adds link metric TLVs to response message.
+     *
+     * Creates a Transmitter Link Metric TLV or a Receiver Link Metric TLV or both and adds them to
+     * the Link Metric Response message.
+     *
+     * @param[in] reporter_al_mac 1905.1 AL MAC address of the device that transmits the response
+     *  message.
+     * @param[in] link_interface Connecting interface in this device.
+     * @param[in] link_neighbor Neighbor connected to interface.
+     * @param[in] link_metrics Metrics information associated to the link between the local
+     *  interface and the neighbor's interface.
+     * @param[in] link_metrics_type The link metrics type requested: TX, RX or both.
+     *
+     * @return True on success and false otherwise.
+     */
+    bool add_link_metrics_tlv(const sMacAddr &reporter_al_mac,
+                              const backhaul_manager::sLinkInterface &link_interface,
+                              const backhaul_manager::sLinkNeighbor &link_neighbor,
+                              const sLinkMetrics &link_metrics,
+                              ieee1905_1::eLinkMetricsType link_metrics_type);
+
 
     /**
      * AP Metrics Reporting configuration and status information type.
