@@ -95,7 +95,7 @@ void LinkMetricsCollectionTask::work()
                 // TODO: to be fixed as part of #1328
 
                 // Send ap_metrics query on all bssids exists on the Agent.
-                m_btl_ctx.send_slave_ap_metric_query_message(UINT16_MAX);
+                send_ap_metric_query_message(UINT16_MAX);
             }
         }
     }
@@ -468,10 +468,64 @@ void LinkMetricsCollectionTask::handle_ap_metrics_query(ieee1905_1::CmduMessageR
                    << std::get<1>(bssid_tuple);
     }
 
-    if (!m_btl_ctx.send_slave_ap_metric_query_message(mid, bssids)) {
+    if (!send_ap_metric_query_message(mid, bssids)) {
         LOG(ERROR) << "Failed to forward AP_METRICS_RESPONSE to the son_slave_thread";
         return;
     }
+}
+
+bool LinkMetricsCollectionTask::send_ap_metric_query_message(
+    uint16_t mid, const std::unordered_set<sMacAddr> &bssid_list)
+{
+    auto db = AgentDB::get();
+
+    for (const auto &radio : db->get_radios_list()) {
+        if (!radio) {
+            continue;
+        }
+        for (const auto &bssid : radio->front.bssids) {
+            if (!bssid_list.empty() && bssid_list.find(bssid.mac) == bssid_list.end()) {
+                continue;
+            }
+            LOG(DEBUG) << "Forwarding AP_METRICS_QUERY_MESSAGE message to son_slave, bssid: "
+                       << bssid.mac;
+
+            if (!m_cmdu_tx.create(mid, ieee1905_1::eMessageType::AP_METRICS_QUERY_MESSAGE)) {
+                LOG(ERROR) << "Failed to create AP_METRICS_QUERY_MESSAGE";
+                return false;
+            }
+
+            auto query = m_cmdu_tx.addClass<wfa_map::tlvApMetricQuery>();
+            if (!query) {
+                LOG(ERROR) << "Failed addClass<wfa_map::tlvApMetricQuery>";
+                return false;
+            }
+
+            if (!query->alloc_bssid_list(1)) {
+                LOG(ERROR) << "Failed to allocate memory for bssid_list";
+                return false;
+            }
+
+            auto list = query->bssid_list(0);
+            if (!std::get<0>(list)) {
+                LOG(ERROR) << "Failed to get element of bssid_list";
+            }
+            std::get<1>(list) = bssid.mac;
+
+            auto radio_info = m_btl_ctx.get_radio(radio->front.iface_mac);
+            if (!radio_info) {
+                LOG(ERROR) << "Failed to get radio info for " << radio->front.iface_mac;
+                return false;
+            }
+
+            if (!message_com::send_cmdu(radio_info->slave, m_cmdu_tx)) {
+                LOG(ERROR) << "Failed forwarding AP_METRICS_QUERY_MESSAGE message to son_slave";
+            }
+
+            m_btl_ctx.m_ap_metric_query.push_back({radio_info->slave, bssid.mac});
+        }
+    }
+    return true;
 }
 
 } // namespace beerocks
