@@ -558,7 +558,7 @@ void main_thread::on_thread_stop()
     LOG(DEBUG) << "Stopping asynchronous work queue...";
     work_queue.stop(true);
 
-    if (bpl::dhcp_mon_stop() == false) {
+    if (bpl::dhcp_mon_stop() == 0) {
         LOG(ERROR) << "Failed stopping DHCP Monitor!";
     } else {
         LOG(DEBUG) << "DHCP Monitor Stopped.";

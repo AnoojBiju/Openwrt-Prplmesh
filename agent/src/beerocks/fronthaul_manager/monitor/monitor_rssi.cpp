@@ -301,8 +301,7 @@ void monitor_rssi::process()
             }
             sta_node->arp_set_start_time();
 
-            auto sta_vap_id = sta_node->get_vap_id();
-            auto vap_node   = mon_db->vap_get_by_id(sta_vap_id);
+            auto vap_node = mon_db->vap_get_by_id(sta_vap_id);
             if (vap_node == nullptr) {
                 LOG(ERROR) << "can't find sta vap_id=" << sta_vap_id;
                 return;
@@ -349,7 +348,8 @@ void monitor_rssi::process()
     }
 }
 
-void monitor_rssi::send_rssi_measurement_response(std::string &sta_mac, monitor_sta_node *sta_node)
+void monitor_rssi::send_rssi_measurement_response(const std::string &sta_mac,
+                                                  monitor_sta_node *sta_node)
 {
     auto id_list          = sta_node->get_rx_rssi_request_id_list();
     const auto &sta_stats = sta_node->get_stats();
@@ -382,7 +382,7 @@ void monitor_rssi::send_rssi_measurement_response(std::string &sta_mac, monitor_
     sta_node->clear_rx_rssi_request_id_list();
 }
 
-void monitor_rssi::monitor_idle_station(std::string &sta_mac, monitor_sta_node *sta_node)
+void monitor_rssi::monitor_idle_station(const std::string &sta_mac, monitor_sta_node *sta_node)
 {
     auto current_time     = std::chrono::steady_clock::now();
     const auto &sta_stats = sta_node->get_stats();
