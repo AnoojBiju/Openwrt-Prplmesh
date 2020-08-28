@@ -86,7 +86,6 @@
 #include <tlvf/wfa_map/tlvErrorCode.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
 #include <tlvf/wfa_map/tlvSearchedService.h>
-#include <tlvf/wfa_map/tlvStaMacAddressType.h>
 #include <tlvf/wfa_map/tlvSteeringPolicy.h>
 #include <tlvf/wfa_map/tlvSupportedService.h>
 #include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
@@ -1972,9 +1971,6 @@ bool backhaul_manager::handle_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx,
     case ieee1905_1::eMessageType::CLIENT_CAPABILITY_QUERY_MESSAGE: {
         return handle_client_capability_query(cmdu_rx, src_mac);
     }
-    case ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE: {
-        return handle_associated_sta_link_metrics_query(cmdu_rx, src_mac);
-    }
     case ieee1905_1::eMessageType::MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE: {
         return handle_multi_ap_policy_config_request(cmdu_rx, src_mac);
     }
@@ -2112,83 +2108,6 @@ bool backhaul_manager::handle_multi_ap_policy_config_request(ieee1905_1::CmduMes
     }
 
     return send_cmdu_to_broker(cmdu_tx, src_mac, tlvf::mac_to_string(db->bridge.mac));
-}
-
-bool backhaul_manager::handle_associated_sta_link_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                                                const std::string &src_mac)
-{
-    const auto mid = cmdu_rx.getMessageId();
-    LOG(DEBUG) << "Received ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE , mid=" << std::dec
-               << int(mid);
-
-    if (!cmdu_tx.create(mid,
-                        ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE)) {
-        LOG(ERROR)
-            << "cmdu creation of type ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE, has failed";
-        return false;
-    }
-
-    auto mac = cmdu_rx.getClass<wfa_map::tlvStaMacAddressType>();
-    if (!mac) {
-        LOG(ERROR) << "Failed to get mac address";
-        return false;
-    }
-
-    auto assoc_link_metrics = cmdu_tx.addClass<wfa_map::tlvAssociatedStaLinkMetrics>();
-    if (!assoc_link_metrics) {
-        LOG(ERROR) << "Failed to create tlvAssociatedStaLinkMetrics tlv";
-        return false;
-    }
-
-    auto db = AgentDB::get();
-
-    // Check if it is an error scenario - if the STA specified in the STA link Query message is not associated
-    // with any of the BSS operated by the Multi-AP Agent
-    auto radio = db->get_radio_by_mac(mac->sta_mac(), AgentDB::eMacType::CLIENT);
-    if (!radio) {
-        LOG(ERROR) << "client with mac address " << mac->sta_mac() << " not found";
-        //Add an Error Code TLV
-        auto error_code_tlv = cmdu_tx.addClass<wfa_map::tlvErrorCode>();
-        if (!error_code_tlv) {
-            LOG(ERROR) << "addClass wfa_map::tlvErrorCode has failed";
-            return false;
-        }
-        error_code_tlv->reason_code() =
-            wfa_map::tlvErrorCode::STA_NOT_ASSOCIATED_WITH_ANY_BSS_OPERATED_BY_THE_AGENT;
-        error_code_tlv->sta_mac() = mac->sta_mac();
-
-        LOG(DEBUG) << "Send a ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE back to controller";
-        return send_cmdu_to_broker(cmdu_tx, src_mac, tlvf::mac_to_string(db->bridge.mac));
-    }
-    auto client_it = radio->associated_clients.find(mac->sta_mac());
-    if (client_it == radio->associated_clients.end()) {
-        LOG(ERROR) << "Cannot find sta sta " << mac->sta_mac();
-        return false;
-    }
-    if (client_it->second.bssid == network_utils::ZERO_MAC) {
-        LOG(ERROR) << "Cannot find sta bssid";
-        return false;
-    }
-    LOG(DEBUG) << "Client with mac address " << mac->sta_mac() << " connected to "
-               << client_it->second.bssid;
-
-    auto request_out = message_com::create_vs_message<
-        beerocks_message::cACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_REQUEST>(cmdu_tx, mid);
-
-    if (!request_out) {
-        LOG(ERROR) << "Failed to build ACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_REQUEST";
-        return false;
-    }
-
-    request_out->sync()    = true;
-    request_out->sta_mac() = mac->sta_mac();
-
-    auto radio_info = get_radio(radio->front.iface_mac);
-    if (!radio_info) {
-        LOG(ERROR) << "Failed to get radio info for " << radio->front.iface_mac;
-        return false;
-    }
-    return message_com::send_cmdu(radio_info->slave, cmdu_tx);
 }
 
 bool backhaul_manager::handle_client_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx,
