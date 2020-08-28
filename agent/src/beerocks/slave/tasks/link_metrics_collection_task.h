@@ -96,6 +96,24 @@ private:
     create_link_metrics_collector(const backhaul_manager::sLinkInterface &link_interface) const;
 
     /**
+     * @brief Gets the list of neighbors connected to this device (from topology database).
+     *
+     * The keys of the returned map are interfaces in this device which connect to one or more
+     * neighbor device. The values are the list of neighbors connected to that interface.
+     *
+     * @param[in] neighbor_mac_filter Optional 1905.1 AL MAC address to filter the links to be
+     * returned. A value of network_utils::ZERO_MAC means no filter has to be applied. A specific
+     * MAC address means that only links to that neighbor device must be included.
+     * @param[in, out] neighbor_links_map Map of neighbor links (interfaces x neighbors).
+     *
+     * @return True on success and false otherwise.
+     */
+    bool get_neighbor_links(
+        const sMacAddr &neighbor_mac_filter,
+        std::map<backhaul_manager::sLinkInterface, std::vector<backhaul_manager::sLinkNeighbor>>
+            &neighbor_links_map);
+
+    /**
      * AP Metrics Reporting configuration and status information type.
      */
     struct sApMetricsReportingInfo {
