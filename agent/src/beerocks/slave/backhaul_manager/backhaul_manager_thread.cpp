@@ -69,7 +69,6 @@
 #include <tlvf/wfa_map/tlvApCapability.h>
 #include <tlvf/wfa_map/tlvApHeCapabilities.h>
 #include <tlvf/wfa_map/tlvApHtCapabilities.h>
-#include <tlvf/wfa_map/tlvApMetricQuery.h>
 #include <tlvf/wfa_map/tlvApMetrics.h>
 #include <tlvf/wfa_map/tlvApOperationalBSS.h>
 #include <tlvf/wfa_map/tlvApRadioBasicCapabilities.h>
@@ -1015,60 +1014,6 @@ bool backhaul_manager::backhaul_fsm_main(bool &skip_select)
     }
 
     return (true);
-}
-
-bool backhaul_manager::send_slave_ap_metric_query_message(
-    uint16_t mid, const std::unordered_set<sMacAddr> &bssid_list)
-{
-    auto db = AgentDB::get();
-
-    for (const auto &radio : db->get_radios_list()) {
-        if (!radio) {
-            continue;
-        }
-        for (const auto &bssid : radio->front.bssids) {
-            if (!bssid_list.empty() && bssid_list.find(bssid.mac) == bssid_list.end()) {
-                continue;
-            }
-            LOG(DEBUG) << "Forwarding AP_METRICS_QUERY_MESSAGE message to son_slave, bssid: "
-                       << bssid.mac;
-
-            if (!cmdu_tx.create(mid, ieee1905_1::eMessageType::AP_METRICS_QUERY_MESSAGE)) {
-                LOG(ERROR) << "Failed to create AP_METRICS_QUERY_MESSAGE";
-                return false;
-            }
-
-            auto query = cmdu_tx.addClass<wfa_map::tlvApMetricQuery>();
-            if (!query) {
-                LOG(ERROR) << "Failed addClass<wfa_map::tlvApMetricQuery>";
-                return false;
-            }
-
-            if (!query->alloc_bssid_list(1)) {
-                LOG(ERROR) << "Failed to allocate memory for bssid_list";
-                return false;
-            }
-
-            auto list = query->bssid_list(0);
-            if (!std::get<0>(list)) {
-                LOG(ERROR) << "Failed to get element of bssid_list";
-            }
-            std::get<1>(list) = bssid.mac;
-
-            auto radio_info = get_radio(radio->front.iface_mac);
-            if (!radio_info) {
-                LOG(ERROR) << "Failed to get radio info for " << radio->front.iface_mac;
-                return false;
-            }
-
-            if (!message_com::send_cmdu(radio_info->slave, cmdu_tx)) {
-                LOG(ERROR) << "Failed forwarding AP_METRICS_QUERY_MESSAGE message to son_slave";
-            }
-
-            m_ap_metric_query.push_back({radio_info->slave, bssid.mac});
-        }
-    }
-    return true;
 }
 
 bool backhaul_manager::backhaul_fsm_wireless(bool &skip_select)
