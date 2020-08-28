@@ -123,8 +123,6 @@ private:
     bool handle_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac,
                                Socket *&forward_to);
     // 1905 messages handlers
-    bool handle_1905_combined_infrastructure_metrics(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                                     const std::string &src_mac);
     bool handle_1905_beacon_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx,
                                           const std::string &src_mac, Socket *&forward_to);
     bool handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac);
