@@ -261,21 +261,6 @@ public:
     std::shared_ptr<sRadioInfo> get_radio(const sMacAddr &radio_mac) const;
 
     /**
-     * @brief Interface in this device which connects to an interface in one or more neighbors.
-     *
-     * An interface is defined by its name, its MAC address and its MediaType as
-     * defined in IEEE Std 1905.1, Table 6-12—Media type (intfType).
-     */
-    struct sLinkInterface {
-        std::string iface_name; /**< The name of the interface. */
-        sMacAddr iface_mac =
-            beerocks::net::network_utils::ZERO_MAC; /**< The MAC address of the interface. */
-        ieee1905_1::eMediaType media_type = ieee1905_1::eMediaType::
-            UNKNOWN_MEDIA; /**< The underlying network technology of the connecting interface. */
-        bool operator<(const sLinkInterface &rhs) const { return iface_name < rhs.iface_name; }
-    };
-
-    /**
      * @brief Neighbor 1905.1 device which connects to an interface in this device.
      *
      * A neighbor is defined by its 1905.1 AL MAC address and the MAC address of the interface in
