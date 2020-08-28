@@ -395,11 +395,6 @@ public:
         wfa_map::tlvAssociatedStaLinkMetrics::sBssidInfo bssid_info;
     };
 
-    struct sApMetricsQuery {
-        Socket *soc;
-        sMacAddr bssid;
-    };
-
     struct sApMetrics {
         sMacAddr bssid;
         uint8_t channel_utilization;
@@ -416,8 +411,6 @@ private:
     };
 
 public:
-    std::vector<sApMetricsQuery> m_ap_metric_query;
-
     std::vector<sApMetricsResponse> m_ap_metric_response;
 
 private:
