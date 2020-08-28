@@ -126,8 +126,6 @@ private:
     bool handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac);
     bool handle_client_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx,
                                         const std::string &src_mac);
-    bool handle_associated_sta_link_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                                  const std::string &src_mac);
     bool handle_multi_ap_policy_config_request(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                const std::string &src_mac);
     bool handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac);
