@@ -61,6 +61,21 @@ private:
         const std::unordered_set<sMacAddr> &bssid_list = std::unordered_set<sMacAddr>());
 
     /**
+     * @brief Interface in this device which connects to an interface in one or more neighbors.
+     *
+     * An interface is defined by its name, its MAC address and its MediaType as
+     * defined in IEEE Std 1905.1, Table 6-12—Media type (intfType).
+     */
+    struct sLinkInterface {
+        std::string iface_name; /**< The name of the interface. */
+        sMacAddr iface_mac =
+            beerocks::net::network_utils::ZERO_MAC; /**< The MAC address of the interface. */
+        ieee1905_1::eMediaType media_type = ieee1905_1::eMediaType::
+            UNKNOWN_MEDIA; /**< The underlying network technology of the connecting interface. */
+        bool operator<(const sLinkInterface &rhs) const { return iface_name < rhs.iface_name; }
+    };
+
+    /**
      * @brief Adds link metric TLVs to response message.
      *
      * Creates a Transmitter Link Metric TLV or a Receiver Link Metric TLV or both and adds them to
@@ -74,8 +89,7 @@ private:
      *
      * @return True on success and false otherwise.
      */
-    bool add_link_metrics(const sMacAddr &reporter_al_mac,
-                          const backhaul_manager::sLinkInterface &link_interface,
+    bool add_link_metrics(const sMacAddr &reporter_al_mac, const sLinkInterface &link_interface,
                           const backhaul_manager::sLinkNeighbor &link_neighbor,
                           const sLinkMetrics &link_metrics,
                           ieee1905_1::eLinkMetricsType link_metrics_type);
@@ -93,7 +107,7 @@ private:
      * @return Link metrics collector on success and nullptr otherwise.
      */
     std::unique_ptr<link_metrics_collector>
-    create_link_metrics_collector(const backhaul_manager::sLinkInterface &link_interface) const;
+    create_link_metrics_collector(const sLinkInterface &link_interface) const;
 
     /**
      * @brief Gets the list of neighbors connected to this device (from topology database).
@@ -110,8 +124,7 @@ private:
      */
     bool get_neighbor_links(
         const sMacAddr &neighbor_mac_filter,
-        std::map<backhaul_manager::sLinkInterface, std::vector<backhaul_manager::sLinkNeighbor>>
-            &neighbor_links_map);
+        std::map<sLinkInterface, std::vector<backhaul_manager::sLinkNeighbor>> &neighbor_links_map);
 
     /**
      * AP Metrics Reporting configuration and status information type.
