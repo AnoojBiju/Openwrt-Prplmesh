@@ -2057,9 +2057,6 @@ bool backhaul_manager::handle_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx,
     case ieee1905_1::eMessageType::MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE: {
         return handle_multi_ap_policy_config_request(cmdu_rx, src_mac);
     }
-    case ieee1905_1::eMessageType::AP_METRICS_QUERY_MESSAGE: {
-        return handle_ap_metrics_query(cmdu_rx, src_mac);
-    }
     case ieee1905_1::eMessageType::BACKHAUL_STEERING_REQUEST_MESSAGE: {
         return handle_backhaul_steering_request(cmdu_rx, src_mac);
     }
@@ -2343,36 +2340,6 @@ bool backhaul_manager::handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmd
 
     LOG(DEBUG) << "Sending AP_CAPABILITY_REPORT_MESSAGE , mid: " << std::hex << mid;
     return send_cmdu_to_broker(cmdu_tx, src_mac, tlvf::mac_to_string(db->bridge.mac));
-}
-
-bool backhaul_manager::handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                               const std::string &src_mac)
-{
-    const auto mid           = cmdu_rx.getMessageId();
-    auto ap_metric_query_tlv = cmdu_rx.getClass<wfa_map::tlvApMetricQuery>();
-    if (!ap_metric_query_tlv) {
-        LOG(ERROR) << "AP Metrics Query CMDU mid=" << mid << " does not have AP Metric Query TLV";
-        return false;
-    }
-
-    std::unordered_set<sMacAddr> bssids;
-    for (size_t bssid_idx = 0; bssid_idx < ap_metric_query_tlv->bssid_list_length(); bssid_idx++) {
-        auto bssid_tuple = ap_metric_query_tlv->bssid_list(bssid_idx);
-        if (!std::get<0>(bssid_tuple)) {
-            LOG(ERROR) << "Failed to get bssid " << bssid_idx << " from AP_METRICS_QUERY";
-            return false;
-        }
-        bssids.insert(std::get<1>(bssid_tuple));
-        LOG(DEBUG) << "Received AP_METRICS_QUERY_MESSAGE, mid=" << std::hex << mid << "  bssid "
-                   << std::get<1>(bssid_tuple);
-    }
-
-    if (!send_slave_ap_metric_query_message(mid, bssids)) {
-        LOG(ERROR) << "Failed to forward AP_METRICS_RESPONSE to the son_slave_thread";
-        return false;
-    }
-
-    return true;
 }
 
 bool backhaul_manager::handle_slave_ap_metrics_response(ieee1905_1::CmduMessageRx &cmdu_rx,
