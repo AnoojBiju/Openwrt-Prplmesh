@@ -358,25 +358,6 @@ private:
      */
     bool add_ap_he_capabilities(const sRadioInfo &radio_info);
 
-public:
-    /**
-     * @brief Adds link metric TLVs to response message.
-     *
-     * Creates a Transmitter Link Metric TLV or a Receiver Link Metric TLV or both and adds them to
-     * the Link Metric Response message.
-     *
-     * @param[in] reporter_al_mac 1905.1 AL MAC address of the device that transmits the response message.
-     * @param[in] link_interface Connecting interface in this device.
-     * @param[in] link_neighbor Neighbor connected to interface.
-     * @param[in] link_metrics Metrics information associated to the link between the local interface and the neighbor's interface.
-     * @param[in] link_metrics_type The link metrics type requested: TX, RX or both.
-     *
-     * @return True on success and false otherwise.
-     */
-    bool add_link_metrics(const sMacAddr &reporter_al_mac, const sLinkInterface &link_interface,
-                          const sLinkNeighbor &link_neighbor, const sLinkMetrics &link_metrics,
-                          ieee1905_1::eLinkMetricsType link_metrics_type);
-
 private:
     bool m_backhaul_sta_steering_enable = false;
 
