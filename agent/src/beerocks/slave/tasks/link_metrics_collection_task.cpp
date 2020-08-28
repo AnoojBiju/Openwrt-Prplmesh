@@ -17,6 +17,7 @@
 #include <tlvf/ieee_1905_1/tlvLinkMetricResultCode.h>
 #include <tlvf/ieee_1905_1/tlvReceiverLinkMetric.h>
 #include <tlvf/ieee_1905_1/tlvTransmitterLinkMetric.h>
+#include <tlvf/wfa_map/tlvApMetricQuery.h>
 #include <tlvf/wfa_map/tlvAssociatedStaExtendedLinkMetrics.h>
 #include <tlvf/wfa_map/tlvBeaconMetricsQuery.h>
 #include <tlvf/wfa_map/tlvStaMacAddressType.h>
@@ -48,6 +49,10 @@ bool LinkMetricsCollectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx,
     }
     case ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE: {
         handle_associated_sta_link_metrics_query(cmdu_rx, src_mac);
+        break;
+    }
+    case ieee1905_1::eMessageType::AP_METRICS_QUERY_MESSAGE: {
+        handle_ap_metrics_query(cmdu_rx, src_mac);
         break;
     }
     default: {
@@ -401,6 +406,35 @@ void LinkMetricsCollectionTask::handle_associated_sta_link_metrics_query(
         return;
     }
     message_com::send_cmdu(radio_info->slave, m_cmdu_tx);
+}
+
+void LinkMetricsCollectionTask::handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                                        const sMacAddr &src_mac)
+{
+    const auto mid           = cmdu_rx.getMessageId();
+    auto ap_metric_query_tlv = cmdu_rx.getClass<wfa_map::tlvApMetricQuery>();
+    if (!ap_metric_query_tlv) {
+        LOG(ERROR) << "AP Metrics Query CMDU mid=" << std::hex << mid
+                   << " does not have AP Metric Query TLV";
+        return;
+    }
+
+    std::unordered_set<sMacAddr> bssids;
+    for (size_t bssid_idx = 0; bssid_idx < ap_metric_query_tlv->bssid_list_length(); bssid_idx++) {
+        auto bssid_tuple = ap_metric_query_tlv->bssid_list(bssid_idx);
+        if (!std::get<0>(bssid_tuple)) {
+            LOG(ERROR) << "Failed to get bssid " << bssid_idx << " from AP_METRICS_QUERY";
+            return;
+        }
+        bssids.insert(std::get<1>(bssid_tuple));
+        LOG(DEBUG) << "Received AP_METRICS_QUERY_MESSAGE, mid=" << std::hex << mid << "  bssid "
+                   << std::get<1>(bssid_tuple);
+    }
+
+    if (!m_btl_ctx.send_slave_ap_metric_query_message(mid, bssids)) {
+        LOG(ERROR) << "Failed to forward AP_METRICS_RESPONSE to the son_slave_thread";
+        return;
+    }
 }
 
 } // namespace beerocks
