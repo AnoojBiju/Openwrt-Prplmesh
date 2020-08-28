@@ -76,6 +76,19 @@ private:
     };
 
     /**
+     * @brief Neighbor 1905.1 device which connects to an interface in this device.
+     *
+     * A neighbor is defined by its 1905.1 AL MAC address and the MAC address of the interface in
+     * the neighbor that connects to this device.
+     */
+    struct sLinkNeighbor {
+        sMacAddr al_mac =
+            beerocks::net::network_utils::ZERO_MAC; /**< The MAC address of the 1905.1 AL. */
+        sMacAddr iface_mac =
+            beerocks::net::network_utils::ZERO_MAC; /**< The MAC address of the interface. */
+    };
+
+    /**
      * @brief Adds link metric TLVs to response message.
      *
      * Creates a Transmitter Link Metric TLV or a Receiver Link Metric TLV or both and adds them to
@@ -90,8 +103,7 @@ private:
      * @return True on success and false otherwise.
      */
     bool add_link_metrics(const sMacAddr &reporter_al_mac, const sLinkInterface &link_interface,
-                          const backhaul_manager::sLinkNeighbor &link_neighbor,
-                          const sLinkMetrics &link_metrics,
+                          const sLinkNeighbor &link_neighbor, const sLinkMetrics &link_metrics,
                           ieee1905_1::eLinkMetricsType link_metrics_type);
 
     /**
@@ -122,9 +134,9 @@ private:
      *
      * @return True on success and false otherwise.
      */
-    bool get_neighbor_links(
-        const sMacAddr &neighbor_mac_filter,
-        std::map<sLinkInterface, std::vector<backhaul_manager::sLinkNeighbor>> &neighbor_links_map);
+    bool
+    get_neighbor_links(const sMacAddr &neighbor_mac_filter,
+                       std::map<sLinkInterface, std::vector<sLinkNeighbor>> &neighbor_links_map);
 
     /**
      * AP Metrics Reporting configuration and status information type.
