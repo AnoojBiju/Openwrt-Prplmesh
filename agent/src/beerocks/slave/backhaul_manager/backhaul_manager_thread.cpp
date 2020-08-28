@@ -80,7 +80,6 @@
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringRequest.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringResponse.h>
-#include <tlvf/wfa_map/tlvBeaconMetricsQuery.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvChannelScanCapabilities.h>
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
@@ -2057,9 +2056,6 @@ bool backhaul_manager::handle_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx,
     case ieee1905_1::eMessageType::AP_METRICS_QUERY_MESSAGE: {
         return handle_ap_metrics_query(cmdu_rx, src_mac);
     }
-    case ieee1905_1::eMessageType::BEACON_METRICS_QUERY_MESSAGE: {
-        return handle_1905_beacon_metrics_query(cmdu_rx, src_mac, forward_to);
-    }
     case ieee1905_1::eMessageType::BACKHAUL_STEERING_REQUEST_MESSAGE: {
         return handle_backhaul_steering_request(cmdu_rx, src_mac);
     }
@@ -2632,85 +2628,6 @@ bool backhaul_manager::handle_slave_ap_metrics_response(ieee1905_1::CmduMessageR
     LOG(DEBUG) << "Sending AP_METRICS_RESPONSE_MESSAGE, mid=" << std::hex << mid;
     return send_cmdu_to_broker(cmdu_tx, tlvf::mac_to_string(db->controller_info.bridge_mac),
                                tlvf::mac_to_string(db->bridge.mac));
-}
-
-bool backhaul_manager::handle_1905_beacon_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                                        const std::string &src_mac,
-                                                        Socket *&forward_to)
-{
-    LOG(DEBUG) << "now going to handle BEACON METRICS QUERY";
-
-    // extract the desired STA mac
-    auto tlvBeaconMetricsQuery = cmdu_rx.getClass<wfa_map::tlvBeaconMetricsQuery>();
-    if (!tlvBeaconMetricsQuery) {
-        LOG(ERROR) << "handle_1905_beacon_metrics_query should handle only tlvBeaconMetrics, but "
-                      "got something else: 0x"
-                   << std::hex << (uint16_t)cmdu_rx.getMessageType();
-        return false;
-    }
-
-    const sMacAddr &requested_sta_mac = tlvBeaconMetricsQuery->associated_sta_mac();
-    LOG(DEBUG) << "the requested STA mac is: " << requested_sta_mac;
-
-    // build ACK message CMDU
-    const auto mid      = cmdu_rx.getMessageId();
-    auto cmdu_tx_header = cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE);
-    if (!cmdu_tx_header) {
-        LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
-        return false;
-    }
-
-    auto db    = AgentDB::get();
-    auto radio = db->get_radio_by_mac(requested_sta_mac, AgentDB::eMacType::CLIENT);
-    if (!radio) {
-        LOG(DEBUG) << "STA with MAC [" << requested_sta_mac
-                   << "] is not associated with any BSS operated by the agent";
-
-        // add an Error Code TLV
-        auto error_code_tlv = cmdu_tx.addClass<wfa_map::tlvErrorCode>();
-        if (!error_code_tlv) {
-            LOG(ERROR) << "addClass wfa_map::tlvErrorCode has failed";
-            return false;
-        }
-
-        error_code_tlv->reason_code() =
-            wfa_map::tlvErrorCode::STA_NOT_ASSOCIATED_WITH_ANY_BSS_OPERATED_BY_THE_AGENT;
-
-        error_code_tlv->sta_mac() = requested_sta_mac;
-
-        // report the error
-        std::stringstream errorSS;
-        auto error_tlv = cmdu_tx.getClass<wfa_map::tlvErrorCode>();
-        if (error_tlv) {
-            errorSS << "0x" << error_tlv->reason_code();
-        } else {
-            errorSS << "note: error constructing the error itself";
-        }
-
-        LOG(DEBUG) << "sending ACK message to the originator with an error, mid: " << std::hex
-                   << mid << " tlv error code: " << errorSS.str();
-
-        // send the error
-        return send_cmdu_to_broker(cmdu_tx, src_mac, tlvf::mac_to_string(db->bridge.mac));
-    }
-
-    auto radio_info = get_radio(radio->front.iface_mac);
-    if (!radio_info) {
-        LOG(ERROR) << "Failed to get radio info for " << radio->front.iface_mac;
-        return false;
-    }
-    forward_to = radio_info->slave;
-
-    LOG(DEBUG) << "Found the radio that has the sation. radio: " << radio->front.iface_mac
-               << "; station: " << requested_sta_mac;
-
-    LOG(DEBUG) << "BEACON METRICS QUERY: sending ACK message to the originator mid: "
-               << mid; // USED IN TESTS
-
-    send_cmdu_to_broker(cmdu_tx, src_mac, tlvf::mac_to_string(db->bridge.mac));
-
-    // continue processing
-    return false;
 }
 
 bool backhaul_manager::send_slaves_enable()
