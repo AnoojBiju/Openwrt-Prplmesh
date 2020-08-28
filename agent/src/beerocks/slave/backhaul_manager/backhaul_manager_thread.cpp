@@ -32,8 +32,6 @@
 #include "../agent_db.h"
 
 #include "../helpers/media_type.h"
-#include "../link_metrics/ieee802_11_link_metrics_collector.h"
-#include "../link_metrics/ieee802_3_link_metrics_collector.h"
 
 #include "../tasks/ap_autoconfiguration_task.h"
 #include "../tasks/link_metrics_collection_task.h"
@@ -2644,28 +2642,6 @@ std::shared_ptr<bwl::sta_wlan_hal> backhaul_manager::get_wireless_hal(std::strin
     }
 
     return slave_sk->second->sta_wlan_hal;
-}
-
-std::unique_ptr<link_metrics_collector>
-backhaul_manager::create_link_metrics_collector(const sLinkInterface &link_interface) const
-{
-    ieee1905_1::eMediaType media_type = link_interface.media_type;
-    ieee1905_1::eMediaTypeGroup media_type_group =
-        static_cast<ieee1905_1::eMediaTypeGroup>(media_type >> 8);
-
-    if (ieee1905_1::eMediaTypeGroup::IEEE_802_3 == media_type_group) {
-        return std::make_unique<ieee802_3_link_metrics_collector>();
-    }
-
-    if (ieee1905_1::eMediaTypeGroup::IEEE_802_11 == media_type_group) {
-        return std::make_unique<ieee802_11_link_metrics_collector>();
-    }
-
-    LOG(ERROR) << "Unable to create link metrics collector for interface '"
-               << link_interface.iface_name << "' (unsupported media type " << std::hex
-               << (int)media_type << ")";
-
-    return nullptr;
 }
 
 bool backhaul_manager::get_neighbor_links(
