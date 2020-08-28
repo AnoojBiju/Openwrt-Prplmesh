@@ -12,6 +12,8 @@
 
 #include <tlvf/ieee_1905_1/tlvLinkMetricQuery.h>
 #include <tlvf/ieee_1905_1/tlvLinkMetricResultCode.h>
+#include <tlvf/ieee_1905_1/tlvReceiverLinkMetric.h>
+#include <tlvf/ieee_1905_1/tlvTransmitterLinkMetric.h>
 
 namespace beerocks {
 
@@ -28,6 +30,10 @@ bool LinkMetricsCollectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx,
     switch (cmdu_rx.getMessageType()) {
     case ieee1905_1::eMessageType::LINK_METRIC_QUERY_MESSAGE: {
         handle_link_metric_query(cmdu_rx, src_mac);
+        break;
+    }
+    case ieee1905_1::eMessageType::COMBINED_INFRASTRUCTURE_METRICS_MESSAGE: {
+        handle_combined_infrastructure_metrics(cmdu_rx, src_mac);
         break;
     }
     default: {
@@ -200,6 +206,29 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
     }
 
     LOG(DEBUG) << "Sending LINK_METRIC_RESPONSE_MESSAGE, mid: " << std::hex << mid;
+    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
+                                  tlvf::mac_to_string(db->bridge.mac));
+}
+
+void LinkMetricsCollectionTask::handle_combined_infrastructure_metrics(
+    ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac)
+{
+    const auto mid = cmdu_rx.getMessageId();
+    LOG(DEBUG) << "Received COMBINED_INFRASTRUCTURE_METRICS message, mid=" << std::hex << mid;
+
+    if (cmdu_rx.getClass<ieee1905_1::tlvReceiverLinkMetric>())
+        LOG(DEBUG) << "Received TLV_RECEIVER_LINK_METRIC";
+    if (cmdu_rx.getClass<ieee1905_1::tlvTransmitterLinkMetric>())
+        LOG(DEBUG) << "Received TLV_TRANSMITTER_LINK_METRIC";
+
+    // build ACK message CMDU
+    auto cmdu_tx_header = m_cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE);
+    if (!cmdu_tx_header) {
+        LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
+        return;
+    }
+    LOG(DEBUG) << "sending ACK message to the originator, mid=" << std::hex << mid;
+    auto db = AgentDB::get();
     m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
                                   tlvf::mac_to_string(db->bridge.mac));
 }
