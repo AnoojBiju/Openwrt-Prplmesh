@@ -70,10 +70,10 @@ public:
      */
     bool start_wps_pbc(const sMacAddr &radio_mac);
 
-private:
     // Forward declaration
     struct sRadioInfo;
 
+private:
     std::shared_ptr<bwl::sta_wlan_hal> get_selected_backhaul_sta_wlan_hal();
 
     virtual bool handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx) override;
@@ -114,8 +114,6 @@ private:
     bool handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac);
     bool handle_client_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx,
                                         const std::string &src_mac);
-    bool handle_multi_ap_policy_config_request(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                               const std::string &src_mac);
     bool handle_slave_ap_metrics_response(ieee1905_1::CmduMessageRx &cmdu_rx,
                                           const std::string &src_mac);
     bool handle_backhaul_steering_request(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -260,7 +258,6 @@ public:
      */
     sApMetricsReportingInfo ap_metrics_reporting_info;
 
-private:
     /**
      * @brief Information gathered about a radio (= slave).
      *
@@ -281,7 +278,6 @@ private:
         bool he_supported = false; /**< Is HE supported flag */
     };
 
-public:
     /**
      * @brief Gets radio info for the radio with given MAC address
      *
