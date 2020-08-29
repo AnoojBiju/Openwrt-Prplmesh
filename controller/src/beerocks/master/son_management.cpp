@@ -2259,6 +2259,31 @@ void son_management::handle_bml_message(Socket *sd,
         message_com::send_cmdu(sd, cmdu_tx);
         break;
     }
+    case beerocks_message::ACTION_BML_CLIENT_CLEAR_CLIENT_REQUEST: {
+        LOG(TRACE) << "ACTION_BML_CLIENT_CLEAR_CLIENT_REQUEST";
+        auto request =
+            beerocks_header->addClass<beerocks_message::cACTION_BML_CLIENT_CLEAR_CLIENT_REQUEST>();
+        if (!request) {
+            LOG(ERROR) << "addClass cACTION_BML_CLIENT_CLEAR_CLIENT_REQUEST failed";
+            break;
+        }
+
+        auto response = message_com::create_vs_message<
+            beerocks_message::cACTION_BML_CLIENT_CLEAR_CLIENT_RESPONSE>(cmdu_tx);
+        if (!response) {
+            LOG(ERROR) << "Failed building message "
+                          "cACTION_BML_CLIENT_CLEAR_CLIENT_RESPONSE !";
+            break;
+        }
+
+        auto mac = request->sta_mac();
+
+        response->result() = database.clear_client_persistent_db(mac) ? 0 : 1;
+        if (!message_com::send_cmdu(sd, cmdu_tx)) {
+            LOG(ERROR) << "Error sending clear client response message for mac= " << mac;
+        }
+        break;
+    }
     default: {
         LOG(ERROR) << "Unsupported BML action_op:" << int(beerocks_header->action_op());
         break;
