@@ -1421,7 +1421,7 @@ bool backhaul_manager::backhaul_fsm_wireless(bool &skip_select)
         }
 
         if (active_hal->connect(db->device_conf.back_radio.ssid, db->device_conf.back_radio.pass,
-                                db->device_conf.back_radio.security_type_bwl,
+                                db->device_conf.back_radio.security_type,
                                 db->device_conf.back_radio.mem_only_psk, selected_bssid,
                                 selected_bssid_channel, hidden_ssid)) {
             LOG(DEBUG) << "successful call to active_hal->connect(), bssid=" << selected_bssid
@@ -1765,16 +1765,14 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
                     }
 
                     // Change mixed state to WPA2
-                    if (db->device_conf.back_radio.security_type_bwl ==
-                        bwl::WiFiSec::WPA_WPA2_PSK) {
-                        db->device_conf.back_radio.security_type_bwl = bwl::WiFiSec::WPA2_PSK;
+                    if (db->device_conf.back_radio.security_type == bwl::WiFiSec::WPA_WPA2_PSK) {
+                        db->device_conf.back_radio.security_type = bwl::WiFiSec::WPA2_PSK;
                     }
                     m_sConfig.wire_iface_type = (beerocks::eIfaceType)request->wire_iface_type();
 
                     LOG(DEBUG) << "All slaves ready, proceeding" << std::endl
                                << "SSID: " << db->device_conf.back_radio.ssid << ", Pass: ****"
-                               << ", Security: "
-                               << int(db->device_conf.back_radio.security_type_bwl)
+                               << ", Security: " << db->device_conf.back_radio.security_type
                                << ", Bridge: " << db->bridge.iface_name
                                << ", Wired: " << db->ethernet.iface_name;
                 }

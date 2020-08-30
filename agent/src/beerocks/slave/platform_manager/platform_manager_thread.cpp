@@ -42,6 +42,24 @@ static const uint8_t s_arrBCastMac[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////// Local Module Functions ///////////////////////////
 //////////////////////////////////////////////////////////////////////////////
+inline bwl::WiFiSec platform_to_bwl_security(const std::string &sec)
+{
+    if (!sec.compare("None")) {
+        return bwl::WiFiSec::None;
+    } else if (!sec.compare("WEP-64")) {
+        return bwl::WiFiSec::WEP_64;
+    } else if (!sec.compare("WEP-128")) {
+        return bwl::WiFiSec::WEP_128;
+    } else if (!sec.compare("WPA-Personal")) {
+        return bwl::WiFiSec::WPA_PSK;
+    } else if (!sec.compare("WPA2-Personal")) {
+        return bwl::WiFiSec::WPA2_PSK;
+    } else if (!sec.compare("WPA-WPA2-Personal")) {
+        return bwl::WiFiSec::WPA_WPA2_PSK;
+    } else {
+        return bwl::WiFiSec::Invalid;
+    }
+}
 
 static beerocks::eFreqType bpl_band_to_freq_type(int bpl_band)
 {
@@ -64,12 +82,13 @@ static bool fill_platform_settings(
 {
     auto db = AgentDB::get();
 
+    char security_type[beerocks::message::WIFI_SECURITY_TYPE_MAX_LENGTH];
     if (bpl::cfg_get_beerocks_credentials(BPL_RADIO_FRONT, db->device_conf.front_radio.ssid,
-                                          db->device_conf.front_radio.pass,
-                                          db->device_conf.front_radio.security_type) < 0) {
+                                          db->device_conf.front_radio.pass, security_type) < 0) {
         LOG(ERROR) << "Failed reading front Wi-Fi credentials!";
         return false;
     }
+    db->device_conf.front_radio.security_type = platform_to_bwl_security(security_type);
 
     LOG(DEBUG) << "Front Credentials:"
                << " ssid=" << db->device_conf.front_radio.ssid
@@ -77,15 +96,13 @@ static bool fill_platform_settings(
 
     char ssid[beerocks::message::WIFI_SSID_MAX_LENGTH];
     char pass[beerocks::message::WIFI_PASS_MAX_LENGTH];
-    char security_type[beerocks::message::WIFI_SECURITY_TYPE_MAX_LENGTH];
     if (bpl::cfg_get_beerocks_credentials(BPL_RADIO_BACK, ssid, pass, security_type) < 0) {
         LOG(ERROR) << "Failed reading Wi-Fi back credentials!";
         return false;
     }
     db->device_conf.back_radio.ssid = std::string(ssid, beerocks::message::WIFI_SSID_MAX_LENGTH);
     db->device_conf.back_radio.pass = std::string(pass, beerocks::message::WIFI_PASS_MAX_LENGTH);
-    db->device_conf.back_radio.security_type =
-        std::string(security_type, beerocks::message::WIFI_SECURITY_TYPE_MAX_LENGTH);
+    db->device_conf.back_radio.security_type = platform_to_bwl_security(security_type);
 
     int mem_only_psk = bpl::cfg_get_security_policy();
     if (mem_only_psk < 0) {
