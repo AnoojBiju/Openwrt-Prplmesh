@@ -58,26 +58,6 @@
 /////////////////////////// Local Module Functions ///////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-// TODO: Should be moved somewhere else?
-static bwl::WiFiSec platform_to_bwl_security(const std::string &sec)
-{
-    if (!sec.compare("None")) {
-        return bwl::WiFiSec::None;
-    } else if (!sec.compare("WEP-64")) {
-        return bwl::WiFiSec::WEP_64;
-    } else if (!sec.compare("WEP-128")) {
-        return bwl::WiFiSec::WEP_128;
-    } else if (!sec.compare("WPA-Personal")) {
-        return bwl::WiFiSec::WPA_PSK;
-    } else if (!sec.compare("WPA2-Personal")) {
-        return bwl::WiFiSec::WPA2_PSK;
-    } else if (!sec.compare("WPA-WPA2-Personal")) {
-        return bwl::WiFiSec::WPA_WPA2_PSK;
-    } else {
-        return bwl::WiFiSec::Invalid;
-    }
-}
-
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////////// Implementation ///////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -3093,8 +3073,6 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
             // TODO: On passive mode, mem_only_psk is always be set, so supplying the credentials
             // to the backhaul manager will no longer be necessary, and therefore should be be
             // removed completely from beerocks including the BPL.
-            db->device_conf.back_radio.security_type_bwl =
-                platform_to_bwl_security(db->device_conf.back_radio.security_type.c_str());
 
             string_utils::copy_string(bh_enable->wire_iface(message::IFACE_NAME_LENGTH),
                                       db->ethernet.iface_name.c_str(), message::IFACE_NAME_LENGTH);
