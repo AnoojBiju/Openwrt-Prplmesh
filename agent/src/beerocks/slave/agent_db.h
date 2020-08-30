@@ -84,6 +84,16 @@ public:
             char ssid[beerocks::message::WIFI_SSID_MAX_LENGTH];
             char pass[beerocks::message::WIFI_PASS_MAX_LENGTH];
             bwl::WiFiSec security_type;
+
+            /* Front radio wlan settings */
+            struct sWlanSettings {
+                bool band_enabled;
+                // Front radio configured channel, if 0 auto channel selection.
+                uint8_t configured_channel;
+            };
+
+            // Wlan settings mapped by front interface name.
+            std::unordered_map<std::string, sWlanSettings> config;
         } front_radio;
 
         struct sBackRadio {
@@ -111,13 +121,6 @@ public:
         bool load_balancing_enabled;
         bool service_fairness_enabled;
         bool rdkb_extensions_enabled;
-
-        /* Front radio wlan settings */
-        struct sWlanSettings {
-            bool band_enabled;
-            // Front radio configured channel, if 0 auto channel selection.
-            uint8_t configured_channel;
-        } wlan_settings;
 
     } device_conf;
 

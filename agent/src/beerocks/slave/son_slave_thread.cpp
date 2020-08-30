@@ -1354,7 +1354,7 @@ bool slave_thread::handle_cmdu_platform_manager_message(
 
         // slave only reacts to band_enabled change
         auto db = AgentDB::get();
-        if (db->device_conf.wlan_settings.band_enabled !=
+        if (db->device_conf.front_radio.config[config.hostap_iface].band_enabled !=
             notification->wlan_settings().band_enabled) {
             LOG(DEBUG) << "band_enabled changed - performing slave_reset()";
             slave_reset();
@@ -1477,8 +1477,9 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             return false;
         }
 
-        auto db               = AgentDB::get();
-        config_msg->channel() = db->device_conf.wlan_settings.configured_channel;
+        auto db = AgentDB::get();
+        config_msg->channel() =
+            db->device_conf.front_radio.config[config.hostap_iface].configured_channel;
 
         message_com::send_cmdu(ap_manager_socket, cmdu_tx);
 
@@ -2981,7 +2982,7 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
     case STATE_JOIN_INIT: {
 
         auto db = AgentDB::get();
-        if (!db->device_conf.wlan_settings.band_enabled) {
+        if (!db->device_conf.front_radio.config[config.hostap_iface].band_enabled) {
             LOG(DEBUG) << "wlan_settings.band_enabled=false";
             LOG(TRACE) << "goto STATE_BACKHAUL_ENABLE";
             slave_state = STATE_BACKHAUL_ENABLE;
@@ -3140,7 +3141,7 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
         master_socket = backhaul_manager_socket;
 
         auto db = AgentDB::get();
-        if (!db->device_conf.wlan_settings.band_enabled) {
+        if (!db->device_conf.front_radio.config[config.hostap_iface].band_enabled) {
             LOG(TRACE) << "goto STATE_OPERATIONAL";
             slave_state = STATE_OPERATIONAL;
             break;
@@ -3346,9 +3347,9 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
 
                 //Wlan Settings
                 notification->wlan_settings().band_enabled =
-                    db->device_conf.wlan_settings.band_enabled;
+                    db->device_conf.front_radio.config[config.hostap_iface].band_enabled;
                 notification->wlan_settings().channel =
-                    db->device_conf.wlan_settings.configured_channel;
+                    db->device_conf.front_radio.config[config.hostap_iface].configured_channel;
                 // Hostap Params
                 notification->hostap()          = hostap_params;
                 notification->hostap().ant_gain = config.hostap_ant_gain;
