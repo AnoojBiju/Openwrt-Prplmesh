@@ -83,14 +83,13 @@ public:
         struct sFrontRadio {
             char ssid[beerocks::message::WIFI_SSID_MAX_LENGTH];
             char pass[beerocks::message::WIFI_PASS_MAX_LENGTH];
-            char security_type[beerocks::message::WIFI_SECURITY_TYPE_MAX_LENGTH];
+            bwl::WiFiSec security_type;
         } front_radio;
 
         struct sBackRadio {
             std::string ssid;
             std::string pass;
-            std::string security_type;
-            bwl::WiFiSec security_type_bwl;
+            bwl::WiFiSec security_type;
 
             bool mem_only_psk;
             uint8_t backhaul_max_vaps;

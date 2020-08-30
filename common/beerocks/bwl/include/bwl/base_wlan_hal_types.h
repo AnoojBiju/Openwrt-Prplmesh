@@ -68,6 +68,34 @@ enum class ChanSwReason { Unknown = 0, Radar = 1, CoEx_20 = 2, CoEx_40 = 3 };
 // WLAN Security Types
 enum class WiFiSec { Invalid = 0, None, WEP_64, WEP_128, WPA_PSK, WPA2_PSK, WPA_WPA2_PSK };
 
+inline std::ostream &operator<<(std::ostream &out, const bwl::WiFiSec &sec)
+{
+    switch (sec) {
+    case bwl::WiFiSec::Invalid:
+        out << "Invalid";
+        break;
+    case bwl::WiFiSec::None:
+        out << "None";
+        break;
+    case bwl::WiFiSec::WEP_64:
+        out << "WEP-64";
+        break;
+    case bwl::WiFiSec::WEP_128:
+        out << "WEP-128";
+        break;
+    case bwl::WiFiSec::WPA_PSK:
+        out << "WPA-Personal";
+        break;
+    case bwl::WiFiSec::WPA2_PSK:
+        out << "WPA2-Personal";
+        break;
+    case bwl::WiFiSec::WPA_WPA2_PSK:
+        out << "WPA-WPA2-Personal";
+        break;
+    }
+    return out;
+}
+
 struct RadioInfo {
     std::string iface_name;
     IfaceType iface_type               = IfaceType::Unsupported;
