@@ -123,12 +123,12 @@ static bool fill_platform_settings(
         return false;
     }
     /* update message */
-    db->device_conf.wlan_settings.band_enabled       = params.enabled;
-    db->device_conf.wlan_settings.configured_channel = params.channel;
+    db->device_conf.front_radio.config[iface_name].band_enabled       = params.enabled;
+    db->device_conf.front_radio.config[iface_name].configured_channel = params.channel;
 
     LOG(DEBUG) << "wlan settings:"
-               << " band_enabled=" << db->device_conf.wlan_settings.band_enabled
-               << " channel=" << int(db->device_conf.wlan_settings.configured_channel);
+               << " band_enabled=" << db->device_conf.front_radio.config[iface_name].band_enabled
+               << " channel=" << db->device_conf.front_radio.config[iface_name].configured_channel;
 
     // initialize wlan params cache
     //erase interface cache from map if exists
@@ -233,7 +233,7 @@ static bool fill_platform_settings(
                << db->device_conf.client_optimal_path_roaming_enabled;
     LOG(DEBUG) << "client_optimal_path_roaming_prefer_signal_strength_enabled: "
                << db->device_conf.client_optimal_path_roaming_prefer_signal_strength_enabled;
-    LOG(DEBUG) << "band_enabled: " << db->device_conf.wlan_settings.band_enabled;
+    LOG(DEBUG) << "band_enabled: " << db->device_conf.front_radio.config[iface_name].band_enabled;
     LOG(DEBUG) << "local_gw: " << db->device_conf.local_gw;
     LOG(DEBUG) << "local_controller: " << db->device_conf.local_controller;
     LOG(DEBUG) << "backhaul_preferred_radio_band: "
