@@ -905,13 +905,6 @@ bool backhaul_manager::backhaul_fsm_main(bool &skip_select)
     }
     // Backhaul manager is OPERATIONAL!
     case EState::OPERATIONAL: {
-
-        /**
-         * Get current time. It is later used to compute elapsed time since some start time and
-         * check if a timeout has expired to perform periodic actions.
-         */
-        auto now = std::chrono::steady_clock::now();
-
         /*
         * TODO
         * This code segment is commented out since wireless-backhaul is not yet supported and
@@ -924,6 +917,12 @@ bool backhaul_manager::backhaul_fsm_main(bool &skip_select)
         * [TASK] Dynamic switching between wired and wireless
         * https://github.com/prplfoundation/prplMesh/issues/866
         */
+        // /**
+        //  * Get current time. It is later used to compute elapsed time since some start time and
+        //  * check if a timeout has expired to perform periodic actions.
+        //  */
+        // auto now = std::chrono::steady_clock::now();
+        //
         // auto db = AgentDB::get();
         // int time_elapsed_ms =
         //     std::chrono::duration_cast<std::chrono::milliseconds>(now - eth_link_poll_timer)
@@ -942,31 +941,6 @@ bool backhaul_manager::backhaul_fsm_main(bool &skip_select)
         if (pending_enable &&
             db->backhaul.connection_type != AgentDB::sBackhaul::eConnectionType::Invalid) {
             pending_enable = false;
-        }
-
-        /**
-         * If periodic AP metrics reporting is enabled, check if time interval has elapsed and if
-         * so, then report AP metrics.
-         */
-        if (0 != ap_metrics_reporting_info.reporting_interval_s) {
-            int elapsed_time_s = std::chrono::duration_cast<std::chrono::seconds>(
-                                     now - ap_metrics_reporting_info.last_reporting_time_point)
-                                     .count();
-
-            if (elapsed_time_s >= ap_metrics_reporting_info.reporting_interval_s) {
-                ap_metrics_reporting_info.last_reporting_time_point = now;
-
-                // We must generate a new MID for the periodic AP Metrics Response messages that
-                // do not correspond to an AP Metrics Query message.
-                // We cannot set MID to 0 here because we must also differentiate periodic
-                // AP Metrics Response messages and messages received from monitor thread
-                // due to channel utilization crossed configured threshold value.
-                // As a temporary solution, set MID to UINT16_MAX here.
-                // TODO: to be fixed as part of #1328
-
-                // Send ap_metrics query on all bssids exists on the Agent.
-                send_slave_ap_metric_query_message(UINT16_MAX);
-            }
         }
 
         break;

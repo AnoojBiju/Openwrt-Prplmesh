@@ -62,7 +62,44 @@ bool LinkMetricsCollectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx,
     return true;
 }
 
-void LinkMetricsCollectionTask::work() {}
+void LinkMetricsCollectionTask::work()
+{
+    auto db = AgentDB::get();
+
+    if (db->statuses.ap_autoconfiguration_completed) {
+        /**
+         * Get current time. It is later used to compute elapsed time since some start time and
+         * check if a timeout has expired to perform periodic actions.
+         */
+        auto now = std::chrono::steady_clock::now();
+
+        /**
+         * If periodic AP metrics reporting is enabled, check if time interval has elapsed and if
+         * so, then report AP metrics.
+         */
+        if (0 != m_btl_ctx.ap_metrics_reporting_info.reporting_interval_s) {
+            int elapsed_time_s =
+                std::chrono::duration_cast<std::chrono::seconds>(
+                    now - m_btl_ctx.ap_metrics_reporting_info.last_reporting_time_point)
+                    .count();
+
+            if (elapsed_time_s >= m_btl_ctx.ap_metrics_reporting_info.reporting_interval_s) {
+                m_btl_ctx.ap_metrics_reporting_info.last_reporting_time_point = now;
+
+                // We must generate a new MID for the periodic AP Metrics Response messages that
+                // do not correspond to an AP Metrics Query message.
+                // We cannot set MID to 0 here because we must also differentiate periodic
+                // AP Metrics Response messages and messages received from monitor thread
+                // due to channel utilization crossed configured threshold value.
+                // As a temporary solution, set MID to UINT16_MAX here.
+                // TODO: to be fixed as part of #1328
+
+                // Send ap_metrics query on all bssids exists on the Agent.
+                m_btl_ctx.send_slave_ap_metric_query_message(UINT16_MAX);
+            }
+        }
+    }
+}
 
 void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                               const sMacAddr &src_mac)
