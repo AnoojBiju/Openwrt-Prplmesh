@@ -23,9 +23,6 @@ stages:
     - if [ "$CI_COMMIT_BRANCH" = "master" ]; then latest_tag="--tag latest"; fi
     - ./tools/docker/image-build.sh --image "${CI_JOB_NAME#image-build-}" --tag $CI_PIPELINE_ID $latest_tag --push
 
-image-build-runner:
-  extends: .image-build
-
 image-build-builder/alpine:
   extends: .image-build
 
@@ -238,7 +235,6 @@ run-tests:
   needs:
     - job: build-in-docker
     - job: image-build-tests-runner
-    - job: image-build-runner
 
 boardfarm-tests:
   stage: test
