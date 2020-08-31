@@ -268,11 +268,13 @@ private:
         std::chrono::steady_clock::time_point last_reporting_time_point;
     };
 
+public:
     /**
      * AP Metrics Reporting configuration and status information.
      */
     sApMetricsReportingInfo ap_metrics_reporting_info;
 
+private:
     /**
      * @brief Information gathered about a radio (= slave).
      *
