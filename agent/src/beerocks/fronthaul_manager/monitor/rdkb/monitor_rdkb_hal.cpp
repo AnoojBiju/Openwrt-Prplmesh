@@ -381,20 +381,16 @@ std::string rdkb_hal_sta_config::getStateAbbreviation()
     switch (getState()) {
     case HAL_CLIENT_START_STATE: {
         return "ST";
-        break;
     }
     case HAL_CLIENT_INACTIVE_STATE: {
         return "IN";
-        break;
     }
     case HAL_CLIENT_ACTIVE_STATE: {
         return "AC";
-        break;
     }
     default:
         LOG(ERROR) << "unexpected state" << getState();
         return "UN";
-        break;
     };
 }
 
@@ -403,20 +399,16 @@ std::string rdkb_hal_sta_config::getStateString(client_state_t state)
     switch (state) {
     case HAL_CLIENT_START_STATE: {
         return "HAL_CLIENT_START_STATE";
-        break;
     }
     case HAL_CLIENT_INACTIVE_STATE: {
         return "HAL_CLIENT_INACTIVE_STATE";
-        break;
     }
     case HAL_CLIENT_ACTIVE_STATE: {
         return "HAL_CLIENT_ACTIVE_STATE";
-        break;
     }
     default:
         LOG(ERROR) << "unexpected state" << state;
         return "UNEXPECTED STATE";
-        break;
     };
 }
 
