@@ -32,10 +32,10 @@ node::node(beerocks::eType type_, const std::string &mac_)
 namespace son {
 std::ostream &operator<<(std::ostream &os, eTriStateBool value)
 {
-    if (value == eTriStateBool::DISABLE) {
-        os << "Disabled";
-    } else if (value == eTriStateBool::ENABLE) {
-        os << "Enabled";
+    if (value == eTriStateBool::FALSE) {
+        os << "False";
+    } else if (value == eTriStateBool::TRUE) {
+        os << "True";
     } else {
         os << "Not-Configured";
     }

@@ -2543,7 +2543,7 @@ bool db::set_client_stay_on_initial_radio(const sMacAddr &mac, bool stay_on_init
     }
 
     node->client_stay_on_initial_radio =
-        (stay_on_initial_radio) ? eTriStateBool::ENABLE : eTriStateBool::DISABLE;
+        (stay_on_initial_radio) ? eTriStateBool::TRUE : eTriStateBool::FALSE;
     // clear initial-radio data on disabling of stay_on_initial_radio
     if (!stay_on_initial_radio) {
         LOG(DEBUG) << "Clearing initial_radio in runtime DB";
@@ -2767,7 +2767,7 @@ bool db::update_client_persistent_db(const sMacAddr &mac)
     }
 
     if (node->client_stay_on_initial_radio != eTriStateBool::NOT_CONFIGURED) {
-        auto enable = (node->client_stay_on_initial_radio == eTriStateBool::ENABLE);
+        auto enable = (node->client_stay_on_initial_radio == eTriStateBool::TRUE);
         LOG(DEBUG) << "Setting client stay-on-initial-radio in persistent-db to " << enable
                    << " for " << mac;
         values_map[INITIAL_RADIO_ENABLE_STR] = std::to_string(enable);
@@ -4354,7 +4354,7 @@ bool db::set_node_params_from_map(const sMacAddr &mac, const ValuesMap &values_m
             LOG(DEBUG) << "Setting node client_stay_on_initial_radio to " << param.second << " for "
                        << mac;
             node->client_stay_on_initial_radio =
-                (param.second == "1") ? eTriStateBool::ENABLE : eTriStateBool::DISABLE;
+                (param.second == "1") ? eTriStateBool::TRUE : eTriStateBool::FALSE;
         } else if (param.first == INITIAL_RADIO_STR) {
             LOG(DEBUG) << "Received client_initial_radio=" << param.second << " for " << mac;
             initial_radio = tlvf::mac_from_string(param.second);
@@ -4370,7 +4370,7 @@ bool db::set_node_params_from_map(const sMacAddr &mac, const ValuesMap &values_m
     // After configuring the values we can determine if the client_initial_radio should be set as well.
     // Since its value is only relevant if client_stay_on_initial_radio is set.
     // clear initial-radio data on disabling of stay_on_initial_radio.
-    if (node->client_stay_on_initial_radio != eTriStateBool::ENABLE) {
+    if (node->client_stay_on_initial_radio != eTriStateBool::TRUE) {
         LOG_IF((initial_radio != network_utils::ZERO_MAC), WARNING)
             << "ignoring initial-radio=" << initial_radio
             << " since stay-on-initial-radio is not enabled";

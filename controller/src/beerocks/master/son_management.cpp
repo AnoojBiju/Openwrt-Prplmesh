@@ -2143,7 +2143,7 @@ void son_management::handle_bml_message(Socket *sd,
         if (request->client_config().stay_on_initial_radio != PARAMETER_NOT_CONFIGURED) {
             auto stay_on_initial_radio =
                 (eTriStateBool(request->client_config().stay_on_initial_radio) ==
-                 eTriStateBool::ENABLE);
+                 eTriStateBool::TRUE);
             if (!database.set_client_stay_on_initial_radio(client_mac, stay_on_initial_radio,
                                                            false)) {
                 LOG(ERROR) << " Failed to set stay-on-initial-radio to " << stay_on_initial_radio
@@ -2161,7 +2161,7 @@ void son_management::handle_bml_message(Socket *sd,
             // TODO: add stay_on_selected_device support in the persistent DB.
             // auto stay_on_selected_device =
             //     (eTriStateBool(request->client_config().stay_on_selected_device) ==
-            //      eTriStateBool::ENABLE);
+            //      eTriStateBool::TRUE);
             // if (!database.set_client_stay_on_selected_device(client_mac, stay_on_selected_device,
             //                                                  false)) {
             //     LOG(ERROR) << " Failed to set stay-on-selected-device to "

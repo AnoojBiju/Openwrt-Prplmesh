@@ -37,9 +37,9 @@ typedef struct {
 
 /**
  * @brief Extended boolean parameter to support "not configured" value for configuration.
- * For persistent data, it is important to differ between configured enable/disable to uncofigured value.
+ * For persistent data, it is important to differ between configured (true/false) to unconfigured value.
  */
-enum class eTriStateBool : int8_t { NOT_CONFIGURED = -1, DISABLE = 0, ENABLE = 1 };
+enum class eTriStateBool : int8_t { NOT_CONFIGURED = -1, FALSE = 0, TRUE = 1 };
 
 std::ostream &operator<<(std::ostream &os, eTriStateBool value);
 

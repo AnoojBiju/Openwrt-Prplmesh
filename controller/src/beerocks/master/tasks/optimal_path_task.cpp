@@ -234,7 +234,7 @@ void optimal_path_task::work()
 
         // Check client's steering persistant database for any band/radio/device restrictions
         auto client = tlvf::mac_from_string(sta_mac);
-        if (database.get_client_stay_on_initial_radio(client) == eTriStateBool::ENABLE) {
+        if (database.get_client_stay_on_initial_radio(client) == eTriStateBool::TRUE) {
             TASK_LOG(INFO) << "Client stay on initial radio enabled";
             auto client_initial_radio = database.get_client_initial_radio(client);
 
@@ -996,7 +996,7 @@ void optimal_path_task::work()
         // TODO: Need to create preliminary state that prepares candidate radio list
         // regardless of client's 11k support #PPM-102.
         auto client = tlvf::mac_from_string(sta_mac);
-        if (database.get_client_stay_on_initial_radio(client) == eTriStateBool::ENABLE) {
+        if (database.get_client_stay_on_initial_radio(client) == eTriStateBool::TRUE) {
             TASK_LOG(INFO) << "Client stay on initial radio enabled";
             auto client_initial_radio = database.get_client_initial_radio(client);
 
