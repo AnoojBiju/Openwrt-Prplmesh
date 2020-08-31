@@ -55,7 +55,7 @@ main() {
         esac
     done
 
-    image=${PRPLMESH_RUNNER_IMAGE-"${DOCKER_REGISTRY}prplmesh-runner$TAG"}
+    image=${PRPLMESH_RUNNER_IMAGE-"${DOCKER_REGISTRY}prplmesh-builder-ubuntu-bionic$TAG"}
     dbg "VERBOSE=${VERBOSE}"
     dbg "DETACH=${DETACH}"
     dbg "NETWORK=${NETWORK}"
@@ -105,7 +105,7 @@ main() {
 
     # Save the container name so that it can easily be stopped/removed later
     echo "$NAME" >> "${scriptdir}/.test_containers"
-    run docker container run "${DOCKEROPTS[@]}" "${image}" "$@"
+    run docker container run "${DOCKEROPTS[@]}" --entrypoint /root/start-prplmesh.sh "${image}" "$@"
 }
 
 VERBOSE=false

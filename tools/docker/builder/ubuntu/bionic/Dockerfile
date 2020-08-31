@@ -74,3 +74,5 @@ RUN \
     make install -C applications/amxb-inspect && \
     make install -C applications/amxo-cg && \
     make install -C applications/amxrt
+
+ADD start-prplmesh.sh /root/

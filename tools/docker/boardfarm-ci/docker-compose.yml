@@ -2,7 +2,7 @@ version: '3'
 services:
     # Controller and agent are run from inside the boardfarm container
     controller:
-        image: registry.gitlab.com/prpl-foundation/prplmesh/prplmesh/prplmesh-runner:${CI_PIPELINE_ID}
+        image: registry.gitlab.com/prpl-foundation/prplmesh/prplmesh/prplmesh-builder-ubuntu-bionic:${CI_PIPELINE_ID}
         privileged: true    # For the creation of the bridge to work
         container_name: controller
         environment:
@@ -15,10 +15,10 @@ services:
             - "8002"
         volumes:
             - "$ROOT_DIR:${FINAL_ROOT_DIR}"
-        entrypoint: ["/root/entrypoint.sh", "/usr/bin/start-controller-agent"]
+        entrypoint: ["/root/start-prplmesh.sh", "start-controller-agent"]
 
     agent:
-        image: registry.gitlab.com/prpl-foundation/prplmesh/prplmesh/prplmesh-runner:${CI_PIPELINE_ID}
+        image: registry.gitlab.com/prpl-foundation/prplmesh/prplmesh/prplmesh-builder-ubuntu-bionic:${CI_PIPELINE_ID}
         privileged: true
         container_name: agent
         environment:
@@ -32,7 +32,7 @@ services:
             - "8002"
         volumes:
           - "$ROOT_DIR:${FINAL_ROOT_DIR}"
-        entrypoint: ["/root/entrypoint.sh", "/usr/bin/start-agent"]
+        entrypoint: ["/root/start-prplmesh.sh", "start-agent"]
 
     # Boardfarm image is launched from dctest.py, TARGET_DIR refers to the
     # path inside the controller, will be referred as $ROOT_DIR inside
