@@ -50,29 +50,10 @@
 #include <beerocks/tlvf/beerocks_message_control.h>
 #include <beerocks/tlvf/beerocks_message_platform.h>
 
-/*
- * TODO:
- * move all these includes into a separate header because
- * over time this list is going to get very long
- */
-#include <tlvf/ieee_1905_1/s802_11SpecificInformation.h>
-#include <tlvf/ieee_1905_1/tlv1905NeighborDevice.h>
-#include <tlvf/ieee_1905_1/tlvAlMacAddress.h>
-#include <tlvf/ieee_1905_1/tlvAutoconfigFreqBand.h>
-#include <tlvf/ieee_1905_1/tlvDeviceInformation.h>
-#include <tlvf/ieee_1905_1/tlvEndOfMessage.h>
-#include <tlvf/ieee_1905_1/tlvMacAddress.h>
-#include <tlvf/ieee_1905_1/tlvSearchedRole.h>
-#include <tlvf/ieee_1905_1/tlvSupportedFreqBand.h>
-#include <tlvf/ieee_1905_1/tlvSupportedRole.h>
 #include <tlvf/wfa_map/tlvApCapability.h>
 #include <tlvf/wfa_map/tlvApHeCapabilities.h>
 #include <tlvf/wfa_map/tlvApHtCapabilities.h>
-#include <tlvf/wfa_map/tlvApMetrics.h>
-#include <tlvf/wfa_map/tlvApOperationalBSS.h>
-#include <tlvf/wfa_map/tlvApRadioBasicCapabilities.h>
 #include <tlvf/wfa_map/tlvApVhtCapabilities.h>
-#include <tlvf/wfa_map/tlvAssociatedClients.h>
 #include <tlvf/wfa_map/tlvAssociatedStaExtendedLinkMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringRequest.h>
@@ -82,9 +63,6 @@
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
-#include <tlvf/wfa_map/tlvSearchedService.h>
-#include <tlvf/wfa_map/tlvSupportedService.h>
-#include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
 
 // BPL Error Codes
 #include <bpl/bpl_cfg.h>
