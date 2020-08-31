@@ -2,10 +2,9 @@
 
 prplMesh provides docker images and helper scripts for building and running prplMesh using docker.
 
-The `./image-build.sh` supports building 2 images:
-
-- **builder image** for building prplMesh using docker
-- **runner image** for running prplMesh using docker
+The `./image-build.sh` supports building several images. The most used image is
+`prplMesh-builder-ubuntu-bionic`. It contains everything needed to build and to run prplMesh.
+Wrapper scripts exist to start the containers with appropriate mounting of volumes.
 
 If you don't build the images first, they will be pulled from the prplmesh registry on gitlab.com.
 
@@ -19,7 +18,7 @@ Note that if you choose not to follow the guide, you should add `sudo` before ea
 
 ---
 
-## Docker builder
+## Building in docker
 
 The docker builder image can be used to build prplMesh via `maptools.py build` command running in a prplmesh-build container via `build.sh`.
 
@@ -28,40 +27,6 @@ Build prplMesh in container:
 ```bash
 ./build.sh <maptools.py build arguments>
 ```
-
-## Docker runner
-
-The docker runner image can be used to run prplMesh inside containers using `run.sh`.
-
-The runner docker allows running multiple containers, for example one with a controller+agent, the other with an agent only:
-The 2 containers are connected using a docker network (bridge), so can
-communicate + sniffed by running `wireshark` / `tshark` / `tcpdump` on the bridge from the host to see 1905 packets.
-This is what is done by the test scripts in the tests/ directory.
-Therefore they require dumpcap and tshark to be installed in order to work.
-
-## Docker all
-
-The all docker allows building and running prplMesh inside containers. It includes all the tools used for building and running prplMesh, and is mainly used for running prplMesh on Windows at the moment.
-
-Build this image:
-
-```bash
-cd ./all
-docker image build --tag prplmesh-all .
-```
-
-The current use case for using the `all` image is to run prplMesh on a Windows host for connecting to the WiFi TestSuite wts application (UCC).
-This is done by running the container (mapping the sources or cloning them from within the container) in priviliged mode on port X which is set in the UCC as the DUT port:
-
-```bash
-docker container run -v //c/Users/prplMesh/dev1/:/work/dev1 --privileged -p 5000:5000 --expose 5000 --name gateway -d --user=0:0 --interactive --tty --entrypoint bash --rm prplmesh-windows
-```
-
-## Docker tester
-
-A simple wrapper which calls `docker exec <container name> -it <path/to>/build/install/scripts/prplmesh_utils.sh status` which prints the prplMesh operational status of the main and radio agents.
-
-### Prerequisites
 
 Build prplMesh (build/install directory will be the only directory mapped to the
 containers).
@@ -75,6 +40,17 @@ If you want to see more verbose build output use "--make-verbose" option
 ```bash
 ./maptools.py build map BUILD_TESTS=ON CMAKE_BUILD_TYPE=Debug --make-verbose
 ```
+
+## Running in docker
+
+The docker builder image can be used to run prplMesh inside containers using `run.sh`.
+
+It is possible to run multiple containers, for example one with a controller+agent, the other with an agent only:
+The 2 containers are connected using a docker network (bridge), so can
+communicate + sniffed by running `wireshark` / `tshark` / `tcpdump` on the bridge from the host to see 1905 packets.
+This is what is done by the test scripts in the tests/ directory.
+Therefore they require dumpcap and tshark to be installed in order to work.
+
 
 ### Run the Containers
 
@@ -114,7 +90,13 @@ If needed, run the container interactively without specifying the daemon to run:
 ```bash
 # start container named <name> and start interactive session using bash (supplied by the image)
 ./run.sh -n <name>
+
 ```
+
+## Docker tester
+
+`test.sh` is a simple wrapper which calls `docker exec <container name> -it <path/to>/build/install/scripts/prplmesh_utils.sh status` which prints the prplMesh operational status of the main and radio agents.
+
 
 ---
 
