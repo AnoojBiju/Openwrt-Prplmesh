@@ -259,6 +259,7 @@ private:
 
     TaskPool m_task_pool;
 
+public:
     /**
      * AP Metrics Reporting configuration and status information type.
      */
@@ -306,6 +307,7 @@ private:
         uint32_t number_of_reports_in_last_minute = 0;
     } unsuccessful_association_policy;
 
+private:
     /**
      * @brief Information gathered about a radio (= slave).
      *
