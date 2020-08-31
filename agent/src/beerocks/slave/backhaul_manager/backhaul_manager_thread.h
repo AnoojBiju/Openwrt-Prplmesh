@@ -276,6 +276,7 @@ private:
         std::chrono::steady_clock::time_point last_reporting_time_point;
     } ap_metrics_reporting_info;
 
+public:
     /**
      * Unsuccessful Association Policy
      */
@@ -306,6 +307,7 @@ private:
         uint32_t number_of_reports_in_last_minute = 0;
     } unsuccessful_association_policy;
 
+private:
     /**
      * @brief Information gathered about a radio (= slave).
      *
