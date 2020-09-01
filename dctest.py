@@ -167,8 +167,6 @@ if __name__ == '__main__':
     group.add_argument('--test', dest='test', type=str, help='Test to be run')
     group.add_argument('--clean', dest='clean', action='store_true',
                        help='Clean containers images and networks')
-    group.add_argument('--build', dest='build', action='store_true',
-                       help='Rebuild containers')
     group.add_argument('--shell', dest='shell', action='store_true',
                        help='Run a shell on the bf container')
     group.add_argument('--comp', dest='comp', action='store_true',
@@ -208,13 +206,6 @@ if __name__ == '__main__':
         services = Services(bid=args.bid)
         rc = services.dc(['run', '--rm', '--service-ports', '--entrypoint',
                           '/bin/bash', 'boardfarm'], interactive=True)
-        cleanup(rc)
-    elif args.build:
-        if not args.bid:
-            print('Specify --id for the build parameter')
-            sys.exit(0)
-        services = Services(bid=args.bid)
-        rc = services.dc(['build'], interactive=True)
         cleanup(rc)
     else:
         if args.bid:

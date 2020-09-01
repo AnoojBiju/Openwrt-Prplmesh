@@ -37,7 +37,7 @@ services:
     # Boardfarm image is launched from dctest.py, TARGET_DIR refers to the
     # path inside the controller, will be referred as $ROOT_DIR inside
     boardfarm:
-        build: .
+        image: registry.gitlab.com/prpl-foundation/prplmesh/prplmesh/prplmesh-boardfarm-ci:${CI_PIPELINE_ID}
         privileged: true
         container_name: boardfarm
         environment:
