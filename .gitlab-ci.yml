@@ -209,20 +209,6 @@ bwl_dummy_unit_tests:
 bcl_unit_tests:
   extends: .run-test-in-docker
 
-dctest_one_test:
-  stage: test
-  script:
-    - ./dctest.py
-  artifacts:
-    paths:
-      - logs
-      - results
-    when: always
-  tags:
-    - boardfarm-compose
-  needs:
-    - job: build-in-docker
-
 mapf_common_encryption_tests:
   extends: .run-test-in-docker
 
@@ -258,8 +244,7 @@ boardfarm-tests:
   stage: test
   image: $CI_REGISTRY_IMAGE/prplmesh-boardfarm-ci:$CI_PIPELINE_ID
   script:
-    - export USER=''
-    - tests/run_bf.sh
+    - ./dctest.py
   artifacts:
     paths:
       - logs
@@ -269,7 +254,7 @@ boardfarm-tests:
     - job: build-in-docker
     - job: image-build-boardfarm-ci
   tags:
-    - boardfarm
+    - boardfarm-compose
 
 .build-for-openwrt:
   stage: build
