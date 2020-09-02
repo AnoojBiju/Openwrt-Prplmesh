@@ -189,7 +189,7 @@ bool ap_wlan_hal_nl80211::set_start_disabled(bool enable, int vap_id)
     return true;
 }
 
-bool ap_wlan_hal_nl80211::set_channel(int chan, int bw, int center_channel)
+bool ap_wlan_hal_nl80211::set_channel(int chan, beerocks::eWiFiBandwidth bw, int center_channel)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return true;
