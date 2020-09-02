@@ -1885,5 +1885,3 @@ bool cACTION_CLI_HOSTAP_STATS_MEASUREMENT::init()
     if (m_parse__) { class_swap(); }
     return true;
 }
-
-

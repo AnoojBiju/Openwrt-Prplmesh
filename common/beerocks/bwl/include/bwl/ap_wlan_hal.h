@@ -96,11 +96,11 @@ public:
      * 
      * @param [in] chan The channel to switch to.
      * @param [in] bw The bandwidth (in Mhz) of the target channel.
-     * @param [in] center_channel VHT center frequency.
+     * @param [in] center_freq VHT center frequency.
      * 
      * @return true on success or false on error.
      */
-    virtual bool set_channel(int chan, int bw, int center_channel) = 0;
+    virtual bool set_channel(int chan, int bw, int center_freq) = 0;
 
     /*!
      * Allow the station with the given MAC address to connect.

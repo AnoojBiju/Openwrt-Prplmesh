@@ -1041,9 +1041,9 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
             return false;
         }
 
-        notification_out->channel()        = notification_in->channel();
-        notification_out->bandwidth()      = notification_in->bandwidth();
-        notification_out->center_channel() = notification_in->center_channel();
+        notification_out->channel()          = notification_in->channel();
+        notification_out->bandwidth()        = notification_in->bandwidth();
+        notification_out->center_frequency() = notification_in->center_frequency();
         LOG(DEBUG) << "Sending ACTION_APMANAGER_ENABLE_APS_REQUEST";
         message_com::send_cmdu(ap_manager_socket, cmdu_tx);
 
