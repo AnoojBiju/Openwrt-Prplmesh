@@ -1322,7 +1322,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--verbose", "-v", action='store_true', default=False,
-                        help="report each action")
+                        help="(ignored for backward compatibility)")
     parser.add_argument("--stop-on-failure", "-s", action='store_true', default=False,
                         help="exit on the first failure")
     user = os.getenv("SUDO_USER", os.getenv("USER", ""))
@@ -1340,8 +1340,6 @@ if __name__ == '__main__':
     unknown_tests = [test for test in options.tests if test not in t.tests]
     if unknown_tests:
         parser.error("Unknown tests: {}".format(', '.join(unknown_tests)))
-
-    opts.verbose = options.verbose
 
     opts.tcpdump_dir = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), '..', 'logs'))
     opts.stop_on_failure = options.stop_on_failure
