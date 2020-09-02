@@ -342,17 +342,14 @@ class RadioDocker(Radio):
 
     def send_bwl_event(self, event: str) -> None:
         # The file is only available within the docker container so we need to use an echo command.
-        # Inside the container, $USER is set to the username that was used for starting it.
-        command = "echo \"{}\" > /tmp/$USER/beerocks/{}/EVENT".format(event, self.iface_name)
+        command = "echo \"{}\" > /tmp/beerocks/{}/EVENT".format(event, self.iface_name)
         self.agent.command('sh', '-c', command)
 
     def read_tmp_file(self, filename: str) -> bytes:
         '''Read the file given by `filename` from the radio's status directory'''
         # The file is only available within the docker container so we need to use cat.
-        # Inside the container, $USER is set to the username that was used for starting it.
-        # We need to pass through shell to expand it.
-        path = "/tmp/$USER/beerocks/{}/{}".format(self.iface_name, filename)
-        return self.agent.command("sh", "-c", 'cat "{}"'.format(path))
+        path = "/tmp/beerocks/{}/{}".format(self.iface_name, filename)
+        return self.agent.command("cat", path)
 
     def get_current_channel(self) -> ChannelInfo:
         channel_info = yaml.safe_load(self.read_tmp_file("channel"))

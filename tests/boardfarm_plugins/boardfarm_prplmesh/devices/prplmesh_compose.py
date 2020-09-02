@@ -32,7 +32,6 @@ class PrplMeshCompose(PrplMeshBase):
 
         # Getting unic ID to distinguish devices and network they belong to
         self.unique_id = os.getenv("RUN_ID")
-        self.user_id = os.getenv("SUDO_USER", os.getenv("USER", ""))
 
         self.name = config.get("name", "prplmesh_compose")
         self.docker_name = "-".join((self.name, self.unique_id))
@@ -69,11 +68,7 @@ class PrplMeshCompose(PrplMeshBase):
             if not os.path.exists(log_path):
                 os.mkdir(log_path)
 
-            pipeline_id = os.getenv('CI_PIPELINE_ID')
-            if pipeline_id is None or pipeline_id == 'latest':
-                vol = '{}:/tmp/{}/beerocks/logs'.format(log_path, self.user_id)
-            else:
-                vol = '{}:/tmp/beerocks/logs'.format(log_path)
+            vol = '{}:/tmp/beerocks/logs'.format(log_path)
 
             full_args += ["run", "--rm", "-v", vol]
             full_args += args

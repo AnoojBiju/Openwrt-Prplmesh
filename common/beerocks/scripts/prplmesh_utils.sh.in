@@ -142,7 +142,7 @@ prplmesh_delete_logs() {
     rm -rf @BEEROCKS_LOG_FILES_PATH@
 
     # Relevant only for Linux environment
-    rm -rf "/tmp/${SUDO_USER:-${USER}}/beerocks/logs"
+    rm -rf "/tmp/beerocks/logs"
 }
 
 prplmesh_watchdog() {
@@ -420,7 +420,7 @@ main() {
     # Give write permissions (linux only)
     # shellcheck disable=SC2050
     if [ "@TARGET_PLATFORM@" = "linux" ]; then
-        chmod -R +o+w "/tmp/${SUDO_USER:-${USER}}" || true
+        chmod -R +o+w "/tmp/beerocks" || true
     fi
 }
 

@@ -95,11 +95,6 @@ set(TMP_PATH "/tmp/beerocks")
 
 if(TARGET_PLATFORM STREQUAL "linux")
     set(INSTALL_PATH "${CMAKE_INSTALL_PREFIX}")
-    option(USE_USER_TMP_PATH "use /tmp/$USER instead of /tmp path" ON)
-    if(USE_USER_TMP_PATH)
-        set(USER "$ENV{USER}")
-        set(TMP_PATH "/tmp/${USER}/beerocks")
-    endif()
 endif()
 
 # Default values
@@ -148,15 +143,15 @@ option(BUILD_TESTS "build multiap unit tests" OFF)
 if (BUILD_TESTS)
     enable_testing()
     message(STATUS "Tests are enabled")
-    
+
     # Compile GoogleTest statically (so we don't have to install libraries)
     set(BUILD_SHARED_LIBS_SAVED "${BUILD_SHARED_LIBS}")
     set(BUILD_SHARED_LIBS OFF)
-        
+
     # GoogleTest
     # https://github.com/google/googletest/blob/master/googletest/README.md#incorporating-into-an-existing-cmake-project
     include(cmake/googletest.cmake)
-    
+
     # Revert it
     set(BUILD_SHARED_LIBS "${BUILD_SHARED_LIBS_SAVED}")
 endif()
