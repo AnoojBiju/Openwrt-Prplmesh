@@ -12,7 +12,8 @@ then
 . /opt/multiap/framework/bpl_err.sh
 fi
 
-BEEROCKS_PATH="@INSTALL_PATH@"
+scriptdir=$(dirname "$(readlink -f "${0}")")
+BEEROCKS_PATH="$(cd "${scriptdir}/.." && pwd)"
 
 BEEROCKS_LOG_PATH="@BEEROCKS_LOG_FILES_PATH@"
 
