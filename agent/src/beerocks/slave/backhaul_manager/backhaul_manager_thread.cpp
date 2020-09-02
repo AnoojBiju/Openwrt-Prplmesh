@@ -2811,11 +2811,18 @@ bool backhaul_manager::send_slaves_enable()
             return false;
         }
 
+        // enable wireless backhaul interface on the selected channel
         if (soc->sta_iface == db->backhaul.selected_iface_name) {
             notification->channel() = iface_hal->get_channel();
+            // set default bw 0 (20Mhz) to cover most cases.
+            // TODO figure out how to get bw of the selected channel.
+            // Will be used later on to set "vht_oper_chwidth" in set_channel()
+            notification->bandwidth() = int{eWiFiBandwidth::BANDWIDTH_20};
+            notification->center_frequency() =
+                son::wireless_utils::channel_to_freq(notification->channel());
         }
-        LOG(DEBUG) << "Sending enable to slave " << soc->hostap_iface
-                   << ", channel=" << int(notification->channel());
+        LOG(DEBUG) << "Send enable to slave " << soc->hostap_iface
+                   << ", channel = " << int(notification->channel());
 
         message_com::send_cmdu(soc->slave, cmdu_tx);
     }
@@ -2857,6 +2864,12 @@ bool backhaul_manager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t eve
         }
         if (FSM_IS_IN_STATE(WAIT_WPS)) {
             db->backhaul.selected_iface_name = iface;
+            db->backhaul.connection_type     = AgentDB::sBackhaul::eConnectionType::Wireless;
+            LOG(DEBUG) << "WPS scan completed successfully on iface = " << iface
+                       << ", enabling all APs";
+
+            // Send slave enable the AP's
+            send_slaves_enable();
             FSM_MOVE_STATE(MASTER_DISCOVERY);
         }
         if (FSM_IS_IN_STATE(WIRELESS_ASSOCIATE_4ADDR_WAIT)) {
