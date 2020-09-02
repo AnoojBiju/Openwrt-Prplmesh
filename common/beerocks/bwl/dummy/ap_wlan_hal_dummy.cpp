@@ -136,17 +136,17 @@ bool ap_wlan_hal_dummy::disable() { return true; }
 
 bool ap_wlan_hal_dummy::set_start_disabled(bool enable, int vap_id) { return true; }
 
-bool ap_wlan_hal_dummy::set_channel(int chan, int bw, int center_channel)
+bool ap_wlan_hal_dummy::set_channel(int chan, int bw, int center_freq)
 {
     m_radio_info.channel = chan;
     m_radio_info.bandwidth =
         beerocks::utils::convert_bandwidth_to_int((beerocks::eWiFiBandwidth)bw);
-    m_radio_info.vht_center_freq = center_channel;
+    m_radio_info.vht_center_freq = center_freq;
     m_radio_info.is_dfs_channel  = son::wireless_utils::is_dfs_channel(chan);
     std::stringstream value;
     value << "channel: " << chan << std::endl;
     value << "bw: " << m_radio_info.bandwidth << std::endl;
-    value << "center_channel: " << center_channel << std::endl;
+    value << "center_channel: " << center_freq << std::endl;
     return write_status_file("channel", value.str());
 }
 
