@@ -429,10 +429,6 @@ uint32_t& cACTION_APMANAGER_ENABLE_APS_REQUEST::bandwidth() {
     return (uint32_t&)(*m_bandwidth);
 }
 
-uint8_t& cACTION_APMANAGER_ENABLE_APS_REQUEST::center_channel() {
-    return (uint8_t&)(*m_center_channel);
-}
-
 void cACTION_APMANAGER_ENABLE_APS_REQUEST::class_swap()
 {
     tlvf_swap(8*sizeof(eActionOp_APMANAGER), reinterpret_cast<uint8_t*>(m_action_op));
@@ -471,7 +467,6 @@ size_t cACTION_APMANAGER_ENABLE_APS_REQUEST::get_initial_size()
     size_t class_size = 0;
     class_size += sizeof(uint8_t); // channel
     class_size += sizeof(uint32_t); // bandwidth
-    class_size += sizeof(uint8_t); // center_channel
     return class_size;
 }
 
@@ -489,11 +484,6 @@ bool cACTION_APMANAGER_ENABLE_APS_REQUEST::init()
     m_bandwidth = reinterpret_cast<uint32_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint32_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
-        return false;
-    }
-    m_center_channel = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
     if (m_parse__) { class_swap(); }

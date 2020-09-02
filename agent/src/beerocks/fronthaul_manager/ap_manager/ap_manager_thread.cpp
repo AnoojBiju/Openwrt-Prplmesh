@@ -430,12 +430,13 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
         // will be all set to 0.
         LOG(DEBUG) << "Setting AP channel: "
                    << ", channel=" << int(notification->channel())
-                   << ", bandwidth=" << int(notification->bandwidth())
-                   << ", center_channel=" << int(notification->center_channel());
+                   << ", bandwidth=" << int(notification->bandwidth()) << ", center frequency="
+                   << int(son::wireless_utils::channel_to_freq(notification->channel()));
 
         // Set original channel or BH channel
-        if (!ap_wlan_hal->set_channel(notification->channel(), notification->bandwidth(),
-                                      notification->center_channel())) {
+        if (!ap_wlan_hal->set_channel(
+                notification->channel(), notification->bandwidth(),
+                son::wireless_utils::channel_to_freq(notification->channel()))) {
             LOG(ERROR) << "Failed setting set_channel";
             response->success() = false;
             message_com::send_cmdu(slave_socket, cmdu_tx);

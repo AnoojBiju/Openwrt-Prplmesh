@@ -85,7 +85,6 @@ cACTION_BACKHAUL_ENABLE_APS_REQUEST:
   _type: class
   channel: uint8_t
   bandwidth: uint32_t
-  center_channel: uint8_t
 
 cACTION_BACKHAUL_ROAM_REQUEST:
   _type: class

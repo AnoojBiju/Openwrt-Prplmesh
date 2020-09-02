@@ -246,7 +246,6 @@ class cACTION_BACKHAUL_ENABLE_APS_REQUEST : public BaseClass
         }
         uint8_t& channel();
         uint32_t& bandwidth();
-        uint8_t& center_channel();
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -256,7 +255,6 @@ class cACTION_BACKHAUL_ENABLE_APS_REQUEST : public BaseClass
         eActionOp_BACKHAUL* m_action_op = nullptr;
         uint8_t* m_channel = nullptr;
         uint32_t* m_bandwidth = nullptr;
-        uint8_t* m_center_channel = nullptr;
 };
 
 class cACTION_BACKHAUL_ROAM_REQUEST : public BaseClass
