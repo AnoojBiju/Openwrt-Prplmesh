@@ -774,7 +774,8 @@ bool ap_wlan_hal_dwpal::set_channel(int chan, int bw, int center_channel)
 
     std::string chan_string = (chan == 0) ? "acs_smart" : std::to_string(chan);
 
-    LOG(DEBUG) << "Set channel to " << chan_string;
+    LOG(DEBUG) << "Set channel to " << chan_string << ", bw " << bw << ", center frequency "
+               << center_channel;
 
     if (!set("channel", chan_string)) {
         LOG(ERROR) << "Failed setting channel";
@@ -808,7 +809,7 @@ bool ap_wlan_hal_dwpal::set_channel(int chan, int bw, int center_channel)
     }
 
     if (center_channel > 0) {
-        if (!set("vht_oper_centr_freq_seg0_idx=", std::to_string(center_channel))) {
+        if (!set("vht_oper_centr_freq_seg0_idx", std::to_string(center_channel))) {
             LOG(ERROR) << "Failed setting vht_oper_centr_freq_seg0_idx";
             return false;
         }
