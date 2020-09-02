@@ -1657,11 +1657,6 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             slave_reset();
         }
 
-        if (detach_on_conf_change) {
-            LOG(DEBUG) << "detach occurred on wifi conf change, slave reset!";
-            slave_reset();
-        }
-
         break;
     }
     case beerocks_message::ACTION_APMANAGER_HOSTAP_AP_ENABLED_NOTIFICATION: {
