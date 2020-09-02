@@ -757,7 +757,7 @@ bool ap_wlan_hal_dwpal::set_start_disabled(bool enable, int vap_id)
     return ret;
 }
 
-bool ap_wlan_hal_dwpal::set_channel(int chan, int bw, int center_channel)
+bool ap_wlan_hal_dwpal::set_channel(int chan, beerocks::eWiFiBandwidth bw, int center_channel)
 {
     if (chan < 0) {
         LOG(ERROR) << "Invalid input: channel(" << chan << ") < 0";
@@ -766,14 +766,15 @@ bool ap_wlan_hal_dwpal::set_channel(int chan, int bw, int center_channel)
 
     std::string chan_string = (chan == 0) ? "acs_smart" : std::to_string(chan);
 
-    LOG(DEBUG) << "Set channel to " << chan_string;
+    LOG(DEBUG) << "Set channel to " << chan_string << ", bw " << bw << ", center channel "
+               << center_channel;
 
     if (!set("channel", chan_string)) {
         LOG(ERROR) << "Failed setting channel";
         return false;
     }
 
-    if (bw > 0) {
+    if (bw != beerocks::eWiFiBandwidth::BANDWIDTH_UNKNOWN) {
         int wifi_bw = 0;
         // based on hostapd.conf @ https://w1.fi/cgit/hostap/plain/hostapd/hostapd.conf
         // # 0 = 20 or 40 MHz operating Channel width
@@ -782,11 +783,13 @@ bool ap_wlan_hal_dwpal::set_channel(int chan, int bw, int center_channel)
         // # 3 = 80+80 MHz channel width
         // #vht_oper_chwidth=1
 
-        if (bw == 20 || bw == 40) {
+        if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_20 ||
+            bw == beerocks::eWiFiBandwidth::BANDWIDTH_40) {
             wifi_bw = 0;
-        } else if (bw == 80) {
+        } else if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_80) {
             wifi_bw = 1;
-        } else if (bw == 160) {
+        } else if ((bw == beerocks::eWiFiBandwidth::BANDWIDTH_160) ||
+                   (bw == beerocks::eWiFiBandwidth::BANDWIDTH_80_80)) {
             wifi_bw = 2;
         } else {
             LOG(ERROR) << "Unknown BW " << bw;
@@ -800,7 +803,7 @@ bool ap_wlan_hal_dwpal::set_channel(int chan, int bw, int center_channel)
     }
 
     if (center_channel > 0) {
-        if (!set("vht_oper_centr_freq_seg0_idx=", std::to_string(center_channel))) {
+        if (!set("vht_oper_centr_freq_seg0_idx", std::to_string(center_channel))) {
             LOG(ERROR) << "Failed setting vht_oper_centr_freq_seg0_idx";
             return false;
         }
