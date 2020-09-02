@@ -127,3 +127,5 @@ cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED:
   front_iface_name:
     _type: char
     _length: ["beerocks::message::IFACE_NAME_LENGTH"]
+cACTION_BACKHAUL_RADIO_DISABLE_REQUEST:
+  _type: class
