@@ -410,23 +410,12 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
 
         response->success() = true;
 
-        // Enable beaconing by setting start_disabled flag to false.
-        if (!ap_wlan_hal->set_start_disabled(false)) {
-            LOG(ERROR) << "Failed setting start_disabled";
-            response->success() = false;
-            message_com::send_cmdu(slave_socket, cmdu_tx);
-            break;
-        }
-
         // Disable the radio interface to make hostapd to consider the new configuration.
         if (!ap_wlan_hal->disable()) {
-            LOG(ERROR) << "Failed disable";
-            response->success() = false;
-            message_com::send_cmdu(slave_socket, cmdu_tx);
-            break;
+            LOG(DEBUG) << "interface already disabled";
         }
 
-        // If it is not the radio of the BH, then channel, bandwidth and center channel paramenters
+        // If it is not the radio of the BH, then channel, bandwidth and center frequency paramenters
         // will be all set to 0.
         LOG(DEBUG) << "Setting AP channel: "
                    << ", channel=" << int(notification->channel())
