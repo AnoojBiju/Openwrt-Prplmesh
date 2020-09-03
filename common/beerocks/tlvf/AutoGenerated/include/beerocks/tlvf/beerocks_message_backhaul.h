@@ -138,11 +138,9 @@ class cACTION_BACKHAUL_ENABLE : public BaseClass
         uint8_t& backhaul_preferred_radio_band();
         beerocks::eFreqType& frequency_band();
         beerocks::eWiFiBandwidth& max_bandwidth();
-        uint8_t& ht_supported();
         uint16_t& ht_capability();
         uint8_t* ht_mcs_set(size_t idx = 0);
         bool set_ht_mcs_set(const void* buffer, size_t size);
-        uint8_t& vht_supported();
         uint32_t& vht_capability();
         uint8_t* vht_mcs_set(size_t idx = 0);
         bool set_vht_mcs_set(const void* buffer, size_t size);
@@ -168,11 +166,9 @@ class cACTION_BACKHAUL_ENABLE : public BaseClass
         uint8_t* m_backhaul_preferred_radio_band = nullptr;
         beerocks::eFreqType* m_frequency_band = nullptr;
         beerocks::eWiFiBandwidth* m_max_bandwidth = nullptr;
-        uint8_t* m_ht_supported = nullptr;
         uint16_t* m_ht_capability = nullptr;
         uint8_t* m_ht_mcs_set = nullptr;
         size_t m_ht_mcs_set_idx__ = 0;
-        uint8_t* m_vht_supported = nullptr;
         uint32_t* m_vht_capability = nullptr;
         uint8_t* m_vht_mcs_set = nullptr;
         size_t m_vht_mcs_set_idx__ = 0;

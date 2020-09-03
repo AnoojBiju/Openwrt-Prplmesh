@@ -449,10 +449,6 @@ beerocks::eWiFiBandwidth& cACTION_BACKHAUL_ENABLE::max_bandwidth() {
     return (beerocks::eWiFiBandwidth&)(*m_max_bandwidth);
 }
 
-uint8_t& cACTION_BACKHAUL_ENABLE::ht_supported() {
-    return (uint8_t&)(*m_ht_supported);
-}
-
 uint16_t& cACTION_BACKHAUL_ENABLE::ht_capability() {
     return (uint16_t&)(*m_ht_capability);
 }
@@ -477,10 +473,6 @@ bool cACTION_BACKHAUL_ENABLE::set_ht_mcs_set(const void* buffer, size_t size) {
     std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_ht_mcs_set);
     return true;
 }
-uint8_t& cACTION_BACKHAUL_ENABLE::vht_supported() {
-    return (uint8_t&)(*m_vht_supported);
-}
-
 uint32_t& cACTION_BACKHAUL_ENABLE::vht_capability() {
     return (uint32_t&)(*m_vht_capability);
 }
@@ -556,10 +548,8 @@ size_t cACTION_BACKHAUL_ENABLE::get_initial_size()
     class_size += sizeof(uint8_t); // backhaul_preferred_radio_band
     class_size += sizeof(beerocks::eFreqType); // frequency_band
     class_size += sizeof(beerocks::eWiFiBandwidth); // max_bandwidth
-    class_size += sizeof(uint8_t); // ht_supported
     class_size += sizeof(uint16_t); // ht_capability
     class_size += beerocks::message::HT_MCS_SET_SIZE * sizeof(uint8_t); // ht_mcs_set
-    class_size += sizeof(uint8_t); // vht_supported
     class_size += sizeof(uint32_t); // vht_capability
     class_size += beerocks::message::VHT_MCS_SET_SIZE * sizeof(uint8_t); // vht_mcs_set
     return class_size;
@@ -626,11 +616,6 @@ bool cACTION_BACKHAUL_ENABLE::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(beerocks::eWiFiBandwidth) << ") Failed!";
         return false;
     }
-    m_ht_supported = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
-        return false;
-    }
     m_ht_capability = reinterpret_cast<uint16_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint16_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
@@ -642,11 +627,6 @@ bool cACTION_BACKHAUL_ENABLE::init()
         return false;
     }
     m_ht_mcs_set_idx__  = beerocks::message::HT_MCS_SET_SIZE;
-    m_vht_supported = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
-        return false;
-    }
     m_vht_capability = reinterpret_cast<uint32_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint32_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";

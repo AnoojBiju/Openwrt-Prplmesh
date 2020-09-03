@@ -1693,10 +1693,8 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
         }
 
         soc->radio_mac     = request->iface_mac();
-        soc->ht_supported  = request->ht_supported();
         soc->ht_capability = request->ht_capability();
         std::copy_n(request->ht_mcs_set(), soc->ht_mcs_set.size(), soc->ht_mcs_set.begin());
-        soc->vht_supported  = request->vht_supported();
         soc->vht_capability = request->vht_capability();
         std::copy_n(request->vht_mcs_set(), soc->vht_mcs_set.size(), soc->vht_mcs_set.begin());
 
@@ -3504,7 +3502,14 @@ bool backhaul_manager::get_neighbor_links(
 
 bool backhaul_manager::add_ap_ht_capabilities(const sRadioInfo &radio_info)
 {
-    if (!radio_info.ht_supported) {
+    auto db    = AgentDB::get();
+    auto radio = db->get_radio_by_mac(radio_info.radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "radio with mac " << radio_info.radio_mac << " does not exist in the db";
+        return false;
+    }
+
+    if (!radio->ht_supported) {
         return true;
     }
 
@@ -3534,7 +3539,14 @@ bool backhaul_manager::add_ap_ht_capabilities(const sRadioInfo &radio_info)
 
 bool backhaul_manager::add_ap_vht_capabilities(const sRadioInfo &radio_info)
 {
-    if (!radio_info.vht_supported) {
+    auto db    = AgentDB::get();
+    auto radio = db->get_radio_by_mac(radio_info.radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "radio with mac " << radio_info.radio_mac << " does not exist in the db";
+        return false;
+    }
+
+    if (!radio->vht_supported) {
         return true;
     }
 
