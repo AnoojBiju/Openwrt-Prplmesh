@@ -8,12 +8,34 @@
 
 #include <algorithm>
 #include <iomanip>
+#include <limits.h>
 #include <mapf/common/logger.h>
 #include <mapf/common/utils.h>
 #include <sstream>
+#include <unistd.h>
 
 namespace mapf {
 namespace utils {
+
+std::string get_install_path()
+{
+    char path_install_file[PATH_MAX];
+    std::string path_install_dir;
+
+    if (readlink("/proc/self/exe", path_install_file, sizeof(path_install_file)) == -1) {
+        return std::string();
+    }
+    path_install_dir = path_install_file;
+    auto end_search  = path_install_dir.rfind("/");
+    if (end_search == std::string::npos) {
+        return std::string();
+    }
+    end_search = path_install_dir.rfind("/", end_search - 1);
+    if (end_search == std::string::npos) {
+        return std::string();
+    }
+    return path_install_dir.substr(0, end_search + 1);
+}
 
 std::string dump_buffer(uint8_t *buffer, size_t len)
 {

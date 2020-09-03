@@ -39,6 +39,13 @@ std::string dump_buffer(uint8_t *buffer, size_t len);
  */
 void copy_string(char *dst, const char *src, size_t dst_len);
 
+/**
+ * @brief Finds one directory up from install directory.
+ * @return if success path to install directory (one directory up) ending with '/', otherwise
+ *         empty string.
+ */
+std::string get_install_path();
+
 } // namespace utils
 } // namespace mapf
 #endif // MAPFUTILS_H_
