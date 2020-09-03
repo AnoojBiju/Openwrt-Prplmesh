@@ -633,17 +633,17 @@ std::vector<uint8_t> wireless_utils::calc_5g_20MHz_subband_channels(
  * @return list of temporary non operable channels with <oper_class, preference, reason,
  *         list of channels> as value
  */
-std::list<wireless_utils::sChannelPreference>
-wireless_utils::get_channel_preferences(const beerocks::message::sWifiChannel supported_channels[])
+std::list<wireless_utils::sChannelPreference> wireless_utils::get_channel_preferences(
+    const std::deque<beerocks::message::sWifiChannel> &supported_channels)
 {
     std::list<sChannelPreference> preferences;
 
     for (auto oper_class : operating_classes_list) {
         std::vector<beerocks::message::sWifiChannel> radar_affected_channels;
-        for (uint8_t i = 0; i < beerocks::message::SUPPORTED_CHANNELS_LENGTH; i++) {
-            if (has_operating_class_channel(oper_class.second, supported_channels[i]) &&
-                supported_channels[i].radar_affected) {
-                radar_affected_channels.push_back(supported_channels[i]);
+        for (auto supported_channel : supported_channels) {
+            if (has_operating_class_channel(oper_class.second, supported_channel) &&
+                supported_channel.radar_affected) {
+                radar_affected_channels.push_back(supported_channel);
             }
         }
         sChannelPreference pref;
@@ -664,13 +664,13 @@ wireless_utils::get_channel_preferences(const beerocks::message::sWifiChannel su
  * @return std::vector<uint8_t> vector of supported operating classes
  */
 std::vector<uint8_t> wireless_utils::get_supported_operating_classes(
-    const beerocks::message::sWifiChannel supported_channels[])
+    const std::deque<beerocks::message::sWifiChannel> &supported_channels)
 {
     std::vector<uint8_t> operating_classes;
     //TODO handle regulatory domain operating classes
     for (auto oper_class : operating_classes_list) {
-        for (uint8_t i = 0; i < beerocks::message::SUPPORTED_CHANNELS_LENGTH; i++) {
-            if (has_operating_class_channel(oper_class.second, supported_channels[i])) {
+        for (auto supported_channel : supported_channels) {
+            if (has_operating_class_channel(oper_class.second, supported_channel)) {
                 operating_classes.push_back(oper_class.first);
                 break;
             }
@@ -688,14 +688,14 @@ std::vector<uint8_t> wireless_utils::get_supported_operating_classes(
  * @return max tx power for requested operating class
  */
 uint8_t wireless_utils::get_operating_class_max_tx_power(
-    const beerocks::message::sWifiChannel supported_channels[], uint8_t operating_class)
+    const std::deque<beerocks::message::sWifiChannel> &supported_channels, uint8_t operating_class)
 {
     uint8_t max_tx_power = 0;
     auto oper_class      = operating_classes_list.at(operating_class);
 
-    for (uint8_t i = 0; i < beerocks::message::SUPPORTED_CHANNELS_LENGTH; i++) {
-        if (has_operating_class_channel(oper_class, supported_channels[i])) {
-            max_tx_power = std::max(max_tx_power, supported_channels[i].tx_pow);
+    for (auto supported_channel : supported_channels) {
+        if (has_operating_class_channel(oper_class, supported_channel)) {
+            max_tx_power = std::max(max_tx_power, supported_channel.tx_pow);
         }
     }
     return max_tx_power;
@@ -744,16 +744,16 @@ wireless_utils::get_operating_class_by_channel(const beerocks::message::sWifiCha
  * @return std::vector<uint8_t> vector of non operable channels
  */
 std::vector<uint8_t> wireless_utils::get_operating_class_non_oper_channels(
-    const beerocks::message::sWifiChannel supported_channels[], uint8_t operating_class)
+    const std::deque<beerocks::message::sWifiChannel> &supported_channels, uint8_t operating_class)
 {
     std::vector<uint8_t> non_oper_channels;
     auto oper_class = operating_classes_list.at(operating_class);
 
     for (auto op_class_channel : oper_class.channels) {
         uint8_t found = 0;
-        for (uint8_t i = 0; i < beerocks::message::SUPPORTED_CHANNELS_LENGTH; i++) {
-            if (op_class_channel == supported_channels[i].channel &&
-                oper_class.band == supported_channels[i].channel_bandwidth) {
+        for (auto supported_channel : supported_channels) {
+            if (op_class_channel == supported_channel.channel &&
+                oper_class.band == supported_channel.channel_bandwidth) {
                 found = 1;
                 break;
             }

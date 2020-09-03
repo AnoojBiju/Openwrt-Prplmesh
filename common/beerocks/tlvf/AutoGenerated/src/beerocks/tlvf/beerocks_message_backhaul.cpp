@@ -505,48 +505,6 @@ bool cACTION_BACKHAUL_ENABLE::set_vht_mcs_set(const void* buffer, size_t size) {
     std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_vht_mcs_set);
     return true;
 }
-uint8_t& cACTION_BACKHAUL_ENABLE::preferred_channels_size() {
-    return (uint8_t&)(*m_preferred_channels_size);
-}
-
-std::tuple<bool, beerocks::message::sWifiChannel&> cACTION_BACKHAUL_ENABLE::preferred_channels(size_t idx) {
-    bool ret_success = ( (m_preferred_channels_idx__ > 0) && (m_preferred_channels_idx__ > idx) );
-    size_t ret_idx = ret_success ? idx : 0;
-    if (!ret_success) {
-        TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
-    }
-    return std::forward_as_tuple(ret_success, m_preferred_channels[ret_idx]);
-}
-
-bool cACTION_BACKHAUL_ENABLE::alloc_preferred_channels(size_t count) {
-    if (m_lock_order_counter__ > 0) {;
-        TLVF_LOG(ERROR) << "Out of order allocation for variable length list preferred_channels, abort!";
-        return false;
-    }
-    size_t len = sizeof(beerocks::message::sWifiChannel) * count;
-    if(getBuffRemainingBytes() < len )  {
-        TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
-        return false;
-    }
-    m_lock_order_counter__ = 0;
-    uint8_t *src = (uint8_t *)&m_preferred_channels[*m_preferred_channels_size];
-    uint8_t *dst = src + len;
-    if (!m_parse__) {
-        size_t move_length = getBuffRemainingBytes(src) - len;
-        std::copy_n(src, move_length, dst);
-    }
-    m_preferred_channels_idx__ += count;
-    *m_preferred_channels_size += count;
-    if (!buffPtrIncrementSafe(len)) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
-        return false;
-    }
-    if (!m_parse__) { 
-        for (size_t i = m_preferred_channels_idx__ - count; i < m_preferred_channels_idx__; i++) { m_preferred_channels[i].struct_init(); }
-    }
-    return true;
-}
-
 void cACTION_BACKHAUL_ENABLE::class_swap()
 {
     tlvf_swap(8*sizeof(eActionOp_BACKHAUL), reinterpret_cast<uint8_t*>(m_action_op));
@@ -556,9 +514,6 @@ void cACTION_BACKHAUL_ENABLE::class_swap()
     tlvf_swap(8*sizeof(beerocks::eWiFiBandwidth), reinterpret_cast<uint8_t*>(m_max_bandwidth));
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_ht_capability));
     tlvf_swap(32, reinterpret_cast<uint8_t*>(m_vht_capability));
-    for (size_t i = 0; i < m_preferred_channels_idx__; i++){
-        m_preferred_channels[i].struct_swap();
-    }
 }
 
 bool cACTION_BACKHAUL_ENABLE::finalize()
@@ -607,7 +562,6 @@ size_t cACTION_BACKHAUL_ENABLE::get_initial_size()
     class_size += sizeof(uint8_t); // vht_supported
     class_size += sizeof(uint32_t); // vht_capability
     class_size += beerocks::message::VHT_MCS_SET_SIZE * sizeof(uint8_t); // vht_mcs_set
-    class_size += sizeof(uint8_t); // preferred_channels_size
     return class_size;
 }
 
@@ -704,19 +658,6 @@ bool cACTION_BACKHAUL_ENABLE::init()
         return false;
     }
     m_vht_mcs_set_idx__  = beerocks::message::VHT_MCS_SET_SIZE;
-    m_preferred_channels_size = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (!m_parse__) *m_preferred_channels_size = 0;
-    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
-        return false;
-    }
-    m_preferred_channels = (beerocks::message::sWifiChannel*)m_buff_ptr__;
-    uint8_t preferred_channels_size = *m_preferred_channels_size;
-    m_preferred_channels_idx__ = preferred_channels_size;
-    if (!buffPtrIncrementSafe(sizeof(beerocks::message::sWifiChannel) * (preferred_channels_size))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(beerocks::message::sWifiChannel) * (preferred_channels_size) << ") Failed!";
-        return false;
-    }
     if (m_parse__) { class_swap(); }
     return true;
 }

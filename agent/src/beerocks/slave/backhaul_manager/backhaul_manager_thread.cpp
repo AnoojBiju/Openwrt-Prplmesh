@@ -1692,16 +1692,6 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
             return false;
         }
 
-        auto tuple_preferred_channels = request->preferred_channels(0);
-        if (!std::get<0>(tuple_preferred_channels)) {
-            LOG(ERROR) << "access to supported channels list failed!";
-            return false;
-        }
-
-        auto channels = &std::get<1>(tuple_preferred_channels);
-
-        std::copy_n(channels, request->preferred_channels_size(), soc->preferred_channels.begin());
-
         soc->radio_mac     = request->iface_mac();
         soc->ht_supported  = request->ht_supported();
         soc->ht_capability = request->ht_capability();
@@ -2308,10 +2298,16 @@ bool backhaul_manager::handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmd
 
     for (const auto &slave : slaves_sockets) {
         // TODO skip slaves that are not operational
-        auto radio_mac          = slave->radio_mac;
-        auto preferred_channels = slave->preferred_channels;
+        auto radio_mac = slave->radio_mac;
 
-        if (!tlvf_utils::add_ap_radio_basic_capabilities(cmdu_tx, radio_mac, preferred_channels)) {
+        auto radio = db->get_radio_by_mac(radio_mac);
+        if (!radio) {
+            LOG(ERROR) << "radio with mac " << radio_mac << " does not exist in the db";
+            continue;
+        }
+
+        if (!tlvf_utils::add_ap_radio_basic_capabilities(cmdu_tx, radio_mac,
+                                                         radio->front.preferred_channels)) {
             return false;
         }
 
