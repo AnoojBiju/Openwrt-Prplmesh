@@ -312,14 +312,15 @@ public:
 
     std::unique_ptr<Socket::Connection> accept(Socket::Address &address) override
     {
-        socklen_t address_length = address.length();
-        int s                    = ::accept(m_socket->fd(), address.sockaddr(), &address_length);
-        if (FileDescriptor::invalid_descriptor == s) {
+        address.length()     = address.size();
+        int connected_socket = ::accept(m_socket->fd(), address.sockaddr(), &address.length());
+        if (FileDescriptor::invalid_descriptor == connected_socket) {
             LOG(ERROR) << "Unable to accept socket connection: " << strerror(errno);
             return nullptr;
         }
 
-        return std::make_unique<SocketConnectionImpl>(std::make_shared<ConnectedSocket>(s));
+        return std::make_unique<SocketConnectionImpl>(
+            std::make_shared<ConnectedSocket>(connected_socket));
     }
 
 protected:
