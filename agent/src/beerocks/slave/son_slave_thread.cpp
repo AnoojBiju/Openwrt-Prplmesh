@@ -1550,10 +1550,16 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         }
 
         radio->front.iface_mac = notification->params().iface_mac;
-        radio->ht_supported    = notification->params().ht_supported;
-        radio->ht_capability   = notification->params().ht_capability;
-        radio->vht_supported   = notification->params().vht_supported;
-        radio->vht_capability  = notification->params().vht_capability;
+
+        radio->ht_supported  = notification->params().ht_supported;
+        radio->ht_capability = notification->params().ht_capability;
+        std::copy_n(notification->params().ht_mcs_set, beerocks::message::HT_MCS_SET_SIZE,
+                    radio->ht_mcs_set.begin());
+
+        radio->vht_supported  = notification->params().vht_supported;
+        radio->vht_capability = notification->params().vht_capability;
+        std::copy_n(notification->params().vht_mcs_set, beerocks::message::VHT_MCS_SET_SIZE,
+                    radio->vht_mcs_set.begin());
 
         hostap_cs_params = notification->cs_params();
 
@@ -3131,11 +3137,6 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
 
         radio->front.freq_type        = hostap_params.frequency_band;
         radio->front.max_supported_bw = hostap_params.max_bandwidth;
-
-        std::copy_n(hostap_params.ht_mcs_set, beerocks::message::HT_MCS_SET_SIZE,
-                    bh_enable->ht_mcs_set());
-        std::copy_n(hostap_params.vht_mcs_set, beerocks::message::VHT_MCS_SET_SIZE,
-                    bh_enable->vht_mcs_set());
 
         // Send the message
         LOG(DEBUG) << "send ACTION_BACKHAUL_ENABLE for mac " << bh_enable->iface_mac();

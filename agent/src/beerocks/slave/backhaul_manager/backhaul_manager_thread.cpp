@@ -1707,8 +1707,6 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
         }
 
         soc->radio_mac = request->iface_mac();
-        std::copy_n(request->ht_mcs_set(), soc->ht_mcs_set.size(), soc->ht_mcs_set.begin());
-        std::copy_n(request->vht_mcs_set(), soc->vht_mcs_set.size(), soc->vht_mcs_set.begin());
 
         LOG(DEBUG) << "ACTION_BACKHAUL_ENABLE hostap_iface=" << soc->hostap_iface
                    << " sta_iface=" << soc->sta_iface << " band=" << int(request->frequency_band());
@@ -3537,9 +3535,9 @@ bool backhaul_manager::add_ap_ht_capabilities(const sRadioInfo &radio_info)
      * See iw/util.c for details on how to compute fields.
      * Code has been preserved as close as possible to that in the iw command line tool.
      */
-    bool tx_mcs_set_defined = !!(radio_info.ht_mcs_set[12] & (1 << 0));
+    bool tx_mcs_set_defined = !!(radio->ht_mcs_set[12] & (1 << 0));
     if (tx_mcs_set_defined) {
-        tlv->flags().max_num_of_supported_tx_spatial_streams = (radio_info.ht_mcs_set[12] >> 2) & 3;
+        tlv->flags().max_num_of_supported_tx_spatial_streams = (radio->ht_mcs_set[12] >> 2) & 3;
         tlv->flags().max_num_of_supported_rx_spatial_streams = 0; // TODO: Compute value (#1163)
     }
     tlv->flags().short_gi_support_20mhz = radio->ht_capability & BIT(5);
@@ -3574,8 +3572,8 @@ bool backhaul_manager::add_ap_vht_capabilities(const sRadioInfo &radio_info)
      * See iw/util.c for details on how to compute fields
      * Code has been preserved as close as possible to that in the iw command line tool.
      */
-    tlv->supported_vht_tx_mcs() = radio_info.vht_mcs_set[4] | (radio_info.vht_mcs_set[5] << 8);
-    tlv->supported_vht_rx_mcs() = radio_info.vht_mcs_set[0] | (radio_info.vht_mcs_set[1] << 8);
+    tlv->supported_vht_tx_mcs() = radio->vht_mcs_set[4] | (radio->vht_mcs_set[5] << 8);
+    tlv->supported_vht_rx_mcs() = radio->vht_mcs_set[0] | (radio->vht_mcs_set[1] << 8);
     tlv->flags1().max_num_of_supported_tx_spatial_streams = 0; // TODO: Compute value (#1163)
     tlv->flags1().max_num_of_supported_rx_spatial_streams = 0; // TODO: Compute value (#1163)
     tlv->flags1().short_gi_support_80mhz                  = radio->vht_capability & BIT(5);
