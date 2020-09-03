@@ -211,10 +211,13 @@ public:
             std::array<uint8_t, ASSOCIATION_FRAME_SIZE> association_frame;
         };
 
-        bool sta_iface_filter_low;
-
         // Associated clients grouped by Client MAC.
         std::unordered_map<sMacAddr, sClient> associated_clients;
+
+        bool sta_iface_filter_low;
+
+        bool ht_supported; ///< Is 802.11n (High Throughput) protocol supported
+        bool vht_supported; ///< Is 802.11ac (Very High Throughput) protocol supported
     };
 
     /**
