@@ -217,9 +217,13 @@ public:
 
         bool ht_supported; ///< Is 802.11n (High Throughput) protocol supported
         uint16_t ht_capability;
+        /// 16-byte attribute containing the MCS set as defined in 802.11n
+        std::array<uint8_t, beerocks::message::HT_MCS_SET_SIZE> ht_mcs_set;
 
         bool vht_supported; ///< Is 802.11ac (Very High Throughput) protocol supported
         uint32_t vht_capability;
+        /// 32-byte attribute containing the MCS set as defined in 802.11ac
+        std::array<uint8_t, beerocks::message::VHT_MCS_SET_SIZE> vht_mcs_set;
     };
 
     /**

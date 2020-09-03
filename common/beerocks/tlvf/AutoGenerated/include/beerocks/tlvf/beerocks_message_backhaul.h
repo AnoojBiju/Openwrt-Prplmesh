@@ -138,10 +138,6 @@ class cACTION_BACKHAUL_ENABLE : public BaseClass
         uint8_t& backhaul_preferred_radio_band();
         beerocks::eFreqType& frequency_band();
         beerocks::eWiFiBandwidth& max_bandwidth();
-        uint8_t* ht_mcs_set(size_t idx = 0);
-        bool set_ht_mcs_set(const void* buffer, size_t size);
-        uint8_t* vht_mcs_set(size_t idx = 0);
-        bool set_vht_mcs_set(const void* buffer, size_t size);
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -164,10 +160,6 @@ class cACTION_BACKHAUL_ENABLE : public BaseClass
         uint8_t* m_backhaul_preferred_radio_band = nullptr;
         beerocks::eFreqType* m_frequency_band = nullptr;
         beerocks::eWiFiBandwidth* m_max_bandwidth = nullptr;
-        uint8_t* m_ht_mcs_set = nullptr;
-        size_t m_ht_mcs_set_idx__ = 0;
-        uint8_t* m_vht_mcs_set = nullptr;
-        size_t m_vht_mcs_set_idx__ = 0;
 };
 
 class cACTION_BACKHAUL_CONNECTED_NOTIFICATION : public BaseClass

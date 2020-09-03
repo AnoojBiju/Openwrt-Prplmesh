@@ -296,10 +296,6 @@ private:
         Socket *sta_hal_ext_events = nullptr;
         Socket *sta_hal_int_events = nullptr;
 
-        std::array<uint8_t, beerocks::message::HT_MCS_SET_SIZE>
-            ht_mcs_set; /**< 16-byte attribute containing the MCS set as defined in 802.11n */
-        std::array<uint8_t, beerocks::message::VHT_MCS_SET_SIZE>
-            vht_mcs_set; /**< 32-byte attribute containing the MCS set as defined in 802.11ac */
         bool he_supported = false; /**< Is HE supported flag */
     };
 
