@@ -192,7 +192,40 @@ public:
 
 class UdsSocket : public SocketAbstractImpl {
 public:
-    UdsSocket() : SocketAbstractImpl(socket(AF_UNIX, SOCK_STREAM, 0)) {}
+    /**
+     * Class constructor.
+     *
+     * Creates a Unix Domain Socket for exchanging data between processes executing on the same
+     * host operating system.
+     *
+     * Valid socket types in the UNIX domain are:
+     * - SOCK_STREAM (compare to TCP) – for a stream-oriented socket.
+     * - SOCK_DGRAM (compare to UDP) – for a datagram-oriented socket that preserves message
+     * boundaries (as on most UNIX implementations, UNIX domain datagram sockets are always
+     * reliable and don't reorder datagrams).
+     * - SOCK_SEQPACKET (compare to SCTP) – for a sequenced-packet socket that is connection-
+     * oriented, preserves message boundaries, and delivers messages in the order that they were
+     * sent.
+     *
+     * Stream socket allows for reading an arbitrary number of bytes, but still preserving byte
+     * sequence. In other words, a sender might write 4K of data to the socket, and the receiver
+     * can consume that data byte by byte. The other way around is true too - the sender can write
+     * several small messages to the socket that the receiver can consume in one read. Stream
+     * socket does not preserve message boundaries.
+     *
+     * Datagram socket, on the other hand, does preserve these boundaries - one write by the
+     * sender always corresponds to one read by the receiver (even if the receiver's buffer given
+     * to read(2) or recv(2) is smaller than that message).
+     *
+     * So if your application protocol has small messages with known upper bound on message size
+     * you are better off with SOCK_DGRAM since that's easier to manage.
+     *
+     * If your protocol calls for arbitrary long message payloads, or is just an unstructured
+     * stream (like raw audio or something), then pick SOCK_STREAM and do the required buffering.
+     *
+     * @param type Socket type (i.e.: communication style).
+     */
+    explicit UdsSocket(int type = SOCK_DGRAM) : SocketAbstractImpl(socket(AF_UNIX, type, 0)) {}
 };
 
 class NetlinkSocket : public SocketAbstractImpl {
