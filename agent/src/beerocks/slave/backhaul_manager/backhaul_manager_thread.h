@@ -296,8 +296,6 @@ private:
         std::shared_ptr<bwl::sta_wlan_hal> sta_wlan_hal;
         Socket *sta_hal_ext_events = nullptr;
         Socket *sta_hal_int_events = nullptr;
-
-        bool he_supported = false; /**< Is HE supported flag */
     };
 
     /**
