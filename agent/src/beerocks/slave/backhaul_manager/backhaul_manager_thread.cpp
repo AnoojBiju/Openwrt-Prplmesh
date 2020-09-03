@@ -3595,7 +3595,14 @@ bool backhaul_manager::add_ap_vht_capabilities(const sRadioInfo &radio_info)
 
 bool backhaul_manager::add_ap_he_capabilities(const sRadioInfo &radio_info)
 {
-    if (!radio_info.he_supported) {
+    auto db    = AgentDB::get();
+    auto radio = db->get_radio_by_mac(radio_info.radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "radio with mac " << radio_info.radio_mac << " does not exist in the db";
+        return false;
+    }
+
+    if (!radio->he_supported) {
         return true;
     }
 
