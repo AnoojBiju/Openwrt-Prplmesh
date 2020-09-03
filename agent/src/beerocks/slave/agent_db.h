@@ -216,7 +216,10 @@ public:
         bool sta_iface_filter_low;
 
         bool ht_supported; ///< Is 802.11n (High Throughput) protocol supported
+        uint16_t ht_capability;
+
         bool vht_supported; ///< Is 802.11ac (Very High Throughput) protocol supported
+        uint32_t vht_capability;
     };
 
     /**

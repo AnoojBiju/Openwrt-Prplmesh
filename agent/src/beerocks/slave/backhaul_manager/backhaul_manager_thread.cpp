@@ -1692,10 +1692,8 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
             return false;
         }
 
-        soc->radio_mac     = request->iface_mac();
-        soc->ht_capability = request->ht_capability();
+        soc->radio_mac = request->iface_mac();
         std::copy_n(request->ht_mcs_set(), soc->ht_mcs_set.size(), soc->ht_mcs_set.begin());
-        soc->vht_capability = request->vht_capability();
         std::copy_n(request->vht_mcs_set(), soc->vht_mcs_set.size(), soc->vht_mcs_set.begin());
 
         LOG(DEBUG) << "ACTION_BACKHAUL_ENABLE hostap_iface=" << soc->hostap_iface
@@ -3530,9 +3528,9 @@ bool backhaul_manager::add_ap_ht_capabilities(const sRadioInfo &radio_info)
         tlv->flags().max_num_of_supported_tx_spatial_streams = (radio_info.ht_mcs_set[12] >> 2) & 3;
         tlv->flags().max_num_of_supported_rx_spatial_streams = 0; // TODO: Compute value (#1163)
     }
-    tlv->flags().short_gi_support_20mhz = radio_info.ht_capability & BIT(5);
-    tlv->flags().short_gi_support_40mhz = radio_info.ht_capability & BIT(6);
-    tlv->flags().ht_support_40mhz       = radio_info.ht_capability & BIT(1);
+    tlv->flags().short_gi_support_20mhz = radio->ht_capability & BIT(5);
+    tlv->flags().short_gi_support_40mhz = radio->ht_capability & BIT(6);
+    tlv->flags().ht_support_40mhz       = radio->ht_capability & BIT(1);
 
     return true;
 }
@@ -3566,12 +3564,12 @@ bool backhaul_manager::add_ap_vht_capabilities(const sRadioInfo &radio_info)
     tlv->supported_vht_rx_mcs() = radio_info.vht_mcs_set[0] | (radio_info.vht_mcs_set[1] << 8);
     tlv->flags1().max_num_of_supported_tx_spatial_streams = 0; // TODO: Compute value (#1163)
     tlv->flags1().max_num_of_supported_rx_spatial_streams = 0; // TODO: Compute value (#1163)
-    tlv->flags1().short_gi_support_80mhz                  = radio_info.vht_capability & BIT(5);
-    tlv->flags1().short_gi_support_160mhz_and_80_80mhz    = radio_info.vht_capability & BIT(6);
-    tlv->flags2().vht_support_80_80mhz  = ((radio_info.vht_capability >> 2) & 3) == 2;
-    tlv->flags2().vht_support_160mhz    = ((radio_info.vht_capability >> 2) & 3) == 1;
-    tlv->flags2().su_beamformer_capable = radio_info.vht_capability & BIT(11);
-    tlv->flags2().mu_beamformer_capable = radio_info.vht_capability & BIT(19);
+    tlv->flags1().short_gi_support_80mhz                  = radio->vht_capability & BIT(5);
+    tlv->flags1().short_gi_support_160mhz_and_80_80mhz    = radio->vht_capability & BIT(6);
+    tlv->flags2().vht_support_80_80mhz                    = ((radio->vht_capability >> 2) & 3) == 2;
+    tlv->flags2().vht_support_160mhz                      = ((radio->vht_capability >> 2) & 3) == 1;
+    tlv->flags2().su_beamformer_capable                   = radio->vht_capability & BIT(11);
+    tlv->flags2().mu_beamformer_capable                   = radio->vht_capability & BIT(19);
 
     return true;
 }
