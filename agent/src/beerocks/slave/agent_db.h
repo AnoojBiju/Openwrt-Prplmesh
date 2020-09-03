@@ -175,6 +175,11 @@ public:
             eWiFiBandwidth max_supported_bw;
             eFreqType freq_type;
 
+            /**
+             * @brief supported channels in radio
+             */
+            std::deque<beerocks::message::sWifiChannel> preferred_channels;
+
             struct sBssid {
                 sMacAddr mac;
                 std::string ssid;

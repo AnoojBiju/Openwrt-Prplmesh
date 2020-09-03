@@ -305,8 +305,6 @@ private:
         std::array<uint8_t, beerocks::message::VHT_MCS_SET_SIZE>
             vht_mcs_set; /**< 32-byte attribute containing the MCS set as defined in 802.11ac */
         bool he_supported = false; /**< Is HE supported flag */
-        std::array<beerocks::message::sWifiChannel, beerocks::message::SUPPORTED_CHANNELS_LENGTH>
-            preferred_channels; /**< Array of supported channels in radio. */
     };
 
     /**

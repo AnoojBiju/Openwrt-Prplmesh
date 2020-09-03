@@ -17,8 +17,7 @@ using namespace beerocks;
 
 bool tlvf_utils::add_ap_radio_basic_capabilities(
     ieee1905_1::CmduMessageTx &cmdu_tx, const sMacAddr &ruid,
-    const std::array<beerocks::message::sWifiChannel, beerocks::message::SUPPORTED_CHANNELS_LENGTH>
-        &supported_channels)
+    const std::deque<beerocks::message::sWifiChannel> &supported_channels)
 {
     std::vector<uint8_t> operating_classes;
 
@@ -31,8 +30,7 @@ bool tlvf_utils::add_ap_radio_basic_capabilities(
     //TODO get maximum supported VAPs from AP Capabilities from BWL
     radio_basic_caps->maximum_number_of_bsss_supported() = 2;
 
-    operating_classes =
-        son::wireless_utils::get_supported_operating_classes(supported_channels.data());
+    operating_classes = son::wireless_utils::get_supported_operating_classes(supported_channels);
 
     for (auto op_class : operating_classes) {
         auto operationClassesInfo = radio_basic_caps->create_operating_classes_info_list();
@@ -43,12 +41,11 @@ bool tlvf_utils::add_ap_radio_basic_capabilities(
 
         operationClassesInfo->operating_class() = op_class;
         operationClassesInfo->maximum_transmit_power_dbm() =
-            son::wireless_utils::get_operating_class_max_tx_power(supported_channels.data(),
-                                                                  op_class);
+            son::wireless_utils::get_operating_class_max_tx_power(supported_channels, op_class);
 
         std::vector<uint8_t> non_oper_channels;
         non_oper_channels = son::wireless_utils::get_operating_class_non_oper_channels(
-            supported_channels.data(), op_class);
+            supported_channels, op_class);
         // Create list of statically non-oper channels
         operationClassesInfo->alloc_statically_non_operable_channels_list(non_oper_channels.size());
         uint8_t idx = 0;

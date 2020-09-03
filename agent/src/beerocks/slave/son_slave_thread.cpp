@@ -1557,10 +1557,10 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             LOG(ERROR) << "getting preferred channels has failed!";
             return false;
         }
-        preferred_channels.clear();
-        preferred_channels.insert(
-            preferred_channels.begin(), &std::get<1>(tuple_preferred_channels),
-            &std::get<1>(tuple_preferred_channels) + notification->preferred_channels_size());
+
+        radio->front.preferred_channels.resize(notification->preferred_channels_size());
+        std::copy_n(&std::get<1>(tuple_preferred_channels), notification->preferred_channels_size(),
+                    radio->front.preferred_channels.begin());
 
         auto tuple_supported_channels = notification->supported_channels(0);
         if (!std::get<0>(tuple_supported_channels)) {
@@ -2154,11 +2154,17 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             return false;
         }
 
+        auto db    = AgentDB::get();
+        auto radio = db->radio(m_fronthaul_iface);
+        if (!radio) {
+            LOG(DEBUG) << "Radio of interface " << m_fronthaul_iface << " does not exist on the db";
+            return false;
+        }
+
         auto tuple_preferred_channels = response->preferred_channels(0);
-        preferred_channels.clear();
-        preferred_channels.insert(
-            preferred_channels.begin(), &std::get<1>(tuple_preferred_channels),
-            &std::get<1>(tuple_preferred_channels) + response->preferred_channels_size());
+        radio->front.preferred_channels.resize(response->preferred_channels_size());
+        std::copy_n(&std::get<1>(tuple_preferred_channels), response->preferred_channels_size(),
+                    radio->front.preferred_channels.begin());
 
         // build channel preference report
         auto cmdu_tx_header = cmdu_tx.create(
@@ -2169,15 +2175,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             return false;
         }
 
-        auto db    = AgentDB::get();
-        auto radio = db->radio(m_fronthaul_iface);
-        if (!radio) {
-            LOG(DEBUG) << "Radio of interface " << m_fronthaul_iface << " does not exist on the db";
-            return false;
-        }
-
-        auto preferences =
-            wireless_utils::get_channel_preferences(&std::get<1>(tuple_preferred_channels));
+        auto preferences = wireless_utils::get_channel_preferences(radio->front.preferred_channels);
 
         auto channel_preference_tlv = cmdu_tx.addClass<wfa_map::tlvChannelPreference>();
         if (!channel_preference_tlv) {
@@ -3138,19 +3136,6 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
         std::copy_n(hostap_params.vht_mcs_set, beerocks::message::VHT_MCS_SET_SIZE,
                     bh_enable->vht_mcs_set());
 
-        if (!bh_enable->alloc_preferred_channels(message::SUPPORTED_CHANNELS_LENGTH)) {
-            LOG(ERROR) << "Failed to allocate preferred channels!";
-            break;
-        }
-        auto tuple_preferred_channels = bh_enable->preferred_channels(0);
-        if (!std::get<0>(tuple_preferred_channels)) {
-            LOG(ERROR) << "getting preferred channels has failed!";
-            break;
-        }
-
-        std::copy_n(preferred_channels.begin(), message::SUPPORTED_CHANNELS_LENGTH,
-                    &std::get<1>(tuple_preferred_channels));
-
         // Send the message
         LOG(DEBUG) << "send ACTION_BACKHAUL_ENABLE for mac " << bh_enable->iface_mac();
         if (!message_com::send_cmdu(backhaul_manager_socket, cmdu_tx)) {
@@ -3277,13 +3262,10 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
             return false;
         }
 
-        std::array<beerocks::message::sWifiChannel, beerocks::message::SUPPORTED_CHANNELS_LENGTH>
-            supported_channels_arr{{}};
-        std::copy_n(supported_channels.begin(), supported_channels.size(),
-                    supported_channels_arr.begin());
+        std::deque<beerocks::message::sWifiChannel> supported_channels_deque(supported_channels.begin(), supported_channels.end());
 
         if (!tlvf_utils::add_ap_radio_basic_capabilities(cmdu_tx, radio->front.iface_mac,
-                                                         supported_channels_arr)) {
+                                                         supported_channels_deque)) {
             LOG(ERROR) << "Failed adding AP Radio Basic Capabilities TLV";
             return false;
         }
@@ -4453,13 +4435,20 @@ static uint8_t get_channel_preference(const beerocks::message::sWifiChannel chan
 
 beerocks::message::sWifiChannel slave_thread::channel_selection_select_channel()
 {
+    auto db    = AgentDB::get();
+    auto radio = db->radio(m_fronthaul_iface);
+    if (!radio) {
+        LOG(DEBUG) << "Radio of interface " << m_fronthaul_iface << " does not exist on the db";
+        return beerocks::message::sWifiChannel();
+    }
+
     for (const auto &preference : channel_preferences) {
         // Skip non-operable operating classes
         if (preference.channels.empty()) {
             continue;
         }
         for (uint8_t i = 0; i < beerocks::message::SUPPORTED_CHANNELS_LENGTH; i++) {
-            const auto &channel  = preferred_channels.at(i);
+            const auto &channel  = radio->front.preferred_channels.at(i);
             auto operating_class = wireless_utils::get_operating_class_by_channel(channel);
 
             // Skip DFS channels
