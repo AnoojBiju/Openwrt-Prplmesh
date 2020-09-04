@@ -12,6 +12,7 @@
 #include <easylogging++.h>
 #include <iomanip> //for resetiosflags
 #include <mapf/common/config.h>
+#include <mapf/common/utils.h>
 
 #define MAPF_ERR(msg) LOG(ERROR) << msg << resetiosflags((std::ios_base::fmtflags)0xFFFF)
 #define MAPF_WARN(msg) LOG(WARNING) << msg << resetiosflags((std::ios_base::fmtflags)0xFFFF)
@@ -27,7 +28,7 @@
 #define MAPF_DBG_IF(cond, msg)                                                                     \
     LOG_IF(cond, DEBUG) << msg << resetiosflags((std::ios_base::fmtflags)0xFFFF)
 
-#define CONF_FILE_PATH std::string(MAPF_ROOT) + "/config/framework_logging.conf"
+#define CONF_FILE_PATH mapf::utils::get_install_path() + "/config/framework_logging.conf"
 #define CONF_FILE_TMP_PATH std::string("/tmp/share/framework_logging.conf")
 
 extern char *__progname;

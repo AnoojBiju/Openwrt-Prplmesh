@@ -16,6 +16,7 @@
 #include <bcl/beerocks_version.h>
 #include <bcl/network/network_utils.h>
 #include <easylogging++.h>
+#include <mapf/common/utils.h>
 
 #include <beerocks/tlvf/beerocks_message.h>
 #include <beerocks/tlvf/beerocks_message_1905_vs.h>
@@ -3472,7 +3473,7 @@ void slave_thread::fronthaul_start()
 
     // Check if file does not exist in current location
     if (access(file_name.c_str(), F_OK) == -1) {
-        file_name = BEEROCKS_BIN_PATH + std::string(BEEROCKS_FRONTHAUL);
+        file_name = mapf::utils::get_install_path() + "bin/" + std::string(BEEROCKS_FRONTHAUL);
     }
     std::string cmd = file_name + " -i " + config.hostap_iface;
     SYSTEM_CALL(cmd, 2, true);

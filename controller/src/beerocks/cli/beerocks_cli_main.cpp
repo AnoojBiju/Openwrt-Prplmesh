@@ -18,6 +18,7 @@
 #include <bcl/beerocks_string_utils.h>
 #include <bcl/beerocks_version.h>
 #include <easylogging++.h>
+#include <mapf/common/utils.h>
 
 #include <chrono>
 
@@ -466,7 +467,8 @@ int main(int argc, char *argv[])
     }
 
     //read slave config file
-    std::string config_file_path = BEEROCKS_CONF_PATH + std::string(BEEROCKS_AGENT) + ".conf";
+    std::string config_file_path =
+        mapf::utils::get_install_path() + "config/" + std::string(BEEROCKS_AGENT) + ".conf";
     beerocks::config_file::sConfigSlave beerocks_slave_conf;
     if (!beerocks::config_file::read_slave_config_file(config_file_path, beerocks_slave_conf)) {
         std::cout << "config file '" << config_file_path << "' args error." << std::endl;
@@ -488,17 +490,18 @@ int main(int argc, char *argv[])
         break;
     }
     case CLI_NON_INTERACTIVE: {
-        status_return = cli_non_interactive(BEEROCKS_CONF_PATH, beerocks_slave_conf.temp_path, ip,
-                                            command_string);
+        status_return = cli_non_interactive(mapf::utils::get_install_path() + "config/",
+                                            beerocks_slave_conf.temp_path, ip, command_string);
         break;
     }
     case CLI_ANALYZER: {
-        beerocks::cli_bml cli_bml(BEEROCKS_CONF_PATH);
+        beerocks::cli_bml cli_bml(mapf::utils::get_install_path() + "config/");
         cli_bml.analyzer_init(analyzer_ip);
         break;
     }
     default: // CLI_INTERACTIVE
-        cli_interactive(BEEROCKS_CONF_PATH, beerocks_slave_conf.temp_path, ip);
+        cli_interactive(mapf::utils::get_install_path() + "config/", beerocks_slave_conf.temp_path,
+                        ip);
         break;
     }
 

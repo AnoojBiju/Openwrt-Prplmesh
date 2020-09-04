@@ -16,6 +16,7 @@
 #include <bcl/beerocks_version.h>
 #include <bcl/network/network_utils.h>
 #include <easylogging++.h>
+#include <mapf/common/utils.h>
 
 // Do not use this macro anywhere else in ire process
 // It should only be there in one place in each executable module
@@ -416,7 +417,8 @@ int main(int argc, char *argv[])
     beerocks::config_file::sConfigSlave beerocks_slave_conf;
     if (!beerocks::config_file::read_slave_config_file(slave_config_file_path,
                                                        beerocks_slave_conf)) {
-        slave_config_file_path = BEEROCKS_CONF_PATH + std::string(BEEROCKS_AGENT) +
+        slave_config_file_path = mapf::utils::get_install_path() + "config/" +
+                                 std::string(BEEROCKS_AGENT) +
                                  ".conf"; // if not found, search in beerocks path
         if (!beerocks::config_file::read_slave_config_file(slave_config_file_path,
                                                            beerocks_slave_conf)) {

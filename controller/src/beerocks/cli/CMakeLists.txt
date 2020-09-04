@@ -10,7 +10,7 @@ set(MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 file(GLOB cli_sources ${MODULE_PATH}/*.cpp)
 
 # Module LIBS
-set(cli_libraries bcl btlvf bml)
+set(cli_libraries bcl btlvf bml mapfcommon)
 
 # In some compiler versions, the static casts to pFunction that are done in the various cli
 # implementations are interpreted as a negative shift. So disable the corresponding warning.

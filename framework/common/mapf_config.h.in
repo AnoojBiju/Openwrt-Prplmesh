@@ -1,3 +1,2 @@
 #define MAPF_VERSION "@prplmesh_VERSION@"
-#define MAPF_ROOT "@INSTALL_PATH@"
 #define TMP_PATH "@TMP_PATH@"

@@ -12,6 +12,7 @@
 #include <bcl/network/network_utils.h>
 #include <bpl/bpl_cfg.h>
 #include <easylogging++.h>
+#include <mapf/common/utils.h>
 
 #include "db/db.h"
 #include "son_master_thread.h"
@@ -269,7 +270,8 @@ int main(int argc, char *argv[])
     beerocks::config_file::sConfigMaster beerocks_master_conf;
     if (!beerocks::config_file::read_master_config_file(master_config_file_path,
                                                         beerocks_master_conf)) {
-        master_config_file_path = BEEROCKS_CONF_PATH + std::string(BEEROCKS_CONTROLLER) +
+        master_config_file_path = mapf::utils::get_install_path() + "config/" +
+                                  std::string(BEEROCKS_CONTROLLER) +
                                   ".conf"; // if not found, search in beerocks path
         if (!beerocks::config_file::read_master_config_file(master_config_file_path,
                                                             beerocks_master_conf)) {
@@ -284,7 +286,8 @@ int main(int argc, char *argv[])
     beerocks::config_file::sConfigSlave beerocks_slave_conf;
     if (!beerocks::config_file::read_slave_config_file(slave_config_file_path,
                                                        beerocks_slave_conf)) {
-        slave_config_file_path = BEEROCKS_CONF_PATH + std::string(BEEROCKS_AGENT) +
+        slave_config_file_path = mapf::utils::get_install_path() + "config/" +
+                                 std::string(BEEROCKS_AGENT) +
                                  ".conf"; // if not found, search in beerocks path
         if (!beerocks::config_file::read_slave_config_file(slave_config_file_path,
                                                            beerocks_slave_conf)) {

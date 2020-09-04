@@ -14,9 +14,7 @@
 
 using namespace mapf;
 
-#ifndef PLATFORM_DB_PATH
-#error "PLATFORM_DB_PATH not defined!"
-#endif
+#define PLATFORM_DB_PATH mapf::utils::get_install_path() + "share/prplmesh_platform_db"
 
 #ifndef PLATFORM_DB_PATH_TEMP
 #define PLATFORM_DB_PATH_TEMP "/tmp/prplmesh_platform_db"
