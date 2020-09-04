@@ -859,10 +859,20 @@ bool ap_wlan_hal_dwpal::sta_deny(const std::string &mac, const std::string &bssi
 
 bool ap_wlan_hal_dwpal::sta_disassoc(int8_t vap_id, const std::string &mac, uint32_t reason)
 {
-    // Build command string
-    const std::string ifname =
-        beerocks::utils::get_iface_string_from_iface_vap_ids(m_radio_info.iface_name, vap_id);
-    std::string cmd = "DISASSOCIATE " + ifname + " " + mac;
+
+    const auto &vap_unordered_map = m_radio_info.available_vaps;
+    auto it                       = std::find_if(
+        vap_unordered_map.begin(), vap_unordered_map.end(),
+        [&](const std::pair<int, bwl::VAPElement> &element) { return element.second.mac == mac; });
+
+    if (vap_unordered_map.end() == it) {
+        LOG(ERROR) << "BSSID " << mac << " not found";
+        return false;
+    }
+
+    auto vap_name = it->second.bss;
+
+    std::string cmd = "DISASSOCIATE " + vap_name + " " + mac;
 
     if (reason) {
         cmd += " reason=" + std::to_string(reason);
@@ -879,10 +889,20 @@ bool ap_wlan_hal_dwpal::sta_disassoc(int8_t vap_id, const std::string &mac, uint
 
 bool ap_wlan_hal_dwpal::sta_deauth(int8_t vap_id, const std::string &mac, uint32_t reason)
 {
-    // Build command string
-    const std::string ifname =
-        beerocks::utils::get_iface_string_from_iface_vap_ids(m_radio_info.iface_name, vap_id);
-    std::string cmd = "DEAUTHENTICATE " + ifname + " " + mac;
+
+    const auto &vap_unordered_map = m_radio_info.available_vaps;
+    auto it                       = std::find_if(
+        vap_unordered_map.begin(), vap_unordered_map.end(),
+        [&](const std::pair<int, bwl::VAPElement> &element) { return element.second.mac == mac; });
+
+    if (vap_unordered_map.end() == it) {
+        LOG(ERROR) << "BSSID " << mac << " not found";
+        return false;
+    }
+
+    auto vap_name = it->second.bss;
+
+    std::string cmd = "DEAUTHENTICATE " + vap_name + " " + mac;
 
     if (reason) {
         cmd += " reason=" + std::to_string(reason);
@@ -1604,9 +1624,9 @@ bool ap_wlan_hal_dwpal::generate_connected_clients_events()
         char *reply;
         size_t replyLen;
 
-        const int &vap_id = vap_element.first;
-        auto vap_iface_name =
-            beerocks::utils::get_iface_string_from_iface_vap_ids(get_iface_name(), vap_id);
+        const int &vap_id   = vap_element.first;
+        auto vap_iface_name = vap_element.second.bss;
+
         LOG(TRACE) << __func__ << " for vap interface: " << vap_iface_name;
 
         do {
