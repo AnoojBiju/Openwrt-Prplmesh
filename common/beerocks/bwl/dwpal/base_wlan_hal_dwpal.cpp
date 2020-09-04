@@ -569,10 +569,10 @@ bool base_wlan_hal_dwpal::attach_ctrl_interface(int vap_id)
     const auto &vap_unordered_map = m_radio_info.available_vaps;
     auto it                       = std::find_if(
         vap_unordered_map.begin(), vap_unordered_map.end(),
-        [&](const std::pair<int, bwl::VAPElement> &element) { return element.first == vap_id; });
+        [&](const std::pair<int, bwl::VAPElement> &element) { return element.first == ctx_index; });
 
     if (vap_unordered_map.end() == it) {
-        LOG(ERROR) << "VAP ID " << vap_id << " not found";
+        LOG(ERROR) << "VAP ID " << ctx_index << " not found";
         return false;
     }
 
