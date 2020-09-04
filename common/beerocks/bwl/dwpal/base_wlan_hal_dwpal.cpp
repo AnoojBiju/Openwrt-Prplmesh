@@ -568,6 +568,7 @@ bool base_wlan_hal_dwpal::attach_ctrl_interface(int vap_id)
 
     const std::string ifname =
         beerocks::utils::get_iface_string_from_iface_vap_ids(m_radio_info.iface_name, vap_id);
+
     int result = dwpal_hostap_interface_attach(&m_dwpal_ctx[ctx_index], ifname.c_str(), nullptr);
 
     if ((result == 0) && m_dwpal_ctx[ctx_index]) {
@@ -919,13 +920,18 @@ bool base_wlan_hal_dwpal::get_vap_type(const std::string &ifname, bool &fronthau
 
 bool base_wlan_hal_dwpal::refresh_vap_info(int vap_id)
 {
-    const std::string ifname =
-        beerocks::utils::get_iface_string_from_iface_vap_ids(m_radio_info.iface_name, vap_id);
-    if (ifname.empty()) {
-        LOG(ERROR) << "Failed to get vap_iface from radio " << m_radio_info.iface_name
-                   << " and vap id " << vap_id;
+
+    const auto &vap_unordered_map = m_radio_info.available_vaps;
+    auto it                       = std::find_if(
+        vap_unordered_map.begin(), vap_unordered_map.end(),
+        [&](const std::pair<int, bwl::VAPElement> &element) { return element.first == vap_id; });
+
+    if (vap_unordered_map.end() == it) {
+        LOG(ERROR) << "VAP ID " << vap_id << " not found";
         return false;
     }
+
+    auto vap_name = it->second.bss;
 
     char *reply              = nullptr;
     size_t numOfValidArgs[2] = {0}, replyLen = 0;
@@ -935,7 +941,7 @@ bool base_wlan_hal_dwpal::refresh_vap_info(int vap_id)
         {(void *)ssid, &numOfValidArgs[1], DWPAL_STR_PARAM, "SSID=", sizeof(ssid)},
         /* Must be at the end */
         {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
-    std::string cmd = "GET_VAP_MEASUREMENTS " + ifname;
+    std::string cmd = "GET_VAP_MEASUREMENTS " + vap_name;
 
     // Read the VAP information
     if (!dwpal_send_cmd(cmd, &reply) || reply[0] == '\0') {
@@ -950,7 +956,7 @@ bool base_wlan_hal_dwpal::refresh_vap_info(int vap_id)
 
     if (dwpal_string_to_struct_parse(reply, replyLen, fieldsToParse, sizeof(ssid)) ==
         DWPAL_FAILURE) {
-        LOG(ERROR) << "DWPAL parse error on " << ifname;
+        LOG(ERROR) << "DWPAL parse error on " << vap_name;
         return false;
     }
 
@@ -970,10 +976,10 @@ bool base_wlan_hal_dwpal::refresh_vap_info(int vap_id)
     // New VAP Element
     VAPElement vapElement;
 
-    vapElement.bss  = ifname;
+    vapElement.bss  = vap_name;
     vapElement.mac  = std::string(bssid);
     vapElement.ssid = std::string(ssid);
-    if (!get_vap_type(ifname, vapElement.fronthaul, vapElement.backhaul)) {
+    if (!get_vap_type(vap_name, vapElement.fronthaul, vapElement.backhaul)) {
         LOG(ERROR) << "Failed to get VAP type";
         return false;
     }
