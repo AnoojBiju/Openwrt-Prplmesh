@@ -1,6 +1,9 @@
 version: '3.5'
 
 networks:
+    ucc:
+        name: prplmesh-$RUN_ID-ucc
+        driver: bridge
     prplmesh:
         name: prplmesh-$RUN_ID
         driver: bridge
@@ -9,6 +12,7 @@ x-prplmesh: &prplmesh # Template for the prplmesh services
     image: registry.gitlab.com/prpl-foundation/prplmesh/prplmesh/prplmesh-builder-ubuntu-bionic:${CI_PIPELINE_ID}
     privileged: true    # For the creation of the bridge to work
     networks:
+        - ucc
         - prplmesh
     environment:
         - USER
