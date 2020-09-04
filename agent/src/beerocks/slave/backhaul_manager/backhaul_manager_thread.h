@@ -30,6 +30,7 @@
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
 
+#include "../agent_db.h"
 #include "../agent_ucc_listener.h"
 #include "../link_metrics/link_metrics.h"
 
@@ -372,11 +373,11 @@ private:
      * TLV is added to message only if given radio supports HT capabilities.
      * See section 17.2.8 of Multi-AP Specification for details.
      *
-     * @param radio_info Radio structure containing the information required to fill in the TLV.
+     * @param radio Radio structure containing the information required to fill in the TLV.
      *
      * @return True on success and false otherwise.
      */
-    bool add_ap_ht_capabilities(const sRadioInfo &radio_info);
+    bool add_ap_ht_capabilities(const AgentDB::sRadio &radio);
 
     /**
      * @brief Adds an AP VHT Capabilities TLV to AP Capability Report message.
@@ -384,11 +385,11 @@ private:
      * TLV is added to message only if given radio supports VHT capabilities.
      * See section 17.2.9 of Multi-AP Specification for details.
      *
-     * @param radio_info Radio structure containing the information required to fill in the TLV.
+     * @param radio Radio structure containing the information required to fill in the TLV.
      *
      * @return True on success and false otherwise.
      */
-    bool add_ap_vht_capabilities(const sRadioInfo &radio_info);
+    bool add_ap_vht_capabilities(const AgentDB::sRadio &radio);
 
     /**
      * @brief Adds an AP HE Capabilities TLV to AP Capability Report message.
@@ -396,11 +397,11 @@ private:
      * TLV is added to message only if given radio supports HE capabilities.
      * See section 17.2.10 of Multi-AP Specification for details.
      *
-     * @param radio_info Radio structure containing the information required to fill in the TLV.
+     * @param radio Radio structure containing the information required to fill in the TLV.
      *
      * @return True on success and false otherwise.
      */
-    bool add_ap_he_capabilities(const sRadioInfo &radio_info);
+    bool add_ap_he_capabilities(const AgentDB::sRadio &radio);
 
     /**
      * @brief Adds link metric TLVs to response message.
