@@ -267,7 +267,7 @@ class ALEntityDocker(ALEntity):
                  compose: bool = False):
 
         self.name = name
-        self.bridge_name = 'br-lan'
+        ucc_interface_name = 'eth0'
         if device:
             self.device = device
 
@@ -289,7 +289,7 @@ class ALEntityDocker(ALEntity):
             ucc_port = int(published_port_output[1])
         else:
             device_ip_output = self.command(
-                'ip', '-f', 'inet', 'addr', 'show', self.bridge_name)
+                'ip', '-f', 'inet', 'addr', 'show', ucc_interface_name)
             device_ip = re.search(
                 r'inet (?P<ip>[0-9.]+)', device_ip_output.decode('utf-8')).group('ip')
 
@@ -445,9 +445,6 @@ class ALEntityPrplWrt(ALEntity):
         ucc_port_raw = self.command("grep \"ucc_listener_port\" {}".format(self.config_file_name))
         ucc_port = int(re.search(r'ucc_listener_port=(?P<port>[0-9]+)',
                                  ucc_port_raw).group('port'))
-        bridge_name_raw = self.command("grep \"bridge_iface\" {}".format(self.config_file_name))
-        self.bridge_name = re.search(r'bridge_iface=(?P<bridge>.+)\r\n',
-                                     bridge_name_raw).group('bridge')
         log_folder_raw = self.command(
             "grep log_files_path {}".format(self.config_file_name))
         self.log_folder = re.search(r'log_files_path=(?P<log_path>[a-zA-Z0-9_\/]+)',
