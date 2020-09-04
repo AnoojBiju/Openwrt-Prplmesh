@@ -13,6 +13,9 @@ services:
         expose:
             - "5000"
             - "8002"
+        networks:
+          - data
+          - ucc
         volumes:
             - "$ROOT_DIR:${FINAL_ROOT_DIR}"
         entrypoint: ["/root/entrypoint.sh", "/usr/bin/start-controller-agent"]
@@ -27,6 +30,9 @@ services:
             - ROOT_DIR=${FINAL_ROOT_DIR}
               # /builds/prpl-foundation/prplMesh
             - CI_PIPELINE_ID
+        networks:
+          - data
+          - ucc
         expose:
             - "5000"
             - "8002"
@@ -46,6 +52,9 @@ services:
             - RUN_ID
             - CI_PIPELINE_ID
             - FINAL_ROOT_DIR
+        networks:
+          - data
+          - ucc
         ports:
             - "5000:5000"
         volumes:
@@ -55,3 +64,8 @@ services:
         user: ${CURRENT_UID_GID}
         working_dir: $ROOT_DIR/tests
         entrypoint: ["bash", "run_bf_compose.sh"]
+
+networks:
+  data:
+  ucc:
+
