@@ -295,10 +295,12 @@ static std::string get_sta_iface(const std::string &hostap_iface)
 
 main_thread::main_thread(const config_file::sConfigSlave &config_,
                          const std::unordered_map<int, std::string> &interfaces_map_,
-                         logging &logger_)
+                         logging &logger_, std::shared_ptr<beerocks::EventLoop> event_loop)
     : socket_thread(config_.temp_path + std::string(BEEROCKS_PLAT_MGR_UDS)), config(config_),
-      interfaces_map(interfaces_map_), logger(logger_)
+      interfaces_map(interfaces_map_), logger(logger_), m_event_loop(event_loop)
 {
+    LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
+
     set_select_timeout(SELECT_TIMEOUT_MSC);
     thread_name        = "platform_manager";
     enable_arp_monitor = (config.enable_arp_monitor == "1");
