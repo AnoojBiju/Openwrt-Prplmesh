@@ -5,6 +5,9 @@
  * This code is subject to the terms of the BSD+Patent license.
  * See LICENSE file for more details.
  */
+#ifndef _AGENT_DB_H_
+#define _AGENT_DB_H_
+
 #include <bcl/beerocks_defines.h>
 #include <bcl/network/network_utils.h>
 #include <bwl/sta_wlan_hal.h>
@@ -329,3 +332,5 @@ private:
 };
 
 } // namespace beerocks
+
+#endif // _AGENT_DB_H_
