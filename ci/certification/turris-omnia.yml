@@ -4,6 +4,13 @@
   variables:
     DEVICE_UNDER_TEST: "turris-omnia"
   before_script:
+    - |
+      if [ -f tests/certification/$DEVICE_UNDER_TEST/uci.sh ] ; then
+        echo "Applying UCI configuration"
+        scp tests/certification/$DEVICE_UNDER_TEST/uci.sh $DEVICE_UNDER_TEST:/tmp
+        ssh "$DEVICE_UNDER_TEST" 'sh /tmp/uci.sh'
+        echo "Done"
+      fi
     - tools/deploy_firmware.py --device turris-omnia --target-name "$DEVICE_UNDER_TEST" --image openwrt-mvebu-cortexa9-cznic_turris-omnia-sysupgrade.img.gz
     - tools/deploy_ipk.sh --certification-mode $DEVICE_UNDER_TEST build/$DEVICE_UNDER_TEST/prplmesh.ipk
   needs:
