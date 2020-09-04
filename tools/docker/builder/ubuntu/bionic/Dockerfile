@@ -7,21 +7,11 @@
 
 FROM ubuntu:18.04
 
-RUN apt-get update && apt-get install -y \
-    autoconf \
-    autogen \
+ARG PACKAGES_FOR_BUILD="\
     binutils \
-    bridge-utils \
-    clang-format \
     cmake \
-    curl \
-    ebtables \
     gcc \
-    gcovr \
-    gdb \
     git \
-    iproute2 \
-    iputils-ping \
     libjson-c-dev \
     libncurses-dev \
     libnl-3-dev \
@@ -29,24 +19,53 @@ RUN apt-get update && apt-get install -y \
     libnl-route-3-dev \
     libreadline-dev \
     libssl-dev \
-    libtool \
-    net-tools \
-    netcat \
     ninja-build \
     pkg-config \
-    psmisc \
     python \
     python-yaml \
     python3 \
     python3-yaml \
-    uuid-runtime \
-    valgrind \
-    vim \
-# AMBRIORIX dependencies
+    "
+
+ARG PACKAGES_FOR_AMBIORIX="\
     bison \
+    curl \
     flex \
     libevent-dev \
-    libyajl-dev && \
+    libyajl-dev \
+    "
+
+ARG PACKAGES_FOR_TEST="\
+    clang-format \
+    gcovr \
+    "
+
+ARG PACKAGES_FOR_RUN="\
+    bridge-utils \
+    ebtables \
+    iproute2 \
+    net-tools \
+    psmisc \
+    uuid-runtime \
+    "
+
+ARG PACKAGES_FOR_DEBUG="\
+    gdb \
+    iputils-ping \
+    netcat \
+    valgrind \
+    vim \
+    "
+
+ARG PACKAGES="\
+    $PACKAGES_FOR_BUILD \
+    $PACKAGES_FOR_AMBIORIX \
+    $PACKAGES_FOR_TEST \
+    $PACKAGES_FOR_RUN \
+    $PACKAGES_FOR_DEBUG\
+    "
+
+RUN apt-get update && apt-get install -y $PACKAGES && \
 # We need liburiparser-dev > v. 9.0 which isn't avalaible in default
 # 18.04 Ubuntu repos. So add Ubuntu 19.10 repo which has v. 0.9.3-2
     echo "deb http://cz.archive.ubuntu.com/ubuntu eoan main universe" | tee -a  /etc/apt/sources.list && \
