@@ -11,6 +11,7 @@
 #include "son_slave_thread.h"
 
 #include <bcl/beerocks_config_file.h>
+#include <bcl/beerocks_event_loop_impl.h>
 #include <bcl/beerocks_logging.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/beerocks_version.h>
@@ -274,6 +275,12 @@ start_son_slave_thread(int slave_num,
     return son_slave;
 }
 
+static std::shared_ptr<beerocks::EventLoop> create_event_loop()
+{
+    // Create application event loop to wait for blocking I/O operations.
+    return std::make_shared<beerocks::EventLoopImpl>();
+}
+
 static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slave_conf,
                               const std::unordered_map<int, std::string> &interfaces_map, int argc,
                               char *argv[])
@@ -299,8 +306,11 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
         }
     }
 
+    auto event_loop = create_event_loop();
+    LOG_IF(!event_loop, FATAL) << "Unable to create event loop!";
+
     beerocks::platform_manager::main_thread platform_mgr(beerocks_slave_conf, interfaces_map,
-                                                         *agent_logger);
+                                                         *agent_logger, event_loop);
 
     // Start platform_manager
     if (!platform_mgr.init()) {
