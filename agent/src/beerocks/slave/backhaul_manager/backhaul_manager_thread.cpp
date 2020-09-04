@@ -2326,15 +2326,15 @@ bool backhaul_manager::handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmd
             return false;
         }
 
-        if (!add_ap_ht_capabilities(*slave)) {
+        if (!add_ap_ht_capabilities(*radio)) {
             return false;
         }
 
-        if (!add_ap_vht_capabilities(*slave)) {
+        if (!add_ap_vht_capabilities(*radio)) {
             return false;
         }
 
-        if (!add_ap_he_capabilities(*slave)) {
+        if (!add_ap_he_capabilities(*radio)) {
             return false;
         }
     }
@@ -3517,16 +3517,9 @@ bool backhaul_manager::get_neighbor_links(
     return true;
 }
 
-bool backhaul_manager::add_ap_ht_capabilities(const sRadioInfo &radio_info)
+bool backhaul_manager::add_ap_ht_capabilities(const AgentDB::sRadio &radio)
 {
-    auto db    = AgentDB::get();
-    auto radio = db->get_radio_by_mac(radio_info.radio_mac);
-    if (!radio) {
-        LOG(ERROR) << "radio with mac " << radio_info.radio_mac << " does not exist in the db";
-        return false;
-    }
-
-    if (!radio->ht_supported) {
+    if (!radio.ht_supported) {
         return true;
     }
 
@@ -3536,34 +3529,27 @@ bool backhaul_manager::add_ap_ht_capabilities(const sRadioInfo &radio_info)
         return false;
     }
 
-    tlv->radio_uid() = radio_info.radio_mac;
+    tlv->radio_uid() = radio.front.iface_mac;
 
     /**
      * See iw/util.c for details on how to compute fields.
      * Code has been preserved as close as possible to that in the iw command line tool.
      */
-    bool tx_mcs_set_defined = !!(radio->ht_mcs_set[12] & (1 << 0));
+    bool tx_mcs_set_defined = !!(radio.ht_mcs_set[12] & (1 << 0));
     if (tx_mcs_set_defined) {
-        tlv->flags().max_num_of_supported_tx_spatial_streams = (radio->ht_mcs_set[12] >> 2) & 3;
+        tlv->flags().max_num_of_supported_tx_spatial_streams = (radio.ht_mcs_set[12] >> 2) & 3;
         tlv->flags().max_num_of_supported_rx_spatial_streams = 0; // TODO: Compute value (#1163)
     }
-    tlv->flags().short_gi_support_20mhz = radio->ht_capability & BIT(5);
-    tlv->flags().short_gi_support_40mhz = radio->ht_capability & BIT(6);
-    tlv->flags().ht_support_40mhz       = radio->ht_capability & BIT(1);
+    tlv->flags().short_gi_support_20mhz = radio.ht_capability & BIT(5);
+    tlv->flags().short_gi_support_40mhz = radio.ht_capability & BIT(6);
+    tlv->flags().ht_support_40mhz       = radio.ht_capability & BIT(1);
 
     return true;
 }
 
-bool backhaul_manager::add_ap_vht_capabilities(const sRadioInfo &radio_info)
+bool backhaul_manager::add_ap_vht_capabilities(const AgentDB::sRadio &radio)
 {
-    auto db    = AgentDB::get();
-    auto radio = db->get_radio_by_mac(radio_info.radio_mac);
-    if (!radio) {
-        LOG(ERROR) << "radio with mac " << radio_info.radio_mac << " does not exist in the db";
-        return false;
-    }
-
-    if (!radio->vht_supported) {
+    if (!radio.vht_supported) {
         return true;
     }
 
@@ -3573,36 +3559,29 @@ bool backhaul_manager::add_ap_vht_capabilities(const sRadioInfo &radio_info)
         return false;
     }
 
-    tlv->radio_uid() = radio_info.radio_mac;
+    tlv->radio_uid() = radio.front.iface_mac;
 
     /**
      * See iw/util.c for details on how to compute fields
      * Code has been preserved as close as possible to that in the iw command line tool.
      */
-    tlv->supported_vht_tx_mcs() = radio->vht_mcs_set[4] | (radio->vht_mcs_set[5] << 8);
-    tlv->supported_vht_rx_mcs() = radio->vht_mcs_set[0] | (radio->vht_mcs_set[1] << 8);
+    tlv->supported_vht_tx_mcs() = radio.vht_mcs_set[4] | (radio.vht_mcs_set[5] << 8);
+    tlv->supported_vht_rx_mcs() = radio.vht_mcs_set[0] | (radio.vht_mcs_set[1] << 8);
     tlv->flags1().max_num_of_supported_tx_spatial_streams = 0; // TODO: Compute value (#1163)
     tlv->flags1().max_num_of_supported_rx_spatial_streams = 0; // TODO: Compute value (#1163)
-    tlv->flags1().short_gi_support_80mhz                  = radio->vht_capability & BIT(5);
-    tlv->flags1().short_gi_support_160mhz_and_80_80mhz    = radio->vht_capability & BIT(6);
-    tlv->flags2().vht_support_80_80mhz                    = ((radio->vht_capability >> 2) & 3) == 2;
-    tlv->flags2().vht_support_160mhz                      = ((radio->vht_capability >> 2) & 3) == 1;
-    tlv->flags2().su_beamformer_capable                   = radio->vht_capability & BIT(11);
-    tlv->flags2().mu_beamformer_capable                   = radio->vht_capability & BIT(19);
+    tlv->flags1().short_gi_support_80mhz                  = radio.vht_capability & BIT(5);
+    tlv->flags1().short_gi_support_160mhz_and_80_80mhz    = radio.vht_capability & BIT(6);
+    tlv->flags2().vht_support_80_80mhz                    = ((radio.vht_capability >> 2) & 3) == 2;
+    tlv->flags2().vht_support_160mhz                      = ((radio.vht_capability >> 2) & 3) == 1;
+    tlv->flags2().su_beamformer_capable                   = radio.vht_capability & BIT(11);
+    tlv->flags2().mu_beamformer_capable                   = radio.vht_capability & BIT(19);
 
     return true;
 }
 
-bool backhaul_manager::add_ap_he_capabilities(const sRadioInfo &radio_info)
+bool backhaul_manager::add_ap_he_capabilities(const AgentDB::sRadio &radio)
 {
-    auto db    = AgentDB::get();
-    auto radio = db->get_radio_by_mac(radio_info.radio_mac);
-    if (!radio) {
-        LOG(ERROR) << "radio with mac " << radio_info.radio_mac << " does not exist in the db";
-        return false;
-    }
-
-    if (!radio->he_supported) {
+    if (!radio.he_supported) {
         return true;
     }
 
@@ -3612,7 +3591,7 @@ bool backhaul_manager::add_ap_he_capabilities(const sRadioInfo &radio_info)
         return false;
     }
 
-    tlv->radio_uid() = radio_info.radio_mac;
+    tlv->radio_uid() = radio.front.iface_mac;
 
     // TODO: Fetch the AP HE Capabilities from the Wi-Fi driver via the Netlink socket and include
     // them into AP HE Capabilities TLV (#1162)
