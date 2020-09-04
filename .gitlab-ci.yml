@@ -411,6 +411,14 @@ run-certification-tests:
   rules:
     - if: "$TESTS_TO_RUN"
 
+certification-reboot:
+  script:
+    - /easymesh_cert/utils/power_cycle/power_cycle.py --force
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - when: manual
+
+
 include:
   - template: 'Workflows/MergeRequest-Pipelines.gitlab-ci.yml'
   - local: "/ci/certification/generic.yml"
