@@ -11,6 +11,7 @@
 
 #include <bcl/beerocks_async_work_queue.h>
 #include <bcl/beerocks_config_file.h>
+#include <bcl/beerocks_event_loop.h>
 #include <bcl/beerocks_logging.h>
 #include <bcl/beerocks_socket_thread.h>
 
@@ -31,7 +32,8 @@ class main_thread : public socket_thread {
 
 public:
     main_thread(const config_file::sConfigSlave &config_,
-                const std::unordered_map<int, std::string> &interfaces_map, logging &logger_);
+                const std::unordered_map<int, std::string> &interfaces_map, logging &logger_,
+                std::shared_ptr<beerocks::EventLoop> event_loop);
     ~main_thread();
 
     virtual bool init() override;
@@ -116,6 +118,11 @@ private:
     std::unordered_map<std::string, std::shared_ptr<beerocks_message::sWlanSettings>>
         bpl_iface_wlan_params_map;
     std::unordered_set<std::string> ap_ifaces;
+
+    /**
+     * Application event loop used by the process to wait for I/O events.
+     */
+    std::shared_ptr<EventLoop> m_event_loop;
 };
 
 } // namespace platform_manager
