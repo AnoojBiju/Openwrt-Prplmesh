@@ -102,12 +102,12 @@ private:
     Socket *m_pArpRawSocket          = nullptr;
     Socket *m_pDHCPMonSocket         = nullptr;
 
-    uint32_t m_uiArpMonIP;
-    uint32_t m_uiArpMonMask;
+    uint32_t m_uiArpMonIP   = 0;
+    uint32_t m_uiArpMonMask = 0;
 
     logging &logger;
-    bool enable_arp_monitor;
-    bool is_onboarding_on_init;
+    bool enable_arp_monitor    = false;
+    bool is_onboarding_on_init = false;
 
     std::string master_version;
     std::string slave_version;
