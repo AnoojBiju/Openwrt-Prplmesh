@@ -136,7 +136,7 @@ elseif (TARGET_PLATFORM STREQUAL "rdkb")
     set(CMAKE_SKIP_RPATH TRUE)
 elseif (TARGET_PLATFORM STREQUAL "linux")
     add_definitions(-DBEEROCKS_LINUX)
-    set(BEEROCKS_BH_WIRE_IFACE "eth0")
+    set(BEEROCKS_BH_WIRE_IFACE "eth1")
 endif()
 
 # Test support

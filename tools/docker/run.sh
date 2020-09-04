@@ -67,17 +67,20 @@ main() {
     dbg "UNIQUE_ID=${UNIQUE_ID}"
 
     NETWORK="${NETWORK:-prplMesh-net-${UNIQUE_ID}}"
-    docker network inspect "${NETWORK}" >/dev/null 2>&1 || {
-        dbg "Network ${NETWORK} does not exist, creating..."
-        run docker network create "${NETWORK}" >/dev/null 2>&1
-        echo "network ${NETWORK}" >> "${scriptdir}/.test_containers"
-    }
+    NETWORK_UCC="$NETWORK-ucc"
+    for _network in "$NETWORK" "$NETWORK_UCC" ; do
+            docker network inspect "${_network}" >/dev/null 2>&1 || {
+                dbg "Network ${_network} does not exist, creating..."
+                run docker network create "${_network}" >/dev/null 2>&1
+                echo "network ${_network}" >> "${scriptdir}/.test_containers"
+            }
+    done
 
     DOCKEROPTS=(
         -e "USER=${SUDO_USER:-${USER}}"
         -e "INSTALL_DIR=${installdir}"
         --privileged
-        --network "${NETWORK}"
+        --network "${NETWORK_UCC}"
         "${PORT[@]}"
         "${PUBLISH[@]}"
         -v "${installdir}:${installdir}"
@@ -88,9 +91,7 @@ main() {
 
     [ -n "$ENTRYPOINT" ] && DOCKEROPTS+=(--entrypoint "$ENTRYPOINT")
     if [ "$DETACH" = "false" ]; then
-        DOCKEROPTS+=(--rm)
-    else
-        DOCKEROPTS+=(-d)
+        DOCKER_RUN_OPTS+=(--rm -a)
     fi
     if docker ps -a --format '{{ .Names }}' --filter name="${NAME}" | grep -q -x "${NAME}"; then
         info "Container ${NAME} is already running"
@@ -105,7 +106,10 @@ main() {
 
     # Save the container name so that it can easily be stopped/removed later
     echo "$NAME" >> "${scriptdir}/.test_containers"
-    run docker container run "${DOCKEROPTS[@]}" --entrypoint /root/start-prplmesh.sh "${image}" "$@"
+    run docker container create "${DOCKEROPTS[@]}" --entrypoint /root/start-prplmesh.sh "${image}" "$@"
+    # Connect the container to the ucc network:
+    run docker network connect "$NETWORK" "$NAME"
+    run docker container start "${DOCKER_RUN_OPTS[@]}" "$NAME"
 }
 
 VERBOSE=false
