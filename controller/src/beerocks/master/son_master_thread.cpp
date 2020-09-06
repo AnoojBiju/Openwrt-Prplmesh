@@ -862,6 +862,15 @@ bool master_thread::handle_cmdu_1905_autoconfiguration_WSC(const std::string &sr
         son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
     }
 
+    if (!database.setting_certification_mode()) {
+        // trigger AP capability query
+        if (!cmdu_tx.create(0, ieee1905_1::eMessageType::AP_CAPABILITY_QUERY_MESSAGE)) {
+            LOG(ERROR) << "Failed building message!";
+            return false;
+        }
+        son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
+    }
+
     return true;
 }
 
