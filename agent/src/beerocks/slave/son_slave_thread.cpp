@@ -2863,6 +2863,20 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
     }
     case STATE_INIT: {
         LOG(INFO) << "STATE_INIT";
+
+        auto db = AgentDB::get();
+        std::string iface_mac;
+        if (!network_utils::linux_iface_get_mac(db->bridge.iface_name, iface_mac)) {
+            LOG(ERROR) << "Failed reading addresses from the bridge!";
+            platform_notify_error(bpl::eErrorCode::BH_READING_DATA_FROM_THE_BRIDGE, "");
+            stop_on_failure_attempts--;
+            slave_reset();
+            break;
+        }
+
+        // Update bridge parameters on AgentDB.
+        db->bridge.mac = tlvf::mac_from_string(iface_mac);
+
         slave_state = STATE_CONNECT_TO_PLATFORM_MANAGER;
         break;
     }

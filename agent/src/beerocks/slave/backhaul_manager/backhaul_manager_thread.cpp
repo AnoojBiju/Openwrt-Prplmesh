@@ -826,9 +826,6 @@ bool backhaul_manager::backhaul_fsm_main(bool &skip_select)
             break;
         }
 
-        // Update bridge parameters on AgentDB.
-        db->bridge.mac = tlvf::mac_from_string(bridge_info.mac);
-
         auto ifaces = network_utils::linux_get_iface_list_from_bridge(db->bridge.iface_name);
         if (!configure_ieee1905_transport_interfaces(db->bridge.iface_name, ifaces)) {
             LOG(ERROR) << "configure_ieee1905_transport_interfaces() failed!";
