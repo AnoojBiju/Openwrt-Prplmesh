@@ -51,6 +51,7 @@
 #include <tlvf/wfa_map/tlvApRadioIdentifier.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringResponse.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
+#include <tlvf/wfa_map/tlvChannelScanCapabilities.h>
 #include <tlvf/wfa_map/tlvChannelSelectionResponse.h>
 #include <tlvf/wfa_map/tlvClientAssociationEvent.h>
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
@@ -1450,8 +1451,39 @@ bool master_thread::handle_cmdu_1905_ap_capability_report(const std::string &src
 {
     auto mid = cmdu_rx.getMessageId();
     LOG(INFO) << "Received AP_CAPABILITY_REPORT_MESSAGE, mid=" << std::dec << int(mid);
+    auto channel_scan_capabilities_tlv = cmdu_rx.getClass<wfa_map::tlvChannelScanCapabilities>();
+    if (!channel_scan_capabilities_tlv) {
+        LOG(ERROR) << "addClass wfa_map::channel_scan_capabilities_tlv failed";
+        return false;
+    }
 
-    return true;
+    // read all operating class list
+    auto radio_list_length = channel_scan_capabilities_tlv->radio_list_length();
+    if (!radio_list_length) {
+        LOG(WARNING) << "Received AP Capability Report without any radios";
+        return true;
+    }
+
+    bool all_radio_capabilities_saved_successfully = true;
+    for (int rc_idx = 0; rc_idx < radio_list_length; rc_idx++) {
+        LOG(DEBUG) << "radio-index=" << rc_idx;
+        auto radio_capabilities_tuple = channel_scan_capabilities_tlv->radio_list(rc_idx);
+        if (!std::get<0>(radio_capabilities_tuple)) {
+            LOG(ERROR) << "getting radio capabilities entry has failed!";
+            return false;
+        }
+        auto &radio_capabilities_entry = std::get<1>(radio_capabilities_tuple);
+        auto &ruid                     = radio_capabilities_entry.radio_uid();
+        LOG(DEBUG) << "ruid=" << ruid;
+
+        if (!database.fill_radio_channel_scan_capabilites(ruid, radio_capabilities_entry)) {
+            // We want to save the channel-scan-capabilities for the radios we can
+            LOG(ERROR) << "Failed to save radio channel-scan-capabilities for radio=" << ruid;
+            all_radio_capabilities_saved_successfully = true;
+        }
+    }
+
+    return all_radio_capabilities_saved_successfully;
 }
 
 bool master_thread::handle_cmdu_1905_operating_channel_report(const std::string &src_mac,
@@ -2840,8 +2872,8 @@ bool master_thread::handle_cmdu_control_message(const std::string &src_mac,
         auto notification = beerocks_header->addClass<
             beerocks_message::cACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_START_NOTIFICATION>();
         if (notification == nullptr) {
-            LOG(ERROR)
-                << "addClass ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_START_NOTIFICATION failed";
+            LOG(ERROR) << "addClass "
+                          "ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_START_NOTIFICATION failed";
             return false;
         }
         break;
@@ -3334,8 +3366,8 @@ bool master_thread::handle_cmdu_control_message(const std::string &src_mac,
         auto notification = beerocks_header->addClass<
             beerocks_message::cACTION_CONTROL_STEERING_EVENT_CLIENT_ACTIVITY_NOTIFICATION>();
         if (notification == nullptr) {
-            LOG(ERROR)
-                << "addClass cACTION_CONTROL_STEERING_EVENT_CLIENT_ACTIVITY_NOTIFICATION failed";
+            LOG(ERROR) << "addClass "
+                          "cACTION_CONTROL_STEERING_EVENT_CLIENT_ACTIVITY_NOTIFICATION failed";
             return false;
         }
         //push event to rdkb_wlan_hal task
