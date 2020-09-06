@@ -955,7 +955,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
 
         auto vap_name = it->second.bss;
 
-        if (!request->params().remove) {
+        if (!request->params().remove && (request->params().config.snrProbeHWM > 0)) {
             if (!ap_wlan_hal->sta_softblock_add(
                     vap_name, tlvf::mac_to_string(request->params().client_mac),
                     request->params().config.authRejectReason, request->params().config.snrProbeHWM,
