@@ -429,6 +429,9 @@ public:
     bool set_hostap_conf_restricted_channels(const std::string &hostap_mac,
                                              uint8_t *restricted_channels);
     std::vector<uint8_t> get_hostap_conf_restricted_channels(const std::string &hostap_mac);
+    bool
+    fill_radio_channel_scan_capabilites(const sMacAddr &radio_mac,
+                                        wfa_map::cRadiosWithScanCapabilities &radio_capabilities);
 
     //
     // CS - DFS
