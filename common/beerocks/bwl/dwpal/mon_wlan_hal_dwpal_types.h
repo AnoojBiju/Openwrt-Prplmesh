@@ -58,6 +58,11 @@ struct sScanCfgParamsBG : sScanCfgParamsBG_legacy {
     unsigned int window_slice_overlap;
 };
 
+constexpr size_t ScanCfgParams_size         = sizeof(sScanCfgParams);
+constexpr size_t ScanCfgParamsBG_min_size   = sizeof(sScanCfgParamsBG_legacy);
+constexpr size_t ScanCfgParamsBG_size       = sizeof(sScanCfgParamsBG);
+constexpr size_t ScanCfgParams_size_invalid = 0L;
+
 } // namespace dwpal
 } // namespace bwl
 
