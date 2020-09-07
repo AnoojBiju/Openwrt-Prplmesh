@@ -257,7 +257,14 @@ public:
         if (offset >= buffer.size()) {
             return -1;
         }
-        return ::recv(m_socket->fd(), buffer.data() + offset, buffer.size() - offset, MSG_DONTWAIT);
+
+        int result =
+            ::recv(m_socket->fd(), buffer.data() + offset, buffer.size() - offset, MSG_DONTWAIT);
+        if (result > 0) {
+            buffer.length() += static_cast<size_t>(result);
+        }
+
+        return result;
     }
 
     /**
@@ -270,8 +277,14 @@ public:
     int receive_from(Buffer &buffer, Socket::Address &address) override
     {
         address.length() = address.size();
-        return ::recvfrom(m_socket->fd(), buffer.data(), buffer.size(), MSG_DONTWAIT,
-                          address.sockaddr(), &address.length());
+
+        int result = ::recvfrom(m_socket->fd(), buffer.data(), buffer.size(), MSG_DONTWAIT,
+                                address.sockaddr(), &address.length());
+        if (result >= 0) {
+            buffer.length() = static_cast<size_t>(result);
+        }
+
+        return result;
     }
 
     /**
@@ -281,12 +294,9 @@ public:
      *
      * This implementation uses the send() system call.
      */
-    int send(const Buffer &buffer, size_t length) override
+    int send(const Buffer &buffer) override
     {
-        if (length > buffer.size()) {
-            return -1;
-        }
-        return ::send(m_socket->fd(), buffer.data(), length, MSG_NOSIGNAL);
+        return ::send(m_socket->fd(), buffer.data(), buffer.length(), MSG_NOSIGNAL);
     }
 
     /**
@@ -296,9 +306,9 @@ public:
      *
      * This implementation uses the sendto() system call.
      */
-    int send_to(const Buffer &buffer, size_t length, const Socket::Address &address) override
+    int send_to(const Buffer &buffer, const Socket::Address &address) override
     {
-        return ::sendto(m_socket->fd(), buffer.data(), buffer.size(), 0, address.sockaddr(),
+        return ::sendto(m_socket->fd(), buffer.data(), buffer.length(), 0, address.sockaddr(),
                         address.length());
     }
 
