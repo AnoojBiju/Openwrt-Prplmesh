@@ -366,13 +366,14 @@ test-on-glinet-b1300:
     OPENWRT_IMAGE: openwrt-ipq40xx-generic-glinet_gl-b1300-squashfs-sysupgrade.bin
   needs: ["build-for-glinet-b1300"]
 
-test-on-netgear-rax40:
-  extends: .test-on-target
-  variables:
-    TARGET_DEVICE: netgear-rax40
-    TARGET_DEVICE_NAME: netgear-rax40-1
-    OPENWRT_IMAGE: NETGEAR_RAX40-squashfs-fullimage.img
-  needs: ["build-for-netgear-rax40"]
+# Device is broken - temporarily turn it off.
+# test-on-netgear-rax40:
+#   extends: .test-on-target
+#   variables:
+#     TARGET_DEVICE: netgear-rax40
+#     TARGET_DEVICE_NAME: netgear-rax40-1
+#     OPENWRT_IMAGE: NETGEAR_RAX40-squashfs-fullimage.img
+#   needs: ["build-for-netgear-rax40"]
 
 run-certification-tests:
   interruptible: false
