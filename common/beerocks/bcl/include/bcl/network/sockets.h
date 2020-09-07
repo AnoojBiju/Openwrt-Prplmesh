@@ -9,30 +9,15 @@
 #ifndef BCL_NETWORK_SOCKETS_H_
 #define BCL_NETWORK_SOCKETS_H_
 
-#include "file_descriptor_impl.h"
-
-#include <stdint.h>
+#include "buffer.h"
+#include "file_descriptor.h"
 
 #include <net/if.h>
 
+#include <memory>
+
 namespace beerocks {
 namespace net {
-
-/**
- * Array of bytes used to hold data received through a socket.
- * Code is programmed to interfaces so it does not care about which implementation is used.
- * Unit tests can use a mock and set different expectations per test (pretend that different data
- * has been received through the socket).
- */
-class Buffer {
-public:
-    virtual ~Buffer()                   = default;
-    virtual const uint8_t *data() const = 0;
-    virtual size_t size() const         = 0;
-    virtual void clear()                = 0;
-
-    uint8_t *data() { return const_cast<uint8_t *>(const_cast<const Buffer *>(this)->data()); }
-};
 
 /**
  * Sockets are OS resources implementing the file descriptor interface. The way this fact is
