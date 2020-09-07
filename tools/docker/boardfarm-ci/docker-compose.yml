@@ -19,6 +19,7 @@ services:
         entrypoint: ["/root/start-prplmesh.sh", "start-controller-agent"]
         volumes:
             - "$ROOT_DIR:${FINAL_ROOT_DIR}"
+            - "$ROOT_DIR/logs/lan-$RUN_ID/:/tmp/beerocks/logs/"
 
     agent:
         <<: *prplmesh
@@ -26,6 +27,7 @@ services:
         entrypoint: ["/root/start-prplmesh.sh", "start-agent"]
         volumes:
             - "$ROOT_DIR:${FINAL_ROOT_DIR}"
+            - "$ROOT_DIR/logs/agent-$RUN_ID/:/tmp/beerocks/logs/"
 
     # Boardfarm image is launched from dctest.py, TARGET_DIR refers to the
     # path inside the controller, will be referred as $ROOT_DIR inside

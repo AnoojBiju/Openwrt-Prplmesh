@@ -64,13 +64,7 @@ class PrplMeshCompose(PrplMeshBase):
         yml_path = "tools/docker/boardfarm-ci/docker-compose.yml"
         full_args = ["-f", os.path.join(rootdir, yml_path)]
         if parameter == "run":
-            log_path = os.path.join(rootdir, "logs/{}".format(self.docker_name))
-            if not os.path.exists(log_path):
-                os.mkdir(log_path)
-
-            vol = '{}:/tmp/beerocks/logs'.format(log_path)
-
-            full_args += ["run", "--rm", "-v", vol]
+            full_args += ["run", "--rm"]
             full_args += args
 
         print('_docker_compose: {}'.format(' '.join(full_args)))
