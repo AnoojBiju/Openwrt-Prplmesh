@@ -1,7 +1,15 @@
 version: '3.5'
+
+networks:
+    prplmesh:
+        name: prplmesh-$RUN_ID
+        driver: bridge
+
 x-prplmesh: &prplmesh # Template for the prplmesh services
     image: registry.gitlab.com/prpl-foundation/prplmesh/prplmesh/prplmesh-builder-ubuntu-bionic:${CI_PIPELINE_ID}
     privileged: true    # For the creation of the bridge to work
+    networks:
+        - prplmesh
     environment:
         - USER
         - INSTALL_DIR=${FINAL_ROOT_DIR}/build/install
@@ -41,8 +49,7 @@ services:
             - RUN_ID
             - CI_PIPELINE_ID
             - FINAL_ROOT_DIR
-        ports:
-            - "5000:5000"
+        network_mode: host
         volumes:
             - "$ROOT_DIR:$ROOT_DIR"
             - "/var/run/docker:/var/run/docker"
