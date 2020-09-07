@@ -9,6 +9,7 @@
 #ifndef BCL_NETWORK_SOCKETS_IMPL_H_
 #define BCL_NETWORK_SOCKETS_IMPL_H_
 
+#include "file_descriptor_impl.h"
 #include "sockets.h"
 
 #include <bcl/beerocks_backport.h>
@@ -25,19 +26,6 @@
 
 namespace beerocks {
 namespace net {
-
-/**
- * One possible Buffer implementation
- */
-template <size_t Size> class BufferImpl : public Buffer {
-public:
-    const uint8_t *data() const override { return m_data; }
-    size_t size() const override { return sizeof(m_data); }
-    void clear() override { std::fill_n(m_data, size(), 0); }
-
-private:
-    uint8_t m_data[Size]{};
-};
 
 /**
  * Abstract base class for all types of sockets: Raw, UDP, TCP, UDS, ...
