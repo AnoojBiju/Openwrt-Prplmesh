@@ -4,7 +4,6 @@
 # See LICENSE file for more details.
 
 import os
-import time
 
 import boardfarm
 from environment import ALEntityDocker, _get_bridge_interface
@@ -43,42 +42,15 @@ class PrplMeshCompose(PrplMeshBase):
         self.docker_network = "boardfarm-ci_default"
 
         if self.role == "controller":
-            self._docker_compose(["-d", "--name", self.docker_name, "controller"],
-                                 "run", "start-controller-agent")
-            time.sleep(self.delay)
             self.controller_entity = \
                 ALEntityDocker(self.docker_name, device=self, is_controller=True, compose=True)
         else:
-            self._docker_compose(["-d", "--name", self.docker_name, "agent"],
-                                 "run", "start-agent")
-            time.sleep(self.delay)
             self.agent_entity = ALEntityDocker(self.docker_name, device=self,
                                                is_controller=False, compose=True)
 
         self.wired_sniffer = Sniffer(_get_bridge_interface(self.docker_network),
                                      boardfarm.config.output_dir)
         self.check_status()
-
-    def _docker_compose(self, args, parameter=None, start=None):
-        print('_docker_compose: args {}'.format(args))
-        yml_path = "tools/docker/boardfarm-ci/docker-compose.yml"
-        full_args = ["-f", os.path.join(rootdir, yml_path)]
-        if parameter == "run":
-            full_args += ["run", "--rm"]
-            full_args += args
-
-        print('_docker_compose: {}'.format(' '.join(full_args)))
-        if os.getenv('CI_PIPELINE_ID') is None:
-            print('Setting CI_PIPELINE_ID "latest"')
-            os.environ['CI_PIPELINE_ID'] = 'latest'
-            self._run_shell_cmd("docker-compose",
-                                full_args, env=os.environ)
-        else:
-            self._run_shell_cmd("docker-compose", full_args)
-
-    def __del__(self):
-        self._run_shell_cmd("docker", ["stop", self.docker_name])
-        self._run_shell_cmd("docker", ["container", "rm", "-f", self.docker_name])
 
     def check_status(self):
         """Method required by boardfarm.

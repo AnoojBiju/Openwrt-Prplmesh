@@ -32,10 +32,22 @@ services:
     agent:
         <<: *prplmesh
         container_name: agent-$RUN_ID
-        entrypoint: ["/root/start-prplmesh.sh", "start-agent"]
+        entrypoint: ["bash", "-c", "sleep 7; /root/start-prplmesh.sh start-agent"]
         volumes:
             - "$ROOT_DIR:${FINAL_ROOT_DIR}"
             - "$ROOT_DIR/logs/agent-$RUN_ID/:/tmp/beerocks/logs/"
+        depends_on:
+          - controller
+
+    agent_2:
+        <<: *prplmesh
+        container_name: lan2-$RUN_ID
+        entrypoint: ["bash", "-c", "sleep 12; /root/start-prplmesh.sh start-agent"]
+        volumes:
+            - "$ROOT_DIR:${FINAL_ROOT_DIR}"
+            - "$ROOT_DIR/logs/lan2-$RUN_ID/:/tmp/beerocks/logs/"
+        depends_on:
+          - controller
 
     # Boardfarm image is launched from dctest.py, TARGET_DIR refers to the
     # path inside the controller, will be referred as $ROOT_DIR inside
@@ -56,4 +68,8 @@ services:
             - "/var/run/docker.sock:/var/run/docker.sock"
         user: ${CURRENT_UID_GID}
         working_dir: $ROOT_DIR/tests
-        entrypoint: ["bash", "run_bf_compose.sh"]
+        entrypoint: ["bash", "-c", "echo 'wait for DUTs'; sleep 20; echo 'starting boardfarm'; ./run_bf_compose.sh"]
+        depends_on:
+          - controller
+          - agent
+          - agent_2
