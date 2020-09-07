@@ -8,7 +8,7 @@ x-prplmesh: &prplmesh # Template for the prplmesh services
         - ROOT_DIR=${FINAL_ROOT_DIR}
         - RUN_ID
         - CI_PIPELINE_ID
-    expose:
+    ports:
         - "8002"
 
 services:
