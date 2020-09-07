@@ -115,7 +115,7 @@ public:
         /**
          * @brief Receives data through the socket connection.
          *
-         * @param[out] buffer Buffer to hold received data.
+         * @param[in, out] buffer Buffer to hold received data.
          * @param[in] offset Position into the buffer to start receiving data.
          * @return Number of bytes received, -1 on failure.
          */
@@ -124,7 +124,7 @@ public:
         /**
          * @brief Receives data through the socket connection.
          *
-         * @param[out] buffer Buffer to hold received data.
+         * @param[in, out] buffer Buffer to hold received data.
          * @param[out] address Address where the data came from.
          * @return Number of bytes received, -1 on failure.
          */
@@ -134,20 +134,18 @@ public:
          * @brief Sends data through the socket connection.
          *
          * @param[in] buffer Buffer holding data to send.
-         * @param[in] length Number of bytes to send.
          * @return Number of bytes transmitted, -1 on failure.
          */
-        virtual int send(const Buffer &buffer, size_t length) = 0;
+        virtual int send(const Buffer &buffer) = 0;
 
         /**
          * @brief Sends data through the socket connection.
          *
          * @param[in] buffer Buffer holding data to send.
-         * @param[in] length Number of bytes to be transmitted.
          * @param[in] address Destination address.
          * @return Number of bytes transmitted, -1 on failure.
          */
-        virtual int send_to(const Buffer &buffer, size_t length, const Address &address) = 0;
+        virtual int send_to(const Buffer &buffer, const Address &address) = 0;
     };
 };
 
