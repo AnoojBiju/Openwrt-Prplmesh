@@ -9,6 +9,7 @@
 #ifndef BCL_NETWORK_INTERFACE_STATE_MONITOR_IMPL_H_
 #define BCL_NETWORK_INTERFACE_STATE_MONITOR_IMPL_H_
 
+#include "buffer_impl.h"
 #include "interface_state_monitor.h"
 #include "sockets_impl.h"
 
