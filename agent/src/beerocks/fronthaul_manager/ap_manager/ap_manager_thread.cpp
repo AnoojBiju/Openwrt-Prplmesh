@@ -1002,6 +1002,56 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
         ap_wlan_hal->generate_connected_clients_events();
         break;
     }
+    case beerocks_message::ACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST: {
+        LOG(TRACE) << "cACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST";
+
+        auto notification = beerocks_header->addClass<
+            beerocks_message::cACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST>();
+        if (!notification) {
+            LOG(ERROR)
+                << "addClass cACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST failed";
+            return false;
+        }
+
+        auto response = message_com::create_vs_message<
+            beerocks_message::cACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE>(cmdu_tx);
+
+        if (!response) {
+            LOG(ERROR) << "Failed building message!";
+            return false;
+        }
+
+        response->success() = true;
+
+        if (notification->ant_switch_on()) {
+            // Enable zwdfs radio antenna
+            if (ap_wlan_hal->is_zwdfs_antenna_enabled()) {
+                LOG(WARNING) << "trying to switch on zwdfs antenna but its already on!";
+            } else if (!ap_wlan_hal->set_zwdfs_antenna(true)) {
+                LOG(ERROR) << "set_zwdfs_antenna on failed!";
+                response->success() = false;
+            }
+            // switch channel on zwdfs interface to start off channel CAC
+            if (!ap_wlan_hal->switch_channel(notification->channel(), notification->bandwidth(),
+                                             notification->center_frequency())) {
+                LOG(ERROR) << "switch_channel failed!";
+                response->success() = false;
+            }
+        } else {
+            // Disable zwdfs radio antenna
+            if (!ap_wlan_hal->is_zwdfs_antenna_enabled()) {
+                LOG(WARNING) << "trying to switch off zwdfs antenna but its already off!";
+            } else if (!ap_wlan_hal->set_zwdfs_antenna(false)) {
+                LOG(ERROR) << "set_zwdfs_antenna off failed!";
+                response->success() = false;
+            }
+        }
+
+        LOG(INFO) << "send cACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE, success="
+                  << int(response->success());
+        message_com::send_cmdu(slave_socket, cmdu_tx);
+        break;
+    }
     default: {
         LOG(ERROR) << "Unsupported header action_op: " << int(beerocks_header->action_op());
         break;
