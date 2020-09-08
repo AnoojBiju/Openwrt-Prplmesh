@@ -209,6 +209,9 @@ if __name__ == '__main__':
             services = Services(bid=args.bid)   # With new build id
         else:
             services = Services()   # With new build id
-        rc = services.dc(['up', '--exit-code-from', 'boardfarm', '--abort-on-container-exit'],
-                         interactive=True)
+        try:
+            rc = services.dc(['up', '--exit-code-from', 'boardfarm', '--abort-on-container-exit'],
+                             interactive=True)
+        finally:
+            services.dc(['down'])
         cleanup(rc)
