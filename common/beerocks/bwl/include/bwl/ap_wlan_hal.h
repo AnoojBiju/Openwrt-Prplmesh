@@ -300,6 +300,29 @@ public:
      */
     virtual bool failsafe_channel_get(int &chan, int &bw) = 0;
 
+    /*!
+     * Check if radio supports zwdfs hw
+     * 
+     * @return true on supported or false on not supported.
+     */
+    virtual bool is_zwdfs_supported() = 0;
+
+    /*!
+     * This function turns off/on zwdfs antenna
+     * 
+     * @param enable true to turn on false to turn off
+     * 
+     * @return true on success or false on error.
+     */
+    virtual bool set_zwdfs_antenna(bool enable) = 0;
+
+    /*!
+     * Check if zwdfs antenna is enabled
+     * 
+     * @return true antenna is on false antenna is off
+     */
+    virtual bool is_zwdfs_antenna_enabled() = 0;
+
     // TODO: UPDATE AFTER THE MERGE WITH CHANNEL SELECTION
     virtual bool restricted_channels_set(char *channel_list) = 0;
     virtual bool restricted_channels_get(char *channel_list) = 0;

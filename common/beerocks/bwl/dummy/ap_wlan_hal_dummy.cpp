@@ -295,6 +295,11 @@ bool ap_wlan_hal_dummy::failsafe_channel_set(int chan, int bw, int vht_center_fr
 
 bool ap_wlan_hal_dummy::failsafe_channel_get(int &chan, int &bw) { return false; }
 
+// zero wait dfs APIs
+bool ap_wlan_hal_dummy::is_zwdfs_supported() { return false; }
+bool ap_wlan_hal_dummy::set_zwdfs_antenna(bool enable) { return false; }
+bool ap_wlan_hal_dummy::is_zwdfs_antenna_enabled() { return false; }
+
 bool ap_wlan_hal_dummy::restricted_channels_set(char *channel_list) { return true; }
 
 bool ap_wlan_hal_dummy::restricted_channels_get(char *channel_list) { return false; }

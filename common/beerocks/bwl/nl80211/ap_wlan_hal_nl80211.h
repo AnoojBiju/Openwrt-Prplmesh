@@ -66,6 +66,9 @@ public:
     virtual bool wds_clear_list() override;
     virtual bool failsafe_channel_set(int chan, int bw, int vht_center_frequency) override;
     virtual bool failsafe_channel_get(int &chan, int &bw) override;
+    virtual bool is_zwdfs_supported() override;
+    virtual bool set_zwdfs_antenna(bool enable) override;
+    virtual bool is_zwdfs_antenna_enabled() override;
     virtual bool restricted_channels_set(char *channel_list) override;
     virtual bool restricted_channels_get(char *channel_list) override;
     virtual bool read_acs_report() override;

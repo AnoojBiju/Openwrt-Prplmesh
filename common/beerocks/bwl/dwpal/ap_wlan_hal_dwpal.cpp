@@ -1400,6 +1400,41 @@ bool ap_wlan_hal_dwpal::failsafe_channel_get(int &chan, int &bw)
     return true;
 }
 
+bool ap_wlan_hal_dwpal::is_zwdfs_supported()
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
+bool ap_wlan_hal_dwpal::set_zwdfs_antenna(bool enable)
+{
+    // Build command string
+    std::string cmd = "SET_ZWDFS_ANTENNA ";
+
+    cmd += enable;
+
+    // Send command
+    if (!dwpal_send_cmd(cmd)) {
+        LOG(ERROR) << "set_zwdfs_antenna() failed!";
+        return false;
+    }
+    return true;
+}
+
+bool ap_wlan_hal_dwpal::is_zwdfs_antenna_enabled()
+{
+    char *reply = nullptr;
+    // Build command string
+    std::string cmd = "GET_ZWDFS_ANTENNA";
+
+    // Send command
+    if (!dwpal_send_cmd(cmd, &reply)) {
+        LOG(ERROR) << "get_zwdfs_antenna() failed!";
+        return false;
+    }
+    return (beerocks::string_utils::stoi(reply));
+}
+
 bool ap_wlan_hal_dwpal::restricted_channels_set(char *channel_list)
 {
     // For example, the channel_list_str: “1 6 11 12 13”

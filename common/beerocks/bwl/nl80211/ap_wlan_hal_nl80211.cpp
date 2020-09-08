@@ -699,6 +699,24 @@ bool ap_wlan_hal_nl80211::failsafe_channel_get(int &chan, int &bw)
     return true;
 }
 
+bool ap_wlan_hal_nl80211::is_zwdfs_supported()
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
+bool ap_wlan_hal_nl80211::set_zwdfs_antenna(bool enable)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
+bool ap_wlan_hal_nl80211::is_zwdfs_antenna_enabled()
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
 bool ap_wlan_hal_nl80211::restricted_channels_set(char *channel_list)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
