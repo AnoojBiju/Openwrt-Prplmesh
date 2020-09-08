@@ -327,6 +327,13 @@ private:
 class ServerSocketAbstractImpl : public ServerSocket {
 public:
     /**
+     * @brief Returns the underlying socket used by this server.
+     *
+     * @see ServerSocket::socket
+     */
+    std::shared_ptr<Socket> socket() override { return m_socket; }
+
+    /**
      * @brief Binds address to the socket.
      *
      * This method is a wrapper around the `bind` system call.
@@ -399,6 +406,13 @@ protected:
 
 class ClientSocketAbstractImpl : public ClientSocket {
 public:
+    /**
+     * @brief Returns the underlying socket used by this client.
+     *
+     * @see ClientSocket::socket
+     */
+    std::shared_ptr<Socket> socket() override { return m_socket; }
+
     /**
      * @brief Binds address to the socket.
      *
