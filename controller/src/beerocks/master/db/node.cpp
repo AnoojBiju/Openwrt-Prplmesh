@@ -44,8 +44,9 @@ std::ostream &operator<<(std::ostream &os, eTriStateBool value)
 
 std::ostream &operator<<(std::ostream &os, const node &n)
 {
-    std::chrono::steady_clock::time_point tCurrTime = std::chrono::steady_clock::now();
-    auto node_type                                  = const_cast<node *>(&n)->get_type();
+    std::chrono::steady_clock::time_point tCurrTime_steady = std::chrono::steady_clock::now();
+    std::chrono::system_clock::time_point tCurrTime_system = std::chrono::system_clock::now();
+    auto node_type                                         = const_cast<node *>(&n)->get_type();
 
     os << std::endl;
     if ((node_type == beerocks::TYPE_IRE_BACKHAUL) || (node_type == beerocks::TYPE_CLIENT)) {
@@ -79,7 +80,7 @@ std::ostream &operator<<(std::ostream &os, const node &n)
            << " Statistics:" << std::endl
            << "   LastUpdate: "
            << float((std::chrono::duration_cast<std::chrono::duration<double>>(
-                         tCurrTime - n.stats_info->timestamp))
+                         tCurrTime_steady - n.stats_info->timestamp))
                         .count())
            << "[sec]" << std::endl
            << "   StatsDelta: " << float(n.stats_info->stats_delta_ms) / 1000.0 << "[sec]"
@@ -115,12 +116,12 @@ std::ostream &operator<<(std::ostream &os, const node &n)
 
         os << "]" << std::endl
            << "   LastSeen: "
-           << float((std::chrono::duration_cast<std::chrono::duration<double>>(tCurrTime -
+           << float((std::chrono::duration_cast<std::chrono::duration<double>>(tCurrTime_steady -
                                                                                n.last_seen))
                         .count())
            << "[sec]" << std::endl
            << "   LastStateChange: "
-           << float((std::chrono::duration_cast<std::chrono::duration<double>>(tCurrTime -
+           << float((std::chrono::duration_cast<std::chrono::duration<double>>(tCurrTime_steady -
                                                                                n.last_state_change))
                         .count())
            << "[sec]" << std::endl;
@@ -137,9 +138,10 @@ std::ostream &operator<<(std::ostream &os, const node &n)
 
         // persistent db
         if (node_type == beerocks::TYPE_CLIENT) {
-            auto client_parameters_last_edit_hours = std::chrono::duration_cast<std::chrono::hours>(
-                                                         tCurrTime - n.client_parameters_last_edit)
-                                                         .count();
+            auto client_parameters_last_edit_hours =
+                std::chrono::duration_cast<std::chrono::hours>(tCurrTime_system -
+                                                               n.client_parameters_last_edit)
+                    .count();
             auto client_time_life_delay_hours =
                 std::chrono::duration_cast<std::chrono::hours>(n.client_time_life_delay_sec)
                     .count();
@@ -186,7 +188,7 @@ std::ostream &operator<<(std::ostream &os, const node &n)
            << " Statistics:" << std::endl
            << "   LastUpdate: "
            << float((std::chrono::duration_cast<std::chrono::duration<double>>(
-                         tCurrTime - n.hostap->stats_info->timestamp))
+                         tCurrTime_steady - n.hostap->stats_info->timestamp))
                         .count())
            << "[sec]" << std::endl
            << "   StatsDelta: " << float(n.hostap->stats_info->stats_delta_ms) / 1000.0 << "[sec]"

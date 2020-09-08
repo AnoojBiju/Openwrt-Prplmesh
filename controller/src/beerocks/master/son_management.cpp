@@ -2223,7 +2223,7 @@ void son_management::handle_bml_message(Socket *sd,
 
         // A configured client must have a valid timestamp configured
         auto client_timestamp = database.get_client_parameters_last_edit(client_mac);
-        if (client_timestamp == std::chrono::steady_clock::time_point::min()) {
+        if (client_timestamp == std::chrono::system_clock::time_point::min()) {
             LOG(DEBUG) << "Requested client " << client_mac
                        << " doesn't have a valid timestamp listed in the DB";
             response->result() = 1; //Fail.

@@ -297,8 +297,8 @@ public:
 
     // Indicates when client parameters were last updated (even if not updated yet to persistent-db)
     // minimal value is used as invalid value.
-    std::chrono::steady_clock::time_point client_parameters_last_edit =
-        std::chrono::steady_clock::time_point::min();
+    std::chrono::system_clock::time_point client_parameters_last_edit =
+        std::chrono::system_clock::time_point::min();
 
     // Optional - if configured the client has its own configured timelife delay.
     std::chrono::seconds client_time_life_delay_sec = std::chrono::seconds::zero();
