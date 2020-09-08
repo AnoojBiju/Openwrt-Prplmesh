@@ -14,6 +14,7 @@
 #include <bcl/beerocks_event_loop.h>
 #include <bcl/beerocks_logging.h>
 #include <bcl/beerocks_socket_thread.h>
+#include <bcl/network/cmdu_parser.h>
 
 #include "beerocks/tlvf/beerocks_message_common.h"
 
@@ -33,6 +34,7 @@ class main_thread : public socket_thread {
 public:
     main_thread(const config_file::sConfigSlave &config_,
                 const std::unordered_map<int, std::string> &interfaces_map, logging &logger_,
+                std::shared_ptr<beerocks::net::CmduParser> cmdu_parser,
                 std::shared_ptr<beerocks::EventLoop> event_loop);
     ~main_thread();
 
@@ -118,6 +120,12 @@ private:
     std::unordered_map<std::string, std::shared_ptr<beerocks_message::sWlanSettings>>
         bpl_iface_wlan_params_map;
     std::unordered_set<std::string> ap_ifaces;
+
+    /**
+     * CMDU parser used to get CMDU messages out of a byte array received through a socket
+     * connection.
+     */
+    std::shared_ptr<beerocks::net::CmduParser> m_cmdu_parser;
 
     /**
      * Application event loop used by the process to wait for I/O events.
