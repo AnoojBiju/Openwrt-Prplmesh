@@ -547,6 +547,54 @@ class cACTION_APMANAGER_HOSTAP_REMOVE_NEIGHBOR_11K_REQUEST : public BaseClass
         sNeighborRemoveParams11k* m_params = nullptr;
 };
 
+class cACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST : public BaseClass
+{
+    public:
+        cACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST();
+
+        static eActionOp_APMANAGER get_action_op(){
+            return (eActionOp_APMANAGER)(ACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST);
+        }
+        uint8_t& ant_switch_on();
+        uint8_t& channel();
+        beerocks::eWiFiBandwidth& bandwidth();
+        uint32_t& center_frequency();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_APMANAGER* m_action_op = nullptr;
+        uint8_t* m_ant_switch_on = nullptr;
+        uint8_t* m_channel = nullptr;
+        beerocks::eWiFiBandwidth* m_bandwidth = nullptr;
+        uint32_t* m_center_frequency = nullptr;
+};
+
+class cACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE : public BaseClass
+{
+    public:
+        cACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE();
+
+        static eActionOp_APMANAGER get_action_op(){
+            return (eActionOp_APMANAGER)(ACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE);
+        }
+        uint8_t& success();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_APMANAGER* m_action_op = nullptr;
+        uint8_t* m_success = nullptr;
+};
+
 class cACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION : public BaseClass
 {
     public:

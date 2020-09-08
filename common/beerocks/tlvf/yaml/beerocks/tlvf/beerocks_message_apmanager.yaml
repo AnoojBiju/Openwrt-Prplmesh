@@ -132,6 +132,17 @@ cACTION_APMANAGER_HOSTAP_REMOVE_NEIGHBOR_11K_REQUEST:
   _type: class
   params: sNeighborRemoveParams11k
 
+cACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST:
+  _type: class
+  ant_switch_on: uint8_t #bool
+  channel: uint8_t
+  bandwidth: beerocks::eWiFiBandwidth
+  center_frequency: uint32_t
+
+cACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE:
+  _type: class
+  success: uint8_t #bool
+
 cACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION:
   _type: class
   mac: sMacAddr
