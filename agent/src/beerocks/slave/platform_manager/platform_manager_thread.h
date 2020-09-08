@@ -16,6 +16,7 @@
 #include <bcl/beerocks_socket_thread.h>
 #include <bcl/network/cmdu_parser.h>
 #include <bcl/network/cmdu_serializer.h>
+#include <bcl/network/sockets.h>
 
 #include "beerocks/tlvf/beerocks_message_common.h"
 
@@ -35,6 +36,7 @@ class main_thread : public socket_thread {
 public:
     main_thread(const config_file::sConfigSlave &config_,
                 const std::unordered_map<int, std::string> &interfaces_map, logging &logger_,
+                std::unique_ptr<beerocks::net::ServerSocket> server_socket,
                 std::shared_ptr<beerocks::net::CmduParser> cmdu_parser,
                 std::shared_ptr<beerocks::net::CmduSerializer> cmdu_serializer,
                 std::shared_ptr<beerocks::EventLoop> event_loop);
@@ -122,6 +124,12 @@ private:
     std::unordered_map<std::string, std::shared_ptr<beerocks_message::sWlanSettings>>
         bpl_iface_wlan_params_map;
     std::unordered_set<std::string> ap_ifaces;
+
+    /**
+     * Server socket used to accept incoming connection requests from clients that will
+     * communicate with platform manager by exchanging CMDU messages through that connections.
+     */
+    std::unique_ptr<beerocks::net::ServerSocket> m_server_socket;
 
     /**
      * CMDU parser used to get CMDU messages out of a byte array received through a socket
