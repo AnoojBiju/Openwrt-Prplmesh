@@ -287,10 +287,10 @@ boardfarm-tests:
   stage: build
   script:
     - mkdir -p "build/$TARGET_DEVICE"
-    - mkdir -p ~/rdk
+    - mkdir -p "build/cache/rdk"
     # Clean up the cache directory from anything that hasn't been accessed for a week.
-    - find ~/rdk -type f -atime +7 -delete
-    - tools/docker/builder/rdk-b/build.sh --verbose --target-device "$TARGET_DEVICE" --tag "$CI_PIPELINE_ID" --cache ~/rdk
+    - find build/cache/rdk -type f -atime +7 -delete
+    - tools/docker/builder/rdk-b/build.sh --verbose --target-device "$TARGET_DEVICE" --tag "$CI_PIPELINE_ID" --cache "$PWD/build/cache/rdk"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
     - if: '$CI_MERGE_REQUEST_LABELS =~ "ready for merge"'
@@ -406,7 +406,7 @@ run-certification-tests:
     - if: "$TESTS_TO_RUN"
 
 include:
-  - template: 'Workflows/MergeRequest-Pipelines.gitlab-ci.yml'
+  - template: "Workflows/MergeRequest-Pipelines.gitlab-ci.yml"
   - local: "/ci/certification/generic.yml"
   - local: "/ci/certification/dummy.yml"
   - local: "/ci/certification/turris-omnia.yml"
