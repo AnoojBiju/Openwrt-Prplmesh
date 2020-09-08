@@ -70,15 +70,15 @@ sMacAddr db::client_db_entry_to_mac(std::string db_entry)
     return tlvf::mac_from_string(db_entry);
 }
 
-std::string db::timestamp_to_string_seconds(const std::chrono::steady_clock::time_point timestamp)
+std::string db::timestamp_to_string_seconds(const std::chrono::system_clock::time_point timestamp)
 {
     return std::to_string(
         std::chrono::duration_cast<std::chrono::seconds>(timestamp.time_since_epoch()).count());
 }
 
-std::chrono::steady_clock::time_point db::timestamp_from_seconds(int timestamp_sec)
+std::chrono::system_clock::time_point db::timestamp_from_seconds(int timestamp_sec)
 {
-    return std::chrono::steady_clock::time_point(std::chrono::seconds(timestamp_sec));
+    return std::chrono::system_clock::time_point(std::chrono::seconds(timestamp_sec));
 }
 
 // static - end
@@ -2520,12 +2520,12 @@ bool db::add_client_to_persistent_db(const sMacAddr &mac, const ValuesMap &param
     return true;
 }
 
-std::chrono::steady_clock::time_point db::get_client_parameters_last_edit(const sMacAddr &mac)
+std::chrono::system_clock::time_point db::get_client_parameters_last_edit(const sMacAddr &mac)
 {
     auto node = get_node_verify_type(mac, beerocks::TYPE_CLIENT);
     if (!node) {
         LOG(ERROR) << "client node not found for mac " << mac;
-        return std::chrono::steady_clock::time_point::min();
+        return std::chrono::system_clock::time_point::min();
     }
 
     return node->client_parameters_last_edit;
@@ -2543,7 +2543,7 @@ bool db::set_client_time_life_delay(const sMacAddr &mac,
 
     LOG(DEBUG) << "time_life_delay_sec = " << time_life_delay_sec.count();
 
-    auto timestamp = std::chrono::steady_clock::now();
+    auto timestamp = std::chrono::system_clock::now();
     if (save_to_persistent_db) {
         // if persistent db is disabled
         if (!config.persistent_db) {
@@ -2595,7 +2595,7 @@ bool db::set_client_stay_on_initial_radio(const sMacAddr &mac, bool stay_on_init
     LOG(DEBUG) << "client "
                << " state=" << ((is_client_connected) ? "connected" : "disconnected");
 
-    auto timestamp = std::chrono::steady_clock::now();
+    auto timestamp = std::chrono::system_clock::now();
     if (save_to_persistent_db) {
         // if persistent db is disabled
         if (!config.persistent_db) {
@@ -2725,7 +2725,7 @@ bool db::set_client_selected_bands(const sMacAddr &mac, int8_t selected_bands,
 
     LOG(DEBUG) << "selected_band = " << int(selected_bands);
 
-    auto timestamp = std::chrono::steady_clock::now();
+    auto timestamp = std::chrono::system_clock::now();
     if (save_to_persistent_db) {
         // if persistent db is disabled
         if (!config.persistent_db) {
@@ -2776,7 +2776,7 @@ bool db::set_client_is_friendly(const sMacAddr &mac, bool client_is_friendly,
     LOG(DEBUG) << "Setting client " << mac
                << " client_is_friendly = " << string_utils::bool_str(client_is_friendly);
 
-    auto timestamp = std::chrono::steady_clock::now();
+    auto timestamp = std::chrono::system_clock::now();
     if (save_to_persistent_db) {
         // if persistent db is disabled
         if (!config.persistent_db) {
@@ -2825,7 +2825,7 @@ bool db::clear_client_persistent_db(const sMacAddr &mac)
 
     LOG(DEBUG) << "setting client " << mac << " runtime info to default values";
 
-    node->client_parameters_last_edit  = std::chrono::steady_clock::time_point::min();
+    node->client_parameters_last_edit  = std::chrono::system_clock::time_point::min();
     node->client_time_life_delay_sec   = std::chrono::seconds::zero();
     node->client_stay_on_initial_radio = eTriStateBool::NOT_CONFIGURED;
     node->client_initial_radio         = network_utils::ZERO_MAC;
@@ -2887,7 +2887,7 @@ bool db::update_client_persistent_db(const sMacAddr &mac)
 
     // any persistent parameter update also sets the last-edit timestamp
     // if it is with default value - no other persistent configuration was performed
-    if (node->client_parameters_last_edit == std::chrono::steady_clock::time_point::min()) {
+    if (node->client_parameters_last_edit == std::chrono::system_clock::time_point::min()) {
         LOG(DEBUG) << "Persistent client parameters are empty for " << mac
                    << ", no need to update persistent-db";
         return true;
@@ -3031,7 +3031,7 @@ bool db::load_persistent_db_clients()
 
         // Save current time as a separate variable for fair comparison of current client
         // remaining-timelife-delay against a candidate for removal in case the DB is full.
-        auto now = std::chrono::steady_clock::now();
+        auto now = std::chrono::system_clock::now();
 
         // Aged clients are removed from persistent db and not added to runtime db
         auto timestamp_sec = beerocks::string_utils::stoi(timestamp_it->second);
@@ -3154,7 +3154,7 @@ std::deque<sMacAddr> db::get_clients_with_persistent_data_configured()
         for (auto kv : node_map) {
             if ((kv.second->get_type() == eType::TYPE_CLIENT) && (kv.second->mac == kv.first) &&
                 (kv.second->client_parameters_last_edit !=
-                 std::chrono::steady_clock::time_point::min())) {
+                 std::chrono::system_clock::time_point::min())) {
                 configured_clients.push_back(tlvf::mac_from_string(kv.first));
             }
         }
@@ -4617,7 +4617,7 @@ sMacAddr db::get_candidate_client_for_removal(sMacAddr client_to_skip)
 
     sMacAddr candidate_client_to_be_removed  = network_utils::ZERO_MAC;
     bool is_disconnected_candidate_available = false;
-    auto candidate_client_expiry_due_time    = std::chrono::steady_clock::time_point::max();
+    auto candidate_client_expiry_due_time    = std::chrono::system_clock::time_point::max();
 
     for (const auto &node_map : nodes) {
         for (const auto &key_value : node_map) {
@@ -4635,7 +4635,7 @@ sMacAddr db::get_candidate_client_for_removal(sMacAddr client_to_skip)
 
             // Skip clients which have no persistent information.
             if (client->client_parameters_last_edit ==
-                std::chrono::steady_clock::time_point::min()) {
+                std::chrono::system_clock::time_point::min()) {
                 continue;
             }
 
