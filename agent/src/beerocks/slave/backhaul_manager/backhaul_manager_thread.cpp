@@ -76,6 +76,7 @@
 #include <tlvf/wfa_map/tlvApRadioBasicCapabilities.h>
 #include <tlvf/wfa_map/tlvApVhtCapabilities.h>
 #include <tlvf/wfa_map/tlvAssociatedClients.h>
+#include <tlvf/wfa_map/tlvAssociatedStaExtendedLinkMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringRequest.h>
@@ -1894,6 +1895,13 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
             return false;
         }
 
+        // adding (currently empty) an associated sta EXTENDED link metrics tlv
+        auto extended = cmdu_tx.addClass<wfa_map::tlvAssociatedStaExtendedLinkMetrics>();
+        if (!extended) {
+            LOG(ERROR) << "adding wfa_map::tlvAssociatedStaExtendedLinkMetrics failed";
+            return false;
+        }
+
         auto response_out = cmdu_tx.addClass<wfa_map::tlvAssociatedStaLinkMetrics>();
 
         if (!response_out->alloc_bssid_info_list(response_in->bssid_info_list_length())) {
@@ -2148,6 +2156,13 @@ bool backhaul_manager::handle_associated_sta_link_metrics_query(ieee1905_1::Cmdu
     auto mac = cmdu_rx.getClass<wfa_map::tlvStaMacAddressType>();
     if (!mac) {
         LOG(ERROR) << "Failed to get mac address";
+        return false;
+    }
+
+    // adding (currently empty) an associated sta EXTENDED link metrics tlv
+    auto extended = cmdu_tx.addClass<wfa_map::tlvAssociatedStaExtendedLinkMetrics>();
+    if (!extended) {
+        LOG(ERROR) << "adding wfa_map::tlvAssociatedStaExtendedLinkMetrics failed";
         return false;
     }
 
