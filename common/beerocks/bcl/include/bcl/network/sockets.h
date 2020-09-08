@@ -157,6 +157,16 @@ public:
     virtual ~ServerSocket() = default;
 
     /**
+     * @brief Returns the underlying socket used by this server.
+     *
+     * Access to the underlying socket is required to obtain the socket file descriptor with which
+     * wait for read or write events using select() or epoll() functions.
+     *
+     * @return Socket used by the server.
+     */
+    virtual std::shared_ptr<Socket> socket() = 0;
+
+    /**
      * @brief Accepts a connection request.
      *
      * @param address Address of the peer socket.
@@ -172,6 +182,16 @@ public:
      * @brief Class destructor
      */
     virtual ~ClientSocket() = default;
+
+    /**
+     * @brief Returns the underlying socket used by this client.
+     *
+     * Access to the underlying socket is required to obtain the socket file descriptor with which
+     * wait for read or write events using select() or epoll() functions.
+     *
+     * @return Socket used by the client.
+     */
+    virtual std::shared_ptr<Socket> socket() = 0;
 
     /**
      * @brief Connects the socket to the address specified.
