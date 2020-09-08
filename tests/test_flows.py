@@ -1412,6 +1412,87 @@ class TestFlows:
         vap1.disassociate(sta1)
         vap2.disassociate(sta2)
 
+    def test_simulate_v2_certification_4_7_10(self):
+
+        agent = env.agents[0]
+        sta1 = env.Station.create()
+        sta2 = env.Station.create()
+        sta3 = env.Station.create()
+        vap1 = agent.radios[0].vaps[0]
+        vap2 = agent.radios[1].vaps[0]
+        vap1.associate(sta1)
+        vap1.associate(sta3)
+        vap2.associate(sta2)
+
+        # Phase 1
+        # Phase 1 (step 1): reset controller
+        env.controller.cmd_reply("DEV_RESET_DEFAULT")
+        # wait
+        time.sleep(2)
+        '''
+        todo: add verification
+        '''
+        # Phase 1 (step 1): config controller
+        env.controller.cmd_reply(
+            "dev_set_config,bss_info1,"
+            "{} 8x Multi-AP-24G-1 0x0020 0x0008 maprocks1 0 1".format(agent.mac))
+        # wait
+        time.sleep(2)
+        '''
+        todo: add verification
+        '''
+        # Phase 1 (step 2): config agent
+        agent.cmd_reply("dev_reset_default")
+        time.sleep(2)
+        agent.cmd_reply("dev_set_config,backhaul,eth")
+        # wait
+        time.sleep(2)
+
+        # Phase 2 (step 3)
+        env.controller.dev_send_1905(agent.mac, 0x8001)
+        # wait
+        time.sleep(1)
+        # Phase 2 (step 4)
+        '''
+        Todo:
+        Verify that MAUT sends a correctly formatted AP Capability Report message within 1 sec of
+        receiving the AP Capability Query message sent by the Controller.
+        Verify that the AP Capability Report message contains one Metric Collection Interval TLV and
+        one R2 AP Capability TLV with the Byte Counter Units field set to 0x01.
+        '''
+
+        # Phase 3
+        # Phase 4
+        # Phase 5
+        # Phase 6
+
+        # Phase 7
+        # prepare tlvs
+        sta_mac_addr_tlv = tlv(0x95, 0x0006, '{}'.format(sta2.mac))
+        # send
+        mid = env.controller.dev_send_1905(agent.mac, 0x800D, sta_mac_addr_tlv)
+        # wait
+        time.sleep(5)
+        # check response
+        resp = self.check_cmdu_type_single("associated sta link metrics response", 0x800E,
+                                           agent.mac, env.controller.mac,
+                                           mid)
+        self.check_cmdu_has_tlvs(resp, 0xC8)
+        self.check_cmdu_has_tlvs(resp, 0x96)
+
+        # tear down the test: disassociated
+        vap1 = agent.radios[0].vaps[0]
+        vap2 = agent.radios[1].vaps[0]
+        vap1.disassociate(sta1)
+        vap1.disassociate(sta3)
+        vap2.disassociate(sta2)
+
+        # reset everything
+        env.controller.cmd_reply("DEV_RESET_DEFAULT")
+
+        # wait
+        time.sleep(2)
+
 
 if __name__ == '__main__':
     t = TestFlows()
