@@ -22,8 +22,6 @@
 
 #include <net/if.h> // if_nametoindex
 
-using namespace beerocks::net;
-
 namespace beerocks {
 namespace platform_manager {
 
@@ -285,7 +283,7 @@ static std::string get_sta_iface(const std::string &hostap_iface)
         return std::string();
     }
     auto sta_iface = std::string(sta_iface_str);
-    if (!network_utils::linux_iface_exists(sta_iface)) {
+    if (!beerocks::net::network_utils::linux_iface_exists(sta_iface)) {
         LOG(DEBUG) << "sta iface " << sta_iface << " does not exist, clearing it from config";
         return std::string();
     }
@@ -446,7 +444,7 @@ void main_thread::send_dhcp_notification(const std::string &op, const std::strin
         dhcp_notif->op() = beerocks_message::eDHCPOp_Old;
 
     dhcp_notif->mac()  = tlvf::mac_from_string(mac);
-    dhcp_notif->ipv4() = network_utils::ipv4_from_string(ip);
+    dhcp_notif->ipv4() = beerocks::net::network_utils::ipv4_from_string(ip);
     string_utils::copy_string(dhcp_notif->hostname(0), hostname.c_str(), message::NODE_NAME_LENGTH);
 
     // Get a slave socket
@@ -728,7 +726,8 @@ bool main_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
             auto pArpEntry = std::make_shared<SArpEntry>();
 
             // Only the IP address is initialized at this point
-            pArpEntry->ip = network_utils::uint_ipv4_from_array(&request->params().ipv4.oct);
+            pArpEntry->ip =
+                beerocks::net::network_utils::uint_ipv4_from_array(&request->params().ipv4.oct);
             pArpEntry->iface_index = -1;
             pArpEntry->last_seen   = std::chrono::steady_clock::now();
 
@@ -1060,14 +1059,14 @@ bool main_thread::handle_arp_monitor()
     }
 
     // Ignore IPs outside the monitored network, zeroed MACs or invalid state
-    if (((network_utils::uint_ipv4_from_array(entry.ip) & m_uiArpMonMask) !=
+    if (((beerocks::net::network_utils::uint_ipv4_from_array(entry.ip) & m_uiArpMonMask) !=
          (m_uiArpMonIP & m_uiArpMonMask)) ||
         (!memcmp(entry.mac, s_arrZeroMac, sizeof(entry.mac))) ||
         (!memcmp(entry.mac, s_arrBCastMac, sizeof(entry.mac))) ||
         (entry.state == beerocks::ARP_NUD_FAILED)) {
 
         // LOG(DEBUG) << "Ignoring ARP from: "
-        //            << network_utils::ipv4_to_string(entry.ip) << " ("
+        //            << beerocks::net::network_utils::ipv4_to_string(entry.ip) << " ("
         //            << entry.mac << ")"
         //            << ", state: " << int(entry.state)
         //            << ", type: " << int(entry.type);
@@ -1077,20 +1076,21 @@ bool main_thread::handle_arp_monitor()
 
     // Copy entry values
     std::copy_n(entry.mac, sizeof(sMacAddr::oct), arp_notif->params().mac.oct);
-    std::copy_n(entry.ip, sizeof(sIpv4Addr::oct), arp_notif->params().ipv4.oct);
+    std::copy_n(entry.ip, sizeof(beerocks::net::sIpv4Addr::oct), arp_notif->params().ipv4.oct);
     arp_notif->params().iface_idx = entry.iface_idx;
     arp_notif->params().state     = entry.state;
     arp_notif->params().source    = entry.source;
     arp_notif->params().type      = entry.type;
 
     // After processing the message, copy the ipv4 and mac as strings
-    std::string client_ipv4 = network_utils::ipv4_to_string(arp_notif->params().ipv4);
-    std::string client_mac  = tlvf::mac_to_string(arp_notif->params().mac);
+    std::string client_ipv4 =
+        beerocks::net::network_utils::ipv4_to_string(arp_notif->params().ipv4);
+    std::string client_mac = tlvf::mac_to_string(arp_notif->params().mac);
 
     Socket *sd       = nullptr;
     auto iIfaceIndex = arp_notif->params().iface_idx;
 
-    auto iface_name = network_utils::linux_get_iface_name(iIfaceIndex);
+    auto iface_name = beerocks::net::network_utils::linux_get_iface_name(iIfaceIndex);
 
     if (iface_name.empty()) {
         LOG(ERROR) << "Failed to find iface of iface_index" << int(iIfaceIndex);
@@ -1113,7 +1113,7 @@ bool main_thread::handle_arp_monitor()
     } else if (entry.type != ARP_TYPE_DELNEIGH) {
 
         std::string mac  = tlvf::mac_to_string(arp_notif->params().mac);
-        std::string ipv4 = network_utils::ipv4_to_string(arp_notif->params().ipv4);
+        std::string ipv4 = beerocks::net::network_utils::ipv4_to_string(arp_notif->params().ipv4);
         LOG(WARNING) << "Interface index " << int(iIfaceIndex) << " not found! mac=" << mac
                      << ", ipv4=" << ipv4;
         return (false);
@@ -1142,14 +1142,14 @@ bool main_thread::handle_arp_monitor()
                                           .count();
 
             // Check for IP/Inteface changes
-            if ((pArpEntry->second->ip !=
-                 network_utils::uint_ipv4_from_array(arp_notif->params().ipv4.oct)) ||
+            if ((pArpEntry->second->ip != beerocks::net::network_utils::uint_ipv4_from_array(
+                                              arp_notif->params().ipv4.oct)) ||
                 (pArpEntry->second->iface_index != int(arp_notif->params().iface_idx)) ||
                 (last_seen_duration >= ARP_NOTIF_INTERVAL)) {
 
                 // Update the entry
-                pArpEntry->second->ip =
-                    network_utils::uint_ipv4_from_array(arp_notif->params().ipv4.oct);
+                pArpEntry->second->ip = beerocks::net::network_utils::uint_ipv4_from_array(
+                    arp_notif->params().ipv4.oct);
                 pArpEntry->second->iface_index = arp_notif->params().iface_idx;
                 pArpEntry->second->last_seen   = now;
 
@@ -1235,15 +1235,16 @@ bool main_thread::handle_arp_raw()
             ? "BACK"
             : "FRONT";
 
-    LOG(DEBUG) << "Discovered IP: " << network_utils::ipv4_to_string(arp_resp->params().ipv4)
-               << " (" << arp_resp->params().mac << ") on '" << strIface << "' (" << strSource
-               << ")";
+    LOG(DEBUG) << "Discovered IP: "
+               << beerocks::net::network_utils::ipv4_to_string(arp_resp->params().ipv4) << " ("
+               << arp_resp->params().mac << ") on '" << strIface << "' (" << strSource << ")";
 
     // Update ARP entry parameters
     auto pArpEntry = m_mapArpEntries.find(arp_resp->params().mac);
 
     if (pArpEntry != m_mapArpEntries.end()) {
-        pArpEntry->second->ip = network_utils::uint_ipv4_from_array(arp_resp->params().ipv4.oct);
+        pArpEntry->second->ip =
+            beerocks::net::network_utils::uint_ipv4_from_array(arp_resp->params().ipv4.oct);
         pArpEntry->second->iface_index = arp_resp->params().iface_idx;
         pArpEntry->second->last_seen   = std::chrono::steady_clock::now();
     } else {
@@ -1343,8 +1344,8 @@ bool main_thread::init_arp_monitor()
         LOG(DEBUG) << "Starting ARP Monitor...";
 
         // Read IP/Netmask of the monitored interface
-        network_utils::raw_iface_info info;
-        if (!network_utils::get_raw_iface_info(config.bridge_iface, info)) {
+        beerocks::net::network_utils::raw_iface_info info;
+        if (!beerocks::net::network_utils::get_raw_iface_info(config.bridge_iface, info)) {
             LOG(ERROR) << "Failed reading '" + config.bridge_iface + "' information";
             return false;
         }
@@ -1376,8 +1377,8 @@ bool main_thread::init_arp_monitor()
         }
 
         LOG(DEBUG) << "ARP Monitor started on interface '" << config.bridge_iface << "' ("
-                   << network_utils::ipv4_to_string(m_uiArpMonIP) << "/"
-                   << network_utils::ipv4_to_string(m_uiArpMonMask) << ")";
+                   << beerocks::net::network_utils::ipv4_to_string(m_uiArpMonIP) << "/"
+                   << beerocks::net::network_utils::ipv4_to_string(m_uiArpMonMask) << ")";
 
         // Initialize the ARP entries cleanup timestamp
         m_tpArpEntriesCleanup = std::chrono::steady_clock::now();
