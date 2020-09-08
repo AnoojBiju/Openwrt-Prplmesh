@@ -66,7 +66,6 @@ services:
             - "$ROOT_DIR:$ROOT_DIR"
             - "/var/run/docker:/var/run/docker"
             - "/var/run/docker.sock:/var/run/docker.sock"
-        user: ${CURRENT_UID_GID}
         working_dir: $ROOT_DIR/tests
         entrypoint: ["bash", "-c", "echo 'wait for DUTs'; sleep 20; echo 'starting boardfarm'; ./run_bf_compose.sh"]
         depends_on:

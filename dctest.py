@@ -25,7 +25,6 @@
 from __future__ import print_function  # To check for python2 or < 3.5 execution
 import argparse
 import os
-import grp
 import getpass
 import sys
 import json
@@ -127,8 +126,6 @@ class Services:
         params += args
         local_env = os.environ
         local_env['ROOT_DIR'] = self.rootdir
-        docker_gid = grp.getgrnam('docker')[2]
-        local_env['CURRENT_UID_GID'] = str(os.getuid()) + ':' + str(docker_gid)
         local_env['RUN_ID'] = self.build_id
 
         if os.getenv('CI_PIPELINE_ID') is None:
