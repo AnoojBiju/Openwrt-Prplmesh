@@ -135,8 +135,15 @@ public:
         bool is_dfs = false;
 
         /**
+         * The DFS State defines if it is possible to switch to the channel, and if it is possible,
+         * then, with or without CAC.
+         * Obtained from NL80211_FREQUENCY_ATTR_DFS_STATE.
+         */
+        beerocks::eDfsState dfs_state;
+
+        /**
          * True if current state for DFS is NL80211_DFS_UNAVAILABLE.
-         * Obtained from NL80211_FREQUENCY_ATTR_DFS_STATE
+         * Obtained from NL80211_FREQUENCY_ATTR_DFS_STATE.
          */
         bool radar_affected = false;
 

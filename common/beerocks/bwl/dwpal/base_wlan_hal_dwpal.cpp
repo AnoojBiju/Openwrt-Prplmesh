@@ -785,6 +785,7 @@ bool base_wlan_hal_dwpal::refresh_radio_info()
                         channel.channel_bandwidth = bw;
                         channel.tx_pow            = channel_info.tx_power;
                         channel.is_dfs_channel    = channel_info.is_dfs;
+                        channel.dfs_state         = channel_info.dfs_state;
                         m_radio_info.supported_channels.push_back(channel);
                     }
                 }

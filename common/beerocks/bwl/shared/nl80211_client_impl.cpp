@@ -385,10 +385,26 @@ bool nl80211_client_impl::get_radio_info(const std::string &interface_name, radi
                         channel.no_ir = true;
                     }
 
-                    if (tb_freq[NL80211_FREQUENCY_ATTR_DFS_STATE] &&
-                        nla_get_u32(tb_freq[NL80211_FREQUENCY_ATTR_DFS_STATE]) ==
-                            NL80211_DFS_UNAVAILABLE) {
-                        channel.radar_affected = true;
+                    if (tb_freq[NL80211_FREQUENCY_ATTR_DFS_STATE]) {
+                        auto dfs_state = nla_get_u32(tb_freq[NL80211_FREQUENCY_ATTR_DFS_STATE]);
+                        channel.radar_affected =
+                            dfs_state == NL80211_DFS_UNAVAILABLE ? true : false;
+                        switch (dfs_state) {
+                        case NL80211_DFS_USABLE: {
+                            channel.dfs_state = beerocks::eDfsState::USABLE;
+                            break;
+                        }
+                        case NL80211_DFS_UNAVAILABLE: {
+                            channel.dfs_state = beerocks::eDfsState::UNAVAILABLE;
+                            break;
+                        }
+                        case NL80211_DFS_AVAILABLE: {
+                            channel.dfs_state = beerocks::eDfsState::AVAILABLE;
+                            break;
+                        }
+                        default:
+                            break;
+                        }
                     }
 
                     //Filter out chanels that are not DFS but still have the NO_IR flag

@@ -41,7 +41,9 @@ bool nl80211_client_dummy::get_radio_info(const std::string &interface_name, rad
             channel.number = ch;
             channel.supported_bandwidths.push_back(
                 beerocks::utils::convert_bandwidth_to_enum(20 + step * 20));
-            channel.is_dfs = (ch > 48);
+            channel.is_dfs    = (ch > 48);
+            channel.dfs_state = channel.is_dfs ? beerocks::eDfsState::AVAILABLE
+                                               : beerocks::eDfsState::DFS_STATE_MAX;
 
             band.supported_channels[channel.number] = channel;
         }
@@ -53,7 +55,8 @@ bool nl80211_client_dummy::get_radio_info(const std::string &interface_name, rad
             channel.number = ch;
             channel.supported_bandwidths.push_back(
                 beerocks::utils::convert_bandwidth_to_enum(20 + step * 20));
-            channel.is_dfs = true;
+            channel.is_dfs    = true;
+            channel.dfs_state = beerocks::eDfsState::AVAILABLE;
 
             band.supported_channels[channel.number] = channel;
         }
@@ -65,7 +68,8 @@ bool nl80211_client_dummy::get_radio_info(const std::string &interface_name, rad
             channel.number = ch;
             channel.supported_bandwidths.push_back(
                 beerocks::utils::convert_bandwidth_to_enum(20 + step * 20));
-            channel.is_dfs = false;
+            channel.is_dfs    = false;
+            channel.dfs_state = beerocks::eDfsState::AVAILABLE;
 
             band.supported_channels[channel.number] = channel;
         }
