@@ -215,6 +215,7 @@ public:
 
         bool sta_iface_filter_low;
         uint8_t number_of_antennas;
+        uint8_t antenna_gain_dB;
 
         bool ht_supported; ///< Is 802.11n (High Throughput) protocol supported
         uint16_t ht_capability;
