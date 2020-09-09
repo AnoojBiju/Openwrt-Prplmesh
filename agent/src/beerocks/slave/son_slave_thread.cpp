@@ -1549,8 +1549,9 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             return false;
         }
 
-        radio->front.iface_mac = hostap_params.iface_mac;
-        hostap_cs_params       = notification->cs_params();
+        radio->front.iface_mac = notification->params().iface_mac;
+
+        hostap_cs_params = notification->cs_params();
 
         auto tuple_preferred_channels = notification->preferred_channels(0);
         if (!std::get<0>(tuple_preferred_channels)) {
