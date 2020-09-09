@@ -1553,6 +1553,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         radio->number_of_antennas = notification->params().ant_num;
         radio->antenna_gain_dB    = notification->params().ant_gain;
         radio->tx_power_dB        = notification->params().tx_power;
+        radio->front.freq_type    = notification->params().frequency_band;
 
         radio->ht_supported  = notification->params().ht_supported;
         radio->ht_capability = notification->params().ht_capability;
@@ -3138,7 +3139,6 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
                                   config.backhaul_wireless_iface.c_str(),
                                   message::IFACE_NAME_LENGTH);
 
-        radio->front.freq_type        = hostap_params.frequency_band;
         radio->front.max_supported_bw = hostap_params.max_bandwidth;
 
         // Send the message
