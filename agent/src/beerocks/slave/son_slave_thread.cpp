@@ -1549,11 +1549,12 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             return false;
         }
 
-        radio->front.iface_mac    = notification->params().iface_mac;
-        radio->number_of_antennas = notification->params().ant_num;
-        radio->antenna_gain_dB    = notification->params().ant_gain;
-        radio->tx_power_dB        = notification->params().tx_power;
-        radio->front.freq_type    = notification->params().frequency_band;
+        radio->front.iface_mac        = notification->params().iface_mac;
+        radio->number_of_antennas     = notification->params().ant_num;
+        radio->antenna_gain_dB        = notification->params().ant_gain;
+        radio->tx_power_dB            = notification->params().tx_power;
+        radio->front.freq_type        = notification->params().frequency_band;
+        radio->front.max_supported_bw = notification->params().max_bandwidth;
 
         radio->ht_supported  = notification->params().ht_supported;
         radio->ht_capability = notification->params().ht_capability;
@@ -3138,8 +3139,6 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
         string_utils::copy_string(bh_enable->sta_iface(message::IFACE_NAME_LENGTH),
                                   config.backhaul_wireless_iface.c_str(),
                                   message::IFACE_NAME_LENGTH);
-
-        radio->front.max_supported_bw = hostap_params.max_bandwidth;
 
         // Send the message
         LOG(DEBUG) << "send ACTION_BACKHAUL_ENABLE for mac " << bh_enable->iface_mac();
