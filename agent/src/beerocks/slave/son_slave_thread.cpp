@@ -3377,7 +3377,28 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
                 notification->wlan_settings().channel =
                     db->device_conf.front_radio.config[config.hostap_iface].configured_channel;
                 // Hostap Params
-                notification->hostap()          = hostap_params;
+                string_utils::copy_string(notification->hostap().iface_name,
+                                          radio->front.iface_name.c_str(),
+                                          beerocks::message::IFACE_NAME_LENGTH);
+                notification->hostap().iface_mac = radio->front.iface_mac;
+                notification->hostap().iface_is_5ghz =
+                    wireless_utils::is_frequency_band_5ghz(radio->front.freq_type);
+                notification->hostap().ant_num        = radio->number_of_antennas;
+                notification->hostap().tx_power       = radio->tx_power_dB;
+                notification->hostap().frequency_band = radio->front.freq_type;
+                notification->hostap().max_bandwidth  = radio->front.max_supported_bw;
+                notification->hostap().ht_supported   = radio->ht_supported;
+                notification->hostap().ht_capability  = radio->ht_capability;
+                std::copy_n(radio->ht_mcs_set.begin(), beerocks::message::HT_MCS_SET_SIZE,
+                            notification->hostap().ht_mcs_set);
+                notification->hostap().vht_supported  = radio->vht_supported;
+                notification->hostap().vht_capability = radio->vht_capability;
+                std::copy_n(radio->vht_mcs_set.begin(), beerocks::message::VHT_MCS_SET_SIZE,
+                            notification->hostap().vht_mcs_set);
+                string_utils::copy_string(notification->hostap().driver_version,
+                                          radio->driver_version,
+                                          beerocks::message::WIFI_DRIVER_VER_LENGTH);
+
                 notification->hostap().ant_gain = config.hostap_ant_gain;
 
                 // Channel Selection Params
