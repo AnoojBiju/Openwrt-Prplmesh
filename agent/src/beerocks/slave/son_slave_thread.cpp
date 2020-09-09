@@ -1540,8 +1540,6 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         }
         auto db = AgentDB::get();
 
-        hostap_params = notification->params();
-
         m_fronthaul_iface = notification->params().iface_name;
         auto radio        = db->radio(m_fronthaul_iface);
         if (!radio) {
