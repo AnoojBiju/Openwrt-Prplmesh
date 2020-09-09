@@ -185,6 +185,24 @@ enum eWiFiBandwidth : uint8_t {
     BANDWIDTH_MAX,
 };
 
+/**
+ * enum eDfsState  DFS states for channels
+ *
+ * Channel states used by the DFS code.
+ *
+ * @USABLE: The channel can be used, but channel availability
+ *	check (CAC) must be performed before using it for AP or IBSS.
+ * @UNAVAILABLE: A radar has been detected on this channel, it
+ *	is therefore marked as not available.
+ * @AVAILABLE: The channel has been CAC checked and is available.
+ */
+enum eDfsState : uint8_t {
+    USABLE,
+    UNAVAILABLE,
+    AVAILABLE,
+    DFS_STATE_MAX,
+};
+
 enum eWiFiGuardInterval : uint8_t {
     LONG_GI  = 0,
     SHORT_GI = 1,
