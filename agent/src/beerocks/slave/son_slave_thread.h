@@ -173,7 +173,6 @@ private:
     //slave FSM //
     eSlaveState slave_state;
     std::chrono::steady_clock::time_point slave_state_timer;
-    bool hostap_params_available;
     int slave_resets_counter = 0;
 
     sSlaveBackhaulParams backhaul_params;
