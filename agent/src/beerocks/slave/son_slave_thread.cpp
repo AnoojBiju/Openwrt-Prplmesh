@@ -1566,6 +1566,9 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         std::copy_n(notification->params().vht_mcs_set, beerocks::message::VHT_MCS_SET_SIZE,
                     radio->vht_mcs_set.begin());
 
+        std::copy_n(notification->params().driver_version,
+                    beerocks::message::WIFI_DRIVER_VER_LENGTH, radio->driver_version);
+
         hostap_cs_params = notification->cs_params();
 
         auto tuple_preferred_channels = notification->preferred_channels(0);
