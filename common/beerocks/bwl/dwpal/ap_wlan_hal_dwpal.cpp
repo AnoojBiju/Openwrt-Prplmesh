@@ -53,6 +53,7 @@ struct DWPAL_acs_report_get {
     int BW;
     int DFS;
     int bss;
+    int rank;
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1524,7 +1525,7 @@ bool ap_wlan_hal_dwpal::read_acs_report()
     // Initialize default values
     m_radio_info.is_5ghz = false;
 
-    size_t numOfValidArgs[4] = {0};
+    size_t numOfValidArgs[5] = {0};
     std::vector<DWPAL_acs_report_get> acs_report(MAX_SUPPORTED_CHANNELS);
 
     FieldsToParse fieldsToParse[] = {
@@ -1532,6 +1533,7 @@ bool ap_wlan_hal_dwpal::read_acs_report()
         {(void *)&acs_report[0].Ch, &numOfValidArgs[1], DWPAL_INT_PARAM, "Ch=", 0},
         {(void *)&acs_report[0].DFS, &numOfValidArgs[2], DWPAL_INT_PARAM, "DFS=", 0},
         {(void *)&acs_report[0].bss, &numOfValidArgs[3], DWPAL_INT_PARAM, "bss=", 0},
+        {(void *)&acs_report[0].rank, &numOfValidArgs[4], DWPAL_INT_PARAM, "rank=", 0},
         /* Must be at the end */
         {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
 
@@ -1555,23 +1557,23 @@ bool ap_wlan_hal_dwpal::read_acs_report()
     LOG(DEBUG) << "Parsed ACS report:";
     for (uint16_t i = 0; (i < numOfValidArgs[0]) && (i < MAX_SUPPORTED_CHANNELS); i++) {
         LOG(DEBUG) << "Ch=" << (int)acs_report[i].Ch << " BW=" << (int)acs_report[i].BW
-                   << " DFS=" << acs_report[i].DFS << " bss=" << acs_report[i].bss;
+                   << " DFS=" << acs_report[i].DFS << " bss=" << acs_report[i].bss
+                   << " rank=" << acs_report[i].rank;
 
         beerocks::message::sWifiChannel preferred_channel;
-        if (acs_report[i].BW == 20) {
-            preferred_channel.channel_bandwidth =
-                beerocks::utils::convert_bandwidth_to_enum(acs_report[i].BW);
-            preferred_channel.channel = acs_report[i].Ch;
-            // Check if channel is 5GHz
-            if (son::wireless_utils::which_freq(preferred_channel.channel) ==
-                beerocks::eFreqType::FREQ_5G) {
-                m_radio_info.is_5ghz = true;
-            }
-            preferred_channel.bss_overlap    = acs_report[i].bss;
-            preferred_channel.is_dfs_channel = acs_report[i].DFS;
+        preferred_channel.channel_bandwidth =
+            beerocks::utils::convert_bandwidth_to_enum(acs_report[i].BW);
+        preferred_channel.channel        = acs_report[i].Ch;
+        preferred_channel.bss_overlap    = acs_report[i].bss;
+        preferred_channel.is_dfs_channel = acs_report[i].DFS;
+        preferred_channel.rank           = acs_report[i].rank;
+        m_radio_info.preferred_channels.push_back(preferred_channel);
+    }
 
-            m_radio_info.preferred_channels.push_back(preferred_channel);
-        }
+    // Check if channel is 5GHz
+    if (son::wireless_utils::which_freq(m_radio_info.preferred_channels.front().channel) ==
+        beerocks::eFreqType::FREQ_5G) {
+        m_radio_info.is_5ghz = true;
     }
 
     return true;

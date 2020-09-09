@@ -45,7 +45,9 @@ get_radio_channels_string(const std::vector<beerocks::message::sWifiChannel> &ch
                << int(beerocks::utils::convert_bandwidth_to_int(
                       beerocks::eWiFiBandwidth(val.channel_bandwidth)))
                << " | tx_pow = " << int(val.is_dfs_channel) << " | noise = " << int(val.noise)
-               << " [dbm] | bss_overlap = " << int(val.bss_overlap) << std::endl;
+               << " [dbm]"
+               << " | bss_overlap = " << int(val.bss_overlap) << " | rank = " << val.rank
+               << std::endl;
         }
     }
 
