@@ -730,8 +730,17 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
         break;
     }
     case beerocks_message::ACTION_APMANAGER_CHANNELS_LIST_REQUEST: {
+
+        // Read preferred Channels (From ACS Report)
         if (!ap_wlan_hal->read_acs_report()) {
             LOG(ERROR) << "Failed to read acs report";
+            return false;
+        }
+
+        // Read supported_channels (From Netlink HW Features)
+        // Refreshing the radio info updates the supported_channels list
+        if (!ap_wlan_hal->refresh_radio_info()) {
+            LOG(ERROR) << "Failed to refresh_radio_info";
             return false;
         }
 
@@ -742,6 +751,8 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
             LOG(ERROR) << "Failed building message!";
             return false;
         }
+
+        // Copy preferred_channels
         if (!response->alloc_preferred_channels(
                 ap_wlan_hal->get_radio_info().preferred_channels.size())) {
             LOG(ERROR) << "Failed to allocate preferred_channels ["
@@ -751,6 +762,16 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
         auto tuple_preferred_channels = response->preferred_channels(0);
         std::copy_n(ap_wlan_hal->get_radio_info().preferred_channels.begin(),
                     response->preferred_channels_size(), &std::get<1>(tuple_preferred_channels));
+
+        // Copy supported channels
+        if (!response->alloc_supported_channels(
+                ap_wlan_hal->get_radio_info().supported_channels.size())) {
+            LOG(ERROR) << "Failed to allocate supported_channels!";
+            return false;
+        }
+        auto tuple_supported_channels = response->supported_channels(0);
+        std::copy_n(ap_wlan_hal->get_radio_info().supported_channels.begin(),
+                    response->supported_channels_size(), &std::get<1>(tuple_supported_channels));
 
         message_com::send_cmdu(slave_socket, cmdu_tx);
         break;
