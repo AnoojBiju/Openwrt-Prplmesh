@@ -286,11 +286,15 @@ boardfarm-tests:
 .build-for-rdkb:
   stage: build
   script:
+    # LOCAL_RUNNER_CACHE_DIR is an environment variable that can be set by a GitLab runner
+    # to specify a custom persistent folder for caching files between builds. If not defined,
+    # the home folder of the current user is used.
+    - export RDK_CACHE_DIR=${LOCAL_RUNNER_CACHE_DIR:-~}/rdk
     - mkdir -p "build/$TARGET_DEVICE"
-    - mkdir -p "build/cache/rdk"
+    - mkdir -p "$RDK_CACHE_DIR"
     # Clean up the cache directory from anything that hasn't been accessed for a week.
-    - find build/cache/rdk -type f -atime +7 -delete
-    - tools/docker/builder/rdk-b/build.sh --verbose --target-device "$TARGET_DEVICE" --tag "$CI_PIPELINE_ID" --cache "$PWD/build/cache/rdk"
+    - find "$RDK_CACHE_DIR" -type f -atime +7 -delete
+    - tools/docker/builder/rdk-b/build.sh --verbose --target-device "$TARGET_DEVICE" --tag "$CI_PIPELINE_ID" --cache "$RDK_CACHE_DIR"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
     - if: '$CI_MERGE_REQUEST_LABELS =~ "ready for merge"'
