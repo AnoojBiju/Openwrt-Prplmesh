@@ -1549,7 +1549,8 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             return false;
         }
 
-        radio->front.iface_mac = notification->params().iface_mac;
+        radio->front.iface_mac    = notification->params().iface_mac;
+        radio->number_of_antennas = notification->params().ant_num;
 
         radio->ht_supported  = notification->params().ht_supported;
         radio->ht_capability = notification->params().ht_capability;
