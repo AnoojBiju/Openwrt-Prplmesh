@@ -101,6 +101,8 @@ typedef struct sWifiChannel {
     uint8_t channel_bandwidth = 0;
     uint8_t is_dfs_channel    = 0;
     uint8_t radar_affected    = 0;
+    int32_t rank              = -1;
+    eDfsState dfs_state       = DFS_STATE_MAX;
     sWifiChannel(){};
     void struct_swap() {}
     void struct_init()
@@ -112,6 +114,8 @@ typedef struct sWifiChannel {
         channel_bandwidth = 0;
         is_dfs_channel    = 0;
         radar_affected    = 0;
+        rank              = -1;
+        dfs_state         = DFS_STATE_MAX;
     }
 } __attribute__((packed)) sWifiChannel;
 
