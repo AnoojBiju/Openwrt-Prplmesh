@@ -30,7 +30,6 @@ import sys
 import json
 from subprocess import Popen, PIPE
 
-
 if not (sys.version_info.major == 3 and sys.version_info.minor >= 5):
     print("This script requires Python 3.5 or higher!")
     print("You are using Python {}.{}.".format(sys.version_info.major, sys.version_info.minor))
@@ -68,6 +67,7 @@ class Services:
         self.scriptdir = os.path.dirname(os.path.realpath(__file__))
         os.chdir(self.scriptdir)
         self.rootdir = self.scriptdir
+        self.local_run = False
 
         if bid is not None:
             self.build_id = bid
@@ -128,8 +128,10 @@ class Services:
         local_env['ROOT_DIR'] = self.rootdir
         local_env['RUN_ID'] = self.build_id
 
-        if os.getenv('CI_PIPELINE_ID') is None:
+        # we have to check with self.local_run because CI_PIPELINE_ID is None only the first time.
+        if os.getenv('CI_PIPELINE_ID') is None or self.local_run:
             # Running locally
+            self.local_run = True
             local_env['CI_PIPELINE_ID'] = 'latest'
             local_env['FINAL_ROOT_DIR'] = self.rootdir
         else:
