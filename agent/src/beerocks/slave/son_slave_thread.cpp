@@ -2115,13 +2115,12 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         send_cmdu_to_controller(cmdu_tx);
         break;
     }
-    case beerocks_message::ACTION_APMANAGER_READ_ACS_REPORT_RESPONSE: {
-        LOG(TRACE) << "received ACTION_APMANAGER_READ_ACS_REPORT_RESPONSE";
+    case beerocks_message::ACTION_APMANAGER_CHANNELS_LIST_RESPONSE: {
+        LOG(TRACE) << "received ACTION_APMANAGER_CHANNELS_LIST_RESPONSE";
         auto response =
-            beerocks_header
-                ->addClass<beerocks_message::cACTION_APMANAGER_READ_ACS_REPORT_RESPONSE>();
+            beerocks_header->addClass<beerocks_message::cACTION_APMANAGER_CHANNELS_LIST_RESPONSE>();
         if (!response) {
-            LOG(ERROR) << "addClass cACTION_APMANAGER_READ_ACS_REPORT_RESPONSE failed";
+            LOG(ERROR) << "addClass cACTION_APMANAGER_CHANNELS_LIST_RESPONSE failed";
             return false;
         }
 
@@ -4353,11 +4352,11 @@ bool slave_thread::handle_channel_preference_query(Socket *sd, ieee1905_1::CmduM
     LOG(DEBUG) << "Received CHANNEL_PREFERENCE_QUERY_MESSAGE, mid=" << std::dec << int(mid);
 
     auto request_out =
-        message_com::create_vs_message<beerocks_message::cACTION_APMANAGER_READ_ACS_REPORT_REQUEST>(
+        message_com::create_vs_message<beerocks_message::cACTION_APMANAGER_CHANNELS_LIST_REQUEST>(
             cmdu_tx, mid);
 
     if (!request_out) {
-        LOG(ERROR) << "Failed building message ACTION_APMANAGER_READ_ACS_REPORT_REQUEST!";
+        LOG(ERROR) << "Failed building message ACTION_APMANAGER_CHANNELS_LIST_REQUEST!";
         return false;
     }
     return message_com::send_cmdu(ap_manager_socket, cmdu_tx);

@@ -727,15 +727,15 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
 
         break;
     }
-    case beerocks_message::ACTION_APMANAGER_READ_ACS_REPORT_REQUEST: {
+    case beerocks_message::ACTION_APMANAGER_CHANNELS_LIST_REQUEST: {
         if (!ap_wlan_hal->read_acs_report()) {
             LOG(ERROR) << "Failed to read acs report";
             return false;
         }
 
         auto response = message_com::create_vs_message<
-            beerocks_message::cACTION_APMANAGER_READ_ACS_REPORT_RESPONSE>(cmdu_tx,
-                                                                          beerocks_header->id());
+            beerocks_message::cACTION_APMANAGER_CHANNELS_LIST_RESPONSE>(cmdu_tx,
+                                                                        beerocks_header->id());
         if (!response) {
             LOG(ERROR) << "Failed building message!";
             return false;

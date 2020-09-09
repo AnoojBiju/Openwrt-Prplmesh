@@ -1025,15 +1025,15 @@ class cACTION_APMANAGER_HEARTBEAT_NOTIFICATION : public BaseClass
         eActionOp_APMANAGER* m_action_op = nullptr;
 };
 
-class cACTION_APMANAGER_READ_ACS_REPORT_REQUEST : public BaseClass
+class cACTION_APMANAGER_CHANNELS_LIST_REQUEST : public BaseClass
 {
     public:
-        cACTION_APMANAGER_READ_ACS_REPORT_REQUEST(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cACTION_APMANAGER_READ_ACS_REPORT_REQUEST(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cACTION_APMANAGER_READ_ACS_REPORT_REQUEST();
+        cACTION_APMANAGER_CHANNELS_LIST_REQUEST(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_APMANAGER_CHANNELS_LIST_REQUEST(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_APMANAGER_CHANNELS_LIST_REQUEST();
 
         static eActionOp_APMANAGER get_action_op(){
-            return (eActionOp_APMANAGER)(ACTION_APMANAGER_READ_ACS_REPORT_REQUEST);
+            return (eActionOp_APMANAGER)(ACTION_APMANAGER_CHANNELS_LIST_REQUEST);
         }
         void class_swap() override;
         bool finalize() override;
@@ -1044,19 +1044,22 @@ class cACTION_APMANAGER_READ_ACS_REPORT_REQUEST : public BaseClass
         eActionOp_APMANAGER* m_action_op = nullptr;
 };
 
-class cACTION_APMANAGER_READ_ACS_REPORT_RESPONSE : public BaseClass
+class cACTION_APMANAGER_CHANNELS_LIST_RESPONSE : public BaseClass
 {
     public:
-        cACTION_APMANAGER_READ_ACS_REPORT_RESPONSE(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cACTION_APMANAGER_READ_ACS_REPORT_RESPONSE(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cACTION_APMANAGER_READ_ACS_REPORT_RESPONSE();
+        cACTION_APMANAGER_CHANNELS_LIST_RESPONSE(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_APMANAGER_CHANNELS_LIST_RESPONSE(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_APMANAGER_CHANNELS_LIST_RESPONSE();
 
         static eActionOp_APMANAGER get_action_op(){
-            return (eActionOp_APMANAGER)(ACTION_APMANAGER_READ_ACS_REPORT_RESPONSE);
+            return (eActionOp_APMANAGER)(ACTION_APMANAGER_CHANNELS_LIST_RESPONSE);
         }
         uint8_t& preferred_channels_size();
         std::tuple<bool, beerocks::message::sWifiChannel&> preferred_channels(size_t idx);
         bool alloc_preferred_channels(size_t count = 1);
+        uint8_t& supported_channels_size();
+        std::tuple<bool, beerocks::message::sWifiChannel&> supported_channels(size_t idx);
+        bool alloc_supported_channels(size_t count = 1);
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -1068,6 +1071,9 @@ class cACTION_APMANAGER_READ_ACS_REPORT_RESPONSE : public BaseClass
         beerocks::message::sWifiChannel* m_preferred_channels = nullptr;
         size_t m_preferred_channels_idx__ = 0;
         int m_lock_order_counter__ = 0;
+        uint8_t* m_supported_channels_size = nullptr;
+        beerocks::message::sWifiChannel* m_supported_channels = nullptr;
+        size_t m_supported_channels_idx__ = 0;
 };
 
 }; // close namespace: beerocks_message

@@ -235,10 +235,10 @@ cACTION_APMANAGER_START_WPS_PBC_REQUEST:
 cACTION_APMANAGER_HEARTBEAT_NOTIFICATION:
   _type: class
 
-cACTION_APMANAGER_READ_ACS_REPORT_REQUEST:
+cACTION_APMANAGER_CHANNELS_LIST_REQUEST:
   _type: class
 
-cACTION_APMANAGER_READ_ACS_REPORT_RESPONSE:
+cACTION_APMANAGER_CHANNELS_LIST_RESPONSE:
   _type: class
   preferred_channels_size:
     _type: uint8_t
@@ -246,3 +246,9 @@ cACTION_APMANAGER_READ_ACS_REPORT_RESPONSE:
   preferred_channels:
     _type: beerocks::message::sWifiChannel
     _length: [preferred_channels_size]
+  supported_channels_size:
+    _type: uint8_t
+    _length_var: True
+  supported_channels:
+    _type: beerocks::message::sWifiChannel
+    _length: [supported_channels_size]
