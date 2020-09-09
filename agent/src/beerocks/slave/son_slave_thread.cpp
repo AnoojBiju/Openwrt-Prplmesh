@@ -4793,7 +4793,12 @@ bool slave_thread::autoconfig_wsc_add_m1()
     tlv->alloc_payload(payload_length);
 
     WSC::m1::config cfg;
-    auto db = AgentDB::get();
+    auto db    = AgentDB::get();
+    auto radio = db->radio(m_fronthaul_iface);
+    if (!radio) {
+        LOG(ERROR) << "Cannot find radio for " << m_fronthaul_iface;
+        return false;
+    }
 
     cfg.msg_type = WSC::eWscMessageType::WSC_MSG_TYPE_M1;
     cfg.mac      = db->bridge.mac;
@@ -4809,7 +4814,7 @@ bool slave_thread::autoconfig_wsc_add_m1()
     cfg.serial_number       = "prpl12345";
     cfg.primary_dev_type_id = WSC::WSC_DEV_NETWORK_INFRA_AP;
     cfg.device_name         = "prplmesh-agent";
-    cfg.bands       = hostap_params.iface_is_5ghz ? WSC::WSC_RF_BAND_5GHZ : WSC::WSC_RF_BAND_2GHZ;
+    cfg.bands       = wireless_utils::is_frequency_band_5ghz(radio->front.freq_type) ? WSC::WSC_RF_BAND_5GHZ : WSC::WSC_RF_BAND_2GHZ;
     auto attributes = WSC::m1::create(*tlv, cfg);
     if (!attributes)
         return false;
