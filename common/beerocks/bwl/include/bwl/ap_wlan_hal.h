@@ -14,7 +14,7 @@
 
 namespace bwl {
 
-/*!
+/**
  * Hardware abstraction layer for WLAN Access Point.
  * Read more about virtual inheritance: https://en.wikipedia.org/wiki/Virtual_inheritance
  */
@@ -22,14 +22,14 @@ class ap_wlan_hal : public virtual base_wlan_hal {
 
     // Public definitions
 public:
-    /*!
+    /**
      * Supported 4 address (WDS) modes
      */
     enum class WDSMode {
-        Disabled = 0, /*!< 4 address mode not supported */
-        Static   = 1, /*!< Single MAC */
-        Dynamic  = 2, /*!< Automatic learning */
-        List     = 3  /*!< Manually managed list of MACs */
+        Disabled = 0, /* < 4 address mode not supported */
+        Static   = 1, /* < Single MAC */
+        Dynamic  = 2, /* < Automatic learning */
+        List     = 3  /* < Manually managed list of MACs */
     };
 
     enum class Event {
@@ -67,22 +67,22 @@ public:
 public:
     virtual ~ap_wlan_hal() = default;
 
-    /*!
-     * Enable the radio interface
+    /**
+     * @brief Enable the radio interface
      *
      * @return true on success or false on error.
      */
     virtual bool enable() = 0;
 
-    /*!
-     * Disable the radio interface
+    /**
+     * @brief Disable the radio interface
      *
      * @return true on success or false on error.
      */
     virtual bool disable() = 0;
 
-    /*!
-     * Set start_disabled flag
+    /**
+     * @brief Set start_disabled flag
      * 
      * @param [in] enable The start_disabled flag
      * @param [in] vap_id vap_id to set
@@ -91,8 +91,8 @@ public:
      */
     virtual bool set_start_disabled(bool enable, int vap_id = beerocks::IFACE_RADIO_ID) = 0;
 
-    /*!
-     * Set the AP channel
+    /**
+     * @brief Set the AP channel
      * 
      * @param [in] chan The channel to switch to.
      * @param [in] bw The bandwidth (in Mhz) of the target channel.
@@ -102,8 +102,8 @@ public:
      */
     virtual bool set_channel(int chan, int bw, int center_channel) = 0;
 
-    /*!
-     * Allow the station with the given MAC address to connect.
+    /**
+     * @brief Allow the station with the given MAC address to connect.
      *
      * @param [in] mac The MAC address of the station.
      * @param [in] bssid The BSSID to which the operation is applicable.
@@ -112,8 +112,8 @@ public:
      */
     virtual bool sta_allow(const std::string &mac, const std::string &bssid) = 0;
 
-    /*!
-     * Deny the station with the given MAC address from connecting to the AP.
+    /**
+     * @brief Deny the station with the given MAC address from connecting to the AP.
      *
      * @param [in] mac The MAC address of the station.        
      * @param [in] bssid The BSSID to which the operation is applicable.
@@ -122,8 +122,8 @@ public:
      */
     virtual bool sta_deny(const std::string &mac, const std::string &bssid) = 0;
 
-    /*!
-     * Disassociate the station with the given MAC address.
+    /**
+     * @brief Disassociate the station with the given MAC address.
      *
      * @param [in] vap_id
      * @param [in] mac The MAC address of the station.
@@ -133,19 +133,19 @@ public:
      */
     virtual bool sta_disassoc(int8_t vap_id, const std::string &mac, uint32_t reason = 0) = 0;
 
-    /*!
-     * Deautanticate the station with the given MAC address.
+    /**
+     * @brief Deauthenticate the station with the given MAC address.
      *
      * @param [in] vap_id
      * @param [in] mac The MAC address of the station.
-     * @param [in] reason The reason for the deathentication
+     * @param [in] reason The reason for the deauthenticate
      *
      * @return true on success or false on error.
      */
     virtual bool sta_deauth(int8_t vap_id, const std::string &mac, uint32_t reason = 0) = 0;
 
-    /*!
-     * Send a 802.11v steer request (BSS Transition) to a connected station.
+    /**
+     * @brief Send a 802.11v steer request (BSS Transition) to a connected station.
      *
      * @param [in] mac The MAC address of the station.
      * @param [in] bssid The MAC address of the target AP.
@@ -162,8 +162,8 @@ public:
     virtual bool sta_bss_steer(const std::string &mac, const std::string &bssid, int oper_class,
                                int chan, int disassoc_timer_btt, int valid_int_btt) = 0;
 
-    /*!
-     * Update wifi credentials.
+    /**
+     * @brief Update wifi credentials.
      *
      * @param [in] bss_info_conf_list List of wifi credentials.
      * @param [in] backhaul_wps_ssid backhaul ssid used for wps onboarding
@@ -176,10 +176,10 @@ public:
                            const std::string &backhaul_wps_ssid,
                            const std::string &backhaul_wps_passphrase) = 0;
 
-    /*!
+    /**
      * TODO: Move to the base class?
      * 
-     * Measure the RSSI of an unassociated station.
+     * @brief Measure the RSSI of an unassociated station.
      * The result of the measurement should be sent as an internal event.
      * 
      * @param [in] mac The MAC address of the station.
@@ -195,8 +195,8 @@ public:
                                               int vht_center_frequency, int delay,
                                               int window_size) = 0;
 
-    /*!
-     * Add a station to softblock list
+    /**
+     * @brief Add a station to softblock list
      * 
      * @param [in] vap_name The of the vap
      * @param [in] client_mac The MAC address of the station.
@@ -215,8 +215,8 @@ public:
                                    uint8_t authetication_snr_threshold_lo) = 0;
 
     // TODO: To be removed?  since hostapd doesn't support removeing STA from softblock list.
-    /*!
-     * Remove a station from softblock list
+    /**
+     * @brief Remove a station from softblock list
      * 
      * @param [in] vap_name The of the vap
      * @param [in] client_mac The MAC address of the station.
@@ -225,8 +225,8 @@ public:
      */
     virtual bool sta_softblock_remove(const std::string &vap_name,
                                       const std::string &client_mac) = 0;
-    /*!
-     * Switch the AP to the given channel.
+    /**
+     * @brief Switch the AP to the given channel.
      *
      * @param [in] chan The channel to switch to.
      * @param [in] bw The bandwidth (in Mhz) of the target channel.
@@ -236,8 +236,8 @@ public:
      */
     virtual bool switch_channel(int chan, int bw, int vht_center_frequency) = 0;
 
-    /*!
-     * Update the Radio antenna configuration.
+    /**
+     * @brief Update the Radio antenna configuration.
      * 
      * @param [in] mode Radio antenna configuration.
      *
@@ -245,8 +245,8 @@ public:
      */
     virtual bool set_antenna_mode(AntMode mode) = 0;
 
-    /*!
-     * Set the WDS (4 address) mode for the Radio.
+    /**
+     * @brief Set the WDS (4 address) mode for the Radio.
      * 
      * @param [in] mode WDS mode.
      *
@@ -254,8 +254,8 @@ public:
      */
     virtual bool wds_set_mode(WDSMode mode) = 0;
 
-    /*!
-     * Add a STA to the WDS list.
+    /**
+     * @brief Add a STA to the WDS list.
      * 
      * @param [in] mac The MAC address of the STA.
      *
@@ -263,8 +263,8 @@ public:
      */
     virtual bool wds_add_sta(const std::string &mac) = 0;
 
-    /*!
-     * Delete a STA from the WDS list.
+    /**
+     * @brief Delete a STA from the WDS list.
      * 
      * @param [in] mac The MAC address of the STA.
      *
@@ -272,15 +272,15 @@ public:
      */
     virtual bool wds_del_sta(const std::string &mac) = 0;
 
-    /*!
-     * Clear the WDS list.
+    /**
+     * @brief Clear the WDS list.
      * 
      * @return true on success or false on error.
      */
     virtual bool wds_clear_list() = 0;
 
-    /*!
-     * Set failsafe channel.
+    /**
+     * @brief Set failsafe channel.
      * 
      * @param [in] chan Channel number.
      * @param [in] bw Channel bandwidth.
@@ -290,8 +290,8 @@ public:
      */
     virtual bool failsafe_channel_set(int chan, int bw, int vht_center_frequency) = 0;
 
-    /*!
-     * Get the failsafe channel.
+    /**
+     * @brief Get the failsafe channel.
      * 
      * @param [out] chan Channel number.
      * @param [out] bw Channel bandwidth.
@@ -300,26 +300,26 @@ public:
      */
     virtual bool failsafe_channel_get(int &chan, int &bw) = 0;
 
-    /*!
-     * Check if radio supports zwdfs hw
+    /**
+     * @brief Check if radio hardware supports zwdfs.
      * 
-     * @return true on supported or false on not supported.
+     * @return true when supported, otherwise false.
      */
     virtual bool is_zwdfs_supported() = 0;
 
-    /*!
-     * This function turns off/on zwdfs antenna
+    /**
+     * @brief Switch zwdfs antenna off/on
      * 
-     * @param enable true to turn on false to turn off
+     * @param enable true to switch on, false to switch off.
      * 
      * @return true on success or false on error.
      */
     virtual bool set_zwdfs_antenna(bool enable) = 0;
 
-    /*!
-     * Check if zwdfs antenna is enabled
+    /**
+     * @brief Check if zwdfs antenna is enabled on the radio.
      * 
-     * @return true antenna is on false antenna is off
+     * @return true when antenna is enabled, otherwise false.
      */
     virtual bool is_zwdfs_antenna_enabled() = 0;
 
@@ -329,8 +329,8 @@ public:
     //virtual bool restricted_channels_set(...);
     //virtual bool restricted_channels_get(...);
 
-    /*!
-     * Read the ACS (Automatic Channel Selection) report from the hardware.
+    /**
+     * @brief Read the ACS (Automatic Channel Selection) report from the hardware.
      * On successful completion the infromation can be retrieved 
      * using the get_acs_report() method.
      *
@@ -338,16 +338,16 @@ public:
      */
     virtual bool read_acs_report() = 0;
 
-    /*!
-     * Read the supported channls from the hardware
-     * On successful completion the information can be retrieved 
+    /**
+     * @brief Read the supported channls from the hardware.
+     * On successful completion the information can be retrieved.
      *
      * @return true on success or false on error.
      */
     virtual bool read_preferred_channels() = 0;
 
-    /*!
-     * Set Transmit Power Limit 
+    /**
+     * @brief Set Transmit Power Limit 
      *
      * @param [in] tx_pow_limit Transmit Power Limit in dBm.
      *
@@ -355,28 +355,28 @@ public:
      */
     virtual bool set_tx_power_limit(int tx_pow_limit) = 0;
 
-    /*!
-     * Returns a string representation of the WLAN driver version.
+    /**
+     * @brief Returns a string representation of the WLAN driver version.
      */
     virtual std::string get_radio_driver_version() = 0;
 
-    /*!
-     * Set/Get enable vap beacon transmittion.
+    /**
+     * @brief Set/Get enable vap beacon transmittion.
      * 
      * @return true on success or false on error.
      */
     virtual bool set_vap_enable(const std::string &iface_name, const bool enable) = 0;
     virtual bool get_vap_enable(const std::string &iface_name, bool &enable)      = 0;
 
-    /*!
-     * Generate "AP-STA-CONNECTED" events on connected clients on AP
+    /**
+     * @brief Generate "AP-STA-CONNECTED" events on connected clients on AP
      * 
      * @return true on success or false on error.
      */
     virtual bool generate_connected_clients_events() = 0;
 
-    /*!
-     * Start WPS PBC procedure on a given VAP 
+    /**
+     * @brief Start WPS PBC procedure on a given VAP 
      *
      * @param iface_name VAP interface on which to start WPS PBC
      *
