@@ -51,7 +51,6 @@ private:
     void add_slave_socket(Socket *sd, const std::string &iface_name);
     void del_slave_socket(Socket *sd);
     bool send_cmdu_safe(Socket *sd, ieee1905_1::CmduMessageTx &cmdu_tx);
-    std::string get_hostap_iface_name_from_slave_socket(Socket *sd);
     Socket *get_slave_socket_from_hostap_iface_name(const std::string &iface);
 
     Socket *get_backhaul_socket();
