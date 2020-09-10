@@ -79,6 +79,10 @@ class Services:
         self.logdir = os.path.join(self.scriptdir, 'logs')
         if not os.path.exists(self.logdir):
             os.makedirs(self.logdir)
+        # dumpcap needs dir to be writable by anyone since it drops root capabilities
+        # (specifically CAP_FOWNER) after opening the network if and cannot write the dump.
+        os.chmod(self.logdir, 0o777)
+
         for device in self._get_device_names():
             device_name = '{}-{}'.format(device, self.build_id)
             devicedir = os.path.join(self.logdir, device_name)
