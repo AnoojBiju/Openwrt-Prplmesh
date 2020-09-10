@@ -1,0 +1,48 @@
+%define {
+
+    /*
+        Define controller data model.
+    */
+    object controller {
+
+        /*
+            Network object describes WiFi network
+            and all connected devices.
+        */
+        %persistent %read-only object Network {
+
+            /*
+                Define string variable.
+                ID is the unique identifier for WiFi network.
+            */
+            %read-only %persistent string ID = "0";
+
+            /*
+                Define date variable in format YYYY-MM-DDThh:mm:ssZ.
+                Time when Network element was collected.
+            */
+            %read-only %persistent datetime TimeStamp = "2020-08-31T11:22:39Z";
+
+            /*
+                Unique identifier for MultiAP Controller.
+            */
+            %read-only %persistent string ControllerID = "0";
+
+
+            /*
+                Network devices list.
+            */
+            %persistent %read-only object Device[] {
+
+                /*
+                   NumberOfDevices variable calculated by
+                   nubmer of entries in Device list.
+                   It is a number of onboarded Multi-AP Agents.
+                */
+                counted with NumberOfDevices;
+
+                %persistent bool Retain = false;
+            }
+        }
+    }
+}
