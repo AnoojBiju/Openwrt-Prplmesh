@@ -1403,8 +1403,9 @@ bool ap_wlan_hal_dwpal::failsafe_channel_get(int &chan, int &bw)
 
 bool ap_wlan_hal_dwpal::is_zwdfs_supported()
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
-    return false;
+    // This is a temporary w/a until NL80211_ATTR_WIPHY_DFS_ANTENNA is implemented.
+    // For now we can identify zwdfs interface by making sure it has no vaps.
+    return (m_radio_info.available_vaps.size() == 0);
 }
 
 bool ap_wlan_hal_dwpal::set_zwdfs_antenna(bool enable)
