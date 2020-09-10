@@ -235,6 +235,14 @@ private:
     bool handle_client_steering_request(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_beacon_metrics_query(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_ack_message(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief save channel switch parameters in the agent DB
+     *
+     * Save majority of sApChannelSwitch parameters in the agent DB.
+     * Discard `switch_reason` and `is_dfs_channel` because they are not used in unified agent.
+     */
+    void save_channel_params_to_db(beerocks_message::sApChannelSwitch params);
 };
 
 } // namespace son

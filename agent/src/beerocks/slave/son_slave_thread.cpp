@@ -4852,3 +4852,19 @@ bool slave_thread::autoconfig_wsc_add_m1()
     std::copy_n(attributes->buffer(), m1_auth_buf_len, m1_auth_buf);
     return true;
 }
+
+void slave_thread::save_channel_params_to_db(beerocks_message::sApChannelSwitch params)
+{
+    auto db    = AgentDB::get();
+    auto radio = db->radio(m_fronthaul_iface);
+    if (!radio) {
+        LOG(DEBUG) << "Radio of interface " << m_fronthaul_iface << " does not exist on the db";
+        return;
+    }
+
+    radio->channel                   = params.channel;
+    radio->bandwidth                 = static_cast<beerocks::eWiFiBandwidth>(params.bandwidth);
+    radio->channel_ext_above_primary = params.channel_ext_above_primary;
+    radio->vht_center_frequency      = params.vht_center_frequency;
+    radio->tx_power                  = params.tx_power;
+}
