@@ -1410,9 +1410,9 @@ bool ap_wlan_hal_dwpal::is_zwdfs_supported()
 bool ap_wlan_hal_dwpal::set_zwdfs_antenna(bool enable)
 {
     // Build command string
-    std::string cmd = "SET_ZWDFS_ANTENNA ";
+    std::string cmd = "ZWDFS_ANT_SWITCH ";
 
-    cmd += enable;
+    cmd += std::to_string(enable ? 1 : 0);
 
     // Send command
     if (!dwpal_send_cmd(cmd)) {
