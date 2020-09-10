@@ -218,6 +218,10 @@ public:
         uint8_t antenna_gain_dB;
         uint8_t tx_power_dB;
         char driver_version[beerocks::message::WIFI_DRIVER_VER_LENGTH];
+        uint8_t channel;
+        beerocks::eWiFiBandwidth bandwidth;
+        bool channel_ext_above_primary;
+        uint16_t vht_center_frequency;
 
         bool ht_supported; ///< Is 802.11n (High Throughput) protocol supported
         uint16_t ht_capability;
