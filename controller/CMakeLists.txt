@@ -4,3 +4,4 @@ add_definitions(-DBEEROCKS_REVISION="${PRPLMESH_REVISION}")
 
 add_subdirectory("src/beerocks")
 add_subdirectory("config")
+add_subdirectory("nbapi")
