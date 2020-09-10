@@ -352,20 +352,6 @@ bool main_thread::send_cmdu_safe(Socket *sd, ieee1905_1::CmduMessageTx &cmdu_tx)
     return true;
 }
 
-std::string main_thread::get_hostap_iface_name_from_slave_socket(Socket *sd)
-{
-    // Lock the slaves socket map
-    std::unique_lock<std::mutex> lock(m_mtxSlaves);
-
-    auto slave_it = m_mapSlaves.find(sd);
-    if (slave_it == m_mapSlaves.end()) {
-        LOG(ERROR) << "Invalid socket slave: " << sd;
-        return std::string();
-    }
-
-    return slave_it->second; // iface_name
-}
-
 Socket *main_thread::get_slave_socket_from_hostap_iface_name(const std::string &iface)
 {
     auto it_slave = std::find_if(
