@@ -56,12 +56,23 @@ protected:
     bool handle_arp_raw();
 
 private:
-    void add_slave_socket(Socket *sd, const std::string &iface_name);
-    void del_slave_socket(Socket *sd);
-    bool send_cmdu_safe(Socket *sd, ieee1905_1::CmduMessageTx &cmdu_tx);
-    Socket *get_slave_socket_from_hostap_iface_name(const std::string &iface);
+    /**
+     * @brief Handles received CMDU message.
+     *
+     * @param fd File descriptor of the socket that the CMDU was received through.
+     * @param cmdu_rx Received CMDU to be handled.
+     * @return true on success and false otherwise.
+     */
+    bool handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
 
-    Socket *get_backhaul_socket();
+    void add_slave_socket(int fd, const std::string &iface_name);
+    void del_slave_socket(int fd);
+    bool send_cmdu_safe(int fd, ieee1905_1::CmduMessageTx &cmdu_tx);
+    bool send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx);
+    int get_slave_socket_from_hostap_iface_name(const std::string &iface);
+    bool socket_disconnected(int fd);
+
+    int get_backhaul_socket();
     void load_iface_params(const std::string &strIface, beerocks::eArpSource eType);
     std::string bridge_iface_from_mac(const sMacAddr &sMac);
     void send_dhcp_notification(const std::string &op, const std::string &mac,
@@ -90,8 +101,8 @@ private:
         std::chrono::steady_clock::time_point last_seen;
     };
 
-    // Connected slaves (socket/interface index)
-    std::unordered_map<Socket *, std::string> m_mapSlaves; // value=iface_name
+    // Connected slaves map (socket file descriptor/interface name)
+    std::unordered_map<int, std::string> m_mapSlaves; // value=iface_name
     std::mutex m_mtxSlaves;
 
     // Interfaces
@@ -101,8 +112,8 @@ private:
     std::unordered_map<sMacAddr, std::shared_ptr<SArpEntry>> m_mapArpEntries;
     std::chrono::steady_clock::time_point m_tpArpEntriesCleanup;
 
-    // Pointer to the backhaul manager slave
-    Socket *m_pBackhaulManagerSlave = nullptr;
+    // File descriptor of the backhaul manager slave
+    int m_pBackhaulManagerSlave = beerocks::net::FileDescriptor::invalid_descriptor;
 
     bpl::BPL_ARP_MON_CTX m_ctxArpMon = nullptr;
     Socket *m_pArpMonSocket          = nullptr;
@@ -147,6 +158,12 @@ private:
      * Application event loop used by the process to wait for I/O events.
      */
     std::shared_ptr<EventLoop> m_event_loop;
+
+    /**
+     * Map of file descriptors to pointers to Socket class instances.
+     * This member variable is temporary and will be removed at the end of PPM-591
+     */
+    std::unordered_map<int, Socket *> m_fd_to_socket_map;
 };
 
 } // namespace platform_manager
