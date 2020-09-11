@@ -47,6 +47,7 @@ if (BUILD_TESTS)
         ${bcl_sources}
         ${MODULE_PATH}/unit_tests/buffer_impl_test.cpp
         ${MODULE_PATH}/unit_tests/cmdu_parser_stream_impl_test.cpp
+        ${MODULE_PATH}/unit_tests/cmdu_serializer_stream_impl_test.cpp
         ${MODULE_PATH}/unit_tests/network_utils_test.cpp
         ${MODULE_PATH}/unit_tests/event_loop_impl_test.cpp
         ${MODULE_PATH}/unit_tests/interface_state_manager_impl_test.cpp
