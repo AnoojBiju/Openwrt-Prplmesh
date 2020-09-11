@@ -14,6 +14,7 @@
 #include <bcl/beerocks_event_loop.h>
 #include <bcl/beerocks_logging.h>
 #include <bcl/beerocks_socket_thread.h>
+#include <bcl/network/buffer_impl.h>
 #include <bcl/network/cmdu_parser.h>
 #include <bcl/network/cmdu_serializer.h>
 #include <bcl/network/sockets.h>
@@ -45,6 +46,20 @@ public:
     virtual bool init() override;
     virtual bool work() override;
 
+    /**
+     * @brief Starts platform manager.
+     *
+     * @return true on success and false otherwise.
+     */
+    bool to_be_renamed_to_start();
+
+    /**
+     * @brief Stops platform manager.
+     *
+     * @return true on success and false otherwise.
+     */
+    bool to_be_renamed_to_stop();
+
 protected:
     virtual bool handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx) override;
     virtual void after_select(bool timeout);
@@ -56,6 +71,57 @@ protected:
     bool handle_arp_raw();
 
 private:
+    /**
+     * @brief Adds a new connection.
+     *
+     * Registers given event handlers for the connected socket so the appropriate action is taken
+     * whenever data is received or socket is disconnected.
+     *
+     * Adds the connection object to the list of current socket connections so event handlers
+     * that have been registered in the event loop can be removed on exit.
+     *
+     * @param fd File descriptor of the socket used by the connection.
+     * @param connection Connection object used to send/receive data.
+     * @param handlers Event handlers to install into the event loop to handle blocking I/O events.
+     * @return true on success and false otherwise.
+     */
+    bool add_connection(int fd, std::unique_ptr<beerocks::net::Socket::Connection> connection,
+                        const beerocks::EventLoop::EventHandlers &handlers);
+
+    /**
+     * @brief Removes connection.
+     *
+     * Removes event handlers for the connected socket and removes the connection from the list of
+     * current connections.
+     *
+     * This method gets called when connection is closed, an error occurs on the socket or platform
+     * manager is stopped.
+     *
+     * @param fd File descriptor of the socket used by the connection.
+     * @return true on success and false otherwise.
+     */
+    bool remove_connection(int fd);
+
+    /**
+     * @brief Handles the read event in a client socket connected to the UDS server socket.
+     *
+     * Reads data received through the socket and parses CMDU messages out of the bytes received.
+     * Valid CMDU messages received are processed by calling the `handle_cmdu()` method.
+     *
+     * @param fd File descriptor of the socket.
+     */
+    void handle_read(int fd);
+
+    /**
+     * @brief Handles the disconnect and error events in a client socket connected to the UDS
+     * server socket.
+     *
+     * Removes connection from the list of current connections.
+     *
+     * @param fd File descriptor of the socket.
+     */
+    void handle_close(int fd);
+
     /**
      * @brief Handles received CMDU message.
      *
@@ -158,6 +224,46 @@ private:
      * Application event loop used by the process to wait for I/O events.
      */
     std::shared_ptr<EventLoop> m_event_loop;
+
+    /**
+     * Structure to hold context information for each ongoing socket connection.
+     */
+    struct sConnectionContext {
+        /**
+         * Accepted socket connection, used to send and receive data to/from the socket.
+         * Connections are stored so event handlers that have been registered in the event loop
+         * can be removed on exit.
+         */
+        std::unique_ptr<beerocks::net::Socket::Connection> connection;
+
+        /**
+         * Buffer to hold data received through the socket connection.
+         * If connection uses a stream-oriented socket, it needs its own buffer to hold received
+         * data.
+         * A stream-oriented socket provides a stream of bytes, it is not message-oriented, and
+         * does not provide boundaries. One write call could take several read calls to get that
+         * data. Data from several write calls could be read by one read call. And anything in
+         * between is also possible.
+         * If connection uses a message-oriented socket instead, this buffer and the code that
+         * uses it is also valid.
+         */
+        beerocks::net::BufferImpl<message::MESSAGE_BUFFER_LENGTH> buffer;
+
+        /**
+         * @brief Struct constructor.
+         *
+         * @param connection Socket connection.
+         */
+        explicit sConnectionContext(std::unique_ptr<beerocks::net::Socket::Connection> connection)
+            : connection(std::move(connection)){};
+    };
+
+    /**
+     * Map of current socket connections.
+     * Key value is the file descriptor of the accepted socket and the object value is the
+     * context information of the connection.
+     */
+    std::unordered_map<int, sConnectionContext> m_connections;
 
     /**
      * Map of file descriptors to pointers to Socket class instances.
