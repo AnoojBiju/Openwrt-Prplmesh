@@ -13,6 +13,7 @@
 #include "../agent_db.h"
 
 #include <bcl/network/network_utils.h>
+#include <bcl/network/sockets_impl.h>
 #include <easylogging++.h>
 
 #include <beerocks/tlvf/beerocks_message.h>
@@ -326,6 +327,182 @@ main_thread::main_thread(const config_file::sConfigSlave &config_,
 }
 
 main_thread::~main_thread() { main_thread::on_thread_stop(); }
+
+bool main_thread::to_be_renamed_to_start()
+{
+    // Register event handlers for the server socket
+    beerocks::EventLoop::EventHandlers handlers{
+        // Accept incoming connections
+        .on_read =
+            [&](int fd, EventLoop &loop) {
+                beerocks::net::UdsAddress address;
+                auto connection = m_server_socket->accept(address);
+
+                if (connection) {
+                    beerocks::EventLoop::EventHandlers handlers{
+                        // Handle incoming data
+                        .on_read =
+                            [&](int fd, EventLoop &loop) {
+                                handle_read(fd);
+                                return true;
+                            },
+
+                        // Not implemented
+                        .on_write = nullptr,
+
+                        // Remove the socket on disconnections or errors
+                        .on_disconnect =
+                            [&](int fd, EventLoop &loop) {
+                                handle_close(fd);
+                                return true;
+                            },
+                        .on_error =
+                            [&](int fd, EventLoop &loop) {
+                                handle_close(fd);
+                                return true;
+                            },
+                    };
+
+                    int connected_socket = connection->socket()->fd();
+                    if (!add_connection(connected_socket, std::move(connection), handlers)) {
+                        LOG(ERROR) << "Unable to add connection!";
+                    }
+                } else {
+                    LOG(ERROR) << "Unable to accept incoming connection request!";
+                }
+                return true;
+            },
+
+        // Not implemented
+        .on_write = nullptr,
+
+        // Fail on server socket disconnections or errors
+        .on_disconnect =
+            [&](int fd, EventLoop &loop) {
+                LOG(ERROR) << "Server socket disconnected!";
+                return false;
+            },
+        .on_error =
+            [&](int fd, EventLoop &loop) {
+                LOG(ERROR) << "Server socket error!";
+                return false;
+            },
+    };
+
+    if (!m_event_loop->register_handlers(m_server_socket->socket()->fd(), handlers)) {
+        LOG(ERROR) << "Failed registering event handlers for the server socket!";
+        return false;
+    }
+
+    return true;
+}
+
+bool main_thread::to_be_renamed_to_stop()
+{
+    bool result = true;
+
+    // Remove all connections and their installed event handlers
+    while (m_connections.size() > 0) {
+        const auto &it = m_connections.begin();
+
+        int fd = it->first;
+
+        if (!remove_connection(fd)) {
+            result = false;
+            break;
+        }
+    }
+
+    // Remove installed event handlers for the server socket
+    if (!m_event_loop->remove_handlers(m_server_socket->socket()->fd())) {
+        result = false;
+    }
+
+    return result;
+}
+
+bool main_thread::add_connection(int fd,
+                                 std::unique_ptr<beerocks::net::Socket::Connection> connection,
+                                 const beerocks::EventLoop::EventHandlers &handlers)
+{
+    LOG(DEBUG) << "Adding new connection, fd = " << fd;
+
+    // Register event handlers for the connected socket
+    if (!m_event_loop->register_handlers(fd, handlers)) {
+        LOG(ERROR) << "Failed registering event handlers for the accepted socket!";
+        return false;
+    }
+
+    // Add a new connection to the map of current connections.
+    auto result = m_connections.emplace(fd, sConnectionContext(std::move(connection)));
+    LOG_IF(!result.second, FATAL) << "File descriptor was already in the connections map!";
+
+    return true;
+}
+
+bool main_thread::remove_connection(int fd)
+{
+    LOG(DEBUG) << "Removing connection, fd = " << fd;
+
+    // Remove connection from the map of current connections.
+    if (0 == m_connections.erase(fd)) {
+        LOG(ERROR) << "Unable to remove connection from the map!";
+        return false;
+    }
+
+    // Remove installed event handlers for the connected socket
+    m_event_loop->remove_handlers(fd);
+
+    return true;
+}
+
+void main_thread::handle_read(int fd)
+{
+    // Find context information for given socket connection
+    auto it = m_connections.find(fd);
+    if (m_connections.end() == it) {
+        // This should never happen, but just in case ...
+        LOG(ERROR) << "Data received through an unknown connection, fd = " << fd;
+        return;
+    }
+
+    auto &context = it->second;
+
+    // Read available bytes into buffer
+    int bytes_received = context.connection->receive(context.buffer);
+    if (bytes_received <= 0) {
+        // This should never happen, but just in case ...
+        LOG(ERROR) << "Bytes received through connection: " << bytes_received << ", fd = " << fd;
+        return;
+    }
+
+    // These parameters are obtained from the UDS header but are not used by the platform manager
+    uint32_t iface_index;
+    sMacAddr dst_mac;
+    sMacAddr src_mac;
+
+    // Buffer for the received CMDU and received CMDU
+    uint8_t cmdu_rx_buffer[message::MESSAGE_BUFFER_LENGTH];
+    ieee1905_1::CmduMessageRx cmdu_rx(cmdu_rx_buffer, sizeof(cmdu_rx_buffer));
+
+    // CMDU parsing & handling loop
+    // Note: must be done in a loop because data received through a stream-oriented socket might
+    // contain more than one CMDU. If data were received through a message-oriented socket, then
+    // only one message would be received at a time and the loop would be iterated only once.
+    while ((context.buffer.length() > 0) &&
+           m_cmdu_parser->parse_cmdu(context.buffer, iface_index, dst_mac, src_mac, cmdu_rx)) {
+        handle_cmdu(fd, cmdu_rx);
+    }
+}
+
+void main_thread::handle_close(int fd)
+{
+    // Notify that socket has been disconnected to clean-up resources
+    socket_disconnected(fd);
+
+    // Remove connection to the given client socket
+    remove_connection(fd);
+}
 
 void main_thread::add_slave_socket(int fd, const std::string &iface_name)
 {
