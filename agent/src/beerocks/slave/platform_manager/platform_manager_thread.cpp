@@ -327,69 +327,73 @@ main_thread::main_thread(const config_file::sConfigSlave &config_,
 
 main_thread::~main_thread() { main_thread::on_thread_stop(); }
 
-void main_thread::add_slave_socket(Socket *sd, const std::string &iface_name)
+void main_thread::add_slave_socket(int fd, const std::string &iface_name)
 {
     // Lock the slaves socket map
     std::unique_lock<std::mutex> lock(m_mtxSlaves);
 
-    m_mapSlaves[sd] = iface_name;
+    m_mapSlaves[fd] = iface_name;
 }
 
-void main_thread::del_slave_socket(Socket *sd)
+void main_thread::del_slave_socket(int fd)
 {
     // Lock the slaves socket map
     std::unique_lock<std::mutex> lock(m_mtxSlaves);
 
     // Remove the socket from the connections map
-    m_mapSlaves.erase(sd);
+    m_mapSlaves.erase(fd);
 
     // Also check if that was the backhaul manager
-    if (m_pBackhaulManagerSlave == sd)
-        m_pBackhaulManagerSlave = nullptr;
+    if (m_pBackhaulManagerSlave == fd)
+        m_pBackhaulManagerSlave = beerocks::net::FileDescriptor::invalid_descriptor;
 }
 
-bool main_thread::send_cmdu_safe(Socket *sd, ieee1905_1::CmduMessageTx &cmdu_tx)
+bool main_thread::send_cmdu_safe(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
 {
     // Lock the slaves socket map
     std::unique_lock<std::mutex> lock(m_mtxSlaves);
 
-    if (m_mapSlaves.find(sd) == m_mapSlaves.end()) {
-        LOG(ERROR) << "Attempted send to invalid socket slave: " << sd;
+    if (m_mapSlaves.find(fd) == m_mapSlaves.end()) {
+        LOG(ERROR) << "Attempted send to invalid socket slave: " << fd;
         return false;
     }
 
-    message_com::send_cmdu(sd, cmdu_tx);
-    return true;
+    return send_cmdu(fd, cmdu_tx);
 }
 
-Socket *main_thread::get_slave_socket_from_hostap_iface_name(const std::string &iface)
+bool main_thread::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
+{
+    return message_com::send_cmdu(m_fd_to_socket_map[fd], cmdu_tx);
+}
+
+int main_thread::get_slave_socket_from_hostap_iface_name(const std::string &iface)
 {
     auto it_slave = std::find_if(
         m_mapSlaves.begin(), m_mapSlaves.end(),
-        [&iface](const std::pair<Socket *, std::string> &slave) { return iface == slave.second; });
+        [&iface](const std::pair<int, std::string> &slave) { return iface == slave.second; });
 
     if (it_slave != m_mapSlaves.end()) {
         return it_slave->first;
     }
 
-    return nullptr;
+    return beerocks::net::FileDescriptor::invalid_descriptor;
 }
 
-Socket *main_thread::get_backhaul_socket()
+int main_thread::get_backhaul_socket()
 {
     // Lock the slaves socket map
     std::unique_lock<std::mutex> lock(m_mtxSlaves);
 
-    // If a slave containing the backhaul manager registered, return its' socket.
+    // If a slave containing the backhaul manager registered, return its socket.
     // If not, return the first socket from the connection map
-    Socket *sd = nullptr;
+    int fd = beerocks::net::FileDescriptor::invalid_descriptor;
 
-    if (m_pBackhaulManagerSlave)
-        sd = m_pBackhaulManagerSlave;
+    if (beerocks::net::FileDescriptor::invalid_descriptor != m_pBackhaulManagerSlave)
+        fd = m_pBackhaulManagerSlave;
     else if (m_mapSlaves.size())
-        sd = m_mapSlaves.begin()->first;
+        fd = m_mapSlaves.begin()->first;
 
-    return (sd);
+    return fd;
 }
 
 void main_thread::load_iface_params(const std::string &strIface, beerocks::eArpSource eType)
@@ -443,10 +447,10 @@ void main_thread::send_dhcp_notification(const std::string &op, const std::strin
     string_utils::copy_string(dhcp_notif->hostname(0), hostname.c_str(), message::NODE_NAME_LENGTH);
 
     // Get a slave socket
-    Socket *sd = get_backhaul_socket();
+    int fd = get_backhaul_socket();
 
-    if (sd) {
-        message_com::send_cmdu(sd, cmdu_tx);
+    if (beerocks::net::FileDescriptor::invalid_descriptor != fd) {
+        send_cmdu(fd, cmdu_tx);
     }
 }
 
@@ -543,15 +547,15 @@ bool main_thread::wlan_params_changed_check()
             notification->wlan_settings().band_enabled = elm.second->band_enabled;
             notification->wlan_settings().channel      = elm.second->channel;
 
-            Socket *sd = get_slave_socket_from_hostap_iface_name(elm.first);
-            if (!sd) {
+            int fd = get_slave_socket_from_hostap_iface_name(elm.first);
+            if (beerocks::net::FileDescriptor::invalid_descriptor == fd) {
                 LOG(ERROR) << "failed to get slave socket from iface=" << elm.first;
                 continue;
             }
 
-            send_cmdu_safe(sd, cmdu_tx);
+            send_cmdu_safe(fd, cmdu_tx);
             LOG(DEBUG) << "wlan_params_changed - cmdu msg sent, iface=" << elm.first
-                       << " cmdu msg sent, sd=" << intptr_t(sd);
+                       << " cmdu msg sent, fd=" << fd;
         }
     }
     return any_slave_changed;
@@ -585,21 +589,43 @@ void main_thread::on_thread_stop()
     bpl_iface_wlan_params_map.clear();
 }
 
+// This method is temporary and will be removed at the end of PPM-591.
+// It is intended to allow the temporary coexistence of Socket* and file descriptors to refer to
+// accepted sockets.
 bool main_thread::socket_disconnected(Socket *sd)
 {
-    auto it = m_mapSlaves.find(sd);
+    if (!sd) {
+        LOG(ERROR) << "socket is nullptr";
+        return false;
+    }
+
+    // Get the file descriptor for the given socket instance
+    int fd = sd->getSocketFd();
+
+    // Save the pair { fd x Socket* } for later retrieval
+    m_fd_to_socket_map[fd] = sd;
+
+    // Call the method with the new signature
+    return socket_disconnected(fd);
+}
+
+bool main_thread::socket_disconnected(int fd)
+{
+    auto it = m_mapSlaves.find(fd);
     if (it == m_mapSlaves.end()) {
         LOG(INFO) << "non slave socket disconnected! (probably backhaul manager)";
         return true;
     }
-    LOG(DEBUG) << "slave socket_disconnected, iface=" << m_mapSlaves[sd] << ", sd=" << sd;
 
-    // we should have only one per sd
-    bpl_iface_wlan_params_map.erase(m_mapSlaves[sd]);
+    std::string iface_name = m_mapSlaves[fd];
+    LOG(DEBUG) << "slave socket_disconnected, iface=" << iface_name << ", fd=" << fd;
 
-    del_slave_socket(sd);
+    // we should have only one per fd
+    bpl_iface_wlan_params_map.erase(iface_name);
 
-    return (true);
+    del_slave_socket(fd);
+
+    return true;
 }
 
 std::string main_thread::print_cmdu_types(const message::sUdsHeader *cmdu_header)
@@ -607,7 +633,27 @@ std::string main_thread::print_cmdu_types(const message::sUdsHeader *cmdu_header
     return message_com::print_cmdu_types(cmdu_header);
 }
 
+// This method is temporary and will be removed at the end of PPM-591.
+// It is intended to allow the temporary coexistence of Socket* and file descriptors to refer to
+// accepted sockets.
 bool main_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    if (!sd) {
+        LOG(ERROR) << "socket is nullptr";
+        return false;
+    }
+
+    // Get the file descriptor for the given socket instance
+    int fd = sd->getSocketFd();
+
+    // Save the pair { fd x Socket* } for later retrieval
+    m_fd_to_socket_map[fd] = sd;
+
+    // Call the method with the new signature
+    return handle_cmdu(fd, cmdu_rx);
+}
+
+bool main_thread::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto beerocks_header = message_com::parse_intel_vs_message(cmdu_rx);
     if (!beerocks_header) {
@@ -634,9 +680,9 @@ bool main_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
         std::string strIfaceName = std::string(request->iface_name(message::IFACE_NAME_LENGTH));
         LOG(DEBUG) << "Registering slave with interface = " << strIfaceName;
 
-        add_slave_socket(sd, strIfaceName);
+        add_slave_socket(fd, strIfaceName);
 
-        work_queue.enqueue<void>([this, strIfaceName, sd]() {
+        work_queue.enqueue<void>([this, strIfaceName, fd]() {
             size_t headroom = sizeof(beerocks::message::sUdsHeader);
             size_t buffer_size =
                 headroom + message_com::get_vs_cmdu_size_on_buffer<
@@ -674,8 +720,8 @@ bool main_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
             } while (!register_response->valid() && !should_stop);
 
             LOG(DEBUG) << "sending ACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE to " << strIfaceName
-                       << " sd=" << intptr_t(sd);
-            send_cmdu_safe(sd, cmdu_tx);
+                       << " fd=" << fd;
+            send_cmdu_safe(fd, cmdu_tx);
         });
 
     } break;
@@ -758,7 +804,7 @@ bool main_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
         string_utils::copy_string(response->params().user_password, pass, message::USER_PASS_LEN);
 
         // Sent with unsafe because BML is reachable only on platform thread
-        message_com::send_cmdu(sd, cmdu_tx);
+        send_cmdu(fd, cmdu_tx);
 
         //clear the pwd in the memory
         memset(&pass, 0, sizeof(pass));
@@ -783,7 +829,7 @@ bool main_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
             response->result() = 0;
         }
 
-        message_com::send_cmdu(sd, cmdu_tx);
+        send_cmdu(fd, cmdu_tx);
 
     } break;
     case beerocks_message::ACTION_PLATFORM_VERSION_MISMATCH_NOTIFICATION: {
@@ -831,7 +877,7 @@ bool main_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
         }
         if (notification->is_backhaul_manager()) {
             LOG(DEBUG) << "slave is backhaul manager, updating";
-            m_pBackhaulManagerSlave = sd;
+            m_pBackhaulManagerSlave = fd;
 
             // Start ARP monitor
             if (enable_arp_monitor) {
@@ -862,7 +908,7 @@ bool main_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
         response->params().onboarding = bpl::cfg_is_onboarding();
 
         // Sent with unsafe because BML is reachable only on platform thread
-        message_com::send_cmdu(sd, cmdu_tx);
+        send_cmdu(fd, cmdu_tx);
 
     } break;
 
@@ -879,7 +925,7 @@ bool main_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
         response->local_master() = bpl::cfg_is_master();
 
         // Sent with unsafe because BML is reachable only on platform thread
-        message_com::send_cmdu(sd, cmdu_tx);
+        send_cmdu(fd, cmdu_tx);
 
     } break;
 
@@ -965,7 +1011,7 @@ bool main_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
                   << " bSEC: " << response->front_params().sec;
 
         // Sent with unsafe because BML is reachable only on platform thread
-        message_com::send_cmdu(sd, cmdu_tx);
+        send_cmdu(fd, cmdu_tx);
 
     } break;
 
@@ -1082,7 +1128,6 @@ bool main_thread::handle_arp_monitor()
         beerocks::net::network_utils::ipv4_to_string(arp_notif->params().ipv4);
     std::string client_mac = tlvf::mac_to_string(arp_notif->params().mac);
 
-    Socket *sd       = nullptr;
     auto iIfaceIndex = arp_notif->params().iface_idx;
 
     auto iface_name = beerocks::net::network_utils::linux_get_iface_name(iIfaceIndex);
@@ -1092,12 +1137,15 @@ bool main_thread::handle_arp_monitor()
         return false;
     }
 
-    sd = get_slave_socket_from_hostap_iface_name(iface_name);
+    int fd = get_slave_socket_from_hostap_iface_name(iface_name);
 
     // Use the Backhaul Manager Slave as the default destination
-    if ((sd == nullptr) && ((sd = get_backhaul_socket()) == nullptr)) {
-        LOG(WARNING) << "Failed obtaining slave socket";
-        return false;
+    if (beerocks::net::FileDescriptor::invalid_descriptor == fd) {
+        fd = get_backhaul_socket();
+        if (beerocks::net::FileDescriptor::invalid_descriptor == fd) {
+            LOG(WARNING) << "Failed obtaining slave socket";
+            return false;
+        }
     }
 
     auto it_iface = m_mapIfaces.find(iface_name);
@@ -1162,8 +1210,8 @@ bool main_thread::handle_arp_monitor()
     }
 
     // Send the message to the slave
-    if (sd && fSendNotif) {
-        send_cmdu_safe(sd, cmdu_tx);
+    if ((beerocks::net::FileDescriptor::invalid_descriptor != fd) && fSendNotif) {
+        send_cmdu_safe(fd, cmdu_tx);
     }
 
     return (true);
@@ -1249,12 +1297,12 @@ bool main_thread::handle_arp_raw()
     }
 
     // Get a slave socket
-    Socket *sd = get_backhaul_socket();
+    int fd = get_backhaul_socket();
 
-    if (sd) {
+    if (beerocks::net::FileDescriptor::invalid_descriptor != fd) {
         LOG(TRACE) << "ACTION_PLATFORM_ARP_QUERY_RESPONSE mac=" << arp_resp->params().mac
                    << " task_id=" << task_id;
-        send_cmdu_safe(sd, cmdu_tx);
+        send_cmdu_safe(fd, cmdu_tx);
     }
 
     return (true);
