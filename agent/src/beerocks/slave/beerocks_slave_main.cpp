@@ -16,6 +16,7 @@
 #include <bcl/beerocks_utils.h>
 #include <bcl/beerocks_version.h>
 #include <bcl/network/cmdu_parser_stream_impl.h>
+#include <bcl/network/cmdu_serializer_stream_impl.h>
 #include <bcl/network/network_utils.h>
 #include <easylogging++.h>
 #include <mapf/common/utils.h>
@@ -282,6 +283,12 @@ static std::shared_ptr<beerocks::EventLoop> create_event_loop()
     return std::make_shared<beerocks::EventLoopImpl>();
 }
 
+static std::shared_ptr<beerocks::net::CmduSerializer> create_cmdu_serializer()
+{
+    // Create serializer for CMDU messages to be sent through a stream-oriented socket.
+    return std::make_shared<beerocks::net::CmduSerializerStreamImpl>();
+}
+
 static std::shared_ptr<beerocks::net::CmduParser> create_cmdu_parser()
 {
     // Create parser for CMDU messages received through a stream-oriented socket.
@@ -319,8 +326,12 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     auto cmdu_parser = create_cmdu_parser();
     LOG_IF(!cmdu_parser, FATAL) << "Unable to create CMDU parser!";
 
+    auto cmdu_serializer = create_cmdu_serializer();
+    LOG_IF(!cmdu_serializer, FATAL) << "Unable to create CMDU serializer!";
+
     beerocks::platform_manager::main_thread platform_mgr(beerocks_slave_conf, interfaces_map,
-                                                         *agent_logger, cmdu_parser, event_loop);
+                                                         *agent_logger, cmdu_parser,
+                                                         cmdu_serializer, event_loop);
 
     // Start platform_manager
     if (!platform_mgr.init()) {
