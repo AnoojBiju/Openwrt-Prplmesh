@@ -59,10 +59,14 @@ bool CmduSerializerStreamImpl::serialize_cmdu(const sMacAddr &dst_mac, const sMa
     uds_header.length = cmdu_length;
 
     // Fill in the buffer with header and payload
-    uint8_t *data = buffer.data();
-    std::copy_n(reinterpret_cast<uint8_t *>(&uds_header), sizeof(message::sUdsHeader), data);
-    std::copy_n(cmdu_data, cmdu_length, data + sizeof(message::sUdsHeader));
-    buffer.length() = length;
+    if (!buffer.append(reinterpret_cast<uint8_t *>(&uds_header), sizeof(message::sUdsHeader))) {
+        LOG(ERROR) << "Failed appending header to the buffer!";
+        return false;
+    }
+    if (!buffer.append(cmdu_data, cmdu_length)) {
+        LOG(ERROR) << "Failed appending payload to the buffer!";
+        return false;
+    }
 
     return true;
 }
