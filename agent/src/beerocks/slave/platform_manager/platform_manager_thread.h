@@ -15,6 +15,7 @@
 #include <bcl/beerocks_logging.h>
 #include <bcl/beerocks_socket_thread.h>
 #include <bcl/network/cmdu_parser.h>
+#include <bcl/network/cmdu_serializer.h>
 
 #include "beerocks/tlvf/beerocks_message_common.h"
 
@@ -35,6 +36,7 @@ public:
     main_thread(const config_file::sConfigSlave &config_,
                 const std::unordered_map<int, std::string> &interfaces_map, logging &logger_,
                 std::shared_ptr<beerocks::net::CmduParser> cmdu_parser,
+                std::shared_ptr<beerocks::net::CmduSerializer> cmdu_serializer,
                 std::shared_ptr<beerocks::EventLoop> event_loop);
     ~main_thread();
 
@@ -126,6 +128,12 @@ private:
      * connection.
      */
     std::shared_ptr<beerocks::net::CmduParser> m_cmdu_parser;
+
+    /**
+     * CMDU serializer used to put CMDU messages into a byte array to be sent through a socket
+     * connection.
+     */
+    std::shared_ptr<beerocks::net::CmduSerializer> m_cmdu_serializer;
 
     /**
      * Application event loop used by the process to wait for I/O events.

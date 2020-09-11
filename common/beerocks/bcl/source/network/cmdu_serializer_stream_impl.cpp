@@ -25,6 +25,12 @@ bool CmduSerializerStreamImpl::serialize_cmdu(const sMacAddr &dst_mac, const sMa
         }
     }
 
+    // Check if given buffer already contains some data
+    if (buffer.length() > 0) {
+        LOG(ERROR) << "Buffer is not empty!";
+        return false;
+    }
+
     // Serialize CMDU
     size_t cmdu_length = cmdu_tx.getMessageLength();
     uint8_t *cmdu_data = cmdu_tx.getMessageBuff();
@@ -37,12 +43,6 @@ bool CmduSerializerStreamImpl::serialize_cmdu(const sMacAddr &dst_mac, const sMa
 
     // Update payload length (finalize() adds an end-of-message TLV)
     cmdu_length = cmdu_tx.getMessageLength();
-
-    // Check if given buffer already contains some data
-    if (buffer.length() > 0) {
-        LOG(ERROR) << "Buffer is not empty!";
-        return false;
-    }
 
     // Check if serialized data fits into given buffer
     size_t length = sizeof(message::sUdsHeader) + cmdu_length;
@@ -59,10 +59,14 @@ bool CmduSerializerStreamImpl::serialize_cmdu(const sMacAddr &dst_mac, const sMa
     uds_header.length = cmdu_length;
 
     // Fill in the buffer with header and payload
-    uint8_t *data = buffer.data();
-    std::copy_n(reinterpret_cast<uint8_t *>(&uds_header), sizeof(message::sUdsHeader), data);
-    std::copy_n(cmdu_data, cmdu_length, data + sizeof(message::sUdsHeader));
-    buffer.length() = length;
+    if (!buffer.append(reinterpret_cast<uint8_t *>(&uds_header), sizeof(message::sUdsHeader))) {
+        LOG(ERROR) << "Failed appending header to the buffer!";
+        return false;
+    }
+    if (!buffer.append(cmdu_data, cmdu_length)) {
+        LOG(ERROR) << "Failed appending payload to the buffer!";
+        return false;
+    }
 
     return true;
 }
