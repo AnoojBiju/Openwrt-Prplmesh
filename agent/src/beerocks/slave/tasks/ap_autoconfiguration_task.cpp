@@ -86,13 +86,13 @@ void ApAutoConfigurationTask::work()
 
             // If another radio with same band already finished the discovery phase, we can skip
             // directly to next phase (AP_CONFIGURATION).
-            if (m_discovery_status[radio->front.freq_type].completed) {
+            if (m_discovery_status[radio->freq_type].completed) {
                 FSM_MOVE_STATE(radio_iface, eState::AP_CONFIGURATION);
             }
 
             // If another radio with same band already have sent the
             // AP_AUTOCONFIGURATION_SEARCH_MESSAGE, we can skip and let it handle it.
-            if (m_discovery_status[radio->front.freq_type].msg_sent) {
+            if (m_discovery_status[radio->freq_type].msg_sent) {
                 continue;
             }
 
@@ -106,7 +106,7 @@ void ApAutoConfigurationTask::work()
             }
 
             if (send_ap_autoconfiguration_search_message(radio_iface)) {
-                m_discovery_status[radio->front.freq_type].msg_sent = true;
+                m_discovery_status[radio->freq_type].msg_sent = true;
             }
 
             state_status.timeout = std::chrono::steady_clock::now() +
@@ -121,7 +121,7 @@ void ApAutoConfigurationTask::work()
             if (!radio) {
                 continue;
             }
-            if (m_discovery_status[radio->front.freq_type].completed) {
+            if (m_discovery_status[radio->freq_type].completed) {
                 FSM_MOVE_STATE(radio_iface, eState::AP_CONFIGURATION);
                 break;
             }
@@ -176,7 +176,7 @@ void ApAutoConfigurationTask::handle_event(uint8_t event_enum_value, const void 
             FSM_MOVE_STATE(radio->front.iface_name, eState::CONTROLLER_DISCOVERY);
 
             // Reset the discovery statuses.
-            m_discovery_status[radio->front.freq_type] = {};
+            m_discovery_status[radio->freq_type] = {};
         }
         // Call work() to not waste time, and send_ap_autoconfiguration_search_message immediately.
         work();
@@ -222,12 +222,12 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_search_message(
         LOG(DEBUG) << "Radio of iface " << radio_iface << " does not exist on the db";
         return false;
     }
-    if (radio->front.freq_type == beerocks::eFreqType::FREQ_24G) {
+    if (radio->freq_type == beerocks::eFreqType::FREQ_24G) {
         freq_band = ieee1905_1::tlvAutoconfigFreqBand::IEEE_802_11_2_4_GHZ;
-    } else if (radio->front.freq_type == beerocks::eFreqType::FREQ_5G) {
+    } else if (radio->freq_type == beerocks::eFreqType::FREQ_5G) {
         freq_band = ieee1905_1::tlvAutoconfigFreqBand::IEEE_802_11_5_GHZ;
     } else {
-        LOG(ERROR) << "unsupported freq_type=" << int(radio->front.freq_type)
+        LOG(ERROR) << "unsupported freq_type=" << int(radio->freq_type)
                    << ", iface=" << radio_iface;
         return false;
     }

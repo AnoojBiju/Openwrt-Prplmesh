@@ -166,14 +166,12 @@ public:
         struct sFront {
             explicit sFront(const std::string &iface_name_)
                 : iface_name(iface_name_), iface_mac(net::network_utils::ZERO_MAC),
-                  max_supported_bw(eWiFiBandwidth::BANDWIDTH_UNKNOWN),
-                  freq_type(eFreqType::FREQ_UNKNOWN)
+                  max_supported_bw(eWiFiBandwidth::BANDWIDTH_UNKNOWN)
             {
             }
             std::string iface_name;
             sMacAddr iface_mac;
             eWiFiBandwidth max_supported_bw;
-            eFreqType freq_type;
 
             /**
              * @brief supported channels in radio
@@ -215,6 +213,7 @@ public:
         std::unordered_map<sMacAddr, sClient> associated_clients;
 
         bool sta_iface_filter_low;
+        eFreqType freq_type = eFreqType::FREQ_UNKNOWN;
         uint8_t number_of_antennas;
         uint8_t antenna_gain_dB;
         uint8_t tx_power_dB;

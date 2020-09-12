@@ -84,7 +84,7 @@ bool MediaType::get_media_type(const std::string &interface_name,
         auto radio = db->radio(interface_name);
         if (radio) {
             media_type =
-                get_802_11_media_type(radio->front.freq_type, radio->front.max_supported_bw);
+                get_802_11_media_type(radio->freq_type, radio->front.max_supported_bw);
             result = true;
         }
 
