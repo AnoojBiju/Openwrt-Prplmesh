@@ -1547,12 +1547,12 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             return false;
         }
 
-        radio->front.iface_mac        = notification->params().iface_mac;
-        radio->number_of_antennas     = notification->params().ant_num;
-        radio->antenna_gain_dB        = notification->params().ant_gain;
-        radio->tx_power_dB            = notification->params().tx_power;
-        radio->freq_type              = notification->params().frequency_band;
-        radio->front.max_supported_bw = notification->params().max_bandwidth;
+        radio->front.iface_mac    = notification->params().iface_mac;
+        radio->number_of_antennas = notification->params().ant_num;
+        radio->antenna_gain_dB    = notification->params().ant_gain;
+        radio->tx_power_dB        = notification->params().tx_power;
+        radio->freq_type          = notification->params().frequency_band;
+        radio->max_supported_bw   = notification->params().max_bandwidth;
 
         radio->ht_supported  = notification->params().ht_supported;
         radio->ht_capability = notification->params().ht_capability;
@@ -3387,7 +3387,7 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
                 notification->hostap().ant_num        = radio->number_of_antennas;
                 notification->hostap().tx_power       = radio->tx_power_dB;
                 notification->hostap().frequency_band = radio->freq_type;
-                notification->hostap().max_bandwidth  = radio->front.max_supported_bw;
+                notification->hostap().max_bandwidth  = radio->max_supported_bw;
                 notification->hostap().ht_supported   = radio->ht_supported;
                 notification->hostap().ht_capability  = radio->ht_capability;
                 std::copy_n(radio->ht_mcs_set.begin(), beerocks::message::HT_MCS_SET_SIZE,
