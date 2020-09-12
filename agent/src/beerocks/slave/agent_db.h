@@ -175,6 +175,7 @@ public:
              * @brief supported channels in radio
              */
             std::deque<beerocks::message::sWifiChannel> preferred_channels;
+            std::vector<beerocks::message::sWifiChannel> supported_channels;
 
             struct sBssid {
                 sMacAddr mac;
