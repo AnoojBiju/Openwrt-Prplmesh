@@ -776,7 +776,7 @@ bool backhaul_manager::backhaul_fsm_main(bool &skip_select)
                 // Override backhaul_preferred_radio_band if UCC set it
                 if (!selected_ruid) {
                     db->device_conf.back_radio.backhaul_preferred_radio_band =
-                        selected_ruid->front.freq_type;
+                        selected_ruid->freq_type;
                 }
 
                 // Mark the connection as WIRELESS
@@ -1271,8 +1271,7 @@ bool backhaul_manager::backhaul_fsm_wireless(bool &skip_select)
                 if (!radio) {
                     continue;
                 }
-                if (db->device_conf.back_radio.backhaul_preferred_radio_band ==
-                    radio->front.freq_type) {
+                if (db->device_conf.back_radio.backhaul_preferred_radio_band == radio->freq_type) {
                     preferred_band_is_available = true;
                 }
             }
@@ -1300,8 +1299,7 @@ bool backhaul_manager::backhaul_fsm_wireless(bool &skip_select)
             if (preferred_band_is_available &&
                 db->device_conf.back_radio.backhaul_preferred_radio_band !=
                     beerocks::eFreqType::FREQ_AUTO &&
-                db->device_conf.back_radio.backhaul_preferred_radio_band !=
-                    radio->front.freq_type) {
+                db->device_conf.back_radio.backhaul_preferred_radio_band != radio->freq_type) {
                 LOG(DEBUG) << "slave iface=" << soc->sta_iface
                            << " is not of the preferred backhaul band";
                 continue;
@@ -3469,7 +3467,7 @@ bool backhaul_manager::get_neighbor_links(
             }
 
             interface.iface_mac  = bssid;
-            interface.media_type = MediaType::get_802_11_media_type(radio->front.freq_type,
+            interface.media_type = MediaType::get_802_11_media_type(radio->freq_type,
                                                                     radio->front.max_supported_bw);
 
             if (ieee1905_1::eMediaType::UNKNOWN_MEDIA == interface.media_type) {
@@ -3913,7 +3911,7 @@ const std::string backhaul_manager::freq_to_radio_mac(eFreqType freq) const
         if (!radio) {
             continue;
         }
-        if (radio->front.freq_type == freq) {
+        if (radio->freq_type == freq) {
             return tlvf::mac_to_string(radio->front.iface_mac);
         }
     }

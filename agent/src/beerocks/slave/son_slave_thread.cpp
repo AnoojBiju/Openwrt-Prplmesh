@@ -1551,7 +1551,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         radio->number_of_antennas     = notification->params().ant_num;
         radio->antenna_gain_dB        = notification->params().ant_gain;
         radio->tx_power_dB            = notification->params().tx_power;
-        radio->front.freq_type        = notification->params().frequency_band;
+        radio->freq_type              = notification->params().frequency_band;
         radio->front.max_supported_bw = notification->params().max_bandwidth;
 
         radio->ht_supported  = notification->params().ht_supported;
@@ -3383,10 +3383,10 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
                                           beerocks::message::IFACE_NAME_LENGTH);
                 notification->hostap().iface_mac = radio->front.iface_mac;
                 notification->hostap().iface_is_5ghz =
-                    wireless_utils::is_frequency_band_5ghz(radio->front.freq_type);
+                    wireless_utils::is_frequency_band_5ghz(radio->freq_type);
                 notification->hostap().ant_num        = radio->number_of_antennas;
                 notification->hostap().tx_power       = radio->tx_power_dB;
-                notification->hostap().frequency_band = radio->front.freq_type;
+                notification->hostap().frequency_band = radio->freq_type;
                 notification->hostap().max_bandwidth  = radio->front.max_supported_bw;
                 notification->hostap().ht_supported   = radio->ht_supported;
                 notification->hostap().ht_capability  = radio->ht_capability;
@@ -3408,7 +3408,7 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
                 notification->cs_params().channel_ext_above_primary =
                     radio->channel_ext_above_primary;
                 notification->cs_params().vht_center_frequency = radio->vht_center_frequency;
-                notification->cs_params().tx_power             = radio->tx_power;
+                notification->cs_params().tx_power             = radio->tx_power_dB;
             }
         }
 
@@ -4810,7 +4810,7 @@ bool slave_thread::send_operating_channel_report()
         (operating_class == 128 || operating_class == 129 || operating_class == 130)
             ? center_channel
             : channel.channel;
-    operating_channel_report_tlv->current_transmit_power() = radio->tx_power;
+    operating_channel_report_tlv->current_transmit_power() = radio->tx_power_dB;
 
     return send_cmdu_to_controller(cmdu_tx);
 }
@@ -4852,7 +4852,8 @@ bool slave_thread::autoconfig_wsc_add_m1()
     cfg.serial_number       = "prpl12345";
     cfg.primary_dev_type_id = WSC::WSC_DEV_NETWORK_INFRA_AP;
     cfg.device_name         = "prplmesh-agent";
-    cfg.bands       = wireless_utils::is_frequency_band_5ghz(radio->front.freq_type) ? WSC::WSC_RF_BAND_5GHZ : WSC::WSC_RF_BAND_2GHZ;
+    cfg.bands = wireless_utils::is_frequency_band_5ghz(radio->freq_type) ? WSC::WSC_RF_BAND_5GHZ
+                                                                         : WSC::WSC_RF_BAND_2GHZ;
     auto attributes = WSC::m1::create(*tlv, cfg);
     if (!attributes)
         return false;
@@ -4880,5 +4881,5 @@ void slave_thread::save_channel_params_to_db(beerocks_message::sApChannelSwitch 
     radio->bandwidth                 = static_cast<beerocks::eWiFiBandwidth>(params.bandwidth);
     radio->channel_ext_above_primary = params.channel_ext_above_primary;
     radio->vht_center_frequency      = params.vht_center_frequency;
-    radio->tx_power                  = params.tx_power;
+    radio->tx_power_dB               = params.tx_power;
 }
