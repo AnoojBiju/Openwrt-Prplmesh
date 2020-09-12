@@ -1567,7 +1567,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         std::copy_n(notification->params().driver_version,
                     beerocks::message::WIFI_DRIVER_VER_LENGTH, radio->driver_version);
 
-        hostap_cs_params = notification->cs_params();
+        save_channel_params_to_db(notification->cs_params());
 
         auto tuple_preferred_channels = notification->preferred_channels(0);
         if (!std::get<0>(tuple_preferred_channels)) {
@@ -1736,7 +1736,8 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             LOG(ERROR) << "addClass ACTION_APMANAGER_HOSTAP_ACS_NOTIFICATION failed";
             return false;
         }
-        hostap_cs_params = notification_in->cs_params();
+
+        save_channel_params_to_db(notification_in->cs_params());
 
         auto notification_out = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_HOSTAP_ACS_NOTIFICATION>(cmdu_tx,
@@ -1770,7 +1771,8 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_CSA_ERROR_NOTIFICATION failed";
             return false;
         }
-        hostap_cs_params = notification_in->cs_params();
+
+        save_channel_params_to_db(notification_in->cs_params());
 
         auto notification_out = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_HOSTAP_CSA_NOTIFICATION>(cmdu_tx,
@@ -1794,7 +1796,8 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_CSA_ERROR_NOTIFICATION failed";
             return false;
         }
-        hostap_cs_params = notification_in->cs_params();
+
+        save_channel_params_to_db(notification_in->cs_params());
 
         auto notification_out = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_HOSTAP_CSA_ERROR_NOTIFICATION>(cmdu_tx,
@@ -3400,7 +3403,12 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
                 notification->hostap().ant_gain = config.hostap_ant_gain;
 
                 // Channel Selection Params
-                notification->cs_params() = hostap_cs_params;
+                notification->cs_params().channel   = radio->channel;
+                notification->cs_params().bandwidth = radio->bandwidth;
+                notification->cs_params().channel_ext_above_primary =
+                    radio->channel_ext_above_primary;
+                notification->cs_params().vht_center_frequency = radio->vht_center_frequency;
+                notification->cs_params().tx_power             = radio->tx_power;
             }
         }
 
@@ -4507,9 +4515,16 @@ beerocks::message::sWifiChannel slave_thread::channel_selection_select_channel()
 
 bool slave_thread::channel_selection_current_channel_restricted()
 {
+    auto db    = AgentDB::get();
+    auto radio = db->radio(m_fronthaul_iface);
+    if (!radio) {
+        LOG(DEBUG) << "Radio of interface " << m_fronthaul_iface << " does not exist on the db";
+        return false;
+    }
+
     beerocks::message::sWifiChannel channel;
-    channel.channel_bandwidth = hostap_cs_params.bandwidth;
-    channel.channel           = hostap_cs_params.channel;
+    channel.channel_bandwidth = radio->bandwidth;
+    channel.channel           = radio->channel;
     auto operating_class      = wireless_utils::get_operating_class_by_channel(channel);
 
     LOG(DEBUG) << "Current channel " << int(channel.channel) << " bw "
@@ -4726,8 +4741,7 @@ bool slave_thread::handle_channel_selection_request(Socket *sd, ieee1905_1::Cmdu
     LOG(DEBUG) << "send ACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START";
 
     // If only tx power limit change is required, set channel to current
-    request_out->cs_params().channel =
-        switch_required ? channel_to_switch.channel : hostap_cs_params.channel;
+    request_out->cs_params().channel = switch_required ? channel_to_switch.channel : radio->channel;
     request_out->cs_params().bandwidth = channel_to_switch.channel_bandwidth;
     request_out->tx_limit()            = power_limit;
     request_out->tx_limit_valid()      = power_limit_received;
@@ -4785,10 +4799,10 @@ bool slave_thread::send_operating_channel_report()
 
     auto &operating_class_entry = std::get<1>(operating_class_entry_tuple);
     beerocks::message::sWifiChannel channel;
-    channel.channel_bandwidth = hostap_cs_params.bandwidth;
-    channel.channel           = hostap_cs_params.channel;
-    auto center_channel  = wireless_utils::freq_to_channel(hostap_cs_params.vht_center_frequency);
-    auto operating_class = wireless_utils::get_operating_class_by_channel(channel);
+    channel.channel_bandwidth = radio->bandwidth;
+    channel.channel           = radio->channel;
+    auto center_channel       = wireless_utils::freq_to_channel(radio->vht_center_frequency);
+    auto operating_class      = wireless_utils::get_operating_class_by_channel(channel);
 
     operating_class_entry.operating_class = operating_class;
     // operating classes 128,129,130 use center channel **unlike the other classes** (See Table E-4 in 802.11 spec)
@@ -4796,7 +4810,7 @@ bool slave_thread::send_operating_channel_report()
         (operating_class == 128 || operating_class == 129 || operating_class == 130)
             ? center_channel
             : channel.channel;
-    operating_channel_report_tlv->current_transmit_power() = hostap_cs_params.tx_power;
+    operating_channel_report_tlv->current_transmit_power() = radio->tx_power;
 
     return send_cmdu_to_controller(cmdu_tx);
 }
