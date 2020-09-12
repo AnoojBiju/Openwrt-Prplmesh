@@ -176,7 +176,6 @@ private:
     int slave_resets_counter = 0;
 
     sSlaveBackhaulParams backhaul_params;
-    beerocks_message::sApChannelSwitch hostap_cs_params;
     std::vector<wireless_utils::sChannelPreference> channel_preferences;
     std::vector<beerocks::message::sWifiChannel> supported_channels;
 
