@@ -1584,9 +1584,9 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             LOG(ERROR) << "getting supported channels has failed!";
             return false;
         }
-        supported_channels.clear();
-        supported_channels.insert(
-            supported_channels.begin(), &std::get<1>(tuple_supported_channels),
+        radio->front.supported_channels.clear();
+        radio->front.supported_channels.insert(
+            radio->front.supported_channels.begin(), &std::get<1>(tuple_supported_channels),
             &std::get<1>(tuple_supported_channels) + notification->supported_channels_size());
 
         break;
@@ -3270,7 +3270,8 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
             return false;
         }
 
-        std::deque<beerocks::message::sWifiChannel> supported_channels_deque(supported_channels.begin(), supported_channels.end());
+        std::deque<beerocks::message::sWifiChannel> supported_channels_deque(
+            radio->front.supported_channels.begin(), radio->front.supported_channels.end());
 
         if (!tlvf_utils::add_ap_radio_basic_capabilities(cmdu_tx, radio->front.iface_mac,
                                                          supported_channels_deque)) {
