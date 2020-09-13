@@ -1597,17 +1597,11 @@ bool backhaul_manager::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_r
                 }
             }
 
-            if (soc && soc->slave == sd) {
-                if (cmdu_rx.getMessageType() == ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE) {
-                    return handle_slave_backhaul_message(soc, cmdu_rx);
-                } else {
-                    return handle_slave_1905_1_message(cmdu_rx, src_mac);
-                }
+            if (cmdu_rx.getMessageType() == ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE) {
+                return handle_slave_backhaul_message(soc, cmdu_rx);
             } else {
-                LOG(ERROR) << "ACTION_BACKHAUL from none slave socket!";
-                return false;
+                return handle_slave_1905_1_message(cmdu_rx, src_mac);
             }
-
         } else { // Forward the data (cmdu) to bus
             // LOG(DEBUG) << "forwarding slave->master message, controller_bridge_mac="
             //            << (db->controller_info.bridge_mac);
@@ -1747,9 +1741,8 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
 
                 LOG(DEBUG) << "All pending slaves have sent us backhaul enable!";
 
-                /* All pending slaves have sent us backhaul enable
-                     * which means we can proceed to the scan->connect->operational flow
-                     */
+                // All pending slaves have sent us backhaul enable which means we can proceed to,
+                // the scan->connect->operational flow.
                 pending_enable = true;
 
                 if (db->device_conf.local_gw) {
