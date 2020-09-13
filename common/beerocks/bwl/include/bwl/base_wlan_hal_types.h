@@ -307,6 +307,30 @@ typedef struct {
 #define MAX_SUPPORTED_20M_CHANNELS beerocks::message::SUPPORTED_CHANNELS_LENGTH
 #define MAX_SUPPORTED_CHANNELS                                                                     \
     (MAX_SUPPORTED_20M_CHANNELS * 4) //max 64 channels, each with BW 20/40/80/160
+
+/**
+ * @brief Supported 802.11 management frame types.
+ */
+enum class eManagementFrameType {
+    ASSOCIATION_REQUEST   = 0x00, /**< Association Request */
+    REASSOCIATION_REQUEST = 0x01, /**< Re-association Request */
+    BTM_QUERY             = 0x02, /**< BSS transition query */
+    WNM_REQUEST           = 0x03, /**< 802.11v transition request */
+    ANQP_REQUEST          = 0x04  /**< Access Network Query Protocol request */
+};
+
+/**
+ * @brief 802.11 management frame notification event.
+ * 
+ * This structure contains the payload of a 802.11 management frame received
+ * from a station. This frame can analyzed in the agent or tunnelled to the controller.
+ */
+struct sMGMT_FRAME_NOTIFICATION {
+    sMacAddr mac;              /**< The MAC address of the station */
+    eManagementFrameType type; /**< The type of the management frame */
+    std::vector<uint8_t> data; /**< Frame body */
+};
+
 } // namespace bwl
 
 #endif // _BWL_BASE_WLAN_HAL_TYPES_H_
