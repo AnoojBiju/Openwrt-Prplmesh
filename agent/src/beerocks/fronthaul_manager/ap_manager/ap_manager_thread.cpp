@@ -255,6 +255,8 @@ void ap_manager_thread::ap_manager_fsm()
             std::chrono::steady_clock::now() +
             std::chrono::seconds(HEARTBEAT_NOTIFICATION_DELAY_SEC);
 
+        m_ap_support_zwdfs = ap_wlan_hal->is_zwdfs_supported();
+
         LOG(DEBUG) << "Move to OPERATIONAL state";
         m_state = eApManagerState::OPERATIONAL;
         break;
@@ -1882,4 +1884,14 @@ void ap_manager_thread::allow_expired_clients()
             it++;
         }
     }
+}
+
+bool ap_manager_thread::zwdfs_ap() const
+{
+    if (m_state != eApManagerState::OPERATIONAL) {
+        LOG(WARNING) << "Requested ZWDFS support status, but AP is not attached to BWL";
+        return false;
+    }
+
+    return m_ap_support_zwdfs;
 }
