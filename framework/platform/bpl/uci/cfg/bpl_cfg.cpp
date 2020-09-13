@@ -388,6 +388,20 @@ int cfg_get_all_prplmesh_wifi_interfaces(BPL_WLAN_IFACE *interfaces, int *num_of
     return RETURN_OK;
 }
 
+bool cfg_get_zwdfs_enable(bool &enable)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int_default("zwdfs_enable", &retVal, DEFAULT_ZWDFS_ENABLE) ==
+        RETURN_ERR) {
+        MAPF_ERR("Failed to read zwdfs_enable parameter");
+        return false;
+    }
+
+    enable = (retVal == 1);
+
+    return true;
+}
+
 bool cfg_get_persistent_db_enable(bool &enable)
 {
     int retVal = -1;
