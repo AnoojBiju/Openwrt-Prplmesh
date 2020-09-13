@@ -3096,6 +3096,28 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
         if (ap_manager_socket && monitor_socket) {
             LOG(TRACE) << "goto STATE_BACKHAUL_ENABLE";
             slave_state = STATE_BACKHAUL_ENABLE;
+            break;
+        }
+        auto db    = AgentDB::get();
+        auto radio = db->radio(m_fronthaul_iface);
+        if (radio && radio->front.zwdfs && ap_manager_socket) {
+            auto request =
+                message_com::create_vs_message<beerocks_message::cACTION_BACKHAUL_DISABLE_RADIO>(
+                    cmdu_tx);
+
+            if (!request) {
+                LOG(ERROR) << "Failed building message!";
+                break;
+            }
+            request->set_front_iface_name(m_fronthaul_iface);
+            LOG(DEBUG) << "send ACTION_BACKHAUL_DISABLE_RADIO for mac " << m_fronthaul_iface;
+            message_com::send_cmdu(backhaul_manager_socket, cmdu_tx);
+
+            db->remove_radio_from_radios_list(m_fronthaul_iface);
+
+            LOG(TRACE) << "goto STATE_OPERATIONAL";
+            slave_state = STATE_OPERATIONAL;
+            break;
         }
         break;
     }
