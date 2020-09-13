@@ -3082,16 +3082,15 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
         auto db    = AgentDB::get();
         auto radio = db->radio(m_fronthaul_iface);
         if (radio && radio->front.zwdfs && ap_manager_socket) {
-            auto request =
-                message_com::create_vs_message<beerocks_message::cACTION_BACKHAUL_DISABLE_RADIO>(
-                    cmdu_tx);
+            auto request = message_com::create_vs_message<
+                beerocks_message::cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED>(cmdu_tx);
 
             if (!request) {
                 LOG(ERROR) << "Failed building message!";
                 break;
             }
             request->set_front_iface_name(m_fronthaul_iface);
-            LOG(DEBUG) << "send ACTION_BACKHAUL_DISABLE_RADIO for mac " << m_fronthaul_iface;
+            LOG(DEBUG) << "send ACTION_BACKHAUL_ZWDFS_RADIO_DETECTED for mac " << m_fronthaul_iface;
             message_com::send_cmdu(backhaul_manager_socket, cmdu_tx);
 
             db->remove_radio_from_radios_list(m_fronthaul_iface);

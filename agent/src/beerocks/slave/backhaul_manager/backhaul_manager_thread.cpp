@@ -1942,6 +1942,44 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
                             tlvf::mac_to_string(db->bridge.mac));
         break;
     }
+    case beerocks_message::ACTION_BACKHAUL_ZWDFS_RADIO_DETECTED: {
+        auto msg_in =
+            beerocks_header->addClass<beerocks_message::cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED>();
+        if (!msg_in) {
+            LOG(ERROR) << "addClass cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED failed";
+            return false;
+        }
+
+        auto front_iface_name = msg_in->front_iface_name_str();
+
+        // Erase the Radio interface from the pending radio interfaces list which is used to block
+        // the Backhaul manager to establish the backhaul link until all the Agent radios has sent
+        // the "Backhaul Enable" message.
+        // In case all other radio has enabled the backhaul already, mark 'pending_enable' to true,
+        // so the Backhaul manager will not stay hanged.
+        pending_slave_ifaces.erase(front_iface_name);
+        if (pending_slave_ifaces.empty()) {
+            LOG(DEBUG) << "All pending slaves have sent us backhaul enable!";
+            // All pending slaves have sent us backhaul enable, which means we can proceed to the
+            // scan->connect->operational flow.
+            pending_enable = true;
+        }
+
+        for (auto it = slaves_sockets.begin(); it != slaves_sockets.end();) {
+            auto slave_soc = *it;
+            if (slave_soc->hostap_iface == front_iface_name) {
+                // Backup the socket, on disabled sockets list
+                m_disabled_slave_sockets[front_iface_name] =
+                    m_sConfig.slave_iface_socket[front_iface_name];
+
+                // Remove the socket reference from the backhaul
+                m_sConfig.slave_iface_socket.erase(front_iface_name);
+                it = slaves_sockets.erase(it);
+                break;
+            }
+        }
+        break;
+    }
     default: {
         bool handled = m_task_pool.handle_cmdu(cmdu_rx, sMacAddr(), beerocks_header);
         if (!handled) {
