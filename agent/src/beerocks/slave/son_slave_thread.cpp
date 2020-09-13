@@ -307,9 +307,14 @@ bool slave_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
             LOG(ERROR) << "Unknown message, action: " << int(beerocks_header->action());
         }
         }
+    } else if (sd == ap_manager_socket) {
+        // Handle IEEE 1905.1 messages from the AP Manager
+        return handle_cmdu_ap_manager_ieee1905_1_message(*sd, cmdu_rx);
     } else if (sd == monitor_socket) {
-        handle_cmdu_monitor_ieee1905_1_message(*sd, cmdu_rx);
+        // Handle IEEE 1905.1 messages from the Monitor
+        return handle_cmdu_monitor_ieee1905_1_message(*sd, cmdu_rx);
     } else { // IEEE 1905.1 message
+        // Handle IEEE 1905.1 messages from the Controller
         return handle_cmdu_control_ieee1905_1_message(sd, cmdu_rx);
     }
     return true;
@@ -363,6 +368,30 @@ bool slave_thread::handle_cmdu_control_ieee1905_1_message(Socket *sd,
     default:
         LOG(ERROR) << "Unknown CMDU message type: " << std::hex << int(cmdu_message_type);
         return false;
+    }
+
+    return true;
+}
+
+bool slave_thread::handle_cmdu_ap_manager_ieee1905_1_message(Socket &sd,
+                                                             ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto cmdu_message_type = cmdu_rx.getMessageType();
+    switch (cmdu_message_type) {
+    // Forward unhandled messages to the backhaul manager (probably headed to the controller)
+    default:
+        const auto mid = cmdu_rx.getMessageId();
+        LOG(DEBUG) << "Forwarding ieee1905 message " << std::hex << int(cmdu_message_type)
+                   << " to backhaul_manager, mid = " << std::hex << int(mid);
+
+        uint16_t length = message_com::get_uds_header(cmdu_rx)->length;
+        cmdu_rx.swap(); // swap back before forwarding
+        if (!message_com::forward_cmdu_to_uds(backhaul_manager_socket, cmdu_rx, length)) {
+            LOG(ERROR) << "Failed forwarding message 0x" << std::hex << int(cmdu_message_type)
+                       << " to backhaul_manager";
+
+            return false;
+        }
     }
 
     return true;
