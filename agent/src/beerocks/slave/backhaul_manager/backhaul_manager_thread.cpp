@@ -2034,9 +2034,23 @@ bool backhaul_manager::handle_slave_1905_1_message(ieee1905_1::CmduMessageRx &cm
     default: {
         bool handled = m_task_pool.handle_cmdu(cmdu_rx, tlvf::mac_from_string(src_mac));
         if (!handled) {
-            LOG(DEBUG) << "Unexpected 1905 message " << int(cmdu_rx.getMessageType());
-            return false;
+            LOG(DEBUG) << "Unhandled 1905 message " << std::hex << int(cmdu_rx.getMessageType())
+                       << ", forwarding to controller...";
+
+            auto db = AgentDB::get();
+            if (db->controller_info.bridge_mac == beerocks::net::network_utils::ZERO_MAC) {
+                LOG(DEBUG) << "Controller MAC unknown. Dropping message.";
+                return false;
+            }
+
+            // Send the CMDU to the broker
+            auto uds_header = message_com::get_uds_header(cmdu_rx);
+            cmdu_rx.swap(); // swap back before sending to the broker
+            return send_cmdu_to_broker(cmdu_rx, tlvf::mac_to_string(db->controller_info.bridge_mac),
+                                       tlvf::mac_to_string(db->bridge.mac), uds_header->length,
+                                       db->bridge.iface_name);
         }
+
         return true;
     }
     }
