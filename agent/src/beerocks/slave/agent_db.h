@@ -178,6 +178,9 @@ public:
             std::deque<beerocks::message::sWifiChannel> preferred_channels;
             std::vector<beerocks::message::sWifiChannel> supported_channels;
 
+            // When set, radio can only be used for ZWDFS purpose.
+            bool zwdfs;
+
             struct sBssid {
                 sMacAddr mac;
                 std::string ssid;
