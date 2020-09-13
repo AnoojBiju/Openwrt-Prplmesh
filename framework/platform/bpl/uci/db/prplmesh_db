@@ -21,6 +21,7 @@ config prplmesh 'config'
     option certification_mode '1'
     option stop_on_failure_attempts '1'
     option zwdfs_enable '0'
+    option best_channel_rank_th '0'
 
 config wifi-device 'radio0'
     option hostap_iface 'wlan0'
