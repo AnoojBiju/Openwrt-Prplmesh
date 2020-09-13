@@ -250,8 +250,10 @@ int main(int argc, char *argv[])
         // The ap_manager is the main process thread. After the ap_manager is finished the attach
         // process, start the monitor thread. There is no point to start it before.
         auto ap_manager_state = ap_manager.get_state();
-        if (ap_manager_state == son::ap_manager_thread::eApManagerState::ATTACHED) {
-            if (monitor.is_running()) {
+        // If the fronthaul is defined as ZWDFS, do not bring the Monitor thread since a ZWDFS
+        // interface shall only use for ZWDFS purpose, and shall not Monitor anything by definition.
+        if (ap_manager_state == son::ap_manager_thread::eApManagerState::OPERATIONAL) {
+            if (monitor.is_running() || ap_manager.zwdfs_ap()) {
                 continue;
             } else if (!monitor.start()) {
                 CLOG(ERROR, g_logger_monitor->get_logger_id()) << "monitor.start() has failed";
