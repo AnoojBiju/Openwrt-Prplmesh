@@ -53,6 +53,23 @@ AgentDB::sRadio *AgentDB::add_radio(const std::string &front_iface_name,
     return &m_radios.back();
 }
 
+void AgentDB::remove_radio_from_radios_list(const std::string &iface_name)
+{
+    if (iface_name.empty()) {
+        LOG(ERROR) << "Given interface name is empty";
+        return;
+    }
+    for (auto radio_it = m_radios_list.begin(); radio_it != m_radios_list.end();) {
+        if ((*radio_it)->front.iface_name == iface_name ||
+            (*radio_it)->back.iface_name == iface_name) {
+            radio_it = m_radios_list.erase(radio_it);
+            return;
+        }
+        radio_it++;
+    }
+    return;
+}
+
 AgentDB::sRadio *AgentDB::get_radio_by_mac(const sMacAddr &mac, eMacType mac_type_hint)
 {
     bool all_mac_types = mac_type_hint == eMacType::ALL;
