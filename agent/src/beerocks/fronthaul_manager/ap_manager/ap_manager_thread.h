@@ -56,6 +56,13 @@ public:
 
     eApManagerState get_state() const { return m_state; }
 
+    /**
+     * @brief Returns 'true' if the AP support ZWDFS.
+     * 
+     * @return true if the radio is ZWDFS radio, otherwise false. 
+     */
+    bool zwdfs_ap() const;
+
 protected:
     virtual bool handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx) override;
     virtual void after_select(bool timeout) override;
@@ -90,6 +97,7 @@ private:
     beerocks::logging &m_logger;
     bool m_ap_manager_configured = false;
     bool acs_enabled;
+    bool m_ap_support_zwdfs;
 
     int bss_steer_valid_int          = BSS_STEER_VALID_INT_BTT;
     int bss_steer_imminent_valid_int = BSS_STEER_IMMINENT_VALID_INT_BTT;
