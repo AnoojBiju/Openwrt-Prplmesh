@@ -1689,6 +1689,8 @@ void ap_manager_thread::handle_hostapd_attached()
     std::copy_n(ap_wlan_hal->get_radio_info().vht_mcs_set.data(),
                 beerocks::message::VHT_MCS_SET_SIZE, notification->params().vht_mcs_set);
 
+    notification->params().zwdfs = m_ap_support_zwdfs;
+
     // Copy the channels supported by the AP
     if (!notification->alloc_preferred_channels(
             ap_wlan_hal->get_radio_info().preferred_channels.size())) {
@@ -1720,6 +1722,7 @@ void ap_manager_thread::handle_hostapd_attached()
     LOG(INFO) << " ht_capability = " << std::hex << ap_wlan_hal->get_radio_info().ht_capability;
     LOG(INFO) << " vht_supported = " << ap_wlan_hal->get_radio_info().vht_supported;
     LOG(INFO) << " vht_capability = " << std::hex << ap_wlan_hal->get_radio_info().vht_capability;
+    LOG(INFO) << " zwdfs = " << m_ap_support_zwdfs;
     LOG(INFO) << " preferred_channels = " << std::endl
               << get_radio_channels_string(ap_wlan_hal->get_radio_info().preferred_channels);
     LOG(INFO) << " supported_channels = " << std::endl
