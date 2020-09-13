@@ -343,6 +343,20 @@ bool cfg_get_zwdfs_enable(bool &enable)
     return true;
 }
 
+bool cfg_get_best_channel_rank_threshold(int &threshold)
+{
+    int best_channel_rank_threshold;
+
+    if (cfg_get_param_int("best_channel_rank_th=", best_channel_rank_threshold) < 0) {
+        MAPF_DBG("Failed to read best_channel_rank_th parameter - setting default value");
+        best_channel_rank_threshold = DEFAULT_BEST_CHANNEL_RANKING_TH;
+    }
+
+    threshold = best_channel_rank_threshold;
+
+    return true;
+}
+
 bool cfg_get_persistent_db_enable(bool &enable)
 {
     int persistent_db_enable = DEFAULT_PERSISTENT_DB;
