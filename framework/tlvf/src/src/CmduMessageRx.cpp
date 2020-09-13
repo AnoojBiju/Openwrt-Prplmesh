@@ -56,6 +56,9 @@
 #include <tlvf/wfa_map/tlvSteeringRequest.h>
 #include <tlvf/wfa_map/tlvSupportedService.h>
 #include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
+#include <tlvf/wfa_map/tlvTunnelledData.h>
+#include <tlvf/wfa_map/tlvTunnelledProtocolType.h>
+#include <tlvf/wfa_map/tlvTunnelledSourceInfo.h>
 
 #include <iostream>
 
@@ -246,6 +249,15 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv()
     }
     case (162): {
         return msg.addClass<wfa_map::tlvAssociatedStaTrafficStats>();
+    }
+    case (192): {
+        return msg.addClass<wfa_map::tlvTunnelledSourceInfo>();
+    }
+    case (193): {
+        return msg.addClass<wfa_map::tlvTunnelledProtocolType>();
+    }
+    case (194): {
+        return msg.addClass<wfa_map::tlvTunnelledData>();
     }
     default: {
         LOG(DEBUG) << "Unknown TLV type: " << tlv_type;
