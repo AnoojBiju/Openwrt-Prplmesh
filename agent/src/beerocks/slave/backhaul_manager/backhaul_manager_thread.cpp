@@ -386,6 +386,14 @@ bool backhaul_manager::socket_disconnected(Socket *sd)
         }
     }
 
+    for (auto it = m_disabled_slave_sockets.begin(); it != m_disabled_slave_sockets.end();) {
+        if (it->second->slave == sd) {
+            it = m_disabled_slave_sockets.erase(it);
+            // Return 'true' to let the socket thread handle the socket removal
+            return true;
+        }
+        it++;
+    }
     return true;
 }
 
