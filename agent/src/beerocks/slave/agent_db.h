@@ -245,6 +245,15 @@ public:
      */
     const std::vector<sRadio *> &get_radios_list() { return m_radios_list; };
 
+    /**
+     * @brief Removes a radio object from the radios list.
+     * This function does not remove the radio completely from the database, only the pointer to 
+     * that radio, from the list which is get when calling "get_radios_list()".
+     * 
+     * @param iface_name Front or back interface name.
+     */
+    void remove_radio_from_radios_list(const std::string &iface_name);
+
     /* Helper enum for get_radio_by_mac() function */
     enum class eMacType : uint8_t { ALL, RADIO, BSSID, CLIENT };
 
