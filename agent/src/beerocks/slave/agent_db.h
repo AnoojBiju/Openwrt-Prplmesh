@@ -174,6 +174,9 @@ public:
             eWiFiBandwidth max_supported_bw;
             eFreqType freq_type;
 
+            // When set, radio can only be used for ZWDFS purpose.
+            bool zwdfs;
+
             struct sBssid {
                 sMacAddr mac;
                 std::string ssid;
