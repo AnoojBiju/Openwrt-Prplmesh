@@ -99,6 +99,7 @@ slave_thread::slave_thread(sSlaveConfig conf, beerocks::logging &logger_)
         // No need to print here anything, 'add_radio()' does it internaly
         return;
     }
+    m_fronthaul_iface = conf.hostap_iface;
 
     radio->sta_iface_filter_low = conf.backhaul_wireless_iface_filter_low;
 
@@ -153,16 +154,13 @@ void slave_thread::slave_reset()
 
     auto db = AgentDB::get();
 
-    /**
-     * m_fronthaul_iface is updated on ACTION_APMANAGER_JOINED_NOTIFICATION
-     * before this initial message the value is empty.
-     * We do not want to fail on this scenario.
-     */
     auto radio = db->radio(m_fronthaul_iface);
-    if (radio) {
-        // Clear the front interface mac if radio exists
-        radio->front.iface_mac = network_utils::ZERO_MAC;
+    if (!radio) {
+        LOG(ERROR) << "Radio of iface " << m_fronthaul_iface << " does not exist on the db";
+        return;
     }
+    // Clear the front interface mac.
+    radio->front.iface_mac = network_utils::ZERO_MAC;
 
     if (db->device_conf.stop_on_failure_attempts && !stop_on_failure_attempts) {
         LOG(ERROR) << "Reached to max stop on failure attempts!";
