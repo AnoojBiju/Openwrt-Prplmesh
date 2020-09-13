@@ -338,6 +338,16 @@ bool slave_thread::handle_cmdu_control_ieee1905_1_message(Socket *sd,
         LOG(WARNING) << "slave_state == STATE_STOPPED";
         return true;
     }
+    auto db    = AgentDB::get();
+    auto radio = db->radio(m_fronthaul_iface);
+    if (!radio) {
+        return false;
+    }
+
+    // ZWDFS Radio should ignore messages from the Controller
+    if (radio->front.zwdfs) {
+        return true;
+    }
 
     switch (cmdu_message_type) {
     case ieee1905_1::eMessageType::ACK_MESSAGE:
@@ -1548,6 +1558,9 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
 
         radio->front.iface_mac = hostap_params.iface_mac;
         hostap_cs_params       = notification->cs_params();
+
+        radio->front.zwdfs = notification->params().zwdfs;
+        LOG(DEBUG) << "ZWDFS AP: " << radio->front.zwdfs;
 
         auto tuple_preferred_channels = notification->preferred_channels(0);
         if (!std::get<0>(tuple_preferred_channels)) {
@@ -3047,6 +3060,11 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
             is_backhaul_manager = false;
         }
 
+        auto radio = db->radio(m_fronthaul_iface);
+        if (radio) {
+            // Set zwdfs to initial value.
+            radio->front.zwdfs = false;
+        }
         fronthaul_start();
 
         is_slave_reset = false;
