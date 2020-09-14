@@ -748,20 +748,11 @@ void main_thread::on_thread_stop()
     LOG(DEBUG) << "Stopping asynchronous work queue...";
     work_queue.stop(true);
 
-    if (bpl::dhcp_mon_stop() != 0) {
-        LOG(ERROR) << "Failed stopping DHCP Monitor!";
-    } else {
-        LOG(DEBUG) << "DHCP Monitor Stopped.";
-    }
+    // Stop the DHCP Monitor
+    stop_dhcp_monitor();
 
     // Stop the ARP Monitor
     stop_arp_monitor();
-
-    if (m_pDHCPMonSocket) {
-        remove_socket(m_pDHCPMonSocket);
-        delete m_pDHCPMonSocket;
-        m_pDHCPMonSocket = nullptr;
-    }
 
     bpl::bpl_close();
     LOG(DEBUG) << "Closed BPL.";
@@ -1594,9 +1585,87 @@ bool main_thread::init_arp_monitor()
             add_socket(m_pArpRawSocket);
         }
 
+        // TODO: PPM-639 Inject ARP monitor to platform manager
+        if (beerocks::net::FileDescriptor::invalid_descriptor == m_arp_raw_socket) {
+            auto connection = std::make_unique<beerocks::net::SocketConnectionImpl>(
+                std::make_shared<beerocks::net::ConnectedSocket>(
+                    bpl::arp_mon_get_raw_arp_fd(m_ctxArpMon)));
+            if (!connection) {
+                LOG(ERROR) << "Unable to create ARP raw connection!";
+                stop_arp_monitor();
+                return false;
+            }
+
+            beerocks::EventLoop::EventHandlers handlers;
+            // Handle event
+            handlers.on_read = [&](int fd, EventLoop &loop) {
+                if (!handle_arp_raw()) {
+                    LOG(ERROR) << "handle_arp_raw failed, restarting ARP monitor";
+                    if (!restart_arp_monitor()) {
+                        LOG(ERROR) << "failed to restart ARP monitor";
+                    }
+                }
+                return true;
+            };
+
+            // Remove the socket on disconnection or error
+            handlers.on_disconnect = [&](int fd, EventLoop &loop) {
+                remove_connection(fd);
+                return true;
+            };
+            handlers.on_error = handlers.on_disconnect;
+
+            int connected_socket = connection->socket()->fd();
+            if (!add_connection(connected_socket, std::move(connection), handlers)) {
+                LOG(ERROR) << "Unable to add ARP raw socket connection !";
+                stop_arp_monitor();
+                return false;
+            }
+
+            m_arp_raw_socket = bpl::arp_mon_get_raw_arp_fd(m_ctxArpMon);
+        }
+
         if (!m_pArpMonSocket) {
             m_pArpMonSocket = new Socket(bpl::arp_mon_get_fd(m_ctxArpMon));
             add_socket(m_pArpMonSocket);
+        }
+
+        if (beerocks::net::FileDescriptor::invalid_descriptor == m_arp_mon_socket) {
+            auto connection = std::make_unique<beerocks::net::SocketConnectionImpl>(
+                std::make_shared<beerocks::net::ConnectedSocket>(bpl::arp_mon_get_fd(m_ctxArpMon)));
+            if (!connection) {
+                LOG(ERROR) << "Unable to create ARP monitor connection!";
+                stop_arp_monitor();
+                return false;
+            }
+
+            beerocks::EventLoop::EventHandlers handlers;
+            // Handle event
+            handlers.on_read = [&](int fd, EventLoop &loop) {
+                if (!handle_arp_monitor()) {
+                    LOG(ERROR) << "handle_arp_monitor failed, restarting ARP monitor";
+                    if (!restart_arp_monitor()) {
+                        LOG(ERROR) << "failed to restart ARP monitor";
+                    }
+                }
+                return true;
+            };
+
+            // Remove the socket on disconnection or error
+            handlers.on_disconnect = [&](int fd, EventLoop &loop) {
+                remove_connection(fd);
+                return true;
+            };
+            handlers.on_error = handlers.on_disconnect;
+
+            int connected_socket = connection->socket()->fd();
+            if (!add_connection(connected_socket, std::move(connection), handlers)) {
+                LOG(ERROR) << "Unable to add ARP monitor socket connection !";
+                stop_arp_monitor();
+                return false;
+            }
+
+            m_arp_mon_socket = bpl::arp_mon_get_fd(m_ctxArpMon);
         }
 
         LOG(DEBUG) << "ARP Monitor started on interface '" << config.bridge_iface << "' ("
@@ -1624,10 +1693,20 @@ void main_thread::stop_arp_monitor()
         m_pArpRawSocket = nullptr;
     }
 
+    if (beerocks::net::FileDescriptor::invalid_descriptor == m_arp_raw_socket) {
+        remove_connection(m_arp_raw_socket);
+        m_arp_raw_socket = beerocks::net::FileDescriptor::invalid_descriptor;
+    }
+
     if (m_pArpMonSocket) {
         remove_socket(m_pArpMonSocket);
         delete m_pArpMonSocket;
         m_pArpMonSocket = nullptr;
+    }
+
+    if (beerocks::net::FileDescriptor::invalid_descriptor == m_arp_mon_socket) {
+        remove_connection(m_arp_mon_socket);
+        m_arp_mon_socket = beerocks::net::FileDescriptor::invalid_descriptor;
     }
 }
 
@@ -1667,10 +1746,65 @@ bool main_thread::init_dhcp_monitor()
 
         m_pDHCPMonSocket = new Socket(dhcp_mon_fd);
         add_socket(m_pDHCPMonSocket);
+
+        // TODO: PPM-639 Inject DHCP monitor to platform manager
+        if (beerocks::net::FileDescriptor::invalid_descriptor == m_dhcp_mon_socket) {
+            auto connection = std::make_unique<beerocks::net::SocketConnectionImpl>(
+                std::make_shared<beerocks::net::ConnectedSocket>(dhcp_mon_fd));
+            if (!connection) {
+                LOG(ERROR) << "Unable to create DHCP monitor connection!";
+                stop_dhcp_monitor();
+                return false;
+            }
+
+            beerocks::EventLoop::EventHandlers handlers;
+            // Handle event
+            handlers.on_read = [&](int fd, EventLoop &loop) {
+                bpl::dhcp_mon_handle_event();
+                return true;
+            };
+
+            // Remove the socket on disconnection or error
+            handlers.on_disconnect = [&](int fd, EventLoop &loop) {
+                remove_connection(fd);
+                return true;
+            };
+            handlers.on_error = handlers.on_disconnect;
+
+            int connected_socket = connection->socket()->fd();
+            if (!add_connection(connected_socket, std::move(connection), handlers)) {
+                LOG(ERROR) << "Unable to add DHCP monitor socket connection !";
+                stop_dhcp_monitor();
+                return false;
+            }
+
+            m_dhcp_mon_socket = dhcp_mon_fd;
+        }
+
         LOG(DEBUG) << "DHCP Monitor Started... sd=" << intptr_t(m_pDHCPMonSocket);
     }
 
     return true;
+}
+
+void main_thread::stop_dhcp_monitor()
+{
+    if (bpl::dhcp_mon_stop() != 0) {
+        LOG(ERROR) << "Failed stopping DHCP Monitor!";
+    } else {
+        LOG(DEBUG) << "DHCP Monitor Stopped.";
+    }
+
+    if (m_pDHCPMonSocket) {
+        remove_socket(m_pDHCPMonSocket);
+        delete m_pDHCPMonSocket;
+        m_pDHCPMonSocket = nullptr;
+    }
+
+    if (beerocks::net::FileDescriptor::invalid_descriptor == m_dhcp_mon_socket) {
+        remove_connection(m_dhcp_mon_socket);
+        m_dhcp_mon_socket = beerocks::net::FileDescriptor::invalid_descriptor;
+    }
 }
 
 } // namespace platform_manager
