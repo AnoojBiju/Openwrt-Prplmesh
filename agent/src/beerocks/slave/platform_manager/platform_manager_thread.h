@@ -145,6 +145,7 @@ private:
                                 const std::string &ip, const std::string &hostname);
     void arp_entries_cleanup();
     bool init_dhcp_monitor();
+    void stop_dhcp_monitor();
     bool init_arp_monitor();
     void stop_arp_monitor();
     bool restart_arp_monitor();
@@ -264,6 +265,21 @@ private:
      * context information of the connection.
      */
     std::unordered_map<int, sConnectionContext> m_connections;
+
+    /**
+     * File descriptor of the ARP raw socket
+     */
+    int m_arp_raw_socket = beerocks::net::FileDescriptor::invalid_descriptor;
+
+    /**
+     * File descriptor of the ARP monitor socket
+     */
+    int m_arp_mon_socket = beerocks::net::FileDescriptor::invalid_descriptor;
+
+    /**
+     * File descriptor of the DHCP monitor socket
+     */
+    int m_dhcp_mon_socket = beerocks::net::FileDescriptor::invalid_descriptor;
 
     /**
      * Map of file descriptors to pointers to Socket class instances.
