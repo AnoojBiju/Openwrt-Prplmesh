@@ -38,6 +38,11 @@ static const uint8_t s_arrBCastMac[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 #define ARP_NOTIF_INTERVAL (90000)                  // 1.5 minutes
 #define ARP_CLEAN_INTERVAL (ARP_NOTIF_INTERVAL * 2) // 2 notif. intervals
 
+/**
+ * Time interval to periodically check if WLAN parameters have changed.
+ */
+constexpr std::chrono::milliseconds check_wlan_params_changed_timer_interval(500);
+
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////// Local Module Functions ///////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -297,14 +302,19 @@ static std::string get_sta_iface(const std::string &hostap_iface)
 main_thread::main_thread(const config_file::sConfigSlave &config_,
                          const std::unordered_map<int, std::string> &interfaces_map_,
                          logging &logger_,
+                         std::unique_ptr<beerocks::net::Timer<>> check_wlan_params_changed_timer,
                          std::unique_ptr<beerocks::net::ServerSocket> server_socket,
                          std::shared_ptr<beerocks::net::CmduParser> cmdu_parser,
                          std::shared_ptr<beerocks::net::CmduSerializer> cmdu_serializer,
                          std::shared_ptr<beerocks::EventLoop> event_loop)
     : socket_thread(config_.temp_path + std::string(BEEROCKS_PLAT_MGR_UDS)), config(config_),
-      interfaces_map(interfaces_map_), logger(logger_), m_server_socket(std::move(server_socket)),
-      m_cmdu_parser(cmdu_parser), m_cmdu_serializer(cmdu_serializer), m_event_loop(event_loop)
+      interfaces_map(interfaces_map_), logger(logger_),
+      m_check_wlan_params_changed_timer(std::move(check_wlan_params_changed_timer)),
+      m_server_socket(std::move(server_socket)), m_cmdu_parser(cmdu_parser),
+      m_cmdu_serializer(cmdu_serializer), m_event_loop(event_loop)
 {
+    LOG_IF(!m_check_wlan_params_changed_timer, FATAL)
+        << "check-WLAN-params-changed timer is a null pointer!";
     LOG_IF(!m_server_socket, FATAL) << "Server socket is a null pointer!";
     LOG_IF(!m_cmdu_parser, FATAL) << "CMDU parser is a null pointer!";
     LOG_IF(!m_cmdu_serializer, FATAL) << "CMDU serializer is a null pointer!";
@@ -330,68 +340,96 @@ main_thread::~main_thread() { main_thread::on_thread_stop(); }
 
 bool main_thread::to_be_renamed_to_start()
 {
-    // Register event handlers for the server socket
-    beerocks::EventLoop::EventHandlers handlers{
-        // Accept incoming connections
-        .on_read =
-            [&](int fd, EventLoop &loop) {
-                beerocks::net::UdsAddress address;
-                auto connection = m_server_socket->accept(address);
+    {
+        // Register event handlers for the server socket
+        beerocks::EventLoop::EventHandlers handlers{
+            // Accept incoming connections
+            .on_read =
+                [&](int fd, EventLoop &loop) {
+                    beerocks::net::UdsAddress address;
+                    auto connection = m_server_socket->accept(address);
 
-                if (connection) {
-                    beerocks::EventLoop::EventHandlers handlers{
-                        // Handle incoming data
-                        .on_read =
-                            [&](int fd, EventLoop &loop) {
-                                handle_read(fd);
-                                return true;
-                            },
+                    if (connection) {
+                        beerocks::EventLoop::EventHandlers handlers{
+                            // Handle incoming data
+                            .on_read =
+                                [&](int fd, EventLoop &loop) {
+                                    handle_read(fd);
+                                    return true;
+                                },
 
-                        // Not implemented
-                        .on_write = nullptr,
+                            // Not implemented
+                            .on_write = nullptr,
 
-                        // Remove the socket on disconnections or errors
-                        .on_disconnect =
-                            [&](int fd, EventLoop &loop) {
-                                handle_close(fd);
-                                return true;
-                            },
-                        .on_error =
-                            [&](int fd, EventLoop &loop) {
-                                handle_close(fd);
-                                return true;
-                            },
-                    };
+                            // Remove the socket on disconnections or errors
+                            .on_disconnect =
+                                [&](int fd, EventLoop &loop) {
+                                    handle_close(fd);
+                                    return true;
+                                },
+                            .on_error =
+                                [&](int fd, EventLoop &loop) {
+                                    handle_close(fd);
+                                    return true;
+                                },
+                        };
 
-                    int connected_socket = connection->socket()->fd();
-                    if (!add_connection(connected_socket, std::move(connection), handlers)) {
-                        LOG(ERROR) << "Unable to add connection!";
+                        int connected_socket = connection->socket()->fd();
+                        if (!add_connection(connected_socket, std::move(connection), handlers)) {
+                            LOG(ERROR) << "Unable to add connection!";
+                        }
+                    } else {
+                        LOG(ERROR) << "Unable to accept incoming connection request!";
                     }
-                } else {
-                    LOG(ERROR) << "Unable to accept incoming connection request!";
-                }
-                return true;
-            },
+                    return true;
+                },
 
-        // Not implemented
-        .on_write = nullptr,
+            // Not implemented
+            .on_write = nullptr,
 
-        // Fail on server socket disconnections or errors
-        .on_disconnect =
-            [&](int fd, EventLoop &loop) {
-                LOG(ERROR) << "Server socket disconnected!";
-                return false;
-            },
-        .on_error =
-            [&](int fd, EventLoop &loop) {
-                LOG(ERROR) << "Server socket error!";
-                return false;
-            },
-    };
+            // Fail on server socket disconnections or errors
+            .on_disconnect =
+                [&](int fd, EventLoop &loop) {
+                    LOG(ERROR) << "Server socket disconnected!";
+                    return false;
+                },
+            .on_error =
+                [&](int fd, EventLoop &loop) {
+                    LOG(ERROR) << "Server socket error!";
+                    return false;
+                },
+        };
 
-    if (!m_event_loop->register_handlers(m_server_socket->socket()->fd(), handlers)) {
-        LOG(ERROR) << "Failed registering event handlers for the server socket!";
-        return false;
+        if (!m_event_loop->register_handlers(m_server_socket->socket()->fd(), handlers)) {
+            LOG(ERROR) << "Failed registering event handlers for the server socket!";
+            return false;
+        }
+    }
+
+    {
+        // Register event handlers for the check-WLAN-params-changed timer
+        beerocks::EventLoop::EventHandlers handlers{
+            // Check if WLAN parameters have changed
+            .on_read =
+                [&](int fd, EventLoop &loop) {
+                    uint64_t number_of_expirations;
+                    if (m_check_wlan_params_changed_timer->read(number_of_expirations)) {
+                        check_wlan_params_changed();
+                    }
+
+                    return true;
+                },
+        };
+
+        if (!m_event_loop->register_handlers(m_check_wlan_params_changed_timer->fd(), handlers)) {
+            LOG(ERROR)
+                << "Failed registering event handlers for the check-WLAN-params-changed timer!";
+            return false;
+        }
+
+        // Start the check-WLAN-params-changed timer
+        m_check_wlan_params_changed_timer->schedule(check_wlan_params_changed_timer_interval,
+                                                    check_wlan_params_changed_timer_interval);
     }
 
     return true;
@@ -400,6 +438,14 @@ bool main_thread::to_be_renamed_to_start()
 bool main_thread::to_be_renamed_to_stop()
 {
     bool result = true;
+
+    // Cancel the check-WLAN-params-changed timer
+    m_check_wlan_params_changed_timer->cancel();
+
+    // Remove installed event handlers for the check-WLAN-params-changed timer
+    if (!m_event_loop->remove_handlers(m_check_wlan_params_changed_timer->fd())) {
+        result = false;
+    }
 
     // Remove all connections and their installed event handlers
     while (m_connections.size() > 0) {
@@ -689,7 +735,7 @@ bool main_thread::work()
     return bret;
 }
 
-bool main_thread::wlan_params_changed_check()
+bool main_thread::check_wlan_params_changed()
 {
     bool any_slave_changed = false;
     for (auto &elm : bpl_iface_wlan_params_map) {
@@ -1549,7 +1595,7 @@ void main_thread::after_select(bool timeout)
     }
 
     // check if wlan params changed
-    wlan_params_changed_check();
+    check_wlan_params_changed();
 }
 
 bool main_thread::init_arp_monitor()
