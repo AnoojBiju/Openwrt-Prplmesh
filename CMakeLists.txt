@@ -73,6 +73,13 @@ endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS}")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_C_FLAGS_RELEASE}")
 
+# Linker Options
+# - Setting the "rpath-link" linker variable to help the linker resolve secondery dependecies
+#   (Libraries that are not directly referenced by the executable, but a linked library)
+# - Setting "rpath" linker to add the cmake installed library folder to the linker search path
+#   (Removes the need to set LD_LIBRARY_PATH manually when installing to a none standard location)
+SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath-link=${PLATFORM_STAGING_DIR}/usr/lib")
+
 if (CMAKE_BUILD_TYPE STREQUAL "Release")
     SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -z noexecstack -z relro -z now -pie")
 endif()
