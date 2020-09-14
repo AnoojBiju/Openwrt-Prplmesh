@@ -29,7 +29,7 @@ list(APPEND HLAPI_LIBS amxb amxc amxd amxp amxo)
 add_library(${PROJECT_NAME} ${hlapi_sources})
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${prplmesh_VERSION} SOVERSION ${prplmesh_VERSION_MAJOR})
 set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,-z,defs")
-target_link_libraries(${PROJECT_NAME} PRIVATE ${HLAPI_LIBS})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${HLAPI_LIBS} mapfcommon elpp)
 
 # Install
 target_include_directories(${PROJECT_NAME}
