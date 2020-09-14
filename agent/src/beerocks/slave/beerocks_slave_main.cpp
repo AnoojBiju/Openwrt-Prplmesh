@@ -19,6 +19,7 @@
 #include <bcl/network/cmdu_serializer_stream_impl.h>
 #include <bcl/network/network_utils.h>
 #include <bcl/network/sockets_impl.h>
+#include <bcl/network/timer_impl.h>
 #include <easylogging++.h>
 #include <mapf/common/utils.h>
 
@@ -344,6 +345,12 @@ create_server_socket(const beerocks::net::UdsAddress &address)
     return server_socket;
 }
 
+static std::unique_ptr<beerocks::net::Timer<>> create_check_wlan_params_changed_timer()
+{
+    // Create timer to periodically check if WLAN parameters have changed
+    return std::make_unique<beerocks::net::TimerImpl<>>();
+}
+
 static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slave_conf,
                               const std::unordered_map<int, std::string> &interfaces_map, int argc,
                               char *argv[])
@@ -385,9 +392,14 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     auto server_socket = create_server_socket(*uds_address);
     LOG_IF(!server_socket, FATAL) << "Unable to create UDS server socket!";
 
-    beerocks::platform_manager::main_thread platform_mgr(beerocks_slave_conf, interfaces_map,
-                                                         *agent_logger, std::move(server_socket),
-                                                         cmdu_parser, cmdu_serializer, event_loop);
+    auto check_wlan_params_changed_timer = create_check_wlan_params_changed_timer();
+    LOG_IF(!check_wlan_params_changed_timer, FATAL)
+        << "Unable to create check-WLAN-parameters-changed timer!";
+
+    beerocks::platform_manager::main_thread platform_mgr(
+        beerocks_slave_conf, interfaces_map, *agent_logger,
+        std::move(check_wlan_params_changed_timer), std::move(server_socket), cmdu_parser,
+        cmdu_serializer, event_loop);
 
     // Start platform_manager
     if (!platform_mgr.init()) {
