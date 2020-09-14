@@ -18,6 +18,7 @@
 #include <bcl/network/cmdu_parser.h>
 #include <bcl/network/cmdu_serializer.h>
 #include <bcl/network/sockets.h>
+#include <bcl/network/timer.h>
 
 #include "beerocks/tlvf/beerocks_message_common.h"
 
@@ -37,6 +38,7 @@ class main_thread : public socket_thread {
 public:
     main_thread(const config_file::sConfigSlave &config_,
                 const std::unordered_map<int, std::string> &interfaces_map, logging &logger_,
+                std::unique_ptr<beerocks::net::Timer<>> check_wlan_params_changed_timer,
                 std::unique_ptr<beerocks::net::ServerSocket> server_socket,
                 std::shared_ptr<beerocks::net::CmduParser> cmdu_parser,
                 std::shared_ptr<beerocks::net::CmduSerializer> cmdu_serializer,
@@ -149,7 +151,17 @@ private:
     bool init_arp_monitor();
     void stop_arp_monitor();
     bool restart_arp_monitor();
-    bool wlan_params_changed_check();
+
+    /**
+     * @brief Checks if WLAN parameters have changed.
+     *
+     * For each of the slaves, performs a check on the `band_enabled` and `channel` parameters and,
+     * if changed, sends a ACTION_PLATFORM_WLAN_PARAMS_CHANGED_NOTIFICATION message to the slave
+     * including the new settings.
+     *
+     * @return true if WLAN parameters have changed for any of the slaves.
+     */
+    bool check_wlan_params_changed();
 
 private:
     const int PLATFORM_READ_CONF_RETRY_SEC    = 5;
@@ -202,6 +214,11 @@ private:
     std::unordered_map<std::string, std::shared_ptr<beerocks_message::sWlanSettings>>
         bpl_iface_wlan_params_map;
     std::unordered_set<std::string> ap_ifaces;
+
+    /**
+     * Timer to periodically check if WLAN parameters have changed.
+     */
+    std::unique_ptr<beerocks::net::Timer<>> m_check_wlan_params_changed_timer;
 
     /**
      * Server socket used to accept incoming connection requests from clients that will
