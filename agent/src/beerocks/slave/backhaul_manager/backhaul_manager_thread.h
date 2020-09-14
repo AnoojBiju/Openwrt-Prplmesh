@@ -28,6 +28,8 @@
 #include <tlvf/CmduMessageTx.h>
 #include <tlvf/wfa_map/tlvApMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
+#include <tlvf/wfa_map/tlvChannelScanCapabilities.h>
+#include <tlvf/wfa_map/tlvChannelSelectionResponse.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
 
 #include "../agent_ucc_listener.h"
@@ -403,6 +405,23 @@ private:
      * @return True on success and false otherwise.
      */
     bool add_ap_he_capabilities(const sRadioInfo &radio_info);
+
+    /**
+     * @brief Adds Channel Scan Capabilities TLV to AP Capability Report message.
+     *
+     * The TLV is already created by the caller. This function adds
+     * information to the given tlv based on the given radio.
+     * See section 17.2.38 of Multi-AP Specification v2 for details.
+     *
+     * @param radio_info Radio structure containing the information required to fill in the TLV.
+     *
+     * @param channe_scan_capability_tlv a pointer to the already created tlv.
+     *
+     * @return True on success and false otherwise.
+     */
+    bool add_channel_scan_capabilities(
+        const sRadioInfo &radio_info,
+        wfa_map::tlvChannelScanCapabilities &channel_scan_capabilities_tlv);
 
     /**
      * @brief Adds link metric TLVs to response message.
