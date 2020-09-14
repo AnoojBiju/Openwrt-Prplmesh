@@ -93,6 +93,7 @@
 #include <tlvf/wfa_map/tlvSteeringPolicy.h>
 #include <tlvf/wfa_map/tlvSupportedService.h>
 #include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
+#include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 
 // BPL Error Codes
 #include <bpl/bpl_cfg.h>
@@ -2416,8 +2417,16 @@ bool backhaul_manager::handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmd
         add_channel_scan_capabilities(*slave, *channel_scan_capabilities_tlv);
     }
 
-    // send the constructed report
+    // tlvs created here are not dependent on the slaves
+    auto profile2_ap_capability_tlv = cmdu_tx.addClass<wfa_map::tlvProfile2ApCapability>();
+    if (!profile2_ap_capability_tlv) {
+        LOG(ERROR) << "Error creating TLV_PROFILE2_AP_CAPABILITIES";
+        return false;
+    }
+    // set kilobytes (KiB)
+    profile2_ap_capability_tlv->capabilities_bit_field().byte_counter_units = 1;
 
+    // send the constructed report 
     LOG(DEBUG) << "Sending AP_CAPABILITY_REPORT_MESSAGE , mid: " << std::hex << (int)mid;
     return send_cmdu_to_broker(cmdu_tx, src_mac, tlvf::mac_to_string(db->bridge.mac));
 }
