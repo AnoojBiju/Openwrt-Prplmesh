@@ -135,7 +135,8 @@ class Sniffer:
             self.current_outputfile = None
 
         # give rights to everyone so any cleanup job can delete network dumps
-        os.chmod(self.current_outputfile, 0o777)
+        if self.current_outputfile:
+            os.chmod(self.current_outputfile, 0o777)
 
     def get_packet_capture(self):
         '''Get a list of packets from the last started tcpdump.'''
