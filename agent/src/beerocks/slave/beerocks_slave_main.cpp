@@ -325,9 +325,6 @@ create_server_socket(const beerocks::net::UdsAddress &address)
     using UdsServerSocket = beerocks::net::ServerSocketImpl<beerocks::net::UdsSocket>;
     auto server_socket    = std::make_unique<UdsServerSocket>(socket);
 
-    // TODO: This code belongs to a preparatory commit. Uncomment when deprecated server
-    // socket is finally replaced by this one
-    /*
     // Bind server socket to that UDS address
     if (!server_socket->bind(address)) {
         LOG(ERROR) << "Unable to bind server socket to UDS address: '" << address.path() << "'";
@@ -340,7 +337,6 @@ create_server_socket(const beerocks::net::UdsAddress &address)
                    << "'";
         return nullptr;
     }
-*/
 
     return server_socket;
 }
@@ -411,10 +407,7 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
         cmdu_serializer, event_loop);
 
     // Start platform_manager
-    if (!platform_mgr.init()) {
-        LOG(ERROR) << "platform_mgr init() has failed!";
-        return 1;
-    }
+    LOG_IF(!platform_mgr.to_be_renamed_to_start(), FATAL) << "Unable to start platform manager!";
 
     // Read the number of failures allowed before stopping agent from platform configuration
     int stop_on_failure_attempts = beerocks::bpl::cfg_get_stop_on_failure_attempts();
@@ -482,8 +475,9 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
             break;
         }
 
-        // Call platform manager work task and break on error.
-        if (!platform_mgr.work()) {
+        // Run application event loop and break on error.
+        if (event_loop->run() < 0) {
+            LOG(ERROR) << "Event loop failure!";
             break;
         }
     }
@@ -496,7 +490,7 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     backhaul_mgr.stop();
 
     LOG(DEBUG) << "platform_mgr.stop()";
-    platform_mgr.stop();
+    platform_mgr.to_be_renamed_to_stop();
 
     LOG(DEBUG) << "Bye Bye!";
 
