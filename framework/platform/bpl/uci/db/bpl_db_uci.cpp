@@ -97,7 +97,7 @@ bool uci_section_exists(const std::string &package_name, const std::string &sect
 }
 
 bool uci_add_section(const std::string &package_name, const std::string &section_type,
-                     const std::string &section_name)
+                     const std::string &section_name, bool commit_changes)
 {
     //package_name.(section_type)section_name
     LOG(TRACE) << "uci_add_section() " << package_name << ".(" << section_type << ")"
@@ -142,17 +142,16 @@ bool uci_add_section(const std::string &package_name, const std::string &section
         return false;
     }
 
-    // Commit changes to file
-    if (uci_commit(ctx.get(), &sec_ptr.p, false) != UCI_OK) {
-        LOG(ERROR) << "Failed to commit changes!" << std::endl << uci_get_error(ctx.get());
-        return false;
+    if (commit_changes) {
+        return uci_commit_changes(package_name);
     }
 
     return true;
 }
 
 bool uci_set_section(const std::string &package_name, const std::string &section_type,
-                     const std::string &section_name, const OptionsUnorderedMap &options)
+                     const std::string &section_name, const OptionsUnorderedMap &options,
+                     bool commit_changes)
 {
     //package_name.(section_type)section_name
     LOG(TRACE) << "uci_set_section() " << package_name << ".(" << section_type << ")"
@@ -212,28 +211,10 @@ bool uci_set_section(const std::string &package_name, const std::string &section
         }
     }
 
-    // To save the changes made we need to call "uci_commit" with the package
-    // Loading a uci_ptr will also load the changes saved in the context's delta
-    char pkg_path[MAX_UCI_BUF_LEN] = {0};
-    // Generate a uci path to the package we wish to lookup
-    if (snprintf(pkg_path, MAX_UCI_BUF_LEN, package_path, package_name.c_str()) <= 0) {
-        LOG(ERROR) << "Failed to compose path";
-        return false;
+    if (commit_changes) {
+        return uci_commit_changes(package_name);
     }
 
-    uci_ptr pkg_ptr;
-    // Initialize package pointer from path & validate package existace.
-    if (uci_lookup_ptr(ctx.get(), &pkg_ptr, pkg_path, true) != UCI_OK || !pkg_ptr.p) {
-        LOG(ERROR) << "UCI failed to lookup ptr for path: " << pkg_path << std::endl
-                   << uci_get_error(ctx.get());
-        return false;
-    }
-
-    // Commit changes to file
-    if (uci_commit(ctx.get(), &pkg_ptr.p, false) != UCI_OK) {
-        LOG(ERROR) << "Failed to commit changes!" << std::endl << uci_get_error(ctx.get());
-        return false;
-    }
     return true;
 }
 
@@ -350,7 +331,7 @@ bool uci_get_option(const std::string &package_name, const std::string &section_
 }
 
 bool uci_delete_section(const std::string &package_name, const std::string &section_type,
-                        const std::string &section_name)
+                        const std::string &section_name, bool commit_changes)
 {
     //package_name.(section_type)section_name
     LOG(TRACE) << "uci_delete_section() " << package_name << ".(" << section_type << ")"
@@ -390,31 +371,8 @@ bool uci_delete_section(const std::string &package_name, const std::string &sect
         return false;
     }
 
-    char pkg_path[MAX_UCI_BUF_LEN] = {0};
-    // Generate a uci path to the package we wish to lookup
-    if (snprintf(pkg_path, MAX_UCI_BUF_LEN, package_path, package_name.c_str()) <= 0) {
-        LOG(ERROR) << "Failed to compose path";
-        return false;
-    }
-
-    uci_ptr pkg_ptr;
-    // Initialize package pointer from path & validate package existace
-    if (uci_lookup_ptr(ctx.get(), &pkg_ptr, pkg_path, true) != UCI_OK || !pkg_ptr.p) {
-        LOG(ERROR) << "UCI failed to lookup ptr for path: " << pkg_path << std::endl
-                   << uci_get_error(ctx.get());
-        return false;
-    }
-
-    // Create delta of changes, this does not change the persistent file.
-    if (uci_save(ctx.get(), pkg_ptr.p) != UCI_OK) {
-        LOG(ERROR) << "Failed to save changes!" << std::endl << uci_get_error(ctx.get());
-        return false;
-    }
-
-    // Commit changes to file
-    if (uci_commit(ctx.get(), &pkg_ptr.p, false) != UCI_OK) {
-        LOG(ERROR) << "Failed to commit changes!" << std::endl << uci_get_error(ctx.get());
-        return false;
+    if (commit_changes) {
+        return uci_commit_changes(package_name);
     }
 
     return true;
@@ -456,6 +414,40 @@ bool uci_get_all_sections(const std::string &package_name, const std::string &se
             sections.emplace_back(sec->e.name);
         }
     }
+    return true;
+}
+
+bool uci_commit_changes(const std::string &package_name)
+{
+    LOG(TRACE) << "uci_commit_changes() ";
+
+    auto ctx = alloc_context();
+    if (!ctx) {
+        return false;
+    }
+
+    // To save the changes made we need to call "uci_commit" with the package
+    // Loading a uci_ptr will also load the changes saved in the context's delta
+    char pkg_path[MAX_UCI_BUF_LEN] = {0};
+    // Generate a uci path to the package we wish to lookup
+    if (snprintf(pkg_path, MAX_UCI_BUF_LEN, package_path, package_name.c_str()) <= 0) {
+        LOG(ERROR) << "Failed to compose path";
+        return false;
+    }
+
+    uci_ptr pkg_ptr;
+    // Initialize package pointer from path & validate package existace.
+    if (uci_lookup_ptr(ctx.get(), &pkg_ptr, pkg_path, true) != UCI_OK || !pkg_ptr.p) {
+        LOG(ERROR) << "UCI failed to lookup ptr for path: " << pkg_path << std::endl
+                   << uci_get_error(ctx.get());
+        return false;
+    }
+    // Commit changes to file
+    if (uci_commit(ctx.get(), &pkg_ptr.p, false) != UCI_OK) {
+        LOG(ERROR) << "Failed to commit changes!" << std::endl << uci_get_error(ctx.get());
+        return false;
+    }
+
     return true;
 }
 

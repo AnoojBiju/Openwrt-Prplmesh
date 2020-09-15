@@ -24,14 +24,14 @@ bool db_has_entry(const std::string &entry_type, const std::string &entry_name)
 }
 
 bool db_add_entry(const std::string &entry_type, const std::string &entry_name,
-                  const std::unordered_map<std::string, std::string> &params)
+                  const std::unordered_map<std::string, std::string> &params, bool commit_changes)
 {
     LOG(TRACE) << " - NOT IMPLEMENTED!";
     return true;
 }
 
 bool db_set_entry(const std::string &entry_type, const std::string &entry_name,
-                  const std::unordered_map<std::string, std::string> &params)
+                  const std::unordered_map<std::string, std::string> &params, bool commit_changes)
 {
     LOG(TRACE) << " - NOT IMPLEMENTED!";
     return true;
@@ -52,7 +52,14 @@ bool db_get_entries_by_type(
     return true;
 }
 
-bool db_remove_entry(const std::string &entry_type, const std::string &entry_name)
+bool db_remove_entry(const std::string &entry_type, const std::string &entry_name,
+                     bool commit_changes)
+{
+    LOG(TRACE) << " - NOT IMPLEMENTED!";
+    return true;
+}
+
+bool db_commit_changes()
 {
     LOG(TRACE) << " - NOT IMPLEMENTED!";
     return true;
