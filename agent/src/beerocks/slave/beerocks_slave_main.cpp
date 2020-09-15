@@ -7,7 +7,7 @@
  */
 
 #include "backhaul_manager/backhaul_manager_thread.h"
-#include "platform_manager/platform_manager_thread.h"
+#include "platform_manager/platform_manager.h"
 #include "son_slave_thread.h"
 
 #include <bcl/beerocks_config_file.h>
@@ -99,8 +99,8 @@ static bool parse_arguments(int argc, char *argv[])
         {
             std::string request{optarg};
             std::cout << std::endl
-                      << request << "="
-                      << beerocks::platform_manager::main_thread::query_db(request) << std::endl;
+                      << request << "=" << beerocks::PlatformManager::query_db(request)
+                      << std::endl;
             exit(0);
         }
         case '?': {
@@ -400,13 +400,13 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     auto clean_old_arp_entries_timer = create_clean_old_arp_entries_timer();
     LOG_IF(!clean_old_arp_entries_timer, FATAL) << "Unable to create clean-old-ARP-entries timer!";
 
-    beerocks::platform_manager::main_thread platform_mgr(
+    beerocks::PlatformManager platform_manager(
         beerocks_slave_conf, interfaces_map, *agent_logger, std::move(clean_old_arp_entries_timer),
         std::move(check_wlan_params_changed_timer), std::move(server_socket), cmdu_parser,
         cmdu_serializer, event_loop);
 
     // Start platform manager
-    LOG_IF(!platform_mgr.start(), FATAL) << "Unable to start platform manager!";
+    LOG_IF(!platform_manager.start(), FATAL) << "Unable to start platform manager!";
 
     // Read the number of failures allowed before stopping agent from platform configuration
     int stop_on_failure_attempts = beerocks::bpl::cfg_get_stop_on_failure_attempts();
@@ -488,8 +488,8 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     LOG(DEBUG) << "backhaul_mgr.stop()";
     backhaul_mgr.stop();
 
-    LOG(DEBUG) << "platform_mgr.stop()";
-    platform_mgr.stop();
+    LOG(DEBUG) << "platform_manager.stop()";
+    platform_manager.stop();
 
     LOG(DEBUG) << "Bye Bye!";
 
