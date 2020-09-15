@@ -88,12 +88,13 @@
 #include <tlvf/wfa_map/tlvClientInfo.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
+#include <tlvf/wfa_map/tlvProfile2ApCapability.h>
+#include <tlvf/wfa_map/tlvProfile2MetricCollectionInterval.h>
 #include <tlvf/wfa_map/tlvSearchedService.h>
 #include <tlvf/wfa_map/tlvStaMacAddressType.h>
 #include <tlvf/wfa_map/tlvSteeringPolicy.h>
 #include <tlvf/wfa_map/tlvSupportedService.h>
 #include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
-#include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 
 // BPL Error Codes
 #include <bpl/bpl_cfg.h>
@@ -2368,11 +2369,8 @@ bool backhaul_manager::handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmd
 
     auto db = AgentDB::get();
 
-    // Capability bitmask is set to 0 because neither unassociated STA link metrics
-    // reporting or agent-initiated RCPI-based steering are supported
-
-    // the tlvs created in the loop are defined in the
-    // specification as "Zero Or More" (multi-ap specification v2, 17.1.7)
+    // 1. The tlvs created in the loop are created per radio and are
+    // defined in the specification as "Zero Or More" (multi-ap specification v2, 17.1.7)
     for (const auto &slave : slaves_sockets) {
         // TODO skip slaves that are not operational
         auto radio_mac = slave->radio_mac;
@@ -2401,10 +2399,11 @@ bool backhaul_manager::handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmd
         }
     }
 
-    // the tlvs created here are defined in the
-    // specification as "One" (multi-ap specification v2, 17.1.7)
-    // the one tlv may contain information about few slaves
+    // 2. The tlvs created here are defined in the
+    // specification as "One" (multi-ap specification v2, 17.1.7).
+    // the one tlv may contain information about few radios
 
+    // 2.1 radio dependent tlvs
     // Add channel scan capabilities
     auto channel_scan_capabilities_tlv = cmdu_tx.addClass<wfa_map::tlvChannelScanCapabilities>();
     if (!channel_scan_capabilities_tlv) {
@@ -2417,7 +2416,9 @@ bool backhaul_manager::handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmd
         add_channel_scan_capabilities(*slave, *channel_scan_capabilities_tlv);
     }
 
-    // tlvs created here are not dependent on the slaves
+    // 2.1 radio independent tlvs
+
+    // profile 2 ap capability
     auto profile2_ap_capability_tlv = cmdu_tx.addClass<wfa_map::tlvProfile2ApCapability>();
     if (!profile2_ap_capability_tlv) {
         LOG(ERROR) << "Error creating TLV_PROFILE2_AP_CAPABILITIES";
@@ -2426,7 +2427,16 @@ bool backhaul_manager::handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmd
     // set kilobytes (KiB)
     profile2_ap_capability_tlv->capabilities_bit_field().byte_counter_units = 1;
 
-    // send the constructed report 
+    // profile 2 metric collection interval
+    // Note: at the moment we are not setting a value for collection_interval
+    auto profile2_meteric_collection_interval_tlv =
+        cmdu_tx.addClass<wfa_map::tlvProfile2MetricCollectionInterval>();
+    if (!profile2_meteric_collection_interval_tlv) {
+        LOG(ERROR) << "error creating TLV_PROFILE2_METERIC_COLLECTION_INTERVAL";
+        return false;
+    }
+
+    // send the constructed report
     LOG(DEBUG) << "Sending AP_CAPABILITY_REPORT_MESSAGE , mid: " << std::hex << (int)mid;
     return send_cmdu_to_broker(cmdu_tx, src_mac, tlvf::mac_to_string(db->bridge.mac));
 }
