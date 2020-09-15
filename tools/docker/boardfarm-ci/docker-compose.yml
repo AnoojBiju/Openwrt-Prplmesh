@@ -61,6 +61,7 @@ services:
             - RUN_ID
             - CI_PIPELINE_ID
             - FINAL_ROOT_DIR
+            - PYTHONDONTWRITEBYTECODE=1
         network_mode: host
         volumes:
             - "$ROOT_DIR:$ROOT_DIR"
