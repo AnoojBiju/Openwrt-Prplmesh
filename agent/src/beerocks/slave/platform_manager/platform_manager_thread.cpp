@@ -39,6 +39,11 @@ static const uint8_t s_arrBCastMac[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 #define ARP_CLEAN_INTERVAL (ARP_NOTIF_INTERVAL * 2) // 2 notif. intervals
 
 /**
+ * Time interval to periodically clean old ARP table entries.
+ */
+constexpr std::chrono::milliseconds clean_old_arp_entries_timer_interval(ARP_CLEAN_INTERVAL);
+
+/**
  * Time interval to periodically check if WLAN parameters have changed.
  */
 constexpr std::chrono::milliseconds check_wlan_params_changed_timer_interval(500);
@@ -302,6 +307,7 @@ static std::string get_sta_iface(const std::string &hostap_iface)
 main_thread::main_thread(const config_file::sConfigSlave &config_,
                          const std::unordered_map<int, std::string> &interfaces_map_,
                          logging &logger_,
+                         std::unique_ptr<beerocks::net::Timer<>> clean_old_arp_entries_timer,
                          std::unique_ptr<beerocks::net::Timer<>> check_wlan_params_changed_timer,
                          std::unique_ptr<beerocks::net::ServerSocket> server_socket,
                          std::shared_ptr<beerocks::net::CmduParser> cmdu_parser,
@@ -309,10 +315,13 @@ main_thread::main_thread(const config_file::sConfigSlave &config_,
                          std::shared_ptr<beerocks::EventLoop> event_loop)
     : socket_thread(config_.temp_path + std::string(BEEROCKS_PLAT_MGR_UDS)), config(config_),
       interfaces_map(interfaces_map_), logger(logger_),
+      m_clean_old_arp_entries_timer(std::move(clean_old_arp_entries_timer)),
       m_check_wlan_params_changed_timer(std::move(check_wlan_params_changed_timer)),
       m_server_socket(std::move(server_socket)), m_cmdu_parser(cmdu_parser),
       m_cmdu_serializer(cmdu_serializer), m_event_loop(event_loop)
 {
+    LOG_IF(!m_clean_old_arp_entries_timer, FATAL)
+        << "clean-old-ARP-entries timer is a null pointer!";
     LOG_IF(!m_check_wlan_params_changed_timer, FATAL)
         << "check-WLAN-params-changed timer is a null pointer!";
     LOG_IF(!m_server_socket, FATAL) << "Server socket is a null pointer!";
@@ -432,12 +441,38 @@ bool main_thread::to_be_renamed_to_start()
                                                     check_wlan_params_changed_timer_interval);
     }
 
+    {
+        // Register event handlers for the clean-old-ARP-entries timer
+        beerocks::EventLoop::EventHandlers handlers{
+            // Clean old ARP table entries
+            .on_read =
+                [&](int fd, EventLoop &loop) {
+                    uint64_t number_of_expirations;
+                    if (m_clean_old_arp_entries_timer->read(number_of_expirations)) {
+                        clean_old_arp_entries();
+                    }
+
+                    return true;
+                },
+        };
+
+        if (!m_event_loop->register_handlers(m_clean_old_arp_entries_timer->fd(), handlers)) {
+            LOG(ERROR) << "Failed registering event handlers for the clean-old-ARP-entries timer!";
+            return false;
+        }
+    }
+
     return true;
 }
 
 bool main_thread::to_be_renamed_to_stop()
 {
     bool result = true;
+
+    // Remove installed event handlers for the clean-old-ARP-entries timer
+    if (!m_event_loop->remove_handlers(m_clean_old_arp_entries_timer->fd())) {
+        result = false;
+    }
 
     // Cancel the check-WLAN-params-changed timer
     m_check_wlan_params_changed_timer->cancel();
@@ -1554,6 +1589,29 @@ void main_thread::arp_entries_cleanup()
     }
 }
 
+void main_thread::clean_old_arp_entries()
+{
+    auto now = std::chrono::steady_clock::now();
+
+    for (auto it = m_mapArpEntries.begin(); it != m_mapArpEntries.end();) {
+
+        auto last_seen_duration =
+            std::chrono::duration_cast<std::chrono::milliseconds>(now - it->second->last_seen)
+                .count();
+
+        // If the client wasn't seen --> erase it
+        if (last_seen_duration >= ARP_NOTIF_INTERVAL) {
+            LOG(INFO) << "Removing client with MAC " << it->first
+                      << " due to inactivity for more than " << last_seen_duration
+                      << " milliseconds.";
+
+            it = m_mapArpEntries.erase(it);
+        } else {
+            it++;
+        }
+    }
+}
+
 void main_thread::after_select(bool timeout)
 {
     // On timeout
@@ -1717,6 +1775,14 @@ bool main_thread::init_arp_monitor()
 
         // Initialize the ARP entries cleanup timestamp
         m_tpArpEntriesCleanup = std::chrono::steady_clock::now();
+
+        // Start the clean-old-ARP-entries timer
+        if (!m_clean_old_arp_entries_timer->schedule(clean_old_arp_entries_timer_interval,
+                                                     clean_old_arp_entries_timer_interval)) {
+            LOG(ERROR) << "Unable to schedule clean-old-ARP-entries timer!";
+            stop_arp_monitor();
+            return false;
+        }
     }
 
     return true;
@@ -1751,6 +1817,9 @@ void main_thread::stop_arp_monitor()
         remove_connection(m_arp_mon_socket);
         m_arp_mon_socket = beerocks::net::FileDescriptor::invalid_descriptor;
     }
+
+    // Cancel the clean-old-ARP-entries timer
+    m_clean_old_arp_entries_timer->cancel();
 }
 
 bool main_thread::restart_arp_monitor()
