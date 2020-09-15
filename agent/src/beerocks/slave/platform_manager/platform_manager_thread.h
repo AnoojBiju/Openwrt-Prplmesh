@@ -31,11 +31,21 @@
 namespace beerocks {
 namespace platform_manager {
 
-extern std::string extern_query_db(const std::string &parameter);
-
 class main_thread {
 
 public:
+    /**
+     * @brief Queries platform for a given parameter value.
+     *
+     * Platform configuration is read through BPL.
+     *
+     * @param parameter Parameter name. Possible values are "is_master", "is_gateway" and
+     * "is_onboarding".
+     * @return Requested parameter value on success and error message on error (i.e.: if unable to
+     * initialize BPL or if parameter name is invalid).
+     */
+    static std::string query_db(const std::string &parameter);
+
     main_thread(const config_file::sConfigSlave &config_,
                 const std::unordered_map<int, std::string> &interfaces_map, logging &logger_,
                 std::unique_ptr<beerocks::net::Timer<>> clean_old_arp_entries_timer,
