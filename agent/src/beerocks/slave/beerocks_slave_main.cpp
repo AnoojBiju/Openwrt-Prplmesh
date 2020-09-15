@@ -406,8 +406,8 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
         std::move(check_wlan_params_changed_timer), std::move(server_socket), cmdu_parser,
         cmdu_serializer, event_loop);
 
-    // Start platform_manager
-    LOG_IF(!platform_mgr.to_be_renamed_to_start(), FATAL) << "Unable to start platform manager!";
+    // Start platform manager
+    LOG_IF(!platform_mgr.start(), FATAL) << "Unable to start platform manager!";
 
     // Read the number of failures allowed before stopping agent from platform configuration
     int stop_on_failure_attempts = beerocks::bpl::cfg_get_stop_on_failure_attempts();
@@ -490,7 +490,7 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     backhaul_mgr.stop();
 
     LOG(DEBUG) << "platform_mgr.stop()";
-    platform_mgr.to_be_renamed_to_stop();
+    platform_mgr.stop();
 
     LOG(DEBUG) << "Bye Bye!";
 
