@@ -47,10 +47,11 @@ bool uci_section_exists(const std::string &package_name, const std::string &sect
  * @param[in] package_name name of the requested configuration file.
  * @param[in] section_type type of the requested section.
  * @param[in] section_name name of the requested section.
+ * @param[in] commit_changes to show immediate intention to commit.
  * @return true if section exists in db, false otherwise
  */
 bool uci_add_section(const std::string &package_name, const std::string &section_type,
-                     const std::string &section_name);
+                     const std::string &section_name, bool commit_changes);
 
 /**
  * @brief Set values in section, updating as needed.
@@ -63,10 +64,12 @@ bool uci_add_section(const std::string &package_name, const std::string &section
  * @param[in] section_type type of the requested section.
  * @param[in] section_name name of the requested section.
  * @param[in] options unordered map containing a key/value pair of parameters to be set.
+ * @param[in] commit_changes to show immediate intention to commit.
  * @return true on success, false otherwise.
  */
 bool uci_set_section(const std::string &package_name, const std::string &section_type,
-                     const std::string &section_name, const OptionsUnorderedMap &options);
+                     const std::string &section_name, const OptionsUnorderedMap &options,
+                     bool commit_changes);
 
 /**
  * @brief Get values in section.
@@ -111,10 +114,11 @@ bool uci_get_option(const std::string &package_name, const std::string &section_
  * @param[in] package_name name of the requested configuration file.
  * @param[in] section_type type of the requested section.
  * @param[in] section_name name of the requested section.
+ * @param[in] commit_changes to show immediate intention to commit.
  * @return true if section exists in db, false otherwise
  */
 bool uci_delete_section(const std::string &package_name, const std::string &section_type,
-                        const std::string &section_name);
+                        const std::string &section_name, bool commit_changes);
 
 /**
  * @brief Get all entries with the same type.
@@ -126,6 +130,14 @@ bool uci_delete_section(const std::string &package_name, const std::string &sect
  */
 bool uci_get_all_sections(const std::string &package_name, const std::string &section_type,
                           std::vector<std::string> &sections);
+
+/**
+ * @brief Commit changes by package name
+ * 
+ * @param[in] package_name name of the requested package.
+ * @return true on success, false otherwise.
+ */
+bool uci_commit_changes(const std::string &package_name);
 
 } // namespace db
 } // namespace bpl
