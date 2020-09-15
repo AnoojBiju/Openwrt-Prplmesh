@@ -1187,6 +1187,12 @@ private:
             */
     bool db_changes_made = false;
 
+    /*
+            * a variable that indicates that data is awaiting to flashed from memory into
+            * the prplMesh.bb (non-rational persistent database file)
+            */
+    bool db_changes_made = false;
+
     int slaves_stop_on_failure_attempts = 0;
 
     /*
