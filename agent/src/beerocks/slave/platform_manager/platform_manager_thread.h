@@ -13,7 +13,6 @@
 #include <bcl/beerocks_config_file.h>
 #include <bcl/beerocks_event_loop.h>
 #include <bcl/beerocks_logging.h>
-#include <bcl/beerocks_socket_thread.h>
 #include <bcl/network/buffer_impl.h>
 #include <bcl/network/cmdu_parser.h>
 #include <bcl/network/cmdu_serializer.h>
@@ -25,6 +24,7 @@
 #include <bpl/bpl_arp.h>
 #include <bpl/bpl_cfg.h>
 
+#include <atomic>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -33,7 +33,7 @@ namespace platform_manager {
 
 extern std::string extern_query_db(const std::string &parameter);
 
-class main_thread : public socket_thread {
+class main_thread {
 
 public:
     main_thread(const config_file::sConfigSlave &config_,
@@ -44,32 +44,22 @@ public:
                 std::shared_ptr<beerocks::net::CmduParser> cmdu_parser,
                 std::shared_ptr<beerocks::net::CmduSerializer> cmdu_serializer,
                 std::shared_ptr<beerocks::EventLoop> event_loop);
-    ~main_thread();
-
-    virtual bool init() override;
-    virtual bool work() override;
 
     /**
      * @brief Starts platform manager.
      *
      * @return true on success and false otherwise.
      */
-    bool to_be_renamed_to_start();
+    bool start();
 
     /**
      * @brief Stops platform manager.
      *
      * @return true on success and false otherwise.
      */
-    bool to_be_renamed_to_stop();
+    bool stop();
 
 protected:
-    virtual bool handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx) override;
-    virtual void after_select(bool timeout);
-    virtual void on_thread_stop() override;
-    virtual bool socket_disconnected(Socket *sd) override;
-    virtual std::string print_cmdu_types(const beerocks::message::sUdsHeader *cmdu_header) override;
-
     bool handle_arp_monitor();
     bool handle_arp_raw();
 
@@ -146,7 +136,6 @@ private:
     std::string bridge_iface_from_mac(const sMacAddr &sMac);
     void send_dhcp_notification(const std::string &op, const std::string &mac,
                                 const std::string &ip, const std::string &hostname);
-    void arp_entries_cleanup();
 
     /**
      * @brief Clean old ARP table entries.
@@ -176,6 +165,21 @@ private:
     const int PLATFORM_READ_CONF_RETRY_SEC    = 5;
     const int PLATFORM_READ_CONF_MAX_ATTEMPTS = 10;
 
+    /**
+     * Buffer to hold CMDU to be transmitted.
+     */
+    uint8_t m_tx_buffer[message::MESSAGE_BUFFER_LENGTH];
+
+    /**
+     * CMDU to be transmitted.
+     */
+    ieee1905_1::CmduMessageTx m_cmdu_tx;
+
+    /**
+     * Flag to ask asynchronous code (running in a background worker thread) to stop.
+     */
+    std::atomic<bool> m_should_stop{false};
+
     config_file::sConfigSlave config;
     const std::unordered_map<int, std::string> interfaces_map;
 
@@ -200,13 +204,12 @@ private:
     std::unordered_map<sMacAddr, std::shared_ptr<SArpEntry>> m_mapArpEntries;
     std::chrono::steady_clock::time_point m_tpArpEntriesCleanup;
 
-    // File descriptor of the backhaul manager slave
-    int m_pBackhaulManagerSlave = beerocks::net::FileDescriptor::invalid_descriptor;
+    /**
+     * File descriptor of the socket connecting to the backhaul manager
+     */
+    int m_backhaul_manager_socket = beerocks::net::FileDescriptor::invalid_descriptor;
 
     bpl::BPL_ARP_MON_CTX m_ctxArpMon = nullptr;
-    Socket *m_pArpMonSocket          = nullptr;
-    Socket *m_pArpRawSocket          = nullptr;
-    Socket *m_pDHCPMonSocket         = nullptr;
 
     uint32_t m_uiArpMonIP   = 0;
     uint32_t m_uiArpMonMask = 0;
@@ -311,12 +314,6 @@ private:
      * File descriptor of the DHCP monitor socket
      */
     int m_dhcp_mon_socket = beerocks::net::FileDescriptor::invalid_descriptor;
-
-    /**
-     * Map of file descriptors to pointers to Socket class instances.
-     * This member variable is temporary and will be removed at the end of PPM-591
-     */
-    std::unordered_map<int, Socket *> m_fd_to_socket_map;
 };
 
 } // namespace platform_manager
