@@ -1,0 +1,17 @@
+#
+---
+# implementation of
+# v2 specificarion:
+# 17.2.64 Reason Code
+
+_namespace: wfa_map
+
+tlvProfile2ReasonCode:
+  _type: class
+  _is_tlv_class : True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_PROFILE2_REASON_CODE  # line 1 (value)
+  length: uint16_t                          # line 2 (length)
+  reason_code: uint16_t                     # line 3
+
