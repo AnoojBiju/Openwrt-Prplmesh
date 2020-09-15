@@ -6,7 +6,7 @@
  * See LICENSE file for more details.
  */
 
-#include "platform_manager_thread.h"
+#include "platform_manager.h"
 
 #include "../agent_db.h"
 
@@ -22,7 +22,6 @@
 #include <net/if.h> // if_nametoindex
 
 namespace beerocks {
-namespace platform_manager {
 
 //////////////////////////////////////////////////////////////////////////////
 ////////////////////////// Local Module Definitions //////////////////////////
@@ -273,7 +272,7 @@ static std::string get_sta_iface(const std::string &hostap_iface)
 /////////////////////////////// Implementation ///////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-std::string main_thread::query_db(const std::string &parameter)
+std::string PlatformManager::query_db(const std::string &parameter)
 {
     std::string ret;
     if (bpl::bpl_init() < 0) {
@@ -300,15 +299,15 @@ std::string main_thread::query_db(const std::string &parameter)
     return ret;
 }
 
-main_thread::main_thread(const config_file::sConfigSlave &config_,
-                         const std::unordered_map<int, std::string> &interfaces_map_,
-                         logging &logger_,
-                         std::unique_ptr<beerocks::net::Timer<>> clean_old_arp_entries_timer,
-                         std::unique_ptr<beerocks::net::Timer<>> check_wlan_params_changed_timer,
-                         std::unique_ptr<beerocks::net::ServerSocket> server_socket,
-                         std::shared_ptr<beerocks::net::CmduParser> cmdu_parser,
-                         std::shared_ptr<beerocks::net::CmduSerializer> cmdu_serializer,
-                         std::shared_ptr<beerocks::EventLoop> event_loop)
+PlatformManager::PlatformManager(
+    const config_file::sConfigSlave &config_,
+    const std::unordered_map<int, std::string> &interfaces_map_, logging &logger_,
+    std::unique_ptr<beerocks::net::Timer<>> clean_old_arp_entries_timer,
+    std::unique_ptr<beerocks::net::Timer<>> check_wlan_params_changed_timer,
+    std::unique_ptr<beerocks::net::ServerSocket> server_socket,
+    std::shared_ptr<beerocks::net::CmduParser> cmdu_parser,
+    std::shared_ptr<beerocks::net::CmduSerializer> cmdu_serializer,
+    std::shared_ptr<beerocks::EventLoop> event_loop)
     : m_cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer)), config(config_), interfaces_map(interfaces_map_),
       logger(logger_), m_clean_old_arp_entries_timer(std::move(clean_old_arp_entries_timer)),
       m_check_wlan_params_changed_timer(std::move(check_wlan_params_changed_timer)),
@@ -338,7 +337,7 @@ main_thread::main_thread(const config_file::sConfigSlave &config_,
     }
 }
 
-bool main_thread::start()
+bool PlatformManager::start()
 {
     {
         // Register event handlers for the server socket
@@ -500,7 +499,7 @@ bool main_thread::start()
     return true;
 }
 
-bool main_thread::stop()
+bool PlatformManager::stop()
 {
     bool result = true;
 
@@ -552,9 +551,9 @@ bool main_thread::stop()
     return result;
 }
 
-bool main_thread::add_connection(int fd,
-                                 std::unique_ptr<beerocks::net::Socket::Connection> connection,
-                                 const beerocks::EventLoop::EventHandlers &handlers)
+bool PlatformManager::add_connection(int fd,
+                                     std::unique_ptr<beerocks::net::Socket::Connection> connection,
+                                     const beerocks::EventLoop::EventHandlers &handlers)
 {
     LOG(DEBUG) << "Adding new connection, fd = " << fd;
 
@@ -571,7 +570,7 @@ bool main_thread::add_connection(int fd,
     return true;
 }
 
-bool main_thread::remove_connection(int fd)
+bool PlatformManager::remove_connection(int fd)
 {
     LOG(DEBUG) << "Removing connection, fd = " << fd;
 
@@ -587,7 +586,7 @@ bool main_thread::remove_connection(int fd)
     return true;
 }
 
-void main_thread::handle_read(int fd)
+void PlatformManager::handle_read(int fd)
 {
     // Find context information for given socket connection
     auto it = m_connections.find(fd);
@@ -626,7 +625,7 @@ void main_thread::handle_read(int fd)
     }
 }
 
-void main_thread::handle_close(int fd)
+void PlatformManager::handle_close(int fd)
 {
     // Notify that socket has been disconnected to clean-up resources
     socket_disconnected(fd);
@@ -635,7 +634,7 @@ void main_thread::handle_close(int fd)
     remove_connection(fd);
 }
 
-void main_thread::add_slave_socket(int fd, const std::string &iface_name)
+void PlatformManager::add_slave_socket(int fd, const std::string &iface_name)
 {
     // Lock the slaves socket map
     std::unique_lock<std::mutex> lock(m_mtxSlaves);
@@ -643,7 +642,7 @@ void main_thread::add_slave_socket(int fd, const std::string &iface_name)
     m_mapSlaves[fd] = iface_name;
 }
 
-void main_thread::del_slave_socket(int fd)
+void PlatformManager::del_slave_socket(int fd)
 {
     // Lock the slaves socket map
     std::unique_lock<std::mutex> lock(m_mtxSlaves);
@@ -657,7 +656,7 @@ void main_thread::del_slave_socket(int fd)
     }
 }
 
-bool main_thread::send_cmdu_safe(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
+bool PlatformManager::send_cmdu_safe(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
 {
     // Lock the slaves socket map
     std::unique_lock<std::mutex> lock(m_mtxSlaves);
@@ -670,7 +669,7 @@ bool main_thread::send_cmdu_safe(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
     return send_cmdu(fd, cmdu_tx);
 }
 
-bool main_thread::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
+bool PlatformManager::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
 {
     // Find context information for given socket connection
     auto it = m_connections.find(fd);
@@ -695,7 +694,7 @@ bool main_thread::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
     return context.connection->send(buffer);
 }
 
-int main_thread::get_slave_socket_from_hostap_iface_name(const std::string &iface)
+int PlatformManager::get_slave_socket_from_hostap_iface_name(const std::string &iface)
 {
     auto it_slave = std::find_if(
         m_mapSlaves.begin(), m_mapSlaves.end(),
@@ -708,7 +707,7 @@ int main_thread::get_slave_socket_from_hostap_iface_name(const std::string &ifac
     return beerocks::net::FileDescriptor::invalid_descriptor;
 }
 
-int main_thread::get_backhaul_socket()
+int PlatformManager::get_backhaul_socket()
 {
     // Lock the slaves socket map
     std::unique_lock<std::mutex> lock(m_mtxSlaves);
@@ -726,7 +725,7 @@ int main_thread::get_backhaul_socket()
     return fd;
 }
 
-void main_thread::load_iface_params(const std::string &strIface, beerocks::eArpSource eType)
+void PlatformManager::load_iface_params(const std::string &strIface, beerocks::eArpSource eType)
 {
     // Ignore empty interfaces
     if (strIface.empty()) {
@@ -739,7 +738,7 @@ void main_thread::load_iface_params(const std::string &strIface, beerocks::eArpS
     m_mapIfaces[strIface] = {eType}; // Struct initialization
 }
 
-std::string main_thread::bridge_iface_from_mac(const sMacAddr &sMac)
+std::string PlatformManager::bridge_iface_from_mac(const sMacAddr &sMac)
 {
     char iface_name[BPL_ARP_IFACE_NAME_LEN];
 
@@ -751,8 +750,8 @@ std::string main_thread::bridge_iface_from_mac(const sMacAddr &sMac)
     return std::string(iface_name);
 }
 
-void main_thread::send_dhcp_notification(const std::string &op, const std::string &mac,
-                                         const std::string &ip, const std::string &hostname)
+void PlatformManager::send_dhcp_notification(const std::string &op, const std::string &mac,
+                                             const std::string &ip, const std::string &hostname)
 {
     LOG(DEBUG) << "DHCP Event: " << op << ", mac: " << mac << ", ip: " << ip
                << ", hostname: " << hostname;
@@ -784,7 +783,7 @@ void main_thread::send_dhcp_notification(const std::string &op, const std::strin
     }
 }
 
-bool main_thread::check_wlan_params_changed()
+bool PlatformManager::check_wlan_params_changed()
 {
     bool any_slave_changed = false;
     for (auto &elm : bpl_iface_wlan_params_map) {
@@ -836,7 +835,7 @@ bool main_thread::check_wlan_params_changed()
     return any_slave_changed;
 }
 
-bool main_thread::socket_disconnected(int fd)
+bool PlatformManager::socket_disconnected(int fd)
 {
     auto it = m_mapSlaves.find(fd);
     if (it == m_mapSlaves.end()) {
@@ -855,7 +854,7 @@ bool main_thread::socket_disconnected(int fd)
     return true;
 }
 
-bool main_thread::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
+bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto beerocks_header = message_com::parse_intel_vs_message(cmdu_rx);
     if (!beerocks_header) {
@@ -1284,7 +1283,7 @@ bool main_thread::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
     return true;
 }
 
-bool main_thread::handle_arp_monitor()
+bool PlatformManager::handle_arp_monitor()
 {
     auto arp_notif =
         message_com::create_vs_message<beerocks_message::cACTION_PLATFORM_ARP_MONITOR_NOTIFICATION>(
@@ -1419,7 +1418,7 @@ bool main_thread::handle_arp_monitor()
     return (true);
 }
 
-bool main_thread::handle_arp_raw()
+bool PlatformManager::handle_arp_raw()
 {
     // Skip invalid ARP packets
     bpl::BPL_ARP_MON_ENTRY entry;
@@ -1510,7 +1509,7 @@ bool main_thread::handle_arp_raw()
     return (true);
 }
 
-void main_thread::clean_old_arp_entries()
+void PlatformManager::clean_old_arp_entries()
 {
     auto now = std::chrono::steady_clock::now();
 
@@ -1533,7 +1532,7 @@ void main_thread::clean_old_arp_entries()
     }
 }
 
-bool main_thread::init_arp_monitor()
+bool PlatformManager::init_arp_monitor()
 {
     if (!m_ctxArpMon) {
         LOG(DEBUG) << "Starting ARP Monitor...";
@@ -1657,7 +1656,7 @@ bool main_thread::init_arp_monitor()
     return true;
 }
 
-void main_thread::stop_arp_monitor()
+void PlatformManager::stop_arp_monitor()
 {
     if (m_ctxArpMon) {
         bpl::arp_mon_stop(m_ctxArpMon);
@@ -1679,7 +1678,7 @@ void main_thread::stop_arp_monitor()
     m_clean_old_arp_entries_timer->cancel();
 }
 
-bool main_thread::restart_arp_monitor()
+bool PlatformManager::restart_arp_monitor()
 {
     stop_arp_monitor();
 
@@ -1691,7 +1690,7 @@ bool main_thread::restart_arp_monitor()
     return true;
 }
 
-bool main_thread::init_dhcp_monitor()
+bool PlatformManager::init_dhcp_monitor()
 {
     static auto dhcp_monitor_cb_wrapper = [&](const std::string &op, const std::string &mac,
                                               const std::string &ip, const std::string &hostname) {
@@ -1749,7 +1748,7 @@ bool main_thread::init_dhcp_monitor()
     return true;
 }
 
-void main_thread::stop_dhcp_monitor()
+void PlatformManager::stop_dhcp_monitor()
 {
     if (bpl::dhcp_mon_stop() != 0) {
         LOG(ERROR) << "Failed stopping DHCP Monitor!";
@@ -1763,5 +1762,4 @@ void main_thread::stop_dhcp_monitor()
     }
 }
 
-} // namespace platform_manager
 } // namespace beerocks
