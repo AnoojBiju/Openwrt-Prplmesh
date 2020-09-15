@@ -1446,7 +1446,7 @@ class TestFlows:
         time.sleep(2)
 
         # Phase 2 (step 3)
-        env.controller.dev_send_1905(agent.mac, 0x8001)
+        mid = env.controller.dev_send_1905(agent.mac, 0x8001)
         # wait
         time.sleep(1)
         # Phase 2 (step 4)
@@ -1457,19 +1457,25 @@ class TestFlows:
         Verify that the AP Capability Report message contains one Metric Collection Interval TLV and
         one R2 AP Capability TLV with the Byte Counter Units field set to 0x01.
         '''
+        resp = self.check_cmdu_type_single("AP Capability Report message", 0x8002,
+                                           agent.mac, env.controller.mac,
+                                           mid)
+
+        self.check_cmdu_has_tlvs(resp, 0xC5)
+        ap_capability_tlv = self.check_cmdu_has_tlvs(resp, 0xB4)
+        print(ap_capability_tlv)
 
         # Phase 3
         # Phase 4
+        vap1.associate(sta1)
+        vap1.associate(sta3)
+        vap2.associate(sta2)
+
+        time.sleep(1)
         # Phase 5
         # Phase 6
 
         # Phase 7
-
-        # Associate STAs after completing all the Resets/Backhaul reconfiguration
-        vap1.associate(sta1)
-        vap1.associate(sta3)
-        vap2.associate(sta2)
-        time.sleep(1)
 
         # prepare tlvs
         sta_mac_addr_tlv = tlv(0x95, 0x0006, '{}'.format(sta2.mac))
