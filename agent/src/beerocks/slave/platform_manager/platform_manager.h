@@ -6,8 +6,8 @@
  * See LICENSE file for more details.
  */
 
-#ifndef _PLATFORM_MANAGER_THREAD_H
-#define _PLATFORM_MANAGER_THREAD_H
+#ifndef _PLATFORM_MANAGER_H
+#define _PLATFORM_MANAGER_H
 
 #include <bcl/beerocks_async_work_queue.h>
 #include <bcl/beerocks_config_file.h>
@@ -29,9 +29,8 @@
 #include <unordered_set>
 
 namespace beerocks {
-namespace platform_manager {
 
-class main_thread {
+class PlatformManager {
 
 public:
     /**
@@ -46,14 +45,14 @@ public:
      */
     static std::string query_db(const std::string &parameter);
 
-    main_thread(const config_file::sConfigSlave &config_,
-                const std::unordered_map<int, std::string> &interfaces_map, logging &logger_,
-                std::unique_ptr<beerocks::net::Timer<>> clean_old_arp_entries_timer,
-                std::unique_ptr<beerocks::net::Timer<>> check_wlan_params_changed_timer,
-                std::unique_ptr<beerocks::net::ServerSocket> server_socket,
-                std::shared_ptr<beerocks::net::CmduParser> cmdu_parser,
-                std::shared_ptr<beerocks::net::CmduSerializer> cmdu_serializer,
-                std::shared_ptr<beerocks::EventLoop> event_loop);
+    PlatformManager(const config_file::sConfigSlave &config_,
+                    const std::unordered_map<int, std::string> &interfaces_map, logging &logger_,
+                    std::unique_ptr<beerocks::net::Timer<>> clean_old_arp_entries_timer,
+                    std::unique_ptr<beerocks::net::Timer<>> check_wlan_params_changed_timer,
+                    std::unique_ptr<beerocks::net::ServerSocket> server_socket,
+                    std::shared_ptr<beerocks::net::CmduParser> cmdu_parser,
+                    std::shared_ptr<beerocks::net::CmduSerializer> cmdu_serializer,
+                    std::shared_ptr<beerocks::EventLoop> event_loop);
 
     /**
      * @brief Starts platform manager.
@@ -326,7 +325,6 @@ private:
     int m_dhcp_mon_socket = beerocks::net::FileDescriptor::invalid_descriptor;
 };
 
-} // namespace platform_manager
 } // namespace beerocks
 
-#endif // _PLATFORM_MANAGER_THREAD_H
+#endif // _PLATFORM_MANAGER_H
