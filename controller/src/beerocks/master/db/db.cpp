@@ -4491,6 +4491,8 @@ bool db::update_client_entry_in_persistent_db(const sMacAddr &mac, const ValuesM
         return false;
     }
 
+    db_changes_made = true;
+
     return true;
 }
 

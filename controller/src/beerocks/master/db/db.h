@@ -1176,6 +1176,11 @@ private:
     std::unordered_map<std::string, std::shared_ptr<node>> nodes[beerocks::HIERARCHY_MAX];
 
     std::queue<std::string> disconnected_slave_mac_queue;
+    /*
+            * This variable indicates that data currently pending flashing from memory into the 
+            * persistent DB hard file. (non-temporary file)
+            */
+    bool db_changes_made = false;
 
     int slaves_stop_on_failure_attempts = 0;
 
