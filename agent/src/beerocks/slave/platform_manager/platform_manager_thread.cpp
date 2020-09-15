@@ -254,7 +254,26 @@ static bool fill_platform_settings(
     return true;
 }
 
-std::string extern_query_db(const std::string &parameter)
+static std::string get_sta_iface(const std::string &hostap_iface)
+{
+    char sta_iface_str[BPL_IFNAME_LEN];
+    if (bpl::cfg_get_sta_iface(hostap_iface.c_str(), sta_iface_str) < 0) {
+        LOG(DEBUG) << "failed to read sta_iface for slave ";
+        return std::string();
+    }
+    auto sta_iface = std::string(sta_iface_str);
+    if (!beerocks::net::network_utils::linux_iface_exists(sta_iface)) {
+        LOG(DEBUG) << "sta iface " << sta_iface << " does not exist, clearing it from config";
+        return std::string();
+    }
+    return sta_iface;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+/////////////////////////////// Implementation ///////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+std::string main_thread::query_db(const std::string &parameter)
 {
     std::string ret;
     if (bpl::bpl_init() < 0) {
@@ -280,25 +299,6 @@ std::string extern_query_db(const std::string &parameter)
     }
     return ret;
 }
-
-static std::string get_sta_iface(const std::string &hostap_iface)
-{
-    char sta_iface_str[BPL_IFNAME_LEN];
-    if (bpl::cfg_get_sta_iface(hostap_iface.c_str(), sta_iface_str) < 0) {
-        LOG(DEBUG) << "failed to read sta_iface for slave ";
-        return std::string();
-    }
-    auto sta_iface = std::string(sta_iface_str);
-    if (!beerocks::net::network_utils::linux_iface_exists(sta_iface)) {
-        LOG(DEBUG) << "sta iface " << sta_iface << " does not exist, clearing it from config";
-        return std::string();
-    }
-    return sta_iface;
-}
-
-//////////////////////////////////////////////////////////////////////////////
-/////////////////////////////// Implementation ///////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
 
 main_thread::main_thread(const config_file::sConfigSlave &config_,
                          const std::unordered_map<int, std::string> &interfaces_map_,
