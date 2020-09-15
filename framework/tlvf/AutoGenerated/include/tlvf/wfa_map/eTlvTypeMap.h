@@ -65,6 +65,7 @@ enum class eTlvTypeMap : uint8_t {
     TLV_TUNNELLED_PROTOCOL_TYPE = 0xc1,
     TLV_TUNNELLED_DATA = 0xc2,
     TLV_PROFILE2_STATUS_CODE = 0xc9,
+    TLV_PROFILE2_REASON_CODE = 0xca,
 };
 class eTlvTypeMapValidate {
 public:
@@ -116,6 +117,7 @@ public:
         case 0xc1:
         case 0xc2:
         case 0xc9:
+        case 0xca:
                 ret = true;
                 break;
             default:
