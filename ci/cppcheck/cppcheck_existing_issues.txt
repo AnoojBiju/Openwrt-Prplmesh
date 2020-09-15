@@ -150,22 +150,22 @@ controller/src/beerocks/master/tasks/task.cpp: performance: Function parameter '
 controller/src/beerocks/master/tasks/task.cpp: performance: Function parameter 'node_mac' should be passed by const reference. [passedByValue]task::task(std::string task_name_, std::string node_mac)
 controller/src/beerocks/master/tasks/task.cpp: performance: Function parameter 'task_name_' should be passed by const reference. [passedByValue]task::task(std::string task_name_, std::string node_mac)
 framework/external/easylogging/easylogging++.cc: information: This file is not analyzed. Cppcheck failed to extract a valid configuration. Use -v for more details. [noValidConfiguration]
+framework/platform/bpl/arp/uci/bpl_arp.cpp: style: C-style pointer casting [cstyleCast]    arp_monitor *pArpMon = (arp_monitor *)ctx;
+framework/platform/bpl/arp/uci/monitor/arp_monitor.cpp: performance: Function parameter 'strIface' should be passed by const reference. [passedByValue]int arp_monitor::start(std::string strIface)
+framework/platform/bpl/arp/uci/monitor/arp_monitor.cpp: style: The scope of the variable 'type' can be reduced. [variableScope]        unsigned short type;
+framework/platform/bpl/arp/uci/monitor/arp_monitor.cpp: style: Unused variable: ipv4_str [unusedVariable]        std::string ipv4_str;
+framework/platform/bpl/cfg/uci/bpl_cfg.cpp: style: The scope of the variable 'retVal' can be reduced. [variableScope]    int retVal = 0;
+framework/platform/bpl/cfg/uci/bpl_cfg.cpp: style: Variable 'retVal' is assigned a value that is never used. [unreadVariable]    int retVal = 0;
+framework/platform/bpl/cfg/uci/bpl_cfg_uci.cpp: style: The scope of the variable 'scanf_res' can be reduced. [variableScope]        int scanf_res;
 framework/platform/bpl/common/utils/utils.cpp: performance: Function parameter 'additional_chars' should be passed by const reference. [passedByValue]void ltrim(std::string &str, std::string additional_chars)
 framework/platform/bpl/common/utils/utils.cpp: performance: Function parameter 'additional_chars' should be passed by const reference. [passedByValue]void rtrim(std::string &str, std::string additional_chars)
 framework/platform/bpl/common/utils/utils.cpp: performance: Function parameter 'additional_chars' should be passed by const reference. [passedByValue]void trim(std::string &str, std::string additional_chars)
 framework/platform/bpl/common/utils/utils.cpp: style: Unused variable: return_string [unusedVariable]    std::string return_string;
-framework/platform/bpl/linux/bpl_db.cpp: style: Parameter 'nested_params' can be declared with const [constParameter]    std::unordered_map<std::string, std::unordered_map<std::string, std::string>> &nested_params)
-framework/platform/bpl/linux/bpl_db.cpp: style: Parameter 'params' can be declared with const [constParameter]                  std::unordered_map<std::string, std::string> &params)
+framework/platform/bpl/db/linux/bpl_db.cpp: style: Parameter 'nested_params' can be declared with const [constParameter]    std::unordered_map<std::string, std::unordered_map<std::string, std::string>> &nested_params)
+framework/platform/bpl/db/linux/bpl_db.cpp: style: Parameter 'params' can be declared with const [constParameter]                  std::unordered_map<std::string, std::string> &params)
+framework/platform/bpl/dhcp/uci/bpl_dhcp.cpp: style: struct member 'dhcp_event_request::data' is never used. [unusedStructMember]    char data[];
 framework/platform/bpl/test/bpl_test.cpp: portability: fflush() called on input stream 'stdin' may result in undefined behaviour on non-linux systems. [fflushOnInputStream]            fflush(stdin);
 framework/platform/bpl/test/bpl_test.cpp: portability: fflush() called on input stream 'stdin' may result in undefined behaviour on non-linux systems. [fflushOnInputStream]        fflush(stdin);
-framework/platform/bpl/uci/arp/bpl_arp.cpp: style: C-style pointer casting [cstyleCast]    arp_monitor *pArpMon = (arp_monitor *)ctx;
-framework/platform/bpl/uci/arp/monitor/arp_monitor.cpp: performance: Function parameter 'strIface' should be passed by const reference. [passedByValue]int arp_monitor::start(std::string strIface)
-framework/platform/bpl/uci/arp/monitor/arp_monitor.cpp: style: The scope of the variable 'type' can be reduced. [variableScope]        unsigned short type;
-framework/platform/bpl/uci/arp/monitor/arp_monitor.cpp: style: Unused variable: ipv4_str [unusedVariable]        std::string ipv4_str;
-framework/platform/bpl/uci/cfg/bpl_cfg.cpp: style: The scope of the variable 'retVal' can be reduced. [variableScope]    int retVal = 0;
-framework/platform/bpl/uci/cfg/bpl_cfg.cpp: style: Variable 'retVal' is assigned a value that is never used. [unreadVariable]    int retVal = 0;
-framework/platform/bpl/uci/cfg/bpl_cfg_uci.cpp: style: The scope of the variable 'scanf_res' can be reduced. [variableScope]        int scanf_res;
-framework/platform/bpl/uci/dhcp/bpl_dhcp.cpp: style: struct member 'dhcp_event_request::data' is never used. [unusedStructMember]    char data[];
 framework/tlvf/test/tlvf_test.cpp: style: Local variable 'cmplx' shadows outer variable [shadowVariable]            auto cmplx = std::get<1>(tlv4->complex_list(0));
 framework/tlvf/test/tlvf_test.cpp: style: Local variable 'cmplx' shadows outer variable [shadowVariable]            auto cmplx = std::get<1>(tlv4->complex_list(1));
 framework/tlvf/test/tlvf_test.cpp: style: Local variable 'cmplx' shadows outer variable [shadowVariable]        auto cmplx = std::get<1>(tlv4->complex_list(i));
