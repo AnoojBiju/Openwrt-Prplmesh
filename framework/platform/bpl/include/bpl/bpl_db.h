@@ -45,20 +45,24 @@ bool db_has_entry(const std::string &entry_type, const std::string &entry_name);
  * @param[in] entry_type type of the requested entry.
  * @param[in] entry_name name of the requested entry.
  * @param[in] params initial params of the entry.
+ * @param[in] commit_changes to show immediate intention to commit, default = true
  * @return true on success, false otherwise
  */
 bool db_add_entry(const std::string &entry_type, const std::string &entry_name,
-                  const std::unordered_map<std::string, std::string> &params);
+                  const std::unordered_map<std::string, std::string> &params,
+                  bool commit_changes = true);
 /**
  * @brief Set values in entry, append attributes and override existing.
  * 
  * @param[in] entry_type type of the requested entry.
  * @param[in] entry_name name of the requested entry.
  * @param[in] params unordered_map containing the params the requested entry, to be set.
+ * @param[in] commit_changes to show immediate intention to commit, default = true
  * @return true on success, false otherwise.
  */
 bool db_set_entry(const std::string &entry_type, const std::string &entry_name,
-                  const std::unordered_map<std::string, std::string> &params);
+                  const std::unordered_map<std::string, std::string> &params,
+                  bool commit_changes = true);
 /**
  * @brief Get values of entry, return all avaliable values.
  * 
@@ -86,9 +90,18 @@ bool db_get_entries_by_type(
  * 
  * @param[in] entry_type type of the requested entry.
  * @param[in] entry_name name of the requested entry.
+ * @param[in] commit_changes to show immediate intention to commit, default = true
  * @return true on success, false otherwise.
  */
-bool db_remove_entry(const std::string &entry_type, const std::string &entry_name);
+bool db_remove_entry(const std::string &entry_type, const std::string &entry_name,
+                     bool commit_changes = true);
+
+/**
+ * @brief Commit changes by package name
+ *
+ * @return true on success, false otherwise.
+ */
+bool db_commit_changes();
 
 } // namespace bpl
 } // namespace beerocks
