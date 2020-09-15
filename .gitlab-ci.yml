@@ -239,8 +239,7 @@ run-tests:
     when: always
 
   tags:
-    - docker
-    - docker-build
+    - test-flows
 
   after_script:
     - tools/docker/stop.sh -k -r
