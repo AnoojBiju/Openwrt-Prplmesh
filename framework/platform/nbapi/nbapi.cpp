@@ -5,17 +5,17 @@
  * This code is subject to the terms of the BSD+Patent license.
  * See LICENSE file for more details.
  */
-#include "hlapi.h"
+#include "nbapi.h"
 
-using namespace nbapi;
+namespace nbapi {
 
-ambiorix::ambiorix()
+Ambiorix::Ambiorix()
 {
     amxo_parser_init(&m_parser);
     amxd_dm_init(&m_datamodel);
 }
 
-bool ambiorix::init(const std::string &amxb_backend, const std::string &bus_uri,
+bool Ambiorix::init(const std::string &amxb_backend, const std::string &bus_uri,
                     const std::string &datamodel_path)
 {
     LOG(DEBUG) << "Initializing the bus connection.";
@@ -49,7 +49,7 @@ bool ambiorix::init(const std::string &amxb_backend, const std::string &bus_uri,
     return true;
 }
 
-bool ambiorix::load_datamodel(const std::string &datamodel_path)
+bool Ambiorix::load_datamodel(const std::string &datamodel_path)
 {
     LOG(DEBUG) << "Loading the data model.";
     auto *root_obj = amxd_dm_get_root(&m_datamodel);
@@ -69,10 +69,11 @@ bool ambiorix::load_datamodel(const std::string &datamodel_path)
     return true;
 }
 
-ambiorix::~ambiorix()
+Ambiorix::~Ambiorix()
 {
     amxb_free(&m_bus_ctx);
     amxd_dm_clean(&m_datamodel);
     amxo_parser_clean(&m_parser);
     amxb_be_remove_all();
 }
+} // namespace nbapi

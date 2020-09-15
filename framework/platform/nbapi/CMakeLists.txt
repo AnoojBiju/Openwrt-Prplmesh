@@ -5,7 +5,7 @@
 # This code is subject to the terms of the BSD+Patent license.
 # See LICENSE file for more details.
 
-project(hlapi VERSION ${prplmesh_VERSION})
+project(nbapi VERSION ${prplmesh_VERSION})
 
 message("${BoldWhite}Preparing ${BoldGreen}${PROJECT_NAME}${BoldWhite} for the ${BoldGreen}${TARGET_PLATFORM}${BoldWhite} platform${ColourReset}")
 
@@ -13,23 +13,22 @@ message("${BoldWhite}Preparing ${BoldGreen}${PROJECT_NAME}${BoldWhite} for the $
 set(MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 
 # Common Sources
-set(hlapi_sources ${MODULE_PATH}/hlapi.cpp)
+set(nbapi_sources ${MODULE_PATH}/nbapi.cpp)
 
 # Include AMBIORIX in the build
-message(STATUS "ENABLE_HLAPI: ${ENABLE_HLAPI}")
 find_package(amxb REQUIRED)
 find_package(amxc REQUIRED)
 find_package(amxd REQUIRED)
 find_package(amxp REQUIRED)
 find_package(amxo REQUIRED)
-list(APPEND HLAPI_LIBS amxb amxc amxd amxp amxo)
+list(APPEND NBAPI_LIBS amxb amxc amxd amxp amxo)
 
 
 # Build the library
-add_library(${PROJECT_NAME} ${hlapi_sources})
+add_library(${PROJECT_NAME} ${nbapi_sources})
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${prplmesh_VERSION} SOVERSION ${prplmesh_VERSION_MAJOR})
 set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,-z,defs")
-target_link_libraries(${PROJECT_NAME} PRIVATE ${HLAPI_LIBS} mapfcommon elpp)
+target_link_libraries(${PROJECT_NAME} PRIVATE ${NBAPI_LIBS} mapfcommon elpp)
 
 # Install
 target_include_directories(${PROJECT_NAME}

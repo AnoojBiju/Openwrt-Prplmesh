@@ -6,8 +6,8 @@
  * See LICENSE file for more details.
  */
 
-#ifndef HLAPI_H
-#define HLAPI_H
+#ifndef NBAPI_H
+#define NBAPI_H
 
 #include <easylogging++.h>
 #include <mapf/common/utils.h>
@@ -29,19 +29,21 @@
 #include <amxo/amxo_save.h>
 
 namespace nbapi {
-class ambiorix {
+
+/**
+ * @class Ambiorix
+ * @brief This class manages the ambiorix instance.
+ */
+class Ambiorix {
 
 public:
-    /**
-     * @brief Ambiorix constructor does initialization for m_datamodel and m_parser variables.
-     */
-    ambiorix();
+    Ambiorix();
 
     /**
      * @brief Ambiorix destructor removes: bus connection, data model, parser and all data
      *        from the backend (UBus, PCB, etc.).
      */
-    virtual ~ambiorix();
+    virtual ~Ambiorix();
 
     /**
      * @brief Initialize the ambiorix library: load backend, connect to the bus, load data model,
@@ -67,10 +69,10 @@ private:
     bool load_datamodel(const std::string &datamodel_path);
 
     // Variables
-    amxb_bus_ctx_t *m_bus_ctx;
+    amxb_bus_ctx_t *m_bus_ctx = nullptr;
     amxd_dm_t m_datamodel;
     amxo_parser_t m_parser;
 };
 
 } // namespace nbapi
-#endif // HLAPI_H
+#endif // NBAPI_H
