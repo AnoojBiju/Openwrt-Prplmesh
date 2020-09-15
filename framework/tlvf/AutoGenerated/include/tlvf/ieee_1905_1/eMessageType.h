@@ -69,6 +69,7 @@ enum class eMessageType : uint16_t {
     CHANNEL_SCAN_REQUEST_MESSAGE = 0x801b,
     CHANNEL_SCAN_REPORT_MESSAGE = 0x801c,
     TUNNELLED_MESSAGE = 0x8026,
+    FAILED_CONNECTION_MESSAGE = 0x8033,
 };
 class eMessageTypeValidate {
 public:
@@ -124,6 +125,7 @@ public:
         case 0x801b:
         case 0x801c:
         case 0x8026:
+        case 0x8033:
                 ret = true;
                 break;
             default:
