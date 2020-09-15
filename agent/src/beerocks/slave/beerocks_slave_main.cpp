@@ -95,13 +95,12 @@ static bool parse_arguments(int argc, char *argv[])
     int opt;
     while ((opt = getopt(argc, argv, "q:")) != -1) {
         switch (opt) {
-        case 'q': // query platfrom: is_master, is_gateway, is_onboarding
+        case 'q': // query platform: is_master, is_gateway, is_onboarding
         {
-            std::string request;
-            request.assign(optarg);
+            std::string request{optarg};
             std::cout << std::endl
-                      << request << "=" << beerocks::platform_manager::extern_query_db(request)
-                      << std::endl;
+                      << request << "="
+                      << beerocks::platform_manager::main_thread::query_db(request) << std::endl;
             exit(0);
         }
         case '?': {
