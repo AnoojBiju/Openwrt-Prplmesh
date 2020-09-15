@@ -6,8 +6,6 @@
  * See LICENSE file for more details.
  */
 
-#include <mapf/common/utils.h>
-
 #include "platform_manager_thread.h"
 
 #include "../agent_db.h"
@@ -29,8 +27,6 @@ namespace platform_manager {
 //////////////////////////////////////////////////////////////////////////////
 ////////////////////////// Local Module Definitions //////////////////////////
 //////////////////////////////////////////////////////////////////////////////
-
-#define SELECT_TIMEOUT_MSC 500
 
 static const uint8_t s_arrZeroMac[]  = {0, 0, 0, 0, 0, 0};
 static const uint8_t s_arrBCastMac[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
@@ -313,9 +309,8 @@ main_thread::main_thread(const config_file::sConfigSlave &config_,
                          std::shared_ptr<beerocks::net::CmduParser> cmdu_parser,
                          std::shared_ptr<beerocks::net::CmduSerializer> cmdu_serializer,
                          std::shared_ptr<beerocks::EventLoop> event_loop)
-    : socket_thread(config_.temp_path + std::string(BEEROCKS_PLAT_MGR_UDS)), config(config_),
-      interfaces_map(interfaces_map_), logger(logger_),
-      m_clean_old_arp_entries_timer(std::move(clean_old_arp_entries_timer)),
+    : m_cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer)), config(config_), interfaces_map(interfaces_map_),
+      logger(logger_), m_clean_old_arp_entries_timer(std::move(clean_old_arp_entries_timer)),
       m_check_wlan_params_changed_timer(std::move(check_wlan_params_changed_timer)),
       m_server_socket(std::move(server_socket)), m_cmdu_parser(cmdu_parser),
       m_cmdu_serializer(cmdu_serializer), m_event_loop(event_loop)
@@ -329,8 +324,6 @@ main_thread::main_thread(const config_file::sConfigSlave &config_,
     LOG_IF(!m_cmdu_serializer, FATAL) << "CMDU serializer is a null pointer!";
     LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
 
-    set_select_timeout(SELECT_TIMEOUT_MSC);
-    thread_name        = "platform_manager";
     enable_arp_monitor = (config.enable_arp_monitor == "1");
 
     int i = 0;
@@ -345,9 +338,7 @@ main_thread::main_thread(const config_file::sConfigSlave &config_,
     }
 }
 
-main_thread::~main_thread() { main_thread::on_thread_stop(); }
-
-bool main_thread::to_be_renamed_to_start()
+bool main_thread::start()
 {
     {
         // Register event handlers for the server socket
@@ -370,7 +361,7 @@ bool main_thread::to_be_renamed_to_start()
                             // Not implemented
                             .on_write = nullptr,
 
-                            // Remove the socket on disconnections or errors
+                            // Remove the socket on disconnection or error
                             .on_disconnect =
                                 [&](int fd, EventLoop &loop) {
                                     handle_close(fd);
@@ -396,7 +387,7 @@ bool main_thread::to_be_renamed_to_start()
             // Not implemented
             .on_write = nullptr,
 
-            // Fail on server socket disconnections or errors
+            // Fail on server socket disconnection or error
             .on_disconnect =
                 [&](int fd, EventLoop &loop) {
                     LOG(ERROR) << "Server socket disconnected!";
@@ -500,6 +491,7 @@ bool main_thread::to_be_renamed_to_start()
     }
 
     // Start the async work queue
+    m_should_stop = false;
     if (!work_queue.start()) {
         LOG(ERROR) << "Failed starting asynchronous work queue";
         return false;
@@ -508,11 +500,12 @@ bool main_thread::to_be_renamed_to_start()
     return true;
 }
 
-bool main_thread::to_be_renamed_to_stop()
+bool main_thread::stop()
 {
     bool result = true;
 
     LOG(DEBUG) << "Stopping asynchronous work queue...";
+    m_should_stop = true;
     work_queue.stop(true);
 
     // Stop the DHCP Monitor
@@ -659,8 +652,9 @@ void main_thread::del_slave_socket(int fd)
     m_mapSlaves.erase(fd);
 
     // Also check if that was the backhaul manager
-    if (m_pBackhaulManagerSlave == fd)
-        m_pBackhaulManagerSlave = beerocks::net::FileDescriptor::invalid_descriptor;
+    if (m_backhaul_manager_socket == fd) {
+        m_backhaul_manager_socket = beerocks::net::FileDescriptor::invalid_descriptor;
+    }
 }
 
 bool main_thread::send_cmdu_safe(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
@@ -723,10 +717,11 @@ int main_thread::get_backhaul_socket()
     // If not, return the first socket from the connection map
     int fd = beerocks::net::FileDescriptor::invalid_descriptor;
 
-    if (beerocks::net::FileDescriptor::invalid_descriptor != m_pBackhaulManagerSlave)
-        fd = m_pBackhaulManagerSlave;
-    else if (m_mapSlaves.size())
+    if (beerocks::net::FileDescriptor::invalid_descriptor != m_backhaul_manager_socket) {
+        fd = m_backhaul_manager_socket;
+    } else if (!m_mapSlaves.empty()) {
         fd = m_mapSlaves.begin()->first;
+    }
 
     return fd;
 }
@@ -762,7 +757,7 @@ void main_thread::send_dhcp_notification(const std::string &op, const std::strin
     LOG(DEBUG) << "DHCP Event: " << op << ", mac: " << mac << ", ip: " << ip
                << ", hostname: " << hostname;
     auto dhcp_notif = message_com::create_vs_message<
-        beerocks_message::cACTION_PLATFORM_DHCP_MONITOR_NOTIFICATION>(cmdu_tx);
+        beerocks_message::cACTION_PLATFORM_DHCP_MONITOR_NOTIFICATION>(m_cmdu_tx);
 
     if (dhcp_notif == nullptr) {
         LOG(ERROR) << "Failed building ACTION_PLATFORM_DHCP_MONITOR_NOTIFICATION message!";
@@ -785,17 +780,8 @@ void main_thread::send_dhcp_notification(const std::string &op, const std::strin
     int fd = get_backhaul_socket();
 
     if (beerocks::net::FileDescriptor::invalid_descriptor != fd) {
-        send_cmdu(fd, cmdu_tx);
+        send_cmdu(fd, m_cmdu_tx);
     }
-}
-
-bool main_thread::init() { return socket_thread::init(); }
-
-bool main_thread::work()
-{
-    bool bret = socket_thread::work();
-
-    return bret;
 }
 
 bool main_thread::check_wlan_params_changed()
@@ -827,7 +813,7 @@ bool main_thread::check_wlan_params_changed()
         if (wlan_params_changed) {
             any_slave_changed = true;
             auto notification = message_com::create_vs_message<
-                beerocks_message::cACTION_PLATFORM_WLAN_PARAMS_CHANGED_NOTIFICATION>(cmdu_tx);
+                beerocks_message::cACTION_PLATFORM_WLAN_PARAMS_CHANGED_NOTIFICATION>(m_cmdu_tx);
             if (notification == nullptr) {
                 LOG(ERROR) << "Failed building message!";
                 return false;
@@ -842,34 +828,12 @@ bool main_thread::check_wlan_params_changed()
                 continue;
             }
 
-            send_cmdu_safe(fd, cmdu_tx);
+            send_cmdu_safe(fd, m_cmdu_tx);
             LOG(DEBUG) << "wlan_params_changed - cmdu msg sent, iface=" << elm.first
                        << " cmdu msg sent, fd=" << fd;
         }
     }
     return any_slave_changed;
-}
-
-void main_thread::on_thread_stop() { LOG(DEBUG) << "Platform_manager on_thread_stop()"; }
-
-// This method is temporary and will be removed at the end of PPM-591.
-// It is intended to allow the temporary coexistence of Socket* and file descriptors to refer to
-// accepted sockets.
-bool main_thread::socket_disconnected(Socket *sd)
-{
-    if (!sd) {
-        LOG(ERROR) << "socket is nullptr";
-        return false;
-    }
-
-    // Get the file descriptor for the given socket instance
-    int fd = sd->getSocketFd();
-
-    // Save the pair { fd x Socket* } for later retrieval
-    m_fd_to_socket_map[fd] = sd;
-
-    // Call the method with the new signature
-    return socket_disconnected(fd);
 }
 
 bool main_thread::socket_disconnected(int fd)
@@ -889,31 +853,6 @@ bool main_thread::socket_disconnected(int fd)
     del_slave_socket(fd);
 
     return true;
-}
-
-std::string main_thread::print_cmdu_types(const message::sUdsHeader *cmdu_header)
-{
-    return message_com::print_cmdu_types(cmdu_header);
-}
-
-// This method is temporary and will be removed at the end of PPM-591.
-// It is intended to allow the temporary coexistence of Socket* and file descriptors to refer to
-// accepted sockets.
-bool main_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
-{
-    if (!sd) {
-        LOG(ERROR) << "socket is nullptr";
-        return false;
-    }
-
-    // Get the file descriptor for the given socket instance
-    int fd = sd->getSocketFd();
-
-    // Save the pair { fd x Socket* } for later retrieval
-    m_fd_to_socket_map[fd] = sd;
-
-    // Call the method with the new signature
-    return handle_cmdu(fd, cmdu_rx);
 }
 
 bool main_thread::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
@@ -946,12 +885,10 @@ bool main_thread::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
         add_slave_socket(fd, strIfaceName);
 
         work_queue.enqueue<void>([this, strIfaceName, fd]() {
-            size_t headroom = sizeof(beerocks::message::sUdsHeader);
-            size_t buffer_size =
-                headroom + message_com::get_vs_cmdu_size_on_buffer<
-                               beerocks_message::cACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE>();
-            uint8_t tx_buffer[buffer_size];
-            ieee1905_1::CmduMessageTx cmdu_tx(tx_buffer + headroom, sizeof(tx_buffer) - headroom);
+            size_t tx_buffer_size = message_com::get_vs_cmdu_size_on_buffer<
+                beerocks_message::cACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE>();
+            uint8_t tx_buffer[tx_buffer_size];
+            ieee1905_1::CmduMessageTx cmdu_tx(tx_buffer, sizeof(tx_buffer));
 
             //Response message (empty for now)
             auto register_response = message_com::create_vs_message<
@@ -980,11 +917,13 @@ bool main_thread::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
                     // sleep and retry
                     std::this_thread::sleep_for(std::chrono::seconds(PLATFORM_READ_CONF_RETRY_SEC));
                 }
-            } while (!register_response->valid() && !should_stop);
+            } while (!register_response->valid() && !m_should_stop);
 
-            LOG(DEBUG) << "sending ACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE to " << strIfaceName
-                       << " fd=" << fd;
-            send_cmdu_safe(fd, cmdu_tx);
+            if (register_response->valid()) {
+                LOG(DEBUG) << "sending ACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE to "
+                           << strIfaceName << " fd=" << fd;
+                send_cmdu_safe(fd, cmdu_tx);
+            }
         });
 
     } break;
@@ -1047,7 +986,7 @@ bool main_thread::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
         LOG(TRACE) << "ACTION_PLATFORM_ADMIN_CREDENTIALS_GET_REQUEST";
 
         auto response = message_com::create_vs_message<
-            beerocks_message::cACTION_PLATFORM_ADMIN_CREDENTIALS_GET_RESPONSE>(cmdu_tx);
+            beerocks_message::cACTION_PLATFORM_ADMIN_CREDENTIALS_GET_RESPONSE>(m_cmdu_tx);
 
         if (response == nullptr) {
             LOG(ERROR) << "Failed building message!";
@@ -1067,7 +1006,7 @@ bool main_thread::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
         string_utils::copy_string(response->params().user_password, pass, message::USER_PASS_LEN);
 
         // Sent with unsafe because BML is reachable only on platform thread
-        send_cmdu(fd, cmdu_tx);
+        send_cmdu(fd, m_cmdu_tx);
 
         //clear the pwd in the memory
         memset(&pass, 0, sizeof(pass));
@@ -1077,7 +1016,7 @@ bool main_thread::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
     } break;
     case beerocks_message::ACTION_PLATFORM_GET_MASTER_SLAVE_VERSIONS_REQUEST: {
         auto response = message_com::create_vs_message<
-            beerocks_message::cACTION_PLATFORM_GET_MASTER_SLAVE_VERSIONS_RESPONSE>(cmdu_tx);
+            beerocks_message::cACTION_PLATFORM_GET_MASTER_SLAVE_VERSIONS_RESPONSE>(m_cmdu_tx);
         if (response == nullptr) {
             LOG(ERROR) << "addClass cACTION_PLATFORM_GET_MASTER_SLAVE_VERSIONS_RESPONSE failed";
             return false;
@@ -1092,7 +1031,7 @@ bool main_thread::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
             response->result() = 0;
         }
 
-        send_cmdu(fd, cmdu_tx);
+        send_cmdu(fd, m_cmdu_tx);
 
     } break;
     case beerocks_message::ACTION_PLATFORM_VERSION_MISMATCH_NOTIFICATION: {
@@ -1140,7 +1079,7 @@ bool main_thread::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
         }
         if (notification->is_backhaul_manager()) {
             LOG(DEBUG) << "slave is backhaul manager, updating";
-            m_pBackhaulManagerSlave = fd;
+            m_backhaul_manager_socket = fd;
 
             // Start ARP monitor
             if (enable_arp_monitor) {
@@ -1163,7 +1102,7 @@ bool main_thread::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
     case beerocks_message::ACTION_PLATFORM_ONBOARD_QUERY_REQUEST: {
         LOG(TRACE) << "ACTION_PLATFORM_ONBOARD_QUERY_REQUEST";
         auto response = message_com::create_vs_message<
-            beerocks_message::cACTION_PLATFORM_ONBOARD_QUERY_RESPONSE>(cmdu_tx);
+            beerocks_message::cACTION_PLATFORM_ONBOARD_QUERY_RESPONSE>(m_cmdu_tx);
         if (response == nullptr) {
             LOG(ERROR) << "Failed building ONBOARD RESPONSE message!";
             return false;
@@ -1171,14 +1110,14 @@ bool main_thread::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
         response->params().onboarding = bpl::cfg_is_onboarding();
 
         // Sent with unsafe because BML is reachable only on platform thread
-        send_cmdu(fd, cmdu_tx);
+        send_cmdu(fd, m_cmdu_tx);
 
     } break;
 
     case beerocks_message::ACTION_PLATFORM_LOCAL_MASTER_GET_REQUEST: {
         LOG(TRACE) << "ACTION_PLATFORM_LOCAL_MASTER_GET_REQUEST";
         auto response = message_com::create_vs_message<
-            beerocks_message::cACTION_PLATFORM_LOCAL_MASTER_GET_RESPONSE>(cmdu_tx);
+            beerocks_message::cACTION_PLATFORM_LOCAL_MASTER_GET_RESPONSE>(m_cmdu_tx);
         if (response == nullptr) {
             LOG(ERROR) << "Failed building message!";
             return false;
@@ -1188,7 +1127,7 @@ bool main_thread::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
         response->local_master() = bpl::cfg_is_master();
 
         // Sent with unsafe because BML is reachable only on platform thread
-        send_cmdu(fd, cmdu_tx);
+        send_cmdu(fd, m_cmdu_tx);
 
     } break;
 
@@ -1207,7 +1146,7 @@ bool main_thread::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
                    << int(request->vap_id());
 
         auto response = message_com::create_vs_message<
-            beerocks_message::cACTION_PLATFORM_WIFI_CREDENTIALS_GET_RESPONSE>(cmdu_tx);
+            beerocks_message::cACTION_PLATFORM_WIFI_CREDENTIALS_GET_RESPONSE>(m_cmdu_tx);
 
         if (response == nullptr) {
             LOG(ERROR) << "Failed building message!";
@@ -1274,7 +1213,7 @@ bool main_thread::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
                   << " bSEC: " << response->front_params().sec;
 
         // Sent with unsafe because BML is reachable only on platform thread
-        send_cmdu(fd, cmdu_tx);
+        send_cmdu(fd, m_cmdu_tx);
 
     } break;
 
@@ -1349,7 +1288,7 @@ bool main_thread::handle_arp_monitor()
 {
     auto arp_notif =
         message_com::create_vs_message<beerocks_message::cACTION_PLATFORM_ARP_MONITOR_NOTIFICATION>(
-            cmdu_tx);
+            m_cmdu_tx);
     if (arp_notif == nullptr) {
         LOG(ERROR) << "Failed building message!";
         return false;
@@ -1474,7 +1413,7 @@ bool main_thread::handle_arp_monitor()
 
     // Send the message to the slave
     if ((beerocks::net::FileDescriptor::invalid_descriptor != fd) && fSendNotif) {
-        send_cmdu_safe(fd, cmdu_tx);
+        send_cmdu_safe(fd, m_cmdu_tx);
     }
 
     return (true);
@@ -1495,7 +1434,7 @@ bool main_thread::handle_arp_raw()
 
     auto arp_resp =
         message_com::create_vs_message<beerocks_message::cACTION_PLATFORM_ARP_QUERY_RESPONSE>(
-            cmdu_tx, task_id);
+            m_cmdu_tx, task_id);
 
     if (arp_resp == nullptr) {
         LOG(ERROR) << "Failed building cACTION_PLATFORM_ARP_QUERY_RESPONSE message!";
@@ -1565,42 +1504,10 @@ bool main_thread::handle_arp_raw()
     if (beerocks::net::FileDescriptor::invalid_descriptor != fd) {
         LOG(TRACE) << "ACTION_PLATFORM_ARP_QUERY_RESPONSE mac=" << arp_resp->params().mac
                    << " task_id=" << task_id;
-        send_cmdu_safe(fd, cmdu_tx);
+        send_cmdu_safe(fd, m_cmdu_tx);
     }
 
     return (true);
-}
-
-void main_thread::arp_entries_cleanup()
-{
-    if (!enable_arp_monitor || !m_mapArpEntries.size())
-        return;
-
-    auto now = std::chrono::steady_clock::now();
-
-    if (std::chrono::duration_cast<std::chrono::milliseconds>(now - m_tpArpEntriesCleanup).count() <
-        ARP_CLEAN_INTERVAL) {
-        return;
-    }
-
-    m_tpArpEntriesCleanup = now;
-
-    for (auto it = m_mapArpEntries.begin(); it != m_mapArpEntries.end();) {
-
-        auto last_seen_duration =
-            std::chrono::duration_cast<std::chrono::milliseconds>(now - it->second->last_seen)
-                .count();
-
-        // If the client wasn't seen --> erase it
-        if (last_seen_duration >= ARP_NOTIF_INTERVAL) {
-            LOG(INFO) << "Removing client with MAC " << (const uint8_t *)&it->first
-                      << " due to inactivity of " << last_seen_duration << " milliseconds.";
-
-            it = m_mapArpEntries.erase(it);
-        } else {
-            it++;
-        }
-    }
 }
 
 void main_thread::clean_old_arp_entries()
@@ -1624,47 +1531,6 @@ void main_thread::clean_old_arp_entries()
             it++;
         }
     }
-}
-
-void main_thread::after_select(bool timeout)
-{
-    // On timeout
-    if (timeout) {
-        // Cleanup old arp entries...
-        arp_entries_cleanup();
-        return;
-    }
-
-    // DHCP Monitor
-    if (m_pDHCPMonSocket && read_ready(m_pDHCPMonSocket)) {
-        clear_ready(m_pDHCPMonSocket);
-        bpl::dhcp_mon_handle_event();
-    }
-
-    // ARP Monitor
-    if (m_pArpMonSocket && read_ready(m_pArpMonSocket)) {
-        clear_ready(m_pArpMonSocket);
-        if (!handle_arp_monitor()) {
-            LOG(ERROR) << "handle_arp_monitor failed, restarting ARP monitor";
-            if (!restart_arp_monitor()) {
-                LOG(ERROR) << "failed to restart ARP monitor";
-            }
-        }
-    }
-
-    // ARP Monitor - RAW Socket
-    if (m_pArpRawSocket && read_ready(m_pArpRawSocket)) {
-        clear_ready(m_pArpRawSocket);
-        if (!handle_arp_raw()) {
-            LOG(ERROR) << "handle_arp_raw failed, restarting ARP monitor";
-            if (!restart_arp_monitor()) {
-                LOG(ERROR) << "failed to restart ARP monitor";
-            }
-        }
-    }
-
-    // check if wlan params changed
-    check_wlan_params_changed();
 }
 
 bool main_thread::init_arp_monitor()
@@ -1693,12 +1559,6 @@ bool main_thread::init_arp_monitor()
 
         m_uiArpMonIP   = info.ipa.s_addr;
         m_uiArpMonMask = info.nmask.s_addr;
-
-        // Create wrapper socket classes
-        if (!m_pArpRawSocket) {
-            m_pArpRawSocket = new Socket(bpl::arp_mon_get_raw_arp_fd(m_ctxArpMon));
-            add_socket(m_pArpRawSocket);
-        }
 
         // TODO: PPM-639 Inject ARP monitor to platform manager
         if (beerocks::net::FileDescriptor::invalid_descriptor == m_arp_raw_socket) {
@@ -1738,11 +1598,6 @@ bool main_thread::init_arp_monitor()
             }
 
             m_arp_raw_socket = bpl::arp_mon_get_raw_arp_fd(m_ctxArpMon);
-        }
-
-        if (!m_pArpMonSocket) {
-            m_pArpMonSocket = new Socket(bpl::arp_mon_get_fd(m_ctxArpMon));
-            add_socket(m_pArpMonSocket);
         }
 
         if (beerocks::net::FileDescriptor::invalid_descriptor == m_arp_mon_socket) {
@@ -1810,21 +1665,9 @@ void main_thread::stop_arp_monitor()
         m_ctxArpMon = nullptr;
     }
 
-    if (m_pArpRawSocket) {
-        remove_socket(m_pArpRawSocket);
-        delete m_pArpRawSocket;
-        m_pArpRawSocket = nullptr;
-    }
-
     if (beerocks::net::FileDescriptor::invalid_descriptor != m_arp_raw_socket) {
         remove_connection(m_arp_raw_socket);
         m_arp_raw_socket = beerocks::net::FileDescriptor::invalid_descriptor;
-    }
-
-    if (m_pArpMonSocket) {
-        remove_socket(m_pArpMonSocket);
-        delete m_pArpMonSocket;
-        m_pArpMonSocket = nullptr;
     }
 
     if (beerocks::net::FileDescriptor::invalid_descriptor != m_arp_mon_socket) {
@@ -1855,8 +1698,8 @@ bool main_thread::init_dhcp_monitor()
         send_dhcp_notification(op, mac, ip, hostname);
     };
 
-    if (!m_pDHCPMonSocket) {
-
+    // TODO: PPM-639 Inject DHCP monitor to platform manager
+    if (beerocks::net::FileDescriptor::invalid_descriptor == m_dhcp_mon_socket) {
         int dhcp_mon_fd = bpl::dhcp_mon_start(
             [](const char *op, const char *mac, const char *ip, const char *hostname) {
                 dhcp_monitor_cb_wrapper(op, mac, ip, hostname);
@@ -1870,44 +1713,37 @@ bool main_thread::init_dhcp_monitor()
             return (false);
         }
 
-        m_pDHCPMonSocket = new Socket(dhcp_mon_fd);
-        add_socket(m_pDHCPMonSocket);
-
-        // TODO: PPM-639 Inject DHCP monitor to platform manager
-        if (beerocks::net::FileDescriptor::invalid_descriptor == m_dhcp_mon_socket) {
-            auto connection = std::make_unique<beerocks::net::SocketConnectionImpl>(
-                std::make_shared<beerocks::net::ConnectedSocket>(dhcp_mon_fd));
-            if (!connection) {
-                LOG(ERROR) << "Unable to create DHCP monitor connection!";
-                stop_dhcp_monitor();
-                return false;
-            }
-
-            beerocks::EventLoop::EventHandlers handlers;
-            // Handle event
-            handlers.on_read = [&](int fd, EventLoop &loop) {
-                bpl::dhcp_mon_handle_event();
-                return true;
-            };
-
-            // Remove the socket on disconnection or error
-            handlers.on_disconnect = [&](int fd, EventLoop &loop) {
-                remove_connection(fd);
-                return true;
-            };
-            handlers.on_error = handlers.on_disconnect;
-
-            int connected_socket = connection->socket()->fd();
-            if (!add_connection(connected_socket, std::move(connection), handlers)) {
-                LOG(ERROR) << "Unable to add DHCP monitor socket connection !";
-                stop_dhcp_monitor();
-                return false;
-            }
-
-            m_dhcp_mon_socket = dhcp_mon_fd;
+        auto connection = std::make_unique<beerocks::net::SocketConnectionImpl>(
+            std::make_shared<beerocks::net::ConnectedSocket>(dhcp_mon_fd));
+        if (!connection) {
+            LOG(ERROR) << "Unable to create DHCP monitor connection!";
+            stop_dhcp_monitor();
+            return false;
         }
 
-        LOG(DEBUG) << "DHCP Monitor Started... sd=" << intptr_t(m_pDHCPMonSocket);
+        beerocks::EventLoop::EventHandlers handlers;
+        // Handle event
+        handlers.on_read = [&](int fd, EventLoop &loop) {
+            bpl::dhcp_mon_handle_event();
+            return true;
+        };
+
+        handlers.on_disconnect = [&](int fd, EventLoop &loop) {
+            remove_connection(fd);
+            return true;
+        };
+        handlers.on_error = handlers.on_disconnect;
+
+        int connected_socket = connection->socket()->fd();
+        if (!add_connection(connected_socket, std::move(connection), handlers)) {
+            LOG(ERROR) << "Unable to add DHCP monitor socket connection !";
+            stop_dhcp_monitor();
+            return false;
+        }
+
+        LOG(DEBUG) << "DHCP Monitor started, fd = " << dhcp_mon_fd;
+
+        m_dhcp_mon_socket = dhcp_mon_fd;
     }
 
     return true;
@@ -1919,12 +1755,6 @@ void main_thread::stop_dhcp_monitor()
         LOG(ERROR) << "Failed stopping DHCP Monitor!";
     } else {
         LOG(DEBUG) << "DHCP Monitor Stopped.";
-    }
-
-    if (m_pDHCPMonSocket) {
-        remove_socket(m_pDHCPMonSocket);
-        delete m_pDHCPMonSocket;
-        m_pDHCPMonSocket = nullptr;
     }
 
     if (beerocks::net::FileDescriptor::invalid_descriptor != m_dhcp_mon_socket) {
