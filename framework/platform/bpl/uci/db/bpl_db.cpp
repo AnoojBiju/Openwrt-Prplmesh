@@ -33,7 +33,7 @@ bool db_has_entry(const std::string &entry_type, const std::string &entry_name)
 }
 
 bool db_add_entry(const std::string &entry_type, const std::string &entry_name,
-                  const std::unordered_map<std::string, std::string> &params)
+                  const std::unordered_map<std::string, std::string> &params, bool commit_changes)
 {
     LOG(TRACE) << entry_type << ":" << entry_name;
 
@@ -46,16 +46,16 @@ bool db_add_entry(const std::string &entry_type, const std::string &entry_name,
         LOG(ERROR) << "Entry " << entry_name << " already exists";
         return false;
     }
-    if (!db::uci_add_section(DB_FILE, entry_type, entry_name)) {
+    if (!db::uci_add_section(DB_FILE, entry_type, entry_name, commit_changes)) {
         LOG(ERROR) << "Failed to create entry " << entry_name << "!";
         return false;
     }
     LOG(DEBUG) << "Update entry " << entry_name << " with new values.";
-    return db::uci_set_section(DB_FILE, entry_type, entry_name, params);
+    return db::uci_set_section(DB_FILE, entry_type, entry_name, params, commit_changes);
 }
 
 bool db_set_entry(const std::string &entry_type, const std::string &entry_name,
-                  const std::unordered_map<std::string, std::string> &params)
+                  const std::unordered_map<std::string, std::string> &params, bool commit_changes)
 {
     LOG(TRACE) << entry_type << ":" << entry_name;
 
@@ -71,7 +71,7 @@ bool db_set_entry(const std::string &entry_type, const std::string &entry_name,
     }
     // Update the new/existing entry
     LOG(DEBUG) << "Update entry " << entry_name << " with new values.";
-    return db::uci_set_section(DB_FILE, entry_type, entry_name, params);
+    return db::uci_set_section(DB_FILE, entry_type, entry_name, params, commit_changes);
 }
 
 bool db_get_entry(const std::string &entry_type, const std::string &entry_name,
@@ -126,7 +126,8 @@ bool db_get_entries_by_type(
     return true;
 }
 
-bool db_remove_entry(const std::string &entry_type, const std::string &entry_name)
+bool db_remove_entry(const std::string &entry_type, const std::string &entry_name,
+                     bool commit_changes)
 {
     LOG(TRACE) << entry_type << ":" << entry_name;
 
@@ -140,7 +141,13 @@ bool db_remove_entry(const std::string &entry_type, const std::string &entry_nam
                    << " not found!";
         return true;
     }
-    return db::uci_delete_section(DB_FILE, entry_type, entry_name);
+    return db::uci_delete_section(DB_FILE, entry_type, entry_name, commit_changes);
+}
+
+bool db_commit_changes()
+{
+    LOG(TRACE) << "db_commit_changes was invoked";
+    return db::uci_commit_changes(DB_FILE);
 }
 
 } // namespace bpl
