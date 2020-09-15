@@ -38,6 +38,7 @@ class main_thread : public socket_thread {
 public:
     main_thread(const config_file::sConfigSlave &config_,
                 const std::unordered_map<int, std::string> &interfaces_map, logging &logger_,
+                std::unique_ptr<beerocks::net::Timer<>> clean_old_arp_entries_timer,
                 std::unique_ptr<beerocks::net::Timer<>> check_wlan_params_changed_timer,
                 std::unique_ptr<beerocks::net::ServerSocket> server_socket,
                 std::shared_ptr<beerocks::net::CmduParser> cmdu_parser,
@@ -146,6 +147,14 @@ private:
     void send_dhcp_notification(const std::string &op, const std::string &mac,
                                 const std::string &ip, const std::string &hostname);
     void arp_entries_cleanup();
+
+    /**
+     * @brief Clean old ARP table entries.
+     *
+     * Iterates over the list of ARP entries and removes those that have been inactive for a period
+     * longer than the ARP notification interval.
+     */
+    void clean_old_arp_entries();
     bool init_dhcp_monitor();
     void stop_dhcp_monitor();
     bool init_arp_monitor();
@@ -214,6 +223,11 @@ private:
     std::unordered_map<std::string, std::shared_ptr<beerocks_message::sWlanSettings>>
         bpl_iface_wlan_params_map;
     std::unordered_set<std::string> ap_ifaces;
+
+    /**
+     * Timer to periodically clean old ARP table entries.
+     */
+    std::unique_ptr<beerocks::net::Timer<>> m_clean_old_arp_entries_timer;
 
     /**
      * Timer to periodically check if WLAN parameters have changed.
