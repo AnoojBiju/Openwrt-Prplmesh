@@ -462,12 +462,69 @@ bool main_thread::to_be_renamed_to_start()
         }
     }
 
+    // Initialize the BPL (Beerocks Platform Library)
+    if (bpl::bpl_init() < 0) {
+        LOG(ERROR) << "Failed to initialize BPL!";
+        return (false);
+    }
+
+    int i = 0;
+    for (int slave_num = 0; slave_num < IRE_MAX_SLAVES && i < BPL_NUM_OF_INTERFACES; ++slave_num) {
+
+        auto hostap_iface_elm = interfaces_map.find(slave_num);
+        if (hostap_iface_elm == interfaces_map.end() || hostap_iface_elm->second.empty())
+            continue;
+
+        config.sta_iface[slave_num] = get_sta_iface(hostap_iface_elm->second);
+
+        if (config.sta_iface[slave_num].empty())
+            continue;
+
+        i++;
+    }
+
+    // Bridge & Backhaul interface
+    is_onboarding_on_init = bpl::cfg_is_onboarding();
+    if (is_onboarding_on_init) {
+        LOG(DEBUG) << "Onboarding state.";
+        for (int slave_num = 0; slave_num < IRE_MAX_SLAVES; slave_num++) {
+            load_iface_params(config.sta_iface[slave_num], beerocks::ARP_SRC_WIRELESS_BACK);
+        }
+    } else {
+        LOG(DEBUG) << "Non-onboarding state.";
+        load_iface_params(config.bridge_iface, beerocks::ARP_SRC_ETH_FRONT);
+        load_iface_params(config.backhaul_wire_iface, beerocks::ARP_SRC_ETH_BACK);
+        for (int slave_num = 0; slave_num < IRE_MAX_SLAVES; slave_num++) {
+            load_iface_params(config.sta_iface[slave_num], beerocks::ARP_SRC_WIRELESS_BACK);
+        }
+    }
+
+    // Start the async work queue
+    if (!work_queue.start()) {
+        LOG(ERROR) << "Failed starting asynchronous work queue";
+        return false;
+    }
+
     return true;
 }
 
 bool main_thread::to_be_renamed_to_stop()
 {
     bool result = true;
+
+    LOG(DEBUG) << "Stopping asynchronous work queue...";
+    work_queue.stop(true);
+
+    // Stop the DHCP Monitor
+    stop_dhcp_monitor();
+
+    // Stop the ARP Monitor
+    stop_arp_monitor();
+
+    bpl::bpl_close();
+    LOG(DEBUG) << "Closed BPL.";
+
+    bpl_iface_wlan_params_map.clear();
 
     // Remove installed event handlers for the clean-old-ARP-entries timer
     if (!m_event_loop->remove_handlers(m_clean_old_arp_entries_timer->fd())) {
@@ -624,7 +681,27 @@ bool main_thread::send_cmdu_safe(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
 
 bool main_thread::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
 {
-    return message_com::send_cmdu(m_fd_to_socket_map[fd], cmdu_tx);
+    // Find context information for given socket connection
+    auto it = m_connections.find(fd);
+    if (m_connections.end() == it) {
+        // This should never happen, but just in case ...
+        LOG(ERROR) << "Unable to send CMDU through an unknown connection, fd = " << fd;
+        return false;
+    }
+
+    auto &context = it->second;
+
+    // Serialize CMDU into a byte array
+    sMacAddr dst_mac = beerocks::net::network_utils::ZERO_MAC;
+    sMacAddr src_mac = beerocks::net::network_utils::ZERO_MAC;
+    beerocks::net::BufferImpl<message::MESSAGE_BUFFER_LENGTH> buffer;
+    if (!m_cmdu_serializer->serialize_cmdu(dst_mac, src_mac, cmdu_tx, buffer)) {
+        LOG(ERROR) << "Failed to serialize CMDU, fd = " << fd;
+        return false;
+    }
+
+    // Send data
+    return context.connection->send(buffer);
 }
 
 int main_thread::get_slave_socket_from_hostap_iface_name(const std::string &iface)
@@ -715,53 +792,7 @@ void main_thread::send_dhcp_notification(const std::string &op, const std::strin
     }
 }
 
-bool main_thread::init()
-{
-    // Initialize the BPL (Beerocks Platform Library)
-    if (bpl::bpl_init() < 0) {
-        LOG(ERROR) << "Failed to initialize BPL!";
-        return (false);
-    }
-
-    int i = 0;
-    for (int slave_num = 0; slave_num < IRE_MAX_SLAVES && i < BPL_NUM_OF_INTERFACES; ++slave_num) {
-
-        auto hostap_iface_elm = interfaces_map.find(slave_num);
-        if (hostap_iface_elm == interfaces_map.end() || hostap_iface_elm->second.empty())
-            continue;
-
-        config.sta_iface[slave_num] = get_sta_iface(hostap_iface_elm->second);
-
-        if (config.sta_iface[slave_num].empty())
-            continue;
-
-        i++;
-    }
-
-    // Bridge & Backhaul interface
-    is_onboarding_on_init = bpl::cfg_is_onboarding();
-    if (is_onboarding_on_init) {
-        LOG(DEBUG) << "Onboarding state.";
-        for (int slave_num = 0; slave_num < IRE_MAX_SLAVES; slave_num++) {
-            load_iface_params(config.sta_iface[slave_num], beerocks::ARP_SRC_WIRELESS_BACK);
-        }
-    } else {
-        LOG(DEBUG) << "Non-onboarding state.";
-        load_iface_params(config.bridge_iface, beerocks::ARP_SRC_ETH_FRONT);
-        load_iface_params(config.backhaul_wire_iface, beerocks::ARP_SRC_ETH_BACK);
-        for (int slave_num = 0; slave_num < IRE_MAX_SLAVES; slave_num++) {
-            load_iface_params(config.sta_iface[slave_num], beerocks::ARP_SRC_WIRELESS_BACK);
-        }
-    }
-
-    // Start the async work queue
-    if (!work_queue.start()) {
-        LOG(ERROR) << "Failed starting asynchronous work queue";
-        return false;
-    }
-
-    return socket_thread::init();
-}
+bool main_thread::init() { return socket_thread::init(); }
 
 bool main_thread::work()
 {
@@ -822,24 +853,7 @@ bool main_thread::check_wlan_params_changed()
     return any_slave_changed;
 }
 
-void main_thread::on_thread_stop()
-{
-    LOG(DEBUG) << "Platform_manager on_thread_stop()";
-
-    LOG(DEBUG) << "Stopping asynchronous work queue...";
-    work_queue.stop(true);
-
-    // Stop the DHCP Monitor
-    stop_dhcp_monitor();
-
-    // Stop the ARP Monitor
-    stop_arp_monitor();
-
-    bpl::bpl_close();
-    LOG(DEBUG) << "Closed BPL.";
-
-    bpl_iface_wlan_params_map.clear();
-}
+void main_thread::on_thread_stop() { LOG(DEBUG) << "Platform_manager on_thread_stop()"; }
 
 // This method is temporary and will be removed at the end of PPM-591.
 // It is intended to allow the temporary coexistence of Socket* and file descriptors to refer to
