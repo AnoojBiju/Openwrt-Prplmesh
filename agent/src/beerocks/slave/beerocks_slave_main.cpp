@@ -351,6 +351,12 @@ static std::unique_ptr<beerocks::net::Timer<>> create_check_wlan_params_changed_
     return std::make_unique<beerocks::net::TimerImpl<>>();
 }
 
+static std::unique_ptr<beerocks::net::Timer<>> create_clean_old_arp_entries_timer()
+{
+    // Create timer to periodically clean old ARP table entries
+    return std::make_unique<beerocks::net::TimerImpl<>>();
+}
+
 static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slave_conf,
                               const std::unordered_map<int, std::string> &interfaces_map, int argc,
                               char *argv[])
@@ -396,8 +402,11 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     LOG_IF(!check_wlan_params_changed_timer, FATAL)
         << "Unable to create check-WLAN-parameters-changed timer!";
 
+    auto clean_old_arp_entries_timer = create_clean_old_arp_entries_timer();
+    LOG_IF(!clean_old_arp_entries_timer, FATAL) << "Unable to create clean-old-ARP-entries timer!";
+
     beerocks::platform_manager::main_thread platform_mgr(
-        beerocks_slave_conf, interfaces_map, *agent_logger,
+        beerocks_slave_conf, interfaces_map, *agent_logger, std::move(clean_old_arp_entries_timer),
         std::move(check_wlan_params_changed_timer), std::move(server_socket), cmdu_parser,
         cmdu_serializer, event_loop);
 
