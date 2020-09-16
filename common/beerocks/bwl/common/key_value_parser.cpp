@@ -193,7 +193,6 @@ bool KeyValueParser::read_param(const std::string &key, parsed_line_t &obj, cons
 {
     auto val_iter = obj.find(key);
     if (val_iter == obj.end()) {
-        LOG(ERROR) << "param :" << key << " does not exist";
         return false;
     }
 
