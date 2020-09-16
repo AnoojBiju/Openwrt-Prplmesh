@@ -47,15 +47,6 @@ namespace dwpal {
             delete[] obj;                                                                          \
     })
 
-// Temporary storage for parsed ACS report
-struct DWPAL_acs_report_get {
-    int Ch;
-    int BW;
-    int DFS;
-    int bss;
-    int rank;
-};
-
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////// Local Module Functions ///////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -1508,68 +1499,74 @@ bool ap_wlan_hal_dwpal::read_acs_report()
 {
     LOG(TRACE) << __func__ << " for interface: " << get_radio_info().iface_name;
 
-    char *reply = nullptr;
+    /**
+     * Returned dump:
+     * Ch=36 BW=20 DFS=0 pow=47 NF=-128 bss=2 pri=2 load=0 rank=28750
+     * Ch=36 BW=40 DFS=0 pow=47 NF=-128 bss=2 pri=2 load=0 rank=28750
+     * Ch=36 BW=80 DFS=0 pow=47 NF=-128 bss=2 pri=2 load=0 rank=28750
+     * Ch=36 BW=160 DFS=1 pow=47 NF=-128 bss=5 pri=2 load=0 rank=60000
+     * Ch=40 BW=20 DFS=0 pow=47 NF=-128 bss=2 pri=2 load=0 rank=28750
+     * ...
+     */
+
+    parsed_multiline_t reply;
+    int64_t tmp_int;
 
     std::string cmd = "GET_ACS_REPORT";
 
     // Send command
-    if (!dwpal_send_cmd(cmd, &reply)) {
+    if (!dwpal_send_cmd(cmd, reply)) {
         LOG(ERROR) << "read_acs_report() failed!";
         return false;
     }
+    LOG(DEBUG) << "GET_ACS_REPORT reply:";
 
-    size_t replyLen = strnlen(reply, HOSTAPD_TO_DWPAL_MSG_LENGTH);
-    /* TEMP: Traces... */
-    LOG(DEBUG) << "GET_ACS_REPORT replylen=" << (int)replyLen;
-    LOG(DEBUG) << "GET_ACS_REPORT reply=\n" << reply;
+    m_radio_info.preferred_channels.resize(reply.size());
+
+    uint32_t ch_idx = 0;
+    for (auto &line : reply) {
+
+        std::ostringstream oss;
+        // Channel
+        if (!read_param("Ch", line, tmp_int)) {
+            LOG(ERROR) << "Failed reading Channel parameter!";
+            return false;
+        }
+        m_radio_info.preferred_channels[ch_idx].channel = tmp_int;
+        oss << "Ch=" << tmp_int;
+
+        // BW
+        if (!read_param("BW", line, tmp_int)) {
+            LOG(ERROR) << "Failed reading BW parameter!";
+            return false;
+        }
+        m_radio_info.preferred_channels[ch_idx].channel_bandwidth =
+            beerocks::utils::convert_bandwidth_to_enum(tmp_int);
+        oss << ", BW=" << tmp_int;
+
+        // DFS
+        if (!read_param("DFS", line, tmp_int)) {
+            LOG(ERROR) << "Failed reading DFS parameter!";
+            return false;
+        }
+        m_radio_info.preferred_channels[ch_idx].is_dfs_channel = tmp_int;
+        oss << ", DFS=" << tmp_int;
+
+        // Rank - May not appear in older Hostapd
+        if (read_param("rank", line, tmp_int)) {
+            m_radio_info.preferred_channels[ch_idx].rank = tmp_int;
+            oss << ", rank=" << tmp_int;
+        }
+
+        LOG(DEBUG) << oss.str();
+
+        // Skip reading parameters since it is not being used.
+
+        ch_idx++;
+    }
 
     // Initialize default values
     m_radio_info.is_5ghz = false;
-
-    size_t numOfValidArgs[5] = {0};
-    std::vector<DWPAL_acs_report_get> acs_report(MAX_SUPPORTED_CHANNELS);
-
-    FieldsToParse fieldsToParse[] = {
-        {(void *)&acs_report[0].BW, &numOfValidArgs[0], DWPAL_INT_PARAM, "BW=", 0},
-        {(void *)&acs_report[0].Ch, &numOfValidArgs[1], DWPAL_INT_PARAM, "Ch=", 0},
-        {(void *)&acs_report[0].DFS, &numOfValidArgs[2], DWPAL_INT_PARAM, "DFS=", 0},
-        {(void *)&acs_report[0].bss, &numOfValidArgs[3], DWPAL_INT_PARAM, "bss=", 0},
-        {(void *)&acs_report[0].rank, &numOfValidArgs[4], DWPAL_INT_PARAM, "rank=", 0},
-        /* Must be at the end */
-        {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
-
-    if (dwpal_string_to_struct_parse(reply, replyLen, fieldsToParse,
-                                     sizeof(DWPAL_acs_report_get) * MAX_SUPPORTED_CHANNELS) ==
-        DWPAL_FAILURE) {
-        LOG(ERROR) << "DWPAL parse error ==> Abort";
-        return false;
-    }
-
-    for (uint16_t i = 0; i < sizeof(numOfValidArgs) / sizeof(size_t); i++) {
-        if ((numOfValidArgs[i] == 0) || (numOfValidArgs[i] != numOfValidArgs[0])) {
-            LOG(ERROR) << "Failed reading parameter " << (int)i << ": " << (int)numOfValidArgs[i];
-            LOG(ERROR) << "Should be the same as numOfValidArgs[0]= " << (int)numOfValidArgs[0]
-                       << " ==> Abort";
-            return false;
-        }
-    }
-
-    m_radio_info.preferred_channels.clear();
-    LOG(DEBUG) << "Parsed ACS report:";
-    for (uint16_t i = 0; (i < numOfValidArgs[0]) && (i < MAX_SUPPORTED_CHANNELS); i++) {
-        LOG(DEBUG) << "Ch=" << (int)acs_report[i].Ch << " BW=" << (int)acs_report[i].BW
-                   << " DFS=" << acs_report[i].DFS << " bss=" << acs_report[i].bss
-                   << " rank=" << acs_report[i].rank;
-
-        beerocks::message::sWifiChannel preferred_channel;
-        preferred_channel.channel_bandwidth =
-            beerocks::utils::convert_bandwidth_to_enum(acs_report[i].BW);
-        preferred_channel.channel        = acs_report[i].Ch;
-        preferred_channel.bss_overlap    = acs_report[i].bss;
-        preferred_channel.is_dfs_channel = acs_report[i].DFS;
-        preferred_channel.rank           = acs_report[i].rank;
-        m_radio_info.preferred_channels.push_back(preferred_channel);
-    }
 
     // Check if channel is 5GHz
     if (son::wireless_utils::which_freq(m_radio_info.preferred_channels.front().channel) ==
