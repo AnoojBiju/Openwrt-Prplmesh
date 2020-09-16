@@ -50,7 +50,8 @@ case $TARGET_DEVICE in
 esac
 
 printf '\033[1;35m%s Building prplWrt\n\033[0m' "$(date --iso-8601=seconds --universal)"
-make -j"$(nproc)"
+#make -j"$(nproc)"
+make -j1 V=s
 
 printf '\033[1;35m%s Cleaning prplMesh\n\033[0m' "$(date --iso-8601=seconds --universal)"
 make package/prplmesh/clean
