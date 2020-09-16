@@ -68,7 +68,6 @@ public:
     {
         m_address.sun_family = AF_UNIX;
         string_utils::copy_string(m_address.sun_path, path.c_str(), sizeof(m_address.sun_path));
-        m_length = path.length();
     }
 
     std::string path() const { return m_address.sun_path; }
@@ -82,7 +81,7 @@ public:
 
 private:
     sockaddr_un m_address  = {};
-    socklen_t m_length     = 0;
+    socklen_t m_length     = sizeof(m_address);
     const socklen_t m_size = sizeof(m_address);
 };
 
@@ -213,7 +212,7 @@ public:
      *
      * @param type Socket type (i.e.: communication style).
      */
-    explicit UdsSocket(int type = SOCK_DGRAM) : SocketAbstractImpl(socket(AF_UNIX, type, 0)) {}
+    explicit UdsSocket(int type = SOCK_STREAM) : SocketAbstractImpl(socket(AF_UNIX, type, 0)) {}
 };
 
 class NetlinkSocket : public SocketAbstractImpl {
