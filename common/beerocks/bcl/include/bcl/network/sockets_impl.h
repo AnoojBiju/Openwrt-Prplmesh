@@ -213,7 +213,7 @@ public:
      *
      * @param type Socket type (i.e.: communication style).
      */
-    explicit UdsSocket(int type = SOCK_DGRAM) : SocketAbstractImpl(socket(AF_UNIX, type, 0)) {}
+    explicit UdsSocket(int type = SOCK_STREAM) : SocketAbstractImpl(socket(AF_UNIX, type, 0)) {}
 };
 
 class NetlinkSocket : public SocketAbstractImpl {
@@ -343,7 +343,7 @@ public:
      */
     bool bind(const Socket::Address &address)
     {
-        if (0 != ::bind(m_socket->fd(), address.sockaddr(), address.length())) {
+        if (0 != ::bind(m_socket->fd(), address.sockaddr(), address.size())) {
             LOG(ERROR) << "Unable to bind server socket: " << strerror(errno);
             return false;
         }
