@@ -13,7 +13,7 @@ RUN apt-get update \
     # Install C++ tools
     && apt-get -y install build-essential cmake cppcheck valgrind \
     # Libraries
-    libjson-c-dev python-yaml python3-yaml libssl-dev \
+    libjson-c-dev python-yaml python3-pip python3-yaml libssl-dev \
     libncurses-dev libreadline-dev libnl-3-dev libnl-route-3-dev libnl-genl-3-dev \
     # Install Helper tools
     bash-completion locales ninja-build pkg-config shellcheck \
@@ -21,9 +21,12 @@ RUN apt-get update \
     # Network capturing
     tcpdump tshark wireshark-common openssh-server
 
+# Install python dependencies
+RUN pip3 install pylint autopep8
+
 # Install podman
 RUN echo "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_$(lsb_release -sr)/ /" \
-         > /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list \
+    > /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list \
     && curl -L "https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_$(lsb_release -sr)/Release.key" | apt-key add - \
     && apt-get update && apt-get install -y podman dnsmasq \
     && ln -s /usr/bin/podman /usr/bin/docker
