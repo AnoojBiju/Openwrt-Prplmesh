@@ -127,11 +127,11 @@ public:
         case 0xc0:
         case 0xc1:
         case 0xc2:
+        case 0xc4:
         case 0xc8:
         case 0xc9:
         case 0xca:
         case 0xc5:
-        case 0xc4:
                 ret = true;
                 break;
             default:
