@@ -152,7 +152,7 @@ build-in-docker-alpine:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
       when: on_success
-    - if: '$CI_MERGE_REQUEST_LABELS =~ "ready for merge"'
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/'
       when: on_success
     - when: manual
   needs: ["image-build-builder/alpine"]
@@ -163,7 +163,7 @@ build-in-docker-ubuntu-xenial:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
       when: on_success
-    - if: '$CI_MERGE_REQUEST_LABELS =~ "ready for merge"'
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/'
       when: on_success
     - when: manual
   needs: ["image-build-builder/ubuntu/xenial"]
@@ -175,7 +175,7 @@ build-in-docker-static:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
       when: on_success
-    - if: '$CI_MERGE_REQUEST_LABELS =~ "ready for merge"'
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/'
       when: on_success
     - when: manual
 
@@ -283,7 +283,7 @@ boardfarm-tests:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
       when: on_success
-    - if: '$CI_MERGE_REQUEST_LABELS =~ "ready for merge"'
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/'
       when: on_success
     - when: manual
   tags:
@@ -306,7 +306,7 @@ boardfarm-tests:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
       when: on_success
-    - if: '$CI_MERGE_REQUEST_LABELS =~ "ready for merge"'
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/'
       when: on_success
     - when: manual
   artifacts:
