@@ -151,7 +151,7 @@ build-in-docker-alpine:
   image: $CI_REGISTRY_IMAGE/prplmesh-builder-alpine:$CI_PIPELINE_ID
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
-    - if: '$CI_MERGE_REQUEST_LABELS =~ "ready for merge"'
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/'
     - when: manual
   needs: ["image-build-builder/alpine"]
 
@@ -160,7 +160,7 @@ build-in-docker-ubuntu-xenial:
   image: $CI_REGISTRY_IMAGE/prplmesh-builder-ubuntu-xenial:$CI_PIPELINE_ID
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
-    - if: '$CI_MERGE_REQUEST_LABELS =~ "ready for merge"'
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/'
     - when: manual
   needs: ["image-build-builder/ubuntu/xenial"]
 
@@ -170,7 +170,7 @@ build-in-docker-static:
     EXTRA_CMAKE_FLAGS: "-DBUILD_SHARED_LIBS=OFF"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
-    - if: '$CI_MERGE_REQUEST_LABELS =~ "ready for merge"'
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/'
     - when: manual
 
 upload-artifacts:
@@ -276,7 +276,7 @@ boardfarm-tests:
     when: always
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
-    - if: '$CI_MERGE_REQUEST_LABELS =~ "ready for merge"'
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/'
     - when: manual
   tags:
     - shell
@@ -297,7 +297,7 @@ boardfarm-tests:
     - tools/docker/builder/rdk-b/build.sh --verbose --target-device "$TARGET_DEVICE" --tag "$CI_PIPELINE_ID" --cache "$RDK_CACHE_DIR"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
-    - if: '$CI_MERGE_REQUEST_LABELS =~ "ready for merge"'
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/'
     - when: manual
   artifacts:
     paths:
