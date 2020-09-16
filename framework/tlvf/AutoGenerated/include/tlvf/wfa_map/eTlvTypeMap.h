@@ -68,6 +68,7 @@ enum class eTlvTypeMap : uint8_t {
     TLV_TUNNELLED_SOURCE_INFO = 0xc0,
     TLV_TUNNELLED_PROTOCOL_TYPE = 0xc1,
     TLV_TUNNELLED_DATA = 0xc2,
+    TLV_PROFILE2_UNSUCCESSFUL_ASSOCIATION_POLICY = 0xc4,
     TLV_ASSOCIATED_STA_EXTENDED_LINK_METRICS = 0xc8,
     TLV_PROFILE2_STATUS_CODE = 0xc9,
     TLV_PROFILE2_REASON_CODE = 0xca,
@@ -128,6 +129,7 @@ public:
         case 0xc8:
         case 0xc9:
         case 0xca:
+        case 0xc4:
                 ret = true;
                 break;
             default:
