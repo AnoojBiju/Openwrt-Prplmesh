@@ -7,9 +7,10 @@
  */
 #include "nbapi.h"
 
+namespace beerocks {
 namespace nbapi {
 
-Ambiorix::Ambiorix()
+Ambiorix::Ambiorix(std::shared_ptr<EventLoop> event_loop) : m_event_loop(event_loop)
 {
     amxo_parser_init(&m_parser);
     amxd_dm_init(&m_datamodel);
@@ -77,3 +78,4 @@ Ambiorix::~Ambiorix()
     amxb_be_remove_all();
 }
 } // namespace nbapi
+} // namespace beerocks
