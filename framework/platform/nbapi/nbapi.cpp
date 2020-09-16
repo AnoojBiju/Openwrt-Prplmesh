@@ -46,6 +46,11 @@ bool Ambiorix::init(const std::string &amxb_backend, const std::string &bus_uri,
         return false;
     }
 
+    if (!init_event_loop()) {
+        LOG(ERROR) << "Failed to initialize event loop.";
+        return false;
+    }
+
     LOG(DEBUG) << "The bus connection initialized successfully.";
     return true;
 }
@@ -67,6 +72,43 @@ bool Ambiorix::load_datamodel(const std::string &datamodel_path)
     amxp_sigmngr_enable(&m_datamodel.sigmngr, true);
 
     LOG(DEBUG) << "The data model loaded successfully.";
+    return true;
+}
+
+bool Ambiorix::init_event_loop()
+{
+    LOG(DEBUG) << "Initializing the event loop.";
+
+    auto ambiorix_fd = amxb_get_fd(m_bus_ctx);
+    if (ambiorix_fd < 0) {
+        LOG(ERROR) << "Failed to get ambiorix file descriptor.";
+        return false;
+    }
+
+    EventLoop::EventHandlers handlers = {
+        // Accept incoming connections
+        .on_read =
+            [&](int fd, EventLoop &loop) {
+                LOG(DEBUG) << "Incoming event on ambiorix fd:";
+                amxb_read(m_bus_ctx);
+                return true;
+            },
+
+        // Not implemented
+        .on_write      = nullptr,
+        .on_disconnect = nullptr,
+
+        // Handle interface errors
+        .on_error =
+            [&](int fd, EventLoop &loop) {
+                LOG(DEBUG) << "Error on ambiorix fd.";
+                return true;
+            },
+    };
+
+    m_event_loop->register_handlers(ambiorix_fd, handlers);
+
+    LOG(DEBUG) << "The event loop initialized successfully.";
     return true;
 }
 
