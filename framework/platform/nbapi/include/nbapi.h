@@ -75,6 +75,13 @@ private:
      */
     bool load_datamodel(const std::string &datamodel_path);
 
+    /**
+     * @brief Initialize event loop for ambiorix.
+     *
+     * @return True on success and false otherwise.
+     */
+    bool init_event_loop();
+
     // Variables
     amxb_bus_ctx_t *m_bus_ctx = nullptr;
     amxd_dm_t m_datamodel;
