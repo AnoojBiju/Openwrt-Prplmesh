@@ -154,8 +154,6 @@ framework/platform/bpl/arp/uci/bpl_arp.cpp: style: C-style pointer casting [csty
 framework/platform/bpl/arp/uci/monitor/arp_monitor.cpp: performance: Function parameter 'strIface' should be passed by const reference. [passedByValue]int arp_monitor::start(std::string strIface)
 framework/platform/bpl/arp/uci/monitor/arp_monitor.cpp: style: The scope of the variable 'type' can be reduced. [variableScope]        unsigned short type;
 framework/platform/bpl/arp/uci/monitor/arp_monitor.cpp: style: Unused variable: ipv4_str [unusedVariable]        std::string ipv4_str;
-framework/platform/bpl/cfg/linux/bpl_cfg.cpp: information: Skipping configuration 'PLATFORM_DB_PATH' since the value of 'PLATFORM_DB_PATH' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]            MAPF_ERR("Failed oppening file " << PLATFORM_DB_PATH);
-framework/platform/bpl/cfg/linux/bpl_cfg.cpp: information: Skipping configuration 'PLATFORM_DB_PATH' since the value of 'PLATFORM_DB_PATH' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]        in_conf_file.open(PLATFORM_DB_PATH);
 framework/platform/bpl/cfg/uci/bpl_cfg.cpp: style: The scope of the variable 'retVal' can be reduced. [variableScope]    int retVal = 0;
 framework/platform/bpl/cfg/uci/bpl_cfg.cpp: style: Variable 'retVal' is assigned a value that is never used. [unreadVariable]    int retVal = 0;
 framework/platform/bpl/cfg/uci/bpl_cfg_uci.cpp: style: The scope of the variable 'scanf_res' can be reduced. [variableScope]        int scanf_res;
