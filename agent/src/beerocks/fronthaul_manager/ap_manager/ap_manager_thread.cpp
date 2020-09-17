@@ -436,11 +436,11 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
         // will be all set to 0.
         LOG(DEBUG) << "Setting AP channel: "
                    << ", channel=" << int(notification->channel())
-                   << ", bandwidth=" << int(notification->bandwidth())
+                   << ", bandwidth=" << notification->bandwidth()
                    << ", center_channel=" << int(notification->center_channel());
 
         // Set original channel or BH channel
-        if (!ap_wlan_hal->set_channel(notification->channel(), notification->bandwidth(),
+        if (!ap_wlan_hal->set_channel(notification->channel(), int(notification->bandwidth()),
                                       notification->center_channel())) {
             LOG(ERROR) << "Failed setting set_channel";
             response->success() = false;
