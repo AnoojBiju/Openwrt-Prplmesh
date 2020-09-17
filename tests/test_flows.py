@@ -1527,6 +1527,7 @@ class TestFlows:
             self.fail("Source Info TLV has wrong STA MAC {} instead of {}".format(
                 received_sta_mac, sta.mac))
 
+
 if __name__ == '__main__':
     t = TestFlows()
 
