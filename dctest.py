@@ -25,7 +25,6 @@
 from __future__ import print_function  # To check for python2 or < 3.5 execution
 import argparse
 import os
-import grp
 import getpass
 import sys
 import json
@@ -90,7 +89,7 @@ class Services:
     def _get_device_names(self):
         jspath = './tests/boardfarm_plugins/boardfarm_prplmesh/prplmesh_config_compose.json'
         js = json.loads(open(jspath, 'r').read())
-        devices = []
+        devices = [js['prplmesh_compose']['name']]
         for device in js['prplmesh_compose']['devices']:
             devices.append(device['name'])
         return devices
@@ -127,8 +126,6 @@ class Services:
         params += args
         local_env = os.environ
         local_env['ROOT_DIR'] = self.rootdir
-        docker_gid = grp.getgrnam('docker')[2]
-        local_env['CURRENT_UID_GID'] = str(os.getuid()) + ':' + str(docker_gid)
         local_env['RUN_ID'] = self.build_id
 
         if os.getenv('CI_PIPELINE_ID') is None:
@@ -167,8 +164,6 @@ if __name__ == '__main__':
     group.add_argument('--test', dest='test', type=str, help='Test to be run')
     group.add_argument('--clean', dest='clean', action='store_true',
                        help='Clean containers images and networks')
-    group.add_argument('--build', dest='build', action='store_true',
-                       help='Rebuild containers')
     group.add_argument('--shell', dest='shell', action='store_true',
                        help='Run a shell on the bf container')
     group.add_argument('--comp', dest='comp', action='store_true',
@@ -209,18 +204,14 @@ if __name__ == '__main__':
         rc = services.dc(['run', '--rm', '--service-ports', '--entrypoint',
                           '/bin/bash', 'boardfarm'], interactive=True)
         cleanup(rc)
-    elif args.build:
-        if not args.bid:
-            print('Specify --id for the build parameter')
-            sys.exit(0)
-        services = Services(bid=args.bid)
-        rc = services.dc(['build'], interactive=True)
-        cleanup(rc)
     else:
         if args.bid:
             services = Services(bid=args.bid)   # With new build id
         else:
             services = Services()   # With new build id
-        rc = services.dc(['run', '--rm', '--service-ports', '--use-aliases',
-                          'boardfarm'], interactive=True)
+        try:
+            rc = services.dc(['up', '--exit-code-from', 'boardfarm', '--abort-on-container-exit'],
+                             interactive=True)
+        finally:
+            services.dc(['down'])
         cleanup(rc)

@@ -93,11 +93,11 @@ gdbserver :9999 --attach <pid of controller/agent/cli>
 
 ### Log files locations
 
-- framework `/tmp/$USER/mapf`
-- controller `/tmp/$USER/beerocks/logs/beerocks_controller.log`
-- main agent (platform manager & backhaul manager) `/tmp/$USER/beerocks/logs/beerocks_agent.log`
-- radio agent wlan0 (son_slave_thread & ap manager) `/tmp/$USER/beerocks/logs/beerocks_agent_wlan0.log`
-- radio agent wlan2 (son_slave_thread & ap manager) `/tmp/$USER/beerocks/logs/beerocks_agent_wlan2.log`
+- framework `/tmp/mapf`
+- controller `/tmp/beerocks/logs/beerocks_controller.log`
+- main agent (platform manager & backhaul manager) `/tmp/beerocks/logs/beerocks_agent.log`
+- radio agent wlan0 (son_slave_thread & ap manager) `/tmp/beerocks/logs/beerocks_agent_wlan0.log`
+- radio agent wlan2 (son_slave_thread & ap manager) `/tmp/beerocks/logs/beerocks_agent_wlan2.log`
 
 ### Checking status
 

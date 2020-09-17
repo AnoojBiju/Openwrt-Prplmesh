@@ -61,7 +61,7 @@ if (BUILD_TESTS)
     )
     target_link_libraries(${TEST_PROJECT_NAME} btlvf tlvf mapfcommon)
     target_link_libraries(${TEST_PROJECT_NAME} gtest_main)
-    install(TARGETS ${TEST_PROJECT_NAME} DESTINATION bin/tests)
+    install(TARGETS ${TEST_PROJECT_NAME} DESTINATION tests)
     add_test(NAME ${TEST_PROJECT_NAME} COMMAND $<TARGET_FILE:${TEST_PROJECT_NAME}>)
 endif()
 

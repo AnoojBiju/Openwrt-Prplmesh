@@ -65,6 +65,7 @@ bool MediaType::get_media_type(const std::string &interface_name,
                                ieee1905_1::eMediaType &media_type)
 {
     bool result = false;
+    media_type  = ieee1905_1::eMediaType::UNKNOWN_MEDIA;
 
     if (ieee1905_1::eMediaTypeGroup::IEEE_802_3 == media_type_group) {
         uint32_t speed;
@@ -73,12 +74,9 @@ bool MediaType::get_media_type(const std::string &interface_name,
                 media_type = ieee1905_1::eMediaType::IEEE_802_3U_FAST_ETHERNET;
             } else if (SPEED_1000 <= speed) {
                 media_type = ieee1905_1::eMediaType::IEEE_802_3AB_GIGABIT_ETHERNET;
-            } else {
-                media_type = ieee1905_1::eMediaType::UNKNOWN_MEDIA;
             }
-
-            result = true;
         }
+        result = true;
     } else if (ieee1905_1::eMediaTypeGroup::IEEE_802_11 == media_type_group) {
 
         auto db = AgentDB::get();
@@ -97,8 +95,7 @@ bool MediaType::get_media_type(const std::string &interface_name,
         // TODO: Not supported yet
         LOG(ERROR) << "MoCA media is not supported yet";
     } else {
-        media_type = ieee1905_1::eMediaType::UNKNOWN_MEDIA;
-        result     = true;
+        result = true;
     }
 
     return result;

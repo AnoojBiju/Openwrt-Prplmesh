@@ -82,7 +82,7 @@ main() {
         "${PUBLISH[@]}"
         -v "${installdir}:${installdir}"
         -v "${rootdir}:${rootdir}"
-        -v "${rootdir}/logs/${NAME}:/tmp/${SUDO_USER:-${USER}}/beerocks/logs"
+        -v "${rootdir}/logs/${NAME}:/tmp/beerocks/logs"
         --name "${NAME}"
     )
 

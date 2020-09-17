@@ -60,7 +60,9 @@ public:
 
         DFS_CAC_Completed,
         DFS_NOP_Finished,
-        DFS_RADAR_Detected
+        DFS_RADAR_Detected,
+
+        MGMT_Frame /**< 802.11 management frame payload */
     };
 
     // Public methods

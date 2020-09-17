@@ -24,12 +24,8 @@ class backhaul_manager;
 
 class agent_ucc_listener : public beerocks_ucc_listener {
 public:
-    agent_ucc_listener(backhaul_manager &backhaul_manager_ctx, uint16_t port,
-                       const std::string &vendor, const std::string &model,
-                       const std::string &bridge_iface, ieee1905_1::CmduMessageTx &cmdu);
+    agent_ucc_listener(backhaul_manager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu);
     ~agent_ucc_listener(){};
-
-    bool init() override;
 
     void lock() override { mutex.lock(); }
     void unlock() override { mutex.unlock(); }
@@ -81,12 +77,7 @@ private:
     bool handle_dev_get_param(std::unordered_map<std::string, std::string> &params,
                               std::string &value) override;
 
-    backhaul_manager &m_backhaul_manager_ctx;
-
-    const std::string &m_vendor;
-    const std::string &m_model;
-    const std::string &m_bridge_iface;
-    std::string m_bridge_mac;
+    backhaul_manager &m_btl_ctx;
 
     bool m_in_reset        = false;
     bool m_reset_completed = false;

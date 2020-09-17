@@ -21,7 +21,8 @@ find_package(amxb REQUIRED)
 find_package(amxc REQUIRED)
 find_package(amxd REQUIRED)
 find_package(amxp REQUIRED)
-list(APPEND HLAPI_LIBS amxb amxc amxd amxp)
+find_package(amxo REQUIRED)
+list(APPEND HLAPI_LIBS amxb amxc amxd amxp amxo)
 
 
 # Build the library

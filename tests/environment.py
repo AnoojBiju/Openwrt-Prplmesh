@@ -282,19 +282,16 @@ class ALEntityDocker(ALEntity):
                           config_file.read()).group('port')
 
         # On WSL, connect to the locally exposed container port
-        if not compose:
-            if on_wsl:
-                published_port_output = subprocess.check_output(
-                    ["docker", "port", name, ucc_port]).decode('utf-8').split(":")
-                device_ip = published_port_output[0]
-                ucc_port = int(published_port_output[1])
-            else:
-                device_ip_output = self.command(
-                    'ip', '-f', 'inet', 'addr', 'show', self.bridge_name)
-                device_ip = re.search(
-                    r'inet (?P<ip>[0-9.]+)', device_ip_output.decode('utf-8')).group('ip')
+        if on_wsl or compose:
+            published_port_output = subprocess.check_output(
+                ["docker", "port", name, ucc_port]).decode('utf-8').split(":")
+            device_ip = published_port_output[0]
+            ucc_port = int(published_port_output[1])
         else:
-            device_ip = self.device.docker_name
+            device_ip_output = self.command(
+                'ip', '-f', 'inet', 'addr', 'show', self.bridge_name)
+            device_ip = re.search(
+                r'inet (?P<ip>[0-9.]+)', device_ip_output.decode('utf-8')).group('ip')
 
         ucc_socket = UCCSocket(device_ip, ucc_port)
         mac = ucc_socket.dev_get_parameter('ALid')
@@ -342,17 +339,14 @@ class RadioDocker(Radio):
 
     def send_bwl_event(self, event: str) -> None:
         # The file is only available within the docker container so we need to use an echo command.
-        # Inside the container, $USER is set to the username that was used for starting it.
-        command = "echo \"{}\" > /tmp/$USER/beerocks/{}/EVENT".format(event, self.iface_name)
+        command = "echo \"{}\" > /tmp/beerocks/{}/EVENT".format(event, self.iface_name)
         self.agent.command('sh', '-c', command)
 
     def read_tmp_file(self, filename: str) -> bytes:
         '''Read the file given by `filename` from the radio's status directory'''
         # The file is only available within the docker container so we need to use cat.
-        # Inside the container, $USER is set to the username that was used for starting it.
-        # We need to pass through shell to expand it.
-        path = "/tmp/$USER/beerocks/{}/{}".format(self.iface_name, filename)
-        return self.agent.command("sh", "-c", 'cat "{}"'.format(path))
+        path = "/tmp/beerocks/{}/{}".format(self.iface_name, filename)
+        return self.agent.command("cat", path)
 
     def get_current_channel(self) -> ChannelInfo:
         channel_info = yaml.safe_load(self.read_tmp_file("channel"))

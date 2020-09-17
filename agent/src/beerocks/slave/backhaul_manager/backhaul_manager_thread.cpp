@@ -183,9 +183,10 @@ backhaul_manager::backhaul_manager(const config_file::sConfigSlave &config,
     configuration_stop_on_failure_attempts = stop_on_failure_attempts_;
     stop_on_failure_attempts               = stop_on_failure_attempts_;
     LOG(DEBUG) << "stop_on_failure_attempts=" << stop_on_failure_attempts;
-    m_sConfig.ucc_listener_port = string_utils::stoi(config.ucc_listener_port);
-    m_sConfig.vendor            = config.vendor;
-    m_sConfig.model             = config.model;
+    auto db                           = AgentDB::get();
+    db->device_conf.ucc_listener_port = string_utils::stoi(config.ucc_listener_port);
+    db->device_conf.vendor            = config.vendor;
+    db->device_conf.model             = config.model;
 
     m_eFSMState = EState::INIT;
     set_select_timeout(SELECT_TIMEOUT_MSC);
@@ -825,9 +826,6 @@ bool backhaul_manager::backhaul_fsm_main(bool &skip_select)
             FSM_MOVE_STATE(RESTART);
             break;
         }
-
-        // Update bridge parameters on AgentDB.
-        db->bridge.mac = tlvf::mac_from_string(bridge_info.mac);
 
         auto ifaces = network_utils::linux_get_iface_list_from_bridge(db->bridge.iface_name);
         if (!configure_ieee1905_transport_interfaces(db->bridge.iface_name, ifaces)) {
@@ -1655,10 +1653,8 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
         m_sConfig.slave_iface_socket[soc->sta_iface] = soc;
 
         if (!m_agent_ucc_listener && request->certification_mode() &&
-            m_sConfig.ucc_listener_port != 0 && !db->device_conf.local_controller) {
-            m_agent_ucc_listener = std::make_unique<agent_ucc_listener>(
-                *this, m_sConfig.ucc_listener_port, m_sConfig.vendor, m_sConfig.model,
-                db->bridge.iface_name, cert_cmdu_tx);
+            db->device_conf.ucc_listener_port != 0 && !db->device_conf.local_controller) {
+            m_agent_ucc_listener = std::make_unique<agent_ucc_listener>(*this, cert_cmdu_tx);
             if (m_agent_ucc_listener && !m_agent_ucc_listener->start("ucc_listener")) {
                 LOG(ERROR) << "failed start agent_ucc_listener";
                 return false;
@@ -2038,9 +2034,23 @@ bool backhaul_manager::handle_slave_1905_1_message(ieee1905_1::CmduMessageRx &cm
     default: {
         bool handled = m_task_pool.handle_cmdu(cmdu_rx, tlvf::mac_from_string(src_mac));
         if (!handled) {
-            LOG(DEBUG) << "Unexpected 1905 message " << int(cmdu_rx.getMessageType());
-            return false;
+            LOG(DEBUG) << "Unhandled 1905 message " << std::hex << int(cmdu_rx.getMessageType())
+                       << ", forwarding to controller...";
+
+            auto db = AgentDB::get();
+            if (db->controller_info.bridge_mac == beerocks::net::network_utils::ZERO_MAC) {
+                LOG(DEBUG) << "Controller MAC unknown. Dropping message.";
+                return false;
+            }
+
+            // Send the CMDU to the broker
+            auto uds_header = message_com::get_uds_header(cmdu_rx);
+            cmdu_rx.swap(); // swap back before sending to the broker
+            return send_cmdu_to_broker(cmdu_rx, tlvf::mac_to_string(db->controller_info.bridge_mac),
+                                       tlvf::mac_to_string(db->bridge.mac), uds_header->length,
+                                       db->bridge.iface_name);
         }
+
         return true;
     }
     }

@@ -8,6 +8,6 @@ if(BUILD_TESTS)
 
     target_link_libraries(${TEST_NAME} mapfcommon elpp)
 
-    install(TARGETS ${TEST_NAME} DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}/tests)
+    install(TARGETS ${TEST_NAME} DESTINATION tests)
     add_test(NAME ${TEST_NAME} COMMAND $<TARGET_FILE:${TEST_NAME}>)
 endif()

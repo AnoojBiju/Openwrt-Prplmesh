@@ -1,57 +1,75 @@
-version: '3'
+version: '3.5'
+
+networks:
+    prplmesh:
+        name: prplmesh-$RUN_ID
+        driver: bridge
+
+x-prplmesh: &prplmesh # Template for the prplmesh services
+    image: registry.gitlab.com/prpl-foundation/prplmesh/prplmesh/prplmesh-builder-ubuntu-bionic:${CI_PIPELINE_ID}
+    privileged: true    # For the creation of the bridge to work
+    networks:
+        - prplmesh
+    environment:
+        - USER
+        - INSTALL_DIR=${FINAL_ROOT_DIR}/build/install
+        - ROOT_DIR=${FINAL_ROOT_DIR}
+        - RUN_ID
+        - CI_PIPELINE_ID
+    ports:
+        - "8002"
+
 services:
     # Controller and agent are run from inside the boardfarm container
     controller:
-        image: registry.gitlab.com/prpl-foundation/prplmesh/prplmesh/prplmesh-builder-ubuntu-bionic:${CI_PIPELINE_ID}
-        privileged: true    # For the creation of the bridge to work
-        container_name: controller
-        environment:
-            - USER
-            - INSTALL_DIR=${FINAL_ROOT_DIR}/build/install
-            - ROOT_DIR=${FINAL_ROOT_DIR}
-            - CI_PIPELINE_ID
-        expose:
-            - "5000"
-            - "8002"
+        <<: *prplmesh
+        container_name: lan-$RUN_ID
+        entrypoint: ["/root/start-prplmesh.sh", "start-controller-agent"]
         volumes:
             - "$ROOT_DIR:${FINAL_ROOT_DIR}"
-        entrypoint: ["/root/start-prplmesh.sh", "start-controller-agent"]
+            - "$ROOT_DIR/logs/lan-$RUN_ID/:/tmp/beerocks/logs/"
 
     agent:
-        image: registry.gitlab.com/prpl-foundation/prplmesh/prplmesh/prplmesh-builder-ubuntu-bionic:${CI_PIPELINE_ID}
-        privileged: true
-        container_name: agent
-        environment:
-            - USER
-            - INSTALL_DIR=${FINAL_ROOT_DIR}/build/install
-            - ROOT_DIR=${FINAL_ROOT_DIR}
-              # /builds/prpl-foundation/prplMesh
-            - CI_PIPELINE_ID
-        expose:
-            - "5000"
-            - "8002"
+        <<: *prplmesh
+        container_name: agent-$RUN_ID
+        entrypoint: ["bash", "-c", "sleep 7; /root/start-prplmesh.sh start-agent"]
         volumes:
-          - "$ROOT_DIR:${FINAL_ROOT_DIR}"
-        entrypoint: ["/root/start-prplmesh.sh", "start-agent"]
+            - "$ROOT_DIR:${FINAL_ROOT_DIR}"
+            - "$ROOT_DIR/logs/agent-$RUN_ID/:/tmp/beerocks/logs/"
+        depends_on:
+          - controller
+
+    agent_2:
+        <<: *prplmesh
+        container_name: lan2-$RUN_ID
+        entrypoint: ["bash", "-c", "sleep 12; /root/start-prplmesh.sh start-agent"]
+        volumes:
+            - "$ROOT_DIR:${FINAL_ROOT_DIR}"
+            - "$ROOT_DIR/logs/lan2-$RUN_ID/:/tmp/beerocks/logs/"
+        depends_on:
+          - controller
 
     # Boardfarm image is launched from dctest.py, TARGET_DIR refers to the
     # path inside the controller, will be referred as $ROOT_DIR inside
     boardfarm:
-        build: .
+        image: registry.gitlab.com/prpl-foundation/prplmesh/prplmesh/prplmesh-boardfarm-ci:${CI_PIPELINE_ID}
         privileged: true
-        container_name: boardfarm
+        container_name: boardfarm-$RUN_ID
         environment:
             - USER
             - ROOT_DIR
             - RUN_ID
             - CI_PIPELINE_ID
             - FINAL_ROOT_DIR
-        ports:
-            - "5000:5000"
+            - PYTHONDONTWRITEBYTECODE=1
+        network_mode: host
         volumes:
             - "$ROOT_DIR:$ROOT_DIR"
             - "/var/run/docker:/var/run/docker"
             - "/var/run/docker.sock:/var/run/docker.sock"
-        user: ${CURRENT_UID_GID}
         working_dir: $ROOT_DIR/tests
-        entrypoint: ["bash", "run_bf_compose.sh"]
+        entrypoint: ["bash", "-c", "echo 'wait for DUTs'; sleep 20; echo 'starting boardfarm'; ./run_bf_compose.sh"]
+        depends_on:
+          - controller
+          - agent
+          - agent_2

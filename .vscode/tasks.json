@@ -46,8 +46,15 @@
           "-r",
           "repeater1-${env:USER}",
           "-r",
-          "repeater2-${env:USER}"
-        ]
+          "repeater2-${env:USER}",
+          "--delay",
+          "7"
+        ],
+        "options": {
+          "env": {
+            "VERBOSE": "true"
+          }
+        }
       },
       "problemMatcher": []
     },
@@ -103,7 +110,7 @@
         ]
       },
       "problemMatcher": []
-    },
+    }
   ],
   "inputs": [
     {

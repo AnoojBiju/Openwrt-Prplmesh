@@ -6,6 +6,8 @@
 
 scriptdir=$(dirname "$(readlink -f "${0}")")
 bf_plugins_dir=${scriptdir}/boardfarm_plugins
+resultdir=${scriptdir}/../logs/
+
 
 if [ -n "${PYTHONPATH}" ]; then
    PYTHONPATH="${bf_plugins_dir}:${scriptdir}:${PYTHONPATH}"
@@ -15,4 +17,4 @@ fi
 echo "$PYTHONPATH"
 export PYTHONPATH
 export BFT_DEBUG=y
-exec bft -c "${bf_plugins_dir}"/boardfarm_prplmesh/prplmesh_config_compose.json -n prplmesh_compose -x test_flows
+exec bft -c "${bf_plugins_dir}"/boardfarm_prplmesh/prplmesh_config_compose.json -n prplmesh_compose -x test_flows -o "${resultdir}"

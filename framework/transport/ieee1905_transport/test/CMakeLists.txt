@@ -6,6 +6,6 @@ if(BUILD_TESTS)
 
     target_link_libraries(ieee1905_transport_broker_tests ieee1905_transport_lib gtest_main)
 
-    install(TARGETS ieee1905_transport_broker_tests DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}/tests)
+    install(TARGETS ieee1905_transport_broker_tests DESTINATION tests)
     add_test(NAME ieee1905_transport_broker_tests COMMAND $<TARGET_FILE:ieee1905_transport_broker_tests>)
 endif()

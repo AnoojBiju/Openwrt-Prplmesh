@@ -1316,13 +1316,54 @@ class TestFlows:
         #                r"inserting 1 RRM_EVENT_BEACON_REP_RXED event(s) to the pending list")
         env.agents[0].radios[0].vaps[0].disassociate(sta)
 
+    def test_tunnelled_wnm_frame(self):
+        '''Associate a STA and inject a WNM Request event.'''
+
+        sta1 = env.Station.create()
+        vap1 = env.agents[0].radios[0].vaps[0]
+        vap1.associate(sta1)
+
+        # Simulate WNM Request management frame event
+        env.agents[0].radios[0].send_bwl_event(
+            "EVENT MGMT-FRAME {} TYPE=3 DATA=0d0e0a0d0b0e0e0f".format(sta1.mac))
+
+        time.sleep(1)
+
+        # Validate "Tunnelled Message" CMDU was sent
+        response = self.check_cmdu_type_single("Tunnelled Message", 0x8026, env.agents[0].mac,
+                                               env.controller.mac)
+
+        debug("Check Tunnelled Message has valid Source Info TLV")
+        tlv_source_info = self.check_cmdu_has_tlv_single(response, 0xc0)
+        if tlv_source_info.tlv_data != sta1.mac:
+            self.fail("Source Info TLV has wrong STA MAC {} instead of {}".format(
+                tlv_source_info.tlv_data, sta1.mac))
+
+        debug("Check Tunnelled Message has valid Type TLV")
+        tlv_type = self.check_cmdu_has_tlv_single(response, 0xc1)
+        if tlv_type.tlv_data != "03":
+            self.fail("Type TLV has wrong value of {} instead of 3".format(
+                tlv_type.tlv_data))
+
+        debug("Check Tunnelled Message has valid Data TLV")
+        tlv_data = self.check_cmdu_has_tlv_single(response, 0xc2)
+        if tlv_data.tlv_data != "0d:0e:0a:0d:0b:0e:0e:0f":
+            self.fail("Type TLV has wrong value of {} instead of 0d:0e:0a:0d:0b:0e:0e:0f".format(
+                tlv_data.tlv_data))
+
+        debug("Confirming Tunnelled Message was received on the Controller")
+        self.check_log(
+            env.controller, r"Received Tunnelled Message from {}".format(env.agents[0].mac))
+
+        vap1.disassociate(sta1)
+
 
 if __name__ == '__main__':
     t = TestFlows()
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--verbose", "-v", action='store_true', default=False,
-                        help="report each action")
+                        help="(ignored for backward compatibility)")
     parser.add_argument("--stop-on-failure", "-s", action='store_true', default=False,
                         help="exit on the first failure")
     user = os.getenv("SUDO_USER", os.getenv("USER", ""))
@@ -1340,8 +1381,6 @@ if __name__ == '__main__':
     unknown_tests = [test for test in options.tests if test not in t.tests]
     if unknown_tests:
         parser.error("Unknown tests: {}".format(', '.join(unknown_tests)))
-
-    opts.verbose = options.verbose
 
     opts.tcpdump_dir = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), '..', 'logs'))
     opts.stop_on_failure = options.stop_on_failure

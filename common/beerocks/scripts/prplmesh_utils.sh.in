@@ -6,7 +6,8 @@
 # See LICENSE file for more details.
 ###############################################################
 
-PRPLMESH_BIN_DIR="@INSTALL_PATH@/@CMAKE_INSTALL_BINDIR@"
+scriptdir="$(dirname "$(readlink -f "${0}")")"
+PRPLMESH_DIR="$(cd "${scriptdir}/.." && pwd)"
 
 dbg() {
     [ "$VERBOSE" = "true" ] && echo "$@"
@@ -30,7 +31,7 @@ killall_program() {
     TERM_SIG=${2:-TERM}
     TIMEOUT=10
     echo "terminating $PROGRAM_NAME ($TERM_SIG)"
-    start-stop-daemon -K -s "$TERM_SIG" -x "$PRPLMESH_BIN_DIR"/"$PROGRAM_NAME" > /dev/null 2>&1
+    start-stop-daemon -K -s "$TERM_SIG" -x "$PRPLMESH_DIR/bin/$PROGRAM_NAME" > /dev/null 2>&1
 
     # If an explicit signal was provided, we don't do a SIGKILL
     if [ -n "$2" ]; then return; fi
@@ -44,7 +45,7 @@ killall_program() {
     done
 
     echo "killing $PROGRAM_NAME (KILL)"
-    start-stop-daemon -K -s "KILL" -x "$PRPLMESH_BIN_DIR"/"$PROGRAM_NAME" > /dev/null 2>&1
+    start-stop-daemon -K -s "KILL" -x "$PRPLMESH_DIR/bin/$PROGRAM_NAME" > /dev/null 2>&1
 }
 
 platform_init() {
@@ -94,7 +95,7 @@ prplmesh_platform_db_init() {
     mkdir -p @TMP_PATH@
 
     # Put generated prplmesh_platform_db file to the temporary directory
-    cp @INSTALL_PATH@/share/prplmesh_platform_db @TMP_PATH@/prplmesh_platform_db
+    cp "${PRPLMESH_DIR}/share/prplmesh_platform_db" @TMP_PATH@/prplmesh_platform_db
 
     # Modify generated parameters to current
     sed -i "s/management_mode=.*/management_mode=${management_mode}/g" @TMP_PATH@/prplmesh_platform_db
@@ -103,7 +104,7 @@ prplmesh_platform_db_init() {
 
 prplmesh_framework_init() {
     echo "prplmesh_framework_init - starting ieee1905_transport process..."
-    @INSTALL_PATH@/bin/ieee1905_transport &
+    "$PRPLMESH_DIR/bin/ieee1905_transport" &
 
     # This is required for solveing issue which causing meesges not geeting to their destination.
     # For more information see: https://github.com/prplfoundation/prplMesh/pull/1029#issuecomment-608353274
@@ -118,7 +119,7 @@ prplmesh_framework_deinit() {
 
 prplmesh_controller_start() {
     echo "prplmesh_controller_start - start beerocks_controller process..."
-    @INSTALL_PATH@/bin/beerocks_controller &
+    "$PRPLMESH_DIR/bin/beerocks_controller" &
 }
 
 prplmesh_controller_stop() {
@@ -128,7 +129,7 @@ prplmesh_controller_stop() {
 
 prplmesh_agent_start() {
     echo "prplmesh_agent_start - start beerocks_agent process..."
-    @INSTALL_PATH@/bin/beerocks_agent &
+    "$PRPLMESH_DIR/bin/beerocks_agent" &
 }
 
 prplmesh_agent_stop() {
@@ -142,7 +143,7 @@ prplmesh_delete_logs() {
     rm -rf @BEEROCKS_LOG_FILES_PATH@
 
     # Relevant only for Linux environment
-    rm -rf "/tmp/${SUDO_USER:-${USER}}/beerocks/logs"
+    rm -rf "/tmp/beerocks/logs"
 }
 
 prplmesh_watchdog() {
@@ -258,8 +259,8 @@ stop_function() {
 
 execute_beerocks_command() {
     dbg "Executing beerocks cli command: $*"
-    if [ -e $PRPLMESH_BIN_DIR/beerocks_cli ]; then
-        output=$(${PRPLMESH_BIN_DIR}/beerocks_cli -c "$@")
+    if [ -e "$PRPLMESH_DIR/bin/beerocks_cli" ]; then
+        output="$("${PRPLMESH_DIR}/bin/beerocks_cli" -c "$@")"
         return $?
     else
         err "BML CLI not found"
@@ -272,7 +273,7 @@ execute_beerocks_command() {
 # Therefore added "($|[[:blank:]])" to the end of the regex expression which means the end of the
 # line ($) or blank character ([[:blank:]])
 main_agent_operational() {
-    pgrep -fx "@INSTALL_PATH@/bin/beerocks_agent($|[[:blank:]])" > /dev/null 2>&1 || return 1
+    pgrep -fx "$PRPLMESH_DIR/bin/beerocks_agent($|[[:blank:]])" > /dev/null 2>&1 || return 1
     grep -q 'CONNECTED --> OPERATIONAL' "$1/beerocks_agent@BEEROCKS_LOG_FILES_SUFFIX@"
 }
 
@@ -420,7 +421,7 @@ main() {
     # Give write permissions (linux only)
     # shellcheck disable=SC2050
     if [ "@TARGET_PLATFORM@" = "linux" ]; then
-        chmod -R +o+w "/tmp/${SUDO_USER:-${USER}}" || true
+        chmod -R +o+w "/tmp/beerocks" || true
     fi
 }
 
@@ -430,8 +431,5 @@ DELETE_LOGS=false
 CONTROL_IFACE=
 DATA_IFACE=
 PRPLMESH_MODE="CA" # CA = Controller & Agent, A = Agent only, C = Controller only
-
-# Export MultiAP libs folder
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:@INSTALL_PATH@/lib
 
 main "$@"

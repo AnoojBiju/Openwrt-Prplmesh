@@ -9,8 +9,8 @@ The BWL Dummy implementation provides simple events simulation support using tex
 The way this is implemented is using `inotify` support in Linux to watch a file named EVENT in each radio agent:
 
 ```bash
-/tmp/$USER/beerocks/wlan0/EVENT
-/tmp/$USER/beerocks/wlan2/EVENT
+/tmp/beerocks/wlan0/EVENT
+/tmp/beerocks/wlan2/EVENT
 ```
 
 The dummy BWL implementation reads the first line of the EVENT file each time it is modified (or created), and parse the event, then act on it.
@@ -19,7 +19,7 @@ This allows simulating WLAN events simply by writing the event as it would have 
 For example, simulating client connected event to the 2.4G radio (wlan0):
 
 ```bash
-echo "AP-STA-CONNECTED 11:22:33:44:55:66" > /tmp/$USER/beerocks/wlan0/EVENT
+echo "AP-STA-CONNECTED 11:22:33:44:55:66" > /tmp/beerocks/wlan0/EVENT
 ```
 
 This results with the event picked by the BWL dummy implementation:

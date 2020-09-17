@@ -196,5 +196,15 @@
                 "order": 2
             }
         },
+        {
+            "name": "Test Flows",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/tests/test_flows.py",
+            "args": [
+                ""
+            ],
+            "console": "integratedTerminal"
+        }
     ]
 }
