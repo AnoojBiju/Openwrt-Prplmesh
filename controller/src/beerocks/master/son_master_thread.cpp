@@ -1918,7 +1918,7 @@ bool master_thread::handle_cmdu_1905_tunnelled_message(const std::string &src_ma
         return false;
     }
 
-    LOG(DEBUG) << "STA MAC: " << source_info_tlv->mac() << ", Type: " << std::hex
+    LOG(DEBUG) << "Tunnelled Message STA MAC: " << source_info_tlv->mac() << ", Type: " << std::hex
                << int(type_tlv->protocol_type()) << ", Data Length: " << std::dec
                << data_tlv->data_length() << ", Data: " << std::endl
                << utils::dump_buffer(data_tlv->data(0), data_tlv->data_length());
