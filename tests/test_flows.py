@@ -1316,46 +1316,77 @@ class TestFlows:
         #                r"inserting 1 RRM_EVENT_BEACON_REP_RXED event(s) to the pending list")
         env.agents[0].radios[0].vaps[0].disassociate(sta)
 
-    def test_tunnelled_wnm_frame(self):
-        '''Associate a STA and inject a WNM Request event.'''
-
-        sta1 = env.Station.create()
-        vap1 = env.agents[0].radios[0].vaps[0]
-        vap1.associate(sta1)
-
-        # Simulate WNM Request management frame event
-        env.agents[0].radios[0].send_bwl_event(
-            "EVENT MGMT-FRAME {} TYPE=3 DATA=0d0e0a0d0b0e0e0f".format(sta1.mac))
-
-        time.sleep(1)
+    def validate_tunnelled_frame(self, agent_mac, sta_mac, msg_type, msg_data):
+        '''Validates the CMDU of Controller reception of the tennulled frame.'''
 
         # Validate "Tunnelled Message" CMDU was sent
-        response = self.check_cmdu_type_single("Tunnelled Message", 0x8026, env.agents[0].mac,
-                                               env.controller.mac)
+        response = self.check_cmdu_type_single(
+            "Tunnelled Message", 0x8026, agent_mac, env.controller.mac)
 
         debug("Check Tunnelled Message has valid Source Info TLV")
         tlv_source_info = self.check_cmdu_has_tlv_single(response, 0xc0)
-        if tlv_source_info.tlv_data != sta1.mac:
+        if tlv_source_info.tlv_data != sta_mac:
             self.fail("Source Info TLV has wrong STA MAC {} instead of {}".format(
-                tlv_source_info.tlv_data, sta1.mac))
+                tlv_source_info.tlv_data, sta_mac))
 
         debug("Check Tunnelled Message has valid Type TLV")
         tlv_type = self.check_cmdu_has_tlv_single(response, 0xc1)
-        if tlv_type.tlv_data != "03":
-            self.fail("Type TLV has wrong value of {} instead of 3".format(
-                tlv_type.tlv_data))
+        if tlv_type.tlv_data != "{:02x}".format(msg_type):
+            self.fail("Type TLV has wrong value of {} instead of {}".format(
+                tlv_type.tlv_data, msg_type))
 
         debug("Check Tunnelled Message has valid Data TLV")
         tlv_data = self.check_cmdu_has_tlv_single(response, 0xc2)
-        if tlv_data.tlv_data != "0d:0e:0a:0d:0b:0e:0e:0f":
-            self.fail("Type TLV has wrong value of {} instead of 0d:0e:0a:0d:0b:0e:0e:0f".format(
-                tlv_data.tlv_data))
+        tlv_data_hex_string = tlv_data.tlv_data.replace(":", "")
+        if tlv_data_hex_string != msg_data:
+            self.fail("Type TLV has wrong value of {} instead of {}".format(
+                tlv_data_hex_string, msg_data))
 
         debug("Confirming Tunnelled Message was received on the Controller")
         self.check_log(
-            env.controller, r"Received Tunnelled Message from {}".format(env.agents[0].mac))
+            env.controller, r"Received Tunnelled Message from {}".format(agent_mac))
+        self.check_log(
+            env.controller, r"Tunnelled Message STA MAC: {}, Type: 0x{:x}".format(sta_mac, msg_type))
 
+    def test_tunnelled_frames(self):
+        '''Associate a STA and inject a WNM Request event.'''
+
+        # Create STAs and Agents
+        sta1 = env.Station.create()
+        sta2 = env.Station.create()
+        vap1 = env.agents[0].radios[0].vaps[0]
+        vap2 = env.agents[1].radios[1].vaps[0]
+
+        # Associate the STAs
+        vap1.associate(sta1)
+        vap2.associate(sta2)
+
+        # Simulated events data
+        event1_type = 3  # WNM Request
+        event1_data = "0d0e0a0d0b0e0e0f"
+        event2_type = 4  # ANQP REQUEST
+        event2_data = "010203040506"
+
+        debug("Simulate WNM Request management frame event")
+        env.agents[0].radios[0].send_bwl_event(
+            "EVENT MGMT-FRAME {} TYPE={:x} DATA={}".format(sta1.mac, event1_type, event1_data))
+
+        debug("Simulate ANQP Request management frame event")
+        env.agents[1].radios[1].send_bwl_event(
+            "EVENT MGMT-FRAME {} TYPE={:x} DATA={}".format(sta2.mac, event2_type, event2_data))
+
+        # Allow the events to propagate
+        time.sleep(1)
+
+        # Validate the first (WNM Request) event
+        self.validate_tunnelled_frame(env.agents[0].mac, sta1.mac, event1_type, event1_data)
+
+        # Validate the second (ANQP REQUEST) event
+        self.validate_tunnelled_frame(env.agents[1].mac, sta2.mac, event2_type, event2_data)
+
+        # Disconnect the stations
         vap1.disassociate(sta1)
+        vap2.disassociate(sta2)
 
 
 if __name__ == '__main__':
