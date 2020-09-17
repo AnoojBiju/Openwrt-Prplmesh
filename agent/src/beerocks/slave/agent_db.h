@@ -121,6 +121,7 @@ public:
         bool load_balancing_enabled;
         bool service_fairness_enabled;
         bool rdkb_extensions_enabled;
+        bool zwdfs_enable;
 
         std::string vendor;
         std::string model;
