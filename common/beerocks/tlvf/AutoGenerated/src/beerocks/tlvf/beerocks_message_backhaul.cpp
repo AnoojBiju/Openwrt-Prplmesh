@@ -873,8 +873,8 @@ uint8_t& cACTION_BACKHAUL_ENABLE_APS_REQUEST::channel() {
     return (uint8_t&)(*m_channel);
 }
 
-uint32_t& cACTION_BACKHAUL_ENABLE_APS_REQUEST::bandwidth() {
-    return (uint32_t&)(*m_bandwidth);
+beerocks::eWiFiBandwidth& cACTION_BACKHAUL_ENABLE_APS_REQUEST::bandwidth() {
+    return (beerocks::eWiFiBandwidth&)(*m_bandwidth);
 }
 
 uint8_t& cACTION_BACKHAUL_ENABLE_APS_REQUEST::center_channel() {
@@ -884,7 +884,7 @@ uint8_t& cACTION_BACKHAUL_ENABLE_APS_REQUEST::center_channel() {
 void cACTION_BACKHAUL_ENABLE_APS_REQUEST::class_swap()
 {
     tlvf_swap(8*sizeof(eActionOp_BACKHAUL), reinterpret_cast<uint8_t*>(m_action_op));
-    tlvf_swap(32, reinterpret_cast<uint8_t*>(m_bandwidth));
+    tlvf_swap(8*sizeof(beerocks::eWiFiBandwidth), reinterpret_cast<uint8_t*>(m_bandwidth));
 }
 
 bool cACTION_BACKHAUL_ENABLE_APS_REQUEST::finalize()
@@ -918,7 +918,7 @@ size_t cACTION_BACKHAUL_ENABLE_APS_REQUEST::get_initial_size()
 {
     size_t class_size = 0;
     class_size += sizeof(uint8_t); // channel
-    class_size += sizeof(uint32_t); // bandwidth
+    class_size += sizeof(beerocks::eWiFiBandwidth); // bandwidth
     class_size += sizeof(uint8_t); // center_channel
     return class_size;
 }
@@ -934,9 +934,9 @@ bool cACTION_BACKHAUL_ENABLE_APS_REQUEST::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_bandwidth = reinterpret_cast<uint32_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint32_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
+    m_bandwidth = reinterpret_cast<beerocks::eWiFiBandwidth*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(beerocks::eWiFiBandwidth))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(beerocks::eWiFiBandwidth) << ") Failed!";
         return false;
     }
     m_center_channel = reinterpret_cast<uint8_t*>(m_buff_ptr__);
