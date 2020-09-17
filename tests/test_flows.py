@@ -1412,6 +1412,37 @@ class TestFlows:
         vap1.disassociate(sta1)
         vap2.disassociate(sta2)
 
+    def test_mismatch_psk(self):
+        # Simulate Mismatch PSK sent by STA
+
+        # Create STA and Agent
+        sta = env.Station.create()
+        agent = env.agents[0]
+        agent_radio = env.agents[0].radios[0]
+
+        # Simulate Failed Association Message
+        agent_radio.send_bwl_event(
+                "EVENT AP-STA-POSSIBLE-PSK-MISMATCH {}".format(sta.mac))
+
+        # Wait for something to happen
+        time.sleep(1)
+
+        # Check correct flow
+        # Validate "Failed Connection Message" CMDU was sent
+        response = self.check_cmdu_type_single(
+            "Failed Connection Message", 0x8033, agent.mac, env.controller.mac)
+
+        debug("Check Failed Connection Message has valid STA TLV")
+        tlv_sta_mac = self.check_cmdu_has_tlv_single(response, 0x95)
+        if hasattr(tlv_sta_mac, 'sta_mac_addr_type_mac_addr'):
+            received_sta_mac = tlv_sta_mac.sta_mac_addr_type_mac_addr
+        else:
+            received_sta_mac = '00:00:00:00:00:00'
+
+        # Validate Srouce Info STA MAC
+        if received_sta_mac != sta.mac:
+            self.fail("Source Info TLV has wrong STA MAC {} instead of {}".format(
+                received_sta_mac, sta.mac))
 
 if __name__ == '__main__':
     t = TestFlows()
