@@ -18,6 +18,9 @@
 #include <beerocks/tlvf/beerocks_message.h>
 #include <beerocks/tlvf/beerocks_message_apmanager.h>
 
+#include <tlvf/wfa_map/tlvProfile2ReasonCode.h>
+#include <tlvf/wfa_map/tlvProfile2StatusCode.h>
+#include <tlvf/wfa_map/tlvStaMacAddressType.h>
 #include <tlvf/wfa_map/tlvTunnelledData.h>
 #include <tlvf/wfa_map/tlvTunnelledProtocolType.h>
 #include <tlvf/wfa_map/tlvTunnelledSourceInfo.h>
@@ -1525,7 +1528,6 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
         message_com::send_cmdu(slave_socket, cmdu_tx);
 
     } break;
-
     case Event::MGMT_Frame: {
         if (!data) {
             LOG(ERROR) << "MGMT_Frame without data!";
@@ -1619,7 +1621,41 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
         message_com::send_cmdu(slave_socket, cmdu_tx);
 
     } break;
-
+    case Event::AP_Sta_Possible_Psk_Mismatch: {
+        LOG(DEBUG) << "ap manager: Ap STA Possible PSK Mismatch";
+        auto mismatch_psk = static_cast<bwl::sSTA_MISMATCH_PSK *>(data);
+        // Create a Failed Connection Message
+        auto cmdu_tx_header =
+            cmdu_tx.create(0, ieee1905_1::eMessageType::FAILED_CONNECTION_MESSAGE);
+        if (!cmdu_tx_header) {
+            LOG(ERROR) << "cmdu creation of type FAILED_CONNECTION_MESSAGE failed!";
+            return false;
+        }
+        // add STA
+        auto sta_mac_tlv = cmdu_tx.addClass<wfa_map::tlvStaMacAddressType>();
+        if (!sta_mac_tlv) {
+            LOG(ERROR) << "addClass wfa_map::tlvStaMacAddressType!";
+            return false;
+        }
+        sta_mac_tlv->sta_mac() = mismatch_psk->sta_mac;
+        // add status code
+        auto profile2_status_code_tlv = cmdu_tx.addClass<wfa_map::tlvProfile2StatusCode>();
+        if (!profile2_status_code_tlv) {
+            LOG(ERROR) << "addClass wfa_map::tlvProfile2StatusCode!";
+            return false;
+        }
+        // note: at the moment just setting the code to non-zero
+        profile2_status_code_tlv->status_code() = 0x0001;
+        // add reason code
+        // note: no value is set at the moment
+        auto profile2_reason_code_tlv = cmdu_tx.addClass<wfa_map::tlvProfile2ReasonCode>();
+        if (!profile2_reason_code_tlv) {
+            LOG(ERROR) << "addClass wfa_map::tlvProfile2ReasonCode!";
+            return false;
+        }
+        // Send the tunnelled message
+        message_com::send_cmdu(slave_socket, cmdu_tx);
+    } break;
     // Unhandled events
     default:
         LOG(ERROR) << "Unhandled event: " << int(event);
