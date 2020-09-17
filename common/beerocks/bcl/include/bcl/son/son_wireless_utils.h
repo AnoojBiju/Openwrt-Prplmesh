@@ -181,6 +181,13 @@ public:
     */
     static bool is_channel_in_operating_class(uint8_t operating_class, uint8_t channel);
 
+    /**
+     * @brief Check if frequency band is 5GHz frequency
+     *
+     * @return False if band is not 5GHz or there is not enoguh data, true otherwise
+     */
+    static bool is_frequency_band_5ghz(beerocks::eFreqType frequency_band);
+
 private:
     enum eAntennaFactor {
         ANT_FACTOR_1X1 = 0,

@@ -876,3 +876,18 @@ bool wireless_utils::is_channel_in_operating_class(uint8_t operating_class, uint
 
     return (channel_set.find(channel) != channel_set.end());
 }
+
+bool wireless_utils::is_frequency_band_5ghz(beerocks::eFreqType frequency_band)
+{
+    switch (frequency_band) {
+    case beerocks::FREQ_24G:
+        return false;
+    case beerocks::FREQ_5G:
+    case beerocks::FREQ_58G:
+    case beerocks::FREQ_24G_5G:
+        return true;
+    default:
+        LOG(WARNING) << "Cannot determine whether frequency band " << frequency_band << " is 5GHz";
+        return false;
+    }
+}
