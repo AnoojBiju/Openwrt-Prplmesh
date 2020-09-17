@@ -125,7 +125,7 @@ class cACTION_APMANAGER_ENABLE_APS_REQUEST : public BaseClass
             return (eActionOp_APMANAGER)(ACTION_APMANAGER_ENABLE_APS_REQUEST);
         }
         uint8_t& channel();
-        uint32_t& bandwidth();
+        beerocks::eWiFiBandwidth& bandwidth();
         uint8_t& center_channel();
         void class_swap() override;
         bool finalize() override;
@@ -135,7 +135,7 @@ class cACTION_APMANAGER_ENABLE_APS_REQUEST : public BaseClass
         bool init();
         eActionOp_APMANAGER* m_action_op = nullptr;
         uint8_t* m_channel = nullptr;
-        uint32_t* m_bandwidth = nullptr;
+        beerocks::eWiFiBandwidth* m_bandwidth = nullptr;
         uint8_t* m_center_channel = nullptr;
 };
 
