@@ -1309,7 +1309,7 @@ class TestFlows:
 
         self.check_log(env.agents[0],
                        r"BEACON METRICS QUERY: "
-                       r"sending ACK message to the originator mid: {:d}".format(mid))
+                       r"sending ACK message to the originator mid: 0x{:x}".format(mid))
 
         # this line is printed in the monitor log - however currently there is no way to test it -
         # self.check_log(env.agents[0].radios[0].???,
