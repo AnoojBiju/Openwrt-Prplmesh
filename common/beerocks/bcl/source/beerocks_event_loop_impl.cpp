@@ -142,7 +142,12 @@ int EventLoopImpl::run()
         (m_timeout > std::chrono::milliseconds::zero()) ? static_cast<int>(m_timeout.count()) : -1;
 
     // Poll the file descriptors
-    auto num_events = epoll_wait(m_epoll_fd, events, sizeof(events), timeout_millis);
+    // Retry if the call was interrupted by a signal handler before either (1) any of the
+    // requested events occurred or (2) the timeout expired
+    int num_events;
+    do {
+        num_events = epoll_wait(m_epoll_fd, events, sizeof(events), timeout_millis);
+    } while ((num_events < 0) && (EINTR == errno));
 
     if (num_events == -1) {
         LOG(ERROR) << "Error during epoll_wait: " << strerror(errno);
