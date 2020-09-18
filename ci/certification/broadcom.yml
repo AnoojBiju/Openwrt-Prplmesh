@@ -1,0 +1,132 @@
+.certification-broadcom:
+  extends: .certification-generic
+  stage: certification-broadcom
+  variables:
+    DEVICE_UNDER_TEST: "broadcom"
+  when: manual
+
+MAP-4.2.3_ETH_FH24G:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.2.3_ETH_FH5GL:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.2.3_ETH_FH5GH:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.2.3_BHWIFI_FH24G:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.2.3_BHWIFI_FH5GL:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.2.3_BHWIFI_FH5GH:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.4.2_ETH_FH24G:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.4.2_ETH_FH5GL:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.4.2_ETH_FH5GH:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.4.2_BHWIFI_FH24G:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.4.2_BHWIFI_FH5GL:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.4.2_BHWIFI_FH5GH:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.5.3_ETH_FH5GL:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.5.3_ETH_FH5GH:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.5.3_BHWIFI_FH5GL:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.5.3_BHWIFI_FH5GH:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.7.1_BH24G_FH5GL:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.7.1_BH5GL_FH5GL:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.7.1_BH5GH_FH5GL:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.7.2_BH24G_FH5GL:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.7.2_BH5GL_FH5GL:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.7.2_BH5GH_FH5GL:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.7.9_ETH:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.7.9_BHWIFI:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.8.4_ETH_FH24G:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.8.4_ETH_FH5GL:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.8.4_ETH_FH5GH:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.8.4_BHWIFI_FH24G:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.8.4_BHWIFI_FH5GL:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.8.4_BHWIFI_FH5GH:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.10.2_BH24G:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.10.2_BH5GL:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.10.2_BH5GH:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.10.5_BH24G_FH24G:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.10.5_BH24G_FH5GL:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.10.5_BH24G_FH5GH:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.10.5_BH5GL_FH24G:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.10.5_BH5GL_FH5GL:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.10.5_BH5GL_FH5GH:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.10.5_BH5GH_FH24G:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.10.5_BH5GH_FH5GL:broadcom:
+  extends: .certification-broadcom
+
+MAP-4.10.5_BH5GH_FH5GH:broadcom:
+  extends: .certification-broadcom

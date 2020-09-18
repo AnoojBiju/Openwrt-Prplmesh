@@ -7,10 +7,10 @@ stages:
   - containers
   - build
   - test
-  - certification-dummy
-  - certification-turris-omnia
-  - certification-axepoint
-  - certification-axepoint-bhwifi
+  - certification-broadcom
+  - certification-marvell
+  - certification-mediatek
+  - certification-qualcomm
   - upload
 
 .image-build:
@@ -410,9 +410,8 @@ run-certification-tests:
     - if: "$TESTS_TO_RUN"
 
 include:
-  - template: "Workflows/MergeRequest-Pipelines.gitlab-ci.yml"
   - local: "/ci/certification/generic.yml"
-  - local: "/ci/certification/dummy.yml"
-  - local: "/ci/certification/turris-omnia.yml"
-  - local: "/ci/certification/axepoint.yml"
-  - local: "/ci/certification/axepoint-bhwifi.yml"
+  - local: "/ci/certification/broadcom.yml"
+  - local: "/ci/certification/marvell.yml"
+  - local: "/ci/certification/mediatek.yml"
+  - local: "/ci/certification/qualcomm.yml"
