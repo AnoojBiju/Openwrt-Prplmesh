@@ -14,5 +14,5 @@
       - logs
     when: always
   tags:
-    - certs-tests
+    - certs-tests-isr
   timeout: 45min
