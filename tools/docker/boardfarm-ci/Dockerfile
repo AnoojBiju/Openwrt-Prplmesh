@@ -1,11 +1,20 @@
 FROM python:3.8-slim-buster
 
 # Debian dependencies to install docker and docker compose from docker.com
-RUN apt-get update \
-&& DEBIAN_FRONTEND=noninteractive apt-get install \
-apt-transport-https ca-certificates curl gnupg-agent \
-software-properties-common curl gcc libsnmp-dev jq wireshark-common tshark \
--y && apt-get clean
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg-agent \
+    software-properties-common \
+    gcc \
+    libsnmp-dev \
+    jq \
+    iproute2 \
+    wireshark-common \
+    tshark \
+    && apt-get clean
 
 # Install docker and docker-compose from docker.com repositories
 RUN curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
