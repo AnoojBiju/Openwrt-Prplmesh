@@ -267,7 +267,10 @@ class ALEntityDocker(ALEntity):
                  compose: bool = False):
 
         self.name = name
-        ucc_interface_name = 'eth0'
+        if compose:
+            ucc_interface_name = 'br-lan'
+        else:
+            ucc_interface_name = 'eth0'
         if device:
             self.device = device
 
@@ -388,9 +391,11 @@ def _get_bridge_interface(docker_network):
     prplmesh_net = inspect[0]
     # podman adds a 'plugins' indirection that docker doesn't have.
     if 'plugins' in prplmesh_net:
+        print("BRIDGE DETERMINED BY PODMAN")
         bridge = prplmesh_net['plugins'][0]['bridge']
     else:
         # docker doesn't report the interface name of the bridge. So format it based on the ID.
+        print("BRIDGE DETERMINED BY CONCATING NET ID")
         bridge_id = prplmesh_net['Id']
         bridge = 'br-' + bridge_id[:12]
 
