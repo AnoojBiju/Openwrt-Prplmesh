@@ -24,7 +24,6 @@ usage() {
     echo "      -n|--name - container name (for later easy attach)"
     echo "      -p|--port - port to expose on the container"
     echo "      -P|--publish - publish all exposed ports to the host"
-    echo "      -I|--image - docker network to which to attach the container"
     echo "      -N|--network - docker network to which to attach the container"
     echo "      -u|--unique-id - unique id to add as suffix to container and network names"
     echo "      --entrypoint - use a different entrypoint for the container"
