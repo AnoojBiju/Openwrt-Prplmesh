@@ -110,7 +110,7 @@ class Sniffer:
 
     def start(self, outputfile_basename):
         '''Start tcpdump to outputfile.'''
-        debug("Starting tcpdump, output file {}.pcap".format(outputfile_basename))
+        debug("Starting tcpdump on {}, output file {}.pcap".format(self.interface, outputfile_basename))
         os.makedirs(os.path.join(self.tcpdump_log_dir, 'logs'), exist_ok=True)
         self.current_outputfile = os.path.join(self.tcpdump_log_dir, outputfile_basename) + ".pcap"
         self.checkpoint_frame_number = 0
