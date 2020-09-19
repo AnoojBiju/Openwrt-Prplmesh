@@ -388,6 +388,7 @@ def _get_bridge_interface(docker_network):
     prplmesh_net = inspect[0]
     # podman adds a 'plugins' indirection that docker doesn't have.
     if 'plugins' in prplmesh_net:
+        # TODO: not sure if this selects the correct network, better get rid of this altogether
         bridge = prplmesh_net['plugins'][0]['bridge']
     else:
         # docker doesn't report the interface name of the bridge. So format it based on the ID.
