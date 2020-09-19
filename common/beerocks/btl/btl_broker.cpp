@@ -267,8 +267,9 @@ bool transport_socket_thread::work()
                 auto ret = socket_disconnected_uds(sd);
                 if (ret == 1) {
                     if (bus_socket_event) {
-                        THREAD_LOG(FATAL) << "setting m_broker to nullptr";
+                        THREAD_LOG(ERROR) << "setting m_broker to nullptr";
                         m_broker = nullptr;
+                        return false;
                     }
                     // breaking instead of continue because socket_disconnected_uds() may erase element from Select Socket Vector while iterating it
                     break;
