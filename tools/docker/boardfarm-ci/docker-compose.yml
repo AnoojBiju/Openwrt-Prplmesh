@@ -12,8 +12,8 @@ x-prplmesh: &prplmesh # Template for the prplmesh services
     image: registry.gitlab.com/prpl-foundation/prplmesh/prplmesh/prplmesh-builder-ubuntu-bionic:${CI_PIPELINE_ID}
     privileged: true    # For the creation of the bridge to work
     networks:
-        - ucc
         - prplmesh
+        - ucc
     environment:
         - USER
         - INSTALL_DIR=${FINAL_ROOT_DIR}/build/install
