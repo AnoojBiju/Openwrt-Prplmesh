@@ -129,14 +129,27 @@ class Sniffer:
                 break
         else:
             err("tcpdump terminated")
+            for line in self.tcpdump_proc.stderr.readlines():
+                err(line.decode())
             self.tcpdump_proc = None
             self.current_outputfile = None
+
+        # give rights to everyone so any cleanup job can delete network dumps
+        if self.current_outputfile:
+            os.chmod(self.current_outputfile, 0o777)
 
     def get_packet_capture(self):
         '''Get a list of packets from the last started tcpdump.'''
         if not self.current_outputfile:
             err("get_packet_capture but no capture file")
             return []
+
+        # tshark just prints "[]" and exits with 0 if .pcap file doesn't exist
+        # so verifying that capture file exists externally
+        if not os.path.isfile(self.current_outputfile):
+            err("Capture file {} does not exist".format(self.current_outputfile))
+            return []
+
         tshark_command = ['tshark', '-r', self.current_outputfile, '-T', 'json',
                           '-Y', 'frame.number >= {}'.format(self.checkpoint_frame_number)]
         tshark_result = subprocess.run(tshark_command, stdout=subprocess.PIPE,
