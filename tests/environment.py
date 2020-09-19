@@ -268,6 +268,12 @@ class ALEntityDocker(ALEntity):
 
         self.name = name
         ucc_interface_name = 'eth0'
+        ipproc = subprocess.Popen(["ip", "-f", "inet", "ad"] ,stdout=subprocess.PIPE)
+        ipproc.wait()
+        print("interfaces on this container:")
+        for line in self.ipproc.stdout.readlines():
+            print("{}".format(line.decode()))
+        print("using eth0 for ucc")
         if device:
             self.device = device
 
