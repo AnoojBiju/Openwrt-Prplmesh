@@ -267,7 +267,10 @@ class ALEntityDocker(ALEntity):
                  compose: bool = False):
 
         self.name = name
-        ucc_interface_name = 'eth0'
+        if compose:
+            ucc_interface_name = 'br-lan'
+        else:
+            ucc_interface_name = 'eth0'
         if device:
             self.device = device
 
