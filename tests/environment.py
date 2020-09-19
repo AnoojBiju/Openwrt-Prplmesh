@@ -267,7 +267,7 @@ class ALEntityDocker(ALEntity):
                  compose: bool = False):
 
         self.name = name
-        ucc_interface_name = 'eth0'
+        self.bridge_name = 'br-lan'
         if device:
             self.device = device
 
@@ -289,7 +289,7 @@ class ALEntityDocker(ALEntity):
             ucc_port = int(published_port_output[1])
         else:
             device_ip_output = self.command(
-                'ip', '-f', 'inet', 'addr', 'show', ucc_interface_name)
+                'ip', '-f', 'inet', 'addr', 'show', self.bridge_name)
             device_ip = re.search(
                 r'inet (?P<ip>[0-9.]+)', device_ip_output.decode('utf-8')).group('ip')
 
