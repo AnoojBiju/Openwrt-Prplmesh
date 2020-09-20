@@ -16,7 +16,7 @@ using namespace son;
 persistent_data_commit_task::persistent_data_commit_task(db &database,
                                                          ieee1905_1::CmduMessageTx &cmdu_tx,
                                                          task_pool &tasks,
-                                                         unsigned int& starting_delay_ms)
+                                                         unsigned int &starting_delay_ms)
     : task("persistent data commit task"), m_database(database), m_cmdu_tx(cmdu_tx), m_tasks(tasks),
       m_interval_ms(starting_delay_ms)
 {
@@ -26,8 +26,7 @@ void persistent_data_commit_task::work()
 {
     switch (m_state) {
     case START: {
-        TASK_LOG(DEBUG) << "state = START, delayed by "
-                        << m_interval_ms;
+        TASK_LOG(DEBUG) << "state = START, delayed by " << m_interval_ms;
 
         m_state = CHECK_FOR_CHANGES;
         wait_for(m_interval_ms);
@@ -55,8 +54,7 @@ void persistent_data_commit_task::work()
             TASK_LOG(ERROR) << "db_commit_changes returns false!";
         } else {
             m_database.reset_db_changes_made();
-            TASK_LOG(DEBUG)
-                << "commiting instruction was sent succesfully";
+            TASK_LOG(DEBUG) << "commiting instruction was sent succesfully";
         }
 
         m_state = START;
