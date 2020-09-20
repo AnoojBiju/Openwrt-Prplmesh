@@ -3548,6 +3548,12 @@ bool db::set_node_stats_info(const std::string &mac, beerocks_message::sStaStats
 
 void db::clear_node_stats_info(const std::string &mac) { set_node_stats_info(mac, nullptr); }
 
+bool db::commit_db_changes() { return bpl::db_commit_changes(); }
+
+bool db::get_db_changes_made() { return db_changes_made; }
+
+void db::reset_db_changes_made() { db_changes_made = false; }
+
 int db::get_hostap_stats_measurement_duration(const std::string &mac)
 {
     auto n = get_node(mac);
@@ -4183,6 +4189,14 @@ int db::get_dynamic_channel_selection_task_id(const sMacAddr &mac)
     }
     return n->dynamic_channel_selection_task_id;
 }
+
+bool db::assign_commit_changes_task_id(int new_task_id)
+{
+    commit_changes_task_id = new_task_id;
+    return true;
+}
+
+int db::get_commit_changes_task_id() { return commit_changes_task_id; }
 
 void db::lock() { db_mutex.lock(); }
 

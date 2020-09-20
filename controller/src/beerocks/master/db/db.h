@@ -127,6 +127,7 @@ public:
         int clients_persistent_db_max_size;
         int max_timelife_delay_days;
         int unfriendly_device_max_timelife_delay_days;
+        int commit_changes_interval;
 
     } sDbMasterConfig;
 
@@ -869,6 +870,10 @@ public:
     bool set_node_stats_info(const std::string &mac, beerocks_message::sStaStatsParams *params);
     void clear_node_stats_info(const std::string &mac);
 
+    bool commit_db_changes();
+    bool get_db_changes_made();
+    void reset_db_changes_made();
+
     int get_hostap_stats_measurement_duration(const std::string &mac);
     std::chrono::steady_clock::time_point get_node_stats_info_timestamp(const std::string &mac);
     std::chrono::steady_clock::time_point get_hostap_stats_info_timestamp(const std::string &mac);
@@ -966,6 +971,9 @@ public:
 
     bool assign_dynamic_channel_selection_task_id(const sMacAddr &mac, int new_task_id);
     int get_dynamic_channel_selection_task_id(const sMacAddr &mac);
+
+    bool assign_commit_changes_task_id(int new_task_id);
+    int get_commit_changes_task_id();
 
     void lock();
     void unlock();
@@ -1167,6 +1175,7 @@ private:
     int bml_task_id                  = -1;
     int rdkb_wlan_task_id            = -1;
     int config_update_task_id        = -1;
+    int commit_changes_task_id       = -1;
 
     std::shared_ptr<node> last_accessed_node;
     std::string last_accessed_node_mac;
