@@ -390,7 +390,7 @@ run-certification-tests:
   script:
     - |
       if [ "$DEVICE_UNDER_TEST" = axepoint ] ; then
-          tools/deploy_firmware.py --device axepoint --target-name "$DEVICE_UNDER_TEST" --image AX6000_2000_ETH_11AXUCI-squashfs-fullimage.img
+          tools/deploy_firmware.py --device axepoint --target-name "$DEVICE_UNDER_TEST" --image AX3000_1600_ETH_11AXUCI-squashfs-fullimage.img
           echo "Deploying to $DEVICE_UNDER_TEST"
           tools/deploy_ipk.sh --certification-mode $DEVICE_UNDER_TEST build/$DEVICE_UNDER_TEST/prplmesh.ipk
       fi
