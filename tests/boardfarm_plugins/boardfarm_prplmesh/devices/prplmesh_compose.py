@@ -39,7 +39,8 @@ class PrplMeshCompose(PrplMeshBase):
         self.cleanup_cmd = config.get("cleanup_cmd", None)
         self.conn_cmd = config.get("conn_cmd", None)
         self.delay = config.get("delay", 7)
-        self.docker_network = "prplmesh-" + self.unique_id
+        # TODO: find out why prplmesh decides to run on ucc network and fix this
+        self.docker_network = "prplmesh-" + self.unique_id + "-ucc"
 
         if self.role == "controller":
             self.controller_entity = \
