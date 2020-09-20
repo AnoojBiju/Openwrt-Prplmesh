@@ -128,6 +128,7 @@ public:
         int clients_persistent_db_max_size;
         int max_timelife_delay_days;
         int unfriendly_device_max_timelife_delay_days;
+        unsigned int commit_changes_interval;
 
     } sDbMasterConfig;
 
@@ -870,6 +871,9 @@ public:
     bool set_node_stats_info(const std::string &mac, beerocks_message::sStaStatsParams *params);
     void clear_node_stats_info(const std::string &mac);
 
+    bool commit_db_changes();
+    bool get_db_changes_made();
+
     int get_hostap_stats_measurement_duration(const std::string &mac);
     std::chrono::steady_clock::time_point get_node_stats_info_timestamp(const std::string &mac);
     std::chrono::steady_clock::time_point get_hostap_stats_info_timestamp(const std::string &mac);
@@ -1187,18 +1191,12 @@ private:
             */
     bool db_changes_made = false;
 
-    /*
-            * a variable that indicates that data is awaiting to flashed from memory into
-            * the prplMesh.bb (non-rational persistent database file)
-            */
-    bool db_changes_made = false;
-
     int slaves_stop_on_failure_attempts = 0;
 
     /*
-            * some operations on unordered_map can cause iterators to be invalidated
-            * use the following with caution
-            */
+     * some operations on unordered_map can cause iterators to be invalidated
+     * use the following with caution.
+     */
     int current_hierarchy = 0;
     std::unordered_map<std::string, std::shared_ptr<node>>::iterator db_it =
         std::unordered_map<std::string, std::shared_ptr<node>>::iterator();
