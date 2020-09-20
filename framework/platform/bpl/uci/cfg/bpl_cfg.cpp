@@ -430,6 +430,21 @@ bool cfg_get_persistent_db_enable(bool &enable)
     return true;
 }
 
+bool cfg_get_commit_changes_interval(unsigned int &interval)
+{
+    int commit_changes_value = DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE;
+
+    if (cfg_get_prplmesh_param_int_default("commit_changes_interval", &commit_changes_value,
+                                           DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE) == RETURN_ERR) {
+        MAPF_ERR("Failed to read commit_changes_interval parameter");
+        return false;
+    }
+
+    interval = commit_changes_value;
+
+    return true;
+}
+
 bool cfg_get_clients_persistent_db_max_size(int &max_size)
 {
     int retVal = -1;
