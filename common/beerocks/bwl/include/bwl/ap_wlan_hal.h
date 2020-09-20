@@ -102,7 +102,7 @@ public:
      * 
      * @return true on success or false on error.
      */
-    virtual bool set_channel(int chan, int bw, int center_channel) = 0;
+    virtual bool set_channel(int chan, beerocks::eWiFiBandwidth bw, int center_channel) = 0;
 
     /**
      * @brief Allow the station with the given MAC address to connect.
