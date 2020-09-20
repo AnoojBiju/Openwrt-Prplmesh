@@ -3548,6 +3548,14 @@ bool db::set_node_stats_info(const std::string &mac, beerocks_message::sStaStats
 
 void db::clear_node_stats_info(const std::string &mac) { set_node_stats_info(mac, nullptr); }
 
+bool db::commit_db_changes()
+{
+     db_changes_made = false;
+     return bpl::db_commit_changes();
+}
+
+bool db::get_db_changes_made() { return db_changes_made; }
+
 int db::get_hostap_stats_measurement_duration(const std::string &mac)
 {
     auto n = get_node(mac);
