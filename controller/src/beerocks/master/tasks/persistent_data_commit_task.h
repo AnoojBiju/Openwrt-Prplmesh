@@ -17,7 +17,7 @@ namespace son {
 class persistent_data_commit_task : public task {
 public:
     persistent_data_commit_task(db &database, ieee1905_1::CmduMessageTx &cmdu_tx, task_pool &tasks,
-                                unsigned int& interval_ms);
+                                unsigned int &interval_ms);
 
     virtual ~persistent_data_commit_task() {}
 
