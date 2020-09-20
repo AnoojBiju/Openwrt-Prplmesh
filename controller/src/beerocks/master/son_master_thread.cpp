@@ -16,6 +16,7 @@
 #include "tasks/optimal_path_task.h"
 #include "tasks/statistics_polling_task.h"
 #ifdef BEEROCKS_RDKB
+#include "tasks/rdkb/persistent_data_commit_task.h"
 #include "tasks/rdkb/rdkb_wlan_task.h"
 #endif
 #include "db/db_algo.h"
@@ -132,7 +133,17 @@ bool master_thread::init()
         })) {
         LOG(ERROR) << "Failed subscribing to the Bus";
     }
+    if (database.config.persistent_db) {
+        auto commit_changes_task = std::make_shared<persistent_data_commit_task>(
+            database, cmdu_tx, tasks, database.config.commit_changes_interval);
 
+        if (!commit_changes_task) {
+            LOG(FATAL) << "Failed allocating memory";
+            return false;
+        }
+
+        tasks.add_task(commit_changes_task);
+    }
 #ifndef BEEROCKS_LINUX
     auto new_statistics_polling_task =
         std::make_shared<statistics_polling_task>(database, cmdu_tx, tasks);
