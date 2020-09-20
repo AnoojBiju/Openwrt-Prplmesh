@@ -21,6 +21,7 @@
 #include "db/db_algo.h"
 #include "db/network_map.h"
 #include "tasks/client_locating_task.h"
+#include "tasks/commit_changes_task.h"
 #include "tasks/dynamic_channel_selection_task.h"
 #include "tasks/ire_network_optimization_task.h"
 #include "tasks/network_health_check_task.h"
@@ -132,6 +133,21 @@ bool master_thread::init()
         })) {
         LOG(ERROR) << "Failed subscribing to the Bus";
     }
+
+// This task is currently only has a meaning in
+// RDKB platform. It is related to the PersistentDB feature.
+#ifndef BEEROCKS_RDKB
+    if (database.config.persistent_db) {
+
+        auto new_commit_changes_task = std::make_shared<commit_changes_task>(
+            database, cmdu_tx, tasks, database.config.commit_changes_interval);
+        if (!new_commit_changes_task) {
+            LOG(FATAL) << "Failed allocating memory";
+            return false;
+        }
+        tasks.add_task(new_commit_changes_task);
+    }
+#endif
 
 #ifndef BEEROCKS_LINUX
     auto new_statistics_polling_task =
