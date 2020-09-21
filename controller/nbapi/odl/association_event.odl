@@ -1,0 +1,46 @@
+
+/* SPDX-License-Identifier: BSD-2-Clause-Patent
+ *
+ * SPDX-FileCopyrightText: 2020 the prplMesh contributors (see AUTHORS.md)
+ *
+ * This code is subject to the terms of the BSD+Patent license.
+ * See LICENSE file for more details.
+ */
+
+%config {
+	define_behavior = { 
+		existing_object = "update"
+	};
+}
+
+%define {
+	object Notification  {
+		object AssociationEvent [] {
+
+			/*
+			** The data provided in the event when an association event is generated
+			*/
+			%read-only object AssocData {
+				%read-only string BSSID = 0 {
+				}
+
+				%read-only string MACAddress = 0 {
+				}
+
+				%read-only uint32 StatusCode = 0 {
+					on action validate call check_range [0, 65535];
+				}
+
+				%read-only uint32 HTCapabilities = 0 {
+					on action validate call check_range [0, 255];
+				}
+
+				%read-only uint64 VHTCapabilities = 0 {
+				}
+
+				%read-only uint64 HECapabilities = 0 {
+				}
+			}
+		}
+	}
+}
