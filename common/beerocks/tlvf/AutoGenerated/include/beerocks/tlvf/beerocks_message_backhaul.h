@@ -510,6 +510,32 @@ class cACTION_BACKHAUL_START_WPS_PBC_REQUEST : public BaseClass
         eActionOp_BACKHAUL* m_action_op = nullptr;
 };
 
+class cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED : public BaseClass
+{
+    public:
+        cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED();
+
+        static eActionOp_BACKHAUL get_action_op(){
+            return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_ZWDFS_RADIO_DETECTED);
+        }
+        std::string front_iface_name_str();
+        char* front_iface_name(size_t length = 0);
+        bool set_front_iface_name(const std::string& str);
+        bool set_front_iface_name(const char buffer[], size_t size);
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_BACKHAUL* m_action_op = nullptr;
+        char* m_front_iface_name = nullptr;
+        size_t m_front_iface_name_idx__ = 0;
+        int m_lock_order_counter__ = 0;
+};
+
 }; // close namespace: beerocks_message
 
 #endif //_BEEROCKS/TLVF_BEEROCKS_MESSAGE_BACKHAUL_H_
