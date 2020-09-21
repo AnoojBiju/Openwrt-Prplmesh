@@ -1,11 +1,11 @@
 version: '3.5'
 
 networks:
-    ucc:
-        name: prplmesh-$RUN_ID-ucc
-        driver: bridge
     prplmesh:
         name: prplmesh-$RUN_ID
+        driver: bridge
+    ucc:
+        name: prplmesh-$RUN_ID-ucc
         driver: bridge
 
 x-prplmesh: &prplmesh # Template for the prplmesh services
