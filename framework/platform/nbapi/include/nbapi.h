@@ -107,6 +107,14 @@ private:
      */
     bool remove_signal_loop();
 
+    /**
+     * @brief Find object by relative path.
+     *
+     * @param relative_path Path to the object in datamodel (ex: "Controller.Network.ID").
+     * @return Pointer on the object on success and nullptr otherwise.
+     */
+    amxd_object_t *find_object(const std::string &relative_path);
+
     // Variables
     amxb_bus_ctx_t *m_bus_ctx = nullptr;
     amxd_dm_t m_datamodel;
