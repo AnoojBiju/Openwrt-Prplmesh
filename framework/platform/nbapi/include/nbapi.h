@@ -44,7 +44,7 @@ namespace nbapi {
 class Ambiorix {
 
 public:
-    Ambiorix(std::shared_ptr<EventLoop> event_loop);
+    explicit Ambiorix(std::shared_ptr<EventLoop> event_loop);
 
     /**
      * @brief Ambiorix destructor removes: bus connection, data model, parser and all data
