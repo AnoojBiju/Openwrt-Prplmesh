@@ -423,7 +423,7 @@ public:
      */
     bool bind(const Socket::Address &address)
     {
-        if (0 != ::bind(m_socket->fd(), address.sockaddr(), address.length())) {
+        if (0 != ::bind(m_socket->fd(), address.sockaddr(), address.size())) {
             LOG(ERROR) << "Unable to bind client socket: " << strerror(errno);
             return false;
         }
@@ -437,11 +437,11 @@ public:
      * This method is a wrapper around the `connect` system call.
      *
      * @param address Address of the server socket.
-     * @return Connection established and nullptr on error.
+     * @return Connection established with peer socket and nullptr on error.
      */
     std::unique_ptr<Socket::Connection> connect(const Socket::Address &address) override
     {
-        if (0 != ::connect(m_socket->fd(), address.sockaddr(), address.length())) {
+        if (0 != ::connect(m_socket->fd(), address.sockaddr(), address.size())) {
             LOG(ERROR) << "Unable to connect client socket: " << strerror(errno);
             return nullptr;
         }
