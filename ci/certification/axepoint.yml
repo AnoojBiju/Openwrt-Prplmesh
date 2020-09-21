@@ -638,4 +638,3 @@ MAP-4.12.2_ETH:axepoint:
       when: on_success
     - when: manual
       allow_failure: true
-

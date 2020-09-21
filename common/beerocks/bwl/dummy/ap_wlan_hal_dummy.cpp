@@ -119,9 +119,9 @@ HALState ap_wlan_hal_dummy::attach(bool block)
 
     // Initialize status files
     if (m_radio_info.is_5ghz) {
-        set_channel(149, int{eWiFiBandwidth::BANDWIDTH_80}, 5775);
+        set_channel(149, beerocks::eWiFiBandwidth::BANDWIDTH_80, 5775);
     } else {
-        set_channel(1, int{eWiFiBandwidth::BANDWIDTH_40}, 0);
+        set_channel(1, beerocks::eWiFiBandwidth::BANDWIDTH_40, 0);
     }
 
     // On Operational send the AP_Attached event to the AP Manager
@@ -138,11 +138,10 @@ bool ap_wlan_hal_dummy::disable() { return true; }
 
 bool ap_wlan_hal_dummy::set_start_disabled(bool enable, int vap_id) { return true; }
 
-bool ap_wlan_hal_dummy::set_channel(int chan, int bw, int center_channel)
+bool ap_wlan_hal_dummy::set_channel(int chan, beerocks::eWiFiBandwidth bw, int center_channel)
 {
-    m_radio_info.channel = chan;
-    m_radio_info.bandwidth =
-        beerocks::utils::convert_bandwidth_to_int((beerocks::eWiFiBandwidth)bw);
+    m_radio_info.channel         = chan;
+    m_radio_info.bandwidth       = beerocks::utils::convert_bandwidth_to_int(bw);
     m_radio_info.vht_center_freq = center_channel;
     m_radio_info.is_dfs_channel  = son::wireless_utils::is_dfs_channel(chan);
     std::stringstream value;
@@ -277,7 +276,7 @@ bool ap_wlan_hal_dummy::switch_channel(int chan, int bw, int vht_center_frequenc
     event_queue_push(Event::ACS_Completed);
     event_queue_push(Event::CSA_Finished);
 
-    return set_channel(chan, bw, vht_center_frequency);
+    return set_channel(chan, beerocks::utils::convert_bandwidth_to_enum(bw), vht_center_frequency);
 }
 
 bool ap_wlan_hal_dummy::set_antenna_mode(AntMode mode) { return true; }
