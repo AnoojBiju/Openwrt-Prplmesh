@@ -204,6 +204,18 @@ bool Ambiorix::remove_signal_loop()
     return true;
 }
 
+amxd_object_t *Ambiorix::find_object(const std::string &relative_path)
+{
+
+    auto object = amxd_dm_findf(&m_datamodel, "%s", relative_path.c_str());
+    if (!object) {
+        LOG(ERROR) << "Failed to get object from data model.";
+        return nullptr;
+    }
+
+    return object;
+}
+
 Ambiorix::~Ambiorix()
 {
     remove_event_loop();
