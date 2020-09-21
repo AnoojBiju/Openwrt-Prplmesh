@@ -131,6 +131,55 @@ amxd_object_t *Ambiorix::find_object(const std::string &relative_path)
     return object;
 }
 
+template <typename T> bool Ambiorix::set(const std::string &relative_path, const T &value)
+{
+    auto object = find_object(relative_path);
+    if (!object) {
+        LOG(ERROR) << "Couldn't get object by relative path.";
+        return false;
+    }
+
+    amxd_trans_t transaction;
+    auto status = amxd_trans_init(&transaction);
+    if (status != amxd_status_ok) {
+        LOG(ERROR) << "Couldn't inititalize transaction, status: " << status;
+        return false;
+    }
+
+    status = amxd_trans_set_attr(&transaction, amxd_tattr_change_ro, true);
+    if (status != amxd_status_ok) {
+        LOG(ERROR) << "Couldn't set transaction attributes, status: " << status;
+        return false;
+    }
+
+    status = amxd_trans_select_object(&transaction, object);
+    if (status != amxd_status_ok) {
+        LOG(ERROR) << "Couldn't select transaction object, status: " << status;
+        return false;
+    }
+
+    LOG(DEBUG) << "Set value: " << value << "to the object: " << object->name;
+
+    std::string type = typeid(T).name();
+    if (type == "std::string") {
+        amxd_trans_set_value(cstring_t, &transaction, object->name, value.c_str());
+    } else {
+        amxd_trans_set_value(T, &transaction, object->name, value);
+    }
+
+    status = amxd_trans_apply(&transaction, &m_datamodel);
+    if (status != amxd_status_ok) {
+        LOG(ERROR) << "Couldn't apply transaction object, status: " << status;
+        return false;
+    }
+
+    amxd_trans_clean(&transaction);
+
+    amxc_var_set(T, status, value);
+
+    return true;
+}
+
 Ambiorix::~Ambiorix()
 {
     amxb_free(&m_bus_ctx);

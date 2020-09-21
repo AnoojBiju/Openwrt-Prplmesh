@@ -64,6 +64,15 @@ public:
     bool init(const std::string &amxb_backend, const std::string &bus_uri,
               const std::string &datamodel_path);
 
+    /**
+     * @brief Set value to the object from data model.
+     *
+     * @param relative_path Path to the object (ex: "Controller.Network.ID").
+     * @param value Value which will be set to the object varaible.
+     * @return True on success and false otherwise.
+     */
+    template <typename T> bool set(const std::string &relative_path, const T &value);
+
 private:
     // Methods
 
