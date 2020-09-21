@@ -1,0 +1,95 @@
+
+/* SPDX-License-Identifier: BSD-2-Clause-Patent
+ *
+ * SPDX-FileCopyrightText: 2020 the prplMesh contributors (see AUTHORS.md)
+ *
+ * This code is subject to the terms of the BSD+Patent license.
+ * See LICENSE file for more details.
+ */
+
+%config {
+	define_behavior = { 
+		existing_object = "update"
+	};
+}
+
+%define {
+	object Controller {
+		object Network {
+			object Device [] {
+				object Radio [] {
+
+					%read-only %persistent uint64 ID = 0 {
+					}
+
+					/*
+					** Indicates whether this radio is enabled.
+					*/
+					 %persistent bool Enabled = false;
+
+
+					%read-only %persistent uint32 Noise = 0 {
+						// on action validate call check_range [0, 220];
+					}
+
+					%read-only %persistent uint32 Utilization = 0 {
+						// on action validate call check_range [0, 255];
+					}
+
+					%read-only %persistent uint32 Transmit = 0 {
+						// on action validate call check_range [0, 255];
+					}
+
+					%read-only %persistent uint32 ReceiveSelf = 0 {
+						// on action validate call check_range [0, 255];
+					}
+
+					%read-only %persistent uint32 ReceiveOther = 0 {
+						// on action validate call check_range [0, 255];
+					}
+
+
+					%read-only object CurrentOperatingClasses [] {
+						// %read-only %persistent datetime TimeStamp {
+							// default = "2020-08-31T11:22:39Z";
+						//}
+
+						%read-only %persistent uint32 Class = 0 {
+							// on action validate call check_range [0, 255];
+						}
+
+						%read-only %persistent uint32 Channel = 0 {
+							// on action validate call check_range [0, 255];
+						}
+
+						%read-only %persistent int32 TxPower = 0 {
+							// on action validate call check_range [-128, 127];
+						}
+						counted with NumberOfCurrOpClass;
+					}
+
+					read-only %persistent object Capabilities [] {
+						counted with NumberOfOpClass;
+					}
+
+					%read-only %persistent object BSS [] {
+						counted with NumberOfBSS;
+					}
+
+					%read-only %persistent object BackhaulSTA {
+						// DataElements:BackhaulSTA
+					}
+
+					%read-only %persistent object UnassociatedSTA [] {
+						counted with NumberOfUnassocSTA;
+						// on action validate call check_range [0, 65535];
+					}
+
+					%read-only %persistent object ScanResult {
+						// DataElements:ScanResult 
+					}
+				}
+			}
+		}
+	}
+}

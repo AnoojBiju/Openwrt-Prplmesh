@@ -1,0 +1,57 @@
+
+/* SPDX-License-Identifier: BSD-2-Clause-Patent
+ *
+ * SPDX-FileCopyrightText: 2020 the prplMesh contributors (see AUTHORS.md)
+ *
+ * This code is subject to the terms of the BSD+Patent license.
+ * See LICENSE file for more details.
+ */
+
+%define {
+
+    // Define main data model
+    object Controller {
+
+        // Define controller.Network element
+        %persistent %read-only object Network {
+
+            // Define string variable
+            %read-only %persistent string ID = "0";
+
+            // Define date variable in format YYYY-MM-DDThh:mm:ssZ
+            %read-only %persistent datetime TimeStamp = "2020-08-31T11:22:39Z";
+
+            %read-only %persistent string ControllerID = "0";
+
+            /*
+                Network devices list.
+            */
+            %persistent %read-only object Device[] {
+
+                /*
+                   NumberOfDevices variable calculated by
+                   nubmer of entries in Device list
+                */
+                counted with NumberOfDevices;
+
+                %persistent bool Retain = false;
+            }
+        }
+    }
+}
+
+include "association_event.odl";
+include "association_event_data.odl";
+include "backhaul_sta.odl";
+include "bss.odl";
+include "capabilities.odl";
+include "channel_scan.odl";
+include "device.odl";
+include "disassociation_event.odl";
+include "disassociation_event_data.odl";
+include "neighbor_bss.odl";
+include "op_class_scan.odl";
+include "radio.odl";
+include "scan_result.odl";
+include "sta.odl";
+include "unassociated_sta.odl";
