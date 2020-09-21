@@ -112,6 +112,25 @@ bool Ambiorix::init_event_loop()
     return true;
 }
 
+amxd_object_t *Ambiorix::find_object(const std::string &relative_path)
+{
+
+    auto root_object = amxd_dm_get_root(&m_datamodel);
+    if (!root_object) {
+        LOG(ERROR) << "Failed to get root object from data model.";
+        return nullptr;
+    }
+
+    auto object = amxd_object_findf(root_object, "%s", relative_path.c_str());
+    if (!object) {
+        LOG(ERROR) << "Failed to get " << relative_path << "object from data model.";
+        return nullptr;
+    }
+
+    LOG(DEBUG) << "Return object pointer on: " << object->name;
+    return object;
+}
+
 Ambiorix::~Ambiorix()
 {
     amxb_free(&m_bus_ctx);
