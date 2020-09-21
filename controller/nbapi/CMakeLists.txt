@@ -1,5 +1,5 @@
 # Set controller data model path
-set(DATAMODEL_PATH ${CMAKE_CURRENT_SOURCE_DIR}/controller.odl)
+set(DATAMODEL_PATH ${CMAKE_CURRENT_SOURCE_DIR}/odl/controller.odl)
 
 message(STATUS "Test controller data model:")
 

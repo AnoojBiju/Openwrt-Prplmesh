@@ -24,8 +24,6 @@
 					}
 				}
 
-				object BackhaulSTA {}
-
 				object UnassociatedSTA {
 					instance add() {}
 				}

@@ -19,23 +19,23 @@ object Controller {
 		object Device [] {
 			object Radio [] {
 				object Capabilities [] {
-					%read-only %persistent string HTCapabilities = "0" {
-						// on action validate call check_range [0, 255];
+					%read-only string HTCapabilities = "0" {
 					}
 
-					%read-only %persistent string VHTCapabilities = "0" {
+					%read-only string VHTCapabilities = "0" {
 					}
-						
-					%read-only %persistent string HECapabilities = "0" {
+
+					%read-only string HECapabilities = "0" {
 					}
-						
+
 					%read-only object OperatingClasses [] {
-						%read-only %persistent uint32 Class = 0 {
-							// on action validate call check_range [0, 255];
+						%read-only uint32 Class = 0 {
+							on action validate call check_range [0, 255];
 						}
-						%read-only %persistent int32 MaxTxPower = 0 {
-							// on action validate call check_range [-127, 128];
+						%read-only int32 MaxTxPower = 0 {
+							on action validate call check_range [-127, 128];
 						}
+
 						%read-only object NonOperable [] {
 							counted with NumberOfNonOperChan;
 						}
