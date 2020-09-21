@@ -263,8 +263,7 @@ public:
             return -1;
         }
 
-        int result =
-            ::recv(m_socket->fd(), buffer.data() + offset, buffer.size() - offset, MSG_DONTWAIT);
+        int result = ::recv(m_socket->fd(), buffer.data() + offset, buffer.size() - offset, 0);
         if (result > 0) {
             buffer.length() += static_cast<size_t>(result);
         }
@@ -283,8 +282,8 @@ public:
     {
         address.length() = address.size();
 
-        int result = ::recvfrom(m_socket->fd(), buffer.data(), buffer.size(), MSG_DONTWAIT,
-                                address.sockaddr(), &address.length());
+        int result = ::recvfrom(m_socket->fd(), buffer.data(), buffer.size(), 0, address.sockaddr(),
+                                &address.length());
         if (result >= 0) {
             buffer.length() = static_cast<size_t>(result);
         }
