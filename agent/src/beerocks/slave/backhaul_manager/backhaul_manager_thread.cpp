@@ -2875,12 +2875,12 @@ bool backhaul_manager::send_slaves_enable()
             // Need to figure out how to get bw parameter of the selected channel (PPM-643).
             notification->bandwidth()      = eWiFiBandwidth::BANDWIDTH_20;
             notification->center_channel() = notification->channel();
-        }
-        LOG(DEBUG) << "Send enable to slave " << soc->hostap_iface
-                   << ", channel = " << int(notification->channel())
-                   << ", center_channel = " << int(notification->center_channel());
+            LOG(DEBUG) << "Send enable to slave " << soc->hostap_iface
+                       << ", channel = " << int(notification->channel())
+                       << ", center_channel = " << int(notification->center_channel());
 
-        message_com::send_cmdu(soc->slave, cmdu_tx);
+            message_com::send_cmdu(soc->slave, cmdu_tx);
+        }
     }
 
     return true;
