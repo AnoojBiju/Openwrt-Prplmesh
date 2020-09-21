@@ -286,6 +286,10 @@ def main():
             dev.sysupgrade()
         except NotImplementedError:
             dev.upgrade_uboot()
+        print("Checking if the device was properly updated")
+        if dev.needs_upgrade():
+            print("Something went wrong with the update!")
+            sys.exit(1)
         print("Done")
     else:
         print("The device is already using the same version, no upgrade will be done.")
