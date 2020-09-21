@@ -18,42 +18,38 @@
 		object DisassociationEvent [] {
 
 			%read-only object DisassocData {
-				%read-only %persistent uint64 BSSID = 0 {
+				%read-only uint64 BSSID = 0 {
 				}
-				
-				%read-only %persistent uint64 MACAddress = 0 {
+
+				%read-only uint64 MACAddress = 0 {
+				}
+
+				%read-only uint32 ReasonCode = 0 {
+					on action validate call check_range [0, 65535];
+				}
+
+				%read-only uint32 BytesSent = 0 {
+				}
+
+				%read-only uint32 BytesReceived = 0 {
 					
 				}
-				
-				%read-only %persistent uint32 ReasonCode = 0 {
-					// on action validate call check_range [0, 65535];
+
+				%read-only uint32 PacketsSent = 0 {
 				}
-				
-				%read-only %persistent uint32 BytesSent = 0 {
+
+				%read-only uint32 PacketsReceived = 0 {
+				}
+
+				%read-only uint32 ErrorsSent = 0 {
 
 				}
-				
-				%read-only %persistent uint32 BytesReceived = 0 {
+
+				%read-only uint32 ErrorsReceived = 0 {
 					
 				}
-				
-				%read-only %persistent uint32 PacketsSent = 0 {
 
-				}
-				
-				%read-only %persistent uint32 PacketsReceived = 0 {
-			
-				}
-				
-				%read-only %persistent uint32 ErrorsSent = 0 {
-
-				}
-				
-				%read-only %persistent uint32 ErrorsReceived = 0 {
-					
-				}
-				
-				%read-only %persistent uint32 RetransCounta = 0 {
+				%read-only uint32 RetransCounta = 0 {
 
 				}
 			}
