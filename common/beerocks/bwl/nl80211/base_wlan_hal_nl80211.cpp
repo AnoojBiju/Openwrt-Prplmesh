@@ -510,7 +510,12 @@ bool base_wlan_hal_nl80211::detach()
 
 bool base_wlan_hal_nl80211::set(const std::string &param, const std::string &value, int vap_id)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    const std::string cmd = "SET " + param + " " + value;
+    if (!wpa_ctrl_send_msg(cmd, std;;to_string(vap_id))) {
+        LOG(ERROR) << "Failed setting param " << param;
+        return false;
+    }
+
     return true;
 }
 

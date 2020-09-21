@@ -174,20 +174,38 @@ HALState ap_wlan_hal_nl80211::attach(bool block)
 
 bool ap_wlan_hal_nl80211::enable()
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    if (!wpa_ctrl_send_msg("ENABLE")) {
+        return false;
+    }
+
     return true;
 }
 
 bool ap_wlan_hal_nl80211::disable()
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    if (!wpa_ctrl_send_msg("DISABLE")) {
+        return false;
+    }
+
     return true;
 }
 
 bool ap_wlan_hal_nl80211::set_start_disabled(bool enable, int vap_id)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
-    return true;
+    if (vap_id != beerocks::IFACE_RADIO_ID) {
+        return set("start_disabled", std::to_string(enable), vap_id);
+    }
+
+    bool ret = true;
+
+    for (auto &vap : m_radio_info.available_vaps) {
+        if (!set("start_disabled", std::to_string(enable), vap.first)) {
+            LOG(ERROR) << "Failed setting start_disabled on vap=" << vap.first;
+            ret = false;
+        }
+    }
+
+    return ret;
 }
 
 bool ap_wlan_hal_nl80211::set_channel(int chan, beerocks::eWiFiBandwidth bw, int center_channel)
