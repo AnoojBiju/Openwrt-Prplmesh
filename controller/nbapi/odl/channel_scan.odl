@@ -22,21 +22,21 @@ object Controller {
 					object OpClassScan [] {
 						object ChannelScan [] {
 
-							%read-only %persistent uint32 Channel = 0 {
-								// on action validate call check_range [0, 255];
+							%read-only uint32 Channel = 0 {
+								on action validate call check_range [0, 255];
 							}
 
-							%read-only %persistent string TimeStamp = "0";
+							%read-only string TimeStamp = "0";
 							
-							%read-only %persistent uint32 Utilization = 0 {
-								// on action validate call check_range [0, 255];
+							%read-only uint32 Utilization = 0 {
+								on action validate call check_range [0, 255];
 							}
 
-							%read-only %persistent uint32 Noise = 0 {
-								// on action validate call check_range [0, 220];
+							%read-only uint32 Noise = 0 {
+								on action validate call check_range [0, 220];
 							}
 
-							%read-only %persistent object NeighborBSS [] {
+							%read-only object NeighborBSS [] {
 								counted with NumberOfNeighbors;
 							}
 						}

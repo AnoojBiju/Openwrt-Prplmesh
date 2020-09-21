@@ -19,12 +19,19 @@ object Controller {
 		object Device [] {
 			object Radio [] {
 				object ScanResult {
-					
-					%persistent %read-only object OpClassScan [] {
+
+					%read-only object OpClassScan [] {
+						%read-only uint32 OperatingClass = 0 {
+							on action validate call check_range [0, 255];
+						}
+
+						%read-only object ChannelScan [] {
+							counted with NumberOfChannelScans;
+						}
 						counted with NumberOfOpClassScans;
 					}
 
-					%read-only string TimeStamp = "2020-08-31T11:22:39Z";
+					%read-only datetime TimeStamp = "2020-08-31T11:22:39Z";
 				}
 			}
 		}
