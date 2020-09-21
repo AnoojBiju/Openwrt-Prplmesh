@@ -19,9 +19,9 @@ object Controller {
 		object Device [] {
 			object UnassociatedSTA [] {
 
-				%read-only %persistent string MACAddress = 0;
-				%read-only %persistent uint32 SignalStrength = 0 {
-					// on action validate call check_range [0, 220];
+				%read-only string MACAddress = "0";
+				%read-only uint32 SignalStrength = 0 {
+					on action validate call check_range [0, 220];
 				}
 			}
 		}

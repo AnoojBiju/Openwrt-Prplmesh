@@ -41,16 +41,12 @@
 }
 
 include "association_event.odl";
-include "association_event_data.odl";
-include "backhaul_sta.odl";
 include "bss.odl";
 include "capabilities.odl";
 include "channel_scan.odl";
 include "device.odl";
 include "disassociation_event.odl";
-include "disassociation_event_data.odl";
 include "neighbor_bss.odl";
-include "op_class_scan.odl";
 include "radio.odl";
 include "scan_result.odl";
 include "sta.odl";
