@@ -13,6 +13,8 @@ namespace nbapi {
 Ambiorix::Ambiorix(std::shared_ptr<EventLoop> event_loop) : m_event_loop(event_loop)
 {
     LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
+    LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
+
     amxo_parser_init(&m_parser);
     amxd_dm_init(&m_datamodel);
 }
