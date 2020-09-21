@@ -86,11 +86,9 @@ bool Ambiorix::init_event_loop()
         return false;
     }
 
-    EventLoop::EventHandlers handlers = {
-        // Accept incoming connections
+    handlers = {
         .on_read =
             [&](int fd, EventLoop &loop) {
-                LOG(DEBUG) << "Incoming event on ambiorix fd:";
                 amxb_read(m_bus_ctx);
                 return true;
             },
@@ -102,19 +100,42 @@ bool Ambiorix::init_event_loop()
         // Handle interface errors
         .on_error =
             [&](int fd, EventLoop &loop) {
-                LOG(DEBUG) << "Error on ambiorix fd.";
+                LOG(ERROR) << "Error on ambiorix fd.";
                 return true;
             },
     };
 
-    m_event_loop->register_handlers(ambiorix_fd, handlers);
+    if (!m_event_loop->register_handlers(ambiorix_fd, handlers)) {
+        LOG(ERROR) << "Couldn't register handlers in the event loop.";
+        return false;
+    }
 
     LOG(DEBUG) << "The event loop initialized successfully.";
     return true;
 }
 
+bool Ambiorix::remove_event_loop()
+{
+    LOG(DEBUG) << "Remove the event loop.";
+
+    auto ambiorix_fd = amxb_get_fd(m_bus_ctx);
+    if (ambiorix_fd < 0) {
+        LOG(ERROR) << "Failed to get ambiorix file descriptor.";
+        return false;
+    }
+
+    if (!m_event_loop->remove_handlers(ambiorix_fd)) {
+        LOG(ERROR) << "Couldn't register handlers in the event loop.";
+        return false;
+    }
+
+    LOG(DEBUG) << "The event loop removed successfully.";
+    return true;
+}
+
 Ambiorix::~Ambiorix()
 {
+    remove_event_loop();
     amxb_free(&m_bus_ctx);
     amxd_dm_clean(&m_datamodel);
     amxo_parser_clean(&m_parser);

@@ -82,6 +82,13 @@ private:
      */
     bool init_event_loop();
 
+    /**
+     * @brief Remove event loop for ambiorix.
+     *
+     * @return True on success and false otherwise.
+     */
+    bool remove_event_loop();
+
     // Variables
     amxb_bus_ctx_t *m_bus_ctx = nullptr;
     amxd_dm_t m_datamodel;
@@ -90,6 +97,7 @@ private:
      * Application event loop to use by the broker to wait for I/O events.
      */
     std::shared_ptr<EventLoop> m_event_loop;
+    EventLoop::EventHandlers handlers;
 };
 
 } // namespace nbapi
