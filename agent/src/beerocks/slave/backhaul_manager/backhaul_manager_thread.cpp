@@ -790,7 +790,7 @@ bool backhaul_manager::backhaul_fsm_main(bool &skip_select)
                 // Override backhaul_preferred_radio_band if UCC set it
                 if (!selected_ruid) {
                     db->device_conf.back_radio.backhaul_preferred_radio_band =
-                        selected_ruid->front.freq_type;
+                        selected_ruid->freq_type;
                 }
 
                 // Mark the connection as WIRELESS
@@ -1285,8 +1285,7 @@ bool backhaul_manager::backhaul_fsm_wireless(bool &skip_select)
                 if (!radio) {
                     continue;
                 }
-                if (db->device_conf.back_radio.backhaul_preferred_radio_band ==
-                    radio->front.freq_type) {
+                if (db->device_conf.back_radio.backhaul_preferred_radio_band == radio->freq_type) {
                     preferred_band_is_available = true;
                 }
             }
@@ -1314,8 +1313,7 @@ bool backhaul_manager::backhaul_fsm_wireless(bool &skip_select)
             if (preferred_band_is_available &&
                 db->device_conf.back_radio.backhaul_preferred_radio_band !=
                     beerocks::eFreqType::FREQ_AUTO &&
-                db->device_conf.back_radio.backhaul_preferred_radio_band !=
-                    radio->front.freq_type) {
+                db->device_conf.back_radio.backhaul_preferred_radio_band != radio->freq_type) {
                 LOG(DEBUG) << "slave iface=" << soc->sta_iface
                            << " is not of the preferred backhaul band";
                 continue;
@@ -1706,23 +1704,7 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
             return false;
         }
 
-        auto tuple_preferred_channels = request->preferred_channels(0);
-        if (!std::get<0>(tuple_preferred_channels)) {
-            LOG(ERROR) << "access to supported channels list failed!";
-            return false;
-        }
-
-        auto channels = &std::get<1>(tuple_preferred_channels);
-
-        std::copy_n(channels, request->preferred_channels_size(), soc->preferred_channels.begin());
-
-        soc->radio_mac     = request->iface_mac();
-        soc->ht_supported  = request->ht_supported();
-        soc->ht_capability = request->ht_capability();
-        std::copy_n(request->ht_mcs_set(), soc->ht_mcs_set.size(), soc->ht_mcs_set.begin());
-        soc->vht_supported  = request->vht_supported();
-        soc->vht_capability = request->vht_capability();
-        std::copy_n(request->vht_mcs_set(), soc->vht_mcs_set.size(), soc->vht_mcs_set.begin());
+        soc->radio_mac = request->iface_mac();
 
         LOG(DEBUG) << "ACTION_BACKHAUL_ENABLE hostap_iface=" << soc->hostap_iface
                    << " sta_iface=" << soc->sta_iface << " band=" << int(request->frequency_band());
@@ -2322,10 +2304,16 @@ bool backhaul_manager::handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmd
 
     for (const auto &slave : slaves_sockets) {
         // TODO skip slaves that are not operational
-        auto radio_mac          = slave->radio_mac;
-        auto preferred_channels = slave->preferred_channels;
+        auto radio_mac = slave->radio_mac;
 
-        if (!tlvf_utils::add_ap_radio_basic_capabilities(cmdu_tx, radio_mac, preferred_channels)) {
+        auto radio = db->get_radio_by_mac(radio_mac);
+        if (!radio) {
+            LOG(ERROR) << "radio with mac " << radio_mac << " does not exist in the db";
+            continue;
+        }
+
+        if (!tlvf_utils::add_ap_radio_basic_capabilities(cmdu_tx, radio_mac,
+                                                         radio->front.preferred_channels)) {
             return false;
         }
 
@@ -3492,9 +3480,9 @@ bool backhaul_manager::get_neighbor_links(
                 return false;
             }
 
-            interface.iface_mac  = bssid;
-            interface.media_type = MediaType::get_802_11_media_type(radio->front.freq_type,
-                                                                    radio->front.max_supported_bw);
+            interface.iface_mac = bssid;
+            interface.media_type =
+                MediaType::get_802_11_media_type(radio->freq_type, radio->max_supported_bw);
 
             if (ieee1905_1::eMediaType::UNKNOWN_MEDIA == interface.media_type) {
                 LOG(ERROR) << "Unknown media type for interface " << interface.iface_name;
@@ -3522,7 +3510,14 @@ bool backhaul_manager::get_neighbor_links(
 
 bool backhaul_manager::add_ap_ht_capabilities(const sRadioInfo &radio_info)
 {
-    if (!radio_info.ht_supported) {
+    auto db    = AgentDB::get();
+    auto radio = db->get_radio_by_mac(radio_info.radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "radio with mac " << radio_info.radio_mac << " does not exist in the db";
+        return false;
+    }
+
+    if (!radio->ht_supported) {
         return true;
     }
 
@@ -3538,21 +3533,28 @@ bool backhaul_manager::add_ap_ht_capabilities(const sRadioInfo &radio_info)
      * See iw/util.c for details on how to compute fields.
      * Code has been preserved as close as possible to that in the iw command line tool.
      */
-    bool tx_mcs_set_defined = !!(radio_info.ht_mcs_set[12] & (1 << 0));
+    bool tx_mcs_set_defined = !!(radio->ht_mcs_set[12] & (1 << 0));
     if (tx_mcs_set_defined) {
-        tlv->flags().max_num_of_supported_tx_spatial_streams = (radio_info.ht_mcs_set[12] >> 2) & 3;
+        tlv->flags().max_num_of_supported_tx_spatial_streams = (radio->ht_mcs_set[12] >> 2) & 3;
         tlv->flags().max_num_of_supported_rx_spatial_streams = 0; // TODO: Compute value (#1163)
     }
-    tlv->flags().short_gi_support_20mhz = radio_info.ht_capability & BIT(5);
-    tlv->flags().short_gi_support_40mhz = radio_info.ht_capability & BIT(6);
-    tlv->flags().ht_support_40mhz       = radio_info.ht_capability & BIT(1);
+    tlv->flags().short_gi_support_20mhz = radio->ht_capability & BIT(5);
+    tlv->flags().short_gi_support_40mhz = radio->ht_capability & BIT(6);
+    tlv->flags().ht_support_40mhz       = radio->ht_capability & BIT(1);
 
     return true;
 }
 
 bool backhaul_manager::add_ap_vht_capabilities(const sRadioInfo &radio_info)
 {
-    if (!radio_info.vht_supported) {
+    auto db    = AgentDB::get();
+    auto radio = db->get_radio_by_mac(radio_info.radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "radio with mac " << radio_info.radio_mac << " does not exist in the db";
+        return false;
+    }
+
+    if (!radio->vht_supported) {
         return true;
     }
 
@@ -3568,16 +3570,16 @@ bool backhaul_manager::add_ap_vht_capabilities(const sRadioInfo &radio_info)
      * See iw/util.c for details on how to compute fields
      * Code has been preserved as close as possible to that in the iw command line tool.
      */
-    tlv->supported_vht_tx_mcs() = radio_info.vht_mcs_set[4] | (radio_info.vht_mcs_set[5] << 8);
-    tlv->supported_vht_rx_mcs() = radio_info.vht_mcs_set[0] | (radio_info.vht_mcs_set[1] << 8);
+    tlv->supported_vht_tx_mcs() = radio->vht_mcs_set[4] | (radio->vht_mcs_set[5] << 8);
+    tlv->supported_vht_rx_mcs() = radio->vht_mcs_set[0] | (radio->vht_mcs_set[1] << 8);
     tlv->flags1().max_num_of_supported_tx_spatial_streams = 0; // TODO: Compute value (#1163)
     tlv->flags1().max_num_of_supported_rx_spatial_streams = 0; // TODO: Compute value (#1163)
-    tlv->flags1().short_gi_support_80mhz                  = radio_info.vht_capability & BIT(5);
-    tlv->flags1().short_gi_support_160mhz_and_80_80mhz    = radio_info.vht_capability & BIT(6);
-    tlv->flags2().vht_support_80_80mhz  = ((radio_info.vht_capability >> 2) & 3) == 2;
-    tlv->flags2().vht_support_160mhz    = ((radio_info.vht_capability >> 2) & 3) == 1;
-    tlv->flags2().su_beamformer_capable = radio_info.vht_capability & BIT(11);
-    tlv->flags2().mu_beamformer_capable = radio_info.vht_capability & BIT(19);
+    tlv->flags1().short_gi_support_80mhz                  = radio->vht_capability & BIT(5);
+    tlv->flags1().short_gi_support_160mhz_and_80_80mhz    = radio->vht_capability & BIT(6);
+    tlv->flags2().vht_support_80_80mhz                    = ((radio->vht_capability >> 2) & 3) == 2;
+    tlv->flags2().vht_support_160mhz                      = ((radio->vht_capability >> 2) & 3) == 1;
+    tlv->flags2().su_beamformer_capable                   = radio->vht_capability & BIT(11);
+    tlv->flags2().mu_beamformer_capable                   = radio->vht_capability & BIT(19);
 
     return true;
 }
@@ -3923,7 +3925,7 @@ const std::string backhaul_manager::freq_to_radio_mac(eFreqType freq) const
         if (!radio) {
             continue;
         }
-        if (radio->front.freq_type == freq) {
+        if (radio->freq_type == freq) {
             return tlvf::mac_to_string(radio->front.iface_mac);
         }
     }
