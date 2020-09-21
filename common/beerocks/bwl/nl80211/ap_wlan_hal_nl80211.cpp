@@ -174,13 +174,19 @@ HALState ap_wlan_hal_nl80211::attach(bool block)
 
 bool ap_wlan_hal_nl80211::enable()
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    if (!wpa_ctrl_send_msg("ENABLE")) {
+        return false;
+    }
+
     return true;
 }
 
 bool ap_wlan_hal_nl80211::disable()
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    if (!wpa_ctrl_send_msg("DISABLE")) {
+        return false;
+    }
+
     return true;
 }
 
