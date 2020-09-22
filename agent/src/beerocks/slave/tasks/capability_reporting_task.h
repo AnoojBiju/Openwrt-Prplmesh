@@ -30,9 +30,9 @@ private:
     backhaul_manager &m_bhm_ctx;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
 
-    bool handle_client_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx,
+    void handle_client_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx,
                                         const std::string &src_mac);
-    bool handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac);
+    void handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac);
 
     /**
      * @brief Adds an AP HT Capabilities TLV to AP Capability Report message.
