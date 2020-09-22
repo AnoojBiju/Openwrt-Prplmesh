@@ -28,7 +28,6 @@
 #include <tlvf/CmduMessageTx.h>
 #include <tlvf/wfa_map/tlvApMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
-#include <tlvf/wfa_map/tlvChannelScanCapabilities.h>
 #include <tlvf/wfa_map/tlvChannelSelectionResponse.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
 
@@ -132,7 +131,6 @@ private:
                                                      const std::string &src_mac);
     bool handle_1905_beacon_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx,
                                           const std::string &src_mac, Socket *&forward_to);
-    bool handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac);
     bool handle_associated_sta_link_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                   const std::string &src_mac);
     bool handle_multi_ap_policy_config_request(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -184,13 +182,16 @@ private:
     std::set<std::string> pending_slave_ifaces;
     std::set<std::string> pending_slave_sta_ifaces;
 
+public:
     std::list<std::shared_ptr<sRadioInfo>> slaves_sockets;
 
+private:
     std::list<std::shared_ptr<sRadioInfo>> m_slaves_sockets_to_finalize;
 
     // TODO: Temporary change, will be removed on Unified Agent PPM-351.
     // Key: front radio iface name, Value: sRadioInfo object
     std::unordered_map<std::string, std::shared_ptr<sRadioInfo>> m_disabled_slave_sockets;
+
     std::shared_ptr<SocketClient> m_scPlatform;
     net::network_utils::iface_info bridge_info;
 
@@ -366,59 +367,6 @@ private:
     bool
     get_neighbor_links(const sMacAddr &neighbor_mac_filter,
                        std::map<sLinkInterface, std::vector<sLinkNeighbor>> &neighbor_links_map);
-
-    /**
-     * @brief Adds an AP HT Capabilities TLV to AP Capability Report message.
-     *
-     * TLV is added to message only if radio on given interface supports HT capabilities.
-     * See section 17.2.8 of Multi-AP Specification for details.
-     *
-     * @param iface_name Interface on which radio operates.
-     *
-     * @return True on success and false otherwise.
-     */
-    bool add_ap_ht_capabilities(const std::string &iface_name);
-
-    /**
-     * @brief Adds an AP VHT Capabilities TLV to AP Capability Report message.
-     *
-     * TLV is added to message only if radio on given interface supports VHT capabilities.
-     * See section 17.2.9 of Multi-AP Specification for details.
-     *
-     * @param iface_name Interface on which radio operates.
-     *
-     * @return True on success and false otherwise.
-     */
-    bool add_ap_vht_capabilities(const std::string &iface_name);
-
-    /**
-     * @brief Adds an AP HE Capabilities TLV to AP Capability Report message.
-     *
-     * TLV is added to message only if radio on given interface supports HE capabilities.
-     * See section 17.2.10 of Multi-AP Specification for details.
-     *
-     * @param iface_name Interface on which radio operates.
-     *
-     * @return True on success and false otherwise.
-     */
-    bool add_ap_he_capabilities(const std::string &iface_name);
-
-    /**
-     * @brief Adds Channel Scan Capabilities TLV to AP Capability Report message.
-     *
-     * The TLV is already created by the caller. This function adds
-     * information to the given tlv based on radio on given interface.
-     * See section 17.2.38 of Multi-AP Specification v2 for details.
-     *
-     * @param iface_name Interface on which radio operates.
-     *
-     * @param channe_scan_capability_tlv a pointer to the already created tlv.
-     *
-     * @return True on success and false otherwise.
-     */
-    bool add_channel_scan_capabilities(
-        const std::string &iface_name,
-        wfa_map::tlvChannelScanCapabilities &channel_scan_capabilities_tlv);
 
     /**
      * @brief Adds link metric TLVs to response message.
