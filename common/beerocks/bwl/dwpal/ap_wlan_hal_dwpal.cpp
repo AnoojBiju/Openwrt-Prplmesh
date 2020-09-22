@@ -1113,6 +1113,8 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
         if (hostapd_config_get_value(it.second, "mode", entry_mode) && entry_mode != "ap") {
             continue;
         }
+
+        ap_wlan_hal_dwpal::enable();
         // Count the the total of available for reconfiguration VAPs
         ++vap_total_count;
         // Send the command
