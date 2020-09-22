@@ -32,11 +32,11 @@ bool CapabilityReportingTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx,
 {
     switch (cmdu_rx.getMessageType()) {
     case ieee1905_1::eMessageType::CLIENT_CAPABILITY_QUERY_MESSAGE: {
-        handle_client_capability_query(cmdu_rx, tlvf::mac_to_string(src_mac));
+        handle_client_capability_query(cmdu_rx, src_mac);
         break;
     }
     case ieee1905_1::eMessageType::AP_CAPABILITY_QUERY_MESSAGE: {
-        handle_ap_capability_query(cmdu_rx, tlvf::mac_to_string(src_mac));
+        handle_ap_capability_query(cmdu_rx, src_mac);
         break;
     }
     default: {
@@ -48,7 +48,7 @@ bool CapabilityReportingTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx,
 }
 
 void CapabilityReportingTask::handle_client_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                                             const std::string &src_mac)
+                                                             const sMacAddr &src_mac)
 {
     const auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Received CLIENT_CAPABILITY_QUERY_MESSAGE , mid=" << std::hex << mid;
@@ -104,7 +104,8 @@ void CapabilityReportingTask::handle_client_capability_query(ieee1905_1::CmduMes
         error_code_tlv->reason_code() =
             wfa_map::tlvErrorCode::STA_NOT_ASSOCIATED_WITH_ANY_BSS_OPERATED_BY_THE_AGENT;
         error_code_tlv->sta_mac() = client_info_tlv_r->client_mac();
-        m_bhm_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, tlvf::mac_to_string(db->bridge.mac));
+        m_bhm_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
+                                      tlvf::mac_to_string(db->bridge.mac));
         return;
     }
 
@@ -117,11 +118,12 @@ void CapabilityReportingTask::handle_client_capability_query(ieee1905_1::CmduMes
                                                         client_info.association_frame_length);
 
     LOG(DEBUG) << "Send a CLIENT_CAPABILITY_REPORT_MESSAGE back to controller";
-    m_bhm_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, tlvf::mac_to_string(db->bridge.mac));
+    m_bhm_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
+                                  tlvf::mac_to_string(db->bridge.mac));
 }
 
 void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                                         const std::string &src_mac)
+                                                         const sMacAddr &src_mac)
 {
     const auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Received AP_CAPABILITY_QUERY_MESSAGE, mid=" << std::hex << mid;
@@ -203,7 +205,8 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
     }
 
     LOG(DEBUG) << "Sending AP_CAPABILITY_REPORT_MESSAGE , mid: " << std::hex << mid;
-    m_bhm_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, tlvf::mac_to_string(db->bridge.mac));
+    m_bhm_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
+                                  tlvf::mac_to_string(db->bridge.mac));
 }
 
 bool CapabilityReportingTask::add_ap_ht_capabilities(const AgentDB::sRadio &radio)

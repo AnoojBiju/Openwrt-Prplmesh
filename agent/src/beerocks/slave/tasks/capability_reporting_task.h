@@ -31,8 +31,8 @@ private:
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
 
     void handle_client_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                        const std::string &src_mac);
-    void handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac);
+                                        const sMacAddr &src_mac);
+    void handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac);
 
     /**
      * @brief Adds an AP HT Capabilities TLV to AP Capability Report message.
