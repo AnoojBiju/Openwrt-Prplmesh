@@ -2108,7 +2108,7 @@ bool backhaul_manager::handle_multi_ap_policy_config_request(ieee1905_1::CmduMes
                                                              const std::string &src_mac)
 {
     auto mid = cmdu_rx.getMessageId();
-    LOG(DEBUG) << "Received MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE, mid=" << std::hex << int(mid);
+    LOG(DEBUG) << "Received MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE, mid=" << std::hex << mid;
 
     auto steering_policy_tlv = cmdu_rx.getClass<wfa_map::tlvSteeringPolicy>();
     if (steering_policy_tlv) {
@@ -2177,8 +2177,7 @@ bool backhaul_manager::handle_associated_sta_link_metrics_query(ieee1905_1::Cmdu
                                                                 const std::string &src_mac)
 {
     const auto mid = cmdu_rx.getMessageId();
-    LOG(DEBUG) << "Received ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE , mid=" << std::dec
-               << int(mid);
+    LOG(DEBUG) << "Received ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE , mid=" << std::dec << mid;
 
     if (!cmdu_tx.create(mid,
                         ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE)) {
@@ -2254,7 +2253,7 @@ bool backhaul_manager::handle_client_capability_query(ieee1905_1::CmduMessageRx 
                                                       const std::string &src_mac)
 {
     const auto mid = cmdu_rx.getMessageId();
-    LOG(DEBUG) << "Received CLIENT_CAPABILITY_QUERY_MESSAGE , mid=" << std::dec << int(mid);
+    LOG(DEBUG) << "Received CLIENT_CAPABILITY_QUERY_MESSAGE , mid=" << std::dec << mid;
 
     auto client_info_tlv_r = cmdu_rx.getClass<wfa_map::tlvClientInfo>();
     if (!client_info_tlv_r) {
@@ -2326,7 +2325,7 @@ bool backhaul_manager::handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmd
                                                   const std::string &src_mac)
 {
     const auto mid = cmdu_rx.getMessageId();
-    LOG(DEBUG) << "Received AP_CAPABILITY_QUERY_MESSAGE, mid=" << std::dec << int(mid);
+    LOG(DEBUG) << "Received AP_CAPABILITY_QUERY_MESSAGE, mid=" << std::dec << mid;
 
     if (!cmdu_tx.create(mid, ieee1905_1::eMessageType::AP_CAPABILITY_REPORT_MESSAGE)) {
         LOG(ERROR) << "cmdu creation of type AP_CAPABILITY_REPORT_MESSAGE, has failed";
@@ -2404,7 +2403,7 @@ bool backhaul_manager::handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmd
         }
     }
 
-    LOG(DEBUG) << "Sending AP_CAPABILITY_REPORT_MESSAGE , mid: " << std::hex << (int)mid;
+    LOG(DEBUG) << "Sending AP_CAPABILITY_REPORT_MESSAGE , mid: " << std::hex << mid;
     return send_cmdu_to_broker(cmdu_tx, src_mac, tlvf::mac_to_string(db->bridge.mac));
 }
 
@@ -2426,8 +2425,8 @@ bool backhaul_manager::handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_r
             return false;
         }
         bssids.insert(std::get<1>(bssid_tuple));
-        LOG(DEBUG) << "Received AP_METRICS_QUERY_MESSAGE, mid=" << std::hex << int(mid)
-                   << "  bssid " << std::get<1>(bssid_tuple);
+        LOG(DEBUG) << "Received AP_METRICS_QUERY_MESSAGE, mid=" << std::hex << mid << "  bssid "
+                   << std::get<1>(bssid_tuple);
     }
 
     if (!send_slave_ap_metric_query_message(mid, bssids)) {
@@ -2442,7 +2441,7 @@ bool backhaul_manager::handle_slave_ap_metrics_response(ieee1905_1::CmduMessageR
                                                         const std::string &src_mac)
 {
     auto mid = cmdu_rx.getMessageId();
-    LOG(DEBUG) << "Received AP_METRICS_RESPONSE_MESSAGE, mid=" << std::hex << int(mid);
+    LOG(DEBUG) << "Received AP_METRICS_RESPONSE_MESSAGE, mid=" << std::hex << mid;
 
     auto db = AgentDB::get();
 
@@ -2474,8 +2473,7 @@ bool backhaul_manager::handle_slave_ap_metrics_response(ieee1905_1::CmduMessageR
 
     auto ap_metrics_tlv = cmdu_rx.getClass<wfa_map::tlvApMetrics>();
     if (!ap_metrics_tlv) {
-        LOG(ERROR) << "Failed cmdu_rx.getClass<wfa_map::tlvApMetrics>(), mid=" << std::hex
-                   << int(mid);
+        LOG(ERROR) << "Failed cmdu_rx.getClass<wfa_map::tlvApMetrics>(), mid=" << std::hex << mid;
         return false;
     }
 
@@ -2486,7 +2484,7 @@ bool backhaul_manager::handle_slave_ap_metrics_response(ieee1905_1::CmduMessageR
 
     if (mac == m_ap_metric_query.end()) {
         LOG(ERROR) << "Failed search in ap_metric_query for bssid: " << bssid_tlv
-                   << " from mid=" << std::hex << int(mid);
+                   << " from mid=" << std::hex << mid;
         return false;
     }
 
@@ -2617,7 +2615,7 @@ bool backhaul_manager::handle_slave_ap_metrics_response(ieee1905_1::CmduMessageR
     // Clear the m_ap_metric_response vector after preparing response to the controller
     m_ap_metric_response.clear();
 
-    LOG(DEBUG) << "Sending AP_METRICS_RESPONSE_MESSAGE, mid=" << std::hex << int(mid);
+    LOG(DEBUG) << "Sending AP_METRICS_RESPONSE_MESSAGE, mid=" << std::hex << mid;
     return send_cmdu_to_broker(cmdu_tx, tlvf::mac_to_string(db->controller_info.bridge_mac),
                                tlvf::mac_to_string(db->bridge.mac));
 }
@@ -2626,7 +2624,7 @@ bool backhaul_manager::handle_1905_link_metric_query(ieee1905_1::CmduMessageRx &
                                                      const std::string &src_mac)
 {
     const auto mid = cmdu_rx.getMessageId();
-    LOG(DEBUG) << "Received LINK_METRIC_QUERY_MESSAGE, mid=" << std::hex << int(mid);
+    LOG(DEBUG) << "Received LINK_METRIC_QUERY_MESSAGE, mid=" << std::hex << mid;
 
     /**
      * The IEEE 1905.1 standard says about the Link Metric Query TLV and the neighbor type octet
@@ -2707,7 +2705,7 @@ bool backhaul_manager::handle_1905_link_metric_query(ieee1905_1::CmduMessageRx &
         cmdu_tx.create(mid, ieee1905_1::eMessageType::LINK_METRIC_RESPONSE_MESSAGE);
     if (!cmdu_tx_header) {
         LOG(ERROR) << "Failed creating LINK_METRIC_RESPONSE_MESSAGE header! mid=" << std::hex
-                   << (int)mid;
+                   << mid;
         return false;
     }
 
@@ -2731,7 +2729,7 @@ bool backhaul_manager::handle_1905_link_metric_query(ieee1905_1::CmduMessageRx &
         auto tlvLinkMetricResultCode = cmdu_tx.addClass<ieee1905_1::tlvLinkMetricResultCode>();
         if (!tlvLinkMetricResultCode) {
             LOG(ERROR) << "addClass ieee1905_1::tlvLinkMetricResultCode failed, mid=" << std::hex
-                       << (int)mid;
+                       << mid;
             return false;
         }
 
@@ -2777,7 +2775,7 @@ bool backhaul_manager::handle_1905_link_metric_query(ieee1905_1::CmduMessageRx &
         }
     }
 
-    LOG(DEBUG) << "Sending LINK_METRIC_RESPONSE_MESSAGE, mid: " << std::hex << (int)mid;
+    LOG(DEBUG) << "Sending LINK_METRIC_RESPONSE_MESSAGE, mid: " << std::hex << mid;
     return send_cmdu_to_broker(cmdu_tx, src_mac, tlvf::mac_to_string(db->bridge.mac));
 }
 
@@ -2785,7 +2783,7 @@ bool backhaul_manager::handle_1905_combined_infrastructure_metrics(
     ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac)
 {
     const auto mid = cmdu_rx.getMessageId();
-    LOG(DEBUG) << "Received COMBINED_INFRASTRUCTURE_METRICS message, mid=" << std::hex << int(mid);
+    LOG(DEBUG) << "Received COMBINED_INFRASTRUCTURE_METRICS message, mid=" << std::hex << mid;
 
     if (cmdu_rx.getClass<ieee1905_1::tlvReceiverLinkMetric>())
         LOG(DEBUG) << "Received TLV_RECEIVER_LINK_METRIC";
@@ -2798,7 +2796,7 @@ bool backhaul_manager::handle_1905_combined_infrastructure_metrics(
         LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
         return false;
     }
-    LOG(DEBUG) << "sending ACK message to the originator, mid=" << std::hex << int(mid);
+    LOG(DEBUG) << "sending ACK message to the originator, mid=" << std::hex << mid;
     auto db = AgentDB::get();
     return send_cmdu_to_broker(cmdu_tx, src_mac, tlvf::mac_to_string(db->bridge.mac));
 }
@@ -2857,7 +2855,7 @@ bool backhaul_manager::handle_1905_beacon_metrics_query(ieee1905_1::CmduMessageR
         }
 
         LOG(DEBUG) << "sending ACK message to the originator with an error, mid: " << std::hex
-                   << int(mid) << " tlv error code: " << errorSS.str();
+                   << mid << " tlv error code: " << errorSS.str();
 
         // send the error
         return send_cmdu_to_broker(cmdu_tx, src_mac, tlvf::mac_to_string(db->bridge.mac));
@@ -2874,7 +2872,7 @@ bool backhaul_manager::handle_1905_beacon_metrics_query(ieee1905_1::CmduMessageR
                << "; station: " << requested_sta_mac;
 
     LOG(DEBUG) << "BEACON METRICS QUERY: sending ACK message to the originator mid: "
-               << int(mid); // USED IN TESTS
+               << mid; // USED IN TESTS
 
     send_cmdu_to_broker(cmdu_tx, src_mac, tlvf::mac_to_string(db->bridge.mac));
 
@@ -3736,7 +3734,7 @@ bool backhaul_manager::handle_channel_selection_request(ieee1905_1::CmduMessageR
 {
     const auto mid = cmdu_rx.getMessageId();
 
-    LOG(DEBUG) << "Forwarding CHANNEL_SELECTION_REQUEST to son_slave, mid=" << std::hex << int(mid);
+    LOG(DEBUG) << "Forwarding CHANNEL_SELECTION_REQUEST to son_slave, mid=" << std::hex << mid;
 
     // Clear previous request, if any
     m_expected_channel_selection.requests.clear();
@@ -3760,7 +3758,7 @@ bool backhaul_manager::handle_slave_channel_selection_response(ieee1905_1::CmduM
                                                                const std::string &src_mac)
 {
     const auto mid = cmdu_rx.getMessageId();
-    LOG(DEBUG) << "Received CHANNEL_SELECTION_RESPONSE message, mid=" << std::hex << int(mid);
+    LOG(DEBUG) << "Received CHANNEL_SELECTION_RESPONSE message, mid=" << std::hex << mid;
 
     if (mid != m_expected_channel_selection.mid) {
         return false;
@@ -3769,7 +3767,7 @@ bool backhaul_manager::handle_slave_channel_selection_response(ieee1905_1::CmduM
     auto channel_selection_response = cmdu_rx.getClass<wfa_map::tlvChannelSelectionResponse>();
     if (!channel_selection_response) {
         LOG(ERROR) << "Failed cmdu_rx.getClass<wfa_map::tlvChannelSelectionResponse>(), mid="
-                   << std::hex << int(mid);
+                   << std::hex << mid;
         return false;
     }
 
@@ -3816,7 +3814,7 @@ bool backhaul_manager::handle_slave_channel_selection_response(ieee1905_1::CmduM
     // Clear the m_expected_channel_selection.responses vector after preparing response to the controller
     m_expected_channel_selection.responses.clear();
 
-    LOG(DEBUG) << "Sending CHANNEL_SELECTION_RESPONSE_MESSAGE, mid=" << std::hex << int(mid);
+    LOG(DEBUG) << "Sending CHANNEL_SELECTION_RESPONSE_MESSAGE, mid=" << std::hex << mid;
     return send_cmdu_to_broker(cmdu_tx, tlvf::mac_to_string(db->controller_info.bridge_mac),
                                tlvf::mac_to_string(db->bridge.mac));
 }
