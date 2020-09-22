@@ -83,6 +83,8 @@ static ap_wlan_hal::Event dwpal_to_bwl_event(const std::string &opcode)
         return ap_wlan_hal::Event::DFS_NOP_Finished;
     } else if (opcode == "LTQ-SOFTBLOCK-DROP") {
         return ap_wlan_hal::Event::STA_Softblock_Drop;
+    } else if (opcode == "AP-STA-POSSIBLE-PSK-MISMATCH" ) {
+        return ap_wlan_hal::Event::AP_Sta_Possible_Psk_Mismatch;
     }
 
     return ap_wlan_hal::Event::Invalid;
@@ -2537,6 +2539,32 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         LOG(DEBUG) << buffer;
         event_queue_push(event); // Forward to the AP manager
         break;
+    case Event::AP_Sta_Possible_Psk_Mismatch: {
+        
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sSTA_MISMATCH_PSK));
+        auto msg      = reinterpret_cast<sSTA_MISMATCH_PSK *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        memset(msg_buff.get(), 0, sizeof(sHOSTAP_DISABLED_NOTIFICATION));
+
+        char client_mac[MAC_ADDR_SIZE] = {0};
+        size_t numOfValidArgs[1]       = {0};
+
+        FieldsToParse fieldsToParse[] = {
+            {(void *)client_mac, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, sizeof(client_mac)},
+            /* Must be at the end */
+            {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+
+        if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(client_mac)) ==
+            DWPAL_FAILURE) {
+            LOG(ERROR) << "DWPAL parse error ==> Abort";
+            return false;
+        }
+        msg->sta_mac             = tlvf::mac_from_string(client_mac);
+
+        event_queue_push(Event::AP_Disabled, msg_buff); // send message to the AP manager
+        break;
+    }
 
     // Gracefully ignore unhandled events
     // TODO: Probably should be changed to an error once dwpal will stop
