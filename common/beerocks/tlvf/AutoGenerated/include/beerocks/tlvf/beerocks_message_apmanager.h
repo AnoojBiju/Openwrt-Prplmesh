@@ -125,7 +125,7 @@ class cACTION_APMANAGER_ENABLE_APS_REQUEST : public BaseClass
             return (eActionOp_APMANAGER)(ACTION_APMANAGER_ENABLE_APS_REQUEST);
         }
         uint8_t& channel();
-        uint32_t& bandwidth();
+        beerocks::eWiFiBandwidth& bandwidth();
         uint8_t& center_channel();
         void class_swap() override;
         bool finalize() override;
@@ -135,7 +135,7 @@ class cACTION_APMANAGER_ENABLE_APS_REQUEST : public BaseClass
         bool init();
         eActionOp_APMANAGER* m_action_op = nullptr;
         uint8_t* m_channel = nullptr;
-        uint32_t* m_bandwidth = nullptr;
+        beerocks::eWiFiBandwidth* m_bandwidth = nullptr;
         uint8_t* m_center_channel = nullptr;
 };
 
@@ -996,6 +996,25 @@ class cACTION_APMANAGER_START_WPS_PBC_REQUEST : public BaseClass
 
         static eActionOp_APMANAGER get_action_op(){
             return (eActionOp_APMANAGER)(ACTION_APMANAGER_START_WPS_PBC_REQUEST);
+        }
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_APMANAGER* m_action_op = nullptr;
+};
+
+class cACTION_APMANAGER_RADIO_DISABLE_REQUEST : public BaseClass
+{
+    public:
+        cACTION_APMANAGER_RADIO_DISABLE_REQUEST(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_APMANAGER_RADIO_DISABLE_REQUEST(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_APMANAGER_RADIO_DISABLE_REQUEST();
+
+        static eActionOp_APMANAGER get_action_op(){
+            return (eActionOp_APMANAGER)(ACTION_APMANAGER_RADIO_DISABLE_REQUEST);
         }
         void class_swap() override;
         bool finalize() override;

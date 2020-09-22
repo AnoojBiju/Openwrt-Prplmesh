@@ -64,7 +64,7 @@ cACTION_BACKHAUL_DISCONNECTED_NOTIFICATION:
 cACTION_BACKHAUL_ENABLE_APS_REQUEST:
   _type: class
   channel: uint8_t
-  bandwidth: uint32_t
+  bandwidth: beerocks::eWiFiBandwidth
   center_channel: uint8_t
 
 cACTION_BACKHAUL_ROAM_REQUEST:
@@ -120,4 +120,7 @@ cACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_RESPONSE:
     _length: [bssid_info_list_length]
 
 cACTION_BACKHAUL_START_WPS_PBC_REQUEST:
+  _type: class
+
+cACTION_BACKHAUL_RADIO_DISABLE_REQUEST:
   _type: class

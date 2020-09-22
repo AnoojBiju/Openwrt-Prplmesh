@@ -416,27 +416,16 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
 
         response->success() = true;
 
-        // Enable beaconing by setting start_disabled flag to false.
-        if (!ap_wlan_hal->set_start_disabled(false)) {
-            LOG(ERROR) << "Failed setting start_disabled";
-            response->success() = false;
-            message_com::send_cmdu(slave_socket, cmdu_tx);
-            break;
-        }
-
         // Disable the radio interface to make hostapd to consider the new configuration.
         if (!ap_wlan_hal->disable()) {
-            LOG(ERROR) << "Failed disable";
-            response->success() = false;
-            message_com::send_cmdu(slave_socket, cmdu_tx);
-            break;
+            LOG(DEBUG) << "ap disable() failed!, the interface might be already disabled or down";
         }
 
         // If it is not the radio of the BH, then channel, bandwidth and center channel paramenters
         // will be all set to 0.
         LOG(DEBUG) << "Setting AP channel: "
                    << ", channel=" << int(notification->channel())
-                   << ", bandwidth=" << int(notification->bandwidth())
+                   << ", bandwidth=" << notification->bandwidth()
                    << ", center_channel=" << int(notification->center_channel());
 
         // Set original channel or BH channel
@@ -957,6 +946,17 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
         }
         break;
     }
+
+    case beerocks_message::ACTION_APMANAGER_RADIO_DISABLE_REQUEST: {
+        LOG(DEBUG) << "Got ACTION_APMANAGER_RADIO_DISABLE_REQUEST";
+        // Disable the radio interface
+        if (!ap_wlan_hal->disable()) {
+            LOG(ERROR) << "Failed disabling radio on iface: " << ap_wlan_hal->get_iface_name();
+            return false;
+        }
+        break;
+    }
+
     case beerocks_message::ACTION_APMANAGER_STEERING_CLIENT_SET_REQUEST: {
         auto request =
             beerocks_header
