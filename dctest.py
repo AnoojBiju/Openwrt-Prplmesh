@@ -114,8 +114,11 @@ class Services:
         search_prefix = self._get_device_names()[0] + '-'
         for d in os.listdir('logs'):
             if d.startswith(search_prefix):
-                suffix = d[len(search_prefix):]
-                isuffix = int(suffix)
+                suffix = d[len(search_prefix):] or 0
+                try:
+                    isuffix = int(suffix)
+                except ValueError:
+                    isuffix = 0
                 if isuffix > last_id:
                     last_id = isuffix
         if last_id == 0:
