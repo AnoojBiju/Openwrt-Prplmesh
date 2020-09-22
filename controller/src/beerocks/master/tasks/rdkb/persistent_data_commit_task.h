@@ -19,7 +19,7 @@ namespace son {
 class persistent_data_commit_task : public task {
 public:
     persistent_data_commit_task(db &database, ieee1905_1::CmduMessageTx &cmdu_tx, task_pool &tasks,
-                        unsigned int starting_delay_ms);
+                                unsigned int starting_delay_ms);
 
     virtual ~persistent_data_commit_task() {}
 
@@ -28,10 +28,10 @@ protected:
     virtual void
     handle_response(std::string slave_mac,
                     std::shared_ptr<beerocks::beerocks_header> beerocks_header) override;
-    virtual 
-    void handle_responses_timeout(
-         std::unordered_multimap<std::string, beerocks_message::eActionOp_CONTROL>
-         timed_out_macs) override;
+    virtual void handle_responses_timeout(
+        std::unordered_multimap<std::string, beerocks_message::eActionOp_CONTROL> timed_out_macs)
+        override;
+
 private:
     db &m_database;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
