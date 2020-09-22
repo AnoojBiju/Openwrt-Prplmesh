@@ -127,7 +127,7 @@ public:
         int clients_persistent_db_max_size;
         int max_timelife_delay_days;
         int unfriendly_device_max_timelife_delay_days;
-        int commit_changes_interval;
+        unsigned int commit_changes_interval;
 
     } sDbMasterConfig;
 
@@ -972,9 +972,6 @@ public:
     bool assign_dynamic_channel_selection_task_id(const sMacAddr &mac, int new_task_id);
     int get_dynamic_channel_selection_task_id(const sMacAddr &mac);
 
-    bool assign_commit_changes_task_id(int new_task_id);
-    int get_commit_changes_task_id();
-
     void lock();
     void unlock();
 
@@ -1175,7 +1172,6 @@ private:
     int bml_task_id                  = -1;
     int rdkb_wlan_task_id            = -1;
     int config_update_task_id        = -1;
-    int commit_changes_task_id       = -1;
 
     std::shared_ptr<node> last_accessed_node;
     std::string last_accessed_node_mac;
@@ -1187,17 +1183,17 @@ private:
     std::queue<std::string> disconnected_slave_mac_queue;
 
     /*
-            * a variable that indicates that data is awaiting to flashed from memory into
-            * the prplMesh.bb (non-rational persistent database file)
-            */
+    * a variable that indicates that data is awaiting to flashed from memory into
+    * the prplMesh.bb (non-rational persistent database file).
+    */
     bool db_changes_made = false;
 
     int slaves_stop_on_failure_attempts = 0;
 
     /*
-            * some operations on unordered_map can cause iterators to be invalidated
-            * use the following with caution
-            */
+     * some operations on unordered_map can cause iterators to be invalidated
+     * use the following with caution.
+     */
     int current_hierarchy = 0;
     std::unordered_map<std::string, std::shared_ptr<node>>::iterator db_it =
         std::unordered_map<std::string, std::shared_ptr<node>>::iterator();
