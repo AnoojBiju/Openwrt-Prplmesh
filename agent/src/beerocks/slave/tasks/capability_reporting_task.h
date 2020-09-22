@@ -10,6 +10,8 @@
 #define _CAPABILITY_REPORTING_TASK_H_
 
 #include "task.h"
+#include "../agent_db.h"
+#include "../tlvf_utils.h"
 
 #include <tlvf/CmduMessageTx.h>
 
@@ -32,6 +34,43 @@ private:
 
     bool handle_client_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx,
                                         const std::string &src_mac);
+    bool handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac);
+
+    /**
+     * @brief Adds an AP HT Capabilities TLV to AP Capability Report message.
+     *
+     * TLV is added to message only if given radio supports HT capabilities.
+     * See section 17.2.8 of Multi-AP Specification for details.
+     *
+     * @param radio Radio structure containing the information required to fill in the TLV.
+     *
+     * @return True on success and false otherwise.
+     */
+    bool add_ap_ht_capabilities(const AgentDB::sRadio &radio);
+
+    /**
+     * @brief Adds an AP VHT Capabilities TLV to AP Capability Report message.
+     *
+     * TLV is added to message only if given radio supports VHT capabilities.
+     * See section 17.2.9 of Multi-AP Specification for details.
+     *
+     * @param radio Radio structure containing the information required to fill in the TLV.
+     *
+     * @return True on success and false otherwise.
+     */
+    bool add_ap_vht_capabilities(const AgentDB::sRadio &radio);
+
+    /**
+     * @brief Adds an AP HE Capabilities TLV to AP Capability Report message.
+     *
+     * TLV is added to message only if given radio supports HE capabilities.
+     * See section 17.2.10 of Multi-AP Specification for details.
+     *
+     * @param radio Radio structure containing the information required to fill in the TLV.
+     *
+     * @return True on success and false otherwise.
+     */
+    bool add_ap_he_capabilities(const AgentDB::sRadio &radio);
 };
 
 } // namespace beerocks
