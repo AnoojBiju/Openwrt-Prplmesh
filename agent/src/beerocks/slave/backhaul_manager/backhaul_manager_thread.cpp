@@ -36,6 +36,7 @@
 #include "../link_metrics/ieee802_3_link_metrics_collector.h"
 
 #include "../tasks/ap_autoconfiguration_task.h"
+#include "../tasks/channel_selection_task.h"
 #include "../tasks/topology_task.h"
 #include "../tlvf_utils.h"
 
@@ -243,6 +244,13 @@ bool backhaul_manager::init()
         return false;
     }
     m_task_pool.add_task(ap_auto_configuration_task);
+
+    auto channel_selection_task = std::make_shared<ApAutoConfigurationTask>(*this, cmdu_tx);
+    if (!channel_selection_task) {
+        LOG(ERROR) << "failed to allocate Channel Selection Task!";
+        return false;
+    }
+    m_task_pool.add_task(channel_selection_task);
 
     return true;
 }
