@@ -410,7 +410,6 @@ run-certification-tests:
     - if: "$TESTS_TO_RUN"
 
 include:
-  - template: "Workflows/MergeRequest-Pipelines.gitlab-ci.yml"
   - local: "/ci/certification/generic.yml"
   - local: "/ci/certification/dummy.yml"
   - local: "/ci/certification/turris-omnia.yml"
