@@ -386,6 +386,14 @@ bool backhaul_manager::socket_disconnected(Socket *sd)
         }
     }
 
+    for (auto it = m_disabled_slave_sockets.begin(); it != m_disabled_slave_sockets.end();) {
+        if (it->second->slave == sd) {
+            it = m_disabled_slave_sockets.erase(it);
+            // Return 'true' to let the socket thread handle the socket removal
+            return true;
+        }
+        it++;
+    }
     return true;
 }
 
@@ -1601,17 +1609,11 @@ bool backhaul_manager::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_r
                 }
             }
 
-            if (soc && soc->slave == sd) {
-                if (cmdu_rx.getMessageType() == ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE) {
-                    return handle_slave_backhaul_message(soc, cmdu_rx);
-                } else {
-                    return handle_slave_1905_1_message(cmdu_rx, src_mac);
-                }
+            if (cmdu_rx.getMessageType() == ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE) {
+                return handle_slave_backhaul_message(soc, cmdu_rx);
             } else {
-                LOG(ERROR) << "ACTION_BACKHAUL from none slave socket!";
-                return false;
+                return handle_slave_1905_1_message(cmdu_rx, src_mac);
             }
-
         } else { // Forward the data (cmdu) to bus
             // LOG(DEBUG) << "forwarding slave->master message, controller_bridge_mac="
             //            << (db->controller_info.bridge_mac);
@@ -1735,9 +1737,8 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
 
                 LOG(DEBUG) << "All pending slaves have sent us backhaul enable!";
 
-                /* All pending slaves have sent us backhaul enable
-                     * which means we can proceed to the scan->connect->operational flow
-                     */
+                // All pending slaves have sent us backhaul enable which means we can proceed to
+                // the scan->connect->operational flow.
                 pending_enable = true;
 
                 if (db->device_conf.local_gw) {
@@ -1936,6 +1937,44 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
         LOG(DEBUG) << "Send AssociatedStaLinkMetrics to controller, mid = " << mid;
         send_cmdu_to_broker(cmdu_tx, tlvf::mac_to_string(db->controller_info.bridge_mac),
                             tlvf::mac_to_string(db->bridge.mac));
+        break;
+    }
+    case beerocks_message::ACTION_BACKHAUL_ZWDFS_RADIO_DETECTED: {
+        auto msg_in =
+            beerocks_header->addClass<beerocks_message::cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED>();
+        if (!msg_in) {
+            LOG(ERROR) << "addClass cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED failed";
+            return false;
+        }
+
+        auto front_iface_name = msg_in->front_iface_name_str();
+
+        // Erase the Radio interface from the pending radio interfaces list which is used to block
+        // the Backhaul manager to establish the backhaul link until all the Agent radios has sent
+        // the "Backhaul Enable" message.
+        // In case all other radio has enabled the backhaul already, mark 'pending_enable' to true,
+        // so the Backhaul manager will not stay hanged.
+        pending_slave_ifaces.erase(front_iface_name);
+        if (pending_slave_ifaces.empty()) {
+            LOG(DEBUG) << "All pending slaves have sent us backhaul enable!";
+            // All pending slaves have sent us backhaul enable, which means we can proceed to the
+            // scan->connect->operational flow.
+            pending_enable = true;
+        }
+
+        for (auto it = slaves_sockets.begin(); it != slaves_sockets.end();) {
+            auto slave_soc = *it;
+            if (slave_soc->hostap_iface == front_iface_name) {
+                // Backup the socket, on disabled sockets list
+                m_disabled_slave_sockets[front_iface_name] =
+                    m_sConfig.slave_iface_socket[front_iface_name];
+
+                // Remove the socket reference from the backhaul
+                m_sConfig.slave_iface_socket.erase(front_iface_name);
+                it = slaves_sockets.erase(it);
+                break;
+            }
+        }
         break;
     }
     default: {
