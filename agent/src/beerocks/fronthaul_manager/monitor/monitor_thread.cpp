@@ -1767,7 +1767,7 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
         auto sta_mac = tlvf::mac_to_string(msg->mac);
         auto vap_id  = msg->vap_id;
 
-        LOG(INFO) << "STA_Connected: mac=" << sta_mac << " vap_id=" << vap_id;
+        LOG(INFO) << "STA_Connected: mac=" << sta_mac << " vap_id=" << int(vap_id);
 
         std::string sta_ipv4             = network_utils::ZERO_IP_STRING;
         std::string set_bridge_4addr_mac = network_utils::ZERO_MAC_STRING;
@@ -1782,7 +1782,7 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
 
         auto vap_node = mon_db.vap_get_by_id(vap_id);
         if (!vap_node) {
-            LOG(ERROR) << "vap_id " << vap_id << " does not exist";
+            LOG(ERROR) << "vap_id " << int(vap_id) << " does not exist";
             return false;
         }
 
