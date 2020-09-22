@@ -80,11 +80,25 @@ private:
     bool init_event_loop();
 
     /**
+     * @brief Initialize ambiorix signal event loop.
+     *
+     * @return True on success and false otherwise.
+     */
+    bool init_signal_loop();
+
+    /**
      * @brief Remove event loop for ambiorix.
      *
      * @return True on success and false otherwise.
      */
     bool remove_event_loop();
+
+    /**
+     * @brief Remove ambiorix signal event loop.
+     *
+     * @return True on success and false otherwise.
+     */
+    bool remove_signal_loop();
 
     // Variables
     amxb_bus_ctx_t *m_bus_ctx = nullptr;
