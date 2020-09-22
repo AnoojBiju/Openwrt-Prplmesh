@@ -36,6 +36,7 @@ This file lists all contributors.
 - Raphaël Mélotte
 - Segev Ravgad
 - Semyon Barenboym
+- Sinan Akpolat (Lifemote)
 - Tomer Eliyahu
 - Vitalii Komisarenko
 - Vitaly Bukhovsky
