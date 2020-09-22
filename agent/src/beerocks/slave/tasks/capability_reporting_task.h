@@ -29,6 +29,9 @@ public:
 private:
     backhaul_manager &m_bhm_ctx;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
+
+    bool handle_client_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                        const std::string &src_mac);
 };
 
 } // namespace beerocks
