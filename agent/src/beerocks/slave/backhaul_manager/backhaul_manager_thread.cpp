@@ -39,7 +39,6 @@
 #include "../tasks/capability_reporting_task.h"
 #include "../tasks/channel_selection_task.h"
 #include "../tasks/topology_task.h"
-#include "../tlvf_utils.h"
 
 #include <bcl/beerocks_utils.h>
 #include <bcl/son/son_wireless_utils.h>
@@ -69,14 +68,10 @@
 #include <tlvf/ieee_1905_1/tlvSupportedFreqBand.h>
 #include <tlvf/ieee_1905_1/tlvSupportedRole.h>
 #include <tlvf/ieee_1905_1/tlvTransmitterLinkMetric.h>
-#include <tlvf/wfa_map/tlvApCapability.h>
-#include <tlvf/wfa_map/tlvApHeCapabilities.h>
-#include <tlvf/wfa_map/tlvApHtCapabilities.h>
 #include <tlvf/wfa_map/tlvApMetricQuery.h>
 #include <tlvf/wfa_map/tlvApMetrics.h>
 #include <tlvf/wfa_map/tlvApOperationalBSS.h>
 #include <tlvf/wfa_map/tlvApRadioBasicCapabilities.h>
-#include <tlvf/wfa_map/tlvApVhtCapabilities.h>
 #include <tlvf/wfa_map/tlvAssociatedClients.h>
 #include <tlvf/wfa_map/tlvAssociatedStaExtendedLinkMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
@@ -87,8 +82,6 @@
 #include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
-#include <tlvf/wfa_map/tlvProfile2ApCapability.h>
-#include <tlvf/wfa_map/tlvProfile2MetricCollectionInterval.h>
 #include <tlvf/wfa_map/tlvProfile2UnsuccessfulAssociationPolicy.h>
 #include <tlvf/wfa_map/tlvSearchedService.h>
 #include <tlvf/wfa_map/tlvStaMacAddressType.h>
@@ -2051,9 +2044,6 @@ bool backhaul_manager::handle_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx,
         // returning false.
         return false;
     }
-    case ieee1905_1::eMessageType::AP_CAPABILITY_QUERY_MESSAGE: {
-        return handle_ap_capability_query(cmdu_rx, src_mac);
-    }
     case ieee1905_1::eMessageType::LINK_METRIC_QUERY_MESSAGE: {
         return handle_1905_link_metric_query(cmdu_rx, src_mac);
     }
@@ -2306,97 +2296,6 @@ bool backhaul_manager::handle_associated_sta_link_metrics_query(ieee1905_1::Cmdu
         return false;
     }
     return message_com::send_cmdu(radio_info->slave, cmdu_tx);
-}
-
-bool backhaul_manager::handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                                  const std::string &src_mac)
-{
-    const auto mid = cmdu_rx.getMessageId();
-    LOG(DEBUG) << "Received AP_CAPABILITY_QUERY_MESSAGE, mid=" << std::dec << mid;
-
-    if (!cmdu_tx.create(mid, ieee1905_1::eMessageType::AP_CAPABILITY_REPORT_MESSAGE)) {
-        LOG(ERROR) << "cmdu creation of type AP_CAPABILITY_REPORT_MESSAGE, has failed";
-        return false;
-    }
-
-    auto ap_capability_tlv = cmdu_tx.addClass<wfa_map::tlvApCapability>();
-    if (!ap_capability_tlv) {
-        LOG(ERROR) << "addClass wfa_map::tlvApCapability has failed";
-        return false;
-    }
-
-    auto db = AgentDB::get();
-
-    // 1. The tlvs created in the loop are created per radio and are
-    // defined in the specification as "Zero Or More" (multi-ap specification v2, 17.1.7)
-    for (const auto &slave : slaves_sockets) {
-        // TODO skip slaves that are not operational
-        auto radio_mac = slave->radio_mac;
-
-        auto radio = db->get_radio_by_mac(radio_mac);
-        if (!radio) {
-            LOG(ERROR) << "radio with mac " << radio_mac << " does not exist in the db";
-            continue;
-        }
-
-        if (!tlvf_utils::add_ap_radio_basic_capabilities(cmdu_tx, radio_mac,
-                                                         radio->front.preferred_channels)) {
-            return false;
-        }
-
-        if (!add_ap_ht_capabilities(radio->front.iface_name)) {
-            return false;
-        }
-
-        if (!add_ap_vht_capabilities(radio->front.iface_name)) {
-            return false;
-        }
-
-        if (!add_ap_he_capabilities(radio->front.iface_name)) {
-            return false;
-        }
-    }
-
-    // 2. The tlvs created here are defined in the
-    // specification as "One" (multi-ap specification v2, 17.1.7).
-    // the one tlv may contain information about few radios
-
-    // 2.1 radio dependent tlvs
-    // Add channel scan capabilities
-    auto channel_scan_capabilities_tlv = cmdu_tx.addClass<wfa_map::tlvChannelScanCapabilities>();
-    if (!channel_scan_capabilities_tlv) {
-        LOG(ERROR) << "Error creating TLV_CHANNEL_SCAN_CAPABILITIES";
-        return false;
-    }
-
-    // Add Channel Scan Capabilities
-    for (const auto &slave : slaves_sockets) {
-        add_channel_scan_capabilities(slave->hostap_iface, *channel_scan_capabilities_tlv);
-    }
-
-    // 2.1 radio independent tlvs
-
-    // profile 2 ap capability
-    auto profile2_ap_capability_tlv = cmdu_tx.addClass<wfa_map::tlvProfile2ApCapability>();
-    if (!profile2_ap_capability_tlv) {
-        LOG(ERROR) << "Error creating TLV_PROFILE2_AP_CAPABILITIES";
-        return false;
-    }
-    // set kilobytes (KiB)
-    profile2_ap_capability_tlv->capabilities_bit_field().byte_counter_units = 1;
-
-    // profile 2 metric collection interval
-    // Note: at the moment we are not setting a value for collection_interval
-    auto profile2_meteric_collection_interval_tlv =
-        cmdu_tx.addClass<wfa_map::tlvProfile2MetricCollectionInterval>();
-    if (!profile2_meteric_collection_interval_tlv) {
-        LOG(ERROR) << "error creating TLV_PROFILE2_METERIC_COLLECTION_INTERVAL";
-        return false;
-    }
-
-    // send the constructed report
-    LOG(DEBUG) << "Sending AP_CAPABILITY_REPORT_MESSAGE , mid: " << std::hex << (int)mid;
-    return send_cmdu_to_broker(cmdu_tx, src_mac, tlvf::mac_to_string(db->bridge.mac));
 }
 
 bool backhaul_manager::handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -3535,141 +3434,6 @@ bool backhaul_manager::get_neighbor_links(
                 neighbor_links_map[interface].push_back(neighbor);
             }
         }
-    }
-
-    return true;
-}
-
-bool backhaul_manager::add_ap_ht_capabilities(const std::string &iface_name)
-{
-    auto db    = AgentDB::get();
-    auto radio = db->radio(iface_name);
-    if (!radio) {
-        return false;
-    }
-
-    if (!radio->ht_supported) {
-        return true;
-    }
-
-    auto tlv = cmdu_tx.addClass<wfa_map::tlvApHtCapabilities>();
-    if (!tlv) {
-        LOG(ERROR) << "Error creating TLV_AP_HT_CAPABILITIES";
-        return false;
-    }
-
-    tlv->radio_uid() = radio->front.iface_mac;
-
-    /**
-     * See iw/util.c for details on how to compute fields.
-     * Code has been preserved as close as possible to that in the iw command line tool.
-     */
-    bool tx_mcs_set_defined = !!(radio->ht_mcs_set[12] & (1 << 0));
-    if (tx_mcs_set_defined) {
-        tlv->flags().max_num_of_supported_tx_spatial_streams = (radio->ht_mcs_set[12] >> 2) & 3;
-        tlv->flags().max_num_of_supported_rx_spatial_streams = 0; // TODO: Compute value (#1163)
-    }
-    tlv->flags().short_gi_support_20mhz = radio->ht_capability & BIT(5);
-    tlv->flags().short_gi_support_40mhz = radio->ht_capability & BIT(6);
-    tlv->flags().ht_support_40mhz       = radio->ht_capability & BIT(1);
-
-    return true;
-}
-
-bool backhaul_manager::add_ap_vht_capabilities(const std::string &iface_name)
-{
-    auto db    = AgentDB::get();
-    auto radio = db->radio(iface_name);
-    if (!radio) {
-        return false;
-    }
-
-    if (!radio->vht_supported) {
-        return true;
-    }
-
-    auto tlv = cmdu_tx.addClass<wfa_map::tlvApVhtCapabilities>();
-    if (!tlv) {
-        LOG(ERROR) << "Error creating TLV_AP_VHT_CAPABILITIES";
-        return false;
-    }
-
-    tlv->radio_uid() = radio->front.iface_mac;
-
-    /**
-     * See iw/util.c for details on how to compute fields
-     * Code has been preserved as close as possible to that in the iw command line tool.
-     */
-    tlv->supported_vht_tx_mcs() = radio->vht_mcs_set[4] | (radio->vht_mcs_set[5] << 8);
-    tlv->supported_vht_rx_mcs() = radio->vht_mcs_set[0] | (radio->vht_mcs_set[1] << 8);
-    tlv->flags1().max_num_of_supported_tx_spatial_streams = 0; // TODO: Compute value (#1163)
-    tlv->flags1().max_num_of_supported_rx_spatial_streams = 0; // TODO: Compute value (#1163)
-    tlv->flags1().short_gi_support_80mhz                  = radio->vht_capability & BIT(5);
-    tlv->flags1().short_gi_support_160mhz_and_80_80mhz    = radio->vht_capability & BIT(6);
-    tlv->flags2().vht_support_80_80mhz                    = ((radio->vht_capability >> 2) & 3) == 2;
-    tlv->flags2().vht_support_160mhz                      = ((radio->vht_capability >> 2) & 3) == 1;
-    tlv->flags2().su_beamformer_capable                   = radio->vht_capability & BIT(11);
-    tlv->flags2().mu_beamformer_capable                   = radio->vht_capability & BIT(19);
-
-    return true;
-}
-
-bool backhaul_manager::add_ap_he_capabilities(const std::string &iface_name)
-{
-    auto db    = AgentDB::get();
-    auto radio = db->radio(iface_name);
-    if (!radio) {
-        return false;
-    }
-
-    if (!radio->he_supported) {
-        return true;
-    }
-
-    auto tlv = cmdu_tx.addClass<wfa_map::tlvApHeCapabilities>();
-    if (!tlv) {
-        LOG(ERROR) << "Error creating TLV_AP_HE_CAPABILITIES";
-        return false;
-    }
-
-    tlv->radio_uid() = radio->front.iface_mac;
-
-    // TODO: Fetch the AP HE Capabilities from the Wi-Fi driver via the Netlink socket and include
-    // them into AP HE Capabilities TLV (#1162)
-
-    return true;
-}
-
-bool backhaul_manager::add_channel_scan_capabilities(
-    const std::string &iface_name,
-    wfa_map::tlvChannelScanCapabilities &channel_scan_capabilities_tlv)
-{
-    auto db    = AgentDB::get();
-    auto radio = db->radio(iface_name);
-    if (!radio) {
-        return false;
-    }
-
-    auto radio_channel_scan_capabilities = channel_scan_capabilities_tlv.create_radio_list();
-    if (!radio_channel_scan_capabilities) {
-        LOG(ERROR) << "create_radio_list() has failed!";
-        return false;
-    }
-    radio_channel_scan_capabilities->radio_uid()                 = radio->front.iface_mac;
-    radio_channel_scan_capabilities->capabilities().on_boot_only = 1;
-    radio_channel_scan_capabilities->capabilities().scan_impact =
-        0x2; // Time slicing impairment (Radio may go off channel for a series of short intervals)
-    // Create operating class object
-    auto op_class_channels = radio_channel_scan_capabilities->create_operating_classes_list();
-    if (!op_class_channels) {
-        LOG(ERROR) << "create_operating_classes_list() has failed!";
-        return false;
-    }
-
-    // Push operating class object to the list of operating class objects
-    if (!channel_scan_capabilities_tlv.add_radio_list(radio_channel_scan_capabilities)) {
-        LOG(ERROR) << "add_radio_list() has failed!";
-        return false;
     }
 
     return true;

@@ -9,9 +9,11 @@
 #ifndef _CAPABILITY_REPORTING_TASK_H_
 #define _CAPABILITY_REPORTING_TASK_H_
 
+#include "../agent_db.h"
 #include "task.h"
 
 #include <tlvf/CmduMessageTx.h>
+#include <tlvf/wfa_map/tlvChannelScanCapabilities.h>
 
 namespace beerocks {
 
@@ -31,6 +33,60 @@ private:
 
     bool handle_client_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx,
                                         const std::string &src_mac);
+    bool handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac);
+
+    /**
+     * @brief Adds an AP HT Capabilities TLV to AP Capability Report message.
+     *
+     * TLV is added to message only if radio on given interface supports HT capabilities.
+     * See section 17.2.8 of Multi-AP Specification for details.
+     *
+     * @param iface_name Interface on which radio operates.
+     *
+     * @return True on success and false otherwise.
+     */
+    bool add_ap_ht_capabilities(const std::string &iface_name);
+
+    /**
+     * @brief Adds an AP VHT Capabilities TLV to AP Capability Report message.
+     *
+     * TLV is added to message only if radio on given interface supports VHT capabilities.
+     * See section 17.2.9 of Multi-AP Specification for details.
+     *
+     * @param iface_name Interface on which radio operates.
+     *
+     * @return True on success and false otherwise.
+     */
+    bool add_ap_vht_capabilities(const std::string &iface_name);
+
+    /**
+     * @brief Adds an AP HE Capabilities TLV to AP Capability Report message.
+     *
+     * TLV is added to message only if radio on given interface supports HE capabilities.
+     * See section 17.2.10 of Multi-AP Specification for details.
+     *
+     * @param iface_name Interface on which radio operates.
+     *
+     * @return True on success and false otherwise.
+     */
+    bool add_ap_he_capabilities(const std::string &iface_name);
+
+    /**
+     * @brief Adds Channel Scan Capabilities TLV to AP Capability Report message.
+     *
+     * The TLV is already created by the caller. This function adds
+     * information to the given tlv based on radio on given interface.
+     * See section 17.2.38 of Multi-AP Specification v2 for details.
+     *
+     * @param iface_name Interface on which radio operates.
+     *
+     * @param channe_scan_capability_tlv a pointer to the already created tlv.
+     *
+     * @return True on success and false otherwise.
+     */
+    bool add_channel_scan_capabilities(
+        const std::string &iface_name,
+        wfa_map::tlvChannelScanCapabilities &channel_scan_capabilities_tlv);
 };
 
 } // namespace beerocks
