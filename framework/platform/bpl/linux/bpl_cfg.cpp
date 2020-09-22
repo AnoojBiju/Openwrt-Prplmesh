@@ -372,7 +372,7 @@ bool cfg_get_persistent_db_enable(bool &enable)
     return true;
 }
 
-bool cfg_get_commit_changes_interval(int &interval)
+bool cfg_get_commit_changes_interval(unsigned int &interval)
 {
     int commit_changes_interval_value = DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE;
 
