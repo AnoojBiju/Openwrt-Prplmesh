@@ -51,7 +51,7 @@ bool CapabilityReportingTask::handle_client_capability_query(ieee1905_1::CmduMes
                                                              const std::string &src_mac)
 {
     const auto mid = cmdu_rx.getMessageId();
-    LOG(DEBUG) << "Received CLIENT_CAPABILITY_QUERY_MESSAGE , mid=" << std::dec << mid;
+    LOG(DEBUG) << "Received CLIENT_CAPABILITY_QUERY_MESSAGE , mid=" << std::hex << mid;
 
     auto client_info_tlv_r = cmdu_rx.getClass<wfa_map::tlvClientInfo>();
     if (!client_info_tlv_r) {
@@ -124,7 +124,7 @@ bool CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
                                                          const std::string &src_mac)
 {
     const auto mid = cmdu_rx.getMessageId();
-    LOG(DEBUG) << "Received AP_CAPABILITY_QUERY_MESSAGE, mid=" << std::dec << mid;
+    LOG(DEBUG) << "Received AP_CAPABILITY_QUERY_MESSAGE, mid=" << std::hex << mid;
 
     if (!m_cmdu_tx.create(mid, ieee1905_1::eMessageType::AP_CAPABILITY_REPORT_MESSAGE)) {
         LOG(ERROR) << "cmdu creation of type AP_CAPABILITY_REPORT_MESSAGE, has failed";
