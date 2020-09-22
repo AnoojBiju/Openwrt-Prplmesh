@@ -404,13 +404,12 @@ run-certification-tests:
     - job: build-in-docker
     - job: build-for-axepoint
   tags:
-    - certs-tests
+    - certs-tests-isr
   timeout: 36h
   rules:
     - if: "$TESTS_TO_RUN"
 
 include:
-  - template: "Workflows/MergeRequest-Pipelines.gitlab-ci.yml"
   - local: "/ci/certification/generic.yml"
   - local: "/ci/certification/dummy.yml"
   - local: "/ci/certification/turris-omnia.yml"
