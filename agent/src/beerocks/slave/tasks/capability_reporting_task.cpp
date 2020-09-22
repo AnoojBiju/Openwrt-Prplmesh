@@ -49,7 +49,7 @@ bool CapabilityReportingTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx,
     return true;
 }
 
-bool CapabilityReportingTask::handle_client_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx,
+void CapabilityReportingTask::handle_client_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                              const std::string &src_mac)
 {
     const auto mid = cmdu_rx.getMessageId();
@@ -58,19 +58,19 @@ bool CapabilityReportingTask::handle_client_capability_query(ieee1905_1::CmduMes
     auto client_info_tlv_r = cmdu_rx.getClass<wfa_map::tlvClientInfo>();
     if (!client_info_tlv_r) {
         LOG(ERROR) << "getClass wfa_map::tlvClientInfo failed";
-        return false;
+        return;
     }
 
     // send CLIENT_CAPABILITY_REPORT_MESSAGE back to the controller
     if (!m_cmdu_tx.create(mid, ieee1905_1::eMessageType::CLIENT_CAPABILITY_REPORT_MESSAGE)) {
         LOG(ERROR) << "cmdu creation of type CLIENT_CAPABILITY_REPORT_MESSAGE, has failed";
-        return false;
+        return;
     }
 
     auto client_info_tlv_t = m_cmdu_tx.addClass<wfa_map::tlvClientInfo>();
     if (!client_info_tlv_t) {
         LOG(ERROR) << "addClass wfa_map::tlvClientInfo has failed";
-        return false;
+        return;
     }
     client_info_tlv_t->bssid()      = client_info_tlv_r->bssid();
     client_info_tlv_t->client_mac() = client_info_tlv_r->client_mac();
@@ -78,7 +78,7 @@ bool CapabilityReportingTask::handle_client_capability_query(ieee1905_1::CmduMes
     auto client_capability_report_tlv = m_cmdu_tx.addClass<wfa_map::tlvClientCapabilityReport>();
     if (!client_capability_report_tlv) {
         LOG(ERROR) << "addClass wfa_map::tlvClientCapabilityReport has failed";
-        return false;
+        return;
     }
 
     auto db = AgentDB::get();
@@ -101,13 +101,13 @@ bool CapabilityReportingTask::handle_client_capability_query(ieee1905_1::CmduMes
         auto error_code_tlv = m_cmdu_tx.addClass<wfa_map::tlvErrorCode>();
         if (!error_code_tlv) {
             LOG(ERROR) << "addClass wfa_map::tlvErrorCode has failed";
-            return false;
+            return;
         }
         error_code_tlv->reason_code() =
             wfa_map::tlvErrorCode::STA_NOT_ASSOCIATED_WITH_ANY_BSS_OPERATED_BY_THE_AGENT;
         error_code_tlv->sta_mac() = client_info_tlv_r->client_mac();
-        return m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac,
-                                             tlvf::mac_to_string(db->bridge.mac));
+        m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, tlvf::mac_to_string(db->bridge.mac));
+        return;
     }
 
     client_capability_report_tlv->result_code() = wfa_map::tlvClientCapabilityReport::SUCCESS;
@@ -119,10 +119,10 @@ bool CapabilityReportingTask::handle_client_capability_query(ieee1905_1::CmduMes
                                                         client_info.association_frame_length);
 
     LOG(DEBUG) << "Send a CLIENT_CAPABILITY_REPORT_MESSAGE back to controller";
-    return m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, tlvf::mac_to_string(db->bridge.mac));
+    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, tlvf::mac_to_string(db->bridge.mac));
 }
 
-bool CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx,
+void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                          const std::string &src_mac)
 {
     const auto mid = cmdu_rx.getMessageId();
@@ -130,13 +130,13 @@ bool CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
 
     if (!m_cmdu_tx.create(mid, ieee1905_1::eMessageType::AP_CAPABILITY_REPORT_MESSAGE)) {
         LOG(ERROR) << "cmdu creation of type AP_CAPABILITY_REPORT_MESSAGE, has failed";
-        return false;
+        return;
     }
 
     auto ap_capability_tlv = m_cmdu_tx.addClass<wfa_map::tlvApCapability>();
     if (!ap_capability_tlv) {
         LOG(ERROR) << "addClass wfa_map::tlvApCapability has failed";
-        return false;
+        return;
     }
 
     auto db = AgentDB::get();
@@ -155,19 +155,19 @@ bool CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
 
         if (!tlvf_utils::add_ap_radio_basic_capabilities(m_cmdu_tx, radio_mac,
                                                          radio->front.preferred_channels)) {
-            return false;
+            return;
         }
 
         if (!add_ap_ht_capabilities(radio->front.iface_name)) {
-            return false;
+            return;
         }
 
         if (!add_ap_vht_capabilities(radio->front.iface_name)) {
-            return false;
+            return;
         }
 
         if (!add_ap_he_capabilities(radio->front.iface_name)) {
-            return false;
+            return;
         }
     }
 
@@ -180,7 +180,7 @@ bool CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
     auto channel_scan_capabilities_tlv = m_cmdu_tx.addClass<wfa_map::tlvChannelScanCapabilities>();
     if (!channel_scan_capabilities_tlv) {
         LOG(ERROR) << "Error creating TLV_CHANNEL_SCAN_CAPABILITIES";
-        return false;
+        return;
     }
 
     // Add Channel Scan Capabilities
@@ -194,7 +194,7 @@ bool CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
     auto profile2_ap_capability_tlv = m_cmdu_tx.addClass<wfa_map::tlvProfile2ApCapability>();
     if (!profile2_ap_capability_tlv) {
         LOG(ERROR) << "Error creating TLV_PROFILE2_AP_CAPABILITIES";
-        return false;
+        return;
     }
     // set kilobytes (KiB)
     profile2_ap_capability_tlv->capabilities_bit_field().byte_counter_units = 1;
@@ -205,12 +205,12 @@ bool CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
         m_cmdu_tx.addClass<wfa_map::tlvProfile2MetricCollectionInterval>();
     if (!profile2_meteric_collection_interval_tlv) {
         LOG(ERROR) << "error creating TLV_PROFILE2_METERIC_COLLECTION_INTERVAL";
-        return false;
+        return;
     }
 
     // send the constructed report
     LOG(DEBUG) << "Sending AP_CAPABILITY_REPORT_MESSAGE , mid: " << std::hex << (int)mid;
-    return m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, tlvf::mac_to_string(db->bridge.mac));
+    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, tlvf::mac_to_string(db->bridge.mac));
 }
 
 bool CapabilityReportingTask::add_ap_ht_capabilities(const std::string &iface_name)
