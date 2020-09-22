@@ -9,9 +9,12 @@
 #ifndef NBAPI_H
 #define NBAPI_H
 
+// prplmesh
+#include <bcl/beerocks_event_loop.h>
 #include <easylogging++.h>
 #include <mapf/common/utils.h>
 
+// Ambiorix
 #include <amxc/amxc.h>
 #include <amxp/amxp.h>
 
@@ -28,6 +31,7 @@
 #include <amxo/amxo.h>
 #include <amxo/amxo_save.h>
 
+namespace beerocks {
 namespace nbapi {
 
 /**
@@ -37,7 +41,7 @@ namespace nbapi {
 class Ambiorix {
 
 public:
-    Ambiorix();
+    explicit Ambiorix(std::shared_ptr<EventLoop> event_loop);
 
     /**
      * @brief Ambiorix destructor removes: bus connection, data model, parser and all data
@@ -68,11 +72,44 @@ private:
      */
     bool load_datamodel(const std::string &datamodel_path);
 
+    /**
+     * @brief Initialize event loop for ambiorix.
+     *
+     * @return True on success and false otherwise.
+     */
+    bool init_event_loop();
+
+    /**
+     * @brief Initialize ambiorix signal event loop.
+     *
+     * @return True on success and false otherwise.
+     */
+    bool init_signal_loop();
+
+    /**
+     * @brief Remove event loop for ambiorix.
+     *
+     * @return True on success and false otherwise.
+     */
+    bool remove_event_loop();
+
+    /**
+     * @brief Remove ambiorix signal event loop.
+     *
+     * @return True on success and false otherwise.
+     */
+    bool remove_signal_loop();
+
     // Variables
     amxb_bus_ctx_t *m_bus_ctx = nullptr;
     amxd_dm_t m_datamodel;
     amxo_parser_t m_parser;
+    /**
+     * Application event loop to use by the broker to wait for I/O events.
+     */
+    std::shared_ptr<EventLoop> m_event_loop;
 };
 
 } // namespace nbapi
+} // namespace beerocks
 #endif // NBAPI_H
