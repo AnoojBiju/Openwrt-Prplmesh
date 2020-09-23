@@ -22,8 +22,11 @@ std::string get_install_path()
     char path_install_file[PATH_MAX];
     std::string path_install_dir;
 
-    if (readlink("/proc/self/exe", path_install_file, sizeof(path_install_file)) == -1) {
+    auto len = readlink("/proc/self/exe", path_install_file, sizeof(path_install_file));
+    if (len == -1) {
         return std::string();
+    } else {
+        path_install_file[len] = '\0';
     }
     path_install_dir = path_install_file;
     auto end_search  = path_install_dir.rfind("/");
@@ -34,7 +37,9 @@ std::string get_install_path()
     if (end_search == std::string::npos) {
         return std::string();
     }
-    return path_install_dir.substr(0, end_search + 1);
+    auto path = path_install_dir.substr(0, end_search + 1);
+    LOG(WARNING) << "get_install_path() is: " << path;
+    return path;
 }
 
 std::string dump_buffer(uint8_t *buffer, size_t len)
