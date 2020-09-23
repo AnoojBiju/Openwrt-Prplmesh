@@ -50,14 +50,14 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
     LOG(DEBUG) << "Forwarding CHANNEL_SELECTION_REQUEST to son_slave, mid=" << std::hex << mid;
 
     // Clear previous request, if any
-    m_btl_ctx.m_expected_channel_selection.requests.clear();
-    m_btl_ctx.m_expected_channel_selection.responses.clear();
+    m_expected_channel_selection.requests.clear();
+    m_expected_channel_selection.responses.clear();
 
-    m_btl_ctx.m_expected_channel_selection.mid = mid;
+    m_expected_channel_selection.mid = mid;
 
     // Save radio mac for each connected radio
     for (auto &socket : m_btl_ctx.slaves_sockets) {
-        m_btl_ctx.m_expected_channel_selection.requests.emplace_back(socket->radio_mac);
+        m_expected_channel_selection.requests.emplace_back(socket->radio_mac);
     }
 }
 
@@ -67,7 +67,7 @@ void ChannelSelectionTask::handle_slave_channel_selection_response(ieee1905_1::C
     const auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Received CHANNEL_SELECTION_RESPONSE message, mid=" << std::hex << mid;
 
-    if (mid != m_btl_ctx.m_expected_channel_selection.mid) {
+    if (mid != m_expected_channel_selection.mid) {
         return;
     }
 
@@ -80,19 +80,19 @@ void ChannelSelectionTask::handle_slave_channel_selection_response(ieee1905_1::C
 
     auto db = AgentDB::get();
 
-    m_btl_ctx.m_expected_channel_selection.responses.push_back(
+    m_expected_channel_selection.responses.push_back(
         {channel_selection_response->radio_uid(), channel_selection_response->response_code()});
 
     // Remove an entry from the processed query
-    m_btl_ctx.m_expected_channel_selection.requests.erase(
-        std::remove_if(m_btl_ctx.m_expected_channel_selection.requests.begin(),
-                       m_btl_ctx.m_expected_channel_selection.requests.end(),
+    m_expected_channel_selection.requests.erase(
+        std::remove_if(m_expected_channel_selection.requests.begin(),
+                       m_expected_channel_selection.requests.end(),
                        [&](sMacAddr const &query) {
                            return channel_selection_response->radio_uid() == query;
                        }),
-        m_btl_ctx.m_expected_channel_selection.requests.end());
+        m_expected_channel_selection.requests.end());
 
-    if (!m_btl_ctx.m_expected_channel_selection.requests.empty()) {
+    if (!m_expected_channel_selection.requests.empty()) {
         return;
     }
 
@@ -105,7 +105,7 @@ void ChannelSelectionTask::handle_slave_channel_selection_response(ieee1905_1::C
         return;
     }
 
-    for (const auto &response : m_btl_ctx.m_expected_channel_selection.responses) {
+    for (const auto &response : m_expected_channel_selection.responses) {
         auto channel_selection_response_tlv =
             m_cmdu_tx.addClass<wfa_map::tlvChannelSelectionResponse>();
 
@@ -119,7 +119,7 @@ void ChannelSelectionTask::handle_slave_channel_selection_response(ieee1905_1::C
     }
 
     // Clear the m_expected_channel_selection.responses vector after preparing response to the controller
-    m_btl_ctx.m_expected_channel_selection.responses.clear();
+    m_expected_channel_selection.responses.clear();
 
     LOG(DEBUG) << "Sending CHANNEL_SELECTION_RESPONSE_MESSAGE, mid=" << std::hex << mid;
     m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(db->controller_info.bridge_mac),
