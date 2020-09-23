@@ -140,8 +140,6 @@ private:
     bool handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac);
     bool handle_slave_ap_metrics_response(ieee1905_1::CmduMessageRx &cmdu_rx,
                                           const std::string &src_mac);
-    bool handle_channel_selection_request(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                          const std::string &src_mac);
     bool handle_slave_channel_selection_response(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                  const std::string &src_mac);
     bool handle_backhaul_steering_request(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -188,8 +186,10 @@ private:
     std::set<std::string> pending_slave_ifaces;
     std::set<std::string> pending_slave_sta_ifaces;
 
+public:
     std::list<std::shared_ptr<sRadioInfo>> slaves_sockets;
 
+private:
     // TODO: Temporary change, will be removed on Unified Agent PPM-351.
     // Key: front radio iface name, Value: sRadioInfo object
     std::unordered_map<std::string, std::shared_ptr<sRadioInfo>> m_disabled_slave_sockets;
@@ -473,8 +473,10 @@ private:
         std::vector<sChannelSelectionResponse> responses;
     };
 
+public:
     sExpectedChannelSelection m_expected_channel_selection;
 
+private:
     bool m_backhaul_sta_steering_enable = false;
 
     /*

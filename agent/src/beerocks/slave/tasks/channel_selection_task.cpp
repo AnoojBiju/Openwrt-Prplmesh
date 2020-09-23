@@ -21,12 +21,39 @@ bool ChannelSelectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const
                                        std::shared_ptr<beerocks_header> beerocks_header)
 {
     switch (cmdu_rx.getMessageType()) {
+    case ieee1905_1::eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE: {
+        handle_channel_selection_request(cmdu_rx, src_mac);
+        // According to the WFA documentation, each radio should send channel selection
+        // response even if that radio was not marked in the request. After filling radio
+        // mac vector need to do forwarding for the channel selection request to all slaves.
+        // In this scope return false forwards the message to the son_slave.
+        return false;
+    }
     default: {
         // Message was not handled, therefore return false.
         return false;
     }
     }
     return true;
+}
+
+void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                                            const sMacAddr &src_mac)
+{
+    const auto mid = cmdu_rx.getMessageId();
+
+    LOG(DEBUG) << "Forwarding CHANNEL_SELECTION_REQUEST to son_slave, mid=" << std::hex << mid;
+
+    // Clear previous request, if any
+    m_btl_ctx.m_expected_channel_selection.requests.clear();
+    m_btl_ctx.m_expected_channel_selection.responses.clear();
+
+    m_btl_ctx.m_expected_channel_selection.mid = mid;
+
+    // Save radio mac for each connected radio
+    for (auto &socket : m_btl_ctx.slaves_sockets) {
+        m_btl_ctx.m_expected_channel_selection.requests.emplace_back(socket->radio_mac);
+    }
 }
 
 } // namespace beerocks
