@@ -1,0 +1,28 @@
+@startuml
+interface Ambiorix {
+	+{abstract} ~Ambiorix()
+	+{abstract} bool init()
+	+{abstract} bool set()
+	+{abstract} void stop()
+}
+
+class AmbiorixImpl {
+	-amxb_bus_ctx_t m_bus_ctx
+	-amxd_dm_t m_datamodel
+	-amxo_parser_t m_parser
+	-shared_ptr<EventLoop> m_event_loop
+	-load_datamodel()
+	-init_event_loop()
+	-find_object()
+}
+
+class AmbiorixDummy {
+	-amxb_bus_ctx_t m_bus_ctx
+	-amxd_dm_t m_datamodel
+	-amxo_parser_t m_parser
+	-shared_ptr<EventLoop> m_event_loop
+}
+
+Ambiorix <|.. AmbiorixImpl
+Ambiorix <|.. AmbiorixDummy
+@enduml
