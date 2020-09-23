@@ -19,14 +19,16 @@ namespace utils {
 
 std::string get_install_path()
 {
-    char path_install_file[PATH_MAX];
+    char path_install_file[PATH_MAX + 1];
     std::string path_install_dir;
 
-    if (readlink("/proc/self/exe", path_install_file, sizeof(path_install_file)) == -1) {
+    auto len = readlink("/proc/self/exe", path_install_file, sizeof(path_install_file) - 1);
+    if (len == -1) {
         return std::string();
     }
-    path_install_dir = path_install_file;
-    auto end_search  = path_install_dir.rfind("/");
+    path_install_file[len] = '\0';
+    path_install_dir       = path_install_file;
+    auto end_search        = path_install_dir.rfind("/");
     if (end_search == std::string::npos) {
         return std::string();
     }
