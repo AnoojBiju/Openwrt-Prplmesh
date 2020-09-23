@@ -34,7 +34,9 @@ std::string get_install_path()
     if (end_search == std::string::npos) {
         return std::string();
     }
-    return path_install_dir.substr(0, end_search + 1);
+    auto path = path_install_dir.substr(0, end_search + 1);
+    LOG(WARNING) << "get_install_path() is: " << path;
+    return path;
 }
 
 std::string dump_buffer(uint8_t *buffer, size_t len)
