@@ -3750,9 +3750,11 @@ bool backhaul_manager::handle_channel_selection_request(ieee1905_1::CmduMessageR
 
     m_expected_channel_selection.mid = mid;
 
+    auto db = AgentDB::get();
+
     // Save radio mac for each connected radio
-    for (auto &socket : slaves_sockets) {
-        m_expected_channel_selection.requests.emplace_back(socket->radio_mac);
+    for (const auto &radio : db->get_radios_list()) {
+        m_expected_channel_selection.requests.emplace_back(radio->front.iface_mac);
     }
 
     // According to the WFA documentation, each radio should send channel selection
