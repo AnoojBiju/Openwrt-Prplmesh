@@ -89,6 +89,7 @@
 #include <tlvf/wfa_map/tlvClientInfo.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
+#include <tlvf/wfa_map/tlvProfile2UnsuccessfulAssociationPolicy.h>
 #include <tlvf/wfa_map/tlvSearchedService.h>
 #include <tlvf/wfa_map/tlvStaMacAddressType.h>
 #include <tlvf/wfa_map/tlvSteeringPolicy.h>
@@ -2136,8 +2137,6 @@ bool backhaul_manager::handle_multi_ap_policy_config_request(ieee1905_1::CmduMes
         // For the time being, agent doesn't do steering so steering policy is ignored.
     }
 
-    auto db = AgentDB::get();
-
     auto metric_reporting_policy_tlv = cmdu_rx.getClass<wfa_map::tlvMetricReportingPolicy>();
     if (metric_reporting_policy_tlv) {
         /**
@@ -2185,12 +2184,35 @@ bool backhaul_manager::handle_multi_ap_policy_config_request(ieee1905_1::CmduMes
         ap_metrics_reporting_info.last_reporting_time_point = std::chrono::steady_clock::now();
     }
 
+    const auto unsuccessful_association_policy_tlv =
+        cmdu_rx.getClass<wfa_map::tlvProfile2UnsuccessfulAssociationPolicy>();
+    if (unsuccessful_association_policy_tlv) {
+        unsuccessful_association_policy.report_unsuccessful_association =
+            unsuccessful_association_policy_tlv->report_unsuccessful_associations().report;
+        unsuccessful_association_policy.maximum_reporting_rate =
+            unsuccessful_association_policy_tlv->maximum_reporting_rate();
+
+        // Reset internal counters
+        unsuccessful_association_policy.number_of_reports_in_last_minute = 0;
+        unsuccessful_association_policy.last_reporting_time_point =
+            std::chrono::steady_clock::time_point::min(); // way in the past
+
+        LOG(DEBUG) << "unsuccessul association policy: report: "
+                   << unsuccessful_association_policy.report_unsuccessful_association
+                   << "; maximum reporting rate: "
+                   << unsuccessful_association_policy.maximum_reporting_rate;
+    } else {
+        LOG(DEBUG) << "no unsuccessul association policy tlv in the request";
+    }
+
+
     // send ACK_MESSAGE back to the controller
     if (!cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE)) {
         LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
         return false;
     }
 
+    auto db = AgentDB::get();
     return send_cmdu_to_broker(cmdu_tx, src_mac, tlvf::mac_to_string(db->bridge.mac));
 }
 
@@ -3755,6 +3777,57 @@ bool backhaul_manager::add_link_metrics(const sMacAddr &reporter_al_mac,
     }
 
     return true;
+}
+
+bool backhaul_manager::handle_slave_failed_connection_message(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                                              const std::string &src_mac)
+{
+    if (!unsuccessful_association_policy.report_unsuccessful_association) {
+        // do nothing, no need to report
+        return true;
+    }
+
+    // Calculate if reporting is needed
+    auto now            = std::chrono::steady_clock::now();
+    auto elapsed_time_m = std::chrono::duration_cast<std::chrono::minutes>(
+                              now - unsuccessful_association_policy.last_reporting_time_point)
+                              .count();
+
+    // start the counting from begining if
+    // the last report was more then a minute ago
+    // also sets the last reporting time to now
+    if (elapsed_time_m > 1) {
+        unsuccessful_association_policy.number_of_reports_in_last_minute = 0;
+        unsuccessful_association_policy.last_reporting_time_point        = now;
+    }
+
+    if (unsuccessful_association_policy.number_of_reports_in_last_minute >
+        unsuccessful_association_policy.maximum_reporting_rate) {
+        // we exceeded the maximum reports allowed
+        // do nothing, no need to report
+        LOG(WARNING)
+            << "received failed connection, but exceeded the maximum number of reports in a minute:"
+            << unsuccessful_association_policy.maximum_reporting_rate;
+        return true;
+    }
+
+    // report
+    ++unsuccessful_association_policy.number_of_reports_in_last_minute;
+
+    auto uds_header = message_com::get_uds_header(cmdu_rx);
+    if (!uds_header) {
+        LOG(ERROR) << "uds_header==nullptr";
+        return false;
+    }
+
+    const auto mid = cmdu_rx.getMessageId();
+    LOG(DEBUG) << "Sending FAILED_CONNECTION_MESSAGE, mid=" << std::hex << int(mid);
+
+    auto db = AgentDB::get();
+    cmdu_rx.swap();
+    return send_cmdu_to_broker(cmdu_rx, tlvf::mac_to_string(db->controller_info.bridge_mac),
+                               tlvf::mac_to_string(db->bridge.mac), uds_header->length,
+                               db->bridge.iface_name);
 }
 
 bool backhaul_manager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx &cmdu_rx,
