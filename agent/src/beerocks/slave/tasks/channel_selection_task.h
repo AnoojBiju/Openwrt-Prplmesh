@@ -26,6 +26,9 @@ public:
                      std::shared_ptr<beerocks_header> beerocks_header) override;
 
 private:
+    void handle_channel_selection_request(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                          const sMacAddr &src_mac);
+
     backhaul_manager &m_btl_ctx;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
 };
