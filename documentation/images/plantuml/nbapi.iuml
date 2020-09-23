@@ -1,0 +1,39 @@
+@startuml
+interface Ambiorix {
+	+{abstract} bool set()
+	+{abstract} void stop()
+	+{abstract} add_instance()
+	+{abstract} remove_instance()
+	+{abstract} prepare_transaction()
+	+{abstract} apply_transaction()
+}
+
+class AmbiorixImpl {
+	__ Private data __
+	-amxb_bus_ctx_t m_bus_ctx
+	-amxd_dm_t m_datamodel
+	-amxo_parser_t m_parser
+	-shared_ptr<EventLoop> m_event_loop
+	__ Public methods __
+	+Ambiorix()
+        +~Ambiorix()
+	+init()
+	__ Private methods __
+	-load_datamodel()
+	-init_event_loop()
+	-remove_event_loop()
+	-init_signal_loop()
+	-remove_event_loop()
+	-remove_signal_loop()
+	-*find_object()
+	-*prepare_transaction()
+	-apply_transaction()
+}
+
+class AmbiorixDummy {
+
+}
+
+Ambiorix <|.. AmbiorixImpl
+Ambiorix <|.. AmbiorixDummy
+@enduml
