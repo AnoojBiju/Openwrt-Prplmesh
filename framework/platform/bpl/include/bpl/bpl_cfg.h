@@ -97,7 +97,7 @@ constexpr int DEFAULT_CLIENT_ROAMING           = 1;
 constexpr int DEFAULT_PERSISTENT_DB = 0;
 // by default the commit_changes_interval is set to 10000, this is used hand in hand with
 // the persistent_data_commit_task which eventually triggers bpl::uci_commit
-constexpr int DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE = 10000;
+constexpr int DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE_MS = 10000;
 // the DB of clients is limited in size to prevent high memory consumption
 // this is configurable to enable flexibility and support for low-memory platforms
 // by default, the number of clients's configuration to be cached is limited to 256
