@@ -2091,6 +2091,9 @@ bool backhaul_manager::handle_slave_1905_1_message(ieee1905_1::CmduMessageRx &cm
     case ieee1905_1::eMessageType::AP_METRICS_RESPONSE_MESSAGE: {
         return handle_slave_ap_metrics_response(cmdu_rx, src_mac);
     }
+    case ieee1905_1::eMessageType::FAILED_CONNECTION_MESSAGE: {
+        return handle_slave_failed_connection_message(cmdu_rx, src_mac);
+    }
     default: {
         bool handled = m_task_pool.handle_cmdu(cmdu_rx, tlvf::mac_from_string(src_mac));
         if (!handled) {
@@ -2187,8 +2190,11 @@ bool backhaul_manager::handle_multi_ap_policy_config_request(ieee1905_1::CmduMes
     const auto unsuccessful_association_policy_tlv =
         cmdu_rx.getClass<wfa_map::tlvProfile2UnsuccessfulAssociationPolicy>();
     if (unsuccessful_association_policy_tlv) {
+        // Set enable/disable
         unsuccessful_association_policy.report_unsuccessful_association =
             unsuccessful_association_policy_tlv->report_unsuccessful_associations().report;
+
+        // Set reporting rate
         unsuccessful_association_policy.maximum_reporting_rate =
             unsuccessful_association_policy_tlv->maximum_reporting_rate();
 
@@ -2204,7 +2210,6 @@ bool backhaul_manager::handle_multi_ap_policy_config_request(ieee1905_1::CmduMes
     } else {
         LOG(DEBUG) << "no unsuccessul association policy tlv in the request";
     }
-
 
     // send ACK_MESSAGE back to the controller
     if (!cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE)) {
@@ -3788,11 +3793,11 @@ bool backhaul_manager::handle_slave_failed_connection_message(ieee1905_1::CmduMe
     }
 
     // Calculate if reporting is needed
-    auto now            = std::chrono::steady_clock::now();
+    auto now           = std::chrono::steady_clock::now();
     auto elapsed_time_m = std::chrono::duration_cast<std::chrono::minutes>(
-                              now - unsuccessful_association_policy.last_reporting_time_point)
-                              .count();
-
+                             now - unsuccessful_association_policy.last_reporting_time_point)
+                             .count();
+   
     // start the counting from begining if
     // the last report was more then a minute ago
     // also sets the last reporting time to now
