@@ -37,7 +37,6 @@ private:
         START = 0,
         CHECK_FOR_CHANGES,
         COMMIT_THE_CHANGES,
-        FINISH,
     } m_state = START;
 };
 
