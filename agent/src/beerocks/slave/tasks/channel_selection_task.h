@@ -12,6 +12,7 @@
 #include "task.h"
 
 #include <tlvf/CmduMessageTx.h>
+#include <tlvf/wfa_map/tlvChannelSelectionResponse.h>
 
 namespace beerocks {
 
@@ -30,6 +31,19 @@ private:
                                           const sMacAddr &src_mac);
     void handle_slave_channel_selection_response(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                  const sMacAddr &src_mac);
+
+    struct sChannelSelectionResponse {
+        sMacAddr radio_mac;
+        wfa_map::tlvChannelSelectionResponse::eResponseCode response_code;
+    };
+
+    struct sExpectedChannelSelection {
+        uint16_t mid;
+        std::vector<sMacAddr> requests;
+        std::vector<sChannelSelectionResponse> responses;
+    };
+
+    sExpectedChannelSelection m_expected_channel_selection;
 
     backhaul_manager &m_btl_ctx;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
