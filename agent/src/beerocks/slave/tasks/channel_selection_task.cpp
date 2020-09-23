@@ -30,6 +30,10 @@ bool ChannelSelectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const
         // In this scope return false forwards the message to the son_slave.
         return false;
     }
+    case ieee1905_1::eMessageType::CHANNEL_SELECTION_RESPONSE_MESSAGE: {
+        handle_slave_channel_selection_response(cmdu_rx, src_mac);
+        break;
+    }
     default: {
         // Message was not handled, therefore return false.
         return false;
@@ -58,6 +62,71 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
         m_btl_ctx.m_expected_channel_selection.requests.emplace_back(radio->front.iface_mac);
     }
 
+}
+
+bool ChannelSelectionTask::handle_slave_channel_selection_response(
+    ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac)
+{
+    const auto mid = cmdu_rx.getMessageId();
+    LOG(DEBUG) << "Received CHANNEL_SELECTION_RESPONSE message, mid=" << std::hex << mid;
+
+    if (mid != m_btl_ctx.m_expected_channel_selection.mid) {
+        return false;
+    }
+
+    auto channel_selection_response = cmdu_rx.getClass<wfa_map::tlvChannelSelectionResponse>();
+    if (!channel_selection_response) {
+        LOG(ERROR) << "Failed cmdu_rx.getClass<wfa_map::tlvChannelSelectionResponse>(), mid="
+                   << std::hex << mid;
+        return false;
+    }
+
+    auto db = AgentDB::get();
+
+    m_btl_ctx.m_expected_channel_selection.responses.push_back(
+        {channel_selection_response->radio_uid(), channel_selection_response->response_code()});
+
+    // Remove an entry from the processed query
+    m_btl_ctx.m_expected_channel_selection.requests.erase(
+        std::remove_if(m_btl_ctx.m_expected_channel_selection.requests.begin(),
+                       m_btl_ctx.m_expected_channel_selection.requests.end(),
+                       [&](sMacAddr const &query) {
+                           return channel_selection_response->radio_uid() == query;
+                       }),
+        m_btl_ctx.m_expected_channel_selection.requests.end());
+
+    if (!m_btl_ctx.m_expected_channel_selection.requests.empty()) {
+        return true;
+    }
+
+    // We received all responses - prepare and send response message to the controller
+    auto cmdu_header =
+        m_cmdu_tx.create(mid, ieee1905_1::eMessageType::CHANNEL_SELECTION_RESPONSE_MESSAGE);
+
+    if (!cmdu_header) {
+        LOG(ERROR) << "Failed building IEEE1905 CHANNEL_SELECTION_RESPONSE_MESSAGE";
+        return false;
+    }
+
+    for (const auto &response : m_btl_ctx.m_expected_channel_selection.responses) {
+        auto channel_selection_response_tlv =
+            m_cmdu_tx.addClass<wfa_map::tlvChannelSelectionResponse>();
+
+        if (!channel_selection_response_tlv) {
+            LOG(ERROR) << "Failed addClass<wfa_map::tlvChannelSelectionResponse>";
+            continue;
+        }
+
+        channel_selection_response_tlv->radio_uid()     = response.radio_mac;
+        channel_selection_response_tlv->response_code() = response.response_code;
+    }
+
+    // Clear the m_expected_channel_selection.responses vector after preparing response to the controller
+    m_btl_ctx.m_expected_channel_selection.responses.clear();
+
+    LOG(DEBUG) << "Sending CHANNEL_SELECTION_RESPONSE_MESSAGE, mid=" << std::hex << mid;
+    return m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(db->controller_info.bridge_mac),
+                                         tlvf::mac_to_string(db->bridge.mac));
 }
 
 } // namespace beerocks

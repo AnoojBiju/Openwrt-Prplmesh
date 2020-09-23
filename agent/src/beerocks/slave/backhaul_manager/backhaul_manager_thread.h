@@ -140,8 +140,6 @@ private:
     bool handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac);
     bool handle_slave_ap_metrics_response(ieee1905_1::CmduMessageRx &cmdu_rx,
                                           const std::string &src_mac);
-    bool handle_slave_channel_selection_response(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                                 const std::string &src_mac);
     bool handle_backhaul_steering_request(ieee1905_1::CmduMessageRx &cmdu_rx,
                                           const std::string &src_mac);
 
