@@ -48,6 +48,7 @@
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
+#include <tlvf/wfa_map/tlvProfile2UnsuccessfulAssociationPolicy.h>
 #include <tlvf/wfa_map/tlvRadioOperationRestriction.h>
 #include <tlvf/wfa_map/tlvSearchedService.h>
 #include <tlvf/wfa_map/tlvStaMacAddressType.h>
@@ -258,6 +259,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv()
     }
     case (194): {
         return msg.addClass<wfa_map::tlvTunnelledData>();
+    }
+    case (196): {
+        return msg.addClass<wfa_map::tlvProfile2UnsuccessfulAssociationPolicy>();
     }
     default: {
         LOG(DEBUG) << "Unknown TLV type: " << tlv_type;
