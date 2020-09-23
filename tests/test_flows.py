@@ -1574,7 +1574,6 @@ class TestFlows:
         self.mismatch_psk('yes')
 
 
-
 if __name__ == '__main__':
     t = TestFlows()
 
