@@ -204,11 +204,15 @@ bool Ambiorix::remove_signal_loop()
     return true;
 }
 
-Ambiorix::~Ambiorix()
+void Ambiorix::stop()
 {
     remove_event_loop();
     remove_signal_loop();
     amxb_free(&m_bus_ctx);
+}
+
+Ambiorix::~Ambiorix()
+{
     amxd_dm_clean(&m_datamodel);
     amxo_parser_clean(&m_parser);
     amxb_be_remove_all();

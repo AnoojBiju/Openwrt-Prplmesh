@@ -61,6 +61,13 @@ public:
     bool init(const std::string &amxb_backend, const std::string &bus_uri,
               const std::string &datamodel_path);
 
+    /**
+     * @brief Ambiorix stop method removes: bus connection, event handlers for ambiorix file
+     * descriptor and ambiorix signals file descriptor.
+     *
+     */
+    void stop();
+
 private:
     // Methods
 
