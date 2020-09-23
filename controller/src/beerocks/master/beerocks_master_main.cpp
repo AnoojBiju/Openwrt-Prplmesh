@@ -7,12 +7,14 @@
  */
 
 #include <bcl/beerocks_config_file.h>
+#include <bcl/beerocks_event_loop_impl.h>
 #include <bcl/beerocks_logging.h>
 #include <bcl/beerocks_version.h>
 #include <bcl/network/network_utils.h>
 #include <bpl/bpl_cfg.h>
-#include <easylogging++.h>
 #include <mapf/common/utils.h>
+
+#include <easylogging++.h>
 
 #include "db/db.h"
 #include "son_master_thread.h"
@@ -379,6 +381,10 @@ int main(int argc, char *argv[])
     son::db::sDbMasterConfig master_conf;
     fill_master_config(master_conf, beerocks_master_conf);
 
+    // Create application event loop to wait for blocking I/O operations.
+    auto event_loop = std::make_shared<beerocks::EventLoopImpl>();
+    LOG_IF(!event_loop, FATAL) << "Unable to create event loop!";
+
     std::string master_uds = beerocks_master_conf.temp_path + std::string(BEEROCKS_MASTER_UDS);
     beerocks::net::network_utils::iface_info bridge_info;
     auto &bridge_iface = beerocks_slave_conf.bridge_iface;
@@ -395,7 +401,7 @@ int main(int argc, char *argv[])
 
     son::db master_db(master_conf, logger, bridge_info.mac, amb_dm_obj);
     // diagnostics_thread diagnostics(master_db);
-    son::master_thread son_master(master_uds, master_db);
+    son::master_thread son_master(master_uds, master_db, event_loop);
 
     if (!son_master.init()) {
         LOG(ERROR) << "son_master.init() ";
