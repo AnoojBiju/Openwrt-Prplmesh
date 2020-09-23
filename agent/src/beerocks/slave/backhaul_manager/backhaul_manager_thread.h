@@ -185,6 +185,8 @@ private:
 
     std::list<std::shared_ptr<sRadioInfo>> slaves_sockets;
 
+    std::list<std::shared_ptr<sRadioInfo>> m_slaves_sockets_to_finalize;
+
     // TODO: Temporary change, will be removed on Unified Agent PPM-351.
     // Key: front radio iface name, Value: sRadioInfo object
     std::unordered_map<std::string, std::shared_ptr<sRadioInfo>> m_disabled_slave_sockets;
