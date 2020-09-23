@@ -38,6 +38,25 @@ static std::string nl80211_security_val(WiFiSec sec)
     }
 }
 
+static sta_wlan_hal::Event nl80211_to_bwl_event(const std::string &opcode)
+{
+    if (opcode == "CTRL-EVENT-CONNECTED") {
+        return sta_wlan_hal::Event::Connected;
+    } else if (opcode == "CTRL-EVENT-DISCONNECTED") {
+        return sta_wlan_hal::Event::Disconnected;
+    } else if (opcode == "CTRL-EVENT-TERMINATING") {
+        return sta_wlan_hal::Event::Terminating;
+    } else if (opcode == "CTRL-EVENT-SCAN-RESULTS") {
+        return sta_wlan_hal::Event::ScanResults;
+    } else if (opcode == "CTRL-EVENT-CHANNEL-SWITCH") {
+        return sta_wlan_hal::Event::ChannelSwitch;
+    } else if (opcode == "UNCONNECTED-STA-RSSI") {
+        return sta_wlan_hal::Event::STA_Unassoc_RSSI;
+    }
+
+    return sta_wlan_hal::Event::Invalid;
+}
+
 sta_wlan_hal_nl80211::sta_wlan_hal_nl80211(const std::string &iface_name, hal_event_cb_t callback,
                                            const bwl::hal_conf_t &hal_conf)
     : base_wlan_hal(bwl::HALType::Station, iface_name, IfaceType::Intel, callback, hal_conf),
@@ -49,7 +68,16 @@ sta_wlan_hal_nl80211::~sta_wlan_hal_nl80211() { sta_wlan_hal_nl80211::detach(); 
 
 bool sta_wlan_hal_nl80211::detach() { return true; }
 
-bool sta_wlan_hal_nl80211::start_wps_pbc() { return true; }
+bool sta_wlan_hal_nl80211::start_wps_pbc()
+{
+    LOG(DEBUG) << "Initiating wps_pbc on interface: " << get_iface_name();
+
+    if (!wpa_ctrl_send_msg("WPS_PBC multi_ap=1")) {
+        LOG(ERROR) << "start_wps_pbc - wpa_ctrl_send_msg failed for " << get_iface_name();
+        return false;
+    }
+    return true;
+}
 
 bool sta_wlan_hal_nl80211::initiate_scan() { return true; }
 
@@ -224,7 +252,43 @@ std::string sta_wlan_hal_nl80211::get_ssid() { return m_active_ssid; }
 
 std::string sta_wlan_hal_nl80211::get_bssid() { return m_active_bssid; }
 
-bool sta_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj) { return true; }
+bool sta_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
+{
+    auto opcode = parsed_obj["_opcode"];
+    LOG(TRACE) << __func__ << " " << get_iface_name() << " - opcode: |" << opcode << "|";
+
+    auto event = nl80211_to_bwl_event(opcode);
+
+    switch (event) {
+    // Client Connected
+    case Event::Connected: {
+
+        ConnectionStatus connection_status;
+        if (!read_status(connection_status)) {
+            LOG(ERROR) << "Failed reading connection status for iface: " << get_iface_name();
+            return false;
+        }
+
+        LOG(DEBUG) << get_iface_name() << " - Connected: bssid = " << connection_status.bssid
+                   << ", freq = " << connection_status.freq;
+
+        update_status(connection_status);
+
+        // Forward the event
+        event_queue_push(event);
+
+    } break;
+
+    // Gracefully ignore unhandled events
+    // TODO: Should be changed to an error once we handle hostapd all expected events
+    default:
+        LOG(WARNING) << "Unhandled event received: " << opcode;
+        return true;
+        break;
+    }
+
+    return true;
+}
 
 bool sta_wlan_hal_nl80211::update_status()
 {

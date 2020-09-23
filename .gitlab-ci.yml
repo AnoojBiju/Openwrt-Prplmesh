@@ -9,6 +9,7 @@ stages:
   - test
   - certification-dummy
   - certification-turris-omnia
+  - certification-turris-omnia-bhwifi
   - certification-axepoint
   - certification-axepoint-bhwifi
   - upload
@@ -412,5 +413,6 @@ include:
   - local: "/ci/certification/generic.yml"
   - local: "/ci/certification/dummy.yml"
   - local: "/ci/certification/turris-omnia.yml"
+  - local: "/ci/certification/turris-omnia-bhwifi.yml"
   - local: "/ci/certification/axepoint.yml"
   - local: "/ci/certification/axepoint-bhwifi.yml"
