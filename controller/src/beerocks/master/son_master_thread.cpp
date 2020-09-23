@@ -76,10 +76,13 @@ using namespace beerocks;
 using namespace net;
 using namespace son;
 
-master_thread::master_thread(const std::string &master_uds_, db &database_)
+master_thread::master_thread(const std::string &master_uds_, db &database_,
+                             std::shared_ptr<beerocks::EventLoop> event_loop)
     : transport_socket_thread(master_uds_), database(database_),
-      m_controller_ucc_listener(database_, cert_cmdu_tx)
+      m_controller_ucc_listener(database_, cert_cmdu_tx), m_event_loop(event_loop)
 {
+    LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
+
     thread_name = "master";
 
     database.set_master_thread_ctx(this);

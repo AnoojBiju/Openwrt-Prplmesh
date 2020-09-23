@@ -16,6 +16,7 @@
 
 #include "../../../common/beerocks/bwl/include/bwl/base_wlan_hal.h"
 #include <bcl/beerocks_defines.h>
+#include <bcl/beerocks_event_loop.h>
 #include <bcl/beerocks_logging.h>
 #include <bcl/beerocks_message_structs.h>
 #include <bcl/beerocks_socket_thread.h>
@@ -38,7 +39,8 @@ namespace son {
 class master_thread : public beerocks::btl::transport_socket_thread {
 
 public:
-    master_thread(const std::string &master_uds_, db &database_);
+    master_thread(const std::string &master_uds_, db &database_,
+                  std::shared_ptr<beerocks::EventLoop> event_loop);
     virtual ~master_thread();
 
     virtual bool init() override;
@@ -121,6 +123,11 @@ private:
     db &database;
     task_pool tasks;
     beerocks::controller_ucc_listener m_controller_ucc_listener;
+
+    /**
+     * Application event loop used by the process to wait for I/O events.
+     */
+    std::shared_ptr<beerocks::EventLoop> m_event_loop;
 };
 
 } // namespace son
