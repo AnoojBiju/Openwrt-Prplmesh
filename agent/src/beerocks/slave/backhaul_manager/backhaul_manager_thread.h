@@ -139,6 +139,12 @@ private:
     bool handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac);
     bool handle_slave_ap_metrics_response(ieee1905_1::CmduMessageRx &cmdu_rx,
                                           const std::string &src_mac);
+    bool handle_channel_selection_request(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                          const std::string &src_mac);
+    bool handle_slave_channel_selection_response(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                                 const std::string &src_mac);
+    bool handle_slave_failed_connection_message(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                                const std::string &src_mac);
     bool handle_backhaul_steering_request(ieee1905_1::CmduMessageRx &cmdu_rx,
                                           const std::string &src_mac);
 
@@ -273,12 +279,37 @@ private:
          * Time point at which AP metrics were reported for the last time.
          */
         std::chrono::steady_clock::time_point last_reporting_time_point;
-    };
+    } ap_metrics_reporting_info;
 
     /**
-     * AP Metrics Reporting configuration and status information.
+     * Unsuccessful Association Policy
      */
-    sApMetricsReportingInfo ap_metrics_reporting_info;
+    struct sUnsuccessfulAssociationPolicy {
+        /* The values in this struct are set by the controller through a Multi-AP Policy Config Request message,
+         * inside the Unsuccessful Association Policy TLV.
+         */
+
+        /**
+         * Report or Don't report unsuccessful associations of clients
+         */
+        bool report_unsuccessful_association = false;
+
+        /**
+         * Maximum Reporting Rate of failed associations in attempts per minute
+         */
+        uint32_t maximum_reporting_rate = 0;
+
+        /**
+         * Time point at which failed associatoin was reported for the last time.
+         */
+        std::chrono::steady_clock::time_point last_reporting_time_point =
+            std::chrono::steady_clock::time_point::min(); // way in the past
+
+        /**
+         * Number of reports in the last minute
+         */
+        uint32_t number_of_reports_in_last_minute = 0;
+    } unsuccessful_association_policy;
 
     /**
      * @brief Information gathered about a radio (= slave).
