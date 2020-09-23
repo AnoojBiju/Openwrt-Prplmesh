@@ -28,7 +28,7 @@ public:
 private:
     void handle_channel_selection_request(ieee1905_1::CmduMessageRx &cmdu_rx,
                                           const sMacAddr &src_mac);
-    bool handle_slave_channel_selection_response(ieee1905_1::CmduMessageRx &cmdu_rx,
+    void handle_slave_channel_selection_response(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                  const sMacAddr &src_mac);
 
     backhaul_manager &m_btl_ctx;
