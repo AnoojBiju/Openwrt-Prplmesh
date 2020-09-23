@@ -64,21 +64,21 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
 
 }
 
-bool ChannelSelectionTask::handle_slave_channel_selection_response(
+void ChannelSelectionTask::handle_slave_channel_selection_response(
     ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac)
 {
     const auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Received CHANNEL_SELECTION_RESPONSE message, mid=" << std::hex << mid;
 
     if (mid != m_btl_ctx.m_expected_channel_selection.mid) {
-        return false;
+        return;
     }
 
     auto channel_selection_response = cmdu_rx.getClass<wfa_map::tlvChannelSelectionResponse>();
     if (!channel_selection_response) {
         LOG(ERROR) << "Failed cmdu_rx.getClass<wfa_map::tlvChannelSelectionResponse>(), mid="
                    << std::hex << mid;
-        return false;
+        return;
     }
 
     auto db = AgentDB::get();
@@ -96,7 +96,7 @@ bool ChannelSelectionTask::handle_slave_channel_selection_response(
         m_btl_ctx.m_expected_channel_selection.requests.end());
 
     if (!m_btl_ctx.m_expected_channel_selection.requests.empty()) {
-        return true;
+        return;
     }
 
     // We received all responses - prepare and send response message to the controller
@@ -105,7 +105,7 @@ bool ChannelSelectionTask::handle_slave_channel_selection_response(
 
     if (!cmdu_header) {
         LOG(ERROR) << "Failed building IEEE1905 CHANNEL_SELECTION_RESPONSE_MESSAGE";
-        return false;
+        return;
     }
 
     for (const auto &response : m_btl_ctx.m_expected_channel_selection.responses) {
@@ -125,8 +125,8 @@ bool ChannelSelectionTask::handle_slave_channel_selection_response(
     m_btl_ctx.m_expected_channel_selection.responses.clear();
 
     LOG(DEBUG) << "Sending CHANNEL_SELECTION_RESPONSE_MESSAGE, mid=" << std::hex << mid;
-    return m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(db->controller_info.bridge_mac),
-                                         tlvf::mac_to_string(db->bridge.mac));
+    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(db->controller_info.bridge_mac),
+                                  tlvf::mac_to_string(db->bridge.mac));
 }
 
 } // namespace beerocks
