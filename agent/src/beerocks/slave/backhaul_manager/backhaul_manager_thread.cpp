@@ -886,9 +886,9 @@ bool backhaul_manager::backhaul_fsm_main(bool &skip_select)
     // Successfully connected to the master
     case EState::CONNECTED: {
 
-        /** 
+        /**
          * According to the 1905.1 specification section 8.2.1.1 - A 1905.1 management entity shall
-         * transmit a topology discovery message every 60 seconds or if an "implementation-specific" 
+         * transmit a topology discovery message every 60 seconds or if an "implementation-specific"
          * event occurs (e.g., device initialized or an interface is connected).
          * Sending "AGENT_DEVICE_INITIALIZED" event will trigger sending of topology discovery
          * message.
@@ -1073,6 +1073,9 @@ bool backhaul_manager::send_slave_ap_metric_query_message(
             if (!bssid_list.empty() && bssid_list.find(bssid.mac) == bssid_list.end()) {
                 continue;
             }
+            if (bssid.mac == network_utils::ZERO_MAC) {
+                continue;
+            }
             LOG(DEBUG) << "Forwarding AP_METRICS_QUERY_MESSAGE message to son_slave, bssid: "
                        << bssid.mac;
 
@@ -1180,7 +1183,7 @@ bool backhaul_manager::backhaul_fsm_wireless(bool &skip_select)
                 }
 
                 /**
-                 * This code was disabled as part of the effort to pass certification flow 
+                 * This code was disabled as part of the effort to pass certification flow
                  * (PR #1469), and broke wireless backhual flow.
                  * If a connected backhual interface has been discovered, the backhaul fsm was set
                  * to MASTER_DISCOVERY state, otherwise to INITIATE_SCAN.
