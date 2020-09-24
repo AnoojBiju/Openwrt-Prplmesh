@@ -337,7 +337,7 @@ bool Ieee1905Transport::fragment_and_send_packet_to_network_interface(unsigned i
     if (packet.ether_type != ETH_P_1905_1 ||
         packet.payload.iov_len <= kIeee1905FragmentationThreashold ||
         packet.src_if_type != CmduRxMessage::IF_TYPE_LOCAL_BUS) {
-        return send_packet_to_network_interface(if_index, packet);
+        return send_packet_to_network_interface(if_index, packet, ETH_P_LLDP);
     }
 
     // reuse most of the original packet metadata for all fragments (except for the payload iov)
@@ -415,7 +415,7 @@ bool Ieee1905Transport::fragment_and_send_packet_to_network_interface(unsigned i
         // send the fragment
         MAPF_DBG("sending fragment " << (int)fragmentId
                                      << " (length=" << fragment_packet.payload.iov_len << ").");
-        if (!send_packet_to_network_interface(if_index, fragment_packet)) {
+        if (!send_packet_to_network_interface(if_index, fragment_packet, ETH_P_1905_1)) {
             return false;
         }
 
@@ -569,7 +569,7 @@ bool Ieee1905Transport::forward_packet_single(Packet &packet)
 
                 if (((forward_to_bridge && network_interface.is_bridge) ||
                      (forward_to_network_interfaces && !network_interface.is_bridge)) &&
-                    (network_interface.fd) &&
+                    (network_interface.fd_ieee1905 && network_interface.fd_lldp) &&
                     !(packet.src_if_type == CmduRxMessage::IF_TYPE_NET &&
                       packet.src_if_index == if_index)) { /* avoid loop-back */
                     if (!fragment_and_send_packet_to_network_interface(if_index, packet)) {

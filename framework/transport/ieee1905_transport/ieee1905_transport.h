@@ -107,8 +107,10 @@ private:
     }
 
     struct NetworkInterface {
-        /// the file descriptor of the socket bound to this interface (or -1 if inactive)
-        std::shared_ptr<Socket> fd;
+        /// the file descriptor of the 1905 messages socket bound to this interface (or -1 if inactive)
+        std::shared_ptr<Socket> fd_ieee1905;
+        /// the file descriptor of the LLDP messages socket bound to this interface (or -1 if inactive)
+        std::shared_ptr<Socket> fd_lldp;
         /// mac address of the interface
         uint8_t addr[ETH_ALEN] = {0};
         /// interface name
@@ -302,14 +304,14 @@ private:
     //
     void
     update_network_interfaces(std::map<std::string, NetworkInterface> updated_network_interfaces);
-    bool open_interface_socket(NetworkInterface &interface);
-    bool attach_interface_socket_filter(NetworkInterface &iface_name);
+    bool open_interface_socket(NetworkInterface &interface, uint16_t protocol);
+    bool attach_interface_socket_filter(NetworkInterface &iface_name, uint16_t protocol);
     void activate_interface(NetworkInterface &interface);
     void deactivate_interface(NetworkInterface &interface);
     void handle_interface_status_change(const std::string &iface_name, bool is_active);
     void handle_interface_pollin_event(int fd);
     bool get_interface_mac_addr(unsigned int if_index, uint8_t *addr);
-    bool send_packet_to_network_interface(unsigned int if_index, Packet &packet);
+    bool send_packet_to_network_interface(unsigned int if_index, Packet &packet, uint16_t protocol);
     void set_al_mac_addr(const uint8_t *addr);
 
     //
@@ -335,6 +337,11 @@ private:
     bool fragment_and_send_packet_to_network_interface(unsigned int if_index, Packet &packet);
     bool forward_packet_single(Packet &packet);
     bool forward_packet(Packet &Packet);
+
+    //
+    // HELPER FUNCTIONS
+    //
+    std::shared_ptr<Socket> socket_from_protocol(uint16_t protocol);
 };
 
 inline std::ostream &operator<<(std::ostream &os, const Ieee1905Transport::Packet &m)
