@@ -7,8 +7,6 @@
  */
 
 #include "periodic_operation.h"
-#include <easylogging++.h>
-#define OPERATION_LOG(a) (LOG(a) << "operation " << operation_name << " id " << id << ": ")
 
 using namespace son;
 

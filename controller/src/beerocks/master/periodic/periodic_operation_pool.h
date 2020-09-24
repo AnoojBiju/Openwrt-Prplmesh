@@ -10,8 +10,6 @@
 #define _PERIODIC_OPERATION_POOL_H_
 
 #include "periodic_operation.h"
-#include <memory>
-#include <unordered_map>
 namespace son {
 
 class periodic_operation_pool {
@@ -20,30 +18,10 @@ public:
     periodic_operation_pool() {}
     ~periodic_operation_pool() {}
 
-    /**
-     * @brief Add a new operation to the operation pool
-     *  An operation will run each time it's interval lapses
-     * @param new_operation Shared pointer of new operation to be added.
-     * @return true is successful, false otherwise
-     */
     bool add_operation(std::shared_ptr<periodic_operation> new_operation);
-    /**
-     * @brief Checks if the operation identified by the ID number is still alive
-     * which means that the operation is either running or is pending to run.
-     * @param id Unique identifier number
-     * @return true is successful, false otherwise
-     */
     bool is_operation_alive(int id);
-    /**
-     * @brief Kills the operation associated with the given ID
-     * If the operation is currently running it would not stop, but would not run again afterwards.
-     * @param id Unique identifier number
-     */
     void kill_operation(int id);
-    /**
-     * @brief Iterates over the operation pool triggering those who lapsed their interval.
-     * 
-     */
+    void pending_operation_ended(int operation_id);
     void run_operations();
 
 private:

@@ -21,7 +21,10 @@ bool periodic_operation_pool::add_operation(std::shared_ptr<periodic_operation> 
 bool periodic_operation_pool::is_operation_alive(int id)
 {
     auto it = periodic_operations.find(id);
-    return (it != periodic_operations.end() && it->second != nullptr);
+    if (it != periodic_operations.end() && it->second != nullptr) {
+        return true;
+    }
+    return false;
 }
 
 void periodic_operation_pool::kill_operation(int id)

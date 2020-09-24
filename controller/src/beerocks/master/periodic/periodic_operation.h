@@ -9,38 +9,30 @@
 #ifndef _PERIODIC_OPERATION_H_
 #define _PERIODIC_OPERATION_H_
 
+#define OPERATION_LOG(a) (LOG(a) << "operation " << operation_name << " id " << id << ": ")
+
+#include "../../common/include/mapf/common/err.h"
 #include <chrono>
-#include <string>
+#include <easylogging++.h>
 
 namespace son {
 
 class periodic_operation {
 public:
-    /**
-     * @brief Construct a new periodic operation object
-     * 
-     * @param period_interval_sec_ Interval for operation between one operation and the next.
-     * @param operation_name_ Name for the operation, used in logs.
-     */
     periodic_operation(std::chrono::seconds period_interval_sec_,
-                       const std::string &operation_name_ = std::string());
+                       const std::string &operation_name_ = std::string(""));
     virtual ~periodic_operation();
     bool work();
 
-    // Unique identifier for the operation, used in logs.
     const int id;
-    // Name for operation, used in logs.
     std::string operation_name;
 
 protected:
-    // Interval for operation between one operation and the next.
     std::chrono::seconds interval_sec;
     virtual void periodic_operation_function() = 0;
 
 private:
-    // Last timestamp that the periodic operation function was called.
     std::chrono::steady_clock::time_point m_last_work_timestamp;
-    // Unique identifier that is used as the index for the ID member.
     static int latest_id;
 };
 
