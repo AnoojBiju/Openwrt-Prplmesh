@@ -11,6 +11,7 @@
 
 #include "controller_ucc_listener.h"
 #include "db/db.h"
+#include "periodic/periodic_operation_pool.h"
 #include "tasks/optimal_path_task.h"
 #include "tasks/task_pool.h"
 
@@ -120,6 +121,7 @@ private:
 
     db &database;
     task_pool tasks;
+    periodic_operation_pool operations;
     beerocks::controller_ucc_listener m_controller_ucc_listener;
 };
 

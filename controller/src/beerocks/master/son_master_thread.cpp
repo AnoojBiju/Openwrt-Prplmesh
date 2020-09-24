@@ -186,6 +186,7 @@ bool master_thread::work()
     }
 
     tasks.run_tasks();
+    operations.run_operations();
     return true;
 }
 
