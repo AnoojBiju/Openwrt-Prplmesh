@@ -61,6 +61,38 @@ public:
     bool init(const std::string &amxb_backend, const std::string &bus_uri,
               const std::string &datamodel_path);
 
+    /**
+     * @brief Set the value to the object variable.
+     *
+     * @param relative_path Path to the object in datamodel (ex: "Controller.Network.ID").
+     * @param value Value which need to set.
+     * @return True on success and false otherwise.
+     */
+    bool set(const std::string &relative_path, const std::string &value);
+    bool set(const std::string &relative_path, const int32_t &value);
+    bool set(const std::string &relative_path, const int64_t &value);
+    bool set(const std::string &relative_path, const uint32_t &value);
+    bool set(const std::string &relative_path, const uint64_t &value);
+    bool set(const std::string &relative_path, const bool &value);
+    bool set(const std::string &relative_path, const double &value);
+
+    /**
+     * @brief Prepare transaction to the ubus
+     *
+     * @param relative_path Path to the object in datamodel (ex: "Controller.Network.ID").
+     * @return Pointer on the object on success and nullptr otherwise.
+     */
+    amxd_object_t *prepare_transaction(const std::string &relative_path, amxd_trans_t &transaction);
+
+    /**
+     * @brief Apply transaction
+     *
+     * @param transaction Variable for transaction structure which contains fields
+     *                    needed for transaction.
+     * @return True on success and false otherwise.
+     */
+    bool apply_transaction(amxd_trans_t &transaction);
+
 private:
     // Methods
 
