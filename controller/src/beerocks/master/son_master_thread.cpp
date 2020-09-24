@@ -7,6 +7,7 @@
  */
 
 #include "son_master_thread.h"
+#include "periodic/persistent_database_aging.h"
 #include "son_actions.h"
 #include "son_management.h"
 #include "tasks/bml_task.h"
@@ -100,6 +101,16 @@ bool master_thread::init()
         } else {
             LOG(DEBUG) << "load clients from persistent db finished successfully";
         }
+    }
+
+    if (operatios.is_operation_alive(database.get_persistent_db_aging_operation_id())) {
+        LOG(DEBUG) << "persistent DB aging operation already running";
+    } else {
+        auto aging_interval_seconds =
+            std::chrono::seconds(database.config.persistent_db_aging_interval);
+        auto new_operation =
+            std::make_shared<persistent_database_aging_operation>(aging_interval_seconds, database);
+        operatios.add_operation(new_operation);
     }
 
     if (!transport_socket_thread::init()) {
