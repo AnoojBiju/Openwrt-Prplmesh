@@ -28,7 +28,6 @@
 #include <tlvf/CmduMessageTx.h>
 #include <tlvf/wfa_map/tlvApMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
-#include <tlvf/wfa_map/tlvChannelSelectionResponse.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
 
 #include "../agent_ucc_listener.h"
@@ -140,10 +139,6 @@ private:
     bool handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac);
     bool handle_slave_ap_metrics_response(ieee1905_1::CmduMessageRx &cmdu_rx,
                                           const std::string &src_mac);
-    bool handle_channel_selection_request(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                          const std::string &src_mac);
-    bool handle_slave_channel_selection_response(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                                 const std::string &src_mac);
     bool handle_backhaul_steering_request(ieee1905_1::CmduMessageRx &cmdu_rx,
                                           const std::string &src_mac);
 
@@ -189,6 +184,12 @@ private:
     std::set<std::string> pending_slave_sta_ifaces;
 
     std::list<std::shared_ptr<sRadioInfo>> slaves_sockets;
+
+    std::list<std::shared_ptr<sRadioInfo>> m_slaves_sockets_to_finalize;
+
+    // TODO: Temporary change, will be removed on Unified Agent PPM-351.
+    // Key: front radio iface name, Value: sRadioInfo object
+    std::unordered_map<std::string, std::shared_ptr<sRadioInfo>> m_disabled_slave_sockets;
     std::shared_ptr<SocketClient> m_scPlatform;
     net::network_utils::iface_info bridge_info;
 
@@ -458,18 +459,6 @@ private:
 
     std::vector<sApMetricsQuery> m_ap_metric_query;
     std::vector<sApMetricsResponse> m_ap_metric_response;
-
-    struct sChannelSelectionResponse {
-        sMacAddr radio_mac;
-        wfa_map::tlvChannelSelectionResponse::eResponseCode response_code;
-    };
-    struct sExpectedChannelSelection {
-        uint16_t mid;
-        std::vector<sMacAddr> requests;
-        std::vector<sChannelSelectionResponse> responses;
-    };
-
-    sExpectedChannelSelection m_expected_channel_selection;
 
     bool m_backhaul_sta_steering_enable = false;
 

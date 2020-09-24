@@ -99,6 +99,7 @@ slave_thread::slave_thread(sSlaveConfig conf, beerocks::logging &logger_)
         // No need to print here anything, 'add_radio()' does it internaly
         return;
     }
+    m_fronthaul_iface = conf.hostap_iface;
 
     radio->sta_iface_filter_low = conf.backhaul_wireless_iface_filter_low;
 
@@ -153,16 +154,13 @@ void slave_thread::slave_reset()
 
     auto db = AgentDB::get();
 
-    /**
-     * m_fronthaul_iface is updated on ACTION_APMANAGER_JOINED_NOTIFICATION
-     * before this initial message the value is empty.
-     * We do not want to fail on this scenario.
-     */
     auto radio = db->radio(m_fronthaul_iface);
-    if (radio) {
-        // Clear the front interface mac if radio exists
-        radio->front.iface_mac = network_utils::ZERO_MAC;
+    if (!radio) {
+        LOG(ERROR) << "Radio of iface " << m_fronthaul_iface << " does not exist on the db";
+        return;
     }
+    // Clear the front interface mac.
+    radio->front.iface_mac = network_utils::ZERO_MAC;
 
     if (db->device_conf.stop_on_failure_attempts && !stop_on_failure_attempts) {
         LOG(ERROR) << "Reached to max stop on failure attempts!";
@@ -338,6 +336,16 @@ bool slave_thread::handle_cmdu_control_ieee1905_1_message(Socket *sd,
 
     if (slave_state == STATE_STOPPED) {
         LOG(WARNING) << "slave_state == STATE_STOPPED";
+        return true;
+    }
+    auto db    = AgentDB::get();
+    auto radio = db->radio(m_fronthaul_iface);
+    if (!radio) {
+        return false;
+    }
+
+    // ZWDFS Radio should ignore messages from the Controller
+    if (radio->front.zwdfs) {
         return true;
     }
 
@@ -1568,6 +1576,9 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
                     beerocks::message::WIFI_DRIVER_VER_LENGTH, radio->driver_version);
 
         save_channel_params_to_db(notification->cs_params());
+
+        radio->front.zwdfs = notification->params().zwdfs;
+        LOG(DEBUG) << "ZWDFS AP: " << radio->front.zwdfs;
 
         auto tuple_preferred_channels = notification->preferred_channels(0);
         if (!std::get<0>(tuple_preferred_channels)) {
@@ -3068,6 +3079,11 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
             is_backhaul_manager = false;
         }
 
+        auto radio = db->radio(m_fronthaul_iface);
+        if (radio) {
+            // Set zwdfs to initial value.
+            radio->front.zwdfs = false;
+        }
         fronthaul_start();
 
         is_slave_reset = false;
@@ -3080,6 +3096,27 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
         if (ap_manager_socket && monitor_socket) {
             LOG(TRACE) << "goto STATE_BACKHAUL_ENABLE";
             slave_state = STATE_BACKHAUL_ENABLE;
+            break;
+        }
+        auto db    = AgentDB::get();
+        auto radio = db->radio(m_fronthaul_iface);
+        if (radio && radio->front.zwdfs && ap_manager_socket) {
+            auto request = message_com::create_vs_message<
+                beerocks_message::cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED>(cmdu_tx);
+
+            if (!request) {
+                LOG(ERROR) << "Failed building message!";
+                break;
+            }
+            request->set_front_iface_name(m_fronthaul_iface);
+            LOG(DEBUG) << "send ACTION_BACKHAUL_ZWDFS_RADIO_DETECTED for mac " << m_fronthaul_iface;
+            message_com::send_cmdu(backhaul_manager_socket, cmdu_tx);
+
+            db->remove_radio_from_radios_list(m_fronthaul_iface);
+
+            LOG(TRACE) << "goto STATE_OPERATIONAL";
+            slave_state = STATE_OPERATIONAL;
+            break;
         }
         break;
     }
