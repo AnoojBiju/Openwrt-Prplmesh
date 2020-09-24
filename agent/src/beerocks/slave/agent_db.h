@@ -5,6 +5,9 @@
  * This code is subject to the terms of the BSD+Patent license.
  * See LICENSE file for more details.
  */
+#ifndef _AGENT_DB_H_
+#define _AGENT_DB_H_
+
 #include <bcl/beerocks_defines.h>
 #include <bcl/network/network_utils.h>
 #include <bwl/sta_wlan_hal.h>
@@ -236,6 +239,8 @@ public:
         uint32_t vht_capability;
         /// 32-byte attribute containing the MCS set as defined in 802.11ac
         std::array<uint8_t, beerocks::message::VHT_MCS_SET_SIZE> vht_mcs_set;
+
+        bool he_supported = false; ///< Is 802.11ax (High Efficiency) protocol supported
     };
 
     /**
@@ -341,3 +346,5 @@ private:
 };
 
 } // namespace beerocks
+
+#endif // _AGENT_DB_H_

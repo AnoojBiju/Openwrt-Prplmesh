@@ -24,6 +24,7 @@ enum eTaskType : uint8_t {
     TOPOLOGY,
     AP_AUTOCONFIGURATION,
     CHANNEL_SELECTION,
+    CAPABILITY_REPORTING,
 };
 
 class Task {
