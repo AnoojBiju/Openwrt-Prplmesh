@@ -474,6 +474,21 @@ bool cfg_get_unfriendly_device_max_timelife_delay_days(
     return true;
 }
 
+bool cfg_get_persistent_db_aging_interval(int &persistent_db_aging_interval_sec)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int("persistent_db_aging_interval_sec", &retVal,
+                                   DEFAULT_PERSISTENT_DB_AGING_INTERVAL_SEC) == RETURN_ERR) {
+        MAPF_ERR("Failed to read persistent-db-aging-interval-sec parameter - setting "
+                 "default value");
+        return false;
+    }
+
+    persistent_db_aging_interval_sec = retVal;
+
+    return true;
+}
+
 bool bpl_cfg_get_wpa_supplicant_ctrl_path(const std::string &iface, std::string &wpa_ctrl_path)
 {
     const char *path{"/var/run/wpa_supplicant/"};
