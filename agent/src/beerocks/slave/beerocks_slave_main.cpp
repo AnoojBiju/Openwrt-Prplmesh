@@ -7,14 +7,19 @@
  */
 
 #include "backhaul_manager/backhaul_manager_thread.h"
-#include "platform_manager/platform_manager_thread.h"
+#include "platform_manager/platform_manager.h"
 #include "son_slave_thread.h"
 
 #include <bcl/beerocks_config_file.h>
+#include <bcl/beerocks_event_loop_impl.h>
 #include <bcl/beerocks_logging.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/beerocks_version.h>
+#include <bcl/network/cmdu_parser_stream_impl.h>
+#include <bcl/network/cmdu_serializer_stream_impl.h>
 #include <bcl/network/network_utils.h>
+#include <bcl/network/sockets_impl.h>
+#include <bcl/network/timer_impl.h>
 #include <easylogging++.h>
 #include <mapf/common/utils.h>
 
@@ -90,12 +95,11 @@ static bool parse_arguments(int argc, char *argv[])
     int opt;
     while ((opt = getopt(argc, argv, "q:")) != -1) {
         switch (opt) {
-        case 'q': // query platfrom: is_master, is_gateway, is_onboarding
+        case 'q': // query platform: is_master, is_gateway, is_onboarding
         {
-            std::string request;
-            request.assign(optarg);
+            std::string request{optarg};
             std::cout << std::endl
-                      << request << "=" << beerocks::platform_manager::extern_query_db(request)
+                      << request << "=" << beerocks::platform_manager::query_db(request)
                       << std::endl;
             exit(0);
         }
@@ -274,6 +278,80 @@ start_son_slave_thread(int slave_num,
     return son_slave;
 }
 
+static std::shared_ptr<beerocks::EventLoop> create_event_loop()
+{
+    // Create application event loop to wait for blocking I/O operations.
+    return std::make_shared<beerocks::EventLoopImpl>();
+}
+
+static std::shared_ptr<beerocks::net::CmduSerializer> create_cmdu_serializer()
+{
+    // Create serializer for CMDU messages to be sent through a stream-oriented socket.
+    return std::make_shared<beerocks::net::CmduSerializerStreamImpl>();
+}
+
+static std::shared_ptr<beerocks::net::CmduParser> create_cmdu_parser()
+{
+    // Create parser for CMDU messages received through a stream-oriented socket.
+    return std::make_shared<beerocks::net::CmduParserStreamImpl>();
+}
+
+static std::shared_ptr<beerocks::net::UdsAddress> create_uds_address(const std::string &path)
+{
+    // When no longer required, the UDS socket pathname should be deleted using unlink or remove.
+    auto deleter = [path](beerocks::net::UdsAddress *p) {
+        if (p) {
+            delete p;
+        }
+        unlink(path.c_str());
+    };
+
+    // Remove given path in case it exists
+    unlink(path.c_str());
+
+    // Create UDS address from given path (using custom deleter)
+    return std::shared_ptr<beerocks::net::UdsAddress>(new beerocks::net::UdsAddress(path), deleter);
+}
+
+static std::unique_ptr<beerocks::net::ServerSocket>
+create_server_socket(const beerocks::net::UdsAddress &address)
+{
+    // Create UDS socket
+    auto socket = std::make_shared<beerocks::net::UdsSocket>();
+
+    // Create UDS server socket to listen for and accept incoming connections from clients that
+    // will send CMDU messages through that connections.
+    using UdsServerSocket = beerocks::net::ServerSocketImpl<beerocks::net::UdsSocket>;
+    auto server_socket    = std::make_unique<UdsServerSocket>(socket);
+
+    // Bind server socket to that UDS address
+    if (!server_socket->bind(address)) {
+        LOG(ERROR) << "Unable to bind server socket to UDS address: '" << address.path() << "'";
+        return nullptr;
+    }
+
+    // Listen for incoming connection requests
+    if (!server_socket->listen()) {
+        LOG(ERROR) << "Unable to listen for connection requests at UDS address: '" << address.path()
+                   << "'";
+        return nullptr;
+    }
+
+    return server_socket;
+}
+
+static std::unique_ptr<beerocks::net::Timer<>> create_check_wlan_params_changed_timer()
+{
+    // Create timer to periodically check if WLAN parameters have changed
+    return std::make_unique<beerocks::net::TimerImpl<>>();
+}
+
+static std::unique_ptr<beerocks::net::Timer<>> create_clean_old_arp_entries_timer()
+{
+    // Create timer to periodically clean old ARP table entries
+    return std::make_unique<beerocks::net::TimerImpl<>>();
+}
+
 static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slave_conf,
                               const std::unordered_map<int, std::string> &interfaces_map, int argc,
                               char *argv[])
@@ -299,14 +377,36 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
         }
     }
 
-    beerocks::platform_manager::main_thread platform_mgr(beerocks_slave_conf, interfaces_map,
-                                                         *agent_logger);
+    auto event_loop = create_event_loop();
+    LOG_IF(!event_loop, FATAL) << "Unable to create event loop!";
 
-    // Start platform_manager
-    if (!platform_mgr.init()) {
-        LOG(ERROR) << "platform_mgr init() has failed!";
-        return 1;
-    }
+    auto cmdu_parser = create_cmdu_parser();
+    LOG_IF(!cmdu_parser, FATAL) << "Unable to create CMDU parser!";
+
+    auto cmdu_serializer = create_cmdu_serializer();
+    LOG_IF(!cmdu_serializer, FATAL) << "Unable to create CMDU serializer!";
+
+    std::string uds_path = beerocks_slave_conf.temp_path + "/" + std::string(BEEROCKS_PLAT_MGR_UDS);
+    auto uds_address     = create_uds_address(uds_path);
+    LOG_IF(!uds_address, FATAL) << "Unable to create UDS server address!";
+
+    auto server_socket = create_server_socket(*uds_address);
+    LOG_IF(!server_socket, FATAL) << "Unable to create UDS server socket!";
+
+    auto check_wlan_params_changed_timer = create_check_wlan_params_changed_timer();
+    LOG_IF(!check_wlan_params_changed_timer, FATAL)
+        << "Unable to create check-WLAN-parameters-changed timer!";
+
+    auto clean_old_arp_entries_timer = create_clean_old_arp_entries_timer();
+    LOG_IF(!clean_old_arp_entries_timer, FATAL) << "Unable to create clean-old-ARP-entries timer!";
+
+    beerocks::platform_manager platform_manager(
+        beerocks_slave_conf, interfaces_map, *agent_logger, std::move(clean_old_arp_entries_timer),
+        std::move(check_wlan_params_changed_timer), std::move(server_socket), cmdu_parser,
+        cmdu_serializer, event_loop);
+
+    // Start platform manager
+    LOG_IF(!platform_manager.start(), FATAL) << "Unable to start platform manager!";
 
     // Read the number of failures allowed before stopping agent from platform configuration
     int stop_on_failure_attempts = beerocks::bpl::cfg_get_stop_on_failure_attempts();
@@ -374,8 +474,9 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
             break;
         }
 
-        // Call platform manager work task and break on error.
-        if (!platform_mgr.work()) {
+        // Run application event loop and break on error.
+        if (event_loop->run() < 0) {
+            LOG(ERROR) << "Event loop failure!";
             break;
         }
     }
@@ -387,8 +488,8 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     LOG(DEBUG) << "backhaul_mgr.stop()";
     backhaul_mgr.stop();
 
-    LOG(DEBUG) << "platform_mgr.stop()";
-    platform_mgr.stop();
+    LOG(DEBUG) << "platform_manager.stop()";
+    platform_manager.stop();
 
     LOG(DEBUG) << "Bye Bye!";
 
