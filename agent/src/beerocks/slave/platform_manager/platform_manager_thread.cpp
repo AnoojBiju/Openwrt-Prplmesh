@@ -214,6 +214,12 @@ static bool fill_platform_settings(
         return false;
     }
 
+    if (!bpl::cfg_get_zwdfs_enable(db->device_conf.zwdfs_enable)) {
+        LOG(WARNING) << "cfg_get_zwdfs_enable() failed!, using default configuration, zwdfs is "
+                     << (db->device_conf.zwdfs_enable ? std::string("enabled.")
+                                                      : std::string("disabled."));
+    }
+
     // Set local_gw flag
     db->device_conf.local_gw = (db->device_conf.operating_mode == BPL_OPER_MODE_GATEWAY ||
                                 db->device_conf.operating_mode == BPL_OPER_MODE_GATEWAY_WISP);
@@ -239,6 +245,7 @@ static bool fill_platform_settings(
     LOG(DEBUG) << "backhaul_preferred_radio_band: "
                << db->device_conf.back_radio.backhaul_preferred_radio_band;
     LOG(DEBUG) << "rdkb_extensions: " << db->device_conf.rdkb_extensions_enabled;
+    LOG(DEBUG) << "zwdfs_enable: " << db->device_conf.zwdfs_enable;
 
     return true;
 }

@@ -44,7 +44,7 @@ struct sScanCfgParams {
  * @param window_slice if passive_dwell_time is bigger than cts-to-self max time (32ms) Than we cut the scan into slices, this is time of each slice.
  * @param window_slice_overlap overlapping of slices, the slices meant to cover full beacon interval time, to catch all networks, so we this is the time we of beacon interval 2 slices will be on. 
  */
-struct sScanCfgParamsBG {
+struct sScanCfgParamsBG_legacy {
     int passive_dwell_time;
     int active_dwell_time;
     int num_probe_reqs;
@@ -52,9 +52,16 @@ struct sScanCfgParamsBG {
     int num_chans_in_chunk;
     int break_time;
     int break_time_busy;
+};
+struct sScanCfgParamsBG : sScanCfgParamsBG_legacy {
     unsigned int window_slice;
     unsigned int window_slice_overlap;
 };
+
+constexpr size_t ScanCfgParams_size         = sizeof(sScanCfgParams);
+constexpr size_t ScanCfgParamsBG_min_size   = sizeof(sScanCfgParamsBG_legacy);
+constexpr size_t ScanCfgParamsBG_size       = sizeof(sScanCfgParamsBG);
+constexpr size_t ScanCfgParams_size_invalid = 0L;
 
 } // namespace dwpal
 } // namespace bwl

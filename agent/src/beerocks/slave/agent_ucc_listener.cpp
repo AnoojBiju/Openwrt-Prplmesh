@@ -207,6 +207,22 @@ bool agent_ucc_listener::handle_dev_set_config(std::unordered_map<std::string, s
     std::transform(backhaul_param.begin(), backhaul_param.end(), backhaul_param.begin(), ::tolower);
     if (backhaul_param == DEV_SET_ETH) {
         m_selected_backhaul = DEV_SET_ETH;
+        // add the iface to the bridge
+        auto db            = AgentDB::get();
+        auto bridge        = db->bridge.iface_name;
+        auto bridge_ifaces = network_utils::linux_get_iface_list_from_bridge(bridge);
+        auto eth_iface     = db->ethernet.iface_name;
+        if (std::find(bridge_ifaces.begin(), bridge_ifaces.end(), eth_iface) !=
+            bridge_ifaces.end()) {
+            LOG(INFO) << "The wired interface was already in the bridge before dev_set_config";
+        } else {
+            if (!network_utils::linux_add_iface_to_bridge(bridge, eth_iface)) {
+                LOG(ERROR) << "Failed to add iface '" << eth_iface << "' to bridge '" << bridge
+                           << "' !";
+                return false;
+            }
+        }
+
     } else {
         // backhaul param must be a radio UID, in hex, starting with 0x
         if (backhaul_param.substr(0, 2) != "0x" || backhaul_param.size() != 14 ||

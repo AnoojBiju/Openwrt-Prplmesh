@@ -91,6 +91,8 @@ static ap_wlan_hal::Event dummy_to_bwl_event(const std::string &opcode)
         return ap_wlan_hal::Event::DFS_CAC_Completed;
     } else if (opcode == "DFS-NOP-FINISHED") {
         return ap_wlan_hal::Event::DFS_NOP_Finished;
+    } else if (opcode == "MGMT-FRAME") {
+        return ap_wlan_hal::Event::MGMT_Frame;
     }
 
     return ap_wlan_hal::Event::Invalid;
@@ -507,6 +509,45 @@ bool ap_wlan_hal_dummy::process_dummy_event(parsed_obj_map_t &parsed_obj)
         // Add the message to the queue
         event_queue_push(Event::STA_Disconnected, msg_buff);
     } break;
+
+    // STA 802.11 management frame event
+    case Event::MGMT_Frame: {
+        auto mgmt_frame = std::make_shared<sMGMT_FRAME_NOTIFICATION>();
+
+        // Read the STA MAC
+        if (!dummy_obj_read_str(DUMMY_EVENT_KEYLESS_PARAM_MAC, parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading mac parameter!";
+            return false;
+        }
+
+        mgmt_frame->mac = tlvf::mac_from_string(tmp_str);
+
+        // Read frame type
+        if (!dummy_obj_read_str("TYPE", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading TYPE parameter!";
+            return false;
+        }
+
+        mgmt_frame->type = eManagementFrameType(beerocks::string_utils::stoi(tmp_str));
+
+        // Read frame data
+        if (!dummy_obj_read_str("DATA", parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading DATA parameter!";
+            return false;
+        }
+
+        // Convert the frame data from hex string to vector
+        std::string hex_data(tmp_str);
+        size_t hex_data_len = hex_data.length();
+        for (size_t i = 0; i < hex_data_len; i += 2) {
+            auto byte     = hex_data.substr(i, 2);
+            auto hex_byte = uint8_t(strtol(byte.c_str(), nullptr, 16));
+            mgmt_frame->data.push_back(hex_byte);
+        }
+
+        event_queue_push(Event::MGMT_Frame, mgmt_frame);
+    } break;
+
     // Gracefully ignore unhandled events
     default: {
         LOG(WARNING) << "Unhandled event received: " << opcode;

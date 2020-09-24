@@ -4,11 +4,16 @@ networks:
     prplmesh:
         name: prplmesh-$RUN_ID
         driver: bridge
+    ucc:
+        # TODO: remove '1-' once docker-compose v3 has a way to set network priority
+        name: 1-prplmesh-$RUN_ID-ucc
+        driver: bridge
 
 x-prplmesh: &prplmesh # Template for the prplmesh services
     image: registry.gitlab.com/prpl-foundation/prplmesh/prplmesh/prplmesh-builder-ubuntu-bionic:${CI_PIPELINE_ID}
     privileged: true    # For the creation of the bridge to work
     networks:
+        - ucc
         - prplmesh
     environment:
         - USER
@@ -61,6 +66,7 @@ services:
             - RUN_ID
             - CI_PIPELINE_ID
             - FINAL_ROOT_DIR
+            - PYTHONDONTWRITEBYTECODE=1
         network_mode: host
         volumes:
             - "$ROOT_DIR:$ROOT_DIR"

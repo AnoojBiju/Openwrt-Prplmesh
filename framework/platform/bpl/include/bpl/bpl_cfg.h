@@ -106,7 +106,12 @@ constexpr int DEFAULT_MAX_TIMELIFE_DELAY_DAYS = 365;
 // TODO: add description of "unfriendly-device" and how it is determined
 // by default, the limit is 1 day, but it is configurable via the UCI
 constexpr int DEFAULT_UNFRIENDLY_DEVICE_MAX_TIMELIFE_DELAY_DAYS = 1;
-
+// by default zwdfs functionality is disabled
+constexpr int DEFAULT_ZWDFS_ENABLE = 0;
+// Channel ranking used to determine best channel candidate.
+// Using threshold to avoid high frequency channel switch.
+// By default best channel ranking threshold is 0.
+constexpr int DEFAULT_BEST_CHANNEL_RANKING_TH = 0;
 /****************************************************************************/
 /******************************* Structures *********************************/
 /****************************************************************************/
@@ -454,6 +459,23 @@ int cfg_get_hostap_iface(int32_t radio_num, char hostap_iface[BPL_IFNAME_LEN]);
  * @return -1 Error, or no hostap_iface is configured.
  */
 int cfg_get_all_prplmesh_wifi_interfaces(BPL_WLAN_IFACE *interfaces, int *num_of_interfaces);
+
+/**
+ * @brief Returns whether the zwdfs feature is enabled.
+ * 
+ * @param [out] enable true if the zwdfs is enabled, otherwise false.
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_zwdfs_enable(bool &enable);
+
+/**
+ * @brief Returns best channel ranking threshold.
+ * 
+ * @param [out] threshold Ranking value used to determine best channel candidate.
+ * Threshold will be used to avoid high frequency channel switch.
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_best_channel_rank_threshold(int &threshold);
 
 /**
  * @brief Returns whether the persistent DB is enabled.

@@ -24,7 +24,6 @@ usage() {
     echo "      -n|--name - container name (for later easy attach)"
     echo "      -p|--port - port to expose on the container"
     echo "      -P|--publish - publish all exposed ports to the host"
-    echo "      -I|--image - docker network to which to attach the container"
     echo "      -N|--network - docker network to which to attach the container"
     echo "      -u|--unique-id - unique id to add as suffix to container and network names"
     echo "      --entrypoint - use a different entrypoint for the container"
@@ -67,11 +66,17 @@ main() {
     dbg "UNIQUE_ID=${UNIQUE_ID}"
 
     NETWORK="${NETWORK:-prplMesh-net-${UNIQUE_ID}}"
-    docker network inspect "${NETWORK}" >/dev/null 2>&1 || {
-        dbg "Network ${NETWORK} does not exist, creating..."
-        run docker network create "${NETWORK}" >/dev/null 2>&1
-        echo "network ${NETWORK}" >> "${scriptdir}/.test_containers"
-    }
+    # Interface names seems to be assigned based on the alphabetical order of the docker networks.
+    # We need the ucc to always be eth0, so we prepend a low number to the network name.
+    # TODO: remove once docker has another way to have deterministic interface names.
+    NETWORK_UCC="1-$NETWORK-ucc"
+    for _network in "$NETWORK" "$NETWORK_UCC" ; do
+            docker network inspect "${_network}" >/dev/null 2>&1 || {
+                dbg "Network ${_network} does not exist, creating..."
+                run docker network create "${_network}" >/dev/null 2>&1
+                echo "network ${_network}" >> "${scriptdir}/.test_containers"
+            }
+    done
 
     DOCKEROPTS=(
         -e "USER=${SUDO_USER:-${USER}}"
@@ -88,9 +93,7 @@ main() {
 
     [ -n "$ENTRYPOINT" ] && DOCKEROPTS+=(--entrypoint "$ENTRYPOINT")
     if [ "$DETACH" = "false" ]; then
-        DOCKEROPTS+=(--rm)
-    else
-        DOCKEROPTS+=(-d)
+        DOCKER_RUN_OPTS+=(--rm -a)
     fi
     if docker ps -a --format '{{ .Names }}' --filter name="${NAME}" | grep -q -x "${NAME}"; then
         info "Container ${NAME} is already running"
@@ -105,7 +108,10 @@ main() {
 
     # Save the container name so that it can easily be stopped/removed later
     echo "$NAME" >> "${scriptdir}/.test_containers"
-    run docker container run "${DOCKEROPTS[@]}" --entrypoint /root/start-prplmesh.sh "${image}" "$@"
+    run docker container create "${DOCKEROPTS[@]}" --entrypoint /root/start-prplmesh.sh "${image}" "$@"
+    # Connect the container to the ucc network:
+    run docker network connect "$NETWORK_UCC" "$NAME"
+    run docker container start "${DOCKER_RUN_OPTS[@]}" "$NAME"
 }
 
 VERBOSE=false

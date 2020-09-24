@@ -99,6 +99,7 @@ slave_thread::slave_thread(sSlaveConfig conf, beerocks::logging &logger_)
         // No need to print here anything, 'add_radio()' does it internaly
         return;
     }
+    m_fronthaul_iface = conf.hostap_iface;
 
     radio->sta_iface_filter_low = conf.backhaul_wireless_iface_filter_low;
 
@@ -153,16 +154,13 @@ void slave_thread::slave_reset()
 
     auto db = AgentDB::get();
 
-    /**
-     * m_fronthaul_iface is updated on ACTION_APMANAGER_JOINED_NOTIFICATION
-     * before this initial message the value is empty.
-     * We do not want to fail on this scenario.
-     */
     auto radio = db->radio(m_fronthaul_iface);
-    if (radio) {
-        // Clear the front interface mac if radio exists
-        radio->front.iface_mac = network_utils::ZERO_MAC;
+    if (!radio) {
+        LOG(ERROR) << "Radio of iface " << m_fronthaul_iface << " does not exist on the db";
+        return;
     }
+    // Clear the front interface mac.
+    radio->front.iface_mac = network_utils::ZERO_MAC;
 
     if (db->device_conf.stop_on_failure_attempts && !stop_on_failure_attempts) {
         LOG(ERROR) << "Reached to max stop on failure attempts!";
@@ -307,9 +305,14 @@ bool slave_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
             LOG(ERROR) << "Unknown message, action: " << int(beerocks_header->action());
         }
         }
+    } else if (sd == ap_manager_socket) {
+        // Handle IEEE 1905.1 messages from the AP Manager
+        return handle_cmdu_ap_manager_ieee1905_1_message(*sd, cmdu_rx);
     } else if (sd == monitor_socket) {
-        handle_cmdu_monitor_ieee1905_1_message(*sd, cmdu_rx);
+        // Handle IEEE 1905.1 messages from the Monitor
+        return handle_cmdu_monitor_ieee1905_1_message(*sd, cmdu_rx);
     } else { // IEEE 1905.1 message
+        // Handle IEEE 1905.1 messages from the Controller
         return handle_cmdu_control_ieee1905_1_message(sd, cmdu_rx);
     }
     return true;
@@ -333,6 +336,16 @@ bool slave_thread::handle_cmdu_control_ieee1905_1_message(Socket *sd,
 
     if (slave_state == STATE_STOPPED) {
         LOG(WARNING) << "slave_state == STATE_STOPPED";
+        return true;
+    }
+    auto db    = AgentDB::get();
+    auto radio = db->radio(m_fronthaul_iface);
+    if (!radio) {
+        return false;
+    }
+
+    // ZWDFS Radio should ignore messages from the Controller
+    if (radio->front.zwdfs) {
         return true;
     }
 
@@ -363,6 +376,30 @@ bool slave_thread::handle_cmdu_control_ieee1905_1_message(Socket *sd,
     default:
         LOG(ERROR) << "Unknown CMDU message type: " << std::hex << int(cmdu_message_type);
         return false;
+    }
+
+    return true;
+}
+
+bool slave_thread::handle_cmdu_ap_manager_ieee1905_1_message(Socket &sd,
+                                                             ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto cmdu_message_type = cmdu_rx.getMessageType();
+    switch (cmdu_message_type) {
+    // Forward unhandled messages to the backhaul manager (probably headed to the controller)
+    default:
+        const auto mid = cmdu_rx.getMessageId();
+        LOG(DEBUG) << "Forwarding ieee1905 message " << std::hex << int(cmdu_message_type)
+                   << " to backhaul_manager, mid = " << std::hex << int(mid);
+
+        uint16_t length = message_com::get_uds_header(cmdu_rx)->length;
+        cmdu_rx.swap(); // swap back before forwarding
+        if (!message_com::forward_cmdu_to_uds(backhaul_manager_socket, cmdu_rx, length)) {
+            LOG(ERROR) << "Failed forwarding message 0x" << std::hex << int(cmdu_message_type)
+                       << " to backhaul_manager";
+
+            return false;
+        }
     }
 
     return true;
@@ -1511,8 +1548,6 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         }
         auto db = AgentDB::get();
 
-        hostap_params = notification->params();
-
         m_fronthaul_iface = notification->params().iface_name;
         auto radio        = db->radio(m_fronthaul_iface);
         if (!radio) {
@@ -1520,27 +1555,49 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             return false;
         }
 
-        radio->front.iface_mac = hostap_params.iface_mac;
-        hostap_cs_params       = notification->cs_params();
+        radio->front.iface_mac    = notification->params().iface_mac;
+        radio->number_of_antennas = notification->params().ant_num;
+        radio->antenna_gain_dB    = notification->params().ant_gain;
+        radio->tx_power_dB        = notification->params().tx_power;
+        radio->freq_type          = notification->params().frequency_band;
+        radio->max_supported_bw   = notification->params().max_bandwidth;
+
+        radio->ht_supported  = notification->params().ht_supported;
+        radio->ht_capability = notification->params().ht_capability;
+        std::copy_n(notification->params().ht_mcs_set, beerocks::message::HT_MCS_SET_SIZE,
+                    radio->ht_mcs_set.begin());
+
+        radio->vht_supported  = notification->params().vht_supported;
+        radio->vht_capability = notification->params().vht_capability;
+        std::copy_n(notification->params().vht_mcs_set, beerocks::message::VHT_MCS_SET_SIZE,
+                    radio->vht_mcs_set.begin());
+
+        std::copy_n(notification->params().driver_version,
+                    beerocks::message::WIFI_DRIVER_VER_LENGTH, radio->driver_version);
+
+        save_channel_params_to_db(notification->cs_params());
+
+        radio->front.zwdfs = notification->params().zwdfs;
+        LOG(DEBUG) << "ZWDFS AP: " << radio->front.zwdfs;
 
         auto tuple_preferred_channels = notification->preferred_channels(0);
         if (!std::get<0>(tuple_preferred_channels)) {
             LOG(ERROR) << "getting preferred channels has failed!";
             return false;
         }
-        preferred_channels.clear();
-        preferred_channels.insert(
-            preferred_channels.begin(), &std::get<1>(tuple_preferred_channels),
-            &std::get<1>(tuple_preferred_channels) + notification->preferred_channels_size());
+
+        radio->front.preferred_channels.resize(notification->preferred_channels_size());
+        std::copy_n(&std::get<1>(tuple_preferred_channels), notification->preferred_channels_size(),
+                    radio->front.preferred_channels.begin());
 
         auto tuple_supported_channels = notification->supported_channels(0);
         if (!std::get<0>(tuple_supported_channels)) {
             LOG(ERROR) << "getting supported channels has failed!";
             return false;
         }
-        supported_channels.clear();
-        supported_channels.insert(
-            supported_channels.begin(), &std::get<1>(tuple_supported_channels),
+        radio->front.supported_channels.clear();
+        radio->front.supported_channels.insert(
+            radio->front.supported_channels.begin(), &std::get<1>(tuple_supported_channels),
             &std::get<1>(tuple_supported_channels) + notification->supported_channels_size());
 
         break;
@@ -1690,7 +1747,8 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             LOG(ERROR) << "addClass ACTION_APMANAGER_HOSTAP_ACS_NOTIFICATION failed";
             return false;
         }
-        hostap_cs_params = notification_in->cs_params();
+
+        save_channel_params_to_db(notification_in->cs_params());
 
         auto notification_out = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_HOSTAP_ACS_NOTIFICATION>(cmdu_tx,
@@ -1724,7 +1782,8 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_CSA_ERROR_NOTIFICATION failed";
             return false;
         }
-        hostap_cs_params = notification_in->cs_params();
+
+        save_channel_params_to_db(notification_in->cs_params());
 
         auto notification_out = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_HOSTAP_CSA_NOTIFICATION>(cmdu_tx,
@@ -1748,7 +1807,8 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_CSA_ERROR_NOTIFICATION failed";
             return false;
         }
-        hostap_cs_params = notification_in->cs_params();
+
+        save_channel_params_to_db(notification_in->cs_params());
 
         auto notification_out = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_HOSTAP_CSA_ERROR_NOTIFICATION>(cmdu_tx,
@@ -2125,11 +2185,17 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             return false;
         }
 
+        auto db    = AgentDB::get();
+        auto radio = db->radio(m_fronthaul_iface);
+        if (!radio) {
+            LOG(DEBUG) << "Radio of interface " << m_fronthaul_iface << " does not exist on the db";
+            return false;
+        }
+
         auto tuple_preferred_channels = response->preferred_channels(0);
-        preferred_channels.clear();
-        preferred_channels.insert(
-            preferred_channels.begin(), &std::get<1>(tuple_preferred_channels),
-            &std::get<1>(tuple_preferred_channels) + response->preferred_channels_size());
+        radio->front.preferred_channels.resize(response->preferred_channels_size());
+        std::copy_n(&std::get<1>(tuple_preferred_channels), response->preferred_channels_size(),
+                    radio->front.preferred_channels.begin());
 
         // build channel preference report
         auto cmdu_tx_header = cmdu_tx.create(
@@ -2140,15 +2206,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             return false;
         }
 
-        auto db    = AgentDB::get();
-        auto radio = db->radio(m_fronthaul_iface);
-        if (!radio) {
-            LOG(DEBUG) << "Radio of interface " << m_fronthaul_iface << " does not exist on the db";
-            return false;
-        }
-
-        auto preferences =
-            wireless_utils::get_channel_preferences(&std::get<1>(tuple_preferred_channels));
+        auto preferences = wireless_utils::get_channel_preferences(radio->front.preferred_channels);
 
         auto channel_preference_tlv = cmdu_tx.addClass<wfa_map::tlvChannelPreference>();
         if (!channel_preference_tlv) {
@@ -3021,6 +3079,11 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
             is_backhaul_manager = false;
         }
 
+        auto radio = db->radio(m_fronthaul_iface);
+        if (radio) {
+            // Set zwdfs to initial value.
+            radio->front.zwdfs = false;
+        }
         fronthaul_start();
 
         is_slave_reset = false;
@@ -3033,6 +3096,27 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
         if (ap_manager_socket && monitor_socket) {
             LOG(TRACE) << "goto STATE_BACKHAUL_ENABLE";
             slave_state = STATE_BACKHAUL_ENABLE;
+            break;
+        }
+        auto db    = AgentDB::get();
+        auto radio = db->radio(m_fronthaul_iface);
+        if (radio && radio->front.zwdfs && ap_manager_socket) {
+            auto request = message_com::create_vs_message<
+                beerocks_message::cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED>(cmdu_tx);
+
+            if (!request) {
+                LOG(ERROR) << "Failed building message!";
+                break;
+            }
+            request->set_front_iface_name(m_fronthaul_iface);
+            LOG(DEBUG) << "send ACTION_BACKHAUL_ZWDFS_RADIO_DETECTED for mac " << m_fronthaul_iface;
+            message_com::send_cmdu(backhaul_manager_socket, cmdu_tx);
+
+            db->remove_radio_from_radios_list(m_fronthaul_iface);
+
+            LOG(TRACE) << "goto STATE_OPERATIONAL";
+            slave_state = STATE_OPERATIONAL;
+            break;
         }
         break;
     }
@@ -3096,31 +3180,6 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
         string_utils::copy_string(bh_enable->sta_iface(message::IFACE_NAME_LENGTH),
                                   config.backhaul_wireless_iface.c_str(),
                                   message::IFACE_NAME_LENGTH);
-
-        radio->front.freq_type        = hostap_params.frequency_band;
-        radio->front.max_supported_bw = hostap_params.max_bandwidth;
-
-        bh_enable->ht_supported()  = hostap_params.ht_supported;
-        bh_enable->ht_capability() = hostap_params.ht_capability;
-        std::copy_n(hostap_params.ht_mcs_set, beerocks::message::HT_MCS_SET_SIZE,
-                    bh_enable->ht_mcs_set());
-        bh_enable->vht_supported()  = hostap_params.vht_supported;
-        bh_enable->vht_capability() = hostap_params.vht_capability;
-        std::copy_n(hostap_params.vht_mcs_set, beerocks::message::VHT_MCS_SET_SIZE,
-                    bh_enable->vht_mcs_set());
-
-        if (!bh_enable->alloc_preferred_channels(message::SUPPORTED_CHANNELS_LENGTH)) {
-            LOG(ERROR) << "Failed to allocate preferred channels!";
-            break;
-        }
-        auto tuple_preferred_channels = bh_enable->preferred_channels(0);
-        if (!std::get<0>(tuple_preferred_channels)) {
-            LOG(ERROR) << "getting preferred channels has failed!";
-            break;
-        }
-
-        std::copy_n(preferred_channels.begin(), message::SUPPORTED_CHANNELS_LENGTH,
-                    &std::get<1>(tuple_preferred_channels));
 
         // Send the message
         LOG(DEBUG) << "send ACTION_BACKHAUL_ENABLE for mac " << bh_enable->iface_mac();
@@ -3248,13 +3307,11 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
             return false;
         }
 
-        std::array<beerocks::message::sWifiChannel, beerocks::message::SUPPORTED_CHANNELS_LENGTH>
-            supported_channels_arr{{}};
-        std::copy_n(supported_channels.begin(), supported_channels.size(),
-                    supported_channels_arr.begin());
+        std::deque<beerocks::message::sWifiChannel> supported_channels_deque(
+            radio->front.supported_channels.begin(), radio->front.supported_channels.end());
 
         if (!tlvf_utils::add_ap_radio_basic_capabilities(cmdu_tx, radio->front.iface_mac,
-                                                         supported_channels_arr)) {
+                                                         supported_channels_deque)) {
             LOG(ERROR) << "Failed adding AP Radio Basic Capabilities TLV";
             return false;
         }
@@ -3359,11 +3416,37 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
                 notification->wlan_settings().channel =
                     db->device_conf.front_radio.config[config.hostap_iface].configured_channel;
                 // Hostap Params
-                notification->hostap()          = hostap_params;
+                string_utils::copy_string(notification->hostap().iface_name,
+                                          radio->front.iface_name.c_str(),
+                                          beerocks::message::IFACE_NAME_LENGTH);
+                notification->hostap().iface_mac = radio->front.iface_mac;
+                notification->hostap().iface_is_5ghz =
+                    wireless_utils::is_frequency_band_5ghz(radio->freq_type);
+                notification->hostap().ant_num        = radio->number_of_antennas;
+                notification->hostap().tx_power       = radio->tx_power_dB;
+                notification->hostap().frequency_band = radio->freq_type;
+                notification->hostap().max_bandwidth  = radio->max_supported_bw;
+                notification->hostap().ht_supported   = radio->ht_supported;
+                notification->hostap().ht_capability  = radio->ht_capability;
+                std::copy_n(radio->ht_mcs_set.begin(), beerocks::message::HT_MCS_SET_SIZE,
+                            notification->hostap().ht_mcs_set);
+                notification->hostap().vht_supported  = radio->vht_supported;
+                notification->hostap().vht_capability = radio->vht_capability;
+                std::copy_n(radio->vht_mcs_set.begin(), beerocks::message::VHT_MCS_SET_SIZE,
+                            notification->hostap().vht_mcs_set);
+                string_utils::copy_string(notification->hostap().driver_version,
+                                          radio->driver_version,
+                                          beerocks::message::WIFI_DRIVER_VER_LENGTH);
+
                 notification->hostap().ant_gain = config.hostap_ant_gain;
 
                 // Channel Selection Params
-                notification->cs_params() = hostap_cs_params;
+                notification->cs_params().channel   = radio->channel;
+                notification->cs_params().bandwidth = radio->bandwidth;
+                notification->cs_params().channel_ext_above_primary =
+                    radio->channel_ext_above_primary;
+                notification->cs_params().vht_center_frequency = radio->vht_center_frequency;
+                notification->cs_params().tx_power             = radio->tx_power_dB;
             }
         }
 
@@ -4424,13 +4507,20 @@ static uint8_t get_channel_preference(const beerocks::message::sWifiChannel chan
 
 beerocks::message::sWifiChannel slave_thread::channel_selection_select_channel()
 {
+    auto db    = AgentDB::get();
+    auto radio = db->radio(m_fronthaul_iface);
+    if (!radio) {
+        LOG(DEBUG) << "Radio of interface " << m_fronthaul_iface << " does not exist on the db";
+        return beerocks::message::sWifiChannel();
+    }
+
     for (const auto &preference : channel_preferences) {
         // Skip non-operable operating classes
         if (preference.channels.empty()) {
             continue;
         }
         for (uint8_t i = 0; i < beerocks::message::SUPPORTED_CHANNELS_LENGTH; i++) {
-            const auto &channel  = preferred_channels.at(i);
+            const auto &channel  = radio->front.preferred_channels.at(i);
             auto operating_class = wireless_utils::get_operating_class_by_channel(channel);
 
             // Skip DFS channels
@@ -4463,9 +4553,16 @@ beerocks::message::sWifiChannel slave_thread::channel_selection_select_channel()
 
 bool slave_thread::channel_selection_current_channel_restricted()
 {
+    auto db    = AgentDB::get();
+    auto radio = db->radio(m_fronthaul_iface);
+    if (!radio) {
+        LOG(DEBUG) << "Radio of interface " << m_fronthaul_iface << " does not exist on the db";
+        return false;
+    }
+
     beerocks::message::sWifiChannel channel;
-    channel.channel_bandwidth = hostap_cs_params.bandwidth;
-    channel.channel           = hostap_cs_params.channel;
+    channel.channel_bandwidth = radio->bandwidth;
+    channel.channel           = radio->channel;
     auto operating_class      = wireless_utils::get_operating_class_by_channel(channel);
 
     LOG(DEBUG) << "Current channel " << int(channel.channel) << " bw "
@@ -4682,8 +4779,7 @@ bool slave_thread::handle_channel_selection_request(Socket *sd, ieee1905_1::Cmdu
     LOG(DEBUG) << "send ACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START";
 
     // If only tx power limit change is required, set channel to current
-    request_out->cs_params().channel =
-        switch_required ? channel_to_switch.channel : hostap_cs_params.channel;
+    request_out->cs_params().channel = switch_required ? channel_to_switch.channel : radio->channel;
     request_out->cs_params().bandwidth = channel_to_switch.channel_bandwidth;
     request_out->tx_limit()            = power_limit;
     request_out->tx_limit_valid()      = power_limit_received;
@@ -4741,10 +4837,10 @@ bool slave_thread::send_operating_channel_report()
 
     auto &operating_class_entry = std::get<1>(operating_class_entry_tuple);
     beerocks::message::sWifiChannel channel;
-    channel.channel_bandwidth = hostap_cs_params.bandwidth;
-    channel.channel           = hostap_cs_params.channel;
-    auto center_channel  = wireless_utils::freq_to_channel(hostap_cs_params.vht_center_frequency);
-    auto operating_class = wireless_utils::get_operating_class_by_channel(channel);
+    channel.channel_bandwidth = radio->bandwidth;
+    channel.channel           = radio->channel;
+    auto center_channel       = wireless_utils::freq_to_channel(radio->vht_center_frequency);
+    auto operating_class      = wireless_utils::get_operating_class_by_channel(channel);
 
     operating_class_entry.operating_class = operating_class;
     // operating classes 128,129,130 use center channel **unlike the other classes** (See Table E-4 in 802.11 spec)
@@ -4752,7 +4848,7 @@ bool slave_thread::send_operating_channel_report()
         (operating_class == 128 || operating_class == 129 || operating_class == 130)
             ? center_channel
             : channel.channel;
-    operating_channel_report_tlv->current_transmit_power() = hostap_cs_params.tx_power;
+    operating_channel_report_tlv->current_transmit_power() = radio->tx_power_dB;
 
     return send_cmdu_to_controller(cmdu_tx);
 }
@@ -4773,7 +4869,12 @@ bool slave_thread::autoconfig_wsc_add_m1()
     tlv->alloc_payload(payload_length);
 
     WSC::m1::config cfg;
-    auto db = AgentDB::get();
+    auto db    = AgentDB::get();
+    auto radio = db->radio(m_fronthaul_iface);
+    if (!radio) {
+        LOG(ERROR) << "Cannot find radio for " << m_fronthaul_iface;
+        return false;
+    }
 
     cfg.msg_type = WSC::eWscMessageType::WSC_MSG_TYPE_M1;
     cfg.mac      = db->bridge.mac;
@@ -4789,7 +4890,8 @@ bool slave_thread::autoconfig_wsc_add_m1()
     cfg.serial_number       = "prpl12345";
     cfg.primary_dev_type_id = WSC::WSC_DEV_NETWORK_INFRA_AP;
     cfg.device_name         = "prplmesh-agent";
-    cfg.bands       = hostap_params.iface_is_5ghz ? WSC::WSC_RF_BAND_5GHZ : WSC::WSC_RF_BAND_2GHZ;
+    cfg.bands = wireless_utils::is_frequency_band_5ghz(radio->freq_type) ? WSC::WSC_RF_BAND_5GHZ
+                                                                         : WSC::WSC_RF_BAND_2GHZ;
     auto attributes = WSC::m1::create(*tlv, cfg);
     if (!attributes)
         return false;
@@ -4802,4 +4904,20 @@ bool slave_thread::autoconfig_wsc_add_m1()
     m1_auth_buf     = new uint8_t[m1_auth_buf_len];
     std::copy_n(attributes->buffer(), m1_auth_buf_len, m1_auth_buf);
     return true;
+}
+
+void slave_thread::save_channel_params_to_db(beerocks_message::sApChannelSwitch params)
+{
+    auto db    = AgentDB::get();
+    auto radio = db->radio(m_fronthaul_iface);
+    if (!radio) {
+        LOG(DEBUG) << "Radio of interface " << m_fronthaul_iface << " does not exist on the db";
+        return;
+    }
+
+    radio->channel                   = params.channel;
+    radio->bandwidth                 = static_cast<beerocks::eWiFiBandwidth>(params.bandwidth);
+    radio->channel_ext_above_primary = params.channel_ext_above_primary;
+    radio->vht_center_frequency      = params.vht_center_frequency;
+    radio->tx_power_dB               = params.tx_power;
 }

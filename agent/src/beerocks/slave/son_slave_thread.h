@@ -118,6 +118,7 @@ private:
     bool handle_cmdu_monitor_message(Socket *sd,
                                      std::shared_ptr<beerocks::beerocks_header> beerocks_header);
     bool handle_cmdu_control_ieee1905_1_message(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_cmdu_ap_manager_ieee1905_1_message(Socket &sd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_cmdu_monitor_ieee1905_1_message(Socket &sd, ieee1905_1::CmduMessageRx &cmdu_rx);
 
     bool slave_fsm(bool &call_slave_select);
@@ -172,15 +173,10 @@ private:
     //slave FSM //
     eSlaveState slave_state;
     std::chrono::steady_clock::time_point slave_state_timer;
-    bool hostap_params_available;
     int slave_resets_counter = 0;
 
     sSlaveBackhaulParams backhaul_params;
-    beerocks_message::sNodeHostap hostap_params;
-    beerocks_message::sApChannelSwitch hostap_cs_params;
     std::vector<wireless_utils::sChannelPreference> channel_preferences;
-    std::vector<beerocks::message::sWifiChannel> preferred_channels;
-    std::vector<beerocks::message::sWifiChannel> supported_channels;
 
     SocketClient *platform_manager_socket = nullptr;
     SocketClient *backhaul_manager_socket = nullptr;
@@ -237,6 +233,14 @@ private:
     bool handle_client_steering_request(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_beacon_metrics_query(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_ack_message(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief save channel switch parameters in the agent DB
+     *
+     * Save majority of sApChannelSwitch parameters in the agent DB.
+     * Discard `switch_reason` and `is_dfs_channel` because they are not used in unified agent.
+     */
+    void save_channel_params_to_db(beerocks_message::sApChannelSwitch params);
 };
 
 } // namespace son

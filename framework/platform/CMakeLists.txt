@@ -1,4 +1,4 @@
 add_subdirectory(bpl)
-if (ENABLE_HLAPI)
-    add_subdirectory(hlapi)
+if (ENABLE_NBAPI)
+    add_subdirectory(nbapi)
 endif()

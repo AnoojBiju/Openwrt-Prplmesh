@@ -52,22 +52,6 @@ cACTION_BACKHAUL_ENABLE:
   backhaul_preferred_radio_band: uint8_t
   frequency_band: beerocks::eFreqType
   max_bandwidth: beerocks::eWiFiBandwidth
-  ht_supported: uint8_t #bool
-  ht_capability: uint16_t
-  ht_mcs_set:
-    _type: uint8_t
-    _length: ["beerocks::message::HT_MCS_SET_SIZE"]
-  vht_supported: uint8_t #bool
-  vht_capability: uint32_t
-  vht_mcs_set:
-    _type: uint8_t
-    _length: ["beerocks::message::VHT_MCS_SET_SIZE"]
-  preferred_channels_size:
-    _type: uint8_t
-    _length_var: True
-  preferred_channels:
-    _type: beerocks::message::sWifiChannel
-    _length: [preferred_channels_size]
 
 cACTION_BACKHAUL_CONNECTED_NOTIFICATION:
   _type: class
@@ -137,3 +121,9 @@ cACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_RESPONSE:
 
 cACTION_BACKHAUL_START_WPS_PBC_REQUEST:
   _type: class
+
+cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED:
+  _type: class
+  front_iface_name:
+    _type: char
+    _length: ["beerocks::message::IFACE_NAME_LENGTH"]

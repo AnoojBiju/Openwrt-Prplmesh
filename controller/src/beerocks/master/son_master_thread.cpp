@@ -64,6 +64,9 @@
 #include <tlvf/wfa_map/tlvSteeringBTMReport.h>
 #include <tlvf/wfa_map/tlvSupportedService.h>
 #include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
+#include <tlvf/wfa_map/tlvTunnelledData.h>
+#include <tlvf/wfa_map/tlvTunnelledProtocolType.h>
+#include <tlvf/wfa_map/tlvTunnelledSourceInfo.h>
 
 #define SOCKET_MAX_CONNECTIONS 20
 #define SOCKETS_SELECT_TIMEOUT_MSEC 50
@@ -124,6 +127,7 @@ bool master_thread::init()
             ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE,
             ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE,
             ieee1905_1::eMessageType::BACKHAUL_STEERING_RESPONSE_MESSAGE,
+            ieee1905_1::eMessageType::TUNNELLED_MESSAGE,
 
         })) {
         LOG(ERROR) << "Failed subscribing to the Bus";
@@ -324,6 +328,8 @@ bool master_thread::handle_cmdu_1905_1_message(const std::string &src_mac,
         return handle_cmdu_1905_topology_response(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::BACKHAUL_STEERING_RESPONSE_MESSAGE:
         return handle_cmdu_1905_backhaul_sta_steering_response(src_mac, cmdu_rx);
+    case ieee1905_1::eMessageType::TUNNELLED_MESSAGE:
+        return handle_cmdu_1905_tunnelled_message(src_mac, cmdu_rx);
 
     default:
         break;
@@ -1883,6 +1889,41 @@ bool master_thread::handle_cmdu_1905_backhaul_sta_steering_response(
     LOG(DEBUG) << "sending ACK message to the agent, mid=" << std::hex << mid;
 
     return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
+}
+
+bool master_thread::handle_cmdu_1905_tunnelled_message(const std::string &src_mac,
+                                                       ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto mid = cmdu_rx.getMessageId();
+    LOG(DEBUG) << "Received Tunnelled Message from " << src_mac << ", mid=" << std::hex << mid;
+
+    // Parse the Source Info TLV
+    auto source_info_tlv = cmdu_rx.getClass<wfa_map::tlvTunnelledSourceInfo>();
+    if (!source_info_tlv) {
+        LOG(ERROR) << "Failed parsing tlvTunnelledSourceInfo!";
+        return false;
+    }
+
+    // Parse the Type
+    auto type_tlv = cmdu_rx.getClass<wfa_map::tlvTunnelledProtocolType>();
+    if (!type_tlv) {
+        LOG(ERROR) << "Failed parsing tlvTunnelledProtocolType!";
+        return false;
+    }
+
+    // Parse the Data
+    auto data_tlv = cmdu_rx.getClass<wfa_map::tlvTunnelledData>();
+    if (!data_tlv) {
+        LOG(ERROR) << "Failed parsing tlvTunnelledData!";
+        return false;
+    }
+
+    LOG(DEBUG) << "Tunnelled Message STA MAC: " << source_info_tlv->mac() << ", Type: " << std::hex
+               << int(type_tlv->protocol_type()) << ", Data Length: " << std::dec
+               << data_tlv->data_length() << ", Data: " << std::endl
+               << utils::dump_buffer(data_tlv->data(0), data_tlv->data_length());
+
+    return true;
 }
 
 bool master_thread::handle_cmdu_1905_beacon_response(const std::string &src_mac,

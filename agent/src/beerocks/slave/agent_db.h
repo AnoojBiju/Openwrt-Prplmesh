@@ -121,6 +121,7 @@ public:
         bool load_balancing_enabled;
         bool service_fairness_enabled;
         bool rdkb_extensions_enabled;
+        bool zwdfs_enable;
 
         std::string vendor;
         std::string model;
@@ -164,15 +165,21 @@ public:
 
         struct sFront {
             explicit sFront(const std::string &iface_name_)
-                : iface_name(iface_name_), iface_mac(net::network_utils::ZERO_MAC),
-                  max_supported_bw(eWiFiBandwidth::BANDWIDTH_UNKNOWN),
-                  freq_type(eFreqType::FREQ_UNKNOWN)
+                : iface_name(iface_name_), iface_mac(net::network_utils::ZERO_MAC)
             {
             }
             std::string iface_name;
             sMacAddr iface_mac;
             eWiFiBandwidth max_supported_bw;
-            eFreqType freq_type;
+
+            /**
+             * @brief supported channels in radio
+             */
+            std::deque<beerocks::message::sWifiChannel> preferred_channels;
+            std::vector<beerocks::message::sWifiChannel> supported_channels;
+
+            // When set, radio can only be used for ZWDFS purpose.
+            bool zwdfs;
 
             struct sBssid {
                 sMacAddr mac;
@@ -205,10 +212,30 @@ public:
             std::array<uint8_t, ASSOCIATION_FRAME_SIZE> association_frame;
         };
 
-        bool sta_iface_filter_low;
-
         // Associated clients grouped by Client MAC.
         std::unordered_map<sMacAddr, sClient> associated_clients;
+
+        bool sta_iface_filter_low;
+        eFreqType freq_type             = eFreqType::FREQ_UNKNOWN;
+        eWiFiBandwidth max_supported_bw = eWiFiBandwidth::BANDWIDTH_UNKNOWN;
+        uint8_t number_of_antennas;
+        uint8_t antenna_gain_dB;
+        uint8_t tx_power_dB;
+        char driver_version[beerocks::message::WIFI_DRIVER_VER_LENGTH];
+        uint8_t channel;
+        beerocks::eWiFiBandwidth bandwidth;
+        bool channel_ext_above_primary;
+        uint16_t vht_center_frequency;
+
+        bool ht_supported; ///< Is 802.11n (High Throughput) protocol supported
+        uint16_t ht_capability;
+        /// 16-byte attribute containing the MCS set as defined in 802.11n
+        std::array<uint8_t, beerocks::message::HT_MCS_SET_SIZE> ht_mcs_set;
+
+        bool vht_supported; ///< Is 802.11ac (Very High Throughput) protocol supported
+        uint32_t vht_capability;
+        /// 32-byte attribute containing the MCS set as defined in 802.11ac
+        std::array<uint8_t, beerocks::message::VHT_MCS_SET_SIZE> vht_mcs_set;
     };
 
     /**
@@ -240,6 +267,15 @@ public:
      * @return const std::vector<std::string &>& Intefaces names list.
      */
     const std::vector<sRadio *> &get_radios_list() { return m_radios_list; };
+
+    /**
+     * @brief Removes a radio object from the radios list.
+     * This function does not remove the radio completely from the database, only the pointer to 
+     * that radio, from the list which is get when calling "get_radios_list()".
+     * 
+     * @param iface_name Front or back interface name.
+     */
+    void remove_radio_from_radios_list(const std::string &iface_name);
 
     /* Helper enum for get_radio_by_mac() function */
     enum class eMacType : uint8_t { ALL, RADIO, BSSID, CLIENT };

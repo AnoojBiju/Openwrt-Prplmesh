@@ -449,104 +449,6 @@ beerocks::eWiFiBandwidth& cACTION_BACKHAUL_ENABLE::max_bandwidth() {
     return (beerocks::eWiFiBandwidth&)(*m_max_bandwidth);
 }
 
-uint8_t& cACTION_BACKHAUL_ENABLE::ht_supported() {
-    return (uint8_t&)(*m_ht_supported);
-}
-
-uint16_t& cACTION_BACKHAUL_ENABLE::ht_capability() {
-    return (uint16_t&)(*m_ht_capability);
-}
-
-uint8_t* cACTION_BACKHAUL_ENABLE::ht_mcs_set(size_t idx) {
-    if ( (m_ht_mcs_set_idx__ == 0) || (m_ht_mcs_set_idx__ <= idx) ) {
-        TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
-        return nullptr;
-    }
-    return &(m_ht_mcs_set[idx]);
-}
-
-bool cACTION_BACKHAUL_ENABLE::set_ht_mcs_set(const void* buffer, size_t size) {
-    if (buffer == nullptr) {
-        TLVF_LOG(WARNING) << "set_ht_mcs_set received a null pointer.";
-        return false;
-    }
-    if (size > beerocks::message::HT_MCS_SET_SIZE) {
-        TLVF_LOG(ERROR) << "Received buffer size is smaller than buffer length";
-        return false;
-    }
-    std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_ht_mcs_set);
-    return true;
-}
-uint8_t& cACTION_BACKHAUL_ENABLE::vht_supported() {
-    return (uint8_t&)(*m_vht_supported);
-}
-
-uint32_t& cACTION_BACKHAUL_ENABLE::vht_capability() {
-    return (uint32_t&)(*m_vht_capability);
-}
-
-uint8_t* cACTION_BACKHAUL_ENABLE::vht_mcs_set(size_t idx) {
-    if ( (m_vht_mcs_set_idx__ == 0) || (m_vht_mcs_set_idx__ <= idx) ) {
-        TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
-        return nullptr;
-    }
-    return &(m_vht_mcs_set[idx]);
-}
-
-bool cACTION_BACKHAUL_ENABLE::set_vht_mcs_set(const void* buffer, size_t size) {
-    if (buffer == nullptr) {
-        TLVF_LOG(WARNING) << "set_vht_mcs_set received a null pointer.";
-        return false;
-    }
-    if (size > beerocks::message::VHT_MCS_SET_SIZE) {
-        TLVF_LOG(ERROR) << "Received buffer size is smaller than buffer length";
-        return false;
-    }
-    std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_vht_mcs_set);
-    return true;
-}
-uint8_t& cACTION_BACKHAUL_ENABLE::preferred_channels_size() {
-    return (uint8_t&)(*m_preferred_channels_size);
-}
-
-std::tuple<bool, beerocks::message::sWifiChannel&> cACTION_BACKHAUL_ENABLE::preferred_channels(size_t idx) {
-    bool ret_success = ( (m_preferred_channels_idx__ > 0) && (m_preferred_channels_idx__ > idx) );
-    size_t ret_idx = ret_success ? idx : 0;
-    if (!ret_success) {
-        TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
-    }
-    return std::forward_as_tuple(ret_success, m_preferred_channels[ret_idx]);
-}
-
-bool cACTION_BACKHAUL_ENABLE::alloc_preferred_channels(size_t count) {
-    if (m_lock_order_counter__ > 0) {;
-        TLVF_LOG(ERROR) << "Out of order allocation for variable length list preferred_channels, abort!";
-        return false;
-    }
-    size_t len = sizeof(beerocks::message::sWifiChannel) * count;
-    if(getBuffRemainingBytes() < len )  {
-        TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
-        return false;
-    }
-    m_lock_order_counter__ = 0;
-    uint8_t *src = (uint8_t *)&m_preferred_channels[*m_preferred_channels_size];
-    uint8_t *dst = src + len;
-    if (!m_parse__) {
-        size_t move_length = getBuffRemainingBytes(src) - len;
-        std::copy_n(src, move_length, dst);
-    }
-    m_preferred_channels_idx__ += count;
-    *m_preferred_channels_size += count;
-    if (!buffPtrIncrementSafe(len)) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
-        return false;
-    }
-    if (!m_parse__) { 
-        for (size_t i = m_preferred_channels_idx__ - count; i < m_preferred_channels_idx__; i++) { m_preferred_channels[i].struct_init(); }
-    }
-    return true;
-}
-
 void cACTION_BACKHAUL_ENABLE::class_swap()
 {
     tlvf_swap(8*sizeof(eActionOp_BACKHAUL), reinterpret_cast<uint8_t*>(m_action_op));
@@ -554,11 +456,6 @@ void cACTION_BACKHAUL_ENABLE::class_swap()
     tlvf_swap(32, reinterpret_cast<uint8_t*>(m_security_type));
     tlvf_swap(8*sizeof(beerocks::eFreqType), reinterpret_cast<uint8_t*>(m_frequency_band));
     tlvf_swap(8*sizeof(beerocks::eWiFiBandwidth), reinterpret_cast<uint8_t*>(m_max_bandwidth));
-    tlvf_swap(16, reinterpret_cast<uint8_t*>(m_ht_capability));
-    tlvf_swap(32, reinterpret_cast<uint8_t*>(m_vht_capability));
-    for (size_t i = 0; i < m_preferred_channels_idx__; i++){
-        m_preferred_channels[i].struct_swap();
-    }
 }
 
 bool cACTION_BACKHAUL_ENABLE::finalize()
@@ -601,13 +498,6 @@ size_t cACTION_BACKHAUL_ENABLE::get_initial_size()
     class_size += sizeof(uint8_t); // backhaul_preferred_radio_band
     class_size += sizeof(beerocks::eFreqType); // frequency_band
     class_size += sizeof(beerocks::eWiFiBandwidth); // max_bandwidth
-    class_size += sizeof(uint8_t); // ht_supported
-    class_size += sizeof(uint16_t); // ht_capability
-    class_size += beerocks::message::HT_MCS_SET_SIZE * sizeof(uint8_t); // ht_mcs_set
-    class_size += sizeof(uint8_t); // vht_supported
-    class_size += sizeof(uint32_t); // vht_capability
-    class_size += beerocks::message::VHT_MCS_SET_SIZE * sizeof(uint8_t); // vht_mcs_set
-    class_size += sizeof(uint8_t); // preferred_channels_size
     return class_size;
 }
 
@@ -670,51 +560,6 @@ bool cACTION_BACKHAUL_ENABLE::init()
     m_max_bandwidth = reinterpret_cast<beerocks::eWiFiBandwidth*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(beerocks::eWiFiBandwidth))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(beerocks::eWiFiBandwidth) << ") Failed!";
-        return false;
-    }
-    m_ht_supported = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
-        return false;
-    }
-    m_ht_capability = reinterpret_cast<uint16_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint16_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
-        return false;
-    }
-    m_ht_mcs_set = (uint8_t*)m_buff_ptr__;
-    if (!buffPtrIncrementSafe(sizeof(uint8_t) * (beerocks::message::HT_MCS_SET_SIZE))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (beerocks::message::HT_MCS_SET_SIZE) << ") Failed!";
-        return false;
-    }
-    m_ht_mcs_set_idx__  = beerocks::message::HT_MCS_SET_SIZE;
-    m_vht_supported = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
-        return false;
-    }
-    m_vht_capability = reinterpret_cast<uint32_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint32_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
-        return false;
-    }
-    m_vht_mcs_set = (uint8_t*)m_buff_ptr__;
-    if (!buffPtrIncrementSafe(sizeof(uint8_t) * (beerocks::message::VHT_MCS_SET_SIZE))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (beerocks::message::VHT_MCS_SET_SIZE) << ") Failed!";
-        return false;
-    }
-    m_vht_mcs_set_idx__  = beerocks::message::VHT_MCS_SET_SIZE;
-    m_preferred_channels_size = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (!m_parse__) *m_preferred_channels_size = 0;
-    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
-        return false;
-    }
-    m_preferred_channels = (beerocks::message::sWifiChannel*)m_buff_ptr__;
-    uint8_t preferred_channels_size = *m_preferred_channels_size;
-    m_preferred_channels_idx__ = preferred_channels_size;
-    if (!buffPtrIncrementSafe(sizeof(beerocks::message::sWifiChannel) * (preferred_channels_size))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(beerocks::message::sWifiChannel) * (preferred_channels_size) << ") Failed!";
         return false;
     }
     if (m_parse__) { class_swap(); }
@@ -1842,6 +1687,98 @@ bool cACTION_BACKHAUL_START_WPS_PBC_REQUEST::init()
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
         return false;
     }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
+cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED::cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED::cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED::~cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED() {
+}
+std::string cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED::front_iface_name_str() {
+    char *front_iface_name_ = front_iface_name();
+    if (!front_iface_name_) { return std::string(); }
+    return std::string(front_iface_name_, m_front_iface_name_idx__);
+}
+
+char* cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED::front_iface_name(size_t length) {
+    if( (m_front_iface_name_idx__ == 0) || (m_front_iface_name_idx__ < length) ) {
+        TLVF_LOG(ERROR) << "front_iface_name length is smaller than requested length";
+        return nullptr;
+    }
+    return ((char*)m_front_iface_name);
+}
+
+bool cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED::set_front_iface_name(const std::string& str) { return set_front_iface_name(str.c_str(), str.size()); }
+bool cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED::set_front_iface_name(const char str[], size_t size) {
+    if (str == nullptr) {
+        TLVF_LOG(WARNING) << "set_front_iface_name received a null pointer.";
+        return false;
+    }
+    if (size > beerocks::message::IFACE_NAME_LENGTH) {
+        TLVF_LOG(ERROR) << "Received buffer size is smaller than string length";
+        return false;
+    }
+    std::copy(str, str + size, m_front_iface_name);
+    return true;
+}
+void cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED::class_swap()
+{
+    tlvf_swap(8*sizeof(eActionOp_BACKHAUL), reinterpret_cast<uint8_t*>(m_action_op));
+}
+
+bool cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED::get_initial_size()
+{
+    size_t class_size = 0;
+    class_size += beerocks::message::IFACE_NAME_LENGTH * sizeof(char); // front_iface_name
+    return class_size;
+}
+
+bool cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_front_iface_name = (char*)m_buff_ptr__;
+    if (!buffPtrIncrementSafe(sizeof(char) * (beerocks::message::IFACE_NAME_LENGTH))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (beerocks::message::IFACE_NAME_LENGTH) << ") Failed!";
+        return false;
+    }
+    m_front_iface_name_idx__  = beerocks::message::IFACE_NAME_LENGTH;
     if (m_parse__) { class_swap(); }
     return true;
 }

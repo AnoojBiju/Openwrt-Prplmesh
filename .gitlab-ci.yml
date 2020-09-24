@@ -151,7 +151,7 @@ build-in-docker-alpine:
   image: $CI_REGISTRY_IMAGE/prplmesh-builder-alpine:$CI_PIPELINE_ID
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
-    - if: '$CI_MERGE_REQUEST_LABELS =~ "ready for merge"'
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/'
     - when: manual
   needs: ["image-build-builder/alpine"]
 
@@ -160,7 +160,7 @@ build-in-docker-ubuntu-xenial:
   image: $CI_REGISTRY_IMAGE/prplmesh-builder-ubuntu-xenial:$CI_PIPELINE_ID
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
-    - if: '$CI_MERGE_REQUEST_LABELS =~ "ready for merge"'
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/'
     - when: manual
   needs: ["image-build-builder/ubuntu/xenial"]
 
@@ -170,7 +170,7 @@ build-in-docker-static:
     EXTRA_CMAKE_FLAGS: "-DBUILD_SHARED_LIBS=OFF"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
-    - if: '$CI_MERGE_REQUEST_LABELS =~ "ready for merge"'
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/'
     - when: manual
 
 upload-artifacts:
@@ -239,8 +239,7 @@ run-tests:
     when: always
 
   tags:
-    - docker
-    - docker-build
+    - test-flows
 
   after_script:
     - tools/docker/stop.sh -k -r
@@ -250,14 +249,12 @@ run-tests:
 
 boardfarm-tests:
   stage: test
-  image: $CI_REGISTRY_IMAGE/prplmesh-boardfarm-ci:$CI_PIPELINE_ID
   script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - ./dctest.py
   artifacts:
     paths:
       - logs
-      - results
     when: always
   needs:
     - job: build-in-docker
@@ -277,7 +274,7 @@ boardfarm-tests:
     when: always
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
-    - if: '$CI_MERGE_REQUEST_LABELS =~ "ready for merge"'
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/'
     - when: manual
   tags:
     - shell
@@ -298,7 +295,7 @@ boardfarm-tests:
     - tools/docker/builder/rdk-b/build.sh --verbose --target-device "$TARGET_DEVICE" --tag "$CI_PIPELINE_ID" --cache "$RDK_CACHE_DIR"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
-    - if: '$CI_MERGE_REQUEST_LABELS =~ "ready for merge"'
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/'
     - when: manual
   artifacts:
     paths:
@@ -391,7 +388,7 @@ run-certification-tests:
   script:
     - |
       if [ "$DEVICE_UNDER_TEST" = axepoint ] ; then
-          tools/deploy_firmware.py --device axepoint --target-name "$DEVICE_UNDER_TEST" --image AX6000_2000_ETH_11AXUCI-squashfs-fullimage.img
+          tools/deploy_firmware.py --device axepoint --target-name "$DEVICE_UNDER_TEST" --image AX3000_1600_ETH_11AXUCI-squashfs-fullimage.img
           echo "Deploying to $DEVICE_UNDER_TEST"
           tools/deploy_ipk.sh --certification-mode $DEVICE_UNDER_TEST build/$DEVICE_UNDER_TEST/prplmesh.ipk
       fi

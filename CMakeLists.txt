@@ -14,7 +14,7 @@ option (BUILD_AGENT "Build EasyMesh agent" ON)
 option (BUILD_CONTROLLER "Build EasyMesh controller" ON)
 
 option(BUILD_SHARED_LIBS "Build shared libraries (.so) instead of static ones (.a)" ON)
-option (ENABLE_HLAPI "Build the northbound (high-level) API" OFF)
+option (ENABLE_NBAPI "Build the northbound (high-level) API" OFF)
 
 ## Generic checks and defaults
 
@@ -136,7 +136,7 @@ elseif (TARGET_PLATFORM STREQUAL "rdkb")
     set(CMAKE_SKIP_RPATH TRUE)
 elseif (TARGET_PLATFORM STREQUAL "linux")
     add_definitions(-DBEEROCKS_LINUX)
-    set(BEEROCKS_BH_WIRE_IFACE "eth0")
+    set(BEEROCKS_BH_WIRE_IFACE "eth1")
 endif()
 
 # Test support

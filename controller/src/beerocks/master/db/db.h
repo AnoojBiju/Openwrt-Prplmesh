@@ -210,15 +210,15 @@ public:
      * @return std::string the string representation of the integer number of seconds in the timestamp.
      */
     static std::string
-    timestamp_to_string_seconds(const std::chrono::steady_clock::time_point timestamp);
+    timestamp_to_string_seconds(const std::chrono::system_clock::time_point timestamp);
 
     /**
      * @brief Translate an integer number of seconds to a timepoint.
      * 
      * @param timestamp_sec Number of seconds in the timestamp.
-     * @return std::chrono::steady_clock::time_point a time-point representation of the number of seconds.
+     * @return std::chrono::system_clock::time_point a time-point representation of the number of seconds.
      */
-    static std::chrono::steady_clock::time_point timestamp_from_seconds(int timestamp_sec);
+    static std::chrono::system_clock::time_point timestamp_from_seconds(int timestamp_sec);
 
     //logger
     void set_log_level_state(const beerocks::eLogLevel &log_level, const bool &new_state);
@@ -671,7 +671,7 @@ public:
      * @param mac MAC address of a client.
      * @return Client persistent data last edit time (even if edit was done only to runtime-dbb and not saved to persistent db), or time_point::min() if not-configured or failure.
      */
-    std::chrono::steady_clock::time_point get_client_parameters_last_edit(const sMacAddr &mac);
+    std::chrono::system_clock::time_point get_client_parameters_last_edit(const sMacAddr &mac);
 
     /**
      * @brief Set the client's time-life delay.
@@ -1176,6 +1176,11 @@ private:
     std::unordered_map<std::string, std::shared_ptr<node>> nodes[beerocks::HIERARCHY_MAX];
 
     std::queue<std::string> disconnected_slave_mac_queue;
+    /*
+            * This variable indicates that data currently pending flashing from memory into the 
+            * persistent DB hard file. (non-temporary file)
+            */
+    bool db_changes_made = false;
 
     int slaves_stop_on_failure_attempts = 0;
 

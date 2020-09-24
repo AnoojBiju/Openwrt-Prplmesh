@@ -18,6 +18,10 @@
 #include <beerocks/tlvf/beerocks_message.h>
 #include <beerocks/tlvf/beerocks_message_apmanager.h>
 
+#include <tlvf/wfa_map/tlvTunnelledData.h>
+#include <tlvf/wfa_map/tlvTunnelledProtocolType.h>
+#include <tlvf/wfa_map/tlvTunnelledSourceInfo.h>
+
 using namespace beerocks::net;
 
 //////////////////////////////////////////////////////////////////////////////
@@ -250,6 +254,8 @@ void ap_manager_thread::ap_manager_fsm()
         next_heartbeat_notification_timestamp =
             std::chrono::steady_clock::now() +
             std::chrono::seconds(HEARTBEAT_NOTIFICATION_DELAY_SEC);
+
+        m_ap_support_zwdfs = ap_wlan_hal->is_zwdfs_supported();
 
         LOG(DEBUG) << "Move to OPERATIONAL state";
         m_state = eApManagerState::OPERATIONAL;
@@ -1520,6 +1526,100 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
 
     } break;
 
+    case Event::MGMT_Frame: {
+        if (!data) {
+            LOG(ERROR) << "MGMT_Frame without data!";
+            // That's indeed an error, but no reason to terminate the AP Manager in this case.
+            // Return "true" to ignore the event and continue operating.
+            return true;
+        }
+
+        auto mgmt_frame = static_cast<bwl::sMGMT_FRAME_NOTIFICATION *>(data);
+
+        // Convert the BWL type to a tunnelled message type
+        wfa_map::tlvTunnelledProtocolType::eTunnelledProtocolType tunnelled_proto_type;
+        switch (mgmt_frame->type) {
+        case bwl::eManagementFrameType::ASSOCIATION_REQUEST: {
+            tunnelled_proto_type =
+                wfa_map::tlvTunnelledProtocolType::eTunnelledProtocolType::ASSOCIATION_REQUEST;
+        } break;
+        case bwl::eManagementFrameType::REASSOCIATION_REQUEST: {
+            tunnelled_proto_type =
+                wfa_map::tlvTunnelledProtocolType::eTunnelledProtocolType::REASSOCIATION_REQUEST;
+        } break;
+        case bwl::eManagementFrameType::BTM_QUERY: {
+            tunnelled_proto_type =
+                wfa_map::tlvTunnelledProtocolType::eTunnelledProtocolType::BTM_QUERY;
+        } break;
+        case bwl::eManagementFrameType::WNM_REQUEST: {
+            tunnelled_proto_type =
+                wfa_map::tlvTunnelledProtocolType::eTunnelledProtocolType::WNM_REQUEST;
+        } break;
+        case bwl::eManagementFrameType::ANQP_REQUEST: {
+            tunnelled_proto_type =
+                wfa_map::tlvTunnelledProtocolType::eTunnelledProtocolType::ANQP_REQUEST;
+        } break;
+        default: {
+            LOG(DEBUG) << "Unsupported 802.11 management frame: " << std::hex
+                       << int(mgmt_frame->type);
+
+            // Not supporting a specific frame is not really an error, so just stop processing
+            return true;
+        }
+        }
+
+        LOG(DEBUG) << "Processing management frame from " << mgmt_frame->mac
+                   << ", of type: " << std::hex << int(mgmt_frame->type)
+                   << " (tunnelled: " << int(tunnelled_proto_type) << ")"
+                   << ", data length: " << std::dec << mgmt_frame->data.size();
+
+        // Create a tunnelled message
+        auto cmdu_tx_header = cmdu_tx.create(0, ieee1905_1::eMessageType::TUNNELLED_MESSAGE);
+        if (!cmdu_tx_header) {
+            LOG(ERROR) << "cmdu creation of type TUNNELLED_MESSAGE failed!";
+            return false;
+        }
+
+        // Add the Source Info TLV
+        auto source_info_tlv = cmdu_tx.addClass<wfa_map::tlvTunnelledSourceInfo>();
+        if (!source_info_tlv) {
+            LOG(ERROR) << "addClass ieee1905_1::tlvTunnelledSourceInfo failed!";
+            return false;
+        }
+
+        // Store the MAC address of the transmitting station
+        source_info_tlv->mac() = mgmt_frame->mac;
+
+        // Add the Type TLV
+        auto type_tlv = cmdu_tx.addClass<wfa_map::tlvTunnelledProtocolType>();
+        if (!type_tlv) {
+            LOG(ERROR) << "addClass ieee1905_1::tlvTunnelledProtocolType failed!";
+            return false;
+        }
+
+        // Store the tunnelled message type and length
+        type_tlv->protocol_type() = tunnelled_proto_type;
+
+        // Add the Data TLV
+        auto data_tlv = cmdu_tx.addClass<wfa_map::tlvTunnelledData>();
+        if (!data_tlv) {
+            LOG(ERROR) << "addClass ieee1905_1::tlvTunnelledData failed!";
+            return false;
+        }
+
+        // Copy the frame body
+        if (!data_tlv->set_data(mgmt_frame->data.data(), mgmt_frame->data.size())) {
+            LOG(ERROR) << "Failed copying " << mgmt_frame->data.size()
+                       << " bytes into the tunnelled message data tlv!";
+
+            return false;
+        }
+
+        // Send the tunnelled message
+        message_com::send_cmdu(slave_socket, cmdu_tx);
+
+    } break;
+
     // Unhandled events
     default:
         LOG(ERROR) << "Unhandled event: " << int(event);
@@ -1589,6 +1689,8 @@ void ap_manager_thread::handle_hostapd_attached()
     std::copy_n(ap_wlan_hal->get_radio_info().vht_mcs_set.data(),
                 beerocks::message::VHT_MCS_SET_SIZE, notification->params().vht_mcs_set);
 
+    notification->params().zwdfs = m_ap_support_zwdfs;
+
     // Copy the channels supported by the AP
     if (!notification->alloc_preferred_channels(
             ap_wlan_hal->get_radio_info().preferred_channels.size())) {
@@ -1620,6 +1722,7 @@ void ap_manager_thread::handle_hostapd_attached()
     LOG(INFO) << " ht_capability = " << std::hex << ap_wlan_hal->get_radio_info().ht_capability;
     LOG(INFO) << " vht_supported = " << ap_wlan_hal->get_radio_info().vht_supported;
     LOG(INFO) << " vht_capability = " << std::hex << ap_wlan_hal->get_radio_info().vht_capability;
+    LOG(INFO) << " zwdfs = " << m_ap_support_zwdfs;
     LOG(INFO) << " preferred_channels = " << std::endl
               << get_radio_channels_string(ap_wlan_hal->get_radio_info().preferred_channels);
     LOG(INFO) << " supported_channels = " << std::endl
@@ -1784,4 +1887,14 @@ void ap_manager_thread::allow_expired_clients()
             it++;
         }
     }
+}
+
+bool ap_manager_thread::zwdfs_ap() const
+{
+    if (m_state != eApManagerState::OPERATIONAL) {
+        LOG(WARNING) << "Requested ZWDFS support status, but AP is not attached to BWL";
+        return true;
+    }
+
+    return m_ap_support_zwdfs;
 }

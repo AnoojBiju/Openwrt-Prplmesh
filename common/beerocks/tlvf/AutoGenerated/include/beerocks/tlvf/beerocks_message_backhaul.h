@@ -138,17 +138,6 @@ class cACTION_BACKHAUL_ENABLE : public BaseClass
         uint8_t& backhaul_preferred_radio_band();
         beerocks::eFreqType& frequency_band();
         beerocks::eWiFiBandwidth& max_bandwidth();
-        uint8_t& ht_supported();
-        uint16_t& ht_capability();
-        uint8_t* ht_mcs_set(size_t idx = 0);
-        bool set_ht_mcs_set(const void* buffer, size_t size);
-        uint8_t& vht_supported();
-        uint32_t& vht_capability();
-        uint8_t* vht_mcs_set(size_t idx = 0);
-        bool set_vht_mcs_set(const void* buffer, size_t size);
-        uint8_t& preferred_channels_size();
-        std::tuple<bool, beerocks::message::sWifiChannel&> preferred_channels(size_t idx);
-        bool alloc_preferred_channels(size_t count = 1);
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -171,17 +160,6 @@ class cACTION_BACKHAUL_ENABLE : public BaseClass
         uint8_t* m_backhaul_preferred_radio_band = nullptr;
         beerocks::eFreqType* m_frequency_band = nullptr;
         beerocks::eWiFiBandwidth* m_max_bandwidth = nullptr;
-        uint8_t* m_ht_supported = nullptr;
-        uint16_t* m_ht_capability = nullptr;
-        uint8_t* m_ht_mcs_set = nullptr;
-        size_t m_ht_mcs_set_idx__ = 0;
-        uint8_t* m_vht_supported = nullptr;
-        uint32_t* m_vht_capability = nullptr;
-        uint8_t* m_vht_mcs_set = nullptr;
-        size_t m_vht_mcs_set_idx__ = 0;
-        uint8_t* m_preferred_channels_size = nullptr;
-        beerocks::message::sWifiChannel* m_preferred_channels = nullptr;
-        size_t m_preferred_channels_idx__ = 0;
 };
 
 class cACTION_BACKHAUL_CONNECTED_NOTIFICATION : public BaseClass
@@ -508,6 +486,32 @@ class cACTION_BACKHAUL_START_WPS_PBC_REQUEST : public BaseClass
     private:
         bool init();
         eActionOp_BACKHAUL* m_action_op = nullptr;
+};
+
+class cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED : public BaseClass
+{
+    public:
+        cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED();
+
+        static eActionOp_BACKHAUL get_action_op(){
+            return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_ZWDFS_RADIO_DETECTED);
+        }
+        std::string front_iface_name_str();
+        char* front_iface_name(size_t length = 0);
+        bool set_front_iface_name(const std::string& str);
+        bool set_front_iface_name(const char buffer[], size_t size);
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_BACKHAUL* m_action_op = nullptr;
+        char* m_front_iface_name = nullptr;
+        size_t m_front_iface_name_idx__ = 0;
+        int m_lock_order_counter__ = 0;
 };
 
 }; // close namespace: beerocks_message

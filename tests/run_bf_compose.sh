@@ -6,6 +6,8 @@
 
 scriptdir=$(dirname "$(readlink -f "${0}")")
 bf_plugins_dir=${scriptdir}/boardfarm_plugins
+resultdir=${scriptdir}/../logs/
+
 
 if [ -n "${PYTHONPATH}" ]; then
    PYTHONPATH="${bf_plugins_dir}:${scriptdir}:${PYTHONPATH}"
@@ -15,4 +17,18 @@ fi
 echo "$PYTHONPATH"
 export PYTHONPATH
 export BFT_DEBUG=y
-exec bft -c "${bf_plugins_dir}"/boardfarm_prplmesh/prplmesh_config_compose.json -n prplmesh_compose -x test_flows
+
+bft -c "${bf_plugins_dir}"/boardfarm_prplmesh/prplmesh_config_compose.json \
+        -n prplmesh_compose -x test_flows -o "${resultdir}" \
+        || exit 255
+
+failed_test_count=$(jq '.tests_fail' "${resultdir}"/test_results.json)
+re='^[0-9]+$'
+if ! [[ "$failed_test_count" =~ $re ]]; then
+   echo "Unable to parse failed test count:" "$failed_test_count" \
+   && exit 255
+fi
+if [[ "$failed_test_count" -gt 0 ]]; then
+   printf '\033[1;31m%s\033[0m\n' "$failed_test_count tests failed!" \
+   && exit 1
+fi

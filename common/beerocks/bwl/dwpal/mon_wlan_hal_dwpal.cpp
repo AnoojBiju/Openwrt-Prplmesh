@@ -886,9 +886,10 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
     ScanParams channel_scan_params = {0};
     sScanCfgParams org_fg, new_fg;   //foreground scan param
     sScanCfgParamsBG org_bg, new_bg; //background scan param
+    size_t bg_size = ScanCfgParams_size_invalid, fg_size = ScanCfgParams_size_invalid;
 
     // get original scan params
-    if (!dwpal_get_scan_params_fg(org_fg) || !dwpal_get_scan_params_bg(org_bg)) {
+    if (!dwpal_get_scan_params_fg(org_fg, fg_size) || !dwpal_get_scan_params_bg(org_bg, bg_size)) {
         LOG(ERROR) << "Failed getting original scan parameters";
         return false;
     }
@@ -902,21 +903,21 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
     new_bg.active_dwell_time  = dwell_time_msec;
 
     // set new scan params & get newly set values for validation
-    if (!dwpal_set_scan_params_fg(new_fg) || !dwpal_set_scan_params_bg(new_bg)) {
+    if (!dwpal_set_scan_params_fg(new_fg, fg_size) || !dwpal_set_scan_params_bg(new_bg, bg_size)) {
         LOG(ERROR) << "Failed setting new values, restoring original scan parameters";
-        dwpal_set_scan_params_fg(org_fg);
-        dwpal_set_scan_params_bg(org_bg);
+        dwpal_set_scan_params_fg(org_fg, fg_size);
+        dwpal_set_scan_params_bg(org_bg, bg_size);
         return false;
     }
 
-    if (!dwpal_get_scan_params_fg(new_fg) || !dwpal_get_scan_params_bg(new_bg) ||
+    if (!dwpal_get_scan_params_fg(new_fg, fg_size) || !dwpal_get_scan_params_bg(new_bg, bg_size) ||
         (new_fg.active_dwell_time != dwell_time_msec) ||
         (new_fg.passive_dwell_time != dwell_time_msec) ||
         (new_bg.active_dwell_time != dwell_time_msec) ||
         (new_bg.passive_dwell_time != dwell_time_msec)) {
         LOG(ERROR) << "Validation failed, restoring original scan parameters";
-        dwpal_set_scan_params_fg(org_fg);
-        dwpal_set_scan_params_bg(org_bg);
+        dwpal_set_scan_params_fg(org_fg, fg_size);
+        dwpal_set_scan_params_bg(org_bg, bg_size);
         return false;
     }
 
@@ -924,8 +925,8 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
     if (!dwpal_get_channel_scan_freq(channel_pool, m_radio_info.channel, m_radio_info.iface_name,
                                      channel_scan_params)) {
         LOG(ERROR) << "Failed getting frequencies, restoring original scan parameters";
-        dwpal_set_scan_params_fg(org_fg);
-        dwpal_set_scan_params_bg(org_bg);
+        dwpal_set_scan_params_fg(org_fg, fg_size);
+        dwpal_set_scan_params_bg(org_bg, bg_size);
         return false;
     }
 
@@ -935,8 +936,8 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
     if (dwpal_driver_nl_scan_trigger(get_dwpal_nl_ctx(), (char *)m_radio_info.iface_name.c_str(),
                                      &channel_scan_params) != DWPAL_SUCCESS) {
         LOG(ERROR) << " scan trigger failed! Abort scan, restoring original scan parameters";
-        dwpal_set_scan_params_fg(org_fg);
-        dwpal_set_scan_params_bg(org_bg);
+        dwpal_set_scan_params_fg(org_fg, fg_size);
+        dwpal_set_scan_params_bg(org_bg, bg_size);
         return false;
     }
 
@@ -945,11 +946,11 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
     // so we have to change and restore driver scan parameters on the fly.
     // no reason to check since we restore the original params here anyway
     // and the next validation will validate the change.
-    dwpal_set_scan_params_fg(org_fg);
-    dwpal_set_scan_params_bg(org_bg);
+    dwpal_set_scan_params_fg(org_fg, fg_size);
+    dwpal_set_scan_params_bg(org_bg, bg_size);
 
     // validate if "set" function to original values worked
-    if (!dwpal_get_scan_params_fg(new_fg) || !dwpal_get_scan_params_bg(new_bg) ||
+    if (!dwpal_get_scan_params_fg(new_fg, fg_size) || !dwpal_get_scan_params_bg(new_bg, bg_size) ||
         (new_fg.active_dwell_time != org_fg.active_dwell_time) ||
         (new_fg.passive_dwell_time != org_fg.passive_dwell_time) ||
         (new_bg.active_dwell_time != org_bg.active_dwell_time) ||
