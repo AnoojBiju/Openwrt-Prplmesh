@@ -964,6 +964,15 @@ bool backhaul_manager::backhaul_fsm_main(bool &skip_select)
         //     }
         // } else {
         auto db = AgentDB::get();
+
+        // if ap-autoconfiguration is completed and there are slaves to be finalized, finalize them as connected
+        if (db->statuses.ap_autoconfiguration_completed && !m_slaves_sockets_to_finalize.empty()) {
+            for (auto slave : m_slaves_sockets_to_finalize) {
+                finalize_slaves_connect_state(true, slave);
+            }
+            m_slaves_sockets_to_finalize.clear();
+        }
+
         if (pending_enable &&
             db->backhaul.connection_type != AgentDB::sBackhaul::eConnectionType::Invalid) {
             pending_enable = false;
@@ -1730,6 +1739,8 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
             m_task_pool.send_event(eTaskType::AP_AUTOCONFIGURATION,
                                    ApAutoConfigurationTask::eEvent::START_AP_AUTOCONFIGURATION,
                                    &radio->front.iface_name);
+            // finalize current slave after ap-autoconfiguration is complete
+            m_slaves_sockets_to_finalize.push_back(soc);
         } else if (pending_enable) {
             auto notification = message_com::create_vs_message<
                 beerocks_message::cACTION_BACKHAUL_BUSY_NOTIFICATION>(cmdu_tx);
@@ -2388,7 +2399,7 @@ bool backhaul_manager::handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmd
         radio_channel_scan_capabilities->capabilities().on_boot_only = 1;
         radio_channel_scan_capabilities->capabilities().scan_impact =
             0x2; // Time slicing impairment (Radio may go off channel for a series of short intervals)
-                 // Create operating class object
+        // Create operating class object
         auto op_class_channels = radio_channel_scan_capabilities->create_operating_classes_list();
         if (!op_class_channels) {
             LOG(ERROR) << "create_operating_classes_list() has failed!";
