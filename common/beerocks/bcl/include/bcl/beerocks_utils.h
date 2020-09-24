@@ -19,6 +19,7 @@
 #include <string>
 #include <type_traits>
 #include <typeinfo>
+#include <vector>
 
 namespace beerocks {
 class utils {
@@ -69,6 +70,8 @@ public:
                          const char *calling_file = __builtin_FILE(),
                          int calling_line         = __builtin_LINE());
     static std::string dump_buffer(const uint8_t *buffer, size_t len);
+    template <class T, class Pred>
+    static std::vector<T> vector_filter(const std::vector<T> &v, Pred p);
 };
 
 } //namespace beerocks
