@@ -113,6 +113,16 @@ bool master_thread::init()
         }
     }
 
+    if (operations.is_operation_alive(database.get_persistent_db_aging_operation_id())) {
+        LOG(DEBUG) << "persistent DB aging operation already running";
+    } else {
+        auto aging_interval_seconds =
+            std::chrono::seconds(database.config.persistent_db_aging_interval);
+        auto new_operation =
+            std::make_shared<persistent_database_aging_operation>(aging_interval_seconds, database);
+        operations.add_operation(new_operation);
+    }
+
     if (!transport_socket_thread::init()) {
         LOG(ERROR) << "Failed init of transport_socket_thread";
         stop();
