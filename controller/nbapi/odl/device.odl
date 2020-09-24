@@ -1,0 +1,58 @@
+
+/* SPDX-License-Identifier: BSD-2-Clause-Patent
+ *
+ * SPDX-FileCopyrightText: 2020 the prplMesh contributors (see AUTHORS.md)
+ *
+ * This code is subject to the terms of the BSD+Patent license.
+ * See LICENSE file for more details.
+ */
+
+%config {
+	define_behavior = { 
+		existing_object = "update"
+	};
+}
+
+%define {
+	object Controller {
+		object Network {
+			/*
+			** Object represents a single Access Point device
+			*/
+			object Device [] {
+				/*
+				** A unique identifier for this particular device
+				** within the Wi-Fi network
+				*/
+				%read-only string ID = "0" {
+				}
+
+				/*
+				** The Multi-AP capabilities supported by this device
+				*/
+				%read-only object MultiAPCapabilities {
+					%read-only bool USTALinkMatricCurrentlyOn;			/* Support Unassociated STA Link Metrics reporting
+																		** on the channels its BSSs are currently operating on. */
+					%read-only bool USTALinkMatricCurrentlyOff;			/* Support Unassociated STA Link Metrics reporting on channels
+																		** its BSSs are not currently operating on.*/
+					%read-only bool AgentInitiatedRCPIBasedSteering;	/* Support Agent-initiated RCPI-based Steering */
+				}
+
+				/*
+				** The list of Radio objects.
+				*/
+				%read-only object Radio [] {
+					counted with NumberOfRadios;
+				}
+
+				/*
+				** The interval between the collection of consecutive measurements of the most
+				** frequently updated Data Element from this device (milliseconds).
+				*/
+				%read-only uint32 CollectionInterval = 0 {
+					on action validate call check_minimum 0;
+				}
+			}
+		}
+	}
+}

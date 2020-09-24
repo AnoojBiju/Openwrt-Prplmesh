@@ -1,0 +1,78 @@
+
+/* SPDX-License-Identifier: BSD-2-Clause-Patent
+ *
+ * SPDX-FileCopyrightText: 2020 the prplMesh contributors (see AUTHORS.md)
+ *
+ * This code is subject to the terms of the BSD+Patent license.
+ * See LICENSE file for more details.
+ */
+
+%config {
+	define_behavior = { 
+		existing_object = "update"
+	};
+}
+
+%define {
+	object Controller {
+		object NeighborBSS {
+			%read-only %persistent uint64 BSSID = 0;
+
+			%read-only %persistent string SSID = "0" {
+				
+			}
+
+			%read-only %persistent uint32 SignalStrength = 0 {
+				on action validate call check_range [0, 220];
+			}
+
+			%read-only %persistent string ChannelBandwidth = "0" {
+				
+			}
+
+			%read-only %persistent uint32 ChannelUtilization = 0 {
+				on action validate call check_range [0, 255];
+			}
+
+			%read-only %persistent uint32 StationCount = 0 {
+				on action validate call check_range [0, 65535];
+			}
+		}
+	}
+}
+
+%define {
+object Controller {
+	object Network {
+		object Device [] {
+			object Radio [] {
+				object ScanResult {
+					object OpClassScan [] {
+						object ChannelScan [] {
+							object NeighborBSS {
+								%read-only uint64 BSSID = 0;
+								%read-only string SSID = "";
+
+								%read-only uint32 SignalStrength = 0 {
+									on action validate call check_range [0, 220];
+								}
+
+								%read-only string ChannelBandwidth = "0" {
+								}
+
+								%read-only uint32 ChannelUtilization = 0 {
+									on action validate call check_range [0, 255];
+								}
+
+								%read-only uint32 StationCount = 0 {
+									on action validate call check_range [0, 65535];
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+}
