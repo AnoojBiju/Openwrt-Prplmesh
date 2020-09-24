@@ -93,6 +93,22 @@ public:
      */
     bool apply_transaction(amxd_trans_t &transaction);
 
+    /* @brief Add instance to the data model object with type list
+     *
+     * @param relative_path Path to the object with type list in datamodel (ex: "Controller.Network.Device").
+     * @return True on success and false otherwise.
+     */
+    bool add_instance(const std::string &relative_path);
+
+    /**
+     * @brief Remove instance from the data model object with type list
+     *
+     * @param relative_path Path to the object with type list in datamodel (ex: "Controller.Network.Device").
+     * @param index Number of instance which should be remove.
+     * @return True on success and false otherwise.
+     */
+    bool remove_instance(const std::string &relative_path, uint32_t index);
+
 private:
     // Methods
 
