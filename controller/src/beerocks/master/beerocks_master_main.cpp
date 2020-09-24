@@ -245,6 +245,14 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
         master_conf.unfriendly_device_max_timelife_delay_days =
             beerocks::bpl::DEFAULT_UNFRIENDLY_DEVICE_MAX_TIMELIFE_DELAY_DAYS;
     }
+    if (!beerocks::bpl::cfg_get_persistent_db_aging_interval(
+            master_conf.persistent_db_aging_interval)) {
+        LOG(DEBUG) << "failed to read persistent DB aging interval in persistent db, setting "
+                      "to default value: "
+                   << beerocks::bpl::DEFAULT_PERSISTENT_DB_AGING_INTERVAL_SEC << " seconds";
+        master_conf.persistent_db_aging_interval =
+            beerocks::bpl::DEFAULT_PERSISTENT_DB_AGING_INTERVAL_SEC;
+    }
 }
 
 int main(int argc, char *argv[])

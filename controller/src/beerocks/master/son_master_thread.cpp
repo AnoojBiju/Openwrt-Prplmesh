@@ -7,6 +7,7 @@
  */
 
 #include "son_master_thread.h"
+#include "periodic/persistent_database_aging.h"
 #include "son_actions.h"
 #include "son_management.h"
 #include "tasks/bml_task.h"
@@ -102,6 +103,14 @@ bool master_thread::init()
         }
     }
 
+    if (operatios.is_operation_pending(database.get_persistent_db_aging_operation_id())) {
+        LOG(DEBUG) << "persistent DB aging operation already running";
+    } else {
+        auto new_operation = std::make_shared<persistent_database_aging_operation>(
+            database.config.persistent_db_aging_interval, database);
+        operatios.add_operation(new_operation);
+    }
+
     if (!transport_socket_thread::init()) {
         LOG(ERROR) << "Failed init of transport_socket_thread";
         stop();
@@ -186,6 +195,7 @@ bool master_thread::work()
     }
 
     tasks.run_tasks();
+    operatios.run_operations();
     return true;
 }
 
