@@ -6,6 +6,7 @@
  * See LICENSE file for more details.
  */
 
+#include <algorithm>
 #include <bcl/beerocks_string_utils.h>
 #include <bcl/beerocks_utils.h>
 #include <easylogging++.h>
@@ -271,4 +272,11 @@ void utils::hex_dump(const std::string &description, uint8_t *addr, int len,
 
     LOG(DEBUG) << caller_file_name << "[" << (int)calling_line << "] " << description << std::endl
                << print_stream.str();
+}
+template <class T, class Pred> std::vector<T> utils::vector_filter(const std::vector<T> &v, Pred p)
+{
+    std::vector<int> tmp(v.size());
+    auto it = std::copy_if(v.begin(), v.end(), tmp.begin(), p);
+    tmp.resize(std::distance(tmp.begin(), it));
+    return tmp;
 }
