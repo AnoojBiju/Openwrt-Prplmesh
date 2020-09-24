@@ -1,0 +1,40 @@
+
+/* SPDX-License-Identifier: BSD-2-Clause-Patent
+ *
+ * SPDX-FileCopyrightText: 2020 the prplMesh contributors (see AUTHORS.md)
+ *
+ * This code is subject to the terms of the BSD+Patent license.
+ * See LICENSE file for more details.
+ */
+
+%config {
+	define_behavior = { 
+		existing_object = "update"
+	};
+}
+
+%define {
+object Controller {
+	object Network {
+		object Device [] {
+			object Radio [] {
+				object ScanResult {
+
+					%read-only object OpClassScan [] {
+						%read-only uint32 OperatingClass = 0 {
+							on action validate call check_range [0, 255];
+						}
+
+						%read-only object ChannelScan [] {
+							counted with NumberOfChannelScans;
+						}
+						counted with NumberOfOpClassScans;
+					}
+
+					%read-only datetime TimeStamp = "2020-08-31T11:22:39Z";
+				}
+			}
+		}
+	}
+}
+}

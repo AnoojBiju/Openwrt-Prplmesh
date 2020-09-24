@@ -1,0 +1,67 @@
+
+/* SPDX-License-Identifier: BSD-2-Clause-Patent
+ *
+ * SPDX-FileCopyrightText: 2020 the prplMesh contributors (see AUTHORS.md)
+ *
+ * This code is subject to the terms of the BSD+Patent license.
+ * See LICENSE file for more details.
+ */
+
+%config {
+	define_behavior = { 
+		existing_object = "update"
+	};
+}
+
+%define {
+object Controller {
+	object Network {
+		object Device [] {
+			object Radio [] {
+				object BSS [] {
+
+					/* macaddress */
+					%read-only uint64 BSSID = 0;
+					%read-only string SSID = "0";
+					bool Enabled = false;
+					%read-only uint32 LastChange = 0;
+
+					%read-only datetime TimeStamp = "2020-08-31T11:22:39Z";
+
+					%read-only uint32 UnicastBytesSent = 0;
+
+					%read-only uint32 UnicastBytesReceived = 0;
+
+					%read-only uint32 MulticastBytesSent = 0;
+
+					%read-only uint32 MulticastBytesReceived = 0;
+
+					%read-only uint32 BroadcastBytesSent = 0;
+
+					%read-only uint32 BroadcastBytesReceived = 0;
+
+					%read-only uint32 EstServiceParametersBE = 0 {
+						on action validate call check_range [0, 16777215];
+					}
+
+					%read-only uint32 EstServiceParametersBK = 0 {
+						on action validate call check_range [0, 16777215];
+					}
+
+					%read-only uint32 EstServiceParametersVI = 0 {
+						on action validate call check_range [0, 16777215];
+					}
+
+					%read-only uint32 EstServiceParametersVO = 0 {
+						on action validate call check_range [0, 16777215];
+					}
+
+				%read-only object STA [] {
+						counted with NumberOfSTA;
+					}
+				}
+			}
+		}
+	}
+}
+}

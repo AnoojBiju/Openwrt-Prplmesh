@@ -1,0 +1,58 @@
+
+/* SPDX-License-Identifier: BSD-2-Clause-Patent
+ *
+ * SPDX-FileCopyrightText: 2020 the prplMesh contributors (see AUTHORS.md)
+ *
+ * This code is subject to the terms of the BSD+Patent license.
+ * See LICENSE file for more details.
+ */
+
+%config {
+	define_behavior = { 
+		existing_object = "update"
+	};
+}
+
+%define {
+	object Notification  {
+		object DisassociationEvent [] {
+
+			%read-only object DisassocData {
+				%read-only uint64 BSSID = 0 {
+				}
+
+				%read-only uint64 MACAddress = 0 {
+				}
+
+				%read-only uint32 ReasonCode = 0 {
+					on action validate call check_range [0, 65535];
+				}
+
+				%read-only uint32 BytesSent = 0 {
+				}
+
+				%read-only uint32 BytesReceived = 0 {
+					
+				}
+
+				%read-only uint32 PacketsSent = 0 {
+				}
+
+				%read-only uint32 PacketsReceived = 0 {
+				}
+
+				%read-only uint32 ErrorsSent = 0 {
+
+				}
+
+				%read-only uint32 ErrorsReceived = 0 {
+					
+				}
+
+				%read-only uint32 RetransCounta = 0 {
+
+				}
+			}
+		}
+	}
+}

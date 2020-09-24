@@ -1,0 +1,85 @@
+
+/* SPDX-License-Identifier: BSD-2-Clause-Patent
+ *
+ * SPDX-FileCopyrightText: 2020 the prplMesh contributors (see AUTHORS.md)
+ *
+ * This code is subject to the terms of the BSD+Patent license.
+ * See LICENSE file for more details.
+ */
+
+%config {
+	define_behavior = { 
+		existing_object = "update"
+	};
+}
+
+%define {
+	object Controller {
+		object Network {
+			object Device [] {
+				object Radio [] {
+
+					%read-only string ID = 0;
+					bool Enabled = false;
+
+					%read-only uint32 Noise = 0 {
+						on action validate call check_range [0, 220];
+					}
+
+					%read-only uint32 Utilization = 0 {
+						on action validate call check_range [0, 255];
+					}
+
+					%read-only uint32 Transmit = 0 {
+						on action validate call check_range [0, 255];
+					}
+
+					%read-only uint32 ReceiveSelf = 0 {
+						on action validate call check_range [0, 255];
+					}
+
+					%read-only uint32 ReceiveOther = 0 {
+						on action validate call check_range [0, 255];
+					}
+
+					%read-only object CurrentOperatingClasses [] {
+						%read-only datetime TimeStamp = "2020-08-31T11:22:39Z";
+
+						%read-only uint32 Class = 0 {
+							on action validate call check_range [0, 255];
+						}
+
+						%read-only uint32 Channel = 0 {
+							on action validate call check_range [0, 255];
+						}
+
+						%read-only int32 TxPower = 0 {
+							on action validate call check_range [-128, 127];
+						}
+						counted with NumberOfCurrOpClass;
+					}
+
+					read-only object Capabilities [] {
+						counted with NumberOfOpClass;
+					}
+
+					%read-only object BSS [] {
+						counted with NumberOfBSS;
+					}
+
+					%read-only object BackhaulSTA {
+						%read-only string MACAddress = "";
+					}
+
+					%read-only object UnassociatedSTA [] {
+						counted with NumberOfUnassocSTA;
+					}
+
+					%read-only object ScanResult {
+						// DataElements:ScanResult 
+					}
+				}
+			}
+		}
+	}
+}
