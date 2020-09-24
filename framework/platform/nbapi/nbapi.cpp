@@ -279,6 +279,8 @@ bool Ambiorix::set(const std::string &relative_path, const std::string &value)
         return false;
     }
 
+    amxc_var_set(cstring_t, 0, value.c_str());
+
     return true;
 }
 
@@ -300,6 +302,8 @@ bool Ambiorix::set(const std::string &relative_path, const int32_t &value)
         LOG(ERROR) << "Couldn't apply transaction.";
         return false;
     }
+
+    amxc_var_set(int32_t, 0, value);
 
     return true;
 }
@@ -323,6 +327,8 @@ bool Ambiorix::set(const std::string &relative_path, const int64_t &value)
         return false;
     }
 
+    amxc_var_set(int64_t, 0, value);
+
     return true;
 }
 
@@ -344,6 +350,8 @@ bool Ambiorix::set(const std::string &relative_path, const uint32_t &value)
         LOG(ERROR) << "Couldn't apply transaction.";
         return false;
     }
+
+    amxc_var_set(uint32_t, 0, value);
 
     return true;
 }
@@ -367,6 +375,8 @@ bool Ambiorix::set(const std::string &relative_path, const uint64_t &value)
         return false;
     }
 
+    amxc_var_set(uint64_t, 0, value);
+
     return true;
 }
 
@@ -388,6 +398,8 @@ bool Ambiorix::set(const std::string &relative_path, const double &value)
         LOG(ERROR) << "Couldn't apply transaction.";
         return false;
     }
+
+    amxc_var_set(double, 0, value);
 
     return true;
 }
