@@ -106,6 +106,9 @@ constexpr int DEFAULT_MAX_TIMELIFE_DELAY_DAYS = 365;
 // TODO: add description of "unfriendly-device" and how it is determined
 // by default, the limit is 1 day, but it is configurable via the UCI
 constexpr int DEFAULT_UNFRIENDLY_DEVICE_MAX_TIMELIFE_DELAY_DAYS = 1;
+// the persistent DB's aging mechanism needs to be checked periodically.
+// by default, the interval in which the aging mechanism needs to be checked is once per hour.
+constexpr int DEFAULT_PERSISTENT_DB_AGING_INTERVAL_SEC = 3600;
 // by default zwdfs functionality is disabled
 constexpr int DEFAULT_ZWDFS_ENABLE = 0;
 // Channel ranking used to determine best channel candidate.
@@ -509,6 +512,14 @@ bool cfg_get_max_timelife_delay_days(int &max_timelife_delay_days);
  */
 bool cfg_get_unfriendly_device_max_timelife_delay_days(
     int &unfriendly_device_max_timelife_delay_days);
+
+/**
+ * @brief Returns the interval to check the persistent DB aging
+ * 
+ * @param [out] persistent_db_aging_interval Interval for checking persistent DB aging.
+ * @return true on success, otherwise false
+ */
+bool cfg_get_persistent_db_aging_interval(int &persistent_db_aging_interval_sec);
 
 /**
  * @brief Returns configured WPA Control Path for the given interface.
