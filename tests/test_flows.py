@@ -1225,6 +1225,25 @@ class TestFlows:
     def test_multi_ap_policy_config_w_metric_reporting_policy(self):
         self.send_and_check_policy_config_metric_reporting(env.agents[0], True, True)
 
+    def configure_multi_ap_policy_config_w_unsuccessful_association(
+            self, enable: 0x80, max_repeat: 0x0A):
+        debug("Send multi-ap policy config request with unsuccessful association policy to agent 1")
+        mid = env.controller.dev_send_1905(env.agents[0].mac, 0x8003,
+                                           tlv(0xC4, 0x0005, "{{0x{:02X} 0x{:08X}}}"
+                                           .format(enable, max_repeat)))
+        time.sleep(1)
+        debug("Confirming multi-ap policy config with unsuccessful association"
+              "request has been received on agent")
+
+        self.check_log(env.agents[0], r"MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE")
+        time.sleep(1)
+        debug("Confirming multi-ap policy config ack message has been received on the controller")
+        self.check_cmdu_type_single("ACK", 0x8000, env.agents[0].mac, env.controller.mac, mid)
+
+    def test_multi_ap_policy_config_w_unsuccessful_association(self):
+        self.configure_multi_ap_policy_config_w_unsuccessful_association(0x80, 0x01)
+        self.mismatch_psk()
+
     def test_client_association(self):
         debug("Send topology request to agent 1")
         env.controller.dev_send_1905(env.agents[0].mac, 0x0002)
@@ -1495,7 +1514,11 @@ class TestFlows:
         # wait
         time.sleep(2)
 
-    def test_mismatch_psk(self):
+    def mismatch_psk(self, expect='yes'):
+        '''
+        expect: yes / no / exceed
+        '''
+
         # Simulate Mismatch PSK sent by STA
 
         # Create STA and Agent
@@ -1511,21 +1534,45 @@ class TestFlows:
         time.sleep(1)
 
         # Check correct flow
-        # Validate "Failed Connection Message" CMDU was sent
-        response = self.check_cmdu_type_single(
-            "Failed Connection Message", 0x8033, agent.mac, env.controller.mac)
 
-        debug("Check Failed Connection Message has valid STA TLV")
-        tlv_sta_mac = self.check_cmdu_has_tlv_single(response, 0x95)
-        if hasattr(tlv_sta_mac, 'sta_mac_addr_type_mac_addr'):
-            received_sta_mac = tlv_sta_mac.sta_mac_addr_type_mac_addr
+        if expect == 'yes':
+            # Validate "Failed Connection Message" CMDU was sent
+            response = self.check_cmdu_type_single(
+                "Failed Connection Message", 0x8033, agent.mac, env.controller.mac)
+
+            debug("Check Failed Connection Message has valid STA TLV")
+            tlv_sta_mac = self.check_cmdu_has_tlv_single(response, 0x95)
+            if hasattr(tlv_sta_mac, 'sta_mac_addr_type_mac_addr'):
+                received_sta_mac = tlv_sta_mac.sta_mac_addr_type_mac_addr
+            else:
+                received_sta_mac = '00:00:00:00:00:00'
+
+            # Validate Srouce Info STA MAC
+            if received_sta_mac != sta.mac:
+                self.fail("Source Info TLV has wrong STA MAC {} instead of {}".format(
+                    received_sta_mac, sta.mac))
+        elif expect == 'no':
+            debug("expecting no cmdu, policy set to no report")
+            self.check_no_cmdu_type("Failed Connection Message", 0x8033,
+                                    agent.mac, env.controller.mac)
+        elif expect == 'exceed':
+            debug("expecting no cmdu, exceeded number of reports in a minute")
+            self.check_no_cmdu_type("Failed Connection Message", 0x8033,
+                                    agent.mac, env.controller.mac)
         else:
-            received_sta_mac = '00:00:00:00:00:00'
+            debug("unknown 'expect' = {}".format(expect))
 
-        # Validate Srouce Info STA MAC
-        if received_sta_mac != sta.mac:
-            self.fail("Source Info TLV has wrong STA MAC {} instead of {}".format(
-                received_sta_mac, sta.mac))
+    def test_mismatch_psk(self):
+        # Disable reporting
+        self.configure_multi_ap_policy_config_w_unsuccessful_association(0x00, 0x00)
+        # report should not be sent as we disabled the feature
+        self.mismatch_psk('no')
+
+        # Enable unsuccsfull association - 1 per minute
+        self.configure_multi_ap_policy_config_w_unsuccessful_association(0x80, 0x01)
+        # First report should be sent
+        self.mismatch_psk('yes')
+
 
 
 if __name__ == '__main__':
