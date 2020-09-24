@@ -4184,6 +4184,13 @@ int db::get_dynamic_channel_selection_task_id(const sMacAddr &mac)
     return n->dynamic_channel_selection_task_id;
 }
 
+bool db::assign_persistent_db_aging_operation_id(int new_operation_id)
+{
+    persistent_db_aging_operation_id = new_operation_id;
+    return true;
+}
+int db::get_persistent_db_aging_operation_id() { return persistent_db_aging_operation_id; }
+
 void db::lock() { db_mutex.lock(); }
 
 void db::unlock() { db_mutex.unlock(); }
