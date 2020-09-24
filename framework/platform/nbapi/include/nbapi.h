@@ -68,6 +68,21 @@ public:
      */
     void stop();
 
+    /**
+     * @brief Set the value to the object variable.
+     *
+     * @param relative_path Path to the object in datamodel (ex: "Controller.Network.ID").
+     * @param value Value which need to set.
+     * @return True on success and false otherwise.
+     */
+    virtual bool set(const std::string &relative_path, const std::string &value);
+    virtual bool set(const std::string &relative_path, const int32_t &value);
+    virtual bool set(const std::string &relative_path, const int64_t &value);
+    virtual bool set(const std::string &relative_path, const uint32_t &value);
+    virtual bool set(const std::string &relative_path, const uint64_t &value);
+    virtual bool set(const std::string &relative_path, const bool &value);
+    virtual bool set(const std::string &relative_path, const double &value);
+
 private:
     // Methods
 
@@ -114,6 +129,23 @@ private:
      * @return Pointer on the object on success and nullptr otherwise.
      */
     amxd_object_t *find_object(const std::string &relative_path);
+
+    /**
+     * @brief Prepare transaction to the ubus
+     *
+     * @param relative_path Path to the object in datamodel (ex: "Controller.Network.ID").
+     * @return Pointer on the object on success and nullptr otherwise.
+     */
+    amxd_object_t *prepare_transaction(const std::string &relative_path, amxd_trans_t &transaction);
+
+    /**
+     * @brief Apply transaction
+     *
+     * @param transaction Variable for transaction structure which contains fields
+     *                    needed for transaction.
+     * @return True on success and false otherwise.
+     */
+    bool apply_transaction(amxd_trans_t &transaction);
 
     // Variables
     amxb_bus_ctx_t *m_bus_ctx = nullptr;
