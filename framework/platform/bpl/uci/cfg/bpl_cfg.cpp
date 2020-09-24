@@ -477,9 +477,8 @@ bool cfg_get_unfriendly_device_max_timelife_delay_days(
 bool cfg_get_persistent_db_aging_interval(int &persistent_db_aging_interval_sec)
 {
     int retVal = -1;
-    if (cfg_get_prplmesh_param_int_default("persistent_db_aging_interval_sec", &retVal,
-                                           DEFAULT_PERSISTENT_DB_AGING_INTERVAL_SEC) ==
-        RETURN_ERR) {
+    if (cfg_get_prplmesh_param_int("persistent_db_aging_interval_sec", &retVal,
+                                   DEFAULT_PERSISTENT_DB_AGING_INTERVAL_SEC) == RETURN_ERR) {
         MAPF_ERR("Failed to read persistent-db-aging-interval-sec parameter - setting "
                  "default value");
         return false;
