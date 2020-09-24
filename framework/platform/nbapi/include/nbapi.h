@@ -83,6 +83,24 @@ public:
     virtual bool set(const std::string &relative_path, const bool &value);
     virtual bool set(const std::string &relative_path, const double &value);
 
+    /**
+     * @brief FIXME!!!
+     *
+     * @param relative_path Path to the object in datamodel (ex: "Controller.Network.ID").
+     * @param value Value which need to set.
+     * @return True on success and false otherwise.
+     */
+    bool add_instance(const std::string &relative_path);
+
+    /**
+     * @brief FIXME!!!
+     *
+     * @param relative_path Path to the object in datamodel (ex: "Controller.Network.ID").
+     * @param value Value which need to set.
+     * @return True on success and false otherwise.
+     */
+    bool remove_instance(const std::string &relative_path, uint32_t index);
+
 private:
     // Methods
 

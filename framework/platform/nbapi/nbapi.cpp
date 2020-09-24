@@ -435,6 +435,57 @@ bool Ambiorix::set(const std::string &relative_path, const bool &value)
     return true;
 }
 
+bool Ambiorix::add_instance(const std::string &relative_path)
+{
+    amxd_trans_t transaction;
+    auto object = prepare_transaction(relative_path, transaction);
+    if (!object) {
+        LOG(ERROR) << "Couldn't find the object for: " << relative_path;
+        return false;
+    }
+
+    auto status = amxd_trans_add_inst(&transaction, 0, NULL);
+    if (status != amxd_status_ok) {
+        LOG(ERROR) << "Failed to add instance for: " << object->name << "status: " << status;
+    }
+
+    if (!apply_transaction(transaction)) {
+        LOG(ERROR) << "Failed to apply transaction for: " << object->name;
+        return false;
+    }
+
+    LOG(DEBUG) << "Instance added for: " << object->name;
+    return true;
+}
+
+bool Ambiorix::remove_instance(const std::string &relative_path, uint32_t index)
+{
+    amxd_trans_t transaction;
+    auto object = prepare_transaction(relative_path, transaction);
+    if (!object) {
+        LOG(ERROR) << "Couldn't find the object for: " << relative_path;
+        return false;
+    }
+
+    amxd_object_for_each(instance, it, object)
+    {
+        auto inst               = amxc_llist_it_get_data(it, amxd_object_t, it);
+        auto current_inst_index = amxd_object_get_index(inst);
+        if (current_inst_index == index) {
+            amxd_trans_del_inst(&transaction, amxd_object_get_index(inst), NULL);
+            break;
+        }
+    }
+
+    if (!apply_transaction(transaction)) {
+        LOG(ERROR) << "Failed to apply transaction for: " << object->name;
+        return false;
+    }
+
+    LOG(DEBUG) << "Instance removed for: " << object->name;
+    return true;
+}
+
 Ambiorix::~Ambiorix()
 {
     amxd_dm_clean(&m_datamodel);
