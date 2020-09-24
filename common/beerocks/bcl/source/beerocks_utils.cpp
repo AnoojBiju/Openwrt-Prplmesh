@@ -6,6 +6,7 @@
  * See LICENSE file for more details.
  */
 
+#include <algorithm>
 #include <bcl/beerocks_string_utils.h>
 #include <bcl/beerocks_utils.h>
 #include <easylogging++.h>

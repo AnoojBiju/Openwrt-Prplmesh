@@ -12,6 +12,7 @@
 #include "beerocks_defines.h"
 #include "beerocks_string_utils.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <fcntl.h>
 #include <iostream>
@@ -19,6 +20,7 @@
 #include <string>
 #include <type_traits>
 #include <typeinfo>
+#include <vector>
 
 namespace beerocks {
 class utils {
@@ -69,6 +71,14 @@ public:
                          const char *calling_file = __builtin_FILE(),
                          int calling_line         = __builtin_LINE());
     static std::string dump_buffer(const uint8_t *buffer, size_t len);
+    template <class T, class Pred>
+    static std::vector<T> vector_filter(const std::vector<T> &v, Pred p)
+    {
+        std::vector<T> tmp(v.size());
+        auto it = std::copy_if(v.begin(), v.end(), tmp.begin(), p);
+        tmp.resize(std::distance(tmp.begin(), it));
+        return tmp;
+    }
 };
 
 } //namespace beerocks
