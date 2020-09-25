@@ -240,7 +240,7 @@ bool agent_ucc_listener::handle_dev_set_config(std::unordered_map<std::string, s
     // Signal to backhaul that it can continue onboarding.
     m_in_reset = false;
 
-    m_received_dev_set_config = true;
+    m_received_dev_set_config = false;
     return true;
 }
 
