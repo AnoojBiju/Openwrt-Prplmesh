@@ -172,9 +172,6 @@ public:
             sMacAddr iface_mac;
             eWiFiBandwidth max_supported_bw;
 
-            /**
-             * @brief supported channels in radio
-             */
             std::deque<beerocks::message::sWifiChannel> preferred_channels;
             std::vector<beerocks::message::sWifiChannel> supported_channels;
 
