@@ -29,9 +29,12 @@ public:
     bool set(const std::string &relative_path, const uint64_t &value) override;
     bool set(const std::string &relative_path, const bool &value) override;
     bool set(const std::string &relative_path, const double &value) override;
-    bool add_instance(const std::string &relative_path);
-    bool remove_instance(const std::string &relative_path, uint32_t index);
+    bool add_instance(const std::string &relative_path) override;
+    bool remove_instance(const std::string &relative_path, uint32_t index) override;
     void stop() override;
+    bool apply_transaction(amxd_trans_t &transaction) override;
+    amxd_object_t *prepare_transaction(const std::string &relative_path,
+                                       amxd_trans_t &transaction) override;
 };
 
 } // namespace nbapi
