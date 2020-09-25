@@ -1,0 +1,11 @@
+packages:
+  - sah-build-compatibility
+  - libamxb
+  - libamxc
+  - libamxd
+  - libamxj
+  - libamxo
+  - libamxp
+  - uriparser
+  - yajl
+  - amxb-ubus
