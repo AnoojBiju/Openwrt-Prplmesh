@@ -49,6 +49,11 @@ private:
     void handle_ap_metrics_response(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac);
 
     /**
+     * @brief do periodic AP Metrics query if AP autoconfiguration completed and timeout passed.
+     */
+    void work_periodic_ap_metrics_query();
+
+    /**
      * @brief Sends an AP Metrics Query message for each bssid on 'bssid_list' to the Fronthaul.
      * If the 'bssid_list' is empty, sends a query on each bssid that exists on the Agent.
      *
