@@ -77,7 +77,7 @@ bool LinkMetricsCollectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx,
     return true;
 }
 
-void LinkMetricsCollectionTask::work()
+void LinkMetricsCollectionTask::work_periodic_ap_metrics_query()
 {
     auto db = AgentDB::get();
 
@@ -113,6 +113,10 @@ void LinkMetricsCollectionTask::work()
             }
         }
     }
+}
+
+void LinkMetricsCollectionTask::work() {
+    work_periodic_ap_metrics_query();
 }
 
 void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessageRx &cmdu_rx,
