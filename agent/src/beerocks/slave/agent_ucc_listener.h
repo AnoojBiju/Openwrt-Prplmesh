@@ -94,7 +94,7 @@ private:
      * This flag is set to `true` by default to not break test_flows and boardfarm tests.
      * In certification every test sends `dev_set_config` and that sets this flag to `false`.
      */
-    bool m_received_dev_set_config = true;
+    bool m_received_dev_set_config = false;
     std::string m_selected_backhaul; // "ETH" or "<RUID of the selected radio>"
 
     std::mutex mutex;
