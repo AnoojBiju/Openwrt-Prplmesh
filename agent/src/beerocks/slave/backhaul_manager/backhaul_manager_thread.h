@@ -125,8 +125,6 @@ private:
     bool handle_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac,
                                Socket *&forward_to);
     // 1905 messages handlers
-    bool handle_1905_link_metric_query(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                       const std::string &src_mac);
     bool handle_1905_combined_infrastructure_metrics(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                      const std::string &src_mac);
     bool handle_1905_beacon_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -339,6 +337,7 @@ private:
      */
     std::shared_ptr<sRadioInfo> get_radio(const sMacAddr &radio_mac) const;
 
+public:
     /**
      * @brief Interface in this device which connects to an interface in one or more neighbors.
      *
@@ -399,6 +398,7 @@ private:
     get_neighbor_links(const sMacAddr &neighbor_mac_filter,
                        std::map<sLinkInterface, std::vector<sLinkNeighbor>> &neighbor_links_map);
 
+private:
     /**
      * @brief Adds link metric TLVs to response message.
      *
@@ -417,6 +417,7 @@ private:
                           const sLinkNeighbor &link_neighbor, const sLinkMetrics &link_metrics,
                           ieee1905_1::eLinkMetricsType link_metrics_type);
 
+private:
     struct sStaTrafficStats {
         sMacAddr sta_mac;
         uint32_t byte_sent;
