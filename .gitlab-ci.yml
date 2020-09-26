@@ -404,7 +404,7 @@ run-certification-tests:
     - job: build-in-docker
     - job: build-for-axepoint
   tags:
-    - certs-tests
+    - certs-tests-blr
   timeout: 36h
   rules:
     - if: "$TESTS_TO_RUN"
