@@ -599,7 +599,7 @@ bool main_thread::socket_disconnected(Socket *sd)
         LOG(INFO) << "non slave socket disconnected! (probably backhaul manager)";
         return true;
     }
-    LOG(DEBUG) << "slave socket_disconnected, iface=" << m_mapSlaves[sd] << ", sd=" << sd;
+    LOG(DEBUG) << "slave socket_disconnected, iface=" << m_mapSlaves[sd] << ", sd=" << intptr_t(sd);
 
     // we should have only one per sd
     bpl_iface_wlan_params_map.erase(m_mapSlaves[sd]);
