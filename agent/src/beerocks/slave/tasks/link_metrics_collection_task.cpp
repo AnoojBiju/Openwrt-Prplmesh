@@ -156,40 +156,45 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
                   << tlvf::mac_to_string(neighbor_al_mac);
 
         tlvLinkMetricResultCode->value() = ieee1905_1::tlvLinkMetricResultCode::INVALID_NEIGHBOR;
-    } else {
 
-        /**
-         * Report link metrics for the link with specific neighbor or for all neighbors, as
-         * obtained from topology database
-         */
-        for (const auto &entry : neighbor_links_map) {
-            auto interface        = entry.first;
-            const auto &neighbors = entry.second;
+        LOG(DEBUG) << "Sending LINK_METRIC_RESPONSE_MESSAGE (invalid neighbour), mid: " << std::hex
+                   << mid;
+        m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
+                                      tlvf::mac_to_string(db->bridge.mac));
+        return;
+    }
 
-            std::unique_ptr<link_metrics_collector> collector =
-                m_btl_ctx.create_link_metrics_collector(interface);
-            if (!collector) {
-                continue;
+    /**
+     * Report link metrics for the link with specific neighbor or for all neighbors, as
+     * obtained from topology database
+     */
+    for (const auto &entry : neighbor_links_map) {
+        auto interface        = entry.first;
+        const auto &neighbors = entry.second;
+
+        std::unique_ptr<link_metrics_collector> collector =
+            m_btl_ctx.create_link_metrics_collector(interface);
+        if (!collector) {
+            continue;
+        }
+
+        for (const auto &neighbor : neighbors) {
+
+            LOG(TRACE) << "Getting link metrics for interface " << interface.iface_name
+                       << " (MediaType = " << std::hex << (int)interface.media_type
+                       << ") and neighbor " << neighbor.iface_mac;
+
+            sLinkMetrics link_metrics;
+            if (!collector->get_link_metrics(interface.iface_name, neighbor.iface_mac,
+                                             link_metrics)) {
+                LOG(ERROR) << "Unable to get link metrics for interface " << interface.iface_name
+                           << " and neighbor " << neighbor.iface_mac;
+                return;
             }
 
-            for (const auto &neighbor : neighbors) {
-
-                LOG(TRACE) << "Getting link metrics for interface " << interface.iface_name
-                           << " (MediaType = " << std::hex << (int)interface.media_type
-                           << ") and neighbor " << neighbor.iface_mac;
-
-                sLinkMetrics link_metrics;
-                if (!collector->get_link_metrics(interface.iface_name, neighbor.iface_mac,
-                                                 link_metrics)) {
-                    LOG(ERROR) << "Unable to get link metrics for interface "
-                               << interface.iface_name << " and neighbor " << neighbor.iface_mac;
-                    return;
-                }
-
-                if (!m_btl_ctx.add_link_metrics(reporter_al_mac, interface, neighbor, link_metrics,
-                                                link_metrics_type)) {
-                    return;
-                }
+            if (!m_btl_ctx.add_link_metrics(reporter_al_mac, interface, neighbor, link_metrics,
+                                            link_metrics_type)) {
+                return;
             }
         }
     }
