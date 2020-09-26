@@ -232,7 +232,8 @@ bool transport_socket_thread::work()
     // If something happened on the server socket (UDS), then its an incoming connection
     if (server_socket && read_ready(server_socket.get())) {
         clear_ready(server_socket.get());
-        THREAD_LOG(DEBUG) << "accept new connection on server socket sd=" << server_socket.get();
+        THREAD_LOG(DEBUG) << "accept new connection on server socket sd="
+                          << intptr_t(server_socket.get());
         Socket *sd = server_socket->acceptConnections();
         if (sd == nullptr || (!server_socket->getError().empty())) {
             THREAD_LOG(ERROR) << "acceptConnections == nullptr: " << server_socket->getError();
@@ -240,9 +241,10 @@ bool transport_socket_thread::work()
         } else {
             if (unix_socket_path.empty()) {
                 THREAD_LOG(DEBUG) << "new connection from ip=" << sd->getPeerIP()
-                                  << " port=" << sd->getPeerPort() << " sd=" << sd;
+                                  << " port=" << sd->getPeerPort() << " sd=" << intptr_t(sd);
             } else {
-                THREAD_LOG(DEBUG) << "new connection on " << unix_socket_path << " sd=" << sd;
+                THREAD_LOG(DEBUG) << "new connection on " << unix_socket_path
+                                  << " sd=" << intptr_t(sd);
             }
             socket_connected(sd);
         }
