@@ -41,16 +41,6 @@ public:
     bool send_cmdu_to_broker(ieee1905_1::CmduMessageTx &cmdu, const std::string &dst_mac,
                              const std::string &src_mac, const std::string &iface_name = "");
 
-protected:
-    void add_socket(Socket *s, bool add_to_vector = true) override;
-    bool configure_ieee1905_transport_interfaces(const std::string &bridge_iface,
-                                                 const std::vector<std::string> &ifaces);
-
-    bool from_broker(Socket *sd);
-
-    bool broker_connect(const std::string &beerocks_temp_path, const bool local_master);
-    bool broker_subscribe(const std::vector<ieee1905_1::eMessageType> &msg_types);
-
     /**
      * @brief Sends CDMU to transport for dispatching.
      *
@@ -65,6 +55,16 @@ protected:
     bool send_cmdu_to_broker(ieee1905_1::CmduMessage &cmdu, const std::string &dst_mac,
                              const std::string &src_mac, uint16_t length,
                              const std::string &iface_name = "");
+
+protected:
+    void add_socket(Socket *s, bool add_to_vector = true) override;
+    bool configure_ieee1905_transport_interfaces(const std::string &bridge_iface,
+                                                 const std::vector<std::string> &ifaces);
+
+    bool from_broker(Socket *sd);
+
+    bool broker_connect(const std::string &beerocks_temp_path, const bool local_master);
+    bool broker_subscribe(const std::vector<ieee1905_1::eMessageType> &msg_types);
 
 private:
     bool broker_init();
