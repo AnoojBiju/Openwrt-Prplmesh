@@ -272,7 +272,7 @@ bool BrokerServer::socket_connected()
         return false;
     }
 
-    LOG(DEBUG) << "Accepted new connection, fd = " << new_socket->getSocketFd();
+    LOG(DEBUG) << "Accepted new connection, sd=" << intptr_t(new_socket->getSocketFd());
 
     // Add the newly accepted socket into the poll
     EventLoop::EventHandlers handlers{
