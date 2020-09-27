@@ -152,7 +152,7 @@ std::ostream &operator<<(std::ostream &os, const node &n)
                << (client_time_life_delay_hours % 24) << " hours" << std::endl
                << "   ClientStayOnInitialRadio: " << n.client_stay_on_initial_radio << std::endl
                << "   ClientInitialRadio: " << n.client_initial_radio << std::endl
-               << "   ClientSelectedBands: " << n.client_selected_bands << std::endl
+               << "   ClientSelectedBands: " << int(n.client_selected_bands) << std::endl
                << "   ClientIsFriendly: " << n.client_is_friendly << std::endl;
         }
 
