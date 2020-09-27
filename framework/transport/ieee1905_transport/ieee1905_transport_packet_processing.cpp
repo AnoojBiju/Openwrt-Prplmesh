@@ -125,7 +125,8 @@ bool Ieee1905Transport::verify_packet(const Packet &packet)
         }
     } else {
         // this should never happen (due to packet filter)
-        MAPF_ERR("packet verification failed - unsupported etherType.");
+        MAPF_ERR("packet verification failed - unsupported etherType: 0x" << std::hex
+                                                                          << packet.ether_type);
         return false;
     }
 
@@ -569,7 +570,7 @@ bool Ieee1905Transport::forward_packet_single(Packet &packet)
 
                 if (((forward_to_bridge && network_interface.is_bridge) ||
                      (forward_to_network_interfaces && !network_interface.is_bridge)) &&
-                    (network_interface.fd) &&
+                    (network_interface.sock_ieee1905 && network_interface.sock_lldp) &&
                     !(packet.src_if_type == CmduRxMessage::IF_TYPE_NET &&
                       packet.src_if_index == if_index)) { /* avoid loop-back */
                     if (!fragment_and_send_packet_to_network_interface(if_index, packet)) {

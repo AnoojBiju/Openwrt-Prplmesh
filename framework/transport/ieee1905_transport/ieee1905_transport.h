@@ -107,8 +107,10 @@ private:
     }
 
     struct NetworkInterface {
-        /// the file descriptor of the socket bound to this interface (or -1 if inactive)
-        std::shared_ptr<Socket> fd;
+        /// the socket of the 1905 messages socket bound to this interface (or -1 if inactive)
+        std::shared_ptr<Socket> sock_ieee1905;
+        /// the socket of the LLDP messages socket bound to this interface (or -1 if inactive)
+        std::shared_ptr<Socket> sock_lldp;
         /// mac address of the interface
         uint8_t addr[ETH_ALEN] = {0};
         /// interface name
@@ -302,8 +304,9 @@ private:
     //
     void
     update_network_interfaces(std::map<std::string, NetworkInterface> updated_network_interfaces);
-    bool open_interface_socket(NetworkInterface &interface);
-    bool attach_interface_socket_filter(NetworkInterface &iface_name);
+    std::shared_ptr<Socket> open_interface_socket(const std::string &ifname, uint16_t protocol);
+    bool attach_interface_socket_filter(const std::string &ifname,
+                                        const std::shared_ptr<Socket> &socket);
     void activate_interface(NetworkInterface &interface);
     void deactivate_interface(NetworkInterface &interface);
     void handle_interface_status_change(const std::string &iface_name, bool is_active);
