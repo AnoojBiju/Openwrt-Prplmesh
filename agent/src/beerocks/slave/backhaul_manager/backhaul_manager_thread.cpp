@@ -2711,7 +2711,7 @@ bool backhaul_manager::handle_1905_beacon_metrics_query(ieee1905_1::CmduMessageR
     LOG(DEBUG) << "Found the radio that has the sation. radio: " << radio->front.iface_mac
                << "; station: " << requested_sta_mac;
 
-    LOG(DEBUG) << "BEACON METRICS QUERY: sending ACK message to the originator mid: "
+    LOG(DEBUG) << "BEACON METRICS QUERY: sending ACK message to the originator mid: " << std::hex
                << mid; // USED IN TESTS
 
     send_cmdu_to_broker(cmdu_tx, src_mac, tlvf::mac_to_string(db->bridge.mac));
