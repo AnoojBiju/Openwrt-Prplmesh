@@ -153,7 +153,7 @@ bool Ieee1905Transport::send_packet_to_broker(Packet &packet)
         msg.metadata()->relay    = 0;
     }
 
-    counters_[CounterId::INCOMMING_LOCAL_BUS_PACKETS]++;
+    counters_[CounterId::INCOMING_LOCAL_BUS_PACKETS]++;
 
     MAPF_DBG("publishing CmduRxMessage:" << std::endl << msg);
     if (!m_broker->publish(msg)) {
