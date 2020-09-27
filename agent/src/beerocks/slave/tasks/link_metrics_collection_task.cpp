@@ -463,6 +463,12 @@ void LinkMetricsCollectionTask::handle_associated_sta_link_metrics_query(
         LOG(ERROR) << "Failed to get radio info for " << radio->front.iface_mac;
         return;
     }
+    /*
+     * TODO: https://jira.prplfoundation.org/browse/PPM-657
+     *
+     * When link metric collection task moves to agent context
+     * send the message to fronthaul, not slave.
+     */
     message_com::send_cmdu(radio_info->slave, m_cmdu_tx);
 }
 
