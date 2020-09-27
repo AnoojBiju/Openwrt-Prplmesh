@@ -328,7 +328,7 @@ void Ieee1905Transport::handle_interface_pollin_event(int fd)
     packet.payload    = {.iov_base = buf + sizeof(struct ether_header),
                       .iov_len  = len - sizeof(struct ether_header)};
 
-    counters_[CounterId::INCOMMING_NETWORK_PACKETS]++;
+    counters_[CounterId::INCOMING_NETWORK_PACKETS]++;
     handle_packet(packet);
 }
 
