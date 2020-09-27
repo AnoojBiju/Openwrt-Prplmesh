@@ -263,6 +263,7 @@ class ALEntityDocker(ALEntity):
     '''
     # NOTE: name arg can be also extracted from the device class itself, but test_flows.py
     # don't have it. We can remove this arg as soon, as we drop test_flows.py
+
     def __init__(self, name: str, device: None = None, is_controller: bool = False,
                  compose: bool = False):
 
@@ -319,6 +320,7 @@ class ALEntityDocker(ALEntity):
 
 class RadioDocker(Radio):
     '''Docker implementation of a radio.'''
+
     def __init__(self, agent: ALEntityDocker, iface_name: str):
         self.iface_name = iface_name
         ip_output = agent.command("ip", "-o",  "link", "list", "dev", self.iface_name).decode()
@@ -339,7 +341,8 @@ class RadioDocker(Radio):
 
     def send_bwl_event(self, event: str) -> None:
         # The file is only available within the docker container so we need to use an echo command.
-        command = "echo \"{}\" > /tmp/beerocks/{}/EVENT".format(event, self.iface_name)
+        command = "echo \"{}\" | timeout 1s tee /tmp/beerocks/{}/EVENT* >/dev/null".format(
+            event, self.iface_name)
         self.agent.command('sh', '-c', command)
 
     def read_tmp_file(self, filename: str) -> bytes:
