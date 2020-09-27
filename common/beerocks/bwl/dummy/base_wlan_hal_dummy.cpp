@@ -13,14 +13,21 @@
 #include <bcl/network/network_utils.h>
 #include <bcl/son/son_wireless_utils.h>
 
-#include <easylogging++.h>
 #include <limits.h>
-#include <sys/inotify.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
-#define UNHANDLED_EVENTS_LOGS 20
+#include <easylogging++.h>
 
 namespace bwl {
 namespace dummy {
+
+//////////////////////////////////////////////////////////////////////////////
+///////////////////////// Local Module Definitions ///////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+// Name for the dummy events FIFO file
+static constexpr char EVENT_FILE_NAME[] = "EVENT";
 
 //////////////////////////////////////////////////////////////////////////////
 ////////////////////////// Local Module Functions ////////////////////////////
@@ -234,34 +241,70 @@ base_wlan_hal_dummy::base_wlan_hal_dummy(HALType type, const std::string &iface_
     : base_wlan_hal(type, iface_name, IfaceType::Intel, callback, hal_conf),
       beerocks::beerocks_fsm<dummy_fsm_state, dummy_fsm_event>(dummy_fsm_state::Delay)
 {
-    // Set up dummy external events fd
-    // dummy implementation is based on monitoring text file changes which
-    // are used to simulate clients activity - STA connected, disconnected, etc.
-    // For that we are creating the INOTIFY instance
-    // inotify_init1 not available with older kernels, consequently inotify reads block.
-    // inotify_init1 allows directory events to complete immediately, avoiding buffering delays. In practice,
-    // this significantly improves monotiring of newly created subdirectories.
-    // Note that IN_NONBLOCK is not defined in old kernels so we get to the #else and call inotify_init()
-    // in this case.
-#ifdef IN_NONBLOCK
-    m_fd_ext_events = inotify_init1(IN_NONBLOCK);
-#else
-    m_fd_ext_events = inotify_init();
-#endif
-
-    if (m_fd_ext_events < 0) {
-        LOG(FATAL) << "Failed creating m_fd_ext_events: " << strerror(errno);
+    // Create events directory
+    if (mkdir(get_status_dir().c_str(), S_IRWXU | S_IRWXG | S_IWOTH | S_IXOTH) == -1) {
+        if (errno != EEXIST) { // Do NOT fail if the directory already exists
+            LOG(FATAL) << "Failed creating events directory: " << strerror(errno);
+        }
     }
 
-    auto path = get_status_dir();
-    mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-    inotify_add_watch(m_fd_ext_events, path.c_str(), (IN_CREATE | IN_DELETE | IN_MODIFY));
+    // Generate dummy events filename:
+    // Since FIFOs allow a single reader only (well, not only, but when multiple
+    // readers listen to the same FIFO, only one of the readers is randomly selected
+    // to process the incoming data), generate separate FIFO filenames for every HAL type.
+    m_dummy_event_file = get_status_dir(EVENT_FILE_NAME);
+
+    switch (type) {
+    case HALType::AccessPoint: {
+        m_dummy_event_file += "_AP";
+    } break;
+    case HALType::Monitor: {
+        m_dummy_event_file += "_MON";
+    } break;
+    case HALType::Station: {
+        m_dummy_event_file += "_STA";
+    } break;
+    default: {
+    } break;
+    }
+
+    // Remove previously created FIFO for the events file and create a new one
+    if (unlink(m_dummy_event_file.c_str()) == -1) {
+        LOG_IF(errno != ENOENT, FATAL)
+            << "Failed removing previous events FIFO: " << strerror(errno);
+    }
+
+    // Create the dummy events FIFO file, with Read-Write permissions to Owner/Group and
+    // Write-Only permissions to Others.
+    if (mkfifo(m_dummy_event_file.c_str(), S_IREAD | S_IWRITE | S_IRGRP | S_IWGRP | S_IWOTH) ==
+        -1) {
+        LOG(FATAL) << "Failed creating events FIFO: " << strerror(errno);
+    }
+
+    // Open the events FIFO for Read-Write. This is necessary to ensure that the FIFO file
+    // always has at-least one "writer". Otherwise the FIFO is automatically closed by the
+    // OS when writing data externally using "echo".
+    if ((m_fd_ext_events = open(m_dummy_event_file.c_str(), O_RDWR | O_NONBLOCK)) == -1) {
+        LOG(FATAL) << "Failed opening events file: " << strerror(errno);
+    }
 
     // Initialize the FSM
     fsm_setup();
 }
 
-base_wlan_hal_dummy::~base_wlan_hal_dummy() { base_wlan_hal_dummy::detach(); }
+base_wlan_hal_dummy::~base_wlan_hal_dummy()
+{
+    // Close the dummy events FIFO
+    if (m_fd_ext_events != -1) {
+        close(m_fd_ext_events);
+        m_fd_ext_events = -1;
+
+        // Remove the FIFO file
+        unlink(m_dummy_event_file.c_str());
+    }
+
+    base_wlan_hal_dummy::detach();
+}
 
 bool base_wlan_hal_dummy::fsm_setup() { return true; }
 
@@ -395,53 +438,36 @@ bool base_wlan_hal_dummy::refresh_vaps_info(int id) { return true; }
  */
 bool base_wlan_hal_dummy::process_ext_events()
 {
-    // From http://man7.org/linux/man-pages/man7/inotify.7.html:
-    // The behavior when the buffer given to read(2) is too small to return
-    // information about the next event depends on the kernel version: in
-    // kernels before 2.6.21, read(2) returns 0; since kernel 2.6.21,
-    // read(2) fails with the error EINVAL.  Specifying a buffer of size
-    // sizeof(struct inotify_event) + NAME_MAX + 1
-    // will be sufficient to read at least one event.
-    const size_t event_size = sizeof(struct inotify_event) + NAME_MAX + 1;
-    // Use a static buffer big enough to hold up to 128 events
-    // We don't actually read the events.
-    // The purpose is to always be able to clear all events with a single read.
-    static char buffer[128 * event_size];
+    LOG(TRACE) << "Processing external dummy event...";
 
-    LOG(DEBUG) << "in process external events";
-
-    // dummy read to clear event
-    int length = read(m_fd_ext_events, buffer, sizeof(buffer));
-    if (length < 0) {
-        LOG(ERROR) << "Failed to read from m_fd_ext_events";
+    // Read the event from the FIFO
+    memset(m_event_data, 0, sizeof(m_event_data));
+    int read_bytes = read(m_fd_ext_events, m_event_data, sizeof(m_event_data));
+    if (read_bytes <= 0) {
+        LOG(ERROR) << "Failed reading event: " << strerror(errno);
         return false;
     }
 
-    std::string event_file = get_status_dir() + "/EVENT";
-    std::ifstream stream;
-    stream.open(event_file);
-    if (!stream.is_open()) {
-        LOG(DEBUG) << "Invalid event, missing " << event_file << " file";
-        return true;
+    // Remove trailing new-line
+    if (m_event_data[read_bytes - 1] == '\n') {
+        m_event_data[read_bytes - 1] = 0;
+        read_bytes--;
     }
-    std::string event;
-    std::getline(stream, event);
-    if (event.empty()) {
-        LOG(DEBUG) << "Received empty event, ignoring";
-        return true;
-    }
+
+    std::string event(m_event_data, 0, read_bytes);
     LOG(DEBUG) << "Received event " << event;
 
     parsed_obj_map_t event_obj;
     map_event_obj_parser(event, event_obj);
-    //base_wlan_hal_dummy::parsed_obj_debug(event_obj);
+    // parsed_obj_debug(event_obj);
 
     // Process the event
     if (event_obj[DUMMY_EVENT_KEYLESS_PARAM_TYPE] == "EVENT") {
         if (!process_dummy_event(event_obj)) {
             LOG(ERROR) << "Failed processing DUMMY event: "
                        << event_obj[DUMMY_EVENT_KEYLESS_PARAM_OPCODE];
-            return false;
+            // Do not fail the AP Manager on parsing errors
+            return true;
         }
     }
     // Process data
@@ -449,14 +475,15 @@ bool base_wlan_hal_dummy::process_ext_events()
         if (!process_dummy_data(event_obj)) {
             LOG(ERROR) << "Failed processing DUMMY data: "
                        << event_obj[DUMMY_EVENT_KEYLESS_PARAM_OPCODE];
-            return false;
+            // Do not fail the AP Manager on parsing errors
+            return true;
         }
     } else {
         LOG(ERROR) << "Unsupported type " << event_obj[DUMMY_EVENT_KEYLESS_PARAM_TYPE];
-        return false;
+        // Do not fail the AP Manager on unknown events
+        return true;
     }
 
-    stream.close();
     return true;
 }
 

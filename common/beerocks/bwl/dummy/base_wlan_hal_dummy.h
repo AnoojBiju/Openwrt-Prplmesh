@@ -16,6 +16,7 @@
 #include <chrono>
 #include <memory>
 
+#define DUMMY_EVENT_MAX_LENGTH 1024
 #define DUMMY_EVENT_KEYLESS_PARAM_TYPE "_type"
 #define DUMMY_EVENT_KEYLESS_PARAM_OPCODE "_opcode"
 #define DUMMY_EVENT_KEYLESS_PARAM_MAC "_mac"
@@ -86,20 +87,23 @@ protected:
                      int vap_id = beerocks::IFACE_RADIO_ID) override;
 
     /** @brief Write/update a dummy status file.
-     *
      * Write the @a value to a status file with name @a filename. This is used by test scripts to
      * verify if the proper bwl commands were given.
      */
     bool write_status_file(const std::string &filename, const std::string &value) const;
 
     /** @brief Get the status directory.
-     *
      * The dummy implementation interacts with the test framework through files in the test
      * directory. This function returns the path to that directory.
+     * 
+     * @param [in] filename The name of the file inside the test directory.
+     * 
+     * @return Full path and filename to the test file.
      */
-    std::string get_status_dir() const
+    std::string get_status_dir(const std::string &filename = {}) const
     {
-        return std::string(BEEROCKS_TMP_PATH) + "/" + get_iface_name();
+        return std::string(BEEROCKS_TMP_PATH) + "/" + get_iface_name() +
+               (!filename.empty() ? "/" + filename : "");
     }
 
     static const int predefined_vaps_num = 4;
@@ -115,6 +119,10 @@ private:
     dummy_fsm_state m_last_attach_state = dummy_fsm_state::Detach;
 
     std::chrono::steady_clock::time_point m_state_timeout;
+
+    // Dummy event filename and data buffer
+    std::string m_dummy_event_file;
+    char m_event_data[DUMMY_EVENT_MAX_LENGTH];
 };
 
 } // namespace dummy
