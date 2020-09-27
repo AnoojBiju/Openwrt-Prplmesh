@@ -2650,8 +2650,7 @@ bool backhaul_manager::handle_slave_ap_metrics_response(ieee1905_1::CmduMessageR
 }
 
 bool backhaul_manager::handle_1905_beacon_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                                        const std::string &src_mac,
-                                                        Socket *&forward_to)
+                                                        const std::string &src_mac)
 {
     LOG(DEBUG) << "now going to handle BEACON METRICS QUERY";
 
@@ -2708,13 +2707,6 @@ bool backhaul_manager::handle_1905_beacon_metrics_query(ieee1905_1::CmduMessageR
         // send the error
         return send_cmdu_to_broker(cmdu_tx, src_mac, tlvf::mac_to_string(db->bridge.mac));
     }
-
-    auto radio_info = get_radio(radio->front.iface_mac);
-    if (!radio_info) {
-        LOG(ERROR) << "Failed to get radio info for " << radio->front.iface_mac;
-        return false;
-    }
-    forward_to = radio_info->slave;
 
     LOG(DEBUG) << "Found the radio that has the sation. radio: " << radio->front.iface_mac
                << "; station: " << requested_sta_mac;
