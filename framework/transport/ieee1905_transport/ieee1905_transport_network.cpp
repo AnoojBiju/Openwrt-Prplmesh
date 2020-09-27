@@ -94,10 +94,16 @@ void Ieee1905Transport::update_network_interfaces(
 
         if (updated_network_interfaces.count(ifname) == 0) {
             MAPF_INFO("interface " << ifname << " is no longer used.");
-            if (network_interface.fd) {
-                m_event_loop->remove_handlers(network_interface.fd->getSocketFd());
-                close(network_interface.fd->getSocketFd());
-                network_interface.fd = nullptr;
+            if (network_interface.sock_ieee1905) {
+                m_event_loop->remove_handlers(network_interface.sock_ieee1905->getSocketFd());
+                close(network_interface.sock_ieee1905->getSocketFd());
+                network_interface.sock_ieee1905 = nullptr;
+            }
+
+            if (network_interface.sock_lldp) {
+                m_event_loop->remove_handlers(network_interface.sock_lldp->getSocketFd());
+                close(network_interface.sock_lldp->getSocketFd());
+                network_interface.sock_lldp = nullptr;
             }
 
             it = network_interfaces_.erase(it);
@@ -124,7 +130,7 @@ void Ieee1905Transport::update_network_interfaces(
             MAPF_WARN("cannot get address of interface " << if_index << ".");
         }
 
-        if (!interface.fd) {
+        if (!interface.sock_ieee1905 || !interface.sock_lldp) {
             activate_interface(interface);
         }
 
@@ -136,14 +142,11 @@ void Ieee1905Transport::update_network_interfaces(
     }
 }
 
-bool Ieee1905Transport::open_interface_socket(NetworkInterface &interface)
+std::shared_ptr<Socket> Ieee1905Transport::open_interface_socket(const std::string &ifname,
+                                                                 uint16_t protocol)
 {
-    MAPF_DBG("opening raw socket on interface " << interface.ifname << ".");
-
-    if (interface.fd) {
-        close(interface.fd->getSocketFd());
-        interface.fd = nullptr;
-    }
+    MAPF_DBG("opening raw socket on interface " << ifname << ", etherType 0x" << std::hex
+                                                << protocol);
 
     // Note to developer: The current implementation uses AF_PACKET socket with SOCK_RAW protocol which means we receive
     // and send packets with the Ethernet header included in the buffer. Please consider changing
@@ -151,9 +154,9 @@ bool Ieee1905Transport::open_interface_socket(NetworkInterface &interface)
 
     // open packet raw socket - see man packet(7) https://linux.die.net/man/7/packet
     int sockfd;
-    if ((sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0) {
+    if ((sockfd = socket(AF_PACKET, SOCK_RAW, htons(protocol))) < 0) {
         MAPF_ERR("cannot open raw socket \"" << strerror(errno) << "\" (" << errno << ").");
-        return false;
+        return nullptr;
     }
 
     // the interface can be used by other processes
@@ -162,53 +165,44 @@ bool Ieee1905Transport::open_interface_socket(NetworkInterface &interface)
         MAPF_ERR("cannot set socket option SO_REUSEADDR \"" << strerror(errno) << "\" (" << errno
                                                             << ").");
         close(sockfd);
-        return false;
+        return nullptr;
     }
 
     // bind to specifed interface - note that we cannot use SO_BINDTODEVICE sockopt as it does not support AF_PACKET sockets
     struct sockaddr_ll sockaddr;
     memset(&sockaddr, 0, sizeof(struct sockaddr_ll));
     sockaddr.sll_family   = AF_PACKET;
-    sockaddr.sll_protocol = htons(ETH_P_ALL);
-    sockaddr.sll_ifindex  = if_nametoindex(interface.ifname.c_str());
+    sockaddr.sll_protocol = htons(protocol);
+    sockaddr.sll_ifindex  = if_nametoindex(ifname.c_str());
     if (bind(sockfd, (struct sockaddr *)&sockaddr, sizeof(sockaddr)) < 0) {
         MAPF_ERR("cannot bind socket to interface \"" << strerror(errno) << "\" (" << errno
                                                       << ").");
         close(sockfd);
-        return false;
+        return nullptr;
     }
 
-    interface.fd = std::make_shared<Socket>(sockfd);
+    auto socket = std::make_shared<Socket>(sockfd);
     LOG_IF(!sockfd, FATAL) << "Failed creating new Socket for fd: " << sockfd;
 
-    attach_interface_socket_filter(interface);
+    attach_interface_socket_filter(ifname, socket);
 
-    return true;
+    return socket;
 }
 
-bool Ieee1905Transport::attach_interface_socket_filter(NetworkInterface &interface)
+bool Ieee1905Transport::attach_interface_socket_filter(const std::string &ifname,
+                                                       const std::shared_ptr<Socket> &socket)
 {
     // 1st step is to put the interface in promiscuous mode.
     // promiscuous mode is required since we expect to receive packets destined to
     // the AL MAC address (which is different the the interfaces HW address)
     //
     struct packet_mreq mr = {0};
-    mr.mr_ifindex         = if_nametoindex(interface.ifname.c_str());
+    mr.mr_ifindex         = if_nametoindex(ifname.c_str());
     mr.mr_type            = PACKET_MR_PROMISC;
-    if (setsockopt(interface.fd->getSocketFd(), SOL_PACKET, PACKET_ADD_MEMBERSHIP, &mr,
-                   sizeof(mr)) == -1) {
+    if (setsockopt(socket->getSocketFd(), SOL_PACKET, PACKET_ADD_MEMBERSHIP, &mr, sizeof(mr)) ==
+        -1) {
         MAPF_ERR("cannot put interface in promiscuous mode \"" << strerror(errno) << "\" (" << errno
                                                                << ").");
-        return false;
-    }
-
-    // prepare linux packet filter for this interface
-    struct sock_fprog fprog = Ieee1905SocketFilter(al_mac_addr_, interface.addr).sock_fprog();
-
-    // attach filter
-    if (setsockopt(interface.fd->getSocketFd(), SOL_SOCKET, SO_ATTACH_FILTER, &fprog,
-                   sizeof(fprog)) == -1) {
-        MAPF_ERR("cannot attach socket filter \"" << strerror(errno) << "\" (" << errno << ").");
         return false;
     }
 
@@ -235,10 +229,16 @@ void Ieee1905Transport::deactivate_interface(NetworkInterface &interface)
 {
     MAPF_INFO("interface " << interface.ifname << " is deactivated.");
 
-    if (interface.fd) {
-        m_event_loop->remove_handlers(interface.fd->getSocketFd());
-        close(interface.fd->getSocketFd());
-        interface.fd = nullptr;
+    if (interface.sock_ieee1905) {
+        m_event_loop->remove_handlers(interface.sock_ieee1905->getSocketFd());
+        close(interface.sock_ieee1905->getSocketFd());
+        interface.sock_ieee1905 = nullptr;
+    }
+
+    if (interface.sock_lldp) {
+        m_event_loop->remove_handlers(interface.sock_lldp->getSocketFd());
+        close(interface.sock_lldp->getSocketFd());
+        interface.sock_lldp = nullptr;
     }
 }
 
@@ -246,38 +246,52 @@ void Ieee1905Transport::activate_interface(NetworkInterface &interface)
 {
     MAPF_INFO("interface " << interface.ifname << " is activated.");
 
-    if (!interface.fd) {
-        if (!open_interface_socket(interface)) {
-            MAPF_ERR("cannot open network interface " << interface.ifname << ".");
+    auto handle_incoming_message = [&](int fd, EventLoop &loop) {
+        MAPF_DBG("Incoming message on interface " << interface.ifname << " fd: " << fd);
+        handle_interface_pollin_event(fd);
+        return true;
+    };
+
+    auto handle_error_on_interface = [&](int fd, EventLoop &loop) {
+        MAPF_ERR("Error on interface " << interface.ifname << " fd: " << fd << " (disabling it).");
+
+        deactivate_interface(interface);
+        return true;
+    };
+
+    EventLoop::EventHandlers handlers = {
+        // Accept incoming connections
+        .on_read = handle_incoming_message,
+
+        // Not implemented
+        .on_write      = nullptr,
+        .on_disconnect = nullptr,
+
+        // Handle interface errors
+        .on_error = handle_error_on_interface,
+    };
+
+    if (!interface.sock_ieee1905) {
+        interface.sock_ieee1905 = open_interface_socket(interface.ifname, ETH_P_1905_1);
+        if (!interface.sock_ieee1905) {
+            MAPF_ERR("cannot open 1905 network interface " << interface.ifname << ".");
             return;
         }
         // Handle network events, but not for bridges
         if (!interface.is_bridge) {
-            EventLoop::EventHandlers handlers = {
-                // Accept incoming connections
-                .on_read =
-                    [&](int fd, EventLoop &loop) {
-                        LOG(DEBUG) << "Incoming message on interface " << interface.ifname
-                                   << " fd: " << fd;
-                        handle_interface_pollin_event(fd);
-                        return true;
-                    },
+            m_event_loop->register_handlers(interface.sock_ieee1905->getSocketFd(), handlers);
+        }
+    }
 
-                // Not implemented
-                .on_write      = nullptr,
-                .on_disconnect = nullptr,
-
-                // Handle interface errors
-                .on_error =
-                    [&](int fd, EventLoop &loop) {
-                        LOG(DEBUG) << "Error on interface " << interface.ifname << " fd: " << fd
-                                   << " (disabling it).";
-
-                        deactivate_interface(interface);
-                        return true;
-                    },
-            };
-            m_event_loop->register_handlers(interface.fd->getSocketFd(), handlers);
+    if (!interface.sock_lldp) {
+        interface.sock_lldp = open_interface_socket(interface.ifname, ETH_P_LLDP);
+        if (!interface.sock_lldp) {
+            MAPF_ERR("cannot open LLDP network interface " << interface.ifname << ".");
+            return;
+        }
+        // Handle network events, but not for bridges
+        if (!interface.is_bridge) {
+            m_event_loop->register_handlers(interface.sock_lldp->getSocketFd(), handlers);
         }
     }
 }
@@ -383,8 +397,19 @@ bool Ieee1905Transport::send_packet_to_network_interface(unsigned int if_index, 
         return false;
     }
 
-    if (!network_interfaces_[ifname].fd) {
-        LOG(ERROR) << "Invalid fd for iface: " << ifname;
+    std::shared_ptr<Socket> fdSock = nullptr;
+    if (packet.ether_type == ETH_P_1905_1) {
+        fdSock = network_interfaces_[ifname].sock_ieee1905;
+    } else if (packet.ether_type == ETH_P_LLDP) {
+        fdSock = network_interfaces_[ifname].sock_lldp;
+    } else {
+        MAPF_ERR("unsupported etherType: 0x" << std::hex << packet.ether_type);
+        return false;
+    }
+
+    if (!fdSock) {
+        MAPF_ERR("Invalid fd for iface: " << ifname << ", etherType: 0x" << std::hex
+                                          << packet.ether_type);
         return false;
     }
 
@@ -397,7 +422,7 @@ bool Ieee1905Transport::send_packet_to_network_interface(unsigned int if_index, 
 
     packet.header = {.iov_base = &eh, .iov_len = sizeof(eh)};
 
-    int fd             = network_interfaces_[ifname].fd->getSocketFd();
+    auto fd            = fdSock->getSocketFd();
     struct iovec iov[] = {packet.header, packet.payload};
     int n              = writev(fd, iov, sizeof(iov) / sizeof(struct iovec));
 
@@ -422,8 +447,13 @@ void Ieee1905Transport::set_al_mac_addr(const uint8_t *addr)
     for (auto it = network_interfaces_.begin(); it != network_interfaces_.end(); ++it) {
         auto &network_interface = it->second;
 
-        if (network_interface.fd) {
-            attach_interface_socket_filter(network_interface);
+        if (network_interface.sock_ieee1905) {
+            attach_interface_socket_filter(network_interface.ifname,
+                                           network_interface.sock_ieee1905);
+        }
+
+        if (network_interface.sock_lldp) {
+            attach_interface_socket_filter(network_interface.ifname, network_interface.sock_lldp);
         }
     }
 }
