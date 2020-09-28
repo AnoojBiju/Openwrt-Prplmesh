@@ -91,28 +91,6 @@ namespace beerocks {
 
 const char *backhaul_manager::s_arrStates[] = {FOREACH_STATE(GENERATE_STRING)};
 
-/**
- * @brief Gets the MAC address of given interface.
- *
- * @param[in] iface_name Name of the network interface.
- * @param[out] iface_mac MAC address of the network interface on success and ZERO_MAC on error.
- *
- * @return True on success and false otherwise.
- */
-static bool get_iface_mac(const std::string &iface_name, sMacAddr &iface_mac)
-{
-    std::string mac;
-    if (network_utils::linux_iface_get_mac(iface_name, mac)) {
-        iface_mac = tlvf::mac_from_string(mac);
-        return true;
-    }
-
-    LOG(ERROR) << "Failed getting MAC address for interface: " << iface_name;
-    iface_mac = network_utils::ZERO_MAC;
-
-    return false;
-}
-
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////////// Implementation ///////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -2903,9 +2881,16 @@ bool backhaul_manager::create_backhaul_steering_response(
         return false;
     }
 
-    sMacAddr sta_mac;
     auto interface = active_hal->get_iface_name();
-    get_iface_mac(interface, sta_mac);
+
+    auto db = AgentDB::get();
+
+    auto radio = db->radio(interface);
+    if (!radio) {
+        return false;
+    }
+
+    sMacAddr sta_mac = radio->front.iface_mac;
 
     LOG(DEBUG) << "Interface: " << interface << "MAC: " << sta_mac;
 
