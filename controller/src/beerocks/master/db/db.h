@@ -18,8 +18,10 @@
 
 #include <tlvf/wfa_map/tlvApRadioBasicCapabilities.h>
 
+#include <algorithm>
 #include <mutex>
 #include <queue>
+#include <vector>
 
 using namespace beerocks_message;
 
@@ -231,6 +233,23 @@ public:
                   const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,
                   beerocks::eType type             = beerocks::TYPE_CLIENT,
                   const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
+    /**
+     * @brief get the remaining lifetime of a client
+     * 
+     * @param pair<std::string, ValuesMap> the pair of the client and its variables.
+     * @return long long long int returns the remaining life duration of a client.
+     */
+    long long int get_client_remaining_sec(const std::pair<std::string, ValuesMap> &client);
+    /**
+     * @brief wrapper to add_node (to nodelist)
+     * 
+     * @param string the client_entry used as an identifier.
+     * @param ValuesMap the client information: timestamp, friendly status.
+     * @param pair<uint16, uint16> [out] error results for the main load function report.
+     */
+    void add_node_from_data(std::string client_entry, const ValuesMap &values_map,
+                            std::pair<uint16_t, uint16_t> &results);
+
     bool remove_node(const sMacAddr &mac);
 
     bool set_node_type(const std::string &mac, beerocks::eType type);
