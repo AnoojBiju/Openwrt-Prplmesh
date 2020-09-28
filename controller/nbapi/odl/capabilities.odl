@@ -8,41 +8,33 @@
  */
 
 %config {
-	define_behavior = { 
-		existing_object = "update"
+	define-behavior = { 
+		existing-object = "update"
 	};
 }
 
 %define {
-object Controller {
-	object Network {
-		object Device [] {
-			object Radio [] {
-				object Capabilities [] {
-					%read-only string HTCapabilities = "0" {
-					}
+	select Controller.Network.Device.Radio.Capabilities {
+		%read-only string HTCapabilities = "0" {
+		}
 
-					%read-only string VHTCapabilities = "0" {
-					}
+		%read-only string VHTCapabilities = "0" {
+		}
 
-					%read-only string HECapabilities = "0" {
-					}
+		%read-only string HECapabilities = "0" {
+		}
 
-					%read-only object OperatingClasses [] {
-						%read-only uint32 Class = 0 {
-							on action validate call check_range [0, 255];
-						}
-						%read-only int32 MaxTxPower = 0 {
-							on action validate call check_range [-127, 128];
-						}
+		%read-only object OperatingClasses [] {
+			%read-only uint32 Class = 0 {
+				on action validate call check_range [0, 255];
+			}
+			%read-only int32 MaxTxPower = 0 {
+				on action validate call check_range [-127, 128];
+			}
 
-						%read-only object NonOperable [] {
-							counted with NumberOfNonOperChan;
-						}
-					}
-				}
+			%read-only object NonOperable [] {
+					counted with NumberOfNonOperChan;
 			}
 		}
 	}
-}
 }
