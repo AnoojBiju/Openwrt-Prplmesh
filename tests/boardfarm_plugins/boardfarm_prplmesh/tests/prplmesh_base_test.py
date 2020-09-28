@@ -184,3 +184,7 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         TODO: Implement for log functions.
         '''
         self.dev.DUT.wired_sniffer.checkpoint()
+
+    def fail(self, msg: str):
+        '''Throw an exception message.'''
+        raise Exception(msg)
