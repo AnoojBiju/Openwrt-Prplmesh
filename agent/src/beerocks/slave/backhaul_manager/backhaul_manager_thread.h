@@ -29,7 +29,7 @@
 #include <tlvf/wfa_map/tlvErrorCode.h>
 
 #include "../agent_ucc_listener.h"
-#include "../link_metrics/link_metrics.h"
+#include "../helpers/link_metrics/link_metrics.h"
 
 #include <future>
 #include <list>
