@@ -26,12 +26,10 @@
 #include <tlvf/ieee_1905_1/eMediaType.h>
 
 #include <tlvf/CmduMessageTx.h>
-#include <tlvf/wfa_map/tlvApMetrics.h>
-#include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
 
 #include "../agent_ucc_listener.h"
-#include "../link_metrics/link_metrics.h"
+#include "../helpers/link_metrics/link_metrics.h"
 
 #include <future>
 #include <list>
@@ -70,10 +68,10 @@ public:
      */
     bool start_wps_pbc(const sMacAddr &radio_mac);
 
-private:
     // Forward declaration
     struct sRadioInfo;
 
+private:
     std::shared_ptr<bwl::sta_wlan_hal> get_selected_backhaul_sta_wlan_hal();
 
     virtual bool handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx) override;
@@ -91,18 +89,6 @@ private:
     bool
     finalize_slaves_connect_state(bool fConnected,
                                   std::shared_ptr<sRadioInfo> pSocket = nullptr); // cmdu_duplicate
-
-    /**
-     * @brief Sends an AP Metrics Query message for each bssid on 'bssid_list' to the son_slaves.
-     * If the 'bssid_list' is empty, sends a query on each bssid that exists on the Agent.
-     * 
-     * @param mid MID of the message to be sent.
-     * @param bssid_list List of bssids to send a query on.
-     * @return true on success, otherwise false.
-     */
-    bool send_slave_ap_metric_query_message(
-        uint16_t mid,
-        const std::unordered_set<sMacAddr> &bssid_list = std::unordered_set<sMacAddr>());
 
     /**
      * @brief Creates Backhaul STA Steering Response message with 2 tlvs Steering Response
@@ -123,22 +109,9 @@ private:
     bool handle_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac,
                                Socket *&forward_to);
     // 1905 messages handlers
-    bool handle_1905_link_metric_query(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                       const std::string &src_mac);
-    bool handle_1905_combined_infrastructure_metrics(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                                     const std::string &src_mac);
-    bool handle_1905_beacon_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                          const std::string &src_mac, Socket *&forward_to);
     bool handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac);
     bool handle_client_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx,
                                         const std::string &src_mac);
-    bool handle_associated_sta_link_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                                  const std::string &src_mac);
-    bool handle_multi_ap_policy_config_request(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                               const std::string &src_mac);
-    bool handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac);
-    bool handle_slave_ap_metrics_response(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                          const std::string &src_mac);
     bool handle_backhaul_steering_request(ieee1905_1::CmduMessageRx &cmdu_rx,
                                           const std::string &src_mac);
 
@@ -258,28 +231,7 @@ private:
 
     TaskPool m_task_pool;
 
-    /**
-     * AP Metrics Reporting configuration and status information type.
-     */
-    struct sApMetricsReportingInfo {
-        /**
-         * AP Metrics Reporting Interval in seconds (0: Do not report AP Metrics periodically).
-         * This value is set by the controller through a Multi-AP Policy Config Request message,
-         * inside the Metric Reporting Policy TLV.
-         */
-        uint8_t reporting_interval_s = 0;
-
-        /**
-         * Time point at which AP metrics were reported for the last time.
-         */
-        std::chrono::steady_clock::time_point last_reporting_time_point;
-    };
-
-    /**
-     * AP Metrics Reporting configuration and status information.
-     */
-    sApMetricsReportingInfo ap_metrics_reporting_info;
-
+public:
     /**
      * @brief Information gathered about a radio (= slave).
      *
@@ -300,6 +252,7 @@ private:
         bool he_supported = false; /**< Is HE supported flag */
     };
 
+public:
     /**
      * @brief Gets radio info for the radio with given MAC address
      *
@@ -308,66 +261,7 @@ private:
      */
     std::shared_ptr<sRadioInfo> get_radio(const sMacAddr &radio_mac) const;
 
-    /**
-     * @brief Interface in this device which connects to an interface in one or more neighbors.
-     *
-     * An interface is defined by its name, its MAC address and its MediaType as
-     * defined in IEEE Std 1905.1, Table 6-12—Media type (intfType).
-     */
-    struct sLinkInterface {
-        std::string iface_name; /**< The name of the interface. */
-        sMacAddr iface_mac =
-            beerocks::net::network_utils::ZERO_MAC; /**< The MAC address of the interface. */
-        ieee1905_1::eMediaType media_type = ieee1905_1::eMediaType::
-            UNKNOWN_MEDIA; /**< The underlying network technology of the connecting interface. */
-        bool operator<(const sLinkInterface &rhs) const { return iface_name < rhs.iface_name; }
-    };
-
-    /**
-     * @brief Neighbor 1905.1 device which connects to an interface in this device.
-     *
-     * A neighbor is defined by its 1905.1 AL MAC address and the MAC address of the interface in
-     * the neighbor that connects to this device.
-     */
-    struct sLinkNeighbor {
-        sMacAddr al_mac =
-            beerocks::net::network_utils::ZERO_MAC; /**< The MAC address of the 1905.1 AL. */
-        sMacAddr iface_mac =
-            beerocks::net::network_utils::ZERO_MAC; /**< The MAC address of the interface. */
-    };
-
-    /**
-     * @brief Creates a new link metrics collector for given media type.
-     *
-     * Creates a new link metrics collector suitable for the underlying network technology of the
-     * connecting interface.
-     * Collector choice depends on bits 15 to 8 of media type, that is, the media type group.
-     *
-     * @param[in] iface_mac MAC address of the connecting interface.
-     * @param[in] media_type The underlying network technology of the connecting interface.
-     *
-     * @return Link metrics collector on success and nullptr otherwise.
-     */
-    std::unique_ptr<link_metrics_collector>
-    create_link_metrics_collector(const sLinkInterface &link_interface) const;
-
-    /**
-     * @brief Gets the list of neighbors connected to this device (from topology database).
-     *
-     * The keys of the returned map are interfaces in this device which connect to one or more
-     * neighbor device. The values are the list of neighbors connected to that interface.
-     *
-     * @param[in] neighbor_mac_filter Optional 1905.1 AL MAC address to filter the links to be
-     * returned. A value of network_utils::ZERO_MAC means no filter has to be applied. A specific
-     * MAC address means that only links to that neighbor device must be included.
-     * @param[in, out] neighbor_links_map Map of neighbor links (interfaces x neighbors).
-     *
-     * @return True on success and false otherwise.
-     */
-    bool
-    get_neighbor_links(const sMacAddr &neighbor_mac_filter,
-                       std::map<sLinkInterface, std::vector<sLinkNeighbor>> &neighbor_links_map);
-
+private:
     /**
      * @brief Adds an AP HT Capabilities TLV to AP Capability Report message.
      *
@@ -404,62 +298,7 @@ private:
      */
     bool add_ap_he_capabilities(const sRadioInfo &radio_info);
 
-    /**
-     * @brief Adds link metric TLVs to response message.
-     *
-     * Creates a Transmitter Link Metric TLV or a Receiver Link Metric TLV or both and adds them to
-     * the Link Metric Response message.
-     *
-     * @param[in] reporter_al_mac 1905.1 AL MAC address of the device that transmits the response message.
-     * @param[in] link_interface Connecting interface in this device.
-     * @param[in] link_neighbor Neighbor connected to interface.
-     * @param[in] link_metrics Metrics information associated to the link between the local interface and the neighbor's interface.
-     * @param[in] link_metrics_type The link metrics type requested: TX, RX or both.
-     *
-     * @return True on success and false otherwise.
-     */
-    bool add_link_metrics(const sMacAddr &reporter_al_mac, const sLinkInterface &link_interface,
-                          const sLinkNeighbor &link_neighbor, const sLinkMetrics &link_metrics,
-                          ieee1905_1::eLinkMetricsType link_metrics_type);
-
-    struct sStaTrafficStats {
-        sMacAddr sta_mac;
-        uint32_t byte_sent;
-        uint32_t byte_recived;
-        uint32_t packets_sent;
-        uint32_t packets_recived;
-        uint32_t tx_packets_error;
-        uint32_t rx_packets_error;
-        uint32_t retransmission_count;
-    };
-
-    struct sStaLinkMetrics {
-        sMacAddr sta_mac;
-        wfa_map::tlvAssociatedStaLinkMetrics::sBssidInfo bssid_info;
-    };
-
-    struct sApMetricsQuery {
-        Socket *soc;
-        sMacAddr bssid;
-    };
-
-    struct sApMetrics {
-        sMacAddr bssid;
-        uint8_t channel_utilization;
-        uint16_t number_of_stas_currently_associated;
-        wfa_map::tlvApMetrics::sEstimatedService estimated_service_parameters;
-        std::vector<uint8_t> estimated_service_info_field;
-    };
-
-    struct sApMetricsResponse {
-        sApMetrics metric;
-        std::vector<sStaTrafficStats> sta_traffic_stats;
-        std::vector<sStaLinkMetrics> sta_link_metrics;
-    };
-
-    std::vector<sApMetricsQuery> m_ap_metric_query;
-    std::vector<sApMetricsResponse> m_ap_metric_response;
-
+private:
     bool m_backhaul_sta_steering_enable = false;
 
     /*
