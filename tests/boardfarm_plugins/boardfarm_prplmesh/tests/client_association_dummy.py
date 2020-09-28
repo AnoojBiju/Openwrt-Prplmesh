@@ -6,12 +6,8 @@
 ###############################################################
 import time
 
-import connmap
-import environment as env
-
 from .prplmesh_base_test import PrplMeshBaseTest
 from boardfarm.exceptions import SkipTest
-from capi import tlv
 from opts import debug
 
 

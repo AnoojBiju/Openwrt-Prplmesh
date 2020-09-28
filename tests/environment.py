@@ -16,7 +16,7 @@ import yaml
 
 from capi import UCCSocket
 from collections import namedtuple
-from connmap import MapClient, MapVap, MapRadio, MapDevice
+from connmap import MapDevice
 from opts import opts, debug, err
 from typing import Dict
 import sniffer
@@ -320,8 +320,7 @@ class ALEntityDocker(ALEntity):
         return self.device.prprlmesh_status_check()
 
     def beerocks_cli_command(self, command):
-        '''Execute `command` beerocks_cli command on the controller and return its output.             
-
+        '''Execute `command` beerocks_cli command on the controller and return its output.
         Will return None if called from an object that is not a controller.
         '''
         if self.is_controller:
