@@ -9,9 +9,12 @@
 #ifndef NBAPI_H
 #define NBAPI_H
 
+// prplmesh
+#include <bcl/beerocks_event_loop.h>
 #include <easylogging++.h>
 #include <mapf/common/utils.h>
 
+// Ambiorix
 #include <amxc/amxc.h>
 #include <amxp/amxp.h>
 
@@ -28,6 +31,7 @@
 #include <amxo/amxo.h>
 #include <amxo/amxo_save.h>
 
+namespace beerocks {
 namespace nbapi {
 
 /**
@@ -37,7 +41,7 @@ namespace nbapi {
 class Ambiorix {
 
 public:
-    Ambiorix();
+    explicit Ambiorix(std::shared_ptr<EventLoop> event_loop);
 
     /**
      * @brief Ambiorix destructor removes: bus connection, data model, parser and all data
@@ -57,6 +61,54 @@ public:
     bool init(const std::string &amxb_backend, const std::string &bus_uri,
               const std::string &datamodel_path);
 
+    /**
+     * @brief Set the value to the object variable.
+     *
+     * @param relative_path Path to the object in datamodel (ex: "Controller.Network.ID").
+     * @param value Value which need to set.
+     * @return True on success and false otherwise.
+     */
+    virtual bool set(const std::string &relative_path, const std::string &value);
+    virtual bool set(const std::string &relative_path, const int32_t &value);
+    virtual bool set(const std::string &relative_path, const int64_t &value);
+    virtual bool set(const std::string &relative_path, const uint32_t &value);
+    virtual bool set(const std::string &relative_path, const uint64_t &value);
+    virtual bool set(const std::string &relative_path, const bool &value);
+    virtual bool set(const std::string &relative_path, const double &value);
+
+    /**
+     * @brief Prepare transaction to the ubus
+     *
+     * @param relative_path Path to the object in datamodel (ex: "Controller.Network.ID").
+     * @return Pointer on the object on success and nullptr otherwise.
+     */
+    amxd_object_t *prepare_transaction(const std::string &relative_path, amxd_trans_t &transaction);
+
+    /**
+     * @brief Apply transaction
+     *
+     * @param transaction Variable for transaction structure which contains fields
+     *                    needed for transaction.
+     * @return True on success and false otherwise.
+     */
+    bool apply_transaction(amxd_trans_t &transaction);
+
+    /* @brief Add instance to the data model object with type list
+     *
+     * @param relative_path Path to the object with type list in datamodel (ex: "Controller.Network.Device").
+     * @return True on success and false otherwise.
+     */
+    bool add_instance(const std::string &relative_path);
+
+    /**
+     * @brief Remove instance from the data model object with type list
+     *
+     * @param relative_path Path to the object with type list in datamodel (ex: "Controller.Network.Device").
+     * @param index Number of instance which should be remove.
+     * @return True on success and false otherwise.
+     */
+    bool remove_instance(const std::string &relative_path, uint32_t index);
+
 private:
     // Methods
 
@@ -68,11 +120,49 @@ private:
      */
     bool load_datamodel(const std::string &datamodel_path);
 
+    /**
+     * @brief Initialize event handlers for Ambiorix fd in the event loop.
+     *
+     * @return True on success and false otherwise.
+     */
+    bool init_event_loop();
+
+    /**
+     * @brief Initialize event handlers for the ambiorix signals fd in the event loop.
+     *
+     * @return True on success and false otherwise.
+     */
+    bool init_signal_loop();
+
+    /**
+     * @brief Remove event handlers for Ambiorix fd from the event loop.
+     *
+     * @return True on success and false otherwise.
+     */
+    bool remove_event_loop();
+
+    /**
+     * @brief Remove event handlers for the ambiorix signals fd from the event loop.
+     *
+     * @return True on success and false otherwise.
+     */
+    bool remove_signal_loop();
+
+    /**
+     * @brief Find object by relative path.
+     *
+     * @param relative_path Path to the object in datamodel (ex: "Controller.Network.ID").
+     * @return Pointer on the object on success and nullptr otherwise.
+     */
+    amxd_object_t *find_object(const std::string &relative_path);
+
     // Variables
     amxb_bus_ctx_t *m_bus_ctx = nullptr;
     amxd_dm_t m_datamodel;
     amxo_parser_t m_parser;
+    std::shared_ptr<EventLoop> m_event_loop;
 };
 
 } // namespace nbapi
+} // namespace beerocks
 #endif // NBAPI_H
