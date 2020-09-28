@@ -8,84 +8,74 @@
  */
 
 %config {
-	define_behavior = { 
-		existing_object = "update"
+	define-behavior = { 
+		existing-object = "update"
 	};
 }
 
 %define {
-object Controller {
-	object Network {
-		object Device [] {
-			object Radio [] {
-				object BSS [] {
-					object STA [] {
-						%read-only uint64 MACAddress = 0 {
-						}
+	select Controller.Network.Device.Radio.BSS.STA {
+		%read-only uint64 MACAddress = 0 {
+		}
 
-						%read-only string TimeStamp = "2020-08-31T11:22:39Z";
+		%read-only string TimeStamp = "2020-08-31T11:22:39Z";
 
-						%read-only uint32 HTCapabilities = 0 {
-							on action validate call check_range [0, 1];
-						}
+		%read-only uint32 HTCapabilities = 0 {
+			on action validate call check_range [0, 1];
+		}
 
-						%read-only uint32 VHTCapabilities = 0 {
-							on action validate call check_range [0, 1];
-						}
+		%read-only uint32 VHTCapabilities = 0 {
+			on action validate call check_range [0, 1];
+		}
 
-						%read-only uint64 HECapabilities = 0 {
-							
-						}
+		%read-only uint64 HECapabilities = 0 {
+			
+		}
 
-						%read-only uint32 LastDataDownlinkRate = 0 {
+		%read-only uint32 LastDataDownlinkRate = 0 {
 
-						}
+		}
 
-						%read-only uint32 LastDataUplinkRate = 0 {
-							
-						}
+		%read-only uint32 LastDataUplinkRate = 0 {
+			
+		}
 
-						%read-only uint32 UtilizationReceive = 0 {
-							on action validate call check_minimum 0;
-						}
+		%read-only uint32 UtilizationReceive = 0 {
+			on action validate call check_minimum 0;
+		}
 
-						%read-only uint32 UtilizationTransmit = 0 {
-							on action validate call check_minimum 0;
-						}
+		%read-only uint32 UtilizationTransmit = 0 {
+			on action validate call check_minimum 0;
+		}
 
-						%read-only uint32 EstMACDataRateDownlink = 0 {
-							
-						}
+		%read-only uint32 EstMACDataRateDownlink = 0 {
+			
+		}
 
-						%read-only uint32 EstMACDataRateUplink = 0 {
-							
-						}
+		%read-only uint32 EstMACDataRateUplink = 0 {
+			
+		}
 
-						%read-only uint32 SignalStrength = 0 {
-							on action validate call check_range [0, 220];
-						}
+		%read-only uint32 SignalStrength = 0 {
+			on action validate call check_range [0, 220];
+		}
 
-						%read-only uint32 LastConnectTime = 0 {
-						}
+		%read-only uint32 LastConnectTime = 0 {
+		}
 
-						uint32 BytesSent = 0;
-						uint32 BytesReceived = 0;
-						%read-only uint32 PacketsSent = 0;
-						%read-only uint32 PacketsReceived = 0;
-						%read-only uint32 ErrorsSent = 0;
-						%read-only uint32 ErrorsReceived = 0;
-						%read-only uint32 RetransCount = 0;
-						%read-only string IPV4Address = "0";
-						%read-only string IPV6Address = "0";
-						%read-only string Hostname = "0";
+		uint32 BytesSent = 0;
+		uint32 BytesReceived = 0;
+		%read-only uint32 PacketsSent = 0;
+		%read-only uint32 PacketsReceived = 0;
+		%read-only uint32 ErrorsSent = 0;
+		%read-only uint32 ErrorsReceived = 0;
+		%read-only uint32 RetransCount = 0;
+		%read-only string IPV4Address = "0";
+		%read-only string IPV6Address = "0";
+		%read-only string Hostname = "0";
 
-						%read-only object MeasurementReport [] {
-							counted with NumberOfMeasureReports;
-						}
-					}
-				}
-			}
+		%read-only object MeasurementReport [] {
+			counted with NumberOfMeasureReports;
 		}
 	}
-}
 }
