@@ -2097,14 +2097,40 @@ bool backhaul_manager::handle_slave_1905_1_message(ieee1905_1::CmduMessageRx &cm
                        << ", forwarding to controller...";
 
             auto db = AgentDB::get();
+            LOG(DEBUG) << "We have the DB, looking for controller MAC";
             if (db->controller_info.bridge_mac == beerocks::net::network_utils::ZERO_MAC) {
                 LOG(DEBUG) << "Controller MAC unknown. Dropping message.";
                 return false;
             }
+            LOG(DEBUG) << "We have the controller MAC: " << db->controller_info.bridge_mac;
 
             // Send the CMDU to the broker
+            LOG(DEBUG) << "Getting uds header";
             auto uds_header = message_com::get_uds_header(cmdu_rx);
+            LOG(DEBUG) << "Swapping back before sending";
             cmdu_rx.swap(); // swap back before sending to the broker
+            LOG(DEBUG) << "Swapped, checking params";
+            if (!db->controller_info.bridge_mac) {
+                LOG(ERROR) << "controller bridge mac";
+            }
+            LOG(DEBUG) << "controller bridge mac is: " << tlvf::mac_to_string(db->controller_info.bridge_mac);
+
+            if (!db->bridge.mac) {
+                LOG(ERROR) << "bridge mac";
+            }
+            LOG(DEBUG) << "bridge mac is: " << tlvf::mac_to_string(tlvf::mac_to_string(db->bridge.mac));
+
+            if (!uds_header->length) {
+                LOG(ERROR) << "uds header length";
+            }
+            LOG(DEBUG) << "uds header length is " << uds_header->length;
+
+            if (!db->bridge.iface_name) {
+                LOG(ERROR) << "iface name";
+            }
+            LOG(DEBUG) << "iface name is " << db->bridge.iface_name;
+
+            LOG(DEBUG) << "sending to broker";
             return send_cmdu_to_broker(cmdu_rx, tlvf::mac_to_string(db->controller_info.bridge_mac),
                                        tlvf::mac_to_string(db->bridge.mac), uds_header->length,
                                        db->bridge.iface_name);
