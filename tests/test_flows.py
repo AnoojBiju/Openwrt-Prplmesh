@@ -14,7 +14,6 @@ import traceback
 from collections import Counter
 from typing import Callable, Union, Any, NoReturn
 
-import connmap
 import environment as env
 from capi import tlv
 from opts import debug, err, message, opts, status
@@ -433,7 +432,7 @@ class TestFlows:
                        r"Received credentials for ssid: Multi-AP-24G-3 .*"
                        r"fronthaul: true backhaul: false")
         self.check_log(env.agents[0].radios[1], r".* tear down radio")
-        conn_map = connmap.get_conn_map()
+        conn_map = env.controller.get_conn_map()
         repeater1 = conn_map[env.agents[0].mac]
         repeater1_wlan0 = repeater1.radios[env.agents[0].radios[0].mac]
         for vap in repeater1_wlan0.vaps.values():
@@ -455,7 +454,7 @@ class TestFlows:
 
         time.sleep(3)
         self.check_log(env.agents[0].radios[0], r".* tear down radio")
-        conn_map = connmap.get_conn_map()
+        conn_map = env.controller.get_conn_map()
         repeater1 = conn_map[env.agents[0].mac]
         repeater1_wlan0 = repeater1.radios[env.agents[0].radios[0].mac]
         for vap in repeater1_wlan0.vaps.values():
@@ -482,7 +481,7 @@ class TestFlows:
                        r"Received credentials for ssid: Multi-AP-24G-3-cli .*"
                        r"fronthaul: true backhaul: false")
         self.check_log(env.agents[0].radios[1], r".* tear down radio")
-        conn_map = connmap.get_conn_map()
+        conn_map = env.controller.get_conn_map()
         repeater1 = conn_map[env.agents[0].mac]
         repeater1_wlan0 = repeater1.radios[env.agents[0].radios[0].mac]
         for vap in repeater1_wlan0.vaps.values():
@@ -498,7 +497,7 @@ class TestFlows:
 
         time.sleep(3)
         self.check_log(env.agents[0].radios[0], r".* tear down radio")
-        conn_map = connmap.get_conn_map()
+        conn_map = env.controller.get_conn_map()
         repeater1 = conn_map[env.agents[0].mac]
         repeater1_wlan0 = repeater1.radios[env.agents[0].radios[0].mac]
         for vap in repeater1_wlan0.vaps.values():
@@ -1001,7 +1000,7 @@ class TestFlows:
         # TODO client blocking not implemented in dummy bwl
 
         # Check in connection map
-        conn_map = connmap.get_conn_map()
+        conn_map = env.controller.get_conn_map()
         map_radio = conn_map[env.agents[0].mac].radios[env.agents[0].radios[0].mac]
         map_vap = map_radio.vaps[env.agents[0].radios[0].vaps[0].bssid]
         if sta.mac not in map_vap.clients:
@@ -1011,7 +1010,7 @@ class TestFlows:
         env.agents[0].radios[0].vaps[0].disassociate(sta)
         env.agents[0].radios[1].vaps[0].associate(sta)
         time.sleep(1)  # Wait for conn_map to be updated
-        conn_map = connmap.get_conn_map()
+        conn_map = env.controller.get_conn_map()
         map_agent = conn_map[env.agents[0].mac]
         map_radio1 = map_agent.radios[env.agents[0].radios[1].mac]
         map_vap1 = map_radio1.vaps[env.agents[0].radios[1].vaps[0].bssid]
@@ -1025,7 +1024,7 @@ class TestFlows:
         # Associate with other radio implies disassociate from first
         env.agents[0].radios[0].vaps[0].associate(sta)
         time.sleep(1)  # Wait for conn_map to be updated
-        conn_map = connmap.get_conn_map()
+        conn_map = env.controller.get_conn_map()
         map_agent = conn_map[env.agents[0].mac]
         map_radio1 = map_agent.radios[env.agents[0].radios[1].mac]
         map_vap1 = map_radio1.vaps[env.agents[0].radios[1].vaps[0].bssid]
