@@ -983,9 +983,9 @@ bool mon_wlan_hal_dwpal::generate_connected_clients_events()
         char *reply;
         size_t replyLen;
 
-        const int &vap_id = vap_element.first;
-        auto vap_iface_name =
-            beerocks::utils::get_iface_string_from_iface_vap_ids(get_iface_name(), vap_id);
+        const int &vap_id   = vap_element.first;
+        auto vap_iface_name = vap_element.second.bss;
+
         LOG(TRACE) << __func__ << " for vap interface: " << vap_iface_name;
 
         do {
