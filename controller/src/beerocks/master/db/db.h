@@ -20,6 +20,7 @@
 
 #include <mutex>
 #include <queue>
+#include <vector>
 
 using namespace beerocks_message;
 
@@ -231,6 +232,43 @@ public:
                   const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,
                   beerocks::eType type             = beerocks::TYPE_CLIENT,
                   const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
+
+    /**
+     * @brief get the max and min time of a client
+     * 
+     * @param pair<std::string, ValuesMap> the pair of the client and its variables.
+     * @return pair<int ,int> returns min/max of the client remaining duration in seconds.
+     */
+    std::pair<int, int> get_client_remaining_sec(const std::pair<std::string, ValuesMap> &client);
+
+    /**
+     * @brief wrapper to add_node (to nodelist)
+     * 
+     * @param string the client_mac_address in string representation.
+     * @param ValuesMap the client information: timestamp, duration etc.
+     * @param pair<std::string, int> [out] error results for the main load function report.
+     * @return bool returns true upon successful completion, otherwise it'll return false.
+     */
+    bool add_node(std::string client_mac, const ValuesMap& values_map,
+                  const std::pair<uint16_t, uint16_t> &results);
+
+    /**
+     * @brief Compare clients remaining lifetime.
+     * @param int time of the 1st operand.
+     * @param int time of the 2nd operand.
+     * @return bool returns true upon successful completion, otherwise it'll return false.
+     */
+    bool compare_time_of_clients(int &time_a, 
+                                 int &time_b);
+    /**
+     * @brief Check if the client hasn't extended its life expectency.
+     * @param int the current remaining time for the client.
+     * @param int the maximum remaining time of the client depends on its friendliness.
+     * @return bool returns true upon successful completion, otherwise it'll return false.
+     */
+    bool client_is_still_alive(const int &current_time
+                              ,const int &max_time);
+
     bool remove_node(const sMacAddr &mac);
 
     bool set_node_type(const std::string &mac, beerocks::eType type);
