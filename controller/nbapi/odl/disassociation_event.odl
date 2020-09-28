@@ -8,13 +8,13 @@
  */
 
 %config {
-	define_behavior = { 
-		existing_object = "update"
+	define-behavior = { 
+		existing-object = "update"
 	};
 }
 
 %define {
-	object Notification  {
+	select Notification  {
 		object DisassociationEvent [] {
 
 			%read-only object DisassocData {
