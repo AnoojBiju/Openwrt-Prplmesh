@@ -10,9 +10,9 @@
 
 #include "../agent_db.h"
 #include "../backhaul_manager/backhaul_manager_thread.h"
+#include "../helpers/link_metrics/ieee802_11_link_metrics_collector.h"
+#include "../helpers/link_metrics/ieee802_3_link_metrics_collector.h"
 #include "../helpers/media_type.h"
-#include "../link_metrics/ieee802_11_link_metrics_collector.h"
-#include "../link_metrics/ieee802_3_link_metrics_collector.h"
 
 #include <beerocks/tlvf/beerocks_message_backhaul.h>
 
