@@ -154,7 +154,12 @@ std::shared_ptr<Socket> Ieee1905Transport::open_interface_socket(const std::stri
 
     // open packet raw socket - see man packet(7) https://linux.die.net/man/7/packet
     int sockfd;
-    if ((sockfd = socket(AF_PACKET, SOCK_RAW, htons(protocol))) < 0) {
+    auto protocol_ = protocol;
+    if (protocol == ETH_P_1905_1) {
+        // try to open the socket with "all" for 1905 socket
+        protocol_ = ETH_P_ALL;
+    }
+    if ((sockfd = socket(AF_PACKET, SOCK_RAW, htons(protocol_))) < 0) {
         MAPF_ERR("cannot open raw socket \"" << strerror(errno) << "\" (" << errno << ").");
         return nullptr;
     }
@@ -172,7 +177,7 @@ std::shared_ptr<Socket> Ieee1905Transport::open_interface_socket(const std::stri
     struct sockaddr_ll sockaddr;
     memset(&sockaddr, 0, sizeof(struct sockaddr_ll));
     sockaddr.sll_family   = AF_PACKET;
-    sockaddr.sll_protocol = htons(protocol);
+    sockaddr.sll_protocol = htons(protocol_);
     sockaddr.sll_ifindex  = if_nametoindex(ifname.c_str());
     if (bind(sockfd, (struct sockaddr *)&sockaddr, sizeof(sockaddr)) < 0) {
         MAPF_ERR("cannot bind socket to interface \"" << strerror(errno) << "\" (" << errno
