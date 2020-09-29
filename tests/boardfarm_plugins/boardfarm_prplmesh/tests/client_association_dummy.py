@@ -10,6 +10,10 @@ from .prplmesh_base_test import PrplMeshBaseTest
 from boardfarm.exceptions import SkipTest
 from opts import debug
 
+import ptvsd
+ptvsd.enable_attach()
+ptvsd.wait_for_attach()
+
 
 class ClientAssociationDummy(PrplMeshBaseTest):
 
