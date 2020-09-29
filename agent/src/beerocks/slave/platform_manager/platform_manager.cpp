@@ -304,23 +304,18 @@ PlatformManager::PlatformManager(
     const std::unordered_map<int, std::string> &interfaces_map_, logging &logger_,
     std::unique_ptr<beerocks::net::Timer<>> clean_old_arp_entries_timer,
     std::unique_ptr<beerocks::net::Timer<>> check_wlan_params_changed_timer,
-    std::unique_ptr<beerocks::net::ServerSocket> server_socket,
-    std::shared_ptr<beerocks::net::CmduParser> cmdu_parser,
-    std::shared_ptr<beerocks::net::CmduSerializer> cmdu_serializer,
+    std::unique_ptr<beerocks::CmduServer> cmdu_server,
     std::shared_ptr<beerocks::EventLoop> event_loop)
     : m_cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer)), config(config_), interfaces_map(interfaces_map_),
       logger(logger_), m_clean_old_arp_entries_timer(std::move(clean_old_arp_entries_timer)),
       m_check_wlan_params_changed_timer(std::move(check_wlan_params_changed_timer)),
-      m_server_socket(std::move(server_socket)), m_cmdu_parser(cmdu_parser),
-      m_cmdu_serializer(cmdu_serializer), m_event_loop(event_loop)
+      m_cmdu_server(std::move(cmdu_server)), m_event_loop(event_loop)
 {
     LOG_IF(!m_clean_old_arp_entries_timer, FATAL)
         << "clean-old-ARP-entries timer is a null pointer!";
     LOG_IF(!m_check_wlan_params_changed_timer, FATAL)
         << "check-WLAN-params-changed timer is a null pointer!";
-    LOG_IF(!m_server_socket, FATAL) << "Server socket is a null pointer!";
-    LOG_IF(!m_cmdu_parser, FATAL) << "CMDU parser is a null pointer!";
-    LOG_IF(!m_cmdu_serializer, FATAL) << "CMDU serializer is a null pointer!";
+    LOG_IF(!m_cmdu_server, FATAL) << "CMDU server is a null pointer!";
     LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
 
     enable_arp_monitor = (config.enable_arp_monitor == "1");
@@ -335,76 +330,21 @@ PlatformManager::PlatformManager(
         ap_ifaces.insert(hostap_iface);
         i++;
     }
+
+    m_cmdu_server->set_client_disconnected_handler([&](int fd) { handle_disconnected(fd); });
+    m_cmdu_server->set_cmdu_received_handler(
+        [&](int fd, uint32_t iface_index, const sMacAddr &dst_mac, const sMacAddr &src_mac,
+            ieee1905_1::CmduMessageRx &cmdu_rx) { handle_cmdu(fd, cmdu_rx); });
+}
+
+PlatformManager::~PlatformManager()
+{
+    m_cmdu_server->clear_client_disconnected_handler();
+    m_cmdu_server->clear_cmdu_received_handler();
 }
 
 bool PlatformManager::start()
 {
-    {
-        // Register event handlers for the server socket
-        beerocks::EventLoop::EventHandlers handlers{
-            // Accept incoming connections
-            .on_read =
-                [&](int fd, EventLoop &loop) {
-                    beerocks::net::UdsAddress address;
-                    auto connection = m_server_socket->accept(address);
-
-                    if (connection) {
-                        beerocks::EventLoop::EventHandlers handlers{
-                            // Handle incoming data
-                            .on_read =
-                                [&](int fd, EventLoop &loop) {
-                                    handle_read(fd);
-                                    return true;
-                                },
-
-                            // Not implemented
-                            .on_write = nullptr,
-
-                            // Remove the socket on disconnection or error
-                            .on_disconnect =
-                                [&](int fd, EventLoop &loop) {
-                                    handle_close(fd);
-                                    return true;
-                                },
-                            .on_error =
-                                [&](int fd, EventLoop &loop) {
-                                    handle_close(fd);
-                                    return true;
-                                },
-                        };
-
-                        int connected_socket = connection->socket()->fd();
-                        if (!add_connection(connected_socket, std::move(connection), handlers)) {
-                            LOG(ERROR) << "Unable to add connection!";
-                        }
-                    } else {
-                        LOG(ERROR) << "Unable to accept incoming connection request!";
-                    }
-                    return true;
-                },
-
-            // Not implemented
-            .on_write = nullptr,
-
-            // Fail on server socket disconnection or error
-            .on_disconnect =
-                [&](int fd, EventLoop &loop) {
-                    LOG(ERROR) << "Server socket disconnected!";
-                    return false;
-                },
-            .on_error =
-                [&](int fd, EventLoop &loop) {
-                    LOG(ERROR) << "Server socket error!";
-                    return false;
-                },
-        };
-
-        if (!m_event_loop->register_handlers(m_server_socket->socket()->fd(), handlers)) {
-            LOG(ERROR) << "Failed registering event handlers for the server socket!";
-            return false;
-        }
-    }
-
     {
         // Register event handlers for the check-WLAN-params-changed timer
         beerocks::EventLoop::EventHandlers handlers{
@@ -531,107 +471,7 @@ bool PlatformManager::stop()
         result = false;
     }
 
-    // Remove all connections and their installed event handlers
-    while (m_connections.size() > 0) {
-        const auto &it = m_connections.begin();
-
-        int fd = it->first;
-
-        if (!remove_connection(fd)) {
-            result = false;
-            break;
-        }
-    }
-
-    // Remove installed event handlers for the server socket
-    if (!m_event_loop->remove_handlers(m_server_socket->socket()->fd())) {
-        result = false;
-    }
-
     return result;
-}
-
-bool PlatformManager::add_connection(int fd,
-                                     std::unique_ptr<beerocks::net::Socket::Connection> connection,
-                                     const beerocks::EventLoop::EventHandlers &handlers)
-{
-    LOG(DEBUG) << "Adding new connection, fd = " << fd;
-
-    // Register event handlers for the connected socket
-    if (!m_event_loop->register_handlers(fd, handlers)) {
-        LOG(ERROR) << "Failed registering event handlers for the accepted socket!";
-        return false;
-    }
-
-    // Add a new connection to the map of current connections.
-    auto result = m_connections.emplace(fd, sConnectionContext(std::move(connection)));
-    LOG_IF(!result.second, FATAL) << "File descriptor was already in the connections map!";
-
-    return true;
-}
-
-bool PlatformManager::remove_connection(int fd)
-{
-    LOG(DEBUG) << "Removing connection, fd = " << fd;
-
-    // Remove connection from the map of current connections.
-    if (0 == m_connections.erase(fd)) {
-        LOG(ERROR) << "Unable to remove connection from the map!";
-        return false;
-    }
-
-    // Remove installed event handlers for the connected socket
-    m_event_loop->remove_handlers(fd);
-
-    return true;
-}
-
-void PlatformManager::handle_read(int fd)
-{
-    // Find context information for given socket connection
-    auto it = m_connections.find(fd);
-    if (m_connections.end() == it) {
-        // This should never happen, but just in case ...
-        LOG(ERROR) << "Data received through an unknown connection, fd = " << fd;
-        return;
-    }
-
-    auto &context = it->second;
-
-    // Read available bytes into buffer
-    int bytes_received = context.connection->receive(context.buffer);
-    if (bytes_received <= 0) {
-        // This should never happen, but just in case ...
-        LOG(ERROR) << "Bytes received through connection: " << bytes_received << ", fd = " << fd;
-        return;
-    }
-
-    // These parameters are obtained from the UDS header but are not used by the platform manager
-    uint32_t iface_index;
-    sMacAddr dst_mac;
-    sMacAddr src_mac;
-
-    // Buffer for the received CMDU and received CMDU
-    uint8_t cmdu_rx_buffer[message::MESSAGE_BUFFER_LENGTH];
-    ieee1905_1::CmduMessageRx cmdu_rx(cmdu_rx_buffer, sizeof(cmdu_rx_buffer));
-
-    // CMDU parsing & handling loop
-    // Note: must be done in a loop because data received through a stream-oriented socket might
-    // contain more than one CMDU. If data were received through a message-oriented socket, then
-    // only one message would be received at a time and the loop would be iterated only once.
-    while ((context.buffer.length() > 0) &&
-           m_cmdu_parser->parse_cmdu(context.buffer, iface_index, dst_mac, src_mac, cmdu_rx)) {
-        handle_cmdu(fd, cmdu_rx);
-    }
-}
-
-void PlatformManager::handle_close(int fd)
-{
-    // Notify that socket has been disconnected to clean-up resources
-    socket_disconnected(fd);
-
-    // Remove connection to the given client socket
-    remove_connection(fd);
 }
 
 void PlatformManager::add_slave_socket(int fd, const std::string &iface_name)
@@ -671,27 +511,7 @@ bool PlatformManager::send_cmdu_safe(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
 
 bool PlatformManager::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
 {
-    // Find context information for given socket connection
-    auto it = m_connections.find(fd);
-    if (m_connections.end() == it) {
-        // This should never happen, but just in case ...
-        LOG(ERROR) << "Unable to send CMDU through an unknown connection, fd = " << fd;
-        return false;
-    }
-
-    auto &context = it->second;
-
-    // Serialize CMDU into a byte array
-    sMacAddr dst_mac = beerocks::net::network_utils::ZERO_MAC;
-    sMacAddr src_mac = beerocks::net::network_utils::ZERO_MAC;
-    beerocks::net::BufferImpl<message::MESSAGE_BUFFER_LENGTH> buffer;
-    if (!m_cmdu_serializer->serialize_cmdu(dst_mac, src_mac, cmdu_tx, buffer)) {
-        LOG(ERROR) << "Failed to serialize CMDU, fd = " << fd;
-        return false;
-    }
-
-    // Send data
-    return context.connection->send(buffer);
+    return m_cmdu_server->send_cmdu(fd, cmdu_tx);
 }
 
 int PlatformManager::get_slave_socket_from_hostap_iface_name(const std::string &iface)
@@ -835,23 +655,25 @@ bool PlatformManager::check_wlan_params_changed()
     return any_slave_changed;
 }
 
-bool PlatformManager::socket_disconnected(int fd)
+void PlatformManager::handle_disconnected(int fd)
 {
     auto it = m_mapSlaves.find(fd);
     if (it == m_mapSlaves.end()) {
-        LOG(INFO) << "non slave socket disconnected! (probably backhaul manager)";
-        return true;
+        if (fd == m_backhaul_manager_socket) {
+            LOG(INFO) << "Bachaul manager socket disconnected! fd = " << fd;
+        } else {
+            LOG(INFO) << "Non slave socket disconnected! fd = " << fd;
+        }
+        return;
     }
 
     std::string iface_name = m_mapSlaves[fd];
-    LOG(DEBUG) << "slave socket_disconnected, iface=" << iface_name << ", fd=" << fd;
+    LOG(DEBUG) << "Slave socket disconnected, iface = " << iface_name << ", fd = " << fd;
 
     // we should have only one per fd
     bpl_iface_wlan_params_map.erase(iface_name);
 
     del_slave_socket(fd);
-
-    return true;
 }
 
 bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
@@ -1560,11 +1382,11 @@ bool PlatformManager::init_arp_monitor()
         m_uiArpMonMask = info.nmask.s_addr;
 
         // TODO: PPM-639 Inject ARP monitor to platform manager
-        if (beerocks::net::FileDescriptor::invalid_descriptor == m_arp_raw_socket) {
-            auto connection = std::make_unique<beerocks::net::SocketConnectionImpl>(
+        if (!m_arp_raw_socket_connection) {
+            m_arp_raw_socket_connection = std::make_unique<beerocks::net::SocketConnectionImpl>(
                 std::make_shared<beerocks::net::ConnectedSocket>(
                     bpl::arp_mon_get_raw_arp_fd(m_ctxArpMon)));
-            if (!connection) {
+            if (!m_arp_raw_socket_connection) {
                 LOG(ERROR) << "Unable to create ARP raw connection!";
                 stop_arp_monitor();
                 return false;
@@ -1584,25 +1406,24 @@ bool PlatformManager::init_arp_monitor()
 
             // Remove the socket on disconnection or error
             handlers.on_disconnect = [&](int fd, EventLoop &loop) {
-                remove_connection(fd);
+                m_arp_raw_socket_connection.reset();
+                stop_arp_monitor();
                 return true;
             };
             handlers.on_error = handlers.on_disconnect;
 
-            int connected_socket = connection->socket()->fd();
-            if (!add_connection(connected_socket, std::move(connection), handlers)) {
-                LOG(ERROR) << "Unable to add ARP raw socket connection !";
+            if (!m_event_loop->register_handlers(m_arp_raw_socket_connection->socket()->fd(),
+                                                 handlers)) {
+                LOG(ERROR) << "Unable to register handlers for ARP raw connection!";
                 stop_arp_monitor();
                 return false;
             }
-
-            m_arp_raw_socket = bpl::arp_mon_get_raw_arp_fd(m_ctxArpMon);
         }
 
-        if (beerocks::net::FileDescriptor::invalid_descriptor == m_arp_mon_socket) {
-            auto connection = std::make_unique<beerocks::net::SocketConnectionImpl>(
+        if (!m_arp_mon_socket_connection) {
+            m_arp_mon_socket_connection = std::make_unique<beerocks::net::SocketConnectionImpl>(
                 std::make_shared<beerocks::net::ConnectedSocket>(bpl::arp_mon_get_fd(m_ctxArpMon)));
-            if (!connection) {
+            if (!m_arp_mon_socket_connection) {
                 LOG(ERROR) << "Unable to create ARP monitor connection!";
                 stop_arp_monitor();
                 return false;
@@ -1622,19 +1443,18 @@ bool PlatformManager::init_arp_monitor()
 
             // Remove the socket on disconnection or error
             handlers.on_disconnect = [&](int fd, EventLoop &loop) {
-                remove_connection(fd);
+                m_arp_mon_socket_connection.reset();
+                stop_arp_monitor();
                 return true;
             };
             handlers.on_error = handlers.on_disconnect;
 
-            int connected_socket = connection->socket()->fd();
-            if (!add_connection(connected_socket, std::move(connection), handlers)) {
-                LOG(ERROR) << "Unable to add ARP monitor socket connection !";
+            if (!m_event_loop->register_handlers(m_arp_mon_socket_connection->socket()->fd(),
+                                                 handlers)) {
+                LOG(ERROR) << "Unable to register handlers for ARP monitor connection!";
                 stop_arp_monitor();
                 return false;
             }
-
-            m_arp_mon_socket = bpl::arp_mon_get_fd(m_ctxArpMon);
         }
 
         LOG(DEBUG) << "ARP Monitor started on interface '" << config.bridge_iface << "' ("
@@ -1664,14 +1484,18 @@ void PlatformManager::stop_arp_monitor()
         m_ctxArpMon = nullptr;
     }
 
-    if (beerocks::net::FileDescriptor::invalid_descriptor != m_arp_raw_socket) {
-        remove_connection(m_arp_raw_socket);
-        m_arp_raw_socket = beerocks::net::FileDescriptor::invalid_descriptor;
+    if (m_arp_raw_socket_connection) {
+        // Remove installed event handlers for the connected socket
+        m_event_loop->remove_handlers(m_arp_raw_socket_connection->socket()->fd());
+
+        m_arp_raw_socket_connection.reset();
     }
 
-    if (beerocks::net::FileDescriptor::invalid_descriptor != m_arp_mon_socket) {
-        remove_connection(m_arp_mon_socket);
-        m_arp_mon_socket = beerocks::net::FileDescriptor::invalid_descriptor;
+    if (m_arp_mon_socket_connection) {
+        // Remove installed event handlers for the connected socket
+        m_event_loop->remove_handlers(m_arp_mon_socket_connection->socket()->fd());
+
+        m_arp_mon_socket_connection.reset();
     }
 
     // Cancel the clean-old-ARP-entries timer
@@ -1698,7 +1522,7 @@ bool PlatformManager::init_dhcp_monitor()
     };
 
     // TODO: PPM-639 Inject DHCP monitor to platform manager
-    if (beerocks::net::FileDescriptor::invalid_descriptor == m_dhcp_mon_socket) {
+    if (!m_dhcp_mon_socket_connection) {
         int dhcp_mon_fd = bpl::dhcp_mon_start(
             [](const char *op, const char *mac, const char *ip, const char *hostname) {
                 dhcp_monitor_cb_wrapper(op, mac, ip, hostname);
@@ -1712,9 +1536,9 @@ bool PlatformManager::init_dhcp_monitor()
             return (false);
         }
 
-        auto connection = std::make_unique<beerocks::net::SocketConnectionImpl>(
+        m_dhcp_mon_socket_connection = std::make_unique<beerocks::net::SocketConnectionImpl>(
             std::make_shared<beerocks::net::ConnectedSocket>(dhcp_mon_fd));
-        if (!connection) {
+        if (!m_dhcp_mon_socket_connection) {
             LOG(ERROR) << "Unable to create DHCP monitor connection!";
             stop_dhcp_monitor();
             return false;
@@ -1728,21 +1552,20 @@ bool PlatformManager::init_dhcp_monitor()
         };
 
         handlers.on_disconnect = [&](int fd, EventLoop &loop) {
-            remove_connection(fd);
+            m_dhcp_mon_socket_connection.reset();
+            stop_dhcp_monitor();
             return true;
         };
         handlers.on_error = handlers.on_disconnect;
 
-        int connected_socket = connection->socket()->fd();
-        if (!add_connection(connected_socket, std::move(connection), handlers)) {
-            LOG(ERROR) << "Unable to add DHCP monitor socket connection !";
+        if (!m_event_loop->register_handlers(m_dhcp_mon_socket_connection->socket()->fd(),
+                                             handlers)) {
+            LOG(ERROR) << "Unable to register handlers for DHCP monitor connection !";
             stop_dhcp_monitor();
             return false;
         }
 
         LOG(DEBUG) << "DHCP Monitor started, fd = " << dhcp_mon_fd;
-
-        m_dhcp_mon_socket = dhcp_mon_fd;
     }
 
     return true;
@@ -1756,9 +1579,11 @@ void PlatformManager::stop_dhcp_monitor()
         LOG(DEBUG) << "DHCP Monitor Stopped.";
     }
 
-    if (beerocks::net::FileDescriptor::invalid_descriptor != m_dhcp_mon_socket) {
-        remove_connection(m_dhcp_mon_socket);
-        m_dhcp_mon_socket = beerocks::net::FileDescriptor::invalid_descriptor;
+    if (m_dhcp_mon_socket_connection) {
+        // Remove installed event handlers for the connected socket
+        m_event_loop->remove_handlers(m_dhcp_mon_socket_connection->socket()->fd());
+
+        m_dhcp_mon_socket_connection.reset();
     }
 }
 
