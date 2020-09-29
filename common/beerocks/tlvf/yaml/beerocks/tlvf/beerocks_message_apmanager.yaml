@@ -1,6 +1,9 @@
 #
 ---
-_include: { beerocks/tlvf/beerocks_message_common.h, tlvf/WSC/WSC_Attributes.h }
+_include: { 
+  beerocks/tlvf/beerocks_message_common.h,
+  classes/ChannelList.h, 
+  tlvf/WSC/WSC_Attributes.h }
 
 _namespace: beerocks_message
 _multi_class: True
@@ -252,3 +255,4 @@ cACTION_APMANAGER_CHANNELS_LIST_RESPONSE:
   supported_channels:
     _type: beerocks::message::sWifiChannel
     _length: [supported_channels_size]
+  channel_list: cChannelList
