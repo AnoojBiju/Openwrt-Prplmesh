@@ -22,6 +22,8 @@
 #include <tlvf/wfa_map/tlvTunnelledProtocolType.h>
 #include <tlvf/wfa_map/tlvTunnelledSourceInfo.h>
 
+#include <numeric>
+
 using namespace beerocks::net;
 
 //////////////////////////////////////////////////////////////////////////////
@@ -89,6 +91,181 @@ static void copy_vaps_info(std::shared_ptr<bwl::ap_wlan_hal> &ap_wlan_hal,
             beerocks::string_utils::copy_string(vaps[i].ssid, curr_vap.ssid.c_str(),
                                                 beerocks::message::WIFI_SSID_MAX_LENGTH);
         }
+    }
+}
+
+static void unify_channels_list(
+    const std::vector<beerocks::message::sWifiChannel> &supported,
+    const std::vector<beerocks::message::sWifiChannel> &preferred,
+    std::shared_ptr<beerocks_message::cACTION_APMANAGER_CHANNELS_LIST_RESPONSE> beerock_header)
+{
+    struct sChannelInfo {
+        int8_t tx_power_dbm;
+        beerocks_message::eDfsState dfs_state;
+
+        // Key: eWiFiBandwidth, Value: Rank
+        std::map<beerocks::eWiFiBandwidth, int32_t> bw_info_list;
+    };
+
+    // Create a helper container to help unifying both supported and preferred channels lists,
+    // and copy the unified list into the tlv message.
+    // Key = channel
+    std::map<uint8_t, sChannelInfo> channels_list;
+
+    auto dfs_state_converter = [&](const beerocks::message::sWifiChannel &wifi_ch) {
+        if (!wifi_ch.is_dfs_channel) {
+            return beerocks_message::eDfsState::NOT_DFS;
+        }
+
+        switch (wifi_ch.dfs_state) {
+        case beerocks::eDfsState::USABLE: {
+            return beerocks_message::eDfsState::USABLE;
+        }
+        case beerocks::eDfsState::UNAVAILABLE: {
+            return beerocks_message::eDfsState::UNAVAILABLE;
+        }
+        case beerocks::eDfsState::AVAILABLE: {
+            return beerocks_message::eDfsState::AVAILABLE;
+        }
+        default: {
+            break;
+        }
+        }
+
+        return beerocks_message::eDfsState::NOT_DFS;
+    };
+
+    // Copy information (dfs_state, tx_power and supported bandwidths) from supported channels list
+    // to the helper unified list container, and initialize the rank field to -1.
+    for (const auto &schannel : supported) {
+        channels_list[schannel.channel].dfs_state    = dfs_state_converter(schannel);
+        channels_list[schannel.channel].tx_power_dbm = schannel.tx_pow;
+
+        // Initialize 'rank' to '-1' (Undefined).
+        channels_list[schannel.channel]
+            .bw_info_list[beerocks::eWiFiBandwidth(schannel.channel_bandwidth)] = -1;
+    }
+
+    // Rank container for multiap preference calculation.
+    // Key - rank average, value - rank average elements
+    std::map<uint16_t, std::set<uint16_t>> ranks;
+
+    // Copy the Rank from the preferred channels list to the helper unified list container and also
+    // to a helper container "ranks" that will be used to convert the rank to multi-ap preference.
+    for (const auto &pchannel : preferred) {
+        auto channel_it = channels_list.find(pchannel.channel);
+        if (channel_it == channels_list.end()) {
+            LOG(WARNING) << "ACS reported channel not supproted by the radio: "
+                         << int(pchannel.channel);
+            continue;
+        }
+        auto &channel_info = channel_it->second;
+
+        auto bw_it =
+            channel_info.bw_info_list.find(beerocks::eWiFiBandwidth(pchannel.channel_bandwidth));
+        if (bw_it == channel_info.bw_info_list.end()) {
+            LOG(WARNING) << "ACS reported bw not supproted by the radio, channel="
+                         << int(pchannel.channel) << ", bw="
+                         << beerocks::utils::convert_bandwidth_to_int(
+                                beerocks::eWiFiBandwidth(pchannel.channel_bandwidth));
+            continue;
+        }
+        bw_it->second = pchannel.rank;
+
+        // Copy rank to helper container that will help to convert the rank to multi-ap preference
+        ranks[pchannel.rank].insert(pchannel.rank);
+    }
+
+    // Multi-AP allows only 15 options of preference whereas the ranking from the ACS-Report has
+    // 2^16 options.
+    // To scale the rank to 1-15, group rankings with small delta until only 15 groups are left:
+    // {group_rank_average, { rank1, rank2, rank3}}.
+    // Note: Since "std::map" is ordered container, we don't have to sort it.
+    while (ranks.size() > 15) {
+        uint16_t min_delta = UINT16_MAX;
+
+        // Key = Min delta ranks group ID, Value: Min delta ranks
+        std::unordered_map<uint16_t, std::set<uint16_t>> min_delta_ranks_groups;
+        uint16_t group_id = 0;
+        for (auto it = std::next(ranks.begin()); it != ranks.end(); it++) {
+            auto this_rank = it->first;
+            auto prev_rank = std::prev(it)->first;
+            auto delta     = this_rank - prev_rank;
+            if (delta <= min_delta) {
+                if (delta == min_delta) {
+                    min_delta_ranks_groups.clear();
+                    min_delta = delta;
+                }
+                min_delta_ranks_groups[group_id].insert(this_rank);
+                min_delta_ranks_groups[group_id].insert(prev_rank);
+                continue;
+            }
+            group_id++;
+        }
+
+        // Unify the original ranks which are under the same group, and add the unified group to
+        // the ranks list. The two separated groups that that made the new group are removed.
+        for (const auto min_delta_ranks_group : min_delta_ranks_groups) {
+            std::set<uint16_t> unified_rank_elements;
+            auto &min_delta_ranks_on_group = min_delta_ranks_group.second;
+            for (const auto &min_delta_rank : min_delta_ranks_on_group) {
+                unified_rank_elements.insert(ranks[min_delta_rank].begin(),
+                                             ranks[min_delta_rank].end());
+                ranks.erase(min_delta_rank);
+            }
+            uint16_t average_rank =
+                std::accumulate(unified_rank_elements.begin(), unified_rank_elements.end(), 0) /
+                unified_rank_elements.size();
+
+            ranks.emplace(average_rank, unified_rank_elements);
+        }
+    }
+
+    // Fill the unified channels list on the CMDU using the helper container.
+    auto channel_list_tlv = beerock_header->channel_list();
+    for (const auto &channel_info_pair : channels_list) {
+        auto channel_info_tlv = channel_list_tlv->create_channels_list();
+        if (!channel_info_tlv) {
+            LOG(ERROR) << "Failed to allocate cChannel!";
+            return;
+        }
+        auto &channel_info               = channel_info_pair.second;
+        channel_info_tlv->channel()      = channel_info_pair.first;
+        channel_info_tlv->tx_power_dbm() = channel_info.tx_power_dbm;
+        channel_info_tlv->dfs_state()    = channel_info.dfs_state;
+
+        if (!channel_info_tlv->alloc_supported_bandwidths(
+                channel_info_pair.second.bw_info_list.size())) {
+            LOG(ERROR) << "Failed to allocate sSupportedBandwidth list!";
+            return;
+        }
+
+        for (uint8_t i = 0; i < channel_info_tlv->supported_bandwidths_length(); i++) {
+            auto &supported_bw_info_tlv = std::get<1>(channel_info_tlv->supported_bandwidths(i));
+            auto bw_it                  = std::next(channel_info.bw_info_list.begin(), i);
+            supported_bw_info_tlv.bandwidth = bw_it->first;
+            supported_bw_info_tlv.rank      = bw_it->second;
+
+            // If channel & bw has undefined rank (-1), set the channel preference to
+            // "Not Usable" (0).
+            if (supported_bw_info_tlv.rank == -1) {
+                supported_bw_info_tlv.multiap_preference = 0;
+                continue;
+            }
+
+            // The ranks are sorted since they are on an ordered container. Therefore, use the
+            // the index of each element to calculate the Multi-AP preference by subtracting
+            // the rank element index from 15 (Best rank).
+            for (uint8_t rank_idx = 0; rank_idx < ranks.size(); rank_idx++) {
+                auto &rank_group_set = std::next(ranks.begin(), rank_idx)->second;
+                if (rank_group_set.find(supported_bw_info_tlv.rank) != rank_group_set.end()) {
+                    supported_bw_info_tlv.multiap_preference = 15 - rank_idx; // 15 - Best rank.
+                    break;
+                }
+            }
+        }
+
+        channel_list_tlv->add_channels_list(channel_info_tlv);
     }
 }
 
@@ -778,6 +955,10 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
         auto tuple_supported_channels = response->supported_channels(0);
         std::copy_n(ap_wlan_hal->get_radio_info().supported_channels.begin(),
                     response->supported_channels_size(), &std::get<1>(tuple_supported_channels));
+
+        // Create unified channels list and add it to the message.
+        unify_channels_list(ap_wlan_hal->get_radio_info().supported_channels,
+                            ap_wlan_hal->get_radio_info().preferred_channels, response);
 
         message_com::send_cmdu(slave_socket, cmdu_tx);
         break;
