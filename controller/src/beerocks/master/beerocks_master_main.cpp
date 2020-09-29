@@ -6,11 +6,15 @@
  * See LICENSE file for more details.
  */
 
+#include <bcl/beerocks_cmdu_server_impl.h>
 #include <bcl/beerocks_config_file.h>
 #include <bcl/beerocks_event_loop_impl.h>
 #include <bcl/beerocks_logging.h>
 #include <bcl/beerocks_version.h>
+#include <bcl/network/cmdu_parser_stream_impl.h>
+#include <bcl/network/cmdu_serializer_stream_impl.h>
 #include <bcl/network/network_utils.h>
+#include <bcl/network/sockets_impl.h>
 #include <bpl/bpl_cfg.h>
 #include <mapf/common/utils.h>
 
@@ -286,6 +290,58 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
     }
 }
 
+static std::shared_ptr<beerocks::net::UdsAddress> create_uds_address(const std::string &path)
+{
+    // When no longer required, the UDS socket pathname should be deleted using unlink or remove.
+    auto deleter = [path](beerocks::net::UdsAddress *p) {
+        if (p) {
+            delete p;
+        }
+        unlink(path.c_str());
+    };
+
+    // Remove given path in case it exists
+    unlink(path.c_str());
+
+    // Create UDS address from given path (using custom deleter)
+    return std::shared_ptr<beerocks::net::UdsAddress>(new beerocks::net::UdsAddress(path), deleter);
+}
+
+static std::unique_ptr<beerocks::net::ServerSocket>
+create_server_socket(const beerocks::net::UdsAddress &address)
+{
+    // Create UDS socket
+    auto socket = std::make_shared<beerocks::net::UdsSocket>();
+
+    // Create UDS server socket to listen for and accept incoming connections from clients that
+    // will send CMDU messages through that connections.
+    using UdsServerSocket = beerocks::net::ServerSocketImpl<beerocks::net::UdsSocket>;
+    auto server_socket    = std::make_unique<UdsServerSocket>(socket);
+    if (!server_socket) {
+        LOG(ERROR) << "Unable to create server socket";
+        return nullptr;
+    }
+
+    // TODO: this code will be commented out until this server socket finally replaces current
+    // server socket in the son_master_thread
+    /*
+    // Bind server socket to that UDS address
+    if (!server_socket->bind(address)) {
+        LOG(ERROR) << "Unable to bind server socket to UDS address: '" << address.path() << "'";
+        return nullptr;
+    }
+
+    // Listen for incoming connection requests
+    if (!server_socket->listen()) {
+        LOG(ERROR) << "Unable to listen for connection requests at UDS address: '" << address.path()
+                   << "'";
+        return nullptr;
+    }
+    */
+
+    return server_socket;
+}
+
 int main(int argc, char *argv[])
 {
     init_signals();
@@ -385,6 +441,26 @@ int main(int argc, char *argv[])
     auto event_loop = std::make_shared<beerocks::EventLoopImpl>();
     LOG_IF(!event_loop, FATAL) << "Unable to create event loop!";
 
+    // Create parser for CMDU messages received through a stream-oriented socket.
+    auto cmdu_parser = std::make_shared<beerocks::net::CmduParserStreamImpl>();
+    LOG_IF(!cmdu_parser, FATAL) << "Unable to create CMDU parser!";
+
+    // Create serializer for CMDU messages to be sent through a stream-oriented socket.
+    auto cmdu_serializer = std::make_shared<beerocks::net::CmduSerializerStreamImpl>();
+    LOG_IF(!cmdu_serializer, FATAL) << "Unable to create CMDU serializer!";
+
+    std::string uds_path = beerocks_slave_conf.temp_path + "/" + std::string(BEEROCKS_MASTER_UDS);
+    auto uds_address     = create_uds_address(uds_path);
+    LOG_IF(!uds_address, FATAL) << "Unable to create UDS server address!";
+
+    auto server_socket = create_server_socket(*uds_address);
+    LOG_IF(!server_socket, FATAL) << "Unable to create UDS server socket!";
+
+    // Create server to exchange CMDU messages with clients connected through a UDS socket
+    auto cmdu_server = std::make_unique<beerocks::CmduServerImpl>(
+        std::move(server_socket), cmdu_parser, cmdu_serializer, event_loop);
+    LOG_IF(!cmdu_server, FATAL) << "Unable to create CMDU server!";
+
     std::string master_uds = beerocks_master_conf.temp_path + std::string(BEEROCKS_MASTER_UDS);
     beerocks::net::network_utils::iface_info bridge_info;
     auto &bridge_iface = beerocks_slave_conf.bridge_iface;
@@ -401,7 +477,7 @@ int main(int argc, char *argv[])
 
     son::db master_db(master_conf, logger, bridge_info.mac, amb_dm_obj);
     // diagnostics_thread diagnostics(master_db);
-    son::master_thread son_master(master_uds, master_db, event_loop);
+    son::master_thread son_master(master_uds, master_db, std::move(cmdu_server), event_loop);
 
     if (!son_master.init()) {
         LOG(ERROR) << "son_master.init() ";
