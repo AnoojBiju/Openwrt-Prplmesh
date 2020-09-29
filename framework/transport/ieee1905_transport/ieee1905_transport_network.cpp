@@ -159,7 +159,7 @@ std::shared_ptr<Socket> Ieee1905Transport::open_interface_socket(const std::stri
         // try to open the socket with "all" for 1905 socket
         protocol_ = ETH_P_ALL;
     }
-    if ((sockfd = socket(AF_PACKET, SOCK_RAW, htons(protocol_))) < 0) {
+    if ((sockfd = socket(AF_PACKET, SOCK_RAW, htons(protocol))) < 0) {
         MAPF_ERR("cannot open raw socket \"" << strerror(errno) << "\" (" << errno << ").");
         return nullptr;
     }
