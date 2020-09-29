@@ -727,14 +727,15 @@ bool base_wlan_hal_nl80211::refresh_radio_info()
             int vht_oper_chwidth = beerocks::string_utils::stoi(reply["vht_oper_chwidth"]);
 
             switch (vht_oper_chwidth) {
-            case 0:
-                m_radio_info.bandwidth = 40;
-                break;
             case 1:
                 m_radio_info.bandwidth = 80;
                 break;
-            default:
+            case 2:
                 m_radio_info.bandwidth = 160;
+                break;
+            default:
+                // a value of 0 is the same as vht_oper_chwidth not being set:
+                m_radio_info.bandwidth = 40;
             }
 
             m_radio_info.vht_center_freq =
