@@ -306,7 +306,7 @@ private:
     update_network_interfaces(std::map<std::string, NetworkInterface> updated_network_interfaces);
     std::shared_ptr<Socket> open_interface_socket(const std::string &ifname, uint16_t protocol);
     bool attach_interface_socket_filter(const std::string &ifname,
-                                        const std::shared_ptr<Socket> &socket);
+                                        const std::shared_ptr<Socket> &socket, uint16_t protocol);
     void activate_interface(NetworkInterface &interface);
     void deactivate_interface(NetworkInterface &interface);
     void handle_interface_status_change(const std::string &iface_name, bool is_active);

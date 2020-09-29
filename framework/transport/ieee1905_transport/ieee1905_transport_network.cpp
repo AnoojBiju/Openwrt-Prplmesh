@@ -184,21 +184,49 @@ std::shared_ptr<Socket> Ieee1905Transport::open_interface_socket(const std::stri
     auto socket = std::make_shared<Socket>(sockfd);
     LOG_IF(!sockfd, FATAL) << "Failed creating new Socket for fd: " << sockfd;
 
-    attach_interface_socket_filter(ifname, socket);
+    attach_interface_socket_filter(ifname, socket, protocol);
 
     return socket;
 }
 
 bool Ieee1905Transport::attach_interface_socket_filter(const std::string &ifname,
-                                                       const std::shared_ptr<Socket> &socket)
+                                                       const std::shared_ptr<Socket> &socket,
+                                                       uint16_t protocol)
 {
+    static const uint8_t ieee1905_multicast_address[ETH_ALEN] = {0x01, 0x80, 0xc2, 0x00,
+                                                                 0x00, 0x13}; // 01:80:c2:00:00:13
+    static const uint8_t lldp_multicast_address[ETH_ALEN]     = {0x01, 0x80, 0xc2,
+                                                             0x00, 0x00, 0x0e}; // 01:80:c2:00:00:0e
+
+    // promisc/multicast ioctl alternative code (uses specific multicast addresses - but not tested)
+    struct packet_mreq mr;
+    memset(&mr, 0, sizeof(mr));
+    mr.mr_ifindex = if_nametoindex(ifname.c_str());
+    mr.mr_type    = PACKET_MR_MULTICAST;
+    mr.mr_alen    = 6;
+    if (protocol == ETH_P_1905_1) {
+        memcpy(mr.mr_address, ieee1905_multicast_address, 6);
+    } else if (protocol == ETH_P_LLDP) {
+        memcpy(mr.mr_address, lldp_multicast_address, 6);
+    } else {
+        MAPF_ERR("unsupported etherType: 0x" << std::hex << protocol);
+        return false;
+    }
+
+    if (setsockopt(socket->getSocketFd(), SOL_PACKET, PACKET_ADD_MEMBERSHIP, &mr, sizeof(mr)) ==
+        -1) {
+        MAPF_ERR("Failed to add multicast support to socket \"" << strerror(errno) << "\" ("
+                                                                << errno << ").");
+        return false;
+    }
+
     // 1st step is to put the interface in promiscuous mode.
     // promiscuous mode is required since we expect to receive packets destined to
     // the AL MAC address (which is different the the interfaces HW address)
     //
-    struct packet_mreq mr = {0};
-    mr.mr_ifindex         = if_nametoindex(ifname.c_str());
-    mr.mr_type            = PACKET_MR_PROMISC;
+    // struct packet_mreq mr = {0};
+    // mr.mr_ifindex = if_nametoindex(ifname.c_str());
+    mr.mr_type = PACKET_MR_PROMISC;
     if (setsockopt(socket->getSocketFd(), SOL_PACKET, PACKET_ADD_MEMBERSHIP, &mr, sizeof(mr)) ==
         -1) {
         MAPF_ERR("cannot put interface in promiscuous mode \"" << strerror(errno) << "\" (" << errno
@@ -449,11 +477,12 @@ void Ieee1905Transport::set_al_mac_addr(const uint8_t *addr)
 
         if (network_interface.sock_ieee1905) {
             attach_interface_socket_filter(network_interface.ifname,
-                                           network_interface.sock_ieee1905);
+                                           network_interface.sock_ieee1905, ETH_P_1905_1);
         }
 
         if (network_interface.sock_lldp) {
-            attach_interface_socket_filter(network_interface.ifname, network_interface.sock_lldp);
+            attach_interface_socket_filter(network_interface.ifname, network_interface.sock_lldp,
+                                           ETH_P_LLDP);
         }
     }
 }
