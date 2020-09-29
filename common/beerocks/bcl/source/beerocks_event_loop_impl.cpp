@@ -83,6 +83,7 @@ bool EventLoopImpl::register_handlers(int fd, const EventLoop::EventHandlers &ha
             event.events |= EPOLLOUT;
         }
 
+        LOG(DEBUG) << "Adding FD (" << fd << ") to the poll";
         if (epoll_ctl(m_epoll_fd, EPOLL_CTL_ADD, fd, &event) == -1) {
             LOG(ERROR) << "Failed adding FD (" << fd << ") to the poll: " << strerror(errno);
             return false;

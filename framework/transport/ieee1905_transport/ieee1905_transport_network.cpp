@@ -309,6 +309,7 @@ void Ieee1905Transport::activate_interface(NetworkInterface &interface)
         if (!interface.is_bridge) {
             m_event_loop->register_handlers(interface.sock_ieee1905->getSocketFd(), handlers);
         }
+        MAPF_DBG("registered handlers for 1905 fd: " << interface.sock_ieee1905->getSocketFd());
     }
 
     if (!interface.sock_lldp) {
@@ -321,6 +322,7 @@ void Ieee1905Transport::activate_interface(NetworkInterface &interface)
         if (!interface.is_bridge) {
             m_event_loop->register_handlers(interface.sock_lldp->getSocketFd(), handlers);
         }
+        MAPF_DBG("registered handlers for lldp fd: " << interface.sock_lldp->getSocketFd());
     }
 }
 
