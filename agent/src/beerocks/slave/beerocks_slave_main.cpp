@@ -10,6 +10,7 @@
 #include "platform_manager/platform_manager.h"
 #include "son_slave_thread.h"
 
+#include <bcl/beerocks_cmdu_server_impl.h>
 #include <bcl/beerocks_config_file.h>
 #include <bcl/beerocks_event_loop_impl.h>
 #include <bcl/beerocks_logging.h>
@@ -278,24 +279,6 @@ start_son_slave_thread(int slave_num,
     return son_slave;
 }
 
-static std::shared_ptr<beerocks::EventLoop> create_event_loop()
-{
-    // Create application event loop to wait for blocking I/O operations.
-    return std::make_shared<beerocks::EventLoopImpl>();
-}
-
-static std::shared_ptr<beerocks::net::CmduSerializer> create_cmdu_serializer()
-{
-    // Create serializer for CMDU messages to be sent through a stream-oriented socket.
-    return std::make_shared<beerocks::net::CmduSerializerStreamImpl>();
-}
-
-static std::shared_ptr<beerocks::net::CmduParser> create_cmdu_parser()
-{
-    // Create parser for CMDU messages received through a stream-oriented socket.
-    return std::make_shared<beerocks::net::CmduParserStreamImpl>();
-}
-
 static std::shared_ptr<beerocks::net::UdsAddress> create_uds_address(const std::string &path)
 {
     // When no longer required, the UDS socket pathname should be deleted using unlink or remove.
@@ -323,6 +306,10 @@ create_server_socket(const beerocks::net::UdsAddress &address)
     // will send CMDU messages through that connections.
     using UdsServerSocket = beerocks::net::ServerSocketImpl<beerocks::net::UdsSocket>;
     auto server_socket    = std::make_unique<UdsServerSocket>(socket);
+    if (!server_socket) {
+        LOG(ERROR) << "Unable to create server socket";
+        return nullptr;
+    }
 
     // Bind server socket to that UDS address
     if (!server_socket->bind(address)) {
@@ -377,13 +364,16 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
         }
     }
 
-    auto event_loop = create_event_loop();
+    // Create application event loop to wait for blocking I/O operations.
+    auto event_loop = std::make_shared<beerocks::EventLoopImpl>();
     LOG_IF(!event_loop, FATAL) << "Unable to create event loop!";
 
-    auto cmdu_parser = create_cmdu_parser();
+    // Create parser for CMDU messages received through a stream-oriented socket.
+    auto cmdu_parser = std::make_shared<beerocks::net::CmduParserStreamImpl>();
     LOG_IF(!cmdu_parser, FATAL) << "Unable to create CMDU parser!";
 
-    auto cmdu_serializer = create_cmdu_serializer();
+    // Create serializer for CMDU messages to be sent through a stream-oriented socket.
+    auto cmdu_serializer = std::make_shared<beerocks::net::CmduSerializerStreamImpl>();
     LOG_IF(!cmdu_serializer, FATAL) << "Unable to create CMDU serializer!";
 
     std::string uds_path = beerocks_slave_conf.temp_path + "/" + std::string(BEEROCKS_PLAT_MGR_UDS);
@@ -392,6 +382,11 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
 
     auto server_socket = create_server_socket(*uds_address);
     LOG_IF(!server_socket, FATAL) << "Unable to create UDS server socket!";
+
+    // Create server to exchange CMDU messages with clients connected through a UDS socket
+    auto cmdu_server = std::make_unique<beerocks::CmduServerImpl>(
+        std::move(server_socket), cmdu_parser, cmdu_serializer, event_loop);
+    LOG_IF(!cmdu_server, FATAL) << "Unable to create CMDU server!";
 
     auto check_wlan_params_changed_timer = create_check_wlan_params_changed_timer();
     LOG_IF(!check_wlan_params_changed_timer, FATAL)
@@ -402,8 +397,7 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
 
     beerocks::PlatformManager platform_manager(
         beerocks_slave_conf, interfaces_map, *agent_logger, std::move(clean_old_arp_entries_timer),
-        std::move(check_wlan_params_changed_timer), std::move(server_socket), cmdu_parser,
-        cmdu_serializer, event_loop);
+        std::move(check_wlan_params_changed_timer), std::move(cmdu_server), event_loop);
 
     // Start platform manager
     LOG_IF(!platform_manager.start(), FATAL) << "Unable to start platform manager!";
