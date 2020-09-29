@@ -192,6 +192,7 @@ std::shared_ptr<Socket> Ieee1905Transport::open_interface_socket(const std::stri
 bool Ieee1905Transport::attach_interface_socket_filter(const std::string &ifname,
                                                        const std::shared_ptr<Socket> &socket)
 {
+    return true;
     // 1st step is to put the interface in promiscuous mode.
     // promiscuous mode is required since we expect to receive packets destined to
     // the AL MAC address (which is different the the interfaces HW address)
