@@ -319,13 +319,15 @@ class ALEntityDocker(ALEntity):
     def prprlmesh_status_check(self):
         return self.device.prprlmesh_status_check()
 
-    def beerocks_cli_command(self, command):
+    def beerocks_cli_command(self, command) -> bytes:
         '''Execute `command` beerocks_cli command on the controller and return its output.
         Will return None if called from an object that is not a controller.
         '''
         if self.is_controller:
             debug("Send CLI command " + command)
-            return self.prplmesh_command("bin/beerocks_cli", "-c", command)
+            res = self.prplmesh_command("bin/beerocks_cli", "-c", command)
+            debug("  Response: " + res.decode('utf-8', errors='replace').strip())
+            return res
         return None
 
     def get_conn_map(self) -> Dict[str, MapDevice]:
