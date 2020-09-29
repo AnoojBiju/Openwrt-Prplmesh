@@ -224,9 +224,9 @@ bool Ieee1905Transport::attach_interface_socket_filter(const std::string &ifname
     // promiscuous mode is required since we expect to receive packets destined to
     // the AL MAC address (which is different the the interfaces HW address)
     //
-    // struct packet_mreq mr = {0};
-    // mr.mr_ifindex = if_nametoindex(ifname.c_str());
-    mr.mr_type = PACKET_MR_PROMISC;
+    mr            = {0};
+    mr.mr_ifindex = if_nametoindex(ifname.c_str());
+    mr.mr_type    = PACKET_MR_PROMISC;
     if (setsockopt(socket->getSocketFd(), SOL_PACKET, PACKET_ADD_MEMBERSHIP, &mr, sizeof(mr)) ==
         -1) {
         MAPF_ERR("cannot put interface in promiscuous mode \"" << strerror(errno) << "\" (" << errno
