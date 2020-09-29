@@ -9,6 +9,7 @@
 #ifndef BCL_NETWORK_INTERFACE_STATE_MONITOR_IMPL_H_
 #define BCL_NETWORK_INTERFACE_STATE_MONITOR_IMPL_H_
 
+#include "buffer_impl.h"
 #include "interface_state_monitor.h"
 #include "sockets_impl.h"
 
@@ -59,10 +60,9 @@ private:
      *
      * The array of bytes contains a list of Netlink messages.
      *
-     * @param data Pointer to array of netlink messages to parse.
-     * @param length Number of bytes to parse.
+     * @param buffer Buffer with the array of netlink messages to parse.
      */
-    void parse(const nlmsghdr *data, size_t length) const;
+    void parse(const Buffer &buffer) const;
 
     /**
      * @brief Parses message received through the Netlink socket connection.
