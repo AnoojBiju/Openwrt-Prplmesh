@@ -51,6 +51,21 @@ namespace dwpal {
 /////////////////////////// Local Module Functions ///////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
+static void print_conf(std::vector<std::string> &hostapd_config_head,
+                       std::map<std::string, std::vector<std::string>> &hostapd_config_vaps)
+{
+    for (std::size_t i = 0; i < hostapd_config_head.size(); i++) {
+        LOG(DEBUG) << hostapd_config_head.at(i);
+    }
+
+    for (auto hostapd_config_vap : hostapd_config_vaps) {
+
+        for (std::size_t i = 0; i < hostapd_config_vap.second.size(); i++) {
+            LOG(DEBUG) << hostapd_config_vap.second.at(i);
+        }
+    }
+}
+
 static ap_wlan_hal::Event dwpal_to_bwl_event(const std::string &opcode)
 {
     if (opcode == "AP-ENABLED") {
@@ -1002,6 +1017,9 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
         return false;
     }
 
+    LOG(DEBUG) << "print hostapd.conf before change";
+    print_conf(hostapd_config_head, hostapd_config_vaps);
+
     // If a Multi-AP Agent receives an AP-Autoconfiguration WSC message containing one or
     // more M2, it shall validate each M2 (based on its 1905 AL MAC address) and configure
     // a BSS on the corresponding radio for each of the M2. If the Multi-AP Agent is currently
@@ -1096,6 +1114,9 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
         LOG(ERROR) << "Autoconfiguration: cannot save hostapd config!";
         return false;
     }
+
+    LOG(DEBUG) << "print hostapd.conf before RECONF";
+    print_conf(hostapd_config_head, hostapd_config_vaps);
 
     // hostapd help says:
     // RECONF [BSS name] = reconfigure interface (add/remove BSS's while other BSS are unaffected)
