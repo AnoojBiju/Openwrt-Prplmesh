@@ -10,12 +10,11 @@
 #define _PLATFORM_MANAGER_H
 
 #include <bcl/beerocks_async_work_queue.h>
+#include <bcl/beerocks_cmdu_server.h>
 #include <bcl/beerocks_config_file.h>
 #include <bcl/beerocks_event_loop.h>
 #include <bcl/beerocks_logging.h>
 #include <bcl/network/buffer_impl.h>
-#include <bcl/network/cmdu_parser.h>
-#include <bcl/network/cmdu_serializer.h>
 #include <bcl/network/sockets.h>
 #include <bcl/network/timer.h>
 
@@ -49,10 +48,13 @@ public:
                     const std::unordered_map<int, std::string> &interfaces_map, logging &logger_,
                     std::unique_ptr<beerocks::net::Timer<>> clean_old_arp_entries_timer,
                     std::unique_ptr<beerocks::net::Timer<>> check_wlan_params_changed_timer,
-                    std::unique_ptr<beerocks::net::ServerSocket> server_socket,
-                    std::shared_ptr<beerocks::net::CmduParser> cmdu_parser,
-                    std::shared_ptr<beerocks::net::CmduSerializer> cmdu_serializer,
+                    std::unique_ptr<beerocks::CmduServer> cmdu_server,
                     std::shared_ptr<beerocks::EventLoop> event_loop);
+
+    /**
+     * @brief Class destructor.
+     */
+    ~PlatformManager();
 
     /**
      * @brief Starts platform manager.
@@ -74,55 +76,11 @@ protected:
 
 private:
     /**
-     * @brief Adds a new connection.
-     *
-     * Registers given event handlers for the connected socket so the appropriate action is taken
-     * whenever data is received or socket is disconnected.
-     *
-     * Adds the connection object to the list of current socket connections so event handlers
-     * that have been registered in the event loop can be removed on exit.
-     *
-     * @param fd File descriptor of the socket used by the connection.
-     * @param connection Connection object used to send/receive data.
-     * @param handlers Event handlers to install into the event loop to handle blocking I/O events.
-     * @return true on success and false otherwise.
-     */
-    bool add_connection(int fd, std::unique_ptr<beerocks::net::Socket::Connection> connection,
-                        const beerocks::EventLoop::EventHandlers &handlers);
-
-    /**
-     * @brief Removes connection.
-     *
-     * Removes event handlers for the connected socket and removes the connection from the list of
-     * current connections.
-     *
-     * This method gets called when connection is closed, an error occurs on the socket or platform
-     * manager is stopped.
-     *
-     * @param fd File descriptor of the socket used by the connection.
-     * @return true on success and false otherwise.
-     */
-    bool remove_connection(int fd);
-
-    /**
-     * @brief Handles the read event in a client socket connected to the UDS server socket.
-     *
-     * Reads data received through the socket and parses CMDU messages out of the bytes received.
-     * Valid CMDU messages received are processed by calling the `handle_cmdu()` method.
+     * @brief Handles the client-disconnected event in the CMDU server.
      *
      * @param fd File descriptor of the socket.
      */
-    void handle_read(int fd);
-
-    /**
-     * @brief Handles the disconnect and error events in a client socket connected to the UDS
-     * server socket.
-     *
-     * Removes connection from the list of current connections.
-     *
-     * @param fd File descriptor of the socket.
-     */
-    void handle_close(int fd);
+    void handle_disconnected(int fd);
 
     /**
      * @brief Handles received CMDU message.
@@ -247,22 +205,9 @@ private:
     std::unique_ptr<beerocks::net::Timer<>> m_check_wlan_params_changed_timer;
 
     /**
-     * Server socket used to accept incoming connection requests from clients that will
-     * communicate with platform manager by exchanging CMDU messages through that connections.
+     * CMDU server to exchange CMDU messages with clients through socket connections.
      */
-    std::unique_ptr<beerocks::net::ServerSocket> m_server_socket;
-
-    /**
-     * CMDU parser used to get CMDU messages out of a byte array received through a socket
-     * connection.
-     */
-    std::shared_ptr<beerocks::net::CmduParser> m_cmdu_parser;
-
-    /**
-     * CMDU serializer used to put CMDU messages into a byte array to be sent through a socket
-     * connection.
-     */
-    std::shared_ptr<beerocks::net::CmduSerializer> m_cmdu_serializer;
+    std::shared_ptr<beerocks::CmduServer> m_cmdu_server;
 
     /**
      * Application event loop used by the process to wait for I/O events.
@@ -270,59 +215,19 @@ private:
     std::shared_ptr<EventLoop> m_event_loop;
 
     /**
-     * Structure to hold context information for each ongoing socket connection.
+     * Connection over the ARP raw socket
      */
-    struct sConnectionContext {
-        /**
-         * Accepted socket connection, used to send and receive data to/from the socket.
-         * Connections are stored so event handlers that have been registered in the event loop
-         * can be removed on exit.
-         */
-        std::unique_ptr<beerocks::net::Socket::Connection> connection;
-
-        /**
-         * Buffer to hold data received through the socket connection.
-         * If connection uses a stream-oriented socket, it needs its own buffer to hold received
-         * data.
-         * A stream-oriented socket provides a stream of bytes, it is not message-oriented, and
-         * does not provide boundaries. One write call could take several read calls to get that
-         * data. Data from several write calls could be read by one read call. And anything in
-         * between is also possible.
-         * If connection uses a message-oriented socket instead, this buffer and the code that
-         * uses it is also valid.
-         */
-        beerocks::net::BufferImpl<message::MESSAGE_BUFFER_LENGTH> buffer;
-
-        /**
-         * @brief Struct constructor.
-         *
-         * @param connection Socket connection.
-         */
-        explicit sConnectionContext(std::unique_ptr<beerocks::net::Socket::Connection> connection)
-            : connection(std::move(connection)){};
-    };
+    std::unique_ptr<beerocks::net::Socket::Connection> m_arp_raw_socket_connection;
 
     /**
-     * Map of current socket connections.
-     * Key value is the file descriptor of the accepted socket and the object value is the
-     * context information of the connection.
+     * Connection over the ARP monitor socket
      */
-    std::unordered_map<int, sConnectionContext> m_connections;
+    std::unique_ptr<beerocks::net::Socket::Connection> m_arp_mon_socket_connection;
 
     /**
-     * File descriptor of the ARP raw socket
+     * Connection over the DHCP monitor socket
      */
-    int m_arp_raw_socket = beerocks::net::FileDescriptor::invalid_descriptor;
-
-    /**
-     * File descriptor of the ARP monitor socket
-     */
-    int m_arp_mon_socket = beerocks::net::FileDescriptor::invalid_descriptor;
-
-    /**
-     * File descriptor of the DHCP monitor socket
-     */
-    int m_dhcp_mon_socket = beerocks::net::FileDescriptor::invalid_descriptor;
+    std::unique_ptr<beerocks::net::Socket::Connection> m_dhcp_mon_socket_connection;
 };
 
 } // namespace beerocks
