@@ -59,7 +59,8 @@
         "thread": "cpp",
         "cinttypes": "cpp",
         "typeinfo": "cpp",
-        "future": "cpp"
+        "future": "cpp",
+        "numeric": "cpp"
     },
     "files.exclude": {
         "build": true
