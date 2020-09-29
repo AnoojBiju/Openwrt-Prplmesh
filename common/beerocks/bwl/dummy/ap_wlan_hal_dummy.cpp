@@ -93,6 +93,8 @@ static ap_wlan_hal::Event dummy_to_bwl_event(const std::string &opcode)
         return ap_wlan_hal::Event::DFS_NOP_Finished;
     } else if (opcode == "MGMT-FRAME") {
         return ap_wlan_hal::Event::MGMT_Frame;
+    } else if (opcode == "AP-STA-POSSIBLE-PSK-MISMATCH") {
+        return ap_wlan_hal::Event::AP_Sta_Possible_Psk_Mismatch;
     }
 
     return ap_wlan_hal::Event::Invalid;
@@ -548,6 +550,16 @@ bool ap_wlan_hal_dummy::process_dummy_event(parsed_obj_map_t &parsed_obj)
         event_queue_push(Event::MGMT_Frame, mgmt_frame);
     } break;
 
+    case Event::AP_Sta_Possible_Psk_Mismatch: {
+        LOG(DEBUG) << "Ap STA Possible PSK Mismatch";
+        if (!dummy_obj_read_str(DUMMY_EVENT_KEYLESS_PARAM_MAC, parsed_obj, &tmp_str)) {
+            LOG(ERROR) << "Failed reading mac parameter of mismatched psk station!";
+            return false;
+        }
+        auto mismatch_psk     = std::make_shared<sSTA_MISMATCH_PSK>();
+        mismatch_psk->sta_mac = tlvf::mac_from_string(tmp_str);
+        event_queue_push(Event::AP_Sta_Possible_Psk_Mismatch, mismatch_psk);
+    } break;
     // Gracefully ignore unhandled events
     default: {
         LOG(WARNING) << "Unhandled event received: " << opcode;
