@@ -203,7 +203,7 @@ int cfg_get_load_steer_on_vaps(int num_of_interfaces,
 int cfg_get_stop_on_failure_attempts()
 {
     int retVal = -1;
-    if (cfg_get_param_int("stop_on_failure_attempts", retVal) == RETURN_ERR) {
+    if (cfg_get_param_int("stop_on_failure_attempts=", retVal) == RETURN_ERR) {
         retVal = RETURN_ERR;
     }
     return retVal;
