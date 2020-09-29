@@ -728,7 +728,8 @@ bool base_wlan_hal_nl80211::refresh_radio_info()
 
             switch (vht_oper_chwidth) {
             case 0:
-                m_radio_info.bandwidth = 40;
+                // 0 can also mean vht_oper_chwidth is not set
+                m_radio_info.bandwidth = 20;
                 break;
             case 1:
                 m_radio_info.bandwidth = 80;
