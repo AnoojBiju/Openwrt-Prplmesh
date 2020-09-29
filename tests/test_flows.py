@@ -1420,9 +1420,6 @@ class TestFlows:
         sta3 = env.Station.create()
         vap1 = agent.radios[0].vaps[0]
         vap2 = agent.radios[1].vaps[0]
-        vap1.associate(sta1)
-        vap1.associate(sta3)
-        vap2.associate(sta2)
 
         # Phase 1
         # Phase 1 (step 1): reset controller
@@ -1467,6 +1464,13 @@ class TestFlows:
         # Phase 6
 
         # Phase 7
+
+        # Associate STAs after completing all the Resets/Backhaul reconfiguration
+        vap1.associate(sta1)
+        vap1.associate(sta3)
+        vap2.associate(sta2)
+        time.sleep(1)
+
         # prepare tlvs
         sta_mac_addr_tlv = tlv(0x95, 0x0006, '{}'.format(sta2.mac))
         # send
@@ -1481,8 +1485,6 @@ class TestFlows:
         self.check_cmdu_has_tlvs(resp, 0x96)
 
         # tear down the test: disassociated
-        vap1 = agent.radios[0].vaps[0]
-        vap2 = agent.radios[1].vaps[0]
         vap1.disassociate(sta1)
         vap1.disassociate(sta3)
         vap2.disassociate(sta2)
