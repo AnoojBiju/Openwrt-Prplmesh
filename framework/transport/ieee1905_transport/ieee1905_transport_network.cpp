@@ -339,6 +339,7 @@ void Ieee1905Transport::handle_interface_pollin_event(int fd)
     ssize_t len = recvfrom(fd, buf, sizeof(buf), MSG_DONTWAIT | MSG_TRUNC, (struct sockaddr *)&addr,
                            &addr_len);
     if (len == -1 && (errno == EWOULDBLOCK || errno == EAGAIN)) {
+        MAPF_DBG("ADAM: errno:" << errno);
         return;
     }
     if (len == -1) {
