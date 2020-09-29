@@ -23,6 +23,7 @@ This file lists all contributors.
 - Ivan Efimov
 - Juan Schroeder
 - KC Chen
+- Kristina Oliinyk
 - Lior Amram
 - Maksym Bielan
 - Mario Maz
@@ -30,6 +31,7 @@ This file lists all contributors.
 - Moran Shoeg
 - Oleksii Ponomarenko
 - Ostap Slyusar
+- Pablo Martin
 - Pavel Levitsky
 - Ram Marzin
 - Ran Regev
