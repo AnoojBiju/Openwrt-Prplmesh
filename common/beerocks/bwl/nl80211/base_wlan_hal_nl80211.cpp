@@ -710,36 +710,38 @@ bool base_wlan_hal_nl80211::refresh_radio_info()
 
         int ieee80211ac = beerocks::string_utils::stoi(reply["ieee80211ac"]);
 
-        // 2.4Ghz
-        if (ieee80211ac == 0) {
-            if (reply.find("num_sta_ht40_intolerant") != reply.end()) {
-                m_radio_info.bandwidth = 40;
-            } else {
+        // 0 = 20 or 40 MHz operating Channel width
+        // 1 = 80 MHz channel width
+        // 2 = 160 MHz channel width
+        // 3 = 80+80 MHz channel width
+        int vht_oper_chwidth  = beerocks::string_utils::stoi(reply["vht_oper_chwidth"]);
+        int secondary_channel = beerocks::string_utils::stoi(reply["vht_oper_chwidth"]);
+
+        switch (vht_oper_chwidth) {
+            // if vht_oper_chwidth is not set it defaults to 0
+        case 0:
+            if (secondary_channel == 0) {
                 m_radio_info.bandwidth = 20;
-            }
-
-        } else {
-
-            // 0 = 20 or 40 MHz operating Channel width
-            // 1 = 80 MHz channel width
-            // 2 = 160 MHz channel width
-            // 3 = 80+80 MHz channel width
-            int vht_oper_chwidth = beerocks::string_utils::stoi(reply["vht_oper_chwidth"]);
-
-            switch (vht_oper_chwidth) {
-            case 0:
+            } else {
                 m_radio_info.bandwidth = 40;
-                break;
-            case 1:
-                m_radio_info.bandwidth = 80;
-                break;
-            default:
-                m_radio_info.bandwidth = 160;
             }
-
-            m_radio_info.vht_center_freq =
-                beerocks::string_utils::stoi(reply["vht_oper_centr_freq_seg0_idx"]);
+            break;
+        case 1:
+            m_radio_info.bandwidth = 80;
+            break;
+        case 2:
+            m_radio_info.bandwidth = 160;
+            break;
+        default:
+            LOG(ERROR) << "Unknown bandwidth " << m_radio_info.bandwidth
+                       << ". Defaulting to 160Mhz." m_radio_info.bandwidth = 160;
         }
+
+        m_radio_info.vht_center_freq =
+            beerocks::string_utils::stoi(reply["vht_oper_centr_freq_seg0_idx"]);
+
+        LOG(DEBUG) << "radio " << m_radio_info.iface_name
+                   << " bandwidth: " << m_radio_info.bandwidth;
 
         // State
         if (reply["state"] == "ENABLED") {
