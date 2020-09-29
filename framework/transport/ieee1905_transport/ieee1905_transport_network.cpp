@@ -155,8 +155,8 @@ std::shared_ptr<Socket> Ieee1905Transport::open_interface_socket(const std::stri
     // open packet raw socket - see man packet(7) https://linux.die.net/man/7/packet
     int sockfd;
     auto protocol_ = protocol;
-    if (protocol == ETH_P_1905_1) {
-        // try to open the socket with "all" for 1905 socket
+    if (protocol == ETH_P_LLDP) {
+        // try to open the socket with "all" for LLDP socket
         protocol_ = ETH_P_ALL;
     }
     if ((sockfd = socket(AF_PACKET, SOCK_RAW, htons(protocol))) < 0) {
