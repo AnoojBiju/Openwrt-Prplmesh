@@ -16,6 +16,7 @@
 #include "tasks/task_pool.h"
 
 #include "../../../common/beerocks/bwl/include/bwl/base_wlan_hal.h"
+#include <bcl/beerocks_cmdu_server.h>
 #include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_event_loop.h>
 #include <bcl/beerocks_logging.h>
@@ -41,6 +42,7 @@ class master_thread : public beerocks::btl::transport_socket_thread {
 
 public:
     master_thread(const std::string &master_uds_, db &database_,
+                  std::unique_ptr<beerocks::CmduServer> cmdu_server,
                   std::shared_ptr<beerocks::EventLoop> event_loop);
     virtual ~master_thread();
 
@@ -127,6 +129,11 @@ private:
     task_pool tasks;
     periodic_operation_pool operations;
     beerocks::controller_ucc_listener m_controller_ucc_listener;
+
+    /**
+     * CMDU server to exchange CMDU messages with clients through socket connections.
+     */
+    std::shared_ptr<beerocks::CmduServer> m_cmdu_server;
 
     /**
      * Application event loop used by the process to wait for I/O events.
