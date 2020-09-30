@@ -6,8 +6,8 @@
  * See LICENSE file for more details.
  */
 
-#ifndef NBAPI_H
-#define NBAPI_H
+#ifndef AMBIORIX_IMPL
+#define AMBIORIX_IMPL
 
 // prplmesh
 #include <bcl/beerocks_event_loop.h>
@@ -31,23 +31,31 @@
 #include <amxo/amxo.h>
 #include <amxo/amxo_save.h>
 
+#include "ambiorix.h"
+
 namespace beerocks {
 namespace nbapi {
 
+class AmbiorixImplTransaction : public Transaction {
+public:
+    amxd_trans_t transaction;
+    virtual void start_transaction() { return; };
+};
+
 /**
- * @class Ambiorix
+ * @class AmbiorixImpl
  * @brief This class manages the ambiorix instance.
  */
-class Ambiorix {
+class AmbiorixImpl : public Ambiorix {
 
 public:
-    explicit Ambiorix(std::shared_ptr<EventLoop> event_loop);
+    explicit AmbiorixImpl(std::shared_ptr<EventLoop> event_loop);
 
     /**
-     * @brief Ambiorix destructor removes: bus connection, data model, parser and all data
+     * @brief AmbiorixImpl destructor removes: bus connection, data model, parser and all data
      *        from the backend (UBus, PCB, etc.).
      */
-    virtual ~Ambiorix();
+    virtual ~AmbiorixImpl();
 
     /**
      * @brief Initialize the ambiorix library: load backend, connect to the bus, load data model,
@@ -91,7 +99,7 @@ public:
      *                    needed for transaction.
      * @return True on success and false otherwise.
      */
-    bool apply_transaction(amxd_trans_t &transaction);
+    bool apply_transaction(Transaction *transaction);
 
     /* @brief Add instance to the data model object with type list
      *
@@ -165,4 +173,5 @@ private:
 
 } // namespace nbapi
 } // namespace beerocks
-#endif // NBAPI_H
+
+#endif // AMBIORIX_IMPL
