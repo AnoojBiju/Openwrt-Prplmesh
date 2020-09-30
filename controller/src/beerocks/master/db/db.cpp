@@ -3147,7 +3147,7 @@ bool db::load_persistent_db_clients()
     return true;
 }
 
-std::deque<sMacAddr> db::get_clients_with_persistent_data_configured()
+std::vector<sMacAddr> db::get_clients_with_persistent_data_configured()
 {
     std::deque<sMacAddr> configured_clients;
     for (auto node_map : nodes) {
@@ -3162,7 +3162,7 @@ std::deque<sMacAddr> db::get_clients_with_persistent_data_configured()
 
     LOG_IF(configured_clients.empty(), DEBUG) << "No clients are found";
 
-    return configured_clients;
+    return {configured_clients.begin(), configured_clients.end()};
 }
 
 //
