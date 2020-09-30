@@ -9,15 +9,30 @@
 #ifndef BCL_NETWORK_SOCKETS_H_
 #define BCL_NETWORK_SOCKETS_H_
 
-#include "buffer.h"
-#include "file_descriptor.h"
+#include "file_descriptor_impl.h"
+
+#include <stdint.h>
 
 #include <net/if.h>
 
-#include <memory>
-
 namespace beerocks {
 namespace net {
+
+/**
+ * Array of bytes used to hold data received through a socket.
+ * Code is programmed to interfaces so it does not care about which implementation is used.
+ * Unit tests can use a mock and set different expectations per test (pretend that different data
+ * has been received through the socket).
+ */
+class Buffer {
+public:
+    virtual ~Buffer()                   = default;
+    virtual const uint8_t *data() const = 0;
+    virtual size_t size() const         = 0;
+    virtual void clear()                = 0;
+
+    uint8_t *data() { return const_cast<uint8_t *>(const_cast<const Buffer *>(this)->data()); }
+};
 
 /**
  * Sockets are OS resources implementing the file descriptor interface. The way this fact is
@@ -115,7 +130,7 @@ public:
         /**
          * @brief Receives data through the socket connection.
          *
-         * @param[in, out] buffer Buffer to hold received data.
+         * @param[out] buffer Buffer to hold received data.
          * @param[in] offset Position into the buffer to start receiving data.
          * @return Number of bytes received, -1 on failure.
          */
@@ -124,7 +139,7 @@ public:
         /**
          * @brief Receives data through the socket connection.
          *
-         * @param[in, out] buffer Buffer to hold received data.
+         * @param[out] buffer Buffer to hold received data.
          * @param[out] address Address where the data came from.
          * @return Number of bytes received, -1 on failure.
          */
@@ -134,18 +149,20 @@ public:
          * @brief Sends data through the socket connection.
          *
          * @param[in] buffer Buffer holding data to send.
+         * @param[in] length Number of bytes to send.
          * @return Number of bytes transmitted, -1 on failure.
          */
-        virtual int send(const Buffer &buffer) = 0;
+        virtual int send(const Buffer &buffer, size_t length) = 0;
 
         /**
          * @brief Sends data through the socket connection.
          *
          * @param[in] buffer Buffer holding data to send.
+         * @param[in] length Number of bytes to be transmitted.
          * @param[in] address Destination address.
          * @return Number of bytes transmitted, -1 on failure.
          */
-        virtual int send_to(const Buffer &buffer, const Address &address) = 0;
+        virtual int send_to(const Buffer &buffer, size_t length, const Address &address) = 0;
     };
 };
 
@@ -155,16 +172,6 @@ public:
      * @brief Class destructor
      */
     virtual ~ServerSocket() = default;
-
-    /**
-     * @brief Returns the underlying socket used by this server.
-     *
-     * Access to the underlying socket is required to obtain the socket file descriptor with which
-     * wait for read or write events using select() or epoll() functions.
-     *
-     * @return Socket used by the server.
-     */
-    virtual std::shared_ptr<Socket> socket() = 0;
 
     /**
      * @brief Accepts a connection request.
@@ -182,16 +189,6 @@ public:
      * @brief Class destructor
      */
     virtual ~ClientSocket() = default;
-
-    /**
-     * @brief Returns the underlying socket used by this client.
-     *
-     * Access to the underlying socket is required to obtain the socket file descriptor with which
-     * wait for read or write events using select() or epoll() functions.
-     *
-     * @return Socket used by the client.
-     */
-    virtual std::shared_ptr<Socket> socket() = 0;
 
     /**
      * @brief Connects the socket to the address specified.

@@ -6,12 +6,13 @@
  * See LICENSE file for more details.
  */
 
-#include "platform_manager.h"
+#include <mapf/common/utils.h>
+
+#include "platform_manager_thread.h"
 
 #include "../agent_db.h"
 
 #include <bcl/network/network_utils.h>
-#include <bcl/network/sockets_impl.h>
 #include <easylogging++.h>
 
 #include <beerocks/tlvf/beerocks_message.h>
@@ -21,27 +22,22 @@
 
 #include <net/if.h> // if_nametoindex
 
+using namespace beerocks::net;
+
 namespace beerocks {
+namespace platform_manager {
 
 //////////////////////////////////////////////////////////////////////////////
 ////////////////////////// Local Module Definitions //////////////////////////
 //////////////////////////////////////////////////////////////////////////////
+
+#define SELECT_TIMEOUT_MSC 500
 
 static const uint8_t s_arrZeroMac[]  = {0, 0, 0, 0, 0, 0};
 static const uint8_t s_arrBCastMac[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 #define ARP_NOTIF_INTERVAL (90000)                  // 1.5 minutes
 #define ARP_CLEAN_INTERVAL (ARP_NOTIF_INTERVAL * 2) // 2 notif. intervals
-
-/**
- * Time interval to periodically clean old ARP table entries.
- */
-constexpr std::chrono::milliseconds clean_old_arp_entries_timer_interval(ARP_CLEAN_INTERVAL);
-
-/**
- * Time interval to periodically check if WLAN parameters have changed.
- */
-constexpr std::chrono::milliseconds check_wlan_params_changed_timer_interval(500);
 
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////// Local Module Functions ///////////////////////////
@@ -81,7 +77,8 @@ static beerocks::eFreqType bpl_band_to_freq_type(int bpl_band)
 static bool fill_platform_settings(
     const std::string &iface_name,
     std::unordered_map<std::string, std::shared_ptr<beerocks_message::sWlanSettings>>
-        &iface_wlan_params_map)
+        &iface_wlan_params_map,
+    Socket *sd)
 {
     auto db = AgentDB::get();
 
@@ -253,26 +250,7 @@ static bool fill_platform_settings(
     return true;
 }
 
-static std::string get_sta_iface(const std::string &hostap_iface)
-{
-    char sta_iface_str[BPL_IFNAME_LEN];
-    if (bpl::cfg_get_sta_iface(hostap_iface.c_str(), sta_iface_str) < 0) {
-        LOG(DEBUG) << "failed to read sta_iface for slave ";
-        return std::string();
-    }
-    auto sta_iface = std::string(sta_iface_str);
-    if (!beerocks::net::network_utils::linux_iface_exists(sta_iface)) {
-        LOG(DEBUG) << "sta iface " << sta_iface << " does not exist, clearing it from config";
-        return std::string();
-    }
-    return sta_iface;
-}
-
-//////////////////////////////////////////////////////////////////////////////
-/////////////////////////////// Implementation ///////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-
-std::string PlatformManager::query_db(const std::string &parameter)
+std::string extern_query_db(const std::string &parameter)
 {
     std::string ret;
     if (bpl::bpl_init() < 0) {
@@ -299,30 +277,33 @@ std::string PlatformManager::query_db(const std::string &parameter)
     return ret;
 }
 
-PlatformManager::PlatformManager(
-    const config_file::sConfigSlave &config_,
-    const std::unordered_map<int, std::string> &interfaces_map_, logging &logger_,
-    std::unique_ptr<beerocks::net::Timer<>> clean_old_arp_entries_timer,
-    std::unique_ptr<beerocks::net::Timer<>> check_wlan_params_changed_timer,
-    std::unique_ptr<beerocks::net::ServerSocket> server_socket,
-    std::shared_ptr<beerocks::net::CmduParser> cmdu_parser,
-    std::shared_ptr<beerocks::net::CmduSerializer> cmdu_serializer,
-    std::shared_ptr<beerocks::EventLoop> event_loop)
-    : m_cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer)), config(config_), interfaces_map(interfaces_map_),
-      logger(logger_), m_clean_old_arp_entries_timer(std::move(clean_old_arp_entries_timer)),
-      m_check_wlan_params_changed_timer(std::move(check_wlan_params_changed_timer)),
-      m_server_socket(std::move(server_socket)), m_cmdu_parser(cmdu_parser),
-      m_cmdu_serializer(cmdu_serializer), m_event_loop(event_loop)
+static std::string get_sta_iface(const std::string &hostap_iface)
 {
-    LOG_IF(!m_clean_old_arp_entries_timer, FATAL)
-        << "clean-old-ARP-entries timer is a null pointer!";
-    LOG_IF(!m_check_wlan_params_changed_timer, FATAL)
-        << "check-WLAN-params-changed timer is a null pointer!";
-    LOG_IF(!m_server_socket, FATAL) << "Server socket is a null pointer!";
-    LOG_IF(!m_cmdu_parser, FATAL) << "CMDU parser is a null pointer!";
-    LOG_IF(!m_cmdu_serializer, FATAL) << "CMDU serializer is a null pointer!";
-    LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
+    char sta_iface_str[BPL_IFNAME_LEN];
+    if (bpl::cfg_get_sta_iface(hostap_iface.c_str(), sta_iface_str) < 0) {
+        LOG(DEBUG) << "failed to read sta_iface for slave ";
+        return std::string();
+    }
+    auto sta_iface = std::string(sta_iface_str);
+    if (!network_utils::linux_iface_exists(sta_iface)) {
+        LOG(DEBUG) << "sta iface " << sta_iface << " does not exist, clearing it from config";
+        return std::string();
+    }
+    return sta_iface;
+}
 
+//////////////////////////////////////////////////////////////////////////////
+/////////////////////////////// Implementation ///////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+main_thread::main_thread(const config_file::sConfigSlave &config_,
+                         const std::unordered_map<int, std::string> &interfaces_map_,
+                         logging &logger_)
+    : socket_thread(config_.temp_path + std::string(BEEROCKS_PLAT_MGR_UDS)), config(config_),
+      interfaces_map(interfaces_map_), logger(logger_)
+{
+    set_select_timeout(SELECT_TIMEOUT_MSC);
+    thread_name        = "platform_manager";
     enable_arp_monitor = (config.enable_arp_monitor == "1");
 
     int i = 0;
@@ -337,121 +318,147 @@ PlatformManager::PlatformManager(
     }
 }
 
-bool PlatformManager::start()
+main_thread::~main_thread() { main_thread::on_thread_stop(); }
+
+void main_thread::add_slave_socket(Socket *sd, const std::string &iface_name)
 {
-    {
-        // Register event handlers for the server socket
-        beerocks::EventLoop::EventHandlers handlers{
-            // Accept incoming connections
-            .on_read =
-                [&](int fd, EventLoop &loop) {
-                    beerocks::net::UdsAddress address;
-                    auto connection = m_server_socket->accept(address);
+    // Lock the slaves socket map
+    std::unique_lock<std::mutex> lock(m_mtxSlaves);
 
-                    if (connection) {
-                        beerocks::EventLoop::EventHandlers handlers{
-                            // Handle incoming data
-                            .on_read =
-                                [&](int fd, EventLoop &loop) {
-                                    handle_read(fd);
-                                    return true;
-                                },
+    m_mapSlaves[sd] = iface_name;
+}
 
-                            // Not implemented
-                            .on_write = nullptr,
+void main_thread::del_slave_socket(Socket *sd)
+{
+    // Lock the slaves socket map
+    std::unique_lock<std::mutex> lock(m_mtxSlaves);
 
-                            // Remove the socket on disconnection or error
-                            .on_disconnect =
-                                [&](int fd, EventLoop &loop) {
-                                    handle_close(fd);
-                                    return true;
-                                },
-                            .on_error =
-                                [&](int fd, EventLoop &loop) {
-                                    handle_close(fd);
-                                    return true;
-                                },
-                        };
+    // Remove the socket from the connections map
+    m_mapSlaves.erase(sd);
 
-                        int connected_socket = connection->socket()->fd();
-                        if (!add_connection(connected_socket, std::move(connection), handlers)) {
-                            LOG(ERROR) << "Unable to add connection!";
-                        }
-                    } else {
-                        LOG(ERROR) << "Unable to accept incoming connection request!";
-                    }
-                    return true;
-                },
+    // Also check if that was the backhaul manager
+    if (m_pBackhaulManagerSlave == sd)
+        m_pBackhaulManagerSlave = nullptr;
+}
 
-            // Not implemented
-            .on_write = nullptr,
+bool main_thread::send_cmdu_safe(Socket *sd, ieee1905_1::CmduMessageTx &cmdu_tx)
+{
+    // Lock the slaves socket map
+    std::unique_lock<std::mutex> lock(m_mtxSlaves);
 
-            // Fail on server socket disconnection or error
-            .on_disconnect =
-                [&](int fd, EventLoop &loop) {
-                    LOG(ERROR) << "Server socket disconnected!";
-                    return false;
-                },
-            .on_error =
-                [&](int fd, EventLoop &loop) {
-                    LOG(ERROR) << "Server socket error!";
-                    return false;
-                },
-        };
-
-        if (!m_event_loop->register_handlers(m_server_socket->socket()->fd(), handlers)) {
-            LOG(ERROR) << "Failed registering event handlers for the server socket!";
-            return false;
-        }
+    if (m_mapSlaves.find(sd) == m_mapSlaves.end()) {
+        LOG(ERROR) << "Attempted send to invalid socket slave: " << sd;
+        return false;
     }
 
-    {
-        // Register event handlers for the check-WLAN-params-changed timer
-        beerocks::EventLoop::EventHandlers handlers{
-            // Check if WLAN parameters have changed
-            .on_read =
-                [&](int fd, EventLoop &loop) {
-                    uint64_t number_of_expirations;
-                    if (m_check_wlan_params_changed_timer->read(number_of_expirations)) {
-                        check_wlan_params_changed();
-                    }
+    message_com::send_cmdu(sd, cmdu_tx);
+    return true;
+}
 
-                    return true;
-                },
-        };
+std::string main_thread::get_hostap_iface_name_from_slave_socket(Socket *sd)
+{
+    // Lock the slaves socket map
+    std::unique_lock<std::mutex> lock(m_mtxSlaves);
 
-        if (!m_event_loop->register_handlers(m_check_wlan_params_changed_timer->fd(), handlers)) {
-            LOG(ERROR)
-                << "Failed registering event handlers for the check-WLAN-params-changed timer!";
-            return false;
-        }
-
-        // Start the check-WLAN-params-changed timer
-        m_check_wlan_params_changed_timer->schedule(check_wlan_params_changed_timer_interval,
-                                                    check_wlan_params_changed_timer_interval);
+    auto slave_it = m_mapSlaves.find(sd);
+    if (slave_it == m_mapSlaves.end()) {
+        LOG(ERROR) << "Invalid socket slave: " << sd;
+        return std::string();
     }
 
-    {
-        // Register event handlers for the clean-old-ARP-entries timer
-        beerocks::EventLoop::EventHandlers handlers{
-            // Clean old ARP table entries
-            .on_read =
-                [&](int fd, EventLoop &loop) {
-                    uint64_t number_of_expirations;
-                    if (m_clean_old_arp_entries_timer->read(number_of_expirations)) {
-                        clean_old_arp_entries();
-                    }
+    return slave_it->second; // iface_name
+}
 
-                    return true;
-                },
-        };
+Socket *main_thread::get_slave_socket_from_hostap_iface_name(const std::string &iface)
+{
+    auto it_slave = std::find_if(
+        m_mapSlaves.begin(), m_mapSlaves.end(),
+        [&iface](const std::pair<Socket *, std::string> &slave) { return iface == slave.second; });
 
-        if (!m_event_loop->register_handlers(m_clean_old_arp_entries_timer->fd(), handlers)) {
-            LOG(ERROR) << "Failed registering event handlers for the clean-old-ARP-entries timer!";
-            return false;
-        }
+    if (it_slave != m_mapSlaves.end()) {
+        return it_slave->first;
     }
 
+    return nullptr;
+}
+
+Socket *main_thread::get_backhaul_socket()
+{
+    // Lock the slaves socket map
+    std::unique_lock<std::mutex> lock(m_mtxSlaves);
+
+    // If a slave containing the backhaul manager registered, return its' socket.
+    // If not, return the first socket from the connection map
+    Socket *sd = nullptr;
+
+    if (m_pBackhaulManagerSlave)
+        sd = m_pBackhaulManagerSlave;
+    else if (m_mapSlaves.size())
+        sd = m_mapSlaves.begin()->first;
+
+    return (sd);
+}
+
+void main_thread::load_iface_params(const std::string &strIface, beerocks::eArpSource eType)
+{
+    // Ignore empty interfaces
+    if (strIface.empty()) {
+        LOG(ERROR) << "strIface is empty!";
+        return;
+    }
+
+    LOG(DEBUG) << "load_iface_params(), Interface " << strIface;
+
+    m_mapIfaces[strIface] = {eType}; // Struct initialization
+}
+
+std::string main_thread::bridge_iface_from_mac(const sMacAddr &sMac)
+{
+    char iface_name[BPL_ARP_IFACE_NAME_LEN];
+
+    // Read the interface name using BPL
+    if (bpl::arp_get_bridge_iface(config.bridge_iface.c_str(), sMac.oct, iface_name) == -1) {
+        return {};
+    }
+
+    return std::string(iface_name);
+}
+
+void main_thread::send_dhcp_notification(const std::string &op, const std::string &mac,
+                                         const std::string &ip, const std::string &hostname)
+{
+    LOG(DEBUG) << "DHCP Event: " << op << ", mac: " << mac << ", ip: " << ip
+               << ", hostname: " << hostname;
+    auto dhcp_notif = message_com::create_vs_message<
+        beerocks_message::cACTION_PLATFORM_DHCP_MONITOR_NOTIFICATION>(cmdu_tx);
+
+    if (dhcp_notif == nullptr) {
+        LOG(ERROR) << "Failed building ACTION_PLATFORM_DHCP_MONITOR_NOTIFICATION message!";
+        return;
+    }
+
+    // Build the DHCP notification message
+    if (op == "add")
+        dhcp_notif->op() = beerocks_message::eDHCPOp_Add;
+    else if (op == "del")
+        dhcp_notif->op() = beerocks_message::eDHCPOp_Del;
+    else if (op == "old")
+        dhcp_notif->op() = beerocks_message::eDHCPOp_Old;
+
+    dhcp_notif->mac()  = tlvf::mac_from_string(mac);
+    dhcp_notif->ipv4() = network_utils::ipv4_from_string(ip);
+    string_utils::copy_string(dhcp_notif->hostname(0), hostname.c_str(), message::NODE_NAME_LENGTH);
+
+    // Get a slave socket
+    Socket *sd = get_backhaul_socket();
+
+    if (sd) {
+        message_com::send_cmdu(sd, cmdu_tx);
+    }
+}
+
+bool main_thread::init()
+{
     // Initialize the BPL (Beerocks Platform Library)
     if (bpl::bpl_init() < 0) {
         LOG(ERROR) << "Failed to initialize BPL!";
@@ -490,300 +497,22 @@ bool PlatformManager::start()
     }
 
     // Start the async work queue
-    m_should_stop = false;
     if (!work_queue.start()) {
         LOG(ERROR) << "Failed starting asynchronous work queue";
         return false;
     }
 
-    return true;
+    return socket_thread::init();
 }
 
-bool PlatformManager::stop()
+bool main_thread::work()
 {
-    bool result = true;
+    bool bret = socket_thread::work();
 
-    LOG(DEBUG) << "Stopping asynchronous work queue...";
-    m_should_stop = true;
-    work_queue.stop(true);
-
-    // Stop the DHCP Monitor
-    stop_dhcp_monitor();
-
-    // Stop the ARP Monitor
-    stop_arp_monitor();
-
-    bpl::bpl_close();
-    LOG(DEBUG) << "Closed BPL.";
-
-    bpl_iface_wlan_params_map.clear();
-
-    // Remove installed event handlers for the clean-old-ARP-entries timer
-    if (!m_event_loop->remove_handlers(m_clean_old_arp_entries_timer->fd())) {
-        result = false;
-    }
-
-    // Cancel the check-WLAN-params-changed timer
-    m_check_wlan_params_changed_timer->cancel();
-
-    // Remove installed event handlers for the check-WLAN-params-changed timer
-    if (!m_event_loop->remove_handlers(m_check_wlan_params_changed_timer->fd())) {
-        result = false;
-    }
-
-    // Remove all connections and their installed event handlers
-    while (m_connections.size() > 0) {
-        const auto &it = m_connections.begin();
-
-        int fd = it->first;
-
-        if (!remove_connection(fd)) {
-            result = false;
-            break;
-        }
-    }
-
-    // Remove installed event handlers for the server socket
-    if (!m_event_loop->remove_handlers(m_server_socket->socket()->fd())) {
-        result = false;
-    }
-
-    return result;
+    return bret;
 }
 
-bool PlatformManager::add_connection(int fd,
-                                     std::unique_ptr<beerocks::net::Socket::Connection> connection,
-                                     const beerocks::EventLoop::EventHandlers &handlers)
-{
-    LOG(DEBUG) << "Adding new connection, fd = " << fd;
-
-    // Register event handlers for the connected socket
-    if (!m_event_loop->register_handlers(fd, handlers)) {
-        LOG(ERROR) << "Failed registering event handlers for the accepted socket!";
-        return false;
-    }
-
-    // Add a new connection to the map of current connections.
-    auto result = m_connections.emplace(fd, sConnectionContext(std::move(connection)));
-    LOG_IF(!result.second, FATAL) << "File descriptor was already in the connections map!";
-
-    return true;
-}
-
-bool PlatformManager::remove_connection(int fd)
-{
-    LOG(DEBUG) << "Removing connection, fd = " << fd;
-
-    // Remove connection from the map of current connections.
-    if (0 == m_connections.erase(fd)) {
-        LOG(ERROR) << "Unable to remove connection from the map!";
-        return false;
-    }
-
-    // Remove installed event handlers for the connected socket
-    m_event_loop->remove_handlers(fd);
-
-    return true;
-}
-
-void PlatformManager::handle_read(int fd)
-{
-    // Find context information for given socket connection
-    auto it = m_connections.find(fd);
-    if (m_connections.end() == it) {
-        // This should never happen, but just in case ...
-        LOG(ERROR) << "Data received through an unknown connection, fd = " << fd;
-        return;
-    }
-
-    auto &context = it->second;
-
-    // Read available bytes into buffer
-    int bytes_received = context.connection->receive(context.buffer);
-    if (bytes_received <= 0) {
-        // This should never happen, but just in case ...
-        LOG(ERROR) << "Bytes received through connection: " << bytes_received << ", fd = " << fd;
-        return;
-    }
-
-    // These parameters are obtained from the UDS header but are not used by the platform manager
-    uint32_t iface_index;
-    sMacAddr dst_mac;
-    sMacAddr src_mac;
-
-    // Buffer for the received CMDU and received CMDU
-    uint8_t cmdu_rx_buffer[message::MESSAGE_BUFFER_LENGTH];
-    ieee1905_1::CmduMessageRx cmdu_rx(cmdu_rx_buffer, sizeof(cmdu_rx_buffer));
-
-    // CMDU parsing & handling loop
-    // Note: must be done in a loop because data received through a stream-oriented socket might
-    // contain more than one CMDU. If data were received through a message-oriented socket, then
-    // only one message would be received at a time and the loop would be iterated only once.
-    while ((context.buffer.length() > 0) &&
-           m_cmdu_parser->parse_cmdu(context.buffer, iface_index, dst_mac, src_mac, cmdu_rx)) {
-        handle_cmdu(fd, cmdu_rx);
-    }
-}
-
-void PlatformManager::handle_close(int fd)
-{
-    // Notify that socket has been disconnected to clean-up resources
-    socket_disconnected(fd);
-
-    // Remove connection to the given client socket
-    remove_connection(fd);
-}
-
-void PlatformManager::add_slave_socket(int fd, const std::string &iface_name)
-{
-    // Lock the slaves socket map
-    std::unique_lock<std::mutex> lock(m_mtxSlaves);
-
-    m_mapSlaves[fd] = iface_name;
-}
-
-void PlatformManager::del_slave_socket(int fd)
-{
-    // Lock the slaves socket map
-    std::unique_lock<std::mutex> lock(m_mtxSlaves);
-
-    // Remove the socket from the connections map
-    m_mapSlaves.erase(fd);
-
-    // Also check if that was the backhaul manager
-    if (m_backhaul_manager_socket == fd) {
-        m_backhaul_manager_socket = beerocks::net::FileDescriptor::invalid_descriptor;
-    }
-}
-
-bool PlatformManager::send_cmdu_safe(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
-{
-    // Lock the slaves socket map
-    std::unique_lock<std::mutex> lock(m_mtxSlaves);
-
-    if (m_mapSlaves.find(fd) == m_mapSlaves.end()) {
-        LOG(ERROR) << "Attempted send to invalid socket slave: " << fd;
-        return false;
-    }
-
-    return send_cmdu(fd, cmdu_tx);
-}
-
-bool PlatformManager::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
-{
-    // Find context information for given socket connection
-    auto it = m_connections.find(fd);
-    if (m_connections.end() == it) {
-        // This should never happen, but just in case ...
-        LOG(ERROR) << "Unable to send CMDU through an unknown connection, fd = " << fd;
-        return false;
-    }
-
-    auto &context = it->second;
-
-    // Serialize CMDU into a byte array
-    sMacAddr dst_mac = beerocks::net::network_utils::ZERO_MAC;
-    sMacAddr src_mac = beerocks::net::network_utils::ZERO_MAC;
-    beerocks::net::BufferImpl<message::MESSAGE_BUFFER_LENGTH> buffer;
-    if (!m_cmdu_serializer->serialize_cmdu(dst_mac, src_mac, cmdu_tx, buffer)) {
-        LOG(ERROR) << "Failed to serialize CMDU, fd = " << fd;
-        return false;
-    }
-
-    // Send data
-    return context.connection->send(buffer);
-}
-
-int PlatformManager::get_slave_socket_from_hostap_iface_name(const std::string &iface)
-{
-    auto it_slave = std::find_if(
-        m_mapSlaves.begin(), m_mapSlaves.end(),
-        [&iface](const std::pair<int, std::string> &slave) { return iface == slave.second; });
-
-    if (it_slave != m_mapSlaves.end()) {
-        return it_slave->first;
-    }
-
-    return beerocks::net::FileDescriptor::invalid_descriptor;
-}
-
-int PlatformManager::get_backhaul_socket()
-{
-    // Lock the slaves socket map
-    std::unique_lock<std::mutex> lock(m_mtxSlaves);
-
-    // If a slave containing the backhaul manager registered, return its socket.
-    // If not, return the first socket from the connection map
-    int fd = beerocks::net::FileDescriptor::invalid_descriptor;
-
-    if (beerocks::net::FileDescriptor::invalid_descriptor != m_backhaul_manager_socket) {
-        fd = m_backhaul_manager_socket;
-    } else if (!m_mapSlaves.empty()) {
-        fd = m_mapSlaves.begin()->first;
-    }
-
-    return fd;
-}
-
-void PlatformManager::load_iface_params(const std::string &strIface, beerocks::eArpSource eType)
-{
-    // Ignore empty interfaces
-    if (strIface.empty()) {
-        LOG(ERROR) << "strIface is empty!";
-        return;
-    }
-
-    LOG(DEBUG) << "load_iface_params(), Interface " << strIface;
-
-    m_mapIfaces[strIface] = {eType}; // Struct initialization
-}
-
-std::string PlatformManager::bridge_iface_from_mac(const sMacAddr &sMac)
-{
-    char iface_name[BPL_ARP_IFACE_NAME_LEN];
-
-    // Read the interface name using BPL
-    if (bpl::arp_get_bridge_iface(config.bridge_iface.c_str(), sMac.oct, iface_name) == -1) {
-        return {};
-    }
-
-    return std::string(iface_name);
-}
-
-void PlatformManager::send_dhcp_notification(const std::string &op, const std::string &mac,
-                                             const std::string &ip, const std::string &hostname)
-{
-    LOG(DEBUG) << "DHCP Event: " << op << ", mac: " << mac << ", ip: " << ip
-               << ", hostname: " << hostname;
-    auto dhcp_notif = message_com::create_vs_message<
-        beerocks_message::cACTION_PLATFORM_DHCP_MONITOR_NOTIFICATION>(m_cmdu_tx);
-
-    if (dhcp_notif == nullptr) {
-        LOG(ERROR) << "Failed building ACTION_PLATFORM_DHCP_MONITOR_NOTIFICATION message!";
-        return;
-    }
-
-    // Build the DHCP notification message
-    if (op == "add")
-        dhcp_notif->op() = beerocks_message::eDHCPOp_Add;
-    else if (op == "del")
-        dhcp_notif->op() = beerocks_message::eDHCPOp_Del;
-    else if (op == "old")
-        dhcp_notif->op() = beerocks_message::eDHCPOp_Old;
-
-    dhcp_notif->mac()  = tlvf::mac_from_string(mac);
-    dhcp_notif->ipv4() = beerocks::net::network_utils::ipv4_from_string(ip);
-    string_utils::copy_string(dhcp_notif->hostname(0), hostname.c_str(), message::NODE_NAME_LENGTH);
-
-    // Get a slave socket
-    int fd = get_backhaul_socket();
-
-    if (beerocks::net::FileDescriptor::invalid_descriptor != fd) {
-        send_cmdu(fd, m_cmdu_tx);
-    }
-}
-
-bool PlatformManager::check_wlan_params_changed()
+bool main_thread::wlan_params_changed_check()
 {
     bool any_slave_changed = false;
     for (auto &elm : bpl_iface_wlan_params_map) {
@@ -812,7 +541,7 @@ bool PlatformManager::check_wlan_params_changed()
         if (wlan_params_changed) {
             any_slave_changed = true;
             auto notification = message_com::create_vs_message<
-                beerocks_message::cACTION_PLATFORM_WLAN_PARAMS_CHANGED_NOTIFICATION>(m_cmdu_tx);
+                beerocks_message::cACTION_PLATFORM_WLAN_PARAMS_CHANGED_NOTIFICATION>(cmdu_tx);
             if (notification == nullptr) {
                 LOG(ERROR) << "Failed building message!";
                 return false;
@@ -821,40 +550,71 @@ bool PlatformManager::check_wlan_params_changed()
             notification->wlan_settings().band_enabled = elm.second->band_enabled;
             notification->wlan_settings().channel      = elm.second->channel;
 
-            int fd = get_slave_socket_from_hostap_iface_name(elm.first);
-            if (beerocks::net::FileDescriptor::invalid_descriptor == fd) {
+            Socket *sd = get_slave_socket_from_hostap_iface_name(elm.first);
+            if (!sd) {
                 LOG(ERROR) << "failed to get slave socket from iface=" << elm.first;
                 continue;
             }
 
-            send_cmdu_safe(fd, m_cmdu_tx);
+            send_cmdu_safe(sd, cmdu_tx);
             LOG(DEBUG) << "wlan_params_changed - cmdu msg sent, iface=" << elm.first
-                       << " cmdu msg sent, fd=" << fd;
+                       << " cmdu msg sent, sd=" << intptr_t(sd);
         }
     }
     return any_slave_changed;
 }
 
-bool PlatformManager::socket_disconnected(int fd)
+void main_thread::on_thread_stop()
 {
-    auto it = m_mapSlaves.find(fd);
+    LOG(DEBUG) << "Platform_manager on_thread_stop()";
+
+    LOG(DEBUG) << "Stopping asynchronous work queue...";
+    work_queue.stop(true);
+
+    if (bpl::dhcp_mon_stop() != 0) {
+        LOG(ERROR) << "Failed stopping DHCP Monitor!";
+    } else {
+        LOG(DEBUG) << "DHCP Monitor Stopped.";
+    }
+
+    // Stop the ARP Monitor
+    stop_arp_monitor();
+
+    if (m_pDHCPMonSocket) {
+        remove_socket(m_pDHCPMonSocket);
+        delete m_pDHCPMonSocket;
+        m_pDHCPMonSocket = nullptr;
+    }
+
+    bpl::bpl_close();
+    LOG(DEBUG) << "Closed BPL.";
+
+    bpl_iface_wlan_params_map.clear();
+}
+
+bool main_thread::socket_disconnected(Socket *sd)
+{
+    auto it = m_mapSlaves.find(sd);
     if (it == m_mapSlaves.end()) {
         LOG(INFO) << "non slave socket disconnected! (probably backhaul manager)";
         return true;
     }
+    LOG(DEBUG) << "slave socket_disconnected, iface=" << m_mapSlaves[sd] << ", sd=" << sd;
 
-    std::string iface_name = m_mapSlaves[fd];
-    LOG(DEBUG) << "slave socket_disconnected, iface=" << iface_name << ", fd=" << fd;
+    // we should have only one per sd
+    bpl_iface_wlan_params_map.erase(m_mapSlaves[sd]);
 
-    // we should have only one per fd
-    bpl_iface_wlan_params_map.erase(iface_name);
+    del_slave_socket(sd);
 
-    del_slave_socket(fd);
-
-    return true;
+    return (true);
 }
 
-bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
+std::string main_thread::print_cmdu_types(const message::sUdsHeader *cmdu_header)
+{
+    return message_com::print_cmdu_types(cmdu_header);
+}
+
+bool main_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto beerocks_header = message_com::parse_intel_vs_message(cmdu_rx);
     if (!beerocks_header) {
@@ -881,13 +641,15 @@ bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
         std::string strIfaceName = std::string(request->iface_name(message::IFACE_NAME_LENGTH));
         LOG(DEBUG) << "Registering slave with interface = " << strIfaceName;
 
-        add_slave_socket(fd, strIfaceName);
+        add_slave_socket(sd, strIfaceName);
 
-        work_queue.enqueue<void>([this, strIfaceName, fd]() {
-            size_t tx_buffer_size = message_com::get_vs_cmdu_size_on_buffer<
-                beerocks_message::cACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE>();
-            uint8_t tx_buffer[tx_buffer_size];
-            ieee1905_1::CmduMessageTx cmdu_tx(tx_buffer, sizeof(tx_buffer));
+        work_queue.enqueue<void>([this, strIfaceName, sd]() {
+            size_t headroom = sizeof(beerocks::message::sUdsHeader);
+            size_t buffer_size =
+                headroom + message_com::get_vs_cmdu_size_on_buffer<
+                               beerocks_message::cACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE>();
+            uint8_t tx_buffer[buffer_size];
+            ieee1905_1::CmduMessageTx cmdu_tx(tx_buffer + headroom, sizeof(tx_buffer) - headroom);
 
             //Response message (empty for now)
             auto register_response = message_com::create_vs_message<
@@ -903,7 +665,7 @@ bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
             do {
                 LOG(TRACE) << "Trying to read settings of iface:" << strIfaceName
                            << ", attempt=" << int(retry_cnt);
-                if (fill_platform_settings(strIfaceName, bpl_iface_wlan_params_map)) {
+                if (fill_platform_settings(strIfaceName, bpl_iface_wlan_params_map, sd)) {
                     register_response->valid() = 1;
                 } else {
                     LOG(INFO) << "Reading settings of iface:" << strIfaceName
@@ -916,13 +678,11 @@ bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
                     // sleep and retry
                     std::this_thread::sleep_for(std::chrono::seconds(PLATFORM_READ_CONF_RETRY_SEC));
                 }
-            } while (!register_response->valid() && !m_should_stop);
+            } while (!register_response->valid() && !should_stop);
 
-            if (register_response->valid()) {
-                LOG(DEBUG) << "sending ACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE to "
-                           << strIfaceName << " fd=" << fd;
-                send_cmdu_safe(fd, cmdu_tx);
-            }
+            LOG(DEBUG) << "sending ACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE to " << strIfaceName
+                       << " sd=" << intptr_t(sd);
+            send_cmdu_safe(sd, cmdu_tx);
         });
 
     } break;
@@ -968,8 +728,7 @@ bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
             auto pArpEntry = std::make_shared<SArpEntry>();
 
             // Only the IP address is initialized at this point
-            pArpEntry->ip =
-                beerocks::net::network_utils::uint_ipv4_from_array(&request->params().ipv4.oct);
+            pArpEntry->ip = network_utils::uint_ipv4_from_array(&request->params().ipv4.oct);
             pArpEntry->iface_index = -1;
             pArpEntry->last_seen   = std::chrono::steady_clock::now();
 
@@ -985,7 +744,7 @@ bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
         LOG(TRACE) << "ACTION_PLATFORM_ADMIN_CREDENTIALS_GET_REQUEST";
 
         auto response = message_com::create_vs_message<
-            beerocks_message::cACTION_PLATFORM_ADMIN_CREDENTIALS_GET_RESPONSE>(m_cmdu_tx);
+            beerocks_message::cACTION_PLATFORM_ADMIN_CREDENTIALS_GET_RESPONSE>(cmdu_tx);
 
         if (response == nullptr) {
             LOG(ERROR) << "Failed building message!";
@@ -1005,7 +764,7 @@ bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
         string_utils::copy_string(response->params().user_password, pass, message::USER_PASS_LEN);
 
         // Sent with unsafe because BML is reachable only on platform thread
-        send_cmdu(fd, m_cmdu_tx);
+        message_com::send_cmdu(sd, cmdu_tx);
 
         //clear the pwd in the memory
         memset(&pass, 0, sizeof(pass));
@@ -1015,7 +774,7 @@ bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
     } break;
     case beerocks_message::ACTION_PLATFORM_GET_MASTER_SLAVE_VERSIONS_REQUEST: {
         auto response = message_com::create_vs_message<
-            beerocks_message::cACTION_PLATFORM_GET_MASTER_SLAVE_VERSIONS_RESPONSE>(m_cmdu_tx);
+            beerocks_message::cACTION_PLATFORM_GET_MASTER_SLAVE_VERSIONS_RESPONSE>(cmdu_tx);
         if (response == nullptr) {
             LOG(ERROR) << "addClass cACTION_PLATFORM_GET_MASTER_SLAVE_VERSIONS_RESPONSE failed";
             return false;
@@ -1030,7 +789,7 @@ bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
             response->result() = 0;
         }
 
-        send_cmdu(fd, m_cmdu_tx);
+        message_com::send_cmdu(sd, cmdu_tx);
 
     } break;
     case beerocks_message::ACTION_PLATFORM_VERSION_MISMATCH_NOTIFICATION: {
@@ -1078,7 +837,7 @@ bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
         }
         if (notification->is_backhaul_manager()) {
             LOG(DEBUG) << "slave is backhaul manager, updating";
-            m_backhaul_manager_socket = fd;
+            m_pBackhaulManagerSlave = sd;
 
             // Start ARP monitor
             if (enable_arp_monitor) {
@@ -1101,7 +860,7 @@ bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
     case beerocks_message::ACTION_PLATFORM_ONBOARD_QUERY_REQUEST: {
         LOG(TRACE) << "ACTION_PLATFORM_ONBOARD_QUERY_REQUEST";
         auto response = message_com::create_vs_message<
-            beerocks_message::cACTION_PLATFORM_ONBOARD_QUERY_RESPONSE>(m_cmdu_tx);
+            beerocks_message::cACTION_PLATFORM_ONBOARD_QUERY_RESPONSE>(cmdu_tx);
         if (response == nullptr) {
             LOG(ERROR) << "Failed building ONBOARD RESPONSE message!";
             return false;
@@ -1109,14 +868,14 @@ bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
         response->params().onboarding = bpl::cfg_is_onboarding();
 
         // Sent with unsafe because BML is reachable only on platform thread
-        send_cmdu(fd, m_cmdu_tx);
+        message_com::send_cmdu(sd, cmdu_tx);
 
     } break;
 
     case beerocks_message::ACTION_PLATFORM_LOCAL_MASTER_GET_REQUEST: {
         LOG(TRACE) << "ACTION_PLATFORM_LOCAL_MASTER_GET_REQUEST";
         auto response = message_com::create_vs_message<
-            beerocks_message::cACTION_PLATFORM_LOCAL_MASTER_GET_RESPONSE>(m_cmdu_tx);
+            beerocks_message::cACTION_PLATFORM_LOCAL_MASTER_GET_RESPONSE>(cmdu_tx);
         if (response == nullptr) {
             LOG(ERROR) << "Failed building message!";
             return false;
@@ -1126,7 +885,7 @@ bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
         response->local_master() = bpl::cfg_is_master();
 
         // Sent with unsafe because BML is reachable only on platform thread
-        send_cmdu(fd, m_cmdu_tx);
+        message_com::send_cmdu(sd, cmdu_tx);
 
     } break;
 
@@ -1145,7 +904,7 @@ bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
                    << int(request->vap_id());
 
         auto response = message_com::create_vs_message<
-            beerocks_message::cACTION_PLATFORM_WIFI_CREDENTIALS_GET_RESPONSE>(m_cmdu_tx);
+            beerocks_message::cACTION_PLATFORM_WIFI_CREDENTIALS_GET_RESPONSE>(cmdu_tx);
 
         if (response == nullptr) {
             LOG(ERROR) << "Failed building message!";
@@ -1212,7 +971,7 @@ bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
                   << " bSEC: " << response->front_params().sec;
 
         // Sent with unsafe because BML is reachable only on platform thread
-        send_cmdu(fd, m_cmdu_tx);
+        message_com::send_cmdu(sd, cmdu_tx);
 
     } break;
 
@@ -1283,11 +1042,11 @@ bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
     return true;
 }
 
-bool PlatformManager::handle_arp_monitor()
+bool main_thread::handle_arp_monitor()
 {
     auto arp_notif =
         message_com::create_vs_message<beerocks_message::cACTION_PLATFORM_ARP_MONITOR_NOTIFICATION>(
-            m_cmdu_tx);
+            cmdu_tx);
     if (arp_notif == nullptr) {
         LOG(ERROR) << "Failed building message!";
         return false;
@@ -1301,14 +1060,14 @@ bool PlatformManager::handle_arp_monitor()
     }
 
     // Ignore IPs outside the monitored network, zeroed MACs or invalid state
-    if (((beerocks::net::network_utils::uint_ipv4_from_array(entry.ip) & m_uiArpMonMask) !=
+    if (((network_utils::uint_ipv4_from_array(entry.ip) & m_uiArpMonMask) !=
          (m_uiArpMonIP & m_uiArpMonMask)) ||
         (!memcmp(entry.mac, s_arrZeroMac, sizeof(entry.mac))) ||
         (!memcmp(entry.mac, s_arrBCastMac, sizeof(entry.mac))) ||
         (entry.state == beerocks::ARP_NUD_FAILED)) {
 
         // LOG(DEBUG) << "Ignoring ARP from: "
-        //            << beerocks::net::network_utils::ipv4_to_string(entry.ip) << " ("
+        //            << network_utils::ipv4_to_string(entry.ip) << " ("
         //            << entry.mac << ")"
         //            << ", state: " << int(entry.state)
         //            << ", type: " << int(entry.type);
@@ -1318,35 +1077,32 @@ bool PlatformManager::handle_arp_monitor()
 
     // Copy entry values
     std::copy_n(entry.mac, sizeof(sMacAddr::oct), arp_notif->params().mac.oct);
-    std::copy_n(entry.ip, sizeof(beerocks::net::sIpv4Addr::oct), arp_notif->params().ipv4.oct);
+    std::copy_n(entry.ip, sizeof(sIpv4Addr::oct), arp_notif->params().ipv4.oct);
     arp_notif->params().iface_idx = entry.iface_idx;
     arp_notif->params().state     = entry.state;
     arp_notif->params().source    = entry.source;
     arp_notif->params().type      = entry.type;
 
     // After processing the message, copy the ipv4 and mac as strings
-    std::string client_ipv4 =
-        beerocks::net::network_utils::ipv4_to_string(arp_notif->params().ipv4);
-    std::string client_mac = tlvf::mac_to_string(arp_notif->params().mac);
+    std::string client_ipv4 = network_utils::ipv4_to_string(arp_notif->params().ipv4);
+    std::string client_mac  = tlvf::mac_to_string(arp_notif->params().mac);
 
+    Socket *sd       = nullptr;
     auto iIfaceIndex = arp_notif->params().iface_idx;
 
-    auto iface_name = beerocks::net::network_utils::linux_get_iface_name(iIfaceIndex);
+    auto iface_name = network_utils::linux_get_iface_name(iIfaceIndex);
 
     if (iface_name.empty()) {
         LOG(ERROR) << "Failed to find iface of iface_index" << int(iIfaceIndex);
         return false;
     }
 
-    int fd = get_slave_socket_from_hostap_iface_name(iface_name);
+    sd = get_slave_socket_from_hostap_iface_name(iface_name);
 
     // Use the Backhaul Manager Slave as the default destination
-    if (beerocks::net::FileDescriptor::invalid_descriptor == fd) {
-        fd = get_backhaul_socket();
-        if (beerocks::net::FileDescriptor::invalid_descriptor == fd) {
-            LOG(WARNING) << "Failed obtaining slave socket";
-            return false;
-        }
+    if ((sd == nullptr) && ((sd = get_backhaul_socket()) == nullptr)) {
+        LOG(WARNING) << "Failed obtaining slave socket";
+        return false;
     }
 
     auto it_iface = m_mapIfaces.find(iface_name);
@@ -1357,7 +1113,7 @@ bool PlatformManager::handle_arp_monitor()
     } else if (entry.type != ARP_TYPE_DELNEIGH) {
 
         std::string mac  = tlvf::mac_to_string(arp_notif->params().mac);
-        std::string ipv4 = beerocks::net::network_utils::ipv4_to_string(arp_notif->params().ipv4);
+        std::string ipv4 = network_utils::ipv4_to_string(arp_notif->params().ipv4);
         LOG(WARNING) << "Interface index " << int(iIfaceIndex) << " not found! mac=" << mac
                      << ", ipv4=" << ipv4;
         return (false);
@@ -1386,14 +1142,14 @@ bool PlatformManager::handle_arp_monitor()
                                           .count();
 
             // Check for IP/Inteface changes
-            if ((pArpEntry->second->ip != beerocks::net::network_utils::uint_ipv4_from_array(
-                                              arp_notif->params().ipv4.oct)) ||
+            if ((pArpEntry->second->ip !=
+                 network_utils::uint_ipv4_from_array(arp_notif->params().ipv4.oct)) ||
                 (pArpEntry->second->iface_index != int(arp_notif->params().iface_idx)) ||
                 (last_seen_duration >= ARP_NOTIF_INTERVAL)) {
 
                 // Update the entry
-                pArpEntry->second->ip = beerocks::net::network_utils::uint_ipv4_from_array(
-                    arp_notif->params().ipv4.oct);
+                pArpEntry->second->ip =
+                    network_utils::uint_ipv4_from_array(arp_notif->params().ipv4.oct);
                 pArpEntry->second->iface_index = arp_notif->params().iface_idx;
                 pArpEntry->second->last_seen   = now;
 
@@ -1411,14 +1167,14 @@ bool PlatformManager::handle_arp_monitor()
     }
 
     // Send the message to the slave
-    if ((beerocks::net::FileDescriptor::invalid_descriptor != fd) && fSendNotif) {
-        send_cmdu_safe(fd, m_cmdu_tx);
+    if (sd && fSendNotif) {
+        send_cmdu_safe(sd, cmdu_tx);
     }
 
     return (true);
 }
 
-bool PlatformManager::handle_arp_raw()
+bool main_thread::handle_arp_raw()
 {
     // Skip invalid ARP packets
     bpl::BPL_ARP_MON_ENTRY entry;
@@ -1433,7 +1189,7 @@ bool PlatformManager::handle_arp_raw()
 
     auto arp_resp =
         message_com::create_vs_message<beerocks_message::cACTION_PLATFORM_ARP_QUERY_RESPONSE>(
-            m_cmdu_tx, task_id);
+            cmdu_tx, task_id);
 
     if (arp_resp == nullptr) {
         LOG(ERROR) << "Failed building cACTION_PLATFORM_ARP_QUERY_RESPONSE message!";
@@ -1479,16 +1235,15 @@ bool PlatformManager::handle_arp_raw()
             ? "BACK"
             : "FRONT";
 
-    LOG(DEBUG) << "Discovered IP: "
-               << beerocks::net::network_utils::ipv4_to_string(arp_resp->params().ipv4) << " ("
-               << arp_resp->params().mac << ") on '" << strIface << "' (" << strSource << ")";
+    LOG(DEBUG) << "Discovered IP: " << network_utils::ipv4_to_string(arp_resp->params().ipv4)
+               << " (" << arp_resp->params().mac << ") on '" << strIface << "' (" << strSource
+               << ")";
 
     // Update ARP entry parameters
     auto pArpEntry = m_mapArpEntries.find(arp_resp->params().mac);
 
     if (pArpEntry != m_mapArpEntries.end()) {
-        pArpEntry->second->ip =
-            beerocks::net::network_utils::uint_ipv4_from_array(arp_resp->params().ipv4.oct);
+        pArpEntry->second->ip = network_utils::uint_ipv4_from_array(arp_resp->params().ipv4.oct);
         pArpEntry->second->iface_index = arp_resp->params().iface_idx;
         pArpEntry->second->last_seen   = std::chrono::steady_clock::now();
     } else {
@@ -1498,20 +1253,30 @@ bool PlatformManager::handle_arp_raw()
     }
 
     // Get a slave socket
-    int fd = get_backhaul_socket();
+    Socket *sd = get_backhaul_socket();
 
-    if (beerocks::net::FileDescriptor::invalid_descriptor != fd) {
+    if (sd) {
         LOG(TRACE) << "ACTION_PLATFORM_ARP_QUERY_RESPONSE mac=" << arp_resp->params().mac
                    << " task_id=" << task_id;
-        send_cmdu_safe(fd, m_cmdu_tx);
+        send_cmdu_safe(sd, cmdu_tx);
     }
 
     return (true);
 }
 
-void PlatformManager::clean_old_arp_entries()
+void main_thread::arp_entries_cleanup()
 {
+    if (!enable_arp_monitor || !m_mapArpEntries.size())
+        return;
+
     auto now = std::chrono::steady_clock::now();
+
+    if (std::chrono::duration_cast<std::chrono::milliseconds>(now - m_tpArpEntriesCleanup).count() <
+        ARP_CLEAN_INTERVAL) {
+        return;
+    }
+
+    m_tpArpEntriesCleanup = now;
 
     for (auto it = m_mapArpEntries.begin(); it != m_mapArpEntries.end();) {
 
@@ -1521,9 +1286,8 @@ void PlatformManager::clean_old_arp_entries()
 
         // If the client wasn't seen --> erase it
         if (last_seen_duration >= ARP_NOTIF_INTERVAL) {
-            LOG(INFO) << "Removing client with MAC " << it->first
-                      << " due to inactivity for more than " << last_seen_duration
-                      << " milliseconds.";
+            LOG(INFO) << "Removing client with MAC " << (const uint8_t *)&it->first
+                      << " due to inactivity of " << last_seen_duration << " milliseconds.";
 
             it = m_mapArpEntries.erase(it);
         } else {
@@ -1532,14 +1296,55 @@ void PlatformManager::clean_old_arp_entries()
     }
 }
 
-bool PlatformManager::init_arp_monitor()
+void main_thread::after_select(bool timeout)
+{
+    // On timeout
+    if (timeout) {
+        // Cleanup old arp entries...
+        arp_entries_cleanup();
+        return;
+    }
+
+    // DHCP Monitor
+    if (m_pDHCPMonSocket && read_ready(m_pDHCPMonSocket)) {
+        clear_ready(m_pDHCPMonSocket);
+        bpl::dhcp_mon_handle_event();
+    }
+
+    // ARP Monitor
+    if (m_pArpMonSocket && read_ready(m_pArpMonSocket)) {
+        clear_ready(m_pArpMonSocket);
+        if (!handle_arp_monitor()) {
+            LOG(ERROR) << "handle_arp_monitor failed, restarting ARP monitor";
+            if (!restart_arp_monitor()) {
+                LOG(ERROR) << "failed to restart ARP monitor";
+            }
+        }
+    }
+
+    // ARP Monitor - RAW Socket
+    if (m_pArpRawSocket && read_ready(m_pArpRawSocket)) {
+        clear_ready(m_pArpRawSocket);
+        if (!handle_arp_raw()) {
+            LOG(ERROR) << "handle_arp_raw failed, restarting ARP monitor";
+            if (!restart_arp_monitor()) {
+                LOG(ERROR) << "failed to restart ARP monitor";
+            }
+        }
+    }
+
+    // check if wlan params changed
+    wlan_params_changed_check();
+}
+
+bool main_thread::init_arp_monitor()
 {
     if (!m_ctxArpMon) {
         LOG(DEBUG) << "Starting ARP Monitor...";
 
         // Read IP/Netmask of the monitored interface
-        beerocks::net::network_utils::raw_iface_info info;
-        if (!beerocks::net::network_utils::get_raw_iface_info(config.bridge_iface, info)) {
+        network_utils::raw_iface_info info;
+        if (!network_utils::get_raw_iface_info(config.bridge_iface, info)) {
             LOG(ERROR) << "Failed reading '" + config.bridge_iface + "' information";
             return false;
         }
@@ -1559,104 +1364,29 @@ bool PlatformManager::init_arp_monitor()
         m_uiArpMonIP   = info.ipa.s_addr;
         m_uiArpMonMask = info.nmask.s_addr;
 
-        // TODO: PPM-639 Inject ARP monitor to platform manager
-        if (beerocks::net::FileDescriptor::invalid_descriptor == m_arp_raw_socket) {
-            auto connection = std::make_unique<beerocks::net::SocketConnectionImpl>(
-                std::make_shared<beerocks::net::ConnectedSocket>(
-                    bpl::arp_mon_get_raw_arp_fd(m_ctxArpMon)));
-            if (!connection) {
-                LOG(ERROR) << "Unable to create ARP raw connection!";
-                stop_arp_monitor();
-                return false;
-            }
-
-            beerocks::EventLoop::EventHandlers handlers;
-            // Handle event
-            handlers.on_read = [&](int fd, EventLoop &loop) {
-                if (!handle_arp_raw()) {
-                    LOG(ERROR) << "handle_arp_raw failed, restarting ARP monitor";
-                    if (!restart_arp_monitor()) {
-                        LOG(ERROR) << "failed to restart ARP monitor";
-                    }
-                }
-                return true;
-            };
-
-            // Remove the socket on disconnection or error
-            handlers.on_disconnect = [&](int fd, EventLoop &loop) {
-                remove_connection(fd);
-                return true;
-            };
-            handlers.on_error = handlers.on_disconnect;
-
-            int connected_socket = connection->socket()->fd();
-            if (!add_connection(connected_socket, std::move(connection), handlers)) {
-                LOG(ERROR) << "Unable to add ARP raw socket connection !";
-                stop_arp_monitor();
-                return false;
-            }
-
-            m_arp_raw_socket = bpl::arp_mon_get_raw_arp_fd(m_ctxArpMon);
+        // Create wrapper socket classes
+        if (!m_pArpRawSocket) {
+            m_pArpRawSocket = new Socket(bpl::arp_mon_get_raw_arp_fd(m_ctxArpMon));
+            add_socket(m_pArpRawSocket);
         }
 
-        if (beerocks::net::FileDescriptor::invalid_descriptor == m_arp_mon_socket) {
-            auto connection = std::make_unique<beerocks::net::SocketConnectionImpl>(
-                std::make_shared<beerocks::net::ConnectedSocket>(bpl::arp_mon_get_fd(m_ctxArpMon)));
-            if (!connection) {
-                LOG(ERROR) << "Unable to create ARP monitor connection!";
-                stop_arp_monitor();
-                return false;
-            }
-
-            beerocks::EventLoop::EventHandlers handlers;
-            // Handle event
-            handlers.on_read = [&](int fd, EventLoop &loop) {
-                if (!handle_arp_monitor()) {
-                    LOG(ERROR) << "handle_arp_monitor failed, restarting ARP monitor";
-                    if (!restart_arp_monitor()) {
-                        LOG(ERROR) << "failed to restart ARP monitor";
-                    }
-                }
-                return true;
-            };
-
-            // Remove the socket on disconnection or error
-            handlers.on_disconnect = [&](int fd, EventLoop &loop) {
-                remove_connection(fd);
-                return true;
-            };
-            handlers.on_error = handlers.on_disconnect;
-
-            int connected_socket = connection->socket()->fd();
-            if (!add_connection(connected_socket, std::move(connection), handlers)) {
-                LOG(ERROR) << "Unable to add ARP monitor socket connection !";
-                stop_arp_monitor();
-                return false;
-            }
-
-            m_arp_mon_socket = bpl::arp_mon_get_fd(m_ctxArpMon);
+        if (!m_pArpMonSocket) {
+            m_pArpMonSocket = new Socket(bpl::arp_mon_get_fd(m_ctxArpMon));
+            add_socket(m_pArpMonSocket);
         }
 
         LOG(DEBUG) << "ARP Monitor started on interface '" << config.bridge_iface << "' ("
-                   << beerocks::net::network_utils::ipv4_to_string(m_uiArpMonIP) << "/"
-                   << beerocks::net::network_utils::ipv4_to_string(m_uiArpMonMask) << ")";
+                   << network_utils::ipv4_to_string(m_uiArpMonIP) << "/"
+                   << network_utils::ipv4_to_string(m_uiArpMonMask) << ")";
 
         // Initialize the ARP entries cleanup timestamp
         m_tpArpEntriesCleanup = std::chrono::steady_clock::now();
-
-        // Start the clean-old-ARP-entries timer
-        if (!m_clean_old_arp_entries_timer->schedule(clean_old_arp_entries_timer_interval,
-                                                     clean_old_arp_entries_timer_interval)) {
-            LOG(ERROR) << "Unable to schedule clean-old-ARP-entries timer!";
-            stop_arp_monitor();
-            return false;
-        }
     }
 
     return true;
 }
 
-void PlatformManager::stop_arp_monitor()
+void main_thread::stop_arp_monitor()
 {
     if (m_ctxArpMon) {
         bpl::arp_mon_stop(m_ctxArpMon);
@@ -1664,21 +1394,20 @@ void PlatformManager::stop_arp_monitor()
         m_ctxArpMon = nullptr;
     }
 
-    if (beerocks::net::FileDescriptor::invalid_descriptor != m_arp_raw_socket) {
-        remove_connection(m_arp_raw_socket);
-        m_arp_raw_socket = beerocks::net::FileDescriptor::invalid_descriptor;
+    if (m_pArpRawSocket) {
+        remove_socket(m_pArpRawSocket);
+        delete m_pArpRawSocket;
+        m_pArpRawSocket = nullptr;
     }
 
-    if (beerocks::net::FileDescriptor::invalid_descriptor != m_arp_mon_socket) {
-        remove_connection(m_arp_mon_socket);
-        m_arp_mon_socket = beerocks::net::FileDescriptor::invalid_descriptor;
+    if (m_pArpMonSocket) {
+        remove_socket(m_pArpMonSocket);
+        delete m_pArpMonSocket;
+        m_pArpMonSocket = nullptr;
     }
-
-    // Cancel the clean-old-ARP-entries timer
-    m_clean_old_arp_entries_timer->cancel();
 }
 
-bool PlatformManager::restart_arp_monitor()
+bool main_thread::restart_arp_monitor()
 {
     stop_arp_monitor();
 
@@ -1690,15 +1419,15 @@ bool PlatformManager::restart_arp_monitor()
     return true;
 }
 
-bool PlatformManager::init_dhcp_monitor()
+bool main_thread::init_dhcp_monitor()
 {
     static auto dhcp_monitor_cb_wrapper = [&](const std::string &op, const std::string &mac,
                                               const std::string &ip, const std::string &hostname) {
         send_dhcp_notification(op, mac, ip, hostname);
     };
 
-    // TODO: PPM-639 Inject DHCP monitor to platform manager
-    if (beerocks::net::FileDescriptor::invalid_descriptor == m_dhcp_mon_socket) {
+    if (!m_pDHCPMonSocket) {
+
         int dhcp_mon_fd = bpl::dhcp_mon_start(
             [](const char *op, const char *mac, const char *ip, const char *hostname) {
                 dhcp_monitor_cb_wrapper(op, mac, ip, hostname);
@@ -1712,54 +1441,13 @@ bool PlatformManager::init_dhcp_monitor()
             return (false);
         }
 
-        auto connection = std::make_unique<beerocks::net::SocketConnectionImpl>(
-            std::make_shared<beerocks::net::ConnectedSocket>(dhcp_mon_fd));
-        if (!connection) {
-            LOG(ERROR) << "Unable to create DHCP monitor connection!";
-            stop_dhcp_monitor();
-            return false;
-        }
-
-        beerocks::EventLoop::EventHandlers handlers;
-        // Handle event
-        handlers.on_read = [&](int fd, EventLoop &loop) {
-            bpl::dhcp_mon_handle_event();
-            return true;
-        };
-
-        handlers.on_disconnect = [&](int fd, EventLoop &loop) {
-            remove_connection(fd);
-            return true;
-        };
-        handlers.on_error = handlers.on_disconnect;
-
-        int connected_socket = connection->socket()->fd();
-        if (!add_connection(connected_socket, std::move(connection), handlers)) {
-            LOG(ERROR) << "Unable to add DHCP monitor socket connection !";
-            stop_dhcp_monitor();
-            return false;
-        }
-
-        LOG(DEBUG) << "DHCP Monitor started, fd = " << dhcp_mon_fd;
-
-        m_dhcp_mon_socket = dhcp_mon_fd;
+        m_pDHCPMonSocket = new Socket(dhcp_mon_fd);
+        add_socket(m_pDHCPMonSocket);
+        LOG(DEBUG) << "DHCP Monitor Started... sd=" << intptr_t(m_pDHCPMonSocket);
     }
 
     return true;
 }
 
-void PlatformManager::stop_dhcp_monitor()
-{
-    if (bpl::dhcp_mon_stop() != 0) {
-        LOG(ERROR) << "Failed stopping DHCP Monitor!";
-    } else {
-        LOG(DEBUG) << "DHCP Monitor Stopped.";
-    }
-
-    if (beerocks::net::FileDescriptor::invalid_descriptor != m_dhcp_mon_socket) {
-        remove_connection(m_dhcp_mon_socket);
-        m_dhcp_mon_socket = beerocks::net::FileDescriptor::invalid_descriptor;
-    }
-}
-
+} // namespace platform_manager
 } // namespace beerocks

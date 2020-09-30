@@ -24,8 +24,9 @@ InterfaceStateMonitorImpl::InterfaceStateMonitorImpl(
 {
     EventLoop::EventHandlers handlers;
     handlers.on_read = [&](int fd, EventLoop &loop) -> bool {
-        if (m_connection->receive(m_buffer) > 0) {
-            parse(m_buffer);
+        int length = m_connection->receive(m_buffer);
+        if (length > 0) {
+            parse(reinterpret_cast<const nlmsghdr *>(m_buffer.data()), length);
         }
 
         return true;
@@ -39,10 +40,9 @@ InterfaceStateMonitorImpl::~InterfaceStateMonitorImpl()
     m_event_loop->remove_handlers(m_connection->socket()->fd());
 }
 
-void InterfaceStateMonitorImpl::parse(const Buffer &buffer) const
+void InterfaceStateMonitorImpl::parse(const nlmsghdr *data, size_t length) const
 {
-    const nlmsghdr *msg_hdr = reinterpret_cast<const nlmsghdr *>(buffer.data());
-    size_t length           = buffer.length();
+    const nlmsghdr *msg_hdr = data;
     while (NLMSG_OK(msg_hdr, length)) {
         parse(msg_hdr);
         msg_hdr = NLMSG_NEXT(msg_hdr, length);

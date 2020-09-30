@@ -9,7 +9,6 @@
 #ifndef BCL_NETWORK_SOCKETS_IMPL_H_
 #define BCL_NETWORK_SOCKETS_IMPL_H_
 
-#include "file_descriptor_impl.h"
 #include "sockets.h"
 
 #include <bcl/beerocks_backport.h>
@@ -26,6 +25,19 @@
 
 namespace beerocks {
 namespace net {
+
+/**
+ * One possible Buffer implementation
+ */
+template <size_t Size> class BufferImpl : public Buffer {
+public:
+    const uint8_t *data() const override { return m_data; }
+    size_t size() const override { return sizeof(m_data); }
+    void clear() override { std::fill_n(m_data, size(), 0); }
+
+private:
+    uint8_t m_data[Size]{};
+};
 
 /**
  * Abstract base class for all types of sockets: Raw, UDP, TCP, UDS, ...
@@ -64,10 +76,11 @@ private:
 
 class UdsAddress : public Socket::Address {
 public:
-    explicit UdsAddress(const std::string &path = "")
+    UdsAddress(const std::string &path = "")
     {
         m_address.sun_family = AF_UNIX;
         string_utils::copy_string(m_address.sun_path, path.c_str(), sizeof(m_address.sun_path));
+        m_length = path.length();
     }
 
     std::string path() const { return m_address.sun_path; }
@@ -81,7 +94,7 @@ public:
 
 private:
     sockaddr_un m_address  = {};
-    socklen_t m_length     = sizeof(m_address);
+    socklen_t m_length     = 0;
     const socklen_t m_size = sizeof(m_address);
 };
 
@@ -212,7 +225,7 @@ public:
      *
      * @param type Socket type (i.e.: communication style).
      */
-    explicit UdsSocket(int type = SOCK_STREAM) : SocketAbstractImpl(socket(AF_UNIX, type, 0)) {}
+    explicit UdsSocket(int type = SOCK_DGRAM) : SocketAbstractImpl(socket(AF_UNIX, type, 0)) {}
 };
 
 class NetlinkSocket : public SocketAbstractImpl {
@@ -235,12 +248,7 @@ public:
  */
 class SocketConnectionImpl : public Socket::Connection {
 public:
-    /**
-     * @brief Class constructor.
-     *
-     * @param socket Underlying socket used by this connection.
-     */
-    explicit SocketConnectionImpl(std::shared_ptr<Socket> socket) : m_socket(socket) {}
+    explicit SocketConnectionImpl(const std::shared_ptr<Socket> &socket) : m_socket(socket) {}
 
     /**
      * @brief Returns the underlying socket used by this connection.
@@ -261,13 +269,7 @@ public:
         if (offset >= buffer.size()) {
             return -1;
         }
-
-        int result = ::recv(m_socket->fd(), buffer.data() + offset, buffer.size() - offset, 0);
-        if (result > 0) {
-            buffer.length() += static_cast<size_t>(result);
-        }
-
-        return result;
+        return ::recv(m_socket->fd(), buffer.data() + offset, buffer.size() - offset, MSG_DONTWAIT);
     }
 
     /**
@@ -280,14 +282,8 @@ public:
     int receive_from(Buffer &buffer, Socket::Address &address) override
     {
         address.length() = address.size();
-
-        int result = ::recvfrom(m_socket->fd(), buffer.data(), buffer.size(), 0, address.sockaddr(),
-                                &address.length());
-        if (result >= 0) {
-            buffer.length() = static_cast<size_t>(result);
-        }
-
-        return result;
+        return ::recvfrom(m_socket->fd(), buffer.data(), buffer.size(), MSG_DONTWAIT,
+                          address.sockaddr(), &address.length());
     }
 
     /**
@@ -297,9 +293,12 @@ public:
      *
      * This implementation uses the send() system call.
      */
-    int send(const Buffer &buffer) override
+    int send(const Buffer &buffer, size_t length) override
     {
-        return ::send(m_socket->fd(), buffer.data(), buffer.length(), MSG_NOSIGNAL);
+        if (length > buffer.size()) {
+            return -1;
+        }
+        return ::send(m_socket->fd(), buffer.data(), length, MSG_NOSIGNAL);
     }
 
     /**
@@ -309,9 +308,9 @@ public:
      *
      * This implementation uses the sendto() system call.
      */
-    int send_to(const Buffer &buffer, const Socket::Address &address) override
+    int send_to(const Buffer &buffer, size_t length, const Socket::Address &address) override
     {
-        return ::sendto(m_socket->fd(), buffer.data(), buffer.length(), 0, address.sockaddr(),
+        return ::sendto(m_socket->fd(), buffer.data(), buffer.size(), 0, address.sockaddr(),
                         address.length());
     }
 
@@ -324,21 +323,6 @@ private:
 
 class ServerSocketAbstractImpl : public ServerSocket {
 public:
-    /**
-     * @brief Returns the underlying socket used by this server.
-     *
-     * @see ServerSocket::socket
-     */
-    std::shared_ptr<Socket> socket() override { return m_socket; }
-
-    /**
-     * @brief Binds address to the socket.
-     *
-     * This method is a wrapper around the `bind` system call.
-     *
-     * @param address Socket address to assign to the socket.
-     * @return true on success and false otherwise.
-     */
     bool bind(const Socket::Address &address)
     {
         if (0 != ::bind(m_socket->fd(), address.sockaddr(), address.length())) {
@@ -349,15 +333,7 @@ public:
         return true;
     }
 
-    /**
-     * @brief Listens for incoming connection requests.
-     *
-     * This method is a wrapper around the `listen` system call.
-     *
-     * @param backlog Maximum length to which the queue of pending connections for the socket may grow.
-     * @return true on success and false otherwise.
-     */
-    bool listen(int backlog = 1)
+    bool listen(int backlog)
     {
         if (0 != ::listen(m_socket->fd(), backlog)) {
             LOG(ERROR) << "Unable to listen for incoming connections: " << strerror(errno);
@@ -367,14 +343,6 @@ public:
         return true;
     }
 
-    /**
-     * @brief Accepts an incoming connection request.
-     *
-     * This method is a wrapper around the `accept` system call.
-     *
-     * @param address Address of the peer socket.
-     * @return Accepted incoming connection and nullptr on error.
-     */
     std::unique_ptr<Socket::Connection> accept(Socket::Address &address) override
     {
         address.length()     = address.size();
@@ -389,36 +357,12 @@ public:
     }
 
 protected:
-    /**
-     * @brief Class constructor.
-     *
-     * @param socket Underlying socket used by this server socket.
-     */
-    explicit ServerSocketAbstractImpl(std::shared_ptr<Socket> socket) : m_socket(socket) {}
-
-    /**
-     * Underlying socket used by this server socket.
-     */
+    explicit ServerSocketAbstractImpl(const std::shared_ptr<Socket> &socket) : m_socket(socket) {}
     std::shared_ptr<Socket> m_socket;
 };
 
 class ClientSocketAbstractImpl : public ClientSocket {
 public:
-    /**
-     * @brief Returns the underlying socket used by this client.
-     *
-     * @see ClientSocket::socket
-     */
-    std::shared_ptr<Socket> socket() override { return m_socket; }
-
-    /**
-     * @brief Binds address to the socket.
-     *
-     * This method is a wrapper around the `bind` system call.
-     *
-     * @param address Socket address to assign to the socket.
-     * @return true on success and false otherwise.
-     */
     bool bind(const Socket::Address &address)
     {
         if (0 != ::bind(m_socket->fd(), address.sockaddr(), address.length())) {
@@ -429,14 +373,6 @@ public:
         return true;
     }
 
-    /**
-     * @brief Connects to a server socket.
-     *
-     * This method is a wrapper around the `connect` system call.
-     *
-     * @param address Address of the server socket.
-     * @return Connection established and nullptr on error.
-     */
     std::unique_ptr<Socket::Connection> connect(const Socket::Address &address) override
     {
         if (0 != ::connect(m_socket->fd(), address.sockaddr(), address.length())) {
@@ -448,29 +384,22 @@ public:
     }
 
 protected:
-    /**
-     * @brief Class constructor.
-     *
-     * @param socket Underlying socket used by this client socket.
-     */
-    explicit ClientSocketAbstractImpl(std::shared_ptr<Socket> socket) : m_socket(socket) {}
-
-    /**
-     * Underlying socket used by this client socket.
-     */
+    explicit ClientSocketAbstractImpl(const std::shared_ptr<Socket> &socket) : m_socket(socket) {}
     std::shared_ptr<Socket> m_socket;
 };
 
 template <class SocketType> class ServerSocketImpl : public ServerSocketAbstractImpl {
 public:
-    explicit ServerSocketImpl(std::shared_ptr<SocketType> socket) : ServerSocketAbstractImpl(socket)
+    explicit ServerSocketImpl(const std::shared_ptr<SocketType> &socket)
+        : ServerSocketAbstractImpl(socket)
     {
     }
 };
 
 template <class SocketType> class ClientSocketImpl : public ClientSocketAbstractImpl {
 public:
-    explicit ClientSocketImpl(std::shared_ptr<SocketType> socket) : ClientSocketAbstractImpl(socket)
+    explicit ClientSocketImpl(const std::shared_ptr<SocketType> &socket)
+        : ClientSocketAbstractImpl(socket)
     {
     }
 };
