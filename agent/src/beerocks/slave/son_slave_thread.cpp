@@ -4565,6 +4565,13 @@ bool slave_thread::channel_selection_current_channel_restricted()
     channel.channel           = radio->channel;
     auto operating_class      = wireless_utils::get_operating_class_by_channel(channel);
 
+    if (operating_class == 0) {
+        LOG(ERROR) << "Unknown operating class for bandwidth= " << channel.channel_bandwidth
+                   << " channel=" << channel.channel
+                   << ". Considering the channel to be restricted";
+        return true;
+    }
+
     LOG(DEBUG) << "Current channel " << int(channel.channel) << " bw "
                << int(channel.channel_bandwidth) << " oper_class " << int(operating_class);
     for (const auto &preference : channel_preferences) {
