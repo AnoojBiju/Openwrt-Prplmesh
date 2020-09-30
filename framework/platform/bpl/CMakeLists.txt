@@ -25,6 +25,11 @@ set(BEEROCKS_WPA_SUPPLICANT_WLAN3_CTRL_IFACE "/var/run/wpa_supplicant/${BEEROCKS
 # Add prplmesh_platform_db config generation
 add_subdirectory(platform_db)
 
+configure_file(
+       "${CMAKE_CURRENT_SOURCE_DIR}/linux/bpl_cfg_ifaces.cpp.in"
+       "${CMAKE_CURRENT_SOURCE_DIR}/linux/bpl_cfg_ifaces.cpp"
+       )
+
 # OpenWRT
 if (TARGET_PLATFORM STREQUAL "openwrt")
 

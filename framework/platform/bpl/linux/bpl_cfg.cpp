@@ -26,6 +26,9 @@ using namespace mapf;
 namespace beerocks {
 namespace bpl {
 
+bool radio_num_to_wlan_iface_name(const int32_t radio_num, std::string& iface_str);
+
+
 int cfg_get_param(const std::string &param, std::string &value)
 {
     std::ifstream in_conf_file;
@@ -290,11 +293,12 @@ int cfg_get_hostap_iface(int32_t radio_num, char hostap_iface[BPL_IFNAME_LEN])
         return RETURN_ERR;
     }
 
-    // the linux implementation expects to receive "wlanX" for interface names where the X is:
-    // 0,2 for Linux-PC
-    // 0,1 for Turris-Omnia and GLInet
-    // we return 0,1,2 and the upper layer filters the non-supported interface
-    std::string iface_str("wlan" + std::to_string(radio_num));
+    std::string iface_str;
+    if (!radio_num_to_wlan_iface_name(radio_num, iface_str)) {
+        MAPF_ERR("cfg_get_hostap_iface: unknown iface index: " + std::to_string(radio_num));
+        return RETURN_ERR;
+    }
+
     mapf::utils::copy_string(hostap_iface, iface_str.c_str(), BPL_IFNAME_LEN);
     return RETURN_OK;
 }
