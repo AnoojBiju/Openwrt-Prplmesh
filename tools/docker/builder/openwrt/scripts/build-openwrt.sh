@@ -15,7 +15,10 @@ case $TARGET_DEVICE in
     netgear-rax40|axepoint|intel_mips)
         # Add prplmesh to the list of packages of the profile:
         sed -i 's/packages:/packages:\n  - prplmesh-dwpal/g' profiles/"$TARGET_DEVICE".yml
+        # First replace the profiles
         yq write --inplace profiles/"$TARGET_DEVICE".yml feeds -f profiles_feeds/netgear-rax40.yml
+        # Then merge adding to  the packages for armx
+        yq merge --append --inplace profiles/"$TARGET_DEVICE".yml profiles_feeds/packages-rax40.yml
         ./scripts/gen_config.py "$TARGET_DEVICE" debug
         cat profiles_feeds/netgear-rax40.yml >> files/etc/prplwrt-version
     ;;
