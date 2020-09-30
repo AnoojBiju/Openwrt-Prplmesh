@@ -93,6 +93,7 @@ public:
         bool load_monitor_on_vaps;
         bool certification_mode;
         bool persistent_db;
+        int persistent_db_aging_interval;
         int roaming_5ghz_failed_attemps_threshold;
         int roaming_24ghz_failed_attemps_threshold;
         int roaming_11v_failed_attemps_threshold;
@@ -806,9 +807,9 @@ public:
     /**
      * @brief Get the clients with persistent data configured object
      * 
-     * @return std::deque<sMacAddr> containing mac addresses of clients with configured persistent data
+     * @return std::vector<sMacAddr> containing mac addresses of clients with configured persistent data
      */
-    std::deque<sMacAddr> get_clients_with_persistent_data_configured();
+    std::vector<sMacAddr> get_clients_with_persistent_data_configured();
 
     //
     // CLI
@@ -966,6 +967,9 @@ public:
 
     bool assign_dynamic_channel_selection_task_id(const sMacAddr &mac, int new_task_id);
     int get_dynamic_channel_selection_task_id(const sMacAddr &mac);
+
+    bool assign_persistent_db_aging_operation_id(int new_operation_id);
+    int get_persistent_db_aging_operation_id();
 
     void lock();
     void unlock();
@@ -1162,11 +1166,12 @@ private:
     sMacAddr get_candidate_client_for_removal(
         sMacAddr client_to_skip = beerocks::net::network_utils::ZERO_MAC);
 
-    int network_optimization_task_id = -1;
-    int channel_selection_task_id    = -1;
-    int bml_task_id                  = -1;
-    int rdkb_wlan_task_id            = -1;
-    int config_update_task_id        = -1;
+    int network_optimization_task_id     = -1;
+    int channel_selection_task_id        = -1;
+    int bml_task_id                      = -1;
+    int rdkb_wlan_task_id                = -1;
+    int config_update_task_id            = -1;
+    int persistent_db_aging_operation_id = -1;
 
     std::shared_ptr<node> last_accessed_node;
     std::string last_accessed_node_mac;
