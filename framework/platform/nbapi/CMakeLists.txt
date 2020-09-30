@@ -13,22 +13,33 @@ message("${BoldWhite}Preparing ${BoldGreen}${PROJECT_NAME}${BoldWhite} for the $
 set(MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 
 # Common Sources
-set(nbapi_sources ${MODULE_PATH}/nbapi.cpp)
+set(nbapi_sources ${MODULE_PATH}/ambiorix_dummy.cpp)
+if (ENABLE_NBAPI)
+    list(APPEND nbapi_sources ${MODULE_PATH}/nbapi.cpp)
+endif()
+
 
 # Include AMBIORIX in the build
-find_package(amxb REQUIRED)
-find_package(amxc REQUIRED)
-find_package(amxd REQUIRED)
-find_package(amxp REQUIRED)
-find_package(amxo REQUIRED)
-list(APPEND NBAPI_LIBS amxb amxc amxd amxp amxo)
-
+if (ENABLE_NBAPI)
+    find_package(amxb REQUIRED)
+    find_package(amxc REQUIRED)
+    find_package(amxd REQUIRED)
+    find_package(amxp REQUIRED)
+    find_package(amxo REQUIRED)
+    list(APPEND NBAPI_LIBS amxb amxc amxd amxp amxo)
+endif()
 
 # Build the library
 add_library(${PROJECT_NAME} ${nbapi_sources})
+
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${prplmesh_VERSION} SOVERSION ${prplmesh_VERSION_MAJOR})
 set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,-z,defs")
-target_link_libraries(${PROJECT_NAME} PRIVATE ${NBAPI_LIBS} mapfcommon elpp bcl)
+
+if (ENABLE_NBAPI)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${NBAPI_LIBS} mapfcommon elpp)
+else ()
+    target_link_libraries(${PROJECT_NAME} PRIVATE mapfcommon elpp)
+endif()
 
 # Install
 target_include_directories(${PROJECT_NAME}
