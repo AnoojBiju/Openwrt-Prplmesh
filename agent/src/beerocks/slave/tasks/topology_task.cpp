@@ -411,6 +411,11 @@ bool TopologyTask::add_device_information_tlv()
             LOG(DEBUG) << "filling interface information on radio="
                        << (front_iface ? radio->front.iface_name : radio->back.iface_name);
 
+            if ((front_iface && radio->front.iface_mac == network_utils::ZERO_MAC) ||
+                (!front_iface && radio->back.iface_mac == network_utils::ZERO_MAC)) {
+                return true;
+            }
+
             // Skip Backhaul iteration iface when STA BWL is not allocated (Eth connection or GW).
             if (!front_iface && (db->device_conf.local_gw ||
                                  radio->back.iface_name != db->backhaul.selected_iface_name)) {
@@ -595,6 +600,10 @@ bool TopologyTask::add_ap_operational_bss_tlv()
 
     for (const auto &radio : db->get_radios_list()) {
         if (!radio) {
+            continue;
+        }
+
+        if (radio->front.iface_mac == network_utils::ZERO_MAC) {
             continue;
         }
 
