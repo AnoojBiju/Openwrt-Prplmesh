@@ -6,8 +6,8 @@
  * See LICENSE file for more details.
  */
 
-#ifndef NBAPI_H
-#define NBAPI_H
+#ifndef AMBIORIX_IMPL
+#define AMBIORIX_IMPL
 
 // prplmesh
 #include <bcl/beerocks_event_loop.h>
@@ -31,23 +31,26 @@
 #include <amxo/amxo.h>
 #include <amxo/amxo_save.h>
 
+#include "ambiorix.h"
+#include "transaction.h"
+
 namespace beerocks {
 namespace nbapi {
 
 /**
- * @class Ambiorix
+ * @class AmbiorixImpl
  * @brief This class manages the ambiorix instance.
  */
-class Ambiorix {
+class AmbiorixImpl : public Ambiorix {
 
 public:
-    explicit Ambiorix(std::shared_ptr<EventLoop> event_loop);
+    explicit AmbiorixImpl(std::shared_ptr<EventLoop> event_loop, amxd_object_t *obj);
 
     /**
-     * @brief Ambiorix destructor removes: bus connection, data model, parser and all data
+     * @brief AmbiorixImpl destructor removes: bus connection, data model, parser and all data
      *        from the backend (UBus, PCB, etc.).
      */
-    virtual ~Ambiorix();
+    virtual ~AmbiorixImpl();
 
     /**
      * @brief Initialize the ambiorix library: load backend, connect to the bus, load data model,
@@ -68,21 +71,13 @@ public:
      * @param value Value which need to set.
      * @return True on success and false otherwise.
      */
-    bool set(const std::string &relative_path, const std::string &value);
-    bool set(const std::string &relative_path, const int32_t &value);
-    bool set(const std::string &relative_path, const int64_t &value);
-    bool set(const std::string &relative_path, const uint32_t &value);
-    bool set(const std::string &relative_path, const uint64_t &value);
-    bool set(const std::string &relative_path, const bool &value);
-    bool set(const std::string &relative_path, const double &value);
-
-    /**
-     * @brief Prepare transaction to the ubus
-     *
-     * @param relative_path Path to the object in datamodel (ex: "Controller.Network.ID").
-     * @return Pointer on the object on success and nullptr otherwise.
-     */
-    amxd_object_t *prepare_transaction(const std::string &relative_path, amxd_trans_t &transaction);
+    virtual bool set(const std::string &relative_path, const std::string &value);
+    virtual bool set(const std::string &relative_path, const int32_t &value);
+    virtual bool set(const std::string &relative_path, const int64_t &value);
+    virtual bool set(const std::string &relative_path, const uint32_t &value);
+    virtual bool set(const std::string &relative_path, const uint64_t &value);
+    virtual bool set(const std::string &relative_path, const bool &value);
+    virtual bool set(const std::string &relative_path, const double &value);
 
     /**
      * @brief Apply transaction
@@ -91,14 +86,14 @@ public:
      *                    needed for transaction.
      * @return True on success and false otherwise.
      */
-    bool apply_transaction(amxd_trans_t &transaction);
+    virtual bool apply_transaction();
 
     /* @brief Add instance to the data model object with type list
      *
      * @param relative_path Path to the object with type list in datamodel (ex: "Controller.Network.Device").
      * @return True on success and false otherwise.
      */
-    bool add_instance(const std::string &relative_path);
+    virtual bool add_instance(const std::string &relative_path);
 
     /**
      * @brief Remove instance from the data model object with type list
@@ -107,7 +102,7 @@ public:
      * @param index Number of instance which should be remove.
      * @return True on success and false otherwise.
      */
-    bool remove_instance(const std::string &relative_path, uint32_t index);
+    virtual bool remove_instance(const std::string &relative_path, uint32_t index);
 
 private:
     // Methods
@@ -161,8 +156,10 @@ private:
     amxd_dm_t m_datamodel;
     amxo_parser_t m_parser;
     std::shared_ptr<EventLoop> m_event_loop;
+    AmbiorixImplTransaction m_trans;
 };
 
 } // namespace nbapi
 } // namespace beerocks
-#endif // NBAPI_H
+
+#endif // AMBIORIX_IMPL
