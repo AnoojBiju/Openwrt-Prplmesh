@@ -128,6 +128,7 @@ void ApAutoConfigurationTask::work()
 
             if (std::chrono::steady_clock::now() > state_status.timeout) {
                 FSM_MOVE_STATE(radio_iface, eState::CONTROLLER_DISCOVERY);
+                m_discovery_status[radio->front.freq_type].msg_sent = false;
             }
             break;
         }
