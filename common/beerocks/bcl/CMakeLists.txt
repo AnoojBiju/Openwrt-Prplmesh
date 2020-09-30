@@ -45,13 +45,9 @@ if (BUILD_TESTS)
     set(TEST_PROJECT_NAME ${PROJECT_NAME}_unit_tests)
     set(unit_tests_sources
         ${bcl_sources}
-        ${MODULE_PATH}/unit_tests/buffer_impl_test.cpp
-        ${MODULE_PATH}/unit_tests/cmdu_parser_stream_impl_test.cpp
-        ${MODULE_PATH}/unit_tests/cmdu_serializer_stream_impl_test.cpp
         ${MODULE_PATH}/unit_tests/network_utils_test.cpp
         ${MODULE_PATH}/unit_tests/event_loop_impl_test.cpp
         ${MODULE_PATH}/unit_tests/interface_state_manager_impl_test.cpp
-        ${MODULE_PATH}/unit_tests/timer_impl_test.cpp
         ${MODULE_PATH}/unit_tests/wireless_utils_test.cpp
     )
     add_executable(${TEST_PROJECT_NAME}
