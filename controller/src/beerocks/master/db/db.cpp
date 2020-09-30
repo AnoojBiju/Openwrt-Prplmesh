@@ -3147,9 +3147,9 @@ bool db::load_persistent_db_clients()
     return true;
 }
 
-std::deque<sMacAddr> db::get_clients_with_persistent_data_configured()
+std::vector<sMacAddr> db::get_clients_with_persistent_data_configured()
 {
-    std::deque<sMacAddr> configured_clients;
+    std::vector<sMacAddr> configured_clients;
     for (auto node_map : nodes) {
         for (auto kv : node_map) {
             if ((kv.second->get_type() == eType::TYPE_CLIENT) && (kv.second->mac == kv.first) &&

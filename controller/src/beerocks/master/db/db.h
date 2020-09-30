@@ -806,9 +806,9 @@ public:
     /**
      * @brief Get the clients with persistent data configured object
      * 
-     * @return std::deque<sMacAddr> containing mac addresses of clients with configured persistent data
+     * @return std::vector<sMacAddr> containing mac addresses of clients with configured persistent data
      */
-    std::deque<sMacAddr> get_clients_with_persistent_data_configured();
+    std::vector<sMacAddr> get_clients_with_persistent_data_configured();
 
     //
     // CLI
