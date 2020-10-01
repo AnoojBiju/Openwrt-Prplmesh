@@ -77,8 +77,8 @@ set prplmesh.radio1.hostap_iface='wlan2'
 set prplmesh.radio1.hostap_iface_steer_vaps='wlan2.0'
 
 # TODO: channel switching does not work yet, remove when it does:
-set wireless.radio0.channel=36
-set wireless.radio2.channel=6
+set wireless.radio0.channel=48
+set wireless.radio2.channel=1
 EOF
 
 uci commit
