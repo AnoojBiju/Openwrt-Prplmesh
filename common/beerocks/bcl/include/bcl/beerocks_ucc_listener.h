@@ -10,6 +10,7 @@
 #define __BEEROCKS_UCC_LISTENER_H__
 
 #include <bcl/beerocks_socket_thread.h>
+#include <bcl/beerocks_ucc_server.h>
 
 #include <list>
 #include <string>
@@ -23,8 +24,9 @@ static constexpr uint8_t UCC_REPLY_COMPLETE_TIMEOUT_SEC = 120;
 
 class beerocks_ucc_listener : public socket_thread {
 public:
-    beerocks_ucc_listener(uint16_t port, ieee1905_1::CmduMessageTx &cmdu);
-    ~beerocks_ucc_listener(){};
+    beerocks_ucc_listener(uint16_t port, ieee1905_1::CmduMessageTx &cmdu,
+                          std::unique_ptr<beerocks::UccServer> ucc_server);
+    ~beerocks_ucc_listener();
 
 protected:
     bool init() override;
@@ -99,8 +101,8 @@ private:
                                              std::string &err_string);
 
     // Class functions
-    void handle_wfa_ca_command(const std::string &command);
-    bool reply_ucc(eWfaCaStatus status, const std::string &description = std::string());
+    void handle_wfa_ca_command(int fd, const std::string &command);
+    bool reply_ucc(int fd, eWfaCaStatus status, const std::string &description = std::string());
 
     friend class tlvPrefilledData;
 
@@ -108,6 +110,11 @@ private:
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
     Socket *m_ucc_sd = nullptr;
     uint16_t m_port;
+
+    /**
+     * UCC server to communicate with a UCC client by exchanging commands and replies.
+     */
+    std::unique_ptr<beerocks::UccServer> m_ucc_server;
 };
 
 class tlvPrefilledData : public BaseClass {
