@@ -2194,6 +2194,29 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             return false;
         }
 
+        // Copy channels list to the AgentDB
+        auto channels_list_length = response->channel_list()->channels_list_length();
+        for (uint8_t ch_idx = 0; ch_idx < channels_list_length; ch_idx++) {
+            auto &channel_info = std::get<1>(response->channel_list()->channels_list(ch_idx));
+            auto channel       = channel_info.channel();
+            radio->channels_list[channel].tx_power_dbm = channel_info.tx_power_dbm();
+            radio->channels_list[channel].dfs_state    = channel_info.dfs_state();
+            auto supported_bw_size                     = channel_info.supported_bandwidths_length();
+            radio->channels_list[channel].supported_bw_list.resize(supported_bw_size);
+            std::copy_n(&std::get<1>(channel_info.supported_bandwidths(0)), supported_bw_size,
+                        radio->channels_list[channel].supported_bw_list.begin());
+        }
+
+        // Forward channels list to the Backhaul manager
+        auto response_out = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_CHANNELS_LIST_RESPONSE>(cmdu_tx);
+        if (!response_out) {
+            LOG(ERROR) << "Failed to build message";
+            break;
+        }
+        message_com::send_cmdu(backhaul_manager_socket, cmdu_tx);
+
+        // Create Channel preference report
         auto tuple_preferred_channels = response->preferred_channels(0);
         radio->front.preferred_channels.resize(response->preferred_channels_size());
         std::copy_n(&std::get<1>(tuple_preferred_channels), response->preferred_channels_size(),

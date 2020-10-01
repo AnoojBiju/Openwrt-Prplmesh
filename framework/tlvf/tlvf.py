@@ -421,7 +421,7 @@ class TlvF:
         sys.exit(0)
 
     def generateCode(self):
-        logConsole("Generating source code...")
+        logConsole("Generating source code...\n")
         for filename in self.yaml_file_list:
             self.openFile(filename)
             # first iteration: list local objects in order
@@ -504,9 +504,6 @@ class TlvF:
                             param_type_real.type_str, param_type_real.type_str)]
                     param_type_info = TypeInfo(value[MetaData.KEY_ENUM_STORAGE])
                     param_type_info.set_type(param_meta.type_info.type)
-                    if param_meta.type == param_type_real.type_str:
-                        self.include_list.append('"' + self.yaml_path +
-                                                 "/" + param_type + ".h" + '"')
 
             else:
                 param_type = param_dict
@@ -1957,7 +1954,7 @@ class TlvF:
             os.makedirs(path)
 
     def generateCmake(self):
-        logConsole("Generating Cmake files...")
+        logConsole("Generating Cmake files...\n")
 
         code = [
             'cmake_minimum_required(VERSION 2.8)',
