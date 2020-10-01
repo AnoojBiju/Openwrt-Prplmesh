@@ -22,6 +22,7 @@
 #include <bcl/beerocks_logging.h>
 #include <bcl/beerocks_message_structs.h>
 #include <bcl/beerocks_socket_thread.h>
+#include <bcl/beerocks_ucc_server.h>
 #include <bcl/network/network_utils.h>
 
 #include <mapf/common/encryption.h>
@@ -42,6 +43,7 @@ class master_thread : public beerocks::btl::transport_socket_thread {
 
 public:
     master_thread(const std::string &master_uds_, db &database_,
+                  std::unique_ptr<beerocks::UccServer> ucc_server,
                   std::unique_ptr<beerocks::CmduServer> cmdu_server,
                   std::shared_ptr<beerocks::EventLoop> event_loop);
     virtual ~master_thread();
