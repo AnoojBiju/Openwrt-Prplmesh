@@ -11,6 +11,8 @@
 
 #include <bcl/beerocks_ucc_listener.h>
 
+#include <bcl/beerocks_ucc_server.h>
+
 #include "db/db.h"
 
 using namespace son;
@@ -18,8 +20,8 @@ using namespace son;
 namespace beerocks {
 class controller_ucc_listener : public beerocks_ucc_listener {
 public:
-    controller_ucc_listener(db &database, ieee1905_1::CmduMessageTx &cmdu_tx);
-    ~controller_ucc_listener(){};
+    controller_ucc_listener(db &database, ieee1905_1::CmduMessageTx &cmdu_tx,
+                            std::unique_ptr<beerocks::UccServer> ucc_server);
 
 private:
     void lock() override { m_database.lock(); }
