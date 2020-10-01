@@ -450,7 +450,7 @@ bool beerocks_ucc_listener::custom_message_handler(Socket *sd, uint8_t *rx_buffe
 
     beerocks::string_utils::trim(command_string);
 
-    handle_wfa_ca_command(command_string);
+    handle_wfa_ca_command(-1, command_string);
 
     return true;
 }
@@ -459,21 +459,36 @@ bool beerocks_ucc_listener::custom_message_handler(Socket *sd, uint8_t *rx_buffe
 ////////////////////////////// Class functions ///////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-beerocks_ucc_listener::beerocks_ucc_listener(uint16_t port, ieee1905_1::CmduMessageTx &cmdu)
-    : socket_thread(), m_cmdu_tx(cmdu), m_port(port)
+beerocks_ucc_listener::beerocks_ucc_listener(uint16_t port, ieee1905_1::CmduMessageTx &cmdu,
+                                             std::unique_ptr<beerocks::UccServer> ucc_server)
+    : socket_thread(), m_cmdu_tx(cmdu), m_port(port), m_ucc_server(std::move(ucc_server))
 {
     thread_name = "ucc_listener";
     set_select_timeout(SELECT_TIMEOUT_MSC);
+
+    // UCC server is provided in certification mode only
+    if (m_ucc_server) {
+        m_ucc_server->set_command_received_handler(
+            [&](int fd, const std::string &command) { handle_wfa_ca_command(fd, command); });
+    }
+}
+
+beerocks_ucc_listener::~beerocks_ucc_listener()
+{
+    if (m_ucc_server) {
+        m_ucc_server->clear_command_received_handler();
+    }
 }
 
 /**
  * @brief Generate WFA-CA reply message and send it.
  * 
+ * @param[in] fd File descriptor of the client socket connection to send the reply through.
  * @param[in] status Status of the reply.
  * @param[in] description Optional, Description to add to the reply.
  * @return true if successful, false if not.
  */
-bool beerocks_ucc_listener::reply_ucc(eWfaCaStatus status, const std::string &description)
+bool beerocks_ucc_listener::reply_ucc(int fd, eWfaCaStatus status, const std::string &description)
 {
     std::string reply_string = "status," + wfa_ca_status_to_string(status);
 
@@ -487,18 +502,29 @@ bool beerocks_ucc_listener::reply_ucc(eWfaCaStatus status, const std::string &de
 
     LOG(DEBUG) << "Replying message: '" << reply_string << "'";
 
-    reply_string += "\r\n";
+    // This condition will be removed at the end of PPM-658
+    if (!m_ucc_server) {
+        if (m_ucc_sd == nullptr) {
+            LOG(DEBUG) << "Client disconnected before message has been sent";
+            return false;
+        }
 
-    if (m_ucc_sd == nullptr) {
-        LOG(DEBUG) << "Client disconnected before message has been sent";
-        return false;
+        reply_string += "\r\n";
+
+        // Send reply to UCC
+        auto written_size = m_ucc_sd->writeBytes(
+            reinterpret_cast<const uint8_t *>(reply_string.c_str()), reply_string.size());
+        if (written_size < 0) {
+            LOG(ERROR) << "writeBytes() failed, error=" << strerror(errno);
+            return false;
+        }
+
+        return true;
     }
 
     // Send reply to UCC
-    auto written_size = m_ucc_sd->writeBytes(
-        reinterpret_cast<const uint8_t *>(reply_string.c_str()), reply_string.size());
-    if (written_size < 0) {
-        LOG(ERROR) << "writeBytes() failed, error=" << strerror(errno);
+    if (!m_ucc_server->send_reply(fd, reply_string)) {
+        LOG(ERROR) << "Failed to send reply string!";
         return false;
     }
 
@@ -506,16 +532,17 @@ bool beerocks_ucc_listener::reply_ucc(eWfaCaStatus status, const std::string &de
 }
 
 /**
- * @brief Receives WFA-CA command, preform it and returns a reply to the sender.
+ * @brief Receives WFA-CA command, executes it and returns a reply to the sender.
  * 
+ * @param[in] fd File descriptor of the client socket connection the command was received through.
  * @param[in] command Command string.
  */
-void beerocks_ucc_listener::handle_wfa_ca_command(const std::string &command)
+void beerocks_ucc_listener::handle_wfa_ca_command(int fd, const std::string &command)
 {
     LOG(DEBUG) << "Received WFA-CA, command=\"" << command << "\"";
 
     // send back first reply
-    if (!reply_ucc(eWfaCaStatus::RUNNING)) {
+    if (!reply_ucc(fd, eWfaCaStatus::RUNNING)) {
         LOG(ERROR) << "failed to send reply";
         return;
     }
@@ -526,7 +553,7 @@ void beerocks_ucc_listener::handle_wfa_ca_command(const std::string &command)
     if (!forbidden_chars.empty()) {
         err_string = "command contain illegal chars";
         LOG(ERROR) << err_string << ": " << forbidden_chars;
-        reply_ucc(eWfaCaStatus::INVALID, err_string);
+        reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
         return;
     }
 
@@ -535,7 +562,7 @@ void beerocks_ucc_listener::handle_wfa_ca_command(const std::string &command)
     if (cmd_tokens_vec.empty()) {
         err_string = "empty command";
         LOG(ERROR) << err_string;
-        reply_ucc(eWfaCaStatus::INVALID, err_string);
+        reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
         return;
     }
 
@@ -545,29 +572,29 @@ void beerocks_ucc_listener::handle_wfa_ca_command(const std::string &command)
     switch (command_type) {
     case eWfaCaCommand::CA_GET_VERSION: {
         // Send back second reply
-        reply_ucc(eWfaCaStatus::COMPLETE, std::string("version,") + BEEROCKS_VERSION);
+        reply_ucc(fd, eWfaCaStatus::COMPLETE, std::string("version,") + BEEROCKS_VERSION);
         break;
     }
     case eWfaCaCommand::DEVICE_GET_INFO: {
         // Send back second reply
-        reply_ucc(eWfaCaStatus::COMPLETE, fill_version_reply_string());
+        reply_ucc(fd, eWfaCaStatus::COMPLETE, fill_version_reply_string());
         break;
     }
     case eWfaCaCommand::DEV_GET_PARAMETER: {
         std::unordered_map<std::string, std::string> params{{"parameter", ""}};
         if (!parse_params(cmd_tokens_vec, params, err_string)) {
             LOG(ERROR) << err_string;
-            reply_ucc(eWfaCaStatus::INVALID, err_string);
+            reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
             break;
         }
         std::string value;
         if (!handle_dev_get_param(params, value)) {
             LOG(ERROR) << "failed to get parameter " << params["parameter"] << "error: " << value;
-            reply_ucc(eWfaCaStatus::ERROR, value);
+            reply_ucc(fd, eWfaCaStatus::ERROR, value);
             break;
         }
         // Success
-        reply_ucc(eWfaCaStatus::COMPLETE, params["parameter"] + "," + value);
+        reply_ucc(fd, eWfaCaStatus::COMPLETE, params["parameter"] + "," + value);
         break;
     }
     case eWfaCaCommand::START_WPS_REGISTRATION: {
@@ -575,22 +602,22 @@ void beerocks_ucc_listener::handle_wfa_ca_command(const std::string &command)
                                                             {"wpsconfigmethod", std::string()}};
         if (!parse_params(cmd_tokens_vec, params, err_string)) {
             LOG(ERROR) << err_string;
-            reply_ucc(eWfaCaStatus::INVALID, err_string);
+            reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
             break;
         }
         if (params["wpsconfigmethod"] != "PBC") {
             err_string = "invalid WpsConfigMethod, supporting only PBC";
             LOG(ERROR) << err_string;
-            reply_ucc(eWfaCaStatus::INVALID, err_string);
+            reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
             break;
         }
         if (!handle_start_wps_registration(params["band"], err_string)) {
             LOG(ERROR) << err_string;
-            reply_ucc(eWfaCaStatus::INVALID, err_string);
+            reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
             break;
         }
         // Send back second reply
-        reply_ucc(eWfaCaStatus::COMPLETE);
+        reply_ucc(fd, eWfaCaStatus::COMPLETE);
         break;
     }
     case eWfaCaCommand::DEV_RESET_DEFAULT: {
@@ -605,7 +632,7 @@ void beerocks_ucc_listener::handle_wfa_ca_command(const std::string &command)
 
         if (!parse_params(cmd_tokens_vec, params, err_string)) {
             LOG(ERROR) << err_string;
-            reply_ucc(eWfaCaStatus::INVALID, err_string);
+            reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
             break;
         }
 
@@ -616,19 +643,19 @@ void beerocks_ucc_listener::handle_wfa_ca_command(const std::string &command)
                              "' for param name 'devrole', accepted values can be only 'controller'"
                              " or 'agent";
                 LOG(ERROR) << err_string;
-                reply_ucc(eWfaCaStatus::INVALID, err_string);
+                reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
                 break;
             } else if (m_ucc_listener_run_on == eUccListenerRunOn::CONTROLLER &&
                        params["devrole"] != "controller") {
                 err_string = "The Controller received a command that it no destined for it";
                 LOG(ERROR) << err_string;
-                reply_ucc(eWfaCaStatus::INVALID, err_string);
+                reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
                 break;
             } else if (m_ucc_listener_run_on == eUccListenerRunOn::AGENT &&
                        params["devrole"] != "agent") {
                 err_string = "The Agent received a command that it no destined for it";
                 LOG(ERROR) << err_string;
-                reply_ucc(eWfaCaStatus::INVALID, err_string);
+                reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
                 break;
             }
         }
@@ -638,7 +665,7 @@ void beerocks_ucc_listener::handle_wfa_ca_command(const std::string &command)
                 err_string = "invalid param value '" + params["map"] +
                              "' for param name 'program', accepted value can be only 'map'";
                 LOG(ERROR) << err_string;
-                reply_ucc(eWfaCaStatus::INVALID, err_string);
+                reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
                 break;
             }
         }
@@ -649,7 +676,7 @@ void beerocks_ucc_listener::handle_wfa_ca_command(const std::string &command)
                              "' for param name 'type', accepted values can be only 'test bed' or"
                              " 'dut'";
                 LOG(ERROR) << err_string;
-                reply_ucc(eWfaCaStatus::INVALID, err_string);
+                reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
                 break;
             }
         }
@@ -658,7 +685,7 @@ void beerocks_ucc_listener::handle_wfa_ca_command(const std::string &command)
         clear_configuration();
 
         // Send back second reply
-        reply_ucc(eWfaCaStatus::COMPLETE);
+        reply_ucc(fd, eWfaCaStatus::COMPLETE);
 
         break;
     }
@@ -668,7 +695,7 @@ void beerocks_ucc_listener::handle_wfa_ca_command(const std::string &command)
 
         if (!parse_params(cmd_tokens_vec, params, err_string)) {
             LOG(ERROR) << err_string;
-            reply_ucc(eWfaCaStatus::INVALID, err_string);
+            reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
             break;
         }
 
@@ -682,7 +709,7 @@ void beerocks_ucc_listener::handle_wfa_ca_command(const std::string &command)
             err_string = "invalid param value '0x" + message_type_str +
                          "' for param name 'MessageTypeValue', message type not found";
             LOG(ERROR) << err_string;
-            reply_ucc(eWfaCaStatus::INVALID, err_string);
+            reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
             break;
         }
 
@@ -690,7 +717,7 @@ void beerocks_ucc_listener::handle_wfa_ca_command(const std::string &command)
         std::list<tlv_hex_t> tlv_hex_list;
         if (!get_send_1905_1_tlv_hex_list(tlv_hex_list, params, err_string)) {
             LOG(ERROR) << err_string;
-            reply_ucc(eWfaCaStatus::INVALID, err_string);
+            reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
             break;
         }
 
@@ -701,7 +728,7 @@ void beerocks_ucc_listener::handle_wfa_ca_command(const std::string &command)
             LOG(DEBUG) << "Send preset cmdu with mid " << std::hex << g_mid;
             if (!send_cmdu_to_destination(m_cmdu_tx, dest_alid)) {
                 LOG(ERROR) << "Failed to send CMDU";
-                reply_ucc(eWfaCaStatus::ERROR, err_internal);
+                reply_ucc(fd, eWfaCaStatus::ERROR, err_internal);
                 m_cmdu_tx.reset();
                 break;
             }
@@ -712,7 +739,7 @@ void beerocks_ucc_listener::handle_wfa_ca_command(const std::string &command)
             m_cmdu_tx.reset();
             if (!cmdu_tx.create(g_mid, ieee1905_1::eMessageType(message_type))) {
                 LOG(ERROR) << "cmdu creation of type 0x" << message_type_str << ", has failed";
-                reply_ucc(eWfaCaStatus::ERROR, err_internal);
+                reply_ucc(fd, eWfaCaStatus::ERROR, err_internal);
                 break;
             }
 
@@ -723,13 +750,13 @@ void beerocks_ucc_listener::handle_wfa_ca_command(const std::string &command)
             auto tlvs = cmdu_tx.addClass<tlvPrefilledData>();
             if (!tlvs) {
                 LOG(ERROR) << "addClass tlvPrefilledData has failed";
-                reply_ucc(eWfaCaStatus::ERROR, err_internal);
+                reply_ucc(fd, eWfaCaStatus::ERROR, err_internal);
                 break;
             }
 
             if (!tlvs->add_tlvs_from_list(tlv_hex_list, err_string)) {
                 LOG(ERROR) << err_string;
-                reply_ucc(eWfaCaStatus::ERROR, err_string);
+                reply_ucc(fd, eWfaCaStatus::ERROR, err_string);
                 break;
             }
 
@@ -738,7 +765,7 @@ void beerocks_ucc_listener::handle_wfa_ca_command(const std::string &command)
 
             if (!send_cmdu_to_destination(cmdu_tx, dest_alid)) {
                 LOG(ERROR) << "Failed to send CMDU";
-                reply_ucc(eWfaCaStatus::ERROR, err_internal);
+                reply_ucc(fd, eWfaCaStatus::ERROR, err_internal);
                 break;
             }
         }
@@ -746,7 +773,7 @@ void beerocks_ucc_listener::handle_wfa_ca_command(const std::string &command)
         std::string description = "mid,0x" + string_utils::int_to_hex_string(g_mid++, 4);
 
         // Send back second reply
-        reply_ucc(eWfaCaStatus::COMPLETE, description);
+        reply_ucc(fd, eWfaCaStatus::COMPLETE, description);
         break;
     }
     case eWfaCaCommand::DEV_SET_CONFIG: {
@@ -759,7 +786,7 @@ void beerocks_ucc_listener::handle_wfa_ca_command(const std::string &command)
 
         if (!parse_params(cmd_tokens_vec, params, err_string)) {
             LOG(ERROR) << err_string;
-            reply_ucc(eWfaCaStatus::INVALID, err_string);
+            reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
             break;
         }
 
@@ -769,25 +796,25 @@ void beerocks_ucc_listener::handle_wfa_ca_command(const std::string &command)
                 err_string = "invalid param value '" + params["map"] +
                              "' for param name 'program', accepted value can be only 'map'";
                 LOG(ERROR) << err_string;
-                reply_ucc(eWfaCaStatus::INVALID, err_string);
+                reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
                 break;
             }
         }
 
         if (!handle_dev_set_config(params, err_string)) {
             LOG(ERROR) << err_string;
-            reply_ucc(eWfaCaStatus::INVALID, err_string);
+            reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
             break;
         }
 
         // Send back second reply
-        reply_ucc(eWfaCaStatus::COMPLETE);
+        reply_ucc(fd, eWfaCaStatus::COMPLETE);
         break;
     }
     default: {
         auto err_description = "Invalid WFA-CA command type: '" + command_type_str + "'";
         LOG(ERROR) << err_description;
-        reply_ucc(eWfaCaStatus::INVALID, err_description);
+        reply_ucc(fd, eWfaCaStatus::INVALID, err_description);
         break;
     }
     }
