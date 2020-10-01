@@ -20,7 +20,8 @@ using namespace beerocks;
 using namespace net;
 
 agent_ucc_listener::agent_ucc_listener(backhaul_manager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu)
-    : beerocks_ucc_listener(AgentDB::get()->device_conf.ucc_listener_port, cmdu), m_btl_ctx(btl_ctx)
+    : beerocks_ucc_listener(AgentDB::get()->device_conf.ucc_listener_port, cmdu, nullptr),
+      m_btl_ctx(btl_ctx)
 
 {
     m_ucc_listener_run_on = eUccListenerRunOn::AGENT;
