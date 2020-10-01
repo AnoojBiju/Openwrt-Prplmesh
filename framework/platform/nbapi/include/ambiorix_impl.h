@@ -1,0 +1,177 @@
+/* SPDX-License-Identifier: BSD-2-Clause-Patent
+ *
+ * SPDX-FileCopyrightText: 2020 the prplMesh contributors (see AUTHORS.md)
+ *
+ * This code is subject to the terms of the BSD+Patent license.
+ * See LICENSE file for more details.
+ */
+
+#ifndef AMBIORIX_IMPL
+#define AMBIORIX_IMPL
+
+// prplmesh
+#include <bcl/beerocks_event_loop.h>
+#include <easylogging++.h>
+#include <mapf/common/utils.h>
+
+// Ambiorix
+#include <amxc/amxc.h>
+#include <amxp/amxp.h>
+
+#include <amxc/amxc.h>
+#include <amxd/amxd_action.h>
+#include <amxd/amxd_dm.h>
+#include <amxd/amxd_object.h>
+#include <amxd/amxd_object_event.h>
+#include <amxd/amxd_transaction.h>
+
+#include <amxb/amxb.h>
+#include <amxb/amxb_register.h>
+
+#include <amxo/amxo.h>
+#include <amxo/amxo_save.h>
+
+#include "ambiorix.h"
+
+namespace beerocks {
+namespace nbapi {
+
+class AmbiorixImplTransaction : public Transaction {
+public:
+    amxd_trans_t transaction;
+    virtual void start_transaction() { return; };
+};
+
+/**
+ * @class AmbiorixImpl
+ * @brief This class manages the ambiorix instance.
+ */
+class AmbiorixImpl : public Ambiorix {
+
+public:
+    explicit AmbiorixImpl(std::shared_ptr<EventLoop> event_loop);
+
+    /**
+     * @brief AmbiorixImpl destructor removes: bus connection, data model, parser and all data
+     *        from the backend (UBus, PCB, etc.).
+     */
+    virtual ~AmbiorixImpl();
+
+    /**
+     * @brief Initialize the ambiorix library: load backend, connect to the bus, load data model,
+     *        register data model in the bus.
+     *
+     * @param amxb_backend Path to the ambiorix backend (ex: "/usr/bin/mods/amxb/mod-amxb-ubus.so").
+     * @param bus_uri Path to the bus in uri form (ex: "ubus:/var/run/ubus.sock").
+     * @param datamodel_path Path to the data model definition ODL file.
+     * @return True on success and false otherwise.
+     */
+    bool init(const std::string &amxb_backend, const std::string &bus_uri,
+              const std::string &datamodel_path);
+
+    /**
+     * @brief Set the value to the object variable.
+     *
+     * @param relative_path Path to the object in datamodel (ex: "Controller.Network.ID").
+     * @param value Value which need to set.
+     * @return True on success and false otherwise.
+     */
+    bool set(const std::string &relative_path, const std::string &value);
+    bool set(const std::string &relative_path, const int32_t &value);
+    bool set(const std::string &relative_path, const int64_t &value);
+    bool set(const std::string &relative_path, const uint32_t &value);
+    bool set(const std::string &relative_path, const uint64_t &value);
+    bool set(const std::string &relative_path, const bool &value);
+    bool set(const std::string &relative_path, const double &value);
+
+    /**
+     * @brief Prepare transaction to the ubus
+     *
+     * @param relative_path Path to the object in datamodel (ex: "Controller.Network.ID").
+     * @return Pointer on the object on success and nullptr otherwise.
+     */
+    amxd_object_t *prepare_transaction(const std::string &relative_path, amxd_trans_t &transaction);
+
+    /**
+     * @brief Apply transaction
+     *
+     * @param transaction Variable for transaction structure which contains fields
+     *                    needed for transaction.
+     * @return True on success and false otherwise.
+     */
+    bool apply_transaction(Transaction *transaction);
+
+    /* @brief Add instance to the data model object with type list
+     *
+     * @param relative_path Path to the object with type list in datamodel (ex: "Controller.Network.Device").
+     * @return True on success and false otherwise.
+     */
+    bool add_instance(const std::string &relative_path);
+
+    /**
+     * @brief Remove instance from the data model object with type list
+     *
+     * @param relative_path Path to the object with type list in datamodel (ex: "Controller.Network.Device").
+     * @param index Number of instance which should be remove.
+     * @return True on success and false otherwise.
+     */
+    bool remove_instance(const std::string &relative_path, uint32_t index);
+
+private:
+    // Methods
+
+    /**
+     * @brief Load and parse data model from the ODL file.
+     *
+     * @param datamodel_path Path to the data model definition ODL file.
+     * @return True on success and false otherwise.
+     */
+    bool load_datamodel(const std::string &datamodel_path);
+
+    /**
+     * @brief Initialize event handlers for Ambiorix fd in the event loop.
+     *
+     * @return True on success and false otherwise.
+     */
+    bool init_event_loop();
+
+    /**
+     * @brief Initialize event handlers for the ambiorix signals fd in the event loop.
+     *
+     * @return True on success and false otherwise.
+     */
+    bool init_signal_loop();
+
+    /**
+     * @brief Remove event handlers for Ambiorix fd from the event loop.
+     *
+     * @return True on success and false otherwise.
+     */
+    bool remove_event_loop();
+
+    /**
+     * @brief Remove event handlers for the ambiorix signals fd from the event loop.
+     *
+     * @return True on success and false otherwise.
+     */
+    bool remove_signal_loop();
+
+    /**
+     * @brief Find object by relative path.
+     *
+     * @param relative_path Path to the object in datamodel (ex: "Controller.Network.ID").
+     * @return Pointer on the object on success and nullptr otherwise.
+     */
+    amxd_object_t *find_object(const std::string &relative_path);
+
+    // Variables
+    amxb_bus_ctx_t *m_bus_ctx = nullptr;
+    amxd_dm_t m_datamodel;
+    amxo_parser_t m_parser;
+    std::shared_ptr<EventLoop> m_event_loop;
+};
+
+} // namespace nbapi
+} // namespace beerocks
+
+#endif // AMBIORIX_IMPL
