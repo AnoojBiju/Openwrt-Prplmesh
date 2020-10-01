@@ -204,6 +204,267 @@ bool Ambiorix::remove_signal_loop()
     return true;
 }
 
+amxd_object_t *Ambiorix::find_object(const std::string &relative_path)
+{
+
+    auto object = amxd_dm_findf(&m_datamodel, "%s", relative_path.c_str());
+    if (!object) {
+        LOG(ERROR) << "Failed to get object from data model when searching for: " << relative_path;
+        return nullptr;
+    }
+
+    return object;
+}
+
+amxd_object_t *Ambiorix::prepare_transaction(const std::string &relative_path,
+                                             amxd_trans_t &transaction)
+{
+    auto object = find_object(relative_path);
+    if (!object) {
+        LOG(ERROR) << "Couldn't get object by relative path.";
+        return nullptr;
+    }
+
+    auto status = amxd_trans_init(&transaction);
+    if (status != amxd_status_ok) {
+        LOG(ERROR) << "Couldn't inititalize transaction, status: " << status;
+        return nullptr;
+    }
+
+    status = amxd_trans_set_attr(&transaction, amxd_tattr_change_ro, true);
+    if (status != amxd_status_ok) {
+        LOG(ERROR) << "Couldn't set transaction attributes, status: " << status;
+        return nullptr;
+    }
+
+    status = amxd_trans_select_object(&transaction, object);
+    if (status != amxd_status_ok) {
+        LOG(ERROR) << "Couldn't select transaction object, status: " << status;
+        return nullptr;
+    }
+
+    return object;
+}
+
+bool Ambiorix::apply_transaction(amxd_trans_t &transaction)
+{
+    auto ret    = true;
+    auto status = amxd_trans_apply(&transaction, &m_datamodel);
+    if (status != amxd_status_ok) {
+        LOG(ERROR) << "Couldn't apply transaction object, status: " << status;
+        ret = false;
+    }
+
+    amxd_trans_clean(&transaction);
+
+    return ret;
+}
+
+bool Ambiorix::set(const std::string &relative_path, const std::string &value)
+{
+    amxd_trans_t transaction;
+    auto object = prepare_transaction(relative_path, transaction);
+
+    if (!object) {
+        LOG(ERROR) << "Failed to prepare transaction.";
+        return false;
+    }
+
+    LOG(DEBUG) << "Set value: " << value << "to the object: " << object->name;
+
+    amxd_trans_set_value(cstring_t, &transaction, object->name, value.c_str());
+
+    if (!apply_transaction(transaction)) {
+        LOG(ERROR) << "Couldn't apply transaction.";
+        return false;
+    }
+
+    return true;
+}
+
+bool Ambiorix::set(const std::string &relative_path, const int32_t &value)
+{
+    amxd_trans_t transaction;
+    auto object = prepare_transaction(relative_path, transaction);
+
+    if (!object) {
+        LOG(ERROR) << "Failed to prepare transaction.";
+        return false;
+    }
+
+    LOG(DEBUG) << "Set value: " << value << "to the object: " << object->name;
+
+    amxd_trans_set_value(int32_t, &transaction, object->name, value);
+
+    if (!apply_transaction(transaction)) {
+        LOG(ERROR) << "Couldn't apply transaction.";
+        return false;
+    }
+
+    return true;
+}
+
+bool Ambiorix::set(const std::string &relative_path, const int64_t &value)
+{
+    amxd_trans_t transaction;
+    auto object = prepare_transaction(relative_path, transaction);
+
+    if (!object) {
+        LOG(ERROR) << "Failed to prepare transaction.";
+        return false;
+    }
+
+    LOG(DEBUG) << "Set value: " << value << "to the object: " << object->name;
+
+    amxd_trans_set_value(int64_t, &transaction, object->name, value);
+
+    if (!apply_transaction(transaction)) {
+        LOG(ERROR) << "Couldn't apply transaction.";
+        return false;
+    }
+
+    return true;
+}
+
+bool Ambiorix::set(const std::string &relative_path, const uint32_t &value)
+{
+    amxd_trans_t transaction;
+    auto object = prepare_transaction(relative_path, transaction);
+
+    if (!object) {
+        LOG(ERROR) << "Failed to prepare transaction.";
+        return false;
+    }
+
+    LOG(DEBUG) << "Set value: " << value << "to the object: " << object->name;
+
+    amxd_trans_set_value(uint32_t, &transaction, object->name, value);
+
+    if (!apply_transaction(transaction)) {
+        LOG(ERROR) << "Couldn't apply transaction.";
+        return false;
+    }
+
+    return true;
+}
+
+bool Ambiorix::set(const std::string &relative_path, const uint64_t &value)
+{
+    amxd_trans_t transaction;
+    auto object = prepare_transaction(relative_path, transaction);
+
+    if (!object) {
+        LOG(ERROR) << "Failed to prepare transaction.";
+        return false;
+    }
+
+    LOG(DEBUG) << "Set value: " << value << "to the object: " << object->name;
+
+    amxd_trans_set_value(uint64_t, &transaction, object->name, value);
+
+    if (!apply_transaction(transaction)) {
+        LOG(ERROR) << "Couldn't apply transaction.";
+        return false;
+    }
+
+    return true;
+}
+
+bool Ambiorix::set(const std::string &relative_path, const double &value)
+{
+    amxd_trans_t transaction;
+    auto object = prepare_transaction(relative_path, transaction);
+
+    if (!object) {
+        LOG(ERROR) << "Failed to prepare transaction.";
+        return false;
+    }
+
+    LOG(DEBUG) << "Set value: " << value << "to the object: " << object->name;
+
+    amxd_trans_set_value(double, &transaction, object->name, value);
+
+    if (!apply_transaction(transaction)) {
+        LOG(ERROR) << "Couldn't apply transaction.";
+        return false;
+    }
+
+    return true;
+}
+
+bool Ambiorix::set(const std::string &relative_path, const bool &value)
+{
+    amxd_trans_t transaction;
+    auto object = prepare_transaction(relative_path, transaction);
+
+    if (!object) {
+        LOG(ERROR) << "Failed to prepare transaction.";
+        return false;
+    }
+
+    LOG(DEBUG) << "Set value: " << value << "to the object: " << object->name;
+
+    amxd_trans_set_value(bool, &transaction, object->name, value);
+
+    if (!apply_transaction(transaction)) {
+        LOG(ERROR) << "Couldn't apply transaction.";
+        return false;
+    }
+
+    return true;
+}
+
+bool Ambiorix::add_instance(const std::string &relative_path)
+{
+    amxd_trans_t transaction;
+    auto object = prepare_transaction(relative_path, transaction);
+    if (!object) {
+        LOG(ERROR) << "Couldn't find the object for: " << relative_path;
+        return false;
+    }
+
+    auto status = amxd_trans_add_inst(&transaction, 0, NULL);
+    if (status != amxd_status_ok) {
+        LOG(ERROR) << "Failed to add instance for: " << object->name << "status: " << status;
+    }
+
+    if (!apply_transaction(transaction)) {
+        LOG(ERROR) << "Failed to apply transaction for: " << object->name;
+        return false;
+    }
+
+    LOG(DEBUG) << "Instance added for: " << object->name;
+    return true;
+}
+
+bool Ambiorix::remove_instance(const std::string &relative_path, uint32_t index)
+{
+    amxd_trans_t transaction;
+    auto object = prepare_transaction(relative_path, transaction);
+    if (!object) {
+        LOG(ERROR) << "Couldn't find the object for: " << relative_path;
+        return false;
+    }
+
+    amxd_object_for_each(instance, it, object)
+    {
+        auto inst               = amxc_llist_it_get_data(it, amxd_object_t, it);
+        auto current_inst_index = amxd_object_get_index(inst);
+        if (current_inst_index == index) {
+            amxd_trans_del_inst(&transaction, amxd_object_get_index(inst), NULL);
+            break;
+        }
+    }
+
+    if (!apply_transaction(transaction)) {
+        LOG(ERROR) << "Failed to apply transaction for: " << object->name;
+        return false;
+    }
+
+    LOG(DEBUG) << "Instance removed for: " << object->name;
+    return true;
+}
+
 Ambiorix::~Ambiorix()
 {
     remove_event_loop();
