@@ -184,3 +184,14 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         TODO: Implement for log functions.
         '''
         self.dev.DUT.wired_sniffer.checkpoint()
+
+    def fail(self, msg: str) -> bool:
+        '''Print a red error message, increment failure count and return False.'''
+        err('FAIL: {}'.format(msg))
+        return self.__fail_no_message()
+
+    def __fail_no_message(self) -> bool:
+        '''Return False.'''
+        if opts.stop_on_failure:
+            sys.exit(1)
+        return False
