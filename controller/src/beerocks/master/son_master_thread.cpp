@@ -79,11 +79,12 @@ using namespace net;
 using namespace son;
 
 master_thread::master_thread(const std::string &master_uds_, db &database_,
+                             std::unique_ptr<beerocks::UccServer> ucc_server,
                              std::unique_ptr<beerocks::CmduServer> cmdu_server,
                              std::shared_ptr<beerocks::EventLoop> event_loop)
     : transport_socket_thread(master_uds_), database(database_),
-      m_controller_ucc_listener(database_, cert_cmdu_tx), m_cmdu_server(std::move(cmdu_server)),
-      m_event_loop(event_loop)
+      m_controller_ucc_listener(database_, cert_cmdu_tx, std::move(ucc_server)),
+      m_cmdu_server(std::move(cmdu_server)), m_event_loop(event_loop)
 {
     LOG_IF(!m_cmdu_server, FATAL) << "CMDU server is a null pointer!";
     LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
