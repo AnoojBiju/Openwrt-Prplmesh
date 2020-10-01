@@ -10,6 +10,10 @@ from .prplmesh_base_test import PrplMeshBaseTest
 from boardfarm.exceptions import SkipTest
 from opts import debug
 
+import ptvsd
+ptvsd.enable_attach()
+ptvsd.wait_for_attach()
+
 
 class ClientAssociationDummy(PrplMeshBaseTest):
 
@@ -24,49 +28,62 @@ class ClientAssociationDummy(PrplMeshBaseTest):
 
         self.dev.DUT.wired_sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
 
+        # Send BWL event repeater 1 wlan0 EVENT AP-STA-CONNECTED
         debug("Connect dummy STA to wlan0")
         sta.wifi_connect_check(agent.radios[0].vaps[0])
 
         time.sleep(1)
 
+        # Beerocks CLI client_allow repeater 1 wlan2
         debug("Send client association control request to the chosen BSSID (UNBLOCK)")
         print('client_allow {} {}'.format(sta.mac, agent.radios[1].mac))
         controller.beerocks_cli_command('client_allow {} {}'.format(sta.mac, agent.radios[1].mac))
 
         time.sleep(1)
 
+        # Check logs repeater 1 wlan2 got client allow request
         debug("Confirming Client Association Control Request message was received (UNBLOCK)")
         self.check_log(agent.radios[1],
                        r"Got client allow request for {}".format(sta.mac), timeout=20)
 
+        # Check in connection map for repeater 1 wlan0
+        conn_map = controller.get_conn_map()
+
+        map_radio = conn_map[agent.mac].radios[agent.radios[0].mac]
+        map_vap = map_radio.vaps[agent.radios[0].vaps[0].bssid]
+        if sta.mac not in map_vap.clients:
+            self.fail("client {} not in conn_map, clients: {}".format(sta.mac, map_vap.clients))
+
+        # Beerocks CLI client_disallow repeater 1 wlan0
         debug("Send client association control request to all other (BLOCK) ")
         controller.beerocks_cli_command('client_disallow {} {}'.format(sta.mac,
                                                                        agent.radios[0].mac))
         time.sleep(1)
 
+        # Check logs repeater 1 wlan0 got client disallow request
         debug("Confirming Client Association Control Request message was received (BLOCK)")
         self.check_log(agent.radios[0],
                        r"Got client disallow request for {}".format(sta.mac), timeout=20)
 
         # TODO client blocking not implemented in dummy bwl
 
-        # Check in connection map
-        conn_map = controller.get_conn_map()
-        map_radio = conn_map[agent.mac].radios[agent.radios[0].mac]
-        map_vap = map_radio.vaps[agent.radios[0].vaps[0].bssid]
-        if sta.mac not in map_vap.clients:
-            self.fail("client {} not in conn_map, clients: {}".format(sta.mac, map_vap.clients))
-
-        # Associate with other radio, check that conn_map is updated
+        # Associate with other radio
         agent.radios[0].vaps[0].disassociate(sta)
         agent.radios[1].vaps[0].associate(sta)
-        time.sleep(1)  # Wait for conn_map to be updated
+
+        time.sleep(1)
+
+        # Check in connection map for repeater 1 wlan2
         conn_map = controller.get_conn_map()
         map_agent = conn_map[agent.mac]
+
         map_radio1 = map_agent.radios[agent.radios[1].mac]
         map_vap1 = map_radio1.vaps[agent.radios[1].vaps[0].bssid]
+
         if sta.mac not in map_vap1.clients:
             self.fail("client {} not in conn_map, clients: {}".format(sta.mac, map_vap1.clients))
+
+        # repeater 1 wlan0
         map_radio0 = map_agent.radios[agent.radios[0].mac]
         map_vap0 = map_radio0.vaps[agent.radios[0].vaps[0].bssid]
         if sta.mac in map_vap0.clients:
@@ -74,13 +91,19 @@ class ClientAssociationDummy(PrplMeshBaseTest):
 
         # Associate with other radio implies disassociate from first
         agent.radios[0].vaps[0].associate(sta)
-        time.sleep(1)  # Wait for conn_map to be updated
+
+        time.sleep(1)
+
+        # Check in connection map for repeater 1 wlan2
         conn_map = controller.get_conn_map()
         map_agent = conn_map[agent.mac]
+
         map_radio1 = map_agent.radios[agent.radios[1].mac]
         map_vap1 = map_radio1.vaps[agent.radios[1].vaps[0].bssid]
         if sta.mac in map_vap1.clients:
             self.fail("client {} still in conn_map, clients: {}".format(sta.mac, map_vap1.clients))
+
+        # repeater 1 wlan0
         map_radio0 = map_agent.radios[agent.radios[0].mac]
         map_vap0 = map_radio0.vaps[agent.radios[0].vaps[0].bssid]
         if sta.mac not in map_vap0.clients:
