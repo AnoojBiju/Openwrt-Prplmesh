@@ -2205,6 +2205,15 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
                         radio->channels_list[channel].supported_bw_list.begin());
         }
 
+        // Forward channels list to the Backhaul manager
+        auto response_out = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_CHANNELS_LIST_RESPONSE>(cmdu_tx);
+        if (!response_out) {
+            LOG(ERROR) << "Failed to build message";
+            break;
+        }
+        message_com::send_cmdu(backhaul_manager_socket, cmdu_tx);
+
         // Create Channel preference report
         auto tuple_preferred_channels = response->preferred_channels(0);
         radio->front.preferred_channels.resize(response->preferred_channels_size());
