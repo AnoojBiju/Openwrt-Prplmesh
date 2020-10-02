@@ -5,20 +5,20 @@
  * This code is subject to the terms of the BSD+Patent license.
  * See LICENSE file for more details.
  */
-#include "nbapi.h"
+#include "ambiorix_impl.h"
 
 namespace beerocks {
 namespace nbapi {
 
-Ambiorix::Ambiorix(std::shared_ptr<EventLoop> event_loop) : m_event_loop(event_loop)
+AmbiorixImpl::AmbiorixImpl(std::shared_ptr<EventLoop> event_loop) : m_event_loop(event_loop)
 {
     LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
     amxo_parser_init(&m_parser);
     amxd_dm_init(&m_datamodel);
 }
 
-bool Ambiorix::init(const std::string &amxb_backend, const std::string &bus_uri,
-                    const std::string &datamodel_path)
+bool AmbiorixImpl::init(const std::string &amxb_backend, const std::string &bus_uri,
+                        const std::string &datamodel_path)
 {
     LOG(DEBUG) << "Initializing the bus connection.";
     int status = 0;
@@ -62,7 +62,7 @@ bool Ambiorix::init(const std::string &amxb_backend, const std::string &bus_uri,
     return true;
 }
 
-bool Ambiorix::load_datamodel(const std::string &datamodel_path)
+bool AmbiorixImpl::load_datamodel(const std::string &datamodel_path)
 {
     LOG(DEBUG) << "Loading the data model.";
     auto *root_obj = amxd_dm_get_root(&m_datamodel);
@@ -82,7 +82,7 @@ bool Ambiorix::load_datamodel(const std::string &datamodel_path)
     return true;
 }
 
-bool Ambiorix::init_event_loop()
+bool AmbiorixImpl::init_event_loop()
 {
     LOG(DEBUG) << "Register event handlers for the Ambiorix fd in the event loop.";
 
@@ -122,7 +122,7 @@ bool Ambiorix::init_event_loop()
     return true;
 }
 
-bool Ambiorix::init_signal_loop()
+bool AmbiorixImpl::init_signal_loop()
 {
     LOG(DEBUG) << "Register event handlers for the Ambiorix signals fd in the event loop.";
 
@@ -162,7 +162,7 @@ bool Ambiorix::init_signal_loop()
     return true;
 }
 
-bool Ambiorix::remove_event_loop()
+bool AmbiorixImpl::remove_event_loop()
 {
     LOG(DEBUG) << "Remove event handlers for Ambiorix fd from the event loop.";
 
@@ -182,7 +182,7 @@ bool Ambiorix::remove_event_loop()
     return true;
 }
 
-bool Ambiorix::remove_signal_loop()
+bool AmbiorixImpl::remove_signal_loop()
 {
     LOG(DEBUG) << "Remove event handlers for the Ambiorix signals fd from the event loop.";
 
@@ -204,7 +204,7 @@ bool Ambiorix::remove_signal_loop()
     return true;
 }
 
-amxd_object_t *Ambiorix::find_object(const std::string &relative_path)
+amxd_object_t *AmbiorixImpl::find_object(const std::string &relative_path)
 {
 
     auto object = amxd_dm_findf(&m_datamodel, "%s", relative_path.c_str());
@@ -216,8 +216,8 @@ amxd_object_t *Ambiorix::find_object(const std::string &relative_path)
     return object;
 }
 
-amxd_object_t *Ambiorix::prepare_transaction(const std::string &relative_path,
-                                             amxd_trans_t &transaction)
+amxd_object_t *AmbiorixImpl::prepare_transaction(const std::string &relative_path,
+                                                 amxd_trans_t &transaction)
 {
     auto object = find_object(relative_path);
     if (!object) {
@@ -246,7 +246,7 @@ amxd_object_t *Ambiorix::prepare_transaction(const std::string &relative_path,
     return object;
 }
 
-bool Ambiorix::apply_transaction(amxd_trans_t &transaction)
+bool AmbiorixImpl::apply_transaction(amxd_trans_t &transaction)
 {
     auto ret    = true;
     auto status = amxd_trans_apply(&transaction, &m_datamodel);
@@ -260,7 +260,7 @@ bool Ambiorix::apply_transaction(amxd_trans_t &transaction)
     return ret;
 }
 
-bool Ambiorix::set(const std::string &relative_path, const std::string &value)
+bool AmbiorixImpl::set(const std::string &relative_path, const std::string &value)
 {
     amxd_trans_t transaction;
     auto object = prepare_transaction(relative_path, transaction);
@@ -284,7 +284,7 @@ bool Ambiorix::set(const std::string &relative_path, const std::string &value)
     return true;
 }
 
-bool Ambiorix::set(const std::string &relative_path, const int32_t &value)
+bool AmbiorixImpl::set(const std::string &relative_path, const int32_t &value)
 {
     amxd_trans_t transaction;
     auto object = prepare_transaction(relative_path, transaction);
@@ -308,7 +308,7 @@ bool Ambiorix::set(const std::string &relative_path, const int32_t &value)
     return true;
 }
 
-bool Ambiorix::set(const std::string &relative_path, const int64_t &value)
+bool AmbiorixImpl::set(const std::string &relative_path, const int64_t &value)
 {
     amxd_trans_t transaction;
     auto object = prepare_transaction(relative_path, transaction);
@@ -332,7 +332,7 @@ bool Ambiorix::set(const std::string &relative_path, const int64_t &value)
     return true;
 }
 
-bool Ambiorix::set(const std::string &relative_path, const uint32_t &value)
+bool AmbiorixImpl::set(const std::string &relative_path, const uint32_t &value)
 {
     amxd_trans_t transaction;
     auto object = prepare_transaction(relative_path, transaction);
@@ -356,7 +356,7 @@ bool Ambiorix::set(const std::string &relative_path, const uint32_t &value)
     return true;
 }
 
-bool Ambiorix::set(const std::string &relative_path, const uint64_t &value)
+bool AmbiorixImpl::set(const std::string &relative_path, const uint64_t &value)
 {
     amxd_trans_t transaction;
     auto object = prepare_transaction(relative_path, transaction);
@@ -380,7 +380,7 @@ bool Ambiorix::set(const std::string &relative_path, const uint64_t &value)
     return true;
 }
 
-bool Ambiorix::set(const std::string &relative_path, const double &value)
+bool AmbiorixImpl::set(const std::string &relative_path, const double &value)
 {
     amxd_trans_t transaction;
     auto object = prepare_transaction(relative_path, transaction);
@@ -404,7 +404,7 @@ bool Ambiorix::set(const std::string &relative_path, const double &value)
     return true;
 }
 
-bool Ambiorix::set(const std::string &relative_path, const bool &value)
+bool AmbiorixImpl::set(const std::string &relative_path, const bool &value)
 {
     amxd_trans_t transaction;
     auto object = prepare_transaction(relative_path, transaction);
@@ -426,7 +426,7 @@ bool Ambiorix::set(const std::string &relative_path, const bool &value)
     return true;
 }
 
-bool Ambiorix::add_instance(const std::string &relative_path)
+bool AmbiorixImpl::add_instance(const std::string &relative_path)
 {
     amxd_trans_t transaction;
     auto object = prepare_transaction(relative_path, transaction);
@@ -449,7 +449,7 @@ bool Ambiorix::add_instance(const std::string &relative_path)
     return true;
 }
 
-bool Ambiorix::remove_instance(const std::string &relative_path, uint32_t index)
+bool AmbiorixImpl::remove_instance(const std::string &relative_path, uint32_t index)
 {
     amxd_trans_t transaction;
     auto object = prepare_transaction(relative_path, transaction);
@@ -477,7 +477,7 @@ bool Ambiorix::remove_instance(const std::string &relative_path, uint32_t index)
     return true;
 }
 
-Ambiorix::~Ambiorix()
+AmbiorixImpl::~AmbiorixImpl()
 {
     remove_event_loop();
     remove_signal_loop();
