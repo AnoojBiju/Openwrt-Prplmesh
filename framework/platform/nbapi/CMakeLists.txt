@@ -15,7 +15,7 @@ set(MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 # Common Sources
 set(nbapi_sources ${MODULE_PATH}/ambiorix_dummy.cpp)
 if (ENABLE_NBAPI)
-    list(APPEND nbapi_sources ${MODULE_PATH}/nbapi.cpp)
+    list(APPEND nbapi_sources ${MODULE_PATH}/ambiorix_impl.cpp)
 endif()
 
 
