@@ -85,6 +85,18 @@ class ClientAssociationDummy(PrplMeshBaseTest):
         if sta.mac in map_vap0.clients:
             self.fail("client {} still in conn_map, clients: {}".format(sta.mac, map_vap0.clients))
 
+        # Beerocks CLI client_allow repeater 1 wlan0
+        debug("Send client association control request to the chosen BSSID (UNBLOCK)")
+        print('client_allow {} {}'.format(sta.mac, agent.radios[0].mac))
+        controller.beerocks_cli_command('client_allow {} {}'.format(sta.mac, agent.radios[0].mac))
+
+        time.sleep(1)
+
+        # Check logs repeater 1 wlan0 got client allow request
+        debug("Confirming Client Association Control Request message was received (UNBLOCK)")
+        self.check_log(agent.radios[0],
+                       r"Got client allow request for {}".format(sta.mac), timeout=20)
+
         # Associate with other radio implies disassociate from first
         agent.radios[0].vaps[0].associate(sta)
 
