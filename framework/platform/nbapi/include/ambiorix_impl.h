@@ -31,6 +31,8 @@
 #include <amxo/amxo.h>
 #include <amxo/amxo_save.h>
 
+#include "ambiorix.h"
+
 namespace beerocks {
 namespace nbapi {
 
@@ -38,7 +40,7 @@ namespace nbapi {
  * @class AmbiorixImpl
  * @brief This class manages the ambiorixImpl instance.
  */
-class AmbiorixImpl {
+class AmbiorixImpl : public Ambiorix {
 
 public:
     explicit AmbiorixImpl(std::shared_ptr<EventLoop> event_loop);
@@ -78,21 +80,15 @@ public:
 
     /**
      * @brief Prepare transaction to the ubus
-     *
-     * @param relative_path Path to the object in datamodel (ex: "Controller.Network.ID").
-     * @return Pointer on the object on success and nullptr otherwise.
+     * @return True on success and false otherwise.
      */
-    virtual amxd_object_t *prepare_transaction(const std::string &relative_path,
-                                               amxd_trans_t &transaction);
+    virtual bool prepare_transaction();
 
     /**
      * @brief Apply transaction
-     *
-     * @param transaction Variable for transaction structure which contains fields
-     *                    needed for transaction.
      * @return True on success and false otherwise.
      */
-    virtual bool apply_transaction(amxd_trans_t &transaction);
+    virtual bool apply_transaction();
 
     /* @brief Add instance to the data model object with type list
      *
@@ -162,6 +158,8 @@ private:
     amxd_dm_t m_datamodel;
     amxo_parser_t m_parser;
     std::shared_ptr<EventLoop> m_event_loop;
+    amxd_trans_t m_transaction;
+    amxd_object_t *m_object;
 };
 
 } // namespace nbapi
