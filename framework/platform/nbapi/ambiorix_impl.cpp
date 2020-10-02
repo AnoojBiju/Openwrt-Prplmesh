@@ -431,52 +431,60 @@ bool AmbiorixImpl::set(const std::string &relative_path, const bool &value)
 
 bool AmbiorixImpl::add_instance(const std::string &relative_path)
 {
-    amxd_trans_t transaction;
-    auto object = prepare_transaction();
-    if (!object) {
-        LOG(ERROR) << "Couldn't find the object for: " << relative_path;
+    m_object = find_object(relative_path);
+    if (!m_object) {
+        LOG(ERROR) << "Couldn't get object by relative path: " << relative_path;
         return false;
     }
 
-    auto status = amxd_trans_add_inst(&transaction, 0, NULL);
+    if (!prepare_transaction()) {
+        LOG(ERROR) << "Couldn't prepare transaction. ";
+        return false;
+    }
+
+    auto status = amxd_trans_add_inst(&m_transaction, 0, NULL);
     if (status != amxd_status_ok) {
-        LOG(ERROR) << "Failed to add instance for: " << object->name << "status: " << status;
+        LOG(ERROR) << "Failed to add instance for: " << m_object->name << "status: " << status;
     }
 
     if (!apply_transaction()) {
-        LOG(ERROR) << "Failed to apply transaction for: " << object->name;
+        LOG(ERROR) << "Failed to apply transaction for: " << m_object->name;
         return false;
     }
 
-    LOG(DEBUG) << "Instance added for: " << object->name;
+    LOG(DEBUG) << "Instance added for: " << m_object->name;
     return true;
 }
 
 bool AmbiorixImpl::remove_instance(const std::string &relative_path, uint32_t index)
 {
-    amxd_trans_t transaction;
-    auto object = prepare_transaction();
-    if (!object) {
+    m_object = find_object(relative_path);
+    if (!m_object) {
         LOG(ERROR) << "Couldn't find the object for: " << relative_path;
         return false;
     }
 
-    amxd_object_for_each(instance, it, object)
+    if (!prepare_transaction()) {
+        LOG(ERROR) << "Couldn't prepare transaction.";
+        return false;
+    }
+
+    amxd_object_for_each(instance, it, m_object)
     {
         auto inst               = amxc_llist_it_get_data(it, amxd_object_t, it);
         auto current_inst_index = amxd_object_get_index(inst);
         if (current_inst_index == index) {
-            amxd_trans_del_inst(&transaction, amxd_object_get_index(inst), NULL);
+            amxd_trans_del_inst(&m_transaction, amxd_object_get_index(inst), NULL);
             break;
         }
     }
 
     if (!apply_transaction()) {
-        LOG(ERROR) << "Failed to apply transaction for: " << object->name;
+        LOG(ERROR) << "Failed to apply transaction for: " << m_object->name;
         return false;
     }
 
-    LOG(DEBUG) << "Instance removed for: " << object->name;
+    LOG(DEBUG) << "Instance removed for: " << m_object->name;
     return true;
 }
 
