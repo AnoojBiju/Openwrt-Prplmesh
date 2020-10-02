@@ -260,162 +260,167 @@ bool AmbiorixImpl::apply_transaction()
 
 bool AmbiorixImpl::set(const std::string &relative_path, const std::string &value)
 {
-    amxd_trans_t transaction;
-    auto object = prepare_transaction();
+    m_object = find_object(relative_path);
+    if (!m_object) {
+        LOG(ERROR) << "Coudn't set object: " << relative_path;
+        return false;
+    }
 
-    if (!object) {
+    if (!prepare_transaction()) {
         LOG(ERROR) << "Failed to prepare transaction.";
         return false;
     }
 
-    LOG(DEBUG) << "Set value: " << value << "to the object: " << object->name;
+    LOG(DEBUG) << "Set value: " << value << "to the object: " << m_object->name;
 
-    amxd_trans_set_value(cstring_t, &transaction, object->name, value.c_str());
+    amxd_trans_set_value(cstring_t, &m_transaction, m_object->name, value.c_str());
 
     if (!apply_transaction()) {
         LOG(ERROR) << "Couldn't apply transaction.";
         return false;
     }
-
-    amxc_var_set(cstring_t, 0, value.c_str());
 
     return true;
 }
 
 bool AmbiorixImpl::set(const std::string &relative_path, const int32_t &value)
 {
-    amxd_trans_t transaction;
-    auto object = prepare_transaction();
+    m_object = find_object(relative_path);
+    if (!m_object) {
+        LOG(ERROR) << "Coudn't set object: " << relative_path;
+        return false;
+    }
 
-    if (!object) {
+    if (!prepare_transaction()) {
         LOG(ERROR) << "Failed to prepare transaction.";
         return false;
     }
 
-    LOG(DEBUG) << "Set value: " << value << "to the object: " << object->name;
+    LOG(DEBUG) << "Set value: " << value << "to the object: " << m_object->name;
 
-    amxd_trans_set_value(int32_t, &transaction, object->name, value);
+    amxd_trans_set_value(int32_t, &m_transaction, m_object->name, value);
 
     if (!apply_transaction()) {
         LOG(ERROR) << "Couldn't apply transaction.";
         return false;
     }
-
-    amxc_var_set(int32_t, 0, value);
 
     return true;
 }
 
 bool AmbiorixImpl::set(const std::string &relative_path, const int64_t &value)
 {
-    amxd_trans_t transaction;
-    auto object = prepare_transaction();
+    m_object = find_object(relative_path);
+    if (!m_object) {
+        LOG(ERROR) << "Coudn't set object: " << relative_path;
+        return false;
+    }
 
-    if (!object) {
+    if (!prepare_transaction()) {
         LOG(ERROR) << "Failed to prepare transaction.";
         return false;
     }
 
-    LOG(DEBUG) << "Set value: " << value << "to the object: " << object->name;
+    LOG(DEBUG) << "Set value: " << value << "to the object: " << m_object->name;
 
-    amxd_trans_set_value(int64_t, &transaction, object->name, value);
+    amxd_trans_set_value(int64_t, &m_transaction, m_object->name, value);
 
     if (!apply_transaction()) {
         LOG(ERROR) << "Couldn't apply transaction.";
         return false;
     }
-
-    amxc_var_set(int64_t, 0, value);
 
     return true;
 }
 
 bool AmbiorixImpl::set(const std::string &relative_path, const uint32_t &value)
 {
-    amxd_trans_t transaction;
-    auto object = prepare_transaction();
+    m_object = find_object(relative_path);
+    if (!m_object) {
+        LOG(ERROR) << "Coudn't set object: " << relative_path;
+        return false;
+    }
 
-    if (!object) {
+    if (!prepare_transaction()) {
         LOG(ERROR) << "Failed to prepare transaction.";
         return false;
     }
 
-    LOG(DEBUG) << "Set value: " << value << "to the object: " << object->name;
+    LOG(DEBUG) << "Set value: " << value << "to the object: " << m_object->name;
 
-    amxd_trans_set_value(uint32_t, &transaction, object->name, value);
+    amxd_trans_set_value(uint32_t, &m_transaction, m_object->name, value);
 
     if (!apply_transaction()) {
         LOG(ERROR) << "Couldn't apply transaction.";
         return false;
     }
-
-    amxc_var_set(uint32_t, 0, value);
 
     return true;
 }
 
 bool AmbiorixImpl::set(const std::string &relative_path, const uint64_t &value)
 {
-    amxd_trans_t transaction;
-    auto object = prepare_transaction();
+    m_object = find_object(relative_path);
+    if (!m_object) {
+        LOG(ERROR) << "Coudn't set object: " << relative_path;
+        return false;
+    }
 
-    if (!object) {
+    if (!prepare_transaction()) {
         LOG(ERROR) << "Failed to prepare transaction.";
         return false;
     }
 
-    LOG(DEBUG) << "Set value: " << value << "to the object: " << object->name;
+    LOG(DEBUG) << "Set value: " << value << "to the object: " << m_object->name;
 
-    amxd_trans_set_value(uint64_t, &transaction, object->name, value);
+    amxd_trans_set_value(uint64_t, &m_transaction, m_object->name, value);
 
     if (!apply_transaction()) {
         LOG(ERROR) << "Couldn't apply transaction.";
         return false;
     }
-
-    amxc_var_set(uint64_t, 0, value);
 
     return true;
 }
 
 bool AmbiorixImpl::set(const std::string &relative_path, const double &value)
 {
-    amxd_trans_t transaction;
-    auto object = prepare_transaction();
+    m_object = find_object(relative_path);
+    if (!m_object) {
+        LOG(ERROR) << "Coudn't set object: " << relative_path;
+        return false;
+    }
 
-    if (!object) {
+    if (!prepare_transaction()) {
         LOG(ERROR) << "Failed to prepare transaction.";
         return false;
     }
 
-    LOG(DEBUG) << "Set value: " << value << "to the object: " << object->name;
-
-    amxd_trans_set_value(double, &transaction, object->name, value);
-
+    LOG(DEBUG) << "Set value: " << value << "to the object: " << m_object->name;
+    amxd_trans_set_value(double, &m_transaction, m_object->name, value);
     if (!apply_transaction()) {
         LOG(ERROR) << "Couldn't apply transaction.";
         return false;
     }
-
-    amxc_var_set(double, 0, value);
 
     return true;
 }
 
 bool AmbiorixImpl::set(const std::string &relative_path, const bool &value)
 {
-    amxd_trans_t transaction;
-    auto object = prepare_transaction();
+    m_object = find_object(relative_path);
+    if (!m_object) {
+        LOG(ERROR) << "Coudn't set object: " << relative_path;
+        return false;
+    }
 
-    if (!object) {
+    if (!prepare_transaction()) {
         LOG(ERROR) << "Failed to prepare transaction.";
         return false;
     }
 
-    LOG(DEBUG) << "Set value: " << value << "to the object: " << object->name;
-
-    amxd_trans_set_value(bool, &transaction, object->name, value);
-
+    LOG(DEBUG) << "Set value: " << value << "to the object: " << m_object->name;
+    amxd_trans_set_value(bool, &m_transaction, m_object->name, value);
     if (!apply_transaction()) {
         LOG(ERROR) << "Couldn't apply transaction.";
         return false;
