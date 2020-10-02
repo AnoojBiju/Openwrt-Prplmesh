@@ -138,8 +138,6 @@ void Ieee1905Transport::update_network_interfaces(
 
 bool Ieee1905Transport::open_interface_socket(NetworkInterface &interface)
 {
-    MAPF_DBG("opening raw socket on interface " << interface.ifname << ".");
-
     if (interface.fd) {
         close(interface.fd->getSocketFd());
         interface.fd = nullptr;
@@ -152,34 +150,37 @@ bool Ieee1905Transport::open_interface_socket(NetworkInterface &interface)
     // open packet raw socket - see man packet(7) https://linux.die.net/man/7/packet
     int sockfd;
     if ((sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0) {
-        MAPF_ERR("cannot open raw socket \"" << strerror(errno) << "\" (" << errno << ").");
+        MAPF_ERR("cannot open raw socket, error: \"" << strerror(errno) << "\" (" << errno << ").");
         return false;
     }
 
     // the interface can be used by other processes
     int optval = 1;
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) {
-        MAPF_ERR("cannot set socket option SO_REUSEADDR \"" << strerror(errno) << "\" (" << errno
-                                                            << ").");
+        MAPF_ERR("cannot set socket option SO_REUSEADDR for FD ("
+                 << sockfd << "), error: \"" << strerror(errno) << "\" (" << errno << ").");
         close(sockfd);
         return false;
     }
 
-    // bind to specifed interface - note that we cannot use SO_BINDTODEVICE sockopt as it does not support AF_PACKET sockets
+    // bind to specified interface - note that we cannot use SO_BINDTODEVICE sockopt as it does not support AF_PACKET sockets
     struct sockaddr_ll sockaddr;
     memset(&sockaddr, 0, sizeof(struct sockaddr_ll));
     sockaddr.sll_family   = AF_PACKET;
     sockaddr.sll_protocol = htons(ETH_P_ALL);
     sockaddr.sll_ifindex  = if_nametoindex(interface.ifname.c_str());
     if (bind(sockfd, (struct sockaddr *)&sockaddr, sizeof(sockaddr)) < 0) {
-        MAPF_ERR("cannot bind socket to interface \"" << strerror(errno) << "\" (" << errno
-                                                      << ").");
+        MAPF_ERR("cannot bind socket to interface for FD ("
+                 << sockfd << "), error: \"" << strerror(errno) << "\" (" << errno << ").");
         close(sockfd);
         return false;
     }
 
     interface.fd = std::make_shared<Socket>(sockfd);
-    LOG_IF(!sockfd, FATAL) << "Failed creating new Socket for fd: " << sockfd;
+    LOG_IF(!sockfd, FATAL) << "Failed creating new Socket for FD (" << sockfd << ")";
+
+    MAPF_DBG("Raw socket on interface " << interface.ifname << " opened with FD (" << sockfd
+                                        << ").");
 
     attach_interface_socket_filter(interface);
 
@@ -188,6 +189,8 @@ bool Ieee1905Transport::open_interface_socket(NetworkInterface &interface)
 
 bool Ieee1905Transport::attach_interface_socket_filter(NetworkInterface &interface)
 {
+    int fd = interface.fd->getSocketFd();
+
     // 1st step is to put the interface in promiscuous mode.
     // promiscuous mode is required since we expect to receive packets destined to
     // the AL MAC address (which is different the the interfaces HW address)
@@ -195,10 +198,9 @@ bool Ieee1905Transport::attach_interface_socket_filter(NetworkInterface &interfa
     struct packet_mreq mr = {0};
     mr.mr_ifindex         = if_nametoindex(interface.ifname.c_str());
     mr.mr_type            = PACKET_MR_PROMISC;
-    if (setsockopt(interface.fd->getSocketFd(), SOL_PACKET, PACKET_ADD_MEMBERSHIP, &mr,
-                   sizeof(mr)) == -1) {
-        MAPF_ERR("cannot put interface in promiscuous mode \"" << strerror(errno) << "\" (" << errno
-                                                               << ").");
+    if (setsockopt(fd, SOL_PACKET, PACKET_ADD_MEMBERSHIP, &mr, sizeof(mr)) == -1) {
+        MAPF_ERR("cannot put interface in promiscuous mode for FD ("
+                 << fd << "), error: \"" << strerror(errno) << "\" (" << errno << ").");
         return false;
     }
 
@@ -208,7 +210,8 @@ bool Ieee1905Transport::attach_interface_socket_filter(NetworkInterface &interfa
     // attach filter
     if (setsockopt(interface.fd->getSocketFd(), SOL_SOCKET, SO_ATTACH_FILTER, &fprog,
                    sizeof(fprog)) == -1) {
-        MAPF_ERR("cannot attach socket filter \"" << strerror(errno) << "\" (" << errno << ").");
+        MAPF_ERR("cannot attach socket filter for FD (" << fd << "), error: \"" << strerror(errno)
+                                                        << "\" (" << errno << ").");
         return false;
     }
 
@@ -258,7 +261,7 @@ void Ieee1905Transport::activate_interface(NetworkInterface &interface)
                 .on_read =
                     [&](int fd, EventLoop &loop) {
                         LOG(DEBUG) << "Incoming message on interface " << interface.ifname
-                                   << " fd: " << fd;
+                                   << " FD (" << fd << ")";
                         handle_interface_pollin_event(fd);
                         return true;
                     },
@@ -270,8 +273,18 @@ void Ieee1905Transport::activate_interface(NetworkInterface &interface)
                 // Handle interface errors
                 .on_error =
                     [&](int fd, EventLoop &loop) {
-                        LOG(DEBUG) << "Error on interface " << interface.ifname << " fd: " << fd
-                                   << " (disabling it).";
+                        std::string error_message;
+
+                        int error        = 0;
+                        socklen_t errlen = sizeof(error);
+                        if (0 == getsockopt(fd, SOL_SOCKET, SO_ERROR, (void *)&error, &errlen)) {
+                            error_message = ": \"" + std::string(strerror(error)) + "\" (" +
+                                            std::to_string(error) + ")";
+                        }
+
+                        LOG(ERROR) << "Error on FD (" << fd << ")" << error_message
+                                   << ". Disabling interface " << interface.ifname;
+                        ;
 
                         deactivate_interface(interface);
                         return true;
@@ -285,7 +298,7 @@ void Ieee1905Transport::activate_interface(NetworkInterface &interface)
 void Ieee1905Transport::handle_interface_pollin_event(int fd)
 {
     if (fd < 0) {
-        MAPF_ERR("illegal file descriptor " << fd << ".");
+        MAPF_ERR("Illegal file descriptor FD (" << fd << ")");
         return;
     }
 
@@ -300,7 +313,8 @@ void Ieee1905Transport::handle_interface_pollin_event(int fd)
         return;
     }
     if (len == -1) {
-        MAPF_ERR("cannot read from socket \"" << strerror(errno) << "\" (" << errno << ").");
+        MAPF_ERR("cannot read from socket with FD (" << fd << "), error: \"" << strerror(errno)
+                                                     << "\" (" << errno << ").");
         return;
     }
     if (len < (ssize_t)sizeof(struct ether_header)) {
@@ -336,7 +350,7 @@ bool Ieee1905Transport::get_interface_mac_addr(unsigned int if_index, uint8_t *a
 {
     int sockfd;
     if ((sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) == -1) {
-        MAPF_ERR("cannot open raw socket \"" << strerror(errno) << "\" (" << errno << ").");
+        MAPF_ERR("cannot open raw socket, error: \"" << strerror(errno) << "\" (" << errno << ").");
         return false;
     }
 
@@ -349,8 +363,8 @@ bool Ieee1905Transport::get_interface_mac_addr(unsigned int if_index, uint8_t *a
     }
 
     if ((ioctl(sockfd, SIOCGIFHWADDR, &ifr)) < 0) {
-        MAPF_ERR("raw socket SIOCGIFHWADDR ioctl failed \"" << strerror(errno) << "\" (" << errno
-                                                            << ").");
+        MAPF_ERR("raw socket SIOCGIFHWADDR ioctl failed, error: \"" << strerror(errno) << "\" ("
+                                                                    << errno << ").");
         close(sockfd);
         return false;
     }
@@ -404,7 +418,7 @@ bool Ieee1905Transport::send_packet_to_network_interface(unsigned int if_index, 
     // Clear the packet header to prevent leaking locally allocated stack pointer
     packet.header = {.iov_base = nullptr, .iov_len = sizeof(eh)};
     if (size_t(n) != sizeof(eh) + packet.payload.iov_len) {
-        MAPF_ERR("cannot write to socket \"" << strerror(errno) << "\" (" << errno << ").");
+        MAPF_ERR("cannot write to socket, error: \"" << strerror(errno) << "\" (" << errno << ").");
         return false;
     }
 
