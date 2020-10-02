@@ -82,13 +82,14 @@ std::unique_ptr<Message> read_transport_message(Socket &sd)
         auto discarded_bytes =
             sd.readBytes(reinterpret_cast<uint8_t *>(&header), sizeof(header), false);
 
-        LOG(DEBUG) << "Discarded " << discarded_bytes << " bytes from fd = " << sd.getSocketFd();
+        LOG(DEBUG) << "Discarded " << discarded_bytes << " bytes from FD (" << sd.getSocketFd()
+                   << ")";
     };
 
     // Validate the header
     if (header.magic != messages::Message::kMessageMagic) {
         LOG(ERROR) << "Invalid message header: magic = 0x" << std::hex << header.magic << std::dec
-                   << ", length = " << header.len << ", fd = " << sd.getSocketFd();
+                   << ", length = " << header.len << ", FD (" << sd.getSocketFd() << ")";
 
         discard_pending_bytes();
         return nullptr;

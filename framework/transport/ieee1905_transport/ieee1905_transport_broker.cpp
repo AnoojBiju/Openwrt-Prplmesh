@@ -272,7 +272,7 @@ bool BrokerServer::socket_connected()
         return false;
     }
 
-    LOG(DEBUG) << "Accepted new connection, fd = " << new_socket->getSocketFd();
+    LOG(DEBUG) << "Accepted new connection, FD (" << new_socket->getSocketFd() << ")";
 
     // Add the newly accepted socket into the poll
     EventLoop::EventHandlers handlers{
@@ -311,7 +311,7 @@ bool BrokerServer::socket_connected()
 
 bool BrokerServer::socket_disconnected(std::shared_ptr<Socket> sd)
 {
-    LOG(DEBUG) << "Socket disconnected: FD(" << sd->getSocketFd() << ")";
+    LOG(DEBUG) << "Socket FD (" << sd->getSocketFd() << ") disconnected";
 
     // Delete the Socket from the list of types subscriptions
     for (auto &type : m_soc_to_type[sd]) {
