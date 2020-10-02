@@ -3,19 +3,19 @@
   hash: 245dca06475e84571e4ccb5e02eb4e336ba77cbe
 - name: feed_datapath
   uri: https://gitlab.com/prpl-foundation/intel/feed_datapath.git
-  hash: 23afe7e659ed6717224659aef74af2bb11d8091a
+  hash: 27758da17ccd9ba9b657f787e461b65857a1d8f7
 - name: feed_ppa
   uri: https://gitlab.com/prpl-foundation/intel/feed_ppa.git
-  hash: 4f49fa34bbd51c7dd218df164e32c17694bed421
+  hash: c388c05a10c81913f98b029fba688aa44e4d205b
 - name: feed_gphy_firmware
   uri: https://gitlab.com/prpl-foundation/intel/feed_gphy_firmware.git
-  hash: cbf75f2abde587ac2c5462d117b98e3dadaae5b6
+  hash: 23e040c127cf4f5217791512a7a797d0b48cc926
 - name: feed_switch_api
   uri: https://gitlab.com/prpl-foundation/intel/feed_switch_api.git
-  hash: af078af5408654ca2e759ea7afcf92163282e86e
+  hash: cacd26c9251c6985b6827c4127171354e6a3cc70
 - name: feed_wlan_6x
   uri: https://gitlab.com/prpl-foundation/intel/feed_wlan_6x.git
-  hash: 82a613dfb226ff4815252ea0e301ed8ef93b28c9
+  hash: 69a1d47134475e4ee63d4f5d7d36c96989a53177
 - name: feed_prpl
   uri: https://gitlab.com/prpl-foundation/prplwrt/feed-prpl.git
   hash: 819ddf84de6438ff060ccb4a9713848b89effb57
@@ -24,7 +24,7 @@
   hash: f22c4f0b1d594598b1d38298fba513e5948dd1e4
 - name: feed_pending
   uri: https://gitlab.com/prpl-foundation/intel/feed-pending.git
-  hash: 352365b31f968ab37e772b23c30ea32dbff9e337
+  hash: 6de63d46158811ca5ac0678c51b14a5ef4c5ffcb
 - name: sah
   uri: https://gitlab.com/soft.at.home/buildsystems/openwrt/sah-packages.git
   hash: cc3991bef565448e2c107c79d3efc3c759a0ca0a
