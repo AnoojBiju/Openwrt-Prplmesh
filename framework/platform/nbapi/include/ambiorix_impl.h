@@ -31,6 +31,8 @@
 #include <amxo/amxo.h>
 #include <amxo/amxo_save.h>
 
+#include "ambiorix.h"
+
 namespace beerocks {
 namespace nbapi {
 
@@ -38,7 +40,7 @@ namespace nbapi {
  * @class AmbiorixImpl
  * @brief This class manages the ambiorixImpl instance.
  */
-class AmbiorixImpl {
+class AmbiorixImpl : public Ambiorix {
 
 public:
     explicit AmbiorixImpl(std::shared_ptr<EventLoop> event_loop);
@@ -68,37 +70,32 @@ public:
      * @param value Value which need to set.
      * @return True on success and false otherwise.
      */
-    bool set(const std::string &relative_path, const std::string &value);
-    bool set(const std::string &relative_path, const int32_t &value);
-    bool set(const std::string &relative_path, const int64_t &value);
-    bool set(const std::string &relative_path, const uint32_t &value);
-    bool set(const std::string &relative_path, const uint64_t &value);
-    bool set(const std::string &relative_path, const bool &value);
-    bool set(const std::string &relative_path, const double &value);
+    bool set(const std::string &relative_path, const std::string &value) override;
+    bool set(const std::string &relative_path, const int32_t &value) override;
+    bool set(const std::string &relative_path, const int64_t &value) override;
+    bool set(const std::string &relative_path, const uint32_t &value) override;
+    bool set(const std::string &relative_path, const uint64_t &value) override;
+    bool set(const std::string &relative_path, const bool &value) override;
+    bool set(const std::string &relative_path, const double &value) override;
 
     /**
      * @brief Prepare transaction to the ubus
-     *
-     * @param relative_path Path to the object in datamodel (ex: "Controller.Network.ID").
-     * @return Pointer on the object on success and nullptr otherwise.
+     * @return True on success and false otherwise.
      */
-    amxd_object_t *prepare_transaction(const std::string &relative_path, amxd_trans_t &transaction);
+    bool prepare_transaction() override;
 
     /**
      * @brief Apply transaction
-     *
-     * @param transaction Variable for transaction structure which contains fields
-     *                    needed for transaction.
      * @return True on success and false otherwise.
      */
-    bool apply_transaction(amxd_trans_t &transaction);
+    bool apply_transaction() override;
 
     /* @brief Add instance to the data model object with type list
      *
      * @param relative_path Path to the object with type list in datamodel (ex: "Controller.Network.Device").
      * @return True on success and false otherwise.
      */
-    bool add_instance(const std::string &relative_path);
+    bool add_instance(const std::string &relative_path) override;
 
     /**
      * @brief Remove instance from the data model object with type list
@@ -107,7 +104,7 @@ public:
      * @param index Number of instance which should be remove.
      * @return True on success and false otherwise.
      */
-    bool remove_instance(const std::string &relative_path, uint32_t index);
+    bool remove_instance(const std::string &relative_path, uint32_t index) override;
 
 private:
     // Methods
@@ -161,6 +158,8 @@ private:
     amxd_dm_t m_datamodel;
     amxo_parser_t m_parser;
     std::shared_ptr<EventLoop> m_event_loop;
+    amxd_trans_t m_transaction;
+    amxd_object_t *m_object;
 };
 
 } // namespace nbapi
