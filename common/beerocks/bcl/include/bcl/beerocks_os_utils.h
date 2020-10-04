@@ -84,6 +84,8 @@ public:
     static bool is_pid_running(const std::string &path, std::string file_name,
                                int *pid_out = nullptr);
 
+    static bool read_pid_file(const std::string &path, const std::string &file_name, int &pid);
+
     static bool write_pid_file(const std::string &path, const std::string &file_name);
 
     static bool touch_pid_file(std::string file_path);
@@ -91,6 +93,8 @@ public:
     static int redirect_console_std(std::string log_file_name);
 
     static void close_file(int fd);
+
+    static void remove_residual_files(const std::string &path, const std::string &file_name);
 };
 } // namespace beerocks
 
