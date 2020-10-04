@@ -6,6 +6,7 @@
  * See LICENSE file for more details.
  */
 
+#include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_os_utils.h>
 #include <bcl/beerocks_string_utils.h>
 
@@ -89,7 +90,7 @@ std::string os_utils::system_call(std::string cmd, int log_lvl, bool detached)
 
 void os_utils::kill_pid(const std::string &path, const std::string &file_name)
 {
-    int pid_out;
+    int pid_out = -1;
     if (is_pid_running(path, file_name, &pid_out)) {
         LOG(DEBUG) << __FUNCTION__ << " SIGTERM pid=" << pid_out << std::endl;
         kill(pid_out, SIGTERM);
@@ -102,6 +103,21 @@ void os_utils::kill_pid(const std::string &path, const std::string &file_name)
             LOG(DEBUG) << __FUNCTION__ << " SIGKILL pid=" << pid_out << std::endl;
             kill(pid_out, SIGKILL);
         }
+    }
+
+    // if pid not provided by is-pid-running check
+    if (pid_out == -1) {
+        if (!read_pid_file(path, file_name, pid_out)) {
+            // if file doesn't exist or failed to read pid from it - nothing to do
+            return;
+        }
+    }
+
+    for (int index = 1; index <= beerocks::eBeeRocksIfaceIds::IFACE_TOTAL_VAPS; ++index) {
+        // remove residual wpa_ctrl files of the old pid if exist
+        std::stringstream ss;
+        ss << "wpa_ctrl_" << pid_out << "-" << index;
+        remove_residual_files(std::string("/tmp/"), ss.str());
     }
 }
 
@@ -147,6 +163,23 @@ bool os_utils::is_pid_running(const std::string &path, std::string file_name, in
         }
     }
     return false; //pid is not running
+}
+
+bool os_utils::read_pid_file(const std::string &path, const std::string &file_name, int &pid)
+{
+    std::string pid_str;
+    std::string pid_file_name = path + "pid/" + file_name;
+    std::ifstream pid_file;
+    pid_file.open(pid_file_name.c_str(), std::fstream::out);
+    if (pid_file.is_open()) {
+        std::getline(pid_file, pid_str);
+        pid_file.close();
+        pid = beerocks::string_utils::stoi(pid_str);
+        return true;
+    } else {
+        LOG(ERROR) << "can't read pid from file: " << pid_file_name;
+        return false;
+    }
 }
 
 bool os_utils::write_pid_file(const std::string &path, const std::string &file_name)
@@ -200,5 +233,16 @@ void os_utils::close_file(int fd)
 {
     if (fd) {
         close(fd);
+    }
+}
+
+void os_utils::remove_residual_files(const std::string &path, const std::string &file_name)
+{
+    std::string file = path + file_name;
+    if (file_exists(file)) {
+        LOG(DEBUG) << "removing residual file: " << file;
+        if (remove(file.c_str()) != 0) {
+            LOG(ERROR) << "failed to remove residual file: " << file;
+        }
     }
 }

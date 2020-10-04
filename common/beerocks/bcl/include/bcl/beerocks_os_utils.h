@@ -84,6 +84,16 @@ public:
     static bool is_pid_running(const std::string &path, std::string file_name,
                                int *pid_out = nullptr);
 
+    /**
+     * @brief read pid from file in the provided path.
+     * 
+     * @param path Path to where the file is located.
+     * @param file_name Name of the pid file for the process in question.
+     * @param[out] pid Process id read from the file
+     * @return true on success, false if file doesn't exist or failed to read it
+     */
+    static bool read_pid_file(const std::string &path, const std::string &file_name, int &pid);
+
     static bool write_pid_file(const std::string &path, const std::string &file_name);
 
     static bool touch_pid_file(std::string file_path);
@@ -91,6 +101,14 @@ public:
     static int redirect_console_std(std::string log_file_name);
 
     static void close_file(int fd);
+
+    /**
+     * @brief remove files that are residue from previos process instance.
+     * 
+     * @param path Path to where the residual file are located.
+     * @param file_name Name of the file to be removed if exist.
+     */
+    static void remove_residual_files(const std::string &path, const std::string &file_name);
 };
 } // namespace beerocks
 
