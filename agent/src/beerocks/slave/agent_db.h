@@ -9,6 +9,9 @@
 #include <bcl/network/network_utils.h>
 #include <bwl/sta_wlan_hal.h>
 
+#include <beerocks/tlvf/enums/eDfsState.h>
+#include <beerocks/tlvf/structs/sSupportedBandwidth.h>
+
 #include <iostream>
 #include <memory>
 #include <mutex>
@@ -211,6 +214,14 @@ public:
             size_t association_frame_length;
             std::array<uint8_t, ASSOCIATION_FRAME_SIZE> association_frame;
         };
+
+        struct sChannelInfo {
+            int8_t tx_power_dbm;
+            beerocks_message::eDfsState dfs_state;
+            std::vector<beerocks_message::sSupportedBandwidth> supported_bw_list;
+        };
+        // Key: Channel
+        std::unordered_map<uint8_t, sChannelInfo> channels_list;
 
         // Associated clients grouped by Client MAC.
         std::unordered_map<sMacAddr, sClient> associated_clients;
