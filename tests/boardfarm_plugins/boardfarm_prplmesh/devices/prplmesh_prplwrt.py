@@ -26,7 +26,7 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
     """prplWRT burned device with prplMesh installed."""
 
     model = "prplWRT"
-    prompt = ['root\\@OpenWrt:/#', '/#', '@OpenWrt:/#', "@OpenWrt:~#"]
+    prompt = ['root\\@OpenWrt:/#', 'root@OpenWrt:/#', 'root@OpenWrt:/#', '/#', '@OpenWrt:/#', "@OpenWrt:~#"]
     wan_iface = "eth1"
     uboot_eth = "eth0_1"
     linesep = "\r"
