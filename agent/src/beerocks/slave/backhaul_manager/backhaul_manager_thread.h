@@ -32,6 +32,7 @@
 #include <tlvf/wfa_map/tlvChannelSelectionResponse.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
 
+#include "../agent_db.h"
 #include "../agent_ucc_listener.h"
 #include "../link_metrics/link_metrics.h"
 
@@ -371,54 +372,54 @@ private:
     /**
      * @brief Adds an AP HT Capabilities TLV to AP Capability Report message.
      *
-     * TLV is added to message only if given radio supports HT capabilities.
+     * TLV is added to message only if radio on given interface supports HT capabilities.
      * See section 17.2.8 of Multi-AP Specification for details.
      *
-     * @param radio_info Radio structure containing the information required to fill in the TLV.
+     * @param iface_name Interface on which radio operates.
      *
      * @return True on success and false otherwise.
      */
-    bool add_ap_ht_capabilities(const sRadioInfo &radio_info);
+    bool add_ap_ht_capabilities(const std::string &iface_name);
 
     /**
      * @brief Adds an AP VHT Capabilities TLV to AP Capability Report message.
      *
-     * TLV is added to message only if given radio supports VHT capabilities.
+     * TLV is added to message only if radio on given interface supports VHT capabilities.
      * See section 17.2.9 of Multi-AP Specification for details.
      *
-     * @param radio_info Radio structure containing the information required to fill in the TLV.
+     * @param iface_name Interface on which radio operates.
      *
      * @return True on success and false otherwise.
      */
-    bool add_ap_vht_capabilities(const sRadioInfo &radio_info);
+    bool add_ap_vht_capabilities(const std::string &iface_name);
 
     /**
      * @brief Adds an AP HE Capabilities TLV to AP Capability Report message.
      *
-     * TLV is added to message only if given radio supports HE capabilities.
+     * TLV is added to message only if radio on given interface supports HE capabilities.
      * See section 17.2.10 of Multi-AP Specification for details.
      *
-     * @param radio_info Radio structure containing the information required to fill in the TLV.
+     * @param iface_name Interface on which radio operates.
      *
      * @return True on success and false otherwise.
      */
-    bool add_ap_he_capabilities(const sRadioInfo &radio_info);
+    bool add_ap_he_capabilities(const std::string &iface_name);
 
     /**
      * @brief Adds Channel Scan Capabilities TLV to AP Capability Report message.
      *
      * The TLV is already created by the caller. This function adds
-     * information to the given tlv based on the given radio.
+     * information to the given tlv based on radio on given interface.
      * See section 17.2.38 of Multi-AP Specification v2 for details.
      *
-     * @param radio_info Radio structure containing the information required to fill in the TLV.
+     * @param iface_name Interface on which radio operates.
      *
      * @param channe_scan_capability_tlv a pointer to the already created tlv.
      *
      * @return True on success and false otherwise.
      */
     bool add_channel_scan_capabilities(
-        const sRadioInfo &radio_info,
+        const std::string &iface_name,
         wfa_map::tlvChannelScanCapabilities &channel_scan_capabilities_tlv);
 
     /**

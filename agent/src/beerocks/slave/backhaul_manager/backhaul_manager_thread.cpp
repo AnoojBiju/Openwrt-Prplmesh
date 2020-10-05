@@ -2394,15 +2394,15 @@ bool backhaul_manager::handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmd
             return false;
         }
 
-        if (!add_ap_ht_capabilities(*slave)) {
+        if (!add_ap_ht_capabilities(radio->front.iface_name)) {
             return false;
         }
 
-        if (!add_ap_vht_capabilities(*slave)) {
+        if (!add_ap_vht_capabilities(radio->front.iface_name)) {
             return false;
         }
 
-        if (!add_ap_he_capabilities(*slave)) {
+        if (!add_ap_he_capabilities(radio->front.iface_name)) {
             return false;
         }
     }
@@ -2421,7 +2421,7 @@ bool backhaul_manager::handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmd
 
     // Add Channel Scan Capabilities
     for (const auto &slave : slaves_sockets) {
-        add_channel_scan_capabilities(*slave, *channel_scan_capabilities_tlv);
+        add_channel_scan_capabilities(slave->hostap_iface, *channel_scan_capabilities_tlv);
     }
 
     // 2.1 radio independent tlvs
@@ -3590,12 +3590,11 @@ bool backhaul_manager::get_neighbor_links(
     return true;
 }
 
-bool backhaul_manager::add_ap_ht_capabilities(const sRadioInfo &radio_info)
+bool backhaul_manager::add_ap_ht_capabilities(const std::string &iface_name)
 {
     auto db    = AgentDB::get();
-    auto radio = db->get_radio_by_mac(radio_info.radio_mac);
+    auto radio = db->radio(iface_name);
     if (!radio) {
-        LOG(ERROR) << "radio with mac " << radio_info.radio_mac << " does not exist in the db";
         return false;
     }
 
@@ -3609,7 +3608,7 @@ bool backhaul_manager::add_ap_ht_capabilities(const sRadioInfo &radio_info)
         return false;
     }
 
-    tlv->radio_uid() = radio_info.radio_mac;
+    tlv->radio_uid() = radio->front.iface_mac;
 
     /**
      * See iw/util.c for details on how to compute fields.
@@ -3627,12 +3626,11 @@ bool backhaul_manager::add_ap_ht_capabilities(const sRadioInfo &radio_info)
     return true;
 }
 
-bool backhaul_manager::add_ap_vht_capabilities(const sRadioInfo &radio_info)
+bool backhaul_manager::add_ap_vht_capabilities(const std::string &iface_name)
 {
     auto db    = AgentDB::get();
-    auto radio = db->get_radio_by_mac(radio_info.radio_mac);
+    auto radio = db->radio(iface_name);
     if (!radio) {
-        LOG(ERROR) << "radio with mac " << radio_info.radio_mac << " does not exist in the db";
         return false;
     }
 
@@ -3646,7 +3644,7 @@ bool backhaul_manager::add_ap_vht_capabilities(const sRadioInfo &radio_info)
         return false;
     }
 
-    tlv->radio_uid() = radio_info.radio_mac;
+    tlv->radio_uid() = radio->front.iface_mac;
 
     /**
      * See iw/util.c for details on how to compute fields
@@ -3666,12 +3664,11 @@ bool backhaul_manager::add_ap_vht_capabilities(const sRadioInfo &radio_info)
     return true;
 }
 
-bool backhaul_manager::add_ap_he_capabilities(const sRadioInfo &radio_info)
+bool backhaul_manager::add_ap_he_capabilities(const std::string &iface_name)
 {
     auto db    = AgentDB::get();
-    auto radio = db->get_radio_by_mac(radio_info.radio_mac);
+    auto radio = db->radio(iface_name);
     if (!radio) {
-        LOG(ERROR) << "radio with mac " << radio_info.radio_mac << " does not exist in the db";
         return false;
     }
 
@@ -3685,7 +3682,7 @@ bool backhaul_manager::add_ap_he_capabilities(const sRadioInfo &radio_info)
         return false;
     }
 
-    tlv->radio_uid() = radio_info.radio_mac;
+    tlv->radio_uid() = radio->front.iface_mac;
 
     // TODO: Fetch the AP HE Capabilities from the Wi-Fi driver via the Netlink socket and include
     // them into AP HE Capabilities TLV (#1162)
@@ -3694,15 +3691,21 @@ bool backhaul_manager::add_ap_he_capabilities(const sRadioInfo &radio_info)
 }
 
 bool backhaul_manager::add_channel_scan_capabilities(
-    const sRadioInfo &radio_info,
+    const std::string &iface_name,
     wfa_map::tlvChannelScanCapabilities &channel_scan_capabilities_tlv)
 {
+    auto db    = AgentDB::get();
+    auto radio = db->radio(iface_name);
+    if (!radio) {
+        return false;
+    }
+
     auto radio_channel_scan_capabilities = channel_scan_capabilities_tlv.create_radio_list();
     if (!radio_channel_scan_capabilities) {
         LOG(ERROR) << "create_radio_list() has failed!";
         return false;
     }
-    radio_channel_scan_capabilities->radio_uid()                 = radio_info.radio_mac;
+    radio_channel_scan_capabilities->radio_uid()                 = radio->front.iface_mac;
     radio_channel_scan_capabilities->capabilities().on_boot_only = 1;
     radio_channel_scan_capabilities->capabilities().scan_impact =
         0x2; // Time slicing impairment (Radio may go off channel for a series of short intervals)
