@@ -95,6 +95,9 @@ constexpr int DEFAULT_CLIENT_ROAMING           = 1;
 // by-default the persistent DB is disabled to allow backwards compatability
 // if the parameter is not configured in the prplmesh config and set to 1, DB is disabled
 constexpr int DEFAULT_PERSISTENT_DB = 0;
+// by default the commit_changes_interval is set to 10000, this is used hand in hand with
+// the persistent_data_commit_task which eventually triggers bpl::uci_commit
+constexpr int DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE_MS = 10000;
 // the DB of clients is limited in size to prevent high memory consumption
 // this is configurable to enable flexibility and support for low-memory platforms
 // by default, the number of clients's configuration to be cached is limited to 256
@@ -487,6 +490,14 @@ bool cfg_get_best_channel_rank_threshold(int &threshold);
  * @return true on success, otherwise false.
  */
 bool cfg_get_persistent_db_enable(bool &enable);
+
+/**
+ * @brief Returns commit_changes_interval value.
+ * 
+ * @param [out] returns the interval between the iterations of persistent_data_commit_task. 
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_commit_changes_interval(unsigned int &interval);
 
 /**
  * @brief Returns the max number of clients in the persistent DB.
