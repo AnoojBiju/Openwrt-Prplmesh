@@ -26,6 +26,8 @@
 #include "tasks/ire_network_optimization_task.h"
 #include "tasks/network_health_check_task.h"
 
+#include "periodic/persistent_commit_data_operation.h"
+
 #include <bcl/beerocks_backport.h>
 #include <bcl/beerocks_version.h>
 #include <bcl/son/son_wireless_utils.h>
@@ -111,6 +113,11 @@ bool master_thread::init()
         auto new_operation =
             std::make_shared<persistent_database_aging_operation>(aging_interval_seconds, database);
         operations.add_operation(new_operation);
+        auto commit_interval_seconds =
+            std::chrono::seconds(database.config.commit_changes_interval);
+        auto commit_operation =
+            std::make_shared<persistent_commit_data_operation>(database, commit_interval_seconds);
+        operations.add_operation(commit_operation);
     }
 
     if (!transport_socket_thread::init()) {
@@ -143,7 +150,6 @@ bool master_thread::init()
         })) {
         LOG(ERROR) << "Failed subscribing to the Bus";
     }
-
 #ifndef BEEROCKS_LINUX
     auto new_statistics_polling_task =
         std::make_shared<statistics_polling_task>(database, cmdu_tx, tasks);
