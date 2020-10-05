@@ -17,6 +17,27 @@
 #include "db/db.h"
 #include "son_master_thread.h"
 
+#ifdef ENABLE_NBAPI
+#include "ambiorix_impl.h"
+
+#ifndef AMBIORIX_BACKEND_PATH
+#define AMBIORIX_BACKEND_PATH "/usr/bin/mods/amxb/mod-amxb-ubus.so"
+#endif // AMBIORIX_BACKEND_PATH
+
+#ifndef AMBIORIX_BUS_URI
+#define AMBIORIX_BUS_URI "ubus:/var/run/ubus.sock"
+#endif // AMBIORIX_BUS_URI
+
+#ifndef CONTROLLER_DATAMODEL_PATH
+#define CONTROLLER_DATAMODEL_PATH "config/odl/controller.odl"
+#endif //CONTROLLER_DATAMODEL_PATH
+
+#endif //#else // ENABLE_NBAPI
+
+#include "ambiorix_dummy.h"
+
+//#endif
+
 // #include <string>
 
 // Do not use this macro anywhere else in ire process
@@ -338,6 +359,14 @@ int main(int argc, char *argv[])
     std::string pid_file_path =
         beerocks_master_conf.temp_path + "pid/" + base_master_name; // for file touching
 
+#ifdef ENABLE_NBAPI
+    // TODO: change nullptr on the EventLoop pointer after it will be added to the controller.
+    auto amb_dm_obj = std::make_shared<beerocks::nbapi::AmbiorixImpl>(nullptr);
+    amb_dm_obj->init(AMBIORIX_BACKEND_PATH, AMBIORIX_BUS_URI, CONTROLLER_DATAMODEL_PATH);
+#else
+    auto amb_dm_obj = std::make_shared<beerocks::nbapi::AmbiorixDummy>();
+#endif //ENABLE_NBAPI
+
     // fill master configuration
     son::db::sDbMasterConfig master_conf;
     fill_master_config(master_conf, beerocks_master_conf);
@@ -350,7 +379,7 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    son::db master_db(master_conf, logger, bridge_info.mac);
+    son::db master_db(master_conf, logger, bridge_info.mac, amb_dm_obj);
     // diagnostics_thread diagnostics(master_db);
     son::master_thread son_master(master_uds, master_db);
 
@@ -361,7 +390,6 @@ int main(int argc, char *argv[])
 
     auto touch_time_stamp_timeout = std::chrono::steady_clock::now();
     while (g_running) {
-
         // Handle signals
         if (s_signal) {
             handle_signal();
