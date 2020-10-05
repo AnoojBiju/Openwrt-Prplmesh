@@ -48,7 +48,7 @@ enum class Type {
 class Message {
 public:
     static constexpr uint32_t kMessageMagic   = 0xB8C16F47;
-    static constexpr uint32_t kMaxFrameLength = 0x100000; // 100kb max for now
+    static constexpr uint32_t kMaxFrameLength = 4096;
 
     class Frame {
     public:
