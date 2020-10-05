@@ -131,7 +131,8 @@ static prplmesh::hostapd::Configuration load_hostapd_config(const std::string &r
         // we are looking for the line in the vap that declares this vap: interface=radio_iface_name
         // we could equaly ask hostapd_conf if it has this vap, but there is no such interface
         // to do this. it should be something like: hostapd_conf.is_vap_exists(radio_iface_name);
-        if (hostapd_conf.get_vap_value(radio_iface_name, "interface") != radio_iface_name) {
+        if (hostapd_conf.get_vap_value(radio_iface_name, "interface") != radio_iface_name &&
+            hostapd_conf.get_vap_value(radio_iface_name, "bss") != radio_iface_name) {
             LOG(DEBUG) << radio_iface_name << " does not exists in " << try_fname;
             continue;
         }
