@@ -3046,8 +3046,8 @@ bool db::load_persistent_db_clients() // bool fordeletion?
                        }
                        // Client is still alive?
                        if (!time || time <= 0) {
-                           LOG(ERROR)
-                               << "Invalid entry - configured data has aged for client entry "
+                           LOG(DEBUG)
+                               << "Filtering aged client data - client entry "
                                << client_entry;
                            return true;
                        }
