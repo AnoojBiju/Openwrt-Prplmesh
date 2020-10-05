@@ -115,6 +115,34 @@ static bool parse_arguments(int argc, char *argv[])
 }
 
 /**
+ * @brief Removes the residue files from previous fronthaul process instance.
+ * 
+ * @param path Path to where the fronthaul residual file are located.
+ * @param file_name Name of the file to be removed if exist.
+ */
+static void remove_residual_fronthaul_files(const std::string &path, const std::string &file_name)
+{
+    int pid_out = -1;
+    // If the PID not provided by is-pid-running check.
+    if (!beerocks::os_utils::read_pid_file(path, file_name, pid_out)) {
+        // If the file doesn't exist or failed to read PID from it - do nothing.
+        return;
+    }
+
+    // There is no error print to prevent false error prints in case of first boot.
+    if (pid_out == -1) {
+        return;
+    }
+
+    for (int index = 1; index <= beerocks::eBeeRocksIfaceIds::IFACE_TOTAL_VAPS; ++index) {
+        // Removes a residual wpa_ctrl files of an old PIDs if exists.
+        std::stringstream ss;
+        ss << "wpa_ctrl_" << pid_out << "-" << index;
+        beerocks::os_utils::remove_residual_files(std::string("/tmp/"), ss.str());
+    }
+}
+
+/**
  * @brief Create and initialize logging object and print the version.
  * 
  * @param file_name File name of the log file.
@@ -209,6 +237,10 @@ int main(int argc, char *argv[])
     // Kill running fronthaul and write pid file
     std::string base_fronthaul_name = std::string(BEEROCKS_FRONTHAUL) + "_" + fronthaul_iface;
     beerocks::os_utils::kill_pid(beerocks_slave_conf.temp_path, base_fronthaul_name);
+
+    // Remove any residual fronthaul files not cleared by previous instance
+    remove_residual_fronthaul_files(beerocks_slave_conf.temp_path, base_fronthaul_name);
+
     beerocks::os_utils::write_pid_file(beerocks_slave_conf.temp_path, base_fronthaul_name);
     std::string pid_file_path =
         beerocks_slave_conf.temp_path + "pid/" + base_fronthaul_name; // For file touching
