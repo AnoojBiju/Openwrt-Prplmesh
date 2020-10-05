@@ -479,6 +479,17 @@ public:
 };
 
 /**
+ * @brief Create a message of the given type with provided frame.
+ *
+ * @param [in] type Message type.
+ * @param [in] frame Message frame.
+ *
+ * @return Unique pointer to the received message object or nullptr on error.
+ */
+std::unique_ptr<Message>
+create_transport_message(Type type, std::initializer_list<messages::Message::Frame> frame);
+
+/**
  * @brief Read and parse internal transport message from a socket.
  * 
  * @param [in] sd Socket of the incoming message.
