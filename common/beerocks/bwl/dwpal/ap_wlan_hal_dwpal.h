@@ -37,7 +37,9 @@ public:
     virtual bool enable() override;
     virtual bool disable() override;
     virtual bool set_start_disabled(bool enable, int vap_id = beerocks::IFACE_RADIO_ID) override;
-    virtual bool set_channel(int chan, int bw = 0, int center_channel = 0) override;
+    virtual bool
+    set_channel(int chan, beerocks::eWiFiBandwidth bw = beerocks::eWiFiBandwidth::BANDWIDTH_UNKNOWN,
+                int center_channel = 0) override;
     virtual bool sta_allow(const std::string &mac, const std::string &bssid) override;
     virtual bool sta_deny(const std::string &mac, const std::string &bssid) override;
     virtual bool sta_disassoc(int8_t vap_id, const std::string &mac, uint32_t reason = 0) override;

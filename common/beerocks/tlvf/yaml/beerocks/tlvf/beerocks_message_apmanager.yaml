@@ -46,7 +46,7 @@ cACTION_APMANAGER_JOINED_NOTIFICATION:
 cACTION_APMANAGER_ENABLE_APS_REQUEST:
   _type: class
   channel: uint8_t
-  bandwidth: uint32_t
+  bandwidth: beerocks::eWiFiBandwidth
   center_channel: uint8_t
 
 cACTION_APMANAGER_ENABLE_APS_RESPONSE:
@@ -230,6 +230,9 @@ cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST:
     _length: [wifi_credentials_size]
 
 cACTION_APMANAGER_START_WPS_PBC_REQUEST:
+  _type: class
+
+cACTION_APMANAGER_RADIO_DISABLE_REQUEST:
   _type: class
 
 cACTION_APMANAGER_HEARTBEAT_NOTIFICATION:
