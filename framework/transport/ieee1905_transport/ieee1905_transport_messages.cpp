@@ -25,7 +25,7 @@ constexpr uint8_t SubscribeMessage::MAX_SUBSCRIBE_TYPES;
 ////////////////////////////// Helper Functions //////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-static std::unique_ptr<Message>
+std::unique_ptr<Message>
 create_transport_message(Type type, std::initializer_list<messages::Message::Frame> frame)
 {
     switch (messages::Type(type)) {
