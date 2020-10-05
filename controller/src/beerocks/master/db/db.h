@@ -21,6 +21,14 @@
 #include <mutex>
 #include <queue>
 
+#ifdef ENABLE_NBAPI
+#include "ambiorix_impl.h"
+
+#else
+#include "ambiorix_dummy.h"
+
+#endif // ENABLE_NBAPI
+
 using namespace beerocks_message;
 
 namespace son {
@@ -158,8 +166,14 @@ public:
         bool client_optimal_path_roaming_prefer_signal_strength = false;
     } sDbMasterSettings;
 
-    db(sDbMasterConfig &config_, beerocks::logging &logger_, const std::string &local_bridge_mac)
-        : config(config_), logger(logger_), m_local_bridge_mac(local_bridge_mac)
+    db(sDbMasterConfig &config_, beerocks::logging &logger_, const std::string &local_bridge_mac,
+#ifdef ENABLE_NBAPI
+       std::shared_ptr<beerocks::nbapi::AmbiorixImpl> &ambiorix_object)
+#else
+       std::shared_ptr<beerocks::nbapi::AmbiorixDummy> &ambiorix_object)
+#endif
+        : config(config_), logger(logger_), m_local_bridge_mac(local_bridge_mac),
+          m_ambiorix_datamodel(ambiorix_object)
     {
         settings.enable_dfs_reentry &= config_.load_dfs_reentry;
         settings.client_band_steering &= config_.load_client_band_steering;
@@ -1234,6 +1248,12 @@ private:
     const std::string m_local_bridge_mac;
 
     int m_persistent_db_clients_count = 0;
+
+#ifdef ENABLE_NBAPI
+    std::shared_ptr<beerocks::nbapi::AmbiorixImpl> m_ambiorix_datamodel;
+#else
+    std::shared_ptr<beerocks::nbapi::AmbiorixDummy> m_ambiorix_datamodel;
+#endif // ENABLE_NBAPI
 };
 
 } // namespace son
