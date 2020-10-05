@@ -17,7 +17,7 @@ class PrplMeshStation(DebianWifi):
 
     linesep = "\r"
     model = "prplWRT_STA"
-    prompt = ['.*:~', '/.*#']
+    prompt = ['.*:~', '/.*#', 'root\\@OpenWrt:/#', 'root@OpenWrt:/#']
 
     def __init__(self, *args, **kwargs):
         """Init station and wlan iface."""

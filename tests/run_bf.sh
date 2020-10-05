@@ -17,7 +17,7 @@ fi
 export PYTHONPATH
 
 bft -c "${bf_plugins_dir}"/boardfarm_prplmesh/prplmesh_config.json \
-        -n prplmesh_docker -x test_flows -o "${resultdir}" \
+        -n netgear-rax40-1 -x test_flows -o "${resultdir}" \
 	|| exit 255
 
 failed_test_count=$(jq '.tests_fail' "${resultdir}"/test_results.json)
