@@ -432,10 +432,10 @@ bool cfg_get_persistent_db_enable(bool &enable)
 
 bool cfg_get_commit_changes_interval(unsigned int &seconds)
 {
-    int commit_changes_value = DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE_MS;
+    int commit_changes_value = DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE_SEC;
 
     if (cfg_get_prplmesh_param_int_default("commit_changes_interval", &commit_changes_value,
-                                           DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE_MS) ==
+                                           DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE_SEC) ==
         RETURN_ERR) {
         MAPF_ERR("Failed to read commit_changes_interval parameter");
         return false;
