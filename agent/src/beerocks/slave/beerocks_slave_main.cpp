@@ -395,6 +395,34 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     return 0;
 }
 
+/**
+ * @brief Removes the residue files from previous agent process instance.
+ * 
+ * @param path Path to where the agent residual file are located.
+ * @param file_name Name of the file to be removed if exist.
+ */
+static void remove_residual_agent_files(const std::string &path, const std::string &file_name)
+{
+    int pid_out = -1;
+    // If the PID not provided by is-pid-running check.
+    if (!beerocks::os_utils::read_pid_file(path, file_name, pid_out)) {
+        // If the file doesn't exist or failed to read PID from it - do nothing.
+        return;
+    }
+
+    // There is no error print to prevent false error prints in case of first boot.
+    if (pid_out == -1) {
+        return;
+    }
+
+    for (int index = 1; index <= beerocks::eBeeRocksIfaceIds::IFACE_TOTAL_VAPS; ++index) {
+        // Removes a residual wpa_ctrl files of an old PIDs if exists.
+        std::stringstream ss;
+        ss << "wpa_ctrl_" << pid_out << "-" << index;
+        beerocks::os_utils::remove_residual_files(std::string("/tmp/"), ss.str());
+    }
+}
+
 int main(int argc, char *argv[])
 {
     init_signals();
@@ -464,6 +492,9 @@ int main(int argc, char *argv[])
 
     // killall running slave
     beerocks::os_utils::kill_pid(beerocks_slave_conf.temp_path, std::string(BEEROCKS_AGENT));
+
+    // Remove any residual agent files not cleared by previous instance
+    remove_residual_agent_files(beerocks_slave_conf.temp_path, std::string(BEEROCKS_AGENT));
 
     // backhaul/platform manager slave
     return run_beerocks_slave(beerocks_slave_conf, interfaces_map, argc, argv);
