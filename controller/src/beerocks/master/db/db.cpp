@@ -27,6 +27,12 @@ const std::string db::INITIAL_RADIO_STR        = "initial_radio";
 const std::string db::SELECTED_BANDS_STR       = "selected_bands";
 const std::string db::IS_FRIENDLY_STR          = "is_friendly";
 
+// Initialize the initial epoch time_points for the steady_system_clock
+const std::chrono::system_clock::time_point db::steady_system_clock::initial_system_epoch =
+    std::chrono::system_clock::now();
+const std::chrono::steady_clock::time_point db::steady_system_clock::initial_steady_epoch =
+    std::chrono::steady_clock::now();
+
 // static
 std::string db::type_to_string(beerocks::eType type)
 {
