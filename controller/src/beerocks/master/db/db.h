@@ -158,6 +158,60 @@ public:
         bool client_optimal_path_roaming_prefer_signal_strength = false;
     } sDbMasterSettings;
 
+    struct steady_system_clock {
+        typedef std::chrono::nanoseconds duration;
+        typedef duration::rep rep;
+        typedef duration::period period;
+        typedef std::chrono::time_point<steady_system_clock> time_point;
+        static const bool is_steady = true;
+        static const std::chrono::system_clock::time_point initial_system_epoch;
+        static const std::chrono::steady_clock::time_point initial_steady_epoch;
+        static time_point now() noexcept
+        {
+            using namespace std::chrono;
+
+            auto current_steady_time_since_epoch = steady_clock::now().time_since_epoch();
+            auto initial_system_timestamp_epoch  = initial_system_epoch.time_since_epoch();
+            auto initial_steady_timestamp_epoch  = initial_steady_epoch.time_since_epoch();
+            /*
+                current_steady_time_since_epoch represents the current time using the steady clock.
+                initial_system_timestamp_epoch is the timestamp for the system clock taken during
+                the initialization stages of the controller.
+                initial_steady_timestamp_epoch is the timestamp for the steady clock taken during
+                the initialization stages of the controller.
+
+                To calculate the steady system clock, we take the delta between the current steady
+                clock and the initial steady clock (steady_delta). then add this delta to the
+                initial system clock to get the adjusted system delta.
+                Then that system delta is converted into a time_point to represent the current
+                system clock using the more secure steady clock.
+            */
+
+            auto steady_delta = duration_cast<duration>(current_steady_time_since_epoch) -
+                                duration_cast<duration>(initial_steady_timestamp_epoch);
+            auto adjusted_system =
+                duration_cast<duration>(initial_system_timestamp_epoch) + steady_delta;
+            return time_point(adjusted_system);
+        }
+        static duration time_passed() noexcept
+        {
+
+            using namespace std::chrono;
+            auto current_steady_time_since_epoch = steady_clock::now().time_since_epoch();
+            auto initial_steady_timestamp_epoch  = initial_steady_epoch.time_since_epoch();
+
+            auto steady_delta = duration_cast<duration>(current_steady_time_since_epoch) -
+                                duration_cast<duration>(initial_steady_timestamp_epoch);
+            return steady_delta;
+        }
+        // Map to C API
+        static std::time_t to_time_t(const time_point &__t) noexcept
+        {
+            using namespace std::chrono;
+            return std::time_t(duration_cast<seconds>(__t.time_since_epoch()).count());
+        }
+    };
+
     db(sDbMasterConfig &config_, beerocks::logging &logger_, const std::string &local_bridge_mac)
         : config(config_), logger(logger_), m_local_bridge_mac(local_bridge_mac)
     {
