@@ -125,7 +125,9 @@ bool Ieee1905Transport::verify_packet(const Packet &packet)
         }
     } else {
         // this should never happen (due to packet filter)
-        MAPF_ERR("packet verification failed - unsupported etherType.");
+        // This print is changed to debug in order to prevent log-flood on the platforms
+        // TODO: change back to error-log-print once PPM-80 is merged
+        MAPF_DBG("packet verification failed - unsupported etherType.");
         return false;
     }
 
