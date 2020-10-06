@@ -7,7 +7,7 @@
  */
 
 #include "son_master_thread.h"
-#include "periodic/persistent_commit_data_operation.h"
+#include "periodic/persistent_data_commit_operation.h"
 #include "periodic/persistent_database_aging.h"
 #include "son_actions.h"
 #include "son_management.h"
