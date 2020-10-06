@@ -372,6 +372,21 @@ bool cfg_get_persistent_db_enable(bool &enable)
     return true;
 }
 
+bool cfg_get_persistent_db_commit_changes_interval(unsigned int &interval_sec)
+{
+    int commit_changes_interval_value = beerocks::bpl::DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE_SEC;
+
+    // persistent db data commit interval value is optional
+    if (cfg_get_param_int(" persistent_db_commit_changes_interval_seconds=", commit_changes_interval_value) < 0) {
+        MAPF_DBG("Failed to read commit_changes_interval parameter - setting default value");
+        commit_changes_interval_value = beerocks::bpl::DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE_SEC;
+    }
+
+    interval_sec = commit_changes_interval_value;
+
+    return true;
+}
+
 bool cfg_get_clients_persistent_db_max_size(int &max_size)
 {
     int max_size_val = -1;
