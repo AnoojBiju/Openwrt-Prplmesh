@@ -186,9 +186,12 @@ class NetgearRax40(PrplwrtDevice):
             # stop autoboot:
             shell.sendline("")
             shell.expect(self.uboot_prompt)
+            # Set image file name
+            shell.sendline("setenv fullimage {}".format(self.image))
             # do the actual upgrade:
             shell.sendline("run update_fullimage")
-            shell.expect(self.uboot_prompt, timeout=600)
+            shell.expect("done", timeout=600)
+            shell.expect(self.uboot_prompt)
             # reboot:
             shell.sendline("reset")
             shell.expect("Please press Enter to activate this console", timeout=180)
