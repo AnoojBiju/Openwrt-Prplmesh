@@ -134,10 +134,13 @@ static void remove_residual_fronthaul_files(const std::string &path, const std::
         return;
     }
 
-    for (int index = 1; index <= beerocks::eBeeRocksIfaceIds::IFACE_TOTAL_VAPS; ++index) {
-        // Removes a residual wpa_ctrl files of an old PIDs if exists.
+    // Removes a residual wpa_ctrl files of an old PIDs if exists.
+    for (int index = beerocks::IFACE_VAP_ID_MIN; index <= beerocks::IFACE_VAP_ID_MAX; ++index) {
+        // wpa-control sockets index starts with 1
+        // wpa-control sockets are created one per vap
+        int wpa_ctrl_index = index + 1;
         std::stringstream ss;
-        ss << "wpa_ctrl_" << pid_out << "-" << index;
+        ss << "wpa_ctrl_" << pid_out << "-" << wpa_ctrl_index;
         beerocks::os_utils::remove_residual_files(std::string("/tmp/"), ss.str());
     }
 }

@@ -1720,7 +1720,8 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             LOG(DEBUG) << "Radio of iface " << m_fronthaul_iface << " does not exist on the db";
             return false;
         }
-        for (uint8_t vap_idx = 0; vap_idx < eBeeRocksIfaceIds::IFACE_TOTAL_VAPS; vap_idx++) {
+        for (uint8_t vap_idx = eBeeRocksIfaceIds::IFACE_VAP_ID_MIN;
+             vap_idx <= eBeeRocksIfaceIds::IFACE_VAP_ID_MAX; vap_idx++) {
             radio->front.bssids[vap_idx].mac  = notification_in->params().vaps[vap_idx].mac;
             radio->front.bssids[vap_idx].ssid = notification_in->params().vaps[vap_idx].ssid;
             radio->front.bssids[vap_idx].type = notification_in->params().vaps[vap_idx].backhaul_vap

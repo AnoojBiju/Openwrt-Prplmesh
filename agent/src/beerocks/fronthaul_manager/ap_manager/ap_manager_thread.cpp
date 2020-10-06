@@ -74,7 +74,7 @@ static void copy_vaps_info(std::shared_ptr<bwl::ap_wlan_hal> &ap_wlan_hal,
     const auto &radio_vaps = ap_wlan_hal->get_radio_info().available_vaps;
 
     // Copy the VAPs
-    for (int vap_id = beerocks::IFACE_VAP_ID_MIN, i = 0; vap_id < beerocks::IFACE_VAP_ID_MAX;
+    for (int vap_id = beerocks::IFACE_VAP_ID_MIN, i = 0; vap_id <= beerocks::IFACE_VAP_ID_MAX;
          vap_id++, i++) {
 
         // Clear the memory
