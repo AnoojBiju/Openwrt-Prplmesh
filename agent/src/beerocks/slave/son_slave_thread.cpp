@@ -1798,6 +1798,16 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         notification_out->cs_params() = notification_in->cs_params();
         send_cmdu_to_controller(cmdu_tx);
         send_operating_channel_report();
+
+        auto notification_out_bhm = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION>(cmdu_tx);
+        if (!notification_out_bhm) {
+            LOG(ERROR) << "Failed building message!";
+            return false;
+        }
+        notification_out_bhm->cs_params() = notification_in->cs_params();
+
+        message_com::send_cmdu(backhaul_manager_socket, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_APMANAGER_HOSTAP_CSA_ERROR_NOTIFICATION: {
@@ -1822,6 +1832,16 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         notification_out->cs_params() = notification_in->cs_params();
         send_cmdu_to_controller(cmdu_tx);
         send_operating_channel_report();
+
+        auto notification_out_bhm = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_HOSTAP_CSA_ERROR_NOTIFICATION>(cmdu_tx);
+        if (!notification_out_bhm) {
+            LOG(ERROR) << "Failed building message!";
+            return false;
+        }
+        notification_out_bhm->cs_params() = notification_in->cs_params();
+
+        message_com::send_cmdu(backhaul_manager_socket, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_APMANAGER_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE: {
@@ -1985,6 +2005,26 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         send_cmdu_to_controller(cmdu_tx);
         break;
     }
+    case beerocks_message::ACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION: {
+        auto notification_in = beerocks_header->addClass<
+            beerocks_message::cACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION>();
+        if (!notification_in) {
+            LOG(ERROR) << "addClass ACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION failed";
+            return false;
+        }
+        LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION";
+
+        auto notification_out_bhm = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_HOSTAP_DFS_CAC_STARTED_NOTIFICATION>(cmdu_tx);
+        if (!notification_out_bhm) {
+            LOG(ERROR) << "Failed building message!";
+            return false;
+        }
+        notification_out_bhm->params() = notification_in->params();
+
+        message_com::send_cmdu(backhaul_manager_socket, cmdu_tx);
+        break;
+    }
     case beerocks_message::ACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION: {
         auto notification_in = beerocks_header->addClass<
             beerocks_message::cACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION>();
@@ -2002,6 +2042,16 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         }
         notification_out->params() = notification_in->params();
         send_cmdu_to_controller(cmdu_tx);
+
+        auto notification_out_bhm = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION>(cmdu_tx);
+        if (!notification_out_bhm) {
+            LOG(ERROR) << "Failed building message!";
+            return false;
+        }
+        notification_out_bhm->params() = notification_in->params();
+
+        message_com::send_cmdu(backhaul_manager_socket, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_APMANAGER_HOSTAP_DFS_CHANNEL_AVAILABLE_NOTIFICATION: {
@@ -2289,6 +2339,27 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
 
         send_cmdu_to_controller(cmdu_tx);
 
+        break;
+    }
+    case beerocks_message::ACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE: {
+        auto notification_in = beerocks_header->addClass<
+            beerocks_message::cACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE>();
+        if (!notification_in) {
+            LOG(ERROR)
+                << "addClass ACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE failed";
+            return false;
+        }
+        LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE";
+
+        auto notification_out_bhm = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE>(cmdu_tx);
+        if (!notification_out_bhm) {
+            LOG(ERROR) << "Failed building message!";
+            return false;
+        }
+        notification_out_bhm->success() = notification_in->success();
+
+        message_com::send_cmdu(backhaul_manager_socket, cmdu_tx);
         break;
     }
     default: {
