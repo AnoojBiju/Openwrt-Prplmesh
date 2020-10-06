@@ -47,7 +47,7 @@ class db {
         */
 
     typedef struct {
-        Socket *sd;
+        int sd;
         bool map_updates;
         bool stats_updates;
         bool events_updates;
@@ -883,27 +883,27 @@ public:
     //
     // CLI
     //
-    void add_cli_socket(Socket *sd);
-    void remove_cli_socket(Socket *sd);
-    bool get_cli_debug_enable(Socket *sd);
-    Socket *get_cli_socket_at(int idx);
+    void add_cli_socket(int sd);
+    void remove_cli_socket(int sd);
+    bool get_cli_debug_enable(int sd);
+    int get_cli_socket_at(int idx);
     void set_slave_stop_on_failure_attempts(int attempts);
     int get_slave_stop_on_failure_attempts();
 
     //
     // BML
     //
-    void add_bml_socket(Socket *sd);
-    void remove_bml_socket(Socket *sd);
-    bool get_bml_nw_map_update_enable(Socket *sd);
-    bool set_bml_nw_map_update_enable(Socket *sd, bool update_enable);
-    bool get_bml_stats_update_enable(Socket *sd);
-    bool set_bml_stats_update_enable(Socket *sd, bool update_enable);
-    bool get_bml_events_update_enable(Socket *sd);
-    bool set_bml_events_update_enable(Socket *sd, bool update_enable);
-    bool get_bml_topology_update_enable(Socket *sd);
-    bool set_bml_topology_update_enable(Socket *sd, bool update_enable);
-    Socket *get_bml_socket_at(int idx);
+    void add_bml_socket(int sd);
+    void remove_bml_socket(int sd);
+    bool get_bml_nw_map_update_enable(int sd);
+    bool set_bml_nw_map_update_enable(int sd, bool update_enable);
+    bool get_bml_stats_update_enable(int sd);
+    bool set_bml_stats_update_enable(int sd, bool update_enable);
+    bool get_bml_events_update_enable(int sd);
+    bool set_bml_events_update_enable(int sd, bool update_enable);
+    bool get_bml_topology_update_enable(int sd);
+    bool set_bml_topology_update_enable(int sd, bool update_enable);
+    int get_bml_socket_at(int idx);
     bool is_bml_listener_exist();
 
     void set_vap_list(std::shared_ptr<vaps_list_t> vaps_list);
@@ -1294,7 +1294,7 @@ private:
     std::unordered_map<std::string, std::shared_ptr<node>>::iterator db_it =
         std::unordered_map<std::string, std::shared_ptr<node>>::iterator();
 
-    std::vector<Socket *> cli_debug_sockets;
+    std::vector<int> cli_debug_sockets;
     std::vector<sBmlListener> bml_listeners_sockets;
 
     beerocks::logging &logger;
