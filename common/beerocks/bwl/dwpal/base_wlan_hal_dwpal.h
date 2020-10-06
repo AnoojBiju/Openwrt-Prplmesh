@@ -31,6 +31,18 @@ enum class dwpal_fsm_state { Delay, Init, GetRadioInfo, AttachVaps, Attach, Oper
 
 enum class dwpal_fsm_event { Attach, Detach };
 
+/**
+ * @brief Contexts array index devision.
+ * Radio context is located at the beginning of the array, followed by the vap contexts.
+ */
+enum eDwpalIfaceContextIndexes {
+    IFACE_CONTEXT_INDEX_MIN     = 0,
+    IFACE_CONTEXT_INDEX_RADIO   = IFACE_CONTEXT_INDEX_MIN,
+    IFACE_CONTEXT_INDEX_VAP_MIN = 1,
+    IFACE_CONTEXT_INDEX_VAP_MAX = beerocks::IFACE_TOTAL_VAPS - 1 + IFACE_CONTEXT_INDEX_VAP_MIN,
+    IFACE_CONTEXT_INDEX_MAX,
+};
+
 /*!
  * Base class for the dwpal abstraction layer.
  * Read more about virtual inheritance: https://en.wikipedia.org/wiki/Virtual_inheritance
@@ -137,8 +149,8 @@ private:
 
     std::chrono::steady_clock::time_point m_state_timeout;
 
-    void *m_dwpal_ctx[beerocks::IFACE_TOTAL_VAPS] = {nullptr};
-    void *m_dwpal_nl_ctx                          = nullptr;
+    void *m_dwpal_ctx[IFACE_CONTEXT_INDEX_MAX] = {nullptr};
+    void *m_dwpal_nl_ctx                       = nullptr;
 
     int m_fd_nl_cmd_get = -1;
 
