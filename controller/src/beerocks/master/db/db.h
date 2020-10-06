@@ -128,7 +128,6 @@ public:
         int clients_persistent_db_max_size;
         int max_timelife_delay_days;
         int unfriendly_device_max_timelife_delay_days;
-        unsigned int persistent_db_commit_changes_interval_seconds;
     } sDbMasterConfig;
 
     typedef struct {
