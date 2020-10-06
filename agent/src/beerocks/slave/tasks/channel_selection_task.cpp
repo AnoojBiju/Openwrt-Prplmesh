@@ -10,6 +10,8 @@
 #include "../agent_db.h"
 #include "../backhaul_manager/backhaul_manager_thread.h"
 
+#include <beerocks/tlvf/beerocks_message_backhaul.h>
+
 namespace beerocks {
 
 ChannelSelectionTask::ChannelSelectionTask(backhaul_manager &btl_ctx,
@@ -126,6 +128,126 @@ void ChannelSelectionTask::handle_slave_channel_selection_response(
     LOG(DEBUG) << "Sending CHANNEL_SELECTION_RESPONSE_MESSAGE, mid=" << std::hex << mid;
     m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(db->controller_info.bridge_mac),
                                   tlvf::mac_to_string(db->bridge.mac));
+}
+
+bool ChannelSelectionTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                                  const sMacAddr &src_mac,
+                                                  std::shared_ptr<beerocks_header> beerocks_header)
+{
+    if (!beerocks_header) {
+        LOG(ERROR) << "beerocks_header is nullptr";
+        return false;
+    }
+
+    // Since currently we handle only action_ops of action type "ACTION_BACKHAUL", use a single
+    // switch-case on "ACTION_BACKHAUL" only.
+    // Once the son_slave will be unified, need to replace the expected action to
+    // "ACTION_AP_MANAGER". PPM-352.
+    if (beerocks_header->action() == beerocks_message::ACTION_BACKHAUL) {
+        switch (beerocks_header->action_op()) {
+        case beerocks_message::ACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION: {
+            handle_vs_csa_notification(cmdu_rx, beerocks_header);
+            break;
+        }
+        case beerocks_message::ACTION_BACKHAUL_HOSTAP_CSA_ERROR_NOTIFICATION: {
+            handle_vs_csa_error_notification(cmdu_rx, beerocks_header);
+            break;
+        }
+        case beerocks_message::ACTION_BACKHAUL_HOSTAP_DFS_CAC_STARTED_NOTIFICATION: {
+            handle_vs_cac_started_notification(cmdu_rx, beerocks_header);
+            break;
+        }
+        case beerocks_message::ACTION_BACKHAUL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION: {
+            handle_vs_dfs_cac_completed_notification(cmdu_rx, beerocks_header);
+            break;
+        }
+        case beerocks_message::ACTION_BACKHAUL_CHANNELS_LIST_RESPONSE: {
+            handle_vs_channels_list_notification(cmdu_rx, beerocks_header);
+            break;
+        }
+        case beerocks_message::ACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE: {
+            handle_vs_zwdfs_ant_channel_switch_response(cmdu_rx, beerocks_header);
+            break;
+        }
+
+        default: {
+            // Message was not handled, therfore return false.
+            return false;
+        }
+        }
+    }
+    return true;
+}
+
+void ChannelSelectionTask::handle_vs_csa_notification(
+    ieee1905_1::CmduMessageRx &cmdu_rx, std::shared_ptr<beerocks_header> beerocks_header)
+{
+    auto notification =
+        beerocks_header->addClass<beerocks_message::cACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION>();
+    if (!notification) {
+        LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_CSA_ERROR_NOTIFICATION failed";
+        return;
+    }
+    // TODO
+}
+
+void ChannelSelectionTask::handle_vs_csa_error_notification(
+    ieee1905_1::CmduMessageRx &cmdu_rx, std::shared_ptr<beerocks_header> beerocks_header)
+{
+    auto notification =
+        beerocks_header
+            ->addClass<beerocks_message::cACTION_BACKHAUL_HOSTAP_CSA_ERROR_NOTIFICATION>();
+    if (!notification) {
+        LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_CSA_ERROR_NOTIFICATION failed";
+        return;
+    }
+    // TODO
+}
+
+void ChannelSelectionTask::handle_vs_cac_started_notification(
+    ieee1905_1::CmduMessageRx &cmdu_rx, std::shared_ptr<beerocks_header> beerocks_header)
+{
+    auto notification =
+        beerocks_header
+            ->addClass<beerocks_message::cACTION_BACKHAUL_HOSTAP_DFS_CAC_STARTED_NOTIFICATION>();
+    if (!notification) {
+        LOG(ERROR) << "addClass sACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION failed";
+        return;
+    }
+    // TODO
+}
+
+void ChannelSelectionTask::handle_vs_dfs_cac_completed_notification(
+    ieee1905_1::CmduMessageRx &cmdu_rx, std::shared_ptr<beerocks_header> beerocks_header)
+{
+    auto notification =
+        beerocks_header
+            ->addClass<beerocks_message::cACTION_BACKHAUL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION>();
+    if (!notification) {
+        LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION failed";
+        return;
+    }
+    // TODO
+}
+
+void ChannelSelectionTask::handle_vs_channels_list_notification(
+    ieee1905_1::CmduMessageRx &cmdu_rx, std::shared_ptr<beerocks_header> beerocks_header)
+{
+    // TODO
+}
+
+void ChannelSelectionTask::handle_vs_zwdfs_ant_channel_switch_response(
+    ieee1905_1::CmduMessageRx &cmdu_rx, std::shared_ptr<beerocks_header> beerocks_header)
+{
+    auto notification = beerocks_header->addClass<
+        beerocks_message::cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE>();
+    if (!notification) {
+        LOG(ERROR) << "addClass ACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE failed";
+        return;
+    }
+    LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE";
+
+    // TODO
 }
 
 } // namespace beerocks

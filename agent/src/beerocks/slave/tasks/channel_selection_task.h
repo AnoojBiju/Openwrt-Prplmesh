@@ -32,6 +32,38 @@ private:
     void handle_slave_channel_selection_response(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                  const sMacAddr &src_mac);
 
+    /**
+     * @brief Handles Vendor Specific messages. 
+     * 
+     * @param[in] cmdu_rx Received CMDU.
+     * @param[in] src_mac MAC address of the message sender.
+     * @param[in] beerocks_header Shared pointer to beerocks header.
+     * @return true, if the message has been handled, otherwise false.
+     */
+    bool handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac,
+                                std::shared_ptr<beerocks_header> beerocks_header);
+
+    /* Vendor specific message handlers: */
+
+    void handle_vs_csa_notification(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                    std::shared_ptr<beerocks_header> beerocks_header);
+
+    void handle_vs_csa_error_notification(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                          std::shared_ptr<beerocks_header> beerocks_header);
+
+    void handle_vs_cac_started_notification(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                            std::shared_ptr<beerocks_header> beerocks_header);
+
+    void handle_vs_dfs_cac_completed_notification(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                                  std::shared_ptr<beerocks_header> beerocks_header);
+
+    void handle_vs_channels_list_notification(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                              std::shared_ptr<beerocks_header> beerocks_header);
+
+    void
+    handle_vs_zwdfs_ant_channel_switch_response(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                                std::shared_ptr<beerocks_header> beerocks_header);
+
     struct sChannelSelectionResponse {
         sMacAddr radio_mac;
         wfa_map::tlvChannelSelectionResponse::eResponseCode response_code;
