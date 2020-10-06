@@ -9,6 +9,7 @@
 #include "db.h"
 
 #include <bcl/beerocks_utils.h>
+#include <bcl/network/sockets.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <bpl/bpl_db.h>
 #include <easylogging++.h>
@@ -3296,17 +3297,17 @@ std::deque<sMacAddr> db::get_clients_with_persistent_data_configured()
 //
 // CLI
 //
-void db::add_cli_socket(Socket *sd)
+void db::add_cli_socket(int sd)
 {
-    if (sd) {
+    if (sd != beerocks::net::FileDescriptor::invalid_descriptor) {
         remove_cli_socket(sd);
         cli_debug_sockets.push_back(sd);
     }
 }
 
-void db::remove_cli_socket(Socket *sd)
+void db::remove_cli_socket(int sd)
 {
-    if (sd) {
+    if (sd != beerocks::net::FileDescriptor::invalid_descriptor) {
         for (auto it = cli_debug_sockets.begin(); it < cli_debug_sockets.end(); it++) {
             if (sd == (*it)) {
                 it = cli_debug_sockets.erase(it);
@@ -3315,9 +3316,9 @@ void db::remove_cli_socket(Socket *sd)
         }
     }
 }
-bool db::get_cli_debug_enable(Socket *sd)
+bool db::get_cli_debug_enable(int sd)
 {
-    if (sd) {
+    if (sd != beerocks::net::FileDescriptor::invalid_descriptor) {
         for (auto it = cli_debug_sockets.begin(); it < cli_debug_sockets.end(); it++) {
             if (sd == (*it)) {
                 return true;
@@ -3334,20 +3335,20 @@ void db::set_slave_stop_on_failure_attempts(int attempts)
 
 int db::get_slave_stop_on_failure_attempts() { return slaves_stop_on_failure_attempts; }
 
-Socket *db::get_cli_socket_at(int idx)
+int db::get_cli_socket_at(int idx)
 {
     if (idx < int(cli_debug_sockets.size())) {
         return cli_debug_sockets.at(idx);
     }
-    return nullptr;
+    return beerocks::net::FileDescriptor::invalid_descriptor;
 }
 
 //
 // BML
 //
-void db::add_bml_socket(Socket *sd)
+void db::add_bml_socket(int sd)
 {
-    if (sd) {
+    if (sd != beerocks::net::FileDescriptor::invalid_descriptor) {
         for (auto it = bml_listeners_sockets.begin(); it < bml_listeners_sockets.end(); it++) {
             if (sd == (*it).sd) {
                 return;
@@ -3359,9 +3360,9 @@ void db::add_bml_socket(Socket *sd)
     }
 }
 
-void db::remove_bml_socket(Socket *sd)
+void db::remove_bml_socket(int sd)
 {
-    if (sd) {
+    if (sd != beerocks::net::FileDescriptor::invalid_descriptor) {
         for (auto it = bml_listeners_sockets.begin(); it < bml_listeners_sockets.end(); it++) {
             if (sd == (*it).sd) {
                 it = bml_listeners_sockets.erase(it);
@@ -3371,9 +3372,9 @@ void db::remove_bml_socket(Socket *sd)
     }
 }
 
-bool db::get_bml_nw_map_update_enable(Socket *sd)
+bool db::get_bml_nw_map_update_enable(int sd)
 {
-    if (sd) {
+    if (sd != beerocks::net::FileDescriptor::invalid_descriptor) {
         for (auto it = bml_listeners_sockets.begin(); it < bml_listeners_sockets.end(); it++) {
             if (sd == (*it).sd) {
                 return (*it).map_updates;
@@ -3383,9 +3384,9 @@ bool db::get_bml_nw_map_update_enable(Socket *sd)
     return false;
 }
 
-bool db::set_bml_topology_update_enable(Socket *sd, bool update_enable)
+bool db::set_bml_topology_update_enable(int sd, bool update_enable)
 {
-    if (!sd) {
+    if (sd == beerocks::net::FileDescriptor::invalid_descriptor) {
         return false;
     }
     auto it = std::find_if(bml_listeners_sockets.begin(), bml_listeners_sockets.end(),
@@ -3398,9 +3399,9 @@ bool db::set_bml_topology_update_enable(Socket *sd, bool update_enable)
     return true;
 }
 
-bool db::get_bml_topology_update_enable(Socket *sd)
+bool db::get_bml_topology_update_enable(int sd)
 {
-    if (!sd) {
+    if (sd == beerocks::net::FileDescriptor::invalid_descriptor) {
         return false;
     }
     auto it = std::find_if(bml_listeners_sockets.begin(), bml_listeners_sockets.end(),
@@ -3412,9 +3413,9 @@ bool db::get_bml_topology_update_enable(Socket *sd)
     return it->topology_updates;
 }
 
-bool db::set_bml_nw_map_update_enable(Socket *sd, bool update_enable)
+bool db::set_bml_nw_map_update_enable(int sd, bool update_enable)
 {
-    if (sd) {
+    if (sd != beerocks::net::FileDescriptor::invalid_descriptor) {
         for (auto it = bml_listeners_sockets.begin(); it < bml_listeners_sockets.end(); it++) {
             if (sd == (*it).sd) {
                 (*it).map_updates = update_enable;
@@ -3425,9 +3426,9 @@ bool db::set_bml_nw_map_update_enable(Socket *sd, bool update_enable)
     return false;
 }
 
-bool db::get_bml_stats_update_enable(Socket *sd)
+bool db::get_bml_stats_update_enable(int sd)
 {
-    if (sd) {
+    if (sd != beerocks::net::FileDescriptor::invalid_descriptor) {
         for (auto it = bml_listeners_sockets.begin(); it < bml_listeners_sockets.end(); it++) {
             if (sd == (*it).sd) {
                 return (*it).stats_updates;
@@ -3437,9 +3438,9 @@ bool db::get_bml_stats_update_enable(Socket *sd)
     return false;
 }
 
-bool db::set_bml_stats_update_enable(Socket *sd, bool update_enable)
+bool db::set_bml_stats_update_enable(int sd, bool update_enable)
 {
-    if (sd) {
+    if (sd != beerocks::net::FileDescriptor::invalid_descriptor) {
         for (auto it = bml_listeners_sockets.begin(); it < bml_listeners_sockets.end(); it++) {
             if (sd == (*it).sd) {
                 (*it).stats_updates = update_enable;
@@ -3450,9 +3451,9 @@ bool db::set_bml_stats_update_enable(Socket *sd, bool update_enable)
     return false;
 }
 
-bool db::get_bml_events_update_enable(Socket *sd)
+bool db::get_bml_events_update_enable(int sd)
 {
-    if (sd) {
+    if (sd != beerocks::net::FileDescriptor::invalid_descriptor) {
         for (auto it = bml_listeners_sockets.begin(); it < bml_listeners_sockets.end(); it++) {
             if (sd == (*it).sd) {
                 return (*it).events_updates;
@@ -3462,9 +3463,9 @@ bool db::get_bml_events_update_enable(Socket *sd)
     return false;
 }
 
-bool db::set_bml_events_update_enable(Socket *sd, bool update_enable)
+bool db::set_bml_events_update_enable(int sd, bool update_enable)
 {
-    if (sd) {
+    if (sd != beerocks::net::FileDescriptor::invalid_descriptor) {
         for (auto it = bml_listeners_sockets.begin(); it < bml_listeners_sockets.end(); it++) {
             if (sd == (*it).sd) {
                 (*it).events_updates = update_enable;
@@ -3475,12 +3476,12 @@ bool db::set_bml_events_update_enable(Socket *sd, bool update_enable)
     return false;
 }
 
-Socket *db::get_bml_socket_at(int idx)
+int db::get_bml_socket_at(int idx)
 {
     if (idx < int(bml_listeners_sockets.size())) {
         return bml_listeners_sockets.at(idx).sd;
     }
-    return nullptr;
+    return beerocks::net::FileDescriptor::invalid_descriptor;
 }
 
 bool db::is_bml_listener_exist()
