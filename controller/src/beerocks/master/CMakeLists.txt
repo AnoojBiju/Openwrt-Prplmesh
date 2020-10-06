@@ -22,8 +22,7 @@ if (ENABLE_NBAPI)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_NBAPI")
 endif()
 
-target_link_libraries(${PROJECT_NAME} bpl bcl btl tlvf elpp btlvf nbapi)
-
+target_link_libraries(${PROJECT_NAME} bpl bcl btl tlvf elpp btlvf nbapi ieee1905_transport_lib)
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${MODULE_PATH}/../bml
 )
