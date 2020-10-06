@@ -18,15 +18,23 @@
 
 #include <bml_defs.h>
 
+#include "../son_master_thread.h"
+
 #include <unordered_set>
 
 using namespace beerocks;
 using namespace net;
 using namespace son;
 
-void network_map::send_bml_network_map_message(db &database, Socket *sd,
+void network_map::send_bml_network_map_message(db &database, int fd,
                                                ieee1905_1::CmduMessageTx &cmdu_tx, uint16_t id)
 {
+    auto master_thread_ctx = database.get_master_thread_ctx();
+    if (!master_thread_ctx) {
+        LOG(ERROR) << "master_thread_context == nullptr";
+        return;
+    }
+
     auto response =
         message_com::create_vs_message<beerocks_message::cACTION_BML_NW_MAP_RESPONSE>(cmdu_tx, id);
     if (response == nullptr) {
@@ -103,7 +111,7 @@ void network_map::send_bml_network_map_message(db &database, Socket *sd,
                 LOG(ERROR) << "node size is bigger than buffer size";
                 return;
             } else if (node_len > size_left) {
-                message_com::send_cmdu(sd, cmdu_tx);
+                master_thread_ctx->send_cmdu(fd, cmdu_tx);
 
                 get_next_node = false;
                 response =
@@ -141,7 +149,7 @@ void network_map::send_bml_network_map_message(db &database, Socket *sd,
     }
 
     beerocks_header->actionhdr()->last() = 1;
-    message_com::send_cmdu(sd, cmdu_tx);
+    master_thread_ctx->send_cmdu(fd, cmdu_tx);
     //LOG(DEBUG) << "sending message, last=1";
 }
 
@@ -310,7 +318,7 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
 }
 
 void network_map::send_bml_nodes_statistics_message_to_listeners(
-    db &database, ieee1905_1::CmduMessageTx &cmdu_tx, std::vector<Socket *> bml_listeners,
+    db &database, ieee1905_1::CmduMessageTx &cmdu_tx, const std::vector<int> &bml_listeners,
     std::set<std::string> valid_hostaps)
 {
     auto response =
@@ -369,7 +377,7 @@ void network_map::send_bml_nodes_statistics_message_to_listeners(
 
             //LOG(DEBUG) << "sending message, last=0";
             // sending to all listeners
-            send_bml_event_to_listeners(cmdu_tx, bml_listeners);
+            send_bml_event_to_listeners(database, cmdu_tx, bml_listeners);
 
             // prepare for next message
             response =
@@ -451,21 +459,27 @@ void network_map::send_bml_nodes_statistics_message_to_listeners(
 
     //LOG(DEBUG) << "sending message, last=0";
     // sending to all listeners
-    send_bml_event_to_listeners(cmdu_tx, bml_listeners);
+    send_bml_event_to_listeners(database, cmdu_tx, bml_listeners);
     //LOG(DEBUG) << "sending message, last=1";
 }
 
-void network_map::send_bml_event_to_listeners(ieee1905_1::CmduMessageTx &cmdu_tx,
-                                              std::vector<Socket *> &bml_listeners)
+void network_map::send_bml_event_to_listeners(db &database, ieee1905_1::CmduMessageTx &cmdu_tx,
+                                              const std::vector<int> &bml_listeners)
 {
-    for (auto it = bml_listeners.begin(); it != bml_listeners.end(); ++it) {
-        message_com::send_cmdu(*it, cmdu_tx);
+    auto master_thread_ctx = database.get_master_thread_ctx();
+    if (!master_thread_ctx) {
+        LOG(ERROR) << "master_thread_context == nullptr";
+        return;
+    }
+
+    for (int fd : bml_listeners) {
+        master_thread_ctx->send_cmdu(fd, cmdu_tx);
     }
 }
 
 void network_map::send_bml_bss_tm_req_message_to_listeners(db &database,
                                                            ieee1905_1::CmduMessageTx &cmdu_tx,
-                                                           std::vector<Socket *> bml_listeners,
+                                                           const std::vector<int> &bml_listeners,
                                                            std::string target_bssid,
                                                            uint8_t disassoc_imminent)
 {
@@ -495,12 +509,12 @@ void network_map::send_bml_bss_tm_req_message_to_listeners(db &database,
     tlvf::mac_from_string(event_bss_tm_req->target_bssid, target_bssid);
     event_bss_tm_req->disassoc_imminent = disassoc_imminent;
 
-    send_bml_event_to_listeners(cmdu_tx, bml_listeners);
+    send_bml_event_to_listeners(database, cmdu_tx, bml_listeners);
 }
 
 void network_map::send_bml_bh_roam_req_message_to_listeners(db &database,
                                                             ieee1905_1::CmduMessageTx &cmdu_tx,
-                                                            std::vector<Socket *> bml_listeners,
+                                                            const std::vector<int> &bml_listeners,
                                                             std::string bssid, uint8_t channel)
 {
     auto response =
@@ -529,11 +543,11 @@ void network_map::send_bml_bh_roam_req_message_to_listeners(db &database,
     tlvf::mac_from_string(event_bh_roam_req->bssid, bssid);
     event_bh_roam_req->channel = channel;
 
-    send_bml_event_to_listeners(cmdu_tx, bml_listeners);
+    send_bml_event_to_listeners(database, cmdu_tx, bml_listeners);
 }
 
 void network_map::send_bml_client_allow_req_message_to_listeners(
-    db &database, ieee1905_1::CmduMessageTx &cmdu_tx, std::vector<Socket *> bml_listeners,
+    db &database, ieee1905_1::CmduMessageTx &cmdu_tx, const std::vector<int> &bml_listeners,
     std::string sta_mac, std::string hostap_mac, std::string ip)
 {
     auto response =
@@ -563,11 +577,11 @@ void network_map::send_bml_client_allow_req_message_to_listeners(
     tlvf::mac_from_string(event_client_allow_req->hostap_mac, hostap_mac);
     network_utils::ipv4_from_string(event_client_allow_req->ip, ip);
 
-    send_bml_event_to_listeners(cmdu_tx, bml_listeners);
+    send_bml_event_to_listeners(database, cmdu_tx, bml_listeners);
 }
 
 void network_map::send_bml_client_disallow_req_message_to_listeners(
-    db &database, ieee1905_1::CmduMessageTx &cmdu_tx, std::vector<Socket *> bml_listeners,
+    db &database, ieee1905_1::CmduMessageTx &cmdu_tx, const std::vector<int> &bml_listeners,
     std::string sta_mac, std::string hostap_mac)
 {
     auto response =
@@ -596,12 +610,12 @@ void network_map::send_bml_client_disallow_req_message_to_listeners(
     tlvf::mac_from_string(event_client_disallow_req->sta_mac, sta_mac);
     tlvf::mac_from_string(event_client_disallow_req->hostap_mac, hostap_mac);
 
-    send_bml_event_to_listeners(cmdu_tx, bml_listeners);
+    send_bml_event_to_listeners(database, cmdu_tx, bml_listeners);
 }
 
 void network_map::send_bml_acs_start_message_to_listeners(db &database,
                                                           ieee1905_1::CmduMessageTx &cmdu_tx,
-                                                          std::vector<Socket *> bml_listeners,
+                                                          const std::vector<int> &bml_listeners,
                                                           std::string hostap_mac)
 {
     auto response =
@@ -630,11 +644,11 @@ void network_map::send_bml_acs_start_message_to_listeners(db &database,
 
     tlvf::mac_from_string(event_acs_start->hostap_mac, hostap_mac);
 
-    send_bml_event_to_listeners(cmdu_tx, bml_listeners);
+    send_bml_event_to_listeners(database, cmdu_tx, bml_listeners);
 }
 
 void network_map::send_bml_csa_notification_message_to_listeners(
-    db &database, ieee1905_1::CmduMessageTx &cmdu_tx, std::vector<Socket *> bml_listeners,
+    db &database, ieee1905_1::CmduMessageTx &cmdu_tx, const std::vector<int> &bml_listeners,
     std::string hostap_mac, uint8_t bandwidth, uint8_t channel, uint8_t channel_ext_above_primary,
     uint16_t vht_center_frequency)
 {
@@ -667,11 +681,11 @@ void network_map::send_bml_csa_notification_message_to_listeners(
     event_csa_notification->channel_ext_above_primary = channel_ext_above_primary;
     event_csa_notification->vht_center_frequency      = vht_center_frequency;
 
-    send_bml_event_to_listeners(cmdu_tx, bml_listeners);
+    send_bml_event_to_listeners(database, cmdu_tx, bml_listeners);
 }
 
 void network_map::send_bml_cac_status_changed_notification_message_to_listeners(
-    db &database, ieee1905_1::CmduMessageTx &cmdu_tx, std::vector<Socket *> bml_listeners,
+    db &database, ieee1905_1::CmduMessageTx &cmdu_tx, const std::vector<int> &bml_listeners,
     std::string hostap_mac, uint8_t cac_completed)
 {
     auto response =
@@ -702,7 +716,7 @@ void network_map::send_bml_cac_status_changed_notification_message_to_listeners(
     tlvf::mac_from_string(event_cac_status_changed->hostap_mac, hostap_mac);
     event_cac_status_changed->cac_completed = cac_completed;
 
-    send_bml_event_to_listeners(cmdu_tx, bml_listeners);
+    send_bml_event_to_listeners(database, cmdu_tx, bml_listeners);
 }
 
 std::ptrdiff_t network_map::get_bml_node_statistics_len(std::shared_ptr<node> n)
