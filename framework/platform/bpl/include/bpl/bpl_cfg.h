@@ -95,6 +95,8 @@ constexpr int DEFAULT_CLIENT_ROAMING           = 1;
 // by-default the persistent DB is disabled to allow backwards compatability
 // if the parameter is not configured in the prplmesh config and set to 1, DB is disabled
 constexpr int DEFAULT_PERSISTENT_DB = 0;
+// The default value in seconds for the interval between periodic commits of persistent DB data.
+constexpr unsigned int DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE_SEC = 10;
 // the DB of clients is limited in size to prevent high memory consumption
 // this is configurable to enable flexibility and support for low-memory platforms
 // by default, the number of clients's configuration to be cached is limited to 256
@@ -487,6 +489,14 @@ bool cfg_get_best_channel_rank_threshold(int &threshold);
  * @return true on success, otherwise false.
  */
 bool cfg_get_persistent_db_enable(bool &enable);
+
+/**
+ * @brief Returns commit_changes_interval (seconds) value.
+ * 
+ * @param[out] interval_sec The interval in seconds between periodic persistent data commit operations. 
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_commit_changes_interval(unsigned int &interval_sec);
 
 /**
  * @brief Returns the max number of clients in the persistent DB.
