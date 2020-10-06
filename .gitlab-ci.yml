@@ -409,6 +409,13 @@ run-certification-tests:
   rules:
     - if: "$TESTS_TO_RUN"
 
+run-certification-tests-isr:
+  extends: run-certification-tests
+  tags:
+    - certs-tests-isr
+  rules:
+    - if: '$TESTS_TO_RUN && $WFA_CERTIFICATION_RUNNER == "ISR"'
+
 include:
   - template: "Workflows/MergeRequest-Pipelines.gitlab-ci.yml"
   - local: "/ci/certification/generic.yml"
