@@ -16,7 +16,9 @@ import yaml
 
 from capi import UCCSocket
 from collections import namedtuple
+from connmap import MapDevice
 from opts import opts, debug, err
+from typing import Dict
 import sniffer
 
 
@@ -316,6 +318,40 @@ class ALEntityDocker(ALEntity):
 
     def prprlmesh_status_check(self):
         return self.device.prprlmesh_status_check()
+
+    def beerocks_cli_command(self, command) -> bytes:
+        '''Execute `command` beerocks_cli command on the controller and return its output.
+        Will return None if called from an object that is not a controller.
+        '''
+        if self.is_controller:
+            debug("Send CLI command " + command)
+            res = self.prplmesh_command("bin/beerocks_cli", "-c", command)
+            debug("  Response: " + res.decode('utf-8', errors='replace').strip())
+            return res
+        return None
+
+    def get_conn_map(self) -> Dict[str, MapDevice]:
+        '''Get the connection map from the controller.'''
+        RE_MAC = rb"(?P<mac>([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})"
+
+        conn_map = {}
+        for line in self.beerocks_cli_command("bml_conn_map").split(b'\n'):
+            # TODO we need to parse indentation to get the exact topology.
+            # For the time being, just parse the repeaters.
+            bridge = re.search(rb' {8}IRE_BRIDGE: .* mac: ' + RE_MAC, line)
+            radio = re.match(rb' {16}RADIO: .* mac: ' + RE_MAC, line)
+            vap = re.match(rb' {20}fVAP.* bssid: ' + RE_MAC + rb', ssid: (?P<ssid>.*)$', line)
+            client = re.match(rb' {24}CLIENT: mac: ' + RE_MAC, line)
+            if bridge:
+                cur_agent = MapDevice(bridge.group('mac').decode('utf-8'))
+                conn_map[cur_agent.mac] = cur_agent
+            elif radio:
+                cur_radio = cur_agent.add_radio(radio.group('mac').decode('utf-8'))
+            elif vap:
+                cur_vap = cur_radio.add_vap(vap.group('mac').decode('utf-8'), vap.group('ssid'))
+            elif client:
+                cur_vap.add_client(client.group('mac').decode('utf-8'))
+        return conn_map
 
 
 class RadioDocker(Radio):

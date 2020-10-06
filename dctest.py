@@ -132,17 +132,8 @@ class Services:
         local_env['ROOT_DIR'] = self.rootdir
         local_env['RUN_ID'] = self.build_id
 
-        # we have to check with self.local_run because CI_PIPELINE_ID is None only the first time.
-        if os.getenv('CI_PIPELINE_ID') is None or self.local_run:
-            # Running locally
-            self.local_run = True
-            local_env['CI_PIPELINE_ID'] = 'latest'
-            local_env['FINAL_ROOT_DIR'] = self.rootdir
-        else:
-            # Running inside gitlab-ci
-            # Setting a fixed location is needed until
-            # https://jira.prplfoundation.org/browse/PPM-208 is fixed.
-            local_env['FINAL_ROOT_DIR'] = '/builds/prpl-foundation/prplmesh/prplMesh'
+        local_env['CI_PIPELINE_ID'] = 'latest'
+        local_env['FINAL_ROOT_DIR'] = self.rootdir
 
         if not interactive:
             proc = Popen(params, stdout=PIPE, stderr=PIPE)
