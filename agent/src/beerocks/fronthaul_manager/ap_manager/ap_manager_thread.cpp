@@ -1653,7 +1653,7 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
             LOG(ERROR) << "addClass wfa_map::tlvProfile2ReasonCode!";
             return false;
         }
-        // Send the tunnelled message
+        // Send the mismatched message
         message_com::send_cmdu(slave_socket, cmdu_tx);
     } break;
     // Unhandled events
