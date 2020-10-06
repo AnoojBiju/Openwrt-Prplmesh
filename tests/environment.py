@@ -332,6 +332,8 @@ class ALEntityDocker(ALEntity):
 
     def get_conn_map(self) -> Dict[str, MapDevice]:
         '''Get the connection map from the controller.'''
+
+        '''Regular expression to match a MAC address in a bytes string.'''
         RE_MAC = rb"(?P<mac>([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})"
 
         conn_map = {}

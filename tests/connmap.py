@@ -5,13 +5,6 @@
 # See LICENSE file for more details.
 ###############################################################
 
-import re
-from typing import Dict
-
-
-'''Regular expression to match a MAC address in a bytes string.'''
-RE_MAC = rb"(?P<mac>([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})"
-
 
 class MapClient:
     '''Represents a client (STA) in the connection map.'''
