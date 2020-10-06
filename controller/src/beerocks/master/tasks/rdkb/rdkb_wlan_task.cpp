@@ -56,9 +56,9 @@ void rdkb_wlan_task::work()
 
 void rdkb_wlan_task::handle_event(int event_type, void *obj)
 {
-    std::vector<Socket *> events_updates_listeners;
+    std::vector<int> events_updates_listeners;
     uint32_t idx = 0;
-    Socket *sd;
+    int sd;
 
     while ((sd = get_bml_rdkb_wlan_socket_at(idx)) != nullptr) {
         if (get_bml_rdkb_wlan_events_update_enable(sd)) {
@@ -850,9 +850,9 @@ bool rdkb_wlan_task::is_bml_rdkb_wlan_listener_exist()
     return false;
 }
 
-bool rdkb_wlan_task::is_bml_rdkb_wlan_listener_socket(Socket *sd)
+bool rdkb_wlan_task::is_bml_rdkb_wlan_listener_socket(int sd)
 {
-    if (sd) {
+    if (sd != beerocks::net::FileDescriptor::invalid_descriptor) {
         for (auto it = bml_rdkb_wlan_listeners_sockets.begin();
              it < bml_rdkb_wlan_listeners_sockets.end(); it++) {
             if (sd == (*it).sd) {
@@ -863,17 +863,17 @@ bool rdkb_wlan_task::is_bml_rdkb_wlan_listener_socket(Socket *sd)
     return false;
 }
 
-Socket *rdkb_wlan_task::get_bml_rdkb_wlan_socket_at(uint32_t idx)
+int rdkb_wlan_task::get_bml_rdkb_wlan_socket_at(uint32_t idx)
 {
     if (idx < (bml_rdkb_wlan_listeners_sockets.size())) {
         return bml_rdkb_wlan_listeners_sockets.at(idx).sd;
     }
-    return nullptr;
+    return beerocks::net::FileDescriptor::invalid_descriptor;
 }
 
-bool rdkb_wlan_task::get_bml_rdkb_wlan_events_update_enable(Socket *sd)
+bool rdkb_wlan_task::get_bml_rdkb_wlan_events_update_enable(int sd)
 {
-    if (sd) {
+    if (sd != beerocks::net::FileDescriptor::invalid_descriptor) {
         for (auto it = bml_rdkb_wlan_listeners_sockets.begin();
              it < bml_rdkb_wlan_listeners_sockets.end(); it++) {
             if (sd == (*it).sd) {
@@ -884,9 +884,9 @@ bool rdkb_wlan_task::get_bml_rdkb_wlan_events_update_enable(Socket *sd)
     return false;
 }
 
-bool rdkb_wlan_task::set_bml_rdkb_wlan_events_update_enable(Socket *sd, bool update_enable)
+bool rdkb_wlan_task::set_bml_rdkb_wlan_events_update_enable(int sd, bool update_enable)
 {
-    if (sd) {
+    if (sd != beerocks::net::FileDescriptor::invalid_descriptor) {
         for (auto it = bml_rdkb_wlan_listeners_sockets.begin();
              it < bml_rdkb_wlan_listeners_sockets.end(); it++) {
             if (sd == (*it).sd) {
@@ -898,9 +898,9 @@ bool rdkb_wlan_task::set_bml_rdkb_wlan_events_update_enable(Socket *sd, bool upd
     return false;
 }
 
-void rdkb_wlan_task::add_bml_rdkb_wlan_socket(Socket *sd)
+void rdkb_wlan_task::add_bml_rdkb_wlan_socket(int sd)
 {
-    if (sd) {
+    if (sd != beerocks::net::FileDescriptor::invalid_descriptor) {
         for (auto it = bml_rdkb_wlan_listeners_sockets.begin();
              it < bml_rdkb_wlan_listeners_sockets.end(); it++) {
             if (sd == (*it).sd) {
@@ -913,9 +913,9 @@ void rdkb_wlan_task::add_bml_rdkb_wlan_socket(Socket *sd)
     }
 }
 
-void rdkb_wlan_task::remove_bml_rdkb_wlan_socket(Socket *sd)
+void rdkb_wlan_task::remove_bml_rdkb_wlan_socket(int sd)
 {
-    if (sd) {
+    if (sd != beerocks::net::FileDescriptor::invalid_descriptor) {
         for (auto it = bml_rdkb_wlan_listeners_sockets.begin();
              it < bml_rdkb_wlan_listeners_sockets.end(); it++) {
             if (sd == (*it).sd) {
@@ -927,10 +927,16 @@ void rdkb_wlan_task::remove_bml_rdkb_wlan_socket(Socket *sd)
 }
 
 void rdkb_wlan_task::send_bml_event_to_listeners(ieee1905_1::CmduMessageTx &cmdu_tx,
-                                                 std::vector<Socket *> &bml_listeners)
+                                                 const std::vector<int> &bml_listeners)
 {
-    for (auto it = bml_listeners.begin(); it != bml_listeners.end(); ++it) {
-        message_com::send_cmdu(*it, cmdu_tx);
+    auto master_thread_ctx = database.get_master_thread_ctx();
+    if (!master_thread_ctx) {
+        LOG(ERROR) << "master_thread_context == nullptr";
+        return;
+    }
+
+    for (int fd : bml_listeners) {
+        master_thread_ctx->send_cmdu(fd, cmdu_tx);
     }
 }
 
@@ -1019,8 +1025,14 @@ rdkb_wlan_task::steering_group_fill_ap_configuration(steering_set_group_request_
     return BML_RET_OK;
 }
 
-void rdkb_wlan_task::send_bml_response(int event, Socket *sd, int32_t ret)
+void rdkb_wlan_task::send_bml_response(int event, int sd, int32_t ret)
 {
+    auto master_thread_ctx = database.get_master_thread_ctx();
+    if (!master_thread_ctx) {
+        LOG(ERROR) << "master_thread_context == nullptr";
+        return;
+    }
+
     switch (event) {
     case STEERING_EVENT_UNREGISTER:
     case STEERING_EVENT_REGISTER: {
@@ -1036,7 +1048,7 @@ void rdkb_wlan_task::send_bml_response(int event, Socket *sd, int32_t ret)
         response->error_code() = ret;
 
         //send response to bml
-        message_com::send_cmdu(sd, cmdu_tx);
+        master_thread_ctx->send_cmdu(sd, cmdu_tx);
         break;
     }
     case STEERING_SET_GROUP_RESPONSE: {
@@ -1051,7 +1063,7 @@ void rdkb_wlan_task::send_bml_response(int event, Socket *sd, int32_t ret)
         response->error_code() = ret;
 
         //send response to bml
-        message_com::send_cmdu(sd, cmdu_tx);
+        master_thread_ctx->send_cmdu(sd, cmdu_tx);
         break;
     }
     case STEERING_CLIENT_SET_RESPONSE: {
@@ -1066,7 +1078,7 @@ void rdkb_wlan_task::send_bml_response(int event, Socket *sd, int32_t ret)
         response->error_code() = ret;
 
         //send response to bml
-        message_com::send_cmdu(sd, cmdu_tx);
+        master_thread_ctx->send_cmdu(sd, cmdu_tx);
         break;
     }
     case STEERING_CLIENT_DISCONNECT_RESPONSE: {
@@ -1082,7 +1094,7 @@ void rdkb_wlan_task::send_bml_response(int event, Socket *sd, int32_t ret)
         response->error_code() = ret;
 
         //send response to bml
-        message_com::send_cmdu(sd, cmdu_tx);
+        master_thread_ctx->send_cmdu(sd, cmdu_tx);
         break;
     }
     case STEERING_RSSI_MEASUREMENT_RESPONSE: {
@@ -1097,7 +1109,7 @@ void rdkb_wlan_task::send_bml_response(int event, Socket *sd, int32_t ret)
         response->error_code() = ret;
 
         //send response to bml
-        message_com::send_cmdu(sd, cmdu_tx);
+        master_thread_ctx->send_cmdu(sd, cmdu_tx);
         break;
     }
     default: {
@@ -1107,7 +1119,7 @@ void rdkb_wlan_task::send_bml_response(int event, Socket *sd, int32_t ret)
     }
     return;
 }
-void rdkb_wlan_task::add_pending_events(int event, Socket *bml_sd, uint32_t amount)
+void rdkb_wlan_task::add_pending_events(int event, int bml_sd, uint32_t amount)
 {
     // TODO - fix to use tasks infrastructure WLANRTSYS-TBD
     for (uint32_t i = 0; i < amount; i++) {
@@ -1118,10 +1130,10 @@ void rdkb_wlan_task::add_pending_events(int event, Socket *bml_sd, uint32_t amou
     }
 }
 
-std::pair<bool, Socket *> rdkb_wlan_task::check_for_pending_events(int event)
+std::pair<bool, int> rdkb_wlan_task::check_for_pending_events(int event)
 {
     // TODO - fix to use tasks infrastructure WLANRTSYS-TBD
-    std::pair<bool, Socket *> res;
+    std::pair<bool, int> res;
     auto ret      = pending_events.equal_range(event);
     auto distance = std::distance(ret.first, ret.second);
     TASK_LOG(DEBUG) << "event = " << int(event) << " distance = " << int(distance);

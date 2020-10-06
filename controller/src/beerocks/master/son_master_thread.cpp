@@ -209,33 +209,62 @@ std::string master_thread::print_cmdu_types(const message::sUdsHeader *cmdu_head
     return message_com::print_cmdu_types(cmdu_header);
 }
 
+bool master_thread::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
+{
+    return message_com::send_cmdu(m_fd_to_socket_map[fd], cmdu_tx);
+}
+
+// This method is temporary and will be removed at the end of PPM-591.
+// It is intended to allow the temporary coexistence of Socket* and file descriptors to refer to
+// accepted sockets.
 bool master_thread::socket_disconnected(Socket *sd)
 {
-    if (sd == nullptr) {
-        LOG(DEBUG) << "sd == nullptr, ignore";
+    if (!sd) {
+        LOG(ERROR) << "socket is nullptr";
         return false;
     }
 
+    // Get the file descriptor for the given socket instance
+    int fd = sd->getSocketFd();
+
+    // Save the pair { fd x Socket* } for later retrieval
+    m_fd_to_socket_map[fd] = sd;
+
+    // Call the method with the new signature
+    handle_disconnected(fd);
+
+    // Returning true so the socket_thread will handle the socket removal.
+    return true;
+}
+
+void master_thread::handle_disconnected(int fd)
+{
     // Removing the socket only from the vector of socket in the database if exists,
     // not from socket thread.
-    database.remove_cli_socket(sd);
-    database.remove_bml_socket(sd);
+    database.remove_cli_socket(fd);
+    database.remove_bml_socket(fd);
 
 #ifdef BEEROCKS_RDKB
     if (database.settings_rdkb_extensions()) {
         //TODO - use rdkb_wlan_hal_db instead of task event
         rdkb_wlan_task::listener_general_register_unregister_event new_event;
-        new_event.sd = sd;
+        new_event.sd = fd;
         tasks.push_event(database.get_rdkb_wlan_task_id(),
                          rdkb_wlan_task::events::STEERING_REMOVE_SOCKET, &new_event);
     }
 #endif
-    // Returning true so the socket_thread will handle the socket removal.
-    return true;
 }
 
+// This method is temporary and will be removed at the end of PPM-591.
+// It is intended to allow the temporary coexistence of Socket* and file descriptors to refer to
+// accepted sockets.
 bool master_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
+    if (!sd) {
+        LOG(ERROR) << "socket is nullptr";
+        return false;
+    }
+
     auto uds_header = message_com::get_uds_header(cmdu_rx);
     if (uds_header == nullptr) {
         LOG(ERROR) << "get_uds_header() returns nullptr";
@@ -267,6 +296,20 @@ bool master_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
         // If VS message was sent by Controllers local agent to the controller, it is looped back.
     }
 
+    // Get the file descriptor for the given socket instance
+    int fd = sd->getSocketFd();
+
+    // Save the pair { fd x Socket* } for later retrieval
+    m_fd_to_socket_map[fd] = sd;
+
+    // Call the method with the new signature
+    return handle_cmdu(fd, 0, tlvf::mac_from_string(dst_mac), tlvf::mac_from_string(src_mac),
+                       cmdu_rx);
+}
+
+bool master_thread::handle_cmdu(int fd, uint32_t iface_index, const sMacAddr &dst_mac,
+                                const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
+{
     bool vendor_specific = false;
 
     if (cmdu_rx.getMessageType() == ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE) {
@@ -281,13 +324,13 @@ bool master_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
         }
         switch (beerocks_header->action()) {
         case beerocks_message::ACTION_CLI: {
-            son_management::handle_cli_message(sd, beerocks_header, cmdu_tx, database, tasks);
+            son_management::handle_cli_message(fd, beerocks_header, cmdu_tx, database, tasks);
         } break;
         case beerocks_message::ACTION_BML: {
-            son_management::handle_bml_message(sd, beerocks_header, cmdu_tx, database, tasks);
+            son_management::handle_bml_message(fd, beerocks_header, cmdu_tx, database, tasks);
         } break;
         case beerocks_message::ACTION_CONTROL: {
-            handle_cmdu_control_message(src_mac, beerocks_header);
+            handle_cmdu_control_message(tlvf::mac_to_string(src_mac), beerocks_header);
         } break;
         default: {
             LOG(ERROR) << "Unknown message, action: " << int(beerocks_header->action());
@@ -295,7 +338,7 @@ bool master_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
         }
     } else {
         LOG(DEBUG) << "received 1905.1 cmdu message";
-        handle_cmdu_1905_1_message(src_mac, cmdu_rx);
+        handle_cmdu_1905_1_message(tlvf::mac_to_string(src_mac), cmdu_rx);
     }
 
     return true;
