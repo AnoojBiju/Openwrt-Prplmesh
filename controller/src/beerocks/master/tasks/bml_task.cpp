@@ -12,6 +12,7 @@
 #include "bml_defs.h"
 
 #include <bcl/network/network_utils.h>
+#include <bcl/network/sockets.h>
 #include <easylogging++.h>
 
 #include <beerocks/tlvf/beerocks_message.h>
@@ -59,11 +60,12 @@ void bml_task::handle_event(int event_type, void *obj)
     }
 
     //TASK_LOG(TRACE) << "event_type " << event_type << " was received";
-    std::vector<Socket *> events_updates_listeners;
+    std::vector<int> events_updates_listeners;
     int idx = 0;
-    Socket *sd;
+    int sd;
 
-    while ((sd = database.get_bml_socket_at(idx)) != nullptr) {
+    while ((sd = database.get_bml_socket_at(idx)) !=
+           beerocks::net::FileDescriptor::invalid_descriptor) {
         if (database.get_bml_events_update_enable(sd)) {
             events_updates_listeners.push_back(sd);
         }
@@ -90,11 +92,12 @@ void bml_task::handle_event(int event_type, void *obj)
             auto event_obj = (stats_info_available_event *)obj;
 
             int idx = 0;
-            std::vector<Socket *> stats_updates_listeners;
-            Socket *sd;
-            while ((sd = database.get_bml_socket_at(idx)) != nullptr) {
-                if (database.get_bml_stats_update_enable(sd)) {
-                    stats_updates_listeners.push_back(sd);
+            std::vector<int> stats_updates_listeners;
+            int fd;
+            while ((fd = database.get_bml_socket_at(idx)) !=
+                   beerocks::net::FileDescriptor::invalid_descriptor) {
+                if (database.get_bml_stats_update_enable(fd)) {
+                    stats_updates_listeners.push_back(fd);
                 }
                 idx++;
             }
@@ -306,8 +309,9 @@ void bml_task::handle_event(int event_type, void *obj)
         auto event_obj = reinterpret_cast<topology_response_update_event *>(obj);
         TASK_LOG(DEBUG) << "TOPOLOGY_RESPONSE_UPDATE event was received";
         int sd_idx = 0;
-        std::vector<Socket *> topology_response_updates_listeners;
-        while ((sd = database.get_bml_socket_at(sd_idx)) != nullptr) {
+        std::vector<int> topology_response_updates_listeners;
+        while ((sd = database.get_bml_socket_at(sd_idx)) !=
+               beerocks::net::FileDescriptor::invalid_descriptor) {
             if (database.get_bml_topology_update_enable(sd)) {
                 topology_response_updates_listeners.push_back(sd);
             }
@@ -345,7 +349,8 @@ void bml_task::handle_event(int event_type, void *obj)
         }
         response->device_data().al_mac = event_obj->al_mac;
         response->result()             = true;
-        network_map::send_bml_event_to_listeners(cmdu_tx, topology_response_updates_listeners);
+        network_map::send_bml_event_to_listeners(database, cmdu_tx,
+                                                 topology_response_updates_listeners);
         break;
     }
     default: {
@@ -358,9 +363,10 @@ void bml_task::handle_event(int event_type, void *obj)
 void bml_task::update_bml_nw_map(std::string mac, bool force_client_disconnect)
 {
     int idx = 0;
-    std::vector<Socket *> nw_map_updates_listeners;
-    Socket *sd;
-    while ((sd = database.get_bml_socket_at(idx)) != nullptr) {
+    std::vector<int> nw_map_updates_listeners;
+    int sd;
+    while ((sd = database.get_bml_socket_at(idx)) !=
+           beerocks::net::FileDescriptor::invalid_descriptor) {
         if (database.get_bml_nw_map_update_enable(sd)) {
             nw_map_updates_listeners.push_back(sd);
         }
@@ -400,6 +406,6 @@ void bml_task::update_bml_nw_map(std::string mac, bool force_client_disconnect)
 
         network_map::fill_bml_node_data(database, mac, p, size_left, force_client_disconnect);
 
-        network_map::send_bml_event_to_listeners(cmdu_tx, nw_map_updates_listeners);
+        network_map::send_bml_event_to_listeners(database, cmdu_tx, nw_map_updates_listeners);
     }
 }
