@@ -56,6 +56,15 @@ public:
     virtual bool init() override;
     virtual bool work() override;
 
+    /**
+     * @brief Sends given CMDU message through the specified socket connection.
+     *
+     * @param fd File descriptor of the connected socket.
+     * @param cmdu_tx CMDU message to send.
+     * @return true on success and false otherwise.
+     */
+    bool send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx);
+
 protected:
     virtual bool handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx) override;
     virtual bool socket_disconnected(Socket *sd) override;
@@ -64,6 +73,26 @@ protected:
     virtual std::string print_cmdu_types(const beerocks::message::sUdsHeader *cmdu_header) override;
 
 private:
+    /**
+     * @brief Handles the client-disconnected event in the CMDU server.
+     *
+     * @param fd File descriptor of the socket that got disconnected.
+     */
+    void handle_disconnected(int fd);
+
+    /**
+     * @brief Handles received CMDU message.
+     *
+     * @param fd File descriptor of the socket connection the CMDU was received through.
+     * @param iface_index Index of the network interface that the CMDU message was received on.
+     * @param dst_mac Destination MAC address.
+     * @param src_mac Source MAC address.
+     * @param cmdu_rx Received CMDU to be handled.
+     * @return true on success and false otherwise.
+     */
+    bool handle_cmdu(int fd, uint32_t iface_index, const sMacAddr &dst_mac, const sMacAddr &src_mac,
+                     ieee1905_1::CmduMessageRx &cmdu_rx);
+
     bool handle_cmdu_1905_1_message(const std::string &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_cmdu_control_message(const std::string &src_mac,
                                      std::shared_ptr<beerocks::beerocks_header> beerocks_header);
@@ -158,6 +187,12 @@ private:
      * Application event loop used by the process to wait for I/O events.
      */
     std::shared_ptr<beerocks::EventLoop> m_event_loop;
+
+    /**
+     * Map of file descriptors to pointers to Socket class instances.
+     * This member variable is temporary and will be removed at the end of PPM-591
+     */
+    std::unordered_map<int, Socket *> m_fd_to_socket_map;
 };
 
 } // namespace son

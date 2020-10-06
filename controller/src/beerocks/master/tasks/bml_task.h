@@ -18,7 +18,7 @@ namespace son {
 class bml_task : public task {
 public:
     struct listener_general_register_unregister_event {
-        Socket *sd;
+        int sd;
     };
 
     struct connection_change_event {
