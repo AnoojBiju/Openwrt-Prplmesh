@@ -372,7 +372,7 @@ bool cfg_get_persistent_db_enable(bool &enable)
     return true;
 }
 
-bool cfg_get_commit_changes_interval(unsigned int &seconds)
+bool cfg_get_persistent_db_commit_changes_interval(unsigned int &interval_sec)
 {
     int commit_changes_interval_value = beerocks::bpl::DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE_SEC;
 
