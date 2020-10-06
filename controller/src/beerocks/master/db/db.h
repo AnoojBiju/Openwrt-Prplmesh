@@ -136,7 +136,7 @@ public:
         int clients_persistent_db_max_size;
         int max_timelife_delay_days;
         int unfriendly_device_max_timelife_delay_days;
-
+        unsigned int persistent_db_commit_changes_interval_seconds;
     } sDbMasterConfig;
 
     typedef struct {
@@ -881,6 +881,9 @@ public:
     bool set_node_stats_info(const std::string &mac, beerocks_message::sStaStatsParams *params);
     void clear_node_stats_info(const std::string &mac);
 
+    bool commit_persistent_db_changes();
+    bool is_commit_to_persistent_db_required();
+
     int get_hostap_stats_measurement_duration(const std::string &mac);
     std::chrono::steady_clock::time_point get_node_stats_info_timestamp(const std::string &mac);
     std::chrono::steady_clock::time_point get_hostap_stats_info_timestamp(const std::string &mac);
@@ -981,6 +984,9 @@ public:
 
     bool assign_persistent_db_aging_operation_id(int new_operation_id);
     int get_persistent_db_aging_operation_id();
+
+    bool assign_persistent_db_data_commit_operation_id(int new_operation_id);
+    int get_persistent_db_data_commit_operation_id();
 
     void lock();
     void unlock();
@@ -1177,12 +1183,13 @@ private:
     sMacAddr get_candidate_client_for_removal(
         sMacAddr client_to_skip = beerocks::net::network_utils::ZERO_MAC);
 
-    int network_optimization_task_id     = -1;
-    int channel_selection_task_id        = -1;
-    int bml_task_id                      = -1;
-    int rdkb_wlan_task_id                = -1;
-    int config_update_task_id            = -1;
-    int persistent_db_aging_operation_id = -1;
+    int network_optimization_task_id           = -1;
+    int channel_selection_task_id              = -1;
+    int bml_task_id                            = -1;
+    int rdkb_wlan_task_id                      = -1;
+    int config_update_task_id                  = -1;
+    int persistent_db_aging_operation_id       = -1;
+    int persistent_db_data_commit_operation_id = -1;
 
     std::shared_ptr<node> last_accessed_node;
     std::string last_accessed_node_mac;
@@ -1193,17 +1200,16 @@ private:
 
     std::queue<std::string> disconnected_slave_mac_queue;
     /*
-            * This variable indicates that data currently pending flashing from memory into the 
-            * persistent DB hard file. (non-temporary file)
-            */
-    bool db_changes_made = false;
+    * This variable indicates that data is awaiting to be commited over to the persistentDB
+    */
+    bool persistent_db_changes_made = false;
 
     int slaves_stop_on_failure_attempts = 0;
 
     /*
-            * some operations on unordered_map can cause iterators to be invalidated
-            * use the following with caution
-            */
+     * some operations on unordered_map can cause iterators to be invalidated
+     * use the following with caution.
+     */
     int current_hierarchy = 0;
     std::unordered_map<std::string, std::shared_ptr<node>>::iterator db_it =
         std::unordered_map<std::string, std::shared_ptr<node>>::iterator();
