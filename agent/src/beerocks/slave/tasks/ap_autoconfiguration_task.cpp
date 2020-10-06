@@ -28,7 +28,7 @@ using namespace net;
 using namespace son;
 
 static constexpr uint8_t MAX_FAILED_AUTOCONFIG_SEARCH_ATTEMPTS = 20;
-static constexpr uint8_t AUTOCONFIG_DISCOVERY_TIMEOUT_SECONDS  = 1;
+static constexpr uint8_t AUTOCONFIG_DISCOVERY_TIMEOUT_SECONDS  = 3;
 
 #define FSM_MOVE_STATE(radio_iface, new_state)                                                     \
     ({                                                                                             \
@@ -102,6 +102,9 @@ void ApAutoConfigurationTask::work()
                               "radio iface="
                            << radio_iface << ", state_attempts=" << state_status.attempts;
                 db->statuses.ap_autoconfiguration_failure = true;
+                state_status.attempts                     = 0;
+                FSM_MOVE_STATE(radio_iface, eState::UNCONFIGURED);
+                //m_state.clear();
                 break;
             }
 
@@ -144,6 +147,11 @@ void ApAutoConfigurationTask::work()
         }
         case eState::CONFIGIRED: {
             configured_aps_count++;
+            LOG(DEBUG) << "m_state size is " << m_state.size();
+            for (auto const &pair : m_state) {
+                LOG(DEBUG) << "m_state element " << pair.first << " status"
+                           << int(pair.second.state);
+            }
             break;
         }
         default:
