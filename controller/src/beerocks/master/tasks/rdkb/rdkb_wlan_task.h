@@ -20,11 +20,11 @@ namespace son {
 class rdkb_wlan_task : public task {
 public:
     struct listener_general_register_unregister_event {
-        Socket *sd;
+        int sd;
     };
 
     struct steering_set_group_request_event {
-        Socket *sd;
+        int sd;
         uint32_t steeringGroupIndex;
         beerocks_message::sSteeringApConfig cfg_2;
         beerocks_message::sSteeringApConfig cfg_5;
@@ -36,7 +36,7 @@ public:
     };
 
     struct steering_client_set_request_event {
-        Socket *sd;
+        int sd;
         uint32_t steeringGroupIndex;
         std::string bssid;
         sMacAddr client_mac;
@@ -49,7 +49,7 @@ public:
     };
 
     struct steering_rssi_measurement_request_event {
-        Socket *sd;
+        int sd;
         std::string bssid;
         beerocks_message::sNodeRssiMeasurementRequest params;
     };
@@ -59,7 +59,7 @@ public:
     };
 
     struct steering_client_disconnect_request_event {
-        Socket *sd;
+        int sd;
         uint32_t steeringGroupIndex;
         std::string bssid;
         sMacAddr client_mac;
@@ -107,33 +107,33 @@ protected:
 
 private:
     typedef struct {
-        Socket *sd;
+        int sd;
         bool events_updates;
     } sBmlRdkbWlanListener;
 
     typedef struct {
-        Socket *bml_sd;
+        int bml_sd;
         std::chrono::steady_clock::time_point timeout;
     } sPendingEvent;
 
     std::vector<sBmlRdkbWlanListener> bml_rdkb_wlan_listeners_sockets;
 
     bool is_bml_rdkb_wlan_listener_exist();
-    bool is_bml_rdkb_wlan_listener_socket(Socket *sd);
-    Socket *get_bml_rdkb_wlan_socket_at(uint32_t idx);
-    bool get_bml_rdkb_wlan_events_update_enable(Socket *sd);
-    bool set_bml_rdkb_wlan_events_update_enable(Socket *sd, bool update_enable);
-    void add_bml_rdkb_wlan_socket(Socket *sd);
-    void remove_bml_rdkb_wlan_socket(Socket *sd);
+    bool is_bml_rdkb_wlan_listener_socket(int sd);
+    int get_bml_rdkb_wlan_socket_at(uint32_t idx);
+    bool get_bml_rdkb_wlan_events_update_enable(int sd);
+    bool set_bml_rdkb_wlan_events_update_enable(int sd, bool update_enable);
+    void add_bml_rdkb_wlan_socket(int sd);
+    void remove_bml_rdkb_wlan_socket(int sd);
     void send_bml_event_to_listeners(ieee1905_1::CmduMessageTx &cmdu_tx,
-                                     std::vector<Socket *> &bml_listeners);
+                                     const std::vector<int> &bml_listeners);
     bool send_steering_conf_to_agent(const std::string &radio_mac);
     int32_t steering_group_fill_ap_configuration(steering_set_group_request_event *event_obj,
                                                  beerocks_message::sSteeringApConfig &cfg_2,
                                                  beerocks_message::sSteeringApConfig &cfg_5);
-    void send_bml_response(int event, Socket *sd, int32_t ret = 0);
-    void add_pending_events(int event, Socket *bml_sd, uint32_t amount = 1);
-    std::pair<bool, Socket *> check_for_pending_events(int event);
+    void send_bml_response(int event, int sd, int32_t ret = 0);
+    void add_pending_events(int event, int bml_sd, uint32_t amount = 1);
+    std::pair<bool, int> check_for_pending_events(int event);
     void pending_event_check_timeout();
 
     enum states {
