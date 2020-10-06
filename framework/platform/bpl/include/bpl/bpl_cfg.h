@@ -95,9 +95,7 @@ constexpr int DEFAULT_CLIENT_ROAMING           = 1;
 // by-default the persistent DB is disabled to allow backwards compatability
 // if the parameter is not configured in the prplmesh config and set to 1, DB is disabled
 constexpr int DEFAULT_PERSISTENT_DB = 0;
-// by default the commit_changes_interval has default delay inbetween calls this
-// is used hand in hand with by default the persistent commit periodic operation
-// which eventually triggers bpl::uci_commit
+// The default value in seconds for the interval between periodic commits of persistent DB data.
 constexpr unsigned int DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE_SEC = 10;
 // the DB of clients is limited in size to prevent high memory consumption
 // this is configurable to enable flexibility and support for low-memory platforms
