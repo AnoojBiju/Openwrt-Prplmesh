@@ -5,7 +5,6 @@
 # See LICENSE file for more details.
 ###############################################################
 
-
 class MapClient:
     '''Represents a client (STA) in the connection map.'''
 
