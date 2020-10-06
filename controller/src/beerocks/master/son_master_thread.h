@@ -25,6 +25,8 @@
 #include <bcl/beerocks_ucc_server.h>
 #include <bcl/network/network_utils.h>
 
+#include <btl/broker_client_factory.h>
+
 #include <mapf/common/encryption.h>
 #include <tlvf/WSC/configData.h>
 #include <tlvf/WSC/m1.h>
@@ -43,6 +45,7 @@ class master_thread : public beerocks::btl::transport_socket_thread {
 
 public:
     master_thread(const std::string &master_uds_, db &database_,
+                  std::shared_ptr<beerocks::btl::BrokerClientFactory> broker_client_factory,
                   std::unique_ptr<beerocks::UccServer> ucc_server,
                   std::unique_ptr<beerocks::CmduServer> cmdu_server,
                   std::shared_ptr<beerocks::EventLoop> event_loop);
@@ -131,6 +134,13 @@ private:
     task_pool tasks;
     periodic_operation_pool operations;
     beerocks::controller_ucc_listener m_controller_ucc_listener;
+
+    /**
+     * Factory to create broker client instances connected to broker server.
+     * Broker client instances are used to exchange CMDU messages with remote processes running in
+     * other devices in the network via the broker server running in the transport process.
+     */
+    std::shared_ptr<beerocks::btl::BrokerClientFactory> m_broker_client_factory;
 
     /**
      * CMDU server to exchange CMDU messages with clients through socket connections.
