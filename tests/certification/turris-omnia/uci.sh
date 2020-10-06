@@ -17,7 +17,7 @@ set wireless.default_radio0.key='prplmesh_pass'
 set wireless.default_radio0.encryption='psk2'
 set wireless.default_radio0.ssid='prplmesh'
 set wireless.default_radio0.wps_pushbutton='1'
-set wireless.default_radio0.multi_ap=3
+set wireless.default_radio0.multi_ap=2
 
 set wireless.default_radio2=wifi-iface
 set wireless.default_radio2.device='radio2'
@@ -27,7 +27,7 @@ set wireless.default_radio2.key='prplmesh_pass'
 set wireless.default_radio2.encryption='psk2'
 set wireless.default_radio2.ssid='prplmesh'
 set wireless.default_radio2.wps_pushbutton='1'
-set wireless.default_radio2.multi_ap=3
+set wireless.default_radio2.multi_ap=2
 
 set wireless.default_radio10=wifi-iface
 set wireless.default_radio10.device='radio0'
@@ -36,7 +36,7 @@ set wireless.default_radio10.mode='ap'
 set wireless.default_radio10.key='prplmesh_pass'
 set wireless.default_radio10.encryption='psk2'
 set wireless.default_radio10.ssid='prplmesh'
-set wireless.default_radio10.multi_ap=3
+set wireless.default_radio10.multi_ap=1
 
 set wireless.default_radio20=wifi-iface
 set wireless.default_radio20.device='radio2'
@@ -45,7 +45,7 @@ set wireless.default_radio20.mode='ap'
 set wireless.default_radio20.key='prplmesh_pass'
 set wireless.default_radio20.encryption='psk2'
 set wireless.default_radio20.ssid='prplmesh'
-set wireless.default_radio20.multi_ap=3
+set wireless.default_radio20.multi_ap=1
 
 set wireless.default_radio11=wifi-iface
 set wireless.default_radio11.device='radio0'
