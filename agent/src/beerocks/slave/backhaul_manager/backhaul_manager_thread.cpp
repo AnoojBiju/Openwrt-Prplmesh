@@ -868,6 +868,7 @@ bool backhaul_manager::backhaul_fsm_main(bool &skip_select)
         }
         if (db->statuses.ap_autoconfiguration_failure) {
             FSM_MOVE_STATE(RESTART);
+            db->statuses.ap_autoconfiguration_failure = false;
         }
         break;
     }
