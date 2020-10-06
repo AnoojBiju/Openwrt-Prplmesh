@@ -5,17 +5,9 @@
 # See LICENSE file for more details.
 ###############################################################
 
-import re
-from typing import Dict
-
-import environment as env
-
-'''Regular expression to match a MAC address in a bytes string.'''
-RE_MAC = rb"(?P<mac>([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})"
-
-
 class MapClient:
     '''Represents a client (STA) in the connection map.'''
+
     def __init__(self, mac: str):
         self.mac = mac
 
@@ -58,25 +50,3 @@ class MapDevice:
         radio = MapRadio(uid)
         self.radios[uid] = radio
         return radio
-
-
-def get_conn_map() -> Dict[str, MapDevice]:
-    '''Get the connection map from the controller.'''
-    conn_map = {}
-    for line in env.beerocks_cli_command("bml_conn_map").split(b'\n'):
-        # TODO we need to parse indentation to get the exact topology.
-        # For the time being, just parse the repeaters.
-        bridge = re.search(rb' {8}IRE_BRIDGE: .* mac: ' + RE_MAC, line)
-        radio = re.match(rb' {16}RADIO: .* mac: ' + RE_MAC, line)
-        vap = re.match(rb' {20}fVAP.* bssid: ' + RE_MAC + rb', ssid: (?P<ssid>.*)$', line)
-        client = re.match(rb' {24}CLIENT: mac: ' + RE_MAC, line)
-        if bridge:
-            cur_agent = MapDevice(bridge.group('mac').decode('utf-8'))
-            conn_map[cur_agent.mac] = cur_agent
-        elif radio:
-            cur_radio = cur_agent.add_radio(radio.group('mac').decode('utf-8'))
-        elif vap:
-            cur_vap = cur_radio.add_vap(vap.group('mac').decode('utf-8'), vap.group('ssid'))
-        elif client:
-            cur_vap.add_client(client.group('mac').decode('utf-8'))
-    return conn_map
