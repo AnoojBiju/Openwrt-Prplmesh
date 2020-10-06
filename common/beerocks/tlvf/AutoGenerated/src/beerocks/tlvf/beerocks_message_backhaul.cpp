@@ -1899,4 +1899,452 @@ bool cACTION_BACKHAUL_CHANNELS_LIST_RESPONSE::init()
     return true;
 }
 
+cACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION::cACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION::cACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION::~cACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION() {
+}
+sApChannelSwitch& cACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION::cs_params() {
+    return (sApChannelSwitch&)(*m_cs_params);
+}
+
+void cACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION::class_swap()
+{
+    tlvf_swap(8*sizeof(eActionOp_BACKHAUL), reinterpret_cast<uint8_t*>(m_action_op));
+    m_cs_params->struct_swap();
+}
+
+bool cACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION::get_initial_size()
+{
+    size_t class_size = 0;
+    class_size += sizeof(sApChannelSwitch); // cs_params
+    return class_size;
+}
+
+bool cACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_cs_params = reinterpret_cast<sApChannelSwitch*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sApChannelSwitch))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sApChannelSwitch) << ") Failed!";
+        return false;
+    }
+    if (!m_parse__) { m_cs_params->struct_init(); }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
+cACTION_BACKHAUL_HOSTAP_CSA_ERROR_NOTIFICATION::cACTION_BACKHAUL_HOSTAP_CSA_ERROR_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_HOSTAP_CSA_ERROR_NOTIFICATION::cACTION_BACKHAUL_HOSTAP_CSA_ERROR_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_HOSTAP_CSA_ERROR_NOTIFICATION::~cACTION_BACKHAUL_HOSTAP_CSA_ERROR_NOTIFICATION() {
+}
+sApChannelSwitch& cACTION_BACKHAUL_HOSTAP_CSA_ERROR_NOTIFICATION::cs_params() {
+    return (sApChannelSwitch&)(*m_cs_params);
+}
+
+void cACTION_BACKHAUL_HOSTAP_CSA_ERROR_NOTIFICATION::class_swap()
+{
+    tlvf_swap(8*sizeof(eActionOp_BACKHAUL), reinterpret_cast<uint8_t*>(m_action_op));
+    m_cs_params->struct_swap();
+}
+
+bool cACTION_BACKHAUL_HOSTAP_CSA_ERROR_NOTIFICATION::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cACTION_BACKHAUL_HOSTAP_CSA_ERROR_NOTIFICATION::get_initial_size()
+{
+    size_t class_size = 0;
+    class_size += sizeof(sApChannelSwitch); // cs_params
+    return class_size;
+}
+
+bool cACTION_BACKHAUL_HOSTAP_CSA_ERROR_NOTIFICATION::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_cs_params = reinterpret_cast<sApChannelSwitch*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sApChannelSwitch))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sApChannelSwitch) << ") Failed!";
+        return false;
+    }
+    if (!m_parse__) { m_cs_params->struct_init(); }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
+cACTION_BACKHAUL_HOSTAP_DFS_CAC_STARTED_NOTIFICATION::cACTION_BACKHAUL_HOSTAP_DFS_CAC_STARTED_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_HOSTAP_DFS_CAC_STARTED_NOTIFICATION::cACTION_BACKHAUL_HOSTAP_DFS_CAC_STARTED_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_HOSTAP_DFS_CAC_STARTED_NOTIFICATION::~cACTION_BACKHAUL_HOSTAP_DFS_CAC_STARTED_NOTIFICATION() {
+}
+sCacStartedNotificationParams& cACTION_BACKHAUL_HOSTAP_DFS_CAC_STARTED_NOTIFICATION::params() {
+    return (sCacStartedNotificationParams&)(*m_params);
+}
+
+void cACTION_BACKHAUL_HOSTAP_DFS_CAC_STARTED_NOTIFICATION::class_swap()
+{
+    tlvf_swap(8*sizeof(eActionOp_BACKHAUL), reinterpret_cast<uint8_t*>(m_action_op));
+    m_params->struct_swap();
+}
+
+bool cACTION_BACKHAUL_HOSTAP_DFS_CAC_STARTED_NOTIFICATION::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cACTION_BACKHAUL_HOSTAP_DFS_CAC_STARTED_NOTIFICATION::get_initial_size()
+{
+    size_t class_size = 0;
+    class_size += sizeof(sCacStartedNotificationParams); // params
+    return class_size;
+}
+
+bool cACTION_BACKHAUL_HOSTAP_DFS_CAC_STARTED_NOTIFICATION::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_params = reinterpret_cast<sCacStartedNotificationParams*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sCacStartedNotificationParams))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sCacStartedNotificationParams) << ") Failed!";
+        return false;
+    }
+    if (!m_parse__) { m_params->struct_init(); }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
+cACTION_BACKHAUL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION::cACTION_BACKHAUL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION::cACTION_BACKHAUL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION::~cACTION_BACKHAUL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION() {
+}
+sDfsCacCompleted& cACTION_BACKHAUL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION::params() {
+    return (sDfsCacCompleted&)(*m_params);
+}
+
+void cACTION_BACKHAUL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION::class_swap()
+{
+    tlvf_swap(8*sizeof(eActionOp_BACKHAUL), reinterpret_cast<uint8_t*>(m_action_op));
+    m_params->struct_swap();
+}
+
+bool cACTION_BACKHAUL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cACTION_BACKHAUL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION::get_initial_size()
+{
+    size_t class_size = 0;
+    class_size += sizeof(sDfsCacCompleted); // params
+    return class_size;
+}
+
+bool cACTION_BACKHAUL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_params = reinterpret_cast<sDfsCacCompleted*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sDfsCacCompleted))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sDfsCacCompleted) << ") Failed!";
+        return false;
+    }
+    if (!m_parse__) { m_params->struct_init(); }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
+cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST::cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST::cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST::~cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST() {
+}
+uint8_t& cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST::ant_switch_on() {
+    return (uint8_t&)(*m_ant_switch_on);
+}
+
+uint8_t& cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST::channel() {
+    return (uint8_t&)(*m_channel);
+}
+
+beerocks::eWiFiBandwidth& cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST::bandwidth() {
+    return (beerocks::eWiFiBandwidth&)(*m_bandwidth);
+}
+
+uint32_t& cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST::center_frequency() {
+    return (uint32_t&)(*m_center_frequency);
+}
+
+void cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST::class_swap()
+{
+    tlvf_swap(8*sizeof(eActionOp_BACKHAUL), reinterpret_cast<uint8_t*>(m_action_op));
+    tlvf_swap(8*sizeof(beerocks::eWiFiBandwidth), reinterpret_cast<uint8_t*>(m_bandwidth));
+    tlvf_swap(32, reinterpret_cast<uint8_t*>(m_center_frequency));
+}
+
+bool cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST::get_initial_size()
+{
+    size_t class_size = 0;
+    class_size += sizeof(uint8_t); // ant_switch_on
+    class_size += sizeof(uint8_t); // channel
+    class_size += sizeof(beerocks::eWiFiBandwidth); // bandwidth
+    class_size += sizeof(uint32_t); // center_frequency
+    return class_size;
+}
+
+bool cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_ant_switch_on = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+        return false;
+    }
+    m_channel = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+        return false;
+    }
+    m_bandwidth = reinterpret_cast<beerocks::eWiFiBandwidth*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(beerocks::eWiFiBandwidth))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(beerocks::eWiFiBandwidth) << ") Failed!";
+        return false;
+    }
+    m_center_frequency = reinterpret_cast<uint32_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint32_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
+        return false;
+    }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
+cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE::cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE::cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE::~cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE() {
+}
+uint8_t& cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE::success() {
+    return (uint8_t&)(*m_success);
+}
+
+void cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE::class_swap()
+{
+    tlvf_swap(8*sizeof(eActionOp_BACKHAUL), reinterpret_cast<uint8_t*>(m_action_op));
+}
+
+bool cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE::get_initial_size()
+{
+    size_t class_size = 0;
+    class_size += sizeof(uint8_t); // success
+    return class_size;
+}
+
+bool cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_success = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+        return false;
+    }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
 
