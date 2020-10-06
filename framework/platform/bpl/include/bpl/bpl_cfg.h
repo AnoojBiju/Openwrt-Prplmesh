@@ -493,10 +493,10 @@ bool cfg_get_persistent_db_enable(bool &enable);
 /**
  * @brief Returns commit_changes_interval (seconds) value.
  * 
- * @param [out] returns the interval (seconds) between the completions of periodic commit data operation. 
+ * @param[out] interval_sec The interval in seconds between periodic persistent data commit operations. 
  * @return true on success, otherwise false.
  */
-bool cfg_get_commit_changes_interval(unsigned int &seconds);
+bool cfg_get_commit_changes_interval(unsigned int &interval_sec);
 
 /**
  * @brief Returns the max number of clients in the persistent DB.
