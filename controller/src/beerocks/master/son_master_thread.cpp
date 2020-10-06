@@ -118,7 +118,7 @@ bool master_thread::init()
         } else {
             auto commit_interval_seconds =
                 std::chrono::seconds(database.config.persistent_db_commit_changes_interval_seconds);
-            auto commit_operation = std::make_shared<persistent_commit_data_operation>(
+            auto commit_operation = std::make_shared<persistent_data_commit_operation>(
                 database, commit_interval_seconds);
             operations.add_operation(commit_operation);
         }
