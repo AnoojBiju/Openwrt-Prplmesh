@@ -22,6 +22,7 @@
 #include <tlvf/ClassList.h>
 #include <tuple>
 #include "beerocks/tlvf/beerocks_message_common.h"
+#include "structs/sCacStartedNotificationParams.h"
 
 namespace beerocks_message {
 
@@ -550,6 +551,163 @@ class cACTION_BACKHAUL_CHANNELS_LIST_RESPONSE : public BaseClass
     private:
         bool init();
         eActionOp_BACKHAUL* m_action_op = nullptr;
+};
+
+class cACTION_BACKHAUL_HOSTAP_CHANNEL_SWITCH_ACS_START : public BaseClass
+{
+    public:
+        cACTION_BACKHAUL_HOSTAP_CHANNEL_SWITCH_ACS_START(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_BACKHAUL_HOSTAP_CHANNEL_SWITCH_ACS_START(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_BACKHAUL_HOSTAP_CHANNEL_SWITCH_ACS_START();
+
+        static eActionOp_BACKHAUL get_action_op(){
+            return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_HOSTAP_CHANNEL_SWITCH_ACS_START);
+        }
+        sApChannelSwitch& cs_params();
+        int8_t& tx_limit();
+        uint8_t& tx_limit_valid();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_BACKHAUL* m_action_op = nullptr;
+        sApChannelSwitch* m_cs_params = nullptr;
+        int8_t* m_tx_limit = nullptr;
+        uint8_t* m_tx_limit_valid = nullptr;
+};
+
+class cACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION : public BaseClass
+{
+    public:
+        cACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION();
+
+        static eActionOp_BACKHAUL get_action_op(){
+            return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION);
+        }
+        sApChannelSwitch& cs_params();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_BACKHAUL* m_action_op = nullptr;
+        sApChannelSwitch* m_cs_params = nullptr;
+};
+
+class cACTION_BACKHAUL_HOSTAP_CSA_ERROR_NOTIFICATION : public BaseClass
+{
+    public:
+        cACTION_BACKHAUL_HOSTAP_CSA_ERROR_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_BACKHAUL_HOSTAP_CSA_ERROR_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_BACKHAUL_HOSTAP_CSA_ERROR_NOTIFICATION();
+
+        static eActionOp_BACKHAUL get_action_op(){
+            return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_HOSTAP_CSA_ERROR_NOTIFICATION);
+        }
+        sApChannelSwitch& cs_params();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_BACKHAUL* m_action_op = nullptr;
+        sApChannelSwitch* m_cs_params = nullptr;
+};
+
+class cACTION_BACKHAUL_HOSTAP_DFS_CAC_STARTED_NOTIFICATION : public BaseClass
+{
+    public:
+        cACTION_BACKHAUL_HOSTAP_DFS_CAC_STARTED_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_BACKHAUL_HOSTAP_DFS_CAC_STARTED_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_BACKHAUL_HOSTAP_DFS_CAC_STARTED_NOTIFICATION();
+
+        static eActionOp_BACKHAUL get_action_op(){
+            return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_HOSTAP_DFS_CAC_STARTED_NOTIFICATION);
+        }
+        sCacStartedNotificationParams& params();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_BACKHAUL* m_action_op = nullptr;
+        sCacStartedNotificationParams* m_params = nullptr;
+};
+
+class cACTION_BACKHAUL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION : public BaseClass
+{
+    public:
+        cACTION_BACKHAUL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_BACKHAUL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_BACKHAUL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION();
+
+        static eActionOp_BACKHAUL get_action_op(){
+            return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION);
+        }
+        sDfsCacCompleted& params();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_BACKHAUL* m_action_op = nullptr;
+        sDfsCacCompleted* m_params = nullptr;
+};
+
+class cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST : public BaseClass
+{
+    public:
+        cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST();
+
+        static eActionOp_BACKHAUL get_action_op(){
+            return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST);
+        }
+        uint8_t& ant_switch_on();
+        uint8_t& channel();
+        beerocks::eWiFiBandwidth& bandwidth();
+        uint32_t& center_frequency();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_BACKHAUL* m_action_op = nullptr;
+        uint8_t* m_ant_switch_on = nullptr;
+        uint8_t* m_channel = nullptr;
+        beerocks::eWiFiBandwidth* m_bandwidth = nullptr;
+        uint32_t* m_center_frequency = nullptr;
+};
+
+class cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE : public BaseClass
+{
+    public:
+        cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE();
+
+        static eActionOp_BACKHAUL get_action_op(){
+            return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE);
+        }
+        uint8_t& success();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_BACKHAUL* m_action_op = nullptr;
+        uint8_t* m_success = nullptr;
 };
 
 }; // close namespace: beerocks_message
