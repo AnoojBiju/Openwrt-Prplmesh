@@ -17,6 +17,7 @@
 
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
+#include <bcl/network/sockets.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <easylogging++.h>
 
@@ -214,6 +215,12 @@ void son_actions::disconnect_client(db &database, ieee1905_1::CmduMessageTx &cmd
 void son_actions::send_cli_debug_message(db &database, ieee1905_1::CmduMessageTx &cmdu_tx,
                                          std::stringstream &ss)
 {
+    auto master_thread_ctx = database.get_master_thread_ctx();
+    if (!master_thread_ctx) {
+        LOG(ERROR) << "master_thread_context == nullptr";
+        return;
+    }
+
     auto response =
         message_com::create_vs_message<beerocks_message::cACTION_CLI_RESPONSE_STR>(cmdu_tx);
 
@@ -242,9 +249,9 @@ void son_actions::send_cli_debug_message(db &database, ieee1905_1::CmduMessageTx
     (buf)[size] = 0;
 
     for (int idx = 0;; idx++) {
-        auto sd_ptr = database.get_cli_socket_at(idx);
-        if (sd_ptr) {
-            message_com::send_cmdu(sd_ptr, cmdu_tx);
+        int fd = database.get_cli_socket_at(idx);
+        if (beerocks::net::FileDescriptor::invalid_descriptor != fd) {
+            master_thread_ctx->send_cmdu(fd, cmdu_tx);
         } else {
             break;
         }
