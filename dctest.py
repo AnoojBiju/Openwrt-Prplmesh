@@ -25,7 +25,6 @@
 from __future__ import print_function  # To check for python2 or < 3.5 execution
 import argparse
 import os
-import getpass
 import sys
 import json
 from subprocess import Popen, PIPE
@@ -158,8 +157,7 @@ class Services:
 def cleanup(rc):
     if rc != 0:
         print('Return code !=0 -> {}'.format(rc))
-    if getpass.getuser() == 'gitlab-runner':
-        os.system('chown -R gitlab-runner:gitlab-runner .')
+    os.system('chmod -R a+w logs')
     sys.exit(rc)
 
 
