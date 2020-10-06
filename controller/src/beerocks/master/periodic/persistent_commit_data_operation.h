@@ -14,7 +14,7 @@
 #include "periodic_operation_pool.h"
 
 namespace son {
-class persistent_commit_data_operation : public periodic_operation {
+class persistent_data_commit_operation : public periodic_operation {
 public:
     persistent_commit_data_operation(
         db &database, std::chrono::seconds period_interval_sec_,
