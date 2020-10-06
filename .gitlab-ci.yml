@@ -379,7 +379,7 @@ test-on-glinet-b1300:
 #     OPENWRT_IMAGE: NETGEAR_RAX40-squashfs-fullimage.img
 #   needs: ["build-for-netgear-rax40"]
 
-run-certification-tests:
+.run-certification-tests:
   interruptible: false
   stage: test
   variables:
@@ -403,11 +403,21 @@ run-certification-tests:
   needs:
     - job: build-in-docker
     - job: build-for-axepoint
-  tags:
-    - certs-tests
   timeout: 36h
+
+run-certification-tests-essensium:
+  extends: .run-certification-tests
+  tags:
+    - certs-tests-essensium
   rules:
-    - if: "$TESTS_TO_RUN"
+    - if: '$TESTS_TO_RUN && $WFA_CERTIFICATION_RUNNER == "ESSENSIUM"'
+
+run-certification-tests-isr:
+  extends: .run-certification-tests
+  tags:
+    - certs-tests-isr
+  rules:
+    - if: '$TESTS_TO_RUN && $WFA_CERTIFICATION_RUNNER == "ISR"'
 
 include:
   - template: "Workflows/MergeRequest-Pipelines.gitlab-ci.yml"
