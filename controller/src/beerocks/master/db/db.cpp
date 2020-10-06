@@ -3548,6 +3548,19 @@ bool db::set_node_stats_info(const std::string &mac, beerocks_message::sStaStats
 
 void db::clear_node_stats_info(const std::string &mac) { set_node_stats_info(mac, nullptr); }
 
+bool db::commit_persistent_db_changes()
+{
+    bool ret = bpl::db_commit_changes();
+
+    if (ret) {
+        persistent_db_changes_made = false;
+    }
+
+    return ret;
+}
+
+bool db::is_commit_to_persistent_db_required() { return persistent_db_changes_made; }
+
 int db::get_hostap_stats_measurement_duration(const std::string &mac)
 {
     auto n = get_node(mac);
@@ -4191,6 +4204,17 @@ bool db::assign_persistent_db_aging_operation_id(int new_operation_id)
 }
 int db::get_persistent_db_aging_operation_id() { return persistent_db_aging_operation_id; }
 
+bool db::assign_persistent_db_data_commit_operation_id(int new_operation_id)
+{
+    persistent_db_data_commit_operation_id = new_operation_id;
+    return true;
+}
+
+int db::get_persistent_db_data_commit_operation_id()
+{
+    return persistent_db_data_commit_operation_id;
+}
+
 void db::lock() { db_mutex.lock(); }
 
 void db::unlock() { db_mutex.unlock(); }
@@ -4498,7 +4522,7 @@ bool db::update_client_entry_in_persistent_db(const sMacAddr &mac, const ValuesM
         return false;
     }
 
-    db_changes_made = true;
+    persistent_db_changes_made = true;
 
     return true;
 }
