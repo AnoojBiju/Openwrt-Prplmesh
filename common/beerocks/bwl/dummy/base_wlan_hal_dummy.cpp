@@ -364,6 +364,7 @@ bool base_wlan_hal_dummy::refresh_radio_info()
 {
     m_radio_info.max_bandwidth = beerocks::eWiFiBandwidth::BANDWIDTH_40;
 
+    m_radio_info.supported_channels.clear();
     if (get_iface_name() == "wlan2") {
         m_radio_info.is_5ghz        = true;
         m_radio_info.frequency_band = beerocks::eFreqType::FREQ_5G;
