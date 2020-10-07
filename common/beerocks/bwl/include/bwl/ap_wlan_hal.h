@@ -38,7 +38,6 @@ public:
         AP_Attached,
         AP_Enabled,
         AP_Disabled,
-        AP_Sta_Possible_Psk_Mismatch,
 
         STA_Connected,
         STA_Disconnected,
