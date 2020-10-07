@@ -31,6 +31,10 @@ enum class dwpal_fsm_state { Delay, Init, GetRadioInfo, AttachVaps, Attach, Oper
 
 enum class dwpal_fsm_event { Attach, Detach };
 
+// Context is created for each VAP and for main radio
+static constexpr uint8_t DWPAL_CONTEXTS_MAX_SIZE =
+    beerocks::eBeeRocksIfaceIds::IFACE_TOTAL_VAPS + 1;
+
 /*!
  * Base class for the dwpal abstraction layer.
  * Read more about virtual inheritance: https://en.wikipedia.org/wiki/Virtual_inheritance
@@ -137,8 +141,8 @@ private:
 
     std::chrono::steady_clock::time_point m_state_timeout;
 
-    void *m_dwpal_ctx[beerocks::IFACE_TOTAL_VAPS] = {nullptr};
-    void *m_dwpal_nl_ctx                          = nullptr;
+    void *m_dwpal_ctx[DWPAL_CONTEXTS_MAX_SIZE] = {nullptr};
+    void *m_dwpal_nl_ctx                       = nullptr;
 
     int m_fd_nl_cmd_get = -1;
 
