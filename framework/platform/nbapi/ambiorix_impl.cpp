@@ -465,6 +465,25 @@ bool AmbiorixImpl::remove_instance(const std::string &relative_path, uint32_t in
     return true;
 }
 
+uint32_t AmbiorixImpl::get_instance_index(const std::string &specific_path, const std::string &key)
+{
+    uint32_t index = 0;
+
+    auto object = amxd_dm_findf(&m_datamodel, specific_path.c_str(), key.c_str());
+    if (!object) {
+        LOG(ERROR) << "Failed to find object by key: " << specific_path << " for id: " << key;
+        return index;
+    }
+
+    index = amxd_object_get_index(object);
+    if (!index) {
+        LOG(ERROR) << "Failed to get index for object: " << object->name;
+        return index;
+    }
+
+    return index;
+}
+
 AmbiorixImpl::~AmbiorixImpl()
 {
     remove_event_loop();
