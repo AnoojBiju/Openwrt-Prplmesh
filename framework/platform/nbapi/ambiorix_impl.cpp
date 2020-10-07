@@ -469,7 +469,7 @@ uint32_t AmbiorixImpl::get_instance_index(const std::string &specific_path, cons
 {
     uint32_t index = 0;
 
-    auto object = amxd_dm_findf(&m_datamodel, specific_path.c_str(), key.c_str());
+    auto object = amxd_dm_findf(&m_datamodel, specific_path.c_str(), key);
     if (!object) {
         LOG(ERROR) << "Failed to find object by key: " << specific_path << " for id: " << key;
         return index;
