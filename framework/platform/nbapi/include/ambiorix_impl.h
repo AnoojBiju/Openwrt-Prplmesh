@@ -94,6 +94,15 @@ public:
      */
     bool remove_instance(const std::string &relative_path, uint32_t index) override;
 
+    /**
+     * @brief Get instance index by ID.
+     *
+     * @param specific_path Path to the object specific key (ex: "Device.[ID == '%s'].").
+     * @param id String which contains ID, for example it can be a MAC address.
+     * @return Instance index on success and 0 otherwise.
+     */
+    int get_instance_index(const std::string &relative_path, const std::string &key) override;
+
 private:
     // Methods
 

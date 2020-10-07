@@ -178,6 +178,12 @@ bool db::add_node(const sMacAddr &mac, const sMacAddr &parent_mac, beerocks::eTy
         nodes[new_hierarchy].insert(std::make_pair(ruid_key, n));
     }
 
+    if (!m_ambiorix_datamodel->add_instance("Network.Device")) {
+        LOG(ERROR) << "Failed to add instance to the Controller Data Model for Device with mac: "
+                   << tlvf::mac_to_string(mac);
+        return false;
+    }
+
     return true;
 }
 
@@ -207,6 +213,21 @@ bool db::remove_node(const sMacAddr &mac)
                 // if removed by ruid_key
             } else if (tlvf::mac_to_string(mac) == ruid_key) {
                 nodes[i].erase(node_mac);
+            } else {
+                continue;
+            }
+
+            auto index = m_ambiorix_datamodel->get_instance_index("Device.[ID == '%s'].",
+                                                                  tlvf::mac_to_string(mac));
+            if (!index) {
+                LOG(ERROR) << "Failed to get Network.Device index for mac: "
+                           << tlvf::mac_to_string(mac);
+                return false;
+            }
+
+            if (!m_ambiorix_datamodel->remove_instance("Network.Device", index)) {
+                LOG(ERROR) << "Failed to remove Network.Device." << index << " instance.";
+                return false;
             }
 
             return true;
