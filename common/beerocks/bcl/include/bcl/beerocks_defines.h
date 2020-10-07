@@ -138,7 +138,7 @@ enum eBeeRocksIfaceIds {
     IFACE_ID_INVALID = -2,
     IFACE_RADIO_ID   = -1,
     IFACE_VAP_ID_MIN = 0,
-    IFACE_TOTAL_VAPS = 15,
+    IFACE_TOTAL_VAPS = 16,
     IFACE_VAP_ID_MAX = IFACE_TOTAL_VAPS - 1,
 };
 
