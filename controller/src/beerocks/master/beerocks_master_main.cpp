@@ -404,6 +404,11 @@ int main(int argc, char *argv[])
     // diagnostics_thread diagnostics(master_db);
     son::master_thread son_master(master_uds, master_db);
 
+    if (!amb_dm_obj->set("Network.TimeStamp", amb_dm_obj->get_datamodel_time_format())) {
+        LOG(ERROR) << "Failed to set Network.TimeStamp.";
+        return false;
+    }
+
     if (!son_master.init()) {
         LOG(ERROR) << "son_master.init() ";
         g_running = false;
