@@ -1949,7 +1949,7 @@ void monitor_thread::update_vaps_in_db()
     network_utils::linux_iface_get_mac(bridge_iface, bridge_iface_mac);
     network_utils::linux_iface_get_ip(bridge_iface, bridge_iface_ip);
 
-    for (int vap_id = beerocks::IFACE_VAP_ID_MIN; vap_id < beerocks::IFACE_VAP_ID_MAX; vap_id++) {
+    for (int vap_id = beerocks::IFACE_VAP_ID_MIN; vap_id <= beerocks::IFACE_VAP_ID_MAX; vap_id++) {
 
         // if vap exist in HAL, update it in the local db.
         if (radio_vaps.find(vap_id) != radio_vaps.end()) {
