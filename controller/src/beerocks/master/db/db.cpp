@@ -4722,11 +4722,53 @@ sMacAddr db::get_candidate_client_for_removal(sMacAddr client_to_skip)
 void db::add_node_from_data(std::string client_entry, const ValuesMap &values_map,
                             std::pair<uint16_t, uint16_t> &result)
 {
-    // NOT YET IMPLEMENTED
+    auto client_mac = client_db_entry_to_mac(client_entry);
+
+    // Add client node with defaults and in default location
+    if (!add_node(client_mac)) {
+        LOG(ERROR) << "Failed to add client node for client_entry " << client_entry;
+        result.first = 1;
+        return;
+    }
+
+    // Set clients persistent information in the node
+    if (!set_node_params_from_map(client_mac, values_map)) {
+        LOG(ERROR) << "Failed to set client " << client_entry
+                   << " node in runtime db with values read from persistent db: " << values_map;
+        result.second = 1;
+        return;
+    }
+
+    LOG(DEBUG) << "Client " << client_entry
+               << " added successfully to node-list with parameters: " << values_map;
+
+    // Update the number of clients in persistent DB
+    ++m_persistent_db_clients_count;
 }
 
 uint64_t db::get_client_remaining_sec(const std::pair<std::string, ValuesMap> &client)
 {
-    // NOT YET IMPLEMENTED
-    return 0;
+    static const int max_timelife_delay_sec = config.max_timelife_delay_days * 24 * 3600;
+    static const int unfriendly_device_max_timelife_delay_sec =
+        config.unfriendly_device_max_timelife_delay_days * 24 * 3600;
+
+    auto timestamp_it = client.second.find(TIMESTAMP_STR);
+    if (timestamp_it == client.second.end())
+        return -1;
+
+    // Save current time as a separate variable for fair comparison of current client
+    auto now           = std::chrono::system_clock::now();
+    auto timestamp_sec = beerocks::string_utils::stoi(timestamp_it->second);
+    auto timestamp     = db::timestamp_from_seconds(timestamp_sec);
+    auto client_timelife_passed_sec =
+        std::chrono::duration_cast<std::chrono::seconds>(now - timestamp).count();
+
+    auto client_remaining_timelife_sec = max_timelife_delay_sec;
+    if ((client.second.find(IS_FRIENDLY_STR)) == client.second.end()) {
+        client_remaining_timelife_sec = unfriendly_device_max_timelife_delay_sec;
+    }
+
+    return ((client_remaining_timelife_sec > client_timelife_passed_sec)
+                ? (client_remaining_timelife_sec -= client_timelife_passed_sec)
+                : 0);
 }
