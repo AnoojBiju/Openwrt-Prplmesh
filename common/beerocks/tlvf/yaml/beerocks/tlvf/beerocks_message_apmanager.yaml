@@ -2,7 +2,8 @@
 ---
 _include: { 
   beerocks/tlvf/beerocks_message_common.h,
-  classes/ChannelList.h, 
+  classes/ChannelList.h,
+  structs/sCacStartedNotificationParams.h,
   tlvf/WSC/WSC_Attributes.h 
 }
 
@@ -111,6 +112,10 @@ cACTION_APMANAGER_HOSTAP_ACS_NOTIFICATION:
   preferred_channels:
     _type: beerocks::message::sWifiChannel
     _length: [preferred_channels_size]
+
+cACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION:
+  _type: class
+  params: sCacStartedNotificationParams
 
 cACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION:
   _type: class

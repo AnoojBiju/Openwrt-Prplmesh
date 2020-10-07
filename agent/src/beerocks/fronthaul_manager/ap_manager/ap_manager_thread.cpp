@@ -1612,6 +1612,32 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
 
     } break;
 
+    case Event::DFS_CAC_Started: {
+
+        if (!data) {
+            LOG(ERROR) << "DFS_CAC_Started without data!";
+            return false;
+        }
+
+        auto msg = static_cast<bwl::sACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION *>(data);
+
+        auto response = message_com::create_vs_message<
+            beerocks_message::cACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION>(cmdu_tx);
+        if (!response) {
+            LOG(ERROR) << "Failed building ACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION "
+                          "message!";
+            break;
+        }
+
+        response->params().channel           = msg->params.channel;
+        response->params().secondary_channel = msg->params.secondary_channel;
+        response->params().bandwidth         = msg->params.bandwidth;
+        response->params().cac_duration_sec  = msg->params.cac_duration_sec;
+
+        message_com::send_cmdu(slave_socket, cmdu_tx);
+
+    } break;
+
     // DFS CAC Completed
     case Event::DFS_CAC_Completed: {
 
