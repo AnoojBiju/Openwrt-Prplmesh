@@ -29,6 +29,7 @@ uint32_t AmbiorixDummy::get_instance_index(const std::string &specific_path, con
     // Return false (0) because method can be used for checking instance present in Data Model or not
     return 0;
 }
+std::string AmbiorixDummy::get_datamodel_time_format() { return ""; }
 
 } // namespace nbapi
 } // namespace beerocks
