@@ -15,6 +15,11 @@ using namespace son;
 
 bool task_pool::add_task(std::shared_ptr<task> new_task)
 {
+    if (!new_task) {
+        LOG(ERROR) << "task to add is null";
+        return false;
+    }
+
     LOG(TRACE) << "inserting new task, id=" << int(new_task->id)
                << " task_name=" << new_task->task_name;
     return (scheduled_tasks.insert(std::make_pair(new_task->id, new_task))).second;
