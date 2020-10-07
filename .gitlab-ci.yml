@@ -244,7 +244,7 @@ run-tests:
     - test-flows
 
   after_script:
-    - tools/docker/stop.sh -k -r
+    - tools/docker/stop.sh -k -r -u $CI_JOB_ID
   needs:
     - job: build-in-docker
     - job: image-build-tests-runner
