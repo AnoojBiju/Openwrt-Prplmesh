@@ -98,6 +98,28 @@ master_thread::master_thread(
     thread_name = "master";
 
     database.set_master_thread_ctx(this);
+
+#ifndef BEEROCKS_LINUX
+    LOG_IF(!tasks.add_task(std::make_shared<statistics_polling_task>(database, cmdu_tx, tasks)),
+           FATAL)
+        << "Failed adding statistics polling task!";
+#endif
+
+    LOG_IF(!tasks.add_task(std::make_shared<bml_task>(database, cmdu_tx, tasks)), FATAL)
+        << "Failed adding BML task!";
+
+    LOG_IF(!tasks.add_task(std::make_shared<channel_selection_task>(database, cmdu_tx, tasks)),
+           FATAL)
+        << "Failed adding channel selection task!";
+
+    if (database.settings_health_check()) {
+        LOG_IF(!tasks.add_task(
+                   std::make_shared<network_health_check_task>(database, cmdu_tx, tasks, 0)),
+               FATAL)
+            << "Failed adding network health check task!";
+    } else {
+        LOG(DEBUG) << "Health check is DISABLED!";
+    }
 }
 
 master_thread::~master_thread() { LOG(DEBUG) << "closing"; }
@@ -167,42 +189,6 @@ bool master_thread::init()
 
         })) {
         LOG(ERROR) << "Failed subscribing to the Bus";
-    }
-#ifndef BEEROCKS_LINUX
-    auto new_statistics_polling_task =
-        std::make_shared<statistics_polling_task>(database, cmdu_tx, tasks);
-    if (!new_statistics_polling_task) {
-        LOG(FATAL) << "Failed allocating memory";
-        return false;
-    }
-    tasks.add_task(new_statistics_polling_task);
-#endif
-
-    auto new_bml_task = std::make_shared<bml_task>(database, cmdu_tx, tasks);
-    if (!new_bml_task) {
-        LOG(FATAL) << "Failed allocating memory";
-        return false;
-    }
-    tasks.add_task(new_bml_task);
-
-    auto new_channel_selection_task =
-        std::make_shared<channel_selection_task>(database, cmdu_tx, tasks);
-    if (!new_channel_selection_task) {
-        LOG(FATAL) << "Failed allocating memory";
-        return false;
-    }
-    tasks.add_task(new_channel_selection_task);
-
-    if (database.settings_health_check()) {
-        auto new_network_health_check_task = std::make_shared<network_health_check_task>(
-            database, cmdu_tx, tasks, 0, "network_health_check_task");
-        if (!new_network_health_check_task) {
-            LOG(FATAL) << "Failed allocating memory";
-            return false;
-        }
-        tasks.add_task(new_network_health_check_task);
-    } else {
-        LOG(DEBUG) << "Health check is DISABLED!";
     }
 
     if (database.setting_certification_mode() && database.config.ucc_listener_port != 0) {
