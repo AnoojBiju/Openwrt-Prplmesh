@@ -387,6 +387,12 @@ int main(int argc, char *argv[])
         return 0;
     }
 
+    // Set Network.ID to the Data Model
+    if (!amb_dm_obj->set("Network.ID", bridge_info.mac)) {
+        LOG(ERROR) << "Failed to add Network.ID, mac: " << bridge_info.mac;
+        return false;
+    }
+
     son::db master_db(master_conf, logger, bridge_info.mac, amb_dm_obj);
     // diagnostics_thread diagnostics(master_db);
     son::master_thread son_master(master_uds, master_db);
