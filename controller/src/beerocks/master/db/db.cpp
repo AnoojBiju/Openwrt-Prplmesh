@@ -4694,3 +4694,15 @@ sMacAddr db::get_candidate_client_for_removal(sMacAddr client_to_skip)
 
     return candidate_client_to_be_removed;
 }
+
+void db::add_node_from_data(std::string client_entry, const ValuesMap &values_map,
+                            std::pair<uint16_t, uint16_t> &result)
+{
+    // NOT YET IMPLEMENTED
+}
+
+uint64_t db::get_client_remaining_sec(const std::pair<std::string, ValuesMap> &client)
+{
+    // NOT YET IMPLEMENTED
+    return 0;
+}
