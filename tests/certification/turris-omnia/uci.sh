@@ -50,6 +50,7 @@ set wireless.default_radio11.wps_pushbutton='1'
 set wireless.default_radio11.wps_config='push_button'
 set wireless.default_radio11.network='lan'
 set wireless.default_radio11.multi_ap='1'
+set wireless.default_radio11.default_disabled='1'
 
 set wireless.default_radio21=wifi-iface
 set wireless.default_radio21.device='radio2'
@@ -58,6 +59,7 @@ set wireless.default_radio21.wps_pushbutton='1'
 set wireless.default_radio21.wps_config='push_button'
 set wireless.default_radio21.network='lan'
 set wireless.default_radio21.multi_ap='1'
+set wireless.default_radio21.default_disabled='1'
 
 # TODO: prplmesh currently rely on the interface names to be like this.
 #       Remove the next block once it's fixed.
