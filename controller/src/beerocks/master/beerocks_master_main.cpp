@@ -391,6 +391,11 @@ int main(int argc, char *argv[])
     // diagnostics_thread diagnostics(master_db);
     son::master_thread son_master(master_uds, master_db);
 
+    if (!amb_dm_obj->set("Network.ControllerID", bridge_info.mac)) {
+        LOG(ERROR) << "Failed to add Network.ControllerID, mac: " << bridge_info.mac;
+        return false;
+    }
+
     if (!son_master.init()) {
         LOG(ERROR) << "son_master.init() ";
         g_running = false;
