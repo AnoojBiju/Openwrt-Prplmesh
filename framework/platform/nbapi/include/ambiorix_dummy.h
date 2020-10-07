@@ -30,6 +30,7 @@ public:
     bool set(const std::string &relative_path, const double &value) override;
     bool add_instance(const std::string &relative_path) override;
     bool remove_instance(const std::string &relative_path, uint32_t index) override;
+    std::string get_datamodel_time_format() override;
 };
 
 } // namespace nbapi
