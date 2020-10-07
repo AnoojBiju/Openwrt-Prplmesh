@@ -178,9 +178,16 @@ bool db::add_node(const sMacAddr &mac, const sMacAddr &parent_mac, beerocks::eTy
         nodes[new_hierarchy].insert(std::make_pair(ruid_key, n));
     }
 
-    if (!m_ambiorix_datamodel->add_instance("Network.Device")) {
+    uint32_t obj_index = m_ambiorix_datamodel->add_instance("Network.Device");
+    if (!obj_index) {
         LOG(ERROR) << "Failed to add instance to the Controller Data Model for Device with mac: "
                    << tlvf::mac_to_string(mac);
+        return false;
+    }
+
+    std::string path_to_obj = "Network.Device." + std::to_string(obj_index);
+    if (!m_ambiorix_datamodel->set(path_to_obj, tlvf::mac_to_string(mac))) {
+        LOG(ERROR) << "Failed to add Network.Device.ID (ID = mac): " << tlvf::mac_to_string(mac);
         return false;
     }
 
