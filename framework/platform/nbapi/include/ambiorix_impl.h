@@ -9,6 +9,10 @@
 #ifndef AMBIORIX_IMPL
 #define AMBIORIX_IMPL
 
+// system
+#include <chrono>
+#include <ctime>
+
 // prplmesh
 #include <bcl/beerocks_event_loop.h>
 #include <easylogging++.h>
@@ -93,6 +97,13 @@ public:
      * @return True on success and false otherwise.
      */
     bool remove_instance(const std::string &relative_path, uint32_t index) override;
+
+    /**
+     * @brief Get Date and Time in the Ambiorix data model format: "2020-08-31T11:22:39Z".
+     * 
+     * @return String with date and time in the Ambiorix data model format.
+     */
+    std::string get_datamodel_time_format() override;
 
 private:
     // Methods

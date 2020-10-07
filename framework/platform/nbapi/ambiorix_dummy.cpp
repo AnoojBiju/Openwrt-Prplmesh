@@ -24,6 +24,7 @@ bool AmbiorixDummy::remove_instance(const std::string &relative_path, uint32_t i
 {
     return true;
 }
+std::string AmbiorixDummy::get_datamodel_time_format() { return ""; }
 
 } // namespace nbapi
 } // namespace beerocks
