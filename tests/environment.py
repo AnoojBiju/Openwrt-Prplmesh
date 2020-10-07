@@ -372,8 +372,9 @@ class VirtualAPDocker(VirtualAP):
         self.radio.send_bwl_event("EVENT AP-STA-DISCONNECTED {}".format(sta.mac))
 
 
-def _get_bridge_interface(docker_network):
+def _get_bridge_interface(unique_id: str):
     '''Use docker network inspect to get the docker bridge interface.'''
+    docker_network = 'prplMesh-net-{}'.format(unique_id)
     docker_network_inspect_cmd = ('docker', 'network', 'inspect', docker_network)
     inspect_result = subprocess.run(docker_network_inspect_cmd, stdout=subprocess.PIPE)
     if inspect_result.returncode != 0:
@@ -381,8 +382,10 @@ def _get_bridge_interface(docker_network):
         # This is normally done by test_gw_repeater.sh, but we need it earlier to be able to
         # start tcpdump
         # Raise an exception if it fails (check=True).
-        subprocess.run(('docker', 'network', 'create', docker_network), check=True,
+        subprocess.run(('docker', 'network', 'create', '--label', 'prplmesh',
+                        '--label', 'prplmesh-id={}'.format(unique_id), docker_network), check=True,
                        stdout=subprocess.DEVNULL)
+
         # Inspect again, now raise if it fails (check=True).
         inspect_result = subprocess.run(docker_network_inspect_cmd, check=True,
                                         stdout=subprocess.PIPE)
@@ -402,7 +405,7 @@ def _get_bridge_interface(docker_network):
 
 def launch_environment_docker(unique_id: str, skip_init: bool = False, tag: str = ""):
     global wired_sniffer
-    iface = _get_bridge_interface('prplMesh-net-{}'.format(unique_id))
+    iface = _get_bridge_interface(unique_id)
     wired_sniffer = sniffer.Sniffer(iface, opts.tcpdump_dir)
 
     gateway = 'gateway-' + unique_id
