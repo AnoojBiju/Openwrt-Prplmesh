@@ -465,6 +465,49 @@ bool AmbiorixImpl::remove_instance(const std::string &relative_path, uint32_t in
     return true;
 }
 
+std::string AmbiorixImpl::get_datamodel_time_format()
+{
+    auto system_clock_time = std::chrono::system_clock::now();
+    std::time_t time_now   = std::chrono::system_clock::to_time_t(system_clock_time);
+    struct tm *parts       = std::localtime(&time_now);
+
+    auto year      = std::to_string(1900 + parts->tm_year);
+    auto month_int = (1 + parts->tm_mon);
+    auto month     = std::to_string(month_int);
+    if (month_int < 10) {
+        month = "0" + month;
+    }
+
+    auto day_int = parts->tm_mday;
+    auto day     = std::to_string(day_int);
+    if (day_int < 10) {
+        day = "0" + day;
+    }
+
+    auto hour_int = parts->tm_hour;
+    auto hour     = std::to_string(hour_int);
+    if (hour_int < 10) {
+        hour = "0" + hour;
+    }
+
+    auto min_int = parts->tm_min;
+    auto min     = std::to_string(min_int);
+    if (min_int < 10) {
+        min = "0" + min;
+    }
+
+    auto sec_int = parts->tm_sec;
+    auto sec     = std::to_string(sec_int);
+    if (sec_int < 10) {
+        sec = "0" + sec;
+    }
+
+    //Prepate string in format like "2020-08-31T11:22:39Z"
+    std::string result = year + "-" + month + "-" + day + "T" + hour + ":" + min + ":" + sec + "Z";
+
+    return result;
+}
+
 AmbiorixImpl::~AmbiorixImpl()
 {
     remove_event_loop();
