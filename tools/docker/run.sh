@@ -72,15 +72,16 @@ main() {
     NETWORK_UCC="1-$NETWORK-ucc"
     for _network in "$NETWORK" "$NETWORK_UCC" ; do
             docker network inspect "${_network}" >/dev/null 2>&1 || {
-                dbg "Network ${_network} does not exist, creating..."
-                run docker network create "${_network}" >/dev/null 2>&1
-                echo "network ${_network}" >> "${scriptdir}/.test_containers"
+                echo "Network ${_network} does not exist, creating..."
+                run docker network create --label prplmesh --label prplmesh-id="${UNIQUE_ID}" "${_network}" >/dev/null 2>&1
             }
     done
 
     DOCKEROPTS=(
         -e "USER=${SUDO_USER:-${USER}}"
         -e "INSTALL_DIR=${installdir}"
+        --label prplmesh
+        --label "prplmesh-id=${UNIQUE_ID}"
         --privileged
         --network "${NETWORK}"
         "${PORT[@]}"
@@ -107,7 +108,6 @@ main() {
     mkdir -p "${rootdir}/logs/${NAME}"
 
     # Save the container name so that it can easily be stopped/removed later
-    echo "$NAME" >> "${scriptdir}/.test_containers"
     run docker container create "${DOCKEROPTS[@]}" --entrypoint /root/start-prplmesh.sh "${image}" "$@"
     # Connect the container to the ucc network:
     run docker network connect "$NETWORK_UCC" "$NAME"

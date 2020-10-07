@@ -39,7 +39,7 @@ class PrplMeshCompose(PrplMeshBase):
         self.cleanup_cmd = config.get("cleanup_cmd", None)
         self.conn_cmd = config.get("conn_cmd", None)
         self.delay = config.get("delay", 7)
-        self.docker_network = "prplmesh-" + self.unique_id
+        self.docker_network = "prplMesh-net-{}".format(self.unique_id)
 
         if self.role == "controller":
             self.controller_entity = \
@@ -48,7 +48,7 @@ class PrplMeshCompose(PrplMeshBase):
             self.agent_entity = ALEntityDocker(self.docker_name, device=self,
                                                is_controller=False, compose=True)
 
-        self.wired_sniffer = Sniffer(_get_bridge_interface(self.docker_network),
+        self.wired_sniffer = Sniffer(_get_bridge_interface(self.unique_id),
                                      boardfarm.config.output_dir)
         self.check_status()
 
