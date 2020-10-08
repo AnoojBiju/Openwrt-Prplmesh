@@ -74,9 +74,7 @@
 #define SOCKETS_SELECT_TIMEOUT_MSEC 50
 #define CLIENT_RECONNECT_TIME_WINDOW_MSEC 2000
 
-using namespace beerocks;
-using namespace net;
-using namespace son;
+namespace son {
 
 master_thread::master_thread(
     const std::string &master_uds_, db &database_,
@@ -215,14 +213,14 @@ void master_thread::before_select() { database.unlock(); }
 
 void master_thread::after_select(bool timeout) { database.lock(); }
 
-std::string master_thread::print_cmdu_types(const message::sUdsHeader *cmdu_header)
+std::string master_thread::print_cmdu_types(const beerocks::message::sUdsHeader *cmdu_header)
 {
-    return message_com::print_cmdu_types(cmdu_header);
+    return beerocks::message_com::print_cmdu_types(cmdu_header);
 }
 
 bool master_thread::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
 {
-    return message_com::send_cmdu(m_fd_to_socket_map[fd], cmdu_tx);
+    return beerocks::message_com::send_cmdu(m_fd_to_socket_map[fd], cmdu_tx);
 }
 
 // This method is temporary and will be removed at the end of PPM-658.
@@ -276,7 +274,7 @@ bool master_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
         return false;
     }
 
-    auto uds_header = message_com::get_uds_header(cmdu_rx);
+    auto uds_header = beerocks::message_com::get_uds_header(cmdu_rx);
     if (uds_header == nullptr) {
         LOG(ERROR) << "get_uds_header() returns nullptr";
         return false;
@@ -287,18 +285,18 @@ bool master_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
 
     if (from_broker(sd)) {
 
-        if (src_mac == network_utils::ZERO_MAC_STRING) {
+        if (src_mac == beerocks::net::network_utils::ZERO_MAC_STRING) {
             LOG(ERROR) << "src_mac is zero!";
             return false;
         }
 
-        if (dst_mac == network_utils::ZERO_MAC_STRING) {
+        if (dst_mac == beerocks::net::network_utils::ZERO_MAC_STRING) {
             LOG(ERROR) << "dst_mac is zero!";
             return false;
         }
 
         // Filter messages which are not destined to the controller
-        if (dst_mac != network_utils::MULTICAST_1905_MAC_ADDR &&
+        if (dst_mac != beerocks::net::network_utils::MULTICAST_1905_MAC_ADDR &&
             dst_mac != database.get_local_bridge_mac()) {
             return true;
         }
@@ -328,7 +326,7 @@ bool master_thread::handle_cmdu(int fd, uint32_t iface_index, const sMacAddr &ds
     }
 
     if (vendor_specific) {
-        auto beerocks_header = message_com::parse_intel_vs_message(cmdu_rx);
+        auto beerocks_header = beerocks::message_com::parse_intel_vs_message(cmdu_rx);
         if (!beerocks_header) {
             LOG(ERROR) << "Not a vendor specific message";
             return false;
@@ -531,7 +529,7 @@ bool master_thread::handle_cmdu_1905_autoconfiguration_search(const std::string 
     std::get<1>(supportedServiceTuple) =
         wfa_map::tlvSupportedService::eSupportedService::MULTI_AP_CONTROLLER;
 
-    auto beerocks_header = message_com::parse_intel_vs_message(cmdu_rx);
+    auto beerocks_header = beerocks::message_com::parse_intel_vs_message(cmdu_rx);
     if (beerocks_header) {
         if (beerocks_header->action_op() !=
             beerocks_message::ACTION_CONTROL_SLAVE_HANDSHAKE_REQUEST) {
@@ -543,14 +541,13 @@ bool master_thread::handle_cmdu_1905_autoconfiguration_search(const std::string 
                    << src_mac;
         database.set_prplmesh(tlvf::mac_from_string(src_mac));
         // response with handshake response to mark the controller as prplmesh
-        auto response =
-            message_com::add_vs_tlv<beerocks_message::cACTION_CONTROL_SLAVE_HANDSHAKE_RESPONSE>(
-                cmdu_tx);
+        auto response = beerocks::message_com::add_vs_tlv<
+            beerocks_message::cACTION_CONTROL_SLAVE_HANDSHAKE_RESPONSE>(cmdu_tx);
         if (!response) {
             LOG(ERROR) << "Failed adding cACTION_CONTROL_SLAVE_HANDSHAKE_RESPONSE";
             return false;
         }
-        message_com::get_beerocks_header(cmdu_tx)->actionhdr()->direction() =
+        beerocks::message_com::get_beerocks_header(cmdu_tx)->actionhdr()->direction() =
             beerocks::BEEROCKS_DIRECTION_AGENT;
 
     } else {
@@ -899,7 +896,7 @@ bool master_thread::handle_cmdu_1905_autoconfiguration_WSC(const std::string &sr
         }
     }
 
-    auto beerocks_header = message_com::parse_intel_vs_message(cmdu_rx);
+    auto beerocks_header = beerocks::message_com::parse_intel_vs_message(cmdu_rx);
     if (beerocks_header) {
         LOG(INFO) << "Intel radio agent join (al_mac=" << al_mac << " ruid=" << ruid;
         if (!handle_intel_slave_join(src_mac, radio_basic_caps, *beerocks_header, cmdu_tx)) {
@@ -1157,8 +1154,8 @@ bool master_thread::handle_cmdu_1905_client_capability_report_message(
                wfa_map::tlvClientCapabilityReport::SUCCESS,
            DEBUG)
         << "(Re)Association Request frame= "
-        << utils::dump_buffer(client_capability_report_tlv->association_frame(),
-                              client_capability_report_tlv->association_frame_length());
+        << beerocks::utils::dump_buffer(client_capability_report_tlv->association_frame(),
+                                        client_capability_report_tlv->association_frame_length());
 
     return true;
 }
@@ -1339,7 +1336,7 @@ bool master_thread::handle_cmdu_1905_link_metric_response(const std::string &src
     }
 
     reporting_agent_al_mac = TxLinkMetricData->reporter_al_mac();
-    if (reporting_agent_al_mac != network_utils::ZERO_MAC) {
+    if (reporting_agent_al_mac != beerocks::net::network_utils::ZERO_MAC) {
         //clear agent reports when recieving a new link metric from that agent
         if (!old_link_metrics_removed) {
             //clear agent reports when recieving a new link metric from that agent
@@ -1364,7 +1361,7 @@ bool master_thread::handle_cmdu_1905_link_metric_response(const std::string &src
         return false;
     }
 
-    if (reporting_agent_al_mac != network_utils::ZERO_MAC) {
+    if (reporting_agent_al_mac != beerocks::net::network_utils::ZERO_MAC) {
         if (reporting_agent_al_mac != RxLinkMetricData->reporter_al_mac()) {
             LOG(ERROR) << "TLV_RECEIVER_LINK_METRIC reporter al_mac =" << reporting_agent_al_mac
                        << std::endl
@@ -1665,7 +1662,7 @@ bool master_thread::handle_cmdu_1905_topology_notification(const std::string &sr
     }
 
     std::shared_ptr<beerocks_message::tlvVsClientAssociationEvent> vs_tlv = nullptr;
-    auto beerocks_header = message_com::parse_intel_vs_message(cmdu_rx);
+    auto beerocks_header = beerocks::message_com::parse_intel_vs_message(cmdu_rx);
     if (beerocks_header) {
         vs_tlv = beerocks_header->addClass<beerocks_message::tlvVsClientAssociationEvent>();
         if (!vs_tlv) {
@@ -1862,7 +1859,8 @@ bool master_thread::handle_cmdu_1905_topology_response(const std::string &src_ma
     // from its neighbors and add them to the report.
     auto last_state_change_timestamp = database.get_last_state_change(src_mac);
     if (last_state_change_timestamp +
-            std::chrono::seconds(ieee1905_1_consts::DISCOVERY_NOTIFICATION_TIMEOUT_SEC + 5) <
+            std::chrono::seconds(beerocks::ieee1905_1_consts::DISCOVERY_NOTIFICATION_TIMEOUT_SEC +
+                                 5) <
         std::chrono::steady_clock::now()) {
         LOG(TRACE) << "Checking if one of " << src_mac << " neighbors is no longer connected";
         std::unordered_set<sMacAddr> reported_neighbor_al_macs;
@@ -1988,7 +1986,7 @@ bool master_thread::handle_cmdu_1905_tunnelled_message(const std::string &src_ma
     LOG(DEBUG) << "Tunnelled Message STA MAC: " << source_info_tlv->mac() << ", Type: " << std::hex
                << int(type_tlv->protocol_type()) << ", Data Length: " << std::dec
                << data_tlv->data_length() << ", Data: " << std::endl
-               << utils::dump_buffer(data_tlv->data(0), data_tlv->data_length());
+               << beerocks::utils::dump_buffer(data_tlv->data(0), data_tlv->data_length());
 
     return true;
 }
@@ -2016,7 +2014,8 @@ bool master_thread::handle_intel_slave_join(
 {
     // Prepare outcoming response vs tlv
     auto join_response =
-        message_com::add_vs_tlv<beerocks_message::cACTION_CONTROL_SLAVE_JOINED_RESPONSE>(cmdu_tx);
+        beerocks::message_com::add_vs_tlv<beerocks_message::cACTION_CONTROL_SLAVE_JOINED_RESPONSE>(
+            cmdu_tx);
     if (!join_response) {
         LOG(ERROR) << "Failed adding intel vendor specific TLV";
         return false;
@@ -2034,15 +2033,17 @@ bool master_thread::handle_intel_slave_join(
         return false;
     }
 
-    std::string slave_version = std::string(notification->slave_version(message::VERSION_LENGTH));
-    std::string radio_mac     = tlvf::mac_to_string(notification->hostap().iface_mac);
-    std::string gw_ipv4 = network_utils::ipv4_to_string(notification->backhaul_params().gw_ipv4);
+    std::string slave_version =
+        std::string(notification->slave_version(beerocks::message::VERSION_LENGTH));
+    std::string radio_mac = tlvf::mac_to_string(notification->hostap().iface_mac);
+    std::string gw_ipv4 =
+        beerocks::net::network_utils::ipv4_to_string(notification->backhaul_params().gw_ipv4);
     std::string gw_bridge_mac = tlvf::mac_to_string(notification->backhaul_params().gw_bridge_mac);
     std::string parent_bssid_mac =
         tlvf::mac_to_string(notification->backhaul_params().backhaul_bssid);
     std::string backhaul_mac = tlvf::mac_to_string(notification->backhaul_params().backhaul_mac);
     std::string backhaul_ipv4 =
-        network_utils::ipv4_to_string(notification->backhaul_params().backhaul_ipv4);
+        beerocks::net::network_utils::ipv4_to_string(notification->backhaul_params().backhaul_ipv4);
     beerocks::eIfaceType backhaul_iface_type =
         (beerocks::eIfaceType)notification->backhaul_params().backhaul_iface_type;
     bool is_gw_slave         = (backhaul_iface_type == beerocks::IFACE_TYPE_GW_BRIDGE);
@@ -2050,7 +2051,7 @@ bool master_thread::handle_intel_slave_join(
     int backhaul_channel     = notification->backhaul_params().backhaul_channel;
     std::string bridge_mac   = tlvf::mac_to_string(notification->backhaul_params().bridge_mac);
     std::string bridge_ipv4 =
-        network_utils::ipv4_to_string(notification->backhaul_params().bridge_ipv4);
+        beerocks::net::network_utils::ipv4_to_string(notification->backhaul_params().bridge_ipv4);
     bool backhaul_manager        = (bool)notification->backhaul_params().is_backhaul_manager;
     std::string radio_identifier = tlvf::mac_to_string(notification->radio_identifier());
     bool acs_enabled             = (notification->wlan_settings().channel == 0);
@@ -2079,7 +2080,7 @@ bool master_thread::handle_intel_slave_join(
               << "    bridge_mac=" << bridge_mac << std::endl
               << "    bridge_ipv4=" << bridge_ipv4 << std::endl
               << "    backhaul_manager=" << int(backhaul_manager) << std::endl
-              << "    backhaul_type=" << utils::get_iface_type_string(backhaul_iface_type)
+              << "    backhaul_type=" << beerocks::utils::get_iface_type_string(backhaul_iface_type)
               << std::endl
               << "    low_pass_filter_on = " << int(notification->low_pass_filter_on()) << std::endl
               << "    radio_identifier = " << radio_identifier << std::endl
@@ -2093,7 +2094,7 @@ bool master_thread::handle_intel_slave_join(
         // and is not yet in map
         if (!notification->platform_settings().local_master) {
             // rejecting join if gw haven't joined yet
-            if ((parent_bssid_mac != network_utils::ZERO_MAC_STRING) &&
+            if ((parent_bssid_mac != beerocks::net::network_utils::ZERO_MAC_STRING) &&
                 (!database.has_node(tlvf::mac_from_string(parent_bssid_mac)) ||
                  (database.get_node_state(parent_bssid_mac) != beerocks::STATE_CONNECTED))) {
                 LOG(DEBUG) << "sending back join reject!";
@@ -2117,7 +2118,7 @@ bool master_thread::handle_intel_slave_join(
         }
 
         //TODO might need to handle bssids of VAP nodes as well in this case
-        if (parent_bssid_mac != network_utils::ZERO_MAC_STRING) {
+        if (parent_bssid_mac != beerocks::net::network_utils::ZERO_MAC_STRING) {
             //add a placeholder
             LOG(DEBUG) << "add a placeholder backhaul_mac = " << backhaul_mac
                        << ", parent_bssid_mac = " << parent_bssid_mac;
@@ -2243,11 +2244,11 @@ bool master_thread::handle_intel_slave_join(
     }
 
     // Check Slave BeeRocks version //
-    auto slave_version_s  = version::version_from_string(slave_version);
-    auto master_version_s = version::version_from_string(BEEROCKS_VERSION);
+    auto slave_version_s  = beerocks::version::version_from_string(slave_version);
+    auto master_version_s = beerocks::version::version_from_string(BEEROCKS_VERSION);
 
-    string_utils::copy_string(join_response->master_version(), BEEROCKS_VERSION,
-                              message::VERSION_LENGTH);
+    beerocks::string_utils::copy_string(join_response->master_version(), BEEROCKS_VERSION,
+                                        beerocks::message::VERSION_LENGTH);
 
     // check if fatal mismatch
     if (slave_version_s.major != master_version_s.major ||
@@ -2258,8 +2259,9 @@ bool master_thread::handle_intel_slave_join(
         LOG(INFO) << " bridge_mac=" << bridge_mac << " bridge_ipv4=" << bridge_ipv4;
 
         join_response->err_code() = beerocks::JOIN_RESP_VERSION_MISMATCH;
-        string_utils::copy_string(join_response->master_version(message::VERSION_LENGTH),
-                                  BEEROCKS_VERSION, message::VERSION_LENGTH);
+        beerocks::string_utils::copy_string(
+            join_response->master_version(beerocks::message::VERSION_LENGTH), BEEROCKS_VERSION,
+            beerocks::message::VERSION_LENGTH);
         return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
     }
 
@@ -2268,8 +2270,8 @@ bool master_thread::handle_intel_slave_join(
 
     LOG(INFO) << std::endl
               << "    hostap_iface_name=" << notification->hostap().iface_name << std::endl
-              << "    hostap_iface_type=" << utils::get_iface_type_string(hostap_iface_type)
-              << std::endl
+              << "    hostap_iface_type="
+              << beerocks::utils::get_iface_type_string(hostap_iface_type) << std::endl
               << "    ant_num=" << int(notification->hostap().ant_num)
               << " ant_gain=" << int(notification->hostap().ant_gain)
               << " channel=" << int(notification->cs_params().channel)
@@ -2383,8 +2385,9 @@ bool master_thread::handle_intel_slave_join(
     // send JOINED_RESPONSE with son config
     {
 
-        string_utils::copy_string(join_response->master_version(message::VERSION_LENGTH),
-                                  BEEROCKS_VERSION, message::VERSION_LENGTH);
+        beerocks::string_utils::copy_string(
+            join_response->master_version(beerocks::message::VERSION_LENGTH), BEEROCKS_VERSION,
+            beerocks::message::VERSION_LENGTH);
         join_response->config().monitor_total_ch_load_notification_hi_th_percent =
             database.config.monitor_total_ch_load_notification_hi_th_percent;
         join_response->config().monitor_total_ch_load_notification_lo_th_percent =
@@ -2430,7 +2433,7 @@ bool master_thread::handle_intel_slave_join(
         LOG(DEBUG) << "CS_task,sending SLAVE_JOINED_EVENT for mac " << radio_mac;
         auto cs_new_event =
             CHANNEL_SELECTION_ALLOCATE_EVENT(channel_selection_task::sSlaveJoined_event);
-        cs_new_event->backhaul_is_wireless = utils::is_node_wireless(backhaul_iface_type);
+        cs_new_event->backhaul_is_wireless = beerocks::utils::is_node_wireless(backhaul_iface_type);
         cs_new_event->backhaul_channel     = backhaul_channel;
         cs_new_event->channel              = notification->cs_params().channel;
         cs_new_event->low_pass_filter_on   = notification->low_pass_filter_on();
@@ -2443,7 +2446,7 @@ bool master_thread::handle_intel_slave_join(
                     beerocks::message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH,
                     cs_new_event->backhaul_scan_measurement_list);
 
-        for (unsigned int i = 0; i < message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH; i++) {
+        for (unsigned int i = 0; i < beerocks::message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH; i++) {
             if (cs_new_event->backhaul_scan_measurement_list[i].channel > 0) {
                 LOG(DEBUG) << "mac = " << cs_new_event->backhaul_scan_measurement_list[i].mac
                            << " channel = "
@@ -2553,7 +2556,7 @@ bool master_thread::handle_non_intel_slave_join(
     std::string backhaul_mac = tlvf::mac_to_string(mac);
     mac.oct[5]++;
     std::string eth_switch_mac   = tlvf::mac_to_string(mac);
-    std::string parent_bssid_mac = network_utils::ZERO_MAC_STRING;
+    std::string parent_bssid_mac = beerocks::net::network_utils::ZERO_MAC_STRING;
     auto manufacturer            = m1.manufacturer();
     LOG(INFO) << "IRE generic Slave joined" << std::endl
               << "    manufacturer=" << manufacturer << std::endl
@@ -2638,7 +2641,7 @@ bool master_thread::handle_non_intel_slave_join(
     database.set_node_backhaul_iface_type(radio_mac, beerocks::IFACE_TYPE_BRIDGE);
     // TODO driver_version will not be set
     database.set_hostap_iface_name(radio_mac, "N/A");
-    database.set_hostap_iface_type(radio_mac, IFACE_TYPE_WIFI_UNSPECIFIED);
+    database.set_hostap_iface_type(radio_mac, beerocks::IFACE_TYPE_WIFI_UNSPECIFIED);
 
     // TODO number of antennas comes from HT/VHT capabilities (implicit from NxM)
     // TODO ant_gain and tx_power will not be set
@@ -2674,8 +2677,8 @@ bool master_thread::handle_non_intel_slave_join(
     return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 }
 
-bool master_thread::handle_cmdu_control_message(const std::string &src_mac,
-                                                std::shared_ptr<beerocks_header> beerocks_header)
+bool master_thread::handle_cmdu_control_message(
+    const std::string &src_mac, std::shared_ptr<beerocks::beerocks_header> beerocks_header)
 {
     std::string hostap_mac = tlvf::mac_to_string(beerocks_header->actionhdr()->radio_mac());
 
@@ -2836,7 +2839,7 @@ bool master_thread::handle_cmdu_control_message(const std::string &src_mac,
         for (int8_t vap_id = beerocks::IFACE_VAP_ID_MIN; vap_id <= beerocks::IFACE_VAP_ID_MAX;
              vap_id++) {
             auto vap_mac = tlvf::mac_to_string(notification->params().vaps[vap_id].mac);
-            if (vap_mac != network_utils::ZERO_MAC_STRING) {
+            if (vap_mac != beerocks::net::network_utils::ZERO_MAC_STRING) {
                 vaps_info[vap_id].mac = vap_mac;
                 vaps_info[vap_id].ssid =
                     std::string((char *)notification->params().vaps[vap_id].ssid);
@@ -2881,8 +2884,9 @@ bool master_thread::handle_cmdu_control_message(const std::string &src_mac,
             return false;
         }
 
-        std::string client_mac  = tlvf::mac_to_string(notification->params().mac);
-        std::string client_ipv4 = network_utils::ipv4_to_string(notification->params().ipv4);
+        std::string client_mac = tlvf::mac_to_string(notification->params().mac);
+        std::string client_ipv4 =
+            beerocks::net::network_utils::ipv4_to_string(notification->params().ipv4);
         LOG(DEBUG) << "received arp monitor notification from slave mac " << hostap_mac << ":"
                    << std::endl
                    << "   client_mac=" << client_mac << std::endl
@@ -2901,7 +2905,7 @@ bool master_thread::handle_cmdu_control_message(const std::string &src_mac,
         //     break;
         //  }
 
-        if (client_ipv4 == network_utils::ZERO_IP_STRING) {
+        if (client_ipv4 == beerocks::net::network_utils::ZERO_IP_STRING) {
             LOG(DEBUG) << "arp ipv4 is 0.0.0.0, ignoring";
             break;
         }
@@ -2969,8 +2973,9 @@ bool master_thread::handle_cmdu_control_message(const std::string &src_mac,
 
         // Run client locating task for reachable or stale client/IRE nodes only if on ETH_FRONT port
         // or WIRELESS_FRONT (in case of eth devices connected to IREs and arp notf was send from GW)
-        if (run_locating_task && ((notification->params().source == ARP_SRC_ETH_FRONT) ||
-                                  (notification->params().source == ARP_SRC_WIRELESS_FRONT))) {
+        if (run_locating_task &&
+            ((notification->params().source == beerocks::ARP_SRC_ETH_FRONT) ||
+             (notification->params().source == beerocks::ARP_SRC_WIRELESS_FRONT))) {
             LOG(DEBUG) << "run_client_locating_task client_mac = " << client_mac;
 
             auto eth_switches = database.get_node_siblings(hostap_mac, beerocks::TYPE_ETH_SWITCH);
@@ -3147,7 +3152,7 @@ bool master_thread::handle_cmdu_control_message(const std::string &src_mac,
         }
 
         std::string client_mac = tlvf::mac_to_string(notification_in->mac());
-        std::string ipv4       = network_utils::ipv4_to_string(notification_in->ipv4());
+        std::string ipv4 = beerocks::net::network_utils::ipv4_to_string(notification_in->ipv4());
         LOG(DEBUG) << "dhcp complete for client " << client_mac << " new ip=" << ipv4
                    << " previous ip=" << database.get_node_ipv4(client_mac);
 
@@ -3164,11 +3169,11 @@ bool master_thread::handle_cmdu_control_message(const std::string &src_mac,
         }
 
         database.set_node_ipv4(client_mac, ipv4);
-        database.set_node_name(client_mac,
-                               std::string(notification_in->name(message::NODE_NAME_LENGTH)));
+        database.set_node_name(
+            client_mac, std::string(notification_in->name(beerocks::message::NODE_NAME_LENGTH)));
 
         if (database.is_node_wireless(client_mac)) {
-            auto notification_out = message_com::create_vs_message<
+            auto notification_out = beerocks::message_com::create_vs_message<
                 beerocks_message::cACTION_CONTROL_CLIENT_NEW_IP_ADDRESS_NOTIFICATION>(cmdu_tx);
 
             if (!notification_out) {
@@ -3206,7 +3211,7 @@ bool master_thread::handle_cmdu_control_message(const std::string &src_mac,
     }
     case beerocks_message::ACTION_CONTROL_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION: {
         /* TODO decide what this code should do now that tx_rssi is no longer used
-            auto report = (message::sACTION_CONTROL_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION*)rx_buffer;
+            auto report = (beerocks::message::sACTION_CONTROL_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION*)rx_buffer;
             std::string backhaul_mac = database.get_node_parent_backhaul(sd->hostap_mac());
             std::string parent_mac = database.get_node_parent(backhaul_mac);
 
@@ -3778,3 +3783,5 @@ bool master_thread::handle_cmdu_control_message(const std::string &src_mac,
 
     return true;
 }
+
+} // namespace son
