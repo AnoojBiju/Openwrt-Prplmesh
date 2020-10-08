@@ -29,6 +29,7 @@
 
 #include <bcl/beerocks_backport.h>
 #include <bcl/beerocks_version.h>
+#include <bcl/network/sockets.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <easylogging++.h>
 
@@ -76,6 +77,16 @@
 
 namespace son {
 
+/**
+ * Time between successive timer executions of the tasks timer
+ */
+constexpr auto tasks_timer_period = std::chrono::milliseconds(50);
+
+/**
+ * Time between successive timer executions of the operations timer
+ */
+constexpr auto operations_timer_period = std::chrono::milliseconds(1000);
+
 master_thread::master_thread(
     const std::string &master_uds_, db &database_,
     std::shared_ptr<beerocks::btl::BrokerClientFactory> broker_client_factory,
@@ -118,9 +129,180 @@ master_thread::master_thread(
     } else {
         LOG(DEBUG) << "Health check is DISABLED!";
     }
+
+    m_cmdu_server->set_client_connected_handler([&](int fd) { handle_connected(fd); });
+    m_cmdu_server->set_client_disconnected_handler([&](int fd) { handle_disconnected(fd); });
+    m_cmdu_server->set_cmdu_received_handler([&](int fd, uint32_t iface_index,
+                                                 const sMacAddr &dst_mac, const sMacAddr &src_mac,
+                                                 ieee1905_1::CmduMessageRx &cmdu_rx) {
+        handle_cmdu(fd, iface_index, dst_mac, src_mac, cmdu_rx);
+    });
 }
 
-master_thread::~master_thread() { LOG(DEBUG) << "closing"; }
+master_thread::~master_thread()
+{
+    m_cmdu_server->clear_client_connected_handler();
+    m_cmdu_server->clear_client_disconnected_handler();
+    m_cmdu_server->clear_cmdu_received_handler();
+
+    LOG(DEBUG) << "closing";
+}
+
+// The name of this method is temporary and will be renamed at the end of PPM-658.
+bool master_thread::to_be_renamed_to_start()
+{
+    // In case of error in one of the steps of this method, we have to undo all the previous steps
+    // (like when rolling back a database transaction, where either all steps get executed or none
+    // of them gets executed)
+    std::deque<std::function<void()>> rollback_actions;
+    auto rollback = [&]() {
+        for (const auto &action : rollback_actions) {
+            action();
+        }
+    };
+
+    LOG(DEBUG) << "persistent db enable=" << database.config.persistent_db;
+    if (database.config.persistent_db) {
+        LOG(DEBUG) << "loading clients from persistent db";
+        if (!database.load_persistent_db_clients()) {
+            LOG(WARNING) << "failed to load clients from persistent db";
+        } else {
+            LOG(DEBUG) << "load clients from persistent db finished successfully";
+        }
+
+        if (operations.is_operation_alive(database.get_persistent_db_aging_operation_id())) {
+            LOG(DEBUG) << "persistent DB aging operation already running";
+        } else {
+            auto aging_interval_seconds =
+                std::chrono::seconds(database.config.persistent_db_aging_interval);
+            auto new_operation = std::make_shared<persistent_database_aging_operation>(
+                aging_interval_seconds, database);
+            operations.add_operation(new_operation);
+        }
+
+        if (operations.is_operation_alive(database.get_persistent_db_data_commit_operation_id())) {
+            LOG(DEBUG) << "persistent DB data commit operation already running";
+        } else {
+            auto commit_interval_seconds =
+                std::chrono::seconds(database.config.persistent_db_commit_changes_interval_seconds);
+            auto commit_operation = std::make_shared<persistent_data_commit_operation>(
+                database, commit_interval_seconds);
+            operations.add_operation(commit_operation);
+        }
+    }
+
+    // Create a timer to run internal tasks periodically
+    m_tasks_timer = m_timer_manager->add_timer(tasks_timer_period, tasks_timer_period,
+                                               [&](int fd, beerocks::EventLoop &loop) {
+                                                   tasks.run_tasks();
+                                                   return true;
+                                               });
+    if (m_tasks_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
+        LOG(ERROR) << "Failed to create the tasks timer";
+        rollback();
+        return false;
+    }
+    LOG(DEBUG) << "Tasks timer created with fd = " << m_tasks_timer;
+    rollback_actions.emplace_front([&]() { m_timer_manager->remove_timer(m_tasks_timer); });
+
+    // Create a timer to execute periodic operations
+    // TODO: as an enhancement, each periodic operation should have its own timer (PPM-717)
+    m_operations_timer = m_timer_manager->add_timer(
+        operations_timer_period, operations_timer_period, [&](int fd, beerocks::EventLoop &loop) {
+            operations.run_operations();
+            return true;
+        });
+    if (m_operations_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
+        LOG(ERROR) << "Failed to create the operations timer";
+        rollback();
+        return false;
+    }
+    LOG(DEBUG) << "Operations timer created with fd = " << m_operations_timer;
+    rollback_actions.emplace_front([&]() { m_timer_manager->remove_timer(m_operations_timer); });
+
+    // Create an instance of a broker client connected to the broker server that is running in the
+    // transport process
+    m_broker_client = m_broker_client_factory->create_instance();
+    if (!m_broker_client) {
+        LOG(ERROR) << "Failed to create instance of broker client";
+        rollback();
+        return false;
+    }
+    rollback_actions.emplace_front([&]() { m_broker_client.reset(); });
+
+    // Install a CMDU-received event handler for CMDU messages received from the transport process.
+    // These messages are actually been sent by a remote process and the broker server running in
+    // the transport process just forwards them to the broker client.
+    m_broker_client->set_cmdu_received_handler([&](uint32_t iface_index, const sMacAddr &dst_mac,
+                                                   const sMacAddr &src_mac,
+                                                   ieee1905_1::CmduMessageRx &cmdu_rx) {
+        handle_cmdu_from_broker(iface_index, dst_mac, src_mac, cmdu_rx);
+    });
+    rollback_actions.emplace_front([&]() { m_broker_client->clear_cmdu_received_handler(); });
+
+    // Install a connection-closed event handler.
+    // Currently there is no recovery mechanism if connection with broker server gets interrupted
+    // (something that happens if the transport process dies). Just log a message and exit
+    m_broker_client->set_connection_closed_handler(
+        [&]() { LOG(FATAL) << "Broker client got disconnected!"; });
+    rollback_actions.emplace_front([&]() { m_broker_client->clear_connection_closed_handler(); });
+
+    // Subscribe for the reception of CMDU messages that this process is interested in
+    if (!m_broker_client->subscribe(std::vector<ieee1905_1::eMessageType>{
+            ieee1905_1::eMessageType::ACK_MESSAGE,
+            ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_SEARCH_MESSAGE,
+            ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_WSC_MESSAGE,
+            ieee1905_1::eMessageType::AP_CAPABILITY_REPORT_MESSAGE,
+            ieee1905_1::eMessageType::AP_METRICS_RESPONSE_MESSAGE,
+            ieee1905_1::eMessageType::BEACON_METRICS_RESPONSE_MESSAGE,
+            ieee1905_1::eMessageType::CHANNEL_PREFERENCE_REPORT_MESSAGE,
+            ieee1905_1::eMessageType::CHANNEL_SELECTION_RESPONSE_MESSAGE,
+            ieee1905_1::eMessageType::CLIENT_CAPABILITY_REPORT_MESSAGE,
+            ieee1905_1::eMessageType::CLIENT_STEERING_BTM_REPORT_MESSAGE,
+            ieee1905_1::eMessageType::HIGHER_LAYER_DATA_MESSAGE,
+            ieee1905_1::eMessageType::LINK_METRIC_RESPONSE_MESSAGE,
+            ieee1905_1::eMessageType::OPERATING_CHANNEL_REPORT_MESSAGE,
+            ieee1905_1::eMessageType::STEERING_COMPLETED_MESSAGE,
+            ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE,
+            ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE,
+            ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE,
+            ieee1905_1::eMessageType::BACKHAUL_STEERING_RESPONSE_MESSAGE,
+            ieee1905_1::eMessageType::TUNNELLED_MESSAGE,
+            ieee1905_1::eMessageType::FAILED_CONNECTION_MESSAGE,
+        })) {
+        LOG(ERROR) << "Failed subscribing to the Bus";
+        rollback();
+        return false;
+    }
+
+    LOG(DEBUG) << "started";
+
+    return true;
+}
+
+// The name of this method is temporary and will be renamed at the end of PPM-658.
+bool master_thread::to_be_renamed_to_stop()
+{
+    bool ok = true;
+
+    if (m_broker_client) {
+        m_broker_client->clear_connection_closed_handler();
+        m_broker_client->clear_cmdu_received_handler();
+        m_broker_client.reset();
+    }
+
+    if (!m_timer_manager->remove_timer(m_operations_timer)) {
+        ok = false;
+    }
+
+    if (!m_timer_manager->remove_timer(m_tasks_timer)) {
+        ok = false;
+    }
+
+    LOG(DEBUG) << "stopped";
+
+    return ok;
+}
 
 bool master_thread::init()
 {
@@ -223,6 +405,22 @@ bool master_thread::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
     return beerocks::message_com::send_cmdu(m_fd_to_socket_map[fd], cmdu_tx);
 }
 
+bool master_thread::send_cmdu_to_broker(ieee1905_1::CmduMessageTx &cmdu_tx, const sMacAddr &dst_mac,
+                                        const sMacAddr &src_mac, const std::string &iface_name)
+{
+    if (!m_broker_client) {
+        LOG(ERROR) << "Unable to send CMDU to broker server";
+        return false;
+    }
+
+    uint32_t iface_index = 0;
+    if (!iface_name.empty()) {
+        iface_index = if_nametoindex(iface_name.c_str());
+    }
+
+    return m_broker_client->send_cmdu(cmdu_tx, dst_mac, src_mac, iface_index);
+}
+
 // This method is temporary and will be removed at the end of PPM-658.
 // It is intended to allow the temporary coexistence of Socket* and file descriptors to refer to
 // accepted sockets.
@@ -246,8 +444,12 @@ bool master_thread::socket_disconnected(Socket *sd)
     return true;
 }
 
+void master_thread::handle_connected(int fd) { LOG(INFO) << "UDS socket connected, fd = " << fd; }
+
 void master_thread::handle_disconnected(int fd)
 {
+    LOG(INFO) << "UDS socket disconnected, fd = " << fd;
+
     // Removing the socket only from the vector of socket in the database if exists,
     // not from socket thread.
     database.remove_cli_socket(fd);
@@ -351,6 +553,36 @@ bool master_thread::handle_cmdu(int fd, uint32_t iface_index, const sMacAddr &ds
     }
 
     return true;
+}
+
+bool master_thread::handle_cmdu_from_broker(uint32_t iface_index, const sMacAddr &dst_mac,
+                                            const sMacAddr &src_mac,
+                                            ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    if (src_mac == beerocks::net::network_utils::ZERO_MAC) {
+        LOG(ERROR) << "src_mac is zero!";
+        return false;
+    }
+
+    if (dst_mac == beerocks::net::network_utils::ZERO_MAC) {
+        LOG(ERROR) << "dst_mac is zero!";
+        return false;
+    }
+
+    // Filter out messages that are not addressed to the controller
+    if (tlvf::mac_to_string(dst_mac) != beerocks::net::network_utils::MULTICAST_1905_MAC_ADDR &&
+        tlvf::mac_to_string(dst_mac) != database.get_local_bridge_mac()) {
+        return false;
+    }
+
+    // TODO: Add optimization of PID filtering for cases like the following:
+    // If VS message was sent by Controllers local agent to the controller, it is looped back.
+
+    // Handle CMDU as if it had been received from any other process.
+    // The socket descriptor is not needed because this process never responds to the transport
+    // process.
+    return handle_cmdu(beerocks::net::FileDescriptor::invalid_descriptor, iface_index, dst_mac,
+                       src_mac, cmdu_rx);
 }
 
 bool master_thread::handle_cmdu_1905_1_message(const std::string &src_mac,
