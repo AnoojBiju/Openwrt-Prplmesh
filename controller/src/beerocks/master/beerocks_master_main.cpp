@@ -10,6 +10,8 @@
 #include <bcl/beerocks_config_file.h>
 #include <bcl/beerocks_event_loop_impl.h>
 #include <bcl/beerocks_logging.h>
+#include <bcl/beerocks_timer_factory_impl.h>
+#include <bcl/beerocks_timer_manager_impl.h>
 #include <bcl/beerocks_ucc_parser_stream_impl.h>
 #include <bcl/beerocks_ucc_serializer_stream_impl.h>
 #include <bcl/beerocks_ucc_server_impl.h>
@@ -485,6 +487,14 @@ int main(int argc, char *argv[])
     auto event_loop = std::make_shared<beerocks::EventLoopImpl>();
     LOG_IF(!event_loop, FATAL) << "Unable to create event loop!";
 
+    // Create timer manager to create instances of timers.
+    auto timer_factory = std::make_shared<beerocks::TimerFactoryImpl>();
+    LOG_IF(!timer_factory, FATAL) << "Unable to create timer factory!";
+
+    // Create timer manager to help using application timers.
+    auto timer_manager = std::make_shared<beerocks::TimerManagerImpl>(timer_factory, event_loop);
+    LOG_IF(!timer_manager, FATAL) << "Unable to create timer manager!";
+
     // Create parser for CMDU messages received through a stream-oriented socket.
     auto cmdu_parser = std::make_shared<beerocks::net::CmduParserStreamImpl>();
     LOG_IF(!cmdu_parser, FATAL) << "Unable to create CMDU parser!";
@@ -568,7 +578,8 @@ int main(int argc, char *argv[])
     LOG_IF(!broker_client_factory, FATAL) << "Unable to create broker client factory!";
 
     son::master_thread son_master(master_uds, master_db, broker_client_factory,
-                                  std::move(ucc_server), std::move(cmdu_server), event_loop);
+                                  std::move(ucc_server), std::move(cmdu_server), timer_manager,
+                                  event_loop);
 
     if (!amb_dm_obj->set("Controller.Network", "TimeStamp",
                          amb_dm_obj->get_datamodel_time_format())) {
