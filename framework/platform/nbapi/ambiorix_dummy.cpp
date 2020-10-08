@@ -24,6 +24,10 @@ bool AmbiorixDummy::remove_instance(const std::string &relative_path, uint32_t i
 {
     return true;
 }
+int AmbiorixDummy::get_instance_index(const std::string &specific_path, const std::string &key)
+{
+    return 1;
+}
 
 } // namespace nbapi
 } // namespace beerocks
