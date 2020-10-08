@@ -25,6 +25,7 @@
 #include <bcl/beerocks_timer_manager.h>
 #include <bcl/beerocks_ucc_server.h>
 #include <bcl/network/network_utils.h>
+#include <btl/broker_client.h>
 
 #include <btl/broker_client_factory.h>
 
@@ -53,6 +54,20 @@ public:
                   std::shared_ptr<beerocks::EventLoop> event_loop);
     virtual ~master_thread();
 
+    /**
+     * @brief Starts controller.
+     *
+     * @return true on success and false otherwise.
+     */
+    bool to_be_renamed_to_start();
+
+    /**
+     * @brief Stops controller.
+     *
+     * @return true on success and false otherwise.
+     */
+    bool to_be_renamed_to_stop();
+
     virtual bool init() override;
     virtual bool work() override;
 
@@ -65,6 +80,20 @@ public:
      */
     bool send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx);
 
+    /**
+     * @brief Sends given CMDU message to the broker server running in the transport process to be
+     * forwarded to another device or multicast.
+     *
+     * @param cmdu_tx CMDU message to send.
+     * @param dst_mac Destination MAC address (must not be empty).
+     * @param src_mac Source MAC address (must not be empty).
+     * @param iface_name Name of the network interface to use (set to empty string to send on all
+     * available interfaces).
+     * @return true on success and false otherwise.
+     */
+    bool send_cmdu_to_broker(ieee1905_1::CmduMessageTx &cmdu_tx, const sMacAddr &dst_mac,
+                             const sMacAddr &src_mac, const std::string &iface_name = "");
+
 protected:
     virtual bool handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx) override;
     virtual bool socket_disconnected(Socket *sd) override;
@@ -73,6 +102,13 @@ protected:
     virtual std::string print_cmdu_types(const beerocks::message::sUdsHeader *cmdu_header) override;
 
 private:
+    /**
+     * @brief Handles the client-connected event in the CMDU server.
+     *
+     * @param fd File descriptor of the socket that got connected.
+     */
+    void handle_connected(int fd);
+
     /**
      * @brief Handles the client-disconnected event in the CMDU server.
      *
@@ -92,6 +128,22 @@ private:
      */
     bool handle_cmdu(int fd, uint32_t iface_index, const sMacAddr &dst_mac, const sMacAddr &src_mac,
                      ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Handles CMDU message received from broker.
+     *
+     * This handler is slightly different than the handler for CMDU messages received from other
+     * processes as it checks the source and destination MAC addresses set by the original sender.
+     * It also filters out messages that are not addressed to the controller.
+     *
+     * @param iface_index Index of the network interface that the CMDU message was received on.
+     * @param dst_mac Destination MAC address.
+     * @param src_mac Source MAC address.
+     * @param cmdu_rx Received CMDU to be handled.
+     * @return true on success and false otherwise.
+     */
+    bool handle_cmdu_from_broker(uint32_t iface_index, const sMacAddr &dst_mac,
+                                 const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
 
     bool handle_cmdu_1905_1_message(const std::string &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_cmdu_control_message(const std::string &src_mac,
@@ -193,6 +245,21 @@ private:
      * This member variable is temporary and will be removed at the end of PPM-591
      */
     std::unordered_map<int, Socket *> m_fd_to_socket_map;
+
+    /**
+     * File descriptor of the timer to run internal tasks periodically.
+     */
+    int m_tasks_timer;
+
+    /**
+     * File descriptor of the timer to run periodic operations.
+     */
+    int m_operations_timer;
+
+    /**
+     * Broker client to exchange CMDU messages with broker server running in transport process.
+     */
+    std::unique_ptr<beerocks::btl::BrokerClient> m_broker_client;
 };
 
 } // namespace son
