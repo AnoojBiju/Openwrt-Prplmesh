@@ -7,45 +7,62 @@ See LICENSE file for more details.
 The prplMesh project is copyright 2016-2020 its contributors.
 This file lists all contributors.
 
-- Adam Dov
-- Alex Kanter
-- Allan Dickow
-- Anton Bilohai
-- Arnout Vandecappelle (Essensium/Mind)
-- Coral Malachi
-- Denis Bakin
-- Eduardo Aguilar
-- Fancy Qian
-- Frederik Van Bogaert
-- Gal Wiener
+Companies and organizations:
+This lists companies/organizations that sponsored development on prplMesh,
+rather than getting paid for implementing it
+- Altran
+- ASSIA
+- Deutsche Telekom
+- GlobalLogic
+- Inango
 - Intel Corporation
-- Itay Elenzweig
-- Ivan Efimov
-- Juan Schroeder
-- KC Chen
-- Kristina Oliinyk
-- Lior Amram
-- Maksym Bielan
-- Mario Maz
+- Lifemote
 - MaxLinear
-- Moran Shoeg
-- Oleksii Ponomarenko
-- Ostap Slyusar
-- Pablo Martin
-- Pavel Levitsky
-- Ram Marzin
-- Ran Regev
-- Raphaël Mélotte
-- Segev Ravgad
-- Semyon Barenboym
+- Minim
+- prpl Foundation (project coordinator)
+- SoftAtHome
+
+Individuals:
+- Adam Dov (MaxLinear via Devalore)
+- Alex Kanter (MaxLinear via Devalore)
+- Allan Dickow (Greenwave Systems)
+- Anton Bilohai (prpl Foundation via Inango)
+- Arnout Vandecappelle (Deutsche Telekom via Essensium/Mind)
+- Coral Malachi (Intel)
+- Daniel Edri (MaxLinear via Devalore)
+- David Miguel Gregório Afonso (Altran)
+- Denis Bakin (Minim)
+- Eduardo Aguilar (Essensium/Mind)
+- Fancy Qian (Hitron)
+- Frederik Van Bogaert (prpl Foundation via Essensium/Mind)
+- Gal Wiener (Intel)
+- Itay Elenzweig (MaxLinear via Devalore)
+- Ivan Efimov (Inango)
+- Juan Schroeder (Essensium/Mind)
+- KC Chen (Hitron Technologies)
+- Klemen Porenta (Borea)
+- Kristina Oliinyk (Inango)
+- Lior Amram (Intel)
+- Maksym Bielan (GlobalLogic)
+- Mario Maz (MaxLinear)
+- Moran Shoeg (MaxLinear via Devalore)
+- Oleksii Ponomarenko (prpl Foundation via Inango)
+- Ostap Slyusar (prpl Foundation)
+- Pablo Martin (ASSIA)
+- Pavel Levitsky (Intel via Devalore)
+- Ram Marzin (Intel)
+- Ran Regev (Devalore)
+- Raphaël Mélotte (prpl Foundation via Essensium/Mind)
+- Segev Ravgad (Intel)
+- Semyon Barenboym (Intel)
 - Sinan Akpolat (Lifemote)
-- Tomer Eliyahu
-- Vitalii Komisarenko
-- Vitaly Bukhovsky
-- Vladyslav Tupikin
-- Yevheniy-Vilhelm Vall
-- Yaniv Yitzhak
-- Yuriy Masechko
+- Tomer Eliyahu (Intel)
+- Vitalii Komisarenko (prpl Foundation via Essensium/Mind)
+- Vitaly Bukhovsky (MaxLinear via Devalore)
+- Vladyslav Tupikin (Inango)
+- Yevheniy-Vilhelm Vall (GlobalLogic)
+- Yaniv Yitzhak (MaxLinear)
+- Yuriy Masechko (GlobalLogic)
 
 In addition, some parts were copied from other projects.
 
@@ -58,4 +75,5 @@ In addition, some parts were copied from other projects.
   - Zuhd Web Services
   - @abumusamq
 - cmake/googletest.cmake and googletest.CMakeLists.txt.in contain code copied from [Incorporating GoogleTest Into An Existing CMake Project](https://github.com/google/googletest/blob/master/googletest/README.md#incorporating-into-an-existing-cmake-project)
-  - Google Inc.  
+  - Google Inc.
+- Ambiorix was created by SoftAtHome  
