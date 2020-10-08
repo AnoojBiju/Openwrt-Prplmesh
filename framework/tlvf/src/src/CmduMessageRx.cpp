@@ -48,6 +48,11 @@
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
+#include <tlvf/wfa_map/tlvProfile2ApCapability.h>
+#include <tlvf/wfa_map/tlvProfile2ApRadioAdvancedCapabilities.h>
+#include <tlvf/wfa_map/tlvProfile2Default802dotQSettings.h>
+#include <tlvf/wfa_map/tlvProfile2TrafficSeparationPolicy.h>
+#include <tlvf/wfa_map/tlvProfile2UnsuccessfulAssociationPolicy.h>
 #include <tlvf/wfa_map/tlvRadioOperationRestriction.h>
 #include <tlvf/wfa_map/tlvSearchedService.h>
 #include <tlvf/wfa_map/tlvStaMacAddressType.h>
@@ -250,6 +255,18 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv()
     case (162): {
         return msg.addClass<wfa_map::tlvAssociatedStaTrafficStats>();
     }
+    case (180): {
+        return msg.addClass<wfa_map::tlvProfile2ApCapability>();
+    }
+    case (181): {
+        return msg.addClass<wfa_map::tlvProfile2Default802dotQSettings>();
+    }
+    case (182): {
+        return msg.addClass<wfa_map::tlvProfile2TrafficSeparationPolicy>();
+    }
+    case (190): {
+        return msg.addClass<wfa_map::tlvProfile2ApRadioAdvancedCapabilities>();
+    }
     case (192): {
         return msg.addClass<wfa_map::tlvTunnelledSourceInfo>();
     }
@@ -258,6 +275,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv()
     }
     case (194): {
         return msg.addClass<wfa_map::tlvTunnelledData>();
+    }
+    case (196): {
+        return msg.addClass<wfa_map::tlvProfile2UnsuccessfulAssociationPolicy>();
     }
     default: {
         LOG(DEBUG) << "Unknown TLV type: " << tlv_type;

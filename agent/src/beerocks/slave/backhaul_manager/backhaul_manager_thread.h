@@ -28,8 +28,10 @@
 #include <tlvf/CmduMessageTx.h>
 #include <tlvf/wfa_map/tlvApMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
+#include <tlvf/wfa_map/tlvChannelSelectionResponse.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
 
+#include "../agent_db.h"
 #include "../agent_ucc_listener.h"
 #include "../link_metrics/link_metrics.h"
 
@@ -129,9 +131,6 @@ private:
                                                      const std::string &src_mac);
     bool handle_1905_beacon_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx,
                                           const std::string &src_mac, Socket *&forward_to);
-    bool handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac);
-    bool handle_client_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                        const std::string &src_mac);
     bool handle_associated_sta_link_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                   const std::string &src_mac);
     bool handle_multi_ap_policy_config_request(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -139,6 +138,12 @@ private:
     bool handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac);
     bool handle_slave_ap_metrics_response(ieee1905_1::CmduMessageRx &cmdu_rx,
                                           const std::string &src_mac);
+    bool handle_channel_selection_request(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                          const std::string &src_mac);
+    bool handle_slave_channel_selection_response(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                                 const std::string &src_mac);
+    bool handle_slave_failed_connection_message(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                                const std::string &src_mac);
     bool handle_backhaul_steering_request(ieee1905_1::CmduMessageRx &cmdu_rx,
                                           const std::string &src_mac);
 
@@ -183,13 +188,16 @@ private:
     std::set<std::string> pending_slave_ifaces;
     std::set<std::string> pending_slave_sta_ifaces;
 
+public:
     std::list<std::shared_ptr<sRadioInfo>> slaves_sockets;
 
+private:
     std::list<std::shared_ptr<sRadioInfo>> m_slaves_sockets_to_finalize;
 
     // TODO: Temporary change, will be removed on Unified Agent PPM-351.
     // Key: front radio iface name, Value: sRadioInfo object
     std::unordered_map<std::string, std::shared_ptr<sRadioInfo>> m_disabled_slave_sockets;
+
     std::shared_ptr<SocketClient> m_scPlatform;
     net::network_utils::iface_info bridge_info;
 
@@ -273,12 +281,37 @@ private:
          * Time point at which AP metrics were reported for the last time.
          */
         std::chrono::steady_clock::time_point last_reporting_time_point;
-    };
+    } ap_metrics_reporting_info;
 
     /**
-     * AP Metrics Reporting configuration and status information.
+     * Unsuccessful Association Policy
      */
-    sApMetricsReportingInfo ap_metrics_reporting_info;
+    struct sUnsuccessfulAssociationPolicy {
+        /* The values in this struct are set by the controller through a Multi-AP Policy Config Request message,
+         * inside the Unsuccessful Association Policy TLV.
+         */
+
+        /**
+         * Report or Don't report unsuccessful associations of clients
+         */
+        bool report_unsuccessful_association = false;
+
+        /**
+         * Maximum Reporting Rate of failed associations in attempts per minute
+         */
+        uint32_t maximum_reporting_rate = 0;
+
+        /**
+         * Time point at which failed associatoin was reported for the last time.
+         */
+        std::chrono::steady_clock::time_point last_reporting_time_point =
+            std::chrono::steady_clock::time_point::min(); // way in the past
+
+        /**
+         * Number of reports in the last minute
+         */
+        uint32_t number_of_reports_in_last_minute = 0;
+    } unsuccessful_association_policy;
 
     /**
      * @brief Information gathered about a radio (= slave).
@@ -296,8 +329,6 @@ private:
         std::shared_ptr<bwl::sta_wlan_hal> sta_wlan_hal;
         Socket *sta_hal_ext_events = nullptr;
         Socket *sta_hal_int_events = nullptr;
-
-        bool he_supported = false; /**< Is HE supported flag */
     };
 
     /**
@@ -367,42 +398,6 @@ private:
     bool
     get_neighbor_links(const sMacAddr &neighbor_mac_filter,
                        std::map<sLinkInterface, std::vector<sLinkNeighbor>> &neighbor_links_map);
-
-    /**
-     * @brief Adds an AP HT Capabilities TLV to AP Capability Report message.
-     *
-     * TLV is added to message only if given radio supports HT capabilities.
-     * See section 17.2.8 of Multi-AP Specification for details.
-     *
-     * @param radio_info Radio structure containing the information required to fill in the TLV.
-     *
-     * @return True on success and false otherwise.
-     */
-    bool add_ap_ht_capabilities(const sRadioInfo &radio_info);
-
-    /**
-     * @brief Adds an AP VHT Capabilities TLV to AP Capability Report message.
-     *
-     * TLV is added to message only if given radio supports VHT capabilities.
-     * See section 17.2.9 of Multi-AP Specification for details.
-     *
-     * @param radio_info Radio structure containing the information required to fill in the TLV.
-     *
-     * @return True on success and false otherwise.
-     */
-    bool add_ap_vht_capabilities(const sRadioInfo &radio_info);
-
-    /**
-     * @brief Adds an AP HE Capabilities TLV to AP Capability Report message.
-     *
-     * TLV is added to message only if given radio supports HE capabilities.
-     * See section 17.2.10 of Multi-AP Specification for details.
-     *
-     * @param radio_info Radio structure containing the information required to fill in the TLV.
-     *
-     * @return True on success and false otherwise.
-     */
-    bool add_ap_he_capabilities(const sRadioInfo &radio_info);
 
     /**
      * @brief Adds link metric TLVs to response message.

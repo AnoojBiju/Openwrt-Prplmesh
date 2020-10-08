@@ -430,6 +430,22 @@ bool cfg_get_persistent_db_enable(bool &enable)
     return true;
 }
 
+bool cfg_get_persistent_db_commit_changes_interval(unsigned int &interval_sec)
+{
+    int commit_changes_value = DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE_SEC;
+
+    if (cfg_get_prplmesh_param_int_default("commit_changes_interval", &commit_changes_value,
+                                           DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE_SEC) ==
+        RETURN_ERR) {
+        MAPF_ERR("Failed to read commit_changes_interval parameter");
+        return false;
+    }
+
+    interval_sec = commit_changes_value;
+
+    return true;
+}
+
 bool cfg_get_clients_persistent_db_max_size(int &max_size)
 {
     int retVal = -1;
@@ -470,6 +486,22 @@ bool cfg_get_unfriendly_device_max_timelife_delay_days(
     }
 
     unfriendly_device_max_timelife_delay_days = retVal;
+
+    return true;
+}
+
+bool cfg_get_persistent_db_aging_interval(int &persistent_db_aging_interval_sec)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int_default("persistent_db_aging_interval_sec", &retVal,
+                                           DEFAULT_PERSISTENT_DB_AGING_INTERVAL_SEC) ==
+        RETURN_ERR) {
+        MAPF_ERR("Failed to read persistent-db-aging-interval-sec parameter - setting "
+                 "default value");
+        return false;
+    }
+
+    persistent_db_aging_interval_sec = retVal;
 
     return true;
 }

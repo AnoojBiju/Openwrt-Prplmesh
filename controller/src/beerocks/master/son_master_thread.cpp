@@ -7,6 +7,8 @@
  */
 
 #include "son_master_thread.h"
+#include "periodic/persistent_data_commit_operation.h"
+#include "periodic/persistent_database_aging.h"
 #include "son_actions.h"
 #include "son_management.h"
 #include "tasks/bml_task.h"
@@ -100,6 +102,26 @@ bool master_thread::init()
         } else {
             LOG(DEBUG) << "load clients from persistent db finished successfully";
         }
+
+        if (operations.is_operation_alive(database.get_persistent_db_aging_operation_id())) {
+            LOG(DEBUG) << "persistent DB aging operation already running";
+        } else {
+            auto aging_interval_seconds =
+                std::chrono::seconds(database.config.persistent_db_aging_interval);
+            auto new_operation = std::make_shared<persistent_database_aging_operation>(
+                aging_interval_seconds, database);
+            operations.add_operation(new_operation);
+        }
+
+        if (operations.is_operation_alive(database.get_persistent_db_data_commit_operation_id())) {
+            LOG(DEBUG) << "persistent DB data commit operation already running";
+        } else {
+            auto commit_interval_seconds =
+                std::chrono::seconds(database.config.persistent_db_commit_changes_interval_seconds);
+            auto commit_operation = std::make_shared<persistent_data_commit_operation>(
+                database, commit_interval_seconds);
+            operations.add_operation(commit_operation);
+        }
     }
 
     if (!transport_socket_thread::init()) {
@@ -128,11 +150,11 @@ bool master_thread::init()
             ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE,
             ieee1905_1::eMessageType::BACKHAUL_STEERING_RESPONSE_MESSAGE,
             ieee1905_1::eMessageType::TUNNELLED_MESSAGE,
+            ieee1905_1::eMessageType::FAILED_CONNECTION_MESSAGE,
 
         })) {
         LOG(ERROR) << "Failed subscribing to the Bus";
     }
-
 #ifndef BEEROCKS_LINUX
     auto new_statistics_polling_task =
         std::make_shared<statistics_polling_task>(database, cmdu_tx, tasks);
@@ -186,6 +208,7 @@ bool master_thread::work()
     }
 
     tasks.run_tasks();
+    operations.run_operations();
     return true;
 }
 
@@ -330,6 +353,8 @@ bool master_thread::handle_cmdu_1905_1_message(const std::string &src_mac,
         return handle_cmdu_1905_backhaul_sta_steering_response(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::TUNNELLED_MESSAGE:
         return handle_cmdu_1905_tunnelled_message(src_mac, cmdu_rx);
+    case ieee1905_1::eMessageType::FAILED_CONNECTION_MESSAGE:
+        return handle_cmdu_1905_failed_connection_message(src_mac, cmdu_rx);
 
     default:
         break;
@@ -1923,6 +1948,13 @@ bool master_thread::handle_cmdu_1905_tunnelled_message(const std::string &src_ma
                << data_tlv->data_length() << ", Data: " << std::endl
                << utils::dump_buffer(data_tlv->data(0), data_tlv->data_length());
 
+    return true;
+}
+
+bool master_thread::handle_cmdu_1905_failed_connection_message(const std::string &src_mac,
+                                                               ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    LOG(DEBUG) << "Recieved Failed Connection Message for STA";
     return true;
 }
 

@@ -14,7 +14,6 @@ import traceback
 from collections import Counter
 from typing import Callable, Union, Any, NoReturn
 
-import connmap
 import environment as env
 from capi import tlv
 from opts import debug, err, message, opts, status
@@ -433,7 +432,7 @@ class TestFlows:
                        r"Received credentials for ssid: Multi-AP-24G-3 .*"
                        r"fronthaul: true backhaul: false")
         self.check_log(env.agents[0].radios[1], r".* tear down radio")
-        conn_map = connmap.get_conn_map()
+        conn_map = env.controller.get_conn_map()
         repeater1 = conn_map[env.agents[0].mac]
         repeater1_wlan0 = repeater1.radios[env.agents[0].radios[0].mac]
         for vap in repeater1_wlan0.vaps.values():
@@ -455,7 +454,7 @@ class TestFlows:
 
         time.sleep(3)
         self.check_log(env.agents[0].radios[0], r".* tear down radio")
-        conn_map = connmap.get_conn_map()
+        conn_map = env.controller.get_conn_map()
         repeater1 = conn_map[env.agents[0].mac]
         repeater1_wlan0 = repeater1.radios[env.agents[0].radios[0].mac]
         for vap in repeater1_wlan0.vaps.values():
@@ -482,7 +481,7 @@ class TestFlows:
                        r"Received credentials for ssid: Multi-AP-24G-3-cli .*"
                        r"fronthaul: true backhaul: false")
         self.check_log(env.agents[0].radios[1], r".* tear down radio")
-        conn_map = connmap.get_conn_map()
+        conn_map = env.controller.get_conn_map()
         repeater1 = conn_map[env.agents[0].mac]
         repeater1_wlan0 = repeater1.radios[env.agents[0].radios[0].mac]
         for vap in repeater1_wlan0.vaps.values():
@@ -498,7 +497,7 @@ class TestFlows:
 
         time.sleep(3)
         self.check_log(env.agents[0].radios[0], r".* tear down radio")
-        conn_map = connmap.get_conn_map()
+        conn_map = env.controller.get_conn_map()
         repeater1 = conn_map[env.agents[0].mac]
         repeater1_wlan0 = repeater1.radios[env.agents[0].radios[0].mac]
         for vap in repeater1_wlan0.vaps.values():
@@ -1001,7 +1000,7 @@ class TestFlows:
         # TODO client blocking not implemented in dummy bwl
 
         # Check in connection map
-        conn_map = connmap.get_conn_map()
+        conn_map = env.controller.get_conn_map()
         map_radio = conn_map[env.agents[0].mac].radios[env.agents[0].radios[0].mac]
         map_vap = map_radio.vaps[env.agents[0].radios[0].vaps[0].bssid]
         if sta.mac not in map_vap.clients:
@@ -1011,7 +1010,7 @@ class TestFlows:
         env.agents[0].radios[0].vaps[0].disassociate(sta)
         env.agents[0].radios[1].vaps[0].associate(sta)
         time.sleep(1)  # Wait for conn_map to be updated
-        conn_map = connmap.get_conn_map()
+        conn_map = env.controller.get_conn_map()
         map_agent = conn_map[env.agents[0].mac]
         map_radio1 = map_agent.radios[env.agents[0].radios[1].mac]
         map_vap1 = map_radio1.vaps[env.agents[0].radios[1].vaps[0].bssid]
@@ -1025,7 +1024,7 @@ class TestFlows:
         # Associate with other radio implies disassociate from first
         env.agents[0].radios[0].vaps[0].associate(sta)
         time.sleep(1)  # Wait for conn_map to be updated
-        conn_map = connmap.get_conn_map()
+        conn_map = env.controller.get_conn_map()
         map_agent = conn_map[env.agents[0].mac]
         map_radio1 = map_agent.radios[env.agents[0].radios[1].mac]
         map_vap1 = map_radio1.vaps[env.agents[0].radios[1].vaps[0].bssid]
@@ -1224,6 +1223,25 @@ class TestFlows:
 
     def test_multi_ap_policy_config_w_metric_reporting_policy(self):
         self.send_and_check_policy_config_metric_reporting(env.agents[0], True, True)
+
+    def configure_multi_ap_policy_config_with_unsuccessful_association(
+            self, enable: 0x80, max_repeat: 0x0A):
+        debug("Send multi-ap policy config request with unsuccessful association policy to agent 1")
+        mid = env.controller.dev_send_1905(env.agents[0].mac, 0x8003,
+                                           tlv(0xC4, 0x0005, "{{0x{:02X} 0x{:08X}}}"
+                                           .format(enable, max_repeat)))
+        time.sleep(1)
+        debug("Confirming multi-ap policy config with unsuccessful association"
+              "request has been received on agent")
+
+        self.check_log(env.agents[0], r"MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE")
+        time.sleep(1)
+        debug("Confirming multi-ap policy config ack message has been received on the controller")
+        self.check_cmdu_type_single("ACK", 0x8000, env.agents[0].mac, env.controller.mac, mid)
+
+    def test_multi_ap_policy_config_w_unsuccessful_association(self):
+        self.configure_multi_ap_policy_config_with_unsuccessful_association(0x80, 0x01)
+        self.mismatch_psk()
 
     def test_client_association(self):
         debug("Send topology request to agent 1")
@@ -1446,7 +1464,7 @@ class TestFlows:
         time.sleep(2)
 
         # Phase 2 (step 3)
-        env.controller.dev_send_1905(agent.mac, 0x8001)
+        mid = env.controller.dev_send_1905(agent.mac, 0x8001)
         # wait
         time.sleep(1)
         # Phase 2 (step 4)
@@ -1457,19 +1475,25 @@ class TestFlows:
         Verify that the AP Capability Report message contains one Metric Collection Interval TLV and
         one R2 AP Capability TLV with the Byte Counter Units field set to 0x01.
         '''
+        resp = self.check_cmdu_type_single("AP Capability Report message", 0x8002,
+                                           agent.mac, env.controller.mac,
+                                           mid)
+
+        self.check_cmdu_has_tlvs(resp, 0xC5)
+        ap_capability_tlv = self.check_cmdu_has_tlvs(resp, 0xB4)
+        print(ap_capability_tlv)
 
         # Phase 3
         # Phase 4
+        vap1.associate(sta1)
+        vap1.associate(sta3)
+        vap2.associate(sta2)
+
+        time.sleep(1)
         # Phase 5
         # Phase 6
 
         # Phase 7
-
-        # Associate STAs after completing all the Resets/Backhaul reconfiguration
-        vap1.associate(sta1)
-        vap1.associate(sta3)
-        vap2.associate(sta2)
-        time.sleep(1)
 
         # prepare tlvs
         sta_mac_addr_tlv = tlv(0x95, 0x0006, '{}'.format(sta2.mac))
@@ -1484,6 +1508,18 @@ class TestFlows:
         self.check_cmdu_has_tlvs(resp, 0xC8)
         self.check_cmdu_has_tlvs(resp, 0x96)
 
+        # Phases 9 + 10
+
+        # Disable reporting
+        self.configure_multi_ap_policy_config_with_unsuccessful_association(0x00, 0x00)
+        # report should not be sent as we disabled the feature
+        self.mismatch_psk('no')
+
+        # Enable unsuccsfull association - 1 per minute
+        self.configure_multi_ap_policy_config_with_unsuccessful_association(0x80, 0x01)
+        # First report should be sent
+        self.mismatch_psk('yes')
+
         # tear down the test: disassociated
         vap1.disassociate(sta1)
         vap1.disassociate(sta3)
@@ -1494,6 +1530,54 @@ class TestFlows:
 
         # wait
         time.sleep(2)
+
+    def mismatch_psk(self, expect='yes'):
+        '''
+        expect: yes / no / exceed
+        '''
+
+        # Simulate Mismatch PSK sent by STA
+
+        # Create STA and Agent
+        sta = env.Station.create()
+        agent = env.agents[0]
+        agent_radio = env.agents[0].radios[0]
+
+        # Simulate Failed Association Message
+        agent_radio.send_bwl_event(
+                "EVENT AP-STA-POSSIBLE-PSK-MISMATCH {}".format(sta.mac))
+
+        # Wait for something to happen
+        time.sleep(1)
+
+        # Check correct flow
+
+        if expect == 'yes':
+            # Validate "Failed Connection Message" CMDU was sent
+            response = self.check_cmdu_type_single(
+                "Failed Connection Message", 0x8033, agent.mac, env.controller.mac)
+
+            debug("Check Failed Connection Message has valid STA TLV")
+            tlv_sta_mac = self.check_cmdu_has_tlv_single(response, 0x95)
+            if hasattr(tlv_sta_mac, 'sta_mac_addr_type_mac_addr'):
+                received_sta_mac = tlv_sta_mac.sta_mac_addr_type_mac_addr
+            else:
+                received_sta_mac = '00:00:00:00:00:00'
+
+            # Validate Srouce Info STA MAC
+            if received_sta_mac != sta.mac:
+                self.fail("Source Info TLV has wrong STA MAC {} instead of {}".format(
+                    received_sta_mac, sta.mac))
+        elif expect == 'no':
+            debug("expecting no cmdu, policy set to no report")
+            self.check_no_cmdu_type("Failed Connection Message", 0x8033,
+                                    agent.mac, env.controller.mac)
+        elif expect == 'exceed':
+            debug("expecting no cmdu, exceeded number of reports in a minute")
+            self.check_no_cmdu_type("Failed Connection Message", 0x8033,
+                                    agent.mac, env.controller.mac)
+        else:
+            debug("unknown 'expect' = {}".format(expect))
 
 
 if __name__ == '__main__':

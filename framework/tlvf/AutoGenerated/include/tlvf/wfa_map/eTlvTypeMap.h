@@ -61,12 +61,18 @@ enum class eTlvTypeMap : uint8_t {
     TLV_CHANNEL_SCAN_REQUEST = 0xa6,
     TLV_CHANNEL_SCAN_RESULT = 0xa7,
     TLV_TIMESTAMP = 0xa8,
+    TLV_PROFILE2_AP_CAPABILITY = 0xb4,
+    TLV_PROFILE2_DEFAULT_802_1Q_SETTINGS = 0xb5,
+    TLV_PROFILE2_TRAFFIC_SEPARATION_POLICY = 0xb6,
+    TLV_PROFILE2_AP_RADIO_ADVANCED_CAPABILITIES = 0xbe,
     TLV_TUNNELLED_SOURCE_INFO = 0xc0,
     TLV_TUNNELLED_PROTOCOL_TYPE = 0xc1,
     TLV_TUNNELLED_DATA = 0xc2,
+    TLV_PROFILE2_UNSUCCESSFUL_ASSOCIATION_POLICY = 0xc4,
     TLV_ASSOCIATED_STA_EXTENDED_LINK_METRICS = 0xc8,
     TLV_PROFILE2_STATUS_CODE = 0xc9,
     TLV_PROFILE2_REASON_CODE = 0xca,
+    TLV_PROFILE2_METRIC_COLLECTION_INTERVAL = 0xc5,
 };
 class eTlvTypeMapValidate {
 public:
@@ -114,12 +120,18 @@ public:
         case 0xa6:
         case 0xa7:
         case 0xa8:
+        case 0xb4:
+        case 0xb5:
+        case 0xb6:
+        case 0xbe:
         case 0xc0:
         case 0xc1:
         case 0xc2:
+        case 0xc4:
         case 0xc8:
         case 0xc9:
         case 0xca:
+        case 0xc5:
                 ret = true;
                 break;
             default:

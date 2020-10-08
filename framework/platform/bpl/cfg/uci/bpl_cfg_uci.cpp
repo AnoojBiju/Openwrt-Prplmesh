@@ -445,7 +445,7 @@ int cfg_uci_get_wireless_idx(char *interfaceName, int *rpc_index)
 int cfg_uci_get_wireless_bool(enum paramType type, const char *interface_name, const char param[],
                               bool *value)
 {
-    int res;
+    int res = 0;
 
     int status = cfg_uci_get_wireless_int(type, interface_name, param, &res);
     if (status == RETURN_ERR)

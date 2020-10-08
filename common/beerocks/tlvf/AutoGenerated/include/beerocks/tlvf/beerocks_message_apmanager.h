@@ -23,6 +23,7 @@
 #include <tuple>
 #include <vector>
 #include "beerocks/tlvf/beerocks_message_common.h"
+#include "classes/ChannelList.h"
 #include "tlvf/WSC/WSC_Attributes.h"
 
 namespace beerocks_message {
@@ -1060,6 +1061,10 @@ class cACTION_APMANAGER_CHANNELS_LIST_RESPONSE : public BaseClass
         uint8_t& supported_channels_size();
         std::tuple<bool, beerocks::message::sWifiChannel&> supported_channels(size_t idx);
         bool alloc_supported_channels(size_t count = 1);
+        bool isPostInitSucceeded() override;
+        std::shared_ptr<cChannelList> create_channel_list();
+        bool add_channel_list(std::shared_ptr<cChannelList> ptr);
+        std::shared_ptr<cChannelList> channel_list() { return m_channel_list_ptr; }
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -1074,6 +1079,10 @@ class cACTION_APMANAGER_CHANNELS_LIST_RESPONSE : public BaseClass
         uint8_t* m_supported_channels_size = nullptr;
         beerocks::message::sWifiChannel* m_supported_channels = nullptr;
         size_t m_supported_channels_idx__ = 0;
+        cChannelList *m_channel_list = nullptr;
+        std::shared_ptr<cChannelList> m_channel_list_ptr = nullptr;
+        bool m_channel_list_init = false;
+        bool m_lock_allocation__ = false;
 };
 
 }; // close namespace: beerocks_message

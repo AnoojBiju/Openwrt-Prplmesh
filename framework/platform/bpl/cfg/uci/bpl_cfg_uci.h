@@ -9,15 +9,21 @@
 #ifndef BPL_CFG_UCI_H_
 #define BPL_CFG_UCI_H_
 
-#ifdef BEEROCKS_UGW
+#ifdef BEEROCKS_OPENWRT
 
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef BEEROCKS_UGW
 #define restrict __restrict
 #include <libsafec/safe_str_lib.h>
+#else
+#define sscanf_s sscanf
+#define strncpy_s(a, b, c, d) strncpy(a, c, d)
+#endif
+
 #undef snprintf_s
 #define snprintf_s snprintf
 

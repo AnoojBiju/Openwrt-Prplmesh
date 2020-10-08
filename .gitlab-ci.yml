@@ -9,6 +9,7 @@ stages:
   - test
   - certification-dummy
   - certification-turris-omnia
+  - certification-turris-omnia-bhwifi
   - certification-axepoint
   - certification-axepoint-bhwifi
   - upload
@@ -152,7 +153,7 @@ build-in-docker-alpine:
   image: $CI_REGISTRY_IMAGE/prplmesh-builder-alpine:$CI_PIPELINE_ID
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
-    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/'
+    - if: "$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/"
     - when: manual
   needs: ["image-build-builder/alpine"]
 
@@ -161,7 +162,7 @@ build-in-docker-ubuntu-xenial:
   image: $CI_REGISTRY_IMAGE/prplmesh-builder-ubuntu-xenial:$CI_PIPELINE_ID
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
-    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/'
+    - if: "$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/"
     - when: manual
   needs: ["image-build-builder/ubuntu/xenial"]
 
@@ -171,7 +172,7 @@ build-in-docker-static:
     EXTRA_CMAKE_FLAGS: "-DBUILD_SHARED_LIBS=OFF"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
-    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/'
+    - if: "$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/"
     - when: manual
 
 upload-artifacts:
@@ -232,7 +233,7 @@ run-tests:
   stage: test
   image: $CI_REGISTRY_IMAGE/prplmesh-tests-runner:$CI_PIPELINE_ID
   script:
-    - tests/test_flows.py --verbose --unique-id $CI_JOB_ID --tag $CI_PIPELINE_ID
+    - tests/test_flows.py --verbose --unique-id "$CI_JOB_ID" --tag "$CI_PIPELINE_ID"
 
   artifacts:
     paths:
@@ -243,7 +244,7 @@ run-tests:
     - test-flows
 
   after_script:
-    - tools/docker/stop.sh -k -r
+    - tools/docker/stop.sh -k -r -u "$CI_JOB_ID"
   needs:
     - job: build-in-docker
     - job: image-build-tests-runner
@@ -275,7 +276,7 @@ boardfarm-tests:
     when: always
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
-    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/'
+    - if: "$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/"
     - when: manual
   tags:
     - shell
@@ -296,7 +297,7 @@ boardfarm-tests:
     - tools/docker/builder/rdk-b/build.sh --verbose --target-device "$TARGET_DEVICE" --tag "$CI_PIPELINE_ID" --cache "$RDK_CACHE_DIR"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
-    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/'
+    - if: "$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/"
     - when: manual
   artifacts:
     paths:
@@ -413,5 +414,6 @@ include:
   - local: "/ci/certification/generic.yml"
   - local: "/ci/certification/dummy.yml"
   - local: "/ci/certification/turris-omnia.yml"
+  - local: "/ci/certification/turris-omnia-bhwifi.yml"
   - local: "/ci/certification/axepoint.yml"
   - local: "/ci/certification/axepoint-bhwifi.yml"

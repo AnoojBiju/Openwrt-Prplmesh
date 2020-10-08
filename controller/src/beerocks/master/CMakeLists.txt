@@ -6,6 +6,7 @@ set(MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 
 file(GLOB controller_sources ${MODULE_PATH}/*.cpp)
 file(GLOB controller_tasks_sources ${MODULE_PATH}/tasks/*.cpp)
+file(GLOB controller_operations_sources ${MODULE_PATH}/periodic/*.cpp)
 file(GLOB controller_db_sources ${MODULE_PATH}/db/*.cpp)
 
 #RDKB
@@ -14,10 +15,15 @@ if (TARGET_PLATFORM STREQUAL "rdkb")
     list(APPEND controller_tasks_sources  ${RDKB_SOURCES})
 endif()
 
-add_executable(${PROJECT_NAME} ${controller_sources} ${controller_tasks_sources} ${controller_db_sources})
+add_executable(${PROJECT_NAME} ${controller_sources} ${controller_tasks_sources} ${controller_operations_sources} ${controller_db_sources})
 set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,-z,defs")
 
-target_link_libraries(${PROJECT_NAME} bpl bcl btl tlvf elpp btlvf)
+if (ENABLE_NBAPI)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_NBAPI")
+endif()
+
+target_link_libraries(${PROJECT_NAME} bpl bcl btl tlvf elpp btlvf nbapi)
+
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${MODULE_PATH}/../bml
 )

@@ -95,6 +95,8 @@ constexpr int DEFAULT_CLIENT_ROAMING           = 1;
 // by-default the persistent DB is disabled to allow backwards compatability
 // if the parameter is not configured in the prplmesh config and set to 1, DB is disabled
 constexpr int DEFAULT_PERSISTENT_DB = 0;
+// The default value in seconds for the interval between periodic commits of persistent DB data.
+constexpr unsigned int DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE_SEC = 10;
 // the DB of clients is limited in size to prevent high memory consumption
 // this is configurable to enable flexibility and support for low-memory platforms
 // by default, the number of clients's configuration to be cached is limited to 256
@@ -106,6 +108,9 @@ constexpr int DEFAULT_MAX_TIMELIFE_DELAY_DAYS = 365;
 // TODO: add description of "unfriendly-device" and how it is determined
 // by default, the limit is 1 day, but it is configurable via the UCI
 constexpr int DEFAULT_UNFRIENDLY_DEVICE_MAX_TIMELIFE_DELAY_DAYS = 1;
+// the persistent DB's aging mechanism needs to be checked periodically.
+// by default, the interval in which the aging mechanism needs to be checked is once per hour.
+constexpr int DEFAULT_PERSISTENT_DB_AGING_INTERVAL_SEC = 3600;
 // by default zwdfs functionality is disabled
 constexpr int DEFAULT_ZWDFS_ENABLE = 0;
 // Channel ranking used to determine best channel candidate.
@@ -486,6 +491,14 @@ bool cfg_get_best_channel_rank_threshold(int &threshold);
 bool cfg_get_persistent_db_enable(bool &enable);
 
 /**
+ * @brief Returns commit_changes_interval (seconds) value.
+ * 
+ * @param[out] interval_sec The interval in seconds between periodic persistent data commit operations. 
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_persistent_db_commit_changes_interval(unsigned int &interval_sec);
+
+/**
  * @brief Returns the max number of clients in the persistent DB.
  * 
  * @param [out] max_size Max number of clients the persistent-db supports.
@@ -509,6 +522,14 @@ bool cfg_get_max_timelife_delay_days(int &max_timelife_delay_days);
  */
 bool cfg_get_unfriendly_device_max_timelife_delay_days(
     int &unfriendly_device_max_timelife_delay_days);
+
+/**
+ * @brief Returns the interval to check the persistent DB aging
+ * 
+ * @param [out] persistent_db_aging_interval Interval for checking persistent DB aging.
+ * @return true on success, otherwise false
+ */
+bool cfg_get_persistent_db_aging_interval(int &persistent_db_aging_interval_sec);
 
 /**
  * @brief Returns configured WPA Control Path for the given interface.

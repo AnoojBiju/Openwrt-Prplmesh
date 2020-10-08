@@ -5,9 +5,15 @@
  * This code is subject to the terms of the BSD+Patent license.
  * See LICENSE file for more details.
  */
+#ifndef _AGENT_DB_H_
+#define _AGENT_DB_H_
+
 #include <bcl/beerocks_defines.h>
 #include <bcl/network/network_utils.h>
 #include <bwl/sta_wlan_hal.h>
+
+#include <beerocks/tlvf/enums/eDfsState.h>
+#include <beerocks/tlvf/structs/sSupportedBandwidth.h>
 
 #include <iostream>
 #include <memory>
@@ -212,6 +218,14 @@ public:
             std::array<uint8_t, ASSOCIATION_FRAME_SIZE> association_frame;
         };
 
+        struct sChannelInfo {
+            int8_t tx_power_dbm;
+            beerocks_message::eDfsState dfs_state;
+            std::vector<beerocks_message::sSupportedBandwidth> supported_bw_list;
+        };
+        // Key: Channel
+        std::unordered_map<uint8_t, sChannelInfo> channels_list;
+
         // Associated clients grouped by Client MAC.
         std::unordered_map<sMacAddr, sClient> associated_clients;
 
@@ -236,6 +250,8 @@ public:
         uint32_t vht_capability;
         /// 32-byte attribute containing the MCS set as defined in 802.11ac
         std::array<uint8_t, beerocks::message::VHT_MCS_SET_SIZE> vht_mcs_set;
+
+        bool he_supported = false; ///< Is 802.11ax (High Efficiency) protocol supported
     };
 
     /**
@@ -341,3 +357,5 @@ private:
 };
 
 } // namespace beerocks
+
+#endif // _AGENT_DB_H_

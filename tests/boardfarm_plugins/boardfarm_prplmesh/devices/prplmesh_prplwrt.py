@@ -68,7 +68,7 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
             # serial connection should be terminated by 2 commands above
             self.pid = None
 
-        self.wired_sniffer = Sniffer(_get_bridge_interface(self.docker_network),
+        self.wired_sniffer = Sniffer(_get_bridge_interface(self.unique_id),
                                      boardfarm.config.output_dir)
         self.connection = connection_decider.connection(device=self,
                                                         conn_type="ssh",
@@ -119,10 +119,10 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
         """ Check prplMesh status. Return True if operational."""
         self.sendline("/etc/init.d/prplmesh status")
         self.expect(
-                ["(?P<main_agent>OK) Main agent.+"
-                 "(?P<wlan0>OK) wlan0.+"
-                 "(?P<wlan2>OK) wlan2", pexpect.TIMEOUT],
-                timeout=5)
+            ["(?P<main_agent>OK) Main agent.+"
+             "(?P<wlan0>OK) wlan0.+"
+             "(?P<wlan2>OK) wlan2", pexpect.TIMEOUT],
+            timeout=5)
         if self.match is not pexpect.TIMEOUT:
             return True
         else:

@@ -44,6 +44,8 @@
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
+#include <tlvf/wfa_map/tlvProfile2ApCapability.h>
+#include <tlvf/wfa_map/tlvProfile2ApRadioAdvancedCapabilities.h>
 #include <tlvf/wfa_map/tlvSteeringBTMReport.h>
 #include <tlvf/wfa_map/tlvSteeringRequest.h>
 #include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
@@ -2192,6 +2194,37 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             return false;
         }
 
+        // Copy channels list to the AgentDB
+        auto channels_list_length = response->channel_list()->channels_list_length();
+        for (uint8_t ch_idx = 0; ch_idx < channels_list_length; ch_idx++) {
+            auto &channel_info = std::get<1>(response->channel_list()->channels_list(ch_idx));
+            auto channel       = channel_info.beacon_channel();
+            radio->channels_list[channel].tx_power_dbm = channel_info.tx_power_dbm();
+            radio->channels_list[channel].dfs_state    = channel_info.dfs_state();
+            auto supported_bw_size                     = channel_info.supported_bandwidths_length();
+            radio->channels_list[channel].supported_bw_list.resize(supported_bw_size);
+            std::copy_n(&std::get<1>(channel_info.supported_bandwidths(0)), supported_bw_size,
+                        radio->channels_list[channel].supported_bw_list.begin());
+
+            for (const auto &supported_bw : radio->channels_list[channel].supported_bw_list) {
+                LOG(DEBUG) << "channel=" << int(channel) << ", bw="
+                           << beerocks::utils::convert_bandwidth_to_int(
+                                  beerocks::eWiFiBandwidth(supported_bw.bandwidth))
+                           << ", rank=" << supported_bw.rank
+                           << ", multiap_preference=" << int(supported_bw.multiap_preference);
+            }
+        }
+
+        // Forward channels list to the Backhaul manager
+        auto response_out = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_CHANNELS_LIST_RESPONSE>(cmdu_tx);
+        if (!response_out) {
+            LOG(ERROR) << "Failed to build message";
+            break;
+        }
+        message_com::send_cmdu(backhaul_manager_socket, cmdu_tx);
+
+        // Create Channel preference report
         auto tuple_preferred_channels = response->preferred_channels(0);
         radio->front.preferred_channels.resize(response->preferred_channels_size());
         std::copy_n(&std::get<1>(tuple_preferred_channels), response->preferred_channels_size(),
@@ -3320,6 +3353,38 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
             LOG(ERROR) << "Failed adding WSC M1 TLV";
             return false;
         }
+
+        /* One Profile-2 AP Capability TLV */
+        auto profile2_ap_capability_tlv = cmdu_tx.addClass<wfa_map::tlvProfile2ApCapability>();
+        if (!profile2_ap_capability_tlv) {
+            LOG(ERROR) << "Failed building message!";
+            return false;
+        }
+        // If the Multi-AP Agent onboards to a Multi-AP Controller that implements Profile-1, the
+        // Multi-AP Agent shall set the Byte Counter Units field to 0x00 (bytes) and report the
+        // values of the BytesSent and BytesReceived fields in the Associated STA Traffic Stats TLV
+        // in bytes. Currently we send it on bytes unit, so set it to bytes.
+        profile2_ap_capability_tlv->capabilities_bit_field().byte_counter_units =
+            wfa_map::tlvProfile2ApCapability::eByteCounterUnits::BYTES;
+
+        // If Multi-AP Agents implements Profile-2, the Max Total Number of VIDs field to 2 or
+        // greater.
+        profile2_ap_capability_tlv->max_total_number_of_vids() = 2;
+
+        /* One AP Radio Advanced Capabilities TLV */
+        auto ap_radio_advanced_capabilities_tlv =
+            cmdu_tx.addClass<wfa_map::tlvProfile2ApRadioAdvancedCapabilities>();
+        if (!ap_radio_advanced_capabilities_tlv) {
+            LOG(ERROR) << "Failed building message!";
+            return false;
+        }
+
+        ap_radio_advanced_capabilities_tlv->radio_uid() = radio->front.iface_mac;
+
+        // Currently Set the flag as we don't support traffic separation.
+        ap_radio_advanced_capabilities_tlv->traffic_separation_flag().combined_front_back = 0;
+        ap_radio_advanced_capabilities_tlv->traffic_separation_flag()
+            .combined_profile1_and_profile2 = 0;
 
         if (!db->controller_info.prplmesh_controller) {
             LOG(INFO) << "Configured as non-prplMesh, not sending SLAVE_JOINED_NOTIFICATION";
@@ -4564,6 +4629,13 @@ bool slave_thread::channel_selection_current_channel_restricted()
     channel.channel_bandwidth = radio->bandwidth;
     channel.channel           = radio->channel;
     auto operating_class      = wireless_utils::get_operating_class_by_channel(channel);
+
+    if (operating_class == 0) {
+        LOG(ERROR) << "Unknown operating class for bandwidth= " << channel.channel_bandwidth
+                   << " channel=" << channel.channel
+                   << ". Considering the channel to be restricted";
+        return true;
+    }
 
     LOG(DEBUG) << "Current channel " << int(channel.channel) << " bw "
                << int(channel.channel_bandwidth) << " oper_class " << int(operating_class);
