@@ -134,8 +134,8 @@ public:
         int failed_roaming_counter_threshold;
         int roaming_sticky_client_rssi_threshold;
         int clients_persistent_db_max_size;
-        int max_timelife_delay_days;
-        int unfriendly_device_max_timelife_delay_days;
+        int max_timelife_delay_minutes;
+        int unfriendly_device_max_timelife_delay_minutes;
         unsigned int persistent_db_commit_changes_interval_seconds;
     } sDbMasterConfig;
 
@@ -689,12 +689,12 @@ public:
      * @brief Set the client's time-life delay.
      * 
      * @param mac MAC address of a client.
-     * @param time_life_delay_sec Client-specific aging time.
+     * @param time_life_delay_minutes Client-specific aging time.
      * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
      * @return true on success, otherwise false.
      */
     bool set_client_time_life_delay(const sMacAddr &mac,
-                                    const std::chrono::seconds &time_life_delay_sec,
+                                    const std::chrono::minutes &time_life_delay_minutes,
                                     bool save_to_persistent_db = true);
 
     /**
@@ -703,7 +703,7 @@ public:
      * @param mac MAC address of a client.
      * @return Client time-life delay, value of 0 means not-configured.
      */
-    std::chrono::seconds get_client_time_life_delay(const sMacAddr &mac);
+    std::chrono::minutes get_client_time_life_delay(const sMacAddr &mac);
 
     /**
      * @brief Set the client's stay-on-initial-radio.

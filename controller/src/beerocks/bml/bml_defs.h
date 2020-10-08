@@ -617,7 +617,7 @@ struct BML_CLIENT {
     // Determines the period of time after which the client configuration should be cleared,
     //   0 - Never age.
     //  -1 - Not Configured.
-    int32_t time_life_delay_days;
+    int32_t time_life_delay_minutes;
 };
 
 /****************************************************************************/
