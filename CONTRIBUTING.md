@@ -85,9 +85,16 @@ It is part of the code's documentation, and allows anyone (including the origina
 Therefore, we pay attention to how the commits look.
 
 Every commit must stand on its own.
-No commit should ever break something.
 Commits should be split up into atomic units that perform one specific change.
 E.g. to add a parameter to a function, there would be one commit to add the parameter and update all callers with the current value for it, and a second commit that changes one caller to use a different value for it.
+
+Normally, a commit shouldn't break anything.
+This makes it possible to use `git bisect` to find the commit that introduced a bug.
+However, sometimes splitting commits in a way that does break something is much easier (e.g. to review).
+Also, it turns out that we don't use bisect much in practice (instead, we manually bisect over merges).
+Therefore, commits that break something are allowed, though it is still to be avoided if it's easy to do.
+If you do this, make sure to mention in the commit message that it breaks compilation or runtime (and why).
+Also in the commit that finally fixes it, mention that.
 
 The commit message is very important, it is part of the documentation.
 It is relevant both during review of the contribution, and later to be able to understand why things are the way they are.
