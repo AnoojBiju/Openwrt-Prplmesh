@@ -332,9 +332,6 @@ create_server_socket(const beerocks::net::UdsAddress &address)
         return nullptr;
     }
 
-    // TODO: this code will be commented out until this server socket finally replaces current
-    // server socket in the son_master_thread
-    /*
     // Bind server socket to that UDS address
     if (!server_socket->bind(address)) {
         LOG(ERROR) << "Unable to bind server socket to UDS address: '" << address.path() << "'";
@@ -347,7 +344,6 @@ create_server_socket(const beerocks::net::UdsAddress &address)
                    << "'";
         return nullptr;
     }
-    */
 
     return server_socket;
 }
@@ -369,9 +365,6 @@ static std::unique_ptr<beerocks::net::ServerSocket> create_ucc_server_socket(uin
     // Internet address to bind the socket to
     beerocks::net::InternetAddress address(port);
 
-    // TODO: this code will be commented out until this server socket finally replaces current
-    // server socket in the beerocks_ucc_listener
-    /*
     // Bind server socket to that TCP address
     if (!server_socket->bind(address)) {
         LOG(ERROR) << "Unable to bind server socket to TCP address at port: " << port;
@@ -383,7 +376,6 @@ static std::unique_ptr<beerocks::net::ServerSocket> create_ucc_server_socket(uin
         LOG(ERROR) << "Unable to listen for connection requests at TCP address at port: " << port;
         return nullptr;
     }
-    */
 
     return server_socket;
 }
@@ -587,10 +579,7 @@ int main(int argc, char *argv[])
         return false;
     }
 
-    if (!son_master.init()) {
-        LOG(ERROR) << "son_master.init() ";
-        g_running = false;
-    }
+    LOG_IF(!son_master.to_be_renamed_to_start(), FATAL) << "Unable to start controller!";
 
     auto touch_time_stamp_timeout = std::chrono::steady_clock::now();
     while (g_running) {
@@ -606,14 +595,16 @@ int main(int argc, char *argv[])
                                        std::chrono::seconds(beerocks::TOUCH_PID_TIMEOUT_SECONDS);
         }
 
-        if (!son_master.work()) {
+        // Run application event loop and break on error.
+        if (event_loop->run() < 0) {
+            LOG(ERROR) << "Event loop failure!";
             break;
         }
     }
 
     s_pLogger = nullptr;
 
-    son_master.stop();
+    son_master.to_be_renamed_to_stop();
 
     return 0;
 }
