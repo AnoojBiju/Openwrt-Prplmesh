@@ -378,6 +378,43 @@ void LinkMetricsCollectionTask::handle_beacon_metrics_query(ieee1905_1::CmduMess
 
     m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
                                   tlvf::mac_to_string(db->bridge.mac));
+
+    // forward message to fronthaul
+    /*
+     * TODO: https://jira.prplfoundation.org/browse/PPM-657
+     *
+     * When link metric collection task moves to agent context
+     * send the message to fronthaul, not slave.
+     */
+
+    auto radio_info = m_btl_ctx.get_radio(radio->front.iface_mac);
+    if (!radio_info) {
+        LOG(ERROR) << "Failed to get radio info for " << radio->front.iface_mac;
+        return;
+    }
+    auto forward_to = radio_info->slave;
+
+    cmdu_rx.swap(); // swap back before forwarding
+
+    auto uds_header = message_com::get_uds_header(cmdu_rx);
+    if (!uds_header) {
+        LOG(ERROR) << "UDS header == nullptr";
+        return;
+    }
+
+    if (forward_to) {
+        // Forward only to the desired destination
+        if (!message_com::forward_cmdu_to_uds(forward_to, cmdu_rx, uds_header->length)) {
+            LOG(ERROR) << "forward_cmdu_to_uds() failed - sd=" << intptr_t(forward_to);
+        }
+    } else {
+        // Forward cmdu to all slaves how it is on UDS, without changing it
+        for (auto soc_iter : m_btl_ctx.slaves_sockets) {
+            if (!message_com::forward_cmdu_to_uds(soc_iter->slave, cmdu_rx, uds_header->length)) {
+                LOG(ERROR) << "forward_cmdu_to_uds() failed - sd=" << intptr_t(soc_iter->slave);
+            }
+        }
+    }
 }
 
 void LinkMetricsCollectionTask::handle_associated_sta_link_metrics_query(
