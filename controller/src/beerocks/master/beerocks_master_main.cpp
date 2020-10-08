@@ -252,19 +252,21 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
         master_conf.clients_persistent_db_max_size =
             beerocks::bpl::DEFAULT_CLIENTS_PERSISTENT_DB_MAX_SIZE;
     }
-    if (!beerocks::bpl::cfg_get_max_timelife_delay_days(master_conf.max_timelife_delay_days)) {
+    if (!beerocks::bpl::cfg_get_max_timelife_delay_minutes(
+            master_conf.max_timelife_delay_minutes)) {
         LOG(DEBUG)
             << "failed to read max lifetime of clients in persistent db, setting to default value: "
-            << beerocks::bpl::DEFAULT_MAX_TIMELIFE_DELAY_DAYS << " days";
-        master_conf.max_timelife_delay_days = beerocks::bpl::DEFAULT_MAX_TIMELIFE_DELAY_DAYS;
+            << beerocks::bpl::DEFAULT_MAX_TIMELIFE_DELAY_MINUTES << " minutes";
+        master_conf.max_timelife_delay_minutes = beerocks::bpl::DEFAULT_MAX_TIMELIFE_DELAY_MINUTES;
     }
-    if (!beerocks::bpl::cfg_get_unfriendly_device_max_timelife_delay_days(
-            master_conf.unfriendly_device_max_timelife_delay_days)) {
+    if (!beerocks::bpl::cfg_get_unfriendly_device_max_timelife_delay_minutes(
+            master_conf.unfriendly_device_max_timelife_delay_minutes)) {
         LOG(DEBUG) << "failed to read max lifetime of unfriendly clients in persistent db, setting "
                       "to default value: "
-                   << beerocks::bpl::DEFAULT_UNFRIENDLY_DEVICE_MAX_TIMELIFE_DELAY_DAYS << " days";
-        master_conf.unfriendly_device_max_timelife_delay_days =
-            beerocks::bpl::DEFAULT_UNFRIENDLY_DEVICE_MAX_TIMELIFE_DELAY_DAYS;
+                   << beerocks::bpl::DEFAULT_UNFRIENDLY_DEVICE_MAX_TIMELIFE_DELAY_MINUTES
+                   << " minutes";
+        master_conf.unfriendly_device_max_timelife_delay_minutes =
+            beerocks::bpl::DEFAULT_UNFRIENDLY_DEVICE_MAX_TIMELIFE_DELAY_MINUTES;
     }
     if (!beerocks::bpl::cfg_get_persistent_db_aging_interval(
             master_conf.persistent_db_aging_interval)) {

@@ -401,30 +401,30 @@ bool cfg_get_clients_persistent_db_max_size(int &max_size)
     return true;
 }
 
-bool cfg_get_max_timelife_delay_days(int &max_timelife_delay_days)
+bool cfg_get_max_timelife_delay_minutes(int &max_timelife_delay_minutes)
 {
     int val = -1;
-    if (cfg_get_param_int("max_timelife_delay_days=", val) == RETURN_ERR) {
-        MAPF_ERR("Failed to read max-timelife-delay-days parameter - setting default value");
-        val = DEFAULT_MAX_TIMELIFE_DELAY_DAYS;
+    if (cfg_get_param_int("max_timelife_delay_minutes=", val) == RETURN_ERR) {
+        MAPF_ERR("Failed to read max-timelife-delay-minutes parameter - setting default value");
+        val = DEFAULT_MAX_TIMELIFE_DELAY_MINUTES;
     }
 
-    max_timelife_delay_days = val;
+    max_timelife_delay_minutes = val;
 
     return true;
 }
 
-bool cfg_get_unfriendly_device_max_timelife_delay_days(
-    int &unfriendly_device_max_timelife_delay_days)
+bool cfg_get_unfriendly_device_max_timelife_delay_minutes(
+    int &unfriendly_device_max_timelife_delay_minutes)
 {
     int val = -1;
-    if (cfg_get_param_int("unfriendly_device_max_timelife_delay_days=", val) == RETURN_ERR) {
-        MAPF_ERR("Failed to read unfriendly-device-max-timelife-delay-days parameter - setting "
+    if (cfg_get_param_int("unfriendly_device_max_timelife_delay_minutes=", val) == RETURN_ERR) {
+        MAPF_ERR("Failed to read unfriendly-device-max-timelife-delay-minutes parameter - setting "
                  "default value");
-        val = DEFAULT_MAX_TIMELIFE_DELAY_DAYS;
+        val = DEFAULT_MAX_TIMELIFE_DELAY_MINUTES;
     }
 
-    unfriendly_device_max_timelife_delay_days = val;
+    unfriendly_device_max_timelife_delay_minutes = val;
 
     return true;
 }
