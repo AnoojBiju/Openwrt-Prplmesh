@@ -291,6 +291,14 @@ public:
 
     std::chrono::steady_clock::time_point get_node_last_seen(const std::string &mac);
 
+    /**
+     * @brief Create and add instance 'radio' to data element 'device'
+	 * dm = data model
+	 * @param mac address of device
+     * @return true if device with such a mac address was found 
+	 * and 'radio' instance was successfully added, false otherwise
+     */
+    bool dm_add_radio_instance(const std::string &mac);
     bool set_hostap_active(const std::string &mac, bool active);
     bool is_hostap_active(const std::string &mac);
 

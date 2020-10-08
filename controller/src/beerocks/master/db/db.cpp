@@ -705,6 +705,24 @@ std::unordered_map<sMacAddr, son::node::ap_metrics_data> &db::get_ap_metric_data
     return m_ap_metric_data;
 }
 
+bool db::dm_add_radio_instance(const std::string &mac)
+{
+    int index = m_ambiorix_datamodel->get_instance_index("Network.Device.[ID == '%s'].", mac);
+
+    if (!index) {
+        LOG(ERROR) << "Failed to find Device instance with ID = " << mac;
+        return false;
+    }
+
+    std::string instance_path = "Network.Device." + std::to_string(index) + ".Radio";
+
+    if (!m_ambiorix_datamodel->add_instance(instance_path)) {
+        LOG(ERROR) << "Failed to add object Radio to the Network.Device." << index;
+        return false;
+    }
+    return true;
+}
+
 bool db::set_hostap_active(const std::string &mac, bool active)
 {
     auto n = get_node(mac);
@@ -715,6 +733,7 @@ bool db::set_hostap_active(const std::string &mac, bool active)
         return false;
     }
     n->hostap->active = active;
+    dm_add_radio_instance(mac);
     return true;
 }
 
