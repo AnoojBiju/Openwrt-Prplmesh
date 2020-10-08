@@ -159,8 +159,10 @@ private:
     std::set<std::string> pending_slave_ifaces;
     std::set<std::string> pending_slave_sta_ifaces;
 
+public:
     std::list<std::shared_ptr<sRadioInfo>> slaves_sockets;
 
+private:
     std::list<std::shared_ptr<sRadioInfo>> m_slaves_sockets_to_finalize;
 
     // TODO: Temporary change, will be removed on Unified Agent PPM-351.
