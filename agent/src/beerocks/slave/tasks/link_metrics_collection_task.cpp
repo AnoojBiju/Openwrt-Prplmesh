@@ -690,10 +690,15 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
      * periodic metrics reporting interval has elapsed.
      */
     if (0 == mid) {
-        uint16_t length = message_com::get_uds_header(cmdu_rx)->length;
+        auto uds_header = message_com::get_uds_header(cmdu_rx);
+        if (!uds_header) {
+            LOG(ERROR) << "Received empty UDS header";
+            return;
+        }
+
         cmdu_rx.swap(); //swap back before forwarding
         m_btl_ctx.send_cmdu_to_broker(cmdu_rx, tlvf::mac_to_string(db->controller_info.bridge_mac),
-                                      tlvf::mac_to_string(db->bridge.mac), length);
+                                      tlvf::mac_to_string(db->bridge.mac), uds_header->length);
         return;
     }
 
