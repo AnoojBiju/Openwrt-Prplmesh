@@ -5,12 +5,11 @@
 # See LICENSE file for more details.
 ###############################################################
 import time
-from typing import Callable, Union, Any, NoReturn
 
 from .prplmesh_base_test import PrplMeshBaseTest
 from boardfarm.exceptions import SkipTest
 from capi import tlv
-from opts import debug, err, message, opts, status
+from opts import debug
 
 
 class ChannelSelection(PrplMeshBaseTest):
