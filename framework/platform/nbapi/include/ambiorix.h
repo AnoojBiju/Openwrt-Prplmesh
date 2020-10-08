@@ -32,8 +32,9 @@ public:
     virtual bool set(const std::string &relative_path, const uint64_t &value)      = 0;
     virtual bool set(const std::string &relative_path, const bool &value)          = 0;
     virtual bool set(const std::string &relative_path, const double &value)        = 0;
-    virtual bool add_instance(const std::string &relative_path)                    = 0;
+    virtual uint32_t add_instance(const std::string &relative_path)                = 0;
     virtual bool remove_instance(const std::string &relative_path, uint32_t index) = 0;
+    virtual int get_instance_index(const std::string &relative_path, const std::string &key) = 0;
 };
 
 inline Ambiorix::~Ambiorix() {}
