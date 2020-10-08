@@ -634,9 +634,13 @@ void LinkMetricsCollectionTask::handle_multi_ap_policy_config_request(
             std::shared_ptr<backhaul_manager::sRadioInfo> radio =
                 m_btl_ctx.get_radio(metrics_reporting_conf.radio_uid);
             if (radio) {
-                uint16_t length = message_com::get_uds_header(cmdu_rx)->length;
+                auto uds_header = message_com::get_uds_header(cmdu_rx);
+                if (!uds_header) {
+                    LOG(ERROR) << "UDS header == nullptr";
+                    continue;
+                }
                 cmdu_rx.swap(); // swap back before forwarding
-                if (!message_com::forward_cmdu_to_uds(radio->slave, cmdu_rx, length)) {
+                if (!message_com::forward_cmdu_to_uds(radio->slave, cmdu_rx, uds_header->length)) {
                     /*
                      * TODO: https://jira.prplfoundation.org/browse/PPM-657
                      *
