@@ -83,14 +83,16 @@ master_thread::master_thread(
     std::shared_ptr<beerocks::btl::BrokerClientFactory> broker_client_factory,
     std::unique_ptr<beerocks::UccServer> ucc_server,
     std::unique_ptr<beerocks::CmduServer> cmdu_server,
+    std::shared_ptr<beerocks::TimerManager> timer_manager,
     std::shared_ptr<beerocks::EventLoop> event_loop)
     : transport_socket_thread(master_uds_), database(database_),
       m_controller_ucc_listener(database_, cert_cmdu_tx, std::move(ucc_server)),
       m_broker_client_factory(broker_client_factory), m_cmdu_server(std::move(cmdu_server)),
-      m_event_loop(event_loop)
+      m_timer_manager(timer_manager), m_event_loop(event_loop)
 {
     LOG_IF(!m_broker_client_factory, FATAL) << "Broker client factory is a null pointer!";
     LOG_IF(!m_cmdu_server, FATAL) << "CMDU server is a null pointer!";
+    LOG_IF(!m_timer_manager, FATAL) << "Timer manager is a null pointer!";
     LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
 
     thread_name = "master";
