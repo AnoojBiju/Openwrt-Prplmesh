@@ -454,8 +454,9 @@ bool son_actions::send_cmdu_to_agent(const std::string &dest_mac,
         return false;
     }
 
-    return master_thread_ctx->send_cmdu_to_broker(cmdu_tx, dest_mac,
-                                                  database.get_local_bridge_mac());
+    return master_thread_ctx->send_cmdu_to_broker(
+        cmdu_tx, tlvf::mac_from_string(dest_mac),
+        tlvf::mac_from_string(database.get_local_bridge_mac()));
 }
 
 bool son_actions::send_ap_config_renew_msg(ieee1905_1::CmduMessageTx &cmdu_tx, db &database,
