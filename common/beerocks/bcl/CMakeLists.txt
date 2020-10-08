@@ -54,6 +54,7 @@ if (BUILD_TESTS)
         ${MODULE_PATH}/unit_tests/event_loop_impl_test.cpp
         ${MODULE_PATH}/unit_tests/interface_state_manager_impl_test.cpp
         ${MODULE_PATH}/unit_tests/timer_impl_test.cpp
+        ${MODULE_PATH}/unit_tests/timer_manager_impl_test.cpp
         ${MODULE_PATH}/unit_tests/ucc_parser_stream_impl_test.cpp
         ${MODULE_PATH}/unit_tests/ucc_serializer_stream_impl_test.cpp
         ${MODULE_PATH}/unit_tests/ucc_server_impl_test.cpp

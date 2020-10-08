@@ -9,7 +9,7 @@
 #ifndef BCL_NETWORK_TIMER_IMPL_H_
 #define BCL_NETWORK_TIMER_IMPL_H_
 
-#include "timer.h"
+#include <bcl/network/timer.h>
 
 #include <bcl/network/file_descriptor_impl.h>
 
