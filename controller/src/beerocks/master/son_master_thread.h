@@ -21,7 +21,6 @@
 #include <bcl/beerocks_event_loop.h>
 #include <bcl/beerocks_logging.h>
 #include <bcl/beerocks_message_structs.h>
-#include <bcl/beerocks_socket_thread.h>
 #include <bcl/beerocks_timer_manager.h>
 #include <bcl/beerocks_ucc_server.h>
 #include <bcl/network/file_descriptor.h>
@@ -44,33 +43,30 @@
 #include <stdint.h>
 
 namespace son {
-class master_thread : public beerocks::btl::transport_socket_thread {
+class master_thread {
 
 public:
-    master_thread(const std::string &master_uds_, db &database_,
+    master_thread(db &database_,
                   std::shared_ptr<beerocks::btl::BrokerClientFactory> broker_client_factory,
                   std::unique_ptr<beerocks::UccServer> ucc_server,
                   std::unique_ptr<beerocks::CmduServer> cmdu_server,
                   std::shared_ptr<beerocks::TimerManager> timer_manager,
                   std::shared_ptr<beerocks::EventLoop> event_loop);
-    virtual ~master_thread();
+    ~master_thread();
 
     /**
      * @brief Starts controller.
      *
      * @return true on success and false otherwise.
      */
-    bool to_be_renamed_to_start();
+    bool start();
 
     /**
      * @brief Stops controller.
      *
      * @return true on success and false otherwise.
      */
-    bool to_be_renamed_to_stop();
-
-    virtual bool init() override;
-    virtual bool work() override;
+    bool stop();
 
     /**
      * @brief Sends given CMDU message through the specified socket connection.
@@ -94,13 +90,6 @@ public:
      */
     bool send_cmdu_to_broker(ieee1905_1::CmduMessageTx &cmdu_tx, const sMacAddr &dst_mac,
                              const sMacAddr &src_mac, const std::string &iface_name = "");
-
-protected:
-    virtual bool handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx) override;
-    virtual bool socket_disconnected(Socket *sd) override;
-    virtual void before_select() override;
-    virtual void after_select(bool timeout) override;
-    virtual std::string print_cmdu_types(const beerocks::message::sUdsHeader *cmdu_header) override;
 
 private:
     /**
@@ -214,6 +203,26 @@ private:
                                        const mapf::encryption::diffie_hellman &dh,
                                        uint8_t authkey[32], uint8_t keywrapkey[16]);
 
+    /**
+     * Buffer to hold CMDU to be transmitted.
+     */
+    uint8_t m_tx_buffer[beerocks::message::MESSAGE_BUFFER_LENGTH];
+
+    /**
+     * CMDU to be transmitted.
+     */
+    ieee1905_1::CmduMessageTx cmdu_tx;
+
+    /**
+     * Buffer to hold CMDU to be transmitted by the UCC listener (in certification mode).
+     */
+    uint8_t m_cert_tx_buffer[beerocks::message::MESSAGE_BUFFER_LENGTH];
+
+    /**
+     * CMDU to be transmitted by the UCC listener (in certification mode).
+     */
+    ieee1905_1::CmduMessageTx cert_cmdu_tx;
+
     db &database;
     task_pool tasks;
     periodic_operation_pool operations;
@@ -240,12 +249,6 @@ private:
      * Application event loop used by the process to wait for I/O events.
      */
     std::shared_ptr<beerocks::EventLoop> m_event_loop;
-
-    /**
-     * Map of file descriptors to pointers to Socket class instances.
-     * This member variable is temporary and will be removed at the end of PPM-591
-     */
-    std::unordered_map<int, Socket *> m_fd_to_socket_map;
 
     /**
      * File descriptor of the timer to run internal tasks periodically.
