@@ -71,10 +71,6 @@
 #include <tlvf/wfa_map/tlvTunnelledProtocolType.h>
 #include <tlvf/wfa_map/tlvTunnelledSourceInfo.h>
 
-#define SOCKET_MAX_CONNECTIONS 20
-#define SOCKETS_SELECT_TIMEOUT_MSEC 50
-#define CLIENT_RECONNECT_TIME_WINDOW_MSEC 2000
-
 namespace son {
 
 /**
@@ -88,13 +84,13 @@ constexpr auto tasks_timer_period = std::chrono::milliseconds(50);
 constexpr auto operations_timer_period = std::chrono::milliseconds(1000);
 
 master_thread::master_thread(
-    const std::string &master_uds_, db &database_,
-    std::shared_ptr<beerocks::btl::BrokerClientFactory> broker_client_factory,
+    db &database_, std::shared_ptr<beerocks::btl::BrokerClientFactory> broker_client_factory,
     std::unique_ptr<beerocks::UccServer> ucc_server,
     std::unique_ptr<beerocks::CmduServer> cmdu_server,
     std::shared_ptr<beerocks::TimerManager> timer_manager,
     std::shared_ptr<beerocks::EventLoop> event_loop)
-    : transport_socket_thread(master_uds_), database(database_),
+    : cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer)),
+      cert_cmdu_tx(m_cert_tx_buffer, sizeof(m_cert_tx_buffer)), database(database_),
       m_controller_ucc_listener(database_, cert_cmdu_tx, std::move(ucc_server)),
       m_broker_client_factory(broker_client_factory), m_cmdu_server(std::move(cmdu_server)),
       m_timer_manager(timer_manager), m_event_loop(event_loop)
@@ -103,8 +99,6 @@ master_thread::master_thread(
     LOG_IF(!m_cmdu_server, FATAL) << "CMDU server is a null pointer!";
     LOG_IF(!m_timer_manager, FATAL) << "Timer manager is a null pointer!";
     LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
-
-    thread_name = "master";
 
     database.set_master_thread_ctx(this);
 
@@ -146,8 +140,7 @@ master_thread::~master_thread()
     LOG(DEBUG) << "closing";
 }
 
-// The name of this method is temporary and will be renamed at the end of PPM-658.
-bool master_thread::to_be_renamed_to_start()
+bool master_thread::start()
 {
     // In case of error in one of the steps of this method, we have to undo all the previous steps
     // (like when rolling back a database transaction, where either all steps get executed or none
@@ -274,8 +267,7 @@ bool master_thread::to_be_renamed_to_start()
     return true;
 }
 
-// The name of this method is temporary and will be renamed at the end of PPM-658.
-bool master_thread::to_be_renamed_to_stop()
+bool master_thread::stop()
 {
     bool ok = true;
 
@@ -294,102 +286,6 @@ bool master_thread::to_be_renamed_to_stop()
     }
 
     return ok;
-}
-
-bool master_thread::init()
-{
-    set_server_max_connections(SOCKET_MAX_CONNECTIONS);
-    set_select_timeout(SOCKETS_SELECT_TIMEOUT_MSEC);
-
-    LOG(DEBUG) << "persistent db enable=" << database.config.persistent_db;
-    if (database.config.persistent_db) {
-        LOG(DEBUG) << "loading clients from persistent db";
-        if (!database.load_persistent_db_clients()) {
-            LOG(WARNING) << "failed to load clients from persistent db";
-        } else {
-            LOG(DEBUG) << "load clients from persistent db finished successfully";
-        }
-
-        if (operations.is_operation_alive(database.get_persistent_db_aging_operation_id())) {
-            LOG(DEBUG) << "persistent DB aging operation already running";
-        } else {
-            auto aging_interval_seconds =
-                std::chrono::seconds(database.config.persistent_db_aging_interval);
-            auto new_operation = std::make_shared<persistent_database_aging_operation>(
-                aging_interval_seconds, database);
-            operations.add_operation(new_operation);
-        }
-
-        if (operations.is_operation_alive(database.get_persistent_db_data_commit_operation_id())) {
-            LOG(DEBUG) << "persistent DB data commit operation already running";
-        } else {
-            auto commit_interval_seconds =
-                std::chrono::seconds(database.config.persistent_db_commit_changes_interval_seconds);
-            auto commit_operation = std::make_shared<persistent_data_commit_operation>(
-                database, commit_interval_seconds);
-            operations.add_operation(commit_operation);
-        }
-    }
-
-    if (!transport_socket_thread::init()) {
-        LOG(ERROR) << "Failed init of transport_socket_thread";
-        stop();
-        return false;
-    }
-
-    if (!broker_subscribe(std::vector<ieee1905_1::eMessageType>{
-            ieee1905_1::eMessageType::ACK_MESSAGE,
-            ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_SEARCH_MESSAGE,
-            ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_WSC_MESSAGE,
-            ieee1905_1::eMessageType::AP_CAPABILITY_REPORT_MESSAGE,
-            ieee1905_1::eMessageType::AP_METRICS_RESPONSE_MESSAGE,
-            ieee1905_1::eMessageType::BEACON_METRICS_RESPONSE_MESSAGE,
-            ieee1905_1::eMessageType::CHANNEL_PREFERENCE_REPORT_MESSAGE,
-            ieee1905_1::eMessageType::CHANNEL_SELECTION_RESPONSE_MESSAGE,
-            ieee1905_1::eMessageType::CLIENT_CAPABILITY_REPORT_MESSAGE,
-            ieee1905_1::eMessageType::CLIENT_STEERING_BTM_REPORT_MESSAGE,
-            ieee1905_1::eMessageType::HIGHER_LAYER_DATA_MESSAGE,
-            ieee1905_1::eMessageType::LINK_METRIC_RESPONSE_MESSAGE,
-            ieee1905_1::eMessageType::OPERATING_CHANNEL_REPORT_MESSAGE,
-            ieee1905_1::eMessageType::STEERING_COMPLETED_MESSAGE,
-            ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE,
-            ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE,
-            ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE,
-            ieee1905_1::eMessageType::BACKHAUL_STEERING_RESPONSE_MESSAGE,
-            ieee1905_1::eMessageType::TUNNELLED_MESSAGE,
-            ieee1905_1::eMessageType::FAILED_CONNECTION_MESSAGE,
-
-        })) {
-        LOG(ERROR) << "Failed subscribing to the Bus";
-    }
-
-    if (database.setting_certification_mode() && database.config.ucc_listener_port != 0) {
-        if (!m_controller_ucc_listener.start("ucc_listener")) {
-            LOG(FATAL) << "failed start controller_ucc_listener";
-            return false;
-        }
-    }
-    return true;
-}
-
-bool master_thread::work()
-{
-    if (!transport_socket_thread::work()) {
-        return false;
-    }
-
-    tasks.run_tasks();
-    operations.run_operations();
-    return true;
-}
-
-void master_thread::before_select() { database.unlock(); }
-
-void master_thread::after_select(bool timeout) { database.lock(); }
-
-std::string master_thread::print_cmdu_types(const beerocks::message::sUdsHeader *cmdu_header)
-{
-    return beerocks::message_com::print_cmdu_types(cmdu_header);
 }
 
 bool master_thread::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
@@ -413,29 +309,6 @@ bool master_thread::send_cmdu_to_broker(ieee1905_1::CmduMessageTx &cmdu_tx, cons
     return m_broker_client->send_cmdu(cmdu_tx, dst_mac, src_mac, iface_index);
 }
 
-// This method is temporary and will be removed at the end of PPM-658.
-// It is intended to allow the temporary coexistence of Socket* and file descriptors to refer to
-// accepted sockets.
-bool master_thread::socket_disconnected(Socket *sd)
-{
-    if (!sd) {
-        LOG(ERROR) << "socket is nullptr";
-        return false;
-    }
-
-    // Get the file descriptor for the given socket instance
-    int fd = sd->getSocketFd();
-
-    // Save the pair { fd x Socket* } for later retrieval
-    m_fd_to_socket_map[fd] = sd;
-
-    // Call the method with the new signature
-    handle_disconnected(fd);
-
-    // Returning true so the socket_thread will handle the socket removal.
-    return true;
-}
-
 void master_thread::handle_disconnected(int fd)
 {
     // Removing the socket only from the vector of socket in the database if exists,
@@ -452,58 +325,6 @@ void master_thread::handle_disconnected(int fd)
                          rdkb_wlan_task::events::STEERING_REMOVE_SOCKET, &new_event);
     }
 #endif
-}
-
-// This method is temporary and will be removed at the end of PPM-658.
-// It is intended to allow the temporary coexistence of Socket* and file descriptors to refer to
-// accepted sockets.
-bool master_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
-{
-    if (!sd) {
-        LOG(ERROR) << "socket is nullptr";
-        return false;
-    }
-
-    auto uds_header = beerocks::message_com::get_uds_header(cmdu_rx);
-    if (uds_header == nullptr) {
-        LOG(ERROR) << "get_uds_header() returns nullptr";
-        return false;
-    }
-
-    std::string src_mac = tlvf::mac_to_string(uds_header->src_bridge_mac);
-    std::string dst_mac = tlvf::mac_to_string(uds_header->dst_bridge_mac);
-
-    if (from_broker(sd)) {
-
-        if (src_mac == beerocks::net::network_utils::ZERO_MAC_STRING) {
-            LOG(ERROR) << "src_mac is zero!";
-            return false;
-        }
-
-        if (dst_mac == beerocks::net::network_utils::ZERO_MAC_STRING) {
-            LOG(ERROR) << "dst_mac is zero!";
-            return false;
-        }
-
-        // Filter messages which are not destined to the controller
-        if (dst_mac != beerocks::net::network_utils::MULTICAST_1905_MAC_ADDR &&
-            dst_mac != database.get_local_bridge_mac()) {
-            return true;
-        }
-
-        // TODO: Add optimization of PID filtering for cases like the following:
-        // If VS message was sent by Controllers local agent to the controller, it is looped back.
-    }
-
-    // Get the file descriptor for the given socket instance
-    int fd = sd->getSocketFd();
-
-    // Save the pair { fd x Socket* } for later retrieval
-    m_fd_to_socket_map[fd] = sd;
-
-    // Call the method with the new signature
-    return handle_cmdu(fd, 0, tlvf::mac_from_string(dst_mac), tlvf::mac_from_string(src_mac),
-                       cmdu_rx);
 }
 
 bool master_thread::handle_cmdu(int fd, uint32_t iface_index, const sMacAddr &dst_mac,
