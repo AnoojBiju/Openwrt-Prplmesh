@@ -350,7 +350,7 @@ bool base_wlan_hal_dwpal::fsm_setup()
 
             LOG(DEBUG) << "dwpal_fsm_state::Detach";
 
-            for (int i = 0; i < beerocks::IFACE_TOTAL_VAPS; i++) {
+            for (int i = 0; i < DWPAL_CONTEXTS_MAX_SIZE; i++) {
                 if (m_dwpal_ctx[i]) {
                     LOG(INFO) << "Call DWPAL socket close";
                     DWPAL_Ret ret = dwpal_hostap_socket_close(&m_dwpal_ctx[i]);
@@ -498,7 +498,7 @@ bool base_wlan_hal_dwpal::dwpal_send_cmd(const std::string &cmd, int vap_id)
     auto buff_size_copy = m_wpa_ctrl_buffer_size;
     int ctx_index       = vap_id + 1;
 
-    if (ctx_index < 0 || ctx_index >= beerocks::IFACE_TOTAL_VAPS) {
+    if (ctx_index < 0 || ctx_index >= DWPAL_CONTEXTS_MAX_SIZE) {
         LOG(ERROR) << "ctx_index " << ctx_index << " is out of bounds";
         return false;
     }
@@ -556,7 +556,7 @@ bool base_wlan_hal_dwpal::dwpal_send_cmd(const std::string &cmd, char **reply, i
 bool base_wlan_hal_dwpal::attach_ctrl_interface(int vap_id)
 {
     int ctx_index = vap_id + 1;
-    if (ctx_index < 0 || ctx_index >= beerocks::IFACE_TOTAL_VAPS) {
+    if (ctx_index < 0 || ctx_index >= DWPAL_CONTEXTS_MAX_SIZE) {
         LOG(ERROR) << "ctx_index " << ctx_index << " is out of bounds";
         return false;
     }

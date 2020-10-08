@@ -2786,7 +2786,8 @@ bool master_thread::handle_cmdu_control_message(const std::string &src_mac,
         }
         std::unordered_map<int8_t, sVapElement> vaps_info;
         std::string vaps_list;
-        for (int8_t vap_id = beerocks::IFACE_VAP_ID_MIN; vap_id < IFACE_VAP_ID_MAX; vap_id++) {
+        for (int8_t vap_id = beerocks::IFACE_VAP_ID_MIN; vap_id <= beerocks::IFACE_VAP_ID_MAX;
+             vap_id++) {
             auto vap_mac = tlvf::mac_to_string(notification->params().vaps[vap_id].mac);
             if (vap_mac != network_utils::ZERO_MAC_STRING) {
                 vaps_info[vap_id].mac = vap_mac;
