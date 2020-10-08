@@ -402,7 +402,7 @@ std::string master_thread::print_cmdu_types(const beerocks::message::sUdsHeader 
 
 bool master_thread::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
 {
-    return beerocks::message_com::send_cmdu(m_fd_to_socket_map[fd], cmdu_tx);
+    return m_cmdu_server->send_cmdu(fd, cmdu_tx);
 }
 
 bool master_thread::send_cmdu_to_broker(ieee1905_1::CmduMessageTx &cmdu_tx, const sMacAddr &dst_mac,
