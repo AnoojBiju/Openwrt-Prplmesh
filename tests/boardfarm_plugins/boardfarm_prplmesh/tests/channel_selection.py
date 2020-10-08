@@ -47,7 +47,7 @@ class ChannelSelection(PrplMeshBaseTest):
         debug("Starting channel wlan0: {}, wlan2: {}".format(orig_chan_0, orig_chan_1))
 
         debug("Send channel preference query")
-        ch_pref_query_mid = controller.ucc_socket.dev_send_1905(agent.mac, 0x8004)
+        ch_pref_query_mid = controller.dev_send_1905(agent.mac, 0x8004)
         time.sleep(3)
         debug("Confirming channel preference query has been received on agent")
 
