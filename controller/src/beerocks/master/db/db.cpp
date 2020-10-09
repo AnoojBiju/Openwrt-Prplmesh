@@ -189,7 +189,16 @@ bool db::add_node_gateway(const sMacAddr &mac, const sMacAddr &parent_mac,
         return false;
     }
 
-    // TODO: Add device to the controller data model via m_ambiorix_datamodel for controller agent
+    auto index = m_ambiorix_datamodel->get_instance_index("Network.Device.[ID == '%s'].",
+                                                          tlvf::mac_to_string(mac));
+    LOG_IF(index, FATAL) << "Device with ID: " << tlvf::mac_to_string(mac)
+                         << " exists in the data model!";
+
+    if (!m_ambiorix_datamodel->add_instance("Network.Device")) {
+        LOG(ERROR) << "Failed to add instance for device, mac: " << tlvf::mac_to_string(mac);
+        return false;
+    }
+
     return true;
 }
 
@@ -201,7 +210,16 @@ bool db::add_node_ire(const sMacAddr &mac, const sMacAddr &parent_mac,
         return false;
     }
 
-    // TODO: Add device to the controller data model via m_ambiorix_datamodel for controller agent
+    auto index = m_ambiorix_datamodel->get_instance_index("Network.Device.[ID == '%s'].",
+                                                          tlvf::mac_to_string(mac));
+    LOG_IF(index, FATAL) << "Device with ID: " << tlvf::mac_to_string(mac)
+                         << " exists in the data model!";
+
+    if (!m_ambiorix_datamodel->add_instance("Network.Device")) {
+        LOG(ERROR) << "Failed to add instance for device, mac: " << tlvf::mac_to_string(mac);
+        return false;
+    }
+
     return true;
 }
 
@@ -213,7 +231,15 @@ bool db::add_node_wireless_bh(const sMacAddr &mac, const sMacAddr &parent_mac,
         return false;
     }
 
-    // TODO: Add device to the controller data model via m_ambiorix_datamodel for Wireless BH agent
+    auto index = m_ambiorix_datamodel->get_instance_index("Network.Device.[ID == '%s'].",
+                                                          tlvf::mac_to_string(mac));
+    LOG_IF(index, FATAL) << "Device with ID: " << tlvf::mac_to_string(mac)
+                         << " exists in the data model!";
+
+    if (!m_ambiorix_datamodel->add_instance("Network.Device")) {
+        LOG(ERROR) << "Failed to add instance for device, mac: " << tlvf::mac_to_string(mac);
+        return false;
+    }
     return true;
 }
 
@@ -225,7 +251,16 @@ bool db::add_node_wired_bh(const sMacAddr &mac, const sMacAddr &parent_mac,
         return false;
     }
 
-    // TODO: Add device to the controller data model via m_ambiorix_datamodel for Wireless BH agent
+    auto index = m_ambiorix_datamodel->get_instance_index("Network.Device.[ID == '%s'].",
+                                                          tlvf::mac_to_string(mac));
+    LOG_IF(index, FATAL) << "Device with ID: " << tlvf::mac_to_string(mac)
+                         << " exists in the data model!";
+
+    if (!m_ambiorix_datamodel->add_instance("Network.Device")) {
+        LOG(ERROR) << "Failed to add instance for device, mac: " << tlvf::mac_to_string(mac);
+        return false;
+    }
+
     return true;
 }
 
