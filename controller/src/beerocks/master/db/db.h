@@ -265,6 +265,17 @@ public:
                          const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,
                          const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
 
+    /**
+    * @brief add instance of data element 'radio'
+    *
+    * @param mac address of radio
+    * @param mac address of device
+    * @return true if device with given mac address was found
+    * and radio instance was successfully added, false otherwise
+	* dm = data model
+    */
+    bool dm_add_radio_element(const std::string &radio_mac, const std::string &device_mac);
+
     bool remove_node(const sMacAddr &mac);
 
     bool set_node_type(const std::string &mac, beerocks::eType type);

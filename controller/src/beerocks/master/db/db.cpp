@@ -264,6 +264,25 @@ bool db::add_node_wired_bh(const sMacAddr &mac, const sMacAddr &parent_mac,
     return true;
 }
 
+bool db::dm_add_radio_element(const std::string &radio_mac, const std::string &device_mac)
+{
+    std::string path_to_obj = " Network.Device.";
+    uint32_t index =
+        m_ambiorix_datamodel->get_instance_index(path_to_obj + "[ID == '%s'].", device_mac);
+
+    if (!index) {
+        LOG(ERROR) << "Failed to get Network.Device index for mac: " << device_mac;
+        return false;
+    }
+    path_to_obj += std::to_string(index);
+    if (!m_ambiorix_datamodel->add_instance(path_to_obj + ".Radio")) {
+        LOG(ERROR) << "Failed to add instance Network.Device." << device_mac
+                   << ".Radio, with radio mac: " << radio_mac;
+        return false;
+    }
+    return true;
+}
+
 bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac,
                         const sMacAddr &radio_identifier)
 {
@@ -271,9 +290,7 @@ bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac,
         LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
         return false;
     }
-
-    // TODO: Add radio to the controller data model via m_ambiorix_datamodel for defined device
-    return true;
+    return dm_add_radio_element(tlvf::mac_to_string(mac), tlvf::mac_to_string(parent_mac));
 }
 
 bool db::add_node_client(const sMacAddr &mac, const sMacAddr &parent_mac,
@@ -3170,1695 +3187,1707 @@ bool db::load_persistent_db_clients()
             is_friendly = is_friendly_it->second == std::to_string(true);
         }
 
-    unsigned int diff = 0;
-    // If DB is too big, we need to delete those who're close to the end of their lifespan
-    if (vector_of_clients.size() > static_cast<unsigned int>(config.clients_persistent_db_max_size))
-        diff = vector_of_clients.size() -
-               static_cast<unsigned int>(config.clients_persistent_db_max_size);
+        unsigned int diff = 0;
+        // If DB is too big, we need to delete those who're close to the end of their lifespan
+        if (vector_of_clients.size() >
+            static_cast<unsigned int>(config.clients_persistent_db_max_size))
+            diff = vector_of_clients.size() -
+                   static_cast<unsigned int>(config.clients_persistent_db_max_size);
 
-    if (diff > 0) {
-        std::sort(
-            std::begin(vector_of_clients), std::end(vector_of_clients),
-            [&](const std::pair<std::string, std::unordered_map<std::string, std::string>> &a,
-                const std::pair<std::string, std::unordered_map<std::string, std::string>> &b) {
-                return (get_client_remaining_sec(a) > get_client_remaining_sec(b));
-            });
+        if (diff > 0) {
+            std::sort(
+                std::begin(vector_of_clients), std::end(vector_of_clients),
+                [&](const std::pair<std::string, std::unordered_map<std::string, std::string>> &a,
+                    const std::pair<std::string, std::unordered_map<std::string, std::string>> &b) {
+                    return (get_client_remaining_sec(a) > get_client_remaining_sec(b));
+                });
 
-        // erase diff and reduce the size of the vector and on persistent DB
-        std::for_each(vector_of_clients.end(), vector_of_clients.end() - diff,
-                      [](const std::pair<std::string, std::unordered_map<std::string, std::string>>
-                             &client_pair) {
-                          bpl::db_remove_entry(type_to_string(beerocks::eType::TYPE_CLIENT),
-                                               client_pair.first);
-                      });
+            // erase diff and reduce the size of the vector and on persistent DB
+            std::for_each(
+                vector_of_clients.end(), vector_of_clients.end() - diff,
+                [](const std::pair<std::string, std::unordered_map<std::string, std::string>>
+                       &client_pair) {
+                    bpl::db_remove_entry(type_to_string(beerocks::eType::TYPE_CLIENT),
+                                         client_pair.first);
+                });
 
-        vector_of_clients.erase(vector_of_clients.end() - diff);
+            vector_of_clients.erase(vector_of_clients.end() - diff);
+        }
+
+        for (const auto &client : vector_of_clients) {
+            // Send results to add_node_from_data and return to increment
+            // the local variable declared previously
+            std::pair<uint16_t, uint16_t> result = std::make_pair(0, 0);
+
+            db::add_node_from_data(client.first, client.second, result);
+
+            // If result i equals 0 it wouldn't affect the real results.
+            add_error_count += result.first;
+            set_error_count += result.second;
+        }
+
+        auto sum = static_cast<uint16_t>(vector_of_clients.size()) - add_error_count -
+                   set_error_count - diff;
+
+        // Print counters
+        LOG_IF(set_error_mac_count, DEBUG)
+            << set_error_mac_count << " were deleted because of malformed mac address";
+        LOG_IF(add_error_count, DEBUG)
+            << "Unable to add nodes for " << add_error_count << "clients";
+        LOG_IF(set_error_count, DEBUG)
+            << "Unable to set the nodes with values from persistent db for " << set_error_count
+            << " clients";
+        LOG(DEBUG) << "Filtered: " << diff << " clients due to max DB capacity reached:"
+                   << " max-capacity: " << config.clients_persistent_db_max_size;
+        LOG(DEBUG) << " Added " << sum << " clients successfully";
+
+        return true;
     }
 
-    for (const auto &client : vector_of_clients) {
-        // Send results to add_node_from_data and return to increment
-        // the local variable declared previously
-        std::pair<uint16_t, uint16_t> result = std::make_pair(0, 0);
+    std::deque<sMacAddr> db::get_clients_with_persistent_data_configured()
+    {
+        std::deque<sMacAddr> configured_clients;
+        for (auto node_map : nodes) {
+            for (auto kv : node_map) {
+                if ((kv.second->get_type() == eType::TYPE_CLIENT) && (kv.second->mac == kv.first) &&
+                    (kv.second->client_parameters_last_edit !=
+                     std::chrono::system_clock::time_point::min())) {
+                    configured_clients.push_back(tlvf::mac_from_string(kv.first));
+                }
+            }
+        }
 
-        db::add_node_from_data(client.first, client.second, result);
+        LOG_IF(configured_clients.empty(), DEBUG) << "No clients are found";
 
-        // If result i equals 0 it wouldn't affect the real results.
-        add_error_count += result.first;
-        set_error_count += result.second;
+        return configured_clients;
     }
 
-    auto sum =
-        static_cast<uint16_t>(vector_of_clients.size()) - add_error_count - set_error_count - diff;
+    //
+    // CLI
+    //
+    void db::add_cli_socket(Socket * sd)
+    {
+        if (sd) {
+            remove_cli_socket(sd);
+            cli_debug_sockets.push_back(sd);
+        }
+    }
 
-    // Print counters
-    LOG_IF(set_error_mac_count, DEBUG)
-        << set_error_mac_count << " were deleted because of malformed mac address";
-    LOG_IF(add_error_count, DEBUG) << "Unable to add nodes for " << add_error_count << "clients";
-    LOG_IF(set_error_count, DEBUG) << "Unable to set the nodes with values from persistent db for "
-                                   << set_error_count << " clients";
-    LOG(DEBUG) << "Filtered: " << diff << " clients due to max DB capacity reached:"
-               << " max-capacity: " << config.clients_persistent_db_max_size;
-    LOG(DEBUG) << " Added " << sum << " clients successfully";
+    void db::remove_cli_socket(Socket * sd)
+    {
+        if (sd) {
+            for (auto it = cli_debug_sockets.begin(); it < cli_debug_sockets.end(); it++) {
+                if (sd == (*it)) {
+                    it = cli_debug_sockets.erase(it);
+                    return;
+                }
+            }
+        }
+    }
+    bool db::get_cli_debug_enable(Socket * sd)
+    {
+        if (sd) {
+            for (auto it = cli_debug_sockets.begin(); it < cli_debug_sockets.end(); it++) {
+                if (sd == (*it)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 
-    return true;
-}
+    void db::set_slave_stop_on_failure_attempts(int attempts)
+    {
+        slaves_stop_on_failure_attempts = attempts;
+    }
 
-std::deque<sMacAddr> db::get_clients_with_persistent_data_configured()
-{
-    std::deque<sMacAddr> configured_clients;
-    for (auto node_map : nodes) {
-        for (auto kv : node_map) {
-            if ((kv.second->get_type() == eType::TYPE_CLIENT) && (kv.second->mac == kv.first) &&
-                (kv.second->client_parameters_last_edit !=
-                 std::chrono::system_clock::time_point::min())) {
-                configured_clients.push_back(tlvf::mac_from_string(kv.first));
+    int db::get_slave_stop_on_failure_attempts() { return slaves_stop_on_failure_attempts; }
+
+    Socket *db::get_cli_socket_at(int idx)
+    {
+        if (idx < int(cli_debug_sockets.size())) {
+            return cli_debug_sockets.at(idx);
+        }
+        return nullptr;
+    }
+
+    //
+    // BML
+    //
+    void db::add_bml_socket(Socket * sd)
+    {
+        if (sd) {
+            for (auto it = bml_listeners_sockets.begin(); it < bml_listeners_sockets.end(); it++) {
+                if (sd == (*it).sd) {
+                    return;
+                }
+            }
+            sBmlListener bml_listener = {0};
+            bml_listener.sd           = sd;
+            bml_listeners_sockets.push_back(bml_listener);
+        }
+    }
+
+    void db::remove_bml_socket(Socket * sd)
+    {
+        if (sd) {
+            for (auto it = bml_listeners_sockets.begin(); it < bml_listeners_sockets.end(); it++) {
+                if (sd == (*it).sd) {
+                    it = bml_listeners_sockets.erase(it);
+                    return;
+                }
             }
         }
     }
 
-    LOG_IF(configured_clients.empty(), DEBUG) << "No clients are found";
-
-    return configured_clients;
-}
-
-//
-// CLI
-//
-void db::add_cli_socket(Socket *sd)
-{
-    if (sd) {
-        remove_cli_socket(sd);
-        cli_debug_sockets.push_back(sd);
-    }
-}
-
-void db::remove_cli_socket(Socket *sd)
-{
-    if (sd) {
-        for (auto it = cli_debug_sockets.begin(); it < cli_debug_sockets.end(); it++) {
-            if (sd == (*it)) {
-                it = cli_debug_sockets.erase(it);
-                return;
+    bool db::get_bml_nw_map_update_enable(Socket * sd)
+    {
+        if (sd) {
+            for (auto it = bml_listeners_sockets.begin(); it < bml_listeners_sockets.end(); it++) {
+                if (sd == (*it).sd) {
+                    return (*it).map_updates;
+                }
             }
         }
-    }
-}
-bool db::get_cli_debug_enable(Socket *sd)
-{
-    if (sd) {
-        for (auto it = cli_debug_sockets.begin(); it < cli_debug_sockets.end(); it++) {
-            if (sd == (*it)) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-void db::set_slave_stop_on_failure_attempts(int attempts)
-{
-    slaves_stop_on_failure_attempts = attempts;
-}
-
-int db::get_slave_stop_on_failure_attempts() { return slaves_stop_on_failure_attempts; }
-
-Socket *db::get_cli_socket_at(int idx)
-{
-    if (idx < int(cli_debug_sockets.size())) {
-        return cli_debug_sockets.at(idx);
-    }
-    return nullptr;
-}
-
-//
-// BML
-//
-void db::add_bml_socket(Socket *sd)
-{
-    if (sd) {
-        for (auto it = bml_listeners_sockets.begin(); it < bml_listeners_sockets.end(); it++) {
-            if (sd == (*it).sd) {
-                return;
-            }
-        }
-        sBmlListener bml_listener = {0};
-        bml_listener.sd           = sd;
-        bml_listeners_sockets.push_back(bml_listener);
-    }
-}
-
-void db::remove_bml_socket(Socket *sd)
-{
-    if (sd) {
-        for (auto it = bml_listeners_sockets.begin(); it < bml_listeners_sockets.end(); it++) {
-            if (sd == (*it).sd) {
-                it = bml_listeners_sockets.erase(it);
-                return;
-            }
-        }
-    }
-}
-
-bool db::get_bml_nw_map_update_enable(Socket *sd)
-{
-    if (sd) {
-        for (auto it = bml_listeners_sockets.begin(); it < bml_listeners_sockets.end(); it++) {
-            if (sd == (*it).sd) {
-                return (*it).map_updates;
-            }
-        }
-    }
-    return false;
-}
-
-bool db::set_bml_topology_update_enable(Socket *sd, bool update_enable)
-{
-    if (!sd) {
-        return false;
-    }
-    auto it = std::find_if(bml_listeners_sockets.begin(), bml_listeners_sockets.end(),
-                           [&](const sBmlListener &element) { return element.sd == sd; });
-    if (it == bml_listeners_sockets.end()) {
-        LOG(ERROR) << "set_bml_topology_update_enable failed!, cannot find bml listener";
-        return false;
-    }
-    it->topology_updates = update_enable;
-    return true;
-}
-
-bool db::get_bml_topology_update_enable(Socket *sd)
-{
-    if (!sd) {
-        return false;
-    }
-    auto it = std::find_if(bml_listeners_sockets.begin(), bml_listeners_sockets.end(),
-                           [&](const sBmlListener &element) { return element.sd == sd; });
-    if (it == bml_listeners_sockets.end()) {
-        LOG(ERROR) << "set_bml_topology_update_enable failed!, cannot find bml listener";
-        return false;
-    }
-    return it->topology_updates;
-}
-
-bool db::set_bml_nw_map_update_enable(Socket *sd, bool update_enable)
-{
-    if (sd) {
-        for (auto it = bml_listeners_sockets.begin(); it < bml_listeners_sockets.end(); it++) {
-            if (sd == (*it).sd) {
-                (*it).map_updates = update_enable;
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-bool db::get_bml_stats_update_enable(Socket *sd)
-{
-    if (sd) {
-        for (auto it = bml_listeners_sockets.begin(); it < bml_listeners_sockets.end(); it++) {
-            if (sd == (*it).sd) {
-                return (*it).stats_updates;
-            }
-        }
-    }
-    return false;
-}
-
-bool db::set_bml_stats_update_enable(Socket *sd, bool update_enable)
-{
-    if (sd) {
-        for (auto it = bml_listeners_sockets.begin(); it < bml_listeners_sockets.end(); it++) {
-            if (sd == (*it).sd) {
-                (*it).stats_updates = update_enable;
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-bool db::get_bml_events_update_enable(Socket *sd)
-{
-    if (sd) {
-        for (auto it = bml_listeners_sockets.begin(); it < bml_listeners_sockets.end(); it++) {
-            if (sd == (*it).sd) {
-                return (*it).events_updates;
-            }
-        }
-    }
-    return false;
-}
-
-bool db::set_bml_events_update_enable(Socket *sd, bool update_enable)
-{
-    if (sd) {
-        for (auto it = bml_listeners_sockets.begin(); it < bml_listeners_sockets.end(); it++) {
-            if (sd == (*it).sd) {
-                (*it).events_updates = update_enable;
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-Socket *db::get_bml_socket_at(int idx)
-{
-    if (idx < int(bml_listeners_sockets.size())) {
-        return bml_listeners_sockets.at(idx).sd;
-    }
-    return nullptr;
-}
-
-bool db::is_bml_listener_exist()
-{
-    bool listener_exist;
-    for (const auto &listener : bml_listeners_sockets) {
-        listener_exist = listener.map_updates || listener.stats_updates ||
-                         listener.events_updates || listener.topology_updates;
-        if (listener_exist) {
-            return true;
-        }
-    }
-    return false;
-}
-
-//
-// Measurements
-//
-bool db::set_node_beacon_measurement(const std::string &sta_mac, std::string ap_mac, int8_t rcpi,
-                                     uint8_t rsni)
-{
-    auto sta = get_node(sta_mac);
-    if (sta == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << sta_mac << " does not exist!";
-        return false;
-    }
-    sta->set_beacon_measurement(ap_mac, rcpi, rsni);
-    return true;
-}
-
-bool db::get_node_beacon_measurement(const std::string &sta_mac, std::string ap_mac, int8_t &rcpi,
-                                     uint8_t &rsni)
-{
-    auto sta = get_node(sta_mac);
-    if (sta == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << sta_mac << " does not exist!";
-        rcpi = beerocks::RSSI_INVALID;
-        rsni = 0;
-        return false;
-    }
-    return sta->get_beacon_measurement(ap_mac, rcpi, rsni);
-}
-
-bool db::set_node_cross_rx_rssi(const std::string &sta_mac, std::string ap_mac, int8_t rssi,
-                                int8_t rx_packets)
-{
-    auto sta = get_node(sta_mac);
-    if (sta == nullptr) {
-        return false;
-    }
-    sta->set_cross_rx_rssi(ap_mac, rssi, rx_packets);
-    return true;
-}
-
-bool db::get_node_cross_rx_rssi(const std::string &sta_mac, std::string ap_mac, int8_t &rssi,
-                                int8_t &rx_packets)
-{
-    auto sta = get_node(sta_mac);
-    if (sta == nullptr) {
-        rssi       = beerocks::RSSI_INVALID;
-        rx_packets = 0;
-        return false;
-    }
-    return sta->get_cross_rx_rssi(ap_mac, rssi, rx_packets);
-}
-
-bool db::set_node_cross_rx_phy_rate_100kb(const std::string &mac, uint16_t rx_phy_rate_100kb)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return false;
-    }
-    n->cross_rx_phy_rate_100kb = rx_phy_rate_100kb;
-    return true;
-}
-
-bool db::set_node_cross_tx_phy_rate_100kb(const std::string &mac, uint16_t tx_phy_rate_100kb)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return false;
-    }
-    n->cross_tx_phy_rate_100kb = tx_phy_rate_100kb;
-    return true;
-}
-
-uint16_t db::get_node_cross_rx_phy_rate_100kb(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return -1;
-    }
-    return n->cross_rx_phy_rate_100kb;
-}
-
-uint16_t db::get_node_cross_tx_phy_rate_100kb(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return -1;
-    }
-    return n->cross_tx_phy_rate_100kb;
-}
-
-bool db::clear_node_cross_rssi(const std::string &sta_mac)
-{
-    auto sta = get_node(sta_mac);
-    if (sta == nullptr) {
-        return false;
-    }
-    sta->clear_cross_rssi();
-    return true;
-}
-
-bool db::set_node_cross_estimated_tx_phy_rate(const std::string &mac, double phy_rate)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return false;
-    }
-    n->cross_estimated_tx_phy_rate = phy_rate;
-    return true;
-}
-
-double db::get_node_cross_estimated_tx_phy_rate(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return -1;
-    }
-    return n->cross_estimated_tx_phy_rate;
-}
-
-bool db::set_hostap_stats_info(const std::string &mac, beerocks_message::sApStatsParams *params)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return false;
-    }
-    if (params == nullptr) { // clear stats
-        n->clear_hostap_stats_info();
-    } else {
-        auto p                          = n->hostap->stats_info;
-        p->active_sta_count             = params->active_client_count;
-        p->rx_packets                   = params->rx_packets;
-        p->tx_packets                   = params->tx_packets;
-        p->rx_bytes                     = params->rx_bytes;
-        p->tx_bytes                     = params->tx_bytes;
-        p->errors_sent                  = params->errors_sent;
-        p->errors_received              = params->errors_received;
-        p->retrans_count                = params->retrans_count;
-        p->noise                        = params->noise;
-        p->channel_load_percent         = params->channel_load_percent;
-        p->total_client_tx_load_percent = params->client_tx_load_percent;
-        p->total_client_rx_load_percent = params->client_rx_load_percent;
-        p->stats_delta_ms               = params->stats_delta_ms;
-        p->timestamp                    = std::chrono::steady_clock::now();
-    }
-    return true;
-}
-
-void db::clear_hostap_stats_info(const std::string &mac) { set_hostap_stats_info(mac, nullptr); }
-
-bool db::set_node_stats_info(const std::string &mac, beerocks_message::sStaStatsParams *params)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return false;
-    }
-    if (params == nullptr) { // clear stats
-        n->clear_node_stats_info();
-    } else {
-        auto p               = n->stats_info;
-        p->rx_packets        = params->rx_packets;
-        p->tx_packets        = params->tx_packets;
-        p->tx_bytes          = params->tx_bytes;
-        p->rx_bytes          = params->rx_bytes;
-        p->retrans_count     = params->retrans_count;
-        p->tx_phy_rate_100kb = params->tx_phy_rate_100kb;
-        p->rx_phy_rate_100kb = params->rx_phy_rate_100kb;
-        p->tx_load_percent   = params->tx_load_percent;
-        p->rx_load_percent   = params->rx_load_percent;
-        p->stats_delta_ms    = params->stats_delta_ms;
-        p->rx_rssi           = params->rx_rssi;
-        p->timestamp         = std::chrono::steady_clock::now();
-    }
-    return true;
-}
-
-void db::clear_node_stats_info(const std::string &mac) { set_node_stats_info(mac, nullptr); }
-
-bool db::commit_persistent_db_changes()
-{
-    bool ret = bpl::db_commit_changes();
-
-    if (ret) {
-        persistent_db_changes_made = false;
-    }
-
-    return ret;
-}
-
-bool db::is_commit_to_persistent_db_required() { return persistent_db_changes_made; }
-
-int db::get_hostap_stats_measurement_duration(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return -1;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return -1;
-    }
-    return n->hostap->stats_info->stats_delta_ms;
-}
-
-std::chrono::steady_clock::time_point db::get_node_stats_info_timestamp(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return std::chrono::steady_clock::time_point();
-    }
-    return n->stats_info->timestamp;
-}
-
-std::chrono::steady_clock::time_point db::get_hostap_stats_info_timestamp(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        std::chrono::steady_clock::time_point();
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        std::chrono::steady_clock::time_point();
-    }
-    return n->hostap->stats_info->timestamp;
-}
-
-uint32_t db::get_node_rx_bytes(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return -1;
-    }
-    return n->stats_info->rx_bytes;
-}
-
-uint32_t db::get_node_tx_bytes(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return -1;
-    }
-    return n->stats_info->tx_bytes;
-}
-
-uint32_t db::get_hostap_total_sta_rx_bytes(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return -1;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return -1;
-    }
-    return n->hostap->stats_info->rx_bytes;
-}
-
-uint32_t db::get_hostap_total_sta_tx_bytes(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return -1;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return -1;
-    }
-    return n->hostap->stats_info->tx_bytes;
-}
-
-double db::get_node_rx_bitrate(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return -1;
-    }
-    return (1000 * 8 * double(n->stats_info->rx_bytes) / n->stats_info->stats_delta_ms) / 1e+6;
-}
-
-double db::get_node_tx_bitrate(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return -1;
-    }
-    return (1000 * 8 * double(n->stats_info->tx_bytes) / n->stats_info->stats_delta_ms) / 1e+6;
-}
-
-uint16_t db::get_node_rx_phy_rate_100kb(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return -1;
-    }
-    return n->stats_info->rx_phy_rate_100kb;
-}
-
-uint16_t db::get_node_tx_phy_rate_100kb(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return -1;
-    }
-    return n->stats_info->tx_phy_rate_100kb;
-}
-
-int db::get_hostap_channel_load_percent(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return -1;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return -1;
-    }
-    return n->hostap->stats_info->channel_load_percent;
-}
-
-int db::get_hostap_total_client_tx_load_percent(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return -1;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return -1;
-    }
-    return n->hostap->stats_info->total_client_tx_load_percent;
-}
-
-int db::get_hostap_total_client_rx_load_percent(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return -1;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return -1;
-    }
-    return n->hostap->stats_info->total_client_rx_load_percent;
-}
-
-int db::get_node_rx_load_percent(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return -1;
-    }
-    return n->stats_info->rx_load_percent;
-}
-
-int db::get_node_tx_load_percent(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return -1;
-    }
-    return n->stats_info->tx_load_percent;
-}
-
-int8_t db::get_load_rx_rssi(const std::string &sta_mac)
-{
-    auto n = get_node(sta_mac);
-    if (!n) {
-        return -1;
-    }
-    return n->stats_info->rx_rssi;
-}
-
-uint16_t db::get_load_rx_phy_rate_100kb(const std::string &sta_mac)
-{
-    auto n = get_node(sta_mac);
-    if (!n) {
-        return -1;
-    }
-    return n->stats_info->rx_phy_rate_100kb;
-}
-
-uint16_t db::get_load_tx_phy_rate_100kb(const std::string &sta_mac)
-{
-    auto n = get_node(sta_mac);
-    if (!n) {
-        return -1;
-    }
-    return n->stats_info->tx_phy_rate_100kb;
-}
-
-bool db::set_measurement_delay(const std::string &mac, int measurement_delay)
-{
-    std::shared_ptr<node> n = get_node(mac);
-    if (!n) {
-        return false;
-    }
-    n->measurement_delay = measurement_delay;
-    LOG(DEBUG) << "set_measurement_delay: mac " << mac
-               << " n->measurement_delay = " << int(n->measurement_delay);
-    return true;
-}
-
-int db::get_measurement_delay(const std::string &mac)
-{
-    std::shared_ptr<node> n = get_node(mac);
-    if (!n) {
-        return -1;
-    }
-    //LOG(DEBUG) << "get_measurement_delay: mac " << mac << " n->measurement_delay = " << int(n->measurement_delay);
-    return n->measurement_delay;
-}
-
-std::chrono::steady_clock::time_point db::get_measurement_sent_timestamp(const std::string &mac)
-{
-    std::shared_ptr<node> n = get_node(mac);
-    if (!n) {
-        return std::chrono::steady_clock::time_point();
-    }
-    //LOG(DEBUG) << "get_measurement_dry_run: mac " << mac << " n->measurement_dry_run" ;
-    return n->measurement_sent_timestamp;
-}
-
-bool db::set_measurement_sent_timestamp(const std::string &mac)
-{
-    std::shared_ptr<node> n = get_node(mac);
-    if (!n) {
-        return false;
-    }
-    n->measurement_sent_timestamp = std::chrono::steady_clock::now();
-    LOG(DEBUG) << "set_measurement_sent_timestamp: mac " << mac;
-    return true;
-}
-
-int db::get_measurement_recv_delta(const std::string &mac)
-{
-    std::shared_ptr<node> n = get_node(mac);
-    if (!n) {
-        return -1;
-    }
-    LOG(DEBUG) << "get_measurement_recv_delta: mac " << mac
-               << " n->measurement_recv_delta = " << int(n->measurement_recv_delta)
-               << " actual delay = " << int((n->measurement_recv_delta / 2));
-    return n->measurement_recv_delta;
-}
-
-bool db::set_measurement_recv_delta(const std::string &mac)
-{
-    std::shared_ptr<node> n = get_node(mac);
-    if (!n) {
-        return false;
-    }
-    auto measurement_recv_timestamp = std::chrono::steady_clock::now();
-    n->measurement_recv_delta       = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                    measurement_recv_timestamp - n->measurement_sent_timestamp)
-                                    .count();
-    //LOG(DEBUG) << "set_measurement_recv_delta: mac " << mac << " n->measurement_recv_delta = " << int(n->measurement_recv_delta);
-    return true;
-}
-
-int db::get_measurement_window_size(const std::string &mac)
-{
-    std::shared_ptr<node> n = get_node(mac);
-    if (!n) {
-        return -1;
-    }
-    return n->measurement_window_size;
-}
-
-bool db::set_measurement_window_size(const std::string &mac, int window_size)
-{
-    std::shared_ptr<node> n = get_node(mac);
-    if (!n) {
-        return false;
-    }
-    n->measurement_window_size = window_size;
-    return true;
-}
-
-bool db::get_hostap_exclude_from_steering_flag(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        return false;
-    }
-    return n->hostap->exclude_from_steering;
-}
-
-bool db::set_hostap_exclude_from_steering_flag(const std::string &mac, bool flag)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
         return false;
     }
 
-    n->hostap->exclude_from_steering = flag;
-    return true;
-}
-
-bool db::set_node_channel_bw(const std::string &mac, int channel, beerocks::eWiFiBandwidth bw,
-                             bool channel_ext_above_secondary, int8_t channel_ext_above_primary,
-                             uint16_t vht_center_frequency)
-{
-    std::shared_ptr<node> n = get_node(mac);
-    if (!n) {
-        LOG(ERROR) << "node " << mac << "does not exist ";
-        return false;
-    }
-    if (n->get_type() == beerocks::TYPE_SLAVE) {
-        if (n->hostap != nullptr) {
-            n->hostap->channel_ext_above_primary = channel_ext_above_primary;
-            n->hostap->vht_center_frequency      = vht_center_frequency;
-            auto is_dfs                          = wireless_utils::is_dfs_channel(channel);
-            set_hostap_is_dfs(mac, is_dfs);
-            if (channel >= 1 && channel <= 13) {
-                n->hostap->operating_class = 81;
-            } else if (channel == 14) {
-                n->hostap->operating_class = 82;
-            } else if (channel >= 36 && channel <= 48) {
-                n->hostap->operating_class = 115;
-            } else if (channel >= 52 && channel <= 64) {
-                n->hostap->operating_class = 118;
-            } else if (channel >= 100 && channel <= 140) {
-                n->hostap->operating_class = 121;
-            } else if (channel >= 149 && channel <= 169) {
-                n->hostap->operating_class = 125;
-            } else {
-                LOG(ERROR) << "Unsupported Operating Class for channel=" << channel;
-            }
-        } else {
-            LOG(ERROR) << __FUNCTION__ << " - node " << mac << " is null!";
+    bool db::set_bml_topology_update_enable(Socket * sd, bool update_enable)
+    {
+        if (!sd) {
             return false;
         }
-    }
-
-    LOG(INFO) << "set node " << mac << " to channel=" << channel << ", bw=" << int(bw)
-              << ", channel_ext_above_secondary=" << int(channel_ext_above_secondary)
-              << ", channel_ext_above_primary=" << int(channel_ext_above_primary)
-              << ", vht_center_frequency=" << int(vht_center_frequency);
-
-    n->channel                     = channel;
-    n->bandwidth                   = bw;
-    n->channel_ext_above_secondary = channel_ext_above_secondary;
-    if (wireless_utils::which_freq(channel) == eFreqType::FREQ_24G) { //2.4G
-        n->supports_24ghz             = true;
-        n->failed_24ghz_steer_attemps = 0;
-    } else if (wireless_utils::which_freq(channel) == eFreqType::FREQ_5G) {
-        n->supports_5ghz             = true;
-        n->failed_5ghz_steer_attemps = 0;
-    } else {
-        LOG(ERROR) << "frequency type unknown, channel=" << int(channel);
-    }
-
-    auto children = get_node_children(n);
-    for (auto child : children) {
-        child->channel                     = channel;
-        child->bandwidth                   = bw;
-        child->channel_ext_above_secondary = channel_ext_above_secondary;
-    }
-    return true;
-}
-
-beerocks::eWiFiBandwidth db::get_node_bw(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return beerocks::BANDWIDTH_MAX;
-    }
-    return n->bandwidth;
-}
-
-bool db::get_node_channel_ext_above_secondary(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    }
-    return n->channel_ext_above_secondary;
-}
-
-bool db::get_hostap_channel_ext_above_primary(const std::string &hostap_mac)
-{
-    auto n = get_node(hostap_mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << hostap_mac << " does not exist!";
-        return -1;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << "node " << hostap_mac << " is not a valid hostap!";
-        return -1;
-    }
-    return n->hostap->channel_ext_above_primary;
-}
-
-int db::get_node_bw_int(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return 0;
-    }
-    return get_node_bw_int(n);
-}
-
-std::string db::get_node_key(const std::string &al_mac, const std::string &ruid)
-{
-
-    if (al_mac.empty() || ruid.empty()) {
-        return std::string();
-    }
-
-    return al_mac + "_" + ruid;
-}
-
-uint16_t db::get_hostap_vht_center_frequency(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return 0;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        return 0;
-    }
-    return n->hostap->vht_center_frequency;
-}
-
-//
-// tasks
-//
-
-bool db::assign_association_handling_task_id(const std::string &mac, int new_task_id)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    }
-    n->association_handling_task_id = new_task_id;
-    return true;
-}
-
-int db::get_association_handling_task_id(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return -1;
-    }
-    return n->association_handling_task_id;
-}
-
-bool db::assign_steering_task_id(const std::string &mac, int new_task_id)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    }
-    n->steering_task_id = new_task_id;
-    return true;
-}
-
-int db::get_steering_task_id(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return -1;
-    }
-    return n->steering_task_id;
-}
-
-bool db::assign_roaming_task_id(const std::string &mac, int new_task_id)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    }
-    n->roaming_task_id = new_task_id;
-    return true;
-}
-
-int db::get_roaming_task_id(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return -1;
-    }
-    return n->roaming_task_id;
-}
-
-bool db::assign_load_balancer_task_id(const std::string &mac, int new_task_id)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    }
-    n->load_balancer_task_id = new_task_id;
-    return true;
-}
-
-int db::get_load_balancer_task_id(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return -1;
-    }
-    return n->load_balancer_task_id;
-}
-
-bool db::assign_client_locating_task_id(const std::string &mac, int new_task_id,
-                                        bool new_connection)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    }
-    if (new_connection) {
-        n->client_locating_task_id_new_connection = new_task_id;
-    } else {
-        n->client_locating_task_id_exist_connection = new_task_id;
-    }
-    return true;
-}
-
-int db::get_client_locating_task_id(const std::string &mac, bool new_connection)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return -1;
-    }
-    if (new_connection) {
-        return n->client_locating_task_id_new_connection;
-    }
-    return n->client_locating_task_id_exist_connection;
-}
-
-bool db::assign_ire_4addr_mode_transition_task_id(const std::string &mac, int new_task_id)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    }
-    n->ire_4addr_mode_transition_task_id = new_task_id;
-    return true;
-}
-
-int db::get_ire_4addr_mode_transition_task_id(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return -1;
-    }
-    return n->ire_4addr_mode_transition_task_id;
-}
-
-bool db::assign_channel_selection_task_id(int new_task_id)
-{
-    channel_selection_task_id = new_task_id;
-    return true;
-}
-
-int db::get_channel_selection_task_id() { return channel_selection_task_id; }
-
-bool db::assign_network_optimization_task_id(int new_task_id)
-{
-    network_optimization_task_id = new_task_id;
-    return true;
-}
-
-int db::get_network_optimization_task_id() { return network_optimization_task_id; }
-
-bool db::assign_bml_task_id(int new_task_id)
-{
-    bml_task_id = new_task_id;
-    return true;
-}
-
-int db::get_bml_task_id() { return bml_task_id; }
-
-bool db::assign_rdkb_wlan_task_id(int new_task_id)
-{
-    rdkb_wlan_task_id = new_task_id;
-    return true;
-}
-
-int db::get_rdkb_wlan_task_id() { return rdkb_wlan_task_id; }
-
-bool db::assign_dynamic_channel_selection_task_id(const sMacAddr &mac, int new_task_id)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << tlvf::mac_to_string(mac)
-                     << " does not exist!";
-        return false;
-    }
-    n->dynamic_channel_selection_task_id = new_task_id;
-    return true;
-}
-
-int db::get_dynamic_channel_selection_task_id(const sMacAddr &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << tlvf::mac_to_string(mac)
-                     << " does not exist!";
-        return -1;
-    }
-    return n->dynamic_channel_selection_task_id;
-}
-
-bool db::assign_persistent_db_aging_operation_id(int new_operation_id)
-{
-    persistent_db_aging_operation_id = new_operation_id;
-    return true;
-}
-int db::get_persistent_db_aging_operation_id() { return persistent_db_aging_operation_id; }
-
-bool db::assign_persistent_db_data_commit_operation_id(int new_operation_id)
-{
-    persistent_db_data_commit_operation_id = new_operation_id;
-    return true;
-}
-
-int db::get_persistent_db_data_commit_operation_id()
-{
-    return persistent_db_data_commit_operation_id;
-}
-
-void db::lock() { db_mutex.lock(); }
-
-void db::unlock() { db_mutex.unlock(); }
-
-void db::add_bss_info_configuration(const sMacAddr &al_mac,
-                                    const wireless_utils::sBssInfoConf &bss_info)
-{
-    bss_infos[al_mac].push_back(bss_info);
-}
-
-std::list<wireless_utils::sBssInfoConf> &db::get_bss_info_configuration(const sMacAddr &al_mac)
-{
-    // If al_mac not exist, it will be added, and return empty list
-    return bss_infos[al_mac];
-}
-
-void db::clear_bss_info_configuration() { bss_infos.clear(); }
-
-void db::clear_bss_info_configuration(const sMacAddr &al_mac) { bss_infos[al_mac].clear(); }
-
-//
-// PRIVATE FUNCTIONS
-//   must be used from a thread safe context
-//
-int db::get_node_hierarchy(std::shared_ptr<node> n)
-{
-    if (!n) {
-        return -1;
-    }
-    //redundant but more efficient this way
-    return n->hierarchy;
-}
-
-std::shared_ptr<node> db::get_node(std::string key)
-{
-    if (key == last_accessed_node_mac) {
-        return last_accessed_node;
-    }
-
-    for (int i = 0; i < HIERARCHY_MAX; i++) {
-        auto it = nodes[i].find(key);
-        if (it != nodes[i].end()) {
-            last_accessed_node_mac = key;
-            last_accessed_node     = it->second;
-            return it->second;
+        auto it = std::find_if(bml_listeners_sockets.begin(), bml_listeners_sockets.end(),
+                               [&](const sBmlListener &element) { return element.sd == sd; });
+        if (it == bml_listeners_sockets.end()) {
+            LOG(ERROR) << "set_bml_topology_update_enable failed!, cannot find bml listener";
+            return false;
         }
-    }
-    return nullptr;
-}
-
-std::shared_ptr<node> db::get_node(sMacAddr mac)
-{
-    std::string key = mac == network_utils::ZERO_MAC ? std::string() : tlvf::mac_to_string(mac);
-    return get_node(key);
-}
-
-std::shared_ptr<node> db::get_node(sMacAddr al_mac, sMacAddr ruid)
-{
-    std::string key = std::string();
-    if (al_mac != network_utils::ZERO_MAC && ruid != network_utils::ZERO_MAC)
-        key = tlvf::mac_to_string(al_mac) + tlvf::mac_to_string(ruid);
-
-    return get_node(key);
-}
-
-std::shared_ptr<node> db::get_node_verify_type(const sMacAddr &mac, beerocks::eType type)
-{
-    auto node = get_node(mac);
-    if (!node) {
-        LOG(ERROR) << "node not found for mac " << mac;
-        return nullptr;
-    } else if (node->get_type() != type) {
-        LOG(ERROR) << "node " << mac << " type(" << node->get_type() << ") != requested-type("
-                   << type << ")";
-        return nullptr;
+        it->topology_updates = update_enable;
+        return true;
     }
 
-    return node;
-}
-
-std::shared_ptr<node::radio> db::get_hostap_by_mac(const sMacAddr &mac)
-{
-    auto n = get_node(mac);
-    beerocks::eType t;
-    if (!n) {
-        LOG(ERROR) << "node not found.... ";
-        return nullptr;
-    } else if ((t = n->get_type()) != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(ERROR) << "node " << tlvf::mac_to_string(mac) << " type is #" << (int)t;
-        LOG(ERROR) << "node " << tlvf::mac_to_string(mac) << " is not a valid hostap!";
-        return nullptr;
+    bool db::get_bml_topology_update_enable(Socket * sd)
+    {
+        if (!sd) {
+            return false;
+        }
+        auto it = std::find_if(bml_listeners_sockets.begin(), bml_listeners_sockets.end(),
+                               [&](const sBmlListener &element) { return element.sd == sd; });
+        if (it == bml_listeners_sockets.end()) {
+            LOG(ERROR) << "set_bml_topology_update_enable failed!, cannot find bml listener";
+            return false;
+        }
+        return it->topology_updates;
     }
 
-    return n->hostap;
-}
-
-std::set<std::shared_ptr<node>> db::get_node_subtree(std::shared_ptr<node> n)
-{
-    std::set<std::shared_ptr<node>> subtree;
-
-    if (!n) {
-        LOG(ERROR) << "node is nullptr!";
-        return subtree;
-    }
-
-    int i = get_node_hierarchy(n) + 1;
-
-    if (i >= HIERARCHY_MAX) {
-        return subtree;
-    }
-
-    for (auto &node_element : nodes[i]) {
-        if (node_element.first == node_element.second->mac) {
-            auto subtree_node = node_element.second;
-            if (subtree_node->parent_mac == n->mac) {
-                subtree.insert(subtree_node);
-                std::set<std::shared_ptr<node>> sub_subtree = get_node_subtree(subtree_node);
-                subtree.insert(sub_subtree.begin(), sub_subtree.end());
+    bool db::set_bml_nw_map_update_enable(Socket * sd, bool update_enable)
+    {
+        if (sd) {
+            for (auto it = bml_listeners_sockets.begin(); it < bml_listeners_sockets.end(); it++) {
+                if (sd == (*it).sd) {
+                    (*it).map_updates = update_enable;
+                    return true;
+                }
             }
         }
+        return false;
     }
-    return subtree;
-}
 
-std::set<std::shared_ptr<node>> db::get_node_children(std::shared_ptr<node> n, int type, int state,
-                                                      std::string parent_mac)
-{
-    std::set<std::shared_ptr<node>> children;
+    bool db::get_bml_stats_update_enable(Socket * sd)
+    {
+        if (sd) {
+            for (auto it = bml_listeners_sockets.begin(); it < bml_listeners_sockets.end(); it++) {
+                if (sd == (*it).sd) {
+                    return (*it).stats_updates;
+                }
+            }
+        }
+        return false;
+    }
 
-    if (!n) {
-        LOG(ERROR) << "node is nullptr!";
+    bool db::set_bml_stats_update_enable(Socket * sd, bool update_enable)
+    {
+        if (sd) {
+            for (auto it = bml_listeners_sockets.begin(); it < bml_listeners_sockets.end(); it++) {
+                if (sd == (*it).sd) {
+                    (*it).stats_updates = update_enable;
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    bool db::get_bml_events_update_enable(Socket * sd)
+    {
+        if (sd) {
+            for (auto it = bml_listeners_sockets.begin(); it < bml_listeners_sockets.end(); it++) {
+                if (sd == (*it).sd) {
+                    return (*it).events_updates;
+                }
+            }
+        }
+        return false;
+    }
+
+    bool db::set_bml_events_update_enable(Socket * sd, bool update_enable)
+    {
+        if (sd) {
+            for (auto it = bml_listeners_sockets.begin(); it < bml_listeners_sockets.end(); it++) {
+                if (sd == (*it).sd) {
+                    (*it).events_updates = update_enable;
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    Socket *db::get_bml_socket_at(int idx)
+    {
+        if (idx < int(bml_listeners_sockets.size())) {
+            return bml_listeners_sockets.at(idx).sd;
+        }
+        return nullptr;
+    }
+
+    bool db::is_bml_listener_exist()
+    {
+        bool listener_exist;
+        for (const auto &listener : bml_listeners_sockets) {
+            listener_exist = listener.map_updates || listener.stats_updates ||
+                             listener.events_updates || listener.topology_updates;
+            if (listener_exist) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    //
+    // Measurements
+    //
+    bool db::set_node_beacon_measurement(const std::string &sta_mac, std::string ap_mac,
+                                         int8_t rcpi, uint8_t rsni)
+    {
+        auto sta = get_node(sta_mac);
+        if (sta == nullptr) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << sta_mac << " does not exist!";
+            return false;
+        }
+        sta->set_beacon_measurement(ap_mac, rcpi, rsni);
+        return true;
+    }
+
+    bool db::get_node_beacon_measurement(const std::string &sta_mac, std::string ap_mac,
+                                         int8_t &rcpi, uint8_t &rsni)
+    {
+        auto sta = get_node(sta_mac);
+        if (sta == nullptr) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << sta_mac << " does not exist!";
+            rcpi = beerocks::RSSI_INVALID;
+            rsni = 0;
+            return false;
+        }
+        return sta->get_beacon_measurement(ap_mac, rcpi, rsni);
+    }
+
+    bool db::set_node_cross_rx_rssi(const std::string &sta_mac, std::string ap_mac, int8_t rssi,
+                                    int8_t rx_packets)
+    {
+        auto sta = get_node(sta_mac);
+        if (sta == nullptr) {
+            return false;
+        }
+        sta->set_cross_rx_rssi(ap_mac, rssi, rx_packets);
+        return true;
+    }
+
+    bool db::get_node_cross_rx_rssi(const std::string &sta_mac, std::string ap_mac, int8_t &rssi,
+                                    int8_t &rx_packets)
+    {
+        auto sta = get_node(sta_mac);
+        if (sta == nullptr) {
+            rssi       = beerocks::RSSI_INVALID;
+            rx_packets = 0;
+            return false;
+        }
+        return sta->get_cross_rx_rssi(ap_mac, rssi, rx_packets);
+    }
+
+    bool db::set_node_cross_rx_phy_rate_100kb(const std::string &mac, uint16_t rx_phy_rate_100kb)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            return false;
+        }
+        n->cross_rx_phy_rate_100kb = rx_phy_rate_100kb;
+        return true;
+    }
+
+    bool db::set_node_cross_tx_phy_rate_100kb(const std::string &mac, uint16_t tx_phy_rate_100kb)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            return false;
+        }
+        n->cross_tx_phy_rate_100kb = tx_phy_rate_100kb;
+        return true;
+    }
+
+    uint16_t db::get_node_cross_rx_phy_rate_100kb(const std::string &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            return -1;
+        }
+        return n->cross_rx_phy_rate_100kb;
+    }
+
+    uint16_t db::get_node_cross_tx_phy_rate_100kb(const std::string &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            return -1;
+        }
+        return n->cross_tx_phy_rate_100kb;
+    }
+
+    bool db::clear_node_cross_rssi(const std::string &sta_mac)
+    {
+        auto sta = get_node(sta_mac);
+        if (sta == nullptr) {
+            return false;
+        }
+        sta->clear_cross_rssi();
+        return true;
+    }
+
+    bool db::set_node_cross_estimated_tx_phy_rate(const std::string &mac, double phy_rate)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            return false;
+        }
+        n->cross_estimated_tx_phy_rate = phy_rate;
+        return true;
+    }
+
+    double db::get_node_cross_estimated_tx_phy_rate(const std::string &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            return -1;
+        }
+        return n->cross_estimated_tx_phy_rate;
+    }
+
+    bool db::set_hostap_stats_info(const std::string &mac, beerocks_message::sApStatsParams *params)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return false;
+        } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+            LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
+            return false;
+        }
+        if (params == nullptr) { // clear stats
+            n->clear_hostap_stats_info();
+        } else {
+            auto p                          = n->hostap->stats_info;
+            p->active_sta_count             = params->active_client_count;
+            p->rx_packets                   = params->rx_packets;
+            p->tx_packets                   = params->tx_packets;
+            p->rx_bytes                     = params->rx_bytes;
+            p->tx_bytes                     = params->tx_bytes;
+            p->errors_sent                  = params->errors_sent;
+            p->errors_received              = params->errors_received;
+            p->retrans_count                = params->retrans_count;
+            p->noise                        = params->noise;
+            p->channel_load_percent         = params->channel_load_percent;
+            p->total_client_tx_load_percent = params->client_tx_load_percent;
+            p->total_client_rx_load_percent = params->client_rx_load_percent;
+            p->stats_delta_ms               = params->stats_delta_ms;
+            p->timestamp                    = std::chrono::steady_clock::now();
+        }
+        return true;
+    }
+
+    void db::clear_hostap_stats_info(const std::string &mac)
+    {
+        set_hostap_stats_info(mac, nullptr);
+    }
+
+    bool db::set_node_stats_info(const std::string &mac, beerocks_message::sStaStatsParams *params)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            return false;
+        }
+        if (params == nullptr) { // clear stats
+            n->clear_node_stats_info();
+        } else {
+            auto p               = n->stats_info;
+            p->rx_packets        = params->rx_packets;
+            p->tx_packets        = params->tx_packets;
+            p->tx_bytes          = params->tx_bytes;
+            p->rx_bytes          = params->rx_bytes;
+            p->retrans_count     = params->retrans_count;
+            p->tx_phy_rate_100kb = params->tx_phy_rate_100kb;
+            p->rx_phy_rate_100kb = params->rx_phy_rate_100kb;
+            p->tx_load_percent   = params->tx_load_percent;
+            p->rx_load_percent   = params->rx_load_percent;
+            p->stats_delta_ms    = params->stats_delta_ms;
+            p->rx_rssi           = params->rx_rssi;
+            p->timestamp         = std::chrono::steady_clock::now();
+        }
+        return true;
+    }
+
+    void db::clear_node_stats_info(const std::string &mac) { set_node_stats_info(mac, nullptr); }
+
+    bool db::commit_persistent_db_changes()
+    {
+        bool ret = bpl::db_commit_changes();
+
+        if (ret) {
+            persistent_db_changes_made = false;
+        }
+
+        return ret;
+    }
+
+    bool db::is_commit_to_persistent_db_required() { return persistent_db_changes_made; }
+
+    int db::get_hostap_stats_measurement_duration(const std::string &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return -1;
+        } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+            LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
+            return -1;
+        }
+        return n->hostap->stats_info->stats_delta_ms;
+    }
+
+    std::chrono::steady_clock::time_point db::get_node_stats_info_timestamp(const std::string &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            return std::chrono::steady_clock::time_point();
+        }
+        return n->stats_info->timestamp;
+    }
+
+    std::chrono::steady_clock::time_point db::get_hostap_stats_info_timestamp(
+        const std::string &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            std::chrono::steady_clock::time_point();
+        } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+            LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
+            std::chrono::steady_clock::time_point();
+        }
+        return n->hostap->stats_info->timestamp;
+    }
+
+    uint32_t db::get_node_rx_bytes(const std::string &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            return -1;
+        }
+        return n->stats_info->rx_bytes;
+    }
+
+    uint32_t db::get_node_tx_bytes(const std::string &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            return -1;
+        }
+        return n->stats_info->tx_bytes;
+    }
+
+    uint32_t db::get_hostap_total_sta_rx_bytes(const std::string &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return -1;
+        } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+            LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
+            return -1;
+        }
+        return n->hostap->stats_info->rx_bytes;
+    }
+
+    uint32_t db::get_hostap_total_sta_tx_bytes(const std::string &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return -1;
+        } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+            LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
+            return -1;
+        }
+        return n->hostap->stats_info->tx_bytes;
+    }
+
+    double db::get_node_rx_bitrate(const std::string &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return -1;
+        }
+        return (1000 * 8 * double(n->stats_info->rx_bytes) / n->stats_info->stats_delta_ms) / 1e+6;
+    }
+
+    double db::get_node_tx_bitrate(const std::string &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return -1;
+        }
+        return (1000 * 8 * double(n->stats_info->tx_bytes) / n->stats_info->stats_delta_ms) / 1e+6;
+    }
+
+    uint16_t db::get_node_rx_phy_rate_100kb(const std::string &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            return -1;
+        }
+        return n->stats_info->rx_phy_rate_100kb;
+    }
+
+    uint16_t db::get_node_tx_phy_rate_100kb(const std::string &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            return -1;
+        }
+        return n->stats_info->tx_phy_rate_100kb;
+    }
+
+    int db::get_hostap_channel_load_percent(const std::string &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return -1;
+        } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+            LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
+            return -1;
+        }
+        return n->hostap->stats_info->channel_load_percent;
+    }
+
+    int db::get_hostap_total_client_tx_load_percent(const std::string &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return -1;
+        } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+            LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
+            return -1;
+        }
+        return n->hostap->stats_info->total_client_tx_load_percent;
+    }
+
+    int db::get_hostap_total_client_rx_load_percent(const std::string &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return -1;
+        } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+            LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
+            return -1;
+        }
+        return n->hostap->stats_info->total_client_rx_load_percent;
+    }
+
+    int db::get_node_rx_load_percent(const std::string &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            return -1;
+        }
+        return n->stats_info->rx_load_percent;
+    }
+
+    int db::get_node_tx_load_percent(const std::string &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            return -1;
+        }
+        return n->stats_info->tx_load_percent;
+    }
+
+    int8_t db::get_load_rx_rssi(const std::string &sta_mac)
+    {
+        auto n = get_node(sta_mac);
+        if (!n) {
+            return -1;
+        }
+        return n->stats_info->rx_rssi;
+    }
+
+    uint16_t db::get_load_rx_phy_rate_100kb(const std::string &sta_mac)
+    {
+        auto n = get_node(sta_mac);
+        if (!n) {
+            return -1;
+        }
+        return n->stats_info->rx_phy_rate_100kb;
+    }
+
+    uint16_t db::get_load_tx_phy_rate_100kb(const std::string &sta_mac)
+    {
+        auto n = get_node(sta_mac);
+        if (!n) {
+            return -1;
+        }
+        return n->stats_info->tx_phy_rate_100kb;
+    }
+
+    bool db::set_measurement_delay(const std::string &mac, int measurement_delay)
+    {
+        std::shared_ptr<node> n = get_node(mac);
+        if (!n) {
+            return false;
+        }
+        n->measurement_delay = measurement_delay;
+        LOG(DEBUG) << "set_measurement_delay: mac " << mac
+                   << " n->measurement_delay = " << int(n->measurement_delay);
+        return true;
+    }
+
+    int db::get_measurement_delay(const std::string &mac)
+    {
+        std::shared_ptr<node> n = get_node(mac);
+        if (!n) {
+            return -1;
+        }
+        //LOG(DEBUG) << "get_measurement_delay: mac " << mac << " n->measurement_delay = " << int(n->measurement_delay);
+        return n->measurement_delay;
+    }
+
+    std::chrono::steady_clock::time_point db::get_measurement_sent_timestamp(const std::string &mac)
+    {
+        std::shared_ptr<node> n = get_node(mac);
+        if (!n) {
+            return std::chrono::steady_clock::time_point();
+        }
+        //LOG(DEBUG) << "get_measurement_dry_run: mac " << mac << " n->measurement_dry_run" ;
+        return n->measurement_sent_timestamp;
+    }
+
+    bool db::set_measurement_sent_timestamp(const std::string &mac)
+    {
+        std::shared_ptr<node> n = get_node(mac);
+        if (!n) {
+            return false;
+        }
+        n->measurement_sent_timestamp = std::chrono::steady_clock::now();
+        LOG(DEBUG) << "set_measurement_sent_timestamp: mac " << mac;
+        return true;
+    }
+
+    int db::get_measurement_recv_delta(const std::string &mac)
+    {
+        std::shared_ptr<node> n = get_node(mac);
+        if (!n) {
+            return -1;
+        }
+        LOG(DEBUG) << "get_measurement_recv_delta: mac " << mac
+                   << " n->measurement_recv_delta = " << int(n->measurement_recv_delta)
+                   << " actual delay = " << int((n->measurement_recv_delta / 2));
+        return n->measurement_recv_delta;
+    }
+
+    bool db::set_measurement_recv_delta(const std::string &mac)
+    {
+        std::shared_ptr<node> n = get_node(mac);
+        if (!n) {
+            return false;
+        }
+        auto measurement_recv_timestamp = std::chrono::steady_clock::now();
+        n->measurement_recv_delta       = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        measurement_recv_timestamp - n->measurement_sent_timestamp)
+                                        .count();
+        //LOG(DEBUG) << "set_measurement_recv_delta: mac " << mac << " n->measurement_recv_delta = " << int(n->measurement_recv_delta);
+        return true;
+    }
+
+    int db::get_measurement_window_size(const std::string &mac)
+    {
+        std::shared_ptr<node> n = get_node(mac);
+        if (!n) {
+            return -1;
+        }
+        return n->measurement_window_size;
+    }
+
+    bool db::set_measurement_window_size(const std::string &mac, int window_size)
+    {
+        std::shared_ptr<node> n = get_node(mac);
+        if (!n) {
+            return false;
+        }
+        n->measurement_window_size = window_size;
+        return true;
+    }
+
+    bool db::get_hostap_exclude_from_steering_flag(const std::string &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return false;
+        } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+            return false;
+        }
+        return n->hostap->exclude_from_steering;
+    }
+
+    bool db::set_hostap_exclude_from_steering_flag(const std::string &mac, bool flag)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return false;
+        } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+            return false;
+        }
+
+        n->hostap->exclude_from_steering = flag;
+        return true;
+    }
+
+    bool db::set_node_channel_bw(const std::string &mac, int channel, beerocks::eWiFiBandwidth bw,
+                                 bool channel_ext_above_secondary, int8_t channel_ext_above_primary,
+                                 uint16_t vht_center_frequency)
+    {
+        std::shared_ptr<node> n = get_node(mac);
+        if (!n) {
+            LOG(ERROR) << "node " << mac << "does not exist ";
+            return false;
+        }
+        if (n->get_type() == beerocks::TYPE_SLAVE) {
+            if (n->hostap != nullptr) {
+                n->hostap->channel_ext_above_primary = channel_ext_above_primary;
+                n->hostap->vht_center_frequency      = vht_center_frequency;
+                auto is_dfs                          = wireless_utils::is_dfs_channel(channel);
+                set_hostap_is_dfs(mac, is_dfs);
+                if (channel >= 1 && channel <= 13) {
+                    n->hostap->operating_class = 81;
+                } else if (channel == 14) {
+                    n->hostap->operating_class = 82;
+                } else if (channel >= 36 && channel <= 48) {
+                    n->hostap->operating_class = 115;
+                } else if (channel >= 52 && channel <= 64) {
+                    n->hostap->operating_class = 118;
+                } else if (channel >= 100 && channel <= 140) {
+                    n->hostap->operating_class = 121;
+                } else if (channel >= 149 && channel <= 169) {
+                    n->hostap->operating_class = 125;
+                } else {
+                    LOG(ERROR) << "Unsupported Operating Class for channel=" << channel;
+                }
+            } else {
+                LOG(ERROR) << __FUNCTION__ << " - node " << mac << " is null!";
+                return false;
+            }
+        }
+
+        LOG(INFO) << "set node " << mac << " to channel=" << channel << ", bw=" << int(bw)
+                  << ", channel_ext_above_secondary=" << int(channel_ext_above_secondary)
+                  << ", channel_ext_above_primary=" << int(channel_ext_above_primary)
+                  << ", vht_center_frequency=" << int(vht_center_frequency);
+
+        n->channel                     = channel;
+        n->bandwidth                   = bw;
+        n->channel_ext_above_secondary = channel_ext_above_secondary;
+        if (wireless_utils::which_freq(channel) == eFreqType::FREQ_24G) { //2.4G
+            n->supports_24ghz             = true;
+            n->failed_24ghz_steer_attemps = 0;
+        } else if (wireless_utils::which_freq(channel) == eFreqType::FREQ_5G) {
+            n->supports_5ghz             = true;
+            n->failed_5ghz_steer_attemps = 0;
+        } else {
+            LOG(ERROR) << "frequency type unknown, channel=" << int(channel);
+        }
+
+        auto children = get_node_children(n);
+        for (auto child : children) {
+            child->channel                     = channel;
+            child->bandwidth                   = bw;
+            child->channel_ext_above_secondary = channel_ext_above_secondary;
+        }
+        return true;
+    }
+
+    beerocks::eWiFiBandwidth db::get_node_bw(const std::string &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return beerocks::BANDWIDTH_MAX;
+        }
+        return n->bandwidth;
+    }
+
+    bool db::get_node_channel_ext_above_secondary(const std::string &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return false;
+        }
+        return n->channel_ext_above_secondary;
+    }
+
+    bool db::get_hostap_channel_ext_above_primary(const std::string &hostap_mac)
+    {
+        auto n = get_node(hostap_mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << hostap_mac << " does not exist!";
+            return -1;
+        } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+            LOG(WARNING) << __FUNCTION__ << "node " << hostap_mac << " is not a valid hostap!";
+            return -1;
+        }
+        return n->hostap->channel_ext_above_primary;
+    }
+
+    int db::get_node_bw_int(const std::string &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return 0;
+        }
+        return get_node_bw_int(n);
+    }
+
+    std::string db::get_node_key(const std::string &al_mac, const std::string &ruid)
+    {
+
+        if (al_mac.empty() || ruid.empty()) {
+            return std::string();
+        }
+
+        return al_mac + "_" + ruid;
+    }
+
+    uint16_t db::get_hostap_vht_center_frequency(const std::string &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return 0;
+        } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+            return 0;
+        }
+        return n->hostap->vht_center_frequency;
+    }
+
+    //
+    // tasks
+    //
+
+    bool db::assign_association_handling_task_id(const std::string &mac, int new_task_id)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return false;
+        }
+        n->association_handling_task_id = new_task_id;
+        return true;
+    }
+
+    int db::get_association_handling_task_id(const std::string &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return -1;
+        }
+        return n->association_handling_task_id;
+    }
+
+    bool db::assign_steering_task_id(const std::string &mac, int new_task_id)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return false;
+        }
+        n->steering_task_id = new_task_id;
+        return true;
+    }
+
+    int db::get_steering_task_id(const std::string &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return -1;
+        }
+        return n->steering_task_id;
+    }
+
+    bool db::assign_roaming_task_id(const std::string &mac, int new_task_id)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return false;
+        }
+        n->roaming_task_id = new_task_id;
+        return true;
+    }
+
+    int db::get_roaming_task_id(const std::string &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return -1;
+        }
+        return n->roaming_task_id;
+    }
+
+    bool db::assign_load_balancer_task_id(const std::string &mac, int new_task_id)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return false;
+        }
+        n->load_balancer_task_id = new_task_id;
+        return true;
+    }
+
+    int db::get_load_balancer_task_id(const std::string &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return -1;
+        }
+        return n->load_balancer_task_id;
+    }
+
+    bool db::assign_client_locating_task_id(const std::string &mac, int new_task_id,
+                                            bool new_connection)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return false;
+        }
+        if (new_connection) {
+            n->client_locating_task_id_new_connection = new_task_id;
+        } else {
+            n->client_locating_task_id_exist_connection = new_task_id;
+        }
+        return true;
+    }
+
+    int db::get_client_locating_task_id(const std::string &mac, bool new_connection)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return -1;
+        }
+        if (new_connection) {
+            return n->client_locating_task_id_new_connection;
+        }
+        return n->client_locating_task_id_exist_connection;
+    }
+
+    bool db::assign_ire_4addr_mode_transition_task_id(const std::string &mac, int new_task_id)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return false;
+        }
+        n->ire_4addr_mode_transition_task_id = new_task_id;
+        return true;
+    }
+
+    int db::get_ire_4addr_mode_transition_task_id(const std::string &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return -1;
+        }
+        return n->ire_4addr_mode_transition_task_id;
+    }
+
+    bool db::assign_channel_selection_task_id(int new_task_id)
+    {
+        channel_selection_task_id = new_task_id;
+        return true;
+    }
+
+    int db::get_channel_selection_task_id() { return channel_selection_task_id; }
+
+    bool db::assign_network_optimization_task_id(int new_task_id)
+    {
+        network_optimization_task_id = new_task_id;
+        return true;
+    }
+
+    int db::get_network_optimization_task_id() { return network_optimization_task_id; }
+
+    bool db::assign_bml_task_id(int new_task_id)
+    {
+        bml_task_id = new_task_id;
+        return true;
+    }
+
+    int db::get_bml_task_id() { return bml_task_id; }
+
+    bool db::assign_rdkb_wlan_task_id(int new_task_id)
+    {
+        rdkb_wlan_task_id = new_task_id;
+        return true;
+    }
+
+    int db::get_rdkb_wlan_task_id() { return rdkb_wlan_task_id; }
+
+    bool db::assign_dynamic_channel_selection_task_id(const sMacAddr &mac, int new_task_id)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << tlvf::mac_to_string(mac)
+                         << " does not exist!";
+            return false;
+        }
+        n->dynamic_channel_selection_task_id = new_task_id;
+        return true;
+    }
+
+    int db::get_dynamic_channel_selection_task_id(const sMacAddr &mac)
+    {
+        auto n = get_node(mac);
+        if (!n) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << tlvf::mac_to_string(mac)
+                         << " does not exist!";
+            return -1;
+        }
+        return n->dynamic_channel_selection_task_id;
+    }
+
+    bool db::assign_persistent_db_aging_operation_id(int new_operation_id)
+    {
+        persistent_db_aging_operation_id = new_operation_id;
+        return true;
+    }
+    int db::get_persistent_db_aging_operation_id() { return persistent_db_aging_operation_id; }
+
+    bool db::assign_persistent_db_data_commit_operation_id(int new_operation_id)
+    {
+        persistent_db_data_commit_operation_id = new_operation_id;
+        return true;
+    }
+
+    int db::get_persistent_db_data_commit_operation_id()
+    {
+        return persistent_db_data_commit_operation_id;
+    }
+
+    void db::lock() { db_mutex.lock(); }
+
+    void db::unlock() { db_mutex.unlock(); }
+
+    void db::add_bss_info_configuration(const sMacAddr &al_mac,
+                                        const wireless_utils::sBssInfoConf &bss_info)
+    {
+        bss_infos[al_mac].push_back(bss_info);
+    }
+
+    std::list<wireless_utils::sBssInfoConf> &db::get_bss_info_configuration(const sMacAddr &al_mac)
+    {
+        // If al_mac not exist, it will be added, and return empty list
+        return bss_infos[al_mac];
+    }
+
+    void db::clear_bss_info_configuration() { bss_infos.clear(); }
+
+    void db::clear_bss_info_configuration(const sMacAddr &al_mac) { bss_infos[al_mac].clear(); }
+
+    //
+    // PRIVATE FUNCTIONS
+    //   must be used from a thread safe context
+    //
+    int db::get_node_hierarchy(std::shared_ptr<node> n)
+    {
+        if (!n) {
+            return -1;
+        }
+        //redundant but more efficient this way
+        return n->hierarchy;
+    }
+
+    std::shared_ptr<node> db::get_node(std::string key)
+    {
+        if (key == last_accessed_node_mac) {
+            return last_accessed_node;
+        }
+
+        for (int i = 0; i < HIERARCHY_MAX; i++) {
+            auto it = nodes[i].find(key);
+            if (it != nodes[i].end()) {
+                last_accessed_node_mac = key;
+                last_accessed_node     = it->second;
+                return it->second;
+            }
+        }
+        return nullptr;
+    }
+
+    std::shared_ptr<node> db::get_node(sMacAddr mac)
+    {
+        std::string key = mac == network_utils::ZERO_MAC ? std::string() : tlvf::mac_to_string(mac);
+        return get_node(key);
+    }
+
+    std::shared_ptr<node> db::get_node(sMacAddr al_mac, sMacAddr ruid)
+    {
+        std::string key = std::string();
+        if (al_mac != network_utils::ZERO_MAC && ruid != network_utils::ZERO_MAC)
+            key = tlvf::mac_to_string(al_mac) + tlvf::mac_to_string(ruid);
+
+        return get_node(key);
+    }
+
+    std::shared_ptr<node> db::get_node_verify_type(const sMacAddr &mac, beerocks::eType type)
+    {
+        auto node = get_node(mac);
+        if (!node) {
+            LOG(ERROR) << "node not found for mac " << mac;
+            return nullptr;
+        } else if (node->get_type() != type) {
+            LOG(ERROR) << "node " << mac << " type(" << node->get_type() << ") != requested-type("
+                       << type << ")";
+            return nullptr;
+        }
+
+        return node;
+    }
+
+    std::shared_ptr<node::radio> db::get_hostap_by_mac(const sMacAddr &mac)
+    {
+        auto n = get_node(mac);
+        beerocks::eType t;
+        if (!n) {
+            LOG(ERROR) << "node not found.... ";
+            return nullptr;
+        } else if ((t = n->get_type()) != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+            LOG(ERROR) << "node " << tlvf::mac_to_string(mac) << " type is #" << (int)t;
+            LOG(ERROR) << "node " << tlvf::mac_to_string(mac) << " is not a valid hostap!";
+            return nullptr;
+        }
+
+        return n->hostap;
+    }
+
+    std::set<std::shared_ptr<node>> db::get_node_subtree(std::shared_ptr<node> n)
+    {
+        std::set<std::shared_ptr<node>> subtree;
+
+        if (!n) {
+            LOG(ERROR) << "node is nullptr!";
+            return subtree;
+        }
+
+        int i = get_node_hierarchy(n) + 1;
+
+        if (i >= HIERARCHY_MAX) {
+            return subtree;
+        }
+
+        for (auto &node_element : nodes[i]) {
+            if (node_element.first == node_element.second->mac) {
+                auto subtree_node = node_element.second;
+                if (subtree_node->parent_mac == n->mac) {
+                    subtree.insert(subtree_node);
+                    std::set<std::shared_ptr<node>> sub_subtree = get_node_subtree(subtree_node);
+                    subtree.insert(sub_subtree.begin(), sub_subtree.end());
+                }
+            }
+        }
+        return subtree;
+    }
+
+    std::set<std::shared_ptr<node>> db::get_node_children(std::shared_ptr<node> n, int type,
+                                                          int state, std::string parent_mac)
+    {
+        std::set<std::shared_ptr<node>> children;
+
+        if (!n) {
+            LOG(ERROR) << "node is nullptr!";
+            return children;
+        }
+
+        auto bssids = get_hostap_vaps_bssids(n->mac);
+        bssids.insert(n->mac);
+
+        int hierarchy = get_node_hierarchy(n) + 1;
+
+        if (hierarchy >= 0 && hierarchy < HIERARCHY_MAX) {
+            for (auto &node_element : nodes[hierarchy]) {
+                auto child = node_element.second;
+                if ((child->mac == node_element.first) &&
+                    (bssids.find(child->parent_mac) != bssids.end() &&
+                     (type == beerocks::TYPE_ANY || child->get_type() == type) &&
+                     (state == beerocks::STATE_ANY || child->state == state) &&
+                     (parent_mac.empty() || child->parent_mac == parent_mac))) {
+                    children.insert(child);
+                }
+            }
+        }
         return children;
     }
 
-    auto bssids = get_hostap_vaps_bssids(n->mac);
-    bssids.insert(n->mac);
-
-    int hierarchy = get_node_hierarchy(n) + 1;
-
-    if (hierarchy >= 0 && hierarchy < HIERARCHY_MAX) {
-        for (auto &node_element : nodes[hierarchy]) {
-            auto child = node_element.second;
-            if ((child->mac == node_element.first) &&
-                (bssids.find(child->parent_mac) != bssids.end() &&
-                 (type == beerocks::TYPE_ANY || child->get_type() == type) &&
-                 (state == beerocks::STATE_ANY || child->state == state) &&
-                 (parent_mac.empty() || child->parent_mac == parent_mac))) {
-                children.insert(child);
-            }
+    void db::adjust_subtree_hierarchy(std::shared_ptr<node> n)
+    {
+        if (!n) {
+            LOG(ERROR) << "node is nullptr!";
+            return;
         }
-    }
-    return children;
-}
 
-void db::adjust_subtree_hierarchy(std::shared_ptr<node> n)
-{
-    if (!n) {
-        LOG(ERROR) << "node is nullptr!";
-        return;
-    }
+        int hierarchy = get_node_hierarchy(n);
 
-    int hierarchy = get_node_hierarchy(n);
-
-    for (int i = 0; i < HIERARCHY_MAX; ++i) {
-        for (auto it = nodes[i].begin(); it != nodes[i].end();) {
-            auto subtree_node = it->second;
-            if (subtree_node->parent_mac == n->mac) {
-                int new_hierarchy = hierarchy + 1;
-                if (new_hierarchy >= HIERARCHY_MAX) {
-                    LOG(ERROR) << "new hierarchy is too high!";
-                    return;
+        for (int i = 0; i < HIERARCHY_MAX; ++i) {
+            for (auto it = nodes[i].begin(); it != nodes[i].end();) {
+                auto subtree_node = it->second;
+                if (subtree_node->parent_mac == n->mac) {
+                    int new_hierarchy = hierarchy + 1;
+                    if (new_hierarchy >= HIERARCHY_MAX) {
+                        LOG(ERROR) << "new hierarchy is too high!";
+                        return;
+                    }
+                    it = nodes[i].erase(it);
+                    nodes[new_hierarchy].insert(std::make_pair(subtree_node->mac, subtree_node));
+                    subtree_node->hierarchy = new_hierarchy;
+                    adjust_subtree_hierarchy(subtree_node);
+                } else {
+                    ++it;
                 }
-                it = nodes[i].erase(it);
-                nodes[new_hierarchy].insert(std::make_pair(subtree_node->mac, subtree_node));
-                subtree_node->hierarchy = new_hierarchy;
-                adjust_subtree_hierarchy(subtree_node);
-            } else {
-                ++it;
             }
         }
     }
-}
 
-void db::adjust_subtree_hierarchy(std::set<std::shared_ptr<node>> subtree, int offset)
-{
-    for (auto s : subtree) {
-        int new_hierarchy = s->hierarchy + offset;
-        if (new_hierarchy >= HIERARCHY_MAX || new_hierarchy < 0) {
-            LOG(ERROR) << "invalid new_hierarchy=" << new_hierarchy << " for node " << s->mac;
-            continue;
+    void db::adjust_subtree_hierarchy(std::set<std::shared_ptr<node>> subtree, int offset)
+    {
+        for (auto s : subtree) {
+            int new_hierarchy = s->hierarchy + offset;
+            if (new_hierarchy >= HIERARCHY_MAX || new_hierarchy < 0) {
+                LOG(ERROR) << "invalid new_hierarchy=" << new_hierarchy << " for node " << s->mac;
+                continue;
+            }
+            nodes[s->hierarchy].erase(s->mac);
+            nodes[new_hierarchy].insert({s->mac, s});
+            s->hierarchy = new_hierarchy;
         }
-        nodes[s->hierarchy].erase(s->mac);
-        nodes[new_hierarchy].insert({s->mac, s});
-        s->hierarchy = new_hierarchy;
-    }
-}
-
-void db::rewind()
-{
-    current_hierarchy = 0;
-    db_it             = nodes[current_hierarchy].begin();
-}
-
-bool db::get_next_node(std::shared_ptr<node> &n, int &hierarchy)
-{
-    bool last = false;
-
-    if (db_it != nodes[current_hierarchy].end()) {
-        n         = db_it->second;
-        hierarchy = current_hierarchy;
-        ++db_it;
     }
 
-    if (db_it == nodes[current_hierarchy].end()) {
-        current_hierarchy++;
-        if (current_hierarchy >= HIERARCHY_MAX) {
-            current_hierarchy = 0;
-            last              = true;
+    void db::rewind()
+    {
+        current_hierarchy = 0;
+        db_it             = nodes[current_hierarchy].begin();
+    }
+
+    bool db::get_next_node(std::shared_ptr<node> & n, int &hierarchy)
+    {
+        bool last = false;
+
+        if (db_it != nodes[current_hierarchy].end()) {
+            n         = db_it->second;
+            hierarchy = current_hierarchy;
+            ++db_it;
         }
-        db_it = nodes[current_hierarchy].begin();
-    }
-    return last;
-}
 
-bool db::get_next_node(std::shared_ptr<node> &n)
-{
-    bool last = false;
-
-    if (db_it != nodes[current_hierarchy].end()) {
-        n = db_it->second;
-        ++db_it;
-    }
-
-    if (db_it == nodes[current_hierarchy].end()) {
-        current_hierarchy++;
-        if (current_hierarchy >= HIERARCHY_MAX) {
-            current_hierarchy = 0;
-            last              = true;
+        if (db_it == nodes[current_hierarchy].end()) {
+            current_hierarchy++;
+            if (current_hierarchy >= HIERARCHY_MAX) {
+                current_hierarchy = 0;
+                last              = true;
+            }
+            db_it = nodes[current_hierarchy].begin();
         }
-        db_it = nodes[current_hierarchy].begin();
+        return last;
     }
-    return last;
-}
 
-int db::get_node_bw_int(std::shared_ptr<node> &n)
-{
-    int bw;
-    switch (n->bandwidth) {
-    case beerocks::BANDWIDTH_20:
-        bw = 20;
-        break;
-    case beerocks::BANDWIDTH_40:
-        bw = 40;
-        break;
-    default:
-        bw = 80;
-        break;
+    bool db::get_next_node(std::shared_ptr<node> & n)
+    {
+        bool last = false;
+
+        if (db_it != nodes[current_hierarchy].end()) {
+            n = db_it->second;
+            ++db_it;
+        }
+
+        if (db_it == nodes[current_hierarchy].end()) {
+            current_hierarchy++;
+            if (current_hierarchy >= HIERARCHY_MAX) {
+                current_hierarchy = 0;
+                last              = true;
+            }
+            db_it = nodes[current_hierarchy].begin();
+        }
+        return last;
     }
-    return bw;
-}
 
-void db::set_vap_list(std::shared_ptr<db::vaps_list_t> vaps_list) { m_vap_list = vaps_list; }
-
-void db::clear_vap_list()
-{
-    if (m_vap_list) {
-        m_vap_list.reset();
+    int db::get_node_bw_int(std::shared_ptr<node> & n)
+    {
+        int bw;
+        switch (n->bandwidth) {
+        case beerocks::BANDWIDTH_20:
+            bw = 20;
+            break;
+        case beerocks::BANDWIDTH_40:
+            bw = 40;
+            break;
+        default:
+            bw = 80;
+            break;
+        }
+        return bw;
     }
-}
 
-const std::shared_ptr<db::vaps_list_t> db::get_vap_list() { return m_vap_list; }
+    void db::set_vap_list(std::shared_ptr<db::vaps_list_t> vaps_list) { m_vap_list = vaps_list; }
 
-bool db::is_prplmesh(const sMacAddr &mac)
-{
-    auto node = get_node(mac);
-    if (!node) {
-        LOG(ERROR) << "can't find node with mac " << mac << ", consider as not prplmesh";
-        return false;
+    void db::clear_vap_list()
+    {
+        if (m_vap_list) {
+            m_vap_list.reset();
+        }
     }
-    return node->is_prplmesh;
-}
 
-void db::set_prplmesh(const sMacAddr &mac)
-{
-    auto local_bridge_mac = tlvf::mac_from_string(get_local_bridge_mac());
-    auto ire_type         = local_bridge_mac == mac ? beerocks::TYPE_GW : beerocks::TYPE_IRE;
-    if (!get_node(mac)) {
-        add_node(mac, beerocks::net::network_utils::ZERO_MAC, ire_type);
-    }
-    get_node(mac)->is_prplmesh = true;
-}
+    const std::shared_ptr<db::vaps_list_t> db::get_vap_list() { return m_vap_list; }
 
-bool db::update_client_entry_in_persistent_db(const sMacAddr &mac, const ValuesMap &values_map)
-{
-    auto db_entry        = client_db_entry_from_mac(mac);
-    auto type_client_str = type_to_string(beerocks::eType::TYPE_CLIENT);
-
-    if (!bpl::db_has_entry(type_client_str, db_entry)) {
-        if (!add_client_to_persistent_db(mac, values_map)) {
-            LOG(ERROR) << "failed to add client entry in persistent-db for " << mac;
+    bool db::is_prplmesh(const sMacAddr &mac)
+    {
+        auto node = get_node(mac);
+        if (!node) {
+            LOG(ERROR) << "can't find node with mac " << mac << ", consider as not prplmesh";
             return false;
         }
-    } else if (!bpl::db_set_entry(type_client_str, db_entry, values_map)) {
-        LOG(ERROR) << "failed to set client in persistent-db for " << mac;
-        return false;
+        return node->is_prplmesh;
     }
 
-    persistent_db_changes_made = true;
-
-    return true;
-}
-
-bool db::set_node_params_from_map(const sMacAddr &mac, const ValuesMap &values_map)
-{
-    auto node = get_node(mac);
-    if (!node) {
-        LOG(WARNING) << " - node " << mac << " does not exist!";
-        return false;
-    }
-
-    auto initial_radio = network_utils::ZERO_MAC;
-
-    for (const auto &param : values_map) {
-        if (param.first == TIMESTAMP_STR) {
-            LOG(DEBUG) << "Setting node client_parameters_last_edit to " << param.second << " for "
-                       << mac;
-            node->client_parameters_last_edit =
-                timestamp_from_seconds(string_utils::stoi(param.second));
-        } else if (param.first == TIMELIFE_DELAY_STR) {
-            LOG(DEBUG) << "Setting node client_time_life_delay_sec to " << param.second << " for "
-                       << mac;
-            node->client_time_life_delay_sec =
-                std::chrono::seconds(string_utils::stoi(param.second));
-        } else if (param.first == INITIAL_RADIO_ENABLE_STR) {
-            LOG(DEBUG) << "Setting node client_stay_on_initial_radio to " << param.second << " for "
-                       << mac;
-            node->client_stay_on_initial_radio =
-                (param.second == "1") ? eTriStateBool::TRUE : eTriStateBool::FALSE;
-        } else if (param.first == INITIAL_RADIO_STR) {
-            LOG(DEBUG) << "Received client_initial_radio=" << param.second << " for " << mac;
-            initial_radio = tlvf::mac_from_string(param.second);
-        } else if (param.first == SELECTED_BANDS_STR) {
-            LOG(DEBUG) << "Setting node client_selected_bands to " << param.second << " for "
-                       << mac;
-            node->client_selected_bands = string_utils::stoi(param.second);
-        } else if (param.first == IS_FRIENDLY_STR) {
-            LOG(DEBUG) << "Setting node client_is_friendly to " << param.second << " for " << mac;
-            node->client_is_friendly =
-                (param.second == std::to_string(true)) ? eTriStateBool::TRUE : eTriStateBool::FALSE;
-        } else {
-            LOG(WARNING) << "Unknown parameter, skipping: " << param.first << " for " << mac;
+    void db::set_prplmesh(const sMacAddr &mac)
+    {
+        auto local_bridge_mac = tlvf::mac_from_string(get_local_bridge_mac());
+        auto ire_type         = local_bridge_mac == mac ? beerocks::TYPE_GW : beerocks::TYPE_IRE;
+        if (!get_node(mac)) {
+            add_node(mac, beerocks::net::network_utils::ZERO_MAC, ire_type);
         }
+        get_node(mac)->is_prplmesh = true;
     }
 
-    // After configuring the values we can determine if the client_initial_radio should be set as well.
-    // Since its value is only relevant if client_stay_on_initial_radio is set.
-    // clear initial-radio data on disabling of stay_on_initial_radio.
-    if (node->client_stay_on_initial_radio != eTriStateBool::TRUE) {
-        LOG_IF((initial_radio != network_utils::ZERO_MAC), WARNING)
-            << "ignoring initial-radio=" << initial_radio
-            << " since stay-on-initial-radio is not enabled";
-        node->client_initial_radio = network_utils::ZERO_MAC;
-    } else if (initial_radio != network_utils::ZERO_MAC) {
-        // If stay-on-initial-radio is set to enable and initial_radio is provided.
-        node->client_initial_radio = initial_radio;
-    } else if (node->state == STATE_CONNECTED) {
-        // If stay-on-initial-radio is enabled and initial_radio is not set and client is already connected:
-        // Set the initial_radio from parent radio mac (not bssid).
-        auto bssid                 = node->parent_mac;
-        auto parent_radio_mac      = get_node_parent_radio(bssid);
-        node->client_initial_radio = tlvf::mac_from_string(parent_radio_mac);
-        LOG(DEBUG) << "Setting client " << mac << " initial-radio to "
-                   << node->client_initial_radio;
+    bool db::update_client_entry_in_persistent_db(const sMacAddr &mac, const ValuesMap &values_map)
+    {
+        auto db_entry        = client_db_entry_from_mac(mac);
+        auto type_client_str = type_to_string(beerocks::eType::TYPE_CLIENT);
+
+        if (!bpl::db_has_entry(type_client_str, db_entry)) {
+            if (!add_client_to_persistent_db(mac, values_map)) {
+                LOG(ERROR) << "failed to add client entry in persistent-db for " << mac;
+                return false;
+            }
+        } else if (!bpl::db_set_entry(type_client_str, db_entry, values_map)) {
+            LOG(ERROR) << "failed to set client in persistent-db for " << mac;
+            return false;
+        }
+
+        persistent_db_changes_made = true;
+
+        return true;
     }
 
-    return true;
-}
+    bool db::set_node_params_from_map(const sMacAddr &mac, const ValuesMap &values_map)
+    {
+        auto node = get_node(mac);
+        if (!node) {
+            LOG(WARNING) << " - node " << mac << " does not exist!";
+            return false;
+        }
 
-bool db::add_client_entry_and_update_counter(const std::string &entry_name,
-                                             const ValuesMap &values_map)
-{
-    if (!bpl::db_add_entry(type_to_string(beerocks::eType::TYPE_CLIENT), entry_name, values_map)) {
-        LOG(ERROR) << "failed to add client entry " << entry_name << " to persistent db";
-        return false;
+        auto initial_radio = network_utils::ZERO_MAC;
+
+        for (const auto &param : values_map) {
+            if (param.first == TIMESTAMP_STR) {
+                LOG(DEBUG) << "Setting node client_parameters_last_edit to " << param.second
+                           << " for " << mac;
+                node->client_parameters_last_edit =
+                    timestamp_from_seconds(string_utils::stoi(param.second));
+            } else if (param.first == TIMELIFE_DELAY_STR) {
+                LOG(DEBUG) << "Setting node client_time_life_delay_sec to " << param.second
+                           << " for " << mac;
+                node->client_time_life_delay_sec =
+                    std::chrono::seconds(string_utils::stoi(param.second));
+            } else if (param.first == INITIAL_RADIO_ENABLE_STR) {
+                LOG(DEBUG) << "Setting node client_stay_on_initial_radio to " << param.second
+                           << " for " << mac;
+                node->client_stay_on_initial_radio =
+                    (param.second == "1") ? eTriStateBool::TRUE : eTriStateBool::FALSE;
+            } else if (param.first == INITIAL_RADIO_STR) {
+                LOG(DEBUG) << "Received client_initial_radio=" << param.second << " for " << mac;
+                initial_radio = tlvf::mac_from_string(param.second);
+            } else if (param.first == SELECTED_BANDS_STR) {
+                LOG(DEBUG) << "Setting node client_selected_bands to " << param.second << " for "
+                           << mac;
+                node->client_selected_bands = string_utils::stoi(param.second);
+            } else if (param.first == IS_FRIENDLY_STR) {
+                LOG(DEBUG) << "Setting node client_is_friendly to " << param.second << " for "
+                           << mac;
+                node->client_is_friendly = (param.second == std::to_string(true))
+                                               ? eTriStateBool::TRUE
+                                               : eTriStateBool::FALSE;
+            } else {
+                LOG(WARNING) << "Unknown parameter, skipping: " << param.first << " for " << mac;
+            }
+        }
+
+        // After configuring the values we can determine if the client_initial_radio should be set as well.
+        // Since its value is only relevant if client_stay_on_initial_radio is set.
+        // clear initial-radio data on disabling of stay_on_initial_radio.
+        if (node->client_stay_on_initial_radio != eTriStateBool::TRUE) {
+            LOG_IF((initial_radio != network_utils::ZERO_MAC), WARNING)
+                << "ignoring initial-radio=" << initial_radio
+                << " since stay-on-initial-radio is not enabled";
+            node->client_initial_radio = network_utils::ZERO_MAC;
+        } else if (initial_radio != network_utils::ZERO_MAC) {
+            // If stay-on-initial-radio is set to enable and initial_radio is provided.
+            node->client_initial_radio = initial_radio;
+        } else if (node->state == STATE_CONNECTED) {
+            // If stay-on-initial-radio is enabled and initial_radio is not set and client is already connected:
+            // Set the initial_radio from parent radio mac (not bssid).
+            auto bssid                 = node->parent_mac;
+            auto parent_radio_mac      = get_node_parent_radio(bssid);
+            node->client_initial_radio = tlvf::mac_from_string(parent_radio_mac);
+            LOG(DEBUG) << "Setting client " << mac << " initial-radio to "
+                       << node->client_initial_radio;
+        }
+
+        return true;
     }
 
-    ++m_persistent_db_clients_count;
+    bool db::add_client_entry_and_update_counter(const std::string &entry_name,
+                                                 const ValuesMap &values_map)
+    {
+        if (!bpl::db_add_entry(type_to_string(beerocks::eType::TYPE_CLIENT), entry_name,
+                               values_map)) {
+            LOG(ERROR) << "failed to add client entry " << entry_name << " to persistent db";
+            return false;
+        }
 
-    return true;
-}
+        ++m_persistent_db_clients_count;
 
-bool db::remove_client_entry_and_update_counter(const std::string &entry_name)
-{
-    if (!bpl::db_remove_entry(type_to_string(beerocks::eType::TYPE_CLIENT), entry_name)) {
-        LOG(ERROR) << "failed to remove entry " << entry_name << "from persistent db";
-        return false;
+        return true;
     }
-    --m_persistent_db_clients_count;
 
-    LOG(DEBUG) << "Removed client entry " << entry_name
-               << " from persistent db, total clients count in persisttent-db: "
-               << m_persistent_db_clients_count;
+    bool db::remove_client_entry_and_update_counter(const std::string &entry_name)
+    {
+        if (!bpl::db_remove_entry(type_to_string(beerocks::eType::TYPE_CLIENT), entry_name)) {
+            LOG(ERROR) << "failed to remove entry " << entry_name << "from persistent db";
+            return false;
+        }
+        --m_persistent_db_clients_count;
 
-    return true;
-}
-
-bool db::remove_candidate_client(sMacAddr client_to_skip)
-{
-
-    // find cadidate client to be removed
-    sMacAddr client_to_remove = get_candidate_client_for_removal(client_to_skip);
-    if (client_to_remove == network_utils::ZERO_MAC) {
-        LOG(ERROR) << "failed to find client to be removed, number of persistent db clients is "
+        LOG(DEBUG) << "Removed client entry " << entry_name
+                   << " from persistent db, total clients count in persisttent-db: "
                    << m_persistent_db_clients_count;
-        return false;
+
+        return true;
     }
 
-    // clear persistent data in runtime db and remove from persistent db
-    if (!clear_client_persistent_db(client_to_remove)) {
-        LOG(ERROR) << "failed to clear client persistent data and remove it from persistent db";
-        return false;
+    bool db::remove_candidate_client(sMacAddr client_to_skip)
+    {
+
+        // find cadidate client to be removed
+        sMacAddr client_to_remove = get_candidate_client_for_removal(client_to_skip);
+        if (client_to_remove == network_utils::ZERO_MAC) {
+            LOG(ERROR) << "failed to find client to be removed, number of persistent db clients is "
+                       << m_persistent_db_clients_count;
+            return false;
+        }
+
+        // clear persistent data in runtime db and remove from persistent db
+        if (!clear_client_persistent_db(client_to_remove)) {
+            LOG(ERROR) << "failed to clear client persistent data and remove it from persistent db";
+            return false;
+        }
+
+        return true;
     }
 
-    return true;
-}
+    sMacAddr db::get_candidate_client_for_removal(sMacAddr client_to_skip)
+    {
+        const auto max_timelife_delay_sec =
+            std::chrono::seconds(config.max_timelife_delay_days * 24 * 3600);
+        const auto unfriendly_device_max_timelife_delay_sec =
+            std::chrono::seconds(config.unfriendly_device_max_timelife_delay_days * 24 * 3600);
 
-sMacAddr db::get_candidate_client_for_removal(sMacAddr client_to_skip)
-{
-    const auto max_timelife_delay_sec =
-        std::chrono::seconds(config.max_timelife_delay_days * 24 * 3600);
-    const auto unfriendly_device_max_timelife_delay_sec =
-        std::chrono::seconds(config.unfriendly_device_max_timelife_delay_days * 24 * 3600);
+        sMacAddr candidate_client_to_be_removed  = network_utils::ZERO_MAC;
+        bool is_disconnected_candidate_available = false;
+        auto candidate_client_expiry_due_time    = std::chrono::system_clock::time_point::max();
 
-    sMacAddr candidate_client_to_be_removed  = network_utils::ZERO_MAC;
-    bool is_disconnected_candidate_available = false;
-    auto candidate_client_expiry_due_time    = std::chrono::system_clock::time_point::max();
-
-    for (const auto &node_map : nodes) {
-        for (const auto &key_value : node_map) {
-            const auto client = key_value.second;
-            if (client->get_type() != beerocks::eType::TYPE_CLIENT) {
-                continue;
-            }
-            const auto client_mac = tlvf::mac_from_string(key_value.first);
-
-            // skip client if matches the provided client to skip
-            if (client_mac == client_to_skip) {
-                continue;
-            }
-            //TODO: improvement - stop search if "already-aged" candidate is found (don't-care of connectivity status)
-
-            // Skip clients which have no persistent information.
-            if (client->client_parameters_last_edit ==
-                std::chrono::system_clock::time_point::min()) {
-                continue;
-            }
-
-            // Preferring disconnected clients over connected ones (even if less aged).
-            if (is_disconnected_candidate_available &&
-                client->state != beerocks::STATE_DISCONNECTED) {
-                continue;
-            }
-
-            // Max client timelife delay
-            // This is ditermined according to the friendliness status of the client.
-            // If a client is unfriendly we can
-            auto max_timelife_delay = client->client_is_friendly == eTriStateBool::FALSE
-                                          ? unfriendly_device_max_timelife_delay_sec
-                                          : max_timelife_delay_sec;
-
-            // Client timelife delay
-            auto timelife_delay =
-                (client->client_time_life_delay_sec != std::chrono::seconds::zero())
-                    ? client->client_time_life_delay_sec
-                    : max_timelife_delay;
-            // Calculate client expiry due time
-            auto current_client_expiry_due = client->client_parameters_last_edit + timelife_delay;
-
-            // Compare to currently chosen candidate expiry due time.
-            // The case where a client is connected and we already found a disconnected cadidate
-            // is handled above - meaning we can assume that either we didn't find any candidate
-            // yet or the candidate found is connected (meaning only the remaining timelife
-            // should be compared)
-            if (current_client_expiry_due < candidate_client_expiry_due_time) {
-                candidate_client_expiry_due_time = current_client_expiry_due;
-                if (client->state == beerocks::STATE_DISCONNECTED) {
-                    is_disconnected_candidate_available = true;
+        for (const auto &node_map : nodes) {
+            for (const auto &key_value : node_map) {
+                const auto client = key_value.second;
+                if (client->get_type() != beerocks::eType::TYPE_CLIENT) {
+                    continue;
                 }
-                candidate_client_to_be_removed = client_mac;
+                const auto client_mac = tlvf::mac_from_string(key_value.first);
+
+                // skip client if matches the provided client to skip
+                if (client_mac == client_to_skip) {
+                    continue;
+                }
+                //TODO: improvement - stop search if "already-aged" candidate is found (don't-care of connectivity status)
+
+                // Skip clients which have no persistent information.
+                if (client->client_parameters_last_edit ==
+                    std::chrono::system_clock::time_point::min()) {
+                    continue;
+                }
+
+                // Preferring disconnected clients over connected ones (even if less aged).
+                if (is_disconnected_candidate_available &&
+                    client->state != beerocks::STATE_DISCONNECTED) {
+                    continue;
+                }
+
+                // Max client timelife delay
+                // This is ditermined according to the friendliness status of the client.
+                // If a client is unfriendly we can
+                auto max_timelife_delay = client->client_is_friendly == eTriStateBool::FALSE
+                                              ? unfriendly_device_max_timelife_delay_sec
+                                              : max_timelife_delay_sec;
+
+                // Client timelife delay
+                auto timelife_delay =
+                    (client->client_time_life_delay_sec != std::chrono::seconds::zero())
+                        ? client->client_time_life_delay_sec
+                        : max_timelife_delay;
+                // Calculate client expiry due time
+                auto current_client_expiry_due =
+                    client->client_parameters_last_edit + timelife_delay;
+
+                // Compare to currently chosen candidate expiry due time.
+                // The case where a client is connected and we already found a disconnected cadidate
+                // is handled above - meaning we can assume that either we didn't find any candidate
+                // yet or the candidate found is connected (meaning only the remaining timelife
+                // should be compared)
+                if (current_client_expiry_due < candidate_client_expiry_due_time) {
+                    candidate_client_expiry_due_time = current_client_expiry_due;
+                    if (client->state == beerocks::STATE_DISCONNECTED) {
+                        is_disconnected_candidate_available = true;
+                    }
+                    candidate_client_to_be_removed = client_mac;
+                }
             }
         }
+
+        if (candidate_client_to_be_removed == network_utils::ZERO_MAC) {
+            LOG(DEBUG) << "no client to be removed is found";
+        } else {
+            LOG(DEBUG) << "candidate client to be removed " << candidate_client_to_be_removed
+                       << " is currently "
+                       << ((is_disconnected_candidate_available) ? "disconnected" : "connected");
+        }
+
+        return candidate_client_to_be_removed;
     }
 
-    if (candidate_client_to_be_removed == network_utils::ZERO_MAC) {
-        LOG(DEBUG) << "no client to be removed is found";
-    } else {
-        LOG(DEBUG) << "candidate client to be removed " << candidate_client_to_be_removed
-                   << " is currently "
-                   << ((is_disconnected_candidate_available) ? "disconnected" : "connected");
+    void db::add_node_from_data(std::string client_entry, const ValuesMap &values_map,
+                                std::pair<uint16_t, uint16_t> &result)
+    {
+        auto client_mac = client_db_entry_to_mac(client_entry);
+
+        // Add client node with defaults and in default location
+        if (!add_node(client_mac)) {
+            LOG(ERROR) << "Failed to add client node for client_entry " << client_entry;
+            result.first = 1;
+            return;
+        }
+
+        // Set clients persistent information in the node
+        if (!set_node_params_from_map(client_mac, values_map)) {
+            LOG(ERROR) << "Failed to set client " << client_entry
+                       << " node in runtime db with values read from persistent db: " << values_map;
+            result.second = 1;
+            return;
+        }
+
+        LOG(DEBUG) << "Client " << client_entry
+                   << " added successfully to node-list with parameters: " << values_map;
+
+        // Update the number of clients in persistent DB
+        ++m_persistent_db_clients_count;
     }
 
-    return candidate_client_to_be_removed;
-}
+    uint64_t db::get_client_remaining_sec(const std::pair<std::string, ValuesMap> &client)
+    {
+        static const int max_timelife_delay_sec = config.max_timelife_delay_days * 24 * 3600;
+        static const int unfriendly_device_max_timelife_delay_sec =
+            config.unfriendly_device_max_timelife_delay_days * 24 * 3600;
 
-void db::add_node_from_data(std::string client_entry, const ValuesMap &values_map,
-                            std::pair<uint16_t, uint16_t> &result)
-{
-    auto client_mac = client_db_entry_to_mac(client_entry);
+        auto timestamp_it = client.second.find(TIMESTAMP_STR);
+        if (timestamp_it == client.second.end())
+            return -1;
 
-    // Add client node with defaults and in default location
-    if (!add_node(client_mac)) {
-        LOG(ERROR) << "Failed to add client node for client_entry " << client_entry;
-        result.first = 1;
-        return;
+        // Save current time as a separate variable for fair comparison of current client
+        auto now           = std::chrono::system_clock::now();
+        auto timestamp_sec = beerocks::string_utils::stoi(timestamp_it->second);
+        auto timestamp     = db::timestamp_from_seconds(timestamp_sec);
+        auto client_timelife_passed_sec =
+            std::chrono::duration_cast<std::chrono::seconds>(now - timestamp).count();
+
+        auto client_remaining_timelife_sec = max_timelife_delay_sec;
+        if ((client.second.find(IS_FRIENDLY_STR)) == client.second.end()) {
+            client_remaining_timelife_sec = unfriendly_device_max_timelife_delay_sec;
+        }
+
+        return ((client_remaining_timelife_sec > client_timelife_passed_sec)
+                    ? (client_remaining_timelife_sec - client_timelife_passed_sec)
+                    : 0);
     }
 
-    // Set clients persistent information in the node
-    if (!set_node_params_from_map(client_mac, values_map)) {
-        LOG(ERROR) << "Failed to set client " << client_entry
-                   << " node in runtime db with values read from persistent db: " << values_map;
-        result.second = 1;
-        return;
+    bool db::dm_add_device_element(const sMacAddr &mac)
+    {
+        auto index = m_ambiorix_datamodel->get_instance_index("Network.Device.[ID == '%s'].",
+                                                              tlvf::mac_to_string(mac));
+        LOG_IF(index, FATAL) << "Device with ID: " << tlvf::mac_to_string(mac)
+                             << " exists in the data model!";
+
+        if (!m_ambiorix_datamodel->add_instance("Network.Device")) {
+            LOG(ERROR) << "Failed to add instance for device, mac: " << tlvf::mac_to_string(mac);
+            return false;
+        }
+        return true;
     }
-
-    LOG(DEBUG) << "Client " << client_entry
-               << " added successfully to node-list with parameters: " << values_map;
-
-    // Update the number of clients in persistent DB
-    ++m_persistent_db_clients_count;
-}
-
-uint64_t db::get_client_remaining_sec(const std::pair<std::string, ValuesMap> &client)
-{
-    static const int max_timelife_delay_sec = config.max_timelife_delay_days * 24 * 3600;
-    static const int unfriendly_device_max_timelife_delay_sec =
-        config.unfriendly_device_max_timelife_delay_days * 24 * 3600;
-
-    auto timestamp_it = client.second.find(TIMESTAMP_STR);
-    if (timestamp_it == client.second.end())
-        return -1;
-
-    // Save current time as a separate variable for fair comparison of current client
-    auto now           = std::chrono::system_clock::now();
-    auto timestamp_sec = beerocks::string_utils::stoi(timestamp_it->second);
-    auto timestamp     = db::timestamp_from_seconds(timestamp_sec);
-    auto client_timelife_passed_sec =
-        std::chrono::duration_cast<std::chrono::seconds>(now - timestamp).count();
-
-    auto client_remaining_timelife_sec = max_timelife_delay_sec;
-    if ((client.second.find(IS_FRIENDLY_STR)) == client.second.end()) {
-        client_remaining_timelife_sec = unfriendly_device_max_timelife_delay_sec;
-    }
-
-    return ((client_remaining_timelife_sec > client_timelife_passed_sec)
-                ? (client_remaining_timelife_sec - client_timelife_passed_sec)
-                : 0);
-}
-
-bool db::dm_add_device_element(const sMacAddr &mac)
-{
-    auto index = m_ambiorix_datamodel->get_instance_index("Network.Device.[ID == '%s'].",
-                                                          tlvf::mac_to_string(mac));
-    LOG_IF(index, FATAL) << "Device with ID: " << tlvf::mac_to_string(mac)
-                         << " exists in the data model!";
-
-    if (!m_ambiorix_datamodel->add_instance("Network.Device")) {
-        LOG(ERROR) << "Failed to add instance for device, mac: " << tlvf::mac_to_string(mac);
-        return false;
-    }
-    return true;
-}
