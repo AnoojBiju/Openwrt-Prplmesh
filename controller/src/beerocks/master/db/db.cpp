@@ -3113,7 +3113,7 @@ bool db::load_persistent_db_clients()
 
         /* TODO: aging validation against specific client configuration and unfriendly-device-max-timelife-delay:
          * 1. If client has timelife_delay_str param configured, it should be checked against it instead of global max-timelife-delay param.
-         * 
+         *
          * Clients are assumed friendly if not configured
          */
         bool is_friendly    = true;
