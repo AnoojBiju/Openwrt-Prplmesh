@@ -53,34 +53,36 @@ class CapiWirelessOnboarding(PrplMeshBaseTest):
         assert backhaul_mac == agent.radios[0].mac
 
     @classmethod
-    def teardown_class(self):
+    def teardown_class(cls):
         """Teardown method, optional for boardfarm tests."""
+        test = cls.test_obj
+
         try:
-            agent = self.dev.DUT.agent_entity
+            agent = test.dev.DUT.agent_entity
         except AttributeError as ae:
             raise SkipTest(ae)
 
         try:
-            self.dev.DUT.wired_sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
+            test.dev.DUT.wired_sniffer.start(test.__class__.__name__ + "-" + test.dev.DUT.name)
 
             agent.ucc_socket.cmd_reply("dev_reset_default,devrole,agent,program,map,type,DUT")
-            self.checkpoint()
+            test.checkpoint()
             time.sleep(2)
-            self.check_no_cmdu_type("autoconfig search while in reset", 0x0007, agent.mac)
-            self.checkpoint()
+            test.check_no_cmdu_type("autoconfig search while in reset", 0x0007, agent.mac)
+            test.checkpoint()
             agent.ucc_socket.cmd_reply("dev_set_config,backhaul,eth")
             time.sleep(2)
-            self.check_cmdu_type("autoconfig search", 0x0007, agent.mac)
+            test.check_cmdu_type("autoconfig search", 0x0007, agent.mac)
 
             # After dev_reset_default there is a delay between the auto_config message to the moment,
             # that the sockets to the son_slaves are open. Add a delay to make sure that the son_slaves
             # are operational before continuing to the next test.
             time.sleep(3)
         finally:
-            self.dev.DUT.wired_sniffer.stop()
+            test.dev.DUT.wired_sniffer.stop()
 
         try:
-            self.dev.DUT.agent_entity.device.send('\003')
+            test.dev.DUT.agent_entity.device.send('\003')
         except AttributeError:
             # If AttributeError was raised - we are dealing with dummy devices.
             # We don't have to additionaly send Ctrl+C for dummy devices.
