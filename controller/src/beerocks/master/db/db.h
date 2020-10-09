@@ -1235,6 +1235,14 @@ private:
     sMacAddr get_candidate_client_for_removal(
         sMacAddr client_to_skip = beerocks::net::network_utils::ZERO_MAC);
 
+    /**
+     * @brief Adds instance to the datamodel for the unique MAC
+     *
+     * @param[in] mac Mac address for the new device
+     * @return True on success, otherwise false.
+     */
+    bool dm_add_device_element(const sMacAddr &mac);
+
     int network_optimization_task_id           = -1;
     int channel_selection_task_id              = -1;
     int bml_task_id                            = -1;
