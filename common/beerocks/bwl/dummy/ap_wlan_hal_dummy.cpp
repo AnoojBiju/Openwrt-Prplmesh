@@ -28,10 +28,6 @@ namespace dummy {
 
 #define CSA_EVENT_FILTERING_TIMEOUT_MS 1000
 
-// As defined on "ieee802_11_defs.h":
-#define WLAN_FC_STYPE_PROBE_REQ 4
-#define WLAN_FC_STYPE_AUTH 11
-
 // Allocate a char array wrapped in a shared_ptr
 #define ALLOC_SMART_BUFFER(size)                                                                   \
     std::shared_ptr<char>(new char[size], [](char *obj) {                                          \
@@ -514,37 +510,17 @@ bool ap_wlan_hal_dummy::process_dummy_event(parsed_obj_map_t &parsed_obj)
 
     // STA 802.11 management frame event
     case Event::MGMT_Frame: {
-        auto mgmt_frame = std::make_shared<sMGMT_FRAME_NOTIFICATION>();
-
-        // Read the STA MAC
-        if (!dummy_obj_read_str(DUMMY_EVENT_KEYLESS_PARAM_MAC, parsed_obj, &tmp_str)) {
-            LOG(ERROR) << "Failed reading mac parameter!";
-            return false;
-        }
-
-        mgmt_frame->mac = tlvf::mac_from_string(tmp_str);
-
-        // Read frame type
-        if (!dummy_obj_read_str("TYPE", parsed_obj, &tmp_str)) {
-            LOG(ERROR) << "Failed reading TYPE parameter!";
-            return false;
-        }
-
-        mgmt_frame->type = eManagementFrameType(beerocks::string_utils::stoi(tmp_str));
-
         // Read frame data
         if (!dummy_obj_read_str("DATA", parsed_obj, &tmp_str)) {
             LOG(ERROR) << "Failed reading DATA parameter!";
             return false;
         }
 
-        // Convert the frame data from hex string to vector
-        std::string hex_data(tmp_str);
-        size_t hex_data_len = hex_data.length();
-        for (size_t i = 0; i < hex_data_len; i += 2) {
-            auto byte     = hex_data.substr(i, 2);
-            auto hex_byte = uint8_t(strtol(byte.c_str(), nullptr, 16));
-            mgmt_frame->data.push_back(hex_byte);
+        // Create the management frame notification event
+        auto mgmt_frame = create_mgmt_frame_notification(tmp_str);
+        if (!mgmt_frame) {
+            LOG(WARNING) << "Failed creating management frame notification!";
+            return true; // Just a warning, do not fail
         }
 
         event_queue_push(Event::MGMT_Frame, mgmt_frame);
