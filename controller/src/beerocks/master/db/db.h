@@ -242,25 +242,9 @@ public:
 
     bool add_virtual_node(sMacAddr mac, sMacAddr real_node_mac);
 
-    /**
-     * @brief Gets the remaining timelife of a client
-     *
-     * @param client The pair of the client and its variables associated with a key.
-     * @return Returns the remaining life duration of a client.
-     */
-    uint64_t get_client_remaining_sec(const std::pair<std::string, ValuesMap> &client);
-    /**
-     * @brief A wrapper to add_node (to nodelist)
-     *
-     * @param client_entry A special identifier of a client.
-     * @param ValuesMap The client information: timestamp, friendly status.
-     * @param [out] results An error results for the persistent function report.
-     */
-    void add_node_from_data(std::string client_entry, const ValuesMap &values_map,
-                            std::pair<uint16_t, uint16_t> &results);
-
     bool
     add_node_gateway(const sMacAddr &mac,
+                     const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,
                      const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
     bool add_node_ire(const sMacAddr &mac,
                       const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,
