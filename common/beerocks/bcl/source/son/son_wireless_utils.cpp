@@ -640,7 +640,7 @@ std::list<wireless_utils::sChannelPreference> wireless_utils::get_channel_prefer
 
     for (const auto &oper_class : operating_classes_list) {
         std::vector<beerocks::message::sWifiChannel> radar_affected_channels;
-        for (const auto &supported_channel : supported_channels) {
+        for (const auto supported_channel : supported_channels) {
             if (has_operating_class_channel(oper_class.second, supported_channel) &&
                 supported_channel.radar_affected) {
                 radar_affected_channels.push_back(supported_channel);
@@ -669,7 +669,7 @@ std::vector<uint8_t> wireless_utils::get_supported_operating_classes(
     std::vector<uint8_t> operating_classes;
     //TODO handle regulatory domain operating classes
     for (const auto &oper_class : operating_classes_list) {
-        for (const auto &supported_channel : supported_channels) {
+        for (const auto supported_channel : supported_channels) {
             if (has_operating_class_channel(oper_class.second, supported_channel)) {
                 operating_classes.push_back(oper_class.first);
                 break;
@@ -693,7 +693,7 @@ uint8_t wireless_utils::get_operating_class_max_tx_power(
     uint8_t max_tx_power = 0;
     auto oper_class      = operating_classes_list.at(operating_class);
 
-    for (const auto &supported_channel : supported_channels) {
+    for (const auto supported_channel : supported_channels) {
         if (has_operating_class_channel(oper_class, supported_channel)) {
             max_tx_power = std::max(max_tx_power, supported_channel.tx_pow);
         }
@@ -751,7 +751,7 @@ std::vector<uint8_t> wireless_utils::get_operating_class_non_oper_channels(
 
     for (const auto &op_class_channel : oper_class.channels) {
         uint8_t found = 0;
-        for (const auto &supported_channel : supported_channels) {
+        for (const auto supported_channel : supported_channels) {
             if (op_class_channel == supported_channel.channel &&
                 oper_class.band == supported_channel.channel_bandwidth) {
                 found = 1;
