@@ -1229,7 +1229,7 @@ class TestFlows:
         debug("Send multi-ap policy config request with unsuccessful association policy to agent 1")
         mid = env.controller.dev_send_1905(env.agents[0].mac, 0x8003,
                                            tlv(0xC4, 0x0005, "{{0x{:02X} 0x{:08X}}}"
-                                           .format(enable, max_repeat)))
+                                               .format(enable, max_repeat)))
         time.sleep(1)
         debug("Confirming multi-ap policy config with unsuccessful association"
               "request has been received on agent")
@@ -1379,7 +1379,7 @@ class TestFlows:
         else:
             source_payload = tlv_data.tlv_data.replace(":", "")
 
-        if source_payload != payload_data:
+        if source_payload.lower() != payload_data.lower():
             self.fail("Type TLV has wrong value of {} instead of {}".format(
                 source_payload, payload_data))
 
@@ -1403,19 +1403,31 @@ class TestFlows:
         vap1.associate(sta1)
         vap2.associate(sta2)
 
-        # Simulated events data
-        event1_type = 3  # WNM Request
-        event1_data = "0d0e0a0d0b0e0e0f"
-        event2_type = 4  # ANQP REQUEST
-        event2_data = "010203040506"
+        vap1_mac_hex = vap1.bssid.replace(':', '').upper()
+        vap2_mac_hex = vap2.bssid.replace(':', '').upper()
+        sta1_mac_hex = sta1.mac.replace(':', '').upper()
+        sta2_mac_hex = sta2.mac.replace(':', '').upper()
 
-        debug("Simulate WNM Request management frame event")
+        # Simulated events data
+        event1_type = 2  # BTQ Query
+        event1_data = "D0003A01{}{}{}60010A060100".format(
+            vap1_mac_hex,  # DA
+            sta1_mac_hex,  # SA
+            vap1_mac_hex)  # BSSID
+
+        event2_type = 4  # ANQP REQUEST
+        event2_data = "D0083A01{}{}{}C000040A7D6C0200000E0000010A0002010601070108010C01".format(
+            vap2_mac_hex,  # DA
+            sta2_mac_hex,  # SA
+            vap2_mac_hex)  # BSSID
+
+        debug("Simulate BTM Query management frame event")
         env.agents[0].radios[0].send_bwl_event(
-            "EVENT MGMT-FRAME {} TYPE={:x} DATA={}".format(sta1.mac, event1_type, event1_data))
+            "EVENT MGMT-FRAME DATA={}".format(event1_data))
 
         debug("Simulate ANQP Request management frame event")
         env.agents[1].radios[1].send_bwl_event(
-            "EVENT MGMT-FRAME {} TYPE={:x} DATA={}".format(sta2.mac, event2_type, event2_data))
+            "EVENT MGMT-FRAME DATA={}".format(event2_data))
 
         # Allow the events to propagate
         time.sleep(1)
@@ -1545,7 +1557,7 @@ class TestFlows:
 
         # Simulate Failed Association Message
         agent_radio.send_bwl_event(
-                "EVENT AP-STA-POSSIBLE-PSK-MISMATCH {}".format(sta.mac))
+            "EVENT AP-STA-POSSIBLE-PSK-MISMATCH {}".format(sta.mac))
 
         # Wait for something to happen
         time.sleep(1)
