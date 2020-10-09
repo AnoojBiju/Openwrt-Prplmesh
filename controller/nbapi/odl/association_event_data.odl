@@ -1,12 +1,19 @@
 
+/* SPDX-License-Identifier: BSD-2-Clause-Patent
+ *
+ * SPDX-FileCopyrightText: 2020 the prplMesh contributors (see AUTHORS.md)
+ *
+ * This code is subject to the terms of the BSD+Patent license.
+ * See LICENSE file for more details.
+ */
+
 %config {
-	define_behavior = { 
-		existing_object = "update"
-	};
+    define_behavior = {
+        existing_object = "update"
+    };
 }
 
 %define {
-    object Controller {
     object AssociationEventData {
         %read-only string BSSID;  /* The MAC address of the logical BSS (BSSID) which is
                                      reporting the association event. */
