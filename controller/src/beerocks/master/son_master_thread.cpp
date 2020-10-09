@@ -2131,11 +2131,14 @@ bool master_thread::handle_intel_slave_join(
     // add new GW/IRE bridge_mac
     LOG(DEBUG) << "adding node " << bridge_mac << " under " << backhaul_mac << ", and mark as type "
                << ire_type;
-    if (is_gw_slave) {
-        database.add_node_gateway(tlvf::mac_from_string(bridge_mac));
-    } else {
+    if (ire_type == TYPE_GW) {
+        database.add_node_gateway(tlvf::mac_from_string(bridge_mac),
+                                  tlvf::mac_from_string(backhaul_mac));
+    } else if (ire_type == TYPE_IRE) {
         database.add_node_ire(tlvf::mac_from_string(bridge_mac),
                               tlvf::mac_from_string(backhaul_mac));
+    } else {
+        LOG(ERROR) << "Wrong node type: " << database.type_to_string(ire_type);
     }
 
     database.set_node_state(bridge_mac, beerocks::STATE_CONNECTED);
@@ -2557,8 +2560,15 @@ bool master_thread::handle_non_intel_slave_join(
     // add new GW/IRE bridge_mac
     LOG(DEBUG) << "adding node " << bridge_mac << " under " << backhaul_mac << ", and mark as type "
                << ire_type;
-
-    database.add_node_ire(tlvf::mac_from_string(bridge_mac), tlvf::mac_from_string(backhaul_mac));
+    if (ire_type == TYPE_GW) {
+        database.add_node_gateway(tlvf::mac_from_string(bridge_mac),
+                                  tlvf::mac_from_string(backhaul_mac));
+    } else if (ire_type == TYPE_IRE) {
+        database.add_node_ire(tlvf::mac_from_string(bridge_mac),
+                              tlvf::mac_from_string(backhaul_mac));
+    } else {
+        LOG(ERROR) << "Wrong node type: " << database.type_to_string(ire_type);
+    }
     database.set_node_state(bridge_mac, beerocks::STATE_CONNECTED);
     database.set_node_backhaul_iface_type(backhaul_mac, beerocks::eIfaceType::IFACE_TYPE_ETHERNET);
     database.set_node_backhaul_iface_type(bridge_mac, beerocks::IFACE_TYPE_BRIDGE);
