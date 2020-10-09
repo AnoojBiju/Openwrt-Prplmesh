@@ -414,13 +414,15 @@ bool AmbiorixImpl::set(const std::string &relative_path, const bool &value)
     return true;
 }
 
-bool AmbiorixImpl::add_instance(const std::string &relative_path)
+uint32_t AmbiorixImpl::add_instance(const std::string &relative_path)
 {
     amxd_trans_t transaction;
+    uint32_t index;
+
     auto object = prepare_transaction(relative_path, transaction);
     if (!object) {
         LOG(ERROR) << "Couldn't find the object for: " << relative_path;
-        return false;
+        return 0;
     }
 
     auto status = amxd_trans_add_inst(&transaction, 0, NULL);
@@ -430,11 +432,16 @@ bool AmbiorixImpl::add_instance(const std::string &relative_path)
 
     if (!apply_transaction(transaction)) {
         LOG(ERROR) << "Failed to apply transaction for: " << object->name;
-        return false;
+        return 0;
+    }
+
+    index = amxd_object_get_index(object);
+    if (!index) {
+        LOG(ERROR) << "Failed to get index for object: " << object->name;
     }
 
     LOG(DEBUG) << "Instance added for: " << object->name;
-    return true;
+    return index;
 }
 
 bool AmbiorixImpl::remove_instance(const std::string &relative_path, uint32_t index)
@@ -463,6 +470,25 @@ bool AmbiorixImpl::remove_instance(const std::string &relative_path, uint32_t in
 
     LOG(DEBUG) << "Instance removed for: " << object->name;
     return true;
+}
+
+uint32_t AmbiorixImpl::get_instance_index(const std::string &specific_path, const std::string &key)
+{
+    uint32_t index = 0;
+
+    auto object = amxd_dm_findf(&m_datamodel, specific_path.c_str(), key);
+    if (!object) {
+        LOG(ERROR) << "Failed to find object by key: " << specific_path << " for id: " << key;
+        return index;
+    }
+
+    index = amxd_object_get_index(object);
+    if (!index) {
+        LOG(ERROR) << "Failed to get index for object: " << object->name;
+        return index;
+    }
+
+    return index;
 }
 
 AmbiorixImpl::~AmbiorixImpl()

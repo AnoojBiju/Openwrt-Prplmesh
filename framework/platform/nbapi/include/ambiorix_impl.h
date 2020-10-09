@@ -81,9 +81,9 @@ public:
     /* @brief Add instance to the data model object with type list
      *
      * @param relative_path Path to the object with type list in datamodel (ex: "Controller.Network.Device").
-     * @return True on success and false otherwise.
+     * @return index of recently added object on success, 0 otherwise
      */
-    bool add_instance(const std::string &relative_path) override;
+    uint32_t add_instance(const std::string &relative_path) override;
 
     /**
      * @brief Remove instance from the data model object with type list
@@ -93,6 +93,15 @@ public:
      * @return True on success and false otherwise.
      */
     bool remove_instance(const std::string &relative_path, uint32_t index) override;
+
+    /**
+     * @brief Get instance index by ID.
+     *
+     * @param specific_path Path to the object specific key (ex: "Device.[ID == '%s'].").
+     * @param key String which contains ID, for example it can be a MAC address.
+     * @return Instance index on success and 0 otherwise.
+     */
+    uint32_t get_instance_index(const std::string &specific_path, const std::string &key) override;
 
 private:
     // Methods

@@ -181,6 +181,147 @@ bool db::add_node(const sMacAddr &mac, const sMacAddr &parent_mac, beerocks::eTy
     return true;
 }
 
+/**
+* @brief set device id, where device id = device mac address
+*
+* @param device mac address
+* @param device index
+* @return true if id of device was successfully set, false otherwise
+*/
+bool db::dm_set_device_id(const std::string device_mac, const std::string device_index)
+{
+    if (!m_ambiorix_datamodel->set("Network.Device." + device_index, device_mac)) {
+        LOG(ERROR) << "Failed to add Network.Device.ID (ID = mac): " << device_mac;
+        return false;
+    }
+    return true;
+}
+
+bool db::add_node_gateway(const sMacAddr &mac, const sMacAddr &parent_mac,
+                          const sMacAddr &radio_identifier)
+{
+    if (!add_node(mac, parent_mac, beerocks::TYPE_GW, radio_identifier)) {
+        LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
+        return false;
+    }
+
+    auto index = m_ambiorix_datamodel->get_instance_index("Network.Device.[ID == '%s'].",
+                                                          tlvf::mac_to_string(mac));
+    LOG_IF(index, FATAL) << "Device with ID: " << tlvf::mac_to_string(mac)
+                         << " exists in the data model!";
+
+    index = m_ambiorix_datamodel->add_instance("Network.Device");
+    if (!index) {
+        LOG(ERROR) << "Failed to add instance for device, mac: " << tlvf::mac_to_string(mac);
+        return false;
+    }
+
+    if (!dm_set_device_id(tlvf::mac_to_string(mac), std::to_string(index))) {
+        return false;
+    }
+
+    return true;
+}
+
+bool db::add_node_ire(const sMacAddr &mac, const sMacAddr &parent_mac,
+                      const sMacAddr &radio_identifier)
+{
+    if (!add_node(mac, parent_mac, beerocks::TYPE_IRE, radio_identifier)) {
+        LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
+        return false;
+    }
+
+    auto index = m_ambiorix_datamodel->get_instance_index("Network.Device.[ID == '%s'].",
+                                                          tlvf::mac_to_string(mac));
+    LOG_IF(index, FATAL) << "Device with ID: " << tlvf::mac_to_string(mac)
+                         << " exists in the data model!";
+
+    if (!m_ambiorix_datamodel->add_instance("Network.Device")) {
+        LOG(ERROR) << "Failed to add instance for device, mac: " << tlvf::mac_to_string(mac);
+        return false;
+    }
+
+    if (!dm_set_device_id(tlvf::mac_to_string(mac), std::to_string(index))) {
+        return false;
+    }
+
+    return true;
+}
+
+bool db::add_node_wireless_bh(const sMacAddr &mac, const sMacAddr &parent_mac,
+                              const sMacAddr &radio_identifier)
+{
+    if (!add_node(mac, parent_mac, beerocks::TYPE_IRE_BACKHAUL, radio_identifier)) {
+        LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
+        return false;
+    }
+
+    auto index = m_ambiorix_datamodel->get_instance_index("Network.Device.[ID == '%s'].",
+                                                          tlvf::mac_to_string(mac));
+    LOG_IF(index, FATAL) << "Device with ID: " << tlvf::mac_to_string(mac)
+                         << " exists in the data model!";
+
+    if (!m_ambiorix_datamodel->add_instance("Network.Device")) {
+        LOG(ERROR) << "Failed to add instance for device, mac: " << tlvf::mac_to_string(mac);
+        return false;
+    }
+
+    if (!dm_set_device_id(tlvf::mac_to_string(mac), std::to_string(index))) {
+        return false;
+    }
+
+    return true;
+}
+
+bool db::add_node_wired_bh(const sMacAddr &mac, const sMacAddr &parent_mac,
+                           const sMacAddr &radio_identifier)
+{
+    if (!add_node(mac, parent_mac, beerocks::TYPE_ETH_SWITCH, radio_identifier)) {
+        LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
+        return false;
+    }
+
+    auto index = m_ambiorix_datamodel->get_instance_index("Network.Device.[ID == '%s'].",
+                                                          tlvf::mac_to_string(mac));
+    LOG_IF(index, FATAL) << "Device with ID: " << tlvf::mac_to_string(mac)
+                         << " exists in the data model!";
+
+    if (!m_ambiorix_datamodel->add_instance("Network.Device")) {
+        LOG(ERROR) << "Failed to add instance for device, mac: " << tlvf::mac_to_string(mac);
+        return false;
+    }
+
+    if (!dm_set_device_id(tlvf::mac_to_string(mac), std::to_string(index))) {
+        return false;
+    }
+
+    return true;
+}
+
+bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac,
+                        const sMacAddr &radio_identifier)
+{
+    if (!add_node(mac, parent_mac, beerocks::TYPE_SLAVE, radio_identifier)) {
+        LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
+        return false;
+    }
+
+    // TODO: Add radio to the controller data model via m_ambiorix_datamodel for defined device
+    return true;
+}
+
+bool db::add_node_client(const sMacAddr &mac, const sMacAddr &parent_mac,
+                         const sMacAddr &radio_identifier)
+{
+    if (!add_node(mac, parent_mac, beerocks::TYPE_CLIENT, radio_identifier)) {
+        LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
+        return false;
+    }
+
+    // TODO: Add STA to the controller data model via m_ambiorix_datamodel for connected station (WiFI client)
+    return true;
+}
+
 bool db::remove_node(const sMacAddr &mac)
 {
     int i;
@@ -207,6 +348,19 @@ bool db::remove_node(const sMacAddr &mac)
                 // if removed by ruid_key
             } else if (tlvf::mac_to_string(mac) == ruid_key) {
                 nodes[i].erase(node_mac);
+            }
+
+            auto index = m_ambiorix_datamodel->get_instance_index("Network.Device.[ID == '%s'].",
+                                                                  tlvf::mac_to_string(mac));
+            if (!index) {
+                LOG(ERROR) << "Failed to get Network.Device index for mac: "
+                           << tlvf::mac_to_string(mac);
+                return false;
+            }
+
+            if (!m_ambiorix_datamodel->remove_instance("Network.Device", index)) {
+                LOG(ERROR) << "Failed to remove Network.Device." << index << " instance.";
+                return false;
             }
 
             return true;
@@ -3041,7 +3195,7 @@ bool db::load_persistent_db_clients()
 
         /* TODO: aging validation against specific client configuration and unfriendly-device-max-timelife-delay:
          * 1. If client has timelife_delay_str param configured, it should be checked against it instead of global max-timelife-delay param.
-         * 
+         *
          * Clients are assumed friendly if not configured
          */
         bool is_friendly    = true;

@@ -40,7 +40,7 @@ class db {
 
     /*
         * none of the functions are thread-safe
-        * code that uses database should be wrapped with calls 
+        * code that uses database should be wrapped with calls
         * to lock() and unlock()
         */
 
@@ -192,7 +192,7 @@ public:
     //static
     /**
      * @brief Get string representation of node type.
-     * 
+     *
      * @param type Type of a node.
      * @return std::string the string representation of the type.
      */
@@ -200,7 +200,7 @@ public:
 
     /**
      * @brief Get db entry from MAC address.
-     * 
+     *
      * @param mac MAC address of a client.
      * @return std::string the string representation of the MAC address with ':' replaced with '_' removed.
      * @return An empty string is returned on failure.
@@ -209,7 +209,7 @@ public:
 
     /**
      * @brief Get client MAC address from db entry.
-     * 
+     *
      * @param db_entry Client entry name in persistent db.
      * @return sMacAddr MAC address of the client the db_entry is representing. On failure ZERO_MAC is returned.
      */
@@ -217,7 +217,7 @@ public:
 
     /**
      * @brief Get string representation of number of seconds in timestamp.
-     * 
+     *
      * @param timestamp A time-point.
      * @return std::string the string representation of the integer number of seconds in the timestamp.
      */
@@ -226,7 +226,7 @@ public:
 
     /**
      * @brief Translate an integer number of seconds to a timepoint.
-     * 
+     *
      * @param timestamp_sec Number of seconds in the timestamp.
      * @return std::chrono::system_clock::time_point a time-point representation of the number of seconds.
      */
@@ -239,11 +239,40 @@ public:
     bool has_node(sMacAddr mac);
 
     bool add_virtual_node(sMacAddr mac, sMacAddr real_node_mac);
-    bool add_node(const sMacAddr &mac,
-                  const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,
-                  beerocks::eType type             = beerocks::TYPE_CLIENT,
-                  const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
+
+    bool
+    add_node_gateway(const sMacAddr &mac,
+                     const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,
+                     const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
+    bool add_node_ire(const sMacAddr &mac,
+                      const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,
+                      const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
+    bool
+    add_node_wireless_bh(const sMacAddr &mac,
+                         const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,
+                         const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
+    bool
+    add_node_wired_bh(const sMacAddr &mac,
+                      const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,
+                      const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
+
+    bool add_node_radio(const sMacAddr &mac,
+                        const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,
+                        const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
+    bool add_node_client(const sMacAddr &mac,
+                         const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,
+                         const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
+
     bool remove_node(const sMacAddr &mac);
+
+    /**
+    * @brief set device id, where device id = device mac address
+    *
+    * @param device mac address
+    * @param device index
+    * @return true if id of device was successfully set, false otherwise
+    */
+    bool dm_set_device_id(const std::string device_mac, const std::string device_index);
 
     bool set_node_type(const std::string &mac, beerocks::eType type);
     beerocks::eType get_node_type(const std::string &mac);
@@ -413,7 +442,7 @@ public:
     std::string get_hostap_ssid(const std::string &mac);
     /**
      * @brief checks if vap name is on the steer list.
-     * 
+     *
      * @param[in] bssid vap mac address.
      * @return true if vap name is on the steer list.
      */
@@ -484,54 +513,54 @@ public:
     //
     /**
      * @brief Set the channel scan is enabled flag
-     * 
+     *
      * @param mac:    MAC address of radio
      * @param enable: enable flag to be set
      * @return true on success
-     * @return false on failure 
+     * @return false on failure
      */
     bool set_channel_scan_is_enabled(const sMacAddr &mac, bool enable);
 
     /**
      * @brief Get the channel scan is enabled flag
-     * 
-     * @param [out] mac: MAC address of radio 
+     *
+     * @param [out] mac: MAC address of radio
      * @return current channel scan enable flag
      */
     bool get_channel_scan_is_enabled(const sMacAddr &mac);
 
     /**
      * @brief Set the channel scan interval sec object
-     * 
-     * @param mac 
-     * @param interval_sec 
-     * @return true 
-     * @return false 
+     *
+     * @param mac
+     * @param interval_sec
+     * @return true
+     * @return false
      */
     bool set_channel_scan_interval_sec(const sMacAddr &mac, int interval_sec);
 
     /**
      * @brief Get the channel scan interval sec object
-     * 
-     * @param mac: MAC address of radio 
+     *
+     * @param mac: MAC address of radio
      * @return value o interval sec object
      */
     int get_channel_scan_interval_sec(const sMacAddr &mac);
 
     /**
      * @brief Set the channel scan in progress object
-     * 
+     *
      * @param mac:              MAC address of radio
      * @param scan_in_progress: Flag of current channel scan
      * @param single_scan:      Indicated if to use single scan or continuous
      * @return true on success
-     * @return false on failure 
+     * @return false on failure
      */
     bool set_channel_scan_in_progress(const sMacAddr &mac, bool scan_in_progress,
                                       const bool single_scan);
     /**
      * @brief Get the channel scan in progress object
-     * 
+     *
      * @param mac          MAC address of radio
      * @param single_scan: Indicated if to use single scan or continuous
      * @return Flag of current channel scan
@@ -540,12 +569,12 @@ public:
 
     /**
      * @brief Set the channel scan results status object
-     * 
+     *
      * @param mac:         MAC address of radio
      * @param error_code:  Current status of channel scan results
      * @param single_scan: Indicated if to use single scan or continuous
      * @return true on success
-     * @return false on failure 
+     * @return false on failure
      */
     bool set_channel_scan_results_status(const sMacAddr &mac,
                                          beerocks::eChannelScanStatusCode error_code,
@@ -553,7 +582,7 @@ public:
 
     /**
      * @brief Get the channel scan results status object
-     * 
+     *
      * @param mac:         MAC address of radio
      * @param single_scan: Indicated if to use single scan or continuous
      * @return Current status of channel scan results
@@ -563,19 +592,19 @@ public:
 
     /**
      * @brief Set the channel scan dwell time msec object
-     * 
+     *
      * @param mac:             MAC address of radio
      * @param dwell_time_msec: Dwell time of channel scan
      * @param single_scan:     Indicated if to use single scan or continuous
      * @return true on success
-     * @return false on failure 
+     * @return false on failure
      */
     bool set_channel_scan_dwell_time_msec(const sMacAddr &mac, int dwell_time_msec,
                                           bool single_scan);
 
     /**
      * @brief Get the channel scan dwell time msec object
-     * 
+     *
      * @param mac          MAC address of radio
      * @param single_scan: Indicated if to use single scan or continuous
      * @return Dwell time of channel scan
@@ -584,19 +613,19 @@ public:
 
     /**
      * @brief Set the channel scan pool object
-     * 
+     *
      * @param mac:          MAC address of radio
      * @param channel_pool: Channel pool of channel scan
      * @param single_scan:  Indicated if to use single scan or continuous
      * @return true on success
-     * @return false on failure 
+     * @return false on failure
      */
     bool set_channel_scan_pool(const sMacAddr &mac, const std::unordered_set<uint8_t> &channel_pool,
                                bool single_scan);
 
     /**
      * @brief Validate the channel scan pool
-     * 
+     *
      * @param mac:          MAC address of radio
      * @param channel_pool: Channel pool of channel scan
      * @return true if pool is valid
@@ -607,7 +636,7 @@ public:
 
     /**
      * @brief Get the channel scan pool object
-     * 
+     *
      * @param mac:         MAC address of radio
      * @param single_scan: Indicated if to use single scan or continuous
      * @return Channel pool of channel scan
@@ -616,7 +645,7 @@ public:
 
     /**
      * @brief Checks whather a given channel is in the currently set channel pool
-     * 
+     *
      * @param mac:         MAC address of radio
      * @param channel:     Given channel to be checked
      * @param single_scan: Indicated if to use single scan or continuous
@@ -627,32 +656,32 @@ public:
 
     /**
      * @brief Clears any existing results for the given channel scan
-     * 
+     *
      * @param mac:         MAC address of radio
      * @param single_scan: Indicated if to use single scan or continuous
      * @return true on success
-     * @return false on failure 
+     * @return false on failure
      */
     bool clear_channel_scan_results(const sMacAddr &mac, bool single_scan);
 
     /**
      * @brief Adds a new scan result to the current scan results
-     * 
+     *
      * @param mac:         MAC address of radio
      * @param scan_result: Scan result to be added to current scan results
      * @param single_scan: Indicated if to use single scan or continuous
      * @return true on success
-     * @return false on failure 
+     * @return false on failure
      */
     bool add_channel_scan_results(const sMacAddr &mac, const sChannelScanResults &scan_result,
                                   bool single_scan);
 
     /**
      * @brief Get the channel scan results object
-     * 
+     *
      * @param mac:         MAC address of radio
      * @param single_scan: Indicated if to use single scan or continuous
-     * @return const std::list<sChannelScanResults>& 
+     * @return const std::list<sChannelScanResults>&
      */
     const std::list<sChannelScanResults> &get_channel_scan_results(const sMacAddr &mac,
                                                                    bool single_scan);
@@ -662,7 +691,7 @@ public:
     //
     /**
      * @brief Check if client exists in persistent db.
-     * 
+     *
      * @param mac MAC address of a client.
      * @return true if client exists, false otherwise.
      */
@@ -670,7 +699,7 @@ public:
 
     /**
      * @brief Adds a client to the persistent db, if already exists, remove old entry and add a new one.
-     * 
+     *
      * @param mac MAC address of a client.
      * @param params An unordered map of key-value of client parameters and their values.
      * @return true on success, otherwise false.
@@ -679,7 +708,7 @@ public:
 
     /**
      * @brief Get the client's parameters last edit time.
-     * 
+     *
      * @param mac MAC address of a client.
      * @return Client persistent data last edit time (even if edit was done only to runtime-dbb and not saved to persistent db), or time_point::min() if not-configured or failure.
      */
@@ -687,7 +716,7 @@ public:
 
     /**
      * @brief Set the client's time-life delay.
-     * 
+     *
      * @param mac MAC address of a client.
      * @param time_life_delay_sec Client-specific aging time.
      * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
@@ -699,7 +728,7 @@ public:
 
     /**
      * @brief Get the client's time-life delay.
-     * 
+     *
      * @param mac MAC address of a client.
      * @return Client time-life delay, value of 0 means not-configured.
      */
@@ -707,7 +736,7 @@ public:
 
     /**
      * @brief Set the client's stay-on-initial-radio.
-     * 
+     *
      * @param mac MAC address of a client.
      * @param stay_on_initial_radio Enable client stay on the radio it initially connected to.
      * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
@@ -718,7 +747,7 @@ public:
 
     /**
      * @brief Get the client's stay-on-initial-radio.
-     * 
+     *
      * @param mac MAC address of a client.
      * @return Enable client stay on the radio it initially connected to.
      */
@@ -726,7 +755,7 @@ public:
 
     /**
      * @brief Set the client's initial-radio.
-     * 
+     *
      * @param mac MAC address of a client.
      * @param initial_radio_mac The MAC address of the radio that the client has initially connected to.
      * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
@@ -737,7 +766,7 @@ public:
 
     /**
      * @brief Get the client's initial-radio.
-     * 
+     *
      * @param mac MAC address of a client.
      * @return MAC adddress of the radio that the client has initially connected to.
      */
@@ -745,7 +774,7 @@ public:
 
     /**
      * @brief Set the client's selected-bands.
-     * 
+     *
      * @param mac MAC address of a client.
      * @param selected_bands Client selected band/bands. Possible values are bitwise options of eClientSelectedBands.
      * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
@@ -756,7 +785,7 @@ public:
 
     /**
      * @brief Get the client's selected-bands.
-     * 
+     *
      * @param mac MAC address of a client.
      * @return Selected band/bands. Possible values are bitwise options of eClientSelectedBands.
      */
@@ -764,7 +793,7 @@ public:
 
     /**
      * @brief Set the client's friendly status.
-     * 
+     *
      * @param mac MAC address of a client.
      * @param is_friendly Whather a client is friendly or not.
      * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
@@ -775,7 +804,7 @@ public:
 
     /**
      * @brief Get the client's friendly status.
-     * 
+     *
      * @param mac MAC address of a client.
      * @return Whather a client is friendly or not.
      */
@@ -783,7 +812,7 @@ public:
 
     /**
      * @brief Check if the radio's band is on one of the selected bands.
-     * 
+     *
      * @param client Client's mac address.
      * @param hostap MAC address of a radio.
      * @return true on success, otherwise false.
@@ -792,7 +821,7 @@ public:
 
     /**
      * @brief Clear client's persistent information.
-     * 
+     *
      * @param mac MAC address of a client.
      * @return true on success, otherwise false.
      */
@@ -800,7 +829,7 @@ public:
 
     /**
      * @brief Update client's persistent information with the runtime information.
-     * 
+     *
      * @param mac MAC address of a client.
      * @return true on success, otherwise false.
      */
@@ -810,14 +839,14 @@ public:
      * @brief Load all clients from persistent db.
      * Creates nodes for the clients in runtime-db and set persistent parameters values accordingly.
      * Aged Clients and Clients with invalid data are filtered-out and removed from persistent-DB.
-     * 
+     *
      * @return true on success, otherwise false.
      */
     bool load_persistent_db_clients();
 
     /**
      * @brief Get the clients with persistent data configured object
-     * 
+     *
      * @return std::deque<sMacAddr> containing mac addresses of clients with configured persistent data
      */
     std::deque<sMacAddr> get_clients_with_persistent_data_configured();
@@ -1100,13 +1129,27 @@ public:
 
 private:
     std::string local_slave_mac;
+
+    /**
+     * @brief Adds node to the database.
+     *
+     * @param mac MAC address of the node.
+     * @param parent_mac
+     * @param type The type of node used for node-type verification.
+     * @param radio_identifier
+     * @return std::shared_ptr<node> pointer to the node on success, nullptr otherwise.
+     */
+    bool add_node(const sMacAddr &mac,
+                  const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,
+                  beerocks::eType type             = beerocks::TYPE_CLIENT,
+                  const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
     std::shared_ptr<node> get_node(std::string key); //key can be <mac> or <al_mac>_<ruid>
     std::shared_ptr<node> get_node(sMacAddr mac);
     std::shared_ptr<node> get_node(sMacAddr al_mac, sMacAddr ruid);
     /**
      * @brief Returns the node object after verifing node type.
      * if node is found but type is not requested type a nullptr is returned.
-     * 
+     *
      * @param mac MAC address of the node.
      * @param type The type of node used for node-type verification.
      * @return std::shared_ptr<node> pointer to the node on success, nullptr otherwise.
@@ -1129,7 +1172,7 @@ private:
 
     /**
      * @brief Updates the client values in the persistent db.
-     * 
+     *
      * @param mac MAC address of a client.
      * @param values_map A map of client params and their values.
      * @return true on success, otherwise false.
@@ -1138,7 +1181,7 @@ private:
 
     /**
      * @brief Sets the node params (runtime db) from a param-value map.
-     * 
+     *
      * @param mac MAC address of node to be updated.
      * @param values_map A map of client params and their values.
      * @return true on success, otherwise false.
@@ -1147,7 +1190,7 @@ private:
 
     /**
      * @brief Adds a client entry to persistent_db with configured parameters and increments clients counter.
-     * 
+     *
      * @param entry_name Client entry name in persistent db.
      * @param values_map A map of client params and their values.
      * @return true on success, otherwise false.
@@ -1157,7 +1200,7 @@ private:
 
     /**
      * @brief Removes a client entry from persistent_db and decrements clients counter.
-     * 
+     *
      * @param entry_name Client entry name in persistent db.
      * @return true on success, otherwise false.
      */
@@ -1165,7 +1208,7 @@ private:
 
     /**
      * @brief Removes client with least timelife remaining from persistent db (with preference to disconnected clients).
-     * 
+     *
      * @param[in] client_to_skip A client mac that should not be selected as cadidate. This is to prevent currently added node as candidate.
      * @return true on success, otherwise false.
      */
@@ -1176,7 +1219,7 @@ private:
      * Preference is determined as follows:
      * - Prefer disconnected clients over connected ones.
      * - According to above, the client with least time left before aging.
-     
+
      * @param[in] client_to_skip A client mac that should not be selected as cadidate. This is to prevent currently added node as candidate.
      * @return sMacAddr mac of candidate client to be removed - if not found, string_utils::ZERO_MAC is returned.
      */
