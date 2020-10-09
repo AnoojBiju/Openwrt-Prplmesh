@@ -239,10 +239,30 @@ public:
     bool has_node(sMacAddr mac);
 
     bool add_virtual_node(sMacAddr mac, sMacAddr real_node_mac);
-    bool add_node(const sMacAddr &mac,
-                  const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,
-                  beerocks::eType type             = beerocks::TYPE_CLIENT,
-                  const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
+
+    bool
+    add_node_gateway(const sMacAddr &mac,
+                     const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,
+                     const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
+    bool add_node_ire(const sMacAddr &mac,
+                      const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,
+                      const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
+    bool
+    add_node_wireless_bh(const sMacAddr &mac,
+                         const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,
+                         const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
+    bool
+    add_node_wired_bh(const sMacAddr &mac,
+                      const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,
+                      const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
+
+    bool add_node_radio(const sMacAddr &mac,
+                        const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,
+                        const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
+    bool add_node_client(const sMacAddr &mac,
+                         const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,
+                         const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
+
     bool remove_node(const sMacAddr &mac);
 
     bool set_node_type(const std::string &mac, beerocks::eType type);
@@ -1100,6 +1120,20 @@ public:
 
 private:
     std::string local_slave_mac;
+
+    /**
+     * @brief Adds node to the database.
+     *
+     * @param mac MAC address of the node.
+     * @param parent_mac
+     * @param type The type of node used for node-type verification.
+     * @param radio_identifier
+     * @return std::shared_ptr<node> pointer to the node on success, nullptr otherwise.
+     */
+    bool add_node(const sMacAddr &mac,
+                  const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,
+                  beerocks::eType type             = beerocks::TYPE_CLIENT,
+                  const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
     std::shared_ptr<node> get_node(std::string key); //key can be <mac> or <al_mac>_<ruid>
     std::shared_ptr<node> get_node(sMacAddr mac);
     std::shared_ptr<node> get_node(sMacAddr al_mac, sMacAddr ruid);
