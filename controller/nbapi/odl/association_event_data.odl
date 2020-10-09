@@ -1,4 +1,12 @@
+
+%config {
+	define_behavior = { 
+		existing_object = "update"
+	};
+}
+
 %define {
+    object Controller {
     object AssociationEventData {
         %read-only string BSSID;  /* The MAC address of the logical BSS (BSSID) which is
                                      reporting the association event. */
