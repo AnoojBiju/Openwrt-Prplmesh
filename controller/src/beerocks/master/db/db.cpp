@@ -181,6 +181,22 @@ bool db::add_node(const sMacAddr &mac, const sMacAddr &parent_mac, beerocks::eTy
     return true;
 }
 
+/**
+* @brief set device id, where device id = device mac address
+*
+* @param device mac address
+* @param device index
+* @return true if id of device was successfully set, false otherwise
+*/
+bool db::dm_set_device_id(const std::string device_mac, const std::string device_index)
+{
+    if (!m_ambiorix_datamodel->set("Network.Device." + device_index, device_mac)) {
+        LOG(ERROR) << "Failed to add Network.Device.ID (ID = mac): " << device_mac;
+        return false;
+    }
+    return true;
+}
+
 bool db::add_node_gateway(const sMacAddr &mac, const sMacAddr &parent_mac,
                           const sMacAddr &radio_identifier)
 {
@@ -194,8 +210,13 @@ bool db::add_node_gateway(const sMacAddr &mac, const sMacAddr &parent_mac,
     LOG_IF(index, FATAL) << "Device with ID: " << tlvf::mac_to_string(mac)
                          << " exists in the data model!";
 
-    if (!m_ambiorix_datamodel->add_instance("Network.Device")) {
+    index = m_ambiorix_datamodel->add_instance("Network.Device");
+    if (!index) {
         LOG(ERROR) << "Failed to add instance for device, mac: " << tlvf::mac_to_string(mac);
+        return false;
+    }
+
+    if (!dm_set_device_id(tlvf::mac_to_string(mac), std::to_string(index))) {
         return false;
     }
 
@@ -220,6 +241,10 @@ bool db::add_node_ire(const sMacAddr &mac, const sMacAddr &parent_mac,
         return false;
     }
 
+    if (!dm_set_device_id(tlvf::mac_to_string(mac), std::to_string(index))) {
+        return false;
+    }
+
     return true;
 }
 
@@ -240,6 +265,11 @@ bool db::add_node_wireless_bh(const sMacAddr &mac, const sMacAddr &parent_mac,
         LOG(ERROR) << "Failed to add instance for device, mac: " << tlvf::mac_to_string(mac);
         return false;
     }
+
+    if (!dm_set_device_id(tlvf::mac_to_string(mac), std::to_string(index))) {
+        return false;
+    }
+
     return true;
 }
 
@@ -258,6 +288,10 @@ bool db::add_node_wired_bh(const sMacAddr &mac, const sMacAddr &parent_mac,
 
     if (!m_ambiorix_datamodel->add_instance("Network.Device")) {
         LOG(ERROR) << "Failed to add instance for device, mac: " << tlvf::mac_to_string(mac);
+        return false;
+    }
+
+    if (!dm_set_device_id(tlvf::mac_to_string(mac), std::to_string(index))) {
         return false;
     }
 
