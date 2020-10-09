@@ -181,6 +181,77 @@ bool db::add_node(const sMacAddr &mac, const sMacAddr &parent_mac, beerocks::eTy
     return true;
 }
 
+bool db::add_node_gateway(const sMacAddr &mac, const sMacAddr &radio_identifier)
+{
+    if (!add_node(mac, network_utils::ZERO_MAC, beerocks::TYPE_GW, radio_identifier)) {
+        LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
+        return false;
+    }
+
+    // TODO: Add device to the controller data model via m_ambiorix_datamodel for controller agent
+    return true;
+}
+
+bool db::add_node_ire(const sMacAddr &mac, const sMacAddr &parent_mac,
+                      const sMacAddr &radio_identifier)
+{
+    if (!add_node(mac, parent_mac, beerocks::TYPE_IRE, radio_identifier)) {
+        LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
+        return false;
+    }
+
+    // TODO: Add device to the controller data model via m_ambiorix_datamodel for controller agent
+    return true;
+}
+
+bool db::add_node_wireless_bh(const sMacAddr &mac, const sMacAddr &parent_mac,
+                              const sMacAddr &radio_identifier)
+{
+    if (!add_node(mac, parent_mac, beerocks::TYPE_IRE_BACKHAUL, radio_identifier)) {
+        LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
+        return false;
+    }
+
+    // TODO: Add device to the controller data model via m_ambiorix_datamodel for Wireless BH agent
+    return true;
+}
+
+bool db::add_node_wired_bh(const sMacAddr &mac, const sMacAddr &parent_mac,
+                           const sMacAddr &radio_identifier)
+{
+    if (!add_node(mac, parent_mac, beerocks::TYPE_ETH_SWITCH, radio_identifier)) {
+        LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
+        return false;
+    }
+
+    // TODO: Add node to the controller data model via m_ambiorix_datamodel for Wired BH agent
+    return true;
+}
+
+bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac,
+                        const sMacAddr &radio_identifier)
+{
+    if (!add_node(mac, parent_mac, beerocks::TYPE_SLAVE, radio_identifier)) {
+        LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
+        return false;
+    }
+
+    // TODO: Add radio to the controller data model via m_ambiorix_datamodel for defined device
+    return true;
+}
+
+bool db::add_node_client(const sMacAddr &mac, const sMacAddr &parent_mac,
+                         const sMacAddr &radio_identifier)
+{
+    if (!add_node(mac, parent_mac, beerocks::TYPE_CLIENT, radio_identifier)) {
+        LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
+        return false;
+    }
+
+    // TODO: Add STA to the controller data model via m_ambiorix_datamodel for connected station (WiFI client)
+    return true;
+}
+
 bool db::remove_node(const sMacAddr &mac)
 {
     int i;
