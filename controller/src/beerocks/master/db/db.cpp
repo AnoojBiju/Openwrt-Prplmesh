@@ -3045,45 +3045,95 @@ bool db::load_persistent_db_clients()
         return false;
     }
 
-    uint16_t add_error_count = 0, set_error_count = 0, set_error_mac_count = 0;
+    // Counters for client nodes-add success/fail (filtered-out client entries are not counted)
+    uint16_t add_node_error_count                        = 0;
+    uint16_t set_node_error_count                        = 0;
+    uint16_t clients_added_no_error                      = 0;
+    uint16_t clients_not_added_or_removed_due_to_full_db = 0;
 
-    // move it to a vector so it can be sorted properly
-    std::vector<std::pair<std::string, std::unordered_map<std::string, std::string>>>
-        vector_of_clients;
+    // Add clients to runtime db - invalid client (no timestamp or aged entries) are filtered out
+    for (const auto &client : clients) {
+        const auto &client_entry = client.first;
+        auto &client_data_map    = client.second;
 
-    // loop through clients, then insert the rightful data to the back of vector_of_clients
-    // after the checks for null mac and wrong timestamp data has been verified as false
-    // it'll will be removed as well as not getting further down this function pipeline.
-    std::for_each(clients.begin(), clients.end(),
-                  [&](const std::pair<std::string, ValuesMap> &client_pair) {
-                      auto client_entry = client_pair.first;
-                      auto client_mac   = client_db_entry_to_mac(client_entry);
-                      auto time         = get_client_remaining_sec(client_pair);
-                      bool add          = true;
+        // Add node for client and fill with persistent data.
+        auto add_new_client_with_persistent_data_to_nodes_list =
+            [&](const sMacAddr &client_mac, const ValuesMap values_map) -> bool {
+            // Add client node with defaults and in default location
+            if (!add_node(client_mac)) {
+                LOG(ERROR) << "Failed to add client node for client_entry " << client_entry;
+                ++add_node_error_count;
+                return false;
+            }
 
-                      // Clients with invalid mac are invalid.
-                      if (client_mac == network_utils::ZERO_MAC) {
-                          LOG(DEBUG) << "Invalid entry - not a valid mac as client entry -"
-                                     << "removing the data." << client_entry;
-                          set_error_mac_count++;
-                          bpl::db_remove_entry(type_to_string(beerocks::eType::TYPE_CLIENT),
-                                               client_pair.first);
-                          add = false;
-                      }
+            // Set clients persistent information in the node
+            if (!set_node_params_from_map(client_mac, values_map)) {
+                LOG(ERROR) << "Failed to set client " << client_mac
+                           << " node in runtime db with values read from persistent db: "
+                           << values_map;
+                ++set_node_error_count;
+                return false;
+            }
 
-                      // Client is still alive?
-                      if (time == 0) {
-                          LOG(DEBUG) << "Filtering aged client data - client entry -"
-                                     << "removing the data." << client_entry;
-                          bpl::db_remove_entry(type_to_string(beerocks::eType::TYPE_CLIENT),
-                                               client_pair.first);
-                          add = false;
-                      }
+            LOG(DEBUG) << "Client " << client_mac
+                       << " added successfully to node-list with parameters: " << values_map;
 
-                      if (add) {
-                          vector_of_clients.push_back(client_pair);
-                      }
-                  });
+            ++clients_added_no_error;
+
+            // Update the number of clients in persistent DB
+            ++m_persistent_db_clients_count;
+            return true;
+        };
+
+        static const auto type_client_str = db::type_to_string(beerocks::eType::TYPE_CLIENT);
+
+        // Clients with invalid mac are invalid.
+        // Invalid clients are removed from persistent db and not added to runtime db
+        auto client_mac = client_db_entry_to_mac(client_entry);
+        if (client_mac == network_utils::ZERO_MAC) {
+            LOG(ERROR) << "Invalid entry - not a valid mac as client entry " << client_entry;
+            // Calling BPL API directly as there's no need to increment/decrement counter at this point
+            if (!beerocks::bpl::db_remove_entry(type_client_str, client_entry)) {
+                // Failure to remove the client will not fail the adding rest of valid client
+                LOG(ERROR) << "Failed to remove client entry " << client_entry;
+            }
+            continue;
+        }
+
+        // Clients without timestamp are invalid.
+        // Invalid clients are removed from persistent db and not added to runtime db
+        auto timestamp_it = client_data_map.find(TIMESTAMP_STR);
+        if (timestamp_it == client_data_map.end()) {
+            LOG(ERROR) << "Invalid entry - no timestamp is configured for client entry "
+                       << client_entry;
+            // Calling BPL API directly as there's no need to increment/decrement counter at this point
+            if (!beerocks::bpl::db_remove_entry(type_client_str, client_entry)) {
+                // Failure to remove the client will not fail the adding rest of valid client
+                LOG(ERROR) << "Failed to remove client entry " << client_entry;
+            }
+            continue;
+        }
+
+        // Save current time as a separate variable for fair comparison of current client
+        // remaining-timelife-delay against a candidate for removal in case the DB is full.
+        auto now = std::chrono::system_clock::now();
+
+        // Aged clients are removed from persistent db and not added to runtime db
+        auto timestamp_sec = beerocks::string_utils::stoi(timestamp_it->second);
+        auto timestamp     = db::timestamp_from_seconds(timestamp_sec);
+        auto client_timelife_passed_sec =
+            std::chrono::duration_cast<std::chrono::seconds>(now - timestamp).count();
+
+        /* TODO: aging validation against specific client configuration and unfriendly-device-max-timelife-delay:
+         * 1. If client has timelife_delay_str param configured, it should be checked against it instead of global max-timelife-delay param.
+         *
+         * Clients are assumed friendly if not configured
+         */
+        bool is_friendly    = true;
+        auto is_friendly_it = client_data_map.find(IS_FRIENDLY_STR);
+        if (is_friendly_it != client_data_map.end()) {
+            is_friendly = is_friendly_it->second == std::to_string(true);
+        }
 
     unsigned int diff = 0;
     // If DB is too big, we need to delete those who're close to the end of their lifespan
