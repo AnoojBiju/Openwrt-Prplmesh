@@ -492,11 +492,15 @@ bool base_wlan_hal_dwpal::dwpal_send_cmd(const std::string &cmd, parsed_multilin
 bool base_wlan_hal_dwpal::dwpal_send_cmd(const std::string &cmd, int vap_id)
 {
     int result;
-    int try_cnt = 0;
+    int try_cnt   = 0;
+    int ctx_index = 0;
 
     auto buffer         = m_wpa_ctrl_buffer;
     auto buff_size_copy = m_wpa_ctrl_buffer_size;
-    int ctx_index       = vap_id + 1;
+
+    if (vap_id != beerocks::IFACE_RADIO_ID) {
+        ctx_index = vap_id + 1;
+    }
 
     if (ctx_index < 0 || ctx_index >= beerocks::IFACE_TOTAL_VAPS) {
         LOG(ERROR) << "ctx_index " << ctx_index << " is out of bounds";
