@@ -1241,9 +1241,9 @@ int bml_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beerocks_
                         m_client->initial_radio);
             // TODO: add stay_on_selected_device to BML_CLIENT when support is added
             //m_client->stay_on_selected_device = response->client().stay_on_selected_device;
-            m_client->selected_bands       = response->client().selected_bands;
-            m_client->single_band          = response->client().single_band;
-            m_client->time_life_delay_days = response->client().time_life_delay_days;
+            m_client->selected_bands          = response->client().selected_bands;
+            m_client->single_band             = response->client().single_band;
+            m_client->time_life_delay_minutes = response->client().time_life_delay_minutes;
 
             //Resolve promise to "true"
             m_prmClientGet->set_value(true);
