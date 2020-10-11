@@ -232,9 +232,9 @@ sNodeHostap:
   driver_version:
     _type: char
     _length: ["beerocks::message::WIFI_DRIVER_VER_LENGTH"]
-  zwdfs: 
+  zwdfs:
     _type: uint8_t
-    _comment: Boolean. When set to 'true', the radio can be used only for zwdfs purpose. 
+    _comment: Boolean. When set to 'true', the radio can be used only for zwdfs purpose.
 
 sVapsList:
   _type: struct
@@ -999,7 +999,7 @@ sClient:
     _type: int8_t
     _value: -1
     _comment: 1 for true, 0 for false, -1 for "not configured".
-  time_life_delay_days:
+  time_life_delay_minutes:
     _type: int32_t
     _value: -1
     _comment: |
