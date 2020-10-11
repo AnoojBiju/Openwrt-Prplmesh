@@ -29,13 +29,14 @@ void persistent_database_aging_operation::periodic_operation_function()
     std::copy_if(
         clients.begin(), clients.end(), aged_clients.begin(), [&](const sMacAddr &client_mac) {
             const auto max_timelife_delay_sec =
-                std::chrono::seconds(m_database.config.max_timelife_delay_days * 24 * 3600);
+                std::chrono::seconds(m_database.config.max_timelife_delay_minutes * 60);
             const auto unfriendly_device_max_timelife_delay_sec = std::chrono::seconds(
-                m_database.config.unfriendly_device_max_timelife_delay_days * 24 * 3600);
+                m_database.config.unfriendly_device_max_timelife_delay_minutes * 60);
             // Client timelife delay
             // If a client has a predetermined timelife delay use that.
             // Otherwise use the Max timelife delay.
-            auto timelife_delay = m_database.get_client_time_life_delay(client_mac);
+            auto timelife_delay = std::chrono::duration_cast<std::chrono::seconds>(
+                m_database.get_client_time_life_delay(client_mac));
             if (timelife_delay == std::chrono::seconds::zero()) {
                 timelife_delay =
                     m_database.get_client_is_friendly(client_mac) == eTriStateBool::FALSE
