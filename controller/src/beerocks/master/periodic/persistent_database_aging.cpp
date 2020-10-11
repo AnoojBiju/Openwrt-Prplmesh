@@ -34,11 +34,12 @@ void persistent_database_aging_operation::periodic_operation_function()
                 m_database.config.unfriendly_device_max_timelife_delay_days * 24 * 3600);
             // Client timelife delay
             // If a client has a predetermined timelife delay use that.
-            // Otherwise use the Max timelife delay.
+            // Otherwise use the Max timelife delay/unfriendly_device_max_timelife_delay_sec according
+            // to the client's unfriendliness status.
             auto timelife_delay = m_database.get_client_time_life_delay(client_mac);
             if (timelife_delay == std::chrono::seconds::zero()) {
                 timelife_delay =
-                    m_database.get_client_is_friendly(client_mac) == eTriStateBool::FALSE
+                    (m_database.get_client_is_unfriendly(client_mac) == eTriStateBool::TRUE)
                         ? unfriendly_device_max_timelife_delay_sec
                         : max_timelife_delay_sec;
             }
