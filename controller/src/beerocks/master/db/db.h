@@ -1263,6 +1263,14 @@ private:
      */
     bool dm_add_device_element(const sMacAddr &mac);
 
+    /**
+     * @brief Prepares path to the Radio by mac.(ex: "Network.Device.1.Radio.1.")
+     *
+     * @param[in] mac Mac address for the Radio.
+     * @return Correct Radio path, otherwise empty string.
+     */
+    std::string dm_prepare_radio_path(const sMacAddr &mac);
+
     int network_optimization_task_id           = -1;
     int channel_selection_task_id              = -1;
     int bml_task_id                            = -1;
