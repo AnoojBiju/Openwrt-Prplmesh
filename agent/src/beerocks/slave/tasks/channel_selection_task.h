@@ -27,6 +27,24 @@ public:
                      std::shared_ptr<beerocks_header> beerocks_header) override;
 
 private:
+    /**
+     * @brief Contain the current channel selection which has chosen by the task.
+     * 
+     * From the channel and the bandwidth, a center channel can be evaluated by a look-up on 
+     * 'son::wireless_utils::channels_table_5g'
+     * 
+     * @param channel Chosen channel.
+     * @param secondary_channel Chosen secondary channel. Relevant only when the bandwidth is 80+80.
+     * @param bw Bandwidth of the channel.
+     * @param dfs_state DFS state for knowing if the channel is DFS channel or not.
+     */
+    struct sChannelSelection {
+        uint8_t channel;
+        uint8_t secondary_channel;
+        eWiFiBandwidth bw;
+        beerocks_message::eDfsState dfs_state;
+    } m_channel_selection;
+
     void handle_channel_selection_request(ieee1905_1::CmduMessageRx &cmdu_rx,
                                           const sMacAddr &src_mac);
     void handle_slave_channel_selection_response(ieee1905_1::CmduMessageRx &cmdu_rx,
