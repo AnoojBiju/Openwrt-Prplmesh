@@ -281,6 +281,17 @@ typedef struct {
 } sACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION;
 
 typedef struct {
+    uint8_t channel;
+    uint8_t secondary_channel;
+    beerocks::eWiFiBandwidth bandwidth;
+    uint16_t cac_duration_sec;
+} sCacStartedNotificationParams;
+
+typedef struct {
+    sCacStartedNotificationParams params;
+} sACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION;
+
+typedef struct {
     uint32_t frequency;
     uint8_t channel;
     uint8_t bandwidth; //beerocks::eWiFiBandwidth
