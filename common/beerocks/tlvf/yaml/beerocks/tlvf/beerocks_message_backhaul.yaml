@@ -1,6 +1,9 @@
 #
 ---
-_include: beerocks/tlvf/beerocks_message_common.h
+_include: {
+  beerocks/tlvf/beerocks_message_common.h,
+  structs/sCacStartedNotificationParams.h
+}
 _namespace: beerocks_message
 _multi_class: True
 _multi_class_auto_insert:
@@ -133,3 +136,36 @@ cACTION_BACKHAUL_CHANNELS_LIST_REQUEST:
 
 cACTION_BACKHAUL_CHANNELS_LIST_RESPONSE:
   _type: class
+
+cACTION_BACKHAUL_HOSTAP_CHANNEL_SWITCH_ACS_START:
+  _type: class
+  cs_params: sApChannelSwitch
+  tx_limit: int8_t
+  tx_limit_valid: uint8_t #bool
+
+cACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION:
+  _type: class
+  cs_params: sApChannelSwitch
+
+cACTION_BACKHAUL_HOSTAP_CSA_ERROR_NOTIFICATION:
+  _type: class
+  cs_params: sApChannelSwitch
+
+cACTION_BACKHAUL_HOSTAP_DFS_CAC_STARTED_NOTIFICATION:
+  _type: class
+  params: sCacStartedNotificationParams
+
+cACTION_BACKHAUL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION:
+  _type: class
+  params: sDfsCacCompleted
+
+cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST:
+  _type: class
+  ant_switch_on: uint8_t #bool
+  channel: uint8_t
+  bandwidth: beerocks::eWiFiBandwidth
+  center_frequency: uint32_t
+
+cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE:
+  _type: class
+  success: uint8_t #bool
