@@ -23,7 +23,7 @@ class ChannelSelectionTask : public Task {
 public:
     ChannelSelectionTask(backhaul_manager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx);
 
-    bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac,
+    bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac, Socket *sd,
                      std::shared_ptr<beerocks_header> beerocks_header) override;
 
 private:
@@ -37,31 +37,32 @@ private:
      * 
      * @param[in] cmdu_rx Received CMDU.
      * @param[in] src_mac MAC address of the message sender.
+     * @param[in] sd Socket of the thread which has sent the message.
      * @param[in] beerocks_header Shared pointer to beerocks header.
      * @return true, if the message has been handled, otherwise false.
      */
     bool handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac,
-                                std::shared_ptr<beerocks_header> beerocks_header);
+                                Socket *sd, std::shared_ptr<beerocks_header> beerocks_header);
 
     /* Vendor specific message handlers: */
 
-    void handle_vs_csa_notification(ieee1905_1::CmduMessageRx &cmdu_rx,
+    void handle_vs_csa_notification(ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
                                     std::shared_ptr<beerocks_header> beerocks_header);
 
-    void handle_vs_csa_error_notification(ieee1905_1::CmduMessageRx &cmdu_rx,
+    void handle_vs_csa_error_notification(ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
                                           std::shared_ptr<beerocks_header> beerocks_header);
 
-    void handle_vs_cac_started_notification(ieee1905_1::CmduMessageRx &cmdu_rx,
+    void handle_vs_cac_started_notification(ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
                                             std::shared_ptr<beerocks_header> beerocks_header);
 
-    void handle_vs_dfs_cac_completed_notification(ieee1905_1::CmduMessageRx &cmdu_rx,
+    void handle_vs_dfs_cac_completed_notification(ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
                                                   std::shared_ptr<beerocks_header> beerocks_header);
 
-    void handle_vs_channels_list_notification(ieee1905_1::CmduMessageRx &cmdu_rx,
+    void handle_vs_channels_list_notification(ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
                                               std::shared_ptr<beerocks_header> beerocks_header);
 
     void
-    handle_vs_zwdfs_ant_channel_switch_response(ieee1905_1::CmduMessageRx &cmdu_rx,
+    handle_vs_zwdfs_ant_channel_switch_response(ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
                                                 std::shared_ptr<beerocks_header> beerocks_header);
 
     struct sChannelSelectionResponse {
