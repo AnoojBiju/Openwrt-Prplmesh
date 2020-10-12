@@ -12,12 +12,27 @@
 
 #include <beerocks/tlvf/beerocks_message_backhaul.h>
 
+#define ZWDFS_FSM_MOVE_STATE(new_state)                                                            \
+    ({                                                                                             \
+        LOG(TRACE) << "CHANNEL_SELECTION ZWDFS FSM: " << m_zwdfs_states_string.at(m_zwdfs_state)   \
+                   << " --> " << m_zwdfs_states_string.at(new_state);                              \
+        m_zwdfs_state = new_state;                                                                 \
+        zwdfs_fsm();                                                                               \
+    })
+
 namespace beerocks {
 
 ChannelSelectionTask::ChannelSelectionTask(backhaul_manager &btl_ctx,
                                            ieee1905_1::CmduMessageTx &cmdu_tx)
     : Task(eTaskType::CHANNEL_SELECTION), m_btl_ctx(btl_ctx), m_cmdu_tx(cmdu_tx)
 {
+}
+
+void ChannelSelectionTask::work()
+{
+    if (zwdfs_in_process()) {
+        zwdfs_fsm();
+    }
 }
 
 bool ChannelSelectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac,
@@ -287,6 +302,50 @@ Socket *ChannelSelectionTask::front_iface_name_to_socket(const std::string &ifac
         }
     }
     return nullptr;
+}
+
+void ChannelSelectionTask::zwdfs_fsm()
+{
+    bool fsm_continue = false;
+    do {
+        switch (m_zwdfs_state) {
+        case eZwdfsState::NOT_RUNNING: {
+            break;
+        }
+        case eZwdfsState::REQUEST_CHANNELS_LIST: {
+            break;
+        }
+        case eZwdfsState::WAIT_FOR_CHANNELS_LIST: {
+            break;
+        }
+        case eZwdfsState::CHOOSE_NEXT_BEST_CHANNEL: {
+            break;
+        }
+        case eZwdfsState::ZWDFS_SWITCH_ANT_SET_CHANNEL_REQUEST: {
+            break;
+        }
+        case eZwdfsState::WAIT_FOR_ZWDFS_CAC_STARTED: {
+            break;
+        }
+        case eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED: {
+            break;
+        }
+        case eZwdfsState::SWITCH_CHANNEL_PRIMARY_RADIO: {
+            break;
+        }
+        case eZwdfsState::WAIT_FOR_PRIMARY_RADIO_CSA_NOTIFICATION: {
+            break;
+        }
+        case eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST: {
+            break;
+        }
+        case eZwdfsState::WAIT_FOR_ZWDFS_SWITCH_ANT_OFF_RESPONSE: {
+            break;
+        }
+        default:
+            break;
+        }
+    } while (fsm_continue);
 }
 
 bool ChannelSelectionTask::initialize_zwdfs_interface_name()
