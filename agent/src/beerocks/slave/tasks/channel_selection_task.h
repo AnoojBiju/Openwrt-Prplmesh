@@ -14,6 +14,8 @@
 #include <tlvf/CmduMessageTx.h>
 #include <tlvf/wfa_map/tlvChannelSelectionResponse.h>
 
+#include <beerocks/tlvf/enums/eDfsState.h>
+
 namespace beerocks {
 
 // Forward decleration for backhaul_manager context saving
@@ -27,6 +29,24 @@ public:
                      std::shared_ptr<beerocks_header> beerocks_header) override;
 
 private:
+    /**
+     * @brief Contain the current channel selection which has chosen by the task.
+     * 
+     * From the channel and the bandwidth, a center channel can be evaluated by a look-up on 
+     * 'son::wireless_utils::channels_table_5g'
+     * 
+     * @param channel Chosen channel.
+     * @param secondary_channel Chosen secondary channel. Relevant only when the bandwidth is 80+80.
+     * @param bw Bandwidth of the channel.
+     * @param dfs_state DFS state for knowing if the channel is DFS channel or not.
+     */
+    struct sChannelSelection {
+        uint8_t channel;
+        uint8_t secondary_channel;
+        eWiFiBandwidth bw;
+        beerocks_message::eDfsState dfs_state;
+    } m_channel_selection;
+
     void handle_channel_selection_request(ieee1905_1::CmduMessageRx &cmdu_rx,
                                           const sMacAddr &src_mac);
     void handle_slave_channel_selection_response(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -65,6 +85,15 @@ private:
     handle_vs_zwdfs_ant_channel_switch_response(ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
                                                 std::shared_ptr<beerocks_header> beerocks_header);
 
+    /**
+     * @brief The function initialize the class members 'm_zwdfs_iface' to the zwdfs radio
+     * interface name. 
+     * 
+     * @return true on success, otherwise false.
+     */
+    bool initialize_zwdfs_interface_name();
+    std::string m_zwdfs_iface;
+    std::string m_zwdfs_primary_radio_iface;
     /* Helper functions */
     const std::string socket_to_front_iface_name(const Socket *sd);
     Socket *front_iface_name_to_socket(const std::string &iface_name);
