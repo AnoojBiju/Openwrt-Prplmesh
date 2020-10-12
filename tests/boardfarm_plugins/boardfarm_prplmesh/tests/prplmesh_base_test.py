@@ -233,3 +233,9 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
                                       agent.radios[0].mac,
                                       "Wrong bssid in report")
         return report
+
+    def get_device_by_name(self, device_name: str) -> env.ALEntity:
+        try:
+            return [_.obj for _ in self.dev.devices if _.obj.name == device_name][0]
+        except IndexError as ae:
+            raise SkipTest(ae)
