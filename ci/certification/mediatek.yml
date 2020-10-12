@@ -98,6 +98,15 @@ MAP-4.8.1_ETH_FH5GL:mediatek:
 MAP-4.8.1_ETH_FH5GH:mediatek:
   extends: .certification-mediatek
 
+MAP-4.8.2_ETH_FH24G:mediatek:
+  extends: .certification-mediatek
+
+MAP-4.8.2_ETH_FH5GL:mediatek:
+  extends: .certification-mediatek
+
+MAP-4.8.2_ETH_FH5GH:mediatek:
+  extends: .certification-mediatek
+
 MAP-4.8.5_ETH_FH24G:mediatek:
   extends: .certification-mediatek
 

@@ -95,6 +95,15 @@ MAP-4.7.8_BHWIFI_FH5GL:qualcomm:
 MAP-4.7.8_BHWIFI_FH5GH:qualcomm:
   extends: .certification-qualcomm
 
+MAP-4.8.2_BHWIFI_FH24G:qualcomm:
+  extends: .certification-qualcomm
+
+MAP-4.8.2_BHWIFI_FH5GL:qualcomm:
+  extends: .certification-qualcomm
+
+MAP-4.8.2_BHWIFI_FH5GH:qualcomm:
+  extends: .certification-qualcomm
+
 MAP-4.8.3_ETH_FH5GL:qualcomm:
   extends: .certification-qualcomm
 
