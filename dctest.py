@@ -114,7 +114,10 @@ class Services:
         for d in os.listdir('logs'):
             if d.startswith(search_prefix):
                 suffix = d[len(search_prefix):]
-                isuffix = int(suffix)
+                try:
+                    isuffix = int(suffix)
+                except ValueError:
+                    isuffix = 0
                 if isuffix > last_id:
                     last_id = isuffix
         if last_id == 0:
