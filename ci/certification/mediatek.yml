@@ -35,6 +35,24 @@ MAP-4.6.1_ETH:mediatek:
 MAP-4.6.1_BHWIFI:mediatek:
   extends: .certification-mediatek
 
+MAP-4.6.2_ETH_FH24G:mediatek:
+  extends: .certification-mediatek
+
+MAP-4.6.2_ETH_FH5GL:mediatek:
+  extends: .certification-mediatek
+
+MAP-4.6.2_ETH_FH5GH:mediatek:
+  extends: .certification-mediatek
+
+MAP-4.6.2_BHWIFI_FH24G:mediatek:
+  extends: .certification-mediatek
+
+MAP-4.6.2_BHWIFI_FH5GL:mediatek:
+  extends: .certification-mediatek
+
+MAP-4.6.2_BHWIFI_FH5GH:mediatek:
+  extends: .certification-mediatek
+
 MAP-4.7.5_ETH_FH24G:mediatek:
   extends: .certification-mediatek
 
@@ -78,15 +96,6 @@ MAP-4.8.1_ETH_FH5GL:mediatek:
   extends: .certification-mediatek
 
 MAP-4.8.1_ETH_FH5GH:mediatek:
-  extends: .certification-mediatek
-
-MAP-4.8.1_BHWIFI_FH24G:mediatek:
-  extends: .certification-mediatek
-
-MAP-4.8.1_BHWIFI_FH5GL:mediatek:
-  extends: .certification-mediatek
-
-MAP-4.8.1_BHWIFI_FH5GH:mediatek:
   extends: .certification-mediatek
 
 MAP-4.8.5_ETH_FH24G:mediatek:

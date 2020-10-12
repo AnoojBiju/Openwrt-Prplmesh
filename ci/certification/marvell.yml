@@ -20,25 +20,16 @@ MAP-4.5.1_ETH:marvell:
 MAP-4.5.1_BHWIFI:marvell:
   extends: .certification-marvell
 
-MAP-4.6.2_ETH_FH24G:marvell:
-  extends: .certification-marvell
-
-MAP-4.6.2_ETH_FH5GL:marvell:
-  extends: .certification-marvell
-
-MAP-4.6.2_ETH_FH5GH:marvell:
-  extends: .certification-marvell
-
-MAP-4.6.2_BHWIFI_FH24G:marvell:
-  extends: .certification-marvell
-
-MAP-4.6.2_BHWIFI_FH5GL:marvell:
-  extends: .certification-marvell
-
-MAP-4.6.2_BHWIFI_FH5GH:marvell:
-  extends: .certification-marvell
-
 MAP-4.7.3_ETH:marvell:
+  extends: .certification-marvell
+
+MAP-4.8.1_BHWIFI_FH24G:marvell:
+  extends: .certification-marvell
+
+MAP-4.8.1_BHWIFI_FH5GL:marvell:
+  extends: .certification-marvell
+
+MAP-4.8.1_BHWIFI_FH5GH:marvell:
   extends: .certification-marvell
 
 MAP-4.8.2_ETH_FH24G:marvell:
