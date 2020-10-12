@@ -36,6 +36,8 @@ public:
     virtual bool remove_instance(const std::string &relative_path, uint32_t index) = 0;
     virtual uint32_t get_instance_index(const std::string &specific_path,
                                         const std::string &key)                    = 0;
+    virtual uint32_t get_parent_instance_index(const std::string &specific_path,
+                                               const std::string &key)             = 0;
 };
 
 inline Ambiorix::~Ambiorix() {}

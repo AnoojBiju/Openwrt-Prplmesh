@@ -103,6 +103,16 @@ public:
      */
     uint32_t get_instance_index(const std::string &specific_path, const std::string &key) override;
 
+    /**
+     * @brief Get parent instance index by child object and key.
+     *
+     * @param specific_path Path to the child object path (ex: "Device.*.Radio.[ID == '%s']").
+     * @param key String which contains ID, for example it can be a MAC address.
+     * @return Instance index on success and 0 otherwise.
+     */
+    uint32_t get_parent_instance_index(const std::string &specific_path,
+                                       const std::string &key) override;
+
 private:
     // Methods
 

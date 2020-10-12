@@ -484,6 +484,32 @@ uint32_t AmbiorixImpl::get_instance_index(const std::string &specific_path, cons
     return index;
 }
 
+uint32_t AmbiorixImpl::get_parent_instance_index(const std::string &specific_path,
+                                                 const std::string &key)
+{
+    uint32_t index = 0;
+
+    auto object = amxd_dm_findf(&m_datamodel, specific_path.c_str(), key.c_str());
+    if (!object) {
+        LOG(ERROR) << "Failed to find object by key: " << specific_path << " for key: " << key;
+        return index;
+    }
+
+    auto parent_object = amxd_object_get_parent(object);
+    if (!object) {
+        LOG(ERROR) << "Failed to get parent object, path: " << specific_path << " for key: " << key;
+        return index;
+    }
+
+    index = amxd_object_get_index(parent_object);
+    if (!index) {
+        LOG(ERROR) << "Failed to get parent index for object: " << object->name;
+        return index;
+    }
+
+    return index;
+}
+
 AmbiorixImpl::~AmbiorixImpl()
 {
     remove_event_loop();

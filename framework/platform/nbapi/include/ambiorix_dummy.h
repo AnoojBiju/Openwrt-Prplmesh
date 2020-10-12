@@ -31,6 +31,8 @@ public:
     bool add_instance(const std::string &relative_path) override;
     bool remove_instance(const std::string &relative_path, uint32_t index) override;
     uint32_t get_instance_index(const std::string &specific_path, const std::string &key) override;
+    uint32_t get_parent_instance_index(const std::string &specific_path,
+                                       const std::string &key) override;
 };
 
 } // namespace nbapi

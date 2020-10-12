@@ -30,5 +30,11 @@ uint32_t AmbiorixDummy::get_instance_index(const std::string &specific_path, con
     return 0;
 }
 
+uint32_t AmbiorixDummy::get_parent_instance_index(const std::string &specific_path,
+                                                  const std::string &key)
+{
+    return 0;
+}
+
 } // namespace nbapi
 } // namespace beerocks
