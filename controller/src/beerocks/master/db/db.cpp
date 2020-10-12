@@ -817,6 +817,30 @@ bool db::set_hostap_active(const std::string &mac, bool active)
         return false;
     }
     n->hostap->active = active;
+
+    auto radio_index =
+        m_ambiorix_datamodel->get_instance_index("Network.Device.*.Radio.[ID == '%s']", mac);
+    if (!radio_index) {
+        LOG(ERROR) << "Failed to get Radio index for mac:" << mac;
+        return false;
+    }
+
+    auto device_index =
+        m_ambiorix_datamodel->get_parent_instance_index("Network.Device.*.Radio.[ID == '%s']", mac);
+    if (!device_index) {
+        LOG(ERROR) << "Failed to get Device index for Radio with mac: " << mac;
+        return false;
+    }
+
+    std::string radio_path = "Network.Device." + std::to_string(device_index) + ".Radio." +
+                             std::to_string(radio_index) + ".Enabled";
+
+    if (!m_ambiorix_datamodel->set(radio_path, active)) {
+        LOG(ERROR) << "Failed to set Device." << device_index << ".Radio." << radio_index
+                   << ".Enabled parameter.";
+        return false;
+    }
+
     return true;
 }
 
