@@ -268,6 +268,26 @@ void ChannelSelectionTask::handle_vs_zwdfs_ant_channel_switch_response(
     LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE";
 
     // TODO
+
+const std::string ChannelSelectionTask::socket_to_front_iface_name(const Socket *sd)
+{
+    for (const auto &soc : m_btl_ctx.slaves_sockets) {
+        if (soc->slave == sd) {
+            return soc->hostap_iface;
+        }
+    }
+    return std::string();
+}
+Socket *ChannelSelectionTask::front_iface_name_to_socket(const std::string &iface_name)
+{
+    for (const auto &soc : m_btl_ctx.slaves_sockets) {
+        if (soc->hostap_iface == iface_name) {
+            return soc->slave;
+        }
+    }
+    return nullptr;
+}
+
 }
 
 } // namespace beerocks

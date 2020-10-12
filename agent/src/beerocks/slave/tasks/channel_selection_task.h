@@ -65,6 +65,12 @@ private:
     handle_vs_zwdfs_ant_channel_switch_response(ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
                                                 std::shared_ptr<beerocks_header> beerocks_header);
 
+    /* Helper functions */
+    const std::string socket_to_front_iface_name(const Socket *sd);
+    Socket *front_iface_name_to_socket(const std::string &iface_name);
+
+    /* Class members */
+
     struct sChannelSelectionResponse {
         sMacAddr radio_mac;
         wfa_map::tlvChannelSelectionResponse::eResponseCode response_code;
