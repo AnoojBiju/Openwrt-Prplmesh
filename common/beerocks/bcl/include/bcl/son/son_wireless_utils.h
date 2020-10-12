@@ -17,6 +17,7 @@
 #include <tlvf/WSC/eWscVendorExt.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
 
+#include <deque>
 #include <iostream>
 #include <list>
 #include <map>
@@ -187,6 +188,12 @@ public:
      * @return False if band is not 5GHz or there is not enoguh data, true otherwise
      */
     static bool is_frequency_band_5ghz(beerocks::eFreqType frequency_band);
+
+    struct sChannel {
+        uint8_t center_channel;
+        std::pair<uint8_t, uint8_t> overlap_beacon_channels_range;
+    };
+    static const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, sChannel>> channels_table_5g;
 
 private:
     enum eAntennaFactor {
