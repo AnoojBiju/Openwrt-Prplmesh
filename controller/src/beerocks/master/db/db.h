@@ -259,6 +259,17 @@ public:
     void add_node_from_data(std::string client_entry, const ValuesMap &values_map,
                             std::pair<uint16_t, uint16_t> &results);
 
+    /**
+    * @brief add instance of data element 'radio'
+    *
+    * @param mac address of radio
+    * @param mac address of device
+    * @return true if device with given mac address was found
+    * and radio instance was successfully added, false otherwise
+	* dm = data model
+    */
+    bool dm_add_radio_element(const std::string &radio_mac, const std::string &device_mac);
+
     bool
     add_node_gateway(const sMacAddr &mac,
                      const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
