@@ -2775,7 +2775,6 @@ bool db::set_client_is_unfriendly(const sMacAddr &mac, bool client_is_unfriendly
 
     LOG(DEBUG) << "Setting client " << mac << " client_is_unfriendly = " << client_is_unfriendly;
 
-    auto timestamp = std::chrono::system_clock::now();
     if (save_to_persistent_db) {
         // if persistent db is disabled
         if (!config.persistent_db) {
@@ -2787,7 +2786,6 @@ bool db::set_client_is_unfriendly(const sMacAddr &mac, bool client_is_unfriendly
             ValuesMap values_map;
             // std::to_string(bool) would result in either "0" or "1"
             values_map[IS_UNFRIENDLY_STR] = std::to_string(client_is_unfriendly);
-            values_map[TIMESTAMP_STR]     = timestamp_to_string_seconds(timestamp);
 
             // update the persistent db
             if (!update_client_entry_in_persistent_db(mac, values_map)) {
@@ -2798,7 +2796,6 @@ bool db::set_client_is_unfriendly(const sMacAddr &mac, bool client_is_unfriendly
     }
 
     node->client_is_unfriendly = client_is_unfriendly ? eTriStateBool::TRUE : eTriStateBool::FALSE;
-    node->client_parameters_last_edit = timestamp;
 
     return true;
 }
