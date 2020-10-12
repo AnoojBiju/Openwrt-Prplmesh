@@ -130,6 +130,9 @@ private:
      * @return true on success, otherwise false.
      */
     bool initialize_zwdfs_interface_name();
+
+    sSelectedChannel zwdfs_select_best_usable_channel(const std::string &front_radio_iface);
+
     std::string m_zwdfs_iface;
     std::string m_zwdfs_primary_radio_iface;
     std::chrono::steady_clock::time_point m_zwdfs_fsm_timeout;

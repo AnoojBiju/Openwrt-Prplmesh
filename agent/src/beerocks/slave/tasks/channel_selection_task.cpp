@@ -12,6 +12,9 @@
 
 #include <beerocks/tlvf/beerocks_message_backhaul.h>
 
+#include <bcl/beerocks_utils.h>
+#include <bcl/son/son_wireless_utils.h>
+
 #define ZWDFS_FSM_MOVE_STATE(new_state)                                                            \
     ({                                                                                             \
         LOG(TRACE) << "CHANNEL_SELECTION ZWDFS FSM: " << m_zwdfs_states_string.at(m_zwdfs_state)   \
@@ -355,6 +358,117 @@ void ChannelSelectionTask::zwdfs_fsm()
     default:
         break;
     }
+}
+
+ChannelSelectionTask::sSelectedChannel
+ChannelSelectionTask::zwdfs_select_best_usable_channel(const std::string &front_radio_iface)
+{
+    auto db = AgentDB::get();
+
+    sSelectedChannel channel_selection = {};
+
+    auto radio = db->radio(front_radio_iface);
+    if (!radio) {
+        return sSelectedChannel();
+    }
+
+    int32_t best_rank = INT32_MAX;
+
+    for (const auto &channel_info_pair : radio->channels_list) {
+        uint8_t channel = channel_info_pair.first;
+        auto dfs_state  = channel_info_pair.second.dfs_state;
+        if (dfs_state == beerocks_message::eDfsState::UNAVAILABLE) {
+            continue;
+        }
+        for (const auto &supported_bw : channel_info_pair.second.supported_bw_list) {
+
+            if (supported_bw.rank == -1) {
+                continue;
+            }
+            // Low rank is better.
+            if (supported_bw.rank > best_rank) {
+                continue;
+            }
+            if (supported_bw.rank == best_rank && supported_bw.bandwidth < channel_selection.bw) {
+                continue;
+            }
+
+            bool update_best_channel = false;
+
+            auto filter_channel_bw_with_unavailable_overlapping_channel = [&]() {
+                auto channel_it = son::wireless_utils::channels_table_5g.find(channel);
+                if (channel_it == son::wireless_utils::channels_table_5g.end()) {
+                    LOG(ERROR) << "Radio supports channel which is not on the channel table! ch="
+                               << int(channel);
+                    return false;
+                }
+
+                auto &channel_bw_info_map = channel_it->second;
+                auto bw_it                = channel_bw_info_map.find(supported_bw.bandwidth);
+                if (bw_it == channel_bw_info_map.end()) {
+                    LOG(ERROR) << "Radio supports channel which is not on the channel table!"
+                               << "ch =" << int(channel) << ", bw="
+                               << utils::convert_bandwidth_to_int(supported_bw.bandwidth);
+                    return false;
+                }
+
+                auto channel_range_min = bw_it->second.overlap_beacon_channels_range.first;
+                auto channel_range_max = bw_it->second.overlap_beacon_channels_range.second;
+
+                constexpr uint8_t channels_distance_5g = 4;
+
+                // Ignore if one of beacon channels is unavailable.
+                for (uint8_t overlap_ch = channel_range_min; overlap_ch <= channel_range_max;
+                     overlap_ch += channels_distance_5g) {
+
+                    auto overlap_channel_info_it = radio->channels_list.find(overlap_ch);
+                    if (overlap_channel_info_it == radio->channels_list.end()) {
+                        LOG(ERROR)
+                            << "Channel " << channel << " supprots bw="
+                            << utils::convert_bandwidth_to_int(supported_bw.bandwidth)
+                            << " but beacon channel=" << int(overlap_ch) << " is not supported!";
+
+                        return false;
+                    }
+
+                    auto overlapping_channel_dfs_state = overlap_channel_info_it->second.dfs_state;
+                    if (overlapping_channel_dfs_state == beerocks_message::eDfsState::UNAVAILABLE) {
+                        return true;
+                    }
+                }
+                update_best_channel = true;
+                return true;
+            };
+            switch (supported_bw.bandwidth) {
+            case beerocks::BANDWIDTH_20: {
+                update_best_channel = true;
+                break;
+            }
+            case beerocks::BANDWIDTH_40:
+            case beerocks::BANDWIDTH_80:
+            case beerocks::BANDWIDTH_160: {
+                // The function updates 'update_best_channel' value.
+                if (!filter_channel_bw_with_unavailable_overlapping_channel()) {
+                    return sSelectedChannel();
+                }
+                break;
+            }
+            default:
+                break;
+            }
+
+            if (!update_best_channel) {
+                continue;
+            }
+
+            best_rank                   = supported_bw.rank;
+            channel_selection.channel   = channel;
+            channel_selection.bw        = supported_bw.bandwidth;
+            channel_selection.dfs_state = dfs_state;
+        }
+    }
+
+    return channel_selection;
 }
 
 bool ChannelSelectionTask::initialize_zwdfs_interface_name()
