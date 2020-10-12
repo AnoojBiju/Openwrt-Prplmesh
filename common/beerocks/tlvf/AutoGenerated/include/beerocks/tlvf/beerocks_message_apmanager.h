@@ -24,6 +24,7 @@
 #include <vector>
 #include "beerocks/tlvf/beerocks_message_common.h"
 #include "classes/ChannelList.h"
+#include "structs/sCacStartedNotificationParams.h"
 #include "tlvf/WSC/WSC_Attributes.h"
 
 namespace beerocks_message {
@@ -420,6 +421,27 @@ class cACTION_APMANAGER_HOSTAP_ACS_NOTIFICATION : public BaseClass
         beerocks::message::sWifiChannel* m_preferred_channels = nullptr;
         size_t m_preferred_channels_idx__ = 0;
         int m_lock_order_counter__ = 0;
+};
+
+class cACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION : public BaseClass
+{
+    public:
+        cACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION();
+
+        static eActionOp_APMANAGER get_action_op(){
+            return (eActionOp_APMANAGER)(ACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION);
+        }
+        sCacStartedNotificationParams& params();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_APMANAGER* m_action_op = nullptr;
+        sCacStartedNotificationParams* m_params = nullptr;
 };
 
 class cACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION : public BaseClass
