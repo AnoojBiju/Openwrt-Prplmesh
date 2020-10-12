@@ -8,7 +8,7 @@ FROM mcr.microsoft.com/vscode/devcontainers/base:ubuntu-18.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install build essintials
-RUN apt-get update \
+RUN apt-get update && apt-get -y upgrade \
     #
     # Install C++ tools
     && apt-get -y install build-essential cmake cppcheck valgrind \
@@ -17,35 +17,35 @@ RUN apt-get update \
     libncurses-dev libreadline-dev libnl-3-dev libnl-route-3-dev libnl-genl-3-dev \
     # Install Helper tools
     bash-completion locales ninja-build pkg-config shellcheck \
-    flake8 clang-format vim \
+    flake8 clang-format vim bridge-utils \
     # Network capturing
     tcpdump tshark wireshark-common openssh-server
 
 # Install python dependencies
-RUN pip3 install pylint autopep8
+RUN pip3 install pylint autopep8 pycodestyle==2.3
 
-# Install podman
-RUN echo "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_$(lsb_release -sr)/ /" \
-    > /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list \
-    && curl -L "https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_$(lsb_release -sr)/Release.key" | apt-key add - \
-    && apt-get update && apt-get install -y podman dnsmasq \
-    && ln -s /usr/bin/podman /usr/bin/docker
+# # Install podman
+# RUN echo "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_$(lsb_release -sr)/ /" \
+#     > /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list \
+#     && curl -L "https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_$(lsb_release -sr)/Release.key" | apt-key add - \
+#     && apt-get update && apt-get install -y podman dnsmasq \
+#     && ln -s /usr/bin/podman /usr/bin/docker
 
 # Install docker-ce
-# RUN apt-get -y install apt-transport-https ca-certificates \
-#         curl gnupg-agent software-properties-common \
-#     && curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
-#     && apt-key fingerprint 0EBFCD88 \
-#     && add-apt-repository \
-#         "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
-#         $(lsb_release -cs) \
-#         stable" \
-#     && apt-get update \
-#     && apt-get -y install docker-ce docker-ce-cli containerd.io
+RUN apt-get -y install apt-transport-https ca-certificates \
+    curl gnupg-agent software-properties-common \
+    && curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
+    && apt-key fingerprint 0EBFCD88 \
+    && add-apt-repository \
+    "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+    $(lsb_release -cs) \
+    stable" \
+    && apt update \
+    && apt -y install docker-ce docker-ce-cli containerd.io
 
 # Clean up
 RUN apt-get autoremove -y \
-    && apt-get clean -y \
+    && apt clean -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Update locale
@@ -53,6 +53,7 @@ RUN locale-gen en_US.UTF-8 && update-locale
 
 # Add GitHub SSH fingerprint to the known_hosts file
 RUN mkdir -p /root/.ssh && ssh-keyscan github.com >> /root/.ssh/known_hosts
+RUN mkdir -p /root/.ssh && ssh-keyscan gitlab.com >> /root/.ssh/known_hosts
 
 # Set default 'root' password
 RUN echo 'root:prplmesh' | chpasswd
