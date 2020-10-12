@@ -289,4 +289,30 @@ Socket *ChannelSelectionTask::front_iface_name_to_socket(const std::string &ifac
     return nullptr;
 }
 
+bool ChannelSelectionTask::initialize_zwdfs_interface_name()
+{
+    if (!m_zwdfs_iface.empty()) {
+        return true;
+    }
+
+    auto db = AgentDB::get();
+
+    const auto &configured_radios_list = db->device_conf.front_radio.config;
+
+    for (const auto &radio_conf_pair : configured_radios_list) {
+        auto &radio_iface_name = radio_conf_pair.first;
+
+        auto radio = db->radio(radio_iface_name);
+        if (!radio) {
+            continue;
+        }
+
+        if (radio->front.zwdfs) {
+            m_zwdfs_iface = radio->front.iface_name;
+            return true;
+        }
+    }
+    return false;
+}
+
 } // namespace beerocks
