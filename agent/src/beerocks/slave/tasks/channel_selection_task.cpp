@@ -270,4 +270,35 @@ void ChannelSelectionTask::handle_vs_zwdfs_ant_channel_switch_response(
     // TODO
 }
 
+const std::string ChannelSelectionTask::socket_to_front_iface_name(const Socket *sd)
+{
+    for (const auto &soc : m_btl_ctx.slaves_sockets) {
+        if (soc->slave == sd) {
+            return soc->hostap_iface;
+        }
+    }
+
+    for (const auto &slave_element : m_btl_ctx.m_disabled_slave_sockets) {
+        if (slave_element.second->slave == sd) {
+            return slave_element.first;
+        }
+    }
+
+    return std::string();
+}
+Socket *ChannelSelectionTask::front_iface_name_to_socket(const std::string &iface_name)
+{
+    for (const auto &soc : m_btl_ctx.slaves_sockets) {
+        if (soc->hostap_iface == iface_name) {
+            return soc->slave;
+        }
+    }
+    for (const auto &slave_element : m_btl_ctx.m_disabled_slave_sockets) {
+        if (slave_element.first == iface_name) {
+            return slave_element.second->slave;
+        }
+    }
+    return nullptr;
+}
+
 } // namespace beerocks
