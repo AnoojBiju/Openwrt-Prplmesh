@@ -520,6 +520,33 @@ std::string AmbiorixImpl::get_datamodel_time_format()
     return result_time;
 }
 
+std::string AmbiorixImpl::get_path_to_radio(const std::string &device_mac,
+                                            const std::string &radio_mac)
+{
+    std::string path_to_obj = "Controller.Network.Device.";
+    uint32_t device_index;
+    uint32_t radio_index;
+
+    device_index = get_instance_index(path_to_obj + "[ID == '%s'].", device_mac);
+    if (!device_index) {
+        LOG(ERROR) << "Failed to get index of Network.Device with mac: " << device_mac;
+        return {};
+    }
+    path_to_obj += std::to_string(device_index);
+    if (radio_mac.empty()) {
+        return path_to_obj;
+    }
+    path_to_obj += ".Radio.";
+    radio_index = get_instance_index(path_to_obj + "[ID == '%s'].", radio_mac);
+    if (!radio_index) {
+        LOG(ERROR) << "Failed to get index of Network.Device." << device_index
+                   << ".Radio with mac: " << radio_mac;
+        return {};
+    }
+    path_to_obj += std::to_string(radio_index);
+    return path_to_obj;
+}
+
 AmbiorixImpl::~AmbiorixImpl()
 {
     remove_event_loop();
