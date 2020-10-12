@@ -14,6 +14,8 @@
 #include <tlvf/CmduMessageTx.h>
 #include <tlvf/wfa_map/tlvChannelSelectionResponse.h>
 
+#include <beerocks/tlvf/enums/eDfsState.h>
+
 namespace beerocks {
 
 // Forward decleration for backhaul_manager context saving
@@ -27,14 +29,33 @@ public:
                      std::shared_ptr<beerocks_header> beerocks_header) override;
 
 private:
+    /**
+     * @brief Contain the current channel selection which has chosen by the task.
+     *
+     * From the channel and the bandwidth, a center channel can be evaluated by a look-up on
+     * 'son::wireless_utils::channels_table_5g'
+     *
+     * @param channel Chosen beacon channel.
+     * @param secondary_channel Chosen secondary beacon channel. Relevant only if the bandwidth is
+     *  80+80.
+     * @param bw Bandwidth of the channel.
+     * @param dfs_state DFS state for knowing if the channel is DFS channel or not.
+     */
+    struct sSelectedChannel {
+        uint8_t channel;
+        uint8_t secondary_channel;
+        eWiFiBandwidth bw;
+        beerocks_message::eDfsState dfs_state;
+    } m_selected_channel;
+
     void handle_channel_selection_request(ieee1905_1::CmduMessageRx &cmdu_rx,
                                           const sMacAddr &src_mac);
     void handle_slave_channel_selection_response(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                  const sMacAddr &src_mac);
 
     /**
-     * @brief Handles Vendor Specific messages. 
-     * 
+     * @brief Handles Vendor Specific messages.
+     *
      * @param[in] cmdu_rx Received CMDU.
      * @param[in] src_mac MAC address of the message sender.
      * @param[in] sd Socket of the thread which has sent the message.
