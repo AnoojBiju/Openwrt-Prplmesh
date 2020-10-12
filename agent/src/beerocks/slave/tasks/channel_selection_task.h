@@ -14,6 +14,8 @@
 #include <tlvf/CmduMessageTx.h>
 #include <tlvf/wfa_map/tlvChannelSelectionResponse.h>
 
+#include <beerocks/tlvf/enums/eDfsState.h>
+
 namespace beerocks {
 
 // Forward decleration for backhaul_manager context saving
@@ -83,6 +85,15 @@ private:
     handle_vs_zwdfs_ant_channel_switch_response(ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
                                                 std::shared_ptr<beerocks_header> beerocks_header);
 
+    /**
+     * @brief The function initialize the class members 'm_zwdfs_iface' to the zwdfs radio
+     * interface name. 
+     * 
+     * @return true on success, otherwise false.
+     */
+    bool initialize_zwdfs_interface_name();
+    std::string m_zwdfs_iface;
+    std::string m_zwdfs_primary_radio_iface;
     /* Helper functions */
     const std::string socket_to_front_iface_name(const Socket *sd);
     Socket *front_iface_name_to_socket(const std::string &iface_name);
