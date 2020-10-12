@@ -1464,6 +1464,14 @@ bool db::add_hostap_supported_operating_class(const std::string &radio_mac, uint
     //            << int(operating_class) << std::endl
     //            << get_hostap_supported_channels_string(radio_mac);
 
+    std::string operating_classes_path =
+        dm_prepare_radio_path(tlvf::mac_from_string(radio_mac)) + ".CurrentOperatingClasses";
+
+    if (!m_ambiorix_datamodel->add_instance(operating_classes_path)) {
+        LOG(ERROR) << "Failed to add instance for: " << operating_classes_path;
+        return false;
+    }
+
     return true;
 }
 
