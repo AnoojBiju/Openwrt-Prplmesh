@@ -816,6 +816,21 @@ bool db::set_hostap_active(const std::string &mac, bool active)
         return false;
     }
     n->hostap->active = active;
+
+    // Enabled variable is a part of Radio data element and
+    // need to get path like Controller.Device.{i}.Radio.{i}. for setting Enabled variable
+    auto radio_enable_path = dm_get_path_to_radio(*n);
+
+    if (radio_enable_path.empty()) {
+        LOG(ERROR) << "Failed to get path to the Radio with mac: " << mac;
+        return false;
+    }
+
+    if (!m_ambiorix_datamodel->set(radio_enable_path, "Enabled", active)) {
+        LOG(ERROR) << "Failed to set " << radio_enable_path << " Enabled parameter.";
+        return false;
+    }
+
     return true;
 }
 
