@@ -21,7 +21,7 @@ ChannelSelectionTask::ChannelSelectionTask(backhaul_manager &btl_ctx,
 }
 
 bool ChannelSelectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac,
-                                       std::shared_ptr<beerocks_header> beerocks_header)
+                                       Socket *sd, std::shared_ptr<beerocks_header> beerocks_header)
 {
     switch (cmdu_rx.getMessageType()) {
     case ieee1905_1::eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE: {
@@ -37,7 +37,7 @@ bool ChannelSelectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const
         break;
     }
     case ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE: {
-        handle_vendor_specific(cmdu_rx, src_mac, beerocks_header);
+        handle_vendor_specific(cmdu_rx, src_mac, sd, beerocks_header);
         break;
     }
     default: {
@@ -135,7 +135,7 @@ void ChannelSelectionTask::handle_slave_channel_selection_response(
 }
 
 bool ChannelSelectionTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                                  const sMacAddr &src_mac,
+                                                  const sMacAddr &src_mac, Socket *sd,
                                                   std::shared_ptr<beerocks_header> beerocks_header)
 {
     if (!beerocks_header) {
@@ -150,27 +150,27 @@ bool ChannelSelectionTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmd
     if (beerocks_header->action() == beerocks_message::ACTION_BACKHAUL) {
         switch (beerocks_header->action_op()) {
         case beerocks_message::ACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION: {
-            handle_vs_csa_notification(cmdu_rx, beerocks_header);
+            handle_vs_csa_notification(cmdu_rx, sd, beerocks_header);
             break;
         }
         case beerocks_message::ACTION_BACKHAUL_HOSTAP_CSA_ERROR_NOTIFICATION: {
-            handle_vs_csa_error_notification(cmdu_rx, beerocks_header);
+            handle_vs_csa_error_notification(cmdu_rx, sd, beerocks_header);
             break;
         }
         case beerocks_message::ACTION_BACKHAUL_HOSTAP_DFS_CAC_STARTED_NOTIFICATION: {
-            handle_vs_cac_started_notification(cmdu_rx, beerocks_header);
+            handle_vs_cac_started_notification(cmdu_rx, sd, beerocks_header);
             break;
         }
         case beerocks_message::ACTION_BACKHAUL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION: {
-            handle_vs_dfs_cac_completed_notification(cmdu_rx, beerocks_header);
+            handle_vs_dfs_cac_completed_notification(cmdu_rx, sd, beerocks_header);
             break;
         }
         case beerocks_message::ACTION_BACKHAUL_CHANNELS_LIST_RESPONSE: {
-            handle_vs_channels_list_notification(cmdu_rx, beerocks_header);
+            handle_vs_channels_list_notification(cmdu_rx, sd, beerocks_header);
             break;
         }
         case beerocks_message::ACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE: {
-            handle_vs_zwdfs_ant_channel_switch_response(cmdu_rx, beerocks_header);
+            handle_vs_zwdfs_ant_channel_switch_response(cmdu_rx, sd, beerocks_header);
             break;
         }
 
@@ -184,7 +184,8 @@ bool ChannelSelectionTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmd
 }
 
 void ChannelSelectionTask::handle_vs_csa_notification(
-    ieee1905_1::CmduMessageRx &cmdu_rx, std::shared_ptr<beerocks_header> beerocks_header)
+    ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
+    std::shared_ptr<beerocks_header> beerocks_header)
 {
     auto notification =
         beerocks_header->addClass<beerocks_message::cACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION>();
@@ -198,7 +199,8 @@ void ChannelSelectionTask::handle_vs_csa_notification(
 }
 
 void ChannelSelectionTask::handle_vs_csa_error_notification(
-    ieee1905_1::CmduMessageRx &cmdu_rx, std::shared_ptr<beerocks_header> beerocks_header)
+    ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
+    std::shared_ptr<beerocks_header> beerocks_header)
 {
     auto notification =
         beerocks_header
@@ -213,7 +215,8 @@ void ChannelSelectionTask::handle_vs_csa_error_notification(
 }
 
 void ChannelSelectionTask::handle_vs_cac_started_notification(
-    ieee1905_1::CmduMessageRx &cmdu_rx, std::shared_ptr<beerocks_header> beerocks_header)
+    ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
+    std::shared_ptr<beerocks_header> beerocks_header)
 {
     auto notification =
         beerocks_header
@@ -228,7 +231,8 @@ void ChannelSelectionTask::handle_vs_cac_started_notification(
 }
 
 void ChannelSelectionTask::handle_vs_dfs_cac_completed_notification(
-    ieee1905_1::CmduMessageRx &cmdu_rx, std::shared_ptr<beerocks_header> beerocks_header)
+    ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
+    std::shared_ptr<beerocks_header> beerocks_header)
 {
     auto notification =
         beerocks_header
@@ -243,7 +247,8 @@ void ChannelSelectionTask::handle_vs_dfs_cac_completed_notification(
 }
 
 void ChannelSelectionTask::handle_vs_channels_list_notification(
-    ieee1905_1::CmduMessageRx &cmdu_rx, std::shared_ptr<beerocks_header> beerocks_header)
+    ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
+    std::shared_ptr<beerocks_header> beerocks_header)
 {
     LOG(TRACE) << "received sACTION_APMANAGER_CHANNELS_LIST_RESPONSE";
 
@@ -251,7 +256,8 @@ void ChannelSelectionTask::handle_vs_channels_list_notification(
 }
 
 void ChannelSelectionTask::handle_vs_zwdfs_ant_channel_switch_response(
-    ieee1905_1::CmduMessageRx &cmdu_rx, std::shared_ptr<beerocks_header> beerocks_header)
+    ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
+    std::shared_ptr<beerocks_header> beerocks_header)
 {
     auto notification = beerocks_header->addClass<
         beerocks_message::cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE>();
