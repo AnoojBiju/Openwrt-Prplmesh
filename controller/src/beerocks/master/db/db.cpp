@@ -181,6 +181,102 @@ bool db::add_node(const sMacAddr &mac, const sMacAddr &parent_mac, beerocks::eTy
     return true;
 }
 
+bool db::add_node_gateway(const sMacAddr &mac, const sMacAddr &radio_identifier)
+{
+    if (!add_node(mac, network_utils::ZERO_MAC, beerocks::TYPE_GW, radio_identifier)) {
+        LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
+        return false;
+    }
+
+    if (!dm_add_device_element(mac)) {
+        LOG(ERROR) << "Failed to add device element for the gateway, mac: "
+                   << tlvf::mac_to_string(mac);
+        return false;
+    }
+
+    return true;
+}
+
+bool db::add_node_ire(const sMacAddr &mac, const sMacAddr &parent_mac,
+                      const sMacAddr &radio_identifier)
+{
+    if (!add_node(mac, parent_mac, beerocks::TYPE_IRE, radio_identifier)) {
+        LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
+        return false;
+    }
+
+    if (!dm_add_device_element(mac)) {
+        LOG(ERROR) << "Failed to add device element for the ire, mac: " << tlvf::mac_to_string(mac);
+        return false;
+    }
+
+    return true;
+}
+
+bool db::add_node_wireless_bh(const sMacAddr &mac, const sMacAddr &parent_mac,
+                              const sMacAddr &radio_identifier)
+{
+    if (!add_node(mac, parent_mac, beerocks::TYPE_IRE_BACKHAUL, radio_identifier)) {
+        LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
+        return false;
+    }
+
+    // TODO: Add instance for Radio.BackhaulSta element from the Data Elements
+    return true;
+}
+
+bool db::add_node_wired_bh(const sMacAddr &mac, const sMacAddr &parent_mac,
+                           const sMacAddr &radio_identifier)
+{
+    if (!add_node(mac, parent_mac, beerocks::TYPE_ETH_SWITCH, radio_identifier)) {
+        LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
+        return false;
+    }
+
+    return true;
+}
+
+bool db::dm_add_radio_element(const std::string &radio_mac, const std::string &device_mac)
+{
+    std::string path_to_obj = " Network.Device.";
+    uint32_t index =
+        m_ambiorix_datamodel->get_instance_index(path_to_obj + "[ID == '%s'].", device_mac);
+
+    if (!index) {
+        LOG(ERROR) << "Failed to get Network.Device index for mac: " << device_mac;
+        return false;
+    }
+    path_to_obj += std::to_string(index);
+    if (!m_ambiorix_datamodel->add_instance(path_to_obj + ".Radio")) {
+        LOG(ERROR) << "Failed to add instance Network.Device." << device_mac
+                   << ".Radio, with radio mac: " << radio_mac;
+        return false;
+    }
+    return true;
+}
+
+bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac,
+                        const sMacAddr &radio_identifier)
+{
+    if (!add_node(mac, parent_mac, beerocks::TYPE_SLAVE, radio_identifier)) {
+        LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
+        return false;
+    }
+    return dm_add_radio_element(tlvf::mac_to_string(mac), tlvf::mac_to_string(parent_mac));
+}
+
+bool db::add_node_client(const sMacAddr &mac, const sMacAddr &parent_mac,
+                         const sMacAddr &radio_identifier)
+{
+    if (!add_node(mac, parent_mac, beerocks::TYPE_CLIENT, radio_identifier)) {
+        LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
+        return false;
+    }
+
+    // TODO: Add STA to the controller data model via m_ambiorix_datamodel for connected station (WiFI client)
+    return true;
+}
+
 bool db::remove_node(const sMacAddr &mac)
 {
     int i;
@@ -207,6 +303,19 @@ bool db::remove_node(const sMacAddr &mac)
                 // if removed by ruid_key
             } else if (tlvf::mac_to_string(mac) == ruid_key) {
                 nodes[i].erase(node_mac);
+            }
+
+            auto index = m_ambiorix_datamodel->get_instance_index("Network.Device.[ID == '%s'].",
+                                                                  tlvf::mac_to_string(mac));
+            if (!index) {
+                LOG(ERROR) << "Failed to get Network.Device index for mac: "
+                           << tlvf::mac_to_string(mac);
+                return false;
+            }
+
+            if (!m_ambiorix_datamodel->remove_instance("Network.Device", index)) {
+                LOG(ERROR) << "Failed to remove Network.Device." << index << " instance.";
+                return false;
             }
 
             return true;
@@ -4677,4 +4786,18 @@ uint64_t db::get_client_remaining_sec(const std::pair<std::string, ValuesMap> &c
     return ((client_remaining_timelife_sec > client_timelife_passed_sec)
                 ? (client_remaining_timelife_sec - client_timelife_passed_sec)
                 : 0);
+}
+
+bool db::dm_add_device_element(const sMacAddr &mac)
+{
+    auto index = m_ambiorix_datamodel->get_instance_index("Network.Device.[ID == '%s'].",
+                                                          tlvf::mac_to_string(mac));
+    LOG_IF(index, FATAL) << "Device with ID: " << tlvf::mac_to_string(mac)
+                         << " exists in the data model!";
+
+    if (!m_ambiorix_datamodel->add_instance("Network.Device")) {
+        LOG(ERROR) << "Failed to add instance for device, mac: " << tlvf::mac_to_string(mac);
+        return false;
+    }
+    return true;
 }
