@@ -77,6 +77,8 @@ static ap_wlan_hal::Event dwpal_to_bwl_event(const std::string &opcode)
         return ap_wlan_hal::Event::CSA_Finished;
     } else if (opcode == "BSS-TM-RESP") {
         return ap_wlan_hal::Event::BSS_TM_Response;
+    } else if (opcode == "DFS-CAC-STARTED") {
+        return ap_wlan_hal::Event::DFS_CAC_Started;
     } else if (opcode == "DFS-CAC-COMPLETED") {
         return ap_wlan_hal::Event::DFS_CAC_Completed;
     } else if (opcode == "DFS-NOP-FINISHED") {
@@ -2366,7 +2368,52 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         event_queue_push(Event::BSS_TM_Response, msg_buff);
         break;
     }
+    case Event::DFS_CAC_Started: {
+        LOG(DEBUG) << buffer;
 
+        parsed_line_t parsed_obj;
+        parse_event(buffer, parsed_obj);
+
+        auto msg_buff =
+            ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION));
+        auto msg = reinterpret_cast<sACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION *>(
+            msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+        // Initialize the message
+        memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION));
+
+        // Channel
+        if (!read_param("chan", parsed_obj, tmp_int)) {
+            LOG(ERROR) << "Failed reading 'channel' parameter!";
+            return false;
+        }
+        msg->params.channel = tmp_int;
+
+        // Secondary Channel
+        if (!read_param("sec_chan", parsed_obj, tmp_int)) {
+            LOG(ERROR) << "Failed reading 'secondary_channel' parameter!";
+            return false;
+        }
+        msg->params.secondary_channel = tmp_int;
+
+        // Bandwidth
+        if (!read_param("width", parsed_obj, tmp_int)) {
+            LOG(ERROR) << "Failed reading 'bandwidth' parameter!";
+            return false;
+        }
+        msg->params.bandwidth = beerocks::eWiFiBandwidth(dwpal_bw_to_beerocks_bw(tmp_int));
+
+        // CAC Duration
+        if (!read_param("cac_time", parsed_obj, tmp_int)) {
+            LOG(ERROR) << "Failed reading 'cac_duration_sec' parameter!";
+            return false;
+        }
+        msg->params.cac_duration_sec = tmp_int;
+
+        // Add the message to the queue
+        event_queue_push(Event::DFS_CAC_Started, msg_buff);
+        break;
+    }
     case Event::DFS_CAC_Completed: {
         LOG(DEBUG) << buffer;
 

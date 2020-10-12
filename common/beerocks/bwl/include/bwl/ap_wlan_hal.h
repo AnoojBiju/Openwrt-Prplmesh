@@ -59,6 +59,7 @@ public:
 
         BSS_TM_Response,
 
+        DFS_CAC_Started,
         DFS_CAC_Completed,
         DFS_NOP_Finished,
         DFS_RADAR_Detected,
