@@ -25,6 +25,8 @@ class ChannelSelectionTask : public Task {
 public:
     ChannelSelectionTask(backhaul_manager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx);
 
+    void work() override;
+
     bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac, Socket *sd,
                      std::shared_ptr<beerocks_header> beerocks_header) override;
 
@@ -86,6 +88,41 @@ private:
     handle_vs_zwdfs_ant_channel_switch_response(ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
                                                 std::shared_ptr<beerocks_header> beerocks_header);
 
+    /* ZWDFS */
+    bool zwdfs_in_process() { return m_zwdfs_state != eZwdfsState::NOT_RUNNING; }
+
+    enum eZwdfsState : uint8_t {
+        NOT_RUNNING,
+        REQUEST_CHANNELS_LIST,
+        WAIT_FOR_CHANNELS_LIST,
+        CHOOSE_NEXT_BEST_CHANNEL,
+        ZWDFS_SWITCH_ANT_SET_CHANNEL_REQUEST,
+        WAIT_FOR_ZWDFS_CAC_STARTED,
+        WAIT_FOR_ZWDFS_CAC_COMPLETED,
+        SWITCH_CHANNEL_PRIMARY_RADIO,
+        WAIT_FOR_PRIMARY_RADIO_CSA_NOTIFICATION,
+        ZWDFS_SWITCH_ANT_OFF_REQUEST,
+        WAIT_FOR_ZWDFS_SWITCH_ANT_OFF_RESPONSE,
+    } m_zwdfs_state = eZwdfsState::NOT_RUNNING;
+
+    // clang-format off
+    const std::unordered_map<eZwdfsState, std::string, std::hash<int>> m_zwdfs_states_string = {
+      { eZwdfsState::NOT_RUNNING,                             "NOT_RUNNING"                             },
+      { eZwdfsState::REQUEST_CHANNELS_LIST,                   "REQUEST_CHANNELS_LIST"                   },
+      { eZwdfsState::WAIT_FOR_CHANNELS_LIST,                  "WAIT_FOR_CHANNELS_LIST"                  },
+      { eZwdfsState::CHOOSE_NEXT_BEST_CHANNEL,                "CHOOSE_NEXT_BEST_CHANNEL"                },
+      { eZwdfsState::ZWDFS_SWITCH_ANT_SET_CHANNEL_REQUEST,    "ZWDFS_SWITCH_ANT_SET_CHANNEL_REQUEST"    },
+      { eZwdfsState::WAIT_FOR_ZWDFS_CAC_STARTED,              "WAIT_FOR_ZWDFS_CAC_STARTED"              },
+      { eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED,            "WAIT_FOR_ZWDFS_CAC_COMPLETED"            },
+      { eZwdfsState::SWITCH_CHANNEL_PRIMARY_RADIO,            "SWITCH_CHANNEL_PRIMARY_RADIO"            },
+      { eZwdfsState::WAIT_FOR_PRIMARY_RADIO_CSA_NOTIFICATION, "WAIT_FOR_PRIMARY_RADIO_CSA_NOTIFICATION" },
+      { eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST,            "ZWDFS_SWITCH_ANT_OFF_REQUEST"            },
+      { eZwdfsState::WAIT_FOR_ZWDFS_SWITCH_ANT_OFF_RESPONSE,  "WAIT_FOR_ZWDFS_SWITCH_ANT_OFF_RESPONSE"  },
+    };
+    // clang-format on
+
+    void zwdfs_fsm();
+
     /**
      * @brief The function initialize the class members 'm_zwdfs_iface' to the zwdfs radio
      * interface name.
@@ -95,6 +132,8 @@ private:
     bool initialize_zwdfs_interface_name();
     std::string m_zwdfs_iface;
     std::string m_zwdfs_primary_radio_iface;
+    std::chrono::steady_clock::time_point m_zwdfs_fsm_timeout;
+
     /* Helper functions */
     const std::string socket_to_front_iface_name(const Socket *sd);
     Socket *front_iface_name_to_socket(const std::string &iface_name);
