@@ -1858,7 +1858,7 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
     default: {
         bool handled = m_task_pool.handle_cmdu(cmdu_rx, sMacAddr(), beerocks_header);
         if (!handled) {
-            LOG(ERROR) << "Unhandled message received from the Controller: "
+            LOG(ERROR) << "Unhandled message received from the Agent: "
                        << int(beerocks_header->action_op());
             return false;
         }
