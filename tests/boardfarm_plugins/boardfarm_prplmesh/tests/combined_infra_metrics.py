@@ -12,10 +12,6 @@ from opts import debug
 
 import time
 
-# import ptvsd
-# ptvsd.enable_attach()
-# ptvsd.wait_for_attach()
-
 
 class CombinedInfraMetrics(PrplMeshBaseTest):
 
