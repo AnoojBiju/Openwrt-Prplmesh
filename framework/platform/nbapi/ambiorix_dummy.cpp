@@ -48,16 +48,25 @@ bool AmbiorixDummy::set(const std::string &relative_path, const std::string &par
     return true;
 }
 uint32_t AmbiorixDummy::add_instance(const std::string &relative_path) { return true; }
+
 bool AmbiorixDummy::remove_instance(const std::string &relative_path, uint32_t index)
 {
     return true;
 }
+
 uint32_t AmbiorixDummy::get_instance_index(const std::string &specific_path, const std::string &key)
 {
     // Return false (0) because method can be used for checking instance present in Data Model or not
     return 0;
 }
 std::string AmbiorixDummy::get_datamodel_time_format() { return ""; }
+
+std::string AmbiorixDummy::get_path_to_radio(const std::string &device_mac,
+                                             const std::string &radio_mac)
+{
+    std::string path_to_obj = "Controller.Network.Device.1.Radio.1";
+    return path_to_obj;
+}
 
 } // namespace nbapi
 } // namespace beerocks
