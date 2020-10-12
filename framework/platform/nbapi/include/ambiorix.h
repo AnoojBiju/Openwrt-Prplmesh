@@ -41,6 +41,8 @@ public:
                      const double &value)                                          = 0;
     virtual uint32_t add_instance(const std::string &relative_path)                = 0;
     virtual bool remove_instance(const std::string &relative_path, uint32_t index) = 0;
+    virtual std::string get_path_to_radio(const std::string &device_mac,
+                                          const std::string &radio_mac = "")       = 0;
     virtual uint32_t get_instance_index(const std::string &specific_path,
                                         const std::string &key)                    = 0;
     virtual std::string get_datamodel_time_format()                                = 0;
