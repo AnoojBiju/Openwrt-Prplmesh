@@ -29,10 +29,12 @@
 #include <tlvf/ieee_1905_1/tlvVendorSpecific.h>
 #include <tlvf/ieee_1905_1/tlvWsc.h>
 #include <tlvf/wfa_map/tlvApCapability.h>
+#include <tlvf/wfa_map/tlvApHtCapabilities.h>
 #include <tlvf/wfa_map/tlvApMetricQuery.h>
 #include <tlvf/wfa_map/tlvApMetrics.h>
 #include <tlvf/wfa_map/tlvApRadioBasicCapabilities.h>
 #include <tlvf/wfa_map/tlvApRadioIdentifier.h>
+#include <tlvf/wfa_map/tlvApVhtCapabilities.h>
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringRequest.h>
@@ -40,6 +42,7 @@
 #include <tlvf/wfa_map/tlvBeaconMetricsQuery.h>
 #include <tlvf/wfa_map/tlvBeaconMetricsResponse.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
+#include <tlvf/wfa_map/tlvChannelScanCapabilities.h>
 #include <tlvf/wfa_map/tlvChannelSelectionResponse.h>
 #include <tlvf/wfa_map/tlvClientAssociationControlRequest.h>
 #include <tlvf/wfa_map/tlvClientAssociationEvent.h>
@@ -51,6 +54,7 @@
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 #include <tlvf/wfa_map/tlvProfile2ApRadioAdvancedCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2Default802dotQSettings.h>
+#include <tlvf/wfa_map/tlvProfile2MetricCollectionInterval.h>
 #include <tlvf/wfa_map/tlvProfile2TrafficSeparationPolicy.h>
 #include <tlvf/wfa_map/tlvProfile2UnsuccessfulAssociationPolicy.h>
 #include <tlvf/wfa_map/tlvRadioOperationRestriction.h>
@@ -183,6 +187,12 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv()
     case (133): {
         return msg.addClass<wfa_map::tlvApRadioBasicCapabilities>();
     }
+    case (134): {
+        return msg.addClass<wfa_map::tlvApHtCapabilities>();
+    }
+    case (135): {
+        return msg.addClass<wfa_map::tlvApVhtCapabilities>();
+    }
     case (137): {
         return msg.addClass<wfa_map::tlvSteeringPolicy>();
     }
@@ -255,6 +265,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv()
     case (162): {
         return msg.addClass<wfa_map::tlvAssociatedStaTrafficStats>();
     }
+    case (165): {
+        return msg.addClass<wfa_map::tlvChannelScanCapabilities>();
+    }
     case (180): {
         return msg.addClass<wfa_map::tlvProfile2ApCapability>();
     }
@@ -278,6 +291,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv()
     }
     case (196): {
         return msg.addClass<wfa_map::tlvProfile2UnsuccessfulAssociationPolicy>();
+    }
+    case (197): {
+        return msg.addClass<wfa_map::tlvProfile2MetricCollectionInterval>();
     }
     default: {
         LOG(DEBUG) << "Unknown TLV type: " << tlv_type;
