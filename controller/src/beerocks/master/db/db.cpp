@@ -4813,3 +4813,29 @@ bool db::dm_add_device_element(const sMacAddr &mac)
     }
     return true;
 }
+
+std::string db::dm_prepare_radio_path(const sMacAddr &mac)
+{
+
+    std::string radio_path = "";
+
+    auto mac_str = tlvf::mac_to_string(mac);
+    auto radio_index =
+        m_ambiorix_datamodel->get_instance_index("Network.Device.*.Radio.[ID == '%s']", mac_str);
+    if (!radio_index) {
+        LOG(ERROR) << "Failed to get Radio index for mac:" << mac_str;
+        return radio_path;
+    }
+
+    auto device_index = m_ambiorix_datamodel->get_parent_instance_index(
+        "Network.Device.*.Radio.[ID == '%s']", mac_str);
+    if (!device_index) {
+        LOG(ERROR) << "Failed to get Device index for Radio with mac: " << mac_str;
+        return radio_path;
+    }
+
+    radio_path = "Network.Device." + std::to_string(device_index) + ".Radio." +
+                 std::to_string(radio_index) + ".";
+
+    return radio_path;
+}
