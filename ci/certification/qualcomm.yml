@@ -14,6 +14,15 @@ MAP-4.2.2_BH24G:qualcomm:
 MAP-4.2.2_BH5GL:qualcomm:
   extends: .certification-qualcomm
 
+MAP-4.3.2_BHWIFI_FH24G:qualcomm:
+  extends: .certification-qualcomm
+
+MAP-4.3.2_BHWIFI_FH5GL:qualcomm:
+  extends: .certification-qualcomm
+
+MAP-4.3.2_BHWIFI_FH5GH:qualcomm:
+  extends: .certification-qualcomm
+
 MAP-4.4.1_ETH:qualcomm:
   extends: .certification-qualcomm
 
