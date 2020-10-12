@@ -44,6 +44,8 @@ public:
     virtual uint32_t get_instance_index(const std::string &specific_path,
                                         const std::string &key)                    = 0;
     virtual std::string get_datamodel_time_format()                                = 0;
+    virtual uint32_t get_parent_instance_index(const std::string &specific_path,
+                                               const std::string &key)             = 0;
 };
 
 inline Ambiorix::~Ambiorix() {}
