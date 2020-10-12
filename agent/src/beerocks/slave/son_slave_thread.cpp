@@ -1356,7 +1356,7 @@ bool slave_thread::handle_cmdu_platform_manager_message(
              * On GW platform the ethernet interface which is used for backhaul connection must be
              * empty since the GW doesn't need wired backhaul connection. Since it is being set on
              * the constructor from the agent configuration file, clear it here when we know if the
-             * agent runs on a GW. 
+             * agent runs on a GW.
              */
             auto db = AgentDB::get();
             if (db->device_conf.local_gw) {
@@ -3349,11 +3349,6 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
             return false;
         }
 
-        if (!autoconfig_wsc_add_m1()) {
-            LOG(ERROR) << "Failed adding WSC M1 TLV";
-            return false;
-        }
-
         /* One Profile-2 AP Capability TLV */
         auto profile2_ap_capability_tlv = cmdu_tx.addClass<wfa_map::tlvProfile2ApCapability>();
         if (!profile2_ap_capability_tlv) {
@@ -3385,6 +3380,11 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
         ap_radio_advanced_capabilities_tlv->traffic_separation_flag().combined_front_back = 0;
         ap_radio_advanced_capabilities_tlv->traffic_separation_flag()
             .combined_profile1_and_profile2 = 0;
+
+        if (!autoconfig_wsc_add_m1()) {
+            LOG(ERROR) << "Failed adding WSC M1 TLV";
+            return false;
+        }
 
         if (!db->controller_info.prplmesh_controller) {
             LOG(INFO) << "Configured as non-prplMesh, not sending SLAVE_JOINED_NOTIFICATION";
