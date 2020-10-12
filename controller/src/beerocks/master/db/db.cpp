@@ -816,6 +816,18 @@ bool db::set_hostap_active(const std::string &mac, bool active)
         return false;
     }
     n->hostap->active = active;
+
+    auto radio_enable_path = dm_prepare_radio_path(n);
+
+    if (radio_enable_path.empty()) {
+        LOG(ERROR) << "Failed to get path to the Radio with mac: " << mac;
+    }
+
+    if (!m_ambiorix_datamodel->set(radio_enable_path, "Enabled", active)) {
+        LOG(ERROR) << "Failed to set " << radio_enable_path << "Enabled parameter.";
+        return false;
+    }
+
     return true;
 }
 
