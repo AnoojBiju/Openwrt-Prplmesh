@@ -4497,9 +4497,12 @@ bool db::is_prplmesh(const sMacAddr &mac)
 void db::set_prplmesh(const sMacAddr &mac)
 {
     auto local_bridge_mac = tlvf::mac_from_string(get_local_bridge_mac());
-    auto ire_type         = local_bridge_mac == mac ? beerocks::TYPE_GW : beerocks::TYPE_IRE;
     if (!get_node(mac)) {
-        add_node(mac, beerocks::net::network_utils::ZERO_MAC, ire_type);
+        if (local_bridge_mac == mac) {
+            add_node_gateway(mac);
+        } else {
+            add_node_ire(mac);
+        }
     }
     get_node(mac)->is_prplmesh = true;
 }
@@ -4722,7 +4725,7 @@ void db::add_node_from_data(std::string client_entry, const ValuesMap &values_ma
     auto client_mac = client_db_entry_to_mac(client_entry);
 
     // Add client node with defaults and in default location
-    if (!add_node(client_mac)) {
+    if (!add_node_client(client_mac)) {
         LOG(ERROR) << "Failed to add client node for client_entry " << client_entry;
         result.first = 1;
         return;
