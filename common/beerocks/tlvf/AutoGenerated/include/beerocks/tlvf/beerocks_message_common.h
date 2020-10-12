@@ -1380,12 +1380,12 @@ typedef struct sClient {
     //Determines the period of time after which the client configuration should be cleared,
     //0 - Never age.
     //-1 - Not Configured.
-    int32_t time_life_delay_days;
+    int32_t time_life_delay_minutes;
     void struct_swap(){
         sta_mac.struct_swap();
         tlvf_swap(32, reinterpret_cast<uint8_t*>(&timestamp_sec));
         initial_radio.struct_swap();
-        tlvf_swap(32, reinterpret_cast<uint8_t*>(&time_life_delay_days));
+        tlvf_swap(32, reinterpret_cast<uint8_t*>(&time_life_delay_minutes));
     }
     void struct_init(){
         timestamp_sec = 0x0;
@@ -1393,7 +1393,7 @@ typedef struct sClient {
         stay_on_selected_device = -0x1;
         selected_bands = eClientSelectedBands::eSelectedBands_Unknown;
         single_band = -0x1;
-        time_life_delay_days = -0x1;
+        time_life_delay_minutes = -0x1;
     }
 } __attribute__((packed)) sClient;
 
