@@ -33,9 +33,9 @@ Individuals:
 - David Miguel Gregório Afonso (Altran)
 - Denis Bakin (Minim)
 - Eduardo Aguilar (Essensium/Mind)
-- Fancy Qian (Hitron)
+- Fancy Qian (Hitron Technologies)
 - Frederik Van Bogaert (prpl Foundation via Essensium/Mind)
-- Gal Wiener (Intel)
+- Gal Wiener (Intel Corporation)
 - Itay Elenzweig (MaxLinear via Devalore)
 - Ivan Efimov (Inango)
 - Juan Schroeder (Essensium/Mind)
@@ -47,16 +47,17 @@ Individuals:
 - Mario Maz (MaxLinear)
 - Moran Shoeg (MaxLinear via Devalore)
 - Oleksii Ponomarenko (prpl Foundation via Inango)
+- Oren Vormaser (MaxLinear via Devalore)
 - Ostap Slyusar (prpl Foundation)
 - Pablo Martin (ASSIA)
-- Pavel Levitsky (Intel via Devalore)
-- Ram Marzin (Intel)
-- Ran Regev (MaxLinear via Devalore)
+- Pavel Levitsky (Intel Corporation via Devalore)
+- Ram Marzin (Intel Corporation)
+- Ran Regev (prpl Foundation and MaxLinear via Devalore)
 - Raphaël Mélotte (prpl Foundation via Essensium/Mind)
-- Segev Ravgad (Intel)
-- Semyon Barenboym (Intel)
+- Segev Ravgad (Intel Corporation)
+- Semyon Barenboym (Intel Corporation)
 - Sinan Akpolat (Lifemote)
-- Tomer Eliyahu (Intel)
+- Tomer Eliyahu (Intel Corporation)
 - Vitalii Komisarenko (prpl Foundation via Essensium/Mind)
 - Vitaly Bukhovsky (MaxLinear via Devalore)
 - Vladyslav Tupikin (prpl Foundation via Inango)
@@ -66,7 +67,7 @@ Individuals:
 
 In addition, some parts were copied from other projects.
 
-- nl80211_client_impl.cpp contains code copied from [`iw`](http://git.sipsolutions.net/iw.git/)
+- nl80211\_client\_impl.cpp contains code copied from [`iw`](http://git.sipsolutions.net/iw.git/)
   - Johannes Berg
   - Andy Lutomirski
   - Mike Kershaw
