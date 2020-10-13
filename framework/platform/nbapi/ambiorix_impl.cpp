@@ -421,27 +421,34 @@ bool AmbiorixImpl::set(const std::string &relative_path, const std::string &para
     return true;
 }
 
-bool AmbiorixImpl::add_instance(const std::string &relative_path)
+uint32_t AmbiorixImpl::add_instance(const std::string &relative_path)
 {
     amxd_trans_t transaction;
+    uint32_t index;
+
     auto object = prepare_transaction(relative_path, transaction);
     if (!object) {
         LOG(ERROR) << "Couldn't find the object for: " << relative_path;
-        return false;
+        return 0;
     }
 
     auto status = amxd_trans_add_inst(&transaction, 0, NULL);
     if (status != amxd_status_ok) {
-        LOG(ERROR) << "Failed to add instance for: " << object->name << "status: " << status;
+        LOG(ERROR) << "Failed to add instance for: " << object->name << " status: " << status;
     }
 
     if (!apply_transaction(transaction)) {
         LOG(ERROR) << "Failed to apply transaction for: " << object->name;
-        return false;
+        return 0;
     }
 
-    LOG(DEBUG) << "Instance added for: " << object->name;
-    return true;
+    index = amxd_object_get_index(transaction.current);
+    if (!index) {
+        LOG(ERROR) << "Failed to get index for object: " << transaction.current->name;
+    }
+
+    LOG(DEBUG) << "Instance " << transaction.current->name << " added for: " << object->name;
+    return index;
 }
 
 bool AmbiorixImpl::remove_instance(const std::string &relative_path, uint32_t index)
