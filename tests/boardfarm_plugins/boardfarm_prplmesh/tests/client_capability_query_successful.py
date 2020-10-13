@@ -17,7 +17,6 @@ class ClientCapabilityQuerySuccessful(PrplMeshBaseTest):
         try:
             sta = self.dev.wifi
             agent = self.dev.DUT.agent_entity
-            controller = self.dev.lan.controller_entity
         except AttributeError as ae:
             raise SkipTest(ae)
 
@@ -40,8 +39,6 @@ class ClientCapabilityQuerySuccessful(PrplMeshBaseTest):
         sta.wifi_connect_check(agent.radios[0].vaps[0])
 
         time.sleep(1)
-
-        conn_map = controller.get_conn_map()
 
         # then check capability query is successful with connected station
         try:
