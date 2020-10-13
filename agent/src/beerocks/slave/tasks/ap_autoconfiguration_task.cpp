@@ -27,7 +27,7 @@ using namespace beerocks;
 using namespace net;
 using namespace son;
 
-static constexpr uint8_t MAX_FAILED_AUTOCONFIG_SEARCH_ATTEMPTS = 20;
+static constexpr uint16_t MAX_FAILED_AUTOCONFIG_SEARCH_ATTEMPTS = 1000;
 static constexpr uint8_t AUTOCONFIG_DISCOVERY_TIMEOUT_SECONDS  = 1;
 
 #define FSM_MOVE_STATE(radio_iface, new_state)                                                     \
