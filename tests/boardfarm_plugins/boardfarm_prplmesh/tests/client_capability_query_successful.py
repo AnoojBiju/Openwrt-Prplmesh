@@ -41,8 +41,6 @@ class ClientCapabilityQuerySuccessful(PrplMeshBaseTest):
 
         time.sleep(1)
 
-        conn_map = controller.get_conn_map()
-
         # then check capability query is successful with connected station
         try:
             report = self.base_test_client_capability_query(sta)
