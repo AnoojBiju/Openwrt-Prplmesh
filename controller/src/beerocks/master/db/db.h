@@ -283,6 +283,15 @@ public:
 
     bool remove_node(const sMacAddr &mac);
 
+    /**
+    * @brief set device id, where device id = device mac address
+    *
+    * @param device mac address
+    * @param device index
+    * @return true if id of device was successfully set, false otherwise
+    */
+    bool dm_set_device_id(const std::string &device_mac, uint32_t device_index);
+
     bool set_node_type(const std::string &mac, beerocks::eType type);
     beerocks::eType get_node_type(const std::string &mac);
 
