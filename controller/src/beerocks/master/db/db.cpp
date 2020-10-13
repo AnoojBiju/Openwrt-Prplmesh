@@ -3402,6 +3402,7 @@ bool db::is_bml_listener_exist()
 //
 // Measurements
 //
+
 bool db::set_node_beacon_measurement(const std::string &sta_mac, std::string ap_mac, int8_t rcpi,
                                      uint8_t rsni)
 {
@@ -4825,6 +4826,31 @@ bool db::dm_set_device_id(const std::string &device_mac, uint32_t device_index)
     return true;
 }
 
+bool db::dm_set_device_multi_ap_capabilities(const std::string &sta_mac)
+{
+    std::string path_to_obj = m_ambiorix_datamodel->get_path_to_radio(sta_mac, "");
+    bool ret_val            = true;
+
+    path_to_obj += ".MultiAPCapabilities.";
+    //For the time being, agent does not do steering so Steering Policy TLV is ignored.
+    if (!m_ambiorix_datamodel->set(path_to_obj, "AgentInitiatedRCPIBasedSteering", false)) {
+        LOG(ERROR) << "Failed to set attribute: " << path_to_obj
+                   << "AgentInitiatedRCPIBasedSteering";
+        ret_val = false;
+    }
+    // USTALinkMatricCurrentlyOn not supported for now
+    if (!m_ambiorix_datamodel->set(path_to_obj, "USTALinkMatricCurrentlyOn", false)) {
+        LOG(ERROR) << "Failed to set attribute: " << path_to_obj << "USTALinkMatricCurrentlyOn";
+        ret_val = false;
+    }
+    // USTALinkMatricCurrentlyOff not supported for now
+    if (!m_ambiorix_datamodel->set(path_to_obj, "USTALinkMatricCurrentlyOff", false)) {
+        LOG(ERROR) << "Failed to set attribute: " << path_to_obj << "USTALinkMatricCurrentlyOff";
+        ret_val = false;
+    }
+    return ret_val;
+}
+
 bool db::dm_add_device_element(const sMacAddr &mac)
 {
     auto index = m_ambiorix_datamodel->get_instance_index("Network.Device.[ID == '%s'].",
@@ -4837,6 +4863,11 @@ bool db::dm_add_device_element(const sMacAddr &mac)
     }
 
     if (!dm_set_device_id(tlvf::mac_to_string(mac), index)) {
+        return false;
+    }
+
+    if (!dm_set_device_multi_ap_capabilities(tlvf::mac_to_string(mac))) {
+        LOG(ERROR) << "Failed to set multi ap capabilities";
         return false;
     }
     return true;
