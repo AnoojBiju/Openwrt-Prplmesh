@@ -24,6 +24,11 @@ bool AmbiorixDummy::remove_instance(const std::string &relative_path, uint32_t i
 {
     return true;
 }
+uint32_t AmbiorixDummy::get_instance_index(const std::string &specific_path, const std::string &key)
+{
+    // Return false (0) because method can be used for checking instance present in Data Model or not
+    return 0;
+}
 
 } // namespace nbapi
 } // namespace beerocks

@@ -591,6 +591,12 @@ struct BML_CLIENT_CONFIG {
     // Bitwise value of selected bands for the client.
     // Correlates to BML_CLIENT_SELECTED_BANDS
     int8_t selected_bands;
+
+    // Optional parameter,
+    // Determines the period of time after which the client configuration should be cleared,
+    //   0 - Never age.
+    //  -1 - Not Configured (optional).
+    int32_t time_life_delay_minutes;
 };
 
 struct BML_CLIENT {
@@ -617,7 +623,7 @@ struct BML_CLIENT {
     // Determines the period of time after which the client configuration should be cleared,
     //   0 - Never age.
     //  -1 - Not Configured.
-    int32_t time_life_delay_days;
+    int32_t time_life_delay_minutes;
 };
 
 /****************************************************************************/

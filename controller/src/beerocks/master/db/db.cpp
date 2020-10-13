@@ -21,7 +21,7 @@ using namespace son;
 using namespace net;
 
 const std::string db::TIMESTAMP_STR            = "timestamp";
-const std::string db::TIMELIFE_DELAY_STR       = "timelife";
+const std::string db::TIMELIFE_DELAY_STR       = "timelife_minutes";
 const std::string db::INITIAL_RADIO_ENABLE_STR = "initial_radio_enable";
 const std::string db::INITIAL_RADIO_STR        = "initial_radio";
 const std::string db::SELECTED_BANDS_STR       = "selected_bands";
@@ -181,6 +181,85 @@ bool db::add_node(const sMacAddr &mac, const sMacAddr &parent_mac, beerocks::eTy
     return true;
 }
 
+bool db::add_node_gateway(const sMacAddr &mac, const sMacAddr &radio_identifier)
+{
+    if (!add_node(mac, network_utils::ZERO_MAC, beerocks::TYPE_GW, radio_identifier)) {
+        LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
+        return false;
+    }
+
+    if (!dm_add_device_element(mac)) {
+        LOG(ERROR) << "Failed to add device element for the gateway, mac: " << mac;
+        return false;
+    }
+
+    return true;
+}
+
+bool db::add_node_ire(const sMacAddr &mac, const sMacAddr &parent_mac,
+                      const sMacAddr &radio_identifier)
+{
+    if (!add_node(mac, parent_mac, beerocks::TYPE_IRE, radio_identifier)) {
+        LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
+        return false;
+    }
+
+    if (!dm_add_device_element(mac)) {
+        LOG(ERROR) << "Failed to add device element for the ire, mac: " << mac;
+        return false;
+    }
+
+    return true;
+}
+
+bool db::add_node_wireless_bh(const sMacAddr &mac, const sMacAddr &parent_mac,
+                              const sMacAddr &radio_identifier)
+{
+    if (!add_node(mac, parent_mac, beerocks::TYPE_IRE_BACKHAUL, radio_identifier)) {
+        LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
+        return false;
+    }
+
+    // TODO: Add instance for Radio.BackhaulSta element from the Data Elements
+    return true;
+}
+
+bool db::add_node_wired_bh(const sMacAddr &mac, const sMacAddr &parent_mac,
+                           const sMacAddr &radio_identifier)
+{
+    if (!add_node(mac, parent_mac, beerocks::TYPE_ETH_SWITCH, radio_identifier)) {
+        LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
+        return false;
+    }
+
+    // TODO: Add node to the controller data model via m_ambiorix_datamodel for Wired BH agent
+    return true;
+}
+
+bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac,
+                        const sMacAddr &radio_identifier)
+{
+    if (!add_node(mac, parent_mac, beerocks::TYPE_SLAVE, radio_identifier)) {
+        LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
+        return false;
+    }
+
+    // TODO: Add radio to the controller data model via m_ambiorix_datamodel for defined device
+    return true;
+}
+
+bool db::add_node_client(const sMacAddr &mac, const sMacAddr &parent_mac,
+                         const sMacAddr &radio_identifier)
+{
+    if (!add_node(mac, parent_mac, beerocks::TYPE_CLIENT, radio_identifier)) {
+        LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
+        return false;
+    }
+
+    // TODO: Add STA to the controller data model via m_ambiorix_datamodel for connected station (WiFI client)
+    return true;
+}
+
 bool db::remove_node(const sMacAddr &mac)
 {
     int i;
@@ -207,6 +286,18 @@ bool db::remove_node(const sMacAddr &mac)
                 // if removed by ruid_key
             } else if (tlvf::mac_to_string(mac) == ruid_key) {
                 nodes[i].erase(node_mac);
+            }
+
+            auto index = m_ambiorix_datamodel->get_instance_index("Network.Device.[ID == '%s'].",
+                                                                  tlvf::mac_to_string(mac));
+            if (!index) {
+                LOG(ERROR) << "Failed to get Network.Device index for mac: " << mac;
+                return false;
+            }
+
+            if (!m_ambiorix_datamodel->remove_instance("Network.Device", index)) {
+                LOG(ERROR) << "Failed to remove Network.Device." << index << " instance.";
+                return false;
             }
 
             return true;
@@ -2532,7 +2623,7 @@ std::chrono::system_clock::time_point db::get_client_parameters_last_edit(const 
 }
 
 bool db::set_client_time_life_delay(const sMacAddr &mac,
-                                    const std::chrono::seconds &time_life_delay_sec,
+                                    const std::chrono::minutes &time_life_delay_minutes,
                                     bool save_to_persistent_db)
 {
     auto node = get_node_verify_type(mac, beerocks::TYPE_CLIENT);
@@ -2541,7 +2632,7 @@ bool db::set_client_time_life_delay(const sMacAddr &mac,
         return false;
     }
 
-    LOG(DEBUG) << "time_life_delay_sec = " << time_life_delay_sec.count();
+    LOG(DEBUG) << "time_life_delay_minutes = " << time_life_delay_minutes.count();
 
     auto timestamp = std::chrono::system_clock::now();
     if (save_to_persistent_db) {
@@ -2549,11 +2640,12 @@ bool db::set_client_time_life_delay(const sMacAddr &mac,
         if (!config.persistent_db) {
             LOG(DEBUG) << "persistent db is disabled";
         } else {
-            LOG(DEBUG) << "configuring persistent-db, timelife = " << time_life_delay_sec.count();
+            LOG(DEBUG) << "configuring persistent-db, timelife = "
+                       << time_life_delay_minutes.count();
 
             ValuesMap values_map;
             values_map[TIMESTAMP_STR]      = timestamp_to_string_seconds(timestamp);
-            values_map[TIMELIFE_DELAY_STR] = std::to_string(time_life_delay_sec.count());
+            values_map[TIMELIFE_DELAY_STR] = std::to_string(time_life_delay_minutes.count());
 
             // update the persistent db
             if (!update_client_entry_in_persistent_db(mac, values_map)) {
@@ -2563,21 +2655,21 @@ bool db::set_client_time_life_delay(const sMacAddr &mac,
         }
     }
 
-    node->client_time_life_delay_sec  = time_life_delay_sec;
-    node->client_parameters_last_edit = timestamp;
+    node->client_time_life_delay_minutes = time_life_delay_minutes;
+    node->client_parameters_last_edit    = timestamp;
 
     return true;
 }
 
-std::chrono::seconds db::get_client_time_life_delay(const sMacAddr &mac)
+std::chrono::minutes db::get_client_time_life_delay(const sMacAddr &mac)
 {
     auto node = get_node_verify_type(mac, beerocks::TYPE_CLIENT);
     if (!node) {
         LOG(ERROR) << "client node not found for mac " << mac;
-        return std::chrono::seconds::zero();
+        return std::chrono::minutes::zero();
     }
 
-    return node->client_time_life_delay_sec;
+    return node->client_time_life_delay_minutes;
 }
 
 bool db::set_client_stay_on_initial_radio(const sMacAddr &mac, bool stay_on_initial_radio,
@@ -2825,12 +2917,12 @@ bool db::clear_client_persistent_db(const sMacAddr &mac)
 
     LOG(DEBUG) << "setting client " << mac << " runtime info to default values";
 
-    node->client_parameters_last_edit  = std::chrono::system_clock::time_point::min();
-    node->client_time_life_delay_sec   = std::chrono::seconds::zero();
-    node->client_stay_on_initial_radio = eTriStateBool::NOT_CONFIGURED;
-    node->client_initial_radio         = network_utils::ZERO_MAC;
-    node->client_selected_bands        = PARAMETER_NOT_CONFIGURED;
-    node->client_is_friendly           = eTriStateBool::NOT_CONFIGURED;
+    node->client_parameters_last_edit    = std::chrono::system_clock::time_point::min();
+    node->client_time_life_delay_minutes = std::chrono::minutes::zero();
+    node->client_stay_on_initial_radio   = eTriStateBool::NOT_CONFIGURED;
+    node->client_initial_radio           = network_utils::ZERO_MAC;
+    node->client_selected_bands          = PARAMETER_NOT_CONFIGURED;
+    node->client_is_friendly             = eTriStateBool::NOT_CONFIGURED;
 
     // if persistent db is enabled
     if (config.persistent_db) {
@@ -2898,10 +2990,11 @@ bool db::update_client_persistent_db(const sMacAddr &mac)
     //fill values map of client persistent params
     values_map[TIMESTAMP_STR] = timestamp_to_string_seconds(node->client_parameters_last_edit);
 
-    if (node->client_time_life_delay_sec != std::chrono::seconds::zero()) {
+    if (node->client_time_life_delay_minutes != std::chrono::minutes::zero()) {
         LOG(DEBUG) << "Setting client time-life-delay in persistent-db to "
-                   << node->client_time_life_delay_sec.count() << " for " << mac;
-        values_map[TIMELIFE_DELAY_STR] = std::to_string(node->client_time_life_delay_sec.count());
+                   << node->client_time_life_delay_minutes.count() << " for " << mac;
+        values_map[TIMELIFE_DELAY_STR] =
+            std::to_string(node->client_time_life_delay_minutes.count());
     }
 
     if (node->client_stay_on_initial_radio != eTriStateBool::NOT_CONFIGURED) {
@@ -4406,9 +4499,12 @@ bool db::is_prplmesh(const sMacAddr &mac)
 void db::set_prplmesh(const sMacAddr &mac)
 {
     auto local_bridge_mac = tlvf::mac_from_string(get_local_bridge_mac());
-    auto ire_type         = local_bridge_mac == mac ? beerocks::TYPE_GW : beerocks::TYPE_IRE;
     if (!get_node(mac)) {
-        add_node(mac, beerocks::net::network_utils::ZERO_MAC, ire_type);
+        if (local_bridge_mac == mac) {
+            add_node_gateway(mac);
+        } else {
+            add_node_ire(mac);
+        }
     }
     get_node(mac)->is_prplmesh = true;
 }
@@ -4452,8 +4548,8 @@ bool db::set_node_params_from_map(const sMacAddr &mac, const ValuesMap &values_m
         } else if (param.first == TIMELIFE_DELAY_STR) {
             LOG(DEBUG) << "Setting node client_time_life_delay_sec to " << param.second << " for "
                        << mac;
-            node->client_time_life_delay_sec =
-                std::chrono::seconds(string_utils::stoi(param.second));
+            node->client_time_life_delay_minutes =
+                std::chrono::minutes(string_utils::stoi(param.second));
         } else if (param.first == INITIAL_RADIO_ENABLE_STR) {
             LOG(DEBUG) << "Setting node client_stay_on_initial_radio to " << param.second << " for "
                        << mac;
@@ -4550,9 +4646,9 @@ bool db::remove_candidate_client(sMacAddr client_to_skip)
 sMacAddr db::get_candidate_client_for_removal(sMacAddr client_to_skip)
 {
     const auto max_timelife_delay_sec =
-        std::chrono::seconds(config.max_timelife_delay_days * 24 * 3600);
+        std::chrono::seconds(config.max_timelife_delay_minutes * 60);
     const auto unfriendly_device_max_timelife_delay_sec =
-        std::chrono::seconds(config.unfriendly_device_max_timelife_delay_days * 24 * 3600);
+        std::chrono::seconds(config.unfriendly_device_max_timelife_delay_minutes * 60);
 
     sMacAddr candidate_client_to_be_removed  = network_utils::ZERO_MAC;
     bool is_disconnected_candidate_available = false;
@@ -4593,8 +4689,8 @@ sMacAddr db::get_candidate_client_for_removal(sMacAddr client_to_skip)
 
             // Client timelife delay
             auto timelife_delay =
-                (client->client_time_life_delay_sec != std::chrono::seconds::zero())
-                    ? client->client_time_life_delay_sec
+                (client->client_time_life_delay_minutes != std::chrono::seconds::zero())
+                    ? std::chrono::seconds(client->client_time_life_delay_minutes)
                     : max_timelife_delay;
             // Calculate client expiry due time
             auto current_client_expiry_due = client->client_parameters_last_edit + timelife_delay;
@@ -4631,7 +4727,7 @@ void db::add_node_from_data(std::string client_entry, const ValuesMap &values_ma
     auto client_mac = client_db_entry_to_mac(client_entry);
 
     // Add client node with defaults and in default location
-    if (!add_node(client_mac)) {
+    if (!add_node_client(client_mac)) {
         LOG(ERROR) << "Failed to add client node for client_entry " << client_entry;
         result.first = 1;
         return;
@@ -4654,9 +4750,9 @@ void db::add_node_from_data(std::string client_entry, const ValuesMap &values_ma
 
 uint64_t db::get_client_remaining_sec(const std::pair<std::string, ValuesMap> &client)
 {
-    static const int max_timelife_delay_sec = config.max_timelife_delay_days * 24 * 3600;
+    static const int max_timelife_delay_sec = config.max_timelife_delay_minutes * 60;
     static const int unfriendly_device_max_timelife_delay_sec =
-        config.unfriendly_device_max_timelife_delay_days * 24 * 3600;
+        config.unfriendly_device_max_timelife_delay_minutes * 60;
 
     auto timestamp_it = client.second.find(TIMESTAMP_STR);
     if (timestamp_it == client.second.end())
@@ -4677,4 +4773,17 @@ uint64_t db::get_client_remaining_sec(const std::pair<std::string, ValuesMap> &c
     return ((client_remaining_timelife_sec > client_timelife_passed_sec)
                 ? (client_remaining_timelife_sec - client_timelife_passed_sec)
                 : 0);
+}
+
+bool db::dm_add_device_element(const sMacAddr &mac)
+{
+    auto index = m_ambiorix_datamodel->get_instance_index("Network.Device.[ID == '%s'].",
+                                                          tlvf::mac_to_string(mac));
+    LOG_IF(index, FATAL) << "Device with ID: " << mac << " exists in the data model!";
+
+    if (!m_ambiorix_datamodel->add_instance("Network.Device")) {
+        LOG(ERROR) << "Failed to add instance for device, mac: " << mac;
+        return false;
+    }
+    return true;
 }

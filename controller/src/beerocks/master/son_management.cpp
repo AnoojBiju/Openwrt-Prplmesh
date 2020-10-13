@@ -2132,7 +2132,7 @@ void son_management::handle_bml_message(Socket *sd,
         // If client doesn't have node in runtime DB - add node to runtime DB.
         if (!database.has_node(client_mac)) {
             LOG(DEBUG) << "Setting a client which doesn't exist in DB, adding client to DB";
-            if (!database.add_node(client_mac)) {
+            if (!database.add_node_client(client_mac)) {
                 LOG(ERROR) << "Failed to add client node for client " << client_mac;
                 send_response(false);
                 break;
@@ -2243,12 +2243,12 @@ void son_management::handle_bml_message(Socket *sd,
         // Selected bands
         response->client().selected_bands =
             static_cast<eClientSelectedBands>(database.get_client_selected_bands(client_mac));
-        // Timelife Delay - scaled from seconds to days
-        auto timelife_delay_sec = database.get_client_time_life_delay(client_mac);
-        response->client().time_life_delay_days =
-            (timelife_delay_sec == std::chrono::seconds::zero())
+        // Timelife Delay in minutes
+        auto timelife_delay_minutes = database.get_client_time_life_delay(client_mac);
+        response->client().time_life_delay_minutes =
+            (timelife_delay_minutes == std::chrono::minutes::zero())
                 ? PARAMETER_NOT_CONFIGURED
-                : std::chrono::duration_cast<std::chrono::hours>(timelife_delay_sec).count() / 24;
+                : timelife_delay_minutes.count();
 
         // Currently not supported in DB
         // Stay on selected device
