@@ -25,7 +25,7 @@ const std::string db::TIMELIFE_DELAY_STR       = "timelife_minutes";
 const std::string db::INITIAL_RADIO_ENABLE_STR = "initial_radio_enable";
 const std::string db::INITIAL_RADIO_STR        = "initial_radio";
 const std::string db::SELECTED_BANDS_STR       = "selected_bands";
-const std::string db::IS_FRIENDLY_STR          = "is_friendly";
+const std::string db::IS_UNFRIENDLY_STR        = "is_unfriendly";
 
 // static
 std::string db::type_to_string(beerocks::eType type)
@@ -2856,8 +2856,8 @@ int8_t db::get_client_selected_bands(const sMacAddr &mac)
     return node->client_selected_bands;
 }
 
-bool db::set_client_is_friendly(const sMacAddr &mac, bool client_is_friendly,
-                                bool save_to_persistent_db)
+bool db::set_client_is_unfriendly(const sMacAddr &mac, bool client_is_unfriendly,
+                                  bool save_to_persistent_db)
 {
     auto node = get_node_verify_type(mac, beerocks::TYPE_CLIENT);
     if (!node) {
@@ -2865,21 +2865,19 @@ bool db::set_client_is_friendly(const sMacAddr &mac, bool client_is_friendly,
         return false;
     }
 
-    LOG(DEBUG) << "Setting client " << mac
-               << " client_is_friendly = " << string_utils::bool_str(client_is_friendly);
+    LOG(DEBUG) << "Setting client " << mac << " client_is_unfriendly = " << client_is_unfriendly;
 
-    auto timestamp = std::chrono::system_clock::now();
     if (save_to_persistent_db) {
         // if persistent db is disabled
         if (!config.persistent_db) {
             LOG(DEBUG) << "persistent db is disabled";
         } else {
-            LOG(DEBUG) << "Configuring persistent-db, client_is_friendly = " << client_is_friendly;
+            LOG(DEBUG) << "Configuring persistent-db, client_is_unfriendly = "
+                       << client_is_unfriendly;
 
             ValuesMap values_map;
             // std::to_string(bool) would result in either "0" or "1"
-            values_map[IS_FRIENDLY_STR] = std::to_string(client_is_friendly);
-            values_map[TIMESTAMP_STR]   = timestamp_to_string_seconds(timestamp);
+            values_map[IS_UNFRIENDLY_STR] = std::to_string(client_is_unfriendly);
 
             // update the persistent db
             if (!update_client_entry_in_persistent_db(mac, values_map)) {
@@ -2889,13 +2887,12 @@ bool db::set_client_is_friendly(const sMacAddr &mac, bool client_is_friendly,
         }
     }
 
-    node->client_is_friendly = client_is_friendly ? eTriStateBool::TRUE : eTriStateBool::FALSE;
-    node->client_parameters_last_edit = timestamp;
+    node->client_is_unfriendly = client_is_unfriendly ? eTriStateBool::TRUE : eTriStateBool::FALSE;
 
     return true;
 }
 
-eTriStateBool db::get_client_is_friendly(const sMacAddr &mac)
+eTriStateBool db::get_client_is_unfriendly(const sMacAddr &mac)
 {
     auto node = get_node_verify_type(mac, beerocks::TYPE_CLIENT);
     if (!node) {
@@ -2904,7 +2901,7 @@ eTriStateBool db::get_client_is_friendly(const sMacAddr &mac)
         return eTriStateBool::NOT_CONFIGURED;
     }
 
-    return node->client_is_friendly;
+    return node->client_is_unfriendly;
 }
 
 bool db::clear_client_persistent_db(const sMacAddr &mac)
@@ -2922,7 +2919,7 @@ bool db::clear_client_persistent_db(const sMacAddr &mac)
     node->client_stay_on_initial_radio   = eTriStateBool::NOT_CONFIGURED;
     node->client_initial_radio           = network_utils::ZERO_MAC;
     node->client_selected_bands          = PARAMETER_NOT_CONFIGURED;
-    node->client_is_friendly             = eTriStateBool::NOT_CONFIGURED;
+    node->client_is_unfriendly           = eTriStateBool::NOT_CONFIGURED;
 
     // if persistent db is enabled
     if (config.persistent_db) {
@@ -3016,11 +3013,11 @@ bool db::update_client_persistent_db(const sMacAddr &mac)
         values_map[SELECTED_BANDS_STR] = std::to_string(node->client_selected_bands);
     }
 
-    if (node->client_is_friendly != eTriStateBool::NOT_CONFIGURED) {
-        auto is_friendly = (node->client_is_friendly == eTriStateBool::TRUE);
-        LOG(DEBUG) << "Setting client is-friendly in persistent-db to " << is_friendly << " for "
-                   << mac;
-        values_map[IS_FRIENDLY_STR] = std::to_string(is_friendly);
+    if (node->client_is_unfriendly != eTriStateBool::NOT_CONFIGURED) {
+        auto is_unfriendly = (node->client_is_unfriendly == eTriStateBool::TRUE);
+        LOG(DEBUG) << "Setting client is-unfriendly in persistent-db to " << is_unfriendly
+                   << " for " << mac;
+        values_map[IS_UNFRIENDLY_STR] = std::to_string(is_unfriendly);
     }
 
     // update the persistent db
@@ -4562,9 +4559,9 @@ bool db::set_node_params_from_map(const sMacAddr &mac, const ValuesMap &values_m
             LOG(DEBUG) << "Setting node client_selected_bands to " << param.second << " for "
                        << mac;
             node->client_selected_bands = string_utils::stoi(param.second);
-        } else if (param.first == IS_FRIENDLY_STR) {
-            LOG(DEBUG) << "Setting node client_is_friendly to " << param.second << " for " << mac;
-            node->client_is_friendly =
+        } else if (param.first == IS_UNFRIENDLY_STR) {
+            LOG(DEBUG) << "Setting node client_is_unfriendly to " << param.second << " for " << mac;
+            node->client_is_unfriendly =
                 (param.second == std::to_string(true)) ? eTriStateBool::TRUE : eTriStateBool::FALSE;
         } else {
             LOG(WARNING) << "Unknown parameter, skipping: " << param.first << " for " << mac;
@@ -4683,7 +4680,7 @@ sMacAddr db::get_candidate_client_for_removal(sMacAddr client_to_skip)
             // Max client timelife delay
             // This is ditermined according to the friendliness status of the client.
             // If a client is unfriendly we can
-            auto max_timelife_delay = client->client_is_friendly == eTriStateBool::FALSE
+            auto max_timelife_delay = (client->client_is_unfriendly == eTriStateBool::TRUE)
                                           ? unfriendly_device_max_timelife_delay_sec
                                           : max_timelife_delay_sec;
 
@@ -4766,7 +4763,8 @@ uint64_t db::get_client_remaining_sec(const std::pair<std::string, ValuesMap> &c
         std::chrono::duration_cast<std::chrono::seconds>(now - timestamp).count();
 
     auto client_remaining_timelife_sec = max_timelife_delay_sec;
-    if ((client.second.find(IS_FRIENDLY_STR)) == client.second.end()) {
+    if ((client.second.find(IS_UNFRIENDLY_STR)) != client.second.end() &&
+        (client.second.at(IS_UNFRIENDLY_STR) == std::to_string(true))) {
         client_remaining_timelife_sec = unfriendly_device_max_timelife_delay_sec;
     }
 

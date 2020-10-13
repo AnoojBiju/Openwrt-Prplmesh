@@ -153,7 +153,7 @@ std::ostream &operator<<(std::ostream &os, const node &n)
                << "   ClientStayOnInitialRadio: " << n.client_stay_on_initial_radio << std::endl
                << "   ClientInitialRadio: " << n.client_initial_radio << std::endl
                << "   ClientSelectedBands: " << n.client_selected_bands << std::endl
-               << "   ClientIsFriendly: " << n.client_is_friendly << std::endl;
+               << "   ClientIsUnfriendly: " << n.client_is_unfriendly << std::endl;
         }
 
     } else if (node_type == beerocks::TYPE_SLAVE) {
