@@ -390,12 +390,12 @@ int main(int argc, char *argv[])
     }
 
     // Set Network.ID to the Data Model
-    if (!amb_dm_obj->set("Network.ID", bridge_info.mac)) {
+    if (!amb_dm_obj->set("Controller.Network", "ID", bridge_info.mac)) {
         LOG(ERROR) << "Failed to add Network.ID, mac: " << bridge_info.mac;
         return false;
     }
 
-    if (!amb_dm_obj->set("Network.ControllerID", bridge_info.mac)) {
+    if (!amb_dm_obj->set("Controller.Network", "ControllerID", bridge_info.mac)) {
         LOG(ERROR) << "Failed to add Network.ControllerID, mac: " << bridge_info.mac;
         return false;
     }
@@ -404,8 +404,9 @@ int main(int argc, char *argv[])
     // diagnostics_thread diagnostics(master_db);
     son::master_thread son_master(master_uds, master_db);
 
-    if (!amb_dm_obj->set("Network.TimeStamp", amb_dm_obj->get_datamodel_time_format())) {
-        LOG(ERROR) << "Failed to set Network.TimeStamp.";
+    if (!amb_dm_obj->set("Controller.Network", "TimeStamp",
+                         amb_dm_obj->get_datamodel_time_format())) {
+        LOG(ERROR) << "Failed to set Controller.Network.TimeStamp.";
         return false;
     }
 
