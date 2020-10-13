@@ -19,7 +19,7 @@ bool AmbiorixDummy::set(const std::string &relative_path, const uint32_t &value)
 bool AmbiorixDummy::set(const std::string &relative_path, const uint64_t &value) { return true; }
 bool AmbiorixDummy::set(const std::string &relative_path, const bool &value) { return true; }
 bool AmbiorixDummy::set(const std::string &relative_path, const double &value) { return true; }
-bool AmbiorixDummy::add_instance(const std::string &relative_path) { return true; }
+uint32_t AmbiorixDummy::add_instance(const std::string &relative_path) { return 1; }
 bool AmbiorixDummy::remove_instance(const std::string &relative_path, uint32_t index)
 {
     return true;
