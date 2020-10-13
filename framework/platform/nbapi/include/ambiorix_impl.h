@@ -103,6 +103,13 @@ public:
      */
     uint32_t get_instance_index(const std::string &specific_path, const std::string &key) override;
 
+    /**
+     * @brief Get Date and Time in the Ambiorix data model format: "2020-08-31T11:22:39Z".
+     *
+     * @return String with date and time in the Ambiorix data model format.
+     */
+    std::string get_datamodel_time_format() override;
+
 private:
     // Methods
 

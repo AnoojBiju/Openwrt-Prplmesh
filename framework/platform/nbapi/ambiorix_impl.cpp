@@ -484,6 +484,28 @@ uint32_t AmbiorixImpl::get_instance_index(const std::string &specific_path, cons
     return index;
 }
 
+std::string AmbiorixImpl::get_datamodel_time_format()
+{
+
+    amxc_ts_t datamodel_time;
+
+    if (amxc_ts_now(&datamodel_time)) {
+        LOG(ERROR) << "Failed to get current time in data model format.";
+        return "";
+    }
+
+    const size_t buf_size = 64;
+    char buf[buf_size];
+
+    if (!amxc_ts_format(&datamodel_time, buf, buf_size)) {
+        LOG(ERROR) << "Failed to get date and time in RFC 3339 format.";
+        return "";
+    }
+
+    std::string result_time = buf;
+    return result_time;
+}
+
 AmbiorixImpl::~AmbiorixImpl()
 {
     remove_event_loop();
