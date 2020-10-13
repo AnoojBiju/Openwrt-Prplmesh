@@ -17,7 +17,6 @@ class ClientCapabilityQuerySuccessful(PrplMeshBaseTest):
         try:
             sta = self.dev.wifi
             agent = self.dev.DUT.agent_entity
-            controller = self.dev.lan.controller_entity
         except AttributeError as ae:
             raise SkipTest(ae)
 
