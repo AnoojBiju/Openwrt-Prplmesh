@@ -236,6 +236,25 @@ bool db::add_node_wired_bh(const sMacAddr &mac, const sMacAddr &parent_mac,
     return true;
 }
 
+bool db::dm_add_radio_element(const std::string &radio_mac, const std::string &device_mac)
+{
+    std::string path_to_obj = " Network.Device.";
+    uint32_t index =
+        m_ambiorix_datamodel->get_instance_index(path_to_obj + "[ID == '%s'].", device_mac);
+
+    if (!index) {
+        LOG(ERROR) << "Failed to get Network.Device index for mac: " << device_mac;
+        return false;
+    }
+    path_to_obj += std::to_string(index);
+    if (!m_ambiorix_datamodel->add_instance(path_to_obj + ".Radio")) {
+        LOG(ERROR) << "Failed to add instance Network.Device." << device_mac
+                   << ".Radio, with radio mac: " << radio_mac;
+        return false;
+    }
+    return true;
+}
+
 bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac,
                         const sMacAddr &radio_identifier)
 {
@@ -243,9 +262,7 @@ bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac,
         LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
         return false;
     }
-
-    // TODO: Add radio to the controller data model via m_ambiorix_datamodel for defined device
-    return true;
+    return dm_add_radio_element(tlvf::mac_to_string(mac), tlvf::mac_to_string(parent_mac));
 }
 
 bool db::add_node_client(const sMacAddr &mac, const sMacAddr &parent_mac,
