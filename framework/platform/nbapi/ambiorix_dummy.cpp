@@ -12,7 +12,7 @@ namespace beerocks {
 namespace nbapi {
 
 AmbiorixDummy::~AmbiorixDummy() {}
-bool AmbiorixDummy::set(const std::string &relative_path, const std::string &value) { return true; }
+bool AmbiorixDummy::set(const std::string &relative_path, const std::string &attribute, const std::string &value) { return true; }
 bool AmbiorixDummy::set(const std::string &relative_path, const int32_t &value) { return true; }
 bool AmbiorixDummy::set(const std::string &relative_path, const int64_t &value) { return true; }
 bool AmbiorixDummy::set(const std::string &relative_path, const uint32_t &value) { return true; }

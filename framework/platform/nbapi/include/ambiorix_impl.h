@@ -70,7 +70,7 @@ public:
      * @param value Value which need to set.
      * @return True on success and false otherwise.
      */
-    bool set(const std::string &relative_path, const std::string &value) override;
+    bool set(const std::string &relative_path, const std::string &attribute, const std::string &value) override;
     bool set(const std::string &relative_path, const int32_t &value) override;
     bool set(const std::string &relative_path, const int64_t &value) override;
     bool set(const std::string &relative_path, const uint32_t &value) override;
