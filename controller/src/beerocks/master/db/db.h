@@ -893,6 +893,9 @@ public:
     //
     // Measurements
     //
+
+    bool dm_set_multi_ap_capabilities(const std::string &sta_mac, int8_t rcpi);
+
     bool set_node_beacon_measurement(const std::string &sta_mac, std::string ap_mac, int8_t rcpi,
                                      uint8_t rsni);
     bool get_node_beacon_measurement(const std::string &sta_mac, std::string ap_mac, int8_t &rcpi,

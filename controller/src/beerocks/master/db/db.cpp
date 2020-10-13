@@ -3367,6 +3367,31 @@ bool db::is_bml_listener_exist()
 //
 // Measurements
 //
+
+bool db::dm_set_multi_ap_capabilities(const std::string &sta_mac, int8_t rcpi)
+{
+    std::string path_to_obj = m_ambiorix_datamodel->get_path_to_radio(sta_mac, "");
+
+    path_to_obj += ".MultiAPCapabilities.";
+    if (!m_ambiorix_datamodel->set(path_to_obj, "AgentInitiatedRCPIBasedSteering",
+                                   (rcpi) ? true : false)) {
+        LOG(ERROR) << "Failed to set attribute: " << path_to_obj
+                   << "AgentInitiatedRCPIBasedSteering";
+        return false;
+    }
+    // USTALinkMatricCurrentlyOn not supported for now
+    if (!m_ambiorix_datamodel->set(path_to_obj, "USTALinkMatricCurrentlyOn", false)) {
+        LOG(ERROR) << "Failed to set attribute: " << path_to_obj << "USTALinkMatricCurrentlyOn";
+        return false;
+    }
+    // USTALinkMatricCurrentlyOff not supported for now
+    if (!m_ambiorix_datamodel->set(path_to_obj, "USTALinkMatricCurrentlyOff", false)) {
+        LOG(ERROR) << "Failed to set attribute: " << path_to_obj << "USTALinkMatricCurrentlyOff";
+        return false;
+    }
+    return true;
+}
+
 bool db::set_node_beacon_measurement(const std::string &sta_mac, std::string ap_mac, int8_t rcpi,
                                      uint8_t rsni)
 {
@@ -3376,6 +3401,10 @@ bool db::set_node_beacon_measurement(const std::string &sta_mac, std::string ap_
         return false;
     }
     sta->set_beacon_measurement(ap_mac, rcpi, rsni);
+    if (dm_set_multi_ap_capabilities(sta_mac, rcpi)) {
+        LOG(ERROR) << "Failed to set multi ap capabilities";
+        return false;
+    }
     return true;
 }
 
