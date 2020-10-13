@@ -28,7 +28,7 @@ public:
     bool set(const std::string &relative_path, const uint64_t &value) override;
     bool set(const std::string &relative_path, const bool &value) override;
     bool set(const std::string &relative_path, const double &value) override;
-    bool add_instance(const std::string &relative_path) override;
+    uint32_t add_instance(const std::string &relative_path) override;
     bool remove_instance(const std::string &relative_path, uint32_t index) override;
     uint32_t get_instance_index(const std::string &specific_path, const std::string &key) override;
     std::string get_datamodel_time_format() override;
