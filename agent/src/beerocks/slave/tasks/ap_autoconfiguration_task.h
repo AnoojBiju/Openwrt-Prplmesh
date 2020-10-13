@@ -55,8 +55,8 @@ private:
     };
 
     struct sStateStatus {
-        eState state     = eState::UNCONFIGURED;
-        uint8_t attempts = 0;
+        eState state      = eState::UNCONFIGURED;
+        uint16_t attempts = 0;
         std::chrono::steady_clock::time_point timeout;
     };
 
