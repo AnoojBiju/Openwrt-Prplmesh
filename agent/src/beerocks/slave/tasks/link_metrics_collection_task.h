@@ -28,7 +28,7 @@ class LinkMetricsCollectionTask : public Task {
 public:
     LinkMetricsCollectionTask(backhaul_manager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx);
 
-    bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac,
+    bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac, Socket *sd,
                      std::shared_ptr<beerocks_header> beerocks_header) override;
 
     void work() override;

@@ -49,6 +49,206 @@ static const std::map<uint8_t, sOperatingClass> operating_classes_list = {
     {129,       {{50, 114},                                                    beerocks::BANDWIDTH_160}},
     {130,       {{42, 58, 106, 122, 138, 155},                                 beerocks::BANDWIDTH_80_80}}
 };
+
+const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, wireless_utils::sChannel>> wireless_utils::channels_table_5g = 
+{
+    /* 
+    Note: Only channel 36 supports both +40MHz and -40MHz bandwidths. Adding it as comment, since
+    it has a duplicate key 'beerocks::BANDWIDTH_40' which is not allowed on unordered_map.
+    For now, assume that if a radio supports channel 32 with bandwidth of +40MHz, it will also
+    support channel 36 with bandwidth of -40MHz.
+    
+    Example:
+    { Channel,  { 
+                   { Bandwidth,               { Center Channel, { Overlap Beacon Channels Range } } },
+                }
+    }
+                                                                 min, max 
+    */
+    { 32,       { 
+                   { beerocks::BANDWIDTH_20,  { 32,             { 32, 32                        } } },
+                   { beerocks::BANDWIDTH_40,  { 34,             { 32, 36                        } } },
+                }
+    },
+    { 36,       { 
+                   { beerocks::BANDWIDTH_20,  { 36,             { 36, 36                        } } },
+                   { beerocks::BANDWIDTH_40,  { 38,             { 36, 40                        } } },
+    /*             { beerocks::BANDWIDTH_40,  { 34,             { 32, 36                        } } }, */
+                   { beerocks::BANDWIDTH_80,  { 42,             { 36, 48                        } } },
+                   { beerocks::BANDWIDTH_160, { 50,             { 36, 64                        } } },
+                }
+    },
+    { 40,       { 
+                   { beerocks::BANDWIDTH_20,  { 40,             { 40, 40                        } } },
+                   { beerocks::BANDWIDTH_40,  { 38,             { 36, 40                        } } },
+                   { beerocks::BANDWIDTH_80,  { 42,             { 36, 48                        } } },
+                   { beerocks::BANDWIDTH_160, { 50,             { 36, 64                        } } },
+                }
+    },
+    { 44,       { 
+                   { beerocks::BANDWIDTH_20,  { 44,             { 44, 44                        } } },
+                   { beerocks::BANDWIDTH_40,  { 38,             { 44, 48                        } } },
+                   { beerocks::BANDWIDTH_80,  { 42,             { 36, 48                        } } },
+                   { beerocks::BANDWIDTH_160, { 50,             { 36, 64                        } } },
+                }
+    },
+    { 48,       { 
+                   { beerocks::BANDWIDTH_20,  { 48,             { 48, 48                        } } },
+                   { beerocks::BANDWIDTH_40,  { 38,             { 44, 48                        } } },
+                   { beerocks::BANDWIDTH_80,  { 42,             { 36, 48                        } } },
+                   { beerocks::BANDWIDTH_160, { 50,             { 36, 64                        } } },
+                }
+    },
+    { 52,       { 
+                   { beerocks::BANDWIDTH_20,  { 52,             { 52, 52                        } } },
+                   { beerocks::BANDWIDTH_40,  { 54,             { 52, 56                        } } },
+                   { beerocks::BANDWIDTH_80,  { 58,             { 52, 64                        } } },
+                   { beerocks::BANDWIDTH_160, { 50,             { 36, 64                        } } },
+                }
+    },
+    { 56,       { 
+                   { beerocks::BANDWIDTH_20,  { 56,             { 56, 56                        } } },
+                   { beerocks::BANDWIDTH_40,  { 54,             { 52, 56                        } } },
+                   { beerocks::BANDWIDTH_80,  { 58,             { 52, 64                        } } },
+                   { beerocks::BANDWIDTH_160, { 50,             { 36, 64                        } } },
+                }
+    },
+    { 60,       { 
+                   { beerocks::BANDWIDTH_20,  { 60,             { 60, 60                        } } },
+                   { beerocks::BANDWIDTH_40,  { 62,             { 60, 64                        } } },
+                   { beerocks::BANDWIDTH_80,  { 58,             { 52, 64                        } } },
+                   { beerocks::BANDWIDTH_160, { 50,             { 36, 64                        } } },
+                }
+    },
+    { 68,       { 
+                   { beerocks::BANDWIDTH_20,  { 68,             { 68, 68                        } } },
+                }
+    },
+    { 96,       { 
+                   { beerocks::BANDWIDTH_20,  { 96,             { 96, 96                        } } },
+                }
+    },
+    { 100,      { 
+                   { beerocks::BANDWIDTH_20,  { 100,            { 100, 100                      } } },
+                   { beerocks::BANDWIDTH_40,  { 102,            { 100, 104                      } } },
+                   { beerocks::BANDWIDTH_80,  { 106,            { 100, 112                      } } },
+                   { beerocks::BANDWIDTH_160, { 114,            { 100, 128                      } } },
+                }
+    },
+    { 104,      { 
+                   { beerocks::BANDWIDTH_20,  { 104,            { 104, 104                      } } },
+                   { beerocks::BANDWIDTH_40,  { 102,            { 100, 104                      } } },
+                   { beerocks::BANDWIDTH_80,  { 106,            { 100, 112                      } } },
+                   { beerocks::BANDWIDTH_160, { 114,            { 100, 128                      } } },
+                }
+    },
+    { 108,      { 
+                   { beerocks::BANDWIDTH_20,  { 108,            { 108, 108                      } } },
+                   { beerocks::BANDWIDTH_40,  { 110,            { 108, 112                      } } },
+                   { beerocks::BANDWIDTH_80,  { 106,            { 100, 112                      } } },
+                   { beerocks::BANDWIDTH_160, { 114,            { 100, 128                      } } },
+                }
+    },
+    { 112,      { 
+                   { beerocks::BANDWIDTH_20,  { 112,            { 112, 112                      } } },
+                   { beerocks::BANDWIDTH_40,  { 110,            { 108, 112                      } } },
+                   { beerocks::BANDWIDTH_80,  { 106,            { 100, 112                      } } },
+                   { beerocks::BANDWIDTH_160, { 114,            { 100, 128                      } } },
+                }
+    },
+    { 116,      { 
+                   { beerocks::BANDWIDTH_20,  { 116,            { 116, 116                      } } },
+                   { beerocks::BANDWIDTH_40,  { 118,            { 116, 120                      } } },
+                   { beerocks::BANDWIDTH_80,  { 122,            { 116, 128                      } } },
+                   { beerocks::BANDWIDTH_160, { 114,            { 100, 128                      } } },
+                }
+    },
+    { 120,      { 
+                   { beerocks::BANDWIDTH_20,  { 120,            { 120, 120                      } } },
+                   { beerocks::BANDWIDTH_40,  { 118,            { 116, 120                      } } },
+                   { beerocks::BANDWIDTH_80,  { 122,            { 116, 128                      } } },
+                   { beerocks::BANDWIDTH_160, { 114,            { 100, 128                      } } },
+                }
+    },
+    { 124,      { 
+                   { beerocks::BANDWIDTH_20,  { 124,            { 124, 124                      } } },
+                   { beerocks::BANDWIDTH_40,  { 126,            { 124, 128                      } } },
+                   { beerocks::BANDWIDTH_80,  { 122,            { 116, 128                      } } },
+                   { beerocks::BANDWIDTH_160, { 114,            { 100, 128                      } } },
+                }
+    },
+    { 128,      { 
+                   { beerocks::BANDWIDTH_20,  { 128,            { 128, 128                      } } },
+                   { beerocks::BANDWIDTH_40,  { 126,            { 124, 128                      } } },
+                   { beerocks::BANDWIDTH_80,  { 122,            { 116, 128                      } } },
+                   { beerocks::BANDWIDTH_160, { 114,            { 100, 128                      } } },
+                }
+    },
+    { 132,      { 
+                   { beerocks::BANDWIDTH_20,  { 132,            { 132, 132                      } } },
+                   { beerocks::BANDWIDTH_40,  { 134,            { 132, 136                      } } },
+                   { beerocks::BANDWIDTH_80,  { 138,            { 132, 144                      } } },
+                }
+    },
+    { 136,      { 
+                   { beerocks::BANDWIDTH_20,  { 136,            { 136, 136                      } } },
+                   { beerocks::BANDWIDTH_40,  { 134,            { 132, 136                      } } },
+                   { beerocks::BANDWIDTH_80,  { 138,            { 132, 144                      } } },
+                }
+    },
+    { 140,      { 
+                   { beerocks::BANDWIDTH_20,  { 140,            { 140, 140                      } } },
+                   { beerocks::BANDWIDTH_40,  { 142,            { 140, 144                      } } },
+                   { beerocks::BANDWIDTH_80,  { 138,            { 132, 144                      } } },
+                }
+    },
+    { 144,      { 
+                   { beerocks::BANDWIDTH_20,  { 144,            { 144, 144                      } } },
+                   { beerocks::BANDWIDTH_40,  { 142,            { 140, 144                      } } },
+                   { beerocks::BANDWIDTH_80,  { 138,            { 132, 144                      } } },
+                }
+    },
+    { 149,      { 
+                   { beerocks::BANDWIDTH_20,  { 149,            { 149, 149                      } } },
+                   { beerocks::BANDWIDTH_40,  { 151,            { 149, 153                      } } },
+                   { beerocks::BANDWIDTH_80,  { 155,            { 149, 161                      } } },
+                }
+    },
+    { 153,      { 
+                   { beerocks::BANDWIDTH_20,  { 153,            { 153, 153                      } } },
+                   { beerocks::BANDWIDTH_40,  { 151,            { 149, 153                      } } },
+                   { beerocks::BANDWIDTH_80,  { 155,            { 149, 161                      } } },
+                }
+    },
+    { 157,      { 
+                   { beerocks::BANDWIDTH_20,  { 157,            { 157, 157                      } } },
+                   { beerocks::BANDWIDTH_40,  { 159,            { 157, 161                      } } },
+                   { beerocks::BANDWIDTH_80,  { 155,            { 149, 161                      } } },
+                }
+    },
+    { 161,      { 
+                   { beerocks::BANDWIDTH_20,  { 161,            { 161, 161                      } } },
+                   { beerocks::BANDWIDTH_40,  { 159,            { 157, 161                      } } },
+                   { beerocks::BANDWIDTH_80,  { 155,            { 149, 161                      } } },
+                }
+    },
+    { 165,      { 
+                   { beerocks::BANDWIDTH_20,  { 165,            { 165, 165                      } } },
+                }
+    },
+    { 169,      { 
+                   { beerocks::BANDWIDTH_20,  { 169,            { 169, 169                      } } },
+                }
+    },
+    { 173,      { 
+                   { beerocks::BANDWIDTH_20,  { 173,            { 173, 173                      } } },
+                }
+    },
+
+
+
+
+};
 // clang-format on
 
 constexpr beerocks::eWiFiAntNum

@@ -41,6 +41,8 @@ namespace bpl {
 enum class eErrorCode;
 }
 
+class ChannelSelectionTask;
+
 class backhaul_manager : public btl::transport_socket_thread {
 
 public:
@@ -233,6 +235,7 @@ private:
     std::unique_ptr<beerocks::agent_ucc_listener> m_agent_ucc_listener;
 
     TaskPool m_task_pool;
+    friend ChannelSelectionTask;
 
 public:
     /**

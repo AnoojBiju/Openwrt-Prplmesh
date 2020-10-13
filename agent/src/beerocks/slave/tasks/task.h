@@ -9,6 +9,8 @@
 #ifndef _TASK_H_
 #define _TASK_H_
 
+#include <bcl/network/socket.h>
+
 #include <beerocks/tlvf/beerocks_header.h>
 #include <tlvf/CmduMessageRx.h>
 
@@ -61,11 +63,12 @@ public:
      * 
      * @param cmdu_rx CMDU object conataining the message.
      * @param src_mac AL Mac of the sender.
+     * @param sd Socket of the thread which has sent the message.
      * @param beerocks_header Beerocks Message header (Only on VS message).
      * @return true if the message has been handled, otherwise false.
      */
     virtual bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac,
-                             std::shared_ptr<beerocks_header> beerocks_header)
+                             Socket *sd, std::shared_ptr<beerocks_header> beerocks_header)
     {
         return false;
     }
