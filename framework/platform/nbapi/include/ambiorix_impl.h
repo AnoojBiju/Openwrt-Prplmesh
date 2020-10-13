@@ -70,13 +70,20 @@ public:
      * @param value Value which need to set.
      * @return True on success and false otherwise.
      */
-    bool set(const std::string &relative_path, const std::string &value) override;
-    bool set(const std::string &relative_path, const int32_t &value) override;
-    bool set(const std::string &relative_path, const int64_t &value) override;
-    bool set(const std::string &relative_path, const uint32_t &value) override;
-    bool set(const std::string &relative_path, const uint64_t &value) override;
-    bool set(const std::string &relative_path, const bool &value) override;
-    bool set(const std::string &relative_path, const double &value) override;
+    bool set(const std::string &relative_path, const std::string &parameter,
+             const std::string &value) override;
+    bool set(const std::string &relative_path, const std::string &parameter,
+             const int32_t &value) override;
+    bool set(const std::string &relative_path, const std::string &parameter,
+             const int64_t &value) override;
+    bool set(const std::string &relative_path, const std::string &parameter,
+             const uint32_t &value) override;
+    bool set(const std::string &relative_path, const std::string &parameter,
+             const uint64_t &value) override;
+    bool set(const std::string &relative_path, const std::string &parameter,
+             const bool &value) override;
+    bool set(const std::string &relative_path, const std::string &parameter,
+             const double &value) override;
 
     /* @brief Add instance to the data model object with type list
      *
