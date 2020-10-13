@@ -276,6 +276,8 @@ boardfarm-tests-rax40:
   stage: test
   script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - apt-get install git
+    - git clone https://github.com/mattsm/boardfarm.git && cd boardfarm && git checkout 100521fde1fb67536682cafecc2f91a6e2e8a6f8 && python3 setup.py install
     - ./tests/run_bf.sh
   artifacts:
     paths:
