@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC  -Wall -Wextra -Werror -pthread -Wno-comment -Wno-unused-parameter -Wno-missing-field-initializers -Wno-address-of-packed-member  -g  -shared -Wl,-soname,libelpp.so.1 -o ../../../out/lib/libelpp.so.1.4.0 CMakeFiles/elpp.dir/easylogging++.cc.o -Wl,-rpath,:::::::::::::: 
