@@ -913,6 +913,7 @@ public:
     //
     // Measurements
     //
+
     bool set_node_beacon_measurement(const std::string &sta_mac, std::string ap_mac, int8_t rcpi,
                                      uint8_t rsni);
     bool get_node_beacon_measurement(const std::string &sta_mac, std::string ap_mac, int8_t &rcpi,
@@ -1262,6 +1263,8 @@ private:
      * @return True on success, otherwise false.
      */
     bool dm_add_device_element(const sMacAddr &mac);
+
+    bool dm_set_device_multi_ap_capabilities(const std::string &sta_mac);
 
     int network_optimization_task_id           = -1;
     int channel_selection_task_id              = -1;
