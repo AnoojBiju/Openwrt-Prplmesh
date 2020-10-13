@@ -81,9 +81,9 @@ public:
     /* @brief Add instance to the data model object with type list
      *
      * @param relative_path Path to the object with type list in datamodel (ex: "Controller.Network.Device").
-     * @return True on success and false otherwise.
+     * @return index of recently added object on success, 0 otherwise
      */
-    bool add_instance(const std::string &relative_path) override;
+    uint32_t add_instance(const std::string &relative_path) override;
 
     /**
      * @brief Remove instance from the data model object with type list
