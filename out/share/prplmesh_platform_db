@@ -1,0 +1,10 @@
+management_mode=Multi-AP-Controller-and-Agent
+operating_mode=Gateway
+stop_on_failure_attempts=0
+certification_mode=1
+hostapd_ctrl_path_wlan0=/var/run/hostapd/wlan0
+hostapd_ctrl_path_wlan2=/var/run/hostapd/wlan2
+hostapd_ctrl_path_wlan4=/var/run/hostapd/wlan4
+wpa_supplicant_ctrl_path_wlan0=/var/run/wpa_supplicant/wlan0
+wpa_supplicant_ctrl_path_wlan2=/var/run/wpa_supplicant/wlan2
+wpa_supplicant_ctrl_path_wlan4=/var/run/wpa_supplicant/wlan4
