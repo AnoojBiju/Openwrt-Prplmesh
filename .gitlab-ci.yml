@@ -28,7 +28,7 @@ stages:
     - shell
     - docker-build
   script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker login -u root -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - if [ "$CI_COMMIT_BRANCH" = "master" ]; then latest_tag="--tag latest"; fi
     - ./tools/docker/image-build.sh --image "${CI_JOB_NAME#image-build-}" --tag $CI_PIPELINE_ID $latest_tag --push
   retry: 2
