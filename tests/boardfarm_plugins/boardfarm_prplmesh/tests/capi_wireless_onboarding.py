@@ -7,9 +7,7 @@
 import time
 
 from .prplmesh_base_test import PrplMeshBaseTest
-from .dev_reset_default import DevResetDefault
 from boardfarm.exceptions import SkipTest
-from opts import debug
 
 
 class CapiWirelessOnboarding(PrplMeshBaseTest):
@@ -74,9 +72,9 @@ class CapiWirelessOnboarding(PrplMeshBaseTest):
             time.sleep(2)
             test.check_cmdu_type("autoconfig search", 0x0007, agent.mac)
 
-            # After dev_reset_default there is a delay between the auto_config message to the moment,
-            # that the sockets to the son_slaves are open. Add a delay to make sure that the son_slaves
-            # are operational before continuing to the next test.
+            # After dev_reset_default there is a delay between the auto_config message to the
+            # moment, that the sockets to the son_slaves are open. Add a delay to make sure
+            # that the son_slaves are operational before continuing to the next test.
             time.sleep(3)
         finally:
             test.dev.DUT.wired_sniffer.stop()
