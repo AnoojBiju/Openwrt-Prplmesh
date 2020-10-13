@@ -913,6 +913,7 @@ public:
     //
     // Measurements
     //
+
     bool set_node_beacon_measurement(const std::string &sta_mac, std::string ap_mac, int8_t rcpi,
                                      uint8_t rsni);
     bool get_node_beacon_measurement(const std::string &sta_mac, std::string ap_mac, int8_t &rcpi,
@@ -1280,6 +1281,15 @@ private:
      * @return Correct Radio path, otherwise empty string.
      */
     std::string dm_get_path_to_radio(const son::node &radio_node);
+
+    /**
+     * @brief Set clients (device) multi ap capabilities
+     * Example: "Controller.Network.Device.1.MultiAPCapabilities.{capabilities}"
+     *
+     * @param device_mac mac address of device
+     * @return True on success, false otherwise.
+     */
+    bool dm_set_device_multi_ap_capabilities(const std::string &device_mac);
 
     int network_optimization_task_id           = -1;
     int channel_selection_task_id              = -1;
