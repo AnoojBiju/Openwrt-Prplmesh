@@ -260,7 +260,8 @@ bool AmbiorixImpl::apply_transaction(amxd_trans_t &transaction)
     return ret;
 }
 
-bool AmbiorixImpl::set(const std::string &relative_path, const std::string &value)
+bool AmbiorixImpl::set(const std::string &relative_path, const std::string &parameter,
+                       const std::string &value)
 {
     amxd_trans_t transaction;
     auto object = prepare_transaction(relative_path, transaction);
@@ -270,9 +271,9 @@ bool AmbiorixImpl::set(const std::string &relative_path, const std::string &valu
         return false;
     }
 
-    LOG(DEBUG) << "Set value: " << value << "to the object: " << object->name;
+    LOG(DEBUG) << "Set " << object->name << "." << parameter << " to " << value;
 
-    amxd_trans_set_value(cstring_t, &transaction, object->name, value.c_str());
+    amxd_trans_set_value(cstring_t, &transaction, parameter.c_str(), value.c_str());
 
     if (!apply_transaction(transaction)) {
         LOG(ERROR) << "Couldn't apply transaction.";
@@ -282,7 +283,8 @@ bool AmbiorixImpl::set(const std::string &relative_path, const std::string &valu
     return true;
 }
 
-bool AmbiorixImpl::set(const std::string &relative_path, const int32_t &value)
+bool AmbiorixImpl::set(const std::string &relative_path, const std::string &parameter,
+                       const int32_t &value)
 {
     amxd_trans_t transaction;
     auto object = prepare_transaction(relative_path, transaction);
@@ -292,9 +294,9 @@ bool AmbiorixImpl::set(const std::string &relative_path, const int32_t &value)
         return false;
     }
 
-    LOG(DEBUG) << "Set value: " << value << "to the object: " << object->name;
+    LOG(DEBUG) << "Set " << object->name << "." << parameter << " to " << value;
 
-    amxd_trans_set_value(int32_t, &transaction, object->name, value);
+    amxd_trans_set_value(int32_t, &transaction, parameter.c_str(), value);
 
     if (!apply_transaction(transaction)) {
         LOG(ERROR) << "Couldn't apply transaction.";
@@ -304,7 +306,8 @@ bool AmbiorixImpl::set(const std::string &relative_path, const int32_t &value)
     return true;
 }
 
-bool AmbiorixImpl::set(const std::string &relative_path, const int64_t &value)
+bool AmbiorixImpl::set(const std::string &relative_path, const std::string &parameter,
+                       const int64_t &value)
 {
     amxd_trans_t transaction;
     auto object = prepare_transaction(relative_path, transaction);
@@ -314,9 +317,9 @@ bool AmbiorixImpl::set(const std::string &relative_path, const int64_t &value)
         return false;
     }
 
-    LOG(DEBUG) << "Set value: " << value << "to the object: " << object->name;
+    LOG(DEBUG) << "Set " << object->name << "." << parameter << " to " << value;
 
-    amxd_trans_set_value(int64_t, &transaction, object->name, value);
+    amxd_trans_set_value(int64_t, &transaction, parameter.c_str(), value);
 
     if (!apply_transaction(transaction)) {
         LOG(ERROR) << "Couldn't apply transaction.";
@@ -326,7 +329,8 @@ bool AmbiorixImpl::set(const std::string &relative_path, const int64_t &value)
     return true;
 }
 
-bool AmbiorixImpl::set(const std::string &relative_path, const uint32_t &value)
+bool AmbiorixImpl::set(const std::string &relative_path, const std::string &parameter,
+                       const uint32_t &value)
 {
     amxd_trans_t transaction;
     auto object = prepare_transaction(relative_path, transaction);
@@ -336,9 +340,9 @@ bool AmbiorixImpl::set(const std::string &relative_path, const uint32_t &value)
         return false;
     }
 
-    LOG(DEBUG) << "Set value: " << value << "to the object: " << object->name;
+    LOG(DEBUG) << "Set " << object->name << "." << parameter << " to " << value;
 
-    amxd_trans_set_value(uint32_t, &transaction, object->name, value);
+    amxd_trans_set_value(uint32_t, &transaction, parameter.c_str(), value);
 
     if (!apply_transaction(transaction)) {
         LOG(ERROR) << "Couldn't apply transaction.";
@@ -348,7 +352,8 @@ bool AmbiorixImpl::set(const std::string &relative_path, const uint32_t &value)
     return true;
 }
 
-bool AmbiorixImpl::set(const std::string &relative_path, const uint64_t &value)
+bool AmbiorixImpl::set(const std::string &relative_path, const std::string &parameter,
+                       const uint64_t &value)
 {
     amxd_trans_t transaction;
     auto object = prepare_transaction(relative_path, transaction);
@@ -358,9 +363,9 @@ bool AmbiorixImpl::set(const std::string &relative_path, const uint64_t &value)
         return false;
     }
 
-    LOG(DEBUG) << "Set value: " << value << "to the object: " << object->name;
+    LOG(DEBUG) << "Set " << object->name << "." << parameter << " to " << value;
 
-    amxd_trans_set_value(uint64_t, &transaction, object->name, value);
+    amxd_trans_set_value(uint64_t, &transaction, parameter.c_str(), value);
 
     if (!apply_transaction(transaction)) {
         LOG(ERROR) << "Couldn't apply transaction.";
@@ -370,7 +375,8 @@ bool AmbiorixImpl::set(const std::string &relative_path, const uint64_t &value)
     return true;
 }
 
-bool AmbiorixImpl::set(const std::string &relative_path, const double &value)
+bool AmbiorixImpl::set(const std::string &relative_path, const std::string &parameter,
+                       const double &value)
 {
     amxd_trans_t transaction;
     auto object = prepare_transaction(relative_path, transaction);
@@ -380,9 +386,9 @@ bool AmbiorixImpl::set(const std::string &relative_path, const double &value)
         return false;
     }
 
-    LOG(DEBUG) << "Set value: " << value << "to the object: " << object->name;
+    LOG(DEBUG) << "Set " << object->name << "." << parameter << " to " << value;
 
-    amxd_trans_set_value(double, &transaction, object->name, value);
+    amxd_trans_set_value(double, &transaction, parameter.c_str(), value);
 
     if (!apply_transaction(transaction)) {
         LOG(ERROR) << "Couldn't apply transaction.";
@@ -392,7 +398,8 @@ bool AmbiorixImpl::set(const std::string &relative_path, const double &value)
     return true;
 }
 
-bool AmbiorixImpl::set(const std::string &relative_path, const bool &value)
+bool AmbiorixImpl::set(const std::string &relative_path, const std::string &parameter,
+                       const bool &value)
 {
     amxd_trans_t transaction;
     auto object = prepare_transaction(relative_path, transaction);
@@ -402,9 +409,9 @@ bool AmbiorixImpl::set(const std::string &relative_path, const bool &value)
         return false;
     }
 
-    LOG(DEBUG) << "Set value: " << value << "to the object: " << object->name;
+    LOG(DEBUG) << "Set " << object->name << "." << parameter << " to " << value;
 
-    amxd_trans_set_value(bool, &transaction, object->name, value);
+    amxd_trans_set_value(bool, &transaction, parameter.c_str(), value);
 
     if (!apply_transaction(transaction)) {
         LOG(ERROR) << "Couldn't apply transaction.";
@@ -463,6 +470,47 @@ bool AmbiorixImpl::remove_instance(const std::string &relative_path, uint32_t in
 
     LOG(DEBUG) << "Instance removed for: " << object->name;
     return true;
+}
+
+uint32_t AmbiorixImpl::get_instance_index(const std::string &specific_path, const std::string &key)
+{
+    uint32_t index = 0;
+
+    auto object = amxd_dm_findf(&m_datamodel, specific_path.c_str(), key.c_str());
+    if (!object) {
+        LOG(ERROR) << "Failed to find object by key: " << specific_path << " for id: " << key;
+        return index;
+    }
+
+    index = amxd_object_get_index(object);
+    if (!index) {
+        LOG(ERROR) << "Failed to get index for object: " << object->name;
+        return index;
+    }
+
+    return index;
+}
+
+std::string AmbiorixImpl::get_datamodel_time_format()
+{
+
+    amxc_ts_t datamodel_time;
+
+    if (amxc_ts_now(&datamodel_time)) {
+        LOG(ERROR) << "Failed to get current time in data model format.";
+        return "";
+    }
+
+    const size_t buf_size = 64;
+    char buf[buf_size];
+
+    if (!amxc_ts_format(&datamodel_time, buf, buf_size)) {
+        LOG(ERROR) << "Failed to get date and time in RFC 3339 format.";
+        return "";
+    }
+
+    std::string result_time = buf;
+    return result_time;
 }
 
 AmbiorixImpl::~AmbiorixImpl()

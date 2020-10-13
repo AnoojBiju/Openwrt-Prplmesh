@@ -25,15 +25,25 @@ public:
     Ambiorix(const Ambiorix &) = delete;
     Ambiorix &operator=(const Ambiorix &)                                          = delete;
     virtual ~Ambiorix()                                                            = 0;
-    virtual bool set(const std::string &relative_path, const std::string &value)   = 0;
-    virtual bool set(const std::string &relative_path, const int32_t &value)       = 0;
-    virtual bool set(const std::string &relative_path, const int64_t &value)       = 0;
-    virtual bool set(const std::string &relative_path, const uint32_t &value)      = 0;
-    virtual bool set(const std::string &relative_path, const uint64_t &value)      = 0;
-    virtual bool set(const std::string &relative_path, const bool &value)          = 0;
-    virtual bool set(const std::string &relative_path, const double &value)        = 0;
+    virtual bool set(const std::string &relative_path, const std::string &parameter,
+                     const std::string &value)                                     = 0;
+    virtual bool set(const std::string &relative_path, const std::string &parameter,
+                     const int32_t &value)                                         = 0;
+    virtual bool set(const std::string &relative_path, const std::string &parameter,
+                     const int64_t &value)                                         = 0;
+    virtual bool set(const std::string &relative_path, const std::string &parameter,
+                     const uint32_t &value)                                        = 0;
+    virtual bool set(const std::string &relative_path, const std::string &parameter,
+                     const uint64_t &value)                                        = 0;
+    virtual bool set(const std::string &relative_path, const std::string &parameter,
+                     const bool &value)                                            = 0;
+    virtual bool set(const std::string &relative_path, const std::string &parameter,
+                     const double &value)                                          = 0;
     virtual bool add_instance(const std::string &relative_path)                    = 0;
     virtual bool remove_instance(const std::string &relative_path, uint32_t index) = 0;
+    virtual uint32_t get_instance_index(const std::string &specific_path,
+                                        const std::string &key)                    = 0;
+    virtual std::string get_datamodel_time_format()                                = 0;
 };
 
 inline Ambiorix::~Ambiorix() {}

@@ -138,22 +138,22 @@ std::ostream &operator<<(std::ostream &os, const node &n)
 
         // persistent db
         if (node_type == beerocks::TYPE_CLIENT) {
-            auto client_parameters_last_edit_hours =
-                std::chrono::duration_cast<std::chrono::hours>(tCurrTime_system -
-                                                               n.client_parameters_last_edit)
+            auto client_parameters_last_edit_minutes =
+                std::chrono::duration_cast<std::chrono::minutes>(tCurrTime_system -
+                                                                 n.client_parameters_last_edit)
                     .count();
-            auto client_time_life_delay_hours =
-                std::chrono::duration_cast<std::chrono::hours>(n.client_time_life_delay_sec)
-                    .count();
+            auto client_time_life_delay_minutes = n.client_time_life_delay_minutes.count();
+
             os << "Persistent configuration and data:" << std::endl
-               << "   ClientParametersLastEdit: " << (client_parameters_last_edit_hours / 24)
-               << " days, " << (client_parameters_last_edit_hours % 24) << " hours" << std::endl
-               << "   ClientTimeLifeDelay: " << (client_time_life_delay_hours / 24) << " days, "
-               << (client_time_life_delay_hours % 24) << " hours" << std::endl
+               << "   ClientParametersLastEdit: " << (client_parameters_last_edit_minutes / 60)
+               << " hours, " << (client_parameters_last_edit_minutes % 60) << " minutes"
+               << std::endl
+               << "   ClientTimeLifeDelay: " << (client_time_life_delay_minutes / 60) << " hours, "
+               << (client_time_life_delay_minutes % 60) << " minutes" << std::endl
                << "   ClientStayOnInitialRadio: " << n.client_stay_on_initial_radio << std::endl
                << "   ClientInitialRadio: " << n.client_initial_radio << std::endl
                << "   ClientSelectedBands: " << n.client_selected_bands << std::endl
-               << "   ClientIsFriendly: " << n.client_is_friendly << std::endl;
+               << "   ClientIsUnfriendly: " << n.client_is_unfriendly << std::endl;
         }
 
     } else if (node_type == beerocks::TYPE_SLAVE) {

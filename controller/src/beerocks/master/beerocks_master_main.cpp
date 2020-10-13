@@ -252,19 +252,21 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
         master_conf.clients_persistent_db_max_size =
             beerocks::bpl::DEFAULT_CLIENTS_PERSISTENT_DB_MAX_SIZE;
     }
-    if (!beerocks::bpl::cfg_get_max_timelife_delay_days(master_conf.max_timelife_delay_days)) {
+    if (!beerocks::bpl::cfg_get_max_timelife_delay_minutes(
+            master_conf.max_timelife_delay_minutes)) {
         LOG(DEBUG)
             << "failed to read max lifetime of clients in persistent db, setting to default value: "
-            << beerocks::bpl::DEFAULT_MAX_TIMELIFE_DELAY_DAYS << " days";
-        master_conf.max_timelife_delay_days = beerocks::bpl::DEFAULT_MAX_TIMELIFE_DELAY_DAYS;
+            << beerocks::bpl::DEFAULT_MAX_TIMELIFE_DELAY_MINUTES << " minutes";
+        master_conf.max_timelife_delay_minutes = beerocks::bpl::DEFAULT_MAX_TIMELIFE_DELAY_MINUTES;
     }
-    if (!beerocks::bpl::cfg_get_unfriendly_device_max_timelife_delay_days(
-            master_conf.unfriendly_device_max_timelife_delay_days)) {
+    if (!beerocks::bpl::cfg_get_unfriendly_device_max_timelife_delay_minutes(
+            master_conf.unfriendly_device_max_timelife_delay_minutes)) {
         LOG(DEBUG) << "failed to read max lifetime of unfriendly clients in persistent db, setting "
                       "to default value: "
-                   << beerocks::bpl::DEFAULT_UNFRIENDLY_DEVICE_MAX_TIMELIFE_DELAY_DAYS << " days";
-        master_conf.unfriendly_device_max_timelife_delay_days =
-            beerocks::bpl::DEFAULT_UNFRIENDLY_DEVICE_MAX_TIMELIFE_DELAY_DAYS;
+                   << beerocks::bpl::DEFAULT_UNFRIENDLY_DEVICE_MAX_TIMELIFE_DELAY_MINUTES
+                   << " minutes";
+        master_conf.unfriendly_device_max_timelife_delay_minutes =
+            beerocks::bpl::DEFAULT_UNFRIENDLY_DEVICE_MAX_TIMELIFE_DELAY_MINUTES;
     }
     if (!beerocks::bpl::cfg_get_persistent_db_aging_interval(
             master_conf.persistent_db_aging_interval)) {
@@ -388,12 +390,12 @@ int main(int argc, char *argv[])
     }
 
     // Set Network.ID to the Data Model
-    if (!amb_dm_obj->set("Network.ID", bridge_info.mac)) {
+    if (!amb_dm_obj->set("Controller.Network", "ID", bridge_info.mac)) {
         LOG(ERROR) << "Failed to add Network.ID, mac: " << bridge_info.mac;
         return false;
     }
 
-    if (!amb_dm_obj->set("Network.ControllerID", bridge_info.mac)) {
+    if (!amb_dm_obj->set("Controller.Network", "ControllerID", bridge_info.mac)) {
         LOG(ERROR) << "Failed to add Network.ControllerID, mac: " << bridge_info.mac;
         return false;
     }
@@ -401,6 +403,12 @@ int main(int argc, char *argv[])
     son::db master_db(master_conf, logger, bridge_info.mac, amb_dm_obj);
     // diagnostics_thread diagnostics(master_db);
     son::master_thread son_master(master_uds, master_db);
+
+    if (!amb_dm_obj->set("Controller.Network", "TimeStamp",
+                         amb_dm_obj->get_datamodel_time_format())) {
+        LOG(ERROR) << "Failed to set Controller.Network.TimeStamp.";
+        return false;
+    }
 
     if (!son_master.init()) {
         LOG(ERROR) << "son_master.init() ";

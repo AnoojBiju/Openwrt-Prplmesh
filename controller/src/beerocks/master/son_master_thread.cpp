@@ -597,10 +597,10 @@ void master_thread::autoconfig_wsc_calculate_keys(WSC::m1 &m1, WSC::m2::config &
 
 /**
  * @brief autoconfig global authenticator attribute calculation
- * 
+ *
  * Calculate authentication on the Full M1 || M2* whereas M2* = M2 without the authenticator
  * attribute.
- * 
+ *
  * @param m1 WSC M1 attribute list
  * @param m2 WSC M2 TLV
  * @param authkey authentication key
@@ -768,7 +768,7 @@ bool master_thread::autoconfig_wsc_add_m2(WSC::m1 &m1,
 /**
  * @brief Parse AP-Autoconfiguration WSC which should include one AP Radio Basic Capabilities
  *        TLV and one WSC TLV containing M1. If this is Intel agent, it will also have vendor specific tlv.
- * 
+ *
  * @param sd socket descriptor
  * @param cmdu_rx received CMDU which contains M1
  * @return true on success
@@ -1647,7 +1647,7 @@ bool master_thread::handle_cmdu_1905_topology_notification(const std::string &sr
 
     if (client_connected) {
         //add or update node parent
-        database.add_node(client_mac, bssid);
+        database.add_node_client(client_mac, bssid);
 
         LOG(INFO) << "client connected, mac=" << client_mac_str << ", bssid=" << bssid_str;
 
@@ -2079,8 +2079,8 @@ bool master_thread::handle_intel_slave_join(
             //add a placeholder
             LOG(DEBUG) << "add a placeholder backhaul_mac = " << backhaul_mac
                        << ", parent_bssid_mac = " << parent_bssid_mac;
-            database.add_node(tlvf::mac_from_string(backhaul_mac),
-                              tlvf::mac_from_string(parent_bssid_mac), beerocks::TYPE_IRE_BACKHAUL);
+            database.add_node_wireless_bh(tlvf::mac_from_string(backhaul_mac),
+                                          tlvf::mac_from_string(parent_bssid_mac));
         } else if (database.get_node_state(backhaul_mac) != beerocks::STATE_CONNECTED) {
             /* if the backhaul node doesn't exist, or is not already marked as connected,
             * we assume it is connected to the GW's LAN switch
@@ -2105,8 +2105,8 @@ bool master_thread::handle_intel_slave_join(
             LOG(DEBUG) << "add a placeholder backhaul_mac = " << backhaul_mac
                        << " gw_lan_switch = " << gw_lan_switch
                        << " TYPE_IRE_BACKHAUL , STATE_CONNECTED";
-            database.add_node(tlvf::mac_from_string(backhaul_mac),
-                              tlvf::mac_from_string(gw_lan_switch), beerocks::TYPE_IRE_BACKHAUL);
+            database.add_node_wireless_bh(tlvf::mac_from_string(backhaul_mac),
+                                          tlvf::mac_from_string(gw_lan_switch));
             database.set_node_state(backhaul_mac, beerocks::STATE_CONNECTED);
         }
     } else {
@@ -2131,8 +2131,13 @@ bool master_thread::handle_intel_slave_join(
     // add new GW/IRE bridge_mac
     LOG(DEBUG) << "adding node " << bridge_mac << " under " << backhaul_mac << ", and mark as type "
                << ire_type;
-    database.add_node(tlvf::mac_from_string(bridge_mac), tlvf::mac_from_string(backhaul_mac),
-                      ire_type);
+    if (is_gw_slave) {
+        database.add_node_gateway(tlvf::mac_from_string(bridge_mac));
+    } else {
+        database.add_node_ire(tlvf::mac_from_string(bridge_mac),
+                              tlvf::mac_from_string(backhaul_mac));
+    }
+
     database.set_node_state(bridge_mac, beerocks::STATE_CONNECTED);
 
     /*
@@ -2161,8 +2166,8 @@ bool master_thread::handle_intel_slave_join(
         ++eth_sw_mac_binary.oct[5];
 
         std::string eth_switch_mac = tlvf::mac_to_string(eth_sw_mac_binary);
-        database.add_node(tlvf::mac_from_string(eth_switch_mac), tlvf::mac_from_string(bridge_mac),
-                          beerocks::TYPE_ETH_SWITCH);
+        database.add_node_wired_bh(tlvf::mac_from_string(eth_switch_mac),
+                                   tlvf::mac_from_string(bridge_mac));
         database.set_node_state(eth_switch_mac, beerocks::STATE_CONNECTED);
         database.set_node_name(eth_switch_mac, slave_name + "_ETH");
         database.set_node_ipv4(eth_switch_mac, bridge_ipv4);
@@ -2276,8 +2281,8 @@ bool master_thread::handle_intel_slave_join(
         }
         database.clear_hostap_stats_info(radio_mac);
     } else {
-        database.add_node(tlvf::mac_from_string(radio_mac), tlvf::mac_from_string(bridge_mac),
-                          beerocks::TYPE_SLAVE, tlvf::mac_from_string(radio_identifier));
+        database.add_node_radio(tlvf::mac_from_string(radio_mac), tlvf::mac_from_string(bridge_mac),
+                                tlvf::mac_from_string(radio_identifier));
     }
     database.set_hostap_is_acs_enabled(radio_mac, acs_enabled);
 
@@ -2437,7 +2442,7 @@ bool master_thread::handle_intel_slave_join(
 /**
  * @brief Parse the radio basic capabilities TLV and store the operating class
  * in the database as supported channels.
- * 
+ *
  * @param radio_mac radio mac address (RUID in non-Intel agent case)
  * @param radio_caps radio basic capabilities TLV received from the remote agent
  * @return true on success
@@ -2535,8 +2540,8 @@ bool master_thread::handle_non_intel_slave_join(
 
     LOG(DEBUG) << "add a placeholder backhaul_mac = " << backhaul_mac
                << " gw_lan_switch = " << gw_lan_switch << " TYPE_IRE_BACKHAUL , STATE_CONNECTED";
-    database.add_node(tlvf::mac_from_string(backhaul_mac), tlvf::mac_from_string(gw_lan_switch),
-                      beerocks::TYPE_IRE_BACKHAUL);
+    database.add_node_wireless_bh(tlvf::mac_from_string(backhaul_mac),
+                                  tlvf::mac_from_string(gw_lan_switch));
     database.set_node_state(backhaul_mac, beerocks::STATE_CONNECTED);
 
     // TODO bridge handling.
@@ -2552,8 +2557,8 @@ bool master_thread::handle_non_intel_slave_join(
     // add new GW/IRE bridge_mac
     LOG(DEBUG) << "adding node " << bridge_mac << " under " << backhaul_mac << ", and mark as type "
                << ire_type;
-    database.add_node(tlvf::mac_from_string(bridge_mac), tlvf::mac_from_string(backhaul_mac),
-                      ire_type);
+
+    database.add_node_ire(tlvf::mac_from_string(bridge_mac), tlvf::mac_from_string(backhaul_mac));
     database.set_node_state(bridge_mac, beerocks::STATE_CONNECTED);
     database.set_node_backhaul_iface_type(backhaul_mac, beerocks::eIfaceType::IFACE_TYPE_ETHERNET);
     database.set_node_backhaul_iface_type(bridge_mac, beerocks::IFACE_TYPE_BRIDGE);
@@ -2562,8 +2567,8 @@ bool master_thread::handle_non_intel_slave_join(
     database.set_node_type(backhaul_mac, beerocks::TYPE_IRE_BACKHAUL);
     database.set_node_name(backhaul_mac, manufacturer + "_BH");
     database.set_node_name(bridge_mac, manufacturer);
-    database.add_node(tlvf::mac_from_string(eth_switch_mac), tlvf::mac_from_string(bridge_mac),
-                      beerocks::TYPE_ETH_SWITCH);
+    database.add_node_wired_bh(tlvf::mac_from_string(eth_switch_mac),
+                               tlvf::mac_from_string(bridge_mac));
     database.set_node_state(eth_switch_mac, beerocks::STATE_CONNECTED);
     database.set_node_name(eth_switch_mac, manufacturer + "_ETH");
     database.set_node_manufacturer(eth_switch_mac, eth_switch_mac);
@@ -2577,8 +2582,8 @@ bool master_thread::handle_non_intel_slave_join(
         database.clear_hostap_stats_info(radio_mac);
     } else {
         // TODO Intel Slave Join has separate radio MAC and UID; we use radio_mac for both.
-        database.add_node(tlvf::mac_from_string(radio_mac), tlvf::mac_from_string(bridge_mac),
-                          beerocks::TYPE_SLAVE, tlvf::mac_from_string(radio_mac));
+        database.add_node_radio(tlvf::mac_from_string(radio_mac), tlvf::mac_from_string(bridge_mac),
+                                tlvf::mac_from_string(radio_mac));
     }
     database.set_hostap_is_acs_enabled(radio_mac, false);
 
@@ -3106,7 +3111,7 @@ bool master_thread::handle_cmdu_control_message(const std::string &src_mac,
 
         if (!database.has_node(tlvf::mac_from_string(client_mac))) {
             LOG(DEBUG) << "client mac not in DB, add temp node " << client_mac;
-            database.add_node(tlvf::mac_from_string(client_mac));
+            database.add_node_client(tlvf::mac_from_string(client_mac));
             database.update_node_last_seen(client_mac);
         }
 

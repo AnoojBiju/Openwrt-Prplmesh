@@ -102,12 +102,12 @@ constexpr unsigned int DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE_SEC = 10;
 // by default, the number of clients's configuration to be cached is limited to 256
 constexpr int DEFAULT_CLIENTS_PERSISTENT_DB_MAX_SIZE = 256;
 // the persistent data of clients has aging limit
-// by default, the limit is 365 days, but it is configurable via the UCI
-constexpr int DEFAULT_MAX_TIMELIFE_DELAY_DAYS = 365;
+// by default, the limit is 365 days scaled to minutes, but it is configurable via the UCI
+constexpr int DEFAULT_MAX_TIMELIFE_DELAY_MINUTES = 365 * 24 * 60;
 // the timelife of unfriendly-devices is set separately and can be shorter than the timelife
 // TODO: add description of "unfriendly-device" and how it is determined
-// by default, the limit is 1 day, but it is configurable via the UCI
-constexpr int DEFAULT_UNFRIENDLY_DEVICE_MAX_TIMELIFE_DELAY_DAYS = 1;
+// by default, the limit is 1 day scaled to minutes, but it is configurable via the UCI
+constexpr int DEFAULT_UNFRIENDLY_DEVICE_MAX_TIMELIFE_DELAY_MINUTES = 1 * 24 * 60;
 // the persistent DB's aging mechanism needs to be checked periodically.
 // by default, the interval in which the aging mechanism needs to be checked is once per hour.
 constexpr int DEFAULT_PERSISTENT_DB_AGING_INTERVAL_SEC = 3600;
@@ -509,19 +509,19 @@ bool cfg_get_clients_persistent_db_max_size(int &max_size);
 /**
  * @brief Returns the max time-life delay of clients (used for aging of client's persistent data).
  * 
- * @param [out] max_timelife_delay_days Max clients' timelife delay.
+ * @param [out] max_timelife_delay_minutes Max clients' timelife delay.
  * @return true on success, otherwise false.
  */
-bool cfg_get_max_timelife_delay_days(int &max_timelife_delay_days);
+bool cfg_get_max_timelife_delay_minutes(int &max_timelife_delay_minutes);
 
 /**
  * @brief Returns the max time-life delay for unfriendly clients.
  * 
- * @param [out] unfriendly_device_max_timelife_delay_days Max unfriendly clients' timelife delay.
+ * @param [out] unfriendly_device_max_timelife_delay_minutes Max unfriendly clients' timelife delay.
  * @return true on success, otherwise false.
  */
-bool cfg_get_unfriendly_device_max_timelife_delay_days(
-    int &unfriendly_device_max_timelife_delay_days);
+bool cfg_get_unfriendly_device_max_timelife_delay_minutes(
+    int &unfriendly_device_max_timelife_delay_minutes);
 
 /**
  * @brief Returns the interval to check the persistent DB aging

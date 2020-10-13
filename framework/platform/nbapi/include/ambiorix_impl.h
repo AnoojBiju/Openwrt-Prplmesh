@@ -66,17 +66,25 @@ public:
     /**
      * @brief Set the value to the object variable.
      *
-     * @param relative_path Path to the object in datamodel (ex: "Controller.Network.ID").
+     * @param relative_path Path to the object in datamodel (ex: "Controller.Network").
+     * @param parameter The parameter to be set (ex: "ID").
      * @param value Value which need to set.
      * @return True on success and false otherwise.
      */
-    bool set(const std::string &relative_path, const std::string &value) override;
-    bool set(const std::string &relative_path, const int32_t &value) override;
-    bool set(const std::string &relative_path, const int64_t &value) override;
-    bool set(const std::string &relative_path, const uint32_t &value) override;
-    bool set(const std::string &relative_path, const uint64_t &value) override;
-    bool set(const std::string &relative_path, const bool &value) override;
-    bool set(const std::string &relative_path, const double &value) override;
+    bool set(const std::string &relative_path, const std::string &parameter,
+             const std::string &value) override;
+    bool set(const std::string &relative_path, const std::string &parameter,
+             const int32_t &value) override;
+    bool set(const std::string &relative_path, const std::string &parameter,
+             const int64_t &value) override;
+    bool set(const std::string &relative_path, const std::string &parameter,
+             const uint32_t &value) override;
+    bool set(const std::string &relative_path, const std::string &parameter,
+             const uint64_t &value) override;
+    bool set(const std::string &relative_path, const std::string &parameter,
+             const bool &value) override;
+    bool set(const std::string &relative_path, const std::string &parameter,
+             const double &value) override;
 
     /* @brief Add instance to the data model object with type list
      *
@@ -93,6 +101,22 @@ public:
      * @return True on success and false otherwise.
      */
     bool remove_instance(const std::string &relative_path, uint32_t index) override;
+
+    /**
+     * @brief Get instance index by ID.
+     *
+     * @param specific_path Path to the object specific key (ex: "Device.[ID == '%s'].").
+     * @param key String which contains ID, for example it can be a MAC address.
+     * @return Instance index on success and 0 otherwise.
+     */
+    uint32_t get_instance_index(const std::string &specific_path, const std::string &key) override;
+
+    /**
+     * @brief Get Date and Time in the Ambiorix data model format: "2020-08-31T11:22:39Z".
+     *
+     * @return String with date and time in the Ambiorix data model format.
+     */
+    std::string get_datamodel_time_format() override;
 
 private:
     // Methods

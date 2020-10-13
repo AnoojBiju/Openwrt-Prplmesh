@@ -301,7 +301,7 @@ public:
         std::chrono::system_clock::time_point::min();
 
     // Optional - if configured the client has its own configured timelife delay.
-    std::chrono::seconds client_time_life_delay_sec = std::chrono::seconds::zero();
+    std::chrono::minutes client_time_life_delay_minutes = std::chrono::minutes::zero();
 
     // If enabled, the client will be steered to the initial radio it connected to - save at client_initial_radio.
     eTriStateBool client_stay_on_initial_radio = eTriStateBool::NOT_CONFIGURED;
@@ -314,10 +314,10 @@ public:
     // Possible values are bitwise options of eClientSelectedBands.
     int8_t client_selected_bands = beerocks::PARAMETER_NOT_CONFIGURED;
 
-    // The friendly status indicates how we interact with the client.
-    // If the friendly status is not configured, the client is assumed friendly unless proven otherwise.
+    // The unfriendly status indicates how we interact with the client.
+    // If the unfriendly status is not configured, the client is assumed friendly unless proven otherwise.
     // The friendliness status affects how we handle the aging mechanism.
-    eTriStateBool client_is_friendly = eTriStateBool::NOT_CONFIGURED;
+    eTriStateBool client_is_unfriendly = eTriStateBool::NOT_CONFIGURED;
 
     /*
      * Persistent configurations - end
