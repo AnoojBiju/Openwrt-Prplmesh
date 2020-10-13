@@ -260,7 +260,7 @@ bool AmbiorixImpl::apply_transaction(amxd_trans_t &transaction)
     return ret;
 }
 
-bool AmbiorixImpl::set(const std::string &relative_path, const std::string &value)
+bool AmbiorixImpl::set(const std::string &relative_path, const std::string &attribute, const std::string &value)
 {
     amxd_trans_t transaction;
     auto object = prepare_transaction(relative_path, transaction);
@@ -270,9 +270,9 @@ bool AmbiorixImpl::set(const std::string &relative_path, const std::string &valu
         return false;
     }
 
-    LOG(DEBUG) << "Set value: " << value << "to the object: " << object->name;
+    LOG(DEBUG) << "Set " << object->name << "." << attribute << " to " << value;
 
-    amxd_trans_set_value(cstring_t, &transaction, object->name, value.c_str());
+    amxd_trans_set_value(cstring_t, &transaction, attribute.c_str(), value.c_str());
 
     if (!apply_transaction(transaction)) {
         LOG(ERROR) << "Couldn't apply transaction.";
