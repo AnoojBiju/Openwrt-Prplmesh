@@ -4775,6 +4775,22 @@ uint64_t db::get_client_remaining_sec(const std::pair<std::string, ValuesMap> &c
                 : 0);
 }
 
+/**
+* @brief set device id, where device id = device mac address
+*
+* @param device mac address
+* @param device index
+* @return true if id of device was successfully set, false otherwise
+*/
+bool db::dm_set_device_id(const std::string device_mac, uint32_t device_index)
+{
+    if (!m_ambiorix_datamodel->set("Network.Device." + std::to_string(device_index), device_mac)) {
+        LOG(ERROR) << "Failed to add Network.Device.ID (ID = mac): " << device_mac;
+        return false;
+    }
+    return true;
+}
+
 bool db::dm_add_device_element(const sMacAddr &mac)
 {
     auto index = m_ambiorix_datamodel->get_instance_index("Network.Device.[ID == '%s'].",
@@ -4783,6 +4799,10 @@ bool db::dm_add_device_element(const sMacAddr &mac)
 
     if (!m_ambiorix_datamodel->add_instance("Network.Device")) {
         LOG(ERROR) << "Failed to add instance for device, mac: " << mac;
+        return false;
+    }
+
+    if (!dm_set_device_id(tlvf::mac_to_string(mac), index)) {
         return false;
     }
     return true;
