@@ -2568,6 +2568,12 @@ const std::list<sChannelScanResults> &db::get_channel_scan_results(const sMacAdd
 //
 bool db::is_client_in_persistent_db(const sMacAddr &mac)
 {
+    // if persistent db is disabled
+    if (!config.persistent_db) {
+        LOG(DEBUG) << "persistent db is disabled";
+        return false;
+    }
+
     auto client_db_entry = client_db_entry_from_mac(mac);
 
     return bpl::db_has_entry(type_to_string(beerocks::eType::TYPE_CLIENT), client_db_entry);
