@@ -169,6 +169,13 @@ bool backhaul_manager::init()
     }
     m_task_pool.add_task(channel_selection_task);
 
+    auto dynamic_channel_selection_task = std::make_shared<ApAutoConfigurationTask>(*this, cmdu_tx);
+    if (!dynamic_channel_selection_task) {
+        LOG(ERROR) << "failed to allocate Dynamic Channel Selection Task!";
+        return false;
+    }
+    m_task_pool.add_task(dynamic_channel_selection_task);
+
     auto capability_reporing_task = std::make_shared<CapabilityReportingTask>(*this, cmdu_tx);
     if (!capability_reporing_task) {
         LOG(ERROR) << "failed to allocate capability_reporing_task!";
