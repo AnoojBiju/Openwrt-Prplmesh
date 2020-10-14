@@ -34,6 +34,7 @@
 #include "../tasks/ap_autoconfiguration_task.h"
 #include "../tasks/capability_reporting_task.h"
 #include "../tasks/channel_selection_task.h"
+#include "../tasks/dynamic_channel_selection_task.h"
 #include "../tasks/link_metrics_collection_task.h"
 #include "../tasks/topology_task.h"
 
@@ -168,6 +169,14 @@ bool backhaul_manager::init()
         return false;
     }
     m_task_pool.add_task(channel_selection_task);
+
+    auto dynamic_channel_selection_task =
+        std::make_shared<DynamicChannelSelectionTask>(*this, cmdu_tx);
+    if (!dynamic_channel_selection_task) {
+        LOG(ERROR) << "failed to allocate Dynamic Channel Selection Task!";
+        return false;
+    }
+    m_task_pool.add_task(dynamic_channel_selection_task);
 
     auto capability_reporing_task = std::make_shared<CapabilityReportingTask>(*this, cmdu_tx);
     if (!capability_reporing_task) {
