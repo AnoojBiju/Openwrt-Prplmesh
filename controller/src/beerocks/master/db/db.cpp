@@ -238,7 +238,7 @@ bool db::add_node_wired_bh(const sMacAddr &mac, const sMacAddr &parent_mac,
 
 bool db::dm_add_radio_element(const std::string &radio_mac, const std::string &device_mac)
 {
-    std::string path_to_obj = " Network.Device.";
+    std::string path_to_obj = "Network.Device.";
     uint32_t index =
         m_ambiorix_datamodel->get_instance_index(path_to_obj + "[ID == '%s'].", device_mac);
 
@@ -246,12 +246,24 @@ bool db::dm_add_radio_element(const std::string &radio_mac, const std::string &d
         LOG(ERROR) << "Failed to get Network.Device index for mac: " << device_mac;
         return false;
     }
-    path_to_obj += std::to_string(index);
-    if (!m_ambiorix_datamodel->add_instance(path_to_obj + ".Radio")) {
-        LOG(ERROR) << "Failed to add instance Network.Device." << device_mac
+
+    // Prepare path to the Radio object, like Device.Network.{i}.Radio
+    path_to_obj += std::to_string(index) + ".Radio";
+
+    auto radio_index = m_ambiorix_datamodel->add_instance(path_to_obj);
+    if (!radio_index) {
+        LOG(ERROR) << "Failed to add instance Network.Device." << index
                    << ".Radio, with radio mac: " << radio_mac;
         return false;
     }
+
+    // Prepare path to the Radio object ID, like Device.Network.{i}.Radio.{i}.ID
+    path_to_obj += "." + std::to_string(radio_index);
+    if (!m_ambiorix_datamodel->set(path_to_obj, "ID", radio_mac)) {
+        LOG(ERROR) << "Failed to set " << path_to_obj << "for mac: " << radio_mac;
+        return false;
+    }
+
     return true;
 }
 
