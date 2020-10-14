@@ -33,7 +33,7 @@ stages:
     - ./tools/docker/image-build.sh --image "${CI_JOB_NAME#image-build-}" --tag $CI_PIPELINE_ID $latest_tag --push
   retry: 2
 
-.image-build-boardfarm:
+image-build-boardfarm:
   stage: containers
   tags:
     - shell
