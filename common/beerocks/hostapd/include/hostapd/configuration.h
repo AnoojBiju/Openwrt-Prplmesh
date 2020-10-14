@@ -237,18 +237,18 @@ private:
     // the end of the cpp file for more details
     std::vector<std::string> m_hostapd_config_head;
 
-    // a map between a vap (the key) to its key/value pairs.
-    // each string in the value part of the map is the line in the original
+    // a vector of pairs: <vap(the key),key/value pairs as a string>.
+    // each key/value in .second of the pair is the line in the original
     // configuration file with the original key=value
     // e.g. the following lines in the configuration file:
-    // bss=wlan0.1 <------------------------------  the key in the map: "wlan0.1"
-    // ctrl_interface=/var/run/hostapd <----------  each line is an element in the array of the map's value
+    // bss=wlan0.1 <------------------------------  .first in the pair: "wlan0.1"
+    // ctrl_interface=/var/run/hostapd <----------  each line is a string in .second vector
     // ap_isolate=1
     // ap_max_inactivity=60
     // bss_transition=1
     // interworking=1
     // disassoc_low_ack=1
-    // bss=wlan0.2  <------------------------------ the key in the map: "wlan0.2"
+    // bss=wlan0.2  <------------------------------ .first in the vector: "wlan0.2"
     // ctrl_interface=/var/run/hostXXd
     // ap_isolate=1
     // ap_max_inactivity=60
@@ -257,7 +257,9 @@ private:
     // creates two entries in the map:
     // { "wlan0.1" : ["ctrl_interface=/var/run/hostapd", "ap_isolate=1", "ap_max_inactivity=60", "bss_transition=1", "interworking=1", "disassoc_low_ack=1"] },
     // { "wlan0.2" : ["ctrl_interface=/var/run/hosXXpd", "ap_isolate=1", "ap_max_inactivity=60", "bss_transition=0", "interworking=3"] }
-    std::map<std::string, std::vector<std::string>> m_hostapd_config_vaps;
+    std::vector<std::pair<std::string, std::vector<std::string>>> m_hostapd_config_vaps;
+    using conifg_vap_iterator =
+        std::vector<std::pair<std::string, std::vector<std::string>>>::iterator;
 
     // see m_ok's comment
     mutable std::string m_last_message = "initial state, yet nothing was done";

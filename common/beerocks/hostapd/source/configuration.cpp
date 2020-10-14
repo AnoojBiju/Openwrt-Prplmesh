@@ -59,6 +59,7 @@ bool Configuration::load(const std::set<std::string> &vap_indications)
 
             // copy the vap value
             cur_vap = std::string(line, end_key + 1);
+            m_hostapd_config_vaps.push_back(std::make_pair(cur_vap, std::vector<std::string>()));
         }
 
         // if not a vap line store it in the header part of the config,
@@ -66,7 +67,8 @@ bool Configuration::load(const std::set<std::string> &vap_indications)
         if (!parsing_vaps) {
             m_hostapd_config_head.push_back(line);
         } else {
-            m_hostapd_config_vaps[cur_vap].push_back(line);
+            // we always adding to the last vap that was inserted
+            m_hostapd_config_vaps.back().second.push_back(line);
         }
     }
 
@@ -91,28 +93,12 @@ bool Configuration::store()
         out_file << line << "\n";
     }
 
-    // store the first vap (using 'interface=')
-    for (auto &vap : m_hostapd_config_vaps) {
-        if (std::find_if(vap.second.begin(), vap.second.end(), [&](std::string line) {
-                return line.rfind("interface=", 0) == 0;
-            }) != vap.second.end()) {
-            // add empty line for readability
-            out_file << "\n";
-            for (auto &line : vap.second) {
-                out_file << line << "\n";
-            }
-        }
-    }
     // store the next ones ('bss=')
     for (auto &vap : m_hostapd_config_vaps) {
-        if (std::find_if(vap.second.begin(), vap.second.end(), [&](std::string line) {
-                return line.rfind("bss=", 0) == 0;
-            }) != vap.second.end()) {
-            // add empty line for readability
-            out_file << "\n";
-            for (auto &line : vap.second) {
-                out_file << line << "\n";
-            }
+        // add empty line for readability
+        out_file << "\n";
+        for (auto &line : vap.second) {
+            out_file << line << "\n";
         }
     }
 
