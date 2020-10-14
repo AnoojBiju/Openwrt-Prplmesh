@@ -2,7 +2,7 @@
 ---
 _namespace: wfa_map
 
-tlvChannelScanResult:
+tlvProfile2ChannelScanResult:
   _type: class
   _is_tlv_class : True
   type:
