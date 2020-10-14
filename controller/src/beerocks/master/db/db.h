@@ -1272,6 +1272,15 @@ private:
      */
     std::string dm_get_path_to_device(const son::node &device_node);
 
+    /**
+     * @brief Prepares path to the Radio data element with correct index (i).
+     * Example: "Controller.Network.Device.1.Radio.1."
+     *
+     * @param[in] radio_node Reference on the Radio node object.
+     * @return Correct Radio path, otherwise empty string.
+     */
+    std::string dm_get_path_to_radio(const son::node &radio_node);
+
     int network_optimization_task_id           = -1;
     int channel_selection_task_id              = -1;
     int bml_task_id                            = -1;
