@@ -4841,3 +4841,25 @@ bool db::dm_add_device_element(const sMacAddr &mac)
     }
     return true;
 }
+
+std::string db::dm_get_path_to_device(const son::node &device_node)
+{
+
+    auto node_type = get_node_type(device_node.mac);
+    if ((node_type != TYPE_GW) || (node_type != TYPE_IRE)) {
+        LOG(ERROR) << "Wrong node type: " << type_to_string(node_type);
+        return {};
+    }
+
+    auto device_index =
+        m_ambiorix_datamodel->get_instance_index("Network.Device.[ID == '%s']", device_node.mac);
+    if (!device_index) {
+        LOG(ERROR) << "Failed to get Device index with mac: " << device_node.mac;
+        return {};
+    }
+
+    // Prepare result string Controller.Network.Device.{i}.
+    auto device_path = "Controller.Network.Device." + std::to_string(device_index) + ".";
+
+    return device_path;
+}
