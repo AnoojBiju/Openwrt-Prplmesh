@@ -9,6 +9,20 @@ MAP-4.2.2_BH24G:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.2_BH24G:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct platform and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*platform:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.2.2_BH24G.*/'
+    - when: manual
+      allow_failure: true
+
+MAP-4.2.2_BH24G:turris-omnia:
+  extends: .certification:turris-omnia-bhwifi
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.2_BH24G:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.2.2_BH24G.*/'
     - when: manual
       allow_failure: true
 
@@ -19,6 +33,8 @@ MAP-4.2.2_BH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.2_BH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.2.2_BH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -29,6 +45,8 @@ MAP-4.2.3_BHWIFI_FH24G:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.3_BHWIFI_FH24G:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.2.3_BHWIFI_FH24G.*/'
     - when: manual
       allow_failure: true
 
@@ -39,6 +57,8 @@ MAP-4.2.3_BHWIFI_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.3_BHWIFI_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.2.3_BHWIFI_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -49,6 +69,8 @@ MAP-4.2.3_BHWIFI_FH5GH:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.3_BHWIFI_FH5GH:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.2.3_BHWIFI_FH5GH.*/'
     - when: manual
       allow_failure: true
 
@@ -59,6 +81,8 @@ MAP-4.3.1_BHWIFI:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.1_BHWIFI:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.3.1_BHWIFI.*/'
     - when: manual
       allow_failure: true
 
@@ -69,6 +93,8 @@ MAP-4.3.2_BHWIFI_FH24G:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.2_BHWIFI_FH24G:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.3.2_BHWIFI_FH24G.*/'
     - when: manual
       allow_failure: true
 
@@ -79,6 +105,8 @@ MAP-4.3.2_BHWIFI_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.2_BHWIFI_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.3.2_BHWIFI_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -89,6 +117,8 @@ MAP-4.3.2_BHWIFI_FH5GH:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.2_BHWIFI_FH5GH:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.3.2_BHWIFI_FH5GH.*/'
     - when: manual
       allow_failure: true
 
@@ -99,6 +129,8 @@ MAP-4.4.1_BHWIFI:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.4.1_BHWIFI:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.4.1_BHWIFI.*/'
     - when: manual
       allow_failure: true
 
@@ -109,6 +141,8 @@ MAP-4.4.2_BHWIFI_FH24G:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.4.2_BHWIFI_FH24G:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.4.2_BHWIFI_FH24G.*/'
     - when: manual
       allow_failure: true
 
@@ -119,6 +153,8 @@ MAP-4.4.2_BHWIFI_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.4.2_BHWIFI_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.4.2_BHWIFI_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -129,6 +165,8 @@ MAP-4.4.2_BHWIFI_FH5GH:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.4.2_BHWIFI_FH5GH:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.4.2_BHWIFI_FH5GH.*/'
     - when: manual
       allow_failure: true
 
@@ -139,6 +177,8 @@ MAP-4.4.3_BHWIFI_FH24G:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.4.3_BHWIFI_FH24G:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.4.3_BHWIFI_FH24G.*/'
     - when: manual
       allow_failure: true
 
@@ -149,6 +189,8 @@ MAP-4.4.3_BHWIFI_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.4.3_BHWIFI_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.4.3_BHWIFI_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -159,6 +201,8 @@ MAP-4.4.3_BHWIFI_FH5GH:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.4.3_BHWIFI_FH5GH:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.4.3_BHWIFI_FH5GH.*/'
     - when: manual
       allow_failure: true
 
@@ -169,6 +213,8 @@ MAP-4.5.1_BHWIFI:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.5.1_BHWIFI:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.5.1_BHWIFI.*/'
     - when: manual
       allow_failure: true
 
@@ -179,6 +225,8 @@ MAP-4.5.2_BHWIFI_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.5.2_BHWIFI_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.5.2_BHWIFI_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -189,6 +237,8 @@ MAP-4.5.3_BHWIFI_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.5.3_BHWIFI_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.5.3_BHWIFI_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -199,6 +249,8 @@ MAP-4.5.3_BHWIFI_FH5GH:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.5.3_BHWIFI_FH5GH:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.5.3_BHWIFI_FH5GH.*/'
     - when: manual
       allow_failure: true
 
@@ -209,6 +261,8 @@ MAP-4.6.1_BHWIFI:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.6.1_BHWIFI:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.6.1_BHWIFI.*/'
     - when: manual
       allow_failure: true
 
@@ -219,6 +273,8 @@ MAP-4.6.2_BHWIFI_FH24G:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.6.2_BHWIFI_FH24G:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.6.2_BHWIFI_FH24G.*/'
     - when: manual
       allow_failure: true
 
@@ -229,6 +285,8 @@ MAP-4.6.2_BHWIFI_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.6.2_BHWIFI_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.6.2_BHWIFI_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -239,6 +297,8 @@ MAP-4.6.2_BHWIFI_FH5GH:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.6.2_BHWIFI_FH5GH:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.6.2_BHWIFI_FH5GH.*/'
     - when: manual
       allow_failure: true
 
@@ -249,6 +309,8 @@ MAP-4.6.3_BHWIFI:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.6.3_BHWIFI:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.6.3_BHWIFI.*/'
     - when: manual
       allow_failure: true
 
@@ -259,6 +321,8 @@ MAP-4.7.1_BH24G_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.1_BH24G_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.7.1_BH24G_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -269,6 +333,8 @@ MAP-4.7.1_BH5GL_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.1_BH5GL_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.7.1_BH5GL_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -279,6 +345,8 @@ MAP-4.7.1_BH5GH_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.1_BH5GH_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.7.1_BH5GH_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -289,6 +357,8 @@ MAP-4.7.2_BH24G_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.2_BH24G_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.7.2_BH24G_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -299,6 +369,8 @@ MAP-4.7.2_BH5GL_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.2_BH5GL_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.7.2_BH5GL_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -309,6 +381,8 @@ MAP-4.7.2_BH5GH_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.2_BH5GH_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.7.2_BH5GH_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -319,6 +393,8 @@ MAP-4.7.4_BHWIFI_FH24G:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.4_BHWIFI_FH24G:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.7.4_BHWIFI_FH24G.*/'
     - when: manual
       allow_failure: true
 
@@ -329,6 +405,8 @@ MAP-4.7.4_BHWIFI_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.4_BHWIFI_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.7.4_BHWIFI_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -339,6 +417,8 @@ MAP-4.7.4_BHWIFI_FH5GH:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.4_BHWIFI_FH5GH:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.7.4_BHWIFI_FH5GH.*/'
     - when: manual
       allow_failure: true
 
@@ -349,6 +429,8 @@ MAP-4.7.5_BHWIFI_FH24G:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.5_BHWIFI_FH24G:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.7.5_BHWIFI_FH24G.*/'
     - when: manual
       allow_failure: true
 
@@ -359,6 +441,8 @@ MAP-4.7.5_BHWIFI_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.5_BHWIFI_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.7.5_BHWIFI_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -369,6 +453,8 @@ MAP-4.7.5_BHWIFI_FH5GH:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.5_BHWIFI_FH5GH:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.7.5_BHWIFI_FH5GH.*/'
     - when: manual
       allow_failure: true
 
@@ -379,6 +465,8 @@ MAP-4.7.6_BHWIFI_FH24G:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.6_BHWIFI_FH24G:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.7.6_BHWIFI_FH24G.*/'
     - when: manual
       allow_failure: true
 
@@ -389,6 +477,8 @@ MAP-4.7.6_BHWIFI_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.6_BHWIFI_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.7.6_BHWIFI_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -399,6 +489,8 @@ MAP-4.7.6_BHWIFI_FH5GH:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.6_BHWIFI_FH5GH:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.7.6_BHWIFI_FH5GH.*/'
     - when: manual
       allow_failure: true
 
@@ -409,6 +501,8 @@ MAP-4.7.7_BHWIFI_FH24G:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.7_BHWIFI_FH24G:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.7.7_BHWIFI_FH24G.*/'
     - when: manual
       allow_failure: true
 
@@ -419,6 +513,8 @@ MAP-4.7.7_BHWIFI_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.7_BHWIFI_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.7.7_BHWIFI_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -429,6 +525,8 @@ MAP-4.7.7_BHWIFI_FH5GH:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.7_BHWIFI_FH5GH:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.7.7_BHWIFI_FH5GH.*/'
     - when: manual
       allow_failure: true
 
@@ -439,6 +537,8 @@ MAP-4.7.8_BHWIFI_FH24G:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.8_BHWIFI_FH24G:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.7.8_BHWIFI_FH24G.*/'
     - when: manual
       allow_failure: true
 
@@ -449,6 +549,8 @@ MAP-4.7.8_BHWIFI_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.8_BHWIFI_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.7.8_BHWIFI_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -459,6 +561,8 @@ MAP-4.7.8_BHWIFI_FH5GH:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.8_BHWIFI_FH5GH:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.7.8_BHWIFI_FH5GH.*/'
     - when: manual
       allow_failure: true
 
@@ -469,6 +573,8 @@ MAP-4.7.9_BHWIFI:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.9_BHWIFI:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.7.9_BHWIFI.*/'
     - when: manual
       allow_failure: true
 
@@ -479,6 +585,8 @@ MAP-4.8.1_BHWIFI_FH24G:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.1_BHWIFI_FH24G:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.8.1_BHWIFI_FH24G.*/'
     - when: manual
       allow_failure: true
 
@@ -489,6 +597,8 @@ MAP-4.8.1_BHWIFI_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.1_BHWIFI_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.8.1_BHWIFI_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -499,6 +609,8 @@ MAP-4.8.1_BHWIFI_FH5GH:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.1_BHWIFI_FH5GH:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.8.1_BHWIFI_FH5GH.*/'
     - when: manual
       allow_failure: true
 
@@ -509,6 +621,8 @@ MAP-4.8.2_BHWIFI_FH24G:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.2_BHWIFI_FH24G:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.8.2_BHWIFI_FH24G.*/'
     - when: manual
       allow_failure: true
 
@@ -519,6 +633,8 @@ MAP-4.8.2_BHWIFI_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.2_BHWIFI_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.8.2_BHWIFI_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -529,6 +645,8 @@ MAP-4.8.2_BHWIFI_FH5GH:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.2_BHWIFI_FH5GH:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.8.2_BHWIFI_FH5GH.*/'
     - when: manual
       allow_failure: true
 
@@ -539,6 +657,8 @@ MAP-4.8.3_BHWIFI_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.3_BHWIFI_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.8.3_BHWIFI_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -549,6 +669,8 @@ MAP-4.8.4_BHWIFI_FH24G:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.4_BHWIFI_FH24G:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.8.4_BHWIFI_FH24G.*/'
     - when: manual
       allow_failure: true
 
@@ -559,6 +681,8 @@ MAP-4.8.4_BHWIFI_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.4_BHWIFI_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.8.4_BHWIFI_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -569,6 +693,8 @@ MAP-4.8.4_BHWIFI_FH5GH:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.4_BHWIFI_FH5GH:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.8.4_BHWIFI_FH5GH.*/'
     - when: manual
       allow_failure: true
 
@@ -579,6 +705,8 @@ MAP-4.8.5_BHWIFI_FH24G:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.5_BHWIFI_FH24G:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.8.5_BHWIFI_FH24G.*/'
     - when: manual
       allow_failure: true
 
@@ -589,6 +717,8 @@ MAP-4.8.5_BHWIFI_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.5_BHWIFI_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.8.5_BHWIFI_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -599,6 +729,8 @@ MAP-4.8.5_BHWIFI_FH5GH:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.5_BHWIFI_FH5GH:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.8.5_BHWIFI_FH5GH.*/'
     - when: manual
       allow_failure: true
 
@@ -609,6 +741,8 @@ MAP-4.9.1_BH24G:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.9.1_BH24G:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.9.1_BH24G.*/'
     - when: manual
       allow_failure: true
 
@@ -619,6 +753,8 @@ MAP-4.9.1_BH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.9.1_BH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.9.1_BH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -629,6 +765,8 @@ MAP-4.9.1_BH5GH:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.9.1_BH5GH:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.9.1_BH5GH.*/'
     - when: manual
       allow_failure: true
 
@@ -639,6 +777,8 @@ MAP-4.10.1_BH24G:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.10.1_BH24G:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.10.1_BH24G.*/'
     - when: manual
       allow_failure: true
 
@@ -649,6 +789,8 @@ MAP-4.10.1_BH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.10.1_BH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.10.1_BH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -659,6 +801,8 @@ MAP-4.10.1_BH5GH:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.10.1_BH5GH:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.10.1_BH5GH.*/'
     - when: manual
       allow_failure: true
 
@@ -669,6 +813,8 @@ MAP-4.10.2_BH24G:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.10.2_BH24G:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.10.2_BH24G.*/'
     - when: manual
       allow_failure: true
 
@@ -679,6 +825,8 @@ MAP-4.10.2_BH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.10.2_BH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.10.2_BH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -689,6 +837,8 @@ MAP-4.10.2_BH5GH:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.10.2_BH5GH:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.10.2_BH5GH.*/'
     - when: manual
       allow_failure: true
 
@@ -699,6 +849,8 @@ MAP-4.10.3_BHWIFI_FH24G:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.10.3_BHWIFI_FH24G:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.10.3_BHWIFI_FH24G.*/'
     - when: manual
       allow_failure: true
 
@@ -709,6 +861,8 @@ MAP-4.10.3_BHWIFI_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.10.3_BHWIFI_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.10.3_BHWIFI_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -719,6 +873,8 @@ MAP-4.10.3_BHWIFI_FH5GH:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.10.3_BHWIFI_FH5GH:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.10.3_BHWIFI_FH5GH.*/'
     - when: manual
       allow_failure: true
 
@@ -729,6 +885,8 @@ MAP-4.10.5_BH24G_FH24G:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.10.5_BH24G_FH24G:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.10.5_BH24G_FH24G.*/'
     - when: manual
       allow_failure: true
 
@@ -739,6 +897,8 @@ MAP-4.10.5_BH24G_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.10.5_BH24G_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.10.5_BH24G_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -749,6 +909,8 @@ MAP-4.10.5_BH24G_FH5GH:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.10.5_BH24G_FH5GH:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.10.5_BH24G_FH5GH.*/'
     - when: manual
       allow_failure: true
 
@@ -759,6 +921,8 @@ MAP-4.10.5_BH5GL_FH24G:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.10.5_BH5GL_FH24G:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.10.5_BH5GL_FH24G.*/'
     - when: manual
       allow_failure: true
 
@@ -769,6 +933,8 @@ MAP-4.10.5_BH5GL_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.10.5_BH5GL_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.10.5_BH5GL_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -779,6 +945,8 @@ MAP-4.10.5_BH5GL_FH5GH:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.10.5_BH5GL_FH5GH:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.10.5_BH5GL_FH5GH.*/'
     - when: manual
       allow_failure: true
 
@@ -789,6 +957,8 @@ MAP-4.10.5_BH5GH_FH24G:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.10.5_BH5GH_FH24G:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.10.5_BH5GH_FH24G.*/'
     - when: manual
       allow_failure: true
 
@@ -799,6 +969,8 @@ MAP-4.10.5_BH5GH_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.10.5_BH5GH_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.10.5_BH5GH_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -809,6 +981,8 @@ MAP-4.10.5_BH5GH_FH5GH:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.10.5_BH5GH_FH5GH:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.10.5_BH5GH_FH5GH.*/'
     - when: manual
       allow_failure: true
 
@@ -819,6 +993,8 @@ MAP-4.10.6_BH24G_FH24G:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.10.6_BH24G_FH24G:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.10.6_BH24G_FH24G.*/'
     - when: manual
       allow_failure: true
 
@@ -829,6 +1005,8 @@ MAP-4.10.6_BH24G_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.10.6_BH24G_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.10.6_BH24G_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -839,6 +1017,8 @@ MAP-4.10.6_BH24G_FH5GH:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.10.6_BH24G_FH5GH:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.10.6_BH24G_FH5GH.*/'
     - when: manual
       allow_failure: true
 
@@ -849,6 +1029,8 @@ MAP-4.10.6_BH5GL_FH24G:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.10.6_BH5GL_FH24G:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.10.6_BH5GL_FH24G.*/'
     - when: manual
       allow_failure: true
 
@@ -859,6 +1041,8 @@ MAP-4.10.6_BH5GL_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.10.6_BH5GL_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.10.6_BH5GL_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -869,6 +1053,8 @@ MAP-4.10.6_BH5GL_FH5GH:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.10.6_BH5GL_FH5GH:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.10.6_BH5GL_FH5GH.*/'
     - when: manual
       allow_failure: true
 
@@ -879,6 +1065,8 @@ MAP-4.10.6_BH5GH_FH24G:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.10.6_BH5GH_FH24G:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.10.6_BH5GH_FH24G.*/'
     - when: manual
       allow_failure: true
 
@@ -889,6 +1077,8 @@ MAP-4.10.6_BH5GH_FH5GL:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.10.6_BH5GH_FH5GL:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.10.6_BH5GH_FH5GL.*/'
     - when: manual
       allow_failure: true
 
@@ -899,6 +1089,8 @@ MAP-4.10.6_BH5GH_FH5GH:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.10.6_BH5GH_FH5GH:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.10.6_BH5GH_FH5GH.*/'
     - when: manual
       allow_failure: true
 
@@ -909,6 +1101,8 @@ MAP-4.11.1_BHWIFI:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.11.1_BHWIFI:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.11.1_BHWIFI.*/'
     - when: manual
       allow_failure: true
 
@@ -919,6 +1113,8 @@ MAP-4.12.1_BHWIFI:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.12.1_BHWIFI:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.12.1_BHWIFI.*/'
     - when: manual
       allow_failure: true
 
@@ -929,5 +1125,7 @@ MAP-4.12.2_BHWIFI:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.12.2_BHWIFI:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    # If we're on a MR and the labels have the correct target and test name, run it.
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/ && $CI_MERGE_REQUEST_LABELS =~ /.*certification:MAP-4.12.2_BHWIFI.*/'
     - when: manual
       allow_failure: true

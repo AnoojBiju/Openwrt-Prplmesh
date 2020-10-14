@@ -22,6 +22,12 @@ stages:
   - certification-axepoint-bhwifi
   - upload
 
+.rules-for-expensive-job: &expensive-job
+  - if: '$CI_PIPELINE_SOURCE == "schedule"'
+  - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train"'
+  - when: manual
+    allow_failure: true
+
 .image-build:
   stage: containers
   tags:
@@ -159,29 +165,20 @@ build-in-docker:
 build-in-docker-alpine:
   extends: build-in-docker
   image: $CI_REGISTRY_IMAGE/prplmesh-builder-alpine:$CI_PIPELINE_ID
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
-    - if: "$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/"
-    - when: manual
+  rules: *expensive-job
   needs: ["image-build-builder/alpine"]
 
 build-in-docker-ubuntu-xenial:
   extends: build-in-docker
   image: $CI_REGISTRY_IMAGE/prplmesh-builder-ubuntu-xenial:$CI_PIPELINE_ID
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
-    - if: "$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/"
-    - when: manual
+  rules: *expensive-job
   needs: ["image-build-builder/ubuntu/xenial"]
 
 build-in-docker-static:
   extends: build-in-docker
   variables:
     EXTRA_CMAKE_FLAGS: "-DBUILD_SHARED_LIBS=OFF"
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
-    - if: "$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/"
-    - when: manual
+  rules: *expensive-job
 
 upload-artifacts:
   stage: upload
@@ -282,10 +279,7 @@ boardfarm-tests:
       - "build/$TARGET_DEVICE/"
     expire_in: 4 weeks
     when: always
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
-    - if: "$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/"
-    - when: manual
+  rules: *expensive-job
   tags:
     - shell
     - docker-build
@@ -303,10 +297,7 @@ boardfarm-tests:
     # Clean up the cache directory from anything that hasn't been accessed for a week.
     - find "$RDK_CACHE_DIR" -type f -atime +7 -delete
     - tools/docker/builder/rdk-b/build.sh --verbose --target-device "$TARGET_DEVICE" --tag "$CI_PIPELINE_ID" --cache "$RDK_CACHE_DIR"
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
-    - if: "$CI_MERGE_REQUEST_LABELS =~ /.*ready for merge.*/"
-    - when: manual
+  rules: *expensive-job
   artifacts:
     paths:
       - "build/$TARGET_DEVICE/"
@@ -333,6 +324,7 @@ build-for-rdkb-raspberrypi:
     - tools/deploy_firmware.py --device "$TARGET_DEVICE" --target-name "$TARGET_DEVICE_NAME" --image "$OPENWRT_IMAGE"
     - tools/deploy_ipk.sh $TARGET_DEVICE_NAME "build/$TARGET_DEVICE/"prplmesh.ipk
     - tests/openwrt/test_status.sh $TARGET_DEVICE_NAME
+  rules: *expensive-job
   artifacts:
     paths:
       - logs
@@ -344,6 +336,12 @@ build-for-rdkb-raspberrypi:
 
 build-for-turris-omnia:
   extends: .build-for-openwrt
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train"'
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/'
+    - when: manual
+      allow_failure: true
   variables:
     TARGET_DEVICE: "turris-omnia"
 
@@ -359,6 +357,12 @@ build-for-netgear-rax40:
 
 build-for-axepoint:
   extends: .build-for-openwrt
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train"'
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:axepoint.*/'
+    - when: manual
+      allow_failure: true
   variables:
     TARGET_DEVICE: "axepoint"
 
