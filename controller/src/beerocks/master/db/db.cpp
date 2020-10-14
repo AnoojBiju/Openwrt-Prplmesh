@@ -4851,3 +4851,27 @@ std::string db::dm_prepare_device_path(std::shared_ptr<son::node> device_node)
 
     return device_path;
 }
+
+std::string db::dm_prepare_radio_path(std::shared_ptr<son::node> radio_node)
+{
+
+    auto device_path =
+        dm_prepare_device_path(get_node(tlvf::mac_from_string(radio_node->parent_mac)));
+
+    if (device_path.empty()) {
+        LOG(ERROR) << "Failed to get path to Device with mac: " << radio_node->parent_mac;
+        return "";
+    }
+
+    auto radio_index = m_ambiorix_datamodel->get_instance_index(device_path + "Radio.[ID == '%s']",
+                                                                radio_node->mac);
+    if (!radio_index) {
+        LOG(ERROR) << "Failed to get Radio index with mac:" << radio_node->mac;
+        return "";
+    }
+
+    // Prepare result string Controller.Network.Device.{i}.Radio{i}.
+    auto radio_path = device_path + "Radio." + std::to_string(radio_index) + ".";
+
+    return radio_path;
+}
