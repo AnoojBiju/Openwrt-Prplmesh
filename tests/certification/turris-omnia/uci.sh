@@ -23,9 +23,9 @@ set wireless.default_radio2=wifi-iface
 set wireless.default_radio2.device='radio2'
 set wireless.default_radio2.network='lan'
 set wireless.default_radio2.mode='ap'
-set wireless.default_radio2.key='prplmesh_pass'
+set wireless.default_radio2.key='maprocks2'
 set wireless.default_radio2.encryption='psk2'
-set wireless.default_radio2.ssid='prplmesh'
+set wireless.default_radio2.ssid='Multi-AP-24G-2'
 set wireless.default_radio2.wps_pushbutton='1'
 set wireless.default_radio2.multi_ap=3
 
