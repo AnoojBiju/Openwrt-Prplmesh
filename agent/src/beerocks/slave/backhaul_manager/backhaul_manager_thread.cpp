@@ -33,6 +33,7 @@
 
 #include "../tasks/ap_autoconfiguration_task.h"
 #include "../tasks/capability_reporting_task.h"
+#include "../tasks/channel_scan_task.h"
 #include "../tasks/channel_selection_task.h"
 #include "../tasks/link_metrics_collection_task.h"
 #include "../tasks/topology_task.h"
@@ -168,6 +169,13 @@ bool backhaul_manager::init()
         return false;
     }
     m_task_pool.add_task(channel_selection_task);
+
+    auto channel_scan_task = std::make_shared<ChannelScanTask>(*this, cmdu_tx);
+    if (!channel_scan_task) {
+        LOG(ERROR) << "failed to allocate Channel Scan Task!";
+        return false;
+    }
+    m_task_pool.add_task(channel_scan_task);
 
     auto capability_reporing_task = std::make_shared<CapabilityReportingTask>(*this, cmdu_tx);
     if (!capability_reporing_task) {
