@@ -4835,3 +4835,19 @@ bool db::dm_add_device_element(const sMacAddr &mac)
     }
     return true;
 }
+
+std::string db::dm_prepare_device_path(std::shared_ptr<son::node> device_node)
+{
+
+    auto device_index =
+        m_ambiorix_datamodel->get_instance_index("Network.Device.[ID == '%s']", device_node->mac);
+    if (!device_index) {
+        LOG(ERROR) << "Failed to get Device index with mac: " << device_node->mac;
+        return "";
+    }
+
+    // Prepare result string Controller.Network.Device.{i}.
+    auto device_path = "Controller.Network.Device." + std::to_string(device_index) + ".";
+
+    return device_path;
+}
