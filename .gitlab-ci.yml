@@ -38,7 +38,7 @@ image-build-boardfarm:
   tags:
     - shell
     - docker-build
-    - mytag
+    - targets
   script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - if [ "$CI_COMMIT_BRANCH" = "master" ]; then latest_tag="--tag latest"; fi
@@ -314,7 +314,7 @@ boardfarm-tests-rax40-2:
     - job: build-in-docker
     - job: image-build-boardfarm-ci
   tags:
-    - mytag
+    - targets
 
 .build-for-openwrt:
   stage: build
