@@ -28,7 +28,7 @@ stages:
     - shell
     - docker-build
   script:
-    - docker login -u root -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - if [ "$CI_COMMIT_BRANCH" = "master" ]; then latest_tag="--tag latest"; fi
     - ./tools/docker/image-build.sh --image "${CI_JOB_NAME#image-build-}" --tag $CI_PIPELINE_ID $latest_tag --push
   retry: 2
@@ -40,7 +40,7 @@ stages:
     - docker-build
     - mytag
   script:
-    - docker login -u root -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - if [ "$CI_COMMIT_BRANCH" = "master" ]; then latest_tag="--tag latest"; fi
     - ./tools/docker/image-build.sh --image boardfarm-ci  --tag $CI_PIPELINE_ID $latest_tag --push
   retry: 2
@@ -284,23 +284,23 @@ boardfarm-tests:
   tags:
     - boardfarm-compose
 
-boardfarm-tests-rax40:
-  stage: test
-  script:
-    - docker login -u root -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - apt-get install git
-    - git clone https://github.com/mattsm/boardfarm.git && cd boardfarm && git checkout 100521fde1fb67536682cafecc2f91a6e2e8a6f8 && python3 setup.py install
-    - ./tests/run_bf.sh
-  artifacts:
-    paths:
-      - logs
-    when: always
-  needs:
-    - job: build-in-docker
-    - job: image-build-boardfarm-ci
-  tags:
-    - boardfarm-compose
-
+#boardfarm-tests-rax40:
+#  stage: test
+#  script:
+#    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+#    - apt-get install git
+#    - git clone https://github.com/mattsm/boardfarm.git && cd boardfarm && git checkout 100521fde1fb67536682cafecc2f91a6e2e8a6f8 && python3 setup.py install
+#    - ./tests/run_bf.sh
+#  artifacts:
+#    paths:
+#      - logs
+#    when: always
+#  needs:
+#    - job: build-in-docker
+#    - job: image-build-boardfarm-ci
+#  tags:
+#    - boardfarm-compose
+#
 boardfarm-tests-rax40-2:
   stage: test
   script:
