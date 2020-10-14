@@ -822,7 +822,7 @@ public:
 
     /**
      * @brief Set the client's unfriendly status.
-     * 
+     *
      * @param mac MAC address of a client.
      * @param is_unfriendly Whether a client is unfriendly or not.
      * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
@@ -833,7 +833,7 @@ public:
 
     /**
      * @brief Get the client's unfriendly status.
-     * 
+     *
      * @param mac MAC address of a client.
      * @return Whather a client is unfriendly or not.
      */
@@ -1262,6 +1262,24 @@ private:
      * @return True on success, otherwise false.
      */
     bool dm_add_device_element(const sMacAddr &mac);
+
+    /**
+     * @brief Prepares path to the Device data element with correct index (i).
+     * Example: "Controller.Network.Device.{i}."
+     *
+     * @param[in] shared_ptr Database Pointer on the Device node.
+     * @return Correct Device path, otherwise empty string.
+     */
+    std::string dm_prepare_device_path(std::shared_ptr<son::node> device_node);
+
+    /**
+     * @brief Prepares path to the Radio data element with correct index (i).
+     * Example: "Controller.Network.Device.{i}.Radio{i}."
+     *
+     * @param[in] shared_ptr Database Pointer on the Radio node.
+     * @return Correct Radio path, otherwise empty string.
+     */
+    std::string dm_prepare_radio_path(std::shared_ptr<son::node> radio_node);
 
     int network_optimization_task_id           = -1;
     int channel_selection_task_id              = -1;
