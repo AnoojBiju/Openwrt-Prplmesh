@@ -78,10 +78,12 @@ void client_steering_task::work()
             }
         }
 
-        // Set is-unfriendly flag only if client exists in the persistent DB.
-        auto client_mac = tlvf::mac_from_string(sta_mac);
-        if (database.is_client_in_persistent_db(client_mac)) {
-            database.set_client_is_unfriendly(client_mac, !steering_success);
+        if (database.config.persistent_db) {
+            // Set is-unfriendly flag only if client exists in the persistent DB.
+            auto client_mac = tlvf::mac_from_string(sta_mac);
+            if (database.is_client_in_persistent_db(client_mac)) {
+                database.set_client_is_unfriendly(client_mac, !steering_success);
+            }
         }
 
         finish();
