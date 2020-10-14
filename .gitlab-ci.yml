@@ -336,6 +336,12 @@ build-for-rdkb-raspberrypi:
 
 build-for-turris-omnia:
   extends: .build-for-openwrt
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train"'
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:turris-omnia.*/'
+    - when: manual
+      allow_failure: true
   variables:
     TARGET_DEVICE: "turris-omnia"
 
@@ -351,6 +357,12 @@ build-for-netgear-rax40:
 
 build-for-axepoint:
   extends: .build-for-openwrt
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train"'
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*target:axepoint.*/'
+    - when: manual
+      allow_failure: true
   variables:
     TARGET_DEVICE: "axepoint"
 
