@@ -809,6 +809,22 @@ bool ap_wlan_hal_nl80211::start_wps_pbc()
 
 std::string ap_wlan_hal_nl80211::get_radio_driver_version() { return "nl80211"; }
 
+bool ap_wlan_hal_nl80211::hostapd_set(const std::string &variable, const std::string &value)
+{
+    LOG(TRACE) << __func__ << " variable: " << variable << ", value: " << value;
+
+    // Build command string
+    const std::string cmd = "SET " + variable + " " + value;
+
+    // Send command
+    if (!wpa_ctrl_send_msg(cmd)) {
+        LOG(ERROR) << "hostapd: 'set' failed!";
+        return false;
+    }
+
+    return true;
+}
+
 bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
 {
     // Filter out empty events
