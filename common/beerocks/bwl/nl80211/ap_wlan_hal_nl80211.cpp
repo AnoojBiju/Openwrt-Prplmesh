@@ -491,8 +491,11 @@ bool ap_wlan_hal_nl80211::update_vap_credentials(
                 if (bss_it->fronthaul && !backhaul_wps_ssid.empty()) {
                     conf.set_create_vap_value(vap, "multi_ap_backhaul_ssid",
                                               "\"" + backhaul_wps_ssid + "\"");
+                    hostapd_set("multi_ap_backhaul_ssid", "\"" + backhaul_wps_ssid + "\"");
+
                     conf.set_create_vap_value(vap, "multi_ap_backhaul_wpa_passphrase",
                                               backhaul_wps_passphrase);
+                    hostapd_set("multi_ap_backhaul_wpa_passphrase", backhaul_wps_passphrase);
                 }
 
                 // remove when not needed
