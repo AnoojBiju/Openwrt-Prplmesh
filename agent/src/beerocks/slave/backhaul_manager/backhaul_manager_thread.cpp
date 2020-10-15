@@ -3981,11 +3981,6 @@ bool backhaul_manager::start_wps_pbc(const sMacAddr &radio_mac)
             return false;
         }
 
-        if (!sta_wlan_hal->start_wps_pbc()) {
-            LOG(ERROR) << "Failed to start wps";
-            return false;
-        }
-
         // This is a temporary solution for intel (prplwrt) drivers to pass wbh easymesh certification 4.2.2 test.
         // For permanent solution need to handle in bwl per platform from ap_manager.
         // Disable the radio interface to make sure its not beaconing along while the supplicant is scanning.
@@ -3998,7 +3993,18 @@ bool backhaul_manager::start_wps_pbc(const sMacAddr &radio_mac)
             return false;
         }
 
-        return message_com::send_cmdu(soc->slave, cmdu_tx);
+        for (auto slaves_socket : slaves_sockets) {
+            if (!message_com::send_cmdu(slaves_socket->slave, cmdu_tx)) {
+                LOG(ERROR) << "Failed to send cACTION_BACKHAUL_RADIO_DISABLE_REQUEST";
+                return false;
+            }
+        }
+
+        if (!sta_wlan_hal->start_wps_pbc()) {
+            LOG(ERROR) << "Failed to start wps";
+            return false;
+        }
+        return true;
     }
 }
 
