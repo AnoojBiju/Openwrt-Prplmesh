@@ -1,7 +1,7 @@
 {
 	"logging": {
 		"default": {
-			"level" : "INFO",
+			"level" : "DEBUG",
 			"syslog" : false,
 			"console" : false,
 			"file" : {
