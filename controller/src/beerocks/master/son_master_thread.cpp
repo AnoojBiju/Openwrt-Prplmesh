@@ -124,6 +124,7 @@ master_thread::master_thread(
         LOG(DEBUG) << "Health check is DISABLED!";
     }
 
+    m_cmdu_server->set_client_connected_handler([&](int fd) { handle_connected(fd); });
     m_cmdu_server->set_client_disconnected_handler([&](int fd) { handle_disconnected(fd); });
     m_cmdu_server->set_cmdu_received_handler([&](int fd, uint32_t iface_index,
                                                  const sMacAddr &dst_mac, const sMacAddr &src_mac,
@@ -134,6 +135,7 @@ master_thread::master_thread(
 
 master_thread::~master_thread()
 {
+    m_cmdu_server->clear_client_connected_handler();
     m_cmdu_server->clear_client_disconnected_handler();
     m_cmdu_server->clear_cmdu_received_handler();
 
@@ -264,6 +266,8 @@ bool master_thread::start()
         return false;
     }
 
+    LOG(DEBUG) << "started";
+
     return true;
 }
 
@@ -284,6 +288,8 @@ bool master_thread::stop()
     if (!m_timer_manager->remove_timer(m_tasks_timer)) {
         ok = false;
     }
+
+    LOG(DEBUG) << "stopped";
 
     return ok;
 }
@@ -309,8 +315,12 @@ bool master_thread::send_cmdu_to_broker(ieee1905_1::CmduMessageTx &cmdu_tx, cons
     return m_broker_client->send_cmdu(cmdu_tx, dst_mac, src_mac, iface_index);
 }
 
+void master_thread::handle_connected(int fd) { LOG(INFO) << "UDS socket connected, fd = " << fd; }
+
 void master_thread::handle_disconnected(int fd)
 {
+    LOG(INFO) << "UDS socket disconnected, fd = " << fd;
+
     // Removing the socket only from the vector of socket in the database if exists,
     // not from socket thread.
     database.remove_cli_socket(fd);
