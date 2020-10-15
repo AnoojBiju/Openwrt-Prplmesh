@@ -315,7 +315,8 @@ bool BrokerServer::socket_disconnected(std::shared_ptr<Socket> sd)
 
     // Delete the Socket from the list of types subscriptions
     for (auto &type : m_soc_to_type[sd]) {
-        m_type_to_soc[type].erase(sd);
+        auto &subscribers = m_type_to_soc[type];
+        subscribers.erase(sd);
     }
 
     // Delete the type from the list of this Socket subscriptions
