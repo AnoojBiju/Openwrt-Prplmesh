@@ -95,6 +95,9 @@ bool BrokerClientImpl::subscribe(const std::vector<ieee1905_1::eMessageType> &ms
 bool BrokerClientImpl::send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx, const sMacAddr &dst_mac,
                                  const sMacAddr &src_mac, uint32_t iface_index)
 {
+    LOG(DEBUG) << "send_cmdu(0x" << std::hex << int(cmdu_tx.getMessageType()) << std::dec << ", "
+               << dst_mac << ", " << src_mac << ", " << iface_index << ")";
+
     if (beerocks::net::network_utils::ZERO_MAC == dst_mac) {
         LOG(ERROR) << "Destination MAC address is empty!";
         return false;
