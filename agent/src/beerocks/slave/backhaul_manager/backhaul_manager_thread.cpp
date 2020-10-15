@@ -1026,7 +1026,11 @@ bool backhaul_manager::backhaul_fsm_main(bool &skip_select)
             radio->back.iface_mac = network_utils::ZERO_MAC;
 
             if (soc->sta_wlan_hal) {
-                soc->sta_wlan_hal.reset();
+                if (soc->sta_wlan_hal->is_connected()) {
+                    soc->sta_wlan_hal->disconnect();
+                }
+                soc->sta_wlan_hal->detach();
+                //soc->sta_wlan_hal.reset();
             }
             if (soc->sta_hal_ext_events) {
                 remove_socket(soc->sta_hal_ext_events);
