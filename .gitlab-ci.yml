@@ -389,8 +389,19 @@ test-on-glinet-b1300:
     DEVICE_UNDER_TEST: prplmesh
   script:
     - |
-      if [ "$DEVICE_UNDER_TEST" = axepoint ] ; then
-          tools/deploy_firmware.py --device axepoint --target-name "$DEVICE_UNDER_TEST" --image AX3000_1600_ETH_11AXUCI-squashfs-fullimage.img
+      case "$DEVICE_UNDER_TEST" in
+          axepoint)
+              IMAGE_NAME=AX3000_1600_ETH_11AXUCI-squashfs-fullimage.img
+          ;;
+          turris-omnia)
+              IMAGE_NAME=openwrt-mvebu-cortexa9-cznic_turris-omnia-sysupgrade.img.gz
+          ;;
+          *)
+              IMAGE_NAME=''
+          ;;
+      esac
+      if [ -n $IMAGE_NAME ] ; then
+          tools/deploy_firmware.py --device $DEVICE_UNDER_TEST --target-name "$DEVICE_UNDER_TEST" --image $IMAGE_NAME
           echo "Deploying to $DEVICE_UNDER_TEST"
           tools/deploy_ipk.sh --certification-mode $DEVICE_UNDER_TEST build/$DEVICE_UNDER_TEST/prplmesh.ipk
       fi
@@ -403,6 +414,7 @@ test-on-glinet-b1300:
   needs:
     - job: build-in-docker
     - job: build-for-axepoint
+    - job: build-for-turris-omnia
   timeout: 36h
 
 run-certification-tests-essensium:
