@@ -130,11 +130,11 @@ private:
     /**
      * @brief Handler method for socket disconnections.
      * 
-     * @param [in] sd The socket interface on which the disconnection event originated.
+     * @param [in] fd The file descriptor of the socket that got disconnected.
      * 
      * @return true on success and false otherwise.
      */
-    bool socket_disconnected(std::shared_ptr<Socket> sd);
+    bool socket_disconnected(int fd);
 
 private:
     /**
@@ -150,12 +150,17 @@ private:
     /**
      * Map for storing Socket->CMDU Type subscriptions.
      */
-    std::unordered_map<std::shared_ptr<Socket>, std::unordered_set<uint32_t>> m_soc_to_type;
+    std::unordered_map<int, std::unordered_set<uint32_t>> m_soc_to_type;
 
     /**
      * Map for storing CMDU Type->Socket subscriptions.
      */
-    std::unordered_map<uint32_t, std::unordered_set<std::shared_ptr<Socket>>> m_type_to_soc;
+    std::unordered_map<uint32_t, std::unordered_set<int>> m_type_to_soc;
+
+    /**
+     * Map of file descriptors to pointers to Socket class instances.
+     */
+    std::unordered_map<int, std::shared_ptr<Socket>> m_fd_to_socket;
 
     /**
      * Handler for internal (non-CMDU) messages.
