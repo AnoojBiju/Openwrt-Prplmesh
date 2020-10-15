@@ -1203,6 +1203,41 @@ db::get_station_current_capabilities(const std::string &mac)
     return (&n->capabilities);
 }
 
+bool db::dm_set_ht_capabilities(const std::string &path_to_obj,
+                                const beerocks::message::sRadioCapabilities &sta_cap)
+{
+    m_ambiorix_datamodel->set(path_to_obj, "GI_20_MHz", (bool)sta_cap.ht_low_bw_short_gi);
+    m_ambiorix_datamodel->set(path_to_obj, "GI_40_MHz", (bool)sta_cap.ht_high_bw_short_gi);
+    m_ambiorix_datamodel->set(path_to_obj, "HT_40_Mhz", (bool)(40 <= sta_cap.ht_bw));
+    m_ambiorix_datamodel->set(path_to_obj, "tx_spatial_streams", true);
+    m_ambiorix_datamodel->set(path_to_obj, "rx_spatial_streams", true);
+    return true;
+}
+
+bool db::dm_set_capabilities(const std::string &device_mac, const std::string &radio_mac,
+                             const beerocks::message::sRadioCapabilities &sta_cap)
+{
+    uint32_t obj_index;
+    std::string path_to_obj = m_ambiorix_datamodel->get_path_to_radio(device_mac, radio_mac);
+
+    if (path_to_obj.empty()) {
+        LOG(ERROR) << "Failed to find device with mac: " << device_mac
+                   << " or radio with mac:" << radio_mac;
+        return false;
+    }
+
+    path_to_obj += ".Capabilities";
+    obj_index = m_ambiorix_datamodel->add_instance(path_to_obj);
+    if (!obj_index) {
+        LOG(ERROR) << "Failed to add instance : " << path_to_obj;
+        return false;
+    }
+
+    path_to_obj += "." + std::to_string(obj_index) + ".";
+    dm_set_ht_capabilities(path_to_obj + "HTCapabilities", sta_cap);
+    return true;
+}
+
 bool db::set_station_capabilities(const std::string &client_mac,
                                   const beerocks::message::sRadioCapabilities &sta_cap)
 {
@@ -1230,6 +1265,7 @@ bool db::set_station_capabilities(const std::string &client_mac,
         n->m_sta_24ghz_capabilities.valid = true;
         n->capabilities                   = n->m_sta_24ghz_capabilities;
     }
+    dm_set_capabilities(client_mac, parent_radio, sta_cap);
     return true;
 }
 

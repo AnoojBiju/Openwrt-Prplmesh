@@ -403,6 +403,26 @@ public:
     // Capabilities
     //
 
+    /**
+     * @brief set values to attributes of 'HTCapabilities' data model
+     * 
+     * @param path_to_obj (ex. Controller.Netwok.Device.1.Radio.1.Capabilities.1.)
+     * @param sta_cap structure with station capabilities
+     * @return true on success, false otherwise
+     */
+    bool dm_set_ht_capabilities(const std::string &path_to_obj,
+                                const beerocks::message::sRadioCapabilities &sta_cap);
+
+    /**
+     * @brief add 'capabilities' data model instance
+     * 
+     * @param device_mac
+     * @param radio_mac
+     * @return true on success, false otherwise
+     */
+    bool dm_set_capabilities(const std::string &device_mac, const std::string &radio_mac,
+                             const beerocks::message::sRadioCapabilities &sta_cap);
+
     const beerocks::message::sRadioCapabilities *
     get_station_current_capabilities(const std::string &mac);
 
