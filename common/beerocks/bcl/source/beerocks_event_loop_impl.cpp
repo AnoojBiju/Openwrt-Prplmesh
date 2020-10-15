@@ -173,6 +173,7 @@ int EventLoopImpl::run()
 
         // Handle errors
         if (events[i].events & EPOLLERR) {
+            LOG(DEBUG) << "Error at FD (" << fd << ")";
 
             // Remove the file descriptor from the poll
             remove_handlers(fd);
@@ -196,12 +197,18 @@ int EventLoopImpl::run()
 
             // Handle incoming data
         } else if (events[i].events & EPOLLIN) {
+            if (handlers.on_read) {
+                LOG(DEBUG) << "Read ready at FD (" << fd << ")";
+            }
             if (handlers.on_read && (!handlers.on_read(fd, *this))) {
                 return -1;
             }
 
             // Handle write operations
         } else if (events[i].events & EPOLLOUT) {
+            if (handlers.on_write) {
+                LOG(DEBUG) << "Write ready at FD (" << fd << ")";
+            }
             if (handlers.on_write && (!handlers.on_write(fd, *this))) {
                 return -1;
             }
