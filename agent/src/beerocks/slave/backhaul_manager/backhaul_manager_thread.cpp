@@ -162,7 +162,7 @@ bool backhaul_manager::init()
     }
     m_task_pool.add_task(ap_auto_configuration_task);
 
-    auto channel_selection_task = std::make_shared<ApAutoConfigurationTask>(*this, cmdu_tx);
+    auto channel_selection_task = std::make_shared<ChannelSelectionTask>(*this, cmdu_tx);
     if (!channel_selection_task) {
         LOG(ERROR) << "failed to allocate Channel Selection Task!";
         return false;
