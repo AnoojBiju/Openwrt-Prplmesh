@@ -329,9 +329,9 @@ bool ap_wlan_hal_nl80211::update_vap_credentials(
     // decalre a function for iterating over bss-conf and ap-vaps
     bool abort = false;
     auto configure_func =
-        [&abort, &conf, &bss_info_conf_list, &backhaul_wps_ssid, &backhaul_wps_passphrase](
-            const std::string &vap,
-            std::remove_reference<decltype(bss_info_conf_list)>::type::iterator bss_it) {
+        [&abort, &conf, &bss_info_conf_list, &backhaul_wps_ssid, &backhaul_wps_passphrase,
+         this](const std::string &vap,
+               std::remove_reference<decltype(bss_info_conf_list)>::type::iterator bss_it) {
             if (abort) {
                 return;
             }
@@ -491,8 +491,11 @@ bool ap_wlan_hal_nl80211::update_vap_credentials(
                 if (bss_it->fronthaul && !backhaul_wps_ssid.empty()) {
                     conf.set_create_vap_value(vap, "multi_ap_backhaul_ssid",
                                               "\"" + backhaul_wps_ssid + "\"");
+                    hostapd_set("multi_ap_backhaul_ssid", "\"" + backhaul_wps_ssid + "\"");
+
                     conf.set_create_vap_value(vap, "multi_ap_backhaul_wpa_passphrase",
                                               backhaul_wps_passphrase);
+                    hostapd_set("multi_ap_backhaul_wpa_passphrase", backhaul_wps_passphrase);
                 }
 
                 // remove when not needed
