@@ -90,6 +90,15 @@ protected:
         return base_wlan_hal::event_queue_push(int(event), data);
     }
 
+    /*!
+     * Set a hostapd runtime variable.
+     *
+     * @param [in] variable The variable to set.
+     * @param [in] value The value to set the variable to.
+     * @return true on success and false otherwise
+     */
+    bool ap_wlan_hal_nl80211::hostapd_set(const std::string &variable, const std::string &value);
+
 private:
     // Unassociated measurement state variables
     std::chrono::steady_clock::time_point m_unassoc_measure_start;
