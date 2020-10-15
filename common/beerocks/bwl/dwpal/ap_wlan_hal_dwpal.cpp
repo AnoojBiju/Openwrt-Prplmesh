@@ -310,7 +310,7 @@ static void parse_rrm_capabilities(int *RRM_CAPS, beerocks::message::sRadioCapab
 }
 
 static std::shared_ptr<char> generate_client_assoc_event(const std::string &event, int vap_id,
-                                                         bool radio_5G)
+                                                         bool radio_5G, int8_t &result)
 {
     // TODO: Change to HAL objects
     auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION));
@@ -333,7 +333,8 @@ static std::shared_ptr<char> generate_client_assoc_event(const std::string &even
     char ht_mcs[64]                = {0};
     char vht_cap[16]               = {0};
     char vht_mcs[24]               = {0};
-    size_t numOfValidArgs[7]       = {0};
+    char conn_time[4]              = {0};
+    size_t numOfValidArgs[8]       = {0};
 
     FieldsToParse fieldsToParse[] = {
         {(void *)client_mac, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, sizeof(client_mac)},
@@ -345,12 +346,14 @@ static std::shared_ptr<char> generate_client_assoc_event(const std::string &even
         {(void *)vht_mcs, &numOfValidArgs[5], DWPAL_STR_PARAM, "rx_vht_mcs_map=", sizeof(vht_mcs)},
         {(void *)&msg->params.capabilities.max_tx_power, &numOfValidArgs[6], DWPAL_CHAR_PARAM,
          "max_txpower=", 0},
+        {(void *)&conn_time, &numOfValidArgs[7], DWPAL_CHAR_PARAM, "connected_time=", 0},
         /* Must be at the end */
         {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
 
     if (dwpal_string_to_struct_parse((char *)event.c_str(), event.length(), fieldsToParse,
                                      sizeof(client_mac)) == DWPAL_FAILURE) {
         LOG(ERROR) << "DWPAL parse error ==> Abort";
+        result = association_event_results::FAILED_TO_PARSE_DWPAL;
         return nullptr;
     }
 
@@ -383,12 +386,18 @@ static std::shared_ptr<char> generate_client_assoc_event(const std::string &even
         if (numOfValidArgs[i] == 0) {
             LOG(ERROR) << "Failed reading parsed parameter " << (int)i
                        << " ==> Continue with default values";
+
+            if (result != 0) {
+                result = association_event_results::FAILED_TO_FETCH_DATA;
+
+                if (i == 7)
+                    result = association_event_results::FAILED_SILENT_CLIENT;
+            }
         }
     }
 
-    msg->params.vap_id = vap_id;
-    msg->params.mac    = tlvf::mac_from_string(client_mac);
-
+    msg->params.vap_id       = vap_id;
+    msg->params.mac          = tlvf::mac_from_string(client_mac);
     msg->params.capabilities = {};
     std::string ht_cap_str(ht_cap);
     get_ht_mcs_capabilities(HT_MCS, ht_cap_str, msg->params.capabilities);
@@ -1675,10 +1684,20 @@ bool ap_wlan_hal_dwpal::generate_connected_clients_events()
                            << " | reply:" << reply;
             }
 
-            auto msg_buff = generate_client_assoc_event(reply, vap_id, get_radio_info().is_5ghz);
+            int8_t result = association_event_results::SUCCESSFUL;
+            auto msg_buff =
+                generate_client_assoc_event(reply, vap_id, get_radio_info().is_5ghz, result);
 
-            if (!msg_buff)
+            if (!msg_buff) {
+                LOG_IF(result == association_event_results::FAILED_TO_PARSE_DWPAL, DEBUG)
+                    << "Failed to parse dwpal information for mac" << client_mac;
+                LOG_IF(result == association_event_results::FAILED_TO_FETCH_DATA, DEBUG)
+                    << "Failed to fetch data for mac" << client_mac;
+                LOG_IF(result == association_event_results::FAILED_SILENT_CLIENT, DEBUG)
+                    << "Client without 'connected time' field are suspected"
+                    << "to be clients who hasn't yet been associated. client's mac: " << client_mac;
                 break;
+            }
 
             // update client mac
             auto msg = reinterpret_cast<sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION *>(

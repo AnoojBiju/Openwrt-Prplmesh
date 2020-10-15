@@ -31,6 +31,14 @@ enum class dwpal_fsm_state { Delay, Init, GetRadioInfo, AttachVaps, Attach, Oper
 
 enum class dwpal_fsm_event { Attach, Detach };
 
+// list of issues that may prevent a client's connection
+enum association_event_results : int8_t {
+    SUCCESSFUL            = 0,
+    FAILED_TO_PARSE_DWPAL = -1,
+    FAILED_TO_FETCH_DATA  = -2,
+    FAILED_SILENT_CLIENT  = -3,
+};
+
 // Context is created for each VAP and for main radio
 static constexpr uint8_t DWPAL_CONTEXTS_MAX_SIZE =
     beerocks::eBeeRocksIfaceIds::IFACE_TOTAL_VAPS + 1;
