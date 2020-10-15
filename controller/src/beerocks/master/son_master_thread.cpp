@@ -342,6 +342,9 @@ bool master_thread::handle_cmdu(int fd, uint32_t iface_index, const sMacAddr &ds
 {
     bool vendor_specific = false;
 
+    LOG(DEBUG) << "handle_cmdu(" << iface_index << ", " << dst_mac << ", " << src_mac << ", "
+               << cmdu_rx.getMessageType() << ")";
+
     if (cmdu_rx.getMessageType() == ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE) {
         vendor_specific = true;
     }
@@ -378,6 +381,9 @@ bool master_thread::handle_cmdu_from_broker(uint32_t iface_index, const sMacAddr
                                             const sMacAddr &src_mac,
                                             ieee1905_1::CmduMessageRx &cmdu_rx)
 {
+    LOG(DEBUG) << "handle_cmdu_from_broker(" << iface_index << ", " << dst_mac << ", " << src_mac
+               << ", " << cmdu_rx.getMessageType() << ")";
+
     if (src_mac == beerocks::net::network_utils::ZERO_MAC) {
         LOG(ERROR) << "src_mac is zero!";
         return false;
