@@ -84,12 +84,18 @@ private:
      * Removes event handlers for the connected socket and removes the connection from the list of
      * current connections.
      *
-     * This method gets called when connection is closed, an error occurs on the socket or on exit.
+     * This method gets called when connection is closed, an error occurs on the socket and on exit.
+     *
+     * When connection is closed by the other peer there is no need to remove installed event
+     * handlers for the disconnected socket as it has already been done by the event loop itself.
+     * It is only on exit when we have to explicitly remove event handlers from the event loop for
+     * the remaining connections.
      *
      * @param fd File descriptor of the socket used by the connection.
+     * @param remove_handlers Flag to signal if event handlers must be removed from event loop.
      * @return true on success and false otherwise.
      */
-    bool remove_connection(int fd);
+    bool remove_connection(int fd, bool remove_handlers = false);
 
     /**
      * @brief Handles the read event in the server socket, which corresponds to an incoming

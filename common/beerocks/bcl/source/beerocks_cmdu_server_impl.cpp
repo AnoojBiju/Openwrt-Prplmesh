@@ -64,8 +64,8 @@ CmduServerImpl::~CmduServerImpl()
 
         int fd = it->first;
 
-        if (!remove_connection(fd)) {
-            break;
+        if (!remove_connection(fd, true)) {
+            m_connections.erase(it);
         }
     }
 
@@ -120,18 +120,20 @@ bool CmduServerImpl::add_connection(int fd,
     return true;
 }
 
-bool CmduServerImpl::remove_connection(int fd)
+bool CmduServerImpl::remove_connection(int fd, bool remove_handlers)
 {
     LOG(DEBUG) << "Removing connection, fd = " << fd;
+
+    // If requested, remove event handlers for the connected socket
+    if (remove_handlers && (!m_event_loop->remove_handlers(fd))) {
+        LOG(ERROR) << "Failed to remove event handlers for the connected socket! fd = " << fd;
+    }
 
     // Remove connection from the map of current connections.
     if (0 == m_connections.erase(fd)) {
         LOG(ERROR) << "Failed to remove connection from the map! fd = " << fd;
         return false;
     }
-
-    // There is no need to remove installed event handlers for the disconnected socket as it has
-    // already been done by the event loop
 
     // Notify that a client has disconnected from this server
     notify_client_disconnected(fd);
