@@ -23,7 +23,7 @@ bool UccSerializerMessageImpl::serialize_reply(const std::string &reply,
     }
 
     // Check if given reply is an empty string
-    if (reply.empty() > 0) {
+    if (reply.empty()) {
         LOG(ERROR) << "Reply is empty!";
         return false;
     }
