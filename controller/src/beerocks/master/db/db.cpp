@@ -4970,3 +4970,24 @@ bool db::add_current_op_class(const sMacAddr &radio_mac, uint8_t op_class, uint8
 
     return true;
 }
+
+bool db::remove_current_op_class(const sMacAddr &radio_mac)
+{
+    auto radio_path = dm_get_path_to_radio(*(get_node(radio_mac)));
+    if (radio_path.empty()) {
+        LOG(ERROR) << "Failed to get Radio path with mac: " << radio_mac
+                   << " in Controller Data model.";
+        return false;
+    }
+
+    // Prepare path to the CurrentOperatingClasses instance
+    // Data model path example: Controller.Network.Device.1.Radio.1.CurrentOperatingClasses
+    auto op_class_path = radio_path + "CurrentOperatingClasses";
+
+    if (!m_ambiorix_datamodel->remove_all_instances(op_class_path)) {
+        LOG(ERROR) << "Failed to remove all instances for: " << op_class_path;
+        return false;
+    }
+
+    return true;
+}
