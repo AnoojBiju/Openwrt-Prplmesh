@@ -388,6 +388,14 @@ public:
     bool add_current_op_class(const sMacAddr &radio_mac, uint8_t op_class, uint8_t op_channel,
                               int8_t tx_power);
 
+    /**
+     * @brief Removes all CurrentOperatingClasses instances from the Data Model.
+     *
+     * @param[in] radio_mac MAC address for Radio which reporting Operating Class
+     * @return true on success and false otherwise.
+     */
+    bool remove_current_op_classes(const sMacAddr &radio_mac);
+
     //
     // DB node functions (get only)
     //
