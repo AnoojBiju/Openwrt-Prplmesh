@@ -117,6 +117,7 @@ private:
     size_t m_wpa_ctrl_buffer_size = 0;
 
     // Path for the WPA Control Interface Socket
+
     std::string m_wpa_ctrl_path;
 };
 
