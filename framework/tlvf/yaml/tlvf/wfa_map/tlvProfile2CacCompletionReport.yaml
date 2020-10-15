@@ -1,0 +1,46 @@
+#
+---
+_namespace: wfa_map
+
+# implementation of v2 specification
+# 17.2.44 CAC Completion Report TLV
+
+tlvProfile2CacCompletionReport:
+  _type: class
+  _is_tlv_class : True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_PROFILE2_CAC_COMPLETION_REPORT            # line 1 (value)
+  length: uint16_t                                              # line 2 
+  number_of_cac_radios:                                         # line 3
+    _type: uint8_t
+    _length_var: True
+  cac_radios:                                                   # line 12
+    _type: cCacRadio
+    _length: [ number_of_cac_radios ]
+
+cCacRadio:
+  _type: class
+  radio_uid: sMacAddr               # line 4
+  operating_class: uint8_t          # line 5
+  channel: uint8_t                  # line 6
+  cac_completion_status:            # line 7
+    _type: uint8_t
+    _comment: |
+      0x00: Successful
+      0x01: Radar detected
+      0x02: CAC not supported as requested (capability mismatch)
+      0x03: Radio too busy to perform CAC
+      0x04: Request was considered to be non-conformant to regulations in the country in which the Multi-AP Agent is operating
+      0x05: Other error
+  number_of_detected_pairs:                                   # line 8
+    _type: uint8_t
+    _length_var: True
+  detected_pairs:                                             # line 11 
+    _type: sDetectedPairs
+    _length: [ number_of_detected_pairs ]
+  
+sDetectedPairs:
+  _type: struct
+  operating_class_detected: uint8_t     # line 9
+  channel_detected: uint8_t             # line 10
