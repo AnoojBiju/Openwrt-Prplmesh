@@ -118,6 +118,17 @@ public:
      */
     std::string get_datamodel_time_format() override;
 
+    /**
+     * @brief Create path to object
+     *
+     * @param device_mac mac address of device
+     * @param radio_mac mac address of radio
+     * @return on success - string which represents path to particular instance
+     * of radio object which are used by particular device, on fail - nullptr
+     */
+    std::string get_path_to_radio(const std::string &device_mac,
+                                  const std::string &radio_mac = "") override;
+
 private:
     // Methods
 
