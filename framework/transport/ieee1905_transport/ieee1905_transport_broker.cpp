@@ -118,7 +118,7 @@ bool BrokerServer::publish(const messages::Message &msg)
 
     // Get the list of subscribers
     auto types_set_it = m_type_to_soc.find(msg_opcode.value);
-    if (types_set_it == m_type_to_soc.end()) {
+    if ((types_set_it == m_type_to_soc.end()) || types_set_it->second.empty()) {
         LOG(DEBUG) << "No subscribers for message (internal = " << msg_opcode.bits.internal
                    << ", type = " << std::hex << msg_opcode.bits.type << ")" << std::dec
                    << " with length: " << msg.header().len;
@@ -127,13 +127,13 @@ bool BrokerServer::publish(const messages::Message &msg)
     }
 
     // Send the message to subscribed FDs
-    for (auto soc : types_set_it->second) {
+    for (auto fd : types_set_it->second) {
         LOG(DEBUG) << "Sending message with type (0x" << std::hex << msg_opcode.value << std::dec
-                   << ") to FD (" << soc->getSocketFd() << ")";
+                   << ") to FD (" << fd << ")";
 
-        if (!messages::send_transport_message(*soc, msg)) {
+        if (!messages::send_transport_message(*m_fd_to_socket[fd], msg)) {
             LOG(ERROR) << "Failed sending message with type (0x" << std::hex << msg_opcode.value
-                       << std::dec << ") to FD (" << soc->getSocketFd() << ")";
+                       << std::dec << ") to FD (" << fd << ")";
 
             continue;
         }
@@ -177,7 +177,7 @@ bool BrokerServer::handle_msg(std::shared_ptr<Socket> sd)
     }
     // Outgoing CMDU messages
     case messages::Type::CmduTxMessage: {
-        LOG(DEBUG) << "Processing external message from FD: " << sd->getSocketFd();
+        LOG(DEBUG) << "Processing external message from FD (" << sd->getSocketFd() << ")";
         if (!m_external_message_handler) {
             LOG(ERROR) << "External message handler not registered!";
             return false;
@@ -187,7 +187,7 @@ bool BrokerServer::handle_msg(std::shared_ptr<Socket> sd)
     }
     // Internal messages
     default: {
-        LOG(DEBUG) << "Processing internal message from FD: " << sd->getSocketFd();
+        LOG(DEBUG) << "Processing internal message from FD (" << sd->getSocketFd() << ")";
         if (!m_internal_message_handler) {
             LOG(ERROR) << "Internal message handler not registered!";
             return false;
@@ -215,6 +215,8 @@ bool BrokerServer::handle_subscribe(std::shared_ptr<Socket> sd,
         return false;
     }
 
+    int fd = sd->getSocketFd();
+
     // Iterate over the message types and subscribe/unsubscribe
     bool subscribe = msg.metadata()->type == messages::SubscribeMessage::ReqType::SUBSCRIBE;
     std::stringstream log_types;
@@ -223,8 +225,8 @@ bool BrokerServer::handle_subscribe(std::shared_ptr<Socket> sd,
 
         // Skip restricted types
         if (is_restricted_type(msg_type.value)) {
-            LOG(WARNING) << "FD (" << sd->getSocketFd()
-                         << ") attempt subscribing to forbidden type " << msg_type.value;
+            LOG(WARNING) << "FD (" << fd << ") attempt subscribing to forbidden type "
+                         << msg_type.value;
 
             continue;
         }
@@ -235,27 +237,26 @@ bool BrokerServer::handle_subscribe(std::shared_ptr<Socket> sd,
         // Subscribe
         if (subscribe) {
             // Add the type to the list of this Socket subscriptions
-            m_soc_to_type[sd].insert(msg_type.value);
+            m_soc_to_type[fd].insert(msg_type.value);
 
             // Add the Socket to the list of this type subscriptions
-            m_type_to_soc[msg_type.value].insert(sd);
+            m_type_to_soc[msg_type.value].insert(fd);
 
             // Unsubscribe
         } else {
             // Delete the type from the list of this Socket subscriptions
-            m_soc_to_type[sd].erase(msg_type.value);
+            m_soc_to_type[fd].erase(msg_type.value);
 
             // Add the Socket from the list of this type subscriptions
-            m_type_to_soc[msg_type.value].erase(sd);
+            m_type_to_soc[msg_type.value].erase(fd);
         }
     }
 
-    LOG(INFO) << "FD (" << sd->getSocketFd() << ") "
+    LOG(INFO) << "FD (" << fd << ") "
               << std::string(subscribe ? "subscribed to" : "unsubscribed from")
               << " the following types: " << log_types.str();
 
-    LOG(DEBUG) << "FD (" << sd->getSocketFd() << ") subscriptions: " << std::hex
-               << m_soc_to_type[sd] << std::dec;
+    LOG(DEBUG) << "FD (" << fd << ") subscriptions: " << std::hex << m_soc_to_type[fd] << std::dec;
 
     return true;
 }
@@ -272,7 +273,9 @@ bool BrokerServer::socket_connected()
         return false;
     }
 
-    LOG(DEBUG) << "Accepted new connection, sd=" << intptr_t(new_socket->getSocketFd());
+    int fd             = new_socket->getSocketFd();
+    m_fd_to_socket[fd] = new_socket;
+    LOG(DEBUG) << "Accepted new connection, FD (" << fd << ")";
 
     // Add the newly accepted socket into the poll
     EventLoop::EventHandlers handlers{
@@ -289,19 +292,19 @@ bool BrokerServer::socket_connected()
 
         // Remove the socket on disconnections or errors
         .on_disconnect =
-            [new_socket, this](int fd, EventLoop &loop) {
+            [this](int fd, EventLoop &loop) {
                 // NOTE: Do NOT stop the broker on errors...
-                socket_disconnected(new_socket);
+                socket_disconnected(fd);
                 return true;
             },
         .on_error =
-            [new_socket, this](int fd, EventLoop &loop) {
+            [this](int fd, EventLoop &loop) {
                 // NOTE: Do NOT stop the broker on errors...
-                socket_disconnected(new_socket);
+                socket_disconnected(fd);
                 return true;
             },
     };
-    if (!m_event_loop->register_handlers(new_socket->getSocketFd(), handlers)) {
+    if (!m_event_loop->register_handlers(fd, handlers)) {
         LOG(ERROR) << "Failed adding new socket into the poll!";
         return false;
     }
@@ -309,17 +312,19 @@ bool BrokerServer::socket_connected()
     return true;
 }
 
-bool BrokerServer::socket_disconnected(std::shared_ptr<Socket> sd)
+bool BrokerServer::socket_disconnected(int fd)
 {
-    LOG(DEBUG) << "Socket disconnected: FD(" << sd->getSocketFd() << ")";
+    LOG(DEBUG) << "Socket disconnected: FD (" << fd << ")";
+
+    m_fd_to_socket.erase(fd);
 
     // Delete the Socket from the list of types subscriptions
-    for (auto &type : m_soc_to_type[sd]) {
-        m_type_to_soc[type].erase(sd);
+    for (auto &type : m_soc_to_type[fd]) {
+        m_type_to_soc[type].erase(fd);
     }
 
     // Delete the type from the list of this Socket subscriptions
-    m_soc_to_type.erase(sd);
+    m_soc_to_type.erase(fd);
 
     return true;
 }
