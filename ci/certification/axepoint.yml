@@ -8,6 +8,9 @@
     - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE build/$RUN_ON_DEVICE/prplmesh.ipk
   needs:
     - job: build-for-axepoint
+  tags:
+    - certs-tests
+    - axepoint
 
 MAP-4.2.1:axepoint:
   extends: .certification:axepoint

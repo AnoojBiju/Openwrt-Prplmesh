@@ -15,6 +15,9 @@
     - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE build/$RUN_ON_DEVICE/prplmesh.ipk
   needs:
     - job: build-for-turris-omnia
+  tags:
+    - certs-tests
+    - turris-omnia
 
 MAP-4.2.1:turris-omnia:
   extends: .certification:turris-omnia
