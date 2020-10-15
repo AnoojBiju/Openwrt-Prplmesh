@@ -256,14 +256,15 @@ public:
      *
      * This implementation uses the recv() system call.
      */
-    int receive(Buffer &buffer, size_t offset = 0) override
+    int receive(Buffer &buffer) override
     {
-        if (offset >= buffer.size()) {
+        if (buffer.length() >= buffer.size()) {
+            // Buffer is full
             return -1;
         }
 
-        int result =
-            ::recv(m_socket->fd(), buffer.data() + offset, buffer.size() - offset, MSG_DONTWAIT);
+        int result = ::recv(m_socket->fd(), buffer.data() + buffer.length(),
+                            buffer.size() - buffer.length(), MSG_DONTWAIT);
         if (result > 0) {
             buffer.length() += static_cast<size_t>(result);
         }
