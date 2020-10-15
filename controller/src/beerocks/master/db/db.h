@@ -375,6 +375,19 @@ public:
      */
     std::unordered_map<sMacAddr, son::node::ap_metrics_data> &get_ap_metric_data_map();
 
+    /**
+     * @brief Add Current Operating Class to the Controller Data model.
+     *        Data model path example: "Controller.Network.Device.1.Radio.1.CurrentOperatingClasses".
+     *
+     * @param[in] radio_mac MAC address for Radio which reporting Operating Class.
+     * @param[in] op_class Current operating class.
+     * @param[in] op_channel Current channel number.
+     * @param[in] tx_power Current Transmit power.
+     * @return True if success otherwise false.
+     */
+    bool add_current_op_class(const sMacAddr &radio_mac, uint8_t op_class, uint8_t op_channel,
+                              int8_t tx_power);
+
     //
     // DB node functions (get only)
     //
