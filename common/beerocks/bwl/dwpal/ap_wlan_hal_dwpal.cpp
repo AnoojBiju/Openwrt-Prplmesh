@@ -1684,19 +1684,17 @@ bool ap_wlan_hal_dwpal::generate_connected_clients_events()
                            << " | reply:" << reply;
             }
 
-            int8_t result = association_event_results::SUCCESSFUL;
+            int8_t result = generate_association_event_result::SUCCESS;
             auto msg_buff =
                 generate_client_assoc_event(reply, vap_id, get_radio_info().is_5ghz, result);
 
             if (!msg_buff) {
-                LOG_IF(result == association_event_results::FAILED_TO_PARSE_DWPAL, DEBUG)
-                    << "Failed to parse dwpal information for mac" << client_mac;
-                LOG_IF(result == association_event_results::FAILED_TO_FETCH_DATA, DEBUG)
-                    << "Failed to fetch data for mac" << client_mac;
-                LOG_IF(result == association_event_results::FAILED_SILENT_CLIENT, DEBUG)
-                    << "Client without 'connected time' field are suspected"
-                    << "to be clients who hasn't yet been associated. client's mac: " << client_mac;
-                break;
+                if (result == association_event_results::FAILED_TO_PARSE_DWPAL) {
+                    LOG(DEBUG) << "Failed to generate client association event from reply";
+                    break;
+                } else if (result == association_event_results::FAILED_CLIENT_NOT_ASSOCIATED) {
+                    LOG(DEBUG) << "Client information is missing 'connected_time' field - client is not associated. Not generating client-association-event";
+                    continue;
             }
 
             // update client mac
