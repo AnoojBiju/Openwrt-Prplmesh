@@ -187,7 +187,7 @@ bool master_thread::start()
     // Create a timer to run internal tasks periodically
     m_tasks_timer = m_timer_manager->add_timer(tasks_timer_period, tasks_timer_period,
                                                [&](int fd, beerocks::EventLoop &loop) {
-                                                   tasks.run_tasks();
+                                                   //tasks.run_tasks();
                                                    return true;
                                                });
     if (m_tasks_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
