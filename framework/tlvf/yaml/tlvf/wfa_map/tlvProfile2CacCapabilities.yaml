@@ -1,0 +1,60 @@
+#
+---
+_namespace: wfa_map
+
+# implementation of v2 specification
+# 17.2.46 CAC Capabilities TLV format
+
+tlvProfile2CacCapabilities:
+  _type: class
+  _is_tlv_class : True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_PROFILE2_CAC_CAPABILITIES     # line 1 (value)
+  length: uint16_t                                  # line 2 
+  country_code: uint16_t                            # line 3
+  number_of_cac_radios:                             # line 4
+    _type: uint8_t
+    _length_var: True
+  cac_radios:                       
+    _type: cCacRadios    
+    _length: [ number_of_cac_radios ]
+
+cCacRadios:
+  _type: class
+  radio_uid: sMacAddr
+  number_of_cac_type_supported: uint8_t
+  cac_types: 
+    _type : cCacTypes
+    _length: [ number_of_cac_type_supported ]
+
+cCacTypes:
+  _type: class
+  cac_method :
+      _type : uint8_t
+      _comment: |
+        0x00: Continuous CAC
+        0x01: Continuous with dedicated radio
+        0x02: MIMO dimension reduced
+        0x03: Time sliced CAC
+        0x04 - 0xFF: Reserved
+  duration:                              # line 11
+    _type: uint16_t                    
+    _length: [3]
+  number_of_operating_classes: uint8_t
+  operating_classes:
+      _type: cCacCapabilitiesOperatingClasses 
+      _length: [ number_of_operating_classes ]
+
+cCacCapabilitiesOperatingClasses:
+   _type: class
+   operating_class : uint8_t
+   number_of_channels: uint8_t
+   channels:
+    _type: cChannel
+    _length : [ number_of_channels ]
+
+cChannel:
+    _type: class
+    channel: uint8_t
+    
