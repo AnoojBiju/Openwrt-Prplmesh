@@ -33,7 +33,7 @@ class PrplMeshStation(DebianWifi):
         self.consoles = [self]
         super(PrplMeshStation, self).__init__(*args, **kwargs)
         self.iface_dut = self.iface_wifi = self.kwargs.get(
-            'iface', 'wlan0')
+            'iface', 'wlp3s0')
         self.driver_name = config.get("driver", "nl80211,wext")
         self.mac = self.get_mac()
 
