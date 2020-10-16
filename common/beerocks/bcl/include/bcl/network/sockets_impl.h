@@ -87,7 +87,7 @@ private:
 
 class InternetAddress : public Socket::Address {
 public:
-    explicit InternetAddress(uint16_t port, uint32_t address = INADDR_ANY)
+    explicit InternetAddress(uint16_t port = 0, uint32_t address = INADDR_ANY)
     {
         m_address.sin_family      = AF_INET;
         m_address.sin_addr.s_addr = address;
@@ -100,6 +100,9 @@ public:
     }
     const socklen_t &length() const override { return m_length; }
     socklen_t size() const override { return m_size; }
+
+    uint16_t port() const { return ntohs(m_address.sin_port); }
+    uint32_t address() const { return m_address.sin_addr.s_addr; }
 
 private:
     sockaddr_in m_address  = {};
