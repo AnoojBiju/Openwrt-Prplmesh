@@ -197,6 +197,11 @@ protected:
                   hal_event_cb_t callback, hal_conf_t hal_conf = {});
 
     /*!
+     * Default constructor (for virtual inheritance)
+     */
+    base_wlan_hal() = default;
+
+    /*!
      * Push a new (internal) event into the queue.
      * 
      * @param [in] event Event opcode.
@@ -206,19 +211,24 @@ protected:
      */
     bool event_queue_push(int event, std::shared_ptr<void> data = {});
 
+    /**
+     * Create a management frame notification event.
+     * 
+     * @param [in] mgmt_frame Hex representation of the management frame.
+     * 
+     * @return Pointer to the event structure or null on failure.
+     */
+    std::shared_ptr<sMGMT_FRAME_NOTIFICATION>
+    create_mgmt_frame_notification(const char *mgmt_frame);
+
+    void calc_curr_traffic(uint64_t val, uint64_t &total, uint32_t &curr);
+
     /*!
      * set a parameter in the interface
      *
      * @return true on success or false on error.
      */
     virtual bool set(const std::string &param, const std::string &value, int vap_id) = 0;
-
-    // Protected methods:
-protected:
-    /*!
-     * Default constructor (for virtual inheritance)
-     */
-    base_wlan_hal() = default;
 
     // Protected data-members:
 protected:
@@ -230,8 +240,6 @@ protected:
     int m_fd_nl_events  = -1;
 
     hal_conf_t m_hal_conf;
-
-    void calc_curr_traffic(uint64_t val, uint64_t &total, uint32_t &curr);
 
     // Private data-members:
 private:
