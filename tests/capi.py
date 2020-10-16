@@ -90,6 +90,7 @@ class UCCSocket:
         self.timeout = timeout
 
     def __enter__(self):
+        print("__enter__ {} {}".format(self.host, self.port))
         self.conn = socket.create_connection((self.host, self.port), self.timeout)
         return self
 
