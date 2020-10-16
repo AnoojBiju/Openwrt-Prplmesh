@@ -357,6 +357,14 @@ static std::shared_ptr<char> generate_client_assoc_event(const std::string &even
         return nullptr;
     }
 
+    // Clients may be authenticated but not associated.
+    // Only associated clients will return the "connected_time" argument.
+    // Do not trigger event for non-associated clients
+    if (numOfValidArgs[7] == 0) {
+        result = association_event_results::FAILED_SILENT_CLIENT;
+        return nullptr;
+    }
+
     std::string ht_mcs_str("0x00");
     std::string vht_mcs_str("0x0000");
 
