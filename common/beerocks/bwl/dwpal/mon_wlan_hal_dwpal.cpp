@@ -492,7 +492,7 @@ static std::shared_ptr<char> generate_client_assoc_event(const std::string &even
         {(void *)vht_cap, &numOfValidArgs[4], DWPAL_STR_PARAM, "vht_caps_info=", sizeof(vht_cap)},
         {(void *)vht_mcs, &numOfValidArgs[5], DWPAL_STR_PARAM, "rx_vht_mcs_map=", sizeof(vht_mcs)},
         {(void *)&max_tx_power, &numOfValidArgs[6], DWPAL_CHAR_PARAM, "max_txpower=", 0},
-        {(void *)&conn_time, &numOfValidArgs[7], DWPAL_CHAR_PARAM, "connected_time=", 0},
+        {(void *)&conn_time, &numOfValidArgs[7], DWPAL_INT_PARAM, "connected_time=", 0},
         /* Must be at the end */
         {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
 
