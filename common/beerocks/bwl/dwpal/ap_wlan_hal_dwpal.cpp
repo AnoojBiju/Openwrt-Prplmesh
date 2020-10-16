@@ -386,13 +386,6 @@ static std::shared_ptr<char> generate_client_assoc_event(const std::string &even
         if (numOfValidArgs[i] == 0) {
             LOG(ERROR) << "Failed reading parsed parameter " << (int)i
                        << " ==> Continue with default values";
-
-            if (result != 0) {
-                result = association_event_results::FAILED_TO_FETCH_DATA;
-
-                if (i == 7)
-                    result = association_event_results::FAILED_SILENT_CLIENT;
-            }
         }
     }
 
