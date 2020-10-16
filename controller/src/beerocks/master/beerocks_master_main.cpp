@@ -530,28 +530,28 @@ int main(int argc, char *argv[])
 
     // UCC server must be created in certification mode only and if a valid TCP port has been set
     std::unique_ptr<beerocks::UccServer> ucc_server;
-    if (master_db.setting_certification_mode() && (master_db.config.ucc_listener_port != 0)) {
-
-        LOG(INFO) << "Certification mode enabled (listening on port "
-                  << master_db.config.ucc_listener_port << ")";
-
-        // Create parser for UCC command strings received through a message-oriented socket.
-        auto ucc_parser = std::make_shared<beerocks::UccParserMessageImpl>();
-        LOG_IF(!ucc_parser, FATAL) << "Unable to create UCC parser!";
-
-        // Create serializer for UCC reply strings to be sent through a message-oriented socket.
-        auto ucc_serializer = std::make_shared<beerocks::UccSerializerMessageImpl>();
-        LOG_IF(!ucc_serializer, FATAL) << "Unable to create UCC serializer!";
-
-        // Create server socket to connect with remote clients
-        auto ucc_server_socket = create_ucc_server_socket(master_db.config.ucc_listener_port);
-        LOG_IF(!ucc_server_socket, FATAL) << "Unable to create UCC server socket!";
-
-        // Create server to exchange UCC commands and replies with clients connected through the socket
-        ucc_server = std::make_unique<beerocks::UccServerImpl>(
-            std::move(ucc_server_socket), ucc_parser, ucc_serializer, event_loop);
-        LOG_IF(!ucc_server, FATAL) << "Unable to create UCC server!";
-    }
+    //    if (master_db.setting_certification_mode() && (master_db.config.ucc_listener_port != 0)) {
+    //
+    //        LOG(INFO) << "Certification mode enabled (listening on port "
+    //                  << master_db.config.ucc_listener_port << ")";
+    //
+    //        // Create parser for UCC command strings received through a message-oriented socket.
+    //        auto ucc_parser = std::make_shared<beerocks::UccParserMessageImpl>();
+    //        LOG_IF(!ucc_parser, FATAL) << "Unable to create UCC parser!";
+    //
+    //        // Create serializer for UCC reply strings to be sent through a message-oriented socket.
+    //        auto ucc_serializer = std::make_shared<beerocks::UccSerializerMessageImpl>();
+    //        LOG_IF(!ucc_serializer, FATAL) << "Unable to create UCC serializer!";
+    //
+    //        // Create server socket to connect with remote clients
+    //        auto ucc_server_socket = create_ucc_server_socket(master_db.config.ucc_listener_port);
+    //        LOG_IF(!ucc_server_socket, FATAL) << "Unable to create UCC server socket!";
+    //
+    //        // Create server to exchange UCC commands and replies with clients connected through the socket
+    //        ucc_server = std::make_unique<beerocks::UccServerImpl>(
+    //            std::move(ucc_server_socket), ucc_parser, ucc_serializer, event_loop);
+    //        LOG_IF(!ucc_server, FATAL) << "Unable to create UCC server!";
+    //    }
 
     // Create parser for broker messages received through a stream-oriented socket.
     auto message_parser = std::make_shared<beerocks::btl::MessageParserStreamImpl>();
