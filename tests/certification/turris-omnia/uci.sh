@@ -27,7 +27,7 @@ set wireless.default_radio2.key='maprocks2'
 set wireless.default_radio2.encryption='psk2'
 set wireless.default_radio2.ssid='TEST_SSID'
 set wireless.default_radio2.wps_pushbutton='1'
-set wireless.default_radio2.multi_ap=3
+set wireless.default_radio2.multi_ap=2
 
 set wireless.default_radio10=wifi-iface
 set wireless.default_radio10.device='radio0'
@@ -45,7 +45,7 @@ set wireless.default_radio20.mode='ap'
 set wireless.default_radio20.key='prplmesh_pass'
 set wireless.default_radio20.encryption='psk2'
 set wireless.default_radio20.ssid='prplmesh'
-set wireless.default_radio20.multi_ap=3
+set wireless.default_radio20.multi_ap=1
 
 set wireless.default_radio11=wifi-iface
 set wireless.default_radio11.device='radio0'
