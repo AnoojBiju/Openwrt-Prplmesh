@@ -118,6 +118,14 @@ public:
      */
     std::string get_datamodel_time_format() override;
 
+    /**
+     * @brief Remove all instances from the data model object which name starts with given relative path
+     *
+     * @param relative_path Path to the object with type list in datamodel (ex: "Controller.Network.Device").
+     * @return True on success and false otherwise.
+     */
+    bool remove_all_instances(const std::string &relative_path) override;
+
 private:
     // Methods
 

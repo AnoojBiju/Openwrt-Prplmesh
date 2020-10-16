@@ -59,5 +59,7 @@ uint32_t AmbiorixDummy::get_instance_index(const std::string &specific_path, con
 }
 std::string AmbiorixDummy::get_datamodel_time_format() { return ""; }
 
+bool AmbiorixDummy::remove_all_instances(const std::string &relative_path) { return true; }
+
 } // namespace nbapi
 } // namespace beerocks

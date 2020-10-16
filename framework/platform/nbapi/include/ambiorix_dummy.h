@@ -39,6 +39,7 @@ public:
     bool remove_instance(const std::string &relative_path, uint32_t index) override;
     uint32_t get_instance_index(const std::string &specific_path, const std::string &key) override;
     std::string get_datamodel_time_format() override;
+    bool remove_all_instances(const std::string &relative_path) override;
 };
 
 } // namespace nbapi
