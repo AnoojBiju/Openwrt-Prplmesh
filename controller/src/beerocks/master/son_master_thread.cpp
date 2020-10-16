@@ -1532,10 +1532,23 @@ bool master_thread::handle_cmdu_1905_operating_channel_report(const std::string 
     auto mid = cmdu_rx.getMessageId();
     LOG(INFO) << "Received OPERATING_CHANNEL_REPORT_MESSAGE, mid=" << std::dec << int(mid);
 
+    sMacAddr previous_ruid = network_utils::ZERO_MAC;
+
     for (auto operating_channel_report_tlv :
          cmdu_rx.getClassList<wfa_map::tlvOperatingChannelReport>()) {
         auto &ruid    = operating_channel_report_tlv->radio_uid();
         auto tx_power = operating_channel_report_tlv->current_transmit_power();
+
+        /*
+            Here need to remove the CurrentOperatingClass data from the Controler Data Model from
+            previous OPERATING_CHANNEL_REPORT_MESSAGE.
+         */
+        if (previous_ruid != ruid) {
+            database.remove_current_op_class(ruid);
+        }
+
+        // Previous ruid should be saved for avoiding removing fresh data from the Controller Data Model
+        previous_ruid = ruid;
 
         LOG(INFO) << "operating channel report, ruid=" << ruid << ", tx_power=" << std::dec
                   << int(tx_power);
@@ -1555,6 +1568,8 @@ bool master_thread::handle_cmdu_1905_operating_channel_report(const std::string 
             auto channel                 = operating_class_struct.channel_number;
             LOG(INFO) << "operating_class=" << int(operating_class)
                       << ", operating_channel=" << int(channel);
+
+            database.add_current_op_class(ruid, operating_class, channel, tx_power);
         }
     }
 
