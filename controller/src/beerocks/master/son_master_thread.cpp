@@ -184,32 +184,32 @@ bool master_thread::start()
         }
     }
 
-    // Create a timer to run internal tasks periodically
-    m_tasks_timer = m_timer_manager->add_timer(tasks_timer_period, tasks_timer_period,
-                                               [&](int fd, beerocks::EventLoop &loop) {
-                                                   tasks.run_tasks();
-                                                   return true;
-                                               });
-    if (m_tasks_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
-        LOG(ERROR) << "Failed to create the tasks timer";
-        rollback();
-        return false;
-    }
-    rollback_actions.emplace_front([&]() { m_timer_manager->remove_timer(m_tasks_timer); });
-
-    // Create a timer to execute periodic operations
-    // TODO: as an enhancement, each periodic operation should have its own timer (PPM-717)
-    m_operations_timer = m_timer_manager->add_timer(
-        operations_timer_period, operations_timer_period, [&](int fd, beerocks::EventLoop &loop) {
-            operations.run_operations();
-            return true;
-        });
-    if (m_operations_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
-        LOG(ERROR) << "Failed to create the operations timer";
-        rollback();
-        return false;
-    }
-    rollback_actions.emplace_front([&]() { m_timer_manager->remove_timer(m_operations_timer); });
+    //    // Create a timer to run internal tasks periodically
+    //    m_tasks_timer = m_timer_manager->add_timer(tasks_timer_period, tasks_timer_period,
+    //                                               [&](int fd, beerocks::EventLoop &loop) {
+    //                                                   tasks.run_tasks();
+    //                                                   return true;
+    //                                               });
+    //    if (m_tasks_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
+    //        LOG(ERROR) << "Failed to create the tasks timer";
+    //        rollback();
+    //        return false;
+    //    }
+    //    rollback_actions.emplace_front([&]() { m_timer_manager->remove_timer(m_tasks_timer); });
+    //
+    //    // Create a timer to execute periodic operations
+    //    // TODO: as an enhancement, each periodic operation should have its own timer (PPM-717)
+    //    m_operations_timer = m_timer_manager->add_timer(
+    //        operations_timer_period, operations_timer_period, [&](int fd, beerocks::EventLoop &loop) {
+    //            operations.run_operations();
+    //            return true;
+    //        });
+    //    if (m_operations_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
+    //        LOG(ERROR) << "Failed to create the operations timer";
+    //        rollback();
+    //        return false;
+    //    }
+    //    rollback_actions.emplace_front([&]() { m_timer_manager->remove_timer(m_operations_timer); });
 
     // Create an instance of a broker client connected to the broker server that is running in the
     // transport process
