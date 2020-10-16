@@ -79,7 +79,28 @@ public:
     static int64_t stoi(const std::string &str, const char *calling_file = __builtin_FILE(),
                         int calling_line = __builtin_LINE());
 
-    static std::string hex_to_char_string(std::string hex);
+    /**
+     * @brief Convert a hex represented string into characters.
+     *
+     * @param [in] hex_data Hexadecimal string
+     * 
+     * @return Container of type T (vector or string) where each cell contains a single character.
+     */
+    template <class T> static T hex_to_bytes(std::string hex_data)
+    {
+        T data;
+
+        // Convert the input data from hex string to character
+        // sequence and push into T type container
+        size_t hex_data_len = hex_data.length();
+        for (size_t i = 0; i < hex_data_len; i += 2) {
+            auto byte     = hex_data.substr(i, 2);
+            auto hex_byte = uint8_t(strtol(byte.c_str(), nullptr, 16));
+            data.push_back(hex_byte);
+        }
+
+        return data;
+    }
 
     static std::string int_to_hex_string(const unsigned int integer,
                                          const uint8_t number_of_digits);
