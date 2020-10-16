@@ -381,6 +381,7 @@ static std::shared_ptr<char> generate_client_assoc_event(const std::string &even
     LOG(DEBUG) << "ht_caps_info    : " << ht_cap;
     LOG(DEBUG) << "vht_cap         : " << vht_cap;
     LOG(DEBUG) << "max_txpower     : " << std::dec << (int)msg->params.capabilities.max_tx_power;
+    LOG(DEBUG) << "connected_time  : " << std::dec << (int)conn_time;
 
     for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
         if (numOfValidArgs[i] == 0) {
