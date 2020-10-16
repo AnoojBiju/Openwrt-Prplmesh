@@ -26,6 +26,7 @@ set wireless.default_radio2.mode='ap'
 set wireless.default_radio2.key='maprocks2'
 set wireless.default_radio2.encryption='psk2'
 set wireless.default_radio2.ssid='TEST_SSID'
+set wireless.default_radio2.multi_ap_backhaul_ssid='Multi-AP-24G-2'
 set wireless.default_radio2.wps_pushbutton='1'
 set wireless.default_radio2.multi_ap=2
 
