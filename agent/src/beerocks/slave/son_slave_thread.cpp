@@ -1657,7 +1657,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
                 detach_on_conf_change = true;
                 break;
             }
-            slave_reset();
+            //slave_reset();
         } else {
             auto response_out = message_com::create_vs_message<
                 beerocks_message::cACTION_CONTROL_HOSTAP_AP_DISABLED_NOTIFICATION>(cmdu_tx);
@@ -2335,7 +2335,7 @@ bool slave_thread::handle_cmdu_monitor_message(Socket *sd,
                 detach_on_conf_change = true;
                 break;
             }
-            slave_reset();
+            //slave_reset();
         }
         break;
     }
