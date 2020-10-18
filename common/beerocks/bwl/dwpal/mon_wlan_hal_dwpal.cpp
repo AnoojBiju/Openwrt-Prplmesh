@@ -456,7 +456,8 @@ static bool get_scan_results_from_nl_msg(sChannelScanResults &results, struct nl
     return true;
 }
 
-static std::shared_ptr<char> generate_client_assoc_event(const std::string &event, int vap_id)
+static std::shared_ptr<char> generate_client_assoc_event(const std::string &event, int vap_id,
+                                                         int32_t &result)
 {
     auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_MONITOR_CLIENT_ASSOCIATED_NOTIFICATION));
     auto msg = reinterpret_cast<sACTION_MONITOR_CLIENT_ASSOCIATED_NOTIFICATION *>(msg_buff.get());
@@ -478,8 +479,9 @@ static std::shared_ptr<char> generate_client_assoc_event(const std::string &even
     char ht_mcs[64]          = {0};
     char vht_cap[16]         = {0};
     char vht_mcs[24]         = {0};
+    int32_t conn_time        = 0;
     int8_t max_tx_power      = 0;
-    size_t numOfValidArgs[7] = {0};
+    size_t numOfValidArgs[8] = {0};
 
     FieldsToParse fieldsToParse[] = {
         {(void *)client_mac, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, sizeof(client_mac)},
@@ -490,12 +492,14 @@ static std::shared_ptr<char> generate_client_assoc_event(const std::string &even
         {(void *)vht_cap, &numOfValidArgs[4], DWPAL_STR_PARAM, "vht_caps_info=", sizeof(vht_cap)},
         {(void *)vht_mcs, &numOfValidArgs[5], DWPAL_STR_PARAM, "rx_vht_mcs_map=", sizeof(vht_mcs)},
         {(void *)&max_tx_power, &numOfValidArgs[6], DWPAL_CHAR_PARAM, "max_txpower=", 0},
+        {(void *)&conn_time, &numOfValidArgs[7], DWPAL_INT_PARAM, "connected_time=", 0},
         /* Must be at the end */
         {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
 
     if (dwpal_string_to_struct_parse((char *)event.c_str(), event.length(), fieldsToParse,
                                      sizeof(client_mac)) == DWPAL_FAILURE) {
         LOG(ERROR) << "DWPAL parse error ==> Abort";
+        result = generate_association_event_result::FAILED_TO_PARSE_DWPAL;
         return nullptr;
     }
 
@@ -1015,10 +1019,19 @@ bool mon_wlan_hal_dwpal::generate_connected_clients_events()
                            << ", reply: " << reply;
             }
 
-            auto msg_buff = generate_client_assoc_event(reply, vap_id);
-
-            if (!msg_buff)
-                break;
+            int8_t result = generate_association_event_result::SUCCESS;
+            auto msg_buff = generate_client_assoc_event(reply, vap_id, result);
+            if (!msg_buff) {
+                if (result == generate_association_event_result::FAILED_TO_PARSE_DWPAL) {
+                    LOG(DEBUG) << "Failed to generate client association event from reply";
+                    break;
+                } else if (result ==
+                           generate_association_event_result::PASS_CLIENT_NOT_ASSOCIATED) {
+                    LOG(DEBUG) << "Client information is missing 'connected_time' field - client "
+                               << "is not associated. Not generating client-association-event";
+                    continue;
+                }
+            }
 
             // update client mac
             auto msg =
@@ -1026,9 +1039,7 @@ bool mon_wlan_hal_dwpal::generate_connected_clients_events()
             client_mac = tlvf::mac_to_string(msg->mac);
 
             event_queue_push(Event::STA_Connected, msg_buff); // send message to the Monitor
-
         } while (replyLen > 0);
-
         if (!ret)
             return false;
 
