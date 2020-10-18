@@ -169,12 +169,12 @@ bool backhaul_manager::init()
     }
     m_task_pool.add_task(channel_selection_task);
 
-    auto capability_reporing_task = std::make_shared<CapabilityReportingTask>(*this, cmdu_tx);
-    if (!capability_reporing_task) {
-        LOG(ERROR) << "failed to allocate capability_reporing_task!";
+    auto capability_reporting_task = std::make_shared<CapabilityReportingTask>(*this, cmdu_tx);
+    if (!capability_reporting_task) {
+        LOG(ERROR) << "failed to allocate capability_reporting_task!";
         return false;
     }
-    m_task_pool.add_task(capability_reporing_task);
+    m_task_pool.add_task(capability_reporting_task);
 
     auto link_metrics_collection_task = std::make_shared<LinkMetricsCollectionTask>(*this, cmdu_tx);
     if (!link_metrics_collection_task) {
