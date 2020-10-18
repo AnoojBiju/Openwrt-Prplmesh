@@ -310,7 +310,7 @@ static void parse_rrm_capabilities(int *RRM_CAPS, beerocks::message::sRadioCapab
 }
 
 static std::shared_ptr<char> generate_client_assoc_event(const std::string &event, int vap_id,
-                                                         bool radio_5G)
+                                                         bool radio_5G, int32_t &result)
 {
     // TODO: Change to HAL objects
     auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION));
@@ -333,7 +333,8 @@ static std::shared_ptr<char> generate_client_assoc_event(const std::string &even
     char ht_mcs[64]                = {0};
     char vht_cap[16]               = {0};
     char vht_mcs[24]               = {0};
-    size_t numOfValidArgs[7]       = {0};
+    int32_t conn_time              = 0;
+    size_t numOfValidArgs[8]       = {0};
 
     FieldsToParse fieldsToParse[] = {
         {(void *)client_mac, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, sizeof(client_mac)},
@@ -345,12 +346,22 @@ static std::shared_ptr<char> generate_client_assoc_event(const std::string &even
         {(void *)vht_mcs, &numOfValidArgs[5], DWPAL_STR_PARAM, "rx_vht_mcs_map=", sizeof(vht_mcs)},
         {(void *)&msg->params.capabilities.max_tx_power, &numOfValidArgs[6], DWPAL_CHAR_PARAM,
          "max_txpower=", 0},
+        {(void *)&conn_time, &numOfValidArgs[7], DWPAL_INT_PARAM, "connected_time=", 0},
         /* Must be at the end */
         {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
 
     if (dwpal_string_to_struct_parse((char *)event.c_str(), event.length(), fieldsToParse,
                                      sizeof(client_mac)) == DWPAL_FAILURE) {
         LOG(ERROR) << "DWPAL parse error ==> Abort";
+        result = generate_association_event_result::FAILED_TO_PARSE_DWPAL;
+        return nullptr;
+    }
+
+    // Clients may be authenticated but not associated.
+    // Only associated clients will return the "connected_time" argument.
+    // Do not trigger event for non-associated clients
+    if (numOfValidArgs[7] == 0) {
+        result = generate_association_event_result::PASS_CLIENT_NOT_ASSOCIATED;
         return nullptr;
     }
 
@@ -378,6 +389,7 @@ static std::shared_ptr<char> generate_client_assoc_event(const std::string &even
     LOG(DEBUG) << "ht_caps_info    : " << ht_cap;
     LOG(DEBUG) << "vht_cap         : " << vht_cap;
     LOG(DEBUG) << "max_txpower     : " << std::dec << (int)msg->params.capabilities.max_tx_power;
+    LOG(DEBUG) << "connected_time  : " << std::dec << (int)conn_time;
 
     for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
         if (numOfValidArgs[i] == 0) {
@@ -386,9 +398,8 @@ static std::shared_ptr<char> generate_client_assoc_event(const std::string &even
         }
     }
 
-    msg->params.vap_id = vap_id;
-    msg->params.mac    = tlvf::mac_from_string(client_mac);
-
+    msg->params.vap_id       = vap_id;
+    msg->params.mac          = tlvf::mac_from_string(client_mac);
     msg->params.capabilities = {};
     std::string ht_cap_str(ht_cap);
     get_ht_mcs_capabilities(HT_MCS, ht_cap_str, msg->params.capabilities);
@@ -1675,10 +1686,21 @@ bool ap_wlan_hal_dwpal::generate_connected_clients_events()
                            << " | reply:" << reply;
             }
 
-            auto msg_buff = generate_client_assoc_event(reply, vap_id, get_radio_info().is_5ghz);
+            int32_t result = generate_association_event_result::SUCCESS;
+            auto msg_buff =
+                generate_client_assoc_event(reply, vap_id, get_radio_info().is_5ghz, result);
 
-            if (!msg_buff)
-                break;
+            if (!msg_buff) {
+                if (result == generate_association_event_result::FAILED_TO_PARSE_DWPAL) {
+                    LOG(DEBUG) << "Failed to generate client association event from reply";
+                    break;
+                } else if (result ==
+                           generate_association_event_result::PASS_CLIENT_NOT_ASSOCIATED) {
+                    LOG(DEBUG) << "Client information is missing 'connected_time' field - client "
+                                  "is not associated. Not generating client-association-event";
+                    continue;
+                }
+            }
 
             // update client mac
             auto msg = reinterpret_cast<sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION *>(
@@ -1688,7 +1710,6 @@ bool ap_wlan_hal_dwpal::generate_connected_clients_events()
             event_queue_push(Event::STA_Connected, msg_buff); // send message to the AP manager
 
         } while (replyLen > 0);
-
         if (!ret)
             return ret; // return from lambda function
 
