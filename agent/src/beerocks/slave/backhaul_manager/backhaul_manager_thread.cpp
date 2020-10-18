@@ -4002,6 +4002,10 @@ bool backhaul_manager::start_wps_pbc(const sMacAddr &radio_mac)
             }
         }
 
+        auto time_stamp_timeout = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+        while (std::chrono::steady_clock::now() < time_stamp_timeout)
+            ;
+
         if (!sta_wlan_hal->start_wps_pbc()) {
             LOG(ERROR) << "Failed to start wps";
             return false;
