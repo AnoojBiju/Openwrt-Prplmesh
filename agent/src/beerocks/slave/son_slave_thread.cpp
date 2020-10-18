@@ -2304,7 +2304,7 @@ bool slave_thread::handle_cmdu_monitor_message(Socket *sd,
                 detach_on_conf_change = true;
                 break;
             }
-            slave_reset();
+            //slave_reset();
         }
         break;
     }
