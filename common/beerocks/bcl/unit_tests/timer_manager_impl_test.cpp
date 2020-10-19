@@ -117,7 +117,9 @@ TEST_F(TimerManagerImplTest, destructor_should_remove_remaining_timers)
         return true;
     };
 
-    // Timer has not been explicitly removed when destructor is executed.
+    // Add timer but do not explicitly remove it.
+    // If timer has not been explicitly removed at the time destructor is executed then destructor
+    // has to do it
     ASSERT_EQ(timer_fd, timer_manager.add_timer(delay, period, handler));
 
     ASSERT_EQ(0U, count);

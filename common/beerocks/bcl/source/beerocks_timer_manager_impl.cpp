@@ -64,7 +64,7 @@ int TimerManagerImpl::add_timer(std::chrono::milliseconds delay, std::chrono::mi
             [&](int fd, EventLoop &loop) {
                 if (handle_read(fd)) {
                     // Invoke provided handler function
-                    handler(fd, loop);
+                    return handler(fd, loop);
                 }
                 return true;
             },
