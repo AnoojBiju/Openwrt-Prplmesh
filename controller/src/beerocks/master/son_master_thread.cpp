@@ -184,16 +184,16 @@ bool master_thread::start()
         }
     }
 
-    m_test_timer =
-        m_timer_manager->add_timer(std::chrono::milliseconds(1000), std::chrono::milliseconds(1000),
-                                   [&](int fd, beerocks::EventLoop &loop) {
-                                       m_test_count++;
-                                       LOG(DEBUG) << "count = " << m_test_count;
-                                       if (m_test_count == 10) {
-                                           return false;
-                                       }
-                                       return true;
-                                   });
+    beerocks::EventLoop::EventHandler test_timer_handler = [&](int fd, beerocks::EventLoop &loop) {
+        m_test_count++;
+        LOG(DEBUG) << "count = " << m_test_count;
+        if (m_test_count == 10) {
+            return false;
+        }
+        return true;
+    };
+    m_test_timer = m_timer_manager->add_timer(std::chrono::milliseconds(1000),
+                                              std::chrono::milliseconds(1000), test_timer_handler);
     if (m_test_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
         LOG(ERROR) << "Failed to create the test timer";
         rollback();

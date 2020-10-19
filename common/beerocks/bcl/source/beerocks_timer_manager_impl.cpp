@@ -62,10 +62,13 @@ int TimerManagerImpl::add_timer(std::chrono::milliseconds delay, std::chrono::mi
     EventLoop::EventHandlers handlers{
         .on_read =
             [&](int fd, EventLoop &loop) {
+                LOG(DEBUG) << "Timer expired, fd = " << fd;
                 if (handle_read(fd)) {
                     // Invoke provided handler function
+                    LOG(DEBUG) << "Calling handler, fd = " << fd;
                     return handler(fd, loop);
                 }
+                LOG(DEBUG) << "Handle read failed, fd = " << fd;
                 return true;
             },
     };
