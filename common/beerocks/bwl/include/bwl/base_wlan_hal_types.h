@@ -96,9 +96,41 @@ inline std::ostream &operator<<(std::ostream &out, const bwl::WiFiSec &sec)
     return out;
 }
 
+enum eRadioState : uint8_t {
+    UNINITIALIZED,
+    DISABLED,
+    COUNTRY_UPDATE,
+    ACS,
+    ACS_DONE,
+    HT_SCAN,
+    DFS,
+    ENABLED,
+    UNKNOWN
+};
+
+// clang-format off
+static const std::unordered_map<eRadioState, const char *, std::hash<int>> eRadioState_string = {
+  { eRadioState::UNINITIALIZED,  "UNINITIALIZED"  },
+  { eRadioState::DISABLED,       "DISABLED"       },
+  { eRadioState::COUNTRY_UPDATE, "COUNTRY_UPDATE" },
+  { eRadioState::ACS,            "ACS"            },
+  { eRadioState::ACS_DONE,       "ACS_DONE"       },
+  { eRadioState::HT_SCAN,        "HT_SCAN"        },
+  { eRadioState::DFS,            "DFS"            },
+  { eRadioState::ENABLED,        "ENABLED"        },
+  { eRadioState::UNKNOWN,        "UNKNOWN"        },
+};
+// clang-format on
+
+inline std::ostream &operator<<(std::ostream &out, eRadioState radio_state)
+{
+    return out << eRadioState_string.at(radio_state);
+}
+
 struct RadioInfo {
     std::string iface_name;
     IfaceType iface_type               = IfaceType::Unsupported;
+    eRadioState radio_state            = eRadioState::UNKNOWN;
     bool radio_enabled                 = false;
     int wifi_ctrl_enabled              = 0; // Hostapd / wpa_supplicant
     bool tx_enabled                    = false;
