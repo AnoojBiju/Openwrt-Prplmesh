@@ -155,6 +155,9 @@ MAP-4.10.6_BH5GH_FH5GL:qualcomm:
 MAP-4.10.6_BH5GH_FH5GH:qualcomm:
   extends: .certification-qualcomm
 
+MAP-4.12.1_ETH:qualcomm:
+  extends: .certification-qualcomm
+
 MAP-4.12.2_ETH:qualcomm:
   extends: .certification-qualcomm
 
