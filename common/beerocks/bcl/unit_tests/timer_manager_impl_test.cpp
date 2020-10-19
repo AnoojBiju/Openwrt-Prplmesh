@@ -141,7 +141,7 @@ TEST_F(TimerManagerImplTest, example_of_use)
     };
 
     constexpr auto period = std::chrono::milliseconds(1);
-    int timer_fd = timer_manager.add_timer(period, period, handler);
+    int timer_fd          = timer_manager.add_timer(period, period, handler);
     ASSERT_NE(-1, timer_fd);
 
     constexpr uint32_t num_repetitions = 10U;
