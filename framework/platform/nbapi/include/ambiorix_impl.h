@@ -49,7 +49,7 @@ public:
      * @brief AmbiorixImpl destructor removes: bus connection, data model, parser and all data
      *        from the backend (UBus, PCB, etc.).
      */
-    virtual ~AmbiorixImpl();
+    ~AmbiorixImpl() override;
 
     /**
      * @brief Initialize the ambiorix library: load backend, connect to the bus, load data model,
