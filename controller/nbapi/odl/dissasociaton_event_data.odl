@@ -1,0 +1,59 @@
+
+/* SPDX-License-Identifier: BSD-2-Clause-Patent
+ *
+ * SPDX-FileCopyrightText: 2020 the prplMesh contributors (see AUTHORS.md)
+ *
+ * This code is subject to the terms of the BSD+Patent license.
+ * See LICENSE file for more details.
+ */
+
+%config {
+	define_behavior = { 
+		existing_object = "update"
+	};
+}
+
+%define {
+    object DissasociationEventData {
+        /* The MAC address of the logical BSS (BSSID) which is reporting
+           the disassociation event */
+        %read-only string BSSID;
+
+        /* MAC address of the dissassociating station */
+        %read-only string MACAddress;
+
+        /* The status code sent or received to the STA in the
+           latest Dissasociation or Deauthentication frame */
+        %read-only uint32 ReasonCode {
+                on action validate call check_range [0, 65536];
+                /* Specified in the spec to be 2 bytes */
+        }
+
+        /* The total number of bytes transmitted to the STA. */
+        %read-only uint32 BytesSent;
+
+        /* The total number of bytes received from the STA. */
+        %read-only uint32 BytesReceived;
+
+        /* The total number of packets transmitted to the STA. */
+        %read-only uint32 PacketsSent;
+
+        /* The total number of packets received from the STA. */
+        %read-only uint32 PacketsReceived;
+
+        /* The total number of outbound packets that could not be transmitted
+           to the STA because of errors. These might be due to the number of
+           retransmissions exceeding the retry limit or from other causes. */
+        %read-only uint32 ErrorsSent;
+
+        /* The total number of inbound packets from the STA that contained
+           errors preventing them from being delivered to a higher-layer
+           protocol. */
+        %read-only uint32 ErrorsReceived;
+
+        /* The total number of transmitted packets to the STA which were
+           retransmissions. N retransmissions of the same packet results
+           in this counter incrementing by N. */
+        %read-only uint32 RetransCount;
+    }
+}
