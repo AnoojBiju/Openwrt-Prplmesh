@@ -253,6 +253,12 @@ private:
     /**
      * File descriptor of the timer to run internal tasks periodically.
      */
+    int m_test_timer      = beerocks::net::FileDescriptor::invalid_descriptor;
+    uint32_t m_test_count = 0;
+
+    /**
+     * File descriptor of the timer to run internal tasks periodically.
+     */
     int m_tasks_timer = beerocks::net::FileDescriptor::invalid_descriptor;
 
     /**
