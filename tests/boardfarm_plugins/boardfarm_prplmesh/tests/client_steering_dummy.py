@@ -9,6 +9,7 @@ from opts import debug
 import environment as env
 import time
 
+
 class ClientSteeringDummy(PrplMeshBaseTest):
     """Check initial configuration on device."""
 
