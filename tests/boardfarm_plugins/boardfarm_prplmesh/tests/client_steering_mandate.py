@@ -38,10 +38,10 @@ class ClientSteeringMandate(PrplMeshBaseTest):
         debug(
             "Send Client Steering Request message for Steering Mandate to CTT Agent1")
         controller.dev_send_1905(agent1.mac, 0x8014,
-                                     tlv(0x9B, 0x001b,
-                                         "{%s 0xe0 0x0000 0x1388 0x01 {0x000000110022} 0x01 {%s 0x73 0x24}}" % (
-                                         agent1.radios[0].mac,
-                                         agent2.radios[0].mac)))  # noqa E501
+                 tlv(0x9B, 0x001b,
+                 "{%s 0xe0 0x0000 0x1388 0x01 {0x000000110022} 0x01 {%s 0x73 0x24}}" % (
+                 agent1.radios[0].mac,
+                 agent2.radios[0].mac)))  # noqa E501
         time.sleep(1)
         debug(
             "Confirming Client Steering Request message was received - mandate")
