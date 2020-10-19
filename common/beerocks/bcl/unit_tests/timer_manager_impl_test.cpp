@@ -8,7 +8,9 @@
 
 #include <bcl/beerocks_timer_manager_impl.h>
 
+#include <bcl/beerocks_event_loop_impl.h>
 #include <bcl/beerocks_event_loop_mock.h>
+#include <bcl/beerocks_timer_factory_impl.h>
 #include <bcl/beerocks_timer_factory_mock.h>
 #include <bcl/network/timer_mock.h>
 
@@ -123,6 +125,32 @@ TEST_F(TimerManagerImplTest, destructor_should_remove_remaining_timers)
     ASSERT_EQ(timer_fd, timer_manager.add_timer(delay, period, handler));
 
     ASSERT_EQ(0U, count);
+}
+
+TEST_F(TimerManagerImplTest, example_of_use)
+{
+    auto timer_factory = std::make_shared<beerocks::TimerFactoryImpl>();
+    auto event_loop    = std::make_shared<beerocks::EventLoopImpl>();
+
+    beerocks::TimerManagerImpl timer_manager(timer_factory, event_loop);
+
+    uint32_t count                            = 0;
+    beerocks::EventLoop::EventHandler handler = [&](int fd, beerocks::EventLoop &loop) {
+        count++;
+        return true;
+    };
+
+    constexpr auto period = std::chrono::milliseconds(1);
+    int timer_fd = timer_manager.add_timer(period, period, handler);
+    ASSERT_NE(-1, timer_fd);
+
+    constexpr uint32_t num_repetitions = 10U;
+    for (uint32_t i = 0; i < num_repetitions; i++) {
+        ASSERT_EQ(1, event_loop->run());
+    }
+
+    ASSERT_TRUE(timer_manager.remove_timer(timer_fd));
+    ASSERT_EQ(num_repetitions, count);
 }
 
 } // namespace
