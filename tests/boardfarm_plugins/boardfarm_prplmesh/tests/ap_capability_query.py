@@ -6,8 +6,8 @@
 from .prplmesh_base_test import PrplMeshBaseTest
 from boardfarm.exceptions import SkipTest
 from opts import debug
-
 import time
+
 
 class ApCapabilityQuery(PrplMeshBaseTest):
     """Check initial configuration on device."""
