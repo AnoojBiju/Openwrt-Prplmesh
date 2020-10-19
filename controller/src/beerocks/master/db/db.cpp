@@ -1673,7 +1673,49 @@ std::unordered_map<int8_t, sVapElement> &db::get_hostap_vap_list(const std::stri
 
 bool db::remove_vap(const std::string &radio_mac, int vap_id)
 {
-    return (get_hostap_vap_list(radio_mac).erase(vap_id) == 1);
+
+    auto radio_node = get_node(tlvf::mac_from_string(radio_mac));
+    if (!radio_node) {
+        LOG(ERROR) << "Failed to get radio node, mac: " << radio_mac;
+        return false;
+    }
+
+    auto vap_list = get_hostap_vap_list(radio_mac);
+
+    auto vap = std::find_if(
+        vap_list.begin(), vap_list.end(),
+        [&](const std::pair<int, son::sVapElement> &element) { return element.first == vap_id; });
+
+    auto radio_path = dm_get_path_to_radio(*radio_node);
+    if (radio_path.empty()) {
+        LOG(ERROR) << "Failed to get radio path with mac: " << radio_mac;
+        return false;
+    }
+
+    /*
+        Prepare path to the BSS instance.
+        Example: Controller.Network.Device.1.Radio.1.BSS.
+    */
+    auto bss_path = radio_path + "BSS.";
+
+    auto bss_index =
+        m_ambiorix_datamodel->get_instance_index(bss_path + "[BSSID == '%s'].", vap->second.mac);
+    if (!bss_index) {
+        LOG(ERROR) << "Failed to get BSS instance index.";
+        return false;
+    }
+
+    if (!m_ambiorix_datamodel->remove_instance(bss_path, bss_index)) {
+        LOG(ERROR) << "Failed to remove " << bss_path << bss_index << " instance.";
+        return false;
+    }
+
+    if (!vap_list.erase(vap_id)) {
+        LOG(ERROR) << "Failed to remove VAP, id: " << vap_id << "bssid: " << vap->second.mac;
+        return false;
+    }
+
+    return true;
 }
 
 bool db::add_vap(const std::string &radio_mac, int vap_id, std::string bssid, std::string ssid,
@@ -1688,6 +1730,23 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, std::string bssid, st
     vaps_info[vap_id].mac          = bssid;
     vaps_info[vap_id].ssid         = ssid;
     vaps_info[vap_id].backhaul_vap = backhual;
+
+    auto radio_node = get_node(tlvf::mac_from_string(radio_mac));
+    if (!radio_node) {
+        LOG(ERROR) << "Failed to get Radio node with mac: " << radio_mac;
+        return false;
+    }
+
+    /*
+        Prepare path to BSS instance
+        Example: Controller.Network.Device.1.Radio.1.BSS
+    */
+    auto bss_path  = dm_get_path_to_radio(*radio_node) + "BSS";
+    auto bss_index = m_ambiorix_datamodel->add_instance(bss_path);
+    if (!bss_index) {
+        LOG(ERROR) << "Failed to add " << bss_path << " instance.";
+        return false;
+    }
 
     return true;
 }
