@@ -36,10 +36,6 @@ namespace dwpal {
 
 #define CSA_EVENT_FILTERING_TIMEOUT_MS 1000
 
-// As defined on "ieee802_11_defs.h":
-#define WLAN_FC_STYPE_PROBE_REQ 4
-#define WLAN_FC_STYPE_AUTH 11
-
 // Allocate a char array wrapped in a shared_ptr
 #define ALLOC_SMART_BUFFER(size)                                                                   \
     std::shared_ptr<char>(new char[size], [](char *obj) {                                          \
@@ -85,6 +81,8 @@ static ap_wlan_hal::Event dwpal_to_bwl_event(const std::string &opcode)
         return ap_wlan_hal::Event::DFS_NOP_Finished;
     } else if (opcode == "LTQ-SOFTBLOCK-DROP") {
         return ap_wlan_hal::Event::STA_Softblock_Drop;
+    } else if (opcode == "AP-ACTION-FRAME-RECEIVED") {
+        return ap_wlan_hal::Event::MGMT_Frame;
     } else if (opcode == "AP-STA-POSSIBLE-PSK-MISMATCH") {
         return ap_wlan_hal::Event::AP_Sta_Possible_Psk_Mismatch;
     }
@@ -1963,7 +1961,16 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
 
         print_sta_capabilities(msg->params.capabilities);
 
-        event_queue_push(Event::STA_Connected, msg_buff); // send message to the AP manager
+        // Send the event to the AP manager
+        event_queue_push(Event::STA_Connected, msg_buff);
+
+        // Tunnel the association/re-association request to the controller
+        if (assoc_req && assoc_req[0]) {
+            auto mgmt_frame = create_mgmt_frame_notification(assoc_req);
+            if (mgmt_frame) {
+                event_queue_push(Event::MGMT_Frame, mgmt_frame);
+            }
+        }
 
         break;
     }
@@ -2131,7 +2138,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         char client_mac[MAC_ADDR_SIZE]                      = {0};
         char vap_bssid[MAC_ADDR_SIZE]                       = {0};
         char vap_name[beerocks::message::IFACE_NAME_LENGTH] = {0};
-        uint8_t message_type;
+        s80211MgmtFrame::eType message_type;
         size_t numOfValidArgsForMsgType[5] = {0};
 
         FieldsToParse fieldsToParseForMsgType[] = {
@@ -2151,7 +2158,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         LOG(DEBUG) << "numOfValidArgs[1]=" << numOfValidArgsForMsgType[1]
                    << ", message_type=" << (int)message_type;
 
-        if (message_type == WLAN_FC_STYPE_PROBE_REQ) {
+        if (message_type == s80211MgmtFrame::eType::PROBE_REQ) {
 
             auto msg_buff =
                 ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_STEERING_EVENT_PROBE_REQ_NOTIFICATION));
@@ -2224,7 +2231,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
             // Add the message to the queue
             event_queue_push(Event::STA_Steering_Probe_Req, msg_buff);
 
-        } else if (message_type == WLAN_FC_STYPE_AUTH) {
+        } else if (message_type == s80211MgmtFrame::eType::AUTH) {
 
             auto msg_buff =
                 ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_STEERING_EVENT_AUTH_FAIL_NOTIFICATION));
@@ -2306,7 +2313,6 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
 
             // Add the message to the queue
             event_queue_push(Event::STA_Steering_Auth_Fail, msg_buff);
-
         } else {
             LOG(ERROR) << "Unknown message type!";
             break;
@@ -2582,10 +2588,45 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
     } break;
 
     case Event::Interface_Disabled:
-    case Event::ACS_Failed:
+    case Event::ACS_Failed: {
         LOG(DEBUG) << buffer;
         event_queue_push(event); // Forward to the AP manager
-        break;
+    } break;
+
+    case Event::MGMT_Frame: {
+
+        char vap[beerocks::message::IFACE_NAME_LENGTH] = {0};
+        char frame[ASSOCIATION_FRAME_SIZE]             = {0};
+        size_t numOfValidArgs[2]                       = {0};
+
+        FieldsToParse fieldsToParse[] = {
+            {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
+            {(void *)vap, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, sizeof(vap)},
+            {(void *)frame, &numOfValidArgs[2], DWPAL_STR_PARAM, NULL, sizeof(frame)},
+            /* Must be at the end */
+            {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+
+        if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(vap)) ==
+            DWPAL_FAILURE) {
+            LOG(ERROR) << "DWPAL parse error ==> Abort";
+            return false;
+        }
+
+        // Create the management frame notification event
+        if (!frame || !frame[0]) {
+            LOG(WARNING) << "Management frame received without data: " << buffer;
+            return true; // Just a warning, do not fail
+        }
+
+        auto mgmt_frame = create_mgmt_frame_notification(frame);
+        if (!mgmt_frame) {
+            LOG(WARNING) << "Failed creating management frame notification!";
+            return true; // Just a warning, do not fail
+        }
+
+        event_queue_push(Event::MGMT_Frame, mgmt_frame);
+    } break;
+
     case Event::AP_Sta_Possible_Psk_Mismatch: {
 
         auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sSTA_MISMATCH_PSK));
