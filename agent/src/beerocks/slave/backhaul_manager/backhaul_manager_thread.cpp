@@ -2880,12 +2880,13 @@ bool backhaul_manager::send_slaves_enable()
             // Need to figure out how to get bw parameter of the selected channel (PPM-643).
             notification->bandwidth()      = eWiFiBandwidth::BANDWIDTH_20;
             notification->center_channel() = notification->channel();
-        }
-        LOG(DEBUG) << "Send enable to slave " << soc->hostap_iface
-                   << ", channel = " << int(notification->channel())
-                   << ", center_channel = " << int(notification->center_channel());
 
-        message_com::send_cmdu(soc->slave, cmdu_tx);
+            LOG(DEBUG) << "Send enable to slave " << soc->hostap_iface
+                       << ", channel = " << int(notification->channel())
+                       << ", center_channel = " << int(notification->center_channel());
+
+            message_com::send_cmdu(soc->slave, cmdu_tx);
+        }
     }
 
     return true;
@@ -3993,12 +3994,17 @@ bool backhaul_manager::start_wps_pbc(const sMacAddr &radio_mac)
             return false;
         }
 
-        for (auto slaves_socket : slaves_sockets) {
-            if (!message_com::send_cmdu(slaves_socket->slave, cmdu_tx)) {
-                LOG(ERROR) << "Failed to send cACTION_BACKHAUL_RADIO_DISABLE_REQUEST";
-                return false;
-            }
+        if (!message_com::send_cmdu(soc->slave, cmdu_tx)) {
+            LOG(ERROR) << "Failed to send cACTION_BACKHAUL_RADIO_DISABLE_REQUEST";
+            return false;
         }
+
+        // for (auto slaves_socket : slaves_sockets) {
+        //     if (!message_com::send_cmdu(slaves_socket->slave, cmdu_tx)) {
+        //         LOG(ERROR) << "Failed to send cACTION_BACKHAUL_RADIO_DISABLE_REQUEST";
+        //         return false;
+        //     }
+        // }
 
         auto time_stamp_timeout = std::chrono::steady_clock::now() + std::chrono::seconds(10);
         while (std::chrono::steady_clock::now() < time_stamp_timeout)
