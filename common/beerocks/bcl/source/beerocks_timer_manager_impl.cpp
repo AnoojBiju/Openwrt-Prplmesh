@@ -87,12 +87,7 @@ int TimerManagerImpl::add_timer(std::chrono::milliseconds delay, std::chrono::mi
     rollback_actions.emplace_front([&]() { timer->cancel(); });
 
     // 5.- Add the timer to the list of timers (so it can be automatically removed in destructor)
-    auto result = m_timers.emplace(fd, std::move(timer));
-    if (!result.second) {
-        LOG(ERROR) << "Failed to add timer to the timers map!, fd = " << fd;
-        rollback();
-        return beerocks::net::FileDescriptor::invalid_descriptor;
-    }
+    m_timers.emplace(fd, std::move(timer));
 
     return fd;
 }
