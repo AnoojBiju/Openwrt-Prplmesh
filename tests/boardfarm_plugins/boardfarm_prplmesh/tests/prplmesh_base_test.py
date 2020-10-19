@@ -239,3 +239,59 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
             return [_.obj for _ in self.dev.devices if _.obj.name == device_name][0]
         except IndexError as ae:
             raise SkipTest(ae)
+
+    def check_topology_notification(self, eth_src: str, neighbors: list,
+                                    sta: env.Station, event: env.StationEvent, bssid: str) -> bool:
+        """Verify topology notification reliable multicast - given a source mac and
+           a list of neighbors macs, check that exactly one relayed multicast CMDU
+           was sent to the IEEE1905.1 multicast MAC address, and a single unicast
+           CMDU with the relayed bit unset to each of the given neighbors destination MACs.
+           Verify correctness of the association event TLV inside the topology notification.
+           Mark failure if any of the above conditions isn't met.
+
+        Parameters
+        ----------
+
+        eth_src: str
+            source AL MAC (origin of the topology notification)
+
+        neighbors: list
+            destination AL MACs (destinations of the topology notification)
+
+        sta: environment.Station
+            station mac
+
+        event: environment.StationEvent
+            station event - CONNECTED / DISCONNECTED
+
+        bssid: str
+            bssid Multi-AP Agent BSSID
+
+        Returns:
+        bool
+            True for valid topology notification, False otherwise
+        """
+        mcast = self.check_cmdu_type_single("topology notification", 0x1, eth_src)
+
+        # relay indication should be set
+        if not mcast.ieee1905_relay_indicator:
+            self.fail("Multicast topology notification should be relayed")
+            return False
+
+        mid = mcast.ieee1905_mid
+        for eth_dst in neighbors:
+            ucast = self.check_cmdu_type_single("topology notification",
+                                                0x1, eth_src, eth_dst, mid)
+            if ucast.ieee1905_relay_indicator:
+                self.fail("Unicast topology notification should not be relayed")
+                return False
+
+        # check for requested event
+        debug("Check for event: sta mac={}, bssid={}, event={}".format(sta.mac, bssid, event))
+        if mcast.ieee1905_tlvs[0].assoc_event_client_mac != sta.mac or \
+                mcast.ieee1905_tlvs[0].assoc_event_agent_bssid != bssid or \
+                int(mcast.ieee1905_tlvs[0].assoc_event_flags, 16) != event.value:
+            self.fail("No match for association event")
+            return False
+
+        return True
