@@ -816,6 +816,21 @@ bool db::set_hostap_active(const std::string &mac, bool active)
         return false;
     }
     n->hostap->active = active;
+
+    // Enabled variable is a part of Radio data element and
+    // need to get path like Controller.Device.{i}.Radio.{i}. for setting Enabled variable
+    auto radio_enable_path = dm_get_path_to_radio(*n);
+
+    if (radio_enable_path.empty()) {
+        LOG(ERROR) << "Failed to get path to the Radio with mac: " << mac;
+        return false;
+    }
+
+    if (!m_ambiorix_datamodel->set(radio_enable_path, "Enabled", active)) {
+        LOG(ERROR) << "Failed to set " << radio_enable_path << " Enabled parameter.";
+        return false;
+    }
+
     return true;
 }
 
@@ -4840,4 +4855,61 @@ bool db::dm_add_device_element(const sMacAddr &mac)
         return false;
     }
     return true;
+}
+
+std::string db::dm_get_path_to_device(const son::node &device_node)
+{
+
+    auto node_type = get_node_type(device_node.mac);
+    if ((node_type != TYPE_GW) || (node_type != TYPE_IRE)) {
+        LOG(ERROR) << "Wrong node type: " << type_to_string(node_type);
+        return {};
+    }
+
+    auto device_index =
+        m_ambiorix_datamodel->get_instance_index("Network.Device.[ID == '%s']", device_node.mac);
+    if (!device_index) {
+        LOG(ERROR) << "Failed to get Device index with mac: " << device_node.mac;
+        return {};
+    }
+
+    // Prepare result string Controller.Network.Device.{i}.
+    auto device_path = "Controller.Network.Device." + std::to_string(device_index) + ".";
+
+    return device_path;
+}
+
+std::string db::dm_get_path_to_radio(const son::node &radio_node)
+{
+    auto node_type = get_node_type(radio_node.mac);
+    if (node_type != TYPE_SLAVE) {
+        LOG(ERROR) << "Wrong node type: " << type_to_string(node_type);
+        return {};
+    }
+
+    auto device_node = get_node(tlvf::mac_from_string(radio_node.parent_mac));
+
+    if (!device_node) {
+        LOG(ERROR) << "Failed to get Parent Device Node with mac: " << radio_node.parent_mac;
+        return {};
+    }
+
+    auto device_path = dm_get_path_to_device(*device_node);
+
+    if (device_path.empty()) {
+        LOG(ERROR) << "Failed to get path to Device with mac: " << radio_node.parent_mac;
+        return {};
+    }
+
+    auto radio_index = m_ambiorix_datamodel->get_instance_index(device_path + "Radio.[ID == '%s']",
+                                                                radio_node.mac);
+    if (!radio_index) {
+        LOG(ERROR) << "Failed to get Radio index with mac:" << radio_node.mac;
+        return {};
+    }
+
+    // Prepare result string Controller.Network.Device.{i}.Radio{i}.
+    auto radio_path = device_path + "Radio." + std::to_string(radio_index) + ".";
+
+    return radio_path;
 }
