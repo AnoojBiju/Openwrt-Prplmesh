@@ -44,6 +44,7 @@ public:
     virtual uint32_t get_instance_index(const std::string &specific_path,
                                         const std::string &key)                    = 0;
     virtual std::string get_datamodel_time_format()                                = 0;
+    virtual bool remove_all_instances(const std::string &relative_path)            = 0;
 };
 
 inline Ambiorix::~Ambiorix() {}

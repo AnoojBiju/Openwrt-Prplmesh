@@ -520,6 +520,29 @@ std::string AmbiorixImpl::get_datamodel_time_format()
     return result_time;
 }
 
+bool AmbiorixImpl::remove_all_instances(const std::string &relative_path)
+{
+    amxd_trans_t transaction;
+    auto object = prepare_transaction(relative_path, transaction);
+    if (!object) {
+        LOG(ERROR) << "Couldn't find the object for: " << relative_path;
+        return false;
+    }
+
+    amxd_object_for_each(instance, it, object)
+    {
+        auto inst = amxc_llist_it_get_data(it, amxd_object_t, it);
+        amxd_trans_del_inst(&transaction, amxd_object_get_index(inst), nullptr);
+    }
+
+    if (!apply_transaction(transaction)) {
+        LOG(ERROR) << "Failed to apply transaction for: " << object->name;
+        return false;
+    }
+
+    LOG(DEBUG) << "All instances removed for: " << object->name;
+    return true;
+}
 AmbiorixImpl::~AmbiorixImpl()
 {
     remove_event_loop();
