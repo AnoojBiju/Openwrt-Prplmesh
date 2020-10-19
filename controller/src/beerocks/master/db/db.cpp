@@ -1689,6 +1689,23 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, std::string bssid, st
     vaps_info[vap_id].ssid         = ssid;
     vaps_info[vap_id].backhaul_vap = backhual;
 
+    auto radio_node = get_node(tlvf::mac_from_string(radio_mac));
+    if (!radio_node) {
+        LOG(ERROR) << "Failed to get Radio node with mac: " << radio_mac;
+        return false;
+    }
+
+    /*
+        Prepare path to BSS instance
+        Example: Controller.Network.Device.1.Radio.1.BSS
+    */
+    auto bss_path  = dm_get_path_to_radio(*radio_node) + "BSS";
+    auto bss_index = m_ambiorix_datamodel->add_instance(bss_path);
+    if (!bss_index) {
+        LOG(ERROR) << "Failed to add " << bss_path << " instance.";
+        return false;
+    }
+
     return true;
 }
 
