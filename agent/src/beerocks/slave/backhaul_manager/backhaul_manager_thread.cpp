@@ -2724,7 +2724,7 @@ bool backhaul_manager::create_backhaul_steering_response(
 const std::string backhaul_manager::freq_to_radio_mac(eFreqType freq) const
 {
     auto db = AgentDB::get();
-    for (const auto &radio : db->get_radios_list()) {
+    for (const auto radio : db->get_radios_list()) {
         if (!radio) {
             continue;
         }

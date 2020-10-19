@@ -543,7 +543,7 @@ bool LinkMetricsCollectionTask::send_ap_metric_query_message(
 {
     auto db = AgentDB::get();
 
-    for (const auto &radio : db->get_radios_list()) {
+    for (const auto radio : db->get_radios_list()) {
         if (!radio) {
             continue;
         }

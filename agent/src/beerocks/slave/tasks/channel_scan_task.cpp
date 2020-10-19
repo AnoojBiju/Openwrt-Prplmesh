@@ -53,7 +53,7 @@ void ChannelScanTask::handle_event(uint8_t event_enum_value, const void *event_o
     switch (eEvent(event_enum_value)) {
     case START_CHANNEL_SCAN: {
         auto db = AgentDB::get();
-        for (const auto &radio : db->get_radios_list()) {
+        for (const auto radio : db->get_radios_list()) {
             if (!radio) {
                 continue;
             }
