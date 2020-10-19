@@ -20,7 +20,6 @@ namespace nbapi {
  */
 class AmbiorixDummy : public Ambiorix {
 public:
-    virtual ~AmbiorixDummy();
     bool set(const std::string &relative_path, const std::string &parameter,
              const std::string &value) override;
     bool set(const std::string &relative_path, const std::string &parameter,

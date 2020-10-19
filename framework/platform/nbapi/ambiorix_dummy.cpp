@@ -11,7 +11,6 @@
 namespace beerocks {
 namespace nbapi {
 
-AmbiorixDummy::~AmbiorixDummy() {}
 bool AmbiorixDummy::set(const std::string &relative_path, const std::string &parameter,
                         const std::string &value)
 {
@@ -57,7 +56,7 @@ uint32_t AmbiorixDummy::get_instance_index(const std::string &specific_path, con
     // Return false (0) because method can be used for checking instance present in Data Model or not
     return 0;
 }
-std::string AmbiorixDummy::get_datamodel_time_format() { return ""; }
+std::string AmbiorixDummy::get_datamodel_time_format() { return {}; }
 
 bool AmbiorixDummy::remove_all_instances(const std::string &relative_path) { return true; }
 
