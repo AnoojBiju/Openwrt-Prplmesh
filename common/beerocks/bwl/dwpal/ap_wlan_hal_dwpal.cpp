@@ -1138,6 +1138,10 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
         }
         // Count the the total of available for reconfiguration VAPs
         ++vap_total_count;
+
+        auto time_stamp_timeout = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+        while (std::chrono::steady_clock::now() < time_stamp_timeout)
+            ;
         // Send the command
         std::string cmd("RECONF " + it.first);
         if (!dwpal_send_cmd(cmd)) {
