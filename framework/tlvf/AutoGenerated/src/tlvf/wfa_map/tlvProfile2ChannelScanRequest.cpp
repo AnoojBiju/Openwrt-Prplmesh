@@ -10,38 +10,38 @@
  * See LICENSE file for more details.
  */
 
-#include <tlvf/wfa_map/tlvChannelScanRequest.h>
+#include <tlvf/wfa_map/tlvProfile2ChannelScanRequest.h>
 #include <tlvf/tlvflogging.h>
 
 using namespace wfa_map;
 
-tlvChannelScanRequest::tlvChannelScanRequest(uint8_t* buff, size_t buff_len, bool parse) :
+tlvProfile2ChannelScanRequest::tlvProfile2ChannelScanRequest(uint8_t* buff, size_t buff_len, bool parse) :
     BaseClass(buff, buff_len, parse) {
     m_init_succeeded = init();
 }
-tlvChannelScanRequest::tlvChannelScanRequest(std::shared_ptr<BaseClass> base, bool parse) :
+tlvProfile2ChannelScanRequest::tlvProfile2ChannelScanRequest(std::shared_ptr<BaseClass> base, bool parse) :
 BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
     m_init_succeeded = init();
 }
-tlvChannelScanRequest::~tlvChannelScanRequest() {
+tlvProfile2ChannelScanRequest::~tlvProfile2ChannelScanRequest() {
 }
-const eTlvTypeMap& tlvChannelScanRequest::type() {
+const eTlvTypeMap& tlvProfile2ChannelScanRequest::type() {
     return (const eTlvTypeMap&)(*m_type);
 }
 
-const uint16_t& tlvChannelScanRequest::length() {
+const uint16_t& tlvProfile2ChannelScanRequest::length() {
     return (const uint16_t&)(*m_length);
 }
 
-tlvChannelScanRequest::ePerformFreshScan& tlvChannelScanRequest::perform_fresh_scan() {
+tlvProfile2ChannelScanRequest::ePerformFreshScan& tlvProfile2ChannelScanRequest::perform_fresh_scan() {
     return (ePerformFreshScan&)(*m_perform_fresh_scan);
 }
 
-uint8_t& tlvChannelScanRequest::radio_list_length() {
+uint8_t& tlvProfile2ChannelScanRequest::radio_list_length() {
     return (uint8_t&)(*m_radio_list_length);
 }
 
-std::tuple<bool, cRadiosToScan&> tlvChannelScanRequest::radio_list(size_t idx) {
+std::tuple<bool, cRadiosToScan&> tlvProfile2ChannelScanRequest::radio_list(size_t idx) {
     bool ret_success = ( (m_radio_list_idx__ > 0) && (m_radio_list_idx__ > idx) );
     size_t ret_idx = ret_success ? idx : 0;
     if (!ret_success) {
@@ -50,7 +50,7 @@ std::tuple<bool, cRadiosToScan&> tlvChannelScanRequest::radio_list(size_t idx) {
     return std::forward_as_tuple(ret_success, *(m_radio_list_vector[ret_idx]));
 }
 
-std::shared_ptr<cRadiosToScan> tlvChannelScanRequest::create_radio_list() {
+std::shared_ptr<cRadiosToScan> tlvProfile2ChannelScanRequest::create_radio_list() {
     if (m_lock_order_counter__ > 0) {
         TLVF_LOG(ERROR) << "Out of order allocation for variable length list radio_list, abort!";
         return nullptr;
@@ -74,7 +74,7 @@ std::shared_ptr<cRadiosToScan> tlvChannelScanRequest::create_radio_list() {
     return std::make_shared<cRadiosToScan>(src, getBuffRemainingBytes(src), m_parse__);
 }
 
-bool tlvChannelScanRequest::add_radio_list(std::shared_ptr<cRadiosToScan> ptr) {
+bool tlvProfile2ChannelScanRequest::add_radio_list(std::shared_ptr<cRadiosToScan> ptr) {
     if (ptr == nullptr) {
         TLVF_LOG(ERROR) << "Received entry is nullptr";
         return false;
@@ -108,7 +108,7 @@ bool tlvChannelScanRequest::add_radio_list(std::shared_ptr<cRadiosToScan> ptr) {
     return true;
 }
 
-void tlvChannelScanRequest::class_swap()
+void tlvProfile2ChannelScanRequest::class_swap()
 {
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_length));
     tlvf_swap(8*sizeof(ePerformFreshScan), reinterpret_cast<uint8_t*>(m_perform_fresh_scan));
@@ -117,7 +117,7 @@ void tlvChannelScanRequest::class_swap()
     }
 }
 
-bool tlvChannelScanRequest::finalize()
+bool tlvProfile2ChannelScanRequest::finalize()
 {
     if (m_parse__) {
         TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
@@ -145,7 +145,7 @@ bool tlvChannelScanRequest::finalize()
     return true;
 }
 
-size_t tlvChannelScanRequest::get_initial_size()
+size_t tlvProfile2ChannelScanRequest::get_initial_size()
 {
     size_t class_size = 0;
     class_size += sizeof(eTlvTypeMap); // type
@@ -155,7 +155,7 @@ size_t tlvChannelScanRequest::get_initial_size()
     return class_size;
 }
 
-bool tlvChannelScanRequest::init()
+bool tlvProfile2ChannelScanRequest::init()
 {
     if (getBuffRemainingBytes() < get_initial_size()) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";

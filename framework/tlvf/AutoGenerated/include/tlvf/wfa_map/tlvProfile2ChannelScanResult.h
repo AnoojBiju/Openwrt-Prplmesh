@@ -10,8 +10,8 @@
  * See LICENSE file for more details.
  */
 
-#ifndef _TLVF_WFA_MAP_TLVCHANNELSCANRESULT_H_
-#define _TLVF_WFA_MAP_TLVCHANNELSCANRESULT_H_
+#ifndef _TLVF_WFA_MAP_TLVPROFILE2CHANNELSCANRESULT_H_
+#define _TLVF_WFA_MAP_TLVPROFILE2CHANNELSCANRESULT_H_
 
 #include <cstddef>
 #include <stdint.h>
@@ -27,12 +27,12 @@
 namespace wfa_map {
 
 
-class tlvChannelScanResult : public BaseClass
+class tlvProfile2ChannelScanResult : public BaseClass
 {
     public:
-        tlvChannelScanResult(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit tlvChannelScanResult(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~tlvChannelScanResult();
+        tlvProfile2ChannelScanResult(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit tlvProfile2ChannelScanResult(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~tlvProfile2ChannelScanResult();
 
         enum eBssLoadElementPresent: uint8_t {
             FIELD_PRESENT = 0x80,
@@ -139,4 +139,4 @@ class tlvChannelScanResult : public BaseClass
 
 }; // close namespace: wfa_map
 
-#endif //_TLVF/WFA_MAP_TLVCHANNELSCANRESULT_H_
+#endif //_TLVF/WFA_MAP_TLVPROFILE2CHANNELSCANRESULT_H_

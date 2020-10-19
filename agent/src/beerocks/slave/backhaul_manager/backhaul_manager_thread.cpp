@@ -33,6 +33,7 @@
 
 #include "../tasks/ap_autoconfiguration_task.h"
 #include "../tasks/capability_reporting_task.h"
+#include "../tasks/channel_scan_task.h"
 #include "../tasks/channel_selection_task.h"
 #include "../tasks/link_metrics_collection_task.h"
 #include "../tasks/topology_task.h"
@@ -168,6 +169,13 @@ bool backhaul_manager::init()
         return false;
     }
     m_task_pool.add_task(channel_selection_task);
+
+    auto channel_scan_task = std::make_shared<ChannelScanTask>(*this, cmdu_tx);
+    if (!channel_scan_task) {
+        LOG(ERROR) << "failed to allocate Channel Scan Task!";
+        return false;
+    }
+    m_task_pool.add_task(channel_scan_task);
 
     auto capability_reporing_task = std::make_shared<CapabilityReportingTask>(*this, cmdu_tx);
     if (!capability_reporing_task) {
@@ -804,6 +812,9 @@ bool backhaul_manager::backhaul_fsm_main(bool &skip_select)
         FSM_MOVE_STATE(WAIT_FOR_AUTOCONFIG_COMPLETE);
         m_task_pool.send_event(eTaskType::AP_AUTOCONFIGURATION,
                                ApAutoConfigurationTask::eEvent::START_AP_AUTOCONFIGURATION);
+
+        m_task_pool.send_event(eTaskType::CHANNEL_SCAN,
+                               ChannelScanTask::eEvent::START_CHANNEL_SCAN);
         break;
     }
     case EState::WAIT_FOR_AUTOCONFIG_COMPLETE: {
@@ -2713,7 +2724,7 @@ bool backhaul_manager::create_backhaul_steering_response(
 const std::string backhaul_manager::freq_to_radio_mac(eFreqType freq) const
 {
     auto db = AgentDB::get();
-    for (const auto &radio : db->get_radios_list()) {
+    for (const auto radio : db->get_radios_list()) {
         if (!radio) {
             continue;
         }
