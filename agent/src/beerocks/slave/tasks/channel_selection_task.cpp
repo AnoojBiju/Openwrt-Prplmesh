@@ -64,7 +64,7 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
     auto db = AgentDB::get();
 
     // Save radio mac for each connected radio
-    for (const auto &radio : db->get_radios_list()) {
+    for (const auto radio : db->get_radios_list()) {
         m_expected_channel_selection.requests.emplace_back(radio->front.iface_mac);
     }
 }
