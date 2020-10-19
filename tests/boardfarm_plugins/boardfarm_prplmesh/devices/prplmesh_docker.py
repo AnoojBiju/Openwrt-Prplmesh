@@ -44,8 +44,7 @@ class PrplMeshDocker(PrplMeshBase):
 
         docker_cmd = os.path.join(rootdir, "tools", "docker", "run.sh")
         docker_args = ["--verbose", "--detach", "--force", "--name", self.docker_name,
-                       "--network", self.docker_network, "--expose", "8002",
-                       "--label", "prplmesh", "--label", "prplmesh-id={}".format(self.unique_id)]
+                       "--network", self.docker_network, "--expose", "8002"]
 
         if self.role == "controller":
             # Spawn dockerized controller
