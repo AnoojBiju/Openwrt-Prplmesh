@@ -808,61 +808,100 @@ bool base_wlan_hal_dwpal::refresh_radio_info()
         // } else if (son::wireless_utils::which_freq(m_radio_info.channel) == beerocks::eFreqType::FREQ_5G) {
         // 	m_radio_info.is_5ghz = true;
         // }
-    } else {
-        if (!dwpal_send_cmd("GET_RADIO_INFO", &reply)) {
-            LOG(ERROR) << __func__ << " failed";
+        return true;
+    }
+
+    if (!dwpal_send_cmd("GET_RADIO_INFO", &reply)) {
+        LOG(ERROR) << __func__ << " failed";
+        return false;
+    }
+
+    // update radio info struct
+    size_t replyLen               = strnlen(reply, HOSTAPD_TO_DWPAL_MSG_LENGTH);
+    size_t numOfValidArgs[7]      = {0};
+    FieldsToParse fieldsToParse[] = {
+        {(void *)&m_radio_info.ant_num, &numOfValidArgs[0], DWPAL_INT_PARAM, "TxAntennas=", 0},
+        {(void *)&m_radio_info.tx_power, &numOfValidArgs[1], DWPAL_INT_PARAM, "TxPower=", 0},
+        {(void *)&m_radio_info.bandwidth, &numOfValidArgs[2], DWPAL_INT_PARAM,
+         "OperatingChannelBandwidt=", 0},
+        {(void *)&m_radio_info.vht_center_freq, &numOfValidArgs[3], DWPAL_INT_PARAM, "Cf1=", 0},
+        {(void *)&m_radio_info.wifi_ctrl_enabled, &numOfValidArgs[4], DWPAL_INT_PARAM,
+         "HostapdEnabled=", 0},
+        {(void *)&m_radio_info.tx_enabled, &numOfValidArgs[5], DWPAL_BOOL_PARAM, "TxEnabled=", 0},
+        {(void *)&m_radio_info.channel, &numOfValidArgs[6], DWPAL_INT_PARAM, "Channel=", 0},
+        /* Must be at the end */
+        {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+    if (dwpal_string_to_struct_parse(reply, replyLen, fieldsToParse, sizeof(m_radio_info)) ==
+        DWPAL_FAILURE) {
+        LOG(ERROR) << "DWPAL parse error ==> Abort";
+        return false;
+    }
+    /* TEMP: Traces... */
+    // LOG(DEBUG) << "GET_RADIO_INFO reply=\n" << reply;
+    // LOG(DEBUG) << "numOfValidArgs[0]= " << numOfValidArgs[0] << " ant_num= " << m_radio_info.ant_num;
+    // LOG(DEBUG) << "numOfValidArgs[1]= " << numOfValidArgs[1] << " tx_power= " << m_radio_info.tx_power;
+    // LOG(DEBUG) << "numOfValidArgs[2]= " << numOfValidArgs[2] << " bandwidth= " << m_radio_info.bandwidth;
+    // LOG(DEBUG) << "numOfValidArgs[3]= " << numOfValidArgs[3] << " vht_center_freq= " << m_radio_info.vht_center_freq;
+    // LOG(DEBUG) << "numOfValidArgs[4]= " << numOfValidArgs[4] << " wifi_ctrl_enabled= " << m_radio_info.wifi_ctrl_enabled;
+    // LOG(DEBUG) << "numOfValidArgs[5]= " << numOfValidArgs[5] << " tx_enabled= " << m_radio_info.tx_enabled;
+    // LOG(DEBUG) << "numOfValidArgs[6]= " << numOfValidArgs[6] << " channel= " << m_radio_info.channel;
+    /* End of TEMP: Traces... */
+    for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
+        if (numOfValidArgs[i] == 0) {
+            LOG(ERROR) << "Failed reading parsed parameter " << (int)i << " ==> Abort";
             return false;
         }
-        // update radio info struct
-        size_t replyLen               = strnlen(reply, HOSTAPD_TO_DWPAL_MSG_LENGTH);
-        size_t numOfValidArgs[7]      = {0};
-        FieldsToParse fieldsToParse[] = {
-            {(void *)&m_radio_info.ant_num, &numOfValidArgs[0], DWPAL_INT_PARAM, "TxAntennas=", 0},
-            {(void *)&m_radio_info.tx_power, &numOfValidArgs[1], DWPAL_INT_PARAM, "TxPower=", 0},
-            {(void *)&m_radio_info.bandwidth, &numOfValidArgs[2], DWPAL_INT_PARAM,
-             "OperatingChannelBandwidt=", 0},
-            {(void *)&m_radio_info.vht_center_freq, &numOfValidArgs[3], DWPAL_INT_PARAM, "Cf1=", 0},
-            {(void *)&m_radio_info.wifi_ctrl_enabled, &numOfValidArgs[4], DWPAL_INT_PARAM,
-             "HostapdEnabled=", 0},
-            {(void *)&m_radio_info.tx_enabled, &numOfValidArgs[5], DWPAL_BOOL_PARAM,
-             "TxEnabled=", 0},
-            {(void *)&m_radio_info.channel, &numOfValidArgs[6], DWPAL_INT_PARAM, "Channel=", 0},
-            /* Must be at the end */
-            {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+    }
+    m_radio_info.is_5ghz =
+        (son::wireless_utils::which_freq(m_radio_info.channel) == beerocks::eFreqType::FREQ_5G);
+    // If the VAPs map is empty, refresh it as well
+    // TODO: update on every refresh?
 
-        if (dwpal_string_to_struct_parse(reply, replyLen, fieldsToParse, sizeof(m_radio_info)) ==
-            DWPAL_FAILURE) {
-            LOG(ERROR) << "DWPAL parse error ==> Abort";
+    // Read Radio status
+    const char *tmp_str;
+    parsed_line_t reply_obj;
+
+    std::string cmd = "STATUS";
+
+    if (!dwpal_send_cmd(cmd, reply_obj)) {
+        LOG(ERROR) << __func__ << " failed";
+        return false;
+    }
+
+    // RSSI
+    if (!read_param("state", reply_obj, &tmp_str)) {
+        LOG(ERROR) << "Failed reading 'state' parameter!";
+        return false;
+    }
+
+    // clang-format off
+        const static std::unordered_map<std::string, eRadioState> string_eRadioState = {
+            { "UNINITIALIZED",  eRadioState::UNINITIALIZED  },
+            { "DISABLED",       eRadioState::DISABLED       },
+            { "COUNTRY_UPDATE", eRadioState::COUNTRY_UPDATE },
+            { "ACS",            eRadioState::ACS            },
+            { "ACS_DONE",       eRadioState::ACS_DONE       },
+            { "HT_SCAN",        eRadioState::HT_SCAN        },
+            { "DFS",            eRadioState::DFS            },
+            { "ENABLED",        eRadioState::ENABLED        },
+            { "UNKNOWN",        eRadioState::UNKNOWN        },
+        };
+    // clang-format on
+    auto state_it = string_eRadioState.find(tmp_str);
+    m_radio_info.radio_state =
+        state_it == string_eRadioState.end() ? eRadioState::UNKNOWN : state_it->second;
+
+    auto print_status = m_radio_info.radio_state != eRadioState::ENABLED &&
+                        m_radio_info.radio_state != eRadioState::DISABLED;
+    LOG_IF(print_status, DEBUG) << "Radio state=" << m_radio_info.radio_state;
+
+    if (m_radio_info.radio_state == eRadioState::DISABLED) {
+        return true;
+    }
+
+    if (!m_radio_info.available_vaps.size()) {
+        if (!refresh_vaps_info(beerocks::IFACE_RADIO_ID)) {
             return false;
-        }
-
-        /* TEMP: Traces... */
-        // LOG(DEBUG) << "GET_RADIO_INFO reply=\n" << reply;
-        // LOG(DEBUG) << "numOfValidArgs[0]= " << numOfValidArgs[0] << " ant_num= " << m_radio_info.ant_num;
-        // LOG(DEBUG) << "numOfValidArgs[1]= " << numOfValidArgs[1] << " tx_power= " << m_radio_info.tx_power;
-        // LOG(DEBUG) << "numOfValidArgs[2]= " << numOfValidArgs[2] << " bandwidth= " << m_radio_info.bandwidth;
-        // LOG(DEBUG) << "numOfValidArgs[3]= " << numOfValidArgs[3] << " vht_center_freq= " << m_radio_info.vht_center_freq;
-        // LOG(DEBUG) << "numOfValidArgs[4]= " << numOfValidArgs[4] << " wifi_ctrl_enabled= " << m_radio_info.wifi_ctrl_enabled;
-        // LOG(DEBUG) << "numOfValidArgs[5]= " << numOfValidArgs[5] << " tx_enabled= " << m_radio_info.tx_enabled;
-        // LOG(DEBUG) << "numOfValidArgs[6]= " << numOfValidArgs[6] << " channel= " << m_radio_info.channel;
-        /* End of TEMP: Traces... */
-
-        for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
-            if (numOfValidArgs[i] == 0) {
-                LOG(ERROR) << "Failed reading parsed parameter " << (int)i << " ==> Abort";
-                return false;
-            }
-        }
-
-        m_radio_info.is_5ghz =
-            (son::wireless_utils::which_freq(m_radio_info.channel) == beerocks::eFreqType::FREQ_5G);
-
-        // If the VAPs map is empty, refresh it as well
-        // TODO: update on every refresh?
-        if (!m_radio_info.available_vaps.size()) {
-            if (!refresh_vaps_info(beerocks::IFACE_RADIO_ID)) {
-                return false;
-            }
         }
     }
 
