@@ -167,6 +167,7 @@ if (BUILD_TESTS)
         ${bwl_common_sources} 
         ${bwl_platform_sources} 
         ${MODULE_PATH}/unit_tests/nl80211_client_test.cpp
+        ${MODULE_PATH}/unit_tests/cac_capabilities_test.cpp
     )
     add_executable(${TEST_PROJECT_NAME} 
         ${unit_tests_sources}
