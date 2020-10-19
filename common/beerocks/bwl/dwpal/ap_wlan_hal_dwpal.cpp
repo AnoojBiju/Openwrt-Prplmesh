@@ -1137,12 +1137,12 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
         // Count the the total of available for reconfiguration VAPs
         ++vap_total_count;
         // Send the command
-        std::string cmd("RECONF " + it.first);
-        if (!dwpal_send_cmd(cmd)) {
-            LOG(ERROR) << "Autoconfiguration: \"" << cmd << "\" command to hostapd has failed!";
-            // Keep going and try to complete what we can
-            continue;
-        }
+        // std::string cmd("RECONF " + it.first);
+        // if (!dwpal_send_cmd(cmd)) {
+        //     LOG(ERROR) << "Autoconfiguration: \"" << cmd << "\" command to hostapd has failed!";
+        //     // Keep going and try to complete what we can
+        //     continue;
+        // }
         ++vap_ok_count;
     }
 
