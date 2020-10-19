@@ -50,9 +50,6 @@ MAP-4.10.4_ETH_FH5GL:marvell:
 MAP-4.10.4_ETH_FH5GH:marvell:
   extends: .certification-marvell
 
-MAP-4.12.1_ETH:marvell:
-  extends: .certification-marvell
-
 MAP-4.12.1_BHWIFI:marvell:
   extends: .certification-marvell
 
