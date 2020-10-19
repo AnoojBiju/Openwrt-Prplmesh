@@ -74,6 +74,8 @@ set wireless.default_radio20.ifname='wlan2.0'
 set wireless.default_radio11.ifname='wlan1'
 set wireless.default_radio21.ifname='wlan3'
 
+set disassoc_low_ack='0'
+
 # TODO: same issue, for prplmesh settings this time:
 set prplmesh.radio0.hostap_iface='wlan0'
 set prplmesh.radio0.sta_iface='wlan1'
