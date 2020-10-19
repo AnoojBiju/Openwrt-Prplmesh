@@ -1,0 +1,94 @@
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+# SPDX-FileCopyrightText: 2020 the prplMesh contributors (see AUTHORS.md)
+# This code is subject to the terms of the BSD+Patent license.
+# See LICENSE file for more details.
+
+from .prplmesh_base_test import PrplMeshBaseTest
+from boardfarm.exceptions import SkipTest
+from capi import tlv
+from opts import debug
+import time
+
+
+class ClientSteeringMandate(PrplMeshBaseTest):
+    """Check initial configuration on device."""
+
+    def runTest(self):
+        # Locate test participants
+        try:
+            agent1 = self.dev.DUT.agent_entity
+            agent2 = self.dev.lan2.agent_entity
+
+            controller = self.dev.lan.controller_entity
+        except AttributeError as ae:
+            raise SkipTest(ae)
+
+        debug("Send topology request to agent 1")
+        controller.dev_send_1905(agent1.mac, 0x0002)
+        time.sleep(1)
+        debug("Confirming topology query was received")
+        self.check_log(agent1, "TOPOLOGY_QUERY_MESSAGE")
+
+        debug("Send topology request to agent 2")
+        controller.dev_send_1905(agent2.mac, 0x0002)
+        time.sleep(1)
+        debug("Confirming topology query was received")
+        self.check_log(agent2, "TOPOLOGY_QUERY_MESSAGE")
+
+        debug(
+            "Send Client Steering Request message for Steering Mandate to CTT Agent1")
+        controller.dev_send_1905(agent1.mac, 0x8014,
+                 tlv(0x9B, 0x001b,
+                 "{%s 0xe0 0x0000 0x1388 0x01 {0x000000110022} 0x01 {%s 0x73 0x24}}" % (
+                 agent1.radios[0].mac,
+                 agent2.radios[0].mac)))  # noqa E501
+        time.sleep(1)
+        debug(
+            "Confirming Client Steering Request message was received - mandate")
+        self.check_log(agent1.radios[0], "Got steer request")
+
+        debug("Confirming BTM Report message was received")
+        self.check_log(controller,
+                       "CLIENT_STEERING_BTM_REPORT_MESSAGE")
+
+        debug("Checking BTM Report source bssid")
+        self.check_log(controller,
+                       "BTM_REPORT from source bssid %s" %
+                       agent1.radios[0].mac)
+
+        debug("Confirming ACK message was received")
+        self.check_log(agent1.radios[0], "ACK_MESSAGE")
+
+        controller.dev_send_1905(agent1.mac, 0x8014,
+                                     tlv(0x9B, 0x000C,
+                                         "{%s 0x00 0x000A 0x0000 0x00}" %
+                                         agent1.radios[
+                                             0].mac))  # noqa E501
+        time.sleep(1)
+        debug(
+            "Confirming Client Steering Request message was received - Opportunity")
+        self.check_log(agent1.radios[0],
+                       "CLIENT_STEERING_REQUEST_MESSAGE")
+
+        debug("Confirming ACK message was received")
+        self.check_log(controller, "ACK_MESSAGE")
+
+        debug("Confirming steering completed message was received")
+        self.check_log(controller, "STEERING_COMPLETED_MESSAGE")
+
+        debug("Confirming ACK message was received")
+        self.check_log(agent1.radios[0], "ACK_MESSAGE")
+
+    @classmethod
+    def teardown_class(cls):
+        """Teardown method, optional for boardfarm tests."""
+        test = cls.test_obj
+        # Send additional Ctrl+C to the device to terminate "tail -f"
+        # Which is used to read log from device. Required only for tests on HW
+        try:
+            test.dev.DUT.agent_entity.device.send('\003')
+        except AttributeError:
+            # If AttributeError was raised - we are dealing with dummy devices.
+            # We don't have to additionaly send Ctrl+C for dummy devices.
+            pass
+        test.dev.wifi.disable_wifi()

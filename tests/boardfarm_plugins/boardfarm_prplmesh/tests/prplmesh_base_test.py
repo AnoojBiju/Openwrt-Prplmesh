@@ -3,12 +3,15 @@
 # This code is subject to the terms of the BSD+Patent license.
 # See LICENSE file for more details.
 
-from typing import Union, Callable, NoReturn
+from typing import Any, Union, Callable, NoReturn
 
+from boardfarm.exceptions import SkipTest
 from boardfarm.tests import bft_base_test
+from capi import tlv
 from opts import debug
 import environment as env
 import sniffer
+import time
 
 
 class PrplMeshBaseTest(bft_base_test.BftBaseTest):
@@ -188,3 +191,101 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
     def fail(self, msg: str):
         '''Throw an exception message.'''
         raise Exception(msg)
+
+    def safe_check_obj_attribute(self, obj: object, attrib_name: str,
+                                 expected_val: Any, fail_str: str) -> NoReturn:
+        """Check if expected attrib exists first, fail test if it does not exist"""
+        try:
+            if getattr(obj, attrib_name) != expected_val:
+                self.fail(fail_str)
+        except AttributeError:
+            self.fail("{} has no attribute {}".format(type(obj).__name__, attrib_name))
+
+    def base_test_client_capability_query(self, sta: env.Station):
+        try:
+            agent = self.dev.DUT.agent_entity
+            controller = self.dev.lan.controller_entity
+        except AttributeError as ae:
+            raise SkipTest(ae)
+
+        mid = controller.ucc_socket.dev_send_1905(agent.mac, 0x8009, tlv(
+            0x90, 0x000C, '{} {}'.format(agent.radios[0].mac, sta.mac)))
+
+        time.sleep(1)
+
+        query = self.check_cmdu_type_single("client capability query", 0x8009,
+                                            controller.mac, agent.mac, mid)
+
+        query_tlv = self.check_cmdu_has_tlv_single(query, 0x90)
+        self.safe_check_obj_attribute(query_tlv, 'client_info_mac_addr', sta.mac,
+                                      "Wrong mac address in query")
+        self.safe_check_obj_attribute(query_tlv, 'client_info_bssid',
+                                      agent.radios[0].mac,
+                                      "Wrong bssid in query")
+
+        report = self.check_cmdu_type_single("client capability report", 0x800a,
+                                             agent.mac, controller.mac, mid)
+
+        client_info_tlv = self.check_cmdu_has_tlv_single(report, 0x90)
+        self.safe_check_obj_attribute(client_info_tlv, 'client_info_mac_addr', sta.mac,
+                                      "Wrong mac address in report")
+        self.safe_check_obj_attribute(client_info_tlv, 'client_info_bssid',
+                                      agent.radios[0].mac,
+                                      "Wrong bssid in report")
+        return report
+
+    def check_topology_notification(self, eth_src: str, neighbors: list,
+                                    sta: env.Station, event: env.StationEvent, bssid: str) -> bool:
+        """Verify topology notification reliable multicast - given a source mac and
+           a list of neighbors macs, check that exactly one relayed multicast CMDU
+           was sent to the IEEE1905.1 multicast MAC address, and a single unicast
+           CMDU with the relayed bit unset to each of the given neighbors destination MACs.
+           Verify correctness of the association event TLV inside the topology notification.
+           Mark failure if any of the above conditions isn't met.
+
+        Parameters
+        ----------
+
+        eth_src: str
+            source AL MAC (origin of the topology notification)
+
+        neighbors: list
+            destination AL MACs (destinations of the topology notification)
+
+        sta: environment.Station
+            station mac
+
+        event: environment.StationEvent
+            station event - CONNECTED / DISCONNECTED
+
+        bssid: str
+            bssid Multi-AP Agent BSSID
+
+        Returns:
+        bool
+            True for valid topology notification, False otherwise
+        """
+        mcast = self.check_cmdu_type_single("topology notification", 0x1, eth_src)
+
+        # relay indication should be set
+        if not mcast.ieee1905_relay_indicator:
+            self.fail("Multicast topology notification should be relayed")
+            return False
+
+        mid = mcast.ieee1905_mid
+        for eth_dst in neighbors:
+            ucast = self.check_cmdu_type_single("topology notification",
+                                                0x1, eth_src, eth_dst, mid)
+            if ucast.ieee1905_relay_indicator:
+                self.fail("Unicast topology notification should not be relayed")
+                return False
+
+        # check for requested event
+        debug("Check for event: sta mac={}, bssid={}, event={}".format(sta.mac, bssid, event))
+        if mcast.ieee1905_tlvs[0].assoc_event_client_mac != sta.mac or \
+                mcast.ieee1905_tlvs[0].assoc_event_agent_bssid != bssid or \
+                int(mcast.ieee1905_tlvs[0].assoc_event_flags, 16) != event.value:
+            self.fail("No match for association event")
+            return False
+
+        return True
