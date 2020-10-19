@@ -250,6 +250,9 @@ private:
      */
     std::shared_ptr<beerocks::EventLoop> m_event_loop;
 
+    int m_test_timer      = beerocks::net::FileDescriptor::invalid_descriptor;
+    uint32_t m_test_count = 0;
+
     /**
      * File descriptor of the timer to run internal tasks periodically.
      */
