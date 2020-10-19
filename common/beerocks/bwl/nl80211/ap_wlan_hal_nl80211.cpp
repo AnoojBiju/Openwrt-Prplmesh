@@ -552,6 +552,8 @@ bool ap_wlan_hal_nl80211::update_vap_credentials(
         LOG(ERROR) << "Autoconfiguration: \"" << cmd << "\" command to hostapd has failed";
         return false;
     }
+    disable();
+    enable();
 
     LOG(DEBUG) << "Autoconfiguration: done:\n" << conf;
     return true;
