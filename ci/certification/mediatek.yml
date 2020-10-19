@@ -125,15 +125,6 @@ MAP-4.8.5_BHWIFI_FH5GL:mediatek:
 MAP-4.8.5_BHWIFI_FH5GH:mediatek:
   extends: .certification-mediatek
 
-MAP-4.10.3_ETH_FH24G:mediatek:
-  extends: .certification-mediatek
-
-MAP-4.10.3_ETH_FH5GL:mediatek:
-  extends: .certification-mediatek
-
-MAP-4.10.3_ETH_FH5GH:mediatek:
-  extends: .certification-mediatek
-
 MAP-4.10.3_BHWIFI_FH24G:mediatek:
   extends: .certification-mediatek
 
