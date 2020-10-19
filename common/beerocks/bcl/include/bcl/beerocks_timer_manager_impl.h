@@ -50,7 +50,7 @@ public:
     /**
      * Default destructor.
      */
-    virtual ~TimerManagerImpl() override;
+    ~TimerManagerImpl() override;
 
     /**
      * @brief Adds a new timer with given schedule.
