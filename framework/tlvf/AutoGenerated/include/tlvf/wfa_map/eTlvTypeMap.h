@@ -61,6 +61,11 @@ enum class eTlvTypeMap : uint8_t {
     TLV_CHANNEL_SCAN_REQUEST = 0xa6,
     TLV_CHANNEL_SCAN_RESULT = 0xa7,
     TLV_TIMESTAMP = 0xa8,
+    TLV_PROFILE2_CAC_REQUEST = 0xad,
+    TLV_PROFILE2_CAC_TERMINATION = 0xae,
+    TLV_PROFILE2_CAC_COMPLETION_REPORT = 0xaf,
+    TLV_PROFILE2_CAC_STATUS_REPORT = 0xb1,
+    TLV_PROFILE2_CAC_CAPABILITIES = 0xb2,
     TLV_PROFILE2_AP_CAPABILITY = 0xb4,
     TLV_PROFILE2_DEFAULT_802_1Q_SETTINGS = 0xb5,
     TLV_PROFILE2_TRAFFIC_SEPARATION_POLICY = 0xb6,
@@ -120,6 +125,11 @@ public:
         case 0xa6:
         case 0xa7:
         case 0xa8:
+        case 0xad:
+        case 0xae:
+        case 0xaf:
+        case 0xb1:
+        case 0xb2:
         case 0xb4:
         case 0xb5:
         case 0xb6:
