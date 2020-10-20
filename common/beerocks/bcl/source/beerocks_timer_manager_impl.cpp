@@ -89,6 +89,8 @@ int TimerManagerImpl::add_timer(std::chrono::milliseconds delay, std::chrono::mi
     // 5.- Add the timer to the list of timers (so it can be automatically removed in destructor)
     m_timers.emplace(fd, std::move(timer));
 
+    LOG(DEBUG) << "Timer added, fd = " << fd;
+
     return fd;
 }
 
@@ -113,6 +115,8 @@ bool TimerManagerImpl::remove_timer(int fd)
     if (0 == m_timers.erase(fd)) {
         LOG(ERROR) << "Failed to remove timer from the map!, fd = " << fd;
     }
+
+    LOG(DEBUG) << "Timer removed, fd = " << fd;
 
     return true;
 }
