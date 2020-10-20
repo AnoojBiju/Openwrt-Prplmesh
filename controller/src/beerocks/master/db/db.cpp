@@ -3561,6 +3561,19 @@ bool db::set_hostap_stats_info(const std::string &mac, beerocks_message::sApStat
         p->stats_delta_ms               = params->stats_delta_ms;
         p->timestamp                    = std::chrono::steady_clock::now();
     }
+
+    auto radio_path = dm_get_path_to_radio(*n);
+    if (radio_path.empty()) {
+        LOG(ERROR) << "Failed to get path to the radio with mac: " << n->mac;
+        return false;
+    }
+
+    // Path to the variable example: Controller.Network.Device.1.Radio.1.Noise
+    if (!m_ambiorix_datamodel->set(radio_path, "Noise", params->noise)) {
+        LOG(ERROR) << "Failed to set: " << radio_path << "Noise parameter.";
+        return false;
+    }
+
     return true;
 }
 
