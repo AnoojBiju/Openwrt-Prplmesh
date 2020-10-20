@@ -548,11 +548,6 @@ bool ap_wlan_hal_nl80211::update_vap_credentials(
         return false;
     }
 
-    const std::string cmd("UPDATE ");
-    if (!wpa_ctrl_send_msg(cmd)) {
-        LOG(ERROR) << "Autoconfiguration: \"" << cmd << "\" command to hostapd has failed";
-        return false;
-    }
     disable();
     enable();
 
