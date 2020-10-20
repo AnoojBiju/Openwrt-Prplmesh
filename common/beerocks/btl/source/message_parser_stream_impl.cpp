@@ -65,7 +65,7 @@ MessageParserStreamImpl::parse_message(beerocks::net::Buffer &buffer)
 
     // Check if the full message has been received
     size_t message_length = header_length + payload_length;
-    if (message_length < length) {
+    if (length < message_length) {
         LOG(DEBUG) << "Buffer length (" << length << ") is less than header length ("
                    << header_length << ") + payload length (" << payload_length << ")";
         return nullptr;
