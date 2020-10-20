@@ -598,7 +598,7 @@ bool TopologyTask::add_ap_operational_bss_tlv()
 
     auto db = AgentDB::get();
 
-    for (const auto &radio : db->get_radios_list()) {
+    for (const auto radio : db->get_radios_list()) {
         if (!radio) {
             continue;
         }
@@ -636,7 +636,7 @@ bool TopologyTask::add_associated_clients_tlv()
     // least one 802.11 client directly associated with any of the BSS(s) that is operated by the
     // Multi-AP Agent.
     bool include_associated_clients_tlv = false;
-    for (const auto &radio : db->get_radios_list()) {
+    for (const auto radio : db->get_radios_list()) {
         if (!radio) {
             continue;
         }
@@ -657,7 +657,7 @@ bool TopologyTask::add_associated_clients_tlv()
         auto now = std::chrono::steady_clock::now();
 
         // Fill in Associated Clients TLV
-        for (const auto &radio : db->get_radios_list()) {
+        for (const auto radio : db->get_radios_list()) {
             if (!radio) {
                 continue;
             }
