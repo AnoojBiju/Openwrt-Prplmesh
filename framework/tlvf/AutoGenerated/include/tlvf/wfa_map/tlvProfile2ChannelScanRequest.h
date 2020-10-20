@@ -10,8 +10,8 @@
  * See LICENSE file for more details.
  */
 
-#ifndef _TLVF_WFA_MAP_TLVCHANNELSCANREQUEST_H_
-#define _TLVF_WFA_MAP_TLVCHANNELSCANREQUEST_H_
+#ifndef _TLVF_WFA_MAP_TLVPROFILE2CHANNELSCANREQUEST_H_
+#define _TLVF_WFA_MAP_TLVPROFILE2CHANNELSCANREQUEST_H_
 
 #include <cstddef>
 #include <stdint.h>
@@ -29,12 +29,12 @@ namespace wfa_map {
 
 class cRadiosToScan;
 
-class tlvChannelScanRequest : public BaseClass
+class tlvProfile2ChannelScanRequest : public BaseClass
 {
     public:
-        tlvChannelScanRequest(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit tlvChannelScanRequest(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~tlvChannelScanRequest();
+        tlvProfile2ChannelScanRequest(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit tlvProfile2ChannelScanRequest(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~tlvProfile2ChannelScanRequest();
 
         enum ePerformFreshScan: uint8_t {
             PERFORM_A_FRESH_SCAN_AND_RETURN_RESULTS = 0x80,
@@ -104,4 +104,4 @@ class cRadiosToScan : public BaseClass
 
 }; // close namespace: wfa_map
 
-#endif //_TLVF/WFA_MAP_TLVCHANNELSCANREQUEST_H_
+#endif //_TLVF/WFA_MAP_TLVPROFILE2CHANNELSCANREQUEST_H_

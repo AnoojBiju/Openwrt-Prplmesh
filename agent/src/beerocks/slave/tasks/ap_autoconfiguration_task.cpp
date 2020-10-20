@@ -161,7 +161,7 @@ void ApAutoConfigurationTask::handle_event(uint8_t event_enum_value, const void 
     switch (eEvent(event_enum_value)) {
     case START_AP_AUTOCONFIGURATION: {
         auto db = AgentDB::get();
-        for (const auto &radio : db->get_radios_list()) {
+        for (const auto radio : db->get_radios_list()) {
             if (!radio) {
                 continue;
             }

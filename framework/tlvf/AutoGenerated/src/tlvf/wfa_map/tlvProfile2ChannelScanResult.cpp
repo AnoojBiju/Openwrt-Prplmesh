@@ -10,50 +10,50 @@
  * See LICENSE file for more details.
  */
 
-#include <tlvf/wfa_map/tlvChannelScanResult.h>
+#include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>
 #include <tlvf/tlvflogging.h>
 
 using namespace wfa_map;
 
-tlvChannelScanResult::tlvChannelScanResult(uint8_t* buff, size_t buff_len, bool parse) :
+tlvProfile2ChannelScanResult::tlvProfile2ChannelScanResult(uint8_t* buff, size_t buff_len, bool parse) :
     BaseClass(buff, buff_len, parse) {
     m_init_succeeded = init();
 }
-tlvChannelScanResult::tlvChannelScanResult(std::shared_ptr<BaseClass> base, bool parse) :
+tlvProfile2ChannelScanResult::tlvProfile2ChannelScanResult(std::shared_ptr<BaseClass> base, bool parse) :
 BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
     m_init_succeeded = init();
 }
-tlvChannelScanResult::~tlvChannelScanResult() {
+tlvProfile2ChannelScanResult::~tlvProfile2ChannelScanResult() {
 }
-const eTlvTypeMap& tlvChannelScanResult::type() {
+const eTlvTypeMap& tlvProfile2ChannelScanResult::type() {
     return (const eTlvTypeMap&)(*m_type);
 }
 
-const uint16_t& tlvChannelScanResult::length() {
+const uint16_t& tlvProfile2ChannelScanResult::length() {
     return (const uint16_t&)(*m_length);
 }
 
-sMacAddr& tlvChannelScanResult::radio_uid() {
+sMacAddr& tlvProfile2ChannelScanResult::radio_uid() {
     return (sMacAddr&)(*m_radio_uid);
 }
 
-uint8_t& tlvChannelScanResult::operating_class() {
+uint8_t& tlvProfile2ChannelScanResult::operating_class() {
     return (uint8_t&)(*m_operating_class);
 }
 
-uint8_t& tlvChannelScanResult::channel() {
+uint8_t& tlvProfile2ChannelScanResult::channel() {
     return (uint8_t&)(*m_channel);
 }
 
-tlvChannelScanResult::eScanStatus& tlvChannelScanResult::success() {
+tlvProfile2ChannelScanResult::eScanStatus& tlvProfile2ChannelScanResult::success() {
     return (eScanStatus&)(*m_success);
 }
 
-uint8_t& tlvChannelScanResult::timestamp_length() {
+uint8_t& tlvProfile2ChannelScanResult::timestamp_length() {
     return (uint8_t&)(*m_timestamp_length);
 }
 
-uint8_t* tlvChannelScanResult::timestamp(size_t idx) {
+uint8_t* tlvProfile2ChannelScanResult::timestamp(size_t idx) {
     if ( (m_timestamp_idx__ == 0) || (m_timestamp_idx__ <= idx) ) {
         TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
         return nullptr;
@@ -61,7 +61,7 @@ uint8_t* tlvChannelScanResult::timestamp(size_t idx) {
     return &(m_timestamp[idx]);
 }
 
-bool tlvChannelScanResult::set_timestamp(const void* buffer, size_t size) {
+bool tlvProfile2ChannelScanResult::set_timestamp(const void* buffer, size_t size) {
     if (buffer == nullptr) {
         TLVF_LOG(WARNING) << "set_timestamp received a null pointer.";
         return false;
@@ -70,7 +70,7 @@ bool tlvChannelScanResult::set_timestamp(const void* buffer, size_t size) {
     std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_timestamp);
     return true;
 }
-bool tlvChannelScanResult::alloc_timestamp(size_t count) {
+bool tlvProfile2ChannelScanResult::alloc_timestamp(size_t count) {
     if (m_lock_order_counter__ > 0) {;
         TLVF_LOG(ERROR) << "Out of order allocation for variable length list timestamp, abort!";
         return false;
@@ -103,19 +103,19 @@ bool tlvChannelScanResult::alloc_timestamp(size_t count) {
     return true;
 }
 
-uint8_t& tlvChannelScanResult::utilization() {
+uint8_t& tlvProfile2ChannelScanResult::utilization() {
     return (uint8_t&)(*m_utilization);
 }
 
-uint8_t& tlvChannelScanResult::noise() {
+uint8_t& tlvProfile2ChannelScanResult::noise() {
     return (uint8_t&)(*m_noise);
 }
 
-uint16_t& tlvChannelScanResult::neighbors_list_length() {
+uint16_t& tlvProfile2ChannelScanResult::neighbors_list_length() {
     return (uint16_t&)(*m_neighbors_list_length);
 }
 
-std::tuple<bool, tlvChannelScanResult::sNeighbors&> tlvChannelScanResult::neighbors_list(size_t idx) {
+std::tuple<bool, tlvProfile2ChannelScanResult::sNeighbors&> tlvProfile2ChannelScanResult::neighbors_list(size_t idx) {
     bool ret_success = ( (m_neighbors_list_idx__ > 0) && (m_neighbors_list_idx__ > idx) );
     size_t ret_idx = ret_success ? idx : 0;
     if (!ret_success) {
@@ -124,7 +124,7 @@ std::tuple<bool, tlvChannelScanResult::sNeighbors&> tlvChannelScanResult::neighb
     return std::forward_as_tuple(ret_success, m_neighbors_list[ret_idx]);
 }
 
-bool tlvChannelScanResult::alloc_neighbors_list(size_t count) {
+bool tlvProfile2ChannelScanResult::alloc_neighbors_list(size_t count) {
     if (m_lock_order_counter__ > 1) {;
         TLVF_LOG(ERROR) << "Out of order allocation for variable length list neighbors_list, abort!";
         return false;
@@ -156,15 +156,15 @@ bool tlvChannelScanResult::alloc_neighbors_list(size_t count) {
     return true;
 }
 
-uint32_t& tlvChannelScanResult::aggregate_scan_duration() {
+uint32_t& tlvProfile2ChannelScanResult::aggregate_scan_duration() {
     return (uint32_t&)(*m_aggregate_scan_duration);
 }
 
-tlvChannelScanResult::eScanType& tlvChannelScanResult::scan_type() {
+tlvProfile2ChannelScanResult::eScanType& tlvProfile2ChannelScanResult::scan_type() {
     return (eScanType&)(*m_scan_type);
 }
 
-void tlvChannelScanResult::class_swap()
+void tlvProfile2ChannelScanResult::class_swap()
 {
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_length));
     m_radio_uid->struct_swap();
@@ -177,7 +177,7 @@ void tlvChannelScanResult::class_swap()
     tlvf_swap(8*sizeof(eScanType), reinterpret_cast<uint8_t*>(m_scan_type));
 }
 
-bool tlvChannelScanResult::finalize()
+bool tlvProfile2ChannelScanResult::finalize()
 {
     if (m_parse__) {
         TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
@@ -205,7 +205,7 @@ bool tlvChannelScanResult::finalize()
     return true;
 }
 
-size_t tlvChannelScanResult::get_initial_size()
+size_t tlvProfile2ChannelScanResult::get_initial_size()
 {
     size_t class_size = 0;
     class_size += sizeof(eTlvTypeMap); // type
@@ -223,7 +223,7 @@ size_t tlvChannelScanResult::get_initial_size()
     return class_size;
 }
 
-bool tlvChannelScanResult::init()
+bool tlvProfile2ChannelScanResult::init()
 {
     if (getBuffRemainingBytes() < get_initial_size()) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
