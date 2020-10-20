@@ -938,8 +938,25 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
             bss_info_conf_list.push_back(bss_info_conf);
         }
 
-        ap_wlan_hal->update_vap_credentials(bss_info_conf_list, backhaul_wps_ssid,
-                                            backhaul_wps_passphrase);
+        auto timeout        = std::chrono::steady_clock::now() + std::chrono::seconds(100);
+        auto perform_update = true;
+        while (std::chrono::steady_clock::now() < timeout) {
+            if (!ap_wlan_hal->refresh_radio_info()) {
+                perform_update = false;
+                break;
+            }
+
+            if (ap_wlan_hal->get_radio_info().radio_enabled) {
+                LOG(DEBUG) << "Radio is in enabled state, performing vap credentials update";
+                break;
+            }
+            UTILS_SLEEP_MSEC(1);
+        }
+
+        if (perform_update) {
+            ap_wlan_hal->update_vap_credentials(bss_info_conf_list, backhaul_wps_ssid,
+                                                backhaul_wps_passphrase);
+        }
 
         break;
     }
