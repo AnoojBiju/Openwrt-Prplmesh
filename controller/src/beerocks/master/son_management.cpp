@@ -81,9 +81,9 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
 
     //LOG(DEBUG) << "NEW CLI action=" << int(header->action()) << " action_op=" << int(header->action_op());
 
-    auto master_thread_ctx = database.get_master_thread_ctx();
-    if (!master_thread_ctx) {
-        LOG(ERROR) << "master_thread_context == nullptr";
+    auto controller_ctx = database.get_controller_ctx();
+    if (!controller_ctx) {
+        LOG(ERROR) << "controller_ctx == nullptr";
         return;
     }
 
@@ -541,7 +541,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
         std::copy_n(node_info.c_str(), size, response->buffer(0));
         (response->buffer(0))[size] = 0;
 
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_CLI_OPTIMAL_PATH_TASK: {
@@ -674,7 +674,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
     response->isOK()         = isOK;
     response->currentValue() = currentValue;
     if (response_action_op == beerocks_message::ACTION_CLI_RESPONSE_INT) {
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
     }
 }
 
@@ -682,9 +682,9 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
                                         ieee1905_1::CmduMessageTx &cmdu_tx, db &database,
                                         task_pool &tasks)
 {
-    auto master_thread_ctx = database.get_master_thread_ctx();
-    if (!master_thread_ctx) {
-        LOG(ERROR) << "master_thread_context == nullptr";
+    auto controller_ctx = database.get_controller_ctx();
+    if (!controller_ctx) {
+        LOG(ERROR) << "controller_ctx == nullptr";
         return;
     }
 
@@ -698,7 +698,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_REGISTER_TOPOLOGY_QUERY: {
@@ -709,7 +709,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         tasks.push_event(database.get_bml_task_id(), bml_task::REGISTER_TO_TOPOLOGY_UPDATES,
                          &new_event);
 
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_UNREGISTER_TOPOLOGY_QUERY: {
@@ -735,7 +735,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_UNREGISTER_FROM_NW_MAP_UPDATES_REQUEST: {
@@ -753,7 +753,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_NW_MAP_REQUEST: {
@@ -775,7 +775,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_UNREGISTER_FROM_STATS_UPDATES_REQUEST: {
@@ -792,7 +792,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_REGISTER_TO_EVENTS_UPDATES_REQUEST: {
@@ -809,7 +809,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_UNREGISTER_FROM_EVENTS_UPDATES_REQUEST: {
@@ -826,7 +826,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_SET_CLIENT_ROAMING_REQUEST: {
@@ -851,7 +851,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_GET_CLIENT_ROAMING_REQUEST: {
@@ -863,7 +863,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         }
         response->isEnable() = database.settings_client_optimal_path_roaming();
 
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_SET_LEGACY_CLIENT_ROAMING_REQUEST: {
@@ -887,7 +887,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_GET_LEGACY_CLIENT_ROAMING_REQUEST: {
@@ -899,7 +899,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         }
         response->isEnable() = (database.settings_legacy_client_roaming());
 
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_SET_CLIENT_ROAMING_PREFER_SIGNAL_STRENGTH_REQUEST: {
@@ -925,7 +925,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_GET_CLIENT_ROAMING_PREFER_SIGNAL_STRENGTH_REQUEST: {
@@ -942,7 +942,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         response->isEnable() =
             database.settings_client_optimal_path_roaming_prefer_signal_strength();
 
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_SET_CLIENT_BAND_STEERING_REQUEST: {
@@ -969,7 +969,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_GET_CLIENT_BAND_STEERING_REQUEST: {
@@ -983,7 +983,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
 
         response->isEnable() = database.settings_client_band_steering();
 
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_SET_IRE_ROAMING_REQUEST: {
@@ -1007,7 +1007,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_GET_IRE_ROAMING_REQUEST: {
@@ -1022,7 +1022,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
 
         response->isEnable() = database.settings_ire_roaming();
 
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_SET_LOAD_BALANCER_REQUEST: {
@@ -1045,7 +1045,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_GET_LOAD_BALANCER_REQUEST: {
@@ -1059,7 +1059,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
 
         response->isEnable() = database.settings_load_balancing();
 
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_SET_SERVICE_FAIRNESS_REQUEST: {
@@ -1082,7 +1082,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_GET_SERVICE_FAIRNESS_REQUEST: {
@@ -1096,7 +1096,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
 
         response->isEnable() = database.settings_service_fairness();
 
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_SET_DFS_REENTRY_REQUEST: {
@@ -1119,7 +1119,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_GET_DFS_REENTRY_REQUEST: {
@@ -1134,7 +1134,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
 
         response->isEnable() = database.settings_dfs_reentry();
 
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_SET_CERTIFICATION_MODE_REQUEST: {
@@ -1158,7 +1158,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_GET_CERTIFICATION_MODE_REQUEST: {
@@ -1172,7 +1172,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
 
         response->isEnable() = database.setting_certification_mode();
 
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_SET_RESTRICTED_CHANNELS_REQUEST: {
@@ -1214,7 +1214,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_GET_RESTRICTED_CHANNELS_REQUEST: {
@@ -1243,7 +1243,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
                   response->params().restricted_channels);
 
         //send response to bml
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
     case beerocks_message::ACTION_BML_CHANGE_MODULE_LOGGING_LEVEL_REQUEST: {
         auto bml_request =
@@ -1294,7 +1294,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             LOG(ERROR) << "Failed building message!";
             return;
         }
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_BML_WIFI_CREDENTIALS_SET_REQUEST: {
@@ -1330,7 +1330,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             LOG(ERROR) << "Failed building message cACTION_BML_WIFI_CREDENTIALS_SET_RESPONSE ! ";
         } else {
             response->error_code() = 1;
-            if (!master_thread_ctx->send_cmdu(sd, cmdu_tx)) {
+            if (!controller_ctx->send_cmdu(sd, cmdu_tx)) {
                 LOG(ERROR) << "Error sending cmdu message";
             }
         }
@@ -1356,7 +1356,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         if (!response) {
             LOG(ERROR) << "Failed building message cACTION_BML_WIFI_CREDENTIALS_CLEAR_RESPONSE ! ";
         } else {
-            if (!master_thread_ctx->send_cmdu(sd, cmdu_tx)) {
+            if (!controller_ctx->send_cmdu(sd, cmdu_tx)) {
                 LOG(ERROR) << "Error sending cmdu message";
             }
         }
@@ -1385,7 +1385,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             LOG(ERROR) << "Failed building message cACTION_BML_WIFI_CREDENTIALS_UPDATE_RESPONSE ! ";
         } else {
             response->error_code() = ret;
-            if (!master_thread_ctx->send_cmdu(sd, cmdu_tx)) {
+            if (!controller_ctx->send_cmdu(sd, cmdu_tx)) {
                 LOG(ERROR) << "Error sending cmdu message";
             }
         }
@@ -1441,7 +1441,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             LOG(ERROR)
                 << "Failed building message cACTION_BML_GET_VAP_LIST_CREDENTIALS_RESPONSE ! ";
         } else {
-            if (!master_thread_ctx->send_cmdu(sd, cmdu_tx)) {
+            if (!controller_ctx->send_cmdu(sd, cmdu_tx)) {
                 LOG(ERROR) << "Error sending cmdu message";
             }
         }
@@ -1494,7 +1494,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         }
 
         response->result() = result;
-        if (!master_thread_ctx->send_cmdu(sd, cmdu_tx)) {
+        if (!controller_ctx->send_cmdu(sd, cmdu_tx)) {
             LOG(ERROR) << "Error sending get vaps list response message";
         }
         break;
@@ -1647,7 +1647,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             }
             response->result()             = false;
             response->device_data().al_mac = bml_request->al_mac();
-            master_thread_ctx->send_cmdu(sd, cmdu_tx);
+            controller_ctx->send_cmdu(sd, cmdu_tx);
             return;
         }
 
@@ -1744,7 +1744,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         }
         response->op_error_code() = uint8_t(op_error_code);
         //send response to bml
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_BML_CHANNEL_SCAN_GET_CONTINUOUS_PARAMS_REQUEST: {
@@ -1773,7 +1773,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         std::copy(channel_pool.begin(), channel_pool.end(), response->params().channel_pool);
         response->params().channel_pool_size = channel_pool.size();
         LOG(DEBUG) << "request radio_mac:" << radio_mac;
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_BML_CHANNEL_SCAN_SET_CONTINUOUS_ENABLE_REQUEST: {
@@ -1814,7 +1814,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
                              (void *)&new_event);
         }
         //send response to bml
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_BML_CHANNEL_SCAN_GET_CONTINUOUS_ENABLE_REQUEST: {
@@ -1841,7 +1841,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         response->isEnable() = (database.get_channel_scan_is_enabled(radio_mac)) ? 1 : 0;
 
         //send response to bml
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_BML_CHANNEL_SCAN_GET_RESULTS_REQUEST: {
@@ -1893,7 +1893,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             return res_msg;
         };
         auto send_results_response =
-            [&master_thread_ctx, &sd, &cmdu_tx](
+            [&controller_ctx, &sd, &cmdu_tx](
                 std::shared_ptr<beerocks_message::cACTION_BML_CHANNEL_SCAN_GET_RESULTS_RESPONSE>
                     &res_msg,
                 const eChannelScanStatusCode result_status,
@@ -1901,7 +1901,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
                 res_msg->result_status() = uint8_t(result_status);
                 res_msg->op_error_code() = uint8_t(op_error_code);
                 res_msg->last()          = (is_last) ? 1 : 0;
-                master_thread_ctx->send_cmdu(sd, cmdu_tx);
+                controller_ctx->send_cmdu(sd, cmdu_tx);
             };
 
         // If there was an error before, send the results with a failed status
@@ -1984,7 +1984,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         if (single_scan_in_progress) {
             LOG(ERROR) << "Single scan is still running!";
             response->op_error_code() = uint8_t(eChannelScanOperationCode::SCAN_IN_PROGRESS);
-            master_thread_ctx->send_cmdu(sd, cmdu_tx);
+            controller_ctx->send_cmdu(sd, cmdu_tx);
             break;
         }
 
@@ -2000,7 +2000,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             LOG(ERROR) << "set_channel_scan_dwell_time_msec failed";
             response->op_error_code() =
                 uint8_t(eChannelScanOperationCode::INVALID_PARAMS_DWELLTIME);
-            master_thread_ctx->send_cmdu(sd, cmdu_tx);
+            controller_ctx->send_cmdu(sd, cmdu_tx);
             break;
         }
 
@@ -2009,14 +2009,14 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
                 LOG(ERROR) << "set_channel_scan_pool failed";
                 response->op_error_code() =
                     uint8_t(eChannelScanOperationCode::INVALID_PARAMS_CHANNELPOOL);
-                master_thread_ctx->send_cmdu(sd, cmdu_tx);
+                controller_ctx->send_cmdu(sd, cmdu_tx);
                 break;
             }
         if (!database.set_channel_scan_pool(radio_mac, channel_pool_set, true)) {
             LOG(ERROR) << "set_channel_scan_pool failed";
             response->op_error_code() =
                 uint8_t(eChannelScanOperationCode::INVALID_PARAMS_CHANNELPOOL);
-            master_thread_ctx->send_cmdu(sd, cmdu_tx);
+            controller_ctx->send_cmdu(sd, cmdu_tx);
             break;
         }
 
@@ -2024,7 +2024,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         if (!database.clear_channel_scan_results(radio_mac, true)) {
             LOG(ERROR) << "failed to clear scan results";
             response->op_error_code() = uint8_t(eChannelScanOperationCode::ERROR);
-            master_thread_ctx->send_cmdu(sd, cmdu_tx);
+            controller_ctx->send_cmdu(sd, cmdu_tx);
             break;
         }
 
@@ -2035,7 +2035,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
                          (int)dynamic_channel_selection_task::eEvent::TRIGGER_SINGLE_SCAN,
                          (void *)&new_event);
         response->op_error_code() = uint8_t(eChannelScanOperationCode::SUCCESS);
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_BML_CHANNEL_SCAN_DUMP_RESULTS_REQUEST: {
@@ -2064,7 +2064,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         auto send_response = [&](bool result) {
             //TODO: replace all BML_CLIENT requests to use boolean: (0=failure, 1-=success)
             response->result() = (result) ? 0 : 1;
-            if (!master_thread_ctx->send_cmdu(sd, cmdu_tx)) {
+            if (!controller_ctx->send_cmdu(sd, cmdu_tx)) {
                 LOG(ERROR) << "Error sending get client list response message";
             }
         };
@@ -2121,7 +2121,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
 
         auto send_response = [&](bool result) -> bool {
             response->result() = (result) ? 0 : 1;
-            return master_thread_ctx->send_cmdu(sd, cmdu_tx);
+            return controller_ctx->send_cmdu(sd, cmdu_tx);
         };
 
         // If none of the parameters is configured - return error.
@@ -2226,7 +2226,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         if (!database.has_node(client_mac)) {
             LOG(DEBUG) << "Requested client " << client_mac << " is not listed in the DB";
             response->result() = 1; //Fail.
-            master_thread_ctx->send_cmdu(sd, cmdu_tx);
+            controller_ctx->send_cmdu(sd, cmdu_tx);
             break;
         }
 
@@ -2236,7 +2236,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             LOG(DEBUG) << "Requested client " << client_mac
                        << " doesn't have a valid timestamp listed in the DB";
             response->result() = 1; //Fail.
-            master_thread_ctx->send_cmdu(sd, cmdu_tx);
+            controller_ctx->send_cmdu(sd, cmdu_tx);
             break;
         }
 
@@ -2266,7 +2266,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         response->client().single_band = PARAMETER_NOT_CONFIGURED;
 
         response->result() = 0; //Success.
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_BML_CLIENT_CLEAR_CLIENT_REQUEST: {
@@ -2289,7 +2289,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         auto mac = request->sta_mac();
 
         response->result() = database.clear_client_persistent_db(mac) ? 0 : 1;
-        if (!master_thread_ctx->send_cmdu(sd, cmdu_tx)) {
+        if (!controller_ctx->send_cmdu(sd, cmdu_tx)) {
             LOG(ERROR) << "Error sending clear client response message for mac= " << mac;
         }
         break;

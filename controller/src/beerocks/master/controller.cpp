@@ -6,7 +6,7 @@
  * See LICENSE file for more details.
  */
 
-#include "son_master_thread.h"
+#include "controller.h"
 #include "periodic/persistent_data_commit_operation.h"
 #include "periodic/persistent_database_aging.h"
 #include "son_actions.h"
@@ -83,12 +83,12 @@ constexpr auto tasks_timer_period = std::chrono::milliseconds(50);
  */
 constexpr auto operations_timer_period = std::chrono::milliseconds(1000);
 
-master_thread::master_thread(
-    db &database_, std::shared_ptr<beerocks::btl::BrokerClientFactory> broker_client_factory,
-    std::unique_ptr<beerocks::UccServer> ucc_server,
-    std::unique_ptr<beerocks::CmduServer> cmdu_server,
-    std::shared_ptr<beerocks::TimerManager> timer_manager,
-    std::shared_ptr<beerocks::EventLoop> event_loop)
+Controller::Controller(db &database_,
+                       std::shared_ptr<beerocks::btl::BrokerClientFactory> broker_client_factory,
+                       std::unique_ptr<beerocks::UccServer> ucc_server,
+                       std::unique_ptr<beerocks::CmduServer> cmdu_server,
+                       std::shared_ptr<beerocks::TimerManager> timer_manager,
+                       std::shared_ptr<beerocks::EventLoop> event_loop)
     : cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer)),
       cert_cmdu_tx(m_cert_tx_buffer, sizeof(m_cert_tx_buffer)), database(database_),
       m_controller_ucc_listener(database_, cert_cmdu_tx, std::move(ucc_server)),
@@ -100,7 +100,7 @@ master_thread::master_thread(
     LOG_IF(!m_timer_manager, FATAL) << "Timer manager is a null pointer!";
     LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
 
-    database.set_master_thread_ctx(this);
+    database.set_controller_ctx(this);
 
 #ifndef BEEROCKS_LINUX
     LOG_IF(!tasks.add_task(std::make_shared<statistics_polling_task>(database, cmdu_tx, tasks)),
@@ -133,7 +133,7 @@ master_thread::master_thread(
     });
 }
 
-master_thread::~master_thread()
+Controller::~Controller()
 {
     m_cmdu_server->clear_client_connected_handler();
     m_cmdu_server->clear_client_disconnected_handler();
@@ -142,7 +142,7 @@ master_thread::~master_thread()
     LOG(DEBUG) << "closing";
 }
 
-bool master_thread::start()
+bool Controller::start()
 {
     // In case of error in one of the steps of this method, we have to undo all the previous steps
     // (like when rolling back a database transaction, where either all steps get executed or none
@@ -273,7 +273,7 @@ bool master_thread::start()
     return true;
 }
 
-bool master_thread::stop()
+bool Controller::stop()
 {
     bool ok = true;
 
@@ -296,13 +296,13 @@ bool master_thread::stop()
     return ok;
 }
 
-bool master_thread::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
+bool Controller::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
 {
     return m_cmdu_server->send_cmdu(fd, cmdu_tx);
 }
 
-bool master_thread::send_cmdu_to_broker(ieee1905_1::CmduMessageTx &cmdu_tx, const sMacAddr &dst_mac,
-                                        const sMacAddr &src_mac, const std::string &iface_name)
+bool Controller::send_cmdu_to_broker(ieee1905_1::CmduMessageTx &cmdu_tx, const sMacAddr &dst_mac,
+                                     const sMacAddr &src_mac, const std::string &iface_name)
 {
     if (!m_broker_client) {
         LOG(ERROR) << "Unable to send CMDU to broker server";
@@ -317,9 +317,9 @@ bool master_thread::send_cmdu_to_broker(ieee1905_1::CmduMessageTx &cmdu_tx, cons
     return m_broker_client->send_cmdu(cmdu_tx, dst_mac, src_mac, iface_index);
 }
 
-void master_thread::handle_connected(int fd) { LOG(INFO) << "UDS socket connected, fd = " << fd; }
+void Controller::handle_connected(int fd) { LOG(INFO) << "UDS socket connected, fd = " << fd; }
 
-void master_thread::handle_disconnected(int fd)
+void Controller::handle_disconnected(int fd)
 {
     LOG(INFO) << "UDS socket disconnected, fd = " << fd;
 
@@ -339,8 +339,8 @@ void master_thread::handle_disconnected(int fd)
 #endif
 }
 
-bool master_thread::handle_cmdu(int fd, uint32_t iface_index, const sMacAddr &dst_mac,
-                                const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
+bool Controller::handle_cmdu(int fd, uint32_t iface_index, const sMacAddr &dst_mac,
+                             const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     bool vendor_specific = false;
 
@@ -376,9 +376,9 @@ bool master_thread::handle_cmdu(int fd, uint32_t iface_index, const sMacAddr &ds
     return true;
 }
 
-bool master_thread::handle_cmdu_from_broker(uint32_t iface_index, const sMacAddr &dst_mac,
-                                            const sMacAddr &src_mac,
-                                            ieee1905_1::CmduMessageRx &cmdu_rx)
+bool Controller::handle_cmdu_from_broker(uint32_t iface_index, const sMacAddr &dst_mac,
+                                         const sMacAddr &src_mac,
+                                         ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     if (src_mac == beerocks::net::network_utils::ZERO_MAC) {
         LOG(ERROR) << "src_mac is zero!";
@@ -406,8 +406,8 @@ bool master_thread::handle_cmdu_from_broker(uint32_t iface_index, const sMacAddr
                        src_mac, cmdu_rx);
 }
 
-bool master_thread::handle_cmdu_1905_1_message(const std::string &src_mac,
-                                               ieee1905_1::CmduMessageRx &cmdu_rx)
+bool Controller::handle_cmdu_1905_1_message(const std::string &src_mac,
+                                            ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     switch (cmdu_rx.getMessageType()) {
     case ieee1905_1::eMessageType::ACK_MESSAGE:
@@ -458,8 +458,8 @@ bool master_thread::handle_cmdu_1905_1_message(const std::string &src_mac,
     return true;
 }
 
-bool master_thread::handle_cmdu_1905_autoconfiguration_search(const std::string &src_mac,
-                                                              ieee1905_1::CmduMessageRx &cmdu_rx)
+bool Controller::handle_cmdu_1905_autoconfiguration_search(const std::string &src_mac,
+                                                           ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     LOG(DEBUG) << "Received AP_AUTOCONFIGURATION_SEARCH_MESSAGE";
 
@@ -621,10 +621,10 @@ bool master_thread::handle_cmdu_1905_autoconfiguration_search(const std::string 
  * @return true on success
  * @return false on failure
  */
-bool master_thread::autoconfig_wsc_add_m2_encrypted_settings(WSC::m2::config &m2_cfg,
-                                                             WSC::configData &config_data,
-                                                             uint8_t authkey[32],
-                                                             uint8_t keywrapkey[16])
+bool Controller::autoconfig_wsc_add_m2_encrypted_settings(WSC::m2::config &m2_cfg,
+                                                          WSC::configData &config_data,
+                                                          uint8_t authkey[32],
+                                                          uint8_t keywrapkey[16])
 {
     // Step 1 - prepare the plaintext: [config_data | keywrapauth]:
     // We use the config_data buffer as the plaintext buffer for encryption.
@@ -675,9 +675,9 @@ bool master_thread::autoconfig_wsc_add_m2_encrypted_settings(WSC::m2::config &m2
  * @return true on success
  * @return false on failure
  */
-void master_thread::autoconfig_wsc_calculate_keys(WSC::m1 &m1, WSC::m2::config &m2,
-                                                  const mapf::encryption::diffie_hellman &dh,
-                                                  uint8_t authkey[32], uint8_t keywrapkey[16])
+void Controller::autoconfig_wsc_calculate_keys(WSC::m1 &m1, WSC::m2::config &m2,
+                                               const mapf::encryption::diffie_hellman &dh,
+                                               uint8_t authkey[32], uint8_t keywrapkey[16])
 {
     std::copy_n(m1.enrollee_nonce(), WSC::eWscLengths::WSC_NONCE_LENGTH, m2.enrollee_nonce);
     std::copy_n(dh.nonce(), dh.nonce_length(), m2.registrar_nonce);
@@ -699,7 +699,7 @@ void master_thread::autoconfig_wsc_calculate_keys(WSC::m1 &m1, WSC::m2::config &
  * @return true on success
  * @return false on failure
  */
-bool master_thread::autoconfig_wsc_authentication(WSC::m1 &m1, WSC::m2 &m2, uint8_t authkey[32])
+bool Controller::autoconfig_wsc_authentication(WSC::m1 &m1, WSC::m2 &m2, uint8_t authkey[32])
 {
     // Authentication on Full M1 || M2* (without the authenticator attribute)
     // This is the content of M1 and M2, without the type and length.
@@ -740,8 +740,8 @@ bool master_thread::autoconfig_wsc_authentication(WSC::m1 &m1, WSC::m2 &m2, uint
  * @return true on success
  * @return false on failure
  */
-bool master_thread::autoconfig_wsc_add_m2(WSC::m1 &m1,
-                                          const wireless_utils::sBssInfoConf *bss_info_conf)
+bool Controller::autoconfig_wsc_add_m2(WSC::m1 &m1,
+                                       const wireless_utils::sBssInfoConf *bss_info_conf)
 {
     auto tlv = cmdu_tx.addClass<ieee1905_1::tlvWsc>();
     if (!tlv) {
@@ -866,8 +866,8 @@ bool master_thread::autoconfig_wsc_add_m2(WSC::m1 &m1,
  * @return true on success
  * @return false on failure
  */
-bool master_thread::handle_cmdu_1905_autoconfiguration_WSC(const std::string &src_mac,
-                                                           ieee1905_1::CmduMessageRx &cmdu_rx)
+bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const std::string &src_mac,
+                                                        ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     LOG(DEBUG) << "Received AP_AUTOCONFIGURATION_WSC_MESSAGE";
     auto tlvWsc = cmdu_rx.getClass<ieee1905_1::tlvWsc>();
@@ -997,8 +997,8 @@ bool master_thread::handle_cmdu_1905_autoconfiguration_WSC(const std::string &sr
     return true;
 }
 
-bool master_thread::handle_cmdu_1905_channel_preference_report(const std::string &src_mac,
-                                                               ieee1905_1::CmduMessageRx &cmdu_rx)
+bool Controller::handle_cmdu_1905_channel_preference_report(const std::string &src_mac,
+                                                            ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto mid = cmdu_rx.getMessageId();
     LOG(INFO) << "Received CHANNEL_PREFERENCE_REPORT_MESSAGE, mid=" << std::dec << int(mid);
@@ -1139,8 +1139,8 @@ bool master_thread::handle_cmdu_1905_channel_preference_report(const std::string
     return true; // cert_cmdu_tx will be sent when triggered to by the UCC application
 }
 
-bool master_thread::handle_cmdu_1905_ack_message(const std::string &src_mac,
-                                                 ieee1905_1::CmduMessageRx &cmdu_rx)
+bool Controller::handle_cmdu_1905_ack_message(const std::string &src_mac,
+                                              ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto mid = cmdu_rx.getMessageId();
 
@@ -1160,8 +1160,8 @@ bool master_thread::handle_cmdu_1905_ack_message(const std::string &src_mac,
     return true;
 }
 
-bool master_thread::handle_cmdu_1905_steering_completed_message(const std::string &src_mac,
-                                                                ieee1905_1::CmduMessageRx &cmdu_rx)
+bool Controller::handle_cmdu_1905_steering_completed_message(const std::string &src_mac,
+                                                             ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto mid = cmdu_rx.getMessageId();
     LOG(INFO) << "Received STEERING_COMPLETED_MESSAGE, mid=" << std::hex << int(mid);
@@ -1176,7 +1176,7 @@ bool master_thread::handle_cmdu_1905_steering_completed_message(const std::strin
     return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 }
 
-bool master_thread::handle_cmdu_1905_client_capability_report_message(
+bool Controller::handle_cmdu_1905_client_capability_report_message(
     const std::string &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto mid                          = cmdu_rx.getMessageId();
@@ -1213,7 +1213,7 @@ bool master_thread::handle_cmdu_1905_client_capability_report_message(
     return true;
 }
 
-bool master_thread::handle_cmdu_1905_client_steering_btm_report_message(
+bool Controller::handle_cmdu_1905_client_steering_btm_report_message(
     const std::string &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto mid = cmdu_rx.getMessageId();
@@ -1258,8 +1258,8 @@ bool master_thread::handle_cmdu_1905_client_steering_btm_report_message(
     return true;
 }
 
-bool master_thread::handle_cmdu_1905_channel_selection_response(const std::string &src_mac,
-                                                                ieee1905_1::CmduMessageRx &cmdu_rx)
+bool Controller::handle_cmdu_1905_channel_selection_response(const std::string &src_mac,
+                                                             ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto mid = cmdu_rx.getMessageId();
     LOG(INFO) << "Received CHANNEL_SELECTION_RESPONSE_MESSAGE, mid=" << std::dec << int(mid);
@@ -1364,8 +1364,8 @@ print_ap_metric_map(std::unordered_map<sMacAddr, son::node::ap_metrics_data> &ap
     }
 }
 
-bool master_thread::handle_cmdu_1905_link_metric_response(const std::string &src_mac,
-                                                          ieee1905_1::CmduMessageRx &cmdu_rx)
+bool Controller::handle_cmdu_1905_link_metric_response(const std::string &src_mac,
+                                                       ieee1905_1::CmduMessageRx &cmdu_rx)
 {
 
     auto mid = cmdu_rx.getMessageId();
@@ -1451,7 +1451,7 @@ bool master_thread::handle_cmdu_1905_link_metric_response(const std::string &src
     return true;
 }
 
-bool master_thread::construct_combined_infra_metric()
+bool Controller::construct_combined_infra_metric()
 {
     auto &link_metric_data = database.get_link_metric_data_map();
 
@@ -1545,8 +1545,8 @@ bool master_thread::construct_combined_infra_metric()
     return true;
 }
 
-bool master_thread::handle_cmdu_1905_ap_metric_response(const std::string &src_mac,
-                                                        ieee1905_1::CmduMessageRx &cmdu_rx)
+bool Controller::handle_cmdu_1905_ap_metric_response(const std::string &src_mac,
+                                                     ieee1905_1::CmduMessageRx &cmdu_rx)
 {
 
     auto mid = cmdu_rx.getMessageId();
@@ -1584,8 +1584,8 @@ bool master_thread::handle_cmdu_1905_ap_metric_response(const std::string &src_m
     return true;
 }
 
-bool master_thread::handle_cmdu_1905_ap_capability_report(const std::string &src_mac,
-                                                          ieee1905_1::CmduMessageRx &cmdu_rx)
+bool Controller::handle_cmdu_1905_ap_capability_report(const std::string &src_mac,
+                                                       ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto mid = cmdu_rx.getMessageId();
     LOG(INFO) << "Received AP_CAPABILITY_REPORT_MESSAGE, mid=" << std::dec << int(mid);
@@ -1624,8 +1624,8 @@ bool master_thread::handle_cmdu_1905_ap_capability_report(const std::string &src
     return all_radio_capabilities_saved_successfully;
 }
 
-bool master_thread::handle_cmdu_1905_operating_channel_report(const std::string &src_mac,
-                                                              ieee1905_1::CmduMessageRx &cmdu_rx)
+bool Controller::handle_cmdu_1905_operating_channel_report(const std::string &src_mac,
+                                                           ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto mid = cmdu_rx.getMessageId();
     LOG(INFO) << "Received OPERATING_CHANNEL_REPORT_MESSAGE, mid=" << std::dec << int(mid);
@@ -1673,8 +1673,8 @@ bool master_thread::handle_cmdu_1905_operating_channel_report(const std::string 
     return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 }
 
-bool master_thread::handle_cmdu_1905_higher_layer_data_message(const std::string &src_mac,
-                                                               ieee1905_1::CmduMessageRx &cmdu_rx)
+bool Controller::handle_cmdu_1905_higher_layer_data_message(const std::string &src_mac,
+                                                            ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     const auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Received HIGHER_LAYER_DATA_MESSAGE , mid=" << std::hex << int(mid);
@@ -1700,8 +1700,8 @@ bool master_thread::handle_cmdu_1905_higher_layer_data_message(const std::string
     return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 }
 
-bool master_thread::handle_cmdu_1905_topology_notification(const std::string &src_mac,
-                                                           ieee1905_1::CmduMessageRx &cmdu_rx)
+bool Controller::handle_cmdu_1905_topology_notification(const std::string &src_mac,
+                                                        ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Received TOPOLOGY_NOTIFICATION_MESSAGE, from " << src_mac << ", mid=" << std::hex
@@ -1827,8 +1827,8 @@ bool master_thread::handle_cmdu_1905_topology_notification(const std::string &sr
     return true;
 }
 
-bool master_thread::handle_cmdu_1905_topology_response(const std::string &src_mac,
-                                                       ieee1905_1::CmduMessageRx &cmdu_rx)
+bool Controller::handle_cmdu_1905_topology_response(const std::string &src_mac,
+                                                    ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Received TOPOLOGY_RESPONSE_MESSAGE from " << src_mac << ", mid=" << std::hex
@@ -1985,8 +1985,8 @@ bool master_thread::handle_cmdu_1905_topology_response(const std::string &src_ma
     return true;
 }
 
-bool master_thread::handle_cmdu_1905_backhaul_sta_steering_response(
-    const std::string &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
+bool Controller::handle_cmdu_1905_backhaul_sta_steering_response(const std::string &src_mac,
+                                                                 ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Received BACKHAUL_STA_STEERING_MESSAGE from " << src_mac << ", mid=" << std::hex
@@ -2023,8 +2023,8 @@ bool master_thread::handle_cmdu_1905_backhaul_sta_steering_response(
     return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 }
 
-bool master_thread::handle_cmdu_1905_tunnelled_message(const std::string &src_mac,
-                                                       ieee1905_1::CmduMessageRx &cmdu_rx)
+bool Controller::handle_cmdu_1905_tunnelled_message(const std::string &src_mac,
+                                                    ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Received Tunnelled Message from " << src_mac << ", mid=" << std::hex << mid;
@@ -2058,15 +2058,15 @@ bool master_thread::handle_cmdu_1905_tunnelled_message(const std::string &src_ma
     return true;
 }
 
-bool master_thread::handle_cmdu_1905_failed_connection_message(const std::string &src_mac,
-                                                               ieee1905_1::CmduMessageRx &cmdu_rx)
+bool Controller::handle_cmdu_1905_failed_connection_message(const std::string &src_mac,
+                                                            ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     LOG(DEBUG) << "Recieved Failed Connection Message for STA";
     return true;
 }
 
-bool master_thread::handle_cmdu_1905_beacon_response(const std::string &src_mac,
-                                                     ieee1905_1::CmduMessageRx &cmdu_rx)
+bool Controller::handle_cmdu_1905_beacon_response(const std::string &src_mac,
+                                                  ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     // here we need to extract and keep the data received from the STA
     // but currently we'll just print that we are here
@@ -2075,7 +2075,7 @@ bool master_thread::handle_cmdu_1905_beacon_response(const std::string &src_mac,
     return true;
 }
 
-bool master_thread::handle_intel_slave_join(
+bool Controller::handle_intel_slave_join(
     const std::string &src_mac, std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps,
     beerocks::beerocks_header &beerocks_header, ieee1905_1::CmduMessageTx &cmdu_tx)
 {
@@ -2560,7 +2560,7 @@ bool master_thread::handle_intel_slave_join(
  * @return true on success
  * @return false on failure
  */
-bool master_thread::autoconfig_wsc_parse_radio_caps(
+bool Controller::autoconfig_wsc_parse_radio_caps(
     std::string radio_mac, std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps)
 {
     // read all operating class list
@@ -2610,7 +2610,7 @@ bool master_thread::autoconfig_wsc_parse_radio_caps(
     return true;
 }
 
-bool master_thread::handle_non_intel_slave_join(
+bool Controller::handle_non_intel_slave_join(
     const std::string &src_mac, std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps,
     WSC::m1 &m1, std::string bridge_mac, std::string radio_mac, ieee1905_1::CmduMessageTx &cmdu_tx)
 {
@@ -2744,7 +2744,7 @@ bool master_thread::handle_non_intel_slave_join(
     return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 }
 
-bool master_thread::handle_cmdu_control_message(
+bool Controller::handle_cmdu_control_message(
     const std::string &src_mac, std::shared_ptr<beerocks::beerocks_header> beerocks_header)
 {
     std::string hostap_mac = tlvf::mac_to_string(beerocks_header->actionhdr()->radio_mac());

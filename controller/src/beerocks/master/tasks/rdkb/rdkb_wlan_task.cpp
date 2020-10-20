@@ -931,14 +931,14 @@ void rdkb_wlan_task::remove_bml_rdkb_wlan_socket(int sd)
 void rdkb_wlan_task::send_bml_event_to_listeners(ieee1905_1::CmduMessageTx &cmdu_tx,
                                                  const std::vector<int> &bml_listeners)
 {
-    auto master_thread_ctx = database.get_master_thread_ctx();
-    if (!master_thread_ctx) {
-        LOG(ERROR) << "master_thread_context == nullptr";
+    auto controller_ctx = database.get_controller_ctx();
+    if (!controller_ctx) {
+        LOG(ERROR) << "controller_ctx == nullptr";
         return;
     }
 
     for (int fd : bml_listeners) {
-        master_thread_ctx->send_cmdu(fd, cmdu_tx);
+        controller_ctx->send_cmdu(fd, cmdu_tx);
     }
 }
 
@@ -1029,9 +1029,9 @@ rdkb_wlan_task::steering_group_fill_ap_configuration(steering_set_group_request_
 
 void rdkb_wlan_task::send_bml_response(int event, int sd, int32_t ret)
 {
-    auto master_thread_ctx = database.get_master_thread_ctx();
-    if (!master_thread_ctx) {
-        LOG(ERROR) << "master_thread_context == nullptr";
+    auto controller_ctx = database.get_controller_ctx();
+    if (!controller_ctx) {
+        LOG(ERROR) << "controller_ctx == nullptr";
         return;
     }
 
@@ -1050,7 +1050,7 @@ void rdkb_wlan_task::send_bml_response(int event, int sd, int32_t ret)
         response->error_code() = ret;
 
         //send response to bml
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
         break;
     }
     case STEERING_SET_GROUP_RESPONSE: {
@@ -1065,7 +1065,7 @@ void rdkb_wlan_task::send_bml_response(int event, int sd, int32_t ret)
         response->error_code() = ret;
 
         //send response to bml
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
         break;
     }
     case STEERING_CLIENT_SET_RESPONSE: {
@@ -1080,7 +1080,7 @@ void rdkb_wlan_task::send_bml_response(int event, int sd, int32_t ret)
         response->error_code() = ret;
 
         //send response to bml
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
         break;
     }
     case STEERING_CLIENT_DISCONNECT_RESPONSE: {
@@ -1096,7 +1096,7 @@ void rdkb_wlan_task::send_bml_response(int event, int sd, int32_t ret)
         response->error_code() = ret;
 
         //send response to bml
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
         break;
     }
     case STEERING_RSSI_MEASUREMENT_RESPONSE: {
@@ -1111,7 +1111,7 @@ void rdkb_wlan_task::send_bml_response(int event, int sd, int32_t ret)
         response->error_code() = ret;
 
         //send response to bml
-        master_thread_ctx->send_cmdu(sd, cmdu_tx);
+        controller_ctx->send_cmdu(sd, cmdu_tx);
         break;
     }
     default: {

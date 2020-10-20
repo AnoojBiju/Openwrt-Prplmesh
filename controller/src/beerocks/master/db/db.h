@@ -35,8 +35,8 @@ using namespace beerocks_message;
 
 namespace son {
 
-// Forward decleration for master_thread context saving
-class master_thread;
+// Forward declaration for Controller context saving
+class Controller;
 
 class db {
 
@@ -1176,10 +1176,10 @@ public:
     void set_prplmesh(const sMacAddr &mac);
 
     //
-    // master_thread context
+    // Controller context
     //
-    void set_master_thread_ctx(master_thread *ctx) { m_master_thread_ctx = ctx; }
-    master_thread *get_master_thread_ctx() { return m_master_thread_ctx; }
+    void set_controller_ctx(Controller *ctx) { m_controller_ctx = ctx; }
+    Controller *get_controller_ctx() { return m_controller_ctx; }
 
     const std::string &get_local_bridge_mac() { return m_local_bridge_mac; }
 
@@ -1386,7 +1386,7 @@ private:
     std::shared_ptr<uint8_t> certification_tx_buffer;
     std::unordered_map<sMacAddr, std::list<wireless_utils::sBssInfoConf>> bss_infos; // key=al_mac
 
-    master_thread *m_master_thread_ctx = nullptr;
+    Controller *m_controller_ctx = nullptr;
     const std::string m_local_bridge_mac;
 
     int m_persistent_db_clients_count = 0;

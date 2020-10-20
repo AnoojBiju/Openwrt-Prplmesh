@@ -28,8 +28,8 @@
 
 #include <easylogging++.h>
 
+#include "controller.h"
 #include "db/db.h"
-#include "son_master_thread.h"
 
 #ifdef ENABLE_NBAPI
 #include "ambiorix_impl.h"
@@ -568,8 +568,8 @@ int main(int argc, char *argv[])
         broker_uds_path, message_parser, message_serializer, event_loop);
     LOG_IF(!broker_client_factory, FATAL) << "Unable to create broker client factory!";
 
-    son::master_thread son_master(master_db, broker_client_factory, std::move(ucc_server),
-                                  std::move(cmdu_server), timer_manager, event_loop);
+    son::Controller controller(master_db, broker_client_factory, std::move(ucc_server),
+                               std::move(cmdu_server), timer_manager, event_loop);
 
     if (!amb_dm_obj->set("Controller.Network", "TimeStamp",
                          amb_dm_obj->get_datamodel_time_format())) {
@@ -577,7 +577,7 @@ int main(int argc, char *argv[])
         return false;
     }
 
-    LOG_IF(!son_master.start(), FATAL) << "Unable to start controller!";
+    LOG_IF(!controller.start(), FATAL) << "Unable to start controller!";
 
     auto touch_time_stamp_timeout = std::chrono::steady_clock::now();
     while (g_running) {
@@ -602,7 +602,7 @@ int main(int argc, char *argv[])
 
     s_pLogger = nullptr;
 
-    son_master.stop();
+    controller.stop();
 
     return 0;
 }

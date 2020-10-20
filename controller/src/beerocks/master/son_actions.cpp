@@ -24,7 +24,7 @@
 #include <beerocks/tlvf/beerocks_message_cli.h>
 #include <tlvf/wfa_map/tlvClientAssociationControlRequest.h>
 
-#include "son_master_thread.h"
+#include "controller.h"
 
 using namespace beerocks;
 using namespace net;
@@ -215,9 +215,9 @@ void son_actions::disconnect_client(db &database, ieee1905_1::CmduMessageTx &cmd
 void son_actions::send_cli_debug_message(db &database, ieee1905_1::CmduMessageTx &cmdu_tx,
                                          std::stringstream &ss)
 {
-    auto master_thread_ctx = database.get_master_thread_ctx();
-    if (!master_thread_ctx) {
-        LOG(ERROR) << "master_thread_context == nullptr";
+    auto controller_ctx = database.get_controller_ctx();
+    if (!controller_ctx) {
+        LOG(ERROR) << "controller_ctx == nullptr";
         return;
     }
 
@@ -251,7 +251,7 @@ void son_actions::send_cli_debug_message(db &database, ieee1905_1::CmduMessageTx
     for (int idx = 0;; idx++) {
         int fd = database.get_cli_socket_at(idx);
         if (beerocks::net::FileDescriptor::invalid_descriptor != fd) {
-            master_thread_ctx->send_cmdu(fd, cmdu_tx);
+            controller_ctx->send_cmdu(fd, cmdu_tx);
         } else {
             break;
         }
@@ -448,13 +448,13 @@ bool son_actions::send_cmdu_to_agent(const std::string &dest_mac,
         beerocks_header->actionhdr()->direction() = beerocks::BEEROCKS_DIRECTION_AGENT;
     }
 
-    auto master_thread_ctx = database.get_master_thread_ctx();
-    if (master_thread_ctx == nullptr) {
-        LOG(ERROR) << "master_thread_context == nullptr";
+    auto controller_ctx = database.get_controller_ctx();
+    if (controller_ctx == nullptr) {
+        LOG(ERROR) << "controller_ctx == nullptr";
         return false;
     }
 
-    return master_thread_ctx->send_cmdu_to_broker(
+    return controller_ctx->send_cmdu_to_broker(
         cmdu_tx, tlvf::mac_from_string(dest_mac),
         tlvf::mac_from_string(database.get_local_bridge_mac()));
 }

@@ -6,8 +6,8 @@
  * See LICENSE file for more details.
  */
 
-#ifndef _SON_MASTER_THREAD_H
-#define _SON_MASTER_THREAD_H
+#ifndef _CONTROLLER_H
+#define _CONTROLLER_H
 
 #include "controller_ucc_listener.h"
 #include "db/db.h"
@@ -43,16 +43,16 @@
 #include <stdint.h>
 
 namespace son {
-class master_thread {
+class Controller {
 
 public:
-    master_thread(db &database_,
-                  std::shared_ptr<beerocks::btl::BrokerClientFactory> broker_client_factory,
-                  std::unique_ptr<beerocks::UccServer> ucc_server,
-                  std::unique_ptr<beerocks::CmduServer> cmdu_server,
-                  std::shared_ptr<beerocks::TimerManager> timer_manager,
-                  std::shared_ptr<beerocks::EventLoop> event_loop);
-    ~master_thread();
+    Controller(db &database_,
+               std::shared_ptr<beerocks::btl::BrokerClientFactory> broker_client_factory,
+               std::unique_ptr<beerocks::UccServer> ucc_server,
+               std::unique_ptr<beerocks::CmduServer> cmdu_server,
+               std::shared_ptr<beerocks::TimerManager> timer_manager,
+               std::shared_ptr<beerocks::EventLoop> event_loop);
+    ~Controller();
 
     /**
      * @brief Starts controller.

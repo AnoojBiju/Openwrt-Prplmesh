@@ -18,7 +18,7 @@
 
 #include <bml_defs.h>
 
-#include "../son_master_thread.h"
+#include "../controller.h"
 
 #include <unordered_set>
 
@@ -29,9 +29,9 @@ using namespace son;
 void network_map::send_bml_network_map_message(db &database, int fd,
                                                ieee1905_1::CmduMessageTx &cmdu_tx, uint16_t id)
 {
-    auto master_thread_ctx = database.get_master_thread_ctx();
-    if (!master_thread_ctx) {
-        LOG(ERROR) << "master_thread_context == nullptr";
+    auto controller_ctx = database.get_controller_ctx();
+    if (!controller_ctx) {
+        LOG(ERROR) << "controller_ctx == nullptr";
         return;
     }
 
@@ -111,7 +111,7 @@ void network_map::send_bml_network_map_message(db &database, int fd,
                 LOG(ERROR) << "node size is bigger than buffer size";
                 return;
             } else if (node_len > size_left) {
-                master_thread_ctx->send_cmdu(fd, cmdu_tx);
+                controller_ctx->send_cmdu(fd, cmdu_tx);
 
                 get_next_node = false;
                 response =
@@ -149,7 +149,7 @@ void network_map::send_bml_network_map_message(db &database, int fd,
     }
 
     beerocks_header->actionhdr()->last() = 1;
-    master_thread_ctx->send_cmdu(fd, cmdu_tx);
+    controller_ctx->send_cmdu(fd, cmdu_tx);
     //LOG(DEBUG) << "sending message, last=1";
 }
 
@@ -466,14 +466,14 @@ void network_map::send_bml_nodes_statistics_message_to_listeners(
 void network_map::send_bml_event_to_listeners(db &database, ieee1905_1::CmduMessageTx &cmdu_tx,
                                               const std::vector<int> &bml_listeners)
 {
-    auto master_thread_ctx = database.get_master_thread_ctx();
-    if (!master_thread_ctx) {
-        LOG(ERROR) << "master_thread_context == nullptr";
+    auto controller_ctx = database.get_controller_ctx();
+    if (!controller_ctx) {
+        LOG(ERROR) << "controller_ctx == nullptr";
         return;
     }
 
     for (int fd : bml_listeners) {
-        master_thread_ctx->send_cmdu(fd, cmdu_tx);
+        controller_ctx->send_cmdu(fd, cmdu_tx);
     }
 }
 

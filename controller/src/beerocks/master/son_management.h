@@ -9,7 +9,7 @@
 #ifndef _SON_MANAGEMENT_H_
 #define _SON_MANAGEMENT_H_
 
-#include "son_master_thread.h"
+#include "controller.h"
 
 namespace son {
 
