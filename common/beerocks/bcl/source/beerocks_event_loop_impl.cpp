@@ -169,7 +169,8 @@ int EventLoopImpl::run()
             continue;
         }
 
-        const auto &handlers = it->second;
+        // Copy by value because it will be destroyed by remove_handlers below.
+        auto handlers = it->second;
 
         // Handle errors
         if (events[i].events & EPOLLERR) {
