@@ -16,8 +16,11 @@ MAP-4.2.1:axepoint:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.1:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train"'
+      when: on_success
     - when: manual
       allow_failure: true
+  retry: 2
 
 MAP-4.2.3_ETH_FH24G:axepoint:
   extends: .certification:axepoint
