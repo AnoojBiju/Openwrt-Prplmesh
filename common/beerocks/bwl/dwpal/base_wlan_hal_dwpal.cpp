@@ -517,7 +517,8 @@ bool base_wlan_hal_dwpal::dwpal_send_cmd(const std::string &cmd, int vap_id)
         result = dwpal_hostap_cmd_send(m_dwpal_ctx[ctx_index], cmd.c_str(), NULL, buffer,
                                        &buff_size_copy);
         if (result != 0) {
-            LOG(DEBUG) << "Failed to send cmd to DWPAL: " << cmd << " --> Retry";
+            LOG(DEBUG) << "Failed to send cmd to DWPAL: " << cmd << " ctx_index=" << ctx_index
+                       << " --> Retry";
         }
     } while (result != 0 && ++try_cnt < 3);
 
@@ -869,6 +870,45 @@ bool base_wlan_hal_dwpal::refresh_radio_info()
             }
         }
     }
+
+    // Read Radio status
+    const char *tmp_str;
+    parsed_line_t status_reply;
+
+    std::string cmd = "STATUS";
+
+    if (!dwpal_send_cmd(cmd, status_reply)) {
+        LOG(ERROR) << __func__ << " failed";
+        return false;
+    }
+
+    // RSSI
+    if (!read_param("state", status_reply, &tmp_str)) {
+        LOG(ERROR) << "Failed reading 'state' parameter!";
+        return false;
+    }
+
+    m_radio_info.radio_enabled = (strcmp(tmp_str, "ENABLED") == 0);
+    // // clang-format off
+    // const static std::unordered_map<std::string, eRadioState> string_eRadioState = {
+    //     { "UNINITIALIZED",  eRadioState::UNINITIALIZED  },
+    //     { "DISABLED",       eRadioState::DISABLED       },
+    //     { "COUNTRY_UPDATE", eRadioState::COUNTRY_UPDATE },
+    //     { "ACS",            eRadioState::ACS            },
+    //     { "ACS_DONE",       eRadioState::ACS_DONE       },
+    //     { "HT_SCAN",        eRadioState::HT_SCAN        },
+    //     { "DFS",            eRadioState::DFS            },
+    //     { "ENABLED",        eRadioState::ENABLED        },
+    //     { "UNKNOWN",        eRadioState::UNKNOWN        },
+    // };
+    // // clang-format on
+    // auto state_it              = string_eRadioState.find(tmp_str);
+    // m_radio_info.radio_enabled = false;
+    // if (state_it != string_eRadioState.end()) {
+    //     m_radio_info.radio_enabled = (state_it->second == eRadioState::ENABLED);
+    //     LOG_IF(m_radio_info.radio_state != eRadioState::ENABLED, DEBUG)
+    //         << "Radio state=" << m_radio_info.radio_state;
+    // }
 
     return true;
 }
