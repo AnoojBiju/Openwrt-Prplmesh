@@ -497,6 +497,7 @@ bool ap_wlan_hal_nl80211::update_vap_credentials(
                 conf.set_create_vap_value(vap, "wps_state", bss_it->fronthaul ? "2" : "");
                 conf.set_create_vap_value(vap, "wps_independent", "0");
                 conf.set_create_vap_value(vap, "max_num_sta", bss_it->backhaul ? "1" : "");
+                conf.set_create_vap_value(vap, "multi_ap", bss_it->backhaul ? "1" : "2");
 
                 // oddly enough, multi_ap_backhaul_wpa_passphrase has to be
                 // quoted, while wpa_passphrase does not...
