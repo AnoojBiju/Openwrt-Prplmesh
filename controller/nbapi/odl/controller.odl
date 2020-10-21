@@ -61,7 +61,7 @@
         /* Coming from 17.2.10 of the Multi-AP Specification */
         object HECapabilities {
             /* Supported HE MCS indicating set of supported HE Tx and Rx MCS. */
-            %read-only object supported_MCS[12] {
+            object supported_MCS[] {
                 counted with supported_MCS_size;
                 %read-only uint32 MCS;   /* Individual MCS */
             }

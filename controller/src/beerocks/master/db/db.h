@@ -16,6 +16,7 @@
 #include <bcl/network/network_utils.h>
 #include <bcl/son/son_wireless_utils.h>
 
+#include <tlvf/wfa_map/tlvApHeCapabilities.h>
 #include <tlvf/wfa_map/tlvApHtCapabilities.h>
 #include <tlvf/wfa_map/tlvApRadioBasicCapabilities.h>
 
@@ -444,6 +445,19 @@ public:
     //
     // Capabilities
     //
+
+    /**
+     * @brief Add optional sub-object of AP HE Capabilities data element,
+     * set values for its parameters.
+     * Example of full path to object:
+     * "Controller.Netwok.Device.1.Radio.1.Capabilities.HECapabilities"
+     * 
+     * @param he_caps_tlv TLV with AP HE Capabilities included in 
+     * 'AP Capability Report' message
+     * @return True if sub-object was successfully added
+     * and values for its parameters set, false otherwise.
+     */
+    bool set_ap_he_capabilities(wfa_map::tlvApHeCapabilities &he_caps_tlv);
 
     /**
      * @brief add 'HTCapabilities' data element, set values to its parametrs.

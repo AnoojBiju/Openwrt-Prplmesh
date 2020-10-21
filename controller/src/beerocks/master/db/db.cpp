@@ -1268,6 +1268,96 @@ bool db::dm_add_ap_operating_classes(const std::string &radio_mac, uint8_t max_t
     return return_value;
 }
 
+bool db::set_ap_he_capabilities(wfa_map::tlvApHeCapabilities &he_caps_tlv)
+{
+    auto radio_node = get_node(he_caps_tlv.radio_uid());
+
+    if (!radio_node) {
+        LOG(ERROR) << "Fail get radio node, mac:" << he_caps_tlv.radio_uid();
+        return false;
+    }
+
+    auto path_to_obj = dm_get_path_to_radio(*radio_node);
+    auto flags1      = he_caps_tlv.flags1();
+    auto flags2      = he_caps_tlv.flags2();
+    bool return_val  = true;
+
+    if (path_to_obj.empty()) {
+        LOG(ERROR) << "Fail get path to object";
+        return false;
+    }
+
+    path_to_obj += "Capabilities";
+    if (!m_ambiorix_datamodel->add_optional_subobject(path_to_obj, "HECapabilities")) {
+        LOG(WARNING) << "Couldn't add object " << path_to_obj << ".HECapabilities";
+        return false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "HE_8080_MHz", (bool)flags1.he_support_80_80mhz)) {
+        LOG(WARNING) << "Couldn't set HE_8080_MHz for object" << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "HE_160_MHz", (bool)flags1.he_support_160mhz)) {
+        LOG(WARNING) << "Couldn't set HE_160_MHz for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "SU_Beamformer",
+                                   (bool)flags2.su_beamformer_capable)) {
+        LOG(WARNING) << "Couldn't set SU_beamformer for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "MU_Beamformer",
+                                   (bool)flags2.mu_beamformer_capable)) {
+        LOG(WARNING) << "Couldn't set MU_Beamformer for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "UL_MU_MIMO", (bool)flags2.ul_mu_mimo_capable)) {
+        LOG(WARNING) << "Couldn't set UL_MU_MIMO for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "UL_MU_MIMO_OFDMA",
+                                   (bool)flags2.ul_mu_mimo_and_ofdm_capable)) {
+        LOG(WARNING) << "Couldn't set UL_MU_MIMO_OFDMA for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "DL_MU_MIMO_OFDMA",
+                                   (bool)flags2.dl_mu_mimo_and_ofdm_capable)) {
+        LOG(WARNING) << "Couldn't set DL_MU_MIMO_OFDMA for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "UL_OFDMA", (bool)flags2.ul_ofdm_capable)) {
+        LOG(WARNING) << "Couldn't set UL_OFDMA for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "tx_spatial_streams",
+                                   flags1.max_num_of_supported_tx_spatial_streams + 1)) {
+        LOG(WARNING) << "Couldn't set tx_spatial_streams for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "rx_spatial_streams",
+                                   flags1.max_num_of_supported_rx_spatial_streams + 1)) {
+        LOG(WARNING) << "Couldn't set rx_spatial_streams for object " << path_to_obj;
+        return_val = false;
+    }
+
+    uint8_t supported_he_mcs_length = he_caps_tlv.supported_he_mcs_length();
+    path_to_obj += ".supported_MCS";
+    for (int i = 0; i < supported_he_mcs_length; i++) {
+        uint32_t index = m_ambiorix_datamodel->add_instance(path_to_obj);
+        if (!index) {
+            LOG(ERROR) << "Failed to add " << path_to_obj;
+            return_val = false;
+            continue;
+        }
+        if (!m_ambiorix_datamodel->set(path_to_obj + "." + std::to_string(index),
+                                       "supported_MCS_size", he_caps_tlv.supported_he_mcs(i))) {
+            LOG(WARNING) << "Failed to set " << path_to_obj + "." + std::to_string(index)
+                         << ".supported_MCS_size to " << he_caps_tlv.supported_he_mcs(i);
+            return_val = false;
+        }
+    }
+    return return_val;
+}
+
 const beerocks::message::sRadioCapabilities *
 db::get_station_current_capabilities(const std::string &mac)
 {
