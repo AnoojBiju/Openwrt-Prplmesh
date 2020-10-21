@@ -2667,7 +2667,13 @@ bool db::set_client_time_life_delay(const sMacAddr &mac,
         return false;
     }
 
-    LOG(DEBUG) << "time_life_delay_minutes = " << time_life_delay_minutes.count();
+    // if the time_life_delay_minutes is configured it wont't age, otherwise
+    // it'll behave as is.
+    if (time_life_delay_minutes == std::chrono::minutes::zero()) {
+        LOG(DEBUG) << "time_life_delay_minutes is set to prevent the client from aging";
+    } else {
+        LOG(DEBUG) << "time_life_delay_minutes = " << time_life_delay_minutes.count();
+    }
 
     auto timestamp = std::chrono::system_clock::now();
     if (save_to_persistent_db) {
@@ -2950,7 +2956,7 @@ bool db::clear_client_persistent_db(const sMacAddr &mac)
     LOG(DEBUG) << "setting client " << mac << " runtime info to default values";
 
     node->client_parameters_last_edit    = std::chrono::system_clock::time_point::min();
-    node->client_time_life_delay_minutes = std::chrono::minutes::zero();
+    node->client_time_life_delay_minutes = std::chrono::minutes(-1);
     node->client_stay_on_initial_radio   = eTriStateBool::NOT_CONFIGURED;
     node->client_initial_radio           = network_utils::ZERO_MAC;
     node->client_selected_bands          = PARAMETER_NOT_CONFIGURED;
@@ -3022,12 +3028,9 @@ bool db::update_client_persistent_db(const sMacAddr &mac)
     //fill values map of client persistent params
     values_map[TIMESTAMP_STR] = timestamp_to_string_seconds(node->client_parameters_last_edit);
 
-    if (node->client_time_life_delay_minutes != std::chrono::minutes::zero()) {
-        LOG(DEBUG) << "Setting client time-life-delay in persistent-db to "
-                   << node->client_time_life_delay_minutes.count() << " for " << mac;
-        values_map[TIMELIFE_DELAY_STR] =
-            std::to_string(node->client_time_life_delay_minutes.count());
-    }
+    LOG(DEBUG) << "Setting client time-life-delay in persistent-db to "
+               << node->client_time_life_delay_minutes.count() << " for " << mac;
+    values_map[TIMELIFE_DELAY_STR] = std::to_string(node->client_time_life_delay_minutes.count());
 
     if (node->client_stay_on_initial_radio != eTriStateBool::NOT_CONFIGURED) {
         auto enable = (node->client_stay_on_initial_radio == eTriStateBool::TRUE);
@@ -3136,6 +3139,38 @@ bool db::load_persistent_db_clients()
             std::begin(vector_of_clients), std::end(vector_of_clients),
             [&](const std::pair<std::string, std::unordered_map<std::string, std::string>> &a,
                 const std::pair<std::string, std::unordered_map<std::string, std::string>> &b) {
+                auto get_timestamp_sec =
+                    [](const std::pair<std::string, std::unordered_map<std::string, std::string>>
+                           &client) {
+                        auto timestamp_it = client.second.find(TIMESTAMP_STR);
+                        if (timestamp_it == client.second.end())
+                            return -1;
+
+                        // Save current time as a separate variable for fair comparison of current client
+                        auto timestamp_sec = beerocks::string_utils::stoi(timestamp_it->second);
+                        auto timestamp     = db::timestamp_from_seconds(timestamp_sec);
+
+                        return static_cast<int>(timestamp.time_since_epoch().count());
+                    };
+                auto get_is_aging =
+                    [](const std::pair<std::string, std::unordered_map<std::string, std::string>>
+                           &client) {
+                        auto timelife_delay_it = client.second.find(TIMELIFE_DELAY_STR);
+                        if (timelife_delay_it == client.second.end())
+                            return -1;
+
+                        return static_cast<int>(string_utils::stoi(timelife_delay_it->second));
+                    };
+
+                // If both clients have time_life_delay_minutes set to not aging, evaluate
+                // them by their timestamp.
+                if (get_is_aging(a) == 0 && get_is_aging(b) == 0)
+                    return (get_timestamp_sec(a) > get_timestamp_sec(b));
+                else if (get_is_aging(a) == 0)
+                    return true;
+                else if (get_is_aging(b) == 0)
+                    return false;
+
                 return (get_client_remaining_sec(a) > get_client_remaining_sec(b));
             });
 
@@ -4721,7 +4756,7 @@ sMacAddr db::get_candidate_client_for_removal(sMacAddr client_to_skip)
 
             // Client timelife delay
             auto timelife_delay =
-                (client->client_time_life_delay_minutes != std::chrono::seconds::zero())
+                (client->client_time_life_delay_minutes != std::chrono::seconds(-1))
                     ? std::chrono::seconds(client->client_time_life_delay_minutes)
                     : max_timelife_delay;
             // Calculate client expiry due time
