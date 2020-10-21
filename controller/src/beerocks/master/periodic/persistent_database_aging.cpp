@@ -32,22 +32,36 @@ void persistent_database_aging_operation::periodic_operation_function()
                 std::chrono::seconds(m_database.config.max_timelife_delay_minutes * 60);
             const auto unfriendly_device_max_timelife_delay_sec = std::chrono::seconds(
                 m_database.config.unfriendly_device_max_timelife_delay_minutes * 60);
+            auto timelife_delay_seconds =
+                (m_database.get_client_is_unfriendly(client_mac) == eTriStateBool::TRUE)
+                    ? unfriendly_device_max_timelife_delay_sec
+                    : max_timelife_delay_sec;
+
+            // Calculate client expiry due time
+            auto parameters_last_edit = m_database.get_client_parameters_last_edit(client_mac);
+            auto expiry_due           = parameters_last_edit + timelife_delay_seconds;
+
             // Client timelife delay
             // If a client has a predetermined timelife delay use that.
             // Otherwise use the Max timelife delay/unfriendly_device_max_timelife_delay_sec according
             // to the client's unfriendliness status.
-            auto timelife_delay = std::chrono::duration_cast<std::chrono::seconds>(
-                m_database.get_client_time_life_delay(client_mac));
-            if (timelife_delay == std::chrono::seconds::zero()) {
-                timelife_delay =
-                    (m_database.get_client_is_unfriendly(client_mac) == eTriStateBool::TRUE)
-                        ? unfriendly_device_max_timelife_delay_sec
-                        : max_timelife_delay_sec;
-            }
+            if ((m_database.get_client_time_life_delay(client_mac) ==
+                 std::chrono::minutes::zero()) &&
+                (expiry_due < last_aging_check)) {
 
-            // Calculate client expiry due time
-            auto parameters_last_edit = m_database.get_client_parameters_last_edit(client_mac);
-            auto expiry_due           = parameters_last_edit + timelife_delay;
+                OPERATION_LOG(TRACE) << "option c:iry_due" << int(expiry_due < last_aging_check);
+                return false;
+            } else if (m_database.get_client_time_life_delay(client_mac) >
+                       std::chrono::minutes::zero()) {
+                timelife_delay_seconds =
+                    std::chrono::seconds(m_database.get_client_time_life_delay(client_mac) * 60);
+
+                expiry_due = parameters_last_edit + timelife_delay_seconds;
+
+                OPERATION_LOG(TRACE) << "option b:iry_due" << int(expiry_due < last_aging_check);
+            }
+            OPERATION_LOG(TRACE) << "option c:iry_due" << int(expiry_due < last_aging_check);
+
             // If the expiry due is less then the last aging check, the client is considered aged.
             return expiry_due < last_aging_check;
         });
