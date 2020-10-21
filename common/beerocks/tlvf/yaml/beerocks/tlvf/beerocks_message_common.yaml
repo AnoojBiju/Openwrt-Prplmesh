@@ -970,6 +970,15 @@ sClientConfig:
   selected_bands:
     _type: int8_t
     _comment: Bitset of selected bands supported by the client according to eClientSelectedBands
+  time_life_delay_minutes:
+    _type: int8_t
+    _value: -1
+    _comment: |
+      Optional parameter,
+      Determines the period of time after which the client configuration should be cleared,
+      0 - Never age.
+      -1 - Not Configured.
+      >0 - Hardcoded timelife cap
 
 sClient:
   _type: struct
