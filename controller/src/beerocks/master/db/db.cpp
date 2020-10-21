@@ -3417,6 +3417,7 @@ bool db::is_bml_listener_exist()
 //
 // Measurements
 //
+
 bool db::set_node_beacon_measurement(const std::string &sta_mac, std::string ap_mac, int8_t rcpi,
                                      uint8_t rsni)
 {
@@ -4853,6 +4854,37 @@ bool db::dm_set_device_id(const std::string &device_mac, uint32_t device_index)
     return true;
 }
 
+bool db::dm_set_device_multi_ap_capabilities(const std::string &device_mac)
+{
+    auto device_node        = get_node(device_mac);
+    std::string path_to_obj = dm_get_path_to_device(*device_node);
+    bool return_val         = true;
+
+    if (path_to_obj.empty()) {
+        LOG(ERROR) << "Failed find path to the device with mac: " << device_mac;
+        return false;
+    }
+
+    path_to_obj += "MultiAPCapabilities";
+    //For the time being, agent does not do steering so Steering Policy TLV is ignored.
+    if (!m_ambiorix_datamodel->set(path_to_obj, "AgentInitiatedRCPIBasedSteering", false)) {
+        LOG(ERROR) << "Failed to set value for: " << path_to_obj
+                   << "AgentInitiatedRCPIBasedSteering";
+        return_val = false;
+    }
+    // USTALinkMatricCurrentlyOn not supported for now (PPM-172)
+    if (!m_ambiorix_datamodel->set(path_to_obj, "USTALinkMatricCurrentlyOn", false)) {
+        LOG(ERROR) << "Failed to set value for: " << path_to_obj << "USTALinkMatricCurrentlyOn";
+        return_val = false;
+    }
+    // USTALinkMatricCurrentlyOff not supported for now (PPM-172)
+    if (!m_ambiorix_datamodel->set(path_to_obj, "USTALinkMatricCurrentlyOff", false)) {
+        LOG(ERROR) << "Failed to set value for: " << path_to_obj << "USTALinkMatricCurrentlyOff";
+        return_val = false;
+    }
+    return return_val;
+}
+
 bool db::dm_add_device_element(const sMacAddr &mac)
 {
     auto index = m_ambiorix_datamodel->get_instance_index("Network.Device.[ID == '%s'].",
@@ -4865,6 +4897,11 @@ bool db::dm_add_device_element(const sMacAddr &mac)
     }
 
     if (!dm_set_device_id(tlvf::mac_to_string(mac), index)) {
+        return false;
+    }
+
+    if (!dm_set_device_multi_ap_capabilities(tlvf::mac_to_string(mac))) {
+        LOG(ERROR) << "Failed to set multi ap capabilities";
         return false;
     }
     return true;
