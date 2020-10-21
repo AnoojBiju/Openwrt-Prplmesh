@@ -2667,8 +2667,6 @@ bool db::set_client_time_life_delay(const sMacAddr &mac,
         return false;
     }
 
-    LOG(DEBUG) << "time_life_delay_minutes = " << time_life_delay_minutes.count();
-
     auto timestamp = std::chrono::system_clock::now();
     if (save_to_persistent_db) {
         // if persistent db is disabled
@@ -2950,7 +2948,7 @@ bool db::clear_client_persistent_db(const sMacAddr &mac)
     LOG(DEBUG) << "setting client " << mac << " runtime info to default values";
 
     node->client_parameters_last_edit    = std::chrono::system_clock::time_point::min();
-    node->client_time_life_delay_minutes = std::chrono::minutes::zero();
+    node->client_time_life_delay_minutes = std::chrono::minutes(PARAMETER_NOT_CONFIGURED);
     node->client_stay_on_initial_radio   = eTriStateBool::NOT_CONFIGURED;
     node->client_initial_radio           = network_utils::ZERO_MAC;
     node->client_selected_bands          = PARAMETER_NOT_CONFIGURED;
@@ -3022,12 +3020,9 @@ bool db::update_client_persistent_db(const sMacAddr &mac)
     //fill values map of client persistent params
     values_map[TIMESTAMP_STR] = timestamp_to_string_seconds(node->client_parameters_last_edit);
 
-    if (node->client_time_life_delay_minutes != std::chrono::minutes::zero()) {
-        LOG(DEBUG) << "Setting client time-life-delay in persistent-db to "
-                   << node->client_time_life_delay_minutes.count() << " for " << mac;
-        values_map[TIMELIFE_DELAY_STR] =
-            std::to_string(node->client_time_life_delay_minutes.count());
-    }
+    LOG(DEBUG) << "Setting client time-life-delay in persistent-db to "
+               << node->client_time_life_delay_minutes.count() << " for " << mac;
+    values_map[TIMELIFE_DELAY_STR] = std::to_string(node->client_time_life_delay_minutes.count());
 
     if (node->client_stay_on_initial_radio != eTriStateBool::NOT_CONFIGURED) {
         auto enable = (node->client_stay_on_initial_radio == eTriStateBool::TRUE);
@@ -3128,24 +3123,49 @@ bool db::load_persistent_db_clients()
     unsigned int diff = 0;
     // If DB is too big, we need to delete those who're close to the end of their lifespan
     if (vector_of_clients.size() > static_cast<unsigned int>(config.clients_persistent_db_max_size))
-        diff = vector_of_clients.size() -
-               static_cast<unsigned int>(config.clients_persistent_db_max_size);
+        diff = static_cast<unsigned int>(config.clients_persistent_db_max_size) -
+               vector_of_clients.size();
 
     if (diff > 0) {
         std::sort(
             std::begin(vector_of_clients), std::end(vector_of_clients),
             [&](const std::pair<std::string, std::unordered_map<std::string, std::string>> &a,
-                const std::pair<std::string, std::unordered_map<std::string, std::string>> &b) {
+                const decltype(a) &b) {
+                auto get_timestamp_sec = [](const decltype(a) &client) {
+                    auto timestamp_it = client.second.find(TIMESTAMP_STR);
+                    if (timestamp_it == client.second.end())
+                        return std::chrono::system_clock::now();
+
+                    // Save current time as a separate variable for fair comparison of current client
+                    int64_t timestamp_sec = beerocks::string_utils::stoi(timestamp_it->second);
+                    auto timestamp        = db::timestamp_from_seconds(timestamp_sec);
+
+                    return timestamp;
+                };
+                auto get_is_aging =
+                    [&](const std::pair<std::string, std::unordered_map<std::string, std::string>>
+                            &client) -> bool {
+                    auto timelife_delay_itr = client.second.find(TIMELIFE_DELAY_STR);
+                    if (timelife_delay_itr != client.second.end()) {
+                        if (beerocks::string_utils::stoi(timelife_delay_itr->second) == 0) {
+                            return true;
+                        }
+                    }
+
+                    return false;
+                };
+
+                // If both clients have time_life_delay_minutes set to not aging, evaluate
+                // them by their timestamp.
+                if (get_is_aging(a) && get_is_aging(b))
+                    return (get_timestamp_sec(a) > get_timestamp_sec(b));
+                else if (get_is_aging(a))
+                    return true;
+                else if (get_is_aging(b))
+                    return false;
+
                 return (get_client_remaining_sec(a) > get_client_remaining_sec(b));
             });
-
-        // erase diff and reduce the size of the vector and on persistent DB
-        std::for_each(vector_of_clients.end(), vector_of_clients.end() - diff,
-                      [](const std::pair<std::string, std::unordered_map<std::string, std::string>>
-                             &client_pair) {
-                          bpl::db_remove_entry(type_to_string(beerocks::eType::TYPE_CLIENT),
-                                               client_pair.first);
-                      });
 
         vector_of_clients.erase(vector_of_clients.end() - diff);
     }
@@ -4720,10 +4740,11 @@ sMacAddr db::get_candidate_client_for_removal(sMacAddr client_to_skip)
                                           : max_timelife_delay_sec;
 
             // Client timelife delay
-            auto timelife_delay =
-                (client->client_time_life_delay_minutes != std::chrono::seconds::zero())
-                    ? std::chrono::seconds(client->client_time_life_delay_minutes)
-                    : max_timelife_delay;
+            auto timelife_delay = (client->client_time_life_delay_minutes !=
+                                   std::chrono::seconds(beerocks::PARAMETER_NOT_CONFIGURED))
+                                      ? std::chrono::seconds(client->client_time_life_delay_minutes)
+                                      : max_timelife_delay;
+
             // Calculate client expiry due time
             auto current_client_expiry_due = client->client_parameters_last_edit + timelife_delay;
 
@@ -4788,7 +4809,7 @@ uint64_t db::get_client_remaining_sec(const std::pair<std::string, ValuesMap> &c
 
     auto timestamp_it = client.second.find(TIMESTAMP_STR);
     if (timestamp_it == client.second.end())
-        return -1;
+        return 0;
 
     // Save current time as a separate variable for fair comparison of current client
     auto now           = std::chrono::system_clock::now();
