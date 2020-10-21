@@ -38,7 +38,10 @@ void persistent_database_aging_operation::periodic_operation_function()
             // to the client's unfriendliness status.
             auto timelife_delay = std::chrono::duration_cast<std::chrono::seconds>(
                 m_database.get_client_time_life_delay(client_mac));
+
             if (timelife_delay == std::chrono::seconds::zero()) {
+                return false;
+            } else if (timelife_delay == std::chrono::seconds(-1)) {
                 timelife_delay =
                     (m_database.get_client_is_unfriendly(client_mac) == eTriStateBool::TRUE)
                         ? unfriendly_device_max_timelife_delay_sec
