@@ -35,6 +35,7 @@
 #include <tlvf/WSC/m2.h>
 #include <tlvf/ieee_1905_1/tlvWsc.h>
 #include <tlvf/wfa_map/tlvApRadioBasicCapabilities.h>
+#include <tlvf/wfa_map/tlvApVhtCapabilities.h>
 
 #include <btl/btl.h>
 
@@ -211,6 +212,15 @@ private:
      * @return True on success, false otherwise.
     */
     bool handle_tlv_ap_he_capabilities(ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Get info from 'AP VHT Capabilities' TLV,
+     * set data to AP VHTCapabilities data element.
+     * 
+     * @param cmdu_rx AP Capability Report message.
+     * @return True on success, false otherwise.
+    */
+    bool handle_tlv_ap_vht_capabilities(ieee1905_1::CmduMessageRx &cmdu_rx);
 
     // Autoconfig encryption support
     bool autoconfig_wsc_add_m2(WSC::m1 &m1, const wireless_utils::sBssInfoConf *bss_info_conf);

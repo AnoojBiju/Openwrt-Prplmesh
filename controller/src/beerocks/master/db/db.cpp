@@ -1214,6 +1214,81 @@ std::list<sMacAddr> db::get_1905_1_neighbors(const sMacAddr &al_mac)
 // Capabilities
 //
 
+bool db::set_ap_vht_capabilities(wfa_map::tlvApVhtCapabilities &vht_caps_tlv)
+{
+    auto radio_node = get_node(vht_caps_tlv.radio_uid());
+    auto flags1     = vht_caps_tlv.flags1();
+    auto flags2     = vht_caps_tlv.flags2();
+    bool return_val = true;
+
+    if (!radio_node) {
+        LOG(ERROR) << "Fail get radio node with mac: " << vht_caps_tlv.radio_uid();
+        return false;
+    }
+
+    auto path_to_obj = dm_get_path_to_radio(*radio_node);
+    if (path_to_obj.empty()) {
+        LOG(ERROR) << "Fail get path to object";
+        return false;
+    }
+
+    path_to_obj += "Capabilities";
+    if (!m_ambiorix_datamodel->add_optional_subobject(path_to_obj, "VHTCapabilities")) {
+        LOG(ERROR) << "Fail add: " << path_to_obj << ".VHTCapabilities";
+        return false;
+    }
+    path_to_obj += ".VHTCapabilities";
+    if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_Tx_MCS",
+                                   vht_caps_tlv.supported_vht_tx_mcs())) {
+        LOG(ERROR) << "Couldn't set VHT_Tx_MCS for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_Rx_MCS",
+                                   vht_caps_tlv.supported_vht_rx_mcs())) {
+        LOG(ERROR) << "Couldn't set VHT_Rx_MCS for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "tx_spatial_streams",
+                                   flags1.max_num_of_supported_tx_spatial_streams + 1)) {
+        LOG(ERROR) << "Couldn't set tx_spatial_streams for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "rx_spatial_streams",
+                                   flags1.max_num_of_supported_rx_spatial_streams + 1)) {
+        LOG(ERROR) << "Couldn't set rx_spatial_streams for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "GI_80_MHz", (bool)flags1.short_gi_support_80mhz)) {
+        LOG(ERROR) << "Couldn't set GI_80_MHz for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "GI_160_MHz",
+                                   (bool)flags1.short_gi_support_160mhz_and_80_80mhz)) {
+        LOG(ERROR) << "Couldn't set GI_160_MHz for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_80_80_MHz",
+                                   (bool)flags2.vht_support_80_80mhz)) {
+        LOG(ERROR) << "Couldn't set VHT_80_80_MHz for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_160_MHz", (bool)flags2.vht_support_160mhz)) {
+        LOG(ERROR) << "Couldn't set VHT_160_MHz for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "SU_beamformer",
+                                   (bool)flags2.su_beamformer_capable)) {
+        LOG(ERROR) << "Couldn't set SU_beamformer for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "MU_beamformer",
+                                   (bool)flags2.mu_beamformer_capable)) {
+        LOG(ERROR) << "Couldn't set MU_beamformer for object " << path_to_obj;
+        return_val = false;
+    }
+    return return_val;
+}
+
 bool db::dm_add_ap_operating_classes(const std::string &radio_mac, uint8_t max_tx_power,
                                      uint8_t op_class, std::vector<uint8_t> non_operable_channels)
 {
