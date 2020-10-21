@@ -8,7 +8,6 @@
 
 #include <bcl/beerocks_event_loop.h>
 #include <bcl/network/interface_state_monitor_impl.h>
-#include <bcl/network/interface_state_reader.h>
 
 #include <net/if.h>
 
