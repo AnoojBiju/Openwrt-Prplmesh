@@ -2182,6 +2182,15 @@ void son_management::handle_bml_message(Socket *sd,
             }
         }
 
+        // Set max Timelife_delay_min hardcoded value if requested.
+        std::chrono::minutes time_life_delay_minutes =
+            std::chrono::minutes(request->client_config().time_life_delay_minutes);
+        if (!database.set_client_time_life_delay(client_mac, time_life_delay_minutes, false)) {
+            LOG(ERROR) << " Failed to set max-time-life for client " << client_mac;
+            send_response(false);
+            break;
+        }
+
         //if persistent_db is enabled, call the "update_client_persistent_db"
         if (database.config.persistent_db) {
             if (!database.update_client_persistent_db(client_mac)) {
