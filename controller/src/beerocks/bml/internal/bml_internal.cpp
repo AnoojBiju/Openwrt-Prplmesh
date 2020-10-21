@@ -2012,6 +2012,10 @@ int bml_internal::client_set_client(const sMacAddr &sta_mac, const BML_CLIENT_CO
     request->client_config().stay_on_selected_device = PARAMETER_NOT_CONFIGURED;
     request->client_config().selected_bands          = client_config.selected_bands;
 
+    // Optional parameter that can be set on demand per-client
+    // If set it would replace the alternative global constants.
+    request->client_config().time_life_delay_minutes = client_config.time_life_delay_minutes;
+
     int result = 0;
     if (send_bml_cmdu(result, request->get_action_op()) != BML_RET_OK) {
         LOG(ERROR) << "Send cACTION_BML_CLIENT_SET_CLIENT_REQUEST failed";
