@@ -1467,7 +1467,13 @@ bool master_thread::handle_cmdu_1905_ap_metric_response(const std::string &src_m
         //parse tx_ap_metric_data
         sMacAddr reporting_agent_bssid = ap_metric_tlv->bssid();
 
-        LOG(DEBUG) << "recieved tlvApMetrics from BSSID =" << reporting_agent_bssid;
+        if (!database.set_radio_utilization(reporting_agent_bssid,
+                                            ap_metric_tlv->channel_utilization())) {
+            LOG(ERROR) << "Failed to set radio utilization dor bssid: " << reporting_agent_bssid;
+            return false;
+        }
+
+        LOG(DEBUG) << "received tlvApMetrics from BSSID =" << reporting_agent_bssid;
 
         //fill tx data from TLV
         if (!ap_metric_data[reporting_agent_bssid].add_ap_metric_data(ap_metric_tlv)) {
