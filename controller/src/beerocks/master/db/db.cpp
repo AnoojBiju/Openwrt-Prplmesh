@@ -2667,7 +2667,13 @@ bool db::set_client_time_life_delay(const sMacAddr &mac,
         return false;
     }
 
-    LOG(DEBUG) << "time_life_delay_minutes = " << time_life_delay_minutes.count();
+    // if the time_life_delay_minutes is configured it wont't age, otherwise
+    // it'll behave as is.
+    if (time_life_delay_minutes == std::chrono::minutes::zero()) {
+        LOG(DEBUG) << "time_life_delay_minutes is set to prevent the client from aging";
+    } else {
+        LOG(DEBUG) << "time_life_delay_minutes = " << time_life_delay_minutes.count();
+    }
 
     auto timestamp = std::chrono::system_clock::now();
     if (save_to_persistent_db) {
@@ -3022,12 +3028,9 @@ bool db::update_client_persistent_db(const sMacAddr &mac)
     //fill values map of client persistent params
     values_map[TIMESTAMP_STR] = timestamp_to_string_seconds(node->client_parameters_last_edit);
 
-    if (node->client_time_life_delay_minutes != std::chrono::minutes::zero()) {
-        LOG(DEBUG) << "Setting client time-life-delay in persistent-db to "
-                   << node->client_time_life_delay_minutes.count() << " for " << mac;
-        values_map[TIMELIFE_DELAY_STR] =
-            std::to_string(node->client_time_life_delay_minutes.count());
-    }
+    LOG(DEBUG) << "Setting client time-life-delay in persistent-db to "
+               << node->client_time_life_delay_minutes.count() << " for " << mac;
+    values_map[TIMELIFE_DELAY_STR] = std::to_string(node->client_time_life_delay_minutes.count());
 
     if (node->client_stay_on_initial_radio != eTriStateBool::NOT_CONFIGURED) {
         auto enable = (node->client_stay_on_initial_radio == eTriStateBool::TRUE);
