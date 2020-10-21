@@ -23,7 +23,7 @@ using ::testing::StrictMock;
  * In this test, no state-changed event has occurred yet so interface state is obtained with an
  * explicit read through the interface state reader.
  */
-TEST(interface_state_manager_impl, read_state_should_succeed_before_event)
+TEST(InterfaceStateManagerImpl, read_state_should_succeed_before_event)
 {
     auto monitor = std::make_unique<StrictMock<beerocks::net::InterfaceStateMonitorMock>>();
     auto reader  = std::make_unique<StrictMock<beerocks::net::InterfaceStateReaderMock>>();
@@ -49,7 +49,7 @@ TEST(interface_state_manager_impl, read_state_should_succeed_before_event)
  * This test demonstrates that state is cached and only one explicit read is performed through the
  * interface state reader no matter how many times it is queried.
  */
-TEST(interface_state_manager_impl, read_state_should_succeed_after_read)
+TEST(InterfaceStateManagerImpl, read_state_should_succeed_after_read)
 {
     auto monitor = std::make_unique<StrictMock<beerocks::net::InterfaceStateMonitorMock>>();
     auto reader  = std::make_unique<StrictMock<beerocks::net::InterfaceStateReaderMock>>();
@@ -78,7 +78,7 @@ TEST(interface_state_manager_impl, read_state_should_succeed_after_read)
  * In this test, the interface state is obtained after a state-changed event (no explicit read
  * operation is required nor performed)
  */
-TEST(interface_state_manager_impl, read_state_should_succeed_after_event)
+TEST(InterfaceStateManagerImpl, read_state_should_succeed_after_event)
 {
     auto monitor = std::make_unique<StrictMock<beerocks::net::InterfaceStateMonitorMock>>();
     auto reader  = std::make_unique<StrictMock<beerocks::net::InterfaceStateReaderMock>>();
@@ -104,7 +104,7 @@ TEST(interface_state_manager_impl, read_state_should_succeed_after_event)
     ASSERT_NE(actual_iface_state, expected_iface_state);
 }
 
-TEST(interface_state_manager_impl, notify_state_changed_should_succeed)
+TEST(InterfaceStateManagerImpl, notify_state_changed_should_succeed)
 {
     auto monitor = std::make_unique<StrictMock<beerocks::net::InterfaceStateMonitorMock>>();
     auto reader  = std::make_unique<StrictMock<beerocks::net::InterfaceStateReaderMock>>();
