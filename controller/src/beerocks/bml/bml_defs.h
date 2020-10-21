@@ -593,9 +593,10 @@ struct BML_CLIENT_CONFIG {
     int8_t selected_bands;
 
     // Optional parameter,
-    // Determines the period of time after which the client configuration should be cleared,
+    // Determines the period of time after which the client configuration
     //   0 - Never age.
-    //  -1 - Not Configured (optional).
+    //  -1 - Not Configured.
+    //  >0 - Hardcoded timelife
     int32_t time_life_delay_minutes;
 };
 
