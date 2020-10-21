@@ -142,14 +142,24 @@ std::ostream &operator<<(std::ostream &os, const node &n)
                 std::chrono::duration_cast<std::chrono::minutes>(tCurrTime_system -
                                                                  n.client_parameters_last_edit)
                     .count();
-            auto client_time_life_delay_minutes = n.client_time_life_delay_minutes.count();
 
             os << "Persistent configuration and data:" << std::endl
                << "   ClientParametersLastEdit: " << (client_parameters_last_edit_minutes / 60)
                << " hours, " << (client_parameters_last_edit_minutes % 60) << " minutes"
                << std::endl
-               << "   ClientTimeLifeDelay: " << (client_time_life_delay_minutes / 60) << " hours, "
-               << (client_time_life_delay_minutes % 60) << " minutes" << std::endl
+               << "   ClientTimeLifeDelayMinutes: "
+               << (((n.client_time_life_delay_minutes == std::chrono::minutes(0))
+                        ? "configured"
+                        : "not configured"))
+               << std::endl
+               << (((n.client_time_life_delay_minutes == std::chrono::minutes(-1))
+                        ? (n.client_time_life_delay_minutes.count() / 60)
+                        : 0))
+               << "hours." << std::endl
+               << (((n.client_time_life_delay_minutes == std::chrono::minutes(-1))
+                        ? (n.client_time_life_delay_minutes.count() % 60)
+                        : 0))
+               << " minutes" << std::endl
                << "   ClientStayOnInitialRadio: " << n.client_stay_on_initial_radio << std::endl
                << "   ClientInitialRadio: " << n.client_initial_radio << std::endl
                << "   ClientSelectedBands: " << n.client_selected_bands << std::endl
