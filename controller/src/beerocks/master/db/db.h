@@ -1025,6 +1025,16 @@ public:
     void clear_bss_info_configuration();
     void clear_bss_info_configuration(const sMacAddr &al_mac);
 
+    /**
+     * @brief Set radio utilization value in Controler Data Model.
+     * Data model path example: "Controller.Network.Device.1.Radio.1.Utilization"
+     *
+     * @param[in] bssid BSSID for specific radio.
+     * @param[in] utilization Radio utilization value.
+     * @return true on success, otherwise false.
+     */
+    bool set_radio_utilization(const sMacAddr &bssid, uint8_t utilization);
+
     //
     // tasks
     //
