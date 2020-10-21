@@ -2253,11 +2253,8 @@ void son_management::handle_bml_message(Socket *sd,
         response->client().selected_bands =
             static_cast<eClientSelectedBands>(database.get_client_selected_bands(client_mac));
         // Timelife Delay in minutes
-        auto timelife_delay_minutes = database.get_client_time_life_delay(client_mac);
         response->client().time_life_delay_minutes =
-            (timelife_delay_minutes == std::chrono::minutes::zero())
-                ? PARAMETER_NOT_CONFIGURED
-                : timelife_delay_minutes.count();
+            static_cast<int>(database.get_client_time_life_delay(client_mac).count());
 
         // Currently not supported in DB
         // Stay on selected device
