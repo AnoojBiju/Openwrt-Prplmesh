@@ -1771,6 +1771,15 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
         return false;
     }
 
+    /*
+        Set value for SSID variable
+        Example: Controller.Network.Device.1.Radio.1.BSS.1.SSID
+    */
+    if (!m_ambiorix_datamodel->set(bss_path, "SSID", ssid)) {
+        LOG(ERROR) << "Failed to set " << bss_path << "SSID";
+        return false;
+    }
+
     auto timestamp = m_ambiorix_datamodel->get_datamodel_time_format();
     if (timestamp.empty()) {
         LOG(ERROR) << "Failed to get Date and Time in RFC 3339 format.";
