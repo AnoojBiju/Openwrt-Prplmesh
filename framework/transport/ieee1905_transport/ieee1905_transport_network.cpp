@@ -234,6 +234,15 @@ void Ieee1905Transport::handle_interface_status_change(const std::string &ifname
     }
 }
 
+void Ieee1905Transport::handle_bridge_state_change(const std::string &bridge_name,
+                                                   const std::string &iface_name, bool iface_added)
+{
+    MAPF_INFO("Bridge state change - interface '"
+              << iface_name << "' " << (iface_added ? "added to " : "removed from ") << "bridge '"
+              << bridge_name << "'.");
+    // TODO
+}
+
 void Ieee1905Transport::deactivate_interface(NetworkInterface &interface)
 {
     MAPF_INFO("interface " << interface.ifname << " is deactivated.");
