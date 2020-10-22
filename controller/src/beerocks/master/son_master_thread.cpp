@@ -1537,6 +1537,12 @@ bool master_thread::handle_cmdu_1905_operating_channel_report(const std::string 
         auto &ruid    = operating_channel_report_tlv->radio_uid();
         auto tx_power = operating_channel_report_tlv->current_transmit_power();
 
+        /*
+            Here need to remove the CurrentOperatingClass data from the Controler Data Model which was
+            set in previous OPERATING_CHANNEL_REPORT_MESSAGE.
+         */
+        database.remove_current_op_classes(ruid);
+
         LOG(INFO) << "operating channel report, ruid=" << ruid << ", tx_power=" << std::dec
                   << int(tx_power);
 
@@ -1555,6 +1561,8 @@ bool master_thread::handle_cmdu_1905_operating_channel_report(const std::string 
             auto channel                 = operating_class_struct.channel_number;
             LOG(INFO) << "operating_class=" << int(operating_class)
                       << ", operating_channel=" << int(channel);
+
+            database.add_current_op_class(ruid, operating_class, channel, tx_power);
         }
     }
 
