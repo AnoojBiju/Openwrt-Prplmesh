@@ -5,12 +5,6 @@
 # See LICENSE file for more details.
 ###############################################################
 
-.rules-for-expensive-job: &expensive-job
-  - if: '$CI_PIPELINE_SOURCE == "schedule"'
-  - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train"'
-  - when: manual
-    allow_failure: true
-
 .image-build:
   stage: containers
   tags:
@@ -49,7 +43,6 @@
       - "build/$TARGET_DEVICE/"
     expire_in: 4 weeks
     when: always
-  rules: *expensive-job
   tags:
     - shell
     - docker-build
@@ -67,7 +60,6 @@
     # Clean up the cache directory from anything that hasn't been accessed for a week.
     - find "$RDK_CACHE_DIR" -type f -atime +7 -delete
     - tools/docker/builder/rdk-b/build.sh --verbose --target-device "$TARGET_DEVICE" --tag "$CI_PIPELINE_ID" --cache "$RDK_CACHE_DIR"
-  rules: *expensive-job
   artifacts:
     paths:
       - "build/$TARGET_DEVICE/"
@@ -89,7 +81,6 @@
     - tools/deploy_firmware.py --device "$TARGET_DEVICE" --target-name "$TARGET_DEVICE_NAME" --image "$OPENWRT_IMAGE"
     - tools/deploy_ipk.sh $TARGET_DEVICE_NAME "build/$TARGET_DEVICE/"prplmesh.ipk
     - tests/openwrt/test_status.sh $TARGET_DEVICE_NAME
-  rules: *expensive-job
   artifacts:
     paths:
       - logs
