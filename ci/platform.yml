@@ -1,0 +1,62 @@
+###############################################################
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+# SPDX-FileCopyrightText: 2019-2020 the prplMesh contributors (see AUTHORS.md)
+# This code is subject to the terms of the BSD+Patent license.
+# See LICENSE file for more details.
+###############################################################
+
+include:
+  - local: "/ci/certification/turris-omnia.yml"
+  - local: "/ci/certification/turris-omnia-bhwifi.yml"
+  - local: "/ci/certification/axepoint.yml"
+  - local: "/ci/certification/axepoint-bhwifi.yml"
+
+build-for-rdkb-raspberrypi:
+  extends: .build-for-rdkb
+  variables:
+    TARGET_DEVICE: "raspberrypi"
+
+build-for-turris-omnia:
+  extends: .build-for-openwrt
+  variables:
+    TARGET_DEVICE: "turris-omnia"
+
+build-for-glinet-b1300:
+  extends: .build-for-openwrt
+  variables:
+    TARGET_DEVICE: "glinet-b1300"
+
+build-for-netgear-rax40:
+  extends: .build-for-openwrt
+  variables:
+    TARGET_DEVICE: "netgear-rax40"
+
+build-for-axepoint:
+  extends: .build-for-openwrt
+  variables:
+    TARGET_DEVICE: "axepoint"
+
+test-on-turris-omnia:
+  extends: .test-on-target
+  variables:
+    TARGET_DEVICE: turris-omnia
+    TARGET_DEVICE_NAME: turris-omnia-1
+    OPENWRT_IMAGE: openwrt-mvebu-cortexa9-cznic_turris-omnia-sysupgrade.img.gz
+  needs: ["build-for-turris-omnia"]
+
+test-on-glinet-b1300:
+  extends: .test-on-target
+  variables:
+    TARGET_DEVICE: glinet-b1300
+    TARGET_DEVICE_NAME: glinet-b1300-1
+    OPENWRT_IMAGE: openwrt-ipq40xx-generic-glinet_gl-b1300-squashfs-sysupgrade.bin
+  needs: ["build-for-glinet-b1300"]
+
+# Device is broken - temporarily turn it off.
+# test-on-netgear-rax40:
+#   extends: .test-on-target
+#   variables:
+#     TARGET_DEVICE: netgear-rax40
+#     TARGET_DEVICE_NAME: netgear-rax40-1
+#     OPENWRT_IMAGE: NETGEAR_RAX40-squashfs-fullimage.img
+#   needs: ["build-for-netgear-rax40"]
