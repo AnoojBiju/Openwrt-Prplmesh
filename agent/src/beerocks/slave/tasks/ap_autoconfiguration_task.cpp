@@ -176,6 +176,9 @@ void ApAutoConfigurationTask::handle_event(uint8_t event_enum_value, const void 
             LOG(DEBUG) << "starting discovery sequence on radio_iface=" << radio->front.iface_name;
             FSM_MOVE_STATE(radio->front.iface_name, eState::CONTROLLER_DISCOVERY);
 
+            // reset AP-Autoconfiguration task attempts counter.
+            m_state[radio->front.iface_name].attempts = 0;
+
             // Reset the discovery statuses.
             m_discovery_status[radio->freq_type] = {};
         }
