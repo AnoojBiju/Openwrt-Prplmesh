@@ -13,18 +13,14 @@ workflow:
 
 stages:
   - containers
+  - platform
   - build
   - test
   - certification-dummy
-  - certification-turris-omnia
-  - certification-turris-omnia-bhwifi
-  - certification-axepoint
-  - certification-axepoint-bhwifi
   - upload
 
 include:
   - local: "/ci/templates.yml"
-  - local: "/ci/platform.yml"
   - local: "/ci/certification/dummy.yml"
 
 .rules-for-expensive-job: &expensive-job
@@ -47,6 +43,14 @@ image-build-tests-runner:
 
 image-build-boardfarm-ci:
   extends: .image-build
+
+platform:
+  stage: platform
+  needs: []
+  rules: *expensive-job
+  trigger:
+    include: "ci/platform.yml"
+    strategy: depend
 
 dco:
   stage: build
@@ -255,7 +259,20 @@ upload-artifacts:
       when: on_success
   needs:
     - build-in-docker
-    - build-for-netgear-rax40
-    - build-for-axepoint
-    - build-for-glinet-b1300
-    - build-for-turris-omnia
+    - platform
+    - job: build-for-axepoint
+      project: $CI_PROJECT_PATH
+      ref: $CI_COMMIT_REF_NAME
+      artifacts: true
+    - job: build-for-turris-omnia
+      project: $CI_PROJECT_PATH
+      ref: $CI_COMMIT_REF_NAME
+      artifacts: true
+    - job: build-for-netgear-rax40
+      project: $CI_PROJECT_PATH
+      ref: $CI_COMMIT_REF_NAME
+      artifacts: true
+    - job: build-for-glinet-b1300
+      project: $CI_PROJECT_PATH
+      ref: $CI_COMMIT_REF_NAME
+      artifacts: true

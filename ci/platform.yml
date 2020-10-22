@@ -5,7 +5,20 @@
 # See LICENSE file for more details.
 ###############################################################
 
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
+
+stages:
+  - build
+  - test
+  - certification-turris-omnia
+  - certification-turris-omnia-bhwifi
+  - certification-axepoint
+  - certification-axepoint-bhwifi
+
 include:
+  - local: "/ci/templates.yml"
   - local: "/ci/certification/turris-omnia.yml"
   - local: "/ci/certification/turris-omnia-bhwifi.yml"
   - local: "/ci/certification/axepoint.yml"
