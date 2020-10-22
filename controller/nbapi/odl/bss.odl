@@ -8,7 +8,7 @@
  */
 
 %config {
-	define-behavior = { 
+	define-behavior = {
 		existing-object = "update"
 	};
 }
@@ -17,7 +17,7 @@
 	select Controller.Network.Device.Radio.BSS {
 
 		/* macaddress */
-		%read-only uint64 BSSID = 0;
+		%read-only string BSSID = "0";
 		%read-only string SSID = "0";
 		bool Enabled = false;
 		%read-only uint32 LastChange = 0;
