@@ -307,7 +307,6 @@ run-certification-tests-isr:
 
 include:
   - local: "/ci/templates.yml"
-  - local: "/ci/certification/generic.yml"
   - local: "/ci/certification/dummy.yml"
   - local: "/ci/certification/turris-omnia.yml"
   - local: "/ci/certification/turris-omnia-bhwifi.yml"
