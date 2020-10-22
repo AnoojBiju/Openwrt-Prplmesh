@@ -33,7 +33,7 @@ class tlvProfile2CacStatusReport : public BaseClass
         explicit tlvProfile2CacStatusReport(std::shared_ptr<BaseClass> base, bool parse = false);
         ~tlvProfile2CacStatusReport();
 
-        typedef struct sAvailableChannles {
+        typedef struct sAvailableChannels {
             uint8_t operating_class;
             uint8_t channel;
             uint16_t minutes_since_cac_completion;
@@ -42,7 +42,7 @@ class tlvProfile2CacStatusReport : public BaseClass
             }
             void struct_init(){
             }
-        } __attribute__((packed)) sAvailableChannles;
+        } __attribute__((packed)) sAvailableChannels;
         
         typedef struct sDetectedPairs {
             uint8_t operating_class_detected;
@@ -58,11 +58,8 @@ class tlvProfile2CacStatusReport : public BaseClass
         typedef struct sActiveCacPairs {
             uint8_t operating_class_active_cac;
             uint8_t channel_active_cac;
-            uint16_t countdown[3];
+            uint8_t countdown[3];
             void struct_swap(){
-                for (size_t i = 0; i < 3; i++){
-                    tlvf_swap(16, reinterpret_cast<uint8_t*>(&(countdown[i])));
-                }
             }
             void struct_init(){
             }
@@ -70,8 +67,8 @@ class tlvProfile2CacStatusReport : public BaseClass
         
         const eTlvTypeMap& type();
         const uint16_t& length();
-        uint8_t& number_of_available_channles();
-        std::tuple<bool, sAvailableChannles&> available_channels(size_t idx);
+        uint8_t& number_of_available_channels();
+        std::tuple<bool, sAvailableChannels&> available_channels(size_t idx);
         bool alloc_available_channels(size_t count = 1);
         uint8_t& number_of_detected_pairs();
         std::tuple<bool, sDetectedPairs&> detected_pairs(size_t idx);
@@ -87,8 +84,8 @@ class tlvProfile2CacStatusReport : public BaseClass
         bool init();
         eTlvTypeMap* m_type = nullptr;
         uint16_t* m_length = nullptr;
-        uint8_t* m_number_of_available_channles = nullptr;
-        sAvailableChannles* m_available_channels = nullptr;
+        uint8_t* m_number_of_available_channels = nullptr;
+        sAvailableChannels* m_available_channels = nullptr;
         size_t m_available_channels_idx__ = 0;
         int m_lock_order_counter__ = 0;
         uint8_t* m_number_of_detected_pairs = nullptr;

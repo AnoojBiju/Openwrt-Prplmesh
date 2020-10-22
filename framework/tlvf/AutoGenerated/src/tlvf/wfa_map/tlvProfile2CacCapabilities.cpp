@@ -33,15 +33,31 @@ const uint16_t& tlvProfile2CacCapabilities::length() {
     return (const uint16_t&)(*m_length);
 }
 
-uint16_t& tlvProfile2CacCapabilities::country_code() {
-    return (uint16_t&)(*m_country_code);
+uint8_t* tlvProfile2CacCapabilities::country_code(size_t idx) {
+    if ( (m_country_code_idx__ == 0) || (m_country_code_idx__ <= idx) ) {
+        TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
+        return nullptr;
+    }
+    return &(m_country_code[idx]);
 }
 
+bool tlvProfile2CacCapabilities::set_country_code(const void* buffer, size_t size) {
+    if (buffer == nullptr) {
+        TLVF_LOG(WARNING) << "set_country_code received a null pointer.";
+        return false;
+    }
+    if (size > 2) {
+        TLVF_LOG(ERROR) << "Received buffer size is smaller than buffer length";
+        return false;
+    }
+    std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_country_code);
+    return true;
+}
 uint8_t& tlvProfile2CacCapabilities::number_of_cac_radios() {
     return (uint8_t&)(*m_number_of_cac_radios);
 }
 
-std::tuple<bool, cCacRadios&> tlvProfile2CacCapabilities::cac_radios(size_t idx) {
+std::tuple<bool, cCacCapabilitiesRadio&> tlvProfile2CacCapabilities::cac_radios(size_t idx) {
     bool ret_success = ( (m_cac_radios_idx__ > 0) && (m_cac_radios_idx__ > idx) );
     size_t ret_idx = ret_success ? idx : 0;
     if (!ret_success) {
@@ -50,12 +66,12 @@ std::tuple<bool, cCacRadios&> tlvProfile2CacCapabilities::cac_radios(size_t idx)
     return std::forward_as_tuple(ret_success, *(m_cac_radios_vector[ret_idx]));
 }
 
-std::shared_ptr<cCacRadios> tlvProfile2CacCapabilities::create_cac_radios() {
+std::shared_ptr<cCacCapabilitiesRadio> tlvProfile2CacCapabilities::create_cac_radios() {
     if (m_lock_order_counter__ > 0) {
         TLVF_LOG(ERROR) << "Out of order allocation for variable length list cac_radios, abort!";
         return nullptr;
     }
-    size_t len = cCacRadios::get_initial_size();
+    size_t len = cCacCapabilitiesRadio::get_initial_size();
     if (m_lock_allocation__ || getBuffRemainingBytes() < len) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer";
         return nullptr;
@@ -71,10 +87,10 @@ std::shared_ptr<cCacRadios> tlvProfile2CacCapabilities::create_cac_radios() {
         size_t move_length = getBuffRemainingBytes(src) - len;
         std::copy_n(src, move_length, dst);
     }
-    return std::make_shared<cCacRadios>(src, getBuffRemainingBytes(src), m_parse__);
+    return std::make_shared<cCacCapabilitiesRadio>(src, getBuffRemainingBytes(src), m_parse__);
 }
 
-bool tlvProfile2CacCapabilities::add_cac_radios(std::shared_ptr<cCacRadios> ptr) {
+bool tlvProfile2CacCapabilities::add_cac_radios(std::shared_ptr<cCacCapabilitiesRadio> ptr) {
     if (ptr == nullptr) {
         TLVF_LOG(ERROR) << "Received entry is nullptr";
         return false;
@@ -111,7 +127,6 @@ bool tlvProfile2CacCapabilities::add_cac_radios(std::shared_ptr<cCacRadios> ptr)
 void tlvProfile2CacCapabilities::class_swap()
 {
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_length));
-    tlvf_swap(16, reinterpret_cast<uint8_t*>(m_country_code));
     for (size_t i = 0; i < m_cac_radios_idx__; i++){
         std::get<1>(cac_radios(i)).class_swap();
     }
@@ -150,7 +165,7 @@ size_t tlvProfile2CacCapabilities::get_initial_size()
     size_t class_size = 0;
     class_size += sizeof(eTlvTypeMap); // type
     class_size += sizeof(uint16_t); // length
-    class_size += sizeof(uint16_t); // country_code
+    class_size += 2 * sizeof(uint8_t); // country_code
     class_size += sizeof(uint8_t); // number_of_cac_radios
     return class_size;
 }
@@ -173,12 +188,15 @@ bool tlvProfile2CacCapabilities::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
-    m_country_code = reinterpret_cast<uint16_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint16_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
+    m_country_code = (uint8_t*)m_buff_ptr__;
+    if (!buffPtrIncrementSafe(sizeof(uint8_t) * (2))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (2) << ") Failed!";
         return false;
     }
-    if(m_length && !m_parse__){ (*m_length) += sizeof(uint16_t); }
+    m_country_code_idx__  = 2;
+    if (!m_parse__) {
+        if (m_length) { (*m_length) += (sizeof(uint8_t) * 2); }
+    }
     m_number_of_cac_radios = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!m_parse__) *m_number_of_cac_radios = 0;
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
@@ -186,7 +204,7 @@ bool tlvProfile2CacCapabilities::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_cac_radios = (cCacRadios*)m_buff_ptr__;
+    m_cac_radios = (cCacCapabilitiesRadio*)m_buff_ptr__;
     uint8_t number_of_cac_radios = *m_number_of_cac_radios;
     m_cac_radios_idx__ = 0;
     for (size_t i = 0; i < number_of_cac_radios; i++) {
@@ -212,25 +230,25 @@ bool tlvProfile2CacCapabilities::init()
     return true;
 }
 
-cCacRadios::cCacRadios(uint8_t* buff, size_t buff_len, bool parse) :
+cCacCapabilitiesRadio::cCacCapabilitiesRadio(uint8_t* buff, size_t buff_len, bool parse) :
     BaseClass(buff, buff_len, parse) {
     m_init_succeeded = init();
 }
-cCacRadios::cCacRadios(std::shared_ptr<BaseClass> base, bool parse) :
+cCacCapabilitiesRadio::cCacCapabilitiesRadio(std::shared_ptr<BaseClass> base, bool parse) :
 BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
     m_init_succeeded = init();
 }
-cCacRadios::~cCacRadios() {
+cCacCapabilitiesRadio::~cCacCapabilitiesRadio() {
 }
-sMacAddr& cCacRadios::radio_uid() {
+sMacAddr& cCacCapabilitiesRadio::radio_uid() {
     return (sMacAddr&)(*m_radio_uid);
 }
 
-uint8_t& cCacRadios::number_of_cac_type_supported() {
+uint8_t& cCacCapabilitiesRadio::number_of_cac_type_supported() {
     return (uint8_t&)(*m_number_of_cac_type_supported);
 }
 
-std::tuple<bool, cCacTypes&> cCacRadios::cac_types(size_t idx) {
+std::tuple<bool, cCacTypes&> cCacCapabilitiesRadio::cac_types(size_t idx) {
     bool ret_success = ( (m_cac_types_idx__ > 0) && (m_cac_types_idx__ > idx) );
     size_t ret_idx = ret_success ? idx : 0;
     if (!ret_success) {
@@ -239,7 +257,7 @@ std::tuple<bool, cCacTypes&> cCacRadios::cac_types(size_t idx) {
     return std::forward_as_tuple(ret_success, *(m_cac_types_vector[ret_idx]));
 }
 
-std::shared_ptr<cCacTypes> cCacRadios::create_cac_types() {
+std::shared_ptr<cCacTypes> cCacCapabilitiesRadio::create_cac_types() {
     if (m_lock_order_counter__ > 0) {
         TLVF_LOG(ERROR) << "Out of order allocation for variable length list cac_types, abort!";
         return nullptr;
@@ -263,7 +281,7 @@ std::shared_ptr<cCacTypes> cCacRadios::create_cac_types() {
     return std::make_shared<cCacTypes>(src, getBuffRemainingBytes(src), m_parse__);
 }
 
-bool cCacRadios::add_cac_types(std::shared_ptr<cCacTypes> ptr) {
+bool cCacCapabilitiesRadio::add_cac_types(std::shared_ptr<cCacTypes> ptr) {
     if (ptr == nullptr) {
         TLVF_LOG(ERROR) << "Received entry is nullptr";
         return false;
@@ -296,7 +314,7 @@ bool cCacRadios::add_cac_types(std::shared_ptr<cCacTypes> ptr) {
     return true;
 }
 
-void cCacRadios::class_swap()
+void cCacCapabilitiesRadio::class_swap()
 {
     m_radio_uid->struct_swap();
     for (size_t i = 0; i < m_cac_types_idx__; i++){
@@ -304,7 +322,7 @@ void cCacRadios::class_swap()
     }
 }
 
-bool cCacRadios::finalize()
+bool cCacCapabilitiesRadio::finalize()
 {
     if (m_parse__) {
         TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
@@ -331,7 +349,7 @@ bool cCacRadios::finalize()
     return true;
 }
 
-size_t cCacRadios::get_initial_size()
+size_t cCacCapabilitiesRadio::get_initial_size()
 {
     size_t class_size = 0;
     class_size += sizeof(sMacAddr); // radio_uid
@@ -339,7 +357,7 @@ size_t cCacRadios::get_initial_size()
     return class_size;
 }
 
-bool cCacRadios::init()
+bool cCacCapabilitiesRadio::init()
 {
     if (getBuffRemainingBytes() < get_initial_size()) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
@@ -390,7 +408,7 @@ cCacTypes::eCacMethod& cCacTypes::cac_method() {
     return (eCacMethod&)(*m_cac_method);
 }
 
-uint16_t* cCacTypes::duration(size_t idx) {
+uint8_t* cCacTypes::duration(size_t idx) {
     if ( (m_duration_idx__ == 0) || (m_duration_idx__ <= idx) ) {
         TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
         return nullptr;
@@ -398,6 +416,18 @@ uint16_t* cCacTypes::duration(size_t idx) {
     return &(m_duration[idx]);
 }
 
+bool cCacTypes::set_duration(const void* buffer, size_t size) {
+    if (buffer == nullptr) {
+        TLVF_LOG(WARNING) << "set_duration received a null pointer.";
+        return false;
+    }
+    if (size > 3) {
+        TLVF_LOG(ERROR) << "Received buffer size is smaller than buffer length";
+        return false;
+    }
+    std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_duration);
+    return true;
+}
 uint8_t& cCacTypes::number_of_operating_classes() {
     return (uint8_t&)(*m_number_of_operating_classes);
 }
@@ -470,9 +500,6 @@ bool cCacTypes::add_operating_classes(std::shared_ptr<cCacCapabilitiesOperatingC
 
 void cCacTypes::class_swap()
 {
-    for (size_t i = 0; i < 3; i++){
-        tlvf_swap(16, reinterpret_cast<uint8_t*>(&m_duration[i]));
-    }
     for (size_t i = 0; i < m_operating_classes_idx__; i++){
         std::get<1>(operating_classes(i)).class_swap();
     }
@@ -509,7 +536,7 @@ size_t cCacTypes::get_initial_size()
 {
     size_t class_size = 0;
     class_size += sizeof(eCacMethod); // cac_method
-    class_size += 3 * sizeof(uint16_t); // duration
+    class_size += 3 * sizeof(uint8_t); // duration
     class_size += sizeof(uint8_t); // number_of_operating_classes
     return class_size;
 }
@@ -525,9 +552,9 @@ bool cCacTypes::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(eCacMethod) << ") Failed!";
         return false;
     }
-    m_duration = (uint16_t*)m_buff_ptr__;
-    if (!buffPtrIncrementSafe(sizeof(uint16_t) * (3))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) * (3) << ") Failed!";
+    m_duration = (uint8_t*)m_buff_ptr__;
+    if (!buffPtrIncrementSafe(sizeof(uint8_t) * (3))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (3) << ") Failed!";
         return false;
     }
     m_duration_idx__  = 3;
@@ -574,77 +601,51 @@ uint8_t& cCacCapabilitiesOperatingClasses::number_of_channels() {
     return (uint8_t&)(*m_number_of_channels);
 }
 
-std::tuple<bool, cChannel&> cCacCapabilitiesOperatingClasses::channels(size_t idx) {
-    bool ret_success = ( (m_channels_idx__ > 0) && (m_channels_idx__ > idx) );
-    size_t ret_idx = ret_success ? idx : 0;
-    if (!ret_success) {
+uint8_t* cCacCapabilitiesOperatingClasses::channels(size_t idx) {
+    if ( (m_channels_idx__ == 0) || (m_channels_idx__ <= idx) ) {
         TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
+        return nullptr;
     }
-    return std::forward_as_tuple(ret_success, *(m_channels_vector[ret_idx]));
+    return &(m_channels[idx]);
 }
 
-std::shared_ptr<cChannel> cCacCapabilitiesOperatingClasses::create_channels() {
-    if (m_lock_order_counter__ > 0) {
-        TLVF_LOG(ERROR) << "Out of order allocation for variable length list channels, abort!";
-        return nullptr;
+bool cCacCapabilitiesOperatingClasses::set_channels(const void* buffer, size_t size) {
+    if (buffer == nullptr) {
+        TLVF_LOG(WARNING) << "set_channels received a null pointer.";
+        return false;
     }
-    size_t len = cChannel::get_initial_size();
-    if (m_lock_allocation__ || getBuffRemainingBytes() < len) {
-        TLVF_LOG(ERROR) << "Not enough available space on buffer";
-        return nullptr;
+    if (!alloc_channels(size)) { return false; }
+    std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_channels);
+    return true;
+}
+bool cCacCapabilitiesOperatingClasses::alloc_channels(size_t count) {
+    if (m_lock_order_counter__ > 0) {;
+        TLVF_LOG(ERROR) << "Out of order allocation for variable length list channels, abort!";
+        return false;
+    }
+    size_t len = sizeof(uint8_t) * count;
+    if(getBuffRemainingBytes() < len )  {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
+        return false;
     }
     m_lock_order_counter__ = 0;
-    m_lock_allocation__ = true;
-    uint8_t *src = (uint8_t *)m_channels;
-    if (m_channels_idx__ > 0) {
-        src = (uint8_t *)m_channels_vector[m_channels_idx__ - 1]->getBuffPtr();
-    }
+    uint8_t *src = (uint8_t *)&m_channels[*m_number_of_channels];
+    uint8_t *dst = src + len;
     if (!m_parse__) {
-        uint8_t *dst = src + len;
         size_t move_length = getBuffRemainingBytes(src) - len;
         std::copy_n(src, move_length, dst);
     }
-    return std::make_shared<cChannel>(src, getBuffRemainingBytes(src), m_parse__);
-}
-
-bool cCacCapabilitiesOperatingClasses::add_channels(std::shared_ptr<cChannel> ptr) {
-    if (ptr == nullptr) {
-        TLVF_LOG(ERROR) << "Received entry is nullptr";
-        return false;
-    }
-    if (m_lock_allocation__ == false) {
-        TLVF_LOG(ERROR) << "No call to create_channels was called before add_channels";
-        return false;
-    }
-    uint8_t *src = (uint8_t *)m_channels;
-    if (m_channels_idx__ > 0) {
-        src = (uint8_t *)m_channels_vector[m_channels_idx__ - 1]->getBuffPtr();
-    }
-    if (ptr->getStartBuffPtr() != src) {
-        TLVF_LOG(ERROR) << "Received entry pointer is different than expected (expecting the same pointer returned from add method)";
-        return false;
-    }
-    if (ptr->getLen() > getBuffRemainingBytes(ptr->getStartBuffPtr())) {;
-        TLVF_LOG(ERROR) << "Not enough available space on buffer";
-        return false;
-    }
-    m_channels_idx__++;
-    if (!m_parse__) { (*m_number_of_channels)++; }
-    size_t len = ptr->getLen();
-    m_channels_vector.push_back(ptr);
+    m_channels_idx__ += count;
+    *m_number_of_channels += count;
     if (!buffPtrIncrementSafe(len)) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
         return false;
     }
-    m_lock_allocation__ = false;
     return true;
 }
 
 void cCacCapabilitiesOperatingClasses::class_swap()
 {
-    for (size_t i = 0; i < m_channels_idx__; i++){
-        std::get<1>(channels(i)).class_swap();
-    }
 }
 
 bool cCacCapabilitiesOperatingClasses::finalize()
@@ -698,87 +699,11 @@ bool cCacCapabilitiesOperatingClasses::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_channels = (cChannel*)m_buff_ptr__;
+    m_channels = (uint8_t*)m_buff_ptr__;
     uint8_t number_of_channels = *m_number_of_channels;
-    m_channels_idx__ = 0;
-    for (size_t i = 0; i < number_of_channels; i++) {
-        auto channels = create_channels();
-        if (!channels) {
-            TLVF_LOG(ERROR) << "create_channels() failed";
-            return false;
-        }
-        if (!add_channels(channels)) {
-            TLVF_LOG(ERROR) << "add_channels() failed";
-            return false;
-        }
-        // swap back since channels will be swapped as part of the whole class swap
-        channels->class_swap();
-    }
-    if (m_parse__) { class_swap(); }
-    return true;
-}
-
-cChannel::cChannel(uint8_t* buff, size_t buff_len, bool parse) :
-    BaseClass(buff, buff_len, parse) {
-    m_init_succeeded = init();
-}
-cChannel::cChannel(std::shared_ptr<BaseClass> base, bool parse) :
-BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
-    m_init_succeeded = init();
-}
-cChannel::~cChannel() {
-}
-uint8_t& cChannel::channel() {
-    return (uint8_t&)(*m_channel);
-}
-
-void cChannel::class_swap()
-{
-}
-
-bool cChannel::finalize()
-{
-    if (m_parse__) {
-        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
-        return true;
-    }
-    if (m_finalized__) {
-        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
-        return true;
-    }
-    if (!isPostInitSucceeded()) {
-        TLVF_LOG(ERROR) << "post init check failed";
-        return false;
-    }
-    if (m_inner__) {
-        if (!m_inner__->finalize()) {
-            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
-            return false;
-        }
-        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
-        m_buff_ptr__ -= tailroom;
-    }
-    class_swap();
-    m_finalized__ = true;
-    return true;
-}
-
-size_t cChannel::get_initial_size()
-{
-    size_t class_size = 0;
-    class_size += sizeof(uint8_t); // channel
-    return class_size;
-}
-
-bool cChannel::init()
-{
-    if (getBuffRemainingBytes() < get_initial_size()) {
-        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
-        return false;
-    }
-    m_channel = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+    m_channels_idx__ = number_of_channels;
+    if (!buffPtrIncrementSafe(sizeof(uint8_t) * (number_of_channels))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (number_of_channels) << ") Failed!";
         return false;
     }
     if (m_parse__) { class_swap(); }

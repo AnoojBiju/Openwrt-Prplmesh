@@ -27,10 +27,9 @@
 
 namespace wfa_map {
 
-class cCacRadios;
+class cCacCapabilitiesRadio;
 class cCacTypes;
 class cCacCapabilitiesOperatingClasses;
-class cChannel;
 
 class tlvProfile2CacCapabilities : public BaseClass
 {
@@ -41,11 +40,12 @@ class tlvProfile2CacCapabilities : public BaseClass
 
         const eTlvTypeMap& type();
         const uint16_t& length();
-        uint16_t& country_code();
+        uint8_t* country_code(size_t idx = 0);
+        bool set_country_code(const void* buffer, size_t size);
         uint8_t& number_of_cac_radios();
-        std::tuple<bool, cCacRadios&> cac_radios(size_t idx);
-        std::shared_ptr<cCacRadios> create_cac_radios();
-        bool add_cac_radios(std::shared_ptr<cCacRadios> ptr);
+        std::tuple<bool, cCacCapabilitiesRadio&> cac_radios(size_t idx);
+        std::shared_ptr<cCacCapabilitiesRadio> create_cac_radios();
+        bool add_cac_radios(std::shared_ptr<cCacCapabilitiesRadio> ptr);
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -54,21 +54,22 @@ class tlvProfile2CacCapabilities : public BaseClass
         bool init();
         eTlvTypeMap* m_type = nullptr;
         uint16_t* m_length = nullptr;
-        uint16_t* m_country_code = nullptr;
-        uint8_t* m_number_of_cac_radios = nullptr;
-        cCacRadios* m_cac_radios = nullptr;
-        size_t m_cac_radios_idx__ = 0;
-        std::vector<std::shared_ptr<cCacRadios>> m_cac_radios_vector;
-        bool m_lock_allocation__ = false;
+        uint8_t* m_country_code = nullptr;
+        size_t m_country_code_idx__ = 0;
         int m_lock_order_counter__ = 0;
+        uint8_t* m_number_of_cac_radios = nullptr;
+        cCacCapabilitiesRadio* m_cac_radios = nullptr;
+        size_t m_cac_radios_idx__ = 0;
+        std::vector<std::shared_ptr<cCacCapabilitiesRadio>> m_cac_radios_vector;
+        bool m_lock_allocation__ = false;
 };
 
-class cCacRadios : public BaseClass
+class cCacCapabilitiesRadio : public BaseClass
 {
     public:
-        cCacRadios(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cCacRadios(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cCacRadios();
+        cCacCapabilitiesRadio(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cCacCapabilitiesRadio(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cCacCapabilitiesRadio();
 
         sMacAddr& radio_uid();
         uint8_t& number_of_cac_type_supported();
@@ -98,14 +99,15 @@ class cCacTypes : public BaseClass
         ~cCacTypes();
 
         enum eCacMethod: uint8_t {
-            CAC_METHOD_CONTINUES_CAC = 0x0,
-            CAC_METHOD_CONTINUES_CAC_WITH_DEDICATED_RADIO = 0x1,
-            CAC_METHOD_MIMO_SLICED_REDUCED = 0x2,
-            CAC_METHOD_TIME_SLICED_CAC = 0x3,
+            CAC_METHOD_CONTINUOUS_CAC = 0x0,
+            CAC_METHOD_CONTINUOUS_CAC_WITH_DEDICATED_RADIO = 0x1,
+            CAC_METHOD_MIMO_DIMENSION_REDUCED = 0x2,
+            CAC_METHOD_TIME_SLICED = 0x3,
         };
         
         eCacMethod& cac_method();
-        uint16_t* duration(size_t idx = 0);
+        uint8_t* duration(size_t idx = 0);
+        bool set_duration(const void* buffer, size_t size);
         uint8_t& number_of_operating_classes();
         std::tuple<bool, cCacCapabilitiesOperatingClasses&> operating_classes(size_t idx);
         std::shared_ptr<cCacCapabilitiesOperatingClasses> create_operating_classes();
@@ -117,7 +119,7 @@ class cCacTypes : public BaseClass
     private:
         bool init();
         eCacMethod* m_cac_method = nullptr;
-        uint16_t* m_duration = nullptr;
+        uint8_t* m_duration = nullptr;
         size_t m_duration_idx__ = 0;
         int m_lock_order_counter__ = 0;
         uint8_t* m_number_of_operating_classes = nullptr;
@@ -136,9 +138,9 @@ class cCacCapabilitiesOperatingClasses : public BaseClass
 
         uint8_t& operating_class();
         uint8_t& number_of_channels();
-        std::tuple<bool, cChannel&> channels(size_t idx);
-        std::shared_ptr<cChannel> create_channels();
-        bool add_channels(std::shared_ptr<cChannel> ptr);
+        uint8_t* channels(size_t idx = 0);
+        bool set_channels(const void* buffer, size_t size);
+        bool alloc_channels(size_t count = 1);
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -147,28 +149,9 @@ class cCacCapabilitiesOperatingClasses : public BaseClass
         bool init();
         uint8_t* m_operating_class = nullptr;
         uint8_t* m_number_of_channels = nullptr;
-        cChannel* m_channels = nullptr;
+        uint8_t* m_channels = nullptr;
         size_t m_channels_idx__ = 0;
-        std::vector<std::shared_ptr<cChannel>> m_channels_vector;
-        bool m_lock_allocation__ = false;
         int m_lock_order_counter__ = 0;
-};
-
-class cChannel : public BaseClass
-{
-    public:
-        cChannel(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cChannel(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cChannel();
-
-        uint8_t& channel();
-        void class_swap() override;
-        bool finalize() override;
-        static size_t get_initial_size();
-
-    private:
-        bool init();
-        uint8_t* m_channel = nullptr;
 };
 
 }; // close namespace: wfa_map

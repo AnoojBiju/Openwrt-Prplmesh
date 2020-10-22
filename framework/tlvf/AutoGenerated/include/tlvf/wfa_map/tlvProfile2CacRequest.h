@@ -37,13 +37,13 @@ class tlvProfile2CacRequest : public BaseClass
 
         typedef struct sCacMethod {
             #if defined(__LITTLE_ENDIAN_BITFIELD)
-            uint8_t rserved : 3;
+            uint8_t reserved : 3;
             uint8_t cac_completion_action : 2;
             uint8_t cac_method : 3;
             #elif defined(__BIG_ENDIAN_BITFIELD)
             uint8_t cac_method : 3;
             uint8_t cac_completion_action : 2;
-            uint8_t rserved : 3;
+            uint8_t reserved : 3;
             #else
             #error "Bitfield macros are not defined"
             #endif
@@ -53,7 +53,7 @@ class tlvProfile2CacRequest : public BaseClass
             }
         } __attribute__((packed)) sCacMethod;
         
-        typedef struct sCacRadio {
+        typedef struct sCacRequestRadio {
             sMacAddr radio_uid;
             uint8_t operating_class;
             uint8_t channel;
@@ -65,12 +65,12 @@ class tlvProfile2CacRequest : public BaseClass
             void struct_init(){
                 radio_uid.struct_init();
             }
-        } __attribute__((packed)) sCacRadio;
+        } __attribute__((packed)) sCacRequestRadio;
         
         const eTlvTypeMap& type();
         const uint16_t& length();
         uint8_t& number_of_cac_radios();
-        std::tuple<bool, sCacRadio&> cac_radios(size_t idx);
+        std::tuple<bool, sCacRequestRadio&> cac_radios(size_t idx);
         bool alloc_cac_radios(size_t count = 1);
         void class_swap() override;
         bool finalize() override;
@@ -81,7 +81,7 @@ class tlvProfile2CacRequest : public BaseClass
         eTlvTypeMap* m_type = nullptr;
         uint16_t* m_length = nullptr;
         uint8_t* m_number_of_cac_radios = nullptr;
-        sCacRadio* m_cac_radios = nullptr;
+        sCacRequestRadio* m_cac_radios = nullptr;
         size_t m_cac_radios_idx__ = 0;
         int m_lock_order_counter__ = 0;
 };
