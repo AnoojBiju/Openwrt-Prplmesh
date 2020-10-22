@@ -12,6 +12,17 @@
 
 #include <beerocks/tlvf/beerocks_message_backhaul.h>
 
+#include <bcl/beerocks_utils.h>
+#include <bcl/son/son_wireless_utils.h>
+
+#define ZWDFS_FSM_MOVE_STATE(new_state)                                                            \
+    ({                                                                                             \
+        LOG(TRACE) << "CHANNEL_SELECTION ZWDFS FSM: " << m_zwdfs_states_string.at(m_zwdfs_state)   \
+                   << " --> " << m_zwdfs_states_string.at(new_state);                              \
+        m_zwdfs_state = new_state;                                                                 \
+        zwdfs_fsm();                                                                               \
+    })
+
 namespace beerocks {
 
 ChannelSelectionTask::ChannelSelectionTask(backhaul_manager &btl_ctx,
@@ -20,8 +31,15 @@ ChannelSelectionTask::ChannelSelectionTask(backhaul_manager &btl_ctx,
 {
 }
 
+void ChannelSelectionTask::work()
+{
+    if (zwdfs_in_process()) {
+        zwdfs_fsm();
+    }
+}
+
 bool ChannelSelectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac,
-                                       std::shared_ptr<beerocks_header> beerocks_header)
+                                       Socket *sd, std::shared_ptr<beerocks_header> beerocks_header)
 {
     switch (cmdu_rx.getMessageType()) {
     case ieee1905_1::eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE: {
@@ -37,7 +55,7 @@ bool ChannelSelectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const
         break;
     }
     case ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE: {
-        handle_vendor_specific(cmdu_rx, src_mac, beerocks_header);
+        handle_vendor_specific(cmdu_rx, src_mac, sd, beerocks_header);
         break;
     }
     default: {
@@ -135,7 +153,7 @@ void ChannelSelectionTask::handle_slave_channel_selection_response(
 }
 
 bool ChannelSelectionTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                                  const sMacAddr &src_mac,
+                                                  const sMacAddr &src_mac, Socket *sd,
                                                   std::shared_ptr<beerocks_header> beerocks_header)
 {
     if (!beerocks_header) {
@@ -150,27 +168,27 @@ bool ChannelSelectionTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmd
     if (beerocks_header->action() == beerocks_message::ACTION_BACKHAUL) {
         switch (beerocks_header->action_op()) {
         case beerocks_message::ACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION: {
-            handle_vs_csa_notification(cmdu_rx, beerocks_header);
+            handle_vs_csa_notification(cmdu_rx, sd, beerocks_header);
             break;
         }
         case beerocks_message::ACTION_BACKHAUL_HOSTAP_CSA_ERROR_NOTIFICATION: {
-            handle_vs_csa_error_notification(cmdu_rx, beerocks_header);
+            handle_vs_csa_error_notification(cmdu_rx, sd, beerocks_header);
             break;
         }
         case beerocks_message::ACTION_BACKHAUL_HOSTAP_DFS_CAC_STARTED_NOTIFICATION: {
-            handle_vs_cac_started_notification(cmdu_rx, beerocks_header);
+            handle_vs_cac_started_notification(cmdu_rx, sd, beerocks_header);
             break;
         }
         case beerocks_message::ACTION_BACKHAUL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION: {
-            handle_vs_dfs_cac_completed_notification(cmdu_rx, beerocks_header);
+            handle_vs_dfs_cac_completed_notification(cmdu_rx, sd, beerocks_header);
             break;
         }
         case beerocks_message::ACTION_BACKHAUL_CHANNELS_LIST_RESPONSE: {
-            handle_vs_channels_list_notification(cmdu_rx, beerocks_header);
+            handle_vs_channels_list_notification(cmdu_rx, sd, beerocks_header);
             break;
         }
         case beerocks_message::ACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE: {
-            handle_vs_zwdfs_ant_channel_switch_response(cmdu_rx, beerocks_header);
+            handle_vs_zwdfs_ant_channel_switch_response(cmdu_rx, sd, beerocks_header);
             break;
         }
 
@@ -184,7 +202,8 @@ bool ChannelSelectionTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmd
 }
 
 void ChannelSelectionTask::handle_vs_csa_notification(
-    ieee1905_1::CmduMessageRx &cmdu_rx, std::shared_ptr<beerocks_header> beerocks_header)
+    ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
+    std::shared_ptr<beerocks_header> beerocks_header)
 {
     auto notification =
         beerocks_header->addClass<beerocks_message::cACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION>();
@@ -198,7 +217,8 @@ void ChannelSelectionTask::handle_vs_csa_notification(
 }
 
 void ChannelSelectionTask::handle_vs_csa_error_notification(
-    ieee1905_1::CmduMessageRx &cmdu_rx, std::shared_ptr<beerocks_header> beerocks_header)
+    ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
+    std::shared_ptr<beerocks_header> beerocks_header)
 {
     auto notification =
         beerocks_header
@@ -213,7 +233,8 @@ void ChannelSelectionTask::handle_vs_csa_error_notification(
 }
 
 void ChannelSelectionTask::handle_vs_cac_started_notification(
-    ieee1905_1::CmduMessageRx &cmdu_rx, std::shared_ptr<beerocks_header> beerocks_header)
+    ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
+    std::shared_ptr<beerocks_header> beerocks_header)
 {
     auto notification =
         beerocks_header
@@ -228,7 +249,8 @@ void ChannelSelectionTask::handle_vs_cac_started_notification(
 }
 
 void ChannelSelectionTask::handle_vs_dfs_cac_completed_notification(
-    ieee1905_1::CmduMessageRx &cmdu_rx, std::shared_ptr<beerocks_header> beerocks_header)
+    ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
+    std::shared_ptr<beerocks_header> beerocks_header)
 {
     auto notification =
         beerocks_header
@@ -243,7 +265,8 @@ void ChannelSelectionTask::handle_vs_dfs_cac_completed_notification(
 }
 
 void ChannelSelectionTask::handle_vs_channels_list_notification(
-    ieee1905_1::CmduMessageRx &cmdu_rx, std::shared_ptr<beerocks_header> beerocks_header)
+    ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
+    std::shared_ptr<beerocks_header> beerocks_header)
 {
     LOG(TRACE) << "received sACTION_APMANAGER_CHANNELS_LIST_RESPONSE";
 
@@ -251,7 +274,8 @@ void ChannelSelectionTask::handle_vs_channels_list_notification(
 }
 
 void ChannelSelectionTask::handle_vs_zwdfs_ant_channel_switch_response(
-    ieee1905_1::CmduMessageRx &cmdu_rx, std::shared_ptr<beerocks_header> beerocks_header)
+    ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
+    std::shared_ptr<beerocks_header> beerocks_header)
 {
     auto notification = beerocks_header->addClass<
         beerocks_message::cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE>();
@@ -262,6 +286,215 @@ void ChannelSelectionTask::handle_vs_zwdfs_ant_channel_switch_response(
     LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE";
 
     // TODO
+}
+
+const std::string ChannelSelectionTask::socket_to_front_iface_name(const Socket *sd)
+{
+    for (const auto &soc : m_btl_ctx.slaves_sockets) {
+        if (soc->slave == sd) {
+            return soc->hostap_iface;
+        }
+    }
+
+    for (const auto &slave_element : m_btl_ctx.m_disabled_slave_sockets) {
+        if (slave_element.second->slave == sd) {
+            return slave_element.first;
+        }
+    }
+
+    return std::string();
+}
+Socket *ChannelSelectionTask::front_iface_name_to_socket(const std::string &iface_name)
+{
+    for (const auto &soc : m_btl_ctx.slaves_sockets) {
+        if (soc->hostap_iface == iface_name) {
+            return soc->slave;
+        }
+    }
+    for (const auto &slave_element : m_btl_ctx.m_disabled_slave_sockets) {
+        if (slave_element.first == iface_name) {
+            return slave_element.second->slave;
+        }
+    }
+    return nullptr;
+}
+
+void ChannelSelectionTask::zwdfs_fsm()
+{
+    switch (m_zwdfs_state) {
+    case eZwdfsState::NOT_RUNNING: {
+        break;
+    }
+    case eZwdfsState::REQUEST_CHANNELS_LIST: {
+        break;
+    }
+    case eZwdfsState::WAIT_FOR_CHANNELS_LIST: {
+        break;
+    }
+    case eZwdfsState::CHOOSE_NEXT_BEST_CHANNEL: {
+        break;
+    }
+    case eZwdfsState::ZWDFS_SWITCH_ANT_SET_CHANNEL_REQUEST: {
+        break;
+    }
+    case eZwdfsState::WAIT_FOR_ZWDFS_CAC_STARTED: {
+        break;
+    }
+    case eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED: {
+        break;
+    }
+    case eZwdfsState::SWITCH_CHANNEL_PRIMARY_RADIO: {
+        break;
+    }
+    case eZwdfsState::WAIT_FOR_PRIMARY_RADIO_CSA_NOTIFICATION: {
+        break;
+    }
+    case eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST: {
+        break;
+    }
+    case eZwdfsState::WAIT_FOR_ZWDFS_SWITCH_ANT_OFF_RESPONSE: {
+        break;
+    }
+    default:
+        break;
+    }
+}
+
+ChannelSelectionTask::sSelectedChannel
+ChannelSelectionTask::zwdfs_select_best_usable_channel(const std::string &front_radio_iface)
+{
+    auto db = AgentDB::get();
+
+    sSelectedChannel channel_selection = {};
+
+    auto radio = db->radio(front_radio_iface);
+    if (!radio) {
+        return sSelectedChannel();
+    }
+
+    int32_t best_rank = INT32_MAX;
+
+    for (const auto &channel_info_pair : radio->channels_list) {
+        uint8_t channel = channel_info_pair.first;
+        auto dfs_state  = channel_info_pair.second.dfs_state;
+        if (dfs_state == beerocks_message::eDfsState::UNAVAILABLE) {
+            continue;
+        }
+        for (const auto &supported_bw : channel_info_pair.second.supported_bw_list) {
+
+            if (supported_bw.rank == -1) {
+                continue;
+            }
+            // Low rank is better.
+            if (supported_bw.rank > best_rank) {
+                continue;
+            }
+            if (supported_bw.rank == best_rank && supported_bw.bandwidth < channel_selection.bw) {
+                continue;
+            }
+
+            bool update_best_channel = false;
+
+            auto filter_channel_bw_with_unavailable_overlapping_channel = [&]() {
+                auto channel_it = son::wireless_utils::channels_table_5g.find(channel);
+                if (channel_it == son::wireless_utils::channels_table_5g.end()) {
+                    LOG(ERROR) << "Radio supports channel which is not on the channel table! ch="
+                               << int(channel);
+                    return false;
+                }
+
+                auto &channel_bw_info_map = channel_it->second;
+                auto bw_it                = channel_bw_info_map.find(supported_bw.bandwidth);
+                if (bw_it == channel_bw_info_map.end()) {
+                    LOG(ERROR) << "Radio supports channel which is not on the channel table!"
+                               << "ch =" << int(channel) << ", bw="
+                               << utils::convert_bandwidth_to_int(supported_bw.bandwidth);
+                    return false;
+                }
+
+                auto channel_range_min = bw_it->second.overlap_beacon_channels_range.first;
+                auto channel_range_max = bw_it->second.overlap_beacon_channels_range.second;
+
+                constexpr uint8_t channels_distance_5g = 4;
+
+                // Ignore if one of beacon channels is unavailable.
+                for (uint8_t overlap_ch = channel_range_min; overlap_ch <= channel_range_max;
+                     overlap_ch += channels_distance_5g) {
+
+                    auto overlap_channel_info_it = radio->channels_list.find(overlap_ch);
+                    if (overlap_channel_info_it == radio->channels_list.end()) {
+                        LOG(ERROR)
+                            << "Channel " << channel << " supprots bw="
+                            << utils::convert_bandwidth_to_int(supported_bw.bandwidth)
+                            << " but beacon channel=" << int(overlap_ch) << " is not supported!";
+
+                        return false;
+                    }
+
+                    auto overlapping_channel_dfs_state = overlap_channel_info_it->second.dfs_state;
+                    if (overlapping_channel_dfs_state == beerocks_message::eDfsState::UNAVAILABLE) {
+                        return true;
+                    }
+                }
+                update_best_channel = true;
+                return true;
+            };
+            switch (supported_bw.bandwidth) {
+            case beerocks::BANDWIDTH_20: {
+                update_best_channel = true;
+                break;
+            }
+            case beerocks::BANDWIDTH_40:
+            case beerocks::BANDWIDTH_80:
+            case beerocks::BANDWIDTH_160: {
+                // The function updates 'update_best_channel' value.
+                if (!filter_channel_bw_with_unavailable_overlapping_channel()) {
+                    return sSelectedChannel();
+                }
+                break;
+            }
+            default:
+                break;
+            }
+
+            if (!update_best_channel) {
+                continue;
+            }
+
+            best_rank                   = supported_bw.rank;
+            channel_selection.channel   = channel;
+            channel_selection.bw        = supported_bw.bandwidth;
+            channel_selection.dfs_state = dfs_state;
+        }
+    }
+
+    return channel_selection;
+}
+
+bool ChannelSelectionTask::initialize_zwdfs_interface_name()
+{
+    if (!m_zwdfs_iface.empty()) {
+        return true;
+    }
+
+    auto db = AgentDB::get();
+
+    const auto &configured_radios_list = db->device_conf.front_radio.config;
+
+    for (const auto &radio_conf_pair : configured_radios_list) {
+        auto &radio_iface_name = radio_conf_pair.first;
+
+        auto radio = db->radio(radio_iface_name);
+        if (!radio) {
+            continue;
+        }
+
+        if (radio->front.zwdfs) {
+            m_zwdfs_iface = radio->front.iface_name;
+            return true;
+        }
+    }
+    return false;
 }
 
 } // namespace beerocks
