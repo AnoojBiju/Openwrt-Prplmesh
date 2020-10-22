@@ -13,10 +13,13 @@ namespace transport {
 
 Ieee1905Transport::Ieee1905Transport(
     std::shared_ptr<beerocks::net::InterfaceStateManager> interface_state_manager,
+    std::shared_ptr<beerocks::net::BridgeStatusManager> bridge_status_manager,
     std::shared_ptr<broker::BrokerServer> broker, std::shared_ptr<EventLoop> event_loop)
-    : m_interface_state_manager(interface_state_manager), m_broker(broker), m_event_loop(event_loop)
+    : m_interface_state_manager(interface_state_manager),
+      m_bridge_status_manager(bridge_status_manager), m_broker(broker), m_event_loop(event_loop)
 {
     LOG_IF(!m_interface_state_manager, FATAL) << "Interface state manager is a null pointer!";
+    LOG_IF(!m_bridge_status_manager, FATAL) << "Bridge status manager is a null pointer!";
     LOG_IF(!m_broker, FATAL) << "Broker server is a null pointer!";
     LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
 }
@@ -44,12 +47,18 @@ bool Ieee1905Transport::start()
         handle_interface_status_change(iface_name, iface_state);
     });
 
+    m_bridge_status_manager->set_handler(
+        [&](const std::string &bridge_name, const std::string &iface_name, bool iface_status) {
+            handle_bridge_status_change(bridge_name, iface_name, iface_status);
+        });
+
     return true;
 }
 
 bool Ieee1905Transport::stop()
 {
     m_interface_state_manager->clear_handler();
+    m_bridge_status_manager->clear_handler();
 
     return true;
 }

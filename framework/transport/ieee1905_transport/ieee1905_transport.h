@@ -13,6 +13,7 @@
 #include <mapf/transport/ieee1905_transport_messages.h>
 
 #include <bcl/beerocks_event_loop.h>
+#include <bcl/network/bridge_status_manager.h>
 #include <bcl/network/interface_state_manager.h>
 
 #include "ieee1905_transport_broker.h"
@@ -59,10 +60,12 @@ public:
      * Class constructor
      *
      * @param interface_state_manager Interface state manager.
+     * @param interface_state_manager Bridge state manager.
      * @param broker Message broker.
      * @param event_loop Event loop to wait for I/O events.
      */
     Ieee1905Transport(std::shared_ptr<beerocks::net::InterfaceStateManager> interface_state_manager,
+                      std::shared_ptr<beerocks::net::BridgeStatusManager> bridge_status_manager,
                       std::shared_ptr<broker::BrokerServer> broker,
                       std::shared_ptr<EventLoop> event_loop);
 
@@ -86,6 +89,11 @@ private:
      * up-and-running state) in the state of the network interfaces.
      */
     std::shared_ptr<beerocks::net::InterfaceStateManager> m_interface_state_manager;
+
+    /**
+     * Bridge status manager to read and detect changes in the bridge (i.e. when an interface is added or removed to the bridge).
+     */
+    std::shared_ptr<beerocks::net::BridgeStatusManager> m_bridge_status_manager;
 
     /**
      * Message broker implementing the publish/subscribe design pattern.
@@ -307,6 +315,8 @@ private:
     void activate_interface(NetworkInterface &interface);
     void deactivate_interface(NetworkInterface &interface);
     void handle_interface_status_change(const std::string &iface_name, bool is_active);
+    void handle_bridge_status_change(const std::string &bridge_name, const std::string &iface_name,
+                                     bool iface_status);
     void handle_interface_pollin_event(int fd);
     bool get_interface_mac_addr(unsigned int if_index, uint8_t *addr);
     bool send_packet_to_network_interface(unsigned int if_index, Packet &packet);

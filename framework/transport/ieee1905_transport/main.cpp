@@ -11,6 +11,9 @@
 #include <bcl/beerocks_backport.h>
 #include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_event_loop_impl.h>
+#include <bcl/network/bridge_status_manager_impl.h>
+#include <bcl/network/bridge_status_monitor_impl.h>
+#include <bcl/network/bridge_status_reader_impl.h>
 #include <bcl/network/interface_flags_reader_impl.h>
 #include <bcl/network/interface_state_manager_impl.h>
 #include <bcl/network/interface_state_monitor_impl.h>
@@ -80,6 +83,35 @@ create_interface_state_manager(const std::shared_ptr<EventLoop> &event_loop)
                                                        std::move(interface_state_reader));
 }
 
+static std::shared_ptr<BridgeStatusManager>
+create_bridge_status_manager(const std::shared_ptr<EventLoop> &event_loop)
+{
+    // Create NETLINK_ROUTE netlink socket for kernel/user-space communication
+    auto socket = std::make_shared<NetlinkRouteSocket>();
+
+    // Create client socket
+    ClientSocketImpl<NetlinkRouteSocket> client(socket);
+
+    // Bind client socket to "route netlink" multicast group to listen for multicast packets sent
+    // from the kernel containing network interface create/delete/up/down events
+    if (!client.bind(NetlinkAddress(RTMGRP_LINK))) {
+        return nullptr;
+    }
+
+    // Create connection to send/receive data using this socket
+    auto connection = std::make_shared<SocketConnectionImpl>(socket);
+
+    // Create the bridge status monitor
+    auto bridge_status_monitor = std::make_unique<BridgeStatusMonitorImpl>(connection, event_loop);
+
+    // Create the bridge status reader
+    auto bridge_status_reader = std::make_unique<BridgeStatusReaderImpl>();
+
+    // Create the bridge status manager
+    return std::make_shared<BridgeStatusManagerImpl>(std::move(bridge_status_monitor),
+                                                     std::move(bridge_status_reader));
+}
+
 int main(int argc, char *argv[])
 {
     mapf::Logger::Instance().LoggerInit("transport");
@@ -96,10 +128,14 @@ int main(int argc, char *argv[])
     auto interface_state_manager = create_interface_state_manager(event_loop);
     LOG_IF(!interface_state_manager, FATAL) << "Unable to create interface state manager!";
 
+    auto bridge_status_manager = create_bridge_status_manager(event_loop);
+    LOG_IF(!bridge_status_manager, FATAL) << "Unable to create bridge status manager!";
+
     /**
      * Create the IEEE1905 transport process.
      */
-    Ieee1905Transport ieee1905_transport(interface_state_manager, broker, event_loop);
+    Ieee1905Transport ieee1905_transport(interface_state_manager, bridge_status_manager, broker,
+                                         event_loop);
 
     /**
      * Start the message broker
