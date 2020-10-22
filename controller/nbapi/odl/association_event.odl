@@ -20,7 +20,7 @@
 			/*
 			** The data provided in the event when an association event is generated
 			*/
-			%read-only object AssocData {
+			object AssocData {
 				%read-only string BSSID = 0 {
 				}
 

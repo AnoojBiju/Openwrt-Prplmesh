@@ -74,7 +74,7 @@
 		%read-only string IPV6Address = "0";
 		%read-only string Hostname = "0";
 
-		%read-only object MeasurementReport [] {
+		object MeasurementReport [] {
 			counted with NumberOfMeasureReports;
 		}
 	}

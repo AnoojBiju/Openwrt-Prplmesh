@@ -13,7 +13,7 @@
     object Controller {
 
         // Define controller.Network element
-        %persistent %read-only object Network {
+        %persistent object Network {
 
             // Define string variable
             %read-only %persistent string ID = "0";
@@ -26,7 +26,7 @@
             /*
                 Network devices list.
             */
-            %persistent %read-only object Device[] {
+            %persistent object Device[] {
 
                 /*
                    NumberOfDevices variable calculated by

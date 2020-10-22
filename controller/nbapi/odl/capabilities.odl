@@ -83,7 +83,7 @@
 			%read-only bool UL_OFDMA;			/* UL OFDMA capable. */
 		}
 
-		%read-only object OperatingClasses [] {
+		object OperatingClasses [] {
 			%read-only uint32 Class = 0 {
 				on action validate call check_range [0, 255];
 			}

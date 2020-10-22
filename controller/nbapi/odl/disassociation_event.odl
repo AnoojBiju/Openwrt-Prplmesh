@@ -17,7 +17,7 @@
 	select Notification  {
 		object DisassociationEvent [] {
 
-			%read-only object DisassocData {
+			object DisassocData {
 				%read-only uint64 BSSID = 0 {
 				}
 

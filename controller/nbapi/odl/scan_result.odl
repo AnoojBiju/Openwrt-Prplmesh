@@ -16,12 +16,12 @@
 %define {
 	select Controller.Network.Device.Radio.ScanResult {
 
-		read-only object OpClassScan [] {
+		object OpClassScan [] {
 			%read-only uint32 OperatingClass = 0 {
 				on action validate call check_range [0, 255];
 			}
 
-			%read-only object ChannelScan [] {
+			object ChannelScan [] {
 				counted with NumberOfChannelScans;
 			}
 			counted with NumberOfOpClassScans;
