@@ -1519,7 +1519,7 @@ bool master_thread::handle_cmdu_1905_ap_capability_report(const std::string &src
         if (!database.fill_radio_channel_scan_capabilites(ruid, radio_capabilities_entry)) {
             // We want to save the channel-scan-capabilities for the radios we can
             LOG(ERROR) << "Failed to save radio channel-scan-capabilities for radio=" << ruid;
-            all_radio_capabilities_saved_successfully = true;
+            all_radio_capabilities_saved_successfully = false;
         }
     }
 
