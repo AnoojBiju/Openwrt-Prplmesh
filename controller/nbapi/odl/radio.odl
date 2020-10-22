@@ -56,9 +56,7 @@
 			counted with NumberOfCurrOpClass;
 		}
 
-		object Capabilities [] {
-			counted with NumberOfOpClass;
-		}
+		object Capabilities;
 
 		object BSS [] {
 			counted with NumberOfBSS;
