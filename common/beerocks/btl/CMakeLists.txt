@@ -6,8 +6,8 @@ set(MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 
 # BTL source files
 set(btl_sources
-    ${MODULE_PATH}/btl.cpp
-    ${MODULE_PATH}/btl_broker.cpp
+    ${MODULE_PATH}/source/btl.cpp
+    ${MODULE_PATH}/source/btl_broker.cpp
     ${MODULE_PATH}/source/broker_client_factory_impl.cpp
     ${MODULE_PATH}/source/broker_client_impl.cpp
     ${MODULE_PATH}/source/message_parser_stream_impl.cpp
