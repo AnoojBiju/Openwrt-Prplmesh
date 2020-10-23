@@ -98,31 +98,27 @@ void Ieee1905Transport::handle_broker_cmdu_tx_message(CmduTxMessage &msg)
 void Ieee1905Transport::handle_broker_interface_configuration_request_message(
     InterfaceConfigurationRequestMessage &msg)
 {
+    LOG_IF(msg.metadata()->numInterfaces == 0, FATAL) << "Configuration with no bridge!";
+    using Flags = InterfaceConfigurationRequestMessage::Flags;
+    LOG_IF(!(msg.metadata()->interfaces[0].flags & Flags::IS_BRIDGE), ERROR)
+        << "Interface to configure is not a bridge!";
+
     std::map<std::string, NetworkInterface> updated_network_interfaces;
+    // fill a set with the interfaces that are part of the bridge:
+    std::set<std::string> bridge_state{};
 
-    // fill an interfaces std::map with the specified interfaces
-    for (int i = 0; i < int(msg.metadata()->numInterfaces); i++) {
-        using Flags = InterfaceConfigurationRequestMessage::Flags;
+    auto bridge_name = msg.metadata()->interfaces[0].ifname;
+    LOG_IF(!m_bridge_state_manager->read_state(bridge_name, bridge_state), ERROR)
+        << "Failed reading the bridge state!";
+    updated_network_interfaces[bridge_name].ifname = bridge_name;
+    updated_network_interfaces[bridge_name].bridge_name =
+        msg.metadata()->interfaces[0].bridge_ifname;
+    updated_network_interfaces[bridge_name].is_bridge = true;
 
-        // only consider interfaces marked with IEEE1905 transport enabled
-        if (!(msg.metadata()->interfaces[i].flags &
-              (Flags::ENABLE_IEEE1905_TRANSPORT | Flags::IS_BRIDGE))) {
-            continue;
-        }
-
-        std::string ifname        = std::string(msg.metadata()->interfaces[i].ifname);
-        std::string bridge_ifname = std::string(msg.metadata()->interfaces[i].bridge_ifname);
-        unsigned int if_index     = if_nametoindex(ifname.c_str());
-
-        if (updated_network_interfaces.count(ifname) > 0) {
-            MAPF_ERR("ignoring duplicate entry for interface " << if_index << ".");
-            continue;
-        }
-
+    for (const auto &ifname : bridge_state) {
+        MAPF_INFO("bridge state iface: " << ifname);
         updated_network_interfaces[ifname].ifname      = ifname;
-        updated_network_interfaces[ifname].bridge_name = bridge_ifname;
-        updated_network_interfaces[ifname].is_bridge =
-            msg.metadata()->interfaces[i].flags & Flags::IS_BRIDGE;
+        updated_network_interfaces[ifname].bridge_name = bridge_name;
     }
 
     update_network_interfaces(updated_network_interfaces);
