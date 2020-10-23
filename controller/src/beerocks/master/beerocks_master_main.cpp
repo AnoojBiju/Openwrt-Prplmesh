@@ -300,23 +300,6 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
     }
 }
 
-static std::shared_ptr<beerocks::net::UdsAddress> create_uds_address(const std::string &path)
-{
-    // When no longer required, the UDS socket pathname should be deleted using unlink or remove.
-    auto deleter = [path](beerocks::net::UdsAddress *p) {
-        if (p) {
-            delete p;
-        }
-        unlink(path.c_str());
-    };
-
-    // Remove given path in case it exists
-    unlink(path.c_str());
-
-    // Create UDS address from given path (using custom deleter)
-    return std::shared_ptr<beerocks::net::UdsAddress>(new beerocks::net::UdsAddress(path), deleter);
-}
-
 static std::unique_ptr<beerocks::net::ServerSocket>
 create_server_socket(const beerocks::net::UdsAddress &address)
 {
@@ -496,7 +479,7 @@ int main(int argc, char *argv[])
     LOG_IF(!cmdu_serializer, FATAL) << "Unable to create CMDU serializer!";
 
     std::string uds_path = beerocks_slave_conf.temp_path + "/" + std::string(BEEROCKS_MASTER_UDS);
-    auto uds_address     = create_uds_address(uds_path);
+    auto uds_address     = beerocks::net::UdsAddress::create_instance(uds_path);
     LOG_IF(!uds_address, FATAL) << "Unable to create UDS server address!";
 
     auto server_socket = create_server_socket(*uds_address);

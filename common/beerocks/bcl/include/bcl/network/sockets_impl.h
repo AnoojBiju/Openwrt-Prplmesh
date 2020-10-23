@@ -79,6 +79,23 @@ public:
     const socklen_t &length() const override { return m_length; }
     socklen_t size() const override { return m_size; }
 
+    static std::shared_ptr<UdsAddress> create_instance(const std::string &path)
+    {
+        // When no longer required, the UDS socket pathname should be deleted using unlink or remove.
+        auto deleter = [path](UdsAddress *p) {
+            if (p) {
+                delete p;
+            }
+            unlink(path.c_str());
+        };
+
+        // Remove given path in case it exists
+        unlink(path.c_str());
+
+        // Create UDS address from given path (using custom deleter)
+        return std::shared_ptr<UdsAddress>(new UdsAddress(path), deleter);
+    }
+
 private:
     sockaddr_un m_address  = {};
     socklen_t m_length     = sizeof(m_address);
