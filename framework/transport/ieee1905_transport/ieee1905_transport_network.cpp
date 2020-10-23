@@ -238,7 +238,29 @@ void Ieee1905Transport::handle_bridge_status_change(const std::string &bridge_na
     MAPF_INFO("Interface status change - interface '"
               << iface_name << "' " << (iface_status ? "added" : "removed") << " from bridge '"
               << bridge_name << ".");
-    // TODO
+    std::map<std::string, NetworkInterface> updated_network_interfaces;
+    // fill a map with bridges (key) and the set of interfaces they contain (value):
+    std::set<std::string> bridge_status {};
+    // // fill an interfaces std::map with the specified interfaces
+    // std::set<std::string, std::string>
+    m_bridge_status_manager->read_status(bridge_name, bridge_status);
+
+    for(const auto &ifname : bridge_status)
+        {
+        unsigned int if_index     = if_nametoindex(ifname.c_str());
+
+        if (updated_network_interfaces.count(ifname) > 0) {
+            MAPF_ERR("ignoring duplicate entry for interface " << if_index << ".");
+            continue;
+        }
+
+        updated_network_interfaces[ifname].ifname      = ifname;
+        updated_network_interfaces[ifname].bridge_name = bridge_name;
+    }
+
+    update_network_interfaces(updated_network_interfaces);
+
+    publish_interface_configuration_indication();
 }
 
 void Ieee1905Transport::deactivate_interface(NetworkInterface &interface)
