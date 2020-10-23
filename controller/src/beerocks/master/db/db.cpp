@@ -5120,3 +5120,36 @@ bool db::remove_current_op_classes(const sMacAddr &radio_mac)
 
     return true;
 }
+
+bool db::set_radio_utilization(const sMacAddr &bssid, uint8_t utilization)
+{
+
+    std::string bssid_string = tlvf::mac_to_string(bssid);
+
+    auto find_node = std::find_if(
+        std::begin(nodes), std::end(nodes),
+        [&bssid_string](const std::unordered_map<std::string, std::shared_ptr<son::node>> &map) {
+            return map.find(bssid_string) != map.end();
+        });
+
+    if (find_node == std::end(nodes)) {
+        LOG(ERROR) << "Failed to get radio node for bssid: " << bssid_string;
+        return false;
+    }
+
+    auto radio_node = find_node->at(bssid_string);
+
+    auto radio_path = dm_get_path_to_radio(*radio_node);
+    if (radio_path.empty()) {
+        LOG(ERROR) << "Failed to get radio path for radio, mac: " << radio_node->mac;
+        return false;
+    }
+
+    // Path to the object example: Controller.Network.Device.1.Radio.1.Utilization
+    if (!m_ambiorix_datamodel->set(radio_path, "Utilization", utilization)) {
+        LOG(ERROR) << "Failed to set " << radio_path << "Utilization";
+        return false;
+    }
+
+    return true;
+}
