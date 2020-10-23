@@ -9,30 +9,26 @@
 #ifndef BCL_NETWORK_INTERFACE_STATE_MONITOR_IMPL_H_
 #define BCL_NETWORK_INTERFACE_STATE_MONITOR_IMPL_H_
 
-#include "buffer_impl.h"
 #include "interface_state_monitor.h"
-#include "sockets_impl.h"
+#include "netlink_event_listener.h"
 
 #include <memory>
 
 namespace beerocks {
-
-class EventLoop;
-
 namespace net {
 
 class InterfaceStateMonitorImpl : public InterfaceStateMonitor {
-    static constexpr size_t netlink_buffer_size = 8192;
-
 public:
     /**
-     * @brief Class constructor
+     * @brief Class constructor.
      *
-     * @param connection Netlink socket connection for kernel/user-space communication.
-     * @param event_loop Event loop to wait for I/O events.
+     * Registers a handler in the given Netlink event listener to get notified of Netlink events
+     * published by the kernel and extract information about interface state changes out of them.
+     *
+     * @param netlink_event_listener Netlink event listener to get notified of Netlink events.
      */
-    InterfaceStateMonitorImpl(const std::shared_ptr<Socket::Connection> &connection,
-                              const std::shared_ptr<EventLoop> &event_loop);
+    explicit InterfaceStateMonitorImpl(
+        std::shared_ptr<NetlinkEventListener> netlink_event_listener);
 
     /**
      * @brief Class destructor
@@ -41,38 +37,28 @@ public:
 
 private:
     /**
-     * Buffer to hold data received through socket connection
+     * Netlink event listener to get notified of Netlink events.
      */
-    BufferImpl<netlink_buffer_size> m_buffer;
+    std::shared_ptr<NetlinkEventListener> m_netlink_event_listener;
 
     /**
-     * Socket connection through which interface state information is received.
+     * Handler identifier of the registered Netlink event handler function, required to remove it
+     * on exit.
      */
-    std::shared_ptr<Socket::Connection> m_connection;
+    uint32_t m_handler_id;
 
     /**
-     * Application event loop used by the monitor to wait for I/O events.
-     */
-    std::shared_ptr<EventLoop> m_event_loop;
-
-    /**
-     * @brief Parses data received through the Netlink socket connection.
+     * @brief Netlink event handler function.
      *
-     * The array of bytes contains a list of Netlink messages.
-     *
-     * @param buffer Buffer with the array of netlink messages to parse.
-     */
-    void parse(const Buffer &buffer) const;
-
-    /**
-     * @brief Parses message received through the Netlink socket connection.
+     * Parses messages received through the Netlink socket connection to extract information about
+     * interface state changes out of them.
      *
      * If the type of the Netlink message is RTM_NEWLINK or RTM_DELLINK then reads the interface
      * index and state and notifies a change in the interface state.
      *
      * @param msg_hdr Netlink message to parse.
      */
-    void parse(const nlmsghdr *msg_hdr) const;
+    void handle_netlink_event(const nlmsghdr *msg_hdr);
 };
 
 } // namespace net
