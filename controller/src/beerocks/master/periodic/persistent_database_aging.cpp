@@ -27,7 +27,8 @@ void persistent_database_aging_operation::periodic_operation_function()
     auto clients     = m_database.get_clients_with_persistent_data_configured();
     std::vector<sMacAddr> aged_clients;
     std::copy_if(
-        clients.begin(), clients.end(), aged_clients.begin(), [&](const sMacAddr &client_mac) {
+        clients.begin(), clients.end(), std::back_inserter(aged_clients),
+        [&](const sMacAddr &client_mac) {
             const auto max_timelife_delay_sec =
                 std::chrono::seconds(m_database.config.max_timelife_delay_minutes * 60);
             const auto unfriendly_device_max_timelife_delay_sec = std::chrono::seconds(
