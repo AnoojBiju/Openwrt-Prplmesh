@@ -17,16 +17,18 @@ class CommandError(Exception):
 class PrplMeshBase(linux.LinuxDevice):
     """PrplMesh abstract device."""
 
-    def _run_shell_cmd(self, cmd: str = "", args: list = None, timeout: int = 30,
+    def _run_shell_cmd(self, cmd: str = "", args: list = [], timeout: int = 30,
                        env: Dict[str, str] = None):
         """Wrapper that executes command with specified args on host machine and logs output."""
-        if env is not None:
-            res, exitstatus = pexpect.run(cmd, args=args, timeout=timeout, encoding="utf-8",
-                                          withexitstatus=1, env=env)
-        else:
-            res, exitstatus = pexpect.run(cmd, args=args, timeout=timeout, encoding="utf-8",
-                                          withexitstatus=1)
-        entry = " ".join((cmd, " ".join(args)))
+
+        _args = ['-c', cmd] + args
+
+        res, exitstatus = pexpect.run(command='/bin/bash',
+                                      args=_args, timeout=timeout,
+                                      encoding="utf-8",
+                                      withexitstatus=1, env=env)
+
+        entry = "".join((cmd, " ".join(args)))
         if exitstatus != 0:
             raise CommandError("Error executing {}:\n{}".format(entry, res))
 

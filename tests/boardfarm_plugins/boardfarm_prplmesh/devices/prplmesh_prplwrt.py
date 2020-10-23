@@ -113,11 +113,14 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
         It is used by boardfarm to indicate that spawned device instance is ready for test
         and also after test - to insure that device still operational.
         """
-        return True
+        self.sendline(f"printf device_get_info | nc {self.wan_ip} 8002")
+        self.expect(
+            'status,RUNNING\r\r\nstatus,COMPLETE,vendor,Intel,model,prplMesh,version',
+            timeout=2)
 
     def get_prplMesh_status(self) -> bool:
         """ Check prplMesh status. Return True if operational."""
-        self.sendline("/etc/init.d/prplmesh status")
+        self._prplMesh_exec("status")
         self.expect(
             ["(?P<main_agent>OK) Main agent.+"
              "(?P<wlan0>OK) wlan0.+"
