@@ -296,6 +296,11 @@ class ALEntityDocker(ALEntity):
             device_ip = re.search(
                 r'inet (?P<ip>[0-9.]+)', device_ip_output.decode('utf-8')).group('ip')
 
+        device_ip_output = self.command(
+            'ip', '-f', 'inet', 'addr', 'show', ucc_interface_name)
+        self.external_ip = re.search(
+            r'inet (?P<ip>[0-9.]+)', device_ip_output.decode('utf-8')).group('ip')
+
         ucc_socket = UCCSocket(device_ip, ucc_port)
         mac = ucc_socket.dev_get_parameter('ALid')
 
