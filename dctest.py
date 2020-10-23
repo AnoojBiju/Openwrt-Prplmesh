@@ -66,7 +66,6 @@ class Services:
         self.scriptdir = os.path.dirname(os.path.realpath(__file__))
         os.chdir(self.scriptdir)
         self.rootdir = self.scriptdir
-        self.local_run = False
         self.dut = dut
         self.test_suite = test_suite
 
@@ -135,8 +134,11 @@ class Services:
         local_env = os.environ
         local_env['ROOT_DIR'] = self.rootdir
         local_env['RUN_ID'] = self.build_id
+        if os.getenv('CI_PIPELINE_ID') is None:
+            # Running locally
+            local_env['CI_PIPELINE_ID'] = 'latest'
+        print("Using CI_PIPELINE_ID '{}'".format(local_env['CI_PIPELINE_ID']))
 
-        local_env['CI_PIPELINE_ID'] = 'latest'
         local_env['FINAL_ROOT_DIR'] = self.rootdir
 
         local_env['DUT'] = self.dut
