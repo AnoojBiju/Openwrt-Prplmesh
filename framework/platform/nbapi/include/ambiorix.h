@@ -45,6 +45,10 @@ public:
                                         const std::string &key)                    = 0;
     virtual std::string get_datamodel_time_format()                                = 0;
     virtual bool remove_all_instances(const std::string &relative_path)            = 0;
+    virtual bool add_optional_subobject(const std::string &path_to_obj,
+                                        const std::string &subobject_name)         = 0;
+    virtual bool remove_optional_subobject(const std::string &path_to_obj,
+                                           const std::string &subobject_name)      = 0;
 };
 
 inline Ambiorix::~Ambiorix() {}

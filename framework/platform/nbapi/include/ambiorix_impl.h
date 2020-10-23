@@ -126,6 +126,32 @@ public:
      */
     bool remove_all_instances(const std::string &relative_path) override;
 
+    /**
+     * @brief Instantiate optional sub-object.
+     *
+     * The subobject must be defined as a mib in the odl file. The name of the mib must be the same as
+     * the name of the subobject, and it must contain only a single object definition.
+     * 
+     * @param path_to_obj path to the object in datamodel (ex: "Controller.Network").
+     * @param subobject_name name of optional subobject to instantiate (ex: "HTCapabilities").
+     * @return true if subobject successfully added, false otherwise
+     */
+    bool add_optional_subobject(const std::string &path_to_obj,
+                                const std::string &subobject_name) override;
+
+    /**
+     * @brief Remove optional sub-object.
+     *
+     * The subobject must be defined as a mib in the odl file. The name of the mib must be the same as
+     * the name of the subobject, and it must contain only a single object definition.
+     * 
+     * @param path_to_obj path to the object in datamodel (ex: "Controller.Network").
+     * @param subobject_name name of optional subobject to be removed (ex: "HTCapabilities").
+     * @return true if subobject successfully removed, false otherwise
+     */
+    bool remove_optional_subobject(const std::string &path_to_obj,
+                                   const std::string &subobject_name) override;
+
 private:
     // Methods
 

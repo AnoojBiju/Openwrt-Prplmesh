@@ -216,6 +216,58 @@ amxd_object_t *AmbiorixImpl::find_object(const std::string &relative_path)
     return object;
 }
 
+bool AmbiorixImpl::add_optional_subobject(const std::string &path_to_obj,
+                                          const std::string &subobject_name)
+{
+    amxd_object_t *object = find_object(path_to_obj);
+
+    if (!object) {
+        LOG(ERROR) << "Failed to add mib [" << subobject_name << "] for " << path_to_obj;
+        return false;
+    }
+
+    amxd_status_t status = amxd_object_add_mib(object, subobject_name.c_str());
+    if (status == amxd_status_duplicate) {
+        LOG(ERROR) << "Mib [" << subobject_name << "] already present in object: " << path_to_obj;
+        return false;
+    }
+
+    if (status != amxd_status_ok) {
+        LOG(ERROR) << "Failed to add mib [" << subobject_name << "] for " << path_to_obj;
+        return false;
+    }
+
+    LOG(DEBUG) << "Mib [" << subobject_name << "] successfully added for object " << path_to_obj;
+
+    return true;
+}
+
+bool AmbiorixImpl::remove_optional_subobject(const std::string &path_to_obj,
+                                             const std::string &subobject_name)
+{
+    amxd_object_t *object = find_object(path_to_obj);
+
+    if (!object) {
+        LOG(ERROR) << "Failed to remove mib [" << subobject_name << "] from " << path_to_obj;
+        return false;
+    }
+
+    amxd_status_t status = amxd_object_remove_mib(object, subobject_name.c_str());
+    if (status == amxd_status_object_not_found) {
+        LOG(ERROR) << "Object [" << path_to_obj << "] not found.";
+        return false;
+    }
+
+    if (status != amxd_status_ok) {
+        LOG(ERROR) << "Failed to remove mib [" << subobject_name << "] for " << path_to_obj;
+        return false;
+    }
+
+    LOG(DEBUG) << "Mib [" << subobject_name << "] successfully removed from " << path_to_obj;
+
+    return true;
+}
+
 amxd_object_t *AmbiorixImpl::prepare_transaction(const std::string &relative_path,
                                                  amxd_trans_t &transaction)
 {

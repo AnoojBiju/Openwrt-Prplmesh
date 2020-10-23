@@ -39,6 +39,10 @@ public:
     uint32_t get_instance_index(const std::string &specific_path, const std::string &key) override;
     std::string get_datamodel_time_format() override;
     bool remove_all_instances(const std::string &relative_path) override;
+    bool add_optional_subobject(const std::string &path_to_obj,
+                                const std::string &subobject_name) override;
+    bool remove_optional_subobject(const std::string &path_to_obj,
+                                   const std::string &subobject_name) override;
 };
 
 } // namespace nbapi

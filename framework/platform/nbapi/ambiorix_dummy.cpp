@@ -60,5 +60,17 @@ std::string AmbiorixDummy::get_datamodel_time_format() { return {}; }
 
 bool AmbiorixDummy::remove_all_instances(const std::string &relative_path) { return true; }
 
+bool AmbiorixDummy::add_optional_subobject(const std::string &path_to_obj,
+                                           const std::string &subobject_name)
+{
+    return true;
+}
+
+bool AmbiorixDummy::remove_optional_subobject(const std::string &path_to_obj,
+                                              const std::string &subobject_name)
+{
+    return true;
+}
+
 } // namespace nbapi
 } // namespace beerocks
