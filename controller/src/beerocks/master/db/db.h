@@ -1322,6 +1322,20 @@ private:
      */
     bool dm_set_device_multi_ap_capabilities(const std::string &device_mac);
 
+    /**
+     * @brief Add instance of 'OperatingClasses' data element,
+     * set values for its parameters/subobjects
+     * Example: "Controller.Network.Device.1.Radio.1.Capabilities.OperatingClasses.1."
+     *
+     * @param radio_mac mac address of radio which reporting operating class.
+     * @param max_tx_power max transmit power.
+     * @param op_class operating class.
+     * @param non_operable_channels list of non oparable channels.
+     * @return true on success, false otherwise.
+     */
+    bool dm_add_ap_operating_classes(const std::string &radio_mac, uint8_t max_tx_power,
+                                     uint8_t op_class, std::vector<uint8_t> non_operable_channels);
+
     int network_optimization_task_id           = -1;
     int channel_selection_task_id              = -1;
     int bml_task_id                            = -1;

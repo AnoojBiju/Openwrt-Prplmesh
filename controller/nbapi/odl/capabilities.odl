@@ -30,7 +30,8 @@
 			}
 
 			%read-only object NonOperable [] {
-					counted with NumberOfNonOperChan;
+				uint32 NonOpChannelNumber;
+				counted with NumberOfNonOperChan;
 			}
 		}
 	}

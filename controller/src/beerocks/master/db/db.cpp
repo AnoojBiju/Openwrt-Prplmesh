@@ -1209,6 +1209,60 @@ std::list<sMacAddr> db::get_1905_1_neighbors(const sMacAddr &al_mac)
 // Capabilities
 //
 
+bool db::dm_add_ap_operating_classes(const std::string &radio_mac, uint8_t max_tx_power,
+                                     uint8_t op_class, std::vector<uint8_t> non_operable_channels)
+{
+    auto radio_node   = get_node(radio_mac);
+    bool return_value = true;
+
+    if (!radio_node) {
+        LOG(ERROR) << "Fail to get radio with mac: " << radio_mac;
+        return false;
+    }
+
+    std::string path_to_obj = dm_get_path_to_radio(*radio_node);
+    if (path_to_obj.empty()) {
+        LOG(ERROR) << "Fail to find path to radio with mac: " << radio_mac;
+        return false;
+    }
+
+    path_to_obj += "Capabilities.OperatingClasses";
+    uint32_t index = m_ambiorix_datamodel->add_instance(path_to_obj);
+    if (!index) {
+        LOG(ERROR) << "Fail to add object: " << path_to_obj;
+        return false;
+    }
+
+    path_to_obj += "." + std::to_string(index);
+    if (!m_ambiorix_datamodel->set(path_to_obj, "MaxTxPower", max_tx_power)) {
+        LOG(ERROR) << "Fail to set value for " << path_to_obj << ".MaxTxPower";
+        return_value = false;
+    }
+
+    if (!m_ambiorix_datamodel->set(path_to_obj, "Class", op_class)) {
+        LOG(ERROR) << "Fail to set value for " << path_to_obj << ".Class";
+        return_value = false;
+    }
+
+    path_to_obj += ".NonOperable";
+    for (auto non_op_channel : non_operable_channels) {
+        uint32_t channel_index = m_ambiorix_datamodel->add_instance(path_to_obj);
+        if (!channel_index) {
+            LOG(ERROR) << "Fail to add object: " << path_to_obj;
+            return_value = false;
+            continue;
+        }
+        if (!m_ambiorix_datamodel->set(path_to_obj + '.' + std::to_string(channel_index),
+                                       "NonOpChannelNumber", non_op_channel)) {
+            LOG(ERROR) << "Fail to set value for " << path_to_obj << channel_index
+                       << ".NonOpChannelNumber";
+            return_value = false;
+        }
+    }
+
+    return return_value;
+}
+
 const beerocks::message::sRadioCapabilities *
 db::get_station_current_capabilities(const std::string &mac)
 {
@@ -1464,6 +1518,9 @@ bool db::add_hostap_supported_operating_class(const std::string &radio_mac, uint
         if (channel != supported_channels.end())
             supported_channels.erase(channel);
     }
+
+    // Set values for Controller.Network.Device.Radio.Capabilities.OperatingClasses
+    dm_add_ap_operating_classes(radio_mac, tx_power, operating_class, non_operable_channels);
 
     set_hostap_supported_channels(radio_mac, &supported_channels[0], supported_channels.size());
     // dump new supported channels state
