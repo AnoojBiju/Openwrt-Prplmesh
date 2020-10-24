@@ -30,7 +30,7 @@
 			on action validate call check_range [0, 220];
 		}
 
-		%read-only object NeighborBSS [] {
+		object NeighborBSS [] {
 			counted with NumberOfNeighbors;
 		}
 	}

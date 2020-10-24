@@ -39,7 +39,7 @@
 			on action validate call check_range [0, 255];
 		}
 
-		%read-only object CurrentOperatingClasses [] {
+		object CurrentOperatingClasses [] {
 			%read-only datetime TimeStamp = "2020-08-31T11:22:39Z";
 
 			%read-only uint32 Class = 0 {
@@ -56,23 +56,21 @@
 			counted with NumberOfCurrOpClass;
 		}
 
-		read-only object Capabilities [] {
-			counted with NumberOfOpClass;
-		}
+		object Capabilities;
 
-		%read-only object BSS [] {
+		object BSS [] {
 			counted with NumberOfBSS;
 		}
 
-		%read-only object BackhaulSTA {
+		object BackhaulSTA {
 			%read-only string MACAddress = "";
 		}
 
-		%read-only object UnassociatedSTA [] {
+		object UnassociatedSTA [] {
 			counted with NumberOfUnassocSTA;
 		}
 
-		%read-only object ScanResult {
+		object ScanResult {
 			// DataElements:ScanResult 
 		}
 	}

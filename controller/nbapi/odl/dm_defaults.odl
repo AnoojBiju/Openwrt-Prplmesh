@@ -63,10 +63,3 @@
 		}
 	}
 }
-
-%populate {
-	object Controller.Network.Device.Radio {
-		instance add() {
-		}
-	}
-}

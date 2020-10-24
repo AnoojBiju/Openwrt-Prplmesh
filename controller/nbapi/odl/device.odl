@@ -25,7 +25,7 @@
 		/*
 		** The Multi-AP capabilities supported by this device
 		*/
-		%read-only object MultiAPCapabilities {
+		object MultiAPCapabilities {
 			%read-only bool USTALinkMatricCurrentlyOn;			/* Support Unassociated STA Link Metrics reporting
 																** on the channels its BSSs are currently operating on. */
 			%read-only bool USTALinkMatricCurrentlyOff;			/* Support Unassociated STA Link Metrics reporting on channels
@@ -36,7 +36,7 @@
 		/*
 		** The list of Radio objects.
 		*/
-		%read-only object Radio [] {
+		object Radio [] {
 			counted with NumberOfRadios;
 		}
 

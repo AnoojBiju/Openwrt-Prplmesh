@@ -20,26 +20,13 @@
 
 		%read-only string TimeStamp = "2020-08-31T11:22:39Z";
 
-		%read-only uint32 HTCapabilities = 0 {
-			on action validate call check_range [0, 1];
-		}
+		/**
+		** Need to add here HTCapabilities, VHTCapabilities, HECapabilities
+		** from mids which defined in controller.odl
+		**/
 
-		%read-only uint32 VHTCapabilities = 0 {
-			on action validate call check_range [0, 1];
-		}
-
-		%read-only uint64 HECapabilities = 0 {
-			
-		}
-
-		%read-only uint32 LastDataDownlinkRate = 0 {
-
-		}
-
-		%read-only uint32 LastDataUplinkRate = 0 {
-			
-		}
-
+		%read-only uint32 LastDataDownlinkRate = 0;
+		%read-only uint32 LastDataUplinkRate = 0;
 		%read-only uint32 UtilizationReceive = 0 {
 			on action validate call check_minimum 0;
 		}
@@ -74,7 +61,7 @@
 		%read-only string IPV6Address = "0";
 		%read-only string Hostname = "0";
 
-		%read-only object MeasurementReport [] {
+		object MeasurementReport [] {
 			counted with NumberOfMeasureReports;
 		}
 	}
