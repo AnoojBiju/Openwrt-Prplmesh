@@ -247,10 +247,6 @@ void channel_selection_task::work()
             }
             case eEvent::AP_ACTIVITY_IDLE_EVENT: {
                 ap_activity_idle = (sApActivityIdle_event *)event_obj;
-                if (database.get_hostap_is_on_fail_safe(hostap_mac)) {
-                    FSM_MOVE_STATE(ON_FAIL_SAFE_CHANNEL);
-                    break;
-                }
                 FSM_MOVE_STATE(GOTO_IDLE);
                 break;
             }
@@ -372,57 +368,12 @@ void channel_selection_task::work()
         channel_switch_required = false;
         get_hostap_params();
 
-        bool hostap_repeater_mode_flag = database.get_hostap_repeater_mode_flag(hostap_mac);
-
-        bool is_eth_bh_and_slave_is_5g_low_band =
-            (hostap_params.low_pass_filter_on && (!is_2G_channel(hostap_params.channel)) &&
-             (!hostap_params.backhaul_is_wireless));
-
-        bool is_2g_bh_and_slave_is_5g_low_band =
-            (hostap_params.low_pass_filter_on && is_2G_channel(hostap_params.backhaul_channel) &&
-             hostap_params.backhaul_is_wireless);
-
-        bool is_bh_manager_wireless_slave = (hostap_params.backhaul_is_wireless &&
-                                             database.is_hostap_backhaul_manager(hostap_mac) &&
-                                             !(is_2G_channel(hostap_params.backhaul_channel)));
-        bool is_bh_2g                     = is_2G_channel(hostap_params.backhaul_channel);
-        TASK_LOG(DEBUG) << "hostap_params.low_pass_filter_on = "
-                        << int(hostap_params.low_pass_filter_on)
-                        << " is_2G_channel(hostap_params.backhaul_channel) = " << int(is_bh_2g)
-                        << " hostap_params.backhaul_is_wireless = "
-                        << int(hostap_params.backhaul_is_wireless)
-                        << " database.is_hostap_backhaul_manager(hostap_mac)) = "
-                        << int(database.is_hostap_backhaul_manager(hostap_mac));
-        auto hostap_parent_mac  = database.get_node_parent(hostap_mac);
-        auto hostap_parent_type = database.get_node_type(hostap_parent_mac);
-
-        if (is_eth_bh_and_slave_is_5g_low_band) {
-            TASK_LOG(INFO) << "ignore 5G slave low band join when in backhaul is eth !!!";
-            send_ap_disabled_notification();
-            FSM_MOVE_STATE(GOTO_IDLE);
-            break;
-        } else if (is_2g_bh_and_slave_is_5g_low_band) {
-            TASK_LOG(INFO) << "ignore 5G slave low band join when in backhaul is 2.4G !!!";
-            send_ap_disabled_notification();
-            FSM_MOVE_STATE(GOTO_IDLE);
-            break;
-        } else if (is_bh_manager_wireless_slave && !hostap_repeater_mode_flag) {
-            TASK_LOG(INFO)
-                << "ignore 5G slave backhaul_manager_slave in backhaul wireless connection !!!";
-            send_ap_disabled_notification();
-            FSM_MOVE_STATE(GOTO_IDLE);
-            break;
-        } else if (!database.get_hostap_is_acs_enabled(hostap_mac)) {
+        if (!database.get_hostap_is_acs_enabled(hostap_mac)) {
             if (wireless_utils::is_dfs_channel(hostap_params.channel)) {
                 TASK_LOG(INFO) << "not waiting for CAC completed on static DFS channel "
                                   "configuration, setting CAC completed flag to true";
                 database.set_hostap_cac_completed(hostap_mac, true);
-                FSM_MOVE_STATE(SEND_RESTRICTED_FAIL_SAFE_CHANNEL);
-                break;
             }
-
-            FSM_MOVE_STATE(ACTIVATE_SLAVE);
-            break;
         }
 
         ccl.clear();
@@ -434,24 +385,7 @@ void channel_selection_task::work()
         channel_switch_request.bandwidth            = beerocks::BANDWIDTH_20;
         channel_switch_request.vht_center_frequency = 0;
 
-        //Check for TYPE GW and no restricted channels for GW
-        hostap_parent_mac  = database.get_node_parent(hostap_mac);
-        hostap_parent_type = database.get_node_type(hostap_parent_mac);
-        if (hostap_parent_type == beerocks::TYPE_GW) {
-            TASK_LOG(DEBUG) << " configured Restricted channels and fail safe channel for GW";
-            // if(!hostap_params.is_2G) {
-            //     FSM_MOVE_STATE(SEND_FAIL_SAFE_CHANNEL);
-            // } else {
-            //     FSM_MOVE_STATE(SEND_ACS);
-            // }
-            FSM_MOVE_STATE(SEND_RESTRICTED_FAIL_SAFE_CHANNEL);
-
-        } else if (hostap_parent_type == beerocks::TYPE_IRE) {
-            FSM_MOVE_STATE(COMPUTE_IRE_CANDIDATE_CHANNELS);
-        } else {
-            TASK_LOG(ERROR) << "Parent is not GW or IRE";
-            FSM_MOVE_STATE(GOTO_IDLE);
-        }
+        FSM_MOVE_STATE(ACTIVATE_SLAVE);
         break;
     }
     case eState::COMPUTE_IRE_CANDIDATE_CHANNELS: {
@@ -742,21 +676,7 @@ void channel_selection_task::work()
             uint16_t(csa_event->cs_params.vht_center_frequency);
         tasks.push_event(database.get_bml_task_id(), bml_task::CSA_NOTIFICATION_EVENT_AVAILABLE,
                          &csa_notification_event);
-
-        if (is_2G_channel(csa_event->cs_params.channel)) { // for 2.4G AP, clear restricted channels
-            FSM_MOVE_STATE(SEND_CLEAR_RESTRICTED_CHANNEL);
-            break;
-        } else if (channel_switch_required) {
-            //checks if acs report matches least used channel result.
-            channel_switch_required = false;
-            if (!acs_result_match()) {
-                FSM_MOVE_STATE(SEND_CHANNEL_SWITCH);
-                break;
-            }
-        } else {
-            FSM_MOVE_STATE(ACTIVATE_SLAVE);
-        }
-
+        FSM_MOVE_STATE(ACTIVATE_SLAVE);
         break;
     }
     case eState::ACTIVATE_SLAVE: {
@@ -874,11 +794,6 @@ void channel_selection_task::work()
             beerocks::eWiFiBandwidth(dfs_channel_available->params.bandwidth),
             dfs_channel_available->params.vht_center_frequency);
         database.set_supported_channel_radar_affected(hostap_mac, vec_channels, false);
-        if (database.get_hostap_is_on_fail_safe(hostap_mac)) {
-            FSM_MOVE_STATE(ON_FAIL_SAFE_CHANNEL);
-            break;
-        }
-
         FSM_MOVE_STATE(GOTO_IDLE);
         break;
     }
@@ -930,29 +845,15 @@ void channel_selection_task::work()
                         << int(csa_event->cs_params.switch_reason);
         if (csa_event->cs_params.switch_reason == beerocks::CH_SWITCH_REASON_RADAR) {
             database.set_radar_hit_stats(hostap_mac, prev_channel, prev_bandwidth, false);
-            if (wireless_utils::is_dfs_channel(csa_event->cs_params.channel) &&
-                (csa_event->cs_params.channel != prev_channel)) {
-                TASK_LOG(DEBUG)
-                    << "hostap_mac - " << hostap_mac
-                    << " csa - reason radar, moved to sub band dfs , update channel radar affected";
-                auto vec_channels = wireless_utils::calc_5g_20MHz_subband_channels(
-                    prev_bandwidth, prev_vht_center_frequency,
-                    beerocks::eWiFiBandwidth(csa_event->cs_params.bandwidth),
-                    csa_event->cs_params.vht_center_frequency);
-                database.set_supported_channel_radar_affected(hostap_mac, vec_channels, true);
-                database.set_hostap_is_on_sub_band(hostap_mac, true);
-                FSM_MOVE_STATE(ACTIVATE_SLAVE);
-            } else {
-                TASK_LOG(DEBUG)
-                    << "hostap_mac - " << hostap_mac
-                    << " csa - reason radar, moved to fail safe , update channel radar affected";
-                auto vec_channels = wireless_utils::get_5g_20MHz_channels(
-                    prev_bandwidth, prev_vht_center_frequency);
-                database.set_supported_channel_radar_affected(hostap_mac, vec_channels, true);
-                database.set_hostap_is_on_fail_safe(hostap_mac, true);
-                FSM_MOVE_STATE(ON_FAIL_SAFE_CHANNEL);
-            }
-
+            TASK_LOG(DEBUG)
+                << "hostap_mac - " << hostap_mac
+                << " csa - reason radar, moved to fail safe , update channel radar affected";
+            auto vec_channels = wireless_utils::calc_5g_20MHz_subband_channels(
+                prev_bandwidth, prev_vht_center_frequency,
+                beerocks::eWiFiBandwidth(csa_event->cs_params.bandwidth),
+                csa_event->cs_params.vht_center_frequency);
+            database.set_supported_channel_radar_affected(hostap_mac, vec_channels, true);
+            FSM_MOVE_STATE(ACTIVATE_SLAVE);
             break;
         }
 
