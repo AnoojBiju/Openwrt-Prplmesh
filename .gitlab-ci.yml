@@ -429,7 +429,7 @@ run-certification-tests-isr:
   tags:
     - certs-tests-isr
   rules:
-    - if: '$TESTS_TO_RUN && $WFA_CERTIFICATION_RUNNER == "ISR"'
+    - if: '$WFA_CERTIFICATION_RUNNER == "ISR"'
 
 include:
   - local: "/ci/certification/generic.yml"
