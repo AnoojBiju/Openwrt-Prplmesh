@@ -27,8 +27,8 @@ using namespace beerocks;
 using namespace net;
 using namespace son;
 
-static constexpr uint8_t MAX_FAILED_AUTOCONFIG_SEARCH_ATTEMPTS = 20;
-static constexpr uint8_t AUTOCONFIG_DISCOVERY_TIMEOUT_SECONDS  = 1;
+static constexpr uint8_t MAX_FAILED_AUTOCONFIG_SEARCH_ATTEMPTS = 60;
+static constexpr uint8_t AUTOCONFIG_DISCOVERY_TIMEOUT_SECONDS  = 3;
 
 #define FSM_MOVE_STATE(radio_iface, new_state)                                                     \
     ({                                                                                             \
@@ -175,6 +175,9 @@ void ApAutoConfigurationTask::handle_event(uint8_t event_enum_value, const void 
 
             LOG(DEBUG) << "starting discovery sequence on radio_iface=" << radio->front.iface_name;
             FSM_MOVE_STATE(radio->front.iface_name, eState::CONTROLLER_DISCOVERY);
+
+            // reset AP-Autoconfiguration task attempts counter.
+            m_state[radio->front.iface_name].attempts = 0;
 
             // Reset the discovery statuses.
             m_discovery_status[radio->freq_type] = {};
