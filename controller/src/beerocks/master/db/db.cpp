@@ -1720,8 +1720,8 @@ bool db::remove_vap(const std::string &radio_mac, int vap_id)
     return true;
 }
 
-bool db::add_vap(const std::string &radio_mac, int vap_id, std::string bssid, std::string ssid,
-                 bool backhual)
+bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bssid,
+                 const std::string &ssid, bool backhual)
 {
     if (!has_node(tlvf::mac_from_string(bssid)) &&
         !add_virtual_node(tlvf::mac_from_string(bssid), tlvf::mac_from_string(radio_mac))) {
