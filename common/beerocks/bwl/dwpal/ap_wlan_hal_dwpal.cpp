@@ -1784,7 +1784,6 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
 
         char reason[32]               = {0};
         char VAP[SSID_MAX_SIZE]       = {0};
-        ChanSwReason chanSwReason     = ChanSwReason::Unknown;
         std::string channelStr        = (event == Event::CSA_Finished) ? "Channel=" : "channel=";
         size_t numOfValidArgs[8]      = {0};
         FieldsToParse fieldsToParse[] = {
@@ -1837,7 +1836,8 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         }
 
         // Channel switch reason
-        auto tmpStr = std::string(reason);
+        ChanSwReason chanSwReason = ChanSwReason::Unknown;
+        auto tmpStr               = std::string(reason);
         if (tmpStr.find("RADAR") != std::string::npos) {
             chanSwReason = ChanSwReason::Radar;
         } else if (tmpStr.find("20_COEXISTANCE") != std::string::npos) {
