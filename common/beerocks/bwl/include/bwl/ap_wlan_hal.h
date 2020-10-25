@@ -400,7 +400,7 @@ protected:
         auto sub_str = std::string(&assoc_req[ap_wlan_hal::tagged_patameters_idx], sub_str_len);
 
         //convert the hex string to binary
-        return beerocks::string_utils::hex_to_char_string(sub_str);
+        return beerocks::string_utils::hex_to_bytes<std::string>(sub_str);
     };
 };
 
