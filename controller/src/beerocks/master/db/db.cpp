@@ -1756,6 +1756,21 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, std::string bssid, st
         return false;
     }
 
+    /*
+        Prepare path with correct BSS instance.
+        Example: Controller.Network.Device.1.Radio.1.BSS.1.
+    */
+    bss_path += std::to_string(bss_index) + ".";
+
+    /*
+        Set value for BSSID variable
+        Example: Controller.Network.Device.1.Radio.1.BSS.1.BSSID
+    */
+    if (!m_ambiorix_datamodel->set(bss_path, "BSSID", bssid)) {
+        LOG(ERROR) << "Failed to set " << bss_path << "BSSID";
+        return false;
+    }
+
     return true;
 }
 
