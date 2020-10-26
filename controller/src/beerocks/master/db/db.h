@@ -261,14 +261,14 @@ public:
                             std::pair<uint16_t, uint16_t> &results);
 
     /**
-     * @brief add instance of data element 'radio'
-     *
-     * @param mac address of radio
-     * @param mac address of device
-     * @return true if device with given mac address was found
-     * and radio instance was successfully added, false otherwise
-     * dm = data model
-     */
+    * @brief add instance of data element 'radio'
+    *
+    * @param mac address of radio
+    * @param mac address of device
+    * @return true if device with given mac address was found
+    * and radio instance was successfully added, false otherwise
+    * dm = data model
+    */
     bool dm_add_radio_element(const std::string &radio_mac, const std::string &device_mac);
 
     bool
