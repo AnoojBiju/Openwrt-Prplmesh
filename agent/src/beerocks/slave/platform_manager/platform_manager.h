@@ -76,6 +76,13 @@ protected:
 
 private:
     /**
+     * @brief Handles the client-connected event in the CMDU server.
+     *
+     * @param fd File descriptor of the socket that got connected.
+     */
+    void handle_connected(int fd);
+
+    /**
      * @brief Handles the client-disconnected event in the CMDU server.
      *
      * @param fd File descriptor of the socket.
