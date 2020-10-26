@@ -12,9 +12,7 @@
 #include <bcl/beerocks_logging.h>
 #include <bcl/beerocks_timer_factory_impl.h>
 #include <bcl/beerocks_timer_manager_impl.h>
-#include <bcl/beerocks_ucc_parser_stream_impl.h>
-#include <bcl/beerocks_ucc_serializer_stream_impl.h>
-#include <bcl/beerocks_ucc_server_impl.h>
+#include <bcl/beerocks_ucc_server_factory.h>
 #include <bcl/beerocks_version.h>
 #include <bcl/network/network_utils.h>
 #include <bcl/network/sockets_impl.h>
@@ -436,28 +434,14 @@ int main(int argc, char *argv[])
     // diagnostics_thread diagnostics(master_db);
 
     // UCC server must be created in certification mode only and if a valid TCP port has been set
+    uint16_t port = master_db.config.ucc_listener_port;
     std::unique_ptr<beerocks::UccServer> ucc_server;
-    if (master_db.setting_certification_mode() && (master_db.config.ucc_listener_port != 0)) {
+    if (master_db.setting_certification_mode() && (port != 0)) {
 
-        LOG(INFO) << "Certification mode enabled (listening on port "
-                  << master_db.config.ucc_listener_port << ")";
-
-        // Create parser for UCC command strings received through a stream-oriented socket.
-        auto ucc_parser = std::make_shared<beerocks::UccParserStreamImpl>();
-        LOG_IF(!ucc_parser, FATAL) << "Unable to create UCC parser!";
-
-        // Create serializer for UCC reply strings to be sent through a stream-oriented socket.
-        auto ucc_serializer = std::make_shared<beerocks::UccSerializerStreamImpl>();
-        LOG_IF(!ucc_serializer, FATAL) << "Unable to create UCC serializer!";
-
-        // Create TCP server socket to connect with remote clients
-        auto ucc_server_socket =
-            beerocks::net::TcpServerSocket::create_instance(master_db.config.ucc_listener_port);
-        LOG_IF(!ucc_server_socket, FATAL) << "Unable to create UCC server socket!";
+        LOG(INFO) << "Certification mode enabled (listening on port " << port << ")";
 
         // Create server to exchange UCC commands and replies with clients connected through the socket
-        ucc_server = std::make_unique<beerocks::UccServerImpl>(
-            std::move(ucc_server_socket), ucc_parser, ucc_serializer, event_loop);
+        ucc_server = beerocks::UccServerFactory::create_instance(port, event_loop);
         LOG_IF(!ucc_server, FATAL) << "Unable to create UCC server!";
     }
 
