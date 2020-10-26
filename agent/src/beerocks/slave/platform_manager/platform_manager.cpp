@@ -305,17 +305,20 @@ PlatformManager::PlatformManager(
     std::unique_ptr<beerocks::net::Timer<>> clean_old_arp_entries_timer,
     std::unique_ptr<beerocks::net::Timer<>> check_wlan_params_changed_timer,
     std::unique_ptr<beerocks::CmduServer> cmdu_server,
+    std::shared_ptr<beerocks::TimerManager> timer_manager,
     std::shared_ptr<beerocks::EventLoop> event_loop)
     : m_cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer)), config(config_), interfaces_map(interfaces_map_),
       logger(logger_), m_clean_old_arp_entries_timer(std::move(clean_old_arp_entries_timer)),
       m_check_wlan_params_changed_timer(std::move(check_wlan_params_changed_timer)),
-      m_cmdu_server(std::move(cmdu_server)), m_event_loop(event_loop)
+      m_cmdu_server(std::move(cmdu_server)), m_timer_manager(timer_manager),
+      m_event_loop(event_loop)
 {
     LOG_IF(!m_clean_old_arp_entries_timer, FATAL)
         << "clean-old-ARP-entries timer is a null pointer!";
     LOG_IF(!m_check_wlan_params_changed_timer, FATAL)
         << "check-WLAN-params-changed timer is a null pointer!";
     LOG_IF(!m_cmdu_server, FATAL) << "CMDU server is a null pointer!";
+    LOG_IF(!m_timer_manager, FATAL) << "Timer manager is a null pointer!";
     LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
 
     enable_arp_monitor = (config.enable_arp_monitor == "1");

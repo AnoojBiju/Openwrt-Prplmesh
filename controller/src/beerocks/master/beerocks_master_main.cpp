@@ -397,7 +397,7 @@ int main(int argc, char *argv[])
     auto event_loop = std::make_shared<beerocks::EventLoopImpl>();
     LOG_IF(!event_loop, FATAL) << "Unable to create event loop!";
 
-    // Create timer manager to create instances of timers.
+    // Create timer factory to create instances of timers.
     auto timer_factory = std::make_shared<beerocks::TimerFactoryImpl>();
     LOG_IF(!timer_factory, FATAL) << "Unable to create timer factory!";
 
