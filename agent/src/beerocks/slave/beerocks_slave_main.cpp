@@ -279,18 +279,6 @@ start_son_slave_thread(int slave_num,
     return son_slave;
 }
 
-static std::unique_ptr<beerocks::net::Timer<>> create_check_wlan_params_changed_timer()
-{
-    // Create timer to periodically check if WLAN parameters have changed
-    return std::make_unique<beerocks::net::TimerImpl<>>();
-}
-
-static std::unique_ptr<beerocks::net::Timer<>> create_clean_old_arp_entries_timer()
-{
-    // Create timer to periodically clean old ARP table entries
-    return std::make_unique<beerocks::net::TimerImpl<>>();
-}
-
 static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slave_conf,
                               const std::unordered_map<int, std::string> &interfaces_map, int argc,
                               char *argv[])
@@ -337,16 +325,7 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     auto cmdu_server = beerocks::CmduServerFactory::create_instance(uds_address, event_loop);
     LOG_IF(!cmdu_server, FATAL) << "Unable to create CMDU server!";
 
-    auto check_wlan_params_changed_timer = create_check_wlan_params_changed_timer();
-    LOG_IF(!check_wlan_params_changed_timer, FATAL)
-        << "Unable to create check-WLAN-parameters-changed timer!";
-
-    auto clean_old_arp_entries_timer = create_clean_old_arp_entries_timer();
-    LOG_IF(!clean_old_arp_entries_timer, FATAL) << "Unable to create clean-old-ARP-entries timer!";
-
     beerocks::PlatformManager platform_manager(beerocks_slave_conf, interfaces_map, *agent_logger,
-                                               std::move(clean_old_arp_entries_timer),
-                                               std::move(check_wlan_params_changed_timer),
                                                std::move(cmdu_server), timer_manager, event_loop);
 
     // Start platform manager
