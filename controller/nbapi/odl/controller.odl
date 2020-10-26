@@ -57,7 +57,7 @@
 }
 
 %define {
-    mib VHTCapabilities {
+    mib HECapabilities {
         /* Coming from 17.2.10 of the Multi-AP Specification */
         object HECapabilities {
             /* Supported HE MCS indicating set of supported HE Tx and Rx MCS. */
