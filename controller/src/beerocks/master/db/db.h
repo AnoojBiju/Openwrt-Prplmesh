@@ -1329,6 +1329,16 @@ private:
     bool dm_add_device_element(const sMacAddr &mac);
 
     /**
+     * @brief Adds STA instance to the datamodel.
+     * (ex. Controller.Network.Device.1.Radio.1.BSS.2.STA.3)
+     *
+     * @param bssid BSS mac address.
+     * @param client_mac Client mac address.
+     * @return True on success, false otherwise.
+     */
+    bool dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client_mac);
+
+    /**
      * @brief Prepares path to the Device data element with correct index (i).
      * Example: "Controller.Network.Device.1."
      *
@@ -1345,6 +1355,15 @@ private:
      * @return Correct Radio path, otherwise empty string.
      */
     std::string dm_get_path_to_radio(const son::node &radio_node);
+
+    /**
+     * @brief Prepares path to the BSS data element with correct index (i).
+     * Example: "Controller.Network.Device.1.Radio.1.BSS.2".
+     *
+     * @param bssid BSSID.
+     * @return Path to bss, empty string otherwise.
+     */
+    std::string dm_get_path_to_bss(const sMacAddr &bssid);
 
     /**
      * @brief Set clients (device) multi ap capabilities
