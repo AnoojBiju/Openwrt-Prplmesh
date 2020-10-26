@@ -6,7 +6,7 @@
  * See LICENSE file for more details.
  */
 
-#include <bcl/beerocks_cmdu_server_impl.h>
+#include <bcl/beerocks_cmdu_server_factory.h>
 #include <bcl/beerocks_config_file.h>
 #include <bcl/beerocks_event_loop_impl.h>
 #include <bcl/beerocks_logging.h>
@@ -16,8 +16,6 @@
 #include <bcl/beerocks_ucc_serializer_stream_impl.h>
 #include <bcl/beerocks_ucc_server_impl.h>
 #include <bcl/beerocks_version.h>
-#include <bcl/network/cmdu_parser_stream_impl.h>
-#include <bcl/network/cmdu_serializer_stream_impl.h>
 #include <bcl/network/network_utils.h>
 #include <bcl/network/sockets_impl.h>
 #include <bpl/bpl_cfg.h>
@@ -407,24 +405,13 @@ int main(int argc, char *argv[])
     auto timer_manager = std::make_shared<beerocks::TimerManagerImpl>(timer_factory, event_loop);
     LOG_IF(!timer_manager, FATAL) << "Unable to create timer manager!";
 
-    // Create parser for CMDU messages received through a stream-oriented socket.
-    auto cmdu_parser = std::make_shared<beerocks::net::CmduParserStreamImpl>();
-    LOG_IF(!cmdu_parser, FATAL) << "Unable to create CMDU parser!";
-
-    // Create serializer for CMDU messages to be sent through a stream-oriented socket.
-    auto cmdu_serializer = std::make_shared<beerocks::net::CmduSerializerStreamImpl>();
-    LOG_IF(!cmdu_serializer, FATAL) << "Unable to create CMDU serializer!";
-
+    // Create UDS address where the server socket will listen for incoming connection requests.
     std::string uds_path = beerocks_slave_conf.temp_path + "/" + std::string(BEEROCKS_MASTER_UDS);
     auto uds_address     = beerocks::net::UdsAddress::create_instance(uds_path);
     LOG_IF(!uds_address, FATAL) << "Unable to create UDS server address!";
 
-    auto server_socket = beerocks::net::UdsServerSocket::create_instance(*uds_address);
-    LOG_IF(!server_socket, FATAL) << "Unable to create UDS server socket!";
-
     // Create server to exchange CMDU messages with clients connected through a UDS socket
-    auto cmdu_server = std::make_unique<beerocks::CmduServerImpl>(
-        std::move(server_socket), cmdu_parser, cmdu_serializer, event_loop);
+    auto cmdu_server = beerocks::CmduServerFactory::create_instance(uds_address, event_loop);
     LOG_IF(!cmdu_server, FATAL) << "Unable to create CMDU server!";
 
     beerocks::net::network_utils::iface_info bridge_info;

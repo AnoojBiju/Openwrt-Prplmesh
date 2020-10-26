@@ -10,14 +10,12 @@
 #include "platform_manager/platform_manager.h"
 #include "son_slave_thread.h"
 
-#include <bcl/beerocks_cmdu_server_impl.h>
+#include <bcl/beerocks_cmdu_server_factory.h>
 #include <bcl/beerocks_config_file.h>
 #include <bcl/beerocks_event_loop_impl.h>
 #include <bcl/beerocks_logging.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/beerocks_version.h>
-#include <bcl/network/cmdu_parser_stream_impl.h>
-#include <bcl/network/cmdu_serializer_stream_impl.h>
 #include <bcl/network/network_utils.h>
 #include <bcl/network/sockets_impl.h>
 #include <bcl/network/timer_impl.h>
@@ -320,24 +318,13 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     auto event_loop = std::make_shared<beerocks::EventLoopImpl>();
     LOG_IF(!event_loop, FATAL) << "Unable to create event loop!";
 
-    // Create parser for CMDU messages received through a stream-oriented socket.
-    auto cmdu_parser = std::make_shared<beerocks::net::CmduParserStreamImpl>();
-    LOG_IF(!cmdu_parser, FATAL) << "Unable to create CMDU parser!";
-
-    // Create serializer for CMDU messages to be sent through a stream-oriented socket.
-    auto cmdu_serializer = std::make_shared<beerocks::net::CmduSerializerStreamImpl>();
-    LOG_IF(!cmdu_serializer, FATAL) << "Unable to create CMDU serializer!";
-
+    // Create UDS address where the server socket will listen for incoming connection requests.
     std::string uds_path = beerocks_slave_conf.temp_path + "/" + std::string(BEEROCKS_PLAT_MGR_UDS);
     auto uds_address     = beerocks::net::UdsAddress::create_instance(uds_path);
     LOG_IF(!uds_address, FATAL) << "Unable to create UDS server address!";
 
-    auto server_socket = beerocks::net::UdsServerSocket::create_instance(*uds_address);
-    LOG_IF(!server_socket, FATAL) << "Unable to create UDS server socket!";
-
     // Create server to exchange CMDU messages with clients connected through a UDS socket
-    auto cmdu_server = std::make_unique<beerocks::CmduServerImpl>(
-        std::move(server_socket), cmdu_parser, cmdu_serializer, event_loop);
+    auto cmdu_server = beerocks::CmduServerFactory::create_instance(uds_address, event_loop);
     LOG_IF(!cmdu_server, FATAL) << "Unable to create CMDU server!";
 
     auto check_wlan_params_changed_timer = create_check_wlan_params_changed_timer();
