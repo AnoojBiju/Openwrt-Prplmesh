@@ -58,8 +58,9 @@ class PrplMeshCompose(PrplMeshBase):
         It is used by boardfarm to indicate that spawned device instance is ready for test
         and also after test - to insure that device still operational.
         """
-        self._run_shell_cmd("printf",
-                            ["device_get_info", "|", "nc", "-w", "1", self.docker_name, "8002"])
+        entity = self.get_active_entity()
+
+        self._run_shell_cmd(f"printf device_get_info | nc -w 1 {entity.external_ip} 8002")
 
     def isalive(self):
         """Method required by boardfarm.
@@ -72,3 +73,11 @@ class PrplMeshCompose(PrplMeshBase):
     def prprlmesh_status_check(self):
         self.check_status()
         return True
+
+    def get_active_entity(self) -> ALEntityDocker:
+        """Returns the active ALEntityDocker instance based on the
+        class role so the entity call can be abstracted"""
+
+        if self.role == "controller":
+            return self.controller_entity
+        return self.agent_entity
