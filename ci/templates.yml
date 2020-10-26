@@ -1,0 +1,153 @@
+###############################################################
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+# SPDX-FileCopyrightText: 2019-2020 the prplMesh contributors (see AUTHORS.md)
+# This code is subject to the terms of the BSD+Patent license.
+# See LICENSE file for more details.
+###############################################################
+
+.image-build:
+  stage: containers
+  tags:
+    - shell
+    - docker-build
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - if [ "$CI_COMMIT_BRANCH" = "master" ]; then latest_tag="--tag latest"; fi
+    - ./tools/docker/image-build.sh --image "${CI_JOB_NAME#image-build-}" --tag $CI_PIPELINE_ID $latest_tag --push
+  retry: 2
+
+.in-prplmesh-builder:
+  image:
+    name: $CI_REGISTRY_IMAGE/prplmesh-builder-ubuntu-bionic:$CI_PIPELINE_ID
+    entrypoint: [""]
+  tags:
+    - docker
+  needs: ["image-build-builder/ubuntu/bionic"]
+
+.run-test-in-docker:
+  stage: test
+  extends: .in-prplmesh-builder
+  script:
+    - cd build/install
+    - ./tests/${CI_JOB_NAME}
+  needs:
+    - job: build-in-docker
+
+.build-for-openwrt:
+  stage: build
+  script:
+    - mkdir -p "build/$TARGET_DEVICE"
+    - tools/docker/builder/openwrt/build.sh --verbose -d "$TARGET_DEVICE" -t "prplmesh-builder-$TARGET_DEVICE:$CI_COMMIT_SHORT_SHA-$CI_PIPELINE_ID" 2>&1 | tee "build/$TARGET_DEVICE/openwrt-build.log"
+  artifacts:
+    paths:
+      - "build/$TARGET_DEVICE/"
+    expire_in: 4 weeks
+    when: always
+  tags:
+    - shell
+    - docker-build
+  needs: []
+
+.build-for-rdkb:
+  stage: build
+  script:
+    # LOCAL_RUNNER_CACHE_DIR is an environment variable that can be set by a GitLab runner
+    # to specify a custom persistent folder for caching files between builds. If not defined,
+    # the home folder of the current user is used.
+    - export RDK_CACHE_DIR=${LOCAL_RUNNER_CACHE_DIR:-~}/rdk
+    - mkdir -p "build/$TARGET_DEVICE"
+    - mkdir -p "$RDK_CACHE_DIR"
+    # Clean up the cache directory from anything that hasn't been accessed for a week.
+    - find "$RDK_CACHE_DIR" -type f -atime +7 -delete
+    - tools/docker/builder/rdk-b/build.sh --verbose --target-device "$TARGET_DEVICE" --tag "$CI_PIPELINE_ID" --cache "$RDK_CACHE_DIR"
+  artifacts:
+    paths:
+      - "build/$TARGET_DEVICE/"
+    expire_in: 4 weeks
+    when: always
+  tags:
+    - shell
+    - docker-build
+  needs: []
+
+.test-on-target:
+  stage: test
+  before_script:
+    # we need a list of all the targets to be able to kill them
+    - ALL_TARGETS="turris-omnia-1 glinet-b1300-1 netgear-rax40-1"
+    # kill prplmesh on each target to make sure they don't interfere with the test
+    - for i in $ALL_TARGETS ; do ssh "$i" 'pgrep -f beerocks | xargs kill -9 2>/dev/null' || true ; done
+  script:
+    - tools/deploy_firmware.py --device "$TARGET_DEVICE" --target-name "$TARGET_DEVICE_NAME" --image "$OPENWRT_IMAGE"
+    - tools/deploy_ipk.sh $TARGET_DEVICE_NAME "build/$TARGET_DEVICE/"prplmesh.ipk
+    - tests/openwrt/test_status.sh $TARGET_DEVICE_NAME
+  artifacts:
+    paths:
+      - logs
+    expire_in: 4 weeks
+    when: always
+  tags:
+    - targets
+  timeout: 20m
+
+.run-certification-tests:
+  interruptible: false
+  stage: test
+  variables:
+    # TESTS_TO_RUN needs to be set by the user (or the pipeline schedule)
+    GIT_CLONE_PATH: "/builds/prpl-foundation/prplmesh/prplMesh/"
+    # device to test with: prplmesh for dummy bwl, axepoint for dwpal on axepoint
+    DEVICE_UNDER_TEST: prplmesh
+  script:
+    - |
+      case "$DEVICE_UNDER_TEST" in
+          axepoint)
+              IMAGE_NAME=AX3000_1600_ETH_11AXUCI-squashfs-fullimage.img
+          ;;
+          turris-omnia)
+              IMAGE_NAME=openwrt-mvebu-cortexa9-cznic_turris-omnia-sysupgrade.img.gz
+          ;;
+          *)
+              IMAGE_NAME=''
+          ;;
+      esac
+      if [ -n $IMAGE_NAME ] ; then
+          tools/deploy_firmware.py --device $DEVICE_UNDER_TEST --target-name "$DEVICE_UNDER_TEST" --image $IMAGE_NAME
+          echo "Deploying to $DEVICE_UNDER_TEST"
+          tools/deploy_ipk.sh --certification-mode $DEVICE_UNDER_TEST build/$DEVICE_UNDER_TEST/prplmesh.ipk
+      fi
+    - ci/git-clean-reset.sh /easymesh_cert "$(<"ci/easymesh_cert_version")"
+    - sudo /easymesh_cert/run_test_file.py --upload-results  --verbose --log-folder logs --device-under-test $DEVICE_UNDER_TEST $TESTS_TO_RUN
+  artifacts:
+    paths:
+      - logs
+    when: always
+  needs:
+    - job: build-in-docker
+    - job: platform
+    - job: build-for-axepoint
+      project: $CI_PROJECT_PATH
+      ref: $CI_COMMIT_REF_NAME
+      artifacts: true
+    - job: build-for-turris-omnia
+      project: $CI_PROJECT_PATH
+      ref: $CI_COMMIT_REF_NAME
+      artifacts: true
+  timeout: 36h
+
+.certification-generic:
+  interruptible: false
+  variables:
+    # DEVICE_UNDER_TEST need to be set when extending the job
+    GIT_CLONE_PATH: "/builds/prpl-foundation/prplmesh/prplMesh/"
+  script:
+      - echo $CI_COMMIT_DESCRIPTION
+      - ci/git-clean-reset.sh /easymesh_cert "$(<"ci/easymesh_cert_version")"
+      - sudo /easymesh_cert/run_test_file.py -v -o logs -d $DEVICE_UNDER_TEST "${CI_JOB_NAME%%:*}"
+  artifacts:
+    paths:
+      - logs
+    when: always
+  tags:
+    - certs-tests
+  timeout: 45min
