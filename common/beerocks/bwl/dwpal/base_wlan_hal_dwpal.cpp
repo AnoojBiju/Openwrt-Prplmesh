@@ -513,7 +513,8 @@ bool base_wlan_hal_dwpal::dwpal_send_cmd(const std::string &cmd, int vap_id)
         result = dwpal_hostap_cmd_send(m_dwpal_ctx[ctx_index], cmd.c_str(), NULL, buffer,
                                        &buff_size_copy);
         if (result != 0) {
-            LOG(DEBUG) << "Failed to send cmd to DWPAL: " << cmd << " --> Retry";
+            LOG(DEBUG) << "Failed to send cmd to DWPAL: " << cmd << " ctx_index=" << ctx_index
+                       << " --> Retry";
         }
     } while (result != 0 && ++try_cnt < 3);
 
@@ -898,6 +899,8 @@ bool base_wlan_hal_dwpal::refresh_radio_info()
     if (m_radio_info.radio_state == eRadioState::DISABLED) {
         return true;
     }
+
+    m_radio_info.radio_enabled = (m_radio_info.radio_state == eRadioState::ENABLED);
 
     if (!m_radio_info.available_vaps.size()) {
         if (!refresh_vaps_info(beerocks::IFACE_RADIO_ID)) {

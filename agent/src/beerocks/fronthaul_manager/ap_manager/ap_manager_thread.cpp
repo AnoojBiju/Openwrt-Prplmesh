@@ -39,6 +39,7 @@ using namespace beerocks::net;
 #define DISABLE_BACKHAUL_VAP_TIMEOUT_SEC 30
 #define OPERATION_SUCCESS 0
 #define OPERATION_FAIL -1
+#define WAIT_FOR_RADIO_ENABLE_TIMEOUT_SEC 100
 
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////// Local Module Functions ///////////////////////////
@@ -1139,8 +1140,28 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
             bss_info_conf_list.push_back(bss_info_conf);
         }
 
-        ap_wlan_hal->update_vap_credentials(bss_info_conf_list, backhaul_wps_ssid,
-                                            backhaul_wps_passphrase);
+        // Before updating vap credentials we need to make sure hostapd is enabled.
+        // Entering blocking state until radio is enabled again.
+        auto timeout = std::chrono::steady_clock::now() +
+                       std::chrono::seconds(WAIT_FOR_RADIO_ENABLE_TIMEOUT_SEC);
+        auto perform_update = false;
+        while (std::chrono::steady_clock::now() < timeout) {
+            if (!ap_wlan_hal->refresh_radio_info()) {
+                break;
+            }
+
+            if (ap_wlan_hal->get_radio_info().radio_enabled) {
+                perform_update = true;
+                LOG(DEBUG) << "Radio is in enabled state, performing vap credentials update";
+                break;
+            }
+            UTILS_SLEEP_MSEC(500);
+        }
+
+        if (perform_update) {
+            ap_wlan_hal->update_vap_credentials(bss_info_conf_list, backhaul_wps_ssid,
+                                                backhaul_wps_passphrase);
+        }
 
         break;
     }

@@ -363,6 +363,7 @@ bool base_wlan_hal_dummy::process_nl_events()
 bool base_wlan_hal_dummy::refresh_radio_info()
 {
     m_radio_info.max_bandwidth = beerocks::eWiFiBandwidth::BANDWIDTH_40;
+    m_radio_info.radio_enabled = true;
 
     m_radio_info.supported_channels.clear();
     if (get_iface_name() == "wlan2") {
