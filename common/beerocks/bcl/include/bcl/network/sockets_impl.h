@@ -528,6 +528,43 @@ public:
     }
 };
 
+class TcpServerSocket : public ServerSocketImpl<TcpSocket> {
+public:
+    static std::unique_ptr<ServerSocket> create_instance(const InternetAddress &address)
+    {
+        // Create TCP socket
+        auto socket = std::make_shared<beerocks::net::TcpSocket>();
+
+        // Create TCP server socket to listen for and accept incoming connections from clients.
+        using TcpServerSocket = beerocks::net::ServerSocketImpl<beerocks::net::TcpSocket>;
+        auto server_socket    = std::make_unique<TcpServerSocket>(socket);
+        if (!server_socket) {
+            LOG(ERROR) << "Unable to create server socket";
+            return nullptr;
+        }
+
+        // Bind server socket to given TCP address
+        if (!server_socket->bind(address)) {
+            LOG(ERROR) << "Unable to bind server socket to TCP address at port: " << address.port();
+            return nullptr;
+        }
+
+        // Listen for incoming connection requests
+        if (!server_socket->listen()) {
+            LOG(ERROR) << "Unable to listen for connection requests at TCP address at port: "
+                       << address.port();
+            return nullptr;
+        }
+
+        return server_socket;
+    }
+
+    static std::unique_ptr<ServerSocket> create_instance(uint16_t port)
+    {
+        return create_instance(InternetAddress(port));
+    }
+};
+
 } // namespace net
 } // namespace beerocks
 

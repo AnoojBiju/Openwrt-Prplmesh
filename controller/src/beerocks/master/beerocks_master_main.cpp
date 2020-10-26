@@ -300,38 +300,6 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
     }
 }
 
-static std::unique_ptr<beerocks::net::ServerSocket> create_ucc_server_socket(uint16_t port)
-{
-    // Create TCP socket
-    auto socket = std::make_shared<beerocks::net::TcpSocket>();
-
-    // Create TCP server socket to listen for and accept incoming connections from clients that
-    // will send UCC commands through that connections.
-    using TcpServerSocket = beerocks::net::ServerSocketImpl<beerocks::net::TcpSocket>;
-    auto server_socket    = std::make_unique<TcpServerSocket>(socket);
-    if (!server_socket) {
-        LOG(ERROR) << "Unable to create server socket";
-        return nullptr;
-    }
-
-    // Internet address to bind the socket to
-    beerocks::net::InternetAddress address(port);
-
-    // Bind server socket to that TCP address
-    if (!server_socket->bind(address)) {
-        LOG(ERROR) << "Unable to bind server socket to TCP address at port: " << port;
-        return nullptr;
-    }
-
-    // Listen for incoming connection requests
-    if (!server_socket->listen()) {
-        LOG(ERROR) << "Unable to listen for connection requests at TCP address at port: " << port;
-        return nullptr;
-    }
-
-    return server_socket;
-}
-
 int main(int argc, char *argv[])
 {
     init_signals();
@@ -495,8 +463,9 @@ int main(int argc, char *argv[])
         auto ucc_serializer = std::make_shared<beerocks::UccSerializerStreamImpl>();
         LOG_IF(!ucc_serializer, FATAL) << "Unable to create UCC serializer!";
 
-        // Create server socket to connect with remote clients
-        auto ucc_server_socket = create_ucc_server_socket(master_db.config.ucc_listener_port);
+        // Create TCP server socket to connect with remote clients
+        auto ucc_server_socket =
+            beerocks::net::TcpServerSocket::create_instance(master_db.config.ucc_listener_port);
         LOG_IF(!ucc_server_socket, FATAL) << "Unable to create UCC server socket!";
 
         // Create server to exchange UCC commands and replies with clients connected through the socket
