@@ -497,6 +497,37 @@ public:
     }
 };
 
+class UdsServerSocket : public ServerSocketImpl<UdsSocket> {
+public:
+    static std::unique_ptr<ServerSocket> create_instance(const UdsAddress &address)
+    {
+        // Create UDS socket
+        auto socket = std::make_shared<UdsSocket>();
+
+        // Create UDS server socket to listen for and accept incoming connections from clients.
+        auto server_socket = std::make_unique<ServerSocketImpl<UdsSocket>>(socket);
+        if (!server_socket) {
+            LOG(ERROR) << "Unable to create server socket";
+            return nullptr;
+        }
+
+        // Bind server socket to given UDS address
+        if (!server_socket->bind(address)) {
+            LOG(ERROR) << "Unable to bind server socket to UDS address: '" << address.path() << "'";
+            return nullptr;
+        }
+
+        // Listen for incoming connection requests
+        if (!server_socket->listen()) {
+            LOG(ERROR) << "Unable to listen for connection requests at UDS address: '"
+                       << address.path() << "'";
+            return nullptr;
+        }
+
+        return server_socket;
+    }
+};
+
 } // namespace net
 } // namespace beerocks
 

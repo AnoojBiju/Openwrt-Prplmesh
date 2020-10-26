@@ -300,37 +300,6 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
     }
 }
 
-static std::unique_ptr<beerocks::net::ServerSocket>
-create_server_socket(const beerocks::net::UdsAddress &address)
-{
-    // Create UDS socket
-    auto socket = std::make_shared<beerocks::net::UdsSocket>();
-
-    // Create UDS server socket to listen for and accept incoming connections from clients that
-    // will send CMDU messages through that connections.
-    using UdsServerSocket = beerocks::net::ServerSocketImpl<beerocks::net::UdsSocket>;
-    auto server_socket    = std::make_unique<UdsServerSocket>(socket);
-    if (!server_socket) {
-        LOG(ERROR) << "Unable to create server socket";
-        return nullptr;
-    }
-
-    // Bind server socket to that UDS address
-    if (!server_socket->bind(address)) {
-        LOG(ERROR) << "Unable to bind server socket to UDS address: '" << address.path() << "'";
-        return nullptr;
-    }
-
-    // Listen for incoming connection requests
-    if (!server_socket->listen()) {
-        LOG(ERROR) << "Unable to listen for connection requests at UDS address: '" << address.path()
-                   << "'";
-        return nullptr;
-    }
-
-    return server_socket;
-}
-
 static std::unique_ptr<beerocks::net::ServerSocket> create_ucc_server_socket(uint16_t port)
 {
     // Create TCP socket
@@ -482,7 +451,7 @@ int main(int argc, char *argv[])
     auto uds_address     = beerocks::net::UdsAddress::create_instance(uds_path);
     LOG_IF(!uds_address, FATAL) << "Unable to create UDS server address!";
 
-    auto server_socket = create_server_socket(*uds_address);
+    auto server_socket = beerocks::net::UdsServerSocket::create_instance(*uds_address);
     LOG_IF(!server_socket, FATAL) << "Unable to create UDS server socket!";
 
     // Create server to exchange CMDU messages with clients connected through a UDS socket
