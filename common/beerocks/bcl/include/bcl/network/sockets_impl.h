@@ -17,12 +17,10 @@
 
 #include <tlvf/common/sMacAddr.h>
 
-#include <linux/if_ether.h>
-#include <linux/if_packet.h>
-#include <linux/in.h>
-#include <linux/netlink.h>
 #include <linux/rtnetlink.h>
-#include <linux/un.h>
+#include <netinet/ether.h>
+#include <netpacket/packet.h>
+#include <sys/un.h>
 
 namespace beerocks {
 namespace net {

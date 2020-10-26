@@ -12,7 +12,7 @@
 #include "buffer.h"
 #include "file_descriptor.h"
 
-#include <net/if.h>
+#include <sys/socket.h>
 
 #include <memory>
 

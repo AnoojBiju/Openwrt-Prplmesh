@@ -71,6 +71,8 @@
 #include <tlvf/wfa_map/tlvTunnelledProtocolType.h>
 #include <tlvf/wfa_map/tlvTunnelledSourceInfo.h>
 
+#include <net/if.h> // if_nametoindex
+
 namespace son {
 
 /**
