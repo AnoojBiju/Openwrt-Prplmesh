@@ -18,12 +18,13 @@ namespace net {
 class InterfaceStateMonitor {
 public:
     /**
-     * Network interface state-change handler function.
+     * Network interface state-changed handler function.
      *
      * @param iface_name Interface name.
      * @param iface_state Interface state (true if it is up and running).
      */
-    using StateChangeHandler = std::function<void(const std::string &iface_name, bool iface_state)>;
+    using StateChangedHandler =
+        std::function<void(const std::string &iface_name, bool iface_state)>;
 
     /**
      * @brief Class destructor
@@ -41,7 +42,7 @@ public:
      *
      * @param handler State change handler function (or nullptr).
      */
-    void set_handler(const StateChangeHandler &handler) { m_handler = handler; }
+    void set_handler(const StateChangedHandler &handler) { m_handler = handler; }
 
     /**
      * @brief Clears previously set state-changed event handler function.
@@ -67,10 +68,10 @@ protected:
 
 private:
     /**
-     * Network interface state-change handler function that is called back whenever any network
+     * Network interface state-changed handler function that is called back whenever any network
      * interface changes its state.
      */
-    StateChangeHandler m_handler;
+    StateChangedHandler m_handler;
 };
 
 } // namespace net

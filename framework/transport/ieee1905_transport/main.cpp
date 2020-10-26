@@ -15,6 +15,7 @@
 #include <bcl/network/interface_state_manager_impl.h>
 #include <bcl/network/interface_state_monitor_impl.h>
 #include <bcl/network/interface_state_reader_impl.h>
+#include <bcl/network/netlink_event_listener_impl.h>
 #include <bcl/network/sockets_impl.h>
 
 #include <net/if.h>
@@ -31,7 +32,7 @@ static std::shared_ptr<EventLoop> create_event_loop()
 }
 
 static std::shared_ptr<broker::BrokerServer>
-create_broker_server(const std::shared_ptr<EventLoop> &event_loop)
+create_broker_server(std::shared_ptr<EventLoop> event_loop)
 {
     // UDS path for broker server socker;
     constexpr const char *broker_uds_path = TMP_PATH "/" BEEROCKS_BROKER_UDS;
@@ -46,8 +47,8 @@ create_broker_server(const std::shared_ptr<EventLoop> &event_loop)
     return std::make_shared<broker::BrokerServer>(server_socket, event_loop);
 }
 
-static std::shared_ptr<InterfaceStateManager>
-create_interface_state_manager(const std::shared_ptr<EventLoop> &event_loop)
+static std::shared_ptr<NetlinkEventListener>
+create_netlink_event_listener(std::shared_ptr<EventLoop> event_loop)
 {
     // Create NETLINK_ROUTE netlink socket for kernel/user-space communication
     auto socket = std::make_shared<NetlinkRouteSocket>();
@@ -64,9 +65,16 @@ create_interface_state_manager(const std::shared_ptr<EventLoop> &event_loop)
     // Create connection to send/receive data using this socket
     auto connection = std::make_shared<SocketConnectionImpl>(socket);
 
+    // Create the Netlink event listener
+    return std::make_shared<NetlinkEventListenerImpl>(connection, event_loop);
+}
+
+static std::shared_ptr<InterfaceStateManager>
+create_interface_state_manager(std::shared_ptr<NetlinkEventListener> netlink_event_listener)
+{
     // Create the interface state monitor
     auto interface_state_monitor =
-        std::make_unique<InterfaceStateMonitorImpl>(connection, event_loop);
+        std::make_unique<InterfaceStateMonitorImpl>(netlink_event_listener);
 
     // Create the interface flags reader
     auto interface_flags_reader = std::make_shared<InterfaceFlagsReaderImpl>();
@@ -93,7 +101,10 @@ int main(int argc, char *argv[])
     auto broker = create_broker_server(event_loop);
     LOG_IF(!broker, FATAL) << "Unable to create message broker!";
 
-    auto interface_state_manager = create_interface_state_manager(event_loop);
+    auto netlink_event_listener = create_netlink_event_listener(event_loop);
+    LOG_IF(!netlink_event_listener, FATAL) << "Unable to create Netlink event listener!";
+
+    auto interface_state_manager = create_interface_state_manager(netlink_event_listener);
     LOG_IF(!interface_state_manager, FATAL) << "Unable to create interface state manager!";
 
     /**

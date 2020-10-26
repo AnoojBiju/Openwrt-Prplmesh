@@ -6,10 +6,10 @@
  * See LICENSE file for more details.
  */
 
-#ifndef BCL_NETWORK_INTERFACE_STATE_MONITOR_IMPL_H_
-#define BCL_NETWORK_INTERFACE_STATE_MONITOR_IMPL_H_
+#ifndef BCL_NETWORK_BRIDGE_STATE_MONITOR_IMPL_H_
+#define BCL_NETWORK_BRIDGE_STATE_MONITOR_IMPL_H_
 
-#include "interface_state_monitor.h"
+#include "bridge_state_monitor.h"
 #include "netlink_event_listener.h"
 
 #include <memory>
@@ -17,23 +17,22 @@
 namespace beerocks {
 namespace net {
 
-class InterfaceStateMonitorImpl : public InterfaceStateMonitor {
+class BridgeStateMonitorImpl : public BridgeStateMonitor {
 public:
     /**
      * @brief Class constructor.
      *
      * Registers a handler in the given Netlink event listener to get notified of Netlink events
-     * published by the kernel and extract information about interface state changes out of them.
+     * published by the kernel and extract information about bridge changes out of them.
      *
      * @param netlink_event_listener Netlink event listener to get notified of Netlink events.
      */
-    explicit InterfaceStateMonitorImpl(
-        std::shared_ptr<NetlinkEventListener> netlink_event_listener);
+    explicit BridgeStateMonitorImpl(std::shared_ptr<NetlinkEventListener> netlink_event_listener);
 
     /**
      * @brief Class destructor
      */
-    ~InterfaceStateMonitorImpl() override;
+    ~BridgeStateMonitorImpl() override;
 
 private:
     /**
@@ -51,12 +50,12 @@ private:
      * @brief Netlink event handler function.
      *
      * Parses messages received through the Netlink socket connection to extract information about
-     * interface state changes out of them.
+     * bridge changes out of them.
      *
      * If the type of the Netlink message is RTM_NEWLINK or RTM_DELLINK then reads the interface
-     * index and state and notifies a change in the interface state.
+     * index and the IFLA_MASTER attribute and notifies a change in the bridge state.
      *
-     * @param msg_hdr Netlink message to parse.
+     * @param msg_hdr Netlink message header struct containing Netlink event.
      */
     void handle_netlink_event(const nlmsghdr *msg_hdr);
 };
@@ -64,4 +63,4 @@ private:
 } // namespace net
 } // namespace beerocks
 
-#endif /* BCL_NETWORK_INTERFACE_STATE_MONITOR_IMPL_H_ */
+#endif /* BCL_NETWORK_BRIDGE_STATE_MONITOR_IMPL_H_ */
