@@ -310,6 +310,16 @@ private:
     //
     void
     update_network_interfaces(std::map<std::string, NetworkInterface> updated_network_interfaces);
+    /**
+     * @brief Add or remove and interface to/from the transport.
+     *
+     * @param[in] bridge_name The bridge the interface is part of.
+     * @param[in] ifname The name of the interface that was added/removed.
+     * @param[in] iface_added true if the interface was added to the bridge, false otherwise.
+     * @return true on success and false otherwise.
+     **/
+    bool update_network_interface(const std::string &bridge_name, const std::string &ifname,
+                                  bool iface_added);
     bool open_interface_socket(NetworkInterface &interface);
     bool attach_interface_socket_filter(NetworkInterface &iface_name);
     void activate_interface(NetworkInterface &interface);
