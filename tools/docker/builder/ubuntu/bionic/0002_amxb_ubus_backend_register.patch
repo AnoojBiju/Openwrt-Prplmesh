@@ -1,0 +1,14 @@
+https://gitlab.com/soft.at.home/ambiorix/modules/amxb_backends/amxb_ubus/-/issues/2
+diff --git a/bus_adaptors/amxb_ubus/src/amxb_ubus_register.c b/bus_adaptors/amxb_ubus/src/amxb_ubus_register.c
+index 078434d..67d55e1 100644
+--- a/bus_adaptors/amxb_ubus/src/amxb_ubus_register.c
++++ b/bus_adaptors/amxb_ubus/src/amxb_ubus_register.c
+@@ -354,7 +354,7 @@ static void amxb_ubus_register_remove(const char* const sig_name,
+     if(strcmp(sig_name, "dm:instance-removed") == 0) {
+         uint32_t index = amxc_var_constcast(uint32_t,
+                                             amxc_var_get_key(data, "index", 0));
+-        amxc_string_setf(&full_path, "%s.%d", object_path, index);
++        amxc_string_setf(&full_path, "%s%d", object_path, index);
+     } else {
+         amxc_string_setf(&full_path, "%s", object_path);
+     }

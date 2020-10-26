@@ -1,0 +1,13 @@
+https://gitlab.com/soft.at.home/ambiorix/libraries/libamxd/-/issues/16
+diff --git a/libraries/libamxd/src/amxd_object.c b/libraries/libamxd/src/amxd_object.c
+index a82831c..990cafb 100644
+--- a/libraries/libamxd/src/amxd_object.c
++++ b/libraries/libamxd/src/amxd_object.c
+@@ -138,6 +138,7 @@ static amxd_param_t* amxd_create_counter_param(amxd_object_t* const container,
+     }
+ 
+     when_null(param, exit);
++    amxd_param_set_attr(param, amxd_pattr_instance, true);
+     amxd_param_set_attr(param, amxd_pattr_read_only, true);
+     amxd_param_set_attr(param, amxd_pattr_counter, true);
+ 

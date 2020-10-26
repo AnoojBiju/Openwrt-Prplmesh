@@ -33,6 +33,9 @@ ARG PACKAGES_FOR_AMBIORIX="\
     flex \
     libevent-dev \
     libyajl-dev \
+    lua5.1 \
+    liblua5.1-0-dev \
+    build-essential \
     "
 
 ARG PACKAGES_FOR_TEST="\
@@ -66,8 +69,8 @@ ARG PACKAGES="\
     "
 
 RUN apt-get update && apt-get install -y $PACKAGES && \
-# We need liburiparser-dev > v. 9.0 which isn't avalaible in default
-# 18.04 Ubuntu repos. So add Ubuntu 19.10 repo which has v. 0.9.3-2
+    # We need liburiparser-dev > v. 9.0 which isn't avalaible in default
+    # 18.04 Ubuntu repos. So add Ubuntu 19.10 repo which has v. 0.9.3-2
     echo "deb http://cz.archive.ubuntu.com/ubuntu eoan main universe" | tee -a  /etc/apt/sources.list && \
     apt-get update && \
     apt-get install -y \
@@ -78,6 +81,32 @@ RUN curl https://storage.googleapis.com/git-repo-downloads/repo > /usr/bin/repo 
     chmod +x /usr/bin/repo
 
 WORKDIR ambiorix
+
+# Fetch, checkout on fixed commit which works and install libubox
+RUN \
+    git clone git://git.openwrt.org/project/libubox.git && \
+    cd libubox && git checkout 9e52171d70def760a6949676800d0b73f85ee22d && \
+    cmake -H"$(pwd)"/. -B"$(pwd)"/build/. -DCMAKE_INSTALL_PREFIX=/usr && \
+    make install -C build
+
+# Fetch, checkout on fixed commit which works and install Ubus daemon
+RUN \
+    git clone git://git.openwrt.org/project/ubus.git && \
+    cd ubus && git checkout 13a4438b4ebdf85d301999e0a615640ac4c9b0a8 && \
+    cmake -H"$(pwd)"/. -B"$(pwd)"/build/. -DCMAKE_INSTALL_PREFIX=/usr && \
+    make install -C build
+
+# Add patch for libamxd - fix counted variable in instances.
+# Should be removed after fixing issue:
+# https://gitlab.com/soft.at.home/ambiorix/libraries/libamxd/-/issues/16
+ADD 0001_amxd_instance_counter_fix.patch /ambiorix
+
+# Add patch for bus_adaptors/ubus which fixes the removing instances from the
+# data model.
+# Should be removed after fixing issue:
+# https://gitlab.com/soft.at.home/ambiorix/modules/amxb_backends/amxb_ubus/-/issues/2
+ADD 0002_amxb_ubus_backend_register.patch /ambiorix
+
 # Fetch and intall Bus Agnostic API libs, applications.
 # As they have some internal dependencies - we should build & install
 # them in specific order.
@@ -86,12 +115,15 @@ RUN \
     repo sync && \
     make install -C libraries/libamxc && \
     make install -C libraries/libamxp && \
+    patch -p1 < 0001_amxd_instance_counter_fix.patch && \
     make install -C libraries/libamxd && \
     make install -C libraries/libamxj && \
     make install -C libraries/libamxo && \
     make install -C libraries/libamxb && \
     make install -C applications/amxb-inspect && \
     make install -C applications/amxo-cg && \
-    make install -C applications/amxrt
+    patch -p1 < 0002_amxb_ubus_backend_register.patch && \
+    make -C bus_adaptors/amxb_ubus && \
+    make install -C bus_adaptors/amxb_ubus
 
 ADD start-prplmesh.sh /root/

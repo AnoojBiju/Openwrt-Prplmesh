@@ -47,6 +47,10 @@ else
     start_arg=(--mode ca)
 fi
 
+# After new change for ubus, socket creates in /var/run/ubus
+mkdir /var/run/ubus
+ubusd &
+
 "${INSTALL_DIR}/scripts/prplmesh_utils.sh" start "${start_arg[@]}" "$@"
 
 tail -f /dev/null # hack so the script will not exit forcing the container to stop
