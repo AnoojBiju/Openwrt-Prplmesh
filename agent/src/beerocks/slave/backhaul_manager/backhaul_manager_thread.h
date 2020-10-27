@@ -18,6 +18,7 @@
 #include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_event_loop.h>
 #include <bcl/beerocks_socket_thread.h>
+#include <bcl/beerocks_timer_manager.h>
 #include <bcl/beerocks_ucc_server.h>
 #include <bcl/network/network_utils.h>
 #include <btl/broker_client_factory.h>
@@ -56,6 +57,7 @@ public:
                      std::unique_ptr<beerocks::btl::BrokerClientFactory> broker_client_factory,
                      std::unique_ptr<beerocks::UccServer> ucc_server,
                      std::unique_ptr<beerocks::CmduServer> cmdu_server,
+                     std::shared_ptr<beerocks::TimerManager> timer_manager,
                      std::shared_ptr<beerocks::EventLoop> event_loop);
     ~backhaul_manager();
 
@@ -363,6 +365,11 @@ private:
      * CMDU server to exchange CMDU messages with clients through socket connections.
      */
     std::unique_ptr<beerocks::CmduServer> m_cmdu_server;
+
+    /**
+     * Timer manager to help using application timers.
+     */
+    std::shared_ptr<beerocks::TimerManager> m_timer_manager;
 
     /**
      * Application event loop used by the process to wait for I/O events.

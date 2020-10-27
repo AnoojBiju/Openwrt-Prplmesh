@@ -387,10 +387,10 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
         beerocks::btl::create_broker_client_factory(broker_uds_path, event_loop);
     LOG_IF(!broker_client_factory, FATAL) << "Unable to create broker client factory!";
 
-    beerocks::backhaul_manager backhaul_mgr(beerocks_slave_conf, slave_ap_ifaces, slave_sta_ifaces,
-                                            stop_on_failure_attempts,
-                                            std::move(broker_client_factory), std::move(ucc_server),
-                                            std::move(backhaul_manager_cmdu_server), event_loop);
+    beerocks::backhaul_manager backhaul_mgr(
+        beerocks_slave_conf, slave_ap_ifaces, slave_sta_ifaces, stop_on_failure_attempts,
+        std::move(broker_client_factory), std::move(ucc_server),
+        std::move(backhaul_manager_cmdu_server), timer_manager, event_loop);
 
     // Start backhaul manager
     if (!backhaul_mgr.start()) {
