@@ -15,6 +15,7 @@
 #include <bcl/beerocks_backport.h>
 #include <bcl/beerocks_config_file.h>
 #include <bcl/beerocks_defines.h>
+#include <bcl/beerocks_event_loop.h>
 #include <bcl/beerocks_socket_thread.h>
 #include <bcl/network/network_utils.h>
 #include <btl/btl.h>
@@ -48,7 +49,8 @@ class backhaul_manager : public btl::transport_socket_thread {
 public:
     backhaul_manager(const config_file::sConfigSlave &config,
                      const std::set<std::string> &slave_ap_ifaces_,
-                     const std::set<std::string> &slave_sta_ifaces_, int stop_on_failure_attempts_);
+                     const std::set<std::string> &slave_sta_ifaces_, int stop_on_failure_attempts_,
+                     std::shared_ptr<beerocks::EventLoop> event_loop);
     ~backhaul_manager();
 
     virtual bool init() override;
@@ -338,6 +340,11 @@ private:
     static const char *s_arrStates[];
 
     EState m_eFSMState;
+
+    /**
+     * Application event loop used by the process to wait for I/O events.
+     */
+    std::shared_ptr<EventLoop> m_event_loop;
 };
 
 } // namespace beerocks

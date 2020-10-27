@@ -343,7 +343,7 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     }
 
     beerocks::backhaul_manager backhaul_mgr(beerocks_slave_conf, slave_ap_ifaces, slave_sta_ifaces,
-                                            stop_on_failure_attempts);
+                                            stop_on_failure_attempts, event_loop);
 
     // Start backhaul manager
     if (!backhaul_mgr.start()) {
