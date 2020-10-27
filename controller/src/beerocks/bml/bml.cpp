@@ -192,7 +192,8 @@ int bml_event_register_cb(BML_CTX ctx, BML_EVENT_CB cb)
 }
 
 int bml_set_wifi_credentials(BML_CTX ctx, const char *al_mac, const char *ssid,
-                             const char *network_key, const char *bands, const char *bss_type)
+                             const char *network_key, const char *bands, const char *bss_type,
+                             bool add_sae)
 {
     sMacAddr al_mac_addr;
     son::wireless_utils::sBssInfoConf wifi_credentials;
@@ -205,9 +206,11 @@ int bml_set_wifi_credentials(BML_CTX ctx, const char *al_mac, const char *ssid,
     wifi_credentials.ssid = ssid;
 
     if (network_key) {
-        wifi_credentials.network_key         = network_key;
-        wifi_credentials.authentication_type = WSC::eWscAuth::WSC_AUTH_WPA2PSK;
-        wifi_credentials.encryption_type     = WSC::eWscEncr::WSC_ENCR_AES;
+        wifi_credentials.network_key = network_key;
+        wifi_credentials.authentication_type =
+            add_sae ? WSC::eWscAuth(WSC::eWscAuth::WSC_AUTH_WPA2PSK | WSC::eWscAuth::WSC_AUTH_SAE)
+                    : WSC::eWscAuth::WSC_AUTH_WPA2PSK;
+        wifi_credentials.encryption_type = WSC::eWscEncr::WSC_ENCR_AES;
     } else {
         wifi_credentials.authentication_type = WSC::eWscAuth::WSC_AUTH_OPEN;
         wifi_credentials.encryption_type     = WSC::eWscEncr::WSC_ENCR_NONE;

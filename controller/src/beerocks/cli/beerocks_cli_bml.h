@@ -164,7 +164,7 @@ private:
     int set_wifi_credentials(const std::string &al_mac, const std::string &ssid,
                              const std::string &network_key = "",
                              const std::string &bands       = "24g-5g",
-                             const std::string &bss_type    = "fronthaul");
+                             const std::string &bss_type = "fronthaul", bool add_sae = false);
     int clear_wifi_credentials(const std::string &al_mac);
     int update_wifi_credentials(const std::string &al_mac);
     int get_wifi_credentials(int vap_id = 0);
