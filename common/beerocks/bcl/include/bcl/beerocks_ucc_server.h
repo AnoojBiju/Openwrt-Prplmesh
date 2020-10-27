@@ -10,6 +10,7 @@
 #define _BEEROCKS_UCC_SERVER_H_
 
 #include <functional>
+#include <string>
 
 namespace beerocks {
 
