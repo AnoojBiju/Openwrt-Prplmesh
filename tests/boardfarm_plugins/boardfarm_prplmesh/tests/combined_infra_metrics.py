@@ -19,7 +19,7 @@ class CombinedInfraMetrics(PrplMeshBaseTest):
         # Locate test participants
         try:
             sta1 = self.dev.wifi
-            sta2 = [_.obj for _ in self.dev.devices if _.obj.name == 'wifi2'][0]
+            sta2 = self.get_device_by_name('wifi2')
 
             controller = self.dev.lan.controller_entity
 
