@@ -68,6 +68,7 @@
 #include <tlvf/wfa_map/tlvSearchedService.h>
 #include <tlvf/wfa_map/tlvSteeringBTMReport.h>
 #include <tlvf/wfa_map/tlvSupportedService.h>
+#include <tlvf/wfa_map/tlvTimestamp.h>
 #include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
 #include <tlvf/wfa_map/tlvTunnelledData.h>
 #include <tlvf/wfa_map/tlvTunnelledProtocolType.h>
@@ -1335,6 +1336,15 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const std::string &src_mac
     auto mid = cmdu_rx.getMessageId();
     LOG(INFO) << "Received CHANNEL_SCAN_REPORT_MESSAGE, src_mac=" << src_mac << ", mid=" << std::hex
               << mid;
+
+    // get Timestamp TLV
+    auto timestamp_tlv = cmdu_rx.getClass<wfa_map::tlvTimestamp>();
+    if (!timestamp_tlv) {
+        LOG(ERROR) << "getClass wfa_map::tlvTimestamp has failed";
+        return false;
+    }
+
+    LOG(INFO) << "timestamp=" << timestamp_tlv->timestamp();
 
     // Send event to dynamic_channel_selection_r2_task.
     // This task is will eventually replace the existing DCS task, but

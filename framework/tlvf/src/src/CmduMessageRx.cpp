@@ -66,6 +66,7 @@
 #include <tlvf/wfa_map/tlvSteeringPolicy.h>
 #include <tlvf/wfa_map/tlvSteeringRequest.h>
 #include <tlvf/wfa_map/tlvSupportedService.h>
+#include <tlvf/wfa_map/tlvTimestamp.h>
 #include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
 #include <tlvf/wfa_map/tlvTunnelledData.h>
 #include <tlvf/wfa_map/tlvTunnelledProtocolType.h>
@@ -275,6 +276,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv()
     }
     case (167): {
         return msg.addClass<wfa_map::tlvProfile2ChannelScanResult>();
+    }
+    case (168): {
+        return msg.addClass<wfa_map::tlvTimestamp>();
     }
     case (180): {
         return msg.addClass<wfa_map::tlvProfile2ApCapability>();
