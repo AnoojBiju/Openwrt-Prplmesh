@@ -241,6 +241,11 @@ private:
      * Discard `switch_reason` and `is_dfs_channel` because they are not used in unified agent.
      */
     void save_channel_params_to_db(beerocks_message::sApChannelSwitch params);
+
+    /**
+     * @brief save cac capabilities in the agent DB
+     */
+    void save_cac_capabilities_params_to_db();
 };
 
 } // namespace son
