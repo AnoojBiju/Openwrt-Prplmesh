@@ -772,7 +772,7 @@ bool Controller::autoconfig_wsc_add_m2(WSC::m1 &m1,
     m2_cfg.encr_type_flags =
         uint16_t(WSC::eWscEncr::WSC_ENCR_NONE) | uint16_t(WSC::eWscEncr::WSC_ENCR_AES);
     m2_cfg.auth_type_flags =
-        uint16_t(WSC::eWscAuth::WSC_AUTH_OPEN) | uint16_t(WSC::eWscAuth::WSC_AUTH_WPA2PSK);
+        WSC::eWscAuth(WSC::eWscAuth::WSC_AUTH_OPEN | WSC::eWscAuth::WSC_AUTH_WPA2PSK);
     // TODO Maybe the band should be taken from bss_info_conf.operating_class instead?
     m2_cfg.bands =
         (m1.rf_bands() & WSC::WSC_RF_BAND_5GHZ) ? WSC::WSC_RF_BAND_5GHZ : WSC::WSC_RF_BAND_2GHZ;
@@ -922,9 +922,10 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const std::string &src_m
             LOG(INFO) << "Skipping " << bss_info_conf.ssid << " due to operclass mismatch";
             continue;
         }
-        if (!(m1->auth_type_flags() & uint16_t(bss_info_conf.authentication_type))) {
+        if ((m1->auth_type_flags() & bss_info_conf.authentication_type) !=
+            bss_info_conf.authentication_type) {
             LOG(INFO) << std::hex << "Auth mismatch for " << bss_info_conf.ssid << ": get 0x"
-                      << m1->auth_type_flags() << " need 0x"
+                      << m1->auth_type_flags() << " need at least 0x"
                       << uint16_t(bss_info_conf.authentication_type);
         }
         if (!(m1->encr_type_flags() & uint16_t(bss_info_conf.encryption_type))) {

@@ -391,15 +391,17 @@ void cli_bml::setFunctionsMapAndArray()
                        STRING_ARG);
     insertCommandToMap(
         "bml_set_wifi_credentials",
-        "<al_mac> <ssid> [<network_key>] [<operating_class>] [<bss_type>]",
+        "<al_mac> <ssid> [<network_key>] [<operating_class>] [<bss_type>] [<add_sae>]",
         "Sets WiFi credentials to the given AL-MAC "
         "al_mac - agent mac address "
         "ssid - service set identifier "
+        "Optionals: "
         "network_key - password. If empty, configure open network. Default - empty. "
         "bands - can be 24g, 5g or 24g-5g. Default - 24g-5g. "
-        "bss_type - can be fronthaul, backhaul, fronthaul-backhaul. Default fronthaul.",
-        static_cast<pFunction>(&cli_bml::set_wifi_credentials_caller), 2, 5, STRING_ARG, STRING_ARG,
-        STRING_ARG, STRING_ARG, STRING_ARG);
+        "bss_type - can be fronthaul, backhaul, fronthaul-backhaul. Default fronthaul."
+        "add_sae - 1 for true. Adds SAE to the authentication type. Must be set with network_key",
+        static_cast<pFunction>(&cli_bml::set_wifi_credentials_caller), 2, 6, STRING_ARG, STRING_ARG,
+        STRING_ARG, STRING_ARG, STRING_ARG, INT_ARG);
     insertCommandToMap(
         "bml_clear_wifi_credentials", "<al_mac>", "Removes wifi credentials for specific AL-MAC.",
         static_cast<pFunction>(&cli_bml::clear_wifi_credentials_caller), 1, 1, STRING_ARG);
@@ -963,6 +965,9 @@ int cli_bml::set_wifi_credentials_caller(int numOfArgs)
     else if (numOfArgs == 5)
         return set_wifi_credentials(args.stringArgs[0], args.stringArgs[1], args.stringArgs[2],
                                     args.stringArgs[3], args.stringArgs[4]);
+    else if (numOfArgs == 6)
+        return set_wifi_credentials(args.stringArgs[0], args.stringArgs[1], args.stringArgs[2],
+                                    args.stringArgs[3], args.stringArgs[4], args.intArgs[5]);
     else
         return -1;
 }
@@ -1504,11 +1509,11 @@ int cli_bml::events_register_cb(const std::string &optional)
 
 int cli_bml::set_wifi_credentials(const std::string &al_mac, const std::string &ssid,
                                   const std::string &network_key, const std::string &bands,
-                                  const std::string &bss_type)
+                                  const std::string &bss_type, bool add_sae)
 {
 
     int ret = bml_set_wifi_credentials(ctx, al_mac.c_str(), ssid.c_str(), network_key.c_str(),
-                                       bands.c_str(), bss_type.c_str());
+                                       bands.c_str(), bss_type.c_str(), add_sae);
 
     printBmlReturnVals("bml_set_wifi_credentials", ret);
     return 0;

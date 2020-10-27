@@ -155,11 +155,13 @@ int bml_event_register_cb(BML_CTX ctx, BML_EVENT_CB cb);
  * @param [in] network_key[BML_NODE_PASS_LEN] The WPA2 passphrase for the network. Pass array length must be equal to BML_NODE_PASS_LEN.
  * @param [in] bands Can be 24g, 5g, 24g-5g.
  * @param [in] bss_type BSS, can be fronthaul, backhaul, fronthaul-backhaul.
+ * @param [in] add_sae Add SAE authentication type (WPA3). Must be set with a network_key.
  *
  * @return BML_RET_OK on success.
  */
 int bml_set_wifi_credentials(BML_CTX ctx, const char *al_mac, const char *ssid,
-                             const char *network_key, const char *bands, const char *bss_type);
+                             const char *network_key, const char *bands, const char *bss_type,
+                             bool add_sae);
 /**
  * Removes the Wi-Fi credentials for the client with AL-MAC
  *

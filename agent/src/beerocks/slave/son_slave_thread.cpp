@@ -5093,7 +5093,7 @@ bool slave_thread::autoconfig_wsc_add_m1()
     std::copy(dh->nonce(), dh->nonce() + dh->nonce_length(), cfg.enrollee_nonce);
     copy_pubkey(*dh, cfg.pub_key);
     cfg.auth_type_flags =
-        uint16_t(WSC::eWscAuth::WSC_AUTH_OPEN) | uint16_t(WSC::eWscAuth::WSC_AUTH_WPA2PSK);
+        WSC::eWscAuth(WSC::eWscAuth::WSC_AUTH_OPEN | WSC::eWscAuth::WSC_AUTH_WPA2PSK);
     cfg.encr_type_flags     = uint16_t(WSC::eWscEncr::WSC_ENCR_AES);
     cfg.manufacturer        = "Intel";
     cfg.model_name          = "Ubuntu";

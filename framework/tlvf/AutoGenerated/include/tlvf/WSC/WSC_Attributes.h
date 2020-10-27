@@ -370,7 +370,7 @@ class cWscAttrAuthenticationTypeFlags : public BaseClass
 
         eWscAttributes& type();
         const uint16_t& length();
-        uint16_t& auth_type_flags();
+        eWscAuth& auth_type_flags();
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -379,7 +379,7 @@ class cWscAttrAuthenticationTypeFlags : public BaseClass
         bool init();
         eWscAttributes* m_type = nullptr;
         uint16_t* m_length = nullptr;
-        uint16_t* m_auth_type_flags = nullptr;
+        eWscAuth* m_auth_type_flags = nullptr;
 };
 
 class cWscAttrEncryptionTypeFlags : public BaseClass
