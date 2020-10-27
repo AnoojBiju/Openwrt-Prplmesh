@@ -239,12 +239,12 @@ bool db::add_node_wired_bh(const sMacAddr &mac, const sMacAddr &parent_mac,
 
 bool db::dm_add_radio_element(const std::string &radio_mac, const std::string &device_mac)
 {
-    std::string path_to_obj = "Network.Device.";
+    std::string path_to_obj = "Controller.Network.Device.";
     uint32_t index =
         m_ambiorix_datamodel->get_instance_index(path_to_obj + "[ID == '%s'].", device_mac);
 
     if (!index) {
-        LOG(ERROR) << "Failed to get Network.Device index for mac: " << device_mac;
+        LOG(ERROR) << "Failed to get Controller.Network.Device index for mac: " << device_mac;
         return false;
     }
 
@@ -253,7 +253,7 @@ bool db::dm_add_radio_element(const std::string &radio_mac, const std::string &d
 
     auto radio_index = m_ambiorix_datamodel->add_instance(path_to_obj);
     if (!radio_index) {
-        LOG(ERROR) << "Failed to add instance Network.Device." << index
+        LOG(ERROR) << "Failed to add instance Controller.Network.Device." << index
                    << ".Radio, with radio mac: " << radio_mac;
         return false;
     }
@@ -3957,18 +3957,19 @@ bool db::set_hostap_stats_info(const std::string &mac, beerocks_message::sApStat
         p->total_client_rx_load_percent = params->client_rx_load_percent;
         p->stats_delta_ms               = params->stats_delta_ms;
         p->timestamp                    = std::chrono::steady_clock::now();
-    }
 
-    auto radio_path = dm_get_path_to_radio(*n);
-    if (radio_path.empty()) {
-        LOG(ERROR) << "Failed to get path to the radio with mac: " << n->mac;
-        return false;
-    }
+        auto radio_path = dm_get_path_to_radio(*n);
 
-    // Path to the variable example: Controller.Network.Device.1.Radio.1.Noise
-    if (!m_ambiorix_datamodel->set(radio_path, "Noise", params->noise)) {
-        LOG(ERROR) << "Failed to set: " << radio_path << "Noise parameter.";
-        return false;
+        if (radio_path.empty()) {
+            LOG(ERROR) << "Failed to get path to the radio with mac: " << n->mac;
+            return false;
+        }
+
+        // Path to the variable example: Controller.Network.Device.1.Radio.1.Noise
+        if (!m_ambiorix_datamodel->set(radio_path, "Noise", p->noise)) {
+            LOG(ERROR) << "Failed to set: " << radio_path << "Noise parameter.";
+            return false;
+        }
     }
 
     return true;
