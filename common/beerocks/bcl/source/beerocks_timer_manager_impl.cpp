@@ -86,7 +86,10 @@ int TimerManagerImpl::add_timer(std::chrono::milliseconds delay, std::chrono::mi
 
     rollback_actions.emplace_front([&]() { timer->cancel(); });
 
-    // 5.- Add the timer to the list of timers (so it can be automatically removed in destructor)
+    // 5.- Add the timer to the list of timers. The purpose of storing active timers in a list is
+    // twofold: first, remove_timer() method can retrieve the timer to remove given its descriptor
+    // and, second, the class destructor can remove timers that have not been removed by the calling
+    // party, just by iterating over the list of timers and removing all that remain there.
     m_timers.emplace(fd, std::move(timer));
 
     LOG(DEBUG) << "Timer added, fd = " << fd;
