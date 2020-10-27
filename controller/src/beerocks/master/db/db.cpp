@@ -5352,8 +5352,8 @@ bool db::set_ap_ht_capabilities(const sMacAddr &radio_mac,
 */
 bool db::dm_set_device_id(const std::string &device_mac, uint32_t device_index)
 {
-    if (!m_ambiorix_datamodel->set("Network.Device." + std::to_string(device_index), "ID",
-                                   device_mac)) {
+    if (!m_ambiorix_datamodel->set("Controller.Network.Device." + std::to_string(device_index),
+                                   "ID", device_mac)) {
         LOG(ERROR) << "Failed to add Network.Device.ID (ID = mac): " << device_mac;
         return false;
     }
@@ -5422,11 +5422,15 @@ bool db::dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client_mac)
 
 bool db::dm_add_device_element(const sMacAddr &mac)
 {
-    auto index = m_ambiorix_datamodel->get_instance_index("Network.Device.[ID == '%s'].",
+    auto index = m_ambiorix_datamodel->get_instance_index("Controller.Network.Device.[ID == '%s'].",
                                                           tlvf::mac_to_string(mac));
-    LOG_IF(index, FATAL) << "Device with ID: " << mac << " exists in the data model!";
+    if (index) {
+        LOG(WARNING) << "Device with ID: " << mac << " exists in the data model!";
+        return false;
+    }
 
-    if (!m_ambiorix_datamodel->add_instance("Network.Device")) {
+    index = m_ambiorix_datamodel->add_instance("Controller.Network.Device");
+    if (!index) {
         LOG(ERROR) << "Failed to add instance for device, mac: " << mac;
         return false;
     }
@@ -5446,13 +5450,13 @@ std::string db::dm_get_path_to_device(const son::node &device_node)
 {
 
     auto node_type = get_node_type(device_node.mac);
-    if ((node_type != TYPE_GW) || (node_type != TYPE_IRE)) {
+    if ((node_type != TYPE_GW) && (node_type != TYPE_IRE)) {
         LOG(ERROR) << "Wrong node type: " << type_to_string(node_type);
         return {};
     }
 
-    auto device_index =
-        m_ambiorix_datamodel->get_instance_index("Network.Device.[ID == '%s']", device_node.mac);
+    auto device_index = m_ambiorix_datamodel->get_instance_index(
+        "Controller.Network.Device.[ID == '%s']", device_node.mac);
     if (!device_index) {
         LOG(ERROR) << "Failed to get Device index with mac: " << device_node.mac;
         return {};
