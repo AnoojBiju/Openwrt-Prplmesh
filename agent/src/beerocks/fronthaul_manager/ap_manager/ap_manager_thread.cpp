@@ -40,6 +40,7 @@ using namespace beerocks::net;
 #define OPERATION_SUCCESS 0
 #define OPERATION_FAIL -1
 #define WAIT_FOR_RADIO_ENABLE_TIMEOUT_SEC 100
+#define MAX_RADIO_DISBALED_TIMEOUT_SEC 3
 
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////// Local Module Functions ///////////////////////////
@@ -1726,6 +1727,28 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
         if (!data) {
             LOG(ERROR) << "AP_Disabled without data!";
             return false;
+        }
+
+        auto timeout =
+            std::chrono::steady_clock::now() + std::chrono::seconds(MAX_RADIO_DISBALED_TIMEOUT_SEC);
+        auto notify_disabled = true;
+
+        while (std::chrono::steady_clock::now() < timeout) {
+            if (!ap_wlan_hal->refresh_radio_info()) {
+                LOG(WARNING) << "refresh_radio_info failed!, radio could be disabled";
+                continue;
+            }
+
+            auto state = ap_wlan_hal->get_radio_info().radio_state;
+            if ((state > bwl::eRadioState::DISABLED) && (state != bwl::eRadioState::UNKNOWN)) {
+                notify_disabled = false;
+                break;
+            }
+            UTILS_SLEEP_MSEC(500);
+        }
+
+        if (!notify_disabled) {
+            break;
         }
 
         auto msg = static_cast<bwl::sHOSTAP_DISABLED_NOTIFICATION *>(data);
