@@ -93,12 +93,14 @@ backhaul_manager::backhaul_manager(const config_file::sConfigSlave &config,
                                    const std::set<std::string> &slave_ap_ifaces_,
                                    const std::set<std::string> &slave_sta_ifaces_,
                                    int stop_on_failure_attempts_,
+                                   std::unique_ptr<beerocks::CmduServer> cmdu_server,
                                    std::shared_ptr<beerocks::EventLoop> event_loop)
     : transport_socket_thread(config.temp_path + std::string(BEEROCKS_BACKHAUL_MGR_UDS)),
       beerocks_temp_path(config.temp_path), slave_ap_ifaces(slave_ap_ifaces_),
       slave_sta_ifaces(slave_sta_ifaces_), config_const_bh_slave(config.const_backhaul_slave),
-      m_event_loop(event_loop)
+      m_cmdu_server(std::move(cmdu_server)), m_event_loop(event_loop)
 {
+    LOG_IF(!m_cmdu_server, FATAL) << "CMDU server is a null pointer!";
     LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
 
     thread_name                            = "backhaul_manager";

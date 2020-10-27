@@ -13,6 +13,7 @@
 #include "wan_monitor.h"
 
 #include <bcl/beerocks_backport.h>
+#include <bcl/beerocks_cmdu_server.h>
 #include <bcl/beerocks_config_file.h>
 #include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_event_loop.h>
@@ -50,6 +51,7 @@ public:
     backhaul_manager(const config_file::sConfigSlave &config,
                      const std::set<std::string> &slave_ap_ifaces_,
                      const std::set<std::string> &slave_sta_ifaces_, int stop_on_failure_attempts_,
+                     std::unique_ptr<beerocks::CmduServer> cmdu_server,
                      std::shared_ptr<beerocks::EventLoop> event_loop);
     ~backhaul_manager();
 
@@ -340,6 +342,11 @@ private:
     static const char *s_arrStates[];
 
     EState m_eFSMState;
+
+    /**
+     * CMDU server to exchange CMDU messages with clients through socket connections.
+     */
+    std::unique_ptr<beerocks::CmduServer> m_cmdu_server;
 
     /**
      * Application event loop used by the process to wait for I/O events.

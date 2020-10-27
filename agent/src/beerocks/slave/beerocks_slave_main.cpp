@@ -317,16 +317,22 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     LOG_IF(!timer_manager, FATAL) << "Unable to create timer manager!";
 
     // Create UDS address where the server socket will listen for incoming connection requests.
-    std::string uds_path = beerocks_slave_conf.temp_path + "/" + std::string(BEEROCKS_PLAT_MGR_UDS);
-    auto uds_address     = beerocks::net::UdsAddress::create_instance(uds_path);
-    LOG_IF(!uds_address, FATAL) << "Unable to create UDS server address!";
+    std::string platform_manager_uds_path =
+        beerocks_slave_conf.temp_path + "/" + std::string(BEEROCKS_PLAT_MGR_UDS);
+    auto platform_manager_uds_address =
+        beerocks::net::UdsAddress::create_instance(platform_manager_uds_path);
+    LOG_IF(!platform_manager_uds_address, FATAL)
+        << "Unable to create UDS server address for platform manager!";
 
     // Create server to exchange CMDU messages with clients connected through a UDS socket
-    auto cmdu_server = beerocks::CmduServerFactory::create_instance(uds_address, event_loop);
-    LOG_IF(!cmdu_server, FATAL) << "Unable to create CMDU server!";
+    auto platform_manager_cmdu_server =
+        beerocks::CmduServerFactory::create_instance(platform_manager_uds_address, event_loop);
+    LOG_IF(!platform_manager_cmdu_server, FATAL)
+        << "Unable to create CMDU server for platform manager!";
 
     beerocks::PlatformManager platform_manager(beerocks_slave_conf, interfaces_map, *agent_logger,
-                                               std::move(cmdu_server), timer_manager, event_loop);
+                                               std::move(platform_manager_cmdu_server),
+                                               timer_manager, event_loop);
 
     // Start platform manager
     LOG_IF(!platform_manager.start(), FATAL) << "Unable to start platform manager!";
@@ -342,8 +348,23 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
         }
     }
 
+    // Create UDS address where the server socket will listen for incoming connection requests.
+    std::string backhaul_manager_uds_path =
+        beerocks_slave_conf.temp_path + "/" + std::string(BEEROCKS_BACKHAUL_MGR_UDS) + "_temp";
+    auto backhaul_manager_uds_address =
+        beerocks::net::UdsAddress::create_instance(backhaul_manager_uds_path);
+    LOG_IF(!backhaul_manager_uds_address, FATAL)
+        << "Unable to create UDS server address for backhaul manager!";
+
+    // Create server to exchange CMDU messages with clients connected through a UDS socket
+    auto backhaul_manager_cmdu_server =
+        beerocks::CmduServerFactory::create_instance(backhaul_manager_uds_address, event_loop);
+    LOG_IF(!backhaul_manager_cmdu_server, FATAL)
+        << "Unable to create CMDU server for backhaul manager!";
+
     beerocks::backhaul_manager backhaul_mgr(beerocks_slave_conf, slave_ap_ifaces, slave_sta_ifaces,
-                                            stop_on_failure_attempts, event_loop);
+                                            stop_on_failure_attempts,
+                                            std::move(backhaul_manager_cmdu_server), event_loop);
 
     // Start backhaul manager
     if (!backhaul_mgr.start()) {
