@@ -62,6 +62,9 @@ bool ChannelScanTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMac
                                   Socket *sd, std::shared_ptr<beerocks_header> beerocks_header)
 {
     switch (cmdu_rx.getMessageType()) {
+    case ieee1905_1::eMessageType::CHANNEL_SCAN_REQUEST_MESSAGE: {
+        return handle_channel_scan_request(cmdu_rx, src_mac);
+    }
     default: {
         // Message was not handled, therefore return false.
         return false;
@@ -83,4 +86,33 @@ void ChannelScanTask::start_scan()
     }
     // Call work() to not waste time, and start channel scan.
     work();
+}
+
+bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                                  const sMacAddr &src_mac)
+{
+    const auto mid = cmdu_rx.getMessageId();
+
+    auto channel_scan_request_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2ChannelScanRequest>();
+    if (!channel_scan_request_tlv) {
+        LOG(ERROR) << "getClass wfa_map::tlvProfile2ChannelScanRequest failed";
+        return false;
+    }
+
+    LOG(INFO) << "Received CHANNEL_SCAN_REQUEST_MESSAGE, src_mac=" << src_mac
+              << ", mid=" << std::hex << mid;
+
+    // Print message content to log - placeholder until full implementation
+    const auto &perform_fresh_scan = channel_scan_request_tlv->perform_fresh_scan();
+    LOG(DEBUG) << "perform_fresh_scan=" << perform_fresh_scan;
+
+    const auto &radio_list_length = channel_scan_request_tlv->radio_list_length();
+    for (int radio_i = 0; radio_i < radio_list_length; ++radio_i) {
+        const auto &radio_list = channel_scan_request_tlv->radio_list(radio_i);
+        const auto radio_uid   = std::get<1>(radio_list).radio_uid();
+        LOG(DEBUG) << "radio_list[" << radio_i << "] radio_uid=" << radio_uid;
+    }
+
+
+    return true;
 }
