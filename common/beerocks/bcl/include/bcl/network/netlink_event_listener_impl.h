@@ -9,7 +9,6 @@
 #ifndef BCL_NETWORK_NETLINK_EVENT_LISTENER_IMPL_H_
 #define BCL_NETWORK_NETLINK_EVENT_LISTENER_IMPL_H_
 
-#include "buffer_impl.h"
 #include "netlink_event_listener.h"
 #include "sockets_impl.h"
 
@@ -22,8 +21,6 @@ class EventLoop;
 namespace net {
 
 class NetlinkEventListenerImpl : public NetlinkEventListener {
-    static constexpr size_t netlink_buffer_size = 8192;
-
 public:
     /**
      * @brief Class constructor
@@ -40,11 +37,6 @@ public:
     ~NetlinkEventListenerImpl() override;
 
 private:
-    /**
-     * Buffer to hold data received through socket connection
-     */
-    BufferImpl<netlink_buffer_size> m_buffer;
-
     /**
      * Socket connection through which interface state information is received.
      */
