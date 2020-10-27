@@ -74,6 +74,17 @@ private:
     * @return True on success, otherwise false.
     */
     bool handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac);
+
+    /* 1905.1 message responses: */
+
+    /**
+    * @brief Sends 1905 CHANNEL_SCAN_REPORT message back to the sender.
+    * 
+    * @param[in] cmdu_rx Received CMDU.
+    * @param[in] src_mac MAC address of the message sender.
+    * @return True on success, otherwise false.
+    */
+    bool send_channel_scan_report(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac);
 };
 
 } // namespace beerocks

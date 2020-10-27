@@ -132,5 +132,26 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
         return false;
     }
 
+    // Send channel scan report back - placeholder until full implementation
+    if (!send_channel_scan_report(cmdu_rx, src_mac)) {
+        LOG(ERROR) << "Failed to send CHANNEL_SCAN_REPORT_MESSAGE back to controller";
+    }
+
     return true;
+}
+
+bool ChannelScanTask::send_channel_scan_report(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                               const sMacAddr &src_mac)
+{
+    // build 1905.1 message CMDU
+    auto mid = cmdu_rx.getMessageId();
+    if (!m_cmdu_tx.create(mid, ieee1905_1::eMessageType::CHANNEL_SCAN_REPORT_MESSAGE)) {
+        LOG(ERROR) << "Create CMDU of type CHANNEL_SCAN_REPORT_MESSAGE failed";
+        return false;
+    }
+
+    LOG(DEBUG) << "Sending CHANNEL_SCAN_REPORT_MESSAGE to the originator, mid=" << std::hex << mid;
+    auto db = AgentDB::get();
+    return m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
+                                         tlvf::mac_to_string(db->bridge.mac));
 }
