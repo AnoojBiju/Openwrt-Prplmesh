@@ -28,6 +28,7 @@ build-for-rdkb-raspberrypi:
   extends: .build-for-rdkb
   variables:
     TARGET_DEVICE: "raspberrypi"
+  retry: 2
 
 build-for-turris-omnia:
   extends: .build-for-openwrt
