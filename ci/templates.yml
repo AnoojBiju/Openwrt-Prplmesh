@@ -122,17 +122,6 @@
     paths:
       - logs
     when: always
-  needs:
-    - job: build-in-docker
-    - job: platform
-    - job: build-for-axepoint
-      project: $CI_PROJECT_PATH
-      ref: $CI_COMMIT_REF_NAME
-      artifacts: true
-    - job: build-for-turris-omnia
-      project: $CI_PROJECT_PATH
-      ref: $CI_COMMIT_REF_NAME
-      artifacts: true
   timeout: 36h
 
 .certification-generic:
