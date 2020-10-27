@@ -38,7 +38,7 @@ public:
         uint16_t mid;
     };
 
-    enum eEvent : uint8_t { TRIGGER_SINGLE_SCAN };
+    enum eEvent : uint8_t { TRIGGER_SINGLE_SCAN, RECEIVED_CHANNEL_SCAN_REPORT };
 
     enum class eRadioScanStatus : uint8_t { PENDING, TRIGGERED_WAIT_FOR_ACK, SCAN_IN_PROGRESS };
     enum class eAgentStatus : uint8_t { IDLE, BUSY };
@@ -141,6 +141,14 @@ private:
      * @return true if successful, false otherwise.
      */
     bool handle_scan_request_event(const sScanRequestEvent &scan_request_event);
+
+    /**
+     * @brief Handle scan report events
+     * 
+     * @param scan_report_event Refernce to sScanReportEvent object.
+     * @return true if successful, false otherwise.
+     */
+    bool handle_scan_report_event(const sScanReportEvent &scan_report_event);
 
     /**
      * @brief Create a channel scan request message, with empty radio_list.

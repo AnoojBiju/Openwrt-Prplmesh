@@ -266,6 +266,7 @@ bool Controller::start()
             ieee1905_1::eMessageType::BEACON_METRICS_RESPONSE_MESSAGE,
             ieee1905_1::eMessageType::CHANNEL_PREFERENCE_REPORT_MESSAGE,
             ieee1905_1::eMessageType::CHANNEL_SELECTION_RESPONSE_MESSAGE,
+            ieee1905_1::eMessageType::CHANNEL_SCAN_REPORT_MESSAGE,
             ieee1905_1::eMessageType::CLIENT_CAPABILITY_REPORT_MESSAGE,
             ieee1905_1::eMessageType::CLIENT_STEERING_BTM_REPORT_MESSAGE,
             ieee1905_1::eMessageType::HIGHER_LAYER_DATA_MESSAGE,
@@ -447,6 +448,8 @@ bool Controller::handle_cmdu_1905_1_message(const std::string &src_mac,
         return handle_cmdu_1905_channel_preference_report(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::CHANNEL_SELECTION_RESPONSE_MESSAGE:
         return handle_cmdu_1905_channel_selection_response(src_mac, cmdu_rx);
+    case ieee1905_1::eMessageType::CHANNEL_SCAN_REPORT_MESSAGE:
+        return handle_cmdu_1905_channel_scan_report(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::CLIENT_CAPABILITY_REPORT_MESSAGE:
         return handle_cmdu_1905_client_capability_report_message(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::CLIENT_STEERING_BTM_REPORT_MESSAGE:
@@ -1322,6 +1325,27 @@ bool Controller::handle_cmdu_1905_channel_selection_response(const std::string &
                    return ret_str;
                })(response_code);
     }
+
+    return true;
+}
+
+bool Controller::handle_cmdu_1905_channel_scan_report(const std::string &src_mac,
+                                                      ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto mid = cmdu_rx.getMessageId();
+    LOG(INFO) << "Received CHANNEL_SCAN_REPORT_MESSAGE, src_mac=" << src_mac << ", mid=" << std::hex
+              << mid;
+
+    // Send event to dynamic_channel_selection_r2_task.
+    // This task is will eventually replace the existing DCS task, but
+    // in order not to break existing functionality, it introduced as
+    // a new separate task.
+    dynamic_channel_selection_r2_task::sScanReportEvent new_event;
+    new_event.agent_mac = tlvf::mac_from_string(src_mac);
+    new_event.mid       = mid;
+    tasks.push_event(database.get_dynamic_channel_selection_r2_task_id(),
+                     (int)dynamic_channel_selection_r2_task::eEvent::RECEIVED_CHANNEL_SCAN_REPORT,
+                     (void *)&new_event);
 
     return true;
 }

@@ -61,6 +61,15 @@ void dynamic_channel_selection_r2_task::handle_event(int event_enum_value, void 
         handle_scan_request_event(*scan_request_event);
         break;
     }
+    case RECEIVED_CHANNEL_SCAN_REPORT: {
+        auto scan_report_event = reinterpret_cast<const sScanReportEvent *>(event_obj);
+        LOG(TRACE) << "Received RECEIVED_SCAN_RESULTS event from agent mac:"
+                   << scan_report_event->agent_mac << ", mid: " << std::hex
+                   << scan_report_event->mid;
+
+        handle_scan_report_event(*scan_report_event);
+        break;
+    }
     default: {
         LOG(DEBUG) << "Message handler doesn't exists for event type " << event_enum_value;
         break;
@@ -229,6 +238,44 @@ bool dynamic_channel_selection_r2_task::handle_scan_request_event(
 
     // Create new radio request (with default values) in request pool
     m_agents_status_map[ire_mac].radio_scans[radio_mac] = sAgentScanStatus::sRadioScanRequest();
+
+    return true;
+}
+
+bool dynamic_channel_selection_r2_task::handle_scan_report_event(
+    const sScanReportEvent &scan_report_event)
+{
+    // Remove all active scans (with the same mid as scan report) from the agent
+    // and mark agent as idle
+    auto mid = scan_report_event.mid;
+
+    // check if there is an agent waiting for the response
+    auto mid_map_it = mid_to_agent_map.find(mid);
+    if (mid_map_it == mid_to_agent_map.end()) {
+        LOG(ERROR) << "unexpected mid " << std::hex << mid << " in scan report";
+        return false;
+    }
+
+    auto agent_mac = mid_map_it->second;
+    mid_to_agent_map.erase(mid);
+
+    auto agent_it = m_agents_status_map.find(agent_mac);
+    if (agent_it == m_agents_status_map.end()) {
+        LOG(ERROR) << "Wrong mid_to_agent_map, agent " << agent_mac
+                   << " not found in status container";
+        return false;
+    }
+
+    auto &radio_scans = agent_it->second.radio_scans;
+
+    for (auto scan_it = radio_scans.begin(); scan_it != radio_scans.end(); ++scan_it) {
+        if (scan_it->second.status == eRadioScanStatus::SCAN_IN_PROGRESS &&
+            scan_it->second.mid == mid) {
+            scan_it = radio_scans.erase(scan_it);
+        }
+    }
+
+    agent_it->second.status = eAgentStatus::IDLE;
 
     return true;
 }
