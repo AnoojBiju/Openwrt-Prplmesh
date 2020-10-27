@@ -35,8 +35,8 @@ using namespace beerocks_message;
 
 namespace son {
 
-// Forward decleration for master_thread context saving
-class master_thread;
+// Forward declaration for Controller context saving
+class Controller;
 
 class db {
 
@@ -47,7 +47,7 @@ class db {
         */
 
     typedef struct {
-        Socket *sd;
+        int sd;
         bool map_updates;
         bool stats_updates;
         bool events_updates;
@@ -904,27 +904,27 @@ public:
     //
     // CLI
     //
-    void add_cli_socket(Socket *sd);
-    void remove_cli_socket(Socket *sd);
-    bool get_cli_debug_enable(Socket *sd);
-    Socket *get_cli_socket_at(int idx);
+    void add_cli_socket(int sd);
+    void remove_cli_socket(int sd);
+    bool get_cli_debug_enable(int sd);
+    int get_cli_socket_at(int idx);
     void set_slave_stop_on_failure_attempts(int attempts);
     int get_slave_stop_on_failure_attempts();
 
     //
     // BML
     //
-    void add_bml_socket(Socket *sd);
-    void remove_bml_socket(Socket *sd);
-    bool get_bml_nw_map_update_enable(Socket *sd);
-    bool set_bml_nw_map_update_enable(Socket *sd, bool update_enable);
-    bool get_bml_stats_update_enable(Socket *sd);
-    bool set_bml_stats_update_enable(Socket *sd, bool update_enable);
-    bool get_bml_events_update_enable(Socket *sd);
-    bool set_bml_events_update_enable(Socket *sd, bool update_enable);
-    bool get_bml_topology_update_enable(Socket *sd);
-    bool set_bml_topology_update_enable(Socket *sd, bool update_enable);
-    Socket *get_bml_socket_at(int idx);
+    void add_bml_socket(int sd);
+    void remove_bml_socket(int sd);
+    bool get_bml_nw_map_update_enable(int sd);
+    bool set_bml_nw_map_update_enable(int sd, bool update_enable);
+    bool get_bml_stats_update_enable(int sd);
+    bool set_bml_stats_update_enable(int sd, bool update_enable);
+    bool get_bml_events_update_enable(int sd);
+    bool set_bml_events_update_enable(int sd, bool update_enable);
+    bool get_bml_topology_update_enable(int sd);
+    bool set_bml_topology_update_enable(int sd, bool update_enable);
+    int get_bml_socket_at(int idx);
     bool is_bml_listener_exist();
 
     void set_vap_list(std::shared_ptr<vaps_list_t> vaps_list);
@@ -1176,10 +1176,10 @@ public:
     void set_prplmesh(const sMacAddr &mac);
 
     //
-    // master_thread context
+    // Controller context
     //
-    void set_master_thread_ctx(master_thread *ctx) { m_master_thread_ctx = ctx; }
-    master_thread *get_master_thread_ctx() { return m_master_thread_ctx; }
+    void set_controller_ctx(Controller *ctx) { m_controller_ctx = ctx; }
+    Controller *get_controller_ctx() { return m_controller_ctx; }
 
     const std::string &get_local_bridge_mac() { return m_local_bridge_mac; }
 
@@ -1353,7 +1353,7 @@ private:
     std::unordered_map<std::string, std::shared_ptr<node>>::iterator db_it =
         std::unordered_map<std::string, std::shared_ptr<node>>::iterator();
 
-    std::vector<Socket *> cli_debug_sockets;
+    std::vector<int> cli_debug_sockets;
     std::vector<sBmlListener> bml_listeners_sockets;
 
     beerocks::logging &logger;
@@ -1386,7 +1386,7 @@ private:
     std::shared_ptr<uint8_t> certification_tx_buffer;
     std::unordered_map<sMacAddr, std::list<wireless_utils::sBssInfoConf>> bss_infos; // key=al_mac
 
-    master_thread *m_master_thread_ctx = nullptr;
+    Controller *m_controller_ctx = nullptr;
     const std::string m_local_bridge_mac;
 
     int m_persistent_db_clients_count = 0;

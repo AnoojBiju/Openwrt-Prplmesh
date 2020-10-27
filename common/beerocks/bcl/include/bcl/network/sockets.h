@@ -12,7 +12,7 @@
 #include "buffer.h"
 #include "file_descriptor.h"
 
-#include <net/if.h>
+#include <sys/socket.h>
 
 #include <memory>
 
@@ -115,11 +115,12 @@ public:
         /**
          * @brief Receives data through the socket connection.
          *
+         * Received data is appended to existing buffer contents, if any.
+         *
          * @param[in, out] buffer Buffer to hold received data.
-         * @param[in] offset Position into the buffer to start receiving data.
          * @return Number of bytes received, -1 on failure.
          */
-        virtual int receive(Buffer &buffer, size_t offset = 0) = 0;
+        virtual int receive(Buffer &buffer) = 0;
 
         /**
          * @brief Receives data through the socket connection.

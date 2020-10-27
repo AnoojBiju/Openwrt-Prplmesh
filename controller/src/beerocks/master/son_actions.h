@@ -9,7 +9,7 @@
 #ifndef _SON_ACTIONS_H_
 #define _SON_ACTIONS_H_
 
-#include "son_master_thread.h"
+#include "controller.h"
 
 #include <bcl/beerocks_message_structs.h>
 #include <bcl/beerocks_utils.h>

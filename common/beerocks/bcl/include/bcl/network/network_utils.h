@@ -19,7 +19,6 @@
 #include <vector>
 
 #include <netinet/ether.h>
-#include <netinet/ip.h> // IP_MAXPACKET (which is 65535)
 
 #define ETH_HDRLEN 14 // Ethernet header length
 #define IP4_HDRLEN 20 // IPv4 header length

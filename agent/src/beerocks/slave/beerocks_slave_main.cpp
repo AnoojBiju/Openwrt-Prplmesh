@@ -10,13 +10,12 @@
 #include "platform_manager/platform_manager.h"
 #include "son_slave_thread.h"
 
+#include <bcl/beerocks_cmdu_server_factory.h>
 #include <bcl/beerocks_config_file.h>
 #include <bcl/beerocks_event_loop_impl.h>
 #include <bcl/beerocks_logging.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/beerocks_version.h>
-#include <bcl/network/cmdu_parser_stream_impl.h>
-#include <bcl/network/cmdu_serializer_stream_impl.h>
 #include <bcl/network/network_utils.h>
 #include <bcl/network/sockets_impl.h>
 #include <bcl/network/timer_impl.h>
@@ -278,68 +277,6 @@ start_son_slave_thread(int slave_num,
     return son_slave;
 }
 
-static std::shared_ptr<beerocks::EventLoop> create_event_loop()
-{
-    // Create application event loop to wait for blocking I/O operations.
-    return std::make_shared<beerocks::EventLoopImpl>();
-}
-
-static std::shared_ptr<beerocks::net::CmduSerializer> create_cmdu_serializer()
-{
-    // Create serializer for CMDU messages to be sent through a stream-oriented socket.
-    return std::make_shared<beerocks::net::CmduSerializerStreamImpl>();
-}
-
-static std::shared_ptr<beerocks::net::CmduParser> create_cmdu_parser()
-{
-    // Create parser for CMDU messages received through a stream-oriented socket.
-    return std::make_shared<beerocks::net::CmduParserStreamImpl>();
-}
-
-static std::shared_ptr<beerocks::net::UdsAddress> create_uds_address(const std::string &path)
-{
-    // When no longer required, the UDS socket pathname should be deleted using unlink or remove.
-    auto deleter = [path](beerocks::net::UdsAddress *p) {
-        if (p) {
-            delete p;
-        }
-        unlink(path.c_str());
-    };
-
-    // Remove given path in case it exists
-    unlink(path.c_str());
-
-    // Create UDS address from given path (using custom deleter)
-    return std::shared_ptr<beerocks::net::UdsAddress>(new beerocks::net::UdsAddress(path), deleter);
-}
-
-static std::unique_ptr<beerocks::net::ServerSocket>
-create_server_socket(const beerocks::net::UdsAddress &address)
-{
-    // Create UDS socket
-    auto socket = std::make_shared<beerocks::net::UdsSocket>();
-
-    // Create UDS server socket to listen for and accept incoming connections from clients that
-    // will send CMDU messages through that connections.
-    using UdsServerSocket = beerocks::net::ServerSocketImpl<beerocks::net::UdsSocket>;
-    auto server_socket    = std::make_unique<UdsServerSocket>(socket);
-
-    // Bind server socket to that UDS address
-    if (!server_socket->bind(address)) {
-        LOG(ERROR) << "Unable to bind server socket to UDS address: '" << address.path() << "'";
-        return nullptr;
-    }
-
-    // Listen for incoming connection requests
-    if (!server_socket->listen()) {
-        LOG(ERROR) << "Unable to listen for connection requests at UDS address: '" << address.path()
-                   << "'";
-        return nullptr;
-    }
-
-    return server_socket;
-}
-
 static std::unique_ptr<beerocks::net::Timer<>> create_check_wlan_params_changed_timer()
 {
     // Create timer to periodically check if WLAN parameters have changed
@@ -377,21 +314,18 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
         }
     }
 
-    auto event_loop = create_event_loop();
+    // Create application event loop to wait for blocking I/O operations.
+    auto event_loop = std::make_shared<beerocks::EventLoopImpl>();
     LOG_IF(!event_loop, FATAL) << "Unable to create event loop!";
 
-    auto cmdu_parser = create_cmdu_parser();
-    LOG_IF(!cmdu_parser, FATAL) << "Unable to create CMDU parser!";
-
-    auto cmdu_serializer = create_cmdu_serializer();
-    LOG_IF(!cmdu_serializer, FATAL) << "Unable to create CMDU serializer!";
-
+    // Create UDS address where the server socket will listen for incoming connection requests.
     std::string uds_path = beerocks_slave_conf.temp_path + "/" + std::string(BEEROCKS_PLAT_MGR_UDS);
-    auto uds_address     = create_uds_address(uds_path);
+    auto uds_address     = beerocks::net::UdsAddress::create_instance(uds_path);
     LOG_IF(!uds_address, FATAL) << "Unable to create UDS server address!";
 
-    auto server_socket = create_server_socket(*uds_address);
-    LOG_IF(!server_socket, FATAL) << "Unable to create UDS server socket!";
+    // Create server to exchange CMDU messages with clients connected through a UDS socket
+    auto cmdu_server = beerocks::CmduServerFactory::create_instance(uds_address, event_loop);
+    LOG_IF(!cmdu_server, FATAL) << "Unable to create CMDU server!";
 
     auto check_wlan_params_changed_timer = create_check_wlan_params_changed_timer();
     LOG_IF(!check_wlan_params_changed_timer, FATAL)
@@ -402,8 +336,7 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
 
     beerocks::PlatformManager platform_manager(
         beerocks_slave_conf, interfaces_map, *agent_logger, std::move(clean_old_arp_entries_timer),
-        std::move(check_wlan_params_changed_timer), std::move(server_socket), cmdu_parser,
-        cmdu_serializer, event_loop);
+        std::move(check_wlan_params_changed_timer), std::move(cmdu_server), event_loop);
 
     // Start platform manager
     LOG_IF(!platform_manager.start(), FATAL) << "Unable to start platform manager!";

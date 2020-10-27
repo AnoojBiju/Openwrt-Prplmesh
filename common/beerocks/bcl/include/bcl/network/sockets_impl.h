@@ -17,12 +17,10 @@
 
 #include <tlvf/common/sMacAddr.h>
 
-#include <linux/if_ether.h>
-#include <linux/if_packet.h>
-#include <linux/in.h>
-#include <linux/netlink.h>
 #include <linux/rtnetlink.h>
-#include <linux/un.h>
+#include <netinet/ether.h>
+#include <netpacket/packet.h>
+#include <sys/un.h>
 
 namespace beerocks {
 namespace net {
@@ -79,6 +77,23 @@ public:
     const socklen_t &length() const override { return m_length; }
     socklen_t size() const override { return m_size; }
 
+    static std::shared_ptr<UdsAddress> create_instance(const std::string &path)
+    {
+        // When no longer required, the UDS socket pathname should be deleted using unlink or remove.
+        auto deleter = [path](UdsAddress *p) {
+            if (p) {
+                delete p;
+            }
+            unlink(path.c_str());
+        };
+
+        // Remove given path in case it exists
+        unlink(path.c_str());
+
+        // Create UDS address from given path (using custom deleter)
+        return std::shared_ptr<UdsAddress>(new UdsAddress(path), deleter);
+    }
+
 private:
     sockaddr_un m_address  = {};
     socklen_t m_length     = sizeof(m_address);
@@ -87,7 +102,7 @@ private:
 
 class InternetAddress : public Socket::Address {
 public:
-    explicit InternetAddress(uint16_t port, uint32_t address = INADDR_ANY)
+    explicit InternetAddress(uint16_t port = 0, uint32_t address = INADDR_ANY)
     {
         m_address.sin_family      = AF_INET;
         m_address.sin_addr.s_addr = address;
@@ -100,6 +115,9 @@ public:
     }
     const socklen_t &length() const override { return m_length; }
     socklen_t size() const override { return m_size; }
+
+    uint16_t port() const { return ntohs(m_address.sin_port); }
+    uint32_t address() const { return m_address.sin_addr.s_addr; }
 
 private:
     sockaddr_in m_address  = {};
@@ -256,14 +274,15 @@ public:
      *
      * This implementation uses the recv() system call.
      */
-    int receive(Buffer &buffer, size_t offset = 0) override
+    int receive(Buffer &buffer) override
     {
-        if (offset >= buffer.size()) {
+        if (buffer.length() >= buffer.size()) {
+            // Buffer is full
             return -1;
         }
 
-        int result =
-            ::recv(m_socket->fd(), buffer.data() + offset, buffer.size() - offset, MSG_DONTWAIT);
+        int result = ::recv(m_socket->fd(), buffer.data() + buffer.length(),
+                            buffer.size() - buffer.length(), MSG_DONTWAIT);
         if (result > 0) {
             buffer.length() += static_cast<size_t>(result);
         }
@@ -473,6 +492,74 @@ template <class SocketType> class ClientSocketImpl : public ClientSocketAbstract
 public:
     explicit ClientSocketImpl(std::shared_ptr<SocketType> socket) : ClientSocketAbstractImpl(socket)
     {
+    }
+};
+
+class UdsServerSocket : public ServerSocketImpl<UdsSocket> {
+public:
+    static std::unique_ptr<ServerSocket> create_instance(const UdsAddress &address)
+    {
+        // Create UDS socket
+        auto socket = std::make_shared<UdsSocket>();
+
+        // Create UDS server socket to listen for and accept incoming connections from clients.
+        auto server_socket = std::make_unique<ServerSocketImpl<UdsSocket>>(socket);
+        if (!server_socket) {
+            LOG(ERROR) << "Unable to create server socket";
+            return nullptr;
+        }
+
+        // Bind server socket to given UDS address
+        if (!server_socket->bind(address)) {
+            LOG(ERROR) << "Unable to bind server socket to UDS address: '" << address.path() << "'";
+            return nullptr;
+        }
+
+        // Listen for incoming connection requests
+        if (!server_socket->listen()) {
+            LOG(ERROR) << "Unable to listen for connection requests at UDS address: '"
+                       << address.path() << "'";
+            return nullptr;
+        }
+
+        return server_socket;
+    }
+};
+
+class TcpServerSocket : public ServerSocketImpl<TcpSocket> {
+public:
+    static std::unique_ptr<ServerSocket> create_instance(const InternetAddress &address)
+    {
+        // Create TCP socket
+        auto socket = std::make_shared<beerocks::net::TcpSocket>();
+
+        // Create TCP server socket to listen for and accept incoming connections from clients.
+        using TcpServerSocket = beerocks::net::ServerSocketImpl<beerocks::net::TcpSocket>;
+        auto server_socket    = std::make_unique<TcpServerSocket>(socket);
+        if (!server_socket) {
+            LOG(ERROR) << "Unable to create server socket";
+            return nullptr;
+        }
+
+        // Bind server socket to given TCP address
+        if (!server_socket->bind(address)) {
+            LOG(ERROR) << "Unable to bind server socket to TCP address at port: " << address.port();
+            return nullptr;
+        }
+
+        // Listen for incoming connection requests
+        if (!server_socket->listen()) {
+            LOG(ERROR) << "Unable to listen for connection requests at TCP address at port: "
+                       << address.port();
+            return nullptr;
+        }
+
+        return server_socket;
+    }
+
+    static std::unique_ptr<ServerSocket> create_instance(uint16_t port)
+    {
+        return create_instance(InternetAddress(port));
     }
 };
 

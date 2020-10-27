@@ -1,11 +1,18 @@
 project(btl VERSION ${prplmesh_VERSION})
 message("${BoldWhite}Preparing ${BoldGreen}${PROJECT_NAME}${BoldWhite} for the ${BoldGreen}${TARGET_PLATFORM}${BoldWhite} platform${ColourReset}")
 
-# BTL source files
-set(btl_sources btl.cpp btl_broker.cpp)
-
 # Set the base path for the current module
 set(MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
+
+# BTL source files
+set(btl_sources
+    ${MODULE_PATH}/source/btl.cpp
+    ${MODULE_PATH}/source/btl_broker.cpp
+    ${MODULE_PATH}/source/broker_client_factory_impl.cpp
+    ${MODULE_PATH}/source/broker_client_impl.cpp
+    ${MODULE_PATH}/source/message_parser_stream_impl.cpp
+    ${MODULE_PATH}/source/message_serializer_stream_impl.cpp
+)
 
 # Build the library
 add_library(${PROJECT_NAME} ${btl_sources})

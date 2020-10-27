@@ -6,16 +6,26 @@
  * See LICENSE file for more details.
  */
 
+#include <bcl/beerocks_cmdu_server_factory.h>
 #include <bcl/beerocks_config_file.h>
+#include <bcl/beerocks_event_loop_impl.h>
 #include <bcl/beerocks_logging.h>
+#include <bcl/beerocks_timer_factory_impl.h>
+#include <bcl/beerocks_timer_manager_impl.h>
+#include <bcl/beerocks_ucc_server_factory.h>
 #include <bcl/beerocks_version.h>
 #include <bcl/network/network_utils.h>
+#include <bcl/network/sockets_impl.h>
 #include <bpl/bpl_cfg.h>
-#include <easylogging++.h>
+#include <btl/broker_client_factory_impl.h>
+#include <btl/message_parser_stream_impl.h>
+#include <btl/message_serializer_stream_impl.h>
 #include <mapf/common/utils.h>
 
+#include <easylogging++.h>
+
+#include "controller.h"
 #include "db/db.h"
-#include "son_master_thread.h"
 
 #ifdef ENABLE_NBAPI
 #include "ambiorix_impl.h"
@@ -381,7 +391,27 @@ int main(int argc, char *argv[])
     son::db::sDbMasterConfig master_conf;
     fill_master_config(master_conf, beerocks_master_conf);
 
-    std::string master_uds = beerocks_master_conf.temp_path + std::string(BEEROCKS_MASTER_UDS);
+    // Create application event loop to wait for blocking I/O operations.
+    auto event_loop = std::make_shared<beerocks::EventLoopImpl>();
+    LOG_IF(!event_loop, FATAL) << "Unable to create event loop!";
+
+    // Create timer manager to create instances of timers.
+    auto timer_factory = std::make_shared<beerocks::TimerFactoryImpl>();
+    LOG_IF(!timer_factory, FATAL) << "Unable to create timer factory!";
+
+    // Create timer manager to help using application timers.
+    auto timer_manager = std::make_shared<beerocks::TimerManagerImpl>(timer_factory, event_loop);
+    LOG_IF(!timer_manager, FATAL) << "Unable to create timer manager!";
+
+    // Create UDS address where the server socket will listen for incoming connection requests.
+    std::string uds_path = beerocks_slave_conf.temp_path + "/" + std::string(BEEROCKS_MASTER_UDS);
+    auto uds_address     = beerocks::net::UdsAddress::create_instance(uds_path);
+    LOG_IF(!uds_address, FATAL) << "Unable to create UDS server address!";
+
+    // Create server to exchange CMDU messages with clients connected through a UDS socket
+    auto cmdu_server = beerocks::CmduServerFactory::create_instance(uds_address, event_loop);
+    LOG_IF(!cmdu_server, FATAL) << "Unable to create CMDU server!";
+
     beerocks::net::network_utils::iface_info bridge_info;
     auto &bridge_iface = beerocks_slave_conf.bridge_iface;
     if (beerocks::net::network_utils::get_iface_info(bridge_info, bridge_iface) != 0) {
@@ -402,7 +432,36 @@ int main(int argc, char *argv[])
 
     son::db master_db(master_conf, logger, bridge_info.mac, amb_dm_obj);
     // diagnostics_thread diagnostics(master_db);
-    son::master_thread son_master(master_uds, master_db);
+
+    // UCC server must be created in certification mode only and if a valid TCP port has been set
+    uint16_t port = master_db.config.ucc_listener_port;
+    std::unique_ptr<beerocks::UccServer> ucc_server;
+    if (master_db.setting_certification_mode() && (port != 0)) {
+
+        LOG(INFO) << "Certification mode enabled (listening on port " << port << ")";
+
+        // Create server to exchange UCC commands and replies with clients connected through the socket
+        ucc_server = beerocks::UccServerFactory::create_instance(port, event_loop);
+        LOG_IF(!ucc_server, FATAL) << "Unable to create UCC server!";
+    }
+
+    // Create parser for broker messages received through a stream-oriented socket.
+    auto message_parser = std::make_shared<beerocks::btl::MessageParserStreamImpl>();
+    LOG_IF(!message_parser, FATAL) << "Unable to create message parser!";
+
+    // Create serializer for broker messages to be sent through a stream-oriented socket.
+    auto message_serializer = std::make_shared<beerocks::btl::MessageSerializerStreamImpl>();
+    LOG_IF(!message_serializer, FATAL) << "Unable to create message serializer!";
+
+    // Create broker client factory to create broker clients when requested
+    std::string broker_uds_path =
+        beerocks_slave_conf.temp_path + "/" + std::string(BEEROCKS_BROKER_UDS);
+    auto broker_client_factory = std::make_shared<beerocks::btl::BrokerClientFactoryImpl>(
+        broker_uds_path, message_parser, message_serializer, event_loop);
+    LOG_IF(!broker_client_factory, FATAL) << "Unable to create broker client factory!";
+
+    son::Controller controller(master_db, broker_client_factory, std::move(ucc_server),
+                               std::move(cmdu_server), timer_manager, event_loop);
 
     if (!amb_dm_obj->set("Controller.Network", "TimeStamp",
                          amb_dm_obj->get_datamodel_time_format())) {
@@ -410,10 +469,7 @@ int main(int argc, char *argv[])
         return false;
     }
 
-    if (!son_master.init()) {
-        LOG(ERROR) << "son_master.init() ";
-        g_running = false;
-    }
+    LOG_IF(!controller.start(), FATAL) << "Unable to start controller!";
 
     auto touch_time_stamp_timeout = std::chrono::steady_clock::now();
     while (g_running) {
@@ -429,14 +485,16 @@ int main(int argc, char *argv[])
                                        std::chrono::seconds(beerocks::TOUCH_PID_TIMEOUT_SECONDS);
         }
 
-        if (!son_master.work()) {
+        // Run application event loop and break on error.
+        if (event_loop->run() < 0) {
+            LOG(ERROR) << "Event loop failure!";
             break;
         }
     }
 
     s_pLogger = nullptr;
 
-    son_master.stop();
+    controller.stop();
 
     return 0;
 }
