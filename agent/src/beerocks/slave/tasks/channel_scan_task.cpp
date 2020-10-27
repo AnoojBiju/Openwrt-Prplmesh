@@ -140,15 +140,64 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
     return true;
 }
 
+std::string get_timestamp_string()
+{
+    // Accourding to Multi-AP Specification Version 2.0, section 17.2.41, page 91:
+    // Timestamp should be in the format:
+    // '\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z|[\+\-]\d{2}:\d{2})'
+    // This function will return a time-date string format as defined in ISO 8601.
+    // For example: 2016-09-28T14:50:31.456449Z or 2016-09-28T14:50:31.456449+06:00
+
+    const auto now = std::chrono::system_clock::now();
+    auto seconds_since_epoch =
+        std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
+
+    // Construct time_t using 'seconds_since_epoch' rather than 'now' since it is
+    // implementation-defined whether the value is rounded or truncated.
+    std::time_t now_t = std::chrono::system_clock::to_time_t(
+        std::chrono::system_clock::time_point(seconds_since_epoch));
+
+    // std::strftime() can convert the "now" timestamp into a string,
+    // but it only supports up to a resolution of a second.
+    // generating the first part of the data-time string:
+    char buff[40];
+    if (!std::strftime(buff, 40, "%Y-%m-%dT%H:%M:%S.", std::localtime(&now_t))) {
+        return "";
+    }
+
+    // The subtraction bellow is used to get the fractional value of the second into the string.
+    // Note: the "Z" at the end means zolo time (UTC+0). This function assume locale to always be UTC.
+    // Unless we have a way to know our local, in which case, "Z" might be replaced with
+    // the time delta (+03:00 for Israel, as an example).
+    return std::string(buff) +
+           std::to_string((now.time_since_epoch() - seconds_since_epoch).count()) + "Z";
+}
+
 bool ChannelScanTask::send_channel_scan_report(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                const sMacAddr &src_mac)
 {
+    const auto timestamp = get_timestamp_string();
+    if (timestamp.empty()) {
+        LOG(ERROR) << "Fail to create timestamp string";
+        return false;
+    }
+
     // build 1905.1 message CMDU
     auto mid = cmdu_rx.getMessageId();
     if (!m_cmdu_tx.create(mid, ieee1905_1::eMessageType::CHANNEL_SCAN_REPORT_MESSAGE)) {
         LOG(ERROR) << "Create CMDU of type CHANNEL_SCAN_REPORT_MESSAGE failed";
         return false;
     }
+
+    // add Timestamp TLV
+    auto timestamp_tlv = m_cmdu_tx.addClass<wfa_map::tlvTimestamp>();
+    auto ret           = timestamp_tlv->set_timestamp(timestamp.c_str(), sizeof(timestamp));
+    if (!ret) {
+        LOG(ERROR) << "Failed to set timestamp in scan_results_tlv!";
+        return false;
+    }
+
+    // TODO: add one or more ChannelScanResult TLVs
 
     LOG(DEBUG) << "Sending CHANNEL_SCAN_REPORT_MESSAGE to the originator, mid=" << std::hex << mid;
     auto db = AgentDB::get();

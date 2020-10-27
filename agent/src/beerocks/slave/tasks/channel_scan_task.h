@@ -14,6 +14,7 @@
 #include <tlvf/CmduMessageTx.h>
 #include <tlvf/wfa_map/tlvProfile2ChannelScanRequest.h>
 #include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>
+#include <tlvf/wfa_map/tlvTimestamp.h>
 
 namespace beerocks {
 
