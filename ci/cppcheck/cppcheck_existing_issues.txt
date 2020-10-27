@@ -65,7 +65,6 @@ controller/src/beerocks/master/controller_ucc_listener.cpp: style: Variable 'bit
 controller/src/beerocks/master/controller_ucc_listener.cpp: style: Variable 'operating_class_str' can be declared with const [constVariable]    auto &operating_class_str = confs[1];
 controller/src/beerocks/master/db/db.cpp: performance: Function parameter 'iface_name' should be passed by const reference. [passedByValue]bool db::set_hostap_iface_name(const std::string &mac, std::string iface_name)
 controller/src/beerocks/master/db/db.cpp: performance: Function parameter 'name' should be passed by const reference. [passedByValue]bool db::set_node_name(const std::string &mac, std::string name)
-controller/src/beerocks/master/db/db.cpp: performance: Function parameter 'ssid' should be passed by const reference. [passedByValue]bool db::add_vap(const std::string &radio_mac, int vap_id, std::string bssid, std::string ssid,
 controller/src/beerocks/master/db/db.cpp: performance: Function parameter 'version' should be passed by const reference. [passedByValue]bool db::set_hostap_driver_version(const std::string &mac, std::string version)
 controller/src/beerocks/master/db/db.cpp: style: Non-boolean value returned from function returning bool [returnNonBoolInBooleanFunction]        return -1;
 controller/src/beerocks/master/db/db.cpp: style: Parameter 'n' can be declared with const [constParameter]int db::get_node_bw_int(std::shared_ptr<node> &n)

@@ -1720,8 +1720,8 @@ bool db::remove_vap(const std::string &radio_mac, int vap_id)
     return true;
 }
 
-bool db::add_vap(const std::string &radio_mac, int vap_id, std::string bssid, std::string ssid,
-                 bool backhual)
+bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bssid,
+                 const std::string &ssid, bool backhual)
 {
     if (!has_node(tlvf::mac_from_string(bssid)) &&
         !add_virtual_node(tlvf::mac_from_string(bssid), tlvf::mac_from_string(radio_mac))) {
@@ -1768,6 +1768,15 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, std::string bssid, st
     */
     if (!m_ambiorix_datamodel->set(bss_path, "BSSID", bssid)) {
         LOG(ERROR) << "Failed to set " << bss_path << "BSSID";
+        return false;
+    }
+
+    /*
+        Set value for SSID variable
+        Example: Controller.Network.Device.1.Radio.1.BSS.1.SSID
+    */
+    if (!m_ambiorix_datamodel->set(bss_path, "SSID", ssid)) {
+        LOG(ERROR) << "Failed to set " << bss_path << "SSID";
         return false;
     }
 
