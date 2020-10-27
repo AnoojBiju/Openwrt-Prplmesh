@@ -20,6 +20,7 @@
 #include <bcl/beerocks_version.h>
 #include <bcl/network/network_utils.h>
 #include <bcl/network/sockets_impl.h>
+#include <btl/broker_client_factory_factory.h>
 #include <mapf/common/utils.h>
 
 #include <easylogging++.h>
@@ -379,8 +380,16 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
         //        LOG_IF(!ucc_server, FATAL) << "Unable to create UCC server!";
     }
 
+    // Create broker client factory to create broker clients when requested
+    std::string broker_uds_path =
+        beerocks_slave_conf.temp_path + "/" + std::string(BEEROCKS_BROKER_UDS);
+    auto broker_client_factory =
+        beerocks::btl::create_broker_client_factory(broker_uds_path, event_loop);
+    LOG_IF(!broker_client_factory, FATAL) << "Unable to create broker client factory!";
+
     beerocks::backhaul_manager backhaul_mgr(beerocks_slave_conf, slave_ap_ifaces, slave_sta_ifaces,
-                                            stop_on_failure_attempts, std::move(ucc_server),
+                                            stop_on_failure_attempts,
+                                            std::move(broker_client_factory), std::move(ucc_server),
                                             std::move(backhaul_manager_cmdu_server), event_loop);
 
     // Start backhaul manager

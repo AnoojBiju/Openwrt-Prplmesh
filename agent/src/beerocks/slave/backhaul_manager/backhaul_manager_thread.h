@@ -20,6 +20,7 @@
 #include <bcl/beerocks_socket_thread.h>
 #include <bcl/beerocks_ucc_server.h>
 #include <bcl/network/network_utils.h>
+#include <btl/broker_client_factory.h>
 #include <btl/btl.h>
 #include <bwl/sta_wlan_hal.h>
 
@@ -52,6 +53,7 @@ public:
     backhaul_manager(const config_file::sConfigSlave &config,
                      const std::set<std::string> &slave_ap_ifaces_,
                      const std::set<std::string> &slave_sta_ifaces_, int stop_on_failure_attempts_,
+                     std::unique_ptr<beerocks::btl::BrokerClientFactory> broker_client_factory,
                      std::unique_ptr<beerocks::UccServer> ucc_server,
                      std::unique_ptr<beerocks::CmduServer> cmdu_server,
                      std::shared_ptr<beerocks::EventLoop> event_loop);
@@ -344,6 +346,13 @@ private:
     static const char *s_arrStates[];
 
     EState m_eFSMState;
+
+    /**
+     * Factory to create broker client instances connected to broker server.
+     * Broker client instances are used to exchange CMDU messages with remote processes running in
+     * other devices in the network via the broker server running in the transport process.
+     */
+    std::unique_ptr<beerocks::btl::BrokerClientFactory> m_broker_client_factory;
 
     /**
      * UCC server to exchange commands and replies with UCC certification application.
