@@ -35,12 +35,12 @@
 #endif // AMBIORIX_BACKEND_PATH
 
 #ifndef AMBIORIX_BUS_URI
-#define AMBIORIX_BUS_URI "ubus:/var/run/ubus.sock"
+#define AMBIORIX_BUS_URI "ubus:/var/run/ubus/ubus.sock"
 #endif // AMBIORIX_BUS_URI
 
 #ifndef CONTROLLER_DATAMODEL_PATH
 #define CONTROLLER_DATAMODEL_PATH "config/odl/controller.odl"
-#endif //CONTROLLER_DATAMODEL_PATH
+#endif
 
 #endif //#else // ENABLE_NBAPI
 
@@ -381,14 +381,6 @@ int main(int argc, char *argv[])
     std::string pid_file_path =
         beerocks_master_conf.temp_path + "pid/" + base_master_name; // for file touching
 
-#ifdef ENABLE_NBAPI
-    // TODO: change nullptr on the EventLoop pointer after it will be added to the controller.
-    auto amb_dm_obj = std::make_shared<beerocks::nbapi::AmbiorixImpl>(nullptr);
-    amb_dm_obj->init(AMBIORIX_BACKEND_PATH, AMBIORIX_BUS_URI, CONTROLLER_DATAMODEL_PATH);
-#else
-    auto amb_dm_obj = std::make_shared<beerocks::nbapi::AmbiorixDummy>();
-#endif //ENABLE_NBAPI
-
     // fill master configuration
     son::db::sDbMasterConfig master_conf;
     fill_master_config(master_conf, beerocks_master_conf);
@@ -420,6 +412,15 @@ int main(int argc, char *argv[])
         LOG(ERROR) << "Failed reading addresses from the bridge!";
         return 0;
     }
+
+#ifdef ENABLE_NBAPI
+    auto controller_dm_path = mapf::utils::get_install_path() + CONTROLLER_DATAMODEL_PATH;
+    auto amb_dm_obj         = std::make_shared<beerocks::nbapi::AmbiorixImpl>(event_loop);
+    LOG_IF(!amb_dm_obj, FATAL) << "Unable to create Ambiorix!";
+    amb_dm_obj->init(AMBIORIX_BACKEND_PATH, AMBIORIX_BUS_URI, controller_dm_path);
+#else
+    auto amb_dm_obj = std::make_shared<beerocks::nbapi::AmbiorixDummy>();
+#endif //ENABLE_NBAPI
 
     // Set Network.ID to the Data Model
     if (!amb_dm_obj->set("Controller.Network", "ID", bridge_info.mac)) {
