@@ -26,6 +26,7 @@ enum eWscAuth: uint16_t {
     WSC_AUTH_WPA = 0x8,
     WSC_AUTH_WPA2 = 0x10,
     WSC_AUTH_WPA2PSK = 0x20,
+    WSC_AUTH_SAE = 0x40,
     WSC_AUTH_INVALID = 0xffff,
 };
 
