@@ -3787,6 +3787,36 @@ bool db::set_node_stats_info(const std::string &mac, beerocks_message::sStaStats
 
 void db::clear_node_stats_info(const std::string &mac) { set_node_stats_info(mac, nullptr); }
 
+bool db::set_vap_stats_info(const std::string &bssid, uint32_t uc_tx_bytes, uint32_t uc_rx_bytes,
+                            uint32_t mc_tx_bytes, uint32_t mc_rx_bytes, uint32_t bc_tx_bytes,
+                            uint32_t bc_rx_bytes)
+{
+    /* 
+        ToDo: add extended stats to vap ?
+    */
+
+    /*
+        Prepare path with correct BSS instance.
+        Example: Controller.Network.Device.1.Radio.1.BSS.1.
+    */
+    auto bss_path = dm_get_path_to_bss(tlvf::mac_from_string(bssid));
+    if (bss_path.empty()) {
+        LOG(ERROR) << "Failed to get BSS path with mac: " << bssid;
+        return false;
+    }
+
+    /*
+        Set value for UnicastBytesSent variable
+        Example: Controller.Network.Device.1.Radio.1.BSS.1.UnicastBytesSent
+    */
+    if (!m_ambiorix_datamodel->set(bss_path, "UnicastBytesSent", uc_tx_bytes)) {
+        LOG(ERROR) << "Failed to set " << bss_path << "UnicastBytesSent";
+        return false;
+    }
+
+    return true;
+}
+
 bool db::commit_persistent_db_changes()
 {
     bool ret = bpl::db_commit_changes();
