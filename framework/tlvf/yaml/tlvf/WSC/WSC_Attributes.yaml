@@ -222,8 +222,8 @@ cWscAttrAuthenticationTypeFlags:
     _type: uint16_t
     _value_const: 2
   auth_type_flags: 
-    _type: uint16_t
-    _value: uint16_t(eWscAuth::WSC_AUTH_OPEN) | uint16_t(eWscAuth::WSC_AUTH_WPA2PSK)
+    _type: eWscAuth
+    _value: eWscAuth(eWscAuth::WSC_AUTH_OPEN | eWscAuth::WSC_AUTH_WPA2PSK)
 
 cWscAttrEncryptionTypeFlags:
   _type: class

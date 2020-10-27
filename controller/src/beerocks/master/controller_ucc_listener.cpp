@@ -220,10 +220,6 @@ controller_ucc_listener::parse_bss_info(const std::string &bss_info_str,
 
     uint16_t authentication_type = std::strtol(authentication_type_str.c_str(), nullptr, 16);
 
-    if (!WSC::eWscAuthValidate::check(authentication_type)) {
-        err_string = "invalid authentication type value";
-        return std::string();
-    }
     bss_info_conf.authentication_type = static_cast<WSC::eWscAuth>(authentication_type);
 
     // Encryption type

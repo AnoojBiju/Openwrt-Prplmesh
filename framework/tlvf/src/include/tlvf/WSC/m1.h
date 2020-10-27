@@ -25,7 +25,7 @@ public:
         uint8_t registrar_nonce[WSC_NONCE_LENGTH];
         uint8_t pub_key[WSC_PUBLIC_KEY_LENGTH];
         uint16_t encr_type_flags;
-        uint16_t auth_type_flags;
+        eWscAuth auth_type_flags;
         std::string manufacturer;
         std::string model_name;
         std::string model_number;

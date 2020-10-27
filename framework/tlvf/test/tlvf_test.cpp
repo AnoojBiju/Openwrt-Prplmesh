@@ -485,7 +485,7 @@ int test_all()
     cfg.primary_dev_type_id = WSC::WSC_DEV_NETWORK_INFRA_GATEWAY;
     cfg.device_name         = "prplmesh-controller";
     cfg.encr_type_flags     = uint16_t(WSC::eWscEncr::WSC_ENCR_NONE);
-    cfg.auth_type_flags     = uint16_t(WSC::eWscAuth::WSC_AUTH_OPEN);
+    cfg.auth_type_flags     = WSC::eWscAuth::WSC_AUTH_OPEN;
     cfg.bands               = WSC::WSC_RF_BAND_2GHZ;
     mapf::encryption::create_iv(cfg.iv, sizeof(cfg.iv));
     wps_calculate_keys(m1, key1, key1_length, m1.nonce(), mac, m2.nonce(), authkey, keywrapkey);

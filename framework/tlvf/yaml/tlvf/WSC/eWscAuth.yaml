@@ -3,7 +3,7 @@
 _namespace: WSC
 
 eWscAuth:
-  _type: enum_class
+  _type: enum
   _enum_storage: uint16_t
   WSC_AUTH_OPEN: 0x0001
   WSC_AUTH_WPAPSK: 0x0002
@@ -12,4 +12,4 @@ eWscAuth:
   WSC_AUTH_WPA2: 0x0010
   WSC_AUTH_WPA2PSK: 0x0020
   WSC_AUTH_INVALID: 0xFFFF
-  
+

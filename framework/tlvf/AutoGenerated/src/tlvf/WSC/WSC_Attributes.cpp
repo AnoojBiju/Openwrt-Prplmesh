@@ -1096,8 +1096,8 @@ const uint16_t& cWscAttrAuthenticationTypeFlags::length() {
     return (const uint16_t&)(*m_length);
 }
 
-uint16_t& cWscAttrAuthenticationTypeFlags::auth_type_flags() {
-    return (uint16_t&)(*m_auth_type_flags);
+eWscAuth& cWscAttrAuthenticationTypeFlags::auth_type_flags() {
+    return (eWscAuth&)(*m_auth_type_flags);
 }
 
 void cWscAttrAuthenticationTypeFlags::class_swap()
@@ -1140,7 +1140,7 @@ size_t cWscAttrAuthenticationTypeFlags::get_initial_size()
     size_t class_size = 0;
     class_size += sizeof(eWscAttributes); // type
     class_size += sizeof(uint16_t); // length
-    class_size += sizeof(uint16_t); // auth_type_flags
+    class_size += sizeof(eWscAuth); // auth_type_flags
     return class_size;
 }
 
@@ -1162,13 +1162,13 @@ bool cWscAttrAuthenticationTypeFlags::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
-    m_auth_type_flags = reinterpret_cast<uint16_t*>(m_buff_ptr__);
-    if (!m_parse__) *m_auth_type_flags = uint16_t(eWscAuth::WSC_AUTH_OPEN) | uint16_t(eWscAuth::WSC_AUTH_WPA2PSK);
-    if (!buffPtrIncrementSafe(sizeof(uint16_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
+    m_auth_type_flags = reinterpret_cast<eWscAuth*>(m_buff_ptr__);
+    if (!m_parse__) *m_auth_type_flags = eWscAuth(eWscAuth::WSC_AUTH_OPEN | eWscAuth::WSC_AUTH_WPA2PSK);
+    if (!buffPtrIncrementSafe(sizeof(eWscAuth))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(eWscAuth) << ") Failed!";
         return false;
     }
-    if(m_length && !m_parse__){ (*m_length) += sizeof(uint16_t); }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(eWscAuth); }
     if (m_parse__) { class_swap(); }
     return true;
 }
