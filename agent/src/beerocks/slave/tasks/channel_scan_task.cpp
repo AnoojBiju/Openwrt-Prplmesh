@@ -10,6 +10,8 @@
 #include "../agent_db.h"
 #include <easylogging++.h>
 
+#include "../backhaul_manager/backhaul_manager_thread.h"
+
 using namespace beerocks;
 
 #define FSM_MOVE_STATE(radio_iface, new_state)                                                     \
@@ -113,6 +115,22 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
         LOG(DEBUG) << "radio_list[" << radio_i << "] radio_uid=" << radio_uid;
     }
 
+    // Build and send ACK message CMDU to the originator.
+    auto cmdu_tx_header = m_cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE);
+    if (!cmdu_tx_header) {
+        LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
+        return false;
+    }
+
+    // Zero Error Code TLVs in this ACK message
+
+    LOG(DEBUG) << "Sending ACK message to the originator, mid=" << std::hex << mid;
+    auto db = AgentDB::get();
+    if (!m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
+                                       tlvf::mac_to_string(db->bridge.mac))) {
+        LOG(ERROR) << "Failed to send ACK_MESSAGE back to controller";
+        return false;
+    }
 
     return true;
 }

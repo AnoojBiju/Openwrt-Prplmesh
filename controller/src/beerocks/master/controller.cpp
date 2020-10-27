@@ -1180,6 +1180,8 @@ bool Controller::handle_cmdu_1905_ack_message(const std::string &src_mac,
     LOG(DEBUG) << "Received ACK_MESSAGE, mid=" << std::hex << int(mid)
                << " tlv error code: " << errorSS.str();
 
+    // TODO: Send ACK message/event to dynamic_channel_selection_r2_task.
+
     //TODO: the ACK should be sent to the correct task and will be done as part of agent certification
     return true;
 }
