@@ -50,16 +50,8 @@ class PrplMeshCompose(PrplMeshBase):
 
         self.wired_sniffer = Sniffer(_get_bridge_interface(self.unique_id),
                                      boardfarm.config.output_dir)
+
         self.check_status()
-
-    def check_status(self):
-        """Method required by boardfarm.
-
-        It is used by boardfarm to indicate that spawned device instance is ready for test
-        and also after test - to insure that device still operational.
-        """
-        self._run_shell_cmd("printf",
-                            ["device_get_info", "|", "nc", "-w", "1", self.docker_name, "8002"])
 
     def isalive(self):
         """Method required by boardfarm.
