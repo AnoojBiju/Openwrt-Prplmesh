@@ -18,6 +18,7 @@
 #include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_event_loop.h>
 #include <bcl/beerocks_socket_thread.h>
+#include <bcl/beerocks_ucc_server.h>
 #include <bcl/network/network_utils.h>
 #include <btl/btl.h>
 #include <bwl/sta_wlan_hal.h>
@@ -51,6 +52,7 @@ public:
     backhaul_manager(const config_file::sConfigSlave &config,
                      const std::set<std::string> &slave_ap_ifaces_,
                      const std::set<std::string> &slave_sta_ifaces_, int stop_on_failure_attempts_,
+                     std::unique_ptr<beerocks::UccServer> ucc_server,
                      std::unique_ptr<beerocks::CmduServer> cmdu_server,
                      std::shared_ptr<beerocks::EventLoop> event_loop);
     ~backhaul_manager();
@@ -342,6 +344,11 @@ private:
     static const char *s_arrStates[];
 
     EState m_eFSMState;
+
+    /**
+     * UCC server to exchange commands and replies with UCC certification application.
+     */
+    std::unique_ptr<beerocks::UccServer> m_ucc_server;
 
     /**
      * CMDU server to exchange CMDU messages with clients through socket connections.

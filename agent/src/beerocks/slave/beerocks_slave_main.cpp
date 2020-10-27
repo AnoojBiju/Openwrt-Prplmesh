@@ -362,8 +362,25 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     LOG_IF(!backhaul_manager_cmdu_server, FATAL)
         << "Unable to create CMDU server for backhaul manager!";
 
+    // UCC server must be created if all the three following conditions are met:
+    // - Device has been configured to work in certification mode
+    // - A valid TCP port has been set
+    // - The controller is not running in this device
+    std::unique_ptr<beerocks::UccServer> ucc_server;
+    bool certification_mode = beerocks::bpl::cfg_get_certification_mode();
+    bool local_controller   = beerocks::bpl::cfg_is_master();
+    uint16_t port           = beerocks::string_utils::stoi(beerocks_slave_conf.ucc_listener_port);
+    if (certification_mode && (port != 0) && (!local_controller)) {
+
+        LOG(INFO) << "Certification mode enabled (listening on port " << port << ")";
+
+        // Create server to exchange UCC commands and replies with clients connected through the socket
+        //        ucc_server = beerocks::UccServerFactory::create_instance(port, event_loop);
+        //        LOG_IF(!ucc_server, FATAL) << "Unable to create UCC server!";
+    }
+
     beerocks::backhaul_manager backhaul_mgr(beerocks_slave_conf, slave_ap_ifaces, slave_sta_ifaces,
-                                            stop_on_failure_attempts,
+                                            stop_on_failure_attempts, std::move(ucc_server),
                                             std::move(backhaul_manager_cmdu_server), event_loop);
 
     // Start backhaul manager

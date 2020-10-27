@@ -93,12 +93,14 @@ backhaul_manager::backhaul_manager(const config_file::sConfigSlave &config,
                                    const std::set<std::string> &slave_ap_ifaces_,
                                    const std::set<std::string> &slave_sta_ifaces_,
                                    int stop_on_failure_attempts_,
+                                   std::unique_ptr<beerocks::UccServer> ucc_server,
                                    std::unique_ptr<beerocks::CmduServer> cmdu_server,
                                    std::shared_ptr<beerocks::EventLoop> event_loop)
     : transport_socket_thread(config.temp_path + std::string(BEEROCKS_BACKHAUL_MGR_UDS)),
       beerocks_temp_path(config.temp_path), slave_ap_ifaces(slave_ap_ifaces_),
       slave_sta_ifaces(slave_sta_ifaces_), config_const_bh_slave(config.const_backhaul_slave),
-      m_cmdu_server(std::move(cmdu_server)), m_event_loop(event_loop)
+      m_ucc_server(std::move(ucc_server)), m_cmdu_server(std::move(cmdu_server)),
+      m_event_loop(event_loop)
 {
     LOG_IF(!m_cmdu_server, FATAL) << "CMDU server is a null pointer!";
     LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
@@ -1559,7 +1561,8 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
 
         if (!m_agent_ucc_listener && request->certification_mode() &&
             db->device_conf.ucc_listener_port != 0 && !db->device_conf.local_controller) {
-            m_agent_ucc_listener = std::make_unique<agent_ucc_listener>(*this, cert_cmdu_tx);
+            m_agent_ucc_listener =
+                std::make_unique<agent_ucc_listener>(*this, cert_cmdu_tx, std::move(m_ucc_server));
             if (m_agent_ucc_listener && !m_agent_ucc_listener->start("ucc_listener")) {
                 LOG(ERROR) << "failed start agent_ucc_listener";
                 return false;

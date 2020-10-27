@@ -19,8 +19,10 @@
 using namespace beerocks;
 using namespace net;
 
-agent_ucc_listener::agent_ucc_listener(backhaul_manager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu)
-    : beerocks_ucc_listener(AgentDB::get()->device_conf.ucc_listener_port, cmdu, nullptr),
+agent_ucc_listener::agent_ucc_listener(backhaul_manager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu,
+                                       std::unique_ptr<beerocks::UccServer> ucc_server)
+    : beerocks_ucc_listener(AgentDB::get()->device_conf.ucc_listener_port, cmdu,
+                            std::move(ucc_server)),
       m_btl_ctx(btl_ctx)
 
 {

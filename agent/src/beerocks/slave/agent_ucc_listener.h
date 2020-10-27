@@ -24,8 +24,8 @@ class backhaul_manager;
 
 class agent_ucc_listener : public beerocks_ucc_listener {
 public:
-    agent_ucc_listener(backhaul_manager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu);
-    ~agent_ucc_listener(){};
+    agent_ucc_listener(backhaul_manager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu,
+                       std::unique_ptr<beerocks::UccServer> ucc_server);
 
     void lock() override { mutex.lock(); }
     void unlock() override { mutex.unlock(); }
