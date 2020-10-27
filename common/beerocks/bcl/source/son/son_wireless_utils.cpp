@@ -987,22 +987,29 @@ wireless_utils::operating_class_to_bandwidth(uint8_t operating_class)
 
 std::string wireless_utils::wsc_to_bwl_authentication(WSC::eWscAuth authtype)
 {
-    switch (authtype) {
-    case WSC::eWscAuth::WSC_AUTH_OPEN:
-        return "NONE";
-    case WSC::eWscAuth::WSC_AUTH_WPAPSK:
-        return "WPA-PSK";
-    case WSC::eWscAuth::WSC_AUTH_SHARED:
-        return "SHARED";
-    case WSC::eWscAuth::WSC_AUTH_WPA:
-        return "WPA";
-    case WSC::eWscAuth::WSC_AUTH_WPA2:
-        return "WPA2";
-    case WSC::eWscAuth::WSC_AUTH_WPA2PSK:
-        return "WPA2-PSK";
-    default:
+    std::string authtype_str("");
+    if (authtype & WSC::eWscAuth::WSC_AUTH_OPEN) {
+        authtype_str += "NONE ";
+    }
+    if (authtype & WSC::eWscAuth::WSC_AUTH_WPAPSK) {
+        authtype_str += "WPA-PSK ";
+    }
+    if (authtype & WSC::eWscAuth::WSC_AUTH_SHARED) {
+        authtype_str += "SHARED ";
+    }
+    if (authtype & WSC::eWscAuth::WSC_AUTH_WPA) {
+        authtype_str += "WPA ";
+    }
+    if (authtype & WSC::eWscAuth::WSC_AUTH_WPA2) {
+        authtype_str += "WPA2 ";
+    }
+    if (authtype & WSC::eWscAuth::WSC_AUTH_WPA2PSK) {
+        authtype_str += "WPA2-PSK ";
+    }
+    if (authtype_str.empty()) {
         return "INVALID";
     }
+    return authtype_str;
 }
 
 std::string wireless_utils::wsc_to_bwl_encryption(WSC::eWscEncr enctype)
