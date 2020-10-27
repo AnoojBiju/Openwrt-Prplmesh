@@ -1006,6 +1006,10 @@ std::string wireless_utils::wsc_to_bwl_authentication(WSC::eWscAuth authtype)
     if (authtype & WSC::eWscAuth::WSC_AUTH_WPA2PSK) {
         authtype_str += "WPA2-PSK ";
     }
+    if (authtype & WSC::eWscAuth::WSC_AUTH_SAE) {
+        authtype_str += "SAE ";
+    }
+
     if (authtype_str.empty()) {
         return "INVALID";
     }
