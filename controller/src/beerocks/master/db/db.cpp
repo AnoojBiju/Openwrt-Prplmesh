@@ -5227,6 +5227,35 @@ bool db::remove_current_op_classes(const sMacAddr &radio_mac)
     return true;
 }
 
+bool db::remove_hostap_supported_operating_classes(const sMacAddr &radio_mac)
+{
+    auto supported_channels = get_hostap_supported_channels(tlvf::mac_to_string(radio_mac));
+    auto radio_node         = get_node(radio_mac);
+
+    // Remove from data model
+    if (!radio_node) {
+        LOG(ERROR) << "Failed to get radio node with mac: " << radio_mac;
+        return false;
+    }
+
+    auto radio_path = dm_get_path_to_radio(*radio_node);
+    if (radio_path.empty()) {
+        LOG(ERROR) << "Failed to get path to radio with mac: " << radio_mac;
+        return false;
+    }
+
+    auto op_class_path = radio_path + "OperatingClasses";
+    if (!m_ambiorix_datamodel->remove_all_instances(op_class_path)) {
+        LOG(ERROR) << "Failed to remove all instances for: " << op_class_path;
+        return false;
+    }
+
+    // Remove from database
+    std::vector<beerocks::message::sWifiChannel>().swap(supported_channels);
+
+    return true;
+}
+
 bool db::set_radio_utilization(const sMacAddr &bssid, uint8_t utilization)
 {
 

@@ -396,6 +396,16 @@ public:
      */
     bool remove_current_op_classes(const sMacAddr &radio_mac);
 
+    /**
+     * @brief Removes all instances of hostap supported operating classes
+	 * from the Data Model and database.
+     * Path example: Controller.Network.Device.1.Radio.1.Capabilities.OperatingClasses
+     *
+     * @param radio_mac MAC address for Radio which reporting Operating Class
+     * @return true on success, false otherwise.
+     */
+    bool remove_hostap_supported_operating_classes(const sMacAddr &radio_mac);
+
     //
     // DB node functions (get only)
     //
