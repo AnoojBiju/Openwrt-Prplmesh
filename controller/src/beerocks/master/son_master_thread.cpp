@@ -828,9 +828,10 @@ bool master_thread::handle_cmdu_1905_autoconfiguration_WSC(const std::string &sr
             LOG(INFO) << "Skipping " << bss_info_conf.ssid << " due to operclass mismatch";
             continue;
         }
-        if (!(m1->auth_type_flags() & uint16_t(bss_info_conf.authentication_type))) {
+        if ((m1->auth_type_flags() & bss_info_conf.authentication_type) !=
+            bss_info_conf.authentication_type) {
             LOG(INFO) << std::hex << "Auth mismatch for " << bss_info_conf.ssid << ": get 0x"
-                      << m1->auth_type_flags() << " need 0x"
+                      << m1->auth_type_flags() << " need at least 0x"
                       << uint16_t(bss_info_conf.authentication_type);
         }
         if (!(m1->encr_type_flags() & uint16_t(bss_info_conf.encryption_type))) {
