@@ -193,7 +193,7 @@ run-tests:
   image: $CI_REGISTRY_IMAGE/prplmesh-tests-runner:$CI_PIPELINE_ID
   script:
     - tests/test_flows.py --verbose --unique-id "$CI_JOB_ID" --tag "$CI_PIPELINE_ID"
-
+  retry: 2
   artifacts:
     paths:
       - logs
