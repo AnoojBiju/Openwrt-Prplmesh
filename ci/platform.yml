@@ -74,3 +74,23 @@ test-on-glinet-b1300:
 #     TARGET_DEVICE_NAME: netgear-rax40-1
 #     OPENWRT_IMAGE: NETGEAR_RAX40-squashfs-fullimage.img
 #   needs: ["build-for-netgear-rax40"]
+
+run-certification-tests-platform-essensium:
+  extends: .run-certification-tests
+  tags:
+    - certs-tests-essensium
+  needs:
+    - job: build-for-axepoint
+    - job: build-for-turris-omnia
+  rules:
+    - if: '$TESTS_TO_RUN && $DEVICE_UNDER_TEST != "prplmesh" && $WFA_CERTIFICATION_RUNNER == "ESSENSIUM"'
+
+run-certification-tests-platform-isr:
+  extends: .run-certification-tests
+  tags:
+    - certs-tests-isr
+  needs:
+    - job: build-for-axepoint
+    - job: build-for-turris-omnia
+  rules:
+    - if: '$TESTS_TO_RUN && $DEVICE_UNDER_TEST != "prplmesh" && $WFA_CERTIFICATION_RUNNER == "ISR"'

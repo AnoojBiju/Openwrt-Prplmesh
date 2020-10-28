@@ -223,19 +223,23 @@ boardfarm-tests:
   tags:
     - boardfarm-compose
 
-run-certification-tests-essensium:
+run-certification-tests-prplmesh-essensium:
   extends: .run-certification-tests
   tags:
     - certs-tests-essensium
+  needs:
+    - job: build-in-docker
   rules:
-    - if: '$TESTS_TO_RUN && $WFA_CERTIFICATION_RUNNER == "ESSENSIUM"'
+    - if: '$TESTS_TO_RUN && $DEVICE_UNDER_TEST == "prplmesh" && $WFA_CERTIFICATION_RUNNER == "ESSENSIUM"'
 
-run-certification-tests-isr:
+run-certification-tests-prplmesh-isr:
   extends: .run-certification-tests
   tags:
     - certs-tests-isr
+  needs:
+    - job: build-in-docker
   rules:
-    - if: '$TESTS_TO_RUN && $WFA_CERTIFICATION_RUNNER == "ISR"'
+    - if: '$TESTS_TO_RUN && $DEVICE_UNDER_TEST == "prplmesh" && $WFA_CERTIFICATION_RUNNER == "ISR"'
 
 upload-artifacts:
   stage: upload
