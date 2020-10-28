@@ -5787,6 +5787,7 @@ std::string db::dm_get_path_to_sta(const std::string &sta_mac)
     }
     return path_to_bss + "STA." + std::to_string(sta_index) + ".";
 }
+
 #else
 std::string db::dm_get_path_to_bss(const sMacAddr &bssid) { return "dummy!"; }
 std::string db::dm_get_path_to_sta(const std::string &sta_mac) { return "dummy!"; }
