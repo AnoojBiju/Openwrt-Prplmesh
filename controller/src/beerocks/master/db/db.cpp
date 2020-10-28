@@ -3294,8 +3294,6 @@ bool db::load_persistent_db_clients()
                           LOG(DEBUG) << "Invalid entry - not a valid mac as client entry -"
                                      << "removing the data." << client_entry;
                           set_error_mac_count++;
-                          bpl::db_remove_entry(type_to_string(beerocks::eType::TYPE_CLIENT),
-                                               client_pair.first);
                           add = false;
                       }
 
@@ -3303,23 +3301,23 @@ bool db::load_persistent_db_clients()
                       if (time == 0) {
                           LOG(DEBUG) << "Filtering aged client data - client entry -"
                                      << "removing the data." << client_entry;
-                          bpl::db_remove_entry(type_to_string(beerocks::eType::TYPE_CLIENT),
-                                               client_pair.first);
+
                           add = false;
                       }
 
                       if (add) {
                           vector_of_clients.push_back(client_pair);
+                      } else {
+                          bpl::db_remove_entry(type_to_string(beerocks::eType::TYPE_CLIENT),
+                                               client_pair.first);
                       }
                   });
 
-    unsigned int diff = 0;
     // If DB is too big, we need to delete those who're close to the end of their lifespan
-    if (vector_of_clients.size() > static_cast<unsigned int>(config.clients_persistent_db_max_size))
-        diff = vector_of_clients.size() -
-               static_cast<unsigned int>(config.clients_persistent_db_max_size);
+    auto diff = vector_of_clients.size() - config.clients_persistent_db_max_size;
+    auto threshold_violation_count = (diff > 0) ? diff : 0;
 
-    if (diff > 0) {
+    if (threshold_violation_count > 0) {
         std::sort(
             std::begin(vector_of_clients), std::end(vector_of_clients),
             [&](const std::pair<std::string, std::unordered_map<std::string, std::string>> &a,
@@ -3327,15 +3325,17 @@ bool db::load_persistent_db_clients()
                 return (get_client_remaining_sec(a) > get_client_remaining_sec(b));
             });
 
-        // erase diff and reduce the size of the vector and on persistent DB
-        std::for_each(vector_of_clients.end(), vector_of_clients.end() - diff,
+        // remove the most aged clients from clients vector and from the persistent DB
+        // to meet the persistent DB max size limit.
+        std::for_each(vector_of_clients.end() - threshold_violation_count, vector_of_clients.end(),
                       [](const std::pair<std::string, std::unordered_map<std::string, std::string>>
                              &client_pair) {
                           bpl::db_remove_entry(type_to_string(beerocks::eType::TYPE_CLIENT),
                                                client_pair.first);
                       });
 
-        vector_of_clients.erase(vector_of_clients.end() - diff);
+        vector_of_clients.erase(vector_of_clients.end() - threshold_violation_count,
+                                vector_of_clients.end());
     }
 
     for (const auto &client : vector_of_clients) {
@@ -3350,8 +3350,8 @@ bool db::load_persistent_db_clients()
         set_error_count += result.second;
     }
 
-    auto sum =
-        static_cast<uint16_t>(vector_of_clients.size()) - add_error_count - set_error_count - diff;
+    auto sum = static_cast<uint16_t>(vector_of_clients.size()) - add_error_count - set_error_count -
+               threshold_violation_count;
 
     // Print counters
     LOG_IF(set_error_mac_count, DEBUG)
@@ -3359,7 +3359,8 @@ bool db::load_persistent_db_clients()
     LOG_IF(add_error_count, DEBUG) << "Unable to add nodes for " << add_error_count << "clients";
     LOG_IF(set_error_count, DEBUG) << "Unable to set the nodes with values from persistent db for "
                                    << set_error_count << " clients";
-    LOG(DEBUG) << "Filtered: " << diff << " clients due to max DB capacity reached:"
+    LOG(DEBUG) << "Filtered: " << threshold_violation_count
+               << " clients due to max DB capacity reached:"
                << " max-capacity: " << config.clients_persistent_db_max_size;
     LOG(DEBUG) << " Added " << sum << " clients successfully";
 
