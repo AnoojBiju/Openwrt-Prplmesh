@@ -1403,12 +1403,21 @@ private:
 
     /**
      * @brief Prepares path to the BSS data element with correct index (i).
-     * Example: "Controller.Network.Device.1.Radio.1.BSS.2".
+     * Example: "Controller.Network.Device.1.Radio.1.BSS.2.".
      *
      * @param bssid BSSID.
      * @return Path to bss, empty string otherwise.
      */
     std::string dm_get_path_to_bss(const sMacAddr &bssid);
+
+    /**
+     * @brief Get path to the STA data element with appropriate indexes.
+     * Example: "Controller.Network.Device.1.Radio.2.BSS.3.STA.4."
+     *
+     * @param sta_mac Mac address of station.
+     * @return Path to STA data element, empty string otherwise.
+     */
+    std::string dm_get_path_to_sta(const std::string &sta_mac);
 
     /**
      * @brief Set clients (device) multi ap capabilities

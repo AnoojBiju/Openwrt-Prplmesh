@@ -5624,3 +5624,28 @@ std::string db::dm_get_path_to_bss(const sMacAddr &bssid)
     }
     return radio_path + "BSS." + std::to_string(bss_index) + ".";
 }
+
+std::string db::dm_get_path_to_sta(const std::string &sta_mac)
+{
+    auto sta_node = get_node(sta_mac);
+
+    if (!sta_node || sta_node->get_type() != TYPE_CLIENT) {
+        LOG(ERROR) << "Fail to get station node with mac: " << sta_mac;
+        return {};
+    }
+
+    std::string path_to_bss = dm_get_path_to_bss(tlvf::mac_from_string(sta_node->parent_mac));
+
+    if (path_to_bss.empty()) {
+        LOG(ERROR) << "Fail to get path to bss object with bssid: " << sta_node->parent_mac;
+        return {};
+    }
+    uint32_t sta_index =
+        m_ambiorix_datamodel->get_instance_index(path_to_bss + "[ID == '%s']", sta_mac);
+    if (!sta_index) {
+        LOG(ERROR) << "Fail to get index for object: " << path_to_bss << ".STA"
+                   << " with mac: " << sta_mac;
+        return {};
+    }
+    return path_to_bss + "STA." + std::to_string(sta_index) + ".";
+}
