@@ -2572,6 +2572,13 @@ bool Controller::autoconfig_wsc_parse_radio_caps(
         LOG(WARNING) << "operating class info list larger then maximum supported channels";
         operating_classes_list_length = beerocks::message::SUPPORTED_CHANNELS_LENGTH;
     }
+
+    /*
+    ** Here need to remove the OperatingClasses data element
+    ** from the Controler Data Model because we are entering a new one
+    */
+    database.remove_hostap_supported_operating_classes(tlvf::mac_from_string(radio_mac));
+
     std::stringstream ss;
     for (int oc_idx = 0; oc_idx < operating_classes_list_length; oc_idx++) {
         auto operating_class_tuple = radio_caps->operating_classes_info_list(oc_idx);
