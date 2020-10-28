@@ -39,6 +39,8 @@ using namespace beerocks::net;
 #define DISABLE_BACKHAUL_VAP_TIMEOUT_SEC 30
 #define OPERATION_SUCCESS 0
 #define OPERATION_FAIL -1
+#define WAIT_FOR_RADIO_ENABLE_TIMEOUT_SEC 100
+#define MAX_RADIO_DISBALED_TIMEOUT_SEC 3
 
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////// Local Module Functions ///////////////////////////
@@ -618,27 +620,16 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
 
         response->success() = true;
 
-        // Enable beaconing by setting start_disabled flag to false.
-        if (!ap_wlan_hal->set_start_disabled(false)) {
-            LOG(ERROR) << "Failed setting start_disabled";
-            response->success() = false;
-            message_com::send_cmdu(slave_socket, cmdu_tx);
-            break;
-        }
-
         // Disable the radio interface to make hostapd to consider the new configuration.
         if (!ap_wlan_hal->disable()) {
-            LOG(ERROR) << "Failed disable";
-            response->success() = false;
-            message_com::send_cmdu(slave_socket, cmdu_tx);
-            break;
+            LOG(DEBUG) << "ap disable() failed!, the interface might be already disabled or down";
         }
 
         // If it is not the radio of the BH, then channel, bandwidth and center channel paramenters
         // will be all set to 0.
         LOG(DEBUG) << "Setting AP channel: "
                    << ", channel=" << int(notification->channel())
-                   << ", bandwidth=" << int(notification->bandwidth())
+                   << ", bandwidth=" << notification->bandwidth()
                    << ", center_channel=" << int(notification->center_channel());
 
         // Set original channel or BH channel
@@ -1150,8 +1141,28 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
             bss_info_conf_list.push_back(bss_info_conf);
         }
 
-        ap_wlan_hal->update_vap_credentials(bss_info_conf_list, backhaul_wps_ssid,
-                                            backhaul_wps_passphrase);
+        // Before updating vap credentials we need to make sure hostapd is enabled.
+        // Entering blocking state until radio is enabled again.
+        auto timeout = std::chrono::steady_clock::now() +
+                       std::chrono::seconds(WAIT_FOR_RADIO_ENABLE_TIMEOUT_SEC);
+        auto perform_update = false;
+        while (std::chrono::steady_clock::now() < timeout) {
+            if (!ap_wlan_hal->refresh_radio_info()) {
+                break;
+            }
+
+            if (ap_wlan_hal->get_radio_info().radio_enabled) {
+                perform_update = true;
+                LOG(DEBUG) << "Radio is in enabled state, performing vap credentials update";
+                break;
+            }
+            UTILS_SLEEP_MSEC(500);
+        }
+
+        if (perform_update) {
+            ap_wlan_hal->update_vap_credentials(bss_info_conf_list, backhaul_wps_ssid,
+                                                backhaul_wps_passphrase);
+        }
 
         break;
     }
@@ -1163,6 +1174,17 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
         }
         break;
     }
+
+    case beerocks_message::ACTION_APMANAGER_RADIO_DISABLE_REQUEST: {
+        LOG(DEBUG) << "Got ACTION_APMANAGER_RADIO_DISABLE_REQUEST";
+        // Disable the radio interface
+        if (!ap_wlan_hal->disable()) {
+            LOG(ERROR) << "Failed disabling radio on iface: " << ap_wlan_hal->get_iface_name();
+            return false;
+        }
+        break;
+    }
+
     case beerocks_message::ACTION_APMANAGER_STEERING_CLIENT_SET_REQUEST: {
         auto request =
             beerocks_header
@@ -1705,6 +1727,28 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
         if (!data) {
             LOG(ERROR) << "AP_Disabled without data!";
             return false;
+        }
+
+        auto timeout =
+            std::chrono::steady_clock::now() + std::chrono::seconds(MAX_RADIO_DISBALED_TIMEOUT_SEC);
+        auto notify_disabled = true;
+
+        while (std::chrono::steady_clock::now() < timeout) {
+            if (!ap_wlan_hal->refresh_radio_info()) {
+                LOG(WARNING) << "refresh_radio_info failed!, radio could be disabled";
+                continue;
+            }
+
+            auto state = ap_wlan_hal->get_radio_info().radio_state;
+            if ((state > bwl::eRadioState::DISABLED) && (state != bwl::eRadioState::UNKNOWN)) {
+                notify_disabled = false;
+                break;
+            }
+            UTILS_SLEEP_MSEC(500);
+        }
+
+        if (!notify_disabled) {
+            break;
         }
 
         auto msg = static_cast<bwl::sHOSTAP_DISABLED_NOTIFICATION *>(data);

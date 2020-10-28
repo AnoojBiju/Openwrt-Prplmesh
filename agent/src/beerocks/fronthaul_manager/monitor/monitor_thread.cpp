@@ -1638,6 +1638,30 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
             LOG(ERROR) << "AP_Disabled without data";
             return false;
         }
+
+        auto timeout         = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+        auto notify_disabled = true;
+
+        while (std::chrono::steady_clock::now() < timeout) {
+            if (!mon_wlan_hal->refresh_radio_info()) {
+                LOG(WARNING) << "refresh_radio_info failed!, radio could be disabled";
+                continue;
+            }
+
+            auto state = mon_wlan_hal->get_radio_info().radio_state;
+            if ((state > bwl::eRadioState::DISABLED) && (state != bwl::eRadioState::UNKNOWN)) {
+                LOG(DEBUG) << "Radio is not disabled state (" << state
+                           << "), not forwarding Disabled Notification";
+                notify_disabled = false;
+                break;
+            }
+            UTILS_SLEEP_MSEC(1);
+        }
+
+        if (!notify_disabled) {
+            break;
+        }
+
         auto msg = static_cast<bwl::sHOSTAP_DISABLED_NOTIFICATION *>(data);
         LOG(INFO) << "AP_Disabled on vap_id = " << int(msg->vap_id);
 
