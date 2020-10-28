@@ -3,12 +3,15 @@
 # This code is subject to the terms of the BSD+Patent license.
 # See LICENSE file for more details.
 
-from typing import Union, Callable, NoReturn
+from typing import Any, Union, Callable, NoReturn
 
+from boardfarm.exceptions import SkipTest
 from boardfarm.tests import bft_base_test
+from capi import tlv
 from opts import debug
 import environment as env
 import sniffer
+import time
 
 
 class PrplMeshBaseTest(bft_base_test.BftBaseTest):
@@ -188,3 +191,51 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
     def fail(self, msg: str):
         '''Throw an exception message.'''
         raise Exception(msg)
+
+    def safe_check_obj_attribute(self, obj: object, attrib_name: str,
+                                 expected_val: Any, fail_str: str) -> NoReturn:
+        """Check if expected attrib exists first, fail test if it does not exist"""
+        try:
+            if getattr(obj, attrib_name) != expected_val:
+                self.fail(fail_str)
+        except AttributeError:
+            self.fail("{} has no attribute {}".format(type(obj).__name__, attrib_name))
+
+    def base_test_client_capability_query(self, sta: env.Station):
+        try:
+            agent = self.dev.DUT.agent_entity
+            controller = self.dev.lan.controller_entity
+        except AttributeError as ae:
+            raise SkipTest(ae)
+
+        mid = controller.ucc_socket.dev_send_1905(agent.mac, 0x8009, tlv(
+            0x90, 0x000C, '{} {}'.format(agent.radios[0].mac, sta.mac)))
+
+        time.sleep(1)
+
+        query = self.check_cmdu_type_single("client capability query", 0x8009,
+                                            controller.mac, agent.mac, mid)
+
+        query_tlv = self.check_cmdu_has_tlv_single(query, 0x90)
+        self.safe_check_obj_attribute(query_tlv, 'client_info_mac_addr', sta.mac,
+                                      "Wrong mac address in query")
+        self.safe_check_obj_attribute(query_tlv, 'client_info_bssid',
+                                      agent.radios[0].mac,
+                                      "Wrong bssid in query")
+
+        report = self.check_cmdu_type_single("client capability report", 0x800a,
+                                             agent.mac, controller.mac, mid)
+
+        client_info_tlv = self.check_cmdu_has_tlv_single(report, 0x90)
+        self.safe_check_obj_attribute(client_info_tlv, 'client_info_mac_addr', sta.mac,
+                                      "Wrong mac address in report")
+        self.safe_check_obj_attribute(client_info_tlv, 'client_info_bssid',
+                                      agent.radios[0].mac,
+                                      "Wrong bssid in report")
+        return report
+
+    def get_device_by_name(self, device_name: str) -> env.ALEntity:
+        try:
+            return [_.obj for _ in self.dev.devices if _.obj.name == device_name][0]
+        except IndexError as ae:
+            raise SkipTest(ae)
