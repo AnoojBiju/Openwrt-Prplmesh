@@ -5011,6 +5011,78 @@ uint64_t db::get_client_remaining_sec(const std::pair<std::string, ValuesMap> &c
                 : 0);
 }
 
+bool db::clear_ap_capabilities(const sMacAddr &radio_mac)
+{
+    auto radio_node = get_node(radio_mac);
+
+    std::string path_to_obj = dm_get_path_to_radio(*radio_node);
+    if (path_to_obj.empty()) {
+        LOG(ERROR) << "Fail get path for radio with mac: " << radio_mac;
+        return false;
+    }
+    path_to_obj += "Capabilities";
+    if (!m_ambiorix_datamodel->remove_optional_subobject(path_to_obj, "HTCapabilities")) {
+        LOG(ERROR) << "Fail to remove optional subobject: " << path_to_obj << ".HTCapabilities";
+        return false;
+    }
+    if (!m_ambiorix_datamodel->remove_optional_subobject(path_to_obj, "VHTCapabilities")) {
+        LOG(ERROR) << "Fail to remove optional subobject: " << path_to_obj << ".VHTCapabilities";
+        return false;
+    }
+    if (!m_ambiorix_datamodel->remove_optional_subobject(path_to_obj, "HECapabilities")) {
+        LOG(ERROR) << "Fail to remove optional subobject: " << path_to_obj << ".HECapabilities";
+        return false;
+    }
+    return true;
+}
+
+bool db::set_ap_ht_capabilities(const sMacAddr &radio_mac,
+                                wfa_map::tlvApHtCapabilities::sFlags flags)
+{
+    auto radio_node = get_node(radio_mac);
+    bool return_val = true;
+
+    if (!radio_node) {
+        LOG(ERROR) << "Fail get radio node with mac: " << radio_mac;
+        return false;
+    }
+
+    std::string path_to_obj = dm_get_path_to_radio(*radio_node);
+    if (path_to_obj.empty()) {
+        LOG(ERROR) << "Fail get path for radio with mac: " << radio_mac;
+        return false;
+    }
+
+    path_to_obj += "Capabilities";
+    if (!m_ambiorix_datamodel->add_optional_subobject(path_to_obj, "HTCapabilities")) {
+        return false;
+    }
+    path_to_obj += ".HTCapabilities";
+    if (!m_ambiorix_datamodel->set(path_to_obj, "GI_20_MHz", (bool)flags.short_gi_support_20mhz)) {
+        LOG(WARNING) << "Couldn't set GI_20_MHz for object" << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "GI_40_MHz", (bool)flags.short_gi_support_40mhz)) {
+        LOG(WARNING) << "Couldn't set GI_40_MHz for object" << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "HT_40_Mhz", (bool)flags.ht_support_40mhz)) {
+        LOG(WARNING) << "Couldn't set HT_40_Mhz for object" << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "tx_spatial_streams",
+                                   flags.max_num_of_supported_tx_spatial_streams + 1)) {
+        LOG(WARNING) << "Couldn't set tx_spatial_streams for object" << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "rx_spatial_streams",
+                                   flags.max_num_of_supported_rx_spatial_streams + 1)) {
+        LOG(WARNING) << "Couldn't set rx_spatial_streams for object" << path_to_obj;
+        return_val = false;
+    }
+    return return_val;
+}
+
 /**
 * @brief set device id, where device id = device mac address
 *

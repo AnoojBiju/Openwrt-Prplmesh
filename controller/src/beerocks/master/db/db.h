@@ -16,6 +16,7 @@
 #include <bcl/network/network_utils.h>
 #include <bcl/son/son_wireless_utils.h>
 
+#include <tlvf/wfa_map/tlvApHtCapabilities.h>
 #include <tlvf/wfa_map/tlvApRadioBasicCapabilities.h>
 
 #include <algorithm>
@@ -260,14 +261,14 @@ public:
                             std::pair<uint16_t, uint16_t> &results);
 
     /**
-    * @brief add instance of data element 'radio'
-    *
-    * @param mac address of radio
-    * @param mac address of device
-    * @return true if device with given mac address was found
-    * and radio instance was successfully added, false otherwise
-	* dm = data model
-    */
+     * @brief add instance of data element 'radio'
+     *
+     * @param mac address of radio
+     * @param mac address of device
+     * @return true if device with given mac address was found
+     * and radio instance was successfully added, false otherwise
+     * dm = data model
+     */
     bool dm_add_radio_element(const std::string &radio_mac, const std::string &device_mac);
 
     bool
@@ -302,6 +303,16 @@ public:
     * @return true if id of device was successfully set, false otherwise
     */
     bool dm_set_device_id(const std::string &device_mac, uint32_t device_index);
+
+    /**
+     * @brief Removes optional subobjects: HTCapabilities, VHTCapabilities,
+     * HECapabilities for Capabilities data model.
+     * Example of path to object: "Controller.Network.Device.1.Radio.1.Capabilities".
+     *
+     * @param radio_mac Radio mac for finding path to appropriate 'Capabilities' data element.
+     * @return True if subobject was successfuly removed, false otherwise.
+     */
+    bool clear_ap_capabilities(const sMacAddr &radio_mac);
 
     bool set_node_type(const std::string &mac, beerocks::eType type);
     beerocks::eType get_node_type(const std::string &mac);
@@ -433,6 +444,18 @@ public:
     //
     // Capabilities
     //
+
+    /**
+     * @brief add 'HTCapabilities' data element, set values to its parametrs.
+     * Example of full path to object:
+     * "Controller.Netwok.Device.1.Radio.1.Capabilities.HTCapabilities"
+     * 
+     * @param radio_mac mac address of radio
+     * @param flags structure with AP HT Capabilities
+     * @return true on success, false otherwise
+     */
+    bool set_ap_ht_capabilities(const sMacAddr &radio_mac,
+                                wfa_map::tlvApHtCapabilities::sFlags flags);
 
     const beerocks::message::sRadioCapabilities *
     get_station_current_capabilities(const std::string &mac);
