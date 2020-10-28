@@ -18,7 +18,7 @@ echo "$PYTHONPATH"
 export PYTHONPATH
 export BFT_DEBUG=y
 
-bft -c "${bf_plugins_dir}"/boardfarm_prplmesh/prplmesh_config_compose.json \
+bft -c "${bf_plugins_dir}"/boardfarm_prplmesh/prplmesh_config.json \
         -n prplmesh_compose -x test_flows -o "${resultdir}" \
         || exit 255
 
