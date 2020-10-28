@@ -111,7 +111,7 @@
               IMAGE_NAME=''
           ;;
       esac
-      if [ -n $IMAGE_NAME ] ; then
+      if [ -n "$IMAGE_NAME" ] ; then
           tools/deploy_firmware.py --device $DEVICE_UNDER_TEST --target-name "$DEVICE_UNDER_TEST" --image $IMAGE_NAME
           echo "Deploying to $DEVICE_UNDER_TEST"
           tools/deploy_ipk.sh --certification-mode $DEVICE_UNDER_TEST build/$DEVICE_UNDER_TEST/prplmesh.ipk
