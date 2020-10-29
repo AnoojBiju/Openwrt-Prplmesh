@@ -340,13 +340,14 @@ void ChannelSelectionTask::handle_vs_zwdfs_ant_channel_switch_response(
     LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE from "
                << socket_to_front_iface_name(sd);
 
-    if (!notification->success()) {
-        LOG(ERROR) << "Failed to switch ZWDFS antenna and channel";
+    if (m_zwdfs_state == eZwdfsState::WAIT_FOR_ZWDFS_SWITCH_ANT_OFF_RESPONSE) {
         ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
     }
 
-    if (m_zwdfs_state == eZwdfsState::WAIT_FOR_ZWDFS_SWITCH_ANT_OFF_RESPONSE) {
-        ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+    // Get here after switching on the ZWDFS antenna.
+    if (!notification->success()) {
+        LOG(ERROR) << "Failed to switch ZWDFS antenna and channel";
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
     }
 }
 
@@ -503,14 +504,14 @@ void ChannelSelectionTask::zwdfs_fsm()
     case eZwdfsState::WAIT_FOR_ZWDFS_CAC_STARTED: {
         if (std::chrono::steady_clock::now() > m_zwdfs_fsm_timeout) {
             LOG(ERROR) << "Reached timeout waiting for CAC-STARTED notification!";
-            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
         }
         break;
     }
     case eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED: {
         if (std::chrono::steady_clock::now() > m_zwdfs_fsm_timeout) {
             LOG(ERROR) << "Reached timeout waiting for CAC-COMPLETED notification!";
-            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
         }
         break;
     }
@@ -537,7 +538,7 @@ void ChannelSelectionTask::zwdfs_fsm()
         auto fronthaul_sd = front_iface_name_to_socket(m_zwdfs_primary_radio_iface);
         if (!fronthaul_sd) {
             LOG(DEBUG) << "socket to fronthaul not found: " << m_zwdfs_primary_radio_iface;
-            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
             break;
         }
 
@@ -553,7 +554,7 @@ void ChannelSelectionTask::zwdfs_fsm()
     case eZwdfsState::WAIT_FOR_PRIMARY_RADIO_CSA_NOTIFICATION: {
         if (std::chrono::steady_clock::now() > m_zwdfs_fsm_timeout) {
             LOG(ERROR) << "Reached timeout waiting for PRIMARY_RADIO_CSA notification!";
-            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
         }
         break;
     }
@@ -561,7 +562,7 @@ void ChannelSelectionTask::zwdfs_fsm()
         auto fronthaul_sd = front_iface_name_to_socket(m_zwdfs_iface);
         if (!fronthaul_sd) {
             LOG(DEBUG) << "socket to fronthaul not found: " << m_zwdfs_iface;
-            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
             break;
         }
 
