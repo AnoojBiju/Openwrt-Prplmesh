@@ -1309,7 +1309,8 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
             }
             // switch channel on zwdfs interface to start off channel CAC
             LOG(DEBUG) << "Switching channel channel=" << notification->channel()
-                       << ", bw=" << utils::convert_bandwidth_to_int(notification->bandwidth());
+                       << ", bw=" << utils::convert_bandwidth_to_int(notification->bandwidth())
+                       << ", center_freq=" << notification->center_frequency();
 
             if (!ap_wlan_hal->switch_channel(notification->channel(), notification->bandwidth(),
                                              notification->center_frequency())) {

@@ -1375,9 +1375,10 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
                           "message!";
             return false;
         }
-        request_out->channel()       = request_in->channel();
-        request_out->bandwidth()     = request_in->bandwidth();
-        request_out->ant_switch_on() = request_in->ant_switch_on();
+        request_out->channel()          = request_in->channel();
+        request_out->bandwidth()        = request_in->bandwidth();
+        request_out->ant_switch_on()    = request_in->ant_switch_on();
+        request_out->center_frequency() = request_in->center_frequency();
         message_com::send_cmdu(ap_manager_socket, cmdu_tx);
         break;
     }
