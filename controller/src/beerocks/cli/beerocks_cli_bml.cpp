@@ -2237,10 +2237,12 @@ int cli_bml::client_get_client_list()
  * @param [in] sta_mac MAC address of requested client.
  * @param [in] selected_bands comma-seperated selected bands.
  * @param [in] stay_on_initial_radio Whather to stay on initial radio or not.
+ * @param [in] time_life_delay_minutes the period of time after which the client is cleared,
+.
  * @return 0 on success.
  */
 int cli_bml::client_set_client(const std::string &sta_mac, int8_t selected_bands,
-                               int8_t stay_on_initial_radio)
+                               int8_t stay_on_initial_radio, int32_t time_life_delay_minutes)
 {
     std::cout << "client_set_client: " << std::endl
               << "  sta_mac: " << sta_mac << std::endl
