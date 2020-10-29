@@ -2247,11 +2247,13 @@ int cli_bml::client_set_client(const std::string &sta_mac, int8_t selected_bands
     std::cout << "client_set_client: " << std::endl
               << "  sta_mac: " << sta_mac << std::endl
               << "  selected_bands: " << int(selected_bands) << std::endl
-              << "  stay_on_initial_radio: " << int(stay_on_initial_radio) << std::endl;
+              << "  stay_on_initial_radio: " << int(stay_on_initial_radio) << std::endl
+              << "  time_life_delay_minutes: " << int(time_life_delay_minutes) << std::endl;
 
     BML_CLIENT_CONFIG cfg{
-        .stay_on_initial_radio = stay_on_initial_radio,
-        .selected_bands        = selected_bands,
+        .stay_on_initial_radio   = stay_on_initial_radio,
+        .selected_bands          = selected_bands,
+        .time_life_delay_minutes = time_life_delay_minutes,
     };
 
     int ret = bml_client_set_client(ctx, sta_mac.c_str(), &cfg);
