@@ -671,10 +671,24 @@ ChannelSelectionTask::zwdfs_select_best_usable_channel(const std::string &front_
                     if (overlapping_channel_dfs_state == beerocks_message::eDfsState::UNAVAILABLE) {
                         return true;
                     }
+
+                    // If get here the switch to the channel is possible. Need to update the dfs
+                    // to the worst according to that order:
+                    static const std::map<beerocks_message::eDfsState, uint8_t> dfs_state_order = {
+                        {beerocks_message::eDfsState::NOT_DFS, 0},
+                        {beerocks_message::eDfsState::AVAILABLE, 1},
+                        {beerocks_message::eDfsState::USABLE, 2},
+                    };
+
+                    if (dfs_state_order.at(overlapping_channel_dfs_state) >
+                        dfs_state_order.at(dfs_state)) {
+                        dfs_state = overlapping_channel_dfs_state;
+                    }
                 }
                 update_best_channel = true;
                 return true;
             };
+
             switch (supported_bw.bandwidth) {
             case beerocks::BANDWIDTH_20: {
                 update_best_channel = true;
