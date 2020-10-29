@@ -1418,15 +1418,21 @@ bool ap_wlan_hal_dwpal::is_zwdfs_supported()
 bool ap_wlan_hal_dwpal::set_zwdfs_antenna(bool enable)
 {
     // Build command string
+    char *reply     = nullptr;
     std::string cmd = "ZWDFS_ANT_SWITCH ";
 
     cmd += std::to_string(enable ? 1 : 0);
 
+    LOG(DEBUG) << "Switch antenna command: " << cmd;
+
     // Send command
-    if (!dwpal_send_cmd(cmd)) {
+    if (!dwpal_send_cmd(cmd, &reply)) {
         LOG(ERROR) << "set_zwdfs_antenna() failed!";
         return false;
     }
+
+    LOG(DEBUG) << "Switch antenna reply: " << reply;
+
     return true;
 }
 

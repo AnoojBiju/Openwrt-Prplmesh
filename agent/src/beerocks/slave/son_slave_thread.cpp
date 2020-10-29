@@ -1356,6 +1356,7 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST: {
+        LOG(TRACE) << "Received ACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST";
         auto request_in = beerocks_header->addClass<
             beerocks_message::cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST>();
         if (!request_in) {
@@ -1588,9 +1589,6 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         ap_manager_last_seen       = std::chrono::steady_clock::now();
         ap_manager_retries_counter = 0;
         return true;
-    } else if (slave_state > STATE_BACKHAUL_MANAGER_CONNECTED && master_socket == nullptr) {
-        LOG(ERROR) << "master_socket == nullptr ACTION_APMANAGER action_op: "
-                   << int(beerocks_header->action_op());
     }
 
     switch (beerocks_header->action_op()) {

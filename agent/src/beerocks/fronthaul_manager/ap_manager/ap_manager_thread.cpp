@@ -285,7 +285,8 @@ static void unify_channels_list(
                            << beerocks::utils::convert_bandwidth_to_int(
                                   beerocks::eWiFiBandwidth(bw_it->first))
                            << ", rank=" << supported_bw_info_tlv.rank << ", multiap_preference="
-                           << int(supported_bw_info_tlv.multiap_preference);
+                           << int(supported_bw_info_tlv.multiap_preference)
+                           << ", dfs_state=" << dfs_state_to_string();
             };
 
             // If channel & bw has undefined rank (-1), set the channel preference to
@@ -1307,6 +1308,9 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
                 response->success() = false;
             }
             // switch channel on zwdfs interface to start off channel CAC
+            LOG(DEBUG) << "Switching channel channel=" << notification->channel()
+                       << ", bw=" << utils::convert_bandwidth_to_int(notification->bandwidth());
+
             if (!ap_wlan_hal->switch_channel(notification->channel(), notification->bandwidth(),
                                              notification->center_frequency())) {
                 LOG(ERROR) << "switch_channel failed!";
