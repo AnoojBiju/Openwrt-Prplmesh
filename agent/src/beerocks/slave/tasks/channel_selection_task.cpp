@@ -236,7 +236,14 @@ void ChannelSelectionTask::handle_vs_csa_notification(
         ZWDFS_FSM_MOVE_STATE(eZwdfsState::REQUEST_CHANNELS_LIST);
         return;
     }
+
+    if (m_zwdfs_state == eZwdfsState::WAIT_FOR_PRIMARY_RADIO_CSA_NOTIFICATION &&
+        sender_iface_name == m_zwdfs_primary_radio_iface) {
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+        return;
+    }
 }
+
 void ChannelSelectionTask::handle_vs_csa_error_notification(
     ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
     std::shared_ptr<beerocks_header> beerocks_header)
@@ -378,7 +385,8 @@ void ChannelSelectionTask::zwdfs_fsm()
         message_com::send_cmdu(fronthaul_sd, m_cmdu_tx);
 
         constexpr uint8_t CHANNELS_LIST_RESPONSE_TIMEOUT_SEC = 1;
-        m_zwdfs_fsm_timeout                                  = std::chrono::steady_clock::now() +
+
+        m_zwdfs_fsm_timeout = std::chrono::steady_clock::now() +
                               std::chrono::seconds(CHANNELS_LIST_RESPONSE_TIMEOUT_SEC);
 
         ZWDFS_FSM_MOVE_STATE(eZwdfsState::WAIT_FOR_CHANNELS_LIST);
@@ -530,9 +538,37 @@ void ChannelSelectionTask::zwdfs_fsm()
         break;
     }
     case eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST: {
+        auto fronthaul_sd = front_iface_name_to_socket(m_zwdfs_iface);
+        if (!fronthaul_sd) {
+            LOG(DEBUG) << "socket to fronthaul not found: " << m_zwdfs_iface;
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            break;
+        }
+
+        auto request = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST>(m_cmdu_tx);
+        if (!request) {
+            LOG(ERROR) << "Failed to build message";
+            break;
+        }
+
+        request->ant_switch_on() = false;
+
+        message_com::send_cmdu(fronthaul_sd, m_cmdu_tx);
+
+        constexpr uint8_t ZWDFS_SWITCH_ANT_OFF_RESPONSE_SEC = 1;
+
+        m_zwdfs_fsm_timeout = std::chrono::steady_clock::now() +
+                              std::chrono::seconds(ZWDFS_SWITCH_ANT_OFF_RESPONSE_SEC);
+
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::WAIT_FOR_ZWDFS_SWITCH_ANT_OFF_RESPONSE);
         break;
     }
     case eZwdfsState::WAIT_FOR_ZWDFS_SWITCH_ANT_OFF_RESPONSE: {
+        if (std::chrono::steady_clock::now() > m_zwdfs_fsm_timeout) {
+            LOG(ERROR) << "Reached timeout waiting for ZWDFS_SWITCH_ANT_OFF notification!";
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+        }
         break;
     }
     default:
