@@ -560,12 +560,15 @@ void cli_bml::setFunctionsMapAndArray()
     insertCommandToMap("bml_client_get_client_list", "", "Get client list.",
                        static_cast<pFunction>(&cli_bml::client_get_client_list_caller), 0, 0);
     insertCommandToMap(
+        // clang-format off
         "bml_client_set_client", "<sta_mac> [<params>]",
         "Set client with the given STA MAC:"
-        " selected_bands - Bitwise parameter, 1 for 2.4G, 2 for 5G, 3 for both, 0 for Disabled"
-        " stay_on_initial_radio - 1 for true, 0 for false or (default) -1 for not configured,",
-        static_cast<pFunction>(&cli_bml::client_set_client_caller), 2, 3, STRING_ARG, STRING_ARG,
-        STRING_ARG);
+        "selected_bands - Bitwise parameter, 1 for 2.4G, 2 for 5G, 3 for both, 0 for Disabled"
+        "stay_on_initial_radio - 1 for true, 0 for false or (default) -1 for not configured,"
+        "time_life_delay_minutes - 0 for non-aging, any positive (>0) value to configure or -1 for not configured",
+        // clang-format on
+        static_cast<pFunction>(&cli_bml::client_set_client_caller), 2, 4, STRING_ARG, STRING_ARG,
+        STRING_ARG, INT_ARG);
     insertCommandToMap("bml_client_get_client", "<sta_mac>", "Get client with the given STA MAC.",
                        static_cast<pFunction>(&cli_bml::client_get_client_caller), 1, 1,
                        STRING_ARG);
@@ -1353,11 +1356,14 @@ int cli_bml::client_set_client_caller(int numOfArgs)
      * Optional:
      *  selected_bands=<selected_bands>
      *  stay_on_initial_radio=<stay_on_initial_radio>
+     *  time_life_delay_minutes=<time_life_delay_minutes>
     ]*/
     std::string::size_type pos;
     std::string sta_mac(network_utils::WILD_MAC_STRING);
-    int8_t selected_bands        = BML_PARAMETER_NOT_CONFIGURED;
-    int8_t stay_on_initial_radio = BML_PARAMETER_NOT_CONFIGURED;
+    int8_t selected_bands           = BML_PARAMETER_NOT_CONFIGURED;
+    int8_t stay_on_initial_radio    = BML_PARAMETER_NOT_CONFIGURED;
+    int32_t time_life_delay_minutes = BML_PARAMETER_NOT_CONFIGURED;
+
     if (numOfArgs > 1) {
         sta_mac = args.stringArgs[0];
         for (int i = 1; i < numOfArgs; i++) { //first optional arg
@@ -1368,9 +1374,14 @@ int cli_bml::client_set_client_caller(int numOfArgs)
                        std::string::npos) {
                 stay_on_initial_radio = string_utils::stoi(
                     args.stringArgs[i].substr(pos + sizeof("stay_on_initial_radio")));
+            } else if ((pos = args.stringArgs[i].find("time_life_delay_minutes")) !=
+                       std::string::npos) {
+                time_life_delay_minutes = string_utils::stoi(
+                    args.stringArgs[i].substr(pos + sizeof("time_life_delay_minutes")));
             }
         }
-        return client_set_client(sta_mac, selected_bands, stay_on_initial_radio);
+        return client_set_client(sta_mac, selected_bands, stay_on_initial_radio,
+                                 time_life_delay_minutes);
     }
     return -1;
 }
