@@ -73,7 +73,7 @@ static ap_wlan_hal::Event dwpal_to_bwl_event(const std::string &opcode)
         return ap_wlan_hal::Event::CSA_Finished;
     } else if (opcode == "BSS-TM-RESP") {
         return ap_wlan_hal::Event::BSS_TM_Response;
-    } else if (opcode == "DFS-CAC-STARTED") {
+    } else if (opcode == "DFS-CAC-START") {
         return ap_wlan_hal::Event::DFS_CAC_Started;
     } else if (opcode == "DFS-CAC-COMPLETED") {
         return ap_wlan_hal::Event::DFS_CAC_Completed;
