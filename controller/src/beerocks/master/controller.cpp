@@ -23,6 +23,7 @@
 #include "db/db_algo.h"
 #include "db/network_map.h"
 #include "tasks/client_locating_task.h"
+#include "tasks/dynamic_channel_selection_r2_task.h"
 #include "tasks/dynamic_channel_selection_task.h"
 #include "tasks/ire_network_optimization_task.h"
 #include "tasks/network_health_check_task.h"
@@ -116,6 +117,11 @@ Controller::Controller(db &database_,
     LOG_IF(!tasks.add_task(std::make_shared<channel_selection_task>(database, cmdu_tx, tasks)),
            FATAL)
         << "Failed adding channel selection task!";
+
+    LOG_IF(!tasks.add_task(
+               std::make_shared<dynamic_channel_selection_r2_task>(database, cmdu_tx, tasks)),
+           FATAL)
+        << "Failed adding dynamic channel selection r2 task!";
 
     if (database.settings_health_check()) {
         LOG_IF(!tasks.add_task(

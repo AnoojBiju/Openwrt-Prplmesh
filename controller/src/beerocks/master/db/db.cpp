@@ -4431,6 +4431,14 @@ int db::get_dynamic_channel_selection_task_id(const sMacAddr &mac)
     return n->dynamic_channel_selection_task_id;
 }
 
+bool db::assign_dynamic_channel_selection_r2_task_id(int new_task_id)
+{
+    dynamic_channel_selection_r2_task_id = new_task_id;
+    return true;
+}
+
+int db::get_dynamic_channel_selection_r2_task_id() { return dynamic_channel_selection_r2_task_id; }
+
 bool db::assign_persistent_db_aging_operation_id(int new_operation_id)
 {
     persistent_db_aging_operation_id = new_operation_id;
