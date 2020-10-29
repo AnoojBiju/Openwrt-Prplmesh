@@ -52,7 +52,7 @@
 			on action validate call check_range [0, 16777215];
 		}
 
-		%read-only object STA [] {
+		object STA [] {
 			counted with NumberOfSTA;
 		}
 	}

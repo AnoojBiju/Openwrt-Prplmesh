@@ -286,7 +286,12 @@ bool db::add_node_client(const sMacAddr &mac, const sMacAddr &parent_mac,
         return false;
     }
 
-    // TODO: Add STA to the controller data model via m_ambiorix_datamodel for connected station (WiFI client)
+    // Add STA to the controller data model via m_ambiorix_datamodel
+    // for connected station (WiFI client)
+    if (!dm_add_sta_element(parent_mac, mac)) {
+        LOG(ERROR) << "Failed to add client instance, mac: " << mac;
+        return false;
+    }
     return true;
 }
 
@@ -5139,6 +5144,30 @@ bool db::dm_set_device_multi_ap_capabilities(const std::string &device_mac)
     return return_val;
 }
 
+bool db::dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client_mac)
+{
+
+    if (bssid == network_utils::ZERO_MAC) {
+        LOG(WARNING) << "Client has empty parent bssid, not adding it to the data model, client="
+                     << client_mac;
+        return true;
+    }
+
+    std::string path_to_bss = dm_get_path_to_bss(bssid);
+    if (path_to_bss.empty()) {
+        LOG(ERROR) << "Failed get path to bss with mac: " << bssid;
+        return false;
+    }
+
+    std::string path_to_sta = path_to_bss + "STA";
+    uint32_t sta_index      = m_ambiorix_datamodel->add_instance(path_to_sta);
+    if (!sta_index) {
+        LOG(ERROR) << "Failed to add sta instance " << path_to_sta;
+        return false;
+    }
+    return true;
+}
+
 bool db::dm_add_device_element(const sMacAddr &mac)
 {
     auto index = m_ambiorix_datamodel->get_instance_index("Network.Device.[ID == '%s'].",
@@ -5368,4 +5397,30 @@ bool db::set_radio_utilization(const sMacAddr &bssid, uint8_t utilization)
     }
 
     return true;
+}
+
+std::string db::dm_get_path_to_bss(const sMacAddr &bssid)
+{
+    std::string bssid_string = tlvf::mac_to_string(bssid);
+    auto node                = get_node(bssid_string);
+
+    if (!node) {
+        LOG(ERROR) << "Failed to get radio node for bssid: " << bssid_string;
+        return {};
+    }
+
+    auto radio_node = get_node(node->parent_mac);
+    auto radio_path = dm_get_path_to_radio(*radio_node);
+    if (radio_path.empty()) {
+        LOG(ERROR) << "Failed to get radio path for radio, mac: " << radio_node->mac;
+        return {};
+    }
+
+    auto bss_index =
+        m_ambiorix_datamodel->get_instance_index(radio_path + "[ID == '%s']", bssid_string);
+    if (!bss_index) {
+        LOG(ERROR) << "Failed to get bss index for bss with mac: " << bssid_string;
+        return {};
+    }
+    return radio_path + "BSS." + std::to_string(bss_index) + ".";
 }
