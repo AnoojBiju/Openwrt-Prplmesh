@@ -184,6 +184,10 @@ static void unify_channels_list(
         }
         bw_it->second = pchannel.rank;
 
+        if (pchannel.rank == -1) {
+            continue;
+        }
+
         // Copy rank to helper container that will help to convert the rank to multi-ap preference
         ranks[pchannel.rank].insert(pchannel.rank);
     }
@@ -261,6 +265,22 @@ static void unify_channels_list(
             supported_bw_info_tlv.rank      = bw_it->second;
 
             auto print_channel_info = [&]() {
+                if (supported_bw_info_tlv.rank == -1) {
+                    return;
+                }
+                auto dfs_state_to_string = [&]() {
+                    if (channel_info.dfs_state == beerocks_message::eDfsState::NOT_DFS) {
+                        return "NOT_DFS";
+                    } else if (channel_info.dfs_state == beerocks_message::eDfsState::AVAILABLE) {
+                        return "AVAILABLE";
+                    } else if (channel_info.dfs_state == beerocks_message::eDfsState::USABLE) {
+                        return "USABLE";
+                    } else if (channel_info.dfs_state == beerocks_message::eDfsState::UNAVAILABLE) {
+                        return "UNAVAILABLE";
+                    }
+                    return "Unknown_State";
+                };
+
                 LOG(DEBUG) << "channel=" << int(channel_info_pair.first) << ", bw="
                            << beerocks::utils::convert_bandwidth_to_int(
                                   beerocks::eWiFiBandwidth(bw_it->first))
