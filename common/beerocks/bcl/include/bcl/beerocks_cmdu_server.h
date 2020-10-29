@@ -89,7 +89,9 @@ public:
     /**
      * @brief Sets the event handler functions.
      *
-     * Sets the callback functions to be executed whenever an event occurs on this this server.
+     * Sets the callback functions to be executed whenever an event occurs on this server.
+     * The event handler functions are all optional and if any of them is not set, the corresponding
+     * event will be silently ignored.
      *
      * @param handlers Event handler functions.
      */
@@ -97,8 +99,6 @@ public:
 
     /**
      * @brief Clears previously set event handler functions.
-     *
-     * Clears callback functions previously set.
      */
     void clear_handlers() { m_handlers = {}; }
 

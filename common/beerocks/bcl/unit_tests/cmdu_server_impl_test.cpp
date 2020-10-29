@@ -330,6 +330,8 @@ TEST_F(CmduServerImplTest, send_cmdu_should_fail_if_serialize_cmdu_fails)
 
         // Serialization fails!
         EXPECT_CALL(*m_cmdu_serializer, serialize_cmdu(_, _, _, _)).WillOnce(Return(false));
+        EXPECT_CALL(*connection, socket()).Times(1);
+        EXPECT_CALL(*connected_socket, fd()).Times(1);
 
         EXPECT_CALL(*m_server_socket, socket()).Times(1);
         EXPECT_CALL(*m_socket, fd()).Times(1);
