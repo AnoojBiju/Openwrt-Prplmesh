@@ -1110,6 +1110,17 @@ public:
      */
     bool set_radio_utilization(const sMacAddr &bssid, uint8_t utilization);
 
+    /**
+     * @brief Set estimated service parameters BE in Controler Data Model.
+     * Data model path example: "Controller.Network.Device.1.Radio.1.BSS.1.EstServiceParametersBE"
+     *
+     * @param[in] bssid BSSID.
+     * @param[in] estimated_service_parameters_be Estimated service parameters BE value.
+     * @return true on success, otherwise false.
+     */
+    bool set_estimated_service_parameters_be(const sMacAddr &bssid,
+                                             uint32_t estimated_service_parameters_be);
+
     //
     // tasks
     //

@@ -5750,3 +5750,21 @@ std::string db::dm_get_path_to_sta(const std::string &sta_mac)
     }
     return path_to_bss + "STA." + std::to_string(sta_index) + ".";
 }
+
+bool db::set_estimated_service_parameters_be(const sMacAddr &bssid,
+                                             uint32_t estimated_service_parameters_be)
+{
+    std::string path_to_bss = dm_get_path_to_bss(bssid);
+    if (path_to_bss.empty()) {
+        LOG(ERROR) << "Failed get path to bss with mac: " << bssid;
+        return false;
+    }
+
+    if (!m_ambiorix_datamodel->set(path_to_bss, "EstServiceParametersBE",
+                                   estimated_service_parameters_be)) {
+        LOG(ERROR) << "Failed to set " << path_to_bss << "EstServiceParametersBE";
+        return false;
+    }
+
+    return true;
+}
