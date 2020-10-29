@@ -1855,8 +1855,7 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
             auto slave_soc = *it;
             if (slave_soc->hostap_iface == front_iface_name) {
                 // Backup the socket, on disabled sockets list
-                m_disabled_slave_sockets[front_iface_name] =
-                    m_sConfig.slave_iface_socket[front_iface_name];
+                m_disabled_slave_sockets[front_iface_name] = slave_soc;
 
                 // Remove the socket reference from the backhaul
                 m_sConfig.slave_iface_socket.erase(front_iface_name);
