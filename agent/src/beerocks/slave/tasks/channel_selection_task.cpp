@@ -255,9 +255,21 @@ void ChannelSelectionTask::handle_vs_csa_error_notification(
         LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_CSA_ERROR_NOTIFICATION failed";
         return;
     }
-    LOG(TRACE) << "received sACTION_APMANAGER_HOSTAP_DFS_CSA_ERROR_NOTIFICATION";
+    LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_DFS_CSA_ERROR_NOTIFICATION from "
+               << socket_to_front_iface_name(sd);
 
-    // TODO
+    auto sender_iface_name = socket_to_front_iface_name(sd);
+    std::string which_radio;
+    if (zwdfs_in_process()) {
+        if (sender_iface_name == m_zwdfs_iface) {
+            which_radio = "ZWDFS";
+        } else if (sender_iface_name == m_zwdfs_primary_radio_iface) {
+            which_radio = "Primary 5G";
+        }
+        LOG(DEBUG) << "Failed to switch channel on " << which_radio << " radio, "
+                   << sender_iface_name << ". Reset ZWDFS flow !";
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::REQUEST_CHANNELS_LIST);
+    }
 }
 
 void ChannelSelectionTask::handle_vs_cac_started_notification(
