@@ -28,6 +28,13 @@ namespace beerocks {
 #define BEEROCKS_PLAT_MGR_UDS "uds_platform_manager"
 #define BEEROCKS_BACKHAUL_MGR_UDS "uds_backhaul_manager"
 
+// configuration files path
+#ifdef BEEROCKS_RDKB
+#define CONF_FILES_PATH "/nvram/"
+#else
+#define CONF_FILES_PATH "./"
+#endif
+
 #if __GNUC__ >= 7 || __cplussplus >= 201703L
 #define FALLTHROUGH __attribute__((fallthrough))
 #else
