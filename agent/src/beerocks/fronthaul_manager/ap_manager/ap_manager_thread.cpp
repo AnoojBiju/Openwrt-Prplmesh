@@ -40,7 +40,7 @@ using namespace beerocks::net;
 #define OPERATION_SUCCESS 0
 #define OPERATION_FAIL -1
 #define WAIT_FOR_RADIO_ENABLE_TIMEOUT_SEC 100
-#define MAX_RADIO_DISBALED_TIMEOUT_SEC 3
+#define MAX_RADIO_DISBALED_TIMEOUT_SEC 4
 
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////// Local Module Functions ///////////////////////////

@@ -1639,7 +1639,7 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
             return false;
         }
 
-        auto timeout         = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+        auto timeout         = std::chrono::steady_clock::now() + std::chrono::seconds(4);
         auto notify_disabled = true;
 
         while (std::chrono::steady_clock::now() < timeout) {
@@ -1655,7 +1655,7 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
                 notify_disabled = false;
                 break;
             }
-            UTILS_SLEEP_MSEC(1);
+            UTILS_SLEEP_MSEC(500);
         }
 
         if (!notify_disabled) {
