@@ -203,6 +203,15 @@ private:
     */
     bool handle_tlv_ap_ht_capabilities(ieee1905_1::CmduMessageRx &cmdu_rx);
 
+    /**
+     * @brief Get info from 'AP HE Capabilities' TLV,
+     * set data to AP HECapabilities data element.
+     * 
+     * @param cmdu_rx AP Capability Report message.
+     * @return True on success, false otherwise.
+    */
+    bool handle_tlv_ap_he_capabilities(ieee1905_1::CmduMessageRx &cmdu_rx);
+
     // Autoconfig encryption support
     bool autoconfig_wsc_add_m2(WSC::m1 &m1, const wireless_utils::sBssInfoConf *bss_info_conf);
     bool autoconfig_wsc_add_m2_encrypted_settings(WSC::m2::config &m2_cfg,
