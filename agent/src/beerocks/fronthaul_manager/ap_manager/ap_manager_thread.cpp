@@ -157,7 +157,7 @@ static void unify_channels_list(
 
     // Rank container for multiap preference calculation.
     // Key - rank average, value - rank average elements
-    std::map<uint16_t, std::set<uint16_t>> ranks;
+    std::map<int32_t, std::set<int32_t>> ranks;
 
     // Copy the Rank from the preferred channels list to the helper unified list container and also
     // to a helper container "ranks" that will be used to convert the rank to multi-ap preference.
@@ -193,16 +193,16 @@ static void unify_channels_list(
     }
 
     // Multi-AP allows only 15 options of preference whereas the ranking from the ACS-Report has
-    // 2^16 options.
+    // 2^31 options.
     // To scale the rank to 1-15, group rankings with small delta until only 15 groups are left:
     // {group_rank_average, { rank1, rank2, rank3}}.
     // Note: Since "std::map" is ordered container, we don't have to sort it.
     LOG(DEBUG) << "Narrow ranks to groups, ranks.size()=" << ranks.size();
     while (ranks.size() > 15) {
-        uint16_t min_delta = UINT16_MAX;
+        auto min_delta = INT32_MAX;
 
         // Key = Min delta ranks group ID, Value: Min delta ranks
-        std::unordered_map<uint16_t, std::set<uint16_t>> min_delta_ranks_groups;
+        std::unordered_map<uint16_t, std::set<int32_t>> min_delta_ranks_groups;
         uint16_t group_id = 0;
         for (auto it = std::next(ranks.begin()); it != ranks.end(); it++) {
             auto this_rank = it->first;
@@ -223,14 +223,14 @@ static void unify_channels_list(
         // Unify the original ranks which are under the same group, and add the unified group to
         // the ranks list. The two separated groups that that made the new group are removed.
         for (const auto min_delta_ranks_group : min_delta_ranks_groups) {
-            std::set<uint16_t> unified_rank_elements;
+            std::set<int32_t> unified_rank_elements;
             auto &min_delta_ranks_on_group = min_delta_ranks_group.second;
             for (const auto &min_delta_rank : min_delta_ranks_on_group) {
                 unified_rank_elements.insert(ranks[min_delta_rank].begin(),
                                              ranks[min_delta_rank].end());
                 ranks.erase(min_delta_rank);
             }
-            uint16_t average_rank =
+            auto average_rank =
                 std::accumulate(unified_rank_elements.begin(), unified_rank_elements.end(), 0) /
                 unified_rank_elements.size();
 
