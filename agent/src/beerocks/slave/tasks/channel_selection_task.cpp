@@ -288,9 +288,12 @@ void ChannelSelectionTask::handle_vs_dfs_cac_completed_notification(
         LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION failed";
         return;
     }
-    LOG(TRACE) << "received sACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION";
+    LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION from "
+               << socket_to_front_iface_name(sd);
 
-    // TODO
+    if (m_zwdfs_state == eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED) {
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::SWITCH_CHANNEL_PRIMARY_RADIO);
+    }
 }
 
 void ChannelSelectionTask::handle_vs_channels_list_notification(
@@ -484,9 +487,46 @@ void ChannelSelectionTask::zwdfs_fsm()
         break;
     }
     case eZwdfsState::SWITCH_CHANNEL_PRIMARY_RADIO: {
+        auto request = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_HOSTAP_CHANNEL_SWITCH_ACS_START>(m_cmdu_tx);
+        if (!request) {
+            LOG(ERROR) << "Failed to build message";
+            break;
+        }
+
+        request->cs_params().channel   = m_selected_channel.channel;
+        request->cs_params().bandwidth = m_selected_channel.bw;
+
+        // At this point the selected channel is validated to be the the channels table, so
+        // using '.at()' is safe.
+        auto center_channel = son::wireless_utils::channels_table_5g.at(m_selected_channel.channel)
+                                  .at(m_selected_channel.bw)
+                                  .center_channel;
+
+        request->cs_params().vht_center_frequency =
+            son::wireless_utils::channel_to_freq(center_channel);
+
+        auto fronthaul_sd = front_iface_name_to_socket(m_zwdfs_primary_radio_iface);
+        if (!fronthaul_sd) {
+            LOG(DEBUG) << "socket to fronthaul not found: " << m_zwdfs_primary_radio_iface;
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            break;
+        }
+
+        message_com::send_cmdu(fronthaul_sd, m_cmdu_tx);
+
+        constexpr uint8_t SWITCH_CHANNEL_PRIMARY_RADIO_TIMEOUT_SEC = 1;
+        m_zwdfs_fsm_timeout = std::chrono::steady_clock::now() +
+                              std::chrono::seconds(SWITCH_CHANNEL_PRIMARY_RADIO_TIMEOUT_SEC);
+
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::WAIT_FOR_PRIMARY_RADIO_CSA_NOTIFICATION);
         break;
     }
     case eZwdfsState::WAIT_FOR_PRIMARY_RADIO_CSA_NOTIFICATION: {
+        if (std::chrono::steady_clock::now() > m_zwdfs_fsm_timeout) {
+            LOG(ERROR) << "Reached timeout waiting for PRIMARY_RADIO_CSA notification!";
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+        }
         break;
     }
     case eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST: {
