@@ -1833,7 +1833,10 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
             return false;
         }
 
-        auto front_iface_name = msg_in->front_iface_name_str();
+        auto front_iface_name = msg_in->front_iface_name();
+
+        LOG(DEBUG) << "Received ACTION_BACKHAUL_ZWDFS_RADIO_DETECTED from front_radio="
+                   << front_iface_name;
 
         // Erase the Radio interface from the pending radio interfaces list which is used to block
         // the Backhaul manager to establish the backhaul link until all the Agent radios has sent
@@ -1860,6 +1863,7 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
                 it = slaves_sockets.erase(it);
                 break;
             }
+            it++;
         }
         break;
     }
