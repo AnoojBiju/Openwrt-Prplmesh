@@ -289,9 +289,12 @@ void ChannelSelectionTask::handle_vs_channels_list_notification(
     ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
     std::shared_ptr<beerocks_header> beerocks_header)
 {
-    LOG(TRACE) << "received sACTION_APMANAGER_CHANNELS_LIST_RESPONSE";
+    LOG(TRACE) << "received ACTION_APMANAGER_CHANNELS_LIST_RESPONSE from "
+               << socket_to_front_iface_name(sd);
 
-    // TODO
+    if (m_zwdfs_state == eZwdfsState::WAIT_FOR_CHANNELS_LIST) {
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::CHOOSE_NEXT_BEST_CHANNEL);
+    }
 }
 
 void ChannelSelectionTask::handle_vs_zwdfs_ant_channel_switch_response(
@@ -378,6 +381,45 @@ void ChannelSelectionTask::zwdfs_fsm()
         break;
     }
     case eZwdfsState::CHOOSE_NEXT_BEST_CHANNEL: {
+        m_selected_channel = zwdfs_select_best_usable_channel(m_zwdfs_primary_radio_iface);
+        if (m_selected_channel.channel == 0) {
+            LOG(ERROR) << "Error occurred on second best channel selection";
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+        }
+
+        auto db    = AgentDB::get();
+        auto radio = db->radio(m_zwdfs_primary_radio_iface);
+        if (!radio) {
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            break;
+        }
+
+        if (m_selected_channel.channel == radio->channel) {
+            LOG(DEBUG) << "Failsafe is already second best channel, abort ZWDFS flow";
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            break;
+        }
+
+        LOG(DEBUG) << "Selected Channel=" << m_selected_channel.channel << " dfs_state=" << [&]() {
+            if (m_selected_channel.dfs_state == beerocks_message::eDfsState::NOT_DFS) {
+                return "NOT_DFS";
+            } else if (m_selected_channel.dfs_state == beerocks_message::eDfsState::AVAILABLE) {
+                return "AVAILABLE";
+            } else if (m_selected_channel.dfs_state == beerocks_message::eDfsState::USABLE) {
+                return "USABLE";
+            }
+            return "Unknown_State";
+        }();
+
+        // If the second best channel is not a DFS or Available, we can skip ZWDFS CAC, and
+        //switch the channel immediately on the primary 5G radio.
+        if (m_selected_channel.dfs_state == beerocks_message::eDfsState::NOT_DFS ||
+            m_selected_channel.dfs_state == beerocks_message::eDfsState::AVAILABLE) {
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::SWITCH_CHANNEL_PRIMARY_RADIO);
+            break;
+        }
+
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_SET_CHANNEL_REQUEST);
         break;
     }
     case eZwdfsState::ZWDFS_SWITCH_ANT_SET_CHANNEL_REQUEST: {
