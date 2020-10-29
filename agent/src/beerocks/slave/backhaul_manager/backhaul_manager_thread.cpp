@@ -1485,6 +1485,12 @@ bool backhaul_manager::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_r
                     break;
                 }
             }
+            for (auto soc_iter : m_disabled_slave_sockets) {
+                if (soc_iter.second->slave == sd) {
+                    soc = soc_iter.second;
+                    break;
+                }
+            }
 
             if (cmdu_rx.getMessageType() == ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE) {
                 return handle_slave_backhaul_message(soc, cmdu_rx);
