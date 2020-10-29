@@ -2314,12 +2314,16 @@ int cli_bml::client_get_client(const std::string &sta_mac)
                   << " initial_radio: " << print_configured_mac(client.initial_radio) << std::endl
                   << " selected_bands: " << client_selected_bands_print(client.selected_bands)
                   << std::endl
-                  << " single_band: " << client_bool_print(client.single_band) << std::endl
-                  << " time_life_delay_minutes: "
-                  << ((client.time_life_delay_minutes == PARAMETER_NOT_CONFIGURED)
-                          ? "not-configred"
-                          : std::to_string(client.time_life_delay_minutes))
-                  << std::endl;
+                  << " single_band: " << client_bool_print(client.single_band) << std::endl;
+        if (client.time_life_delay_minutes == 0) {
+            std::cout << " time_life_delay_minutes: configured and not aging." << std::endl;
+        } else if (client.time_life_delay_minutes == -1) {
+            std::cout << " time_life_delay_minutes: unconfigured and aging." << std::endl;
+        } else if (client.time_life_delay_minutes > 0) {
+            std::cout << " time_life_delay_minutes: configured and aging." << std::endl
+                      << client.time_life_delay_minutes / 60 << " hours, "
+                      << client.time_life_delay_minutes % 60 << " minutes" << std::endl;
+        }
     }
 
     printBmlReturnVals("bml_client_get_client", ret);
