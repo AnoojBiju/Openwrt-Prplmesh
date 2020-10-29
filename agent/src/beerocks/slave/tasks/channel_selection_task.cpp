@@ -264,9 +264,17 @@ void ChannelSelectionTask::handle_vs_cac_started_notification(
         LOG(ERROR) << "addClass sACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION failed";
         return;
     }
-    LOG(TRACE) << "received sACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION";
+    LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION from "
+               << socket_to_front_iface_name(sd);
 
-    // TODO
+    if (m_zwdfs_state == eZwdfsState::WAIT_FOR_ZWDFS_CAC_STARTED) {
+        // Set timeout for CAC-COMPLETED notification with the CAC duration received on this
+        // this notification, multiplied in factor of 1.2.
+        m_zwdfs_fsm_timeout =
+            std::chrono::steady_clock::now() +
+            std::chrono::seconds(uint16_t(notification->params().cac_duration_sec * 1.2));
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED);
+    }
 }
 
 void ChannelSelectionTask::handle_vs_dfs_cac_completed_notification(
@@ -469,6 +477,10 @@ void ChannelSelectionTask::zwdfs_fsm()
         break;
     }
     case eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED: {
+        if (std::chrono::steady_clock::now() > m_zwdfs_fsm_timeout) {
+            LOG(ERROR) << "Reached timeout waiting for CAC-COMPLETED notification!";
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+        }
         break;
     }
     case eZwdfsState::SWITCH_CHANNEL_PRIMARY_RADIO: {
