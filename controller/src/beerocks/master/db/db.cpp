@@ -5165,6 +5165,11 @@ bool db::dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client_mac)
         LOG(ERROR) << "Failed to add sta instance " << path_to_sta;
         return false;
     }
+    path_to_sta += "." + std::to_string(sta_index);
+    if (!m_ambiorix_datamodel->set(path_to_sta, "MACAddress", tlvf::mac_to_string(client_mac))) {
+        LOG(ERROR) << "Failed to set " << path_to_sta << ".MACAddress to " << client_mac;
+        return false;
+    }
     return true;
 }
 
