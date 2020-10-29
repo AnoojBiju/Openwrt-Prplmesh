@@ -423,9 +423,49 @@ void ChannelSelectionTask::zwdfs_fsm()
         break;
     }
     case eZwdfsState::ZWDFS_SWITCH_ANT_SET_CHANNEL_REQUEST: {
+
+        auto fronthaul_sd = front_iface_name_to_socket(m_zwdfs_iface);
+        if (!fronthaul_sd) {
+            LOG(DEBUG) << "socket to fronthaul not found: " << m_zwdfs_iface;
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            break;
+        }
+
+        auto request = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST>(m_cmdu_tx);
+        if (!request) {
+            LOG(ERROR) << "Failed to build message";
+            break;
+        }
+
+        request->ant_switch_on() = true;
+        request->channel()       = m_selected_channel.channel;
+        request->bandwidth()     = m_selected_channel.bw;
+
+        auto center_channel = son::wireless_utils::channels_table_5g.at(request->channel())
+                                  .at(request->bandwidth())
+                                  .center_channel;
+
+        request->center_frequency() = son::wireless_utils::channel_to_freq(center_channel);
+
+        LOG(DEBUG) << "Sending ZWDFS_ANT_CHANNEL_SWITCH_REQUEST on, channel="
+                   << m_selected_channel.channel
+                   << ", bw=" << utils::convert_bandwidth_to_int(m_selected_channel.bw);
+
+        message_com::send_cmdu(fronthaul_sd, m_cmdu_tx);
+
+        constexpr uint8_t CAC_STARTED_TIMEOUT_SEC = 10;
+        m_zwdfs_fsm_timeout =
+            std::chrono::steady_clock::now() + std::chrono::seconds(CAC_STARTED_TIMEOUT_SEC);
+
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::WAIT_FOR_ZWDFS_CAC_STARTED);
         break;
     }
     case eZwdfsState::WAIT_FOR_ZWDFS_CAC_STARTED: {
+        if (std::chrono::steady_clock::now() > m_zwdfs_fsm_timeout) {
+            LOG(ERROR) << "Reached timeout waiting for CAC-STARTED notification!";
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+        }
         break;
     }
     case eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED: {
