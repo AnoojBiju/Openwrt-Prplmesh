@@ -1447,7 +1447,12 @@ bool ap_wlan_hal_dwpal::is_zwdfs_antenna_enabled()
         LOG(ERROR) << "get_zwdfs_antenna() failed!";
         return false;
     }
-    return (beerocks::string_utils::stoi(reply));
+
+    std::string reply_str(reply);
+    beerocks::string_utils::trim(reply_str);
+    LOG(DEBUG) << "GET_ZWDFS_ANTENNA returned '" << reply_str << "'";
+
+    return reply_str == "1";
 }
 
 bool ap_wlan_hal_dwpal::restricted_channels_set(char *channel_list)
