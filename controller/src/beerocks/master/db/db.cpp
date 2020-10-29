@@ -3360,7 +3360,7 @@ bool db::clear_client_persistent_db(const sMacAddr &mac)
     LOG(DEBUG) << "setting client " << mac << " runtime info to default values";
 
     node->client_parameters_last_edit    = std::chrono::system_clock::time_point::min();
-    node->client_time_life_delay_minutes = std::chrono::minutes::zero();
+    node->client_time_life_delay_minutes = std::chrono::minutes(PARAMETER_NOT_CONFIGURED);
     node->client_stay_on_initial_radio   = eTriStateBool::NOT_CONFIGURED;
     node->client_initial_radio           = network_utils::ZERO_MAC;
     node->client_selected_bands          = PARAMETER_NOT_CONFIGURED;
@@ -3429,10 +3429,10 @@ bool db::update_client_persistent_db(const sMacAddr &mac)
 
     ValuesMap values_map;
 
-    //fill values map of client persistent params
+    // fill values map of client persistent params
     values_map[TIMESTAMP_STR] = timestamp_to_string_seconds(node->client_parameters_last_edit);
 
-    if (node->client_time_life_delay_minutes != std::chrono::minutes::zero()) {
+    if (node->client_time_life_delay_minutes != std::chrono::minutes(PARAMETER_NOT_CONFIGURED)) {
         LOG(DEBUG) << "Setting client time-life-delay in persistent-db to "
                    << node->client_time_life_delay_minutes.count() << " for " << mac;
         values_map[TIMELIFE_DELAY_STR] =
@@ -5183,10 +5183,11 @@ sMacAddr db::get_candidate_client_for_removal(sMacAddr client_to_skip)
                                           : max_timelife_delay_sec;
 
             // Client timelife delay
-            auto timelife_delay =
-                (client->client_time_life_delay_minutes != std::chrono::seconds::zero())
-                    ? std::chrono::seconds(client->client_time_life_delay_minutes)
-                    : max_timelife_delay;
+            auto timelife_delay = (client->client_time_life_delay_minutes !=
+                                   std::chrono::seconds(beerocks::PARAMETER_NOT_CONFIGURED))
+                                      ? std::chrono::seconds(client->client_time_life_delay_minutes)
+                                      : max_timelife_delay;
+
             // Calculate client expiry due time
             auto current_client_expiry_due = client->client_parameters_last_edit + timelife_delay;
 
@@ -5251,7 +5252,7 @@ uint64_t db::get_client_remaining_sec(const std::pair<std::string, ValuesMap> &c
 
     auto timestamp_it = client.second.find(TIMESTAMP_STR);
     if (timestamp_it == client.second.end())
-        return -1;
+        return 0;
 
     // Save current time as a separate variable for fair comparison of current client
     auto now           = std::chrono::system_clock::now();
