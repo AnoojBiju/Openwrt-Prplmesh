@@ -2,7 +2,7 @@
   stage: certification-dummy
   extends: .certification-generic
   variables:
-    DEVICE_UNDER_TEST: "prplmesh"
+    RUN_ON_DEVICE: "prplmesh"
   needs:
     - job: build-in-docker
 
