@@ -48,6 +48,10 @@ platform:
   stage: platform
   needs: []
   rules: *expensive-job
+  variables:
+    TESTS_TO_RUN: $TESTS_TO_RUN
+    DEVICE_UNDER_TEST: $DEVICE_UNDER_TEST
+    WFA_CERTIFICATION_RUNNER: $WFA_CERTIFICATION_RUNNER
   trigger:
     include: "ci/platform.yml"
     strategy: depend
