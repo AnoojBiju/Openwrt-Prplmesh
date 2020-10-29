@@ -93,6 +93,7 @@ backhaul_manager::backhaul_manager(
     const config_file::sConfigSlave &config, const std::set<std::string> &slave_ap_ifaces_,
     const std::set<std::string> &slave_sta_ifaces_, int stop_on_failure_attempts_,
     std::unique_ptr<beerocks::btl::BrokerClientFactory> broker_client_factory,
+    std::unique_ptr<beerocks::CmduClientFactory> platform_manager_cmdu_client_factory,
     std::unique_ptr<beerocks::UccServer> ucc_server,
     std::unique_ptr<beerocks::CmduServer> cmdu_server,
     std::shared_ptr<beerocks::TimerManager> timer_manager,
@@ -101,10 +102,13 @@ backhaul_manager::backhaul_manager(
       beerocks_temp_path(config.temp_path), slave_ap_ifaces(slave_ap_ifaces_),
       slave_sta_ifaces(slave_sta_ifaces_), config_const_bh_slave(config.const_backhaul_slave),
       m_broker_client_factory(std::move(broker_client_factory)),
+      m_platform_manager_cmdu_client_factory(std::move(platform_manager_cmdu_client_factory)),
       m_ucc_server(std::move(ucc_server)), m_cmdu_server(std::move(cmdu_server)),
       m_timer_manager(timer_manager), m_event_loop(event_loop)
 {
     LOG_IF(!m_broker_client_factory, FATAL) << "Broker client factory is a null pointer!";
+    LOG_IF(!m_platform_manager_cmdu_client_factory, FATAL)
+        << "CMDU client factory is a null pointer!";
     LOG_IF(!m_cmdu_server, FATAL) << "CMDU server is a null pointer!";
     LOG_IF(!m_timer_manager, FATAL) << "Timer manager is a null pointer!";
     LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";

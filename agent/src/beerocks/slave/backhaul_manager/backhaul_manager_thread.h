@@ -13,6 +13,7 @@
 #include "wan_monitor.h"
 
 #include <bcl/beerocks_backport.h>
+#include <bcl/beerocks_cmdu_client_factory.h>
 #include <bcl/beerocks_cmdu_server.h>
 #include <bcl/beerocks_config_file.h>
 #include <bcl/beerocks_defines.h>
@@ -51,14 +52,15 @@ class ChannelSelectionTask;
 class backhaul_manager : public btl::transport_socket_thread {
 
 public:
-    backhaul_manager(const config_file::sConfigSlave &config,
-                     const std::set<std::string> &slave_ap_ifaces_,
-                     const std::set<std::string> &slave_sta_ifaces_, int stop_on_failure_attempts_,
-                     std::unique_ptr<beerocks::btl::BrokerClientFactory> broker_client_factory,
-                     std::unique_ptr<beerocks::UccServer> ucc_server,
-                     std::unique_ptr<beerocks::CmduServer> cmdu_server,
-                     std::shared_ptr<beerocks::TimerManager> timer_manager,
-                     std::shared_ptr<beerocks::EventLoop> event_loop);
+    backhaul_manager(
+        const config_file::sConfigSlave &config, const std::set<std::string> &slave_ap_ifaces_,
+        const std::set<std::string> &slave_sta_ifaces_, int stop_on_failure_attempts_,
+        std::unique_ptr<beerocks::btl::BrokerClientFactory> broker_client_factory,
+        std::unique_ptr<beerocks::CmduClientFactory> platform_manager_cmdu_client_factory,
+        std::unique_ptr<beerocks::UccServer> ucc_server,
+        std::unique_ptr<beerocks::CmduServer> cmdu_server,
+        std::shared_ptr<beerocks::TimerManager> timer_manager,
+        std::shared_ptr<beerocks::EventLoop> event_loop);
     ~backhaul_manager();
 
     virtual bool init() override;
@@ -355,6 +357,11 @@ private:
      * other devices in the network via the broker server running in the transport process.
      */
     std::unique_ptr<beerocks::btl::BrokerClientFactory> m_broker_client_factory;
+
+    /**
+     * Factory to create CMDU client instances connected to CMDU server running in platform manager.
+     */
+    std::unique_ptr<beerocks::CmduClientFactory> m_platform_manager_cmdu_client_factory;
 
     /**
      * UCC server to exchange commands and replies with UCC certification application.

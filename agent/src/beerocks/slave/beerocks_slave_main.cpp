@@ -10,6 +10,7 @@
 #include "platform_manager/platform_manager.h"
 #include "son_slave_thread.h"
 
+#include <bcl/beerocks_cmdu_client_factory_factory.h>
 #include <bcl/beerocks_cmdu_server_factory.h>
 #include <bcl/beerocks_config_file.h>
 #include <bcl/beerocks_event_loop_impl.h>
@@ -380,6 +381,12 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
         //        LOG_IF(!ucc_server, FATAL) << "Unable to create UCC server!";
     }
 
+    // Create CMDU client factory to create CMDU clients connected to CMDU server running in
+    // platform manager when requested
+    auto platform_manager_cmdu_client_factory =
+        beerocks::create_cmdu_client_factory(platform_manager_uds_path, event_loop);
+    LOG_IF(!platform_manager_cmdu_client_factory, FATAL) << "Unable to create CMDU client factory!";
+
     // Create broker client factory to create broker clients when requested
     std::string broker_uds_path =
         beerocks_slave_conf.temp_path + "/" + std::string(BEEROCKS_BROKER_UDS);
@@ -389,8 +396,8 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
 
     beerocks::backhaul_manager backhaul_mgr(
         beerocks_slave_conf, slave_ap_ifaces, slave_sta_ifaces, stop_on_failure_attempts,
-        std::move(broker_client_factory), std::move(ucc_server),
-        std::move(backhaul_manager_cmdu_server), timer_manager, event_loop);
+        std::move(broker_client_factory), std::move(platform_manager_cmdu_client_factory),
+        std::move(ucc_server), std::move(backhaul_manager_cmdu_server), timer_manager, event_loop);
 
     // Start backhaul manager
     if (!backhaul_mgr.start()) {
