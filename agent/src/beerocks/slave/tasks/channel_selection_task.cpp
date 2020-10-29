@@ -325,9 +325,17 @@ void ChannelSelectionTask::handle_vs_zwdfs_ant_channel_switch_response(
         LOG(ERROR) << "addClass ACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE failed";
         return;
     }
-    LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE";
+    LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE from "
+               << socket_to_front_iface_name(sd);
 
-    // TODO
+    if (!notification->success()) {
+        LOG(ERROR) << "Failed to switch ZWDFS antenna and channel";
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+    }
+
+    if (m_zwdfs_state == eZwdfsState::WAIT_FOR_ZWDFS_SWITCH_ANT_OFF_RESPONSE) {
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+    }
 }
 
 const std::string ChannelSelectionTask::socket_to_front_iface_name(const Socket *sd)
