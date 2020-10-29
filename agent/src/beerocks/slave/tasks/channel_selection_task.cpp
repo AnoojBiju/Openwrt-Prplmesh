@@ -211,11 +211,32 @@ void ChannelSelectionTask::handle_vs_csa_notification(
         LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION failed";
         return;
     }
-    LOG(TRACE) << "received cACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION";
+    LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION from "
+               << socket_to_front_iface_name(sd);
 
-    // TODO
+    auto db = AgentDB::get();
+
+    auto sender_iface_name = socket_to_front_iface_name(sd);
+    auto sender_radio      = db->radio(sender_iface_name);
+    if (!sender_radio) {
+        return;
+    }
+
+    // Initiate Agent Managed ZWDFS flow.
+    if (db->device_conf.zwdfs_enable && !sender_radio->front.zwdfs &&
+        notification->cs_params().switch_reason == beerocks::CH_SWITCH_REASON_RADAR &&
+        m_zwdfs_state != eZwdfsState::WAIT_FOR_ZWDFS_CAC_STARTED &&
+        m_zwdfs_state != eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED) {
+
+        if (!initialize_zwdfs_interface_name()) {
+            LOG(DEBUG) << "No ZWDFS radio interface has been found. ZWDFS not initiated.";
+            return;
+        }
+        m_zwdfs_primary_radio_iface = sender_radio->front.iface_name;
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::REQUEST_CHANNELS_LIST);
+        return;
+    }
 }
-
 void ChannelSelectionTask::handle_vs_csa_error_notification(
     ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
     std::shared_ptr<beerocks_header> beerocks_header)
@@ -326,9 +347,34 @@ void ChannelSelectionTask::zwdfs_fsm()
         break;
     }
     case eZwdfsState::REQUEST_CHANNELS_LIST: {
+        auto request = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_CHANNELS_LIST_REQUEST>(m_cmdu_tx);
+        if (!request) {
+            LOG(ERROR) << "Failed to build message";
+            break;
+        }
+
+        auto fronthaul_sd = front_iface_name_to_socket(m_zwdfs_primary_radio_iface);
+        if (!fronthaul_sd) {
+            LOG(DEBUG) << "socket to fronthaul not found: " << m_zwdfs_primary_radio_iface;
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            break;
+        }
+
+        message_com::send_cmdu(fronthaul_sd, m_cmdu_tx);
+
+        constexpr uint8_t CHANNELS_LIST_RESPONSE_TIMEOUT_SEC = 1;
+        m_zwdfs_fsm_timeout                                  = std::chrono::steady_clock::now() +
+                              std::chrono::seconds(CHANNELS_LIST_RESPONSE_TIMEOUT_SEC);
+
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::WAIT_FOR_CHANNELS_LIST);
         break;
     }
     case eZwdfsState::WAIT_FOR_CHANNELS_LIST: {
+        if (std::chrono::steady_clock::now() > m_zwdfs_fsm_timeout) {
+            LOG(ERROR) << "Reached timeout waiting for channels list response";
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+        }
         break;
     }
     case eZwdfsState::CHOOSE_NEXT_BEST_CHANNEL: {
