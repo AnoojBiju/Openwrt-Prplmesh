@@ -184,7 +184,7 @@ bool ChannelSelectionTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmd
             break;
         }
         case beerocks_message::ACTION_BACKHAUL_CHANNELS_LIST_RESPONSE: {
-            handle_vs_channels_list_notification(cmdu_rx, sd, beerocks_header);
+            handle_vs_channels_list_response(cmdu_rx, sd, beerocks_header);
             break;
         }
         case beerocks_message::ACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE: {
@@ -315,7 +315,7 @@ void ChannelSelectionTask::handle_vs_dfs_cac_completed_notification(
     }
 }
 
-void ChannelSelectionTask::handle_vs_channels_list_notification(
+void ChannelSelectionTask::handle_vs_channels_list_response(
     ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
     std::shared_ptr<beerocks_header> beerocks_header)
 {
