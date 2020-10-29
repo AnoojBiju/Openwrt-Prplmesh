@@ -565,7 +565,8 @@ void cli_bml::setFunctionsMapAndArray()
         "Set client with the given STA MAC:"
         "selected_bands - Bitwise parameter, 1 for 2.4G, 2 for 5G, 3 for both, 0 for Disabled"
         "stay_on_initial_radio - 1 for true, 0 for false or (default) -1 for not configured,"
-        "time_life_delay_minutes - 0 for non-aging, any positive (>0) value to configure or -1 for not configured",
+        "time_life_delay_minutes - 0 for non-aging, any positive (>0) value to configure or -1 for "
+        "not configured",
         // clang-format on
         static_cast<pFunction>(&cli_bml::client_set_client_caller), 2, 4, STRING_ARG, STRING_ARG,
         STRING_ARG, INT_ARG);
