@@ -19,6 +19,7 @@
 #include <tlvf/wfa_map/tlvApHeCapabilities.h>
 #include <tlvf/wfa_map/tlvApHtCapabilities.h>
 #include <tlvf/wfa_map/tlvApRadioBasicCapabilities.h>
+#include <tlvf/wfa_map/tlvApVhtCapabilities.h>
 
 #include <algorithm>
 #include <mutex>
@@ -469,6 +470,18 @@ public:
      */
     bool set_ap_ht_capabilities(const sMacAddr &radio_mac,
                                 wfa_map::tlvApHtCapabilities::sFlags flags);
+
+    /**
+     * @brief Add 'VHTCapabilities' data element, set values to its parametrs.
+     * Example of full path to object:
+     * "Controller.Netwok.Device.1.Radio.1.Capabilities.VHTCapabilities"
+     * 
+     * @param vht_caps_tlv TLV with AP VHT Capabilities included in
+     * 'AP Capability Report' message.
+     * @return True if sub-object was successfully added
+     * and values for its parameters set, false otherwise.
+     */
+    bool set_ap_vht_capabilities(wfa_map::tlvApVhtCapabilities &vht_caps_tlv);
 
     const beerocks::message::sRadioCapabilities *
     get_station_current_capabilities(const std::string &mac);

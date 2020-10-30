@@ -1620,6 +1620,19 @@ bool Controller::handle_tlv_ap_he_capabilities(ieee1905_1::CmduMessageRx &cmdu_r
     return ret_val;
 }
 
+bool Controller::handle_tlv_ap_vht_capabilities(ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    bool ret_val = true;
+
+    for (const auto &vht_caps_tlv : cmdu_rx.getClassList<wfa_map::tlvApVhtCapabilities>()) {
+        if (!database.set_ap_vht_capabilities(*vht_caps_tlv)) {
+            LOG(ERROR) << "Couldn't set values for ap VHTcapabilities data model";
+            ret_val = false;
+        }
+    }
+    return ret_val;
+}
+
 bool Controller::handle_cmdu_1905_ap_capability_report(const std::string &src_mac,
                                                        ieee1905_1::CmduMessageRx &cmdu_rx)
 {
@@ -1663,10 +1676,13 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const std::string &src_ma
         return false;
     }
     if (!handle_tlv_ap_he_capabilities(cmdu_rx)) {
-        LOG(ERROR) << "Couldn't set ap HEcapabilities";
+        LOG(ERROR) << "Couldn't handle TLV AP HEcapabilities";
         return false;
     }
-
+    if (!handle_tlv_ap_vht_capabilities(cmdu_rx)) {
+        LOG(ERROR) << "Couldn't handle TLV AP VHTCapabilities";
+        return false;
+    }
     return all_radio_capabilities_saved_successfully;
 }
 
