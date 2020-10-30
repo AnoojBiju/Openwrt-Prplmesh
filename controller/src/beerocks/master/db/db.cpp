@@ -4042,6 +4042,18 @@ bool db::set_node_stats_info(const std::string &mac, beerocks_message::sStaStats
         p->stats_delta_ms    = params->stats_delta_ms;
         p->rx_rssi           = params->rx_rssi;
         p->timestamp         = std::chrono::steady_clock::now();
+
+        std::string path_to_sta = dm_get_path_to_sta(mac);
+
+        if (path_to_sta.empty()) {
+            LOG(ERROR) << "Fail to get path for station with mac: " << mac;
+            return false;
+        }
+
+        if (!m_ambiorix_datamodel->set(path_to_sta, "LastDataDownlinkRate", p->tx_phy_rate_100kb)) {
+            LOG(ERROR) << "Fail to set " << path_to_sta << "LastDataDownlinkRate";
+            return false;
+        }
     }
     return true;
 }
