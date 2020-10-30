@@ -61,8 +61,6 @@
 // SPEED values
 #include <linux/ethtool.h>
 
-using namespace beerocks::net;
-
 namespace beerocks {
 
 //////////////////////////////////////////////////////////////////////////////
@@ -585,25 +583,29 @@ bool backhaul_manager::finalize_slaves_connect_state(bool fConnected,
 
         auto db = AgentDB::get();
 
-        network_utils::iface_info iface_info;
+        beerocks::net::network_utils::iface_info iface_info;
         bool backhaul_manager_exist = false;
 
         if (!db->device_conf.local_gw) {
             // Read the IP addresses of the bridge interface
-            if (network_utils::get_iface_info(iface_info, db->backhaul.selected_iface_name) != 0) {
+            if (beerocks::net::network_utils::get_iface_info(
+                    iface_info, db->backhaul.selected_iface_name) != 0) {
                 LOG(ERROR) << "Failed reading addresses for: " << db->backhaul.selected_iface_name;
                 return false;
             }
 
-            notification->params().gw_ipv4 = network_utils::ipv4_from_string(bridge_info.ip_gw);
+            notification->params().gw_ipv4 =
+                beerocks::net::network_utils::ipv4_from_string(bridge_info.ip_gw);
             notification->params().gw_bridge_mac = tlvf::mac_from_string(bssid_bridge_mac);
-            notification->params().bridge_ipv4   = network_utils::ipv4_from_string(bridge_info.ip);
-            notification->params().backhaul_mac  = tlvf::mac_from_string(iface_info.mac);
-            notification->params().backhaul_ipv4 = network_utils::ipv4_from_string(iface_info.ip);
+            notification->params().bridge_ipv4 =
+                beerocks::net::network_utils::ipv4_from_string(bridge_info.ip);
+            notification->params().backhaul_mac = tlvf::mac_from_string(iface_info.mac);
+            notification->params().backhaul_ipv4 =
+                beerocks::net::network_utils::ipv4_from_string(iface_info.ip);
 
             if (db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wired) {
                 notification->params().backhaul_bssid =
-                    tlvf::mac_from_string(network_utils::ZERO_MAC_STRING);
+                    tlvf::mac_from_string(beerocks::net::network_utils::ZERO_MAC_STRING);
                 notification->params().backhaul_iface_type  = IFACE_TYPE_ETHERNET;
                 notification->params().backhaul_is_wireless = 0;
                 for (auto soc : slaves_sockets) {
@@ -767,12 +769,12 @@ bool backhaul_manager::backhaul_fsm_main(bool &skip_select)
 
         auto db            = AgentDB::get();
         auto bridge        = db->bridge.iface_name;
-        auto bridge_ifaces = network_utils::linux_get_iface_list_from_bridge(bridge);
+        auto bridge_ifaces = beerocks::net::network_utils::linux_get_iface_list_from_bridge(bridge);
         auto eth_iface     = db->ethernet.iface_name;
         // remove the wired interface from the bridge, it will be added on dev_set_config.
         if (std::find(bridge_ifaces.begin(), bridge_ifaces.end(), eth_iface) !=
             bridge_ifaces.end()) {
-            if (!network_utils::linux_remove_iface_from_bridge(bridge, eth_iface)) {
+            if (!beerocks::net::network_utils::linux_remove_iface_from_bridge(bridge, eth_iface)) {
                 LOG(ERROR) << "Failed to remove iface '" << eth_iface << "' from bridge '" << bridge
                            << "' !";
                 return false;
@@ -851,7 +853,8 @@ bool backhaul_manager::backhaul_fsm_main(bool &skip_select)
             db->backhaul.selected_iface_name.clear();
         } else { // link establish
 
-            auto ifaces = network_utils::linux_get_iface_list_from_bridge(db->bridge.iface_name);
+            auto ifaces = beerocks::net::network_utils::linux_get_iface_list_from_bridge(
+                db->bridge.iface_name);
 
             // If a wired (WAN) interface was provided, try it first, check if the interface is UP
             wan_monitor::ELinkState wired_link_state = wan_monitor::ELinkState::eInvalid;
@@ -935,7 +938,7 @@ bool backhaul_manager::backhaul_fsm_main(bool &skip_select)
             }
         }
 
-        if (network_utils::get_iface_info(bridge_info, db->bridge.iface_name) != 0) {
+        if (beerocks::net::network_utils::get_iface_info(bridge_info, db->bridge.iface_name) != 0) {
             LOG(ERROR) << "Failed reading addresses from the bridge!";
             platform_notify_error(bpl::eErrorCode::BH_READING_DATA_FROM_THE_BRIDGE, "");
             stop_on_failure_attempts--;
@@ -943,7 +946,8 @@ bool backhaul_manager::backhaul_fsm_main(bool &skip_select)
             break;
         }
 
-        auto ifaces = network_utils::linux_get_iface_list_from_bridge(db->bridge.iface_name);
+        auto ifaces =
+            beerocks::net::network_utils::linux_get_iface_list_from_bridge(db->bridge.iface_name);
         if (!configure_ieee1905_transport_interfaces(db->bridge.iface_name, ifaces)) {
             LOG(ERROR) << "configure_ieee1905_transport_interfaces() failed!";
             FSM_MOVE_STATE(RESTART);
@@ -997,7 +1001,8 @@ bool backhaul_manager::backhaul_fsm_main(bool &skip_select)
         auto db = AgentDB::get();
 
         eth_link_poll_timer = std::chrono::steady_clock::now();
-        m_eth_link_up       = network_utils::linux_iface_is_up_and_running(db->ethernet.iface_name);
+        m_eth_link_up =
+            beerocks::net::network_utils::linux_iface_is_up_and_running(db->ethernet.iface_name);
         FSM_MOVE_STATE(OPERATIONAL);
 
         // This event may come as a result of enabling the backhaul, but also as a result
@@ -1042,9 +1047,9 @@ bool backhaul_manager::backhaul_fsm_main(bool &skip_select)
         // if (time_elapsed_ms > POLL_TIMER_TIMEOUT_MS) {
 
         //     eth_link_poll_timer = now;
-        //     bool eth_link_up = network_utils::linux_iface_is_up_and_running(db->ethernet.iface_name);
+        //     bool eth_link_up = beerocks::net::network_utils::linux_iface_is_up_and_running(db->ethernet.iface_name);
         //     if (eth_link_up != m_eth_link_up) {
-        //         m_eth_link_up = network_utils::linux_iface_is_up_and_running(db->ethernet.iface_name);
+        //         m_eth_link_up = beerocks::net::network_utils::linux_iface_is_up_and_running(db->ethernet.iface_name);
         //         FSM_MOVE_STATE(RESTART);
         //     }
         // } else {
@@ -1080,7 +1085,7 @@ bool backhaul_manager::backhaul_fsm_main(bool &skip_select)
                 continue;
             }
             // Clear the backhaul interface mac.
-            radio->back.iface_mac = network_utils::ZERO_MAC;
+            radio->back.iface_mac = beerocks::net::network_utils::ZERO_MAC;
 
             if (soc->sta_wlan_hal) {
                 soc->sta_wlan_hal.reset();
@@ -1111,7 +1116,7 @@ bool backhaul_manager::backhaul_fsm_main(bool &skip_select)
 
         db->backhaul.connection_type = AgentDB::sBackhaul::eConnectionType::Invalid;
 
-        db->controller_info.bridge_mac = network_utils::ZERO_MAC;
+        db->controller_info.bridge_mac = beerocks::net::network_utils::ZERO_MAC;
 
         db->statuses.ap_autoconfiguration_failure = false;
 
@@ -1899,7 +1904,7 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
             // If get_radio_by_mac() found the radio, it means that 'client_mac' is on the radio
             // 'associated_clients' list.
             bss_out.bssid = radio->associated_clients.at(client_mac).bssid;
-            if (bss_out.bssid == network_utils::ZERO_MAC) {
+            if (bss_out.bssid == beerocks::net::network_utils::ZERO_MAC) {
                 LOG(ERROR) << "bssid is ZERO_MAC";
                 return false;
             }
@@ -2406,7 +2411,7 @@ bool backhaul_manager::select_bssid()
                     db->backhaul.selected_iface_name = iface;
                     return true;
                 }
-            } else if ((db->backhaul.preferred_bssid != network_utils::ZERO_MAC) &&
+            } else if ((db->backhaul.preferred_bssid != beerocks::net::network_utils::ZERO_MAC) &&
                        (tlvf::mac_from_string(bssid) == db->backhaul.preferred_bssid)) {
                 LOG(DEBUG) << "preferred bssid - found bssid match = " << bssid;
                 selected_bssid_channel           = scan_result.channel;
@@ -2605,9 +2610,10 @@ void backhaul_manager::get_scan_measurement()
                 }
             } else {
                 //insert new entry
-                sScanResult scan_measurement;
+                beerocks::net::sScanResult scan_measurement;
 
-                std::copy_n(scan_result.bssid.oct, MAC_ADDR_LEN, scan_measurement.mac.oct);
+                std::copy_n(scan_result.bssid.oct, beerocks::net::MAC_ADDR_LEN,
+                            scan_measurement.mac.oct);
                 scan_measurement.channel     = scan_result.channel;
                 scan_measurement.rssi        = scan_result.rssi;
                 scan_measurement_list[bssid] = scan_measurement;
