@@ -1020,6 +1020,22 @@ public:
     bool set_node_stats_info(const std::string &mac, beerocks_message::sStaStatsParams *params);
     void clear_node_stats_info(const std::string &mac);
 
+    /**
+     * @brief Set virtual AP metrics info
+     *
+     * @param[in] bssid vap mac address.
+     * @param[in] uc_tx_bytes unicast send bytes
+     * @param[in] uc_rx_bytes unicast received bytes
+     * @param[in] mc_tx_bytes multicast send bytes
+     * @param[in] mc_rx_bytes multicast received bytes
+     * @param[in] bc_tx_bytes broadcast send bytes
+     * @param[in] bc_rx_bytes broadcast received bytes
+     * @return true on success, otherwise false.
+     */
+    bool set_vap_stats_info(const std::string &bssid, uint32_t uc_tx_bytes, uint32_t uc_rx_bytes,
+                            uint32_t mc_tx_bytes, uint32_t mc_rx_bytes, uint32_t bc_tx_bytes,
+                            uint32_t bc_rx_bytes);
+
     bool commit_persistent_db_changes();
     bool is_commit_to_persistent_db_required();
 
