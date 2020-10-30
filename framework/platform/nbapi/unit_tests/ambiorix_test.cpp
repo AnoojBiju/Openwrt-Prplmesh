@@ -27,7 +27,15 @@ using ::testing::StrictMock;
 
 namespace {
 
+constexpr auto initial_value           = 42;
+constexpr auto new_value               = 0xaabbccdd;
 constexpr auto g_param_path            = "Test.Container";
+constexpr auto g_param_name_int32      = "Int32";
+constexpr auto g_param_name_uint32     = "Uint32";
+constexpr auto g_param_name_int64      = "Int64";
+constexpr auto g_param_name_uint64     = "Uint64";
+constexpr auto g_param_name_bool       = "Bool";
+constexpr auto g_param_name_double     = "Double";
 constexpr auto g_param_name_string     = "String";
 constexpr auto g_param_value_foo       = "Foo";
 constexpr auto g_param_value_bar       = "Bar";
@@ -138,6 +146,78 @@ TEST_F(AmbiorixTest, set_string_should_succeed)
     EXPECT_EQ(status, amxd_status_ok);
     EXPECT_STREQ(value, g_param_value_foo);
     free(value);
+}
+
+/*
+ * Add a test for each instance of the set() function.
+ * Ideally, we'd use a parameterized test, but that is not possible when
+ * the type itself varies. So instead use a template class that defines the
+ * test itself, and instantiate it for the different types.
+ */
+template <class T> class AmbiorixTestSetter : public AmbiorixTest {
+protected:
+    using setter_t = std::function<amxd_status_t(amxd_object_t *, const char *name, const T)>;
+    using getter_t = std::function<T(amxd_object_t *, const char *name, amxd_status_t *)>;
+    void set_should_succeed(const std::string &parameter_name, T initial_value, T new_value,
+                            setter_t setter, getter_t getter)
+    {
+        amxd_object_t *obj = find_object(g_param_path);
+        ASSERT_TRUE(obj);
+        EXPECT_EQ(setter(obj, parameter_name.c_str(), initial_value), amxd_status_ok);
+        EXPECT_TRUE(m_ambiorix->set(g_param_path, parameter_name, new_value));
+        amxd_status_t status;
+        T value = getter(obj, parameter_name.c_str(), &status);
+        EXPECT_EQ(status, amxd_status_ok);
+        EXPECT_EQ(value, new_value);
+    }
+};
+
+class AmbiorixTestSetterInt32 : public AmbiorixTestSetter<int32_t> {
+};
+TEST_F(AmbiorixTestSetterInt32, set_int32_should_succeed)
+{
+    set_should_succeed(g_param_name_int32, initial_value, new_value, amxd_object_set_int32_t,
+                       amxd_object_get_int32_t);
+}
+
+class AmbiorixTestSetterUint32 : public AmbiorixTestSetter<uint32_t> {
+};
+TEST_F(AmbiorixTestSetterUint32, set_uint32_should_succeed)
+{
+    set_should_succeed(g_param_name_uint32, initial_value, new_value, amxd_object_set_uint32_t,
+                       amxd_object_get_uint32_t);
+}
+
+class AmbiorixTestSetterInt64 : public AmbiorixTestSetter<int64_t> {
+};
+TEST_F(AmbiorixTestSetterInt64, set_int64_should_succeed)
+{
+    set_should_succeed(g_param_name_int64, initial_value, new_value, amxd_object_set_int64_t,
+                       amxd_object_get_int64_t);
+}
+
+class AmbiorixTestSetterUint64 : public AmbiorixTestSetter<uint64_t> {
+};
+TEST_F(AmbiorixTestSetterUint64, set_uint64_should_succeed)
+{
+    set_should_succeed(g_param_name_uint64, initial_value, new_value, amxd_object_set_uint64_t,
+                       amxd_object_get_uint64_t);
+}
+
+class AmbiorixTestSetterBool : public AmbiorixTestSetter<bool> {
+};
+TEST_F(AmbiorixTestSetterBool, set_int32_should_succeed)
+{
+    set_should_succeed(g_param_name_bool, initial_value, new_value, amxd_object_set_bool,
+                       amxd_object_get_bool);
+}
+
+class AmbiorixTestSetterDouble : public AmbiorixTestSetter<double> {
+};
+TEST_F(AmbiorixTestSetterDouble, set_uint32_should_succeed)
+{
+    set_should_succeed(g_param_name_double, initial_value, new_value, amxd_object_set_double,
+                       amxd_object_get_double);
 }
 
 } // namespace
