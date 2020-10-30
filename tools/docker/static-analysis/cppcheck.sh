@@ -21,6 +21,7 @@ run_cppcheck() {
              --force \
              --error-exitcode=1 \
              --enable=warning,style,information \
+             -i"$rootdir/framework/platform/nbapi/unit_tests" \
              -i"$rootdir/common/beerocks/bwl/unit_tests" \
              -i"$rootdir/common/beerocks/bcl/unit_tests" \
              -i"$rootdir/build" \
