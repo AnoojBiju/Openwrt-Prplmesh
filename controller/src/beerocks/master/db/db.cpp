@@ -4054,6 +4054,10 @@ bool db::set_node_stats_info(const std::string &mac, beerocks_message::sStaStats
             LOG(ERROR) << "Fail to set " << path_to_sta << "LastDataDownlinkRate";
             return false;
         }
+        if (!m_ambiorix_datamodel->set(path_to_sta, "LastDataUplinkRate", p->rx_phy_rate_100kb)) {
+            LOG(ERROR) << "Fail to set " << path_to_sta << "LastDataUplinkRate";
+            return false;
+        }
     }
     return true;
 }
