@@ -1,26 +1,34 @@
 {
-    "prplmesh_docker": {
+    "prplmesh_compose": {
         "name": "agent",
-        "board_type": "prplmesh_docker",
+        "board_type": "prplmesh_compose",
         "role": "agent",
         "conn_cmd": "",
         "devices": [
             {
                 "name": "lan",
-                "type": "prplmesh_docker",
+                "type": "prplmesh_compose",
                 "role": "controller",
+                "delay": 7,
                 "conn_cmd": ""
             },
             {
                 "name": "lan2",
-                "type": "prplmesh_docker",
+                "type": "prplmesh_compose",
                 "role": "agent",
+                "delay": 7,
                 "conn_cmd": ""
             },
             {
                 "name": "wifi",
                 "type": "STA_dummy",
                 "mac": "51:a1:10:20:00:01",
+                "conn_cmd": ""
+            },
+            {
+                "name": "wifi2",
+                "type": "STA_dummy",
+                "mac": "51:a1:10:20:00:02",
                 "conn_cmd": ""
             }
         ]
@@ -33,11 +41,11 @@
         "conn_cmd": "cu -s 115200 -l /dev/ttyUSB0",
         "devices": [
             {
-            "name": "lan",
-            "type": "prplmesh_docker",
-            "role": "controller",
-            "docker_network": "prplMesh-net-rax40-1",
-            "conn_cmd": ""
+                "name": "lan",
+                "type": "prplmesh_compose",
+                "role": "controller",
+                "docker_network": "prplMesh-net-rax40-1",
+                "conn_cmd": ""
             },
             {
                 "name": "wifi",

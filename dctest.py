@@ -90,7 +90,7 @@ class Services:
                 os.makedirs(devicedir)
 
     def _get_device_names(self):
-        jspath = './tests/boardfarm_plugins/boardfarm_prplmesh/prplmesh_config_compose.json'
+        jspath = './tests/boardfarm_plugins/boardfarm_prplmesh/prplmesh_config.json'
         js = json.loads(open(jspath, 'r').read())
         devices = [js['prplmesh_compose']['name']]
         for device in js['prplmesh_compose']['devices']:

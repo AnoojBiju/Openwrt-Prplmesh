@@ -73,7 +73,7 @@ services:
             - "/var/run/docker:/var/run/docker"
             - "/var/run/docker.sock:/var/run/docker.sock"
         working_dir: $ROOT_DIR/tests
-        entrypoint: ["bash", "-c", "echo 'wait for DUTs'; sleep 20; echo 'starting boardfarm'; ./run_bf_compose.sh"]
+        entrypoint: ["bash", "-c", "echo 'wait for DUTs'; sleep 20; echo 'starting boardfarm'; ./run_bf.sh"]
         depends_on:
           - controller
           - agent
