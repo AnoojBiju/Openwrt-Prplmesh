@@ -28,6 +28,15 @@ public:
     dynamic_channel_selection_r2_task(db &database, ieee1905_1::CmduMessageTx &cmdu_tx_,
                                       task_pool &tasks_);
 
+    struct sScanRequestEvent {
+        sMacAddr radio_mac;
+    };
+
+    struct sScanReportEvent {
+        sMacAddr agent_mac;
+        uint16_t mid;
+    };
+
     enum eEvent : uint8_t {};
 
 protected:
@@ -35,11 +44,12 @@ protected:
     virtual void handle_event(int event_enum_value, void *event_obj) override;
 
 private:
-    enum eState : uint8_t { IDLE };
+    enum eState : uint8_t { IDLE, TRIGGER_SCAN };
 
     // clang-format off
     const std::unordered_map<eState, std::string, std::hash<int>> m_states_string = {
       { eState::IDLE,                "IDLE"              },
+      { eState::TRIGGER_SCAN,        "TRIGGER_SCAN"      },
     };
     // clang-format on
 

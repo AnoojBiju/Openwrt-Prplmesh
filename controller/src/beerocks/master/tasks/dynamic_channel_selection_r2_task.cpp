@@ -33,6 +33,9 @@ void dynamic_channel_selection_r2_task::work()
     case eState::IDLE: {
         break;
     }
+    case eState::TRIGGER_SCAN: {
+        break;
+    }
 
     default:
         break;
