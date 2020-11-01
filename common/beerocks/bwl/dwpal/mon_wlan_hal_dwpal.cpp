@@ -906,7 +906,7 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
     new_bg.passive_dwell_time = dwell_time_msec;
     new_bg.active_dwell_time  = dwell_time_msec;
 
-    // set new scan params & get newly set values for validation
+    // set new scan params
     if (!dwpal_set_scan_params_fg(new_fg, fg_size) || !dwpal_set_scan_params_bg(new_bg, bg_size)) {
         LOG(ERROR) << "Failed setting new values, restoring original scan parameters";
         dwpal_set_scan_params_fg(org_fg, fg_size);
@@ -914,6 +914,7 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
         return false;
     }
 
+    // get "new" scan params to validate the previous set
     if (!dwpal_get_scan_params_fg(new_fg, fg_size) || !dwpal_get_scan_params_bg(new_bg, bg_size) ||
         (new_fg.active_dwell_time != dwell_time_msec) ||
         (new_fg.passive_dwell_time != dwell_time_msec) ||
@@ -925,7 +926,7 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
         return false;
     }
 
-    // get frequencies from channel pool and set in scan_params
+    // get frequencies from channel pool and set in channel_scan_params
     if (!dwpal_get_channel_scan_freq(channel_pool, m_radio_info.channel, m_radio_info.iface_name,
                                      channel_scan_params)) {
         LOG(ERROR) << "Failed getting frequencies, restoring original scan parameters";
@@ -946,10 +947,9 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
     }
 
     // restoring channel scan params with original dwell time.
-    // dwpal_driver_nl_scan_trigger() API doesn't include dwell time parameter
-    // so we have to change and restore driver scan parameters on the fly.
-    // no reason to check since we restore the original params here anyway
-    // and the next validation will validate the change.
+    // We have to change and restore driver scan parameters manually.
+    // There is no reason to check since we restore the original params here anyway
+    // and the next validation will validate this change.
     dwpal_set_scan_params_fg(org_fg, fg_size);
     dwpal_set_scan_params_bg(org_bg, bg_size);
 
