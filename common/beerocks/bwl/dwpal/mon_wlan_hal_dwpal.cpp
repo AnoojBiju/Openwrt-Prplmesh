@@ -881,6 +881,38 @@ bool mon_wlan_hal_dwpal::sta_link_measurements_11k_request(const std::string &st
     return true;
 }
 
+nl_msg *mon_wlan_hal_dwpal::generate_nl_message(int nl80211_id, int flags, uint8_t command)
+{
+    LOG(DEBUG) << "Generating NL message, "
+               << "NL80211 ID: " << nl80211_id << ", flags: " << flags << ", CMD: " << command;
+
+    auto devidx = if_nametoindex(m_radio_info.iface_name.c_str());
+    if (!devidx) {
+        LOG(ERROR) << "Failed to get devidx for " << m_radio_info.iface_name;
+        return nullptr;
+    }
+
+    nl_msg *msg = nlmsg_alloc();
+    if (!msg) {
+        LOG(ERROR) << "Failed to allocate nl_msg";
+        return nullptr;
+    }
+
+    if (!genlmsg_put(msg, 0, 0, nl80211_id, 0, flags, command, 0)) {
+        LOG(ERROR) << "Failed to set NL MSG values";
+        nlmsg_free(msg);
+        return nullptr;
+    }
+
+    if (nla_put_u32(msg, NL80211_ATTR_IFINDEX, devidx) < 0) {
+        LOG(ERROR) << "Failed to set device ID: " << devidx;
+        nlmsg_free(msg);
+        return nullptr;
+    }
+
+    return msg;
+}
+
 bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
                                               const std::vector<unsigned int> &channel_pool)
 {
