@@ -72,10 +72,14 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
 
         self.wired_sniffer = Sniffer(_get_bridge_interface(self.unique_id),
                                      boardfarm.config.output_dir)
+        # Disable public key checking.
+        # Boards will be reflashed from time to time and it will change their ssh identity.
+        conn_cmd = "ssh -o PubkeyAuthentication=no" \
+                   " -o StrictHostKeyChecking=no" \
+                   " {}@{}".format(self.username, self.wan_ip)
         self.connection = connection_decider.connection(device=self,
                                                         conn_type="ssh",
-                                                        conn_cmd="ssh {}@{}".format(
-                                                            self.username, self.wan_ip))
+                                                        conn_cmd=conn_cmd)
         self.connection.connect()
         # Append active connection to the general array for logging
         self.consoles = [self]
