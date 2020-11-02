@@ -81,8 +81,8 @@ private:
     void handle_vs_dfs_cac_completed_notification(ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
                                                   std::shared_ptr<beerocks_header> beerocks_header);
 
-    void handle_vs_channels_list_notification(ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
-                                              std::shared_ptr<beerocks_header> beerocks_header);
+    void handle_vs_channels_list_response(ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
+                                          std::shared_ptr<beerocks_header> beerocks_header);
 
     void
     handle_vs_zwdfs_ant_channel_switch_response(ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,

@@ -1485,6 +1485,12 @@ bool backhaul_manager::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_r
                     break;
                 }
             }
+            for (auto soc_iter : m_disabled_slave_sockets) {
+                if (soc_iter.second->slave == sd) {
+                    soc = soc_iter.second;
+                    break;
+                }
+            }
 
             if (cmdu_rx.getMessageType() == ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE) {
                 return handle_slave_backhaul_message(soc, cmdu_rx);
@@ -1833,7 +1839,10 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
             return false;
         }
 
-        auto front_iface_name = msg_in->front_iface_name_str();
+        auto front_iface_name = msg_in->front_iface_name();
+
+        LOG(DEBUG) << "Received ACTION_BACKHAUL_ZWDFS_RADIO_DETECTED from front_radio="
+                   << front_iface_name;
 
         // Erase the Radio interface from the pending radio interfaces list which is used to block
         // the Backhaul manager to establish the backhaul link until all the Agent radios has sent
@@ -1852,14 +1861,14 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
             auto slave_soc = *it;
             if (slave_soc->hostap_iface == front_iface_name) {
                 // Backup the socket, on disabled sockets list
-                m_disabled_slave_sockets[front_iface_name] =
-                    m_sConfig.slave_iface_socket[front_iface_name];
+                m_disabled_slave_sockets[front_iface_name] = slave_soc;
 
                 // Remove the socket reference from the backhaul
                 m_sConfig.slave_iface_socket.erase(front_iface_name);
                 it = slaves_sockets.erase(it);
                 break;
             }
+            it++;
         }
         break;
     }

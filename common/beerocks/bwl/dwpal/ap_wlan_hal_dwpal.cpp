@@ -73,7 +73,7 @@ static ap_wlan_hal::Event dwpal_to_bwl_event(const std::string &opcode)
         return ap_wlan_hal::Event::CSA_Finished;
     } else if (opcode == "BSS-TM-RESP") {
         return ap_wlan_hal::Event::BSS_TM_Response;
-    } else if (opcode == "DFS-CAC-STARTED") {
+    } else if (opcode == "DFS-CAC-START") {
         return ap_wlan_hal::Event::DFS_CAC_Started;
     } else if (opcode == "DFS-CAC-COMPLETED") {
         return ap_wlan_hal::Event::DFS_CAC_Completed;
@@ -1418,15 +1418,21 @@ bool ap_wlan_hal_dwpal::is_zwdfs_supported()
 bool ap_wlan_hal_dwpal::set_zwdfs_antenna(bool enable)
 {
     // Build command string
+    char *reply     = nullptr;
     std::string cmd = "ZWDFS_ANT_SWITCH ";
 
     cmd += std::to_string(enable ? 1 : 0);
 
+    LOG(DEBUG) << "Switch antenna command: " << cmd;
+
     // Send command
-    if (!dwpal_send_cmd(cmd)) {
+    if (!dwpal_send_cmd(cmd, &reply)) {
         LOG(ERROR) << "set_zwdfs_antenna() failed!";
         return false;
     }
+
+    LOG(DEBUG) << "Switch antenna reply: " << reply;
+
     return true;
 }
 
@@ -1441,7 +1447,12 @@ bool ap_wlan_hal_dwpal::is_zwdfs_antenna_enabled()
         LOG(ERROR) << "get_zwdfs_antenna() failed!";
         return false;
     }
-    return (beerocks::string_utils::stoi(reply));
+
+    std::string reply_str(reply);
+    beerocks::string_utils::trim(reply_str);
+    LOG(DEBUG) << "GET_ZWDFS_ANTENNA returned '" << reply_str << "'";
+
+    return reply_str == "1";
 }
 
 bool ap_wlan_hal_dwpal::restricted_channels_set(char *channel_list)
@@ -1757,6 +1768,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
 
     // For key-value parser.
     int64_t tmp_int;
+    const char *tmp_str;
 
     auto event = dwpal_to_bwl_event(opcode);
 
@@ -2402,6 +2414,8 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
     case Event::DFS_CAC_Started: {
         LOG(DEBUG) << buffer;
 
+        std::string tmp_string;
+
         parsed_line_t parsed_obj;
         parse_event(buffer, parsed_obj);
 
@@ -2421,25 +2435,32 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         msg->params.channel = tmp_int;
 
         // Secondary Channel
-        if (!read_param("sec_chan", parsed_obj, tmp_int)) {
+        if (!read_param("sec_chan", parsed_obj, &tmp_str)) {
             LOG(ERROR) << "Failed reading 'secondary_channel' parameter!";
             return false;
         }
-        msg->params.secondary_channel = tmp_int;
+        tmp_string = tmp_str;
+        beerocks::string_utils::rtrim(tmp_string, ",");
+        msg->params.secondary_channel = beerocks::string_utils::stoi(tmp_string);
 
         // Bandwidth
-        if (!read_param("width", parsed_obj, tmp_int)) {
+        if (!read_param("width", parsed_obj, &tmp_str)) {
             LOG(ERROR) << "Failed reading 'bandwidth' parameter!";
             return false;
         }
+        tmp_string = tmp_str;
+        beerocks::string_utils::rtrim(tmp_string, ",");
+        tmp_int               = beerocks::string_utils::stoi(tmp_string);
         msg->params.bandwidth = beerocks::eWiFiBandwidth(dwpal_bw_to_beerocks_bw(tmp_int));
 
         // CAC Duration
-        if (!read_param("cac_time", parsed_obj, tmp_int)) {
+        if (!read_param("cac_time", parsed_obj, &tmp_str)) {
             LOG(ERROR) << "Failed reading 'cac_duration_sec' parameter!";
             return false;
         }
-        msg->params.cac_duration_sec = tmp_int;
+        tmp_string = tmp_str;
+        beerocks::string_utils::rtrim(tmp_string, "s");
+        msg->params.cac_duration_sec = beerocks::string_utils::stoi(tmp_string);
 
         // Add the message to the queue
         event_queue_push(Event::DFS_CAC_Started, msg_buff);

@@ -40,7 +40,7 @@ using namespace beerocks::net;
 #define OPERATION_SUCCESS 0
 #define OPERATION_FAIL -1
 #define WAIT_FOR_RADIO_ENABLE_TIMEOUT_SEC 100
-#define MAX_RADIO_DISBALED_TIMEOUT_SEC 3
+#define MAX_RADIO_DISBALED_TIMEOUT_SEC 4
 
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////// Local Module Functions ///////////////////////////
@@ -157,7 +157,7 @@ static void unify_channels_list(
 
     // Rank container for multiap preference calculation.
     // Key - rank average, value - rank average elements
-    std::map<uint16_t, std::set<uint16_t>> ranks;
+    std::map<int32_t, std::set<int32_t>> ranks;
 
     // Copy the Rank from the preferred channels list to the helper unified list container and also
     // to a helper container "ranks" that will be used to convert the rank to multi-ap preference.
@@ -184,21 +184,25 @@ static void unify_channels_list(
         }
         bw_it->second = pchannel.rank;
 
+        if (pchannel.rank == -1) {
+            continue;
+        }
+
         // Copy rank to helper container that will help to convert the rank to multi-ap preference
         ranks[pchannel.rank].insert(pchannel.rank);
     }
 
     // Multi-AP allows only 15 options of preference whereas the ranking from the ACS-Report has
-    // 2^16 options.
+    // 2^31 options.
     // To scale the rank to 1-15, group rankings with small delta until only 15 groups are left:
     // {group_rank_average, { rank1, rank2, rank3}}.
     // Note: Since "std::map" is ordered container, we don't have to sort it.
     LOG(DEBUG) << "Narrow ranks to groups, ranks.size()=" << ranks.size();
     while (ranks.size() > 15) {
-        uint16_t min_delta = UINT16_MAX;
+        auto min_delta = INT32_MAX;
 
         // Key = Min delta ranks group ID, Value: Min delta ranks
-        std::unordered_map<uint16_t, std::set<uint16_t>> min_delta_ranks_groups;
+        std::unordered_map<uint16_t, std::set<int32_t>> min_delta_ranks_groups;
         uint16_t group_id = 0;
         for (auto it = std::next(ranks.begin()); it != ranks.end(); it++) {
             auto this_rank = it->first;
@@ -219,14 +223,14 @@ static void unify_channels_list(
         // Unify the original ranks which are under the same group, and add the unified group to
         // the ranks list. The two separated groups that that made the new group are removed.
         for (const auto min_delta_ranks_group : min_delta_ranks_groups) {
-            std::set<uint16_t> unified_rank_elements;
+            std::set<int32_t> unified_rank_elements;
             auto &min_delta_ranks_on_group = min_delta_ranks_group.second;
             for (const auto &min_delta_rank : min_delta_ranks_on_group) {
                 unified_rank_elements.insert(ranks[min_delta_rank].begin(),
                                              ranks[min_delta_rank].end());
                 ranks.erase(min_delta_rank);
             }
-            uint16_t average_rank =
+            auto average_rank =
                 std::accumulate(unified_rank_elements.begin(), unified_rank_elements.end(), 0) /
                 unified_rank_elements.size();
 
@@ -261,11 +265,28 @@ static void unify_channels_list(
             supported_bw_info_tlv.rank      = bw_it->second;
 
             auto print_channel_info = [&]() {
+                if (supported_bw_info_tlv.rank == -1) {
+                    return;
+                }
+                auto dfs_state_to_string = [&]() {
+                    if (channel_info.dfs_state == beerocks_message::eDfsState::NOT_DFS) {
+                        return "NOT_DFS";
+                    } else if (channel_info.dfs_state == beerocks_message::eDfsState::AVAILABLE) {
+                        return "AVAILABLE";
+                    } else if (channel_info.dfs_state == beerocks_message::eDfsState::USABLE) {
+                        return "USABLE";
+                    } else if (channel_info.dfs_state == beerocks_message::eDfsState::UNAVAILABLE) {
+                        return "UNAVAILABLE";
+                    }
+                    return "Unknown_State";
+                };
+
                 LOG(DEBUG) << "channel=" << int(channel_info_pair.first) << ", bw="
                            << beerocks::utils::convert_bandwidth_to_int(
                                   beerocks::eWiFiBandwidth(bw_it->first))
                            << ", rank=" << supported_bw_info_tlv.rank << ", multiap_preference="
-                           << int(supported_bw_info_tlv.multiap_preference);
+                           << int(supported_bw_info_tlv.multiap_preference)
+                           << ", dfs_state=" << dfs_state_to_string();
             };
 
             // If channel & bw has undefined rank (-1), set the channel preference to
@@ -1287,6 +1308,10 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
                 response->success() = false;
             }
             // switch channel on zwdfs interface to start off channel CAC
+            LOG(DEBUG) << "Switching channel channel=" << notification->channel()
+                       << ", bw=" << utils::convert_bandwidth_to_int(notification->bandwidth())
+                       << ", center_freq=" << notification->center_frequency();
+
             if (!ap_wlan_hal->switch_channel(notification->channel(), notification->bandwidth(),
                                              notification->center_frequency())) {
                 LOG(ERROR) << "switch_channel failed!";

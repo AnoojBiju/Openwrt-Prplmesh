@@ -184,7 +184,7 @@ bool ChannelSelectionTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmd
             break;
         }
         case beerocks_message::ACTION_BACKHAUL_CHANNELS_LIST_RESPONSE: {
-            handle_vs_channels_list_notification(cmdu_rx, sd, beerocks_header);
+            handle_vs_channels_list_response(cmdu_rx, sd, beerocks_header);
             break;
         }
         case beerocks_message::ACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE: {
@@ -211,9 +211,37 @@ void ChannelSelectionTask::handle_vs_csa_notification(
         LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION failed";
         return;
     }
-    LOG(TRACE) << "received cACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION";
+    LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION from "
+               << socket_to_front_iface_name(sd);
 
-    // TODO
+    auto db = AgentDB::get();
+
+    auto sender_iface_name = socket_to_front_iface_name(sd);
+    auto sender_radio      = db->radio(sender_iface_name);
+    if (!sender_radio) {
+        return;
+    }
+
+    // Initiate Agent Managed ZWDFS flow.
+    if (db->device_conf.zwdfs_enable && !sender_radio->front.zwdfs &&
+        notification->cs_params().switch_reason == beerocks::CH_SWITCH_REASON_RADAR &&
+        m_zwdfs_state != eZwdfsState::WAIT_FOR_ZWDFS_CAC_STARTED &&
+        m_zwdfs_state != eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED) {
+
+        if (!initialize_zwdfs_interface_name()) {
+            LOG(DEBUG) << "No ZWDFS radio interface has been found. ZWDFS not initiated.";
+            return;
+        }
+        m_zwdfs_primary_radio_iface = sender_radio->front.iface_name;
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::REQUEST_CHANNELS_LIST);
+        return;
+    }
+
+    if (m_zwdfs_state == eZwdfsState::WAIT_FOR_PRIMARY_RADIO_CSA_NOTIFICATION &&
+        sender_iface_name == m_zwdfs_primary_radio_iface) {
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+        return;
+    }
 }
 
 void ChannelSelectionTask::handle_vs_csa_error_notification(
@@ -227,9 +255,21 @@ void ChannelSelectionTask::handle_vs_csa_error_notification(
         LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_CSA_ERROR_NOTIFICATION failed";
         return;
     }
-    LOG(TRACE) << "received sACTION_APMANAGER_HOSTAP_DFS_CSA_ERROR_NOTIFICATION";
+    LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_DFS_CSA_ERROR_NOTIFICATION from "
+               << socket_to_front_iface_name(sd);
 
-    // TODO
+    auto sender_iface_name = socket_to_front_iface_name(sd);
+    std::string which_radio;
+    if (zwdfs_in_process()) {
+        if (sender_iface_name == m_zwdfs_iface) {
+            which_radio = "ZWDFS";
+        } else if (sender_iface_name == m_zwdfs_primary_radio_iface) {
+            which_radio = "Primary 5G";
+        }
+        LOG(DEBUG) << "Failed to switch channel on " << which_radio << " radio, "
+                   << sender_iface_name << ". Reset ZWDFS flow !";
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::REQUEST_CHANNELS_LIST);
+    }
 }
 
 void ChannelSelectionTask::handle_vs_cac_started_notification(
@@ -243,9 +283,17 @@ void ChannelSelectionTask::handle_vs_cac_started_notification(
         LOG(ERROR) << "addClass sACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION failed";
         return;
     }
-    LOG(TRACE) << "received sACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION";
+    LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION from "
+               << socket_to_front_iface_name(sd);
 
-    // TODO
+    if (m_zwdfs_state == eZwdfsState::WAIT_FOR_ZWDFS_CAC_STARTED) {
+        // Set timeout for CAC-COMPLETED notification with the CAC duration received on this
+        // this notification, multiplied in factor of 1.2.
+        m_zwdfs_fsm_timeout =
+            std::chrono::steady_clock::now() +
+            std::chrono::seconds(uint16_t(notification->params().cac_duration_sec * 1.2));
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED);
+    }
 }
 
 void ChannelSelectionTask::handle_vs_dfs_cac_completed_notification(
@@ -259,18 +307,24 @@ void ChannelSelectionTask::handle_vs_dfs_cac_completed_notification(
         LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION failed";
         return;
     }
-    LOG(TRACE) << "received sACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION";
+    LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION from "
+               << socket_to_front_iface_name(sd);
 
-    // TODO
+    if (m_zwdfs_state == eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED) {
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::SWITCH_CHANNEL_PRIMARY_RADIO);
+    }
 }
 
-void ChannelSelectionTask::handle_vs_channels_list_notification(
+void ChannelSelectionTask::handle_vs_channels_list_response(
     ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
     std::shared_ptr<beerocks_header> beerocks_header)
 {
-    LOG(TRACE) << "received sACTION_APMANAGER_CHANNELS_LIST_RESPONSE";
+    LOG(TRACE) << "received ACTION_APMANAGER_CHANNELS_LIST_RESPONSE from "
+               << socket_to_front_iface_name(sd);
 
-    // TODO
+    if (m_zwdfs_state == eZwdfsState::WAIT_FOR_CHANNELS_LIST) {
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::CHOOSE_NEXT_BEST_CHANNEL);
+    }
 }
 
 void ChannelSelectionTask::handle_vs_zwdfs_ant_channel_switch_response(
@@ -283,9 +337,18 @@ void ChannelSelectionTask::handle_vs_zwdfs_ant_channel_switch_response(
         LOG(ERROR) << "addClass ACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE failed";
         return;
     }
-    LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE";
+    LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE from "
+               << socket_to_front_iface_name(sd);
 
-    // TODO
+    if (m_zwdfs_state == eZwdfsState::WAIT_FOR_ZWDFS_SWITCH_ANT_OFF_RESPONSE) {
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+    }
+
+    // Get here after switching on the ZWDFS antenna.
+    if (!notification->success()) {
+        LOG(ERROR) << "Failed to switch ZWDFS antenna and channel";
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+    }
 }
 
 const std::string ChannelSelectionTask::socket_to_front_iface_name(const Socket *sd)
@@ -326,33 +389,207 @@ void ChannelSelectionTask::zwdfs_fsm()
         break;
     }
     case eZwdfsState::REQUEST_CHANNELS_LIST: {
+        auto request = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_CHANNELS_LIST_REQUEST>(m_cmdu_tx);
+        if (!request) {
+            LOG(ERROR) << "Failed to build message";
+            break;
+        }
+
+        auto fronthaul_sd = front_iface_name_to_socket(m_zwdfs_primary_radio_iface);
+        if (!fronthaul_sd) {
+            LOG(DEBUG) << "socket to fronthaul not found: " << m_zwdfs_primary_radio_iface;
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            break;
+        }
+
+        message_com::send_cmdu(fronthaul_sd, m_cmdu_tx);
+
+        constexpr uint8_t CHANNELS_LIST_RESPONSE_TIMEOUT_SEC = 1;
+
+        m_zwdfs_fsm_timeout = std::chrono::steady_clock::now() +
+                              std::chrono::seconds(CHANNELS_LIST_RESPONSE_TIMEOUT_SEC);
+
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::WAIT_FOR_CHANNELS_LIST);
         break;
     }
     case eZwdfsState::WAIT_FOR_CHANNELS_LIST: {
+        if (std::chrono::steady_clock::now() > m_zwdfs_fsm_timeout) {
+            LOG(ERROR) << "Reached timeout waiting for channels list response";
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+        }
         break;
     }
     case eZwdfsState::CHOOSE_NEXT_BEST_CHANNEL: {
+        m_selected_channel = zwdfs_select_best_usable_channel(m_zwdfs_primary_radio_iface);
+        if (m_selected_channel.channel == 0) {
+            LOG(ERROR) << "Error occurred on second best channel selection";
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+        }
+
+        auto db    = AgentDB::get();
+        auto radio = db->radio(m_zwdfs_primary_radio_iface);
+        if (!radio) {
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            break;
+        }
+
+        if (m_selected_channel.channel == radio->channel) {
+            LOG(DEBUG) << "Failsafe is already second best channel, abort ZWDFS flow";
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            break;
+        }
+
+        LOG(DEBUG) << "Selected Channel=" << m_selected_channel.channel << " dfs_state=" << [&]() {
+            if (m_selected_channel.dfs_state == beerocks_message::eDfsState::NOT_DFS) {
+                return "NOT_DFS";
+            } else if (m_selected_channel.dfs_state == beerocks_message::eDfsState::AVAILABLE) {
+                return "AVAILABLE";
+            } else if (m_selected_channel.dfs_state == beerocks_message::eDfsState::USABLE) {
+                return "USABLE";
+            }
+            return "Unknown_State";
+        }();
+
+        // If the second best channel is not a DFS or Available, we can skip ZWDFS CAC, and
+        //switch the channel immediately on the primary 5G radio.
+        if (m_selected_channel.dfs_state == beerocks_message::eDfsState::NOT_DFS ||
+            m_selected_channel.dfs_state == beerocks_message::eDfsState::AVAILABLE) {
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::SWITCH_CHANNEL_PRIMARY_RADIO);
+            break;
+        }
+
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_SET_CHANNEL_REQUEST);
         break;
     }
     case eZwdfsState::ZWDFS_SWITCH_ANT_SET_CHANNEL_REQUEST: {
+
+        auto fronthaul_sd = front_iface_name_to_socket(m_zwdfs_iface);
+        if (!fronthaul_sd) {
+            LOG(DEBUG) << "socket to fronthaul not found: " << m_zwdfs_iface;
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            break;
+        }
+
+        auto request = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST>(m_cmdu_tx);
+        if (!request) {
+            LOG(ERROR) << "Failed to build message";
+            break;
+        }
+
+        request->ant_switch_on() = true;
+        request->channel()       = m_selected_channel.channel;
+        request->bandwidth()     = m_selected_channel.bw;
+
+        auto center_channel = son::wireless_utils::channels_table_5g.at(request->channel())
+                                  .at(request->bandwidth())
+                                  .center_channel;
+
+        request->center_frequency() = son::wireless_utils::channel_to_freq(center_channel);
+
+        LOG(DEBUG) << "Sending ZWDFS_ANT_CHANNEL_SWITCH_REQUEST on, channel="
+                   << m_selected_channel.channel
+                   << ", bw=" << utils::convert_bandwidth_to_int(m_selected_channel.bw);
+
+        message_com::send_cmdu(fronthaul_sd, m_cmdu_tx);
+
+        constexpr uint8_t CAC_STARTED_TIMEOUT_SEC = 10;
+        m_zwdfs_fsm_timeout =
+            std::chrono::steady_clock::now() + std::chrono::seconds(CAC_STARTED_TIMEOUT_SEC);
+
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::WAIT_FOR_ZWDFS_CAC_STARTED);
         break;
     }
     case eZwdfsState::WAIT_FOR_ZWDFS_CAC_STARTED: {
+        if (std::chrono::steady_clock::now() > m_zwdfs_fsm_timeout) {
+            LOG(ERROR) << "Reached timeout waiting for CAC-STARTED notification!";
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+        }
         break;
     }
     case eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED: {
+        if (std::chrono::steady_clock::now() > m_zwdfs_fsm_timeout) {
+            LOG(ERROR) << "Reached timeout waiting for CAC-COMPLETED notification!";
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+        }
         break;
     }
     case eZwdfsState::SWITCH_CHANNEL_PRIMARY_RADIO: {
+        auto request = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_HOSTAP_CHANNEL_SWITCH_ACS_START>(m_cmdu_tx);
+        if (!request) {
+            LOG(ERROR) << "Failed to build message";
+            break;
+        }
+
+        request->cs_params().channel   = m_selected_channel.channel;
+        request->cs_params().bandwidth = m_selected_channel.bw;
+
+        // At this point the selected channel is validated to be the the channels table, so
+        // using '.at()' is safe.
+        auto center_channel = son::wireless_utils::channels_table_5g.at(m_selected_channel.channel)
+                                  .at(m_selected_channel.bw)
+                                  .center_channel;
+
+        request->cs_params().vht_center_frequency =
+            son::wireless_utils::channel_to_freq(center_channel);
+
+        auto fronthaul_sd = front_iface_name_to_socket(m_zwdfs_primary_radio_iface);
+        if (!fronthaul_sd) {
+            LOG(DEBUG) << "socket to fronthaul not found: " << m_zwdfs_primary_radio_iface;
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+            break;
+        }
+
+        message_com::send_cmdu(fronthaul_sd, m_cmdu_tx);
+
+        constexpr uint8_t SWITCH_CHANNEL_PRIMARY_RADIO_TIMEOUT_SEC = 1;
+        m_zwdfs_fsm_timeout = std::chrono::steady_clock::now() +
+                              std::chrono::seconds(SWITCH_CHANNEL_PRIMARY_RADIO_TIMEOUT_SEC);
+
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::WAIT_FOR_PRIMARY_RADIO_CSA_NOTIFICATION);
         break;
     }
     case eZwdfsState::WAIT_FOR_PRIMARY_RADIO_CSA_NOTIFICATION: {
+        if (std::chrono::steady_clock::now() > m_zwdfs_fsm_timeout) {
+            LOG(ERROR) << "Reached timeout waiting for PRIMARY_RADIO_CSA notification!";
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+        }
         break;
     }
     case eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST: {
+        auto fronthaul_sd = front_iface_name_to_socket(m_zwdfs_iface);
+        if (!fronthaul_sd) {
+            LOG(DEBUG) << "socket to fronthaul not found: " << m_zwdfs_iface;
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+            break;
+        }
+
+        auto request = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST>(m_cmdu_tx);
+        if (!request) {
+            LOG(ERROR) << "Failed to build message";
+            break;
+        }
+
+        request->ant_switch_on() = false;
+
+        message_com::send_cmdu(fronthaul_sd, m_cmdu_tx);
+
+        constexpr uint8_t ZWDFS_SWITCH_ANT_OFF_RESPONSE_SEC = 1;
+
+        m_zwdfs_fsm_timeout = std::chrono::steady_clock::now() +
+                              std::chrono::seconds(ZWDFS_SWITCH_ANT_OFF_RESPONSE_SEC);
+
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::WAIT_FOR_ZWDFS_SWITCH_ANT_OFF_RESPONSE);
         break;
     }
     case eZwdfsState::WAIT_FOR_ZWDFS_SWITCH_ANT_OFF_RESPONSE: {
+        if (std::chrono::steady_clock::now() > m_zwdfs_fsm_timeout) {
+            LOG(ERROR) << "Reached timeout waiting for ZWDFS_SWITCH_ANT_OFF notification!";
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+        }
         break;
     }
     default:
@@ -435,10 +672,24 @@ ChannelSelectionTask::zwdfs_select_best_usable_channel(const std::string &front_
                     if (overlapping_channel_dfs_state == beerocks_message::eDfsState::UNAVAILABLE) {
                         return true;
                     }
+
+                    // If get here the switch to the channel is possible. Need to update the dfs
+                    // to the worst according to that order:
+                    static const std::map<beerocks_message::eDfsState, uint8_t> dfs_state_order = {
+                        {beerocks_message::eDfsState::NOT_DFS, 0},
+                        {beerocks_message::eDfsState::AVAILABLE, 1},
+                        {beerocks_message::eDfsState::USABLE, 2},
+                    };
+
+                    if (dfs_state_order.at(overlapping_channel_dfs_state) >
+                        dfs_state_order.at(dfs_state)) {
+                        dfs_state = overlapping_channel_dfs_state;
+                    }
                 }
                 update_best_channel = true;
                 return true;
             };
+
             switch (supported_bw.bandwidth) {
             case beerocks::BANDWIDTH_20: {
                 update_best_channel = true;
