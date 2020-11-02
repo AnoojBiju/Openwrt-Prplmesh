@@ -1,6 +1,6 @@
 - name: feed_target_mips
   uri: https://gitlab.com/prpl-foundation/intel/feed_target_mips.git
-  hash: 245dca06475e84571e4ccb5e02eb4e336ba77cbe
+  hash: 3ee38ff535af23c410f717a9b1ff9d3883b21d98
 - name: feed_datapath
   uri: https://gitlab.com/prpl-foundation/intel/feed_datapath.git
   hash: 27758da17ccd9ba9b657f787e461b65857a1d8f7
