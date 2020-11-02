@@ -4059,6 +4059,49 @@ bool db::set_node_stats_info(const std::string &mac, beerocks_message::sStaStats
             return false;
         }
     }
+
+    std::string path_to_sta = dm_get_path_to_sta(mac);
+
+    if (path_to_sta.empty()) {
+        LOG(ERROR) << "Failed to get path for STA object with mac: " << mac;
+        return false;
+    }
+
+    // Path example to the variable in Data Model
+    // Controller.Network.Device.1.Radio.1.BSS.2.STA.1.BytesSent
+    if (!m_ambiorix_datamodel->set(path_to_sta, "BytesSent", n->stats_info->tx_bytes)) {
+        LOG(ERROR) << "Couldn't set BytesSent for object " << path_to_sta;
+        return false;
+    }
+
+    // Path example to the variable in Data Model
+    // Controller.Network.Device.1.Radio.1.BSS.3.STA.1.BytesReceived
+    if (!m_ambiorix_datamodel->set(path_to_sta, "BytesReceived", n->stats_info->rx_bytes)) {
+        LOG(ERROR) << "Couldn't set BytesReceived for object " << path_to_sta;
+        return false;
+    }
+
+    // Path example to the variable in Data Model
+    // Controller.Network.Device.1.Radio.1.BSS.2.STA.1.PacketsSent
+    if (!m_ambiorix_datamodel->set(path_to_sta, "PacketsSent", n->stats_info->tx_packets)) {
+        LOG(ERROR) << "Couldn't set PacketsSent for object " << path_to_sta;
+        return false;
+    }
+
+    // Path example to the variable in Data Model
+    // Controller.Network.Device.1.Radio.1.BSS.1.STA.2.PacketsReceived
+    if (!m_ambiorix_datamodel->set(path_to_sta, "PacketsReceived", n->stats_info->rx_packets)) {
+        LOG(ERROR) << "Couldn't set PacketsReceived for object " << path_to_sta;
+        return false;
+    }
+
+    // Path example to the variable in Data Model
+    // Controller.Network.Device.1.Radio.1.BSS.2.STA.4.RetransCount
+    if (!m_ambiorix_datamodel->set(path_to_sta, "RetransCount", n->stats_info->retrans_count)) {
+        LOG(ERROR) << "Couldn't set RetransCount for object " << path_to_sta;
+        return false;
+    }
+
     return true;
 }
 
