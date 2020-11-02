@@ -1411,6 +1411,65 @@ bool mon_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std
     return true;
 }
 
+bool mon_wlan_hal_dwpal::channel_scan_dump_sequence()
+{
+    auto context   = get_dwpal_nl_ctx();
+    int nl80211_id = 0;
+
+    if (dwpal_nl80211_id_get(context, &nl80211_id) != DWPAL_SUCCESS) {
+        LOG(ERROR) << "Failed to get nl80211 ID";
+        return false;
+    }
+
+    auto msg = generate_nl_message(nl80211_id, NLM_F_DUMP, NL80211_CMD_GET_SCAN);
+    if (!msg) {
+        LOG(ERROR) << "Failed to generate NL80211_CMD_GET_SCAN CMD message";
+        return false;
+    }
+
+    LOG(TRACE) << "Sending scan trigger CMD (NL80211_CMD_GET_SCAN)";
+    int ret                    = DWPAL_FAILURE;
+    auto callback_function_ptr = +[](nl_msg *msg, void *args) -> int {
+        if (static_cast<genlmsghdr *>(nlmsg_data(nlmsg_hdr(msg)))->cmd !=
+            NL80211_CMD_NEW_SCAN_RESULTS) {
+            LOG(ERROR) << "Returning header does not match scan-dump-result header "
+                          "(NL80211_CMD_NEW_SCAN_RESULTS)";
+            return DWPAL_FAILURE;
+        }
+
+        LOG(DEBUG) << "NL80211_CMD_NEW_SCAN_RESULTS received";
+
+        auto results = std::make_shared<sCHANNEL_SCAN_RESULTS_NOTIFICATION>();
+        if (!get_scan_results_from_nl_msg(results->channel_scan_results, msg)) {
+            LOG(ERROR) << "Getting monitor msg results from NL msg failed!";
+            return DWPAL_FAILURE;
+        }
+
+        auto hal = reinterpret_cast<mon_wlan_hal_dwpal *>(args);
+        if (!hal) {
+            LOG(ERROR) << "\"args\" cannot be cast into \"mon_wlan_hal_dwpal\"!";
+            return DWPAL_FAILURE;
+        }
+
+        hal->event_queue_push(Event::Channel_Scan_Dump_Result, results);
+        return DWPAL_SUCCESS;
+    };
+    // "this" is sent to the lambda function-ptr as 'args'
+    auto cmd_ret = dwpal_nl80211_cmd_send(context, msg, &ret, callback_function_ptr, this);
+    // "ret" correlates to
+    // https://www-numi.fnal.gov/offline_software/srt_public_context/WebDocs/Errors/unix_system_errors.html
+    LOG(DEBUG) << "ret: " << ret << " cmd_ret: " << int(cmd_ret);
+    if (cmd_ret != DWPAL_SUCCESS || ret < 0) {
+        LOG(ERROR) << "Sending scan trigger CMD (NL80211_CMD_GET_SCAN) failed";
+        nlmsg_free(msg);
+        return false;
+    }
+
+    LOG(DEBUG) << "Scan trigger CMD (NL80211_CMD_GET_SCAN) handled successfully!";
+    nlmsg_free(msg);
+    return true;
+}
+
 bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg)
 {
     struct nlmsghdr *nlh    = nlmsg_hdr(msg);

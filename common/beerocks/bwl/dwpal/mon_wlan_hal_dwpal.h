@@ -58,6 +58,7 @@ protected:
     // Private data-members:
 private:
     nl_msg *generate_nl_message(int nl80211_id, int flags, uint8_t command);
+    bool channel_scan_dump_sequence();
     bool dwpal_get_scan_params_fg(sScanCfgParams &params, size_t &result_size)
     {
         ssize_t received_result_size =
