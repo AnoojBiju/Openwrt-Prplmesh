@@ -353,7 +353,8 @@ static void parse_info_elements(unsigned char *ie, int ielen, sChannelScanResult
         } break;
 
         default: {
-            LOG(ERROR) << "Unhandled element received: " << int(key);
+            // This print is used for debugging, but during run is floods the monitor logs
+            // LOG(ERROR) << "Unhandled element received: " << int(key);
         } break;
         }
 
@@ -1481,40 +1482,33 @@ bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg)
 {
     struct nlmsghdr *nlh    = nlmsg_hdr(msg);
     struct genlmsghdr *gnlh = (genlmsghdr *)nlmsg_data(nlh);
-    std::string iface_name;
 
     struct nlattr *tb[NL80211_ATTR_MAX + 1];
     nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0), genlmsg_attrlen(gnlh, 0), NULL);
 
     if (tb[NL80211_ATTR_IFINDEX]) {
-        auto index = nla_get_u32(tb[NL80211_ATTR_IFINDEX]);
-        iface_name = beerocks::net::network_utils::linux_get_iface_name(index);
+        auto index             = nla_get_u32(tb[NL80211_ATTR_IFINDEX]);
+        std::string iface_name = beerocks::net::network_utils::linux_get_iface_name(index);
+        if (m_radio_info.iface_name != iface_name) {
+            // if name doesn't match current interface
+            // meaning the event was received for a diffrent radio
+            LOG(DEBUG) << "Received event #" << gnlh->cmd << " for radio " << iface_name
+                       << " and not for " << m_radio_info.iface_name;
+            return true;
+        }
     }
 
     auto event = dwpal_nl_to_bwl_event(gnlh->cmd);
 
     switch (event) {
     case Event::Channel_Scan_Triggered: {
-        if (m_radio_info.iface_name != iface_name) {
-            // ifname doesn't match current interface
-            // meaning the event was recevied for a diffrent channel
-            return true;
-        }
-        LOG(DEBUG) << "DWPAL NL event channel scan triggered";
-
-        //start new sequence of dump results
-        m_nl_seq = 0;
+        LOG(DEBUG) << "DWPAL NL event received, channel scan triggered";
         event_queue_push(event);
         break;
     }
     case Event::Channel_Scan_Dump_Result: {
-        if (m_radio_info.iface_name != iface_name) {
-            // ifname doesn't match current interface
-            // meaning the event was received for a diffrent channel
-            return true;
-        }
-
         LOG(DEBUG) << "DWPAL NL event received, scan dump results";
+
         if (!channel_scan_dump_results()) {
             LOG(ERROR) << "Failed to get channel scan dump results";
             return false;
