@@ -36,16 +36,15 @@ bool UccParserStreamImpl::parse_command(beerocks::net::Buffer &buffer, std::stri
         return false;
     }
 
-    // Replace trailer char with a terminating null char
-    trailer[0] = '\0';
-
     // Build command string and trim white spaces from it
-    command = reinterpret_cast<const char *>(data);
+    const size_t trailer_length = 1;
+    size_t frame_length         = trailer - data + trailer_length;
+    command.assign(reinterpret_cast<char *>(data), frame_length - trailer_length);
     beerocks::string_utils::trim(command);
 
     // Shift bytes remaining in buffer (i.e.: consume processed bytes and return bytes not
     // processed yet, if any)
-    buffer.shift(command.length() + 1);
+    buffer.shift(frame_length);
 
     return true;
 }
