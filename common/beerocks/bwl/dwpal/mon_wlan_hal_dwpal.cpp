@@ -994,6 +994,13 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
         nlmsg_free(freqs);
         return true;
     };
+
+    auto restore_original_scan_params = [&org_fg, &org_bg, fg_size, bg_size, this]() {
+        LOG(ERROR) << "restoring original scan parameters";
+        dwpal_set_scan_params_fg(org_fg, fg_size);
+        dwpal_set_scan_params_bg(org_bg, bg_size);
+    };
+
     // get original scan params
     if (!dwpal_get_scan_params_fg(org_fg, fg_size) || !dwpal_get_scan_params_bg(org_bg, bg_size)) {
         LOG(ERROR) << "Failed getting original scan parameters";
@@ -1010,9 +1017,8 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
 
     // set new scan params
     if (!dwpal_set_scan_params_fg(new_fg, fg_size) || !dwpal_set_scan_params_bg(new_bg, bg_size)) {
-        LOG(ERROR) << "Failed setting new values, restoring original scan parameters";
-        dwpal_set_scan_params_fg(org_fg, fg_size);
-        dwpal_set_scan_params_bg(org_bg, bg_size);
+        LOG(ERROR) << "Failed setting new values";
+        restore_original_scan_params();
         return false;
     }
 
@@ -1022,29 +1028,22 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
         (new_fg.passive_dwell_time != dwell_time_msec) ||
         (new_bg.active_dwell_time != dwell_time_msec) ||
         (new_bg.passive_dwell_time != dwell_time_msec)) {
-        LOG(ERROR) << "Validation failed, restoring original scan parameters";
-        dwpal_set_scan_params_fg(org_fg, fg_size);
-        dwpal_set_scan_params_bg(org_bg, bg_size);
+        LOG(ERROR) << "Validation failed";
+        restore_original_scan_params();
         return false;
     }
 
     // get frequencies from channel pool and set in channel_scan_params
     if (!dwpal_get_channel_scan_freq(channel_pool, m_radio_info.channel, m_radio_info.iface_name,
                                      channel_scan_params)) {
-        LOG(ERROR) << "Failed getting frequencies, restoring original scan parameters";
-        dwpal_set_scan_params_fg(org_fg, fg_size);
-        dwpal_set_scan_params_bg(org_bg, bg_size);
+        LOG(ERROR) << "Failed getting frequencies";
+        restore_original_scan_params();
         return false;
     }
 
-    // must as single wifi won't allow scan on ap without this flag
-    channel_scan_params.ap_force = 1;
-
-    if (dwpal_driver_nl_scan_trigger(get_dwpal_nl_ctx(), (char *)m_radio_info.iface_name.c_str(),
-                                     &channel_scan_params) != DWPAL_SUCCESS) {
-        LOG(ERROR) << " scan trigger failed! Abort scan, restoring original scan parameters";
-        dwpal_set_scan_params_fg(org_fg, fg_size);
-        dwpal_set_scan_params_bg(org_bg, bg_size);
+    if (!request_channel_scan(channel_scan_params)) {
+        LOG(ERROR) << "Channel scan request failed";
+        restore_original_scan_params();
         return false;
     }
 
