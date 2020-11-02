@@ -617,6 +617,22 @@ void ChannelSelectionTask::zwdfs_fsm()
         break;
     }
     case eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST: {
+        // Block switching back 2.4G antenna if its radio is during background scan.
+        auto db = AgentDB::get();
+        auto break_state = false;
+        for (const auto &radio : db->get_radios_list()) {
+            if (!radio) {
+                continue;
+            }
+            if (radio->freq_type == eFreqType::FREQ_24G &&
+                radio->statuses.dcs_background_scan_in_process) {
+                break_state = true;
+                break;
+            }
+        }
+        if (break_state) {
+            break;
+        }
         auto fronthaul_sd = front_iface_name_to_socket(m_zwdfs_iface);
         if (!fronthaul_sd) {
             LOG(DEBUG) << "socket to fronthaul not found: " << m_zwdfs_iface;
