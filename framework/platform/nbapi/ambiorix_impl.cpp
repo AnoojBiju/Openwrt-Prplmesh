@@ -324,7 +324,7 @@ bool AmbiorixImpl::set(const std::string &relative_path, const std::string &para
         return false;
     }
 
-    LOG(DEBUG) << "Set " << object->name << "." << parameter << " to " << value;
+    LOG(DEBUG) << "Set " << relative_path << "." << parameter << ": " << value;
 
     amxd_trans_set_value(cstring_t, &transaction, parameter.c_str(), value.c_str());
 
@@ -348,7 +348,7 @@ bool AmbiorixImpl::set(const std::string &relative_path, const std::string &para
         return false;
     }
 
-    LOG(DEBUG) << "Set " << object->name << "." << parameter << " to " << value;
+    LOG(DEBUG) << "Set " << relative_path << "." << parameter << ": " << value;
 
     amxd_trans_set_value(int32_t, &transaction, parameter.c_str(), value);
 
@@ -372,7 +372,7 @@ bool AmbiorixImpl::set(const std::string &relative_path, const std::string &para
         return false;
     }
 
-    LOG(DEBUG) << "Set " << object->name << "." << parameter << " to " << value;
+    LOG(DEBUG) << "Set " << relative_path << "." << parameter << ": " << value;
 
     amxd_trans_set_value(int64_t, &transaction, parameter.c_str(), value);
 
@@ -396,7 +396,7 @@ bool AmbiorixImpl::set(const std::string &relative_path, const std::string &para
         return false;
     }
 
-    LOG(DEBUG) << "Set " << object->name << "." << parameter << " to " << value;
+    LOG(DEBUG) << "Set " << relative_path << "." << parameter << ": " << value;
 
     amxd_trans_set_value(uint32_t, &transaction, parameter.c_str(), value);
 
@@ -420,7 +420,7 @@ bool AmbiorixImpl::set(const std::string &relative_path, const std::string &para
         return false;
     }
 
-    LOG(DEBUG) << "Set " << object->name << "." << parameter << " to " << value;
+    LOG(DEBUG) << "Set " << relative_path << "." << parameter << ": " << value;
 
     amxd_trans_set_value(uint64_t, &transaction, parameter.c_str(), value);
 
@@ -444,7 +444,7 @@ bool AmbiorixImpl::set(const std::string &relative_path, const std::string &para
         return false;
     }
 
-    LOG(DEBUG) << "Set " << object->name << "." << parameter << " to " << value;
+    LOG(DEBUG) << "Set " << relative_path << "." << parameter << ": " << value;
 
     amxd_trans_set_value(double, &transaction, parameter.c_str(), value);
 
@@ -468,7 +468,7 @@ bool AmbiorixImpl::set(const std::string &relative_path, const std::string &para
         return false;
     }
 
-    LOG(DEBUG) << "Set " << object->name << "." << parameter << " to " << value;
+    LOG(DEBUG) << "Set " << relative_path << "." << parameter << ": " << value;
 
     amxd_trans_set_value(bool, &transaction, parameter.c_str(), value);
 
@@ -493,11 +493,11 @@ uint32_t AmbiorixImpl::add_instance(const std::string &relative_path)
 
     auto status = amxd_trans_add_inst(&transaction, 0, NULL);
     if (status != amxd_status_ok) {
-        LOG(ERROR) << "Failed to add instance for: " << object->name << " status: " << status;
+        LOG(ERROR) << "Failed to add instance for: " << relative_path << " status: " << status;
     }
 
     if (!apply_transaction(transaction)) {
-        LOG(ERROR) << "Failed to apply transaction for: " << object->name;
+        LOG(ERROR) << "Failed to apply transaction for: " << relative_path;
         return 0;
     }
 
@@ -506,7 +506,7 @@ uint32_t AmbiorixImpl::add_instance(const std::string &relative_path)
         LOG(ERROR) << "Failed to get index for object: " << transaction.current->name;
     }
 
-    LOG(DEBUG) << "Instance " << transaction.current->name << " added for: " << object->name;
+    LOG(DEBUG) << "Instance " << transaction.current->name << " added for: " << relative_path;
     return index;
 }
 
@@ -530,11 +530,11 @@ bool AmbiorixImpl::remove_instance(const std::string &relative_path, uint32_t in
     }
 
     if (!apply_transaction(transaction)) {
-        LOG(ERROR) << "Failed to apply transaction for: " << object->name;
+        LOG(ERROR) << "Failed to apply transaction for: " << relative_path;
         return false;
     }
 
-    LOG(DEBUG) << "Instance removed for: " << object->name;
+    LOG(DEBUG) << "Instance removed for: " << relative_path << "." << index;
     return true;
 }
 
@@ -550,7 +550,7 @@ uint32_t AmbiorixImpl::get_instance_index(const std::string &specific_path, cons
 
     index = amxd_object_get_index(object);
     if (!index) {
-        LOG(ERROR) << "Failed to get index for object: " << object->name;
+        LOG(ERROR) << "Failed to get index for object: " << specific_path << " for id: " << key;
         return index;
     }
 
@@ -595,11 +595,11 @@ bool AmbiorixImpl::remove_all_instances(const std::string &relative_path)
     }
 
     if (!apply_transaction(transaction)) {
-        LOG(ERROR) << "Failed to apply transaction for: " << object->name;
+        LOG(ERROR) << "Failed to apply transaction for: " << relative_path;
         return false;
     }
 
-    LOG(DEBUG) << "All instances removed for: " << object->name;
+    LOG(DEBUG) << "All instances removed for: " << relative_path;
     return true;
 }
 AmbiorixImpl::~AmbiorixImpl()
