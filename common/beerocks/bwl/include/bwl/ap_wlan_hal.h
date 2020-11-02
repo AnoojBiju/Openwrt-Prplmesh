@@ -158,13 +158,13 @@ public:
      *             before the AP should forcefully disconnect the client. 
      *             Setting a non-ZERO value should enable the "disassociation imminent" function and
      *             arm the internal AP timer (usually performed by the hardware).
-     * @param [in] valid_int_btt  the number of beacon transmission times (TBTTs) 
+     * @param [in] valid_int_btt The number of beacon transmission times (TBTTs) 
      *             until the BSS transition candidate list is no longer valid.
-     *
+     * @param [in] reason The reason code for the steer based on Table 18 @ Wi-Fi Agile Multiband Technical Specification
      * @return true on success or false on error.
      */
     virtual bool sta_bss_steer(const std::string &mac, const std::string &bssid, int oper_class,
-                               int chan, int disassoc_timer_btt, int valid_int_btt) = 0;
+                               int chan, int disassoc_timer_btt, int valid_int_btt, int reason) = 0;
 
     /**
      * @brief Update wifi credentials.

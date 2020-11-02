@@ -1108,7 +1108,8 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
             request->params().target.channel,
             (disassoc_imminent) ? (request->params().disassoc_timer_ms / BEACON_TRANSMIT_TIME_MS)
                                 : 0,
-            (disassoc_imminent) ? bss_steer_imminent_valid_int : bss_steer_valid_int);
+            (disassoc_imminent) ? bss_steer_imminent_valid_int : bss_steer_valid_int,
+            request->params().target.reason);
         break;
     }
     case beerocks_message::ACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST: {

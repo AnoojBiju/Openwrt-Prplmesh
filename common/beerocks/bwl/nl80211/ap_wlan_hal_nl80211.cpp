@@ -264,7 +264,7 @@ bool ap_wlan_hal_nl80211::sta_deauth(int8_t vap_id, const std::string &mac, uint
 
 bool ap_wlan_hal_nl80211::sta_bss_steer(const std::string &mac, const std::string &bssid,
                                         int oper_class, int chan, int disassoc_timer_btt,
-                                        int valid_int_btt)
+                                        int valid_int_btt, int reason)
 {
     LOG(TRACE) << __func__ << " mac: " << mac << ", BSS: " << bssid
                << ", oper_class: " << oper_class << ", channel: " << chan
