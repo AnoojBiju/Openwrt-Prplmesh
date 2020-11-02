@@ -29,6 +29,9 @@ ChannelSelectionTask::ChannelSelectionTask(backhaul_manager &btl_ctx,
                                            ieee1905_1::CmduMessageTx &cmdu_tx)
     : Task(eTaskType::CHANNEL_SELECTION), m_btl_ctx(btl_ctx), m_cmdu_tx(cmdu_tx)
 {
+    // Initialize database members
+    auto db                                   = AgentDB::get();
+    db->statuses.zwdfs_cac_remaining_time_sec = 0;
 }
 
 void ChannelSelectionTask::work()
@@ -287,11 +290,15 @@ void ChannelSelectionTask::handle_vs_cac_started_notification(
                << socket_to_front_iface_name(sd);
 
     if (m_zwdfs_state == eZwdfsState::WAIT_FOR_ZWDFS_CAC_STARTED) {
+        auto db = AgentDB::get();
         // Set timeout for CAC-COMPLETED notification with the CAC duration received on this
         // this notification, multiplied in factor of 1.2.
+        constexpr float CAC_DURATION_FACTOR = 1.2;
+        auto cac_remaining_sec =
+            uint16_t(notification->params().cac_duration_sec * CAC_DURATION_FACTOR);
+        db->statuses.zwdfs_cac_remaining_time_sec = cac_remaining_sec;
         m_zwdfs_fsm_timeout =
-            std::chrono::steady_clock::now() +
-            std::chrono::seconds(uint16_t(notification->params().cac_duration_sec * 1.2));
+            std::chrono::steady_clock::now() + std::chrono::seconds(cac_remaining_sec);
         ZWDFS_FSM_MOVE_STATE(eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED);
     }
 }
@@ -311,6 +318,8 @@ void ChannelSelectionTask::handle_vs_dfs_cac_completed_notification(
                << socket_to_front_iface_name(sd);
 
     if (m_zwdfs_state == eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED) {
+        auto db                                   = AgentDB::get();
+        db->statuses.zwdfs_cac_remaining_time_sec = 0;
         ZWDFS_FSM_MOVE_STATE(eZwdfsState::SWITCH_CHANNEL_PRIMARY_RADIO);
     }
 }
@@ -513,6 +522,13 @@ void ChannelSelectionTask::zwdfs_fsm()
             LOG(ERROR) << "Reached timeout waiting for CAC-COMPLETED notification!";
             ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
         }
+        auto db = AgentDB::get();
+
+        auto cac_remaining_sec = std::chrono::duration_cast<std::chrono::seconds>(
+                                     m_zwdfs_fsm_timeout - std::chrono::steady_clock::now())
+                                     .count();
+        db->statuses.zwdfs_cac_remaining_time_sec = cac_remaining_sec;
+
         break;
     }
     case eZwdfsState::SWITCH_CHANNEL_PRIMARY_RADIO: {
