@@ -924,6 +924,76 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
     sScanCfgParamsBG org_bg, new_bg; //background scan param
     size_t bg_size = ScanCfgParams_size_invalid, fg_size = ScanCfgParams_size_invalid;
 
+    auto request_channel_scan = [this](const ScanParams &channel_scan_params) -> bool {
+        auto context   = get_dwpal_nl_ctx();
+        int nl80211_id = 0;
+
+        if (dwpal_nl80211_id_get(context, &nl80211_id) != DWPAL_SUCCESS) {
+            LOG(ERROR) << "Failed to get nl80211 ID";
+            return false;
+        }
+
+        auto msg = generate_nl_message(nl80211_id, 0 /*No flag*/, NL80211_CMD_TRIGGER_SCAN);
+        if (!msg) {
+            LOG(ERROR) << "Failed to generate NL80211_CMD_TRIGGER_SCAN CMD message";
+            return false;
+        }
+
+        // must set NL80211_SCAN_FLAG_AP as single wifi won't allow scan on an AP without this flag
+        if (nla_put_u32(msg, NL80211_ATTR_SCAN_FLAGS, NL80211_SCAN_FLAG_AP) < 0) {
+            LOG(ERROR) << "Failed to set scan flags (NL80211_ATTR_SCAN_FLAGS)";
+            nlmsg_free(msg);
+            return false;
+        }
+
+        nl_msg *freqs = nullptr;
+        for (int i = 0; channel_scan_params.freq[i] != 0; i++) {
+            // freqs need to be allocated only once.
+            if (!freqs) {
+                freqs = nlmsg_alloc();
+                if (!freqs) {
+                    LOG(ERROR) << "Failed to allocate \"freqs\" nl_msg buffer";
+                    nlmsg_free(msg);
+                    return false;
+                }
+            }
+            // Place frequency within "freqs" nl_msg buffer
+            if (nla_put_u32(freqs, i, channel_scan_params.freq[i]) < 0) {
+                LOG(ERROR) << "Failed to set channel frequency freq[" << i
+                           << "]: " << channel_scan_params.freq[i];
+                nlmsg_free(msg);
+                nlmsg_free(freqs);
+                return false;
+            }
+        }
+
+        if (!freqs) {
+            LOG(DEBUG) << "Triggering a scan without any set frequencies";
+            // return false;
+        } else {
+            LOG(DEBUG) << "Setting NL80211_ATTR_SCAN_FREQUENCIES";
+            nla_put_nested(msg, NL80211_ATTR_SCAN_FREQUENCIES, freqs);
+        }
+
+        LOG(TRACE) << "Sending scan trigger CMD (NL80211_CMD_TRIGGER_SCAN)";
+        int ret                 = DWPAL_FAILURE;
+        auto empty_function_ptr = +[](nl_msg *msg, void *arg) -> int { return DWPAL_SUCCESS; };
+        auto cmd_ret = dwpal_nl80211_cmd_send(context, msg, &ret, empty_function_ptr, nullptr);
+        // "ret" correlates to
+        // https://www-numi.fnal.gov/offline_software/srt_public_context/WebDocs/Errors/unix_system_errors.html
+        LOG(TRACE) << "ret: " << ret << " cmd_ret: " << int(cmd_ret);
+        if (cmd_ret != DWPAL_SUCCESS || ret < 0) {
+            LOG(ERROR) << "Sending scan trigger CMD (NL80211_CMD_TRIGGER_SCAN) failed";
+            nlmsg_free(msg);
+            nlmsg_free(freqs);
+            return false;
+        }
+
+        LOG(DEBUG) << "Scan trigger CMD (NL80211_CMD_TRIGGER_SCAN) sent successfully!";
+        nlmsg_free(msg);
+        nlmsg_free(freqs);
+        return true;
+    };
     // get original scan params
     if (!dwpal_get_scan_params_fg(org_fg, fg_size) || !dwpal_get_scan_params_bg(org_bg, bg_size)) {
         LOG(ERROR) << "Failed getting original scan parameters";
