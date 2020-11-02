@@ -23,6 +23,7 @@
 #include <bcl/beerocks_ucc_server.h>
 #include <bcl/network/file_descriptor.h>
 #include <bcl/network/network_utils.h>
+#include <btl/broker_client.h>
 #include <btl/broker_client_factory.h>
 #include <btl/btl.h>
 #include <bwl/sta_wlan_hal.h>
@@ -63,6 +64,20 @@ public:
         std::shared_ptr<beerocks::TimerManager> timer_manager,
         std::shared_ptr<beerocks::EventLoop> event_loop);
     ~backhaul_manager();
+
+    /**
+     * @brief Starts backhaul manager.
+     *
+     * @return true on success and false otherwise.
+     */
+    bool to_be_renamed_to_start();
+
+    /**
+     * @brief Stops backhaul manager.
+     *
+     * @return true on success and false otherwise.
+     */
+    bool to_be_renamed_to_stop();
 
     virtual bool init() override;
     virtual bool work() override;
@@ -452,6 +467,21 @@ private:
      * This member variable is temporary and will be removed at the end of PPM-753
      */
     std::unordered_map<int, Socket *> m_fd_to_socket_map;
+
+    /**
+     * File descriptor of the timer to run internal tasks periodically.
+     */
+    int m_tasks_timer = beerocks::net::FileDescriptor::invalid_descriptor;
+
+    /**
+     * File descriptor of the timer to run the Finite State Machine.
+     */
+    int m_fsm_timer = beerocks::net::FileDescriptor::invalid_descriptor;
+
+    /**
+     * Broker client to exchange CMDU messages with broker server running in transport process.
+     */
+    std::unique_ptr<beerocks::btl::BrokerClient> m_broker_client;
 };
 
 } // namespace beerocks

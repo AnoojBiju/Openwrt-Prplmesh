@@ -39,6 +39,7 @@
 #include "../tasks/topology_task.h"
 
 #include <bcl/beerocks_utils.h>
+#include <bcl/network/sockets.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <easylogging++.h>
 
@@ -62,6 +63,16 @@
 #include <linux/ethtool.h>
 
 namespace beerocks {
+
+/**
+ * Time between successive timer executions of the tasks timer
+ */
+constexpr auto tasks_timer_period = std::chrono::milliseconds(500);
+
+/**
+ * Time between successive timer executions of the FSM timer
+ */
+constexpr auto fsm_timer_period = std::chrono::milliseconds(500);
 
 //////////////////////////////////////////////////////////////////////////////
 ////////////////////////// Local Module Definitions //////////////////////////
@@ -130,9 +141,165 @@ backhaul_manager::backhaul_manager(
     m_task_pool.add_task(std::make_shared<ChannelScanTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<CapabilityReportingTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<LinkMetricsCollectionTask>(*this, cmdu_tx));
+
+    beerocks::CmduServer::EventHandlers handlers{
+        .on_client_connected    = [&](int fd) { handle_connected(fd); },
+        .on_client_disconnected = [&](int fd) { handle_disconnected(fd); },
+        .on_cmdu_received =
+            [&](int fd, uint32_t iface_index, const sMacAddr &dst_mac, const sMacAddr &src_mac,
+                ieee1905_1::CmduMessageRx &cmdu_rx) {
+                handle_cmdu(fd, iface_index, dst_mac, src_mac, cmdu_rx);
+            },
+    };
+    m_cmdu_server->set_handlers(handlers);
 }
 
-backhaul_manager::~backhaul_manager() { backhaul_manager::on_thread_stop(); }
+backhaul_manager::~backhaul_manager() { m_cmdu_server->clear_handlers(); }
+
+// The name of this method is temporary and will be renamed at the end of PPM-753.
+bool backhaul_manager::to_be_renamed_to_start()
+{
+    // In case of error in one of the steps of this method, we have to undo all the previous steps
+    // (like when rolling back a database transaction, where either all steps get executed or none
+    // of them gets executed)
+    std::deque<std::function<void()>> rollback_actions;
+    auto rollback = [&]() {
+        for (const auto &action : rollback_actions) {
+            action();
+        }
+    };
+
+    // Create a timer to run internal tasks periodically
+    m_tasks_timer = m_timer_manager->add_timer(tasks_timer_period, tasks_timer_period,
+                                               [&](int fd, beerocks::EventLoop &loop) {
+                                                   m_task_pool.run_tasks();
+                                                   return true;
+                                               });
+    if (m_tasks_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
+        LOG(ERROR) << "Failed to create the tasks timer";
+        return false;
+    }
+    LOG(DEBUG) << "Tasks timer created with fd = " << m_tasks_timer;
+    rollback_actions.emplace_front([&]() { m_timer_manager->remove_timer(m_tasks_timer); });
+
+    // Create a timer to run the FSM periodically
+    m_fsm_timer = m_timer_manager->add_timer(fsm_timer_period, fsm_timer_period,
+                                             [&](int fd, beerocks::EventLoop &loop) {
+                                                 bool continue_processing = false;
+                                                 do {
+                                                     if (!backhaul_fsm_main(continue_processing)) {
+                                                         return false;
+                                                     }
+                                                 } while (continue_processing);
+
+                                                 return true;
+                                             });
+    if (m_fsm_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
+        LOG(ERROR) << "Failed to create the FSM timer";
+        rollback();
+        return false;
+    }
+    LOG(DEBUG) << "FSM timer created with fd = " << m_fsm_timer;
+    rollback_actions.emplace_front([&]() { m_timer_manager->remove_timer(m_fsm_timer); });
+
+    // Create an instance of a broker client connected to the broker server that is running in the
+    // transport process
+    m_broker_client = m_broker_client_factory->create_instance();
+    if (!m_broker_client) {
+        LOG(ERROR) << "Failed to create instance of broker client";
+        rollback();
+        return false;
+    }
+    rollback_actions.emplace_front([&]() { m_broker_client.reset(); });
+
+    beerocks::btl::BrokerClient::EventHandlers handlers;
+    // Install a CMDU-received event handler for CMDU messages received from the transport process.
+    // These messages are actually been sent by a remote process and the broker server running in
+    // the transport process just forwards them to the broker client.
+    handlers.on_cmdu_received = [&](uint32_t iface_index, const sMacAddr &dst_mac,
+                                    const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx) {
+        handle_cmdu_from_broker(iface_index, dst_mac, src_mac, cmdu_rx);
+    };
+
+    // Install a connection-closed event handler.
+    // Currently there is no recovery mechanism if connection with broker server gets interrupted
+    // (something that happens if the transport process dies). Just log a message and exit
+    handlers.on_connection_closed = [&]() { LOG(FATAL) << "Broker client got disconnected!"; };
+
+    m_broker_client->set_handlers(handlers);
+    rollback_actions.emplace_front([&]() { m_broker_client->clear_handlers(); });
+
+    // Subscribe for the reception of CMDU messages that this process is interested in
+    if (!m_broker_client->subscribe(std::set<ieee1905_1::eMessageType>{
+            ieee1905_1::eMessageType::ACK_MESSAGE,
+            ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_RENEW_MESSAGE,
+            ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_RESPONSE_MESSAGE,
+            ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_WSC_MESSAGE,
+            ieee1905_1::eMessageType::AP_CAPABILITY_QUERY_MESSAGE,
+            ieee1905_1::eMessageType::AP_METRICS_QUERY_MESSAGE,
+            ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE,
+            ieee1905_1::eMessageType::BEACON_METRICS_QUERY_MESSAGE,
+            ieee1905_1::eMessageType::CHANNEL_PREFERENCE_QUERY_MESSAGE,
+            ieee1905_1::eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE,
+            ieee1905_1::eMessageType::CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE,
+            ieee1905_1::eMessageType::CLIENT_CAPABILITY_QUERY_MESSAGE,
+            ieee1905_1::eMessageType::CLIENT_STEERING_REQUEST_MESSAGE,
+            ieee1905_1::eMessageType::COMBINED_INFRASTRUCTURE_METRICS_MESSAGE,
+            ieee1905_1::eMessageType::HIGHER_LAYER_DATA_MESSAGE,
+            ieee1905_1::eMessageType::LINK_METRIC_QUERY_MESSAGE,
+            ieee1905_1::eMessageType::MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE,
+            ieee1905_1::eMessageType::TOPOLOGY_DISCOVERY_MESSAGE,
+            ieee1905_1::eMessageType::TOPOLOGY_QUERY_MESSAGE,
+            ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE,
+            ieee1905_1::eMessageType::BACKHAUL_STEERING_REQUEST_MESSAGE,
+        })) {
+        LOG(ERROR) << "Failed subscribing to the Bus";
+        rollback();
+        return false;
+    }
+
+    LOG(DEBUG) << "started";
+
+    return true;
+}
+
+// The name of this method is temporary and will be renamed at the end of PPM-753.
+bool backhaul_manager::to_be_renamed_to_stop()
+{
+    bool ok = true;
+
+    while (slaves_sockets.size() > 0) {
+        auto soc          = slaves_sockets.back();
+        std::string iface = soc->sta_iface;
+        LOG(DEBUG) << "Closing interface " << iface << " sockets";
+        if (soc) {
+            if (soc->slave != beerocks::net::FileDescriptor::invalid_descriptor) {
+                m_cmdu_server->disconnect(soc->slave);
+            }
+            if (soc->sta_wlan_hal) {
+                soc->sta_wlan_hal.reset();
+            }
+        }
+        slaves_sockets.pop_back();
+    }
+
+    if (m_broker_client) {
+        m_broker_client->clear_handlers();
+        m_broker_client.reset();
+    }
+
+    if (!m_timer_manager->remove_timer(m_fsm_timer)) {
+        ok = false;
+    }
+
+    if (!m_timer_manager->remove_timer(m_tasks_timer)) {
+        ok = false;
+    }
+
+    LOG(DEBUG) << "stopped";
+
+    return ok;
+}
 
 bool backhaul_manager::init()
 {
@@ -297,6 +464,8 @@ bool backhaul_manager::socket_disconnected(Socket *sd)
 
 void backhaul_manager::handle_disconnected(int fd)
 {
+    LOG(INFO) << "UDS socket disconnected, fd = " << fd;
+
     auto db = AgentDB::get();
 
     for (auto it = slaves_sockets.begin(); it != slaves_sockets.end();) {
@@ -722,6 +891,8 @@ bool backhaul_manager::finalize_slaves_connect_state(bool fConnected,
 
 bool backhaul_manager::backhaul_fsm_main(bool &skip_select)
 {
+    skip_select = false;
+
     // Process internal FSMs before the main one, to prevent
     // falling into the "default" case...
 
