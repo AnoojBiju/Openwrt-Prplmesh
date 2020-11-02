@@ -1374,6 +1374,20 @@ private:
     bool dm_add_device_element(const sMacAddr &mac);
 
     /**
+     * @brief Add station 'HTCapabilities' data element, set values to its parametrs.
+     * Example of full path to object:
+     * "Controller.Netwok.Device.1.Radio.1.Capabilities.BSS.1.STA.1.HTCapabilities".
+     * 
+     * @param path_to_sta Path to station.
+     * Example of full path to station:
+     * "Controller.Netwok.Device.1.Radio.1.Capabilities.BSS.1.STA.1.
+     * @param sta_cap Structure with station HT Capabilities.
+     * @return True on success, false otherwise.
+     */
+    bool dm_set_sta_ht_capabilities(std::string &path_to_sta,
+                                    const beerocks::message::sRadioCapabilities &sta_cap);
+
+    /**
      * @brief Adds STA instance to the datamodel.
      * (ex. Controller.Network.Device.1.Radio.1.BSS.2.STA.3)
      *
@@ -1403,12 +1417,21 @@ private:
 
     /**
      * @brief Prepares path to the BSS data element with correct index (i).
-     * Example: "Controller.Network.Device.1.Radio.1.BSS.2".
+     * Example: "Controller.Network.Device.1.Radio.1.BSS.2.".
      *
      * @param bssid BSSID.
      * @return Path to bss, empty string otherwise.
      */
     std::string dm_get_path_to_bss(const sMacAddr &bssid);
+
+    /**
+     * @brief Get path to the STA data element with appropriate indexes.
+     * Example: "Controller.Network.Device.1.Radio.2.BSS.3.STA.4."
+     *
+     * @param sta_mac Mac address of station.
+     * @return Path to STA data element, empty string otherwise.
+     */
+    std::string dm_get_path_to_sta(const std::string &sta_mac);
 
     /**
      * @brief Set clients (device) multi ap capabilities

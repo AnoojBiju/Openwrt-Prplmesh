@@ -1443,6 +1443,43 @@ db::get_station_current_capabilities(const std::string &mac)
     return (&n->capabilities);
 }
 
+bool db::dm_set_sta_ht_capabilities(std::string &path_to_obj,
+                                    const beerocks::message::sRadioCapabilities &sta_cap)
+{
+    bool return_val = true;
+
+    if (!m_ambiorix_datamodel->add_optional_subobject(path_to_obj, "HTCapabilities")) {
+        LOG(ERROR) << "Failed to add: " << path_to_obj << ".HTCapabilities sub-object.";
+        return false;
+    }
+    path_to_obj += "HTCapabilities";
+    if (!m_ambiorix_datamodel->set(path_to_obj, "GI_20_MHz",
+                                   static_cast<bool>(sta_cap.ht_low_bw_short_gi))) {
+        LOG(ERROR) << "Couldn't set GI_20_MHz for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "GI_40_MHz",
+                                   static_cast<bool>(sta_cap.ht_high_bw_short_gi))) {
+        LOG(ERROR) << "Couldn't set GI_40_MHz for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "HT_40_Mhz", static_cast<bool>(sta_cap.ht_bw))) {
+        LOG(ERROR) << "Couldn't set HT_40_Mhz for object " << path_to_obj;
+        return_val = false;
+    }
+    // To do: find value for tx_spatial_streams PPM-792.
+    // Parse the (Re)Association Request frame.
+    if (!m_ambiorix_datamodel->set(path_to_obj, "tx_spatial_streams", sta_cap.ht_ss)) {
+        LOG(ERROR) << "Couldn't set tx_spatial_streams for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "rx_spatial_streams", sta_cap.ht_ss)) {
+        LOG(ERROR) << "Couldn't set rx_spatial_streams for object " << path_to_obj;
+        return_val = false;
+    }
+    return return_val;
+}
+
 bool db::set_station_capabilities(const std::string &client_mac,
                                   const beerocks::message::sRadioCapabilities &sta_cap)
 {
@@ -1469,6 +1506,21 @@ bool db::set_station_capabilities(const std::string &client_mac,
         n->m_sta_24ghz_capabilities       = sta_cap;
         n->m_sta_24ghz_capabilities.valid = true;
         n->capabilities                   = n->m_sta_24ghz_capabilities;
+    }
+
+    std::string path_to_sta = dm_get_path_to_sta(client_mac);
+
+    if (path_to_sta.empty()) {
+        LOG(ERROR) << "Failed to add path for STA object with mac: " << client_mac;
+        return false;
+    }
+
+    // Remove previous HT Capabilities object, if it exist
+    m_ambiorix_datamodel->remove_optional_subobject(path_to_sta, "HTCapabilities");
+
+    if (sta_cap.ht_bw != 0xFF && !dm_set_sta_ht_capabilities(path_to_sta, sta_cap)) {
+        LOG(ERROR) << "Fail to set station HT Capabilities";
+        return false;
     }
     return true;
 }
@@ -5623,4 +5675,29 @@ std::string db::dm_get_path_to_bss(const sMacAddr &bssid)
         return {};
     }
     return radio_path + "BSS." + std::to_string(bss_index) + ".";
+}
+
+std::string db::dm_get_path_to_sta(const std::string &sta_mac)
+{
+    auto sta_node = get_node(sta_mac);
+
+    if (!sta_node || sta_node->get_type() != TYPE_CLIENT) {
+        LOG(ERROR) << "Fail to get station node with mac: " << sta_mac;
+        return {};
+    }
+
+    std::string path_to_bss = dm_get_path_to_bss(tlvf::mac_from_string(sta_node->parent_mac));
+
+    if (path_to_bss.empty()) {
+        LOG(ERROR) << "Fail to get path to bss object with bssid: " << sta_node->parent_mac;
+        return {};
+    }
+    uint32_t sta_index =
+        m_ambiorix_datamodel->get_instance_index(path_to_bss + "[ID == '%s']", sta_mac);
+    if (!sta_index) {
+        LOG(ERROR) << "Fail to get index for object: " << path_to_bss << ".STA"
+                   << " with mac: " << sta_mac;
+        return {};
+    }
+    return path_to_bss + "STA." + std::to_string(sta_index) + ".";
 }
