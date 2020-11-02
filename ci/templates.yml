@@ -99,6 +99,8 @@
     # device to test with: prplmesh for dummy bwl, axepoint for dwpal on axepoint
     DEVICE_UNDER_TEST: prplmesh
   script:
+    - ci/git-clean-reset.sh /easymesh_cert "$(<"ci/easymesh_cert_version")"
+    - /easymesh_cert/utils/power_cycle/power_cycle.py --force
     - |
       case "$DEVICE_UNDER_TEST" in
           axepoint)
@@ -112,11 +114,11 @@
           ;;
       esac
       if [ -n "$IMAGE_NAME" ] ; then
+          echo "Checking if the firmware on $DEVICE_UNDER_TEST needs to be updated"
           tools/deploy_firmware.py --device $DEVICE_UNDER_TEST --target-name "$DEVICE_UNDER_TEST" --image $IMAGE_NAME
-          echo "Deploying to $DEVICE_UNDER_TEST"
+          echo "Deploying prplMesh to $DEVICE_UNDER_TEST"
           tools/deploy_ipk.sh --certification-mode $DEVICE_UNDER_TEST build/$DEVICE_UNDER_TEST/prplmesh.ipk
       fi
-    - ci/git-clean-reset.sh /easymesh_cert "$(<"ci/easymesh_cert_version")"
     - sudo /easymesh_cert/run_test_file.py --upload-results  --verbose --log-folder logs --device-under-test $DEVICE_UNDER_TEST $TESTS_TO_RUN
   artifacts:
     paths:
