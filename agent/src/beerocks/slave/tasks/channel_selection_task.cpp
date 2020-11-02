@@ -398,6 +398,26 @@ void ChannelSelectionTask::zwdfs_fsm()
         break;
     }
     case eZwdfsState::REQUEST_CHANNELS_LIST: {
+
+        // Block the begining of the flow if background scan is running on one of the radios.
+        // 2.4G because it is forbidden to switch zwdfs antenna during scan.
+        // 5G because we don't want the ZWDFS flow will switch channel on the primary 5G radio
+        // while it is during a background scan.
+        auto db = AgentDB::get();
+        auto break_state = false;
+        for (const auto &radio : db->get_radios_list()) {
+            if (!radio) {
+                continue;
+            }
+            if (radio->statuses.dcs_background_scan_in_process) {
+                break_state = true;
+                break;
+            }
+        }
+        if (break_state) {
+            break;
+        }
+
         auto request = message_com::create_vs_message<
             beerocks_message::cACTION_BACKHAUL_CHANNELS_LIST_REQUEST>(m_cmdu_tx);
         if (!request) {
@@ -472,6 +492,28 @@ void ChannelSelectionTask::zwdfs_fsm()
         break;
     }
     case eZwdfsState::ZWDFS_SWITCH_ANT_SET_CHANNEL_REQUEST: {
+
+        // Stop ZWDFS flow from doing CAC if a background scan has started before we switch the
+        // ZWDFS antenna. Since at the time when the background scan will be over, the selected
+        // channel might not be relevant anymore, the FSM will start over and jum to the initial
+        // state which query the updated channel info from the AP.
+        auto db = AgentDB::get();
+        auto break_state = false;
+        for (const auto &radio : db->get_radios_list()) {
+            if (!radio) {
+                continue;
+            }
+            if (radio->statuses.dcs_background_scan_in_process) {
+                LOG(INFO) << "Pause ZWDFS flow until background scan on radio "
+                          << radio->front.iface_name << " is finished";
+                ZWDFS_FSM_MOVE_STATE(eZwdfsState::REQUEST_CHANNELS_LIST);
+                break_state = true;
+                break;
+            }
+        }
+        if (break_state) {
+            break;
+        }
 
         auto fronthaul_sd = front_iface_name_to_socket(m_zwdfs_iface);
         if (!fronthaul_sd) {
