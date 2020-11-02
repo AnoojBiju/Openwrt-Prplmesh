@@ -688,8 +688,32 @@ update_vap_credentials_configure_wpa(const std::string &vap_if,
         disable_pmksa_caching.assign("1");
         okc.assign("0");
         wpa_disable_eapol_key_retries.assign("0");
+    } else if (bss_info_conf.authentication_type ==
+               WSC::eWscAuth(WSC::eWscAuth::WSC_AUTH_WPA2PSK | WSC::eWscAuth::WSC_AUTH_SAE)) {
+        wpa = 0x2;
+        wpa_key_mgmt.assign("WPA-PSK SAE");
+
+        if (bss_info_conf.encryption_type != WSC::eWscEncr::WSC_ENCR_AES) {
+            LOG(ERROR) << "Autoconfiguration:  " << vap_if << " CCMP(AES) is required for WPA3";
+            return false;
+        }
+        wpa_pairwise.assign("CCMP");
+
+        if (bss_info_conf.network_key.length() < 8 || bss_info_conf.network_key.length() > 64) {
+            LOG(ERROR) << "Autoconfiguration: " << vap_if << " invalid network key length "
+                       << bss_info_conf.network_key.length();
+            return false;
+        }
+        wpa_passphrase.assign(bss_info_conf.network_key);
+
+        ieee80211w.assign("2");
+        disable_pmksa_caching.assign("1");
+        okc.assign("1");
+        wpa_disable_eapol_key_retries.assign("0");
     } else {
-        LOG(ERROR) << "Autoconfiguration: " << vap_if << " invalid authentication type";
+        LOG(ERROR) << "Autoconfiguration: " << vap_if << " invalid authentication type "
+                   << son::wireless_utils::wsc_to_bwl_authentication(
+                          bss_info_conf.authentication_type);
         return false;
     }
 
