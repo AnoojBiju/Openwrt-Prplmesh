@@ -1353,11 +1353,19 @@ typedef struct sClientConfig {
     int8_t stay_on_selected_device;
     //Bitset of selected bands supported by the client according to eClientSelectedBands
     int8_t selected_bands;
+    //Optional parameter,
+    //Determines the period of time after which the client configuration should be cleared,
+    //0 - Never age.
+    //-1 - Not Configured.
+    //>0 - Hardcoded timelife cap.
+    int32_t time_life_delay_minutes;
     void struct_swap(){
+        tlvf_swap(32, reinterpret_cast<uint8_t*>(&time_life_delay_minutes));
     }
     void struct_init(){
         stay_on_initial_radio = -0x1;
         stay_on_selected_device = -0x1;
+        time_life_delay_minutes = -0x1;
     }
 } __attribute__((packed)) sClientConfig;
 

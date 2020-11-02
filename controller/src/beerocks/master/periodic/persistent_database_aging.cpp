@@ -29,26 +29,31 @@ void persistent_database_aging_operation::periodic_operation_function()
     std::copy_if(
         clients.begin(), clients.end(), std::back_inserter(aged_clients),
         [&](const sMacAddr &client_mac) {
-            const auto max_timelife_delay_sec =
-                std::chrono::seconds(m_database.config.max_timelife_delay_minutes * 60);
-            const auto unfriendly_device_max_timelife_delay_sec = std::chrono::seconds(
-                m_database.config.unfriendly_device_max_timelife_delay_minutes * 60);
             // Client timelife delay
             // If a client has a predetermined timelife delay use that.
             // Otherwise use the Max timelife delay/unfriendly_device_max_timelife_delay_sec according
             // to the client's unfriendliness status.
-            auto timelife_delay = std::chrono::duration_cast<std::chrono::seconds>(
-                m_database.get_client_time_life_delay(client_mac));
-            if (timelife_delay == std::chrono::seconds::zero()) {
-                timelife_delay =
-                    (m_database.get_client_is_unfriendly(client_mac) == eTriStateBool::TRUE)
-                        ? unfriendly_device_max_timelife_delay_sec
-                        : max_timelife_delay_sec;
+            const auto max_timelife_delay_sec =
+                std::chrono::seconds(m_database.config.max_timelife_delay_minutes * 60);
+            const auto unfriendly_device_max_timelife_delay_sec = std::chrono::seconds(
+                m_database.config.unfriendly_device_max_timelife_delay_minutes * 60);
+            auto timelife_delay_seconds =
+                (m_database.get_client_is_unfriendly(client_mac) == eTriStateBool::TRUE)
+                    ? unfriendly_device_max_timelife_delay_sec
+                    : max_timelife_delay_sec;
+            std::chrono::minutes temp_timelife = m_database.get_client_time_life_delay(client_mac);
+
+            if ((temp_timelife == std::chrono::minutes::zero())) {
+                return false;
+            } else if (temp_timelife > std::chrono::minutes::zero()) {
+                timelife_delay_seconds =
+                    std::chrono::duration_cast<std::chrono::seconds>(temp_timelife);
             }
 
             // Calculate client expiry due time
             auto parameters_last_edit = m_database.get_client_parameters_last_edit(client_mac);
-            auto expiry_due           = parameters_last_edit + timelife_delay;
+            auto expiry_due           = parameters_last_edit + timelife_delay_seconds;
+
             // If the expiry due is less then the last aging check, the client is considered aged.
             return expiry_due < last_aging_check;
         });

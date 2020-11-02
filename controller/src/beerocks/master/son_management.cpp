@@ -2128,7 +2128,8 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         // This flow should be blocked by the BML interface and should not be reached.
         if ((request->client_config().stay_on_initial_radio == PARAMETER_NOT_CONFIGURED) &&
             (request->client_config().stay_on_selected_device == PARAMETER_NOT_CONFIGURED) &&
-            (request->client_config().selected_bands == PARAMETER_NOT_CONFIGURED)) {
+            (request->client_config().selected_bands == PARAMETER_NOT_CONFIGURED) &&
+            (request->client_config().time_life_delay_minutes == PARAMETER_NOT_CONFIGURED)) {
             LOG(ERROR)
                 << "Received ACTION_BML_CLIENT_SET_CLIENT request without parameters to configure";
             send_response(false);
@@ -2186,6 +2187,17 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             if (!database.set_client_selected_bands(client_mac, selected_bands, false)) {
                 LOG(ERROR) << " Failed to set selected-bands to " << selected_bands
                            << " for client " << client_mac;
+                send_response(false);
+                break;
+            }
+        }
+
+        // Set time_life_delay_minutes if requested.
+        if (request->client_config().time_life_delay_minutes != PARAMETER_NOT_CONFIGURED) {
+            auto time_life_delay_minutes =
+                std::chrono::minutes(request->client_config().time_life_delay_minutes);
+            if (!database.set_client_time_life_delay(client_mac, time_life_delay_minutes, false)) {
+                LOG(ERROR) << " Failed to set max-time-life for client " << client_mac;
                 send_response(false);
                 break;
             }
@@ -2253,11 +2265,8 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         response->client().selected_bands =
             static_cast<eClientSelectedBands>(database.get_client_selected_bands(client_mac));
         // Timelife Delay in minutes
-        auto timelife_delay_minutes = database.get_client_time_life_delay(client_mac);
         response->client().time_life_delay_minutes =
-            (timelife_delay_minutes == std::chrono::minutes::zero())
-                ? PARAMETER_NOT_CONFIGURED
-                : timelife_delay_minutes.count();
+            static_cast<int>(database.get_client_time_life_delay(client_mac).count());
 
         // Currently not supported in DB
         // Stay on selected device
