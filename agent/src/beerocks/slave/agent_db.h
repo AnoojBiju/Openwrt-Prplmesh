@@ -143,6 +143,7 @@ public:
     struct sStatus {
         bool ap_autoconfiguration_completed;
         bool ap_autoconfiguration_failure;
+        uint32_t zwdfs_cac_remaining_time_sec;
     } statuses;
 
     /** 
@@ -201,6 +202,10 @@ public:
             std::string iface_name;
             sMacAddr iface_mac;
         } back;
+
+        struct sStatus {
+            bool dcs_background_scan_in_process = false;
+        } statuses;
 
         struct sClient {
             sClient(sMacAddr bssid_, size_t association_frame_length_, uint8_t *association_frame_)
