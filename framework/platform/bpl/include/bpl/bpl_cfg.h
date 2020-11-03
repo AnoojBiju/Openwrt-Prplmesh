@@ -480,7 +480,7 @@ bool cfg_get_zwdfs_enable(bool &enable);
  * Threshold will be used to avoid high frequency channel switch.
  * @return true on success, otherwise false.
  */
-bool cfg_get_best_channel_rank_threshold(int &threshold);
+bool cfg_get_best_channel_rank_threshold(uint32_t &threshold);
 
 /**
  * @brief Returns whether the persistent DB is enabled.

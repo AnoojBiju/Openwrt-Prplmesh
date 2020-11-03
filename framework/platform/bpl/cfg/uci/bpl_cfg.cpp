@@ -402,7 +402,7 @@ bool cfg_get_zwdfs_enable(bool &enable)
     return true;
 }
 
-bool cfg_get_best_channel_rank_threshold(int &threshold)
+bool cfg_get_best_channel_rank_threshold(uint32_t &threshold)
 {
     int retVal = -1;
     if (cfg_get_prplmesh_param_int_default("best_channel_rank_th", &retVal,

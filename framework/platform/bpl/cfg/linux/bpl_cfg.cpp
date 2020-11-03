@@ -346,7 +346,7 @@ bool cfg_get_zwdfs_enable(bool &enable)
     return true;
 }
 
-bool cfg_get_best_channel_rank_threshold(int &threshold)
+bool cfg_get_best_channel_rank_threshold(uint32_t &threshold)
 {
     int best_channel_rank_threshold;
 
