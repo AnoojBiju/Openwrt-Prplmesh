@@ -1594,11 +1594,35 @@ bool Controller::handle_cmdu_1905_ap_metric_response(const std::string &src_mac,
             LOG(ERROR) << "adding apMetricData from tlv has failed";
             return false;
         }
+
+        if (ap_metric_tlv->estimated_service_parameters().include_ac_be) {
+            union {
+                char bytes[4];
+                uint32_t value;
+            } estimated_service_parameters = {0};
+
+            estimated_service_parameters.bytes[1] = *ap_metric_tlv->estimated_service_info_field(0);
+            estimated_service_parameters.bytes[2] = *ap_metric_tlv->estimated_service_info_field(1);
+            estimated_service_parameters.bytes[3] = *ap_metric_tlv->estimated_service_info_field(2);
+            if (!database.set_estimated_service_parameters_be(
+                    reporting_agent_bssid, ntohl(estimated_service_parameters.value))) {
+                LOG(ERROR) << "Failed to set estimated service parameters be for bssid: "
+                           << reporting_agent_bssid;
+                return false;
+            }
+        } else {
+            LOG(WARNING)
+                << "Include bit for the Estimated Service Parameters AC = BE should always be 1";
+            if (!database.set_estimated_service_parameters_be(reporting_agent_bssid, 0)) {
+                LOG(ERROR) << "Failed to set estimated service parameters be for bssid: "
+                           << reporting_agent_bssid;
+                return false;
+            }
+        }
     }
 
     print_ap_metric_map(ap_metric_data);
 
-    // TODO store the ap metric response data in the DB and trigger the relevant task.
     // For now, this is only used for certification so update the certification cmdu.
     if (database.setting_certification_mode())
         construct_combined_infra_metric();
