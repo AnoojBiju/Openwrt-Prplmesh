@@ -1443,6 +1443,65 @@ db::get_station_current_capabilities(const std::string &mac)
     return (&n->capabilities);
 }
 
+bool db::dm_set_sta_he_capabilities(const std::string &path_to_sta,
+                                    const beerocks::message::sRadioCapabilities &sta_cap)
+{
+    bool return_val = true;
+
+    if (!m_ambiorix_datamodel->add_optional_subobject(path_to_sta, "HECapabilities")) {
+        LOG(ERROR) << "Failed to add: " << path_to_sta << "HECapabilities.";
+        return false;
+    }
+    std::string path_to_obj = path_to_sta + "HECapabilities";
+    if (!m_ambiorix_datamodel->set(path_to_obj, "rx_spatial_streams", sta_cap.ht_ss)) {
+        LOG(ERROR) << "Couldn't set rx_spatial_streams for object " << path_to_obj;
+        return_val = false;
+    }
+    // To do: find value for tx_spatial_streams PPM-792.
+    // Parse the (Re)Association Request frame.
+    if (!m_ambiorix_datamodel->set(path_to_obj, "tx_spatial_streams", sta_cap.ht_ss)) {
+        LOG(ERROR) << "Couldn't set tx_spatial_streams for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_80_80_MHz",
+                                   BANDWIDTH_80_80 <= sta_cap.vht_bw)) {
+        LOG(ERROR) << "Couldn't set VHT_80_80_MHz for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "GI_160_MHz",
+                                   static_cast<bool>(sta_cap.vht_high_bw_short_gi))) {
+        LOG(ERROR) << "Couldn't set GI_160_MHz for object " << path_to_obj;
+        return_val = false;
+    }
+    // To do: For rest of the values need to parse
+    // (Re)Association Request frame PPM-792
+    if (!m_ambiorix_datamodel->set(path_to_obj, "SU_Beamformer", false)) {
+        LOG(ERROR) << "Couldn't set SU_Beamformer for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "MU_Beamformer", false)) {
+        LOG(ERROR) << "Couldn't set MU_Beamformer for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "UL_MU_MIMO", false)) {
+        LOG(ERROR) << "Couldn't set UL_MU_MIMO for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "UL_MU_MIMO_OFDMA", false)) {
+        LOG(ERROR) << "Couldn't set UL_MU_MIMO_OFDMA for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "DL_MU_MIMO_OFDMA", false)) {
+        LOG(ERROR) << "Couldn't set DL_MU_MIMO_OFDMA for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "UL_OFDMA", false)) {
+        LOG(ERROR) << "Couldn't set UL_OFDMA for object " << path_to_obj;
+        return_val = false;
+    }
+    return return_val;
+}
+
 bool db::dm_set_sta_ht_capabilities(std::string &path_to_obj,
                                     const beerocks::message::sRadioCapabilities &sta_cap)
 {
