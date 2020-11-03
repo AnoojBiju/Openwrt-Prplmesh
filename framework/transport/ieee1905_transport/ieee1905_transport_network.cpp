@@ -112,6 +112,11 @@ void Ieee1905Transport::update_network_interfaces(
         auto &updated_network_interface = it->second;
         auto &ifname                    = updated_network_interface.ifname;
         unsigned int if_index           = if_nametoindex(ifname.c_str());
+        if (if_index == 0) {
+            MAPF_WARN("Failed to get index for interface " << ifname
+                                                           << ". Interface will be ignored.");
+            continue;
+        }
 
         MAPF_INFO("interface " << ifname << " if_index " << if_index << " is used.");
         auto &interface       = network_interfaces_[ifname]; // Creates the interface object.
