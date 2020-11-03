@@ -485,6 +485,22 @@ bool ap_wlan_hal_nl80211::update_vap_credentials(
                 conf.set_create_vap_value(vap, "wps_state", bss_it->fronthaul ? "2" : "");
                 conf.set_create_vap_value(vap, "wps_independent", "0");
                 conf.set_create_vap_value(vap, "max_num_sta", bss_it->backhaul ? "1" : "");
+                std::string multi_ap;
+                if (bss_it->fronthaul) {
+                    if (bss_it->backhaul) {
+                        multi_ap = "3";
+                    } else {
+                        multi_ap = "2";
+                    }
+                } else {
+                    if (bss_it->backhaul) {
+                        multi_ap = "1";
+                    } else {
+                        LOG(WARNING) << "BSS configured with fronthaul nor backhaul";
+                        multi_ap = "0";
+                    }
+                }
+                conf.set_create_vap_value(vap, "multi_ap", multi_ap);
 
                 // oddly enough, multi_ap_backhaul_wpa_passphrase has to be
                 // quoted, while wpa_passphrase does not...
