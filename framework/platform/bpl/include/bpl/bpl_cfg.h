@@ -196,6 +196,9 @@ struct BPL_WLAN_PARAMS {
 
     /* Wi-Fi Channel (0 for ACS) */
     int channel;
+
+    /* Sub band DFS channel enable */
+    bool sub_band_dfs;
 };
 
 /**

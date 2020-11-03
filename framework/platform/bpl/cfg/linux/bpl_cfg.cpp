@@ -224,8 +224,9 @@ int cfg_get_wifi_params(const char *iface, struct BPL_WLAN_PARAMS *wlan_params)
     if (!iface || !wlan_params) {
         return RETURN_ERR;
     }
-    wlan_params->enabled = 1;
-    wlan_params->channel = 0;
+    wlan_params->enabled      = 1;
+    wlan_params->channel      = 0;
+    wlan_params->sub_band_dfs = false;
 
     return RETURN_OK;
 }

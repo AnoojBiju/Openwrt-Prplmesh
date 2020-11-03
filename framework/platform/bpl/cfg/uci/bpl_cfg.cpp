@@ -237,6 +237,12 @@ int cfg_get_wifi_params(const char iface[BPL_IFNAME_LEN], struct BPL_WLAN_PARAMS
     cfg_uci_get_wireless_bool(TYPE_RADIO, iface, "disabled", &disabled);
     wlan_params->enabled = !disabled;
 
+    if (cfg_uci_get_wireless_bool(TYPE_RADIO, iface, "sub_band_dfs", &wlan_params->sub_band_dfs) ==
+        RETURN_ERR) {
+        // Failed to find "sub_band_dfs", set to to default value.
+        wlan_params->sub_band_dfs = false;
+    }
+
     // The UCI "channel" setting is not documented as optional, but for Intel
     // wireless (as probably for other drivers) it is. We do not want to
     // fail when wifi still works fine, so default to "auto" (0) and if
