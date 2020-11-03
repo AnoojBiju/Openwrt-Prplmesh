@@ -27,6 +27,7 @@ using ::testing::StrictMock;
 namespace {
 
 constexpr size_t size_of_uds_header = sizeof(beerocks::message::sUdsHeader);
+constexpr uint32_t iface_index      = 1;
 
 class CmduSerializerStreamImplTest : public ::testing::Test {
 protected:
@@ -34,17 +35,6 @@ protected:
 
     beerocks::net::CmduSerializerStreamImpl m_serializer;
 };
-
-TEST_F(CmduSerializerStreamImplTest, serialize_cmdu_should_fail_with_invalid_cmdu)
-{
-    sMacAddr dst_mac = beerocks::net::network_utils::ZERO_MAC;
-    sMacAddr src_mac = beerocks::net::network_utils::ZERO_MAC;
-
-    // Invalid CMDU
-    ieee1905_1::CmduMessageTx cmdu_tx(nullptr, 0);
-
-    ASSERT_FALSE(m_serializer.serialize_cmdu(dst_mac, src_mac, cmdu_tx, m_buffer));
-}
 
 TEST_F(CmduSerializerStreamImplTest, serialize_cmdu_should_fail_with_invalid_src_mac)
 {
@@ -57,7 +47,7 @@ TEST_F(CmduSerializerStreamImplTest, serialize_cmdu_should_fail_with_invalid_src
 
     cmdu_tx.create(0, ieee1905_1::eMessageType::TOPOLOGY_QUERY_MESSAGE);
 
-    ASSERT_FALSE(m_serializer.serialize_cmdu(dst_mac, src_mac, cmdu_tx, m_buffer));
+    ASSERT_FALSE(m_serializer.serialize_cmdu(iface_index, dst_mac, src_mac, cmdu_tx, m_buffer));
 }
 
 TEST_F(CmduSerializerStreamImplTest, serialize_cmdu_should_fail_with_buffer_not_empty)
@@ -79,7 +69,7 @@ TEST_F(CmduSerializerStreamImplTest, serialize_cmdu_should_fail_with_buffer_not_
         EXPECT_CALL(m_buffer, length()).WillOnce(ReturnRef(length));
     }
 
-    ASSERT_FALSE(m_serializer.serialize_cmdu(dst_mac, src_mac, cmdu_tx, m_buffer));
+    ASSERT_FALSE(m_serializer.serialize_cmdu(iface_index, dst_mac, src_mac, cmdu_tx, m_buffer));
 }
 
 TEST_F(CmduSerializerStreamImplTest, serialize_cmdu_should_fail_with_buffer_too_small)
@@ -105,7 +95,7 @@ TEST_F(CmduSerializerStreamImplTest, serialize_cmdu_should_fail_with_buffer_too_
         EXPECT_CALL(m_buffer, size()).WillOnce(Return(size));
     }
 
-    ASSERT_FALSE(m_serializer.serialize_cmdu(dst_mac, src_mac, cmdu_tx, m_buffer));
+    ASSERT_FALSE(m_serializer.serialize_cmdu(iface_index, dst_mac, src_mac, cmdu_tx, m_buffer));
 }
 
 TEST_F(CmduSerializerStreamImplTest, serialize_cmdu_should_succeed)
@@ -137,12 +127,13 @@ TEST_F(CmduSerializerStreamImplTest, serialize_cmdu_should_succeed)
         EXPECT_CALL(m_buffer, append(_, _)).WillOnce(Invoke(actual_append));
     }
 
-    ASSERT_TRUE(m_serializer.serialize_cmdu(dst_mac, src_mac, cmdu_tx, m_buffer));
+    ASSERT_TRUE(m_serializer.serialize_cmdu(iface_index, dst_mac, src_mac, cmdu_tx, m_buffer));
 
     const size_t expected_length = size_of_uds_header + cmdu_tx.getMessageLength();
     ASSERT_EQ(actual_length, expected_length);
 
     auto uds_header = reinterpret_cast<beerocks::message::sUdsHeader *>(actual_data);
+    ASSERT_EQ(uds_header->if_index, iface_index);
     ASSERT_TRUE(std::equal(dst_mac.oct, dst_mac.oct + beerocks::net::MAC_ADDR_LEN,
                            uds_header->dst_bridge_mac));
     ASSERT_TRUE(std::equal(src_mac.oct, src_mac.oct + beerocks::net::MAC_ADDR_LEN,

@@ -19,8 +19,8 @@ namespace net {
 class CmduSerializerMock : public CmduSerializer {
 public:
     MOCK_METHOD(bool, serialize_cmdu,
-                (const sMacAddr &dst_mac, const sMacAddr &src_mac,
-                 ieee1905_1::CmduMessageTx &cmdu_tx, Buffer &buffer),
+                (uint32_t iface_index, const sMacAddr &dst_mac, const sMacAddr &src_mac,
+                 ieee1905_1::CmduMessage &cmdu, Buffer &buffer),
                 (override));
 };
 
