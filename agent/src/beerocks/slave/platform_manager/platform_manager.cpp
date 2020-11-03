@@ -326,17 +326,17 @@ PlatformManager::PlatformManager(const config_file::sConfigSlave &config_,
         i++;
     }
 
-    m_cmdu_server->set_client_disconnected_handler([&](int fd) { handle_disconnected(fd); });
-    m_cmdu_server->set_cmdu_received_handler(
-        [&](int fd, uint32_t iface_index, const sMacAddr &dst_mac, const sMacAddr &src_mac,
-            ieee1905_1::CmduMessageRx &cmdu_rx) { handle_cmdu(fd, cmdu_rx); });
+    beerocks::CmduServer::EventHandlers handlers{
+        .on_client_connected    = [&](int fd) { handle_connected(fd); },
+        .on_client_disconnected = [&](int fd) { handle_disconnected(fd); },
+        .on_cmdu_received       = [&](int fd, uint32_t iface_index, const sMacAddr &dst_mac,
+                                const sMacAddr &src_mac,
+                                ieee1905_1::CmduMessageRx &cmdu_rx) { handle_cmdu(fd, cmdu_rx); },
+    };
+    m_cmdu_server->set_handlers(handlers);
 }
 
-PlatformManager::~PlatformManager()
-{
-    m_cmdu_server->clear_client_disconnected_handler();
-    m_cmdu_server->clear_cmdu_received_handler();
-}
+PlatformManager::~PlatformManager() { m_cmdu_server->clear_handlers(); }
 
 bool PlatformManager::start()
 {
@@ -628,6 +628,8 @@ bool PlatformManager::check_wlan_params_changed()
     }
     return any_slave_changed;
 }
+
+void PlatformManager::handle_connected(int fd) { LOG(INFO) << "UDS socket connected, fd = " << fd; }
 
 void PlatformManager::handle_disconnected(int fd)
 {

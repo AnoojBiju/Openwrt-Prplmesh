@@ -58,72 +58,49 @@ public:
                            const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)>;
 
     /**
+     * Set of event handler functions, one function to handle each possible event happened.
+     * Handlers are grouped into a struct to facilitate passing them as a single parameter to the
+     * method used to set the handlers.
+     * Event handlers are optional and if not set for a given event, that event will be silently
+     * ignored.
+     */
+    struct EventHandlers {
+        /**
+         * Handler function called back by the CMDU server to deal with client-connected event.
+         */
+        ClientConnectedHandler on_client_connected;
+
+        /**
+         * Handler function called back by the CMDU server to deal with client-disconnected event.
+         */
+        ClientDisconnectedHandler on_client_disconnected;
+
+        /**
+         * Handler function called back by the CMDU server to deal with CMDU-received event.
+         */
+        CmduReceivedHandler on_cmdu_received;
+    };
+
+    /**
      * Default destructor.
      */
     virtual ~CmduServer() = default;
 
     /**
-     * @brief Sets the client-connected event handler function.
+     * @brief Sets the event handler functions.
      *
-     * Sets the callback function to be executed whenever a new client connects to this server.
-     * Use nullptr to remove previously installed callback function.
+     * Sets the callback functions to be executed whenever an event occurs on this this server.
      *
-     * @param handler Client-connected event handler function (or nullptr).
+     * @param handlers Event handler functions.
      */
-    void set_client_connected_handler(const ClientConnectedHandler &handler)
-    {
-        m_client_connected_handler = handler;
-    }
+    void set_handlers(const EventHandlers &handlers) { m_handlers = handlers; }
 
     /**
-     * @brief Clears previously set client-connected event handler function.
+     * @brief Clears previously set event handler functions.
      *
-     * Clears callback function previously set. Behaves like calling the set method with nullptr.
+     * Clears callback functions previously set.
      */
-    void clear_client_connected_handler() { m_client_connected_handler = nullptr; }
-
-    /**
-     * @brief Sets the client-disconnected event handler function.
-     *
-     * Sets the callback function to be executed whenever a client disconnects from this server.
-     * Use nullptr to remove previously installed callback function.
-     *
-     * @param handler Client-disconnected event handler function (or nullptr).
-     */
-    void set_client_disconnected_handler(const ClientDisconnectedHandler &handler)
-    {
-        m_client_disconnected_handler = handler;
-    }
-
-    /**
-     * @brief Clears previously set client-disconnected event handler function.
-     *
-     * Clears callback function previously set. Behaves like calling the set method with nullptr.
-     */
-    void clear_client_disconnected_handler() { m_client_disconnected_handler = nullptr; }
-
-    /**
-     * @brief Sets the CMDU-received event handler function.
-     *
-     * Sets the callback function to handle CMDU messages received. Use nullptr to remove
-     * previously installed callback function.
-     *
-     * If a handler is set, it will be called back whenever a CMDU message is received at the
-     * server.
-     *
-     * @param handler CMDU-received event handler function (or nullptr).
-     */
-    void set_cmdu_received_handler(const CmduReceivedHandler &handler)
-    {
-        m_cmdu_received_handler = handler;
-    }
-
-    /**
-     * @brief Clears previously set CMDU-received event handler function.
-     *
-     * Clears callback function previously set. Behaves like calling the set method with nullptr.
-     */
-    void clear_cmdu_received_handler() { m_cmdu_received_handler = nullptr; }
+    void clear_handlers() { m_handlers = {}; }
 
     /**
      * @brief Sends a CMDU message.
@@ -140,24 +117,24 @@ protected:
     /**
      * @brief Notifies a client-connected event.
      *
-     * @param fd File descriptor of the socket connection the CMDU was received through.
+     * @param fd File descriptor of the socket connection.
      */
     void notify_client_connected(int fd) const
     {
-        if (m_client_connected_handler) {
-            m_client_connected_handler(fd);
+        if (m_handlers.on_client_connected) {
+            m_handlers.on_client_connected(fd);
         }
     }
 
     /**
      * @brief Notifies a client-disconnected event.
      *
-     * @param fd File descriptor of the socket connection the CMDU was received through.
+     * @param fd File descriptor of the socket connection.
      */
     void notify_client_disconnected(int fd) const
     {
-        if (m_client_disconnected_handler) {
-            m_client_disconnected_handler(fd);
+        if (m_handlers.on_client_disconnected) {
+            m_handlers.on_client_disconnected(fd);
         }
     }
 
@@ -173,29 +150,17 @@ protected:
     void notify_cmdu_received(int fd, uint32_t iface_index, const sMacAddr &dst_mac,
                               const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx) const
     {
-        if (m_cmdu_received_handler) {
-            m_cmdu_received_handler(fd, iface_index, dst_mac, src_mac, cmdu_rx);
+        if (m_handlers.on_cmdu_received) {
+            m_handlers.on_cmdu_received(fd, iface_index, dst_mac, src_mac, cmdu_rx);
         }
     }
 
 private:
     /**
-     * Client-connected event handler function that is called back whenever a new client is
-     * connected to this server.
+     * Set of event handler functions that are called back whenever a new event occurs on this
+     * server.
      */
-    ClientConnectedHandler m_client_connected_handler;
-
-    /**
-     * Client-disconnected event handler function that is called back whenever a new client is
-     * disconnected from this server.
-     */
-    ClientDisconnectedHandler m_client_disconnected_handler;
-
-    /**
-     * CMDU-received event handler function that is called back whenever a CMDU message is received
-     * at this server.
-     */
-    CmduReceivedHandler m_cmdu_received_handler;
+    EventHandlers m_handlers;
 };
 
 } // namespace beerocks

@@ -132,20 +132,21 @@ Controller::Controller(db &database_,
         LOG(DEBUG) << "Health check is DISABLED!";
     }
 
-    m_cmdu_server->set_client_connected_handler([&](int fd) { handle_connected(fd); });
-    m_cmdu_server->set_client_disconnected_handler([&](int fd) { handle_disconnected(fd); });
-    m_cmdu_server->set_cmdu_received_handler([&](int fd, uint32_t iface_index,
-                                                 const sMacAddr &dst_mac, const sMacAddr &src_mac,
-                                                 ieee1905_1::CmduMessageRx &cmdu_rx) {
-        handle_cmdu(fd, iface_index, dst_mac, src_mac, cmdu_rx);
-    });
+    beerocks::CmduServer::EventHandlers handlers{
+        .on_client_connected    = [&](int fd) { handle_connected(fd); },
+        .on_client_disconnected = [&](int fd) { handle_disconnected(fd); },
+        .on_cmdu_received =
+            [&](int fd, uint32_t iface_index, const sMacAddr &dst_mac, const sMacAddr &src_mac,
+                ieee1905_1::CmduMessageRx &cmdu_rx) {
+                handle_cmdu(fd, iface_index, dst_mac, src_mac, cmdu_rx);
+            },
+    };
+    m_cmdu_server->set_handlers(handlers);
 }
 
 Controller::~Controller()
 {
-    m_cmdu_server->clear_client_connected_handler();
-    m_cmdu_server->clear_client_disconnected_handler();
-    m_cmdu_server->clear_cmdu_received_handler();
+    m_cmdu_server->clear_handlers();
 
     LOG(DEBUG) << "closing";
 }

@@ -171,19 +171,40 @@ TEST_F(CmduServerImplTest, receive_cmdu_should_succeed)
         beerocks::CmduServerImpl cmdu_server(std::move(m_server_socket), m_cmdu_parser,
                                              m_cmdu_serializer, m_event_loop);
 
-        // Install the CMDU-received event handler function
-        bool cmdu_received         = false;
-        auto cmdu_received_handler = [&](int fd, uint32_t iface_index, const sMacAddr &dst_mac,
-                                         const sMacAddr &src_mac,
-                                         ieee1905_1::CmduMessageRx &cmdu_rx) {
-            if (fd == connected_socket_fd) {
-                cmdu_received = true;
-            }
+        // Flags to assert that events were actually fired
+        bool client_connected    = false;
+        bool client_disconnected = false;
+        bool cmdu_received       = false;
+
+        // Install the event handler functions
+        beerocks::CmduServer::EventHandlers handlers{
+            .on_client_connected =
+                [&](int fd) {
+                    if (fd == connected_socket_fd) {
+                        client_connected = true;
+                    }
+                },
+            .on_client_disconnected =
+                [&](int fd) {
+                    if (fd == connected_socket_fd) {
+                        client_disconnected = true;
+                    }
+                },
+            .on_cmdu_received =
+                [&](int fd, uint32_t iface_index, const sMacAddr &dst_mac, const sMacAddr &src_mac,
+                    ieee1905_1::CmduMessageRx &cmdu_rx) {
+                    if (fd == connected_socket_fd) {
+                        cmdu_received = true;
+                    }
+                },
         };
-        cmdu_server.set_cmdu_received_handler(cmdu_received_handler);
+        cmdu_server.set_handlers(handlers);
 
         // Emulate a new client is connected to the server socket
         server_socket_handlers.on_read(connected_socket_fd, *m_event_loop);
+
+        // Assert that client-connected event handler function has been called back
+        ASSERT_TRUE(client_connected);
 
         // Emulate the client sends a CMDU message
         connected_socket_handlers.on_read(connected_socket_fd, *m_event_loop);
@@ -193,6 +214,9 @@ TEST_F(CmduServerImplTest, receive_cmdu_should_succeed)
 
         // Emulate the client gets disconnected from the server socket
         connected_socket_handlers.on_disconnect(connected_socket_fd, *m_event_loop);
+
+        // Assert that client-disconnected event handler function has been called back
+        ASSERT_TRUE(client_disconnected);
     }
 
     EXPECT_TRUE(testing::Mock::VerifyAndClearExpectations(m_socket.get()));
