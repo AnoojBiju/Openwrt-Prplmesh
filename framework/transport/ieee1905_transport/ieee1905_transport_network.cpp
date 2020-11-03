@@ -112,6 +112,11 @@ void Ieee1905Transport::update_network_interfaces(
         auto &updated_network_interface = it->second;
         auto &ifname                    = updated_network_interface.ifname;
         unsigned int if_index           = if_nametoindex(ifname.c_str());
+        if (if_index == 0) {
+            MAPF_WARN("Failed to get index for interface " << ifname
+                                                           << ". Interface will be ignored.");
+            continue;
+        }
 
         MAPF_INFO("interface " << ifname << " if_index " << if_index << " is used.");
         auto &interface       = network_interfaces_[ifname]; // Creates the interface object.
@@ -134,6 +139,51 @@ void Ieee1905Transport::update_network_interfaces(
             set_al_mac_addr(interface.addr);
         }
     }
+}
+
+bool Ieee1905Transport::update_network_interface(const std::string &bridge_name,
+                                                 const std::string &ifname, bool iface_added)
+{
+    if (iface_added) {
+        // Add the new interface to network_interfaces_
+        unsigned int if_index = if_nametoindex(ifname.c_str());
+        if (if_index == 0) {
+            MAPF_WARN("Failed to get index for interface " << ifname);
+            return false;
+        }
+
+        MAPF_INFO("interface " << ifname << " if_index " << if_index << " is used.");
+        auto &interface =
+            network_interfaces_[ifname]; // Creates the interface object if it doesn't exist yet..
+        interface.ifname      = ifname;
+        interface.bridge_name = bridge_name;
+        interface.is_bridge   = false;
+
+        // must be called before open_interface_socket (address is used for packet filtering)
+        if (!get_interface_mac_addr(if_index, interface.addr)) {
+            MAPF_WARN("cannot get address of interface " << if_index << ".");
+            return false;
+        }
+
+        if (!interface.fd) {
+            activate_interface(interface);
+        }
+
+    } else {
+        if (network_interfaces_.count(ifname) == 0) {
+            LOG(ERROR) << "Trying to remove an interface that has not been previously configured.";
+            return false;
+        }
+        auto &iface = network_interfaces_[ifname];
+
+        MAPF_INFO("Removing interface " << ifname << " from the transport");
+        if (iface.fd) {
+            m_event_loop->remove_handlers(iface.fd->getSocketFd());
+            iface.fd = nullptr;
+        }
+        network_interfaces_.erase(ifname);
+    }
+    return true;
 }
 
 bool Ieee1905Transport::open_interface_socket(NetworkInterface &interface)
@@ -232,6 +282,18 @@ void Ieee1905Transport::handle_interface_status_change(const std::string &ifname
     } else {
         deactivate_interface(interface);
     }
+}
+
+void Ieee1905Transport::handle_bridge_state_change(const std::string &bridge_name,
+                                                   const std::string &iface_name, bool iface_added)
+{
+    MAPF_INFO("Bridge state change - interface '"
+              << iface_name << "' " << (iface_added ? "added to " : "removed from ") << "bridge '"
+              << bridge_name << "'.");
+
+    update_network_interface(bridge_name, iface_name, iface_added);
+
+    publish_interface_configuration_indication();
 }
 
 void Ieee1905Transport::deactivate_interface(NetworkInterface &interface)

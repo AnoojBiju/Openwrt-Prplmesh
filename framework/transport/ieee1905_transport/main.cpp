@@ -11,6 +11,9 @@
 #include <bcl/beerocks_backport.h>
 #include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_event_loop_impl.h>
+#include <bcl/network/bridge_state_manager_impl.h>
+#include <bcl/network/bridge_state_monitor_impl.h>
+#include <bcl/network/bridge_state_reader_impl.h>
 #include <bcl/network/interface_flags_reader_impl.h>
 #include <bcl/network/interface_state_manager_impl.h>
 #include <bcl/network/interface_state_monitor_impl.h>
@@ -88,6 +91,22 @@ create_interface_state_manager(std::shared_ptr<NetlinkEventListener> netlink_eve
                                                        std::move(interface_state_reader));
 }
 
+static std::shared_ptr<BridgeStateManager>
+create_bridge_state_manager(std::shared_ptr<NetlinkEventListener> netlink_event_listener)
+{
+    // Create the bridge state monitor
+    auto bridge_state_monitor = std::make_unique<BridgeStateMonitorImpl>(netlink_event_listener);
+    LOG_IF(!bridge_state_monitor, FATAL) << "Unable to create bridge state monitor!";
+
+    // Create the bridge state reader
+    auto bridge_state_reader = std::make_unique<BridgeStateReaderImpl>();
+    LOG_IF(!bridge_state_reader, FATAL) << "Unable to create bridge state reader!";
+
+    // Create the bridge state manager
+    return std::make_shared<BridgeStateManagerImpl>(std::move(bridge_state_monitor),
+                                                    std::move(bridge_state_reader));
+}
+
 int main(int argc, char *argv[])
 {
     mapf::Logger::Instance().LoggerInit("transport");
@@ -107,10 +126,14 @@ int main(int argc, char *argv[])
     auto interface_state_manager = create_interface_state_manager(netlink_event_listener);
     LOG_IF(!interface_state_manager, FATAL) << "Unable to create interface state manager!";
 
+    auto bridge_state_manager = create_bridge_state_manager(netlink_event_listener);
+    LOG_IF(!bridge_state_manager, FATAL) << "Unable to create bridge state manager!";
+
     /**
      * Create the IEEE1905 transport process.
      */
-    Ieee1905Transport ieee1905_transport(interface_state_manager, broker, event_loop);
+    Ieee1905Transport ieee1905_transport(interface_state_manager, bridge_state_manager, broker,
+                                         event_loop);
 
     /**
      * Start the message broker
