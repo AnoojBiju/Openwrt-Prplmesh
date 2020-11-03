@@ -95,10 +95,14 @@ public:
      * @brief Forwards given received CMDU message through the specified socket connection.
      *
      * @param fd File descriptor of the connected socket.
+     * @param iface_index Index of the network interface that the CMDU message was received on.
+     * @param dst_mac Destination MAC address.
+     * @param src_mac Source MAC address.
      * @param cmdu_rx Received CMDU message to forward.
      * @return true on success and false otherwise.
      */
-    bool forward_cmdu_to_uds(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool forward_cmdu_to_uds(int fd, uint32_t iface_index, const sMacAddr &dst_mac,
+                             const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
 
     // For agent_ucc_listener
     /**

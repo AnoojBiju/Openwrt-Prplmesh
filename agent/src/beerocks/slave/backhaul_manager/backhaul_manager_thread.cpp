@@ -418,7 +418,9 @@ bool backhaul_manager::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
     return message_com::send_cmdu(m_fd_to_socket_map[fd], cmdu_tx);
 }
 
-bool backhaul_manager::forward_cmdu_to_uds(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
+bool backhaul_manager::forward_cmdu_to_uds(int fd, uint32_t iface_index, const sMacAddr &dst_mac,
+                                           const sMacAddr &src_mac,
+                                           ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     // Swap bytes before forwarding, from host to network byte order.
     cmdu_rx.swap();
@@ -622,13 +624,13 @@ bool backhaul_manager::handle_cmdu_from_broker(uint32_t iface_index, const sMacA
 
     if (dest_slave != beerocks::net::FileDescriptor::invalid_descriptor) {
         // Forward only to the desired destination
-        if (!forward_cmdu_to_uds(dest_slave, cmdu_rx)) {
+        if (!forward_cmdu_to_uds(dest_slave, iface_index, dst_mac, src_mac, cmdu_rx)) {
             LOG(ERROR) << "forward_cmdu_to_uds() failed - fd=" << dest_slave;
         }
     } else {
         // Forward cmdu to all slaves how it is on UDS, without changing it
         for (auto soc_iter : slaves_sockets) {
-            if (!forward_cmdu_to_uds(soc_iter->slave, cmdu_rx)) {
+            if (!forward_cmdu_to_uds(soc_iter->slave, iface_index, dst_mac, src_mac, cmdu_rx)) {
                 LOG(ERROR) << "forward_cmdu_to_uds() failed - fd=" << soc_iter->slave;
             }
         }
