@@ -398,21 +398,15 @@ void LinkMetricsCollectionTask::handle_beacon_metrics_query(ieee1905_1::CmduMess
 
     cmdu_rx.swap(); // swap back before forwarding
 
-    auto uds_header = message_com::get_uds_header(cmdu_rx);
-    if (!uds_header) {
-        LOG(ERROR) << "UDS header == nullptr";
-        return;
-    }
-
     if (forward_to != beerocks::net::FileDescriptor::invalid_descriptor) {
         // Forward only to the desired destination
-        if (!m_btl_ctx.forward_cmdu_to_uds(forward_to, cmdu_rx, uds_header->length)) {
+        if (!m_btl_ctx.forward_cmdu_to_uds(forward_to, cmdu_rx)) {
             LOG(ERROR) << "forward_cmdu_to_uds() failed - fd=" << forward_to;
         }
     } else {
         // Forward cmdu to all slaves how it is on UDS, without changing it
         for (auto soc_iter : m_btl_ctx.slaves_sockets) {
-            if (!m_btl_ctx.forward_cmdu_to_uds(soc_iter->slave, cmdu_rx, uds_header->length)) {
+            if (!m_btl_ctx.forward_cmdu_to_uds(soc_iter->slave, cmdu_rx)) {
                 LOG(ERROR) << "forward_cmdu_to_uds() failed - fd=" << soc_iter->slave;
             }
         }
@@ -635,13 +629,8 @@ void LinkMetricsCollectionTask::handle_multi_ap_policy_config_request(
             std::shared_ptr<backhaul_manager::sRadioInfo> radio =
                 m_btl_ctx.get_radio(metrics_reporting_conf.radio_uid);
             if (radio) {
-                auto uds_header = message_com::get_uds_header(cmdu_rx);
-                if (!uds_header) {
-                    LOG(ERROR) << "UDS header == nullptr";
-                    continue;
-                }
                 cmdu_rx.swap(); // swap back before forwarding
-                if (!m_btl_ctx.forward_cmdu_to_uds(radio->slave, cmdu_rx, uds_header->length)) {
+                if (!m_btl_ctx.forward_cmdu_to_uds(radio->slave, cmdu_rx)) {
                     /*
                      * TODO: https://jira.prplfoundation.org/browse/PPM-657
                      *

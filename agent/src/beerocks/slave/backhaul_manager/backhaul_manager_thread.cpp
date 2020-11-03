@@ -418,10 +418,10 @@ bool backhaul_manager::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
     return message_com::send_cmdu(m_fd_to_socket_map[fd], cmdu_tx);
 }
 
-bool backhaul_manager::forward_cmdu_to_uds(int fd, ieee1905_1::CmduMessageRx &cmdu_rx,
-                                           uint16_t length)
+bool backhaul_manager::forward_cmdu_to_uds(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
-    return message_com::forward_cmdu_to_uds(m_fd_to_socket_map[fd], cmdu_rx, length);
+    return message_com::forward_cmdu_to_uds(m_fd_to_socket_map[fd], cmdu_rx,
+                                            cmdu_rx.getMessageLength());
 }
 
 // This method is temporary and will be removed at the end of PPM-753.
@@ -612,17 +612,15 @@ bool backhaul_manager::handle_cmdu_from_broker(uint32_t iface_index, const sMacA
 
     cmdu_rx.swap(); // swap back before forwarding
 
-    uint16_t length = cmdu_rx.getMessageLength();
-
     if (dest_slave != beerocks::net::FileDescriptor::invalid_descriptor) {
         // Forward only to the desired destination
-        if (!forward_cmdu_to_uds(dest_slave, cmdu_rx, length)) {
+        if (!forward_cmdu_to_uds(dest_slave, cmdu_rx)) {
             LOG(ERROR) << "forward_cmdu_to_uds() failed - fd=" << dest_slave;
         }
     } else {
         // Forward cmdu to all slaves how it is on UDS, without changing it
         for (auto soc_iter : slaves_sockets) {
-            if (!forward_cmdu_to_uds(soc_iter->slave, cmdu_rx, length)) {
+            if (!forward_cmdu_to_uds(soc_iter->slave, cmdu_rx)) {
                 LOG(ERROR) << "forward_cmdu_to_uds() failed - fd=" << soc_iter->slave;
             }
         }

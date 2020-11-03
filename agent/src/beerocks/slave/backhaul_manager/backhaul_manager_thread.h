@@ -96,10 +96,9 @@ public:
      *
      * @param fd File descriptor of the connected socket.
      * @param cmdu_rx Received CMDU message to forward.
-     * @param length Length of CMDU message.
      * @return true on success and false otherwise.
      */
-    bool forward_cmdu_to_uds(int fd, ieee1905_1::CmduMessageRx &cmdu_rx, uint16_t length);
+    bool forward_cmdu_to_uds(int fd, ieee1905_1::CmduMessageRx &cmdu_rx);
 
     // For agent_ucc_listener
     /**
