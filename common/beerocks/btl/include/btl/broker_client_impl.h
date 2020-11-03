@@ -111,6 +111,18 @@ private:
     void close_connection(bool remove_handlers = false);
 
     /**
+     * @brief Sends a CDMU message to the transport process for dispatching.
+     *
+     * @param cmdu CMDU message to send.
+     * @param dst_mac Destination MAC address (must not be empty).
+     * @param src_mac Source MAC address (must not be empty).
+     * @param iface_index Index of the network interface to use (set to 0 to send on all available
+     * interfaces).
+     * @return true on success and false otherwise.
+     */
+    bool send_cmdu_message(ieee1905_1::CmduMessage &cmdu, const sMacAddr &dst_mac,
+                           const sMacAddr &src_mac, uint32_t iface_index);
+    /**
      * @brief Sends a transport message to the server.
      *
      * If connection with server is still open, then serializes given message into a byte array
