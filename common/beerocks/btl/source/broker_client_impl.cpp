@@ -109,6 +109,22 @@ bool BrokerClientImpl::send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx, const sMacA
     return send_cmdu_message(cmdu_tx, dst_mac, src_mac, iface_index);
 }
 
+bool BrokerClientImpl::forward_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &dst_mac,
+                                    const sMacAddr &src_mac, uint32_t iface_index)
+{
+    // Swap bytes before forwarding, from host to network byte order.
+    cmdu_rx.swap();
+
+    // Use a shared_ptr with a custom deleter and the RAII programming idiom to emulate the
+    // `finally` block of a `try-finally` clause.
+    std::shared_ptr<int> finally(nullptr, [&cmdu_rx](int *p) {
+        // Swap bytes back from network to host byte order after forwarding.
+        cmdu_rx.swap();
+    });
+
+    return send_cmdu_message(cmdu_rx, dst_mac, src_mac, iface_index);
+}
+
 void BrokerClientImpl::handle_read(int fd)
 {
     // Read available bytes into buffer
