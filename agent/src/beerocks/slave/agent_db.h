@@ -97,6 +97,7 @@ public:
                 bool band_enabled;
                 // Front radio configured channel, if 0 auto channel selection.
                 uint8_t configured_channel;
+                bool sub_band_dfs;
             };
 
             // Wlan settings mapped by front interface name.

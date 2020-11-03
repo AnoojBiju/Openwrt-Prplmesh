@@ -128,10 +128,12 @@ static bool fill_platform_settings(
     /* update message */
     db->device_conf.front_radio.config[iface_name].band_enabled       = params.enabled;
     db->device_conf.front_radio.config[iface_name].configured_channel = params.channel;
+    db->device_conf.front_radio.config[iface_name].sub_band_dfs       = params.sub_band_dfs;
 
-    LOG(DEBUG) << "wlan settings:"
-               << " band_enabled=" << db->device_conf.front_radio.config[iface_name].band_enabled
-               << " channel=" << db->device_conf.front_radio.config[iface_name].configured_channel;
+    LOG(DEBUG) << "wlan settings " << iface_name << ":";
+    LOG(DEBUG) << "band_enabled=" << params.enabled;
+    LOG(DEBUG) << "channel=" << params.channel;
+    LOG(DEBUG) << "sub_band_dfs=" << params.sub_band_dfs;
 
     // initialize wlan params cache
     //erase interface cache from map if exists
