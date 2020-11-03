@@ -123,6 +123,24 @@ public:
      */
     virtual bool send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx) = 0;
 
+    /**
+     * @brief Forwards a CMDU message that was sent by a remote process.
+     *
+     * Forwards a received CMDU message to a client through the given socket connection.
+     *
+     * The CMDU message was originally sent by a remote process running in a different device
+     * (interface index, source and destination MAC addresses provide routing information).
+     *
+     * @param fd File descriptor of the socket connection to send CMDU through.
+     * @param iface_index Index of the network interface that the CMDU message was received on.
+     * @param dst_mac Destination MAC address.
+     * @param src_mac Source MAC address.
+     * @param cmdu_rx The received CMDU message to forward.
+     * @return true on success and false otherwise.
+     */
+    virtual bool forward_cmdu(int fd, uint32_t iface_index, const sMacAddr &dst_mac,
+                              const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx) = 0;
+
 protected:
     /**
      * @brief Notifies a client-connected event.

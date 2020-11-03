@@ -52,6 +52,31 @@ bool CmduPeer::send_cmdu(beerocks::net::Socket::Connection &connection,
     return connection.send(buffer);
 }
 
+bool CmduPeer::forward_cmdu(beerocks::net::Socket::Connection &connection, uint32_t iface_index,
+                            const sMacAddr &dst_mac, const sMacAddr &src_mac,
+                            ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    // Swap bytes before forwarding, from host to network byte order.
+    cmdu_rx.swap();
+
+    // Use a shared_ptr with a custom deleter and the RAII programming idiom to emulate the
+    // `finally` block of a `try-finally` clause.
+    std::shared_ptr<int> finally(nullptr, [&cmdu_rx](int *p) {
+        // Swap bytes back from network to host byte order after forwarding.
+        cmdu_rx.swap();
+    });
+
+    // Serialize CMDU into a byte array
+    beerocks::net::BufferImpl<message::MESSAGE_BUFFER_LENGTH> buffer;
+    if (!m_cmdu_serializer->serialize_cmdu(iface_index, dst_mac, src_mac, cmdu_rx, buffer)) {
+        LOG(ERROR) << "Failed to serialize CMDU! fd = " << connection.socket()->fd();
+        return false;
+    }
+
+    // Send data
+    return connection.send(buffer);
+}
+
 void CmduPeer::receive_cmdus(beerocks::net::Socket::Connection &connection,
                              beerocks::net::Buffer &buffer, const CmduReceivedHandler &handler)
 {

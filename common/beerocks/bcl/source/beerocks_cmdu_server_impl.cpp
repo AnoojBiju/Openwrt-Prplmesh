@@ -96,6 +96,21 @@ bool CmduServerImpl::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
     return CmduPeer::send_cmdu(*context.connection, cmdu_tx);
 }
 
+bool CmduServerImpl::forward_cmdu(int fd, uint32_t iface_index, const sMacAddr &dst_mac,
+                                  const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    // Find context information for given socket connection
+    auto it = m_connections.find(fd);
+    if (m_connections.end() == it) {
+        LOG(ERROR) << "Failed to forward CMDU through an unknown connection! fd = " << fd;
+        return false;
+    }
+
+    auto &context = it->second;
+
+    return CmduPeer::forward_cmdu(*context.connection, iface_index, dst_mac, src_mac, cmdu_rx);
+}
+
 bool CmduServerImpl::add_connection(int fd,
                                     std::unique_ptr<beerocks::net::Socket::Connection> connection,
                                     const beerocks::EventLoop::EventHandlers &handlers)
