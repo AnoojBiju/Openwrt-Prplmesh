@@ -33,6 +33,7 @@
 			on action validate call check_minimum 0;
 		}
 
+		
 		%read-only uint32 EstMACDataRateDownlink = 0 {
 			
 		}

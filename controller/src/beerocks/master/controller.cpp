@@ -53,6 +53,7 @@
 #include <tlvf/ieee_1905_1/tlvSupportedRole.h>
 #include <tlvf/wfa_map/tlvApMetrics.h>
 #include <tlvf/wfa_map/tlvApRadioIdentifier.h>
+#include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringResponse.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvChannelScanCapabilities.h>
@@ -468,7 +469,8 @@ bool Controller::handle_cmdu_1905_1_message(const std::string &src_mac,
         return handle_cmdu_1905_tunnelled_message(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::FAILED_CONNECTION_MESSAGE:
         return handle_cmdu_1905_failed_connection_message(src_mac, cmdu_rx);
-
+    case ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE:
+        return handle_cmdu_1905_associated_sta_link_metrics_response_message(src_mac, cmdu_rx);
     default:
         break;
     }
@@ -1655,6 +1657,22 @@ bool Controller::handle_tlv_ap_he_capabilities(ieee1905_1::CmduMessageRx &cmdu_r
         }
     }
     return ret_val;
+}
+
+bool Controller::handle_cmdu_1905_associated_sta_link_metrics_response_message(
+    const std::string &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto mid = cmdu_rx.getMessageId();
+
+    LOG(DEBUG) << "Received ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE, mid=" << std::hex << mid;
+    for (auto &sta_link_metric : cmdu_rx.getClassList<wfa_map::tlvAssociatedStaLinkMetrics>()) {
+        if (!sta_link_metric) {
+            LOG(ERROR) << "Failed getClassList<wfa_map::tlvAssociatedStaLinkMetrics>";
+            continue;
+        }
+    }
+
+    return true;
 }
 
 bool Controller::handle_tlv_ap_vht_capabilities(ieee1905_1::CmduMessageRx &cmdu_rx)
