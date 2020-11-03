@@ -225,8 +225,10 @@ void ChannelSelectionTask::handle_vs_csa_notification(
         return;
     }
 
+    auto sub_band_dfs_enable = db->device_conf.front_radio.config[sender_iface_name].sub_band_dfs;
+
     // Initiate Agent Managed ZWDFS flow.
-    if (db->device_conf.zwdfs_enable && !sender_radio->front.zwdfs &&
+    if (db->device_conf.zwdfs_enable && !sub_band_dfs_enable && !sender_radio->front.zwdfs &&
         notification->cs_params().switch_reason == beerocks::CH_SWITCH_REASON_RADAR &&
         m_zwdfs_state != eZwdfsState::WAIT_FOR_ZWDFS_CAC_STARTED &&
         m_zwdfs_state != eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED) {
