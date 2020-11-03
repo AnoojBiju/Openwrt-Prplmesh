@@ -5505,6 +5505,18 @@ bool db::dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client_mac)
         LOG(ERROR) << "Failed to set " << path_to_sta << ".MACAddress to " << client_mac;
         return false;
     }
+
+    auto time_stamp = m_ambiorix_datamodel->get_datamodel_time_format();
+    if (time_stamp.empty()) {
+        LOG(ERROR) << "Failed to get Date and Time in RFC 3339 format.";
+        return false;
+    }
+
+    if (!m_ambiorix_datamodel->set(path_to_sta, "Timestamp", time_stamp)) {
+        LOG(ERROR) << "Failed to set " << path_to_sta << ".Timestamp";
+        return false;
+    }
+
     return true;
 }
 
