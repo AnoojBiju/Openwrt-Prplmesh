@@ -426,16 +426,20 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
     // LOG(DEBUG) << "handle_cmdu_control_message(), INTEL_VS: action=" + std::to_string(beerocks_header->action()) + ", action_op=" + std::to_string(beerocks_header->action_op());
     // LOG(DEBUG) << "received radio_mac=" << beerocks_header->radio_mac() << ", local radio_mac=" << hostap_params.iface_mac;
 
-    auto db    = AgentDB::get();
-    auto radio = db->radio(m_fronthaul_iface);
-    if (!radio) {
-        LOG(DEBUG) << "Radio of interface " << m_fronthaul_iface << " does not exist on the db";
-        return false;
-    }
+    // Scope this code block to prevent shadowing of of "db" and "radio" variables internally on the
+    // switch case.
+    {
+        auto db    = AgentDB::get();
+        auto radio = db->radio(m_fronthaul_iface);
+        if (!radio) {
+            LOG(DEBUG) << "Radio of interface " << m_fronthaul_iface << " does not exist on the db";
+            return false;
+        }
 
-    // to me or not to me, this is the question...
-    if (beerocks_header->actionhdr()->radio_mac() != radio->front.iface_mac) {
-        return true;
+        // to me or not to me, this is the question...
+        if (beerocks_header->actionhdr()->radio_mac() != radio->front.iface_mac) {
+            return true;
+        }
     }
 
     if (beerocks_header->actionhdr()->direction() == beerocks::BEEROCKS_DIRECTION_CONTROLLER) {
@@ -824,6 +828,9 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
             LOG(ERROR) << "addClass ACTION_CONTROL_CLIENT_BEACON_11K_REQUEST failed";
             return false;
         }
+
+        auto db = AgentDB::get();
+
         //LOG(DEBUG) << "ACTION_CONTROL_CLIENT_BEACON_11K_REQUEST";
         // override ssid in case of:
         if (request_in->params().use_optional_ssid &&
@@ -853,6 +860,8 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
                 << "addClass cACTION_CONTROL_HOSTAP_UPDATE_STOP_ON_FAILURE_ATTEMPTS_REQUEST failed";
             return false;
         }
+        auto db = AgentDB::get();
+
         db->device_conf.stop_on_failure_attempts = request_in->attempts();
         stop_on_failure_attempts                 = db->device_conf.stop_on_failure_attempts;
         LOG(DEBUG) << "stop_on_failure_attempts new value: "
