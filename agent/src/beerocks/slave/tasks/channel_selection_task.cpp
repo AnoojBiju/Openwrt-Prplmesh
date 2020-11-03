@@ -463,7 +463,8 @@ void ChannelSelectionTask::zwdfs_fsm()
             break;
         }
 
-        if (m_selected_channel.channel == radio->channel) {
+        if (m_selected_channel.channel == radio->channel &&
+            m_selected_channel.bw == radio->bandwidth) {
             LOG(DEBUG) << "Failsafe is already second best channel, abort ZWDFS flow";
             ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
             break;
@@ -684,6 +685,25 @@ ChannelSelectionTask::zwdfs_select_best_usable_channel(const std::string &front_
     }
 
     int32_t best_rank = INT32_MAX;
+
+    // Initialize the best channel to the current channel, and add the ranking threshold
+    // so only channel that has a better rank than the current channel (with threshold),
+    // could be selected.
+    int32_t current_rank_with_threshold;
+    for (const auto &channel_bw_info : radio->channels_list.at(radio->channel).supported_bw_list) {
+        if (channel_bw_info.bandwidth == radio->bandwidth) {
+            current_rank_with_threshold =
+                channel_bw_info.rank - db->device_conf.best_channel_rank_threshold;
+            best_rank                   = current_rank_with_threshold;
+            channel_selection.channel   = radio->channel;
+            channel_selection.bw        = channel_bw_info.bandwidth;
+            channel_selection.dfs_state = radio->channels_list.at(radio->channel).dfs_state;
+            if (current_rank_with_threshold < 0) {
+                current_rank_with_threshold = 0;
+            }
+            break;
+        }
+    }
 
     for (const auto &channel_info_pair : radio->channels_list) {
         uint8_t channel = channel_info_pair.first;
