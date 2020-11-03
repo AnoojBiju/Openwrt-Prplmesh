@@ -14,9 +14,9 @@
 #include <bcl/beerocks_config_file.h>
 #include <bcl/beerocks_event_loop.h>
 #include <bcl/beerocks_logging.h>
+#include <bcl/beerocks_timer_manager.h>
 #include <bcl/network/buffer_impl.h>
 #include <bcl/network/sockets.h>
-#include <bcl/network/timer.h>
 
 #include "beerocks/tlvf/beerocks_message_common.h"
 
@@ -46,9 +46,8 @@ public:
 
     PlatformManager(const config_file::sConfigSlave &config_,
                     const std::unordered_map<int, std::string> &interfaces_map, logging &logger_,
-                    std::unique_ptr<beerocks::net::Timer<>> clean_old_arp_entries_timer,
-                    std::unique_ptr<beerocks::net::Timer<>> check_wlan_params_changed_timer,
                     std::unique_ptr<beerocks::CmduServer> cmdu_server,
+                    std::shared_ptr<beerocks::TimerManager> timer_manager,
                     std::shared_ptr<beerocks::EventLoop> event_loop);
 
     /**
@@ -197,17 +196,22 @@ private:
     /**
      * Timer to periodically clean old ARP table entries.
      */
-    std::unique_ptr<beerocks::net::Timer<>> m_clean_old_arp_entries_timer;
+    int m_clean_old_arp_entries_timer;
 
     /**
      * Timer to periodically check if WLAN parameters have changed.
      */
-    std::unique_ptr<beerocks::net::Timer<>> m_check_wlan_params_changed_timer;
+    int m_check_wlan_params_changed_timer;
 
     /**
      * CMDU server to exchange CMDU messages with clients through socket connections.
      */
     std::shared_ptr<beerocks::CmduServer> m_cmdu_server;
+
+    /**
+     * Timer manager to help using application timers.
+     */
+    std::shared_ptr<beerocks::TimerManager> m_timer_manager;
 
     /**
      * Application event loop used by the process to wait for I/O events.

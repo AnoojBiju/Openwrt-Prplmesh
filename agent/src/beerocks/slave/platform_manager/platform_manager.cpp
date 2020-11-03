@@ -299,23 +299,18 @@ std::string PlatformManager::query_db(const std::string &parameter)
     return ret;
 }
 
-PlatformManager::PlatformManager(
-    const config_file::sConfigSlave &config_,
-    const std::unordered_map<int, std::string> &interfaces_map_, logging &logger_,
-    std::unique_ptr<beerocks::net::Timer<>> clean_old_arp_entries_timer,
-    std::unique_ptr<beerocks::net::Timer<>> check_wlan_params_changed_timer,
-    std::unique_ptr<beerocks::CmduServer> cmdu_server,
-    std::shared_ptr<beerocks::EventLoop> event_loop)
+PlatformManager::PlatformManager(const config_file::sConfigSlave &config_,
+                                 const std::unordered_map<int, std::string> &interfaces_map_,
+                                 logging &logger_,
+                                 std::unique_ptr<beerocks::CmduServer> cmdu_server,
+                                 std::shared_ptr<beerocks::TimerManager> timer_manager,
+                                 std::shared_ptr<beerocks::EventLoop> event_loop)
     : m_cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer)), config(config_), interfaces_map(interfaces_map_),
-      logger(logger_), m_clean_old_arp_entries_timer(std::move(clean_old_arp_entries_timer)),
-      m_check_wlan_params_changed_timer(std::move(check_wlan_params_changed_timer)),
-      m_cmdu_server(std::move(cmdu_server)), m_event_loop(event_loop)
+      logger(logger_), m_cmdu_server(std::move(cmdu_server)), m_timer_manager(timer_manager),
+      m_event_loop(event_loop)
 {
-    LOG_IF(!m_clean_old_arp_entries_timer, FATAL)
-        << "clean-old-ARP-entries timer is a null pointer!";
-    LOG_IF(!m_check_wlan_params_changed_timer, FATAL)
-        << "check-WLAN-params-changed timer is a null pointer!";
     LOG_IF(!m_cmdu_server, FATAL) << "CMDU server is a null pointer!";
+    LOG_IF(!m_timer_manager, FATAL) << "Timer manager is a null pointer!";
     LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
 
     enable_arp_monitor = (config.enable_arp_monitor == "1");
@@ -345,58 +340,41 @@ PlatformManager::~PlatformManager()
 
 bool PlatformManager::start()
 {
-    {
-        // Register event handlers for the check-WLAN-params-changed timer
-        beerocks::EventLoop::EventHandlers handlers{
-            // Check if WLAN parameters have changed
-            .on_read =
-                [&](int fd, EventLoop &loop) {
-                    uint64_t number_of_expirations;
-                    if (m_check_wlan_params_changed_timer->read(number_of_expirations)) {
-                        check_wlan_params_changed();
-                    }
-
-                    return true;
-                },
-        };
-
-        if (!m_event_loop->register_handlers(m_check_wlan_params_changed_timer->fd(), handlers)) {
-            LOG(ERROR)
-                << "Failed registering event handlers for the check-WLAN-params-changed timer!";
-            return false;
+    // In case of error in one of the steps of this method, we have to undo all the previous steps
+    // (like when rolling back a database transaction, where either all steps get executed or none
+    // of them gets executed)
+    std::deque<std::function<void()>> rollback_actions;
+    auto rollback = [&]() {
+        for (const auto &action : rollback_actions) {
+            action();
         }
+    };
 
-        // Start the check-WLAN-params-changed timer
-        m_check_wlan_params_changed_timer->schedule(check_wlan_params_changed_timer_interval,
-                                                    check_wlan_params_changed_timer_interval);
+    // Create a timer to periodically check if WLAN parameters have changed
+    m_check_wlan_params_changed_timer = m_timer_manager->add_timer(
+        check_wlan_params_changed_timer_interval, check_wlan_params_changed_timer_interval,
+        [&](int fd, beerocks::EventLoop &loop) {
+            check_wlan_params_changed();
+            return true;
+        });
+    if (m_check_wlan_params_changed_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
+        LOG(ERROR) << "Failed to create the check-WLAN-parameters-changed timer";
+        return false;
     }
-
-    {
-        // Register event handlers for the clean-old-ARP-entries timer
-        beerocks::EventLoop::EventHandlers handlers{
-            // Clean old ARP table entries
-            .on_read =
-                [&](int fd, EventLoop &loop) {
-                    uint64_t number_of_expirations;
-                    if (m_clean_old_arp_entries_timer->read(number_of_expirations)) {
-                        clean_old_arp_entries();
-                    }
-
-                    return true;
-                },
-        };
-
-        if (!m_event_loop->register_handlers(m_clean_old_arp_entries_timer->fd(), handlers)) {
-            LOG(ERROR) << "Failed registering event handlers for the clean-old-ARP-entries timer!";
-            return false;
-        }
-    }
+    LOG(DEBUG) << "Check-WLAN-parameters-changed timer created with fd = "
+               << m_check_wlan_params_changed_timer;
+    rollback_actions.emplace_front([&]() {
+        m_timer_manager->remove_timer(m_check_wlan_params_changed_timer);
+        m_check_wlan_params_changed_timer = beerocks::net::FileDescriptor::invalid_descriptor;
+    });
 
     // Initialize the BPL (Beerocks Platform Library)
     if (bpl::bpl_init() < 0) {
         LOG(ERROR) << "Failed to initialize BPL!";
-        return (false);
+        rollback();
+        return false;
     }
+    rollback_actions.emplace_front([&]() { bpl::bpl_close(); });
 
     int i = 0;
     for (int slave_num = 0; slave_num < IRE_MAX_SLAVES && i < BPL_NUM_OF_INTERFACES; ++slave_num) {
@@ -433,6 +411,7 @@ bool PlatformManager::start()
     m_should_stop = false;
     if (!work_queue.start()) {
         LOG(ERROR) << "Failed starting asynchronous work queue";
+        rollback();
         return false;
     }
 
@@ -458,17 +437,12 @@ bool PlatformManager::stop()
 
     bpl_iface_wlan_params_map.clear();
 
-    // Remove installed event handlers for the clean-old-ARP-entries timer
-    if (!m_event_loop->remove_handlers(m_clean_old_arp_entries_timer->fd())) {
-        result = false;
-    }
-
-    // Cancel the check-WLAN-params-changed timer
-    m_check_wlan_params_changed_timer->cancel();
-
-    // Remove installed event handlers for the check-WLAN-params-changed timer
-    if (!m_event_loop->remove_handlers(m_check_wlan_params_changed_timer->fd())) {
-        result = false;
+    // Cancel and remove the check-WLAN-parameters-changed timer
+    if (m_check_wlan_params_changed_timer != beerocks::net::FileDescriptor::invalid_descriptor) {
+        if (!m_timer_manager->remove_timer(m_check_wlan_params_changed_timer)) {
+            result = false;
+        }
+        m_check_wlan_params_changed_timer = beerocks::net::FileDescriptor::invalid_descriptor;
     }
 
     return result;
@@ -1464,10 +1438,15 @@ bool PlatformManager::init_arp_monitor()
         // Initialize the ARP entries cleanup timestamp
         m_tpArpEntriesCleanup = std::chrono::steady_clock::now();
 
-        // Start the clean-old-ARP-entries timer
-        if (!m_clean_old_arp_entries_timer->schedule(clean_old_arp_entries_timer_interval,
-                                                     clean_old_arp_entries_timer_interval)) {
-            LOG(ERROR) << "Unable to schedule clean-old-ARP-entries timer!";
+        // Create a timer to periodically clean old ARP table entries
+        m_clean_old_arp_entries_timer = m_timer_manager->add_timer(
+            clean_old_arp_entries_timer_interval, clean_old_arp_entries_timer_interval,
+            [&](int fd, beerocks::EventLoop &loop) {
+                clean_old_arp_entries();
+                return true;
+            });
+        if (m_clean_old_arp_entries_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
+            LOG(ERROR) << "Failed to create the clean-old-ARP-entries timer";
             stop_arp_monitor();
             return false;
         }
@@ -1498,8 +1477,11 @@ void PlatformManager::stop_arp_monitor()
         m_arp_mon_socket_connection.reset();
     }
 
-    // Cancel the clean-old-ARP-entries timer
-    m_clean_old_arp_entries_timer->cancel();
+    // Cancel and remove the clean-old-ARP-entries timer
+    if (m_clean_old_arp_entries_timer != beerocks::net::FileDescriptor::invalid_descriptor) {
+        m_timer_manager->remove_timer(m_clean_old_arp_entries_timer);
+        m_clean_old_arp_entries_timer = beerocks::net::FileDescriptor::invalid_descriptor;
+    }
 }
 
 bool PlatformManager::restart_arp_monitor()

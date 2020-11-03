@@ -14,13 +14,15 @@
 #include <bcl/beerocks_config_file.h>
 #include <bcl/beerocks_event_loop_impl.h>
 #include <bcl/beerocks_logging.h>
+#include <bcl/beerocks_timer_factory_impl.h>
+#include <bcl/beerocks_timer_manager_impl.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/beerocks_version.h>
 #include <bcl/network/network_utils.h>
 #include <bcl/network/sockets_impl.h>
-#include <bcl/network/timer_impl.h>
-#include <easylogging++.h>
 #include <mapf/common/utils.h>
+
+#include <easylogging++.h>
 
 // Do not use this macro anywhere else in ire process
 // It should only be there in one place in each executable module
@@ -277,18 +279,6 @@ start_son_slave_thread(int slave_num,
     return son_slave;
 }
 
-static std::unique_ptr<beerocks::net::Timer<>> create_check_wlan_params_changed_timer()
-{
-    // Create timer to periodically check if WLAN parameters have changed
-    return std::make_unique<beerocks::net::TimerImpl<>>();
-}
-
-static std::unique_ptr<beerocks::net::Timer<>> create_clean_old_arp_entries_timer()
-{
-    // Create timer to periodically clean old ARP table entries
-    return std::make_unique<beerocks::net::TimerImpl<>>();
-}
-
 static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slave_conf,
                               const std::unordered_map<int, std::string> &interfaces_map, int argc,
                               char *argv[])
@@ -318,6 +308,14 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     auto event_loop = std::make_shared<beerocks::EventLoopImpl>();
     LOG_IF(!event_loop, FATAL) << "Unable to create event loop!";
 
+    // Create timer factory to create instances of timers.
+    auto timer_factory = std::make_shared<beerocks::TimerFactoryImpl>();
+    LOG_IF(!timer_factory, FATAL) << "Unable to create timer factory!";
+
+    // Create timer manager to help using application timers.
+    auto timer_manager = std::make_shared<beerocks::TimerManagerImpl>(timer_factory, event_loop);
+    LOG_IF(!timer_manager, FATAL) << "Unable to create timer manager!";
+
     // Create UDS address where the server socket will listen for incoming connection requests.
     std::string uds_path = beerocks_slave_conf.temp_path + "/" + std::string(BEEROCKS_PLAT_MGR_UDS);
     auto uds_address     = beerocks::net::UdsAddress::create_instance(uds_path);
@@ -327,16 +325,8 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     auto cmdu_server = beerocks::CmduServerFactory::create_instance(uds_address, event_loop);
     LOG_IF(!cmdu_server, FATAL) << "Unable to create CMDU server!";
 
-    auto check_wlan_params_changed_timer = create_check_wlan_params_changed_timer();
-    LOG_IF(!check_wlan_params_changed_timer, FATAL)
-        << "Unable to create check-WLAN-parameters-changed timer!";
-
-    auto clean_old_arp_entries_timer = create_clean_old_arp_entries_timer();
-    LOG_IF(!clean_old_arp_entries_timer, FATAL) << "Unable to create clean-old-ARP-entries timer!";
-
-    beerocks::PlatformManager platform_manager(
-        beerocks_slave_conf, interfaces_map, *agent_logger, std::move(clean_old_arp_entries_timer),
-        std::move(check_wlan_params_changed_timer), std::move(cmdu_server), event_loop);
+    beerocks::PlatformManager platform_manager(beerocks_slave_conf, interfaces_map, *agent_logger,
+                                               std::move(cmdu_server), timer_manager, event_loop);
 
     // Start platform manager
     LOG_IF(!platform_manager.start(), FATAL) << "Unable to start platform manager!";
