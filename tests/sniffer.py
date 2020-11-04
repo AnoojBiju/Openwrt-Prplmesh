@@ -141,14 +141,12 @@ class Sniffer:
     def get_packet_capture(self):
         '''Get a list of packets from the last started tcpdump.'''
         if not self.current_outputfile:
-            err("get_packet_capture but no capture file")
-            return []
+            raise ValueError("get_packet_capture but no capture file")
 
         # tshark just prints "[]" and exits with 0 if .pcap file doesn't exist
         # so verifying that capture file exists externally
         if not os.path.isfile(self.current_outputfile):
-            err("Capture file {} does not exist".format(self.current_outputfile))
-            return []
+            raise ValueError("Capture file {} does not exist".format(self.current_outputfile))
 
         tshark_command = ['tshark', '-r', self.current_outputfile, '-T', 'json',
                           '-Y', 'frame.number >= {}'.format(self.checkpoint_frame_number)]
@@ -185,8 +183,7 @@ class Sniffer:
 
             return [Packet(x) for x in capture]
         except json.JSONDecodeError as error:
-            err("capture JSON decoding failed: {}".format(error))
-            return []
+            raise ValueError("capture JSON decoding failed: {}".format(error))
 
     def get_cmdu_capture(self, match_function: Callable[[Packet], bool]) -> [Packet]:
         """Get a list of filtered IEEE1905.1 packets from the last started tcpdump.

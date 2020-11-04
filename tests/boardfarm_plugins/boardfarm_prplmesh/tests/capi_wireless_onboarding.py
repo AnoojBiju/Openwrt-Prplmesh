@@ -19,6 +19,8 @@ class CapiWirelessOnboarding(PrplMeshBaseTest):
         except AttributeError as ae:
             raise SkipTest(ae)
 
+        self.dev.DUT.wired_sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
+
         # Step 1: reset
         agent.ucc_socket.cmd_reply("dev_reset_default,devrole,agent,program,map,type,DUT")
         self.checkpoint()
@@ -61,8 +63,6 @@ class CapiWirelessOnboarding(PrplMeshBaseTest):
             raise SkipTest(ae)
 
         try:
-            test.dev.DUT.wired_sniffer.start(test.__class__.__name__ + "-" + test.dev.DUT.name)
-
             agent.ucc_socket.cmd_reply("dev_reset_default,devrole,agent,program,map,type,DUT")
             test.checkpoint()
             time.sleep(2)
