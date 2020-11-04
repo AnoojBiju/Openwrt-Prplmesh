@@ -54,6 +54,7 @@ Individuals:
 - Ram Marzin (Intel Corporation)
 - Ran Regev (prpl Foundation and MaxLinear via Devalore)
 - Raphaël Mélotte (prpl Foundation via Essensium/Mind)
+- Rudolf Svanda (GlobalLogic)
 - Segev Ravgad (Intel Corporation)
 - Semyon Barenboym (Intel Corporation)
 - Sinan Akpolat (Lifemote)
