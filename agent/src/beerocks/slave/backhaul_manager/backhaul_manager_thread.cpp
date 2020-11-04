@@ -436,6 +436,14 @@ bool backhaul_manager::forward_cmdu_to_uds(int fd, uint32_t iface_index, const s
                                             cmdu_rx.getMessageLength());
 }
 
+bool backhaul_manager::send_cmdu_to_broker_temp(ieee1905_1::CmduMessageTx &cmdu_tx,
+                                                const sMacAddr &dst_mac, const sMacAddr &src_mac,
+                                                const std::string &iface_name)
+{
+    return send_cmdu_to_broker(cmdu_tx, tlvf::mac_to_string(dst_mac), tlvf::mac_to_string(src_mac),
+                               iface_name);
+}
+
 bool backhaul_manager::forward_cmdu_to_broker(ieee1905_1::CmduMessageRx &cmdu_rx,
                                               const sMacAddr &dst_mac, const sMacAddr &src_mac,
                                               const std::string &iface_name)

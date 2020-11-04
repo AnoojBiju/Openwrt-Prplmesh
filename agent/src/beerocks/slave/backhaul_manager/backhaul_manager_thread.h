@@ -105,6 +105,19 @@ public:
                              const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
+     * @brief Sends CDMU to transport for dispatching.
+     *
+     * @param cmdu CMDU message to send.
+     * @param dst_mac Destination MAC address.
+     * @param src_mac Source MAC address.
+     * @param iface_name Name of the network interface to use (set to empty string to send on all
+     * available interfaces).
+     * @return true on success and false otherwise.
+     */
+    bool send_cmdu_to_broker_temp(ieee1905_1::CmduMessageTx &cmdu, const sMacAddr &dst_mac,
+                                  const sMacAddr &src_mac, const std::string &iface_name = "");
+
+    /**
      * @brief Forwards given received CMDU message to the broker server for dispatching.
      *
      * @param cmdu_rx Received CMDU message to forward.
