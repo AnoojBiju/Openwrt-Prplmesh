@@ -243,8 +243,7 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
 
         LOG(DEBUG) << "Sending LINK_METRIC_RESPONSE_MESSAGE (invalid neighbour), mid: " << std::hex
                    << mid;
-        m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
-                                      tlvf::mac_to_string(db->bridge.mac));
+        m_btl_ctx.send_cmdu_to_broker_temp(m_cmdu_tx, src_mac, db->bridge.mac);
         return;
     }
 
@@ -284,8 +283,7 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
     }
 
     LOG(DEBUG) << "Sending LINK_METRIC_RESPONSE_MESSAGE, mid: " << std::hex << mid;
-    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
-                                  tlvf::mac_to_string(db->bridge.mac));
+    m_btl_ctx.send_cmdu_to_broker_temp(m_cmdu_tx, src_mac, db->bridge.mac);
 }
 
 void LinkMetricsCollectionTask::handle_combined_infrastructure_metrics(
@@ -307,8 +305,7 @@ void LinkMetricsCollectionTask::handle_combined_infrastructure_metrics(
     }
     LOG(DEBUG) << "sending ACK message to the originator, mid=" << std::hex << mid;
     auto db = AgentDB::get();
-    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
-                                  tlvf::mac_to_string(db->bridge.mac));
+    m_btl_ctx.send_cmdu_to_broker_temp(m_cmdu_tx, src_mac, db->bridge.mac);
 }
 
 void LinkMetricsCollectionTask::handle_beacon_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -367,8 +364,7 @@ void LinkMetricsCollectionTask::handle_beacon_metrics_query(ieee1905_1::CmduMess
                    << mid << " tlv error code: " << errorSS.str();
 
         // send the error
-        m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
-                                      tlvf::mac_to_string(db->bridge.mac));
+        m_btl_ctx.send_cmdu_to_broker_temp(m_cmdu_tx, src_mac, db->bridge.mac);
         return;
     }
 
@@ -378,8 +374,7 @@ void LinkMetricsCollectionTask::handle_beacon_metrics_query(ieee1905_1::CmduMess
     LOG(DEBUG) << "BEACON METRICS QUERY: sending ACK message to the originator mid: " << std::hex
                << mid; // USED IN TESTS
 
-    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
-                                  tlvf::mac_to_string(db->bridge.mac));
+    m_btl_ctx.send_cmdu_to_broker_temp(m_cmdu_tx, src_mac, db->bridge.mac);
 
     // forward message to fronthaul
     /*
@@ -462,8 +457,7 @@ void LinkMetricsCollectionTask::handle_associated_sta_link_metrics_query(
         error_code_tlv->sta_mac() = mac->sta_mac();
 
         LOG(DEBUG) << "Send a ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE back to controller";
-        m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
-                                      tlvf::mac_to_string(db->bridge.mac));
+        m_btl_ctx.send_cmdu_to_broker_temp(m_cmdu_tx, src_mac, db->bridge.mac);
         return;
     }
     auto client_it = radio->associated_clients.find(mac->sta_mac());
@@ -696,8 +690,7 @@ void LinkMetricsCollectionTask::handle_multi_ap_policy_config_request(
     }
 
     auto db = AgentDB::get();
-    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
-                                  tlvf::mac_to_string(db->bridge.mac));
+    m_btl_ctx.send_cmdu_to_broker_temp(m_cmdu_tx, src_mac, db->bridge.mac);
 }
 
 void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -882,8 +875,7 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
     m_ap_metric_response.clear();
 
     LOG(DEBUG) << "Sending AP_METRICS_RESPONSE_MESSAGE, mid=" << std::hex << mid;
-    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(db->controller_info.bridge_mac),
-                                  tlvf::mac_to_string(db->bridge.mac));
+    m_btl_ctx.send_cmdu_to_broker_temp(m_cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
 }
 
 bool LinkMetricsCollectionTask::add_link_metrics_tlv(const sMacAddr &reporter_al_mac,

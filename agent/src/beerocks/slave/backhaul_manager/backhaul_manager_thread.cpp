@@ -1172,8 +1172,8 @@ bool backhaul_manager::backhaul_fsm_main(bool &skip_select)
             create_backhaul_steering_response(wfa_map::tlvErrorCode::eReasonCode::RESERVED);
 
             LOG(DEBUG) << "Sending BACKHAUL_STA_STEERING_RESPONSE_MESSAGE";
-            send_cmdu_to_broker(cmdu_tx, tlvf::mac_to_string(db->controller_info.bridge_mac),
-                                bridge_info.mac);
+            send_cmdu_to_broker_temp(cmdu_tx, db->controller_info.bridge_mac,
+                                     tlvf::mac_from_string(bridge_info.mac));
         }
         break;
     }
@@ -2076,8 +2076,7 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
         }
 
         LOG(DEBUG) << "Send AssociatedStaLinkMetrics to controller, mid = " << mid;
-        send_cmdu_to_broker(cmdu_tx, tlvf::mac_to_string(db->controller_info.bridge_mac),
-                            tlvf::mac_to_string(db->bridge.mac));
+        send_cmdu_to_broker_temp(cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_ZWDFS_RADIO_DETECTED: {
@@ -2863,8 +2862,8 @@ bool backhaul_manager::handle_backhaul_steering_request(ieee1905_1::CmduMessageR
     auto db = AgentDB::get();
 
     LOG(DEBUG) << "Sending ACK message to the originator, mid=" << std::hex << mid;
-    send_cmdu_to_broker(cmdu_tx, tlvf::mac_to_string(db->controller_info.bridge_mac),
-                        bridge_info.mac);
+    send_cmdu_to_broker_temp(cmdu_tx, db->controller_info.bridge_mac,
+                             tlvf::mac_from_string(bridge_info.mac));
 
     auto channel    = bh_sta_steering_req->target_channel_number();
     auto oper_class = bh_sta_steering_req->operating_class();
@@ -2883,8 +2882,8 @@ bool backhaul_manager::handle_backhaul_steering_request(ieee1905_1::CmduMessageR
             return false;
         }
 
-        send_cmdu_to_broker(cmdu_tx, tlvf::mac_to_string(db->controller_info.bridge_mac),
-                            bridge_info.mac);
+        send_cmdu_to_broker_temp(cmdu_tx, db->controller_info.bridge_mac,
+                                 tlvf::mac_from_string(bridge_info.mac));
 
         return false;
     }
@@ -2906,8 +2905,8 @@ bool backhaul_manager::handle_backhaul_steering_request(ieee1905_1::CmduMessageR
         LOG(ERROR) << "Couldn't associate active HAL with bssid: " << bssid;
 
         LOG(DEBUG) << "Sending ACK message to the originator, mid=" << std::hex << mid;
-        send_cmdu_to_broker(cmdu_tx, tlvf::mac_to_string(db->controller_info.bridge_mac),
-                            bridge_info.mac);
+        send_cmdu_to_broker_temp(cmdu_tx, db->controller_info.bridge_mac,
+                                 tlvf::mac_from_string(bridge_info.mac));
 
         auto response = create_backhaul_steering_response(
             wfa_map::tlvErrorCode::eReasonCode::
@@ -2918,8 +2917,8 @@ bool backhaul_manager::handle_backhaul_steering_request(ieee1905_1::CmduMessageR
             return false;
         }
 
-        send_cmdu_to_broker(cmdu_tx, tlvf::mac_to_string(db->controller_info.bridge_mac),
-                            bridge_info.mac);
+        send_cmdu_to_broker_temp(cmdu_tx, db->controller_info.bridge_mac,
+                                 tlvf::mac_from_string(bridge_info.mac));
 
         return false;
     }
