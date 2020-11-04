@@ -583,13 +583,9 @@ bool backhaul_manager::handle_cmdu(int fd, uint32_t iface_index, const sMacAddr 
     // Forward the data (cmdu) to bus
     // LOG(DEBUG) << "forwarding slave->master message, controller_bridge_mac="
     //            << (db->controller_info.bridge_mac);
-    cmdu_rx.swap(); //swap back before forwarding
-
-    uint16_t length = cmdu_rx.getMessageLength();
 
     auto db = AgentDB::get();
-    return send_cmdu_to_broker(cmdu_rx, tlvf::mac_to_string(dst_mac),
-                               tlvf::mac_to_string(db->bridge.mac), length);
+    return forward_cmdu_to_broker(cmdu_rx, dst_mac, db->bridge.mac);
 }
 
 bool backhaul_manager::handle_cmdu_from_broker(uint32_t iface_index, const sMacAddr &dst_mac,
@@ -2194,11 +2190,8 @@ bool backhaul_manager::handle_slave_1905_1_message(ieee1905_1::CmduMessageRx &cm
             }
 
             // Send the CMDU to the broker
-            auto uds_header = message_com::get_uds_header(cmdu_rx);
-            cmdu_rx.swap(); // swap back before sending to the broker
-            return send_cmdu_to_broker(cmdu_rx, tlvf::mac_to_string(db->controller_info.bridge_mac),
-                                       tlvf::mac_to_string(db->bridge.mac), uds_header->length,
-                                       db->bridge.iface_name);
+            return forward_cmdu_to_broker(cmdu_rx, db->controller_info.bridge_mac, db->bridge.mac,
+                                          db->bridge.iface_name);
         }
 
         return true;
@@ -2830,20 +2823,13 @@ bool backhaul_manager::handle_slave_failed_connection_message(ieee1905_1::CmduMe
     // report
     ++unsuccessful_association_policy.number_of_reports_in_last_minute;
 
-    auto uds_header = message_com::get_uds_header(cmdu_rx);
-    if (!uds_header) {
-        LOG(ERROR) << "Failed to get uds_header.";
-        return false;
-    }
-
     const auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Sending FAILED_CONNECTION_MESSAGE, mid=" << std::hex << int(mid);
 
     auto db = AgentDB::get();
-    cmdu_rx.swap();
-    return send_cmdu_to_broker(cmdu_rx, tlvf::mac_to_string(db->controller_info.bridge_mac),
-                               tlvf::mac_to_string(db->bridge.mac), uds_header->length,
-                               db->bridge.iface_name);
+
+    return forward_cmdu_to_broker(cmdu_rx, db->controller_info.bridge_mac, db->bridge.mac,
+                                  db->bridge.iface_name);
 }
 
 bool backhaul_manager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx &cmdu_rx,
