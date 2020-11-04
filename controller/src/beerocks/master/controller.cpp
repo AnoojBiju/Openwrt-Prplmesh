@@ -89,7 +89,7 @@ constexpr auto tasks_timer_period = std::chrono::milliseconds(50);
 constexpr auto operations_timer_period = std::chrono::milliseconds(1000);
 
 Controller::Controller(db &database_,
-                       std::shared_ptr<beerocks::btl::BrokerClientFactory> broker_client_factory,
+                       std::unique_ptr<beerocks::btl::BrokerClientFactory> broker_client_factory,
                        std::unique_ptr<beerocks::UccServer> ucc_server,
                        std::unique_ptr<beerocks::CmduServer> cmdu_server,
                        std::shared_ptr<beerocks::TimerManager> timer_manager,
@@ -97,8 +97,9 @@ Controller::Controller(db &database_,
     : cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer)),
       cert_cmdu_tx(m_cert_tx_buffer, sizeof(m_cert_tx_buffer)), database(database_),
       m_controller_ucc_listener(database_, cert_cmdu_tx, std::move(ucc_server)),
-      m_broker_client_factory(broker_client_factory), m_cmdu_server(std::move(cmdu_server)),
-      m_timer_manager(timer_manager), m_event_loop(event_loop)
+      m_broker_client_factory(std::move(broker_client_factory)),
+      m_cmdu_server(std::move(cmdu_server)), m_timer_manager(timer_manager),
+      m_event_loop(event_loop)
 {
     LOG_IF(!m_broker_client_factory, FATAL) << "Broker client factory is a null pointer!";
     LOG_IF(!m_cmdu_server, FATAL) << "CMDU server is a null pointer!";

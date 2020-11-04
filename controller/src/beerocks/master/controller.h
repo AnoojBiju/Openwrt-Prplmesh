@@ -25,8 +25,6 @@
 #include <bcl/beerocks_ucc_server.h>
 #include <bcl/network/file_descriptor.h>
 #include <bcl/network/network_utils.h>
-#include <btl/broker_client.h>
-
 #include <btl/broker_client_factory.h>
 
 #include <mapf/common/encryption.h>
@@ -48,7 +46,7 @@ class Controller {
 
 public:
     Controller(db &database_,
-               std::shared_ptr<beerocks::btl::BrokerClientFactory> broker_client_factory,
+               std::unique_ptr<beerocks::btl::BrokerClientFactory> broker_client_factory,
                std::unique_ptr<beerocks::UccServer> ucc_server,
                std::unique_ptr<beerocks::CmduServer> cmdu_server,
                std::shared_ptr<beerocks::TimerManager> timer_manager,
@@ -266,7 +264,7 @@ private:
      * Broker client instances are used to exchange CMDU messages with remote processes running in
      * other devices in the network via the broker server running in the transport process.
      */
-    std::shared_ptr<beerocks::btl::BrokerClientFactory> m_broker_client_factory;
+    std::unique_ptr<beerocks::btl::BrokerClientFactory> m_broker_client_factory;
 
     /**
      * CMDU server to exchange CMDU messages with clients through socket connections.
