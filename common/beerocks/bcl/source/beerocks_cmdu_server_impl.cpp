@@ -113,7 +113,7 @@ bool CmduServerImpl::add_connection(int fd,
                                     std::unique_ptr<beerocks::net::Socket::Connection> connection,
                                     const beerocks::EventLoop::EventHandlers &handlers)
 {
-    LOG(DEBUG) << "Adding new connection, fd = " << fd;
+    // LOG(DEBUG) << "Adding new connection, fd = " << fd;
 
     // Register event handlers for the connected socket
     if (!m_event_loop->register_handlers(fd, handlers)) {
@@ -134,7 +134,7 @@ bool CmduServerImpl::add_connection(int fd,
 
 bool CmduServerImpl::remove_connection(int fd, bool remove_handlers)
 {
-    LOG(DEBUG) << "Removing connection, fd = " << fd;
+    // LOG(DEBUG) << "Removing connection, fd = " << fd;
 
     // Find context information for given socket connection
     auto it = m_connections.find(fd);
@@ -160,7 +160,7 @@ bool CmduServerImpl::remove_connection(int fd, bool remove_handlers)
 
 void CmduServerImpl::handle_connect(int fd)
 {
-    LOG(DEBUG) << "Accepting connection, fd = " << fd;
+    // LOG(DEBUG) << "Accepting connection, fd = " << fd;
 
     beerocks::net::UdsAddress address;
     auto connection = m_server_socket->accept(address);
