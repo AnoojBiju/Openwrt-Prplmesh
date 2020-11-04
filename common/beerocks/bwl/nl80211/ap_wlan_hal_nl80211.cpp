@@ -469,8 +469,34 @@ bool ap_wlan_hal_nl80211::update_vap_credentials(
                     disable_pmksa_caching.assign("1");
                     okc.assign("0");
                     wpa_disable_eapol_key_retries.assign("0");
+                } else if (bss_it->authentication_type ==
+                           WSC::eWscAuth(WSC::eWscAuth::WSC_AUTH_WPA2PSK |
+                                         WSC::eWscAuth::WSC_AUTH_SAE)) {
+                    wpa = 0x2;
+                    wpa_key_mgmt.assign("WPA-PSK SAE");
+
+                    if (bss_it->encryption_type != WSC::eWscEncr::WSC_ENCR_AES) {
+                        LOG(ERROR)
+                            << "Autoconfiguration:  " << vap << " CCMP(AES) is required for WPA3";
+                        return;
+                    }
+                    wpa_pairwise.assign("CCMP");
+
+                    if (bss_it->network_key.length() < 8 || bss_it->network_key.length() > 64) {
+                        LOG(ERROR) << "Autoconfiguration: " << vap << " invalid network key length "
+                                   << bss_it->network_key.length();
+                        return;
+                    }
+                    wpa_passphrase.assign(bss_it->network_key);
+
+                    ieee80211w.assign("2");
+                    disable_pmksa_caching.assign("1");
+                    okc.assign("1");
+                    wpa_disable_eapol_key_retries.assign("0");
                 } else {
-                    LOG(ERROR) << "Autoconfiguration: " << vap << " invalid authentication type";
+                    LOG(ERROR) << "Autoconfiguration: " << vap << " invalid authentication type: "
+                               << son::wireless_utils::wsc_to_bwl_authentication(
+                                      bss_it->authentication_type);
                     abort = true;
                     return;
                 }
