@@ -4052,7 +4052,7 @@ bool db::set_vap_stats_info(const std::string &bssid, uint32_t uc_tx_bytes, uint
                             uint32_t mc_tx_bytes, uint32_t mc_rx_bytes, uint32_t bc_tx_bytes,
                             uint32_t bc_rx_bytes)
 {
-    /* 
+    /*
         ToDo: add extended stats to vap ?
     */
 
@@ -5491,6 +5491,9 @@ bool db::dm_add_device_element(const sMacAddr &mac)
     return true;
 }
 
+// Cover the get_path_ code for skipping errors about finding the path
+// when AmbiorixDummy enabled
+#ifdef ENABLE_NBAPI
 std::string db::dm_get_path_to_device(const son::node &device_node)
 {
 
@@ -5547,6 +5550,10 @@ std::string db::dm_get_path_to_radio(const son::node &radio_node)
 
     return radio_path;
 }
+#else
+std::string db::dm_get_path_to_radio(const son::node &radio_node) { return "dummy!!"; }
+std::string db::dm_get_path_to_device(const son::node &device_node) { return "dummy!!"; }
+#endif
 
 bool db::add_current_op_class(const sMacAddr &radio_mac, uint8_t op_class, uint8_t op_channel,
                               int8_t tx_power)
@@ -5700,6 +5707,9 @@ bool db::set_radio_utilization(const sMacAddr &bssid, uint8_t utilization)
     return true;
 }
 
+// Cover the get_path_ code for skipping errors about finding the path
+// when AmbiorixDummy enabled
+#ifdef ENABLE_NBAPI
 std::string db::dm_get_path_to_bss(const sMacAddr &bssid)
 {
     std::string bssid_string = tlvf::mac_to_string(bssid);
@@ -5750,6 +5760,10 @@ std::string db::dm_get_path_to_sta(const std::string &sta_mac)
     }
     return path_to_bss + "STA." + std::to_string(sta_index) + ".";
 }
+#else
+std::string db::dm_get_path_to_bss(const sMacAddr &bssid) { return "dummy!"; }
+std::string db::dm_get_path_to_sta(const std::string &sta_mac) { return "dummy!"; }
+#endif
 
 bool db::set_estimated_service_parameters_be(const sMacAddr &bssid,
                                              uint32_t estimated_service_parameters_be)
