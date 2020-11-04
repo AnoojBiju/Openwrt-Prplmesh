@@ -104,6 +104,19 @@ public:
     bool forward_cmdu_to_uds(int fd, uint32_t iface_index, const sMacAddr &dst_mac,
                              const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
 
+    /**
+     * @brief Forwards given received CMDU message to the broker server for dispatching.
+     *
+     * @param cmdu_rx Received CMDU message to forward.
+     * @param dst_mac Destination MAC address.
+     * @param src_mac Source MAC address.
+     * @param iface_name Name of the network interface to use (set to empty string to send on all
+     * available interfaces).
+     * @return true on success and false otherwise.
+     */
+    bool forward_cmdu_to_broker(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &dst_mac,
+                                const sMacAddr &src_mac, const std::string &iface_name = "");
+
     // For agent_ucc_listener
     /**
      * @brief get radio mac (ruid) of registered slave based on frequency type

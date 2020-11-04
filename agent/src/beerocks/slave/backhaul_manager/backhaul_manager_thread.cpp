@@ -436,6 +436,16 @@ bool backhaul_manager::forward_cmdu_to_uds(int fd, uint32_t iface_index, const s
                                             cmdu_rx.getMessageLength());
 }
 
+bool backhaul_manager::forward_cmdu_to_broker(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                              const sMacAddr &dst_mac, const sMacAddr &src_mac,
+                                              const std::string &iface_name)
+{
+    cmdu_rx.swap(); // swap back before sending to the broker
+
+    return send_cmdu_to_broker(cmdu_rx, tlvf::mac_to_string(dst_mac), tlvf::mac_to_string(src_mac),
+                               cmdu_rx.getMessageLength(), iface_name);
+}
+
 // This method is temporary and will be removed at the end of PPM-753.
 // It is intended to allow the temporary coexistence of Socket* and file descriptors to refer to
 // accepted sockets.
