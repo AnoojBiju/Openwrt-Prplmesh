@@ -227,6 +227,12 @@ boardfarm-tests:
   tags:
     - boardfarm-compose
 
+boardfarm-stability-tests:
+  extends: boardfarm-tests
+  parallel: 10
+  rules:
+    - if: '$STABILITY_TESTS'
+
 run-certification-tests-prplmesh-essensium:
   extends: .run-certification-tests
   tags:
