@@ -39,6 +39,44 @@ public:
 
     enum eEvent : uint8_t {};
 
+    enum class eRadioScanStatus : uint8_t { PENDING, TRIGGERED_WAIT_FOR_ACK, SCAN_IN_PROGRESS };
+    enum class eAgentStatus : uint8_t { IDLE, BUSY };
+
+    // Struct of the status of an agent and it's scan requests
+    struct sAgentScanStatus {
+
+        // Struct of a radio scan request
+        struct sRadioScanRequest {
+            uint16_t mid            = INVALID_MID_ID;
+            eRadioScanStatus status = eRadioScanStatus::PENDING;
+        };
+
+        eAgentStatus status;
+        /**
+         * @brief Map of radio scans
+         * 
+         * Key:     radio mac.
+         * Value:   radio scan request as sRadioScanRequest struct.
+         */
+        std::unordered_map<sMacAddr, sRadioScanRequest> radio_scans;
+    };
+
+    /**
+     * @brief Map of agent's status.
+     * 
+     * Key:     agent mac.
+     * Value:   agent status as sAgentScanStatus struct.
+     */
+    std::unordered_map<sMacAddr, sAgentScanStatus> m_agents_status_map;
+
+    /**
+     * @brief Map of outgoing mids to agents.
+     * 
+     * Key:     mid (message id) value.
+     * Value:   agent mac.
+     */
+    std::unordered_map<uint16_t, sMacAddr> mid_to_agent_map;
+
 protected:
     virtual void work() override;
     virtual void handle_event(int event_enum_value, void *event_obj) override;
@@ -54,6 +92,9 @@ private:
     // clang-format on
 
     eState m_state = eState::IDLE;
+
+    // Class constants
+    static constexpr uint16_t INVALID_MID_ID = UINT16_MAX;
 
     db &database;
     ieee1905_1::CmduMessageTx &cmdu_tx;
