@@ -5191,6 +5191,7 @@ sMacAddr db::get_candidate_client_for_removal(sMacAddr client_to_skip)
 
     sMacAddr candidate_client_to_be_removed  = network_utils::ZERO_MAC;
     bool is_disconnected_candidate_available = false;
+    bool is_aging_candidate_available        = false;
     auto candidate_client_expiry_due_time    = std::chrono::system_clock::time_point::max();
 
     for (const auto &node_map : nodes) {
@@ -5213,39 +5214,65 @@ sMacAddr db::get_candidate_client_for_removal(sMacAddr client_to_skip)
                 continue;
             }
 
+            // Max client timelife delay
+            // This is ditermined according to the friendliness status of the client.
+            // If a client is unfriendly we can
+            auto selected_max_timelife_delay_sec =
+                (client->client_is_unfriendly == eTriStateBool::TRUE)
+                    ? unfriendly_device_max_timelife_delay_sec
+                    : max_timelife_delay_sec;
+
+            // Client timelife delay
+            auto timelife_delay_sec =
+                (client->client_time_life_delay_minutes !=
+                 std::chrono::seconds(beerocks::PARAMETER_NOT_CONFIGURED))
+                    ? std::chrono::seconds(client->client_time_life_delay_minutes)
+                    : selected_max_timelife_delay_sec;
+
+            // Calculate client expiry due time.
+            // In case both clients are non-aging - both time-life will be 0 - so only the
+            // last-edit-time will affect the candidate selected.
+            auto current_client_expiry_due_time =
+                client->client_parameters_last_edit + timelife_delay_sec;
+
+            // Preferring non-aging clients over aging ones (even if disconnected).
+            // If client is non-aging and candidate is aging - skip it
+            if (is_aging_candidate_available &&
+                client->client_time_life_delay_minutes == std::chrono::seconds::zero()) {
+                continue;
+            }
+
+            // Previous candidate is not aging and current client is aging - replace candidate
+            if (!is_aging_candidate_available &&
+                (client->client_time_life_delay_minutes > std::chrono::seconds::zero())) {
+                // Update candidate
+                candidate_client_to_be_removed = client_mac;
+                // Set the candidate client expiry due time for later comparison
+                candidate_client_expiry_due_time = current_client_expiry_due_time;
+                // Set aging-candidate-available
+                is_aging_candidate_available = true;
+                // Set disconnected-candidate-available
+                is_disconnected_candidate_available =
+                    (client->state == beerocks::STATE_DISCONNECTED);
+                continue;
+            }
+
             // Preferring disconnected clients over connected ones (even if less aged).
             if (is_disconnected_candidate_available &&
                 client->state != beerocks::STATE_DISCONNECTED) {
                 continue;
             }
 
-            // Max client timelife delay
-            // This is ditermined according to the friendliness status of the client.
-            // If a client is unfriendly we can
-            auto max_timelife_delay = (client->client_is_unfriendly == eTriStateBool::TRUE)
-                                          ? unfriendly_device_max_timelife_delay_sec
-                                          : max_timelife_delay_sec;
-
-            // Client timelife delay
-            auto timelife_delay = (client->client_time_life_delay_minutes !=
-                                   std::chrono::seconds(beerocks::PARAMETER_NOT_CONFIGURED))
-                                      ? std::chrono::seconds(client->client_time_life_delay_minutes)
-                                      : max_timelife_delay;
-
-            // Calculate client expiry due time
-            auto current_client_expiry_due = client->client_parameters_last_edit + timelife_delay;
-
             // Compare to currently chosen candidate expiry due time.
-            // The case where a client is connected and we already found a disconnected cadidate
-            // is handled above - meaning we can assume that either we didn't find any candidate
-            // yet or the candidate found is connected (meaning only the remaining timelife
-            // should be compared)
-            if (current_client_expiry_due < candidate_client_expiry_due_time) {
-                candidate_client_expiry_due_time = current_client_expiry_due;
-                if (client->state == beerocks::STATE_DISCONNECTED) {
-                    is_disconnected_candidate_available = true;
-                }
+            // All other parameters that affect the candidate selection are already handled above
+            if (current_client_expiry_due_time < candidate_client_expiry_due_time) {
+                // Set the candidate client expiry due time for later comparison
+                candidate_client_expiry_due_time = current_client_expiry_due_time;
+                // Set the candidate client
                 candidate_client_to_be_removed = client_mac;
+                // Set disconnected-candidate-available
+                is_disconnected_candidate_available =
+                    (client->state == beerocks::STATE_DISCONNECTED);
             }
         }
     }
