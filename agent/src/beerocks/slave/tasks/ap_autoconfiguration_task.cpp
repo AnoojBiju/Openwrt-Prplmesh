@@ -102,6 +102,7 @@ void ApAutoConfigurationTask::work()
                               "radio iface="
                            << radio_iface << ", state_attempts=" << state_status.attempts;
                 db->statuses.ap_autoconfiguration_failure = true;
+                FSM_MOVE_STATE(radio_iface, eState::UNCONFIGURED);
                 break;
             }
 
