@@ -33,16 +33,10 @@
 			on action validate call check_minimum 0;
 		}
 
-		
-		%read-only uint32 EstMACDataRateDownlink = 0 {
-			
-		}
+		%read-only uint32 EstMACDataRateDownlink = 0;
+		%read-only uint32 EstMACDataRateUplink = 0;
 
-		%read-only uint32 EstMACDataRateUplink = 0 {
-			
-		}
-
-		%read-only uint32 SignalStrength = 0 {
+		%read-only uint8 SignalStrength = 0 {
 			on action validate call check_range [0, 220];
 		}
 

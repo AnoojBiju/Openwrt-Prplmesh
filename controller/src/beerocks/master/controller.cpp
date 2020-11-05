@@ -1662,7 +1662,8 @@ bool Controller::handle_tlv_ap_he_capabilities(ieee1905_1::CmduMessageRx &cmdu_r
 bool Controller::handle_cmdu_1905_associated_sta_link_metrics_response_message(
     const std::string &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
-    auto mid = cmdu_rx.getMessageId();
+    auto mid     = cmdu_rx.getMessageId();
+    bool success = true;
 
     LOG(DEBUG) << "Received ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE, mid=" << std::hex << mid;
     for (auto &sta_link_metric : cmdu_rx.getClassList<wfa_map::tlvAssociatedStaLinkMetrics>()) {
@@ -1670,9 +1671,22 @@ bool Controller::handle_cmdu_1905_associated_sta_link_metrics_response_message(
             LOG(ERROR) << "Failed getClassList<wfa_map::tlvAssociatedStaLinkMetrics>";
             continue;
         }
-    }
+        auto response_list = sta_link_metric->bssid_info_list(0);
 
-    return true;
+        if (!std::get<0>(response_list)) {
+            LOG(ERROR) << "Fail to get bssid info list.";
+            continue;
+        }
+        auto bssid_info = std::get<1>(response_list);
+        if (!database.set_sta_link_metrics(sta_link_metric->sta_mac(),
+                                           bssid_info.downlink_estimated_mac_data_rate_mbps,
+                                           bssid_info.uplink_estimated_mac_data_rate_mbps,
+                                           bssid_info.sta_measured_uplink_rssi_dbm_enc)) {
+            LOG(ERROR) << "Fail to set value for Estimated MAC Data Rate or for signal strength.";
+            success = false;
+        }
+    }
+    return success;
 }
 
 bool Controller::handle_tlv_ap_vht_capabilities(ieee1905_1::CmduMessageRx &cmdu_rx)
