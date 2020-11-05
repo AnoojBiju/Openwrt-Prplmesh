@@ -107,54 +107,6 @@ public:
     void clear_handlers() { m_handlers = {}; }
 
     /**
-     * @brief Sets the CMDU-received event handler function.
-     *
-     * Sets the callback function to handle CMDU messages received. Use nullptr to remove
-     * previously installed callback function.
-     *
-     * If a handler is set, it will be called back whenever a CMDU message is received at the
-     * server and forwarded to the client.
-     *
-     * @param handler CMDU-received event handler function (or nullptr).
-     */
-    void set_cmdu_received_handler(const CmduReceivedHandler &handler)
-    {
-        m_cmdu_received_handler = handler;
-    }
-
-    /**
-     * @brief Clears previously set CMDU-received event handler function.
-     *
-     * Clears callback function previously set. Behaves like calling the set method with nullptr.
-     */
-    void clear_cmdu_received_handler() { m_cmdu_received_handler = nullptr; }
-
-    /**
-     * @brief Sets the connection-closed event handler function.
-     *
-     * Sets the callback function to handle the event that connection is unexpectedly closed. Use
-     * nullptr to remove previously installed callback function.
-     *
-     * If a handler is set, it will be called back whenever the connection to the broker server
-     * is closed (e.g.: when the server goes down because the transport process dies). The handler
-     * may, for example, implement a recovery mechanism that includes reconnecting to the server
-     * and creating another client.
-     *
-     * @param handler Connection-closed event handler function (or nullptr).
-     */
-    void set_connection_closed_handler(const ConnectionClosedHandler &handler)
-    {
-        m_connection_closed_handler = handler;
-    }
-
-    /**
-     * @brief Clears previously set connection-closed event handler function.
-     *
-     * Clears callback function previously set. Behaves like calling the set method with nullptr.
-     */
-    void clear_connection_closed_handler() { m_connection_closed_handler = nullptr; }
-
-    /**
      * @brief Subscribes for the reception of a set of CMDU messages.
      *
      * Builds a subscription message including the filter for message types and sends it to the
@@ -217,17 +169,6 @@ private:
      * component.
      */
     EventHandlers m_handlers;
-
-    /**
-     * CMDU-received event handler function that is called back whenever a CMDU message is received.
-     */
-    CmduReceivedHandler m_cmdu_received_handler;
-
-    /**
-     * Connection-closed event handler function that is called back whenever the connection with the
-     * server is closed unexpectedly.
-     */
-    ConnectionClosedHandler m_connection_closed_handler;
 };
 
 } // namespace btl
