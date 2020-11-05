@@ -41,8 +41,10 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
         self.args = args
         self.kwargs = kwargs
         config = kwargs.get("config", kwargs)
+        self.unique_id = os.getenv("RUN_ID")
+        if not self.unique_id:
+            raise CodeError("RUN_ID not set")
 
-        self.unique_id = os.getenv("SUDO_USER", os.getenv("USER", ""))
         self.docker_network = config.get("docker_network",
                                          "prplMesh-net-{}".format(self.unique_id))
         self.role = config.get("role", "agent")
