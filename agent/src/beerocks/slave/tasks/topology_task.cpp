@@ -101,12 +101,13 @@ void TopologyTask::handle_event(uint8_t event_enum_value, const void *event_obj)
     }
 }
 
-bool TopologyTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac, int fd,
+bool TopologyTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
+                               const sMacAddr &dst_mac, const sMacAddr &src_mac, int fd,
                                std::shared_ptr<beerocks_header> beerocks_header)
 {
     switch (cmdu_rx.getMessageType()) {
     case ieee1905_1::eMessageType::TOPOLOGY_DISCOVERY_MESSAGE: {
-        handle_topology_discovery(cmdu_rx, src_mac);
+        handle_topology_discovery(cmdu_rx, iface_index, dst_mac, src_mac);
         break;
     }
     case ieee1905_1::eMessageType::TOPOLOGY_QUERY_MESSAGE: {
@@ -125,6 +126,7 @@ bool TopologyTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAdd
 }
 
 void TopologyTask::handle_topology_discovery(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                             uint32_t iface_index, const sMacAddr &dst_mac,
                                              const sMacAddr &src_mac)
 {
     auto tlvAlMac = cmdu_rx.getClass<ieee1905_1::tlvAlMacAddress>();
@@ -150,10 +152,9 @@ void TopologyTask::handle_topology_discovery(ieee1905_1::CmduMessageRx &cmdu_rx,
         return;
     }
 
-    uint32_t if_index                      = message_com::get_uds_header(cmdu_rx)->if_index;
-    std::string local_receiving_iface_name = network_utils::linux_get_iface_name(if_index);
+    std::string local_receiving_iface_name = network_utils::linux_get_iface_name(iface_index);
     if (local_receiving_iface_name.empty()) {
-        LOG(ERROR) << "Failed getting interface name for index: " << if_index;
+        LOG(ERROR) << "Failed getting interface name for index: " << iface_index;
         return;
     }
 

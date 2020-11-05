@@ -32,7 +32,8 @@ public:
 
     void handle_event(uint8_t event_enum_value, const void *event_obj) override;
 
-    bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac, int fd,
+    bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
+                     const sMacAddr &dst_mac, const sMacAddr &src_mac, int fd,
                      std::shared_ptr<beerocks_header> beerocks_header) override;
 
 private:
@@ -42,9 +43,12 @@ private:
     * @brief Handles 1905 Topology Discovery message.
     * 
     * @param[in] cmdu_rx Received CMDU.
+    * @param iface_index Index of the network interface that the CMDU message was received on.
+    * @param dst_mac Destination MAC address.
     * @param[in] src_mac MAC address of the message sender.
     */
-    void handle_topology_discovery(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac);
+    void handle_topology_discovery(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
+                                   const sMacAddr &dst_mac, const sMacAddr &src_mac);
 
     /**
     * @brief Handles 1905 Topology Query message.

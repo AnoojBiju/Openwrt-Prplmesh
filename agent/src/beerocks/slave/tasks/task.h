@@ -62,13 +62,16 @@ public:
     /**
      * @brief Handle CMDU message.
      * 
-     * @param cmdu_rx CMDU object conataining the message.
-     * @param src_mac AL Mac of the sender.
+     * @param cmdu_rx CMDU object containing the received message to be handled.
+     * @param iface_index Index of the network interface that the CMDU message was received on.
+     * @param dst_mac Destination MAC address.
+     * @param src_mac AL MAC address of the sender.
      * @param fd File descriptor of the socket connection with the slave that sent the message.
      * @param beerocks_header Beerocks Message header (Only on VS message).
      * @return true if the message has been handled, otherwise false.
      */
-    virtual bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac, int fd,
+    virtual bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
+                             const sMacAddr &dst_mac, const sMacAddr &src_mac, int fd,
                              std::shared_ptr<beerocks_header> beerocks_header)
     {
         return false;

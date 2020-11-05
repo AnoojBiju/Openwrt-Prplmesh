@@ -182,15 +182,15 @@ private:
                                std::shared_ptr<beerocks_message::cACTION_HEADER> beerocks_header);
     bool handle_slave_backhaul_message(std::shared_ptr<sRadioInfo> soc,
                                        ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_slave_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                     const std::string &src_mac);
-    bool handle_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac,
-                               int &forward_to);
+    bool handle_slave_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
+                                     const sMacAddr &dst_mac, const sMacAddr &src_mac);
+    bool handle_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
+                               const sMacAddr &dst_mac, const sMacAddr &src_mac, int &forward_to);
     // 1905 messages handlers
     bool handle_slave_failed_connection_message(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                                const std::string &src_mac);
+                                                const sMacAddr &src_mac);
     bool handle_backhaul_steering_request(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                          const std::string &src_mac);
+                                          const sMacAddr &src_mac);
 
     //bool sta_handle_event(const std::string &iface,const std::string& event_name, void* event_obj);
     bool hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr, std::string iface);

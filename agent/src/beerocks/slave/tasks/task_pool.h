@@ -44,13 +44,16 @@ public:
     /**
      * @brief Iterate over all tasks on the pool and pass them the message on 'cmdu_rx'.
      * 
-     * @param cmdu_rx CMDU object containing the message.
+     * @param cmdu_rx CMDU object containing the received message to be handled.
+     * @param iface_index Index of the network interface that the CMDU message was received on.
+     * @param dst_mac Destination MAC address.
      * @param src_mac MAC address of the message sender.
      * @param fd File descriptor of the socket connection with the slave that sent the message.
      * @param beerocks_header Beerocks header (Only on VS message).
      * @return true if the message has been handled, otherwise false.
      */
-    bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, sMacAddr src_mac, int fd,
+    bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
+                     const sMacAddr &dst_mac, const sMacAddr &src_mac, int fd,
                      std::shared_ptr<beerocks_header> beerocks_header = nullptr);
 
 private:

@@ -422,7 +422,7 @@ bool backhaul_manager::handle_cmdu(int fd, uint32_t iface_index, const sMacAddr 
         if (cmdu_rx.getMessageType() == ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE) {
             return handle_slave_backhaul_message(soc, cmdu_rx);
         } else {
-            return handle_slave_1905_1_message(cmdu_rx, tlvf::mac_to_string(src_mac));
+            return handle_slave_1905_1_message(cmdu_rx, iface_index, dst_mac, src_mac);
         }
     }
 
@@ -468,7 +468,7 @@ bool backhaul_manager::handle_cmdu_from_broker(uint32_t iface_index, const sMacA
     // to this slave. when dest_slave is left as invalid_descriptor
     // the cmdu is forwarded to all slaves
     int dest_slave = beerocks::net::FileDescriptor::invalid_descriptor;
-    if (handle_1905_1_message(cmdu_rx, tlvf::mac_to_string(src_mac), dest_slave)) {
+    if (handle_1905_1_message(cmdu_rx, iface_index, dst_mac, src_mac, dest_slave)) {
         //function returns true if message doesn't need to be forwarded
         return true;
     }
@@ -1959,7 +1959,8 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
         break;
     }
     default: {
-        bool handled = m_task_pool.handle_cmdu(cmdu_rx, sMacAddr(), soc->slave, beerocks_header);
+        bool handled = m_task_pool.handle_cmdu(cmdu_rx, 0, sMacAddr(), sMacAddr(), soc->slave,
+                                               beerocks_header);
         if (!handled) {
             LOG(ERROR) << "Unhandled message received from the Agent: "
                        << int(beerocks_header->action_op());
@@ -1973,7 +1974,8 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
 }
 
 bool backhaul_manager::handle_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                             const std::string &src_mac, int &forward_to)
+                                             uint32_t iface_index, const sMacAddr &dst_mac,
+                                             const sMacAddr &src_mac, int &forward_to)
 {
     /*
      * return values:
@@ -1983,7 +1985,7 @@ bool backhaul_manager::handle_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx,
     switch (cmdu_rx.getMessageType()) {
     case ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_RENEW_MESSAGE: {
         auto db = AgentDB::get();
-        if (src_mac != tlvf::mac_to_string(db->controller_info.bridge_mac)) {
+        if (src_mac != db->controller_info.bridge_mac) {
             LOG(INFO) << "current controller_bridge_mac=" << db->controller_info.bridge_mac
                       << " but renew came from src_mac=" << src_mac << ", ignoring";
             return true;
@@ -2005,21 +2007,22 @@ bool backhaul_manager::handle_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx,
     default: {
         // TODO add a warning once all vendor specific flows are replaced with EasyMesh
         // flows, since we won't expect a 1905 message not handled in this function
-        return m_task_pool.handle_cmdu(cmdu_rx, tlvf::mac_from_string(src_mac),
+        return m_task_pool.handle_cmdu(cmdu_rx, iface_index, dst_mac, src_mac,
                                        beerocks::net::FileDescriptor::invalid_descriptor);
     }
     }
 }
 
 bool backhaul_manager::handle_slave_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                                   const std::string &src_mac)
+                                                   uint32_t iface_index, const sMacAddr &dst_mac,
+                                                   const sMacAddr &src_mac)
 {
     switch (cmdu_rx.getMessageType()) {
     case ieee1905_1::eMessageType::FAILED_CONNECTION_MESSAGE: {
         return handle_slave_failed_connection_message(cmdu_rx, src_mac);
     }
     default: {
-        bool handled = m_task_pool.handle_cmdu(cmdu_rx, tlvf::mac_from_string(src_mac),
+        bool handled = m_task_pool.handle_cmdu(cmdu_rx, iface_index, dst_mac, src_mac,
                                                beerocks::net::FileDescriptor::invalid_descriptor);
         if (!handled) {
             LOG(DEBUG) << "Unhandled 1905 message " << std::hex << int(cmdu_rx.getMessageType())
@@ -2633,7 +2636,7 @@ std::shared_ptr<bwl::sta_wlan_hal> backhaul_manager::get_wireless_hal(std::strin
 }
 
 bool backhaul_manager::handle_slave_failed_connection_message(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                                              const std::string &src_mac)
+                                                              const sMacAddr &src_mac)
 {
     if (!unsuccessful_association_policy.report_unsuccessful_association) {
         // do nothing, no need to report
@@ -2684,7 +2687,7 @@ bool backhaul_manager::handle_slave_failed_connection_message(ieee1905_1::CmduMe
 }
 
 bool backhaul_manager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                                        const std::string &src_mac)
+                                                        const sMacAddr &src_mac)
 {
     const auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Received BACKHAUL_STA_STEERING message, mid=" << std::hex << mid;
