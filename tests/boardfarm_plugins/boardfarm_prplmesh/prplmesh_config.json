@@ -45,6 +45,7 @@
         "role": "agent",
         "docker_network": "prplMesh-net-rax40-1",
         "conn_cmd": "cu -s 115200 -l /dev/ttyUSB0 -f",
+        "delay": "30",
         "devices": [
             {
                 "name": "lan",

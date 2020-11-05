@@ -15,6 +15,7 @@ import sys
 import time
 
 from .prplmesh_base import PrplMeshBase
+from boardfarm.exceptions import CodeError
 from boardfarm.devices import connection_decider
 from boardfarm.devices.openwrt_router import OpenWrtRouter
 from environment import ALEntityPrplWrt, _get_bridge_interface
@@ -51,6 +52,10 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
         self.username = config.get("username", "root")
 
         self.name = "-".join((config.get("name", "netgear-rax40"), self.unique_id))
+        try:
+            self.delay = int(config.get("delay", 30))
+        except ValueError as err:
+            raise CodeError("Invalid delay specified: {}".format(str(err)))
 
         # If no WAN IP is set in config file retrieve IP from docker network set in config
         # X.X.X.245 IP will be selected from docker network
@@ -88,11 +93,14 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
         self.logfile_read = sys.stdout
         self.add_iface_to_bridge(self.wan_iface, "br-lan")
 
+        # prplMesh has to be started before creating the ALEntity,
+        # since the latter requires the ucc listener to be running.
+        self.prplmesh_start_mode(self.role)
+
         if self.role == "controller":
             self.controller_entity = ALEntityPrplWrt(self, is_controller=True)
         else:
             self.agent_entity = ALEntityPrplWrt(self, is_controller=False)
-            self.prplmesh_start_agent()
 
     def _prplMesh_exec(self, mode: str):
         """Send line to prplmesh initd script."""
@@ -167,11 +175,33 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
         self.sendline("ip a add {}/{} dev {}".format(ip, prefixlen, iface))
         self.expect(self.prompt, timeout=10)
 
-    def prplmesh_start_agent(self) -> bool:
-        """Start prplMesh in certification_mode agent. Return true if done."""
-        self._prplMesh_exec("certification_mode agent")
+    def prplmesh_start_mode(self, mode: str = "agent"):
+        """Start prplMesh in certification_mode and wait for it to initialize.
+
+        Parameters
+        ----------
+        mode: str
+            (optional) The mode in which to start prplMesh.
+            Has to be either 'agent' or 'controller'.
+            Defaults to 'agent'.
+
+        Raises
+        ------
+        ExceptionPexpect
+            If the operation failed.
+
+        ValueError
+            If the mode is neither 'controller' nor 'agent'.
+        """
+        if mode not in ["controller", "agent"]:
+            raise ValueError("Unknown prplMesh mode: {}".format(mode))
+
+        print("Starting prplmesh as {}".format(mode))
+        self._prplMesh_exec("certification_mode {}".format(mode))
         self.expect(self.prompt)
-        return True
+        if self.delay:
+            print("Waiting {} seconds for prplMesh to initialize".format(self.delay))
+            time.sleep(self.delay)
 
     def prprlmesh_status_check(self) -> bool:
         """Check prplMesh status by executing status command to initd service.
