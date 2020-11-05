@@ -62,12 +62,13 @@ def check_docker_versions():
 
 
 class Services:
-    def __init__(self, dut, bid=None):
+    def __init__(self, dut, test_suite, bid=None):
         self.scriptdir = os.path.dirname(os.path.realpath(__file__))
         os.chdir(self.scriptdir)
         self.rootdir = self.scriptdir
         self.local_run = False
         self.dut = dut
+        self.test_suite = test_suite
 
         if bid is not None:
             self.build_id = bid
@@ -139,6 +140,7 @@ class Services:
         local_env['FINAL_ROOT_DIR'] = self.rootdir
 
         local_env['DUT'] = self.dut
+        local_env['TEST_SUITE'] = self.test_suite
 
         if not interactive:
             proc = Popen(params, stdout=PIPE, stderr=PIPE)
@@ -161,7 +163,6 @@ if __name__ == '__main__':
     check_docker_versions()
     parser = argparse.ArgumentParser(description='Dockerized test launcher')
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('--test', dest='test', type=str, help='Test to be run')
     group.add_argument('--clean', dest='clean', action='store_true',
                        help='Clean containers images and networks')
     group.add_argument('--shell', dest='shell', action='store_true',
@@ -172,6 +173,9 @@ if __name__ == '__main__':
                         help='Specify the id to use for build/shell/comp/clean')
     parser.add_argument('--dut', dest='dut', type=str, help='Device under test',
                         default='prplmesh_compose')
+    parser.add_argument('--test-suite', dest='test_suite', type=str,
+                        default='test_flows', help='Test suite to be run')
+
     args, rest = parser.parse_known_args()
 
     if os.getenv('CI_PIPELINE_ID') is not None:
@@ -181,7 +185,7 @@ if __name__ == '__main__':
         if args.bid is None:
             print('Specify --id for the --comp parameter')
             sys.exit(0)
-        services = Services(dut=args.dut, bid=args.bid)
+        services = Services(dut=args.dut, test_suite=args.test_suite, bid=args.bid)
         if len(rest) == 0:
             print('Usage: dctest --id <id> --comp <arguments to docker-compose>')
             sys.exit(1)
@@ -195,22 +199,22 @@ if __name__ == '__main__':
         if args.bid is None:
             print('Specify --id for the --clean parameter')
             sys.exit(0)
-        services = Services(dut=args.dut, bid=args.bid)
+        services = Services(dut=args.dut, test_suite=args.test_suite, bid=args.bid)
         rc = services.dc(['down', '--remove-orphans', '--rmi', 'all'])
         cleanup(rc)
     elif args.shell:
         if not args.bid:
             print('Specify --id for the shell parameter')
             sys.exit(0)
-        services = Services(dut=args.dut, bid=args.bid)
+        services = Services(dut=args.dut, test_suite=args.test_suite, bid=args.bid)
         rc = services.dc(['run', '--rm', '--service-ports', '--entrypoint',
                           '/bin/bash', 'boardfarm'], interactive=True)
         cleanup(rc)
     else:
         if args.bid:
-            services = Services(dut=args.dut, bid=args.bid)   # With new build id
+            services = Services(dut=args.dut, test_suite=args.test_suite, bid=args.bid)
         else:
-            services = Services(dut=args.dut)   # With new build id
+            services = Services(dut=args.dut, test_suite=args.test_suite)   # With new build id
         try:
             rc = services.dc(['up', '--exit-code-from', 'boardfarm', '--abort-on-container-exit'],
                              interactive=True)

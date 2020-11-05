@@ -17,6 +17,12 @@ while [[ "$#" -gt 0 ]]; do
             DUT="$1"
             shift
             ;;
+        --test-suite)
+            shift
+            [[ "$#" -eq 0 ]] && echo "no test suite specified" && exit 1
+            TEST_SUITE="$1"
+            shift
+            ;;
         *)
             echo "unsupported arg: $1"
             ;;
@@ -33,7 +39,7 @@ export PYTHONPATH
 export BFT_DEBUG=y
 
 bft -c "${bf_plugins_dir}"/boardfarm_prplmesh/prplmesh_config.json \
-        -n "$DUT" -x test_flows -o "${resultdir}" || exit 255
+        -n "$DUT" -x "$TEST_SUITE" -o "${resultdir}" || exit 255
 
 failed_test_count=$(jq '.tests_fail' "${resultdir}"/test_results.json)
 re='^[0-9]+$'
