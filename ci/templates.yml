@@ -77,9 +77,18 @@
     - ALL_TARGETS="turris-omnia-1 glinet-b1300-1 netgear-rax40-1"
     # kill prplmesh on each target to make sure they don't interfere with the test
     - for i in $ALL_TARGETS ; do ssh "$i" 'pgrep -f beerocks | xargs kill -9 2>/dev/null' || true ; done
-  script:
     - tools/deploy_firmware.py --device "$TARGET_DEVICE" --target-name "$TARGET_DEVICE_NAME" --image "$OPENWRT_IMAGE"
     - tools/deploy_ipk.sh $TARGET_DEVICE_NAME "build/$TARGET_DEVICE/"prplmesh.ipk
+  script:
+    - |
+      ssh "$TARGET_DEVICE_NAME" <<'EOF'
+        uci set prplmesh.config.management_mode='Multi-AP-Controller-and-Agent'
+        uci set prplmesh.config.operating_mode='Gateway'
+        uci set prplmesh.config.wired_backhaul=0
+        uci set prplmesh.config.master=1
+        uci set prplmesh.config.gateway=1
+        uci commit prplmesh
+      EOF
     - tests/openwrt/test_status.sh $TARGET_DEVICE_NAME
   artifacts:
     paths:
