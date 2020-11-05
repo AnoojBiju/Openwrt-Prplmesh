@@ -42,7 +42,9 @@ RUN pip3 install -r requirements.txt
 # Installation of Debian dependencies needed by the tests
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y \
-       tshark \
-       wireshark-common \
+      iproute2 \
+      iw \
+      tshark \
+      wireshark-common \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
