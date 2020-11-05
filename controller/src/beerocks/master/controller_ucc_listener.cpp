@@ -34,9 +34,13 @@ std::string controller_ucc_listener::fill_version_reply_string()
 /**
  * @brief Clear configuration on Controller database.
  * 
- * @return None.
+ * @return true on success and false otherwise.
  */
-void controller_ucc_listener::clear_configuration() { m_database.clear_bss_info_configuration(); }
+bool controller_ucc_listener::clear_configuration()
+{
+    m_database.clear_bss_info_configuration();
+    return true;
+}
 
 /**
  * @brief get parameter command

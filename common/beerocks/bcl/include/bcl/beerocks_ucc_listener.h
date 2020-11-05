@@ -29,7 +29,7 @@ class beerocks_ucc_listener : public socket_thread {
 public:
     beerocks_ucc_listener(uint16_t port, ieee1905_1::CmduMessageTx &cmdu,
                           std::unique_ptr<beerocks::UccServer> ucc_server);
-    ~beerocks_ucc_listener();
+    virtual ~beerocks_ucc_listener();
 
 protected:
     bool init() override;
@@ -44,7 +44,7 @@ protected:
     virtual void lock()                                                                = 0;
     virtual void unlock()                                                              = 0;
     virtual std::string fill_version_reply_string()                                    = 0;
-    virtual void clear_configuration()                                                 = 0;
+    virtual bool clear_configuration()                                                 = 0;
     virtual bool send_cmdu_to_destination(ieee1905_1::CmduMessageTx &cmdu_tx,
                                           const std::string &dest_mac = std::string()) = 0;
     virtual bool handle_dev_set_config(std::unordered_map<std::string, std::string> &params,

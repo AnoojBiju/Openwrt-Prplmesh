@@ -680,10 +680,15 @@ void beerocks_ucc_listener::handle_wfa_ca_command(int fd, const std::string &com
         }
 
         // TODO: Find out what to do with value of param "name".
-        clear_configuration();
-
-        // Send back second reply
-        reply_ucc(fd, eWfaCaStatus::COMPLETE);
+        // Perform this operation in a background thread and continue.
+        // Send reply only when device reset completes. Do not send anything in case of timeout.
+        std::thread thread([fd, this]() {
+            if (clear_configuration()) {
+                // Send back second reply
+                reply_ucc(fd, eWfaCaStatus::COMPLETE);
+            }
+        });
+        thread.detach();
 
         break;
     }
