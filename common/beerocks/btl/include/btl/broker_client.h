@@ -59,9 +59,52 @@ public:
     using ConnectionClosedHandler = std::function<void()>;
 
     /**
+     * Set of event handler functions, one function to handle each possible event happened.
+     * Handlers are grouped into a struct to facilitate passing them as a single parameter to the
+     * method used to set the handlers.
+     * Event handlers are optional and if not set for a given event, that event will be silently
+     * ignored.
+     */
+    struct EventHandlers {
+        /**
+         * Handler function called back by the broker client to deal with CMDU-received event.
+         *
+         * If this handler is set, it will be called back whenever a CMDU message is received at the
+         * server and forwarded to the client.
+         */
+        CmduReceivedHandler on_cmdu_received;
+
+        /**
+         * Handler function called back by the broker client to deal with connection-closed event.
+         *
+         * If this handler is set, it will be called back whenever the connection to the broker
+         * server is closed (e.g.: when the server goes down because the transport process dies).
+         * The handler may, for example, implement a recovery mechanism that includes reconnecting
+         * to the server and creating another client.
+         */
+        ConnectionClosedHandler on_connection_closed;
+    };
+
+    /**
      * @brief Class destructor
      */
     virtual ~BrokerClient() = default;
+
+    /**
+     * @brief Sets the event handler functions.
+     *
+     * Sets the callback functions to be executed whenever an event occurs on this this component.
+     * The event handler functions are all optional and if any of them is not set, the corresponding
+     * event will be silently ignored.
+     *
+     * @param handlers Event handler functions.
+     */
+    void set_handlers(const EventHandlers &handlers) { m_handlers = handlers; }
+
+    /**
+     * @brief Clears previously set event handler functions.
+     */
+    void clear_handlers() { m_handlers = {}; }
 
     /**
      * @brief Sets the CMDU-received event handler function.
@@ -169,6 +212,12 @@ protected:
     }
 
 private:
+    /**
+     * Set of event handler functions that are called back whenever a new event occurs on this
+     * component.
+     */
+    EventHandlers m_handlers;
+
     /**
      * CMDU-received event handler function that is called back whenever a CMDU message is received.
      */
