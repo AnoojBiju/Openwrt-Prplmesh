@@ -62,11 +62,12 @@ def check_docker_versions():
 
 
 class Services:
-    def __init__(self, bid=None):
+    def __init__(self, dut, bid=None):
         self.scriptdir = os.path.dirname(os.path.realpath(__file__))
         os.chdir(self.scriptdir)
         self.rootdir = self.scriptdir
         self.local_run = False
+        self.dut = dut
 
         if bid is not None:
             self.build_id = bid
@@ -92,8 +93,8 @@ class Services:
     def _get_device_names(self):
         jspath = './tests/boardfarm_plugins/boardfarm_prplmesh/prplmesh_config.json'
         js = json.loads(open(jspath, 'r').read())
-        devices = [js['prplmesh_compose']['name']]
-        for device in js['prplmesh_compose']['devices']:
+        devices = [js[self.dut]['name']]
+        for device in js[self.dut]['devices']:
             devices.append(device['name'])
         return devices
 
@@ -137,6 +138,8 @@ class Services:
         local_env['CI_PIPELINE_ID'] = 'latest'
         local_env['FINAL_ROOT_DIR'] = self.rootdir
 
+        local_env['DUT'] = self.dut
+
         if not interactive:
             proc = Popen(params, stdout=PIPE, stderr=PIPE)
             for line in proc.stdout:
@@ -167,6 +170,8 @@ if __name__ == '__main__':
                        help='Pass the rest of arguments to docker-compose')
     parser.add_argument('--id', dest='bid', type=str,
                         help='Specify the id to use for build/shell/comp/clean')
+    parser.add_argument('--dut', dest='dut', type=str, help='Device under test',
+                        default='prplmesh_compose')
     args, rest = parser.parse_known_args()
 
     if os.getenv('CI_PIPELINE_ID') is not None:
@@ -176,7 +181,7 @@ if __name__ == '__main__':
         if args.bid is None:
             print('Specify --id for the --comp parameter')
             sys.exit(0)
-        services = Services(bid=args.bid)
+        services = Services(dut=args.dut, bid=args.bid)
         if len(rest) == 0:
             print('Usage: dctest --id <id> --comp <arguments to docker-compose>')
             sys.exit(1)
@@ -190,22 +195,22 @@ if __name__ == '__main__':
         if args.bid is None:
             print('Specify --id for the --clean parameter')
             sys.exit(0)
-        services = Services(bid=args.bid)
+        services = Services(dut=args.dut, bid=args.bid)
         rc = services.dc(['down', '--remove-orphans', '--rmi', 'all'])
         cleanup(rc)
     elif args.shell:
         if not args.bid:
             print('Specify --id for the shell parameter')
             sys.exit(0)
-        services = Services(bid=args.bid)
+        services = Services(dut=args.dut, bid=args.bid)
         rc = services.dc(['run', '--rm', '--service-ports', '--entrypoint',
                           '/bin/bash', 'boardfarm'], interactive=True)
         cleanup(rc)
     else:
         if args.bid:
-            services = Services(bid=args.bid)   # With new build id
+            services = Services(dut=args.dut, bid=args.bid)   # With new build id
         else:
-            services = Services()   # With new build id
+            services = Services(dut=args.dut)   # With new build id
         try:
             rc = services.dc(['up', '--exit-code-from', 'boardfarm', '--abort-on-container-exit'],
                              interactive=True)
