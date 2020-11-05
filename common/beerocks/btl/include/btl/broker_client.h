@@ -196,8 +196,8 @@ protected:
     void notify_cmdu_received(uint32_t iface_index, const sMacAddr &dst_mac,
                               const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx) const
     {
-        if (m_cmdu_received_handler) {
-            m_cmdu_received_handler(iface_index, dst_mac, src_mac, cmdu_rx);
+        if (m_handlers.on_cmdu_received) {
+            m_handlers.on_cmdu_received(iface_index, dst_mac, src_mac, cmdu_rx);
         }
     }
 
@@ -206,8 +206,8 @@ protected:
      */
     void notify_connection_closed() const
     {
-        if (m_connection_closed_handler) {
-            m_connection_closed_handler();
+        if (m_handlers.on_connection_closed) {
+            m_handlers.on_connection_closed();
         }
     }
 
