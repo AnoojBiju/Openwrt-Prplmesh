@@ -396,8 +396,6 @@ void LinkMetricsCollectionTask::handle_beacon_metrics_query(ieee1905_1::CmduMess
     }
     auto forward_to = radio_info->slave;
 
-    cmdu_rx.swap(); // swap back before forwarding
-
     if (forward_to != beerocks::net::FileDescriptor::invalid_descriptor) {
         // Forward only to the desired destination
         if (!m_btl_ctx.forward_cmdu_to_uds(forward_to, cmdu_rx)) {
@@ -629,7 +627,6 @@ void LinkMetricsCollectionTask::handle_multi_ap_policy_config_request(
             std::shared_ptr<backhaul_manager::sRadioInfo> radio =
                 m_btl_ctx.get_radio(metrics_reporting_conf.radio_uid);
             if (radio) {
-                cmdu_rx.swap(); // swap back before forwarding
                 if (!m_btl_ctx.forward_cmdu_to_uds(radio->slave, cmdu_rx)) {
                     /*
                      * TODO: https://jira.prplfoundation.org/browse/PPM-657
@@ -638,7 +635,6 @@ void LinkMetricsCollectionTask::handle_multi_ap_policy_config_request(
                      */
                     LOG(ERROR) << "Failed to forward message to fronthaul " << radio->radio_mac;
                 }
-                cmdu_rx.swap(); // swap back to normal after forwarding, for next iteration
             } else {
                 LOG(INFO) << "Radio Unique Identifier " << metrics_reporting_conf.radio_uid
                           << " not found";

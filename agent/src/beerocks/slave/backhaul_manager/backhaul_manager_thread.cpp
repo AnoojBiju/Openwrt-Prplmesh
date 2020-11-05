@@ -420,6 +420,16 @@ bool backhaul_manager::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
 
 bool backhaul_manager::forward_cmdu_to_uds(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
+    // Swap bytes before forwarding, from host to network byte order.
+    cmdu_rx.swap();
+
+    // Use a shared_ptr with a custom deleter and the RAII programming idiom to emulate the
+    // `finally` block of a `try-finally` clause.
+    std::shared_ptr<int> finally(nullptr, [&cmdu_rx](int *p) {
+        // Swap bytes back from network to host byte order after forwarding.
+        cmdu_rx.swap();
+    });
+
     return message_com::forward_cmdu_to_uds(m_fd_to_socket_map[fd], cmdu_rx,
                                             cmdu_rx.getMessageLength());
 }
@@ -609,8 +619,6 @@ bool backhaul_manager::handle_cmdu_from_broker(uint32_t iface_index, const sMacA
 
     // Message from controller (bus) to agent (uds)
     // Send the data (uds_header + cmdu) how it is on UDS, without changing it
-
-    cmdu_rx.swap(); // swap back before forwarding
 
     if (dest_slave != beerocks::net::FileDescriptor::invalid_descriptor) {
         // Forward only to the desired destination
