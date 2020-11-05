@@ -11,8 +11,6 @@ RUN apt-get update \
        jq \
        libsnmp-dev \
        software-properties-common \
-       tshark \
-       wireshark-common \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -42,4 +40,9 @@ WORKDIR app
 RUN pip3 install -r requirements.txt
 
 # Installation of Debian dependencies needed by the tests
-# RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install wireshark-common -y && apt-get clean
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+       tshark \
+       wireshark-common \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
