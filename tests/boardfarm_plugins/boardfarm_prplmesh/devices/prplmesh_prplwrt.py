@@ -52,6 +52,10 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
         self.conn_cmd = config.get("conn_cmd", None)
         self.wan_ip = config.get("wan_ip", None)
         self.username = config.get("username", "root")
+        self.host_iface_to_device = config.get("iface_to_device")
+        if not self.host_iface_to_device:
+            raise CodeError("Interface to the device not specified. \
+            Please provide the interface on the host that connects to the prplWrt device.")
 
         self.name = "-".join((config.get("name", "netgear-rax40"), self.unique_id))
         try:
@@ -93,7 +97,12 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
         # Point what to log as data read from child process of pexpect
         # Result: boardfarm will log communication in separate file
         self.logfile_read = sys.stdout
-        self.add_iface_to_bridge(self.wan_iface, "br-lan")
+
+        # We need to add the interface to the actual device to the
+        # docker bridge the docker controller is in, to allow them to
+        # communicate:
+        self.add_host_iface_to_bridge(self.host_iface_to_device,
+                                      _get_bridge_interface(self.unique_id))
 
         # prplMesh has to be started before creating the ALEntity,
         # since the latter requires the ucc listener to be running.
@@ -166,11 +175,22 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
 
         return IPv4Network(inspect_json[0]["IPAM"]["Config"][0]["Subnet"])
 
-    def add_iface_to_bridge(self, iface: str, bridge: str) -> bool:
-        """Add specified interface to the specified bridge."""
-        ip_command = ("ip link set {} master {}".format(iface, bridge))
-        self.sendline(ip_command)
-        self.expect(self.prompt, timeout=10)
+    def add_host_iface_to_bridge(self, iface: str, bridge: str):
+        """Add specified local interface to the specified bridge.
+
+        Note that this applies to the _local_ device (i.e. the device
+        boardfarm runs in), not to the prplwrt device. This can be used
+        to add the interface to the prplWrt device to a docker bridge
+        for example.
+
+        Raises
+        ------
+        ExceptionPexpect
+            If the operation failed.
+
+        """
+        ip_args = ("link set {} master {}".format(iface, bridge))
+        self._run_shell_cmd("ip", ip_args.split(" "))
 
     def set_iface_ip(self, iface: str, ip: IPv4Address, prefixlen: int) -> bool:
         """Set interface IPv4 address."""
