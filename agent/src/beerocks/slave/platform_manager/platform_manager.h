@@ -203,12 +203,12 @@ private:
     /**
      * Timer to periodically clean old ARP table entries.
      */
-    int m_clean_old_arp_entries_timer;
+    int m_clean_old_arp_entries_timer = beerocks::net::FileDescriptor::invalid_descriptor;
 
     /**
      * Timer to periodically check if WLAN parameters have changed.
      */
-    int m_check_wlan_params_changed_timer;
+    int m_check_wlan_params_changed_timer = beerocks::net::FileDescriptor::invalid_descriptor;
 
     /**
      * CMDU server to exchange CMDU messages with clients through socket connections.
