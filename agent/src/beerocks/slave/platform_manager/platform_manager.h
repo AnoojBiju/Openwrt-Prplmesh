@@ -213,7 +213,7 @@ private:
     /**
      * CMDU server to exchange CMDU messages with clients through socket connections.
      */
-    std::shared_ptr<beerocks::CmduServer> m_cmdu_server;
+    std::unique_ptr<beerocks::CmduServer> m_cmdu_server;
 
     /**
      * Timer manager to help using application timers.
