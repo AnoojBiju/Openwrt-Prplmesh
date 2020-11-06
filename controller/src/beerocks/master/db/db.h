@@ -451,8 +451,8 @@ public:
      * set values for its parameters.
      * Example of full path to object:
      * "Controller.Netwok.Device.1.Radio.1.Capabilities.HECapabilities"
-     * 
-     * @param he_caps_tlv TLV with AP HE Capabilities included in 
+     *
+     * @param he_caps_tlv TLV with AP HE Capabilities included in
      * 'AP Capability Report' message
      * @return True if sub-object was successfully added
      * and values for its parameters set, false otherwise.
@@ -463,7 +463,7 @@ public:
      * @brief add 'HTCapabilities' data element, set values to its parametrs.
      * Example of full path to object:
      * "Controller.Netwok.Device.1.Radio.1.Capabilities.HTCapabilities"
-     * 
+     *
      * @param radio_mac mac address of radio
      * @param flags structure with AP HT Capabilities
      * @return true on success, false otherwise
@@ -475,7 +475,7 @@ public:
      * @brief Add 'VHTCapabilities' data element, set values to its parametrs.
      * Example of full path to object:
      * "Controller.Netwok.Device.1.Radio.1.Capabilities.VHTCapabilities"
-     * 
+     *
      * @param vht_caps_tlv TLV with AP VHT Capabilities included in
      * 'AP Capability Report' message.
      * @return True if sub-object was successfully added
@@ -490,7 +490,7 @@ public:
      * 'Controller.Network.Device.1.Radio.2.BSS.3.STA.4.EstMACDataRateUplink'.
      * Set value for station SignalStrength data element.
      * 'Controller.Network.Device.1.Radio.2.BSS.1.STA.4.SignalStrength'.
-     * 
+     *
      * @param sta_mac Station MAC address.
      * @param downlink_est_mac_data_rate Estimated MAC Data Rate in downlink (in Mb/s).
      * @param uplink_est_mac_data_rate Estimated MAC Data Rate in uplink (in Mb/s).
@@ -1417,7 +1417,7 @@ private:
      * @brief Add station 'HECapabilities' data element, set values to its parametrs.
      * Example of full path to object:
      * "Controller.Netwok.Device.1.Radio.1.Capabilities.BSS.1.STA.1.HECapabilities".
-     * 
+     *
      * @param path_to_sta Path to station.
      * Example of full path to station:
      * "Controller.Netwok.Device.1.Radio.1.Capabilities.BSS.1.STA.1.
@@ -1431,7 +1431,7 @@ private:
      * @brief Add station 'HTCapabilities' data element, set values to its parametrs.
      * Example of full path to object:
      * "Controller.Netwok.Device.1.Radio.1.Capabilities.BSS.1.STA.1.HTCapabilities".
-     * 
+     *
      * @param path_to_sta Path to station.
      * Example of full path to station:
      * "Controller.Netwok.Device.1.Radio.1.Capabilities.BSS.1.STA.1.
@@ -1445,7 +1445,7 @@ private:
      * @brief Add station 'VHTCapabilities' data element, set values to its parametrs.
      * Example of full path to VHTCapabilities object:
      * "Controller.Netwok.Device.1.Radio.1.Capabilities.BSS.1.STA.1.VHTCapabilities".
-     * 
+     *
      * @param path_to_sta Path to station.
      * Example of full path to the station:
      * "Controller.Netwok.Device.1.Radio.1.Capabilities.BSS.1.STA.1."
@@ -1464,6 +1464,15 @@ private:
      * @return True on success, false otherwise.
      */
     bool dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client_mac);
+
+    /**
+     * @brief Adds last STA to the Controller.Notifiation.AssociationEvent
+     *
+     * @param bssid BSS mac address.
+     * @param client_mac Client mac address.
+     * @return True on success, false otherwise.
+     */
+    bool dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac);
 
     /**
      * @brief Prepares path to the Device data element with correct index (i).

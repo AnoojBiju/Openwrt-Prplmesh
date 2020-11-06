@@ -292,6 +292,11 @@ bool db::add_node_client(const sMacAddr &mac, const sMacAddr &parent_mac,
         LOG(ERROR) << "Failed to add client instance, mac: " << mac;
         return false;
     }
+    // Add the MAC to the association event */
+    if (!dm_add_association_event(parent_mac, mac)) {
+        LOG(ERROR) << "Failed to add association event, mac: " << mac;
+    }
+
     return true;
 }
 
@@ -1627,6 +1632,8 @@ bool db::set_station_capabilities(const std::string &client_mac,
         n->capabilities                   = n->m_sta_24ghz_capabilities;
     }
 
+    // Prepare path to the STA
+    // Example: Controller.Network.Device.1.Radio.1.BSS.1.STA.1.
     std::string path_to_sta = dm_get_path_to_sta(client_mac);
 
     if (path_to_sta.empty()) {
@@ -1637,6 +1644,7 @@ bool db::set_station_capabilities(const std::string &client_mac,
     // Remove previous capabilities objects, if they exist
     m_ambiorix_datamodel->remove_optional_subobject(path_to_sta, "HTCapabilities");
     m_ambiorix_datamodel->remove_optional_subobject(path_to_sta, "VHTCapabilities");
+    // TODO: Remove HECapabilities before setting new one.
 
     if (sta_cap.ht_bw != 0xFF && !dm_set_sta_ht_capabilities(path_to_sta, sta_cap)) {
         LOG(ERROR) << "Fail to set station HT Capabilities";
@@ -1646,6 +1654,31 @@ bool db::set_station_capabilities(const std::string &client_mac,
         LOG(ERROR) << "Fail to set station VHT Capabilities";
         return false;
     }
+
+    // TODO: Fill up HE Capabilities for STA, PPM-567
+
+    // Prepare path to AssociationEvent.AssocData object
+    std::string path_to_eventdata = "Controller.Notification.AssociationEvent.AssocData";
+
+    // Remove previous entry
+    m_ambiorix_datamodel->remove_optional_subobject(path_to_eventdata, "HTCapabilities");
+    m_ambiorix_datamodel->remove_optional_subobject(path_to_eventdata, "VHTCapabilities");
+    // TODO: Remove HECapabilities before setting new one.
+
+    // Fill up HT Capabilities for Controller.Notification.AssociationEvent.AssocData
+    if (sta_cap.ht_bw != 0xFF && !dm_set_sta_ht_capabilities(path_to_eventdata, sta_cap)) {
+        LOG(ERROR) << "Fail to set station HT Capabilities into " << path_to_eventdata;
+        return false;
+    }
+
+    // Fill up VHT Capabilities for Controller.Notification.AssociationEvent.AssocData
+    if (sta_cap.vht_bw != 0xFF && !dm_set_sta_vht_capabilities(path_to_eventdata, sta_cap)) {
+        LOG(ERROR) << "Fail to set station VHT Capabilities";
+        return false;
+    }
+
+    // TODO: Fill up HE Capabilities for Controller.Notification.AssociationEvent, PPM-567
+
     return true;
 }
 
@@ -5763,6 +5796,33 @@ bool db::dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client_mac)
         LOG(ERROR) << "Failed to set " << path_to_sta << ".LastConnectTime";
         return false;
     }
+    return true;
+}
+
+bool db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac)
+{
+    const std::string path_association_event = "Controller.Notification.AssociationEvent.AssocData";
+    if (!m_ambiorix_datamodel->set(path_association_event, "BSSID", tlvf::mac_to_string(bssid))) {
+        LOG(ERROR) << "Failed to set " << path_association_event << ".BSSID to " << bssid;
+        return false;
+    }
+    if (!m_ambiorix_datamodel->set(path_association_event, "MACAddress",
+                                   tlvf::mac_to_string(client_mac))) {
+        LOG(ERROR) << "Failed to set " << path_association_event << ".MACAddress to " << client_mac;
+        return false;
+    }
+
+    /*
+     TODO:  Set the status code to real value. Now value hardcoded to 0
+            means connection successfull (IEEE802.11-16, Table 9.46).
+            Should be fixed after PPM-864.
+    */
+    if (!m_ambiorix_datamodel->set(path_association_event, "StatusCode",
+                                   static_cast<uint32_t>(0))) {
+        LOG(ERROR) << "Failed to set " << path_association_event << ".StatusCode to " << client_mac;
+        return false;
+    }
+
     return true;
 }
 

@@ -8,13 +8,13 @@
  */
 
 %config {
-	define-behavior = { 
+	define-behavior = {
 		existing-object = "update"
 	};
 }
 
 %define {
-	select Notification  {
+	select Controller.Notification  {
 		object DisassociationEvent [] {
 
 			object DisassocData {
@@ -32,7 +32,7 @@
 				}
 
 				%read-only uint32 BytesReceived = 0 {
-					
+
 				}
 
 				%read-only uint32 PacketsSent = 0 {
@@ -46,7 +46,7 @@
 				}
 
 				%read-only uint32 ErrorsReceived = 0 {
-					
+
 				}
 
 				%read-only uint32 RetransCounta = 0 {
