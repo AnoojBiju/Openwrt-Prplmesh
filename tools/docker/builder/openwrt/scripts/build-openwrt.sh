@@ -12,7 +12,7 @@ mkdir -p files/etc
 printf '%s=%s\n' "OPENWRT_REPOSITORY" "$OPENWRT_REPOSITORY" >> files/etc/prplwrt-version
 printf '%s=%s\n' "OPENWRT_VERSION" "$OPENWRT_VERSION" >> files/etc/prplwrt-version
 case $TARGET_DEVICE in 
-    netgear-rax40|axepoint|intel_mips)
+    netgear-rax40|axepoint|nec-wx3000hp|intel_mips)
         # Add prplmesh to the list of packages of the profile:
         sed -i 's/packages:/packages:\n  - prplmesh-dwpal/g' profiles/"$TARGET_DEVICE".yml
         # First replace the profiles

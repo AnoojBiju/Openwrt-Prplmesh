@@ -88,7 +88,7 @@ main() {
 
     eval set -- "$OPTS"
 
-    SUPPORTED_TARGETS="turris-omnia glinet-b1300 netgear-rax40 axepoint intel_mips"
+    SUPPORTED_TARGETS="turris-omnia glinet-b1300 netgear-rax40 axepoint nec-wx3000hp intel_mips"
 
     while true; do
         case "$1" in
@@ -116,7 +116,7 @@ main() {
             SUBTARGET=generic
             TARGET_PROFILE=DEVICE_glinet_gl-b1300
             ;;
-        netgear-rax40|axepoint|intel_mips)
+        netgear-rax40|axepoint|intel_mips|nec-wx3000hp)
             TARGET_SYSTEM=intel_mips
             SUBTARGET=xrx500
             TARGET_PROFILE=
@@ -178,7 +178,7 @@ main() {
 VERBOSE=false
 IMAGE_ONLY=false
 OPENWRT_REPOSITORY='https://gitlab.com/prpl-foundation/prplwrt/prplwrt.git'
-OPENWRT_VERSION='25d061959042235ea6e25b9c9d3f5a32cff11a4c'
+OPENWRT_VERSION='3dbba8ad8ca8acf13aa28c37a38cf9c9903a2fc2'
 PRPL_FEED='https://gitlab.com/prpl-foundation/prplwrt/feed-prpl.git^9dc5664f501e31335cf78c2cfa6d9c140dae353f'
 SAH_FEED='https://gitlab.com/soft.at.home/buildsystems/openwrt/sah-packages.git^cc3991bef565448e2c107c79d3efc3c759a0ca0a'
 PRPLMESH_VARIANT="-nl80211"
