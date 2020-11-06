@@ -35,8 +35,6 @@
 #include <tlvf/wfa_map/tlvApRadioBasicCapabilities.h>
 #include <tlvf/wfa_map/tlvApVhtCapabilities.h>
 
-#include <btl/btl.h>
-
 #include <cstddef>
 #include <ctime>
 #include <stdint.h>

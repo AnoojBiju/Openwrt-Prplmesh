@@ -6,8 +6,8 @@
  * See LICENSE file for more details.
  */
 
-#ifndef _BACKHAUL_MANAGER_THREAD_H
-#define _BACKHAUL_MANAGER_THREAD_H
+#ifndef _BACKHAUL_MANAGER_H
+#define _BACKHAUL_MANAGER_H
 
 #include "../tasks/task_pool.h"
 #include "wan_monitor.h"
@@ -24,20 +24,15 @@
 #include <bcl/network/network_utils.h>
 #include <btl/broker_client.h>
 #include <btl/broker_client_factory.h>
-#include <btl/btl.h>
 #include <bwl/sta_wlan_hal.h>
 
 #include <beerocks/tlvf/beerocks_message_header.h>
-
-#include <tlvf/ieee_1905_1/eLinkMetricsType.h>
-#include <tlvf/ieee_1905_1/eMediaType.h>
 
 #include <tlvf/CmduMessageTx.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
 
 #include "../agent_db.h"
 #include "../agent_ucc_listener.h"
-#include "../helpers/link_metrics/link_metrics.h"
 
 #include <future>
 #include <list>
@@ -50,10 +45,10 @@ enum class eErrorCode;
 
 class ChannelSelectionTask;
 
-class backhaul_manager {
+class BackhaulManager {
 
 public:
-    backhaul_manager(
+    BackhaulManager(
         const config_file::sConfigSlave &config, const std::set<std::string> &slave_ap_ifaces_,
         const std::set<std::string> &slave_sta_ifaces_, int stop_on_failure_attempts_,
         std::unique_ptr<beerocks::btl::BrokerClientFactory> broker_client_factory,
@@ -62,7 +57,7 @@ public:
         std::unique_ptr<beerocks::CmduServer> cmdu_server,
         std::shared_ptr<beerocks::TimerManager> timer_manager,
         std::shared_ptr<beerocks::EventLoop> event_loop);
-    ~backhaul_manager();
+    ~BackhaulManager();
 
     /**
      * @brief Starts backhaul manager.
@@ -520,4 +515,4 @@ private:
 
 } // namespace beerocks
 
-#endif // _BACKHAUL_MANAGER_THREAD_H
+#endif // _BACKHAUL_MANAGER_H

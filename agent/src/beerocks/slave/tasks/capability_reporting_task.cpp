@@ -7,7 +7,7 @@
  */
 
 #include "capability_reporting_task.h"
-#include "../backhaul_manager/backhaul_manager_thread.h"
+#include "../backhaul_manager/backhaul_manager.h"
 #include "../tlvf_utils.h"
 #include <tlvf/wfa_map/tlvApCapability.h>
 #include <tlvf/wfa_map/tlvApHeCapabilities.h>
@@ -22,7 +22,7 @@
 
 namespace beerocks {
 
-CapabilityReportingTask::CapabilityReportingTask(backhaul_manager &btl_ctx,
+CapabilityReportingTask::CapabilityReportingTask(BackhaulManager &btl_ctx,
                                                  ieee1905_1::CmduMessageTx &cmdu_tx)
     : Task(eTaskType::CAPABILITY_REPORTING), m_btl_ctx(btl_ctx), m_cmdu_tx(cmdu_tx)
 {

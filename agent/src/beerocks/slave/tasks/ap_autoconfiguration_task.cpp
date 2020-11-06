@@ -9,7 +9,7 @@
 #include "ap_autoconfiguration_task.h"
 
 #include "../agent_db.h"
-#include "../backhaul_manager/backhaul_manager_thread.h"
+#include "../backhaul_manager/backhaul_manager.h"
 
 #include <tlvf/ieee_1905_1/tlvAlMacAddress.h>
 #include <tlvf/ieee_1905_1/tlvAutoconfigFreqBand.h>
@@ -60,7 +60,7 @@ const std::string ApAutoConfigurationTask::fsm_state_to_string(eState status)
     return std::string();
 }
 
-ApAutoConfigurationTask::ApAutoConfigurationTask(backhaul_manager &btl_ctx,
+ApAutoConfigurationTask::ApAutoConfigurationTask(BackhaulManager &btl_ctx,
                                                  ieee1905_1::CmduMessageTx &cmdu_tx)
     : Task(eTaskType::AP_AUTOCONFIGURATION), m_btl_ctx(btl_ctx), m_cmdu_tx(cmdu_tx)
 {

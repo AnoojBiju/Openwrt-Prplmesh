@@ -6,7 +6,7 @@
  * See LICENSE file for more details.
  */
 
-#include "backhaul_manager/backhaul_manager_thread.h"
+#include "backhaul_manager/backhaul_manager.h"
 #include "platform_manager/platform_manager.h"
 #include "son_slave_thread.h"
 
@@ -395,13 +395,13 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
         beerocks::btl::create_broker_client_factory(broker_uds_path, event_loop);
     LOG_IF(!broker_client_factory, FATAL) << "Unable to create broker client factory!";
 
-    beerocks::backhaul_manager backhaul_mgr(
+    beerocks::BackhaulManager backhaul_manager(
         beerocks_slave_conf, slave_ap_ifaces, slave_sta_ifaces, stop_on_failure_attempts,
         std::move(broker_client_factory), std::move(platform_manager_cmdu_client_factory),
         std::move(ucc_server), std::move(backhaul_manager_cmdu_server), timer_manager, event_loop);
 
     // Start backhaul manager
-    LOG_IF(!backhaul_mgr.start(), FATAL) << "Unable to start backhaul manager!";
+    LOG_IF(!backhaul_manager.start(), FATAL) << "Unable to start backhaul manager!";
 
     std::vector<std::shared_ptr<son::slave_thread>> son_slaves;
     for (const auto &iface_element : interfaces_map) {
@@ -455,8 +455,8 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
         son_slave->stop();
     }
 
-    LOG(DEBUG) << "backhaul_mgr.stop()";
-    backhaul_mgr.stop();
+    LOG(DEBUG) << "backhaul_manager.stop()";
+    backhaul_manager.stop();
 
     LOG(DEBUG) << "platform_manager.stop()";
     platform_manager.stop();

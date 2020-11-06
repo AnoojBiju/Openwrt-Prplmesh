@@ -15,12 +15,12 @@
 
 namespace beerocks {
 
-// Forward decleration for backhaul_manager context saving
-class backhaul_manager;
+// Forward declaration for BackhaulManager context saving
+class BackhaulManager;
 
 class TopologyTask : public Task {
 public:
-    TopologyTask(backhaul_manager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx);
+    TopologyTask(BackhaulManager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx);
     ~TopologyTask() {}
 
     void work() override;
@@ -128,7 +128,7 @@ private:
      */
     bool add_associated_clients_tlv();
 
-    backhaul_manager &m_btl_ctx;
+    BackhaulManager &m_btl_ctx;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
 };
 

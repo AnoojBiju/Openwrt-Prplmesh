@@ -14,12 +14,12 @@
 
 #include <easylogging++.h>
 
-#include "backhaul_manager/backhaul_manager_thread.h"
+#include "backhaul_manager/backhaul_manager.h"
 
 using namespace beerocks;
 using namespace net;
 
-agent_ucc_listener::agent_ucc_listener(backhaul_manager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu,
+agent_ucc_listener::agent_ucc_listener(BackhaulManager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu,
                                        std::unique_ptr<beerocks::UccServer> ucc_server)
     : beerocks_ucc_listener(cmdu, std::move(ucc_server)), m_btl_ctx(btl_ctx)
 

@@ -17,20 +17,19 @@
 
 namespace beerocks {
 
-// Forward decleration for backhaul_manager context saving
-class backhaul_manager;
-class CacTask;
+// Forward declaration for BackhaulManager context saving
+class BackhaulManager;
 
 class CapabilityReportingTask : public Task {
 public:
-    CapabilityReportingTask(backhaul_manager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx);
+    CapabilityReportingTask(BackhaulManager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx);
 
     bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
                      const sMacAddr &dst_mac, const sMacAddr &src_mac, int fd,
                      std::shared_ptr<beerocks_header> beerocks_header) override;
 
 private:
-    backhaul_manager &m_btl_ctx;
+    BackhaulManager &m_btl_ctx;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
     beerocks::CacCapabilitiesDatabase m_cac_capabilities;
 

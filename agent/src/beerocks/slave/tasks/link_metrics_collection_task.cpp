@@ -9,7 +9,7 @@
 #include "link_metrics_collection_task.h"
 
 #include "../agent_db.h"
-#include "../backhaul_manager/backhaul_manager_thread.h"
+#include "../backhaul_manager/backhaul_manager.h"
 #include "../helpers/link_metrics/ieee802_11_link_metrics_collector.h"
 #include "../helpers/link_metrics/ieee802_3_link_metrics_collector.h"
 #include "../helpers/media_type.h"
@@ -31,7 +31,7 @@
 
 namespace beerocks {
 
-LinkMetricsCollectionTask::LinkMetricsCollectionTask(backhaul_manager &btl_ctx,
+LinkMetricsCollectionTask::LinkMetricsCollectionTask(BackhaulManager &btl_ctx,
                                                      ieee1905_1::CmduMessageTx &cmdu_tx)
     : Task(eTaskType::LINK_METRICS_COLLECTION), m_btl_ctx(btl_ctx), m_cmdu_tx(cmdu_tx)
 {
@@ -619,7 +619,7 @@ void LinkMetricsCollectionTask::handle_multi_ap_policy_config_request(
 
             auto metrics_reporting_conf = std::get<1>(tuple);
 
-            std::shared_ptr<backhaul_manager::sRadioInfo> radio =
+            std::shared_ptr<BackhaulManager::sRadioInfo> radio =
                 m_btl_ctx.get_radio(metrics_reporting_conf.radio_uid);
             if (radio) {
                 auto db = AgentDB::get();

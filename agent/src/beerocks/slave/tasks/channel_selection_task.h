@@ -18,12 +18,12 @@
 
 namespace beerocks {
 
-// Forward decleration for backhaul_manager context saving
-class backhaul_manager;
+// Forward declaration for BackhaulManager context saving
+class BackhaulManager;
 
 class ChannelSelectionTask : public Task {
 public:
-    ChannelSelectionTask(backhaul_manager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx);
+    ChannelSelectionTask(BackhaulManager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx);
 
     void work() override;
 
@@ -166,7 +166,7 @@ private:
 
     sExpectedChannelSelection m_expected_channel_selection;
 
-    backhaul_manager &m_btl_ctx;
+    BackhaulManager &m_btl_ctx;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
 };
 

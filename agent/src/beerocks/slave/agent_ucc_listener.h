@@ -19,12 +19,12 @@ namespace beerocks {
 
 static const auto DEV_SET_ETH = std::string("eth");
 
-// Forward decleration for backhaul_manager context saving
-class backhaul_manager;
+// Forward declaration for BackhaulManager context saving
+class BackhaulManager;
 
 class agent_ucc_listener : public beerocks_ucc_listener {
 public:
-    agent_ucc_listener(backhaul_manager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu,
+    agent_ucc_listener(BackhaulManager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu,
                        std::unique_ptr<beerocks::UccServer> ucc_server);
     ~agent_ucc_listener() override;
 
@@ -75,7 +75,7 @@ private:
     bool handle_dev_get_param(std::unordered_map<std::string, std::string> &params,
                               std::string &value) override;
 
-    backhaul_manager &m_btl_ctx;
+    BackhaulManager &m_btl_ctx;
 
     std::atomic<bool> m_in_reset{false};
     std::atomic<bool> m_reset_completed{false};

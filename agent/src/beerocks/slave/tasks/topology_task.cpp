@@ -8,7 +8,7 @@
 
 #include "topology_task.h"
 #include "../agent_db.h"
-#include "../backhaul_manager/backhaul_manager_thread.h"
+#include "../backhaul_manager/backhaul_manager.h"
 #include "../helpers/media_type.h"
 
 #include <bcl/network/network_utils.h>
@@ -31,7 +31,7 @@ using namespace beerocks;
 using namespace net;
 using namespace son;
 
-TopologyTask::TopologyTask(backhaul_manager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx)
+TopologyTask::TopologyTask(BackhaulManager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx)
     : Task(eTaskType::TOPOLOGY), m_btl_ctx(btl_ctx), m_cmdu_tx(cmdu_tx)
 {
 }

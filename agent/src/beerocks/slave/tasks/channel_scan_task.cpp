@@ -8,9 +8,8 @@
 
 #include "channel_scan_task.h"
 #include "../agent_db.h"
+#include "../backhaul_manager/backhaul_manager.h"
 #include <easylogging++.h>
-
-#include "../backhaul_manager/backhaul_manager_thread.h"
 
 using namespace beerocks;
 
@@ -22,7 +21,7 @@ using namespace beerocks;
         m_state[radio_iface] = new_state;                                                          \
     })
 
-ChannelScanTask::ChannelScanTask(backhaul_manager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx)
+ChannelScanTask::ChannelScanTask(BackhaulManager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx)
     : Task(eTaskType::CHANNEL_SCAN), m_btl_ctx(btl_ctx), m_cmdu_tx(cmdu_tx)
 {
 }

@@ -8,7 +8,7 @@
 
 #include "channel_selection_task.h"
 #include "../agent_db.h"
-#include "../backhaul_manager/backhaul_manager_thread.h"
+#include "../backhaul_manager/backhaul_manager.h"
 
 #include <beerocks/tlvf/beerocks_message_backhaul.h>
 
@@ -25,7 +25,7 @@
 
 namespace beerocks {
 
-ChannelSelectionTask::ChannelSelectionTask(backhaul_manager &btl_ctx,
+ChannelSelectionTask::ChannelSelectionTask(BackhaulManager &btl_ctx,
                                            ieee1905_1::CmduMessageTx &cmdu_tx)
     : Task(eTaskType::CHANNEL_SELECTION), m_btl_ctx(btl_ctx), m_cmdu_tx(cmdu_tx)
 {

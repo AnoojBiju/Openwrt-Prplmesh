@@ -15,12 +15,12 @@
 
 namespace beerocks {
 
-// Forward decleration for backhaul_manager context saving
-class backhaul_manager;
+// Forward declaration for BackhaulManager context saving
+class BackhaulManager;
 
 class ApAutoConfigurationTask : public Task {
 public:
-    ApAutoConfigurationTask(backhaul_manager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx);
+    ApAutoConfigurationTask(BackhaulManager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx);
     ~ApAutoConfigurationTask() {}
 
     void work() override;
@@ -102,7 +102,7 @@ private:
     // template argument.
     std::unordered_map<eFreqType, sDiscoveryStatus, std::hash<int>> m_discovery_status;
 
-    backhaul_manager &m_btl_ctx;
+    BackhaulManager &m_btl_ctx;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
 
     /* 1905.1 message handlers: */
