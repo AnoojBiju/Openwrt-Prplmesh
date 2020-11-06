@@ -573,6 +573,14 @@ public:
             return nullptr;
         }
 
+        // Allow reuse of local addresses.
+        // (to avoid the "address already in use" error when calling bind() on a TCP server socket
+        // if server has been shut down and restarted right away).
+        if (!socket->setsockopt_reuseaddr(true)) {
+            LOG(ERROR) << "Unable to set socket option";
+            return nullptr;
+        }
+
         // Bind server socket to given TCP address
         if (!server_socket->bind(address)) {
             LOG(ERROR) << "Unable to bind server socket to TCP address at port: " << address.port();
