@@ -134,10 +134,17 @@ class Services:
         local_env = os.environ
         local_env['ROOT_DIR'] = self.rootdir
         local_env['RUN_ID'] = self.build_id
-        if os.getenv('CI_PIPELINE_ID') is None:
+        if os.getenv('PARENT_PIPELINE_ID'):
+            # Running from a child pipeline. Use the parent pipeline ID:
+            local_env['IMAGE_TAG'] = local_env['PARENT_PIPELINE_ID']
+        elif os.getenv('CI_PIPELINE_ID'):
+            # Running from the main pipeline:
+            local_env['IMAGE_TAG'] = local_env['CI_PIPELINE_ID']
+        else:
             # Running locally
-            local_env['CI_PIPELINE_ID'] = 'latest'
-        print("Using CI_PIPELINE_ID '{}'".format(local_env['CI_PIPELINE_ID']))
+            local_env['IMAGE_TAG'] = 'latest'
+
+        print("Using IMAGE_TAG '{}'".format(local_env['IMAGE_TAG']))
 
         local_env['FINAL_ROOT_DIR'] = self.rootdir
 
