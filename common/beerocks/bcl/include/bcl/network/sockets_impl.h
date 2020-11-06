@@ -45,6 +45,38 @@ public:
      */
     int fd() override { return m_descriptor.fd(); }
 
+    /**
+     * @brief Sets the SO_REUSEADDR socket option.
+     *
+     * Indicates that the rules used in validating addresses supplied in a bind(2) call should allow
+     * reuse of local addresses. For AF_INET sockets this means that a socket may bind, except when
+     * there is an active listening socket bound to the address. When the listening socket is bound
+     * to INADDR_ANY with a specific port then it is not possible to bind to this port for any local
+     * address.
+     *
+     * What exactly does SO_REUSEADDR do?
+     * On TCP server sockets, is both the simplest and the most effective option for reducing the
+     * "address already in use" error when calling bind() to a specific port.
+     * This socket option tells the kernel that even if this port is busy (in the TIME_WAIT state),
+     * go ahead and reuse it anyway. If it is busy, but in another state, you will still get an
+     * address already in use error. It is useful if your server has been shut down, and then
+     * restarted right away while sockets are still active on its port.
+     *
+     * @param reuseaddr Flag set to true to allow reuse of local addresses and to false to disallow.
+     * @return true on success and false otherwise.
+     */
+    bool setsockopt_reuseaddr(bool reuseaddr)
+    {
+        int optval = reuseaddr ? 1 : 0;
+        if (0 != ::setsockopt(fd(), SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval))) {
+            LOG(ERROR) << "Unable to set the SO_REUSEADDR socket option for fd: " << fd()
+                       << ", error: " << strerror(errno);
+            return false;
+        }
+
+        return true;
+    }
+
 protected:
     /**
      * @brief Class constructor.
