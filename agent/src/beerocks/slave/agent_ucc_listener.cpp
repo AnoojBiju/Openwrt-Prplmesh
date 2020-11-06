@@ -21,9 +21,7 @@ using namespace net;
 
 agent_ucc_listener::agent_ucc_listener(backhaul_manager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu,
                                        std::unique_ptr<beerocks::UccServer> ucc_server)
-    : beerocks_ucc_listener(AgentDB::get()->device_conf.ucc_listener_port, cmdu,
-                            std::move(ucc_server)),
-      m_btl_ctx(btl_ctx)
+    : beerocks_ucc_listener(cmdu, std::move(ucc_server)), m_btl_ctx(btl_ctx)
 
 {
     m_ucc_listener_run_on = eUccListenerRunOn::AGENT;
@@ -64,8 +62,6 @@ bool agent_ucc_listener::clear_configuration()
             return false;
         }
 
-        // Unlock the thread mutex and allow the Agent thread to work while this thread sleeps
-        unlock();
         UTILS_SLEEP_MSEC(1000);
     }
 

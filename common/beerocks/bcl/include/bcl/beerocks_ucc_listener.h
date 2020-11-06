@@ -9,8 +9,9 @@
 #ifndef __BEEROCKS_UCC_LISTENER_H__
 #define __BEEROCKS_UCC_LISTENER_H__
 
-#include <bcl/beerocks_socket_thread.h>
 #include <bcl/beerocks_ucc_server.h>
+
+#include <tlvf/CmduMessageTx.h>
 
 #include <list>
 #include <string>
@@ -25,15 +26,13 @@ static constexpr uint8_t UCC_REPLY_COMPLETE_TIMEOUT_SEC = 120;
 // list of values we support for "program":
 static constexpr std::array<const char *, 2> supported_programs = {"map", "mapr2"};
 
-class beerocks_ucc_listener : public socket_thread {
+class beerocks_ucc_listener {
 public:
-    beerocks_ucc_listener(uint16_t port, ieee1905_1::CmduMessageTx &cmdu,
+    beerocks_ucc_listener(ieee1905_1::CmduMessageTx &cmdu,
                           std::unique_ptr<beerocks::UccServer> ucc_server);
     virtual ~beerocks_ucc_listener();
 
 protected:
-    bool init() override;
-
     // Helper functions
     static std::string check_forbidden_chars(const std::string &str);
     static bool validate_hex_notation(const std::string &str, uint8_t expected_octets = 0);
@@ -41,8 +40,6 @@ protected:
     static bool validate_decimal_notation(const std::string &str);
 
     // Virtual functions
-    virtual void lock()                                                                = 0;
-    virtual void unlock()                                                              = 0;
     virtual std::string fill_version_reply_string()                                    = 0;
     virtual bool clear_configuration()                                                 = 0;
     virtual bool send_cmdu_to_destination(ieee1905_1::CmduMessageTx &cmdu_tx,
@@ -62,18 +59,6 @@ protected:
     eUccListenerRunOn m_ucc_listener_run_on = eUccListenerRunOn::NONE;
 
 private:
-    // socket thread functions
-    int server_port() override;
-    void socket_connected(Socket *sd) override;
-    bool socket_disconnected(Socket *sd) override;
-    bool custom_message_handler(Socket *sd, uint8_t *rx_buffer, size_t rx_buffer_size) override;
-
-    void before_select() override { unlock(); }
-    void after_select(bool timeout) override { lock(); }
-
-    // not need this function but it is pure virtual so must be overridden.
-    bool handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx) override { return true; }
-
     // Helper functions
     enum class eWfaCaCommand : uint8_t {
         CA_GET_VERSION,
@@ -120,8 +105,6 @@ private:
 
     // Variables
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
-    Socket *m_ucc_sd = nullptr;
-    uint16_t m_port;
 
     /**
      * UCC server to communicate with a UCC client by exchanging commands and replies.

@@ -13,7 +13,7 @@
 #include <bcl/beerocks_ucc_listener.h>
 #include <beerocks/tlvf/beerocks_message.h>
 
-#include <mutex>
+#include <atomic>
 
 namespace beerocks {
 
@@ -27,9 +27,6 @@ public:
     agent_ucc_listener(backhaul_manager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu,
                        std::unique_ptr<beerocks::UccServer> ucc_server);
     ~agent_ucc_listener() override;
-
-    void lock() override { mutex.lock(); }
-    void unlock() override { mutex.unlock(); }
 
     /** @brief Check if reset CAPI command was given.
      *
@@ -97,8 +94,6 @@ private:
      */
     std::atomic<bool> m_received_dev_set_config{true};
     std::string m_selected_backhaul; // "ETH" or "<RUID of the selected radio>"
-
-    std::mutex mutex;
 };
 
 } // namespace beerocks

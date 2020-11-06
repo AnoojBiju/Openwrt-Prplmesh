@@ -24,8 +24,6 @@ public:
                             std::unique_ptr<beerocks::UccServer> ucc_server);
 
 private:
-    void lock() override { m_database.lock(); }
-    void unlock() override { m_database.unlock(); }
     std::string fill_version_reply_string() override;
     bool clear_configuration() override;
     bool send_cmdu_to_destination(ieee1905_1::CmduMessageTx &cmdu_tx,
