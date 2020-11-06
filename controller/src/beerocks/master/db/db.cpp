@@ -4069,7 +4069,7 @@ bool db::set_vap_stats_info(const std::string &bssid, uint32_t uc_tx_bytes, uint
                             uint32_t bc_rx_bytes)
 {
     /*
-        ToDo: add extended stats to vap ?
+        ToDo: This method should be called in the handler for AP Extended Metrics TLV (WFA EasyMesh R2)
     */
 
     /*
@@ -4088,6 +4088,15 @@ bool db::set_vap_stats_info(const std::string &bssid, uint32_t uc_tx_bytes, uint
     */
     if (!m_ambiorix_datamodel->set(bss_path, "UnicastBytesSent", uc_tx_bytes)) {
         LOG(ERROR) << "Failed to set " << bss_path << "UnicastBytesSent";
+        return false;
+    }
+
+    /*
+        Set value for UnicastBytesReceived variable
+        Example: Controller.Network.Device.1.Radio.1.BSS.1.UnicastBytesReceived
+    */
+    if (!m_ambiorix_datamodel->set(bss_path, "UnicastBytesReceived", uc_rx_bytes)) {
+        LOG(ERROR) << "Failed to set " << bss_path << "UnicastBytesReceived";
         return false;
     }
 
