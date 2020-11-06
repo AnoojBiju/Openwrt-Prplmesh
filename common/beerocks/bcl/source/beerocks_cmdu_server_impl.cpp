@@ -73,6 +73,18 @@ CmduServerImpl::~CmduServerImpl()
     m_event_loop->remove_handlers(m_server_socket->socket()->fd());
 }
 
+bool CmduServerImpl::disconnect(int fd)
+{
+    // Find context information for given socket connection
+    auto it = m_connections.find(fd);
+    if (m_connections.end() == it) {
+        LOG(ERROR) << "Failed to close an unknown connection! fd = " << fd;
+        return false;
+    }
+
+    return remove_connection(fd, true);
+}
+
 bool CmduServerImpl::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
 {
     // Find context information for given socket connection

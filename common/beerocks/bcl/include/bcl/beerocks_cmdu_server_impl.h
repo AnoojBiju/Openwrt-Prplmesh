@@ -52,6 +52,12 @@ public:
     ~CmduServerImpl() override;
 
     /**
+     * @brief Disconnects a client socket connection.
+     * @see CmduServer::disconnect
+     */
+    bool disconnect(int fd) override;
+
+    /**
      * @brief Sends a CMDU message.
      * @see CmduServer::send_cmdu
      *

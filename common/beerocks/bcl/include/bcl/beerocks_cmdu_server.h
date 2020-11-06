@@ -103,6 +103,16 @@ public:
     void clear_handlers() { m_handlers = {}; }
 
     /**
+     * @brief Disconnects a client socket connection.
+     *
+     * Closes the given client socket connection and frees allocated resources.
+     *
+     * @param fd File descriptor of the socket connection to disconnect.
+     * @return true on success and false otherwise.
+     */
+    virtual bool disconnect(int fd) = 0;
+
+    /**
      * @brief Sends a CMDU message.
      *
      * Sends a CMDU message to a client through the given socket connection.
