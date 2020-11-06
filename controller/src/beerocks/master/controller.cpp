@@ -238,22 +238,22 @@ bool Controller::start()
     }
     rollback_actions.emplace_front([&]() { m_broker_client.reset(); });
 
+    beerocks::btl::BrokerClient::EventHandlers handlers;
     // Install a CMDU-received event handler for CMDU messages received from the transport process.
     // These messages are actually been sent by a remote process and the broker server running in
     // the transport process just forwards them to the broker client.
-    m_broker_client->set_cmdu_received_handler([&](uint32_t iface_index, const sMacAddr &dst_mac,
-                                                   const sMacAddr &src_mac,
-                                                   ieee1905_1::CmduMessageRx &cmdu_rx) {
+    handlers.on_cmdu_received = [&](uint32_t iface_index, const sMacAddr &dst_mac,
+                                    const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx) {
         handle_cmdu_from_broker(iface_index, dst_mac, src_mac, cmdu_rx);
-    });
-    rollback_actions.emplace_front([&]() { m_broker_client->clear_cmdu_received_handler(); });
+    };
 
     // Install a connection-closed event handler.
     // Currently there is no recovery mechanism if connection with broker server gets interrupted
     // (something that happens if the transport process dies). Just log a message and exit
-    m_broker_client->set_connection_closed_handler(
-        [&]() { LOG(FATAL) << "Broker client got disconnected!"; });
-    rollback_actions.emplace_front([&]() { m_broker_client->clear_connection_closed_handler(); });
+    handlers.on_connection_closed = [&]() { LOG(FATAL) << "Broker client got disconnected!"; };
+
+    m_broker_client->set_handlers(handlers);
+    rollback_actions.emplace_front([&]() { m_broker_client->clear_handlers(); });
 
     // Subscribe for the reception of CMDU messages that this process is interested in
     if (!m_broker_client->subscribe(std::set<ieee1905_1::eMessageType>{
@@ -293,8 +293,7 @@ bool Controller::stop()
     bool ok = true;
 
     if (m_broker_client) {
-        m_broker_client->clear_connection_closed_handler();
-        m_broker_client->clear_cmdu_received_handler();
+        m_broker_client->clear_handlers();
         m_broker_client.reset();
     }
 
