@@ -6,7 +6,7 @@
 			"console" : false,
 			"file" : {
 				"enable" : true,
-				"path" : "@TMP_PATH@/logs/",
+				"path" : "@BEEROCKS_LOG_FILES_PATH@/",
 				"size" : "1000000"
 			},
 			"flushthreshold" : 1
