@@ -139,6 +139,4 @@
     paths:
       - logs
     when: always
-  tags:
-    - certs-tests
   timeout: 45min
