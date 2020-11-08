@@ -447,7 +447,7 @@ void ChannelSelectionTask::zwdfs_fsm()
 
         message_com::send_cmdu(fronthaul_sd, m_cmdu_tx);
 
-        constexpr uint8_t CHANNELS_LIST_RESPONSE_TIMEOUT_SEC = 1;
+        constexpr uint8_t CHANNELS_LIST_RESPONSE_TIMEOUT_SEC = 3;
 
         m_zwdfs_fsm_timeout = std::chrono::steady_clock::now() +
                               std::chrono::seconds(CHANNELS_LIST_RESPONSE_TIMEOUT_SEC);
@@ -603,7 +603,7 @@ void ChannelSelectionTask::zwdfs_fsm()
 
         message_com::send_cmdu(fronthaul_sd, m_cmdu_tx);
 
-        constexpr uint8_t SWITCH_CHANNEL_PRIMARY_RADIO_TIMEOUT_SEC = 1;
+        constexpr uint8_t SWITCH_CHANNEL_PRIMARY_RADIO_TIMEOUT_SEC = 3;
         m_zwdfs_fsm_timeout = std::chrono::steady_clock::now() +
                               std::chrono::seconds(SWITCH_CHANNEL_PRIMARY_RADIO_TIMEOUT_SEC);
 
@@ -642,7 +642,7 @@ void ChannelSelectionTask::zwdfs_fsm()
 
         message_com::send_cmdu(fronthaul_sd, m_cmdu_tx);
 
-        constexpr uint8_t ZWDFS_SWITCH_ANT_OFF_RESPONSE_SEC = 1;
+        constexpr uint8_t ZWDFS_SWITCH_ANT_OFF_RESPONSE_SEC = 3;
 
         m_zwdfs_fsm_timeout = std::chrono::steady_clock::now() +
                               std::chrono::seconds(ZWDFS_SWITCH_ANT_OFF_RESPONSE_SEC);
