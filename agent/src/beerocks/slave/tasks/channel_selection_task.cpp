@@ -629,7 +629,7 @@ void ChannelSelectionTask::zwdfs_fsm()
         auto fronthaul_sd = front_iface_name_to_socket(m_zwdfs_iface);
         if (!fronthaul_sd) {
             LOG(DEBUG) << "socket to fronthaul not found: " << m_zwdfs_iface;
-            ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
             break;
         }
 
