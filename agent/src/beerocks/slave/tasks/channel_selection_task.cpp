@@ -495,9 +495,11 @@ void ChannelSelectionTask::zwdfs_fsm()
         }();
 
         // If the second best channel is not a DFS or Available, we can skip ZWDFS CAC, and
-        //switch the channel immediately on the primary 5G radio.
+        // switch the channel immediately on the primary 5G radio.
         if (m_selected_channel.dfs_state == beerocks_message::eDfsState::NOT_DFS ||
             m_selected_channel.dfs_state == beerocks_message::eDfsState::AVAILABLE) {
+            LOG(WARNING) << "Better failsafe channel has been found, skip ZWDFS CAC, and switch "
+                            "primary 5G radio immediately";
             ZWDFS_FSM_MOVE_STATE(eZwdfsState::SWITCH_CHANNEL_PRIMARY_RADIO);
             break;
         }

@@ -3117,6 +3117,8 @@ bool slave_thread::handle_cmdu_monitor_message(Socket *sd,
             break;
         }
 
+        LOG(DEBUG) << "Received ACTION_MONITOR_CHANNEL_SCAN_FINISHED_NOTIFICATION";
+
         radio->statuses.dcs_background_scan_in_process = false;
 
         auto notification_in =
