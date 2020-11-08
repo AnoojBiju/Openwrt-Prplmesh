@@ -45,9 +45,58 @@ void dynamic_channel_selection_r2_task::work()
 void dynamic_channel_selection_r2_task::handle_event(int event_enum_value, void *event_obj)
 {
     switch (eEvent(event_enum_value)) {
+    case TRIGGER_SINGLE_SCAN: {
+        auto scan_request_event = reinterpret_cast<const sScanRequestEvent *>(event_obj);
+        LOG(TRACE) << "Received TRIGGER_SINGLE_SCAN event for mac:"
+                   << scan_request_event->radio_mac;
+        handle_scan_request_event(*scan_request_event);
+        break;
+    }
     default: {
         LOG(DEBUG) << "Message handler doesn't exists for event type " << event_enum_value;
         break;
     }
     }
+}
+
+bool dynamic_channel_selection_r2_task::handle_scan_request_event(
+    const sScanRequestEvent &scan_request_event)
+{
+    // Add pending scan request for radio to the task status container
+    auto radio_mac = scan_request_event.radio_mac;
+
+    // Get parent agent mac from radio mac
+    auto radio_mac_str = tlvf::mac_to_string(radio_mac);
+    auto ire           = database.get_node_parent_ire(radio_mac_str);
+    if (ire.empty()) {
+        LOG(ERROR) << "Failed to get node_parent_ire!";
+        return false;
+    }
+    // Is agent exist in pool
+    auto ire_mac = tlvf::mac_from_string(ire);
+    auto agent   = m_agents_status_map.find(ire_mac);
+    if (agent != m_agents_status_map.end()) {
+        // Is radio scan exist in agent
+        auto radio_request = agent->second.radio_scans.find(radio_mac);
+        if (radio_request != agent->second.radio_scans.end()) {
+            // Radio scan request exists - check if radio scan in progress
+            if (radio_request->second.status != eRadioScanStatus::PENDING) {
+                LOG(ERROR) << "Scan for radio " << radio_mac
+                           << " already in progress - ignore new scan request";
+                return false;
+            }
+            // Radio scan request exists but not in progress - override scan request with new request.
+            // Note: Currently the scan request does not contain specific informaiton (when pending) - but in the future
+            // may include other information to override.
+            agent->second.radio_scans.erase(radio_mac);
+        }
+    } else {
+        // Add agent to the queue
+        m_agents_status_map[ire_mac] = sAgentScanStatus();
+    }
+
+    // Create new radio request (with default values) in request pool
+    m_agents_status_map[ire_mac].radio_scans[radio_mac] = sAgentScanStatus::sRadioScanRequest();
+
+    return true;
 }

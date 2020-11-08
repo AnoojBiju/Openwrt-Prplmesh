@@ -37,7 +37,7 @@ public:
         uint16_t mid;
     };
 
-    enum eEvent : uint8_t {};
+    enum eEvent : uint8_t { TRIGGER_SINGLE_SCAN };
 
     enum class eRadioScanStatus : uint8_t { PENDING, TRIGGERED_WAIT_FOR_ACK, SCAN_IN_PROGRESS };
     enum class eAgentStatus : uint8_t { IDLE, BUSY };
@@ -99,6 +99,14 @@ private:
     db &database;
     ieee1905_1::CmduMessageTx &cmdu_tx;
     task_pool &tasks;
+    /**
+     * @brief Handle scan request events.
+     * Add a radio scan request in the event to pending scan requests.
+     * 
+     * @param scan_request_event Refernce to sScanRequestEvent object.
+     * @return true if successful, false otherwise.
+     */
+    bool handle_scan_request_event(const sScanRequestEvent &scan_request_event);
 };
 
 } //namespace son
