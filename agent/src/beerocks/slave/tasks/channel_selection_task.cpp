@@ -398,6 +398,23 @@ Socket *ChannelSelectionTask::front_iface_name_to_socket(const std::string &ifac
     return nullptr;
 }
 
+bool ChannelSelectionTask::radio_on_scan(eFreqType band)
+{
+    auto db = AgentDB::get();
+    for (const auto radio : db->get_radios_list()) {
+        if (!radio) {
+            continue;
+        }
+        if (band != eFreqType::FREQ_UNKNOWN && radio->freq_type != band) {
+            continue;
+        }
+        if (radio->statuses.dcs_background_scan_in_process) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void ChannelSelectionTask::zwdfs_fsm()
 {
     switch (m_zwdfs_state) {
@@ -410,18 +427,7 @@ void ChannelSelectionTask::zwdfs_fsm()
         // 2.4G because it is forbidden to switch zwdfs antenna during scan.
         // 5G because we don't want the ZWDFS flow will switch channel on the primary 5G radio
         // while it is during a background scan.
-        auto db = AgentDB::get();
-        auto break_state = false;
-        for (const auto &radio : db->get_radios_list()) {
-            if (!radio) {
-                continue;
-            }
-            if (radio->statuses.dcs_background_scan_in_process) {
-                break_state = true;
-                break;
-            }
-        }
-        if (break_state) {
+        if (radio_on_scan()) {
             break;
         }
 
@@ -505,21 +511,8 @@ void ChannelSelectionTask::zwdfs_fsm()
         // ZWDFS antenna. Since at the time when the background scan will be over, the selected
         // channel might not be relevant anymore, the FSM will start over and jum to the initial
         // state which query the updated channel info from the AP.
-        auto db = AgentDB::get();
-        auto break_state = false;
-        for (const auto &radio : db->get_radios_list()) {
-            if (!radio) {
-                continue;
-            }
-            if (radio->statuses.dcs_background_scan_in_process) {
-                LOG(INFO) << "Pause ZWDFS flow until background scan on radio "
-                          << radio->front.iface_name << " is finished";
-                ZWDFS_FSM_MOVE_STATE(eZwdfsState::REQUEST_CHANNELS_LIST);
-                break_state = true;
-                break;
-            }
-        }
-        if (break_state) {
+        if (radio_on_scan()) {
+            LOG(INFO) << "Pause ZWDFS flow until background scan is finished";
             break;
         }
 
@@ -626,21 +619,11 @@ void ChannelSelectionTask::zwdfs_fsm()
     }
     case eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST: {
         // Block switching back 2.4G antenna if its radio is during background scan.
-        auto db = AgentDB::get();
-        auto break_state = false;
-        for (const auto &radio : db->get_radios_list()) {
-            if (!radio) {
-                continue;
-            }
-            if (radio->freq_type == eFreqType::FREQ_24G &&
-                radio->statuses.dcs_background_scan_in_process) {
-                break_state = true;
-                break;
-            }
-        }
-        if (break_state) {
+        if (radio_on_scan(eFreqType::FREQ_24G)) {
             break;
         }
+
+        LOG(DEBUG) << "Sending ZWDFS antenna switch off request";
         auto fronthaul_sd = front_iface_name_to_socket(m_zwdfs_iface);
         if (!fronthaul_sd) {
             LOG(DEBUG) << "socket to fronthaul not found: " << m_zwdfs_iface;
