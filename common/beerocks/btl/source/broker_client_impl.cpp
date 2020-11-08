@@ -149,6 +149,10 @@ void BrokerClientImpl::handle_read(int fd)
         auto message = m_message_parser->parse_message(m_buffer);
         if (message) {
             handle_message(*message);
+        } else {
+            // Message is incomplete.
+            // Keep bytes received so far and wait till the next read event
+            break;
         }
     }
 }
