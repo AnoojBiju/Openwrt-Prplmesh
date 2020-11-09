@@ -1427,7 +1427,7 @@ private:
      * @param sta_cap Structure with station HT Capabilities.
      * @return True on success, false otherwise.
      */
-    bool dm_set_sta_ht_capabilities(std::string &path_to_sta,
+    bool dm_set_sta_ht_capabilities(const std::string &path_to_sta,
                                     const beerocks::message::sRadioCapabilities &sta_cap);
 
     /**
