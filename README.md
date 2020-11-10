@@ -15,15 +15,7 @@ Architecture documentation can be found in the [documentation](documentation/) f
 
 The latest build artifacts are [always accessible](https://ftp.essensium.com/owncloud/index.php/s/xidrhY3JKEYS9dK?path=%2Fartifacts%2Flatest%2Fbuild).
 
-## Requirements
-
-To build prplMesh, you need (on Ubuntu) the following packages:
-
-```bash
-sudo apt install curl gcc cmake binutils git autoconf autogen libtool pkg-config \
-     libreadline-dev libncurses-dev libssl-dev libjson-c-dev libnl-genl-3-dev \
-     python python-yaml python-paramiko repo bridge-utils clang-format ninja-build
-```
+## Fetch Sources
 
 If you haven't done so already, set up your git configuration:
 
@@ -32,18 +24,64 @@ git config --global user.email your@email.address
 git config --global user.name "Your Name"
 ```
 
-There are several dependencies for which we require a specific version. To ease
-deployment of these, they are collected in a google repo manifest file:
-
+If you already have a gitlab account:
 ```bash
-mkdir prplmesh_root
-cd prplmesh_root
-repo init -u https://github.com/prplfoundation/prplMesh-manifest.git
-repo sync
-repo forall -p -c 'git checkout $REPO_RREV'
+git clone ssh://git@gitlab.com/prpl-foundation/prplmesh/prplMesh.git
+```
+Otherwise
+```bash
+git clone https://gitlab.com/prpl-foundation/prplmesh/prplMesh.git
 ```
 
-## Build Instructions
+## Build in Docker
+
+See corresponding [README](tools/docker/README.md)
+
+## Native Build
+
+As an alternative to the manual steps outlined below, [tools/maptools.py](tools/README.md) can be used to build and install prplMesh with a single command.
+
+### Requirements
+
+An up-to-date list of packages you need to build prplMesh on Ubuntu (18.04) is available in the [Dockerfile](tools/docker/builder/ubuntu/bionic/Dockerfile)
+This is used in our automated builds, so is guaranteed to be up to date.
+As of the time of writing, it includes the following packages:
+
+* binutils 
+* cmake 
+* gcc 
+* git 
+* libjson-c-dev 
+* libncurses-dev 
+* libnl-3-dev 
+* libnl-genl-3-dev 
+* libnl-route-3-dev 
+* libreadline-dev 
+* libssl-dev 
+* ninja-build 
+* pkg-config 
+* python 
+* python-yaml 
+* python3 
+* python3-yaml 
+* bison 
+* curl 
+* flex 
+* libevent-dev 
+* libyajl-dev 
+* lua5.1 
+* liblua5.1-0-dev 
+* build-essential 
+* clang-format 
+* gcovr 
+* bridge-utils 
+* ebtables 
+* iproute2 
+* net-tools 
+* psmisc 
+* uuid-runtime
+
+### Run Build
 
 Use standard CMake to build prplMesh, with a configure-build-install cycle.
 
@@ -54,19 +92,15 @@ cmake -DBUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=../build/
 ninja -C ../build install
 ```
 
-If you prefer, `make` can be used instead of `ninja` by removing the `-G Ninja` part.
+If you prefer, `make` can be used instead of `ninja` by removing the `-G Ninja` part in 1st command and by replacing `ninja` with `make` in 2nd one.
+
+### Install
 
 For system-level install, the standard DESTDIR approach can be used for installing prplMesh as a package.
 
 ```bash
 DESTDIR=/tmp/prplMesh-install ninja install
 ```
-
-Alternatively, [tools/maptools.py](tools/README.md) can be used to build and install prplMesh with a single command.
-
-Note - to build and run with Docker, see provided [building with docker](tools/docker/README.md)
-
-Build artifacts are also available through the following link: https://ftp.essensium.com/owncloud/index.php/s/Sp7esHfmfH3bfwn .
 
 ## Running Instructions
 
