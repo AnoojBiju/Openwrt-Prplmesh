@@ -18,13 +18,17 @@ endif()
 add_executable(${PROJECT_NAME} ${controller_sources} ${controller_tasks_sources} ${controller_operations_sources} ${controller_db_sources})
 set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,-z,defs")
 
+list(APPEND LINKED_LIBS bpl bcl btl tlvf elpp btlvf nbapi ieee1905_transport_lib)
 if (ENABLE_NBAPI)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_NBAPI")
+    list(APPEND LINKED_LIBS nbapi_actions_controller)
 endif()
 
-target_link_libraries(${PROJECT_NAME} bpl bcl btl tlvf elpp btlvf nbapi)
+target_link_libraries(${PROJECT_NAME} ${LINKED_LIBS})
+
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${MODULE_PATH}/../bml
+    ${MODULE_PATH}/../../../nbapi
 )
 
 # Install
