@@ -2706,10 +2706,11 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         memset(msg_buff.get(), 0, sizeof(sHOSTAP_DISABLED_NOTIFICATION));
 
         char client_mac[MAC_ADDR_SIZE] = {0};
-        size_t numOfValidArgs[1]       = {0};
+        size_t numOfValidArgs[2]       = {0};
 
         FieldsToParse fieldsToParse[] = {
-            {(void *)client_mac, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, sizeof(client_mac)},
+            {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
+            {(void *)client_mac, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, sizeof(client_mac)},
             /* Must be at the end */
             {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
 
