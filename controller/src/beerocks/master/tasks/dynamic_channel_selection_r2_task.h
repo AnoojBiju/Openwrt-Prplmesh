@@ -99,6 +99,32 @@ private:
     db &database;
     ieee1905_1::CmduMessageTx &cmdu_tx;
     task_pool &tasks;
+
+    /**
+     * @brief Check the scans queue for any pending requests in idle agents
+     * 
+     * @return true if pending scan in idle agent found, false otherwise.
+     */
+    bool is_scan_pending_for_any_idle_agent();
+
+    /**
+     * @brief Check if the agent has pending scans that can be triggered.
+     * Will return true only if the agent is in IDLE state and therefore
+     * ready to run the pending scan.
+     * 
+     * @param agent_scan_status A reference to sAgentScanStatus struct
+     * @return true if pending scan in idle agent found, false otherwise.
+     */
+    bool is_agent_idle_with_pending_radio_scans(const sAgentScanStatus &agent_scan_status);
+
+    /**
+     * @brief Check if a scan was triggered for a given radio
+     * 
+     * @param radio_mac MAC address of the radio 
+     * @return true if successful, false otherwise.
+     */
+    bool is_scan_triggered_for_radio(const sMacAddr &radio_mac);
+
     /**
      * @brief Handle scan request events.
      * Add a radio scan request in the event to pending scan requests.
