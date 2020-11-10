@@ -1431,6 +1431,20 @@ private:
                                     const beerocks::message::sRadioCapabilities &sta_cap);
 
     /**
+     * @brief Add station 'VHTCapabilities' data element, set values to its parametrs.
+     * Example of full path to VHTCapabilities object:
+     * "Controller.Netwok.Device.1.Radio.1.Capabilities.BSS.1.STA.1.VHTCapabilities".
+     * 
+     * @param path_to_sta Path to station.
+     * Example of full path to the station:
+     * "Controller.Netwok.Device.1.Radio.1.Capabilities.BSS.1.STA.1."
+     * @param sta_cap Structure with station capabilities.
+     * @return True on success, false otherwise.
+     */
+    bool dm_set_sta_vht_capabilities(const std::string &path_to_obj,
+                                     const beerocks::message::sRadioCapabilities &sta_cap);
+
+    /**
      * @brief Adds STA instance to the datamodel.
      * (ex. Controller.Network.Device.1.Radio.1.BSS.2.STA.3)
      *
