@@ -34,16 +34,6 @@ TimerManagerImpl::~TimerManagerImpl()
 int TimerManagerImpl::add_timer(std::chrono::milliseconds delay, std::chrono::milliseconds period,
                                 const EventLoop::EventHandler &handler)
 {
-    // In case of error in one of the steps of this method, we have to undo all the previous steps
-    // (like when rolling back a database transaction, where either all steps get executed or none
-    // of them gets executed)
-    std::deque<std::function<void()>> rollback_actions;
-    auto rollback = [&]() {
-        for (const auto &action : rollback_actions) {
-            action();
-        }
-    };
-
     // 1.- Create the timer instance
     auto timer = m_timer_factory->create_instance();
     if (!timer) {
@@ -75,16 +65,12 @@ int TimerManagerImpl::add_timer(std::chrono::milliseconds delay, std::chrono::mi
         return beerocks::net::FileDescriptor::invalid_descriptor;
     }
 
-    rollback_actions.emplace_front([&]() { m_event_loop->remove_handlers(fd); });
-
     // 4.- Schedule the timer with given frequency
     if (!timer->schedule(delay, period)) {
         LOG(ERROR) << "Failed to schedule the timer!, fd = " << fd;
-        rollback();
+        m_event_loop->remove_handlers(fd);
         return beerocks::net::FileDescriptor::invalid_descriptor;
     }
-
-    rollback_actions.emplace_front([&]() { timer->cancel(); });
 
     // 5.- Add the timer to the list of timers. The purpose of storing active timers in a list is
     // twofold: first, remove_timer() method can retrieve the timer to remove given its descriptor
