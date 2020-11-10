@@ -10,7 +10,9 @@
 namespace beerocks {
 namespace nbapi {
 
-AmbiorixImpl::AmbiorixImpl(std::shared_ptr<EventLoop> event_loop) : m_event_loop(event_loop)
+AmbiorixImpl::AmbiorixImpl(std::shared_ptr<EventLoop> event_loop,
+                           std::unordered_map<std::string, actions_callback> on_action)
+    : m_event_loop(event_loop), m_on_action_handlers(on_action)
 {
     LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
     amxo_parser_init(&m_parser);
@@ -69,6 +71,16 @@ bool AmbiorixImpl::load_datamodel(const std::string &datamodel_path)
     if (!root_obj) {
         LOG(ERROR) << "Failed to get datamodel root object.";
         return false;
+    }
+
+    for (auto it : m_on_action_handlers) {
+        auto ret = amxo_resolver_ftab_add(&m_parser, it.first.c_str(),
+                                          reinterpret_cast<amxo_fn_ptr_t>(it.second));
+        if (ret != 0) {
+            LOG(WARNING) << "Failed to add " << it.first;
+            continue;
+        }
+        LOG(DEBUG) << "Added " << it.first << " to the functions table.";
     }
 
     // Disable eventing while loading odls

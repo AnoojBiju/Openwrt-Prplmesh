@@ -33,6 +33,9 @@
 
 #include "ambiorix.h"
 
+using actions_callback = amxd_status_t (*)(amxd_object_t *object, amxd_param_t *param,
+                                           amxd_action_t reason, const amxc_var_t *const args,
+                                           amxc_var_t *const retval, void *priv);
 namespace beerocks {
 namespace nbapi {
 
@@ -43,7 +46,8 @@ namespace nbapi {
 class AmbiorixImpl : public Ambiorix {
 
 public:
-    explicit AmbiorixImpl(std::shared_ptr<EventLoop> event_loop);
+    explicit AmbiorixImpl(std::shared_ptr<EventLoop> event_loop,
+                          std::unordered_map<std::string, actions_callback>);
 
     /**
      * @brief AmbiorixImpl destructor removes: bus connection, data model, parser and all data
@@ -131,7 +135,7 @@ public:
      *
      * The subobject must be defined as a mib in the odl file. The name of the mib must be the same as
      * the name of the subobject, and it must contain only a single object definition.
-     * 
+     *
      * @param path_to_obj path to the object in datamodel (ex: "Controller.Network").
      * @param subobject_name name of optional subobject to instantiate (ex: "HTCapabilities").
      * @return true if subobject successfully added, false otherwise
@@ -144,7 +148,7 @@ public:
      *
      * The subobject must be defined as a mib in the odl file. The name of the mib must be the same as
      * the name of the subobject, and it must contain only a single object definition.
-     * 
+     *
      * @param path_to_obj path to the object in datamodel (ex: "Controller.Network").
      * @param subobject_name name of optional subobject to be removed (ex: "HTCapabilities").
      * @return true if subobject successfully removed, false otherwise
@@ -221,6 +225,7 @@ private:
     amxd_dm_t m_datamodel;
     amxo_parser_t m_parser;
     std::shared_ptr<EventLoop> m_event_loop;
+    std::unordered_map<std::string, actions_callback> m_on_action_handlers;
 };
 
 } // namespace nbapi
