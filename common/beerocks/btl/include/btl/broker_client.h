@@ -136,6 +136,22 @@ public:
     virtual bool send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx, const sMacAddr &dst_mac,
                            const sMacAddr &src_mac, uint32_t iface_index = 0) = 0;
 
+    /**
+     * @brief Forwards a CMDU message to the transport process for dispatching.
+     *
+     * Forwards a CMDU message received through a UDS socket to the transport process which in turn
+     * will send it to destination (or multicast).
+     *
+     * @param cmdu_rx The received CMDU message to forward.
+     * @param dst_mac Destination MAC address (must not be empty).
+     * @param src_mac Source MAC address (must not be empty).
+     * @param iface_index Index of the network interface to use (set to 0 to send on all available
+     * interfaces).
+     * @return true on success and false otherwise.
+     */
+    virtual bool forward_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &dst_mac,
+                              const sMacAddr &src_mac, uint32_t iface_index = 0) = 0;
+
 protected:
     /**
      * @brief Notifies a CMDU-received event.

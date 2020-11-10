@@ -95,16 +95,6 @@ bool BrokerClientImpl::subscribe(const std::set<ieee1905_1::eMessageType> &msg_t
 bool BrokerClientImpl::send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx, const sMacAddr &dst_mac,
                                  const sMacAddr &src_mac, uint32_t iface_index)
 {
-    if (beerocks::net::network_utils::ZERO_MAC == dst_mac) {
-        LOG(ERROR) << "Destination MAC address is empty!";
-        return false;
-    }
-
-    if (beerocks::net::network_utils::ZERO_MAC == src_mac) {
-        LOG(ERROR) << "Source MAC address is empty!";
-        return false;
-    }
-
     if (!cmdu_tx.is_finalized()) {
         size_t cmdu_length = cmdu_tx.getMessageLength();
         uint8_t *cmdu_data = cmdu_tx.getMessageBuff();
@@ -116,20 +106,23 @@ bool BrokerClientImpl::send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx, const sMacA
         }
     }
 
-    beerocks::transport::messages::CmduTxMessage message;
+    return send_cmdu_message(cmdu_tx, dst_mac, src_mac, iface_index);
+}
 
-    std::copy_n(src_mac.oct, sizeof(src_mac.oct), message.metadata()->src);
-    std::copy_n(dst_mac.oct, sizeof(dst_mac.oct), message.metadata()->dst);
+bool BrokerClientImpl::forward_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &dst_mac,
+                                    const sMacAddr &src_mac, uint32_t iface_index)
+{
+    // Swap bytes before forwarding, from host to network byte order.
+    cmdu_rx.swap();
 
-    message.metadata()->ether_type        = ETH_P_1905_1;
-    message.metadata()->length            = cmdu_tx.getMessageLength();
-    message.metadata()->msg_type          = static_cast<uint16_t>(cmdu_tx.getMessageType());
-    message.metadata()->preset_message_id = cmdu_tx.getMessageId() ? 1 : 0;
-    message.metadata()->if_index          = iface_index;
+    // Use a shared_ptr with a custom deleter and the RAII programming idiom to emulate the
+    // `finally` block of a `try-finally` clause.
+    std::shared_ptr<int> finally(nullptr, [&cmdu_rx](int *p) {
+        // Swap bytes back from network to host byte order after forwarding.
+        cmdu_rx.swap();
+    });
 
-    std::copy_n(cmdu_tx.getMessageBuff(), message.metadata()->length, message.data());
-
-    return send_message(message);
+    return send_cmdu_message(cmdu_rx, dst_mac, src_mac, iface_index);
 }
 
 void BrokerClientImpl::handle_read(int fd)
@@ -237,6 +230,35 @@ void BrokerClientImpl::close_connection(bool remove_handlers)
         // Terminate the connection
         m_connection.reset();
     }
+}
+
+bool BrokerClientImpl::send_cmdu_message(ieee1905_1::CmduMessage &cmdu, const sMacAddr &dst_mac,
+                                         const sMacAddr &src_mac, uint32_t iface_index)
+{
+    if (beerocks::net::network_utils::ZERO_MAC == dst_mac) {
+        LOG(ERROR) << "Destination MAC address is empty!";
+        return false;
+    }
+
+    if (beerocks::net::network_utils::ZERO_MAC == src_mac) {
+        LOG(ERROR) << "Source MAC address is empty!";
+        return false;
+    }
+
+    beerocks::transport::messages::CmduTxMessage message;
+
+    std::copy_n(src_mac.oct, sizeof(src_mac.oct), message.metadata()->src);
+    std::copy_n(dst_mac.oct, sizeof(dst_mac.oct), message.metadata()->dst);
+
+    message.metadata()->ether_type        = ETH_P_1905_1;
+    message.metadata()->length            = cmdu.getMessageLength();
+    message.metadata()->msg_type          = static_cast<uint16_t>(cmdu.getMessageType());
+    message.metadata()->preset_message_id = cmdu.getMessageId() ? 1 : 0;
+    message.metadata()->if_index          = iface_index;
+
+    std::copy_n(cmdu.getMessageBuff(), message.metadata()->length, message.data());
+
+    return send_message(message);
 }
 
 bool BrokerClientImpl::send_message(const beerocks::transport::messages::Message &message)

@@ -66,6 +66,14 @@ public:
     bool send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx, const sMacAddr &dst_mac,
                    const sMacAddr &src_mac, uint32_t iface_index = 0) override;
 
+    /**
+     * @brief Forwards a CMDU message to the transport process for dispatching.
+     *
+     * @see BrokerClient::forward_cmdu()
+     */
+    bool forward_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &dst_mac,
+                      const sMacAddr &src_mac, uint32_t iface_index = 0) override;
+
 private:
     /**
      * @brief Handles the read event in a client socket connected to the server socket.
@@ -110,6 +118,18 @@ private:
      */
     void close_connection(bool remove_handlers = false);
 
+    /**
+     * @brief Sends a CDMU message to the transport process for dispatching.
+     *
+     * @param cmdu CMDU message to send.
+     * @param dst_mac Destination MAC address (must not be empty).
+     * @param src_mac Source MAC address (must not be empty).
+     * @param iface_index Index of the network interface to use (set to 0 to send on all available
+     * interfaces).
+     * @return true on success and false otherwise.
+     */
+    bool send_cmdu_message(ieee1905_1::CmduMessage &cmdu, const sMacAddr &dst_mac,
+                           const sMacAddr &src_mac, uint32_t iface_index);
     /**
      * @brief Sends a transport message to the server.
      *
