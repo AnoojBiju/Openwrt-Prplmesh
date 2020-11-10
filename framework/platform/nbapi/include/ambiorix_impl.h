@@ -47,7 +47,7 @@ class AmbiorixImpl : public Ambiorix {
 
 public:
     explicit AmbiorixImpl(std::shared_ptr<EventLoop> event_loop,
-                          std::unordered_map<std::string, actions_callback>);
+                          const std::unordered_map<std::string, actions_callback> &on_action);
 
     /**
      * @brief AmbiorixImpl destructor removes: bus connection, data model, parser and all data

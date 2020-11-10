@@ -11,7 +11,7 @@ namespace beerocks {
 namespace nbapi {
 
 AmbiorixImpl::AmbiorixImpl(std::shared_ptr<EventLoop> event_loop,
-                           std::unordered_map<std::string, actions_callback> on_action)
+                           const std::unordered_map<std::string, actions_callback> &on_action)
     : m_event_loop(event_loop), m_on_action_handlers(on_action)
 {
     LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
