@@ -483,6 +483,24 @@ public:
      */
     bool set_ap_vht_capabilities(wfa_map::tlvApVhtCapabilities &vht_caps_tlv);
 
+    /**
+     * @brief Set values for estimated MAC data rate downlink and uplink
+     * for STA.EstMACDataRateDownlink and STA.EstMACDataRateUplink data elements.
+     * Example of full path to data element:
+     * 'Controller.Network.Device.1.Radio.2.BSS.3.STA.4.EstMACDataRateUplink'.
+     * Set value for station SignalStrength data element.
+     * 'Controller.Network.Device.1.Radio.2.BSS.1.STA.4.SignalStrength'.
+     * 
+     * @param sta_mac Station MAC address.
+     * @param downlink_est_mac_data_rate Estimated MAC Data Rate in downlink (in Mb/s).
+     * @param uplink_est_mac_data_rate Estimated MAC Data Rate in uplink (in Mb/s).
+     * @param signal_strength Indicator of radio signal strength (RCPI)
+     * of the uplink from the Non-AP STA - measured in dBm.
+     * @return True on success, false otherwise.
+     */
+    bool set_sta_link_metrics(const sMacAddr &sta_mac, uint32_t downlink_est_mac_data_rate,
+                              uint32_t uplink_est_mac_data_rate, uint8_t signal_strength);
+
     const beerocks::message::sRadioCapabilities *
     get_station_current_capabilities(const std::string &mac);
 

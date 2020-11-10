@@ -192,6 +192,8 @@ private:
                                             ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_cmdu_1905_failed_connection_message(const std::string &src_mac,
                                                     ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_cmdu_1905_associated_sta_link_metrics_response_message(
+        const std::string &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool autoconfig_wsc_parse_radio_caps(
         std::string radio_mac, std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps);
 

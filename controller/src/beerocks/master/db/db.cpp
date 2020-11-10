@@ -4841,6 +4841,33 @@ void db::clear_bss_info_configuration() { bss_infos.clear(); }
 
 void db::clear_bss_info_configuration(const sMacAddr &al_mac) { bss_infos[al_mac].clear(); }
 
+bool db::set_sta_link_metrics(const sMacAddr &sta_mac, uint32_t downlink_est_mac_data_rate,
+                              uint32_t uplink_est_mac_data_rate, uint8_t signal_strength)
+{
+    std::string path_to_sta = dm_get_path_to_sta(tlvf::mac_to_string(sta_mac));
+    bool return_val         = true;
+
+    if (path_to_sta.empty()) {
+        LOG(ERROR) << "Failed to get path for STA object with mac: " << sta_mac;
+        return false;
+    }
+
+    if (!m_ambiorix_datamodel->set(path_to_sta, "EstMACDataRateDownlink",
+                                   downlink_est_mac_data_rate)) {
+        LOG(ERROR) << "Couldn't set EstMACDataRateDownlink for object" << path_to_sta;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_sta, "EstMACDataRateUplink", uplink_est_mac_data_rate)) {
+        LOG(ERROR) << "Couldn't set EstMACDataRateUplink for object" << path_to_sta;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_sta, "SignalStrength", signal_strength)) {
+        LOG(ERROR) << "Couldn't set SignalStrength for object" << path_to_sta;
+        return_val = false;
+    }
+    return return_val;
+}
+
 //
 // PRIVATE FUNCTIONS
 //   must be used from a thread safe context
