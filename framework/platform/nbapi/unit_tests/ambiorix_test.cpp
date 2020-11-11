@@ -30,6 +30,8 @@ namespace {
 constexpr auto initial_value           = 42;
 constexpr auto new_value               = 0xaabbccdd;
 constexpr auto g_param_path            = "Test.Container";
+constexpr auto g_param_strings_path    = "Test.Strings";
+constexpr auto g_param_strings_search  = ".[String == '%s'].";
 constexpr auto g_param_name_int32      = "Int32";
 constexpr auto g_param_name_uint32     = "Uint32";
 constexpr auto g_param_name_int64      = "Int64";
@@ -39,6 +41,7 @@ constexpr auto g_param_name_double     = "Double";
 constexpr auto g_param_name_string     = "String";
 constexpr auto g_param_value_foo       = "Foo";
 constexpr auto g_param_value_bar       = "Bar";
+constexpr auto g_param_value_baz       = "Baz";
 constexpr auto g_odl_filename_template = "ambiorix_test.odl.XXXXXX";
 constexpr auto g_odl_contents          = "%define {\n"
                                 "    object Test {\n"
@@ -133,6 +136,47 @@ private:
         m_ambiorix.reset();
     }
 };
+
+TEST_F(AmbiorixTest, test_instance)
+{
+    const auto search_path = std::string(g_param_strings_path) + g_param_strings_search;
+    // no instance exists
+    EXPECT_EQ(0, m_ambiorix->get_instance_index(search_path, g_param_value_bar));
+    EXPECT_EQ(0, m_ambiorix->get_instance_index(search_path, g_param_value_foo));
+    EXPECT_EQ(0, m_ambiorix->get_instance_index(search_path, g_param_value_baz));
+
+    // let us add some instances
+    EXPECT_EQ(1, m_ambiorix->add_instance(std::string(g_param_strings_path)));
+    EXPECT_EQ(2, m_ambiorix->add_instance(std::string(g_param_strings_path)));
+    EXPECT_EQ(3, m_ambiorix->add_instance(std::string(g_param_strings_path)));
+
+    // and set keys
+    EXPECT_TRUE(m_ambiorix->set(std::string(g_param_strings_path) + ".1", g_param_name_string,
+                                std::string(g_param_value_foo)));
+    EXPECT_TRUE(m_ambiorix->set(std::string(g_param_strings_path) + ".3", g_param_name_string,
+                                std::string(g_param_value_baz)));
+    EXPECT_TRUE(m_ambiorix->set(std::string(g_param_strings_path) + ".2", g_param_name_string,
+                                std::string(g_param_value_bar)));
+
+    // check if instances were added correctly
+    EXPECT_EQ(2, m_ambiorix->get_instance_index(search_path, g_param_value_bar));
+    EXPECT_EQ(1, m_ambiorix->get_instance_index(search_path, g_param_value_foo));
+    EXPECT_EQ(3, m_ambiorix->get_instance_index(search_path, g_param_value_baz));
+
+    // remove instance 2
+    EXPECT_TRUE(m_ambiorix->remove_instance(std::string(g_param_strings_path), 2));
+    EXPECT_EQ(0, m_ambiorix->get_instance_index(search_path, g_param_value_bar));
+    EXPECT_EQ(1, m_ambiorix->get_instance_index(search_path, g_param_value_foo));
+    EXPECT_EQ(3, m_ambiorix->get_instance_index(search_path, g_param_value_baz));
+
+    // remove all instances
+    EXPECT_TRUE(m_ambiorix->remove_all_instances(std::string(g_param_strings_path)));
+
+    // check if instances were removed
+    EXPECT_EQ(0, m_ambiorix->get_instance_index(search_path, g_param_value_bar));
+    EXPECT_EQ(0, m_ambiorix->get_instance_index(search_path, g_param_value_foo));
+    EXPECT_EQ(0, m_ambiorix->get_instance_index(search_path, g_param_value_bar));
+}
 
 TEST_F(AmbiorixTest, set_string_should_succeed)
 {
