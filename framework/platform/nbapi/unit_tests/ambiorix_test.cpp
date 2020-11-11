@@ -39,6 +39,7 @@ constexpr auto g_param_name_uint64     = "Uint64";
 constexpr auto g_param_name_bool       = "Bool";
 constexpr auto g_param_name_double     = "Double";
 constexpr auto g_param_name_string     = "String";
+constexpr auto g_param_name_unknown    = "Unknown";
 constexpr auto g_param_value_foo       = "Foo";
 constexpr auto g_param_value_bar       = "Bar";
 constexpr auto g_param_value_baz       = "Baz";
@@ -192,6 +193,12 @@ TEST_F(AmbiorixTest, set_string_should_succeed)
     free(value);
 }
 
+TEST_F(AmbiorixTest, set_string_should_fail)
+{
+    EXPECT_FALSE(
+        m_ambiorix->set(g_param_path, g_param_name_unknown, std::string(g_param_value_foo)));
+}
+
 /*
  * Add a test for each instance of the set() function.
  * Ideally, we'd use a parameterized test, but that is not possible when
@@ -214,6 +221,10 @@ protected:
         EXPECT_EQ(status, amxd_status_ok);
         EXPECT_EQ(value, new_value);
     }
+    void set_should_fail(const std::string &parameter_name, T new_value)
+    {
+        EXPECT_FALSE(m_ambiorix->set(g_param_path, parameter_name, new_value));
+    }
 };
 
 class AmbiorixTestSetterInt32 : public AmbiorixTestSetter<int32_t> {
@@ -223,6 +234,10 @@ TEST_F(AmbiorixTestSetterInt32, set_int32_should_succeed)
     set_should_succeed(g_param_name_int32, initial_value, new_value, amxd_object_set_int32_t,
                        amxd_object_get_int32_t);
 }
+TEST_F(AmbiorixTestSetterInt32, set_int32_should_fail)
+{
+    set_should_fail(g_param_name_unknown, new_value);
+}
 
 class AmbiorixTestSetterUint32 : public AmbiorixTestSetter<uint32_t> {
 };
@@ -230,6 +245,10 @@ TEST_F(AmbiorixTestSetterUint32, set_uint32_should_succeed)
 {
     set_should_succeed(g_param_name_uint32, initial_value, new_value, amxd_object_set_uint32_t,
                        amxd_object_get_uint32_t);
+}
+TEST_F(AmbiorixTestSetterUint32, set_uint32_should_fail)
+{
+    set_should_fail(g_param_name_unknown, new_value);
 }
 
 class AmbiorixTestSetterInt64 : public AmbiorixTestSetter<int64_t> {
@@ -239,6 +258,10 @@ TEST_F(AmbiorixTestSetterInt64, set_int64_should_succeed)
     set_should_succeed(g_param_name_int64, initial_value, new_value, amxd_object_set_int64_t,
                        amxd_object_get_int64_t);
 }
+TEST_F(AmbiorixTestSetterInt64, set_int64_should_fail)
+{
+    set_should_fail(g_param_name_unknown, new_value);
+}
 
 class AmbiorixTestSetterUint64 : public AmbiorixTestSetter<uint64_t> {
 };
@@ -246,6 +269,10 @@ TEST_F(AmbiorixTestSetterUint64, set_uint64_should_succeed)
 {
     set_should_succeed(g_param_name_uint64, initial_value, new_value, amxd_object_set_uint64_t,
                        amxd_object_get_uint64_t);
+}
+TEST_F(AmbiorixTestSetterUint64, set_uint64_should_fail)
+{
+    set_should_fail(g_param_name_unknown, new_value);
 }
 
 class AmbiorixTestSetterBool : public AmbiorixTestSetter<bool> {
@@ -255,6 +282,10 @@ TEST_F(AmbiorixTestSetterBool, set_int32_should_succeed)
     set_should_succeed(g_param_name_bool, initial_value, new_value, amxd_object_set_bool,
                        amxd_object_get_bool);
 }
+TEST_F(AmbiorixTestSetterBool, set_int32_should_fail)
+{
+    set_should_fail(g_param_name_unknown, new_value);
+}
 
 class AmbiorixTestSetterDouble : public AmbiorixTestSetter<double> {
 };
@@ -262,6 +293,10 @@ TEST_F(AmbiorixTestSetterDouble, set_uint32_should_succeed)
 {
     set_should_succeed(g_param_name_double, initial_value, new_value, amxd_object_set_double,
                        amxd_object_get_double);
+}
+TEST_F(AmbiorixTestSetterDouble, set_uint32_should_fail)
+{
+    set_should_fail(g_param_name_unknown, new_value);
 }
 
 } // namespace
