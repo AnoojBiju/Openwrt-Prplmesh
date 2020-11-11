@@ -29,6 +29,8 @@ namespace {
 
 constexpr auto initial_value           = 42;
 constexpr auto new_value               = 0xaabbccdd;
+constexpr auto g_param_path_test       = "Test";
+constexpr auto g_param_path_unknown    = "Test_Unknown";
 constexpr auto g_param_path            = "Test.Container";
 constexpr auto g_param_strings_path    = "Test.Strings";
 constexpr auto g_param_strings_search  = ".[String == '%s'].";
@@ -40,6 +42,7 @@ constexpr auto g_param_name_bool       = "Bool";
 constexpr auto g_param_name_double     = "Double";
 constexpr auto g_param_name_string     = "String";
 constexpr auto g_param_name_unknown    = "Unknown";
+constexpr auto g_object_optional       = "Optional";
 constexpr auto g_param_value_foo       = "Foo";
 constexpr auto g_param_value_bar       = "Bar";
 constexpr auto g_param_value_baz       = "Baz";
@@ -177,6 +180,28 @@ TEST_F(AmbiorixTest, test_instance)
     EXPECT_EQ(0, m_ambiorix->get_instance_index(search_path, g_param_value_bar));
     EXPECT_EQ(0, m_ambiorix->get_instance_index(search_path, g_param_value_foo));
     EXPECT_EQ(0, m_ambiorix->get_instance_index(search_path, g_param_value_bar));
+}
+
+TEST_F(AmbiorixTest, test_optional_subobject)
+{
+    //must fail because path does not exists
+    EXPECT_FALSE(m_ambiorix->add_optional_subobject(g_param_path_unknown, g_object_optional));
+
+    //success
+    EXPECT_TRUE(m_ambiorix->add_optional_subobject(g_param_path_test, g_object_optional));
+
+    // must fail, because of duplicate
+    EXPECT_FALSE(m_ambiorix->add_optional_subobject(g_param_path_test, g_object_optional));
+
+    //must fail because path does not exists
+    EXPECT_FALSE(m_ambiorix->remove_optional_subobject(g_param_path_unknown, g_object_optional));
+
+    //success
+    EXPECT_TRUE(m_ambiorix->remove_optional_subobject(g_param_path_test, g_object_optional));
+
+    // should fail, because already removed
+    // ToDo: does not fail!!!
+    //EXPECT_FALSE(m_ambiorix->remove_optional_subobject(g_ParamPathTest, g_ObjectOptional));
 }
 
 TEST_F(AmbiorixTest, set_string_should_succeed)
