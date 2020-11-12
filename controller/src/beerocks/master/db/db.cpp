@@ -4190,6 +4190,79 @@ bool db::set_hostap_stats_info(const std::string &mac, beerocks_message::sApStat
 
 void db::clear_hostap_stats_info(const std::string &mac) { set_hostap_stats_info(mac, nullptr); }
 
+bool db::notify_disconnection(const std::string &client_mac)
+{
+    auto n = get_node(client_mac);
+    if (!n) {
+        return false;
+    }
+
+    std::string path_to_eventdata = "Controller.Notification.DisassociationEvent.DisassocData";
+
+    if (!m_ambiorix_datamodel->set(path_to_eventdata, "BSSID", n->parent_mac)) {
+        LOG(ERROR) << "Couldn't set BSSID for object " << path_to_eventdata;
+        return false;
+    }
+
+    if (!m_ambiorix_datamodel->set(path_to_eventdata, "MACAddress", client_mac)) {
+        LOG(ERROR) << "Couldn't set MACAddress for object " << path_to_eventdata;
+        return false;
+    }
+
+    /*
+      TODO: Reason code should come from Client Disassociation Stats message in
+            reason Code TLV but since we do not have this data Reason Code
+            set to 1 (UNSPECIFIED_REASON - IEEE802.11-16, Table 9.45).
+            Should be fixed after PPM-864.
+    */
+    if (!m_ambiorix_datamodel->set(path_to_eventdata, "ReasonCode", static_cast<uint32_t>(1))) {
+        LOG(ERROR) << "Couldn't set ReasonCode for object " << path_to_eventdata;
+        return false;
+    }
+
+    if (!m_ambiorix_datamodel->set(path_to_eventdata, "BytesSent", n->stats_info->tx_bytes)) {
+        LOG(ERROR) << "Couldn't set BytesSent for object " << path_to_eventdata;
+        return false;
+    }
+
+    if (!m_ambiorix_datamodel->set(path_to_eventdata, "BytesReceived", n->stats_info->rx_bytes)) {
+        LOG(ERROR) << "Couldn't set BytesReceived for object " << path_to_eventdata;
+        return false;
+    }
+
+    if (!m_ambiorix_datamodel->set(path_to_eventdata, "PacketsSent", n->stats_info->tx_packets)) {
+        LOG(ERROR) << "Couldn't set PacketsSent for object " << path_to_eventdata;
+        return false;
+    }
+
+    if (!m_ambiorix_datamodel->set(path_to_eventdata, "PacketsReceived",
+                                   n->stats_info->rx_packets)) {
+        LOG(ERROR) << "Couldn't set PacketsReceived for object " << path_to_eventdata;
+        return false;
+    }
+
+    /*
+        ErrorsSent and ErrorsReceived are not available yet on stats_info
+    */
+    if (!m_ambiorix_datamodel->set(path_to_eventdata, "ErrorsSent", static_cast<uint32_t>(0))) {
+        LOG(ERROR) << "Couldn't set ErrorsSent for object " << path_to_eventdata;
+        return false;
+    }
+
+    if (!m_ambiorix_datamodel->set(path_to_eventdata, "ErrorsReceived", static_cast<uint32_t>(0))) {
+        LOG(ERROR) << "Couldn't set ErrorsReceived for object " << path_to_eventdata;
+        return false;
+    }
+
+    if (!m_ambiorix_datamodel->set(path_to_eventdata, "RetransCount",
+                                   n->stats_info->retrans_count)) {
+        LOG(ERROR) << "Couldn't set RetransCount for object " << path_to_eventdata;
+        return false;
+    }
+
+    return true;
+}
+
 bool db::set_node_stats_info(const std::string &mac, beerocks_message::sStaStatsParams *params)
 {
     auto n = get_node(mac);

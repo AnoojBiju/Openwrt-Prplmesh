@@ -1035,6 +1035,12 @@ public:
 
     bool set_hostap_stats_info(const std::string &mac, beerocks_message::sApStatsParams *params);
     void clear_hostap_stats_info(const std::string &mac);
+
+    /**
+     * @brief Notificatify about client disconnection
+     * @param mac string with STA mac address
+     */
+    bool notify_disconnection(const std::string &mac);
     bool set_node_stats_info(const std::string &mac, beerocks_message::sStaStatsParams *params);
     void clear_node_stats_info(const std::string &mac);
 
@@ -1116,7 +1122,7 @@ public:
                                     const wireless_utils::sBssInfoConf &bss_info);
     /**
      * @brief Store BSS information in the bss_infos_global list.
-     * 
+     *
      * @param bss_info Structure with BSS information.
      */
     void add_bss_info_configuration(const wireless_utils::sBssInfoConf &bss_info);
