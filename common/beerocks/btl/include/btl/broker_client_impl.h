@@ -59,6 +59,13 @@ public:
     bool subscribe(const std::set<ieee1905_1::eMessageType> &msg_types) override;
 
     /**
+     * @brief Configures the transport process to use given network bridge.
+     *
+     * @see BrokerClient::configure()
+     */
+    bool configure(const std::string &bridge_name) override;
+
+    /**
      * @brief Sends a CDMU message to the transport process for dispatching.
      *
      * @see BrokerClient::send_cmdu()

@@ -92,6 +92,24 @@ bool BrokerClientImpl::subscribe(const std::set<ieee1905_1::eMessageType> &msg_t
     return send_message(message);
 }
 
+bool BrokerClientImpl::configure(const std::string &bridge_name)
+{
+    beerocks::transport::messages::InterfaceConfigurationRequestMessage message;
+
+    string_utils::copy_string(message.metadata()->interfaces[0].ifname, bridge_name.c_str(),
+                              IF_NAMESIZE);
+
+    using Flags = beerocks::transport::messages::InterfaceConfigurationRequestMessage::Flags;
+    message.metadata()->interfaces[0].flags |= Flags::IS_BRIDGE;
+
+    LOG(DEBUG) << "Configuring bridge " << bridge_name << " to ieee1905 transport";
+
+    // TODO: remove unused attribute in the configuration request: https://jira.prplfoundation.org/browse/PPM-802
+    message.metadata()->numInterfaces = 1;
+
+    return send_message(message);
+}
+
 bool BrokerClientImpl::send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx, const sMacAddr &dst_mac,
                                  const sMacAddr &src_mac, uint32_t iface_index)
 {

@@ -121,6 +121,18 @@ public:
     virtual bool subscribe(const std::set<ieee1905_1::eMessageType> &msg_types) = 0;
 
     /**
+     * @brief Configures the transport process to use given network bridge.
+     *
+     * Builds a configuration message including the name of the bridge provided and sends it to the.
+     * server. The transport process will read the network interfaces currently in the bridge and
+     * monitor the bridge for changes as interfaces are added to and/or removed from the bridge.
+     *
+     * @param bridge_name Name of the bridge to use in the transport process.
+     * @return true on success and false otherwise
+     */
+    virtual bool configure(const std::string &bridge_name) = 0;
+
+    /**
      * @brief Sends a CDMU message to the transport process for dispatching.
      *
      * Finalizes CMDU if not already finalized. Then builds a message including the CMDU and sends
