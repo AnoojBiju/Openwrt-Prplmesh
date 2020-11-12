@@ -37,6 +37,12 @@ void dynamic_channel_selection_r2_task::work()
         break;
     }
     case eState::TRIGGER_SCAN: {
+
+        if (!trigger_pending_scan_requests()) {
+            LOG(ERROR) << "failed to trigger pending scans";
+        }
+
+        FSM_MOVE_STATE(eState::IDLE);
         break;
     }
 
@@ -227,6 +233,10 @@ bool dynamic_channel_selection_r2_task::handle_scan_request_event(
     return true;
 }
 
+bool dynamic_channel_selection_r2_task::send_scan_request_to_agent(const sMacAddr &agent_mac)
+{
+    return true;
+}
 
 bool son::dynamic_channel_selection_r2_task::create_channel_scan_request_message(
     sMacAddr agent_mac, uint16_t &mid,

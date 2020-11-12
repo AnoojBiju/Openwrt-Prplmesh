@@ -119,6 +119,13 @@ private:
     bool is_agent_idle_with_pending_radio_scans(const sAgentScanStatus &agent_scan_status);
 
     /**
+     * @brief Trigger pending scan requests for any idle agent.
+     * 
+     * @return true if successful, false otherwise.
+     */
+    bool trigger_pending_scan_requests();
+
+    /**
      * @brief Check if a scan was triggered for a given radio
      * 
      * @param radio_mac MAC address of the radio 
@@ -157,6 +164,14 @@ private:
     bool add_radio_to_channel_scan_request_tlv(
         std::shared_ptr<wfa_map::tlvProfile2ChannelScanRequest> &channel_scan_request_tlv,
         sMacAddr radio_mac);
+
+    /**
+     * @brief Send channel scan request message to agent
+     * 
+     * @param agent_mac MAC address of the agent.
+     * @return true if successful, false otherwise.
+     */
+    bool send_scan_request_to_agent(const sMacAddr &agent_mac);
 };
 
 } //namespace son
