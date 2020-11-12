@@ -4161,6 +4161,14 @@ bool db::set_node_stats_info(const std::string &mac, beerocks_message::sStaStats
         return false;
     }
 
+    // Path example to the variable in Data Model
+    // Controller.Network.Device.1.Radio.1.BSS.2.STA.1.ErrorsSent
+    // PPM-40: ToDo: should be set after processing STA Traffic Stats, not implemented yet.
+    if (!m_ambiorix_datamodel->set(path_to_sta, "ErrorsSent", 0)) {
+        LOG(ERROR) << "Couldn't set ErrorsSent for object " << path_to_sta;
+        return false;
+    }
+
     return true;
 }
 
