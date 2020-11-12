@@ -356,6 +356,11 @@ bool cfg_get_best_channel_rank_threshold(uint32_t &threshold)
         best_channel_rank_threshold = DEFAULT_BEST_CHANNEL_RANKING_TH;
     }
 
+    if (best_channel_rank_threshold < 0) {
+        MAPF_ERR("best_channel_rank_th is configured to a negative value");
+        return false;
+    }
+
     threshold = best_channel_rank_threshold;
 
     return true;
