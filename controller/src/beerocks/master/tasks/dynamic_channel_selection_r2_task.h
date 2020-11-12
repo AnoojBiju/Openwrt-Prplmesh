@@ -18,6 +18,7 @@
 #include "task_pool.h"
 
 #include <beerocks/tlvf/beerocks_message.h>
+#include <tlvf/wfa_map/tlvProfile2ChannelScanRequest.h>
 
 #include <chrono>
 
@@ -133,6 +134,29 @@ private:
      * @return true if successful, false otherwise.
      */
     bool handle_scan_request_event(const sScanRequestEvent &scan_request_event);
+
+    /**
+     * @brief Create a channel scan request message, with empty radio_list.
+     * 
+     * @param[in] agent_mac MAC address of the agent.
+     * @param[out] mid The unique message-id of the message sent to the agent.
+     * @param[out] channel_scan_request_tlv Shared pointer to the Channel_scan_request_tlv.
+     * @return true if successful, false otherwise.
+     */
+    bool create_channel_scan_request_message(
+        sMacAddr agent_mac, uint16_t &mid,
+        std::shared_ptr<wfa_map::tlvProfile2ChannelScanRequest> &channel_scan_request_tlv);
+
+    /**
+     * @brief Add a new radio to the channel scan request tlv.
+     * 
+     * @param channel_scan_request_tlv Shared pointer to the channel scan request tlv.
+     * @param radio_mac MAC address of the radio to scan.
+     * @return true if successful, false otherwise.
+     */
+    bool add_radio_to_channel_scan_request_tlv(
+        std::shared_ptr<wfa_map::tlvProfile2ChannelScanRequest> &channel_scan_request_tlv,
+        sMacAddr radio_mac);
 };
 
 } //namespace son

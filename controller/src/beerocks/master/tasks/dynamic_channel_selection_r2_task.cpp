@@ -226,3 +226,73 @@ bool dynamic_channel_selection_r2_task::handle_scan_request_event(
 
     return true;
 }
+
+
+bool son::dynamic_channel_selection_r2_task::create_channel_scan_request_message(
+    sMacAddr agent_mac, uint16_t &mid,
+    std::shared_ptr<wfa_map::tlvProfile2ChannelScanRequest> &channel_scan_request_tlv)
+{
+    LOG(TRACE) << "Creating CHANNEL_SCAN_REQUEST CMDU for agent: " << agent_mac;
+
+    // Build 1905.1 message CMDU to send to the controller
+    if (!cmdu_tx.create(0, ieee1905_1::eMessageType::CHANNEL_SCAN_REQUEST_MESSAGE)) {
+        LOG(ERROR) << "CMDU creation of type CHANNEL_SCAN_REQUEST_MESSAGE, has failed";
+        return false;
+    }
+
+    // Add ChannelScanRequest TLV (non vendor specific)
+    channel_scan_request_tlv = cmdu_tx.addClass<wfa_map::tlvProfile2ChannelScanRequest>();
+    if (!channel_scan_request_tlv) {
+        LOG(ERROR) << "addClass tlvProfile2ChannelScanRequest failed";
+        return false;
+    }
+
+    // Save the mid of the new CMDU message
+    // TODO: Currently getMessageId() return 0, Should be replace by the outgoing message id
+    //       once MID will be globally assigned and available to the controller.
+    mid = cmdu_tx.getMessageId();
+
+    channel_scan_request_tlv->perform_fresh_scan() = wfa_map::tlvProfile2ChannelScanRequest::
+        ePerformFreshScan::RETURN_STORED_RESULTS_OF_LAST_SUCCESSFUL_SCAN;
+
+    return true;
+}
+
+bool son::dynamic_channel_selection_r2_task::add_radio_to_channel_scan_request_tlv(
+    std::shared_ptr<wfa_map::tlvProfile2ChannelScanRequest> &channel_scan_request_tlv,
+    sMacAddr radio_mac)
+{
+    // Create radio list (cRadiosToScan) object
+    auto radio_list = channel_scan_request_tlv->create_radio_list();
+    if (!radio_list) {
+        LOG(ERROR) << "create_radio_list() failed";
+        return false;
+    }
+
+    // Add radio list object to TLV
+    if (!channel_scan_request_tlv->add_radio_list(radio_list)) {
+        LOG(ERROR) << "add_radio_list() failed";
+        return false;
+    }
+
+    // Fill radio list object
+    auto radio_i                = channel_scan_request_tlv->radio_list_length() - 1;
+    auto radio_list_entry_tuple = channel_scan_request_tlv->radio_list(radio_i);
+    if (!std::get<0>(radio_list_entry_tuple)) {
+        LOG(ERROR) << "failed to get radio_list entry for radio-index=" << radio_i;
+        return false;
+    }
+
+    auto &radio_list_entry = std::get<1>(radio_list_entry_tuple);
+
+    // Set radio uid as radio mac address
+    radio_list_entry.radio_uid() = radio_mac;
+
+    // If the "Perform Fresh Scan" bit is set to 0 (RETURN_STORED_RESULTS_OF_LAST_SUCCESSFUL_SCAN),
+    // Number of Operating Classes field shall be set to zero and the following fields shall be omitted:
+    // Operating Class, Number of Channels, Channel List
+    // TODO: add a real operating class list from channel_pool in DB
+    radio_list_entry.operating_classes_list_length() = 0;
+
+    return true;
+}
