@@ -1502,16 +1502,16 @@ bool db::dm_set_sta_he_capabilities(const std::string &path_to_sta,
     return return_val;
 }
 
-bool db::dm_set_sta_ht_capabilities(std::string &path_to_obj,
+bool db::dm_set_sta_ht_capabilities(const std::string &path_to_sta,
                                     const beerocks::message::sRadioCapabilities &sta_cap)
 {
     bool return_val = true;
 
-    if (!m_ambiorix_datamodel->add_optional_subobject(path_to_obj, "HTCapabilities")) {
-        LOG(ERROR) << "Failed to add: " << path_to_obj << ".HTCapabilities sub-object.";
+    if (!m_ambiorix_datamodel->add_optional_subobject(path_to_sta, "HTCapabilities")) {
+        LOG(ERROR) << "Failed to add: " << path_to_sta << "HTCapabilities sub-object.";
         return false;
     }
-    path_to_obj += "HTCapabilities";
+    std::string path_to_obj = path_to_sta + "HTCapabilities";
     if (!m_ambiorix_datamodel->set(path_to_obj, "GI_20_MHz",
                                    static_cast<bool>(sta_cap.ht_low_bw_short_gi))) {
         LOG(ERROR) << "Couldn't set GI_20_MHz for object " << path_to_obj;
@@ -1526,7 +1526,7 @@ bool db::dm_set_sta_ht_capabilities(std::string &path_to_obj,
         LOG(ERROR) << "Couldn't set HT_40_Mhz for object " << path_to_obj;
         return_val = false;
     }
-    // To do: find value for tx_spatial_streams PPM-792.
+    // TODO: find value for tx_spatial_streams PPM-792.
     // Parse the (Re)Association Request frame.
     if (!m_ambiorix_datamodel->set(path_to_obj, "tx_spatial_streams", sta_cap.ht_ss)) {
         LOG(ERROR) << "Couldn't set tx_spatial_streams for object " << path_to_obj;
@@ -1534,6 +1534,66 @@ bool db::dm_set_sta_ht_capabilities(std::string &path_to_obj,
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "rx_spatial_streams", sta_cap.ht_ss)) {
         LOG(ERROR) << "Couldn't set rx_spatial_streams for object " << path_to_obj;
+        return_val = false;
+    }
+    return return_val;
+}
+
+bool db::dm_set_sta_vht_capabilities(const std::string &path_to_sta,
+                                     const beerocks::message::sRadioCapabilities &sta_cap)
+{
+    bool return_val = true;
+
+    if (!m_ambiorix_datamodel->add_optional_subobject(path_to_sta, "VHTCapabilities")) {
+        LOG(ERROR) << "Failed to add: " << path_to_sta << "VHTCapabilities sub-object.";
+        return false;
+    }
+    std::string path_to_obj = path_to_sta + "VHTCapabilities";
+    if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_Tx_MCS", sta_cap.default_mcs)) {
+        LOG(ERROR) << "Couldn't set VHT_Tx_MCS for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_Rx_MCS", sta_cap.vht_mcs)) {
+        LOG(ERROR) << "Couldn't set VHT_Rx_MCS for object " << path_to_obj;
+        return_val = false;
+    }
+    // TODO: find value for tx_spatial_streams PPM-792.
+    // Parse the (Re)Association Request frame.
+    if (!m_ambiorix_datamodel->set(path_to_obj, "tx_spatial_streams", sta_cap.vht_ss)) {
+        LOG(ERROR) << "Couldn't set tx_spatial_streams for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "rx_spatial_streams", sta_cap.vht_ss)) {
+        LOG(ERROR) << "Couldn't set rx_spatial_streams for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "GI_80_MHz",
+                                   static_cast<bool>(sta_cap.vht_low_bw_short_gi))) {
+        LOG(ERROR) << "Couldn't set GI_80_MHz for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "GI_160_MHz",
+                                   static_cast<bool>(sta_cap.vht_high_bw_short_gi))) {
+        LOG(ERROR) << "Couldn't set GI_160_MHz for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_80_80_MHz",
+                                   (BANDWIDTH_80_80 <= sta_cap.vht_bw))) {
+        LOG(ERROR) << "Couldn't set VHT_80_80_MHz for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_160_MHz", (BANDWIDTH_160 <= sta_cap.vht_bw))) {
+        LOG(ERROR) << "Couldn't set VHT_160_MHz for object " << path_to_obj;
+        return_val = false;
+    }
+    // TODO: find value for SU_beamformer and MU_beamformer PPM-792.
+    // Parse the (Re)Association Request frame.
+    if (!m_ambiorix_datamodel->set(path_to_obj, "SU_beamformer", false)) {
+        LOG(ERROR) << "Couldn't set SU_beamformer for object " << path_to_obj;
+        return_val = false;
+    }
+    if (!m_ambiorix_datamodel->set(path_to_obj, "MU_beamformer", false)) {
+        LOG(ERROR) << "Couldn't set MU_beamformer for object " << path_to_obj;
         return_val = false;
     }
     return return_val;
@@ -1574,11 +1634,16 @@ bool db::set_station_capabilities(const std::string &client_mac,
         return false;
     }
 
-    // Remove previous HT Capabilities object, if it exist
+    // Remove previous capabilities objects, if they exist
     m_ambiorix_datamodel->remove_optional_subobject(path_to_sta, "HTCapabilities");
+    m_ambiorix_datamodel->remove_optional_subobject(path_to_sta, "VHTCapabilities");
 
     if (sta_cap.ht_bw != 0xFF && !dm_set_sta_ht_capabilities(path_to_sta, sta_cap)) {
         LOG(ERROR) << "Fail to set station HT Capabilities";
+        return false;
+    }
+    if (sta_cap.vht_bw != 0xFF && !dm_set_sta_vht_capabilities(path_to_sta, sta_cap)) {
+        LOG(ERROR) << "Fail to set station VHT Capabilities";
         return false;
     }
     return true;
