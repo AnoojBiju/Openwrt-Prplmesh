@@ -463,7 +463,7 @@ void ChannelSelectionTask::zwdfs_fsm()
         break;
     }
     case eZwdfsState::CHOOSE_NEXT_BEST_CHANNEL: {
-        m_selected_channel = zwdfs_select_best_usable_channel(m_zwdfs_primary_radio_iface);
+        m_selected_channel = select_best_usable_channel(m_zwdfs_primary_radio_iface);
         if (m_selected_channel.channel == 0) {
             LOG(ERROR) << "Error occurred on second best channel selection";
             ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
@@ -665,7 +665,7 @@ void ChannelSelectionTask::zwdfs_fsm()
 }
 
 ChannelSelectionTask::sSelectedChannel
-ChannelSelectionTask::zwdfs_select_best_usable_channel(const std::string &front_radio_iface)
+ChannelSelectionTask::select_best_usable_channel(const std::string &front_radio_iface)
 {
     auto db = AgentDB::get();
 

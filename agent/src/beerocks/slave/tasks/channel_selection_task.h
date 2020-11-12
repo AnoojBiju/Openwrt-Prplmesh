@@ -141,7 +141,7 @@ private:
      */
     bool radio_on_scan(eFreqType band = eFreqType::FREQ_UNKNOWN);
 
-    sSelectedChannel zwdfs_select_best_usable_channel(const std::string &front_radio_iface);
+    sSelectedChannel select_best_usable_channel(const std::string &front_radio_iface);
 
     std::string m_zwdfs_iface;
     std::string m_zwdfs_primary_radio_iface;
