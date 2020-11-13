@@ -449,6 +449,8 @@ static void remove_residual_agent_files(const std::string &path, const std::stri
 
 int main(int argc, char *argv[])
 {
+    std::cout << "Beerocks Agent Process Start" << std::endl;
+
     init_signals();
 
     // Check for version query first, handle and exit if requested.

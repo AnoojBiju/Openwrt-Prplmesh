@@ -180,6 +180,8 @@ init_logger(const std::string &file_name, const beerocks::config_file::SConfigLo
 
 int main(int argc, char *argv[])
 {
+    std::cout << "Beerocks Fronthaul Process Start" << std::endl;
+
     init_signals();
 
     // Close all inhereted files descriptors.
