@@ -298,6 +298,8 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
 
 int main(int argc, char *argv[])
 {
+    std::cout << "Beerocks Controller Process Start" << std::endl;
+
     init_signals();
 
     // Check for version query first, handle and exit if requested.

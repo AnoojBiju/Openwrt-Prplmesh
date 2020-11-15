@@ -109,6 +109,8 @@ create_bridge_state_manager(std::shared_ptr<NetlinkEventListener> netlink_event_
 
 int main(int argc, char *argv[])
 {
+    std::cout << "IEEE1905 Transport Process Start" << std::endl;
+
     mapf::Logger::Instance().LoggerInit("transport");
 
     /**
