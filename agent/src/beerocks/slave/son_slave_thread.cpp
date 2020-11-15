@@ -3017,6 +3017,13 @@ bool slave_thread::handle_cmdu_monitor_message(Socket *sd,
         break;
     }
     case beerocks_message::ACTION_MONITOR_CHANNEL_SCAN_RESULTS_NOTIFICATION: {
+
+        auto db    = AgentDB::get();
+        auto radio = db->radio(m_fronthaul_iface);
+        if (!radio) {
+            break;
+        }
+
         auto notification_in =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_RESULTS_NOTIFICATION>();
@@ -3032,8 +3039,20 @@ bool slave_thread::handle_cmdu_monitor_message(Socket *sd,
             return false;
         }
 
-        notification_out->scan_results() = notification_in->scan_results();
-        notification_out->is_dump()      = notification_in->is_dump();
+        auto &is_dump = notification_out->is_dump() = notification_in->is_dump();
+        // The scan results are provided as a series of scan-results notifications.
+        // The first notification includes a message with is_dump set to 0, which doesn't
+        // include a real result and only indicates the start of the series.
+        // The following notifications with is_dump set to 1, contains a single result.
+        if (is_dump == 0) {
+            // Clear the stored results in Agent DB for the current radio.
+            radio->channel_scan_results.clear();
+        } else {
+            // Store result in Agent DB for the current radio.
+            auto &scan_result = notification_out->scan_results() = notification_in->scan_results();
+            radio->channel_scan_results[scan_result.channel].push_back(scan_result);
+            //TODO: Forward the result to the DCS R2 task handling.
+        }
 
         send_cmdu_to_controller(cmdu_tx);
         break;
