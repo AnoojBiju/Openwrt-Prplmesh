@@ -12,6 +12,7 @@
 #include <bcl/network/network_utils.h>
 #include <bwl/sta_wlan_hal.h>
 
+#include <beerocks/tlvf/beerocks_message.h>
 #include <beerocks/tlvf/enums/eDfsState.h>
 #include <beerocks/tlvf/structs/sSupportedBandwidth.h>
 
@@ -222,6 +223,11 @@ public:
         };
         // Key: Channel
         std::unordered_map<uint8_t, sChannelInfo> channels_list;
+
+        // Key: Channel number
+        // Value: Neighboring APs as ChannelScanResults.
+        std::unordered_map<uint8_t, std::vector<beerocks_message::sChannelScanResults>>
+            channel_scan_results;
 
         // Associated clients grouped by Client MAC.
         std::unordered_map<sMacAddr, sClient> associated_clients;
