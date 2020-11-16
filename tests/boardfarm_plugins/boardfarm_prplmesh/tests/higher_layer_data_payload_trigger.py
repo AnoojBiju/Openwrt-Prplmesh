@@ -19,6 +19,8 @@ class HigherLayerDataPayloadTrigger(PrplMeshBaseTest):
         except AttributeError as ae:
             raise SkipTest(ae)
 
+        self.dev.DUT.wired_sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
+
         mac_gateway_hex = '0x' + controller.mac.replace(':', '')
         debug("mac_gateway_hex = " + mac_gateway_hex)
         payload = 199 * (mac_gateway_hex + " ") + mac_gateway_hex
@@ -28,7 +30,7 @@ class HigherLayerDataPayloadTrigger(PrplMeshBaseTest):
         # Higher layer protocol = "0x00"
         # Higher layer payload = 200 concatenated copies of the ALID of the MCUT (1200 octets)
         mid = controller.dev_send_1905(agent.mac, 0x8018,
-                                           tlv(0xA0, 0x04b1,
+                                       tlv(0xA0, 0x04b1,
                                            "{0x00 %s}" % payload))
 
         debug(
@@ -60,13 +62,16 @@ class HigherLayerDataPayloadTrigger(PrplMeshBaseTest):
         self.check_log(received_agent_radio, r"Payload-Length: 0x4b0")
 
         debug("Confirming ACK message was received in the controller")
-        self.check_log(controller,
-                       r"ACK_MESSAGE, mid=0x{:04x}".format(mid))
+
+        self.check_cmdu_type_single("ACK", 0x8000, agent.mac,
+                                    controller.mac, mid)
 
     @classmethod
     def teardown_class(cls):
         """Teardown method, optional for boardfarm tests."""
         test = cls.test_obj
+        print("Sniffer - stop")
+        test.dev.DUT.wired_sniffer.stop()
         # Send additional Ctrl+C to the device to terminate "tail -f"
         # Which is used to read log from device. Required only for tests on HW
         try:
