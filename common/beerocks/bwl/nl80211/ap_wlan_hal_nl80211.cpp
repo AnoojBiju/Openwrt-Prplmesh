@@ -268,7 +268,8 @@ bool ap_wlan_hal_nl80211::sta_bss_steer(const std::string &mac, const std::strin
 {
     LOG(TRACE) << __func__ << " mac: " << mac << ", BSS: " << bssid
                << ", oper_class: " << oper_class << ", channel: " << chan
-               << ", disassoc: " << disassoc_timer_btt << ", valid_int: " << valid_int_btt;
+               << ", disassoc: " << disassoc_timer_btt << ", valid_int: " << valid_int_btt
+               << ", reason: " << reason;
 
     // Build command string
     std::string cmd =
@@ -276,7 +277,8 @@ bool ap_wlan_hal_nl80211::sta_bss_steer(const std::string &mac, const std::strin
         "BSS_TM_REQ " +
         mac
         // Transition management parameters
-        + " pref=" + "1" + " abridged=" + "1";
+        + " pref=" + "1" + " abridged=" + "1" + " mbo=" + std::to_string(reason);
+    ;
 
     if (disassoc_timer_btt) {
         cmd += std::string() + " disassoc_imminent=" + "1" +
