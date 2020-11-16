@@ -21,6 +21,7 @@
 #include <bcl/beerocks_socket_thread.h>
 #include <bcl/beerocks_timer_manager.h>
 #include <bcl/beerocks_ucc_server.h>
+#include <bcl/network/file_descriptor.h>
 #include <bcl/network/network_utils.h>
 #include <btl/broker_client_factory.h>
 #include <btl/btl.h>
@@ -66,6 +67,25 @@ public:
     virtual bool init() override;
     virtual bool work() override;
 
+    /**
+     * @brief Sends given CMDU message through the specified socket connection.
+     *
+     * @param fd File descriptor of the connected socket.
+     * @param cmdu_tx CMDU message to send.
+     * @return true on success and false otherwise.
+     */
+    bool send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx);
+
+    /**
+     * @brief Forwards given received CMDU message through the specified socket connection.
+     *
+     * @param fd File descriptor of the connected socket.
+     * @param cmdu_rx Received CMDU message to forward.
+     * @param length Length of CMDU message.
+     * @return true on success and false otherwise.
+     */
+    bool forward_cmdu_to_uds(int fd, ieee1905_1::CmduMessageRx &cmdu_rx, uint16_t length);
+
     // For agent_ucc_listener
     /**
      * @brief get radio mac (ruid) of registered slave based on frequency type
@@ -88,6 +108,49 @@ public:
 
 private:
     std::shared_ptr<bwl::sta_wlan_hal> get_selected_backhaul_sta_wlan_hal();
+
+    /**
+     * @brief Handles the client-connected event in the CMDU server.
+     *
+     * @param fd File descriptor of the socket that got connected.
+     */
+    void handle_connected(int fd);
+
+    /**
+     * @brief Handles the client-disconnected event in the CMDU server.
+     *
+     * @param fd File descriptor of the socket that got disconnected.
+     */
+    void handle_disconnected(int fd);
+
+    /**
+     * @brief Handles received CMDU message.
+     *
+     * @param fd File descriptor of the socket connection the CMDU was received through.
+     * @param iface_index Index of the network interface that the CMDU message was received on.
+     * @param dst_mac Destination MAC address.
+     * @param src_mac Source MAC address.
+     * @param cmdu_rx Received CMDU to be handled.
+     * @return true on success and false otherwise.
+     */
+    bool handle_cmdu(int fd, uint32_t iface_index, const sMacAddr &dst_mac, const sMacAddr &src_mac,
+                     ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Handles CMDU message received from broker.
+     *
+     * This handler is slightly different than the handler for CMDU messages received from other
+     * processes as it checks the source and destination MAC addresses set by the original sender.
+     * It also filters out messages that are not addressed to the controller.
+     *
+     * @param iface_index Index of the network interface that the CMDU message was received on.
+     * @param dst_mac Destination MAC address.
+     * @param src_mac Source MAC address.
+     * @param cmdu_rx Received CMDU to be handled.
+     * @return true on success and false otherwise.
+     */
+    bool handle_cmdu_from_broker(uint32_t iface_index, const sMacAddr &dst_mac,
+                                 const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
 
     virtual bool handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx) override;
     virtual void before_select() override;
@@ -122,7 +185,7 @@ private:
     bool handle_slave_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx,
                                      const std::string &src_mac);
     bool handle_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac,
-                               Socket *&forward_to);
+                               int &forward_to);
     // 1905 messages handlers
     bool handle_slave_failed_connection_message(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                 const std::string &src_mac);
@@ -159,7 +222,7 @@ private:
 
     } m_sConfig;
 
-    Socket *unassociated_measurement_slave_soc  = nullptr;
+    int m_unassociated_measurement_slave_soc    = beerocks::net::FileDescriptor::invalid_descriptor;
     int unassociated_rssi_measurement_header_id = -1;
 
     //comes from config file
@@ -287,7 +350,8 @@ public:
      * the TLVs to include in notification messages or responses to CDMU query messages.
      */
     struct sRadioInfo {
-        Socket *slave = nullptr;  /**< Socket connection to the slave */
+        int slave = beerocks::net::FileDescriptor::
+            invalid_descriptor; /**< File descriptor of the socket connection established from the slave to the CMDU server. */
         sMacAddr radio_mac;       /**< Radio ID (= radio MAC address) */
         std::string hostap_iface; /**< Name of the radio interface */
         std::string sta_iface;    /**< Name of the bSTA interface on the radio (if any) */
@@ -382,6 +446,12 @@ private:
      * Application event loop used by the process to wait for I/O events.
      */
     std::shared_ptr<EventLoop> m_event_loop;
+
+    /**
+     * Map of file descriptors to pointers to Socket class instances.
+     * This member variable is temporary and will be removed at the end of PPM-753
+     */
+    std::unordered_map<int, Socket *> m_fd_to_socket_map;
 };
 
 } // namespace beerocks

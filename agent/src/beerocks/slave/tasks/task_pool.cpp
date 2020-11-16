@@ -84,12 +84,12 @@ void TaskPool::send_event(eTaskEvent event, std::shared_ptr<void> event_obj)
     m_event_queue.push(std::make_pair(event, event_obj));
 }
 
-bool TaskPool::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, sMacAddr src_mac, Socket *sd,
+bool TaskPool::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, sMacAddr src_mac, int fd,
                            std::shared_ptr<beerocks_header> beerocks_header)
 {
     for (auto &task_element : m_task_pool) {
         auto &task = task_element.second;
-        if (task->handle_cmdu(cmdu_rx, src_mac, sd, beerocks_header)) {
+        if (task->handle_cmdu(cmdu_rx, src_mac, fd, beerocks_header)) {
             return true;
         }
     }

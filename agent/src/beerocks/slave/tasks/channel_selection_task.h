@@ -27,7 +27,7 @@ public:
 
     void work() override;
 
-    bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac, Socket *sd,
+    bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac, int fd,
                      std::shared_ptr<beerocks_header> beerocks_header) override;
 
 private:
@@ -61,32 +61,32 @@ private:
      *
      * @param[in] cmdu_rx Received CMDU.
      * @param[in] src_mac MAC address of the message sender.
-     * @param[in] sd Socket of the thread which has sent the message.
+     * @param[in] fd File descriptor of the socket connection with the slave that sent the message.
      * @param[in] beerocks_header Shared pointer to beerocks header.
      * @return true, if the message has been handled, otherwise false.
      */
-    bool handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac,
-                                Socket *sd, std::shared_ptr<beerocks_header> beerocks_header);
+    bool handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac, int fd,
+                                std::shared_ptr<beerocks_header> beerocks_header);
 
     /* Vendor specific message handlers: */
 
-    void handle_vs_csa_notification(ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
+    void handle_vs_csa_notification(ieee1905_1::CmduMessageRx &cmdu_rx, int fd,
                                     std::shared_ptr<beerocks_header> beerocks_header);
 
-    void handle_vs_csa_error_notification(ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
+    void handle_vs_csa_error_notification(ieee1905_1::CmduMessageRx &cmdu_rx, int fd,
                                           std::shared_ptr<beerocks_header> beerocks_header);
 
-    void handle_vs_cac_started_notification(ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
+    void handle_vs_cac_started_notification(ieee1905_1::CmduMessageRx &cmdu_rx, int fd,
                                             std::shared_ptr<beerocks_header> beerocks_header);
 
-    void handle_vs_dfs_cac_completed_notification(ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
+    void handle_vs_dfs_cac_completed_notification(ieee1905_1::CmduMessageRx &cmdu_rx, int fd,
                                                   std::shared_ptr<beerocks_header> beerocks_header);
 
-    void handle_vs_channels_list_response(ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
+    void handle_vs_channels_list_response(ieee1905_1::CmduMessageRx &cmdu_rx, int fd,
                                           std::shared_ptr<beerocks_header> beerocks_header);
 
     void
-    handle_vs_zwdfs_ant_channel_switch_response(ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
+    handle_vs_zwdfs_ant_channel_switch_response(ieee1905_1::CmduMessageRx &cmdu_rx, int fd,
                                                 std::shared_ptr<beerocks_header> beerocks_header);
 
     /* ZWDFS */
@@ -147,8 +147,8 @@ private:
     std::chrono::steady_clock::time_point m_zwdfs_fsm_timeout;
 
     /* Helper functions */
-    const std::string socket_to_front_iface_name(const Socket *sd);
-    Socket *front_iface_name_to_socket(const std::string &iface_name);
+    const std::string socket_to_front_iface_name(int fd);
+    int front_iface_name_to_socket(const std::string &iface_name);
 
     /* Class members */
 

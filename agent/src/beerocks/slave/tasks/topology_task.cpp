@@ -101,8 +101,8 @@ void TopologyTask::handle_event(uint8_t event_enum_value, const void *event_obj)
     }
 }
 
-bool TopologyTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac,
-                               Socket *sd, std::shared_ptr<beerocks_header> beerocks_header)
+bool TopologyTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac, int fd,
+                               std::shared_ptr<beerocks_header> beerocks_header)
 {
     switch (cmdu_rx.getMessageType()) {
     case ieee1905_1::eMessageType::TOPOLOGY_DISCOVERY_MESSAGE: {

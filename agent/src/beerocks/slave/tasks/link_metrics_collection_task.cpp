@@ -38,7 +38,7 @@ LinkMetricsCollectionTask::LinkMetricsCollectionTask(backhaul_manager &btl_ctx,
 }
 
 bool LinkMetricsCollectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                            const sMacAddr &src_mac, Socket *sd,
+                                            const sMacAddr &src_mac, int fd,
                                             std::shared_ptr<beerocks_header> beerocks_header)
 {
     switch (cmdu_rx.getMessageType()) {
@@ -403,16 +403,16 @@ void LinkMetricsCollectionTask::handle_beacon_metrics_query(ieee1905_1::CmduMess
         return;
     }
 
-    if (forward_to) {
+    if (forward_to != beerocks::net::FileDescriptor::invalid_descriptor) {
         // Forward only to the desired destination
-        if (!message_com::forward_cmdu_to_uds(forward_to, cmdu_rx, uds_header->length)) {
-            LOG(ERROR) << "forward_cmdu_to_uds() failed - sd=" << intptr_t(forward_to);
+        if (!m_btl_ctx.forward_cmdu_to_uds(forward_to, cmdu_rx, uds_header->length)) {
+            LOG(ERROR) << "forward_cmdu_to_uds() failed - fd=" << forward_to;
         }
     } else {
         // Forward cmdu to all slaves how it is on UDS, without changing it
         for (auto soc_iter : m_btl_ctx.slaves_sockets) {
-            if (!message_com::forward_cmdu_to_uds(soc_iter->slave, cmdu_rx, uds_header->length)) {
-                LOG(ERROR) << "forward_cmdu_to_uds() failed - sd=" << intptr_t(soc_iter->slave);
+            if (!m_btl_ctx.forward_cmdu_to_uds(soc_iter->slave, cmdu_rx, uds_header->length)) {
+                LOG(ERROR) << "forward_cmdu_to_uds() failed - fd=" << soc_iter->slave;
             }
         }
     }
@@ -506,7 +506,7 @@ void LinkMetricsCollectionTask::handle_associated_sta_link_metrics_query(
      * When link metric collection task moves to agent context
      * send the message to fronthaul, not slave.
      */
-    message_com::send_cmdu(radio_info->slave, m_cmdu_tx);
+    m_btl_ctx.send_cmdu(radio_info->slave, m_cmdu_tx);
 }
 
 void LinkMetricsCollectionTask::handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -591,7 +591,7 @@ bool LinkMetricsCollectionTask::send_ap_metric_query_message(
              * When link metric collection task moves to agent context
              * send the message to fronthaul, not slave.
              */
-            if (!message_com::send_cmdu(radio_info->slave, m_cmdu_tx)) {
+            if (!m_btl_ctx.send_cmdu(radio_info->slave, m_cmdu_tx)) {
                 LOG(ERROR) << "Failed forwarding AP_METRICS_QUERY_MESSAGE message to fronthaul";
             }
 
@@ -640,7 +640,7 @@ void LinkMetricsCollectionTask::handle_multi_ap_policy_config_request(
                     continue;
                 }
                 cmdu_rx.swap(); // swap back before forwarding
-                if (!message_com::forward_cmdu_to_uds(radio->slave, cmdu_rx, uds_header->length)) {
+                if (!m_btl_ctx.forward_cmdu_to_uds(radio->slave, cmdu_rx, uds_header->length)) {
                     /*
                      * TODO: https://jira.prplfoundation.org/browse/PPM-657
                      *

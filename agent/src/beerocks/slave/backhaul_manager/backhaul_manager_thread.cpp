@@ -237,9 +237,9 @@ void backhaul_manager::on_thread_stop()
         std::string iface = soc->sta_iface;
         LOG(DEBUG) << "Closing iface " << iface << " sockets";
         if (soc) {
-            if (soc->slave) {
-                remove_socket(soc->slave);
-                delete soc->slave;
+            if (soc->slave != beerocks::net::FileDescriptor::invalid_descriptor) {
+                remove_socket(m_fd_to_socket_map[soc->slave]);
+                delete m_fd_to_socket_map[soc->slave];
             }
             if (soc->sta_wlan_hal) {
                 soc->sta_wlan_hal.reset();
@@ -262,14 +262,48 @@ void backhaul_manager::on_thread_stop()
 void backhaul_manager::socket_connected(Socket *sd)
 {
     LOG(DEBUG) << "new slave_socket, sd=" << intptr_t(sd);
-    auto soc   = std::make_shared<sRadioInfo>();
-    soc->slave = sd;
-    slaves_sockets.push_back(soc);
-    add_socket(soc->slave);
+    add_socket(sd);
+
+    // Get the file descriptor for the given socket instance
+    int fd = sd->getSocketFd();
+
+    // Save the pair { fd x Socket* } for later retrieval
+    m_fd_to_socket_map[fd] = sd;
+
+    // Call the method with the new signature
+    handle_connected(fd);
 }
 
+void backhaul_manager::handle_connected(int fd)
+{
+    LOG(INFO) << "UDS socket connected, fd = " << fd;
+
+    auto soc   = std::make_shared<sRadioInfo>();
+    soc->slave = fd;
+    slaves_sockets.push_back(soc);
+}
+
+bool backhaul_manager::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
+{
+    return message_com::send_cmdu(m_fd_to_socket_map[fd], cmdu_tx);
+}
+
+bool backhaul_manager::forward_cmdu_to_uds(int fd, ieee1905_1::CmduMessageRx &cmdu_rx,
+                                           uint16_t length)
+{
+    return message_com::forward_cmdu_to_uds(m_fd_to_socket_map[fd], cmdu_rx, length);
+}
+
+// This method is temporary and will be removed at the end of PPM-753.
+// It is intended to allow the temporary coexistence of Socket* and file descriptors to refer to
+// accepted sockets.
 bool backhaul_manager::socket_disconnected(Socket *sd)
 {
+    if (!sd) {
+        LOG(ERROR) << "socket is nullptr";
+        return false;
+    }
+
     if (from_broker(sd)) {
         LOG(ERROR) << "broker socket to the controller disconnected " << intptr_t(sd)
                    << " restarting backhaul manager";
@@ -285,19 +319,29 @@ bool backhaul_manager::socket_disconnected(Socket *sd)
         return true;
     }
 
+    // Get the file descriptor for the given socket instance
+    int fd = sd->getSocketFd();
+
+    // Save the pair { fd x Socket* } for later retrieval
+    m_fd_to_socket_map[fd] = sd;
+
+    // Call the method with the new signature
+    handle_disconnected(fd);
+
+    // Returning true so the socket_thread will handle the socket removal.
+    return true;
+}
+
+void backhaul_manager::handle_disconnected(int fd)
+{
     auto db = AgentDB::get();
 
     for (auto it = slaves_sockets.begin(); it != slaves_sockets.end();) {
         auto soc          = *it;
         std::string iface = soc->hostap_iface;
-        if (soc->slave == sd) {
+        if (soc->slave == fd) {
             LOG(INFO) << "slave disconnected, iface=" << iface
                       << " backhaul_manager=" << int(soc->slave_is_backhaul_manager);
-            if (soc->slave) {
-                LOG(INFO) << "removing slave socket";
-                remove_socket(soc->slave);
-                delete soc->slave;
-            }
             if (soc->sta_wlan_hal) {
                 LOG(INFO) << "dereferencing sta_wlan_hal";
                 soc->sta_wlan_hal.reset();
@@ -344,20 +388,114 @@ bool backhaul_manager::socket_disconnected(Socket *sd)
                 m_task_pool.send_event(eTaskType::TOPOLOGY,
                                        TopologyTask::eEvent::AGENT_RADIO_STATE_CHANGED);
             }
-            return false;
+            return;
         } else {
             ++it;
         }
     }
 
     for (auto it = m_disabled_slave_sockets.begin(); it != m_disabled_slave_sockets.end();) {
-        if (it->second->slave == sd) {
+        if (it->second->slave == fd) {
             it = m_disabled_slave_sockets.erase(it);
-            // Return 'true' to let the socket thread handle the socket removal
-            return true;
+            return;
         }
         it++;
     }
+    return;
+}
+
+bool backhaul_manager::handle_cmdu(int fd, uint32_t iface_index, const sMacAddr &dst_mac,
+                                   const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    // Check for local handling
+    if (dst_mac == beerocks::net::network_utils::ZERO_MAC) {
+        auto it =
+            std::find_if(slaves_sockets.begin(), slaves_sockets.end(),
+                         [fd](std::shared_ptr<sRadioInfo> radio) { return (radio->slave == fd); });
+        if (it == slaves_sockets.end()) {
+            LOG(ERROR) << "Slave socket descriptor not found, fd = " << fd;
+            return false;
+        }
+
+        auto soc = *it;
+
+        if (cmdu_rx.getMessageType() == ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE) {
+            return handle_slave_backhaul_message(soc, cmdu_rx);
+        } else {
+            return handle_slave_1905_1_message(cmdu_rx, tlvf::mac_to_string(src_mac));
+        }
+    }
+
+    // Forward the data (cmdu) to bus
+    // LOG(DEBUG) << "forwarding slave->master message, controller_bridge_mac="
+    //            << (db->controller_info.bridge_mac);
+    cmdu_rx.swap(); //swap back before forwarding
+
+    uint16_t length = cmdu_rx.getMessageLength();
+
+    auto db = AgentDB::get();
+    return send_cmdu_to_broker(cmdu_rx, tlvf::mac_to_string(dst_mac),
+                               tlvf::mac_to_string(db->bridge.mac), length);
+}
+
+bool backhaul_manager::handle_cmdu_from_broker(uint32_t iface_index, const sMacAddr &dst_mac,
+                                               const sMacAddr &src_mac,
+                                               ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto db = AgentDB::get();
+
+    // Filter messages which are not destined to this agent
+    if (tlvf::mac_to_string(dst_mac) != beerocks::net::network_utils::MULTICAST_1905_MAC_ADDR &&
+        dst_mac != db->bridge.mac) {
+        LOG(DEBUG) << "handle_cmdu() - dropping msg, dst_mac=" << dst_mac
+                   << ", local_bridge_mac=" << db->bridge.mac;
+        return true;
+    }
+
+    // TODO: Add optimization of PID filtering for cases like the following:
+    // 1. If VS message was sent by Controllers local agent to the controller, it is looped back.
+    // 2. If IRE is sending message to the Controller of the Controller, it will be received in
+    //    Controllers backhaul manager as well, and should ignored.
+
+    // Handle the CMDU message. If the message was processed locally
+    // (by the Backhaul Manager), this function will return 'true'.
+    // Otherwise, it should be forwarded to the slaves.
+
+    // the destination slave is used to forward the cmdu
+    // only to the desired slave.
+    // handle_1905_1_message has the opportunity to set it
+    // to a speficic slave. In this case the cmdu is forward only
+    // to this slave. when dest_slave is left as invalid_descriptor
+    // the cmdu is forwarded to all slaves
+    int dest_slave = beerocks::net::FileDescriptor::invalid_descriptor;
+    if (handle_1905_1_message(cmdu_rx, tlvf::mac_to_string(src_mac), dest_slave)) {
+        //function returns true if message doesn't need to be forwarded
+        return true;
+    }
+
+    ////////// If got here, message needs to be forwarded //////////
+
+    // Message from controller (bus) to agent (uds)
+    // Send the data (uds_header + cmdu) how it is on UDS, without changing it
+
+    cmdu_rx.swap(); // swap back before forwarding
+
+    uint16_t length = cmdu_rx.getMessageLength();
+
+    if (dest_slave != beerocks::net::FileDescriptor::invalid_descriptor) {
+        // Forward only to the desired destination
+        if (!forward_cmdu_to_uds(dest_slave, cmdu_rx, length)) {
+            LOG(ERROR) << "forward_cmdu_to_uds() failed - fd=" << dest_slave;
+        }
+    } else {
+        // Forward cmdu to all slaves how it is on UDS, without changing it
+        for (auto soc_iter : slaves_sockets) {
+            if (!forward_cmdu_to_uds(soc_iter->slave, cmdu_rx, length)) {
+                LOG(ERROR) << "forward_cmdu_to_uds() failed - fd=" << soc_iter->slave;
+            }
+        }
+    }
+
     return true;
 }
 
@@ -390,7 +528,7 @@ void backhaul_manager::platform_notify_error(bpl::eErrorCode code, const std::st
     LOG(ERROR) << "platform_notify_error: " << error_data;
 
     // Send the message
-    message_com::send_cmdu(m_scPlatform.get(), cmdu_tx);
+    send_cmdu(m_scPlatform.get()->getSocketFd(), cmdu_tx);
 }
 
 void backhaul_manager::before_select()
@@ -571,10 +709,6 @@ bool backhaul_manager::finalize_slaves_connect_state(bool fConnected,
                            << " skipping " << sc->hostap_iface;
                 continue;
             }
-            if (sc->slave == nullptr) {
-                LOG(ERROR) << "slave " << sc->hostap_iface << " socket is nullptr!";
-                continue;
-            }
 
             // note: On wired connections ore GW, the first connected slave is selected as the backhaul manager
             notification->params().is_backhaul_manager = sc->slave_is_backhaul_manager;
@@ -589,7 +723,7 @@ bool backhaul_manager::finalize_slaves_connect_state(bool fConnected,
                            << ", GW_IP: " << bridge_info.ip_gw
                            << ", Slave is Backhaul Manager: " << int(sc->slave_is_backhaul_manager);
             }
-            message_com::send_cmdu(sc->slave, cmdu_tx);
+            send_cmdu(sc->slave, cmdu_tx);
 
         } // end for (auto sc : slaves_sockets)
 
@@ -599,10 +733,6 @@ bool backhaul_manager::finalize_slaves_connect_state(bool fConnected,
         for (auto sc : slaves_sockets) {
             // If the notification should be sent to a specific socket, skip all other
             if (pSocket != nullptr && pSocket != sc) {
-                continue;
-            }
-
-            if (sc->slave == nullptr) {
                 continue;
             }
 
@@ -616,7 +746,7 @@ bool backhaul_manager::finalize_slaves_connect_state(bool fConnected,
             notification->stopped() =
                 (uint8_t)(configuration_stop_on_failure_attempts && !stop_on_failure_attempts);
             LOG(DEBUG) << "Sending DISCONNECTED notification to slave of " << sc->hostap_iface;
-            message_com::send_cmdu(sc->slave, cmdu_tx);
+            send_cmdu(sc->slave, cmdu_tx);
         }
     }
 
@@ -1424,8 +1554,22 @@ bool backhaul_manager::backhaul_fsm_wireless(bool &skip_select)
     return (true);
 }
 
+// This method is temporary and will be removed at the end of PPM-753.
+// It is intended to allow the temporary coexistence of Socket* and file descriptors to refer to
+// accepted sockets.
 bool backhaul_manager::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
+    if (!sd) {
+        LOG(ERROR) << "socket is nullptr";
+        return false;
+    }
+
+    // Get the file descriptor for the given socket instance
+    int fd = sd->getSocketFd();
+
+    // Save the pair { fd x Socket* } for later retrieval
+    m_fd_to_socket_map[fd] = sd;
+
     auto uds_header = message_com::get_uds_header(cmdu_rx);
 
     if (!uds_header) {
@@ -1433,97 +1577,20 @@ bool backhaul_manager::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_r
         return false;
     }
 
-    uint16_t length     = uds_header->length;
-    std::string src_mac = tlvf::mac_to_string(uds_header->src_bridge_mac);
-    std::string dst_mac = tlvf::mac_to_string(uds_header->dst_bridge_mac);
+    uint32_t iface_index = uds_header->if_index;
 
-    auto db = AgentDB::get();
+    sMacAddr src_mac;
+    std::copy_n(uds_header->src_bridge_mac, beerocks::net::MAC_ADDR_LEN, src_mac.oct);
+
+    sMacAddr dst_mac;
+    std::copy_n(uds_header->dst_bridge_mac, beerocks::net::MAC_ADDR_LEN, dst_mac.oct);
 
     if (from_broker(sd)) {
-
-        // Filter messages which are not destined to this agent
-        if (dst_mac != network_utils::MULTICAST_1905_MAC_ADDR &&
-            dst_mac != tlvf::mac_to_string(db->bridge.mac)) {
-            LOG(DEBUG) << "handle_cmdu() - dropping msg, dst_mac=" << dst_mac
-                       << ", local_bridge_mac=" << db->bridge.mac;
-            return true;
-        }
-
-        // TODO: Add optimization of PID filtering for cases like the following:
-        // 1. If VS message was sent by Controllers local agent to the controller, it is looped back.
-        // 2. If IRE is sending message to the Controller of the Controller, it will be received in
-        //    Controllers backhaul manager as well, and should ignored.
-
-        // Handle the CMDU message. If the message was processed locally
-        // (by the Backhaul Manager), this function will return 'true'.
-        // Otherwise, it should be forwarded to the slaves.
-
-        // the destination slave is used to forward the cmdu
-        // only to the desired slave.
-        // handle_1905_1_message has the opportunity to set it
-        // to a speficic slave. In this case the cmdu is forward only
-        // to this slave. when dest_slave is left as nullptr
-        // the cmdu is forwarded to all slaves
-        Socket *dest_slave = nullptr;
-        if (handle_1905_1_message(cmdu_rx, src_mac, dest_slave)) {
-            //function returns true if message doesn't need to be forwarded
-            return true;
-        }
-
-        ////////// If got here, message needs to be forwarded //////////
-
-        // Message from controller (bus) to agent (uds)
-        // Send the data (uds_header + cmdu) how it is on UDS, without changing it
-
-        cmdu_rx.swap(); // swap back before forwarding
-
-        if (dest_slave) {
-            // Forward only to the desired destination
-            if (!message_com::forward_cmdu_to_uds(dest_slave, cmdu_rx, length)) {
-                LOG(ERROR) << "forward_cmdu_to_uds() failed - " << print_cmdu_types(uds_header)
-                           << " sd=" << intptr_t(dest_slave);
-            }
-        } else {
-            // Forward cmdu to all slaves how it is on UDS, without changing it
-            for (auto soc_iter : slaves_sockets) {
-                if (!message_com::forward_cmdu_to_uds(soc_iter->slave, cmdu_rx, length)) {
-                    LOG(ERROR) << "forward_cmdu_to_uds() failed - " << print_cmdu_types(uds_header)
-                               << " sd=" << intptr_t(soc_iter->slave);
-                }
-            }
-        }
-    } else { // from uds to bus or local handling (ACTION_BACKHAUL)
-
-        // Check for local handling
-        if (dst_mac == network_utils::ZERO_MAC_STRING) {
-            std::shared_ptr<sRadioInfo> soc;
-            for (auto soc_iter : slaves_sockets) {
-                if (soc_iter->slave == sd) {
-                    soc = soc_iter;
-                    break;
-                }
-            }
-            for (auto soc_iter : m_disabled_slave_sockets) {
-                if (soc_iter.second->slave == sd) {
-                    soc = soc_iter.second;
-                    break;
-                }
-            }
-
-            if (cmdu_rx.getMessageType() == ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE) {
-                return handle_slave_backhaul_message(soc, cmdu_rx);
-            } else {
-                return handle_slave_1905_1_message(cmdu_rx, src_mac);
-            }
-        } else { // Forward the data (cmdu) to bus
-            // LOG(DEBUG) << "forwarding slave->master message, controller_bridge_mac="
-            //            << (db->controller_info.bridge_mac);
-            cmdu_rx.swap(); //swap back before forwarding
-            send_cmdu_to_broker(cmdu_rx, dst_mac, tlvf::mac_to_string(db->bridge.mac), length);
-        }
+        return handle_cmdu_from_broker(iface_index, dst_mac, src_mac, cmdu_rx);
     }
 
-    return true;
+    // from uds to bus or local handling (ACTION_BACKHAUL)
+    return handle_cmdu(fd, iface_index, dst_mac, src_mac, cmdu_rx);
 }
 
 bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo> soc,
@@ -1589,7 +1656,7 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
             return false;
         }
 
-        message_com::send_cmdu(soc->slave, cmdu_tx);
+        send_cmdu(soc->slave, cmdu_tx);
         break;
     }
 
@@ -1633,7 +1700,7 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
                 LOG(ERROR) << "Failed building cACTION_BACKHAUL_BUSY_NOTIFICATION message!";
                 break;
             }
-            message_com::send_cmdu(soc->slave, cmdu_tx);
+            send_cmdu(soc->slave, cmdu_tx);
         } else {
             pending_slave_ifaces.erase(soc->hostap_iface);
 
@@ -1738,7 +1805,7 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
                 break;
             }
             response->mac() = tlvf::mac_from_string(sta_mac);
-            message_com::send_cmdu(soc->slave, cmdu_tx);
+            send_cmdu(soc->slave, cmdu_tx);
             LOG(DEBUG) << "send ACTION_BACKHAUL_CLIENT_RX_RSSI_MEASUREMENT_CMD_RESPONSE, sta_mac = "
                        << sta_mac;
             int bandwidth = beerocks::utils::convert_bandwidth_to_int(
@@ -1747,7 +1814,7 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
                     sta_mac, request->params().channel, bandwidth,
                     request->params().vht_center_frequency, request->params().measurement_delay,
                     request->params().mon_ping_burst_pkt_num)) {
-                unassociated_measurement_slave_soc = soc->slave;
+                m_unassociated_measurement_slave_soc = soc->slave;
             } else {
                 bwl_error = true;
                 LOG(ERROR) << "unassociated_sta_rssi_measurement failed!";
@@ -1778,7 +1845,7 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
             response->params().rx_rssi    = beerocks::RSSI_INVALID;
             response->params().rx_snr     = beerocks::SNR_INVALID;
             response->params().rx_packets = -1;
-            message_com::send_cmdu(soc->slave, cmdu_tx);
+            send_cmdu(soc->slave, cmdu_tx);
         }
         break;
     }
@@ -1906,7 +1973,7 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
 }
 
 bool backhaul_manager::handle_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                             const std::string &src_mac, Socket *&forward_to)
+                                             const std::string &src_mac, int &forward_to)
 {
     /*
      * return values:
@@ -1938,7 +2005,8 @@ bool backhaul_manager::handle_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx,
     default: {
         // TODO add a warning once all vendor specific flows are replaced with EasyMesh
         // flows, since we won't expect a 1905 message not handled in this function
-        return m_task_pool.handle_cmdu(cmdu_rx, tlvf::mac_from_string(src_mac));
+        return m_task_pool.handle_cmdu(cmdu_rx, tlvf::mac_from_string(src_mac),
+                                       beerocks::net::FileDescriptor::invalid_descriptor);
     }
     }
 }
@@ -1951,7 +2019,8 @@ bool backhaul_manager::handle_slave_1905_1_message(ieee1905_1::CmduMessageRx &cm
         return handle_slave_failed_connection_message(cmdu_rx, src_mac);
     }
     default: {
-        bool handled = m_task_pool.handle_cmdu(cmdu_rx, tlvf::mac_from_string(src_mac));
+        bool handled = m_task_pool.handle_cmdu(cmdu_rx, tlvf::mac_from_string(src_mac),
+                                               beerocks::net::FileDescriptor::invalid_descriptor);
         if (!handled) {
             LOG(DEBUG) << "Unhandled 1905 message " << std::hex << int(cmdu_rx.getMessageType())
                        << ", forwarding to controller...";
@@ -2013,7 +2082,7 @@ bool backhaul_manager::send_slaves_enable()
                    << ", channel = " << int(notification->channel())
                    << ", center_channel = " << int(notification->center_channel());
 
-        message_com::send_cmdu(soc->slave, cmdu_tx);
+        send_cmdu(soc->slave, cmdu_tx);
     }
 
     return true;
@@ -2248,17 +2317,18 @@ bool backhaul_manager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t eve
             response->params().rx_packets        = msg->params.rx_packets;
             response->params().src_module        = msg->params.src_module;
 
-            if (unassociated_measurement_slave_soc) {
-                message_com::send_cmdu(unassociated_measurement_slave_soc, cmdu_tx);
+            if (m_unassociated_measurement_slave_soc !=
+                beerocks::net::FileDescriptor::invalid_descriptor) {
+                send_cmdu(m_unassociated_measurement_slave_soc, cmdu_tx);
             } else {
-                LOG(ERROR) << "unassociated_measurement_slave_soc = nullptr!!!";
+                LOG(ERROR) << "m_unassociated_measurement_slave_soc == invalid_descriptor!!!";
             }
         } else {
             LOG(ERROR) << "sta_unassociated_rssi_measurement_header_id == -1";
         }
 
         unassociated_rssi_measurement_header_id = -1;
-        unassociated_measurement_slave_soc      = nullptr;
+        m_unassociated_measurement_slave_soc    = beerocks::net::FileDescriptor::invalid_descriptor;
 
     } break;
 
@@ -2797,7 +2867,7 @@ bool backhaul_manager::start_wps_pbc(const sMacAddr &radio_mac)
         }
 
         LOG(DEBUG) << "Start WPS PBC registration on interface " << soc->hostap_iface;
-        return message_com::send_cmdu(soc->slave, cmdu_tx);
+        return send_cmdu(soc->slave, cmdu_tx);
     } else {
         // WPS PBC registration on STA interface
         auto sta_wlan_hal = get_selected_backhaul_sta_wlan_hal();
@@ -2819,7 +2889,7 @@ bool backhaul_manager::start_wps_pbc(const sMacAddr &radio_mac)
             }
             LOG(DEBUG) << "Request Agent to disable the radio interface "
                        << slaves_socket->hostap_iface << " before WPS starts";
-            if (!message_com::send_cmdu(slaves_socket->slave, cmdu_tx)) {
+            if (!send_cmdu(slaves_socket->slave, cmdu_tx)) {
                 LOG(ERROR) << "Failed to send cACTION_BACKHAUL_RADIO_DISABLE_REQUEST";
                 return false;
             }

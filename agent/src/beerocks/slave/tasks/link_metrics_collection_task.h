@@ -28,7 +28,7 @@ class LinkMetricsCollectionTask : public Task {
 public:
     LinkMetricsCollectionTask(backhaul_manager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx);
 
-    bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac, Socket *sd,
+    bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac, int fd,
                      std::shared_ptr<beerocks_header> beerocks_header) override;
 
     void work() override;
@@ -162,7 +162,10 @@ private:
     sApMetricsReportingInfo m_ap_metrics_reporting_info;
 
     struct sApMetricsQuery {
-        Socket *soc;
+        /**
+         * File descriptor of the socket connection established from the slave to the CMDU server.
+         */
+        int slave;
         sMacAddr bssid;
     };
 

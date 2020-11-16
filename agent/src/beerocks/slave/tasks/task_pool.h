@@ -46,11 +46,11 @@ public:
      * 
      * @param cmdu_rx CMDU object containing the message.
      * @param src_mac MAC address of the message sender.
-     * @param sd Socket of the thread which has sent the message.
+     * @param fd File descriptor of the socket connection with the slave that sent the message.
      * @param beerocks_header Beerocks header (Only on VS message).
      * @return true if the message has been handled, otherwise false.
      */
-    bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, sMacAddr src_mac, Socket *sd = nullptr,
+    bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, sMacAddr src_mac, int fd,
                      std::shared_ptr<beerocks_header> beerocks_header = nullptr);
 
 private:
