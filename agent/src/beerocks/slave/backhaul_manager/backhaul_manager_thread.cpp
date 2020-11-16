@@ -132,6 +132,7 @@ bool backhaul_manager::init()
             ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE,
             ieee1905_1::eMessageType::BEACON_METRICS_QUERY_MESSAGE,
             ieee1905_1::eMessageType::CHANNEL_PREFERENCE_QUERY_MESSAGE,
+            ieee1905_1::eMessageType::CHANNEL_SCAN_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::CLIENT_CAPABILITY_QUERY_MESSAGE,

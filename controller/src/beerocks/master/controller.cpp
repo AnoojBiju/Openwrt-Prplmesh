@@ -68,6 +68,7 @@
 #include <tlvf/wfa_map/tlvSearchedService.h>
 #include <tlvf/wfa_map/tlvSteeringBTMReport.h>
 #include <tlvf/wfa_map/tlvSupportedService.h>
+#include <tlvf/wfa_map/tlvTimestamp.h>
 #include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
 #include <tlvf/wfa_map/tlvTunnelledData.h>
 #include <tlvf/wfa_map/tlvTunnelledProtocolType.h>
@@ -266,6 +267,7 @@ bool Controller::start()
             ieee1905_1::eMessageType::BEACON_METRICS_RESPONSE_MESSAGE,
             ieee1905_1::eMessageType::CHANNEL_PREFERENCE_REPORT_MESSAGE,
             ieee1905_1::eMessageType::CHANNEL_SELECTION_RESPONSE_MESSAGE,
+            ieee1905_1::eMessageType::CHANNEL_SCAN_REPORT_MESSAGE,
             ieee1905_1::eMessageType::CLIENT_CAPABILITY_REPORT_MESSAGE,
             ieee1905_1::eMessageType::CLIENT_STEERING_BTM_REPORT_MESSAGE,
             ieee1905_1::eMessageType::HIGHER_LAYER_DATA_MESSAGE,
@@ -447,6 +449,8 @@ bool Controller::handle_cmdu_1905_1_message(const std::string &src_mac,
         return handle_cmdu_1905_channel_preference_report(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::CHANNEL_SELECTION_RESPONSE_MESSAGE:
         return handle_cmdu_1905_channel_selection_response(src_mac, cmdu_rx);
+    case ieee1905_1::eMessageType::CHANNEL_SCAN_REPORT_MESSAGE:
+        return handle_cmdu_1905_channel_scan_report(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::CLIENT_CAPABILITY_REPORT_MESSAGE:
         return handle_cmdu_1905_client_capability_report_message(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::CLIENT_STEERING_BTM_REPORT_MESSAGE:
@@ -1180,6 +1184,8 @@ bool Controller::handle_cmdu_1905_ack_message(const std::string &src_mac,
     LOG(DEBUG) << "Received ACK_MESSAGE, mid=" << std::hex << int(mid)
                << " tlv error code: " << errorSS.str();
 
+    // TODO: Send ACK message/event to dynamic_channel_selection_r2_task.
+
     //TODO: the ACK should be sent to the correct task and will be done as part of agent certification
     return true;
 }
@@ -1320,6 +1326,36 @@ bool Controller::handle_cmdu_1905_channel_selection_response(const std::string &
                    return ret_str;
                })(response_code);
     }
+
+    return true;
+}
+
+bool Controller::handle_cmdu_1905_channel_scan_report(const std::string &src_mac,
+                                                      ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto mid = cmdu_rx.getMessageId();
+    LOG(INFO) << "Received CHANNEL_SCAN_REPORT_MESSAGE, src_mac=" << src_mac << ", mid=" << std::hex
+              << mid;
+
+    // get Timestamp TLV
+    auto timestamp_tlv = cmdu_rx.getClass<wfa_map::tlvTimestamp>();
+    if (!timestamp_tlv) {
+        LOG(ERROR) << "getClass wfa_map::tlvTimestamp has failed";
+        return false;
+    }
+
+    LOG(INFO) << "timestamp=" << timestamp_tlv->timestamp();
+
+    // Send event to dynamic_channel_selection_r2_task.
+    // This task is will eventually replace the existing DCS task, but
+    // in order not to break existing functionality, it introduced as
+    // a new separate task.
+    dynamic_channel_selection_r2_task::sScanReportEvent new_event;
+    new_event.agent_mac = tlvf::mac_from_string(src_mac);
+    new_event.mid       = mid;
+    tasks.push_event(database.get_dynamic_channel_selection_r2_task_id(),
+                     (int)dynamic_channel_selection_r2_task::eEvent::RECEIVED_CHANNEL_SCAN_REPORT,
+                     (void *)&new_event);
 
     return true;
 }

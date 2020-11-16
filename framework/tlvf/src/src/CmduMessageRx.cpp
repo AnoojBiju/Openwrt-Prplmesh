@@ -53,6 +53,8 @@
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 #include <tlvf/wfa_map/tlvProfile2ApRadioAdvancedCapabilities.h>
+#include <tlvf/wfa_map/tlvProfile2ChannelScanRequest.h>
+#include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>
 #include <tlvf/wfa_map/tlvProfile2Default802dotQSettings.h>
 #include <tlvf/wfa_map/tlvProfile2MetricCollectionInterval.h>
 #include <tlvf/wfa_map/tlvProfile2TrafficSeparationPolicy.h>
@@ -64,6 +66,7 @@
 #include <tlvf/wfa_map/tlvSteeringPolicy.h>
 #include <tlvf/wfa_map/tlvSteeringRequest.h>
 #include <tlvf/wfa_map/tlvSupportedService.h>
+#include <tlvf/wfa_map/tlvTimestamp.h>
 #include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
 #include <tlvf/wfa_map/tlvTunnelledData.h>
 #include <tlvf/wfa_map/tlvTunnelledProtocolType.h>
@@ -267,6 +270,15 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv()
     }
     case (165): {
         return msg.addClass<wfa_map::tlvChannelScanCapabilities>();
+    }
+    case (166): {
+        return msg.addClass<wfa_map::tlvProfile2ChannelScanRequest>();
+    }
+    case (167): {
+        return msg.addClass<wfa_map::tlvProfile2ChannelScanResult>();
+    }
+    case (168): {
+        return msg.addClass<wfa_map::tlvTimestamp>();
     }
     case (180): {
         return msg.addClass<wfa_map::tlvProfile2ApCapability>();

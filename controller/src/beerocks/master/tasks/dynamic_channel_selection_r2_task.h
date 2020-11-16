@@ -18,6 +18,7 @@
 #include "task_pool.h"
 
 #include <beerocks/tlvf/beerocks_message.h>
+#include <tlvf/wfa_map/tlvProfile2ChannelScanRequest.h>
 
 #include <chrono>
 
@@ -28,26 +29,157 @@ public:
     dynamic_channel_selection_r2_task(db &database, ieee1905_1::CmduMessageTx &cmdu_tx_,
                                       task_pool &tasks_);
 
-    enum eEvent : uint8_t {};
+    struct sScanRequestEvent {
+        sMacAddr radio_mac;
+    };
+
+    struct sScanReportEvent {
+        sMacAddr agent_mac;
+        uint16_t mid;
+    };
+
+    enum eEvent : uint8_t { TRIGGER_SINGLE_SCAN, RECEIVED_CHANNEL_SCAN_REPORT };
+
+    enum class eRadioScanStatus : uint8_t { PENDING, TRIGGERED_WAIT_FOR_ACK, SCAN_IN_PROGRESS };
+    enum class eAgentStatus : uint8_t { IDLE, BUSY };
+
+    // Struct of the status of an agent and it's scan requests
+    struct sAgentScanStatus {
+
+        // Struct of a radio scan request
+        struct sRadioScanRequest {
+            uint16_t mid            = INVALID_MID_ID;
+            eRadioScanStatus status = eRadioScanStatus::PENDING;
+        };
+
+        eAgentStatus status;
+        /**
+         * @brief Map of radio scans
+         * 
+         * Key:     radio mac.
+         * Value:   radio scan request as sRadioScanRequest struct.
+         */
+        std::unordered_map<sMacAddr, sRadioScanRequest> radio_scans;
+    };
+
+    /**
+     * @brief Map of agent's status.
+     * 
+     * Key:     agent mac.
+     * Value:   agent status as sAgentScanStatus struct.
+     */
+    std::unordered_map<sMacAddr, sAgentScanStatus> m_agents_status_map;
+
+    /**
+     * @brief Map of outgoing mids to agents.
+     * 
+     * Key:     mid (message id) value.
+     * Value:   agent mac.
+     */
+    std::unordered_map<uint16_t, sMacAddr> mid_to_agent_map;
 
 protected:
     virtual void work() override;
     virtual void handle_event(int event_enum_value, void *event_obj) override;
 
 private:
-    enum eState : uint8_t { IDLE };
+    enum eState : uint8_t { IDLE, TRIGGER_SCAN };
 
     // clang-format off
     const std::unordered_map<eState, std::string, std::hash<int>> m_states_string = {
       { eState::IDLE,                "IDLE"              },
+      { eState::TRIGGER_SCAN,        "TRIGGER_SCAN"      },
     };
     // clang-format on
 
     eState m_state = eState::IDLE;
 
+    // Class constants
+    static constexpr uint16_t INVALID_MID_ID = UINT16_MAX;
+
     db &database;
     ieee1905_1::CmduMessageTx &cmdu_tx;
     task_pool &tasks;
+
+    /**
+     * @brief Check the scans queue for any pending requests in idle agents
+     * 
+     * @return true if pending scan in idle agent found, false otherwise.
+     */
+    bool is_scan_pending_for_any_idle_agent();
+
+    /**
+     * @brief Check if the agent has pending scans that can be triggered.
+     * Will return true only if the agent is in IDLE state and therefore
+     * ready to run the pending scan.
+     * 
+     * @param agent_scan_status A reference to sAgentScanStatus struct
+     * @return true if pending scan in idle agent found, false otherwise.
+     */
+    bool is_agent_idle_with_pending_radio_scans(const sAgentScanStatus &agent_scan_status);
+
+    /**
+     * @brief Trigger pending scan requests for any idle agent.
+     * 
+     * @return true if successful, false otherwise.
+     */
+    bool trigger_pending_scan_requests();
+
+    /**
+     * @brief Check if a scan was triggered for a given radio
+     * 
+     * @param radio_mac MAC address of the radio 
+     * @return true if successful, false otherwise.
+     */
+    bool is_scan_triggered_for_radio(const sMacAddr &radio_mac);
+
+    /**
+     * @brief Handle scan request events.
+     * Add a radio scan request in the event to pending scan requests.
+     * 
+     * @param scan_request_event Refernce to sScanRequestEvent object.
+     * @return true if successful, false otherwise.
+     */
+    bool handle_scan_request_event(const sScanRequestEvent &scan_request_event);
+
+    /**
+     * @brief Handle scan report events
+     * 
+     * @param scan_report_event Refernce to sScanReportEvent object.
+     * @return true if successful, false otherwise.
+     */
+    bool handle_scan_report_event(const sScanReportEvent &scan_report_event);
+
+    /**
+     * @brief Create a channel scan request message, with empty radio_list.
+     * 
+     * @param[in] agent_mac MAC address of the agent.
+     * @param[out] mid The unique message-id of the message sent to the agent.
+     * @param[out] channel_scan_request_tlv Shared pointer to the Channel_scan_request_tlv.
+     * @return true if successful, false otherwise.
+     */
+    bool create_channel_scan_request_message(
+        sMacAddr agent_mac, uint16_t &mid,
+        std::shared_ptr<wfa_map::tlvProfile2ChannelScanRequest> &channel_scan_request_tlv);
+
+    /**
+     * @brief Add a new radio to the channel scan request tlv.
+     * 
+     * @param channel_scan_request_tlv Shared pointer to the channel scan request tlv.
+     * @param radio_mac MAC address of the radio to scan.
+     * @return true if successful, false otherwise.
+     */
+    bool add_radio_to_channel_scan_request_tlv(
+        std::shared_ptr<wfa_map::tlvProfile2ChannelScanRequest> &channel_scan_request_tlv,
+        sMacAddr radio_mac);
+
+    /**
+     * @brief Send channel scan request message to agent
+     * 
+     * @param agent_mac MAC address of the agent.
+     * @return true if successful, false otherwise.
+     */
+    bool send_scan_request_to_agent(const sMacAddr &agent_mac);
 };
 
 } //namespace son
