@@ -10,6 +10,8 @@
 #define _TASK_POOL_H_
 
 #include "task.h"
+#include "task_pool_interface.h"
+#include <queue>
 #include <unordered_map>
 
 namespace beerocks {
@@ -19,15 +21,9 @@ namespace beerocks {
  * task and allow passing messages and events from the Agent to the task.
  * 
  */
-class TaskPool {
+class TaskPool : public TaskPoolInterface {
 public:
-    /**
-     * @brief Add new task to the task pool.
-     * 
-     * @param new_task Shared pointer to the task.
-     * @return true on success, otherwise false.
-     */
-    bool add_task(const std::shared_ptr<Task> &new_task);
+    void add_task(const std::shared_ptr<Task> new_task, std::vector<eTaskEvent> = {}) override;
 
     /**
      * @brief Run all tasks on the pool, by calling each task work() function.
@@ -43,6 +39,8 @@ public:
      */
     void send_event(eTaskType task_type, uint8_t event, const void *event_obj = nullptr);
 
+    void send_event(eTaskEvent event, std::shared_ptr<void> event_obj = nullptr) override;
+
     /**
      * @brief Iterate over all tasks on the pool and pass them the message on 'cmdu_rx'.
      * 
@@ -56,12 +54,28 @@ public:
                      std::shared_ptr<beerocks_header> beerocks_header = nullptr);
 
 private:
+    /**
+     * @brief Add new task to the task pool.
+     * 
+     * @param new_task Shared pointer to the task.
+     * @return true on success, otherwise false.
+     */
+    bool add_task_no_events(const std::shared_ptr<Task> &new_task);
+
+private:
     // Decalaring unordered_map with key which is an enum, does not compiles on older gcc version.
     // It was considered a defect in the standard, and was fixed in C++14, and also fixed in the
     // version of libstdc++ shipping with gcc as of 6.1.
     // To make unordered_map work with an enum as key, std::hash<int> function was added as third
     // template argument.
     std::unordered_map<eTaskType, std::shared_ptr<Task>, std::hash<int>> m_task_pool;
+
+private:
+    // map each event to the tasks that want to handle it
+    std::unordered_multimap<eTaskEvent, std::shared_ptr<Task>, TaskEventHash> m_event_to_tasks_map;
+
+    // queue of events to handle
+    std::queue<std::pair<eTaskEvent, std::shared_ptr<void>>> m_event_queue;
 };
 
 } // namespace beerocks
