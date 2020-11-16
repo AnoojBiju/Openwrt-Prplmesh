@@ -467,7 +467,7 @@ int main(int argc, char *argv[])
 
     // read slave config file
     std::string slave_config_file_path =
-        CONF_FILES_PATH + std::string(BEEROCKS_AGENT) +
+        CONF_FILES_WRITABLE_PATH + std::string(BEEROCKS_AGENT) +
         ".conf"; //search first in platform-specific default directory
     beerocks::config_file::sConfigSlave beerocks_slave_conf;
     if (!beerocks::config_file::read_slave_config_file(slave_config_file_path,

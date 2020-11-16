@@ -30,9 +30,9 @@ namespace beerocks {
 
 // configuration files path
 #ifdef BEEROCKS_RDKB
-#define CONF_FILES_PATH "/nvram/"
+#define CONF_FILES_WRITABLE_PATH std::string("/nvram/")
 #else
-#define CONF_FILES_PATH "./"
+#define CONF_FILES_WRITABLE_PATH std::string("./")
 #endif
 
 #if __GNUC__ >= 7 || __cplussplus >= 201703L
