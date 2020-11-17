@@ -933,7 +933,7 @@ bool LinkMetricsCollectionTask::add_link_metrics_tlv(const sMacAddr &reporter_al
             LOG(ERROR) << "Failed accessing interface_pair_info";
             return false;
         }
-        auto interfacePairInfo                      = std::get<1>(interface_pair_info);
+        auto &interfacePairInfo                     = std::get<1>(interface_pair_info);
         interfacePairInfo.rc_interface_mac          = link_interface.iface_mac;
         interfacePairInfo.neighbor_interface_mac    = link_neighbor.iface_mac;
         interfacePairInfo.link_metric_info.intfType = link_interface.media_type;
@@ -976,7 +976,7 @@ bool LinkMetricsCollectionTask::add_link_metrics_tlv(const sMacAddr &reporter_al
             LOG(ERROR) << "Failed accessing interface_pair_info";
             return false;
         }
-        auto interfacePairInfo                           = std::get<1>(interface_pair_info);
+        auto &interfacePairInfo                          = std::get<1>(interface_pair_info);
         interfacePairInfo.rc_interface_mac               = link_interface.iface_mac;
         interfacePairInfo.neighbor_interface_mac         = link_neighbor.iface_mac;
         interfacePairInfo.link_metric_info.intfType      = link_interface.media_type;
