@@ -33,11 +33,16 @@
 
 #include "ambiorix.h"
 
+namespace beerocks {
+namespace nbapi {
+
 using actions_callback = amxd_status_t (*)(amxd_object_t *object, amxd_param_t *param,
                                            amxd_action_t reason, const amxc_var_t *const args,
                                            amxc_var_t *const retval, void *priv);
-namespace beerocks {
-namespace nbapi {
+typedef struct sActionsCallback {
+    std::string action_name;
+    actions_callback callback;
+} sActionsCallback;
 
 /**
  * @class AmbiorixImpl
@@ -47,7 +52,7 @@ class AmbiorixImpl : public Ambiorix {
 
 public:
     explicit AmbiorixImpl(std::shared_ptr<EventLoop> event_loop,
-                          const std::unordered_map<std::string, actions_callback> &on_action);
+                          const std::vector<sActionsCallback> &on_action);
 
     /**
      * @brief AmbiorixImpl destructor removes: bus connection, data model, parser and all data
@@ -163,6 +168,8 @@ private:
      * @brief Prepare transaction to the ubus
      *
      * @param relative_path Path to the object in datamodel (ex: "Controller.Network.ID").
+     * @param transaction Variable for transaction structure which contains fields
+     *                    needed for transaction.
      * @return Pointer on the object on success and nullptr otherwise.
      */
     amxd_object_t *prepare_transaction(const std::string &relative_path, amxd_trans_t &transaction);
@@ -225,7 +232,8 @@ private:
     amxd_dm_t m_datamodel;
     amxo_parser_t m_parser;
     std::shared_ptr<EventLoop> m_event_loop;
-    std::unordered_map<std::string, actions_callback> m_on_action_handlers;
+    //std::unordered_map<std::string, actions_callback> m_on_action_handlers;
+    std::vector<sActionsCallback> m_on_action_handlers;
 };
 
 } // namespace nbapi
