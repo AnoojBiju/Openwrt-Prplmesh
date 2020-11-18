@@ -29,6 +29,9 @@ ChannelSelectionTask::ChannelSelectionTask(backhaul_manager &btl_ctx,
                                            ieee1905_1::CmduMessageTx &cmdu_tx)
     : Task(eTaskType::CHANNEL_SELECTION), m_btl_ctx(btl_ctx), m_cmdu_tx(cmdu_tx)
 {
+    // Initialize database members
+    auto db                                   = AgentDB::get();
+    db->statuses.zwdfs_cac_remaining_time_sec = 0;
 }
 
 void ChannelSelectionTask::work()
@@ -222,8 +225,10 @@ void ChannelSelectionTask::handle_vs_csa_notification(
         return;
     }
 
+    auto sub_band_dfs_enable = db->device_conf.front_radio.config[sender_iface_name].sub_band_dfs;
+
     // Initiate Agent Managed ZWDFS flow.
-    if (db->device_conf.zwdfs_enable && !sender_radio->front.zwdfs &&
+    if (db->device_conf.zwdfs_enable && !sub_band_dfs_enable && !sender_radio->front.zwdfs &&
         notification->cs_params().switch_reason == beerocks::CH_SWITCH_REASON_RADAR &&
         m_zwdfs_state != eZwdfsState::WAIT_FOR_ZWDFS_CAC_STARTED &&
         m_zwdfs_state != eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED) {
@@ -287,11 +292,15 @@ void ChannelSelectionTask::handle_vs_cac_started_notification(
                << socket_to_front_iface_name(sd);
 
     if (m_zwdfs_state == eZwdfsState::WAIT_FOR_ZWDFS_CAC_STARTED) {
+        auto db = AgentDB::get();
         // Set timeout for CAC-COMPLETED notification with the CAC duration received on this
         // this notification, multiplied in factor of 1.2.
+        constexpr float CAC_DURATION_FACTOR = 1.2;
+        auto cac_remaining_sec =
+            uint16_t(notification->params().cac_duration_sec * CAC_DURATION_FACTOR);
+        db->statuses.zwdfs_cac_remaining_time_sec = cac_remaining_sec;
         m_zwdfs_fsm_timeout =
-            std::chrono::steady_clock::now() +
-            std::chrono::seconds(uint16_t(notification->params().cac_duration_sec * 1.2));
+            std::chrono::steady_clock::now() + std::chrono::seconds(cac_remaining_sec);
         ZWDFS_FSM_MOVE_STATE(eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED);
     }
 }
@@ -308,9 +317,16 @@ void ChannelSelectionTask::handle_vs_dfs_cac_completed_notification(
         return;
     }
     LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION from "
-               << socket_to_front_iface_name(sd);
+               << socket_to_front_iface_name(sd) << ", status=" << notification->params().success;
 
     if (m_zwdfs_state == eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED) {
+        auto db                                   = AgentDB::get();
+        db->statuses.zwdfs_cac_remaining_time_sec = 0;
+        if (notification->params().success != 1) {
+            LOG(ERROR) << "CAC has failed!";
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+            return;
+        }
         ZWDFS_FSM_MOVE_STATE(eZwdfsState::SWITCH_CHANNEL_PRIMARY_RADIO);
     }
 }
@@ -382,6 +398,23 @@ Socket *ChannelSelectionTask::front_iface_name_to_socket(const std::string &ifac
     return nullptr;
 }
 
+bool ChannelSelectionTask::radio_on_scan(eFreqType band)
+{
+    auto db = AgentDB::get();
+    for (const auto radio : db->get_radios_list()) {
+        if (!radio) {
+            continue;
+        }
+        if (band != eFreqType::FREQ_UNKNOWN && radio->freq_type != band) {
+            continue;
+        }
+        if (radio->statuses.dcs_background_scan_in_process) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void ChannelSelectionTask::zwdfs_fsm()
 {
     switch (m_zwdfs_state) {
@@ -389,6 +422,15 @@ void ChannelSelectionTask::zwdfs_fsm()
         break;
     }
     case eZwdfsState::REQUEST_CHANNELS_LIST: {
+
+        // Block the begining of the flow if background scan is running on one of the radios.
+        // 2.4G because it is forbidden to switch zwdfs antenna during scan.
+        // 5G because we don't want the ZWDFS flow will switch channel on the primary 5G radio
+        // while it is during a background scan.
+        if (radio_on_scan()) {
+            break;
+        }
+
         auto request = message_com::create_vs_message<
             beerocks_message::cACTION_BACKHAUL_CHANNELS_LIST_REQUEST>(m_cmdu_tx);
         if (!request) {
@@ -405,7 +447,7 @@ void ChannelSelectionTask::zwdfs_fsm()
 
         message_com::send_cmdu(fronthaul_sd, m_cmdu_tx);
 
-        constexpr uint8_t CHANNELS_LIST_RESPONSE_TIMEOUT_SEC = 1;
+        constexpr uint8_t CHANNELS_LIST_RESPONSE_TIMEOUT_SEC = 3;
 
         m_zwdfs_fsm_timeout = std::chrono::steady_clock::now() +
                               std::chrono::seconds(CHANNELS_LIST_RESPONSE_TIMEOUT_SEC);
@@ -421,7 +463,7 @@ void ChannelSelectionTask::zwdfs_fsm()
         break;
     }
     case eZwdfsState::CHOOSE_NEXT_BEST_CHANNEL: {
-        m_selected_channel = zwdfs_select_best_usable_channel(m_zwdfs_primary_radio_iface);
+        m_selected_channel = select_best_usable_channel(m_zwdfs_primary_radio_iface);
         if (m_selected_channel.channel == 0) {
             LOG(ERROR) << "Error occurred on second best channel selection";
             ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
@@ -434,7 +476,8 @@ void ChannelSelectionTask::zwdfs_fsm()
             break;
         }
 
-        if (m_selected_channel.channel == radio->channel) {
+        if (m_selected_channel.channel == radio->channel &&
+            m_selected_channel.bw == radio->bandwidth) {
             LOG(DEBUG) << "Failsafe is already second best channel, abort ZWDFS flow";
             ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
             break;
@@ -452,9 +495,11 @@ void ChannelSelectionTask::zwdfs_fsm()
         }();
 
         // If the second best channel is not a DFS or Available, we can skip ZWDFS CAC, and
-        //switch the channel immediately on the primary 5G radio.
+        // switch the channel immediately on the primary 5G radio.
         if (m_selected_channel.dfs_state == beerocks_message::eDfsState::NOT_DFS ||
             m_selected_channel.dfs_state == beerocks_message::eDfsState::AVAILABLE) {
+            LOG(WARNING) << "Better failsafe channel has been found, skip ZWDFS CAC, and switch "
+                            "primary 5G radio immediately";
             ZWDFS_FSM_MOVE_STATE(eZwdfsState::SWITCH_CHANNEL_PRIMARY_RADIO);
             break;
         }
@@ -463,6 +508,15 @@ void ChannelSelectionTask::zwdfs_fsm()
         break;
     }
     case eZwdfsState::ZWDFS_SWITCH_ANT_SET_CHANNEL_REQUEST: {
+
+        // Stop ZWDFS flow from doing CAC if a background scan has started before we switch the
+        // ZWDFS antenna. Since at the time when the background scan will be over, the selected
+        // channel might not be relevant anymore, the FSM will start over and jum to the initial
+        // state which query the updated channel info from the AP.
+        if (radio_on_scan()) {
+            LOG(INFO) << "Pause ZWDFS flow until background scan is finished";
+            break;
+        }
 
         auto fronthaul_sd = front_iface_name_to_socket(m_zwdfs_iface);
         if (!fronthaul_sd) {
@@ -513,6 +567,13 @@ void ChannelSelectionTask::zwdfs_fsm()
             LOG(ERROR) << "Reached timeout waiting for CAC-COMPLETED notification!";
             ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
         }
+        auto db = AgentDB::get();
+
+        auto cac_remaining_sec = std::chrono::duration_cast<std::chrono::seconds>(
+                                     m_zwdfs_fsm_timeout - std::chrono::steady_clock::now())
+                                     .count();
+        db->statuses.zwdfs_cac_remaining_time_sec = cac_remaining_sec;
+
         break;
     }
     case eZwdfsState::SWITCH_CHANNEL_PRIMARY_RADIO: {
@@ -544,7 +605,7 @@ void ChannelSelectionTask::zwdfs_fsm()
 
         message_com::send_cmdu(fronthaul_sd, m_cmdu_tx);
 
-        constexpr uint8_t SWITCH_CHANNEL_PRIMARY_RADIO_TIMEOUT_SEC = 1;
+        constexpr uint8_t SWITCH_CHANNEL_PRIMARY_RADIO_TIMEOUT_SEC = 3;
         m_zwdfs_fsm_timeout = std::chrono::steady_clock::now() +
                               std::chrono::seconds(SWITCH_CHANNEL_PRIMARY_RADIO_TIMEOUT_SEC);
 
@@ -559,10 +620,16 @@ void ChannelSelectionTask::zwdfs_fsm()
         break;
     }
     case eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST: {
+        // Block switching back 2.4G antenna if its radio is during background scan.
+        if (radio_on_scan(eFreqType::FREQ_24G)) {
+            break;
+        }
+
+        LOG(DEBUG) << "Sending ZWDFS antenna switch off request";
         auto fronthaul_sd = front_iface_name_to_socket(m_zwdfs_iface);
         if (!fronthaul_sd) {
             LOG(DEBUG) << "socket to fronthaul not found: " << m_zwdfs_iface;
-            ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
             break;
         }
 
@@ -577,7 +644,7 @@ void ChannelSelectionTask::zwdfs_fsm()
 
         message_com::send_cmdu(fronthaul_sd, m_cmdu_tx);
 
-        constexpr uint8_t ZWDFS_SWITCH_ANT_OFF_RESPONSE_SEC = 1;
+        constexpr uint8_t ZWDFS_SWITCH_ANT_OFF_RESPONSE_SEC = 3;
 
         m_zwdfs_fsm_timeout = std::chrono::steady_clock::now() +
                               std::chrono::seconds(ZWDFS_SWITCH_ANT_OFF_RESPONSE_SEC);
@@ -598,11 +665,11 @@ void ChannelSelectionTask::zwdfs_fsm()
 }
 
 ChannelSelectionTask::sSelectedChannel
-ChannelSelectionTask::zwdfs_select_best_usable_channel(const std::string &front_radio_iface)
+ChannelSelectionTask::select_best_usable_channel(const std::string &front_radio_iface)
 {
     auto db = AgentDB::get();
 
-    sSelectedChannel channel_selection = {};
+    sSelectedChannel selected_channel = {};
 
     auto radio = db->radio(front_radio_iface);
     if (!radio) {
@@ -610,6 +677,31 @@ ChannelSelectionTask::zwdfs_select_best_usable_channel(const std::string &front_
     }
 
     int32_t best_rank = INT32_MAX;
+
+    // Best rank without ranking threshold calculation.
+    sSelectedChannel absolute_best_rank_channel;
+    int32_t absolute_best_rank   = INT32_MAX;
+    int32_t current_channel_rank = INT32_MAX;
+
+    // Initialize the best channel to the current channel, and add the ranking threshold
+    // so only channel that has a better rank than the current channel (with threshold),
+    // could be selected.
+    for (const auto &channel_bw_info : radio->channels_list.at(radio->channel).supported_bw_list) {
+        if (channel_bw_info.bandwidth == radio->bandwidth) {
+            current_channel_rank = channel_bw_info.rank;
+            best_rank = current_channel_rank - db->device_conf.best_channel_rank_threshold;
+            if (best_rank < 0) {
+                best_rank = 0;
+            }
+            selected_channel.channel   = radio->channel;
+            selected_channel.bw        = channel_bw_info.bandwidth;
+            selected_channel.dfs_state = radio->channels_list.at(radio->channel).dfs_state;
+            break;
+        }
+    }
+
+    absolute_best_rank_channel = selected_channel;
+    absolute_best_rank         = current_channel_rank;
 
     for (const auto &channel_info_pair : radio->channels_list) {
         uint8_t channel = channel_info_pair.first;
@@ -622,11 +714,23 @@ ChannelSelectionTask::zwdfs_select_best_usable_channel(const std::string &front_
             if (supported_bw.rank == -1) {
                 continue;
             }
-            // Low rank is better.
+
+            // Low rank is better. Best rank include the ranking threshold.
             if (supported_bw.rank > best_rank) {
+                // If there is a channel with better rank, but did not pass the ranking threshold
+                // do not select it but print INFO about it.
+                if (supported_bw.rank < absolute_best_rank) {
+                    absolute_best_rank                 = supported_bw.rank;
+                    absolute_best_rank_channel.channel = radio->channel;
+                    absolute_best_rank_channel.bw      = supported_bw.bandwidth;
+                    absolute_best_rank_channel.dfs_state =
+                        radio->channels_list.at(radio->channel).dfs_state;
+                }
                 continue;
             }
-            if (supported_bw.rank == best_rank && supported_bw.bandwidth < channel_selection.bw) {
+
+            // Prefer higher bandwidth with a same ranking.
+            if (supported_bw.rank == best_rank && supported_bw.bandwidth < selected_channel.bw) {
                 continue;
             }
 
@@ -712,14 +816,34 @@ ChannelSelectionTask::zwdfs_select_best_usable_channel(const std::string &front_
                 continue;
             }
 
-            best_rank                   = supported_bw.rank;
-            channel_selection.channel   = channel;
-            channel_selection.bw        = supported_bw.bandwidth;
-            channel_selection.dfs_state = dfs_state;
+            best_rank                  = supported_bw.rank;
+            selected_channel.channel   = channel;
+            selected_channel.bw        = supported_bw.bandwidth;
+            selected_channel.dfs_state = dfs_state;
+
+            absolute_best_rank_channel = selected_channel;
+            absolute_best_rank         = best_rank;
         }
     }
 
-    return channel_selection;
+    // If there is a channel with better rank, but did not pass the ranking threshold, print INFO
+    // about it.
+    int32_t current_rank_with_threshold =
+        current_channel_rank - db->device_conf.best_channel_rank_threshold;
+    if (current_rank_with_threshold < 0) {
+        current_rank_with_threshold = 0;
+    }
+    if (absolute_best_rank != current_channel_rank && // The absolute_best_rank has been updated
+        absolute_best_rank > current_rank_with_threshold) {
+        LOG(INFO)
+            << "Channel " << absolute_best_rank_channel.channel
+            << " with bw=" << absolute_best_rank_channel.bw
+            << " and dfs_state=" << absolute_best_rank_channel.dfs_state
+            << " has better rank than current channel, but did not pass the ranking threshold="
+            << db->device_conf.best_channel_rank_threshold << ", Current channel is selected.";
+    }
+
+    return selected_channel;
 }
 
 bool ChannelSelectionTask::initialize_zwdfs_interface_name()

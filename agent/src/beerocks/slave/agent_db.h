@@ -97,6 +97,7 @@ public:
                 bool band_enabled;
                 // Front radio configured channel, if 0 auto channel selection.
                 uint8_t configured_channel;
+                bool sub_band_dfs;
             };
 
             // Wlan settings mapped by front interface name.
@@ -129,6 +130,7 @@ public:
         bool service_fairness_enabled;
         bool rdkb_extensions_enabled;
         bool zwdfs_enable;
+        uint32_t best_channel_rank_threshold;
 
         std::string vendor;
         std::string model;
@@ -143,6 +145,7 @@ public:
     struct sStatus {
         bool ap_autoconfiguration_completed;
         bool ap_autoconfiguration_failure;
+        uint32_t zwdfs_cac_remaining_time_sec;
     } statuses;
 
     /** 
@@ -201,6 +204,10 @@ public:
             std::string iface_name;
             sMacAddr iface_mac;
         } back;
+
+        struct sStatus {
+            bool dcs_background_scan_in_process = false;
+        } statuses;
 
         struct sClient {
             sClient(sMacAddr bssid_, size_t association_frame_length_, uint8_t *association_frame_)

@@ -224,8 +224,9 @@ int cfg_get_wifi_params(const char *iface, struct BPL_WLAN_PARAMS *wlan_params)
     if (!iface || !wlan_params) {
         return RETURN_ERR;
     }
-    wlan_params->enabled = 1;
-    wlan_params->channel = 0;
+    wlan_params->enabled      = 1;
+    wlan_params->channel      = 0;
+    wlan_params->sub_band_dfs = false;
 
     return RETURN_OK;
 }
@@ -346,13 +347,18 @@ bool cfg_get_zwdfs_enable(bool &enable)
     return true;
 }
 
-bool cfg_get_best_channel_rank_threshold(int &threshold)
+bool cfg_get_best_channel_rank_threshold(uint32_t &threshold)
 {
     int best_channel_rank_threshold;
 
     if (cfg_get_param_int("best_channel_rank_th=", best_channel_rank_threshold) < 0) {
         MAPF_DBG("Failed to read best_channel_rank_th parameter - setting default value");
         best_channel_rank_threshold = DEFAULT_BEST_CHANNEL_RANKING_TH;
+    }
+
+    if (best_channel_rank_threshold < 0) {
+        MAPF_ERR("best_channel_rank_th is configured to a negative value");
+        return false;
     }
 
     threshold = best_channel_rank_threshold;

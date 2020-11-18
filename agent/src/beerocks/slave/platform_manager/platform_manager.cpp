@@ -128,10 +128,12 @@ static bool fill_platform_settings(
     /* update message */
     db->device_conf.front_radio.config[iface_name].band_enabled       = params.enabled;
     db->device_conf.front_radio.config[iface_name].configured_channel = params.channel;
+    db->device_conf.front_radio.config[iface_name].sub_band_dfs       = params.sub_band_dfs;
 
-    LOG(DEBUG) << "wlan settings:"
-               << " band_enabled=" << db->device_conf.front_radio.config[iface_name].band_enabled
-               << " channel=" << db->device_conf.front_radio.config[iface_name].configured_channel;
+    LOG(DEBUG) << "wlan settings " << iface_name << ":";
+    LOG(DEBUG) << "band_enabled=" << params.enabled;
+    LOG(DEBUG) << "channel=" << params.channel;
+    LOG(DEBUG) << "sub_band_dfs=" << params.sub_band_dfs;
 
     // initialize wlan params cache
     //erase interface cache from map if exists
@@ -223,6 +225,11 @@ static bool fill_platform_settings(
                                                       : std::string("disabled."));
     }
 
+    if (!bpl::cfg_get_best_channel_rank_threshold(db->device_conf.best_channel_rank_threshold)) {
+        LOG(WARNING) << "cfg_get_best_channel_rank_threshold() failed!"
+                     << " using default configuration ";
+    }
+
     // Set local_gw flag
     db->device_conf.local_gw = (db->device_conf.operating_mode == BPL_OPER_MODE_GATEWAY ||
                                 db->device_conf.operating_mode == BPL_OPER_MODE_GATEWAY_WISP);
@@ -249,6 +256,7 @@ static bool fill_platform_settings(
                << db->device_conf.back_radio.backhaul_preferred_radio_band;
     LOG(DEBUG) << "rdkb_extensions: " << db->device_conf.rdkb_extensions_enabled;
     LOG(DEBUG) << "zwdfs_enable: " << db->device_conf.zwdfs_enable;
+    LOG(DEBUG) << "best_channel_rank_threshold: " << db->device_conf.best_channel_rank_threshold;
 
     return true;
 }

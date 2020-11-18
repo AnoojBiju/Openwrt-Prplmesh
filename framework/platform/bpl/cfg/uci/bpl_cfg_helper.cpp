@@ -128,6 +128,10 @@ int cfg_get_channel(const std::string &interface_name, int *channel)
     std::string channel_str(channel_num);
     if (!channel_str.compare("auto")) {
         *channel = 0;
+    } else if (channel_str.find_first_not_of("0123456789") != std::string::npos) {
+        // If non numeric character exist, "stoi()" below will fail and print error.
+        // Assign 0 if we know it is going to fail, since the error print floods the log.
+        *channel = 0;
     } else {
         *channel = utils::stoi(channel_str);
     }

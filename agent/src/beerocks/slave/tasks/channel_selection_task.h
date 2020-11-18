@@ -131,7 +131,17 @@ private:
      */
     bool initialize_zwdfs_interface_name();
 
-    sSelectedChannel zwdfs_select_best_usable_channel(const std::string &front_radio_iface);
+    /**
+     * @brief Check if a Radio on a given band, or all band is doing background scan.
+     * 
+     * If more than one radio is doing scan, returns only the scanning radio which has been found.
+     * 
+     * @param [in] band If set, check on the specific band, otherwise check on all bands.
+     * @return true if scan is being performed, otherwise false. 
+     */
+    bool radio_on_scan(eFreqType band = eFreqType::FREQ_UNKNOWN);
+
+    sSelectedChannel select_best_usable_channel(const std::string &front_radio_iface);
 
     std::string m_zwdfs_iface;
     std::string m_zwdfs_primary_radio_iface;

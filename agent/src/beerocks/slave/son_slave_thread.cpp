@@ -426,16 +426,20 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
     // LOG(DEBUG) << "handle_cmdu_control_message(), INTEL_VS: action=" + std::to_string(beerocks_header->action()) + ", action_op=" + std::to_string(beerocks_header->action_op());
     // LOG(DEBUG) << "received radio_mac=" << beerocks_header->radio_mac() << ", local radio_mac=" << hostap_params.iface_mac;
 
-    auto db    = AgentDB::get();
-    auto radio = db->radio(m_fronthaul_iface);
-    if (!radio) {
-        LOG(DEBUG) << "Radio of interface " << m_fronthaul_iface << " does not exist on the db";
-        return false;
-    }
+    // Scope this code block to prevent shadowing of of "db" and "radio" variables internally on the
+    // switch case.
+    {
+        auto db    = AgentDB::get();
+        auto radio = db->radio(m_fronthaul_iface);
+        if (!radio) {
+            LOG(DEBUG) << "Radio of interface " << m_fronthaul_iface << " does not exist on the db";
+            return false;
+        }
 
-    // to me or not to me, this is the question...
-    if (beerocks_header->actionhdr()->radio_mac() != radio->front.iface_mac) {
-        return true;
+        // to me or not to me, this is the question...
+        if (beerocks_header->actionhdr()->radio_mac() != radio->front.iface_mac) {
+            return true;
+        }
     }
 
     if (beerocks_header->actionhdr()->direction() == beerocks::BEEROCKS_DIRECTION_CONTROLLER) {
@@ -824,6 +828,9 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
             LOG(ERROR) << "addClass ACTION_CONTROL_CLIENT_BEACON_11K_REQUEST failed";
             return false;
         }
+
+        auto db = AgentDB::get();
+
         //LOG(DEBUG) << "ACTION_CONTROL_CLIENT_BEACON_11K_REQUEST";
         // override ssid in case of:
         if (request_in->params().use_optional_ssid &&
@@ -853,6 +860,8 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
                 << "addClass cACTION_CONTROL_HOSTAP_UPDATE_STOP_ON_FAILURE_ATTEMPTS_REQUEST failed";
             return false;
         }
+        auto db = AgentDB::get();
+
         db->device_conf.stop_on_failure_attempts = request_in->attempts();
         stop_on_failure_attempts                 = db->device_conf.stop_on_failure_attempts;
         LOG(DEBUG) << "stop_on_failure_attempts new value: "
@@ -984,6 +993,49 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
             LOG(ERROR) << "addClass cACTION_CONTROL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST failed";
             return false;
         }
+
+        auto db = AgentDB::get();
+
+        auto radio = db->radio(m_fronthaul_iface);
+        if (!radio) {
+            return false;
+        }
+
+        bool radio_5g = wireless_utils::is_frequency_band_5ghz(radio->freq_type);
+
+        // If received scan request and ZWDFS CAC is about to finish refuse to start the
+        // background scan only on the 5G radio.
+        LOG(DEBUG) << "zwdfs_cac_remaining_time_sec=" << db->statuses.zwdfs_cac_remaining_time_sec;
+        if (radio_5g && db->statuses.zwdfs_cac_remaining_time_sec > 0) {
+            constexpr uint8_t ETSI_CAC_TIME_SEC = 72; // ETSI CAC time sec (60) * factor of 1.2
+            float dwell_time_sec                = request_in->scan_params().dwell_time_ms / 1000.0;
+            auto number_of_channel_to_scan      = request_in->scan_params().channel_pool_size;
+
+            constexpr float SCAN_TIME_FACTOR = 89.1;
+            // scan time factor (89.1) is calculated in this way:
+            // factor * (scan_break_time / slice_size + 1) = 89.1
+            // when: factor=1.1, scan_break_time=1600ms, slice_size=20ms
+            auto total_scan_time = number_of_channel_to_scan * dwell_time_sec * SCAN_TIME_FACTOR;
+            LOG(DEBUG) << "total_scan_time=" << total_scan_time
+                       << " on number_of_channels=" << number_of_channel_to_scan;
+
+            if (db->statuses.zwdfs_cac_remaining_time_sec < ETSI_CAC_TIME_SEC &&
+                db->statuses.zwdfs_cac_remaining_time_sec < total_scan_time) {
+                LOG(DEBUG) << "Refuse DCS scan";
+                auto notification = message_com::create_vs_message<
+                    beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION>(cmdu_tx);
+                if (!notification) {
+                    LOG(ERROR)
+                        << "Failed building cACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION msg";
+                    return false;
+                }
+
+                send_cmdu_to_controller(cmdu_tx);
+                break;
+            }
+        }
+
+        radio->statuses.dcs_background_scan_in_process = true;
 
         auto request_out = message_com::create_vs_message<
             beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST>(cmdu_tx);
@@ -3058,6 +3110,17 @@ bool slave_thread::handle_cmdu_monitor_message(Socket *sd,
         break;
     }
     case beerocks_message::ACTION_MONITOR_CHANNEL_SCAN_FINISHED_NOTIFICATION: {
+
+        auto db    = AgentDB::get();
+        auto radio = db->radio(m_fronthaul_iface);
+        if (!radio) {
+            break;
+        }
+
+        LOG(DEBUG) << "Received ACTION_MONITOR_CHANNEL_SCAN_FINISHED_NOTIFICATION";
+
+        radio->statuses.dcs_background_scan_in_process = false;
+
         auto notification_in =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_FINISHED_NOTIFICATION>();
@@ -3077,6 +3140,17 @@ bool slave_thread::handle_cmdu_monitor_message(Socket *sd,
         break;
     }
     case beerocks_message::ACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION: {
+
+        auto db = AgentDB::get();
+
+        auto radio = db->radio(m_fronthaul_iface);
+        if (!radio) {
+            break;
+        }
+
+        LOG(DEBUG) << "Received ACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION";
+        radio->statuses.dcs_background_scan_in_process = false;
+
         auto notification_in =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION>();

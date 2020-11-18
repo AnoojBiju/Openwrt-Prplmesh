@@ -237,6 +237,12 @@ int cfg_get_wifi_params(const char iface[BPL_IFNAME_LEN], struct BPL_WLAN_PARAMS
     cfg_uci_get_wireless_bool(TYPE_RADIO, iface, "disabled", &disabled);
     wlan_params->enabled = !disabled;
 
+    if (cfg_uci_get_wireless_bool(TYPE_RADIO, iface, "sub_band_dfs", &wlan_params->sub_band_dfs) ==
+        RETURN_ERR) {
+        // Failed to find "sub_band_dfs", set to to default value.
+        wlan_params->sub_band_dfs = false;
+    }
+
     // The UCI "channel" setting is not documented as optional, but for Intel
     // wireless (as probably for other drivers) it is. We do not want to
     // fail when wifi still works fine, so default to "auto" (0) and if
@@ -402,12 +408,17 @@ bool cfg_get_zwdfs_enable(bool &enable)
     return true;
 }
 
-bool cfg_get_best_channel_rank_threshold(int &threshold)
+bool cfg_get_best_channel_rank_threshold(uint32_t &threshold)
 {
     int retVal = -1;
     if (cfg_get_prplmesh_param_int_default("best_channel_rank_th", &retVal,
                                            DEFAULT_BEST_CHANNEL_RANKING_TH) == RETURN_ERR) {
         MAPF_ERR("Failed to read best_channel_rank_th parameter");
+        return false;
+    }
+
+    if (retVal < 0) {
+        MAPF_ERR("best_channel_rank_th is configured to a negative value");
         return false;
     }
 
