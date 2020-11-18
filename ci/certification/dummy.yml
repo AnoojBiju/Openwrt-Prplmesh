@@ -5,6 +5,8 @@
     RUN_ON_DEVICE: "prplmesh"
   needs:
     - job: build-in-docker
+  tags:
+    - certs-tests
 
 MAP-5.3.1:dummy:
   extends: .certification:dummy
