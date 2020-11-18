@@ -17,6 +17,7 @@
 #include <bcl/beerocks_logging.h>
 #include <bcl/beerocks_timer_factory_impl.h>
 #include <bcl/beerocks_timer_manager_impl.h>
+#include <bcl/beerocks_ucc_server_factory.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/beerocks_version.h>
 #include <bcl/network/network_utils.h>
@@ -352,7 +353,7 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
 
     // Create UDS address where the server socket will listen for incoming connection requests.
     std::string backhaul_manager_uds_path =
-        beerocks_slave_conf.temp_path + "/" + std::string(BEEROCKS_BACKHAUL_MGR_UDS) + "_temp";
+        beerocks_slave_conf.temp_path + "/" + std::string(BEEROCKS_BACKHAUL_MGR_UDS);
     auto backhaul_manager_uds_address =
         beerocks::net::UdsAddress::create_instance(backhaul_manager_uds_path);
     LOG_IF(!backhaul_manager_uds_address, FATAL)
@@ -377,8 +378,8 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
         LOG(INFO) << "Certification mode enabled (listening on port " << port << ")";
 
         // Create server to exchange UCC commands and replies with clients connected through the socket
-        //        ucc_server = beerocks::UccServerFactory::create_instance(port, event_loop);
-        //        LOG_IF(!ucc_server, FATAL) << "Unable to create UCC server!";
+        ucc_server = beerocks::UccServerFactory::create_instance(port, event_loop);
+        LOG_IF(!ucc_server, FATAL) << "Unable to create UCC server!";
     }
 
     // Create CMDU client factory to create CMDU clients connected to CMDU server running in
@@ -400,10 +401,7 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
         std::move(ucc_server), std::move(backhaul_manager_cmdu_server), timer_manager, event_loop);
 
     // Start backhaul manager
-    if (!backhaul_mgr.start()) {
-        LOG(ERROR) << "backhaul_mgr init() has failed!";
-        return 1;
-    }
+    LOG_IF(!backhaul_mgr.to_be_renamed_to_start(), FATAL) << "Unable to start backhaul manager!";
 
     std::vector<std::shared_ptr<son::slave_thread>> son_slaves;
     for (const auto &iface_element : interfaces_map) {
@@ -434,11 +432,6 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
                                        std::chrono::seconds(beerocks::TOUCH_PID_TIMEOUT_SECONDS);
         }
 
-        // Check if backhaul manager still running and break on error.
-        if (!backhaul_mgr.is_running()) {
-            break;
-        }
-
         // Check if all son_slave are still running and break on error.
         auto should_break = false;
         for (const auto &son_slave : son_slaves) {
@@ -463,7 +456,7 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     }
 
     LOG(DEBUG) << "backhaul_mgr.stop()";
-    backhaul_mgr.stop();
+    backhaul_mgr.to_be_renamed_to_stop();
 
     LOG(DEBUG) << "platform_manager.stop()";
     platform_manager.stop();

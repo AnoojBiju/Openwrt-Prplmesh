@@ -287,6 +287,13 @@ private:
     // Key: front radio iface name, Value: sRadioInfo object
     std::unordered_map<std::string, std::shared_ptr<sRadioInfo>> m_disabled_slave_sockets;
 
+    /**
+     * CMDU client connected to the the CMDU server running in platform manager.
+     * This object is dynamically created using the CMDU client factory for the platform manager
+     * provided in class constructor.
+     */
+    std::unique_ptr<CmduClient> m_platform_manager_client;
+
     std::shared_ptr<SocketClient> m_scPlatform;
     net::network_utils::iface_info bridge_info;
 
@@ -404,6 +411,8 @@ public:
         std::shared_ptr<bwl::sta_wlan_hal> sta_wlan_hal;
         Socket *sta_hal_ext_events = nullptr;
         Socket *sta_hal_int_events = nullptr;
+        int sta_hal_ext_events_fd  = beerocks::net::FileDescriptor::invalid_descriptor;
+        int sta_hal_int_events_fd  = beerocks::net::FileDescriptor::invalid_descriptor;
     };
 
 public:
