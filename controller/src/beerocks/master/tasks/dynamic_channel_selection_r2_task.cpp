@@ -239,6 +239,27 @@ bool dynamic_channel_selection_r2_task::handle_scan_request_event(
     // Create new radio request (with default values) in request pool
     m_agents_status_map[ire_mac].radio_scans[radio_mac] = sAgentScanStatus::sRadioScanRequest();
 
+    // Fill radio scan additional details (for vs_message)
+
+    // TODO:Assuming single scan only for now
+    auto is_single_scan = true;
+
+    int32_t dwell_time_msec = database.get_channel_scan_dwell_time_msec(radio_mac, is_single_scan);
+    if (dwell_time_msec <= 0) {
+        LOG(ERROR) << "invalid dwell_time=" << int(dwell_time_msec);
+        return false;
+    }
+    m_agents_status_map[ire_mac].radio_scans[radio_mac].dwell_time_msec = dwell_time_msec;
+
+    //get current channel pool from DB
+    auto &current_channel_pool = database.get_channel_scan_pool(radio_mac, is_single_scan);
+    if (current_channel_pool.empty()) {
+        LOG(ERROR) << "empty channel pool is not supported. please set channel pool for radio mac="
+                   << radio_mac;
+        return false;
+    }
+    m_agents_status_map[ire_mac].radio_scans[radio_mac].channel_pool = current_channel_pool;
+
     return true;
 }
 

@@ -50,6 +50,9 @@ public:
         struct sRadioScanRequest {
             uint16_t mid            = INVALID_MID_ID;
             eRadioScanStatus status = eRadioScanStatus::PENDING;
+
+            int32_t dwell_time_msec;
+            std::unordered_set<uint8_t> channel_pool;
         };
 
         eAgentStatus status;
