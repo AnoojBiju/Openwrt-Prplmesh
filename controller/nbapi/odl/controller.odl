@@ -115,6 +115,8 @@
 
                 %persistent bool Retain = false;
             }
+
+            object AccessPoint[];
         }
 
         %persistent object Notification {
@@ -134,3 +136,4 @@ include "sta.odl";
 include "association_event.odl";
 include "disassociation_event.odl";
 include "unassociated_sta.odl";
+include "access_point.odl";
