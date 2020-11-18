@@ -106,7 +106,7 @@ void CapabilityReportingTask::handle_client_capability_query(ieee1905_1::CmduMes
         error_code_tlv->reason_code() =
             wfa_map::tlvErrorCode::STA_NOT_ASSOCIATED_WITH_ANY_BSS_OPERATED_BY_THE_AGENT;
         error_code_tlv->sta_mac() = client_info_tlv_r->client_mac();
-        m_btl_ctx.send_cmdu_to_broker_temp(m_cmdu_tx, src_mac, db->bridge.mac);
+        m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac);
         return;
     }
 
@@ -119,7 +119,7 @@ void CapabilityReportingTask::handle_client_capability_query(ieee1905_1::CmduMes
                                                         client_info.association_frame_length);
 
     LOG(DEBUG) << "Send a CLIENT_CAPABILITY_REPORT_MESSAGE back to controller";
-    m_btl_ctx.send_cmdu_to_broker_temp(m_cmdu_tx, src_mac, db->bridge.mac);
+    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac);
 }
 
 void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -216,7 +216,7 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
 
     // send the constructed report
     LOG(DEBUG) << "Sending AP_CAPABILITY_REPORT_MESSAGE , mid: " << std::hex << mid;
-    m_btl_ctx.send_cmdu_to_broker_temp(m_cmdu_tx, src_mac, db->bridge.mac);
+    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac);
 }
 
 bool CapabilityReportingTask::add_ap_ht_capabilities(const std::string &iface_name)

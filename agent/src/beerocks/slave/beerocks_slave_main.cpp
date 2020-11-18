@@ -401,7 +401,7 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
         std::move(ucc_server), std::move(backhaul_manager_cmdu_server), timer_manager, event_loop);
 
     // Start backhaul manager
-    LOG_IF(!backhaul_mgr.to_be_renamed_to_start(), FATAL) << "Unable to start backhaul manager!";
+    LOG_IF(!backhaul_mgr.start(), FATAL) << "Unable to start backhaul manager!";
 
     std::vector<std::shared_ptr<son::slave_thread>> son_slaves;
     for (const auto &iface_element : interfaces_map) {
@@ -456,7 +456,7 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     }
 
     LOG(DEBUG) << "backhaul_mgr.stop()";
-    backhaul_mgr.to_be_renamed_to_stop();
+    backhaul_mgr.stop();
 
     LOG(DEBUG) << "platform_manager.stop()";
     platform_manager.stop();

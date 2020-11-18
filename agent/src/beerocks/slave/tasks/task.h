@@ -9,8 +9,6 @@
 #ifndef _TASK_H_
 #define _TASK_H_
 
-#include <bcl/network/socket.h>
-
 #include <beerocks/tlvf/beerocks_header.h>
 #include <tlvf/CmduMessageRx.h>
 

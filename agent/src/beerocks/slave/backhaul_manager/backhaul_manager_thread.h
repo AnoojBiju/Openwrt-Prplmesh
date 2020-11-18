@@ -18,7 +18,6 @@
 #include <bcl/beerocks_config_file.h>
 #include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_event_loop.h>
-#include <bcl/beerocks_socket_thread.h>
 #include <bcl/beerocks_timer_manager.h>
 #include <bcl/beerocks_ucc_server.h>
 #include <bcl/network/file_descriptor.h>
@@ -51,7 +50,7 @@ enum class eErrorCode;
 
 class ChannelSelectionTask;
 
-class backhaul_manager : public btl::transport_socket_thread {
+class backhaul_manager {
 
 public:
     backhaul_manager(
@@ -70,17 +69,14 @@ public:
      *
      * @return true on success and false otherwise.
      */
-    bool to_be_renamed_to_start();
+    bool start();
 
     /**
      * @brief Stops backhaul manager.
      *
      * @return true on success and false otherwise.
      */
-    bool to_be_renamed_to_stop();
-
-    virtual bool init() override;
-    virtual bool work() override;
+    bool stop();
 
     /**
      * @brief Sends given CMDU message through the specified socket connection.
@@ -114,8 +110,8 @@ public:
      * available interfaces).
      * @return true on success and false otherwise.
      */
-    bool send_cmdu_to_broker_temp(ieee1905_1::CmduMessageTx &cmdu, const sMacAddr &dst_mac,
-                                  const sMacAddr &src_mac, const std::string &iface_name = "");
+    bool send_cmdu_to_broker(ieee1905_1::CmduMessageTx &cmdu, const sMacAddr &dst_mac,
+                             const sMacAddr &src_mac, const std::string &iface_name = "");
 
     /**
      * @brief Forwards given received CMDU message to the broker server for dispatching.
@@ -196,14 +192,6 @@ private:
     bool handle_cmdu_from_broker(uint32_t iface_index, const sMacAddr &dst_mac,
                                  const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
 
-    virtual bool handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx) override;
-    virtual void before_select() override;
-    virtual void after_select(bool timeout) override;
-    virtual void on_thread_stop() override;
-    virtual void socket_connected(Socket *sd) override;
-    virtual bool socket_disconnected(Socket *sd) override;
-    virtual std::string print_cmdu_types(const beerocks::message::sUdsHeader *cmdu_header) override;
-
     bool backhaul_fsm_main(bool &skip_select);
     bool backhaul_fsm_wired(bool &skip_select);
     bool backhaul_fsm_wireless(bool &skip_select);
@@ -247,8 +235,25 @@ private:
 
     std::shared_ptr<bwl::sta_wlan_hal> get_wireless_hal(std::string iface = "");
 
-private:
-    const std::string &beerocks_temp_path;
+    /**
+     * Buffer to hold CMDU to be transmitted.
+     */
+    uint8_t m_tx_buffer[beerocks::message::MESSAGE_BUFFER_LENGTH];
+
+    /**
+     * CMDU to be transmitted.
+     */
+    ieee1905_1::CmduMessageTx cmdu_tx;
+
+    /**
+     * Buffer to hold CMDU to be transmitted by the UCC listener (in certification mode).
+     */
+    uint8_t m_cert_tx_buffer[beerocks::message::MESSAGE_BUFFER_LENGTH];
+
+    /**
+     * CMDU to be transmitted by the UCC listener (in certification mode).
+     */
+    ieee1905_1::CmduMessageTx cert_cmdu_tx;
 
     struct SBackhaulConfig {
         std::string ssid;
@@ -294,7 +299,6 @@ private:
      */
     std::unique_ptr<CmduClient> m_platform_manager_client;
 
-    std::shared_ptr<SocketClient> m_scPlatform;
     net::network_utils::iface_info bridge_info;
 
     int configuration_stop_on_failure_attempts;
@@ -409,10 +413,8 @@ public:
         bool slave_is_backhaul_manager = false;
 
         std::shared_ptr<bwl::sta_wlan_hal> sta_wlan_hal;
-        Socket *sta_hal_ext_events = nullptr;
-        Socket *sta_hal_int_events = nullptr;
-        int sta_hal_ext_events_fd  = beerocks::net::FileDescriptor::invalid_descriptor;
-        int sta_hal_int_events_fd  = beerocks::net::FileDescriptor::invalid_descriptor;
+        int sta_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
+        int sta_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
     };
 
 public:
@@ -499,12 +501,6 @@ private:
      * Application event loop used by the process to wait for I/O events.
      */
     std::shared_ptr<EventLoop> m_event_loop;
-
-    /**
-     * Map of file descriptors to pointers to Socket class instances.
-     * This member variable is temporary and will be removed at the end of PPM-753
-     */
-    std::unordered_map<int, Socket *> m_fd_to_socket_map;
 
     /**
      * File descriptor of the timer to run internal tasks periodically.

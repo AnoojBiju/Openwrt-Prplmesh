@@ -312,7 +312,7 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_search_message(
     auto beerocks_header                      = message_com::get_beerocks_header(m_cmdu_tx);
     beerocks_header->actionhdr()->direction() = beerocks::BEEROCKS_DIRECTION_CONTROLLER;
     LOG(DEBUG) << "sending autoconfig search message, bridge_mac=" << db->bridge.mac;
-    return m_btl_ctx.send_cmdu_to_broker_temp(
+    return m_btl_ctx.send_cmdu_to_broker(
         m_cmdu_tx, tlvf::mac_from_string(network_utils::MULTICAST_1905_MAC_ADDR), db->bridge.mac);
 }
 

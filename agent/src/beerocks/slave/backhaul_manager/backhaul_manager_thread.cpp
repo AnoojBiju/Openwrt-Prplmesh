@@ -39,7 +39,6 @@
 #include "../tasks/topology_task.h"
 
 #include <bcl/beerocks_utils.h>
-#include <bcl/network/sockets.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <easylogging++.h>
 
@@ -109,8 +108,8 @@ backhaul_manager::backhaul_manager(
     std::unique_ptr<beerocks::CmduServer> cmdu_server,
     std::shared_ptr<beerocks::TimerManager> timer_manager,
     std::shared_ptr<beerocks::EventLoop> event_loop)
-    : transport_socket_thread(config.temp_path + std::string(BEEROCKS_BACKHAUL_MGR_UDS)),
-      beerocks_temp_path(config.temp_path), slave_ap_ifaces(slave_ap_ifaces_),
+    : cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer)),
+      cert_cmdu_tx(m_cert_tx_buffer, sizeof(m_cert_tx_buffer)), slave_ap_ifaces(slave_ap_ifaces_),
       slave_sta_ifaces(slave_sta_ifaces_), config_const_bh_slave(config.const_backhaul_slave),
       m_broker_client_factory(std::move(broker_client_factory)),
       m_platform_manager_cmdu_client_factory(std::move(platform_manager_cmdu_client_factory)),
@@ -124,7 +123,6 @@ backhaul_manager::backhaul_manager(
     LOG_IF(!m_timer_manager, FATAL) << "Timer manager is a null pointer!";
     LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
 
-    thread_name                            = "backhaul_manager";
     pending_slave_ifaces                   = slave_ap_ifaces_;
     configuration_stop_on_failure_attempts = stop_on_failure_attempts_;
     stop_on_failure_attempts               = stop_on_failure_attempts_;
@@ -135,7 +133,6 @@ backhaul_manager::backhaul_manager(
     db->device_conf.model             = config.model;
 
     m_eFSMState = EState::INIT;
-    set_select_timeout(SELECT_TIMEOUT_MSC);
 
     m_task_pool.add_task(std::make_shared<TopologyTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<ApAutoConfigurationTask>(*this, cmdu_tx));
@@ -158,8 +155,7 @@ backhaul_manager::backhaul_manager(
 
 backhaul_manager::~backhaul_manager() { m_cmdu_server->clear_handlers(); }
 
-// The name of this method is temporary and will be renamed at the end of PPM-753.
-bool backhaul_manager::to_be_renamed_to_start()
+bool backhaul_manager::start()
 {
     // In case of error in one of the steps of this method, we have to undo all the previous steps
     // (like when rolling back a database transaction, where either all steps get executed or none
@@ -242,6 +238,7 @@ bool backhaul_manager::to_be_renamed_to_start()
             ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE,
             ieee1905_1::eMessageType::BEACON_METRICS_QUERY_MESSAGE,
             ieee1905_1::eMessageType::CHANNEL_PREFERENCE_QUERY_MESSAGE,
+            ieee1905_1::eMessageType::CHANNEL_SCAN_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::CLIENT_CAPABILITY_QUERY_MESSAGE,
@@ -265,8 +262,7 @@ bool backhaul_manager::to_be_renamed_to_start()
     return true;
 }
 
-// The name of this method is temporary and will be renamed at the end of PPM-753.
-bool backhaul_manager::to_be_renamed_to_stop()
+bool backhaul_manager::stop()
 {
     bool ok = true;
 
@@ -281,13 +277,13 @@ bool backhaul_manager::to_be_renamed_to_stop()
             if (soc->sta_wlan_hal) {
                 soc->sta_wlan_hal.reset();
             }
-            if (soc->sta_hal_ext_events_fd != beerocks::net::FileDescriptor::invalid_descriptor) {
-                m_event_loop->remove_handlers(soc->sta_hal_ext_events_fd);
-                soc->sta_hal_ext_events_fd = beerocks::net::FileDescriptor::invalid_descriptor;
+            if (soc->sta_hal_ext_events != beerocks::net::FileDescriptor::invalid_descriptor) {
+                m_event_loop->remove_handlers(soc->sta_hal_ext_events);
+                soc->sta_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
             }
-            if (soc->sta_hal_int_events_fd != beerocks::net::FileDescriptor::invalid_descriptor) {
-                m_event_loop->remove_handlers(soc->sta_hal_int_events_fd);
-                soc->sta_hal_int_events_fd = beerocks::net::FileDescriptor::invalid_descriptor;
+            if (soc->sta_hal_int_events != beerocks::net::FileDescriptor::invalid_descriptor) {
+                m_event_loop->remove_handlers(soc->sta_hal_int_events);
+                soc->sta_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
             }
         }
         slaves_sockets.pop_back();
@@ -315,109 +311,6 @@ bool backhaul_manager::to_be_renamed_to_stop()
     return ok;
 }
 
-bool backhaul_manager::init()
-{
-    on_thread_stop();
-    if (!transport_socket_thread::init()) {
-        LOG(ERROR) << "Failed init!";
-        stop();
-        return false;
-    }
-
-    if (!broker_subscribe(std::vector<ieee1905_1::eMessageType>{
-            ieee1905_1::eMessageType::ACK_MESSAGE,
-            ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_RENEW_MESSAGE,
-            ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_RESPONSE_MESSAGE,
-            ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_WSC_MESSAGE,
-            ieee1905_1::eMessageType::AP_CAPABILITY_QUERY_MESSAGE,
-            ieee1905_1::eMessageType::AP_METRICS_QUERY_MESSAGE,
-            ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE,
-            ieee1905_1::eMessageType::BEACON_METRICS_QUERY_MESSAGE,
-            ieee1905_1::eMessageType::CHANNEL_PREFERENCE_QUERY_MESSAGE,
-            ieee1905_1::eMessageType::CHANNEL_SCAN_REQUEST_MESSAGE,
-            ieee1905_1::eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE,
-            ieee1905_1::eMessageType::CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE,
-            ieee1905_1::eMessageType::CLIENT_CAPABILITY_QUERY_MESSAGE,
-            ieee1905_1::eMessageType::CLIENT_STEERING_REQUEST_MESSAGE,
-            ieee1905_1::eMessageType::COMBINED_INFRASTRUCTURE_METRICS_MESSAGE,
-            ieee1905_1::eMessageType::HIGHER_LAYER_DATA_MESSAGE,
-            ieee1905_1::eMessageType::LINK_METRIC_QUERY_MESSAGE,
-            ieee1905_1::eMessageType::MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE,
-            ieee1905_1::eMessageType::TOPOLOGY_DISCOVERY_MESSAGE,
-            ieee1905_1::eMessageType::TOPOLOGY_QUERY_MESSAGE,
-            ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE,
-            ieee1905_1::eMessageType::BACKHAUL_STEERING_REQUEST_MESSAGE,
-        })) {
-        LOG(ERROR) << "Failed to init mapf_bus";
-        return false;
-    }
-
-    return true;
-}
-
-bool backhaul_manager::work()
-{
-    bool skip_select = false;
-
-    if (!backhaul_fsm_main(skip_select))
-        return false;
-
-    if (!skip_select)
-        if (!transport_socket_thread::work())
-            return false;
-
-    return true;
-}
-
-void backhaul_manager::on_thread_stop()
-{
-    // Close the socket with the platform manager
-    if (m_scPlatform) {
-        m_scPlatform.reset();
-    }
-
-    while (slaves_sockets.size() > 0) {
-        auto soc          = slaves_sockets.back();
-        std::string iface = soc->sta_iface;
-        LOG(DEBUG) << "Closing iface " << iface << " sockets";
-        if (soc) {
-            if (soc->slave != beerocks::net::FileDescriptor::invalid_descriptor) {
-                remove_socket(m_fd_to_socket_map[soc->slave]);
-                delete m_fd_to_socket_map[soc->slave];
-            }
-            if (soc->sta_wlan_hal) {
-                soc->sta_wlan_hal.reset();
-            }
-            if (soc->sta_hal_ext_events) {
-                remove_socket(soc->sta_hal_ext_events);
-                delete soc->sta_hal_ext_events;
-                soc->sta_hal_ext_events = nullptr;
-            }
-            if (soc->sta_hal_int_events) {
-                remove_socket(soc->sta_hal_int_events);
-                delete soc->sta_hal_int_events;
-                soc->sta_hal_int_events = nullptr;
-            }
-        }
-        slaves_sockets.pop_back();
-    }
-}
-
-void backhaul_manager::socket_connected(Socket *sd)
-{
-    LOG(DEBUG) << "new slave_socket, sd=" << intptr_t(sd);
-    add_socket(sd);
-
-    // Get the file descriptor for the given socket instance
-    int fd = sd->getSocketFd();
-
-    // Save the pair { fd x Socket* } for later retrieval
-    m_fd_to_socket_map[fd] = sd;
-
-    // Call the method with the new signature
-    handle_connected(fd);
-}
-
 void backhaul_manager::handle_connected(int fd)
 {
     LOG(INFO) << "UDS socket connected, fd = " << fd;
@@ -439,9 +332,9 @@ bool backhaul_manager::forward_cmdu_to_uds(int fd, uint32_t iface_index, const s
     return m_cmdu_server->forward_cmdu(fd, iface_index, dst_mac, src_mac, cmdu_rx);
 }
 
-bool backhaul_manager::send_cmdu_to_broker_temp(ieee1905_1::CmduMessageTx &cmdu_tx,
-                                                const sMacAddr &dst_mac, const sMacAddr &src_mac,
-                                                const std::string &iface_name)
+bool backhaul_manager::send_cmdu_to_broker(ieee1905_1::CmduMessageTx &cmdu_tx,
+                                           const sMacAddr &dst_mac, const sMacAddr &src_mac,
+                                           const std::string &iface_name)
 {
     if (!m_broker_client) {
         LOG(ERROR) << "Unable to send CMDU to broker server";
@@ -473,44 +366,6 @@ bool backhaul_manager::forward_cmdu_to_broker(ieee1905_1::CmduMessageRx &cmdu_rx
     return m_broker_client->forward_cmdu(cmdu_rx, dst_mac, src_mac, iface_index);
 }
 
-// This method is temporary and will be removed at the end of PPM-753.
-// It is intended to allow the temporary coexistence of Socket* and file descriptors to refer to
-// accepted sockets.
-bool backhaul_manager::socket_disconnected(Socket *sd)
-{
-    if (!sd) {
-        LOG(ERROR) << "socket is nullptr";
-        return false;
-    }
-
-    if (from_broker(sd)) {
-        LOG(ERROR) << "broker socket to the controller disconnected " << intptr_t(sd)
-                   << " restarting backhaul manager";
-        FSM_MOVE_STATE(RESTART);
-        return true;
-    }
-
-    if (m_scPlatform.get() == sd) {
-        LOG(ERROR) << "platform manager socket disconnected " << intptr_t(sd)
-                   << " restarting backhaul manager";
-        m_scPlatform.reset();
-        FSM_MOVE_STATE(RESTART);
-        return true;
-    }
-
-    // Get the file descriptor for the given socket instance
-    int fd = sd->getSocketFd();
-
-    // Save the pair { fd x Socket* } for later retrieval
-    m_fd_to_socket_map[fd] = sd;
-
-    // Call the method with the new signature
-    handle_disconnected(fd);
-
-    // Returning true so the socket_thread will handle the socket removal.
-    return true;
-}
-
 void backhaul_manager::handle_disconnected(int fd)
 {
     LOG(INFO) << "UDS socket disconnected, fd = " << fd;
@@ -527,25 +382,13 @@ void backhaul_manager::handle_disconnected(int fd)
                 LOG(INFO) << "dereferencing sta_wlan_hal";
                 soc->sta_wlan_hal.reset();
             }
-            if (soc->sta_hal_ext_events) {
-                LOG(INFO) << "removing sta_hal_ext_events socket";
-                remove_socket(soc->sta_hal_ext_events);
-                delete soc->sta_hal_ext_events;
-                soc->sta_hal_ext_events = nullptr;
+            if (soc->sta_hal_ext_events != beerocks::net::FileDescriptor::invalid_descriptor) {
+                m_event_loop->remove_handlers(soc->sta_hal_ext_events);
+                soc->sta_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
             }
-            if (soc->sta_hal_int_events) {
-                LOG(INFO) << "removing sta_hal_int_events socket";
-                remove_socket(soc->sta_hal_int_events);
-                delete soc->sta_hal_int_events;
-                soc->sta_hal_int_events = nullptr;
-            }
-            if (soc->sta_hal_ext_events_fd != beerocks::net::FileDescriptor::invalid_descriptor) {
-                m_event_loop->remove_handlers(soc->sta_hal_ext_events_fd);
-                soc->sta_hal_ext_events_fd = beerocks::net::FileDescriptor::invalid_descriptor;
-            }
-            if (soc->sta_hal_int_events_fd != beerocks::net::FileDescriptor::invalid_descriptor) {
-                m_event_loop->remove_handlers(soc->sta_hal_int_events_fd);
-                soc->sta_hal_int_events_fd = beerocks::net::FileDescriptor::invalid_descriptor;
+            if (soc->sta_hal_int_events != beerocks::net::FileDescriptor::invalid_descriptor) {
+                m_event_loop->remove_handlers(soc->sta_hal_int_events);
+                soc->sta_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
             }
 
             // Remove the socket reference from the backhaul configuration
@@ -680,11 +523,6 @@ bool backhaul_manager::handle_cmdu_from_broker(uint32_t iface_index, const sMacA
     return true;
 }
 
-std::string backhaul_manager::print_cmdu_types(const message::sUdsHeader *cmdu_header)
-{
-    return message_com::print_cmdu_types(cmdu_header);
-}
-
 void backhaul_manager::platform_notify_error(bpl::eErrorCode code, const std::string &error_data)
 {
     if (!m_platform_manager_client) {
@@ -710,41 +548,6 @@ void backhaul_manager::platform_notify_error(bpl::eErrorCode code, const std::st
 
     // Send the message
     m_platform_manager_client->send_cmdu(cmdu_tx);
-}
-
-void backhaul_manager::before_select()
-{
-    if (m_agent_ucc_listener) {
-        m_agent_ucc_listener->unlock();
-    }
-}
-
-void backhaul_manager::after_select(bool timeout)
-{
-    if (m_agent_ucc_listener) {
-        m_agent_ucc_listener->lock();
-    }
-
-    for (auto &soc : slaves_sockets) {
-        if (soc->sta_iface.empty() || !soc->sta_wlan_hal)
-            continue;
-
-        // Process external events
-        if (read_ready(soc->sta_hal_ext_events)) {
-            soc->sta_wlan_hal->process_ext_events();
-            clear_ready(soc->sta_hal_ext_events);
-        }
-
-        // Process internal events
-        if (read_ready(soc->sta_hal_int_events)) {
-            // A callback (hal_event_handler()) will invoked for pending events
-            soc->sta_wlan_hal->process_int_events();
-            clear_ready(soc->sta_hal_int_events);
-        }
-    }
-
-    // Run Tasks
-    m_task_pool.run_tasks();
 }
 
 bool backhaul_manager::finalize_slaves_connect_state(bool fConnected,
@@ -796,27 +599,15 @@ bool backhaul_manager::finalize_slaves_connect_state(bool fConnected,
                     if (soc->sta_wlan_hal) {
                         soc->sta_wlan_hal.reset();
                     }
-                    if (soc->sta_hal_ext_events) {
-                        remove_socket(soc->sta_hal_ext_events);
-                        delete soc->sta_hal_ext_events;
-                        soc->sta_hal_ext_events = nullptr;
-                    }
-                    if (soc->sta_hal_int_events) {
-                        remove_socket(soc->sta_hal_int_events);
-                        delete soc->sta_hal_int_events;
-                        soc->sta_hal_int_events = nullptr;
-                    }
-                    if (soc->sta_hal_ext_events_fd !=
+                    if (soc->sta_hal_ext_events !=
                         beerocks::net::FileDescriptor::invalid_descriptor) {
-                        m_event_loop->remove_handlers(soc->sta_hal_ext_events_fd);
-                        soc->sta_hal_ext_events_fd =
-                            beerocks::net::FileDescriptor::invalid_descriptor;
+                        m_event_loop->remove_handlers(soc->sta_hal_ext_events);
+                        soc->sta_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
                     }
-                    if (soc->sta_hal_int_events_fd !=
+                    if (soc->sta_hal_int_events !=
                         beerocks::net::FileDescriptor::invalid_descriptor) {
-                        m_event_loop->remove_handlers(soc->sta_hal_int_events_fd);
-                        soc->sta_hal_int_events_fd =
-                            beerocks::net::FileDescriptor::invalid_descriptor;
+                        m_event_loop->remove_handlers(soc->sta_hal_int_events);
+                        soc->sta_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
                     }
                 }
 
@@ -846,26 +637,16 @@ bool backhaul_manager::finalize_slaves_connect_state(bool fConnected,
                         if (soc->sta_wlan_hal) {
                             soc->sta_wlan_hal.reset();
                         }
-                        if (soc->sta_hal_ext_events) {
-                            remove_socket(soc->sta_hal_ext_events);
-                            delete soc->sta_hal_ext_events;
-                            soc->sta_hal_ext_events = nullptr;
-                        }
-                        if (soc->sta_hal_int_events) {
-                            remove_socket(soc->sta_hal_int_events);
-                            delete soc->sta_hal_int_events;
-                            soc->sta_hal_int_events = nullptr;
-                        }
-                        if (soc->sta_hal_ext_events_fd !=
+                        if (soc->sta_hal_ext_events !=
                             beerocks::net::FileDescriptor::invalid_descriptor) {
-                            m_event_loop->remove_handlers(soc->sta_hal_ext_events_fd);
-                            soc->sta_hal_ext_events_fd =
+                            m_event_loop->remove_handlers(soc->sta_hal_ext_events);
+                            soc->sta_hal_ext_events =
                                 beerocks::net::FileDescriptor::invalid_descriptor;
                         }
-                        if (soc->sta_hal_int_events_fd !=
+                        if (soc->sta_hal_int_events !=
                             beerocks::net::FileDescriptor::invalid_descriptor) {
-                            m_event_loop->remove_handlers(soc->sta_hal_int_events_fd);
-                            soc->sta_hal_int_events_fd =
+                            m_event_loop->remove_handlers(soc->sta_hal_int_events);
+                            soc->sta_hal_int_events =
                                 beerocks::net::FileDescriptor::invalid_descriptor;
                         }
                     }
@@ -1223,8 +1004,8 @@ bool backhaul_manager::backhaul_fsm_main(bool &skip_select)
             create_backhaul_steering_response(wfa_map::tlvErrorCode::eReasonCode::RESERVED);
 
             LOG(DEBUG) << "Sending BACKHAUL_STA_STEERING_RESPONSE_MESSAGE";
-            send_cmdu_to_broker_temp(cmdu_tx, db->controller_info.bridge_mac,
-                                     tlvf::mac_from_string(bridge_info.mac));
+            send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
+                                tlvf::mac_from_string(bridge_info.mac));
         }
         break;
     }
@@ -1299,23 +1080,13 @@ bool backhaul_manager::backhaul_fsm_main(bool &skip_select)
             if (soc->sta_wlan_hal) {
                 soc->sta_wlan_hal.reset();
             }
-            if (soc->sta_hal_ext_events) {
-                remove_socket(soc->sta_hal_ext_events);
-                delete soc->sta_hal_ext_events;
-                soc->sta_hal_ext_events = nullptr;
+            if (soc->sta_hal_ext_events != beerocks::net::FileDescriptor::invalid_descriptor) {
+                m_event_loop->remove_handlers(soc->sta_hal_ext_events);
+                soc->sta_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
             }
-            if (soc->sta_hal_int_events) {
-                remove_socket(soc->sta_hal_int_events);
-                delete soc->sta_hal_int_events;
-                soc->sta_hal_int_events = nullptr;
-            }
-            if (soc->sta_hal_ext_events_fd != beerocks::net::FileDescriptor::invalid_descriptor) {
-                m_event_loop->remove_handlers(soc->sta_hal_ext_events_fd);
-                soc->sta_hal_ext_events_fd = beerocks::net::FileDescriptor::invalid_descriptor;
-            }
-            if (soc->sta_hal_int_events_fd != beerocks::net::FileDescriptor::invalid_descriptor) {
-                m_event_loop->remove_handlers(soc->sta_hal_int_events_fd);
-                soc->sta_hal_int_events_fd = beerocks::net::FileDescriptor::invalid_descriptor;
+            if (soc->sta_hal_int_events != beerocks::net::FileDescriptor::invalid_descriptor) {
+                m_event_loop->remove_handlers(soc->sta_hal_int_events);
+                soc->sta_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
             }
 
             soc->slave_is_backhaul_manager = false;
@@ -1425,10 +1196,7 @@ bool backhaul_manager::backhaul_fsm_wireless(bool &skip_select)
                     }
 
                     LOG(DEBUG) << "External events queue with fd = " << ext_events_fd;
-                    soc->sta_hal_ext_events_fd = ext_events_fd;
-
-                    soc->sta_hal_ext_events = new Socket(ext_events_fd);
-                    add_socket(soc->sta_hal_ext_events);
+                    soc->sta_hal_ext_events = ext_events_fd;
 
                     beerocks::EventLoop::EventHandlers int_events_handlers{
                         .on_read =
@@ -1443,10 +1211,7 @@ bool backhaul_manager::backhaul_fsm_wireless(bool &skip_select)
                     }
 
                     LOG(DEBUG) << "Internal events queue with fd = " << int_events_fd;
-                    soc->sta_hal_int_events_fd = int_events_fd;
-
-                    soc->sta_hal_int_events = new Socket(int_events_fd);
-                    add_socket(soc->sta_hal_int_events);
+                    soc->sta_hal_int_events = int_events_fd;
                 } else {
                     LOG(ERROR) << "Invalid event file descriptors - "
                                << "External = " << ext_events_fd
@@ -1806,45 +1571,6 @@ bool backhaul_manager::backhaul_fsm_wireless(bool &skip_select)
     return (true);
 }
 
-// This method is temporary and will be removed at the end of PPM-753.
-// It is intended to allow the temporary coexistence of Socket* and file descriptors to refer to
-// accepted sockets.
-bool backhaul_manager::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
-{
-    if (!sd) {
-        LOG(ERROR) << "socket is nullptr";
-        return false;
-    }
-
-    // Get the file descriptor for the given socket instance
-    int fd = sd->getSocketFd();
-
-    // Save the pair { fd x Socket* } for later retrieval
-    m_fd_to_socket_map[fd] = sd;
-
-    auto uds_header = message_com::get_uds_header(cmdu_rx);
-
-    if (!uds_header) {
-        LOG(ERROR) << "uds_header=nullptr";
-        return false;
-    }
-
-    uint32_t iface_index = uds_header->if_index;
-
-    sMacAddr src_mac;
-    std::copy_n(uds_header->src_bridge_mac, beerocks::net::MAC_ADDR_LEN, src_mac.oct);
-
-    sMacAddr dst_mac;
-    std::copy_n(uds_header->dst_bridge_mac, beerocks::net::MAC_ADDR_LEN, dst_mac.oct);
-
-    if (from_broker(sd)) {
-        return handle_cmdu_from_broker(iface_index, dst_mac, src_mac, cmdu_rx);
-    }
-
-    // from uds to bus or local handling (ACTION_BACKHAUL)
-    return handle_cmdu(fd, iface_index, dst_mac, src_mac, cmdu_rx);
-}
-
 bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo> soc,
                                                      ieee1905_1::CmduMessageRx &cmdu_rx)
 {
@@ -2164,7 +1890,7 @@ bool backhaul_manager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo>
         }
 
         LOG(DEBUG) << "Send AssociatedStaLinkMetrics to controller, mid = " << mid;
-        send_cmdu_to_broker_temp(cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
+        send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_ZWDFS_RADIO_DETECTED: {
@@ -2950,8 +2676,8 @@ bool backhaul_manager::handle_backhaul_steering_request(ieee1905_1::CmduMessageR
     auto db = AgentDB::get();
 
     LOG(DEBUG) << "Sending ACK message to the originator, mid=" << std::hex << mid;
-    send_cmdu_to_broker_temp(cmdu_tx, db->controller_info.bridge_mac,
-                             tlvf::mac_from_string(bridge_info.mac));
+    send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
+                        tlvf::mac_from_string(bridge_info.mac));
 
     auto channel    = bh_sta_steering_req->target_channel_number();
     auto oper_class = bh_sta_steering_req->operating_class();
@@ -2970,8 +2696,8 @@ bool backhaul_manager::handle_backhaul_steering_request(ieee1905_1::CmduMessageR
             return false;
         }
 
-        send_cmdu_to_broker_temp(cmdu_tx, db->controller_info.bridge_mac,
-                                 tlvf::mac_from_string(bridge_info.mac));
+        send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
+                            tlvf::mac_from_string(bridge_info.mac));
 
         return false;
     }
@@ -2993,8 +2719,8 @@ bool backhaul_manager::handle_backhaul_steering_request(ieee1905_1::CmduMessageR
         LOG(ERROR) << "Couldn't associate active HAL with bssid: " << bssid;
 
         LOG(DEBUG) << "Sending ACK message to the originator, mid=" << std::hex << mid;
-        send_cmdu_to_broker_temp(cmdu_tx, db->controller_info.bridge_mac,
-                                 tlvf::mac_from_string(bridge_info.mac));
+        send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
+                            tlvf::mac_from_string(bridge_info.mac));
 
         auto response = create_backhaul_steering_response(
             wfa_map::tlvErrorCode::eReasonCode::
@@ -3005,8 +2731,8 @@ bool backhaul_manager::handle_backhaul_steering_request(ieee1905_1::CmduMessageR
             return false;
         }
 
-        send_cmdu_to_broker_temp(cmdu_tx, db->controller_info.bridge_mac,
-                                 tlvf::mac_from_string(bridge_info.mac));
+        send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
+                            tlvf::mac_from_string(bridge_info.mac));
 
         return false;
     }

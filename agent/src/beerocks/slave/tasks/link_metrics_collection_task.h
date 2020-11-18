@@ -17,8 +17,6 @@
 
 #include "../backhaul_manager/backhaul_manager_thread.h"
 
-#include "bcl/network/socket.h"
-
 namespace beerocks {
 
 // Forward decleration for backhaul_manager context saving

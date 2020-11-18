@@ -158,8 +158,7 @@ bool agent_ucc_listener::send_cmdu_to_destination(ieee1905_1::CmduMessageTx &cmd
                                                   const std::string &dest_mac)
 {
     auto db = AgentDB::get();
-    return m_btl_ctx.send_cmdu_to_broker_temp(cmdu_tx, tlvf::mac_from_string(dest_mac),
-                                              db->bridge.mac);
+    return m_btl_ctx.send_cmdu_to_broker(cmdu_tx, tlvf::mac_from_string(dest_mac), db->bridge.mac);
 }
 
 static enum eFreqType band_to_freq(const std::string &band)

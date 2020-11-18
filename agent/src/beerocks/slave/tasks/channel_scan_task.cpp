@@ -127,8 +127,7 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
 
     LOG(DEBUG) << "Sending ACK message to the originator, mid=" << std::hex << mid;
     auto db = AgentDB::get();
-    if (!m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
-                                       tlvf::mac_to_string(db->bridge.mac))) {
+    if (!m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac)) {
         LOG(ERROR) << "Failed to send ACK_MESSAGE back to controller";
         return false;
     }
@@ -202,6 +201,5 @@ bool ChannelScanTask::send_channel_scan_report(ieee1905_1::CmduMessageRx &cmdu_r
 
     LOG(DEBUG) << "Sending CHANNEL_SCAN_REPORT_MESSAGE to the originator, mid=" << std::hex << mid;
     auto db = AgentDB::get();
-    return m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
-                                         tlvf::mac_to_string(db->bridge.mac));
+    return m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac);
 }
