@@ -4963,13 +4963,31 @@ void db::add_bss_info_configuration(const sMacAddr &al_mac,
     bss_infos[al_mac].push_back(bss_info);
 }
 
+void db::add_bss_info_configuration(const wireless_utils::sBssInfoConf &bss_info)
+{
+    bss_infos_global.push_back(bss_info);
+}
+
 std::list<wireless_utils::sBssInfoConf> &db::get_bss_info_configuration(const sMacAddr &al_mac)
 {
     // If al_mac not exist, it will be added, and return empty list
-    return bss_infos[al_mac];
+    if (bss_infos[al_mac].empty()) {
+        return bss_infos_global;
+    } else {
+        return bss_infos[al_mac];
+    }
 }
 
-void db::clear_bss_info_configuration() { bss_infos.clear(); }
+std::list<wireless_utils::sBssInfoConf> &db::get_bss_info_configuration()
+{
+    return bss_infos_global;
+}
+
+void db::clear_bss_info_configuration()
+{
+    bss_infos.clear();
+    bss_infos_global.clear();
+}
 
 void db::clear_bss_info_configuration(const sMacAddr &al_mac) { bss_infos[al_mac].clear(); }
 
