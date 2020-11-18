@@ -19,7 +19,7 @@ from capi import UCCSocket
 from collections import namedtuple
 from connmap import MapDevice
 from opts import opts, debug, err
-from typing import Dict
+from typing import Dict, Any
 import sniffer
 
 
@@ -72,6 +72,53 @@ class ALEntity:
                      fail_on_mismatch: bool = True) -> bool:
         '''Poll the entity's logfile until it contains "regex" or times out.'''
         raise NotImplementedError("wait_for_log is not implemented in abstract class ALEntity")
+
+    # Northbound API access functions
+
+    def nbapi_command(self, path: str, command: str, args: Dict = None) -> Dict:
+        '''Run a northbound API command.
+
+        Run northbound API "command" on the object specified with "path" with arguments "args".
+        '''
+        raise NotImplementedError("nbapi_command is not implemented in abstract class ALEntity")
+
+    def nbapi_get(self, path: str, args: Dict = None) -> Dict:
+        '''Run a northbound API 'get' command.
+
+        Run northbound API "get" on the object specified with "path" with arguments "args". Parse
+        the return value and remove the outer dict (with is always a single-entry dict with 'path.'
+        as the key).
+        '''
+        ret = self.nbapi_command(path, "get", args)
+        if not ret:
+            return {}
+        assert len(ret) == 1, "NBAPI 'get' should return a single object"
+        return ret[path + "."]
+
+    def nbapi_get_parameter(self, path: str, parameter: str) -> Any:
+        '''Get a parameter from nbapi.
+
+        Gets the northbound API "parameter" in the object specified with "path". Returns the value,
+        converted to a Python object.
+
+        Equivalent to nbapi_get_object(path)[parameter] but slightly more efficient.
+        '''
+        values = self.nbapi_get(path, {"parameters": [parameter]})
+        return values and values[parameter]
+
+    def nbapi_get_instances(self, path: str) -> Dict[str, Dict[str, Any]]:
+        '''Get all instances of a template object from nbapi.
+
+        Gets the northbound API objects instantiated from the template object "path". Returns a
+        dictionary of dictionaries corresponding to the instances. The key of the outer dictionary
+        is the instance name (i.e., "1.", "2." etc.).
+        '''
+        values = self.nbapi_get(path, {"depth": 1})
+        # Filter out the template parameters, i.e. anything that doesn't start with a number
+        for k in list(values.keys()):
+            if not re.match("^[0-9]", k):
+                del values[k]
+        return values
 
 
 ChannelInfo = namedtuple("ChannelInfo", "channel bandwidth center_channel")
@@ -179,6 +226,18 @@ def checkpoint() -> None:
     TODO: Implement for log functions.
     '''
     wired_sniffer.checkpoint()
+
+
+# Helper function used by the implementations based on ubus
+def nbapi_ubus_command(entity: ALEntity, path: str, command: str, args: Dict = None) -> Dict:
+    command = ['ubus', 'call', path, command]
+    if args:
+        command.append(json.dumps(args))
+    result = entity.command(*command)
+    if result:
+        return json.loads(result)
+    else:
+        return result
 
 
 # Concrete implementation with docker
@@ -322,6 +381,9 @@ class ALEntityDocker(ALEntity):
         program = "controller" if self.is_controller else "agent"
         return _docker_wait_for_log(self.name, [program], regex, start_line, timeout,
                                     fail_on_mismatch=fail_on_mismatch)
+
+    def nbapi_command(self, path: str, command: str, args: Dict = None) -> Dict:
+        return nbapi_ubus_command(self, path, command, args)
 
     def prprlmesh_status_check(self):
         return self.device.prprlmesh_status_check()
@@ -524,6 +586,9 @@ class ALEntityPrplWrt(ALEntity):
         return _device_wait_for_log(self.device,
                                     "{}/beerocks_{}.log".format(self.log_folder, program),
                                     regex, timeout, start_line)
+
+    def nbapi_command(self, path: str, command: str, args: Dict = None) -> Dict:
+        return nbapi_ubus_command(self, path, command, args)
 
     def prprlmesh_status_check(self):
         return self.device.prprlmesh_status_check()
