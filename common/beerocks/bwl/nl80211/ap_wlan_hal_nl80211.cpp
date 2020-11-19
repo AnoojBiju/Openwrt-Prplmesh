@@ -307,12 +307,6 @@ bool ap_wlan_hal_nl80211::update_vap_credentials(
     std::list<son::wireless_utils::sBssInfoConf> &bss_info_conf_list,
     const std::string &backhaul_wps_ssid, const std::string &backhaul_wps_passphrase)
 {
-    if (0 == bss_info_conf_list.size()) {
-        LOG(DEBUG) << "given bss conf list size is zero, no changes to existing hostapd "
-                      "configuration are applied";
-        return true;
-    }
-
     // Load hostapd config for the radio
     prplmesh::hostapd::Configuration conf = load_hostapd_config(m_radio_info.iface_name);
     if (!conf) {
