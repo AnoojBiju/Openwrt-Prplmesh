@@ -396,10 +396,10 @@ TEST(configuration_test, disable_all_ap)
     conf.for_all_ap_vaps(disable_func, all_predicate);
     EXPECT_TRUE(conf) << conf;
 
-    // disable by commenting
-    auto comment_func = [&conf](const std::string vap) { conf.comment_vap(vap); };
+    // disable by setting start_disabled to 1 and removing ssid
+    auto disable_vap_func = [&conf](const std::string vap) { conf.disable_vap(vap); };
 
-    conf.for_all_ap_vaps(comment_func, all_predicate);
+    conf.for_all_ap_vaps(disable_vap_func, all_predicate);
     EXPECT_TRUE(conf) << conf;
 
     // store
@@ -437,12 +437,6 @@ TEST(configuration_test, enable_all_ap)
     conf.for_all_ap_vaps(enable_func, ap_predicate);
     EXPECT_TRUE(conf) << conf;
 
-    // enable by uncommenting
-    auto uncomment_func = [&conf](const std::string &vap) { conf.uncomment_vap(vap); };
-
-    conf.for_all_ap_vaps(uncomment_func, ap_predicate);
-    EXPECT_TRUE(conf) << conf;
-
     // store
     conf.store();
     EXPECT_TRUE(conf) << conf;
@@ -450,7 +444,7 @@ TEST(configuration_test, enable_all_ap)
     //// end prerequsite ////
 }
 
-TEST(configuration_test, comment_vap)
+TEST(configuration_test, disable_vap)
 {
     //// start prerequsite ////
 
@@ -470,7 +464,7 @@ TEST(configuration_test, comment_vap)
 
     //// start test ////
 
-    conf.comment_vap("wlan0");
+    conf.disable_vap("wlan0");
     EXPECT_TRUE(conf) << conf;
 
     conf.store();
@@ -479,7 +473,7 @@ TEST(configuration_test, comment_vap)
     //// end test ////
 }
 
-TEST(configuration_test, uncomment_vap)
+TEST(configuration_test, add_remove_key_value)
 {
     //// start prerequsite ////
 
@@ -495,9 +489,9 @@ TEST(configuration_test, uncomment_vap)
     ;
     ASSERT_TRUE(conf) << conf;
 
-    // comment twice!
-    conf.comment_vap("wlan0");
-    conf.comment_vap("wlan0");
+    // disable twice!
+    conf.disable_vap("wlan0");
+    conf.disable_vap("wlan0");
     EXPECT_TRUE(conf) << conf;
 
     conf.store();
@@ -511,15 +505,6 @@ TEST(configuration_test, uncomment_vap)
     //// end prerequsite ////
 
     //// start test ////
-
-    conf.uncomment_vap("wlan0");
-    EXPECT_TRUE(conf) << conf;
-
-    conf.uncomment_vap("wlan0");
-    EXPECT_TRUE(conf) << conf;
-
-    conf.store();
-    EXPECT_TRUE(conf) << conf;
 
     // replace existing value for existing key for existing vap
     conf.set_create_vap_value("wlan0", "disassoc_low_ack", "734");
@@ -569,8 +554,8 @@ TEST(configuration_test, itererate_both_containers)
             conf.set_create_vap_value(vap, "ssid", *it);
         } else {
             // when we done with our container, we simply
-            // comment the rest of the vaps
-            conf.comment_vap(vap);
+            // disable the rest of the vaps
+            conf.disable_vap(vap);
         }
     };
 

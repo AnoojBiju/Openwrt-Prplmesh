@@ -554,14 +554,13 @@ bool ap_wlan_hal_nl80211::update_vap_credentials(
                 conf.set_create_vap_value(vap, "wpa_disable_eapol_key_retries",
                                           wpa_disable_eapol_key_retries);
 
-                // finally enable the vap (remove any previously set start_disabled and uncomment)
+                // finally enable the vap (remove any previously set start_disabled)
                 conf.set_create_vap_value(vap, "start_disabled", "");
-                conf.uncomment_vap(vap);
-
             } else {
                 // no more data in the input bss-conf list
                 // disable the rest of the vaps
-                conf.comment_vap(vap);
+                LOG(DEBUG) << "Disabling VAP " << vap;
+                conf.disable_vap(vap);
             }
         };
 

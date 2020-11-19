@@ -130,34 +130,12 @@ public:
     std::string get_vap_value(const std::string &vap, const std::string &key);
 
     /**
-     * @brief disables vap by adding a comment to it
-     * e.g: 
-     * before:
-     * bss=wlan0_0 
-     * ssid=test2 
-     * bss=wlan0_1
-     * after:
-     * #bss=wlan0_0 
-     * #ssid=test2 
-     * bss=wlan0_1
-     *
+     * @brief disables vap by setting start_disabled to 1 and removing
+     * the "ssid" parameter.
+     * @param vap The vap to disable.
+     * @return true on success, false otherwise.
      */
-    void comment_vap(const std::string &vap);
-
-    /**
-     * @brief enables vap by removing comments from it
-     * e.g: 
-     * before:
-     * #bss=wlan0_0 
-     * ##ssid=test2 
-     * bss=wlan0_1
-     * after:
-     * bss=wlan0_0 
-     * ssid=test2 
-     * bss=wlan0_1
-     *
-     */
-    void uncomment_vap(const std::string &vap);
+    bool disable_vap(const std::string &vap);
 
     /**
      * @brief apply func to all ap vaps
