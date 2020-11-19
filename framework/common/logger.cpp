@@ -39,7 +39,7 @@ static void *watch_log_file(void *args)
         return nullptr;
     }
 
-    int ret = inotify_add_watch(fd, std::string(CONF_FILE_PATH).c_str(),
+    int ret = inotify_add_watch(fd, std::string(CONF_FILE_WRITEABLE_PATH).c_str(),
                                 IN_MODIFY | IN_CLOSE_WRITE | IN_IGNORED | IN_DELETE_SELF);
     if (ret < 0) {
         return nullptr;
@@ -55,7 +55,7 @@ static void *watch_log_file(void *args)
                 fileEvent = (struct inotify_event *)&buffer[i];
                 if (fileEvent->mask) {
                     if ((fileEvent->mask & IN_IGNORED) || (fileEvent->mask & IN_DELETE_SELF)) {
-                        inotify_add_watch(fd, std::string(CONF_FILE_PATH).c_str(),
+                        inotify_add_watch(fd, std::string(CONF_FILE_WRITEABLE_PATH).c_str(),
                                           IN_MODIFY | IN_CLOSE_WRITE | IN_IGNORED | IN_DELETE_SELF);
                     }
                     sleep(1);
@@ -118,12 +118,12 @@ void Logger::LoggerConfig() { LoggerConfig(DEFAULT_LOGGER_NAME); }
 void Logger::LoggerConfig(const char *logger_name)
 {
     Logger::Config cfg;
-    std::string conf_path_tmp = CONF_FILE_TMP_PATH;
-    std::string conf_path     = CONF_FILE_PATH;
+    std::string conf_writeable_path = CONF_FILE_WRITEABLE_PATH;
+    std::string conf_default_path   = CONF_FILE_DEFAULT_PATH;
 
-    // first look for conf in tmp, since some systems are read only
-    if (cfg.SetValuesFromJson(conf_path_tmp, logger_name) < 0) {
-        cfg.SetValuesFromJson(conf_path, logger_name);
+    // first look for conf in writeable path, since some systems are read only
+    if (cfg.SetValuesFromJson(conf_writeable_path, logger_name) < 0) {
+        cfg.SetValuesFromJson(conf_default_path, logger_name);
     }
 
     LoggerConfig(cfg);

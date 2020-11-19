@@ -28,8 +28,14 @@
 #define MAPF_DBG_IF(cond, msg)                                                                     \
     LOG_IF(cond, DEBUG) << msg << resetiosflags((std::ios_base::fmtflags)0xFFFF)
 
-#define CONF_FILE_PATH mapf::utils::get_install_path() + "/config/framework_logging.conf"
-#define CONF_FILE_TMP_PATH std::string("/tmp/share/framework_logging.conf")
+// configuration files path
+#ifdef BEEROCKS_RDKB
+#define CONF_FILE_WRITEABLE_PATH std::string("/nvram/framework_logging.conf")
+#else
+#define CONF_FILE_WRITEABLE_PATH std::string("/tmp/share/framework_logging.conf")
+#endif
+
+#define CONF_FILE_DEFAULT_PATH mapf::utils::get_install_path() + "/config/framework_logging.conf"
 
 extern char *__progname;
 struct json_object;
