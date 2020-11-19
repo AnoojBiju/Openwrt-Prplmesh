@@ -1114,7 +1114,18 @@ public:
 
     void add_bss_info_configuration(const sMacAddr &al_mac,
                                     const wireless_utils::sBssInfoConf &bss_info);
+    /**
+     * @brief Store BSS information in the bss_infos_global list.
+     * 
+     * @param bss_info Structure with BSS information.
+     */
+    void add_bss_info_configuration(const wireless_utils::sBssInfoConf &bss_info);
     std::list<wireless_utils::sBssInfoConf> &get_bss_info_configuration(const sMacAddr &al_mac);
+
+    /**
+     * @brief Return bss_infos_global list with BSS information.
+     */
+    std::list<wireless_utils::sBssInfoConf> &get_bss_info_configuration();
     void clear_bss_info_configuration();
     void clear_bss_info_configuration(const sMacAddr &al_mac);
 
@@ -1577,6 +1588,7 @@ private:
     // certification
     std::shared_ptr<uint8_t> certification_tx_buffer;
     std::unordered_map<sMacAddr, std::list<wireless_utils::sBssInfoConf>> bss_infos; // key=al_mac
+    std::list<wireless_utils::sBssInfoConf> bss_infos_global;
 
     Controller *m_controller_ctx = nullptr;
     const std::string m_local_bridge_mac;
