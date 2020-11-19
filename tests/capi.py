@@ -127,6 +127,11 @@ class UCCSocket:
             A mapping of parameter -> value. The CAPI COMPLETE message is followed by
             parameter,value pairs. These are converted to a dict and returned. If the COMPLETE
             message has no parameters, an empty dict is returned.
+
+        Raises
+        ------
+        ValueError
+            If the reply was something other than `CAPIReply.RUNNING`, or `CAPIReply.COMPLETE`.
         """
         data = bytearray()
         while True:
