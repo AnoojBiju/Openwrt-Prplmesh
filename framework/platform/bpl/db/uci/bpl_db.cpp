@@ -8,7 +8,7 @@
 
 #include <bpl/bpl_db.h>
 
-#include "bpl_db_uci.h"
+#include "../../common/uci/bpl_uci.h"
 
 #include <mapf/common/logger.h>
 

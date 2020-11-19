@@ -6,8 +6,8 @@
  * See LICENSE file for more details.
  */
 
-#ifndef _BPL_DB_UCI_H_
-#define _BPL_DB_UCI_H_
+#ifndef _BPL_UCI_H_
+#define _BPL_UCI_H_
 
 #include <string>
 #include <unordered_map>
@@ -143,4 +143,4 @@ bool uci_commit_changes(const std::string &package_name);
 } // namespace bpl
 } // namespace beerocks
 
-#endif /* _BPL_DB_UCI_H_ */
+#endif /* _BPL_UCI_H_ */
