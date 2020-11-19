@@ -8,7 +8,6 @@
 
 #include <bcl/beerocks_cmdu_server_impl.h>
 
-#include <bcl/network/network_utils.h>
 #include <bcl/network/sockets_impl.h>
 
 #include <easylogging++.h>
@@ -19,12 +18,10 @@ CmduServerImpl::CmduServerImpl(std::unique_ptr<beerocks::net::ServerSocket> serv
                                std::shared_ptr<beerocks::net::CmduParser> cmdu_parser,
                                std::shared_ptr<beerocks::net::CmduSerializer> cmdu_serializer,
                                std::shared_ptr<beerocks::EventLoop> event_loop)
-    : m_server_socket(std::move(server_socket)), m_cmdu_parser(cmdu_parser),
-      m_cmdu_serializer(cmdu_serializer), m_event_loop(event_loop)
+    : CmduPeer(cmdu_parser, cmdu_serializer), m_server_socket(std::move(server_socket)),
+      m_event_loop(event_loop)
 {
     LOG_IF(!m_server_socket, FATAL) << "Server socket is a null pointer!";
-    LOG_IF(!m_cmdu_parser, FATAL) << "CMDU parser is a null pointer!";
-    LOG_IF(!m_cmdu_serializer, FATAL) << "CMDU serializer is a null pointer!";
     LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
 
     // Register event handlers for the server socket
@@ -96,17 +93,7 @@ bool CmduServerImpl::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
 
     auto &context = it->second;
 
-    // Serialize CMDU into a byte array
-    sMacAddr dst_mac = beerocks::net::network_utils::ZERO_MAC;
-    sMacAddr src_mac = beerocks::net::network_utils::ZERO_MAC;
-    beerocks::net::BufferImpl<message::MESSAGE_BUFFER_LENGTH> buffer;
-    if (!m_cmdu_serializer->serialize_cmdu(dst_mac, src_mac, cmdu_tx, buffer)) {
-        LOG(ERROR) << "Failed to serialize CMDU! fd = " << fd;
-        return false;
-    }
-
-    // Send data
-    return context.connection->send(buffer);
+    return CmduPeer::send_cmdu(*context.connection, cmdu_tx);
 }
 
 bool CmduServerImpl::add_connection(int fd,
@@ -200,32 +187,13 @@ void CmduServerImpl::handle_read(int fd)
 
     auto &context = it->second;
 
-    // Read available bytes into buffer
-    int bytes_received = context.connection->receive(context.buffer);
-    if (bytes_received <= 0) {
-        LOG(ERROR) << "Failed to received data! bytes received: " << bytes_received
-                   << ", fd = " << fd;
-        return;
-    }
-
-    // These parameters are obtained from the UDS header. Sender process will fill them in only
-    // if CMDU was originally received by a remote process and then forwarded to this process.
-    uint32_t iface_index;
-    sMacAddr dst_mac;
-    sMacAddr src_mac;
-
-    // Buffer for the received CMDU and received CMDU itself
-    uint8_t cmdu_rx_buffer[message::MESSAGE_BUFFER_LENGTH];
-    ieee1905_1::CmduMessageRx cmdu_rx(cmdu_rx_buffer, sizeof(cmdu_rx_buffer));
-
-    // CMDU parsing & handling loop
-    // Note: must be done in a loop because data received through a stream-oriented socket might
-    // contain more than one CMDU. If data was received through a message-oriented socket, then
-    // only one message would be received at a time and the loop would be iterated only once.
-    while ((context.buffer.length() > 0) &&
-           m_cmdu_parser->parse_cmdu(context.buffer, iface_index, dst_mac, src_mac, cmdu_rx)) {
+    // Read all CMDU messages received and notify their reception
+    auto handler = [&](beerocks::net::Socket::Connection &connection, uint32_t iface_index,
+                       const sMacAddr &dst_mac, const sMacAddr &src_mac,
+                       ieee1905_1::CmduMessageRx &cmdu_rx) {
         notify_cmdu_received(fd, iface_index, dst_mac, src_mac, cmdu_rx);
-    }
+    };
+    CmduPeer::receive_cmdus(*context.connection, context.buffer, handler);
 }
 
 void CmduServerImpl::handle_close(int fd)

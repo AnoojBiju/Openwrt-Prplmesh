@@ -9,14 +9,12 @@
 #ifndef _BEEROCKS_CMDU_SERVER_IMPL_H_
 #define _BEEROCKS_CMDU_SERVER_IMPL_H_
 
+#include <bcl/beerocks_cmdu_peer.h>
 #include <bcl/beerocks_cmdu_server.h>
 
 #include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_event_loop.h>
 #include <bcl/network/buffer_impl.h>
-#include <bcl/network/cmdu_parser.h>
-#include <bcl/network/cmdu_serializer.h>
-#include <bcl/network/sockets.h>
 
 #include <unordered_map>
 
@@ -29,7 +27,7 @@ namespace beerocks {
  * processes is established with a server socket. The framing protocol used is defined by the CMDU
  * parser and serializer objects given constructor.
  */
-class CmduServerImpl : public CmduServer {
+class CmduServerImpl : public CmduServer, public CmduPeer {
 public:
     /**
      * @brief Class constructor.
@@ -139,18 +137,6 @@ private:
      * communicate with this process by exchanging CMDU messages through those connections.
      */
     std::unique_ptr<beerocks::net::ServerSocket> m_server_socket;
-
-    /**
-     * CMDU parser used to get CMDU messages out of a byte array received through a socket
-     * connection.
-     */
-    std::shared_ptr<beerocks::net::CmduParser> m_cmdu_parser;
-
-    /**
-     * CMDU serializer used to put CMDU messages into a byte array ready to be sent through a
-     * socket connection.
-     */
-    std::shared_ptr<beerocks::net::CmduSerializer> m_cmdu_serializer;
 
     /**
      * Application event loop used by the process to wait for I/O events.
