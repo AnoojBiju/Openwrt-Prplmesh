@@ -35,3 +35,65 @@ class CommonFlows(prplmesh_base_test.PrplMeshBaseTest):
         time.sleep(1)
         debug("Confirming multi-ap policy config request was acked by agent")
         self.check_cmdu_type_single("ACK", 0x8000, agent.mac, controller.mac, mid)
+
+    def configure_multi_ap_policy_config_with_unsuccessful_association(
+            self, agent, controller, enable: 0x80, max_repeat: 0x0A):
+        debug("Send multi-ap policy config request with unsuccessful association policy to agent 1")
+        mid = controller.dev_send_1905(agent.mac, 0x8003,
+                                       tlv(0xC4, 0x0005, "{{0x{:02X} 0x{:08X}}}"
+                                           .format(enable, max_repeat)))
+        time.sleep(1)
+        debug("Confirming multi-ap policy config with unsuccessful association"
+              "request has been received on agent")
+
+        self.check_cmdu_type("AP_POLICY_CONFIG_QUERY_MESSAGE", 0x8003,
+                             controller.mac, agent.mac, mid)
+        time.sleep(1)
+        debug("Confirming multi-ap policy config ack message has been received on the controller")
+        self.check_cmdu_type_single("ACK", 0x8000, agent.mac, controller.mac, mid)
+
+    def mismatch_psk(self, agent_radio, controller, sta, expect='yes'):
+        '''
+        expect: yes / no / exceed
+        '''
+
+        # Simulate Mismatch PSK sent by STA
+
+        # Get the agent from the radio
+        agent = agent_radio.agent
+
+        # Simulate Failed Association Message
+        agent_radio.send_bwl_event(
+            "EVENT AP-STA-POSSIBLE-PSK-MISMATCH {}".format(sta.mac))
+
+        # Wait for something to happen
+        time.sleep(1)
+
+        # Check correct flow
+
+        if expect == 'yes':
+            # Validate "Failed Connection Message" CMDU was sent
+            response = self.check_cmdu_type_single(
+                "Failed Connection Message", 0x8033, agent.mac, controller.mac)
+
+            debug("Check Failed Connection Message has valid STA TLV")
+            tlv_sta_mac = self.check_cmdu_has_tlv_single(response, 0x95)
+            if hasattr(tlv_sta_mac, 'sta_mac_addr_type_mac_addr'):
+                received_sta_mac = tlv_sta_mac.sta_mac_addr_type_mac_addr
+            else:
+                received_sta_mac = '00:00:00:00:00:00'
+
+            # Validate Srouce Info STA MAC
+            if received_sta_mac != sta.mac:
+                self.fail("Source Info TLV has wrong STA MAC {} instead of {}".format(
+                    received_sta_mac, sta.mac))
+        elif expect == 'no':
+            debug("expecting no cmdu, policy set to no report")
+            self.check_no_cmdu_type("Failed Connection Message", 0x8033,
+                                    agent.mac, controller.mac)
+        elif expect == 'exceed':
+            debug("expecting no cmdu, exceeded number of reports in a minute")
+            self.check_no_cmdu_type("Failed Connection Message", 0x8033,
+                                    agent.mac, controller.mac)
+        else:
+            debug("unknown 'expect' = {}".format(expect))
