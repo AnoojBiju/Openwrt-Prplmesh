@@ -15,7 +15,6 @@
 
 namespace beerocks {
 namespace bpl {
-namespace db {
 
 using OptionsUnorderedMap = std::unordered_map<std::string, std::string>;
 /****************************************************************************/
@@ -139,7 +138,6 @@ bool uci_get_all_sections(const std::string &package_name, const std::string &se
  */
 bool uci_commit_changes(const std::string &package_name);
 
-} // namespace db
 } // namespace bpl
 } // namespace beerocks
 

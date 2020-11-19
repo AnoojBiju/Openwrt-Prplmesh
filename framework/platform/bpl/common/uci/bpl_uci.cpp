@@ -9,7 +9,6 @@ extern "C" {
 
 namespace beerocks {
 namespace bpl {
-namespace db {
 
 constexpr ssize_t MAX_UCI_BUF_LEN  = 64;
 constexpr char package_path[]      = "%s";
@@ -451,6 +450,5 @@ bool uci_commit_changes(const std::string &package_name)
     return true;
 }
 
-} // namespace db
 } // namespace bpl
 } // namespace beerocks
