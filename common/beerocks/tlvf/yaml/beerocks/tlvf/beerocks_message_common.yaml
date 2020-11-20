@@ -392,6 +392,7 @@ sBeaconRequest11k:
   ap_ch_report:
     _type: uint8_t
     _length: [237]
+    _comment: The first element of this list is the operating class.
 
   use_optional_req_elements: uint8_t # bool
   req_elements:

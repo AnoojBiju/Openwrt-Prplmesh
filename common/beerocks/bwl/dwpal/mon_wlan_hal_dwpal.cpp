@@ -821,7 +821,9 @@ bool mon_wlan_hal_dwpal::sta_beacon_11k_request(const SBeaconRequest11k &req, in
             return false;
         }
         std::stringstream ch_report_ss;
-        uint8_t current_channel = 0;
+        // Skip the first element, it's the operating class.
+        // The dwpal version of hostapd will set the operating class itself.
+        uint8_t current_channel = 1;
         for (; current_channel < req.use_optional_ap_ch_report - 1; ++current_channel) {
             ch_report_ss << +req.ap_ch_report[current_channel] << ",";
         }
