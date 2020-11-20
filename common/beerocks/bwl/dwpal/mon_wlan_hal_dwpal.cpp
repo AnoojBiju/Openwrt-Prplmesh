@@ -834,11 +834,7 @@ bool mon_wlan_hal_dwpal::sta_beacon_11k_request(const SBeaconRequest11k &req, in
         }
     }
 
-    // report detail: rep_detail=
-    // this value should be set by default to 2 if not stated otherwise.
-    // however hostap does not set it to 2. So we add it hardcoded here
-    // note: currently there is no field in SBeaconRequest11k that holds this optional field
-    cmd += " rep_detail=2";
+    cmd += " rep_detail=" + std::to_string(req.reporting_detail);
 
     LOG(DEBUG) << " the command: " << cmd;
 
