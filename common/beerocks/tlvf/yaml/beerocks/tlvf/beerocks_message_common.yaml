@@ -403,6 +403,8 @@ sBeaconRequest11k:
   new_ch_center_freq_seg_0: uint32_t # not sure if this type is most fit
   new_ch_center_freq_seg_1: uint32_t # not sure if this type is most fit
 
+  reporting_detail: uint8_t
+
 sBeaconResponse11k:
   _type: struct
   channel: uint8_t # A Channel Number of 0 indicates a request to make iterative measurements for all supported channels in the Regulatory Class

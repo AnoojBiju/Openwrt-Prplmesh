@@ -198,6 +198,7 @@ struct SBeaconRequest11k {
     uint32_t new_ch_width;                    // not sure if this type is most fit
     uint32_t new_ch_center_freq_seg_0;        // not sure if this type is most fit
     uint32_t new_ch_center_freq_seg_1;        // not sure if this type is most fit
+    uint8_t reporting_detail;
 };
 
 struct SBeaconRequestStatus11k {

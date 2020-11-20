@@ -567,6 +567,7 @@ typedef struct sBeaconRequest11k {
     uint32_t new_ch_width;
     uint32_t new_ch_center_freq_seg_0;
     uint32_t new_ch_center_freq_seg_1;
+    uint8_t reporting_detail;
     void struct_swap(){
         tlvf_swap(16, reinterpret_cast<uint8_t*>(&op_class));
         tlvf_swap(16, reinterpret_cast<uint8_t*>(&repeats));
