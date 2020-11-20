@@ -187,7 +187,7 @@ struct SBeaconRequest11k {
     uint8_t use_optional_ssid;          // bool
     uint8_t ssid[WIFI_SSID_MAX_LENGTH]; // 36 bytes
 
-    uint8_t use_optional_ap_ch_report; // bool
+    uint8_t use_optional_ap_ch_report; // size of ap_ch_report
     uint8_t ap_ch_report[237];
 
     uint8_t use_optional_req_elements; // bool
