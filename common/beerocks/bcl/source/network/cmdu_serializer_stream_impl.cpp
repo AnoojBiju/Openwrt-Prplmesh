@@ -8,14 +8,14 @@
 
 #include <bcl/network/cmdu_serializer_stream_impl.h>
 
-#include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
 
 namespace beerocks {
 namespace net {
 
-bool CmduSerializerStreamImpl::serialize_cmdu(const sMacAddr &dst_mac, const sMacAddr &src_mac,
-                                              ieee1905_1::CmduMessageTx &cmdu_tx, Buffer &buffer)
+bool CmduSerializerStreamImpl::serialize_cmdu(uint32_t iface_index, const sMacAddr &dst_mac,
+                                              const sMacAddr &src_mac,
+                                              ieee1905_1::CmduMessage &cmdu, Buffer &buffer)
 {
     // If a destination MAC address has been given, then source MAC address must be given too
     if (beerocks::net::network_utils::ZERO_MAC != dst_mac) {
@@ -25,24 +25,14 @@ bool CmduSerializerStreamImpl::serialize_cmdu(const sMacAddr &dst_mac, const sMa
         }
     }
 
-    // Serialize CMDU
-    size_t cmdu_length = cmdu_tx.getMessageLength();
-    uint8_t *cmdu_data = cmdu_tx.getMessageBuff();
-    if (!cmdu_tx.finalize()) {
-        LOG(ERROR) << "Failed finalizing cmdu!";
-        LOG(DEBUG) << "hex_dump (" << cmdu_length << " bytes):" << std::endl
-                   << utils::dump_buffer(cmdu_data, cmdu_length);
-        return false;
-    }
-
-    // Update payload length (finalize() adds an end-of-message TLV)
-    cmdu_length = cmdu_tx.getMessageLength();
-
     // Check if given buffer already contains some data
     if (buffer.length() > 0) {
         LOG(ERROR) << "Buffer is not empty!";
         return false;
     }
+
+    size_t cmdu_length = cmdu.getMessageLength();
+    uint8_t *cmdu_data = cmdu.getMessageBuff();
 
     // Check if serialized data fits into given buffer
     size_t length = sizeof(message::sUdsHeader) + cmdu_length;
@@ -54,6 +44,7 @@ bool CmduSerializerStreamImpl::serialize_cmdu(const sMacAddr &dst_mac, const sMa
 
     // Fill in UDS header
     message::sUdsHeader uds_header;
+    uds_header.if_index = iface_index;
     std::copy_n(src_mac.oct, MAC_ADDR_LEN, uds_header.src_bridge_mac);
     std::copy_n(dst_mac.oct, MAC_ADDR_LEN, uds_header.dst_bridge_mac);
     uds_header.length = cmdu_length;

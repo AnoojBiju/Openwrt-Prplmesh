@@ -32,13 +32,16 @@ public:
      * the source MAC address (@see beerocks::message::sUdsHeader). The payload is the CMDU "as is".
      *
      * Both source and destination MAC addresses can be ZERO_MAC but, if destination MAC address is
-     * set, then source MAC address must be set too. These two fields are meant to signal to the
-     * receiver that the CMDU has to be processed locally (destination MAC address is ZERO_MAC) or
-     * forwarded to another machine via the transport process (source and destination MAC addresses
-     * both contain a valid value).
+     * set, then source MAC address must be set too. When sending a CMDU, these two fields are
+     * intended to signal the receiver that the CMDU has to be processed locally (destination MAC
+     * address is ZERO_MAC) or forwarded to another machine via the transport process (source and
+     * destination MAC addresses both contain a valid value). When forwarding a received CMDU, these
+     * two fields together with the interface index contain the routing information: the interface
+     * the CMDU was received on and source and destination MAC addresses set by the original remote
+     * sender.
      */
-    bool serialize_cmdu(const sMacAddr &dst_mac, const sMacAddr &src_mac,
-                        ieee1905_1::CmduMessageTx &cmdu_tx, Buffer &buffer) override;
+    bool serialize_cmdu(uint32_t iface_index, const sMacAddr &dst_mac, const sMacAddr &src_mac,
+                        ieee1905_1::CmduMessage &cmdu, Buffer &buffer) override;
 };
 
 } // namespace net

@@ -11,7 +11,7 @@
 
 #include <bcl/network/buffer.h>
 
-#include <tlvf/CmduMessageTx.h>
+#include <tlvf/CmduMessage.h>
 #include <tlvf/common/sMacAddr.h>
 
 namespace beerocks {
@@ -43,15 +43,17 @@ public:
     /**
      * @brief Serializes a CMDU to a byte buffer.
      *
+     * @param[in] iface_index Index of the network interface the message was received on.
      * @param[in] dst_mac Destination MAC address.
      * @param[in] src_mac Source MAC address.
-     * @param[in/out] cmdu_tx CMDU message to serialize.
+     * @param[in/out] cmdu CMDU message to serialize.
      * @param[in,out] buffer Array of bytes containing the serialized message.
      * @return true if CMDU could be serialized to the buffer and false otherwise (i.e.: message
      * does not fit into output buffer).
      */
-    virtual bool serialize_cmdu(const sMacAddr &dst_mac, const sMacAddr &src_mac,
-                                ieee1905_1::CmduMessageTx &cmdu_tx, Buffer &buffer) = 0;
+    virtual bool serialize_cmdu(uint32_t iface_index, const sMacAddr &dst_mac,
+                                const sMacAddr &src_mac, ieee1905_1::CmduMessage &cmdu,
+                                Buffer &buffer) = 0;
 };
 
 } // namespace net

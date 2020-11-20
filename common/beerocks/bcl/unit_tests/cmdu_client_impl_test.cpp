@@ -11,6 +11,7 @@
 #include <bcl/beerocks_event_loop_mock.h>
 #include <bcl/network/cmdu_parser_mock.h>
 #include <bcl/network/cmdu_serializer_mock.h>
+#include <bcl/network/network_utils.h>
 #include <bcl/network/sockets_mock.h>
 
 #include <bcl/beerocks_backport.h>
@@ -148,7 +149,10 @@ TEST_F(CmduClientImplTest, send_cmdu_should_succeed)
         EXPECT_CALL(*m_event_loop, register_handlers(connected_socket_fd, _))
             .WillOnce(DoAll(SaveArg<1>(&connected_socket_handlers), Return(true)));
 
-        EXPECT_CALL(*m_cmdu_serializer, serialize_cmdu(_, _, _, _)).WillOnce(Return(true));
+        EXPECT_CALL(*m_cmdu_serializer,
+                    serialize_cmdu(0, beerocks::net::network_utils::ZERO_MAC,
+                                   beerocks::net::network_utils::ZERO_MAC, _, _))
+            .WillOnce(Return(true));
 
         EXPECT_CALL(*m_connection_raw_ptr, send(_)).WillOnce(Return(true));
     }
@@ -158,6 +162,32 @@ TEST_F(CmduClientImplTest, send_cmdu_should_succeed)
 
     // Method `send_cmdu` should succeed on a connected socket
     ASSERT_TRUE(cmdu_client.send_cmdu(m_cmdu_tx));
+
+    // Emulate the server closes the connection
+    connected_socket_handlers.on_disconnect(connected_socket_fd, *m_event_loop);
+}
+
+TEST_F(CmduClientImplTest, send_cmdu_should_fail_with_invalid_cmdu)
+{
+    beerocks::EventLoop::EventHandlers connected_socket_handlers;
+
+    {
+        InSequence sequence;
+
+        EXPECT_CALL(*m_connection_raw_ptr, socket()).Times(1);
+        EXPECT_CALL(*m_connected_socket, fd()).Times(1);
+        EXPECT_CALL(*m_event_loop, register_handlers(connected_socket_fd, _))
+            .WillOnce(DoAll(SaveArg<1>(&connected_socket_handlers), Return(true)));
+    }
+
+    beerocks::CmduClientImpl cmdu_client(std::move(m_connection), m_cmdu_parser, m_cmdu_serializer,
+                                         m_event_loop);
+
+    // Invalid CMDU
+    ieee1905_1::CmduMessageTx cmdu_tx(nullptr, 0);
+
+    // Method `send_cmdu` should fail with invalid CMDU
+    ASSERT_FALSE(cmdu_client.send_cmdu(cmdu_tx));
 
     // Emulate the server closes the connection
     connected_socket_handlers.on_disconnect(connected_socket_fd, *m_event_loop);
@@ -176,7 +206,10 @@ TEST_F(CmduClientImplTest, send_cmdu_should_fail_if_serialize_cmdu_fails)
             .WillOnce(DoAll(SaveArg<1>(&connected_socket_handlers), Return(true)));
 
         // Serialization fails!
-        EXPECT_CALL(*m_cmdu_serializer, serialize_cmdu(_, _, _, _)).WillOnce(Return(false));
+        EXPECT_CALL(*m_cmdu_serializer,
+                    serialize_cmdu(0, beerocks::net::network_utils::ZERO_MAC,
+                                   beerocks::net::network_utils::ZERO_MAC, _, _))
+            .WillOnce(Return(false));
 
         EXPECT_CALL(*m_connection_raw_ptr, socket()).Times(1);
         EXPECT_CALL(*m_connected_socket, fd()).Times(1);

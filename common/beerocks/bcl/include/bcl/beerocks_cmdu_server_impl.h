@@ -64,6 +64,16 @@ public:
      */
     bool send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx) override;
 
+    /**
+     * @brief Forwards a CMDU message that was sent by a remote process.
+     * @see CmduServer::forward_cmdu
+     *
+     * This implementation uses the CMDU serializer to build a frame and sends it through given
+     * socket connection.
+     */
+    bool forward_cmdu(int fd, uint32_t iface_index, const sMacAddr &dst_mac,
+                      const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx) override;
+
 private:
     /**
      * @brief Adds a new connection.

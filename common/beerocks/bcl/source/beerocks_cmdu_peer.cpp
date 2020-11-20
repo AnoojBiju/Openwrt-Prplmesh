@@ -9,6 +9,7 @@
 #include <bcl/beerocks_cmdu_peer.h>
 
 #include <bcl/beerocks_defines.h>
+#include <bcl/beerocks_utils.h>
 #include <bcl/network/buffer_impl.h>
 #include <bcl/network/network_utils.h>
 
@@ -27,11 +28,47 @@ CmduPeer::CmduPeer(std::shared_ptr<beerocks::net::CmduParser> cmdu_parser,
 bool CmduPeer::send_cmdu(beerocks::net::Socket::Connection &connection,
                          ieee1905_1::CmduMessageTx &cmdu_tx)
 {
+    // Finalize CMDU
+    size_t cmdu_length = cmdu_tx.getMessageLength();
+    uint8_t *cmdu_data = cmdu_tx.getMessageBuff();
+    if (!cmdu_tx.finalize()) {
+        LOG(ERROR) << "Failed finalizing cmdu!";
+        LOG(DEBUG) << "hex_dump (" << cmdu_length << " bytes):" << std::endl
+                   << utils::dump_buffer(cmdu_data, cmdu_length);
+        return false;
+    }
+
     // Serialize CMDU into a byte array
-    sMacAddr dst_mac = beerocks::net::network_utils::ZERO_MAC;
-    sMacAddr src_mac = beerocks::net::network_utils::ZERO_MAC;
+    uint32_t iface_index = 0;
+    sMacAddr dst_mac     = beerocks::net::network_utils::ZERO_MAC;
+    sMacAddr src_mac     = beerocks::net::network_utils::ZERO_MAC;
     beerocks::net::BufferImpl<message::MESSAGE_BUFFER_LENGTH> buffer;
-    if (!m_cmdu_serializer->serialize_cmdu(dst_mac, src_mac, cmdu_tx, buffer)) {
+    if (!m_cmdu_serializer->serialize_cmdu(iface_index, dst_mac, src_mac, cmdu_tx, buffer)) {
+        LOG(ERROR) << "Failed to serialize CMDU! fd = " << connection.socket()->fd();
+        return false;
+    }
+
+    // Send data
+    return connection.send(buffer);
+}
+
+bool CmduPeer::forward_cmdu(beerocks::net::Socket::Connection &connection, uint32_t iface_index,
+                            const sMacAddr &dst_mac, const sMacAddr &src_mac,
+                            ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    // Swap bytes before forwarding, from host to network byte order.
+    cmdu_rx.swap();
+
+    // Use a shared_ptr with a custom deleter and the RAII programming idiom to emulate the
+    // `finally` block of a `try-finally` clause.
+    std::shared_ptr<int> finally(nullptr, [&cmdu_rx](int *p) {
+        // Swap bytes back from network to host byte order after forwarding.
+        cmdu_rx.swap();
+    });
+
+    // Serialize CMDU into a byte array
+    beerocks::net::BufferImpl<message::MESSAGE_BUFFER_LENGTH> buffer;
+    if (!m_cmdu_serializer->serialize_cmdu(iface_index, dst_mac, src_mac, cmdu_rx, buffer)) {
         LOG(ERROR) << "Failed to serialize CMDU! fd = " << connection.socket()->fd();
         return false;
     }
