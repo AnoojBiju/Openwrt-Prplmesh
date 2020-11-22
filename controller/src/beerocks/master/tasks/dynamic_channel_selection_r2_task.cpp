@@ -339,6 +339,7 @@ bool son::dynamic_channel_selection_r2_task::create_channel_scan_request_message
     //       once MID will be globally assigned and available to the controller.
     mid = cmdu_tx.getMessageId();
 
+    //TODO: Assuming perform_fresh_scan=0 for now => no operating_classes_list.
     channel_scan_request_tlv->perform_fresh_scan() = wfa_map::tlvProfile2ChannelScanRequest::
         ePerformFreshScan::RETURN_STORED_RESULTS_OF_LAST_SUCCESSFUL_SCAN;
 
@@ -356,30 +357,86 @@ bool son::dynamic_channel_selection_r2_task::add_radio_to_channel_scan_request_t
         return false;
     }
 
+    // Fill radio list object
+    // Set radio uid as radio mac address
+    radio_list->radio_uid() = radio_mac;
+
+    // If the "Perform Fresh Scan" bit is set to 0 (RETURN_STORED_RESULTS_OF_LAST_SUCCESSFUL_SCAN),
+    // Number of Operating Classes field shall be set to zero and the following fields shall be omitted:
+    // Operating Class, Number of Channels, Channel List.
+
+    // Fill Operating Class, Number of Channels and Channel List only if "Perform Fresh Scan" bit is set to 1.
+    if (channel_scan_request_tlv->perform_fresh_scan() ==
+        wfa_map::tlvProfile2ChannelScanRequest::ePerformFreshScan::
+            PERFORM_A_FRESH_SCAN_AND_RETURN_RESULTS) {
+        // Fill Operating Class and Channel List
+        if (!add_operating_classes_to_radio(radio_list, radio_mac)) {
+            return false;
+        };
+    }
+
     // Add radio list object to TLV
     if (!channel_scan_request_tlv->add_radio_list(radio_list)) {
         LOG(ERROR) << "add_radio_list() failed";
         return false;
     }
+    return true;
+}
 
-    // Fill radio list object
-    auto radio_i                = channel_scan_request_tlv->radio_list_length() - 1;
-    auto radio_list_entry_tuple = channel_scan_request_tlv->radio_list(radio_i);
-    if (!std::get<0>(radio_list_entry_tuple)) {
-        LOG(ERROR) << "failed to get radio_list entry for radio-index=" << radio_i;
+bool son::dynamic_channel_selection_r2_task::add_operating_classes_to_radio(
+    std::shared_ptr<wfa_map::cRadiosToScan> radio_list_entry, sMacAddr radio_mac)
+{
+    // Get parent agent mac from radio mac
+    auto radio_mac_str = tlvf::mac_to_string(radio_mac);
+    auto ire           = database.get_node_parent_ire(radio_mac_str);
+    if (ire.empty()) {
+        LOG(ERROR) << "Failed to get node_parent_ire!";
         return false;
     }
+    auto ire_mac = tlvf::mac_from_string(ire);
 
-    auto &radio_list_entry = std::get<1>(radio_list_entry_tuple);
+    // Get channel pool for this radio scan request
+    auto const &curr_channel_pool =
+        m_agents_status_map[ire_mac].radio_scans[radio_mac].curr_channel_pool;
 
-    // Set radio uid as radio mac address
-    radio_list_entry.radio_uid() = radio_mac;
+    // Convert channels list to operating_class: channels list
+    std::unordered_map<uint8_t, std::set<uint8_t>> operating_class_to_classes_map;
 
-    // If the "Perform Fresh Scan" bit is set to 0 (RETURN_STORED_RESULTS_OF_LAST_SUCCESSFUL_SCAN),
-    // Number of Operating Classes field shall be set to zero and the following fields shall be omitted:
-    // Operating Class, Number of Channels, Channel List
-    // TODO: add a real operating class list from channel_pool in DB
-    radio_list_entry.operating_classes_list_length() = 0;
+    for (auto const &ch : curr_channel_pool) {
+        beerocks::message::sWifiChannel channel;
+        channel.channel           = ch;
+        channel.channel_bandwidth = database.get_node_bw(tlvf::mac_to_string(radio_mac));
+        auto operating_class      = wireless_utils::get_operating_class_by_channel(channel);
+        operating_class_to_classes_map[operating_class].insert(ch);
+        LOG(INFO) << "ch:" << channel.channel << ", bw:" << channel.channel_bandwidth
+                  << " => op_class:" << operating_class;
+    }
 
+    for (auto const &op_class : operating_class_to_classes_map) {
+
+        // Create radio list (cRadiosToScan) object
+        auto operating_classes_list = radio_list_entry->create_operating_classes_list();
+        if (!operating_classes_list) {
+            LOG(ERROR) << "create_operating_classes_list() failed";
+            return false;
+        }
+
+        // Fill operating_classes list object
+        // Set operating_classes uid as operating_classes mac address
+        operating_classes_list->operating_class() = op_class.first;
+
+        // Fill channels list field
+        std::vector<uint8_t> ch_list(op_class.second.begin(), op_class.second.end());
+        if (!operating_classes_list->set_channel_list(ch_list.data(), ch_list.size())) {
+            LOG(ERROR) << "set_channel_list() failed";
+            return false;
+        }
+
+        // Add operating_classes list object to TLV
+        if (!radio_list_entry->add_operating_classes_list(operating_classes_list)) {
+            LOG(ERROR) << "add_operating_classes_list() failed";
+            return false;
+        }
+    }
     return true;
 }
