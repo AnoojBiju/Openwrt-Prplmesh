@@ -246,34 +246,17 @@ std::string Configuration::get_vap_value(const std::string &vap, const std::stri
     return line_iter->substr(line_iter->find('=') + 1);
 }
 
-void Configuration::comment_vap(const std::string &vap)
+bool Configuration::disable_vap(const std::string &vap)
 {
-    // search for the requested vap
-    auto find_vap = get_vap(std::string(__FUNCTION__), vap);
-    if (!std::get<0>(find_vap)) {
-        return;
+    if (!set_create_vap_value(vap, "start_disabled", "1")) {
+        LOG(ERROR) << "Unable to set start_disabled on vap '" << vap << "'.";
+        return false;
     }
-    const auto &existing_vap = std::get<1>(find_vap);
-
-    std::for_each(existing_vap->begin(), existing_vap->end(),
-                  [](std::string &line) { line.insert(0, 1, '#'); });
-}
-
-void Configuration::uncomment_vap(const std::string &vap)
-{
-    // search for the requested vap
-    auto find_vap = get_vap(std::string(__FUNCTION__), vap);
-    if (!std::get<0>(find_vap)) {
-        return;
+    if (!set_create_vap_value(vap, "ssid", "")) {
+        LOG(ERROR) << "Unable to remove ssid on vap '" << vap << "'.";
+        return false;
     }
-    const auto &existing_vap = std::get<1>(find_vap);
-
-    std::for_each(existing_vap->begin(), existing_vap->end(), [](std::string &line) {
-        auto end_comment = line.find_first_not_of('#');
-        if (std::string::npos != end_comment) {
-            line.erase(0, end_comment);
-        };
-    });
+    return true;
 }
 
 const std::string &Configuration::get_last_message() const { return m_last_message; }

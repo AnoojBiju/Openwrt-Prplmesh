@@ -309,12 +309,6 @@ bool ap_wlan_hal_nl80211::update_vap_credentials(
     std::list<son::wireless_utils::sBssInfoConf> &bss_info_conf_list,
     const std::string &backhaul_wps_ssid, const std::string &backhaul_wps_passphrase)
 {
-    if (0 == bss_info_conf_list.size()) {
-        LOG(DEBUG) << "given bss conf list size is zero, no changes to existing hostapd "
-                      "configuration are applied";
-        return true;
-    }
-
     // Load hostapd config for the radio
     prplmesh::hostapd::Configuration conf = load_hostapd_config(m_radio_info.iface_name);
     if (!conf) {
@@ -556,14 +550,13 @@ bool ap_wlan_hal_nl80211::update_vap_credentials(
                 conf.set_create_vap_value(vap, "wpa_disable_eapol_key_retries",
                                           wpa_disable_eapol_key_retries);
 
-                // finally enable the vap (remove any previously set start_disabled and uncomment)
+                // finally enable the vap (remove any previously set start_disabled)
                 conf.set_create_vap_value(vap, "start_disabled", "");
-                conf.uncomment_vap(vap);
-
             } else {
                 // no more data in the input bss-conf list
                 // disable the rest of the vaps
-                conf.comment_vap(vap);
+                LOG(DEBUG) << "Disabling VAP " << vap;
+                conf.disable_vap(vap);
             }
         };
 
