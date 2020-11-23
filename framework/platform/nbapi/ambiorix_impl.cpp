@@ -10,7 +10,9 @@
 namespace beerocks {
 namespace nbapi {
 
-AmbiorixImpl::AmbiorixImpl(std::shared_ptr<EventLoop> event_loop) : m_event_loop(event_loop)
+AmbiorixImpl::AmbiorixImpl(std::shared_ptr<EventLoop> event_loop,
+                           const std::vector<sActionsCallback> &on_action)
+    : m_event_loop(event_loop), m_on_action_handlers(on_action)
 {
     LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
     amxo_parser_init(&m_parser);
@@ -69,6 +71,16 @@ bool AmbiorixImpl::load_datamodel(const std::string &datamodel_path)
     if (!root_obj) {
         LOG(ERROR) << "Failed to get datamodel root object.";
         return false;
+    }
+
+    for (const auto &action : m_on_action_handlers) {
+        auto ret = amxo_resolver_ftab_add(&m_parser, action.action_name.c_str(),
+                                          reinterpret_cast<amxo_fn_ptr_t>(action.callback));
+        if (ret != 0) {
+            LOG(WARNING) << "Failed to add " << action.action_name;
+            continue;
+        }
+        LOG(DEBUG) << "Added " << action.action_name << " to the functions table.";
     }
 
     // Disable eventing while loading odls
@@ -279,19 +291,19 @@ amxd_object_t *AmbiorixImpl::prepare_transaction(const std::string &relative_pat
 
     auto status = amxd_trans_init(&transaction);
     if (status != amxd_status_ok) {
-        LOG(ERROR) << "Couldn't inititalize transaction, status: " << status;
+        LOG(ERROR) << "Couldn't inititalize transaction, status: " << amxd_status_string(status);
         return nullptr;
     }
 
     status = amxd_trans_set_attr(&transaction, amxd_tattr_change_ro, true);
     if (status != amxd_status_ok) {
-        LOG(ERROR) << "Couldn't set transaction attributes, status: " << status;
+        LOG(ERROR) << "Couldn't set transaction attributes, status: " << amxd_status_string(status);
         return nullptr;
     }
 
     status = amxd_trans_select_object(&transaction, object);
     if (status != amxd_status_ok) {
-        LOG(ERROR) << "Couldn't select transaction object, status: " << status;
+        LOG(ERROR) << "Couldn't select transaction object, status: " << amxd_status_string(status);
         return nullptr;
     }
 
@@ -303,7 +315,7 @@ bool AmbiorixImpl::apply_transaction(amxd_trans_t &transaction)
     auto ret    = true;
     auto status = amxd_trans_apply(&transaction, &m_datamodel);
     if (status != amxd_status_ok) {
-        LOG(ERROR) << "Couldn't apply transaction object, status: " << status;
+        LOG(ERROR) << "Couldn't apply transaction object, status: " << amxd_status_string(status);
         ret = false;
     }
 
@@ -493,7 +505,8 @@ uint32_t AmbiorixImpl::add_instance(const std::string &relative_path)
 
     auto status = amxd_trans_add_inst(&transaction, 0, NULL);
     if (status != amxd_status_ok) {
-        LOG(ERROR) << "Failed to add instance for: " << relative_path << " status: " << status;
+        LOG(ERROR) << "Failed to add instance for: " << relative_path
+                   << " status: " << amxd_status_string(status);
     }
 
     if (!apply_transaction(transaction)) {

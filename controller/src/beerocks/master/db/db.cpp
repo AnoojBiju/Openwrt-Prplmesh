@@ -2193,6 +2193,18 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
         return false;
     }
 
+    /*
+        Set value for LastChange variable - it is creation time, when someone will
+        try to get data from this parameter action method will calculate time in seconds
+        from creation moment.
+        Example: Controller.Network.Device.1.Radio.1.BSS.1.LastChange
+    */
+    uint64_t creation_time = time(NULL);
+    if (!m_ambiorix_datamodel->set(bss_path, "LastChange", creation_time)) {
+        LOG(ERROR) << "Failed to set " << bss_path << "LastChange";
+        return false;
+    }
+
     auto timestamp = m_ambiorix_datamodel->get_datamodel_time_format();
     if (timestamp.empty()) {
         LOG(ERROR) << "Failed to get Date and Time in RFC 3339 format.";
