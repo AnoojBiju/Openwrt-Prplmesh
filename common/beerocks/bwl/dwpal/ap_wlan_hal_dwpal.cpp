@@ -931,7 +931,7 @@ bool ap_wlan_hal_dwpal::sta_deauth(int8_t vap_id, const std::string &mac, uint32
 
 bool ap_wlan_hal_dwpal::sta_bss_steer(const std::string &mac, const std::string &bssid,
                                       int oper_class, int chan, int disassoc_timer_btt,
-                                      int valid_int_btt)
+                                      int valid_int_btt, int reason)
 {
 
     LOG(TRACE) << __func__ << " mac: " << mac << ", BSS: " << bssid
@@ -945,7 +945,8 @@ bool ap_wlan_hal_dwpal::sta_bss_steer(const std::string &mac, const std::string 
         mac
 
         // Transition management parameters
-        + " dialog_token=" + "0" + " pref=" + "1" + " abridged=" + "1";
+        + " dialog_token=" + "0" + " pref=" + "1" + " abridged=" + "1" +
+        " mbo=" + std::to_string(reason);
 
     // Divide disassoc_timer by 100, because the hostapd expects it to be in beacon interval
     // which is 100ms.

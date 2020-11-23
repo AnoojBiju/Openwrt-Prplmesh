@@ -46,6 +46,7 @@
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 #include <tlvf/wfa_map/tlvProfile2ApRadioAdvancedCapabilities.h>
+#include <tlvf/wfa_map/tlvProfile2SteeringRequest.h>
 #include <tlvf/wfa_map/tlvSteeringBTMReport.h>
 #include <tlvf/wfa_map/tlvSteeringRequest.h>
 #include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
@@ -4621,15 +4622,18 @@ bool slave_thread::handle_client_steering_request(Socket *sd, ieee1905_1::CmduMe
 {
     const auto mid = cmdu_rx.getMessageId();
 
-    auto steering_request_tlv = cmdu_rx.getClass<wfa_map::tlvSteeringRequest>();
-    if (!steering_request_tlv) {
+    auto steering_request_tlv          = cmdu_rx.getClass<wfa_map::tlvSteeringRequest>();
+    auto steering_request_tlv_profile2 = cmdu_rx.getClass<wfa_map::tlvProfile2SteeringRequest>();
+    if (!steering_request_tlv && !steering_request_tlv_profile2) {
         LOG(ERROR) << "addClass wfa_map::tlvSteeringRequest failed";
         return false;
     }
 
     LOG(DEBUG) << "Received CLIENT_STEERING_REQUEST_MESSAGE , mid=" << std::hex << int(mid);
 
-    auto request_mode = steering_request_tlv->request_flags().request_mode;
+    auto request_mode = steering_request_tlv_profile2
+                            ? steering_request_tlv_profile2->request_flags().request_mode
+                            : steering_request_tlv->request_flags().request_mode;
     LOG(DEBUG) << "request_mode: " << std::hex << int(request_mode);
 
     if (request_mode ==
@@ -4644,17 +4648,34 @@ bool slave_thread::handle_client_steering_request(Socket *sd, ieee1905_1::CmduMe
             return false;
         }
 
-        auto bssid_list                 = steering_request_tlv->target_bssid_list(0);
-        request_out->params().cur_bssid = steering_request_tlv->bssid();
-        request_out->params().mac       = std::get<1>(steering_request_tlv->sta_list(0));
-        request_out->params().disassoc_timer_ms =
-            steering_request_tlv->btm_disassociation_timer_ms();
-        request_out->params().target.bssid = std::get<1>(bssid_list).target_bssid;
-        request_out->params().target.operating_class =
-            std::get<1>(bssid_list).target_bss_operating_class;
-        request_out->params().target.channel = std::get<1>(bssid_list).target_bss_channel_number;
-        request_out->params().disassoc_imminent =
-            steering_request_tlv->request_flags().btm_disassociation_imminent_bit;
+        if (steering_request_tlv_profile2) {
+            auto bssid_list                 = steering_request_tlv_profile2->target_bssid_list(0);
+            request_out->params().cur_bssid = steering_request_tlv_profile2->bssid();
+            request_out->params().mac = std::get<1>(steering_request_tlv_profile2->sta_list(0));
+            request_out->params().disassoc_timer_ms =
+                steering_request_tlv_profile2->btm_disassociation_timer_ms();
+            request_out->params().target.bssid = std::get<1>(bssid_list).target_bssid;
+            request_out->params().target.operating_class =
+                std::get<1>(bssid_list).target_bss_operating_class;
+            request_out->params().target.channel =
+                std::get<1>(bssid_list).target_bss_channel_number;
+            request_out->params().disassoc_imminent =
+                steering_request_tlv_profile2->request_flags().btm_disassociation_imminent_bit;
+            request_out->params().target.reason = std::get<1>(bssid_list).target_bss_reason_code;
+        } else {
+            auto bssid_list                 = steering_request_tlv->target_bssid_list(0);
+            request_out->params().cur_bssid = steering_request_tlv->bssid();
+            request_out->params().mac       = std::get<1>(steering_request_tlv->sta_list(0));
+            request_out->params().disassoc_timer_ms =
+                steering_request_tlv->btm_disassociation_timer_ms();
+            request_out->params().target.bssid = std::get<1>(bssid_list).target_bssid;
+            request_out->params().target.operating_class =
+                std::get<1>(bssid_list).target_bss_operating_class;
+            request_out->params().target.channel =
+                std::get<1>(bssid_list).target_bss_channel_number;
+            request_out->params().disassoc_imminent =
+                steering_request_tlv->request_flags().btm_disassociation_imminent_bit;
+        }
 
         message_com::send_cmdu(ap_manager_socket, cmdu_tx);
         return true;
