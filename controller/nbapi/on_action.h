@@ -30,13 +30,23 @@
 
 #include <chrono>
 #include <ctime>
+#include <easylogging++.h>
+
+#include "../src/beerocks/master/db/db.h"
 
 namespace prplmesh {
 namespace controller {
+namespace actions {
 
 std::vector<beerocks::nbapi::sActionsCallback> get_actions_callback_list(void);
 std::vector<beerocks::nbapi::sEvents> get_events_list(void);
+std::vector<beerocks::nbapi::sFunctions> get_func_list(void);
+beerocks::nbapi::ambiorix_func_ptr get_access_point_commit(void);
 
+extern son::db *g_database;
+extern amxd_dm_t *g_data_model;
+
+} // namespace actions
 } // namespace controller
 } // namespace prplmesh
 #endif // ON_ACTION_H
