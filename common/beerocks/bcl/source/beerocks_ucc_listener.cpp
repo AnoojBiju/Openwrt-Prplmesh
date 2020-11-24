@@ -661,10 +661,8 @@ void beerocks_ucc_listener::handle_wfa_ca_command(int fd, const std::string &com
         }
 
         if (params.find("program") != params.end()) {
-            if (params["program"] != "map") {
-                err_string = "invalid param value '" + params["map"] +
-                             "' for param name 'program', accepted value can be only 'map'";
-                LOG(ERROR) << err_string;
+            if (!validate_program_parameter(params["program"], err_string)) {
+                // errors are logged by validate_program_parameter
                 reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
                 break;
             }
@@ -792,10 +790,8 @@ void beerocks_ucc_listener::handle_wfa_ca_command(int fd, const std::string &com
 
         // Input check
         if (params.find("program") != params.end()) {
-            if (params["program"] != "map") {
-                err_string = "invalid param value '" + params["map"] +
-                             "' for param name 'program', accepted value can be only 'map'";
-                LOG(ERROR) << err_string;
+            if (!validate_program_parameter(params["program"], err_string)) {
+                // errors are logged by validate_program_parameter
                 reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
                 break;
             }
