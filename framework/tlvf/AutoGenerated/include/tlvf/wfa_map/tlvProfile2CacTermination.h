@@ -34,7 +34,7 @@ class tlvProfile2CacTermination : public BaseClass
         explicit tlvProfile2CacTermination(std::shared_ptr<BaseClass> base, bool parse = false);
         ~tlvProfile2CacTermination();
 
-        typedef struct sCacRadio {
+        typedef struct sCacTerminationRadio {
             sMacAddr radio_uid;
             uint8_t operating_class;
             uint8_t channel;
@@ -44,12 +44,12 @@ class tlvProfile2CacTermination : public BaseClass
             void struct_init(){
                 radio_uid.struct_init();
             }
-        } __attribute__((packed)) sCacRadio;
+        } __attribute__((packed)) sCacTerminationRadio;
         
         const eTlvTypeMap& type();
         const uint16_t& length();
         uint8_t& number_of_cac_radios();
-        std::tuple<bool, sCacRadio&> cac_radios(size_t idx);
+        std::tuple<bool, sCacTerminationRadio&> cac_radios(size_t idx);
         bool alloc_cac_radios(size_t count = 1);
         void class_swap() override;
         bool finalize() override;
@@ -60,7 +60,7 @@ class tlvProfile2CacTermination : public BaseClass
         eTlvTypeMap* m_type = nullptr;
         uint16_t* m_length = nullptr;
         uint8_t* m_number_of_cac_radios = nullptr;
-        sCacRadio* m_cac_radios = nullptr;
+        sCacTerminationRadio* m_cac_radios = nullptr;
         size_t m_cac_radios_idx__ = 0;
         int m_lock_order_counter__ = 0;
 };

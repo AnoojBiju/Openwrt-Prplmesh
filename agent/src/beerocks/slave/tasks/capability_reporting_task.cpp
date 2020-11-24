@@ -9,7 +9,6 @@
 #include "capability_reporting_task.h"
 #include "../backhaul_manager/backhaul_manager_thread.h"
 #include "../tlvf_utils.h"
-
 #include <tlvf/wfa_map/tlvApCapability.h>
 #include <tlvf/wfa_map/tlvApHeCapabilities.h>
 #include <tlvf/wfa_map/tlvApHtCapabilities.h>
@@ -18,6 +17,7 @@
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
+#include <tlvf/wfa_map/tlvProfile2CacCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2MetricCollectionInterval.h>
 
 namespace beerocks {
@@ -190,7 +190,7 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
         add_channel_scan_capabilities(slave->hostap_iface, *channel_scan_capabilities_tlv);
     }
 
-    // 2.1 radio independent tlvs
+    // 2.2 radio independent tlvs
 
     // profile 2 ap capability
     auto profile2_ap_capability_tlv = m_cmdu_tx.addClass<wfa_map::tlvProfile2ApCapability>();
@@ -207,6 +207,12 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
         m_cmdu_tx.addClass<wfa_map::tlvProfile2MetricCollectionInterval>();
     if (!profile2_meteric_collection_interval_tlv) {
         LOG(ERROR) << "error creating TLV_PROFILE2_METERIC_COLLECTION_INTERVAL";
+        return;
+    }
+
+    // 3. tlvs added by external sources
+    if (!add_cac_capabilities_tlv()) {
+        LOG(ERROR) << "error filling cac capabilities tlv";
         return;
     }
 
@@ -348,6 +354,82 @@ bool CapabilityReportingTask::add_channel_scan_capabilities(
         return false;
     }
 
+    return true;
+}
+
+bool CapabilityReportingTask::add_cac_capabilities_tlv()
+{
+    auto cac_capabilities_tlv = m_cmdu_tx.addClass<wfa_map::tlvProfile2CacCapabilities>();
+    if (!cac_capabilities_tlv) {
+        LOG(ERROR) << "addClass wfa_map::tlvProfile2CacCapabilities has failed";
+        return false;
+    }
+
+    // country code
+    const auto &country_code               = m_cac_capabilities.get_country_code();
+    *cac_capabilities_tlv->country_code(0) = country_code[0];
+    *cac_capabilities_tlv->country_code(1) = country_code[1];
+
+    // get all cac radios
+    auto cac_radios = m_cac_capabilities.get_cac_radios();
+
+    // fill in the tlv
+
+    // for each radio
+    for (const auto &radio : cac_radios) {
+        // read cac methods for the radio
+        auto cac_radio_methods = beerocks::get_radio_cac_methods(m_cac_capabilities, radio);
+
+        // create tlv radios
+        auto radios_tlv = cac_capabilities_tlv->create_cac_radios();
+        if (!radios_tlv) {
+            LOG(ERROR) << "unable to create cac radios";
+            return false;
+        }
+
+        radios_tlv->radio_uid() = radio;
+
+        // create cac type tlv for each CAC method
+        for (const auto &cac_method : cac_radio_methods.second) {
+            auto cac_type_tlv = radios_tlv->create_cac_types();
+            if (!cac_type_tlv) {
+                LOG(ERROR) << "unable to create cac types";
+                return false;
+            }
+            cac_type_tlv->cac_method() = static_cast<wfa_map::cCacTypes::eCacMethod>(cac_method);
+
+            uint32_t duration = m_cac_capabilities.get_cac_completion_duration(radio, cac_method);
+            memcpy(cac_type_tlv->duration(), &duration, 3);
+
+            // operating classes
+            const CacCapabilities::CacOperatingClasses &cac_operating_classes =
+                m_cac_capabilities.get_cac_operating_classes(radio, cac_method);
+
+            // for each {operating-class,[channels]}
+            for (auto &operating_class_channels : cac_operating_classes) {
+                auto operating_classes_tlv = cac_type_tlv->create_operating_classes();
+                if (!operating_classes_tlv) {
+                    LOG(ERROR) << "unable to create cac operating classes";
+                    return false;
+                }
+                operating_classes_tlv->operating_class() = operating_class_channels.first;
+                auto channels_tlv =
+                    operating_classes_tlv->alloc_channels(operating_class_channels.second.size());
+                if (!channels_tlv) {
+                    LOG(ERROR) << "unable to create cac channles";
+                    return false;
+                }
+                for (size_t i = 0; i < operating_class_channels.second.size(); ++i) {
+                    *operating_classes_tlv->channels(i) = operating_class_channels.second[i];
+                }
+
+                // add to cac type
+                cac_type_tlv->add_operating_classes(operating_classes_tlv);
+            }
+        }
+        // add the cac type back to the radios tlv
+        cac_capabilities_tlv->add_cac_radios(radios_tlv);
+    }
     return true;
 }
 

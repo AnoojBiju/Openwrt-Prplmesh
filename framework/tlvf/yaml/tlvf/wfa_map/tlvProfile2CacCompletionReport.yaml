@@ -16,10 +16,10 @@ tlvProfile2CacCompletionReport:
     _type: uint8_t
     _length_var: True
   cac_radios:                                                   # line 12
-    _type: cCacRadio
+    _type: cCacCompletionReportRadio
     _length: [ number_of_cac_radios ]
 
-cCacRadio:
+cCacCompletionReportRadio:
   _type: class
   radio_uid: sMacAddr               # line 4
   operating_class: uint8_t          # line 5
@@ -30,10 +30,10 @@ cCacRadio:
     _type: uint8_t
     _length_var: True
   detected_pairs:                                             # line 11 
-    _type: sDetectedPairs
+    _type: sCacDetectedPair
     _length: [ number_of_detected_pairs ]
   
-sDetectedPairs:
+sCacDetectedPair:
   _type: struct
   operating_class_detected: uint8_t     # line 9
   channel_detected: uint8_t             # line 10

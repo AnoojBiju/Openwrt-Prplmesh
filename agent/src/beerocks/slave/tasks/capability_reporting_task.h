@@ -10,8 +10,8 @@
 #define _CAPABILITY_REPORTING_TASK_H_
 
 #include "../agent_db.h"
+#include "../cac_capabilities_database.h"
 #include "task.h"
-
 #include <tlvf/CmduMessageTx.h>
 #include <tlvf/wfa_map/tlvChannelScanCapabilities.h>
 
@@ -19,6 +19,7 @@ namespace beerocks {
 
 // Forward decleration for backhaul_manager context saving
 class backhaul_manager;
+class CacTask;
 
 class CapabilityReportingTask : public Task {
 public:
@@ -30,6 +31,7 @@ public:
 private:
     backhaul_manager &m_btl_ctx;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
+    beerocks::CacCapabilitiesDatabase m_cac_capabilities;
 
     void handle_client_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx,
                                         const sMacAddr &src_mac);
@@ -87,6 +89,14 @@ private:
     bool add_channel_scan_capabilities(
         const std::string &iface_name,
         wfa_map::tlvChannelScanCapabilities &channel_scan_capabilities_tlv);
+
+    /**
+     * @brief add cac-capabilities to the given cmdu_tx
+     * 
+     * @param cmdu_tx CMDU object to add the cac capabilities to.
+     * @return true if the tlv was added, otherwise false.
+     */
+    bool add_cac_capabilities_tlv();
 };
 
 } // namespace beerocks

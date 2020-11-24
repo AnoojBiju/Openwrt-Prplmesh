@@ -250,6 +250,13 @@ int cfg_get_wifi_params(const char iface[BPL_IFNAME_LEN], struct BPL_WLAN_PARAMS
     wlan_params->channel = 0;
     cfg_get_channel(iface, &wlan_params->channel);
 
+    // country code
+    char alpha_2[MAX_UCI_BUF_LEN] = {0};
+    cfg_uci_get_wireless_from_ifname(TYPE_RADIO, iface, "country", alpha_2);
+
+    wlan_params->country_code[0] = alpha_2[0];
+    wlan_params->country_code[1] = alpha_2[1];
+
     return RETURN_OK;
 }
 

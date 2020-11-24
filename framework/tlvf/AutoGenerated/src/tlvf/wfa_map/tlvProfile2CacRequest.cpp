@@ -37,7 +37,7 @@ uint8_t& tlvProfile2CacRequest::number_of_cac_radios() {
     return (uint8_t&)(*m_number_of_cac_radios);
 }
 
-std::tuple<bool, tlvProfile2CacRequest::sCacRadio&> tlvProfile2CacRequest::cac_radios(size_t idx) {
+std::tuple<bool, tlvProfile2CacRequest::sCacRequestRadio&> tlvProfile2CacRequest::cac_radios(size_t idx) {
     bool ret_success = ( (m_cac_radios_idx__ > 0) && (m_cac_radios_idx__ > idx) );
     size_t ret_idx = ret_success ? idx : 0;
     if (!ret_success) {
@@ -51,7 +51,7 @@ bool tlvProfile2CacRequest::alloc_cac_radios(size_t count) {
         TLVF_LOG(ERROR) << "Out of order allocation for variable length list cac_radios, abort!";
         return false;
     }
-    size_t len = sizeof(sCacRadio) * count;
+    size_t len = sizeof(sCacRequestRadio) * count;
     if(getBuffRemainingBytes() < len )  {
         TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
         return false;
@@ -146,11 +146,11 @@ bool tlvProfile2CacRequest::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_cac_radios = (sCacRadio*)m_buff_ptr__;
+    m_cac_radios = (sCacRequestRadio*)m_buff_ptr__;
     uint8_t number_of_cac_radios = *m_number_of_cac_radios;
     m_cac_radios_idx__ = number_of_cac_radios;
-    if (!buffPtrIncrementSafe(sizeof(sCacRadio) * (number_of_cac_radios))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sCacRadio) * (number_of_cac_radios) << ") Failed!";
+    if (!buffPtrIncrementSafe(sizeof(sCacRequestRadio) * (number_of_cac_radios))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sCacRequestRadio) * (number_of_cac_radios) << ") Failed!";
         return false;
     }
     if (m_parse__) { class_swap(); }

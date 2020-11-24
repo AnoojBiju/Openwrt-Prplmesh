@@ -33,11 +33,11 @@ const uint16_t& tlvProfile2CacStatusReport::length() {
     return (const uint16_t&)(*m_length);
 }
 
-uint8_t& tlvProfile2CacStatusReport::number_of_available_channles() {
-    return (uint8_t&)(*m_number_of_available_channles);
+uint8_t& tlvProfile2CacStatusReport::number_of_available_channels() {
+    return (uint8_t&)(*m_number_of_available_channels);
 }
 
-std::tuple<bool, tlvProfile2CacStatusReport::sAvailableChannles&> tlvProfile2CacStatusReport::available_channels(size_t idx) {
+std::tuple<bool, tlvProfile2CacStatusReport::sAvailableChannels&> tlvProfile2CacStatusReport::available_channels(size_t idx) {
     bool ret_success = ( (m_available_channels_idx__ > 0) && (m_available_channels_idx__ > idx) );
     size_t ret_idx = ret_success ? idx : 0;
     if (!ret_success) {
@@ -51,13 +51,13 @@ bool tlvProfile2CacStatusReport::alloc_available_channels(size_t count) {
         TLVF_LOG(ERROR) << "Out of order allocation for variable length list available_channels, abort!";
         return false;
     }
-    size_t len = sizeof(sAvailableChannles) * count;
+    size_t len = sizeof(sAvailableChannels) * count;
     if(getBuffRemainingBytes() < len )  {
         TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
         return false;
     }
     m_lock_order_counter__ = 0;
-    uint8_t *src = (uint8_t *)&m_available_channels[*m_number_of_available_channles];
+    uint8_t *src = (uint8_t *)&m_available_channels[*m_number_of_available_channels];
     uint8_t *dst = src + len;
     if (!m_parse__) {
         size_t move_length = getBuffRemainingBytes(src) - len;
@@ -68,7 +68,7 @@ bool tlvProfile2CacStatusReport::alloc_available_channels(size_t count) {
     m_number_of_active_cac_pairs = (uint8_t *)((uint8_t *)(m_number_of_active_cac_pairs) + len);
     m_active_cac_pairs = (sActiveCacPairs *)((uint8_t *)(m_active_cac_pairs) + len);
     m_available_channels_idx__ += count;
-    *m_number_of_available_channles += count;
+    *m_number_of_available_channels += count;
     if (!buffPtrIncrementSafe(len)) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
         return false;
@@ -215,7 +215,7 @@ size_t tlvProfile2CacStatusReport::get_initial_size()
     size_t class_size = 0;
     class_size += sizeof(eTlvTypeMap); // type
     class_size += sizeof(uint16_t); // length
-    class_size += sizeof(uint8_t); // number_of_available_channles
+    class_size += sizeof(uint8_t); // number_of_available_channels
     class_size += sizeof(uint8_t); // number_of_detected_pairs
     class_size += sizeof(uint8_t); // number_of_active_cac_pairs
     return class_size;
@@ -239,18 +239,18 @@ bool tlvProfile2CacStatusReport::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
-    m_number_of_available_channles = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (!m_parse__) *m_number_of_available_channles = 0;
+    m_number_of_available_channels = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!m_parse__) *m_number_of_available_channels = 0;
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_available_channels = (sAvailableChannles*)m_buff_ptr__;
-    uint8_t number_of_available_channles = *m_number_of_available_channles;
-    m_available_channels_idx__ = number_of_available_channles;
-    if (!buffPtrIncrementSafe(sizeof(sAvailableChannles) * (number_of_available_channles))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sAvailableChannles) * (number_of_available_channles) << ") Failed!";
+    m_available_channels = (sAvailableChannels*)m_buff_ptr__;
+    uint8_t number_of_available_channels = *m_number_of_available_channels;
+    m_available_channels_idx__ = number_of_available_channels;
+    if (!buffPtrIncrementSafe(sizeof(sAvailableChannels) * (number_of_available_channels))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sAvailableChannels) * (number_of_available_channels) << ") Failed!";
         return false;
     }
     m_number_of_detected_pairs = reinterpret_cast<uint8_t*>(m_buff_ptr__);

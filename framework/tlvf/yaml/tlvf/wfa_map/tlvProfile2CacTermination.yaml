@@ -16,10 +16,10 @@ tlvProfile2CacTermination:
     _type: uint8_t
     _length_var: True
   cac_radios:                                                   # line 7
-    _type: sCacRadio
+    _type: sCacTerminationRadio
     _length: [ number_of_cac_radios ]
 
-sCacRadio:
+sCacTerminationRadio:
   _type: struct
   radio_uid: sMacAddr           # line 4
   operating_class: uint8_t      # line 5

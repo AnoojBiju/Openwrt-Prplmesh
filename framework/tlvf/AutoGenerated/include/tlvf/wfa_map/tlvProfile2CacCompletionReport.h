@@ -27,7 +27,7 @@
 
 namespace wfa_map {
 
-class cCacRadio;
+class cCacCompletionReportRadio;
 
 class tlvProfile2CacCompletionReport : public BaseClass
 {
@@ -39,9 +39,9 @@ class tlvProfile2CacCompletionReport : public BaseClass
         const eTlvTypeMap& type();
         const uint16_t& length();
         uint8_t& number_of_cac_radios();
-        std::tuple<bool, cCacRadio&> cac_radios(size_t idx);
-        std::shared_ptr<cCacRadio> create_cac_radios();
-        bool add_cac_radios(std::shared_ptr<cCacRadio> ptr);
+        std::tuple<bool, cCacCompletionReportRadio&> cac_radios(size_t idx);
+        std::shared_ptr<cCacCompletionReportRadio> create_cac_radios();
+        bool add_cac_radios(std::shared_ptr<cCacCompletionReportRadio> ptr);
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -51,28 +51,28 @@ class tlvProfile2CacCompletionReport : public BaseClass
         eTlvTypeMap* m_type = nullptr;
         uint16_t* m_length = nullptr;
         uint8_t* m_number_of_cac_radios = nullptr;
-        cCacRadio* m_cac_radios = nullptr;
+        cCacCompletionReportRadio* m_cac_radios = nullptr;
         size_t m_cac_radios_idx__ = 0;
-        std::vector<std::shared_ptr<cCacRadio>> m_cac_radios_vector;
+        std::vector<std::shared_ptr<cCacCompletionReportRadio>> m_cac_radios_vector;
         bool m_lock_allocation__ = false;
         int m_lock_order_counter__ = 0;
 };
 
-class cCacRadio : public BaseClass
+class cCacCompletionReportRadio : public BaseClass
 {
     public:
-        cCacRadio(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cCacRadio(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cCacRadio();
+        cCacCompletionReportRadio(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cCacCompletionReportRadio(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cCacCompletionReportRadio();
 
-        typedef struct sDetectedPairs {
+        typedef struct sCacDetectedPair {
             uint8_t operating_class_detected;
             uint8_t channel_detected;
             void struct_swap(){
             }
             void struct_init(){
             }
-        } __attribute__((packed)) sDetectedPairs;
+        } __attribute__((packed)) sCacDetectedPair;
         
         enum eCompletionStatus: uint8_t {
             CAC_COMPLETION_SUCCESSFUL = 0x0,
@@ -88,7 +88,7 @@ class cCacRadio : public BaseClass
         uint8_t& channel();
         eCompletionStatus& cac_completion_status();
         uint8_t& number_of_detected_pairs();
-        std::tuple<bool, sDetectedPairs&> detected_pairs(size_t idx);
+        std::tuple<bool, sCacDetectedPair&> detected_pairs(size_t idx);
         bool alloc_detected_pairs(size_t count = 1);
         void class_swap() override;
         bool finalize() override;
@@ -101,7 +101,7 @@ class cCacRadio : public BaseClass
         uint8_t* m_channel = nullptr;
         eCompletionStatus* m_cac_completion_status = nullptr;
         uint8_t* m_number_of_detected_pairs = nullptr;
-        sDetectedPairs* m_detected_pairs = nullptr;
+        sCacDetectedPair* m_detected_pairs = nullptr;
         size_t m_detected_pairs_idx__ = 0;
         int m_lock_order_counter__ = 0;
 };

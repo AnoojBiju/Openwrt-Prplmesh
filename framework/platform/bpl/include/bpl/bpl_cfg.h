@@ -66,6 +66,7 @@ namespace bpl {
 #define BPL_USER_PASS_LEN (64 + 1)           /* Maximal length of USER_PASS */
 #define BPL_SERIAL_NUMBER_LEN (64 + 1)       /* Maximal length of SERIAL_NUMBER */
 #define BPL_LOAD_STEER_ON_VAPS_LEN (127 + 1) /* Maximal length of LOAD_STEER_ON_VAPS string */
+#define BPL_COUNTRY_CODE_LEN (2 + 1)         /* Maximal length of "2 letters country code" */
 
 /* Platform notification types */
 #define BPL_NOTIF_VER_MISMATCH 1 /* Version mismatch detected */
@@ -199,6 +200,9 @@ struct BPL_WLAN_PARAMS {
 
     /* Sub band DFS channel enable */
     bool sub_band_dfs;
+
+    /* country code */
+    char country_code[BPL_COUNTRY_CODE_LEN];
 };
 
 /**

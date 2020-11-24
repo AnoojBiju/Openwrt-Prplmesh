@@ -1735,6 +1735,9 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             radio->front.supported_channels.begin(), &std::get<1>(tuple_supported_channels),
             &std::get<1>(tuple_supported_channels) + notification->supported_channels_size());
 
+        // cac
+        save_cac_capabilities_params_to_db();
+
         break;
     }
     case beerocks_message::ACTION_APMANAGER_HOSTAP_SET_RESTRICTED_FAILSAFE_CHANNEL_RESPONSE: {
@@ -5253,4 +5256,46 @@ void slave_thread::save_channel_params_to_db(beerocks_message::sApChannelSwitch 
     radio->channel_ext_above_primary = params.channel_ext_above_primary;
     radio->vht_center_frequency      = params.vht_center_frequency;
     radio->tx_power_dB               = params.tx_power;
+}
+
+void slave_thread::save_cac_capabilities_params_to_db()
+{
+    auto db    = AgentDB::get();
+    auto radio = db->radio(m_fronthaul_iface);
+    if (!radio) {
+        LOG(DEBUG) << "Radio of interface " << m_fronthaul_iface << " does not exist on the db";
+        return;
+    }
+    if (son::wireless_utils::is_frequency_band_5ghz(radio->freq_type)) {
+        AgentDB::sRadio::sCacCapabilities::sCacMethodCapabilities cac_capabilities_local;
+
+        // we'll update the value when we receive cac-started event.
+        // there is no way to query the hardware until a CAC is
+        // actually performed. We set the value to 10 minutes as default.
+        cac_capabilities_local.cac_duration_sec = 600;
+
+        // add the operating class for all supported channels
+        for (const auto &wifi_channel : radio->front.supported_channels) {
+            if (wifi_channel.is_dfs_channel) {
+                auto operating_class = wireless_utils::get_operating_class_by_channel(wifi_channel);
+                if (operating_class == 0) {
+                    continue;
+                }
+                cac_capabilities_local.operating_classes[operating_class].push_back(
+                    wifi_channel.channel);
+            }
+        }
+        cac_capabilities_local.cac_method = eCacMethod::CAC_METHOD_CONTINUOUS;
+
+        // insert "regular" 5g
+        radio->cac_capabilities.cac_method_capabilities.insert(
+            std::make_pair(cac_capabilities_local.cac_method, cac_capabilities_local));
+
+        // insert zwdfs 5g
+        if (radio->front.zwdfs) {
+            cac_capabilities_local.cac_method = eCacMethod::CAC_METHOD_MIMO_DIMENSION_REDUCED;
+            radio->cac_capabilities.cac_method_capabilities.insert(
+                std::make_pair(cac_capabilities_local.cac_method, cac_capabilities_local));
+        }
+    }
 }

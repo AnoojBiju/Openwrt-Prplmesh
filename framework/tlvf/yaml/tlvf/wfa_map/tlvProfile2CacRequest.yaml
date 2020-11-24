@@ -16,7 +16,7 @@ tlvProfile2CacRequest:
     _type: uint8_t
     _length_var: True
   cac_radios:                                                   # line 10
-    _type: sCacRadio
+    _type: sCacRequestRadio
     _length: [ number_of_cac_radios ]
 
 sCacMethod:
@@ -24,16 +24,22 @@ sCacMethod:
   _bit_field: uint8_t
   cac_method:
     _bit_range: [7, 5]      # line 7
+    _comment: |
+      000: continus cac
+      001: continus with dedicted radio
+      010: MIMO dimension reduced
+      011: Time sliced CAC
+      100-111: Reserved
   cac_completion_action:
     _bit_range: [4, 3]      # line 8
     _comment: |
       00: Remain on channel and continue to monitor for radar
       01: Return the radio that was performing the CAC to its most recent operational configuration.
       10-11: Reserved 
-  rserved:
+  reserved:
     _bit_range: [2, 0]      # line 9
 
-sCacRadio:
+sCacRequestRadio:
   _type: struct
   radio_uid: sMacAddr           # line 4
   operating_class: uint8_t      # line 5

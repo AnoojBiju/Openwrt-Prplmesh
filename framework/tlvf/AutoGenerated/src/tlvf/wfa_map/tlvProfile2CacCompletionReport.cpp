@@ -37,7 +37,7 @@ uint8_t& tlvProfile2CacCompletionReport::number_of_cac_radios() {
     return (uint8_t&)(*m_number_of_cac_radios);
 }
 
-std::tuple<bool, cCacRadio&> tlvProfile2CacCompletionReport::cac_radios(size_t idx) {
+std::tuple<bool, cCacCompletionReportRadio&> tlvProfile2CacCompletionReport::cac_radios(size_t idx) {
     bool ret_success = ( (m_cac_radios_idx__ > 0) && (m_cac_radios_idx__ > idx) );
     size_t ret_idx = ret_success ? idx : 0;
     if (!ret_success) {
@@ -46,12 +46,12 @@ std::tuple<bool, cCacRadio&> tlvProfile2CacCompletionReport::cac_radios(size_t i
     return std::forward_as_tuple(ret_success, *(m_cac_radios_vector[ret_idx]));
 }
 
-std::shared_ptr<cCacRadio> tlvProfile2CacCompletionReport::create_cac_radios() {
+std::shared_ptr<cCacCompletionReportRadio> tlvProfile2CacCompletionReport::create_cac_radios() {
     if (m_lock_order_counter__ > 0) {
         TLVF_LOG(ERROR) << "Out of order allocation for variable length list cac_radios, abort!";
         return nullptr;
     }
-    size_t len = cCacRadio::get_initial_size();
+    size_t len = cCacCompletionReportRadio::get_initial_size();
     if (m_lock_allocation__ || getBuffRemainingBytes() < len) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer";
         return nullptr;
@@ -67,10 +67,10 @@ std::shared_ptr<cCacRadio> tlvProfile2CacCompletionReport::create_cac_radios() {
         size_t move_length = getBuffRemainingBytes(src) - len;
         std::copy_n(src, move_length, dst);
     }
-    return std::make_shared<cCacRadio>(src, getBuffRemainingBytes(src), m_parse__);
+    return std::make_shared<cCacCompletionReportRadio>(src, getBuffRemainingBytes(src), m_parse__);
 }
 
-bool tlvProfile2CacCompletionReport::add_cac_radios(std::shared_ptr<cCacRadio> ptr) {
+bool tlvProfile2CacCompletionReport::add_cac_radios(std::shared_ptr<cCacCompletionReportRadio> ptr) {
     if (ptr == nullptr) {
         TLVF_LOG(ERROR) << "Received entry is nullptr";
         return false;
@@ -174,7 +174,7 @@ bool tlvProfile2CacCompletionReport::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_cac_radios = (cCacRadio*)m_buff_ptr__;
+    m_cac_radios = (cCacCompletionReportRadio*)m_buff_ptr__;
     uint8_t number_of_cac_radios = *m_number_of_cac_radios;
     m_cac_radios_idx__ = 0;
     for (size_t i = 0; i < number_of_cac_radios; i++) {
@@ -200,37 +200,37 @@ bool tlvProfile2CacCompletionReport::init()
     return true;
 }
 
-cCacRadio::cCacRadio(uint8_t* buff, size_t buff_len, bool parse) :
+cCacCompletionReportRadio::cCacCompletionReportRadio(uint8_t* buff, size_t buff_len, bool parse) :
     BaseClass(buff, buff_len, parse) {
     m_init_succeeded = init();
 }
-cCacRadio::cCacRadio(std::shared_ptr<BaseClass> base, bool parse) :
+cCacCompletionReportRadio::cCacCompletionReportRadio(std::shared_ptr<BaseClass> base, bool parse) :
 BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
     m_init_succeeded = init();
 }
-cCacRadio::~cCacRadio() {
+cCacCompletionReportRadio::~cCacCompletionReportRadio() {
 }
-sMacAddr& cCacRadio::radio_uid() {
+sMacAddr& cCacCompletionReportRadio::radio_uid() {
     return (sMacAddr&)(*m_radio_uid);
 }
 
-uint8_t& cCacRadio::operating_class() {
+uint8_t& cCacCompletionReportRadio::operating_class() {
     return (uint8_t&)(*m_operating_class);
 }
 
-uint8_t& cCacRadio::channel() {
+uint8_t& cCacCompletionReportRadio::channel() {
     return (uint8_t&)(*m_channel);
 }
 
-cCacRadio::eCompletionStatus& cCacRadio::cac_completion_status() {
+cCacCompletionReportRadio::eCompletionStatus& cCacCompletionReportRadio::cac_completion_status() {
     return (eCompletionStatus&)(*m_cac_completion_status);
 }
 
-uint8_t& cCacRadio::number_of_detected_pairs() {
+uint8_t& cCacCompletionReportRadio::number_of_detected_pairs() {
     return (uint8_t&)(*m_number_of_detected_pairs);
 }
 
-std::tuple<bool, cCacRadio::sDetectedPairs&> cCacRadio::detected_pairs(size_t idx) {
+std::tuple<bool, cCacCompletionReportRadio::sCacDetectedPair&> cCacCompletionReportRadio::detected_pairs(size_t idx) {
     bool ret_success = ( (m_detected_pairs_idx__ > 0) && (m_detected_pairs_idx__ > idx) );
     size_t ret_idx = ret_success ? idx : 0;
     if (!ret_success) {
@@ -239,12 +239,12 @@ std::tuple<bool, cCacRadio::sDetectedPairs&> cCacRadio::detected_pairs(size_t id
     return std::forward_as_tuple(ret_success, m_detected_pairs[ret_idx]);
 }
 
-bool cCacRadio::alloc_detected_pairs(size_t count) {
+bool cCacCompletionReportRadio::alloc_detected_pairs(size_t count) {
     if (m_lock_order_counter__ > 0) {;
         TLVF_LOG(ERROR) << "Out of order allocation for variable length list detected_pairs, abort!";
         return false;
     }
-    size_t len = sizeof(sDetectedPairs) * count;
+    size_t len = sizeof(sCacDetectedPair) * count;
     if(getBuffRemainingBytes() < len )  {
         TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
         return false;
@@ -268,7 +268,7 @@ bool cCacRadio::alloc_detected_pairs(size_t count) {
     return true;
 }
 
-void cCacRadio::class_swap()
+void cCacCompletionReportRadio::class_swap()
 {
     m_radio_uid->struct_swap();
     for (size_t i = 0; i < m_detected_pairs_idx__; i++){
@@ -276,7 +276,7 @@ void cCacRadio::class_swap()
     }
 }
 
-bool cCacRadio::finalize()
+bool cCacCompletionReportRadio::finalize()
 {
     if (m_parse__) {
         TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
@@ -303,7 +303,7 @@ bool cCacRadio::finalize()
     return true;
 }
 
-size_t cCacRadio::get_initial_size()
+size_t cCacCompletionReportRadio::get_initial_size()
 {
     size_t class_size = 0;
     class_size += sizeof(sMacAddr); // radio_uid
@@ -314,7 +314,7 @@ size_t cCacRadio::get_initial_size()
     return class_size;
 }
 
-bool cCacRadio::init()
+bool cCacCompletionReportRadio::init()
 {
     if (getBuffRemainingBytes() < get_initial_size()) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
@@ -347,11 +347,11 @@ bool cCacRadio::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_detected_pairs = (sDetectedPairs*)m_buff_ptr__;
+    m_detected_pairs = (sCacDetectedPair*)m_buff_ptr__;
     uint8_t number_of_detected_pairs = *m_number_of_detected_pairs;
     m_detected_pairs_idx__ = number_of_detected_pairs;
-    if (!buffPtrIncrementSafe(sizeof(sDetectedPairs) * (number_of_detected_pairs))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sDetectedPairs) * (number_of_detected_pairs) << ") Failed!";
+    if (!buffPtrIncrementSafe(sizeof(sCacDetectedPair) * (number_of_detected_pairs))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sCacDetectedPair) * (number_of_detected_pairs) << ") Failed!";
         return false;
     }
     if (m_parse__) { class_swap(); }

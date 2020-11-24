@@ -8,14 +8,13 @@
 #ifndef _AGENT_DB_H_
 #define _AGENT_DB_H_
 
+#include "cac_capabilities.h"
 #include <bcl/beerocks_defines.h>
 #include <bcl/network/network_utils.h>
-#include <bwl/sta_wlan_hal.h>
-
 #include <beerocks/tlvf/beerocks_message.h>
 #include <beerocks/tlvf/enums/eDfsState.h>
 #include <beerocks/tlvf/structs/sSupportedBandwidth.h>
-
+#include <bwl/sta_wlan_hal.h>
 #include <iostream>
 #include <memory>
 #include <mutex>
@@ -135,6 +134,7 @@ public:
         std::string vendor;
         std::string model;
         uint16_t ucc_listener_port;
+        CountryCode country_code;
     } device_conf;
 
     struct sControllerInfo {
@@ -222,6 +222,16 @@ public:
             size_t association_frame_length;
             std::array<uint8_t, ASSOCIATION_FRAME_SIZE> association_frame;
         };
+
+        struct sCacCapabilities {
+            struct sCacMethodCapabilities {
+                eCacMethod cac_method;
+                uint32_t cac_duration_sec;
+                CacCapabilities::CacOperatingClasses operating_classes;
+            };
+            // for each cac method - the capabilities for it
+            std::map<eCacMethod, sCacMethodCapabilities> cac_method_capabilities;
+        } cac_capabilities;
 
         struct sChannelInfo {
             int8_t tx_power_dbm;

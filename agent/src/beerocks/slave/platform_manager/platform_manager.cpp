@@ -130,10 +130,29 @@ static bool fill_platform_settings(
     db->device_conf.front_radio.config[iface_name].configured_channel = params.channel;
     db->device_conf.front_radio.config[iface_name].sub_band_dfs       = params.sub_band_dfs;
 
+    // although this will update the same variable again and again for each radio,
+    // and the final value will be of the latest radio. We still expect them all
+    // to have the same value as this is a country code. Although technically possible by the code,
+    // we don't expect the same agent exists in two different countries at the same time.
+    // verificartioation is done for logging only
+    CountryCode current_country;
+    current_country[0] = params.country_code[0];
+    current_country[1] = params.country_code[1];
+
+    if (current_country != db->device_conf.country_code && !db->device_conf.country_code.empty()) {
+        LOG(ERROR) << "strangly enough this agent exists in more than one country: "
+                   << current_country[0] << current_country[1] << " and "
+                   << db->device_conf.country_code[0] << db->device_conf.country_code[1];
+    }
+    // take the latest
+    db->device_conf.country_code = current_country;
+
     LOG(DEBUG) << "wlan settings " << iface_name << ":";
     LOG(DEBUG) << "band_enabled=" << params.enabled;
     LOG(DEBUG) << "channel=" << params.channel;
     LOG(DEBUG) << "sub_band_dfs=" << params.sub_band_dfs;
+    LOG(DEBUG) << "country-code=" << db->device_conf.country_code[0]
+               << db->device_conf.country_code[1];
 
     // initialize wlan params cache
     //erase interface cache from map if exists
@@ -259,7 +278,7 @@ static bool fill_platform_settings(
     LOG(DEBUG) << "best_channel_rank_threshold: " << db->device_conf.best_channel_rank_threshold;
 
     return true;
-}
+} // namespace beerocks
 
 static std::string get_sta_iface(const std::string &hostap_iface)
 {
