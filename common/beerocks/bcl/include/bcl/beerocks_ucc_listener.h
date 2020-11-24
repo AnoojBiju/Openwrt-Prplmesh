@@ -22,6 +22,9 @@ namespace beerocks {
 static constexpr uint8_t UCC_REPLY_RUNNING_TIMEOUT_SEC  = 1;
 static constexpr uint8_t UCC_REPLY_COMPLETE_TIMEOUT_SEC = 120;
 
+// list of values we support for "program":
+static constexpr std::array<const char *, 2> supported_programs = {"map", "mapr2"};
+
 class beerocks_ucc_listener : public socket_thread {
 public:
     beerocks_ucc_listener(uint16_t port, ieee1905_1::CmduMessageTx &cmdu,
@@ -103,6 +106,15 @@ private:
     // Class functions
     void handle_wfa_ca_command(int fd, const std::string &command);
     bool reply_ucc(int fd, eWfaCaStatus status, const std::string &description = std::string());
+    /**
+     * @brief Helper function to validate the 'program' parameter
+     * given by the UCC and log errors if any.
+     *
+     * @param[in] parameter the 'program' parameter.
+     * @param[out] err_string an error string, if the parameter is not valid.
+     * @return true if the parameter is valid, false otherwise.
+     **/
+    bool validate_program_parameter(const std::string &parameter, std::string &err_string);
 
     friend class tlvPrefilledData;
 
