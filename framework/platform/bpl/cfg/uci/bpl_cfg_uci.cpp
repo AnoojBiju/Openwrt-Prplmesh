@@ -262,9 +262,7 @@ int cfg_uci_get_wireless_from_ifname(enum paramType type, const char *interface_
         char path[MAX_UCI_BUF_LEN] = "";
         mapf::utils::copy_string(path, path_str.c_str(), MAX_UCI_BUF_LEN);
 
-        if (cfg_uci_get(path, value, MAX_UCI_BUF_LEN) != RETURN_OK) {
-            ERROR("%s option N/A. path=%s\n", __func__, path);
-        }
+        cfg_uci_get(path, value, MAX_UCI_BUF_LEN);
 
         return RETURN_OK;
 
