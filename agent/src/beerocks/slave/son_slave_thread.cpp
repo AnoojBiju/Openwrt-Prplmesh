@@ -2165,6 +2165,18 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         }
         LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION";
 
+        auto db    = AgentDB::get();
+        auto radio = db->radio(m_fronthaul_iface);
+        if (!radio) {
+            return false;
+        }
+
+        radio->channel              = notification_in->params().channel;
+        radio->bandwidth            = beerocks::eWiFiBandwidth(notification_in->params().bandwidth);
+        radio->vht_center_frequency = notification_in->params().center_frequency1;
+        radio->channel_ext_above_primary =
+            radio->vht_center_frequency > wireless_utils::channel_to_freq(radio->channel);
+
         auto notification_out = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION>(cmdu_tx);
         if (notification_out == nullptr) {
@@ -2173,6 +2185,8 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         }
         notification_out->params() = notification_in->params();
         send_cmdu_to_controller(cmdu_tx);
+
+        send_operating_channel_report();
 
         auto notification_out_bhm = message_com::create_vs_message<
             beerocks_message::cACTION_BACKHAUL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION>(cmdu_tx);
