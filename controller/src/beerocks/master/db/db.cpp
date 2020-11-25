@@ -5757,7 +5757,11 @@ bool db::dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client_mac)
         LOG(ERROR) << "Failed to set " << path_to_sta << ".Timestamp";
         return false;
     }
-
+    uint64_t add_sta_time = time(NULL);
+    if (!m_ambiorix_datamodel->set(path_to_sta, "LastConnectTime", add_sta_time)) {
+        LOG(ERROR) << "Failed to set " << path_to_sta << ".LastConnectTime";
+        return false;
+    }
     return true;
 }
 

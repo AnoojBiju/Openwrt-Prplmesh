@@ -41,6 +41,7 @@
 		}
 
 		%read-only uint32 LastConnectTime = 0 {
+			on action read call action_read_last_change;
 		}
 
 		uint32 BytesSent = 0;
