@@ -6,7 +6,7 @@
                 "${default}"
             ],
             "compilerPath": "/usr/bin/gcc",
-            "cStandard": "gnu18"
+            "cStandard": "gnu11"
         }
     ],
     "version": 4

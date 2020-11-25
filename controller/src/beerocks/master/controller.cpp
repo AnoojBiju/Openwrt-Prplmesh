@@ -81,7 +81,7 @@ namespace son {
 /**
  * Time between successive timer executions of the tasks timer
  */
-constexpr auto tasks_timer_period = std::chrono::milliseconds(50);
+constexpr auto tasks_timer_period = std::chrono::milliseconds(250);
 
 /**
  * Time between successive timer executions of the operations timer
@@ -197,11 +197,12 @@ bool Controller::start()
     }
 
     // Create a timer to run internal tasks periodically
-    m_tasks_timer = m_timer_manager->add_timer(tasks_timer_period, tasks_timer_period,
-                                               [&](int fd, beerocks::EventLoop &loop) {
-                                                   tasks.run_tasks();
-                                                   return true;
-                                               });
+    m_tasks_timer = m_timer_manager->add_timer(
+        tasks_timer_period, tasks_timer_period, [&](int fd, beerocks::EventLoop &loop) {
+            // Allow tasks to execute up to 80% of the timer period
+            tasks.run_tasks(int(double(tasks_timer_period.count()) * 0.8));
+            return true;
+        });
     if (m_tasks_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
         LOG(ERROR) << "Failed to create the tasks timer";
         rollback();

@@ -274,6 +274,16 @@ bool BrokerServer::socket_connected()
 
     LOG(DEBUG) << "Accepted new connection, sd=" << intptr_t(new_socket->getSocketFd());
 
+    // Set a write operation timeout for the new socket to 1ms to prevent system deadlocks and DoS.
+    // The broker is the communication backbone, and as such it should never block on IO operations.
+    // Read operations are polled (epoll) by the event loop, so we set the timeout on writes only.
+    // We do this on internal (Unix Domain) sockets only, since we assume that external (Hardware)
+    // sockets will never block indefinitely. Internal sockets are read by software processes,
+    // which can potentially hang and result in the broker "hanging" on write operations.
+    if (!new_socket->setWriteTimeout(1)) {
+        LOG(WARNING) << "Failed setting 'write' timeout for fd: " << new_socket->getSocketFd();
+    }
+
     // Add the newly accepted socket into the poll
     EventLoop::EventHandlers handlers{
         // Handle incoming data

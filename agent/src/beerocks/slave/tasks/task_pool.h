@@ -11,6 +11,8 @@
 
 #include "task.h"
 #include "task_pool_interface.h"
+
+#include <chrono>
 #include <queue>
 #include <unordered_map>
 
@@ -27,8 +29,12 @@ public:
 
     /**
      * @brief Run all tasks on the pool, by calling each task work() function.
+     * 
+     * @param max_exec_duration_ms Maximal duration (in milliseconds) for tasks execution.
+     * Tasks that won't be executed within this duration will be handled first on during
+     * the next execution slot.
      */
-    void run_tasks();
+    void run_tasks(int max_exec_duration_ms = 0);
 
     /**
      * @brief Send an 'event' defined on a specific task 'task_type'. 
@@ -79,6 +85,19 @@ private:
 
     // queue of events to handle
     std::queue<std::pair<eTaskEvent, std::shared_ptr<void>>> m_event_queue;
+
+    /**
+     * Used to mark the beginning of an execution iteration.
+     * Each iteration can be span over multiple execution slots.
+     */
+    std::chrono::steady_clock::time_point m_exec_iteration_start_time =
+        std::chrono::steady_clock::time_point::max();
+
+    /**
+     * Counts the number of slots it took to process all the tasks within
+     * the current execution iteration.
+     */
+    int m_exec_iteration_slots = 0;
 };
 
 } // namespace beerocks
