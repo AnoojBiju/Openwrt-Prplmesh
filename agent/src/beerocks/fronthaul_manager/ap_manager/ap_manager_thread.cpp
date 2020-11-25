@@ -1706,11 +1706,13 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
             break;
         }
 
-        response->params().timeout   = msg->params.timeout;
-        response->params().frequency = msg->params.frequency;
-        response->params().success   = msg->params.success;
-        response->params().channel   = msg->params.channel;
-        response->params().bandwidth = msg->params.bandwidth;
+        response->params().timeout           = msg->params.timeout;
+        response->params().frequency         = msg->params.frequency;
+        response->params().center_frequency1 = msg->params.center_frequency1;
+        response->params().center_frequency2 = msg->params.center_frequency2;
+        response->params().success           = msg->params.success;
+        response->params().channel           = msg->params.channel;
+        response->params().bandwidth         = msg->params.bandwidth;
 
         message_com::send_cmdu(slave_socket, cmdu_tx);
 
