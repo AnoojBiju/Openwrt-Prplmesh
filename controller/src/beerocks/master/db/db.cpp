@@ -2063,13 +2063,14 @@ bool db::set_hostap_vap_list(const std::string &mac,
 
 std::unordered_map<int8_t, sVapElement> &db::get_hostap_vap_list(const std::string &mac)
 {
+    static std::unordered_map<int8_t, sVapElement> invalid_vap_list;
     auto n = get_node(mac);
     if (!n) {
         LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return *(std::make_shared<std::unordered_map<int8_t, sVapElement>>());
+        return invalid_vap_list;
     } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
         LOG(WARNING) << __FUNCTION__ << " - node " << mac << " is not a valid hostap!";
-        return *(std::make_shared<std::unordered_map<int8_t, sVapElement>>());
+        return invalid_vap_list;
     }
 
     return n->hostap->vaps_info;
