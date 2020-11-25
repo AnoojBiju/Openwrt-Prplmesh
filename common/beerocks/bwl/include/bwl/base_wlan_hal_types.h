@@ -302,6 +302,8 @@ typedef struct {
 typedef struct {
     uint32_t timeout;
     uint32_t frequency;
+    uint16_t center_frequency1;
+    uint16_t center_frequency2;
     uint8_t success;
     uint8_t channel;
     uint8_t bandwidth;

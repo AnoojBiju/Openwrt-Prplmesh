@@ -2526,7 +2526,20 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
             return false;
         }
         msg->params.frequency = tmp_int;
-        msg->params.channel   = son::wireless_utils::freq_to_channel(msg->params.frequency);
+
+        if (!read_param("cf1", parsed_obj, tmp_int)) {
+            LOG(ERROR) << "Failed reading 'cf1' parameter!";
+            return false;
+        }
+        msg->params.center_frequency1 = tmp_int;
+
+        if (!read_param("cf2", parsed_obj, tmp_int)) {
+            LOG(ERROR) << "Failed reading 'cf2 parameter!";
+            return false;
+        }
+        msg->params.center_frequency2 = tmp_int;
+
+        msg->params.channel = son::wireless_utils::freq_to_channel(msg->params.frequency);
 
         if (!read_param("timeout", parsed_obj, tmp_int)) {
             LOG(ERROR) << "Failed reading timeout parameter!";
