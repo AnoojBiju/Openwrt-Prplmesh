@@ -661,10 +661,8 @@ void beerocks_ucc_listener::handle_wfa_ca_command(int fd, const std::string &com
         }
 
         if (params.find("program") != params.end()) {
-            if (params["program"] != "map") {
-                err_string = "invalid param value '" + params["map"] +
-                             "' for param name 'program', accepted value can be only 'map'";
-                LOG(ERROR) << err_string;
+            if (!validate_program_parameter(params["program"], err_string)) {
+                // errors are logged by validate_program_parameter
                 reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
                 break;
             }
@@ -792,10 +790,8 @@ void beerocks_ucc_listener::handle_wfa_ca_command(int fd, const std::string &com
 
         // Input check
         if (params.find("program") != params.end()) {
-            if (params["program"] != "map") {
-                err_string = "invalid param value '" + params["map"] +
-                             "' for param name 'program', accepted value can be only 'map'";
-                LOG(ERROR) << err_string;
+            if (!validate_program_parameter(params["program"], err_string)) {
+                // errors are logged by validate_program_parameter
                 reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
                 break;
             }
@@ -818,6 +814,22 @@ void beerocks_ucc_listener::handle_wfa_ca_command(int fd, const std::string &com
         break;
     }
     }
+}
+
+bool beerocks_ucc_listener::validate_program_parameter(const std::string &parameter,
+                                                       std::string &err_string)
+{
+    if (std::find(supported_programs.begin(), supported_programs.end(), parameter) ==
+        supported_programs.end()) {
+        err_string = "invalid param value '" + parameter +
+                     "' for param name 'program', accepted values are: ";
+        for (const auto &p : supported_programs) {
+            err_string += " '" + std::string(p) + "' ";
+        }
+        LOG(ERROR) << err_string;
+        return false;
+    }
+    return true;
 }
 
 //////////////////////////////////////////////////////////////////////////////
