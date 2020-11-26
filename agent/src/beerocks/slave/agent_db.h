@@ -206,7 +206,7 @@ public:
         } back;
 
         struct sStatus {
-            bool dcs_background_scan_in_process = false;
+            bool channel_scan_in_progress = false;
         } statuses;
 
         struct sClient {

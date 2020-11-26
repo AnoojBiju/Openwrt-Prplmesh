@@ -408,7 +408,7 @@ bool ChannelSelectionTask::radio_scan_in_progress(eFreqType band)
         if (band != eFreqType::FREQ_UNKNOWN && radio->freq_type != band) {
             continue;
         }
-        if (radio->statuses.dcs_background_scan_in_process) {
+        if (radio->statuses.channel_scan_in_progress) {
             return true;
         }
     }
