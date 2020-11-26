@@ -134,8 +134,6 @@ private:
     /**
      * @brief Check if a Radio on a given band, or all band is doing background scan.
      * 
-     * If more than one radio is doing scan, returns only the scanning radio which has been found.
-     * 
      * @param [in] band If set, check on the specific band, otherwise check on all bands.
      * @return true if scan is being performed, otherwise false. 
      */
