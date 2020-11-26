@@ -823,7 +823,6 @@ bool backhaul_manager::backhaul_fsm_main(bool &skip_select)
             break;
         }
         if (db->statuses.ap_autoconfiguration_failure) {
-            db->statuses.ap_autoconfiguration_failure = false;
             FSM_MOVE_STATE(RESTART);
         }
         break;
@@ -967,6 +966,8 @@ bool backhaul_manager::backhaul_fsm_main(bool &skip_select)
         db->backhaul.connection_type = AgentDB::sBackhaul::eConnectionType::Invalid;
 
         db->controller_info.bridge_mac = network_utils::ZERO_MAC;
+
+        db->statuses.ap_autoconfiguration_failure = false;
 
         if (configuration_stop_on_failure_attempts && !stop_on_failure_attempts) {
             LOG(ERROR) << "Reached to max stop on failure attempts!";
