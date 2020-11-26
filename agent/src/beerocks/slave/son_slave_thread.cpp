@@ -427,7 +427,7 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
     // LOG(DEBUG) << "handle_cmdu_control_message(), INTEL_VS: action=" + std::to_string(beerocks_header->action()) + ", action_op=" + std::to_string(beerocks_header->action_op());
     // LOG(DEBUG) << "received radio_mac=" << beerocks_header->radio_mac() << ", local radio_mac=" << hostap_params.iface_mac;
 
-    // Scope this code block to prevent shadowing of of "db" and "radio" variables internally on the
+    // Scope this code block to prevent shadowing of "db" and "radio" variables internally on the
     // switch case.
     {
         auto db    = AgentDB::get();
