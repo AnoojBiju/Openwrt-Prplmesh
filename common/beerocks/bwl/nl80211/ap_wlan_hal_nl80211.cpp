@@ -550,6 +550,9 @@ bool ap_wlan_hal_nl80211::update_vap_credentials(
                 conf.set_create_vap_value(vap, "wpa_disable_eapol_key_retries",
                                           wpa_disable_eapol_key_retries);
 
+                // we always need to get the mgmt frames (assoc req) for capability reports:
+                conf.set_create_vap_value(vap, "notify_mgmt_frames", "1");
+
                 // finally enable the vap (remove any previously set start_disabled)
                 conf.set_create_vap_value(vap, "start_disabled", "");
             } else {
