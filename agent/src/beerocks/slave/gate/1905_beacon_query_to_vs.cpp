@@ -38,8 +38,7 @@ bool load(std::shared_ptr<beerocks_message::cACTION_MONITOR_CLIENT_BEACON_11K_RE
 
     lhs_params.op_class = beacon_metrics_query->operating_class();
 
-    // FixMe: not sure about this
-    lhs_params.report = beacon_metrics_query->reporting_detail_value();
+    lhs_params.reporting_detail = beacon_metrics_query->reporting_detail_value();
 
     // values based on https://github.com/prplfoundation/prplMesh/pull/1114#discussion_r406326546
     lhs_params.repeats            = 0;
@@ -85,14 +84,13 @@ bool load(std::shared_ptr<beerocks_message::cACTION_MONITOR_CLIENT_BEACON_11K_RE
             return false;
         }
 
-        // the number of channels, excluding the first operating class
-        lhs_params.use_optional_ap_ch_report =
-            std::get<1>(channel).ap_channel_report_list_length() - 1;
+        // the number of channels, +1 for the operating class that is stored at the beginning
+        lhs_params.use_optional_ap_ch_report = std::get<1>(channel).ap_channel_report_list_length();
 
         // the first index in the tlv's channel-report-list is the operating class,
-        // we skip it. using pointer arithmethics and copying one element less from the source (we skip the operation class)
+        // store it in the same way: the operating class, then the channels.
         for (int idx = 0; idx < lhs_params.use_optional_ap_ch_report; ++idx) {
-            lhs_params.ap_ch_report[idx] = *std::get<1>(channel).ap_channel_report_list(idx + 1);
+            lhs_params.ap_ch_report[idx] = *std::get<1>(channel).ap_channel_report_list(idx);
         }
     }
 

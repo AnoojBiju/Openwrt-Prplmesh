@@ -348,7 +348,43 @@ bool mon_wlan_hal_nl80211::sta_beacon_11k_request(const SBeaconRequest11k &req, 
                       beerocks::string_utils::int_to_hex_string(req.bssid.oct[2], 2) +
                       beerocks::string_utils::int_to_hex_string(req.bssid.oct[3], 2) +
                       beerocks::string_utils::int_to_hex_string(req.bssid.oct[4], 2) +
-                      beerocks::string_utils::int_to_hex_string(req.bssid.oct[5], 2);
+                      beerocks::string_utils::int_to_hex_string(req.bssid.oct[5], 2) +
+                      // Reporting detail subelement
+                      // subelement id (2):
+                      beerocks::string_utils::int_to_hex_string(2, 2) +
+                      // length:
+                      beerocks::string_utils::int_to_hex_string(1, 2) +
+                      // value:
+                      beerocks::string_utils::int_to_hex_string(req.reporting_detail, 2);
+
+    if (req.use_optional_ap_ch_report != 0) {
+        if (req.channel != 255) {
+            LOG(ERROR) << "ap_ch_report is set but channel is NOT set to 255.";
+            return false;
+        }
+
+        // AP channel report
+        // subelement id:
+        cmd += beerocks::string_utils::int_to_hex_string(51, 2) +
+               // length:
+               beerocks::string_utils::int_to_hex_string(req.use_optional_ap_ch_report, 2);
+        // operating class followed by list of channels:
+        unsigned ap_ch_report_size = req.use_optional_ap_ch_report;
+        if (ap_ch_report_size > sizeof(req.ap_ch_report)) {
+            LOG(ERROR)
+                << "use_optional_ap_ch_report is bigger than the total size of ap_ch_report! "
+                   "use_optional_ap_ch_report is "
+                << req.use_optional_ap_ch_report;
+            return false;
+        }
+        for (unsigned i = 0; i < ap_ch_report_size; i++) {
+            cmd += beerocks::string_utils::int_to_hex_string(req.ap_ch_report[i], 2);
+        }
+    } else {
+        if (req.channel == 255) {
+            LOG(ERROR) << "Channel is set to 255 but ap_ch_report is NOT set.";
+        }
+    }
 
     // Print the command
     LOG(DEBUG) << __func__ << " - " << cmd;

@@ -1226,6 +1226,7 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
         bwl_request.new_ch_width             = request->params().new_ch_width;
         bwl_request.new_ch_center_freq_seg_0 = request->params().new_ch_center_freq_seg_0;
         bwl_request.new_ch_center_freq_seg_1 = request->params().new_ch_center_freq_seg_1;
+        bwl_request.reporting_detail         = request->params().reporting_detail;
 
         mon_wlan_hal->sta_beacon_11k_request(bwl_request, dialog_token);
 

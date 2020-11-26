@@ -391,10 +391,11 @@ sBeaconRequest11k:
     _type: char
     _length: ["beerocks::message::WIFI_SSID_MAX_LENGTH"] # 36 bytes
 
-  use_optional_ap_ch_report: uint8_t
+  use_optional_ap_ch_report: uint8_t # size of ap_ch_report
   ap_ch_report:
     _type: uint8_t
     _length: [237]
+    _comment: The first element of this list is the operating class.
 
   use_optional_req_elements: uint8_t # bool
   req_elements:
@@ -405,6 +406,8 @@ sBeaconRequest11k:
   new_ch_width: uint32_t # not sure if this type is most fit
   new_ch_center_freq_seg_0: uint32_t # not sure if this type is most fit
   new_ch_center_freq_seg_1: uint32_t # not sure if this type is most fit
+
+  reporting_detail: uint8_t
 
 sBeaconResponse11k:
   _type: struct
