@@ -24,6 +24,7 @@ run_cppcheck() {
              -i"$rootdir/framework/platform/nbapi/unit_tests" \
              -i"$rootdir/common/beerocks/bwl/unit_tests" \
              -i"$rootdir/common/beerocks/bcl/unit_tests" \
+             -i"$rootdir/controller/src/beerocks/master/db/unit_tests" \
              -i"$rootdir/build" \
              --inline-suppr \
              --suppressions-list="$rootdir"/tools/docker/static-analysis/suppressions.txt \
