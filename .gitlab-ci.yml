@@ -1,5 +1,8 @@
 variables:
   PYTHONUNBUFFERED: "1"
+  ARTIFACT_DOWNLOAD_ATTEMPTS: 3
+  GET_SOURCES_ATTEMPTS: 3
+
 default:
   interruptible: true
 
