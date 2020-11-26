@@ -125,12 +125,16 @@ typedef struct sApChannelSwitch {
 typedef struct sDfsCacCompleted {
     uint32_t timeout;
     uint32_t frequency;
+    uint16_t center_frequency1;
+    uint16_t center_frequency2;
     uint8_t success;
     uint8_t channel;
     uint8_t bandwidth;
     void struct_swap(){
         tlvf_swap(32, reinterpret_cast<uint8_t*>(&timeout));
         tlvf_swap(32, reinterpret_cast<uint8_t*>(&frequency));
+        tlvf_swap(16, reinterpret_cast<uint8_t*>(&center_frequency1));
+        tlvf_swap(16, reinterpret_cast<uint8_t*>(&center_frequency2));
     }
     void struct_init(){
     }

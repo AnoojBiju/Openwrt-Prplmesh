@@ -3490,6 +3490,16 @@ bool Controller::handle_cmdu_control_message(
                          (int)channel_selection_task::eEvent::CAC_COMPLETED_EVENT,
                          (void *)new_event);
 
+        auto channel_ext_above =
+            (notification->params().frequency < notification->params().center_frequency1) ? true
+                                                                                          : false;
+        if (!database.set_node_channel_bw(
+                hostap_mac, notification->params().channel,
+                beerocks::eWiFiBandwidth(notification->params().bandwidth), channel_ext_above,
+                channel_ext_above, notification->params().center_frequency1)) {
+            LOG(ERROR) << "set node channel bw failed, mac=" << hostap_mac;
+        }
+
         break;
     }
     case beerocks_message::ACTION_CONTROL_HOSTAP_DFS_CHANNEL_AVAILABLE_NOTIFICATION: {
