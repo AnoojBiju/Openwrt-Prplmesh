@@ -137,7 +137,7 @@ private:
      * @param [in] band If set, check on the specific band, otherwise check on all bands.
      * @return true if scan is being performed, otherwise false. 
      */
-    bool radio_on_scan(eFreqType band = eFreqType::FREQ_UNKNOWN);
+    bool radio_scan_in_progress(eFreqType band = eFreqType::FREQ_UNKNOWN);
 
     sSelectedChannel select_best_usable_channel(const std::string &front_radio_iface);
 

@@ -398,7 +398,7 @@ Socket *ChannelSelectionTask::front_iface_name_to_socket(const std::string &ifac
     return nullptr;
 }
 
-bool ChannelSelectionTask::radio_on_scan(eFreqType band)
+bool ChannelSelectionTask::radio_scan_in_progress(eFreqType band)
 {
     auto db = AgentDB::get();
     for (const auto radio : db->get_radios_list()) {
@@ -427,7 +427,7 @@ void ChannelSelectionTask::zwdfs_fsm()
         // 2.4G because it is forbidden to switch zwdfs antenna during scan.
         // 5G because we don't want the ZWDFS flow will switch channel on the primary 5G radio
         // while it is during a background scan.
-        if (radio_on_scan()) {
+        if (radio_scan_in_progress()) {
             break;
         }
 
@@ -513,7 +513,7 @@ void ChannelSelectionTask::zwdfs_fsm()
         // ZWDFS antenna. Since at the time when the background scan will be over, the selected
         // channel might not be relevant anymore, the FSM will start over and jum to the initial
         // state which query the updated channel info from the AP.
-        if (radio_on_scan()) {
+        if (radio_scan_in_progress()) {
             LOG(INFO) << "Pause ZWDFS flow until background scan is finished";
             break;
         }
@@ -621,7 +621,7 @@ void ChannelSelectionTask::zwdfs_fsm()
     }
     case eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST: {
         // Block switching back 2.4G antenna if its radio is during background scan.
-        if (radio_on_scan(eFreqType::FREQ_24G)) {
+        if (radio_scan_in_progress(eFreqType::FREQ_24G)) {
             break;
         }
 
