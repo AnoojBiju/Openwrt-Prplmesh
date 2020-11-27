@@ -55,6 +55,7 @@ platform:
   needs:
     - build-in-docker
     - image-build-boardfarm-ci
+    - "image-build-builder/alpine"
   rules: *expensive-job
   variables:
     TESTS_TO_RUN: $TESTS_TO_RUN

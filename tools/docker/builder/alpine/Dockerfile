@@ -12,6 +12,7 @@ RUN apk add --update --no-cache \
     json-c-dev \
     libnl3-dev \
     libtool \
+    jq \
     musl-dev \
     zeromq-dev \
     linux-headers \
