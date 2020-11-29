@@ -469,11 +469,37 @@ void ChannelSelectionTask::zwdfs_fsm()
             ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
         }
 
-        auto db    = AgentDB::get();
+        auto db = AgentDB::get();
+
         auto radio = db->radio(m_zwdfs_primary_radio_iface);
         if (!radio) {
             ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
             break;
+        }
+
+        // If there is a channel with better rank, but did not pass the ranking threshold, print
+        // information about it.
+        int current_channel_rank = -1;
+        for (const auto &channel_bw_info :
+             radio->channels_list.at(radio->channel).supported_bw_list) {
+            if (channel_bw_info.bandwidth == radio->bandwidth) {
+                current_channel_rank = channel_bw_info.rank;
+            }
+        }
+        if (current_channel_rank == -1) {
+            LOG(ERROR) << "Current channels has rank not found!";
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            break;
+        }
+
+        if (m_selected_channel.rank < current_channel_rank &&
+            uint32_t(current_channel_rank - m_selected_channel.rank) <
+                db->device_conf.best_channel_rank_threshold) {
+            LOG(INFO)
+                << "Channel " << m_selected_channel.channel << " with bw=" << m_selected_channel.bw
+                << " and dfs_state=" << m_selected_channel.dfs_state
+                << " has better rank than current channel, but did not pass the ranking threshold="
+                << db->device_conf.best_channel_rank_threshold << ", Current channel is selected.";
         }
 
         if (m_selected_channel.channel == radio->channel &&
@@ -676,32 +702,25 @@ ChannelSelectionTask::select_best_usable_channel(const std::string &front_radio_
         return sSelectedChannel();
     }
 
-    int32_t best_rank = INT32_MAX;
-
-    // Best rank without ranking threshold calculation.
-    sSelectedChannel absolute_best_rank_channel;
-    int32_t absolute_best_rank   = INT32_MAX;
-    int32_t current_channel_rank = INT32_MAX;
+    int32_t best_rank = -1;
 
     // Initialize the best channel to the current channel, and add the ranking threshold
     // so only channel that has a better rank than the current channel (with threshold),
     // could be selected.
     for (const auto &channel_bw_info : radio->channels_list.at(radio->channel).supported_bw_list) {
         if (channel_bw_info.bandwidth == radio->bandwidth) {
-            current_channel_rank = channel_bw_info.rank;
-            best_rank = current_channel_rank - db->device_conf.best_channel_rank_threshold;
-            if (best_rank < 0) {
-                best_rank = 0;
-            }
+            best_rank                  = channel_bw_info.rank;
             selected_channel.channel   = radio->channel;
             selected_channel.bw        = channel_bw_info.bandwidth;
             selected_channel.dfs_state = radio->channels_list.at(radio->channel).dfs_state;
+            selected_channel.rank      = channel_bw_info.rank;
             break;
         }
     }
-
-    absolute_best_rank_channel = selected_channel;
-    absolute_best_rank         = current_channel_rank;
+    if (best_rank == -1) {
+        LOG(ERROR) << "Current channels has rank not found!";
+        return sSelectedChannel();
+    }
 
     for (const auto &channel_info_pair : radio->channels_list) {
         uint8_t channel = channel_info_pair.first;
@@ -717,15 +736,6 @@ ChannelSelectionTask::select_best_usable_channel(const std::string &front_radio_
 
             // Low rank is better. Best rank include the ranking threshold.
             if (supported_bw.rank > best_rank) {
-                // If there is a channel with better rank, but did not pass the ranking threshold
-                // do not select it but print INFO about it.
-                if (supported_bw.rank < absolute_best_rank) {
-                    absolute_best_rank                 = supported_bw.rank;
-                    absolute_best_rank_channel.channel = radio->channel;
-                    absolute_best_rank_channel.bw      = supported_bw.bandwidth;
-                    absolute_best_rank_channel.dfs_state =
-                        radio->channels_list.at(radio->channel).dfs_state;
-                }
                 continue;
             }
 
@@ -820,27 +830,8 @@ ChannelSelectionTask::select_best_usable_channel(const std::string &front_radio_
             selected_channel.channel   = channel;
             selected_channel.bw        = supported_bw.bandwidth;
             selected_channel.dfs_state = dfs_state;
-
-            absolute_best_rank_channel = selected_channel;
-            absolute_best_rank         = best_rank;
+            selected_channel.rank      = best_rank;
         }
-    }
-
-    // If there is a channel with better rank, but did not pass the ranking threshold, print INFO
-    // about it.
-    int32_t current_rank_with_threshold =
-        current_channel_rank - db->device_conf.best_channel_rank_threshold;
-    if (current_rank_with_threshold < 0) {
-        current_rank_with_threshold = 0;
-    }
-    if (absolute_best_rank != current_channel_rank && // The absolute_best_rank has been updated
-        absolute_best_rank > current_rank_with_threshold) {
-        LOG(INFO)
-            << "Channel " << absolute_best_rank_channel.channel
-            << " with bw=" << absolute_best_rank_channel.bw
-            << " and dfs_state=" << absolute_best_rank_channel.dfs_state
-            << " has better rank than current channel, but did not pass the ranking threshold="
-            << db->device_conf.best_channel_rank_threshold << ", Current channel is selected.";
     }
 
     return selected_channel;

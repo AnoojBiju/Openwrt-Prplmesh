@@ -48,6 +48,7 @@ private:
         uint8_t secondary_channel;
         eWiFiBandwidth bw;
         beerocks_message::eDfsState dfs_state;
+        int rank;
     } m_selected_channel;
 
     void handle_channel_selection_request(ieee1905_1::CmduMessageRx &cmdu_rx,
