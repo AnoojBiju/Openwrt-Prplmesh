@@ -8,34 +8,30 @@
  */
 
 %config {
-	define-behavior = { 
-		existing-object = "update"
-	};
+    define-behavior = {
+        existing-object = "update"
+    };
 }
 
 %define {
-	object Notification  {
-		object AssociationEvent [] {
+    select Controller.Notification  {
+        object AssociationEvent {
+            /*
+            ** The data provided in the event when an association event is generated
+            */
+            object AssocData {
 
-			/*
-			** The data provided in the event when an association event is generated
-			*/
-			object AssocData {
-				%read-only string BSSID = 0 {
-				}
+                /**
+                ** Need to add here HTCapabilities, VHTCapabilities, HECapabilities
+                ** from mids which defined in controller.odl
+                **/
 
-				%read-only string MACAddress = 0 {
-				}
-
-				%read-only uint32 StatusCode = 0 {
-					on action validate call check_range [0, 65535];
-				}
-
-				/**
-				** Need to add here HTCapabilities, VHTCapabilities, HECapabilities
-				** from mids which defined in controller.odl
-				**/
-			}
-		}
-	}
+                %read-only string BSSID;  /* The MAC address of the logical BSS (BSSID) which is
+                                            reporting the association event. */
+                %read-only string MACAddress;  /* MAC address of the associating station */
+                %read-only uint32 StatusCode;  /* The status code sent to the STA in the
+                                                latest Association Response frame */
+            }
+        }
+    }
 }

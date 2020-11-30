@@ -116,6 +116,10 @@
                 %persistent bool Retain = false;
             }
         }
+
+        %persistent object Notification {
+
+        }
     }
 }
 
