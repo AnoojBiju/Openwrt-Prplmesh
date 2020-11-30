@@ -2154,7 +2154,7 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
         Prepare path to the BSS instance.
         Example: Controller.Network.Device.1.Radio.1.BSS.
     */
-    auto bss_path  = radio_path + "BSS.";
+    auto bss_path  = radio_path + "BSS";
     auto bss_index = m_ambiorix_datamodel->add_instance(bss_path);
     if (!bss_index) {
         LOG(ERROR) << "Failed to add " << bss_path << " instance.";
@@ -2165,7 +2165,7 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
         Prepare path with correct BSS instance.
         Example: Controller.Network.Device.1.Radio.1.BSS.1.
     */
-    bss_path += std::to_string(bss_index) + ".";
+    bss_path += "." + std::to_string(bss_index);
 
     /*
         Set value for BSSID variable
@@ -5754,8 +5754,8 @@ bool db::dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client_mac)
         return false;
     }
 
-    if (!m_ambiorix_datamodel->set(path_to_sta, "Timestamp", time_stamp)) {
-        LOG(ERROR) << "Failed to set " << path_to_sta << ".Timestamp";
+    if (!m_ambiorix_datamodel->set(path_to_sta, "TimeStamp", time_stamp)) {
+        LOG(ERROR) << "Failed to set " << path_to_sta << ".TimeStamp";
         return false;
     }
     uint64_t add_sta_time = time(NULL);
@@ -6028,8 +6028,9 @@ std::string db::dm_get_path_to_bss(const sMacAddr &bssid)
         return {};
     }
 
+    auto bss_path = radio_path + "BSS.";
     auto bss_index =
-        m_ambiorix_datamodel->get_instance_index(radio_path + "[ID == '%s']", bssid_string);
+        m_ambiorix_datamodel->get_instance_index(bss_path + "[BSSID == '%s']", bssid_string);
     if (!bss_index) {
         LOG(ERROR) << "Failed to get bss index for bss with mac: " << bssid_string;
         return {};
