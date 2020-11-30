@@ -107,14 +107,6 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
             return False
         return True
 
-    def check_status(self) -> bool:
-        """Check status of device, return bool to indicate state.
-
-        It is used by boardfarm to indicate that spawned device instance is ready for test
-        and also after test - to insure that device still operational.
-        """
-        return True
-
     def get_prplMesh_status(self) -> bool:
         """ Check prplMesh status. Return True if operational."""
         self.sendline("/etc/init.d/prplmesh status")
