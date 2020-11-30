@@ -34,6 +34,7 @@ class LinkMetricQuery(PrplMeshBaseTest):
     Link's media type (ethernet, wifi), packet stats, RSSI (for wireless rx links) and phy rate
     (for wireless tx links) are not checked in this test.
     """
+
     def runTest(self):
         # skip this test if one of the components does not exist in setup
         try:

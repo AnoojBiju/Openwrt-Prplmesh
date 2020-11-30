@@ -23,17 +23,22 @@ class PrplMeshStationDummy(PrplMeshBase):
 
         self.name = config.get("name", "station")
         self.mac = config.get("mac", None)
+        self.associated_vap = None
 
         if self.mac is None:
             raise ValueError(err("{} device \"{}\" has no MAC!".format(self.model, self.name)))
 
     def wifi_connect(self, vap: VirtualAPDocker) -> bool:
         """Connect to the Access Point. Return True if successful."""
+        self.associated_vap = vap
+
         vap.radio.send_bwl_event("EVENT AP-STA-CONNECTED {}".format(self.mac))
         return True
 
     def wifi_disconnect(self, vap: VirtualAPDocker) -> bool:
         '''Disassociate "sta" from this VAP.'''
+        self.associated_vap = None
+
         vap.radio.send_bwl_event("EVENT AP-STA-DISCONNECTED {}".format(self.mac))
         return True
 

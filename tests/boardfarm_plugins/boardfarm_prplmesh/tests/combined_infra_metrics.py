@@ -132,22 +132,6 @@ class CombinedInfraMetrics(PrplMeshBaseTest):
         sta1.wifi_disconnect(vap1)
         sta2.wifi_disconnect(vap2)
 
-    @classmethod
-    def teardown_class(cls):
-        """Teardown method, optional for boardfarm tests."""
-        test = cls.test_obj
-        print("Sniffer - stop")
-        test.dev.DUT.wired_sniffer.stop()
-        # Send additional Ctrl+C to the device to terminate "tail -f"
-        # Which is used to read log from device. Required only for tests on HW
-        try:
-            test.dev.DUT.agent_entity.device.send('\003')
-        except AttributeError:
-            # If AttributeError was raised - we are dealing with dummy devices.
-            # We don't have to additionaly send Ctrl+C for dummy devices.
-            pass
-        test.dev.wifi.disable_wifi()
-
     def send_and_check_policy_config_metric_reporting(self, controller,
                                                       agent, include_sta_traffic_stats=True,
                                                       include_sta_link_metrics=True):
