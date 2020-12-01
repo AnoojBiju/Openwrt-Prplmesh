@@ -31,12 +31,16 @@
 #include <tlvf/ieee_1905_1/tlvWsc.h>
 #include <tlvf/wfa_map/eTlvTypeMap.h>
 #include <tlvf/wfa_map/tlvApCapability.h>
+#include <tlvf/wfa_map/tlvApHeCapabilities.h>
 #include <tlvf/wfa_map/tlvApHtCapabilities.h>
 #include <tlvf/wfa_map/tlvApMetricQuery.h>
 #include <tlvf/wfa_map/tlvApMetrics.h>
+#include <tlvf/wfa_map/tlvApOperationalBSS.h>
 #include <tlvf/wfa_map/tlvApRadioBasicCapabilities.h>
 #include <tlvf/wfa_map/tlvApRadioIdentifier.h>
 #include <tlvf/wfa_map/tlvApVhtCapabilities.h>
+#include <tlvf/wfa_map/tlvAssociatedClients.h>
+#include <tlvf/wfa_map/tlvAssociatedStaExtendedLinkMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringRequest.h>
@@ -45,20 +49,30 @@
 #include <tlvf/wfa_map/tlvBeaconMetricsResponse.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvChannelScanCapabilities.h>
+#include <tlvf/wfa_map/tlvChannelScanReportingPolicy.h>
 #include <tlvf/wfa_map/tlvChannelSelectionResponse.h>
 #include <tlvf/wfa_map/tlvClientAssociationControlRequest.h>
 #include <tlvf/wfa_map/tlvClientAssociationEvent.h>
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
+#include <tlvf/wfa_map/tlvErrorCode.h>
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 #include <tlvf/wfa_map/tlvProfile2ApRadioAdvancedCapabilities.h>
+#include <tlvf/wfa_map/tlvProfile2CacCapabilities.h>
+#include <tlvf/wfa_map/tlvProfile2CacCompletionReport.h>
+#include <tlvf/wfa_map/tlvProfile2CacRequest.h>
+#include <tlvf/wfa_map/tlvProfile2CacStatusReport.h>
+#include <tlvf/wfa_map/tlvProfile2CacTermination.h>
 #include <tlvf/wfa_map/tlvProfile2ChannelScanRequest.h>
 #include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>
 #include <tlvf/wfa_map/tlvProfile2Default802dotQSettings.h>
 #include <tlvf/wfa_map/tlvProfile2MetricCollectionInterval.h>
+#include <tlvf/wfa_map/tlvProfile2ReasonCode.h>
+#include <tlvf/wfa_map/tlvProfile2StatusCode.h>
+#include <tlvf/wfa_map/tlvProfile2SteeringRequest.h>
 #include <tlvf/wfa_map/tlvProfile2TrafficSeparationPolicy.h>
 #include <tlvf/wfa_map/tlvProfile2UnsuccessfulAssociationPolicy.h>
 #include <tlvf/wfa_map/tlvRadioOperationRestriction.h>
@@ -196,6 +210,12 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     case (wfa_map::eTlvTypeMap::TLV_AP_RADIO_IDENTIFIER): {
         return msg.addClass<wfa_map::tlvApRadioIdentifier>();
     }
+    case (wfa_map::eTlvTypeMap::TLV_AP_OPERATIONAL_BSS): {
+        return msg.addClass<wfa_map::tlvApOperationalBSS>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_ASSOCIATED_CLIENTS): {
+        return msg.addClass<wfa_map::tlvAssociatedClients>();
+    }
     case (wfa_map::eTlvTypeMap::TLV_AP_RADIO_BASIC_CAPABILITIES): {
         return msg.addClass<wfa_map::tlvApRadioBasicCapabilities>();
     }
@@ -204,6 +224,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_AP_VHT_CAPABILITIES): {
         return msg.addClass<wfa_map::tlvApVhtCapabilities>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_AP_HE_CAPABILITIES): {
+        return msg.addClass<wfa_map::tlvApHeCapabilities>();
     }
     case (wfa_map::eTlvTypeMap::TLV_STEERING_POLICY): {
         return msg.addClass<wfa_map::tlvSteeringPolicy>();
@@ -247,6 +270,14 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     case (wfa_map::eTlvTypeMap::TLV_ASSOCIATED_STA_LINK_METRICS): {
         return msg.addClass<wfa_map::tlvAssociatedStaLinkMetrics>();
     }
+    case (wfa_map::eTlvTypeMap::TLV_UNASSOCIATED_STA_LINK_METRICS_QUERY): {
+        LOG(DEBUG) << "TLV_UNASSOCIATED_STA_LINK_METRICS_QUERY not supported";
+        return msg.addClass<ieee1905_1::tlvUnknown>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_UNASSOCIATED_STA_LINK_METRICS_RESPONSE): {
+        LOG(DEBUG) << "TLV_UNASSOCIATED_STA_LINK_METRICS_RESPONSE not supported";
+        return msg.addClass<ieee1905_1::tlvUnknown>();
+    }
     case (wfa_map::eTlvTypeMap::TLV_BEACON_METRICS_QUERY): {
         return msg.addClass<wfa_map::tlvBeaconMetricsQuery>();
     }
@@ -277,6 +308,12 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     case (wfa_map::eTlvTypeMap::TLV_ASSOCIATED_STA_TRAFFIC_STATS): {
         return msg.addClass<wfa_map::tlvAssociatedStaTrafficStats>();
     }
+    case (wfa_map::eTlvTypeMap::TLV_ERROR_CODE): {
+        return msg.addClass<wfa_map::tlvErrorCode>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_CHANNEL_SCAN_REPORTING_POLICY): {
+        return msg.addClass<wfa_map::tlvChannelScanReportingPolicy>();
+    }
     case (wfa_map::eTlvTypeMap::TLV_CHANNEL_SCAN_CAPABILITIES): {
         return msg.addClass<wfa_map::tlvChannelScanCapabilities>();
     }
@@ -288,6 +325,21 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_TIMESTAMP): {
         return msg.addClass<wfa_map::tlvTimestamp>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_PROFILE2_CAC_REQUEST): {
+        return msg.addClass<wfa_map::tlvProfile2CacRequest>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_PROFILE2_CAC_TERMINATION): {
+        return msg.addClass<wfa_map::tlvProfile2CacTermination>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_PROFILE2_CAC_COMPLETION_REPORT): {
+        return msg.addClass<wfa_map::tlvProfile2CacCompletionReport>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_PROFILE2_CAC_STATUS_REPORT): {
+        return msg.addClass<wfa_map::tlvProfile2CacStatusReport>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_PROFILE2_CAC_CAPABILITIES): {
+        return msg.addClass<wfa_map::tlvProfile2CacCapabilities>();
     }
     case (wfa_map::eTlvTypeMap::TLV_PROFILE2_AP_CAPABILITY): {
         return msg.addClass<wfa_map::tlvProfile2ApCapability>();
@@ -310,17 +362,27 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     case (wfa_map::eTlvTypeMap::TLV_TUNNELLED_DATA): {
         return msg.addClass<wfa_map::tlvTunnelledData>();
     }
+    case (wfa_map::eTlvTypeMap::TLV_PROFILE2_STEERING_REQUEST): {
+        return msg.addClass<wfa_map::tlvProfile2SteeringRequest>();
+    }
     case (wfa_map::eTlvTypeMap::TLV_PROFILE2_UNSUCCESSFUL_ASSOCIATION_POLICY): {
         return msg.addClass<wfa_map::tlvProfile2UnsuccessfulAssociationPolicy>();
     }
     case (wfa_map::eTlvTypeMap::TLV_PROFILE2_METRIC_COLLECTION_INTERVAL): {
         return msg.addClass<wfa_map::tlvProfile2MetricCollectionInterval>();
     }
-    default: {
-        LOG(DEBUG) << "Unknown TLV type: " << unsigned(tlv_type);
-        return msg.addClass<tlvUnknown>();
+    case (wfa_map::eTlvTypeMap::TLV_ASSOCIATED_STA_EXTENDED_LINK_METRICS): {
+        return msg.addClass<wfa_map::tlvAssociatedStaExtendedLinkMetrics>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_PROFILE2_STATUS_CODE): {
+        return msg.addClass<wfa_map::tlvProfile2StatusCode>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_PROFILE2_REASON_CODE): {
+        return msg.addClass<wfa_map::tlvProfile2ReasonCode>();
     }
     }
+    LOG(FATAL) << "Unknown TLV type: " << unsigned(tlv_type);
+    return msg.addClass<tlvUnknown>();
 }
 
 std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv()
