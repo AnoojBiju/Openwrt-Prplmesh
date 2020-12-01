@@ -945,14 +945,19 @@ bool ap_wlan_hal_dwpal::sta_bss_steer(const std::string &mac, const std::string 
         mac
 
         // Transition management parameters
-        + " dialog_token=" + "0" + " pref=" + "1" + " abridged=" + "1" +
-        " mbo=" + std::to_string(reason);
+        + " dialog_token=" + "0" + " pref=" + "1" + " abridged=" + "1";
 
     // Divide disassoc_timer by 100, because the hostapd expects it to be in beacon interval
     // which is 100ms.
     if (disassoc_timer_btt) {
         cmd += std::string() + " disassoc_imminent=" + "1" +
                " disassoc_timer=" + std::to_string(disassoc_timer_btt);
+    }
+
+    // Add only valid (possitive) reason codes
+    // Upper layers may set the reason value to a (-1) value to mark that the reason is not present
+    if (reason >= 0) {
+        cmd += " mbo=" + std::to_string(reason);
     }
 
     if (valid_int_btt) {

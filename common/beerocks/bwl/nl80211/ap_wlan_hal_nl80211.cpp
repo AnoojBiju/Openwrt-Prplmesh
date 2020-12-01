@@ -277,8 +277,13 @@ bool ap_wlan_hal_nl80211::sta_bss_steer(const std::string &mac, const std::strin
         "BSS_TM_REQ " +
         mac
         // Transition management parameters
-        + " pref=" + "1" + " abridged=" + "1" + " mbo=" + std::to_string(reason);
-    ;
+        + " pref=" + "1" + " abridged=" + "1";
+
+    // Add only valid (possitive) reason codes
+    // Upper layers may set the reason value to a (-1) value to mark that the reason is not present
+    if (reason >= 0) {
+        cmd += " mbo=" + std::to_string(reason);
+    }
 
     if (disassoc_timer_btt) {
         cmd += std::string() + " disassoc_imminent=" + "1" +
@@ -286,7 +291,6 @@ bool ap_wlan_hal_nl80211::sta_bss_steer(const std::string &mac, const std::strin
     }
     // " bss_term="  // Unused Param
     // " url="       // Unused Param
-    // " mbo="       // Unused Param
 
     if (valid_int_btt) {
         cmd += " valid_int=" + std::to_string(valid_int_btt);
