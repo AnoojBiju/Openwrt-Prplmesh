@@ -4692,6 +4692,7 @@ bool slave_thread::handle_client_steering_request(Socket *sd, ieee1905_1::CmduMe
                 std::get<1>(bssid_list).target_bss_channel_number;
             request_out->params().disassoc_imminent =
                 steering_request_tlv->request_flags().btm_disassociation_imminent_bit;
+            request_out->params().target.reason = -1; // Mark that reason is not added
         }
 
         message_com::send_cmdu(ap_manager_socket, cmdu_tx);
