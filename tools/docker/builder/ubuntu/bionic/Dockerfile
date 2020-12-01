@@ -100,7 +100,8 @@ RUN \
 # As they have some internal dependencies - we should build & install
 # them in specific order.
 RUN \
-    repo init -u https://gitlab.com/soft.at.home/ambiorix/ambiorix.git < /dev/null && \
+    repo init -u https://gitlab.com/soft.at.home/ambiorix/ambiorix.git \
+        -b refs/tags/v0.3.2 < /dev/null && \
     repo sync && \
     make install -C libraries/libamxc && \
     make install -C libraries/libamxp && \
