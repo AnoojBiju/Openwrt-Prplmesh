@@ -282,7 +282,11 @@ bool ap_wlan_hal_nl80211::sta_bss_steer(const std::string &mac, const std::strin
     // Add only valid (possitive) reason codes
     // Upper layers may set the reason value to a (-1) value to mark that the reason is not present
     if (reason >= 0) {
-        cmd += " mbo=" + std::to_string(reason);
+        // mbo format is mbo=<reason>:<reassoc_delay>:<cell_pref>
+        // since the <reassoc_delay>:<cell_pref> variables are not part of the Steering Request TLV, we hard code it.
+        // See discussion here:
+        // https://gitlab.com/prpl-foundation/prplmesh/prplMesh/-/merge_requests/1948#note_457733802
+        cmd += " mbo=" + std::to_string(reason) + ":100:0";
     }
 
     if (disassoc_timer_btt) {
