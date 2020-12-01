@@ -1987,6 +1987,14 @@ bool Controller::handle_cmdu_1905_topology_notification(const std::string &src_m
                              &new_event);
         }
 #endif
+        /*
+          TODO: Notify disconenction should be called if Disassociation Event TLV present
+                in Topology Notification Message.
+                Should be fixed after PPM-864.
+        */
+        if (!database.notify_disconnection(client_mac_str)) {
+            LOG(WARNING) << "Failed to notify disconnection event.";
+        }
 
         son_actions::handle_dead_node(client_mac_str, bssid_str, database, cmdu_tx, tasks);
     }
