@@ -8,6 +8,7 @@
 
 #include <tlvf/CmduMessageRx.h>
 #include <tlvf/WSC/AttrList.h>
+#include <tlvf/ieee_1905_1/eTlvType.h>
 #include <tlvf/ieee_1905_1/tlv1905NeighborDevice.h>
 #include <tlvf/ieee_1905_1/tlvAlMacAddress.h>
 #include <tlvf/ieee_1905_1/tlvAutoconfigFreqBand.h>
@@ -28,6 +29,7 @@
 #include <tlvf/ieee_1905_1/tlvUnknown.h>
 #include <tlvf/ieee_1905_1/tlvVendorSpecific.h>
 #include <tlvf/ieee_1905_1/tlvWsc.h>
+#include <tlvf/wfa_map/eTlvTypeMap.h>
 #include <tlvf/wfa_map/tlvApCapability.h>
 #include <tlvf/wfa_map/tlvApHtCapabilities.h>
 #include <tlvf/wfa_map/tlvApMetricQuery.h>
@@ -97,32 +99,31 @@ uint16_t CmduMessageRx::getNextTlvLength() const
     return tlv_length;
 }
 
-std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv()
+std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(ieee1905_1::eTlvType tlv_type)
 {
-    auto tlv_type = getNextTlvType();
     switch (tlv_type) {
-    case (0): {
+    case (ieee1905_1::eTlvType::TLV_END_OF_MESSAGE): {
         return msg.addClass<tlvEndOfMessage>();
     }
-    case (1): {
+    case (ieee1905_1::eTlvType::TLV_AL_MAC_ADDRESS): {
         return msg.addClass<tlvAlMacAddress>();
     }
-    case (2): {
+    case (ieee1905_1::eTlvType::TLV_MAC_ADDRESS): {
         return msg.addClass<tlvMacAddress>();
     }
-    case (3): {
+    case (ieee1905_1::eTlvType::TLV_DEVICE_INFORMATION): {
         return msg.addClass<tlvDeviceInformation>();
     }
-    case (4): {
+    case (ieee1905_1::eTlvType::TLV_DEVICE_BRIDGING_CAPABILITY): {
         return msg.addClass<tlvDeviceBridgingCapability>();
     }
-    case (6): {
+    case (ieee1905_1::eTlvType::TLV_NON_1905_NEIGHBOR_DEVICE_LIST): {
         return msg.addClass<tlvNon1905neighborDeviceList>();
     }
-    case (7): {
+    case (ieee1905_1::eTlvType::TLV_1905_NEIGHBOR_DEVICE): {
         return msg.addClass<tlv1905NeighborDevice>();
     }
-    case (8): {
+    case (ieee1905_1::eTlvType::TLV_LINK_METRIC_QUERY): {
         /**
          * The IEEE 1905.1 standard says about the Link Metric Query TLV and the neighbor type
          * octet that "If the value is 0, then the EUI48 field is not present; if the value is 1,
@@ -145,172 +146,194 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv()
             return msg.addClass<tlvLinkMetricQuery>();
         }
     }
-    case (9): {
+    case (ieee1905_1::eTlvType::TLV_TRANSMITTER_LINK_METRIC): {
         return msg.addClass<tlvTransmitterLinkMetric>();
     }
-    case (10): {
+    case (ieee1905_1::eTlvType::TLV_RECEIVER_LINK_METRIC): {
         return msg.addClass<tlvReceiverLinkMetric>();
     }
-    case (11): {
+    case (ieee1905_1::eTlvType::TLV_VENDOR_SPECIFIC): {
         return msg.addClass<tlvVendorSpecific>();
     }
-    case (12): {
+    case (ieee1905_1::eTlvType::TLV_LINK_METRIC_RESULT_CODE): {
         return msg.addClass<tlvLinkMetricResultCode>();
     }
-    case (13): {
+    case (ieee1905_1::eTlvType::TLV_SEARCHED_ROLE): {
         return msg.addClass<tlvSearchedRole>();
     }
-    case (14): {
+    case (ieee1905_1::eTlvType::TLV_AUTOCONFIG_FREQ_BAND): {
         return msg.addClass<tlvAutoconfigFreqBand>();
     }
-    case (15): {
+    case (ieee1905_1::eTlvType::TLV_SUPPORTED_ROLE): {
         return msg.addClass<tlvSupportedRole>();
     }
-    case (16): {
+    case (ieee1905_1::eTlvType::TLV_SUPPORTED_FREQ_BAND): {
         return msg.addClass<tlvSupportedFreqBand>();
     }
-    case (17): {
+    case (ieee1905_1::eTlvType::TLV_WSC): {
         return msg.addClass<ieee1905_1::tlvWsc>();
     }
-    case (18): {
+    case (ieee1905_1::eTlvType::TLV_PUSH_BUTTON_EVENT_NOTIFICATION): {
         return msg.addClass<tlvPushButtonEventNotification>();
     }
-    case (19): {
+    case (ieee1905_1::eTlvType::TLV_PUSH_BUTTON_JOIN_NOTIFICATION): {
         return msg.addClass<tlvPushButtonJoinNotification>();
     }
-    case (128): {
+    }
+    LOG(FATAL) << "Unknown TLV type: " << unsigned(tlv_type);
+    return msg.addClass<tlvUnknown>();
+}
+
+std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_type)
+{
+    switch (tlv_type) {
+    case (wfa_map::eTlvTypeMap::TLV_SUPPORTED_SERVICE): {
         return msg.addClass<wfa_map::tlvSupportedService>();
     }
-    case (129): {
+    case (wfa_map::eTlvTypeMap::TLV_SEARCHED_SERVICE): {
         return msg.addClass<wfa_map::tlvSearchedService>();
     }
-    case (130): {
+    case (wfa_map::eTlvTypeMap::TLV_AP_RADIO_IDENTIFIER): {
         return msg.addClass<wfa_map::tlvApRadioIdentifier>();
     }
-    case (133): {
+    case (wfa_map::eTlvTypeMap::TLV_AP_RADIO_BASIC_CAPABILITIES): {
         return msg.addClass<wfa_map::tlvApRadioBasicCapabilities>();
     }
-    case (134): {
+    case (wfa_map::eTlvTypeMap::TLV_AP_HT_CAPABILITIES): {
         return msg.addClass<wfa_map::tlvApHtCapabilities>();
     }
-    case (135): {
+    case (wfa_map::eTlvTypeMap::TLV_AP_VHT_CAPABILITIES): {
         return msg.addClass<wfa_map::tlvApVhtCapabilities>();
     }
-    case (137): {
+    case (wfa_map::eTlvTypeMap::TLV_STEERING_POLICY): {
         return msg.addClass<wfa_map::tlvSteeringPolicy>();
     }
-    case (138): {
+    case (wfa_map::eTlvTypeMap::TLV_METRIC_REPORTING_POLICY): {
         return msg.addClass<wfa_map::tlvMetricReportingPolicy>();
     }
-    case (139): {
+    case (wfa_map::eTlvTypeMap::TLV_CHANNEL_PREFERENCE): {
         return msg.addClass<wfa_map::tlvChannelPreference>();
     }
-    case (140): {
+    case (wfa_map::eTlvTypeMap::TLV_RADIO_OPERATION_RESTRICTION): {
         return msg.addClass<wfa_map::tlvRadioOperationRestriction>();
     }
-    case (141): {
+    case (wfa_map::eTlvTypeMap::TLV_TRANSMIT_POWER_LIMIT): {
         return msg.addClass<wfa_map::tlvTransmitPowerLimit>();
     }
-    case (142): {
+    case (wfa_map::eTlvTypeMap::TLV_CHANNEL_SELECTION_RESPONSE): {
         return msg.addClass<wfa_map::tlvChannelSelectionResponse>();
     }
-    case (143): {
+    case (wfa_map::eTlvTypeMap::TLV_OPERATING_CHANNEL_REPORT): {
         return msg.addClass<wfa_map::tlvOperatingChannelReport>();
     }
-    case (144): {
+    case (wfa_map::eTlvTypeMap::TLV_CLIENT_INFO): {
         return msg.addClass<wfa_map::tlvClientInfo>();
     }
-    case (145): {
+    case (wfa_map::eTlvTypeMap::TLV_CLIENT_CAPABILITY_REPORT): {
         return msg.addClass<wfa_map::tlvClientCapabilityReport>();
     }
-    case (146): {
+    case (wfa_map::eTlvTypeMap::TLV_CLIENT_ASSOCIATION_EVENT): {
         return msg.addClass<wfa_map::tlvClientAssociationEvent>();
     }
-    case (147): {
+    case (wfa_map::eTlvTypeMap::TLV_AP_METRIC_QUERY): {
         return msg.addClass<wfa_map::tlvApMetricQuery>();
     }
-    case (148): {
+    case (wfa_map::eTlvTypeMap::TLV_AP_METRIC): {
         return msg.addClass<wfa_map::tlvApMetrics>();
     }
-    case (149): {
+    case (wfa_map::eTlvTypeMap::TLV_STAMAC_ADDRESS_TYPE): {
         return msg.addClass<wfa_map::tlvStaMacAddressType>();
     }
-    case (150): {
+    case (wfa_map::eTlvTypeMap::TLV_ASSOCIATED_STA_LINK_METRICS): {
         return msg.addClass<wfa_map::tlvAssociatedStaLinkMetrics>();
     }
-    case (153): {
+    case (wfa_map::eTlvTypeMap::TLV_BEACON_METRICS_QUERY): {
         return msg.addClass<wfa_map::tlvBeaconMetricsQuery>();
     }
-    case (154): {
+    case (wfa_map::eTlvTypeMap::TLV_BEACON_METRICS_RESPONSE): {
         return msg.addClass<wfa_map::tlvBeaconMetricsResponse>();
     }
-    case (155): {
+    case (wfa_map::eTlvTypeMap::TLV_STEERING_REQUEST): {
         return msg.addClass<wfa_map::tlvSteeringRequest>();
     }
-    case (156): {
+    case (wfa_map::eTlvTypeMap::TLV_STEERING_BTM_REPORT): {
         return msg.addClass<wfa_map::tlvSteeringBTMReport>();
     }
-    case (157): {
+    case (wfa_map::eTlvTypeMap::TLV_CLIENT_ASSOCIATION_CONTROL_REQUEST): {
         return msg.addClass<wfa_map::tlvClientAssociationControlRequest>();
     }
-    case (158): {
+    case (wfa_map::eTlvTypeMap::TLV_BACKHAUL_STEERING_REQUEST): {
         return msg.addClass<wfa_map::tlvBackhaulSteeringRequest>();
     }
-    case (159): {
+    case (wfa_map::eTlvTypeMap::TLV_BACKHAUL_STEERING_RESPONSE): {
         return msg.addClass<wfa_map::tlvBackhaulSteeringResponse>();
     }
-    case (160): {
+    case (wfa_map::eTlvTypeMap::TLV_HIGHER_LAYER_DATA): {
         return msg.addClass<wfa_map::tlvHigherLayerData>();
     }
-    case (161): {
+    case (wfa_map::eTlvTypeMap::TLV_AP_CAPABILITY): {
         return msg.addClass<wfa_map::tlvApCapability>();
     }
-    case (162): {
+    case (wfa_map::eTlvTypeMap::TLV_ASSOCIATED_STA_TRAFFIC_STATS): {
         return msg.addClass<wfa_map::tlvAssociatedStaTrafficStats>();
     }
-    case (165): {
+    case (wfa_map::eTlvTypeMap::TLV_CHANNEL_SCAN_CAPABILITIES): {
         return msg.addClass<wfa_map::tlvChannelScanCapabilities>();
     }
-    case (166): {
+    case (wfa_map::eTlvTypeMap::TLV_CHANNEL_SCAN_REQUEST): {
         return msg.addClass<wfa_map::tlvProfile2ChannelScanRequest>();
     }
-    case (167): {
+    case (wfa_map::eTlvTypeMap::TLV_CHANNEL_SCAN_RESULT): {
         return msg.addClass<wfa_map::tlvProfile2ChannelScanResult>();
     }
-    case (168): {
+    case (wfa_map::eTlvTypeMap::TLV_TIMESTAMP): {
         return msg.addClass<wfa_map::tlvTimestamp>();
     }
-    case (180): {
+    case (wfa_map::eTlvTypeMap::TLV_PROFILE2_AP_CAPABILITY): {
         return msg.addClass<wfa_map::tlvProfile2ApCapability>();
     }
-    case (181): {
+    case (wfa_map::eTlvTypeMap::TLV_PROFILE2_DEFAULT_802_1Q_SETTINGS): {
         return msg.addClass<wfa_map::tlvProfile2Default802dotQSettings>();
     }
-    case (182): {
+    case (wfa_map::eTlvTypeMap::TLV_PROFILE2_TRAFFIC_SEPARATION_POLICY): {
         return msg.addClass<wfa_map::tlvProfile2TrafficSeparationPolicy>();
     }
-    case (190): {
+    case (wfa_map::eTlvTypeMap::TLV_PROFILE2_AP_RADIO_ADVANCED_CAPABILITIES): {
         return msg.addClass<wfa_map::tlvProfile2ApRadioAdvancedCapabilities>();
     }
-    case (192): {
+    case (wfa_map::eTlvTypeMap::TLV_TUNNELLED_SOURCE_INFO): {
         return msg.addClass<wfa_map::tlvTunnelledSourceInfo>();
     }
-    case (193): {
+    case (wfa_map::eTlvTypeMap::TLV_TUNNELLED_PROTOCOL_TYPE): {
         return msg.addClass<wfa_map::tlvTunnelledProtocolType>();
     }
-    case (194): {
+    case (wfa_map::eTlvTypeMap::TLV_TUNNELLED_DATA): {
         return msg.addClass<wfa_map::tlvTunnelledData>();
     }
-    case (196): {
+    case (wfa_map::eTlvTypeMap::TLV_PROFILE2_UNSUCCESSFUL_ASSOCIATION_POLICY): {
         return msg.addClass<wfa_map::tlvProfile2UnsuccessfulAssociationPolicy>();
     }
-    case (197): {
+    case (wfa_map::eTlvTypeMap::TLV_PROFILE2_METRIC_COLLECTION_INTERVAL): {
         return msg.addClass<wfa_map::tlvProfile2MetricCollectionInterval>();
     }
     default: {
-        LOG(DEBUG) << "Unknown TLV type: " << tlv_type;
+        LOG(DEBUG) << "Unknown TLV type: " << unsigned(tlv_type);
         return msg.addClass<tlvUnknown>();
     }
+    }
+}
+
+std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv()
+{
+    auto tlv_type = getNextTlvType();
+
+    if (ieee1905_1::eTlvTypeValidate::check(tlv_type)) {
+        return parseNextTlv(ieee1905_1::eTlvType(tlv_type));
+    } else if (wfa_map::eTlvTypeMapValidate::check(tlv_type)) {
+        return parseNextTlv(wfa_map::eTlvTypeMap(tlv_type));
+    } else {
+        LOG(INFO) << "Unknown TLV type: " << tlv_type;
+        return msg.addClass<tlvUnknown>();
     }
 }
 
