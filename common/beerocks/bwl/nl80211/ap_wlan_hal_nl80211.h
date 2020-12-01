@@ -99,6 +99,9 @@ private:
 
     bool m_drop_csa = false;
     std::chrono::steady_clock::time_point m_csa_event_filtering_timestamp;
+    // (re)association requests. only the last one is stored to
+    // include it in STA-CONNECTED:
+    std::string m_latest_assoc_frame = {};
 };
 
 } // namespace nl80211
