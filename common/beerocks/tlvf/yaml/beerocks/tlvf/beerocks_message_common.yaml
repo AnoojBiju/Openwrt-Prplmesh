@@ -263,7 +263,7 @@ sNodeBssSteerTarget:
   bssid: sMacAddr
   operating_class: uint8_t
   channel: uint8_t
-  reason: uint8_t
+  reason: int16_t
 
 sNodeBssSteerRequest:
   _type: struct
