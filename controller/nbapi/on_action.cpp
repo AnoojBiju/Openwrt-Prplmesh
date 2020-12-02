@@ -11,6 +11,8 @@
 namespace prplmesh {
 namespace controller {
 
+// Actions
+
 static amxd_status_t action_read_last_change(amxd_object_t *object, amxd_param_t *param,
                                              amxd_action_t reason, const amxc_var_t *const args,
                                              amxc_var_t *const retval, void *priv)
@@ -68,6 +70,66 @@ static amxd_status_t display_empty_val(amxd_object_t *object, amxd_param_t *para
     return status;
 }
 
+// Events
+
+amxd_dm_t *g_data_model = nullptr;
+
+static void rm_params(amxd_object_t *object, const char *param_name)
+{
+    amxd_param_t *param = amxd_object_get_param_def(object, param_name);
+
+    if (param) {
+        amxd_action_param_destroy(object, param, action_param_destroy, NULL, NULL, NULL);
+        amxd_param_delete(&param);
+    }
+}
+
+/**
+ * @brief Removes PreSharedKey, KeyPassphrase, SAEPassphrase parameters 
+ * from Controller.Network.AccessPoint.*.Security object.
+ * event_rm_params() invokes when value of parameter
+ * Controller.Network.AccessPoint.*.Security.ModeEnabled changed
+ * from "WPA2-Personal" to any of other availeble values.
+ */
+static void event_rm_params(const char *const sig_name, const amxc_var_t *const data,
+                            void *const priv)
+{
+    amxd_object_t *security_obj = amxd_dm_signal_get_object(g_data_model, data);
+
+    if (!security_obj) {
+        LOG(WARNING) << "Failed to get object Controller.Network.AccessPoint.Security";
+        return;
+    }
+    rm_params(security_obj, "PreSharedKey");
+    rm_params(security_obj, "KeyPassphrase");
+    rm_params(security_obj, "SAEPassphrase");
+}
+
+static void add_string_param(const char *param_name, amxd_object_t *param_owner_obj)
+{
+    amxd_param_t *param = NULL;
+
+    amxd_param_new(&param, param_name, AMXC_VAR_ID_CSTRING);
+    amxd_object_add_param(param_owner_obj, param);
+    amxd_param_add_action_cb(param, action_param_read, display_empty_val, NULL);
+}
+
+/**
+ * @brief Add PreSharedKey, KeyPassphrase, SAEPassphrase parameters 
+ * to Controller.Network.AccessPoint.*.Security object.
+ * Function invokes when value of parameter
+ * Controller.Network.AccessPoint.*.Security.ModeEnabled changed to "WPA2-Personal".
+ */
+static void event_add_hidden_params(const char *const sig_name, const amxc_var_t *const data,
+                                    void *const priv)
+{
+    amxd_object_t *security_obj = amxd_dm_signal_get_object(g_data_model, data);
+
+    add_string_param("PreSharedKey", security_obj);
+    add_string_param("KeyPassphrase", security_obj);
+    add_string_param("SAEPassphrase", security_obj);
+}
+
 std::vector<beerocks::nbapi::sActionsCallback> get_actions_callback_list(void)
 {
     const std::vector<beerocks::nbapi::sActionsCallback> actions_list = {
@@ -75,6 +137,15 @@ std::vector<beerocks::nbapi::sActionsCallback> get_actions_callback_list(void)
         {"display_empty_val", display_empty_val},
     };
     return actions_list;
+}
+
+std::vector<beerocks::nbapi::sEvents> get_events_list(void)
+{
+    const std::vector<beerocks::nbapi::sEvents> events_list = {
+        {"event_add_hidden_params", event_add_hidden_params},
+        {"event_rm_params", event_rm_params},
+    };
+    return events_list;
 }
 
 } // namespace controller

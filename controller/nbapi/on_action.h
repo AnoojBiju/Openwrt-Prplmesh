@@ -35,6 +35,7 @@ namespace prplmesh {
 namespace controller {
 
 std::vector<beerocks::nbapi::sActionsCallback> get_actions_callback_list(void);
+std::vector<beerocks::nbapi::sEvents> get_events_list(void);
 
 } // namespace controller
 } // namespace prplmesh

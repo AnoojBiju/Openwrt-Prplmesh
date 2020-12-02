@@ -419,10 +419,11 @@ int main(int argc, char *argv[])
 #ifdef ENABLE_NBAPI
     // Prepare vector with actions: name and pointer to function
     auto on_action_handlers = prplmesh::controller::get_actions_callback_list();
+    auto events_list        = prplmesh::controller::get_events_list();
 
     auto controller_dm_path = mapf::utils::get_install_path() + "config/odl/controller.odl";
-    auto amb_dm_obj =
-        std::make_shared<beerocks::nbapi::AmbiorixImpl>(event_loop, on_action_handlers);
+    auto amb_dm_obj         = std::make_shared<beerocks::nbapi::AmbiorixImpl>(
+        event_loop, on_action_handlers, events_list);
     LOG_IF(!amb_dm_obj, FATAL) << "Unable to create Ambiorix!";
     amb_dm_obj->init(AMBIORIX_BACKEND_PATH, AMBIORIX_BUS_URI, controller_dm_path);
 #else
