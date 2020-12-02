@@ -38,16 +38,17 @@ void Ieee1905Transport::update_neighbours(const Packet &packet)
     }
 
     // Delete aged neighbors
-    for (const auto &neigh : neighbors_map_) {
-        if (neigh.first == packet.src) {
-            continue;
+    for (auto neigh = neighbors_map_.begin(); neigh != neighbors_map_.end();) {
+        if (neigh->first != packet.src) {
+            auto age = std::chrono::duration_cast<std::chrono::seconds>(
+                std::chrono::steady_clock::now() - neigh->second.last_seen);
+            if (age > kMaximumNeighbourAge) {
+                MAPF_INFO("Deleting aged out neighbour with almac " << neigh->first);
+                neigh = neighbors_map_.erase(neigh);
+                continue;
+            }
         }
-        auto age = std::chrono::duration_cast<std::chrono::seconds>(
-            std::chrono::steady_clock::now() - neigh.second.last_seen);
-        if (age > kMaximumNeighbourAge) {
-            MAPF_INFO("Deleting aged out neighbour with almac " << neigh.first);
-            neighbors_map_.erase(neigh.first);
-        }
+        ++neigh;
     }
 
     // Add new neighbours
