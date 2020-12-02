@@ -51,7 +51,7 @@ class PrplMeshCompose(PrplMeshBase):
         self.wired_sniffer = Sniffer(_get_bridge_interface(self.unique_id),
                                      boardfarm.config.output_dir)
 
-        self.check_status()
+        self.check_dev_get_info()
 
     def isalive(self):
         """Method required by boardfarm.
@@ -62,5 +62,5 @@ class PrplMeshCompose(PrplMeshBase):
         return True
 
     def prprlmesh_status_check(self):
-        self.check_status()
+        self.check_dev_get_info()
         return True

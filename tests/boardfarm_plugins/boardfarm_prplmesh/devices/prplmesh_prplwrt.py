@@ -150,7 +150,7 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
 
         States that device is operational and its consoles are accessible.
         """
-        return self.check_status()
+        return self.check_dev_get_info()
 
     def touch(self):
         """Keep consoles alive.

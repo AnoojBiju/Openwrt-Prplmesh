@@ -33,7 +33,7 @@ class PrplMeshBase(linux.LinuxDevice):
         self.log_calls += entry
         self.log += "$ " + entry + "\r\n" + res
 
-    def check_status(self):
+    def check_dev_get_info(self):
         """Method required by boardfarm.
 
         It is used by boardfarm to indicate that spawned device instance is ready for test
