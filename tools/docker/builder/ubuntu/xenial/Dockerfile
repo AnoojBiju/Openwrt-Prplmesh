@@ -19,8 +19,6 @@ RUN apt-get update && apt-get install -y \
     libtool \
     ninja-build \
     pkg-config \
-    python \
-    python-yaml \
     python3 \
     python3-yaml \
     uuid-runtime \

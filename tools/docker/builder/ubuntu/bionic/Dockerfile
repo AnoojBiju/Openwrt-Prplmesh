@@ -21,8 +21,6 @@ ARG PACKAGES_FOR_BUILD="\
     libssl-dev \
     ninja-build \
     pkg-config \
-    python \
-    python-yaml \
     python3 \
     python3-yaml \
     "
