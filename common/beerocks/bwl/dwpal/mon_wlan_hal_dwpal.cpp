@@ -103,7 +103,7 @@ static mon_wlan_hal::Event dwpal_nl_to_bwl_event(uint8_t cmd)
  * @param [in] channel_pool list of channels to be scanned.
  * @param [in] curr_channel channel teh radio is currently on.
  * @param [in] iface radio interface name.
- * @param [out] scan_params for saving channel frequencies for next scan. 
+ * @param [out] scan_params for saving channel frequencies for next scan.
  * @return true on success
  */
 static bool dwpal_get_channel_scan_freq(const std::vector<unsigned int> &channel_pool,
@@ -257,9 +257,9 @@ static void get_supprates(const uint8_t *data, uint8_t len, sChannelScanResults 
         }
 
         /**
-         * rate_mbs_fp_8_1 is tx data rate in mbps 
+         * rate_mbs_fp_8_1 is tx data rate in mbps
          * represented with fixed point u<8,1>.
-         * converting to kbps (no fixpoint) for simplicity u<8,0> 
+         * converting to kbps (no fixpoint) for simplicity u<8,0>
          */
         rate_kbs = (rate_mbs_fp_8_1 / 2) * 1000 + (5 * (rate_mbs_fp_8_1 & 1)) * 100;
 
@@ -737,6 +737,13 @@ bool mon_wlan_hal_dwpal::update_stations_stats(const std::string &vap_iface_name
     // TX Packets
     if (!read_param("PacketsSent", reply, tmp_int)) {
         LOG(ERROR) << "Failed reading PacketsSent parameter!";
+        return false;
+    }
+    calc_curr_traffic(tmp_int, sta_stats.tx_packets_cnt, sta_stats.tx_packets);
+
+    // RX Packets
+    if (!read_param("PacketsReceived", reply, tmp_int)) {
+        LOG(ERROR) << "Failed reading PacketsReceived parameter!";
         return false;
     }
     calc_curr_traffic(tmp_int, sta_stats.rx_packets_cnt, sta_stats.rx_packets);
