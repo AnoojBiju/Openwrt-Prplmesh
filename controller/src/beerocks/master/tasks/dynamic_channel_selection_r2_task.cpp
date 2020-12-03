@@ -8,6 +8,7 @@
 
 #include "dynamic_channel_selection_r2_task.h"
 #include "../son_actions.h"
+#include <beerocks/tlvf/beerocks_message_1905_vs.h>
 #include <easylogging++.h>
 
 #define FSM_MOVE_STATE(new_state)                                                                  \
@@ -125,7 +126,7 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
         }
 
         // Add all radio scans in current agent to radio_list in channel_scan_request_tlv.
-        bool succsess = true;
+        bool success = true;
         for (auto &radio_scan_request : agent.second.radio_scans) {
 
             radio_scan_request.second.mid    = mid;
@@ -138,12 +139,54 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
                 // Failed to add radio to radio_list in channel_scan_request_tlv
                 LOG(ERROR) << "add_radio_to_channel_scan_request_tlv() failed for radio "
                            << radio_mac;
-                succsess = false;
+                success = false;
                 break;
             }
         }
 
-        if (!succsess) {
+        // Create channel scan request extended message (vendor specific tlv)
+        if (database.is_prplmesh(agent_mac)) {
+            auto channel_scan_request_extension_vs_tlv = beerocks::message_com::add_vs_tlv<
+                beerocks_message::tlvVsChannelScanRequestExtension>(cmdu_tx);
+
+            if (!channel_scan_request_extension_vs_tlv) {
+                LOG(ERROR) << "Failed building tlvVsChannelScanRequestExtension message!";
+                success = false;
+                break;
+            }
+
+            // Add additional parmeters of all radio scans in current agent
+            // to scan_requests_list in channel_scan_request_extension_vs_tlv.
+            auto num_of_radios = agent.second.radio_scans.size();
+            if (!channel_scan_request_extension_vs_tlv->alloc_scan_requests_list(num_of_radios)) {
+                LOG(ERROR) << "Failed to alloc_scan_requests_list(" << num_of_radios << ")!";
+                success = false;
+                break;
+            }
+
+            auto scan_request_idx = 0;
+            for (auto &radio_scan_request : agent.second.radio_scans) {
+
+                // Add the radio scan details to the extended message.
+                auto ap_scan_request_tuple =
+                    channel_scan_request_extension_vs_tlv->scan_requests_list(scan_request_idx);
+                if (!std::get<0>(ap_scan_request_tuple)) {
+                    LOG(ERROR) << "Failed to get element " << scan_request_idx;
+                    success = false;
+                    break;
+                }
+                auto &scan_request_extension = std::get<1>(ap_scan_request_tuple);
+
+                scan_request_extension.radio_mac     = radio_scan_request.first;
+                scan_request_extension.dwell_time_ms = radio_scan_request.second.dwell_time_msec;
+                scan_request_idx++;
+            }
+        } else {
+            LOG(INFO) << "non-prplmesh agent " << agent_mac
+                      << ", skip tlvVsChannelScanRequestExtension creation";
+        }
+
+        if (!success) {
             for (auto &radio_scan_request : agent.second.radio_scans) {
                 radio_scan_request.second.mid    = INVALID_MID_ID;
                 radio_scan_request.second.status = eRadioScanStatus::PENDING;
@@ -155,9 +198,9 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
 
         // Send CHANNEL_SCAN_REQUEST_MESSAGE to the agent
         //auto first_radio_mac = agent.second.radio_scans.begin()->first;
-        succsess = send_scan_request_to_agent(agent_mac);
+        success = send_scan_request_to_agent(agent_mac);
 
-        if (!succsess) {
+        if (!success) {
             for (auto &radio_scan_request : agent.second.radio_scans) {
                 radio_scan_request.second.mid    = INVALID_MID_ID;
                 radio_scan_request.second.status = eRadioScanStatus::PENDING;
@@ -397,7 +440,7 @@ bool son::dynamic_channel_selection_r2_task::add_operating_classes_to_radio(
 
     // Get channel pool for this radio scan request
     auto const &curr_channel_pool =
-        m_agents_status_map[ire_mac].radio_scans[radio_mac].curr_channel_pool;
+        m_agents_status_map[ire_mac].radio_scans[radio_mac].channel_pool;
 
     // Convert channels list to operating_class: channels list
     std::unordered_map<uint8_t, std::set<uint8_t>> operating_class_to_classes_map;
