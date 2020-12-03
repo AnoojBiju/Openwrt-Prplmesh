@@ -20,6 +20,7 @@
 #include <memory>
 #include <tlvf/BaseClass.h>
 #include <tlvf/ClassList.h>
+#include <tuple>
 #include "bcl/beerocks_message_structs.h"
 #include "beerocks/tlvf/beerocks_message_action.h"
 
@@ -61,6 +62,44 @@ class tlvVsClientAssociationEvent : public BaseClass
         uint8_t* m_disconnect_reason = nullptr;
         uint8_t* m_disconnect_source = nullptr;
         uint8_t* m_disconnect_type = nullptr;
+};
+typedef struct sScanRequestExtension {
+    sMacAddr radio_mac;
+    uint32_t dwell_time_ms;
+    void struct_swap(){
+        radio_mac.struct_swap();
+        tlvf_swap(32, reinterpret_cast<uint8_t*>(&dwell_time_ms));
+    }
+    void struct_init(){
+        radio_mac.struct_init();
+    }
+} __attribute__((packed)) sScanRequestExtension;
+
+
+class tlvVsChannelScanRequestExtension : public BaseClass
+{
+    public:
+        tlvVsChannelScanRequestExtension(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit tlvVsChannelScanRequestExtension(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~tlvVsChannelScanRequestExtension();
+
+        static eActionOp_1905_VS get_action_op(){
+            return (eActionOp_1905_VS)(ACTION_TLV_VENDOR_SPECIFIC);
+        }
+        uint8_t& scan_requests_list_length();
+        std::tuple<bool, sScanRequestExtension&> scan_requests_list(size_t idx);
+        bool alloc_scan_requests_list(size_t count = 1);
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_1905_VS* m_action_op = nullptr;
+        uint8_t* m_scan_requests_list_length = nullptr;
+        sScanRequestExtension* m_scan_requests_list = nullptr;
+        size_t m_scan_requests_list_idx__ = 0;
+        int m_lock_order_counter__ = 0;
 };
 
 }; // close namespace: beerocks_message
