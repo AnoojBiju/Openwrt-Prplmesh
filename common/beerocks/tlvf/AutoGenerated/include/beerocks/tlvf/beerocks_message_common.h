@@ -401,9 +401,10 @@ typedef struct sNodeBssSteerTarget {
     sMacAddr bssid;
     uint8_t operating_class;
     uint8_t channel;
-    uint8_t reason;
+    int16_t reason;
     void struct_swap(){
         bssid.struct_swap();
+        tlvf_swap(16, reinterpret_cast<uint8_t*>(&reason));
     }
     void struct_init(){
         bssid.struct_init();
