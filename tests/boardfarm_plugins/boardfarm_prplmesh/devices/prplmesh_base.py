@@ -34,6 +34,8 @@ class PrplMeshBase(linux.LinuxDevice):
         self.log += "$ " + entry + "\r\n" + res
 
     def check_status(self):
+        print("\n\nRunning check_status() on %s" % self.name)
+
         self.sendline(
             "\ncat /proc/version"
         )
