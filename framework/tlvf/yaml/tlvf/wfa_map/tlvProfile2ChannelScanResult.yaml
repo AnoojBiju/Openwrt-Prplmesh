@@ -59,7 +59,7 @@ eScanStatus:
   SCAN_NOT_COMPLETED: 0x04
   SCAN_ABORTED: 0x05
   FRESH_SCAN_NOT_SUPPORTED_RADIO_ONLY_SUPPORTS_ON_BOOT_SCANS: 0x06
-  #0x07 – 0xFF: Reserved
+  #0x07 - 0xFF: Reserved
 
 eScanType:
   _type: enum
