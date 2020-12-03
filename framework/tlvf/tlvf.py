@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -47,7 +47,7 @@ except ImportError:
 class OrderedDictYAMLLoader(yaml.Loader):
     def __init__(self, *args, **kwargs):
         yaml.Loader.__init__(self, *args, **kwargs)
-        self.add_constructor(u'tag:yaml.org,2002:map', type(self).constructYamlMap)
+        self.add_constructor('tag:yaml.org,2002:map', type(self).constructYamlMap)
 
     def constructYamlMap(self, node):
         data = OrderedDict()

@@ -1,11 +1,10 @@
-FROM alpine:3.11.3
+FROM alpine:3.12
 
 RUN apk add --update --no-cache \
     autoconf \
     binutils \
     bridge-utils \
     cmake \
-    cppcheck \
     curl \
     gcc \
     g++ \
@@ -21,12 +20,8 @@ RUN apk add --update --no-cache \
     ninja \
     openssl-dev \
     pkgconf \
-    py2-pip \
-    python2 \
+    py3-yaml \
+    python3 \
     readline-dev \
     sed \
-    && apk add --update --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/main \
     clang-extra-tools
-# clang-extra-tools needs to be fetched from the edge repository for now
-
-RUN pip install pyyaml
