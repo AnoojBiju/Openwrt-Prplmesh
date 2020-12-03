@@ -1,0 +1,40 @@
+/* SPDX-License-Identifier: BSD-2-Clause-Patent
+ *
+ * SPDX-FileCopyrightText: 2020 the prplMesh contributors (see AUTHORS.md)
+ *
+ * This code is subject to the terms of the BSD+Patent license.
+ * See LICENSE file for more details.
+ */
+
+%define {
+	select Controller.Network.AccessPoint {
+		string SSID = "prplMesh";
+		object Security {
+			/*
+			** Strings PreSharedKey, KeyPassphrase, SAEPassphrase added
+			** here when ModeEnabled set to "WPA2-Personal"
+			*/
+			string ModeEnabled {
+				default "None";
+				on action validate call check_enum [
+					"None",
+					"WPA2-Personal",
+					"WPA3-Personal",
+					"WPA3-Personal-Transition"
+				];
+			}
+		}
+		string MultiApMode {
+			default "Fronthaul";
+			on action validate call check_enum [
+				"Fronthaul",
+				"Backhaul",
+				"Fronthaul+Backhaul"
+			];
+		}
+		bool Band2_4G = false;
+		bool Band5GL = false;
+		bool Band5GH = false;
+		bool Band6G = false;
+	}
+}
