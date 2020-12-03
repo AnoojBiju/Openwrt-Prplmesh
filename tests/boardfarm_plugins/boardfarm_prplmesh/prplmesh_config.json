@@ -30,6 +30,12 @@
                 "type": "STA_dummy",
                 "mac": "51:a1:10:20:00:02",
                 "conn_cmd": ""
+            },
+            {
+                "name": "wifi3",
+                "type": "STA_dummy",
+                "mac": "51:a1:10:20:00:03",
+                "conn_cmd": ""
             }
         ]
     },
