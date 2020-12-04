@@ -3329,8 +3329,7 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
         string_utils::copy_string(request->hostap_iface(message::IFACE_NAME_LENGTH),
                                   config.hostap_iface.c_str(), message::IFACE_NAME_LENGTH);
 
-        request->onboarding()         = 0;
-        request->certification_mode() = db->device_conf.certification_mode;
+        request->onboarding() = 0;
 
         LOG(INFO) << "ACTION_BACKHAUL_REGISTER_REQUEST "
                   << " hostap_iface=" << request->hostap_iface(message::IFACE_NAME_LENGTH)
