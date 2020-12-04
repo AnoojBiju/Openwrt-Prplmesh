@@ -123,6 +123,13 @@ backhaul_manager::backhaul_manager(
 
     m_eFSMState = EState::INIT;
     set_select_timeout(SELECT_TIMEOUT_MSC);
+
+    m_task_pool.add_task(std::make_shared<TopologyTask>(*this, cmdu_tx));
+    m_task_pool.add_task(std::make_shared<ApAutoConfigurationTask>(*this, cmdu_tx));
+    m_task_pool.add_task(std::make_shared<ChannelSelectionTask>(*this, cmdu_tx));
+    m_task_pool.add_task(std::make_shared<ChannelScanTask>(*this, cmdu_tx));
+    m_task_pool.add_task(std::make_shared<CapabilityReportingTask>(*this, cmdu_tx));
+    m_task_pool.add_task(std::make_shared<LinkMetricsCollectionTask>(*this, cmdu_tx));
 }
 
 backhaul_manager::~backhaul_manager() { backhaul_manager::on_thread_stop(); }
@@ -163,48 +170,6 @@ bool backhaul_manager::init()
         LOG(ERROR) << "Failed to init mapf_bus";
         return false;
     }
-
-    auto topology_task = std::make_shared<TopologyTask>(*this, cmdu_tx);
-    if (!topology_task) {
-        LOG(ERROR) << "failed to allocate Topology Task!";
-        return false;
-    }
-    m_task_pool.add_task(topology_task);
-
-    auto ap_auto_configuration_task = std::make_shared<ApAutoConfigurationTask>(*this, cmdu_tx);
-    if (!ap_auto_configuration_task) {
-        LOG(ERROR) << "failed to allocate ap_auto_configuration_task Task!";
-        return false;
-    }
-    m_task_pool.add_task(ap_auto_configuration_task);
-
-    auto channel_selection_task = std::make_shared<ChannelSelectionTask>(*this, cmdu_tx);
-    if (!channel_selection_task) {
-        LOG(ERROR) << "failed to allocate Channel Selection Task!";
-        return false;
-    }
-    m_task_pool.add_task(channel_selection_task);
-
-    auto channel_scan_task = std::make_shared<ChannelScanTask>(*this, cmdu_tx);
-    if (!channel_scan_task) {
-        LOG(ERROR) << "failed to allocate Channel Scan Task!";
-        return false;
-    }
-    m_task_pool.add_task(channel_scan_task);
-
-    auto capability_reporting_task = std::make_shared<CapabilityReportingTask>(*this, cmdu_tx);
-    if (!capability_reporting_task) {
-        LOG(ERROR) << "failed to allocate capability_reporting_task!";
-        return false;
-    }
-    m_task_pool.add_task(capability_reporting_task);
-
-    auto link_metrics_collection_task = std::make_shared<LinkMetricsCollectionTask>(*this, cmdu_tx);
-    if (!link_metrics_collection_task) {
-        LOG(ERROR) << "failed to allocate link_metrics_collection_task Task!";
-        return false;
-    }
-    m_task_pool.add_task(link_metrics_collection_task);
 
     return true;
 }
