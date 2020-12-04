@@ -958,9 +958,6 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
             FSM_MOVE_STATE(CONNECT_TO_MASTER);
             break;
         }
-        if (db->statuses.ap_autoconfiguration_failure) {
-            FSM_MOVE_STATE(RESTART);
-        }
         break;
     }
     case EState::CONNECT_TO_MASTER: {
@@ -1101,8 +1098,6 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         db->backhaul.connection_type = AgentDB::sBackhaul::eConnectionType::Invalid;
 
         db->controller_info.bridge_mac = beerocks::net::network_utils::ZERO_MAC;
-
-        db->statuses.ap_autoconfiguration_failure = false;
 
         if (configuration_stop_on_failure_attempts && !stop_on_failure_attempts) {
             LOG(ERROR) << "Reached to max stop on failure attempts!";

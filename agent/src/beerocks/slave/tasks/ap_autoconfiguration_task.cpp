@@ -27,8 +27,7 @@ using namespace beerocks;
 using namespace net;
 using namespace son;
 
-static constexpr uint8_t MAX_FAILED_AUTOCONFIG_SEARCH_ATTEMPTS = 60;
-static constexpr uint8_t AUTOCONFIG_DISCOVERY_TIMEOUT_SECONDS  = 3;
+static constexpr uint8_t AUTOCONFIG_DISCOVERY_TIMEOUT_SECONDS = 3;
 
 #define FSM_MOVE_STATE(radio_iface, new_state)                                                     \
     ({                                                                                             \
@@ -94,16 +93,6 @@ void ApAutoConfigurationTask::work()
             // AP_AUTOCONFIGURATION_SEARCH_MESSAGE, we can skip and let it handle it.
             if (m_discovery_status[radio->freq_type].msg_sent) {
                 continue;
-            }
-
-            if (state_status.attempts++ > MAX_FAILED_AUTOCONFIG_SEARCH_ATTEMPTS) {
-                LOG(ERROR) << "exceeded maximum attempts for "
-                              "ap_autoconfiguration discovery on "
-                              "radio iface="
-                           << radio_iface << ", state_attempts=" << state_status.attempts;
-                db->statuses.ap_autoconfiguration_failure = true;
-                FSM_MOVE_STATE(radio_iface, eState::UNCONFIGURED);
-                break;
             }
 
             if (send_ap_autoconfiguration_search_message(radio_iface)) {
@@ -176,9 +165,6 @@ void ApAutoConfigurationTask::handle_event(uint8_t event_enum_value, const void 
 
             LOG(DEBUG) << "starting discovery sequence on radio_iface=" << radio->front.iface_name;
             FSM_MOVE_STATE(radio->front.iface_name, eState::CONTROLLER_DISCOVERY);
-
-            // reset AP-Autoconfiguration task attempts counter.
-            m_state[radio->front.iface_name].attempts = 0;
 
             // Reset the discovery statuses.
             m_discovery_status[radio->freq_type] = {};
