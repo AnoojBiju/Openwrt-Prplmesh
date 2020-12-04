@@ -37,12 +37,12 @@ class PrplMeshBase(linux.LinuxDevice):
         print("\n\nRunning check_status() on %s" % self.name)
 
         self.sendline(
-            "\ncat /proc/version"
+            "\nexpr 12345679 \* 8"
         )
         self.expect_exact(
-            'cat /proc/version'
+            'expr 12345679 \* 8'
         )
-        self.expect('Linux version', timeout=5)
+        self.expect('98765432', timeout=5)
         self.expect(self.prompt, timeout=5)
 
         return True
