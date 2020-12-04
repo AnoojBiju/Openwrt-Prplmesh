@@ -38,10 +38,16 @@ class PrplMeshBase(linux.LinuxDevice):
 
         It is used by boardfarm to indicate that spawned device instance is ready for test
         and also after test - to insure that device still operational.
-        """
-        entity = self.get_active_entity()
 
-        entity.ucc_socket.cmd_reply("device_get_info")
+        Currently always returns True.
+        """
+        # TODO: enable actual check
+
+        # entity = self.get_active_entity()
+
+        # entity.ucc_socket.cmd_reply("device_get_info")
+
+        return True
 
     def close(self):
         """Method required by boardfarm.
