@@ -32,10 +32,13 @@ set(MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 set(nbapi_action_sources ${MODULE_PATH}/on_action.cpp)
 
 # Include AMBIORIX in the build
-find_package(amxc REQUIRED)
-find_package(amxd REQUIRED)
+if (ENABLE_NBAPI)
+    find_package(amxc REQUIRED)
+    find_package(amxd REQUIRED)
+    list(APPEND NBAPI_LIBS amxc amxd)
+endif()
 
-set(linked_libs elpp nbapi bcl mapfcommon amxd amxc)
+set(linked_libs elpp nbapi bcl mapfcommon ${NBAPI_LIBS})
 
 
 # Build the Controller Data Model Actions library
