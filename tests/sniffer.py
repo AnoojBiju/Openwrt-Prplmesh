@@ -112,6 +112,9 @@ class Sniffer:
         '''Start tcpdump to outputfile.'''
         debug("Starting tcpdump, output file {}.pcap".format(outputfile_basename))
         os.makedirs(os.path.join(self.tcpdump_log_dir, 'logs'), exist_ok=True)
+        # dumpcap drops its root priviledges and becomes unable to write to log directory.
+        # Make log directory accessible to everyone to fix it.
+        os.chmod(self.tcpdump_log_dir, 0o777)
         self.current_outputfile = os.path.join(self.tcpdump_log_dir, outputfile_basename) + ".pcap"
         self.checkpoint_frame_number = 0
         # '-q' avoids the output, which we don't need.

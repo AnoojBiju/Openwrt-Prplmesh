@@ -10,7 +10,7 @@ networks:
         driver: bridge
 
 x-prplmesh: &prplmesh # Template for the prplmesh services
-    image: registry.gitlab.com/prpl-foundation/prplmesh/prplmesh/prplmesh-builder-ubuntu-bionic:${CI_PIPELINE_ID}
+    image: registry.gitlab.com/prpl-foundation/prplmesh/prplmesh/prplmesh-builder-ubuntu-bionic:${IMAGE_TAG}
     privileged: true    # For the creation of the bridge to work
     networks:
         - ucc
@@ -20,7 +20,7 @@ x-prplmesh: &prplmesh # Template for the prplmesh services
         - INSTALL_DIR=${FINAL_ROOT_DIR}/build/install
         - ROOT_DIR=${FINAL_ROOT_DIR}
         - RUN_ID
-        - CI_PIPELINE_ID
+        - IMAGE_TAG
     ports:
         - "8002"
 
@@ -57,14 +57,14 @@ services:
     # Boardfarm image is launched from dctest.py, TARGET_DIR refers to the
     # path inside the controller, will be referred as $ROOT_DIR inside
     boardfarm:
-        image: registry.gitlab.com/prpl-foundation/prplmesh/prplmesh/prplmesh-boardfarm-ci:${CI_PIPELINE_ID}
+        image: registry.gitlab.com/prpl-foundation/prplmesh/prplmesh/prplmesh-boardfarm-ci:${IMAGE_TAG}
         privileged: true
         container_name: boardfarm-$RUN_ID
         environment:
             - USER
             - ROOT_DIR
             - RUN_ID
-            - CI_PIPELINE_ID
+            - IMAGE_TAG
             - FINAL_ROOT_DIR
             - PYTHONDONTWRITEBYTECODE=1
         network_mode: host
@@ -73,7 +73,7 @@ services:
             - "/var/run/docker:/var/run/docker"
             - "/var/run/docker.sock:/var/run/docker.sock"
         working_dir: $ROOT_DIR/tests
-        entrypoint: ["bash", "-c", "echo 'wait for DUTs'; sleep 20; echo 'starting boardfarm'; ./run_bf.sh"]
+        entrypoint: ["bash", "-c", "echo 'wait for DUTs'; sleep 20; echo 'starting boardfarm'; ./run_bf.sh --dut $DUT --test-suite $TEST_SUITE"]
         depends_on:
           - controller
           - agent

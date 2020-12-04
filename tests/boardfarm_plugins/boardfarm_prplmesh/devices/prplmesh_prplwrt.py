@@ -15,6 +15,7 @@ import sys
 import time
 
 from .prplmesh_base import PrplMeshBase
+from boardfarm.exceptions import CodeError
 from boardfarm.devices import connection_decider
 from boardfarm.devices.openwrt_router import OpenWrtRouter
 from environment import ALEntityPrplWrt, _get_bridge_interface
@@ -26,7 +27,9 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
     """prplWRT burned device with prplMesh installed."""
 
     model = "prplWRT"
-    prompt = ['root\\@OpenWrt:/#', '/#', '@OpenWrt:/#', "@OpenWrt:~#"]
+    prompt = ['/#',
+              'root\\@OpenWrt:/#', '@OpenWrt:/#', "@OpenWrt:~#",
+              'root\\@prplWrt:/#', '@prplWrt:/#', "@prplWrt:~#"]
     wan_iface = "eth1"
     uboot_eth = "eth0_1"
     linesep = "\r"
@@ -38,8 +41,10 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
         self.args = args
         self.kwargs = kwargs
         config = kwargs.get("config", kwargs)
+        self.unique_id = os.getenv("RUN_ID")
+        if not self.unique_id:
+            raise CodeError("RUN_ID not set")
 
-        self.unique_id = os.getenv("SUDO_USER", os.getenv("USER", ""))
         self.docker_network = config.get("docker_network",
                                          "prplMesh-net-{}".format(self.unique_id))
         self.role = config.get("role", "agent")
@@ -47,8 +52,16 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
         self.conn_cmd = config.get("conn_cmd", None)
         self.wan_ip = config.get("wan_ip", None)
         self.username = config.get("username", "root")
+        self.host_iface_to_device = config.get("iface_to_device")
+        if not self.host_iface_to_device:
+            raise CodeError("Interface to the device not specified. \
+            Please provide the interface on the host that connects to the prplWrt device.")
 
         self.name = "-".join((config.get("name", "netgear-rax40"), self.unique_id))
+        try:
+            self.delay = int(config.get("delay", 30))
+        except ValueError as err:
+            raise CodeError("Invalid delay specified: {}".format(str(err)))
 
         # If no WAN IP is set in config file retrieve IP from docker network set in config
         # X.X.X.245 IP will be selected from docker network
@@ -70,23 +83,35 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
 
         self.wired_sniffer = Sniffer(_get_bridge_interface(self.unique_id),
                                      boardfarm.config.output_dir)
+        # Disable public key checking.
+        # Boards will be reflashed from time to time and it will change their ssh identity.
+        conn_cmd = "ssh -o PubkeyAuthentication=no" \
+                   " -o StrictHostKeyChecking=no" \
+                   " {}@{}".format(self.username, self.wan_ip)
         self.connection = connection_decider.connection(device=self,
                                                         conn_type="ssh",
-                                                        conn_cmd="ssh {}@{}".format(
-                                                            self.username, self.wan_ip))
+                                                        conn_cmd=conn_cmd)
         self.connection.connect()
         # Append active connection to the general array for logging
         self.consoles = [self]
         # Point what to log as data read from child process of pexpect
         # Result: boardfarm will log communication in separate file
         self.logfile_read = sys.stdout
-        self.add_iface_to_bridge(self.wan_iface, "br-lan")
+
+        # We need to add the interface to the actual device to the
+        # docker bridge the docker controller is in, to allow them to
+        # communicate:
+        self.add_host_iface_to_bridge(self.host_iface_to_device,
+                                      _get_bridge_interface(self.unique_id))
+
+        # prplMesh has to be started before creating the ALEntity,
+        # since the latter requires the ucc listener to be running.
+        self.prplmesh_start_mode(self.role)
 
         if self.role == "controller":
             self.controller_entity = ALEntityPrplWrt(self, is_controller=True)
         else:
             self.agent_entity = ALEntityPrplWrt(self, is_controller=False)
-            self.prplmesh_start_agent()
 
     def _prplMesh_exec(self, mode: str):
         """Send line to prplmesh initd script."""
@@ -150,22 +175,55 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
 
         return IPv4Network(inspect_json[0]["IPAM"]["Config"][0]["Subnet"])
 
-    def add_iface_to_bridge(self, iface: str, bridge: str) -> bool:
-        """Add specified interface to the specified bridge."""
-        ip_command = ("ip link set {} master {}".format(iface, bridge))
-        self.sendline(ip_command)
-        self.expect(self.prompt, timeout=10)
+    def add_host_iface_to_bridge(self, iface: str, bridge: str):
+        """Add specified local interface to the specified bridge.
+
+        Note that this applies to the _local_ device (i.e. the device
+        boardfarm runs in), not to the prplwrt device. This can be used
+        to add the interface to the prplWrt device to a docker bridge
+        for example.
+
+        Raises
+        ------
+        ExceptionPexpect
+            If the operation failed.
+
+        """
+        ip_args = ("link set {} master {}".format(iface, bridge))
+        self._run_shell_cmd("ip", ip_args.split(" "))
 
     def set_iface_ip(self, iface: str, ip: IPv4Address, prefixlen: int) -> bool:
         """Set interface IPv4 address."""
         self.sendline("ip a add {}/{} dev {}".format(ip, prefixlen, iface))
         self.expect(self.prompt, timeout=10)
 
-    def prplmesh_start_agent(self) -> bool:
-        """Start prplMesh in certification_mode agent. Return true if done."""
-        self._prplMesh_exec("certification_mode agent")
+    def prplmesh_start_mode(self, mode: str = "agent"):
+        """Start prplMesh in certification_mode and wait for it to initialize.
+
+        Parameters
+        ----------
+        mode: str
+            (optional) The mode in which to start prplMesh.
+            Has to be either 'agent' or 'controller'.
+            Defaults to 'agent'.
+
+        Raises
+        ------
+        ExceptionPexpect
+            If the operation failed.
+
+        ValueError
+            If the mode is neither 'controller' nor 'agent'.
+        """
+        if mode not in ["controller", "agent"]:
+            raise ValueError("Unknown prplMesh mode: {}".format(mode))
+
+        print("Starting prplmesh as {}".format(mode))
+        self._prplMesh_exec("certification_mode {}".format(mode))
         self.expect(self.prompt)
-        return True
+        if self.delay:
+            print("Waiting {} seconds for prplMesh to initialize".format(self.delay))
+            time.sleep(self.delay)
 
     def prprlmesh_status_check(self) -> bool:
         """Check prplMesh status by executing status command to initd service.

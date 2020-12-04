@@ -16,8 +16,8 @@ workflow:
 
 stages:
   - containers
-  - platform
   - build
+  - platform
   - test
   - certification-dummy
   - upload
@@ -49,12 +49,15 @@ image-build-boardfarm-ci:
 
 platform:
   stage: platform
-  needs: []
+  needs:
+    - build-in-docker
+    - image-build-boardfarm-ci
   rules: *expensive-job
   variables:
     TESTS_TO_RUN: $TESTS_TO_RUN
     DEVICE_UNDER_TEST: $DEVICE_UNDER_TEST
     WFA_CERTIFICATION_RUNNER: $WFA_CERTIFICATION_RUNNER
+    PARENT_PIPELINE_ID: $CI_PIPELINE_ID
   trigger:
     include: "ci/platform.yml"
     strategy: depend
