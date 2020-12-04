@@ -919,12 +919,8 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
 
         // In certification mode we want to wait till dev_set_config is received (wired backhaul)
         // or start_wps_registration (wireless backhaul).
-        int certification_mode = beerocks::bpl::cfg_get_certification_mode();
-        if (certification_mode < 0) {
-            LOG(ERROR) << "Error reading certification_mode";
-            return false;
-        }
-        if (certification_mode && wired_backhaul && !db->device_conf.local_controller) {
+        if (db->device_conf.certification_mode && wired_backhaul &&
+            !db->device_conf.local_controller) {
             if (!m_agent_ucc_listener) {
                 LOG(ERROR) << "m_agent_ucc_listener == nullptr";
                 return false;
