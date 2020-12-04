@@ -45,10 +45,7 @@ class cACTION_BACKHAUL_REGISTER_REQUEST : public BaseClass
         char* hostap_iface(size_t length = 0);
         bool set_hostap_iface(const std::string& str);
         bool set_hostap_iface(const char buffer[], size_t size);
-        uint8_t& local_master();
-        uint8_t& local_gw();
         uint8_t& onboarding();
-        uint8_t& certification_mode();
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -61,10 +58,7 @@ class cACTION_BACKHAUL_REGISTER_REQUEST : public BaseClass
         int m_lock_order_counter__ = 0;
         char* m_hostap_iface = nullptr;
         size_t m_hostap_iface_idx__ = 0;
-        uint8_t* m_local_master = nullptr;
-        uint8_t* m_local_gw = nullptr;
         uint8_t* m_onboarding = nullptr;
-        uint8_t* m_certification_mode = nullptr;
 };
 
 class cACTION_BACKHAUL_REGISTER_RESPONSE : public BaseClass

@@ -23,10 +23,7 @@ cACTION_BACKHAUL_REGISTER_REQUEST:
   hostap_iface:
     _type: char
     _length: ["beerocks::message::IFACE_NAME_LENGTH"]
-  local_master: uint8_t
-  local_gw: uint8_t
   onboarding: uint8_t
-  certification_mode: uint8_t
 
 cACTION_BACKHAUL_REGISTER_RESPONSE:
   _type: class
