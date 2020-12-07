@@ -15,9 +15,6 @@
 
 #include <easylogging++.h>
 
-// Initialize easylogging++
-INITIALIZE_EASYLOGGINGPP
-
 using namespace beerocks;
 
 using ::testing::InSequence;

@@ -52,3 +52,33 @@ install(TARGETS ${PROJECT_NAME}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
+
+# Tests are only available if NBAPI is actually built.
+if (ENABLE_NBAPI AND BUILD_TESTS)
+    set(TEST_PROJECT_NAME ${PROJECT_NAME}_unit_tests)
+    set(unit_tests_sources
+        ${nbapi_sources}
+        ${MODULE_PATH}/unit_tests/ambiorix_test.cpp
+        ${MODULE_PATH}/unit_tests/amxb_wrapper.cpp
+    )
+    add_executable(${TEST_PROJECT_NAME}
+        ${unit_tests_sources}
+    )
+    if (COVERAGE)
+        set_target_properties(${TEST_PROJECT_NAME} PROPERTIES COMPILE_FLAGS "--coverage -fPIC -O0")
+        set_target_properties(${TEST_PROJECT_NAME} PROPERTIES LINK_FLAGS "--coverage")
+    endif()
+    target_include_directories(${TEST_PROJECT_NAME}
+        PRIVATE
+            ${PLATFORM_INCLUDE_DIR}
+        PUBLIC
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    )
+    list(REMOVE_ITEM NBAPI_LIBS amxb)
+    target_link_libraries(${TEST_PROJECT_NAME} ${NBAPI_LIBS} mapfcommon elpp bcl)
+    target_link_libraries(${TEST_PROJECT_NAME} gtest_main gmock)
+
+    install(TARGETS ${TEST_PROJECT_NAME} DESTINATION tests)
+    add_test(NAME ${TEST_PROJECT_NAME} COMMAND $<TARGET_FILE:${TEST_PROJECT_NAME}>)
+endif()
+

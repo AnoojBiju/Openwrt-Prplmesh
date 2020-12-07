@@ -24,9 +24,6 @@
 
 #include <easylogging++.h>
 
-// Initialize easylogging++
-INITIALIZE_EASYLOGGINGPP
-
 namespace beerocks {
 namespace transport {
 namespace broker {
