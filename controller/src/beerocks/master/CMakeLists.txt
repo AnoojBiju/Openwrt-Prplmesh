@@ -33,3 +33,5 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
 # Install
 install(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+add_subdirectory("db/unit_tests")

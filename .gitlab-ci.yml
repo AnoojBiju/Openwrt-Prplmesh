@@ -213,6 +213,9 @@ beerocks_agent_unit_tests:
 nbapi_unit_tests:
   extends: .run-test-in-docker
 
+db_unit_tests:
+  extends: .run-test-in-docker
+
 run-tests:
   stage: test
   image: $CI_REGISTRY_IMAGE/prplmesh-tests-runner:$CI_PIPELINE_ID
