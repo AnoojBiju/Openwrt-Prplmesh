@@ -14,18 +14,20 @@
 
 #include <easylogging++.h>
 
-#include "backhaul_manager/backhaul_manager_thread.h"
+#include "backhaul_manager/backhaul_manager.h"
 
 using namespace beerocks;
 using namespace net;
 
-agent_ucc_listener::agent_ucc_listener(backhaul_manager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu)
-    : beerocks_ucc_listener(AgentDB::get()->device_conf.ucc_listener_port, cmdu, nullptr),
-      m_btl_ctx(btl_ctx)
+agent_ucc_listener::agent_ucc_listener(BackhaulManager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu,
+                                       std::unique_ptr<beerocks::UccServer> ucc_server)
+    : beerocks_ucc_listener(cmdu, std::move(ucc_server)), m_btl_ctx(btl_ctx)
 
 {
     m_ucc_listener_run_on = eUccListenerRunOn::AGENT;
 }
+
+agent_ucc_listener::~agent_ucc_listener() { m_in_reset = false; }
 
 /**
  * @brief Returns string filled with reply to "DEVICE_GET_INFO" command.
@@ -42,9 +44,9 @@ std::string agent_ucc_listener::fill_version_reply_string()
 /**
  * @brief Clear configuration on Agent, and initiate onboarding sequence.
  *
- * @return None.
+ * @return true on success and false otherwise.
  */
-void agent_ucc_listener::clear_configuration()
+bool agent_ucc_listener::clear_configuration()
 {
     m_in_reset                = true;
     m_reset_completed         = false;
@@ -53,17 +55,17 @@ void agent_ucc_listener::clear_configuration()
     auto timeout =
         std::chrono::steady_clock::now() + std::chrono::seconds(UCC_REPLY_COMPLETE_TIMEOUT_SEC);
 
-    while (!m_reset_completed) {
+    while (m_in_reset && (!m_reset_completed)) {
 
         if (std::chrono::steady_clock::now() > timeout) {
             LOG(ERROR) << "Reached timeout!";
-            return;
+            return false;
         }
 
-        // Unlock the thread mutex and allow the Agent thread to work while this thread sleeps
-        unlock();
         UTILS_SLEEP_MSEC(1000);
     }
+
+    return m_in_reset;
 }
 
 /**
@@ -152,7 +154,7 @@ bool agent_ucc_listener::send_cmdu_to_destination(ieee1905_1::CmduMessageTx &cmd
                                                   const std::string &dest_mac)
 {
     auto db = AgentDB::get();
-    return m_btl_ctx.send_cmdu_to_broker(cmdu_tx, dest_mac, tlvf::mac_to_string(db->bridge.mac));
+    return m_btl_ctx.send_cmdu_to_broker(cmdu_tx, tlvf::mac_from_string(dest_mac), db->bridge.mac);
 }
 
 static enum eFreqType band_to_freq(const std::string &band)

@@ -7,7 +7,7 @@
  */
 
 #include "capability_reporting_task.h"
-#include "../backhaul_manager/backhaul_manager_thread.h"
+#include "../backhaul_manager/backhaul_manager.h"
 #include "../tlvf_utils.h"
 #include <tlvf/wfa_map/tlvApCapability.h>
 #include <tlvf/wfa_map/tlvApHeCapabilities.h>
@@ -22,14 +22,14 @@
 
 namespace beerocks {
 
-CapabilityReportingTask::CapabilityReportingTask(backhaul_manager &btl_ctx,
+CapabilityReportingTask::CapabilityReportingTask(BackhaulManager &btl_ctx,
                                                  ieee1905_1::CmduMessageTx &cmdu_tx)
     : Task(eTaskType::CAPABILITY_REPORTING), m_btl_ctx(btl_ctx), m_cmdu_tx(cmdu_tx)
 {
 }
 
-bool CapabilityReportingTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                          const sMacAddr &src_mac, Socket *sd,
+bool CapabilityReportingTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
+                                          const sMacAddr &dst_mac, const sMacAddr &src_mac, int fd,
                                           std::shared_ptr<beerocks_header> beerocks_header)
 {
     switch (cmdu_rx.getMessageType()) {
@@ -106,8 +106,7 @@ void CapabilityReportingTask::handle_client_capability_query(ieee1905_1::CmduMes
         error_code_tlv->reason_code() =
             wfa_map::tlvErrorCode::STA_NOT_ASSOCIATED_WITH_ANY_BSS_OPERATED_BY_THE_AGENT;
         error_code_tlv->sta_mac() = client_info_tlv_r->client_mac();
-        m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
-                                      tlvf::mac_to_string(db->bridge.mac));
+        m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac);
         return;
     }
 
@@ -120,8 +119,7 @@ void CapabilityReportingTask::handle_client_capability_query(ieee1905_1::CmduMes
                                                         client_info.association_frame_length);
 
     LOG(DEBUG) << "Send a CLIENT_CAPABILITY_REPORT_MESSAGE back to controller";
-    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
-                                  tlvf::mac_to_string(db->bridge.mac));
+    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac);
 }
 
 void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -218,8 +216,7 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
 
     // send the constructed report
     LOG(DEBUG) << "Sending AP_CAPABILITY_REPORT_MESSAGE , mid: " << std::hex << mid;
-    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
-                                  tlvf::mac_to_string(db->bridge.mac));
+    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac);
 }
 
 bool CapabilityReportingTask::add_ap_ht_capabilities(const std::string &iface_name)

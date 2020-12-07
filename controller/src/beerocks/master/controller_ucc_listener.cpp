@@ -14,8 +14,7 @@ using namespace beerocks;
 
 controller_ucc_listener::controller_ucc_listener(db &database, ieee1905_1::CmduMessageTx &cmdu,
                                                  std::unique_ptr<beerocks::UccServer> ucc_server)
-    : beerocks_ucc_listener(database.config.ucc_listener_port, cmdu, std::move(ucc_server)),
-      m_database(database)
+    : beerocks_ucc_listener(cmdu, std::move(ucc_server)), m_database(database)
 {
     m_ucc_listener_run_on = eUccListenerRunOn::CONTROLLER;
 }
@@ -34,9 +33,13 @@ std::string controller_ucc_listener::fill_version_reply_string()
 /**
  * @brief Clear configuration on Controller database.
  * 
- * @return None.
+ * @return true on success and false otherwise.
  */
-void controller_ucc_listener::clear_configuration() { m_database.clear_bss_info_configuration(); }
+bool controller_ucc_listener::clear_configuration()
+{
+    m_database.clear_bss_info_configuration();
+    return true;
+}
 
 /**
  * @brief get parameter command

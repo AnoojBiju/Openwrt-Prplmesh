@@ -18,12 +18,12 @@
 
 namespace beerocks {
 
-// Forward decleration for backhaul_manager context saving
-class backhaul_manager;
+// Forward declaration for BackhaulManager context saving
+class BackhaulManager;
 
 class ChannelScanTask : public Task {
 public:
-    ChannelScanTask(backhaul_manager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx);
+    ChannelScanTask(BackhaulManager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx);
     ~ChannelScanTask() {}
 
     void work() override;
@@ -32,7 +32,8 @@ public:
 
     void handle_event(uint8_t event_enum_value, const void *event_obj) override;
 
-    bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac, Socket *sd,
+    bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
+                     const sMacAddr &dst_mac, const sMacAddr &src_mac, int fd,
                      std::shared_ptr<beerocks_header> beerocks_header) override;
 
     void start_scan();
@@ -62,7 +63,7 @@ private:
      */
     std::unordered_map<std::string, eState> m_state;
 
-    backhaul_manager &m_btl_ctx;
+    BackhaulManager &m_btl_ctx;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
 
     /* 1905.1 message handlers: */

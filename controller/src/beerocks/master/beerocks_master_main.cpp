@@ -17,9 +17,7 @@
 #include <bcl/network/network_utils.h>
 #include <bcl/network/sockets_impl.h>
 #include <bpl/bpl_cfg.h>
-#include <btl/broker_client_factory_impl.h>
-#include <btl/message_parser_stream_impl.h>
-#include <btl/message_serializer_stream_impl.h>
+#include <btl/broker_client_factory_factory.h>
 #include <mapf/common/utils.h>
 
 #include <easylogging++.h>
@@ -456,22 +454,14 @@ int main(int argc, char *argv[])
         LOG_IF(!ucc_server, FATAL) << "Unable to create UCC server!";
     }
 
-    // Create parser for broker messages received through a stream-oriented socket.
-    auto message_parser = std::make_shared<beerocks::btl::MessageParserStreamImpl>();
-    LOG_IF(!message_parser, FATAL) << "Unable to create message parser!";
-
-    // Create serializer for broker messages to be sent through a stream-oriented socket.
-    auto message_serializer = std::make_shared<beerocks::btl::MessageSerializerStreamImpl>();
-    LOG_IF(!message_serializer, FATAL) << "Unable to create message serializer!";
-
     // Create broker client factory to create broker clients when requested
     std::string broker_uds_path =
         beerocks_slave_conf.temp_path + "/" + std::string(BEEROCKS_BROKER_UDS);
-    auto broker_client_factory = std::make_shared<beerocks::btl::BrokerClientFactoryImpl>(
-        broker_uds_path, message_parser, message_serializer, event_loop);
+    auto broker_client_factory =
+        beerocks::btl::create_broker_client_factory(broker_uds_path, event_loop);
     LOG_IF(!broker_client_factory, FATAL) << "Unable to create broker client factory!";
 
-    son::Controller controller(master_db, broker_client_factory, std::move(ucc_server),
+    son::Controller controller(master_db, std::move(broker_client_factory), std::move(ucc_server),
                                std::move(cmdu_server), timer_manager, event_loop);
 
     if (!amb_dm_obj->set("Controller.Network", "TimeStamp",

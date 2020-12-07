@@ -13,28 +13,26 @@
 #include <bcl/beerocks_ucc_listener.h>
 #include <beerocks/tlvf/beerocks_message.h>
 
-#include <mutex>
+#include <atomic>
 
 namespace beerocks {
 
 static const auto DEV_SET_ETH = std::string("eth");
 
-// Forward decleration for backhaul_manager context saving
-class backhaul_manager;
+// Forward declaration for BackhaulManager context saving
+class BackhaulManager;
 
 class agent_ucc_listener : public beerocks_ucc_listener {
 public:
-    agent_ucc_listener(backhaul_manager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu);
-    ~agent_ucc_listener(){};
-
-    void lock() override { mutex.lock(); }
-    void unlock() override { mutex.unlock(); }
+    agent_ucc_listener(BackhaulManager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu,
+                       std::unique_ptr<beerocks::UccServer> ucc_server);
+    ~agent_ucc_listener() override;
 
     /** @brief Check if reset CAPI command was given.
      *
      * When the DEV_RESET_DEFAULT CAPI command is given, the agent must be held in reset until the
      * DEV_SET_CONFIG command is given. This function returns true when this is the case. It will
-     * return true as soon as the DEV_SET_CONFIG command is given. At that point,
+     * return false as soon as the DEV_SET_CONFIG command is given. At that point,
      * get_selected_backhaul() will return a valid result.
      */
     bool is_in_reset() const { return m_in_reset; }
@@ -68,7 +66,7 @@ public:
 
 private:
     std::string fill_version_reply_string() override;
-    void clear_configuration() override;
+    bool clear_configuration() override;
     bool send_cmdu_to_destination(ieee1905_1::CmduMessageTx &cmdu_tx,
                                   const std::string &dest_mac = std::string()) override;
     bool handle_start_wps_registration(const std::string &band, std::string &err_string) override;
@@ -77,10 +75,10 @@ private:
     bool handle_dev_get_param(std::unordered_map<std::string, std::string> &params,
                               std::string &value) override;
 
-    backhaul_manager &m_btl_ctx;
+    BackhaulManager &m_btl_ctx;
 
-    bool m_in_reset        = false;
-    bool m_reset_completed = false;
+    std::atomic<bool> m_in_reset{false};
+    std::atomic<bool> m_reset_completed{false};
 
     /**
      * @brief flag telling whether `dev_set_config` has been received
@@ -94,10 +92,8 @@ private:
      * This flag is set to `true` by default to not break test_flows and boardfarm tests.
      * In certification every test sends `dev_set_config` and that sets this flag to `false`.
      */
-    bool m_received_dev_set_config = true;
+    std::atomic<bool> m_received_dev_set_config{true};
     std::string m_selected_backhaul; // "ETH" or "<RUID of the selected radio>"
-
-    std::mutex mutex;
 };
 
 } // namespace beerocks

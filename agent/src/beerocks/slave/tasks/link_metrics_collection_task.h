@@ -12,29 +12,32 @@
 #include "task.h"
 
 #include <tlvf/CmduMessageTx.h>
+#include <tlvf/ieee_1905_1/eLinkMetricsType.h>
+#include <tlvf/ieee_1905_1/eMediaType.h>
 #include <tlvf/wfa_map/tlvApMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
 
-#include "../backhaul_manager/backhaul_manager_thread.h"
+#include "bcl/network/network_utils.h"
 
-#include "bcl/network/socket.h"
+#include "../helpers/link_metrics/link_metrics.h"
 
 namespace beerocks {
 
-// Forward decleration for backhaul_manager context saving
-class backhaul_manager;
+// Forward declaration for BackhaulManager context saving
+class BackhaulManager;
 
 class LinkMetricsCollectionTask : public Task {
 public:
-    LinkMetricsCollectionTask(backhaul_manager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx);
+    LinkMetricsCollectionTask(BackhaulManager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx);
 
-    bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac, Socket *sd,
+    bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
+                     const sMacAddr &dst_mac, const sMacAddr &src_mac, int fd,
                      std::shared_ptr<beerocks_header> beerocks_header) override;
 
     void work() override;
 
 private:
-    backhaul_manager &m_btl_ctx;
+    BackhaulManager &m_btl_ctx;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
 
     void handle_link_metric_query(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac);
@@ -162,7 +165,10 @@ private:
     sApMetricsReportingInfo m_ap_metrics_reporting_info;
 
     struct sApMetricsQuery {
-        Socket *soc;
+        /**
+         * File descriptor of the socket connection established from the slave to the CMDU server.
+         */
+        int slave;
         sMacAddr bssid;
     };
 

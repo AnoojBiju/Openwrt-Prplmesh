@@ -9,7 +9,7 @@
 #include "ap_autoconfiguration_task.h"
 
 #include "../agent_db.h"
-#include "../backhaul_manager/backhaul_manager_thread.h"
+#include "../backhaul_manager/backhaul_manager.h"
 
 #include <tlvf/ieee_1905_1/tlvAlMacAddress.h>
 #include <tlvf/ieee_1905_1/tlvAutoconfigFreqBand.h>
@@ -60,7 +60,7 @@ const std::string ApAutoConfigurationTask::fsm_state_to_string(eState status)
     return std::string();
 }
 
-ApAutoConfigurationTask::ApAutoConfigurationTask(backhaul_manager &btl_ctx,
+ApAutoConfigurationTask::ApAutoConfigurationTask(BackhaulManager &btl_ctx,
                                                  ieee1905_1::CmduMessageTx &cmdu_tx)
     : Task(eTaskType::AP_AUTOCONFIGURATION), m_btl_ctx(btl_ctx), m_cmdu_tx(cmdu_tx)
 {
@@ -194,8 +194,8 @@ void ApAutoConfigurationTask::handle_event(uint8_t event_enum_value, const void 
     }
 }
 
-bool ApAutoConfigurationTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                          const sMacAddr &src_mac, Socket *sd,
+bool ApAutoConfigurationTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
+                                          const sMacAddr &dst_mac, const sMacAddr &src_mac, int fd,
                                           std::shared_ptr<beerocks_header> beerocks_header)
 {
     switch (cmdu_rx.getMessageType()) {
@@ -312,8 +312,8 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_search_message(
     auto beerocks_header                      = message_com::get_beerocks_header(m_cmdu_tx);
     beerocks_header->actionhdr()->direction() = beerocks::BEEROCKS_DIRECTION_CONTROLLER;
     LOG(DEBUG) << "sending autoconfig search message, bridge_mac=" << db->bridge.mac;
-    return m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, network_utils::MULTICAST_1905_MAC_ADDR,
-                                         tlvf::mac_to_string(db->bridge.mac));
+    return m_btl_ctx.send_cmdu_to_broker(
+        m_cmdu_tx, tlvf::mac_from_string(network_utils::MULTICAST_1905_MAC_ADDR), db->bridge.mac);
 }
 
 void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(

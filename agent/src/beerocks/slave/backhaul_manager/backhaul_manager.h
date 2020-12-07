@@ -6,31 +6,33 @@
  * See LICENSE file for more details.
  */
 
-#ifndef _BACKHAUL_MANAGER_THREAD_H
-#define _BACKHAUL_MANAGER_THREAD_H
+#ifndef _BACKHAUL_MANAGER_H
+#define _BACKHAUL_MANAGER_H
 
 #include "../tasks/task_pool.h"
 #include "wan_monitor.h"
 
 #include <bcl/beerocks_backport.h>
+#include <bcl/beerocks_cmdu_client_factory.h>
+#include <bcl/beerocks_cmdu_server.h>
 #include <bcl/beerocks_config_file.h>
 #include <bcl/beerocks_defines.h>
-#include <bcl/beerocks_socket_thread.h>
+#include <bcl/beerocks_event_loop.h>
+#include <bcl/beerocks_timer_manager.h>
+#include <bcl/beerocks_ucc_server.h>
+#include <bcl/network/file_descriptor.h>
 #include <bcl/network/network_utils.h>
-#include <btl/btl.h>
+#include <btl/broker_client.h>
+#include <btl/broker_client_factory.h>
 #include <bwl/sta_wlan_hal.h>
 
 #include <beerocks/tlvf/beerocks_message_header.h>
-
-#include <tlvf/ieee_1905_1/eLinkMetricsType.h>
-#include <tlvf/ieee_1905_1/eMediaType.h>
 
 #include <tlvf/CmduMessageTx.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
 
 #include "../agent_db.h"
 #include "../agent_ucc_listener.h"
-#include "../helpers/link_metrics/link_metrics.h"
 
 #include <future>
 #include <list>
@@ -43,16 +45,81 @@ enum class eErrorCode;
 
 class ChannelSelectionTask;
 
-class backhaul_manager : public btl::transport_socket_thread {
+class BackhaulManager {
 
 public:
-    backhaul_manager(const config_file::sConfigSlave &config,
-                     const std::set<std::string> &slave_ap_ifaces_,
-                     const std::set<std::string> &slave_sta_ifaces_, int stop_on_failure_attempts_);
-    ~backhaul_manager();
+    BackhaulManager(
+        const config_file::sConfigSlave &config, const std::set<std::string> &slave_ap_ifaces_,
+        const std::set<std::string> &slave_sta_ifaces_, int stop_on_failure_attempts_,
+        std::unique_ptr<beerocks::btl::BrokerClientFactory> broker_client_factory,
+        std::unique_ptr<beerocks::CmduClientFactory> platform_manager_cmdu_client_factory,
+        std::unique_ptr<beerocks::UccServer> ucc_server,
+        std::unique_ptr<beerocks::CmduServer> cmdu_server,
+        std::shared_ptr<beerocks::TimerManager> timer_manager,
+        std::shared_ptr<beerocks::EventLoop> event_loop);
+    ~BackhaulManager();
 
-    virtual bool init() override;
-    virtual bool work() override;
+    /**
+     * @brief Starts backhaul manager.
+     *
+     * @return true on success and false otherwise.
+     */
+    bool start();
+
+    /**
+     * @brief Stops backhaul manager.
+     *
+     * @return true on success and false otherwise.
+     */
+    bool stop();
+
+    /**
+     * @brief Sends given CMDU message through the specified socket connection.
+     *
+     * @param fd File descriptor of the connected socket.
+     * @param cmdu_tx CMDU message to send.
+     * @return true on success and false otherwise.
+     */
+    bool send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx);
+
+    /**
+     * @brief Forwards given received CMDU message through the specified socket connection.
+     *
+     * @param fd File descriptor of the connected socket.
+     * @param iface_index Index of the network interface that the CMDU message was received on.
+     * @param dst_mac Destination MAC address.
+     * @param src_mac Source MAC address.
+     * @param cmdu_rx Received CMDU message to forward.
+     * @return true on success and false otherwise.
+     */
+    bool forward_cmdu_to_uds(int fd, uint32_t iface_index, const sMacAddr &dst_mac,
+                             const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Sends CDMU to transport for dispatching.
+     *
+     * @param cmdu CMDU message to send.
+     * @param dst_mac Destination MAC address.
+     * @param src_mac Source MAC address.
+     * @param iface_name Name of the network interface to use (set to empty string to send on all
+     * available interfaces).
+     * @return true on success and false otherwise.
+     */
+    bool send_cmdu_to_broker(ieee1905_1::CmduMessageTx &cmdu, const sMacAddr &dst_mac,
+                             const sMacAddr &src_mac, const std::string &iface_name = "");
+
+    /**
+     * @brief Forwards given received CMDU message to the broker server for dispatching.
+     *
+     * @param cmdu_rx Received CMDU message to forward.
+     * @param dst_mac Destination MAC address.
+     * @param src_mac Source MAC address.
+     * @param iface_name Name of the network interface to use (set to empty string to send on all
+     * available interfaces).
+     * @return true on success and false otherwise.
+     */
+    bool forward_cmdu_to_broker(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &dst_mac,
+                                const sMacAddr &src_mac, const std::string &iface_name = "");
 
     // For agent_ucc_listener
     /**
@@ -77,13 +144,48 @@ public:
 private:
     std::shared_ptr<bwl::sta_wlan_hal> get_selected_backhaul_sta_wlan_hal();
 
-    virtual bool handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx) override;
-    virtual void before_select() override;
-    virtual void after_select(bool timeout) override;
-    virtual void on_thread_stop() override;
-    virtual void socket_connected(Socket *sd) override;
-    virtual bool socket_disconnected(Socket *sd) override;
-    virtual std::string print_cmdu_types(const beerocks::message::sUdsHeader *cmdu_header) override;
+    /**
+     * @brief Handles the client-connected event in the CMDU server.
+     *
+     * @param fd File descriptor of the socket that got connected.
+     */
+    void handle_connected(int fd);
+
+    /**
+     * @brief Handles the client-disconnected event in the CMDU server.
+     *
+     * @param fd File descriptor of the socket that got disconnected.
+     */
+    void handle_disconnected(int fd);
+
+    /**
+     * @brief Handles received CMDU message.
+     *
+     * @param fd File descriptor of the socket connection the CMDU was received through.
+     * @param iface_index Index of the network interface that the CMDU message was received on.
+     * @param dst_mac Destination MAC address.
+     * @param src_mac Source MAC address.
+     * @param cmdu_rx Received CMDU to be handled.
+     * @return true on success and false otherwise.
+     */
+    bool handle_cmdu(int fd, uint32_t iface_index, const sMacAddr &dst_mac, const sMacAddr &src_mac,
+                     ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Handles CMDU message received from broker.
+     *
+     * This handler is slightly different than the handler for CMDU messages received from other
+     * processes as it checks the source and destination MAC addresses set by the original sender.
+     * It also filters out messages that are not addressed to the controller.
+     *
+     * @param iface_index Index of the network interface that the CMDU message was received on.
+     * @param dst_mac Destination MAC address.
+     * @param src_mac Source MAC address.
+     * @param cmdu_rx Received CMDU to be handled.
+     * @return true on success and false otherwise.
+     */
+    bool handle_cmdu_from_broker(uint32_t iface_index, const sMacAddr &dst_mac,
+                                 const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
 
     bool backhaul_fsm_main(bool &skip_select);
     bool backhaul_fsm_wired(bool &skip_select);
@@ -107,15 +209,15 @@ private:
                                std::shared_ptr<beerocks_message::cACTION_HEADER> beerocks_header);
     bool handle_slave_backhaul_message(std::shared_ptr<sRadioInfo> soc,
                                        ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_slave_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                     const std::string &src_mac);
-    bool handle_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx, const std::string &src_mac,
-                               Socket *&forward_to);
+    bool handle_slave_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
+                                     const sMacAddr &dst_mac, const sMacAddr &src_mac);
+    bool handle_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
+                               const sMacAddr &dst_mac, const sMacAddr &src_mac, int &forward_to);
     // 1905 messages handlers
     bool handle_slave_failed_connection_message(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                                const std::string &src_mac);
+                                                const sMacAddr &src_mac);
     bool handle_backhaul_steering_request(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                          const std::string &src_mac);
+                                          const sMacAddr &src_mac);
 
     //bool sta_handle_event(const std::string &iface,const std::string& event_name, void* event_obj);
     bool hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr, std::string iface);
@@ -128,8 +230,25 @@ private:
 
     std::shared_ptr<bwl::sta_wlan_hal> get_wireless_hal(std::string iface = "");
 
-private:
-    const std::string &beerocks_temp_path;
+    /**
+     * Buffer to hold CMDU to be transmitted.
+     */
+    uint8_t m_tx_buffer[beerocks::message::MESSAGE_BUFFER_LENGTH];
+
+    /**
+     * CMDU to be transmitted.
+     */
+    ieee1905_1::CmduMessageTx cmdu_tx;
+
+    /**
+     * Buffer to hold CMDU to be transmitted by the UCC listener (in certification mode).
+     */
+    uint8_t m_cert_tx_buffer[beerocks::message::MESSAGE_BUFFER_LENGTH];
+
+    /**
+     * CMDU to be transmitted by the UCC listener (in certification mode).
+     */
+    ieee1905_1::CmduMessageTx cert_cmdu_tx;
 
     struct SBackhaulConfig {
         std::string ssid;
@@ -147,7 +266,7 @@ private:
 
     } m_sConfig;
 
-    Socket *unassociated_measurement_slave_soc  = nullptr;
+    int m_unassociated_measurement_slave_soc    = beerocks::net::FileDescriptor::invalid_descriptor;
     int unassociated_rssi_measurement_header_id = -1;
 
     //comes from config file
@@ -168,7 +287,13 @@ private:
     // Key: front radio iface name, Value: sRadioInfo object
     std::unordered_map<std::string, std::shared_ptr<sRadioInfo>> m_disabled_slave_sockets;
 
-    std::shared_ptr<SocketClient> m_scPlatform;
+    /**
+     * CMDU client connected to the the CMDU server running in platform manager.
+     * This object is dynamically created using the CMDU client factory for the platform manager
+     * provided in class constructor.
+     */
+    std::unique_ptr<CmduClient> m_platform_manager_client;
+
     net::network_utils::iface_info bridge_info;
 
     int configuration_stop_on_failure_attempts;
@@ -275,15 +400,16 @@ public:
      * the TLVs to include in notification messages or responses to CDMU query messages.
      */
     struct sRadioInfo {
-        Socket *slave = nullptr;  /**< Socket connection to the slave */
+        int slave = beerocks::net::FileDescriptor::
+            invalid_descriptor; /**< File descriptor of the socket connection established from the slave to the CMDU server. */
         sMacAddr radio_mac;       /**< Radio ID (= radio MAC address) */
         std::string hostap_iface; /**< Name of the radio interface */
         std::string sta_iface;    /**< Name of the bSTA interface on the radio (if any) */
         bool slave_is_backhaul_manager = false;
 
         std::shared_ptr<bwl::sta_wlan_hal> sta_wlan_hal;
-        Socket *sta_hal_ext_events = nullptr;
-        Socket *sta_hal_int_events = nullptr;
+        int sta_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
+        int sta_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
     };
 
 public:
@@ -338,8 +464,55 @@ private:
     static const char *s_arrStates[];
 
     EState m_eFSMState;
+
+    /**
+     * Factory to create broker client instances connected to broker server.
+     * Broker client instances are used to exchange CMDU messages with remote processes running in
+     * other devices in the network via the broker server running in the transport process.
+     */
+    std::unique_ptr<beerocks::btl::BrokerClientFactory> m_broker_client_factory;
+
+    /**
+     * Factory to create CMDU client instances connected to CMDU server running in platform manager.
+     */
+    std::unique_ptr<beerocks::CmduClientFactory> m_platform_manager_cmdu_client_factory;
+
+    /**
+     * UCC server to exchange commands and replies with UCC certification application.
+     */
+    std::unique_ptr<beerocks::UccServer> m_ucc_server;
+
+    /**
+     * CMDU server to exchange CMDU messages with clients through socket connections.
+     */
+    std::unique_ptr<beerocks::CmduServer> m_cmdu_server;
+
+    /**
+     * Timer manager to help using application timers.
+     */
+    std::shared_ptr<beerocks::TimerManager> m_timer_manager;
+
+    /**
+     * Application event loop used by the process to wait for I/O events.
+     */
+    std::shared_ptr<EventLoop> m_event_loop;
+
+    /**
+     * File descriptor of the timer to run internal tasks periodically.
+     */
+    int m_tasks_timer = beerocks::net::FileDescriptor::invalid_descriptor;
+
+    /**
+     * File descriptor of the timer to run the Finite State Machine.
+     */
+    int m_fsm_timer = beerocks::net::FileDescriptor::invalid_descriptor;
+
+    /**
+     * Broker client to exchange CMDU messages with broker server running in transport process.
+     */
+    std::unique_ptr<beerocks::btl::BrokerClient> m_broker_client;
 };
 
 } // namespace beerocks
 
-#endif // _BACKHAUL_MANAGER_THREAD_H
+#endif // _BACKHAUL_MANAGER_H

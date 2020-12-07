@@ -353,119 +353,13 @@ bool beerocks_ucc_listener::get_send_1905_1_tlv_hex_list(
 }
 
 //////////////////////////////////////////////////////////////////////////////
-////////////////////////// socket_thread functions ///////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-
-/**
- * @brief Initialize thread
- * 
- * @return true if successful, false if not.
- */
-bool beerocks_ucc_listener::init()
-{
-    if (m_port == 0) {
-        LOG(DEBUG) << "UCC listener server port is not defined, closing thread.";
-        should_stop = true;
-        return false;
-    }
-
-    return socket_thread::init();
-}
-
-/**
- * @brief Returns UCC listener server port.
- * 
- * @return int Server port.
- */
-int beerocks_ucc_listener::server_port() { return m_port; }
-
-/**
- * @brief Handle a new socket connect event.
- * 
- * @param[in] sd Incoming socket connection. 
- * @return None.
- */
-void beerocks_ucc_listener::socket_connected(Socket *sd)
-{
-    LOG(DEBUG) << "New client has connected";
-
-    if (sd == nullptr) {
-        LOG(ERROR) << "sd == nullptr";
-        ;
-        return;
-    }
-
-    // Delete previous connection if exist
-    if (m_ucc_sd != nullptr) {
-        remove_socket(m_ucc_sd);
-        delete m_ucc_sd;
-    }
-
-    m_ucc_sd = sd;
-    add_socket(sd);
-}
-
-/**
- * @brief Handle a socket disconnect event.
- * 
- * @param[in] sd The socket that disconnected.
- * @return true if successful, false if not.
- */
-bool beerocks_ucc_listener::socket_disconnected(Socket *sd)
-{
-    LOG(DEBUG) << "Client has disconnected";
-    if (sd != m_ucc_sd) {
-        LOG(DEBUG) << "Unfamiliar socket has disconnected";
-        m_ucc_sd = nullptr;
-        return true;
-    }
-
-    m_ucc_sd = nullptr;
-
-    // Socket thread will remove socket from Select and delete it
-    return true;
-}
-
-/**
- * @brief Reads data from the incoming message buffer.
- * 
- * @param sd[in] Incoming socket.
- * @param rx_buffer[in] Incoming buffer.
- * @param rx_buffer_size[in] Incoming buffer size.
- * @return true always.
- */
-bool beerocks_ucc_listener::custom_message_handler(Socket *sd, uint8_t *rx_buffer,
-                                                   size_t rx_buffer_size)
-{
-    std::string command_string;
-    auto available_bytes = sd->readBytes(rx_buffer, rx_buffer_size, true);
-
-    if (available_bytes <= 0) {
-        LOG(ERROR) << "Cannot read from socket";
-        return true;
-    }
-
-    rx_buffer[available_bytes] = '\0';
-    command_string.assign(reinterpret_cast<char *>(rx_buffer), available_bytes);
-
-    beerocks::string_utils::trim(command_string);
-
-    handle_wfa_ca_command(-1, command_string);
-
-    return true;
-}
-
-//////////////////////////////////////////////////////////////////////////////
 ////////////////////////////// Class functions ///////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-beerocks_ucc_listener::beerocks_ucc_listener(uint16_t port, ieee1905_1::CmduMessageTx &cmdu,
+beerocks_ucc_listener::beerocks_ucc_listener(ieee1905_1::CmduMessageTx &cmdu,
                                              std::unique_ptr<beerocks::UccServer> ucc_server)
-    : socket_thread(), m_cmdu_tx(cmdu), m_port(port), m_ucc_server(std::move(ucc_server))
+    : m_cmdu_tx(cmdu), m_ucc_server(std::move(ucc_server))
 {
-    thread_name = "ucc_listener";
-    set_select_timeout(SELECT_TIMEOUT_MSC);
-
     // UCC server is provided in certification mode only
     if (m_ucc_server) {
         m_ucc_server->set_command_received_handler(
@@ -501,26 +395,6 @@ bool beerocks_ucc_listener::reply_ucc(int fd, eWfaCaStatus status, const std::st
     }
 
     LOG(DEBUG) << "Replying message: '" << reply_string << "'";
-
-    // This condition will be removed at the end of PPM-658
-    if (!m_ucc_server) {
-        if (m_ucc_sd == nullptr) {
-            LOG(DEBUG) << "Client disconnected before message has been sent";
-            return false;
-        }
-
-        reply_string += "\r\n";
-
-        // Send reply to UCC
-        auto written_size = m_ucc_sd->writeBytes(
-            reinterpret_cast<const uint8_t *>(reply_string.c_str()), reply_string.size());
-        if (written_size < 0) {
-            LOG(ERROR) << "writeBytes() failed, error=" << strerror(errno);
-            return false;
-        }
-
-        return true;
-    }
 
     // Send reply to UCC
     if (!m_ucc_server->send_reply(fd, reply_string)) {
@@ -680,10 +554,21 @@ void beerocks_ucc_listener::handle_wfa_ca_command(int fd, const std::string &com
         }
 
         // TODO: Find out what to do with value of param "name".
-        clear_configuration();
-
-        // Send back second reply
-        reply_ucc(fd, eWfaCaStatus::COMPLETE);
+        // Perform this operation in a background thread and continue.
+        // Send reply only when device reset completes. Do not send anything in case of timeout.
+        // TODO: PPM-889 Notify reset completed asynchronously.
+        // "This is horribly ugly and should be (eventually) replaced with an async action. I.e.,
+        // ucc_listener should have a method reset_completed or something like that, which is called
+        // when the reset is completed. In the controller, it can be called directly from
+        // clear_configuration(). In the agent, it would be called from the backhaul manager state
+        // machine.
+        std::thread thread([fd, this]() {
+            if (clear_configuration()) {
+                // Send back second reply
+                reply_ucc(fd, eWfaCaStatus::COMPLETE);
+            }
+        });
+        thread.detach();
 
         break;
     }
@@ -719,7 +604,7 @@ void beerocks_ucc_listener::handle_wfa_ca_command(int fd, const std::string &com
             break;
         }
 
-        // Check if CMDU message type has preprepared CMDU which can be loaded
+        // Check if CMDU message type has prepared CMDU which can be loaded
         if (tlv_hex_list.empty() && m_cmdu_tx.is_finalized() &&
             m_cmdu_tx.getMessageType() == ieee1905_1::eMessageType(message_type)) {
             m_cmdu_tx.setMessageId(g_mid); // force mid
@@ -732,10 +617,10 @@ void beerocks_ucc_listener::handle_wfa_ca_command(int fd, const std::string &com
             }
             m_cmdu_tx.reset();
         } else {
-            // CMDU was not loaded from preprepared buffer, and need to be created manually, and
+            // CMDU was not loaded from prepared buffer, and need to be created manually, and
             // use TLV data from the command (if exists)
             m_cmdu_tx.reset();
-            if (!cmdu_tx.create(g_mid, ieee1905_1::eMessageType(message_type))) {
+            if (!m_cmdu_tx.create(g_mid, ieee1905_1::eMessageType(message_type))) {
                 LOG(ERROR) << "cmdu creation of type 0x" << message_type_str << ", has failed";
                 reply_ucc(fd, eWfaCaStatus::ERROR, err_internal);
                 break;
@@ -745,7 +630,7 @@ void beerocks_ucc_listener::handle_wfa_ca_command(int fd, const std::string &com
             // the classes, and we don't want any swapping to be done. Still, we need something
             // to make sure the length of the tlvs is taken into account.
             // Therefore, use the tlvPrefilledData class, which can update the end pointer.
-            auto tlvs = cmdu_tx.addClass<tlvPrefilledData>();
+            auto tlvs = m_cmdu_tx.addClass<tlvPrefilledData>();
             if (!tlvs) {
                 LOG(ERROR) << "addClass tlvPrefilledData has failed";
                 reply_ucc(fd, eWfaCaStatus::ERROR, err_internal);
@@ -759,9 +644,9 @@ void beerocks_ucc_listener::handle_wfa_ca_command(int fd, const std::string &com
             }
 
             LOG(INFO) << "Send TLV CMDU " << message_type << " with " << tlv_hex_list.size()
-                      << " TLVs, length " << cmdu_tx.getMessageLength();
+                      << " TLVs, length " << m_cmdu_tx.getMessageLength();
 
-            if (!send_cmdu_to_destination(cmdu_tx, dest_alid)) {
+            if (!send_cmdu_to_destination(m_cmdu_tx, dest_alid)) {
                 LOG(ERROR) << "Failed to send CMDU";
                 reply_ucc(fd, eWfaCaStatus::ERROR, err_internal);
                 break;

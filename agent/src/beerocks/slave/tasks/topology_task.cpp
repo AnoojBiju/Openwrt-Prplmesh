@@ -8,7 +8,7 @@
 
 #include "topology_task.h"
 #include "../agent_db.h"
-#include "../backhaul_manager/backhaul_manager_thread.h"
+#include "../backhaul_manager/backhaul_manager.h"
 #include "../helpers/media_type.h"
 
 #include <bcl/network/network_utils.h>
@@ -31,7 +31,7 @@ using namespace beerocks;
 using namespace net;
 using namespace son;
 
-TopologyTask::TopologyTask(backhaul_manager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx)
+TopologyTask::TopologyTask(BackhaulManager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx)
     : Task(eTaskType::TOPOLOGY), m_btl_ctx(btl_ctx), m_cmdu_tx(cmdu_tx)
 {
 }
@@ -101,12 +101,13 @@ void TopologyTask::handle_event(uint8_t event_enum_value, const void *event_obj)
     }
 }
 
-bool TopologyTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac,
-                               Socket *sd, std::shared_ptr<beerocks_header> beerocks_header)
+bool TopologyTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
+                               const sMacAddr &dst_mac, const sMacAddr &src_mac, int fd,
+                               std::shared_ptr<beerocks_header> beerocks_header)
 {
     switch (cmdu_rx.getMessageType()) {
     case ieee1905_1::eMessageType::TOPOLOGY_DISCOVERY_MESSAGE: {
-        handle_topology_discovery(cmdu_rx, src_mac);
+        handle_topology_discovery(cmdu_rx, iface_index, dst_mac, src_mac);
         break;
     }
     case ieee1905_1::eMessageType::TOPOLOGY_QUERY_MESSAGE: {
@@ -125,6 +126,7 @@ bool TopologyTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAdd
 }
 
 void TopologyTask::handle_topology_discovery(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                             uint32_t iface_index, const sMacAddr &dst_mac,
                                              const sMacAddr &src_mac)
 {
     auto tlvAlMac = cmdu_rx.getClass<ieee1905_1::tlvAlMacAddress>();
@@ -150,10 +152,9 @@ void TopologyTask::handle_topology_discovery(ieee1905_1::CmduMessageRx &cmdu_rx,
         return;
     }
 
-    uint32_t if_index                      = message_com::get_uds_header(cmdu_rx)->if_index;
-    std::string local_receiving_iface_name = network_utils::linux_get_iface_name(if_index);
+    std::string local_receiving_iface_name = network_utils::linux_get_iface_name(iface_index);
     if (local_receiving_iface_name.empty()) {
-        LOG(ERROR) << "Failed getting interface name for index: " << if_index;
+        LOG(ERROR) << "Failed getting interface name for index: " << iface_index;
         return;
     }
 
@@ -198,8 +199,9 @@ void TopologyTask::handle_topology_discovery(ieee1905_1::CmduMessageRx &cmdu_rx,
             LOG(ERROR) << "cmdu creation of type TOPOLOGY_NOTIFICATION_MESSAGE, has failed";
             return;
         }
-        m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, network_utils::MULTICAST_1905_MAC_ADDR,
-                                      tlvf::mac_to_string(db->bridge.mac));
+        m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx,
+                                      tlvf::mac_from_string(network_utils::MULTICAST_1905_MAC_ADDR),
+                                      db->bridge.mac);
     }
 }
 
@@ -238,8 +240,7 @@ void TopologyTask::handle_topology_query(ieee1905_1::CmduMessageRx &cmdu_rx,
     auto db = AgentDB::get();
 
     LOG(DEBUG) << "Sending topology response message, mid=" << std::hex << mid;
-    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
-                                  tlvf::mac_to_string(db->bridge.mac));
+    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac);
 }
 
 bool TopologyTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -335,8 +336,9 @@ void TopologyTask::send_topology_discovery()
 
         LOG(DEBUG) << "send_1905_topology_discovery_message, bridge_mac=" << db->bridge.mac
                    << ", iface=" << iface_name;
-        m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, network_utils::MULTICAST_1905_MAC_ADDR,
-                                      tlvf::mac_to_string(db->bridge.mac), iface_name);
+        m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx,
+                                      tlvf::mac_from_string(network_utils::MULTICAST_1905_MAC_ADDR),
+                                      db->bridge.mac, iface_name);
     }
 }
 
@@ -348,8 +350,8 @@ void TopologyTask::send_topology_notification()
         return;
     }
     auto db = AgentDB::get();
-    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, network_utils::MULTICAST_1905_MAC_ADDR,
-                                  tlvf::mac_to_string(db->bridge.mac));
+    m_btl_ctx.send_cmdu_to_broker(
+        m_cmdu_tx, tlvf::mac_from_string(network_utils::MULTICAST_1905_MAC_ADDR), db->bridge.mac);
 }
 
 bool TopologyTask::add_device_information_tlv()

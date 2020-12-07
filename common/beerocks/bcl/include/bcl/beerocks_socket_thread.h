@@ -21,10 +21,6 @@
 #define DEFAULT_SELECT_TIMEOUT_MS 500
 
 namespace beerocks {
-// Forward Declaration
-namespace btl {
-class transport_socket_thread;
-}
 
 class socket_thread : public thread_base {
 public:
@@ -79,10 +75,6 @@ protected:
     const std::string unix_socket_path;
 
 private:
-    // Only mapf_socket thread need to access these functions and memebers, other classes should not
-    // TODO: redesign the socket thread in order to not use "friend" - Vitaly
-    friend class btl::transport_socket_thread;
-
     int socket_disconnected_uds(Socket *sd);
     bool handle_cmdu_message_uds(Socket *sd);
     bool verify_cmdu(message::sUdsHeader *uds_header);

@@ -11,8 +11,7 @@
 
 #include <btl/broker_client_factory.h>
 
-#include <btl/broker_client_impl.h>
-
+#include <btl/broker_client.h>
 #include <btl/message_parser.h>
 #include <btl/message_serializer.h>
 

@@ -9,7 +9,7 @@
 #include "link_metrics_collection_task.h"
 
 #include "../agent_db.h"
-#include "../backhaul_manager/backhaul_manager_thread.h"
+#include "../backhaul_manager/backhaul_manager.h"
 #include "../helpers/link_metrics/ieee802_11_link_metrics_collector.h"
 #include "../helpers/link_metrics/ieee802_3_link_metrics_collector.h"
 #include "../helpers/media_type.h"
@@ -31,14 +31,15 @@
 
 namespace beerocks {
 
-LinkMetricsCollectionTask::LinkMetricsCollectionTask(backhaul_manager &btl_ctx,
+LinkMetricsCollectionTask::LinkMetricsCollectionTask(BackhaulManager &btl_ctx,
                                                      ieee1905_1::CmduMessageTx &cmdu_tx)
     : Task(eTaskType::LINK_METRICS_COLLECTION), m_btl_ctx(btl_ctx), m_cmdu_tx(cmdu_tx)
 {
 }
 
 bool LinkMetricsCollectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                            const sMacAddr &src_mac, Socket *sd,
+                                            uint32_t iface_index, const sMacAddr &dst_mac,
+                                            const sMacAddr &src_mac, int fd,
                                             std::shared_ptr<beerocks_header> beerocks_header)
 {
     switch (cmdu_rx.getMessageType()) {
@@ -242,8 +243,7 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
 
         LOG(DEBUG) << "Sending LINK_METRIC_RESPONSE_MESSAGE (invalid neighbour), mid: " << std::hex
                    << mid;
-        m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
-                                      tlvf::mac_to_string(db->bridge.mac));
+        m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac);
         return;
     }
 
@@ -283,8 +283,7 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
     }
 
     LOG(DEBUG) << "Sending LINK_METRIC_RESPONSE_MESSAGE, mid: " << std::hex << mid;
-    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
-                                  tlvf::mac_to_string(db->bridge.mac));
+    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac);
 }
 
 void LinkMetricsCollectionTask::handle_combined_infrastructure_metrics(
@@ -306,8 +305,7 @@ void LinkMetricsCollectionTask::handle_combined_infrastructure_metrics(
     }
     LOG(DEBUG) << "sending ACK message to the originator, mid=" << std::hex << mid;
     auto db = AgentDB::get();
-    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
-                                  tlvf::mac_to_string(db->bridge.mac));
+    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac);
 }
 
 void LinkMetricsCollectionTask::handle_beacon_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -366,8 +364,7 @@ void LinkMetricsCollectionTask::handle_beacon_metrics_query(ieee1905_1::CmduMess
                    << mid << " tlv error code: " << errorSS.str();
 
         // send the error
-        m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
-                                      tlvf::mac_to_string(db->bridge.mac));
+        m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac);
         return;
     }
 
@@ -377,8 +374,7 @@ void LinkMetricsCollectionTask::handle_beacon_metrics_query(ieee1905_1::CmduMess
     LOG(DEBUG) << "BEACON METRICS QUERY: sending ACK message to the originator mid: " << std::hex
                << mid; // USED IN TESTS
 
-    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
-                                  tlvf::mac_to_string(db->bridge.mac));
+    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac);
 
     // forward message to fronthaul
     /*
@@ -395,24 +391,17 @@ void LinkMetricsCollectionTask::handle_beacon_metrics_query(ieee1905_1::CmduMess
     }
     auto forward_to = radio_info->slave;
 
-    cmdu_rx.swap(); // swap back before forwarding
-
-    auto uds_header = message_com::get_uds_header(cmdu_rx);
-    if (!uds_header) {
-        LOG(ERROR) << "UDS header == nullptr";
-        return;
-    }
-
-    if (forward_to) {
+    if (forward_to != beerocks::net::FileDescriptor::invalid_descriptor) {
         // Forward only to the desired destination
-        if (!message_com::forward_cmdu_to_uds(forward_to, cmdu_rx, uds_header->length)) {
-            LOG(ERROR) << "forward_cmdu_to_uds() failed - sd=" << intptr_t(forward_to);
+        if (!m_btl_ctx.forward_cmdu_to_uds(forward_to, 0, db->bridge.mac, src_mac, cmdu_rx)) {
+            LOG(ERROR) << "forward_cmdu_to_uds() failed - fd=" << forward_to;
         }
     } else {
         // Forward cmdu to all slaves how it is on UDS, without changing it
         for (auto soc_iter : m_btl_ctx.slaves_sockets) {
-            if (!message_com::forward_cmdu_to_uds(soc_iter->slave, cmdu_rx, uds_header->length)) {
-                LOG(ERROR) << "forward_cmdu_to_uds() failed - sd=" << intptr_t(soc_iter->slave);
+            if (!m_btl_ctx.forward_cmdu_to_uds(soc_iter->slave, 0, db->bridge.mac, src_mac,
+                                               cmdu_rx)) {
+                LOG(ERROR) << "forward_cmdu_to_uds() failed - fd=" << soc_iter->slave;
             }
         }
     }
@@ -468,8 +457,7 @@ void LinkMetricsCollectionTask::handle_associated_sta_link_metrics_query(
         error_code_tlv->sta_mac() = mac->sta_mac();
 
         LOG(DEBUG) << "Send a ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE back to controller";
-        m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
-                                      tlvf::mac_to_string(db->bridge.mac));
+        m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac);
         return;
     }
     auto client_it = radio->associated_clients.find(mac->sta_mac());
@@ -506,7 +494,7 @@ void LinkMetricsCollectionTask::handle_associated_sta_link_metrics_query(
      * When link metric collection task moves to agent context
      * send the message to fronthaul, not slave.
      */
-    message_com::send_cmdu(radio_info->slave, m_cmdu_tx);
+    m_btl_ctx.send_cmdu(radio_info->slave, m_cmdu_tx);
 }
 
 void LinkMetricsCollectionTask::handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -591,7 +579,7 @@ bool LinkMetricsCollectionTask::send_ap_metric_query_message(
              * When link metric collection task moves to agent context
              * send the message to fronthaul, not slave.
              */
-            if (!message_com::send_cmdu(radio_info->slave, m_cmdu_tx)) {
+            if (!m_btl_ctx.send_cmdu(radio_info->slave, m_cmdu_tx)) {
                 LOG(ERROR) << "Failed forwarding AP_METRICS_QUERY_MESSAGE message to fronthaul";
             }
 
@@ -631,16 +619,13 @@ void LinkMetricsCollectionTask::handle_multi_ap_policy_config_request(
 
             auto metrics_reporting_conf = std::get<1>(tuple);
 
-            std::shared_ptr<backhaul_manager::sRadioInfo> radio =
+            std::shared_ptr<BackhaulManager::sRadioInfo> radio =
                 m_btl_ctx.get_radio(metrics_reporting_conf.radio_uid);
             if (radio) {
-                auto uds_header = message_com::get_uds_header(cmdu_rx);
-                if (!uds_header) {
-                    LOG(ERROR) << "UDS header == nullptr";
-                    continue;
-                }
-                cmdu_rx.swap(); // swap back before forwarding
-                if (!message_com::forward_cmdu_to_uds(radio->slave, cmdu_rx, uds_header->length)) {
+                auto db = AgentDB::get();
+
+                if (!m_btl_ctx.forward_cmdu_to_uds(radio->slave, 0, db->bridge.mac, src_mac,
+                                                   cmdu_rx)) {
                     /*
                      * TODO: https://jira.prplfoundation.org/browse/PPM-657
                      *
@@ -648,7 +633,6 @@ void LinkMetricsCollectionTask::handle_multi_ap_policy_config_request(
                      */
                     LOG(ERROR) << "Failed to forward message to fronthaul " << radio->radio_mac;
                 }
-                cmdu_rx.swap(); // swap back to normal after forwarding, for next iteration
             } else {
                 LOG(INFO) << "Radio Unique Identifier " << metrics_reporting_conf.radio_uid
                           << " not found";
@@ -706,8 +690,7 @@ void LinkMetricsCollectionTask::handle_multi_ap_policy_config_request(
     }
 
     auto db = AgentDB::get();
-    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(src_mac),
-                                  tlvf::mac_to_string(db->bridge.mac));
+    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac);
 }
 
 void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -731,15 +714,7 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
      * periodic metrics reporting interval has elapsed.
      */
     if (0 == mid) {
-        auto uds_header = message_com::get_uds_header(cmdu_rx);
-        if (!uds_header) {
-            LOG(ERROR) << "Received empty UDS header";
-            return;
-        }
-
-        cmdu_rx.swap(); //swap back before forwarding
-        m_btl_ctx.send_cmdu_to_broker(cmdu_rx, tlvf::mac_to_string(db->controller_info.bridge_mac),
-                                      tlvf::mac_to_string(db->bridge.mac), uds_header->length);
+        m_btl_ctx.forward_cmdu_to_broker(cmdu_rx, db->controller_info.bridge_mac, db->bridge.mac);
         return;
     }
 
@@ -900,8 +875,7 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
     m_ap_metric_response.clear();
 
     LOG(DEBUG) << "Sending AP_METRICS_RESPONSE_MESSAGE, mid=" << std::hex << mid;
-    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(db->controller_info.bridge_mac),
-                                  tlvf::mac_to_string(db->bridge.mac));
+    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
 }
 
 bool LinkMetricsCollectionTask::add_link_metrics_tlv(const sMacAddr &reporter_al_mac,

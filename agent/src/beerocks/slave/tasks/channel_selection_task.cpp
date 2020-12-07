@@ -8,7 +8,7 @@
 
 #include "channel_selection_task.h"
 #include "../agent_db.h"
-#include "../backhaul_manager/backhaul_manager_thread.h"
+#include "../backhaul_manager/backhaul_manager.h"
 
 #include <beerocks/tlvf/beerocks_message_backhaul.h>
 
@@ -25,7 +25,7 @@
 
 namespace beerocks {
 
-ChannelSelectionTask::ChannelSelectionTask(backhaul_manager &btl_ctx,
+ChannelSelectionTask::ChannelSelectionTask(BackhaulManager &btl_ctx,
                                            ieee1905_1::CmduMessageTx &cmdu_tx)
     : Task(eTaskType::CHANNEL_SELECTION), m_btl_ctx(btl_ctx), m_cmdu_tx(cmdu_tx)
 {
@@ -41,8 +41,9 @@ void ChannelSelectionTask::work()
     }
 }
 
-bool ChannelSelectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac,
-                                       Socket *sd, std::shared_ptr<beerocks_header> beerocks_header)
+bool ChannelSelectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
+                                       const sMacAddr &dst_mac, const sMacAddr &src_mac, int fd,
+                                       std::shared_ptr<beerocks_header> beerocks_header)
 {
     switch (cmdu_rx.getMessageType()) {
     case ieee1905_1::eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE: {
@@ -58,7 +59,7 @@ bool ChannelSelectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, const
         break;
     }
     case ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE: {
-        handle_vendor_specific(cmdu_rx, src_mac, sd, beerocks_header);
+        handle_vendor_specific(cmdu_rx, src_mac, fd, beerocks_header);
         break;
     }
     default: {
@@ -151,12 +152,11 @@ void ChannelSelectionTask::handle_slave_channel_selection_response(
     m_expected_channel_selection.responses.clear();
 
     LOG(DEBUG) << "Sending CHANNEL_SELECTION_RESPONSE_MESSAGE, mid=" << std::hex << mid;
-    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, tlvf::mac_to_string(db->controller_info.bridge_mac),
-                                  tlvf::mac_to_string(db->bridge.mac));
+    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
 }
 
 bool ChannelSelectionTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                                  const sMacAddr &src_mac, Socket *sd,
+                                                  const sMacAddr &src_mac, int sd,
                                                   std::shared_ptr<beerocks_header> beerocks_header)
 {
     if (!beerocks_header) {
@@ -205,8 +205,7 @@ bool ChannelSelectionTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmd
 }
 
 void ChannelSelectionTask::handle_vs_csa_notification(
-    ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
-    std::shared_ptr<beerocks_header> beerocks_header)
+    ieee1905_1::CmduMessageRx &cmdu_rx, int fd, std::shared_ptr<beerocks_header> beerocks_header)
 {
     auto notification =
         beerocks_header->addClass<beerocks_message::cACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION>();
@@ -214,13 +213,13 @@ void ChannelSelectionTask::handle_vs_csa_notification(
         LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION failed";
         return;
     }
-    LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION from "
-               << socket_to_front_iface_name(sd);
+
+    auto sender_iface_name = socket_to_front_iface_name(fd);
+    LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION from " << sender_iface_name;
 
     auto db = AgentDB::get();
 
-    auto sender_iface_name = socket_to_front_iface_name(sd);
-    auto sender_radio      = db->radio(sender_iface_name);
+    auto sender_radio = db->radio(sender_iface_name);
     if (!sender_radio) {
         return;
     }
@@ -250,8 +249,7 @@ void ChannelSelectionTask::handle_vs_csa_notification(
 }
 
 void ChannelSelectionTask::handle_vs_csa_error_notification(
-    ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
-    std::shared_ptr<beerocks_header> beerocks_header)
+    ieee1905_1::CmduMessageRx &cmdu_rx, int fd, std::shared_ptr<beerocks_header> beerocks_header)
 {
     auto notification =
         beerocks_header
@@ -260,10 +258,11 @@ void ChannelSelectionTask::handle_vs_csa_error_notification(
         LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_CSA_ERROR_NOTIFICATION failed";
         return;
     }
-    LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_DFS_CSA_ERROR_NOTIFICATION from "
-               << socket_to_front_iface_name(sd);
 
-    auto sender_iface_name = socket_to_front_iface_name(sd);
+    auto sender_iface_name = socket_to_front_iface_name(fd);
+    LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_DFS_CSA_ERROR_NOTIFICATION from "
+               << sender_iface_name;
+
     std::string which_radio;
     if (zwdfs_in_process()) {
         if (sender_iface_name == m_zwdfs_iface) {
@@ -278,8 +277,7 @@ void ChannelSelectionTask::handle_vs_csa_error_notification(
 }
 
 void ChannelSelectionTask::handle_vs_cac_started_notification(
-    ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
-    std::shared_ptr<beerocks_header> beerocks_header)
+    ieee1905_1::CmduMessageRx &cmdu_rx, int fd, std::shared_ptr<beerocks_header> beerocks_header)
 {
     auto notification =
         beerocks_header
@@ -288,8 +286,10 @@ void ChannelSelectionTask::handle_vs_cac_started_notification(
         LOG(ERROR) << "addClass sACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION failed";
         return;
     }
+
+    auto sender_iface_name = socket_to_front_iface_name(fd);
     LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION from "
-               << socket_to_front_iface_name(sd);
+               << sender_iface_name;
 
     if (m_zwdfs_state == eZwdfsState::WAIT_FOR_ZWDFS_CAC_STARTED) {
         auto db = AgentDB::get();
@@ -306,8 +306,7 @@ void ChannelSelectionTask::handle_vs_cac_started_notification(
 }
 
 void ChannelSelectionTask::handle_vs_dfs_cac_completed_notification(
-    ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
-    std::shared_ptr<beerocks_header> beerocks_header)
+    ieee1905_1::CmduMessageRx &cmdu_rx, int fd, std::shared_ptr<beerocks_header> beerocks_header)
 {
     auto notification =
         beerocks_header
@@ -316,8 +315,10 @@ void ChannelSelectionTask::handle_vs_dfs_cac_completed_notification(
         LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION failed";
         return;
     }
+
+    auto sender_iface_name = socket_to_front_iface_name(fd);
     LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION from "
-               << socket_to_front_iface_name(sd) << ", status=" << notification->params().success;
+               << sender_iface_name << ", status=" << notification->params().success;
 
     if (m_zwdfs_state == eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED) {
         auto db                                   = AgentDB::get();
@@ -332,11 +333,10 @@ void ChannelSelectionTask::handle_vs_dfs_cac_completed_notification(
 }
 
 void ChannelSelectionTask::handle_vs_channels_list_response(
-    ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
-    std::shared_ptr<beerocks_header> beerocks_header)
+    ieee1905_1::CmduMessageRx &cmdu_rx, int fd, std::shared_ptr<beerocks_header> beerocks_header)
 {
-    LOG(TRACE) << "received ACTION_APMANAGER_CHANNELS_LIST_RESPONSE from "
-               << socket_to_front_iface_name(sd);
+    auto sender_iface_name = socket_to_front_iface_name(fd);
+    LOG(TRACE) << "received ACTION_APMANAGER_CHANNELS_LIST_RESPONSE from " << sender_iface_name;
 
     if (m_zwdfs_state == eZwdfsState::WAIT_FOR_CHANNELS_LIST) {
         ZWDFS_FSM_MOVE_STATE(eZwdfsState::CHOOSE_NEXT_BEST_CHANNEL);
@@ -344,8 +344,7 @@ void ChannelSelectionTask::handle_vs_channels_list_response(
 }
 
 void ChannelSelectionTask::handle_vs_zwdfs_ant_channel_switch_response(
-    ieee1905_1::CmduMessageRx &cmdu_rx, Socket *sd,
-    std::shared_ptr<beerocks_header> beerocks_header)
+    ieee1905_1::CmduMessageRx &cmdu_rx, int fd, std::shared_ptr<beerocks_header> beerocks_header)
 {
     auto notification = beerocks_header->addClass<
         beerocks_message::cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE>();
@@ -353,8 +352,10 @@ void ChannelSelectionTask::handle_vs_zwdfs_ant_channel_switch_response(
         LOG(ERROR) << "addClass ACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE failed";
         return;
     }
+
+    auto sender_iface_name = socket_to_front_iface_name(fd);
     LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE from "
-               << socket_to_front_iface_name(sd);
+               << sender_iface_name;
 
     if (m_zwdfs_state == eZwdfsState::WAIT_FOR_ZWDFS_SWITCH_ANT_OFF_RESPONSE) {
         ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
@@ -367,23 +368,24 @@ void ChannelSelectionTask::handle_vs_zwdfs_ant_channel_switch_response(
     }
 }
 
-const std::string ChannelSelectionTask::socket_to_front_iface_name(const Socket *sd)
+const std::string ChannelSelectionTask::socket_to_front_iface_name(int fd)
 {
     for (const auto &soc : m_btl_ctx.slaves_sockets) {
-        if (soc->slave == sd) {
+        if (soc->slave == fd) {
             return soc->hostap_iface;
         }
     }
 
     for (const auto &slave_element : m_btl_ctx.m_disabled_slave_sockets) {
-        if (slave_element.second->slave == sd) {
+        if (slave_element.second->slave == fd) {
             return slave_element.first;
         }
     }
 
     return std::string();
 }
-Socket *ChannelSelectionTask::front_iface_name_to_socket(const std::string &iface_name)
+
+int ChannelSelectionTask::front_iface_name_to_socket(const std::string &iface_name)
 {
     for (const auto &soc : m_btl_ctx.slaves_sockets) {
         if (soc->hostap_iface == iface_name) {
@@ -395,7 +397,7 @@ Socket *ChannelSelectionTask::front_iface_name_to_socket(const std::string &ifac
             return slave_element.second->slave;
         }
     }
-    return nullptr;
+    return beerocks::net::FileDescriptor::invalid_descriptor;
 }
 
 bool ChannelSelectionTask::radio_scan_in_progress(eFreqType band)
@@ -439,13 +441,13 @@ void ChannelSelectionTask::zwdfs_fsm()
         }
 
         auto fronthaul_sd = front_iface_name_to_socket(m_zwdfs_primary_radio_iface);
-        if (!fronthaul_sd) {
+        if (fronthaul_sd == beerocks::net::FileDescriptor::invalid_descriptor) {
             LOG(DEBUG) << "socket to fronthaul not found: " << m_zwdfs_primary_radio_iface;
             ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
             break;
         }
 
-        message_com::send_cmdu(fronthaul_sd, m_cmdu_tx);
+        m_btl_ctx.send_cmdu(fronthaul_sd, m_cmdu_tx);
 
         constexpr uint8_t CHANNELS_LIST_RESPONSE_TIMEOUT_SEC = 3;
 
@@ -545,7 +547,7 @@ void ChannelSelectionTask::zwdfs_fsm()
         }
 
         auto fronthaul_sd = front_iface_name_to_socket(m_zwdfs_iface);
-        if (!fronthaul_sd) {
+        if (fronthaul_sd == beerocks::net::FileDescriptor::invalid_descriptor) {
             LOG(DEBUG) << "socket to fronthaul not found: " << m_zwdfs_iface;
             ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
             break;
@@ -572,7 +574,7 @@ void ChannelSelectionTask::zwdfs_fsm()
                    << m_selected_channel.channel
                    << ", bw=" << utils::convert_bandwidth_to_int(m_selected_channel.bw);
 
-        message_com::send_cmdu(fronthaul_sd, m_cmdu_tx);
+        m_btl_ctx.send_cmdu(fronthaul_sd, m_cmdu_tx);
 
         constexpr uint8_t CAC_STARTED_TIMEOUT_SEC = 10;
         m_zwdfs_fsm_timeout =
@@ -623,13 +625,13 @@ void ChannelSelectionTask::zwdfs_fsm()
             son::wireless_utils::channel_to_freq(center_channel);
 
         auto fronthaul_sd = front_iface_name_to_socket(m_zwdfs_primary_radio_iface);
-        if (!fronthaul_sd) {
+        if (fronthaul_sd == beerocks::net::FileDescriptor::invalid_descriptor) {
             LOG(DEBUG) << "socket to fronthaul not found: " << m_zwdfs_primary_radio_iface;
             ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
             break;
         }
 
-        message_com::send_cmdu(fronthaul_sd, m_cmdu_tx);
+        m_btl_ctx.send_cmdu(fronthaul_sd, m_cmdu_tx);
 
         constexpr uint8_t SWITCH_CHANNEL_PRIMARY_RADIO_TIMEOUT_SEC = 3;
         m_zwdfs_fsm_timeout = std::chrono::steady_clock::now() +
@@ -653,7 +655,7 @@ void ChannelSelectionTask::zwdfs_fsm()
 
         LOG(DEBUG) << "Sending ZWDFS antenna switch off request";
         auto fronthaul_sd = front_iface_name_to_socket(m_zwdfs_iface);
-        if (!fronthaul_sd) {
+        if (fronthaul_sd == beerocks::net::FileDescriptor::invalid_descriptor) {
             LOG(DEBUG) << "socket to fronthaul not found: " << m_zwdfs_iface;
             ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
             break;
@@ -668,7 +670,7 @@ void ChannelSelectionTask::zwdfs_fsm()
 
         request->ant_switch_on() = false;
 
-        message_com::send_cmdu(fronthaul_sd, m_cmdu_tx);
+        m_btl_ctx.send_cmdu(fronthaul_sd, m_cmdu_tx);
 
         constexpr uint8_t ZWDFS_SWITCH_ANT_OFF_RESPONSE_SEC = 3;
 
