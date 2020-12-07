@@ -556,6 +556,12 @@ void beerocks_ucc_listener::handle_wfa_ca_command(int fd, const std::string &com
         // TODO: Find out what to do with value of param "name".
         // Perform this operation in a background thread and continue.
         // Send reply only when device reset completes. Do not send anything in case of timeout.
+        // TODO: PPM-889 Notify reset completed asynchronously.
+        // "This is horribly ugly and should be (eventually) replaced with an async action. I.e.,
+        // ucc_listener should have a method reset_completed or something like that, which is called
+        // when the reset is completed. In the controller, it can be called directly from
+        // clear_configuration(). In the agent, it would be called from the backhaul manager state
+        // machine.
         std::thread thread([fd, this]() {
             if (clear_configuration()) {
                 // Send back second reply
