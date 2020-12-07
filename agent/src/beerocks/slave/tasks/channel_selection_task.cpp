@@ -398,7 +398,7 @@ Socket *ChannelSelectionTask::front_iface_name_to_socket(const std::string &ifac
     return nullptr;
 }
 
-bool ChannelSelectionTask::radio_on_scan(eFreqType band)
+bool ChannelSelectionTask::radio_scan_in_progress(eFreqType band)
 {
     auto db = AgentDB::get();
     for (const auto radio : db->get_radios_list()) {
@@ -408,7 +408,7 @@ bool ChannelSelectionTask::radio_on_scan(eFreqType band)
         if (band != eFreqType::FREQ_UNKNOWN && radio->freq_type != band) {
             continue;
         }
-        if (radio->statuses.dcs_background_scan_in_process) {
+        if (radio->statuses.channel_scan_in_progress) {
             return true;
         }
     }
@@ -427,7 +427,7 @@ void ChannelSelectionTask::zwdfs_fsm()
         // 2.4G because it is forbidden to switch zwdfs antenna during scan.
         // 5G because we don't want the ZWDFS flow will switch channel on the primary 5G radio
         // while it is during a background scan.
-        if (radio_on_scan()) {
+        if (radio_scan_in_progress()) {
             break;
         }
 
@@ -469,11 +469,37 @@ void ChannelSelectionTask::zwdfs_fsm()
             ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
         }
 
-        auto db    = AgentDB::get();
+        auto db = AgentDB::get();
+
         auto radio = db->radio(m_zwdfs_primary_radio_iface);
         if (!radio) {
             ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
             break;
+        }
+
+        // If there is a channel with better rank, but did not pass the ranking threshold, print
+        // information about it.
+        int current_channel_rank = -1;
+        for (const auto &channel_bw_info :
+             radio->channels_list.at(radio->channel).supported_bw_list) {
+            if (channel_bw_info.bandwidth == radio->bandwidth) {
+                current_channel_rank = channel_bw_info.rank;
+            }
+        }
+        if (current_channel_rank == -1) {
+            LOG(ERROR) << "Current channels has rank not found!";
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            break;
+        }
+
+        if (m_selected_channel.rank < current_channel_rank &&
+            uint32_t(current_channel_rank - m_selected_channel.rank) <
+                db->device_conf.best_channel_rank_threshold) {
+            LOG(INFO)
+                << "Channel " << m_selected_channel.channel << " with bw=" << m_selected_channel.bw
+                << " and dfs_state=" << m_selected_channel.dfs_state
+                << " has better rank than current channel, but did not pass the ranking threshold="
+                << db->device_conf.best_channel_rank_threshold << ", Current channel is selected.";
         }
 
         if (m_selected_channel.channel == radio->channel &&
@@ -513,7 +539,7 @@ void ChannelSelectionTask::zwdfs_fsm()
         // ZWDFS antenna. Since at the time when the background scan will be over, the selected
         // channel might not be relevant anymore, the FSM will start over and jum to the initial
         // state which query the updated channel info from the AP.
-        if (radio_on_scan()) {
+        if (radio_scan_in_progress()) {
             LOG(INFO) << "Pause ZWDFS flow until background scan is finished";
             break;
         }
@@ -621,7 +647,7 @@ void ChannelSelectionTask::zwdfs_fsm()
     }
     case eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST: {
         // Block switching back 2.4G antenna if its radio is during background scan.
-        if (radio_on_scan(eFreqType::FREQ_24G)) {
+        if (radio_scan_in_progress(eFreqType::FREQ_24G)) {
             break;
         }
 
@@ -676,32 +702,25 @@ ChannelSelectionTask::select_best_usable_channel(const std::string &front_radio_
         return sSelectedChannel();
     }
 
-    int32_t best_rank = INT32_MAX;
-
-    // Best rank without ranking threshold calculation.
-    sSelectedChannel absolute_best_rank_channel;
-    int32_t absolute_best_rank   = INT32_MAX;
-    int32_t current_channel_rank = INT32_MAX;
+    int32_t best_rank = -1;
 
     // Initialize the best channel to the current channel, and add the ranking threshold
     // so only channel that has a better rank than the current channel (with threshold),
     // could be selected.
     for (const auto &channel_bw_info : radio->channels_list.at(radio->channel).supported_bw_list) {
         if (channel_bw_info.bandwidth == radio->bandwidth) {
-            current_channel_rank = channel_bw_info.rank;
-            best_rank = current_channel_rank - db->device_conf.best_channel_rank_threshold;
-            if (best_rank < 0) {
-                best_rank = 0;
-            }
+            best_rank                  = channel_bw_info.rank;
             selected_channel.channel   = radio->channel;
             selected_channel.bw        = channel_bw_info.bandwidth;
             selected_channel.dfs_state = radio->channels_list.at(radio->channel).dfs_state;
+            selected_channel.rank      = channel_bw_info.rank;
             break;
         }
     }
-
-    absolute_best_rank_channel = selected_channel;
-    absolute_best_rank         = current_channel_rank;
+    if (best_rank == -1) {
+        LOG(ERROR) << "Current channels has rank not found!";
+        return sSelectedChannel();
+    }
 
     for (const auto &channel_info_pair : radio->channels_list) {
         uint8_t channel = channel_info_pair.first;
@@ -717,15 +736,6 @@ ChannelSelectionTask::select_best_usable_channel(const std::string &front_radio_
 
             // Low rank is better. Best rank include the ranking threshold.
             if (supported_bw.rank > best_rank) {
-                // If there is a channel with better rank, but did not pass the ranking threshold
-                // do not select it but print INFO about it.
-                if (supported_bw.rank < absolute_best_rank) {
-                    absolute_best_rank                 = supported_bw.rank;
-                    absolute_best_rank_channel.channel = radio->channel;
-                    absolute_best_rank_channel.bw      = supported_bw.bandwidth;
-                    absolute_best_rank_channel.dfs_state =
-                        radio->channels_list.at(radio->channel).dfs_state;
-                }
                 continue;
             }
 
@@ -820,27 +830,8 @@ ChannelSelectionTask::select_best_usable_channel(const std::string &front_radio_
             selected_channel.channel   = channel;
             selected_channel.bw        = supported_bw.bandwidth;
             selected_channel.dfs_state = dfs_state;
-
-            absolute_best_rank_channel = selected_channel;
-            absolute_best_rank         = best_rank;
+            selected_channel.rank      = best_rank;
         }
-    }
-
-    // If there is a channel with better rank, but did not pass the ranking threshold, print INFO
-    // about it.
-    int32_t current_rank_with_threshold =
-        current_channel_rank - db->device_conf.best_channel_rank_threshold;
-    if (current_rank_with_threshold < 0) {
-        current_rank_with_threshold = 0;
-    }
-    if (absolute_best_rank != current_channel_rank && // The absolute_best_rank has been updated
-        absolute_best_rank > current_rank_with_threshold) {
-        LOG(INFO)
-            << "Channel " << absolute_best_rank_channel.channel
-            << " with bw=" << absolute_best_rank_channel.bw
-            << " and dfs_state=" << absolute_best_rank_channel.dfs_state
-            << " has better rank than current channel, but did not pass the ranking threshold="
-            << db->device_conf.best_channel_rank_threshold << ", Current channel is selected.";
     }
 
     return selected_channel;

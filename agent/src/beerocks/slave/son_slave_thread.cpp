@@ -427,7 +427,7 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
     // LOG(DEBUG) << "handle_cmdu_control_message(), INTEL_VS: action=" + std::to_string(beerocks_header->action()) + ", action_op=" + std::to_string(beerocks_header->action_op());
     // LOG(DEBUG) << "received radio_mac=" << beerocks_header->radio_mac() << ", local radio_mac=" << hostap_params.iface_mac;
 
-    // Scope this code block to prevent shadowing of of "db" and "radio" variables internally on the
+    // Scope this code block to prevent shadowing of "db" and "radio" variables internally on the
     // switch case.
     {
         auto db    = AgentDB::get();
@@ -1036,7 +1036,7 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
             }
         }
 
-        radio->statuses.dcs_background_scan_in_process = true;
+        radio->statuses.channel_scan_in_progress = true;
 
         auto request_out = message_com::create_vs_message<
             beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST>(cmdu_tx);
@@ -3137,7 +3137,7 @@ bool slave_thread::handle_cmdu_monitor_message(Socket *sd,
 
         LOG(DEBUG) << "Received ACTION_MONITOR_CHANNEL_SCAN_FINISHED_NOTIFICATION";
 
-        radio->statuses.dcs_background_scan_in_process = false;
+        radio->statuses.channel_scan_in_progress = false;
 
         auto notification_in =
             beerocks_header
@@ -3167,7 +3167,7 @@ bool slave_thread::handle_cmdu_monitor_message(Socket *sd,
         }
 
         LOG(DEBUG) << "Received ACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION";
-        radio->statuses.dcs_background_scan_in_process = false;
+        radio->statuses.channel_scan_in_progress = false;
 
         auto notification_in =
             beerocks_header
