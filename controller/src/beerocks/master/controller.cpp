@@ -2112,8 +2112,9 @@ bool Controller::handle_cmdu_1905_topology_response(const std::string &src_mac,
                 LOG(ERROR) << "ieee1905_1::tlv1905NeighborDevice has invalid pointer";
                 return false;
             }
-
-            for (size_t i = 0; i < tlv1905NeighborDevice->mac_al_1905_device_length(); i++) {
+            auto device_count = tlv1905NeighborDevice->mac_al_1905_device_length() /
+                                sizeof(ieee1905_1::tlv1905NeighborDevice::sMacAl1905Device);
+            for (size_t i = 0; i < device_count; i++) {
                 const auto neighbor_al_mac_tuple = tlv1905NeighborDevice->mac_al_1905_device(i);
                 if (!std::get<0>(neighbor_al_mac_tuple)) {
                     LOG(ERROR) << "Getting al_mac element has failed";
