@@ -3430,8 +3430,8 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
 
             db->remove_radio_from_radios_list(m_fronthaul_iface);
 
-            LOG(TRACE) << "goto STATE_OPERATIONAL";
-            slave_state = STATE_OPERATIONAL;
+            LOG(TRACE) << "goto STATE_PRE_OPERATIONAL";
+            slave_state = STATE_PRE_OPERATIONAL;
             break;
         }
         break;
@@ -3525,8 +3525,8 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
 
         auto db = AgentDB::get();
         if (!db->device_conf.front_radio.config[config.hostap_iface].band_enabled) {
-            LOG(TRACE) << "goto STATE_OPERATIONAL";
-            slave_state = STATE_OPERATIONAL;
+            LOG(TRACE) << "goto STATE_PRE_OPERATIONAL";
+            slave_state = STATE_PRE_OPERATIONAL;
             break;
         }
 
@@ -3830,13 +3830,20 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
 
         update->config() = son_config;
         message_com::send_cmdu(monitor_socket, cmdu_tx);
+        LOG(TRACE) << "goto STATE_PRE_OPERATIONAL";
+        slave_state = STATE_PRE_OPERATIONAL;
+        break;
+    }
+
+    case STATE_PRE_OPERATIONAL: {
+        auto db                    = AgentDB::get();
+        m_stop_on_failure_attempts = db->device_conf.stop_on_failure_attempts;
+
         LOG(TRACE) << "goto STATE_OPERATIONAL";
         slave_state = STATE_OPERATIONAL;
         break;
     }
     case STATE_OPERATIONAL: {
-        auto db                    = AgentDB::get();
-        m_stop_on_failure_attempts = db->device_conf.stop_on_failure_attempts;
         break;
     }
     case STATE_VERSION_MISMATCH: {
