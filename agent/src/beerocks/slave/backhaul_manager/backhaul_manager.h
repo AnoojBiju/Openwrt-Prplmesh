@@ -463,6 +463,7 @@ private:
     STATE(WAIT_FOR_AUTOCONFIG_COMPLETE)                                                            \
     STATE(CONNECT_TO_MASTER)                                                                       \
     STATE(CONNECTED)                                                                               \
+    STATE(PRE_OPERATIONAL)                                                                         \
     STATE(OPERATIONAL)                                                                             \
     STATE(RESTART)                                                                                 \
     STATE(STOPPED)
