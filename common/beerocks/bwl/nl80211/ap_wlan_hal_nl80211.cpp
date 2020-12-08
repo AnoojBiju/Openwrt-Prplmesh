@@ -302,7 +302,7 @@ bool ap_wlan_hal_nl80211::sta_bss_steer(const std::string &mac, const std::strin
 
     // Target BSSID
     cmd += std::string() + " neighbor=" + bssid + ",0," + std::to_string(oper_class) + "," +
-           std::to_string(chan) + ",0,255";
+           std::to_string(chan) + ",0";
 
     // Send command
     if (!wpa_ctrl_send_msg(cmd)) {
