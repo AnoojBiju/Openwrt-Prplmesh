@@ -683,7 +683,7 @@ update_vap_credentials_configure_wpa(const std::string &vap_if,
         } else {
             wpa_psk.assign(bss_info_conf.network_key);
         }
-        ieee80211w.assign("0");
+        ieee80211w.assign("1");
         disable_pmksa_caching.assign("1");
         okc.assign("0");
         wpa_disable_eapol_key_retries.assign("0");
