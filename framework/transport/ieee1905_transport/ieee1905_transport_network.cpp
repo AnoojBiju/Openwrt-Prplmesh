@@ -292,8 +292,6 @@ void Ieee1905Transport::handle_bridge_state_change(const std::string &bridge_nam
               << bridge_name << "'.");
 
     update_network_interface(bridge_name, iface_name, iface_added);
-
-    publish_interface_configuration_indication();
 }
 
 void Ieee1905Transport::deactivate_interface(NetworkInterface &interface)

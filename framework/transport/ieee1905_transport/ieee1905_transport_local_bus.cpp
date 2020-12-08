@@ -30,12 +30,6 @@ void Ieee1905Transport::handle_broker_pollin_event(std::unique_ptr<messages::Mes
                  << std::endl
                  << *interface_configuration_request_msg);
         handle_broker_interface_configuration_request_message(*interface_configuration_request_msg);
-    } else if (auto *interface_configuration_query_msg =
-                   dynamic_cast<InterfaceConfigurationQueryMessage *>(msg.get())) {
-        MAPF_DBG("received InterfaceConfigurationQueryMessage message:"
-                 << std::endl
-                 << *interface_configuration_query_msg);
-        publish_interface_configuration_indication();
     } else {
         // should never receive messages which we are not subscribed to
         MAPF_WARN("received un-expected message:" << std::endl << *msg);
@@ -98,22 +92,16 @@ void Ieee1905Transport::handle_broker_cmdu_tx_message(CmduTxMessage &msg)
 void Ieee1905Transport::handle_broker_interface_configuration_request_message(
     InterfaceConfigurationRequestMessage &msg)
 {
-    LOG_IF(msg.metadata()->numInterfaces == 0, FATAL) << "Configuration with no bridge!";
-    using Flags = InterfaceConfigurationRequestMessage::Flags;
-    LOG_IF(!(msg.metadata()->interfaces[0].flags & Flags::IS_BRIDGE), ERROR)
-        << "Interface to configure is not a bridge!";
-
     std::map<std::string, NetworkInterface> updated_network_interfaces;
     // fill a set with the interfaces that are part of the bridge:
     std::set<std::string> bridge_state{};
 
-    auto bridge_name = msg.metadata()->interfaces[0].ifname;
+    auto bridge_name = msg.metadata()->bridge_name;
     LOG_IF(!m_bridge_state_manager->read_state(bridge_name, bridge_state), ERROR)
         << "Failed reading the bridge state!";
-    updated_network_interfaces[bridge_name].ifname = bridge_name;
-    updated_network_interfaces[bridge_name].bridge_name =
-        msg.metadata()->interfaces[0].bridge_ifname;
-    updated_network_interfaces[bridge_name].is_bridge = true;
+    updated_network_interfaces[bridge_name].ifname      = bridge_name;
+    updated_network_interfaces[bridge_name].bridge_name = std::string();
+    updated_network_interfaces[bridge_name].is_bridge   = true;
 
     for (const auto &ifname : bridge_state) {
         MAPF_INFO("bridge state iface: " << ifname);
@@ -122,8 +110,6 @@ void Ieee1905Transport::handle_broker_interface_configuration_request_message(
     }
 
     update_network_interfaces(updated_network_interfaces);
-
-    publish_interface_configuration_indication();
 }
 
 bool Ieee1905Transport::send_packet_to_broker(Packet &packet)
@@ -158,36 +144,6 @@ bool Ieee1905Transport::send_packet_to_broker(Packet &packet)
     }
 
     return true;
-}
-
-void Ieee1905Transport::publish_interface_configuration_indication()
-{
-    // publish an updated interface status indication
-    InterfaceConfigurationIndicationMessage indication_msg;
-    uint32_t n = 0;
-    for (auto it = network_interfaces_.begin(); it != network_interfaces_.end(); ++it) {
-        using Flags = InterfaceConfigurationRequestMessage::Flags;
-        auto &iface = it->second;
-
-        mapf::utils::copy_string(indication_msg.metadata()->interfaces[n].ifname,
-                                 iface.ifname.c_str(), IF_NAMESIZE);
-        mapf::utils::copy_string(indication_msg.metadata()->interfaces[n].bridge_ifname,
-                                 iface.bridge_name.c_str(), IF_NAMESIZE);
-
-        if (iface.is_bridge) {
-            indication_msg.metadata()->interfaces[n].flags |= Flags::IS_BRIDGE;
-        } else {
-            indication_msg.metadata()->interfaces[n].flags |= Flags::ENABLE_IEEE1905_TRANSPORT;
-        }
-
-        n++;
-    }
-    indication_msg.metadata()->numInterfaces = n;
-
-    MAPF_DBG("publishing InterfaceConfigurationIndicationMessage:" << std::endl << indication_msg);
-    if (!m_broker->publish(indication_msg)) {
-        MAPF_ERR("failed to publish message to broker.");
-    }
 }
 
 uint16_t Ieee1905Transport::get_next_message_id()

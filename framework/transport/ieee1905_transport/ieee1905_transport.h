@@ -340,7 +340,6 @@ private:
     void handle_broker_interface_configuration_request_message(
         messages::InterfaceConfigurationRequestMessage &msg);
     bool send_packet_to_broker(Packet &packet);
-    void publish_interface_configuration_indication();
     uint16_t get_next_message_id();
 
     //
