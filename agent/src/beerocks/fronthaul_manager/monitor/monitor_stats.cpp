@@ -216,7 +216,6 @@ void monitor_stats::send_associated_sta_link_metrics(const sMeasurementsRequest 
 
 void monitor_stats::process()
 {
-
     //LOG(DEBUG) << "monitor_stats::process() 2 : db_poll_id=" << int(mon_db->get_poll_id()) << ", next_poll_id=" << int(next_poll_id);
 
     //check if dd has updates
@@ -224,7 +223,7 @@ void monitor_stats::process()
     if (db_poll_id != next_poll_id) {
         return;
     }
-    next_poll_id++;
+    ++next_poll_id;
 
     // Radio
     auto radio_node = mon_db->get_radio_node();
@@ -434,6 +433,8 @@ void monitor_stats::process()
         notification->params().channel_load_percent   = radio_stats.channel_load_tot_curr;
         message_com::send_cmdu(slave_socket, cmdu_tx);
     }
+
+    return;
 }
 
 bool monitor_stats::add_ap_metrics(ieee1905_1::CmduMessageTx &cmdu_tx,

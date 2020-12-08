@@ -510,7 +510,15 @@ void monitor_thread::after_select(bool timeout)
         auto result = mon_rssi.process(awake_timeout());
         LOG_IF(!result, DEBUG)
             << "##### mon_rssi.process not-complete will continue next time thread awakes";
+
+        if (std::chrono::steady_clock::now() >= awake_timeout()) {
+            LOG(DEBUG) << "thread awake time too long, mon_stats.process not started, will "
+                          "continue next time thread awakes";
+            return;
+        }
+
         mon_stats.process();
+
 #ifdef BEEROCKS_RDKB
         mon_rdkb_hal.process();
 #endif
@@ -1322,8 +1330,8 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
             beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE>(
             cmdu_tx, beerocks_header->id());
         if (!response_out) {
-            LOG(ERROR)
-                << "Failed building cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE message!";
+            LOG(ERROR) << "Failed building cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE "
+                          "message!";
             return false;
         }
 
@@ -1347,8 +1355,8 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
             beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE>(
             cmdu_tx, beerocks_header->id());
         if (!response_out) {
-            LOG(ERROR)
-                << "Failed building cACTION_MONITOR_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE message!";
+            LOG(ERROR) << "Failed building cACTION_MONITOR_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE "
+                          "message!";
             return false;
         }
 
@@ -1590,8 +1598,8 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
                 auto response = message_com::create_vs_message<
                     beerocks_message::cACTION_MONITOR_CLIENT_BEACON_11K_RESPONSE>(cmdu_tx, id);
                 if (response == nullptr) {
-                    LOG(ERROR)
-                        << "Failed building cACTION_MONITOR_CLIENT_BEACON_11K_RESPONSE message!";
+                    LOG(ERROR) << "Failed building cACTION_MONITOR_CLIENT_BEACON_11K_RESPONSE "
+                                  "message!";
                     break;
                 }
 
@@ -1679,8 +1687,8 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
             auto response = message_com::create_vs_message<
                 beerocks_message::cACTION_MONITOR_HOSTAP_AP_DISABLED_NOTIFICATION>(cmdu_tx);
             if (response == nullptr) {
-                LOG(ERROR)
-                    << "Failed building cACTION_MONITOR_HOSTAP_AP_DISABLED_NOTIFICATION message!";
+                LOG(ERROR) << "Failed building cACTION_MONITOR_HOSTAP_AP_DISABLED_NOTIFICATION "
+                              "message!";
                 break;
             }
 
