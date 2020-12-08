@@ -150,6 +150,11 @@ private:
     uint32_t m_nl_seq = 0;
     // Flag indicating if we are currently in a dump sequence
     bool m_scan_dump_in_progress = false;
+
+    std::set<int> m_completed_vaps;
+    std::unordered_set<std::string> m_handled_clients;
+    std::string m_next_client_mac;
+    bool m_queried_first = false;
 };
 
 } // namespace dwpal
