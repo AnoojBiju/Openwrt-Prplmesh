@@ -4862,8 +4862,7 @@ beerocks::message::sWifiChannel slave_thread::channel_selection_select_channel()
         if (preference.channels.empty()) {
             continue;
         }
-        for (uint8_t i = 0; i < beerocks::message::SUPPORTED_CHANNELS_LENGTH; i++) {
-            const auto &channel  = radio->front.preferred_channels.at(i);
+        for (const auto &channel : radio->front.preferred_channels) {
             auto operating_class = wireless_utils::get_operating_class_by_channel(channel);
 
             // Skip DFS channels
