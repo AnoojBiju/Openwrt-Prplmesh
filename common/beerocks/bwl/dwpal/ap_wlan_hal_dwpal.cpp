@@ -1717,26 +1717,36 @@ bool ap_wlan_hal_dwpal::set_radio_mbo_assoc_disallow(bool enable)
 bool ap_wlan_hal_dwpal::generate_connected_clients_events(
     std::chrono::steady_clock::time_point max_iteration_timeout)
 {
-    bool queried_first = false;
     std::string cmd;
-    std::string client_mac;
-    bool ret = true;
 
     for (const auto &vap_element : m_radio_info.available_vaps) {
         char *reply;
         size_t replyLen;
 
         const int &vap_id = vap_element.first;
+
+        if (m_completed_vaps.find(vap_id) != m_completed_vaps.end()) {
+            // skip vaps we already completed
+            continue;
+        }
+
         auto vap_iface_name =
             beerocks::utils::get_iface_string_from_iface_vap_ids(get_iface_name(), vap_id);
         LOG(TRACE) << __func__ << " for vap interface: " << vap_iface_name;
 
         do {
-            if (queried_first) {
-                cmd = "STA-NEXT " + vap_iface_name + " " + client_mac;
+            // if thread awake time is too long - return false (means there is more handling to be done on next wake-up)
+            if (std::chrono::steady_clock::now() > max_iteration_timeout) {
+                LOG(DEBUG)
+                    << "Thread is awake too long - will continue on next wakeup, last handled sta:"
+                    << m_next_client_mac;
+                return false;
+            }
+
+            if (m_queried_first) {
+                cmd = "STA-NEXT " + vap_iface_name + " " + m_next_client_mac;
             } else {
-                cmd           = "STA-FIRST " + vap_iface_name;
-                queried_first = true;
+                cmd = "STA-FIRST " + vap_iface_name;
             }
 
             reply = nullptr;
@@ -1744,14 +1754,25 @@ bool ap_wlan_hal_dwpal::generate_connected_clients_events(
             // Send command
             if (!dwpal_send_cmd(cmd, &reply)) {
                 LOG(ERROR) << __func__ << ": cmd='" << cmd << "' failed!";
-                ret = false;
-                break;
+                // if failed and not on get-first-client then last processed client may have disconnected
+                // we need to go over the vap from begining
+                if (m_queried_first) {
+                    m_queried_first = false;
+                    m_handled_clients.insert(m_next_client_mac);
+                    m_next_client_mac.clear();
+                }
+                return false;
             }
+
+            m_queried_first = true;
 
             replyLen = strnlen(reply, HOSTAPD_TO_DWPAL_MSG_LENGTH);
 
             if (replyLen == 0) {
                 LOG(DEBUG) << "cmd:" << cmd << " | reply:EMPTY";
+                LOG(DEBUG) << "Finished generating client assocaition events for vap="
+                           << vap_iface_name << ", vap_id=" << vap_id;
+                m_completed_vaps.insert(vap_id);
                 break;
             } else {
                 LOG(DEBUG) << "cmd:" << cmd << " | replylen:" << (int)replyLen
@@ -1770,7 +1791,14 @@ bool ap_wlan_hal_dwpal::generate_connected_clients_events(
             // update client mac
             auto msg = reinterpret_cast<sACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION *>(
                 msg_buff.get());
-            client_mac = tlvf::mac_to_string(msg->params.mac);
+            m_next_client_mac = tlvf::mac_to_string(msg->params.mac);
+
+            if (m_handled_clients.find(m_next_client_mac) != m_handled_clients.end()) {
+                // already generated event for this client
+                continue;
+            }
+
+            m_handled_clients.insert(m_next_client_mac);
 
             if (result == generate_association_event_result::SKIP_CLIENT_NOT_ASSOCIATED) {
                 LOG(DEBUG) << "Client information is missing 'connected_time' field - client "
@@ -1782,13 +1810,18 @@ bool ap_wlan_hal_dwpal::generate_connected_clients_events(
 
         } while (replyLen > 0);
 
-        if (!ret)
-            return ret; // return from lambda function
-
-        queried_first = false;
+        m_queried_first = false;
+        m_next_client_mac.clear();
+        m_handled_clients.clear();
     }
 
-    return ret;
+    // if reached this point it means we finished quering all VAPs
+    m_completed_vaps.clear();
+    m_next_client_mac.clear();
+    m_handled_clients.clear();
+    m_queried_first = false;
+
+    return true;
 }
 
 bool ap_wlan_hal_dwpal::start_wps_pbc()

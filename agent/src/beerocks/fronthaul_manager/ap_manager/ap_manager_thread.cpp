@@ -527,6 +527,13 @@ void ap_manager_thread::ap_manager_fsm()
                 now + std::chrono::seconds(HEARTBEAT_NOTIFICATION_DELAY_SEC);
         }
 
+        if (m_generate_connected_clients_events) {
+            // Reset the flag if finished to generate all clients' events
+            if (ap_wlan_hal->generate_connected_clients_events(awake_timeout())) {
+                m_generate_connected_clients_events = false;
+            }
+        }
+
         // Allow clients with expired blocking period timer
         allow_expired_clients();
         break;
@@ -1301,7 +1308,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
     }
     case beerocks_message::
         ACTION_APMANAGER_HOSTAP_GENERATE_CLIENT_ASSOCIATION_NOTIFICATIONS_REQUEST: {
-        ap_wlan_hal->generate_connected_clients_events();
+        m_generate_connected_clients_events = true;
         break;
     }
     case beerocks_message::ACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST: {

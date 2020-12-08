@@ -95,6 +95,7 @@ public:
      * @return true if finished generating, false otherwise
      */
     virtual bool
+    // returns true if finished to generate for all clients
     generate_connected_clients_events(std::chrono::steady_clock::time_point max_iteration_timeout =
                                           std::chrono::steady_clock::time_point::max()) override;
     virtual bool start_wps_pbc() override;
@@ -121,6 +122,11 @@ private:
 
     bool m_drop_csa = false;
     std::chrono::steady_clock::time_point m_csa_event_filtering_timestamp;
+
+    std::set<int> m_completed_vaps;
+    std::unordered_set<std::string> m_handled_clients;
+    std::string m_next_client_mac;
+    bool m_queried_first = false;
 };
 
 } // namespace dwpal
