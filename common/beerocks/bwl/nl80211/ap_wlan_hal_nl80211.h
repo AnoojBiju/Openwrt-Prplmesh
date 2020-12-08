@@ -79,7 +79,21 @@ public:
     virtual std::string get_radio_driver_version() override;
     virtual bool set_vap_enable(const std::string &iface_name, const bool enable) override;
     virtual bool get_vap_enable(const std::string &iface_name, bool &enable) override;
-    virtual bool generate_connected_clients_events() override;
+
+    /**
+     * @brief Generates client-connected event for already connected clients.
+     * This is used to overcome a scenario where clients that are already connected
+     * are not known to the prplmesh "missed" the "connected" event for them. This scenario
+     * can happen due to prplmesh unexpected restart, son-slave unexpected restart and/or during development
+     * when prplmesh is intentionally restarted
+     * 
+     * @param max_iteration_timeout - the time when thread awake time expires and function must return
+     * 
+     * @return true if finished generating, false otherwise
+     */
+    virtual bool
+    generate_connected_clients_events(std::chrono::steady_clock::time_point max_iteration_timeout =
+                                          std::chrono::steady_clock::time_point::max()) override;
     virtual bool start_wps_pbc() override;
     virtual bool set_mbo_assoc_disallow(const std::string &bssid, bool enable) override;
     virtual bool set_radio_mbo_assoc_disallow(bool enable) override;

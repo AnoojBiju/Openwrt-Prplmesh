@@ -988,7 +988,8 @@ bool mon_wlan_hal_dwpal::channel_scan_dump_results()
     return true;
 }
 
-bool mon_wlan_hal_dwpal::generate_connected_clients_events()
+bool mon_wlan_hal_dwpal::generate_connected_clients_events(
+    std::chrono::steady_clock::time_point max_iteration_timeout)
 {
     bool queried_first = false;
     std::string cmd;

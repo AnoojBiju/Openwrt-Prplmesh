@@ -1714,7 +1714,8 @@ bool ap_wlan_hal_dwpal::set_radio_mbo_assoc_disallow(bool enable)
     return true;
 }
 
-bool ap_wlan_hal_dwpal::generate_connected_clients_events()
+bool ap_wlan_hal_dwpal::generate_connected_clients_events(
+    std::chrono::steady_clock::time_point max_iteration_timeout)
 {
     bool queried_first = false;
     std::string cmd;

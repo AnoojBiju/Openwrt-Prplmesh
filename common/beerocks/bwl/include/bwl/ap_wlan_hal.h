@@ -404,7 +404,9 @@ public:
      * 
      * @return true on success or false on error.
      */
-    virtual bool generate_connected_clients_events() = 0;
+    virtual bool
+    generate_connected_clients_events(std::chrono::steady_clock::time_point max_iteration_timeout =
+                                          std::chrono::steady_clock::time_point::max()) = 0;
 
     /**
      * @brief Start WPS PBC procedure on a given VAP 

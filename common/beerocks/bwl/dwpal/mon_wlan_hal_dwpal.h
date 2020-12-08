@@ -43,7 +43,21 @@ public:
     virtual bool channel_scan_trigger(int dwell_time_msec,
                                       const std::vector<unsigned int> &channel_pool) override;
     virtual bool channel_scan_dump_results() override;
-    virtual bool generate_connected_clients_events() override;
+
+    /**
+     * @brief Generates client-connected event for already connected clients.
+     * This is used to overcome a scenario where clients that are already connected
+     * are not known to the prplmesh "missed" the "connected" event for them. This scenario
+     * can happen due to prplmesh unexpected restart, son-slave unexpected restart and/or during development
+     * when prplmesh is intentionally restarted
+     * 
+     * @param max_iteration_timeout - the time when thread awake time expires and function must return
+     * 
+     * @return true if finished generating, false otherwise
+     */
+    virtual bool
+    generate_connected_clients_events(std::chrono::steady_clock::time_point max_iteration_timeout =
+                                          std::chrono::steady_clock::time_point::max()) override;
     // Protected methods:
 protected:
     virtual bool process_dwpal_event(char *buffer, int bufLen, const std::string &opcode) override;
