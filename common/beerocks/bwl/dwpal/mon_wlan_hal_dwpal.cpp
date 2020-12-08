@@ -503,6 +503,13 @@ static std::shared_ptr<char> generate_client_assoc_event(const std::string &even
         return nullptr;
     }
 
+    // Clients may be authenticated but not associated.
+    // Only associated clients will return the "connected_time" argument.
+    // Do not trigger event for non-associated clients
+    if (numOfValidArgs[7] == 0) {
+        result = generate_association_event_result::SKIP_CLIENT_NOT_ASSOCIATED;
+    }
+
     (void)supported_rates;
     (void)HT_MCS;
     (void)VHT_MCS;
@@ -1027,21 +1034,20 @@ bool mon_wlan_hal_dwpal::generate_connected_clients_events()
             int32_t result = generate_association_event_result::SUCCESS;
             auto msg_buff  = generate_client_assoc_event(reply, vap_id, result);
             if (!msg_buff) {
-                if (result == generate_association_event_result::FAILED_TO_PARSE_DWPAL) {
-                    LOG(DEBUG) << "Failed to generate client association event from reply";
-                    break;
-                } else if (result ==
-                           generate_association_event_result::SKIP_CLIENT_NOT_ASSOCIATED) {
-                    LOG(DEBUG) << "Client information is missing 'connected_time' field - client "
-                               << "is not associated. Not generating client-association-event";
-                    continue;
-                }
+                LOG(DEBUG) << "Failed to generate client association event from reply";
+                break;
             }
 
             // update client mac
             auto msg =
                 reinterpret_cast<sACTION_MONITOR_CLIENT_ASSOCIATED_NOTIFICATION *>(msg_buff.get());
             client_mac = tlvf::mac_to_string(msg->mac);
+
+            if (result == generate_association_event_result::SKIP_CLIENT_NOT_ASSOCIATED) {
+                LOG(DEBUG) << "Client information is missing 'connected_time' field - client "
+                           << "is not associated. Not generating client-association-event";
+                continue;
+            }
 
             event_queue_push(Event::STA_Connected, msg_buff); // send message to the Monitor
 
