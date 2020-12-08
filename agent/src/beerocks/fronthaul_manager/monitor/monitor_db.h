@@ -39,6 +39,15 @@ public:
     void set_last_change_time() { last_change_time = std::chrono::steady_clock::now(); }
     std::chrono::steady_clock::time_point get_last_change_time() const { return last_change_time; }
 
+    void set_last_rssi_process_time()
+    {
+        m_last_rssi_process_time = std::chrono::steady_clock::now();
+    }
+    std::chrono::steady_clock::time_point get_last_rssi_process_time() const
+    {
+        return m_last_rssi_process_time;
+    }
+
     int8_t get_vap_id() const { return vap_id; }
 
     void set_ipv4(const std::string &ip) { ipv4 = ip; }
@@ -141,6 +150,8 @@ private:
     uint8_t arp_retry_count = 0;
     std::list<uint16_t> pending_rx_rssi_requests_id;
     std::chrono::steady_clock::time_point last_change_time;
+    std::chrono::steady_clock::time_point m_last_rssi_process_time =
+        std::chrono::steady_clock::time_point::min();
     std::chrono::steady_clock::time_point arp_time = std::chrono::steady_clock::now();
     SStaStats m_sta_stats;
 };

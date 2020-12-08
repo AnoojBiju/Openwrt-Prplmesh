@@ -184,17 +184,36 @@ void monitor_rssi::arp_recv()
 }
 
 // enter every poll event done (~1sec or on req)
-void monitor_rssi::process()
+bool monitor_rssi::process(std::chrono::steady_clock::time_point awake_timeout)
 {
-    bool poll_last = mon_db->is_last_poll();
+    static bool poll_last = mon_db->is_last_poll();
+
+    if (m_sta_rssi_process_completed) {
+        m_sta_rssi_process_start_timestamp = std::chrono::steady_clock::now();
+        m_sta_rssi_process_completed       = false;
+    }
 
     for (auto it = mon_db->sta_begin(); it != mon_db->sta_end(); ++it) {
         auto sta_mac  = it->first;
         auto sta_node = it->second;
 
+        // if thread awake time is too long - return
+        if (std::chrono::steady_clock::now() > awake_timeout) {
+            LOG(DEBUG) << "Thread is awake too long - will continue on next wakeup, next sta to "
+                          "be processeed: "
+                       << sta_mac;
+            return false;
+        }
+
+        auto &sta_stats = sta_node->get_stats();
+
+        // Skip stations that were already updated in the current cycle
+        if (sta_node->get_last_rssi_process_time() >= m_sta_rssi_process_start_timestamp) {
+            continue;
+        }
+
         auto sta_vap_id = sta_node->get_vap_id();
         auto arp_state  = sta_node->get_arp_state();
-        auto &sta_stats = sta_node->get_stats();
 
         if (arp_state == monitor_sta_node::IDLE) {
             if (!poll_last)
@@ -270,7 +289,7 @@ void monitor_rssi::process()
                     if (notification == nullptr) {
                         LOG(ERROR) << "Failed building "
                                       "cACTION_MONITOR_CLIENT_NO_RESPONSE_NOTIFICATION message!";
-                        break;
+                        return false;
                     }
 
                     notification->mac() = tlvf::mac_from_string(sta_mac);
@@ -304,7 +323,7 @@ void monitor_rssi::process()
             auto vap_node = mon_db->vap_get_by_id(sta_vap_id);
             if (vap_node == nullptr) {
                 LOG(ERROR) << "can't find sta vap_id=" << sta_vap_id;
-                return;
+                return false;
             }
 
             std::string arp_iface            = vap_node->get_bridge_iface();
@@ -345,7 +364,13 @@ void monitor_rssi::process()
         if (sta_node->enable_idle_monitor) {
             monitor_idle_station(sta_mac, sta_node);
         }
+
+        sta_node->set_last_rssi_process_time();
     }
+
+    m_sta_rssi_process_completed = true;
+
+    return true;
 }
 
 void monitor_rssi::send_rssi_measurement_response(const std::string &sta_mac,

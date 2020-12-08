@@ -507,7 +507,9 @@ void monitor_thread::after_select(bool timeout)
             }
         }
 
-        mon_rssi.process();
+        auto result = mon_rssi.process(awake_timeout());
+        LOG_IF(!result, DEBUG)
+            << "##### mon_rssi.process not-complete will continue next time thread awakes";
         mon_stats.process();
 #ifdef BEEROCKS_RDKB
         mon_rdkb_hal.process();

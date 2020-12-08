@@ -30,7 +30,8 @@ public:
     void stop();
     Socket *get_arp_socket();
 
-    void process();
+    bool process(std::chrono::steady_clock::time_point awake_timeout =
+                     std::chrono::steady_clock::time_point::max());
     void arp_recv();
 
     int conf_rx_rssi_notification_delta_db      = 8;
@@ -46,6 +47,8 @@ private:
     Socket *slave_socket;
     int arp_socket;
     Socket *arp_socket_class;
+    std::chrono::steady_clock::time_point m_sta_rssi_process_start_timestamp;
+    bool m_sta_rssi_process_completed = true;
 
     unsigned m_idle_unit_tx_threshold;
     unsigned m_idle_unit_rx_threshold;
