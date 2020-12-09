@@ -76,16 +76,57 @@ void task_pool::response_received(std::string mac,
     }
 }
 
-void task_pool::run_tasks()
+void task_pool::run_tasks(int max_exec_duration_ms)
 {
+    // Check if a new pool iteration should be started
+    if (m_exec_iteration_start_time > std::chrono::steady_clock::now()) {
+        m_exec_iteration_start_time = std::chrono::steady_clock::now();
+        m_exec_iteration_slots      = 0;
+    }
+
+    // Calculate the execution deadline time point
+    auto exec_deadline_time =
+        (max_exec_duration_ms)
+            ? std::chrono::steady_clock::now() + std::chrono::milliseconds(max_exec_duration_ms)
+            : std::chrono::steady_clock::time_point(std::chrono::milliseconds::max());
+
     for (auto it = m_scheduled_tasks.begin(); it != m_scheduled_tasks.end();) {
+        // If the maximal execution time in a single execution slot is reached
+        if (std::chrono::steady_clock::now() >= exec_deadline_time) {
+            m_exec_iteration_slots++;
+            return;
+        }
+
+        // Skip tasks that were already executed in this iteration
+        if (it->second->get_last_exec_time() == m_exec_iteration_start_time) {
+            ++it;
+            continue;
+        }
+
+        // Execute the task and update the iteration execution time
         it->second->execute();
+        it->second->set_last_exec_time(m_exec_iteration_start_time);
+
         if (it->second->is_done()) {
             pending_task_ended(it->first);
-            LOG(DEBUG) << "erasing task " << it->second->task_name << ", id " << it->first;
+            LOG(DEBUG) << "Erasing task " << it->second->task_name << ", id " << it->first;
             it = m_scheduled_tasks.erase(it);
         } else {
             ++it;
         }
     }
+
+    // If the iteration was completed in more than one slot, print a warning
+    if (m_exec_iteration_slots) {
+        auto total_iter_exec_time = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - m_exec_iteration_start_time);
+
+        LOG(DEBUG) << "Task pool execution iteration completed in " << m_exec_iteration_slots + 1
+                   << " slots of " << max_exec_duration_ms
+                   << "ms each, with a total execution time of " << total_iter_exec_time.count()
+                   << "ms. Number of tasks in pool: " << m_scheduled_tasks.size();
+    }
+
+    // Execution iteration completed, reset the state
+    m_exec_iteration_start_time = std::chrono::steady_clock::time_point::max();
 }
