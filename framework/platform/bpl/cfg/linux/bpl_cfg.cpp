@@ -29,6 +29,35 @@ namespace bpl {
 extern bool radio_num_to_wlan_iface_name(const int32_t radio_num, std::string &iface_str);
 
 /**
+ * @brief Returns the name of the configuration file to use.
+ *
+ * Configuration file can be either PLATFORM_DB_PATH_TEMP or PLATFORM_DB_PATH, the first that proves
+ * to exist in that order.
+ *
+ * If none exists, then returns false and sets the file name to the last one tried.
+ *
+ * @param file_name Name of the configuration file to use.
+ * @return true on success and false otherwise.
+ */
+static bool cfg_get_file_name(std::string &file_name)
+{
+    // Return the first existing file in the array.
+    const std::string file_names[]{PLATFORM_DB_PATH_TEMP, PLATFORM_DB_PATH};
+
+    for (const auto &name : file_names) {
+        std::ifstream file(name);
+        if (file) {
+            file_name = name;
+            return true;
+        }
+    }
+
+    // None of the files in the array could be found.
+    // Return the last file name tried.
+    return false;
+}
+
+/*
  * @brief Returns the value of a configuration parameter given its name.
  *
  * @param[in] name Name of the configuration parameter.
@@ -37,18 +66,16 @@ extern bool radio_num_to_wlan_iface_name(const int32_t radio_num, std::string &i
  */
 static bool cfg_get_param(const std::string &name, std::string &value)
 {
-    std::ifstream in_conf_file;
-    in_conf_file.open(PLATFORM_DB_PATH_TEMP);
-    if (!in_conf_file.is_open()) {
-        in_conf_file.open(PLATFORM_DB_PATH);
-        if (!in_conf_file.is_open()) {
-            MAPF_ERR("Failed oppening file " << PLATFORM_DB_PATH);
-            return false;
-        }
+    std::string file_name;
+    if (!cfg_get_file_name(file_name)) {
+        MAPF_ERR("Failed opening file " << file_name);
+        return false;
     }
 
+    std::ifstream file(file_name);
+
     std::string line;
-    while (std::getline(in_conf_file, line)) {
+    while (std::getline(file, line)) {
         utils::trim(line);
         if (line.empty())
             continue; // Empty line
