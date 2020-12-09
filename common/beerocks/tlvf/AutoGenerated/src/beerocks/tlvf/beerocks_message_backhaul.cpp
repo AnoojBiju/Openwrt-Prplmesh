@@ -79,20 +79,8 @@ bool cACTION_BACKHAUL_REGISTER_REQUEST::set_hostap_iface(const char str[], size_
     std::copy(str, str + size, m_hostap_iface);
     return true;
 }
-uint8_t& cACTION_BACKHAUL_REGISTER_REQUEST::local_master() {
-    return (uint8_t&)(*m_local_master);
-}
-
-uint8_t& cACTION_BACKHAUL_REGISTER_REQUEST::local_gw() {
-    return (uint8_t&)(*m_local_gw);
-}
-
 uint8_t& cACTION_BACKHAUL_REGISTER_REQUEST::onboarding() {
     return (uint8_t&)(*m_onboarding);
-}
-
-uint8_t& cACTION_BACKHAUL_REGISTER_REQUEST::certification_mode() {
-    return (uint8_t&)(*m_certification_mode);
 }
 
 void cACTION_BACKHAUL_REGISTER_REQUEST::class_swap()
@@ -132,10 +120,7 @@ size_t cACTION_BACKHAUL_REGISTER_REQUEST::get_initial_size()
     size_t class_size = 0;
     class_size += beerocks::message::IFACE_NAME_LENGTH * sizeof(char); // sta_iface
     class_size += beerocks::message::IFACE_NAME_LENGTH * sizeof(char); // hostap_iface
-    class_size += sizeof(uint8_t); // local_master
-    class_size += sizeof(uint8_t); // local_gw
     class_size += sizeof(uint8_t); // onboarding
-    class_size += sizeof(uint8_t); // certification_mode
     return class_size;
 }
 
@@ -157,22 +142,7 @@ bool cACTION_BACKHAUL_REGISTER_REQUEST::init()
         return false;
     }
     m_hostap_iface_idx__  = beerocks::message::IFACE_NAME_LENGTH;
-    m_local_master = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
-        return false;
-    }
-    m_local_gw = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
-        return false;
-    }
     m_onboarding = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
-        return false;
-    }
-    m_certification_mode = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
