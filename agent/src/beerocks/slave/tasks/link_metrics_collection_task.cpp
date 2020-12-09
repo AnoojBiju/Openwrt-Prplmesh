@@ -241,7 +241,7 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
 
         tlvLinkMetricResultCode->value() = ieee1905_1::tlvLinkMetricResultCode::INVALID_NEIGHBOR;
 
-        LOG(DEBUG) << "Sending LINK_METRIC_RESPONSE_MESSAGE (invalid neighbour), mid: " << std::hex
+        LOG(DEBUG) << "Sending LINK_METRIC_RESPONSE_MESSAGE (invalid neighbor), mid: " << std::hex
                    << mid;
         m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac);
         return;
