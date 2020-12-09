@@ -326,7 +326,7 @@ std::string PlatformManager::query_db(const std::string &parameter)
     return ret;
 }
 
-PlatformManager::PlatformManager(const config_file::sConfigSlave &config_,
+PlatformManager::PlatformManager(config_file::sConfigSlave &config_,
                                  const std::unordered_map<int, std::string> &interfaces_map_,
                                  logging &logger_,
                                  std::unique_ptr<beerocks::CmduServer> cmdu_server,

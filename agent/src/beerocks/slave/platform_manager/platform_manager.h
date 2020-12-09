@@ -44,7 +44,7 @@ public:
      */
     static std::string query_db(const std::string &parameter);
 
-    PlatformManager(const config_file::sConfigSlave &config_,
+    PlatformManager(config_file::sConfigSlave &config_,
                     const std::unordered_map<int, std::string> &interfaces_map, logging &logger_,
                     std::unique_ptr<beerocks::CmduServer> cmdu_server,
                     std::shared_ptr<beerocks::TimerManager> timer_manager,
@@ -153,7 +153,7 @@ private:
      */
     std::atomic<bool> m_should_stop{false};
 
-    config_file::sConfigSlave config;
+    config_file::sConfigSlave &config;
     const std::unordered_map<int, std::string> interfaces_map;
 
     struct SIfaceParams {
