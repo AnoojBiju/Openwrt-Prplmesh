@@ -27,4 +27,4 @@
   hash: 6de63d46158811ca5ac0678c51b14a5ef4c5ffcb
 - name: sah
   uri: https://gitlab.com/soft.at.home/buildsystems/openwrt/sah-packages.git
-  hash: 572230b253ab220635934113da03c29cab969264
+  hash: 3c8fef0f760b26d3c54cc518dd71f6bc5f79680a
