@@ -57,14 +57,16 @@ static bool cfg_get_file_name(std::string &file_name)
     return false;
 }
 
-/*
- * @brief Returns the value of a configuration parameter given its name.
+/**
+ * @brief Gets all parameters in configuration file for which name the given predicate evaluates to
+ * true.
  *
- * @param[in] name Name of the configuration parameter.
- * @param[out] value Value of the configuration parameter.
+ * @param[out] parameters Parameters read from configuration file.
+ * @param[in] filter Unary predicate to filter parameter names. Set to nullptr for no filter.
  * @return true on success and false otherwise.
  */
-static bool cfg_get_param(const std::string &name, std::string &value)
+static bool cfg_get_params(std::unordered_map<std::string, std::string> &parameters,
+                           std::function<bool(const std::string &name)> filter = nullptr)
 {
     std::string file_name;
     if (!cfg_get_file_name(file_name)) {
@@ -77,27 +79,52 @@ static bool cfg_get_param(const std::string &name, std::string &value)
     std::string line;
     while (std::getline(file, line)) {
         utils::trim(line);
-        if (line.empty())
+        if (line.empty()) {
             continue; // Empty line
-        if (line.at(0) == '#')
+        }
+        if (line.at(0) == '#') {
             continue; // Commented line
-        if (line.compare(0, name.size(), name) != 0)
-            continue; // Not the param we look for
+        }
 
-        std::string line_arg = line.substr(name.size(), line.size());
-        auto pos             = line_arg.find("#");
+        auto pos = line.find("#");
         if (pos != std::string::npos) {
-            line_arg.erase(pos, line_arg.size());
-            utils::rtrim(line_arg);
+            line.erase(pos, line.size());
+            utils::rtrim(line);
         }
-        if (line_arg.size() >= 1) {
-            value.assign(line_arg);
-            return true;
+
+        pos = line.find("=");
+        if (pos == std::string::npos) {
+            continue; // Not a name=value
         }
-        break;
+
+        std::string name = line.substr(0, pos);
+        if (!filter || filter(name)) {
+            std::string value = line.substr(pos + 1, line.size());
+            parameters[name]  = value;
+        }
     }
 
-    return false;
+    return true;
+}
+
+/*
+ * @brief Returns the value of a configuration parameter given its name.
+ *
+ * @param[in] name Name of the configuration parameter.
+ * @param[out] value Value of the configuration parameter.
+ * @return true on success and false otherwise.
+ */
+static bool cfg_get_param(const std::string &name, std::string &value)
+{
+    std::unordered_map<std::string, std::string> parameters;
+    auto filter = [name](const std::string &n) { return n == name; };
+
+    if (!cfg_get_params(parameters, filter)) {
+        return false;
+    }
+
+    value = parameters[name];
+    return true;
 }
 
 int cfg_get_param_int(const std::string &param, int &value)
@@ -135,7 +162,7 @@ int cfg_is_master()
 int cfg_get_management_mode()
 {
     std::string mgmt_mode;
-    if (!cfg_get_param("management_mode=", mgmt_mode)) {
+    if (!cfg_get_param("management_mode", mgmt_mode)) {
         MAPF_ERR("cfg_get_management_mode: Failed to read management_mode");
         return RETURN_ERR;
     }
@@ -157,7 +184,7 @@ int cfg_get_management_mode()
 int cfg_get_operating_mode()
 {
     std::string op_mode;
-    if (!cfg_get_param("operating_mode=", op_mode)) {
+    if (!cfg_get_param("operating_mode", op_mode)) {
         MAPF_ERR("cfg_get_operating_mode: Failed to read operating_mode");
         return RETURN_ERR;
     }
@@ -182,7 +209,7 @@ int cfg_get_certification_mode()
 {
     int retVal = 0;
     std::string certification_mode;
-    if (!cfg_get_param("certification_mode=", certification_mode)) {
+    if (!cfg_get_param("certification_mode", certification_mode)) {
         MAPF_ERR("cfg_get_certification_mode: Failed to read certification_mode");
         retVal = RETURN_ERR;
     } else if (certification_mode == "0") {
@@ -237,7 +264,7 @@ int cfg_get_load_steer_on_vaps(int num_of_interfaces,
 int cfg_get_stop_on_failure_attempts()
 {
     int retVal = -1;
-    if (cfg_get_param_int("stop_on_failure_attempts=", retVal) == RETURN_ERR) {
+    if (cfg_get_param_int("stop_on_failure_attempts", retVal) == RETURN_ERR) {
         retVal = RETURN_ERR;
     }
     return retVal;
@@ -369,7 +396,7 @@ bool cfg_get_zwdfs_enable(bool &enable)
 {
     int zwdfs_enable;
 
-    if (cfg_get_param_int("zwdfs_enable=", zwdfs_enable) < 0) {
+    if (cfg_get_param_int("zwdfs_enable", zwdfs_enable) < 0) {
         MAPF_DBG("Failed to read zwdfs_enable parameter - setting default value");
         zwdfs_enable = DEFAULT_ZWDFS_ENABLE;
     }
@@ -383,7 +410,7 @@ bool cfg_get_best_channel_rank_threshold(uint32_t &threshold)
 {
     int best_channel_rank_threshold;
 
-    if (cfg_get_param_int("best_channel_rank_th=", best_channel_rank_threshold) < 0) {
+    if (cfg_get_param_int("best_channel_rank_th", best_channel_rank_threshold) < 0) {
         MAPF_DBG("Failed to read best_channel_rank_th parameter - setting default value");
         best_channel_rank_threshold = DEFAULT_BEST_CHANNEL_RANKING_TH;
     }
@@ -403,7 +430,7 @@ bool cfg_get_persistent_db_enable(bool &enable)
     int persistent_db_enable = DEFAULT_PERSISTENT_DB;
 
     // persistent db value is optional
-    if (cfg_get_param_int("persistent_db=", persistent_db_enable) < 0) {
+    if (cfg_get_param_int("persistent_db", persistent_db_enable) < 0) {
         MAPF_DBG("Failed to read persistent-db-enable parameter - setting default value");
         persistent_db_enable = DEFAULT_PERSISTENT_DB;
     }
@@ -418,7 +445,7 @@ bool cfg_get_persistent_db_commit_changes_interval(unsigned int &interval_sec)
     int commit_changes_interval_value = beerocks::bpl::DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE_SEC;
 
     // persistent db data commit interval value is optional
-    if (cfg_get_param_int("persistent_db_commit_changes_interval_seconds=",
+    if (cfg_get_param_int("persistent_db_commit_changes_interval_seconds",
                           commit_changes_interval_value) < 0) {
         MAPF_DBG("Failed to read commit_changes_interval parameter - setting default value");
         commit_changes_interval_value = beerocks::bpl::DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE_SEC;
@@ -432,7 +459,7 @@ bool cfg_get_persistent_db_commit_changes_interval(unsigned int &interval_sec)
 bool cfg_get_clients_persistent_db_max_size(int &max_size)
 {
     int max_size_val = -1;
-    if (cfg_get_param_int("clients_persistent_db_max_size=", max_size_val) == RETURN_ERR) {
+    if (cfg_get_param_int("clients_persistent_db_max_size", max_size_val) == RETURN_ERR) {
         MAPF_ERR("Failed to read clients-persistent-db-max-size parameter - setting default value");
         max_size_val = DEFAULT_CLIENTS_PERSISTENT_DB_MAX_SIZE;
     }
@@ -445,7 +472,7 @@ bool cfg_get_clients_persistent_db_max_size(int &max_size)
 bool cfg_get_max_timelife_delay_minutes(int &max_timelife_delay_minutes)
 {
     int val = -1;
-    if (cfg_get_param_int("max_timelife_delay_minutes=", val) == RETURN_ERR) {
+    if (cfg_get_param_int("max_timelife_delay_minutes", val) == RETURN_ERR) {
         MAPF_ERR("Failed to read max-timelife-delay-minutes parameter - setting default value");
         val = DEFAULT_MAX_TIMELIFE_DELAY_MINUTES;
     }
@@ -459,7 +486,7 @@ bool cfg_get_unfriendly_device_max_timelife_delay_minutes(
     int &unfriendly_device_max_timelife_delay_minutes)
 {
     int val = -1;
-    if (cfg_get_param_int("unfriendly_device_max_timelife_delay_minutes=", val) == RETURN_ERR) {
+    if (cfg_get_param_int("unfriendly_device_max_timelife_delay_minutes", val) == RETURN_ERR) {
         MAPF_ERR("Failed to read unfriendly-device-max-timelife-delay-minutes parameter - setting "
                  "default value");
         val = DEFAULT_MAX_TIMELIFE_DELAY_MINUTES;
@@ -473,7 +500,7 @@ bool cfg_get_unfriendly_device_max_timelife_delay_minutes(
 bool cfg_get_persistent_db_aging_interval(int &persistent_db_aging_interval_sec)
 {
     int val = -1;
-    if (cfg_get_param_int("persistent_db_aging_interval_sec=", val) == RETURN_ERR) {
+    if (cfg_get_param_int("persistent_db_aging_interval_sec", val) == RETURN_ERR) {
         MAPF_ERR("Failed to read persistent-db-aging-interval-sec parameter - setting "
                  "default value");
         val = DEFAULT_PERSISTENT_DB_AGING_INTERVAL_SEC;
@@ -485,10 +512,7 @@ bool cfg_get_persistent_db_aging_interval(int &persistent_db_aging_interval_sec)
 
 bool bpl_cfg_get_wpa_supplicant_ctrl_path(const std::string &iface, std::string &wpa_ctrl_path)
 {
-    std::string param = "wpa_supplicant_ctrl_path_";
-
-    param += iface;
-    param += '=';
+    const std::string param = "wpa_supplicant_ctrl_path_" + iface;
 
     if (!cfg_get_param(param, wpa_ctrl_path)) {
         MAPF_ERR("Failed to read: " << param);
@@ -500,10 +524,7 @@ bool bpl_cfg_get_wpa_supplicant_ctrl_path(const std::string &iface, std::string 
 
 bool bpl_cfg_get_hostapd_ctrl_path(const std::string &iface, std::string &hostapd_ctrl_path)
 {
-    std::string param = "hostapd_ctrl_path_";
-
-    param += iface;
-    param += '=';
+    const std::string param = "hostapd_ctrl_path_" + iface;
 
     if (!cfg_get_param(param, hostapd_ctrl_path)) {
         MAPF_ERR("Failed to read: " << param);
