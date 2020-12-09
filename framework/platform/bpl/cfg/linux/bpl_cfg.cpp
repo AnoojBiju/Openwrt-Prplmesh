@@ -28,29 +28,36 @@ namespace bpl {
 
 extern bool radio_num_to_wlan_iface_name(const int32_t radio_num, std::string &iface_str);
 
-int cfg_get_param(const std::string &param, std::string &value)
+/**
+ * @brief Returns the value of a configuration parameter given its name.
+ *
+ * @param[in] name Name of the configuration parameter.
+ * @param[out] value Value of the configuration parameter.
+ * @return true on success and false otherwise.
+ */
+static bool cfg_get_param(const std::string &name, std::string &value)
 {
     std::ifstream in_conf_file;
-    std::string line;
     in_conf_file.open(PLATFORM_DB_PATH_TEMP);
     if (!in_conf_file.is_open()) {
         in_conf_file.open(PLATFORM_DB_PATH);
         if (!in_conf_file.is_open()) {
             MAPF_ERR("Failed oppening file " << PLATFORM_DB_PATH);
-            return RETURN_ERR;
+            return false;
         }
     }
 
+    std::string line;
     while (std::getline(in_conf_file, line)) {
         utils::trim(line);
         if (line.empty())
             continue; // Empty line
         if (line.at(0) == '#')
             continue; // Commented line
-        if (line.compare(0, param.size(), param) != 0)
+        if (line.compare(0, name.size(), name) != 0)
             continue; // Not the param we look for
 
-        std::string line_arg = line.substr(param.size(), line.size());
+        std::string line_arg = line.substr(name.size(), line.size());
         auto pos             = line_arg.find("#");
         if (pos != std::string::npos) {
             line_arg.erase(pos, line_arg.size());
@@ -58,19 +65,19 @@ int cfg_get_param(const std::string &param, std::string &value)
         }
         if (line_arg.size() >= 1) {
             value.assign(line_arg);
-            return RETURN_OK;
+            return true;
         }
         break;
     }
 
-    return RETURN_ERR;
+    return false;
 }
 
 int cfg_get_param_int(const std::string &param, int &value)
 {
     std::string str_value;
 
-    if (cfg_get_param(param, str_value) < 0) {
+    if (!cfg_get_param(param, str_value)) {
         MAPF_ERR("Failed reading param " << param);
         return RETURN_ERR;
     }
@@ -100,11 +107,10 @@ int cfg_is_master()
 
 int cfg_get_management_mode()
 {
-    int retVal = RETURN_ERR;
     std::string mgmt_mode;
-    if (cfg_get_param("management_mode=", mgmt_mode) < 0) {
+    if (!cfg_get_param("management_mode=", mgmt_mode)) {
         MAPF_ERR("cfg_get_management_mode: Failed to read management_mode");
-        return -1;
+        return RETURN_ERR;
     }
 
     if (mgmt_mode == "Multi-AP-Controller-and-Agent") {
@@ -118,16 +124,15 @@ int cfg_get_management_mode()
     }
 
     MAPF_ERR("cfg_get_management_mode: Unexpected management_mode");
-    return retVal;
+    return RETURN_ERR;
 }
 
 int cfg_get_operating_mode()
 {
-    int retVal = 0;
     std::string op_mode;
-    if (cfg_get_param("operating_mode=", op_mode) < 0) {
+    if (!cfg_get_param("operating_mode=", op_mode)) {
         MAPF_ERR("cfg_get_operating_mode: Failed to read operating_mode");
-        return -1;
+        return RETURN_ERR;
     }
 
     if (op_mode == "Gateway") {
@@ -143,14 +148,14 @@ int cfg_get_operating_mode()
     }
 
     MAPF_ERR("cfg_get_operating_mode: Unexpected operating_mode");
-    return retVal;
+    return RETURN_ERR;
 }
 
 int cfg_get_certification_mode()
 {
     int retVal = 0;
     std::string certification_mode;
-    if (cfg_get_param("certification_mode=", certification_mode) < 0) {
+    if (!cfg_get_param("certification_mode=", certification_mode)) {
         MAPF_ERR("cfg_get_certification_mode: Failed to read certification_mode");
         retVal = RETURN_ERR;
     } else if (certification_mode == "0") {
@@ -453,13 +458,12 @@ bool cfg_get_persistent_db_aging_interval(int &persistent_db_aging_interval_sec)
 
 bool bpl_cfg_get_wpa_supplicant_ctrl_path(const std::string &iface, std::string &wpa_ctrl_path)
 {
-
     std::string param = "wpa_supplicant_ctrl_path_";
 
     param += iface;
     param += '=';
 
-    if (cfg_get_param(param, wpa_ctrl_path) < 0) {
+    if (!cfg_get_param(param, wpa_ctrl_path)) {
         MAPF_ERR("Failed to read: " << param);
         return false;
     }
@@ -469,13 +473,12 @@ bool bpl_cfg_get_wpa_supplicant_ctrl_path(const std::string &iface, std::string 
 
 bool bpl_cfg_get_hostapd_ctrl_path(const std::string &iface, std::string &hostapd_ctrl_path)
 {
-
     std::string param = "hostapd_ctrl_path_";
 
     param += iface;
     param += '=';
 
-    if (cfg_get_param(param, hostapd_ctrl_path) < 0) {
+    if (!cfg_get_param(param, hostapd_ctrl_path)) {
         MAPF_ERR("Failed to read: " << param);
         return false;
     }
