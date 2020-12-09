@@ -95,9 +95,9 @@ class CombinedInfraMetrics(PrplMeshBaseTest):
                 self.fail("STA metrics with wrong BSSID {} instead of {}".format(
                     sta_metrics_2.bss[0].bssid, vap2.bssid))
 
-        debug("Send 1905 Link metric query to agent 1 (neighbor gateway)")
+        debug("Send 1905 Link metric query to agent 1 (neighbor STA)")
         mid = controller.dev_send_1905(agent1.mac, 0x0005,
-                                       tlv(0x08, 0x0008, "0x01 {%s} 0x02" % controller.mac))
+                                       tlv(0x08, 0x0008, "0x01 {%s} 0x02" % sta1.mac))
         time.sleep(1)
         response = self.check_cmdu_type_single("Link metrics response", 0x0006, agent1.mac,
                                                controller.mac, mid)
