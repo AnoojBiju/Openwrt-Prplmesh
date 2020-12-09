@@ -1,4 +1,4 @@
-#!/bin/sh -e
+#!/bin/bash -e
 ###############################################################
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 # SPDX-FileCopyrightText: 2019-2020 the prplMesh contributors (see AUTHORS.md)
@@ -11,6 +11,8 @@ rootdir="${scriptdir%/*/*/*/*}"
 
 # shellcheck source=functions.sh
 . "${rootdir}/tools/functions.sh"
+
+set -o pipefail
 
 usage() {
     echo "usage: $(basename "$0") -d <target_device> [-hfiortv]"
