@@ -34,7 +34,8 @@ usage() {
 }
 
 build_image() {
-    # We first need to build the corresponding images
+    build_dir="$1"
+    mkdir -p "$build_dir"
     docker build --tag "$image_tag" \
            --build-arg OPENWRT_REPOSITORY="$OPENWRT_REPOSITORY" \
            --build-arg OPENWRT_VERSION="$OPENWRT_VERSION" \
@@ -46,7 +47,13 @@ build_image() {
            --build-arg SAH_FEED="$SAH_FEED" \
            --build-arg PRPLMESH_VARIANT="$PRPLMESH_VARIANT" \
            --target="$DOCKER_TARGET_STAGE" \
-           "$scriptdir/"
+           "$scriptdir/" \
+      | awk -v LOGFILE="$build_dir/openwrt-build.log" '
+          BEGIN { p = 1; }
+          /Cleaning prplMesh/ { p = 1; }
+          p || /^make\[[0-3]\]|time:/ { print; }
+          !p { print >> LOGFILE; }
+          /Building prplWrt/ { p = 0; }'
 }
 
 build_prplmesh() {
@@ -170,7 +177,7 @@ main() {
         exit $?
     fi
 
-    build_image
+    build_image "$rootdir/build/$TARGET_DEVICE"
     build_prplmesh "$rootdir/build/$TARGET_DEVICE"
 
 }
