@@ -12,6 +12,9 @@
 #include <mapf/common/logger.h>
 #include <mapf/common/utils.h>
 
+#include <tlvf/WSC/eWscAuth.h>
+#include <tlvf/WSC/eWscEncr.h>
+
 using namespace mapf;
 
 #define PLATFORM_DB_PATH mapf::utils::get_install_path() + "share/prplmesh_platform_db"
@@ -102,6 +105,35 @@ static bool cfg_get_params(std::unordered_map<std::string, std::string> &paramet
             std::string value = line.substr(pos + 1, line.size());
             parameters[name]  = value;
         }
+    }
+
+    return true;
+}
+
+/**
+ * @brief Saves given parameters into configuration file.
+ *
+ * @param[in] parameters Parameters to write to configuration file.
+ * @return true on success and false otherwise.
+ */
+static bool cfg_set_params(std::unordered_map<std::string, std::string> &parameters)
+{
+    std::string file_name;
+    if (!cfg_get_file_name(file_name)) {
+        MAPF_ERR("Failed opening file " << file_name);
+        return false;
+    }
+
+    std::ofstream file(file_name);
+
+    for (const auto &parameter : parameters) {
+        file << parameter.first << "=" << parameter.second << std::endl;
+    }
+
+    file.close();
+    if (!file.good()) {
+        MAPF_ERR("Failed writing to file " << file_name);
+        return false;
     }
 
     return true;
@@ -528,6 +560,84 @@ bool bpl_cfg_get_hostapd_ctrl_path(const std::string &iface, std::string &hostap
 
     if (!cfg_get_param(param, hostapd_ctrl_path)) {
         MAPF_ERR("Failed to read: " << param);
+        return false;
+    }
+
+    return true;
+}
+
+bool bpl_cfg_get_wifi_credentials(const std::string &iface,
+                                  son::wireless_utils::sBssInfoConf &configuration)
+{
+    // Filter returns true if given parameter name starts with "wireless.<iface>."
+    const std::string prefix = "wireless." + iface + ".";
+    auto filter              = [prefix](const std::string &name) {
+        return name.compare(0, prefix.size(), prefix) == 0;
+    };
+
+    // Read all configuration parameters for the given interface.
+    std::unordered_map<std::string, std::string> parameters;
+    if (!cfg_get_params(parameters, filter) || (parameters.empty())) {
+        MAPF_ERR("Failed to read WiFi credentials for interface " << iface);
+        return false;
+    }
+
+    // Fill in wireless credentials from parameter values read from configuration file.
+    configuration.ssid = parameters[prefix + "ssid"];
+
+    auto get_authentication_type = [](const std::string &security_mode) {
+        if ((security_mode == "wpa2") || (security_mode == "wpa2-psk")) {
+            return WSC::eWscAuth::WSC_AUTH_WPA2;
+        }
+        return WSC::eWscAuth::WSC_AUTH_OPEN;
+    };
+    configuration.authentication_type =
+        get_authentication_type(parameters[prefix + "security_mode"]);
+
+    auto get_encryption_type = [](const std::string &security_mode) {
+        if ((security_mode == "wpa2") || (security_mode == "wpa2-psk")) {
+            return WSC::eWscEncr::WSC_ENCR_AES;
+        }
+        return WSC::eWscEncr::WSC_ENCR_NONE;
+    };
+    configuration.encryption_type = get_encryption_type(parameters[prefix + "security_mode"]);
+
+    configuration.network_key = parameters[prefix + "psk"];
+
+    return true;
+}
+
+bool bpl_cfg_set_wifi_credentials(const std::string &iface,
+                                  const son::wireless_utils::sBssInfoConf &configuration)
+{
+    // Read all configuration parameters
+    std::unordered_map<std::string, std::string> parameters;
+    if (!cfg_get_params(parameters)) {
+        MAPF_ERR("Failed to read configuration parameters");
+        return false;
+    }
+
+    // Overwrite configuration parameters with wireless credentials for the given interface
+    const std::string prefix    = "wireless." + iface + ".";
+    parameters[prefix + "ssid"] = configuration.ssid;
+
+    auto get_security_mode = [](WSC::eWscAuth authentication_type, WSC::eWscEncr encryption_type) {
+        std::string security_mode = "none";
+        if ((authentication_type == WSC::eWscAuth::WSC_AUTH_WPA2) &&
+            (encryption_type == WSC::eWscEncr::WSC_ENCR_AES)) {
+            security_mode = "wpa2-psk";
+        }
+        return security_mode;
+    };
+
+    parameters[prefix + "security_mode"] =
+        get_security_mode(configuration.authentication_type, configuration.encryption_type);
+
+    parameters[prefix + "psk"] = configuration.network_key;
+
+    // Save configuration parameters
+    if (!cfg_set_params(parameters)) {
+        MAPF_ERR("Failed to write configuration parameters");
         return false;
     }
 

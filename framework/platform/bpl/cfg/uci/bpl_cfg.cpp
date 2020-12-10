@@ -6,11 +6,11 @@
  * See LICENSE file for more details.
  */
 
-#include <string.h>
+#include <bpl/bpl_cfg.h>
 
+#include "../../common/uci/bpl_uci.h"
 #include "../../common/utils/utils.h"
 #include "../../common/utils/utils_net.h"
-#include <bpl/bpl_cfg.h>
 
 #include "bpl_cfg_helper.h"
 #include "bpl_cfg_uci.h"
@@ -535,6 +535,124 @@ bool bpl_cfg_get_hostapd_ctrl_path(const std::string &iface, std::string &hostap
 {
     const char *path{"/var/run/hostapd/"};
     hostapd_ctrl_path = path + iface;
+    return true;
+}
+
+bool bpl_cfg_get_wifi_credentials(const std::string &iface,
+                                  son::wireless_utils::sBssInfoConf &configuration)
+{
+    // Find the "wireless.wifi-iface" section in UCI configuration for the given interface
+    const std::string package_name = "wireless";
+    const std::string section_type = "wifi-iface";
+    const std::string option_name  = "ifname";
+    std::string section_name;
+    if (!uci_find_section_by_option(package_name, section_type, option_name, iface, section_name)) {
+        LOG(ERROR) << "Failed to find configuration section for interface " << iface;
+        return false;
+    }
+
+    if (section_name.empty()) {
+        LOG(ERROR) << "Configuration for interface " << iface << " not found";
+        return false;
+    }
+
+    // Read all UCI options in the "wireless.wifi-iface" section for the given interface.
+    OptionsUnorderedMap options;
+    if (!uci_get_section(package_name, section_type, section_name, options)) {
+        LOG(ERROR) << "Failed to get wireless configuration for interface " << iface
+                   << " at section " << section_name;
+        return false;
+    }
+
+    // Fill in wireless credentials from option values read from UCI configuration.
+    configuration.ssid = options["ssid"];
+
+    auto starts_with = [](const std::string &prefix, const std::string &value) {
+        return (value.compare(0, prefix.size(), prefix) == 0);
+    };
+
+    auto contains = [](const std::string &substring, const std::string &value) {
+        return (value.find(substring) != std::string::npos);
+    };
+
+    auto get_authentication_type = [&](const std::string &encryption) {
+        if ("none" == encryption) {
+            return WSC::eWscAuth::WSC_AUTH_OPEN;
+        } else if (starts_with("psk2", encryption)) {
+            return WSC::eWscAuth::WSC_AUTH_WPA2;
+        } else if ("sae" == encryption) {
+            return WSC::eWscAuth::WSC_AUTH_SAE;
+        }
+        return WSC::eWscAuth::WSC_AUTH_INVALID;
+    };
+    configuration.authentication_type = get_authentication_type(options["encryption"]);
+
+    auto get_encryption_type = [&](const std::string &encryption) {
+        if ("none" == encryption) {
+            return WSC::eWscEncr::WSC_ENCR_NONE;
+        } else if (contains("+tkip", encryption)) {
+            return WSC::eWscEncr::WSC_ENCR_TKIP;
+        } else if (("psk2" == encryption) || ("sae" == encryption) ||
+                   contains("+aes", encryption) || contains("+ccmp", encryption)) {
+            return WSC::eWscEncr::WSC_ENCR_AES;
+        }
+        return WSC::eWscEncr::WSC_ENCR_INVALID;
+    };
+    configuration.encryption_type = get_encryption_type(options["encryption"]);
+
+    configuration.network_key = options["key"];
+
+    return true;
+}
+
+bool bpl_cfg_set_wifi_credentials(const std::string &iface,
+                                  const son::wireless_utils::sBssInfoConf &configuration)
+{
+    // Find the "wireless.wifi-iface" section in UCI configuration for the given interface
+    const std::string package_name = "wireless";
+    const std::string section_type = "wifi-iface";
+    const std::string option_name  = "ifname";
+    std::string section_name;
+    if (!uci_find_section_by_option(package_name, section_type, option_name, iface, section_name)) {
+        LOG(ERROR) << "Failed to find configuration section for interface " << iface;
+        return false;
+    }
+
+    if (section_name.empty()) {
+        LOG(ERROR) << "Configuration for interface " << iface << " not found";
+        return false;
+    }
+
+    // Overwrite UCI configuration with wireless credentials for the given interface
+    OptionsUnorderedMap options;
+    options["ssid"] = configuration.ssid;
+
+    auto get_encryption = [](WSC::eWscAuth authentication_type, WSC::eWscEncr encryption_type) {
+        std::string encryption = "none";
+        if (authentication_type == WSC::eWscAuth::WSC_AUTH_WPA2) {
+            encryption = "psk2";
+            if (encryption_type == WSC::eWscEncr::WSC_ENCR_TKIP) {
+                encryption += "+tkip";
+            } else if (encryption_type == WSC::eWscEncr::WSC_ENCR_AES) {
+                encryption += "+aes";
+            }
+        } else if (authentication_type == WSC::eWscAuth::WSC_AUTH_SAE) {
+            encryption = "sae";
+        }
+        return encryption;
+    };
+    options["encryption"] =
+        get_encryption(configuration.authentication_type, configuration.encryption_type);
+
+    options["key"] = configuration.network_key;
+
+    // Write UCI options in the "wireless.wifi-iface" section for the given interface.
+    if (!uci_set_section(package_name, section_type, section_name, options, true)) {
+        LOG(ERROR) << "Failed to set wireless configuration for interface " << iface
+                   << " at section " << section_name;
+        return false;
+    }
+
     return true;
 }
 

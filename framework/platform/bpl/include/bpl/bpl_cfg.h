@@ -12,6 +12,8 @@
 #include "bpl.h"
 #include "bpl_err.h"
 
+#include <bcl/son/son_wireless_utils.h>
+
 #include <stdint.h>
 #include <string>
 
@@ -555,6 +557,26 @@ bool bpl_cfg_get_wpa_supplicant_ctrl_path(const std::string &iface, std::string 
  * @return true on success, otherwise false.
  */
 bool bpl_cfg_get_hostapd_ctrl_path(const std::string &iface, std::string &hostapd_ctrl_path);
+
+/**
+ * @brief Reads wireless network configuration for the given interface.
+ *
+ * @param [in] iface Interface name.
+ * @param [out] configuration Wireless network configuration.
+ * @return true on success and false otherwise.
+ */
+bool bpl_cfg_get_wifi_credentials(const std::string &iface,
+                                  son::wireless_utils::sBssInfoConf &configuration);
+
+/**
+ * @brief Writes wireless network configuration for the given interface.
+ *
+ * @param [in] iface Interface name.
+ * @param [in] configuration Wireless network configuration.
+ * @return true on success and false otherwise.
+ */
+bool bpl_cfg_set_wifi_credentials(const std::string &iface,
+                                  const son::wireless_utils::sBssInfoConf &configuration);
 
 } // namespace bpl
 } // namespace beerocks

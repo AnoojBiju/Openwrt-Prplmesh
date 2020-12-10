@@ -121,6 +121,8 @@ else()
 
 endif()
 
+list(APPEND BPL_LIBS bcl)
+
 # Build the library
 add_library(${PROJECT_NAME} ${bpl_common_sources} ${bpl_platform_sources})
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${prplmesh_VERSION} SOVERSION ${prplmesh_VERSION_MAJOR})
