@@ -29,7 +29,7 @@ static const uint8_t ieee1905_max_message_version = 0x00;
 void Ieee1905Transport::update_neighbours(const Packet &packet)
 {
     if (packet.ether_type != ETH_P_1905_1) {
-        MAPF_DBG("Ignoring non-1905 packet");
+        MAPF_WARN("Ignoring non-1905 packet");
         return;
     }
     if (packet.src_if_type != CmduRxMessage::IF_TYPE_NET) {
@@ -73,6 +73,11 @@ void Ieee1905Transport::handle_packet(Packet &packet)
 
     if (!verify_packet(packet)) {
         MAPF_DBG("packet verification failed.");
+        return;
+    }
+
+    if (packet.ether_type != ETH_P_1905_1) {
+        MAPF_DBG("Non-IEEE1905.1 packet");
         return;
     }
 
@@ -170,6 +175,7 @@ bool Ieee1905Transport::de_duplicate_packet(Packet &packet)
 {
     // only try to detect duplicate IEEE1905 packets
     if (packet.ether_type != ETH_P_1905_1) {
+        MAPF_WARN("Ignoring non-1905 packet");
         return true;
     }
 
@@ -589,19 +595,24 @@ bool Ieee1905Transport::forward_packet_single(Packet &packet)
 
 /**
  * @brief forward a 1905.1 packet.
- * 
+ *
  * Basically a wrapper to forward_packet_single, which also takes into account the reliable
  * multicast procedure - according to section 15.1 in the Multi-AP specification, a reliable multicast
  * transmission includes sending the packet with the relay bit set to a multicast address once,
  * and once for each discovered Multi-AP agent in the network as unicast
  * with the same MID and the relay bit unset.
- * 
+ *
  * @param packet packet to forward
  * @return true on success
  * @return false on failure (one or more packets failed in transmission)
  */
 bool Ieee1905Transport::forward_packet(Packet &packet)
 {
+    // only try to forward IEEE1905 packets
+    if (packet.ether_type != ETH_P_1905_1) {
+        MAPF_WARN("Ignoring non-1905 packet");
+        return false;
+    }
     // First, forward the packet as is.
     bool success = forward_packet_single(packet);
     if (!success) {
