@@ -144,7 +144,6 @@ public:
 
     struct sStatus {
         bool ap_autoconfiguration_completed;
-        bool ap_autoconfiguration_failure;
         uint32_t zwdfs_cac_remaining_time_sec;
     } statuses;
 
