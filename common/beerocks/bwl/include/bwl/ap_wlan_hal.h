@@ -63,6 +63,7 @@ public:
         DFS_CAC_Completed,
         DFS_NOP_Finished,
         DFS_RADAR_Detected,
+        AP_MGMT_FRAME_RECEIVED,
 
         MGMT_Frame /**< 802.11 management frame payload */
     };

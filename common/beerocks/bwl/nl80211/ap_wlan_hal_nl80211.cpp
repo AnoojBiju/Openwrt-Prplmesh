@@ -87,6 +87,8 @@ static ap_wlan_hal::Event nl80211_to_bwl_event(const std::string &opcode)
         return ap_wlan_hal::Event::DFS_CAC_Completed;
     } else if (opcode == "DFS-NOP-FINISHED") {
         return ap_wlan_hal::Event::DFS_NOP_Finished;
+    } else if (opcode == "AP-MGMT-FRAME-RECEIVED") {
+        return ap_wlan_hal::Event::AP_MGMT_FRAME_RECEIVED;
     }
 
     return ap_wlan_hal::Event::Invalid;
@@ -558,6 +560,9 @@ bool ap_wlan_hal_nl80211::update_vap_credentials(
                 conf.set_create_vap_value(vap, "wpa_disable_eapol_key_retries",
                                           wpa_disable_eapol_key_retries);
 
+                // we always need to get the mgmt frames (assoc req) for capability reports:
+                conf.set_create_vap_value(vap, "notify_mgmt_frames", "1");
+
                 // finally enable the vap (remove any previously set start_disabled)
                 conf.set_create_vap_value(vap, "start_disabled", "");
             } else {
@@ -867,7 +872,34 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
 
     auto event = nl80211_to_bwl_event(opcode);
 
+    if (event != Event::AP_MGMT_FRAME_RECEIVED && event != Event::STA_Connected) {
+        // we only need to keep the association frame from the time we
+        // receive AP_MGMT_FRAME_RECEIVED, to the time we receive
+        // STA_Connected.
+        if (!m_latest_assoc_frame.empty()) {
+            m_latest_assoc_frame = {};
+        }
+    }
+
     switch (event) {
+
+    case Event::AP_MGMT_FRAME_RECEIVED: {
+        if (parsed_obj.find("buf") == parsed_obj.end() || parsed_obj["buf"].empty()) {
+            LOG(ERROR) << "Management frame without data!";
+            return false;
+        }
+        // ignore anything other than re-association (02) and association (00) frames:
+        if (parsed_obj["buf"].rfind("00") == std::string::npos &&
+            parsed_obj["buf"].rfind("02") == std::string::npos) {
+            LOG(TRACE) << "Ignored management frame other than (re-)association request.";
+            return true;
+        };
+
+        // Save it as a string, it will be converted to binary in STA-CONNECTED:
+        m_latest_assoc_frame = parsed_obj["buf"];
+        LOG(DEBUG) << "Saved assoc frame";
+
+    } break;
 
     // STA Connected
     case Event::STA_Connected: {
@@ -884,6 +916,15 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
 
         msg->params.vap_id = 0;
         msg->params.mac    = tlvf::mac_from_string(parsed_obj["_mac"]);
+
+        // Add the latest association frame
+        if (m_latest_assoc_frame.empty()) {
+            LOG(ERROR) << "STA-CONNECTED without previously receiving a (re-)association frame!";
+            return false;
+        }
+        auto assoc_req = get_binary_association_frame(m_latest_assoc_frame.c_str());
+        msg->params.association_frame_length = assoc_req.length();
+        std::copy_n(&assoc_req[0], assoc_req.length(), msg->params.association_frame);
 
         // Add the message to the queue
         event_queue_push(Event::STA_Connected, msg_buff);
