@@ -12,6 +12,9 @@
 #include <mapf/common/logger.h>
 #include <mapf/common/utils.h>
 
+#include <tlvf/WSC/eWscAuth.h>
+#include <tlvf/WSC/eWscEncr.h>
+
 using namespace mapf;
 
 #define PLATFORM_DB_PATH mapf::utils::get_install_path() + "share/prplmesh_platform_db"
@@ -28,49 +31,139 @@ namespace bpl {
 
 extern bool radio_num_to_wlan_iface_name(const int32_t radio_num, std::string &iface_str);
 
-int cfg_get_param(const std::string &param, std::string &value)
+/**
+ * @brief Returns the name of the configuration file to use.
+ *
+ * Configuration file can be either PLATFORM_DB_PATH_TEMP or PLATFORM_DB_PATH, the first that proves
+ * to exist in that order.
+ *
+ * If none exists, then returns false and sets the file name to the last one tried.
+ *
+ * @param file_name Name of the configuration file to use.
+ * @return true on success and false otherwise.
+ */
+static bool cfg_get_file_name(std::string &file_name)
 {
-    std::ifstream in_conf_file;
+    // Return the first existing file in the array.
+    const std::string file_names[]{PLATFORM_DB_PATH_TEMP, PLATFORM_DB_PATH};
+
+    for (const auto &name : file_names) {
+        std::ifstream file(name);
+        if (file) {
+            file_name = name;
+            return true;
+        }
+    }
+
+    // None of the files in the array could be found.
+    // Return the last file name tried.
+    return false;
+}
+
+/**
+ * @brief Gets all parameters in configuration file for which name the given predicate evaluates to
+ * true.
+ *
+ * @param[out] parameters Parameters read from configuration file.
+ * @param[in] filter Unary predicate to filter parameter names. Set to nullptr for no filter.
+ * @return true on success and false otherwise.
+ */
+static bool cfg_get_params(std::unordered_map<std::string, std::string> &parameters,
+                           std::function<bool(const std::string &name)> filter = nullptr)
+{
+    std::string file_name;
+    if (!cfg_get_file_name(file_name)) {
+        MAPF_ERR("Failed opening file " << file_name);
+        return false;
+    }
+
+    std::ifstream file(file_name);
+
     std::string line;
-    in_conf_file.open(PLATFORM_DB_PATH_TEMP);
-    if (!in_conf_file.is_open()) {
-        in_conf_file.open(PLATFORM_DB_PATH);
-        if (!in_conf_file.is_open()) {
-            MAPF_ERR("Failed oppening file " << PLATFORM_DB_PATH);
-            return RETURN_ERR;
-        }
-    }
-
-    while (std::getline(in_conf_file, line)) {
+    while (std::getline(file, line)) {
         utils::trim(line);
-        if (line.empty())
+        if (line.empty()) {
             continue; // Empty line
-        if (line.at(0) == '#')
+        }
+        if (line.at(0) == '#') {
             continue; // Commented line
-        if (line.compare(0, param.size(), param) != 0)
-            continue; // Not the param we look for
+        }
 
-        std::string line_arg = line.substr(param.size(), line.size());
-        auto pos             = line_arg.find("#");
+        auto pos = line.find("#");
         if (pos != std::string::npos) {
-            line_arg.erase(pos, line_arg.size());
-            utils::rtrim(line_arg);
+            line.erase(pos, line.size());
+            utils::rtrim(line);
         }
-        if (line_arg.size() >= 1) {
-            value.assign(line_arg);
-            return RETURN_OK;
+
+        pos = line.find("=");
+        if (pos == std::string::npos) {
+            continue; // Not a name=value
         }
-        break;
+
+        std::string name = line.substr(0, pos);
+        if (!filter || filter(name)) {
+            std::string value = line.substr(pos + 1, line.size());
+            parameters[name]  = value;
+        }
     }
 
-    return RETURN_ERR;
+    return true;
+}
+
+/**
+ * @brief Saves given parameters into configuration file.
+ *
+ * @param[in] parameters Parameters to write to configuration file.
+ * @return true on success and false otherwise.
+ */
+static bool cfg_set_params(std::unordered_map<std::string, std::string> &parameters)
+{
+    std::string file_name;
+    if (!cfg_get_file_name(file_name)) {
+        MAPF_ERR("Failed opening file " << file_name);
+        return false;
+    }
+
+    std::ofstream file(file_name);
+
+    for (const auto &parameter : parameters) {
+        file << parameter.first << "=" << parameter.second << std::endl;
+    }
+
+    file.close();
+    if (!file.good()) {
+        MAPF_ERR("Failed writing to file " << file_name);
+        return false;
+    }
+
+    return true;
+}
+
+/*
+ * @brief Returns the value of a configuration parameter given its name.
+ *
+ * @param[in] name Name of the configuration parameter.
+ * @param[out] value Value of the configuration parameter.
+ * @return true on success and false otherwise.
+ */
+static bool cfg_get_param(const std::string &name, std::string &value)
+{
+    std::unordered_map<std::string, std::string> parameters;
+    auto filter = [name](const std::string &n) { return n == name; };
+
+    if (!cfg_get_params(parameters, filter)) {
+        return false;
+    }
+
+    value = parameters[name];
+    return true;
 }
 
 int cfg_get_param_int(const std::string &param, int &value)
 {
     std::string str_value;
 
-    if (cfg_get_param(param, str_value) < 0) {
+    if (!cfg_get_param(param, str_value)) {
         MAPF_ERR("Failed reading param " << param);
         return RETURN_ERR;
     }
@@ -100,11 +193,10 @@ int cfg_is_master()
 
 int cfg_get_management_mode()
 {
-    int retVal = RETURN_ERR;
     std::string mgmt_mode;
-    if (cfg_get_param("management_mode=", mgmt_mode) < 0) {
+    if (!cfg_get_param("management_mode", mgmt_mode)) {
         MAPF_ERR("cfg_get_management_mode: Failed to read management_mode");
-        return -1;
+        return RETURN_ERR;
     }
 
     if (mgmt_mode == "Multi-AP-Controller-and-Agent") {
@@ -118,16 +210,15 @@ int cfg_get_management_mode()
     }
 
     MAPF_ERR("cfg_get_management_mode: Unexpected management_mode");
-    return retVal;
+    return RETURN_ERR;
 }
 
 int cfg_get_operating_mode()
 {
-    int retVal = 0;
     std::string op_mode;
-    if (cfg_get_param("operating_mode=", op_mode) < 0) {
+    if (!cfg_get_param("operating_mode", op_mode)) {
         MAPF_ERR("cfg_get_operating_mode: Failed to read operating_mode");
-        return -1;
+        return RETURN_ERR;
     }
 
     if (op_mode == "Gateway") {
@@ -143,14 +234,14 @@ int cfg_get_operating_mode()
     }
 
     MAPF_ERR("cfg_get_operating_mode: Unexpected operating_mode");
-    return retVal;
+    return RETURN_ERR;
 }
 
 int cfg_get_certification_mode()
 {
     int retVal = 0;
     std::string certification_mode;
-    if (cfg_get_param("certification_mode=", certification_mode) < 0) {
+    if (!cfg_get_param("certification_mode", certification_mode)) {
         MAPF_ERR("cfg_get_certification_mode: Failed to read certification_mode");
         retVal = RETURN_ERR;
     } else if (certification_mode == "0") {
@@ -205,7 +296,7 @@ int cfg_get_load_steer_on_vaps(int num_of_interfaces,
 int cfg_get_stop_on_failure_attempts()
 {
     int retVal = -1;
-    if (cfg_get_param_int("stop_on_failure_attempts=", retVal) == RETURN_ERR) {
+    if (cfg_get_param_int("stop_on_failure_attempts", retVal) == RETURN_ERR) {
         retVal = RETURN_ERR;
     }
     return retVal;
@@ -337,7 +428,7 @@ bool cfg_get_zwdfs_enable(bool &enable)
 {
     int zwdfs_enable;
 
-    if (cfg_get_param_int("zwdfs_enable=", zwdfs_enable) < 0) {
+    if (cfg_get_param_int("zwdfs_enable", zwdfs_enable) < 0) {
         MAPF_DBG("Failed to read zwdfs_enable parameter - setting default value");
         zwdfs_enable = DEFAULT_ZWDFS_ENABLE;
     }
@@ -351,7 +442,7 @@ bool cfg_get_best_channel_rank_threshold(uint32_t &threshold)
 {
     int best_channel_rank_threshold;
 
-    if (cfg_get_param_int("best_channel_rank_th=", best_channel_rank_threshold) < 0) {
+    if (cfg_get_param_int("best_channel_rank_th", best_channel_rank_threshold) < 0) {
         MAPF_DBG("Failed to read best_channel_rank_th parameter - setting default value");
         best_channel_rank_threshold = DEFAULT_BEST_CHANNEL_RANKING_TH;
     }
@@ -371,7 +462,7 @@ bool cfg_get_persistent_db_enable(bool &enable)
     int persistent_db_enable = DEFAULT_PERSISTENT_DB;
 
     // persistent db value is optional
-    if (cfg_get_param_int("persistent_db=", persistent_db_enable) < 0) {
+    if (cfg_get_param_int("persistent_db", persistent_db_enable) < 0) {
         MAPF_DBG("Failed to read persistent-db-enable parameter - setting default value");
         persistent_db_enable = DEFAULT_PERSISTENT_DB;
     }
@@ -386,7 +477,7 @@ bool cfg_get_persistent_db_commit_changes_interval(unsigned int &interval_sec)
     int commit_changes_interval_value = beerocks::bpl::DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE_SEC;
 
     // persistent db data commit interval value is optional
-    if (cfg_get_param_int("persistent_db_commit_changes_interval_seconds=",
+    if (cfg_get_param_int("persistent_db_commit_changes_interval_seconds",
                           commit_changes_interval_value) < 0) {
         MAPF_DBG("Failed to read commit_changes_interval parameter - setting default value");
         commit_changes_interval_value = beerocks::bpl::DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE_SEC;
@@ -400,7 +491,7 @@ bool cfg_get_persistent_db_commit_changes_interval(unsigned int &interval_sec)
 bool cfg_get_clients_persistent_db_max_size(int &max_size)
 {
     int max_size_val = -1;
-    if (cfg_get_param_int("clients_persistent_db_max_size=", max_size_val) == RETURN_ERR) {
+    if (cfg_get_param_int("clients_persistent_db_max_size", max_size_val) == RETURN_ERR) {
         MAPF_ERR("Failed to read clients-persistent-db-max-size parameter - setting default value");
         max_size_val = DEFAULT_CLIENTS_PERSISTENT_DB_MAX_SIZE;
     }
@@ -413,7 +504,7 @@ bool cfg_get_clients_persistent_db_max_size(int &max_size)
 bool cfg_get_max_timelife_delay_minutes(int &max_timelife_delay_minutes)
 {
     int val = -1;
-    if (cfg_get_param_int("max_timelife_delay_minutes=", val) == RETURN_ERR) {
+    if (cfg_get_param_int("max_timelife_delay_minutes", val) == RETURN_ERR) {
         MAPF_ERR("Failed to read max-timelife-delay-minutes parameter - setting default value");
         val = DEFAULT_MAX_TIMELIFE_DELAY_MINUTES;
     }
@@ -427,7 +518,7 @@ bool cfg_get_unfriendly_device_max_timelife_delay_minutes(
     int &unfriendly_device_max_timelife_delay_minutes)
 {
     int val = -1;
-    if (cfg_get_param_int("unfriendly_device_max_timelife_delay_minutes=", val) == RETURN_ERR) {
+    if (cfg_get_param_int("unfriendly_device_max_timelife_delay_minutes", val) == RETURN_ERR) {
         MAPF_ERR("Failed to read unfriendly-device-max-timelife-delay-minutes parameter - setting "
                  "default value");
         val = DEFAULT_MAX_TIMELIFE_DELAY_MINUTES;
@@ -441,7 +532,7 @@ bool cfg_get_unfriendly_device_max_timelife_delay_minutes(
 bool cfg_get_persistent_db_aging_interval(int &persistent_db_aging_interval_sec)
 {
     int val = -1;
-    if (cfg_get_param_int("persistent_db_aging_interval_sec=", val) == RETURN_ERR) {
+    if (cfg_get_param_int("persistent_db_aging_interval_sec", val) == RETURN_ERR) {
         MAPF_ERR("Failed to read persistent-db-aging-interval-sec parameter - setting "
                  "default value");
         val = DEFAULT_PERSISTENT_DB_AGING_INTERVAL_SEC;
@@ -453,13 +544,9 @@ bool cfg_get_persistent_db_aging_interval(int &persistent_db_aging_interval_sec)
 
 bool bpl_cfg_get_wpa_supplicant_ctrl_path(const std::string &iface, std::string &wpa_ctrl_path)
 {
+    const std::string param = "wpa_supplicant_ctrl_path_" + iface;
 
-    std::string param = "wpa_supplicant_ctrl_path_";
-
-    param += iface;
-    param += '=';
-
-    if (cfg_get_param(param, wpa_ctrl_path) < 0) {
+    if (!cfg_get_param(param, wpa_ctrl_path)) {
         MAPF_ERR("Failed to read: " << param);
         return false;
     }
@@ -469,14 +556,88 @@ bool bpl_cfg_get_wpa_supplicant_ctrl_path(const std::string &iface, std::string 
 
 bool bpl_cfg_get_hostapd_ctrl_path(const std::string &iface, std::string &hostapd_ctrl_path)
 {
+    const std::string param = "hostapd_ctrl_path_" + iface;
 
-    std::string param = "hostapd_ctrl_path_";
-
-    param += iface;
-    param += '=';
-
-    if (cfg_get_param(param, hostapd_ctrl_path) < 0) {
+    if (!cfg_get_param(param, hostapd_ctrl_path)) {
         MAPF_ERR("Failed to read: " << param);
+        return false;
+    }
+
+    return true;
+}
+
+bool bpl_cfg_get_wifi_credentials(const std::string &iface,
+                                  son::wireless_utils::sBssInfoConf &configuration)
+{
+    // Filter returns true if given parameter name starts with "wireless.<iface>."
+    const std::string prefix = "wireless." + iface + ".";
+    auto filter              = [prefix](const std::string &name) {
+        return name.compare(0, prefix.size(), prefix) == 0;
+    };
+
+    // Read all configuration parameters for the given interface.
+    std::unordered_map<std::string, std::string> parameters;
+    if (!cfg_get_params(parameters, filter) || (parameters.empty())) {
+        MAPF_ERR("Failed to read WiFi credentials for interface " << iface);
+        return false;
+    }
+
+    // Fill in wireless credentials from parameter values read from configuration file.
+    configuration.ssid = parameters[prefix + "ssid"];
+
+    auto get_authentication_type = [](const std::string &security_mode) {
+        if ((security_mode == "wpa2") || (security_mode == "wpa2-psk")) {
+            return WSC::eWscAuth::WSC_AUTH_WPA2;
+        }
+        return WSC::eWscAuth::WSC_AUTH_OPEN;
+    };
+    configuration.authentication_type =
+        get_authentication_type(parameters[prefix + "security_mode"]);
+
+    auto get_encryption_type = [](const std::string &security_mode) {
+        if ((security_mode == "wpa2") || (security_mode == "wpa2-psk")) {
+            return WSC::eWscEncr::WSC_ENCR_AES;
+        }
+        return WSC::eWscEncr::WSC_ENCR_NONE;
+    };
+    configuration.encryption_type = get_encryption_type(parameters[prefix + "security_mode"]);
+
+    configuration.network_key = parameters[prefix + "psk"];
+
+    return true;
+}
+
+bool bpl_cfg_set_wifi_credentials(const std::string &iface,
+                                  const son::wireless_utils::sBssInfoConf &configuration)
+{
+    // Read all configuration parameters
+    std::unordered_map<std::string, std::string> parameters;
+    if (!cfg_get_params(parameters)) {
+        MAPF_ERR("Failed to read configuration parameters");
+        return false;
+    }
+
+    // Overwrite configuration parameters with wireless credentials for the given interface
+    const std::string prefix    = "wireless." + iface + ".";
+    parameters[prefix + "ssid"] = configuration.ssid;
+
+    auto get_security_mode = [](WSC::eWscAuth authentication_type, WSC::eWscEncr encryption_type) {
+        std::string security_mode = "none";
+        if ((authentication_type == WSC::eWscAuth::WSC_AUTH_WPA2) &&
+            (encryption_type == WSC::eWscEncr::WSC_ENCR_AES)) {
+            security_mode = "wpa2-psk";
+        }
+        return security_mode;
+    };
+
+    parameters[prefix + "security_mode"] =
+        get_security_mode(configuration.authentication_type, configuration.encryption_type);
+
+    parameters[prefix + "psk"] = configuration.network_key;
+
+    // Save configuration parameters
+    if (!cfg_set_params(parameters)) {
+        MAPF_ERR("Failed to write configuration parameters");
         return false;
     }
 

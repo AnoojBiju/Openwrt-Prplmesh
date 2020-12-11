@@ -6,8 +6,8 @@
  * See LICENSE file for more details.
  */
 
-#ifndef _BPL_DB_UCI_H_
-#define _BPL_DB_UCI_H_
+#ifndef _BPL_UCI_H_
+#define _BPL_UCI_H_
 
 #include <string>
 #include <unordered_map>
@@ -15,7 +15,6 @@
 
 namespace beerocks {
 namespace bpl {
-namespace db {
 
 using OptionsUnorderedMap = std::unordered_map<std::string, std::string>;
 /****************************************************************************/
@@ -40,6 +39,23 @@ using OptionsUnorderedMap = std::unordered_map<std::string, std::string>;
  */
 bool uci_section_exists(const std::string &package_name, const std::string &section_type,
                         const std::string &section_name);
+
+/**
+ * @brief Finds a section with given type and containing option with name=value.
+ *
+ * The returned @a secion_name can be used as the @a secion_name in e.g. uci_set_section and
+ * uci_get_section.
+ *
+ * @param[in] package_name name of the requested configuration file.
+ * @param[in] section_type type of the requested section.
+ * @param[in] option_name name of the requested option.
+ * @param[in] option_value value of the requested option.
+ * @param[out] section_name name of the section found or empty if it does not exist.
+ * @return true on success, false otherwise.
+ */
+bool uci_find_section_by_option(const std::string &package_name, const std::string &section_type,
+                                const std::string &option_name, const std::string &option_value,
+                                std::string &section_name);
 
 /**
  * @brief Add new named section.
@@ -139,8 +155,7 @@ bool uci_get_all_sections(const std::string &package_name, const std::string &se
  */
 bool uci_commit_changes(const std::string &package_name);
 
-} // namespace db
 } // namespace bpl
 } // namespace beerocks
 
-#endif /* _BPL_DB_UCI_H_ */
+#endif /* _BPL_UCI_H_ */

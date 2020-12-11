@@ -6,7 +6,10 @@ message("${BoldWhite}Preparing ${BoldGreen}${PROJECT_NAME}${BoldWhite} for the $
 set(MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 
 # Common Sources
-file(GLOB_RECURSE bpl_common_sources ${MODULE_PATH}/common/*.c*)
+set(bpl_common_sources
+    ${MODULE_PATH}/common/utils/utils_net.cpp
+    ${MODULE_PATH}/common/utils/utils.cpp
+)
 
 # Common prplmesh_db values
 set(BEEROCKS_MANAGEMENT_MODE  "Multi-AP-Controller-and-Agent" CACHE STRING "Set management mode")
@@ -64,14 +67,16 @@ if (TARGET_PLATFORM STREQUAL "openwrt")
         add_definitions(-DHAVE_C99)
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
 
-    # Other OpenWRT based platforms (e.g. Turris-Omnia)
+    # Other OpenWRT based platforms (e.g. Turris-Omnia or GL.iNet-B1300)
     else()
 
         file(GLOB_RECURSE bpl_platform_sources
           ${MODULE_PATH}/arp/linux/*.c*
           ${MODULE_PATH}/dhcp/linux/*.c*
           ${MODULE_PATH}/db/uci/*.c*
-          ${MODULE_PATH}/cfg/uci/*.c*)
+          ${MODULE_PATH}/cfg/uci/*.c*
+          ${MODULE_PATH}/common/uci/*.c*
+        )
 
         list(APPEND BPL_LIBS uci)
 
@@ -115,6 +120,8 @@ else()
     return()
 
 endif()
+
+list(APPEND BPL_LIBS bcl)
 
 # Build the library
 add_library(${PROJECT_NAME} ${bpl_common_sources} ${bpl_platform_sources})

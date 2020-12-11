@@ -1,4 +1,4 @@
-#include "bpl_db_uci.h"
+#include "bpl_uci.h"
 
 #include <mapf/common/logger.h>
 #include <mapf/common/utils.h>
@@ -9,7 +9,6 @@ extern "C" {
 
 namespace beerocks {
 namespace bpl {
-namespace db {
 
 constexpr ssize_t MAX_UCI_BUF_LEN  = 64;
 constexpr char package_path[]      = "%s";
@@ -93,6 +92,75 @@ bool uci_section_exists(const std::string &package_name, const std::string &sect
         return false;
     }
 
+    return true;
+}
+
+bool uci_find_section_by_option(const std::string &package_name, const std::string &section_type,
+                                const std::string &option_name, const std::string &option_value,
+                                std::string &section_name)
+{
+    LOG(TRACE) << "uci_find_section_by_option() " << package_name << ".(" << section_type
+               << ") with " << option_name << " = " << option_value;
+
+    auto ctx = alloc_context();
+    if (!ctx) {
+        return false;
+    }
+
+    char pkg_path[MAX_UCI_BUF_LEN] = {0};
+    // Generate a uci path to the package we wish to lookup
+    int nchars = snprintf(pkg_path, MAX_UCI_BUF_LEN, package_path, package_name.c_str());
+    if ((nchars < 0) || (static_cast<size_t>(nchars) >= MAX_UCI_BUF_LEN)) {
+        LOG(ERROR) << "Failed to compose path, nchars = " << nchars;
+        return false;
+    }
+
+    uci_ptr pkg_ptr;
+    // Initialize package pointer from path & validate package existence
+    if (uci_lookup_ptr(ctx.get(), &pkg_ptr, pkg_path, true) != UCI_OK || !pkg_ptr.p) {
+        LOG(ERROR) << "UCI lookup failed for path: " << pkg_path << std::endl
+                   << uci_get_error(ctx.get());
+        return false;
+    }
+
+    // Loop through all sections in the package until a section with given type and option with
+    // name=value is found
+    uci_package *pkg = pkg_ptr.p;
+    uci_element *e   = nullptr;
+    uci_foreach_element(&pkg->sections, e)
+    {
+        uci_section *sec = uci_to_section(e);
+
+        if (section_type.compare(sec->type) != 0) {
+            continue;
+        }
+
+        // Iterate over all the options in current section
+        uci_element *n = nullptr;
+        uci_foreach_element(&sec->options, n)
+        {
+            uci_option *opt = uci_to_option(n);
+
+            if (option_name.compare(opt->e.name) != 0) {
+                continue;
+            }
+
+            if (opt->type != UCI_TYPE_STRING) {
+                continue;
+            }
+
+            if (option_value.compare(opt->v.string) != 0) {
+                continue;
+            }
+
+            // We have reached the specified section
+            section_name = sec->e.name;
+            return true;
+        }
+    }
+
+    // Section not found but no error either
+    section_name = "";
     return true;
 }
 
@@ -451,6 +519,5 @@ bool uci_commit_changes(const std::string &package_name)
     return true;
 }
 
-} // namespace db
 } // namespace bpl
 } // namespace beerocks
