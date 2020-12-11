@@ -10,6 +10,18 @@ from opts import debug
 
 
 class ClientAssociation(PrplMeshBaseTest):
+    """
+        Devices used in test setup:
+        STA1 - WIFI repeater
+        AP1 - Agent1 [DUT]
+        GW - Controller
+
+        Topology request is sent to AP1
+        AP1 logs are checked if topology query was received
+        Client association control message is sent to AP1
+        AP1 logs are checked if client association control message has been received
+        GW controller if checked for a ACK message
+    """
 
     def runTest(self):
         # Locate test participants

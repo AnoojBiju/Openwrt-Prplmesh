@@ -14,6 +14,15 @@ import time
 
 
 class CombinedInfraMetrics(PrplMeshBaseTest):
+    """
+        Devices used in test setup:
+        STA1 - WIFI repeater
+        STA2 - WIFI repeater
+        AP1 - Agent1 [DUT]
+        AP2 - Agent2 [LAN2]
+
+        GW - Controller
+    """
 
     def runTest(self):
         # Locate test participants

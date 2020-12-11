@@ -11,6 +11,25 @@ import time
 
 
 class ClientSteeringDummy(PrplMeshBaseTest):
+    """
+        Devices used in test setup:
+        STA1 - WIFI repeater
+        AP1 - Agent1 [DUT]
+        AP2 - Agent2 [LAN2]
+
+        GW - Controller
+
+        Dummy STA is connected to AP1 wlan0
+        A steer request is sent to AP1 radio 1
+        Dummy STA is disconnected from wlan0
+        Dummy STA is connected to AP1 wlan2
+        All APs radios should get a disallow request, except for AP1 radio 1
+        Client Steering Request message is checked of AP1 radio 0
+        BTM Report message is checked on GW controller
+        ACK message is checked on AP1 radio 0
+        GW controller should have a steering a disconnected message refering to STA1
+        After 25 seconds all disallowed APs radios should have an allow message
+    """
 
     def runTest(self):
         # Locate test participants

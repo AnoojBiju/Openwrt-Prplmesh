@@ -12,6 +12,26 @@ from opts import debug
 
 
 class ClientAssociationDummy(PrplMeshBaseTest):
+    """Checks if allow/disallow requests are being implemented when instructed
+
+        Devices used in test setup:
+        STA1 - WIFI repeater
+        AP1 - Agent1 [DUT]
+        GW - Controller
+
+        Dummy STA is connected to wlan0
+        GW controller is instructed through beerocks CLI to client allow repeater 1 radio 1
+        Repeater 1 radio 1 is checked to see if AP1 got allow request
+        Connection map is checked for repeater 1 wlan0
+        GW controller is instructed through beerocks CLI to client disallow repeater 1 radio 0
+        Repeater 1 radio 0 is checked to see if AP1 got disallow request
+        Dummy STA is connected to wlan2
+        Connection map is checked for repeater 1 wlan2
+        GW controller is instructed through beerocks CLI to client allow repeater 1 radio 1
+        Repeater 1 radio 1 is checked to see if AP1 got allow request
+        Connection map is checked for repeater 1 wlan2
+        Connection map is checked for repeater 1 wlan0
+    """
 
     def runTest(self):
         # Locate test participants
