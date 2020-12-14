@@ -12,6 +12,7 @@
 
 #include <beerocks/tlvf/beerocks_message_backhaul.h>
 
+#include "task_messages.h"
 #include <bcl/beerocks_utils.h>
 #include <bcl/son/son_wireless_utils.h>
 
@@ -250,7 +251,21 @@ void ChannelSelectionTask::handle_vs_csa_notification(
     }
 
     auto sender_iface_name = socket_to_front_iface_name(fd);
+
     LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION from " << sender_iface_name;
+
+    // send inner task message
+    auto switch_channel_notification = std::make_shared<sSwitchChannelNotification>();
+    if (!switch_channel_notification) {
+        LOG(ERROR) << "unable to create switch-channel-notification message";
+        return;
+    }
+
+    switch_channel_notification->ifname            = sender_iface_name;
+    switch_channel_notification->ap_channel_switch = notification->cs_params();
+    switch_channel_notification->switched          = true;
+    m_btl_ctx.m_task_pool.send_event(eTaskEvent::SWITCH_CHANNEL_NOTIFICATION_EVENT,
+                                     switch_channel_notification);
 
     auto db = AgentDB::get();
 
@@ -299,8 +314,22 @@ void ChannelSelectionTask::handle_vs_csa_error_notification(
     }
 
     auto sender_iface_name = socket_to_front_iface_name(fd);
+
     LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_DFS_CSA_ERROR_NOTIFICATION from "
                << sender_iface_name;
+
+    // send inner task message
+    auto switch_channel_notification = std::make_shared<sSwitchChannelNotification>();
+    if (!switch_channel_notification) {
+        LOG(ERROR) << "unable to create switch-channel-notification message";
+        return;
+    }
+
+    switch_channel_notification->ifname            = sender_iface_name;
+    switch_channel_notification->ap_channel_switch = notification->cs_params();
+    switch_channel_notification->switched          = false;
+    m_btl_ctx.m_task_pool.send_event(eTaskEvent::SWITCH_CHANNEL_NOTIFICATION_EVENT,
+                                     switch_channel_notification);
 
     std::string which_radio;
     if (zwdfs_in_process()) {
@@ -346,8 +375,20 @@ void ChannelSelectionTask::handle_vs_cac_started_notification(
     }
 
     auto sender_iface_name = socket_to_front_iface_name(fd);
+
     LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION from "
                << sender_iface_name;
+
+    // send inner task message
+    auto cac_started_notification = std::make_shared<sCacStartedNotification>();
+    if (!cac_started_notification) {
+        LOG(ERROR) << "unable to create cac-started-notification message";
+        return;
+    }
+    cac_started_notification->ifname             = sender_iface_name;
+    cac_started_notification->cac_started_params = notification->params();
+    m_btl_ctx.m_task_pool.send_event(eTaskEvent::CAC_STARTED_NOTIFICATION,
+                                     cac_started_notification);
 
     // CAC_STARTED event is received when moving to DFS usable channel.
     // If this event is received unexpectedly (because of external channel switch),
@@ -386,8 +427,21 @@ void ChannelSelectionTask::handle_vs_dfs_cac_completed_notification(
     }
 
     auto sender_iface_name = socket_to_front_iface_name(fd);
+
     LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION from "
                << sender_iface_name << ", status=" << notification->params().success;
+
+    // send inner task message
+    auto cac_completed_notification = std::make_shared<sCacCompletedNotification>();
+    if (!cac_completed_notification) {
+        LOG(ERROR) << "unable to create cac-completed-notification message";
+        return;
+    }
+    cac_completed_notification->ifname               = sender_iface_name;
+    cac_completed_notification->cac_completed_params = notification->params();
+
+    m_btl_ctx.m_task_pool.send_event(eTaskEvent::CAC_COMPLETED_NOTIFICATION,
+                                     cac_completed_notification);
 
     if (m_zwdfs_state == eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED) {
         auto db                                   = AgentDB::get();
