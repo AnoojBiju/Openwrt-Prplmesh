@@ -128,7 +128,7 @@ public:
      * @param freq radio frequency to search
      * @return radio mac of the found slave if found, otherwise empty string
      */
-    const std::string freq_to_radio_mac(eFreqType freq) const;
+    std::string freq_to_radio_mac(eFreqType freq) const;
 
     /**
      * @brief start WPS PBC
@@ -289,6 +289,8 @@ private:
 
 public:
     std::list<std::shared_ptr<sRadioInfo>> slaves_sockets;
+    int front_iface_name_to_socket(const std::string &iface_name);
+    std::string socket_to_front_iface_name(int fd);
 
 private:
     std::list<std::shared_ptr<sRadioInfo>> m_slaves_sockets_to_finalize;
