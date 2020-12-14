@@ -38,15 +38,9 @@ create_transport_message(Type type, std::initializer_list<messages::Message::Fra
     case messages::Type::CmduTxConfirmationMessage:
         return std::unique_ptr<messages::CmduTxConfirmationMessage>{
             new messages::CmduTxConfirmationMessage(frame)};
-    case messages::Type::InterfaceConfigurationQueryMessage:
-        return std::unique_ptr<messages::InterfaceConfigurationQueryMessage>{
-            new messages::InterfaceConfigurationQueryMessage(frame)};
     case messages::Type::InterfaceConfigurationRequestMessage:
         return std::unique_ptr<messages::InterfaceConfigurationRequestMessage>{
             new messages::InterfaceConfigurationRequestMessage(frame)};
-    case messages::Type::InterfaceConfigurationIndicationMessage:
-        return std::unique_ptr<messages::InterfaceConfigurationIndicationMessage>{
-            new messages::InterfaceConfigurationIndicationMessage(frame)};
     default:
         LOG(WARNING) << "Received unknown message type: " << int(type);
         return std::unique_ptr<messages::Message>{new messages::Message(Type::Invalid, frame)};

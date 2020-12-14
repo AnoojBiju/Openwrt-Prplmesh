@@ -96,16 +96,9 @@ bool BrokerClientImpl::configure(const std::string &bridge_name)
 {
     beerocks::transport::messages::InterfaceConfigurationRequestMessage message;
 
-    string_utils::copy_string(message.metadata()->interfaces[0].ifname, bridge_name.c_str(),
-                              IF_NAMESIZE);
-
-    using Flags = beerocks::transport::messages::InterfaceConfigurationRequestMessage::Flags;
-    message.metadata()->interfaces[0].flags |= Flags::IS_BRIDGE;
+    string_utils::copy_string(message.metadata()->bridge_name, bridge_name.c_str(), IF_NAMESIZE);
 
     LOG(DEBUG) << "Configuring bridge " << bridge_name << " to ieee1905 transport";
-
-    // TODO: remove unused attribute in the configuration request: https://jira.prplfoundation.org/browse/PPM-802
-    message.metadata()->numInterfaces = 1;
 
     return send_message(message);
 }

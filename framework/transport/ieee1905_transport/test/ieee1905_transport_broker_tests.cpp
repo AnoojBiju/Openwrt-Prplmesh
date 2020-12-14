@@ -317,59 +317,6 @@ TEST(broker_server, subscribe_unsubscribe)
     ASSERT_TRUE(broker_wrapper.stop());
 }
 
-TEST(broker_server, publish_internal_message)
-{
-    auto server_socket = std::make_shared<SocketServer>(broker_uds_file, broker_listen_buffer);
-    auto event_loop    = std::make_shared<EventLoopImpl>(broker_timeout);
-    BrokerServerWrapper broker_wrapper(server_socket, event_loop);
-
-    ASSERT_TRUE(broker_wrapper.start());
-
-    // Connect to the broker
-    SocketClient sock1(broker_uds_file);
-    ASSERT_EQ(1, event_loop->run()); // Accept the connection
-    ASSERT_FALSE(broker_wrapper.error());
-
-    // Build a subscribe message
-    SubscribeMessage subscribe;
-    subscribe.metadata()->type              = SubscribeMessage::ReqType::SUBSCRIBE;
-    subscribe.metadata()->msg_types_count   = 1;
-    subscribe.metadata()->msg_types[0].bits = {
-        .internal        = 1,
-        .vendor_specific = 0,
-        .reserved        = 0,
-        .type            = uint32_t(Type::InterfaceConfigurationIndicationMessage),
-    };
-
-    // Subscribe to the InterfaceConfigurationIndicationMessage message
-    ASSERT_TRUE(messages::send_transport_message(sock1, subscribe));
-    ASSERT_EQ(1, event_loop->run()); // Process
-    ASSERT_FALSE(broker_wrapper.error());
-
-    // Publish an InterfaceConfigurationIndicationMessage message to subscribers
-    constexpr int NUM_OF_IFACES = 17;
-    InterfaceConfigurationIndicationMessage iface_indication_msg_tx;
-    iface_indication_msg_tx.metadata()->numInterfaces = NUM_OF_IFACES;
-    ASSERT_TRUE(broker_wrapper.publish(iface_indication_msg_tx));
-
-    // Verify the data is received on the subscribed socket
-    ASSERT_TRUE(size_t(sock1.getBytesReady()) > sizeof(messages::Message::Header));
-
-    // Read, parse and validate the message
-    auto iface_indication_msg_rx_ptr = messages::read_transport_message(sock1);
-    ASSERT_TRUE(iface_indication_msg_rx_ptr);
-    ASSERT_TRUE(iface_indication_msg_rx_ptr->type() ==
-                Type::InterfaceConfigurationIndicationMessage);
-
-    auto &iface_indication_msg_rx =
-        dynamic_cast<InterfaceConfigurationIndicationMessage &>(*iface_indication_msg_rx_ptr);
-
-    // Validate the number of interfaces matches the sent message
-    ASSERT_TRUE(iface_indication_msg_rx.metadata()->numInterfaces == NUM_OF_IFACES);
-
-    ASSERT_TRUE(broker_wrapper.stop());
-}
-
 } // namespace tests
 } // namespace broker
 } // namespace transport

@@ -35,14 +35,12 @@ namespace messages {
  * Transport internal message types
  */
 enum class Type {
-    Invalid                                 = 0,
-    CmduRxMessage                           = 1,
-    CmduTxMessage                           = 2,
-    SubscribeMessage                        = 3,
-    CmduTxConfirmationMessage               = 4,
-    InterfaceConfigurationQueryMessage      = 5,
-    InterfaceConfigurationRequestMessage    = 6,
-    InterfaceConfigurationIndicationMessage = 7
+    Invalid                              = 0,
+    CmduRxMessage                        = 1,
+    CmduTxMessage                        = 2,
+    SubscribeMessage                     = 3,
+    CmduTxConfirmationMessage            = 4,
+    InterfaceConfigurationRequestMessage = 5
 };
 
 class Message {
@@ -389,42 +387,17 @@ public:
     }
 };
 
-class InterfaceConfigurationQueryMessage : public Message {
-public:
-    explicit InterfaceConfigurationQueryMessage(std::initializer_list<Frame> frames = {})
-        : Message(Type::InterfaceConfigurationQueryMessage, frames)
-    {
-    }
-
-    virtual ~InterfaceConfigurationQueryMessage() = default;
-};
-
-class InterfaceConfigurationMessage : public Message {
-    static const uint8_t kVersion   = 0;
-    static const int kMaxInterfaces = 32;
+class InterfaceConfigurationRequestMessage : public Message {
+    static const uint8_t kVersion = 0;
 
 public:
-    enum Flags {
-        ENABLE_IEEE1905_TRANSPORT = 0x00000001, // enable IEEE1905 transport on this interface
-        IS_BRIDGE                 = 0x00000002,
-    };
-
-    struct Interface {
-        // the linux interface index of the specified interface
-        char ifname[IF_NAMESIZE];
-        // the interface index of the bridge to which this interface belong to (or zero if it does not belong to a bridge)
-        char bridge_ifname[IF_NAMESIZE];
-        uint32_t flags = 0;
-    };
-
     struct Metadata {
-        uint8_t version        = kVersion;
-        uint32_t numInterfaces = 0;
-        Interface interfaces[kMaxInterfaces];
+        uint8_t version = kVersion;
+        char bridge_name[IF_NAMESIZE];
     };
 
-    explicit InterfaceConfigurationMessage(Type type, std::initializer_list<Frame> frames)
-        : Message(type, frames)
+    explicit InterfaceConfigurationRequestMessage(std::initializer_list<Frame> frames = {})
+        : Message(Type::InterfaceConfigurationRequestMessage, frames)
     {
         // maximum one frame is allowed (if none are given we will allocate one below)
         mapf_assert(this->frames().size() <= 1);
@@ -446,35 +419,10 @@ public:
         std::stringstream ss;
         Metadata *m = metadata();
         ss << " metadata:" << std::endl;
-        ss << "  version       : " << (unsigned)m->version << std::endl;
-        ss << "  numInterfaces : " << (unsigned)m->numInterfaces << std::endl;
-
-        for (int i = 0; i < int(m->numInterfaces) && i < kMaxInterfaces; i++) {
-            ss << "  interface " << i << ":"
-               << " name: " << m->interfaces[i].ifname
-               << " in bridge: " << m->interfaces[i].bridge_ifname << " flags:"
-               << ((m->interfaces[i].flags & Flags::ENABLE_IEEE1905_TRANSPORT) ? " transport" : "")
-               << ((m->interfaces[i].flags & Flags::IS_BRIDGE) ? " bridge" : "") << std::endl;
-        }
+        ss << " version: " << (unsigned)m->version << std::endl;
+        ss << " name: " << m->bridge_name << std::endl;
 
         return os << ss.str();
-    }
-};
-
-class InterfaceConfigurationRequestMessage : public InterfaceConfigurationMessage {
-public:
-    explicit InterfaceConfigurationRequestMessage(std::initializer_list<Frame> frames = {})
-        : InterfaceConfigurationMessage(Type::InterfaceConfigurationRequestMessage, frames)
-    {
-    }
-};
-
-// same as InterfaceConfigurationRequestMessage - only with different type
-class InterfaceConfigurationIndicationMessage : public InterfaceConfigurationMessage {
-public:
-    explicit InterfaceConfigurationIndicationMessage(std::initializer_list<Frame> frames = {})
-        : InterfaceConfigurationMessage(Type::InterfaceConfigurationIndicationMessage, frames)
-    {
     }
 };
 
