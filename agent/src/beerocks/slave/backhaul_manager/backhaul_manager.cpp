@@ -1176,7 +1176,7 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
                 if (ext_events_fd >= 0 && int_events_fd) {
                     beerocks::EventLoop::EventHandlers ext_events_handlers{
                         .on_read =
-                            [&](int fd, EventLoop &loop) {
+                            [soc](int fd, EventLoop &loop) {
                                 soc->sta_wlan_hal->process_ext_events();
                                 return true;
                             },
@@ -1191,7 +1191,7 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
 
                     beerocks::EventLoop::EventHandlers int_events_handlers{
                         .on_read =
-                            [&](int fd, EventLoop &loop) {
+                            [soc](int fd, EventLoop &loop) {
                                 soc->sta_wlan_hal->process_int_events();
                                 return true;
                             },
