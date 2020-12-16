@@ -186,6 +186,7 @@ public:
 
             // When set, radio can only be used for ZWDFS purpose.
             bool zwdfs;
+            bool hybrid_mode_supported;
 
             struct sBssid {
                 sMacAddr mac;

@@ -1712,7 +1712,8 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
 
         save_channel_params_to_db(notification->cs_params());
 
-        radio->front.zwdfs = notification->params().zwdfs;
+        radio->front.zwdfs                 = notification->params().zwdfs;
+        radio->front.hybrid_mode_supported = notification->params().hybrid_mode_supported;
         LOG(DEBUG) << "ZWDFS AP: " << radio->front.zwdfs;
 
         auto tuple_preferred_channels = notification->preferred_channels(0);
