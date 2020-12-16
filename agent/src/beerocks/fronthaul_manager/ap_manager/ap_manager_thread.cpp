@@ -1196,7 +1196,32 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
         }
         break;
     }
+    case beerocks_message::ACTION_APMANAGER_SET_ASSOC_DISALLOW_REQUEST: {
+        LOG(DEBUG) << "Got ACTION_APMANAGER_SET_ASSOC_DISALLOW_REQUEST";
 
+        auto request =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_APMANAGER_SET_ASSOC_DISALLOW_REQUEST>();
+        if (!request) {
+            LOG(ERROR) << "addClass ACTION_APMANAGER_SET_ASSOC_DISALLOW_REQUEST failed";
+            return false;
+        }
+
+        auto bssid = tlvf::mac_to_string(request->bssid());
+
+        if (bssid == net::network_utils::ZERO_MAC_STRING) {
+            if (!ap_wlan_hal->set_radio_mbo_assoc_disallow(request->enable())) {
+                LOG(ERROR) << "Failed to set MBO AssocDisallow";
+                return false;
+            }
+        } else {
+            if (!ap_wlan_hal->set_mbo_assoc_disallow(bssid, request->enable())) {
+                LOG(ERROR) << "Failed to set MBO AssocDisallow";
+                return false;
+            }
+        }
+        break;
+    }
     case beerocks_message::ACTION_APMANAGER_RADIO_DISABLE_REQUEST: {
         LOG(DEBUG) << "Got ACTION_APMANAGER_RADIO_DISABLE_REQUEST";
         // Disable the radio interface
