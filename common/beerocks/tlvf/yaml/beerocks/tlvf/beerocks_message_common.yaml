@@ -237,7 +237,9 @@ sNodeHostap:
   zwdfs:
     _type: uint8_t
     _comment: Boolean. When set to 'true', the radio can be used only for zwdfs purpose.
-
+  hybrid_mode_supported:
+    _type: uint8_t
+    _comment: Boolean
 sVapsList:
   _type: struct
   vaps:

@@ -340,6 +340,8 @@ typedef struct sNodeHostap {
     char driver_version[beerocks::message::WIFI_DRIVER_VER_LENGTH];
     //Boolean. When set to 'true', the radio can be used only for zwdfs purpose.
     uint8_t zwdfs;
+    //Boolean
+    uint8_t hybrid_mode_supported;
     void struct_swap(){
         iface_mac.struct_swap();
         tlvf_swap(8*sizeof(beerocks::eFreqType), reinterpret_cast<uint8_t*>(&frequency_band));
