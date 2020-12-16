@@ -539,8 +539,11 @@ bool base_wlan_hal_nl80211::wpa_ctrl_send_msg(const std::string &cmd)
 
     auto buff_size_copy = m_wpa_ctrl_buffer_size;
     do {
+        buff_size_copy = m_wpa_ctrl_buffer_size;
         result = wpa_ctrl_request(m_wpa_ctrl_cmd, cmd.c_str(), cmd.size(), buffer, &buff_size_copy,
                                   NULL);
+        LOG(ERROR) << "wpa_ctrl_request returned reply of size " << result
+                   << " size of answer : " << buff_size_copy;
     } while (result == -2 && ++try_cnt < 3);
 
     if (result < 0) {
@@ -557,9 +560,10 @@ bool base_wlan_hal_nl80211::wpa_ctrl_send_msg(const std::string &cmd)
     buffer[buff_size_copy] =
         0; // the wpa_ctrl does not put null terminator at the and of the string
 
+    LOG(DEBUG) << std::endl << "cmd: " << cmd;
+    LOG(WARNING) << std::endl << "reply: " << buffer;
+
     if ((!strncmp(buffer, "FAIL", 4)) || (!strncmp(buffer, "UNKNOWN", 7))) {
-        LOG(DEBUG) << std::endl << "cmd failed: " << cmd;
-        LOG(WARNING) << std::endl << "reply: " << buffer;
         return false;
     }
 
