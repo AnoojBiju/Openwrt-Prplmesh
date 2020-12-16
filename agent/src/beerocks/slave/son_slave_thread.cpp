@@ -3639,7 +3639,8 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
         ap_radio_advanced_capabilities_tlv->radio_uid() = radio->front.iface_mac;
 
         // Currently Set the flag as we don't support traffic separation.
-        ap_radio_advanced_capabilities_tlv->traffic_separation_flag().combined_front_back = 0;
+        ap_radio_advanced_capabilities_tlv->traffic_separation_flag().combined_front_back =
+            radio->front.hybrid_mode_supported;
         ap_radio_advanced_capabilities_tlv->traffic_separation_flag()
             .combined_profile1_and_profile2 = 0;
 
