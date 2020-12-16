@@ -111,7 +111,8 @@ bool controller_ucc_listener::handle_start_wps_registration(const std::string &b
 bool controller_ucc_listener::handle_dev_set_rfeature(
     const std::unordered_map<std::string, std::string> &params, std::string &err_string)
 {
-    return true;
+    err_string = "dev set rfeature not supported in controller mode";
+    return false;
 }
 
 /**

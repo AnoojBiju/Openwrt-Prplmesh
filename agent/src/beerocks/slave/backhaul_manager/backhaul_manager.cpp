@@ -2868,6 +2868,34 @@ bool BackhaulManager::start_wps_pbc(const sMacAddr &radio_mac)
     }
 }
 
+bool BackhaulManager::set_mbo_assoc_disallow(const sMacAddr &radio_mac, const sMacAddr &bssid,
+                                             bool enable)
+{
+    auto it = std::find_if(
+        slaves_sockets.begin(), slaves_sockets.end(),
+        [&](std::shared_ptr<sRadioInfo> slave) { return slave->radio_mac == radio_mac; });
+    if (it == slaves_sockets.end()) {
+        LOG(ERROR) << "couldn't find slave for radio mac " << radio_mac;
+        return false;
+    }
+
+    // Store the socket to the slave managing the requested radio
+    auto soc = *it;
+
+    auto msg = message_com::create_vs_message<
+        beerocks_message::cACTION_BACKHAUL_SET_ASSOC_DISALLOW_REQUEST>(cmdu_tx);
+    if (!msg) {
+        LOG(ERROR) << "Failed building message!";
+        return false;
+    }
+
+    msg->enable() = enable;
+    msg->bssid()  = bssid;
+
+    LOG(DEBUG) << "Set MBO ASSOC_DISALLOW on interface " << soc->hostap_iface << " to " << enable;
+    return send_cmdu(soc->slave, cmdu_tx);
+}
+
 std::shared_ptr<bwl::sta_wlan_hal> BackhaulManager::get_selected_backhaul_sta_wlan_hal()
 {
     std::string selected_backhaul = m_agent_ucc_listener->get_selected_backhaul();

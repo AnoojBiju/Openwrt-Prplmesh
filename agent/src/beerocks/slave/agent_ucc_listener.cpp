@@ -244,6 +244,59 @@ bool agent_ucc_listener::handle_dev_set_rfeature(
     // The expected command is in the following format:
     // dev_set_rfeature,NAME,$DUT_Name,type,MBO,ruid,$MAUT_RUID,Assoc_Disallow,Enable
     // dev_set_rfeature,NAME,$DUT_Name,type,MBO,bssid,$MAUT_FH_MACAddress,Assoc_Disallow,Enable
+    auto type = params.at("type");
+    std::transform(type.begin(), type.end(), type.begin(), ::tolower);
+    if (type != "mbo") {
+        err_string =
+            "invalid param value '" + type + "' for param name 'type', accepted value is: MBO";
+        LOG(ERROR) << err_string;
+        return false;
+    }
+
+    sMacAddr ruid, bssid;
+
+    auto ruid_it  = params.find("ruid");
+    auto bssid_it = params.find("bssid");
+    if (ruid_it != params.end()) {
+        auto ruid_str = tlvf::mac_to_string(std::strtoull(ruid_it->second.c_str(), nullptr, 16));
+        ruid          = tlvf::mac_from_string(ruid_str);
+        bssid         = net::network_utils::ZERO_MAC;
+    } else if (bssid_it != params.end()) {
+        bssid      = tlvf::mac_from_string(bssid_it->second);
+        auto db    = AgentDB::get();
+        auto radio = db->get_radio_by_mac(bssid, AgentDB::eMacType::BSSID);
+        ruid       = radio->front.iface_mac;
+        if (ruid == bssid) {
+            err_string = "The provided BSSID is RUID";
+            LOG(ERROR) << err_string;
+            return false;
+        }
+    } else {
+        err_string = "Command must include RUID or BSSID";
+        LOG(ERROR) << err_string;
+        return false;
+    }
+
+    auto assoc_disallow = params.at("assoc_disallow");
+    std::transform(assoc_disallow.begin(), assoc_disallow.end(), assoc_disallow.begin(), ::tolower);
+
+    bool enable = false;
+    if (assoc_disallow == "enable") {
+        enable = true;
+    } else if (assoc_disallow == "disable") {
+        enable = false;
+    } else {
+        err_string = "invalid param value '" + assoc_disallow +
+                     "' for param name 'assoc_disallow', accepted value are: ENABLE, DISABLE";
+        LOG(ERROR) << err_string;
+        return false;
+    }
+
+    if (!m_btl_ctx.set_mbo_assoc_disallow(ruid, bssid, enable)) {
+        err_string = "Failed to set rfeature";
+        LOG(ERROR) << err_string;
+        return false;
+    }
     return true;
 }
 
