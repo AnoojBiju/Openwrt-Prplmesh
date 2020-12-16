@@ -56,14 +56,6 @@
         : (VAP_RPC_IDX_OFFSET + (MAX_VAPS_PER_RADIO * RADIO_INDEX_SKIP * (index % 2)) +            \
            ((index - (index % 2)) / 2))
 
-#define UCI_RETURN_INDEX(iftype, rpcIndex)                                                         \
-    iftype == TYPE_RADIO                                                                           \
-        ? (rpcIndex / RADIO_INDEX_SKIP)                                                            \
-        : (2 * (rpcIndex -                                                                         \
-                (VAP_RPC_IDX_OFFSET +                                                              \
-                 MAX_VAPS_PER_RADIO * ((rpcIndex - VAP_RPC_IDX_OFFSET) / MAX_VAPS_PER_RADIO))) +   \
-           (((rpcIndex - VAP_RPC_IDX_OFFSET) / MAX_VAPS_PER_RADIO) / RADIO_INDEX_SKIP))
-
 enum paramType { TYPE_RADIO = 0, TYPE_VAP };
 
 #elif BEEROCKS_RDKB
@@ -75,7 +67,6 @@ extern "C" {
 #include <uci_wrapper.h>
 
 #define UCI_INDEX(iftype, rpc_index) rpc_to_uci_index(iftype, rpc_index)
-#define UCI_RETURN_INDEX(iftype, uci_idx) uci_to_rpc_index(ifType, uci_idx)
 }
 
 #endif
@@ -88,7 +79,6 @@ extern "C" {
 namespace beerocks {
 namespace bpl {
 
-int cfg_uci_get_wireless_idx(char *interfaceName, int *rpc_index);
 int cfg_uci_get(char *path, char *value, size_t length);
 int cfg_uci_get_wireless(enum paramType type, int index, const char param[], char *value);
 int cfg_uci_get_wireless_bool(enum paramType type, const char *interface_name, const char param[],

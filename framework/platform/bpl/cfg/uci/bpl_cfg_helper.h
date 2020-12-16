@@ -17,16 +17,6 @@ namespace beerocks {
 namespace bpl {
 
 /**
- * Returns the index of interface from DB
- *
- * @param [in] inputIfName interface name string
- * @param [out] nIndex index of interface
- *
- * @return 0 on success or -1 on error.
- **/
-int cfg_get_index_from_interface(const std::string &inputIfName, int *nIndex);
-
-/**
  * Returns the value of requested param from DB
  *
  * @param [in] param prplmesh param key string

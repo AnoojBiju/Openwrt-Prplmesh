@@ -345,14 +345,31 @@ int cfg_get_sta_iface(const char iface[BPL_IFNAME_LEN], char sta_iface[BPL_IFNAM
         return RETURN_ERR;
     }
 
-    //TODO: remove dependency in wireless section naming in UCI #801
-    int index = -1;
-    if (cfg_get_index_from_interface(iface, &index) == RETURN_ERR) {
-        MAPF_ERR("cfg_get_sta_iface: Failed to get radio index from iface");
+    // Find the "prplmesh.wifi-device" section in UCI configuration for the given interface
+    const std::string package_name = "prplmesh";
+    const std::string section_type = "wifi-device";
+    std::string section_name;
+    if (!uci_find_section_by_option(package_name, section_type, "hostap_iface", iface,
+                                    section_name)) {
+        LOG(ERROR) << "Failed to find configuration section for interface " << iface;
         return RETURN_ERR;
     }
 
-    return cfg_get_prplmesh_radio_param(index, "sta_iface", sta_iface, BPL_IFNAME_LEN);
+    if (section_name.empty()) {
+        LOG(ERROR) << "Configuration for interface " << iface << " not found";
+        return RETURN_ERR;
+    }
+
+    // Get the name of the STA interface for the given Host AP interface
+    std::string option_value;
+    if (!uci_get_option(package_name, section_type, section_name, "sta_iface", option_value)) {
+        LOG(ERROR) << "Failed to get STA interface for Host AP interface " << iface;
+        return RETURN_ERR;
+    }
+
+    mapf::utils::copy_string(sta_iface, option_value.c_str(), BPL_IFNAME_LEN);
+
+    return RETURN_OK;
 }
 
 int cfg_get_hostap_iface(int32_t radio_num, char hostap_iface[BPL_IFNAME_LEN])
