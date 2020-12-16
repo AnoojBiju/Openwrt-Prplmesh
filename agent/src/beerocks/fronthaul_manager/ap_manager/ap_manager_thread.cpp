@@ -2026,6 +2026,8 @@ void ap_manager_thread::handle_hostapd_attached()
 
     notification->params().zwdfs = m_ap_support_zwdfs;
 
+    notification->params().hybrid_mode_supported = ap_wlan_hal->hybrid_mode_supported();
+
     // Copy the channels supported by the AP
     if (!notification->alloc_preferred_channels(
             ap_wlan_hal->get_radio_info().preferred_channels.size())) {
