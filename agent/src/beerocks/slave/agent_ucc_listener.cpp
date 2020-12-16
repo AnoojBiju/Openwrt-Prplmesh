@@ -232,6 +232,22 @@ bool agent_ucc_listener::handle_dev_set_config(std::unordered_map<std::string, s
 }
 
 /**
+ * @brief Handle DEV_SET_RFEATURE command. Parse the command and send it to the agent.
+ *
+ * @param[in] params Command parameters.
+ * @param[out] err_string Contains an error description if the function fails.
+ * @return true if successful, false if not.
+ */
+bool agent_ucc_listener::handle_dev_set_rfeature(
+    const std::unordered_map<std::string, std::string> &params, std::string &err_string)
+{
+    // The expected command is in the following format:
+    // dev_set_rfeature,NAME,$DUT_Name,type,MBO,ruid,$MAUT_RUID,Assoc_Disallow,Enable
+    // dev_set_rfeature,NAME,$DUT_Name,type,MBO,bssid,$MAUT_FH_MACAddress,Assoc_Disallow,Enable
+    return true;
+}
+
+/**
  * @brief Get the selected backhaul which has been received on "DEV_SET_CONFIG" command from UCC.
  *
  * @return std::string "eth" or RUID of selected radio or empty string if "DEV_SET_CONFIG" has not
