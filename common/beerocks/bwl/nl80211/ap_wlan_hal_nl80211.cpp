@@ -768,6 +768,12 @@ bool ap_wlan_hal_nl80211::is_zwdfs_antenna_enabled()
     return false;
 }
 
+bool ap_wlan_hal_nl80211::hybrid_mode_supported()
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
 bool ap_wlan_hal_nl80211::restricted_channels_set(char *channel_list)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";

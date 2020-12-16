@@ -70,6 +70,7 @@ public:
     virtual bool is_zwdfs_supported() override;
     virtual bool set_zwdfs_antenna(bool enable) override;
     virtual bool is_zwdfs_antenna_enabled() override;
+    virtual bool hybrid_mode_supported() override;
     virtual bool restricted_channels_set(char *channel_list) override;
     virtual bool restricted_channels_get(char *channel_list) override;
     virtual bool read_acs_report() override;
