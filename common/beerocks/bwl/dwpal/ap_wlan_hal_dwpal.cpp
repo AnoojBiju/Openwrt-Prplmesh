@@ -1690,6 +1690,13 @@ bool ap_wlan_hal_dwpal::get_vap_enable(const std::string &iface_name, bool &enab
     return true;
 }
 
+bool ap_wlan_hal_dwpal::set_mbo_assoc_disallow(const std::string &bssid, bool enable)
+{
+    return true;
+}
+
+bool ap_wlan_hal_dwpal::set_radio_mbo_assoc_disallow(bool enable) { return true; }
+
 bool ap_wlan_hal_dwpal::generate_connected_clients_events()
 {
     bool queried_first = false;

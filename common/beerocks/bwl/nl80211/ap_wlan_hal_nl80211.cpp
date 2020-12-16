@@ -840,6 +840,18 @@ bool ap_wlan_hal_nl80211::set_vap_enable(const std::string &iface_name, const bo
     return true;
 }
 
+bool ap_wlan_hal_nl80211::set_mbo_assoc_disallow(const std::string &bssid, bool enable)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return true;
+}
+
+bool ap_wlan_hal_nl80211::set_radio_mbo_assoc_disallow(bool enable)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return true;
+}
+
 bool ap_wlan_hal_nl80211::get_vap_enable(const std::string &iface_name, bool &enable)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
