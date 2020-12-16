@@ -1692,10 +1692,25 @@ bool ap_wlan_hal_dwpal::get_vap_enable(const std::string &iface_name, bool &enab
 
 bool ap_wlan_hal_dwpal::set_mbo_assoc_disallow(const std::string &bssid, bool enable)
 {
+    std::string cmd = "MBO_BSS_ASSOC_DISALLOW " + bssid + " " + std::to_string(enable);
+
+    // Send command
+    if (!dwpal_send_cmd(cmd)) {
+        LOG(ERROR) << "set_mbo_assoc_disallow() failed!";
+        return false;
+    }
     return true;
 }
 
-bool ap_wlan_hal_dwpal::set_radio_mbo_assoc_disallow(bool enable) { return true; }
+bool ap_wlan_hal_dwpal::set_radio_mbo_assoc_disallow(bool enable)
+{
+    for (const auto &vap : m_radio_info.available_vaps) {
+        if (!set_mbo_assoc_disallow(vap.second.mac, enable)) {
+            return false;
+        }
+    }
+    return true;
+}
 
 bool ap_wlan_hal_dwpal::generate_connected_clients_events()
 {
