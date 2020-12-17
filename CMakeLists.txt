@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.1)
 cmake_policy(VERSION 3.1)
 project(prplmesh
         LANGUAGES C CXX
-        VERSION 1.4.0)
+        VERSION 1.5.0)
 
 include(cmake/multiap-helpers.cmake)
 

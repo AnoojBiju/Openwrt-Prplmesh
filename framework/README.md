@@ -64,7 +64,7 @@ Supported Unit Tests:
 
 ## Versioning
 <a name="ver"></a>
-1.4.0
+1.5.0
 
 ## Authors
 <a name="authors"></a>
