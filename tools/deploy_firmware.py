@@ -179,7 +179,9 @@ class NetgearRax40(PrplwrtDevice):
             # will prevent it from rebooting:
             shell.sendline("pgrep -f 'S99prplmesh boot' | xargs kill")
             # remove overlay and reboot
-            shell.sendline("rm -rf /overlay/upper/usr /overlay/upper/opt")
+            shell.sendline("rm -rf /overlay/upper/usr /overlay/upper/opt "
+                           "    /overlay/upper/etc/config/wireless "
+                           "    /overlay/upper/etc/uci-defaults/15_wireless-generate-macaddr")
             shell.sendline("reboot -f")
             shell.expect(["Hit any key to stop autoboot:",
                           pexpect.EOF, pexpect.TIMEOUT], timeout=120)
