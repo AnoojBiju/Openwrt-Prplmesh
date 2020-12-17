@@ -18,7 +18,7 @@
   hash: 69a1d47134475e4ee63d4f5d7d36c96989a53177
 - name: feed_prpl
   uri: https://gitlab.com/prpl-foundation/prplwrt/feed-prpl.git
-  hash: bdaa8ab57b62fbd4c6d1118419fdee017c6b65bf
+  hash: f33b927413468d389cf854fceffc806ca9c5886d
 - name: feed_opensource_apps
   uri: https://gitlab.com/prpl-foundation/intel/feed_opensource_apps.git
   hash: f22c4f0b1d594598b1d38298fba513e5948dd1e4
