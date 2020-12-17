@@ -44,6 +44,7 @@ RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y \
       iproute2 \
       iw \
+      net-tools \
       tshark \
       wireshark-common \
     && apt-get clean \
