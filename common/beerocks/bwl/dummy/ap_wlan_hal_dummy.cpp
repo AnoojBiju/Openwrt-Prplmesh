@@ -299,6 +299,8 @@ bool ap_wlan_hal_dummy::is_zwdfs_supported() { return false; }
 bool ap_wlan_hal_dummy::set_zwdfs_antenna(bool enable) { return false; }
 bool ap_wlan_hal_dummy::is_zwdfs_antenna_enabled() { return false; }
 
+bool ap_wlan_hal_dummy::hybrid_mode_supported() { return false; }
+
 bool ap_wlan_hal_dummy::restricted_channels_set(char *channel_list) { return true; }
 
 bool ap_wlan_hal_dummy::restricted_channels_get(char *channel_list) { return false; }

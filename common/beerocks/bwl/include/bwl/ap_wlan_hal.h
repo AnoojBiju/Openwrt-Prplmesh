@@ -328,6 +328,13 @@ public:
      */
     virtual bool is_zwdfs_antenna_enabled() = 0;
 
+    /**
+     * @brief Check if the radio supports configuring a bssid on hybrid mode (fBSS=1 & bBSS=1).
+     * 
+     * @return true if hybrid mode is supported, otherwise false.
+     */
+    virtual bool hybrid_mode_supported() = 0;
+
     // TODO: UPDATE AFTER THE MERGE WITH CHANNEL SELECTION
     virtual bool restricted_channels_set(char *channel_list) = 0;
     virtual bool restricted_channels_get(char *channel_list) = 0;

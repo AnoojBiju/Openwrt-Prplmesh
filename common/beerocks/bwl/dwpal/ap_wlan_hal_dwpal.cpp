@@ -1488,6 +1488,8 @@ bool ap_wlan_hal_dwpal::is_zwdfs_antenna_enabled()
     return reply_str == "1";
 }
 
+bool ap_wlan_hal_dwpal::hybrid_mode_supported() { return false; }
+
 bool ap_wlan_hal_dwpal::restricted_channels_set(char *channel_list)
 {
     // For example, the channel_list_str: “1 6 11 12 13”
