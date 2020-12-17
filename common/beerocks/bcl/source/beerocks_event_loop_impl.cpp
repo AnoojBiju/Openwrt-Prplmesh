@@ -136,6 +136,7 @@ int EventLoopImpl::run()
 {
     // Poll events
     epoll_event events[MAX_POLL_EVENTS]{};
+    const size_t events_size = sizeof(events) / sizeof(events[0]);
 
     // Convert the global event loop timeout (if set) to milliseconds
     int timeout_millis =
@@ -146,7 +147,7 @@ int EventLoopImpl::run()
     // requested events occurred or (2) the timeout expired
     int num_events;
     do {
-        num_events = epoll_wait(m_epoll_fd, events, sizeof(events), timeout_millis);
+        num_events = epoll_wait(m_epoll_fd, events, events_size, timeout_millis);
     } while ((num_events < 0) && (EINTR == errno));
 
     if (num_events == -1) {
