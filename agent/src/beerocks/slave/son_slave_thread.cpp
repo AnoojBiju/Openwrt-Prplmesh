@@ -1492,7 +1492,7 @@ bool slave_thread::handle_cmdu_platform_manager_message(
              * On GW platform the ethernet interface which is used for backhaul connection must be
              * empty since the GW doesn't need wired backhaul connection. Since it is being set on
              * the constructor from the agent configuration file, clear it here when we know if the
-             * agent runs on a GW. 
+             * agent runs on a GW.
              */
             auto db = AgentDB::get();
             if (db->device_conf.local_gw) {
@@ -2108,7 +2108,36 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         //TODO Add target BSSID
         steering_btm_report_tlv->sta_mac()         = response_in->params().mac;
         steering_btm_report_tlv->btm_status_code() = response_in->params().status_code;
-        steering_btm_report_tlv->bssid()           = response_in->params().source_bssid;
+
+        /*
+            If ACTION_APMANAGER_CLIENT_BSS_STEER_RESPONSE contains
+            non-zero MAC fill up BSSID (client associated with) for
+            CLIENT_STEERING_BTM_REPORT_MESSAGE otherwise find BSSID
+            in the AgentDB.
+        */
+        if (response_in->params().source_bssid != net::network_utils::ZERO_MAC) {
+            steering_btm_report_tlv->bssid() = response_in->params().source_bssid;
+        } else {
+            auto agent_db = AgentDB::get();
+
+            /*
+                For finding BSSID in AgentDB need to find STA entry.
+                STA entry can be found by checking associated clients list
+                per radio.
+            */
+            steering_btm_report_tlv->bssid() = net::network_utils::ZERO_MAC;
+            for (const auto &radio : agent_db->get_radios_list()) {
+                auto sta =
+                    find_if(radio->associated_clients.begin(), radio->associated_clients.end(),
+                            [&](const std::pair<sMacAddr, AgentDB::sRadio::sClient> &sta) {
+                                return sta.first == steering_btm_report_tlv->sta_mac();
+                            });
+                if (sta != radio->associated_clients.end()) {
+                    steering_btm_report_tlv->bssid() = sta->second.bssid;
+                    break;
+                }
+            }
+        }
 
         LOG(DEBUG) << "sending CLIENT_STEERING_BTM_REPORT_MESSAGE back to controller";
         LOG(DEBUG) << "BTM report source bssid: " << steering_btm_report_tlv->bssid();

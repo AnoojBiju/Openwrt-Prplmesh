@@ -974,6 +974,11 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
         msg->params.mac         = tlvf::mac_from_string(parsed_obj["_mac"]);
         msg->params.status_code = beerocks::string_utils::stoi(parsed_obj["status_code"]);
 
+        // Open source hostapd does not contain bssid where client connected
+        // BSSID should be retrieved from Agent database, for simplify logic in the
+        // Agent need to fill up BSSID here with ZERO_MAC.
+        msg->params.source_bssid = beerocks::net::network_utils::ZERO_MAC;
+
         // Add the message to the queue
         event_queue_push(Event::BSS_TM_Response, msg_buff);
 
