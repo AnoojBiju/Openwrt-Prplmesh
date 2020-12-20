@@ -226,25 +226,33 @@ void ChannelSelectionTask::handle_vs_csa_notification(
 
     auto sub_band_dfs_enable = db->device_conf.front_radio.config[sender_iface_name].sub_band_dfs;
 
-    // Initiate Agent Managed ZWDFS flow.
-    if (db->device_conf.zwdfs_enable && !sub_band_dfs_enable && !sender_radio->front.zwdfs &&
-        notification->cs_params().switch_reason == beerocks::CH_SWITCH_REASON_RADAR &&
-        m_zwdfs_state != eZwdfsState::WAIT_FOR_ZWDFS_CAC_STARTED &&
-        m_zwdfs_state != eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED) {
+    if (db->device_conf.zwdfs_enable) {
+        // Initiate Agent Managed ZWDFS flow.
+        if (notification->cs_params().switch_reason == beerocks::CH_SWITCH_REASON_RADAR) {
+            if (!sub_band_dfs_enable && !sender_radio->front.zwdfs &&
+                m_zwdfs_state != eZwdfsState::WAIT_FOR_ZWDFS_CAC_STARTED &&
+                m_zwdfs_state != eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED) {
 
-        if (!initialize_zwdfs_interface_name()) {
-            LOG(DEBUG) << "No ZWDFS radio interface has been found. ZWDFS not initiated.";
-            return;
+                if (!initialize_zwdfs_interface_name()) {
+                    LOG(DEBUG) << "No ZWDFS radio interface has been found. ZWDFS not initiated.";
+                    return;
+                }
+                m_zwdfs_primary_radio_iface = sender_radio->front.iface_name;
+                // Start ZWDFS flow
+                ZWDFS_FSM_MOVE_STATE(eZwdfsState::REQUEST_CHANNELS_LIST);
+                return;
+            }
+        } else if (zwdfs_in_process()) {
+            // Channel switch reason != RADAR
+            if (sender_iface_name == m_zwdfs_primary_radio_iface) {
+
+                auto external_channel_switch =
+                    (m_zwdfs_state != eZwdfsState::WAIT_FOR_PRIMARY_RADIO_CSA_NOTIFICATION);
+
+                abort_zwdfs_flow(external_channel_switch);
+                return;
+            }
         }
-        m_zwdfs_primary_radio_iface = sender_radio->front.iface_name;
-        ZWDFS_FSM_MOVE_STATE(eZwdfsState::REQUEST_CHANNELS_LIST);
-        return;
-    }
-
-    if (m_zwdfs_state == eZwdfsState::WAIT_FOR_PRIMARY_RADIO_CSA_NOTIFICATION &&
-        sender_iface_name == m_zwdfs_primary_radio_iface) {
-        ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
-        return;
     }
 }
 
