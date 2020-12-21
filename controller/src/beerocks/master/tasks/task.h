@@ -35,6 +35,9 @@ public:
     bool is_done();
     void kill();
 
+    void set_last_exec_time(std::chrono::steady_clock::time_point time) { last_exec_time = time; }
+    std::chrono::steady_clock::time_point get_last_exec_time() { return last_exec_time; }
+
     std::string task_name;
     const std::string assigned_node;
     const int id;
@@ -88,6 +91,7 @@ private:
 
     std::chrono::steady_clock::time_point task_timeout;
     std::chrono::steady_clock::time_point next_action_time;
+    std::chrono::steady_clock::time_point last_exec_time;
 
     static int latest_id;
 };

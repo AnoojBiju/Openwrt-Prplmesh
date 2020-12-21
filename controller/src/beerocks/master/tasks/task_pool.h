@@ -28,10 +28,23 @@ public:
     void response_received(std::string mac,
                            std::shared_ptr<beerocks::beerocks_header> beerocks_header);
     void pending_task_ended(int task_id);
-    void run_tasks();
+    void run_tasks(int max_exec_duration_ms = 0);
 
 private:
-    std::unordered_map<int, std::shared_ptr<task>> scheduled_tasks;
+    std::unordered_map<int, std::shared_ptr<task>> m_scheduled_tasks;
+
+    /**
+     * Used to mark the beginning of an execution iteration.
+     * Each iteration can be span over multiple execution slots.
+     */
+    std::chrono::steady_clock::time_point m_exec_iteration_start_time =
+        std::chrono::steady_clock::time_point::max();
+
+    /**
+     * Counts the number of slots it took to process all the tasks within
+     * the current execution iteration.
+     */
+    int m_exec_iteration_slots = 0;
 };
 
 } // namespace son

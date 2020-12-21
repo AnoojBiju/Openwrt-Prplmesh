@@ -12,6 +12,8 @@
 #include <beerocks/tlvf/beerocks_header.h>
 #include <tlvf/CmduMessageRx.h>
 
+#include <chrono>
+
 namespace beerocks {
 
 /**
@@ -75,8 +77,21 @@ public:
         return false;
     }
 
+    /**
+     * @brief Task execution time setter method.
+     * 
+     * @param time A timepoint of the task's last execution.
+     */
+    void set_last_exec_time(std::chrono::steady_clock::time_point time) { m_last_exec_time = time; }
+
+    /**
+     * @brief Task execution time getter method.
+     */
+    std::chrono::steady_clock::time_point get_last_exec_time() { return m_last_exec_time; }
+
 private:
     eTaskType m_task_type;
+    std::chrono::steady_clock::time_point m_last_exec_time;
 };
 
 } // namespace beerocks

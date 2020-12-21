@@ -7,7 +7,9 @@
  */
 
 #include "task_pool.h"
+
 #include <algorithm>
+#include <chrono>
 
 using namespace beerocks;
 
@@ -35,8 +37,20 @@ void TaskPool::add_task(const std::shared_ptr<Task> new_task, std::vector<eTaskE
     add_task_no_events(new_task);
 }
 
-void TaskPool::run_tasks()
+void TaskPool::run_tasks(int max_exec_duration_ms)
 {
+    // Check if a new pool iteration should be started
+    if (m_exec_iteration_start_time > std::chrono::steady_clock::now()) {
+        m_exec_iteration_start_time = std::chrono::steady_clock::now();
+        m_exec_iteration_slots      = 0;
+    }
+
+    // Calculate the execution deadline time point
+    auto exec_deadline_time =
+        (max_exec_duration_ms)
+            ? std::chrono::steady_clock::now() + std::chrono::milliseconds(max_exec_duration_ms)
+            : std::chrono::steady_clock::time_point(std::chrono::milliseconds::max());
+
     // First, empty the queue of messages
     // by sending each one of them to the task that is registered
     // Note: tasks may _add_ more events to the queue in their handle_event().
@@ -51,10 +65,16 @@ void TaskPool::run_tasks()
         auto tasks  = m_event_to_tasks_map.equal_range(event.first);
 
         std::for_each(tasks.first, tasks.second,
-                      [&event](std::pair<const eTaskEvent, std::shared_ptr<Task>> event_task) {
+                      [&](std::pair<const eTaskEvent, std::shared_ptr<Task>> event_task) {
                           if (event_task.second) {
                               event_task.second->handle_event(static_cast<uint8_t>(event.first),
                                                               event.second.get());
+
+                              // Increment the number of processed events and check if any limit has been reached
+                              if (std::chrono::steady_clock::now() >= exec_deadline_time) {
+                                  m_exec_iteration_slots++;
+                                  return;
+                              }
                           }
                       });
         m_event_queue.pop();
@@ -62,9 +82,32 @@ void TaskPool::run_tasks()
 
     // second, do the work for all tasks
     for (auto &task_element : m_task_pool) {
+        // If the maximal execution time in a single execution slot is reached
+        if (std::chrono::steady_clock::now() >= exec_deadline_time) {
+            m_exec_iteration_slots++;
+            return;
+        }
+
         auto &task = task_element.second;
+
+        // Execute the task and update the iteration execution time
         task->work();
+        task->set_last_exec_time(m_exec_iteration_start_time);
     }
+
+    // If the iteration was completed in more than one slot, print a warning
+    if (m_exec_iteration_slots) {
+        auto total_iter_exec_time = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - m_exec_iteration_start_time);
+
+        LOG(DEBUG) << "Task pool execution iteration completed in " << m_exec_iteration_slots + 1
+                   << " slots of " << max_exec_duration_ms
+                   << "ms each, with a total execution time of " << total_iter_exec_time.count()
+                   << "ms. Number of tasks in pool: " << m_task_pool.size();
+    }
+
+    // Execution iteration completed, reset the state
+    m_exec_iteration_start_time = std::chrono::steady_clock::time_point::max();
 }
 
 void TaskPool::send_event(eTaskType task_type, uint8_t event, const void *event_obj)
