@@ -108,6 +108,13 @@ bool controller_ucc_listener::handle_start_wps_registration(const std::string &b
     return false;
 }
 
+bool controller_ucc_listener::handle_dev_set_rfeature(
+    const std::unordered_map<std::string, std::string> &params, std::string &err_string)
+{
+    err_string = "dev set rfeature not supported in controller mode";
+    return false;
+}
+
 /**
  * @brief Handle DEV_SET_CONFIG command. Parse the command and save the parameters on the controller
  * database.

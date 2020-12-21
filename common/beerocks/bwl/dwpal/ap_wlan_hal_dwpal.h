@@ -84,6 +84,8 @@ public:
     virtual bool get_vap_enable(const std::string &iface_name, bool &enable) override;
     virtual bool generate_connected_clients_events() override;
     virtual bool start_wps_pbc() override;
+    virtual bool set_mbo_assoc_disallow(const std::string &bssid, bool enable) override;
+    virtual bool set_radio_mbo_assoc_disallow(bool enable) override;
 
     // Protected methods:
 protected:

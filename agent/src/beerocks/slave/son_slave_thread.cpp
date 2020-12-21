@@ -1365,6 +1365,32 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         message_com::send_cmdu(ap_manager_socket, cmdu_tx);
         break;
     }
+    case beerocks_message::ACTION_BACKHAUL_SET_ASSOC_DISALLOW_REQUEST: {
+        if (!ap_manager_socket) {
+            LOG(ERROR) << "ap_manager_socket is null";
+            return false;
+        }
+        LOG(DEBUG) << "ACTION_BACKHAUL_SET_ASSOC_DISALLOW_REQUEST";
+        auto request_in =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_BACKHAUL_SET_ASSOC_DISALLOW_REQUEST>();
+        if (!request_in) {
+            LOG(ERROR) << "addClass cACTION_BACKHAUL_SET_ASSOC_DISALLOW_REQUEST failed";
+            return false;
+        }
+
+        auto request_out = message_com::create_vs_message<
+            beerocks_message::cACTION_APMANAGER_SET_ASSOC_DISALLOW_REQUEST>(cmdu_tx);
+        if (!request_out) {
+            LOG(ERROR) << "Failed building message!";
+            return false;
+        }
+        request_out->enable() = request_in->enable();
+        request_out->bssid()  = request_in->bssid();
+        LOG(DEBUG) << "send ACTION_APMANAGER_SET_ASSOC_DISALLOW_REQUEST";
+        message_com::send_cmdu(ap_manager_socket, cmdu_tx);
+        break;
+    }
     case beerocks_message::ACTION_BACKHAUL_CHANNELS_LIST_REQUEST: {
         auto request_in =
             beerocks_header->addClass<beerocks_message::cACTION_BACKHAUL_CHANNELS_LIST_REQUEST>();
