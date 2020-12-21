@@ -18,9 +18,13 @@ endif()
 add_executable(${PROJECT_NAME} ${controller_sources} ${controller_tasks_sources} ${controller_operations_sources} ${controller_db_sources})
 set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,-z,defs")
 
+if (TARGET_PLATFORM STREQUAL "openwrt")
+    set(UBUS_SOCK "-DAMBIORIX_BUS_URI=\"\\\"ubus:/var/run/ubus.sock\\\"\"")
+endif()
+
 list(APPEND LINKED_LIBS bpl bcl btl tlvf elpp btlvf nbapi ieee1905_transport_lib)
 if (ENABLE_NBAPI)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_NBAPI")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_NBAPI ${UBUS_SOCK}")
     list(APPEND LINKED_LIBS nbapi_actions_controller)
 endif()
 
