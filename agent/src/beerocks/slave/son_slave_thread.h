@@ -159,7 +159,7 @@ private:
     beerocks_message::sSonConfig son_config;
     beerocks::logging &logger;
     std::string master_version;
-    int stop_on_failure_attempts;
+    int m_stop_on_failure_attempts;
     bool stopped                   = false;
     bool is_backhaul_disconnected  = false;
     bool is_slave_reset            = false;

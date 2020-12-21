@@ -90,7 +90,7 @@ slave_thread::slave_thread(sSlaveConfig conf, beerocks::logging &logger_)
     auto db = AgentDB::get();
 
     db->device_conf.stop_on_failure_attempts = conf.stop_on_failure_attempts;
-    stop_on_failure_attempts                 = db->device_conf.stop_on_failure_attempts;
+    m_stop_on_failure_attempts               = db->device_conf.stop_on_failure_attempts;
 
     db->bridge.iface_name        = conf.bridge_iface;
     db->ethernet.iface_name      = conf.backhaul_wire_iface;
@@ -165,7 +165,7 @@ void slave_thread::slave_reset()
     // Clear the front interface mac.
     radio->front.iface_mac = network_utils::ZERO_MAC;
 
-    if (db->device_conf.stop_on_failure_attempts && !stop_on_failure_attempts) {
+    if (db->device_conf.stop_on_failure_attempts && !m_stop_on_failure_attempts) {
         LOG(ERROR) << "Reached to max stop on failure attempts!";
         stopped = true;
     }
@@ -864,7 +864,7 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
         auto db = AgentDB::get();
 
         db->device_conf.stop_on_failure_attempts = request_in->attempts();
-        stop_on_failure_attempts                 = db->device_conf.stop_on_failure_attempts;
+        m_stop_on_failure_attempts               = db->device_conf.stop_on_failure_attempts;
         LOG(DEBUG) << "stop_on_failure_attempts new value: "
                    << db->device_conf.stop_on_failure_attempts;
 
@@ -1509,7 +1509,7 @@ bool slave_thread::handle_cmdu_platform_manager_message(
                 LOG(ERROR) << "response->valid == 0";
                 platform_notify_error(
                     bpl::eErrorCode::CONFIG_PLATFORM_REPORTED_INVALID_CONFIGURATION, "");
-                stop_on_failure_attempts--;
+                m_stop_on_failure_attempts--;
                 slave_reset();
                 return true;
             }
@@ -1526,7 +1526,7 @@ bool slave_thread::handle_cmdu_platform_manager_message(
                 db->ethernet.mac = network_utils::ZERO_MAC;
             }
 
-            stop_on_failure_attempts = db->device_conf.stop_on_failure_attempts;
+            m_stop_on_failure_attempts = db->device_conf.stop_on_failure_attempts;
 
             LOG(TRACE) << "goto STATE_CONNECT_TO_BACKHAUL_MANAGER";
             slave_state = STATE_CONNECT_TO_BACKHAUL_MANAGER;
@@ -3244,7 +3244,7 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
         if (!network_utils::linux_iface_get_mac(db->bridge.iface_name, iface_mac)) {
             LOG(ERROR) << "Failed reading addresses from the bridge!";
             platform_notify_error(bpl::eErrorCode::BH_READING_DATA_FROM_THE_BRIDGE, "");
-            stop_on_failure_attempts--;
+            m_stop_on_failure_attempts--;
             slave_reset();
             break;
         }
@@ -3267,7 +3267,7 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
                 LOG(ERROR) << "Failed connecting to Platform Manager! Resetting...";
                 platform_notify_error(bpl::eErrorCode::SLAVE_FAILED_CONNECT_TO_PLATFORM_MANAGER,
                                       "");
-                stop_on_failure_attempts--;
+                m_stop_on_failure_attempts--;
                 slave_reset();
                 connect_platform_retry_counter = 0;
             } else {
@@ -3308,7 +3308,7 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
         if (std::chrono::steady_clock::now() > slave_state_timer) {
             LOG(ERROR) << "STATE_WAIT_FOR_PLATFORM_MANAGER_REGISTER_RESPONSE timeout!";
             platform_notify_error(bpl::eErrorCode::SLAVE_PLATFORM_MANAGER_REGISTER_TIMEOUT, "");
-            stop_on_failure_attempts--;
+            m_stop_on_failure_attempts--;
             slave_reset();
         }
         break;
@@ -3323,7 +3323,7 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
                 backhaul_manager_stop();
                 platform_notify_error(bpl::eErrorCode::SLAVE_CONNECTING_TO_BACKHAUL_MANAGER,
                                       "iface=" + config.backhaul_wireless_iface);
-                stop_on_failure_attempts--;
+                m_stop_on_failure_attempts--;
                 slave_reset();
                 break;
             } else {
@@ -3453,7 +3453,7 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
         }
 
         if (error) {
-            stop_on_failure_attempts--;
+            m_stop_on_failure_attempts--;
             slave_reset();
         } else {
             // backhaul manager will request for backhaul iface and tx enable after receiving ACTION_BACKHAUL_ENABLE,
@@ -3606,7 +3606,7 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
             LOG(ERROR) << "master_socket == nullptr";
             platform_notify_error(bpl::eErrorCode::SLAVE_INVALID_MASTER_SOCKET,
                                   "Invalid master socket");
-            stop_on_failure_attempts--;
+            m_stop_on_failure_attempts--;
             slave_reset();
             break;
         }
@@ -3835,8 +3835,8 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
         break;
     }
     case STATE_OPERATIONAL: {
-        auto db                  = AgentDB::get();
-        stop_on_failure_attempts = db->device_conf.stop_on_failure_attempts;
+        auto db                    = AgentDB::get();
+        m_stop_on_failure_attempts = db->device_conf.stop_on_failure_attempts;
         break;
     }
     case STATE_VERSION_MISMATCH: {
