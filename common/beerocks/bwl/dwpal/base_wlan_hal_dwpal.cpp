@@ -631,6 +631,8 @@ bool base_wlan_hal_dwpal::process_nl_events()
                        << " ctx=" << m_dwpal_nl_ctx << ", returning error!";
             return false;
         }
+    } else {
+        m_nl_get_failed_attempts = 0;
     }
 
     return true;
