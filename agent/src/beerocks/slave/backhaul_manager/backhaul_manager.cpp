@@ -974,7 +974,7 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         eth_link_poll_timer = std::chrono::steady_clock::now();
         m_eth_link_up =
             beerocks::net::network_utils::linux_iface_is_up_and_running(db->ethernet.iface_name);
-        FSM_MOVE_STATE(OPERATIONAL);
+        FSM_MOVE_STATE(PRE_OPERATIONAL);
 
         // This event may come as a result of enabling the backhaul, but also as a result
         // of steering. *Only* in case it was the result of steering, we need to send a steering
@@ -987,6 +987,27 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
             LOG(DEBUG) << "Sending BACKHAUL_STA_STEERING_RESPONSE_MESSAGE";
             send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
                                 tlvf::mac_from_string(bridge_info.mac));
+        }
+        break;
+    }
+    case EState::PRE_OPERATIONAL: {
+        auto db = AgentDB::get();
+
+        // if ap-autoconfiguration is completed and there are slaves to be finalized, finalize them as connected
+        if (db->statuses.ap_autoconfiguration_completed && !m_slaves_sockets_to_finalize.empty()) {
+            for (auto slave : m_slaves_sockets_to_finalize) {
+                finalize_slaves_connect_state(true, slave);
+            }
+            m_slaves_sockets_to_finalize.clear();
+        }
+
+        if (pending_enable &&
+            db->backhaul.connection_type != AgentDB::sBackhaul::eConnectionType::Invalid) {
+            pending_enable = false;
+        }
+
+        if (m_slaves_sockets_to_finalize.empty() && !pending_enable) {
+            FSM_MOVE_STATE(OPERATIONAL);
         }
         break;
     }
@@ -1024,21 +1045,6 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         //         FSM_MOVE_STATE(RESTART);
         //     }
         // } else {
-        auto db = AgentDB::get();
-
-        // if ap-autoconfiguration is completed and there are slaves to be finalized, finalize them as connected
-        if (db->statuses.ap_autoconfiguration_completed && !m_slaves_sockets_to_finalize.empty()) {
-            for (auto slave : m_slaves_sockets_to_finalize) {
-                finalize_slaves_connect_state(true, slave);
-            }
-            m_slaves_sockets_to_finalize.clear();
-        }
-
-        if (pending_enable &&
-            db->backhaul.connection_type != AgentDB::sBackhaul::eConnectionType::Invalid) {
-            pending_enable = false;
-        }
-
         break;
     }
     case EState::RESTART: {
@@ -1643,12 +1649,13 @@ bool BackhaulManager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo> 
         }
 
         // If we're already connected, send a notification to the slave
-        if (FSM_IS_IN_STATE(OPERATIONAL)) {
+        if (FSM_IS_IN_STATE(OPERATIONAL) || FSM_IS_IN_STATE(PRE_OPERATIONAL)) {
             m_task_pool.send_event(eTaskType::AP_AUTOCONFIGURATION,
                                    ApAutoConfigurationTask::eEvent::START_AP_AUTOCONFIGURATION,
                                    &radio->front.iface_name);
             // finalize current slave after ap-autoconfiguration is complete
             m_slaves_sockets_to_finalize.push_back(soc);
+            FSM_MOVE_STATE(PRE_OPERATIONAL);
         } else if (pending_enable) {
             auto notification = message_com::create_vs_message<
                 beerocks_message::cACTION_BACKHAUL_BUSY_NOTIFICATION>(cmdu_tx);
@@ -2162,7 +2169,7 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
             if (db->device_conf.local_controller && !db->device_conf.local_gw) {
                 FSM_MOVE_STATE(CONNECT_TO_MASTER);
             } else {
-                FSM_MOVE_STATE(OPERATIONAL);
+                FSM_MOVE_STATE(PRE_OPERATIONAL);
             }
         }
     } break;
@@ -2173,7 +2180,8 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
         }
         auto db = AgentDB::get();
         if (iface == db->backhaul.selected_iface_name) {
-            if (FSM_IS_IN_STATE(OPERATIONAL) || FSM_IS_IN_STATE(CONNECTED)) {
+            if (FSM_IS_IN_STATE(OPERATIONAL) || FSM_IS_IN_STATE(PRE_OPERATIONAL) ||
+                FSM_IS_IN_STATE(CONNECTED)) {
                 platform_notify_error(bpl::eErrorCode::BH_DISCONNECTED,
                                       "Backhaul disconnected on operational state");
                 stop_on_failure_attempts--;

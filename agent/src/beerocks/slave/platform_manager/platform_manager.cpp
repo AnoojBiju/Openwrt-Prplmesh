@@ -41,7 +41,7 @@ constexpr std::chrono::milliseconds clean_old_arp_entries_timer_interval(ARP_CLE
 /**
  * Time interval to periodically check if WLAN parameters have changed.
  */
-constexpr std::chrono::milliseconds check_wlan_params_changed_timer_interval(500);
+constexpr std::chrono::milliseconds check_wlan_params_changed_timer_interval(5000);
 
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////// Local Module Functions ///////////////////////////

@@ -88,6 +88,7 @@ public:
         STATE_JOIN_MASTER,
         STATE_WAIT_FOR_JOINED_RESPONSE,
         STATE_UPDATE_MONITOR_SON_CONFIG,
+        STATE_PRE_OPERATIONAL,
         STATE_OPERATIONAL,
         STATE_VERSION_MISMATCH,
         STATE_SSID_MISMATCH,
@@ -159,7 +160,7 @@ private:
     beerocks_message::sSonConfig son_config;
     beerocks::logging &logger;
     std::string master_version;
-    int stop_on_failure_attempts;
+    int m_stop_on_failure_attempts;
     bool stopped                   = false;
     bool is_backhaul_disconnected  = false;
     bool is_slave_reset            = false;
