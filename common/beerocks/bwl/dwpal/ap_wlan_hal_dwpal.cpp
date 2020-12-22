@@ -1692,6 +1692,8 @@ bool ap_wlan_hal_dwpal::get_vap_enable(const std::string &iface_name, bool &enab
 
 bool ap_wlan_hal_dwpal::set_mbo_assoc_disallow(const std::string &bssid, bool enable)
 {
+    LOG(DEBUG) << "set_mbo_assoc_disallow " << enable << " for bssid " << bssid;
+
     std::string cmd = "MBO_BSS_ASSOC_DISALLOW " + bssid + " " + std::to_string(enable);
 
     // Send command

@@ -265,7 +265,12 @@ bool agent_ucc_listener::handle_dev_set_rfeature(
         bssid      = tlvf::mac_from_string(bssid_it->second);
         auto db    = AgentDB::get();
         auto radio = db->get_radio_by_mac(bssid, AgentDB::eMacType::BSSID);
-        ruid       = radio->front.iface_mac;
+        if (radio == nullptr) {
+            err_string = "Cannot find radio for the provided bssid " + bssid_it->second;
+            LOG(ERROR) << err_string;
+            return false;
+        }
+        ruid = radio->front.iface_mac;
         if (ruid == bssid) {
             err_string = "The provided BSSID is RUID";
             LOG(ERROR) << err_string;
