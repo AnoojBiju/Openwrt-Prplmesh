@@ -1791,16 +1791,16 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         break;
     }
     case beerocks_message::ACTION_APMANAGER_HOSTAP_AP_DISABLED_NOTIFICATION: {
-        auto response_in =
+        auto notification_in =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_APMANAGER_HOSTAP_AP_DISABLED_NOTIFICATION>();
-        if (response_in == nullptr) {
+        if (notification_in == nullptr) {
             LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_AP_DISABLED_NOTIFICATION failed";
             return false;
         }
         LOG(INFO) << "received ACTION_APMANAGER_HOSTAP_AP_DISABLED_NOTIFICATION on vap_id="
-                  << int(response_in->vap_id());
-        if (response_in->vap_id() == beerocks::IFACE_RADIO_ID) {
+                  << int(notification_in->vap_id());
+        if (notification_in->vap_id() == beerocks::IFACE_RADIO_ID) {
             LOG(WARNING) << __FUNCTION__ << "AP_Disabled on radio, slave reset";
             if (configuration_in_progress) {
                 LOG(INFO) << "configuration in progress, ignoring";
@@ -1809,14 +1809,14 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             }
             slave_reset();
         } else {
-            auto response_out = message_com::create_vs_message<
+            auto notification_out = message_com::create_vs_message<
                 beerocks_message::cACTION_CONTROL_HOSTAP_AP_DISABLED_NOTIFICATION>(cmdu_tx);
-            if (response_out == nullptr) {
+            if (notification_out == nullptr) {
                 LOG(ERROR) << "Failed building message!";
                 return false;
             }
 
-            response_out->vap_id() = response_in->vap_id();
+            notification_out->vap_id() = notification_in->vap_id();
             send_cmdu_to_controller(cmdu_tx);
         }
         break;
@@ -2907,22 +2907,22 @@ bool slave_thread::handle_cmdu_monitor_message(Socket *sd,
         break;
     }
     case beerocks_message::ACTION_MONITOR_CLIENT_NO_ACTIVITY_NOTIFICATION: {
-        auto response_in =
+        auto notification_in =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_MONITOR_CLIENT_NO_ACTIVITY_NOTIFICATION>();
-        if (response_in == nullptr) {
+        if (notification_in == nullptr) {
             LOG(ERROR) << "addClass ACTION_MONITOR_CLIENT_NO_ACTIVITY_NOTIFICATION failed";
             break;
         }
-        auto response_out = message_com::create_vs_message<
+        auto notification_out = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_CLIENT_NO_ACTIVITY_NOTIFICATION>(
             cmdu_tx, beerocks_header->id());
-        if (response_out == nullptr) {
+        if (notification_out == nullptr) {
             LOG(ERROR) << "Failed building ACTION_CONTROL_CLIENT_NO_ACTIVITY_NOTIFICATION message!";
             break;
         }
         // Only mac id is the part of notification now, if this changes in future this message will break
-        response_out->mac() = response_in->mac();
+        notification_out->mac() = notification_in->mac();
         send_cmdu_to_controller(cmdu_tx);
         break;
     }
@@ -2977,9 +2977,9 @@ bool slave_thread::handle_cmdu_monitor_message(Socket *sd,
             platform_notify_error(bpl::eErrorCode::MONITOR_REPORT_PROCESS_FAIL, "");
         }
 
-        auto response_out = message_com::create_vs_message<
+        auto notification_out = message_com::create_vs_message<
             beerocks_message::cACTION_MONITOR_ERROR_NOTIFICATION_ACK>(cmdu_tx);
-        if (response_out == nullptr) {
+        if (notification_out == nullptr) {
             LOG(ERROR) << "Failed building message!";
             break;
         }
