@@ -358,12 +358,14 @@ void ChannelSelectionTask::handle_vs_zwdfs_ant_channel_switch_response(
                << sender_iface_name;
 
     if (m_zwdfs_state == eZwdfsState::WAIT_FOR_ZWDFS_SWITCH_ANT_OFF_RESPONSE) {
+        m_zwdfs_ant_in_use = false;
         ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
     }
 
     // Get here after switching on the ZWDFS antenna.
     if (!notification->success()) {
         LOG(ERROR) << "Failed to switch ZWDFS antenna and channel";
+        m_zwdfs_ant_in_use = true;
         ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
     }
 }
@@ -574,6 +576,7 @@ void ChannelSelectionTask::zwdfs_fsm()
                    << m_selected_channel.channel
                    << ", bw=" << utils::convert_bandwidth_to_int(m_selected_channel.bw);
 
+        m_zwdfs_ant_in_use = true;
         m_btl_ctx.send_cmdu(fronthaul_sd, m_cmdu_tx);
 
         constexpr uint8_t CAC_STARTED_TIMEOUT_SEC = 10;

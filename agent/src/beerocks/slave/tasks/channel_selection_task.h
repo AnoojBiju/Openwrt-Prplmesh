@@ -147,6 +147,14 @@ private:
     std::string m_zwdfs_primary_radio_iface;
     std::chrono::steady_clock::time_point m_zwdfs_fsm_timeout;
 
+    /** @brief Indicator if the ZW-DFS antenna is in use.
+    *
+    * The ZW-DFS antenna is assumed to be in use at task start to enable ZW-DFS antenna release
+    * in case the agent got restarted while the antenna is still owned by the ZW-DFS antenna hostapd
+    * (due to hostapd crash or agent process crash).
+    */
+    bool m_zwdfs_ant_in_use = true;
+
     /* Helper functions */
     const std::string socket_to_front_iface_name(int fd);
     int front_iface_name_to_socket(const std::string &iface_name);
