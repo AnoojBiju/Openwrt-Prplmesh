@@ -310,6 +310,14 @@ void ChannelSelectionTask::handle_vs_cac_started_notification(
     LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION from "
                << sender_iface_name;
 
+    // CAC_STARTED event is received when moving to DFS usable channel.
+    // If this event is received unexpectedly (because of external channel switch),
+    // we should abort the current ZW-DFS flow.
+    if (sender_iface_name == m_zwdfs_primary_radio_iface) {
+        abort_zwdfs_flow();
+        return;
+    }
+
     if (m_zwdfs_state == eZwdfsState::WAIT_FOR_ZWDFS_CAC_STARTED) {
         auto db = AgentDB::get();
         // Set timeout for CAC-COMPLETED notification with the CAC duration received on this
