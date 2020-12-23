@@ -276,6 +276,25 @@ void ChannelSelectionTask::handle_vs_csa_error_notification(
     }
 }
 
+void ChannelSelectionTask::abort_zwdfs_flow(bool external_channel_switch)
+{
+    if (!zwdfs_in_process()) {
+        return;
+    }
+
+    if (external_channel_switch) {
+        LOG(DEBUG) << "External channel switch detected - Abort ZWDFS in progress:"
+                   << " state=" << m_zwdfs_states_string.at(m_zwdfs_state);
+    }
+
+    if (m_zwdfs_ant_in_use) {
+        LOG(DEBUG) << "Release ZWDFS antenna in use";
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+    } else {
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+    }
+}
+
 void ChannelSelectionTask::handle_vs_cac_started_notification(
     ieee1905_1::CmduMessageRx &cmdu_rx, int fd, std::shared_ptr<beerocks_header> beerocks_header)
 {

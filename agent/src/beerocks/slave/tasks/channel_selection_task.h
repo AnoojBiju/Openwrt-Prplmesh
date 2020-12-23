@@ -143,6 +143,13 @@ private:
 
     sSelectedChannel select_best_usable_channel(const std::string &front_radio_iface);
 
+    /**
+     * @brief Abort ZWDFS flow in progress
+     *
+     * @param [in] external_channel_switch true if external channel switch detected, false if end of zwdfs flow
+     */
+    void abort_zwdfs_flow(bool external_channel_switch = true);
+
     std::string m_zwdfs_iface;
     std::string m_zwdfs_primary_radio_iface;
     std::chrono::steady_clock::time_point m_zwdfs_fsm_timeout;
