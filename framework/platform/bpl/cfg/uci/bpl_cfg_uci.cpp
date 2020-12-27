@@ -199,5 +199,43 @@ int cfg_uci_get_wireless_bool(enum paramType type, const char *interface_name, c
     return RETURN_OK;
 }
 
+int cfg_uci_get_all_options_by_section_type(char *pkg_name, char *sct_type, char *opt_name,
+                                            std::unordered_map<std::string, std::string> &options)
+{
+    DEBUG("%s, pkg: %s, sct type: %s, opt name: %s\n", __FUNCTION__, pkg_name, sct_type, opt_name);
+    struct uci_context *ctx = uci_alloc_context();
+    if (!ctx) {
+        ERROR("%s, uci alloc context failed!\n", __FUNCTION__);
+        return RETURN_ERR;
+    }
+
+    struct uci_ptr ptr;
+    if ((uci_lookup_ptr(ctx, &ptr, pkg_name, true) != UCI_OK) || !ptr.p) {
+        ERROR("%s, uci lookup package failed!\n", __FUNCTION__);
+        return RETURN_ERR;
+    }
+
+    struct uci_package *pkg = ptr.p;
+
+    struct uci_element *e; // iterator element
+    uci_foreach_element(&pkg->sections, e)
+    {
+        // Iterate over the sections present in the package
+        struct uci_section *s = uci_to_section(e);
+        if (strncmp(s->type, sct_type, MAX_UCI_BUF_LEN) == 0) {
+
+            struct uci_option *opt = uci_lookup_option(ctx, s, opt_name);
+            if (!opt) {
+                continue;
+            } else {
+                DEBUG("%s, name: %s, value: %s\n", __FUNCTION__, e->name, opt->v.string);
+                options.emplace(e->name, opt->v.string);
+            }
+        }
+    }
+
+    return RETURN_OK;
+}
+
 } // namespace bpl
 } // namespace beerocks
