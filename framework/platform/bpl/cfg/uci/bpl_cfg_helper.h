@@ -17,6 +17,15 @@ namespace beerocks {
 namespace bpl {
 
 /**
+ * Returns the hostap interfaces from the DB
+ *
+ * @param [out] hostapd_ifaces map to contain the hostap interfaces
+ *
+ * @return 0 on success or -1 on error.
+ **/
+int cfg_get_prplmesh_hostapd_ifaces(std::unordered_map<std::string, std::string> &hostapd_ifaces);
+
+/**
  * Returns the value of requested param from DB
  *
  * @param [in] param prplmesh param key string
