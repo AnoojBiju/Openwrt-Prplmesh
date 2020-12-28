@@ -2187,11 +2187,18 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
         Prepare path to the BSS instance.
         Example: Controller.Network.Device.1.Radio.1.BSS.
     */
-    auto bss_path  = radio_path + "BSS";
-    auto bss_index = m_ambiorix_datamodel->add_instance(bss_path);
-    if (!bss_index) {
-        LOG(ERROR) << "Failed to add " << bss_path << " instance.";
-        return false;
+    auto bss_path = radio_path + "BSS";
+    auto bss_index =
+        m_ambiorix_datamodel->get_instance_index(bss_path + ".[BSSID == '%s'].", bssid);
+
+    if (bss_index == 0) {
+        bss_index = m_ambiorix_datamodel->add_instance(bss_path);
+        if (!bss_index) {
+            LOG(ERROR) << "Failed to add " << bss_path << " instance.";
+            return false;
+        }
+    } else {
+        LOG(DEBUG) << "BSS instance exists for BSSID: " << bssid << "Updating Data Model.";
     }
 
     /*
