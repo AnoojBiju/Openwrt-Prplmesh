@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-2-Clause-Patent
  *
- * SPDX-FileCopyrightText: 2016-2020 the prplMesh contributors (see AUTHORS.md)
+ * SPDX-FileCopyrightText: 2016-2021 the prplMesh contributors (see AUTHORS.md)
  *
  * This code is subject to the terms of the BSD+Patent license.
  * See LICENSE file for more details.
@@ -23,10 +23,13 @@ bool TaskPool::add_task_no_events(const std::shared_ptr<Task> &new_task)
     return true;
 }
 
-void TaskPool::add_task(const std::shared_ptr<Task> new_task, std::vector<eTaskEvent> events)
+void TaskPool::add_task(const std::shared_ptr<Task> new_task)
 {
     // escape
     LOG_IF(!new_task, FATAL);
+
+    // get the events the new task wants to handle
+    const auto &events = new_task->get_task_event_list();
 
     // insert into event-to-task map
     std::transform(events.begin(), events.end(),
@@ -60,6 +63,8 @@ void TaskPool::run_tasks(int max_exec_duration_ms)
     // Possible solution if we encounter this:
     // * work with two queues: one to push to and the
     // second to pop from. Each cycle switch between them.
+
+    // first, empty the queue
     while (!m_event_queue.empty()) {
         auto &event = m_event_queue.front();
         auto tasks  = m_event_to_tasks_map.equal_range(event.first);
@@ -67,8 +72,7 @@ void TaskPool::run_tasks(int max_exec_duration_ms)
         std::for_each(tasks.first, tasks.second,
                       [&](std::pair<const eTaskEvent, std::shared_ptr<Task>> event_task) {
                           if (event_task.second) {
-                              event_task.second->handle_event(static_cast<uint8_t>(event.first),
-                                                              event.second.get());
+                              event_task.second->handle_event(event.first, event.second);
 
                               // Increment the number of processed events and check if any limit has been reached
                               if (std::chrono::steady_clock::now() >= exec_deadline_time) {
