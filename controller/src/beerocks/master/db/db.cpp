@@ -2229,7 +2229,7 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
         Set value for Enabled variable
         Example: Controller.Network.Device.1.Radio.1.BSS.1.Enabled
     */
-    if (!m_ambiorix_datamodel->set(bss_path, "Enabled", true)) {
+    if (!m_ambiorix_datamodel->set(bss_path, "Enabled", !ssid.empty())) {
         LOG(ERROR) << "Failed to set " << bss_path << "Enabled";
         return false;
     }
