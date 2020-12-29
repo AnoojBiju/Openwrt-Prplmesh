@@ -103,6 +103,9 @@ TEST_F(DbTest, test_add_vap)
     //BSS node and path may not exist
     EXPECT_FALSE(m_db->has_node(tlvf::mac_from_string(g_radio_mac_1)));
 
+    //BSS does not exist in database
+    EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_bssid_1)).WillOnce(Return(0));
+
     //must fail because radio does not exist
     EXPECT_FALSE(m_db->add_vap(g_radio_mac_1, g_vap_id_1, g_bssid_1, g_ssid_1, false));
 
