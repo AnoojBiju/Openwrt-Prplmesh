@@ -660,16 +660,14 @@ bool Controller::autoconfig_wsc_add_m2_encrypted_settings(WSC::m2::config &m2_cf
     // attribute type, 2 bytes attribute length, 8 bytes data), but check it anyway
     // to be on the safe side. Then, we add keywrapauth at its end.
     uint8_t *plaintext = config_data.getMessageBuff();
-    int plaintextlen   = config_data.getMessageLength() + sizeof(WSC::sWscAttrKeyWrapAuthenticator);
-    WSC::sWscAttrKeyWrapAuthenticator *keywrapauth =
-        reinterpret_cast<WSC::sWscAttrKeyWrapAuthenticator *>(
-            &plaintext[config_data.getMessageLength()]);
-    keywrapauth->struct_init();
-    uint8_t *kwa = reinterpret_cast<uint8_t *>(keywrapauth->data);
+    int plaintextlen   = config_data.getMessageLength();
+
+    auto wka_attr  = config_data.getAttr<WSC::cWscAttrKeyWrapAuthenticator>();
+    uint8_t *kwa   = wka_attr->data();
+    size_t kwa_len = plaintextlen - wka_attr->get_initial_size();
     // Add KWA which is the 1st 64 bits of HMAC of config_data using AuthKey
-    if (!mapf::encryption::kwa_compute(authkey, plaintext, config_data.getMessageLength(), kwa))
+    if (!mapf::encryption::kwa_compute(authkey, plaintext, kwa_len, kwa))
         return false;
-    keywrapauth->struct_swap();
 
     // Step 2 - AES encryption using temporary buffer. This is needed since we only
     // know the encrypted length after encryption.

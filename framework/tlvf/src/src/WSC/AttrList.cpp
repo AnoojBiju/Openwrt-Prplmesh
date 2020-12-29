@@ -184,6 +184,12 @@ bool AttrList::init()
                 return false;
             }
             break;
+        case ATTR_KEY_WRAP_AUTH:
+            if (!addAttr<cWscAttrKeyWrapAuthenticator>()) {
+                TLVF_LOG(ERROR) << "Failed to add cWscAttrKeyWrapAuthenticator";
+                return false;
+            }
+            break;
         case ATTR_SSID:
             if (!addAttr<cWscAttrSsid>()) {
                 TLVF_LOG(ERROR) << "Failed to add cWscAttrSsid";
