@@ -403,17 +403,29 @@ int cfg_get_all_prplmesh_wifi_interfaces(BPL_WLAN_IFACE *interfaces, int *num_of
         return RETURN_ERR;
     }
 
-    int interfaces_count = 0;
-    for (int index = 0; index < *num_of_interfaces; index++) {
-        if (cfg_get_hostap_iface(index, interfaces[interfaces_count].ifname) == RETURN_ERR) {
-            MAPF_DBG("cfg_get_all_prplmesh_wifi_interfaces: failed to get wifi interface for radio"
-                     << index << " or radio" << interfaces_count << ".hostap_iface doesn't exist");
-        } else {
-            interfaces[interfaces_count++].radio_num = index;
-        }
+    std::unordered_map<std::string, std::string> hostapd_ifaces;
+    if (cfg_get_prplmesh_hostapd_ifaces(hostapd_ifaces) == RETURN_ERR) {
+        MAPF_DBG("cfg_get_all_prplmesh_wifi_interfaces: failed to get avaliable interfaces");
+        return RETURN_ERR;
     }
 
-    *num_of_interfaces = interfaces_count;
+    if (*num_of_interfaces < (int)hostapd_ifaces.size()) {
+        MAPF_ERR("cfg_get_all_prplmesh_wifi_interfaces: invalid input: max num_of_interfaces < "
+                 "number of avaliable interfaces");
+        return RETURN_ERR;
+    }
+
+    int iface_idx = 0;
+    for (const auto &iface_iter : hostapd_ifaces) {
+        // the `first` element of iface_iter is a string structured "radioN" where N represents the
+        // given interface's index
+        interfaces[iface_idx].radio_num = atoi(iface_iter.first.substr(5).c_str());
+        strncpy_s(interfaces[iface_idx].ifname, BPL_IFNAME_LEN, iface_iter.second.c_str(),
+                  BPL_IFNAME_LEN - 1);
+        iface_idx++;
+    }
+
+    *num_of_interfaces = iface_idx;
 
     return RETURN_OK;
 }

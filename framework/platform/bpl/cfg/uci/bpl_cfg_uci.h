@@ -56,6 +56,8 @@ extern "C" {
 
 #endif
 
+#include <unordered_map>
+
 #define RETURN_ERR_PARSE -3
 #define RETURN_ERR_NOT_FOUND -2
 #define RETURN_ERR -1
@@ -70,6 +72,22 @@ int cfg_uci_get_wireless_bool(enum paramType type, const char *interface_name, c
 
 int cfg_uci_get_wireless_from_ifname(enum paramType type, const char *interface_name,
                                      const char param[], char *value);
+
+/**
+ * Iterate over the given package and will return the given option for sections that match the
+ * section type
+ *
+ * Results stored in `option` map as [Key: Section name, Value: Option value]
+ * 
+ * @param [in] pkg_name package name to lookup
+ * @param [in] sct_type section type to filter within the package
+ * @param [in] opt_name option to take the value of
+ * @param [out] options map to contain the found results
+ *
+ * @return 0 on success or -1 on error.
+ **/
+int cfg_uci_get_all_options_by_section_type(char *pkg_name, char *sct_type, char *opt_name,
+                                            std::unordered_map<std::string, std::string> &options);
 
 } // namespace bpl
 } // namespace beerocks
