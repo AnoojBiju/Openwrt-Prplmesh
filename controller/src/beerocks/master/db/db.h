@@ -142,6 +142,7 @@ public:
         int max_timelife_delay_minutes;
         int unfriendly_device_max_timelife_delay_minutes;
         unsigned int persistent_db_commit_changes_interval_seconds;
+        unsigned int shared_memory_get_latest_mid_interval_miliseconds;
     } sDbMasterConfig;
 
     typedef struct {
@@ -1035,6 +1036,12 @@ public:
 
     bool set_hostap_stats_info(const std::string &mac, beerocks_message::sApStatsParams *params);
     void clear_hostap_stats_info(const std::string &mac);
+
+    /**
+     * @brief Notificatify about client disconnection
+     * @param mac string with STA mac address
+     */
+    bool notify_disconnection(const std::string &mac);
     bool set_node_stats_info(const std::string &mac, beerocks_message::sStaStatsParams *params);
     void clear_node_stats_info(const std::string &mac);
 
@@ -1116,7 +1123,7 @@ public:
                                     const wireless_utils::sBssInfoConf &bss_info);
     /**
      * @brief Store BSS information in the bss_infos_global list.
-     * 
+     *
      * @param bss_info Structure with BSS information.
      */
     void add_bss_info_configuration(const wireless_utils::sBssInfoConf &bss_info);
@@ -1149,6 +1156,41 @@ public:
      */
     bool set_estimated_service_parameters_be(const sMacAddr &bssid,
                                              uint32_t estimated_service_parameters_be);
+                                             
+    /**
+     * @brief Get the RID received from the transport
+     * @param[in] uint16_t rid the value we've obtained via shared memory when we cmdu_tx.create()
+     * @return the rid value of the 
+     */
+    uint16_t get_shared_memory_latest_mid(const uint16_t &rid);
+
+    /**
+     * @brief Set the RID passed from the transport
+     * @param[in] uint16_t RID the communal signal to be used while handle message_ack cmdus
+     * @return true on success, otherwise false.
+     */
+    bool set_shared_memory_latest_mid(const uint16_t &rid);
+
+    /**
+     * @brief Get (ACK) the type that was just sent from send_cmdu_to_agent
+     * @param[in] rid the rid that was received to confirm the type of the message 
+     * that was previously sent.
+     * @return the type that was found in the container associated with the rid  
+     */
+    ieee1905_1::eMessageType get_latest_message_type_sent(const uint16_t &rid);
+
+    /**
+     * @brief Set the MessageType passed from the transport
+     * @param[in] uint16_t RID the communal signal to be used while handle message_ack cmdus
+     * @return true on success, otherwise false.
+     */
+    bool set_latest_message_type_sent(const ieee1905_1::eMessageType &type);
+
+    /**
+     * @brief Get the type that was just sent from send_cmdu_to_agent
+     * @return the 1st type that was sent and not ack yet  
+     */
+    ieee1905_1::eMessageType get_latest_message_type();
 
     //
     // tasks
@@ -1195,6 +1237,9 @@ public:
 
     bool assign_persistent_db_data_commit_operation_id(int new_operation_id);
     int get_persistent_db_data_commit_operation_id();
+
+    bool assign_shared_memory_get_latest_mid_operation_id(int new_operation_id);
+    int get_shared_memory_get_latest_mid_operation_id();
 
     void lock();
     void unlock();
@@ -1541,6 +1586,7 @@ private:
     int config_update_task_id                  = -1;
     int persistent_db_aging_operation_id       = -1;
     int persistent_db_data_commit_operation_id = -1;
+    int shared_memory_latest_mid_operation_id  = -1;
 
     std::shared_ptr<node> last_accessed_node;
     std::string last_accessed_node_mac;
@@ -1586,6 +1632,15 @@ private:
     std::unordered_map<sMacAddr, std::unordered_map<sMacAddr, son::node::link_metrics_data>>
         m_link_metric_data;
 
+    /*
+    *  The vector holds types, those are captured inside cmdu_send_to_agent
+    *  and stored, later when the shared_memory_get_latest_mid_operation is 
+    *  able to receive a RID from the shared memory, the vector of types will pop
+    *  the pop the back of te vector and associated it with the type. 
+    */
+    std::set<ieee1905_1::eMessageType> m_awaiting_types;
+    std::set<uint16_t> m_awaiting_rids;
+    std::unordered_map<uint16_t, ieee1905_1::eMessageType> m_awaiting_acks;
     /*
     * This map holds ap metric data per reporting Agent sMacAddr .
     * Map is Used in TYPE_GW/TYPE_IRE nodes.

@@ -4999,6 +4999,17 @@ int db::get_persistent_db_data_commit_operation_id()
     return persistent_db_data_commit_operation_id;
 }
 
+bool db::assign_shared_memory_get_latest_mid_operation_id(int new_operation_id)
+{
+    shared_memory_latest_mid_operation_id = new_operation_id;
+    return true;
+}
+
+int db::get_shared_memory_get_latest_mid_operation_id()
+{
+    return shared_memory_latest_mid_operation_id;
+}
+
 void db::lock() { db_mutex.lock(); }
 
 void db::unlock() { db_mutex.unlock(); }
@@ -6127,6 +6138,44 @@ std::string db::dm_get_path_to_sta(const std::string &sta_mac)
 std::string db::dm_get_path_to_bss(const sMacAddr &bssid) { return "dummy!"; }
 std::string db::dm_get_path_to_sta(const std::string &sta_mac) { return "dummy!"; }
 #endif
+
+int16_t db::get_shared_memory_latest_mid(const uint16_t& rid) { 
+    if (!m_awaiting_rids.empty()) {
+        auto iter = m_awaiting_rids.find(rid);
+        if (iter != m_awaiting_rids.end()) {
+            return (*iter);
+        }
+    }    
+}
+
+void db::set_shared_memory_latest_mid(const uint16_t& rid) {
+    m_awaiting_rids.insert(rid);
+}
+
+ieee1905_1::eMessageType db::get_latest_message_type_sent(const uint16_t& rid) {
+    if (!m_awaiting_acks.empty()) {
+        auto iter = m_awaiting_acks.find(rid);
+        if (iter != m_awaiting_acks.end()) {
+            return iter->second;
+        }
+    }    
+
+    return ieee1905_1::eMessageType(0);
+}
+
+void db::set_latest_message_type_sent(const ieee1905_1::eMessageType& type) {
+     m_awaiting_types.insert(type); 
+}
+
+ieee1905_1::eMessageType db::get_latest_message_type() { 
+   ieee1905_1::eMessageType type = m_awaiting_types.begin();
+   return type;
+}
+
+ieee1905_1::eMessageType db::get_latest_message_type() { 
+   ieee1905_1::eMessageType type = m_awaiting_types.begin();
+   return type;
+}
 
 bool db::set_estimated_service_parameters_be(const sMacAddr &bssid,
                                              uint32_t estimated_service_parameters_be)
