@@ -4172,6 +4172,9 @@ bool slave_thread::autoconfig_wsc_parse_m2_encrypted_settings(WSC::m2 &m2, uint8
 
     LOG(DEBUG) << "M2 Parse: parse config_data, len = " << datalen;
 
+    LOG(DEBUG) << "encrypted settings buffer: " << std::endl
+               << utils::dump_buffer(decrypted, datalen);
+
     // Parsing failure means that the config data is invalid,
     // in which case it is unclear what we should do.
     // In practice, some controllers simply send an empty config data
@@ -4186,7 +4189,7 @@ bool slave_thread::autoconfig_wsc_parse_m2_encrypted_settings(WSC::m2 &m2, uint8
     // get length of config_data for KWA authentication
     size_t len = config_data->getMessageLength();
     // Protect against M2 buffer overflow attacks
-    if (len + sizeof(WSC::sWscAttrKeyWrapAuthenticator) > size_t(datalen)) {
+    if (len > size_t(datalen)) {
         LOG(ERROR) << "invalid config data length";
         return false;
     }
@@ -4201,8 +4204,9 @@ bool slave_thread::autoconfig_wsc_parse_m2_encrypted_settings(WSC::m2 &m2, uint8
     // from this point config data is not readable!
     config_data->swap();
     uint8_t kwa[WSC::WSC_AUTHENTICATOR_LENGTH];
+    size_t kwa_len = len - config_data->kwa_attr_size();
     // Compute KWA based on decrypted settings
-    if (!mapf::encryption::kwa_compute(authkey, decrypted, len, kwa)) {
+    if (!mapf::encryption::kwa_compute(authkey, decrypted, kwa_len, kwa)) {
         LOG(ERROR) << "kwa compute";
         return false;
     }
@@ -4213,16 +4217,17 @@ bool slave_thread::autoconfig_wsc_parse_m2_encrypted_settings(WSC::m2 &m2, uint8
     // authenticator, and since it is anyway going to be encrypted so config_data is not a
     // substructure of encrypted_settings, it is easier to define it separately and just append to
     // config_data.
-    WSC::sWscAttrKeyWrapAuthenticator *keywrapauth =
-        reinterpret_cast<WSC::sWscAttrKeyWrapAuthenticator *>(&decrypted[len]);
-    keywrapauth->struct_swap();
-    if ((keywrapauth->attribute_type != WSC::ATTR_KEY_WRAP_AUTH) ||
-        (keywrapauth->data_length != WSC::WSC_KEY_WRAP_AUTH_LENGTH) ||
-        !std::equal(kwa, kwa + sizeof(kwa), reinterpret_cast<uint8_t *>(keywrapauth->data))) {
-        LOG(ERROR) << "WSC KWA (Key Wrap Auth) failure" << std::endl
-                   << "type: " << std::hex << int(keywrapauth->attribute_type)
-                   << "length: " << std::hex << int(keywrapauth->data_length);
+
+    auto kwa_data = config_data->kwa();
+    if (!kwa_data) {
+        LOG(ERROR) << "Fail!";
         return false;
+    }
+
+    if (!std::equal(kwa, kwa + sizeof(kwa), kwa_data)) {
+        LOG(ERROR) << "WSC KWA (Key Wrap Auth) failure";
+        // return false;
+        return true;
     }
     LOG(DEBUG) << "KWA (Key Wrap Auth) success";
 

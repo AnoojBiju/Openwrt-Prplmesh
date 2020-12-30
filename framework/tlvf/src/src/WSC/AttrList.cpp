@@ -21,7 +21,9 @@ bool AttrList::init()
         return false; // Used for parse only
     }
     while (getRemainingBytes() > 0) {
-        switch (getNextAttrType()) {
+        auto attr_type = getNextAttrType();
+        LOG(DEBUG) << "Adding attribute type " << std::hex << attr_type << std::dec;
+        switch (attr_type) {
         case ATTR_ASSOC_STATE:
             if (!addAttr<cWscAttrAssociationState>()) {
                 TLVF_LOG(ERROR) << "Failed to add cWscAttrAssociationState";
@@ -181,6 +183,12 @@ bool AttrList::init()
         case ATTR_AUTHENTICATOR:
             if (!addAttr<cWscAttrAuthenticator>()) {
                 TLVF_LOG(ERROR) << "Failed to add cWscAttrAuthenticator";
+                return false;
+            }
+            break;
+        case ATTR_KEY_WRAP_AUTH:
+            if (!addAttr<cWscAttrKeyWrapAuthenticator>()) {
+                TLVF_LOG(ERROR) << "Failed to add cWscAttrKeyWrapAuthenticator";
                 return false;
             }
             break;

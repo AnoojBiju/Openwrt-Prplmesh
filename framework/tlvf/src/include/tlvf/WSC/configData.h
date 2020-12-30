@@ -26,6 +26,7 @@ public:
         std::string network_key = "";
         sMacAddr bssid          = {};
         uint8_t bss_type;
+        uint8_t kwa[WSC_KEY_WRAP_AUTH_LENGTH] = {};
     };
 
     configData(uint8_t *buff, size_t buff_len, bool parse) : AttrList(buff, buff_len, parse) {}
@@ -95,6 +96,16 @@ public:
         }
 
         return default_value;
+    };
+    uint8_t *kwa() const
+    {
+        auto attr = getAttr<cWscAttrKeyWrapAuthenticator>();
+        return attr ? attr->data() : nullptr;
+    };
+    size_t kwa_attr_size() const
+    {
+        auto attr = getAttr<cWscAttrKeyWrapAuthenticator>();
+        return attr ? attr->get_initial_size() : 0;
     };
 };
 
