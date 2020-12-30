@@ -6015,6 +6015,8 @@ bool db::add_current_op_class(const sMacAddr &radio_mac, uint8_t op_class, uint8
         return false;
     }
 
+    op_class_path += "." + std::to_string(op_class_index);
+
     auto time_stamp = m_ambiorix_datamodel->get_datamodel_time_format();
     if (time_stamp.empty()) {
         LOG(ERROR) << "Failed to get Date and Time in RFC 3339 format.";
@@ -6024,28 +6026,28 @@ bool db::add_current_op_class(const sMacAddr &radio_mac, uint8_t op_class, uint8
     //Set TimeStamp
     //Data model path example: Controller.Network.Device.1.Radio.1.CurrentOperatingClasses.TimeStamp
     if (!m_ambiorix_datamodel->set(op_class_path, "TimeStamp", time_stamp)) {
-        LOG(ERROR) << "Failed to set " << radio_path << "TimeStamp";
+        LOG(ERROR) << "Failed to set " << op_class_path << ".TimeStamp";
         return false;
     }
 
     //Set Operating class
     //Data model path: Controller.Network.Device.1.Radio.1.CurrentOperatingClasses.Class
     if (!m_ambiorix_datamodel->set(op_class_path, "Class", op_class)) {
-        LOG(ERROR) << "Failed to set " << op_class_path << "Class";
+        LOG(ERROR) << "Failed to set " << op_class_path << ".Class";
         return false;
     }
 
     //Set Operating channel
     //Data model path example: Controller.Network.Device.1.Radio.1.CurrentOperatingClasses.Channel
     if (!m_ambiorix_datamodel->set(op_class_path, "Channel", op_channel)) {
-        LOG(ERROR) << "Failed to set " << op_class_path << "Channel";
+        LOG(ERROR) << "Failed to set " << op_class_path << ".Channel";
         return false;
     }
 
     //Set TX power
     //Data model path example: Controller.Network.Device.1.Radio.1.CurrentOperatingClasses.TxPower
     if (!m_ambiorix_datamodel->set(op_class_path, "TxPower", tx_power)) {
-        LOG(ERROR) << "Failed to set " << op_class_path << "TxPower";
+        LOG(ERROR) << "Failed to set " << op_class_path << ".TxPower";
         return false;
     }
 
