@@ -295,6 +295,15 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
         master_conf.persistent_db_commit_changes_interval_seconds =
             beerocks::bpl::DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE_SEC;
     }
+    if (!beerocks::bpl::cfg_get_shared_memory_get_latest_mid_interval(
+            master_conf.shared_memory_get_latest_mid_interval_miliseconds)) {
+        LOG(DEBUG)
+            << "failed to read shared memory get latest mid interval, setting to default value: "
+            << beerocks::bpl::DEFAULT_SHARED_MEMORY_GET_LATEST_MID_VALUE_MILISEC;
+
+        master_conf.shared_memory_get_latest_mid_interval_miliseconds =
+            beerocks::bpl::DEFAULT_SHARED_MEMORY_GET_LATEST_MID_VALUE_MILISEC;
+    }
 }
 
 int main(int argc, char *argv[])

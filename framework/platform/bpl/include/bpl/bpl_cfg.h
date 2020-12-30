@@ -98,6 +98,8 @@ constexpr int DEFAULT_CLIENT_ROAMING           = 1;
 constexpr int DEFAULT_PERSISTENT_DB = 0;
 // The default value in seconds for the interval between periodic commits of persistent DB data.
 constexpr unsigned int DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE_SEC = 10;
+// The default value in millisecond for the interval between periodic commits of persistent DB data.
+constexpr unsigned int DEFAULT_SHARED_MEMORY_GET_LATEST_MID_VALUE_MILISEC = 250;
 // the DB of clients is limited in size to prevent high memory consumption
 // this is configurable to enable flexibility and support for low-memory platforms
 // by default, the number of clients's configuration to be cached is limited to 256
@@ -504,6 +506,14 @@ bool cfg_get_persistent_db_enable(bool &enable);
  * @return true on success, otherwise false.
  */
 bool cfg_get_persistent_db_commit_changes_interval(unsigned int &interval_sec);
+
+/**
+ * @brief Returns shared_memory_get_latest_mid_interval (miliseconds) value.
+ * 
+ * @param[out] interval_milisec The interval in miliseconds between every attempt to catch if a new mid has been generated on the transport. 
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_shared_memory_get_latest_mid_interval(unsigned int &interval_milisec);
 
 /**
  * @brief Returns the max number of clients in the persistent DB.

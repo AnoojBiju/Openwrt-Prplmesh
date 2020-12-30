@@ -397,6 +397,24 @@ bool cfg_get_persistent_db_commit_changes_interval(unsigned int &interval_sec)
     return true;
 }
 
+bool cfg_get_shared_memory_get_latest_mid_operation_interval(unsigned int &interval_sec)
+{
+    int get_latest_mid_interval = beerocks::bpl::DEFAULT_SHARED_MEMORY_GET_LATEST_MID_VALUE_MILISEC;
+
+    // shared memory get latest mid interval milisecds interval value is optional
+    if (cfg_get_param_int("shared_memory_get_latest_mid_interval_miliseconds=",
+                          commit_changes_interval_value) < 0) {
+        MAPF_DBG("Failed to read shared_memory_get_latest_mid interval parameter - setting default "
+                 "value");
+        commit_changes_interval_value =
+            beerocks::bpl::DEFAULT_SHARED_MEMORY_GET_LATEST_MID_VALUE_MILISEC;
+    }
+
+    interval_sec = get_latest_mid_interval;
+
+    return true;
+}
+
 bool cfg_get_clients_persistent_db_max_size(int &max_size)
 {
     int max_size_val = -1;
