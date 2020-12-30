@@ -12,6 +12,10 @@
 
 #include <arpa/inet.h>
 #include <net/if.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <sys/types.h>
+#include <semaphore.h>
 
 namespace beerocks {
 namespace transport {
@@ -65,8 +69,15 @@ void Ieee1905Transport::handle_broker_cmdu_tx_message(CmduTxMessage &msg)
 
         // update messageId field (a.k.a "MID") unless is was pre-set by the originator
         if (!msg.metadata()->preset_message_id) {
+
             uint16_t messageId = get_next_message_id();
-            ch->messageId      = htons(messageId);
+
+            if (messageId <= sizeof(uint16_t)) {
+                ch->messageId = htons(messageId);
+            } else {
+                int rid       = get_rid(std::make_pair(msg.metadata()->dst, ch->messageId));
+                ch->messageId = rid;
+            }
         }
 
         // send confirmation (with messageId value)
@@ -190,16 +201,68 @@ void Ieee1905Transport::publish_interface_configuration_indication()
     }
 }
 
-uint16_t Ieee1905Transport::get_next_message_id()
+uint16_t Ieee1905Transport::get_next_message_id(uint8_t *src, const int &mid)
 {
-    message_id_++;
+    message++;
+    return SHMEM_get_next_message_id(src, mid.);
+}
 
-    if (message_id_ == 0) {
+uint16_t Ieee1905Transport::SHMEM_set_next_message_id(uint8_t *dst, const int &mid)
+{
+    int shm;
+    sem_t *mutex;
+
+    const int rid = getRidCounter(false);
+
+    key_t key = rid;
+
+    if (rid == 0) {
         MAPF_DBG("messageId wrap-around occurred.");
         counters_[CounterId::MESSAGE_ID_WRAPAROUND]++;
     }
 
-    return message_id_;
+    if (rid > sizeof(uint16_t)) {
+        auto id = std::make_pair(std::to_string(mid)), tlvf::mac_to_string(dst));
+        ack_table.insert(std::make_pair(id, rid)));
+    }
+
+    if ((shm = shm_open("SHM_MID", O_RDWR | O_CREAT, S_IRWXU))0) {
+        MAPF_DBG("failure! SHM_MID cannot be found.");
+    }
+
+    if (ftruncate(shm, sizeof(sem_t)) < 0) {
+        MAPF_DBG("failure! SHM_MID cannot be .");
+    }
+
+    if ((mutex = mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE, MAP_SHARED, shm, 0)) ==
+        MAP_FAILED) {
+        MAPF_DBG("failure! mutex cannot be mapped.");
+    }
+
+    if (sem_init(mutex, 1, 1) < 0) {
+        MAPF_DBG("failure! semaphore initialization");
+    }
+
+    sem_wait(&mutex);
+
+    // place data into memory
+    memcpy(*shm, rid, sizeof(rid));
+
+    incRidCounter();
+
+    sem_post(&mutex);
+
+    return rid;
+}
+
+uint16_t Ieee1905Transport::get_rid(uint8_t *dst, uint16_t mid) const
+{
+    auto iter = ack_table.find(std::make_pair(std::to_string(mid), tlvf::mac_to_string(*dst)));
+    if (iter != ack_table.end()) {
+        return iter.second;
+    }
+
+    return 0;
 }
 
 } // namespace transport

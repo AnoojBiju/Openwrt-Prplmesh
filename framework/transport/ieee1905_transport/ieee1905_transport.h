@@ -305,6 +305,32 @@ private:
         1500 -
         sizeof(Tlv); // IEEE1905 packets (CMDU) should be fragmented if larger than this threashold
 
+    static int ridCounter = 0;
+
+    int getRidCounter() const { return ridCounter; }
+
+    void incRidCounter()
+    {
+        if (sizeof(ridCounter) + 1 > sizeof(int)) {
+            return;
+        }
+
+        ++ridCounter;
+    }
+
+    // MAC^MID
+    typedef std::pair<std::string, std::string> id_ack;
+
+    struct pair_hash {
+        template <class T1, class T2> std::size_t operator()(const std::pair<T1, T2> &pair) const
+        {
+            return std::hash<T1>()(pair.first) ^ std::hash<T2>()(pair.second);
+        }
+    };
+
+    // KEY: MAC^MID ; : value: RID
+    std::unordered_map<id_ack, int, pair_hash> ack_table;
+
     //
     // NETWORK INTERFACE STUFF
     //
