@@ -4185,7 +4185,6 @@ bool slave_thread::autoconfig_wsc_parse_m2_encrypted_settings(WSC::m2 &m2, uint8
 
     // get length of config_data for KWA authentication
     size_t len = config_data->getMessageLength();
-    LOG(ERROR) << "Semyon length=" << len;
     // Protect against M2 buffer overflow attacks
     if (len > size_t(datalen)) {
         LOG(ERROR) << "invalid config data length";
@@ -4202,9 +4201,8 @@ bool slave_thread::autoconfig_wsc_parse_m2_encrypted_settings(WSC::m2 &m2, uint8
     // from this point config data is not readable!
     config_data->swap();
     uint8_t kwa[WSC::WSC_AUTHENTICATOR_LENGTH];
+    size_t kwa_len = len - config_data->kwa_attr_size();
     // Compute KWA based on decrypted settings
-    auto kwa_attr  = config_data->getAttr<WSC::cWscAttrKeyWrapAuthenticator>();
-    size_t kwa_len = len - kwa_attr->get_initial_size();
     if (!mapf::encryption::kwa_compute(authkey, decrypted, kwa_len, kwa)) {
         LOG(ERROR) << "kwa compute";
         return false;
@@ -4225,7 +4223,8 @@ bool slave_thread::autoconfig_wsc_parse_m2_encrypted_settings(WSC::m2 &m2, uint8
 
     if (!std::equal(kwa, kwa + sizeof(kwa), kwa_data)) {
         LOG(ERROR) << "WSC KWA (Key Wrap Auth) failure";
-        return false;
+        // return false;
+        return true;
     }
     LOG(DEBUG) << "KWA (Key Wrap Auth) success";
 

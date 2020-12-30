@@ -102,6 +102,11 @@ public:
         auto attr = getAttr<cWscAttrKeyWrapAuthenticator>();
         return attr ? attr->data() : nullptr;
     };
+    size_t kwa_attr_size() const
+    {
+        auto attr = getAttr<cWscAttrKeyWrapAuthenticator>();
+        return attr ? attr->get_initial_size() : 0;
+    };
 };
 
 } // namespace WSC

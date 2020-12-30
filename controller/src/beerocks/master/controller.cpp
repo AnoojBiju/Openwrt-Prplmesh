@@ -662,9 +662,8 @@ bool Controller::autoconfig_wsc_add_m2_encrypted_settings(WSC::m2::config &m2_cf
     uint8_t *plaintext = config_data.getMessageBuff();
     int plaintextlen   = config_data.getMessageLength();
 
-    auto wka_attr  = config_data.getAttr<WSC::cWscAttrKeyWrapAuthenticator>();
-    uint8_t *kwa   = wka_attr->data();
-    size_t kwa_len = plaintextlen - wka_attr->get_initial_size();
+    uint8_t *kwa   = config_data.kwa();
+    size_t kwa_len = plaintextlen - config_data.kwa_attr_size();
     // Add KWA which is the 1st 64 bits of HMAC of config_data using AuthKey
     if (!mapf::encryption::kwa_compute(authkey, plaintext, kwa_len, kwa))
         return false;
