@@ -655,22 +655,25 @@ bool Controller::autoconfig_wsc_add_m2_encrypted_settings(WSC::m2::config &m2_cf
                                                           uint8_t authkey[32],
                                                           uint8_t keywrapkey[16])
 {
-    // Step 1 - prepare the plaintext: [config_data | keywrapauth]:
-    // We use the config_data buffer as the plaintext buffer for encryption.
-    // The config_data buffer has room for 12 bytes for the keywrapauth (2 bytes
-    // attribute type, 2 bytes attribute length, 8 bytes data), but check it anyway
-    // to be on the safe side. Then, we add keywrapauth at its end.
+    // Step 1 - key wrap authenticator calculation
     uint8_t *plaintext = config_data.getMessageBuff();
-    int plaintextlen   = config_data.getMessageLength() + sizeof(WSC::sWscAttrKeyWrapAuthenticator);
-    WSC::sWscAttrKeyWrapAuthenticator *keywrapauth =
-        reinterpret_cast<WSC::sWscAttrKeyWrapAuthenticator *>(
-            &plaintext[config_data.getMessageLength()]);
-    keywrapauth->struct_init();
-    uint8_t *kwa = reinterpret_cast<uint8_t *>(keywrapauth->data);
+    int plaintextlen   = config_data.getMessageLength();
+
+    uint8_t *kwa = config_data.key_wrap_authenticator();
+    // The keywrap authenticator is part of the config_data (last member of the
+    // config_data to be precise).
+    // However, since we need to calculate it over the part of config_data without the keywrap
+    // authenticator, substruct it's size from the computation length
+    size_t config_data_len_for_kwa = plaintextlen - config_data.key_wrap_authenticator_size();
     // Add KWA which is the 1st 64 bits of HMAC of config_data using AuthKey
-    if (!mapf::encryption::kwa_compute(authkey, plaintext, config_data.getMessageLength(), kwa))
+    if (!mapf::encryption::kwa_compute(authkey, plaintext, config_data_len_for_kwa, kwa)) {
+        LOG(ERROR) << "KeyWrapAuth computation failed!";
         return false;
-    keywrapauth->struct_swap();
+    }
+
+    // The KWA is computed on the swapped config_data (network byte order).
+    // So at this point the KWA class is already swapped. We don't need to swap the recently
+    // calculated data since the data is a char array and there is no need to swap it.
 
     // Step 2 - AES encryption using temporary buffer. This is needed since we only
     // know the encrypted length after encryption.
