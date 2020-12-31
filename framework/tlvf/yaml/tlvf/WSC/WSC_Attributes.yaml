@@ -20,18 +20,6 @@ _include: {
 }
 _namespace: WSC
 
-sWscAttrKeyWrapAuthenticator:
-  _type: struct
-  attribute_type:
-    _type: eWscAttributes
-    _value: ATTR_KEY_WRAP_AUTH
-  data_length:
-    _type: uint16_t
-    _value: WSC_KEY_WRAP_AUTH_LENGTH
-  data:
-    _type: uint8_t
-    _length: [ WSC_KEY_WRAP_AUTH_LENGTH ]
-
 #encrypted attributes
 
 sWscAttrAuthenticationType:
