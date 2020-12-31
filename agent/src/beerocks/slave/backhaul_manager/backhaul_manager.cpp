@@ -442,15 +442,28 @@ bool BackhaulManager::handle_cmdu(int fd, uint32_t iface_index, const sMacAddr &
 {
     // Check for local handling
     if (dst_mac == beerocks::net::network_utils::ZERO_MAC) {
-        auto it =
-            std::find_if(slaves_sockets.begin(), slaves_sockets.end(),
-                         [fd](std::shared_ptr<sRadioInfo> radio) { return (radio->slave == fd); });
-        if (it == slaves_sockets.end()) {
-            LOG(ERROR) << "Slave socket descriptor not found, fd = " << fd;
-            return false;
-        }
+        std::shared_ptr<sRadioInfo> soc;
 
-        auto soc = *it;
+        auto it = std::find_if(
+            slaves_sockets.begin(), slaves_sockets.end(),
+            [fd](const std::shared_ptr<sRadioInfo> &radio) { return (radio->slave == fd); });
+        if (it != slaves_sockets.end()) {
+            soc = *it;
+
+        } else {
+            // check the disabled sockets container as well
+            auto it2 =
+                std::find_if(m_disabled_slave_sockets.begin(), m_disabled_slave_sockets.end(),
+                             [fd](const std::pair<std::string, std::shared_ptr<sRadioInfo>> &elm) {
+                                 return (elm.second->slave == fd);
+                             });
+
+            if (it2 == m_disabled_slave_sockets.end()) {
+                LOG(ERROR) << "Slave socket descriptor not found, fd = " << fd;
+                return false;
+            }
+            soc = it2->second;
+        }
 
         if (cmdu_rx.getMessageType() == ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE) {
             return handle_slave_backhaul_message(soc, cmdu_rx);
