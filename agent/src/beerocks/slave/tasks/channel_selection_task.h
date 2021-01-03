@@ -113,7 +113,7 @@ private:
         WAIT_FOR_PRIMARY_RADIO_CSA_NOTIFICATION,
         ZWDFS_SWITCH_ANT_OFF_REQUEST,
         WAIT_FOR_ZWDFS_SWITCH_ANT_OFF_RESPONSE,
-    } m_zwdfs_state = eZwdfsState::NOT_RUNNING;
+    } m_zwdfs_state = eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST;
 
     // clang-format off
     const std::unordered_map<eZwdfsState, std::string, std::hash<int>> m_zwdfs_states_string = {
