@@ -41,6 +41,17 @@ void ChannelSelectionTask::work()
     }
 }
 
+void ChannelSelectionTask::handle_event(uint8_t event_enum_value, const void *event_obj)
+{
+    switch (eEvent(event_enum_value)) {
+
+    default: {
+        LOG(DEBUG) << "Message handler doesn't exists for event type " << event_enum_value;
+        break;
+    }
+    }
+}
+
 bool ChannelSelectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
                                        const sMacAddr &dst_mac, const sMacAddr &src_mac, int fd,
                                        std::shared_ptr<beerocks_header> beerocks_header)
