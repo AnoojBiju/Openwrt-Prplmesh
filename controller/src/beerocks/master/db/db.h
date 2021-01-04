@@ -20,6 +20,7 @@
 #include <tlvf/wfa_map/tlvApHtCapabilities.h>
 #include <tlvf/wfa_map/tlvApRadioBasicCapabilities.h>
 #include <tlvf/wfa_map/tlvApVhtCapabilities.h>
+#include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>
 
 #include <algorithm>
 #include <mutex>
@@ -793,6 +794,21 @@ public:
      */
     bool add_channel_scan_results(const sMacAddr &mac, const sChannelScanResults &scan_result,
                                   bool single_scan);
+
+    /**
+     * @brief
+     * 
+     * @param RUID Radio UID
+     * @param operating_class Operating class of report
+     * @param channel channel of report
+     * @param neighbors vactor containing the neighboring APs
+     * @return true on success
+     * @return false on failure
+     */
+    bool add_channel_report(const sMacAddr &RUID, const uint8_t &operating_class,
+                            const uint8_t &channel,
+                            const std::vector<wfa_map::cNeighbors> &neighbors, uint8_t avg_noise,
+                            uint8_t avg_utilization, bool override_existing_data = true);
 
     /**
      * @brief Get the channel scan results object
