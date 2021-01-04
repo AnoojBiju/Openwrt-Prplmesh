@@ -44,7 +44,18 @@ void ChannelSelectionTask::work()
 void ChannelSelectionTask::handle_event(uint8_t event_enum_value, const void *event_obj)
 {
     switch (eEvent(event_enum_value)) {
+    case AP_DISABLED: {
+        if (!event_obj) {
+            LOG(ERROR) << "Received AP_DISABLED event without interface";
+            break;
+        }
 
+        auto specific_iface_ptr = reinterpret_cast<const std::string *>(event_obj);
+
+        handle_ap_disabled_event(*specific_iface_ptr);
+
+        break;
+    }
     default: {
         LOG(DEBUG) << "Message handler doesn't exists for event type " << event_enum_value;
         break;
@@ -414,6 +425,17 @@ void ChannelSelectionTask::handle_vs_zwdfs_ant_channel_switch_response(
         m_zwdfs_ant_in_use = true;
         ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
     }
+}
+
+void ChannelSelectionTask::handle_ap_disabled_event(const std::string &iface)
+{
+    LOG(TRACE) << "Received AP_DISABLED event for iface=" << iface;
+
+    if ((iface != m_zwdfs_primary_radio_iface) && (iface != m_zwdfs_iface)) {
+        return;
+    }
+
+    abort_zwdfs_flow();
 }
 
 const std::string ChannelSelectionTask::socket_to_front_iface_name(int fd)
