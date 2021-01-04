@@ -23,9 +23,11 @@
 #include "tlvf/wfa_map/eTlvTypeMap.h"
 #include "tlvf/common/sMacAddr.h"
 #include <tuple>
+#include <vector>
 
 namespace wfa_map {
 
+class cNeighbors;
 
 class tlvProfile2ChannelScanResult : public BaseClass
 {
@@ -34,11 +36,6 @@ class tlvProfile2ChannelScanResult : public BaseClass
         explicit tlvProfile2ChannelScanResult(std::shared_ptr<BaseClass> base, bool parse = false);
         ~tlvProfile2ChannelScanResult();
 
-        enum eBssLoadElementPresent: uint8_t {
-            FIELD_PRESENT = 0x80,
-            FIELD_NOT_PRESENT = 0x0,
-        };
-        
         enum eScanStatus: uint8_t {
             SUCCESS = 0x0,
             SCAN_NOT_SUPPORTED_ON_THIS_OPERATING_CLASS_AND_CHANNEL_ON_THIS_RADIO = 0x1,
@@ -53,40 +50,6 @@ class tlvProfile2ChannelScanResult : public BaseClass
             SCAN_WAS_ACTIVE_SCAN = 0x80,
             SCAN_WAS_PASSIVE_SCAN = 0x0,
         };
-        
-        typedef struct sNeighbors {
-            sMacAddr bssid;
-            uint8_t ssid_length;
-            //The SSID indicated by the neighboring BSS
-            uint8_t* ssid; //TLVF_TODO: not supported yet
-            //An indicator of radio signal strength (RSSI) of the Beacon or Probe
-            //Response frames of the neighboring BSS as received by the radio
-            //measured in dBm
-            uint8_t signal_strength;
-            uint8_t channel_bw_length;
-            //String indicating the maximum bandwidth at which the neighbor BSS is
-            //operating, e.g., "20" or "40" or "80" or "80+80" or "160" MHz.
-            uint8_t* channels_bw_list; //TLVF_TODO: not supported yet
-            eBssLoadElementPresent bss_load_element_present;
-            //If "BSS Load Element Present" bit is set to one, this field is present.
-            //Otherwise it is omitted.
-            //The value of the "Channel Utilization" field as reported by the neighboring
-            //BSS in the BSS Load element
-            uint8_t channel_utilization;
-            //If "BSS Load Element Present" bit is set to one, this field is present.
-            //Otherwise it is omitted.
-            //The value of the "Channel Utilization" field as reported by the neighboring
-            //BSS in the BSS Load element
-            uint16_t station_count;
-            void struct_swap(){
-                bssid.struct_swap();
-                tlvf_swap(8*sizeof(eBssLoadElementPresent), reinterpret_cast<uint8_t*>(&bss_load_element_present));
-                tlvf_swap(16, reinterpret_cast<uint8_t*>(&station_count));
-            }
-            void struct_init(){
-                bssid.struct_init();
-            }
-        } __attribute__((packed)) sNeighbors;
         
         const eTlvTypeMap& type();
         const uint16_t& length();
@@ -107,8 +70,9 @@ class tlvProfile2ChannelScanResult : public BaseClass
         //on the 20 MHz channel during a channel scan.
         uint8_t& noise();
         uint16_t& neighbors_list_length();
-        std::tuple<bool, sNeighbors&> neighbors_list(size_t idx);
-        bool alloc_neighbors_list(size_t count = 1);
+        std::tuple<bool, cNeighbors&> neighbors_list(size_t idx);
+        std::shared_ptr<cNeighbors> create_neighbors_list();
+        bool add_neighbors_list(std::shared_ptr<cNeighbors> ptr);
         //Total time spent performing the scan of this channel in milliseconds
         uint32_t& aggregate_scan_duration();
         eScanType& scan_type();
@@ -131,10 +95,71 @@ class tlvProfile2ChannelScanResult : public BaseClass
         uint8_t* m_utilization = nullptr;
         uint8_t* m_noise = nullptr;
         uint16_t* m_neighbors_list_length = nullptr;
-        sNeighbors* m_neighbors_list = nullptr;
+        cNeighbors* m_neighbors_list = nullptr;
         size_t m_neighbors_list_idx__ = 0;
+        std::vector<std::shared_ptr<cNeighbors>> m_neighbors_list_vector;
+        bool m_lock_allocation__ = false;
         uint32_t* m_aggregate_scan_duration = nullptr;
         eScanType* m_scan_type = nullptr;
+};
+
+class cNeighbors : public BaseClass
+{
+    public:
+        cNeighbors(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cNeighbors(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cNeighbors();
+
+        enum eBssLoadElementPresent: uint8_t {
+            FIELD_PRESENT = 0x80,
+            FIELD_NOT_PRESENT = 0x0,
+        };
+        
+        sMacAddr& bssid();
+        uint8_t& ssid_length();
+        //The SSID indicated by the neighboring BSS
+        uint8_t* ssid(size_t idx = 0);
+        bool set_ssid(const void* buffer, size_t size);
+        bool alloc_ssid(size_t count = 1);
+        //An indicator of radio signal strength (RSSI) of the Beacon or Probe
+        //Response frames of the neighboring BSS as received by the radio
+        //measured in dBm
+        uint8_t& signal_strength();
+        uint8_t& channel_bw_length();
+        //String indicating the maximum bandwidth at which the neighbor BSS is
+        //operating, e.g., "20" or "40" or "80" or "80+80" or "160" MHz.
+        uint8_t* channels_bw_list(size_t idx = 0);
+        bool set_channels_bw_list(const void* buffer, size_t size);
+        bool alloc_channels_bw_list(size_t count = 1);
+        eBssLoadElementPresent& bss_load_element_present();
+        //If "BSS Load Element Present" bit is set to one, this field is present.
+        //Otherwise it is omitted.
+        //The value of the "Channel Utilization" field as reported by the neighboring
+        //BSS in the BSS Load element
+        uint8_t& channel_utilization();
+        //If "BSS Load Element Present" bit is set to one, this field is present.
+        //Otherwise it is omitted.
+        //The value of the "Channel Utilization" field as reported by the neighboring
+        //BSS in the BSS Load element
+        uint16_t& station_count();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        sMacAddr* m_bssid = nullptr;
+        uint8_t* m_ssid_length = nullptr;
+        uint8_t* m_ssid = nullptr;
+        size_t m_ssid_idx__ = 0;
+        int m_lock_order_counter__ = 0;
+        uint8_t* m_signal_strength = nullptr;
+        uint8_t* m_channel_bw_length = nullptr;
+        uint8_t* m_channels_bw_list = nullptr;
+        size_t m_channels_bw_list_idx__ = 0;
+        eBssLoadElementPresent* m_bss_load_element_present = nullptr;
+        uint8_t* m_channel_utilization = nullptr;
+        uint16_t* m_station_count = nullptr;
 };
 
 }; // close namespace: wfa_map
