@@ -39,7 +39,7 @@ class tlvProfile2ChannelScanResult : public BaseClass
             FIELD_NOT_PRESENT = 0x0,
         };
         
-        enum eScanStatus {
+        enum eScanStatus: uint8_t {
             SUCCESS = 0x0,
             SCAN_NOT_SUPPORTED_ON_THIS_OPERATING_CLASS_AND_CHANNEL_ON_THIS_RADIO = 0x1,
             REQUEST_TOO_SOON_AFTER_LAST_SCAN = 0x2,
