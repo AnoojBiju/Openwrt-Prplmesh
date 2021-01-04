@@ -13,6 +13,7 @@
 #include "../tasks/capability_reporting_task.h"
 #include "../tasks/channel_scan_task.h"
 #include "../tasks/channel_selection_task.h"
+#include "../tasks/coordinated_cac_task.h"
 #include "../tasks/link_metrics_collection_task.h"
 #include "../tasks/switch_channel_task.h"
 #include "../tasks/topology_task.h"
@@ -139,6 +140,8 @@ BackhaulManager::BackhaulManager(
     m_task_pool.add_task(std::make_shared<LinkMetricsCollectionTask>(*this, cmdu_tx));
     m_task_pool.add_task(
         std::make_shared<switch_channel::SwitchChannelTask>(m_task_pool, *this, cmdu_tx));
+    m_task_pool.add_task(
+        std::make_shared<coordinated_cac::CoordinatedCacTask>(m_task_pool, *this, cmdu_tx));
 
     beerocks::CmduServer::EventHandlers handlers{
         .on_client_connected    = [&](int fd) { handle_connected(fd); },
@@ -236,7 +239,10 @@ bool BackhaulManager::start()
             ieee1905_1::eMessageType::AP_CAPABILITY_QUERY_MESSAGE,
             ieee1905_1::eMessageType::AP_METRICS_QUERY_MESSAGE,
             ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE,
+            ieee1905_1::eMessageType::BACKHAUL_STEERING_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::BEACON_METRICS_QUERY_MESSAGE,
+            ieee1905_1::eMessageType::CAC_REQUEST_MESSAGE,
+            ieee1905_1::eMessageType::CAC_TERMINATION_MESSAGE,
             ieee1905_1::eMessageType::CHANNEL_PREFERENCE_QUERY_MESSAGE,
             ieee1905_1::eMessageType::CHANNEL_SCAN_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE,
@@ -250,7 +256,6 @@ bool BackhaulManager::start()
             ieee1905_1::eMessageType::TOPOLOGY_DISCOVERY_MESSAGE,
             ieee1905_1::eMessageType::TOPOLOGY_QUERY_MESSAGE,
             ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE,
-            ieee1905_1::eMessageType::BACKHAUL_STEERING_REQUEST_MESSAGE,
         })) {
         LOG(ERROR) << "Failed subscribing to the Bus";
         rollback();
@@ -346,6 +351,23 @@ bool BackhaulManager::send_cmdu_to_broker(ieee1905_1::CmduMessageTx &cmdu_tx,
     }
 
     return m_broker_client->send_cmdu(cmdu_tx, dst_mac, src_mac, iface_index);
+}
+
+bool BackhaulManager::send_ack_to_controller(ieee1905_1::CmduMessageTx &cmdu_tx, uint32_t mid)
+{
+    // build ACK message CMDU
+    auto cmdu_tx_header = cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE);
+    if (!cmdu_tx_header) {
+        LOG(ERROR) << "Failed to create ieee1905_1::eMessageType::ACK_MESSAGE";
+        return false;
+    }
+
+    auto db = AgentDB::get();
+
+    LOG(DEBUG) << "Sending ACK message to the controller, mid=" << std::hex << mid;
+    bool ret = send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
+                                   tlvf::mac_from_string(bridge_info.mac));
+    return ret;
 }
 
 bool BackhaulManager::forward_cmdu_to_broker(ieee1905_1::CmduMessageRx &cmdu_rx,
