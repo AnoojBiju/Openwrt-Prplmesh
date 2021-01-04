@@ -208,20 +208,20 @@ bool ChannelScanTask::send_channel_scan_report(ieee1905_1::CmduMessageRx &cmdu_r
         auto eChannelScanResultChannelBandwidth_toString =
             [](const beerocks_message::eChannelScanResultChannelBandwidth &bw) -> std::string {
             switch (bw) {
-        case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_20MHz:
+            case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_20MHz:
                 return "20";
-        case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_40MHz:
+            case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_40MHz:
                 return "40";
-        case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80MHz:
+            case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80MHz:
                 return "80";
-        case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80_80:
+            case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80_80:
                 return "80+80";
-        case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_160MHz:
+            case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_160MHz:
                 return "160";
-        case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_NA:
-        default:
+            case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_NA:
+            default:
                 return "";
-        }
+            }
         };
         auto bw_str =
             eChannelScanResultChannelBandwidth_toString(neighbor.operating_channel_bandwidth);
@@ -344,9 +344,62 @@ bool ChannelScanTask::send_channel_scan_report(ieee1905_1::CmduMessageRx &cmdu_r
         return true;
     };
 
-    // TODO: add one or more ChannelScanResult TLVs
+    if (!add_timestamp_TLV(timestamp)) {
+        LOG(ERROR) << "Failed to add Timestamp TLV to CHANNEL_SCAN_REPORT_MESSAGE";
+        return false;
+    }
+
+    auto db = AgentDB::get();
+    LOG(TRACE) << "scan requests size: " << scan_requests.size();
+    for (auto &scan_request_iter : scan_requests) {
+        auto &ruid = scan_request_iter.first;
+        LOG(TRACE) << "Creating report for radio: " << ruid;
+        auto &scan_request = scan_request_iter.second;
+        LOG(TRACE) << "Get radio struct for radio: " << ruid;
+        auto db_radio = db->get_radio_by_mac(ruid);
+        if (!db_radio) {
+            LOG(ERROR) << "No radio with ruid '" << ruid << "' found!";
+            return false;
+        }
+        LOG(TRACE) << "Getting operating classes list length for radio: " << ruid;
+        const auto &operating_class_length = scan_request.radio.operating_classes_list_length();
+        LOG(TRACE) << "operating classes list length: " << operating_class_length;
+        for (int op_idx = 0; op_idx < operating_class_length; ++op_idx) {
+            const auto &op_list = scan_request.radio.operating_classes_list(op_idx);
+            if (!std::get<0>(op_list)) {
+                LOG(ERROR) << "Failed to get operating classes list[" << op_idx
+                           << "] for radio: " << scan_request.radio.radio_uid();
+                return false;
+            }
+            auto &operating_class_item = std::get<1>(op_list);
+            auto operating_class       = operating_class_item.operating_class();
+            auto channel_list_length   = operating_class_item.channel_list_length();
+            auto channel_list          = operating_class_item.channel_list(0);
+            LOG(TRACE) << "Operating class #" << operating_class
+                       << ", Channel-list length: " << channel_list_length;
+            for (int c_idx = 0; c_idx < channel_list_length; c_idx++) {
+                auto channel = channel_list[c_idx];
+                LOG(TRACE) << "Getting neighbors for channel[" << c_idx << "]: " << channel;
+                auto &stored_scanned_neighbors = db_radio->channel_scan_results;
+                if (stored_scanned_neighbors.find(channel) == stored_scanned_neighbors.end()) {
+                    LOG(TRACE) << "There are no stored results for channel #" << channel;
+                    continue;
+                }
+                auto &neighbors = stored_scanned_neighbors.at(channel);
+                LOG(TRACE) << "Found " << neighbors.size() << " neighbors for channel #" << channel;
+                if (!add_report_TLV(ruid, operating_class, channel, scan_request.scan_status,
+                                    scan_request.scan_start_timestamp, scan_request.scan_type,
+                                    neighbors)) {
+                    LOG(ERROR) << "Failed to create Scan Report TLV to CHANNEL_SCAN_REPORT_MESSAGE";
+                    return false;
+                }
+                LOG(TRACE) << "Done setting TLV for [radio: " << ruid
+                           << ", operating class: " << operating_class << " channel: " << channel
+                           << "].";
+            }
+        }
+    }
 
     LOG(DEBUG) << "Sending CHANNEL_SCAN_REPORT_MESSAGE to the originator, mid=" << std::hex << mid;
-    auto db = AgentDB::get();
     return m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac);
 }
