@@ -20,10 +20,9 @@
 #include <memory>
 #include <tlvf/BaseClass.h>
 #include <tlvf/ClassList.h>
-#include "tlvf/wfa_map/eTlvTypeMap.h"
 #include <tuple>
 #include <vector>
-#include "tlvf/common/sMacAddr.h"
+#include "tlvf/wfa_map/tlvChannelScanCapabilities.h"
 
 namespace wfa_map {
 
@@ -72,23 +71,11 @@ class cRadiosToScan : public BaseClass
         explicit cRadiosToScan(std::shared_ptr<BaseClass> base, bool parse = false);
         ~cRadiosToScan();
 
-        typedef struct sOperatingClasses {
-            uint8_t operating_class;
-            //Number of channels specified in the Channel List. channel_list_length=0
-            //indicates that the Multi-AP Agent is requested to scan on all channels
-            //in the Operating Class
-            uint8_t channel_list_length;
-            uint8_t* channels_list; //TLVF_TODO: not supported yet
-            void struct_swap(){
-            }
-            void struct_init(){
-            }
-        } __attribute__((packed)) sOperatingClasses;
-        
         sMacAddr& radio_uid();
         uint8_t& operating_classes_list_length();
-        std::tuple<bool, sOperatingClasses&> operating_classes_list(size_t idx);
-        bool alloc_operating_classes_list(size_t count = 1);
+        std::tuple<bool, cOperatingClasses&> operating_classes_list(size_t idx);
+        std::shared_ptr<cOperatingClasses> create_operating_classes_list();
+        bool add_operating_classes_list(std::shared_ptr<cOperatingClasses> ptr);
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -97,8 +84,10 @@ class cRadiosToScan : public BaseClass
         bool init();
         sMacAddr* m_radio_uid = nullptr;
         uint8_t* m_operating_classes_list_length = nullptr;
-        sOperatingClasses* m_operating_classes_list = nullptr;
+        cOperatingClasses* m_operating_classes_list = nullptr;
         size_t m_operating_classes_list_idx__ = 0;
+        std::vector<std::shared_ptr<cOperatingClasses>> m_operating_classes_list_vector;
+        bool m_lock_allocation__ = false;
         int m_lock_order_counter__ = 0;
 };
 
