@@ -109,6 +109,15 @@ public:
                              const sMacAddr &src_mac, const std::string &iface_name = "");
 
     /**
+     * @brief Sends ACK CDMU to controller
+     *
+     * @param cmdu CMDU message to send.
+     * @param mid The message id to attach to the ACK
+     * @return true on success and false otherwise.
+     */
+    bool send_ack_to_controller(ieee1905_1::CmduMessageTx &cmdu_tx, uint32_t mid);
+
+    /**
      * @brief Forwards given received CMDU message to the broker server for dispatching.
      *
      * @param cmdu_rx Received CMDU message to forward.
