@@ -139,7 +139,8 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
     return true;
 }
 
-std::string get_timestamp_string()
+std::string
+get_timestamp_string(std::chrono::system_clock::time_point stamp = std::chrono::system_clock::now())
 {
     // Accourding to Multi-AP Specification Version 2.0, section 17.2.41, page 91:
     // Timestamp should be in the format:
@@ -147,20 +148,19 @@ std::string get_timestamp_string()
     // This function will return a time-date string format as defined in ISO 8601.
     // For example: 2016-09-28T14:50:31.456449Z or 2016-09-28T14:50:31.456449+06:00
 
-    const auto now = std::chrono::system_clock::now();
     auto seconds_since_epoch =
-        std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
+        std::chrono::duration_cast<std::chrono::seconds>(stamp.time_since_epoch());
 
-    // Construct time_t using 'seconds_since_epoch' rather than 'now' since it is
+    // Construct time_t using 'seconds_since_epoch' rather than 'stamp' since it is
     // implementation-defined whether the value is rounded or truncated.
-    std::time_t now_t = std::chrono::system_clock::to_time_t(
+    std::time_t stamp_t = std::chrono::system_clock::to_time_t(
         std::chrono::system_clock::time_point(seconds_since_epoch));
 
     // std::strftime() can convert the "now" timestamp into a string,
     // but it only supports up to a resolution of a second.
     // generating the first part of the data-time string:
     char buff[40];
-    if (!std::strftime(buff, 40, "%Y-%m-%dT%H:%M:%S.", std::localtime(&now_t))) {
+    if (!std::strftime(buff, 40, "%Y-%m-%dT%H:%M:%S.", std::localtime(&stamp_t))) {
         return "";
     }
 
@@ -169,7 +169,7 @@ std::string get_timestamp_string()
     // Unless we have a way to know our local, in which case, "Z" might be replaced with
     // the time delta (+03:00 for Israel, as an example).
     return std::string(buff) +
-           std::to_string((now.time_since_epoch() - seconds_since_epoch).count()) + "Z";
+           std::to_string((stamp.time_since_epoch() - seconds_since_epoch).count()) + "Z";
 }
 
 bool ChannelScanTask::send_channel_scan_report(ieee1905_1::CmduMessageRx &cmdu_rx,
