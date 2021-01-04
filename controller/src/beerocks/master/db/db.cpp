@@ -1633,7 +1633,7 @@ bool db::set_station_capabilities(const std::string &client_mac,
     }
 
     // Prepare path to the STA
-    // Example: Controller.Network.Device.1.Radio.1.BSS.1.STA.1.
+    // Example: Controller.Network.Device.1.Radio.1.BSS.1.STA.1
     std::string path_to_sta = dm_get_path_to_sta(client_mac);
 
     if (path_to_sta.empty()) {
@@ -6195,7 +6195,7 @@ std::string db::dm_get_path_to_sta(const std::string &sta_mac)
                    << " with mac: " << sta_mac;
         return {};
     }
-    return path_to_bss + "STA." + std::to_string(sta_index) + ".";
+    return path_to_bss + "STA." + std::to_string(sta_index);
 }
 
 #else
