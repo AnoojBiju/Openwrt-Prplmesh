@@ -10,6 +10,7 @@
 #include "../agent_db.h"
 #include "../backhaul_manager/backhaul_manager.h"
 #include <easylogging++.h>
+#include <tlvf/wfa_map/tlvTunnelledSourceInfo.h>
 
 using namespace beerocks;
 
@@ -188,13 +189,160 @@ bool ChannelScanTask::send_channel_scan_report(ieee1905_1::CmduMessageRx &cmdu_r
         return false;
     }
 
-    // add Timestamp TLV
-    auto timestamp_tlv = m_cmdu_tx.addClass<wfa_map::tlvTimestamp>();
-    auto ret           = timestamp_tlv->set_timestamp(timestamp.c_str(), sizeof(timestamp));
-    if (!ret) {
-        LOG(ERROR) << "Failed to set timestamp in scan_results_tlv!";
-        return false;
-    }
+    // Lambda function that fills the TLV neighbor structure.
+    auto fill_scan_report_neighbor = [](const beerocks_message::sChannelScanResults &neighbor,
+                                        std::shared_ptr<wfa_map::cNeighbors> neighbor_res) -> bool {
+        // BSSID
+        neighbor_res->bssid() = neighbor.bssid;
+
+        // SSID
+        if (!neighbor_res->set_ssid(neighbor.ssid, std::string(neighbor.ssid).length())) {
+            LOG(ERROR) << "Failed to set SSID";
+            return false;
+        }
+
+        // Signal Strength
+        neighbor_res->signal_strength() = neighbor.signal_strength_dBm;
+
+        // Bandwidth
+        auto eChannelScanResultChannelBandwidth_toString =
+            [](const beerocks_message::eChannelScanResultChannelBandwidth &bw) -> std::string {
+            switch (bw) {
+        case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_20MHz:
+                return "20";
+        case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_40MHz:
+                return "40";
+        case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80MHz:
+                return "80";
+        case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80_80:
+                return "80+80";
+        case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_160MHz:
+                return "160";
+        case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_NA:
+        default:
+                return "";
+        }
+        };
+        auto bw_str =
+            eChannelScanResultChannelBandwidth_toString(neighbor.operating_channel_bandwidth);
+        if (!neighbor_res->set_channels_bw_list(bw_str.c_str(), bw_str.length())) {
+            LOG(ERROR) << "Failed to set channel BW list";
+            return false;
+        }
+
+        // BSS Load Element Present
+        neighbor_res->bss_load_element_present() =
+            wfa_map::cNeighbors::eBssLoadElementPresent::FIELD_NOT_PRESENT;
+
+        // Channel Utilization
+        // Since BSS Load Element Present is set to "Not Present" no need to set  Channel Utilization.
+        // neighbor_res->channel_utilization() = neighbor.channel_utilization;
+
+        // Station Count
+        // Since BSS Load Element Present is set to "Not Present" no need to set Station Count.
+        // neighbor_res->station_count() = 0;
+
+        LOG(TRACE) << "Done filling report structure";
+        return true;
+    };
+
+    // Lambda function that creates the Timestamp TLV.
+    auto add_timestamp_TLV = [this](const std::string &timestamp) -> bool {
+        LOG(DEBUG) << "Creating tlvTimestamp";
+
+        // add Timestamp TLV
+        auto timestamp_tlv = m_cmdu_tx.addClass<wfa_map::tlvTimestamp>();
+        if (!timestamp_tlv) {
+            LOG(ERROR) << "addClass tlvTimestamp failed";
+            return false;
+        }
+        LOG(TRACE) << "timestamp tlv created";
+
+        // fill Timestamp TLV
+        if (!timestamp_tlv->set_timestamp(timestamp.c_str(), timestamp.size())) {
+            LOG(ERROR) << "Failed to set timestamp in tlvTimestamp!";
+            return false;
+        }
+        return true;
+    };
+
+    // Lambda function that creates the Scan Report TLV.
+    auto add_report_TLV =
+        [this, &fill_scan_report_neighbor](
+            const sMacAddr &ruid, const uint8_t &operating_class, const uint8_t &channel,
+            wfa_map::tlvProfile2ChannelScanResult::eScanStatus scan_status,
+            std::chrono::system_clock::time_point scan_start_time,
+            wfa_map::tlvProfile2ChannelScanResult::eScanType scan_type,
+            std::vector<beerocks_message::sChannelScanResults> neighbors) -> bool {
+        LOG(DEBUG) << "Creating report TLV";
+        // add Results TLV
+        auto channel_scan_result_tlv = m_cmdu_tx.addClass<wfa_map::tlvProfile2ChannelScanResult>();
+        if (!channel_scan_result_tlv) {
+            LOG(ERROR) << "addClass tlvProfile2ChannelScanResult failed";
+            return false;
+        }
+
+        // fill Results TLV
+
+        LOG(DEBUG) << "Setting report details";
+        channel_scan_result_tlv->radio_uid()       = ruid;
+        channel_scan_result_tlv->operating_class() = operating_class;
+        channel_scan_result_tlv->channel()         = channel;
+
+        LOG(DEBUG) << "Setting report success status";
+        channel_scan_result_tlv->success() = scan_status;
+        if (channel_scan_result_tlv->success() !=
+            wfa_map::tlvProfile2ChannelScanResult::eScanStatus::SUCCESS) {
+            // If the status is not set to "success" then there is no need to set the other fields.
+            return true;
+        }
+
+        LOG(DEBUG) << "Setting report timestamp";
+
+        const auto &scan_start_timestamp = get_timestamp_string(scan_start_time);
+        if (!channel_scan_result_tlv->set_timestamp(scan_start_timestamp.c_str(),
+                                                    scan_start_timestamp.size())) {
+            LOG(DEBUG) << "Failed to set timestamp in tlvProfile2ChannelScanResult!";
+            return false;
+        }
+
+        // totalNoise will be used to calculate the average noise level for the channel.
+        int totalNoise       = 0;
+        int totalUtilization = 0;
+        int neighbor_idx     = 0;
+        for (const auto &neighbor : neighbors) {
+            LOG(DEBUG) << "Filling neighbor structure #" << (neighbor_idx + 1);
+            auto neighbor_res = channel_scan_result_tlv->create_neighbors_list();
+            if (!neighbor_res) {
+                LOG(ERROR) << "Failed to create neighbor list";
+                return false;
+            }
+            if (!fill_scan_report_neighbor(neighbor, neighbor_res)) {
+                LOG(ERROR) << "Failed to fill neighbor structure #" << (neighbor_idx + 1);
+                return false;
+            }
+            if (!channel_scan_result_tlv->add_neighbors_list(neighbor_res)) {
+                LOG(ERROR) << "Failed to add neighbor #" << (neighbor_idx + 1) << " to TLV";
+                return false;
+            }
+            // Used to set TLV noise & utilization field later on
+            totalNoise += neighbor.noise_dBm;
+            totalUtilization += neighbor.channel_utilization;
+            neighbor_idx++;
+        }
+        if (channel_scan_result_tlv->neighbors_list_length() != 0) {
+            channel_scan_result_tlv->noise() =
+                totalNoise / channel_scan_result_tlv->neighbors_list_length();
+            channel_scan_result_tlv->utilization() =
+                totalUtilization / channel_scan_result_tlv->neighbors_list_length();
+        } else {
+            LOG(DEBUG) << "No neighbors were found, setting noise and utilization to 0.";
+            channel_scan_result_tlv->noise()       = 0;
+            channel_scan_result_tlv->utilization() = 0;
+        }
+        channel_scan_result_tlv->scan_type() = scan_type;
+        return true;
+    };
 
     // TODO: add one or more ChannelScanResult TLVs
 
