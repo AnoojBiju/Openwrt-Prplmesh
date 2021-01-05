@@ -2096,22 +2096,6 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
             LOG(WARNING) << "event iface != wireless iface!";
         }
         if (FSM_IS_IN_STATE(WAIT_WPS)) {
-
-            auto bridge = db->bridge.iface_name;
-            auto bridge_ifaces =
-                beerocks::net::network_utils::linux_get_iface_list_from_bridge(bridge);
-            auto eth_iface = db->ethernet.iface_name;
-            // remove the wired interface from the bridge, it will be added on dev_set_config.
-            if (std::find(bridge_ifaces.begin(), bridge_ifaces.end(), eth_iface) !=
-                bridge_ifaces.end()) {
-                if (!beerocks::net::network_utils::linux_remove_iface_from_bridge(bridge,
-                                                                                  eth_iface)) {
-                    LOG(ERROR) << "Failed to remove iface '" << eth_iface << "' from bridge '"
-                               << bridge << "' !";
-                    return false;
-                }
-            }
-
             db->backhaul.selected_iface_name = iface;
             db->backhaul.connection_type     = AgentDB::sBackhaul::eConnectionType::Wireless;
             LOG(DEBUG) << "WPS scan completed successfully on iface = " << iface
