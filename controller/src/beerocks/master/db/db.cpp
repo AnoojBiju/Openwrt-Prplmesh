@@ -2187,11 +2187,18 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
         Prepare path to the BSS instance.
         Example: Controller.Network.Device.1.Radio.1.BSS.
     */
-    auto bss_path  = radio_path + "BSS";
-    auto bss_index = m_ambiorix_datamodel->add_instance(bss_path);
+    auto bss_path = radio_path + "BSS";
+    auto bss_index =
+        m_ambiorix_datamodel->get_instance_index(bss_path + ".[BSSID == '%s'].", bssid);
+
     if (!bss_index) {
-        LOG(ERROR) << "Failed to add " << bss_path << " instance.";
-        return false;
+        bss_index = m_ambiorix_datamodel->add_instance(bss_path);
+        if (!bss_index) {
+            LOG(ERROR) << "Failed to add " << bss_path << " instance.";
+            return false;
+        }
+    } else {
+        LOG(DEBUG) << "BSS instance exists for BSSID: " << bssid << "Updating Data Model.";
     }
 
     /*
@@ -6156,7 +6163,19 @@ std::string db::dm_get_path_to_bss(const sMacAddr &bssid)
         return {};
     }
 
-    auto radio_node = get_node(node->parent_mac);
+    auto find_node = std::find_if(
+        std::begin(nodes), std::end(nodes),
+        [&bssid_string](const std::unordered_map<std::string, std::shared_ptr<son::node>> &map) {
+            return map.find(bssid_string) != map.end();
+        });
+
+    if (find_node == std::end(nodes)) {
+        LOG(ERROR) << "Failed to get radio node for bssid: " << bssid_string;
+        return {};
+    }
+
+    auto radio_node = find_node->at(bssid_string);
+
     auto radio_path = dm_get_path_to_radio(*radio_node);
     if (radio_path.empty()) {
         LOG(ERROR) << "Failed to get radio path for radio, mac: " << radio_node->mac;
