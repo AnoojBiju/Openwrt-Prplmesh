@@ -771,6 +771,23 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
             active_hal->disconnect();
         }
 
+        // Add wired interface to the bridge
+        // It will be removed later on (dev_set_config) in case of wireless backhaul connection is needed.
+        auto db            = AgentDB::get();
+        auto bridge        = db->bridge.iface_name;
+        auto bridge_ifaces = beerocks::net::network_utils::linux_get_iface_list_from_bridge(bridge);
+        auto eth_iface     = db->ethernet.iface_name;
+        if (std::find(bridge_ifaces.begin(), bridge_ifaces.end(), eth_iface) !=
+            bridge_ifaces.end()) {
+            LOG(INFO) << "The wired interface is already in the bridge";
+        } else {
+            if (!beerocks::net::network_utils::linux_add_iface_to_bridge(bridge, eth_iface)) {
+                LOG(ERROR) << "Failed to add iface '" << eth_iface << "' to bridge '" << bridge
+                           << "' !";
+                return false;
+            }
+        }
+
         if (m_eFSMState == EState::ENABLED) {
             m_agent_ucc_listener->reset_completed();
             // Stay in ENABLE state until onboarding_state will change
