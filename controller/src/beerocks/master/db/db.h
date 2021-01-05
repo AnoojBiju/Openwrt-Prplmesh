@@ -268,10 +268,9 @@ public:
     *
     * @param mac address of radio
     * @param mac address of device
-    * @return true if device with given mac address was found
-    * and radio instance was successfully added, false otherwise
+    * @return data model path if radio instance was successfully added, empty string otherwise
     */
-    bool dm_add_radio_element(const std::string &radio_mac, const std::string &device_mac);
+    std::string dm_add_radio_element(const std::string &radio_mac, const std::string &device_mac);
 
     bool
     add_node_gateway(const sMacAddr &mac,
@@ -569,6 +568,16 @@ public:
     std::string get_hostap_vap_with_ssid(const std::string &mac, const std::string &ssid);
     std::string get_hostap_vap_mac(const std::string &mac, const int vap_id);
     std::string get_node_parent_radio(const std::string &mac);
+
+    /**
+     * @brief Get data model path of node
+     *
+     * @param[in] mac node mac address.
+     * @return Data model path of node on success or empty string otherwise.
+     */
+    std::string get_node_data_model_path(const std::string &mac);
+    std::string get_node_data_model_path(const sMacAddr &mac);
+
     int8_t get_hostap_vap_id(const std::string &mac);
 
     bool set_hostap_repeater_mode_flag(const std::string &mac, bool flag);
@@ -1422,9 +1431,9 @@ private:
      * @brief Adds instance to the datamodel for the unique MAC
      *
      * @param[in] mac Mac address for the new device
-     * @return True on success, otherwise false.
+     * @return Path of device instance on success or empty string otherwise.
      */
-    bool dm_add_device_element(const sMacAddr &mac);
+    std::string dm_add_device_element(const sMacAddr &mac);
 
     /**
      * @brief Add station 'HECapabilities' data element, set values to its parametrs.
@@ -1474,9 +1483,9 @@ private:
      *
      * @param bssid BSS mac address.
      * @param client_mac Client mac address.
-     * @return True on success, false otherwise.
+     * @return Data model path on success, empty string otherwise
      */
-    bool dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client_mac);
+    std::string dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client_mac);
 
     /**
      * @brief Adds last STA to the Controller.Notifiation.AssociationEvent
@@ -1488,24 +1497,6 @@ private:
     bool dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac);
 
     /**
-     * @brief Prepares path to the Device data element with correct index (i).
-     * Example: "Controller.Network.Device.1."
-     *
-     * @param[in] device_node Reference on the Device node object.
-     * @return Correct Device path, otherwise empty string.
-     */
-    std::string dm_get_path_to_device(const son::node &device_node);
-
-    /**
-     * @brief Prepares path to the Radio data element with correct index (i).
-     * Example: "Controller.Network.Device.1.Radio.1."
-     *
-     * @param[in] radio_node Reference on the Radio node object.
-     * @return Correct Radio path, otherwise empty string.
-     */
-    std::string dm_get_path_to_radio(const son::node &radio_node);
-
-    /**
      * @brief Prepares path to the BSS data element with correct index (i).
      * Example: "Controller.Network.Device.1.Radio.1.BSS.2.".
      *
@@ -1513,15 +1504,6 @@ private:
      * @return Path to bss, empty string otherwise.
      */
     std::string dm_get_path_to_bss(const sMacAddr &bssid);
-
-    /**
-     * @brief Get path to the STA data element with appropriate indexes.
-     * Example: "Controller.Network.Device.1.Radio.2.BSS.3.STA.4."
-     *
-     * @param sta_mac Mac address of station.
-     * @return Path to STA data element, empty string otherwise.
-     */
-    std::string dm_get_path_to_sta(const std::string &sta_mac);
 
     /**
      * @brief Set clients (device) multi ap capabilities
@@ -1545,6 +1527,15 @@ private:
      */
     bool dm_add_ap_operating_classes(const std::string &radio_mac, uint8_t max_tx_power,
                                      uint8_t op_class, std::vector<uint8_t> non_operable_channels);
+
+    /**
+     * @brief Set data model path member of a node
+     *
+     * @param mac mac address of node
+     * @param data_model_path data model path
+     * @return true on success, false otherwise.
+     */
+    bool set_node_data_model_path(const sMacAddr &mac, const std::string &data_model_path);
 
     int network_optimization_task_id           = -1;
     int channel_selection_task_id              = -1;

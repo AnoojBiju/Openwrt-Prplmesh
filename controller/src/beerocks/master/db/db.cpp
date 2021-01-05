@@ -182,6 +182,28 @@ bool db::add_node(const sMacAddr &mac, const sMacAddr &parent_mac, beerocks::eTy
     return true;
 }
 
+bool db::set_node_data_model_path(const sMacAddr &mac, const std::string &data_model_path)
+{
+    auto node = get_node(mac);
+    if (!node) {
+        LOG(ERROR) << "Failed to add set data model path, node " << mac << " does not exist";
+        return false;
+    }
+
+    node->dm_path = data_model_path;
+    return true;
+}
+
+std::string db::get_node_data_model_path(const std::string &mac)
+{
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return {};
+    }
+    return n->dm_path;
+}
+
 bool db::add_node_gateway(const sMacAddr &mac, const sMacAddr &radio_identifier)
 {
     if (!add_node(mac, network_utils::ZERO_MAC, beerocks::TYPE_GW, radio_identifier)) {
@@ -189,9 +211,17 @@ bool db::add_node_gateway(const sMacAddr &mac, const sMacAddr &radio_identifier)
         return false;
     }
 
-    if (!dm_add_device_element(mac)) {
+    auto data_model_path = dm_add_device_element(mac);
+    if (data_model_path.empty()) {
         LOG(ERROR) << "Failed to add device element for the gateway, mac: " << mac;
         return false;
+    }
+
+    set_node_data_model_path(mac, data_model_path);
+
+    if (!dm_set_device_multi_ap_capabilities(tlvf::mac_to_string(mac))) {
+        LOG(ERROR) << "Failed to set multi ap capabilities";
+        return {};
     }
 
     return true;
@@ -205,9 +235,17 @@ bool db::add_node_ire(const sMacAddr &mac, const sMacAddr &parent_mac,
         return false;
     }
 
-    if (!dm_add_device_element(mac)) {
+    auto data_model_path = dm_add_device_element(mac);
+    if (data_model_path.empty()) {
         LOG(ERROR) << "Failed to add device element for the ire, mac: " << mac;
         return false;
+    }
+
+    set_node_data_model_path(mac, data_model_path);
+
+    if (!dm_set_device_multi_ap_capabilities(tlvf::mac_to_string(mac))) {
+        LOG(ERROR) << "Failed to set multi ap capabilities";
+        return {};
     }
 
     return true;
@@ -237,7 +275,7 @@ bool db::add_node_wired_bh(const sMacAddr &mac, const sMacAddr &parent_mac,
     return true;
 }
 
-bool db::dm_add_radio_element(const std::string &radio_mac, const std::string &device_mac)
+std::string db::dm_add_radio_element(const std::string &radio_mac, const std::string &device_mac)
 {
     std::string path_to_obj = "Controller.Network.Device.";
     uint32_t index =
@@ -245,7 +283,7 @@ bool db::dm_add_radio_element(const std::string &radio_mac, const std::string &d
 
     if (!index) {
         LOG(ERROR) << "Failed to get Controller.Network.Device index for mac: " << device_mac;
-        return false;
+        return {};
     }
 
     // Prepare path to the Radio object, like Device.Network.{i}.Radio
@@ -255,26 +293,37 @@ bool db::dm_add_radio_element(const std::string &radio_mac, const std::string &d
     if (radio_instance.empty()) {
         LOG(ERROR) << "Failed to add instance Controller.Network.Device." << index
                    << ".Radio, with radio mac: " << radio_mac;
-        return false;
+        return {};
     }
 
     // Prepare path to the Radio object ID, like Device.Network.{i}.Radio.{i}.ID
     if (!m_ambiorix_datamodel->set(radio_instance, "ID", radio_mac)) {
         LOG(ERROR) << "Failed to set " << radio_instance << "for mac: " << radio_mac;
-        return false;
+        return {};
     }
 
-    return true;
+    return radio_instance;
 }
 
 bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac,
                         const sMacAddr &radio_identifier)
 {
     if (!add_node(mac, parent_mac, beerocks::TYPE_SLAVE, radio_identifier)) {
-        LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
+        LOG(ERROR) << "Failed to add radio node, mac: " << mac;
         return false;
     }
-    return dm_add_radio_element(tlvf::mac_to_string(mac), tlvf::mac_to_string(parent_mac));
+
+    auto data_model_path =
+        dm_add_radio_element(tlvf::mac_to_string(mac), tlvf::mac_to_string(parent_mac));
+
+    if (data_model_path.empty()) {
+        LOG(ERROR) << "Failed to add radio element, mac: " << mac;
+        return false;
+    }
+
+    set_node_data_model_path(mac, data_model_path);
+
+    return true;
 }
 
 bool db::add_node_client(const sMacAddr &mac, const sMacAddr &parent_mac,
@@ -287,7 +336,8 @@ bool db::add_node_client(const sMacAddr &mac, const sMacAddr &parent_mac,
 
     // Add STA to the controller data model via m_ambiorix_datamodel
     // for connected station (WiFI client)
-    if (!dm_add_sta_element(parent_mac, mac)) {
+    auto data_model_path = dm_add_sta_element(parent_mac, mac);
+    if (data_model_path.empty()) {
         LOG(ERROR) << "Failed to add client instance, mac: " << mac;
         return false;
     }
@@ -295,6 +345,8 @@ bool db::add_node_client(const sMacAddr &mac, const sMacAddr &parent_mac,
     if (!dm_add_association_event(parent_mac, mac)) {
         LOG(ERROR) << "Failed to add association event, mac: " << mac;
     }
+
+    set_node_data_model_path(mac, data_model_path);
 
     return true;
 }
@@ -829,7 +881,7 @@ bool db::set_hostap_active(const std::string &mac, bool active)
 
     // Enabled variable is a part of Radio data element and
     // need to get path like Controller.Device.{i}.Radio.{i}. for setting Enabled variable
-    auto radio_enable_path = dm_get_path_to_radio(*n);
+    auto radio_enable_path = n->dm_path;
 
     if (radio_enable_path.empty()) {
         LOG(ERROR) << "Failed to get path to the Radio with mac: " << mac;
@@ -1230,13 +1282,13 @@ bool db::set_ap_vht_capabilities(wfa_map::tlvApVhtCapabilities &vht_caps_tlv)
         return false;
     }
 
-    auto path_to_obj = dm_get_path_to_radio(*radio_node);
+    auto path_to_obj = radio_node->dm_path;
     if (path_to_obj.empty()) {
         LOG(ERROR) << "Fail get path to object";
         return false;
     }
 
-    path_to_obj += "Capabilities";
+    path_to_obj += ".Capabilities";
     if (!m_ambiorix_datamodel->add_optional_subobject(path_to_obj, "VHTCapabilities")) {
         LOG(ERROR) << "Fail add: " << path_to_obj << ".VHTCapabilities";
         return false;
@@ -1304,13 +1356,13 @@ bool db::dm_add_ap_operating_classes(const std::string &radio_mac, uint8_t max_t
         return false;
     }
 
-    std::string path_to_obj = dm_get_path_to_radio(*radio_node);
+    std::string path_to_obj = radio_node->dm_path;
     if (path_to_obj.empty()) {
         LOG(ERROR) << "Fail to find path to radio with mac: " << radio_mac;
         return false;
     }
 
-    path_to_obj += "Capabilities.OperatingClasses";
+    path_to_obj += ".Capabilities.OperatingClasses";
     std::string path_to_obj_instance = m_ambiorix_datamodel->add_instance(path_to_obj);
     if (path_to_obj_instance.empty()) {
         LOG(ERROR) << "Fail to add object: " << path_to_obj;
@@ -1355,7 +1407,7 @@ bool db::set_ap_he_capabilities(wfa_map::tlvApHeCapabilities &he_caps_tlv)
         return false;
     }
 
-    auto path_to_obj = dm_get_path_to_radio(*radio_node);
+    auto path_to_obj = radio_node->dm_path;
     auto flags1      = he_caps_tlv.flags1();
     auto flags2      = he_caps_tlv.flags2();
     bool return_val  = true;
@@ -1365,7 +1417,7 @@ bool db::set_ap_he_capabilities(wfa_map::tlvApHeCapabilities &he_caps_tlv)
         return false;
     }
 
-    path_to_obj += "Capabilities";
+    path_to_obj += ".Capabilities";
     if (!m_ambiorix_datamodel->add_optional_subobject(path_to_obj, "HECapabilities")) {
         LOG(WARNING) << "Couldn't add object " << path_to_obj << ".HECapabilities";
         return false;
@@ -1514,7 +1566,7 @@ bool db::dm_set_sta_ht_capabilities(const std::string &path_to_sta,
         LOG(ERROR) << "Failed to add: " << path_to_sta << "HTCapabilities sub-object.";
         return false;
     }
-    std::string path_to_obj = path_to_sta + "HTCapabilities";
+    std::string path_to_obj = path_to_sta + ".HTCapabilities";
     if (!m_ambiorix_datamodel->set(path_to_obj, "GI_20_MHz",
                                    static_cast<bool>(sta_cap.ht_low_bw_short_gi))) {
         LOG(ERROR) << "Couldn't set GI_20_MHz for object " << path_to_obj;
@@ -1551,7 +1603,7 @@ bool db::dm_set_sta_vht_capabilities(const std::string &path_to_sta,
         LOG(ERROR) << "Failed to add: " << path_to_sta << "VHTCapabilities sub-object.";
         return false;
     }
-    std::string path_to_obj = path_to_sta + "VHTCapabilities";
+    std::string path_to_obj = path_to_sta + ".VHTCapabilities";
     if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_Tx_MCS", sta_cap.default_mcs)) {
         LOG(ERROR) << "Couldn't set VHT_Tx_MCS for object " << path_to_obj;
         return_val = false;
@@ -1632,7 +1684,7 @@ bool db::set_station_capabilities(const std::string &client_mac,
 
     // Prepare path to the STA
     // Example: Controller.Network.Device.1.Radio.1.BSS.1.STA.1
-    std::string path_to_sta = dm_get_path_to_sta(client_mac);
+    std::string path_to_sta = n->dm_path;
 
     if (path_to_sta.empty()) {
         LOG(ERROR) << "Failed to add path for STA object with mac: " << client_mac;
@@ -2124,7 +2176,7 @@ bool db::remove_vap(const std::string &radio_mac, int vap_id)
         return false;
     }
 
-    auto radio_path = dm_get_path_to_radio(*radio_node);
+    auto radio_path = radio_node->dm_path;
     if (radio_path.empty()) {
         LOG(ERROR) << "Failed to get radio path with mac: " << radio_mac;
         return false;
@@ -2134,7 +2186,7 @@ bool db::remove_vap(const std::string &radio_mac, int vap_id)
         Prepare path to the BSS instance.
         Example: Controller.Network.Device.1.Radio.1.BSS.
     */
-    auto bss_path = radio_path + "BSS.";
+    auto bss_path = radio_path + ".BSS.";
 
     auto bss_index =
         m_ambiorix_datamodel->get_instance_index(bss_path + "[BSSID == '%s'].", vap->second.mac);
@@ -2175,7 +2227,7 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
         return false;
     }
 
-    auto radio_path = dm_get_path_to_radio(*radio_node);
+    auto radio_path = radio_node->dm_path;
     if (radio_path.empty()) {
         LOG(ERROR) << "Failed to get radio path with mac: " << radio_mac;
         return false;
@@ -2185,10 +2237,10 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
         Prepare path to the BSS instance.
         Example: Controller.Network.Device.1.Radio.1.BSS.
     */
-    std::string bss_instance;
-    auto bss_path = radio_path + "BSS";
+    auto bss_path = radio_path + ".BSS";
     auto bss_index =
         m_ambiorix_datamodel->get_instance_index(bss_path + ".[BSSID == '%s'].", bssid);
+    std::string bss_instance;
 
     if (!bss_index) {
         bss_instance = m_ambiorix_datamodel->add_instance(bss_path);
@@ -2198,7 +2250,7 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
         }
     } else {
         LOG(DEBUG) << "BSS instance exists for BSSID: " << bssid << "Updating Data Model.";
-        bss_instance += "." + std::to_string(bss_index);
+        bss_instance = bss_path + "." + std::to_string(bss_index);
     }
 
     /*
@@ -2377,6 +2429,11 @@ std::string db::get_node_parent_radio(const std::string &mac)
         }
     }
     return n->mac;
+}
+
+std::string db::get_node_data_model_path(const sMacAddr &mac)
+{
+    return get_node_data_model_path(tlvf::mac_to_string(mac));
 }
 
 int8_t db::get_hostap_vap_id(const std::string &mac)
@@ -4197,7 +4254,7 @@ bool db::set_hostap_stats_info(const std::string &mac, beerocks_message::sApStat
         p->stats_delta_ms               = params->stats_delta_ms;
         p->timestamp                    = std::chrono::steady_clock::now();
 
-        auto radio_path = dm_get_path_to_radio(*n);
+        auto radio_path = n->dm_path;
 
         if (radio_path.empty()) {
             LOG(ERROR) << "Failed to get path to the radio with mac: " << n->mac;
@@ -4315,7 +4372,7 @@ bool db::set_node_stats_info(const std::string &mac, beerocks_message::sStaStats
         p->rx_rssi           = params->rx_rssi;
         p->timestamp         = std::chrono::steady_clock::now();
 
-        std::string path_to_sta = dm_get_path_to_sta(mac);
+        std::string path_to_sta = n->dm_path;
 
         if (path_to_sta.empty()) {
             LOG(ERROR) << "Fail to get path for station with mac: " << mac;
@@ -4332,7 +4389,7 @@ bool db::set_node_stats_info(const std::string &mac, beerocks_message::sStaStats
         }
     }
 
-    std::string path_to_sta = dm_get_path_to_sta(mac);
+    std::string path_to_sta = n->dm_path;
 
     if (path_to_sta.empty()) {
         LOG(ERROR) << "Failed to get path for STA object with mac: " << mac;
@@ -4397,7 +4454,7 @@ bool db::set_vap_stats_info(const std::string &bssid, uint32_t uc_tx_bytes, uint
 
     /*
         Prepare path with correct BSS instance.
-        Example: Controller.Network.Device.1.Radio.1.BSS.1.
+        Example: Controller.Network.Device.1.Radio.1.BSS.1
     */
     auto bss_path = dm_get_path_to_bss(tlvf::mac_from_string(bssid));
     if (bss_path.empty()) {
@@ -4410,7 +4467,7 @@ bool db::set_vap_stats_info(const std::string &bssid, uint32_t uc_tx_bytes, uint
         Example: Controller.Network.Device.1.Radio.1.BSS.1.UnicastBytesSent
     */
     if (!m_ambiorix_datamodel->set(bss_path, "UnicastBytesSent", uc_tx_bytes)) {
-        LOG(ERROR) << "Failed to set " << bss_path << "UnicastBytesSent";
+        LOG(ERROR) << "Failed to set " << bss_path << ".UnicastBytesSent";
         return false;
     }
 
@@ -4419,7 +4476,7 @@ bool db::set_vap_stats_info(const std::string &bssid, uint32_t uc_tx_bytes, uint
         Example: Controller.Network.Device.1.Radio.1.BSS.1.UnicastBytesReceived
     */
     if (!m_ambiorix_datamodel->set(bss_path, "UnicastBytesReceived", uc_rx_bytes)) {
-        LOG(ERROR) << "Failed to set " << bss_path << "UnicastBytesReceived";
+        LOG(ERROR) << "Failed to set " << bss_path << ".UnicastBytesReceived";
         return false;
     }
 
@@ -5142,7 +5199,14 @@ void db::clear_bss_info_configuration(const sMacAddr &al_mac) { bss_infos[al_mac
 bool db::set_sta_link_metrics(const sMacAddr &sta_mac, uint32_t downlink_est_mac_data_rate,
                               uint32_t uplink_est_mac_data_rate, uint8_t signal_strength)
 {
-    std::string path_to_sta = dm_get_path_to_sta(tlvf::mac_to_string(sta_mac));
+    auto sta_node = get_node(sta_mac);
+
+    if (!sta_node || sta_node->get_type() != TYPE_CLIENT) {
+        LOG(ERROR) << "Fail to get station node with mac: " << sta_mac;
+        return {};
+    }
+
+    std::string path_to_sta = sta_node->dm_path;
     bool return_val         = true;
 
     if (path_to_sta.empty()) {
@@ -5740,12 +5804,12 @@ bool db::clear_ap_capabilities(const sMacAddr &radio_mac)
 {
     auto radio_node = get_node(radio_mac);
 
-    std::string path_to_obj = dm_get_path_to_radio(*radio_node);
+    std::string path_to_obj = radio_node->dm_path;
     if (path_to_obj.empty()) {
         LOG(ERROR) << "Fail get path for radio with mac: " << radio_mac;
         return false;
     }
-    path_to_obj += "Capabilities";
+    path_to_obj += ".Capabilities";
     if (!m_ambiorix_datamodel->remove_optional_subobject(path_to_obj, "HTCapabilities")) {
         LOG(ERROR) << "Fail to remove optional subobject: " << path_to_obj << ".HTCapabilities";
         return false;
@@ -5772,13 +5836,13 @@ bool db::set_ap_ht_capabilities(const sMacAddr &radio_mac,
         return false;
     }
 
-    std::string path_to_obj = dm_get_path_to_radio(*radio_node);
+    std::string path_to_obj = radio_node->dm_path;
     if (path_to_obj.empty()) {
         LOG(ERROR) << "Fail get path for radio with mac: " << radio_mac;
         return false;
     }
 
-    path_to_obj += "Capabilities";
+    path_to_obj += ".Capabilities";
     if (!m_ambiorix_datamodel->add_optional_subobject(path_to_obj, "HTCapabilities")) {
         return false;
     }
@@ -5811,7 +5875,7 @@ bool db::set_ap_ht_capabilities(const sMacAddr &radio_mac,
 bool db::dm_set_device_multi_ap_capabilities(const std::string &device_mac)
 {
     auto device_node        = get_node(device_mac);
-    std::string path_to_obj = dm_get_path_to_device(*device_node);
+    std::string path_to_obj = device_node->dm_path;
     bool return_val         = true;
 
     if (path_to_obj.empty()) {
@@ -5819,7 +5883,7 @@ bool db::dm_set_device_multi_ap_capabilities(const std::string &device_mac)
         return false;
     }
 
-    path_to_obj += "MultiAPCapabilities";
+    path_to_obj += ".MultiAPCapabilities";
     //For the time being, agent does not do steering so Steering Policy TLV is ignored.
     if (!m_ambiorix_datamodel->set(path_to_obj, "AgentInitiatedRCPIBasedSteering", false)) {
         LOG(ERROR) << "Failed to set value for: " << path_to_obj
@@ -5839,48 +5903,48 @@ bool db::dm_set_device_multi_ap_capabilities(const std::string &device_mac)
     return return_val;
 }
 
-bool db::dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client_mac)
+std::string db::dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client_mac)
 {
 
     if (bssid == network_utils::ZERO_MAC) {
         LOG(WARNING) << "Client has empty parent bssid, not adding it to the data model, client="
                      << client_mac;
-        return true;
+        return {};
     }
 
     std::string path_to_bss = dm_get_path_to_bss(bssid);
     if (path_to_bss.empty()) {
         LOG(ERROR) << "Failed get path to bss with mac: " << bssid;
-        return false;
+        return {};
     }
 
-    std::string path_to_sta = path_to_bss + "STA";
+    std::string path_to_sta = path_to_bss + ".STA";
     auto sta_instance       = m_ambiorix_datamodel->add_instance(path_to_sta);
     if (sta_instance.empty()) {
         LOG(ERROR) << "Failed to add sta instance " << path_to_sta;
-        return false;
+        return {};
     }
     if (!m_ambiorix_datamodel->set(sta_instance, "MACAddress", tlvf::mac_to_string(client_mac))) {
         LOG(ERROR) << "Failed to set " << sta_instance << ".MACAddress to " << client_mac;
-        return false;
+        return {};
     }
 
     auto time_stamp = m_ambiorix_datamodel->get_datamodel_time_format();
     if (time_stamp.empty()) {
         LOG(ERROR) << "Failed to get Date and Time in RFC 3339 format.";
-        return false;
+        return {};
     }
 
     if (!m_ambiorix_datamodel->set(sta_instance, "TimeStamp", time_stamp)) {
         LOG(ERROR) << "Failed to set " << sta_instance << ".TimeStamp";
-        return false;
+        return {};
     }
     uint64_t add_sta_time = time(NULL);
     if (!m_ambiorix_datamodel->set(sta_instance, "LastConnectTime", add_sta_time)) {
         LOG(ERROR) << "Failed to set " << sta_instance << ".LastConnectTime";
-        return false;
+        return {};
     }
-    return true;
+    return sta_instance;
 }
 
 bool db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac)
@@ -5911,96 +5975,28 @@ bool db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_
     return true;
 }
 
-bool db::dm_add_device_element(const sMacAddr &mac)
+std::string db::dm_add_device_element(const sMacAddr &mac)
 {
     auto index = m_ambiorix_datamodel->get_instance_index("Controller.Network.Device.[ID == '%s'].",
                                                           tlvf::mac_to_string(mac));
     if (index) {
         LOG(WARNING) << "Device with ID: " << mac << " exists in the data model!";
-        return false;
+        return {};
     }
 
     auto device_instance = m_ambiorix_datamodel->add_instance("Controller.Network.Device");
     if (device_instance.empty()) {
         LOG(ERROR) << "Failed to add instance for device, mac: " << mac;
-        return false;
+        return {};
     }
 
     if (!m_ambiorix_datamodel->set(device_instance, "ID", tlvf::mac_to_string(mac))) {
         LOG(ERROR) << "Failed to add Network.Device.ID (ID = mac): " << tlvf::mac_to_string(mac);
-        return false;
+        return {};
     }
 
-    if (!dm_set_device_multi_ap_capabilities(tlvf::mac_to_string(mac))) {
-        LOG(ERROR) << "Failed to set multi ap capabilities";
-        return false;
-    }
-    return true;
+    return device_instance;
 }
-
-// Cover the get_path_ code for skipping errors about finding the path
-// when AmbiorixDummy enabled
-#ifdef ENABLE_NBAPI
-std::string db::dm_get_path_to_device(const son::node &device_node)
-{
-
-    auto node_type = get_node_type(device_node.mac);
-    if ((node_type != TYPE_GW) && (node_type != TYPE_IRE)) {
-        LOG(ERROR) << "Wrong node type: " << type_to_string(node_type);
-        return {};
-    }
-
-    auto device_index = m_ambiorix_datamodel->get_instance_index(
-        "Controller.Network.Device.[ID == '%s']", device_node.mac);
-    if (!device_index) {
-        LOG(ERROR) << "Failed to get Device index with mac: " << device_node.mac;
-        return {};
-    }
-
-    // Prepare result string Controller.Network.Device.{i}.
-    auto device_path = "Controller.Network.Device." + std::to_string(device_index) + ".";
-
-    return device_path;
-}
-
-std::string db::dm_get_path_to_radio(const son::node &radio_node)
-{
-    auto node_type = get_node_type(radio_node.mac);
-    if (node_type != TYPE_SLAVE) {
-        LOG(ERROR) << "Wrong node type: " << type_to_string(node_type);
-        return {};
-    }
-
-    auto device_node = get_node(tlvf::mac_from_string(radio_node.parent_mac));
-
-    if (!device_node) {
-        LOG(ERROR) << "Failed to get Parent Device Node with mac: " << radio_node.parent_mac;
-        return {};
-    }
-
-    auto device_path = dm_get_path_to_device(*device_node);
-
-    if (device_path.empty()) {
-        LOG(ERROR) << "Failed to get path to Device with mac: " << radio_node.parent_mac;
-        return {};
-    }
-
-    auto radio_index = m_ambiorix_datamodel->get_instance_index(device_path + "Radio.[ID == '%s']",
-                                                                radio_node.mac);
-    if (!radio_index) {
-        LOG(ERROR) << "Failed to get Radio index with mac:" << radio_node.mac;
-        return {};
-    }
-
-    // Prepare result string Controller.Network.Device.{i}.Radio{i}.
-    auto radio_path = device_path + "Radio." + std::to_string(radio_index) + ".";
-
-    return radio_path;
-}
-#else
-std::string db::dm_get_path_to_radio(const son::node &radio_node) { return "dummy!!"; }
-std::string db::dm_get_path_to_device(const son::node &device_node) { return "dummy!!"; }
-#endif
 
 bool db::add_current_op_class(const sMacAddr &radio_mac, uint8_t op_class, uint8_t op_channel,
                               int8_t tx_power)
@@ -6011,7 +6007,7 @@ bool db::add_current_op_class(const sMacAddr &radio_mac, uint8_t op_class, uint8
         return false;
     }
 
-    auto radio_path = dm_get_path_to_radio(*radio_node);
+    auto radio_path = radio_node->dm_path;
     if (radio_path.empty()) {
         LOG(ERROR) << "Failed to get radio path with mac: " << radio_mac
                    << " in Controller Data model.";
@@ -6020,7 +6016,7 @@ bool db::add_current_op_class(const sMacAddr &radio_mac, uint8_t op_class, uint8
 
     // Prepare path to the CurrentOperatingClasses instance
     // Data model path example: Controller.Network.Device.1.Radio.1.CurrentOperatingClasses
-    auto op_class_path = radio_path + "CurrentOperatingClasses";
+    auto op_class_path = radio_path + ".CurrentOperatingClasses";
 
     auto op_class_path_instance = m_ambiorix_datamodel->add_instance(op_class_path);
     if (op_class_path_instance.empty()) {
@@ -6073,7 +6069,7 @@ bool db::remove_current_op_classes(const sMacAddr &radio_mac)
         return false;
     }
 
-    auto radio_path = dm_get_path_to_radio(*radio_node);
+    auto radio_path = radio_node->dm_path;
     if (radio_path.empty()) {
         LOG(ERROR) << "Failed to get radio path with mac: " << radio_mac
                    << " in Controller Data model.";
@@ -6082,7 +6078,7 @@ bool db::remove_current_op_classes(const sMacAddr &radio_mac)
 
     // Prepare path to the CurrentOperatingClasses instance
     // Data model path example: Controller.Network.Device.1.Radio.1.CurrentOperatingClasses
-    auto op_class_path = radio_path + "CurrentOperatingClasses";
+    auto op_class_path = radio_path + ".CurrentOperatingClasses";
 
     if (!m_ambiorix_datamodel->remove_all_instances(op_class_path)) {
         LOG(ERROR) << "Failed to remove all instances for: " << op_class_path;
@@ -6103,13 +6099,13 @@ bool db::remove_hostap_supported_operating_classes(const sMacAddr &radio_mac)
         return false;
     }
 
-    auto radio_path = dm_get_path_to_radio(*radio_node);
+    auto radio_path = radio_node->dm_path;
     if (radio_path.empty()) {
         LOG(ERROR) << "Failed to get path to radio with mac: " << radio_mac;
         return false;
     }
 
-    auto op_class_path = radio_path + "OperatingClasses";
+    auto op_class_path = radio_path + ".OperatingClasses";
     if (!m_ambiorix_datamodel->remove_all_instances(op_class_path)) {
         LOG(ERROR) << "Failed to remove all instances for: " << op_class_path;
         return false;
@@ -6139,7 +6135,7 @@ bool db::set_radio_utilization(const sMacAddr &bssid, uint8_t utilization)
 
     auto radio_node = find_node->at(bssid_string);
 
-    auto radio_path = dm_get_path_to_radio(*radio_node);
+    auto radio_path = radio_node->dm_path;
     if (radio_path.empty()) {
         LOG(ERROR) << "Failed to get radio path for radio, mac: " << radio_node->mac;
         return false;
@@ -6180,51 +6176,24 @@ std::string db::dm_get_path_to_bss(const sMacAddr &bssid)
 
     auto radio_node = find_node->at(bssid_string);
 
-    auto radio_path = dm_get_path_to_radio(*radio_node);
+    auto radio_path = radio_node->dm_path;
     if (radio_path.empty()) {
         LOG(ERROR) << "Failed to get radio path for radio, mac: " << radio_node->mac;
         return {};
     }
 
-    auto bss_path = radio_path + "BSS.";
+    auto bss_path = radio_path + ".BSS.";
     auto bss_index =
         m_ambiorix_datamodel->get_instance_index(bss_path + "[BSSID == '%s']", bssid_string);
     if (!bss_index) {
         LOG(ERROR) << "Failed to get bss index for bss with mac: " << bssid_string;
         return {};
     }
-    return radio_path + "BSS." + std::to_string(bss_index) + ".";
-}
-
-std::string db::dm_get_path_to_sta(const std::string &sta_mac)
-{
-    auto sta_node = get_node(sta_mac);
-
-    if (!sta_node || sta_node->get_type() != TYPE_CLIENT) {
-        LOG(ERROR) << "Fail to get station node with mac: " << sta_mac;
-        return {};
-    }
-
-    std::string path_to_bss = dm_get_path_to_bss(tlvf::mac_from_string(sta_node->parent_mac));
-
-    if (path_to_bss.empty()) {
-        LOG(ERROR) << "Fail to get path to bss object with bssid: " << sta_node->parent_mac;
-        return {};
-    }
-
-    auto path_to_sta = path_to_bss + "STA.";
-    uint32_t sta_index =
-        m_ambiorix_datamodel->get_instance_index(path_to_sta + "[MACAddress == '%s']", sta_mac);
-    if (!sta_index) {
-        LOG(ERROR) << "Fail to get index for object: " << path_to_sta << " with mac: " << sta_mac;
-        return {};
-    }
-    return path_to_sta + std::to_string(sta_index);
+    return radio_path + ".BSS." + std::to_string(bss_index);
 }
 
 #else
 std::string db::dm_get_path_to_bss(const sMacAddr &bssid) { return "dummy!"; }
-std::string db::dm_get_path_to_sta(const std::string &sta_mac) { return "dummy!"; }
 #endif
 
 bool db::set_estimated_service_parameters_be(const sMacAddr &bssid,
