@@ -1964,6 +1964,16 @@ bool BackhaulManager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo> 
             }
             it++;
         }
+
+        // Notify channel selection task on zwdfs radio re-connect
+        auto db    = AgentDB::get();
+        auto radio = db->radio(soc->hostap_iface);
+        if (!radio) {
+            break;
+        }
+        m_task_pool.send_event(eTaskType::CHANNEL_SELECTION,
+                               ChannelSelectionTask::eEvent::AP_ENABLED, &radio->front.iface_name);
+
         break;
     }
     default: {
