@@ -27,9 +27,7 @@ public:
 
     void work() override;
 
-    enum eEvent : uint8_t {
-        AP_DISABLED,
-    };
+    enum eEvent : uint8_t { AP_DISABLED, AP_ENABLED };
 
     void handle_event(uint8_t event_enum_value, const void *event_obj) override;
 
@@ -97,6 +95,8 @@ private:
                                                 std::shared_ptr<beerocks_header> beerocks_header);
 
     void handle_ap_disabled_event(const std::string &iface);
+
+    void handle_ap_enable_event(const std::string &iface);
 
     /* ZWDFS */
     bool zwdfs_in_process() { return m_zwdfs_state != eZwdfsState::NOT_RUNNING; }
