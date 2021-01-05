@@ -128,6 +128,14 @@ bool mon_wlan_hal_dummy::sta_beacon_11k_request(const SBeaconRequest11k &req, in
 
     auto dummy_sta = m_dummy_stas_map.find(sta_mac);
     if (dummy_sta != m_dummy_stas_map.end()) {
+        if (bssid == "ff:ff:ff:ff:ff:ff") {
+            for (auto dummy_bssid_event : dummy_sta->second.beacon_measurment_events) {
+                sleep(1);
+                process_dummy_event(dummy_bssid_event.second);
+                LOG(DEBUG) << "Send RRM beacon response for sta " << sta_mac;
+            }
+            return true;
+        }
         auto dummy_bssid_event = dummy_sta->second.beacon_measurment_events.find(bssid);
         if (dummy_bssid_event == dummy_sta->second.beacon_measurment_events.end()) {
             LOG(WARNING) << "No RRM beacon response for bssid " << bssid;
