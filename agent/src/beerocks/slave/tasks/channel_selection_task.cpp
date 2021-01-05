@@ -268,10 +268,6 @@ void ChannelSelectionTask::handle_vs_csa_notification(
                 m_zwdfs_state != eZwdfsState::WAIT_FOR_ZWDFS_CAC_STARTED &&
                 m_zwdfs_state != eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED) {
 
-                if (!initialize_zwdfs_interface_name()) {
-                    LOG(DEBUG) << "No ZWDFS radio interface has been found. ZWDFS not initiated.";
-                    return;
-                }
                 m_zwdfs_primary_radio_iface = sender_radio->front.iface_name;
                 // Start ZWDFS flow
                 ZWDFS_FSM_MOVE_STATE(eZwdfsState::REQUEST_CHANNELS_LIST);
@@ -448,6 +444,11 @@ void ChannelSelectionTask::handle_ap_disabled_event(const std::string &iface)
         return;
     }
 
+    if (iface == m_zwdfs_iface) {
+        LOG(DEBUG) << "Received AP_DISABLED event for the ZW-DFS interface";
+        m_zwdfs_ap_enabled = false;
+    }
+
     abort_zwdfs_flow();
 }
 
@@ -455,6 +456,19 @@ void ChannelSelectionTask::handle_ap_enable_event(const std::string &iface)
 {
     LOG(TRACE) << "Received AP_ENABLED event for iface=" << iface;
 
+    if (!initialize_zwdfs_interface_name()) {
+        LOG(WARNING) << "No ZWDFS radio interface has been found. "
+                        "AP_ENABLED before ZWDFS has been initiated.";
+        return;
+    }
+
+    if (iface == m_zwdfs_iface) {
+        LOG(DEBUG) << "Received AP_ENABLED event for the ZW-DFS interface";
+        m_zwdfs_ap_enabled = true;
+
+        LOG_IF((m_zwdfs_state == ZWDFS_SWITCH_ANT_OFF_REQUEST), DEBUG)
+            << "Resume ZW-DFS antenna release";
+    }
 }
 
 const std::string ChannelSelectionTask::socket_to_front_iface_name(int fd)
@@ -630,6 +644,13 @@ void ChannelSelectionTask::zwdfs_fsm()
         // ZWDFS antenna. Since at the time when the background scan will be over, the selected
         // channel might not be relevant anymore, the FSM will start over and jum to the initial
         // state which query the updated channel info from the AP.
+        if (!m_zwdfs_ap_enabled) {
+            LOG(ERROR) << "ZW-DFS antenna interface is down. Unable to switch to DFS channel "
+                          "using ZW-DFS. Aborting flow.";
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            break;
+        }
+
         if (radio_scan_in_progress()) {
             LOG(INFO) << "Pause ZWDFS flow until background scan is finished";
             break;
@@ -740,6 +761,11 @@ void ChannelSelectionTask::zwdfs_fsm()
     case eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST: {
         // Block switching back 2.4G antenna if its radio is during background scan.
         if (radio_scan_in_progress(eFreqType::FREQ_24G)) {
+            break;
+        }
+
+        // Block switching back 2.4G antenna while the ZW-DFS interface is down.
+        if (!m_zwdfs_ap_enabled) {
             break;
         }
 

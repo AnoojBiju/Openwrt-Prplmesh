@@ -170,6 +170,8 @@ private:
     */
     bool m_zwdfs_ant_in_use = true;
 
+    bool m_zwdfs_ap_enabled = false;
+
     /* Helper functions */
     const std::string socket_to_front_iface_name(int fd);
     int front_iface_name_to_socket(const std::string &iface_name);
