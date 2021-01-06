@@ -69,7 +69,7 @@ ARG PACKAGES="\
 RUN apt-get update && apt-get install -y $PACKAGES && \
     # We need liburiparser-dev > v. 9.0 which isn't avalaible in default
     # 18.04 Ubuntu repos. So add Ubuntu 19.10 repo which has v. 0.9.3-2
-    echo "deb http://cz.archive.ubuntu.com/ubuntu eoan main universe" | tee -a  /etc/apt/sources.list && \
+    echo "deb http://old-releases.ubuntu.com/ubuntu eoan main universe" | tee -a  /etc/apt/sources.list && \
     apt-get update && \
     apt-get install -y \
     liburiparser-dev && \
