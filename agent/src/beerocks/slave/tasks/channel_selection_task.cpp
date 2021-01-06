@@ -1096,7 +1096,7 @@ ChannelSelectionTask::select_best_usable_channel(const std::string &front_radio_
             best_rank                  = channel_bw_info.rank;
             selected_channel.channel   = radio->channel;
             selected_channel.bw        = channel_bw_info.bandwidth;
-            selected_channel.dfs_state = radio->channels_list.at(radio->channel).dfs_state;
+            selected_channel.dfs_state = radio->channels_list.at(radio->channel).get_dfs_state();
             selected_channel.rank      = channel_bw_info.rank;
             break;
         }
@@ -1110,7 +1110,7 @@ ChannelSelectionTask::select_best_usable_channel(const std::string &front_radio_
 
     for (const auto &channel_info_pair : radio->channels_list) {
         uint8_t channel = channel_info_pair.first;
-        auto dfs_state  = channel_info_pair.second.dfs_state;
+        auto dfs_state  = channel_info_pair.second.get_dfs_state();
         if (dfs_state == beerocks_message::eDfsState::UNAVAILABLE) {
             continue;
         }
@@ -1168,7 +1168,8 @@ ChannelSelectionTask::select_best_usable_channel(const std::string &front_radio_
                         return false;
                     }
 
-                    auto overlapping_channel_dfs_state = overlap_channel_info_it->second.dfs_state;
+                    auto overlapping_channel_dfs_state =
+                        overlap_channel_info_it->second.get_dfs_state();
                     if (overlapping_channel_dfs_state == beerocks_message::eDfsState::UNAVAILABLE) {
                         return true;
                     }

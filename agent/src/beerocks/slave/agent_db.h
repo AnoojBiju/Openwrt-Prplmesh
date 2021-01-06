@@ -9,6 +9,8 @@
 #define _AGENT_DB_H_
 
 #include "cac_capabilities.h"
+#include "cac_status_interface.h"
+#include "tasks/task_messages.h"
 #include <bcl/beerocks_defines.h>
 #include <bcl/network/network_utils.h>
 #include <beerocks/tlvf/beerocks_message.h>
@@ -252,9 +254,38 @@ public:
         } cac_capabilities;
 
         struct sChannelInfo {
+            sChannelInfo()
+                : tx_power_dbm(0),
+                  cac_completion_status(eCacCompletionStatus::CAC_COMPLETION_NOT_PERFORMED),
+                  dfs_state(beerocks_message::eDfsState::NOT_DFS)
+            {
+            }
+
             int8_t tx_power_dbm;
-            beerocks_message::eDfsState dfs_state;
             std::vector<beerocks_message::sSupportedBandwidth> supported_bw_list;
+            eCacCompletionStatus cac_completion_status;
+
+            void set_dfs_state(beerocks_message::eDfsState dfs_state_)
+            {
+                if (dfs_state == dfs_state_) {
+                    // no real change in the state, nothing to do
+                    return;
+                }
+                dfs_state       = dfs_state_;
+                dfs_state_since = std::chrono::steady_clock::now();
+            }
+
+            beerocks_message::eDfsState get_dfs_state() const { return dfs_state; }
+
+            std::chrono::time_point<std::chrono::steady_clock> get_dfs_state_since() const
+            {
+                return dfs_state_since;
+            }
+
+        private:
+            beerocks_message::eDfsState dfs_state;
+            // the time the dfs state started
+            std::chrono::time_point<std::chrono::steady_clock> dfs_state_since;
         };
         // Key: Channel
         std::unordered_map<uint8_t, sChannelInfo> channels_list;
@@ -294,6 +325,8 @@ public:
 
         bool he_supported = false; ///< Is 802.11ax (High Efficiency) protocol supported
         bool report_indepent_scans_policy = false;
+
+        std::shared_ptr<sSwitchChannelRequest> last_swich_channel_request;
     };
     struct {
         uint16_t max_number_of_vlans_ids;
