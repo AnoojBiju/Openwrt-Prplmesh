@@ -250,6 +250,7 @@ boardfarm-tests:
     - job: image-build-boardfarm-ci
   tags:
     - boardfarm-compose
+  timeout: 30m
 
 boardfarm-stability-tests:
   extends: boardfarm-tests
