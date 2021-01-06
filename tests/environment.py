@@ -560,6 +560,15 @@ class RadioHostapd(Radio):
         device.expect("link/ether (?P<mac>([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})")
         return device.match.group('mac')
 
+    def get_current_channel(self, iface: str) -> ChannelInfo:
+        device = self.agent.device
+        device.sendline("iw {} info".format(iface))
+        device.expect(
+            "channel (?P<channel>[0-9]+) .*width.* (?P<width>[0-9]+) " +
+            "MHz.*center1.* (?P<center>[0-9]+) MHz")
+        return ChannelInfo(device.match.group('channel'), device.match.group('width'),
+                           device.match.group('center'))
+
 
 class VirtualAPHostapd(VirtualAP):
     """Docker implementation of a VAP."""
