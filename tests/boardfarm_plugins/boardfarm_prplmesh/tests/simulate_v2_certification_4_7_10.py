@@ -29,30 +29,6 @@ class V2Certification_4_7_10(CommonFlows):
 
         self.dev.DUT.wired_sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
 
-        # Phase 1
-        # Phase 1 (step 1): reset controller
-        controller.cmd_reply("DEV_RESET_DEFAULT")
-        # wait
-        sleep(2)
-        '''
-        todo: add verification
-        '''
-        # Phase 1 (step 1): config controller
-        controller.cmd_reply(
-            "dev_set_config,bss_info1,"
-            "{} 8x Multi-AP-24G-1 0x0020 0x0008 maprocks1 0 1".format(agent.mac))
-        # wait
-        sleep(2)
-        '''
-        todo: add verification
-        '''
-        # Phase 1 (step 2): config agent
-        agent.cmd_reply("dev_reset_default")
-        sleep(2)
-        agent.cmd_reply("dev_set_config,backhaul,eth")
-        # wait
-        sleep(2)
-
         # Phase 2 (step 3)
         mid = controller.dev_send_1905(agent.mac, 0x8001)
         # wait
