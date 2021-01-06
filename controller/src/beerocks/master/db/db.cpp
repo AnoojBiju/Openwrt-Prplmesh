@@ -4185,11 +4185,14 @@ bool db::set_hostap_stats_info(const std::string &mac, beerocks_message::sApStat
             return false;
         }
 
-        // Path to the variable example: Controller.Network.Device.1.Radio.1.Noise
-        if (!m_ambiorix_datamodel->set(radio_path, "Noise", p->noise)) {
-            LOG(ERROR) << "Failed to set: " << radio_path << "Noise parameter.";
-            return false;
-        }
+        // TODO: PPM-945
+        // Radio.Noise parameter should be filled up after receiving specific R2 message.
+        // For avoiding spam in controller log decided to comment code below.
+        // // Path to the variable example: Controller.Network.Device.1.Radio.1.Noise
+        // if (!m_ambiorix_datamodel->set(radio_path, "Noise", p->noise)) {
+        //     LOG(ERROR) << "Failed to set: " << radio_path << "Noise parameter.";
+        //     return false;
+        // }
     }
 
     return true;
