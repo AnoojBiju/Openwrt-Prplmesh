@@ -61,6 +61,7 @@
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 #include <tlvf/wfa_map/tlvProfile2ApRadioAdvancedCapabilities.h>
+#include <tlvf/wfa_map/tlvProfile2AssociationStatusNotification.h>
 #include <tlvf/wfa_map/tlvProfile2CacCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2CacCompletionReport.h>
 #include <tlvf/wfa_map/tlvProfile2CacRequest.h>
@@ -352,6 +353,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_PROFILE2_AP_RADIO_ADVANCED_CAPABILITIES): {
         return msg.addClass<wfa_map::tlvProfile2ApRadioAdvancedCapabilities>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_PROFILE2_ASSOCIATION_STATUS_NOTIFICATION): {
+        return msg.addClass<wfa_map::tlvProfile2AssociationStatusNotification>();
     }
     case (wfa_map::eTlvTypeMap::TLV_TUNNELLED_SOURCE_INFO): {
         return msg.addClass<wfa_map::tlvTunnelledSourceInfo>();

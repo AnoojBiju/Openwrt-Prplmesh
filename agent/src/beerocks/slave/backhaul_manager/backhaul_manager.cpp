@@ -53,6 +53,7 @@
 #include <tlvf/wfa_map/tlvBackhaulSteeringResponse.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
+#include <tlvf/wfa_map/tlvProfile2AssociationStatusNotification.h>
 
 // BPL Error Codes
 #include <bpl/bpl_cfg.h>
@@ -2914,7 +2915,41 @@ bool BackhaulManager::set_mbo_assoc_disallow(const sMacAddr &radio_mac, const sM
     msg->bssid()  = bssid;
 
     LOG(DEBUG) << "Set MBO ASSOC_DISALLOW on interface " << soc->hostap_iface << " to " << enable;
-    return send_cmdu(soc->slave, cmdu_tx);
+    send_cmdu(soc->slave, cmdu_tx);
+
+    if (!cmdu_tx.create(0, ieee1905_1::eMessageType::ASSOCIATION_STATUS_NOTIFICATION_MESSAGE)) {
+        LOG(ERROR) << "Failed building message!";
+        return false;
+    }
+
+    auto profile2_association_status_notification_tlv =
+        cmdu_tx.addClass<wfa_map::tlvProfile2AssociationStatusNotification>();
+    if (!profile2_association_status_notification_tlv) {
+        LOG(ERROR) << "addClass failed";
+        return false;
+    }
+
+    profile2_association_status_notification_tlv->alloc_bssid_status_list();
+    auto bssid_status_tuple = profile2_association_status_notification_tlv->bssid_status_list(0);
+
+    if (!std::get<0>(bssid_status_tuple)) {
+        LOG(ERROR) << "getting bssid status has failed!";
+        return false;
+    }
+
+    auto &bssid_status = std::get<1>(bssid_status_tuple);
+
+    bssid_status.bssid = bssid;
+    bssid_status.association_allowance_status =
+        enable ? wfa_map::tlvProfile2AssociationStatusNotification::eAssociationAllowanceStatus::
+                     NO_MORE_ASSOCIATIONS_ALLOWED
+               : wfa_map::tlvProfile2AssociationStatusNotification::eAssociationAllowanceStatus::
+                     ASSOCIATIONS_ALLOWED;
+
+    auto db = AgentDB::get();
+    send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
+
+    return true;
 }
 
 std::shared_ptr<bwl::sta_wlan_hal> BackhaulManager::get_selected_backhaul_sta_wlan_hal()
