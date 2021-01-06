@@ -1,0 +1,13 @@
+###############################################################
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+# SPDX-FileCopyrightText: 2019-2020 the prplMesh contributors (see AUTHORS.md)
+# This code is subject to the terms of the BSD+Patent license.
+# See LICENSE file for more details.
+###############################################################
+
+# This creates an empty cache image, to get us going
+
+FROM scratch
+
+# Docker doesn't have a native mkdir command. Emulate it with COPY.
+COPY scripts /home/openwrt
