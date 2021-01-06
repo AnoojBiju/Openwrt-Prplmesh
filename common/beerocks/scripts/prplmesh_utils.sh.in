@@ -274,7 +274,7 @@ execute_beerocks_command() {
 # line ($) or blank character ([[:blank:]])
 main_agent_operational() {
     pgrep -fx "$PRPLMESH_DIR/bin/beerocks_agent($|[[:blank:]])" > /dev/null 2>&1 || return 1
-    grep -q 'CONNECTED --> OPERATIONAL' "$1/beerocks_agent@BEEROCKS_LOG_FILES_SUFFIX@"
+    grep -q ' --> OPERATIONAL' "$1/beerocks_agent@BEEROCKS_LOG_FILES_SUFFIX@"
 }
 
 radio_agent_operational() {
