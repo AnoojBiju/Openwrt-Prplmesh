@@ -36,8 +36,12 @@
 .build-for-openwrt:
   stage: build
   script:
+    # LOCAL_RUNNER_CACHE_DIR is an environment variable that can be set by a GitLab runner
+    # to specify a custom persistent folder for caching files between builds. If not defined,
+    # the home folder of the current user is used.
+    - export CACHE_DIR=${LOCAL_RUNNER_CACHE_DIR:-~/prplmesh-cache}
     - mkdir -p "build/$TARGET_DEVICE"
-    - tools/docker/builder/openwrt/build.sh --verbose -d "$TARGET_DEVICE" -t "prplmesh-builder-$TARGET_DEVICE:$CI_COMMIT_SHORT_SHA-$CI_PIPELINE_ID" 2>&1
+    - tools/docker/builder/openwrt/build.sh --verbose --cache "${CACHE_DIR}" -d "$TARGET_DEVICE" -t "prplmesh-builder-$TARGET_DEVICE:$CI_COMMIT_SHORT_SHA-$CI_PIPELINE_ID" 2>&1
   artifacts:
     paths:
       - "build/$TARGET_DEVICE/"

@@ -44,6 +44,14 @@ ENV OPENWRT_REPOSITORY=$OPENWRT_REPOSITORY
 # Which OpenWrt version (commit hash) to use:
 ARG OPENWRT_VERSION
 ENV OPENWRT_VERSION=$OPENWRT_VERSION
+
+WORKDIR /home/openwrt
+
+RUN printf '\033[1;35m%s Cloning prplWrt\n\033[0m' "$(date --iso-8601=seconds --universal)" \
+    && git clone "$OPENWRT_REPOSITORY" openwrt \
+    && cd openwrt \
+    && git checkout "$OPENWRT_VERSION"
+
 # The variant to build (nl80211 or dwpal)
 ARG PRPLMESH_VARIANT
 ENV PRPLMESH_VARIANT=$PRPLMESH_VARIANT
@@ -81,13 +89,6 @@ ENV TARGET_PROFILE=$TARGET_PROFILE
 ARG TARGET_DEVICE
 ENV TARGET_DEVICE=$TARGET_DEVICE
 
-WORKDIR /home/openwrt
-
-RUN printf '\033[1;35m%s Cloning prplWrt\n\033[0m' "$(date --iso-8601=seconds --universal)" \
-    && git clone "$OPENWRT_REPOSITORY" openwrt \
-    && cd openwrt \
-    && git checkout "$OPENWRT_VERSION"
-
 WORKDIR /home/openwrt/openwrt
 
 COPY --chown=openwrt:openwrt configs/ /home/openwrt/openwrt/configs/
@@ -98,5 +99,10 @@ COPY --chown=openwrt:openwrt scripts/build-openwrt.sh /home/openwrt/openwrt/scri
 ## Prebuilt OpenWrt and prplMesh dependencies, but not the prplMesh ipk itself
 ####
 FROM openwrt-builder as prplmesh-builder
+
+# This is done as late as possible, because we force the timestamp on cache.tar so it is never
+# considered as changed. If any of the above commands invalidated the cache, we want to use the
+# latest cache tarball instead.
+ADD cache.tar /home/openwrt
 
 RUN scripts/build-openwrt.sh
