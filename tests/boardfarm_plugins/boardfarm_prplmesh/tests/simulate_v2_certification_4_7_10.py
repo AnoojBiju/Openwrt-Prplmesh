@@ -10,6 +10,15 @@ from time import sleep
 
 
 class V2Certification_4_7_10(CommonFlows):
+    """
+        Devices used in test setup:
+        STA1 - WIFI repeater
+        STA2 - WIFI repeater
+        STA3 - WIFI repeater
+        AP1 - Agent1 [DUT]
+
+        GW - Controller
+    """
 
     def runTest(self):
         # Locate test participants

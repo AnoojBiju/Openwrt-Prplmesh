@@ -13,6 +13,21 @@ from opts import debug
 
 
 class ChannelSelection(PrplMeshBaseTest):
+    """
+    Devices used in test setup:
+            AP1 - Agent1 [DUT]
+            GW - Controller
+
+    Check if the channel is switched when there's a channel preference but
+     an empty channel selection request
+    - Should fail if channels are different
+    Check if the channel is switched when there's an empty channel selection
+     request changing tx_power_limit
+    - Should fail if channels are different
+    Trigger channel selection to channel 6 and 36. Check that operating channel
+     report was sent.
+    - Should fail if channels haven't changed to 6 and 36
+    """
 
     def runTest(self):
 

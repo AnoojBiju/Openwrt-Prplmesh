@@ -11,6 +11,13 @@ import time
 
 
 class ClientSteeringMandate(PrplMeshBaseTest):
+    """
+        Devices used in test setup:
+        AP1 - Agent1 [DUT]
+        AP2 - Agent2 [LAN2]
+
+        GW - Controller
+    """
 
     def runTest(self):
         # Locate test participants
