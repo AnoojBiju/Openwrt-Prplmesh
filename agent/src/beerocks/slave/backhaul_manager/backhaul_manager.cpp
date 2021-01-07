@@ -772,6 +772,23 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
             active_hal->disconnect();
         }
 
+        // Add wired interface to the bridge
+        // It will be removed later on (dev_set_config) in case of wireless backhaul connection is needed.
+        auto db            = AgentDB::get();
+        auto bridge        = db->bridge.iface_name;
+        auto bridge_ifaces = beerocks::net::network_utils::linux_get_iface_list_from_bridge(bridge);
+        auto eth_iface     = db->ethernet.iface_name;
+        if (std::find(bridge_ifaces.begin(), bridge_ifaces.end(), eth_iface) !=
+            bridge_ifaces.end()) {
+            LOG(INFO) << "The wired interface is already in the bridge";
+        } else {
+            if (!beerocks::net::network_utils::linux_add_iface_to_bridge(bridge, eth_iface)) {
+                LOG(ERROR) << "Failed to add iface '" << eth_iface << "' to bridge '" << bridge
+                           << "' !";
+                return false;
+            }
+        }
+
         if (m_eFSMState == EState::ENABLED) {
             m_agent_ucc_listener->reset_completed();
             // Stay in ENABLE state until onboarding_state will change
@@ -2097,22 +2114,6 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
             LOG(WARNING) << "event iface != wireless iface!";
         }
         if (FSM_IS_IN_STATE(WAIT_WPS)) {
-
-            auto bridge = db->bridge.iface_name;
-            auto bridge_ifaces =
-                beerocks::net::network_utils::linux_get_iface_list_from_bridge(bridge);
-            auto eth_iface = db->ethernet.iface_name;
-            // remove the wired interface from the bridge, it will be added on dev_set_config.
-            if (std::find(bridge_ifaces.begin(), bridge_ifaces.end(), eth_iface) !=
-                bridge_ifaces.end()) {
-                if (!beerocks::net::network_utils::linux_remove_iface_from_bridge(bridge,
-                                                                                  eth_iface)) {
-                    LOG(ERROR) << "Failed to remove iface '" << eth_iface << "' from bridge '"
-                               << bridge << "' !";
-                    return false;
-                }
-            }
-
             db->backhaul.selected_iface_name = iface;
             db->backhaul.connection_type     = AgentDB::sBackhaul::eConnectionType::Wireless;
             LOG(DEBUG) << "WPS scan completed successfully on iface = " << iface
