@@ -8,6 +8,12 @@ from common_flow import CommonFlows
 
 
 class MultiApPolicyConfigWMetricReportingPolicy(CommonFlows):
+    """
+        Devices used in test setup:
+        AP1 - Agent1 [DUT]
+
+        GW - Controller
+    """
 
     def runTest(self):
         # Locate test participants

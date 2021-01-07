@@ -11,6 +11,16 @@ import time
 
 
 class ClientCapabilityQuerySuccessful(PrplMeshBaseTest):
+    """
+        Devices used in test setup:
+        STA1 - WIFI repeater
+        AP1 - Agent1 [DUT]
+
+        Dummy STA is connected to wlan0
+        Client capability query is sent to STA
+        AP1 is checked for a sent capability query
+        The there should be an expected capability frame on the report
+    """
 
     def runTest(self):
         # Locate test participants

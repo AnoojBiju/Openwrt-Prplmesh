@@ -8,6 +8,13 @@ from common_flow import CommonFlows
 
 
 class MultiApPolicyConfigWUnsucessfulAssociation(CommonFlows):
+    """
+        Devices used in test setup:
+        STA1 - WIFI repeater
+        AP1 - Agent1 [DUT]
+
+        GW - Controller
+    """
 
     def runTest(self):
         # Locate test participants

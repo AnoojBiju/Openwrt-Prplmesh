@@ -11,6 +11,10 @@ from boardfarm.exceptions import SkipTest
 
 
 class DevResetDefault(PrplMeshBaseTest):
+    """
+        Devices used in test setup:
+        AP1 - Agent1 [DUT]
+    """
 
     def runTest(self):
         # Locate test participants

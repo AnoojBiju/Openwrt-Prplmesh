@@ -11,6 +11,16 @@ from opts import debug
 
 
 class ClientCapabilityQueryFailsWithNoSta(PrplMeshBaseTest):
+    """
+        Devices used in test setup:
+        STA1 - WIFI repeater
+        AP1 - Agent1 [DUT]
+        GW - Controller
+
+        Client capability query is sent to unconnected STA
+        AP1 is checked for a sent capability query
+        The action should return an error message
+    """
 
     def runTest(self):
         # Locate test participants
