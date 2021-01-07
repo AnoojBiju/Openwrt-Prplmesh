@@ -251,17 +251,16 @@ bool db::dm_add_radio_element(const std::string &radio_mac, const std::string &d
     // Prepare path to the Radio object, like Device.Network.{i}.Radio
     path_to_obj += std::to_string(index) + ".Radio";
 
-    auto radio_index = m_ambiorix_datamodel->add_instance(path_to_obj);
-    if (!radio_index) {
+    auto radio_instance = m_ambiorix_datamodel->add_instance(path_to_obj);
+    if (radio_instance.empty()) {
         LOG(ERROR) << "Failed to add instance Controller.Network.Device." << index
                    << ".Radio, with radio mac: " << radio_mac;
         return false;
     }
 
     // Prepare path to the Radio object ID, like Device.Network.{i}.Radio.{i}.ID
-    path_to_obj += "." + std::to_string(radio_index);
-    if (!m_ambiorix_datamodel->set(path_to_obj, "ID", radio_mac)) {
-        LOG(ERROR) << "Failed to set " << path_to_obj << "for mac: " << radio_mac;
+    if (!m_ambiorix_datamodel->set(radio_instance, "ID", radio_mac)) {
+        LOG(ERROR) << "Failed to set " << radio_instance << "for mac: " << radio_mac;
         return false;
     }
 
@@ -1312,34 +1311,33 @@ bool db::dm_add_ap_operating_classes(const std::string &radio_mac, uint8_t max_t
     }
 
     path_to_obj += "Capabilities.OperatingClasses";
-    uint32_t index = m_ambiorix_datamodel->add_instance(path_to_obj);
-    if (!index) {
+    std::string path_to_obj_instance = m_ambiorix_datamodel->add_instance(path_to_obj);
+    if (path_to_obj_instance.empty()) {
         LOG(ERROR) << "Fail to add object: " << path_to_obj;
         return false;
     }
 
-    path_to_obj += "." + std::to_string(index);
-    if (!m_ambiorix_datamodel->set(path_to_obj, "MaxTxPower", max_tx_power)) {
+    if (!m_ambiorix_datamodel->set(path_to_obj_instance, "MaxTxPower", max_tx_power)) {
         LOG(ERROR) << "Fail to set value for " << path_to_obj << ".MaxTxPower";
         return_value = false;
     }
 
-    if (!m_ambiorix_datamodel->set(path_to_obj, "Class", op_class)) {
+    if (!m_ambiorix_datamodel->set(path_to_obj_instance, "Class", op_class)) {
         LOG(ERROR) << "Fail to set value for " << path_to_obj << ".Class";
         return_value = false;
     }
 
-    path_to_obj += ".NonOperable";
+    path_to_obj = path_to_obj_instance + ".NonOperable";
     for (auto non_op_channel : non_operable_channels) {
-        uint32_t channel_index = m_ambiorix_datamodel->add_instance(path_to_obj);
-        if (!channel_index) {
+        auto path_to_non_operable_instance = m_ambiorix_datamodel->add_instance(path_to_obj);
+        if (path_to_non_operable_instance.empty()) {
             LOG(ERROR) << "Fail to add object: " << path_to_obj;
             return_value = false;
             continue;
         }
-        if (!m_ambiorix_datamodel->set(path_to_obj + '.' + std::to_string(channel_index),
-                                       "NonOpChannelNumber", non_op_channel)) {
-            LOG(ERROR) << "Fail to set value for " << path_to_obj << channel_index
+        if (!m_ambiorix_datamodel->set(path_to_non_operable_instance, "NonOpChannelNumber",
+                                       non_op_channel)) {
+            LOG(ERROR) << "Fail to set value for " << path_to_non_operable_instance
                        << ".NonOpChannelNumber";
             return_value = false;
         }
@@ -1422,16 +1420,16 @@ bool db::set_ap_he_capabilities(wfa_map::tlvApHeCapabilities &he_caps_tlv)
     uint8_t supported_he_mcs_length = he_caps_tlv.supported_he_mcs_length();
     path_to_obj += ".supported_MCS";
     for (int i = 0; i < supported_he_mcs_length; i++) {
-        uint32_t index = m_ambiorix_datamodel->add_instance(path_to_obj);
-        if (!index) {
+        auto path_to_obj_instance = m_ambiorix_datamodel->add_instance(path_to_obj);
+        if (path_to_obj_instance.empty()) {
             LOG(ERROR) << "Failed to add " << path_to_obj;
             return_val = false;
             continue;
         }
-        if (!m_ambiorix_datamodel->set(path_to_obj + "." + std::to_string(index),
-                                       "supported_MCS_size", he_caps_tlv.supported_he_mcs(i))) {
-            LOG(WARNING) << "Failed to set " << path_to_obj + "." + std::to_string(index)
-                         << ".supported_MCS_size to " << he_caps_tlv.supported_he_mcs(i);
+        if (!m_ambiorix_datamodel->set(path_to_obj_instance, "supported_MCS_size",
+                                       *he_caps_tlv.supported_he_mcs(i))) {
+            LOG(WARNING) << "Failed to set " << path_to_obj_instance << ".supported_MCS_size to "
+                         << he_caps_tlv.supported_he_mcs(i);
             return_val = false;
         }
     }
@@ -2187,32 +2185,28 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
         Prepare path to the BSS instance.
         Example: Controller.Network.Device.1.Radio.1.BSS.
     */
+    std::string bss_instance;
     auto bss_path = radio_path + "BSS";
     auto bss_index =
         m_ambiorix_datamodel->get_instance_index(bss_path + ".[BSSID == '%s'].", bssid);
 
     if (!bss_index) {
-        bss_index = m_ambiorix_datamodel->add_instance(bss_path);
-        if (!bss_index) {
+        bss_instance = m_ambiorix_datamodel->add_instance(bss_path);
+        if (bss_instance.empty()) {
             LOG(ERROR) << "Failed to add " << bss_path << " instance.";
             return false;
         }
     } else {
         LOG(DEBUG) << "BSS instance exists for BSSID: " << bssid << "Updating Data Model.";
+        bss_instance += "." + std::to_string(bss_index);
     }
-
-    /*
-        Prepare path with correct BSS instance.
-        Example: Controller.Network.Device.1.Radio.1.BSS.1.
-    */
-    bss_path += "." + std::to_string(bss_index);
 
     /*
         Set value for BSSID variable
         Example: Controller.Network.Device.1.Radio.1.BSS.1.BSSID
     */
-    if (!m_ambiorix_datamodel->set(bss_path, "BSSID", bssid)) {
-        LOG(ERROR) << "Failed to set " << bss_path << "BSSID";
+    if (!m_ambiorix_datamodel->set(bss_instance, "BSSID", bssid)) {
+        LOG(ERROR) << "Failed to set " << bss_instance << "BSSID";
         return false;
     }
 
@@ -2220,8 +2214,8 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
         Set value for SSID variable
         Example: Controller.Network.Device.1.Radio.1.BSS.1.SSID
     */
-    if (!m_ambiorix_datamodel->set(bss_path, "SSID", ssid)) {
-        LOG(ERROR) << "Failed to set " << bss_path << "SSID";
+    if (!m_ambiorix_datamodel->set(bss_instance, "SSID", ssid)) {
+        LOG(ERROR) << "Failed to set " << bss_instance << "SSID";
         return false;
     }
 
@@ -2229,8 +2223,8 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
         Set value for Enabled variable
         Example: Controller.Network.Device.1.Radio.1.BSS.1.Enabled
     */
-    if (!m_ambiorix_datamodel->set(bss_path, "Enabled", !ssid.empty())) {
-        LOG(ERROR) << "Failed to set " << bss_path << "Enabled";
+    if (!m_ambiorix_datamodel->set(bss_instance, "Enabled", !ssid.empty())) {
+        LOG(ERROR) << "Failed to set " << bss_instance << "Enabled";
         return false;
     }
 
@@ -2241,8 +2235,8 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
         Example: Controller.Network.Device.1.Radio.1.BSS.1.LastChange
     */
     uint64_t creation_time = time(NULL);
-    if (!m_ambiorix_datamodel->set(bss_path, "LastChange", creation_time)) {
-        LOG(ERROR) << "Failed to set " << bss_path << "LastChange";
+    if (!m_ambiorix_datamodel->set(bss_instance, "LastChange", creation_time)) {
+        LOG(ERROR) << "Failed to set " << bss_instance << "LastChange";
         return false;
     }
 
@@ -2256,8 +2250,8 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
         Set value for TimeStamp variable
         Example: Controller.Network.Device.1.Radio.1.BSS.1.TimeStamp
     */
-    if (!m_ambiorix_datamodel->set(bss_path, "TimeStamp", timestamp)) {
-        LOG(ERROR) << "Failed to set " << bss_path << "TimeStamp";
+    if (!m_ambiorix_datamodel->set(bss_instance, "TimeStamp", timestamp)) {
+        LOG(ERROR) << "Failed to set " << bss_instance << "TimeStamp";
         return false;
     }
 
@@ -5789,23 +5783,6 @@ bool db::set_ap_ht_capabilities(const sMacAddr &radio_mac,
     return return_val;
 }
 
-/**
-* @brief set device id, where device id = device mac address
-*
-* @param device mac address
-* @param device index
-* @return true if id of device was successfully set, false otherwise
-*/
-bool db::dm_set_device_id(const std::string &device_mac, uint32_t device_index)
-{
-    if (!m_ambiorix_datamodel->set("Controller.Network.Device." + std::to_string(device_index),
-                                   "ID", device_mac)) {
-        LOG(ERROR) << "Failed to add Network.Device.ID (ID = mac): " << device_mac;
-        return false;
-    }
-    return true;
-}
-
 bool db::dm_set_device_multi_ap_capabilities(const std::string &device_mac)
 {
     auto device_node        = get_node(device_mac);
@@ -5853,14 +5830,13 @@ bool db::dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client_mac)
     }
 
     std::string path_to_sta = path_to_bss + "STA";
-    uint32_t sta_index      = m_ambiorix_datamodel->add_instance(path_to_sta);
-    if (!sta_index) {
+    auto sta_instance       = m_ambiorix_datamodel->add_instance(path_to_sta);
+    if (sta_instance.empty()) {
         LOG(ERROR) << "Failed to add sta instance " << path_to_sta;
         return false;
     }
-    path_to_sta += "." + std::to_string(sta_index);
-    if (!m_ambiorix_datamodel->set(path_to_sta, "MACAddress", tlvf::mac_to_string(client_mac))) {
-        LOG(ERROR) << "Failed to set " << path_to_sta << ".MACAddress to " << client_mac;
+    if (!m_ambiorix_datamodel->set(sta_instance, "MACAddress", tlvf::mac_to_string(client_mac))) {
+        LOG(ERROR) << "Failed to set " << sta_instance << ".MACAddress to " << client_mac;
         return false;
     }
 
@@ -5870,13 +5846,13 @@ bool db::dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client_mac)
         return false;
     }
 
-    if (!m_ambiorix_datamodel->set(path_to_sta, "TimeStamp", time_stamp)) {
-        LOG(ERROR) << "Failed to set " << path_to_sta << ".TimeStamp";
+    if (!m_ambiorix_datamodel->set(sta_instance, "TimeStamp", time_stamp)) {
+        LOG(ERROR) << "Failed to set " << sta_instance << ".TimeStamp";
         return false;
     }
     uint64_t add_sta_time = time(NULL);
-    if (!m_ambiorix_datamodel->set(path_to_sta, "LastConnectTime", add_sta_time)) {
-        LOG(ERROR) << "Failed to set " << path_to_sta << ".LastConnectTime";
+    if (!m_ambiorix_datamodel->set(sta_instance, "LastConnectTime", add_sta_time)) {
+        LOG(ERROR) << "Failed to set " << sta_instance << ".LastConnectTime";
         return false;
     }
     return true;
@@ -5918,13 +5894,14 @@ bool db::dm_add_device_element(const sMacAddr &mac)
         return false;
     }
 
-    index = m_ambiorix_datamodel->add_instance("Controller.Network.Device");
-    if (!index) {
+    auto device_instance = m_ambiorix_datamodel->add_instance("Controller.Network.Device");
+    if (device_instance.empty()) {
         LOG(ERROR) << "Failed to add instance for device, mac: " << mac;
         return false;
     }
 
-    if (!dm_set_device_id(tlvf::mac_to_string(mac), index)) {
+    if (!m_ambiorix_datamodel->set(device_instance, "ID", tlvf::mac_to_string(mac))) {
+        LOG(ERROR) << "Failed to add Network.Device.ID (ID = mac): " << tlvf::mac_to_string(mac);
         return false;
     }
 
@@ -6019,13 +5996,11 @@ bool db::add_current_op_class(const sMacAddr &radio_mac, uint8_t op_class, uint8
     // Data model path example: Controller.Network.Device.1.Radio.1.CurrentOperatingClasses
     auto op_class_path = radio_path + "CurrentOperatingClasses";
 
-    auto op_class_index = m_ambiorix_datamodel->add_instance(op_class_path);
-    if (!op_class_index) {
+    auto op_class_path_instance = m_ambiorix_datamodel->add_instance(op_class_path);
+    if (op_class_path_instance.empty()) {
         LOG(ERROR) << "Failed to add instance: " << op_class_path;
         return false;
     }
-
-    op_class_path += "." + std::to_string(op_class_index);
 
     auto time_stamp = m_ambiorix_datamodel->get_datamodel_time_format();
     if (time_stamp.empty()) {
@@ -6035,29 +6010,29 @@ bool db::add_current_op_class(const sMacAddr &radio_mac, uint8_t op_class, uint8
 
     //Set TimeStamp
     //Data model path example: Controller.Network.Device.1.Radio.1.CurrentOperatingClasses.TimeStamp
-    if (!m_ambiorix_datamodel->set(op_class_path, "TimeStamp", time_stamp)) {
-        LOG(ERROR) << "Failed to set " << op_class_path << ".TimeStamp";
+    if (!m_ambiorix_datamodel->set(op_class_path_instance, "TimeStamp", time_stamp)) {
+        LOG(ERROR) << "Failed to set " << op_class_path_instance << ".TimeStamp";
         return false;
     }
 
     //Set Operating class
     //Data model path: Controller.Network.Device.1.Radio.1.CurrentOperatingClasses.Class
-    if (!m_ambiorix_datamodel->set(op_class_path, "Class", op_class)) {
-        LOG(ERROR) << "Failed to set " << op_class_path << ".Class";
+    if (!m_ambiorix_datamodel->set(op_class_path_instance, "Class", op_class)) {
+        LOG(ERROR) << "Failed to set " << op_class_path_instance << ".Class";
         return false;
     }
 
     //Set Operating channel
     //Data model path example: Controller.Network.Device.1.Radio.1.CurrentOperatingClasses.Channel
-    if (!m_ambiorix_datamodel->set(op_class_path, "Channel", op_channel)) {
-        LOG(ERROR) << "Failed to set " << op_class_path << ".Channel";
+    if (!m_ambiorix_datamodel->set(op_class_path_instance, "Channel", op_channel)) {
+        LOG(ERROR) << "Failed to set " << op_class_path_instance << ".Channel";
         return false;
     }
 
     //Set TX power
     //Data model path example: Controller.Network.Device.1.Radio.1.CurrentOperatingClasses.TxPower
-    if (!m_ambiorix_datamodel->set(op_class_path, "TxPower", tx_power)) {
-        LOG(ERROR) << "Failed to set " << op_class_path << ".TxPower";
+    if (!m_ambiorix_datamodel->set(op_class_path_instance, "TxPower", tx_power)) {
+        LOG(ERROR) << "Failed to set " << op_class_path_instance << ".TxPower";
         return false;
     }
 
@@ -6218,7 +6193,7 @@ std::string db::dm_get_path_to_sta(const std::string &sta_mac)
         LOG(ERROR) << "Fail to get index for object: " << path_to_sta << " with mac: " << sta_mac;
         return {};
     }
-    return path_to_sta + std::to_string(sta_index) + ".";
+    return path_to_sta + std::to_string(sta_index);
 }
 
 #else

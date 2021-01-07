@@ -297,15 +297,6 @@ public:
     bool remove_node(const sMacAddr &mac);
 
     /**
-    * @brief set device id, where device id = device mac address
-    *
-    * @param device mac address
-    * @param device index
-    * @return true if id of device was successfully set, false otherwise
-    */
-    bool dm_set_device_id(const std::string &device_mac, uint32_t device_index);
-
-    /**
      * @brief Removes optional subobjects: HTCapabilities, VHTCapabilities,
      * HECapabilities for Capabilities data model.
      * Example of path to object: "Controller.Network.Device.1.Radio.1.Capabilities".
