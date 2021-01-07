@@ -194,7 +194,80 @@ bool ap_wlan_hal_nl80211::set_start_disabled(bool enable, int vap_id)
 
 bool ap_wlan_hal_nl80211::set_channel(int chan, beerocks::eWiFiBandwidth bw, int center_channel)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    if (chan < 0) {
+        LOG(ERROR) << "Invalid input: channel(" << chan << ") < 0";
+        return false;
+    }
+
+    // Load hostapd config for the radio
+    prplmesh::hostapd::Configuration conf = load_hostapd_config(m_radio_info.iface_name);
+    if (!conf) {
+        LOG(ERROR) << "Unable to load hostapd config for interface " << m_radio_info.iface_name;
+        return false;
+    }
+
+    std::string chan_string = std::to_string(chan);
+
+    LOG(DEBUG) << "Set channel to " << chan_string << ", bw " << bw << ", center channel "
+               << center_channel;
+
+    if (!conf.set_create_head_value("channel", chan_string)) {
+        LOG(ERROR) << "Failed setting channel";
+        return false;
+    }
+
+    if (bw != beerocks::eWiFiBandwidth::BANDWIDTH_UNKNOWN) {
+        int wifi_bw = 0;
+        // based on hostapd.conf @ https://w1.fi/cgit/hostap/plain/hostapd/hostapd.conf
+        // # 0 = 20 or 40 MHz operating Channel width
+        // # 1 = 80 MHz channel width
+        // # 2 = 160 MHz channel width
+        // # 3 = 80+80 MHz channel width
+        // #vht_oper_chwidth=1
+
+        if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_20 ||
+            bw == beerocks::eWiFiBandwidth::BANDWIDTH_40) {
+            wifi_bw = 0;
+        } else if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_80) {
+            wifi_bw = 1;
+        } else if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_160) {
+            wifi_bw = 2;
+        } else if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_80_80) {
+            wifi_bw = 3;
+        } else {
+            LOG(ERROR) << "Unknown BW " << bw;
+            return false;
+        }
+
+        if (!conf.set_create_head_value("vht_oper_chwidth", std::to_string(wifi_bw))) {
+            LOG(ERROR) << "Failed setting vht_oper_chwidth";
+            return false;
+        }
+    }
+
+    if (center_channel > 0) {
+        if (!conf.set_create_head_value("vht_oper_centr_freq_seg0_idx",
+                                        std::to_string(center_channel))) {
+            LOG(ERROR) << "Failed setting vht_oper_centr_freq_seg0_idx";
+            return false;
+        }
+    }
+
+    // store the result:
+    if (!conf.store()) {
+        LOG(ERROR) << "set_channel: cannot save hostapd config!";
+        return false;
+    }
+
+    // make hostapd reload its configuration file:
+    const std::string cmd{"UPDATE"};
+    if (!wpa_ctrl_send_msg(cmd)) {
+        LOG(ERROR) << "'" << cmd << "' command to hostapd failed";
+        return false;
+    }
+
+    LOG(DEBUG) << "set_channel done";
+
     return true;
 }
 
