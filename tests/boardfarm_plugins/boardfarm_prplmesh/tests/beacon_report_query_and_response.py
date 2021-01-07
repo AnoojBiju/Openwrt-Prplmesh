@@ -90,7 +90,7 @@ class BeaconReportQueryAndResponse(PrplMeshBaseTest):
         assert beacon_resp_tlv.beacon_metrics_mac_addr == sta.mac, \
             "Wrong beacon metrics mac addr in Beacon Respond"
 
-        agent.radios[0].vaps[0].disassociate(sta)
+        sta.wifi_disconnect(agent.radios[0].vaps[0])
 
     @ classmethod
     def teardown_class(cls):

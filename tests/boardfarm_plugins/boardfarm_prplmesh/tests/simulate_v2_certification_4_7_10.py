@@ -75,9 +75,9 @@ class V2Certification_4_7_10(CommonFlows):
 
         # Phase 3
         # Phase 4
-        vap1.associate(sta1)
-        vap1.associate(sta3)
-        vap2.associate(sta2)
+        sta1.wifi_connect(vap1)
+        sta2.wifi_connect(vap2)
+        sta3.wifi_connect(vap1)
 
         sleep(1)
         # Phase 5
@@ -113,9 +113,9 @@ class V2Certification_4_7_10(CommonFlows):
         self.mismatch_psk(agent.radios[0], controller, sta1, 'yes')
 
         # tear down the test: disassociated
-        vap1.disassociate(sta1)
-        vap1.disassociate(sta3)
-        vap2.disassociate(sta2)
+        sta1.wifi_disconnect(vap1)
+        sta2.wifi_disconnect(vap2)
+        sta3.wifi_disconnect(vap1)
 
         # reset everything
         controller.cmd_reply("DEV_RESET_DEFAULT")

@@ -64,8 +64,8 @@ class ClientAssociationDummy(PrplMeshBaseTest):
         # TODO client blocking not implemented in dummy bwl
 
         # Associate with other radio
-        agent.radios[0].vaps[0].disassociate(sta)
-        agent.radios[1].vaps[0].associate(sta)
+        sta.wifi_disconnect(agent.radios[0].vaps[0])
+        sta.wifi_connect(agent.radios[1].vaps[0])
 
         time.sleep(1)
 
@@ -98,7 +98,7 @@ class ClientAssociationDummy(PrplMeshBaseTest):
                        r"Got client allow request for {}".format(sta.mac), timeout=20)
 
         # Associate with other radio implies disassociate from first
-        agent.radios[0].vaps[0].associate(sta)
+        sta.wifi_connect_check(agent.radios[0].vaps[0])
 
         time.sleep(1)
 
@@ -117,7 +117,7 @@ class ClientAssociationDummy(PrplMeshBaseTest):
         if sta.mac not in map_vap0.clients:
             self.fail("client {} not in conn_map, clients: {}".format(sta.mac, map_vap0.clients))
 
-        agent.radios[0].vaps[0].disassociate(sta)
+        sta.wifi_disconnect(agent.radios[0].vaps[0])
 
     @classmethod
     def teardown_class(cls):

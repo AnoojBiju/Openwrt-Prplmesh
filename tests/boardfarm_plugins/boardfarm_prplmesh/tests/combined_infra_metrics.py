@@ -33,8 +33,8 @@ class CombinedInfraMetrics(PrplMeshBaseTest):
 
         self.dev.DUT.wired_sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
 
-        vap1.associate(sta1)
-        vap2.associate(sta2)
+        sta1.wifi_connect(vap1)
+        sta2.wifi_connect(vap2)
 
         # Set station link metrics
         # TODO make abstraction for this in Radio
@@ -129,8 +129,8 @@ class CombinedInfraMetrics(PrplMeshBaseTest):
 
         self.check_cmdu_type_single("ACK", 0x8000, agent1.mac, controller.mac, mid)
 
-        vap1.disassociate(sta1)
-        vap2.disassociate(sta2)
+        sta1.wifi_disconnect(vap1)
+        sta2.wifi_disconnect(vap2)
 
     @classmethod
     def teardown_class(cls):
