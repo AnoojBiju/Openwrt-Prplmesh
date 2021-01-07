@@ -24,7 +24,6 @@ stages:
 
 include:
   - local: "/ci/templates.yml"
-  - local: "/ci/certification/dummy.yml"
 
 .rules-for-expensive-job: &expensive-job
   - if: '$CI_PIPELINE_SOURCE == "schedule"'

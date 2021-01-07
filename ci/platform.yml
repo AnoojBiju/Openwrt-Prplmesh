@@ -26,6 +26,7 @@ stages:
   - certification-axepoint-bhwifi
   - upload
   - release
+  - certification-axepoint-controller
 
 include:
   - local: "/ci/templates.yml"
@@ -33,6 +34,7 @@ include:
   - local: "/ci/certification/turris-omnia-bhwifi.yml"
   - local: "/ci/certification/axepoint.yml"
   - local: "/ci/certification/axepoint-bhwifi.yml"
+  - local: "/ci/certification/axepoint-controller.yml"
 
 build-for-rdkb-raspberrypi:
   extends: .build-for-rdkb

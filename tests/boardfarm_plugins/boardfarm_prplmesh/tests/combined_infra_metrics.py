@@ -120,8 +120,7 @@ class CombinedInfraMetrics(PrplMeshBaseTest):
 
         # Combined infra metrics should *not* contain STA stats/metrics
         expected_tlvs = filter(None, [ap_metrics_1, ap_metrics_2, tx_metrics_1, rx_metrics_1])
-        # TODO the combined infra metrics is not generated correctly, so the following fails.
-        # self.check_cmdu_has_tlvs_exact(combined_infra_metrics, expected_tlvs)
+        self.check_cmdu_has_tlvs_exact(combined_infra_metrics, expected_tlvs)
         # TODO for now, just check that it has link metrics
         self.check_cmdu_has_tlv_single(response, 9)
         self.check_cmdu_has_tlv_single(response, 10)
