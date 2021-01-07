@@ -66,9 +66,7 @@ controller/src/beerocks/master/controller.cpp: style: Variable 'old_link_metrics
 controller/src/beerocks/master/controller_ucc_listener.cpp: style: Variable 'bit_5_str' can be declared with const [constVariable]    auto &bit_5_str = confs[7];
 controller/src/beerocks/master/controller_ucc_listener.cpp: style: Variable 'bit_6_str' can be declared with const [constVariable]    auto &bit_6_str = confs[6];
 controller/src/beerocks/master/controller_ucc_listener.cpp: style: Variable 'operating_class_str' can be declared with const [constVariable]    auto &operating_class_str = confs[1];
-controller/src/beerocks/master/db/db.cpp: performance: Function parameter 'iface_name' should be passed by const reference. [passedByValue]bool db::set_hostap_iface_name(const std::string &mac, std::string iface_name)
 controller/src/beerocks/master/db/db.cpp: performance: Function parameter 'name' should be passed by const reference. [passedByValue]bool db::set_node_name(const std::string &mac, std::string name)
-controller/src/beerocks/master/db/db.cpp: performance: Function parameter 'version' should be passed by const reference. [passedByValue]bool db::set_hostap_driver_version(const std::string &mac, std::string version)
 controller/src/beerocks/master/db/db.cpp: style: Non-boolean value returned from function returning bool [returnNonBoolInBooleanFunction]        return -1;
 controller/src/beerocks/master/db/db.cpp: style: Parameter 'n' can be declared with const [constParameter]int db::get_node_bw_int(std::shared_ptr<node> &n)
 controller/src/beerocks/master/db/db.cpp: style: The scope of the variable 'listener_exist' can be reduced. [variableScope]    bool listener_exist;
@@ -152,6 +150,7 @@ framework/platform/bpl/arp/uci/bpl_arp.cpp: style: C-style pointer casting [csty
 framework/platform/bpl/arp/uci/monitor/arp_monitor.cpp: performance: Function parameter 'strIface' should be passed by const reference. [passedByValue]int arp_monitor::start(std::string strIface)
 framework/platform/bpl/arp/uci/monitor/arp_monitor.cpp: style: The scope of the variable 'type' can be reduced. [variableScope]        unsigned short type;
 framework/platform/bpl/arp/uci/monitor/arp_monitor.cpp: style: Unused variable: ipv4_str [unusedVariable]        std::string ipv4_str;
+framework/platform/bpl/cfg/linux/bpl_cfg.cpp: style: Parameter 'parameters' can be declared with const [constParameter]static bool cfg_set_params(std::unordered_map<std::string, std::string> &parameters)
 framework/platform/bpl/cfg/uci/bpl_cfg.cpp: style: The scope of the variable 'retVal' can be reduced. [variableScope]    int retVal = 0;
 framework/platform/bpl/cfg/uci/bpl_cfg.cpp: style: Variable 'retVal' is assigned a value that is never used. [unreadVariable]    int retVal = 0;
 framework/platform/bpl/common/utils/utils.cpp: performance: Function parameter 'additional_chars' should be passed by const reference. [passedByValue]void ltrim(std::string &str, std::string additional_chars)

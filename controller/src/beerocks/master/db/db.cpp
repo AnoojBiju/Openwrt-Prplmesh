@@ -91,13 +91,13 @@ void db::set_log_level_state(const beerocks::eLogLevel &log_level, const bool &n
 
 // General set/get
 
-bool db::has_node(sMacAddr mac)
+bool db::has_node(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     return (n != nullptr);
 }
 
-bool db::add_virtual_node(sMacAddr mac, sMacAddr real_node_mac)
+bool db::add_virtual_node(const sMacAddr &mac, const sMacAddr &real_node_mac)
 {
     //TODO prototype code, untested
     if (mac == network_utils::ZERO_MAC) {
@@ -546,7 +546,7 @@ bool db::set_cs_lb_flag(const std::string &mac, bool flag)
     return true;
 }
 
-bool db::set_global_restricted_channels(uint8_t *restricted_channels)
+bool db::set_global_restricted_channels(const uint8_t *restricted_channels)
 {
     if (!restricted_channels) {
         return false;
@@ -560,7 +560,7 @@ bool db::set_global_restricted_channels(uint8_t *restricted_channels)
 std::vector<uint8_t> db::get_global_restricted_channels() { return global_restricted_channels; }
 
 bool db::set_hostap_conf_restricted_channels(const std::string &hostap_mac,
-                                             uint8_t *restricted_channels)
+                                             const uint8_t *restricted_channels)
 {
     auto n = get_node(hostap_mac);
     if (!n) {
@@ -935,7 +935,7 @@ bool db::is_hostap_backhaul_manager(const std::string &mac)
     return n->hostap->is_backhaul_manager;
 }
 
-std::string db::get_hostap_backhaul_manager(std::string ire)
+std::string db::get_hostap_backhaul_manager(const std::string &ire)
 {
     auto n = get_node(ire);
     if (!n) {
@@ -1346,7 +1346,8 @@ bool db::set_ap_vht_capabilities(wfa_map::tlvApVhtCapabilities &vht_caps_tlv)
 }
 
 bool db::dm_add_ap_operating_classes(const std::string &radio_mac, uint8_t max_tx_power,
-                                     uint8_t op_class, std::vector<uint8_t> non_operable_channels)
+                                     uint8_t op_class,
+                                     const std::vector<uint8_t> &non_operable_channels)
 {
     auto radio_node   = get_node(radio_mac);
     bool return_value = true;
@@ -1872,7 +1873,7 @@ bool db::set_hostap_supported_channels(const std::string &mac,
     return true;
 }
 
-const std::vector<beerocks::message::sWifiChannel>
+std::vector<beerocks::message::sWifiChannel>
 db::get_hostap_supported_channels(const std::string &mac)
 {
     auto n = get_node(mac);
@@ -2396,7 +2397,7 @@ std::string db::get_hostap_vap_with_ssid(const std::string &mac, const std::stri
     return it->second.mac;
 }
 
-std::string db::get_hostap_vap_mac(const std::string &mac, const int vap_id)
+std::string db::get_hostap_vap_mac(const std::string &mac, int vap_id)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2482,7 +2483,7 @@ bool db::set_hostap_repeater_mode_flag(const std::string &mac, bool flag)
     return true;
 }
 
-bool db::set_hostap_iface_name(const std::string &mac, std::string iface_name)
+bool db::set_hostap_iface_name(const std::string &mac, const std::string &iface_name)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2554,7 +2555,7 @@ bool db::set_node_backhaul_iface_type(const std::string &mac, beerocks::eIfaceTy
     return true;
 }
 
-bool db::set_hostap_driver_version(const std::string &mac, std::string version)
+bool db::set_hostap_driver_version(const std::string &mac, const std::string &version)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2676,8 +2677,8 @@ bool db::set_radar_hit_stats(const std::string &mac, uint8_t channel, uint8_t bw
     return true;
 }
 
-bool db::set_supported_channel_radar_affected(const std::string &mac, std::vector<uint8_t> channels,
-                                              bool affected)
+bool db::set_supported_channel_radar_affected(const std::string &mac,
+                                              const std::vector<uint8_t> &channels, bool affected)
 {
     std::shared_ptr<node> n = get_node(mac);
 
@@ -4110,8 +4111,8 @@ bool db::is_bml_listener_exist()
 // Measurements
 //
 
-bool db::set_node_beacon_measurement(const std::string &sta_mac, std::string ap_mac, int8_t rcpi,
-                                     uint8_t rsni)
+bool db::set_node_beacon_measurement(const std::string &sta_mac, const std::string &ap_mac,
+                                     int8_t rcpi, uint8_t rsni)
 {
     auto sta = get_node(sta_mac);
     if (sta == nullptr) {
@@ -4122,8 +4123,8 @@ bool db::set_node_beacon_measurement(const std::string &sta_mac, std::string ap_
     return true;
 }
 
-bool db::get_node_beacon_measurement(const std::string &sta_mac, std::string ap_mac, int8_t &rcpi,
-                                     uint8_t &rsni)
+bool db::get_node_beacon_measurement(const std::string &sta_mac, const std::string &ap_mac,
+                                     int8_t &rcpi, uint8_t &rsni)
 {
     auto sta = get_node(sta_mac);
     if (sta == nullptr) {
@@ -4135,7 +4136,7 @@ bool db::get_node_beacon_measurement(const std::string &sta_mac, std::string ap_
     return sta->get_beacon_measurement(ap_mac, rcpi, rsni);
 }
 
-bool db::set_node_cross_rx_rssi(const std::string &sta_mac, std::string ap_mac, int8_t rssi,
+bool db::set_node_cross_rx_rssi(const std::string &sta_mac, const std::string &ap_mac, int8_t rssi,
                                 int8_t rx_packets)
 {
     auto sta = get_node(sta_mac);
@@ -4146,7 +4147,7 @@ bool db::set_node_cross_rx_rssi(const std::string &sta_mac, std::string ap_mac, 
     return true;
 }
 
-bool db::get_node_cross_rx_rssi(const std::string &sta_mac, std::string ap_mac, int8_t &rssi,
+bool db::get_node_cross_rx_rssi(const std::string &sta_mac, const std::string &ap_mac, int8_t &rssi,
                                 int8_t &rx_packets)
 {
     auto sta = get_node(sta_mac);
@@ -4225,7 +4226,8 @@ double db::get_node_cross_estimated_tx_phy_rate(const std::string &mac)
     return n->cross_estimated_tx_phy_rate;
 }
 
-bool db::set_hostap_stats_info(const std::string &mac, beerocks_message::sApStatsParams *params)
+bool db::set_hostap_stats_info(const std::string &mac,
+                               const beerocks_message::sApStatsParams *params)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -4349,7 +4351,8 @@ bool db::notify_disconnection(const std::string &client_mac)
     return true;
 }
 
-bool db::set_node_stats_info(const std::string &mac, beerocks_message::sStaStatsParams *params)
+bool db::set_node_stats_info(const std::string &mac,
+                             const beerocks_message::sStaStatsParams *params)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -5243,7 +5246,7 @@ int db::get_node_hierarchy(std::shared_ptr<node> n)
     return n->hierarchy;
 }
 
-std::shared_ptr<node> db::get_node(std::string key)
+std::shared_ptr<node> db::get_node(const std::string &key)
 {
     if (key == last_accessed_node_mac) {
         return last_accessed_node;
@@ -5260,13 +5263,13 @@ std::shared_ptr<node> db::get_node(std::string key)
     return nullptr;
 }
 
-std::shared_ptr<node> db::get_node(sMacAddr mac)
+std::shared_ptr<node> db::get_node(const sMacAddr &mac)
 {
     std::string key = mac == network_utils::ZERO_MAC ? std::string() : tlvf::mac_to_string(mac);
     return get_node(key);
 }
 
-std::shared_ptr<node> db::get_node(sMacAddr al_mac, sMacAddr ruid)
+std::shared_ptr<node> db::get_node(const sMacAddr &al_mac, const sMacAddr &ruid)
 {
     std::string key = std::string();
     if (al_mac != network_utils::ZERO_MAC && ruid != network_utils::ZERO_MAC)
@@ -5745,7 +5748,7 @@ sMacAddr db::get_candidate_client_for_removal(sMacAddr client_to_skip)
     return candidate_client_to_be_removed;
 }
 
-void db::add_node_from_data(std::string client_entry, const ValuesMap &values_map,
+void db::add_node_from_data(const std::string &client_entry, const ValuesMap &values_map,
                             std::pair<uint16_t, uint16_t> &result)
 {
     auto client_mac = client_db_entry_to_mac(client_entry);
@@ -5826,7 +5829,7 @@ bool db::clear_ap_capabilities(const sMacAddr &radio_mac)
 }
 
 bool db::set_ap_ht_capabilities(const sMacAddr &radio_mac,
-                                wfa_map::tlvApHtCapabilities::sFlags flags)
+                                const wfa_map::tlvApHtCapabilities::sFlags &flags)
 {
     auto radio_node = get_node(radio_mac);
     bool return_val = true;
