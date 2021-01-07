@@ -150,9 +150,12 @@ TEST_F(AmbiorixTest, test_instance)
     EXPECT_EQ(0, m_ambiorix->get_instance_index(search_path, g_param_value_baz));
 
     // let us add some instances
-    EXPECT_EQ(1, m_ambiorix->add_instance(std::string(g_param_strings_path)));
-    EXPECT_EQ(2, m_ambiorix->add_instance(std::string(g_param_strings_path)));
-    EXPECT_EQ(3, m_ambiorix->add_instance(std::string(g_param_strings_path)));
+    EXPECT_EQ(std::string(g_param_strings_path) + ".1",
+              m_ambiorix->add_instance(std::string(g_param_strings_path)));
+    EXPECT_EQ(std::string(g_param_strings_path) + ".2",
+              m_ambiorix->add_instance(std::string(g_param_strings_path)));
+    EXPECT_EQ(std::string(g_param_strings_path) + ".3",
+              m_ambiorix->add_instance(std::string(g_param_strings_path)));
 
     // and set keys
     EXPECT_TRUE(m_ambiorix->set(std::string(g_param_strings_path) + ".1", g_param_name_string,
