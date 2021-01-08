@@ -12,7 +12,7 @@ rootdir="$(realpath "$scriptdir/../..")"
 # shellcheck source=functions.sh
 . "${rootdir}/tools/functions.sh"
 
-image="${DOCKER_REGISTRY}"prplmesh-builder-alpine
+image="${DOCKER_REGISTRY}"prplmesh-cppcheck
 docker run --rm -it -w "$rootdir" -v "$rootdir:$rootdir" --user="${SUDO_UID:-$UID}"  "$image" "$rootdir"/tools/docker/static-analysis/cppcheck.sh -j"$(nproc)" .
 
 # Also check for new issues:

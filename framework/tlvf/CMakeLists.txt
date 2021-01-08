@@ -1,6 +1,6 @@
 project(tlvf VERSION ${prplmesh_VERSION})
 
-find_package(PythonInterp REQUIRED)
+execute_process(COMMAND command -v python3 OUTPUT_VARIABLE PYTHON_EXECUTABLE)
 
 set(TLVF_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(PythonTlvf ${TLVF_DIR}/tlvf.py)
