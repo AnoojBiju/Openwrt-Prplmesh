@@ -95,7 +95,10 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         [sniffer.Packet]
             The matching packets.
         """
-        debug("Checking for CMDU {} (0x{:04x}) from {}".format(msg, msg_type, eth_src))
+        debug("Checking for CMDU {} (0x{:04x}) from {} to {} mid {}"
+              .format(msg, msg_type, eth_src,
+                      eth_dst if eth_dst else "Multicast",
+                      mid if mid else "Any"))
         result = self.dev.DUT.wired_sniffer.get_cmdu_capture_type(msg_type, eth_src, eth_dst, mid)
         assert result, "No CMDU {} found".format(msg)
         return result
@@ -104,9 +107,13 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         self, msg: str, msg_type: int, eth_src: str, eth_dst: str = None, mid: int = None
     ) -> sniffer.Packet:
         '''Like check_cmdu_type, but also check that only a single CMDU is found.'''
-        debug("Checking for single CMDU {} (0x{:04x}) from {}".format(msg, msg_type, eth_src))
+        debug("Checking for single CMDU {} (0x{:04x}) from {} to {} mid {}"
+              .format(msg, msg_type, eth_src,
+                      eth_dst if eth_dst else "Multicast",
+                      mid if mid else "Any"))
         cmdus = self.check_cmdu_type(msg, msg_type, eth_src, eth_dst, mid)
-        assert len(cmdus) == 1, "Multiple CMDUs {} found".format(msg)
+        assert len(cmdus) == 1, \
+            "Multiple CMDUs {} found:\n {}".format(msg, '\n'.join([str(cmdu) for cmdu in cmdus]))
         return cmdus[0]
 
     def check_no_cmdu_type(
