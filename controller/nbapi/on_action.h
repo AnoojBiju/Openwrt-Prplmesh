@@ -33,6 +33,7 @@
 #include <easylogging++.h>
 
 #include "../src/beerocks/master/db/db.h"
+#include "../src/beerocks/master/son_actions.h"
 
 namespace prplmesh {
 namespace controller {

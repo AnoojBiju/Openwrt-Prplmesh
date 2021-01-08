@@ -8,6 +8,9 @@
 
 #include "on_action.h"
 
+using namespace beerocks;
+using namespace net;
+using namespace son;
 namespace prplmesh {
 namespace controller {
 namespace actions {
@@ -178,6 +181,20 @@ amxd_status_t access_point_commit(amxd_object_t *object, amxd_function_t *func, 
                    << " and operating classes: " << bss_info.operating_class;
         g_database->add_bss_info_configuration(bss_info);
     }
+
+    // Update wifi credentials
+    uint8_t m_tx_buffer[beerocks::message::MESSAGE_BUFFER_LENGTH];
+    ieee1905_1::CmduMessageTx cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer));
+    auto connected_ires = g_database->get_all_connected_ires();
+
+    for (auto &hostap : connected_ires) {
+        auto agent_mac = g_database->get_node_parent_ire(hostap);
+
+        if (!son_actions::send_ap_config_renew_msg(cmdu_tx, *g_database,
+                                                   tlvf::mac_from_string(agent_mac))) {
+            LOG(ERROR) << "Failed son_actions::send_ap_config_renew_msg ! ";
+        }
+    }
     return amxd_status_ok;
 }
 
@@ -208,7 +225,7 @@ static void event_rm_params(const char *const sig_name, const amxc_var_t *const 
     amxd_object_t *security_obj = amxd_dm_signal_get_object(g_data_model, data);
 
     if (!security_obj) {
-        LOG(WARNING) << "Failed to get object Controller.Network.AccessPoint.Security";
+        LOG(WARNING) << "Failed to get object Controller.Network.AccessPoint.*.Security";
         return;
     }
     rm_params(security_obj, "PreSharedKey");
