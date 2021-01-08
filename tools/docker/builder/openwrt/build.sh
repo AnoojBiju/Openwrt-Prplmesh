@@ -19,6 +19,7 @@ usage() {
     echo "  options:"
     echo "      -h|--help - show this help menu"
     echo "      -v|--verbose - increase the script's verbosity"
+    echo "      -c|--cache - directory containing the openwrt cache files (ccache, downloads)"
     echo "      -d|--target-device the device to build for"
     echo "      --docker-target-stage docker target build stage (implies -i)"
     echo "      -i|--image - build the docker image only"
@@ -38,6 +39,35 @@ usage() {
 build_image() {
     build_dir="$1"
     mkdir -p "$build_dir"
+    DEVICE_CACHE_DIR="${CACHE_DIR}/openwrt/${TARGET_DEVICE}"
+    GENERIC_CACHE_DIR="${CACHE_DIR}/openwrt/generic"
+    LOCAL_CACHE="$scriptdir/cache.tar"
+
+    # Create cache dir if it doesn't exist yet
+    if [ -n "$CACHE_DIR" ]; then
+        if [ ! -d "$DEVICE_CACHE_DIR" ]; then
+            # If a generic one exists, use that as the base
+            if [ -d "$GENERIC_CACHE_DIR" ]; then
+                cp -a "$GENERIC_CACHE_DIR" "$DEVICE_CACHE_DIR"
+            else
+                mkdir -p "$DEVICE_CACHE_DIR"
+            fi
+        fi
+        # Stupid Docker doesn't observe the --chown argument for tarballs, so everything is owned
+        # by whatever UID you have outside of docker. The openwrt user inside docker has ID
+        # 1000:1000, so store this explicitly in the tarball.
+        tar -cf "$LOCAL_CACHE" --owner=1000 --group=1000 -C "$DEVICE_CACHE_DIR" .
+        echo "Seeding with cache of $(du -h "$LOCAL_CACHE"  | cut -f 1)"
+    else
+        # Use a dummy cache; we need something, otherwise the ADD fails
+        tar -cf "$LOCAL_CACHE" --files-from=/dev/null
+    fi
+    # Docker uses the mtime to see if the file changed. We invent a timestamp somewhere, but
+    # actually we never want to invalidate the cache even if the tarball contents have changed.
+    # So instead, set it to a fixed time.
+    # *** If you want to force update of the caches, change this timestamp ***
+    touch -t 202101011201 "$LOCAL_CACHE"
+
     docker build --tag "$image_tag" \
            --build-arg OPENWRT_REPOSITORY="$OPENWRT_REPOSITORY" \
            --build-arg OPENWRT_VERSION="$OPENWRT_VERSION" \
@@ -56,6 +86,21 @@ build_image() {
           p || /^make\[[0-3]\]|time:/ { print; }
           !p { print >> LOGFILE; }
           /Building prplWrt/ { p = 0; }'
+
+    # Update the cache
+    # We can't copy anything out of an image, so we need to create a container
+    if [ -n "$CACHE_DIR" ]; then
+        container=$(docker container create "$image_tag")
+        test -n "$container" || { echo "Failed to create container for cache"; exit 1; }
+        dir=openwrt/dl
+        mkdir -p "$DEVICE_CACHE_DIR/$dir"
+        docker container cp "$container:/home/openwrt/$dir/." "$DEVICE_CACHE_DIR/$dir"
+        docker container rm -f "$container"
+        echo "Updated cache of $(du -h "$DEVICE_CACHE_DIR"  | cut -f 1)"
+        if [ ! -d "$GENERIC_CACHE_DIR" ]; then
+            cp -r "$DEVICE_CACHE_DIR" "$GENERIC_CACHE_DIR"
+        fi
+    fi
 }
 
 build_prplmesh() {
@@ -89,7 +134,7 @@ main() {
         exit 1
     fi
 
-    if ! OPTS=$(getopt -o 'hvd:io:r:t:' --long help,verbose,target-device:,docker-target-stage:,image,openwrt-version:,openwrt-repository:,tag: -n 'parse-options' -- "$@"); then
+    if ! OPTS=$(getopt -o 'hvc:d:io:r:t:' --long help,verbose,cache:,target-device:,docker-target-stage:,image,openwrt-version:,openwrt-repository:,tag: -n 'parse-options' -- "$@"); then
         err "Failed parsing options." >&2
         usage
         exit 1
@@ -103,6 +148,7 @@ main() {
         case "$1" in
             -h | --help)               usage; exit 0; shift ;;
             -v | --verbose)            VERBOSE=true; shift ;;
+            -c | --cache)              CACHE_DIR="$2"; shift ; shift ;;
             -d | --target-device)      TARGET_DEVICE="$2"; shift ; shift ;;
             --docker-target-stage)     DOCKER_TARGET_STAGE="$2"; IMAGE_ONLY=true; shift 2 ;;
             -i | --image)              IMAGE_ONLY=true; shift ;;
@@ -140,6 +186,7 @@ main() {
             ;;
     esac
 
+    dbg "CACHE_DIR=$CACHE_DIR"
     dbg "OPENWRT_REPOSITORY=$OPENWRT_REPOSITORY"
     dbg "OPENWRT_VERSION=$OPENWRT_VERSION"
     dbg "PRPL_FEED=$PRPL_FEED"
@@ -186,6 +233,7 @@ main() {
 
 VERBOSE=false
 IMAGE_ONLY=false
+CACHE_DIR=
 OPENWRT_REPOSITORY='https://gitlab.com/prpl-foundation/prplwrt/prplwrt.git'
 OPENWRT_VERSION='1147055bc76597175037e6428a2dc1e98dd86150'
 PRPL_FEED='https://gitlab.com/prpl-foundation/prplwrt/feed-prpl.git^9dc5664f501e31335cf78c2cfa6d9c140dae353f'
