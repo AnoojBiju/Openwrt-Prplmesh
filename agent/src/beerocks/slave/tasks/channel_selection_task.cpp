@@ -368,6 +368,9 @@ void ChannelSelectionTask::handle_vs_cac_started_notification(
         m_zwdfs_fsm_timeout =
             std::chrono::steady_clock::now() + std::chrono::seconds(cac_remaining_sec);
         ZWDFS_FSM_MOVE_STATE(eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED);
+    } else {
+        LOG(WARNING) << "Received unexpected cACTION_BACKHAUL_HOSTAP_DFS_CAC_STARTED_NOTIFICATION:"
+                     << " state=" << m_zwdfs_states_string.at(m_zwdfs_state);
     }
 }
 
