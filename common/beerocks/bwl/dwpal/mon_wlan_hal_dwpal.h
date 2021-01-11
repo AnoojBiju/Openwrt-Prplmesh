@@ -151,10 +151,13 @@ private:
     // Flag indicating if we are currently in a dump sequence
     bool m_scan_dump_in_progress = false;
 
+    static constexpr int INVALID_VAP_ID = -1;
+
     std::set<int> m_completed_vaps;
     std::unordered_set<std::string> m_handled_clients;
     std::string m_next_client_mac;
-    bool m_queried_first = false;
+    bool m_queried_first     = false;
+    int m_vap_id_in_progress = INVALID_VAP_ID;
 };
 
 } // namespace dwpal

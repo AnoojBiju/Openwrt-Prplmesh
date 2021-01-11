@@ -993,19 +993,41 @@ bool mon_wlan_hal_dwpal::generate_connected_clients_events(
 {
     std::string cmd;
 
-    for (const auto &vap_element : m_radio_info.available_vaps) {
+    auto get_next_unhandled_vap =
+        [&](const std::unordered_map<int, bwl::VAPElement> &available_vaps) {
+            return std::find_if(available_vaps.begin(), available_vaps.end(),
+                                [&](const std::pair<int, bwl::VAPElement> &element) {
+                                    return (std::find(m_completed_vaps.begin(),
+                                                      m_completed_vaps.end(),
+                                                      element.first) == m_completed_vaps.end());
+                                });
+        };
+
+    // if vap not in progress, find next unhandled vap
+    if (m_vap_id_in_progress == INVALID_VAP_ID) {
+        auto vap_elm_it = get_next_unhandled_vap(m_radio_info.available_vaps);
+
+        if (vap_elm_it == m_radio_info.available_vaps.end()) {
+            LOG(DEBUG) << "Finished to generate connected clients events for all vaps";
+            // if reached this point it means we finished quering all VAPs
+            m_vap_id_in_progress = INVALID_VAP_ID;
+            m_completed_vaps.clear();
+            m_next_client_mac.clear();
+            m_handled_clients.clear();
+            m_queried_first = false;
+
+            return true;
+        }
+
+        m_vap_id_in_progress = vap_elm_it->first;
+    }
+
+    while (m_vap_id_in_progress != INVALID_VAP_ID) {
         char *reply;
         size_t replyLen;
 
-        const int &vap_id = vap_element.first;
-
-        if (m_completed_vaps.find(vap_element.first) != m_completed_vaps.end()) {
-            // skip vaps we already completed
-            continue;
-        }
-
-        auto vap_iface_name =
-            beerocks::utils::get_iface_string_from_iface_vap_ids(get_iface_name(), vap_id);
+        auto vap_iface_name = beerocks::utils::get_iface_string_from_iface_vap_ids(
+            get_iface_name(), m_vap_id_in_progress);
         LOG(TRACE) << __func__ << " for vap interface: " << vap_iface_name;
 
         do {
@@ -1045,8 +1067,8 @@ bool mon_wlan_hal_dwpal::generate_connected_clients_events(
             if (replyLen == 0) {
                 LOG(DEBUG) << "cmd:" << cmd << ", reply: EMPTY";
                 LOG(DEBUG) << "Finished generating client assocaition events for vap="
-                           << vap_iface_name << ", vap_id=" << vap_id;
-                m_completed_vaps.insert(vap_id);
+                           << vap_iface_name << ", vap_id=" << m_vap_id_in_progress;
+                m_completed_vaps.insert(m_vap_id_in_progress);
                 break;
             } else {
                 LOG(DEBUG) << "cmd: " << cmd << ", replylen: " << (int)replyLen
@@ -1054,7 +1076,7 @@ bool mon_wlan_hal_dwpal::generate_connected_clients_events(
             }
 
             int32_t result = generate_association_event_result::SUCCESS;
-            auto msg_buff  = generate_client_assoc_event(reply, vap_id, result);
+            auto msg_buff  = generate_client_assoc_event(reply, m_vap_id_in_progress, result);
             if (!msg_buff) {
                 LOG(DEBUG) << "Failed to generate client association event from reply";
                 break;
@@ -1085,9 +1107,16 @@ bool mon_wlan_hal_dwpal::generate_connected_clients_events(
         m_queried_first = false;
         m_next_client_mac.clear();
         m_handled_clients.clear();
+
+        // set next vap to be handled
+        auto vap_elm_it = get_next_unhandled_vap(m_radio_info.available_vaps);
+        m_vap_id_in_progress =
+            (vap_elm_it != m_radio_info.available_vaps.end()) ? vap_elm_it->first : INVALID_VAP_ID;
     }
 
+    LOG(DEBUG) << "Finished to generate connected clients events for all vaps";
     // if reached this point it means we finished quering all VAPs
+    m_vap_id_in_progress = INVALID_VAP_ID;
     m_completed_vaps.clear();
     m_next_client_mac.clear();
     m_handled_clients.clear();
