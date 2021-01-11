@@ -239,9 +239,7 @@ boardfarm-tests:
 
 boardfarm-stability-tests:
   extends: boardfarm-tests
-  parallel: 10
-  rules:
-    - if: '$STABILITY_TESTS'
+  parallel: 20
 
 run-certification-tests-prplmesh-essensium:
   extends: .run-certification-tests
