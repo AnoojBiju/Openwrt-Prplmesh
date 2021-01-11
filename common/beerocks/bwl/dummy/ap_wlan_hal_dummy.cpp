@@ -361,6 +361,9 @@ bool ap_wlan_hal_dummy::set_tx_power_limit(int tx_pow_limit)
 {
     LOG(TRACE) << " setting power limit: " << tx_pow_limit << " dBm";
     m_radio_info.tx_power = tx_pow_limit;
+    std::stringstream value;
+    value << "tx_power: " << m_radio_info.tx_power << std::endl;
+    write_status_file("tx_power", value.str());
     return true;
 }
 
