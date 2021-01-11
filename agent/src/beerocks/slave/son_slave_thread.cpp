@@ -2399,6 +2399,13 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         auto &bssid      = notification_in->bssid();
         LOG(INFO) << "Client associated sta_mac=" << client_mac << " to bssid=" << bssid;
 
+        // Check if the client is an Multi-AP Agent, '0' means a regular station.
+        if (notification_in->multi_ap_profile() != 0) {
+            // TODO:
+            // If the Multi-AP Agent supports "Combined Profile-1 and Profile-2" mode, need to
+            // configure the bBSS to support it on L2.
+        }
+
         if (!master_socket) {
             LOG(DEBUG) << "Controller is not connected";
             return true;
