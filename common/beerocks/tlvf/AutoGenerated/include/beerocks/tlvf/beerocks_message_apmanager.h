@@ -653,6 +653,10 @@ class cACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION : public BaseClass
         sMacAddr& bssid();
         beerocks::message::sRadioCapabilities& capabilities();
         int8_t& vap_id();
+        //0 - Not Multi-AP station
+        //1 - Profile 1 Agent
+        //2 - Profile 2 Agent
+        uint8_t& multi_ap_profile();
         size_t association_frame_length() { return m_association_frame_idx__ * sizeof(uint8_t); }
         uint8_t* association_frame(size_t idx = 0);
         bool set_association_frame(const void* buffer, size_t size);
@@ -668,6 +672,7 @@ class cACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION : public BaseClass
         sMacAddr* m_bssid = nullptr;
         beerocks::message::sRadioCapabilities* m_capabilities = nullptr;
         int8_t* m_vap_id = nullptr;
+        uint8_t* m_multi_ap_profile = nullptr;
         uint8_t* m_association_frame = nullptr;
         size_t m_association_frame_idx__ = 0;
         int m_lock_order_counter__ = 0;

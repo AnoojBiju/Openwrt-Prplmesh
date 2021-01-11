@@ -2222,6 +2222,10 @@ int8_t& cACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION::vap_id() {
     return (int8_t&)(*m_vap_id);
 }
 
+uint8_t& cACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION::multi_ap_profile() {
+    return (uint8_t&)(*m_multi_ap_profile);
+}
+
 uint8_t* cACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION::association_frame(size_t idx) {
     if ( (m_association_frame_idx__ == 0) || (m_association_frame_idx__ <= idx) ) {
         TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
@@ -2306,6 +2310,7 @@ size_t cACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION::get_initial_size()
     class_size += sizeof(sMacAddr); // bssid
     class_size += sizeof(beerocks::message::sRadioCapabilities); // capabilities
     class_size += sizeof(int8_t); // vap_id
+    class_size += sizeof(uint8_t); // multi_ap_profile
     return class_size;
 }
 
@@ -2336,6 +2341,11 @@ bool cACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION::init()
     m_vap_id = reinterpret_cast<int8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(int8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(int8_t) << ") Failed!";
+        return false;
+    }
+    m_multi_ap_profile = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
     m_association_frame = (uint8_t*)m_buff_ptr__;
