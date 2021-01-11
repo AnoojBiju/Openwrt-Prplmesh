@@ -180,6 +180,11 @@ typedef struct {
 } sNodeRssiMeasurement;
 
 typedef struct {
+    uint8_t multi_ap_profile;
+    uint16_t multi_ap_primary_vlan_id;
+} sACTION_BACKHAUL_CONNECTED_NOTIFICATION;
+
+typedef struct {
     uint32_t disconnect_reason;
     sMacAddr bssid;
 } sACTION_BACKHAUL_DISCONNECT_REASON_NOTIFICATION;
@@ -260,7 +265,7 @@ typedef struct {
     int8_t vap_id;
     uint8_t reserved1;
     uint8_t reserved2;
-    uint8_t reserved3;
+    uint8_t multi_ap_profile;
     size_t association_frame_length;
     uint8_t association_frame[beerocks::message::ASSOCIATION_MAX_LENGTH];
 } sClientAssociationParams;
