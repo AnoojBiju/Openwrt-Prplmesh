@@ -465,9 +465,35 @@ bool sta_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std
 
         update_status(connection_status);
 
-        // Forward the event
-        event_queue_push(event);
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_BACKHAUL_CONNECTED_NOTIFICATION));
+        auto msg      = reinterpret_cast<sACTION_BACKHAUL_CONNECTED_NOTIFICATION *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
 
+        // Initialize the message
+        memset(msg_buff.get(), 0, sizeof(sACTION_BACKHAUL_CONNECTED_NOTIFICATION));
+
+        // Parse the event
+        parsed_line_t parsed_obj;
+        int64_t tmp_int;
+
+        parse_event(buffer, parsed_obj);
+
+        // Multi-AP Profile
+        if (!read_param("multi_ap_profile", parsed_obj, tmp_int)) {
+            LOG(ERROR) << "Failed reading 'multi_ap_profile' parameter!";
+            return false;
+        }
+        msg->multi_ap_profile = tmp_int;
+
+        // Multi-AP Primary VLAN ID
+        if (!read_param("multi_ap_primary_vlanid", parsed_obj, tmp_int)) {
+            LOG(ERROR) << "Failed reading 'multi_ap_primary_vlanid' parameter!";
+            return false;
+        }
+        msg->multi_ap_primary_vlan_id = tmp_int;
+
+        // Forward the event
+        event_queue_push(event, msg_buff);
     } break;
 
     // Client disconnected
