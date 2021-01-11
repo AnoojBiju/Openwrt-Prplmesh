@@ -214,26 +214,6 @@ nbapi_unit_tests:
 db_unit_tests:
   extends: .run-test-in-docker
 
-run-tests:
-  stage: test
-  image: $CI_REGISTRY_IMAGE/prplmesh-tests-runner:$CI_PIPELINE_ID
-  script:
-    - tests/test_flows.py --verbose --unique-id "$CI_JOB_ID" --tag "$CI_PIPELINE_ID"
-  retry: 2
-  artifacts:
-    paths:
-      - logs
-    when: always
-
-  tags:
-    - test-flows
-
-  after_script:
-    - tools/docker/stop.sh -k -r -u "$CI_JOB_ID"
-  needs:
-    - job: build-in-docker
-    - job: image-build-tests-runner
-
 boardfarm-tests:
   stage: test
   script:
