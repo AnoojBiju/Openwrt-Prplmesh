@@ -1507,6 +1507,9 @@ bool Controller::handle_cmdu_1905_link_metric_response(const std::string &src_ma
     // holds mac address of the reporting agent, used as link_metric_data key
     sMacAddr reporting_agent_al_mac;
 
+    // holds mac address of the neighbor, used as the second link_metric_data key
+    sMacAddr neighbor_mac;
+
     auto TxLinkMetricData = cmdu_rx.getClass<ieee1905_1::tlvTransmitterLinkMetric>();
     if (!TxLinkMetricData) {
         LOG(ERROR) << "getClass ieee1905_1::tlvTransmitterLinkMetric has failed";
@@ -1550,6 +1553,15 @@ bool Controller::handle_cmdu_1905_link_metric_response(const std::string &src_ma
         }
     }
 
+    neighbor_mac = TxLinkMetricData->neighbor_al_mac();
+    if (neighbor_mac != beerocks::net::network_utils::ZERO_MAC &&
+        neighbor_mac != RxLinkMetricData->neighbor_al_mac()) {
+        LOG(ERROR) << "TLV_RECEIVER_LINK_METRIC neighbor_mac =" << neighbor_mac
+                   << " and TLV_TRANSMITTER_LINK_METRIC reporter neighbor_mac ="
+                   << RxLinkMetricData->neighbor_al_mac() << " are not the same";
+        return false;
+    }
+
     LOG(DEBUG) << "Received TLV_RECEIVER_LINK_METRIC from al_mac=" << reporting_agent_al_mac
                << std::endl
                << "reported  al_mac =" << RxLinkMetricData->neighbor_al_mac() << std::endl;
@@ -1560,7 +1572,7 @@ bool Controller::handle_cmdu_1905_link_metric_response(const std::string &src_ma
         return false;
     }
 
-    link_metric_data[reporting_agent_al_mac][reporting_agent_al_mac] = new_link_metric_data;
+    link_metric_data[reporting_agent_al_mac][neighbor_mac] = new_link_metric_data;
 
     LOG(DEBUG) << " Added metric data from "
                << " al_mac = " << reporting_agent_al_mac << std::endl
@@ -1607,8 +1619,7 @@ bool Controller::construct_combined_infra_metric()
                         LOG(ERROR) << "getting interface entry has failed!";
                         return false;
                     }
-                    auto interface = std::get<1>(interface_tuple);
-                    interface      = interface_pair_info;
+                    std::get<1>(interface_tuple) = interface_pair_info;
                     interface_idx++;
                 }
             }
@@ -1632,8 +1643,7 @@ bool Controller::construct_combined_infra_metric()
                         LOG(ERROR) << "getting interface entry has failed!";
                         return false;
                     }
-                    auto interface = std::get<1>(interface_tuple);
-                    interface      = interface_pair_info;
+                    std::get<1>(interface_tuple) = interface_pair_info;
                 }
             }
         }
