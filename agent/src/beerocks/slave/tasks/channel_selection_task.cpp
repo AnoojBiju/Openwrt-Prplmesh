@@ -41,6 +41,41 @@ void ChannelSelectionTask::work()
     }
 }
 
+void ChannelSelectionTask::handle_event(uint8_t event_enum_value, const void *event_obj)
+{
+    switch (eEvent(event_enum_value)) {
+    case AP_DISABLED: {
+        if (!event_obj) {
+            LOG(ERROR) << "Received AP_DISABLED event without interface";
+            break;
+        }
+
+        auto specific_iface_ptr = reinterpret_cast<const std::string *>(event_obj);
+
+        handle_ap_disabled_event(*specific_iface_ptr);
+
+        break;
+    }
+    case AP_ENABLED: {
+        if (!event_obj) {
+            LOG(ERROR) << "Received AP_ENABLED event without interface";
+            break;
+        }
+
+        auto specific_iface_ptr = reinterpret_cast<const std::string *>(event_obj);
+
+        handle_ap_enable_event(*specific_iface_ptr);
+
+        break;
+    }
+
+    default: {
+        LOG(DEBUG) << "Message handler doesn't exists for event type " << event_enum_value;
+        break;
+    }
+    }
+}
+
 bool ChannelSelectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
                                        const sMacAddr &dst_mac, const sMacAddr &src_mac, int fd,
                                        std::shared_ptr<beerocks_header> beerocks_header)
@@ -226,25 +261,29 @@ void ChannelSelectionTask::handle_vs_csa_notification(
 
     auto sub_band_dfs_enable = db->device_conf.front_radio.config[sender_iface_name].sub_band_dfs;
 
-    // Initiate Agent Managed ZWDFS flow.
-    if (db->device_conf.zwdfs_enable && !sub_band_dfs_enable && !sender_radio->front.zwdfs &&
-        notification->cs_params().switch_reason == beerocks::CH_SWITCH_REASON_RADAR &&
-        m_zwdfs_state != eZwdfsState::WAIT_FOR_ZWDFS_CAC_STARTED &&
-        m_zwdfs_state != eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED) {
+    if (db->device_conf.zwdfs_enable) {
+        // Initiate Agent Managed ZWDFS flow.
+        if (notification->cs_params().switch_reason == beerocks::CH_SWITCH_REASON_RADAR) {
+            if (!sub_band_dfs_enable && !sender_radio->front.zwdfs &&
+                m_zwdfs_state != eZwdfsState::WAIT_FOR_ZWDFS_CAC_STARTED &&
+                m_zwdfs_state != eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED) {
 
-        if (!initialize_zwdfs_interface_name()) {
-            LOG(DEBUG) << "No ZWDFS radio interface has been found. ZWDFS not initiated.";
-            return;
+                m_zwdfs_primary_radio_iface = sender_radio->front.iface_name;
+                // Start ZWDFS flow
+                ZWDFS_FSM_MOVE_STATE(eZwdfsState::REQUEST_CHANNELS_LIST);
+                return;
+            }
+        } else if (zwdfs_in_process()) {
+            // Channel switch reason != RADAR
+            if (sender_iface_name == m_zwdfs_primary_radio_iface) {
+
+                auto external_channel_switch =
+                    (m_zwdfs_state != eZwdfsState::WAIT_FOR_PRIMARY_RADIO_CSA_NOTIFICATION);
+
+                abort_zwdfs_flow(external_channel_switch);
+                return;
+            }
         }
-        m_zwdfs_primary_radio_iface = sender_radio->front.iface_name;
-        ZWDFS_FSM_MOVE_STATE(eZwdfsState::REQUEST_CHANNELS_LIST);
-        return;
-    }
-
-    if (m_zwdfs_state == eZwdfsState::WAIT_FOR_PRIMARY_RADIO_CSA_NOTIFICATION &&
-        sender_iface_name == m_zwdfs_primary_radio_iface) {
-        ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
-        return;
     }
 }
 
@@ -276,6 +315,25 @@ void ChannelSelectionTask::handle_vs_csa_error_notification(
     }
 }
 
+void ChannelSelectionTask::abort_zwdfs_flow(bool external_channel_switch)
+{
+    if (!zwdfs_in_process()) {
+        return;
+    }
+
+    if (external_channel_switch) {
+        LOG(DEBUG) << "External channel switch detected - Abort ZWDFS in progress:"
+                   << " state=" << m_zwdfs_states_string.at(m_zwdfs_state);
+    }
+
+    if (m_zwdfs_ant_in_use) {
+        LOG(DEBUG) << "Release ZWDFS antenna in use";
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+    } else {
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+    }
+}
+
 void ChannelSelectionTask::handle_vs_cac_started_notification(
     ieee1905_1::CmduMessageRx &cmdu_rx, int fd, std::shared_ptr<beerocks_header> beerocks_header)
 {
@@ -291,6 +349,14 @@ void ChannelSelectionTask::handle_vs_cac_started_notification(
     LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION from "
                << sender_iface_name;
 
+    // CAC_STARTED event is received when moving to DFS usable channel.
+    // If this event is received unexpectedly (because of external channel switch),
+    // we should abort the current ZW-DFS flow.
+    if (sender_iface_name == m_zwdfs_primary_radio_iface) {
+        abort_zwdfs_flow();
+        return;
+    }
+
     if (m_zwdfs_state == eZwdfsState::WAIT_FOR_ZWDFS_CAC_STARTED) {
         auto db = AgentDB::get();
         // Set timeout for CAC-COMPLETED notification with the CAC duration received on this
@@ -302,6 +368,9 @@ void ChannelSelectionTask::handle_vs_cac_started_notification(
         m_zwdfs_fsm_timeout =
             std::chrono::steady_clock::now() + std::chrono::seconds(cac_remaining_sec);
         ZWDFS_FSM_MOVE_STATE(eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED);
+    } else {
+        LOG(WARNING) << "Received unexpected cACTION_BACKHAUL_HOSTAP_DFS_CAC_STARTED_NOTIFICATION:"
+                     << " state=" << m_zwdfs_states_string.at(m_zwdfs_state);
     }
 }
 
@@ -358,13 +427,50 @@ void ChannelSelectionTask::handle_vs_zwdfs_ant_channel_switch_response(
                << sender_iface_name;
 
     if (m_zwdfs_state == eZwdfsState::WAIT_FOR_ZWDFS_SWITCH_ANT_OFF_RESPONSE) {
+        m_zwdfs_ant_in_use = false;
         ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
     }
 
     // Get here after switching on the ZWDFS antenna.
     if (!notification->success()) {
         LOG(ERROR) << "Failed to switch ZWDFS antenna and channel";
+        m_zwdfs_ant_in_use = true;
         ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+    }
+}
+
+void ChannelSelectionTask::handle_ap_disabled_event(const std::string &iface)
+{
+    LOG(TRACE) << "Received AP_DISABLED event for iface=" << iface;
+
+    if ((iface != m_zwdfs_primary_radio_iface) && (iface != m_zwdfs_iface)) {
+        return;
+    }
+
+    if (iface == m_zwdfs_iface) {
+        LOG(DEBUG) << "Received AP_DISABLED event for the ZW-DFS interface";
+        m_zwdfs_ap_enabled = false;
+    }
+
+    abort_zwdfs_flow();
+}
+
+void ChannelSelectionTask::handle_ap_enable_event(const std::string &iface)
+{
+    LOG(TRACE) << "Received AP_ENABLED event for iface=" << iface;
+
+    if (!initialize_zwdfs_interface_name()) {
+        LOG(WARNING) << "No ZWDFS radio interface has been found. "
+                        "AP_ENABLED before ZWDFS has been initiated.";
+        return;
+    }
+
+    if (iface == m_zwdfs_iface) {
+        LOG(DEBUG) << "Received AP_ENABLED event for the ZW-DFS interface";
+        m_zwdfs_ap_enabled = true;
+
+        LOG_IF((m_zwdfs_state == ZWDFS_SWITCH_ANT_OFF_REQUEST), DEBUG)
+            << "Resume ZW-DFS antenna release";
     }
 }
 
@@ -541,6 +647,13 @@ void ChannelSelectionTask::zwdfs_fsm()
         // ZWDFS antenna. Since at the time when the background scan will be over, the selected
         // channel might not be relevant anymore, the FSM will start over and jum to the initial
         // state which query the updated channel info from the AP.
+        if (!m_zwdfs_ap_enabled) {
+            LOG(ERROR) << "ZW-DFS antenna interface is down. Unable to switch to DFS channel "
+                          "using ZW-DFS. Aborting flow.";
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            break;
+        }
+
         if (radio_scan_in_progress()) {
             LOG(INFO) << "Pause ZWDFS flow until background scan is finished";
             break;
@@ -574,6 +687,7 @@ void ChannelSelectionTask::zwdfs_fsm()
                    << m_selected_channel.channel
                    << ", bw=" << utils::convert_bandwidth_to_int(m_selected_channel.bw);
 
+        m_zwdfs_ant_in_use = true;
         m_btl_ctx.send_cmdu(fronthaul_sd, m_cmdu_tx);
 
         constexpr uint8_t CAC_STARTED_TIMEOUT_SEC = 10;
@@ -650,6 +764,11 @@ void ChannelSelectionTask::zwdfs_fsm()
     case eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST: {
         // Block switching back 2.4G antenna if its radio is during background scan.
         if (radio_scan_in_progress(eFreqType::FREQ_24G)) {
+            break;
+        }
+
+        // Block switching back 2.4G antenna while the ZW-DFS interface is down.
+        if (!m_zwdfs_ap_enabled) {
             break;
         }
 

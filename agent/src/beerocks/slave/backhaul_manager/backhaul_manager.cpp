@@ -422,6 +422,15 @@ void BackhaulManager::handle_disconnected(int fd)
                 m_task_pool.send_event(eTaskType::TOPOLOGY,
                                        TopologyTask::eEvent::AGENT_RADIO_STATE_CHANGED);
             }
+
+            // notify channel selection task on radio disconnect (NON-ZWDFS)
+            auto radio = db->radio(soc->hostap_iface);
+            if (!radio) {
+                return;
+            }
+            m_task_pool.send_event(eTaskType::CHANNEL_SELECTION,
+                                   ChannelSelectionTask::eEvent::AP_DISABLED,
+                                   &radio->front.iface_name);
             return;
         } else {
             ++it;
@@ -430,6 +439,12 @@ void BackhaulManager::handle_disconnected(int fd)
 
     for (auto it = m_disabled_slave_sockets.begin(); it != m_disabled_slave_sockets.end();) {
         if (it->second->slave == fd) {
+
+            // notify channel selection task on ZWDFS radio disconnect
+            m_task_pool.send_event(eTaskType::CHANNEL_SELECTION,
+                                   ChannelSelectionTask::eEvent::AP_DISABLED,
+                                   &it->second->hostap_iface);
+
             it = m_disabled_slave_sockets.erase(it);
             return;
         }
@@ -1949,6 +1964,16 @@ bool BackhaulManager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo> 
             }
             it++;
         }
+
+        // Notify channel selection task on zwdfs radio re-connect
+        auto db    = AgentDB::get();
+        auto radio = db->radio(soc->hostap_iface);
+        if (!radio) {
+            break;
+        }
+        m_task_pool.send_event(eTaskType::CHANNEL_SELECTION,
+                               ChannelSelectionTask::eEvent::AP_ENABLED, &radio->front.iface_name);
+
         break;
     }
     default: {
