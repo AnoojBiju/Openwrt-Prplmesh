@@ -212,6 +212,15 @@ static void rm_params(amxd_object_t *object, const char *param_name)
     }
 }
 
+static void add_string_param(const char *param_name, amxd_object_t *param_owner_obj)
+{
+    amxd_param_t *param = NULL;
+
+    amxd_param_new(&param, param_name, AMXC_VAR_ID_CSTRING);
+    amxd_object_add_param(param_owner_obj, param);
+    amxd_param_add_action_cb(param, action_param_read, display_empty_val, NULL);
+}
+
 /**
  * @brief Removes PreSharedKey, KeyPassphrase, SAEPassphrase parameters 
  * from Controller.Network.AccessPoint.*.Security object.
@@ -233,15 +242,6 @@ static void event_rm_params(const char *const sig_name, const amxc_var_t *const 
     rm_params(security_obj, "SAEPassphrase");
 }
 
-static void add_string_param(const char *param_name, amxd_object_t *param_owner_obj)
-{
-    amxd_param_t *param = NULL;
-
-    amxd_param_new(&param, param_name, AMXC_VAR_ID_CSTRING);
-    amxd_object_add_param(param_owner_obj, param);
-    amxd_param_add_action_cb(param, action_param_read, display_empty_val, NULL);
-}
-
 /**
  * @brief Add PreSharedKey, KeyPassphrase, SAEPassphrase parameters 
  * to Controller.Network.AccessPoint.*.Security object.
@@ -253,6 +253,10 @@ static void event_add_hidden_params(const char *const sig_name, const amxc_var_t
 {
     amxd_object_t *security_obj = amxd_dm_signal_get_object(g_data_model, data);
 
+    if (!security_obj) {
+        LOG(WARNING) << "Failed to get object Controller.Network.AccessPoint.*.Security";
+        return;
+    }
     add_string_param("PreSharedKey", security_obj);
     add_string_param("KeyPassphrase", security_obj);
     add_string_param("SAEPassphrase", security_obj);
@@ -270,8 +274,8 @@ std::vector<beerocks::nbapi::sActionsCallback> get_actions_callback_list(void)
 std::vector<beerocks::nbapi::sEvents> get_events_list(void)
 {
     const std::vector<beerocks::nbapi::sEvents> events_list = {
-        {"event_add_hidden_params", event_add_hidden_params},
         {"event_rm_params", event_rm_params},
+        {"event_add_hidden_params", event_add_hidden_params},
     };
     return events_list;
 }
