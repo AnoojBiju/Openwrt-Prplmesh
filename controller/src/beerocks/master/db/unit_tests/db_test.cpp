@@ -28,7 +28,7 @@ using ::testing::StrictMock;
 
 namespace {
 
-constexpr auto g_assoc_event_path           = "Controller.Notification.AssociationEvent.AssocData";
+constexpr auto g_assoc_event_path           = "Controller.Notification.AssociationEvent.AssocData.";
 constexpr auto g_device_path                = "Controller.Network.Device";
 constexpr auto g_controller_data_model_path = "config/odl/controller.odl";
 constexpr auto g_zero_mac                   = "00:00:00:00:00:00";
