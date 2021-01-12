@@ -15,6 +15,7 @@
 #include <tlvf/wfa_map/tlvProfile2ChannelScanRequest.h>
 #include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>
 #include <tlvf/wfa_map/tlvTimestamp.h>
+#include <vector>
 
 namespace beerocks {
 
@@ -65,6 +66,19 @@ private:
 
     BackhaulManager &m_btl_ctx;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
+
+    struct sChannelScanRequest {
+        wfa_map::cRadiosToScan &radio; // Radio structure send in the request
+        std::chrono::system_clock::time_point scan_start_timestamp; // Timestamp of the scan start.
+        wfa_map::tlvProfile2ChannelScanResult::eScanType scan_type; // Type of scan requested.
+        wfa_map::tlvProfile2ChannelScanResult::eScanStatus scan_status; // Status of the scan.
+        explicit sChannelScanRequest(wfa_map::cRadiosToScan &_radio) : radio(_radio)
+        {
+            scan_status = wfa_map::tlvProfile2ChannelScanResult::eScanStatus::SUCCESS;
+            scan_type   = wfa_map::tlvProfile2ChannelScanResult::eScanType::SCAN_WAS_PASSIVE_SCAN;
+        };
+    };
+    std::unordered_map<sMacAddr, sChannelScanRequest> scan_requests;
 
     /* 1905.1 message handlers: */
 

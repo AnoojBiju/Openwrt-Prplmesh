@@ -64,6 +64,7 @@
 #include <tlvf/wfa_map/tlvErrorCode.h>
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
+#include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>
 #include <tlvf/wfa_map/tlvRadioOperationRestriction.h>
 #include <tlvf/wfa_map/tlvSearchedService.h>
 #include <tlvf/wfa_map/tlvSteeringBTMReport.h>
@@ -1345,20 +1346,69 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const std::string &src_mac
         LOG(ERROR) << "getClass wfa_map::tlvTimestamp has failed";
         return false;
     }
+    auto timestamp_str = std::string((char *)timestamp_tlv->timestamp())
+                             .substr(0, timestamp_tlv->timestamp_length());
+    LOG(INFO) << "timestamp=" << timestamp_str;
 
-    LOG(INFO) << "timestamp=" << timestamp_tlv->timestamp();
+    int result_count = 0;
+    for (auto const result_tlv : cmdu_rx.getClassList<wfa_map::tlvProfile2ChannelScanResult>()) {
+        auto neighbors_list_length = result_tlv->neighbors_list_length();
+        LOG(DEBUG) << "RUID ,operating_class & channel: " << std::endl
+                   << " " << result_tlv->radio_uid() << std::endl
+                   << " " << result_tlv->operating_class() << std::endl
+                   << " " << result_tlv->channel() << std::endl
+                   << " containing " << neighbors_list_length << " neighbors";
+
+        std::vector<wfa_map::cNeighbors> neighbor_vec;
+        for (int nbr_idx = 0; nbr_idx < neighbors_list_length; nbr_idx++) {
+            auto neighbor_tuple = result_tlv->neighbors_list(nbr_idx);
+            if (!std::get<0>(neighbor_tuple)) {
+                LOG(ERROR) << "getting neighbor entry #" << nbr_idx << " has failed!";
+                return false;
+            }
+
+            auto &neighbor = std::get<1>(neighbor_tuple);
+            // TODO: Remove DEBUG prints
+            LOG(DEBUG) << "neighbor BSSID: " << neighbor.bssid();
+            LOG(DEBUG) << "neighbor Signal Strength: " << neighbor.signal_strength();
+            LOG(DEBUG) << "neighbor BSS Load Element Present: "
+                       << neighbor.bss_load_element_present();
+            LOG(DEBUG) << "neighbor Channel Utilization: " << neighbor.channel_utilization();
+            neighbor_vec.push_back(neighbor);
+        }
+        LOG(DEBUG) << "Avg noise on channel: " << result_tlv->noise();
+        LOG(DEBUG) << "neighbor Channel Utilization: " << result_tlv->utilization();
+        if (database.add_channel_report(result_tlv->radio_uid(), result_tlv->operating_class(),
+                                        result_tlv->channel(), neighbor_vec, result_tlv->noise(),
+                                        result_tlv->utilization())) {
+            LOG(ERROR) << "Failed to add channel report entry #" << result_count << "!";
+            return false;
+        }
+        result_count++;
+    }
+    LOG(DEBUG) << "Done with Channel Scan Result";
+
+    // Build and send ACK message CMDU to the originator.
+    auto cmdu_tx_header = cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE);
+    if (!cmdu_tx_header) {
+        LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
+        return false;
+    }
+
+    // Zero Error Code TLVs in this ACK message
+
+    LOG(DEBUG) << "Sending ACK message to the originator, mid=" << std::hex << mid;
+    if (!send_cmdu_to_broker(cmdu_tx, tlvf::mac_from_string(src_mac),
+                             tlvf::mac_from_string(database.get_local_bridge_mac()))) {
+        LOG(ERROR) << "Failed to send ACK_MESSAGE back to agent";
+        return false;
+    }
 
     // Send event to dynamic_channel_selection_r2_task.
     // This task is will eventually replace the existing DCS task, but
     // in order not to break existing functionality, it introduced as
     // a new separate task.
-    dynamic_channel_selection_r2_task::sScanReportEvent new_event;
-    new_event.agent_mac = tlvf::mac_from_string(src_mac);
-    new_event.mid       = mid;
-    tasks.push_event(database.get_dynamic_channel_selection_r2_task_id(),
-                     (int)dynamic_channel_selection_r2_task::eEvent::RECEIVED_CHANNEL_SCAN_REPORT,
-                     (void *)&new_event);
-
+    // TODO: Send Channel-Scan-Report-Received event to task.
     return true;
 }
 

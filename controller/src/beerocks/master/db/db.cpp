@@ -3156,6 +3156,31 @@ const std::list<sChannelScanResults> &db::get_channel_scan_results(const sMacAdd
     return (single_scan ? hostap->single_scan_results : hostap->continuous_scan_results);
 }
 
+bool db::add_channel_report(const sMacAddr &RUID, const uint8_t &operating_class,
+                            const uint8_t &channel,
+                            const std::vector<wfa_map::cNeighbors> &neighbors, uint8_t avg_noise,
+                            uint8_t avg_utilization, bool override_existing_data)
+{
+    auto hostap = get_hostap_by_mac(RUID);
+    if (!hostap) {
+        LOG(ERROR) << "unable to get hostap";
+        return false;
+    }
+    const auto &key = std::make_pair(operating_class, channel);
+    // Get report as reference.
+    // if not report exist of the given key, this will create a new report.
+    auto &db_report = hostap->scan_report[key];
+    if (override_existing_data) {
+        // Clear neighbors if Override flag is set.
+        db_report.neighbors.clear();
+    }
+    std::copy(neighbors.begin(), neighbors.end(), std::back_inserter(db_report.neighbors));
+    db_report.noise       = avg_noise;
+    db_report.utilization = avg_utilization;
+
+    return true;
+}
+
 //
 // Client Persistent Data
 //
