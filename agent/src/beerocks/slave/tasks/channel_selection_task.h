@@ -27,6 +27,10 @@ public:
 
     void work() override;
 
+    enum eEvent : uint8_t { AP_DISABLED, AP_ENABLED };
+
+    void handle_event(uint8_t event_enum_value, const void *event_obj) override;
+
     bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
                      const sMacAddr &dst_mac, const sMacAddr &src_mac, int fd,
                      std::shared_ptr<beerocks_header> beerocks_header) override;
@@ -90,6 +94,10 @@ private:
     handle_vs_zwdfs_ant_channel_switch_response(ieee1905_1::CmduMessageRx &cmdu_rx, int fd,
                                                 std::shared_ptr<beerocks_header> beerocks_header);
 
+    void handle_ap_disabled_event(const std::string &iface);
+
+    void handle_ap_enable_event(const std::string &iface);
+
     /* ZWDFS */
     bool zwdfs_in_process() { return m_zwdfs_state != eZwdfsState::NOT_RUNNING; }
 
@@ -105,7 +113,7 @@ private:
         WAIT_FOR_PRIMARY_RADIO_CSA_NOTIFICATION,
         ZWDFS_SWITCH_ANT_OFF_REQUEST,
         WAIT_FOR_ZWDFS_SWITCH_ANT_OFF_RESPONSE,
-    } m_zwdfs_state = eZwdfsState::NOT_RUNNING;
+    } m_zwdfs_state = eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST;
 
     // clang-format off
     const std::unordered_map<eZwdfsState, std::string, std::hash<int>> m_zwdfs_states_string = {
@@ -143,9 +151,26 @@ private:
 
     sSelectedChannel select_best_usable_channel(const std::string &front_radio_iface);
 
+    /**
+     * @brief Abort ZWDFS flow in progress
+     *
+     * @param [in] external_channel_switch true if external channel switch detected, false if end of zwdfs flow
+     */
+    void abort_zwdfs_flow(bool external_channel_switch = true);
+
     std::string m_zwdfs_iface;
     std::string m_zwdfs_primary_radio_iface;
     std::chrono::steady_clock::time_point m_zwdfs_fsm_timeout;
+
+    /** @brief Indicator if the ZW-DFS antenna is in use.
+    *
+    * The ZW-DFS antenna is assumed to be in use at task start to enable ZW-DFS antenna release
+    * in case the agent got restarted while the antenna is still owned by the ZW-DFS antenna hostapd
+    * (due to hostapd crash or agent process crash).
+    */
+    bool m_zwdfs_ant_in_use = true;
+
+    bool m_zwdfs_ap_enabled = false;
 
     /* Helper functions */
     const std::string socket_to_front_iface_name(int fd);
