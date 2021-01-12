@@ -1656,7 +1656,7 @@ bool db::set_station_capabilities(const std::string &client_mac,
     // TODO: Fill up HE Capabilities for STA, PPM-567
 
     // Prepare path to AssociationEvent.AssocData object
-    std::string path_to_eventdata = "Controller.Notification.AssociationEvent.AssocData";
+    std::string path_to_eventdata = "Controller.Notification.AssociationEvent.AssocData.";
 
     // Remove previous entry
     m_ambiorix_datamodel->remove_optional_subobject(path_to_eventdata, "HTCapabilities");
@@ -5885,14 +5885,15 @@ bool db::dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client_mac)
 
 bool db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac)
 {
-    const std::string path_association_event = "Controller.Notification.AssociationEvent.AssocData";
+    const std::string path_association_event =
+        "Controller.Notification.AssociationEvent.AssocData.";
     if (!m_ambiorix_datamodel->set(path_association_event, "BSSID", tlvf::mac_to_string(bssid))) {
-        LOG(ERROR) << "Failed to set " << path_association_event << ".BSSID to " << bssid;
+        LOG(ERROR) << "Failed to set " << path_association_event << "BSSID to " << bssid;
         return false;
     }
     if (!m_ambiorix_datamodel->set(path_association_event, "MACAddress",
                                    tlvf::mac_to_string(client_mac))) {
-        LOG(ERROR) << "Failed to set " << path_association_event << ".MACAddress to " << client_mac;
+        LOG(ERROR) << "Failed to set " << path_association_event << "MACAddress to " << client_mac;
         return false;
     }
 
@@ -5903,7 +5904,7 @@ bool db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_
     */
     if (!m_ambiorix_datamodel->set(path_association_event, "StatusCode",
                                    static_cast<uint32_t>(0))) {
-        LOG(ERROR) << "Failed to set " << path_association_event << ".StatusCode to " << client_mac;
+        LOG(ERROR) << "Failed to set " << path_association_event << "StatusCode to " << client_mac;
         return false;
     }
 
