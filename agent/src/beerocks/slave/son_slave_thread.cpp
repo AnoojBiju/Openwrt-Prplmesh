@@ -4164,6 +4164,8 @@ bool slave_thread::autoconfig_wsc_parse_m2_encrypted_settings(WSC::m2 &m2, uint8
     int datalen = cipherlen + 16;
     uint8_t decrypted[datalen];
 
+    LOG(DEBUG) << "M2 Parse: received encrypted settings with length " << cipherlen;
+
     LOG(DEBUG) << "M2 Parse: aes decrypt";
     if (!mapf::encryption::aes_decrypt(keywrapkey, iv, ciphertext, cipherlen, decrypted, datalen)) {
         LOG(ERROR) << "aes decrypt failure";
@@ -4171,6 +4173,8 @@ bool slave_thread::autoconfig_wsc_parse_m2_encrypted_settings(WSC::m2 &m2, uint8
     }
 
     LOG(DEBUG) << "M2 Parse: parse config_data, len = " << datalen;
+    LOG(DEBUG) << "decrypted config_data buffer: " << std::endl
+               << utils::dump_buffer(decrypted, datalen);
 
     // Parsing failure means that the config data is invalid,
     // in which case it is unclear what we should do.
