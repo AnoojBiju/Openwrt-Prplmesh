@@ -659,6 +659,9 @@ void LinkMetricsCollectionTask::handle_multi_ap_policy_config_request(
         return;
     }
 
+    auto db = AgentDB::get();
+    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac);
+
     const auto unsuccessful_association_policy_tlv =
         cmdu_rx.getClass<wfa_map::tlvProfile2UnsuccessfulAssociationPolicy>();
     if (unsuccessful_association_policy_tlv) {
@@ -682,15 +685,6 @@ void LinkMetricsCollectionTask::handle_multi_ap_policy_config_request(
     } else {
         LOG(DEBUG) << "Unsuccessul Association Policy tlv not found in the request, mid" << mid;
     }
-
-    // send ACK_MESSAGE back to the controller
-    if (!m_cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE)) {
-        LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
-        return;
-    }
-
-    auto db = AgentDB::get();
-    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac);
 }
 
 void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessageRx &cmdu_rx,
