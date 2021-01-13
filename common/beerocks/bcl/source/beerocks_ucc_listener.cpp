@@ -591,7 +591,7 @@ void beerocks_ucc_listener::handle_wfa_ca_command(int fd, const std::string &com
         auto &message_type_str = params["messagetypevalue"];
         auto message_type      = (uint16_t)(std::strtoul(message_type_str.c_str(), nullptr, 16));
         if (!ieee1905_1::eMessageTypeValidate::check(message_type)) {
-            err_string = "invalid param value '0x" + message_type_str +
+            err_string = "invalid param value '" + message_type_str +
                          "' for param name 'MessageTypeValue', message type not found";
             LOG(ERROR) << err_string;
             reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
