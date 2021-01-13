@@ -100,9 +100,4 @@ COPY --chown=openwrt:openwrt scripts/build-openwrt.sh /home/openwrt/openwrt/scri
 ####
 FROM openwrt-builder as prplmesh-builder
 
-# This is done as late as possible, because we force the timestamp on cache.tar so it is never
-# considered as changed. If any of the above commands invalidated the cache, we want to use the
-# latest cache tarball instead.
-ADD cache.tar /home/openwrt
-
 RUN scripts/build-openwrt.sh
