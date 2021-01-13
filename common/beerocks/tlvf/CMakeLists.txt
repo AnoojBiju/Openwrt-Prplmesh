@@ -1,6 +1,11 @@
 project(btlvf VERSION ${prplmesh_VERSION})
 
-execute_process(COMMAND command -v python3 OUTPUT_VARIABLE PYTHON_EXECUTABLE)
+if (TARGET_PLATFORM_TYPE STREQUAL "ugw")
+    find_package(PythonInterp REQUIRED)
+else()
+    set(PYTHON_EXECUTABLE python3)
+endif()
+
 get_property(PythonTlvf TARGET tlvf PROPERTY PythonTlvf)
 message("-- Inherited ${PythonTlvf} ...")
 
