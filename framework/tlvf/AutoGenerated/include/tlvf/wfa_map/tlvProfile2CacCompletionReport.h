@@ -81,6 +81,7 @@ class cCacCompletionReportRadio : public BaseClass
             CAC_COMPLETION_RADIO_TOO_BUSY = 0x3,
             CAC_COMPLETION_NOT_UNDER_REGULATION = 0x4,
             CAC_COMPLETION_OTHER_ERROR = 0x5,
+            CAC_COMPLETION_NOT_PERFORMED = 0xff,
         };
         
         sMacAddr& radio_uid();
