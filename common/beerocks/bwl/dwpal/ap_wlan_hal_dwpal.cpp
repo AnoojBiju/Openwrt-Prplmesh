@@ -816,7 +816,7 @@ bool ap_wlan_hal_dwpal::set_channel(int chan, beerocks::eWiFiBandwidth bw, int c
         // # 0 = 20 or 40 MHz operating Channel width
         // # 1 = 80 MHz channel width
         // # 2 = 160 MHz channel width
-        // # 3 = 80+80 MHz channel width
+        // 80+80 MHz channel width not currently supported by Mxl Wifi driver
         // #vht_oper_chwidth=1
 
         if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_20 ||
@@ -824,9 +824,11 @@ bool ap_wlan_hal_dwpal::set_channel(int chan, beerocks::eWiFiBandwidth bw, int c
             wifi_bw = 0;
         } else if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_80) {
             wifi_bw = 1;
-        } else if ((bw == beerocks::eWiFiBandwidth::BANDWIDTH_160) ||
-                   (bw == beerocks::eWiFiBandwidth::BANDWIDTH_80_80)) {
+        } else if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_160) {
             wifi_bw = 2;
+        } else if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_80_80) {
+            LOG(ERROR) << "80+80 Mhz channel width not currently supported by this platform.";
+            return false;
         } else {
             LOG(ERROR) << "Unknown BW " << bw;
             return false;
