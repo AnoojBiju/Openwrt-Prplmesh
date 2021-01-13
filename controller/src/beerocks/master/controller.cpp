@@ -1167,6 +1167,16 @@ bool Controller::handle_cmdu_1905_channel_preference_report(const std::string &s
     }
 
     cert_cmdu_tx.finalize();
+
+    // build ACK message CMDU
+    auto cmdu_tx_header = cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE);
+    if (!cmdu_tx_header) {
+        LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
+        return false;
+    }
+    LOG(DEBUG) << "sending ACK message back to agent";
+    son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
+
     return true; // cert_cmdu_tx will be sent when triggered to by the UCC application
 }
 
