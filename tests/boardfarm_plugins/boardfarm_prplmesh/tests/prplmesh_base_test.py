@@ -198,6 +198,9 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
 
     def fail(self, msg: str):
         '''Throw an exception message.'''
+        FAIL = '\033[91m'
+        END = '\033[0m'
+        msg = FAIL + msg + END
         raise Exception(msg)
 
     def safe_check_obj_attribute(self, obj: object, attrib_name: str,
