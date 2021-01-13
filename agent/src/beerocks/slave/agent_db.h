@@ -272,6 +272,7 @@ public:
         std::array<uint8_t, beerocks::message::VHT_MCS_SET_SIZE> vht_mcs_set;
 
         bool he_supported = false; ///< Is 802.11ax (High Efficiency) protocol supported
+        bool report_indepent_scans_policy = false;
     };
 
     /**
