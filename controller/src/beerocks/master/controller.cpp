@@ -4152,4 +4152,15 @@ bool Controller::handle_cmdu_control_message(
     return true;
 }
 
+bool Controller::start_client_steering(const std::string &sta_mac, const std::string &target_bssid)
+{
+    std::string triggered_by{" On-Demand "};
+    bool disassoc_imminent = false;
+
+    LOG(DEBUG) << "NBAPI client steer request for " << sta_mac << " to hostap: " << target_bssid;
+    son_actions::steer_sta(database, cmdu_tx, tasks, sta_mac, target_bssid, triggered_by,
+                           std::string(), disassoc_imminent);
+    return true;
+}
+
 } // namespace son

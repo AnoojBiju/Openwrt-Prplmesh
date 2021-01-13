@@ -181,6 +181,28 @@ amxd_status_t access_point_commit(amxd_object_t *object, amxd_function_t *func, 
     return amxd_status_ok;
 }
 
+amxd_status_t client_steering(amxd_object_t *object, amxd_function_t *func, amxc_var_t *args,
+                              amxc_var_t *ret)
+{
+    amxc_var_t *argc_station_mac  = GET_ARG(args, "station_mac");
+    amxc_var_t *argc_target_bssid = GET_ARG(args, "target_bssid");
+    char *sta_mac                 = amxc_var_dyncast(cstring_t, argc_station_mac);
+    char *target_bssid            = amxc_var_dyncast(cstring_t, argc_target_bssid);
+    auto controller_ctx           = g_database->get_controller_ctx();
+
+    if (!controller_ctx) {
+        LOG(ERROR) << "Failed to get controller context.";
+        return amxd_status_unknown_error;
+    }
+    if (!g_database->can_start_client_steering(sta_mac, target_bssid)) {
+        LOG(WARNING) << "Fail initiate steering for client: " << sta_mac
+                     << " with atemp connect to AP with BSSID: " << target_bssid;
+    } else {
+        controller_ctx->start_client_steering(sta_mac, target_bssid);
+    }
+    return amxd_status_ok;
+}
+
 // Events
 
 amxd_dm_t *g_data_model = nullptr;
@@ -265,6 +287,7 @@ std::vector<beerocks::nbapi::sFunctions> get_func_list(void)
 {
     const std::vector<beerocks::nbapi::sFunctions> functions_list = {
         {"access_point_commit", "Controller.Network.AccessPointCommit", access_point_commit},
+        {"client_steering", "Controller.Network.ClientSteering", client_steering},
     };
     return functions_list;
 }

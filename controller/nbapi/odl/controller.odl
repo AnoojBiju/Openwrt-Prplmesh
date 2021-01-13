@@ -117,6 +117,11 @@
             object AccessPoint[];
 
             void AccessPointCommit();
+
+            void ClientSteering(
+                %in %mandatory string station_mac,
+                %in %mandatory string target_bssid
+            );
         }
 
         %persistent object Notification {
