@@ -69,17 +69,12 @@ void Ieee1905Transport::update_neighbours(const Packet &packet)
 
 void Ieee1905Transport::handle_packet(Packet &packet)
 {
-    MAPF_DBG("handling packet:" << std::endl << packet);
-
     if (!verify_packet(packet)) {
-        MAPF_DBG("packet verification failed.");
+        // Silently drop packets that failed verification
         return;
     }
 
-    if (packet.ether_type != ETH_P_1905_1) {
-        MAPF_DBG("Non-IEEE1905.1 packet");
-        return;
-    }
+    MAPF_DBG("handling packet:" << std::endl << packet);
 
     update_neighbours(packet);
 
@@ -100,40 +95,46 @@ bool Ieee1905Transport::verify_packet(const Packet &packet)
     if (packet.ether_type == ETH_P_1905_1) {
         // verify minimum packet length (should at least contain an IEEE1905 header + End of Message TLV)
         if (packet.payload.iov_len < sizeof(Ieee1905CmduHeader) + 3) {
-            MAPF_DBG("packet verification failed - IEEE1905 packet is too short ("
-                     << (unsigned)packet.payload.iov_len << "bytes).");
+            MAPF_DBG("packet verification failed - IEEE1905 packet is too short: "
+                     << (unsigned)packet.payload.iov_len << " bytes");
+
             return false;
         }
 
         Ieee1905CmduHeader *ch = reinterpret_cast<Ieee1905CmduHeader *>(packet.payload.iov_base);
         if (ch->messageVersion > ieee1905_max_message_version) {
-            MAPF_DBG("packet verification failed - unsupported IEEE1905 messageVersion "
-                     << (unsigned)ch->messageVersion << ".");
+            MAPF_DBG("packet verification failed - unsupported IEEE1905 messageVersion: "
+                     << (unsigned)ch->messageVersion);
+
             return false;
         }
 
         if (ch->_reservedField0 != 0) {
             // don't drop packet - just print a warning message
-            MAPF_DBG("packet verification warning - non zero IEEE1905 reservedField.");
+            MAPF_DBG("packet verification warning - non zero IEEE1905 reservedField");
         }
 
         if ((ch->flags & 0x3F) != 0) {
             // don't drop packet - just print a warning message
-            MAPF_DBG("packet verification warning - non zero IEEE1905 reservedField (flags).");
+            MAPF_DBG("packet verification warning - non zero IEEE1905 reservedField (flags): 0x"
+                     << std::hex << ch->flags);
         }
     } else if (packet.ether_type == ETH_P_LLDP) {
         // not much to verify at this layer...
         // verify minimum packet length (should at least contain a single empty TLV)
         if (packet.payload.iov_len < 3) {
-            MAPF_DBG("packet verification failed - LLDP packet is too short ("
-                     << (unsigned)packet.payload.iov_len << "bytes).");
+            MAPF_DBG("packet verification failed - LLDP packet is too short: "
+                     << (unsigned)packet.payload.iov_len << " bytes");
+
             return false;
         }
     } else {
         // this should never happen (due to packet filter)
         // This print is changed to debug in order to prevent log-flood on the platforms
         // TODO: change back to error-log-print once PPM-80 is merged
-        MAPF_DBG("packet verification failed - unsupported etherType.");
+        MAPF_DBG("packet verification failed - unsupported etherType: 0x"
+                 << std::hex << packet.ether_type << std::dec);
+
         return false;
     }
 

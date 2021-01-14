@@ -1003,8 +1003,18 @@ static bool set_vap_multiap_mode(std::vector<std::string> &vap_hostapd_config, b
     hostapd_config_set_value(vap_hostapd_config, "wps_state", fronthaul ? "2" : "");
     hostapd_config_set_value(vap_hostapd_config, "wps_independent", "0");
     hostapd_config_set_value(vap_hostapd_config, "mesh_mode", backhaul ? "bAP" : "fAP");
-    hostapd_config_set_value(vap_hostapd_config, "sFourAddrMode", backhaul ? "1" : "");
-    hostapd_config_set_value(vap_hostapd_config, "max_num_sta", backhaul ? "1" : "");
+    // Setting max_num_sta to an bAP interface definces number of repeaters that can
+    // connect to this VAP. What actualy Maxlinear driver does (proprietry feature) is
+    // to create more virtual vaps. So if wlan2.0 has max_num_sta=3 configuration
+    // there will be 2 aaditional vaps created by the driver.
+    // Since currently in prplwrt we are already using 6 vaps (4 fAP, 1 dummy, 1 STA)
+    // and WAV654 (wifi card on AX3000) limits number of VAPS to 8 + 8 (8 in 2.4G and 8 in 5G)
+    // we can set max_num_sta to 3.
+    // note: this works only for 1 backhaul interface per radio.
+    // Defining more that one backhaul interfaces requires:
+    // 1. counting nuber of interfaces in use.
+    // 2. knowing number of VAP supported on the platform.
+    hostapd_config_set_value(vap_hostapd_config, "max_num_sta", backhaul ? "3" : "");
 
     if (fronthaul && !backhaul_wps_ssid.empty()) {
         // Oddly enough, multi_ap_backhaul_wpa_passphrase has to be quoted, while wpa_passphrase does not...

@@ -47,11 +47,10 @@ if (TARGET_PLATFORM STREQUAL "openwrt")
         include_directories(${PLATFORM_INCLUDE_DIR}/libnl3)
         include_directories(${PLATFORM_INCLUDE_DIR})
 
-        # libbridge
-        file(GLOB LIBBRIDGE_SEARCH_PATHS "${PLATFORM_BUILD_DIR}/linux-intel_mips*/bridge-utils*/libbridge")
-        find_path(LIBBRIDGE_INCLUDE_DIR NAMES "libbridge.h" PATHS "${LIBBRIDGE_SEARCH_PATHS}" NO_CMAKE_FIND_ROOT_PATH)
+        # libbridge-ugw
+        find_path(LIBBRIDGE_INCLUDE_DIR NAMES "libbridge-ugw.h")
         include_directories(${LIBBRIDGE_INCLUDE_DIR})
-        link_directories(${LIBBRIDGE_INCLUDE_DIR})
+        find_library(bridge-ugw NAMES libbridge-ugw.a)
 
         # UCI BPL
         file(GLOB_RECURSE bpl_platform_sources ${MODULE_PATH}/*/uci/*.c*)
@@ -61,7 +60,7 @@ if (TARGET_PLATFORM STREQUAL "openwrt")
         find_package(safec REQUIRED)
 
         link_directories(${PLATFORM_STAGING_DIR}/usr/lib)
-        list(APPEND BPL_LIBS ubus nl-3 nl-route-3 bridge dl uci ubox safec)
+        list(APPEND BPL_LIBS ubus nl-3 nl-route-3 ${bridge-ugw} dl uci ubox safec)
 
         # Signal libsafec that we support the C99 standard
         add_definitions(-DHAVE_C99)

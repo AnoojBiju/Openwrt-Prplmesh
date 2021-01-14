@@ -29,6 +29,7 @@ using namespace son;
 #define HAL_MAX_COMMAND_FAILURES 10
 #define OPERATION_SUCCESS 0
 #define OPERATION_FAIL -1
+#define MAX_RADIO_DISBALED_TIMEOUT_SEC 4
 
 /**
  * Implementation-specific measurement period of channel utilization.
@@ -1636,37 +1637,43 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
 
     case Event::AP_Disabled: {
         if (!data) {
-            LOG(ERROR) << "AP_Disabled without data";
+            LOG(ERROR) << "AP_Disabled without data!";
             return false;
-        }
-
-        auto timeout         = std::chrono::steady_clock::now() + std::chrono::seconds(4);
-        auto notify_disabled = true;
-
-        while (std::chrono::steady_clock::now() < timeout) {
-            if (!mon_wlan_hal->refresh_radio_info()) {
-                LOG(WARNING) << "refresh_radio_info failed!, radio could be disabled";
-                continue;
-            }
-
-            auto state = mon_wlan_hal->get_radio_info().radio_state;
-            if ((state > bwl::eRadioState::DISABLED) && (state != bwl::eRadioState::UNKNOWN)) {
-                LOG(DEBUG) << "Radio is not disabled state (" << state
-                           << "), not forwarding Disabled Notification";
-                notify_disabled = false;
-                break;
-            }
-            UTILS_SLEEP_MSEC(500);
-        }
-
-        if (!notify_disabled) {
-            break;
         }
 
         auto msg = static_cast<bwl::sHOSTAP_DISABLED_NOTIFICATION *>(data);
         LOG(INFO) << "AP_Disabled on vap_id = " << int(msg->vap_id);
 
         if (msg->vap_id == beerocks::IFACE_RADIO_ID) {
+            auto timeout = std::chrono::steady_clock::now() +
+                           std::chrono::seconds(MAX_RADIO_DISBALED_TIMEOUT_SEC);
+            auto notify_disabled = true;
+
+            while (std::chrono::steady_clock::now() < timeout) {
+                if (!mon_wlan_hal->refresh_radio_info()) {
+                    LOG(WARNING) << "Radio could be temporary disabled, wait grace time "
+                                 << std::chrono::duration_cast<std::chrono::seconds>(
+                                        timeout - std::chrono::steady_clock::now())
+                                        .count()
+                                 << " sec.";
+                    UTILS_SLEEP_MSEC(500);
+                    continue;
+                }
+
+                auto state = mon_wlan_hal->get_radio_info().radio_state;
+                if ((state > bwl::eRadioState::DISABLED) && (state != bwl::eRadioState::UNKNOWN)) {
+                    LOG(DEBUG) << "Radio is not disabled (state=" << state
+                               << "), not forwarding disabled notification.";
+                    notify_disabled = false;
+                    break;
+                }
+                UTILS_SLEEP_MSEC(500);
+            }
+
+            if (!notify_disabled) {
+                break;
+            }
+
             auto response = message_com::create_vs_message<
                 beerocks_message::cACTION_MONITOR_HOSTAP_AP_DISABLED_NOTIFICATION>(cmdu_tx);
             if (response == nullptr) {
