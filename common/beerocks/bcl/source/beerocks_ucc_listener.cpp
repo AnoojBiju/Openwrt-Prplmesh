@@ -75,14 +75,20 @@ bool beerocks_ucc_listener::validate_hex_notation(const std::string &str, uint8_
     }
 
     // The number of digits must be even
+    // In practice we already encountered HEX values with odd number of digits.
+
+    // So instead of failing, adjust the number of octets calculation
+    // "str.size() - 2" ignore "0x" prefix.
+    // division by 2 because 2 chars are equal to one octet
+    uint8_t number_of_octets = (str.size() - 2) / 2;
+    // The calculation will round down the number of octets on odd size
+    // so add the missing octet if needed.
     if (str.size() % 2 != 0) {
-        return false;
+        ++number_of_octets;
     }
 
     // Expected octets validation
-    // "str.size() - 2" ignore "0x" prefix.
-    // division by 2 because 2 chars are equal to one octet
-    if (expected_octets != 0 && (str.size() - 2) / 2 != expected_octets) {
+    if (expected_octets != 0 && (number_of_octets != expected_octets)) {
         return false;
     }
 
