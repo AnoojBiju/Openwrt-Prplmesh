@@ -40,6 +40,7 @@
 
 namespace WSC {
 
+class cWscAttrVendorExtension;
 class cConfigData;
 class cWscAttrEncryptedSettings;
 class cWscAttrVersion;
@@ -71,20 +72,6 @@ class cWscAttrSsid;
 class cWscAttrAuthenticationType;
 class cWscAttrEncryptionType;
 class cWscAttrNetworkKey;
-typedef struct sWscAttrKeyWrapAuthenticator {
-    eWscAttributes attribute_type;
-    uint16_t data_length;
-    uint8_t data[WSC_KEY_WRAP_AUTH_LENGTH];
-    void struct_swap(){
-        tlvf_swap(16, reinterpret_cast<uint8_t*>(&attribute_type));
-        tlvf_swap(16, reinterpret_cast<uint8_t*>(&data_length));
-    }
-    void struct_init(){
-        attribute_type = ATTR_KEY_WRAP_AUTH;
-        data_length = WSC_KEY_WRAP_AUTH_LENGTH;
-    }
-} __attribute__((packed)) sWscAttrKeyWrapAuthenticator;
-
 typedef struct sWscAttrAuthenticationType {
     eWscAttributes attribute_type;
     uint16_t data_length;
@@ -158,6 +145,30 @@ typedef struct sWscWfaVendorExtSubelementMultiApIdentifier {
     }
 } __attribute__((packed)) sWscWfaVendorExtSubelementMultiApIdentifier;
 
+
+class cWscAttrKeyWrapAuthenticator : public BaseClass
+{
+    public:
+        cWscAttrKeyWrapAuthenticator(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cWscAttrKeyWrapAuthenticator(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cWscAttrKeyWrapAuthenticator();
+
+        eWscAttributes& type();
+        const uint16_t& length();
+        uint8_t* data(size_t idx = 0);
+        bool set_data(const void* buffer, size_t size);
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eWscAttributes* m_type = nullptr;
+        uint16_t* m_length = nullptr;
+        uint8_t* m_data = nullptr;
+        size_t m_data_idx__ = 0;
+        int m_lock_order_counter__ = 0;
+};
 
 class cWscAttrVendorExtension : public BaseClass
 {
