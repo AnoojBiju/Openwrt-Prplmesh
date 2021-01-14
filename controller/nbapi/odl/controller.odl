@@ -112,8 +112,6 @@
                    nubmer of entries in Device list
                 */
                 counted with NumberOfDevices;
-
-                %persistent bool Retain = false;
             }
 
             object AccessPoint[];
