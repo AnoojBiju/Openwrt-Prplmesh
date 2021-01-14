@@ -11,7 +11,7 @@ mkdir -p files/etc
 #   We need to keep the hashes in the firmware, to later know if an upgrade is needed:
 printf '%s=%s\n' "OPENWRT_REPOSITORY" "$OPENWRT_REPOSITORY" >> files/etc/prplwrt-version
 printf '%s=%s\n' "OPENWRT_VERSION" "$OPENWRT_VERSION" >> files/etc/prplwrt-version
-case $TARGET_DEVICE in 
+case $TARGET_DEVICE in
     netgear-rax40|axepoint|nec-wx3000hp|intel_mips)
         # Add prplmesh to the list of packages of the profile:
         sed -i 's/packages:/packages:\n  - prplmesh-dwpal/g' profiles/"$TARGET_DEVICE".yml
@@ -47,6 +47,17 @@ case $TARGET_DEVICE in
             echo "CONFIG_TARGET_${TARGET_SYSTEM}_${SUBTARGET}=y"
             echo "CONFIG_TARGET_${TARGET_SYSTEM}_${SUBTARGET}_${TARGET_PROFILE}=y"
             echo "CONFIG_PACKAGE_prplmesh${PRPLMESH_VARIANT}=y"
+            echo "CONFIG_PACKAGE_libamxb=y"
+            echo "CONFIG_PACKAGE_libamxc=y"
+            echo "CONFIG_PACKAGE_libamxd=y"
+            echo "CONFIG_PACKAGE_libamxj=y"
+            echo "CONFIG_PACKAGE_libamxm=y"
+            echo "CONFIG_PACKAGE_libamxo=y"
+            echo "CONFIG_PACKAGE_libamxp=y"
+            echo "CONFIG_PACKAGE_uriparser=y"
+            echo "CONFIG_PACKAGE_amxb-ubus=y"
+            echo "CONFIG_PACKAGE_yajl=y"
+            echo "CONFIG_PACKAGE_amxo-cg=y"
         } >> .config
         make defconfig
     ;;
