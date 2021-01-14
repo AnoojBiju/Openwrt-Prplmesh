@@ -157,6 +157,12 @@ class Radio:
         '''Get the current tx_power information.'''
         raise NotImplementedError("get_power_limit is not implemented in abstract class Radio")
 
+    def get_vap(self, ssid: str):
+        for vap in self.vaps:
+            if vap.get_ssid() == ssid:
+                return vap
+        return None
+
 
 class Station:
     '''Placeholder for a wireless (fronthaul) station.
@@ -485,6 +491,14 @@ class VirtualAPDocker(VirtualAP):
 
     def __init__(self, radio: RadioDocker, bssid: str):
         super().__init__(radio, bssid)
+
+    def get_ssid(self) -> str:
+        '''Get current SSID of attached radio. Return string.'''
+        vaps_info = yaml.safe_load(self.radio.read_tmp_file("vap"))
+        vap_info = [vap for vap in vaps_info if vap['bssid'] == self.bssid]
+        if vap_info:
+            return 'N/A' if not vap_info[0]['ssid'] else vap_info[0]['ssid']
+        return None
 
     def associate(self, sta: Station) -> bool:
         '''Associate "sta" with this VAP.'''
