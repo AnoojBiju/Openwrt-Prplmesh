@@ -208,6 +208,21 @@ bool AttrList::init()
                 return false;
             }
             break;
+        case ATTR_KEY_WRAP_AUTH:
+            if (!addAttr<cWscAttrKeyWrapAuthenticator>()) {
+                TLVF_LOG(ERROR) << "Failed to add cWscAttrKeyWrapAuthenticator";
+                return false;
+            }
+            // The standard requires that this attribute will be the last added.
+            // Therefore, assume that we finished adding attributes.
+            // It is good for two reasons:
+            // 1. If it wasn't the last attribute, we will fail on TLV validation when checking
+            //    that all the required attributes are present.
+            // 2. When it is not the last, and somehow the validation has passed, we will still fail on
+            //    the key wrap authenticator calculation.
+            LOG(DEBUG)
+                << "Received Key Wrap Authentication attribute, assuming end of attribute list";
+            return true;
         // Other attributes are not expected, if so ignore them silently
         default:
             TLVF_LOG(DEBUG) << "Unknown attribute " << getNextAttrType()

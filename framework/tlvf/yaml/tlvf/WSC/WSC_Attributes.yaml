@@ -20,18 +20,6 @@ _include: {
 }
 _namespace: WSC
 
-sWscAttrKeyWrapAuthenticator:
-  _type: struct
-  attribute_type:
-    _type: eWscAttributes
-    _value: ATTR_KEY_WRAP_AUTH
-  data_length:
-    _type: uint16_t
-    _value: WSC_KEY_WRAP_AUTH_LENGTH
-  data:
-    _type: uint8_t
-    _length: [ WSC_KEY_WRAP_AUTH_LENGTH ]
-
 #encrypted attributes
 
 sWscAttrAuthenticationType:
@@ -92,6 +80,19 @@ sWscWfaVendorExtSubelementMultiApIdentifier:
   value:
     _type: uint8_t
     _value: TEARDOWN
+    
+cWscAttrKeyWrapAuthenticator:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eWscAttributes
+    _value: ATTR_KEY_WRAP_AUTH
+  length:
+    _type: uint16_t
+    _value: WSC_KEY_WRAP_AUTH_LENGTH
+  data:
+    _type: uint8_t
+    _length: [ WSC_KEY_WRAP_AUTH_LENGTH ]
     
 cWscAttrVendorExtension:
   _type: class

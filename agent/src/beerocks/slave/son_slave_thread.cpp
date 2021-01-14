@@ -4164,6 +4164,8 @@ bool slave_thread::autoconfig_wsc_parse_m2_encrypted_settings(WSC::m2 &m2, uint8
     int datalen = cipherlen + 16;
     uint8_t decrypted[datalen];
 
+    LOG(DEBUG) << "M2 Parse: received encrypted settings with length " << cipherlen;
+
     LOG(DEBUG) << "M2 Parse: aes decrypt";
     if (!mapf::encryption::aes_decrypt(keywrapkey, iv, ciphertext, cipherlen, decrypted, datalen)) {
         LOG(ERROR) << "aes decrypt failure";
@@ -4171,6 +4173,8 @@ bool slave_thread::autoconfig_wsc_parse_m2_encrypted_settings(WSC::m2 &m2, uint8
     }
 
     LOG(DEBUG) << "M2 Parse: parse config_data, len = " << datalen;
+    LOG(DEBUG) << "decrypted config_data buffer: " << std::endl
+               << utils::dump_buffer(decrypted, datalen);
 
     // Parsing failure means that the config data is invalid,
     // in which case it is unclear what we should do.
@@ -4186,7 +4190,7 @@ bool slave_thread::autoconfig_wsc_parse_m2_encrypted_settings(WSC::m2 &m2, uint8
     // get length of config_data for KWA authentication
     size_t len = config_data->getMessageLength();
     // Protect against M2 buffer overflow attacks
-    if (len + sizeof(WSC::sWscAttrKeyWrapAuthenticator) > size_t(datalen)) {
+    if (len > size_t(datalen)) {
         LOG(ERROR) << "invalid config data length";
         return false;
     }
@@ -4197,31 +4201,32 @@ bool slave_thread::autoconfig_wsc_parse_m2_encrypted_settings(WSC::m2 &m2, uint8
     config.network_key = config_data->network_key();
     config.ssid        = config_data->ssid();
     config.bss_type    = config_data->bss_type();
+
+    // Get the Key Wrap Authenticator data
+    auto kwa_data = config_data->key_wrap_authenticator();
+    if (!kwa_data) {
+        LOG(ERROR) << "No KeyWrapAuthenticator in config_data";
+        return false;
+    }
+
+    // The keywrap authenticator is part of the config_data (last member of the
+    // config_data to be precise).
+    // However, since we need to calculate it over the part of config_data without the keywrap
+    // authenticator, substruct it's size from the computation length
+    size_t config_data_len_for_kwa = len - config_data->key_wrap_authenticator_size();
+
     // Swap to network byte order for KWA HMAC calculation
     // from this point config data is not readable!
     config_data->swap();
     uint8_t kwa[WSC::WSC_AUTHENTICATOR_LENGTH];
     // Compute KWA based on decrypted settings
-    if (!mapf::encryption::kwa_compute(authkey, decrypted, len, kwa)) {
+    if (!mapf::encryption::kwa_compute(authkey, decrypted, config_data_len_for_kwa, kwa)) {
         LOG(ERROR) << "kwa compute";
         return false;
     }
 
-    // Basically, the keywrap authenticator is part of the config_data (last member of the
-    // config_data to be precise).
-    // However, since we need to calculate it over the part of config_data without the keywrap
-    // authenticator, and since it is anyway going to be encrypted so config_data is not a
-    // substructure of encrypted_settings, it is easier to define it separately and just append to
-    // config_data.
-    WSC::sWscAttrKeyWrapAuthenticator *keywrapauth =
-        reinterpret_cast<WSC::sWscAttrKeyWrapAuthenticator *>(&decrypted[len]);
-    keywrapauth->struct_swap();
-    if ((keywrapauth->attribute_type != WSC::ATTR_KEY_WRAP_AUTH) ||
-        (keywrapauth->data_length != WSC::WSC_KEY_WRAP_AUTH_LENGTH) ||
-        !std::equal(kwa, kwa + sizeof(kwa), reinterpret_cast<uint8_t *>(keywrapauth->data))) {
-        LOG(ERROR) << "WSC KWA (Key Wrap Auth) failure" << std::endl
-                   << "type: " << std::hex << int(keywrapauth->attribute_type)
-                   << "length: " << std::hex << int(keywrapauth->data_length);
+    if (!std::equal(kwa, kwa + sizeof(kwa), kwa_data)) {
+        LOG(ERROR) << "WSC KWA (Key Wrap Auth) failure";
         return false;
     }
     LOG(DEBUG) << "KWA (Key Wrap Auth) success";

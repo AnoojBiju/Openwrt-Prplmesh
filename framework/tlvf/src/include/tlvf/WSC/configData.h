@@ -96,6 +96,16 @@ public:
 
         return default_value;
     };
+    uint8_t *key_wrap_authenticator() const
+    {
+        auto attr = getAttr<cWscAttrKeyWrapAuthenticator>();
+        return attr ? attr->data() : nullptr;
+    };
+    size_t key_wrap_authenticator_size() const
+    {
+        auto attr = getAttr<cWscAttrKeyWrapAuthenticator>();
+        return attr ? attr->get_initial_size() : 0;
+    };
 };
 
 } // namespace WSC
