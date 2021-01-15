@@ -21,9 +21,10 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
     """
 
     def check_log(self, entity_or_radio: Union[env.ALEntity, env.Radio], regex: str,
-                  start_line: int = 0, timeout: float = 0.6) -> bool:
-        result, line, match = entity_or_radio.wait_for_log(regex, start_line, timeout)
-        if not result:
+                  start_line: int = 0, timeout: float = 0.6, fail_on_mismatch: bool = True) -> bool:
+        result, line, match = entity_or_radio.wait_for_log(regex, start_line, timeout,
+                                                           fail_on_mismatch=fail_on_mismatch)
+        if fail_on_mismatch and not result:
             raise Exception
         return result, line, match
 
@@ -94,7 +95,10 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         [sniffer.Packet]
             The matching packets.
         """
-        debug("Checking for CMDU {} (0x{:04x}) from {}".format(msg, msg_type, eth_src))
+        debug("Checking for CMDU {} (0x{:04x}) from {} to {} mid {}"
+              .format(msg, msg_type, eth_src,
+                      eth_dst if eth_dst else "Multicast",
+                      mid if mid else "Any"))
         result = self.dev.DUT.wired_sniffer.get_cmdu_capture_type(msg_type, eth_src, eth_dst, mid)
         assert result, "No CMDU {} found".format(msg)
         return result
@@ -103,9 +107,13 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         self, msg: str, msg_type: int, eth_src: str, eth_dst: str = None, mid: int = None
     ) -> sniffer.Packet:
         '''Like check_cmdu_type, but also check that only a single CMDU is found.'''
-        debug("Checking for single CMDU {} (0x{:04x}) from {}".format(msg, msg_type, eth_src))
+        debug("Checking for single CMDU {} (0x{:04x}) from {} to {} mid {}"
+              .format(msg, msg_type, eth_src,
+                      eth_dst if eth_dst else "Multicast",
+                      mid if mid else "Any"))
         cmdus = self.check_cmdu_type(msg, msg_type, eth_src, eth_dst, mid)
-        assert len(cmdus) == 1, "Multiple CMDUs {} found".format(msg)
+        assert len(cmdus) == 1, \
+            "Multiple CMDUs {} found:\n {}".format(msg, '\n'.join([str(cmdu) for cmdu in cmdus]))
         return cmdus[0]
 
     def check_no_cmdu_type(
@@ -190,6 +198,9 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
 
     def fail(self, msg: str):
         '''Throw an exception message.'''
+        FAIL = '\033[91m'
+        END = '\033[0m'
+        msg = FAIL + msg + END
         raise Exception(msg)
 
     def safe_check_obj_attribute(self, obj: object, attrib_name: str,
@@ -295,3 +306,24 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
             return False
 
         return True
+
+    @classmethod
+    def teardown_class(cls):
+        """Teardown method, optional for boardfarm tests."""
+
+        test = cls.test_obj
+
+        for dev in test.dev:
+            if dev.model in ['prplWRT_STA', 'STA_dummy'] and dev.associated_vap:
+                dev.wifi_disconnect(dev.associated_vap)
+
+        print("Sniffer - stop")
+        test.dev.DUT.wired_sniffer.stop()
+        # Send additional Ctrl+C to the device to terminate "tail -f"
+        # Which is used to read log from device. Required only for tests on HW
+        try:
+            test.dev.DUT.agent_entity.device.send('\003')
+        except AttributeError:
+            # If AttributeError was raised - we are dealing with dummy devices.
+            # We don't have to additionaly send Ctrl+C for dummy devices.
+            pass

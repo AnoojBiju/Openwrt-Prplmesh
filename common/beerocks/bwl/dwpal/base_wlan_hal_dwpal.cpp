@@ -631,6 +631,8 @@ bool base_wlan_hal_dwpal::process_nl_events()
                        << " ctx=" << m_dwpal_nl_ctx << ", returning error!";
             return false;
         }
+    } else {
+        m_nl_get_failed_attempts = 0;
     }
 
     return true;
@@ -1046,6 +1048,8 @@ bool base_wlan_hal_dwpal::refresh_vaps_info(int id)
 
 bool base_wlan_hal_dwpal::process_ext_events()
 {
+    constexpr uint8_t MAX_EVENTS_PER_ITERATION = 5;
+
     char opCode[DWPAL_OPCODE_STRING_LENGTH] = {0};
 
     if (!m_dwpal_ctx[0]) {
@@ -1053,49 +1057,58 @@ bool base_wlan_hal_dwpal::process_ext_events()
         return false;
     }
 
-    auto buffer         = m_wpa_ctrl_buffer;
-    auto buff_size_copy = m_wpa_ctrl_buffer_size;
+    uint8_t events_received = 0;
+    int status              = DWPAL_SUCCESS;
 
-    // Check if there are pending event and get it
-    int status = dwpal_hostap_event_get(m_dwpal_ctx[0], buffer, &buff_size_copy, opCode);
+    do {
+        auto buffer         = m_wpa_ctrl_buffer;
+        auto buff_size_copy = m_wpa_ctrl_buffer_size;
 
-    if (status == DWPAL_FAILURE) {
-        LOG(ERROR) << "Failed reading event from DWPAL socket --> detaching!";
-        detach();
-        return false;
-    } else if (status == DWPAL_NO_PENDING_MESSAGES) {
+        // Check if there are pending event and get it
+        status = dwpal_hostap_event_get(m_dwpal_ctx[0], buffer, &buff_size_copy, opCode);
+
+        if (status == DWPAL_FAILURE) {
+            LOG(ERROR) << "Failed reading event from DWPAL socket --> detaching!";
+            detach();
+            return false;
+        } else if (status != DWPAL_NO_PENDING_MESSAGES) {
+            ++events_received;
+
+            /* Silencing unhandled multiple events */
+            if (!strncmp(opCode, "WPS-ENROLLEE-SEEN", sizeof(opCode))) {
+                LOG_EVERY_N(UNHANDLED_EVENTS_LOGS, DEBUG)
+                    << "DWPAL unhandled event opcode recieved: " << opCode;
+                return true;
+            } else if (!strncmp(opCode, "AP-PROBE-REQ-RECEIVED", sizeof(opCode))) {
+                LOG_EVERY_N(UNHANDLED_EVENTS_LOGS, DEBUG)
+                    << "DWPAL unhandled event opcode recieved: " << opCode;
+                return true;
+            } else if (!strncmp(opCode, "BEACON-REQ-TX-STATUS", sizeof(opCode))) {
+                LOG_EVERY_N(UNHANDLED_EVENTS_LOGS, DEBUG)
+                    << "DWPAL unhandled event opcode recieved: " << opCode;
+                return true;
+            } else if (!strncmp(opCode, "CTRL-EVENT-BSS-ADDED", sizeof(opCode))) {
+                LOG_EVERY_N(UNHANDLED_EVENTS_LOGS, DEBUG)
+                    << "DWPAL unhandled event opcode recieved: " << opCode;
+                return true;
+            } else if (!strncmp(opCode, "CTRL-EVENT-BSS-REMOVED", sizeof(opCode))) {
+                LOG_EVERY_N(UNHANDLED_EVENTS_LOGS, DEBUG)
+                    << "DWPAL unhandled event opcode recieved: " << opCode;
+                return true;
+            }
+
+            // Process the event with the DWPAL parser
+            if (!process_dwpal_event(buffer, buff_size_copy, std::string(opCode))) {
+                LOG(ERROR) << "Failed processing DWPAL event with DWPAL parser";
+                return false;
+            }
+        }
+    } while ((status != DWPAL_NO_PENDING_MESSAGES) && (events_received < MAX_EVENTS_PER_ITERATION));
+
+    if (events_received == 0) {
         // No pending messages
         LOG(WARNING) << "base_wlan_hal_dwpal::process_ext_events() called but there are no pending "
                         "messages...";
-        return false;
-    }
-
-    /* Silencing unhandled multiple events */
-    if (!strncmp(opCode, "WPS-ENROLLEE-SEEN", sizeof(opCode))) {
-        LOG_EVERY_N(UNHANDLED_EVENTS_LOGS, DEBUG)
-            << "DWPAL unhandled event opcode recieved: " << opCode;
-        return true;
-    } else if (!strncmp(opCode, "AP-PROBE-REQ-RECEIVED", sizeof(opCode))) {
-        LOG_EVERY_N(UNHANDLED_EVENTS_LOGS, DEBUG)
-            << "DWPAL unhandled event opcode recieved: " << opCode;
-        return true;
-    } else if (!strncmp(opCode, "BEACON-REQ-TX-STATUS", sizeof(opCode))) {
-        LOG_EVERY_N(UNHANDLED_EVENTS_LOGS, DEBUG)
-            << "DWPAL unhandled event opcode recieved: " << opCode;
-        return true;
-    } else if (!strncmp(opCode, "CTRL-EVENT-BSS-ADDED", sizeof(opCode))) {
-        LOG_EVERY_N(UNHANDLED_EVENTS_LOGS, DEBUG)
-            << "DWPAL unhandled event opcode recieved: " << opCode;
-        return true;
-    } else if (!strncmp(opCode, "CTRL-EVENT-BSS-REMOVED", sizeof(opCode))) {
-        LOG_EVERY_N(UNHANDLED_EVENTS_LOGS, DEBUG)
-            << "DWPAL unhandled event opcode recieved: " << opCode;
-        return true;
-    }
-
-    // Process the event with the DWPAL parser
-    if (!process_dwpal_event(buffer, buff_size_copy, std::string(opCode))) {
-        LOG(ERROR) << "Failed processing DWPAL event with DWPAL parser";
         return false;
     }
 

@@ -709,6 +709,27 @@ update_vap_credentials_configure_wpa(const std::string &vap_if,
         disable_pmksa_caching.assign("1");
         okc.assign("1");
         wpa_disable_eapol_key_retries.assign("0");
+    } else if (bss_info_conf.authentication_type == WSC::eWscAuth::WSC_AUTH_SAE) {
+        wpa = 0x2;
+        wpa_key_mgmt.assign("SAE");
+
+        if (bss_info_conf.encryption_type != WSC::eWscEncr::WSC_ENCR_AES) {
+            LOG(ERROR) << "Autoconfiguration:  " << vap_if << " CCMP(AES) is required for WPA3";
+            return false;
+        }
+        wpa_pairwise.assign("CCMP");
+
+        if (bss_info_conf.network_key.length() < 8 || bss_info_conf.network_key.length() > 64) {
+            LOG(ERROR) << "Autoconfiguration: " << vap_if << " invalid network key length "
+                       << bss_info_conf.network_key.length();
+            return false;
+        }
+        wpa_passphrase.assign(bss_info_conf.network_key);
+
+        ieee80211w.assign("2");
+        disable_pmksa_caching.assign("1");
+        okc.assign("1");
+        wpa_disable_eapol_key_retries.assign("0");
     } else {
         LOG(ERROR) << "Autoconfiguration: " << vap_if << " invalid authentication type "
                    << son::wireless_utils::wsc_to_bwl_authentication(
@@ -816,7 +837,7 @@ bool ap_wlan_hal_dwpal::set_channel(int chan, beerocks::eWiFiBandwidth bw, int c
         // # 0 = 20 or 40 MHz operating Channel width
         // # 1 = 80 MHz channel width
         // # 2 = 160 MHz channel width
-        // # 3 = 80+80 MHz channel width
+        // 80+80 MHz channel width not currently supported by Mxl Wifi driver
         // #vht_oper_chwidth=1
 
         if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_20 ||
@@ -824,9 +845,11 @@ bool ap_wlan_hal_dwpal::set_channel(int chan, beerocks::eWiFiBandwidth bw, int c
             wifi_bw = 0;
         } else if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_80) {
             wifi_bw = 1;
-        } else if ((bw == beerocks::eWiFiBandwidth::BANDWIDTH_160) ||
-                   (bw == beerocks::eWiFiBandwidth::BANDWIDTH_80_80)) {
+        } else if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_160) {
             wifi_bw = 2;
+        } else if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_80_80) {
+            LOG(ERROR) << "80+80 Mhz channel width not currently supported by this platform.";
+            return false;
         } else {
             LOG(ERROR) << "Unknown BW " << bw;
             return false;
@@ -1687,6 +1710,30 @@ bool ap_wlan_hal_dwpal::set_vap_enable(const std::string &iface_name, const bool
 bool ap_wlan_hal_dwpal::get_vap_enable(const std::string &iface_name, bool &enable)
 {
     LOG(DEBUG) << "get_vap_enable(): missing function implementation";
+    return true;
+}
+
+bool ap_wlan_hal_dwpal::set_mbo_assoc_disallow(const std::string &bssid, bool enable)
+{
+    LOG(DEBUG) << "set_mbo_assoc_disallow " << enable << " for bssid " << bssid;
+
+    std::string cmd = "MBO_BSS_ASSOC_DISALLOW " + bssid + " " + std::to_string(enable);
+
+    // Send command
+    if (!dwpal_send_cmd(cmd)) {
+        LOG(ERROR) << "set_mbo_assoc_disallow() failed!";
+        return false;
+    }
+    return true;
+}
+
+bool ap_wlan_hal_dwpal::set_radio_mbo_assoc_disallow(bool enable)
+{
+    for (const auto &vap : m_radio_info.available_vaps) {
+        if (!set_mbo_assoc_disallow(vap.second.mac, enable)) {
+            return false;
+        }
+    }
     return true;
 }
 

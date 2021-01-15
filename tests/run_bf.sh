@@ -41,13 +41,32 @@ export BFT_DEBUG=y
 bft -c "${bf_plugins_dir}"/boardfarm_prplmesh/prplmesh_config.json \
         -n "$DUT" -x "$TEST_SUITE" -o "${resultdir}" || exit 255
 
-failed_test_count=$(jq '.tests_fail' "${resultdir}"/test_results.json)
-re='^[0-9]+$'
-if ! [[ "$failed_test_count" =~ $re ]]; then
-   echo "Unable to parse failed test count:" "$failed_test_count" \
-   && exit 255
+mapfile -t failed <<< "$(jq -c '.test_results[] | select(.grade == "FAIL") | .name' "${resultdir}"/test_results.json)"
+mapfile -t passed <<< "$(jq -c '.test_results[] | select(.grade == "OK") | .name' "${resultdir}"/test_results.json)"
+mapfile -t skipped <<< "$(jq -c '.test_results[] | select(.grade == "SKIP") | .name' "${resultdir}"/test_results.json)"
+
+if [[ -n "${passed[*]/$'\n'/}" ]]; then
+if [[ -n "${failed[*]/$'\n'/}" ]]; then
+    printf '\n\033[2;32m%s\033[0m\n' "${#passed[@]} tests passed!"
+    for test in ${passed[*]};do
+	    printf '%s\n' "$test"
+    done
+else
+    printf '\n\033[2;32mAll tests passed!\033[0m\n\n'
 fi
-if [[ "$failed_test_count" -gt 0 ]]; then
-   printf '\033[1;31m%s\033[0m\n' "$failed_test_count tests failed!" \
-   && exit 1
+fi
+
+if [[ -n "${skipped[*]/$'\n'/}" ]]; then
+    printf '\n\033[1;36m%s\033[0m\n' "${#skipped[@]} tests skipped!" 
+for test in ${skipped[*]};do
+	printf '%s\n' "$test"
+done
+fi
+
+if [[ -n "${failed[*]/$'\n'/}" ]]; then
+    printf '\n\033[1;31m%s\033[0m\n' "${#failed[@]} tests failed!" 
+for test in ${failed[*]};do
+	printf '%s\n' "$test"
+done
+exit 1
 fi

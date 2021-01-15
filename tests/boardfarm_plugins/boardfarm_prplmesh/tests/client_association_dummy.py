@@ -12,6 +12,26 @@ from opts import debug
 
 
 class ClientAssociationDummy(PrplMeshBaseTest):
+    """Checks if allow/disallow requests are being implemented when instructed
+
+        Devices used in test setup:
+        STA1 - WIFI repeater
+        AP1 - Agent1 [DUT]
+        GW - Controller
+
+        Dummy STA is connected to wlan0
+        GW controller is instructed through beerocks CLI to client allow repeater 1 radio 1
+        Repeater 1 radio 1 is checked to see if AP1 got allow request
+        Connection map is checked for repeater 1 wlan0
+        GW controller is instructed through beerocks CLI to client disallow repeater 1 radio 0
+        Repeater 1 radio 0 is checked to see if AP1 got disallow request
+        Dummy STA is connected to wlan2
+        Connection map is checked for repeater 1 wlan2
+        GW controller is instructed through beerocks CLI to client allow repeater 1 radio 1
+        Repeater 1 radio 1 is checked to see if AP1 got allow request
+        Connection map is checked for repeater 1 wlan2
+        Connection map is checked for repeater 1 wlan0
+    """
 
     def runTest(self):
         # Locate test participants
@@ -64,8 +84,8 @@ class ClientAssociationDummy(PrplMeshBaseTest):
         # TODO client blocking not implemented in dummy bwl
 
         # Associate with other radio
-        agent.radios[0].vaps[0].disassociate(sta)
-        agent.radios[1].vaps[0].associate(sta)
+        sta.wifi_disconnect(agent.radios[0].vaps[0])
+        sta.wifi_connect(agent.radios[1].vaps[0])
 
         time.sleep(1)
 
@@ -98,7 +118,7 @@ class ClientAssociationDummy(PrplMeshBaseTest):
                        r"Got client allow request for {}".format(sta.mac), timeout=20)
 
         # Associate with other radio implies disassociate from first
-        agent.radios[0].vaps[0].associate(sta)
+        sta.wifi_connect_check(agent.radios[0].vaps[0])
 
         time.sleep(1)
 
@@ -117,20 +137,4 @@ class ClientAssociationDummy(PrplMeshBaseTest):
         if sta.mac not in map_vap0.clients:
             self.fail("client {} not in conn_map, clients: {}".format(sta.mac, map_vap0.clients))
 
-        agent.radios[0].vaps[0].disassociate(sta)
-
-    @classmethod
-    def teardown_class(cls):
-        """Teardown method, optional for boardfarm tests."""
-        test = cls.test_obj
-        print("Sniffer - stop")
-        test.dev.DUT.wired_sniffer.stop()
-        # Send additional Ctrl+C to the device to terminate "tail -f"
-        # Which is used to read log from device. Required only for tests on HW
-        try:
-            test.dev.DUT.agent_entity.device.send('\003')
-        except AttributeError:
-            # If AttributeError was raised - we are dealing with dummy devices.
-            # We don't have to additionaly send Ctrl+C for dummy devices.
-            pass
-        test.dev.wifi.disable_wifi()
+        sta.wifi_disconnect(agent.radios[0].vaps[0])

@@ -31,6 +31,12 @@ int cfg_get_prplmesh_param(const std::string &param, char *buf, size_t buf_len)
     return cfg_uci_get(path, buf, buf_len);
 }
 
+int cfg_get_prplmesh_hostapd_ifaces(std::unordered_map<std::string, std::string> &hostapd_ifaces)
+{
+    return cfg_uci_get_all_options_by_section_type((char *)"prplmesh", (char *)"wifi-device",
+                                                   (char *)"hostap_iface", hostapd_ifaces);
+}
+
 int cfg_get_prplmesh_radio_param(int radio_id, const std::string &radio_param, char *buf,
                                  size_t buf_len)
 {

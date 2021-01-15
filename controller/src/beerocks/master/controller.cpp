@@ -64,6 +64,7 @@
 #include <tlvf/wfa_map/tlvErrorCode.h>
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
+#include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>
 #include <tlvf/wfa_map/tlvRadioOperationRestriction.h>
 #include <tlvf/wfa_map/tlvSearchedService.h>
 #include <tlvf/wfa_map/tlvSteeringBTMReport.h>
@@ -654,22 +655,25 @@ bool Controller::autoconfig_wsc_add_m2_encrypted_settings(WSC::m2::config &m2_cf
                                                           uint8_t authkey[32],
                                                           uint8_t keywrapkey[16])
 {
-    // Step 1 - prepare the plaintext: [config_data | keywrapauth]:
-    // We use the config_data buffer as the plaintext buffer for encryption.
-    // The config_data buffer has room for 12 bytes for the keywrapauth (2 bytes
-    // attribute type, 2 bytes attribute length, 8 bytes data), but check it anyway
-    // to be on the safe side. Then, we add keywrapauth at its end.
+    // Step 1 - key wrap authenticator calculation
     uint8_t *plaintext = config_data.getMessageBuff();
-    int plaintextlen   = config_data.getMessageLength() + sizeof(WSC::sWscAttrKeyWrapAuthenticator);
-    WSC::sWscAttrKeyWrapAuthenticator *keywrapauth =
-        reinterpret_cast<WSC::sWscAttrKeyWrapAuthenticator *>(
-            &plaintext[config_data.getMessageLength()]);
-    keywrapauth->struct_init();
-    uint8_t *kwa = reinterpret_cast<uint8_t *>(keywrapauth->data);
+    int plaintextlen   = config_data.getMessageLength();
+
+    uint8_t *kwa = config_data.key_wrap_authenticator();
+    // The keywrap authenticator is part of the config_data (last member of the
+    // config_data to be precise).
+    // However, since we need to calculate it over the part of config_data without the keywrap
+    // authenticator, substruct it's size from the computation length
+    size_t config_data_len_for_kwa = plaintextlen - config_data.key_wrap_authenticator_size();
     // Add KWA which is the 1st 64 bits of HMAC of config_data using AuthKey
-    if (!mapf::encryption::kwa_compute(authkey, plaintext, config_data.getMessageLength(), kwa))
+    if (!mapf::encryption::kwa_compute(authkey, plaintext, config_data_len_for_kwa, kwa)) {
+        LOG(ERROR) << "KeyWrapAuth computation failed!";
         return false;
-    keywrapauth->struct_swap();
+    }
+
+    // The KWA is computed on the swapped config_data (network byte order).
+    // So at this point the KWA class is already swapped. We don't need to swap the recently
+    // calculated data since the data is a char array and there is no need to swap it.
 
     // Step 2 - AES encryption using temporary buffer. This is needed since we only
     // know the encrypted length after encryption.
@@ -1166,6 +1170,16 @@ bool Controller::handle_cmdu_1905_channel_preference_report(const std::string &s
     }
 
     cert_cmdu_tx.finalize();
+
+    // build ACK message CMDU
+    auto cmdu_tx_header = cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE);
+    if (!cmdu_tx_header) {
+        LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
+        return false;
+    }
+    LOG(DEBUG) << "sending ACK message back to agent";
+    son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
+
     return true; // cert_cmdu_tx will be sent when triggered to by the UCC application
 }
 
@@ -1345,20 +1359,69 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const std::string &src_mac
         LOG(ERROR) << "getClass wfa_map::tlvTimestamp has failed";
         return false;
     }
+    auto timestamp_str = std::string((char *)timestamp_tlv->timestamp())
+                             .substr(0, timestamp_tlv->timestamp_length());
+    LOG(INFO) << "timestamp=" << timestamp_str;
 
-    LOG(INFO) << "timestamp=" << timestamp_tlv->timestamp();
+    int result_count = 0;
+    for (auto const result_tlv : cmdu_rx.getClassList<wfa_map::tlvProfile2ChannelScanResult>()) {
+        auto neighbors_list_length = result_tlv->neighbors_list_length();
+        LOG(DEBUG) << "RUID ,operating_class & channel: " << std::endl
+                   << " " << result_tlv->radio_uid() << std::endl
+                   << " " << result_tlv->operating_class() << std::endl
+                   << " " << result_tlv->channel() << std::endl
+                   << " containing " << neighbors_list_length << " neighbors";
+
+        std::vector<wfa_map::cNeighbors> neighbor_vec;
+        for (int nbr_idx = 0; nbr_idx < neighbors_list_length; nbr_idx++) {
+            auto neighbor_tuple = result_tlv->neighbors_list(nbr_idx);
+            if (!std::get<0>(neighbor_tuple)) {
+                LOG(ERROR) << "getting neighbor entry #" << nbr_idx << " has failed!";
+                return false;
+            }
+
+            auto &neighbor = std::get<1>(neighbor_tuple);
+            // TODO: Remove DEBUG prints
+            LOG(DEBUG) << "neighbor BSSID: " << neighbor.bssid();
+            LOG(DEBUG) << "neighbor Signal Strength: " << neighbor.signal_strength();
+            LOG(DEBUG) << "neighbor BSS Load Element Present: "
+                       << neighbor.bss_load_element_present();
+            LOG(DEBUG) << "neighbor Channel Utilization: " << neighbor.channel_utilization();
+            neighbor_vec.push_back(neighbor);
+        }
+        LOG(DEBUG) << "Avg noise on channel: " << result_tlv->noise();
+        LOG(DEBUG) << "neighbor Channel Utilization: " << result_tlv->utilization();
+        if (database.add_channel_report(result_tlv->radio_uid(), result_tlv->operating_class(),
+                                        result_tlv->channel(), neighbor_vec, result_tlv->noise(),
+                                        result_tlv->utilization())) {
+            LOG(ERROR) << "Failed to add channel report entry #" << result_count << "!";
+            return false;
+        }
+        result_count++;
+    }
+    LOG(DEBUG) << "Done with Channel Scan Result";
+
+    // Build and send ACK message CMDU to the originator.
+    auto cmdu_tx_header = cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE);
+    if (!cmdu_tx_header) {
+        LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
+        return false;
+    }
+
+    // Zero Error Code TLVs in this ACK message
+
+    LOG(DEBUG) << "Sending ACK message to the originator, mid=" << std::hex << mid;
+    if (!send_cmdu_to_broker(cmdu_tx, tlvf::mac_from_string(src_mac),
+                             tlvf::mac_from_string(database.get_local_bridge_mac()))) {
+        LOG(ERROR) << "Failed to send ACK_MESSAGE back to agent";
+        return false;
+    }
 
     // Send event to dynamic_channel_selection_r2_task.
     // This task is will eventually replace the existing DCS task, but
     // in order not to break existing functionality, it introduced as
     // a new separate task.
-    dynamic_channel_selection_r2_task::sScanReportEvent new_event;
-    new_event.agent_mac = tlvf::mac_from_string(src_mac);
-    new_event.mid       = mid;
-    tasks.push_event(database.get_dynamic_channel_selection_r2_task_id(),
-                     (int)dynamic_channel_selection_r2_task::eEvent::RECEIVED_CHANNEL_SCAN_REPORT,
-                     (void *)&new_event);
-
+    // TODO: Send Channel-Scan-Report-Received event to task.
     return true;
 }
 

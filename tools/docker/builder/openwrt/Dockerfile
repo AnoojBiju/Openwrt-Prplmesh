@@ -44,6 +44,14 @@ ENV OPENWRT_REPOSITORY=$OPENWRT_REPOSITORY
 # Which OpenWrt version (commit hash) to use:
 ARG OPENWRT_VERSION
 ENV OPENWRT_VERSION=$OPENWRT_VERSION
+
+WORKDIR /home/openwrt
+
+RUN printf '\033[1;35m%s Cloning prplWrt\n\033[0m' "$(date --iso-8601=seconds --universal)" \
+    && git clone "$OPENWRT_REPOSITORY" openwrt \
+    && cd openwrt \
+    && git checkout "$OPENWRT_VERSION"
+
 # The variant to build (nl80211 or dwpal)
 ARG PRPLMESH_VARIANT
 ENV PRPLMESH_VARIANT=$PRPLMESH_VARIANT
@@ -80,13 +88,6 @@ ENV TARGET_PROFILE=$TARGET_PROFILE
 # Example: TARGET_DEVICE=axepoint
 ARG TARGET_DEVICE
 ENV TARGET_DEVICE=$TARGET_DEVICE
-
-WORKDIR /home/openwrt
-
-RUN printf '\033[1;35m%s Cloning prplWrt\n\033[0m' "$(date --iso-8601=seconds --universal)" \
-    && git clone "$OPENWRT_REPOSITORY" openwrt \
-    && cd openwrt \
-    && git checkout "$OPENWRT_VERSION"
 
 WORKDIR /home/openwrt/openwrt
 

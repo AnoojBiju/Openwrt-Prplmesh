@@ -138,6 +138,16 @@ public:
      */
     bool start_wps_pbc(const sMacAddr &radio_mac);
 
+    /**
+     * @brief set MBO AssocDisallow property
+     * 
+     * @param radio_mac radio mac of the radio on which to set the MBO
+     * @param bssid mac of the VAP on which to set the property or ZERO_MAC for whole radio
+     * @param enable enable or disable the MBO AssocDisallow property
+     * @return true on success, false on failure
+     */
+    bool set_mbo_assoc_disallow(const sMacAddr &radio_mac, const sMacAddr &bssid, bool enable);
+
     // Forward declaration
     struct sRadioInfo;
 
@@ -453,6 +463,7 @@ private:
     STATE(WAIT_FOR_AUTOCONFIG_COMPLETE)                                                            \
     STATE(CONNECT_TO_MASTER)                                                                       \
     STATE(CONNECTED)                                                                               \
+    STATE(PRE_OPERATIONAL)                                                                         \
     STATE(OPERATIONAL)                                                                             \
     STATE(RESTART)                                                                                 \
     STATE(STOPPED)

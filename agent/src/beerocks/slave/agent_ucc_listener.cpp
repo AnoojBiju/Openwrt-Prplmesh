@@ -209,8 +209,10 @@ bool agent_ucc_listener::handle_dev_set_config(std::unordered_map<std::string, s
     auto &backhaul_param = params["backhaul"];
     std::transform(backhaul_param.begin(), backhaul_param.end(), backhaul_param.begin(), ::tolower);
     if (backhaul_param == DEV_SET_ETH) {
+        // wired backhaul connection.
         m_selected_backhaul = DEV_SET_ETH;
     } else {
+        // wireless backhaul connection.
         // backhaul param must be a radio UID, in hex, starting with 0x
         if (backhaul_param.substr(0, 2) != "0x" || backhaul_param.size() != 14 ||
             backhaul_param.find_first_not_of("0123456789abcdef", 2) != std::string::npos) {
@@ -222,12 +224,102 @@ bool agent_ucc_listener::handle_dev_set_config(std::unordered_map<std::string, s
             backhaul_radio_uid.oct[idx] = std::stoul(backhaul_param.substr(2 + 2 * idx, 2), 0, 16);
         }
         m_selected_backhaul = tlvf::mac_to_string(backhaul_radio_uid);
+
+        // remove wired (ethernet) interface from the bridge
+        auto db            = AgentDB::get();
+        auto bridge        = db->bridge.iface_name;
+        auto bridge_ifaces = network_utils::linux_get_iface_list_from_bridge(bridge);
+        auto eth_iface     = db->ethernet.iface_name;
+        if (std::find(bridge_ifaces.begin(), bridge_ifaces.end(), eth_iface) !=
+            bridge_ifaces.end()) {
+            if (!beerocks::net::network_utils::linux_remove_iface_from_bridge(bridge, eth_iface)) {
+                LOG(ERROR) << "Failed to remove iface '" << eth_iface << "' from bridge '" << bridge
+                           << "' !";
+                return false;
+            }
+        } else {
+            LOG(INFO) << "There are no wired interfaces in the bridge";
+        }
     }
 
     // Signal to backhaul that it can continue onboarding.
     m_in_reset = false;
 
     m_received_dev_set_config = true;
+    return true;
+}
+
+/**
+ * @brief Handle DEV_SET_RFEATURE command. Parse the command and send it to the agent.
+ *
+ * @param[in] params Command parameters.
+ * @param[out] err_string Contains an error description if the function fails.
+ * @return true if successful, false if not.
+ */
+bool agent_ucc_listener::handle_dev_set_rfeature(
+    const std::unordered_map<std::string, std::string> &params, std::string &err_string)
+{
+    // The expected command is in the following format:
+    // dev_set_rfeature,NAME,$DUT_Name,type,MBO,ruid,$MAUT_RUID,Assoc_Disallow,Enable
+    // dev_set_rfeature,NAME,$DUT_Name,type,MBO,bssid,$MAUT_FH_MACAddress,Assoc_Disallow,Enable
+    auto type = params.at("type");
+    std::transform(type.begin(), type.end(), type.begin(), ::tolower);
+    if (type != "mbo") {
+        err_string =
+            "invalid param value '" + type + "' for param name 'type', accepted value is: MBO";
+        LOG(ERROR) << err_string;
+        return false;
+    }
+
+    sMacAddr ruid, bssid;
+
+    auto ruid_it  = params.find("ruid");
+    auto bssid_it = params.find("bssid");
+    if (ruid_it != params.end()) {
+        auto ruid_str = tlvf::mac_to_string(std::strtoull(ruid_it->second.c_str(), nullptr, 16));
+        ruid          = tlvf::mac_from_string(ruid_str);
+        bssid         = net::network_utils::ZERO_MAC;
+    } else if (bssid_it != params.end()) {
+        bssid      = tlvf::mac_from_string(bssid_it->second);
+        auto db    = AgentDB::get();
+        auto radio = db->get_radio_by_mac(bssid, AgentDB::eMacType::BSSID);
+        if (radio == nullptr) {
+            err_string = "Cannot find radio for the provided bssid " + bssid_it->second;
+            LOG(ERROR) << err_string;
+            return false;
+        }
+        ruid = radio->front.iface_mac;
+        if (ruid == bssid) {
+            err_string = "The provided BSSID is RUID";
+            LOG(ERROR) << err_string;
+            return false;
+        }
+    } else {
+        err_string = "Command must include RUID or BSSID";
+        LOG(ERROR) << err_string;
+        return false;
+    }
+
+    auto assoc_disallow = params.at("assoc_disallow");
+    std::transform(assoc_disallow.begin(), assoc_disallow.end(), assoc_disallow.begin(), ::tolower);
+
+    bool enable = false;
+    if (assoc_disallow == "enable") {
+        enable = true;
+    } else if (assoc_disallow == "disable") {
+        enable = false;
+    } else {
+        err_string = "invalid param value '" + assoc_disallow +
+                     "' for param name 'assoc_disallow', accepted value are: ENABLE, DISABLE";
+        LOG(ERROR) << err_string;
+        return false;
+    }
+
+    if (!m_btl_ctx.set_mbo_assoc_disallow(ruid, bssid, enable)) {
+        err_string = "Failed to set rfeature";
+        LOG(ERROR) << err_string;
+        return false;
+    }
     return true;
 }
 

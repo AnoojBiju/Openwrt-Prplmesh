@@ -108,6 +108,12 @@ bool configData::init(const config &cfg)
     std::copy_n(reinterpret_cast<uint8_t *>(&multi_ap_identifier), sizeof(multi_ap_identifier),
                 &vendor_data[index]);
 
+    auto kwa_attr = addAttr<cWscAttrKeyWrapAuthenticator>();
+    if (!kwa_attr) {
+        TLVF_LOG(ERROR) << "addAttr<cWscAttrKeyWrapAuthenticator> failed";
+        return false;
+    }
+
     return true;
 }
 
@@ -136,6 +142,10 @@ bool configData::valid() const
     }
     if (!getAttr<cWscAttrMac>()) {
         TLVF_LOG(ERROR) << "getAttr<cWscAttrMac> failed";
+        valid = false;
+    }
+    if (!getAttr<cWscAttrKeyWrapAuthenticator>()) {
+        TLVF_LOG(ERROR) << "getAttr<cWscAttrKeyWrapAuthenticator> failed";
         valid = false;
     }
     return valid;

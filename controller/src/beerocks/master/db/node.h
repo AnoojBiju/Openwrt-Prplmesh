@@ -16,6 +16,7 @@
 #include <tlvf/ieee_1905_1/tlvTransmitterLinkMetric.h>
 #include <tlvf/wfa_map/tlvApMetrics.h>
 #include <tlvf/wfa_map/tlvChannelScanCapabilities.h>
+#include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>
 
 #include <list>
 #include <map>
@@ -62,6 +63,7 @@ public:
     int8_t vap_id = beerocks::IFACE_ID_INVALID;
     const std::string mac;           // client
     std::string parent_mac;          // hostap
+    std::string dm_path;             // data model path
     std::string previous_parent_mac; //hostap
     std::string radio_identifier;
 
@@ -216,6 +218,24 @@ public:
                 operating_classes;
         };
         channel_scan_capabilities scan_capabilities;
+
+        class channel_scan_report {
+        public:
+            typedef std::pair<uint8_t, uint8_t> channel_scan_report_key;
+            struct channel_scan_report_hash {
+                std::size_t operator()(const std::pair<uint8_t, uint8_t> &pair) const
+                {
+                    return std::hash<uint8_t>()(pair.first) ^ std::hash<uint8_t>()(pair.second);
+                }
+            };
+            std::vector<wfa_map::cNeighbors> neighbors;
+            uint8_t noise;
+            uint8_t utilization;
+        };
+
+        std::unordered_map<channel_scan_report::channel_scan_report_key, channel_scan_report,
+                           channel_scan_report::channel_scan_report_hash>
+            scan_report;
 
         struct channel_scan_config {
             bool is_enabled = false;

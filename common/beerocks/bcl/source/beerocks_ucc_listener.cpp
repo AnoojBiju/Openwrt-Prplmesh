@@ -187,6 +187,8 @@ beerocks_ucc_listener::wfa_ca_command_from_string(std::string command)
         return eWfaCaCommand::DEV_GET_PARAMETER;
     } else if (command == "START_WPS_REGISTRATION") {
         return eWfaCaCommand::START_WPS_REGISTRATION;
+    } else if (command == "DEV_SET_RFEATURE") {
+        return eWfaCaCommand::DEV_SET_RFEATURE;
     }
 
     return eWfaCaCommand::WFA_CA_COMMAND_MAX;
@@ -589,7 +591,7 @@ void beerocks_ucc_listener::handle_wfa_ca_command(int fd, const std::string &com
         auto &message_type_str = params["messagetypevalue"];
         auto message_type      = (uint16_t)(std::strtoul(message_type_str.c_str(), nullptr, 16));
         if (!ieee1905_1::eMessageTypeValidate::check(message_type)) {
-            err_string = "invalid param value '0x" + message_type_str +
+            err_string = "invalid param value '" + message_type_str +
                          "' for param name 'MessageTypeValue', message type not found";
             LOG(ERROR) << err_string;
             reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
@@ -683,6 +685,26 @@ void beerocks_ucc_listener::handle_wfa_ca_command(int fd, const std::string &com
         }
 
         if (!handle_dev_set_config(params, err_string)) {
+            LOG(ERROR) << err_string;
+            reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
+            break;
+        }
+
+        // Send back second reply
+        reply_ucc(fd, eWfaCaStatus::COMPLETE);
+        break;
+    }
+    case eWfaCaCommand::DEV_SET_RFEATURE: {
+        std::unordered_map<std::string, std::string> params{
+            {"name", std::string()}, {"type", std::string()}, {"assoc_disallow", std::string()}};
+
+        if (!parse_params(cmd_tokens_vec, params, err_string)) {
+            LOG(ERROR) << err_string;
+            reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
+            break;
+        }
+
+        if (!handle_dev_set_rfeature(params, err_string)) {
             LOG(ERROR) << err_string;
             reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
             break;

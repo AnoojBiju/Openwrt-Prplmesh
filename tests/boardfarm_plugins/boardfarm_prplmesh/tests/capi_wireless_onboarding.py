@@ -11,6 +11,12 @@ from boardfarm.exceptions import SkipTest
 
 
 class CapiWirelessOnboarding(PrplMeshBaseTest):
+    """
+    Devices used in test setup:
+        AP1 - Agent1 [DUT]
+
+        Checks if prplMesh uses the AP1 radio 0 MAC as backhaul MAC after the onboarding process
+    """
 
     def runTest(self):
         # Locate test participants

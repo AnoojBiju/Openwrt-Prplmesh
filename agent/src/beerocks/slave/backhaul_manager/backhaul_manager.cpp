@@ -53,6 +53,7 @@
 #include <tlvf/wfa_map/tlvBackhaulSteeringResponse.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
+#include <tlvf/wfa_map/tlvProfile2AssociationStatusNotification.h>
 
 // BPL Error Codes
 #include <bpl/bpl_cfg.h>
@@ -421,6 +422,15 @@ void BackhaulManager::handle_disconnected(int fd)
                 m_task_pool.send_event(eTaskType::TOPOLOGY,
                                        TopologyTask::eEvent::AGENT_RADIO_STATE_CHANGED);
             }
+
+            // notify channel selection task on radio disconnect (NON-ZWDFS)
+            auto radio = db->radio(soc->hostap_iface);
+            if (!radio) {
+                return;
+            }
+            m_task_pool.send_event(eTaskType::CHANNEL_SELECTION,
+                                   ChannelSelectionTask::eEvent::AP_DISABLED,
+                                   &radio->front.iface_name);
             return;
         } else {
             ++it;
@@ -429,6 +439,12 @@ void BackhaulManager::handle_disconnected(int fd)
 
     for (auto it = m_disabled_slave_sockets.begin(); it != m_disabled_slave_sockets.end();) {
         if (it->second->slave == fd) {
+
+            // notify channel selection task on ZWDFS radio disconnect
+            m_task_pool.send_event(eTaskType::CHANNEL_SELECTION,
+                                   ChannelSelectionTask::eEvent::AP_DISABLED,
+                                   &it->second->hostap_iface);
+
             it = m_disabled_slave_sockets.erase(it);
             return;
         }
@@ -442,15 +458,28 @@ bool BackhaulManager::handle_cmdu(int fd, uint32_t iface_index, const sMacAddr &
 {
     // Check for local handling
     if (dst_mac == beerocks::net::network_utils::ZERO_MAC) {
-        auto it =
-            std::find_if(slaves_sockets.begin(), slaves_sockets.end(),
-                         [fd](std::shared_ptr<sRadioInfo> radio) { return (radio->slave == fd); });
-        if (it == slaves_sockets.end()) {
-            LOG(ERROR) << "Slave socket descriptor not found, fd = " << fd;
-            return false;
-        }
+        std::shared_ptr<sRadioInfo> soc;
 
-        auto soc = *it;
+        auto it = std::find_if(
+            slaves_sockets.begin(), slaves_sockets.end(),
+            [fd](const std::shared_ptr<sRadioInfo> &radio) { return (radio->slave == fd); });
+        if (it != slaves_sockets.end()) {
+            soc = *it;
+
+        } else {
+            // check the disabled sockets container as well
+            auto it2 =
+                std::find_if(m_disabled_slave_sockets.begin(), m_disabled_slave_sockets.end(),
+                             [fd](const std::pair<std::string, std::shared_ptr<sRadioInfo>> &elm) {
+                                 return (elm.second->slave == fd);
+                             });
+
+            if (it2 == m_disabled_slave_sockets.end()) {
+                LOG(ERROR) << "Slave socket descriptor not found, fd = " << fd;
+                return false;
+            }
+            soc = it2->second;
+        }
 
         if (cmdu_rx.getMessageType() == ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE) {
             return handle_slave_backhaul_message(soc, cmdu_rx);
@@ -758,6 +787,23 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
             active_hal->disconnect();
         }
 
+        // Add wired interface to the bridge
+        // It will be removed later on (dev_set_config) in case of wireless backhaul connection is needed.
+        auto db            = AgentDB::get();
+        auto bridge        = db->bridge.iface_name;
+        auto bridge_ifaces = beerocks::net::network_utils::linux_get_iface_list_from_bridge(bridge);
+        auto eth_iface     = db->ethernet.iface_name;
+        if (std::find(bridge_ifaces.begin(), bridge_ifaces.end(), eth_iface) !=
+            bridge_ifaces.end()) {
+            LOG(INFO) << "The wired interface is already in the bridge";
+        } else {
+            if (!beerocks::net::network_utils::linux_add_iface_to_bridge(bridge, eth_iface)) {
+                LOG(ERROR) << "Failed to add iface '" << eth_iface << "' to bridge '" << bridge
+                           << "' !";
+                return false;
+            }
+        }
+
         if (m_eFSMState == EState::ENABLED) {
             m_agent_ucc_listener->reset_completed();
             // Stay in ENABLE state until onboarding_state will change
@@ -974,7 +1020,7 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         eth_link_poll_timer = std::chrono::steady_clock::now();
         m_eth_link_up =
             beerocks::net::network_utils::linux_iface_is_up_and_running(db->ethernet.iface_name);
-        FSM_MOVE_STATE(OPERATIONAL);
+        FSM_MOVE_STATE(PRE_OPERATIONAL);
 
         // This event may come as a result of enabling the backhaul, but also as a result
         // of steering. *Only* in case it was the result of steering, we need to send a steering
@@ -987,6 +1033,27 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
             LOG(DEBUG) << "Sending BACKHAUL_STA_STEERING_RESPONSE_MESSAGE";
             send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
                                 tlvf::mac_from_string(bridge_info.mac));
+        }
+        break;
+    }
+    case EState::PRE_OPERATIONAL: {
+        auto db = AgentDB::get();
+
+        // if ap-autoconfiguration is completed and there are slaves to be finalized, finalize them as connected
+        if (db->statuses.ap_autoconfiguration_completed && !m_slaves_sockets_to_finalize.empty()) {
+            for (auto slave : m_slaves_sockets_to_finalize) {
+                finalize_slaves_connect_state(true, slave);
+            }
+            m_slaves_sockets_to_finalize.clear();
+        }
+
+        if (pending_enable &&
+            db->backhaul.connection_type != AgentDB::sBackhaul::eConnectionType::Invalid) {
+            pending_enable = false;
+        }
+
+        if (m_slaves_sockets_to_finalize.empty() && !pending_enable) {
+            FSM_MOVE_STATE(OPERATIONAL);
         }
         break;
     }
@@ -1024,21 +1091,6 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         //         FSM_MOVE_STATE(RESTART);
         //     }
         // } else {
-        auto db = AgentDB::get();
-
-        // if ap-autoconfiguration is completed and there are slaves to be finalized, finalize them as connected
-        if (db->statuses.ap_autoconfiguration_completed && !m_slaves_sockets_to_finalize.empty()) {
-            for (auto slave : m_slaves_sockets_to_finalize) {
-                finalize_slaves_connect_state(true, slave);
-            }
-            m_slaves_sockets_to_finalize.clear();
-        }
-
-        if (pending_enable &&
-            db->backhaul.connection_type != AgentDB::sBackhaul::eConnectionType::Invalid) {
-            pending_enable = false;
-        }
-
         break;
     }
     case EState::RESTART: {
@@ -1643,12 +1695,13 @@ bool BackhaulManager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo> 
         }
 
         // If we're already connected, send a notification to the slave
-        if (FSM_IS_IN_STATE(OPERATIONAL)) {
+        if (FSM_IS_IN_STATE(OPERATIONAL) || FSM_IS_IN_STATE(PRE_OPERATIONAL)) {
             m_task_pool.send_event(eTaskType::AP_AUTOCONFIGURATION,
                                    ApAutoConfigurationTask::eEvent::START_AP_AUTOCONFIGURATION,
                                    &radio->front.iface_name);
             // finalize current slave after ap-autoconfiguration is complete
             m_slaves_sockets_to_finalize.push_back(soc);
+            FSM_MOVE_STATE(PRE_OPERATIONAL);
         } else if (pending_enable) {
             auto notification = message_com::create_vs_message<
                 beerocks_message::cACTION_BACKHAUL_BUSY_NOTIFICATION>(cmdu_tx);
@@ -1911,6 +1964,16 @@ bool BackhaulManager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo> 
             }
             it++;
         }
+
+        // Notify channel selection task on zwdfs radio re-connect
+        auto db    = AgentDB::get();
+        auto radio = db->radio(soc->hostap_iface);
+        if (!radio) {
+            break;
+        }
+        m_task_pool.send_event(eTaskType::CHANNEL_SELECTION,
+                               ChannelSelectionTask::eEvent::AP_ENABLED, &radio->front.iface_name);
+
         break;
     }
     default: {
@@ -2076,22 +2139,6 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
             LOG(WARNING) << "event iface != wireless iface!";
         }
         if (FSM_IS_IN_STATE(WAIT_WPS)) {
-
-            auto bridge = db->bridge.iface_name;
-            auto bridge_ifaces =
-                beerocks::net::network_utils::linux_get_iface_list_from_bridge(bridge);
-            auto eth_iface = db->ethernet.iface_name;
-            // remove the wired interface from the bridge, it will be added on dev_set_config.
-            if (std::find(bridge_ifaces.begin(), bridge_ifaces.end(), eth_iface) !=
-                bridge_ifaces.end()) {
-                if (!beerocks::net::network_utils::linux_remove_iface_from_bridge(bridge,
-                                                                                  eth_iface)) {
-                    LOG(ERROR) << "Failed to remove iface '" << eth_iface << "' from bridge '"
-                               << bridge << "' !";
-                    return false;
-                }
-            }
-
             db->backhaul.selected_iface_name = iface;
             db->backhaul.connection_type     = AgentDB::sBackhaul::eConnectionType::Wireless;
             LOG(DEBUG) << "WPS scan completed successfully on iface = " << iface
@@ -2162,7 +2209,7 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
             if (db->device_conf.local_controller && !db->device_conf.local_gw) {
                 FSM_MOVE_STATE(CONNECT_TO_MASTER);
             } else {
-                FSM_MOVE_STATE(OPERATIONAL);
+                FSM_MOVE_STATE(PRE_OPERATIONAL);
             }
         }
     } break;
@@ -2173,7 +2220,8 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
         }
         auto db = AgentDB::get();
         if (iface == db->backhaul.selected_iface_name) {
-            if (FSM_IS_IN_STATE(OPERATIONAL) || FSM_IS_IN_STATE(CONNECTED)) {
+            if (FSM_IS_IN_STATE(OPERATIONAL) || FSM_IS_IN_STATE(PRE_OPERATIONAL) ||
+                FSM_IS_IN_STATE(CONNECTED)) {
                 platform_notify_error(bpl::eErrorCode::BH_DISCONNECTED,
                                       "Backhaul disconnected on operational state");
                 stop_on_failure_attempts--;
@@ -2866,6 +2914,68 @@ bool BackhaulManager::start_wps_pbc(const sMacAddr &radio_mac)
         }
         return true;
     }
+}
+
+bool BackhaulManager::set_mbo_assoc_disallow(const sMacAddr &radio_mac, const sMacAddr &bssid,
+                                             bool enable)
+{
+    auto it = std::find_if(
+        slaves_sockets.begin(), slaves_sockets.end(),
+        [&](std::shared_ptr<sRadioInfo> slave) { return slave->radio_mac == radio_mac; });
+    if (it == slaves_sockets.end()) {
+        LOG(ERROR) << "couldn't find slave for radio mac " << radio_mac;
+        return false;
+    }
+
+    // Store the socket to the slave managing the requested radio
+    auto soc = *it;
+
+    auto msg = message_com::create_vs_message<
+        beerocks_message::cACTION_BACKHAUL_SET_ASSOC_DISALLOW_REQUEST>(cmdu_tx);
+    if (!msg) {
+        LOG(ERROR) << "Failed building message!";
+        return false;
+    }
+
+    msg->enable() = enable;
+    msg->bssid()  = bssid;
+
+    LOG(DEBUG) << "Set MBO ASSOC_DISALLOW on interface " << soc->hostap_iface << " to " << enable;
+    send_cmdu(soc->slave, cmdu_tx);
+
+    if (!cmdu_tx.create(0, ieee1905_1::eMessageType::ASSOCIATION_STATUS_NOTIFICATION_MESSAGE)) {
+        LOG(ERROR) << "Failed building message!";
+        return false;
+    }
+
+    auto profile2_association_status_notification_tlv =
+        cmdu_tx.addClass<wfa_map::tlvProfile2AssociationStatusNotification>();
+    if (!profile2_association_status_notification_tlv) {
+        LOG(ERROR) << "addClass failed";
+        return false;
+    }
+
+    profile2_association_status_notification_tlv->alloc_bssid_status_list();
+    auto bssid_status_tuple = profile2_association_status_notification_tlv->bssid_status_list(0);
+
+    if (!std::get<0>(bssid_status_tuple)) {
+        LOG(ERROR) << "getting bssid status has failed!";
+        return false;
+    }
+
+    auto &bssid_status = std::get<1>(bssid_status_tuple);
+
+    bssid_status.bssid = bssid;
+    bssid_status.association_allowance_status =
+        enable ? wfa_map::tlvProfile2AssociationStatusNotification::eAssociationAllowanceStatus::
+                     NO_MORE_ASSOCIATIONS_ALLOWED
+               : wfa_map::tlvProfile2AssociationStatusNotification::eAssociationAllowanceStatus::
+                     ASSOCIATIONS_ALLOWED;
+
+    auto db = AgentDB::get();
+    send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
+
+    return true;
 }
 
 std::shared_ptr<bwl::sta_wlan_hal> BackhaulManager::get_selected_backhaul_sta_wlan_hal()

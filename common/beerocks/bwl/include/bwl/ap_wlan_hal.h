@@ -381,6 +381,25 @@ public:
     virtual bool get_vap_enable(const std::string &iface_name, bool &enable)      = 0;
 
     /**
+     * @brief Set MBO Association Disallow parameter for BSSID.
+     * 
+     * @param [in] bssid BSSID of the VAP to set the parameter.
+     * @param [in] enable Enable or disable the MBO Association Disallow parameter.
+     * 
+     * @return true on success or false on error.
+     */
+    virtual bool set_mbo_assoc_disallow(const std::string &bssid, bool enable) = 0;
+
+    /**
+     * @brief Set MBO Association Disallow parameter all available vaps.
+     * 
+     * @param [in] enable enable or disable the MBO Association Disallow.
+     * 
+     * @return true on success or false on error.
+     */
+    virtual bool set_radio_mbo_assoc_disallow(bool enable) = 0;
+
+    /**
      * @brief Generate "AP-STA-CONNECTED" events on connected clients on AP
      * 
      * @return true on success or false on error.

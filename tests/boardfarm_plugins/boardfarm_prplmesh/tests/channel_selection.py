@@ -13,6 +13,21 @@ from opts import debug
 
 
 class ChannelSelection(PrplMeshBaseTest):
+    """
+    Devices used in test setup:
+            AP1 - Agent1 [DUT]
+            GW - Controller
+
+    Check if the channel is switched when there's a channel preference but
+     an empty channel selection request
+    - Should fail if channels are different
+    Check if the channel is switched when there's an empty channel selection
+     request changing tx_power_limit
+    - Should fail if channels are different
+    Trigger channel selection to channel 6 and 36. Check that operating channel
+     report was sent.
+    - Should fail if channels haven't changed to 6 and 36
+    """
 
     def runTest(self):
 
@@ -240,18 +255,3 @@ class ChannelSelection(PrplMeshBaseTest):
                                             report.ieee1905_mid)
 
             self.checkpoint()
-
-    @classmethod
-    def teardown_class(cls):
-        """Teardown method, optional for boardfarm tests."""
-        test = cls.test_obj
-        print("Sniffer - stop")
-        test.dev.DUT.wired_sniffer.stop()
-        # Send additional Ctrl+C to the device to terminate "tail -f"
-        # Which is used to read log from device. Required only for tests on HW
-        try:
-            test.dev.DUT.agent_entity.device.send('\003')
-        except AttributeError:
-            # If AttributeError was raised - we are dealing with dummy devices.
-            # We don't have to additionaly send Ctrl+C for dummy devices.
-            pass

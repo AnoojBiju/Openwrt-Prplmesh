@@ -379,6 +379,18 @@ bool ap_wlan_hal_dummy::start_wps_pbc()
     return true;
 }
 
+bool ap_wlan_hal_dummy::set_mbo_assoc_disallow(const std::string &bssid, bool enable)
+{
+    LOG(DEBUG) << "Set MBO ASSOC DISALLOW for bssid " << bssid << " to " << enable;
+    return true;
+}
+
+bool ap_wlan_hal_dummy::set_radio_mbo_assoc_disallow(bool enable)
+{
+    LOG(DEBUG) << "Set MBO ASSOC DISALLOW for radio to " << enable;
+    return true;
+}
+
 std::string ap_wlan_hal_dummy::get_radio_driver_version() { return std::string("dummy"); }
 
 bool ap_wlan_hal_dummy::process_dummy_data(parsed_obj_map_t &parsed_obj) { return true; }

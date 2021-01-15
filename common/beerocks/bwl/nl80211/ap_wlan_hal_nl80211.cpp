@@ -194,7 +194,80 @@ bool ap_wlan_hal_nl80211::set_start_disabled(bool enable, int vap_id)
 
 bool ap_wlan_hal_nl80211::set_channel(int chan, beerocks::eWiFiBandwidth bw, int center_channel)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    if (chan < 0) {
+        LOG(ERROR) << "Invalid input: channel(" << chan << ") < 0";
+        return false;
+    }
+
+    // Load hostapd config for the radio
+    prplmesh::hostapd::Configuration conf = load_hostapd_config(m_radio_info.iface_name);
+    if (!conf) {
+        LOG(ERROR) << "Unable to load hostapd config for interface " << m_radio_info.iface_name;
+        return false;
+    }
+
+    std::string chan_string = std::to_string(chan);
+
+    LOG(DEBUG) << "Set channel to " << chan_string << ", bw " << bw << ", center channel "
+               << center_channel;
+
+    if (!conf.set_create_head_value("channel", chan_string)) {
+        LOG(ERROR) << "Failed setting channel";
+        return false;
+    }
+
+    if (bw != beerocks::eWiFiBandwidth::BANDWIDTH_UNKNOWN) {
+        int wifi_bw = 0;
+        // based on hostapd.conf @ https://w1.fi/cgit/hostap/plain/hostapd/hostapd.conf
+        // # 0 = 20 or 40 MHz operating Channel width
+        // # 1 = 80 MHz channel width
+        // # 2 = 160 MHz channel width
+        // # 3 = 80+80 MHz channel width
+        // #vht_oper_chwidth=1
+
+        if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_20 ||
+            bw == beerocks::eWiFiBandwidth::BANDWIDTH_40) {
+            wifi_bw = 0;
+        } else if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_80) {
+            wifi_bw = 1;
+        } else if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_160) {
+            wifi_bw = 2;
+        } else if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_80_80) {
+            wifi_bw = 3;
+        } else {
+            LOG(ERROR) << "Unknown BW " << bw;
+            return false;
+        }
+
+        if (!conf.set_create_head_value("vht_oper_chwidth", std::to_string(wifi_bw))) {
+            LOG(ERROR) << "Failed setting vht_oper_chwidth";
+            return false;
+        }
+    }
+
+    if (center_channel > 0) {
+        if (!conf.set_create_head_value("vht_oper_centr_freq_seg0_idx",
+                                        std::to_string(center_channel))) {
+            LOG(ERROR) << "Failed setting vht_oper_centr_freq_seg0_idx";
+            return false;
+        }
+    }
+
+    // store the result:
+    if (!conf.store()) {
+        LOG(ERROR) << "set_channel: cannot save hostapd config!";
+        return false;
+    }
+
+    // make hostapd reload its configuration file:
+    const std::string cmd{"UPDATE"};
+    if (!wpa_ctrl_send_msg(cmd)) {
+        LOG(ERROR) << "'" << cmd << "' command to hostapd failed";
+        return false;
+    }
+
+    LOG(DEBUG) << "set_channel done";
+
     return true;
 }
 
@@ -480,6 +553,28 @@ bool ap_wlan_hal_nl80211::update_vap_credentials(
                                          WSC::eWscAuth::WSC_AUTH_SAE)) {
                     wpa = 0x2;
                     wpa_key_mgmt.assign("WPA-PSK SAE");
+
+                    if (bss_it->encryption_type != WSC::eWscEncr::WSC_ENCR_AES) {
+                        LOG(ERROR)
+                            << "Autoconfiguration:  " << vap << " CCMP(AES) is required for WPA3";
+                        return;
+                    }
+                    wpa_pairwise.assign("CCMP");
+
+                    if (bss_it->network_key.length() < 8 || bss_it->network_key.length() > 64) {
+                        LOG(ERROR) << "Autoconfiguration: " << vap << " invalid network key length "
+                                   << bss_it->network_key.length();
+                        return;
+                    }
+                    wpa_passphrase.assign(bss_it->network_key);
+
+                    ieee80211w.assign("2");
+                    disable_pmksa_caching.assign("1");
+                    okc.assign("1");
+                    wpa_disable_eapol_key_retries.assign("0");
+                } else if (bss_it->authentication_type == WSC::eWscAuth::WSC_AUTH_SAE) {
+                    wpa = 0x2;
+                    wpa_key_mgmt.assign("SAE");
 
                     if (bss_it->encryption_type != WSC::eWscEncr::WSC_ENCR_AES) {
                         LOG(ERROR)
@@ -840,6 +935,18 @@ bool ap_wlan_hal_nl80211::set_vap_enable(const std::string &iface_name, const bo
     return true;
 }
 
+bool ap_wlan_hal_nl80211::set_mbo_assoc_disallow(const std::string &bssid, bool enable)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return true;
+}
+
+bool ap_wlan_hal_nl80211::set_radio_mbo_assoc_disallow(bool enable)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return true;
+}
+
 bool ap_wlan_hal_nl80211::get_vap_enable(const std::string &iface_name, bool &enable)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
@@ -973,6 +1080,11 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
         // Client params
         msg->params.mac         = tlvf::mac_from_string(parsed_obj["_mac"]);
         msg->params.status_code = beerocks::string_utils::stoi(parsed_obj["status_code"]);
+
+        // Open source hostapd does not contain bssid where client connected
+        // BSSID should be retrieved from Agent database, for simplify logic in the
+        // Agent need to fill up BSSID here with ZERO_MAC.
+        msg->params.source_bssid = beerocks::net::network_utils::ZERO_MAC;
 
         // Add the message to the queue
         event_queue_push(Event::BSS_TM_Response, msg_buff);

@@ -34,6 +34,7 @@ class LinkMetricQuery(PrplMeshBaseTest):
     Link's media type (ethernet, wifi), packet stats, RSSI (for wireless rx links) and phy rate
     (for wireless tx links) are not checked in this test.
     """
+
     def runTest(self):
         # skip this test if one of the components does not exist in setup
         try:
@@ -90,12 +91,12 @@ class LinkMetricQuery(PrplMeshBaseTest):
                     dup_links.append((neighbor, count))
             assert not dup_links, \
                 "Following {} links were expected to appear only once:\n".format(link_type)\
-                + "\n".join(dup_links)
+                + "\n".join([str(link) for link in dup_links])
 
             # report any extra neighbors that show up
             assert not unexpected_neighbors, \
                 "{} links to following neighbors were not expected:\n".format(link_type)\
-                + "\n".join(unexpected_neighbors)
+                + "\n".join([str(neighbor) for neighbor in dup_links])
 
         # check responder mac is our own mac, neighbor is one of the expected macs for each link
         verify_links(actual_tx_links, expected_tx_link_neighbors, "tx")

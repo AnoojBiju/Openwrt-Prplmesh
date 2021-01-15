@@ -13,6 +13,7 @@ import re
 import subprocess
 import time
 import yaml
+import pexpect
 
 from capi import UCCSocket
 from collections import namedtuple
@@ -241,6 +242,12 @@ def _docker_wait_for_log(container: str, programs: [str], regex: str, start_line
 def _device_wait_for_log(device: None, log_path: str, regex: str,
                          timeout: int, start_line: int = 0):
     """Waits for log matching regex expression to show up."""
+    # Interrupt any running command:
+    device.send('\003')
+    # Expect the prompt and the end of the line, to make sure we match
+    # the last one. Doing this will make sure we don't keep old data
+    # in the buffer.
+    device.expect(['{}$'.format(device.prompt), pexpect.TIMEOUT, pexpect.EOF])
     device.sendline("tail -f -n +{:d} {}".format(start_line + 1, log_path))
     device.expect(regex, timeout=timeout)
     match = device.match.group(0)
@@ -559,6 +566,15 @@ class RadioHostapd(Radio):
         device.sendline("ip link show {}".format(iface))
         device.expect("link/ether (?P<mac>([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})")
         return device.match.group('mac')
+
+    def get_current_channel(self, iface: str) -> ChannelInfo:
+        device = self.agent.device
+        device.sendline("iw {} info".format(iface))
+        device.expect(
+            "channel (?P<channel>[0-9]+) .*width.* (?P<width>[0-9]+) " +
+            "MHz.*center1.* (?P<center>[0-9]+) MHz")
+        return ChannelInfo(device.match.group('channel'), device.match.group('width'),
+                           device.match.group('center'))
 
 
 class VirtualAPHostapd(VirtualAP):

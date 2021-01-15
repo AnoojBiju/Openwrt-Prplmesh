@@ -90,7 +90,7 @@ slave_thread::slave_thread(sSlaveConfig conf, beerocks::logging &logger_)
     auto db = AgentDB::get();
 
     db->device_conf.stop_on_failure_attempts = conf.stop_on_failure_attempts;
-    stop_on_failure_attempts                 = db->device_conf.stop_on_failure_attempts;
+    m_stop_on_failure_attempts               = db->device_conf.stop_on_failure_attempts;
 
     db->bridge.iface_name        = conf.bridge_iface;
     db->ethernet.iface_name      = conf.backhaul_wire_iface;
@@ -165,7 +165,7 @@ void slave_thread::slave_reset()
     // Clear the front interface mac.
     radio->front.iface_mac = network_utils::ZERO_MAC;
 
-    if (db->device_conf.stop_on_failure_attempts && !stop_on_failure_attempts) {
+    if (db->device_conf.stop_on_failure_attempts && !m_stop_on_failure_attempts) {
         LOG(ERROR) << "Reached to max stop on failure attempts!";
         stopped = true;
     }
@@ -864,7 +864,7 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
         auto db = AgentDB::get();
 
         db->device_conf.stop_on_failure_attempts = request_in->attempts();
-        stop_on_failure_attempts                 = db->device_conf.stop_on_failure_attempts;
+        m_stop_on_failure_attempts               = db->device_conf.stop_on_failure_attempts;
         LOG(DEBUG) << "stop_on_failure_attempts new value: "
                    << db->device_conf.stop_on_failure_attempts;
 
@@ -1365,6 +1365,32 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         message_com::send_cmdu(ap_manager_socket, cmdu_tx);
         break;
     }
+    case beerocks_message::ACTION_BACKHAUL_SET_ASSOC_DISALLOW_REQUEST: {
+        if (!ap_manager_socket) {
+            LOG(ERROR) << "ap_manager_socket is null";
+            return false;
+        }
+        LOG(DEBUG) << "ACTION_BACKHAUL_SET_ASSOC_DISALLOW_REQUEST";
+        auto request_in =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_BACKHAUL_SET_ASSOC_DISALLOW_REQUEST>();
+        if (!request_in) {
+            LOG(ERROR) << "addClass cACTION_BACKHAUL_SET_ASSOC_DISALLOW_REQUEST failed";
+            return false;
+        }
+
+        auto request_out = message_com::create_vs_message<
+            beerocks_message::cACTION_APMANAGER_SET_ASSOC_DISALLOW_REQUEST>(cmdu_tx);
+        if (!request_out) {
+            LOG(ERROR) << "Failed building message!";
+            return false;
+        }
+        request_out->enable() = request_in->enable();
+        request_out->bssid()  = request_in->bssid();
+        LOG(DEBUG) << "send ACTION_APMANAGER_SET_ASSOC_DISALLOW_REQUEST";
+        message_com::send_cmdu(ap_manager_socket, cmdu_tx);
+        break;
+    }
     case beerocks_message::ACTION_BACKHAUL_CHANNELS_LIST_REQUEST: {
         auto request_in =
             beerocks_header->addClass<beerocks_message::cACTION_BACKHAUL_CHANNELS_LIST_REQUEST>();
@@ -1483,7 +1509,7 @@ bool slave_thread::handle_cmdu_platform_manager_message(
                 LOG(ERROR) << "response->valid == 0";
                 platform_notify_error(
                     bpl::eErrorCode::CONFIG_PLATFORM_REPORTED_INVALID_CONFIGURATION, "");
-                stop_on_failure_attempts--;
+                m_stop_on_failure_attempts--;
                 slave_reset();
                 return true;
             }
@@ -1492,7 +1518,7 @@ bool slave_thread::handle_cmdu_platform_manager_message(
              * On GW platform the ethernet interface which is used for backhaul connection must be
              * empty since the GW doesn't need wired backhaul connection. Since it is being set on
              * the constructor from the agent configuration file, clear it here when we know if the
-             * agent runs on a GW. 
+             * agent runs on a GW.
              */
             auto db = AgentDB::get();
             if (db->device_conf.local_gw) {
@@ -1500,7 +1526,7 @@ bool slave_thread::handle_cmdu_platform_manager_message(
                 db->ethernet.mac = network_utils::ZERO_MAC;
             }
 
-            stop_on_failure_attempts = db->device_conf.stop_on_failure_attempts;
+            m_stop_on_failure_attempts = db->device_conf.stop_on_failure_attempts;
 
             LOG(TRACE) << "goto STATE_CONNECT_TO_BACKHAUL_MANAGER";
             slave_state = STATE_CONNECT_TO_BACKHAUL_MANAGER;
@@ -1765,16 +1791,16 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         break;
     }
     case beerocks_message::ACTION_APMANAGER_HOSTAP_AP_DISABLED_NOTIFICATION: {
-        auto response_in =
+        auto notification_in =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_APMANAGER_HOSTAP_AP_DISABLED_NOTIFICATION>();
-        if (response_in == nullptr) {
+        if (notification_in == nullptr) {
             LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_AP_DISABLED_NOTIFICATION failed";
             return false;
         }
         LOG(INFO) << "received ACTION_APMANAGER_HOSTAP_AP_DISABLED_NOTIFICATION on vap_id="
-                  << int(response_in->vap_id());
-        if (response_in->vap_id() == beerocks::IFACE_RADIO_ID) {
+                  << int(notification_in->vap_id());
+        if (notification_in->vap_id() == beerocks::IFACE_RADIO_ID) {
             LOG(WARNING) << __FUNCTION__ << "AP_Disabled on radio, slave reset";
             if (configuration_in_progress) {
                 LOG(INFO) << "configuration in progress, ignoring";
@@ -1783,14 +1809,14 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             }
             slave_reset();
         } else {
-            auto response_out = message_com::create_vs_message<
+            auto notification_out = message_com::create_vs_message<
                 beerocks_message::cACTION_CONTROL_HOSTAP_AP_DISABLED_NOTIFICATION>(cmdu_tx);
-            if (response_out == nullptr) {
+            if (notification_out == nullptr) {
                 LOG(ERROR) << "Failed building message!";
                 return false;
             }
 
-            response_out->vap_id() = response_in->vap_id();
+            notification_out->vap_id() = notification_in->vap_id();
             send_cmdu_to_controller(cmdu_tx);
         }
         break;
@@ -2108,7 +2134,36 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         //TODO Add target BSSID
         steering_btm_report_tlv->sta_mac()         = response_in->params().mac;
         steering_btm_report_tlv->btm_status_code() = response_in->params().status_code;
-        steering_btm_report_tlv->bssid()           = response_in->params().source_bssid;
+
+        /*
+            If ACTION_APMANAGER_CLIENT_BSS_STEER_RESPONSE contains
+            non-zero MAC fill up BSSID (client associated with) for
+            CLIENT_STEERING_BTM_REPORT_MESSAGE otherwise find BSSID
+            in the AgentDB.
+        */
+        if (response_in->params().source_bssid != net::network_utils::ZERO_MAC) {
+            steering_btm_report_tlv->bssid() = response_in->params().source_bssid;
+        } else {
+            auto agent_db = AgentDB::get();
+
+            /*
+                For finding BSSID in AgentDB need to find STA entry.
+                STA entry can be found by checking associated clients list
+                per radio.
+            */
+            steering_btm_report_tlv->bssid() = net::network_utils::ZERO_MAC;
+            for (const auto &radio : agent_db->get_radios_list()) {
+                auto sta =
+                    find_if(radio->associated_clients.begin(), radio->associated_clients.end(),
+                            [&](const std::pair<sMacAddr, AgentDB::sRadio::sClient> &sta) {
+                                return sta.first == steering_btm_report_tlv->sta_mac();
+                            });
+                if (sta != radio->associated_clients.end()) {
+                    steering_btm_report_tlv->bssid() = sta->second.bssid;
+                    break;
+                }
+            }
+        }
 
         LOG(DEBUG) << "sending CLIENT_STEERING_BTM_REPORT_MESSAGE back to controller";
         LOG(DEBUG) << "BTM report source bssid: " << steering_btm_report_tlv->bssid();
@@ -2852,22 +2907,22 @@ bool slave_thread::handle_cmdu_monitor_message(Socket *sd,
         break;
     }
     case beerocks_message::ACTION_MONITOR_CLIENT_NO_ACTIVITY_NOTIFICATION: {
-        auto response_in =
+        auto notification_in =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_MONITOR_CLIENT_NO_ACTIVITY_NOTIFICATION>();
-        if (response_in == nullptr) {
+        if (notification_in == nullptr) {
             LOG(ERROR) << "addClass ACTION_MONITOR_CLIENT_NO_ACTIVITY_NOTIFICATION failed";
             break;
         }
-        auto response_out = message_com::create_vs_message<
+        auto notification_out = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_CLIENT_NO_ACTIVITY_NOTIFICATION>(
             cmdu_tx, beerocks_header->id());
-        if (response_out == nullptr) {
+        if (notification_out == nullptr) {
             LOG(ERROR) << "Failed building ACTION_CONTROL_CLIENT_NO_ACTIVITY_NOTIFICATION message!";
             break;
         }
         // Only mac id is the part of notification now, if this changes in future this message will break
-        response_out->mac() = response_in->mac();
+        notification_out->mac() = notification_in->mac();
         send_cmdu_to_controller(cmdu_tx);
         break;
     }
@@ -2922,9 +2977,9 @@ bool slave_thread::handle_cmdu_monitor_message(Socket *sd,
             platform_notify_error(bpl::eErrorCode::MONITOR_REPORT_PROCESS_FAIL, "");
         }
 
-        auto response_out = message_com::create_vs_message<
+        auto notification_out = message_com::create_vs_message<
             beerocks_message::cACTION_MONITOR_ERROR_NOTIFICATION_ACK>(cmdu_tx);
-        if (response_out == nullptr) {
+        if (notification_out == nullptr) {
             LOG(ERROR) << "Failed building message!";
             break;
         }
@@ -3218,7 +3273,7 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
         if (!network_utils::linux_iface_get_mac(db->bridge.iface_name, iface_mac)) {
             LOG(ERROR) << "Failed reading addresses from the bridge!";
             platform_notify_error(bpl::eErrorCode::BH_READING_DATA_FROM_THE_BRIDGE, "");
-            stop_on_failure_attempts--;
+            m_stop_on_failure_attempts--;
             slave_reset();
             break;
         }
@@ -3241,7 +3296,7 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
                 LOG(ERROR) << "Failed connecting to Platform Manager! Resetting...";
                 platform_notify_error(bpl::eErrorCode::SLAVE_FAILED_CONNECT_TO_PLATFORM_MANAGER,
                                       "");
-                stop_on_failure_attempts--;
+                m_stop_on_failure_attempts--;
                 slave_reset();
                 connect_platform_retry_counter = 0;
             } else {
@@ -3282,7 +3337,7 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
         if (std::chrono::steady_clock::now() > slave_state_timer) {
             LOG(ERROR) << "STATE_WAIT_FOR_PLATFORM_MANAGER_REGISTER_RESPONSE timeout!";
             platform_notify_error(bpl::eErrorCode::SLAVE_PLATFORM_MANAGER_REGISTER_TIMEOUT, "");
-            stop_on_failure_attempts--;
+            m_stop_on_failure_attempts--;
             slave_reset();
         }
         break;
@@ -3297,7 +3352,7 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
                 backhaul_manager_stop();
                 platform_notify_error(bpl::eErrorCode::SLAVE_CONNECTING_TO_BACKHAUL_MANAGER,
                                       "iface=" + config.backhaul_wireless_iface);
-                stop_on_failure_attempts--;
+                m_stop_on_failure_attempts--;
                 slave_reset();
                 break;
             } else {
@@ -3404,8 +3459,8 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
 
             db->remove_radio_from_radios_list(m_fronthaul_iface);
 
-            LOG(TRACE) << "goto STATE_OPERATIONAL";
-            slave_state = STATE_OPERATIONAL;
+            LOG(TRACE) << "goto STATE_PRE_OPERATIONAL";
+            slave_state = STATE_PRE_OPERATIONAL;
             break;
         }
         break;
@@ -3427,7 +3482,7 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
         }
 
         if (error) {
-            stop_on_failure_attempts--;
+            m_stop_on_failure_attempts--;
             slave_reset();
         } else {
             // backhaul manager will request for backhaul iface and tx enable after receiving ACTION_BACKHAUL_ENABLE,
@@ -3499,8 +3554,8 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
 
         auto db = AgentDB::get();
         if (!db->device_conf.front_radio.config[config.hostap_iface].band_enabled) {
-            LOG(TRACE) << "goto STATE_OPERATIONAL";
-            slave_state = STATE_OPERATIONAL;
+            LOG(TRACE) << "goto STATE_PRE_OPERATIONAL";
+            slave_state = STATE_PRE_OPERATIONAL;
             break;
         }
 
@@ -3580,7 +3635,7 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
             LOG(ERROR) << "master_socket == nullptr";
             platform_notify_error(bpl::eErrorCode::SLAVE_INVALID_MASTER_SOCKET,
                                   "Invalid master socket");
-            stop_on_failure_attempts--;
+            m_stop_on_failure_attempts--;
             slave_reset();
             break;
         }
@@ -3804,13 +3859,20 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
 
         update->config() = son_config;
         message_com::send_cmdu(monitor_socket, cmdu_tx);
+        LOG(TRACE) << "goto STATE_PRE_OPERATIONAL";
+        slave_state = STATE_PRE_OPERATIONAL;
+        break;
+    }
+
+    case STATE_PRE_OPERATIONAL: {
+        auto db                    = AgentDB::get();
+        m_stop_on_failure_attempts = db->device_conf.stop_on_failure_attempts;
+
         LOG(TRACE) << "goto STATE_OPERATIONAL";
         slave_state = STATE_OPERATIONAL;
         break;
     }
     case STATE_OPERATIONAL: {
-        auto db                  = AgentDB::get();
-        stop_on_failure_attempts = db->device_conf.stop_on_failure_attempts;
         break;
     }
     case STATE_VERSION_MISMATCH: {
@@ -4102,6 +4164,8 @@ bool slave_thread::autoconfig_wsc_parse_m2_encrypted_settings(WSC::m2 &m2, uint8
     int datalen = cipherlen + 16;
     uint8_t decrypted[datalen];
 
+    LOG(DEBUG) << "M2 Parse: received encrypted settings with length " << cipherlen;
+
     LOG(DEBUG) << "M2 Parse: aes decrypt";
     if (!mapf::encryption::aes_decrypt(keywrapkey, iv, ciphertext, cipherlen, decrypted, datalen)) {
         LOG(ERROR) << "aes decrypt failure";
@@ -4109,6 +4173,8 @@ bool slave_thread::autoconfig_wsc_parse_m2_encrypted_settings(WSC::m2 &m2, uint8
     }
 
     LOG(DEBUG) << "M2 Parse: parse config_data, len = " << datalen;
+    LOG(DEBUG) << "decrypted config_data buffer: " << std::endl
+               << utils::dump_buffer(decrypted, datalen);
 
     // Parsing failure means that the config data is invalid,
     // in which case it is unclear what we should do.
@@ -4124,7 +4190,7 @@ bool slave_thread::autoconfig_wsc_parse_m2_encrypted_settings(WSC::m2 &m2, uint8
     // get length of config_data for KWA authentication
     size_t len = config_data->getMessageLength();
     // Protect against M2 buffer overflow attacks
-    if (len + sizeof(WSC::sWscAttrKeyWrapAuthenticator) > size_t(datalen)) {
+    if (len > size_t(datalen)) {
         LOG(ERROR) << "invalid config data length";
         return false;
     }
@@ -4135,31 +4201,32 @@ bool slave_thread::autoconfig_wsc_parse_m2_encrypted_settings(WSC::m2 &m2, uint8
     config.network_key = config_data->network_key();
     config.ssid        = config_data->ssid();
     config.bss_type    = config_data->bss_type();
+
+    // Get the Key Wrap Authenticator data
+    auto kwa_data = config_data->key_wrap_authenticator();
+    if (!kwa_data) {
+        LOG(ERROR) << "No KeyWrapAuthenticator in config_data";
+        return false;
+    }
+
+    // The keywrap authenticator is part of the config_data (last member of the
+    // config_data to be precise).
+    // However, since we need to calculate it over the part of config_data without the keywrap
+    // authenticator, substruct it's size from the computation length
+    size_t config_data_len_for_kwa = len - config_data->key_wrap_authenticator_size();
+
     // Swap to network byte order for KWA HMAC calculation
     // from this point config data is not readable!
     config_data->swap();
     uint8_t kwa[WSC::WSC_AUTHENTICATOR_LENGTH];
     // Compute KWA based on decrypted settings
-    if (!mapf::encryption::kwa_compute(authkey, decrypted, len, kwa)) {
+    if (!mapf::encryption::kwa_compute(authkey, decrypted, config_data_len_for_kwa, kwa)) {
         LOG(ERROR) << "kwa compute";
         return false;
     }
 
-    // Basically, the keywrap authenticator is part of the config_data (last member of the
-    // config_data to be precise).
-    // However, since we need to calculate it over the part of config_data without the keywrap
-    // authenticator, and since it is anyway going to be encrypted so config_data is not a
-    // substructure of encrypted_settings, it is easier to define it separately and just append to
-    // config_data.
-    WSC::sWscAttrKeyWrapAuthenticator *keywrapauth =
-        reinterpret_cast<WSC::sWscAttrKeyWrapAuthenticator *>(&decrypted[len]);
-    keywrapauth->struct_swap();
-    if ((keywrapauth->attribute_type != WSC::ATTR_KEY_WRAP_AUTH) ||
-        (keywrapauth->data_length != WSC::WSC_KEY_WRAP_AUTH_LENGTH) ||
-        !std::equal(kwa, kwa + sizeof(kwa), reinterpret_cast<uint8_t *>(keywrapauth->data))) {
-        LOG(ERROR) << "WSC KWA (Key Wrap Auth) failure" << std::endl
-                   << "type: " << std::hex << int(keywrapauth->attribute_type)
-                   << "length: " << std::hex << int(keywrapauth->data_length);
+    if (!std::equal(kwa, kwa + sizeof(kwa), kwa_data)) {
+        LOG(ERROR) << "WSC KWA (Key Wrap Auth) failure";
         return false;
     }
     LOG(DEBUG) << "KWA (Key Wrap Auth) success";

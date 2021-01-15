@@ -1,6 +1,6 @@
 project(btlvf VERSION ${prplmesh_VERSION})
 
-find_package(PythonInterp REQUIRED)
+execute_process(COMMAND command -v python3 OUTPUT_VARIABLE PYTHON_EXECUTABLE)
 get_property(PythonTlvf TARGET tlvf PROPERTY PythonTlvf)
 message("-- Inherited ${PythonTlvf} ...")
 
