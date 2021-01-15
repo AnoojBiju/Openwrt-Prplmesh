@@ -260,7 +260,7 @@ bool ap_wlan_hal_nl80211::set_channel(int chan, beerocks::eWiFiBandwidth bw, int
     }
 
     // make hostapd reload its configuration file:
-    const std::string cmd{"UPDATE"};
+    const std::string cmd{"UPDATE "};
     if (!wpa_ctrl_send_msg(cmd)) {
         LOG(ERROR) << "'" << cmd << "' command to hostapd failed";
         return false;
