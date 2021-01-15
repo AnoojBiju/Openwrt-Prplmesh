@@ -67,22 +67,13 @@ set wireless.default_radio21.network='lan'
 set wireless.default_radio21.multi_ap='1'
 set wireless.default_radio21.default_disabled='1'
 
-# TODO: prplmesh currently rely on the interface names to be like this.
-#       Remove the next block once it's fixed.
-set wireless.default_radio0.ifname='wlan0'
-set wireless.default_radio1.ifname='wlan2'
-set wireless.default_radio10.ifname='wlan0.0'
-set wireless.default_radio20.ifname='wlan2.0'
-set wireless.default_radio11.ifname='wlan1'
-set wireless.default_radio21.ifname='wlan3'
-
-# TODO: same issue, for prplmesh settings this time:
-set prplmesh.radio0.hostap_iface='wlan0'
-set prplmesh.radio0.sta_iface='wlan1'
-set prplmesh.radio0.hostap_iface_steer_vaps='wlan0.0'
-set prplmesh.radio1.sta_iface='wlan3'
-set prplmesh.radio1.hostap_iface='wlan2'
-set prplmesh.radio1.hostap_iface_steer_vaps='wlan2.0'
+# Use the interface names that are automatically assigned by OpenWrt
+set prplmesh.radio0.hostap_iface='wlan0-1'
+set prplmesh.radio0.sta_iface='wlan0'
+set prplmesh.radio0.hostap_iface_steer_vaps='wlan0-2'
+set prplmesh.radio1.sta_iface='wlan1'
+set prplmesh.radio1.hostap_iface='wlan1-1'
+set prplmesh.radio1.hostap_iface_steer_vaps='wlan1-2'
 
 # TODO: The current channel selection does not work correctly when 80Mhz bandwidths are involved.
 # This temporary workaround forces the use of 20Mhz bands, and will need to be reverted when the 
