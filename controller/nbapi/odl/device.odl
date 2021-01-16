@@ -41,6 +41,24 @@
 		}
 
 		/*
+		** The list of Interface objects.
+		*/
+		object Interface [] {
+			%read-only string Status {
+				default "Down";
+				on action validate call check_enum [
+					"Up",
+					"Down",
+					"Dormant"
+				];
+			}
+			%read-only string MACAddress = "00:00:00:00:00:00";
+			%read-only string Name = "NoName";
+			%read-only uint16 MediaType = "0";
+			counted with NumberOfInterfaces;
+		}
+
+		/*
 		** The interval between the collection of consecutive measurements of the most
 		** frequently updated Data Element from this device (milliseconds).
 		*/
