@@ -2093,6 +2093,7 @@ bool Controller::handle_cmdu_1905_topology_response(const std::string &src_mac,
         tlvf::mac_to_string(al_mac), beerocks::TYPE_SLAVE, beerocks::STATE_CONNECTED);
 
     std::unordered_set<std::string> reported_fronthaul_radios;
+    std::vector<sMacAddr> interface_macs{};
 
     // create topology response update event for bml listeners
     bml_task::topology_response_update_event new_bml_event;
@@ -2113,6 +2114,10 @@ bool Controller::handle_cmdu_1905_topology_response(const std::string &src_mac,
 
         const auto media_type       = iface_info.media_type();
         const auto media_type_group = media_type >> 8;
+
+        interface_macs.push_back(iface_mac);
+        // TODO Name and Status of Interface should be add
+        database.dm_add_interface_element(al_mac, iface_mac, media_type);
 
         // For wireless interface it is defined on IEEE 1905.1 that the size of the media info
         // is n=10 octets, which the size of s802_11SpecificInformation struct.
@@ -2143,6 +2148,9 @@ bool Controller::handle_cmdu_1905_topology_response(const std::string &src_mac,
             // TODO: Add/Update the node on the database
         }
     }
+
+    // Update active mac list of the device node
+    database.dm_update_interface_elements(al_mac, interface_macs);
 
     tasks.push_event(database.get_bml_task_id(), bml_task::TOPOLOGY_RESPONSE_UPDATE,
                      &new_bml_event);
