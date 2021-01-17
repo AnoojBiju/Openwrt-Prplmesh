@@ -1098,3 +1098,33 @@ bool wireless_utils::is_frequency_band_5ghz(beerocks::eFreqType frequency_band)
         return false;
     }
 }
+
+wireless_utils::OverlappingChannels wireless_utils::get_overlapping_channels(uint8_t source_channel)
+{
+    OverlappingChannels ret;
+
+    auto source_channel_it = channels_table_5g.find(source_channel);
+    if (source_channel_it == channels_table_5g.end()) {
+        LOG(ERROR) << "Couldn't find source channel " << source_channel
+                   << " for overlapping channles";
+        return ret;
+    }
+
+    // go over the table and if the source-cannel
+    // is within the range of the current-channel, current-bandwidth
+    // add current-channel, current-bandwidth to the output
+
+    for (const auto &current_channel_it : channels_table_5g) {
+        auto &bandwidth_map  = current_channel_it.second;
+        auto current_channel = current_channel_it.first;
+        for (const auto &current_bandwidth_it : bandwidth_map) {
+            auto current_bandwidth = current_bandwidth_it.first;
+            auto min_channel = current_bandwidth_it.second.overlap_beacon_channels_range.first;
+            auto max_channel = current_bandwidth_it.second.overlap_beacon_channels_range.second;
+            if (source_channel >= min_channel && source_channel <= max_channel) {
+                ret.push_back(std::make_pair(current_channel, current_bandwidth));
+            }
+        }
+    }
+    return ret;
+}

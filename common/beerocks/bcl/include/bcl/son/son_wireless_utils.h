@@ -201,6 +201,25 @@ public:
      */
     static bool is_frequency_band_5ghz(beerocks::eFreqType frequency_band);
 
+    /**
+     * @brief A vector of overlapping channels and bandwidths.
+     * E.g taken from wireless_utils::channels_table_5g (see the cpp file):
+     * {{104,beerocks::BANDWIDTH_80}, {112,beerocks::BANDWIDTH_40}, ... } 
+     * they are both overlapping because both share channel 108.
+     * Note: the common channel is NOT part of this structure
+     */
+    using OverlappingChannels = std::vector<std::pair<uint8_t, beerocks::eWiFiBandwidth>>;
+
+    /**
+     * #brief calculates the list of overlapping channels and bandwidths
+     * for the given source channel
+     *
+     * @param source_channel The channel to calculate its overlapping pairs.
+     * @return OverlappingChannles A vector of the overlapping channles for the
+     * given source channel. Empty list if not as such.
+     */
+    static OverlappingChannels get_overlapping_channels(uint8_t source_channel);
+
     struct sChannel {
         uint8_t center_channel;
         std::pair<uint8_t, uint8_t> overlap_beacon_channels_range;
