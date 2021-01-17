@@ -9,10 +9,11 @@
 #ifndef _TASK_H_
 #define _TASK_H_
 
+#include "task_pool_interface.h"
+#include <bcl/network/socket.h>
 #include <beerocks/tlvf/beerocks_header.h>
-#include <tlvf/CmduMessageRx.h>
-
 #include <chrono>
+#include <tlvf/CmduMessageRx.h>
 
 namespace beerocks {
 
@@ -23,12 +24,15 @@ namespace beerocks {
 * event. 
 */
 enum eTaskType : uint8_t {
-    TOPOLOGY,
     AP_AUTOCONFIGURATION,
-    CHANNEL_SELECTION,
-    CHANNEL_SCAN,
+    CAC_MANAGEMENT_TASK,
+    CAC_TASK,
     CAPABILITY_REPORTING,
+    CHANNEL_SCAN,
+    CHANNEL_SELECTION,
     LINK_METRICS_COLLECTION,
+    SWITCH_CHANNEL,
+    TOPOLOGY,
 };
 
 class Task {
@@ -47,6 +51,13 @@ public:
     virtual eTaskType get_task_type() { return m_task_type; }
 
     /**
+     * @brief The list of events this task wants to handle
+     * 
+     * @return vector of events this task handles. empty by default.
+     */
+    virtual std::vector<eTaskEvent> get_task_event_list() const { return {}; }
+
+    /**
      * @brief Work function. Shall do the task routine. Called by TaskPool run_task() function.
      */
     virtual void work(){};
@@ -58,6 +69,15 @@ public:
      * @param event_obj Pointer to some chunk of memory used to pass data to the event handler.
      */
     virtual void handle_event(uint8_t event_enum_value, const void *event_obj){};
+
+    /**
+     * @brief Handle events, which are careless about the containing thread.
+     * Implementation may take ownership of the data by keeping the shared pointer.
+     * 
+     * @param event Event enum value which shall be defined on the task.
+     * @param event_obj Pointer to some chunk of memory used to pass data to the event handler.
+     */
+    virtual void handle_event(eTaskEvent event, std::shared_ptr<void> event_obj){};
 
     /**
      * @brief Handle CMDU message.

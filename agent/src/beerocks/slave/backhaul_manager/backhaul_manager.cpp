@@ -36,6 +36,7 @@
 #include "../tasks/channel_scan_task.h"
 #include "../tasks/channel_selection_task.h"
 #include "../tasks/link_metrics_collection_task.h"
+#include "../tasks/switch_channel_task.h"
 #include "../tasks/topology_task.h"
 
 #include <bcl/beerocks_utils.h>
@@ -141,6 +142,8 @@ BackhaulManager::BackhaulManager(
     m_task_pool.add_task(std::make_shared<ChannelScanTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<CapabilityReportingTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<LinkMetricsCollectionTask>(*this, cmdu_tx));
+    m_task_pool.add_task(
+        std::make_shared<switch_channel::SwitchChannelTask>(m_task_pool, *this, cmdu_tx));
 
     beerocks::CmduServer::EventHandlers handlers{
         .on_client_connected    = [&](int fd) { handle_connected(fd); },
@@ -260,7 +263,6 @@ bool BackhaulManager::start()
     }
 
     LOG(DEBUG) << "started";
-
     return true;
 }
 
@@ -2842,7 +2844,7 @@ bool BackhaulManager::create_backhaul_steering_response(
     return true;
 }
 
-const std::string BackhaulManager::freq_to_radio_mac(eFreqType freq) const
+std::string BackhaulManager::freq_to_radio_mac(eFreqType freq) const
 {
     auto db = AgentDB::get();
     for (const auto radio : db->get_radios_list()) {
@@ -2855,7 +2857,7 @@ const std::string BackhaulManager::freq_to_radio_mac(eFreqType freq) const
     }
 
     LOG(ERROR) << "Radio not found for freq " << int(freq);
-    return std::string();
+    return {};
 }
 
 bool BackhaulManager::start_wps_pbc(const sMacAddr &radio_mac)
@@ -2993,4 +2995,36 @@ std::shared_ptr<bwl::sta_wlan_hal> BackhaulManager::get_selected_backhaul_sta_wl
     return (*selected_backhaul_it)->sta_wlan_hal;
 }
 
+int BackhaulManager::front_iface_name_to_socket(const std::string &iface_name)
+{
+    for (const auto &soc : slaves_sockets) {
+        if (soc->hostap_iface == iface_name) {
+            return soc->slave;
+        }
+    }
+    for (const auto &slave_element : m_disabled_slave_sockets) {
+        if (slave_element.first == iface_name) {
+            return slave_element.second->slave;
+        }
+    }
+
+    return beerocks::net::FileDescriptor::invalid_descriptor;
+}
+
+std::string BackhaulManager::socket_to_front_iface_name(int fd)
+{
+    for (const auto &soc : slaves_sockets) {
+        if (soc->slave == fd) {
+            return soc->hostap_iface;
+        }
+    }
+
+    for (const auto &slave_element : m_disabled_slave_sockets) {
+        if (slave_element.second->slave == fd) {
+            return slave_element.first;
+        }
+    }
+
+    return {};
+}
 } // namespace beerocks
