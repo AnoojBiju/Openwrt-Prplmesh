@@ -1,6 +1,10 @@
 project(tlvf VERSION ${prplmesh_VERSION})
 
-execute_process(COMMAND command -v python3 OUTPUT_VARIABLE PYTHON_EXECUTABLE)
+if (TARGET_PLATFORM_TYPE STREQUAL "ugw")
+    find_package(PythonInterp REQUIRED)
+else()
+    set(PYTHON_EXECUTABLE python3)
+endif()
 
 set(TLVF_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(PythonTlvf ${TLVF_DIR}/tlvf.py)
@@ -60,4 +64,3 @@ install(PROGRAMS ${TLVF_DIR}/tlvf.py DESTINATION host/bin)
 
 add_subdirectory(test)
 message("-- Done")
-
