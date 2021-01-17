@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-2-Clause-Patent
  *
- * SPDX-FileCopyrightText: 2016-2020 the prplMesh contributors (see AUTHORS.md)
+ * SPDX-FileCopyrightText: 2016-2021 the prplMesh contributors (see AUTHORS.md)
  *
  * This code is subject to the terms of the BSD+Patent license.
  * See LICENSE file for more details.
@@ -47,6 +47,7 @@ struct s80211MgmtFrame {
 
             // Bitfield
             struct sFrameControl {
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
                 uint16_t protocol_version : 2; // Protocol version (currently is 0)
                 uint16_t type : 2;             // Frame type (00 - Mgmt, 01 - Control, 10 - Data)
                 uint16_t subtype : 4;          // Frame subtype (e.g. Assoc Req, Action etc.)
@@ -58,6 +59,19 @@ struct s80211MgmtFrame {
                 uint16_t more_data : 1;        // TBD
                 uint16_t protected_frame : 1;  // If the data is encrypted
                 uint16_t order : 1;            // QoS
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+                uint16_t subtype : 4;          // Frame subtype (e.g. Assoc Req, Action etc.)
+                uint16_t type : 2;             // Frame type (00 - Mgmt, 01 - Control, 10 - Data)
+                uint16_t protocol_version : 2; // Protocol version (currently is 0)
+                uint16_t order : 1;            // QoS
+                uint16_t protected_frame : 1;  // If the data is encrypted
+                uint16_t more_data : 1;        // TBD
+                uint16_t power_mgmt : 1;       // If power management is enabled
+                uint16_t retry : 1;            // Retransmission of the earlier frame
+                uint16_t more_fragments : 1;   // If the frame is fragmented
+                uint16_t from_ds : 1;          // If originated from Distribution System
+                uint16_t to_ds : 1;            // If destined to Distribution System
+#endif
             } __attribute__((packed)) bits;
         } __attribute__((packed)) frame_control;
 
