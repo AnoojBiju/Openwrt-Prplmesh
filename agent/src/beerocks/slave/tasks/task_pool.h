@@ -25,7 +25,7 @@ namespace beerocks {
  */
 class TaskPool : public TaskPoolInterface {
 public:
-    void add_task(const std::shared_ptr<Task> new_task, std::vector<eTaskEvent> = {}) override;
+    void add_task(const std::shared_ptr<Task> new_task) override;
 
     /**
      * @brief Run all tasks on the pool, by calling each task work() function.

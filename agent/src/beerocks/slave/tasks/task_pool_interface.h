@@ -9,12 +9,25 @@
 #ifndef _TASK_POOL_INTERFACE_H_
 #define _TASK_POOL_INTERFACE_H_
 
+#include <memory>
+#include <vector>
+
 namespace beerocks {
 
+class Task;
+
 /**
- * @brief all possible events in the system are defined here
+ * @brief All possible events in the system are defined here
  */
-enum class eTaskEvent { TASK_EVENT_CAC_COMPLETED, TASK_EVENT_SWITCH_CHANNEL_COMPLETED };
+enum class eTaskEvent {
+    CAC_STARTED_NOTIFICATION,
+    CAC_COMPLETED_NOTIFICATION,
+    SWITCH_CHANNEL_NOTIFICATION_EVENT,
+    /* indication about the time to wait for switch channel */
+    SWITCH_CHANNEL_DURATION_TIME,
+    SWTICH_CHANNEL_REQUEST,
+    SWITCH_CHANNEL_REPORT,
+};
 
 // helper for hashing the event type
 struct TaskEventHash {
@@ -32,9 +45,8 @@ public:
      * a list of messages this task wants to handle
      * 
      * @param new_task Shared pointer to the task.
-     * @param events A vector of events the task is registered to
      */
-    virtual void add_task(const std::shared_ptr<Task> new_task, std::vector<eTaskEvent>) = 0;
+    virtual void add_task(const std::shared_ptr<Task> new_task) = 0;
 
     /**
      * @brief Send an event to all registered tasks
