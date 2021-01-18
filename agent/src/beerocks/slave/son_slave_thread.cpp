@@ -3124,6 +3124,11 @@ bool slave_thread::handle_cmdu_monitor_message(Socket *sd,
         send_cmdu_to_controller(cmdu_tx);
         break;
     }
+    case beerocks_message::ACTION_MONITOR_CHANNEL_SCAN_ABORT_RESPONSE: {
+        LOG(ERROR) << "addClass cACTION_MONITOR_CHANNEL_SCAN_ABORT_RESPONSE received";
+        //TODO: propagate the scan-abort-response to the requesting agent task (channel-scan-task)
+        break;
+    }
     case beerocks_message::ACTION_MONITOR_CHANNEL_SCAN_TRIGGERED_NOTIFICATION: {
         auto notification_in =
             beerocks_header
