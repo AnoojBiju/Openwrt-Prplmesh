@@ -4,6 +4,7 @@
   variables:
     RUN_ON_DEVICE: "turris-omnia"
   before_script:
+    - tools/deploy_firmware.py --device turris-omnia --target-name "$RUN_ON_DEVICE" --image openwrt-mvebu-cortexa9-cznic_turris-omnia-sysupgrade.img.gz
     - |
       if [ -f tests/certification/$RUN_ON_DEVICE/uci.sh ] ; then
         echo "Applying UCI configuration"
@@ -11,7 +12,6 @@
         ssh "$RUN_ON_DEVICE" 'sh /tmp/uci.sh'
         echo "Done"
       fi
-    - tools/deploy_firmware.py --device turris-omnia --target-name "$RUN_ON_DEVICE" --image openwrt-mvebu-cortexa9-cznic_turris-omnia-sysupgrade.img.gz
     - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE build/$RUN_ON_DEVICE/prplmesh.ipk
   needs:
     - job: build-for-turris-omnia
