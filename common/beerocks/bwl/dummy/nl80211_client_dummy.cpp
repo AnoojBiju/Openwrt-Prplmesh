@@ -137,4 +137,6 @@ bool nl80211_client_dummy::set_tx_power_limit(const std::string &interface_name,
     return true;
 }
 
+bool nl80211_client_dummy::channel_scan_abort(const std::string &interface_name) { return true; }
+
 } // namespace bwl
