@@ -75,14 +75,20 @@ bool beerocks_ucc_listener::validate_hex_notation(const std::string &str, uint8_
     }
 
     // The number of digits must be even
+    // In practice we already encountered HEX values with odd number of digits.
+
+    // So instead of failing, adjust the number of octets calculation
+    // "str.size() - 2" ignore "0x" prefix.
+    // division by 2 because 2 chars are equal to one octet
+    uint8_t number_of_octets = (str.size() - 2) / 2;
+    // The calculation will round down the number of octets on odd size
+    // so add the missing octet if needed.
     if (str.size() % 2 != 0) {
-        return false;
+        ++number_of_octets;
     }
 
     // Expected octets validation
-    // "str.size() - 2" ignore "0x" prefix.
-    // division by 2 because 2 chars are equal to one octet
-    if (expected_octets != 0 && (str.size() - 2) / 2 != expected_octets) {
+    if (expected_octets != 0 && (number_of_octets != expected_octets)) {
         return false;
     }
 
@@ -315,18 +321,26 @@ bool beerocks_ucc_listener::get_send_1905_1_tlv_hex_list(
                                  it->second.end());
                 it->second.erase(std::remove(it->second.begin(), it->second.end(), '}'),
                                  it->second.end());
-                tlv_hex.value = &it->second;
 
-                // Validate hex notation on list of values separated by space
+                std::string tmp_value;
                 auto values = string_utils::str_split(it->second, ' ');
                 for (auto &value : values) {
-                    if (!(validate_hex_notation(value) || net::network_utils::is_valid_mac(value) ||
-                          validate_binary_notation(value) || validate_decimal_notation(value))) {
-                        err_string = "param name '" + lookup_str + "' has value '" + value +
-                                     "' with invalid format";
-                        return false;
+                    // Validate hex notation on list of values separated by space
+                    if ((validate_hex_notation(value) || net::network_utils::is_valid_mac(value) ||
+                         validate_binary_notation(value) || validate_decimal_notation(value))) {
+                        // Hex notation bytes are use as is
+                        tmp_value += value + " ";
+                    } else {
+                        // If we got here, assuming we have received a string. Convert the string into ASCII hex values.
+                        std::stringstream ss;
+                        for (char &c : value) {
+                            ss << "0x" << std::hex << int(c) << " ";
+                        }
+                        tmp_value += ss.str();
                     }
                 }
+                it->second    = tmp_value;
+                tlv_hex.value = &it->second;
             } else {
                 LOG(ERROR) << "Illegal tlv_member_idx value: " << int(tlv_member_idx);
                 err_string = err_internal;
