@@ -416,12 +416,13 @@ int main(int argc, char *argv[])
 
 #ifdef ENABLE_NBAPI
     // Prepare vector with actions: name and pointer to function
-    auto on_action_handlers = prplmesh::controller::get_actions_callback_list();
-    auto events_list        = prplmesh::controller::get_events_list();
+    auto on_action_handlers = prplmesh::controller::actions::get_actions_callback_list();
+    auto events_list        = prplmesh::controller::actions::get_events_list();
+    auto funcs_list         = prplmesh::controller::actions::get_func_list();
 
     auto controller_dm_path = mapf::utils::get_install_path() + "config/odl/controller.odl";
     auto amb_dm_obj         = std::make_shared<beerocks::nbapi::AmbiorixImpl>(
-        event_loop, on_action_handlers, events_list);
+        event_loop, on_action_handlers, events_list, funcs_list);
     LOG_IF(!amb_dm_obj, FATAL) << "Unable to create Ambiorix!";
     amb_dm_obj->init(AMBIORIX_BACKEND_PATH, AMBIORIX_BUS_URI, controller_dm_path);
 #else
@@ -440,6 +441,12 @@ int main(int argc, char *argv[])
     }
 
     son::db master_db(master_conf, logger, bridge_info.mac, amb_dm_obj);
+
+#ifdef ENABLE_NBAPI
+    prplmesh::controller::actions::g_database   = &master_db;
+    prplmesh::controller::actions::g_data_model = beerocks::nbapi::g_data_model;
+#endif
+
     // diagnostics_thread diagnostics(master_db);
 
     // UCC server must be created in certification mode only and if a valid TCP port has been set

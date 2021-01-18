@@ -112,7 +112,7 @@ private:
         m_event_loop = std::make_shared<StrictMock<beerocks::EventLoopMock>>();
         m_ambiorix   = std::make_shared<beerocks::nbapi::AmbiorixImpl>(
             m_event_loop, std::vector<beerocks::nbapi::sActionsCallback>(),
-            std::vector<beerocks::nbapi::sEvents>());
+            std::vector<beerocks::nbapi::sEvents>(), std::vector<beerocks::nbapi::sFunctions>());
 
         EXPECT_CALL(m_amxb_mock, amxb_be_load(_)).WillRepeatedly(Return(0));
         EXPECT_CALL(m_amxb_mock, amxb_connect(_, _)).WillRepeatedly(Return(0));

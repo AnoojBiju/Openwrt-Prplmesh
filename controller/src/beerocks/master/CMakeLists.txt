@@ -3,11 +3,15 @@ message("${BoldWhite}Preparing ${BoldGreen}${PROJECT_NAME}${BoldWhite} for the $
 
 # Set the base path for the current module
 set(MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
+set(ACTION_PATH ${MODULE_PATH}/../../../nbapi)
 
 file(GLOB controller_sources ${MODULE_PATH}/*.cpp)
 file(GLOB controller_tasks_sources ${MODULE_PATH}/tasks/*.cpp)
 file(GLOB controller_operations_sources ${MODULE_PATH}/periodic/*.cpp)
 file(GLOB controller_db_sources ${MODULE_PATH}/db/*.cpp)
+if (ENABLE_NBAPI)
+    file(GLOB controller_actions ${ACTION_PATH}/*.cpp)
+endif()
 
 #RDKB
 if (TARGET_PLATFORM STREQUAL "rdkb")
@@ -15,7 +19,9 @@ if (TARGET_PLATFORM STREQUAL "rdkb")
     list(APPEND controller_tasks_sources  ${RDKB_SOURCES})
 endif()
 
-add_executable(${PROJECT_NAME} ${controller_sources} ${controller_tasks_sources} ${controller_operations_sources} ${controller_db_sources})
+add_executable(${PROJECT_NAME} ${controller_sources} ${controller_tasks_sources}
+${controller_operations_sources} ${controller_db_sources} ${controller_actions})
+
 set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,-z,defs")
 
 if (TARGET_PLATFORM STREQUAL "openwrt")
@@ -24,15 +30,20 @@ endif()
 
 list(APPEND LINKED_LIBS bpl bcl btl tlvf elpp btlvf nbapi ieee1905_transport_lib)
 if (ENABLE_NBAPI)
+    # Include AMBIORIX in the build
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_NBAPI ${UBUS_SOCK}")
-    list(APPEND LINKED_LIBS nbapi_actions_controller)
+    find_package(amxc REQUIRED)
+    find_package(amxd REQUIRED)
+    list(APPEND LINKED_LIBS amxc amxd)
 endif()
 
 target_link_libraries(${PROJECT_NAME} ${LINKED_LIBS})
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${MODULE_PATH}/../bml
-    ${MODULE_PATH}/../../../nbapi
+    if (ENABLE_NBAPI)
+        ${ACTION_PATH}
+    endif()
 )
 
 # Install
