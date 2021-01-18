@@ -1361,6 +1361,29 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
         message_com::send_cmdu(slave_socket, cmdu_tx);
         break;
     }
+    case beerocks_message::ACTION_MONITOR_CHANNEL_SCAN_ABORT_REQUEST: {
+        auto request =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_ABORT_REQUEST>();
+        if (!request) {
+            LOG(ERROR) << "addClass cACTION_MONITOR_CHANNEL_SCAN_ABORT_REQUEST failed";
+            return false;
+        }
+
+        auto response_out = message_com::create_vs_message<
+            beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_ABORT_RESPONSE>(cmdu_tx,
+                                                                           beerocks_header->id());
+        if (!response_out) {
+            LOG(ERROR) << "Failed building cACTION_MONITOR_CHANNEL_SCAN_ABORT_RESPONSE message!";
+            return false;
+        }
+
+        response_out->success() = mon_wlan_hal->channel_scan_abort();
+        LOG_IF(!response_out->success(), ERROR) << "channel_scan_abort failed";
+
+        message_com::send_cmdu(slave_socket, cmdu_tx);
+        break;
+    }
     default: {
         LOG(ERROR) << "Unsupported MONITOR action_op: " << int(beerocks_header->action_op());
         break;
