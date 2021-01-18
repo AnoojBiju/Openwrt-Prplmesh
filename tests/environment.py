@@ -386,8 +386,9 @@ class RadioDocker(Radio):
 
     def send_bwl_event(self, event: str) -> None:
         # The file is only available within the docker container so we need to use an echo command.
-        command = "echo \"{}\" | timeout 1s tee /tmp/beerocks/{}/EVENT* >/dev/null".format(
-            event, self.iface_name)
+        # Use '|| true' to make sure it doesn't fail on timeout.
+        command = "echo \"{}\" | timeout 1s tee /tmp/beerocks/{}/EVENT* >/dev/null || true"\
+            .format(event, self.iface_name)
         self.agent.command('sh', '-c', command)
 
     def read_tmp_file(self, filename: str) -> bytes:
