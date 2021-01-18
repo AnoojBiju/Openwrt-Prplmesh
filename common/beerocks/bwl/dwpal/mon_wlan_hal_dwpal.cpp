@@ -988,6 +988,16 @@ bool mon_wlan_hal_dwpal::channel_scan_dump_results()
     return true;
 }
 
+bool mon_wlan_hal_dwpal::channel_scan_abort()
+{
+    if (!m_nl80211_client->channel_scan_abort(get_iface_name())) {
+        LOG(ERROR) << "Channel scan abort failed";
+        return false;
+    }
+
+    return true;
+}
+
 bool mon_wlan_hal_dwpal::generate_connected_clients_events()
 {
     bool queried_first = false;

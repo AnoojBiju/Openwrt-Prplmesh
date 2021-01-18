@@ -608,6 +608,12 @@ bool mon_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
     return true;
 }
 
+bool mon_wlan_hal_nl80211::channel_scan_abort()
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return true;
+}
+
 } // namespace nl80211
 
 std::shared_ptr<mon_wlan_hal> mon_wlan_hal_create(const std::string &iface_name,
