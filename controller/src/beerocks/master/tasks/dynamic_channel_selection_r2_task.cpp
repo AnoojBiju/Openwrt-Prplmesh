@@ -185,8 +185,22 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
                 }
                 auto &scan_request_extension = std::get<1>(ap_scan_request_tuple);
 
-                scan_request_extension.radio_mac     = radio_scan_request.first;
-                scan_request_extension.dwell_time_ms = radio_scan_request.second.dwell_time_msec;
+                auto &radio_mac = radio_scan_request.first;
+
+                // Get current scan request dwell time from DB
+                int32_t dwell_time_msec =
+                    database.get_channel_scan_dwell_time_msec(radio_mac, is_single_scan);
+                if (dwell_time_msec <= 0) {
+                    LOG(ERROR) << "invalid dwell_time=" << int(dwell_time_msec);
+                    success = false;
+                    break;
+                }
+
+                auto &radio_scans           = m_agents_status_map[agent_mac].radio_scans[radio_mac];
+                radio_scans.dwell_time_msec = dwell_time_msec;
+
+                scan_request_extension.radio_mac     = radio_mac;
+                scan_request_extension.dwell_time_ms = dwell_time_msec;
                 scan_request_idx++;
             }
         } else {
@@ -291,27 +305,6 @@ bool dynamic_channel_selection_r2_task::handle_scan_request_event(
 
     // Create new radio request (with default values) in request pool
     m_agents_status_map[ire_mac].radio_scans[radio_mac] = sAgentScanStatus::sRadioScanRequest();
-
-    // Fill radio scan additional details (for vs_message)
-
-    // TODO:Assuming single scan only for now
-    auto is_single_scan = true;
-
-    int32_t dwell_time_msec = database.get_channel_scan_dwell_time_msec(radio_mac, is_single_scan);
-    if (dwell_time_msec <= 0) {
-        LOG(ERROR) << "invalid dwell_time=" << int(dwell_time_msec);
-        return false;
-    }
-    m_agents_status_map[ire_mac].radio_scans[radio_mac].dwell_time_msec = dwell_time_msec;
-
-    //get current channel pool from DB
-    auto &current_channel_pool = database.get_channel_scan_pool(radio_mac, is_single_scan);
-    if (current_channel_pool.empty()) {
-        LOG(ERROR) << "empty channel pool is not supported. please set channel pool for radio mac="
-                   << radio_mac;
-        return false;
-    }
-    m_agents_status_map[ire_mac].radio_scans[radio_mac].channel_pool = current_channel_pool;
 
     return true;
 }
@@ -450,14 +443,31 @@ bool son::dynamic_channel_selection_r2_task::add_operating_classes_to_radio(
     }
     auto ire_mac = tlvf::mac_from_string(ire);
 
-    // Get channel pool for this radio scan request
-    auto const &curr_channel_pool =
-        m_agents_status_map[ire_mac].radio_scans[radio_mac].channel_pool;
+    // TODO:Assuming single scan only for now
+    const bool is_single_scan = true;
+
+    // Get channel pool for this radio scan request from DB
+    auto &current_channel_pool = database.get_channel_scan_pool(radio_mac, is_single_scan);
+    if (current_channel_pool.empty()) {
+        LOG(ERROR) << "Empty channel pool is not supported. please set channel pool "
+                      "for radio mac="
+                   << radio_mac;
+        return false;
+    }
+
+    if (current_channel_pool.size() > beerocks::message::SUPPORTED_CHANNELS_LENGTH) {
+        LOG(ERROR) << "channel_pool is too big [" << int(current_channel_pool.size())
+                   << "] on mac=" << radio_mac;
+        return false;
+    }
+
+    auto &radio_scans        = m_agents_status_map[ire_mac].radio_scans[radio_mac];
+    radio_scans.channel_pool = current_channel_pool;
 
     // Convert channels list to operating_class: channels list
     std::unordered_map<uint8_t, std::set<uint8_t>> operating_class_to_classes_map;
 
-    for (auto const &ch : curr_channel_pool) {
+    for (auto const &ch : current_channel_pool) {
         beerocks::message::sWifiChannel channel;
         channel.channel           = ch;
         channel.channel_bandwidth = database.get_node_bw(tlvf::mac_to_string(radio_mac));
