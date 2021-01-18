@@ -1391,9 +1391,9 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const std::string &src_mac
         }
         LOG(DEBUG) << "Avg noise on channel: " << result_tlv->noise();
         LOG(DEBUG) << "neighbor Channel Utilization: " << result_tlv->utilization();
-        if (database.add_channel_report(result_tlv->radio_uid(), result_tlv->operating_class(),
-                                        result_tlv->channel(), neighbor_vec, result_tlv->noise(),
-                                        result_tlv->utilization())) {
+        if (!database.add_channel_report(result_tlv->radio_uid(), result_tlv->operating_class(),
+                                         result_tlv->channel(), neighbor_vec, result_tlv->noise(),
+                                         result_tlv->utilization())) {
             LOG(ERROR) << "Failed to add channel report entry #" << result_count << "!";
             return false;
         }
