@@ -141,8 +141,11 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
             radio_scan_request.second.status = eRadioScanStatus::TRIGGERED_WAIT_FOR_ACK;
             LOG(DEBUG) << "Triggering a scan for radio " << radio_scan_request.first;
 
+            // TODO:Assuming single scan only for now
+            auto &radio_mac = radio_scan_request.first;
+            database.set_channel_scan_in_progress(radio_mac, true, is_single_scan);
+
             // Add the radio scan details to the sent message.
-            auto radio_mac = radio_scan_request.first;
             if (!add_radio_to_channel_scan_request_tlv(channel_scan_request_tlv, radio_mac)) {
                 // Failed to add radio to radio_list in channel_scan_request_tlv
                 LOG(ERROR) << "add_radio_to_channel_scan_request_tlv() failed for radio "
@@ -214,6 +217,11 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
                 radio_scan_request.second.status = eRadioScanStatus::PENDING;
                 LOG(DEBUG) << "Triggering a scan for radio " << radio_scan_request.first
                            << " failed";
+
+                // TODO:Assuming single scan only for now
+                auto &radio_mac           = radio_scan_request.first;
+                const bool is_single_scan = true;
+                database.set_channel_scan_in_progress(radio_mac, false, is_single_scan);
             }
             return false;
         }
@@ -228,6 +236,11 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
                 radio_scan_request.second.status = eRadioScanStatus::PENDING;
                 LOG(DEBUG) << "Triggering a scan for radio " << radio_scan_request.first
                            << " failed";
+
+                // TODO:Assuming single scan only for now
+                auto &radio_mac           = radio_scan_request.first;
+                const bool is_single_scan = true;
+                database.set_channel_scan_in_progress(radio_mac, false, is_single_scan);
             }
             return false;
         }
@@ -335,9 +348,14 @@ bool dynamic_channel_selection_r2_task::handle_scan_report_event(
 
     auto &radio_scans = agent_it->second.radio_scans;
 
-    for (auto scan_it = radio_scans.begin(); scan_it != radio_scans.end();) {
-        if (scan_it->second.status == eRadioScanStatus::SCAN_IN_PROGRESS &&
-            scan_it->second.mid == mid) {
+    auto scan_it = radio_scans.begin();
+    while (scan_it != radio_scans.end()) {
+        if (scan_it->second.status == eRadioScanStatus::SCAN_IN_PROGRESS) {
+            //TODO: Insert mid validation here when mid of outgoing request messages is known.
+            //      If the radio status is SCAN_IN_PROGRESS, it is assumed to expect the scan report of this agent.
+            auto &radio_mac = scan_it->first;
+            database.set_channel_scan_in_progress(radio_mac, false, is_single_scan);
+
             scan_it = radio_scans.erase(scan_it);
         } else {
             ++scan_it;
