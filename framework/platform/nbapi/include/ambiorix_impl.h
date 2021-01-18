@@ -43,6 +43,9 @@ using actions_callback = amxd_status_t (*)(amxd_object_t *object, amxd_param_t *
 using events_callback = void (*)(const char *const sig_name, const amxc_var_t *const data,
                                  void *const priv);
 
+using ambiorix_func_ptr = amxd_status_t (*)(amxd_object_t *object, amxd_function_t *func,
+                                            amxc_var_t *args, amxc_var_t *ret);
+
 typedef struct sActionsCallback {
     std::string action_name;
     actions_callback callback;
@@ -52,6 +55,12 @@ typedef struct sEvents {
     std::string name;
     events_callback callback;
 } sEvents;
+
+typedef struct sFunctions {
+    std::string name;
+    std::string path;
+    ambiorix_func_ptr callback;
+} sFunctions;
 
 extern amxd_dm_t *g_data_model;
 
@@ -64,7 +73,8 @@ class AmbiorixImpl : public Ambiorix {
 public:
     explicit AmbiorixImpl(std::shared_ptr<EventLoop> event_loop,
                           const std::vector<sActionsCallback> &on_action,
-                          const std::vector<sEvents> &events);
+                          const std::vector<sEvents> &events,
+                          const std::vector<sFunctions> &funcs_list);
 
     /**
      * @brief AmbiorixImpl destructor removes: bus connection, data model, parser and all data
@@ -247,6 +257,7 @@ private:
     //std::unordered_map<std::string, actions_callback> m_on_action_handlers;
     std::vector<sActionsCallback> m_on_action_handlers;
     std::vector<sEvents> m_events_list;
+    std::vector<sFunctions> m_func_list;
 };
 
 } // namespace nbapi

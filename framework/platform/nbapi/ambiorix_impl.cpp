@@ -14,8 +14,10 @@ amxd_dm_t *g_data_model = nullptr;
 
 AmbiorixImpl::AmbiorixImpl(std::shared_ptr<EventLoop> event_loop,
                            const std::vector<sActionsCallback> &on_action,
-                           const std::vector<sEvents> &events)
-    : m_event_loop(event_loop), m_on_action_handlers(on_action), m_events_list(events)
+                           const std::vector<sEvents> &events,
+                           const std::vector<sFunctions> &funcs_list)
+    : m_event_loop(event_loop), m_on_action_handlers(on_action), m_events_list(events),
+      m_func_list(funcs_list)
 {
     LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
     amxo_parser_init(&m_parser);
@@ -62,8 +64,8 @@ bool AmbiorixImpl::init(const std::string &amxb_backend, const std::string &bus_
                       "event loop.";
         return false;
     }
-    g_data_model = &m_datamodel;
     LOG(DEBUG) << "The bus connection initialized successfully.";
+    g_data_model = &m_datamodel;
     return true;
 }
 
@@ -94,6 +96,15 @@ bool AmbiorixImpl::load_datamodel(const std::string &datamodel_path)
         }
         LOG(DEBUG) << "Added " << event.name << " to the functions table.";
     }
+    for (const auto &func : m_func_list) {
+        auto ret = amxo_resolver_ftab_add(&m_parser, func.path.c_str(), AMXO_FUNC(func.callback));
+        if (ret != 0) {
+            LOG(WARNING) << "Failed to add " << func.name;
+            continue;
+        }
+        LOG(DEBUG) << "Added " << func.name << " to the functions table.";
+    }
+
     // Disable eventing while loading odls
     amxp_sigmngr_enable(&m_datamodel.sigmngr, false);
 
@@ -635,5 +646,6 @@ AmbiorixImpl::~AmbiorixImpl()
     amxo_parser_clean(&m_parser);
     amxb_be_remove_all();
 }
+
 } // namespace nbapi
 } // namespace beerocks

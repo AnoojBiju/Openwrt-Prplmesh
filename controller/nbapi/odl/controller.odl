@@ -117,6 +117,8 @@
             }
 
             object AccessPoint[];
+
+            void AccessPointCommit();
         }
 
         %persistent object Notification {
