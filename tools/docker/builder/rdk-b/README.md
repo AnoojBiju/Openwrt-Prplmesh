@@ -8,7 +8,7 @@ The scripts optimise the build time by making use of the download and sstate cac
   Alternatively, the password can be written base64-encoded to a file, and the filename is put in the RDK_GIT_TOKEN_FILE environment variable.
 * Run `tools/docker/builder/rdk-b/build.sh -d <device>` to start the build.
   The `-d` option is mandatory.
-  Supported devices is currently only `raspberry`.
+  Supported devices is currently only `turris-omnia`.
 * By default, the download and sstate cache are put in the `rdk` subdirectory of the top-level directory.
   An alternative location can be given with the `--cache` option of the top-level directory.
 * The build results will be made available in the `build/<device>` directory of the top-level directory.

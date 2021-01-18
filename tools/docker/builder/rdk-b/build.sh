@@ -109,7 +109,7 @@ main() {
     fi
 
     build_image
-    build_prplmesh "$rootdir/build/$TARGET_DEVICE"
+    build_prplmesh "$rootdir/build/${TARGET_DEVICE}-rdk"
 
 }
 

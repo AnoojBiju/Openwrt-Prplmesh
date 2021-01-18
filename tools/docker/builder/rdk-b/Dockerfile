@@ -82,8 +82,14 @@ RUN git config --global \
 WORKDIR /home/rdk/rdk-b
 
 RUN printf '\033[1;35m%s Cloning RDK-B\n\033[0m' "$(date --iso-8601=seconds --universal)" \
-    && yes | repo init -u https://code.rdkcentral.com/r/manifests -b rdk-next -m rdkb-extsrc.xml \
+    && yes | repo init -u https://code.rdkcentral.com/r/manifests -m rdkb-turris-extsrc.xml -b yocto-dunfell-upgrade \
     && repo sync
+
+# Fix a bug in "current" turris setup with meta-rdk-ext
+# curl pulls in openssl-1.0.2o; openssl on turris is fixed up to use ocf-linux instead of
+# cryptodev-linux, so we need to do the same for openssl-1.0.2o
+RUN cp meta-turris/recipes-connectivity/openssl/openssl_%.bbappend \
+       meta-turris/recipes-connectivity/openssl/openssl-1.0.2o_%.bbappend
 
 RUN printf '\033[1;35m%s Cloning meta-prplmesh\n\033[0m' "$(date --iso-8601=seconds --universal)" \
     && git clone https://gitlab.com/prpl-foundation/prplmesh/meta-prplmesh \

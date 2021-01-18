@@ -24,10 +24,10 @@ include:
   - local: "/ci/certification/axepoint.yml"
   - local: "/ci/certification/axepoint-bhwifi.yml"
 
-build-for-rdkb-raspberrypi:
+build-for-rdkb-turris-omnia:
   extends: .build-for-rdkb
   variables:
-    TARGET_DEVICE: "raspberrypi"
+    TARGET_DEVICE: "turris-omnia"
   retry: 2
 
 build-for-turris-omnia:
