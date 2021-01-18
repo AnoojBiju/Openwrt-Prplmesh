@@ -2982,26 +2982,26 @@ bool cACTION_MONITOR_CHANNEL_SCAN_RESULTS_NOTIFICATION::init()
     return true;
 }
 
-cACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION::cACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse) :
+cACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION::cACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse) :
     BaseClass(buff, buff_len, parse) {
     m_init_succeeded = init();
 }
-cACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION::cACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse) :
+cACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION::cACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse) :
 BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
     m_init_succeeded = init();
 }
-cACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION::~cACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION() {
+cACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION::~cACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION() {
 }
-uint8_t& cACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION::reason() {
+uint8_t& cACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION::reason() {
     return (uint8_t&)(*m_reason);
 }
 
-void cACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION::class_swap()
+void cACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION::class_swap()
 {
     tlvf_swap(8*sizeof(eActionOp_MONITOR), reinterpret_cast<uint8_t*>(m_action_op));
 }
 
-bool cACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION::finalize()
+bool cACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION::finalize()
 {
     if (m_parse__) {
         TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
@@ -3028,14 +3028,14 @@ bool cACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION::finalize()
     return true;
 }
 
-size_t cACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION::get_initial_size()
+size_t cACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION::get_initial_size()
 {
     size_t class_size = 0;
     class_size += sizeof(uint8_t); // reason
     return class_size;
 }
 
-bool cACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION::init()
+bool cACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION::init()
 {
     if (getBuffRemainingBytes() < get_initial_size()) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";

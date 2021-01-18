@@ -38,7 +38,7 @@ public:
         Channel_Scan_Triggered,
         Channel_Scan_New_Results_Ready,
         Channel_Scan_Dump_Result,
-        Channel_Scan_Abort,
+        Channel_Scan_Aborted,
         Channel_Scan_Finished
     };
 

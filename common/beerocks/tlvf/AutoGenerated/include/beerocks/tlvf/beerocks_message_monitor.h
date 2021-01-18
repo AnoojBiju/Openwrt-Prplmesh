@@ -887,15 +887,15 @@ class cACTION_MONITOR_CHANNEL_SCAN_RESULTS_NOTIFICATION : public BaseClass
         uint8_t* m_is_dump = nullptr;
 };
 
-class cACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION : public BaseClass
+class cACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION : public BaseClass
 {
     public:
-        cACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION();
+        cACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION();
 
         static eActionOp_MONITOR get_action_op(){
-            return (eActionOp_MONITOR)(ACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION);
+            return (eActionOp_MONITOR)(ACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION);
         }
         uint8_t& reason();
         void class_swap() override;

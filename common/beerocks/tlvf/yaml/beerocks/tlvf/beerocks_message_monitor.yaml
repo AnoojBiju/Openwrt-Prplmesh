@@ -204,7 +204,7 @@ cACTION_MONITOR_CHANNEL_SCAN_RESULTS_NOTIFICATION:
     _value: 0
     _comment: 1 - notification contains a result dump, 0 - notification that results are ready
 
-cACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION:
+cACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION:
   _type: class
   reason: uint8_t
 

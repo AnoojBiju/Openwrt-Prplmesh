@@ -1775,11 +1775,11 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
 
         message_com::send_cmdu(slave_socket, cmdu_tx);
     } break;
-    case Event::Channel_Scan_Abort: {
+    case Event::Channel_Scan_Aborted: {
         auto notification = message_com::create_vs_message<
-            beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION>(cmdu_tx);
+            beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION>(cmdu_tx);
         if (!notification) {
-            LOG(ERROR) << "Failed building cACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION msg";
+            LOG(ERROR) << "Failed building cACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION msg";
             return false;
         }
 
