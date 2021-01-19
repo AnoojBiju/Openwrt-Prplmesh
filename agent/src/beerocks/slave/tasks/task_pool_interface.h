@@ -20,13 +20,13 @@ class Task;
  * @brief All possible events in the system are defined here
  */
 enum class eTaskEvent {
-    CAC_STARTED_NOTIFICATION,
-    CAC_COMPLETED_NOTIFICATION,
-    SWITCH_CHANNEL_NOTIFICATION_EVENT,
-    /* indication about the time to wait for switch channel */
-    SWITCH_CHANNEL_DURATION_TIME,
-    SWTICH_CHANNEL_REQUEST,
-    SWITCH_CHANNEL_REPORT,
+    CAC_STARTED_NOTIFICATION,          // 0
+    CAC_COMPLETED_NOTIFICATION,        // 1
+    SWITCH_CHANNEL_NOTIFICATION_EVENT, // 2
+    SWITCH_CHANNEL_DURATION_TIME,      // 3
+    SWITCH_CHANNEL_REQUEST,            // 4
+    SWITCH_CHANNEL_REPORT,             // 5
+    CHANNEL_LIST_READY,                // 6
 };
 
 // helper for hashing the event type
