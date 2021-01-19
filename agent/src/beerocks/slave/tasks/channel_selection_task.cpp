@@ -494,6 +494,9 @@ void ChannelSelectionTask::handle_vs_dfs_cac_completed_notification(
 void ChannelSelectionTask::handle_vs_channels_list_response(
     ieee1905_1::CmduMessageRx &cmdu_rx, int fd, std::shared_ptr<beerocks_header> beerocks_header)
 {
+    // report to other tasks that the channel list is ready
+    m_btl_ctx.m_task_pool.send_event(eTaskEvent::CHANNEL_LIST_READY);
+
     auto sender_iface_name = socket_to_front_iface_name(fd);
     LOG(TRACE) << "received ACTION_APMANAGER_CHANNELS_LIST_RESPONSE from " << sender_iface_name;
 
