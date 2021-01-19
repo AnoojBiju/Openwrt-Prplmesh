@@ -998,7 +998,8 @@ bool ap_wlan_hal_dwpal::sta_bss_steer(const std::string &mac, const std::string 
 
 static bool set_vap_multiap_mode(std::vector<std::string> &vap_hostapd_config, bool fronthaul,
                                  bool backhaul, const std::string &backhaul_wps_ssid,
-                                 const std::string &backhaul_wps_passphrase)
+                                 const std::string &backhaul_wps_passphrase, bool disallow_profile1,
+                                 bool disallow_profile2)
 {
     std::string bssid, ifname;
     if (!hostapd_config_get_value(vap_hostapd_config, "bssid", bssid)) {
@@ -1036,6 +1037,10 @@ static bool set_vap_multiap_mode(std::vector<std::string> &vap_hostapd_config, b
     // 1. counting nuber of interfaces in use.
     // 2. knowing number of VAP supported on the platform.
     hostapd_config_set_value(vap_hostapd_config, "max_num_sta", backhaul ? "3" : "");
+    hostapd_config_set_value(vap_hostapd_config, "multi_ap_profile1_disallow",
+                             disallow_profile1 ? "1" : "");
+    hostapd_config_set_value(vap_hostapd_config, "multi_ap_profile2_disallow",
+                             disallow_profile2 ? "1" : "");
 
     if (fronthaul && !backhaul_wps_ssid.empty()) {
         // Oddly enough, multi_ap_backhaul_wpa_passphrase has to be quoted, while wpa_passphrase does not...
@@ -1085,6 +1090,9 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
 
     // Find first VAP entry
     auto hostapd_vap_iterator = hostapd_config_vaps.begin();
+
+    // Clear all VAPs from the available container, since we preset it with configuration.
+    m_radio_info.available_vaps.clear();
 
     // Go through the bss_info_conf_list and change the hostapd config accordingly
     for (const auto &bss_info_conf : bss_info_conf_list) {
@@ -1139,10 +1147,35 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
         // Set multi_ap mode
         if (!set_vap_multiap_mode(vap_hostapd_config, bss_info_conf.fronthaul,
                                   bss_info_conf.backhaul, backhaul_wps_ssid,
-                                  backhaul_wps_passphrase)) {
+                                  backhaul_wps_passphrase,
+                                  bss_info_conf.profile1_backhaul_sta_association_disallowed,
+                                  bss_info_conf.profile2_backhaul_sta_association_disallowed)) {
             // The function prints the error messages itself
             return false;
         }
+
+        VAPElement vap_info;
+        vap_info.bss       = vap_if;
+        vap_info.fronthaul = bss_info_conf.fronthaul;
+        vap_info.backhaul  = bss_info_conf.backhaul;
+        if (vap_info.backhaul) {
+            vap_info.ssid = backhaul_wps_ssid;
+
+            vap_info.profile1_backhaul_sta_association_disallowed =
+                bss_info_conf.profile1_backhaul_sta_association_disallowed;
+            vap_info.profile2_backhaul_sta_association_disallowed =
+                bss_info_conf.profile2_backhaul_sta_association_disallowed;
+        } else {
+            vap_info.ssid = bss_info_conf.ssid;
+
+            vap_info.profile1_backhaul_sta_association_disallowed = 0;
+            vap_info.profile2_backhaul_sta_association_disallowed = 0;
+        }
+
+        // Save the configured VAP into available VAPS list.
+        uint8_t vap_id = beerocks::utils::get_ids_from_iface_string(vap_if).vap_id;
+
+        m_radio_info.available_vaps[vap_id] = vap_info;
 
         // Finally enable the VAP (remove any previously set start_disabled)
         hostapd_config_set_value(vap_hostapd_config, "start_disabled", "");
