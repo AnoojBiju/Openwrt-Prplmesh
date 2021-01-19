@@ -1773,6 +1773,20 @@ bool ap_wlan_hal_dwpal::set_radio_mbo_assoc_disallow(bool enable)
     return true;
 }
 
+bool ap_wlan_hal_dwpal::set_primary_vlan_id(uint16_t primary_vlan_id)
+{
+    LOG(DEBUG) << "set_primary_vlan_id " << primary_vlan_id;
+
+    std::string cmd = "set multi_ap_primary_vlanid " + std::to_string(primary_vlan_id);
+
+    // Send command
+    if (!dwpal_send_cmd(cmd)) {
+        LOG(ERROR) << "set_primary_vlan_id() failed!";
+        return false;
+    }
+    return true;
+}
+
 bool ap_wlan_hal_dwpal::generate_connected_clients_events()
 {
     bool queried_first = false;

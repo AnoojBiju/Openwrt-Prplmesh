@@ -415,6 +415,16 @@ public:
      */
     virtual bool start_wps_pbc() = 0;
 
+    /**
+     * @brief Set primary VLAN ID value on the Radio.
+     * The primary VLAN ID will be added into the Multi-AP extention IE.
+     * If the primary VLAN ID is zero, it unset it, and not add it to the IE.
+     *
+     * @param primary_vlan_id Primary VLAN ID.
+     * @return true on success, false otherwise.
+     */
+    virtual bool set_primary_vlan_id(uint16_t primary_vlan_id) = 0;
+
 private:
     static const int tagged_patameters_idx = 56;
     static const int wifi_alliance_tag_len = 18;
