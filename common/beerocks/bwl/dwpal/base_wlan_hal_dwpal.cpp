@@ -1025,11 +1025,27 @@ bool base_wlan_hal_dwpal::refresh_vap_info(int vap_id)
 
     // Store the VAP element
     LOG(DEBUG) << "Detected VAP ID (" << vap_id << ") - MAC: " << vapElement.mac
-               << ", SSID: " << vapElement.ssid
-               << ", fronthaul: " << beerocks::string_utils::bool_str(vapElement.fronthaul)
-               << ", backhaul: " << beerocks::string_utils::bool_str(vapElement.backhaul);
+               << ", SSID: " << vapElement.ssid << ", fronthaul: " << vapElement.fronthaul
+               << ", backhaul: " << vapElement.backhaul;
 
-    m_radio_info.available_vaps[vap_id] = vapElement;
+    auto &mapped_vap_element = m_radio_info.available_vaps[vap_id];
+    if (mapped_vap_element.bss.empty()) {
+        LOG(WARNING) << "BSS " << vapElement.bss << " is not preconfigured!"
+                     << "Overriding VAP element.";
+
+        mapped_vap_element = vapElement;
+        return true;
+
+    } else if (mapped_vap_element.bss != vapElement.bss) {
+        LOG(ERROR) << "bss mismatch! vap_element.bss=" << vapElement.bss
+                   << ", mapped_vap_element.bss=" << mapped_vap_element.bss;
+        return false;
+    }
+
+    // If reached here, assume that the BSS information is already exist on the container,
+    // therefore there is no need to update the information except the BSS mac that is not
+    // preset.
+    mapped_vap_element.mac = vapElement.mac;
 
     return true;
 }
