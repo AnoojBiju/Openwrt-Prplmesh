@@ -13,6 +13,35 @@
 
 using namespace beerocks;
 
+// helper for debug
+std::ostream &operator<<(std::ostream &o, const eTaskEvent &task_event)
+{
+    switch (task_event) {
+    case eTaskEvent::CAC_STARTED_NOTIFICATION:
+        o << "CAC_STARTED_NOTIFICATION";
+        break;
+    case eTaskEvent::CAC_COMPLETED_NOTIFICATION:
+        o << "CAC_COMPLETED_NOTIFICATION";
+        break;
+    case eTaskEvent::SWITCH_CHANNEL_NOTIFICATION_EVENT:
+        o << "SWITCH_CHANNEL_NOTIFICATION_EVENT";
+        break;
+    case eTaskEvent::SWITCH_CHANNEL_DURATION_TIME:
+        o << "SWITCH_CHANNEL_DURATION_TIME";
+        break;
+    case eTaskEvent::SWITCH_CHANNEL_REQUEST:
+        o << "SWITCH_CHANNEL_REQUEST";
+        break;
+    case eTaskEvent::SWITCH_CHANNEL_REPORT:
+        o << "SWITCH_CHANNEL_REPORT";
+        break;
+    case eTaskEvent::CHANNEL_LIST_READY:
+        o << "CHANNEL_LIST_READY";
+        break;
+    }
+    return o;
+}
+
 bool TaskPool::add_task_no_events(const std::shared_ptr<Task> &new_task)
 {
     if (!new_task) {
