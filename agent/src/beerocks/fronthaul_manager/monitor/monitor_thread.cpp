@@ -1361,6 +1361,29 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
         message_com::send_cmdu(slave_socket, cmdu_tx);
         break;
     }
+    case beerocks_message::ACTION_MONITOR_CHANNEL_SCAN_ABORT_REQUEST: {
+        auto request =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_ABORT_REQUEST>();
+        if (!request) {
+            LOG(ERROR) << "addClass cACTION_MONITOR_CHANNEL_SCAN_ABORT_REQUEST failed";
+            return false;
+        }
+
+        auto response_out = message_com::create_vs_message<
+            beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_ABORT_RESPONSE>(cmdu_tx,
+                                                                           beerocks_header->id());
+        if (!response_out) {
+            LOG(ERROR) << "Failed building cACTION_MONITOR_CHANNEL_SCAN_ABORT_RESPONSE message!";
+            return false;
+        }
+
+        response_out->success() = mon_wlan_hal->channel_scan_abort();
+        LOG_IF(!response_out->success(), ERROR) << "channel_scan_abort failed";
+
+        message_com::send_cmdu(slave_socket, cmdu_tx);
+        break;
+    }
     default: {
         LOG(ERROR) << "Unsupported MONITOR action_op: " << int(beerocks_header->action_op());
         break;
@@ -1775,11 +1798,11 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
 
         message_com::send_cmdu(slave_socket, cmdu_tx);
     } break;
-    case Event::Channel_Scan_Abort: {
+    case Event::Channel_Scan_Aborted: {
         auto notification = message_com::create_vs_message<
-            beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION>(cmdu_tx);
+            beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION>(cmdu_tx);
         if (!notification) {
-            LOG(ERROR) << "Failed building cACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION msg";
+            LOG(ERROR) << "Failed building cACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION msg";
             return false;
         }
 
