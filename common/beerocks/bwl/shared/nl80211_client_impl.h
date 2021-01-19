@@ -106,6 +106,15 @@ public:
      */
     virtual bool set_tx_power_limit(const std::string &interface_name, uint32_t limit) override;
 
+    /**
+     * @brief Abort the in-progress channel scan for the interface
+     *
+     * @param[in] interface_name radio interface name.
+     *
+     * @return true on success and false otherwise.
+     */
+    virtual bool channel_scan_abort(const std::string &interface_name) override;
+
 private:
     /**
      * NL80211 socket to send messages and receive responses to/from the WiFi driver.

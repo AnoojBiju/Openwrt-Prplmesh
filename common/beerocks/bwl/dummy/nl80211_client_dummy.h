@@ -79,6 +79,8 @@ public:
      * @return true success and false otherwise
      */
     bool set_tx_power_limit(const std::string &interface_name, uint32_t limit) override;
+
+    bool channel_scan_abort(const std::string &interface_name) override;
 };
 
 } // namespace bwl

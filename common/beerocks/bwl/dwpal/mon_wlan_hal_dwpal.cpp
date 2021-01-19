@@ -88,7 +88,7 @@ static mon_wlan_hal::Event dwpal_nl_to_bwl_event(uint8_t cmd)
     case NL80211_CMD_NEW_SCAN_RESULTS:
         return mon_wlan_hal::Event::Channel_Scan_Dump_Result;
     case NL80211_CMD_SCAN_ABORTED:
-        return mon_wlan_hal::Event::Channel_Scan_Abort;
+        return mon_wlan_hal::Event::Channel_Scan_Aborted;
     case SCAN_FINISH_CB:
         return mon_wlan_hal::Event::Channel_Scan_Finished;
     default:
@@ -988,6 +988,16 @@ bool mon_wlan_hal_dwpal::channel_scan_dump_results()
     return true;
 }
 
+bool mon_wlan_hal_dwpal::channel_scan_abort()
+{
+    if (!m_nl80211_client->channel_scan_abort(get_iface_name())) {
+        LOG(ERROR) << "Channel scan abort failed";
+        return false;
+    }
+
+    return true;
+}
+
 bool mon_wlan_hal_dwpal::generate_connected_clients_events()
 {
     bool queried_first = false;
@@ -1413,7 +1423,7 @@ bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg)
         event_queue_push(event, results);
         break;
     }
-    case Event::Channel_Scan_Abort: {
+    case Event::Channel_Scan_Aborted: {
 
         if (m_radio_info.iface_name != iface_name) {
             // ifname doesn't match current interface

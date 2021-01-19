@@ -44,6 +44,7 @@ public:
                                       const std::vector<unsigned int> &channel_pool) override;
     virtual bool channel_scan_dump_results() override;
     virtual bool generate_connected_clients_events() override;
+    virtual bool channel_scan_abort() override;
     // Protected methods:
 protected:
     virtual bool process_nl80211_event(parsed_obj_map_t &parsed_obj) override;

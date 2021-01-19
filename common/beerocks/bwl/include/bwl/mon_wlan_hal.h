@@ -38,7 +38,7 @@ public:
         Channel_Scan_Triggered,
         Channel_Scan_New_Results_Ready,
         Channel_Scan_Dump_Result,
-        Channel_Scan_Abort,
+        Channel_Scan_Aborted,
         Channel_Scan_Finished
     };
 
@@ -57,7 +57,15 @@ public:
     virtual bool channel_scan_trigger(int dwell_time_msec,
                                       const std::vector<unsigned int> &channel_pool)     = 0;
     virtual bool channel_scan_dump_results()                                             = 0;
-    virtual bool generate_connected_clients_events()                                     = 0;
+    /**
+     * @brief Abort the in-progress channel scan for the interface
+     *
+     * @param[in] interface_name radio interface name.
+     * 
+     * @return true on success and false otherwise.
+     */
+    virtual bool channel_scan_abort()                = 0;
+    virtual bool generate_connected_clients_events() = 0;
 };
 
 // mon HAL factory types

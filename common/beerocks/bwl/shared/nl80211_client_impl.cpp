@@ -730,4 +730,33 @@ bool nl80211_client_impl::set_tx_power_limit(const std::string &interface_name, 
         [&](struct nl_msg *msg) {});
 }
 
+bool nl80211_client_impl::channel_scan_abort(const std::string &interface_name)
+{
+    if (!m_socket) {
+        LOG(ERROR) << "Socket is NULL!";
+        return false;
+    }
+
+    if (interface_name.empty()) {
+        LOG(ERROR) << "interface_name is empty!";
+        return false;
+    }
+
+    // Get the interface index for given interface name
+    int iface_index = if_nametoindex(interface_name.c_str());
+    if (0 == iface_index) {
+        LOG(ERROR) << "Failed to read the index of interface '" << interface_name
+                   << "': " << strerror(errno);
+
+        return false;
+    }
+
+    return m_socket.get()->send_receive_msg(NL80211_CMD_ABORT_SCAN, 0,
+                                            [&](struct nl_msg *msg) -> bool {
+                                                nla_put_u32(msg, NL80211_ATTR_IFINDEX, iface_index);
+                                                return true;
+                                            },
+                                            [&](struct nl_msg *msg) {});
+}
+
 } // namespace bwl

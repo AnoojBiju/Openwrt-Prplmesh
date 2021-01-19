@@ -1025,10 +1025,10 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
                 db->statuses.zwdfs_cac_remaining_time_sec < total_scan_time) {
                 LOG(DEBUG) << "Refuse DCS scan";
                 auto notification = message_com::create_vs_message<
-                    beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION>(cmdu_tx);
+                    beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION>(cmdu_tx);
                 if (!notification) {
                     LOG(ERROR)
-                        << "Failed building cACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION msg";
+                        << "Failed building cACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION msg";
                     return false;
                 }
 
@@ -3124,6 +3124,11 @@ bool slave_thread::handle_cmdu_monitor_message(Socket *sd,
         send_cmdu_to_controller(cmdu_tx);
         break;
     }
+    case beerocks_message::ACTION_MONITOR_CHANNEL_SCAN_ABORT_RESPONSE: {
+        LOG(ERROR) << "addClass cACTION_MONITOR_CHANNEL_SCAN_ABORT_RESPONSE received";
+        //TODO: propagate the scan-abort-response to the requesting agent task (channel-scan-task)
+        break;
+    }
     case beerocks_message::ACTION_MONITOR_CHANNEL_SCAN_TRIGGERED_NOTIFICATION: {
         auto notification_in =
             beerocks_header
@@ -3214,8 +3219,7 @@ bool slave_thread::handle_cmdu_monitor_message(Socket *sd,
         send_cmdu_to_controller(cmdu_tx);
         break;
     }
-    case beerocks_message::ACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION: {
-
+    case beerocks_message::ACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION: {
         auto db = AgentDB::get();
 
         auto radio = db->radio(m_fronthaul_iface);
@@ -3223,14 +3227,15 @@ bool slave_thread::handle_cmdu_monitor_message(Socket *sd,
             break;
         }
 
-        LOG(DEBUG) << "Received ACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION";
+        LOG(DEBUG) << "Received ACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION";
+
         radio->statuses.channel_scan_in_progress = false;
 
         auto notification_in =
             beerocks_header
-                ->addClass<beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION>();
+                ->addClass<beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION>();
         if (!notification_in) {
-            LOG(ERROR) << "addClass cACTION_MONITOR_CHANNEL_SCAN_ABORT_NOTIFICATION failed";
+            LOG(ERROR) << "addClass cACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION failed";
             return false;
         }
 
