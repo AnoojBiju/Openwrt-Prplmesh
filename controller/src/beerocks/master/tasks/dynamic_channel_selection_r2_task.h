@@ -63,6 +63,7 @@ public:
          * Value:   radio scan request as sRadioScanRequest struct.
          */
         std::unordered_map<sMacAddr, sRadioScanRequest> radio_scans;
+        std::chrono::system_clock::time_point timeout;
     };
 
     /**
@@ -194,6 +195,13 @@ private:
      * @return true if successful, false otherwise.
      */
     bool send_scan_request_to_agent(const sMacAddr &agent_mac);
+
+    /**
+     * @brief Scan all agent for timeout and abort scans in progress
+     * 
+     * @return true if timeout found, false otherwise.
+     */
+    bool handle_timeout_in_busy_agents();
 };
 
 } //namespace son

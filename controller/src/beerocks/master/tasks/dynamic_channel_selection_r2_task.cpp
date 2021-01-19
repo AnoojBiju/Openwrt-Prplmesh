@@ -11,6 +11,11 @@
 #include <beerocks/tlvf/beerocks_message_1905_vs.h>
 #include <easylogging++.h>
 
+#define CHANNEL_SCAN_REPORT_WAIT_TIME_SEC 300 //5 Min
+
+// TODO:Assuming single scan only for now
+constexpr bool is_single_scan = true;
+
 #define FSM_MOVE_STATE(new_state)                                                                  \
     ({                                                                                             \
         LOG(TRACE) << "DYNAMIC_CHANNEL_SELECTION_R2 "                                              \
@@ -32,6 +37,9 @@ void dynamic_channel_selection_r2_task::work()
 {
     switch (m_state) {
     case eState::IDLE: {
+
+        handle_timeout_in_busy_agents();
+
         if (is_scan_pending_for_any_idle_agent()) {
             FSM_MOVE_STATE(eState::TRIGGER_SCAN);
         }
@@ -210,7 +218,9 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
             return false;
         }
 
-        agent.second.status   = eAgentStatus::BUSY;
+        agent.second.status  = eAgentStatus::BUSY;
+        agent.second.timeout = std::chrono::system_clock::now() +
+                               std::chrono::seconds(CHANNEL_SCAN_REPORT_WAIT_TIME_SEC);
         mid_to_agent_map[mid] = agent_mac;
         LOG(DEBUG) << "Triggered a scan for agent " << agent_mac;
     }
@@ -332,10 +342,12 @@ bool dynamic_channel_selection_r2_task::handle_scan_report_event(
 
     auto &radio_scans = agent_it->second.radio_scans;
 
-    for (auto scan_it = radio_scans.begin(); scan_it != radio_scans.end(); ++scan_it) {
+    for (auto scan_it = radio_scans.begin(); scan_it != radio_scans.end();) {
         if (scan_it->second.status == eRadioScanStatus::SCAN_IN_PROGRESS &&
             scan_it->second.mid == mid) {
             scan_it = radio_scans.erase(scan_it);
+        } else {
+            ++scan_it;
         }
     }
 
@@ -482,4 +494,40 @@ bool son::dynamic_channel_selection_r2_task::add_operating_classes_to_radio(
         }
     }
     return true;
+}
+
+bool dynamic_channel_selection_r2_task::handle_timeout_in_busy_agents()
+{
+    // Check all busy agents for timeout
+    auto timeout_found = false;
+    for (auto &agent : m_agents_status_map) {
+        auto &agent_mac    = agent.first;
+        auto &agent_status = agent.second;
+
+        if (agent_status.status == eAgentStatus::BUSY &&
+            agent_status.timeout <= std::chrono::system_clock::now()) {
+
+            timeout_found = true;
+            LOG(WARNING) << "Scan request timeout for agent: " << agent_mac
+                         << " - aborting in progress scans";
+
+            // remove all radio_scan_request in-progress from agent queue
+            auto scan_it = agent_status.radio_scans.begin();
+            while (scan_it != agent_status.radio_scans.end()) {
+                if (scan_it->second.status != eRadioScanStatus::PENDING) {
+                    auto &radio_mac = scan_it->first;
+                    LOG(WARNING) << "Scan request timeout for radio: " << radio_mac
+                                 << " - aborting scan";
+                    database.set_channel_scan_in_progress(radio_mac, false, is_single_scan);
+
+                    scan_it = agent_status.radio_scans.erase(scan_it);
+                } else {
+                    ++scan_it;
+                }
+            }
+
+            agent_status.status = eAgentStatus::IDLE;
+        }
+    }
+    return timeout_found;
 }
