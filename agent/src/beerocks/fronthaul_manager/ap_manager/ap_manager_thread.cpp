@@ -1364,6 +1364,16 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
         message_com::send_cmdu(slave_socket, cmdu_tx);
         break;
     }
+    case beerocks_message::ACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST: {
+        auto request = beerocks_header->addClass<
+            beerocks_message::cACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST>();
+        if (!request) {
+            LOG(ERROR) << "addClass has failed";
+            return false;
+        }
+        ap_wlan_hal->set_primary_vlan_id(request->primary_vlan_id());
+        break;
+    }
     default: {
         LOG(ERROR) << "Unsupported header action_op: " << int(beerocks_header->action_op());
         break;
