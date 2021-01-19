@@ -70,6 +70,7 @@
 #include <tlvf/wfa_map/tlvProfile2ChannelScanRequest.h>
 #include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>
 #include <tlvf/wfa_map/tlvProfile2Default802dotQSettings.h>
+#include <tlvf/wfa_map/tlvProfile2ErrorCode.h>
 #include <tlvf/wfa_map/tlvProfile2MetricCollectionInterval.h>
 #include <tlvf/wfa_map/tlvProfile2ReasonCode.h>
 #include <tlvf/wfa_map/tlvProfile2StatusCode.h>
@@ -350,6 +351,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_PROFILE2_TRAFFIC_SEPARATION_POLICY): {
         return msg.addClass<wfa_map::tlvProfile2TrafficSeparationPolicy>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_PROFILE2_ERROR_CODE): {
+        return msg.addClass<wfa_map::tlvProfile2ErrorCode>();
     }
     case (wfa_map::eTlvTypeMap::TLV_PROFILE2_AP_RADIO_ADVANCED_CAPABILITIES): {
         return msg.addClass<wfa_map::tlvProfile2ApRadioAdvancedCapabilities>();
