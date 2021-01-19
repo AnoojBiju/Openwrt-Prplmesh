@@ -152,6 +152,10 @@ cACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE:
   _type: class
   success: uint8_t #bool
 
+cACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST:
+  _type: class
+  primary_vlan_id: uint16_t
+
 cACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION:
   _type: class
   mac: sMacAddr

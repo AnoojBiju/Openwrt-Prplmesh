@@ -618,6 +618,27 @@ class cACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE : public BaseCl
         uint8_t* m_success = nullptr;
 };
 
+class cACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST : public BaseClass
+{
+    public:
+        cACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST();
+
+        static eActionOp_APMANAGER get_action_op(){
+            return (eActionOp_APMANAGER)(ACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST);
+        }
+        uint16_t& primary_vlan_id();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_APMANAGER* m_action_op = nullptr;
+        uint16_t* m_primary_vlan_id = nullptr;
+};
+
 class cACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION : public BaseClass
 {
     public:
