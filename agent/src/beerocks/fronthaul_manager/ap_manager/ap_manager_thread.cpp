@@ -1154,6 +1154,12 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
                 backhaul_wps_ssid       = config_data.ssid_str();
                 backhaul_wps_passphrase = config_data.network_key_str();
             }
+            bss_info_conf.profile1_backhaul_sta_association_disallowed =
+                bss_type &
+                WSC::eWscVendorExtSubelementBssType::PROFILE1_BACKHAUL_STA_ASSOCIATION_DISALLOWED;
+            bss_info_conf.profile2_backhaul_sta_association_disallowed =
+                bss_type &
+                WSC::eWscVendorExtSubelementBssType::PROFILE2_BACKHAUL_STA_ASSOCIATION_DISALLOWED;
 
             bss_info_conf.ssid                = config_data.ssid_str();
             bss_info_conf.authentication_type = config_data.authentication_type_attr().data;
