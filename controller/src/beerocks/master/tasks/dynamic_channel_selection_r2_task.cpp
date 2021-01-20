@@ -112,7 +112,7 @@ bool dynamic_channel_selection_r2_task::is_scan_pending_for_any_idle_agent()
 bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
 {
     for (auto &agent : m_agents_status_map) {
-        auto agent_mac    = agent.first;
+        auto &agent_mac   = agent.first;
         auto agent_status = agent.second;
 
         // Triggering a scan request for a busy agent will result in the abort
@@ -284,7 +284,7 @@ bool dynamic_channel_selection_r2_task::handle_scan_request_event(
     const sScanRequestEvent &scan_request_event)
 {
     // Add pending scan request for radio to the task status container
-    auto radio_mac = scan_request_event.radio_mac;
+    auto &radio_mac = scan_request_event.radio_mac;
 
     // Get parent agent mac from radio mac
     auto radio_mac_str = tlvf::mac_to_string(radio_mac);
@@ -336,7 +336,7 @@ bool dynamic_channel_selection_r2_task::handle_scan_report_event(
         return false;
     }
 
-    auto agent_mac = mid_map_it->second;
+    auto &agent_mac = mid_map_it->second;
     mid_to_agent_map.erase(mid);
 
     auto agent_it = m_agents_status_map.find(agent_mac);

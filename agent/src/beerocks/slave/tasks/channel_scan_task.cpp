@@ -10,6 +10,7 @@
 #include "../agent_db.h"
 #include "../backhaul_manager/backhaul_manager.h"
 #include <bcl/beerocks_utils.h>
+#include <beerocks/tlvf/beerocks_message_1905_vs.h>
 #include <beerocks/tlvf/beerocks_message_backhaul.h>
 #include <easylogging++.h>
 #include <tlvf/wfa_map/tlvTunnelledSourceInfo.h>
