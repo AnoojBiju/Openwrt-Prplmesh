@@ -27,6 +27,26 @@
 
 #include <easylogging++.h>
 
+#ifdef ENABLE_NBAPI
+
+#include "ambiorix_impl.h"
+
+#ifndef AMBIORIX_BACKEND_PATH
+#define AMBIORIX_BACKEND_PATH "/usr/bin/mods/amxb/mod-amxb-ubus.so"
+#endif // AMBIORIX_BACKEND_PATH
+
+#ifndef AMBIORIX_BUS_URI
+#define AMBIORIX_BUS_URI "ubus:/var/run/ubus/ubus.sock"
+#endif // AMBIORIX_BUS_URI
+
+#ifndef AGENT_DATAMODEL_PATH
+#define AGENT_DATAMODEL_PATH "config/odl/agent.odl"
+#endif // AGENT_DATAMODEL_PATH
+
+#endif
+
+#include "ambiorix_dummy.h"
+
 // Do not use this macro anywhere else in ire process
 // It should only be there in one place in each executable module
 BEEROCKS_INIT_BEEROCKS_VERSION
@@ -332,6 +352,18 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
         beerocks::CmduServerFactory::create_instance(platform_manager_uds_address, event_loop);
     LOG_IF(!platform_manager_cmdu_server, FATAL)
         << "Unable to create CMDU server for platform manager!";
+
+#ifdef ENABLE_NBAPI
+    auto agent_dm_path = mapf::utils::get_install_path() + AGENT_DATAMODEL_PATH;
+    auto amb_dm_obj    = std::make_shared<beerocks::nbapi::AmbiorixImpl>(
+        event_loop, std::vector<beerocks::nbapi::sActionsCallback>(),
+        std::vector<beerocks::nbapi::sEvents>(), std::vector<beerocks::nbapi::sFunctions>());
+    LOG_IF(!amb_dm_obj, FATAL) << "Unable to create Ambiorix!";
+    LOG_IF(!amb_dm_obj->init(AMBIORIX_BACKEND_PATH, AMBIORIX_BUS_URI, agent_dm_path), FATAL)
+        << "Unable to init ambiorix object!";
+#else
+    auto amb_dm_obj = std::make_shared<beerocks::nbapi::AmbiorixDummy>();
+#endif //ENABLE_NBAPI
 
     beerocks::PlatformManager platform_manager(beerocks_slave_conf, interfaces_map, *agent_logger,
                                                std::move(platform_manager_cmdu_server),
