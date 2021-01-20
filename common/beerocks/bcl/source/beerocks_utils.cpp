@@ -272,3 +272,28 @@ void utils::hex_dump(const std::string &description, uint8_t *addr, int len,
     LOG(DEBUG) << caller_file_name << "[" << (int)calling_line << "] " << description << std::endl
                << print_stream.str();
 }
+std::string utils::get_ISO_8601_timestamp_string(std::chrono::system_clock::time_point timestamp)
+{
+    auto seconds_since_epoch =
+        std::chrono::duration_cast<std::chrono::seconds>(timestamp.time_since_epoch());
+
+    // Construct time_t using 'seconds_since_epoch' rather than 'stamp' since it is
+    // implementation-defined whether the value is rounded or truncated.
+    std::time_t stamp_t = std::chrono::system_clock::to_time_t(
+        std::chrono::system_clock::time_point(seconds_since_epoch));
+
+    // std::strftime() can convert the "now" timestamp into a string,
+    // but it only supports up to a resolution of a second.
+    // generating the first part of the data-time string:
+    char buff[40];
+    if (!std::strftime(buff, 40, "%Y-%m-%dT%H:%M:%S.", std::localtime(&stamp_t))) {
+        return "";
+    }
+
+    // The subtraction bellow is used to get the fractional value of the second into the string.
+    // Note: the "Z" at the end means zolo time (UTC+0). This function assume locale to always be UTC.
+    // Unless we have a way to know our local, in which case, "Z" might be replaced with
+    // the time delta (+03:00 for Israel, as an example).
+    return std::string(buff) +
+           std::to_string((timestamp.time_since_epoch() - seconds_since_epoch).count()) + "Z";
+}
