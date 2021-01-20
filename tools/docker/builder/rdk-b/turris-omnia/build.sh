@@ -10,11 +10,11 @@ set -e
 
 printf '\033[1;35m%s Configuring RDK-B\n\033[0m' "$(date --iso-8601=seconds --universal)"
 
-export MACHINE=raspberrypi-rdk-broadband
+export MACHINE=turris
 
 # Not part of this repository
 # shellcheck disable=SC1091
-source meta-cmf-raspberrypi/setup-environment
+source meta-turris/setup-environment
 
 echo "BBLAYERS += \"\${RDKROOT}/meta-prplmesh\"" >> conf/bblayers.conf
 
@@ -35,6 +35,5 @@ printf '\033[1;35m%s Building RDK-B\n\033[0m' "$(date --iso-8601=seconds --unive
 bitbake rdk-generic-broadband-image
 
 # Collect the artifacts
-cp tmp/deploy/images/raspberrypi-rdk-broadband/rdk-generic-broadband-image-raspberrypi-rdk-broadband.rpi-sdimg ~/artifacts/
-cp tmp/deploy/ipk/cortexa7t2hf-neon-vfpv4/prplmesh* ~/artifacts
-
+cp tmp/deploy/images/turris/rdk-generic-broadband-image-turris.{manifest,wic.gz} ~/artifacts/
+cp tmp/deploy/ipk/armv7ahf-neon/prplmesh* ~/artifacts
