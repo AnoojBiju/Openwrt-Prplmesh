@@ -1359,8 +1359,7 @@ bool db::dm_add_ap_operating_classes(const std::string &radio_mac, uint8_t max_t
 
     std::string path_to_obj = radio_node->dm_path;
     if (path_to_obj.empty()) {
-        LOG(ERROR) << "Fail to find path to radio with mac: " << radio_mac;
-        return false;
+        return true;
     }
 
     path_to_obj += ".Capabilities.OperatingClasses";
@@ -1414,8 +1413,7 @@ bool db::set_ap_he_capabilities(wfa_map::tlvApHeCapabilities &he_caps_tlv)
     bool return_val  = true;
 
     if (path_to_obj.empty()) {
-        LOG(ERROR) << "Fail get path to object";
-        return false;
+        return true;
     }
 
     path_to_obj += ".Capabilities";
@@ -1688,8 +1686,7 @@ bool db::set_station_capabilities(const std::string &client_mac,
     std::string path_to_sta = n->dm_path;
 
     if (path_to_sta.empty()) {
-        LOG(ERROR) << "Failed to add path for STA object with mac: " << client_mac;
-        return false;
+        return true;
     }
 
     // Remove previous capabilities objects, if they exist
@@ -2179,8 +2176,7 @@ bool db::remove_vap(const std::string &radio_mac, int vap_id)
 
     auto radio_path = radio_node->dm_path;
     if (radio_path.empty()) {
-        LOG(ERROR) << "Failed to get radio path with mac: " << radio_mac;
-        return false;
+        return true;
     }
 
     /*
@@ -2230,8 +2226,7 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
 
     auto radio_path = radio_node->dm_path;
     if (radio_path.empty()) {
-        LOG(ERROR) << "Failed to get radio path with mac: " << radio_mac;
-        return false;
+        return true;
     }
 
     /*
@@ -4259,8 +4254,7 @@ bool db::set_hostap_stats_info(const std::string &mac,
         auto radio_path = n->dm_path;
 
         if (radio_path.empty()) {
-            LOG(ERROR) << "Failed to get path to the radio with mac: " << n->mac;
-            return false;
+            return true;
         }
 
         // TODO: PPM-945
@@ -4378,8 +4372,7 @@ bool db::set_node_stats_info(const std::string &mac,
         std::string path_to_sta = n->dm_path;
 
         if (path_to_sta.empty()) {
-            LOG(ERROR) << "Fail to get path for station with mac: " << mac;
-            return false;
+            return true;
         }
 
         if (!m_ambiorix_datamodel->set(path_to_sta, "LastDataDownlinkRate", p->tx_phy_rate_100kb)) {
@@ -4395,8 +4388,7 @@ bool db::set_node_stats_info(const std::string &mac,
     std::string path_to_sta = n->dm_path;
 
     if (path_to_sta.empty()) {
-        LOG(ERROR) << "Failed to get path for STA object with mac: " << mac;
-        return false;
+        return true;
     }
 
     // Path example to the variable in Data Model
@@ -5213,8 +5205,7 @@ bool db::set_sta_link_metrics(const sMacAddr &sta_mac, uint32_t downlink_est_mac
     bool return_val         = true;
 
     if (path_to_sta.empty()) {
-        LOG(ERROR) << "Failed to get path for STA object with mac: " << sta_mac;
-        return false;
+        return true;
     }
 
     if (!m_ambiorix_datamodel->set(path_to_sta, "EstMACDataRateDownlink",
@@ -5809,8 +5800,7 @@ bool db::clear_ap_capabilities(const sMacAddr &radio_mac)
 
     std::string path_to_obj = radio_node->dm_path;
     if (path_to_obj.empty()) {
-        LOG(ERROR) << "Fail get path for radio with mac: " << radio_mac;
-        return false;
+        return true;
     }
     path_to_obj += ".Capabilities";
     if (!m_ambiorix_datamodel->remove_optional_subobject(path_to_obj, "HTCapabilities")) {
@@ -5841,8 +5831,7 @@ bool db::set_ap_ht_capabilities(const sMacAddr &radio_mac,
 
     std::string path_to_obj = radio_node->dm_path;
     if (path_to_obj.empty()) {
-        LOG(ERROR) << "Fail get path for radio with mac: " << radio_mac;
-        return false;
+        return true;
     }
 
     path_to_obj += ".Capabilities";
@@ -5882,8 +5871,7 @@ bool db::dm_set_device_multi_ap_capabilities(const std::string &device_mac)
     bool return_val         = true;
 
     if (path_to_obj.empty()) {
-        LOG(ERROR) << "Failed find path to the device with mac: " << device_mac;
-        return false;
+        return true;
     }
 
     path_to_obj += ".MultiAPCapabilities";
@@ -6012,9 +6000,7 @@ bool db::add_current_op_class(const sMacAddr &radio_mac, uint8_t op_class, uint8
 
     auto radio_path = radio_node->dm_path;
     if (radio_path.empty()) {
-        LOG(ERROR) << "Failed to get radio path with mac: " << radio_mac
-                   << " in Controller Data model.";
-        return false;
+        return true;
     }
 
     // Prepare path to the CurrentOperatingClasses instance
@@ -6074,9 +6060,7 @@ bool db::remove_current_op_classes(const sMacAddr &radio_mac)
 
     auto radio_path = radio_node->dm_path;
     if (radio_path.empty()) {
-        LOG(ERROR) << "Failed to get radio path with mac: " << radio_mac
-                   << " in Controller Data model.";
-        return false;
+        return true;
     }
 
     // Prepare path to the CurrentOperatingClasses instance
@@ -6104,8 +6088,7 @@ bool db::remove_hostap_supported_operating_classes(const sMacAddr &radio_mac)
 
     auto radio_path = radio_node->dm_path;
     if (radio_path.empty()) {
-        LOG(ERROR) << "Failed to get path to radio with mac: " << radio_mac;
-        return false;
+        return true;
     }
 
     auto op_class_path = radio_path + ".OperatingClasses";
@@ -6140,8 +6123,7 @@ bool db::set_radio_utilization(const sMacAddr &bssid, uint8_t utilization)
 
     auto radio_path = radio_node->dm_path;
     if (radio_path.empty()) {
-        LOG(ERROR) << "Failed to get radio path for radio, mac: " << radio_node->mac;
-        return false;
+        return true;
     }
 
     // Path to the object example: Controller.Network.Device.1.Radio.1.Utilization
