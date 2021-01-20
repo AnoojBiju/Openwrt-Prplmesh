@@ -65,6 +65,7 @@
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
 #include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>
 #include <tlvf/wfa_map/tlvProfile2Default802dotQSettings.h>
+#include <tlvf/wfa_map/tlvProfile2MultiApProfile.h>
 #include <tlvf/wfa_map/tlvProfile2RadioMetrics.h>
 #include <tlvf/wfa_map/tlvProfile2TrafficSeparationPolicy.h>
 #include <tlvf/wfa_map/tlvRadioOperationRestriction.h>
@@ -613,6 +614,20 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const std::string &sr
     }
     std::get<1>(supportedServiceTuple) =
         wfa_map::tlvSupportedService::eSupportedService::MULTI_AP_CONTROLLER;
+
+    // Add MultiAp Profile TLV only if the agent added it to the seach message.
+    // Although R2 is profile1 competible, we found out that some certified agent
+    // fail to parse the response in case the TLV is present.
+    if (cmdu_rx.getClass<wfa_map::tlvProfile2MultiApProfile>()) {
+        auto tlvProfile2MultiApProfile = cmdu_tx.addClass<wfa_map::tlvProfile2MultiApProfile>();
+        if (!tlvProfile2MultiApProfile) {
+            LOG(ERROR) << "addClass wfa_map::tlvProfile2MultiApProfile failed";
+            return false;
+        }
+
+        tlvProfile2MultiApProfile->profile() =
+            wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2;
+    }
 
     auto beerocks_header = beerocks::message_com::parse_intel_vs_message(cmdu_rx);
     if (beerocks_header) {
