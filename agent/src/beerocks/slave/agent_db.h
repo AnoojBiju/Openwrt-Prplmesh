@@ -18,6 +18,7 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
+#include <unordered_set>
 
 namespace beerocks {
 
@@ -274,6 +275,14 @@ public:
         bool he_supported = false; ///< Is 802.11ax (High Efficiency) protocol supported
         bool report_indepent_scans_policy = false;
     };
+    struct {
+        uint16_t max_number_of_vlans_ids;
+        // Key: SSID, Value: VID
+        std::unordered_map<std::string, uint16_t> ssid_vid_mapping;
+        uint16_t primary_vlan_id;
+        uint8_t default_pcp;
+        std::unordered_set<uint16_t> secondaries_vlans_ids;
+    } traffic_separation;
 
     /**
      * @brief Get pointer to the radio data struct of a specific interface. The function can
