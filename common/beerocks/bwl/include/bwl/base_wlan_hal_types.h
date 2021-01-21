@@ -54,6 +54,8 @@ struct VAPElement {
     std::string mac;
     bool fronthaul;
     bool backhaul;
+    bool profile1_backhaul_sta_association_disallowed = false;
+    bool profile2_backhaul_sta_association_disallowed = false;
 
     bool operator==(const VAPElement &other) const
     {
