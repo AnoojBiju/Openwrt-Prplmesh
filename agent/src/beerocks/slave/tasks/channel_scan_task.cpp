@@ -161,7 +161,61 @@ bool ChannelScanTask::trigger_next_radio_scan(const std::shared_ptr<sScanRequest
 bool ChannelScanTask::trigger_radio_scan(const std::string &radio_iface,
                                          const std::shared_ptr<sRadioScan> radio_scan_info)
 {
-    return false;
+    auto fronthaul_sd = m_btl_ctx.front_iface_name_to_socket(radio_iface);
+    if (fronthaul_sd == beerocks::net::FileDescriptor::invalid_descriptor) {
+        LOG(DEBUG) << "socket to fronthaul not found: " << radio_iface;
+        return false;
+    }
+    auto radio = AgentDB::get()->radio(radio_iface);
+    if (!radio) {
+        LOG(ERROR) << "Failed to get radio info from Agent DB for " << radio_iface;
+        return false;
+    }
+
+    auto trigger_request = beerocks::message_com::create_vs_message<
+        beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST>(m_cmdu_tx);
+    if (!trigger_request) {
+        LOG(ERROR) << "Failed to build cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST";
+        return false;
+    }
+
+    /**
+     * Copy the channel list within the operating class vector in the found Radio Scan info.
+     * Using an unordered_set since we do not want duplicated channels in out channel pool
+     */
+    std::unordered_set<uint8_t> channels_to_be_scanned;
+    std::for_each(radio_scan_info->operating_classes.begin(),
+                  radio_scan_info->operating_classes.end(),
+                  [&channels_to_be_scanned](const sOperationalClass &op_cls) {
+                      channels_to_be_scanned.insert(std::begin(op_cls.channel_list),
+                                                    std::end(op_cls.channel_list));
+                  });
+    // Set scan params in CMDU
+    trigger_request->scan_params().radio_mac         = radio_scan_info->radio_mac;
+    trigger_request->scan_params().dwell_time_ms     = PREFERRED_DWELLTIME_MS;
+    trigger_request->scan_params().channel_pool_size = channels_to_be_scanned.size();
+    std::copy(channels_to_be_scanned.begin(), channels_to_be_scanned.end(),
+              trigger_request->scan_params().channel_pool);
+
+    // Print CMDU scan parameters
+    auto print_pool = [](uint8_t *pool, uint8_t size) -> std::string {
+        std::stringstream ss;
+        ss << "[ ";
+        for (int ch_idx = 0; ch_idx < size; ch_idx++) {
+            ss << int(pool[ch_idx]) << " ";
+        }
+        ss << "]";
+        return ss.str();
+    };
+    LOG(DEBUG) << "Sending \"Scan Trigger\" request for the following:" << std::endl
+               << "- Radio MAC: " << trigger_request->scan_params().radio_mac << std::endl
+               << "- Dwell time: " << trigger_request->scan_params().dwell_time_ms << std::endl
+               << "- Channels: "
+               << print_pool(trigger_request->scan_params().channel_pool,
+                             trigger_request->scan_params().channel_pool_size);
+
+    // Send CMDU
+    return m_btl_ctx.send_cmdu(fronthaul_sd, m_cmdu_tx);
 }
 
 bool ChannelScanTask::store_radio_scan_result(const std::shared_ptr<sScanRequest> request,
