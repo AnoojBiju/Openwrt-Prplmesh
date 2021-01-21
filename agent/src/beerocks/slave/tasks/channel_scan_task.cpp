@@ -36,7 +36,82 @@ ChannelScanTask::ChannelScanTask(BackhaulManager &btl_ctx, ieee1905_1::CmduMessa
 {
 }
 
-void ChannelScanTask::work() {}
+void ChannelScanTask::work()
+{
+    // Handle currently running scan.
+    if (m_current_scan_info.is_scan_currently_running) {
+        auto current_scan_request = m_current_scan_info.scan_request;
+        auto current_radio_scan   = m_current_scan_info.radio_scan;
+
+        // Handle current radio-scan's state
+        switch (current_radio_scan->current_state) {
+        case eState::PENDING_TRIGGER: {
+            // Wait until Current-Scan resource is free.
+            break;
+        }
+        case eState::WAIT_FOR_SCAN_TRIGGERED: {
+            if (current_radio_scan->timeout < std::chrono::system_clock::now()) {
+                LOG(ERROR) << "Reached timeout for PENDING_TRIGGER";
+                FSM_MOVE_STATE(current_radio_scan, eState::SCAN_FAILED);
+            }
+            break;
+        }
+        case eState::WAIT_FOR_RESULTS_READY: {
+            if (current_radio_scan->timeout < std::chrono::system_clock::now()) {
+                LOG(ERROR) << "Reached timeout for WAIT_FOR_RESULTS_READY";
+                FSM_MOVE_STATE(current_radio_scan, eState::SCAN_FAILED);
+            }
+            break;
+        }
+        case eState::WAIT_FOR_RESULTS_DUMP: {
+            if (current_radio_scan->timeout < std::chrono::system_clock::now()) {
+                LOG(ERROR) << "Reached timeout for WAIT_FOR_RESULTS_DUMP";
+                FSM_MOVE_STATE(current_radio_scan, eState::SCAN_FAILED);
+            }
+            break;
+        }
+        case eState::SCAN_DONE: {
+            if (!is_scan_request_finished(current_scan_request)) {
+                LOG(INFO) << "Wait for other scans to complete";
+                trigger_next_radio_scan(current_scan_request);
+            } else {
+                current_scan_request->ready_to_send_report = true;
+            }
+            break;
+        }
+        case eState::SCAN_FAILED: {
+            if (!is_scan_request_finished(current_scan_request)) {
+                LOG(INFO) << "Wait for other scans to complete";
+                trigger_next_radio_scan(current_scan_request);
+            } else {
+                current_scan_request->ready_to_send_report = true;
+            }
+            break;
+        }
+        case eState::SCAN_ABORTED: {
+        }
+        default:
+            break;
+        }
+
+        // Handle finished requests.
+        if (current_scan_request->ready_to_send_report) {
+            m_current_scan_info.is_scan_currently_running = false;
+            if (!send_channel_scan_report(current_scan_request)) {
+                LOG(ERROR) << "Failed to send channel scan report!";
+                return;
+            }
+        }
+    } else {
+        // Handle pending requests.
+        if (!m_pending_requests.empty()) {
+            if (!trigger_next_radio_scan(m_pending_requests.front())) {
+                LOG(ERROR) << "Failed to trigger the radio scan on top request in queue";
+            }
+            m_pending_requests.pop_front();
+        }
+    }
+}
 
 void ChannelScanTask::handle_event(uint8_t event_enum_value, const void *event_obj)
 {
