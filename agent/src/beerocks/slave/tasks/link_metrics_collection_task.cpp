@@ -25,6 +25,7 @@
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
 #include <tlvf/wfa_map/tlvBeaconMetricsQuery.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
+#include <tlvf/wfa_map/tlvProfile2RadioMetrics.h>
 #include <tlvf/wfa_map/tlvProfile2UnsuccessfulAssociationPolicy.h>
 #include <tlvf/wfa_map/tlvStaMacAddressType.h>
 #include <tlvf/wfa_map/tlvSteeringPolicy.h>
@@ -479,7 +480,6 @@ void LinkMetricsCollectionTask::handle_associated_sta_link_metrics_query(
         LOG(ERROR) << "Failed to build ACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_REQUEST";
         return;
     }
-
     request_out->sync()    = true;
     request_out->sta_mac() = mac->sta_mac();
 
@@ -494,6 +494,7 @@ void LinkMetricsCollectionTask::handle_associated_sta_link_metrics_query(
      * When link metric collection task moves to agent context
      * send the message to fronthaul, not slave.
      */
+
     m_btl_ctx.send_cmdu(radio_info->slave, m_cmdu_tx);
 }
 
@@ -862,6 +863,19 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
             auto &sta_link_metric_response =
                 std::get<1>(sta_link_metric_response_tlv->bssid_info_list(0));
             sta_link_metric_response = link_metric.bssid_info;
+        }
+
+        auto radio_metrics_tlv = m_cmdu_tx.addClass<wfa_map::tlvProfile2RadioMetrics>();
+        if (!radio_metrics_tlv) {
+            LOG(ERROR) << "Failed to add class tlvProfile2RadioMetrics";
+            continue;
+        }
+
+        // just copy the radio metrics
+        radio_metrics_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2RadioMetrics>();
+        if (!radio_metrics_tlv) {
+            LOG(ERROR) << "Failed to get class tlvProfile2RadioMetrics";
+            continue;
         }
     }
 
