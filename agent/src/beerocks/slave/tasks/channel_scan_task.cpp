@@ -9,6 +9,7 @@
 #include "channel_scan_task.h"
 #include "../agent_db.h"
 #include "../backhaul_manager/backhaul_manager.h"
+#include <bcl/beerocks_utils.h>
 #include <beerocks/tlvf/beerocks_message_backhaul.h>
 #include <easylogging++.h>
 #include <tlvf/wfa_map/tlvTunnelledSourceInfo.h>
@@ -251,7 +252,141 @@ bool ChannelScanTask::store_radio_scan_result(const std::shared_ptr<sScanRequest
 bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                   const sMacAddr &src_mac)
 {
-    return false;
+    const auto scan_start_timestamp = std::chrono::system_clock::now();
+    const auto mid                  = cmdu_rx.getMessageId();
+
+    auto channel_scan_request_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2ChannelScanRequest>();
+    if (!channel_scan_request_tlv) {
+        LOG(ERROR) << "getClass wfa_map::tlvProfile2ChannelScanRequest failed";
+        return false;
+    }
+
+    const auto &perform_fresh_scan = channel_scan_request_tlv->perform_fresh_scan();
+
+    LOG(INFO) << "Received CHANNEL_SCAN_REQUEST_MESSAGE from "
+              << "radio MAC: " << src_mac << " mid: " << std::hex << mid << "." << std::endl
+              << "The perform_fresh_scan flag set to: \""
+              << (perform_fresh_scan == wfa_map::tlvProfile2ChannelScanRequest::ePerformFreshScan::
+                                            PERFORM_A_FRESH_SCAN_AND_RETURN_RESULTS
+                      ? "PERFORM_A_FRESH_SCAN_AND_RETURN_RESULTS"
+                      : "RETURN_STORED_RESULTS_OF_LAST_SUCCESSFUL_SCAN")
+              << "\"";
+
+    // Build and send ACK message CMDU to the originator.
+    auto cmdu_tx_header = m_cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE);
+    if (!cmdu_tx_header) {
+        LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
+        return false;
+    }
+
+    LOG(DEBUG) << "Sending ACK message to the originator, mid=" << std::hex << mid;
+    auto db = AgentDB::get();
+    if (!m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac)) {
+        LOG(ERROR) << "Failed to send ACK_MESSAGE back to controller";
+        return false;
+    }
+
+    if (perform_fresh_scan && m_current_scan_info.is_scan_currently_running) {
+        // Check if current scan can be aborted.
+        auto current_request_info = m_current_scan_info.scan_request;
+        // Only Controller-Requested scan requests can be aborted.
+        if (current_request_info->request_info->request_type ==
+            sRequestInfo::eScanRequestType::ControllerRequested) {
+            if (!abort_scan_request(current_request_info)) {
+                LOG(ERROR) << "Failed to abort current scan request!";
+                return false;
+            }
+        }
+    }
+
+    sControllerRequestInfo request_info;
+    request_info.mid                = mid;
+    request_info.src_mac            = src_mac;
+    request_info.perform_fresh_scan = perform_fresh_scan;
+
+    auto new_request = std::shared_ptr<sScanRequest>(new sScanRequest(), [](sScanRequest *ptr) {
+        LOG(TRACE) << "Deleting scan request: " << std::hex << ptr << ".";
+        delete ptr;
+    });
+    new_request->request_info         = std::make_shared<sControllerRequestInfo>(request_info);
+    new_request->scan_start_timestamp = scan_start_timestamp;
+    new_request->ready_to_send_report = false;
+
+    const auto &radio_list_length = channel_scan_request_tlv->radio_list_length();
+    // Iterate over the incoming radio list
+    for (int radio_i = 0; radio_i < radio_list_length; ++radio_i) {
+        const auto &radio_list_tuple = channel_scan_request_tlv->radio_list(radio_i);
+        if (!std::get<0>(radio_list_tuple)) {
+            LOG(ERROR) << "Failed to get radio_list[" << radio_i << "]. Continuing...";
+            continue;
+        }
+        auto &radio_list_entry     = std::get<1>(radio_list_tuple);
+        const auto radio_mac       = radio_list_entry.radio_uid();
+        const auto op_cls_list_len = radio_list_entry.operating_classes_list_length();
+        if (op_cls_list_len == 0 && perform_fresh_scan) {
+            LOG(ERROR) << "Invalid request! A fresh scan was requested, but no operating classed "
+                          "were sent";
+            return false;
+        }
+        const auto radio = db->get_radio_by_mac(radio_mac);
+        if (!radio) {
+            LOG(ERROR) << "Failed to get radio entry for MAC: " << radio_mac;
+            return false;
+        }
+        const auto radio_iface = radio->front.iface_name;
+
+        LOG(TRACE) << "radio_list[" << radio_i << "]:" << std::endl
+                   << "\tRadio iface: " << radio_iface << std::endl
+                   << "\tRadio MAC: " << radio_mac << std::endl
+                   << "\tOperating class list length:" << int(op_cls_list_len);
+
+        // Create new radio scan
+        auto new_radio_scan = std::shared_ptr<sRadioScan>(new sRadioScan(), [](sRadioScan *ptr) {
+            LOG(TRACE) << "Deleting radio scan: " << std::hex << ptr << ".";
+            delete ptr;
+        });
+        new_radio_scan->radio_mac     = radio_mac;
+        new_radio_scan->current_state = eState::PENDING_TRIGGER;
+
+        // Iterate over operating classes
+        for (int op_cls_idx = 0; op_cls_idx < op_cls_list_len; op_cls_idx++) {
+            const auto &op_cls_tuple = radio_list_entry.operating_classes_list(op_cls_idx);
+            if (!std::get<0>(op_cls_tuple)) {
+                LOG(ERROR) << "Failed to get operating class[" << op_cls_idx << "]. Continuing...";
+                continue;
+            }
+
+            auto &op_cls_entry    = std::get<1>(op_cls_tuple);
+            const auto op_cls_num = op_cls_entry.operating_class();
+            const auto ch_lst_len = op_cls_entry.channel_list_length();
+            const auto ch_lst_arr = op_cls_entry.channel_list();
+
+            std::stringstream ss;
+            ss << "[ ";
+            for (int c_idx = 0; c_idx < ch_lst_len; c_idx++) {
+                ss << int(ch_lst_arr[c_idx]) << " ";
+            }
+            ss << "]";
+            LOG(TRACE) << "Operating class[" << op_cls_idx << "]:" << std::endl
+                       << "\tOperating class : #" << int(op_cls_num) << std::endl
+                       << "\tChannel list length:" << int(ch_lst_len) << std::endl
+                       << "\tChannel list: " << ss.str() << ".";
+
+            new_radio_scan->operating_classes.emplace_back(op_cls_num, ch_lst_arr, ch_lst_len);
+        }
+
+        // Add radio scan info to radio scans map in the request
+        new_request->radio_scans.emplace(radio_iface, new_radio_scan);
+    }
+
+    // Should return all the currently stored results in the DB for the requested radios
+    // There is no need to add it to the request queue, since there is no need to perform a scan.
+    if (!perform_fresh_scan) {
+        new_request->ready_to_send_report = true;
+        return send_channel_scan_report_to_controller(new_request);
+    }
+    m_pending_requests.emplace_back(new_request);
+    return true;
 }
 
 bool ChannelScanTask::send_channel_scan_report(const std::shared_ptr<sScanRequest> request)
