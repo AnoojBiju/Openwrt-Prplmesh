@@ -406,5 +406,310 @@ bool ChannelScanTask::send_channel_scan_report(const std::shared_ptr<sScanReques
 bool ChannelScanTask::send_channel_scan_report_to_controller(
     const std::shared_ptr<sScanRequest> request)
 {
-    return false;
+    // Lambda function that fills the TLV neighbor structure.
+    auto fill_scan_result_tlv_with_neighbors =
+        [](const beerocks_message::sChannelScanResults &neighbor,
+           std::shared_ptr<wfa_map::cNeighbors> neighbor_res) -> bool {
+        // BSSID
+        neighbor_res->bssid() = neighbor.bssid;
+
+        // SSID
+        if (!neighbor_res->set_ssid(neighbor.ssid, std::string(neighbor.ssid).length())) {
+            LOG(ERROR) << "Failed to set SSID";
+            return false;
+        }
+
+        // Signal Strength
+        neighbor_res->signal_strength() = neighbor.signal_strength_dBm;
+
+        // Bandwidth
+        auto eChannelScanResultChannelBandwidth_toString =
+            [](const beerocks_message::eChannelScanResultChannelBandwidth &bw) -> std::string {
+            switch (bw) {
+            case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_20MHz:
+                return "20";
+            case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_40MHz:
+                return "40";
+            case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80MHz:
+                return "80";
+            case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80_80:
+                return "80+80";
+            case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_160MHz:
+                return "160";
+            case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_NA:
+            default:
+                return "";
+            }
+        };
+        auto bw_str =
+            eChannelScanResultChannelBandwidth_toString(neighbor.operating_channel_bandwidth);
+        if (!neighbor_res->set_channels_bw_list(bw_str.c_str(), bw_str.length())) {
+            LOG(ERROR) << "Failed to set channel BW list";
+            return false;
+        }
+
+        // BSS Load Element Present
+        // Resolve as part of PPM-1045
+        neighbor_res->bss_load_element_present() =
+            wfa_map::cNeighbors::eBssLoadElementPresent::FIELD_NOT_PRESENT;
+
+        // Channel Utilization
+        // Resolve as part of PPM-1045
+        // Since BSS Load Element Present is set to "Not Present" no need to set  Channel Utilization.
+        // neighbor_res->channel_utilization() = neighbor.channel_utilization;
+
+        // Station Count
+        // Resolve as part of PPM-1045
+        // Since BSS Load Element Present is set to "Not Present" no need to set Station Count.
+        // neighbor_res->station_count() = 0;
+
+        LOG(TRACE) << "Done filling report structure";
+        return true;
+    };
+
+    // Lambda function that creates the Timestamp TLV.
+    auto add_report_timestamp_tlv = [this](const std::string &timestamp) -> bool {
+        LOG(DEBUG) << "Creating tlvTimestamp";
+
+        // add Timestamp TLV
+        auto timestamp_tlv = m_cmdu_tx.addClass<wfa_map::tlvTimestamp>();
+        if (!timestamp_tlv) {
+            LOG(ERROR) << "addClass tlvTimestamp failed";
+            return false;
+        }
+        LOG(TRACE) << "timestamp tlv created";
+
+        // fill Timestamp TLV
+        if (!timestamp_tlv->set_timestamp(timestamp.c_str(), timestamp.size())) {
+            LOG(ERROR) << "Failed to set timestamp in tlvTimestamp!";
+            return false;
+        }
+        return true;
+    };
+
+    // Lambda function that creates the Scan Report TLV.
+    auto add_scan_result_tlv =
+        [this, &fill_scan_result_tlv_with_neighbors](
+            const sMacAddr &ruid, const uint8_t &operating_class, const uint8_t &channel,
+            wfa_map::tlvProfile2ChannelScanResult::eScanStatus scan_status,
+            std::chrono::system_clock::time_point scan_start_time,
+            std::vector<beerocks_message::sChannelScanResults> neighbors) -> bool {
+        LOG(DEBUG) << "Creating Scan-Result TLV";
+        // add Results TLV
+        auto channel_scan_result_tlv = m_cmdu_tx.addClass<wfa_map::tlvProfile2ChannelScanResult>();
+        if (!channel_scan_result_tlv) {
+            LOG(ERROR) << "addClass tlvProfile2ChannelScanResult failed";
+            return false;
+        }
+
+        // fill Results TLV
+
+        LOG(DEBUG) << "Setting report details";
+        channel_scan_result_tlv->radio_uid()       = ruid;
+        channel_scan_result_tlv->operating_class() = operating_class;
+        channel_scan_result_tlv->channel()         = channel;
+
+        LOG(DEBUG) << "Setting report success status";
+        channel_scan_result_tlv->success() = scan_status;
+        if (channel_scan_result_tlv->success() !=
+            wfa_map::tlvProfile2ChannelScanResult::eScanStatus::SUCCESS) {
+            // If the status is not set to "success" then there is no need to set the other fields.
+            return true;
+        }
+
+        LOG(DEBUG) << "Setting report timestamp";
+
+        const auto &scan_start_timestamp = utils::get_ISO_8601_timestamp_string(scan_start_time);
+        if (!channel_scan_result_tlv->set_timestamp(scan_start_timestamp.c_str(),
+                                                    scan_start_timestamp.size())) {
+            LOG(DEBUG) << "Failed to set timestamp in tlvProfile2ChannelScanResult!";
+            return false;
+        }
+
+        // totalNoise will be used to calculate the average noise level for the channel.
+        int totalNoise       = 0;
+        int totalUtilization = 0;
+        int neighbor_idx     = 0;
+        for (const auto &neighbor : neighbors) {
+            LOG(DEBUG) << "Filling neighbor structure #" << (neighbor_idx + 1);
+            auto neighbor_res = channel_scan_result_tlv->create_neighbors_list();
+            if (!neighbor_res) {
+                LOG(ERROR) << "Failed to create neighbor list";
+                return false;
+            }
+            if (!fill_scan_result_tlv_with_neighbors(neighbor, neighbor_res)) {
+                LOG(ERROR) << "Failed to fill neighbor structure #" << (neighbor_idx + 1);
+                return false;
+            }
+            if (!channel_scan_result_tlv->add_neighbors_list(neighbor_res)) {
+                LOG(ERROR) << "Failed to add neighbor #" << (neighbor_idx + 1) << " to TLV";
+                return false;
+            }
+            // Used to set TLV noise & utilization field later on
+            totalNoise += neighbor.noise_dBm;
+            totalUtilization += neighbor.channel_utilization;
+            neighbor_idx++;
+        }
+        if (channel_scan_result_tlv->neighbors_list_length() != 0) {
+            channel_scan_result_tlv->noise() =
+                totalNoise / channel_scan_result_tlv->neighbors_list_length();
+            channel_scan_result_tlv->utilization() =
+                totalUtilization / channel_scan_result_tlv->neighbors_list_length();
+        } else {
+            LOG(DEBUG) << "No neighbors were found, setting noise and utilization to 0.";
+            channel_scan_result_tlv->noise()       = 0;
+            channel_scan_result_tlv->utilization() = 0;
+        }
+        /**
+         * If the channel is a DFS channel, the scan will be passive
+         *      only listen, without sending probes.
+         * If the channel is a non-DFS channel, the scan will be active
+         *      sending probes
+         * 
+         * Need to see if there is a way to report from the Driver if the result was returned from
+         * an active/passive scan and not whather the channel is DFS or not
+         * Need to be resolved as part of PPM-1045.
+         */
+        channel_scan_result_tlv->scan_type() =
+            son::wireless_utils::is_dfs_channel(channel)
+                ? wfa_map::tlvProfile2ChannelScanResult::eScanType::SCAN_WAS_PASSIVE_SCAN
+                : wfa_map::tlvProfile2ChannelScanResult::eScanType::SCAN_WAS_ACTIVE_SCAN;
+        return true;
+    };
+
+    const auto timestamp = utils::get_ISO_8601_timestamp_string();
+    if (timestamp.empty()) {
+        LOG(ERROR) << "Failed to create timestamp string";
+        return false;
+    }
+
+    const auto request_info =
+        std::static_pointer_cast<sControllerRequestInfo>(request->request_info);
+    const auto mid                  = request_info->mid;
+    const auto src_mac              = request_info->src_mac;
+    const auto preform_fresh_scan   = request_info->perform_fresh_scan;
+    const auto scan_start_timestamp = request->scan_start_timestamp;
+
+    if (!m_cmdu_tx.create(mid, ieee1905_1::eMessageType::CHANNEL_SCAN_REPORT_MESSAGE)) {
+        LOG(ERROR) << "Failed to create CMDU of type CHANNEL_SCAN_REPORT_MESSAGE";
+        return false;
+    }
+
+    if (!add_report_timestamp_tlv(timestamp)) {
+        LOG(ERROR) << "Failed to add Timestamp TLV to CHANNEL_SCAN_REPORT_MESSAGE";
+        return false;
+    }
+
+    auto db = AgentDB::get();
+
+    int result_tlv_count = 0;
+    for (auto &radio_scan_iter : request->radio_scans) {
+        // Get Scan info
+        const auto radio_iface = radio_scan_iter.first;
+        const auto radio_scan  = radio_scan_iter.second;
+        const auto scan_status = radio_scan->scan_status;
+
+        // Load stored scanned neighbors map
+        auto radio = db->radio(radio_iface);
+        if (!radio) {
+            LOG(ERROR) << "No radio with iface '" << radio_iface << "' found!";
+            return false;
+        }
+        const auto &stored_scanned_neighbors_map = radio->channel_scan_results;
+
+        if (preform_fresh_scan == wfa_map::tlvProfile2ChannelScanRequest::ePerformFreshScan::
+                                      PERFORM_A_FRESH_SCAN_AND_RETURN_RESULTS) {
+            /**
+             * A fresh scan was requested
+             * Iterate over operating classed
+             */
+            for (auto &op_cls_iter : radio_scan->operating_classes) {
+                const auto operating_class     = op_cls_iter.operating_class;
+                const auto channel_list_length = op_cls_iter.channel_list_length;
+                const auto channel_list        = op_cls_iter.channel_list;
+                for (int chan_idx = 0; chan_idx < channel_list_length; chan_idx++) {
+                    const auto channel = channel_list[chan_idx];
+                    /**
+                     * Check if channel has any stored results
+                     * It is possible that a channel has no neighbors
+                     */
+                    if (stored_scanned_neighbors_map.find(channel) ==
+                        stored_scanned_neighbors_map.end()) {
+                        LOG(TRACE) << "There are no stored results for channel #" << channel;
+                        continue;
+                    }
+                    /**
+                     * Check if stored results are from the current request
+                     * Old results are disregarded.
+                     */
+                    if (stored_scanned_neighbors_map.at(channel).first !=
+                        request->scan_start_timestamp) {
+                        LOG(TRACE) << "The results stored for channel #" << channel
+                                   << " are not part of the current scan.";
+                        continue;
+                    }
+
+                    LOG(TRACE) << "Adding new Scan-Result TLV for ["
+                               << "radio: " << radio_iface << ", "
+                               << "operating-class: " << operating_class << ", "
+                               << "channel: " << channel << "]";
+                    if (!add_scan_result_tlv(radio->front.iface_mac, operating_class, channel,
+                                             scan_status, scan_start_timestamp,
+                                             stored_scanned_neighbors_map.at(channel).second)) {
+                        LOG(ERROR)
+                            << "Failed to add Scan-Result TLV to CHANNEL_SCAN_REPORT_MESSAGE";
+                        return false;
+                    }
+                    LOG(DEBUG) << "Added Scan-Result TLV #" << result_tlv_count++ << " ["
+                               << "radio: " << radio_iface << ", "
+                               << "operating-class: " << operating_class << ", "
+                               << "channel: " << channel << "] to CHANNEL_SCAN_REPORT_MESSAGE";
+                }
+            }
+
+        } else {
+            /**
+             * RETURN_STORED_RESULTS_OF_LAST_SUCCESSFUL_SCAN
+             * The given scan request requested to returned all stored results
+             * Iterate over the stored scanned neighbors lists
+             */
+            for (const auto &stored_scanned_neighbor_item : stored_scanned_neighbors_map) {
+                /**
+                 *  The scanned neighbors lists are stored in a map of
+                 *      Key: channel number
+                 *      Value: result pair
+                 *          First: Timestamp of associated request
+                 *          Second: vector of Stored Neighbors
+                 */
+                const auto channel = stored_scanned_neighbor_item.first;
+
+                // Get operating class of channel according to current radio's bandwidth.
+                beerocks::message::sWifiChannel wifi_channel;
+                wifi_channel.channel           = channel;
+                wifi_channel.channel_bandwidth = radio->bandwidth;
+                const auto operating_class =
+                    son::wireless_utils::get_operating_class_by_channel(wifi_channel);
+
+                LOG(TRACE) << "Creating Scan-Result TLV for ["
+                           << "radio: " << radio_iface << ", "
+                           << "operating-class: " << operating_class << ", "
+                           << "channel: " << channel << "]";
+                if (!add_scan_result_tlv(radio->front.iface_mac, operating_class, channel,
+                                         scan_status, stored_scanned_neighbor_item.second.first,
+                                         stored_scanned_neighbor_item.second.second)) {
+                    LOG(ERROR) << "Failed to add Scan-Result TLV to CHANNEL_SCAN_REPORT_MESSAGE";
+                    return false;
+                }
+                LOG(DEBUG) << "Added Scan-Result TLV #" << result_tlv_count++ << " ["
+                           << "radio: " << radio_iface << ", "
+                           << "operating-class: " << operating_class << ", "
+                           << "channel: " << channel << "] to CHANNEL_SCAN_REPORT_MESSAGE";
+            }
+        }
+    }
+
+    LOG(TRACE) << "Sending CHANNEL_SCAN_REPORT_MESSAGE to the originator, mid=" << std::hex << mid;
+    LOG(DEBUG) << "CHANNEL_SCAN_REPORT_MESSAGE contains " << result_tlv_count
+               << " Scan-Result TLV(s)";
+    return m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac);
 }
