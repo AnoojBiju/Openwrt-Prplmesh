@@ -82,7 +82,17 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
 
 bool ChannelScanTask::is_scan_request_finished(const std::shared_ptr<sScanRequest> request)
 {
-    return false;
+    auto radio_scans = request->radio_scans;
+    auto radio_scan_not_finished =
+        [](std::pair<std::string, std::shared_ptr<sRadioScan>> radio_scan_iter) -> bool {
+        return radio_scan_iter.second->current_state != eState::SCAN_DONE &&
+               radio_scan_iter.second->current_state != eState::SCAN_FAILED;
+    };
+    auto unfinished_radio_scan_in_request =
+        std::find_if(radio_scans.begin(), radio_scans.end(), radio_scan_not_finished);
+
+    // Returns "True" if no unfinished scans were found
+    return unfinished_radio_scan_in_request == radio_scans.end();
 }
 
 bool ChannelScanTask::abort_scan_request(const std::shared_ptr<sScanRequest> request)
