@@ -391,7 +391,16 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
 
 bool ChannelScanTask::send_channel_scan_report(const std::shared_ptr<sScanRequest> request)
 {
-    return false;
+    const auto request_info = request->request_info;
+    switch (request_info->request_type) {
+    case sRequestInfo::eScanRequestType::ControllerRequested: {
+        return send_channel_scan_report_to_controller(request);
+    }
+    default: {
+        LOG(ERROR) << "Request of unknown type!";
+        return false;
+    }
+    }
 }
 
 bool ChannelScanTask::send_channel_scan_report_to_controller(
