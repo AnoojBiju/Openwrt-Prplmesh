@@ -79,14 +79,14 @@ static amxd_status_t display_empty_val(amxd_object_t *object, amxd_param_t *para
 static std::string get_param_string(amxd_object_t *object, const char *param_name)
 {
     amxc_var_t param;
-    char *param_val = NULL;
+    std::string param_val;
 
     amxc_var_init(&param);
     if (amxd_object_get_param(object, param_name, &param) == amxd_status_ok) {
-        param_val = amxc_var_dyncast(cstring_t, &param);
-    } else {
-        amxc_var_clean(&param);
-        return {};
+        auto param_val_cstring = amxc_var_dyncast(cstring_t, &param);
+        if (param_val_cstring) {
+            param_val.assign(param_val_cstring);
+        }
     }
     amxc_var_clean(&param);
     return param_val;
@@ -109,9 +109,9 @@ static bool get_param_bool(amxd_object_t *object, const char *param_name)
 
 /**
 * @brief Overwrite an action 'get' aka 'read' for Controller.Network.AccessPointCommit
-* data element, that when this element is triggered the bss information from 
+* data element, that when this element is triggered the bss information from
 * Controller.Network.AccessPoint and Controller.Network.AccessPoint.n.Security,
-* where n = element's index, objects will be stored in the sAccessPoint structure.
+* where n = element's index, objects will be stored in the sAccessPoint structure.
 */
 amxd_status_t access_point_commit(amxd_object_t *object, amxd_function_t *func, amxc_var_t *args,
                                   amxc_var_t *ret)
@@ -222,7 +222,7 @@ static void add_string_param(const char *param_name, amxd_object_t *param_owner_
 }
 
 /**
- * @brief Removes PreSharedKey, KeyPassphrase, SAEPassphrase parameters 
+ * @brief Removes PreSharedKey, KeyPassphrase, SAEPassphrase parameters
  * from Controller.Network.AccessPoint.*.Security object.
  * event_rm_params() invokes when value of parameter
  * Controller.Network.AccessPoint.*.Security.ModeEnabled changed
@@ -243,7 +243,7 @@ static void event_rm_params(const char *const sig_name, const amxc_var_t *const 
 }
 
 /**
- * @brief Add PreSharedKey, KeyPassphrase, SAEPassphrase parameters 
+ * @brief Add PreSharedKey, KeyPassphrase, SAEPassphrase parameters
  * to Controller.Network.AccessPoint.*.Security object.
  * Function invokes when value of parameter
  * Controller.Network.AccessPoint.*.Security.ModeEnabled changed to "WPA2-Personal".
