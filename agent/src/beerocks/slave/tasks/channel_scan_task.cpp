@@ -129,7 +129,33 @@ bool ChannelScanTask::abort_scan_request(const std::shared_ptr<sScanRequest> req
 
 bool ChannelScanTask::trigger_next_radio_scan(const std::shared_ptr<sScanRequest> request)
 {
-    return false;
+    /**
+     * Currently only one Channel Scan per radio is supported.
+     * When PPM-711 is resolved we need to rework the trigger mechanism to support multiple
+     * simultaneous radio scans.
+     * https://jira.prplfoundation.org/browse/PPM-711
+     */
+    auto &radio_scans = request->radio_scans;
+    auto radio_scan_is_pending =
+        [](std::pair<std::string, std::shared_ptr<sRadioScan>> radio_scan_iter) -> bool {
+        return radio_scan_iter.second->current_state == eState::PENDING_TRIGGER;
+    };
+    auto next_pending_radio_scan =
+        std::find_if(radio_scans.begin(), radio_scans.end(), radio_scan_is_pending);
+    if (next_pending_radio_scan == radio_scans.end()) {
+        LOG(TRACE) << "Unable to find the next pending radio scan in request.";
+        return false;
+    }
+    if (!trigger_radio_scan(next_pending_radio_scan->first, next_pending_radio_scan->second)) {
+        LOG(ERROR) << "Failed to send radio scan trigger request";
+        return false;
+    }
+
+    m_current_scan_info.scan_request              = request;
+    m_current_scan_info.radio_scan                = next_pending_radio_scan->second;
+    m_current_scan_info.is_scan_currently_running = true;
+
+    return true;
 }
 
 bool ChannelScanTask::trigger_radio_scan(const std::string &radio_iface,
