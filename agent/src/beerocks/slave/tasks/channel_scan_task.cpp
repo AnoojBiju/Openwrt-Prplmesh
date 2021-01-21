@@ -222,7 +222,30 @@ bool ChannelScanTask::store_radio_scan_result(const std::shared_ptr<sScanRequest
                                               const sMacAddr &radio_mac,
                                               beerocks_message::sChannelScanResults results)
 {
-    return false;
+    LOG(TRACE) << "Handling scan result from " << radio_mac;
+    auto radio = AgentDB::get()->get_radio_by_mac(radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "Failed to get radio info from Agent DB for " << radio_mac;
+        return false;
+    }
+
+    auto channel_scan_results_iter = radio->channel_scan_results.find(results.channel);
+    if (channel_scan_results_iter != radio->channel_scan_results.end()) {
+        // Previous results are found for the given channel.
+        auto &channel_scan_results = channel_scan_results_iter->second;
+        // channel_scan_results: pair<system_clock::time_point, vector<sChannelScanResults>>
+        //      First:  Scan results timestamp
+        //      Second: Scan results vector
+        if (channel_scan_results.first < request->scan_start_timestamp) {
+            // The currently stored channel scan results are older then the incoming results and
+            // are to be considered aged/invalid.
+            // Reset currently stored channel scan results.
+            channel_scan_results.first = request->scan_start_timestamp;
+            channel_scan_results.second.clear();
+        }
+    }
+    radio->channel_scan_results[results.channel].second.push_back(results);
+    return true;
 }
 
 bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmdu_rx,
