@@ -77,7 +77,183 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
                                              const sMacAddr &src_mac, int fd,
                                              std::shared_ptr<beerocks_header> beerocks_header)
 {
-    return false;
+    if (!beerocks_header) {
+        LOG(ERROR) << "beerocks_header is nullptr";
+        return false;
+    }
+
+    auto is_current_scan_running = [this]() -> bool {
+        if (!m_current_scan_info.is_scan_currently_running) {
+            LOG(ERROR) << "No scan is currently running";
+            return false;
+        }
+        return true;
+    };
+    auto does_current_scan_match_incoming_src = [this](const sMacAddr &src_mac) -> bool {
+        if (m_current_scan_info.radio_scan->radio_mac != src_mac) {
+            LOG(ERROR) << "Currently running scan radio MAC does not match incoming response's. "
+                       << m_current_scan_info.radio_scan->radio_mac << " != " << src_mac;
+            return false;
+        }
+        return true;
+    };
+    auto is_current_scan_in_state = [this](eState scan_expected_state) -> bool {
+        if (m_current_scan_info.radio_scan->current_state != scan_expected_state) {
+            LOG(ERROR) << "Currently running scan is not in "
+                       << m_states_string.at(scan_expected_state)
+                       << " state, current scan is in state: "
+                       << m_states_string.at(m_current_scan_info.radio_scan->current_state);
+            return false;
+        }
+        return true;
+    };
+
+    /**
+     * Since currently we handle only action_ops of action type "ACTION_BACKHAUL", use a single
+     * switch-case on "ACTION_BACKHAUL" only.
+     * Once the son_slave will be unified, need to replace the expected action to "ACTION_MONITOR".
+     * PPM-352.
+     */
+    switch (beerocks_header->action_op()) {
+    case beerocks_message::ACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE: {
+        LOG(TRACE) << "ACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE from mac " << src_mac;
+        auto response =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE>();
+        if (!response) {
+            LOG(ERROR) << "addClass cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE failed";
+            return false;
+        }
+
+        if (!is_current_scan_running() || !does_current_scan_match_incoming_src(src_mac) ||
+            !is_current_scan_in_state(eState::WAIT_FOR_SCAN_TRIGGERED)) {
+            return false;
+        }
+
+        if (!response->success()) {
+            LOG(ERROR) << "Failed to trigger scan on radio (" << src_mac << ")";
+            FSM_MOVE_STATE(m_current_scan_info.radio_scan, eState::SCAN_FAILED);
+            return true;
+        }
+
+        LOG(INFO) << "scan request was successful for radio (" << src_mac
+                  << "). Wait for SCAN_TRIGGERED notification";
+        break;
+    }
+    case beerocks_message::ACTION_BACKHAUL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION: {
+        LOG(TRACE) << "ACTION_BACKHAUL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION from mac " << src_mac;
+        auto notification = beerocks_header->addClass<
+            beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION>();
+        if (!notification) {
+            LOG(ERROR) << "addClass cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION failed";
+            return false;
+        }
+
+        if (!is_current_scan_running() || !does_current_scan_match_incoming_src(src_mac) ||
+            !is_current_scan_in_state(eState::WAIT_FOR_SCAN_TRIGGERED)) {
+            return false;
+        }
+
+        LOG(INFO) << "Scan was triggered successfully, wait for RESULTS_READY_NOTIFICATION.";
+        FSM_MOVE_STATE(m_current_scan_info.radio_scan, eState::WAIT_FOR_RESULTS_READY);
+
+        break;
+    }
+    case beerocks_message::ACTION_BACKHAUL_CHANNEL_SCAN_RESULTS_NOTIFICATION: {
+        LOG(TRACE) << "ACTION_BACKHAUL_CHANNEL_SCAN_RESULTS_NOTIFICATION from mac " << src_mac;
+        auto notification =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_RESULTS_NOTIFICATION>();
+        if (!notification) {
+            LOG(ERROR) << "addClass cACTION_BACKHAUL_CHANNEL_SCAN_RESULTS_NOTIFICATION failed";
+            return false;
+        }
+
+        if (!is_current_scan_running() || !does_current_scan_match_incoming_src(src_mac)) {
+            return false;
+        }
+
+        if (notification->is_dump() == 0) {
+            if (!is_current_scan_in_state(eState::WAIT_FOR_RESULTS_READY)) {
+                LOG(INFO) << "Scan results are ready, wait for RESULTS_DUMP_NOTIFICATION.";
+                FSM_MOVE_STATE(m_current_scan_info.radio_scan, eState::WAIT_FOR_RESULTS_DUMP);
+            }
+            // Todo
+        } else {
+            if (!is_current_scan_in_state(eState::WAIT_FOR_RESULTS_DUMP)) {
+                return false;
+            }
+            if (!store_radio_scan_result(m_current_scan_info.scan_request, src_mac,
+                                         notification->scan_results())) {
+                LOG(ERROR) << "Failed to store radio scan result!";
+                return false;
+            }
+            LOG(INFO) << "Scan result received, wait for another RESULTS_DUMP_NOTIFICATION or "
+                         "SCAN_FINISHED_NOTIFICATION.";
+            FSM_MOVE_STATE(m_current_scan_info.radio_scan, eState::WAIT_FOR_RESULTS_DUMP);
+        }
+        break;
+    }
+    case beerocks_message::ACTION_BACKHAUL_CHANNEL_SCAN_FINISHED_NOTIFICATION: {
+        LOG(DEBUG) << "ACTION_BACKHAUL_CHANNEL_SCAN_FINISHED_NOTIFICATION from mac " << src_mac;
+        auto notification =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_FINISHED_NOTIFICATION>();
+        if (!notification) {
+            LOG(ERROR) << "addClass cACTION_BACKHAUL_CHANNEL_SCAN_FINISHED_NOTIFICATION failed";
+            return false;
+        }
+
+        if (!is_current_scan_running() || !does_current_scan_match_incoming_src(src_mac) ||
+            !is_current_scan_in_state(eState::WAIT_FOR_RESULTS_DUMP)) {
+            return false;
+        }
+
+        auto radio = AgentDB::get()->get_radio_by_mac(src_mac);
+        if (!radio) {
+            return false;
+        }
+        radio->statuses.channel_scan_in_progress = false;
+        FSM_MOVE_STATE(m_current_scan_info.radio_scan, eState::SCAN_DONE);
+        break;
+    }
+    case beerocks_message::ACTION_BACKHAUL_CHANNEL_SCAN_ABORTED_NOTIFICATION: {
+        LOG(DEBUG) << "ACTION_BACKHAUL_CHANNEL_SCAN_ABORTED_NOTIFICATION from mac " << src_mac;
+
+        auto notification =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_ABORTED_NOTIFICATION>();
+        if (!notification) {
+            LOG(ERROR) << "addClass cACTION_BACKHAUL_CHANNEL_SCAN_ABORTED_NOTIFICATION failed";
+            return false;
+        }
+
+        if (!is_current_scan_running() || !does_current_scan_match_incoming_src(src_mac)) {
+            return false;
+        }
+
+        auto radio = AgentDB::get()->get_radio_by_mac(src_mac);
+        if (!radio) {
+            break;
+        }
+        radio->statuses.channel_scan_in_progress = false;
+        FSM_MOVE_STATE(m_current_scan_info.radio_scan, eState::SCAN_ABORTED);
+        break;
+    }
+    case beerocks_message::ACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE: {
+        LOG(TRACE) << "ACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE from mac " << src_mac;
+        break;
+    }
+    case beerocks_message::ACTION_BACKHAUL_CHANNEL_SCAN_ABORT_RESPONSE: {
+        LOG(TRACE) << "ACTION_BACKHAUL_CHANNEL_SCAN_ABORT_RESPONSE from mac " << src_mac;
+        break;
+    }
+    default: {
+        // Message was not handled, therfore return false.
+        return false;
+    }
+    }
+    return true;
 }
 
 /* Helper functions */
