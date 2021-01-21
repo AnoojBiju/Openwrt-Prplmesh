@@ -9,6 +9,7 @@
 #include "channel_scan_task.h"
 #include "../agent_db.h"
 #include "../backhaul_manager/backhaul_manager.h"
+#include <beerocks/tlvf/beerocks_message_backhaul.h>
 #include <easylogging++.h>
 #include <tlvf/wfa_map/tlvTunnelledSourceInfo.h>
 
@@ -97,7 +98,33 @@ bool ChannelScanTask::is_scan_request_finished(const std::shared_ptr<sScanReques
 
 bool ChannelScanTask::abort_scan_request(const std::shared_ptr<sScanRequest> request)
 {
-    return false;
+    for (auto radio_scan : request->radio_scans) {
+        const auto &radio_iface = radio_scan.first;
+        LOG(TRACE) << "Request scan abort on " << radio_iface;
+
+        auto fronthaul_sd = m_btl_ctx.front_iface_name_to_socket(radio_iface);
+        if (fronthaul_sd == beerocks::net::FileDescriptor::invalid_descriptor) {
+            LOG(DEBUG) << "socket to fronthaul not found: " << radio_iface;
+            return false;
+        }
+
+        auto abort_request = beerocks::message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST>(m_cmdu_tx);
+        if (!abort_request) {
+            LOG(ERROR) << "Failed to build cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST";
+            return false;
+        }
+
+        if (!m_btl_ctx.send_cmdu(fronthaul_sd, m_cmdu_tx)) {
+            LOG(ERROR) << "Failed to send cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST for "
+                       << radio_iface;
+            return false;
+        }
+
+        LOG(TRACE) << "Sent ABORT_CHANNEL_SCAN for radio " << radio_iface;
+    }
+
+    return true;
 }
 
 bool ChannelScanTask::trigger_next_radio_scan(const std::shared_ptr<sScanRequest> request)
