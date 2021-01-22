@@ -129,10 +129,6 @@ bool tlvProfile2ChannelScanResult::alloc_neighbors_list(size_t count) {
         TLVF_LOG(ERROR) << "Out of order allocation for variable length list neighbors_list, abort!";
         return false;
     }
-    if (m_lock_allocation__) {
-        TLVF_LOG(ERROR) << "Can't create new element before adding the previous one";
-        return false;
-    }
     size_t len = sizeof(sNeighbors) * count;
     if(getBuffRemainingBytes() < len )  {
         TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";

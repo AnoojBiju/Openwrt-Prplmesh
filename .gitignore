@@ -18,3 +18,17 @@ __pycache__/
 .source_dir
 ipkg-*/
 /rdk
+# Build artifacts if you don't set a separate build dir
+*.cmake
+Makefile
+CMakeFiles
+CMakeCache.txt
+out
+version
+agent/config/beerocks_agent.conf
+common/beerocks/scripts/beerocks_watchdog.sh
+common/beerocks/scripts/prplmesh_utils.sh
+controller/config/beerocks_controller.conf
+framework/common/framework_logging.conf
+framework/common/include/mapf/common/config.h
+framework/platform/bpl/platform_db/prplmesh_platform_db
