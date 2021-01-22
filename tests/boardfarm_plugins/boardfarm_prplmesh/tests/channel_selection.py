@@ -110,10 +110,12 @@ class ChannelSelection(PrplMeshBaseTest):
             )
             time.sleep(1)
 
-            self.check_log(agent.radios[0],
-                           "tlvTransmitPowerLimit {}".format(payload_transmit_power))
-            self.check_log(agent.radios[1],
-                           "tlvTransmitPowerLimit {}".format(payload_transmit_power))
+            cur_power_0 = agent.radios[0].get_power_limit()
+            cur_power_1 = agent.radios[1].get_power_limit()
+            if cur_power_0 != payload_transmit_power:
+                self.fail("Radio 0 tx_power switched to {}".format(cur_power_0))
+            if cur_power_1 != payload_transmit_power:
+                self.fail("Radio 1 tx_power switched to {}".format(cur_power_1))
 
             # TODO should be a single response (currently two are sent)
             self.check_cmdu_type("channel selection response", 0x8007, agent.mac,
@@ -227,8 +229,12 @@ class ChannelSelection(PrplMeshBaseTest):
             debug("Confirming tlvTransmitPowerLimit has been received with correct value on agent,"
                   " step {}".format(i))
 
-            self.check_log(agent.radios[0], "tlvTransmitPowerLimit {}".format(tp20dBm))
-            self.check_log(agent.radios[1], "tlvTransmitPowerLimit {}".format(tp20dBm))
+            cur_power_0 = agent.radios[0].get_power_limit()
+            cur_power_1 = agent.radios[1].get_power_limit()
+            if cur_power_0 != tp20dBm:
+                self.fail("Radio 0 tx_power switched to {}".format(cur_power_0))
+            if cur_power_1 != tp20dBm:
+                self.fail("Radio 1 tx_power switched to {}".format(cur_power_1))
 
             check_single_channel_response(self, 0x00)
 
