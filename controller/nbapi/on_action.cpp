@@ -54,28 +54,6 @@ static amxd_status_t action_read_last_change(amxd_object_t *object, amxd_param_t
     return amxd_status_ok;
 }
 
-/**
- * @brief Overwrite action 'read' aka 'get', that it will display an empty
- * string insted of real value when action is applied.
- */
-static amxd_status_t display_empty_val(amxd_object_t *object, amxd_param_t *param,
-                                       amxd_action_t reason, const amxc_var_t *const args,
-                                       amxc_var_t *const retval, void *priv)
-{
-    if (reason != action_param_read) {
-        return amxd_status_function_not_implemented;
-    }
-    if (!param) {
-        return amxd_status_parameter_not_found;
-    }
-
-    // Read the value from the data model. We will not actually use the value, but
-    // amxd_action_param_read does all necessary checks and prepares retval appropriately.
-    auto status = amxd_action_param_read(object, param, reason, args, retval, priv);
-    amxc_var_set(cstring_t, retval, "");
-    return status;
-}
-
 static std::string get_param_string(amxd_object_t *object, const char *param_name)
 {
     amxc_var_t param;
@@ -177,6 +155,13 @@ amxd_status_t access_point_commit(amxd_object_t *object, amxd_function_t *func, 
             bss_info.authentication_type = WSC::eWscAuth::WSC_AUTH_OPEN;
             bss_info.encryption_type     = WSC::eWscEncr::WSC_ENCR_NONE;
         }
+
+        if (bss_info.authentication_type != WSC::eWscAuth::WSC_AUTH_OPEN &&
+            bss_info.network_key.empty()) {
+            LOG(WARNING) << "BSS: " << bss_info.ssid << " with mode: " << mode_enabled
+                         << " missing value for network key.";
+            continue;
+        }
         LOG(DEBUG) << "Add bss info configration for AP with ssid: " << bss_info.ssid
                    << " and operating classes: " << bss_info.operating_class;
         g_database->add_bss_info_configuration(bss_info);
@@ -187,9 +172,7 @@ amxd_status_t access_point_commit(amxd_object_t *object, amxd_function_t *func, 
     ieee1905_1::CmduMessageTx cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer));
     auto connected_ires = g_database->get_all_connected_ires();
 
-    for (auto &hostap : connected_ires) {
-        auto agent_mac = g_database->get_node_parent_ire(hostap);
-
+    for (const auto &agent_mac : connected_ires) {
         if (!son_actions::send_ap_config_renew_msg(cmdu_tx, *g_database,
                                                    tlvf::mac_from_string(agent_mac))) {
             LOG(ERROR) << "Failed son_actions::send_ap_config_renew_msg ! ";
@@ -218,7 +201,6 @@ static void add_string_param(const char *param_name, amxd_object_t *param_owner_
 
     amxd_param_new(&param, param_name, AMXC_VAR_ID_CSTRING);
     amxd_object_add_param(param_owner_obj, param);
-    amxd_param_add_action_cb(param, action_param_read, display_empty_val, NULL);
 }
 
 /**
@@ -266,7 +248,6 @@ std::vector<beerocks::nbapi::sActionsCallback> get_actions_callback_list(void)
 {
     const std::vector<beerocks::nbapi::sActionsCallback> actions_list = {
         {"action_read_last_change", action_read_last_change},
-        {"display_empty_val", display_empty_val},
     };
     return actions_list;
 }
