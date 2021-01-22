@@ -409,6 +409,48 @@ public:
      */
     bool remove_hostap_supported_operating_classes(const sMacAddr &radio_mac);
 
+    /**
+     * @brief Adds interface instances to Device's Data Model.
+     *
+     * If instance with @a interface_mac exists, update it, otherwise add it.
+     * Path example: Controller.Network.Device.1.Interface.1
+     * 
+     * @param device_mac device MAC address for node matching
+     * @param interface_mac interface mac address
+     * @param media_type Media type, as per IEEE1905.1 table 6-12
+     * @param status current operational state of the interface
+     * @param name per-device unique and unchanging name for the interface. if unavailable,
+     * use MAC address or linux interface name
+     * @return true on success, false otherwise.
+     */
+    bool dm_add_interface_element(const sMacAddr &device_mac, const sMacAddr &interface_mac,
+                                  const uint16_t media_type, const std::string &status = "Up",
+                                  const std::string &name = {});
+
+    /**
+     * @brief Removes the interface of given MAC from Device's Date Model.
+     * 
+     * Searches index of Controller.Network.Device.{i}.Interface.{i} according 
+     * to MACAddress attribute and removes it.
+     * Path example: Controller.Network.Device.1.Interface.1.MACAdrress
+     * 
+     * @param device_mac device MAC address for node matching
+     * @param interface_mac interface mac to be deleted
+     * @return true on success, false otherwise.
+     */
+    bool dm_remove_interface_element(const sMacAddr &device_mac, const sMacAddr &interface_mac);
+
+    /**
+     * @brief Updates the node interface mac list. 
+     * Removes unused intarfaces from Device's Data model.
+     * 
+     * @param device_mac device MAC address for node matching
+     * @param interface_macs all interface macs vector of the device
+     * @return true on success, false otherwise.
+     */
+    bool dm_update_interface_elements(const sMacAddr &device_mac,
+                                      const std::vector<sMacAddr> &interface_macs);
+
     //
     // DB node functions (get only)
     //

@@ -400,3 +400,22 @@ bool node::ap_metrics_data::add_ap_metric_data(std::shared_ptr<wfa_map::tlvApMet
     }
     return true;
 }
+
+std::vector<sMacAddr> node::update_interfaces(const std::vector<sMacAddr> &new_interfaces)
+{
+    // Fastest way is checking that they are equal. If they are, nothing to be erased.
+    if (interfaces_mac_list == new_interfaces)
+        return {};
+
+    std::vector<sMacAddr> erase_mac_list = interfaces_mac_list;
+
+    // Loop through active interface and remove them from erase list.
+    for (auto &element : new_interfaces) {
+        erase_mac_list.erase(std::remove(erase_mac_list.begin(), erase_mac_list.end(), element),
+                             erase_mac_list.end());
+    }
+
+    // After substracting, active list is now interface list
+    interfaces_mac_list = new_interfaces;
+    return erase_mac_list;
+}
