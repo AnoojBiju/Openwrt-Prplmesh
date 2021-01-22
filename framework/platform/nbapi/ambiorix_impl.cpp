@@ -363,7 +363,8 @@ bool AmbiorixImpl::set(const std::string &relative_path, const std::string &para
     amxd_trans_set_value(cstring_t, &transaction, parameter.c_str(), value.c_str());
 
     if (!apply_transaction(transaction)) {
-        LOG(ERROR) << "Couldn't apply transaction: " << relative_path << parameter << "=" << value;
+        LOG(ERROR) << "Couldn't apply transaction: " << relative_path << "." << parameter << "="
+                   << value;
         return false;
     }
 

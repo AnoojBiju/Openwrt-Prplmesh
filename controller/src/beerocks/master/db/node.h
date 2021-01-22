@@ -53,6 +53,14 @@ public:
     bool get_cross_rx_rssi(const std::string &ap_mac_, int8_t &rssi, int8_t &rx_packets);
     void set_cross_rx_rssi(const std::string &ap_mac_, int8_t rssi, int8_t rx_packets);
 
+    /**
+     * @brief Removes unused interface mac addresses and updates active list
+     * 
+     * @param active_interfaces_vector vector of active interface macs from topology message
+     * @return unused interface mac's returned as vector of sMacAddr
+     */
+    std::vector<sMacAddr> update_interfaces(const std::vector<sMacAddr> &active_interfaces_vector);
+
     void clear_cross_rssi();
     void clear_node_stats_info();
     void clear_hostap_stats_info();
@@ -378,6 +386,7 @@ private:
     beerocks::eType type;
     std::unordered_map<std::string, std::shared_ptr<beacon_measurement>> beacon_measurements;
     std::unordered_map<std::string, std::shared_ptr<rssi_measurement>> cross_rx_rssi;
+    std::vector<sMacAddr> interfaces_mac_list;
 };
 } // namespace son
 #endif
