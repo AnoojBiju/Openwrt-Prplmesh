@@ -237,6 +237,17 @@ bool ap_wlan_hal_dummy::update_vap_credentials(
         m_radio_info.available_vaps[vap_id++].ssid.clear();
     }
 
+    /* Write current conf to tmp file*/
+    std::stringstream value;
+    for (const auto &vap : m_radio_info.available_vaps) {
+        value << "- vap_" << vap.first << ":" << std::endl;
+        value << "  bssid: " << vap.second.mac << std::endl;
+        value << "  ssid: '" << vap.second.ssid << "'" << std::endl;
+        value << "  fronthaul: " << vap.second.fronthaul << std::endl;
+        value << "  backhaul: " << vap.second.backhaul << std::endl;
+    }
+    write_status_file("vap", value.str());
+
     return true;
 }
 
