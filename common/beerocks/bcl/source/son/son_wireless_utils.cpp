@@ -1049,25 +1049,19 @@ beerocks::eBssType wireless_utils::wsc_to_bwl_bss_type(WSC::eWscVendorExtSubelem
 
 std::list<uint8_t> wireless_utils::string_to_wsc_oper_class(const std::string &operating_class)
 {
-    std::list<uint8_t> radio_24g     = {81, 82, 83, 84};
-    std::list<uint8_t> radio_5g_both = {128, 129, 130};
-    std::list<uint8_t> radio_5gh     = {121, 122, 123, 124, 125, 126, 127};
-    std::list<uint8_t> radio_5gl     = {115, 116, 117, 118, 119, 120};
-    std::list<uint8_t> radio_5g      = radio_5gh;
-    std::list<uint8_t> radio_6g      = {131, 132, 133, 134, 135, 136};
+    std::list<uint8_t> radio_24g = {81, 82, 83, 84};
+    std::list<uint8_t> radio_5g  = {115, 116, 117, 118, 119, 120, 121, 122,
+                                   123, 124, 125, 126, 127, 128, 129, 130};
+    std::list<uint8_t> radio_6g  = {131, 132, 133, 134, 135, 136};
 
-    radio_5g.merge(radio_5gl);
-    radio_5g.merge(radio_5g_both);
-    radio_5gh.merge(radio_5g_both);
-    radio_5gl.merge(radio_5g_both);
     if (operating_class == "24g") {
         return radio_24g;
     }
     if (operating_class == "5gh") {
-        return radio_5gh;
+        return {121, 122, 123, 124, 125, 126, 127, 128, 129, 130};
     }
     if (operating_class == "5gl") {
-        return radio_5gl;
+        return {115, 116, 117, 118, 119, 120, 128, 129, 130};
     }
     if (operating_class == "5g") {
         return radio_5g;
@@ -1076,8 +1070,10 @@ std::list<uint8_t> wireless_utils::string_to_wsc_oper_class(const std::string &o
         radio_5g.merge(radio_24g);
         return radio_5g;
     }
-    if (operating_class == "6g")
+    if (operating_class == "6g") {
         return radio_6g;
+    }
+    LOG(WARNING) << "Operating class [" << operating_class << "] was not converted.";
     return {};
 }
 
