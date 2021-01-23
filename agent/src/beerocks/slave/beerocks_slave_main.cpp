@@ -365,6 +365,8 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     auto amb_dm_obj = std::make_shared<beerocks::nbapi::AmbiorixDummy>();
 #endif //ENABLE_NBAPI
 
+    beerocks::AgentDB::get()->m_ambiorix_datamodel = amb_dm_obj;
+
     beerocks::PlatformManager platform_manager(beerocks_slave_conf, interfaces_map, *agent_logger,
                                                std::move(platform_manager_cmdu_server),
                                                timer_manager, event_loop);
