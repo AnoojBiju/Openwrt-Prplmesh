@@ -134,6 +134,13 @@ BackhaulManager::BackhaulManager(
     db->device_conf.vendor            = config.vendor;
     db->device_conf.model             = config.model;
 
+    std::string bridge_mac;
+    if (!beerocks::net::network_utils::linux_iface_get_mac(config.bridge_iface, bridge_mac)) {
+        LOG(ERROR) << "Failed getting MAC address for interface: " << config.bridge_iface;
+    } else {
+        db->dm_set_agent_mac(bridge_mac);
+    }
+
     m_eFSMState = EState::INIT;
 
     m_task_pool.add_task(std::make_shared<TopologyTask>(*this, cmdu_tx));

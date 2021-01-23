@@ -365,7 +365,7 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     auto amb_dm_obj = std::make_shared<beerocks::nbapi::AmbiorixDummy>();
 #endif //ENABLE_NBAPI
 
-    beerocks::AgentDB::get()->m_ambiorix_datamodel = amb_dm_obj;
+    beerocks::AgentDB::get()->init_data_model(amb_dm_obj);
 
     beerocks::PlatformManager platform_manager(beerocks_slave_conf, interfaces_map, *agent_logger,
                                                std::move(platform_manager_cmdu_server),
@@ -509,7 +509,7 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
 
 /**
  * @brief Removes the residue files from previous agent process instance.
- * 
+ *
  * @param path Path to where the agent residual file are located.
  * @param file_name Name of the file to be removed if exist.
  */
