@@ -629,11 +629,14 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
         }
         std::string slave_mac  = tlvf::mac_to_string(request->slave_mac());
         std::string hostap_mac = tlvf::mac_to_string(request->bssid());
+        std::string triggered_by{" On-Demand backhaul [imminent] "};
         //TODO: we are passing true for imminent by default
         //extend ACTION_CLI_BACKHAUL_ROAM_REQUEST to have imminent variable
         uint8_t disassoc_imminent = uint8_t(1);
+
         LOG(DEBUG) << "CLI steer IRE request for " << slave_mac << " to hostap: " << hostap_mac;
-        son_actions::steer_sta(database, cmdu_tx, tasks, slave_mac, hostap_mac, disassoc_imminent);
+        son_actions::steer_sta(database, cmdu_tx, tasks, slave_mac, hostap_mac, triggered_by,
+                               std::string(), disassoc_imminent);
         break;
     }
     case beerocks_message::ACTION_CLI_CLIENT_BSS_STEER_REQUEST: {
@@ -646,13 +649,14 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
         }
         std::string client_mac = tlvf::mac_to_string(request->client_mac());
         std::string hostap_mac = tlvf::mac_to_string(request->bssid());
-
+        std::string triggered_by{" On-Demand "};
         uint8_t disassoc_imminent = request->disassoc_timer_ms() ? uint8_t(1) : uint8_t(0);
         LOG(DEBUG) << "CLI steer sta request for " << client_mac << " to hostap: " << hostap_mac
                    << " disassoc_imminent=" << int(disassoc_imminent)
                    << " disassoc_timer=" << int(request->disassoc_timer_ms());
-        son_actions::steer_sta(database, cmdu_tx, tasks, client_mac, hostap_mac,
-                               int(disassoc_imminent), int(request->disassoc_timer_ms()));
+        son_actions::steer_sta(database, cmdu_tx, tasks, client_mac, hostap_mac, triggered_by,
+                               std::string(), int(disassoc_imminent),
+                               int(request->disassoc_timer_ms()));
 
         break;
     }

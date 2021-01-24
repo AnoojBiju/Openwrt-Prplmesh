@@ -37,7 +37,9 @@ public:
     static bool add_node_to_default_location(db &database, std::string client_mac);
     static void unblock_sta(db &database, ieee1905_1::CmduMessageTx &cmdu_tx, std::string sta_mac);
     static int steer_sta(db &database, ieee1905_1::CmduMessageTx &cmdu_tx, task_pool &tasks,
-                         std::string sta_mac, std::string chosen_hostap, bool disassoc_imminent,
+                         std::string sta_mac, std::string chosen_hostap,
+                         const std::string &triggered_by, const std::string &steering_type,
+                         bool disassoc_imminent,
                          int disassoc_timer_ms = beerocks::BSS_STEER_DISASSOC_TIMER_MS,
                          bool steer_restricted = false);
     static void disconnect_client(db &database, ieee1905_1::CmduMessageTx &cmdu_tx,

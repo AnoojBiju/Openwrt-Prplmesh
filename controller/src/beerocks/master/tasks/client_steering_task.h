@@ -24,11 +24,13 @@ public:
     };
 
 public:
-    client_steering_task(db &database_, ieee1905_1::CmduMessageTx &cmdu_tx_, task_pool &tasks_,
-                         std::string sta_mac_, std::string target_bssid_, bool disassoc_imminent_,
-                         int disassoc_timer_ms_ = beerocks::BSS_STEER_DISASSOC_TIMER_MS,
-                         bool steer_restricted_ = false,
-                         std::string task_name_ = std::string("client_steering_task"));
+    client_steering_task(db &database, ieee1905_1::CmduMessageTx &cmdu_tx, task_pool &tasks,
+                         const std::string &sta_mac, const std::string &target_bssid,
+                         const std::string &triggered_by, const std::string &steering_type,
+                         bool disassoc_imminent,
+                         int disassoc_timer_ms        = beerocks::BSS_STEER_DISASSOC_TIMER_MS,
+                         bool steer_restricted        = false,
+                         const std::string &task_name = std::string("client_steering_task"));
     virtual ~client_steering_task() {}
 
 protected:
@@ -38,27 +40,30 @@ protected:
 
 private:
     void steer_sta();
+    void print_steering_info();
 
-    db &database;
-    ieee1905_1::CmduMessageTx &cmdu_tx;
-    task_pool &tasks;
-    const std::string sta_mac;
-    const std::string target_bssid;
-    std::string original_bssid;
-    bool steering_success  = false;
-    bool disassoc_imminent = true;
-    const int disassoc_timer_ms;
-    bool btm_report_received = false;
-    bool steer_restricted    = false;
-
-    const static int steering_wait_time_ms = 25000;
+    db &m_database;
+    ieee1905_1::CmduMessageTx &m_cmdu_tx;
+    task_pool &m_tasks;
+    const std::string m_sta_mac;
+    const std::string m_target_bssid;
+    const std::string m_triggered_by;
+    std::string m_steering_type;
+    std::string m_ssid_name;
+    std::string m_original_bssid;
+    bool m_steering_success  = false;
+    bool m_disassoc_imminent = true;
+    const int m_disassoc_timer_ms;
+    bool m_btm_report_received                 = false;
+    bool m_steer_restricted                    = false;
+    static constexpr int STEERING_WAIT_TIME_MS = 25000;
 
     enum states {
         STEER = 0,
         FINALIZE,
     };
 
-    int state = 0;
+    int m_state = 0;
 };
 } // namespace son
 
