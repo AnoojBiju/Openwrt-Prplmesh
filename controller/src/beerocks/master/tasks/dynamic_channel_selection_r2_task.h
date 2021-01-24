@@ -167,28 +167,6 @@ private:
         std::shared_ptr<wfa_map::tlvProfile2ChannelScanRequest> &channel_scan_request_tlv);
 
     /**
-     * @brief Add a new radio to the channel scan request tlv.
-     * 
-     * @param channel_scan_request_tlv Shared pointer to the channel scan request tlv.
-     * @param radio_mac MAC address of the radio to scan.
-     * @return true if successful, false otherwise.
-     */
-    bool add_radio_to_channel_scan_request_tlv(
-        std::shared_ptr<wfa_map::tlvProfile2ChannelScanRequest> &channel_scan_request_tlv,
-        sMacAddr radio_mac);
-
-    /**
-     * @brief Add a new operating_class to a radio in channel scan request tlv.
-     * 
-     * @param radio_list_entry Shared pointer to the radio list in channel scan request tlv.
-     * @param radio_mac MAC address of the radio to scan.
-     * @param idx index of the operating_class in the operating_class_list.
-     * @return true if successful, false otherwise.
-     */
-    bool add_operating_classes_to_radio(std::shared_ptr<wfa_map::cRadiosToScan> radio_list_entry,
-                                        sMacAddr radio_mac);
-
-    /**
      * @brief Send channel scan request message to agent
      * 
      * @param agent_mac MAC address of the agent.

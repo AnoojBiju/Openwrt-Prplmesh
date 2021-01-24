@@ -140,6 +140,118 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
             agent.second.status = eAgentStatus::IDLE;
         };
 
+        // Helper lambda - Add a new radio to the channel scan request tlv.
+        auto add_radio_to_channel_scan_request_tlv =
+            [&](std::shared_ptr<wfa_map::tlvProfile2ChannelScanRequest> &channel_scan_request_tlv,
+                sMacAddr radio_mac) -> bool {
+            // Helper lambda - Add a new operating_class to a radio in channel scan request tlv.
+            auto add_operating_classes_to_radio =
+                [&](std::shared_ptr<wfa_map::cRadiosToScan> radio_list_entry,
+                    sMacAddr radio_mac) -> bool {
+                // Get parent agent mac from radio mac
+                auto radio_mac_str = tlvf::mac_to_string(radio_mac);
+                auto ire           = database.get_node_parent_ire(radio_mac_str);
+                if (ire.empty()) {
+                    LOG(ERROR) << "Failed to get node_parent_ire!";
+                    return false;
+                }
+                auto ire_mac = tlvf::mac_from_string(ire);
+
+                // Get channel pool for this radio scan request from DB
+                auto &current_channel_pool =
+                    database.get_channel_scan_pool(radio_mac, is_single_scan);
+                if (current_channel_pool.empty()) {
+                    LOG(ERROR) << "Empty channel pool is not supported. please set channel pool "
+                                  "for radio mac="
+                               << radio_mac;
+                    return false;
+                }
+
+                if (current_channel_pool.size() > beerocks::message::SUPPORTED_CHANNELS_LENGTH) {
+                    LOG(ERROR) << "channel_pool is too big [" << int(current_channel_pool.size())
+                               << "] on mac=" << radio_mac;
+                    return false;
+                }
+
+                auto &radio_scans        = m_agents_status_map[ire_mac].radio_scans[radio_mac];
+                radio_scans.channel_pool = current_channel_pool;
+
+                // Convert channels list to operating_class: channels list
+                std::unordered_map<uint8_t, std::set<uint8_t>> operating_class_to_classes_map;
+
+                for (auto const &ch : current_channel_pool) {
+                    beerocks::message::sWifiChannel channel;
+                    channel.channel = ch;
+                    channel.channel_bandwidth =
+                        database.get_node_bw(tlvf::mac_to_string(radio_mac));
+                    auto operating_class = wireless_utils::get_operating_class_by_channel(channel);
+                    operating_class_to_classes_map[operating_class].insert(ch);
+                    LOG(INFO) << "ch:" << channel.channel << ", bw:" << channel.channel_bandwidth
+                              << " => op_class:" << operating_class;
+                }
+
+                for (auto const &op_class : operating_class_to_classes_map) {
+
+                    // Create radio list (cRadiosToScan) object
+                    auto operating_classes_list = radio_list_entry->create_operating_classes_list();
+                    if (!operating_classes_list) {
+                        LOG(ERROR) << "create_operating_classes_list() failed";
+                        return false;
+                    }
+
+                    // Fill operating_classes list object
+                    // Set operating_classes uid as operating_classes mac address
+                    operating_classes_list->operating_class() = op_class.first;
+
+                    // Fill channels list field
+                    std::vector<uint8_t> ch_list(op_class.second.begin(), op_class.second.end());
+                    if (!operating_classes_list->set_channel_list(ch_list.data(), ch_list.size())) {
+                        LOG(ERROR) << "set_channel_list() failed";
+                        return false;
+                    }
+
+                    // Add operating_classes list object to TLV
+                    if (!radio_list_entry->add_operating_classes_list(operating_classes_list)) {
+                        LOG(ERROR) << "add_operating_classes_list() failed";
+                        return false;
+                    }
+                }
+                return true;
+            };
+
+            // Create radio list (cRadiosToScan) object
+            auto radio_list = channel_scan_request_tlv->create_radio_list();
+            if (!radio_list) {
+                LOG(ERROR) << "create_radio_list() failed";
+                return false;
+            }
+
+            // Fill radio list object
+            // Set radio uid as radio mac address
+            radio_list->radio_uid() = radio_mac;
+
+            // If the "Perform Fresh Scan" bit is set to 0 (RETURN_STORED_RESULTS_OF_LAST_SUCCESSFUL_SCAN),
+            // Number of Operating Classes field shall be set to zero and the following fields shall be omitted:
+            // Operating Class, Number of Channels, Channel List.
+
+            // Fill Operating Class, Number of Channels and Channel List only if "Perform Fresh Scan" bit is set to 1.
+            if (channel_scan_request_tlv->perform_fresh_scan() ==
+                wfa_map::tlvProfile2ChannelScanRequest::ePerformFreshScan::
+                    PERFORM_A_FRESH_SCAN_AND_RETURN_RESULTS) {
+                // Fill Operating Class and Channel List
+                if (!add_operating_classes_to_radio(radio_list, radio_mac)) {
+                    return false;
+                };
+            }
+
+            // Add radio list object to TLV
+            if (!channel_scan_request_tlv->add_radio_list(radio_list)) {
+                LOG(ERROR) << "add_radio_list() failed";
+                return false;
+            }
+            return true;
+        };
+
         // Agent require triggering - trigger all scans in agent
         uint16_t mid;
         std::shared_ptr<wfa_map::tlvProfile2ChannelScanRequest> channel_scan_request_tlv = nullptr;
@@ -412,118 +524,6 @@ bool son::dynamic_channel_selection_r2_task::create_channel_scan_request_message
     channel_scan_request_tlv->perform_fresh_scan() = wfa_map::tlvProfile2ChannelScanRequest::
         ePerformFreshScan::RETURN_STORED_RESULTS_OF_LAST_SUCCESSFUL_SCAN;
 
-    return true;
-}
-
-bool son::dynamic_channel_selection_r2_task::add_radio_to_channel_scan_request_tlv(
-    std::shared_ptr<wfa_map::tlvProfile2ChannelScanRequest> &channel_scan_request_tlv,
-    sMacAddr radio_mac)
-{
-    // Create radio list (cRadiosToScan) object
-    auto radio_list = channel_scan_request_tlv->create_radio_list();
-    if (!radio_list) {
-        LOG(ERROR) << "create_radio_list() failed";
-        return false;
-    }
-
-    // Fill radio list object
-    // Set radio uid as radio mac address
-    radio_list->radio_uid() = radio_mac;
-
-    // If the "Perform Fresh Scan" bit is set to 0 (RETURN_STORED_RESULTS_OF_LAST_SUCCESSFUL_SCAN),
-    // Number of Operating Classes field shall be set to zero and the following fields shall be omitted:
-    // Operating Class, Number of Channels, Channel List.
-
-    // Fill Operating Class, Number of Channels and Channel List only if "Perform Fresh Scan" bit is set to 1.
-    if (channel_scan_request_tlv->perform_fresh_scan() ==
-        wfa_map::tlvProfile2ChannelScanRequest::ePerformFreshScan::
-            PERFORM_A_FRESH_SCAN_AND_RETURN_RESULTS) {
-        // Fill Operating Class and Channel List
-        if (!add_operating_classes_to_radio(radio_list, radio_mac)) {
-            return false;
-        };
-    }
-
-    // Add radio list object to TLV
-    if (!channel_scan_request_tlv->add_radio_list(radio_list)) {
-        LOG(ERROR) << "add_radio_list() failed";
-        return false;
-    }
-    return true;
-}
-
-bool son::dynamic_channel_selection_r2_task::add_operating_classes_to_radio(
-    std::shared_ptr<wfa_map::cRadiosToScan> radio_list_entry, sMacAddr radio_mac)
-{
-    // Get parent agent mac from radio mac
-    auto radio_mac_str = tlvf::mac_to_string(radio_mac);
-    auto ire           = database.get_node_parent_ire(radio_mac_str);
-    if (ire.empty()) {
-        LOG(ERROR) << "Failed to get node_parent_ire!";
-        return false;
-    }
-    auto ire_mac = tlvf::mac_from_string(ire);
-
-    // TODO:Assuming single scan only for now
-    const bool is_single_scan = true;
-
-    // Get channel pool for this radio scan request from DB
-    auto &current_channel_pool = database.get_channel_scan_pool(radio_mac, is_single_scan);
-    if (current_channel_pool.empty()) {
-        LOG(ERROR) << "Empty channel pool is not supported. please set channel pool "
-                      "for radio mac="
-                   << radio_mac;
-        return false;
-    }
-
-    if (current_channel_pool.size() > beerocks::message::SUPPORTED_CHANNELS_LENGTH) {
-        LOG(ERROR) << "channel_pool is too big [" << int(current_channel_pool.size())
-                   << "] on mac=" << radio_mac;
-        return false;
-    }
-
-    auto &radio_scans        = m_agents_status_map[ire_mac].radio_scans[radio_mac];
-    radio_scans.channel_pool = current_channel_pool;
-
-    // Convert channels list to operating_class: channels list
-    std::unordered_map<uint8_t, std::set<uint8_t>> operating_class_to_classes_map;
-
-    for (auto const &ch : current_channel_pool) {
-        beerocks::message::sWifiChannel channel;
-        channel.channel           = ch;
-        channel.channel_bandwidth = database.get_node_bw(tlvf::mac_to_string(radio_mac));
-        auto operating_class      = wireless_utils::get_operating_class_by_channel(channel);
-        operating_class_to_classes_map[operating_class].insert(ch);
-        LOG(INFO) << "ch:" << channel.channel << ", bw:" << channel.channel_bandwidth
-                  << " => op_class:" << operating_class;
-    }
-
-    for (auto const &op_class : operating_class_to_classes_map) {
-
-        // Create radio list (cRadiosToScan) object
-        auto operating_classes_list = radio_list_entry->create_operating_classes_list();
-        if (!operating_classes_list) {
-            LOG(ERROR) << "create_operating_classes_list() failed";
-            return false;
-        }
-
-        // Fill operating_classes list object
-        // Set operating_classes uid as operating_classes mac address
-        operating_classes_list->operating_class() = op_class.first;
-
-        // Fill channels list field
-        std::vector<uint8_t> ch_list(op_class.second.begin(), op_class.second.end());
-        if (!operating_classes_list->set_channel_list(ch_list.data(), ch_list.size())) {
-            LOG(ERROR) << "set_channel_list() failed";
-            return false;
-        }
-
-        // Add operating_classes list object to TLV
-        if (!radio_list_entry->add_operating_classes_list(operating_classes_list)) {
-            LOG(ERROR) << "add_operating_classes_list() failed";
-            return false;
-        }
-    }
     return true;
 }
 
