@@ -251,8 +251,10 @@ void optimal_path_task::work()
                     tlvf::mac_to_string(client_initial_radio), current_hostap_ssid);
                 state          = SEND_STEER_ACTION;
                 is_force_steer = true;
-                TASK_LOG(INFO) << "Steer client imminently to initial radio "
-                               << client_initial_radio;
+
+                chosen_method.append("Steer client imminently to initial radio " +
+                                     tlvf::mac_to_string(client_initial_radio) + " ");
+                TASK_LOG(INFO) << chosen_method;
                 break;
             }
             TASK_LOG(WARNING) << "Client's initial radio " << client_initial_radio
@@ -283,8 +285,9 @@ void optimal_path_task::work()
                         database.get_hostap_vap_with_ssid(sibling_it->data(), current_hostap_ssid);
                     state          = SEND_STEER_ACTION;
                     is_force_steer = true;
-                    TASK_LOG(INFO) << "Found local radio " << sibling_it->data()
-                                   << " on selected bands, force steer client to that radio";
+                    chosen_method.append("Found local radio " + std::string(sibling_it->data()) +
+                                         " on selected bands, force steer client to that radio ");
+                    TASK_LOG(INFO) << chosen_method;
                     break;
                 }
                 TASK_LOG(WARNING) << "Couldnt find local radio on selected bands "
@@ -1018,7 +1021,9 @@ void optimal_path_task::work()
                     database.get_hostap_vap_with_ssid(hostap_it->first, current_hostap_ssid);
                 state          = SEND_STEER_ACTION;
                 is_force_steer = true;
-                TASK_LOG(INFO) << "Steer client imminently to initial radio " << hostap_it->first;
+                chosen_method.append("Steer client imminently to initial radio " +
+                                     hostap_it->first + " ");
+                TASK_LOG(INFO) << chosen_method;
                 break;
             }
             TASK_LOG(WARNING) << "Client's initial radio " << client_initial_radio
@@ -1049,8 +1054,10 @@ void optimal_path_task::work()
                         database.get_hostap_vap_with_ssid(sibling_it->data(), current_hostap_ssid);
                     state          = SEND_STEER_ACTION;
                     is_force_steer = true;
-                    TASK_LOG(INFO) << "Found local radio " << sibling_it->data()
-                                   << " on selected bands, force steer client to that radio";
+                    chosen_method.append("Found local radio " + std::string(sibling_it->data()) +
+                                         " on selected bands, force steer client to that radio ");
+
+                    TASK_LOG(INFO) << chosen_method;
                     break;
                 }
                 TASK_LOG(WARNING) << "Couldnt find local radio on selected bands "
@@ -1339,6 +1346,7 @@ void optimal_path_task::work()
             finish();
         } else {
             if (!database.settings_client_optimal_path_roaming_prefer_signal_strength()) {
+                chosen_method.append(" PHY rate ");
                 LOG_CLI(DEBUG, "optimal_path_task:" << std::endl
                                                     << "    best hostap for " << sta_mac << " is "
                                                     << chosen_bssid << " with weighted_phy_rate="
@@ -1347,6 +1355,7 @@ void optimal_path_task::work()
                                                     << "    --> steering " << sta_mac << " to "
                                                     << chosen_bssid << std::endl);
             } else {
+                chosen_method.append(" link quality (RSSI) ");
                 LOG_CLI(DEBUG, "optimal_path_task:"
                                    << std::endl
                                    << "    best hostap (signal strength metric) for " << sta_mac
@@ -1363,29 +1372,44 @@ void optimal_path_task::work()
 
         state                = WAIT_FOR_HANDOVER;
         int steering_task_id = 0;
+
+        std::string method = " 11v (BTM) ";
+        if (!database.get_node_11v_capability(sta_mac)) {
+            method = std::string(" Legacy ");
+        }
+
+        if (is_force_steer) {
+            chosen_method.append(" [forced steering] ");
+        }
+
         if (database.get_node_11v_capability(sta_mac) && !is_force_steer) {
             if (sticky_roaming_rssi <= database.config.roaming_sticky_client_rssi_threshold) {
                 TASK_LOG(DEBUG) << "optimal_path_task: steering with disassociate imminent, sta "
                                 << sta_mac << " steer from BSSID " << current_hostap_vap
                                 << " to BSSID " << chosen_bssid;
                 bool disassoc_imminent = true;
-                steering_task_id       = son_actions::steer_sta(database, cmdu_tx, tasks, sta_mac,
-                                                          chosen_bssid, disassoc_imminent);
+                method.append(" [with imminent] ");
+                steering_task_id =
+                    son_actions::steer_sta(database, cmdu_tx, tasks, sta_mac, chosen_bssid,
+                                           chosen_method, method, disassoc_imminent);
             } else {
                 TASK_LOG(DEBUG) << "optimal_path_task: steering without disassociate imminent, sta "
                                 << sta_mac << " steer from BSSID " << current_hostap_vap
                                 << " to BSSID " << chosen_bssid;
                 bool disassoc_imminent = false;
-                steering_task_id       = son_actions::steer_sta(database, cmdu_tx, tasks, sta_mac,
-                                                          chosen_bssid, disassoc_imminent);
+                steering_task_id =
+                    son_actions::steer_sta(database, cmdu_tx, tasks, sta_mac, chosen_bssid,
+                                           chosen_method, method, disassoc_imminent);
             }
         } else if (database.settings_legacy_client_roaming()) {
             TASK_LOG(DEBUG) << "optimal_path_task: steering with disassociate imminent, sta "
                             << sta_mac << " steer from BSSID " << current_hostap_vap << " to BSSID "
                             << chosen_bssid;
             bool disassoc_imminent = true;
-            steering_task_id       = son_actions::steer_sta(database, cmdu_tx, tasks, sta_mac,
-                                                      chosen_bssid, disassoc_imminent);
+            method.append(" [imminent] ");
+            steering_task_id =
+                son_actions::steer_sta(database, cmdu_tx, tasks, sta_mac, chosen_bssid,
+                                       chosen_method, method, disassoc_imminent);
         }
 
         wait_for_task_end(steering_task_id, 30000);

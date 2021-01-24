@@ -25,11 +25,13 @@ using namespace son;
 client_steering_task::client_steering_task(db &database, ieee1905_1::CmduMessageTx &cmdu_tx,
                                            task_pool &tasks, const std::string &sta_mac,
                                            const std::string &target_bssid,
-                                           bool disassoc_imminent,
+                                           const std::string &triggered_by,
+                                           const std::string &steering_type, bool disassoc_imminent,
                                            int disassoc_timer_ms, bool steer_restricted,
                                            const std::string &task_name)
     : task(task_name), m_database(database), m_cmdu_tx(cmdu_tx), m_tasks(tasks), m_sta_mac(sta_mac),
       m_target_bssid(target_bssid), //Chosen VAP BSSID to steer the client to
+      m_triggered_by(triggered_by), m_steering_type(steering_type),
       m_disassoc_imminent(disassoc_imminent), m_disassoc_timer_ms(disassoc_timer_ms),
       m_steer_restricted(steer_restricted)
 {
@@ -44,6 +46,8 @@ void client_steering_task::work()
         m_database.assign_steering_task_id(m_sta_mac, id);
 
         m_original_bssid = m_database.get_node_parent(m_sta_mac);
+        m_ssid_name      = m_database.get_hostap_ssid(m_original_bssid);
+
         steer_sta();
 
         m_state = FINALIZE;
