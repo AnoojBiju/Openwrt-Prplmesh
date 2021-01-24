@@ -122,6 +122,24 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
             continue;
         }
 
+        auto abort_scan_in_current_agent = [&]() {
+            LOG(ERROR) << "aborting all scans for agent " << agent.first;
+
+            for (auto &radio_scan_request : agent.second.radio_scans) {
+                auto &radio_mac = radio_scan_request.first;
+                LOG(ERROR) << "Triggering a scan for radio " << radio_scan_request.first
+                           << " aborted";
+
+                database.set_channel_scan_results_status(
+                    radio_mac, beerocks::eChannelScanStatusCode::INTERNAL_FAILURE, is_single_scan);
+                database.set_channel_scan_in_progress(radio_mac, false, is_single_scan);
+            }
+
+            //clear all radio_scan_request in agent
+            agent.second.radio_scans.clear();
+            agent.second.status = eAgentStatus::IDLE;
+        };
+
         // Agent require triggering - trigger all scans in agent
         uint16_t mid;
         std::shared_ptr<wfa_map::tlvProfile2ChannelScanRequest> channel_scan_request_tlv = nullptr;
@@ -130,7 +148,8 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
         if ((!create_channel_scan_request_message(agent_mac, mid, channel_scan_request_tlv)) ||
             (!channel_scan_request_tlv)) {
             LOG(ERROR) << "create_channel_scan_request_message() failed for agent " << agent_mac;
-            return false;
+            abort_scan_in_current_agent();
+            continue; //CMDU creation failed - Trigger the next agent
         }
 
         // Add all radio scans in current agent to radio_list in channel_scan_request_tlv.
@@ -154,6 +173,10 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
                 break;
             }
         }
+        if (!success) {
+            abort_scan_in_current_agent();
+            continue; //tlv creation failed - Trigger the next agent
+        }
 
         // Create channel scan request extended message (vendor specific tlv)
         if (database.is_prplmesh(agent_mac)) {
@@ -162,8 +185,8 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
 
             if (!channel_scan_request_extension_vs_tlv) {
                 LOG(ERROR) << "Failed building tlvVsChannelScanRequestExtension message!";
-                success = false;
-                break;
+                abort_scan_in_current_agent();
+                continue; //tlv creation failed - Trigger the next agent
             }
 
             // Add additional parmeters of all radio scans in current agent
@@ -171,8 +194,8 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
             auto num_of_radios = agent.second.radio_scans.size();
             if (!channel_scan_request_extension_vs_tlv->alloc_scan_requests_list(num_of_radios)) {
                 LOG(ERROR) << "Failed to alloc_scan_requests_list(" << num_of_radios << ")!";
-                success = false;
-                break;
+                abort_scan_in_current_agent();
+                continue; //tlv creation failed - Trigger the next agent
             }
 
             auto scan_request_idx = 0;
@@ -212,18 +235,8 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
         }
 
         if (!success) {
-            for (auto &radio_scan_request : agent.second.radio_scans) {
-                radio_scan_request.second.mid    = INVALID_MID_ID;
-                radio_scan_request.second.status = eRadioScanStatus::PENDING;
-                LOG(DEBUG) << "Triggering a scan for radio " << radio_scan_request.first
-                           << " failed";
-
-                // TODO:Assuming single scan only for now
-                auto &radio_mac           = radio_scan_request.first;
-                const bool is_single_scan = true;
-                database.set_channel_scan_in_progress(radio_mac, false, is_single_scan);
-            }
-            return false;
+            abort_scan_in_current_agent();
+            return false; //tlv creation failed - Trigger the next agent
         }
 
         // Send CHANNEL_SCAN_REQUEST_MESSAGE to the agent
@@ -231,18 +244,8 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
         success = send_scan_request_to_agent(agent_mac);
 
         if (!success) {
-            for (auto &radio_scan_request : agent.second.radio_scans) {
-                radio_scan_request.second.mid    = INVALID_MID_ID;
-                radio_scan_request.second.status = eRadioScanStatus::PENDING;
-                LOG(DEBUG) << "Triggering a scan for radio " << radio_scan_request.first
-                           << " failed";
-
-                // TODO:Assuming single scan only for now
-                auto &radio_mac           = radio_scan_request.first;
-                const bool is_single_scan = true;
-                database.set_channel_scan_in_progress(radio_mac, false, is_single_scan);
-            }
-            return false;
+            abort_scan_in_current_agent();
+            return false; //tlv creation failed - Trigger the next agent
         }
 
         agent.second.status  = eAgentStatus::BUSY;
