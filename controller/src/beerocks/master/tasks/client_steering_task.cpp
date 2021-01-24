@@ -83,6 +83,8 @@ void client_steering_task::work()
             }
         }
 
+        print_steering_info();
+
         if (m_database.config.persistent_db) {
             // Set is-unfriendly flag only if client exists in the persistent DB.
             auto client_mac = tlvf::mac_from_string(m_sta_mac);
@@ -293,6 +295,32 @@ void client_steering_task::steer_sta()
                        &bss_tm_event);
 }
 
+void client_steering_task::print_steering_info()
+{
+    // Get timestamp of date & time as a string
+    char temp[70];
+    std::string timestamp;
+    auto now          = std::chrono::system_clock::now();
+    std::time_t now_c = std::chrono::system_clock::to_time_t(now);
+    std::tm now_tm    = *std::localtime(&now_c);
+    if (strftime(temp, sizeof(temp), "%c", &now_tm)) {
+        timestamp = temp;
+    }
+
+    if (m_steering_type.empty()) {
+        m_steering_type = std::string(" 11v (BTM) ");
+        if (!m_database.get_node_11v_capability(m_sta_mac)) {
+            m_steering_type = std::string(" Legacy ");
+        }
+    }
+    LOG(INFO) << "Client Steer attempt: "
+              << "result= " << (m_steering_success ? "Success " : "Failed")
+              << ", sta_mac= " << m_sta_mac << ", source= " << m_original_bssid
+              << ", dest= " << m_target_bssid << ", trigger=" << m_triggered_by
+              << ", type=" << m_steering_type << ", SSID= " << m_ssid_name
+              << ", time= " << timestamp;
+}
+
 void client_steering_task::handle_event(int event_type, void *obj)
 {
     if (event_type == STA_CONNECTED) {
@@ -313,6 +341,7 @@ void client_steering_task::handle_event(int event_type, void *obj)
             TASK_LOG(DEBUG) << "m_disassoc_imminent flag is true, proceeding as usual";
         } else {
             TASK_LOG(DEBUG) << "aborting task";
+            print_steering_info();
             // need to remove client from blacklist ASAP and not wait until the disallow period ends.
             son_actions::unblock_sta(m_database, m_cmdu_tx, m_sta_mac);
             finish();

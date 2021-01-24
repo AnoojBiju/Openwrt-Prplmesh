@@ -40,6 +40,7 @@ protected:
 
 private:
     void steer_sta();
+    void print_steering_info();
 
     db &m_database;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
