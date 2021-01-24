@@ -45,6 +45,9 @@ private:
     task_pool &m_tasks;
     const std::string m_sta_mac;
     const std::string m_target_bssid;
+    const std::string m_triggered_by;
+    std::string m_steering_type;
+    std::string m_ssid_name;
     std::string m_original_bssid;
     bool m_steering_success  = false;
     bool m_disassoc_imminent = true;
