@@ -79,6 +79,7 @@ private:
     std::string current_hostap_ssid;
     std::string chosen_hostap;
     std::string chosen_bssid;
+    std::string chosen_method;
 
     enum states {
         //common states:
