@@ -1499,7 +1499,7 @@ bool db::set_ap_he_capabilities(wfa_map::tlvApHeCapabilities &he_caps_tlv)
     }
 
     uint8_t supported_he_mcs_length = he_caps_tlv.supported_he_mcs_length();
-    path_to_obj += "supported_MCS.";
+    path_to_obj += "supported_MCS";
     for (int i = 0; i < supported_he_mcs_length; i++) {
         auto path_to_obj_instance = m_ambiorix_datamodel->add_instance(path_to_obj);
         if (path_to_obj_instance.empty()) {
@@ -1507,7 +1507,7 @@ bool db::set_ap_he_capabilities(wfa_map::tlvApHeCapabilities &he_caps_tlv)
             return_val = false;
             continue;
         }
-        if (!m_ambiorix_datamodel->set(path_to_obj_instance, "supported_MCS_size",
+        if (!m_ambiorix_datamodel->set(path_to_obj_instance + '.', "supported_MCS_size",
                                        *he_caps_tlv.supported_he_mcs(i))) {
             LOG(WARNING) << "Failed to set " << path_to_obj_instance
                          << "supported_MCS_size: " << he_caps_tlv.supported_he_mcs(i);
@@ -1536,7 +1536,7 @@ bool db::dm_set_sta_he_capabilities(const std::string &path_to_sta,
         LOG(ERROR) << "Failed to add sub-object " << path_to_sta << "HECapabilities";
         return false;
     }
-    std::string path_to_obj = path_to_sta + "HECapabilities";
+    std::string path_to_obj = path_to_sta + "HECapabilities.";
     if (!m_ambiorix_datamodel->set(path_to_obj, "rx_spatial_streams", sta_cap.ht_ss)) {
         LOG(ERROR) << "Failed to set " << path_to_obj << "rx_spatial_streams: " << sta_cap.ht_ss;
         return_val = false;
@@ -1597,7 +1597,7 @@ bool db::dm_set_sta_ht_capabilities(const std::string &path_to_sta,
         LOG(ERROR) << "Failed to add sub-object " << path_to_sta << "HTCapabilities";
         return false;
     }
-    std::string path_to_obj = path_to_sta + ".HTCapabilities.";
+    std::string path_to_obj = path_to_sta + "HTCapabilities.";
     if (!m_ambiorix_datamodel->set(path_to_obj, "GI_20_MHz",
                                    static_cast<bool>(sta_cap.ht_low_bw_short_gi))) {
         LOG(ERROR) << "Failed to set " << path_to_obj
@@ -1637,7 +1637,7 @@ bool db::dm_set_sta_vht_capabilities(const std::string &path_to_sta,
         LOG(ERROR) << "Failed to add sub-object " << path_to_sta << "VHTCapabilities";
         return false;
     }
-    std::string path_to_obj = path_to_sta + ".VHTCapabilities";
+    std::string path_to_obj = path_to_sta + "VHTCapabilities.";
     if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_Tx_MCS", sta_cap.default_mcs)) {
         LOG(ERROR) << "Failed to set " << path_to_obj << "VHT_Tx_MCS: " << sta_cap.default_mcs;
         return_val = false;
@@ -1728,9 +1728,11 @@ bool db::set_station_capabilities(const std::string &client_mac,
         return true;
     }
 
+    path_to_sta += '.';
     // Remove previous capabilities objects, if they exist
     m_ambiorix_datamodel->remove_optional_subobject(path_to_sta, "HTCapabilities");
     m_ambiorix_datamodel->remove_optional_subobject(path_to_sta, "VHTCapabilities");
+    LOG(ERROR) << "Path path_to_sta: " << path_to_sta;
     // TODO: Remove HECapabilities before setting new one.
 
     if (sta_cap.ht_bw != 0xFF && !dm_set_sta_ht_capabilities(path_to_sta, sta_cap)) {
@@ -5891,12 +5893,12 @@ bool db::set_ap_ht_capabilities(const sMacAddr &radio_mac,
         return false;
     }
 
-    path_to_obj += ".Capabilities";
+    path_to_obj += ".Capabilities.";
     if (!m_ambiorix_datamodel->add_optional_subobject(path_to_obj, "HTCapabilities")) {
         LOG(ERROR) << "Failed to add sub-object " << path_to_obj << ".HTCapabilities";
         return false;
     }
-    path_to_obj += ".HTCapabilities";
+    path_to_obj += "HTCapabilities.";
     if (!m_ambiorix_datamodel->set(path_to_obj, "GI_20_MHz",
                                    static_cast<bool>(flags.short_gi_support_20mhz))) {
         LOG(ERROR) << "Failed to set " << path_to_obj
