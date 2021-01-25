@@ -421,6 +421,7 @@ bool son_actions::has_matching_operating_class(
     for (uint8_t i = 0; i < radio_basic_caps.operating_classes_info_list_length(); i++) {
         auto operating_class_info = std::get<1>(radio_basic_caps.operating_classes_info_list(i));
         for (auto operating_class : bss_info_conf.operating_class) {
+            LOG(DEBUG) << "Comparing radio opclass '" << operating_class_info.operating_class() << "' with conf opclass '" << operating_class << "'";
             if (operating_class == operating_class_info.operating_class()) {
                 return true;
             }
