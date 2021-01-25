@@ -2,7 +2,6 @@
 import argparse
 import logging
 import socket
-import time
 from enum import Enum
 from typing import Dict
 
@@ -161,11 +160,6 @@ class UCCSocket:
 
     def cmd_reply(self, command: str, verbose: bool = False) -> Dict[str, str]:
         """Open the connection, send a command and wait for the reply."""
-        # Give the prplMesh UCC listener some time to process previous
-        # commands. This is a workaround to prevent the boardfarm
-        # tests from hanging until the following issue is fixed:
-        # https://jira.prplfoundation.org/browse/PPM-925
-        time.sleep(0.3)
         with self:
             self.send_cmd(command)
             return self.get_reply(verbose)
