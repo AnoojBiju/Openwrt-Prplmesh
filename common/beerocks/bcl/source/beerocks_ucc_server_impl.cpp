@@ -100,11 +100,13 @@ bool UccServerImpl::add_connection(int fd,
         return false;
     }
 
+    // If any, remove existing connection and its installed event handlers.
+    if (m_connection) {
+        remove_connection(m_connection->socket()->fd(), true);
+    }
+
     // Save connection.
-    // Overwrite it if there was an ongoing connection and clear the buffer just in case it
-    // contained some data from previous one
     m_connection = std::move(connection);
-    m_buffer.clear();
 
     return true;
 }
@@ -126,6 +128,9 @@ bool UccServerImpl::remove_connection(int fd, bool remove_handlers)
 
     // Remove connection
     m_connection.reset();
+
+    // Clear the buffer just in case it contained some data from removed connection.
+    m_buffer.clear();
 
     return true;
 }
