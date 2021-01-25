@@ -599,6 +599,18 @@ public:
     bool add_vap(const std::string &radio_mac, int vap_id, const std::string &bssid,
                  const std::string &ssid, bool backhual);
 
+    /** Update VAP information
+     *
+     * Add or update the VAP information for the given BSSID on the given radio. If the VAP exists
+     * already, it is updated. If no VAP with the given BSSID exists, a new one is created with
+     * a unique vap_id.
+     *
+     * For prplMesh agents, this function should be called after the VAPs were created (with
+     * add_vap) so the vap_id is correct. For non-prplMesh agents, the vap_id doesn't matter.
+     */
+    bool update_vap(const sMacAddr &radio_mac, const sMacAddr &bssid, const std::string &ssid,
+                    bool backhaul);
+
     std::string get_hostap_ssid(const std::string &mac);
     /**
      * @brief checks if vap name is on the steer list.
