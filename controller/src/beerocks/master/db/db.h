@@ -847,7 +847,7 @@ public:
 
     /**
      * @brief
-     * 
+     *
      * @param RUID Radio UID
      * @param operating_class Operating class of report
      * @param channel channel of report
@@ -1571,6 +1571,18 @@ private:
     bool dm_add_ap_operating_classes(const std::string &radio_mac, uint8_t max_tx_power,
                                      uint8_t op_class,
                                      const std::vector<uint8_t> &non_operable_channels);
+
+    /**
+     * @brief Add or update instance of "BSS" data element, set values for its parameters.
+     *
+     * Example: "Controller.Network.Device.1.Radio.1.BSS.1"
+     *
+     * @param radio_mac mac address of radio on which BSSID exists.
+     * @param bssid BSSID of the BSS.
+     * @param ssid SSID of the BSS. If empty, BSS is considered disabled.
+     */
+    bool dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid,
+                          const std::string &ssid);
 
     /**
      * @brief Set data model path member of a node
