@@ -12,6 +12,7 @@
 #include "beerocks_defines.h"
 #include "beerocks_string_utils.h"
 
+#include <chrono>
 #include <cstddef>
 #include <fcntl.h>
 #include <iostream>
@@ -69,6 +70,17 @@ public:
                          const char *calling_file = __builtin_FILE(),
                          int calling_line         = __builtin_LINE());
     static std::string dump_buffer(const uint8_t *buffer, size_t len);
+    /**
+    * @brief This function will return a time-date string format as defined in ISO 8601.
+    * ISO 8601 is aligned to the following format:
+    *   '\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z|[\+\-]\d{2}:\d{2})'
+    * For example: 2016-09-28T14:50:31.456449Z or 2016-09-28T14:50:31.456449+06:00
+    * 
+    * @param[in] timestamp a system_clock timepoint, defaulted to now()
+    * @return ISO 8601 aligned std::string or empty string in case of failure.
+    */
+    static std::string get_ISO_8601_timestamp_string(
+        std::chrono::system_clock::time_point timestamp = std::chrono::system_clock::now());
 };
 
 } //namespace beerocks

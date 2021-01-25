@@ -243,8 +243,11 @@ public:
         std::unordered_map<uint8_t, sChannelInfo> channels_list;
 
         // Key: Channel number
-        // Value: Neighboring APs as ChannelScanResults.
-        std::unordered_map<uint8_t, std::vector<beerocks_message::sChannelScanResults>>
+        // Value: Pair containing:
+        //              Timestamp of Scan request
+        //              Vector of Neighboring APs as ChannelScanResults.
+        std::unordered_map<uint8_t, std::pair<std::chrono::system_clock::time_point,
+                                              std::vector<beerocks_message::sChannelScanResults>>>
             channel_scan_results;
 
         // Associated clients grouped by Client MAC.

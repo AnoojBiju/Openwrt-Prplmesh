@@ -1475,6 +1475,116 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         message_com::send_cmdu(ap_manager_socket, cmdu_tx);
         break;
     }
+    case beerocks_message::ACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST: {
+        LOG(TRACE) << "ACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST";
+        auto request_in =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST>();
+        if (!request_in) {
+            LOG(ERROR) << "addClass cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST failed";
+            return false;
+        }
+
+        auto db = AgentDB::get();
+
+        auto radio = db->radio(m_fronthaul_iface);
+        if (!radio) {
+            return false;
+        }
+
+        bool radio_5g = wireless_utils::is_frequency_band_5ghz(radio->freq_type);
+
+        // If received scan request and ZWDFS CAC is about to finish refuse to start the
+        // background scan only on the 5G radio.
+        LOG(DEBUG) << "zwdfs_cac_remaining_time_sec=" << db->statuses.zwdfs_cac_remaining_time_sec;
+        if (radio_5g && db->statuses.zwdfs_cac_remaining_time_sec > 0) {
+            constexpr uint8_t ETSI_CAC_TIME_SEC = 72; // ETSI CAC time sec (60) * factor of 1.2
+            float dwell_time_sec                = request_in->scan_params().dwell_time_ms / 1000.0;
+            auto number_of_channel_to_scan      = request_in->scan_params().channel_pool_size;
+
+            constexpr float SCAN_TIME_FACTOR = 89.1;
+            // scan time factor (89.1) is calculated in this way:
+            // factor * (scan_break_time / slice_size + 1) = 89.1
+            // when: factor=1.1, scan_break_time=1600ms, slice_size=20ms
+            auto total_scan_time = number_of_channel_to_scan * dwell_time_sec * SCAN_TIME_FACTOR;
+            LOG(DEBUG) << "total_scan_time=" << total_scan_time
+                       << " on number_of_channels=" << number_of_channel_to_scan;
+
+            if (db->statuses.zwdfs_cac_remaining_time_sec < ETSI_CAC_TIME_SEC &&
+                db->statuses.zwdfs_cac_remaining_time_sec < total_scan_time) {
+                LOG(DEBUG) << "Refuse DCS scan";
+                auto notification = message_com::create_vs_message<
+                    beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION>(cmdu_tx);
+                if (!notification) {
+                    LOG(ERROR)
+                        << "Failed building cACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION msg";
+                    return false;
+                }
+
+                send_cmdu_to_controller(cmdu_tx);
+                break;
+            }
+        }
+
+        radio->statuses.channel_scan_in_progress = true;
+
+        auto request_out = message_com::create_vs_message<
+            beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST>(cmdu_tx);
+        if (!request_out) {
+            LOG(ERROR)
+                << "Failed building cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST message!";
+            return false;
+        }
+
+        request_out->scan_params() = request_in->scan_params();
+
+        LOG(DEBUG) << "send cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST";
+        message_com::send_cmdu(monitor_socket, cmdu_tx);
+        break;
+    }
+    case beerocks_message::ACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST: {
+        LOG(TRACE) << "ACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST";
+        auto request_in =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST>();
+        if (!request_in) {
+            LOG(ERROR) << "addClass cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST failed";
+            return false;
+        }
+
+        auto request_out = message_com::create_vs_message<
+            beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_DUMP_RESULTS_REQUEST>(cmdu_tx);
+        if (!request_out) {
+            LOG(ERROR)
+                << "Failed building cACTION_MONITOR_CHANNEL_SCAN_DUMP_RESULTS_REQUEST message!";
+            return false;
+        }
+
+        LOG(DEBUG) << "send cACTION_MONITOR_CHANNEL_SCAN_DUMP_RESULTS_REQUEST";
+        message_com::send_cmdu(monitor_socket, cmdu_tx);
+        break;
+    }
+    case beerocks_message::ACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST: {
+        LOG(TRACE) << "ACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST";
+        auto request_in =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST>();
+        if (!request_in) {
+            LOG(ERROR) << "addClass cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST failed";
+            return false;
+        }
+
+        auto request_out = message_com::create_vs_message<
+            beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_ABORT_REQUEST>(cmdu_tx);
+        if (!request_out) {
+            LOG(ERROR) << "Failed building cACTION_MONITOR_CHANNEL_SCAN_ABORT_REQUEST message!";
+            return false;
+        }
+
+        LOG(DEBUG) << "send cACTION_MONITOR_CHANNEL_SCAN_ABORT_REQUEST";
+        message_com::send_cmdu(monitor_socket, cmdu_tx);
+        break;
+    }
     default: {
         LOG(ERROR) << "Unknown BACKHAUL_MANAGER message, action_op: "
                    << int(beerocks_header->action_op());
@@ -3093,15 +3203,24 @@ bool slave_thread::handle_cmdu_monitor_message(Socket *sd,
             return false;
         }
 
-        auto response_out = message_com::create_vs_message<
+        auto response_out_controller = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE>(cmdu_tx);
-        if (!response_out) {
+        if (!response_out_controller) {
             LOG(ERROR) << "Failed building cACTION_CONTROL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE";
             return false;
         }
+        auto response_out_backhaul = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE>(cmdu_tx);
+        if (!response_out_backhaul) {
+            LOG(ERROR) << "Failed building cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE";
+            return false;
+        }
 
-        response_out->success() = response_in->success();
+        response_out_controller->success() = response_in->success();
+        response_out_backhaul->success()   = response_in->success();
+
         send_cmdu_to_controller(cmdu_tx);
+        message_com::send_cmdu(backhaul_manager_socket, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_MONITOR_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE: {
@@ -3113,20 +3232,43 @@ bool slave_thread::handle_cmdu_monitor_message(Socket *sd,
             return false;
         }
 
-        auto response_out = message_com::create_vs_message<
+        auto response_out_controller = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE>(cmdu_tx);
-        if (!response_out) {
+        if (!response_out_controller) {
             LOG(ERROR) << "Failed building cACTION_CONTROL_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE";
             return false;
         }
+        auto response_out_backhaul = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE>(cmdu_tx);
+        if (!response_out_backhaul) {
+            LOG(ERROR) << "Failed building cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE";
+            return false;
+        }
 
-        response_out->success() = response_in->success();
+        response_out_controller->success() = response_in->success();
+        response_out_backhaul->success()   = response_in->success();
         send_cmdu_to_controller(cmdu_tx);
+        message_com::send_cmdu(backhaul_manager_socket, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_MONITOR_CHANNEL_SCAN_ABORT_RESPONSE: {
-        LOG(ERROR) << "addClass cACTION_MONITOR_CHANNEL_SCAN_ABORT_RESPONSE received";
-        //TODO: propagate the scan-abort-response to the requesting agent task (channel-scan-task)
+        auto response_in =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_ABORT_RESPONSE>();
+        if (!response_in) {
+            LOG(ERROR) << "addClass cACTION_MONITOR_CHANNEL_SCAN_ABORT_RESPONSE failed";
+            return false;
+        }
+
+        auto response_out_backhaul = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_RESPONSE>(cmdu_tx);
+        if (!response_out_backhaul) {
+            LOG(ERROR) << "Failed building cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_RESPONSE";
+            return false;
+        }
+
+        response_out_backhaul->success() = response_in->success();
+        message_com::send_cmdu(backhaul_manager_socket, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_MONITOR_CHANNEL_SCAN_TRIGGERED_NOTIFICATION: {
@@ -3138,24 +3280,25 @@ bool slave_thread::handle_cmdu_monitor_message(Socket *sd,
             return false;
         }
 
-        auto notification_out = message_com::create_vs_message<
+        auto notification_out_controller = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION>(cmdu_tx);
-        if (!notification_out) {
+        if (!notification_out_controller) {
             LOG(ERROR) << "Failed building cACTION_CONTROL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION !";
             return false;
         }
-
         send_cmdu_to_controller(cmdu_tx);
+
+        auto notification_out_backhaul = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION>(cmdu_tx);
+        if (!notification_out_backhaul) {
+            LOG(ERROR) << "Failed building cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION !";
+            return false;
+        }
+
+        message_com::send_cmdu(backhaul_manager_socket, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_MONITOR_CHANNEL_SCAN_RESULTS_NOTIFICATION: {
-
-        auto db    = AgentDB::get();
-        auto radio = db->radio(m_fronthaul_iface);
-        if (!radio) {
-            break;
-        }
-
         auto notification_in =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_RESULTS_NOTIFICATION>();
@@ -3164,43 +3307,31 @@ bool slave_thread::handle_cmdu_monitor_message(Socket *sd,
             return false;
         }
 
-        auto notification_out = message_com::create_vs_message<
+        auto notification_out_controller = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_CHANNEL_SCAN_RESULTS_NOTIFICATION>(cmdu_tx);
-        if (!notification_out) {
+        if (!notification_out_controller) {
             LOG(ERROR) << "Failed building cACTION_CONTROL_CHANNEL_SCAN_RESULTS_NOTIFICATION !";
             return false;
         }
 
-        auto &is_dump = notification_out->is_dump() = notification_in->is_dump();
-        // The scan results are provided as a series of scan-results notifications.
-        // The first notification includes a message with is_dump set to 0, which doesn't
-        // include a real result and only indicates the start of the series.
-        // The following notifications with is_dump set to 1, contains a single result.
-        if (is_dump == 0) {
-            // Clear the stored results in Agent DB for the current radio.
-            radio->channel_scan_results.clear();
-        } else {
-            // Store result in Agent DB for the current radio.
-            auto &scan_result = notification_out->scan_results() = notification_in->scan_results();
-            radio->channel_scan_results[scan_result.channel].push_back(scan_result);
-            //TODO: Forward the result to the DCS R2 task handling.
-        }
+        notification_out_controller->scan_results() = notification_in->scan_results();
+        notification_out_controller->is_dump()      = notification_in->is_dump();
 
         send_cmdu_to_controller(cmdu_tx);
+
+        auto notification_out_backhaul = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_RESULTS_NOTIFICATION>(cmdu_tx);
+        if (!notification_out_backhaul) {
+            LOG(ERROR) << "Failed building cACTION_BACKHAUL_CHANNEL_SCAN_RESULTS_NOTIFICATION !";
+            return false;
+        }
+
+        notification_out_backhaul->scan_results() = notification_in->scan_results();
+        notification_out_backhaul->is_dump()      = notification_in->is_dump();
+        message_com::send_cmdu(backhaul_manager_socket, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_MONITOR_CHANNEL_SCAN_FINISHED_NOTIFICATION: {
-
-        auto db    = AgentDB::get();
-        auto radio = db->radio(m_fronthaul_iface);
-        if (!radio) {
-            break;
-        }
-
-        LOG(DEBUG) << "Received ACTION_MONITOR_CHANNEL_SCAN_FINISHED_NOTIFICATION";
-
-        radio->statuses.channel_scan_in_progress = false;
-
         auto notification_in =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_FINISHED_NOTIFICATION>();
@@ -3209,27 +3340,28 @@ bool slave_thread::handle_cmdu_monitor_message(Socket *sd,
             return false;
         }
 
-        auto notification_out = message_com::create_vs_message<
+        auto notification_out_controller = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_CHANNEL_SCAN_FINISHED_NOTIFICATION>(cmdu_tx);
-        if (!notification_out) {
+        if (!notification_out_controller) {
             LOG(ERROR) << "Failed building cACTION_CONTROL_CHANNEL_SCAN_FINISHED_NOTIFICATION !";
             return false;
         }
 
         send_cmdu_to_controller(cmdu_tx);
+
+        auto notification_out_backhaul = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_FINISHED_NOTIFICATION>(cmdu_tx);
+        if (!notification_out_backhaul) {
+            LOG(ERROR) << "Failed building cACTION_BACKHAUL_CHANNEL_SCAN_FINISHED_NOTIFICATION !";
+            return false;
+        }
+
+        message_com::send_cmdu(backhaul_manager_socket, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION: {
-        auto db = AgentDB::get();
-
-        auto radio = db->radio(m_fronthaul_iface);
-        if (!radio) {
-            break;
-        }
 
         LOG(DEBUG) << "Received ACTION_MONITOR_CHANNEL_SCAN_ABORTED_NOTIFICATION";
-
-        radio->statuses.channel_scan_in_progress = false;
 
         auto notification_in =
             beerocks_header
@@ -3239,14 +3371,23 @@ bool slave_thread::handle_cmdu_monitor_message(Socket *sd,
             return false;
         }
 
-        auto notification_out = message_com::create_vs_message<
+        auto notification_out_controller = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_CHANNEL_SCAN_ABORT_NOTIFICATION>(cmdu_tx);
-        if (!notification_out) {
-            LOG(ERROR) << "Failed building cACTION_CONTROL_CHANNEL_SCAN_ABORT_NOTIFICATION !";
+        if (!notification_out_controller) {
+            LOG(ERROR) << "Failed building cACTION_CONTROL_CHANNEL_SCAN_ABORT_NOTIFICATION!";
             return false;
         }
 
         send_cmdu_to_controller(cmdu_tx);
+
+        auto notification_out_backhaul = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_ABORTED_NOTIFICATION>(cmdu_tx);
+        if (!notification_out_backhaul) {
+            LOG(ERROR) << "Failed building cACTION_BACKHAUL_CHANNEL_SCAN_ABORTED_NOTIFICATION!";
+            return false;
+        }
+
+        message_com::send_cmdu(backhaul_manager_socket, cmdu_tx);
         break;
     }
     default: {
