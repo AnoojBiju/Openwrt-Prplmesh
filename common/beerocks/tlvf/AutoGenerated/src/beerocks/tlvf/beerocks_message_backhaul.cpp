@@ -2545,4 +2545,707 @@ bool cACTION_BACKHAUL_RADIO_DISABLE_REQUEST::init()
     return true;
 }
 
+cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST::cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST::cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST::~cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST() {
+}
+sTriggerChannelScanParams& cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST::scan_params() {
+    return (sTriggerChannelScanParams&)(*m_scan_params);
+}
+
+void cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST::class_swap()
+{
+    tlvf_swap(8*sizeof(eActionOp_BACKHAUL), reinterpret_cast<uint8_t*>(m_action_op));
+    m_scan_params->struct_swap();
+}
+
+bool cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST::get_initial_size()
+{
+    size_t class_size = 0;
+    class_size += sizeof(sTriggerChannelScanParams); // scan_params
+    return class_size;
+}
+
+bool cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_scan_params = reinterpret_cast<sTriggerChannelScanParams*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sTriggerChannelScanParams))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sTriggerChannelScanParams) << ") Failed!";
+        return false;
+    }
+    if (!m_parse__) { m_scan_params->struct_init(); }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
+cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE::cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE::cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE::~cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE() {
+}
+uint8_t& cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE::success() {
+    return (uint8_t&)(*m_success);
+}
+
+void cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE::class_swap()
+{
+    tlvf_swap(8*sizeof(eActionOp_BACKHAUL), reinterpret_cast<uint8_t*>(m_action_op));
+}
+
+bool cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE::get_initial_size()
+{
+    size_t class_size = 0;
+    class_size += sizeof(uint8_t); // success
+    return class_size;
+}
+
+bool cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_success = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+        return false;
+    }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
+cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST::cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST::cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST::~cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST() {
+}
+void cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST::class_swap()
+{
+    tlvf_swap(8*sizeof(eActionOp_BACKHAUL), reinterpret_cast<uint8_t*>(m_action_op));
+}
+
+bool cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST::get_initial_size()
+{
+    size_t class_size = 0;
+    return class_size;
+}
+
+bool cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
+cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE::cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE::cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE::~cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE() {
+}
+uint8_t& cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE::success() {
+    return (uint8_t&)(*m_success);
+}
+
+void cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE::class_swap()
+{
+    tlvf_swap(8*sizeof(eActionOp_BACKHAUL), reinterpret_cast<uint8_t*>(m_action_op));
+}
+
+bool cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE::get_initial_size()
+{
+    size_t class_size = 0;
+    class_size += sizeof(uint8_t); // success
+    return class_size;
+}
+
+bool cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_success = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+        return false;
+    }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
+cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION::cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION::cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION::~cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION() {
+}
+sMacAddr& cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION::radio_mac() {
+    return (sMacAddr&)(*m_radio_mac);
+}
+
+void cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION::class_swap()
+{
+    tlvf_swap(8*sizeof(eActionOp_BACKHAUL), reinterpret_cast<uint8_t*>(m_action_op));
+    m_radio_mac->struct_swap();
+}
+
+bool cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION::get_initial_size()
+{
+    size_t class_size = 0;
+    class_size += sizeof(sMacAddr); // radio_mac
+    return class_size;
+}
+
+bool cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_radio_mac = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sMacAddr))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";
+        return false;
+    }
+    if (!m_parse__) { m_radio_mac->struct_init(); }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
+cACTION_BACKHAUL_CHANNEL_SCAN_RESULTS_NOTIFICATION::cACTION_BACKHAUL_CHANNEL_SCAN_RESULTS_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_CHANNEL_SCAN_RESULTS_NOTIFICATION::cACTION_BACKHAUL_CHANNEL_SCAN_RESULTS_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_CHANNEL_SCAN_RESULTS_NOTIFICATION::~cACTION_BACKHAUL_CHANNEL_SCAN_RESULTS_NOTIFICATION() {
+}
+sChannelScanResults& cACTION_BACKHAUL_CHANNEL_SCAN_RESULTS_NOTIFICATION::scan_results() {
+    return (sChannelScanResults&)(*m_scan_results);
+}
+
+sMacAddr& cACTION_BACKHAUL_CHANNEL_SCAN_RESULTS_NOTIFICATION::radio_mac() {
+    return (sMacAddr&)(*m_radio_mac);
+}
+
+uint8_t& cACTION_BACKHAUL_CHANNEL_SCAN_RESULTS_NOTIFICATION::is_dump() {
+    return (uint8_t&)(*m_is_dump);
+}
+
+void cACTION_BACKHAUL_CHANNEL_SCAN_RESULTS_NOTIFICATION::class_swap()
+{
+    tlvf_swap(8*sizeof(eActionOp_BACKHAUL), reinterpret_cast<uint8_t*>(m_action_op));
+    m_scan_results->struct_swap();
+    m_radio_mac->struct_swap();
+}
+
+bool cACTION_BACKHAUL_CHANNEL_SCAN_RESULTS_NOTIFICATION::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cACTION_BACKHAUL_CHANNEL_SCAN_RESULTS_NOTIFICATION::get_initial_size()
+{
+    size_t class_size = 0;
+    class_size += sizeof(sChannelScanResults); // scan_results
+    class_size += sizeof(sMacAddr); // radio_mac
+    class_size += sizeof(uint8_t); // is_dump
+    return class_size;
+}
+
+bool cACTION_BACKHAUL_CHANNEL_SCAN_RESULTS_NOTIFICATION::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_scan_results = reinterpret_cast<sChannelScanResults*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sChannelScanResults))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sChannelScanResults) << ") Failed!";
+        return false;
+    }
+    if (!m_parse__) { m_scan_results->struct_init(); }
+    m_radio_mac = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sMacAddr))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";
+        return false;
+    }
+    if (!m_parse__) { m_radio_mac->struct_init(); }
+    m_is_dump = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!m_parse__) *m_is_dump = 0x0;
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+        return false;
+    }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
+cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST::cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST::cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST::~cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST() {
+}
+void cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST::class_swap()
+{
+    tlvf_swap(8*sizeof(eActionOp_BACKHAUL), reinterpret_cast<uint8_t*>(m_action_op));
+}
+
+bool cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST::get_initial_size()
+{
+    size_t class_size = 0;
+    return class_size;
+}
+
+bool cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
+cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_RESPONSE::cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_RESPONSE(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_RESPONSE::cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_RESPONSE(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_RESPONSE::~cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_RESPONSE() {
+}
+uint8_t& cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_RESPONSE::success() {
+    return (uint8_t&)(*m_success);
+}
+
+void cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_RESPONSE::class_swap()
+{
+    tlvf_swap(8*sizeof(eActionOp_BACKHAUL), reinterpret_cast<uint8_t*>(m_action_op));
+}
+
+bool cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_RESPONSE::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_RESPONSE::get_initial_size()
+{
+    size_t class_size = 0;
+    class_size += sizeof(uint8_t); // success
+    return class_size;
+}
+
+bool cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_RESPONSE::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_success = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+        return false;
+    }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
+cACTION_BACKHAUL_CHANNEL_SCAN_ABORTED_NOTIFICATION::cACTION_BACKHAUL_CHANNEL_SCAN_ABORTED_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_CHANNEL_SCAN_ABORTED_NOTIFICATION::cACTION_BACKHAUL_CHANNEL_SCAN_ABORTED_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_CHANNEL_SCAN_ABORTED_NOTIFICATION::~cACTION_BACKHAUL_CHANNEL_SCAN_ABORTED_NOTIFICATION() {
+}
+uint8_t& cACTION_BACKHAUL_CHANNEL_SCAN_ABORTED_NOTIFICATION::reason() {
+    return (uint8_t&)(*m_reason);
+}
+
+sMacAddr& cACTION_BACKHAUL_CHANNEL_SCAN_ABORTED_NOTIFICATION::radio_mac() {
+    return (sMacAddr&)(*m_radio_mac);
+}
+
+void cACTION_BACKHAUL_CHANNEL_SCAN_ABORTED_NOTIFICATION::class_swap()
+{
+    tlvf_swap(8*sizeof(eActionOp_BACKHAUL), reinterpret_cast<uint8_t*>(m_action_op));
+    m_radio_mac->struct_swap();
+}
+
+bool cACTION_BACKHAUL_CHANNEL_SCAN_ABORTED_NOTIFICATION::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cACTION_BACKHAUL_CHANNEL_SCAN_ABORTED_NOTIFICATION::get_initial_size()
+{
+    size_t class_size = 0;
+    class_size += sizeof(uint8_t); // reason
+    class_size += sizeof(sMacAddr); // radio_mac
+    return class_size;
+}
+
+bool cACTION_BACKHAUL_CHANNEL_SCAN_ABORTED_NOTIFICATION::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_reason = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+        return false;
+    }
+    m_radio_mac = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sMacAddr))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";
+        return false;
+    }
+    if (!m_parse__) { m_radio_mac->struct_init(); }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
+cACTION_BACKHAUL_CHANNEL_SCAN_FINISHED_NOTIFICATION::cACTION_BACKHAUL_CHANNEL_SCAN_FINISHED_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_CHANNEL_SCAN_FINISHED_NOTIFICATION::cACTION_BACKHAUL_CHANNEL_SCAN_FINISHED_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_CHANNEL_SCAN_FINISHED_NOTIFICATION::~cACTION_BACKHAUL_CHANNEL_SCAN_FINISHED_NOTIFICATION() {
+}
+sMacAddr& cACTION_BACKHAUL_CHANNEL_SCAN_FINISHED_NOTIFICATION::radio_mac() {
+    return (sMacAddr&)(*m_radio_mac);
+}
+
+void cACTION_BACKHAUL_CHANNEL_SCAN_FINISHED_NOTIFICATION::class_swap()
+{
+    tlvf_swap(8*sizeof(eActionOp_BACKHAUL), reinterpret_cast<uint8_t*>(m_action_op));
+    m_radio_mac->struct_swap();
+}
+
+bool cACTION_BACKHAUL_CHANNEL_SCAN_FINISHED_NOTIFICATION::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cACTION_BACKHAUL_CHANNEL_SCAN_FINISHED_NOTIFICATION::get_initial_size()
+{
+    size_t class_size = 0;
+    class_size += sizeof(sMacAddr); // radio_mac
+    return class_size;
+}
+
+bool cACTION_BACKHAUL_CHANNEL_SCAN_FINISHED_NOTIFICATION::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_radio_mac = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sMacAddr))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";
+        return false;
+    }
+    if (!m_parse__) { m_radio_mac->struct_init(); }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
 
