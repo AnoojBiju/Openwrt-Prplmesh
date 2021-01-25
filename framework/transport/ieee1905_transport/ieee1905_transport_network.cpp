@@ -386,8 +386,6 @@ void Ieee1905Transport::handle_interface_pollin_event(int fd)
         len = sizeof(buf);
     }
 
-    MAPF_DBG("received packet on interface " << addr.sll_ifindex << ".");
-
     // convert packet to internal data structure for further handling
     struct ether_header *eh = (struct ether_header *)buf;
     struct Packet packet;
