@@ -4,9 +4,9 @@ message("${BoldWhite}Preparing ${BoldGreen}${PROJECT_NAME}${BoldWhite} for the $
 # Set the base path for the current module
 set(MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 
-file(GLOB beerocks_agent_sources 
+file(GLOB beerocks_agent_sources
     ${MODULE_PATH}/backhaul_manager/*.c*
-    # This code should be moved to BPL 
+    # This code should be moved to BPL
     # [TASK] Move link metric related classes to BPL #910
     ${MODULE_PATH}/link_metrics/*.c*
     ${MODULE_PATH}/platform_manager/*.c*
@@ -16,6 +16,10 @@ file(GLOB beerocks_agent_sources
     ${MODULE_PATH}/gate/*.c*
     ${MODULE_PATH}/*.c*
 )
+
+if (ENABLE_NBAPI)
+    add_subdirectory("nbapi")
+endif()
 
 # UGW
 if (TARGET_PLATFORM STREQUAL "ugw")
@@ -33,7 +37,19 @@ endif()
 
 add_executable(${PROJECT_NAME} ${beerocks_agent_sources})
 set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,-z,defs")
-target_link_libraries(${PROJECT_NAME} rt dl bcl btl tlvf elpp btlvf bwl bpl ${LIBS})
+target_link_libraries(${PROJECT_NAME} rt dl bcl btl tlvf elpp btlvf bwl bpl nbapi ${LIBS})
+
+if (TARGET_PLATFORM STREQUAL "openwrt")
+    set(UBUS_SOCK "-DAMBIORIX_BUS_URI=\"\\\"ubus:/var/run/ubus.sock\\\"\"")
+endif()
+
+if (ENABLE_NBAPI)
+    # Include AMBIORIX in the build
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_NBAPI ${UBUS_SOCK}")
+    find_package(amxc REQUIRED)
+    find_package(amxd REQUIRED)
+    target_link_libraries(${PROJECT_NAME} amxc amxd)
+endif()
 
 # Install
 install(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_BINDIR})
@@ -43,7 +59,7 @@ if (BUILD_TESTS)
     set(TEST_PROJECT_NAME ${PROJECT_NAME}_unit_tests)
     set(unit_tests_sources
         gate/unit_tests/gate_test.cpp
-        ${MODULE_PATH}/gate/1905_beacon_query_to_vs.cpp 
+        ${MODULE_PATH}/gate/1905_beacon_query_to_vs.cpp
         ${MODULE_PATH}/gate/vs_beacon_response_to_1905.cpp
     )
     add_executable(${TEST_PROJECT_NAME}
