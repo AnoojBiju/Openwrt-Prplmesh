@@ -268,8 +268,12 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
         bool success = true;
         for (auto &radio_scan_request : agent.second.radio_scans) {
 
-            radio_scan_request.second.mid    = mid;
-            radio_scan_request.second.status = eRadioScanStatus::TRIGGERED_WAIT_FOR_ACK;
+            radio_scan_request.second.mid = mid;
+            //TODO: Skip ACK until ACK message can be routed back to controller task.
+            //      (required knowing the mid of outgoing messages)
+            //      assume scan request was received and acknowledged by the agent for now.
+            //radio_scan_request.second.status = eRadioScanStatus::TRIGGERED_WAIT_FOR_ACK;
+            radio_scan_request.second.status = eRadioScanStatus::SCAN_IN_PROGRESS;
             LOG(DEBUG) << "Triggering a scan for radio " << radio_scan_request.first;
 
             // TODO:Assuming single scan only for now
@@ -440,24 +444,18 @@ bool dynamic_channel_selection_r2_task::handle_scan_request_event(
 bool dynamic_channel_selection_r2_task::handle_scan_report_event(
     const sScanReportEvent &scan_report_event)
 {
-    // Remove all active scans (with the same mid as scan report) from the agent
-    // and mark agent as idle
-    auto mid = scan_report_event.mid;
 
-    // check if there is an agent waiting for the response
-    auto mid_map_it = mid_to_agent_map.find(mid);
-    if (mid_map_it == mid_to_agent_map.end()) {
-        LOG(ERROR) << "unexpected mid " << std::hex << mid << " in scan report";
-        return false;
-    }
+    // Remove all active scans from the agent and mark it as idle.
 
-    auto &agent_mac = mid_map_it->second;
-    mid_to_agent_map.erase(mid);
+    //TODO: Insert mid_to_agent_map validation here when mid of outgoing request messages is known.
+    //      If radio scan in progress, assume the agent is expecting the current scan report for now.
+
+    auto &agent_mac = scan_report_event.agent_mac;
 
     auto agent_it = m_agents_status_map.find(agent_mac);
     if (agent_it == m_agents_status_map.end()) {
-        LOG(ERROR) << "Wrong mid_to_agent_map, agent " << agent_mac
-                   << " not found in status container";
+        LOG(WARNING) << "Unexpected scan report - agent_mac " << agent_mac
+                     << " not found in status container ";
         return false;
     }
 
