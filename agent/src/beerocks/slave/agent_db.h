@@ -20,34 +20,42 @@
 #include <mutex>
 #include <unordered_set>
 
+#ifdef ENABLE_NBAPI
+#include "ambiorix_impl.h"
+
+#else
+#include "ambiorix_dummy.h"
+
+#endif // ENABLE_NBAPI
+
 namespace beerocks {
 
 /**
  * @brief AgentDB is a class used by all main Agent threads on the Agent process to store the Agent
  * common data.
- * 
+ *
  * The class is implemented using singleton design pattern.
  * It is thread safe and being locked and released automatically.
- * 
+ *
  * How to use:
  * @code
  * auto db = AgentDB::get();            // Get DB and automatically lock it. The lock will be
  *                                      // Released when 'db' will be destructed.
- * 
+ *
  * db->foo = 42;                        // Change database member 'foo' to value 42.
  * db->bar = "prpl"                     // Set another database member.
  * auto &my_foo = db->foo;              // Get a refernce to a member.
- * 
+ *
  * AgentDB::get()->foo = 44;            // Set database member directly.
- * 
- * 
+ *
+ *
  * Unsafe operation which should never be done:
  * auto my_foo = AgentDB::get()->foo;   // Unsafe! Don't do it! The database might be unlocked,
  *                                      // if used on ranged loop. So better not use it.
- * 
+ *
  * auto &foo = AgentDB::get()->foo;     // Unsafe! Don't do it! The database will be unlocked,
  *                                      // but the reference will remain.
- * 
+ *
  * std::string &get_foo() {             // Unsafe! Don't do it! Returning refernce to the database
  *     auto db = AgentDB::get();        // on a wrapper function is unsafe because the database will
  *     return db->foo;                  // be unlocked when the function ends, and the caller will
@@ -81,6 +89,7 @@ private:
     std::recursive_mutex m_db_mutex;
     void db_lock() { m_db_mutex.lock(); }
     void db_unlock() { m_db_mutex.unlock(); }
+    std::shared_ptr<beerocks::nbapi::Ambiorix> m_ambiorix_datamodel{};
 
     /* Put down from here database members and functions used by the Agent modules */
 
@@ -148,7 +157,7 @@ public:
         uint32_t zwdfs_cac_remaining_time_sec;
     } statuses;
 
-    /** 
+    /**
      * Agent Sub Entities Data
      */
     struct sBridge {
@@ -290,7 +299,7 @@ public:
     /**
      * @brief Get pointer to the radio data struct of a specific interface. The function can
      * accepts either front or back interface name.
-     * 
+     *
      * @param iface_name Interface name of a radio, front or back.
      * @return std::unique_ptr<sRadio> to the radio struct if exist, otherwise, nullptr.
      */
@@ -301,7 +310,7 @@ public:
      * This function should be called only once with valid arguments. If called once and then called
      * again, the radio struct on the database will not be updated with new arguments, and the
      * function will return nullptr.
-     * 
+     *
      * @param front_iface_name Front interface name.
      * @param back_iface_name Back interface name.
      * @return true if a radio struct has been added to the database, otherwise return false.
@@ -311,17 +320,17 @@ public:
 
     /**
      * @brief Get list of all radio objects on the database.
-     * This function shall be used in order to iterate over all the radios. 
-     * 
+     * This function shall be used in order to iterate over all the radios.
+     *
      * @return const std::vector<std::string &>& Intefaces names list.
      */
     const std::vector<sRadio *> &get_radios_list() { return m_radios_list; };
 
     /**
      * @brief Removes a radio object from the radios list.
-     * This function does not remove the radio completely from the database, only the pointer to 
+     * This function does not remove the radio completely from the database, only the pointer to
      * that radio, from the list which is get when calling "get_radios_list()".
-     * 
+     *
      * @param iface_name Front or back interface name.
      */
     void remove_radio_from_radios_list(const std::string &iface_name);
@@ -330,8 +339,8 @@ public:
     enum class eMacType : uint8_t { ALL, RADIO, BSSID, CLIENT };
 
     /**
-     * @brief Get a pointer to the parent radio struct of given MAC address. 
-     * 
+     * @brief Get a pointer to the parent radio struct of given MAC address.
+     *
      * @param mac MAC address of radio interface or bssid.
      * @param mac_type_hint Hint for the MAC type, for faster lookup.
      * @return sRadio* A pointer to the radio struct containing the given MAC address.
@@ -342,7 +351,7 @@ public:
      * @brief Erase client from associated_clients list.
      * If @a bssid is given, then remove client only from its radio, otherwise remove from all
      * radios.
-     * 
+     *
      * @param client_mac The client MAC address.
      * @param bssid The bssid that the client will be removed from its radio.
      */
@@ -359,6 +368,26 @@ public:
     bool get_mac_by_ssid(const sMacAddr &ruid, const std::string &ssid, sMacAddr &value);
 
     /**
+     * @brief Initialize Agent Data model.
+     *
+     * This method should be called in initialization state, otherwise data-model methods fail.
+     *
+     * @param dm Ambiorix shared ptr to access data model.
+     * @return True if success otherwise false.
+     */
+    bool init_data_model(std::shared_ptr<beerocks::nbapi::Ambiorix> dm);
+
+    /**
+     * @brief Sets MACAddress to the Agent Data model.
+     *
+     * Path is: "Agent.MACAddress".
+     *
+     * @param mac MAC address for Bridge Interface.
+     * @return True if success otherwise false.
+     */
+    bool dm_set_agent_mac(const std::string &mac);
+
+    /**
      * @brief 1905.1 Neighbor device information
      * Information gathered from a neighbor device upon reception of a Topology Discovery message.
      */
@@ -372,12 +401,12 @@ public:
 
     /**
      * @brief List of known 1905 neighbor devices.
-     * 
+     *
      * Upper key: Local interface MAC on which the Topology Discovery message was received from.
      * Upper value: Map containing 1905.1 device information ordered by neighbor device al_mac -
      *  Sub-key: 1905.1 AL MAC address of the Topology Discovery message transmitting device.
      *  Sub-value: 1905.1 device information.
-     * 
+     *
      * Devices are being added to the list when receiving a 1905.1 Topology Discovery message from
      * an unknown 1905.1 device. Every 1905.1 device shall send this message every 60 seconds, and
      * we update the time stamp in which the message is received.
