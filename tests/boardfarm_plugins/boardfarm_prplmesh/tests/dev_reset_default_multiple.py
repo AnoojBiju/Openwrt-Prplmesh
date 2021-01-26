@@ -40,3 +40,7 @@ class DevResetDefaultMultiple(PrplMeshBaseTest):
             if matched_line_nb <= previous_line_nb:
                 self.fail("The agent was not reset on attempt {}".format(attempt))
             previous_line_nb = matched_line_nb
+
+            time.sleep(10)
+            agent.ucc_socket.cmd_reply("dev_set_config,backhaul,eth")
+            time.sleep(10)
