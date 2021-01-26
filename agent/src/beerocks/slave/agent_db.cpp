@@ -133,4 +133,25 @@ bool AgentDB::get_mac_by_ssid(const sMacAddr &ruid, const std::string &ssid, sMa
     return false;
 }
 
+bool AgentDB::init_data_model(std::shared_ptr<beerocks::nbapi::Ambiorix> dm)
+{
+    LOG_IF(!dm, FATAL) << "Ambiorix datamodel not specified";
+    LOG_IF(m_ambiorix_datamodel, FATAL) << "Ambiorix datamodel already set";
+
+    m_ambiorix_datamodel = dm;
+    return true;
+}
+
+bool AgentDB::dm_set_agent_mac(const std::string &mac)
+{
+    LOG_IF(!m_ambiorix_datamodel, FATAL) << "m_ambiorix_datamodel not set";
+
+    // Set MACAddress, Data model path: Agent.MACAddress
+    if (!m_ambiorix_datamodel->set("Agent", "MACAddress", mac)) {
+        LOG(ERROR) << "Failed to set Agent with mac: " << mac;
+        return false;
+    }
+    return true;
+}
+
 } // namespace beerocks
