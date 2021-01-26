@@ -3,12 +3,13 @@
 # This code is subject to the terms of the BSD+Patent license.
 # See LICENSE file for more details.
 
-from typing import Any, Union, Callable, NoReturn
+from typing import Any, Dict, Union, Callable, NoReturn
 
 from boardfarm.exceptions import SkipTest
 from boardfarm.tests import bft_base_test
 from capi import tlv
 from opts import debug
+import connmap
 import environment as env
 import sniffer
 import time
@@ -306,6 +307,35 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
             return False
 
         return True
+
+    def get_topology(self) -> Dict[str, connmap.MapDevice]:
+        '''Get the topology.
+
+        Returns a list of devices, the rest of the topology is a tree under it.
+
+        Uses the northbound API to get this information.
+        '''
+        controller = self.dev.lan.controller_entity
+
+        devices = controller.nbapi_get_instances("Controller.Network.Device")
+        map_devices = {}
+        for name, device in devices.items():
+            map_device = connmap.MapDevice(device["ID"])
+            map_device.path = "Controller.Network.Device." + name[:-1]  # strip trailing .
+            map_devices[map_device.mac] = map_device
+            radios = controller.nbapi_get_instances(map_device.path + ".Radio")
+            for radio_name, radio in radios.items():
+                map_radio = map_device.add_radio(radio["ID"])
+                map_radio.path = map_device.path + ".Radio." + radio_name[:-1]  # strip trailing .
+                bsses = controller.nbapi_get_instances(map_radio.path + ".BSS")
+                for bss_name, bss in bsses.items():
+                    map_vap = map_radio.add_vap(bss["BSSID"], bss["SSID"])
+                    map_vap.path = map_radio.path + ".BSS." + bss_name[:-1]  # strip trailing .
+                    stas = controller.nbapi_get_instances(map_vap.path + ".STA")
+                    for sta_name, sta in stas.items():
+                        map_client = map_vap.add_client(sta["MACAddress"])
+                        map_client.path = map_vap.path + ".STA." + sta_name[:-1]  # strip trailing .
+        return map_devices
 
     @classmethod
     def teardown_class(cls):
