@@ -50,6 +50,9 @@ public:
         struct sRadioScanRequest {
             uint16_t mid            = INVALID_MID_ID;
             eRadioScanStatus status = eRadioScanStatus::PENDING;
+
+            int32_t dwell_time_msec;
+            std::unordered_set<uint8_t> channel_pool;
         };
 
         eAgentStatus status;
@@ -60,6 +63,7 @@ public:
          * Value:   radio scan request as sRadioScanRequest struct.
          */
         std::unordered_map<sMacAddr, sRadioScanRequest> radio_scans;
+        std::chrono::system_clock::time_point timeout;
     };
 
     /**
@@ -163,23 +167,19 @@ private:
         std::shared_ptr<wfa_map::tlvProfile2ChannelScanRequest> &channel_scan_request_tlv);
 
     /**
-     * @brief Add a new radio to the channel scan request tlv.
-     * 
-     * @param channel_scan_request_tlv Shared pointer to the channel scan request tlv.
-     * @param radio_mac MAC address of the radio to scan.
-     * @return true if successful, false otherwise.
-     */
-    bool add_radio_to_channel_scan_request_tlv(
-        std::shared_ptr<wfa_map::tlvProfile2ChannelScanRequest> &channel_scan_request_tlv,
-        sMacAddr radio_mac);
-
-    /**
      * @brief Send channel scan request message to agent
      * 
      * @param agent_mac MAC address of the agent.
      * @return true if successful, false otherwise.
      */
     bool send_scan_request_to_agent(const sMacAddr &agent_mac);
+
+    /**
+     * @brief Scan all agent for timeout and abort scans in progress
+     * 
+     * @return true if timeout found, false otherwise.
+     */
+    bool handle_timeout_in_busy_agents();
 };
 
 } //namespace son

@@ -10,7 +10,6 @@
 #define _CHANNEL_SCAN_TASK_H_
 
 #include "task.h"
-
 #include <tlvf/CmduMessageTx.h>
 #include <tlvf/wfa_map/tlvProfile2ChannelScanRequest.h>
 #include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>

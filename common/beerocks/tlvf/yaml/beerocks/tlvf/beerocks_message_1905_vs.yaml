@@ -33,3 +33,20 @@ tlvVsClientAssociationEvent:
   disconnect_type:
     _type: uint8_t
     _comment: relevant only on disconnect event
+
+sScanRequestExtension:
+  _type: struct
+  radio_mac: sMacAddr
+  dwell_time_ms:
+    _type: uint32_t
+  _value: 0
+  _comment: time interval (msec) between channels during scan
+
+tlvVsChannelScanRequestExtension:
+  _type: class
+  scan_requests_list_length:
+    _type: uint8_t
+    _length_var: True
+  scan_requests_list:
+    _type: sScanRequestExtension
+    _length: [ scan_requests_list_length ]
