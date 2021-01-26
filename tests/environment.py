@@ -388,6 +388,8 @@ class ALEntityDocker(ALEntity):
         RadioDocker(self, "wlan0")
         RadioDocker(self, "wlan2")
 
+        self.refresh_vaps()
+
     def command(self, *command: str) -> bytes:
         '''Execute `command` in docker container and return its output.'''
         return subprocess.check_output(("docker", "exec", self.name) + command)
@@ -441,6 +443,13 @@ class ALEntityDocker(ALEntity):
                 cur_vap.add_client(client.group('mac').decode('utf-8'))
         return conn_map
 
+    def refresh_vaps(self):
+        for radio in self.radios:
+            radio.vaps = []
+            vap_file = yaml.safe_load(radio.read_tmp_file("vap"))
+            for vap in vap_file:
+                VirtualAPDocker(radio, vap['bssid'])
+
 
 class RadioDocker(Radio):
     '''Docker implementation of a radio.'''
@@ -451,10 +460,6 @@ class RadioDocker(Radio):
         mac = re.search(r"link/ether (([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})",
                         ip_output).group(1)
         super().__init__(agent, mac)
-
-        # Since dummy bwl always uses the first VAP, in practice we always have a single VAP with
-        # the radio MAC as the bssid.
-        VirtualAPDocker(self, mac)
 
     def wait_for_log(self, regex: str, start_line: int, timeout: float,
                      fail_on_mismatch: bool = True) -> bool:
@@ -762,7 +767,7 @@ class VirtualAPHostapd(VirtualAP):
         device = self.radio.agent.device
         device.sendline(f"hostapd_cli -i {self.iface} get_mesh_mode {self.iface}")
         device.expect(r"mesh_mode\=\w+ \((?P<bss_type>\d?)\)")
-        multi_ap_value = self.bss_from_bits(device.match.group('bss_type'))
+        multi_ap_value = self.bss_from_bits_intel(device.match.group('bss_type'))
         return multi_ap_value
 
     @staticmethod
@@ -772,4 +777,12 @@ class VirtualAPHostapd(VirtualAP):
             '1': BssType.Backhaul,
             '2': BssType.Fronthaul,
             '3': BssType.Hybrid
+        }.get(bss_type, BssType.Disabled)
+
+    @staticmethod
+    def bss_from_bits_intel(bss_type: str):
+        return {
+            '0': BssType.Fronthaul,
+            '1': BssType.Backhaul,
+            '2': BssType.Hybrid
         }.get(bss_type, BssType.Disabled)
