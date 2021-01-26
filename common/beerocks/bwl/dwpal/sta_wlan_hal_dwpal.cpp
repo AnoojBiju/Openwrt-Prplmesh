@@ -835,7 +835,7 @@ bool sta_wlan_hal_dwpal::parse_fapi_event(const std::string& opcode, std::shared
             // Gracefully ignore unhandled events
             // TODO: Probably should be changed to an error once FAPI will stop
             //       sending empty or irrelevant events...
-        default: LOG(WARNING) << "Unhandled event received: " << opcode; break;
+        default: LOG(DEBUG) << "Unhandled event received: " << opcode; break;
     }
 
     return true;

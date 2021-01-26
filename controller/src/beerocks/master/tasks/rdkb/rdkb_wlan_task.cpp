@@ -337,7 +337,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
             auto bssid             = std::string(event_obj->bssid);
             auto group_index       = rdkb_db.get_group_index(client_mac, bssid);
             if (group_index == -1) {
-                TASK_LOG(ERROR) << "event for un-configured client mac - " << client_mac
+                TASK_LOG(DEBUG) << "event for un-configured client mac - " << client_mac
                                 << " ignored";
                 send_bml_response(int(STEERING_RSSI_MEASUREMENT_RESPONSE), event_obj->sd,
                                   -BML_RET_CLIENT_NOT_CONFIGURED);
@@ -410,7 +410,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
             }
 
             if (group_index == -1) {
-                TASK_LOG(ERROR) << "event for un-configured client mac - " << client_mac
+                TASK_LOG(DEBUG) << "event for un-configured client mac - " << client_mac
                                 << " ignored";
                 break;
             }
@@ -465,7 +465,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
             }
 
             if (group_index == -1) {
-                TASK_LOG(ERROR) << "event for un-configured client mac - " << client_mac
+                TASK_LOG(DEBUG) << "event for un-configured client mac - " << client_mac
                                 << " ignored";
                 break;
             }
@@ -525,7 +525,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
             }
 
             if (group_index == -1) {
-                TASK_LOG(ERROR) << "event for un-configured client mac - " << client_mac
+                TASK_LOG(DEBUG) << "event for un-configured client mac - " << client_mac
                                 << " ignored";
                 break;
             }
@@ -578,7 +578,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
             }
 
             if (group_index == -1) {
-                TASK_LOG(ERROR) << "event for un-configured client mac - " << client_mac
+                TASK_LOG(DEBUG) << "event for un-configured client mac - " << client_mac
                                 << " ignored";
                 break;
             }
@@ -634,7 +634,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
             }
 
             if (group_index == -1) {
-                TASK_LOG(ERROR) << "event for un-configured client mac - " << client_mac
+                TASK_LOG(DEBUG) << "event for un-configured client mac - " << client_mac
                                 << " ignored";
                 break;
             }
@@ -692,7 +692,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
             }
 
             if (group_index == -1) {
-                TASK_LOG(ERROR) << "event for un-configured client mac - " << client_mac
+                TASK_LOG(DEBUG) << "event for un-configured client mac - " << client_mac
                                 << " ignored";
                 break;
             }
@@ -771,7 +771,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
             }
 
             if (group_index == -1) {
-                TASK_LOG(ERROR) << "event for un-configured client mac - " << client_mac
+                TASK_LOG(DEBUG) << "event for un-configured client mac - " << client_mac
                                 << " ignored";
                 break;
             }

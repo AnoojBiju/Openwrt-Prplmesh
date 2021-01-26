@@ -2799,7 +2799,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
     // TODO: Probably should be changed to an error once dwpal will stop
     //       sending empty or irrelevant events...
     default:
-        LOG(WARNING) << "Unhandled event received: " << opcode;
+        LOG(DEBUG) << "Unhandled event received: " << opcode;
         return true;
         break;
     }
