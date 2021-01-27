@@ -33,10 +33,6 @@ const uint16_t& tlvProfile2TrafficSeparationPolicy::length() {
     return (const uint16_t&)(*m_length);
 }
 
-uint8_t& tlvProfile2TrafficSeparationPolicy::number_of_ssids() {
-    return (uint8_t&)(*m_number_of_ssids);
-}
-
 uint8_t& tlvProfile2TrafficSeparationPolicy::ssids_vlan_id_list_length() {
     return (uint8_t&)(*m_ssids_vlan_id_list_length);
 }
@@ -153,7 +149,6 @@ size_t tlvProfile2TrafficSeparationPolicy::get_initial_size()
     size_t class_size = 0;
     class_size += sizeof(eTlvTypeMap); // type
     class_size += sizeof(uint16_t); // length
-    class_size += sizeof(uint8_t); // number_of_ssids
     class_size += sizeof(uint8_t); // ssids_vlan_id_list_length
     return class_size;
 }
@@ -176,12 +171,6 @@ bool tlvProfile2TrafficSeparationPolicy::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
-    m_number_of_ssids = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
-        return false;
-    }
-    if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
     m_ssids_vlan_id_list_length = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!m_parse__) *m_ssids_vlan_id_list_length = 0;
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
