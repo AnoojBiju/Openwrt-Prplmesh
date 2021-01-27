@@ -2259,92 +2259,37 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
     vaps_info[vap_id].ssid         = ssid;
     vaps_info[vap_id].backhaul_vap = backhual;
 
-    auto radio_node = get_node(tlvf::mac_from_string(radio_mac));
-    if (!radio_node) {
-        LOG(ERROR) << "Failed to get Radio node with mac: " << radio_mac;
+    return dm_set_radio_bss(tlvf::mac_from_string(radio_mac), tlvf::mac_from_string(bssid), ssid);
+}
+
+bool db::update_vap(const sMacAddr &radio_mac, const sMacAddr &bssid, const std::string &ssid,
+                    bool backhaul)
+{
+    if (!has_node(bssid) && !add_virtual_node(bssid, radio_mac)) {
         return false;
     }
 
-    auto radio_path = radio_node->dm_path;
-    if (radio_path.empty()) {
-        return true;
+    auto &vaps_info = get_hostap_vap_list(tlvf::mac_to_string(radio_mac));
+    auto it         = std::find_if(vaps_info.begin(), vaps_info.end(),
+                           [&](const std::pair<int8_t, sVapElement> &vap) {
+                               return vap.second.mac == tlvf::mac_to_string(bssid);
+                           });
+    if (it == vaps_info.end()) {
+        LOG(DEBUG) << "update_vap: creating new VAP for " << bssid;
+
+        // Need to create a new VAP, which means creating a new vap_id
+        auto max_vap_it = std::max_element(
+            vaps_info.begin(), vaps_info.end(),
+            [](const std::pair<int8_t, sVapElement> &a, const std::pair<int8_t, sVapElement> &b) {
+                return a.first < b.first;
+            });
+        int8_t new_vap_id = (max_vap_it == vaps_info.end()) ? 0 : max_vap_it->first + 1;
+        return add_vap(tlvf::mac_to_string(radio_mac), new_vap_id, tlvf::mac_to_string(bssid), ssid,
+                       backhaul);
     }
-
-    /*
-        Prepare path to the BSS instance.
-        Example: Controller.Network.Device.1.Radio.1.BSS.
-    */
-    auto bss_path = radio_path + ".BSS";
-    auto bss_index =
-        m_ambiorix_datamodel->get_instance_index(bss_path + ".[BSSID == '%s'].", bssid);
-    std::string bss_instance;
-
-    if (!bss_index) {
-        bss_instance = m_ambiorix_datamodel->add_instance(bss_path);
-        if (bss_instance.empty()) {
-            LOG(ERROR) << "Failed to add " << bss_path << " instance.";
-            return false;
-        }
-    } else {
-        LOG(DEBUG) << "BSS instance exists for BSSID: " << bssid << ". Updating Data Model.";
-        bss_instance = bss_path + "." + std::to_string(bss_index) + ".";
-    }
-
-    /*
-        Set value for BSSID variable
-        Example: Controller.Network.Device.1.Radio.1.BSS.1.BSSID
-    */
-    if (!m_ambiorix_datamodel->set(bss_instance, "BSSID", bssid)) {
-        LOG(ERROR) << "Failed to set " << bss_instance << "BSSID: " << bssid;
-        return false;
-    }
-
-    /*
-        Set value for SSID variable
-        Example: Controller.Network.Device.1.Radio.1.BSS.1.SSID
-    */
-    if (!m_ambiorix_datamodel->set(bss_instance, "SSID", ssid)) {
-        LOG(ERROR) << "Failed to set " << bss_instance << "SSID: " << ssid;
-        return false;
-    }
-
-    /*
-        Set value for Enabled variable
-        Example: Controller.Network.Device.1.Radio.1.BSS.1.Enabled
-    */
-    if (!m_ambiorix_datamodel->set(bss_instance, "Enabled", !ssid.empty())) {
-        LOG(ERROR) << "Failed to set " << bss_instance << "Enabled: " << !ssid.empty();
-        return false;
-    }
-
-    /*
-        Set value for LastChange variable - it is creation time, when someone will
-        try to get data from this parameter action method will calculate time in seconds
-        from creation moment.
-        Example: Controller.Network.Device.1.Radio.1.BSS.1.LastChange
-    */
-    uint64_t creation_time = time(NULL);
-    if (!m_ambiorix_datamodel->set(bss_instance, "LastChange", creation_time)) {
-        LOG(ERROR) << "Failed to set " << bss_instance << "LastChange: " << creation_time;
-        return false;
-    }
-
-    auto timestamp = m_ambiorix_datamodel->get_datamodel_time_format();
-    if (timestamp.empty()) {
-        LOG(ERROR) << "Failed to get Date and Time in RFC 3339 format.";
-        return false;
-    }
-
-    /*
-        Set value for TimeStamp variable
-        Example: Controller.Network.Device.1.Radio.1.BSS.1.TimeStamp
-    */
-    if (!m_ambiorix_datamodel->set(bss_instance, "TimeStamp", timestamp)) {
-        LOG(ERROR) << "Failed to set " << bss_instance << "TimeStamp: " << timestamp;
-        return false;
-    }
-
-    return true;
+    it->second.ssid         = ssid;
+    it->second.backhaul_vap = backhaul;
+    return dm_set_radio_bss(radio_mac, bssid, ssid);
 }
 
 std::set<std::string> db::get_hostap_vaps_bssids(const std::string &mac)
@@ -6197,6 +6142,96 @@ bool db::set_radio_utilization(const sMacAddr &bssid, uint8_t utilization)
     // Path to the object example: Controller.Network.Device.1.Radio.1.Utilization
     if (!m_ambiorix_datamodel->set(radio_path, "Utilization", utilization)) {
         LOG(ERROR) << "Failed to set " << radio_path << "Utilization: " << utilization;
+        return false;
+    }
+
+    return true;
+}
+
+bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, const std::string &ssid)
+{
+    auto radio_node = get_node(radio_mac);
+    if (!radio_node) {
+        LOG(ERROR) << "Failed to get Radio node with mac: " << radio_mac;
+        return false;
+    }
+
+    auto radio_path = radio_node->dm_path;
+    if (radio_path.empty()) {
+        return true;
+    }
+
+    /*
+        Prepare path to the BSS instance.
+        Example: Controller.Network.Device.1.Radio.1.BSS.
+    */
+    auto bss_path  = radio_path + ".BSS";
+    auto bss_index = m_ambiorix_datamodel->get_instance_index(bss_path + ".[BSSID == '%s'].",
+                                                              tlvf::mac_to_string(bssid));
+    std::string bss_instance;
+
+    if (!bss_index) {
+        bss_instance = m_ambiorix_datamodel->add_instance(bss_path);
+        if (bss_instance.empty()) {
+            LOG(ERROR) << "Failed to add " << bss_path << " instance.";
+            return false;
+        }
+    } else {
+        LOG(DEBUG) << "BSS instance exists for BSSID: " << bssid << ". Updating Data Model.";
+        bss_instance = bss_path + "." + std::to_string(bss_index) + ".";
+    }
+
+    /*
+        Set value for BSSID variable
+        Example: Controller.Network.Device.1.Radio.1.BSS.1.BSSID
+    */
+    if (!m_ambiorix_datamodel->set(bss_instance, "BSSID", tlvf::mac_to_string(bssid))) {
+        LOG(ERROR) << "Failed to set " << bss_instance << "BSSID: " << bssid;
+        return false;
+    }
+
+    /*
+        Set value for SSID variable
+        Example: Controller.Network.Device.1.Radio.1.BSS.1.SSID
+    */
+    if (!m_ambiorix_datamodel->set(bss_instance, "SSID", ssid)) {
+        LOG(ERROR) << "Failed to set " << bss_instance << "SSID: " << ssid;
+        return false;
+    }
+
+    /*
+        Set value for Enabled variable
+        Example: Controller.Network.Device.1.Radio.1.BSS.1.Enabled
+    */
+    if (!m_ambiorix_datamodel->set(bss_instance, "Enabled", !ssid.empty())) {
+        LOG(ERROR) << "Failed to set " << bss_instance << "Enabled: " << !ssid.empty();
+        return false;
+    }
+
+    /*
+        Set value for LastChange variable - it is creation time, when someone will
+        try to get data from this parameter action method will calculate time in seconds
+        from creation moment.
+        Example: Controller.Network.Device.1.Radio.1.BSS.1.LastChange
+    */
+    uint64_t creation_time = time(NULL);
+    if (!m_ambiorix_datamodel->set(bss_instance, "LastChange", creation_time)) {
+        LOG(ERROR) << "Failed to set " << bss_instance << "LastChange: " << creation_time;
+        return false;
+    }
+
+    auto timestamp = m_ambiorix_datamodel->get_datamodel_time_format();
+    if (timestamp.empty()) {
+        LOG(ERROR) << "Failed to get Date and Time in RFC 3339 format.";
+        return false;
+    }
+
+    /*
+        Set value for TimeStamp variable
+        Example: Controller.Network.Device.1.Radio.1.BSS.1.TimeStamp
+    */
+    if (!m_ambiorix_datamodel->set(bss_instance, "TimeStamp", timestamp)) {
+        LOG(ERROR) << "Failed to set " << bss_instance << "TimeStamp: " << timestamp;
         return false;
     }
 

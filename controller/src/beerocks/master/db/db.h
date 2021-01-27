@@ -599,6 +599,18 @@ public:
     bool add_vap(const std::string &radio_mac, int vap_id, const std::string &bssid,
                  const std::string &ssid, bool backhual);
 
+    /** Update VAP information
+     *
+     * Add or update the VAP information for the given BSSID on the given radio. If the VAP exists
+     * already, it is updated. If no VAP with the given BSSID exists, a new one is created with
+     * a unique vap_id.
+     *
+     * For prplMesh agents, this function should be called after the VAPs were created (with
+     * add_vap) so the vap_id is correct. For non-prplMesh agents, the vap_id doesn't matter.
+     */
+    bool update_vap(const sMacAddr &radio_mac, const sMacAddr &bssid, const std::string &ssid,
+                    bool backhaul);
+
     std::string get_hostap_ssid(const std::string &mac);
     /**
      * @brief checks if vap name is on the steer list.
@@ -847,7 +859,7 @@ public:
 
     /**
      * @brief
-     * 
+     *
      * @param RUID Radio UID
      * @param operating_class Operating class of report
      * @param channel channel of report
@@ -1571,6 +1583,18 @@ private:
     bool dm_add_ap_operating_classes(const std::string &radio_mac, uint8_t max_tx_power,
                                      uint8_t op_class,
                                      const std::vector<uint8_t> &non_operable_channels);
+
+    /**
+     * @brief Add or update instance of "BSS" data element, set values for its parameters.
+     *
+     * Example: "Controller.Network.Device.1.Radio.1.BSS.1"
+     *
+     * @param radio_mac mac address of radio on which BSSID exists.
+     * @param bssid BSSID of the BSS.
+     * @param ssid SSID of the BSS. If empty, BSS is considered disabled.
+     */
+    bool dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid,
+                          const std::string &ssid);
 
     /**
      * @brief Set data model path member of a node
