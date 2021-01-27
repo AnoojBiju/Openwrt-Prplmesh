@@ -337,6 +337,78 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
                         map_client.path = map_vap.path + ".STA." + sta_name[:-1]  # strip trailing .
         return map_devices
 
+    def configure_ssids_clear(self):
+        '''Clear the SSID configuration.
+
+        Removes all Controller.Network.AccessPoint instances in the northbound API.
+        '''
+        controller = self.dev.lan.controller_entity
+        access_points = controller.nbapi_get_instances('Controller.Network.AccessPoint')
+        for name, access_point in access_points.items():
+            controller.nbapi_command('Controller.Network.AccessPoint', 'del', {'name': name})
+
+    def configure_ssid(self, ssid: str) -> str:
+        '''Configure an SSID.
+
+        Adds a Controller.Network.AccessPoint instance and configures it with the given SSID.
+        The SSID is enabled on all bands as fronthaul-only in open mode.
+
+        Parameters
+        ----------
+        ssid: str
+            The SSID to configure.
+
+        Returns
+        -------
+        str
+            Path to the Controller.Network.AccessPoint instance.
+        '''
+        controller = self.dev.lan.controller_entity
+        params = {"parameters": {
+            "MultiApMode": "Fronthaul",
+            "Band5GH": True,
+            "Band6G": True,
+            "Band5GL": True,
+            "Band2_4G": True,
+            "SSID": ssid,
+        }}
+        new_inst = controller.nbapi_command("Controller.Network.AccessPoint", "add", params)
+        return "Controller.Network.AccessPoint." + new_inst["name"]
+
+    def configure_ssids(self, ssids: [str], clear_old: bool = True):
+        '''Configure SSIDs on all agents.
+
+        Configure all radios on all agents with the given set of ssids. They
+        are configured as fronthaul-only, in open mode.
+
+        If clear_old is True, the existing configuration is cleared first. By
+        setting it to false, it is possible to add more complicated custom
+        configuration first and then call configure_ssids for the simple SSIDs.
+
+        After configuration completes, check that all agents have been updated.
+
+        Uses northbound API.
+
+        Parameters
+        ---------
+        ssid: [str]
+            List of SSIDs to configure. Each SSID will configure an additional
+            VAP on the radios.
+
+        clear_old: bool
+            If True (default), the existing configuration is cleared before
+            adding new SSIDs.
+        '''
+        if clear_old:
+            self.configure_ssids_clear()
+        for ssid in ssids:
+            self.configure_ssid(ssid)
+
+        self.checkpoint()
+        self.dev.lan.controller_entity.nbapi_command("Controller.Network", "AccessPointCommit")
+        # TODO check that renew was sent to all agents
+        # TODO check that all agents have been configured with the SSIDs
+
     @classmethod
     def teardown_class(cls):
         """Teardown method, optional for boardfarm tests."""
