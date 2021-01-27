@@ -94,14 +94,6 @@ public:
     bool init(const std::string &amxb_backend, const std::string &bus_uri,
               const std::string &datamodel_path);
 
-    /**
-     * @brief Set the value to the object variable.
-     *
-     * @param relative_path Path to the object in datamodel (ex: "Controller.Network").
-     * @param parameter The parameter to be set (ex: "ID").
-     * @param value Value which need to set.
-     * @return True on success and false otherwise.
-     */
     bool set(const std::string &relative_path, const std::string &parameter,
              const std::string &value) override;
     bool set(const std::string &relative_path, const std::string &parameter,
@@ -117,69 +109,19 @@ public:
     bool set(const std::string &relative_path, const std::string &parameter,
              const double &value) override;
 
-    /* @brief Add instance to the data model object with type list
-     *
-     * @param relative_path Path to the object with type list in datamodel (ex: "Controller.Network.Device").
-     * @return string with the full path (ex: "Controller.Network.Device.1")
-     */
     std::string add_instance(const std::string &relative_path) override;
 
-    /**
-     * @brief Remove instance from the data model object with type list
-     *
-     * @param relative_path Path to the object with type list in datamodel (ex: "Controller.Network.Device").
-     * @param index Number of instance which should be remove.
-     * @return True on success and false otherwise.
-     */
     bool remove_instance(const std::string &relative_path, uint32_t index) override;
 
-    /**
-     * @brief Get instance index by ID.
-     *
-     * @param specific_path Path to the object specific key (ex: "Device.[ID == '%s'].").
-     * @param key String which contains ID, for example it can be a MAC address.
-     * @return Instance index on success and 0 otherwise.
-     */
     uint32_t get_instance_index(const std::string &specific_path, const std::string &key) override;
 
-    /**
-     * @brief Get Date and Time in the Ambiorix data model format: "2020-08-31T11:22:39Z".
-     *
-     * @return String with date and time in the Ambiorix data model format.
-     */
     std::string get_datamodel_time_format() override;
 
-    /**
-     * @brief Remove all instances from the data model object which name starts with given relative path
-     *
-     * @param relative_path Path to the object with type list in datamodel (ex: "Controller.Network.Device").
-     * @return True on success and false otherwise.
-     */
     bool remove_all_instances(const std::string &relative_path) override;
 
-    /**
-     * @brief Instantiate optional sub-object.
-     *
-     * The subobject must be defined as a mib in the odl file. The name of the mib must be the same as
-     * the name of the subobject, and it must contain only a single object definition.
-     *
-     * @param path_to_obj path to the object in datamodel (ex: "Controller.Network").
-     * @param subobject_name name of optional subobject to instantiate (ex: "HTCapabilities").
-     * @return true if subobject successfully added, false otherwise
-     */
     bool add_optional_subobject(const std::string &path_to_obj,
                                 const std::string &subobject_name) override;
 
-    /**
-     * @brief Remove optional sub-object.
-     *
-     * The subobject must be defined as a mib in the odl file. The name of the mib must be the same as
-     * the name of the subobject, and it must contain only a single object definition.
-     *
-     * @param path_to_obj path to the object in datamodel (ex: "Controller.Network").
-     * @param subobject_name name of optional subobject to be removed (ex: "HTCapabilities").
-     * @return true if subobject successfully removed, false otherwise
-     */
     bool remove_optional_subobject(const std::string &path_to_obj,
                                    const std::string &subobject_name) override;
 

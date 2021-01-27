@@ -180,10 +180,10 @@ TEST_F(DbTest, test_add_vap)
 
 TEST_F(DbTest, test_set_ap_ht_capabilities)
 {
-    const std::string capabilities1    = g_radio_path_1 + ".Capabilities";
-    const std::string capabilities2    = g_radio_path_2 + ".Capabilities";
-    const std::string ht_capabilities1 = capabilities1 + ".HTCapabilities";
-    const std::string ht_capabilities2 = capabilities2 + ".HTCapabilities";
+    const std::string capabilities1    = g_radio_path_1 + ".Capabilities.";
+    const std::string capabilities2    = g_radio_path_2 + ".Capabilities.";
+    const std::string ht_capabilities1 = capabilities1 + "HTCapabilities.";
+    const std::string ht_capabilities2 = capabilities2 + "HTCapabilities.";
 
     wfa_map::tlvApHtCapabilities::sFlags flags1    = {};
     flags1.reserved                                = 0;
@@ -335,7 +335,7 @@ TEST_F(DbTest, test_add_hostap_supported_operating_class)
 
 TEST_F(DbTest, test_set_ap_he_capabilities)
 {
-    const std::string radio_path_1_capabilities = std::string(g_radio_path_1) + ".Capabilities";
+    const std::string radio_path_1_capabilities = std::string(g_radio_path_1) + ".Capabilities.";
 
     //device always exists
     EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_bridge_mac)).WillRepeatedly(Return(1));
@@ -346,7 +346,8 @@ TEST_F(DbTest, test_set_ap_he_capabilities)
     //expectations for add_node_radio
     EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_radio_mac_1)).WillRepeatedly(Return(1));
     EXPECT_CALL(*m_ambiorix, add_instance(std::string(g_device_path) + ".1.Radio"))
-        .WillOnce(Return(g_radio_path_1));
+        .WillOnce(Return(std::string(g_device_path) + ".1.Radio.1"));
+
     EXPECT_CALL(*m_ambiorix,
                 set(std::string(g_radio_path_1), "ID", Matcher<const std::string &>(g_radio_mac_1)))
         .WillOnce(Return(true));
@@ -363,35 +364,32 @@ TEST_F(DbTest, test_set_ap_he_capabilities)
     EXPECT_CALL(*m_ambiorix, add_optional_subobject(radio_path_1_capabilities, "HECapabilities"))
         .WillOnce(Return(true));
 
-    EXPECT_CALL(*m_ambiorix,
-                set(radio_path_1_capabilities, "HE_8080_MHz", Matcher<const bool &>(true)))
+    const std::string he_capabilities_path = radio_path_1_capabilities + "HECapabilities.";
+    EXPECT_CALL(*m_ambiorix, set(he_capabilities_path, "HE_8080_MHz", Matcher<const bool &>(true)))
+        .WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set(he_capabilities_path, "HE_160_MHz", Matcher<const bool &>(true)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix,
-                set(radio_path_1_capabilities, "HE_160_MHz", Matcher<const bool &>(true)))
+                set(he_capabilities_path, "SU_Beamformer", Matcher<const bool &>(true)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix,
-                set(radio_path_1_capabilities, "SU_Beamformer", Matcher<const bool &>(true)))
+                set(he_capabilities_path, "MU_Beamformer", Matcher<const bool &>(true)))
+        .WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set(he_capabilities_path, "UL_MU_MIMO", Matcher<const bool &>(true)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix,
-                set(radio_path_1_capabilities, "MU_Beamformer", Matcher<const bool &>(true)))
+                set(he_capabilities_path, "UL_MU_MIMO_OFDMA", Matcher<const bool &>(true)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix,
-                set(radio_path_1_capabilities, "UL_MU_MIMO", Matcher<const bool &>(true)))
+                set(he_capabilities_path, "DL_MU_MIMO_OFDMA", Matcher<const bool &>(true)))
+        .WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set(he_capabilities_path, "UL_OFDMA", Matcher<const bool &>(true)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix,
-                set(radio_path_1_capabilities, "UL_MU_MIMO_OFDMA", Matcher<const bool &>(true)))
+                set(he_capabilities_path, "tx_spatial_streams", Matcher<const int32_t &>(8)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix,
-                set(radio_path_1_capabilities, "DL_MU_MIMO_OFDMA", Matcher<const bool &>(true)))
-        .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix,
-                set(radio_path_1_capabilities, "UL_OFDMA", Matcher<const bool &>(true)))
-        .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix,
-                set(radio_path_1_capabilities, "tx_spatial_streams", Matcher<const int32_t &>(8)))
-        .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix,
-                set(radio_path_1_capabilities, "rx_spatial_streams", Matcher<const int32_t &>(8)))
+                set(he_capabilities_path, "rx_spatial_streams", Matcher<const int32_t &>(8)))
         .WillOnce(Return(true));
 
     uint8_t buff[100];
@@ -413,8 +411,8 @@ TEST_F(DbTest, test_set_ap_he_capabilities)
     he_caps_tlv.set_supported_he_mcs(supported_he_mcs, sizeof(supported_he_mcs));
 
     int supported_MCS_index = 1;
-    EXPECT_CALL(*m_ambiorix, add_instance(radio_path_1_capabilities + ".supported_MCS"))
-        .WillRepeatedly(Return(radio_path_1_capabilities + ".supported_MCS." +
+    EXPECT_CALL(*m_ambiorix, add_instance(he_capabilities_path + "supported_MCS"))
+        .WillRepeatedly(Return(he_capabilities_path + "supported_MCS." +
                                std::to_string(supported_MCS_index++)));
     EXPECT_CALL(*m_ambiorix, set(_, "supported_MCS_size", Matcher<const int32_t &>(_)))
         .WillRepeatedly(Return(true));
@@ -615,10 +613,10 @@ TEST_F(DbTest, test_set_vap_stats_info)
 
     //expectations for set_vap_stats_info
     EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_bssid_1)).WillRepeatedly(Return(1));
-    EXPECT_CALL(*m_ambiorix, set(std::string(g_radio_1_bss_path_1), "UnicastBytesSent",
+    EXPECT_CALL(*m_ambiorix, set(std::string(g_radio_1_bss_path_1) + '.', "UnicastBytesSent",
                                  Matcher<const uint32_t &>(1U)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set(std::string(g_radio_1_bss_path_1), "UnicastBytesReceived",
+    EXPECT_CALL(*m_ambiorix, set(std::string(g_radio_1_bss_path_1) + '.', "UnicastBytesReceived",
                                  Matcher<const uint32_t &>(2U)))
         .WillOnce(Return(true));
 
@@ -628,10 +626,10 @@ TEST_F(DbTest, test_set_vap_stats_info)
 
 TEST_F(DbTest, test_set_station_capabilities)
 {
-    const std::string ht_capabilities1  = std::string(g_sta_path_1) + ".HTCapabilities";
-    const std::string vht_capabilities1 = std::string(g_sta_path_1) + ".VHTCapabilities";
-    const std::string ht_capabilities2  = std::string(g_assoc_event_path) + ".HTCapabilities";
-    const std::string vht_capabilities2 = std::string(g_assoc_event_path) + ".VHTCapabilities";
+    std::string ht_capabilities1  = std::string(g_sta_path_1) + ".HTCapabilities.";
+    std::string vht_capabilities1 = std::string(g_sta_path_1) + ".VHTCapabilities.";
+    std::string ht_capabilities2  = std::string(g_assoc_event_path) + "HTCapabilities.";
+    std::string vht_capabilities2 = std::string(g_assoc_event_path) + "VHTCapabilities.";
 
     //device always exists
     EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_bridge_mac)).WillRepeatedly(Return(1));
@@ -689,13 +687,13 @@ TEST_F(DbTest, test_set_station_capabilities)
 
     EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_client_mac)).WillRepeatedly(Return(1));
 
-    EXPECT_CALL(*m_ambiorix, remove_optional_subobject(g_sta_path_1, "HTCapabilities"))
+    EXPECT_CALL(*m_ambiorix, remove_optional_subobject(g_sta_path_1 + '.', "HTCapabilities"))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, remove_optional_subobject(g_sta_path_1, "VHTCapabilities"))
+    EXPECT_CALL(*m_ambiorix, remove_optional_subobject(g_sta_path_1 + '.', "VHTCapabilities"))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, add_optional_subobject(g_sta_path_1, "HTCapabilities"))
+    EXPECT_CALL(*m_ambiorix, add_optional_subobject(g_sta_path_1 + '.', "HTCapabilities"))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, add_optional_subobject(g_sta_path_1, "VHTCapabilities"))
+    EXPECT_CALL(*m_ambiorix, add_optional_subobject(g_sta_path_1 + '.', "VHTCapabilities"))
         .WillOnce(Return(true));
 
     EXPECT_CALL(*m_ambiorix, set(ht_capabilities1, "GI_20_MHz", Matcher<const bool &>(_)))
