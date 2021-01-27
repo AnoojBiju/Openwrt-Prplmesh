@@ -158,6 +158,7 @@ ap_wlan_hal_nl80211::ap_wlan_hal_nl80211(const std::string &iface_name, hal_even
     : base_wlan_hal(bwl::HALType::AccessPoint, iface_name, IfaceType::Intel, callback, hal_conf),
       base_wlan_hal_nl80211(bwl::HALType::AccessPoint, iface_name, callback, BUFFER_SIZE, hal_conf)
 {
+    wpa_ctrl_send_msg("STATUS");
 }
 
 ap_wlan_hal_nl80211::~ap_wlan_hal_nl80211() {}
@@ -713,10 +714,28 @@ bool ap_wlan_hal_nl80211::sta_softblock_remove(const std::string &vap_name,
     return false;
 }
 
+std::string exec(const char *cmd)
+{
+    std::array<char, 128> buffer;
+    std::string result;
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
+    if (!pipe) {
+        throw std::runtime_error("popen() failed!");
+    }
+    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+        result += buffer.data();
+    }
+    return result;
+}
+
 bool ap_wlan_hal_nl80211::switch_channel(int chan, int bw, int vht_center_frequency)
 {
     LOG(TRACE) << __func__ << " channel: " << chan << ", bw: " << bw
                << ", vht_center_frequency: " << vht_center_frequency;
+
+    LOG(TRACE) << "iwinfo wlan0 info: \n" << exec("iwinfo wlan0 info");
+    LOG(TRACE) << "ps: \n" << exec("ps");
+    wpa_ctrl_send_msg("STATUS");
 
     // CHAN_SWITCH cs_count freq [center_freq1] [center_freq2] [bandwidth] [sec_channel_offset]
     //             [ht] [vht] [blocktx]
@@ -760,13 +779,17 @@ bool ap_wlan_hal_nl80211::switch_channel(int chan, int bw, int vht_center_freque
         cmd += " vht"; // ac
     }
 
+    bool ret = true;
     // Send command
     if (!wpa_ctrl_send_msg(cmd)) {
         LOG(ERROR) << "wpa_ctrl_send_msg() failed!";
-        return false;
+        ret = false;
     }
 
-    return true;
+    LOG(TRACE) << "iwinfo wlan0 info: \n" << exec("iwinfo wlan0 info");
+    wpa_ctrl_send_msg("STATUS");
+
+    return ret;
 }
 
 bool ap_wlan_hal_nl80211::set_antenna_mode(AntMode mode)
