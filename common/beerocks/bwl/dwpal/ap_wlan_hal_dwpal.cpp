@@ -1976,7 +1976,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         int16_t VHT_MCS[16]                    = {0};
         char ht_cap[8]                         = {0};
         char vht_cap[16]                       = {0};
-        size_t numOfValidArgs[21]              = {0};
+        size_t numOfValidArgs[22]              = {0};
         char assoc_req[ASSOCIATION_FRAME_SIZE] = {0};
 
         FieldsToParse fieldsToParse[] = {
@@ -2017,6 +2017,8 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
              "max_tx_power=", 0},
             {(void *)&msg->params.capabilities.mumimo_supported, &numOfValidArgs[20],
              DWPAL_CHAR_PARAM, "mu_mimo=", 0},
+            {(void *)&msg->params.multi_ap_profile, &numOfValidArgs[21], DWPAL_INT_PARAM,
+             "multi_ap_profile=", 0},
             /* Must be at the end */
             {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
 
@@ -2046,10 +2048,18 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
         LOG(DEBUG) << "max_mcs          : " << (int)msg->params.capabilities.max_mcs;
         LOG(DEBUG) << "max_tx_power     : " << (int)msg->params.capabilities.max_tx_power;
         LOG(DEBUG) << "mumimo_supported : " << (int)msg->params.capabilities.mumimo_supported;
+        LOG(DEBUG) << "multi_ap_profile : " << (int)msg->params.multi_ap_profile;
         LOG(DEBUG) << "assoc_req: " << assoc_req;
 
         for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
             if (numOfValidArgs[i] == 0) {
+                // Skip validation on multi-ap profile since it is not mandatory.
+                if (i == 21) {
+                    // If the validation check fails, set the profile parameter to zero (not a Mult-AP
+                    // Station), to make sure DWPAL did not put garbage there.
+                    msg->params.multi_ap_profile = 0;
+                    continue;
+                }
                 LOG(ERROR) << "Failed reading parsed parameter " << (int)i
                            << " ==> Continue with default values";
             }
