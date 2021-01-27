@@ -291,14 +291,13 @@ std::string db::dm_add_radio_element(const std::string &radio_mac, const std::st
 
     auto radio_instance = m_ambiorix_datamodel->add_instance(path_to_obj);
     if (radio_instance.empty()) {
-        LOG(ERROR) << "Failed to add instance Controller.Network.Device." << index
-                   << ".Radio, with radio mac: " << radio_mac;
+        LOG(ERROR) << "Failed to add instance " << radio_instance << ". Radio mac: " << radio_mac;
         return {};
     }
 
     // Prepare path to the Radio object ID, like Device.Network.{i}.Radio.{i}.ID
     if (!m_ambiorix_datamodel->set(radio_instance, "ID", radio_mac)) {
-        LOG(ERROR) << "Failed to set " << radio_instance << "for mac: " << radio_mac;
+        LOG(ERROR) << "Failed to set " << radio_instance << "ID: " << radio_mac;
         return {};
     }
 
@@ -889,7 +888,7 @@ bool db::set_hostap_active(const std::string &mac, bool active)
     }
 
     if (!m_ambiorix_datamodel->set(radio_enable_path, "Enabled", active)) {
-        LOG(ERROR) << "Failed to set " << radio_enable_path << " Enabled parameter.";
+        LOG(ERROR) << "Failed to set " << radio_enable_path << "Enabled: " << active;
         return false;
     }
 
@@ -1278,68 +1277,81 @@ bool db::set_ap_vht_capabilities(wfa_map::tlvApVhtCapabilities &vht_caps_tlv)
     bool return_val = true;
 
     if (!radio_node) {
-        LOG(ERROR) << "Fail get radio node with mac: " << vht_caps_tlv.radio_uid();
+        LOG(ERROR) << "Failed to get radio node with mac: " << vht_caps_tlv.radio_uid();
         return false;
     }
 
     auto path_to_obj = radio_node->dm_path;
     if (path_to_obj.empty()) {
-        LOG(ERROR) << "Fail get path to object";
+        LOG(ERROR) << "Failed to get path to Radio object";
         return false;
     }
 
-    path_to_obj += ".Capabilities";
+    path_to_obj += ".Capabilities.";
     if (!m_ambiorix_datamodel->add_optional_subobject(path_to_obj, "VHTCapabilities")) {
-        LOG(ERROR) << "Fail add: " << path_to_obj << ".VHTCapabilities";
+        LOG(ERROR) << "Failed to add sub-object" << path_to_obj << "VHTCapabilities";
         return false;
     }
-    path_to_obj += ".VHTCapabilities";
+    path_to_obj += "VHTCapabilities.";
     if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_Tx_MCS",
                                    vht_caps_tlv.supported_vht_tx_mcs())) {
-        LOG(ERROR) << "Couldn't set VHT_Tx_MCS for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "VHT_Tx_MCS: " << vht_caps_tlv.supported_vht_tx_mcs();
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_Rx_MCS",
                                    vht_caps_tlv.supported_vht_rx_mcs())) {
-        LOG(ERROR) << "Couldn't set VHT_Rx_MCS for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "VHT_Rx_MCS: " << vht_caps_tlv.supported_vht_rx_mcs();
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "tx_spatial_streams",
                                    flags1.max_num_of_supported_tx_spatial_streams + 1)) {
-        LOG(ERROR) << "Couldn't set tx_spatial_streams for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "tx_spatial_streams: " << flags1.max_num_of_supported_tx_spatial_streams + 1;
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "rx_spatial_streams",
                                    flags1.max_num_of_supported_rx_spatial_streams + 1)) {
-        LOG(ERROR) << "Couldn't set rx_spatial_streams for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "rx_spatial_streams: " << flags1.max_num_of_supported_rx_spatial_streams + 1;
         return_val = false;
     }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "GI_80_MHz", (bool)flags1.short_gi_support_80mhz)) {
-        LOG(ERROR) << "Couldn't set GI_80_MHz for object " << path_to_obj;
+    if (!m_ambiorix_datamodel->set(path_to_obj, "GI_80_MHz",
+                                   static_cast<bool>(flags1.short_gi_support_80mhz))) {
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "GI_80_MHz: " << static_cast<bool>(flags1.short_gi_support_80mhz);
         return_val = false;
     }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "GI_160_MHz",
-                                   (bool)flags1.short_gi_support_160mhz_and_80_80mhz)) {
-        LOG(ERROR) << "Couldn't set GI_160_MHz for object " << path_to_obj;
+    if (!m_ambiorix_datamodel->set(
+            path_to_obj, "GI_160_MHz",
+            static_cast<bool>(flags1.short_gi_support_160mhz_and_80_80mhz))) {
+        LOG(ERROR) << "Failed to set " << path_to_obj << "GI_160_MHz: "
+                   << static_cast<bool>(flags1.short_gi_support_160mhz_and_80_80mhz);
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_80_80_MHz",
-                                   (bool)flags2.vht_support_80_80mhz)) {
-        LOG(ERROR) << "Couldn't set VHT_80_80_MHz for object " << path_to_obj;
+                                   static_cast<bool>(flags2.vht_support_80_80mhz))) {
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "VHT_80_80_MHz: " << static_cast<bool>(flags2.vht_support_80_80mhz);
         return_val = false;
     }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_160_MHz", (bool)flags2.vht_support_160mhz)) {
-        LOG(ERROR) << "Couldn't set VHT_160_MHz for object " << path_to_obj;
+    if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_160_MHz",
+                                   static_cast<bool>(flags2.vht_support_160mhz))) {
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "VHT_160_MHz: " << static_cast<bool>(flags2.vht_support_160mhz);
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "SU_beamformer",
-                                   (bool)flags2.su_beamformer_capable)) {
-        LOG(ERROR) << "Couldn't set SU_beamformer for object " << path_to_obj;
+                                   static_cast<bool>(flags2.su_beamformer_capable))) {
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "SU_beamformer: " << static_cast<bool>(flags2.su_beamformer_capable);
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "MU_beamformer",
-                                   (bool)flags2.mu_beamformer_capable)) {
-        LOG(ERROR) << "Couldn't set MU_beamformer for object " << path_to_obj;
+                                   static_cast<bool>(flags2.mu_beamformer_capable))) {
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "MU_beamformer: " << static_cast<bool>(flags2.mu_beamformer_capable);
         return_val = false;
     }
     return return_val;
@@ -1353,29 +1365,30 @@ bool db::dm_add_ap_operating_classes(const std::string &radio_mac, uint8_t max_t
     bool return_value = true;
 
     if (!radio_node) {
-        LOG(ERROR) << "Fail to get radio with mac: " << radio_mac;
+        LOG(ERROR) << "Failed to get radio with mac: " << radio_mac;
         return false;
     }
 
     std::string path_to_obj = radio_node->dm_path;
     if (path_to_obj.empty()) {
-        return true;
+        LOG(ERROR) << "Failed to find path to radio with mac: " << radio_mac;
+        return false;
     }
 
     path_to_obj += ".Capabilities.OperatingClasses";
     std::string path_to_obj_instance = m_ambiorix_datamodel->add_instance(path_to_obj);
     if (path_to_obj_instance.empty()) {
-        LOG(ERROR) << "Fail to add object: " << path_to_obj;
+        LOG(ERROR) << "Failed to add object: " << path_to_obj;
         return false;
     }
 
     if (!m_ambiorix_datamodel->set(path_to_obj_instance, "MaxTxPower", max_tx_power)) {
-        LOG(ERROR) << "Fail to set value for " << path_to_obj << ".MaxTxPower";
+        LOG(ERROR) << "Failed to set " << path_to_obj << " MaxTxPower: " << max_tx_power;
         return_value = false;
     }
 
     if (!m_ambiorix_datamodel->set(path_to_obj_instance, "Class", op_class)) {
-        LOG(ERROR) << "Fail to set value for " << path_to_obj << ".Class";
+        LOG(ERROR) << "Failed to set " << path_to_obj << " Class: " << op_class;
         return_value = false;
     }
 
@@ -1383,14 +1396,14 @@ bool db::dm_add_ap_operating_classes(const std::string &radio_mac, uint8_t max_t
     for (auto non_op_channel : non_operable_channels) {
         auto path_to_non_operable_instance = m_ambiorix_datamodel->add_instance(path_to_obj);
         if (path_to_non_operable_instance.empty()) {
-            LOG(ERROR) << "Fail to add object: " << path_to_obj;
+            LOG(ERROR) << "Failed to add object: " << path_to_obj;
             return_value = false;
             continue;
         }
         if (!m_ambiorix_datamodel->set(path_to_non_operable_instance, "NonOpChannelNumber",
                                        non_op_channel)) {
-            LOG(ERROR) << "Fail to set value for " << path_to_non_operable_instance
-                       << ".NonOpChannelNumber";
+            LOG(ERROR) << "Failed to set " << path_to_non_operable_instance
+                       << "NonOpChannelNumber: " << non_op_channel;
             return_value = false;
         }
     }
@@ -1413,63 +1426,80 @@ bool db::set_ap_he_capabilities(wfa_map::tlvApHeCapabilities &he_caps_tlv)
     bool return_val  = true;
 
     if (path_to_obj.empty()) {
-        return true;
-    }
-
-    path_to_obj += ".Capabilities";
-    if (!m_ambiorix_datamodel->add_optional_subobject(path_to_obj, "HECapabilities")) {
-        LOG(WARNING) << "Couldn't add object " << path_to_obj << ".HECapabilities";
+        LOG(ERROR) << "Failed to get path to object";
         return false;
     }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "HE_8080_MHz", (bool)flags1.he_support_80_80mhz)) {
-        LOG(WARNING) << "Couldn't set HE_8080_MHz for object" << path_to_obj;
+
+    path_to_obj += ".Capabilities.";
+    if (!m_ambiorix_datamodel->add_optional_subobject(path_to_obj, "HECapabilities")) {
+        LOG(ERROR) << "Failed to add sub-object " << path_to_obj << "HECapabilities";
+        return false;
+    }
+
+    path_to_obj += "HECapabilities.";
+    if (!m_ambiorix_datamodel->set(path_to_obj, "HE_8080_MHz",
+                                   static_cast<bool>(flags1.he_support_80_80mhz))) {
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "HE_8080_MHz: " << static_cast<bool>(flags1.he_support_80_80mhz);
         return_val = false;
     }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "HE_160_MHz", (bool)flags1.he_support_160mhz)) {
-        LOG(WARNING) << "Couldn't set HE_160_MHz for object " << path_to_obj;
+    if (!m_ambiorix_datamodel->set(path_to_obj, "HE_160_MHz",
+                                   static_cast<bool>(flags1.he_support_160mhz))) {
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "HE_160_MHz: " << static_cast<bool>(flags1.he_support_160mhz);
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "SU_Beamformer",
-                                   (bool)flags2.su_beamformer_capable)) {
-        LOG(WARNING) << "Couldn't set SU_beamformer for object " << path_to_obj;
+                                   static_cast<bool>(flags2.su_beamformer_capable))) {
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "SU_beamformer: " << static_cast<bool>(flags2.su_beamformer_capable);
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "MU_Beamformer",
-                                   (bool)flags2.mu_beamformer_capable)) {
-        LOG(WARNING) << "Couldn't set MU_Beamformer for object " << path_to_obj;
+                                   static_cast<bool>(flags2.mu_beamformer_capable))) {
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "MU_Beamformer: " << static_cast<bool>(flags2.mu_beamformer_capable);
         return_val = false;
     }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "UL_MU_MIMO", (bool)flags2.ul_mu_mimo_capable)) {
-        LOG(WARNING) << "Couldn't set UL_MU_MIMO for object " << path_to_obj;
+    if (!m_ambiorix_datamodel->set(path_to_obj, "UL_MU_MIMO",
+                                   static_cast<bool>(flags2.ul_mu_mimo_capable))) {
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "UL_MU_MIMO: " << static_cast<bool>(flags2.ul_mu_mimo_capable);
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "UL_MU_MIMO_OFDMA",
-                                   (bool)flags2.ul_mu_mimo_and_ofdm_capable)) {
-        LOG(WARNING) << "Couldn't set UL_MU_MIMO_OFDMA for object " << path_to_obj;
+                                   static_cast<bool>(flags2.ul_mu_mimo_and_ofdm_capable))) {
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "UL_MU_MIMO_OFDMA: " << static_cast<bool>(flags2.ul_mu_mimo_and_ofdm_capable);
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "DL_MU_MIMO_OFDMA",
-                                   (bool)flags2.dl_mu_mimo_and_ofdm_capable)) {
-        LOG(WARNING) << "Couldn't set DL_MU_MIMO_OFDMA for object " << path_to_obj;
+                                   static_cast<bool>(flags2.dl_mu_mimo_and_ofdm_capable))) {
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "DL_MU_MIMO_OFDMA: " << static_cast<bool>(flags2.dl_mu_mimo_and_ofdm_capable);
         return_val = false;
     }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "UL_OFDMA", (bool)flags2.ul_ofdm_capable)) {
-        LOG(WARNING) << "Couldn't set UL_OFDMA for object " << path_to_obj;
+    if (!m_ambiorix_datamodel->set(path_to_obj, "UL_OFDMA",
+                                   static_cast<bool>(flags2.ul_ofdm_capable))) {
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "UL_OFDMA: " << static_cast<bool>(flags2.ul_ofdm_capable);
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "tx_spatial_streams",
                                    flags1.max_num_of_supported_tx_spatial_streams + 1)) {
-        LOG(WARNING) << "Couldn't set tx_spatial_streams for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "tx_spatial_streams: " << flags1.max_num_of_supported_tx_spatial_streams + 1;
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "rx_spatial_streams",
                                    flags1.max_num_of_supported_rx_spatial_streams + 1)) {
-        LOG(WARNING) << "Couldn't set rx_spatial_streams for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "rx_spatial_streams: " << flags1.max_num_of_supported_rx_spatial_streams + 1;
         return_val = false;
     }
 
     uint8_t supported_he_mcs_length = he_caps_tlv.supported_he_mcs_length();
-    path_to_obj += ".supported_MCS";
+    path_to_obj += "supported_MCS";
     for (int i = 0; i < supported_he_mcs_length; i++) {
         auto path_to_obj_instance = m_ambiorix_datamodel->add_instance(path_to_obj);
         if (path_to_obj_instance.empty()) {
@@ -1477,10 +1507,10 @@ bool db::set_ap_he_capabilities(wfa_map::tlvApHeCapabilities &he_caps_tlv)
             return_val = false;
             continue;
         }
-        if (!m_ambiorix_datamodel->set(path_to_obj_instance, "supported_MCS_size",
+        if (!m_ambiorix_datamodel->set(path_to_obj_instance + '.', "supported_MCS_size",
                                        *he_caps_tlv.supported_he_mcs(i))) {
-            LOG(WARNING) << "Failed to set " << path_to_obj_instance << ".supported_MCS_size to "
-                         << he_caps_tlv.supported_he_mcs(i);
+            LOG(WARNING) << "Failed to set " << path_to_obj_instance
+                         << "supported_MCS_size: " << he_caps_tlv.supported_he_mcs(i);
             return_val = false;
         }
     }
@@ -1503,54 +1533,56 @@ bool db::dm_set_sta_he_capabilities(const std::string &path_to_sta,
     bool return_val = true;
 
     if (!m_ambiorix_datamodel->add_optional_subobject(path_to_sta, "HECapabilities")) {
-        LOG(ERROR) << "Failed to add: " << path_to_sta << "HECapabilities.";
+        LOG(ERROR) << "Failed to add sub-object " << path_to_sta << "HECapabilities";
         return false;
     }
-    std::string path_to_obj = path_to_sta + "HECapabilities";
+    std::string path_to_obj = path_to_sta + "HECapabilities.";
     if (!m_ambiorix_datamodel->set(path_to_obj, "rx_spatial_streams", sta_cap.ht_ss)) {
-        LOG(ERROR) << "Couldn't set rx_spatial_streams for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj << "rx_spatial_streams: " << sta_cap.ht_ss;
         return_val = false;
     }
     // To do: find value for tx_spatial_streams PPM-792.
     // Parse the (Re)Association Request frame.
     if (!m_ambiorix_datamodel->set(path_to_obj, "tx_spatial_streams", sta_cap.ht_ss)) {
-        LOG(ERROR) << "Couldn't set tx_spatial_streams for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj << "tx_spatial_streams: " << sta_cap.ht_ss;
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_80_80_MHz",
                                    BANDWIDTH_80_80 <= sta_cap.vht_bw)) {
-        LOG(ERROR) << "Couldn't set VHT_80_80_MHz for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "VHT_80_80_MHz: " << (BANDWIDTH_80_80 <= sta_cap.vht_bw);
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "GI_160_MHz",
                                    static_cast<bool>(sta_cap.vht_high_bw_short_gi))) {
-        LOG(ERROR) << "Couldn't set GI_160_MHz for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "GI_160_MHz: " << static_cast<bool>(sta_cap.vht_high_bw_short_gi);
         return_val = false;
     }
     // To do: For rest of the values need to parse
     // (Re)Association Request frame PPM-792
     if (!m_ambiorix_datamodel->set(path_to_obj, "SU_Beamformer", false)) {
-        LOG(ERROR) << "Couldn't set SU_Beamformer for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj << "SU_Beamformer: " << false;
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "MU_Beamformer", false)) {
-        LOG(ERROR) << "Couldn't set MU_Beamformer for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj << "MU_Beamformer: " << false;
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "UL_MU_MIMO", false)) {
-        LOG(ERROR) << "Couldn't set UL_MU_MIMO for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj << "UL_MU_MIMO: " << false;
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "UL_MU_MIMO_OFDMA", false)) {
-        LOG(ERROR) << "Couldn't set UL_MU_MIMO_OFDMA for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj << "UL_MU_MIMO_OFDMA: " << false;
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "DL_MU_MIMO_OFDMA", false)) {
-        LOG(ERROR) << "Couldn't set DL_MU_MIMO_OFDMA for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj << "DL_MU_MIMO_OFDMA: " << false;
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "UL_OFDMA", false)) {
-        LOG(ERROR) << "Couldn't set UL_OFDMA for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set  " << path_to_obj << "UL_OFDMA: " << false;
         return_val = false;
     }
     return return_val;
@@ -1562,32 +1594,35 @@ bool db::dm_set_sta_ht_capabilities(const std::string &path_to_sta,
     bool return_val = true;
 
     if (!m_ambiorix_datamodel->add_optional_subobject(path_to_sta, "HTCapabilities")) {
-        LOG(ERROR) << "Failed to add: " << path_to_sta << "HTCapabilities sub-object.";
+        LOG(ERROR) << "Failed to add sub-object " << path_to_sta << "HTCapabilities";
         return false;
     }
-    std::string path_to_obj = path_to_sta + ".HTCapabilities";
+    std::string path_to_obj = path_to_sta + "HTCapabilities.";
     if (!m_ambiorix_datamodel->set(path_to_obj, "GI_20_MHz",
                                    static_cast<bool>(sta_cap.ht_low_bw_short_gi))) {
-        LOG(ERROR) << "Couldn't set GI_20_MHz for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "GI_20_MHz: " << static_cast<bool>(sta_cap.ht_low_bw_short_gi);
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "GI_40_MHz",
                                    static_cast<bool>(sta_cap.ht_high_bw_short_gi))) {
-        LOG(ERROR) << "Couldn't set GI_40_MHz for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "GI_40_MHz: " << static_cast<bool>(sta_cap.ht_high_bw_short_gi);
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "HT_40_Mhz", static_cast<bool>(sta_cap.ht_bw))) {
-        LOG(ERROR) << "Couldn't set HT_40_Mhz for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "HT_40_Mhz: " << static_cast<bool>(sta_cap.ht_bw);
         return_val = false;
     }
     // TODO: find value for tx_spatial_streams PPM-792.
     // Parse the (Re)Association Request frame.
     if (!m_ambiorix_datamodel->set(path_to_obj, "tx_spatial_streams", sta_cap.ht_ss)) {
-        LOG(ERROR) << "Couldn't set tx_spatial_streams for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj << "tx_spatial_streams: " << sta_cap.ht_ss;
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "rx_spatial_streams", sta_cap.ht_ss)) {
-        LOG(ERROR) << "Couldn't set rx_spatial_streams for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj << "rx_spatial_streams: " << sta_cap.ht_ss;
         return_val = false;
     }
     return return_val;
@@ -1599,55 +1634,59 @@ bool db::dm_set_sta_vht_capabilities(const std::string &path_to_sta,
     bool return_val = true;
 
     if (!m_ambiorix_datamodel->add_optional_subobject(path_to_sta, "VHTCapabilities")) {
-        LOG(ERROR) << "Failed to add: " << path_to_sta << "VHTCapabilities sub-object.";
+        LOG(ERROR) << "Failed to add sub-object " << path_to_sta << "VHTCapabilities";
         return false;
     }
-    std::string path_to_obj = path_to_sta + ".VHTCapabilities";
+    std::string path_to_obj = path_to_sta + "VHTCapabilities.";
     if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_Tx_MCS", sta_cap.default_mcs)) {
-        LOG(ERROR) << "Couldn't set VHT_Tx_MCS for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj << "VHT_Tx_MCS: " << sta_cap.default_mcs;
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_Rx_MCS", sta_cap.vht_mcs)) {
-        LOG(ERROR) << "Couldn't set VHT_Rx_MCS for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj << "VHT_Rx_MCS: " << sta_cap.vht_mcs;
         return_val = false;
     }
     // TODO: find value for tx_spatial_streams PPM-792.
     // Parse the (Re)Association Request frame.
     if (!m_ambiorix_datamodel->set(path_to_obj, "tx_spatial_streams", sta_cap.vht_ss)) {
-        LOG(ERROR) << "Couldn't set tx_spatial_streams for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj << "tx_spatial_streams: " << sta_cap.vht_ss;
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "rx_spatial_streams", sta_cap.vht_ss)) {
-        LOG(ERROR) << "Couldn't set rx_spatial_streams for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj << "rx_spatial_streams: " << sta_cap.vht_ss;
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "GI_80_MHz",
                                    static_cast<bool>(sta_cap.vht_low_bw_short_gi))) {
-        LOG(ERROR) << "Couldn't set GI_80_MHz for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "GI_80_MHz: " << static_cast<bool>(sta_cap.vht_low_bw_short_gi);
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "GI_160_MHz",
                                    static_cast<bool>(sta_cap.vht_high_bw_short_gi))) {
-        LOG(ERROR) << "Couldn't set GI_160_MHz for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "GI_160_MHz: " << static_cast<bool>(sta_cap.vht_high_bw_short_gi);
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_80_80_MHz",
                                    (BANDWIDTH_80_80 <= sta_cap.vht_bw))) {
-        LOG(ERROR) << "Couldn't set VHT_80_80_MHz for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "VHT_80_80_MHz: " << (BANDWIDTH_80_80 <= sta_cap.vht_bw);
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "VHT_160_MHz", (BANDWIDTH_160 <= sta_cap.vht_bw))) {
-        LOG(ERROR) << "Couldn't set VHT_160_MHz for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "VHT_160_MHz: " << (BANDWIDTH_160 <= sta_cap.vht_bw);
         return_val = false;
     }
     // TODO: find value for SU_beamformer and MU_beamformer PPM-792.
     // Parse the (Re)Association Request frame.
     if (!m_ambiorix_datamodel->set(path_to_obj, "SU_beamformer", false)) {
-        LOG(ERROR) << "Couldn't set SU_beamformer for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj << "SU_beamformer: " << false;
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "MU_beamformer", false)) {
-        LOG(ERROR) << "Couldn't set MU_beamformer for object " << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj << "MU_beamformer: " << false;
         return_val = false;
     }
     return return_val;
@@ -1689,17 +1728,19 @@ bool db::set_station_capabilities(const std::string &client_mac,
         return true;
     }
 
+    path_to_sta += '.';
     // Remove previous capabilities objects, if they exist
     m_ambiorix_datamodel->remove_optional_subobject(path_to_sta, "HTCapabilities");
     m_ambiorix_datamodel->remove_optional_subobject(path_to_sta, "VHTCapabilities");
+    LOG(ERROR) << "Path path_to_sta: " << path_to_sta;
     // TODO: Remove HECapabilities before setting new one.
 
     if (sta_cap.ht_bw != 0xFF && !dm_set_sta_ht_capabilities(path_to_sta, sta_cap)) {
-        LOG(ERROR) << "Fail to set station HT Capabilities";
+        LOG(ERROR) << "Failed to set station HT Capabilities";
         return false;
     }
     if (sta_cap.vht_bw != 0xFF && !dm_set_sta_vht_capabilities(path_to_sta, sta_cap)) {
-        LOG(ERROR) << "Fail to set station VHT Capabilities";
+        LOG(ERROR) << "Failed to set station VHT Capabilities";
         return false;
     }
 
@@ -1715,13 +1756,13 @@ bool db::set_station_capabilities(const std::string &client_mac,
 
     // Fill up HT Capabilities for Controller.Notification.AssociationEvent.AssocData
     if (sta_cap.ht_bw != 0xFF && !dm_set_sta_ht_capabilities(path_to_eventdata, sta_cap)) {
-        LOG(ERROR) << "Fail to set station HT Capabilities into " << path_to_eventdata;
+        LOG(ERROR) << "Failed to set station HT Capabilities into " << path_to_eventdata;
         return false;
     }
 
     // Fill up VHT Capabilities for Controller.Notification.AssociationEvent.AssocData
     if (sta_cap.vht_bw != 0xFF && !dm_set_sta_vht_capabilities(path_to_eventdata, sta_cap)) {
-        LOG(ERROR) << "Fail to set station VHT Capabilities";
+        LOG(ERROR) << "Failed to set station VHT Capabilities";
         return false;
     }
 
@@ -2245,8 +2286,8 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
             return false;
         }
     } else {
-        LOG(DEBUG) << "BSS instance exists for BSSID: " << bssid << "Updating Data Model.";
-        bss_instance = bss_path + "." + std::to_string(bss_index);
+        LOG(DEBUG) << "BSS instance exists for BSSID: " << bssid << ". Updating Data Model.";
+        bss_instance = bss_path + "." + std::to_string(bss_index) + ".";
     }
 
     /*
@@ -2254,7 +2295,7 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
         Example: Controller.Network.Device.1.Radio.1.BSS.1.BSSID
     */
     if (!m_ambiorix_datamodel->set(bss_instance, "BSSID", bssid)) {
-        LOG(ERROR) << "Failed to set " << bss_instance << "BSSID";
+        LOG(ERROR) << "Failed to set " << bss_instance << "BSSID: " << bssid;
         return false;
     }
 
@@ -2263,7 +2304,7 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
         Example: Controller.Network.Device.1.Radio.1.BSS.1.SSID
     */
     if (!m_ambiorix_datamodel->set(bss_instance, "SSID", ssid)) {
-        LOG(ERROR) << "Failed to set " << bss_instance << "SSID";
+        LOG(ERROR) << "Failed to set " << bss_instance << "SSID: " << ssid;
         return false;
     }
 
@@ -2272,7 +2313,7 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
         Example: Controller.Network.Device.1.Radio.1.BSS.1.Enabled
     */
     if (!m_ambiorix_datamodel->set(bss_instance, "Enabled", !ssid.empty())) {
-        LOG(ERROR) << "Failed to set " << bss_instance << "Enabled";
+        LOG(ERROR) << "Failed to set " << bss_instance << "Enabled: " << !ssid.empty();
         return false;
     }
 
@@ -2284,7 +2325,7 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
     */
     uint64_t creation_time = time(NULL);
     if (!m_ambiorix_datamodel->set(bss_instance, "LastChange", creation_time)) {
-        LOG(ERROR) << "Failed to set " << bss_instance << "LastChange";
+        LOG(ERROR) << "Failed to set " << bss_instance << "LastChange: " << creation_time;
         return false;
     }
 
@@ -2299,7 +2340,7 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
         Example: Controller.Network.Device.1.Radio.1.BSS.1.TimeStamp
     */
     if (!m_ambiorix_datamodel->set(bss_instance, "TimeStamp", timestamp)) {
-        LOG(ERROR) << "Failed to set " << bss_instance << "TimeStamp";
+        LOG(ERROR) << "Failed to set " << bss_instance << "TimeStamp: " << timestamp;
         return false;
     }
 
@@ -3570,7 +3611,7 @@ bool db::set_client_is_unfriendly(const sMacAddr &mac, bool client_is_unfriendly
                        << client_is_unfriendly;
 
             ValuesMap values_map;
-            // std::to_string(bool) would result in either "0" or "1"
+            // std::to_stringstatic_cast<bool>( would result in either "0" or "1"
             values_map[IS_UNFRIENDLY_STR] = std::to_string(client_is_unfriendly);
 
             // update the persistent db
@@ -4279,15 +4320,15 @@ bool db::notify_disconnection(const std::string &client_mac)
         return false;
     }
 
-    std::string path_to_eventdata = "Controller.Notification.DisassociationEvent.DisassocData";
+    std::string path_to_eventdata = "Controller.Notification.DisassociationEvent.DisassocData.";
 
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "BSSID", n->parent_mac)) {
-        LOG(ERROR) << "Couldn't set BSSID for object " << path_to_eventdata;
+        LOG(ERROR) << "Failed to set " << path_to_eventdata << "BSSID: " << n->parent_mac;
         return false;
     }
 
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "MACAddress", client_mac)) {
-        LOG(ERROR) << "Couldn't set MACAddress for object " << path_to_eventdata;
+        LOG(ERROR) << "Failed to set " << path_to_eventdata << "MACAddress: " << client_mac;
         return false;
     }
 
@@ -4298,28 +4339,33 @@ bool db::notify_disconnection(const std::string &client_mac)
             Should be fixed after PPM-864.
     */
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "ReasonCode", static_cast<uint32_t>(1))) {
-        LOG(ERROR) << "Couldn't set ReasonCode for object " << path_to_eventdata;
+        LOG(ERROR) << "Failed to set " << path_to_eventdata
+                   << "ReasonCode: " << static_cast<uint32_t>(1);
         return false;
     }
 
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "BytesSent", n->stats_info->tx_bytes)) {
-        LOG(ERROR) << "Couldn't set BytesSent for object " << path_to_eventdata;
+        LOG(ERROR) << "Failed to set " << path_to_eventdata
+                   << "BytesSent: " << n->stats_info->tx_bytes;
         return false;
     }
 
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "BytesReceived", n->stats_info->rx_bytes)) {
-        LOG(ERROR) << "Couldn't set BytesReceived for object " << path_to_eventdata;
+        LOG(ERROR) << "Failed to set " << path_to_eventdata
+                   << "BytesReceived: " << n->stats_info->rx_bytes;
         return false;
     }
 
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "PacketsSent", n->stats_info->tx_packets)) {
-        LOG(ERROR) << "Couldn't set PacketsSent for object " << path_to_eventdata;
+        LOG(ERROR) << "Failed to set " << path_to_eventdata
+                   << "PacketsSent: " << n->stats_info->tx_packets;
         return false;
     }
 
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "PacketsReceived",
                                    n->stats_info->rx_packets)) {
-        LOG(ERROR) << "Couldn't set PacketsReceived for object " << path_to_eventdata;
+        LOG(ERROR) << "Failed to set " << path_to_eventdata
+                   << "PacketsReceived: " << n->stats_info->rx_packets;
         return false;
     }
 
@@ -4327,18 +4373,21 @@ bool db::notify_disconnection(const std::string &client_mac)
         ErrorsSent and ErrorsReceived are not available yet on stats_info
     */
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "ErrorsSent", static_cast<uint32_t>(0))) {
-        LOG(ERROR) << "Couldn't set ErrorsSent for object " << path_to_eventdata;
+        LOG(ERROR) << "Failed to set " << path_to_eventdata
+                   << "ErrorsSent: " << static_cast<uint32_t>(0);
         return false;
     }
 
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "ErrorsReceived", static_cast<uint32_t>(0))) {
-        LOG(ERROR) << "Couldn't set ErrorsReceived for object " << path_to_eventdata;
+        LOG(ERROR) << "Failed to set " << path_to_eventdata
+                   << "ErrorsReceived: " << static_cast<uint32_t>(0);
         return false;
     }
 
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "RetransCount",
                                    n->stats_info->retrans_count)) {
-        LOG(ERROR) << "Couldn't set RetransCount for object " << path_to_eventdata;
+        LOG(ERROR) << "Failed to set " << path_to_eventdata
+                   << "RetransCount: " << n->stats_info->retrans_count;
         return false;
     }
 
@@ -4372,15 +4421,18 @@ bool db::set_node_stats_info(const std::string &mac,
         std::string path_to_sta = n->dm_path;
 
         if (path_to_sta.empty()) {
-            return true;
+            LOG(ERROR) << "Failed to get path for station with mac: " << mac;
+            return false;
         }
 
         if (!m_ambiorix_datamodel->set(path_to_sta, "LastDataDownlinkRate", p->tx_phy_rate_100kb)) {
-            LOG(ERROR) << "Fail to set " << path_to_sta << "LastDataDownlinkRate";
+            LOG(ERROR) << "Failed to set " << path_to_sta
+                       << "LastDataDownlinkRate: " << p->tx_phy_rate_100kb;
             return false;
         }
         if (!m_ambiorix_datamodel->set(path_to_sta, "LastDataUplinkRate", p->rx_phy_rate_100kb)) {
-            LOG(ERROR) << "Fail to set " << path_to_sta << "LastDataUplinkRate";
+            LOG(ERROR) << "Failed to set " << path_to_sta
+                       << "LastDataUplinkRate: " << p->rx_phy_rate_100kb;
             return false;
         }
     }
@@ -4394,35 +4446,39 @@ bool db::set_node_stats_info(const std::string &mac,
     // Path example to the variable in Data Model
     // Controller.Network.Device.1.Radio.1.BSS.2.STA.1.BytesSent
     if (!m_ambiorix_datamodel->set(path_to_sta, "BytesSent", n->stats_info->tx_bytes)) {
-        LOG(ERROR) << "Couldn't set BytesSent for object " << path_to_sta;
+        LOG(ERROR) << "Failed to set " << path_to_sta << "BytesSent: " << n->stats_info->tx_bytes;
         return false;
     }
 
     // Path example to the variable in Data Model
     // Controller.Network.Device.1.Radio.1.BSS.3.STA.1.BytesReceived
     if (!m_ambiorix_datamodel->set(path_to_sta, "BytesReceived", n->stats_info->rx_bytes)) {
-        LOG(ERROR) << "Couldn't set BytesReceived for object " << path_to_sta;
+        LOG(ERROR) << "Failed to set " << path_to_sta
+                   << "BytesReceived: " << n->stats_info->rx_bytes;
         return false;
     }
 
     // Path example to the variable in Data Model
     // Controller.Network.Device.1.Radio.1.BSS.2.STA.1.PacketsSent
     if (!m_ambiorix_datamodel->set(path_to_sta, "PacketsSent", n->stats_info->tx_packets)) {
-        LOG(ERROR) << "Couldn't set PacketsSent for object " << path_to_sta;
+        LOG(ERROR) << "Failed to set " << path_to_sta
+                   << "PacketsSent: " << n->stats_info->tx_packets;
         return false;
     }
 
     // Path example to the variable in Data Model
     // Controller.Network.Device.1.Radio.1.BSS.1.STA.2.PacketsReceived
     if (!m_ambiorix_datamodel->set(path_to_sta, "PacketsReceived", n->stats_info->rx_packets)) {
-        LOG(ERROR) << "Couldn't set PacketsReceived for object " << path_to_sta;
+        LOG(ERROR) << "Failed to set " << path_to_sta
+                   << "PacketsReceived: " << n->stats_info->rx_packets;
         return false;
     }
 
     // Path example to the variable in Data Model
     // Controller.Network.Device.1.Radio.1.BSS.2.STA.4.RetransCount
     if (!m_ambiorix_datamodel->set(path_to_sta, "RetransCount", n->stats_info->retrans_count)) {
-        LOG(ERROR) << "Couldn't set RetransCount for object " << path_to_sta;
+        LOG(ERROR) << "Failed to set " << path_to_sta
+                   << "RetransCount: " << n->stats_info->retrans_count;
         return false;
     }
 
@@ -4430,7 +4486,7 @@ bool db::set_node_stats_info(const std::string &mac,
     // Controller.Network.Device.1.Radio.1.BSS.2.STA.1.ErrorsSent
     // PPM-40: ToDo: should be set after processing STA Traffic Stats, not implemented yet.
     if (!m_ambiorix_datamodel->set(path_to_sta, "ErrorsSent", 0)) {
-        LOG(ERROR) << "Couldn't set ErrorsSent for object " << path_to_sta;
+        LOG(ERROR) << "Failed to set " << path_to_sta << "ErrorsSent: " << 0;
         return false;
     }
 
@@ -5210,15 +5266,17 @@ bool db::set_sta_link_metrics(const sMacAddr &sta_mac, uint32_t downlink_est_mac
 
     if (!m_ambiorix_datamodel->set(path_to_sta, "EstMACDataRateDownlink",
                                    downlink_est_mac_data_rate)) {
-        LOG(ERROR) << "Couldn't set EstMACDataRateDownlink for object" << path_to_sta;
+        LOG(ERROR) << "Failed to set" << path_to_sta
+                   << "EstMACDataRateDownlink: " << downlink_est_mac_data_rate;
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_sta, "EstMACDataRateUplink", uplink_est_mac_data_rate)) {
-        LOG(ERROR) << "Couldn't set EstMACDataRateUplink for object" << path_to_sta;
+        LOG(ERROR) << "Failed to set " << path_to_sta
+                   << "EstMACDataRateUplink: " << uplink_est_mac_data_rate;
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_sta, "SignalStrength", signal_strength)) {
-        LOG(ERROR) << "Couldn't set SignalStrength for object" << path_to_sta;
+        LOG(ERROR) << "Failed to set " << path_to_sta << "SignalStrength: " << signal_strength;
         return_val = false;
     }
     return return_val;
@@ -5804,15 +5862,15 @@ bool db::clear_ap_capabilities(const sMacAddr &radio_mac)
     }
     path_to_obj += ".Capabilities";
     if (!m_ambiorix_datamodel->remove_optional_subobject(path_to_obj, "HTCapabilities")) {
-        LOG(ERROR) << "Fail to remove optional subobject: " << path_to_obj << ".HTCapabilities";
+        LOG(ERROR) << "Failed to remove optional subobject: " << path_to_obj << ".HTCapabilities";
         return false;
     }
     if (!m_ambiorix_datamodel->remove_optional_subobject(path_to_obj, "VHTCapabilities")) {
-        LOG(ERROR) << "Fail to remove optional subobject: " << path_to_obj << ".VHTCapabilities";
+        LOG(ERROR) << "Failed to remove optional subobject: " << path_to_obj << ".VHTCapabilities";
         return false;
     }
     if (!m_ambiorix_datamodel->remove_optional_subobject(path_to_obj, "HECapabilities")) {
-        LOG(ERROR) << "Fail to remove optional subobject: " << path_to_obj << ".HECapabilities";
+        LOG(ERROR) << "Failed to remove optional subobject: " << path_to_obj << ".HECapabilities";
         return false;
     }
     return true;
@@ -5825,40 +5883,50 @@ bool db::set_ap_ht_capabilities(const sMacAddr &radio_mac,
     bool return_val = true;
 
     if (!radio_node) {
-        LOG(ERROR) << "Fail get radio node with mac: " << radio_mac;
+        LOG(ERROR) << "Failed to get radio node with mac: " << radio_mac;
         return false;
     }
 
     std::string path_to_obj = radio_node->dm_path;
     if (path_to_obj.empty()) {
-        return true;
-    }
-
-    path_to_obj += ".Capabilities";
-    if (!m_ambiorix_datamodel->add_optional_subobject(path_to_obj, "HTCapabilities")) {
+        LOG(ERROR) << "Failed to get path for radio with mac: " << radio_mac;
         return false;
     }
-    path_to_obj += ".HTCapabilities";
-    if (!m_ambiorix_datamodel->set(path_to_obj, "GI_20_MHz", (bool)flags.short_gi_support_20mhz)) {
-        LOG(WARNING) << "Couldn't set GI_20_MHz for object" << path_to_obj;
+
+    path_to_obj += ".Capabilities.";
+    if (!m_ambiorix_datamodel->add_optional_subobject(path_to_obj, "HTCapabilities")) {
+        LOG(ERROR) << "Failed to add sub-object " << path_to_obj << ".HTCapabilities";
+        return false;
+    }
+    path_to_obj += "HTCapabilities.";
+    if (!m_ambiorix_datamodel->set(path_to_obj, "GI_20_MHz",
+                                   static_cast<bool>(flags.short_gi_support_20mhz))) {
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "GI_20_MHz: " << static_cast<bool>(flags.short_gi_support_20mhz);
         return_val = false;
     }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "GI_40_MHz", (bool)flags.short_gi_support_40mhz)) {
-        LOG(WARNING) << "Couldn't set GI_40_MHz for object" << path_to_obj;
+    if (!m_ambiorix_datamodel->set(path_to_obj, "GI_40_MHz",
+                                   static_cast<bool>(flags.short_gi_support_40mhz))) {
+        LOG(ERROR) << "Failed to  set " << path_to_obj
+                   << "GI_40_MHz: " << static_cast<bool>(flags.short_gi_support_40mhz);
         return_val = false;
     }
-    if (!m_ambiorix_datamodel->set(path_to_obj, "HT_40_Mhz", (bool)flags.ht_support_40mhz)) {
-        LOG(WARNING) << "Couldn't set HT_40_Mhz for object" << path_to_obj;
+    if (!m_ambiorix_datamodel->set(path_to_obj, "HT_40_Mhz",
+                                   static_cast<bool>(flags.ht_support_40mhz))) {
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "HT_40_Mhz: " << static_cast<bool>(flags.ht_support_40mhz);
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "tx_spatial_streams",
                                    flags.max_num_of_supported_tx_spatial_streams + 1)) {
-        LOG(WARNING) << "Couldn't set tx_spatial_streams for object" << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "tx_spatial_streams: " << flags.max_num_of_supported_tx_spatial_streams + 1;
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_obj, "rx_spatial_streams",
                                    flags.max_num_of_supported_rx_spatial_streams + 1)) {
-        LOG(WARNING) << "Couldn't set rx_spatial_streams for object" << path_to_obj;
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "rx_spatial_streams: " << flags.max_num_of_supported_rx_spatial_streams + 1;
         return_val = false;
     }
     return return_val;
@@ -5877,18 +5945,18 @@ bool db::dm_set_device_multi_ap_capabilities(const std::string &device_mac)
     path_to_obj += ".MultiAPCapabilities";
     //For the time being, agent does not do steering so Steering Policy TLV is ignored.
     if (!m_ambiorix_datamodel->set(path_to_obj, "AgentInitiatedRCPIBasedSteering", false)) {
-        LOG(ERROR) << "Failed to set value for: " << path_to_obj
-                   << "AgentInitiatedRCPIBasedSteering";
+        LOG(ERROR) << "Failed to set " << path_to_obj
+                   << "AgentInitiatedRCPIBasedSteering: " << false;
         return_val = false;
     }
     // USTALinkMatricCurrentlyOn not supported for now (PPM-172)
     if (!m_ambiorix_datamodel->set(path_to_obj, "USTALinkMatricCurrentlyOn", false)) {
-        LOG(ERROR) << "Failed to set value for: " << path_to_obj << "USTALinkMatricCurrentlyOn";
+        LOG(ERROR) << "Failed to set: " << path_to_obj << "USTALinkMatricCurrentlyOn: " << false;
         return_val = false;
     }
     // USTALinkMatricCurrentlyOff not supported for now (PPM-172)
     if (!m_ambiorix_datamodel->set(path_to_obj, "USTALinkMatricCurrentlyOff", false)) {
-        LOG(ERROR) << "Failed to set value for: " << path_to_obj << "USTALinkMatricCurrentlyOff";
+        LOG(ERROR) << "Failed to set : " << path_to_obj << "USTALinkMatricCurrentlyOff: " << false;
         return_val = false;
     }
     return return_val;
@@ -5909,14 +5977,14 @@ std::string db::dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client
         return {};
     }
 
-    std::string path_to_sta = path_to_bss + ".STA";
+    std::string path_to_sta = path_to_bss + "STA";
     auto sta_instance       = m_ambiorix_datamodel->add_instance(path_to_sta);
     if (sta_instance.empty()) {
-        LOG(ERROR) << "Failed to add sta instance " << path_to_sta;
+        LOG(ERROR) << "Failed to add sta instance " << path_to_sta << ". STA mac: " << client_mac;
         return {};
     }
     if (!m_ambiorix_datamodel->set(sta_instance, "MACAddress", tlvf::mac_to_string(client_mac))) {
-        LOG(ERROR) << "Failed to set " << sta_instance << ".MACAddress to " << client_mac;
+        LOG(ERROR) << "Failed to set " << sta_instance << ".MACAddress: " << client_mac;
         return {};
     }
 
@@ -5927,12 +5995,12 @@ std::string db::dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client
     }
 
     if (!m_ambiorix_datamodel->set(sta_instance, "TimeStamp", time_stamp)) {
-        LOG(ERROR) << "Failed to set " << sta_instance << ".TimeStamp";
+        LOG(ERROR) << "Failed to set " << sta_instance << ".TimeStamp: " << time_stamp;
         return {};
     }
     uint64_t add_sta_time = time(NULL);
     if (!m_ambiorix_datamodel->set(sta_instance, "LastConnectTime", add_sta_time)) {
-        LOG(ERROR) << "Failed to set " << sta_instance << ".LastConnectTime";
+        LOG(ERROR) << "Failed to set " << sta_instance << ".LastConnectTime: " << add_sta_time;
         return {};
     }
     return sta_instance;
@@ -5943,12 +6011,12 @@ bool db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_
     const std::string path_association_event =
         "Controller.Notification.AssociationEvent.AssocData.";
     if (!m_ambiorix_datamodel->set(path_association_event, "BSSID", tlvf::mac_to_string(bssid))) {
-        LOG(ERROR) << "Failed to set " << path_association_event << "BSSID to " << bssid;
+        LOG(ERROR) << "Failed to set " << path_association_event << "BSSID: " << bssid;
         return false;
     }
     if (!m_ambiorix_datamodel->set(path_association_event, "MACAddress",
                                    tlvf::mac_to_string(client_mac))) {
-        LOG(ERROR) << "Failed to set " << path_association_event << "MACAddress to " << client_mac;
+        LOG(ERROR) << "Failed to set " << path_association_event << "MACAddress: " << client_mac;
         return false;
     }
 
@@ -5959,7 +6027,7 @@ bool db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_
     */
     if (!m_ambiorix_datamodel->set(path_association_event, "StatusCode",
                                    static_cast<uint32_t>(0))) {
-        LOG(ERROR) << "Failed to set " << path_association_event << "StatusCode to " << client_mac;
+        LOG(ERROR) << "Failed to set " << path_association_event << "StatusCode: " << 0;
         return false;
     }
 
@@ -5975,18 +6043,18 @@ std::string db::dm_add_device_element(const sMacAddr &mac)
         return {};
     }
 
-    auto device_instance = m_ambiorix_datamodel->add_instance("Controller.Network.Device");
-    if (device_instance.empty()) {
-        LOG(ERROR) << "Failed to add instance for device, mac: " << mac;
+    auto device_path = m_ambiorix_datamodel->add_instance("Controller.Network.Device");
+    if (device_path.empty()) {
+        LOG(ERROR) << "Failed to add instance " << device_path << ". Device mac: " << mac;
         return {};
     }
 
-    if (!m_ambiorix_datamodel->set(device_instance, "ID", tlvf::mac_to_string(mac))) {
-        LOG(ERROR) << "Failed to add Network.Device.ID (ID = mac): " << tlvf::mac_to_string(mac);
+    if (!m_ambiorix_datamodel->set(device_path, "ID", tlvf::mac_to_string(mac))) {
+        LOG(ERROR) << "Failed to set " << device_path << ".ID: " << tlvf::mac_to_string(mac);
         return {};
     }
 
-    return device_instance;
+    return device_path;
 }
 
 bool db::add_current_op_class(const sMacAddr &radio_mac, uint8_t op_class, uint8_t op_channel,
@@ -6009,7 +6077,7 @@ bool db::add_current_op_class(const sMacAddr &radio_mac, uint8_t op_class, uint8
 
     auto op_class_path_instance = m_ambiorix_datamodel->add_instance(op_class_path);
     if (op_class_path_instance.empty()) {
-        LOG(ERROR) << "Failed to add instance: " << op_class_path;
+        LOG(ERROR) << "Failed to add instance " << op_class_path;
         return false;
     }
 
@@ -6022,28 +6090,28 @@ bool db::add_current_op_class(const sMacAddr &radio_mac, uint8_t op_class, uint8
     //Set TimeStamp
     //Data model path example: Controller.Network.Device.1.Radio.1.CurrentOperatingClasses.TimeStamp
     if (!m_ambiorix_datamodel->set(op_class_path_instance, "TimeStamp", time_stamp)) {
-        LOG(ERROR) << "Failed to set " << op_class_path_instance << ".TimeStamp";
+        LOG(ERROR) << "Failed to set " << op_class_path_instance << ".TimeStamp: " << time_stamp;
         return false;
     }
 
     //Set Operating class
     //Data model path: Controller.Network.Device.1.Radio.1.CurrentOperatingClasses.Class
     if (!m_ambiorix_datamodel->set(op_class_path_instance, "Class", op_class)) {
-        LOG(ERROR) << "Failed to set " << op_class_path_instance << ".Class";
+        LOG(ERROR) << "Failed to set " << op_class_path_instance << ".Class: " << op_class;
         return false;
     }
 
     //Set Operating channel
     //Data model path example: Controller.Network.Device.1.Radio.1.CurrentOperatingClasses.Channel
     if (!m_ambiorix_datamodel->set(op_class_path_instance, "Channel", op_channel)) {
-        LOG(ERROR) << "Failed to set " << op_class_path_instance << ".Channel";
+        LOG(ERROR) << "Failed to set " << op_class_path_instance << ".Channel: " << op_channel;
         return false;
     }
 
     //Set TX power
     //Data model path example: Controller.Network.Device.1.Radio.1.CurrentOperatingClasses.TxPower
     if (!m_ambiorix_datamodel->set(op_class_path_instance, "TxPower", tx_power)) {
-        LOG(ERROR) << "Failed to set " << op_class_path_instance << ".TxPower";
+        LOG(ERROR) << "Failed to set " << op_class_path_instance << ".TxPower: " << tx_power;
         return false;
     }
 
@@ -6128,7 +6196,7 @@ bool db::set_radio_utilization(const sMacAddr &bssid, uint8_t utilization)
 
     // Path to the object example: Controller.Network.Device.1.Radio.1.Utilization
     if (!m_ambiorix_datamodel->set(radio_path, "Utilization", utilization)) {
-        LOG(ERROR) << "Failed to set " << radio_path << "Utilization";
+        LOG(ERROR) << "Failed to set " << radio_path << "Utilization: " << utilization;
         return false;
     }
 
@@ -6174,7 +6242,7 @@ std::string db::dm_get_path_to_bss(const sMacAddr &bssid)
         LOG(ERROR) << "Failed to get bss index for bss with mac: " << bssid_string;
         return {};
     }
-    return radio_path + ".BSS." + std::to_string(bss_index);
+    return radio_path + ".BSS." + std::to_string(bss_index) + ".";
 }
 
 #else
@@ -6192,7 +6260,8 @@ bool db::set_estimated_service_parameters_be(const sMacAddr &bssid,
 
     if (!m_ambiorix_datamodel->set(path_to_bss, "EstServiceParametersBE",
                                    estimated_service_parameters_be)) {
-        LOG(ERROR) << "Failed to set " << path_to_bss << "EstServiceParametersBE";
+        LOG(ERROR) << "Failed to set " << path_to_bss
+                   << "EstServiceParametersBE: " << estimated_service_parameters_be;
         return false;
     }
 

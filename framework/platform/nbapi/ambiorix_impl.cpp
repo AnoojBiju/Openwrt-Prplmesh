@@ -358,7 +358,7 @@ bool AmbiorixImpl::set(const std::string &relative_path, const std::string &para
         return false;
     }
 
-    LOG(DEBUG) << "Set " << relative_path << "." << parameter << ": " << value;
+    // LOG(DEBUG) << "Set " << relative_path << "." << parameter << ": " << value;
 
     amxd_trans_set_value(cstring_t, &transaction, parameter.c_str(), value.c_str());
 
@@ -383,7 +383,7 @@ bool AmbiorixImpl::set(const std::string &relative_path, const std::string &para
         return false;
     }
 
-    LOG(DEBUG) << "Set " << relative_path << "." << parameter << ": " << value;
+    // LOG(DEBUG) << "Set " << relative_path << "." << parameter << ": " << value;
 
     amxd_trans_set_value(int32_t, &transaction, parameter.c_str(), value);
 
@@ -407,7 +407,7 @@ bool AmbiorixImpl::set(const std::string &relative_path, const std::string &para
         return false;
     }
 
-    LOG(DEBUG) << "Set " << relative_path << "." << parameter << ": " << value;
+    // LOG(DEBUG) << "Set " << relative_path << "." << parameter << ": " << value;
 
     amxd_trans_set_value(int64_t, &transaction, parameter.c_str(), value);
 
@@ -431,7 +431,7 @@ bool AmbiorixImpl::set(const std::string &relative_path, const std::string &para
         return false;
     }
 
-    LOG(DEBUG) << "Set " << relative_path << "." << parameter << ": " << value;
+    // LOG(DEBUG) << "Set " << relative_path << "." << parameter << ": " << value;
 
     amxd_trans_set_value(uint32_t, &transaction, parameter.c_str(), value);
 
@@ -455,7 +455,7 @@ bool AmbiorixImpl::set(const std::string &relative_path, const std::string &para
         return false;
     }
 
-    LOG(DEBUG) << "Set " << relative_path << "." << parameter << ": " << value;
+    // LOG(DEBUG) << "Set " << relative_path << "." << parameter << ": " << value;
 
     amxd_trans_set_value(uint64_t, &transaction, parameter.c_str(), value);
 
@@ -479,7 +479,7 @@ bool AmbiorixImpl::set(const std::string &relative_path, const std::string &para
         return false;
     }
 
-    LOG(DEBUG) << "Set " << relative_path << "." << parameter << ": " << value;
+    // LOG(DEBUG) << "Set " << relative_path << "." << parameter << ": " << value;
 
     amxd_trans_set_value(double, &transaction, parameter.c_str(), value);
 
@@ -503,7 +503,7 @@ bool AmbiorixImpl::set(const std::string &relative_path, const std::string &para
         return false;
     }
 
-    LOG(DEBUG) << "Set " << relative_path << "." << parameter << ": " << value;
+    // LOG(DEBUG) << "Set " << relative_path << "." << parameter << ": " << value;
 
     amxd_trans_set_value(bool, &transaction, parameter.c_str(), value);
 
