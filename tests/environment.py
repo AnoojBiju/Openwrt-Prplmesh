@@ -153,6 +153,10 @@ class Radio:
         '''
         raise NotImplementedError("get_current_channel is not implemented in abstract class Radio")
 
+    def get_power_limit(self) -> int:
+        '''Get the current tx_power information.'''
+        raise NotImplementedError("get_power_limit is not implemented in abstract class Radio")
+
 
 class Station:
     '''Placeholder for a wireless (fronthaul) station.
@@ -464,6 +468,10 @@ class RadioDocker(Radio):
         return ChannelInfo(channel_info["channel"], channel_info["bw"],
                            channel_info["center_channel"])
 
+    def get_power_limit(self) -> int:
+        power_info = yaml.safe_load(self.read_tmp_file("tx_power"))
+        return power_info["tx_power"]
+
 
 class VirtualAPDocker(VirtualAP):
     '''Docker implementation of a VAP.'''
@@ -641,6 +649,12 @@ class RadioHostapd(Radio):
             "MHz.*center1.* (?P<center>[0-9]+) MHz")
         return ChannelInfo(device.match.group('channel'), device.match.group('width'),
                            device.match.group('center'))
+
+    def get_power_limit(self) -> int:
+        device = self.agent.device
+        device.sendline("iw {} info".format(self.iface_name))
+        device.expect("txpower (?P<power_limit>[0-9]*[.]?[0-9]*) dBm")
+        return device.match.group('power_limit')
 
 
 class VirtualAPHostapd(VirtualAP):
