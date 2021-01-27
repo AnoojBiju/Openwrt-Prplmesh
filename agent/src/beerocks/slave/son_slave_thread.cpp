@@ -2007,6 +2007,14 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         notification_out->params() = notification_in->params();
         LOG(TRACE) << "send ACTION_CONTROL_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION";
         send_cmdu_to_controller(cmdu_tx);
+
+        // This probably changed the "AP Operational BSS" list in topology, so send a notification
+        if (!cmdu_tx.create(0, ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE)) {
+            LOG(ERROR) << "cmdu creation of type TOPOLOGY_NOTIFICATION_MESSAGE, has failed";
+            return false;
+        }
+        send_cmdu_to_controller(cmdu_tx);
+
         break;
     }
     case beerocks_message::ACTION_APMANAGER_HOSTAP_ACS_NOTIFICATION: {

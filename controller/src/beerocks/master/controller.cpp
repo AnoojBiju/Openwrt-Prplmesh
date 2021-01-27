@@ -52,6 +52,7 @@
 #include <tlvf/ieee_1905_1/tlvSupportedFreqBand.h>
 #include <tlvf/ieee_1905_1/tlvSupportedRole.h>
 #include <tlvf/wfa_map/tlvApMetrics.h>
+#include <tlvf/wfa_map/tlvApOperationalBSS.h>
 #include <tlvf/wfa_map/tlvApRadioIdentifier.h>
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringResponse.h>
@@ -2174,6 +2175,30 @@ bool Controller::handle_cmdu_1905_topology_response(const std::string &src_mac,
             son_actions::handle_dead_node(fronthaul_radio_on_db,
                                           database.get_node_parent(fronthaul_radio_on_db), database,
                                           cmdu_tx, tasks);
+        }
+    }
+
+    auto tlvApInformation = cmdu_rx.getClass<wfa_map::tlvApOperationalBSS>();
+    if (tlvApInformation) {
+        for (uint8_t i = 0; i < tlvApInformation->radio_list_length(); i++) {
+            auto radio = std::get<1>(tlvApInformation->radio_list(i));
+            LOG(DEBUG) << "Operational BSS radio " << radio.radio_uid();
+            if (fronthaul_radios_on_db.find(tlvf::mac_to_string(radio.radio_uid())) ==
+                fronthaul_radios_on_db.end()) {
+                LOG(WARNING) << "OperationalBSS on unknown radio " << radio.radio_uid();
+                continue;
+            }
+            for (uint8_t j = 0; j < radio.radio_bss_list_length(); j++) {
+                auto bss = std::get<1>(radio.radio_bss_list(j));
+                LOG(DEBUG) << "Operational BSS " << bss.radio_bssid();
+
+                // TODO "backhaul" is not set in this TLV, so just assume false
+                if (!database.update_vap(radio.radio_uid(), bss.radio_bssid(), bss.ssid_str(),
+                                         false)) {
+                    LOG(ERROR) << "Failed to update VAP for radio " << radio.radio_uid() << " BSS "
+                               << bss.radio_bssid() << " SSID " << bss.ssid_str();
+                }
+            }
         }
     }
 
