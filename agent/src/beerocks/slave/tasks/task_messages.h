@@ -80,6 +80,8 @@ struct sCacCompletedNotification {
  * @param ifname The interface name this message relates to.
  * @param channel The channel to switch to.
  * @param bandwidth The bandwidth to use.
+ * @param force A boolean indicating if to stop other switch
+ * channel that might be in progress (like during CAC)
  */
 struct sSwitchChannelRequest {
     sSwitchChannelRequest();
@@ -88,6 +90,7 @@ struct sSwitchChannelRequest {
     std::string ifname;
     uint8_t channel          = 0;
     eWiFiBandwidth bandwidth = eWiFiBandwidth::BANDWIDTH_UNKNOWN;
+    bool force               = false;
 };
 std::ostream &operator<<(std::ostream &os, const sSwitchChannelRequest &switch_channel_request);
 
@@ -95,13 +98,14 @@ std::ostream &operator<<(std::ostream &os, const sSwitchChannelRequest &switch_c
  * @brief Possible end status of switch channel request.
  */
 enum class eSwitchChannelReportStatus {
-    SUCCESS,
-    GENERAL_FAIL,
-    NO_SWITCH_CHANNEL_NOTIFICATION,
-    ANOTHER_SWITCH_IN_PROGRESS,
-    CAC_FAILED,
-    CSA_FAILED,
-    NOT_COMPUTED
+    SUCCESS,                        // switch channel ended succefully
+    GENERAL_FAIL,                   // genreral fail - memory or alike
+    NO_SWITCH_CHANNEL_NOTIFICATION, // no switch channel (csa or cac) was received
+    ANOTHER_SWITCH_IN_PROGRESS,     // another switch channel is in progress
+    CAC_FAILED,                     // cac failed (radar detected)
+    CSA_FAILED,                     // driver reported an error
+    FORCED_STOP, // the switch channel stopped due to another _forced_ switch channel request
+    NOT_COMPUTED // left empty to be computed based on other parametrs
 };
 
 /*

@@ -23,10 +23,10 @@ enum class eTaskEvent {
     CAC_STARTED_NOTIFICATION,
     CAC_COMPLETED_NOTIFICATION,
     SWITCH_CHANNEL_NOTIFICATION_EVENT,
-    /* indication about the time to wait for switch channel */
     SWITCH_CHANNEL_DURATION_TIME,
     SWTICH_CHANNEL_REQUEST,
     SWITCH_CHANNEL_REPORT,
+    CHANNEL_LIST_READY,
 };
 
 // helper for hashing the event type

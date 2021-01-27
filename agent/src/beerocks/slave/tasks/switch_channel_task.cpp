@@ -40,7 +40,11 @@ private:
         m_max_wait_for_switch_channel_notification_sec =
             DEFAULT_WAIT_FOR_SWITCH_CHANNEL_NOTIFICATION;
     }
-    bool report_switch_channel_in_progress(TTransition &transition, const void *args);
+    bool report_switch_channel_in_progress(std::shared_ptr<sSwitchChannelRequest> request);
+    bool handle_switch_channel_request_while_in_another_switch_channel(TTransition &transition,
+                                                                       const void *args, bool &error_occured);
+    bool disable_interface();
+    bool enable_aps(int channel, eWiFiBandwidth bandwidth);
 
     static constexpr std::chrono::seconds DEFAULT_WAIT_FOR_SWITCH_CHANNEL_NOTIFICATION =
         std::chrono::seconds(2);
@@ -155,9 +159,9 @@ std::ostream &operator<<(std::ostream &out, const fsm_event &value)
 void SwitchChannelFsm::config_fsm()
 {
     config()
-        ////////////////////////////////
-        //////// switch_channel ////////
-        ////////////////////////////////
+        //////////////////////
+        //////// IDLE ////////
+        //////////////////////
         .state(fsm_state::IDLE)
 
         .entry([&](const void *args) -> bool {
@@ -226,12 +230,6 @@ void SwitchChannelFsm::config_fsm()
         //////// WAIT_FOR_SWITCH_CHANNEL_NOTIFICATION ////////
         //////////////////////////////////////////////////////
         .state(fsm_state::WAIT_FOR_SWITCH_CHANNEL_NOTIFICATION)
-
-        .entry([&](const void *args) -> bool {
-            reset();
-
-            return true;
-        })
 
         .on(fsm_event::CSA, {fsm_state::IDLE, fsm_state::ERROR},
             [&](TTransition &transition, const void *args) -> bool {
@@ -305,7 +303,18 @@ void SwitchChannelFsm::config_fsm()
 
         .on(fsm_event::SWITCH_CHANNEL_REQUEST, fsm_state::WAIT_FOR_SWITCH_CHANNEL_NOTIFICATION,
             [&](TTransition &transition, const void *args) -> bool {
-                return report_switch_channel_in_progress(transition, args);
+                bool error_occured = false;
+                handle_switch_channel_request_while_in_another_switch_channel(transition, args, error_occured);
+
+                if (error_occured) {
+                    transition.change_destination(fsm_state::ERROR); 
+                    return true;
+                }
+                    
+                // regardless of how we handled this request we wait
+                // for switch channel notification.
+                // i.e staying in the same state
+                return false;
             })
 
         .on(fsm_event::PERIODIC, fsm_state::WAIT_FOR_SWITCH_CHANNEL_NOTIFICATION)
@@ -344,7 +353,9 @@ void SwitchChannelFsm::config_fsm()
 
         .on(fsm_event::SWITCH_CHANNEL_REQUEST, fsm_state::WAIT_FOR_SWITCH_CHANNEL_NOTIFICATION,
             [&](TTransition &transition, const void *args) -> bool {
-                return report_switch_channel_in_progress(transition, args);
+                auto request = *(reinterpret_cast<std::shared_ptr<sSwitchChannelRequest> *>(
+                    const_cast<void *>(args)));
+                return report_switch_channel_in_progress(request);
             })
 
         .on(fsm_event::PERIODIC, fsm_state::ERROR,
@@ -361,6 +372,26 @@ void SwitchChannelFsm::config_fsm()
                 }
                 // returning false means "stay in the same state"
                 return false;
+            })
+
+        .on(fsm_event::SWITCH_CHANNEL_REQUEST, fsm_state::WAIT_FOR_SWITCH_CHANNEL_NOTIFICATION,
+            [&](TTransition &transition, const void *args) -> bool {
+                bool error_occured = false;
+                bool switched =
+                    handle_switch_channel_request_while_in_another_switch_channel(transition, args, error_occured);
+
+                if (error_occured) {
+                    transition.change_destination(fsm_state::ERROR); 
+                    return true;
+                }
+
+                if (switched) {
+                    // move to wait for notification
+                    return true;
+                } else {
+                    // wait for cac
+                    return false;
+                }
             })
         //////////////////////////////////////////////////////
         //////// ERROR                                ////////
@@ -391,14 +422,11 @@ void SwitchChannelFsm::config_fsm()
     start();
 }
 
-bool SwitchChannelFsm::report_switch_channel_in_progress(TTransition &transition, const void *args)
+bool SwitchChannelFsm::report_switch_channel_in_progress(
+    std::shared_ptr<sSwitchChannelRequest> request)
 {
     // we are in the middle of another switch channel.
     // construct switch-channel-report with an ERROR.
-    // at the end we always want to stay in the same state
-    auto request =
-        *(reinterpret_cast<std::shared_ptr<sSwitchChannelRequest> *>(const_cast<void *>(args)));
-
     auto switch_channel_report = std::make_shared<sSwitchChannelReport>(
         false, request, nullptr, nullptr, nullptr,
         eSwitchChannelReportStatus::ANOTHER_SWITCH_IN_PROGRESS);
@@ -414,7 +442,7 @@ bool SwitchChannelFsm::report_switch_channel_in_progress(TTransition &transition
     // report
     m_task_pool.send_event(eTaskEvent::SWITCH_CHANNEL_REPORT, switch_channel_report);
 
-    return false;
+    return true;
 }
 
 bool load_switch_channel_request_to_cmdu_tx(ieee1905_1::CmduMessageTx &cmdu_tx,
@@ -449,6 +477,124 @@ bool load_switch_channel_request_to_cmdu_tx(ieee1905_1::CmduMessageTx &cmdu_tx,
     request->cs_params().vht_center_frequency =
         son::wireless_utils::channel_to_freq(center_channel);
 
+    return true;
+}
+
+// return true if switch channel was really forwarded
+// return false otherwise
+bool SwitchChannelFsm::handle_switch_channel_request_while_in_another_switch_channel(
+    TTransition &transition, const void *args, bool &error_occured)
+{
+    auto request =
+        *(reinterpret_cast<std::shared_ptr<sSwitchChannelRequest> *>(const_cast<void *>(args)));
+
+    if (!request) {
+        LOG(ERROR) << "can't handle null swich-channel-request";
+        // switch didn't happen
+        error_occured = true;
+        return false;
+    }
+
+    // we were asked to forcely switch the channel.
+    // it means that we need to stop current switch channel
+    // and start the switch channel with the new values
+    // in the given request
+    if (request->force) {
+        // 1. report fail for the ongoing
+        auto switch_channel_report = std::make_shared<sSwitchChannelReport>(
+            false, m_switch_channel_request, m_switch_channel_notification,
+            m_cac_started_notification, m_cac_completed_notification,
+            eSwitchChannelReportStatus::FORCED_STOP);
+
+        if (!switch_channel_report) {
+            LOG(ERROR) << "failed to create switch channel report for " << m_ifname;
+            // switch didn't happen
+            error_occured = true;
+            return false;
+        }
+
+        m_task_pool.send_event(eTaskEvent::SWITCH_CHANNEL_REPORT, switch_channel_report);
+
+        // 2. restart the switch channel.
+        // restarting the switch channel is composed of
+        // two actions (as messges):
+        // - radio disable requet
+        // - enable aps request (cACTION_APMANAGER_ENABLE_APS_REQUEST)
+        disable_interface();
+        enable_aps(request->channel, request->bandwidth);
+
+        // start all over
+        reset();
+        m_switch_channel_request = request;
+        error_occured = false;
+        return true;
+
+    } else {
+        report_switch_channel_in_progress(request);
+        error_occured = false;
+        return false;
+    }
+}
+
+bool SwitchChannelFsm::disable_interface()
+{
+    // disable the radio
+    auto radio = std::find_if(m_backhaul_manager.slaves_sockets.begin(),
+                              m_backhaul_manager.slaves_sockets.end(),
+                              [&](std::shared_ptr<BackhaulManager::sRadioInfo> s_radio) {
+                                  return s_radio->hostap_iface == m_ifname;
+                              });
+
+    if (radio == m_backhaul_manager.slaves_sockets.end()) {
+        LOG(ERROR) << "can't find radio info for " << m_ifname << " at the backhaul";
+        return false;
+    }
+
+    auto msg =
+        message_com::create_vs_message<beerocks_message::cACTION_BACKHAUL_RADIO_DISABLE_REQUEST>(
+            m_cmdu_tx);
+
+    if (!msg) {
+        LOG(ERROR) << "Failed building cACTION_BACKHAUL_RADIO_DISABLE_REQUEST";
+        return false;
+    }
+    LOG(DEBUG) << "Request Agent to disable the radio interface " << m_ifname
+               << " before forcing switch channel";
+    if (!m_backhaul_manager.send_cmdu((*radio)->slave, m_cmdu_tx)) {
+        LOG(ERROR) << "Failed to send cACTION_BACKHAUL_RADIO_DISABLE_REQUEST";
+        return false;
+    }
+    return true;
+}
+
+bool SwitchChannelFsm::enable_aps(int channel, eWiFiBandwidth bandwidth)
+{
+    auto radio = std::find_if(m_backhaul_manager.slaves_sockets.begin(),
+                              m_backhaul_manager.slaves_sockets.end(),
+                              [&](const std::shared_ptr<BackhaulManager::sRadioInfo> s_radio) {
+                                  return s_radio->hostap_iface == m_ifname;
+                              });
+
+    if (radio == m_backhaul_manager.slaves_sockets.end()) {
+        LOG(ERROR) << "can't find radio info for " << m_ifname << " at the backhaul";
+        return false;
+    }
+
+    auto request =
+        message_com::create_vs_message<beerocks_message::cACTION_BACKHAUL_ENABLE_APS_REQUEST>(
+            m_cmdu_tx);
+
+    if (!request) {
+        LOG(ERROR) << "Failed building cACTION_BACKHAUL_ENABLE_APS_REQUEST";
+        return false;
+    }
+
+    request->bandwidth() = bandwidth;
+    request->channel()   = channel;
+    request->center_channel() =
+        son::wireless_utils::get_5g_center_channel(channel, bandwidth, true);
+
+    m_backhaul_manager.send_cmdu((*radio)->slave, m_cmdu_tx);
     return true;
 }
 

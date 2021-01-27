@@ -49,6 +49,7 @@ eCompletionStatus:
       0x04: Request was considered to be non-conformant to regulations in the country in which the Multi-AP Agent is operating
       0x05: Other error
       0x06-0xFF: Reserved
+      0xFF: prplmesh addition - CAC was not performed
     _enum_storage: uint8_t
     CAC_COMPLETION_SUCCESSFUL:              0x00
     CAC_COMPLETION_RADAR_DETECTED:          0x01
@@ -56,3 +57,4 @@ eCompletionStatus:
     CAC_COMPLETION_RADIO_TOO_BUSY:          0x03
     CAC_COMPLETION_NOT_UNDER_REGULATION:    0x04
     CAC_COMPLETION_OTHER_ERROR:             0x05 
+    CAC_COMPLETION_NOT_PERFORMED:           0xFF
