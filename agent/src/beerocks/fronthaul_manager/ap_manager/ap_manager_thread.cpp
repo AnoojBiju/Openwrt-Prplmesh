@@ -1500,6 +1500,8 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
                                                 msg->params.association_frame_length);
         }
 
+        notification->multi_ap_profile() = msg->params.multi_ap_profile;
+
         message_com::send_cmdu(slave_socket, cmdu_tx);
     } break;
 

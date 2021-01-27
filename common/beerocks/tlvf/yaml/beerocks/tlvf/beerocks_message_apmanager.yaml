@@ -162,6 +162,12 @@ cACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION:
   bssid: sMacAddr
   capabilities: beerocks::message::sRadioCapabilities
   vap_id: int8_t
+  multi_ap_profile: 
+    _type: uint8_t
+    _comment: |
+      0 - Not Multi-AP station
+      1 - Profile 1 Agent
+      2 - Profile 2 Agent
   association_frame:
     _type: uint8_t
     _length: []
