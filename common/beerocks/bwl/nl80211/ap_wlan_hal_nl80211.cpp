@@ -1123,7 +1123,7 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
     // TODO: Probably should be changed to an error once WAV will stop
     //       sending empty or irrelevant events...
     default: {
-        LOG(WARNING) << "Unhandled event received: " << opcode;
+        LOG(DEBUG) << "Unhandled event received: " << opcode;
         return true;
 
     } break;

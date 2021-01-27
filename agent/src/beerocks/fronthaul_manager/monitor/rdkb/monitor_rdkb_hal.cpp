@@ -129,7 +129,7 @@ void monitor_rdkb_hal::process()
 
         const auto conf_ap = conf_find_ap(conf_client->getVapIndex());
         if (!conf_ap) {
-            LOG(ERROR) << "configuration for sta " << sta_mac
+            LOG(DEBUG) << "configuration for sta " << sta_mac
                        << " ap: " << int(conf_client->getVapIndex())
                        << " not found, aborting inactivity process";
             continue;

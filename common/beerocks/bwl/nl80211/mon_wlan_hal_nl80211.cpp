@@ -600,7 +600,7 @@ bool mon_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
     // TODO: Probably should be changed to an error once WAV will stop
     //       sending empty or irrelevant events...
     default: {
-        LOG(WARNING) << "Unhandled event received: " << opcode;
+        LOG(DEBUG) << "Unhandled event received: " << opcode;
         break;
     };
     }
@@ -618,6 +618,7 @@ bool mon_wlan_hal_nl80211::channel_scan_abort()
 
 std::shared_ptr<mon_wlan_hal> mon_wlan_hal_create(const std::string &iface_name,
                                                   base_wlan_hal::hal_event_cb_t callback,
+
                                                   const bwl::hal_conf_t &hal_conf)
 {
     return std::make_shared<nl80211::mon_wlan_hal_nl80211>(iface_name, callback, hal_conf);
