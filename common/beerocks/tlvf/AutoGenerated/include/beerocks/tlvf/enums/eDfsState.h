@@ -23,7 +23,8 @@ enum eDfsState: uint8_t {
     USABLE = 0x0,
     UNAVAILABLE = 0x1,
     AVAILABLE = 0x2,
-    NOT_DFS = 0x3,
+    ACTIVE_CAC = 0x3,
+    NOT_DFS = 0x4,
 };
 
 

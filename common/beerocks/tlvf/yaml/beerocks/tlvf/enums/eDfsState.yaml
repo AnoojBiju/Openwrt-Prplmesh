@@ -12,8 +12,10 @@ eDfsState:
       using it.
     UNAVAILABLE: A radar has been detected on this channel and it cannot be used.
     AVAILABLE: The channel passed CAC. It is possible to switch to this channel without CAC.
+    ACTIVE_CAC: The channel is performing Channel Availability Check at the moment
     NOT_DFS: The channel is not subject to DFS.
   USABLE: 0
   UNAVAILABLE: 1
   AVAILABLE: 2
-  NOT_DFS: 3
+  ACTIVE_CAC: 3
+  NOT_DFS: 4
