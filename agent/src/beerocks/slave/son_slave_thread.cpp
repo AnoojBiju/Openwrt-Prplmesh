@@ -3849,9 +3849,13 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
         profile2_ap_capability_tlv->capabilities_bit_field().byte_counter_units =
             wfa_map::tlvProfile2ApCapability::eByteCounterUnits::BYTES;
 
-        // If Multi-AP Agents implements Profile-2, the Max Total Number of VIDs field to 2 or
-        // greater.
-        profile2_ap_capability_tlv->max_total_number_of_vids() = 2;
+        // Calculate max total number of VLANs which can be configured on the Agent, and save it on
+        // on the AgentDB.
+        db->traffic_separation.max_number_of_vlans_ids =
+            db->get_radios_list().size() * eBeeRocksIfaceIds::IFACE_TOTAL_VAPS;
+
+        profile2_ap_capability_tlv->max_total_number_of_vids() =
+            db->traffic_separation.max_number_of_vlans_ids;
 
         /* One AP Radio Advanced Capabilities TLV */
         auto ap_radio_advanced_capabilities_tlv =
