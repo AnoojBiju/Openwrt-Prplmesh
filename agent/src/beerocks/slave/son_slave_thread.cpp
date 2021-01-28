@@ -49,6 +49,7 @@
 #include <tlvf/wfa_map/tlvProfile2ApRadioAdvancedCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2Default802dotQSettings.h>
 #include <tlvf/wfa_map/tlvProfile2SteeringRequest.h>
+#include <tlvf/wfa_map/tlvProfile2TrafficSeparationPolicy.h>
 #include <tlvf/wfa_map/tlvSteeringBTMReport.h>
 #include <tlvf/wfa_map/tlvSteeringRequest.h>
 #include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
@@ -4495,6 +4496,67 @@ bool slave_thread::handle_profile2_default_802dotq_settings_tlv(ieee1905_1::Cmdu
         // TODO
     }
 
+    return true;
+}
+
+bool slave_thread::handle_profile2_traffic_separation_policy_tlv(
+    ieee1905_1::CmduMessageRx &cmdu_rx, std::unordered_set<std::string> &misconfigured_ssids)
+{
+    auto traffic_seperation_policy =
+        cmdu_rx.getClass<wfa_map::tlvProfile2TrafficSeparationPolicy>();
+
+    auto db = AgentDB::get();
+    // tlvProfile2TrafficSeparationPolicy is not mandatory.
+    if (traffic_seperation_policy) {
+        std::unordered_map<std::string, uint16_t> tmp_ssid_vid_mapping;
+        for (int i = 0; i < traffic_seperation_policy->ssids_vlan_id_list_length(); i++) {
+            auto ssid_vid_tuple = traffic_seperation_policy->ssids_vlan_id_list(i);
+            if (!std::get<0>(ssid_vid_tuple)) {
+                LOG(ERROR) << "Failed to get ssid_vid mapping, idx=" << i;
+                return false;
+            }
+            auto &ssid_vid_mapping = std::get<1>(ssid_vid_tuple);
+
+            tmp_ssid_vid_mapping[ssid_vid_mapping.ssid_name_str()] = ssid_vid_mapping.vlan_id();
+            LOG(DEBUG) << "SSID: " << ssid_vid_mapping.ssid_name_str()
+                       << ", VID: " << ssid_vid_mapping.vlan_id();
+        }
+
+        // Overwriting the whole container instead of pushing one by one, since we need to remove
+        // old configuration from previous configurations messages.
+        db->traffic_separation.ssid_vid_mapping = tmp_ssid_vid_mapping;
+
+        // Fill secondaries VLANs IDs to the database.
+        for (const auto &ssid_vid_pair : db->traffic_separation.ssid_vid_mapping) {
+            auto vlan_id = ssid_vid_pair.second;
+            if (vlan_id != db->traffic_separation.primary_vlan_id) {
+                db->traffic_separation.secondaries_vlans_ids.insert(vlan_id);
+            }
+        }
+
+        // TODO:
+        // - Add Bridge VLAN to each secondary VLAN ID.
+        // - Add the Secondary VLAN ID to the bridge (not pvid and tagged mode).
+        // - On repeater/extender
+        //   1. Add to bSTA interfaces the secondary VLAN ID (not pvid and tagged mode)
+        //   2. Add to the backhaul wire interface the secondary VLAN ID (not pvid and tagged mode).
+        if (!db->device_conf.local_gw) {
+            // TODO
+        }
+    }
+
+    if (db->traffic_separation.ssid_vid_mapping.size() >
+        db->traffic_separation.max_number_of_vlans_ids) {
+
+        for (auto it = std::next(db->traffic_separation.ssid_vid_mapping.begin(),
+                                 db->traffic_separation.max_number_of_vlans_ids);
+             it != db->traffic_separation.ssid_vid_mapping.end();) {
+
+            auto &ssid = it->first;
+            misconfigured_ssids.insert(ssid);
+            it = db->traffic_separation.ssid_vid_mapping.erase(it);
+        }
+    }
     return true;
 }
 
