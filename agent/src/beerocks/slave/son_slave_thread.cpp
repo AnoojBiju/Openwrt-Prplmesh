@@ -12,12 +12,12 @@
 #include "../fronthaul_manager/monitor/monitor_thread.h"
 #include "tlvf_utils.h"
 
+#include "cac_status_database.h"
+#include "gate/1905_beacon_query_to_vs.h"
+#include "gate/vs_beacon_response_to_1905.h"
 #include <bcl/beerocks_utils.h>
 #include <bcl/beerocks_version.h>
 #include <bcl/network/network_utils.h>
-#include <easylogging++.h>
-#include <mapf/common/utils.h>
-
 #include <beerocks/tlvf/beerocks_message.h>
 #include <beerocks/tlvf/beerocks_message_1905_vs.h>
 #include <beerocks/tlvf/beerocks_message_apmanager.h>
@@ -25,7 +25,8 @@
 #include <beerocks/tlvf/beerocks_message_control.h>
 #include <beerocks/tlvf/beerocks_message_monitor.h>
 #include <beerocks/tlvf/beerocks_message_platform.h>
-
+#include <easylogging++.h>
+#include <mapf/common/utils.h>
 #include <tlvf/WSC/AttrList.h>
 #include <tlvf/ieee_1905_1/tlvAlMacAddress.h>
 #include <tlvf/ieee_1905_1/tlvLinkMetricQuery.h>
@@ -47,15 +48,14 @@
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 #include <tlvf/wfa_map/tlvProfile2ApRadioAdvancedCapabilities.h>
+#include <tlvf/wfa_map/tlvProfile2CacCompletionReport.h>
+#include <tlvf/wfa_map/tlvProfile2CacStatusReport.h>
 #include <tlvf/wfa_map/tlvProfile2Default802dotQSettings.h>
 #include <tlvf/wfa_map/tlvProfile2SteeringRequest.h>
 #include <tlvf/wfa_map/tlvProfile2TrafficSeparationPolicy.h>
 #include <tlvf/wfa_map/tlvSteeringBTMReport.h>
 #include <tlvf/wfa_map/tlvSteeringRequest.h>
 #include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
-
-#include "gate/1905_beacon_query_to_vs.h"
-#include "gate/vs_beacon_response_to_1905.h"
 
 // BPL Error Codes
 #include <bpl/bpl_cfg.h>
@@ -2641,7 +2641,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             auto channel       = channel_info.beacon_channel();
             radio->channels_list[channel].tx_power_dbm = channel_info.tx_power_dbm();
             radio->channels_list[channel].set_dfs_state(channel_info.dfs_state());
-            auto supported_bw_size                     = channel_info.supported_bandwidths_length();
+            auto supported_bw_size = channel_info.supported_bandwidths_length();
             radio->channels_list[channel].supported_bw_list.resize(supported_bw_size);
             std::copy_n(&std::get<1>(channel_info.supported_bandwidths(0)), supported_bw_size,
                         radio->channels_list[channel].supported_bw_list.begin());
@@ -2724,6 +2724,77 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
                 return false;
             }
         }
+
+        // cac tlvs //
+
+        // create status report
+        auto cac_status_report_tlv = cmdu_tx.addClass<wfa_map::tlvProfile2CacStatusReport>();
+        if (!cac_status_report_tlv) {
+            LOG(ERROR) << "Failed to create cac-status-report-tlv";
+            return false;
+        }
+
+        CacStatusDatabase cac_status_database;
+
+        // fill status report
+        auto available_channels =
+            cac_status_database.get_availiable_channels(radio->front.iface_mac);
+
+        if (!cac_status_report_tlv->alloc_available_channels(available_channels.size())) {
+            LOG(ERROR) << "Failed to allocate " << available_channels.size()
+                       << " structures for available channels";
+            return false;
+        }
+        for (unsigned int i = 0; i < available_channels.size(); ++i) {
+            auto &available_ref = std::get<1>(cac_status_report_tlv->available_channels(i));
+            available_ref.operating_class = available_channels[i].operating_class;
+            available_ref.channel         = available_channels[i].channel;
+            available_ref.minutes_since_cac_completion =
+                std::chrono::duration_cast<std::chrono::minutes>(available_channels[i].duration)
+                    .count();
+        }
+
+        // TODO
+        // Complete status report
+        // https://jira.prplfoundation.org/browse/PPM-1089
+
+        // create completion report
+        auto cac_completion_report_tlv =
+            cmdu_tx.addClass<wfa_map::tlvProfile2CacCompletionReport>();
+        if (!cac_completion_report_tlv) {
+            LOG(ERROR) << "Failed to create cac-completion-report-tlv";
+            return false;
+        }
+
+        // fill completion report
+        const auto &cac_completion =
+            cac_status_database.get_completion_status(radio->front.iface_mac);
+
+        auto cac_radio = cac_completion_report_tlv->create_cac_radios();
+        if (!cac_radio) {
+            LOG(ERROR) << "Failed to create cac radio for " << radio->front.iface_mac;
+            return false;
+        }
+        cac_radio->radio_uid() = radio->front.iface_mac;
+
+        cac_radio->operating_class() = cac_completion.first.operating_class;
+        cac_radio->channel()         = cac_completion.first.channel;
+        cac_radio->cac_completion_status() =
+            static_cast<wfa_map::cCacCompletionReportRadio::eCompletionStatus>(
+                cac_completion.first.completion_status);
+
+        if (!cac_completion.second.empty()) {
+            cac_radio->alloc_detected_pairs(cac_completion.second.size());
+            for (unsigned int i = 0; i < cac_completion.second.size(); ++i) {
+                if (std::get<0>(cac_radio->detected_pairs(i))) {
+                    auto &cac_detected_pair = std::get<1>(cac_radio->detected_pairs(i));
+                    cac_detected_pair.operating_class_detected = cac_completion.second[i].first;
+                    cac_detected_pair.channel_detected         = cac_completion.second[i].second;
+                }
+            }
+        }
+
+        cac_completion_report_tlv->add_cac_radios(cac_radio);
 
         LOG(DEBUG) << "sending channel preference report for ruid=" << radio->front.iface_mac;
 
