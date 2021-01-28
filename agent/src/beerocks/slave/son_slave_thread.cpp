@@ -4560,6 +4560,34 @@ bool slave_thread::handle_profile2_traffic_separation_policy_tlv(
     return true;
 }
 
+bool slave_thread::send_error_response(
+    const std::deque<std::pair<wfa_map::tlvProfile2ErrorCode::eReasonCode, sMacAddr>> &bss_errors)
+{
+    if (!cmdu_tx.create(0, ieee1905_1::eMessageType::ERROR_RESPONSE_MESSAGE)) {
+        LOG(ERROR) << "cmdu creation has failed";
+        return false;
+    }
+
+    LOG(INFO) << "Sending ERROR_RESPONSE_MESSAGE to the controller on:";
+    for (const auto &bss_error : bss_errors) {
+        auto &reason = bss_error.first;
+        auto &bssid  = bss_error.second;
+        LOG(INFO) << "reason : " << reason << ", bssid: " << bssid;
+
+        auto profile2_error_code_tlv = cmdu_tx.addClass<wfa_map::tlvProfile2ErrorCode>();
+        if (!profile2_error_code_tlv) {
+            LOG(ERROR) << "addClass has failed";
+            return false;
+        }
+
+        profile2_error_code_tlv->reason_code() = reason;
+        profile2_error_code_tlv->bssid()       = bssid;
+
+        send_cmdu_to_controller(cmdu_tx);
+    }
+    return true;
+}
+
 /**
  * @brief Parse AP-Autoconfiguration WSC which should include one AP Radio Identifier
  *        TLV and one or more WSC TLV containing M2

@@ -21,6 +21,7 @@
 #include <tlvf/WSC/m1.h>
 #include <tlvf/WSC/m2.h>
 #include <tlvf/ieee_1905_1/tlvWsc.h>
+#include <tlvf/wfa_map/tlvProfile2ErrorCode.h>
 
 namespace beerocks {
 namespace bpl {
@@ -238,6 +239,9 @@ private:
     bool handle_profile2_traffic_separation_policy_tlv(
         ieee1905_1::CmduMessageRx &cmdu_rx, std::unordered_set<std::string> &misconfigured_ssids);
 
+    bool send_error_response(
+        const std::deque<std::pair<wfa_map::tlvProfile2ErrorCode::eReasonCode, sMacAddr>>
+            &bss_errors);
     /**
      * @brief save channel switch parameters in the agent DB
      *
