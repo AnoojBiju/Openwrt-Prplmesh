@@ -5229,6 +5229,55 @@ void db::clear_bss_info_configuration()
 
 void db::clear_bss_info_configuration(const sMacAddr &al_mac) { bss_infos[al_mac].clear(); }
 
+void db::add_traffic_separataion_configuration(const sMacAddr &al_mac,
+                                               const wireless_utils::sTrafficSeparationSsid &config)
+{
+    traffic_separation_policy_configurations[al_mac].push_back(config);
+}
+
+void db::add_default_8021q_settings(const sMacAddr &al_mac,
+                                    const wireless_utils::s8021QSettings &config)
+{
+    default_8021q_settings[al_mac] = config;
+}
+
+const std::list<wireless_utils::sTrafficSeparationSsid>
+db::get_traffic_separataion_configuration(const sMacAddr &al_mac)
+{
+    auto config = traffic_separation_policy_configurations.find(al_mac);
+    if (config != traffic_separation_policy_configurations.end()) {
+        return config->second;
+    }
+
+    return std::list<wireless_utils::sTrafficSeparationSsid>();
+}
+wireless_utils::s8021QSettings db::get_default_8021q_setting(const sMacAddr &al_mac)
+{
+    auto config = default_8021q_settings.find(al_mac);
+    if (config != default_8021q_settings.end()) {
+        return config->second;
+    }
+
+    return wireless_utils::s8021QSettings();
+}
+
+void db::clear_traffic_separation_configurations()
+{
+    traffic_separation_policy_configurations.clear();
+}
+
+void db::clear_traffic_separation_configurations(const sMacAddr &al_mac)
+{
+    traffic_separation_policy_configurations.erase(al_mac);
+}
+
+void db::clear_default_8021q_settings() { default_8021q_settings.clear(); }
+
+void db::clear_default_8021q_settings(const sMacAddr &al_mac)
+{
+    default_8021q_settings.erase(al_mac);
+}
+
 bool db::set_sta_link_metrics(const sMacAddr &sta_mac, uint32_t downlink_est_mac_data_rate,
                               uint32_t uplink_est_mac_data_rate, uint8_t signal_strength)
 {

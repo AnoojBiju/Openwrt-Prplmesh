@@ -88,6 +88,16 @@ public:
     } sPhyApParams;
 
     typedef struct {
+        std::string ssid;
+        uint16_t vlan_id;
+    } sTrafficSeparationSsid;
+
+    typedef struct {
+        uint16_t primary_vlan_id;
+        uint8_t default_pcp;
+    } s8021QSettings;
+
+    typedef struct {
         std::list<uint8_t> operating_class;
         std::string ssid;
         WSC::eWscAuth authentication_type;
