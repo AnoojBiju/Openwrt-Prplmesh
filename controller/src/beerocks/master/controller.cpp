@@ -66,6 +66,8 @@
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
 #include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>
+#include <tlvf/wfa_map/tlvProfile2Default802dotQSettings.h>
+#include <tlvf/wfa_map/tlvProfile2TrafficSeparationPolicy.h>
 #include <tlvf/wfa_map/tlvRadioOperationRestriction.h>
 #include <tlvf/wfa_map/tlvSearchedService.h>
 #include <tlvf/wfa_map/tlvSteeringBTMReport.h>
@@ -981,6 +983,47 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const std::string &src_m
         if (!autoconfig_wsc_add_m2(*m1, nullptr)) {
             LOG(ERROR) << "Failed setting M2 attributes";
             return false;
+        }
+    } else {
+        auto traffic_separation_configs =
+            database.get_traffic_separataion_configuration(m1->mac_addr());
+        if (!traffic_separation_configs.empty()) {
+            auto tlv_traffic_policy =
+                cmdu_tx.addClass<wfa_map::tlvProfile2TrafficSeparationPolicy>();
+            if (!tlv_traffic_policy) {
+                LOG(ERROR) << "Failed adding tlvProfile2TrafficSeparationPolicy";
+                return false;
+            }
+            for (auto &config : traffic_separation_configs) {
+                auto ssid_vlan_id_entry = tlv_traffic_policy->create_ssids_vlan_id_list();
+                if (!ssid_vlan_id_entry) {
+                    LOG(ERROR) << "Failed creating ssid_vlan_id entry";
+                    return false;
+                }
+
+                if (!ssid_vlan_id_entry->set_ssid_name(config.ssid)) {
+                    LOG(ERROR) << "Failed setting ssid";
+                    return false;
+                }
+                ssid_vlan_id_entry->vlan_id() = config.vlan_id;
+
+                if (!tlv_traffic_policy->add_ssids_vlan_id_list(ssid_vlan_id_entry)) {
+                    LOG(ERROR) << "Failed adding ssid_vlan_entry";
+                    return false;
+                }
+            }
+        }
+
+        auto default_8021q_config = database.get_default_8021q_setting(m1->mac_addr());
+        if (default_8021q_config.primary_vlan_id > 0) {
+            auto tlv_default_8021q_settings =
+                cmdu_tx.addClass<wfa_map::tlvProfile2Default802dotQSettings>();
+            if (!tlv_default_8021q_settings) {
+                LOG(ERROR) << "Failed adding tlvProfile2Default802dotQSettings";
+                return false;
+            }
+            tlv_default_8021q_settings->primary_vlan_id() = default_8021q_config.primary_vlan_id;
+            tlv_default_8021q_settings->default_pcp()     = default_8021q_config.default_pcp;
         }
     }
 
