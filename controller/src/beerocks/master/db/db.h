@@ -576,6 +576,15 @@ public:
     bool update_node_failed_5ghz_steer_attempt(const std::string &mac);
     bool update_node_failed_24ghz_steer_attempt(const std::string &mac);
 
+    /**
+     * @brief Checks if it's possible to initiate client steering.
+     * 
+     * @param sta_mac Mac address of client fetched from BUS, which made steering reqeust.
+     * @param bss_id Target BSSID.
+     * @return True if it's possible to initiate client steering, false otherwise.
+     */
+    bool can_start_client_steering(const std::string &sta_mac, const std::string &bssid);
+
     bool update_node_11v_responsiveness(const std::string &mac, bool success);
     bool get_node_11v_capability(const std::string &mac);
 
