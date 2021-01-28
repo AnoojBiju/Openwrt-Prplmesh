@@ -55,6 +55,19 @@ class CombinedInfraMetrics(PrplMeshBaseTest):
 
         time.sleep(1)
 
+        # Check on controller if stations have associated
+        map_devices = self.get_topology()
+        map_agent1 = map_devices[agent1.mac]
+        map_radio1 = map_agent1.radios[agent1.radios[0].mac]
+        map_vap1 = map_radio1.vaps[vap1.bssid]
+        map_sta1 = map_vap1.clients[sta1.mac]
+        debug("Found sta1 in topology: {}".format(map_sta1.path))
+        map_agent2 = map_devices[agent2.mac]
+        map_radio2 = map_agent2.radios[agent2.radios[1].mac]
+        map_vap2 = map_radio2.vaps[vap2.bssid]
+        map_sta2 = map_vap2.clients[sta2.mac]
+        debug("Found sta2 in topology: {}".format(map_sta2.path))
+
         debug("Send AP Metrics query message to agent 1 expecting"
               "Traffic Stats for {}".format(sta1.mac))
         self.send_and_check_policy_config_metric_reporting(controller, agent1, True, False)
