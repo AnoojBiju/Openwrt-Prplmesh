@@ -88,6 +88,15 @@ public:
     bool send_cmdu_to_broker(ieee1905_1::CmduMessageTx &cmdu_tx, const sMacAddr &dst_mac,
                              const sMacAddr &src_mac, const std::string &iface_name = "");
 
+    /**
+     * @brief Start client steering initiated by NBAPI.
+     * 
+     * @param sta_mac Mac address of client.
+     * @param target_bssid Target BSSID.
+     * @return True if client steering started successfully, false otherwise.
+     */
+    bool start_client_steering(const std::string &sta_mac, const std::string &target_bssid);
+
 private:
     /**
      * @brief Handles the client-connected event in the CMDU server.

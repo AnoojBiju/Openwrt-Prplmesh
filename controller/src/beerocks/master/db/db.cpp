@@ -2110,6 +2110,43 @@ bool db::update_node_failed_24ghz_steer_attempt(const std::string &mac)
     return true;
 }
 
+bool db::can_start_client_steering(const std::string &sta_mac, const std::string &target_bssid)
+{
+    auto sta        = get_node(sta_mac);
+    auto target_bss = get_node(target_bssid);
+
+    if (!sta || get_node_type(sta_mac) != TYPE_CLIENT) {
+        LOG(ERROR) << "Device with mac " << sta_mac << " is not a station.";
+        return false;
+    }
+    if (!target_bss || !is_hostap_active(target_bssid)) {
+        LOG(ERROR) << "Invalid or inactive BSS " << target_bssid;
+        return false;
+    }
+
+    bool hostap_is_5ghz = is_node_5ghz(target_bssid);
+
+    if ((hostap_is_5ghz && !get_node_5ghz_support(sta_mac))) {
+        LOG(DEBUG) << "Sta " << sta_mac << " can't steer to hostap " << target_bssid << std::endl
+                   << "  hostap_is_5ghz = " << hostap_is_5ghz << std::endl
+                   << "  sta_is_5ghz = " << is_node_5ghz(sta_mac) << std::endl;
+        return false;
+    }
+    if (!hostap_is_5ghz && !get_node_24ghz_support(sta_mac)) {
+        LOG(DEBUG) << "Sta " << sta_mac << " can't steer to hostap " << target_bssid << std::endl
+                   << "  node_5ghz_support = " << get_node_5ghz_support(sta_mac) << std::endl
+                   << "  node_24ghz_support = " << get_node_24ghz_support(sta_mac) << std::endl;
+        return false;
+    }
+    if ((get_hostap_exclude_from_steering_flag(target_bssid))) {
+        LOG(DEBUG) << "Sta " << sta_mac << " can't steer to hostap " << target_bssid << std::endl
+                   << "  hostap_exclude_from_steering = "
+                   << get_hostap_exclude_from_steering_flag(target_bssid) << std::endl;
+        return false;
+    }
+    return true;
+}
+
 bool db::update_node_11v_responsiveness(const std::string &mac, bool success)
 {
     auto n = get_node(mac);
