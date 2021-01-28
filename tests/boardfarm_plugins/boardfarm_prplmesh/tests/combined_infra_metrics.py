@@ -42,6 +42,8 @@ class CombinedInfraMetrics(PrplMeshBaseTest):
 
         self.dev.DUT.wired_sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
 
+        self.configure_ssids(['CombInfraMetrics-1'])
+
         sta1.wifi_connect(vap1)
         sta2.wifi_connect(vap2)
 
