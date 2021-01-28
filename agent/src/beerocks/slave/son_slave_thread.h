@@ -234,6 +234,7 @@ private:
     bool handle_client_steering_request(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_beacon_metrics_query(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_ack_message(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_profile2_default_802dotq_settings_tlv(ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
      * @brief save channel switch parameters in the agent DB

@@ -47,6 +47,7 @@
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 #include <tlvf/wfa_map/tlvProfile2ApRadioAdvancedCapabilities.h>
+#include <tlvf/wfa_map/tlvProfile2Default802dotQSettings.h>
 #include <tlvf/wfa_map/tlvProfile2SteeringRequest.h>
 #include <tlvf/wfa_map/tlvSteeringBTMReport.h>
 #include <tlvf/wfa_map/tlvSteeringRequest.h>
@@ -4448,6 +4449,52 @@ bool slave_thread::handle_autoconfiguration_renew(Socket *sd, ieee1905_1::CmduMe
 
     LOG(TRACE) << "goto STATE_JOIN_MASTER";
     slave_state = STATE_JOIN_MASTER;
+    return true;
+}
+
+bool slave_thread::handle_profile2_default_802dotq_settings_tlv(ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto db = AgentDB::get();
+
+    auto pvid_set_request = message_com::create_vs_message<
+        beerocks_message::cACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST>(cmdu_tx);
+    if (!pvid_set_request) {
+        LOG(ERROR) << "Failed building message!";
+        return false;
+    }
+
+    auto dot1q_settings = cmdu_rx.getClass<wfa_map::tlvProfile2Default802dotQSettings>();
+    // tlvProfile2Default802dotQSettings is not mandatory.
+    if (!dot1q_settings) {
+        // If no primary VLAN has been configured, set it to zero.
+        db->traffic_separation.primary_vlan_id = 0;
+        db->traffic_separation.default_pcp     = 0;
+
+        pvid_set_request->primary_vlan_id() = 0;
+        // TODO: Remove VLAN filtering from the bridge.
+        return true;
+    }
+
+    LOG(DEBUG) << "Primary VLAN ID:" << dot1q_settings->primary_vlan_id()
+               << ", PCP: " << dot1q_settings->default_pcp();
+
+    db->traffic_separation.primary_vlan_id = dot1q_settings->primary_vlan_id();
+    db->traffic_separation.default_pcp     = dot1q_settings->default_pcp();
+
+    pvid_set_request->primary_vlan_id() = dot1q_settings->primary_vlan_id();
+
+    // Send ACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST.
+    message_com::send_cmdu(ap_manager_socket, cmdu_tx);
+
+    // TODO:
+    // - Configure L2 to bridge filtering with Primary VLAN ID
+    // - Create VLAN to the bridge
+    // - On repeater/extender add to bSTA interfaces the primary VLAN ID
+    //   (not pvid and tagged mode):
+    if (!db->device_conf.local_gw) {
+        // TODO
+    }
+
     return true;
 }
 
