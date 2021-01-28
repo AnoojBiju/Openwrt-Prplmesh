@@ -73,12 +73,6 @@ void Ieee1905Transport::update_network_interfaces(
         if (!interface.fd) {
             activate_interface(interface);
         }
-
-        if (interface.is_bridge) {
-            // use the last set bridge address as AL MAC address (there should be a single bridge interface configured at any given time)
-            // TODO: let the Multi-AP Agent set the AL MAC address using proper API and remove this code
-            set_al_mac_addr(interface.addr);
-        }
     }
 }
 
