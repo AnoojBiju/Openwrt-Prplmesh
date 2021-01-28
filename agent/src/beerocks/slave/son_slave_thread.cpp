@@ -4980,6 +4980,28 @@ bool slave_thread::handle_multi_ap_policy_config_request(Socket *sd,
         return false;
     }
 
+    if (!handle_profile2_default_802dotq_settings_tlv(cmdu_rx)) {
+        LOG(ERROR) << "handle_profile2_default_802dotq_settings_tlv has failed!";
+        return false;
+    }
+
+    std::unordered_set<std::string> misconfigured_ssids;
+    if (!handle_profile2_traffic_separation_policy_tlv(cmdu_rx, misconfigured_ssids)) {
+        LOG(ERROR) << "handle_profile2_traffic_separation_policy_tlv has failed!";
+        return false;
+    }
+
+    std::deque<std::pair<wfa_map::tlvProfile2ErrorCode::eReasonCode, sMacAddr>> bss_errors;
+    if (!misconfigured_ssids.empty()) {
+        bss_errors.push_back({wfa_map::tlvProfile2ErrorCode::eReasonCode::
+                                  NUMBER_OF_UNIQUE_VLAN_ID_EXCEEDS_MAXIMUM_SUPPORTED,
+                              sMacAddr()});
+    }
+
+    if (bss_errors.size()) {
+        send_error_response(bss_errors);
+    }
+
     return true;
 }
 
