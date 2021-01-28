@@ -209,7 +209,7 @@ enum eDfsState : uint8_t {
     USABLE,
     UNAVAILABLE,
     AVAILABLE,
-    CAC_SCAN,
+    ACTIVE_CAC,
     DFS_STATE_MAX,
 };
 
