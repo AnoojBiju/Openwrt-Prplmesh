@@ -4621,7 +4621,19 @@ bool slave_thread::handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMess
         return false;
     }
 
-    auto db    = AgentDB::get();
+    if (!handle_profile2_default_802dotq_settings_tlv(cmdu_rx)) {
+        LOG(ERROR) << "handle_profile2_default_802dotq_settings_tlv has failed!";
+        return false;
+    }
+
+    std::unordered_set<std::string> misconfigured_ssids;
+    if (!handle_profile2_traffic_separation_policy_tlv(cmdu_rx, misconfigured_ssids)) {
+        LOG(ERROR) << "handle_profile2_traffic_separation_policy_tlv has failed!";
+        return false;
+    }
+
+    auto db = AgentDB::get();
+
     auto radio = db->radio(m_fronthaul_iface);
     if (!radio) {
         LOG(DEBUG) << "Radio of interface " << m_fronthaul_iface << " does not exist on the db";
@@ -4634,6 +4646,7 @@ bool slave_thread::handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMess
         return true;
     }
 
+    std::deque<std::pair<wfa_map::tlvProfile2ErrorCode::eReasonCode, sMacAddr>> bss_errors;
     std::vector<WSC::configData::config> configs;
     for (auto m2 : m2_list) {
         LOG(DEBUG) << "M2 Parse " << m2.manufacturer()
@@ -4671,11 +4684,52 @@ bool slave_thread::handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMess
         if (config.bss_type & WSC::eWscVendorExtSubelementBssType::BACKHAUL_STA) {
             LOG(WARNING) << "Unexpected backhaul STA bit";
         }
+
+        if (misconfigured_ssids.find(config.ssid) != misconfigured_ssids.end()) {
+            bss_errors.push_back({wfa_map::tlvProfile2ErrorCode::eReasonCode::
+                                      NUMBER_OF_UNIQUE_VLAN_ID_EXCEEDS_MAXIMUM_SUPPORTED,
+                                  config.bssid});
+
+            // Multi-AP standard requires to tear down any misconfigured BSS.
+            config.bss_type = WSC::eWscVendorExtSubelementBssType::TEARDOWN;
+        } else if (config.bss_type & WSC::eWscVendorExtSubelementBssType::FRONTHAUL_BSS &&
+                   config.bss_type & WSC::eWscVendorExtSubelementBssType::BACKHAUL_BSS &&
+                   !radio->front.hybrid_mode_supported) {
+            LOG(WARNING) << "Controller configured hybrid mode, but it is not supported!";
+            bss_errors.push_back(
+                {wfa_map::tlvProfile2ErrorCode::eReasonCode::
+                     TRAFFIC_SEPARATION_ON_COMBINED_FRONTHAUL_AND_PROFILE1_BACKHAUL_UNSUPPORTED,
+                 config.bssid});
+
+            // Multi-AP standard requires to tear down any misconfigured BSS.
+            config.bss_type = WSC::eWscVendorExtSubelementBssType::TEARDOWN;
+
+        } else if (config.bss_type & WSC::eWscVendorExtSubelementBssType::BACKHAUL_BSS &&
+                   !(config.bss_type & WSC::eWscVendorExtSubelementBssType::
+                                           PROFILE1_BACKHAUL_STA_ASSOCIATION_DISALLOWED) &&
+                   !(config.bss_type & WSC::eWscVendorExtSubelementBssType::
+                                           PROFILE2_BACKHAUL_STA_ASSOCIATION_DISALLOWED) &&
+                   db->traffic_separation.secondaries_vlans_ids.size() > 0) {
+            LOG(WARNING) << "Controller configured Backhaul BSS for combined Profile1 and "
+                         << "Profile2, but it is not supproted!";
+            bss_errors.push_back(
+                {wfa_map::tlvProfile2ErrorCode::eReasonCode::
+                     TRAFFIC_SEPARATION_ON_COMBINED_PROFILE1_BACKHAUL_AND_PROFILE2_BACKHAUL_UNSUPPORTED,
+                 config.bssid});
+
+            // Multi-AP standard requires to tear down any misconfigured BSS.
+            config.bss_type = WSC::eWscVendorExtSubelementBssType::TEARDOWN;
+        }
+
         LOG(DEBUG) << m2.manufacturer() << " config data:" << std::endl
                    << " ssid: " << config.ssid << ", bssid: " << config.bssid
                    << ", authentication_type: " << std::hex << int(config.auth_type)
                    << ", encryption_type: " << int(config.encr_type);
         configs.push_back(config);
+    }
+
+    if (bss_errors.size()) {
+        send_error_response(bss_errors);
     }
 
     auto request = message_com::create_vs_message<
