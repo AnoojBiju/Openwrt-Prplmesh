@@ -414,7 +414,7 @@ public:
      *
      * If instance with @a interface_mac exists, update it, otherwise add it.
      * Path example: Controller.Network.Device.1.Interface.1
-     * 
+     *
      * @param device_mac device MAC address for node matching
      * @param interface_mac interface mac address
      * @param media_type Media type, as per IEEE1905.1 table 6-12
@@ -429,11 +429,11 @@ public:
 
     /**
      * @brief Removes the interface of given MAC from Device's Date Model.
-     * 
-     * Searches index of Controller.Network.Device.{i}.Interface.{i} according 
+     *
+     * Searches index of Controller.Network.Device.{i}.Interface.{i} according
      * to MACAddress attribute and removes it.
-     * Path example: Controller.Network.Device.1.Interface.1.MACAdrress
-     * 
+     * Path example: Controller.Network.Device.1.Interface.1.MACAddress
+     *
      * @param device_mac device MAC address for node matching
      * @param interface_mac interface mac to be deleted
      * @return true on success, false otherwise.
@@ -441,15 +441,43 @@ public:
     bool dm_remove_interface_element(const sMacAddr &device_mac, const sMacAddr &interface_mac);
 
     /**
-     * @brief Updates the node interface mac list. 
+     * @brief Updates the node interface mac list.
      * Removes unused intarfaces from Device's Data model.
-     * 
+     *
      * @param device_mac device MAC address for node matching
-     * @param interface_macs all interface macs vector of the device
+     * @param interface_macs Interface MAC addresses of the device
      * @return true on success, false otherwise.
      */
     bool dm_update_interface_elements(const sMacAddr &device_mac,
                                       const std::vector<sMacAddr> &interface_macs);
+
+    /**
+     * @brief Updates Tx Parameters of the Interface Stats.
+     *
+     * Path: Controller.Network.Device.{i}.Interface.{i}.Stats
+     *
+     * @param device_mac device MAC address for node matching
+     * @param interface_macs Interface MAC addresses of the device
+     * @param packets_sent send packets counter
+     * @param errors_sent send error counter
+     * @return true on success, false otherwise.
+     */
+    bool dm_update_interface_tx_stats(const sMacAddr &device_mac, const sMacAddr &interface_mac,
+                                      uint64_t packets_sent, uint32_t errors_sent);
+
+    /**
+     * @brief Updates Rx Parameters of the Interface Stats.
+     *
+     * Path: Controller.Network.Device.{i}.Interface.{i}.Stats
+     *
+     * @param device_mac device MAC address for node matching
+     * @param interface_macs Interface MAC address of the device
+     * @param packets_received received packets counter
+     * @param errors_received receive error counter
+     * @return true on success, false otherwise.
+     */
+    bool dm_update_interface_rx_stats(const sMacAddr &device_mac, const sMacAddr &interface_mac,
+                                      uint64_t packets_received, uint32_t errors_received);
 
     //
     // DB node functions (get only)
@@ -578,7 +606,7 @@ public:
 
     /**
      * @brief Checks if it's possible to initiate client steering.
-     * 
+     *
      * @param sta_mac Mac address of client fetched from BUS, which made steering reqeust.
      * @param bss_id Target BSSID.
      * @return True if it's possible to initiate client steering, false otherwise.

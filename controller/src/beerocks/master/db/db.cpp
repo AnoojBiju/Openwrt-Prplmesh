@@ -6444,3 +6444,81 @@ bool db::dm_update_interface_elements(const sMacAddr &device_mac,
     }
     return true;
 }
+
+bool db::dm_update_interface_tx_stats(const sMacAddr &device_mac, const sMacAddr &interface_mac,
+                                      uint64_t packets_sent, uint32_t errors_sent)
+{
+    auto device = get_node(device_mac);
+    if (!device) {
+        LOG(ERROR) << "Failed to get device node with mac: " << device_mac;
+        return false;
+    }
+
+    // Prepare path to the Interface object, like Controller.Network.Device.{i}.Interface
+    auto interface_path = device->dm_path + ".Interface";
+
+    auto interface_index = m_ambiorix_datamodel->get_instance_index(
+        interface_path + ".[MACAddress == '%s']", tlvf::mac_to_string(interface_mac));
+
+    if (!interface_index) {
+        LOG(ERROR) << "Failed to find " << interface_path
+                   << ".Interface with MAC: " << interface_mac;
+        return false;
+    }
+
+    // Prepare path to the Interface object Stats, like Controller.Network.Device.{i}.Interface.{i}.Stats
+    auto stats_path = interface_path + "." + std::to_string(interface_index) + ".Stats";
+
+    // Set value for the path as Controller.Network.Device.{i}.Interface.{i}.Stats.PacketsSent
+    if (!m_ambiorix_datamodel->set(stats_path, "PacketsSent", packets_sent)) {
+        LOG(ERROR) << "Failed to set " << stats_path << ".PacketsSent: " << packets_sent;
+        return false;
+    }
+
+    // Set value for the path as Controller.Network.Device.{i}.Interface.{i}.Stats.ErrorsSent
+    if (!m_ambiorix_datamodel->set(stats_path, "ErrorsSent", errors_sent)) {
+        LOG(ERROR) << "Failed to set " << stats_path << ".ErrorsSent: " << errors_sent;
+        return false;
+    }
+
+    return true;
+}
+
+bool db::dm_update_interface_rx_stats(const sMacAddr &device_mac, const sMacAddr &interface_mac,
+                                      uint64_t packets_received, uint32_t errors_received)
+{
+    auto device = get_node(device_mac);
+    if (!device) {
+        LOG(ERROR) << "Failed to get device node with mac: " << device_mac;
+        return false;
+    }
+
+    // Prepare path to the Interface object, like Controller.Network.Device.{i}.Interface
+    auto interface_path = device->dm_path + ".Interface";
+
+    auto interface_index = m_ambiorix_datamodel->get_instance_index(
+        interface_path + ".[MACAddress == '%s']", tlvf::mac_to_string(interface_mac));
+
+    if (!interface_index) {
+        LOG(ERROR) << "Failed to find " << interface_path
+                   << ".Interface with MAC: " << interface_mac;
+        return false;
+    }
+
+    // Prepare path to the Interface object Stats, like Controller.Network.Device.{i}.Interface.{i}.Stats
+    auto stats_path = interface_path + "." + std::to_string(interface_index) + ".Stats";
+
+    // Set value for the path as Controller.Network.Device.{i}.Interface.{i}.Stats.PacketsReceived
+    if (!m_ambiorix_datamodel->set(stats_path, "PacketsReceived", packets_received)) {
+        LOG(ERROR) << "Failed to set " << stats_path << ".PacketsReceived: " << packets_received;
+        return false;
+    }
+
+    // Set value for the path as Controller.Network.Device.{i}.Interface.{i}.Stats.ErrorsReceived
+    if (!m_ambiorix_datamodel->set(stats_path, "ErrorsReceived", errors_received)) {
+        LOG(ERROR) << "Failed to set " << stats_path << ".ErrorsReceived: " << errors_received;
+        return false;
+    }
+
+    return true;
+}
