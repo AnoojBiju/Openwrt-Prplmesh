@@ -12,6 +12,9 @@ class MapClient:
     def __init__(self, mac: str):
         self.mac = mac
 
+    def __str__(self):
+        return "      STA   {}".format(self.mac)
+
 
 class MapVap:
     '''Represents a VAP in the connection map.'''
@@ -26,6 +29,10 @@ class MapVap:
         self.clients[mac] = client
         return client
 
+    def __str__(self):
+        my_id = self.bssid + " " + self.ssid
+        return "    BSS   " + '\n'.join([my_id] + [str(client) for client in self.clients.values()])
+
 
 class MapRadio:
     '''Represents a radio in the connection map.'''
@@ -39,6 +46,9 @@ class MapRadio:
         self.vaps[bssid] = vap
         return vap
 
+    def __str__(self):
+        return "  Radio " + '\n'.join([self.uid] + [str(vap) for vap in self.vaps.values()])
+
 
 class MapDevice:
     '''Represents a device in the connection map.'''
@@ -51,3 +61,6 @@ class MapDevice:
         radio = MapRadio(uid)
         self.radios[uid] = radio
         return radio
+
+    def __str__(self):
+        return "Agent " + '\n'.join([self.mac] + [str(radio) for radio in self.radios.values()])
