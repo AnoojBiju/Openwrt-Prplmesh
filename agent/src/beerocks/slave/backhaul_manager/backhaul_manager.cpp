@@ -1030,19 +1030,6 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         m_eth_link_up =
             beerocks::net::network_utils::linux_iface_is_up_and_running(db->ethernet.iface_name);
         FSM_MOVE_STATE(PRE_OPERATIONAL);
-
-        // This event may come as a result of enabling the backhaul, but also as a result
-        // of steering. *Only* in case it was the result of steering, we need to send a steering
-        // response.
-        if (m_backhaul_sta_steering_enable) {
-            m_backhaul_sta_steering_enable = false;
-
-            create_backhaul_steering_response(wfa_map::tlvErrorCode::eReasonCode::RESERVED);
-
-            LOG(DEBUG) << "Sending BACKHAUL_STA_STEERING_RESPONSE_MESSAGE";
-            send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
-                                tlvf::mac_from_string(bridge_info.mac));
-        }
         break;
     }
     case EState::PRE_OPERATIONAL: {
@@ -2147,6 +2134,20 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
             //this is generally not supposed to happen
             LOG(WARNING) << "event iface != wireless iface!";
         }
+
+        // This event may come as a result of enabling the backhaul, but also as a result
+        // of steering. *Only* in case it was the result of steering, we need to send a steering
+        // response.
+        if (m_backhaul_sta_steering_enable) {
+            m_backhaul_sta_steering_enable = false;
+
+            create_backhaul_steering_response(wfa_map::tlvErrorCode::eReasonCode::RESERVED);
+
+            LOG(DEBUG) << "Sending BACKHAUL_STA_STEERING_RESPONSE_MESSAGE";
+            send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
+                                tlvf::mac_from_string(bridge_info.mac));
+        }
+
         if (FSM_IS_IN_STATE(WAIT_WPS)) {
             db->backhaul.selected_iface_name = iface;
             db->backhaul.connection_type     = AgentDB::sBackhaul::eConnectionType::Wireless;
