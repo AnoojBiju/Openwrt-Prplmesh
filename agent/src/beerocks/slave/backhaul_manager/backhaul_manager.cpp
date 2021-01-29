@@ -2751,7 +2751,8 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
     auto is_valid_channel = son::wireless_utils::is_channel_in_operating_class(oper_class, channel);
 
     if (!is_valid_channel) {
-        LOG(WARNING) << "Invalid channel number";
+        LOG(WARNING) << "Invalid channel number (oper_class=" << oper_class
+                     << ", channel=" << channel << ")";
 
         auto response = create_backhaul_steering_response(
             wfa_map::tlvErrorCode::eReasonCode::
