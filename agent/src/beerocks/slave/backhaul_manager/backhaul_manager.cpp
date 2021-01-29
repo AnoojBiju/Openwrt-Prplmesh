@@ -2132,7 +2132,9 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
 
         if (iface == db->backhaul.selected_iface_name && !hidden_ssid) {
             //this is generally not supposed to happen
-            LOG(WARNING) << "event iface != wireless iface!";
+            LOG(WARNING) << "event iface=" << iface
+                         << ", selected iface=" << db->backhaul.selected_iface_name
+                         << ", hidden_ssid=" << hidden_ssid;
         }
 
         // This event may come as a result of enabling the backhaul, but also as a result
