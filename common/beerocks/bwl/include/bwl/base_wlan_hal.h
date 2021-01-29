@@ -21,6 +21,13 @@
 
 namespace bwl {
 
+// Allocate a char array wrapped in a shared_ptr
+#define ALLOC_SMART_BUFFER(size)                                                                   \
+    std::shared_ptr<char>(new char[size], [](char *obj) {                                          \
+        if (obj)                                                                                   \
+            delete[] obj;                                                                          \
+    })
+
 /*!
  * Base class for the WLAN hardware abstraction layer.
  */
