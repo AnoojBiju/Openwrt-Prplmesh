@@ -277,6 +277,34 @@ bool sta_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
 
     } break;
 
+    // Client disconnected
+    case Event::Disconnected: {
+
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_BACKHAUL_DISCONNECT_REASON_NOTIFICATION));
+        auto msg =
+            reinterpret_cast<sACTION_BACKHAUL_DISCONNECT_REASON_NOTIFICATION *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        memset(msg_buff.get(), 0, sizeof(sACTION_BACKHAUL_DISCONNECT_REASON_NOTIFICATION));
+
+        // Fill in the message
+        msg->bssid             = tlvf::mac_from_string(parsed_obj["bssid"]);
+        msg->disconnect_reason = std::strtoul(parsed_obj["reason"].c_str(), nullptr, 10);
+
+        // Forward the event
+        event_queue_push(event, msg_buff);
+
+    } break;
+
+    case Event::Terminating:
+    case Event::ScanResults:
+    case Event::ChannelSwitch: {
+        // Forward the event
+        event_queue_push(event);
+
+    } break;
+
     // Gracefully ignore unhandled events
     // TODO: Should be changed to an error once we handle hostapd all expected events
     default:
