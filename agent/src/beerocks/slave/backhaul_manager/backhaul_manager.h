@@ -200,9 +200,13 @@ private:
      *        and Error Code.
      *
      * @param error_code One of the error codes presented in wfa_map::tlvErrorCode::eReasonCode.
+     * @param target_bssid The bssid to steer to.
+     *        If empty or ZERO_MAC, the bssid we're currently connected to will be used.
      * @return True on success and false otherwise
      */
-    bool create_backhaul_steering_response(const wfa_map::tlvErrorCode::eReasonCode &error_code);
+    bool create_backhaul_steering_response(
+        const wfa_map::tlvErrorCode::eReasonCode &error_code,
+        const sMacAddr &target_bssid = beerocks::net::network_utils::ZERO_MAC);
 
     // cmdu handlers
     bool handle_master_message(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -422,7 +426,22 @@ public:
     std::shared_ptr<sRadioInfo> get_radio(const sMacAddr &radio_mac) const;
 
 private:
-    bool m_backhaul_sta_steering_enable = false;
+    /**
+     * The BSSID of the target BSS in an ongoing backhaul steering operation.
+     * Empty MAC address if no steering operation is in progress.
+     */
+    sMacAddr m_backhaul_steering_bssid = beerocks::net::network_utils::ZERO_MAC;
+
+    /**
+     * The channel of the target BSS in an ongoing backhaul steering operation.
+     * Zero if no steering operation is in progress.
+     */
+    int m_backhaul_steering_channel = 0;
+
+    /**
+     * File descriptor of the timer to check if a backhaul steering request timed out.
+     */
+    int m_backhaul_steering_timer = beerocks::net::FileDescriptor::invalid_descriptor;
 
     /*
  * State Machines

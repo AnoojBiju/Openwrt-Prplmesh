@@ -27,17 +27,6 @@ namespace dwpal {
 ////////////////////////// Local Module Definitions //////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-//Allocate a char array wrapped in a shared_ptr
-#define ALLOC_SMART_BUFFER(size)                                                                   \
-    std::shared_ptr<char>(new char[size], [](char *obj) {                                          \
-        if (obj)                                                                                   \
-            delete[] obj;                                                                          \
-    })
-
-//////////////////////////////////////////////////////////////////////////////
-/////////////////////////// Local Module Functions ///////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-
 struct localScanResults {
     uint frequency;
     char bssid[MAC_ADDR_SIZE];
@@ -45,6 +34,10 @@ struct localScanResults {
     char ssid[SSID_MAX_SIZE];
     char vsie[49];
 };
+
+//////////////////////////////////////////////////////////////////////////////
+/////////////////////////// Local Module Functions ///////////////////////////
+//////////////////////////////////////////////////////////////////////////////
 
 static sta_wlan_hal::Event dwpal_to_bwl_event(const std::string &opcode)
 {
@@ -118,6 +111,26 @@ bool sta_wlan_hal_dwpal::initiate_scan()
     // Start the scan
     if (!dwpal_send_cmd("SCAN")) {
         LOG(ERROR) << "initiate_scan - wpa_ctrl_send_msg failed for " << get_iface_name();
+        return false;
+    }
+    return true;
+}
+
+bool sta_wlan_hal_dwpal::scan_type_only(const sMacAddr &bssid, uint8_t channel)
+{
+    if (bssid == beerocks::net::network_utils::ZERO_MAC || channel == 0) {
+        LOG(ERROR) << "Invalid parameters";
+        return false;
+    }
+    auto freq = son::wireless_utils::channel_to_freq(channel);
+
+    LOG(DEBUG) << "Scan with TYPE=ONLY on interface: " << get_iface_name() << " for bssid " << bssid
+               << " channel " << channel << " (frequency " << freq << ").";
+
+    // Start the scan
+    if (!dwpal_send_cmd("SCAN TYPE=ONLY freq=" + std::to_string(freq) +
+                        " bssid=" + tlvf::mac_to_string(bssid))) {
+        LOG(ERROR) << "scan_type_only - dwpal_send_cmd failed for " << get_iface_name();
         return false;
     }
     return true;
