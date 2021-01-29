@@ -2239,9 +2239,15 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
         if (iface == db->backhaul.selected_iface_name) {
             if (FSM_IS_IN_STATE(OPERATIONAL) || FSM_IS_IN_STATE(PRE_OPERATIONAL) ||
                 FSM_IS_IN_STATE(CONNECTED)) {
-                platform_notify_error(bpl::eErrorCode::BH_DISCONNECTED,
-                                      "Backhaul disconnected on operational state");
-                stop_on_failure_attempts--;
+
+                // If this event comes as a result of a steering request, then do not consider it
+                // as an error.
+                if (!m_backhaul_sta_steering_enable) {
+                    platform_notify_error(bpl::eErrorCode::BH_DISCONNECTED,
+                                          "Backhaul disconnected on operational state");
+                    stop_on_failure_attempts--;
+                }
+
                 state_time_stamp_timeout =
                     std::chrono::steady_clock::now() +
                     std::chrono::seconds(WIRELESS_WAIT_FOR_RECONNECT_TIMEOUT);
