@@ -27,17 +27,6 @@ namespace dwpal {
 ////////////////////////// Local Module Definitions //////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-//Allocate a char array wrapped in a shared_ptr
-#define ALLOC_SMART_BUFFER(size)                                                                   \
-    std::shared_ptr<char>(new char[size], [](char *obj) {                                          \
-        if (obj)                                                                                   \
-            delete[] obj;                                                                          \
-    })
-
-//////////////////////////////////////////////////////////////////////////////
-/////////////////////////// Local Module Functions ///////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-
 struct localScanResults {
     uint frequency;
     char bssid[MAC_ADDR_SIZE];
@@ -45,6 +34,10 @@ struct localScanResults {
     char ssid[SSID_MAX_SIZE];
     char vsie[49];
 };
+
+//////////////////////////////////////////////////////////////////////////////
+/////////////////////////// Local Module Functions ///////////////////////////
+//////////////////////////////////////////////////////////////////////////////
 
 static sta_wlan_hal::Event dwpal_to_bwl_event(const std::string &opcode)
 {
