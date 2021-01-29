@@ -2813,7 +2813,8 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
 }
 
 bool BackhaulManager::create_backhaul_steering_response(
-    const wfa_map::tlvErrorCode::eReasonCode &error_code)
+    const wfa_map::tlvErrorCode::eReasonCode &error_code,
+    const sMacAddr &target_bssid /*= beerocks::net::network_utils::ZERO_MAC*/)
 {
     auto cmdu_tx_header =
         cmdu_tx.create(0, ieee1905_1::eMessageType::BACKHAUL_STEERING_RESPONSE_MESSAGE);
@@ -2847,7 +2848,15 @@ bool BackhaulManager::create_backhaul_steering_response(
 
     LOG(DEBUG) << "Interface: " << interface << " MAC: " << sta_mac;
 
-    bh_steering_resp_tlv->target_bssid()         = tlvf::mac_from_string(active_hal->get_bssid());
+    if (target_bssid != beerocks::net::network_utils::ZERO_MAC) {
+        bh_steering_resp_tlv->target_bssid() = target_bssid;
+    } else {
+        // No target bssid was provided, use the one we're currently connected to.
+        bh_steering_resp_tlv->target_bssid() = tlvf::mac_from_string(active_hal->get_bssid());
+    }
+
+    LOG(DEBUG) << "Target BSSID: " << tlvf::mac_to_string(bh_steering_resp_tlv->target_bssid());
+
     bh_steering_resp_tlv->backhaul_station_mac() = sta_mac;
 
     if (!error_code) {
