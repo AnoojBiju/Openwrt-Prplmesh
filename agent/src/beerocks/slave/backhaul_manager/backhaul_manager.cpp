@@ -2750,6 +2750,7 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
 
     auto channel    = bh_sta_steering_req->target_channel_number();
     auto oper_class = bh_sta_steering_req->operating_class();
+    auto bssid      = bh_sta_steering_req->target_bssid();
 
     auto is_valid_channel = son::wireless_utils::is_channel_in_operating_class(oper_class, channel);
 
@@ -2759,7 +2760,8 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
 
         auto response = create_backhaul_steering_response(
             wfa_map::tlvErrorCode::eReasonCode::
-                BACKHAUL_STEERING_REQUEST_REJECTED_CANNOT_OPERATE_ON_CHANNEL_SPECIFIED);
+                BACKHAUL_STEERING_REQUEST_REJECTED_CANNOT_OPERATE_ON_CHANNEL_SPECIFIED,
+            bssid);
 
         if (!response) {
             LOG(ERROR) << "Failed to build Backhaul STA Steering Response message.";
@@ -2782,8 +2784,6 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
         return false;
     }
 
-    auto bssid = bh_sta_steering_req->target_bssid();
-
     auto associate = active_hal->roam(bssid, channel);
     if (!associate) {
         LOG(ERROR) << "Couldn't associate active HAL with bssid: " << bssid;
@@ -2794,7 +2794,8 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
 
         auto response = create_backhaul_steering_response(
             wfa_map::tlvErrorCode::eReasonCode::
-                BACKHAUL_STEERING_REQUEST_REJECTED_TARGET_BSS_SIGNAL_NOT_SUITABLE);
+                BACKHAUL_STEERING_REQUEST_REJECTED_TARGET_BSS_SIGNAL_NOT_SUITABLE,
+            bssid);
 
         if (!response) {
             LOG(ERROR) << "Failed to build Backhaul STA Steering Response message.";
