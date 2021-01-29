@@ -2843,9 +2843,9 @@ bool BackhaulManager::create_backhaul_steering_response(
         return false;
     }
 
-    sMacAddr sta_mac = radio->front.iface_mac;
+    sMacAddr sta_mac = radio->back.iface_mac;
 
-    LOG(DEBUG) << "Interface: " << interface << "MAC: " << sta_mac;
+    LOG(DEBUG) << "Interface: " << interface << " MAC: " << sta_mac;
 
     bh_steering_resp_tlv->target_bssid()         = tlvf::mac_from_string(active_hal->get_bssid());
     bh_steering_resp_tlv->backhaul_station_mac() = sta_mac;
