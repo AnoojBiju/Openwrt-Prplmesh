@@ -488,10 +488,12 @@ void ChannelSelectionTask::zwdfs_fsm()
                 current_channel_rank = channel_bw_info.rank;
             }
         }
+
         if (current_channel_rank == -1) {
-            LOG(ERROR) << "Current channels has rank not found!";
-            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
-            break;
+            LOG(DEBUG)
+                << "Current channels has rank not found! Setting `current rank` as worst rank "
+                   "and searching for any other channel";
+            current_channel_rank = UINT16_MAX;
         }
 
         if (m_selected_channel.rank < current_channel_rank &&
@@ -719,9 +721,11 @@ ChannelSelectionTask::select_best_usable_channel(const std::string &front_radio_
             break;
         }
     }
+
     if (best_rank == -1) {
-        LOG(ERROR) << "Current channels has rank not found!";
-        return sSelectedChannel();
+        LOG(DEBUG) << "Current channels has rank not found! Setting `current rank` as worst rank "
+                      "and searching for any other channel";
+        best_rank = UINT16_MAX;
     }
 
     for (const auto &channel_info_pair : radio->channels_list) {
