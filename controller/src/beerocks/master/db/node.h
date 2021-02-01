@@ -10,6 +10,7 @@
 #define _NODE_H_
 
 #include "../tasks/task.h"
+#include "bss.h"
 #include <bcl/network/network_utils.h>
 #include <tlvf/common/sMacAddr.h>
 #include <tlvf/ieee_1905_1/tlvReceiverLinkMetric.h>
@@ -55,7 +56,7 @@ public:
 
     /**
      * @brief Removes unused interface mac addresses and updates active list
-     * 
+     *
      * @param active_interfaces_vector vector of active interface macs from topology message
      * @return unused interface mac's returned as vector of sMacAddr
      */
@@ -352,6 +353,17 @@ public:
      * Persistent configurations - end
      */
 
+    /**
+     * @brief Get BSS with the given BSSID, create it if necessary.
+     *
+     * References to a bss should only be stored somewhere else if there is also a back-reference
+     * and remove_bss is updated to remove it.
+     */
+    prplmesh::controller::db::bss &get_bss(const sMacAddr &bssid);
+
+    /** @brief Remove the BSS with the given BSSID. */
+    void remove_bss(const sMacAddr &bssid);
+
 private:
     class rssi_measurement {
     public:
@@ -387,6 +399,19 @@ private:
     std::unordered_map<std::string, std::shared_ptr<beacon_measurement>> beacon_measurements;
     std::unordered_map<std::string, std::shared_ptr<rssi_measurement>> cross_rx_rssi;
     std::vector<sMacAddr> interfaces_mac_list;
+
+    /**
+     * @brief BSSes configured on this node.
+     *
+     * Only valid for radio nodes.
+     *
+     * The bss objects are kept alive by this list. References to a bss should only be stored
+     * somewhere else if there is also a back-reference and remove_bss is updated to remove it.
+     *
+     * @note This must be a list, not a vector, otherwise it is not possible to remove from the
+     * middle of the list.
+     */
+    std::list<prplmesh::controller::db::bss> m_bsses;
 };
 } // namespace son
 #endif

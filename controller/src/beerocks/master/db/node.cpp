@@ -419,3 +419,26 @@ std::vector<sMacAddr> node::update_interfaces(const std::vector<sMacAddr> &new_i
     interfaces_mac_list = new_interfaces;
     return erase_mac_list;
 }
+
+prplmesh::controller::db::bss &node::get_bss(const sMacAddr &bssid)
+{
+    auto it = std::find_if(
+        m_bsses.begin(), m_bsses.end(),
+        [bssid](const prplmesh::controller::db::bss &bss) { return bss.m_bssid == bssid; });
+    if (it == m_bsses.end()) {
+        m_bsses.emplace_back(bssid, *this);
+        return m_bsses.back();
+    } else {
+        return *it;
+    }
+}
+
+void node::remove_bss(const sMacAddr &bssid)
+{
+    auto it = std::find_if(
+        m_bsses.begin(), m_bsses.end(),
+        [bssid](const prplmesh::controller::db::bss &bss) { return bss.m_bssid == bssid; });
+    if (it != m_bsses.end()) {
+        m_bsses.erase(it);
+    }
+}

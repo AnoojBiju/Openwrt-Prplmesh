@@ -7,6 +7,7 @@
  */
 
 #include "db.h"
+#include "bss.h"
 
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/sockets.h>
@@ -2252,6 +2253,7 @@ bool db::remove_vap(const std::string &radio_mac, int vap_id)
         return false;
     }
 
+    radio_node->remove_bss(tlvf::mac_from_string(vap->second.mac));
     auto radio_path = radio_node->dm_path;
     if (radio_path.empty()) {
         return true;
@@ -2296,6 +2298,14 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
     vaps_info[vap_id].ssid         = ssid;
     vaps_info[vap_id].backhaul_vap = backhual;
 
+    auto radio = get_node(radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "No radio with MAC " << radio_mac;
+        return false;
+    }
+    prplmesh::controller::db::bss &bss = radio->get_bss(tlvf::mac_from_string(bssid));
+    bss.m_ssid                         = ssid;
+
     return dm_set_radio_bss(tlvf::mac_from_string(radio_mac), tlvf::mac_from_string(bssid), ssid);
 }
 
@@ -2324,6 +2334,15 @@ bool db::update_vap(const sMacAddr &radio_mac, const sMacAddr &bssid, const std:
         return add_vap(tlvf::mac_to_string(radio_mac), new_vap_id, tlvf::mac_to_string(bssid), ssid,
                        backhaul);
     }
+
+    auto radio = get_node(radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "No radio with MAC " << radio_mac;
+        return false;
+    }
+    prplmesh::controller::db::bss &bss = radio->get_bss(bssid);
+    bss.m_ssid                         = ssid;
+
     it->second.ssid         = ssid;
     it->second.backhaul_vap = backhaul;
     return dm_set_radio_bss(radio_mac, bssid, ssid);
