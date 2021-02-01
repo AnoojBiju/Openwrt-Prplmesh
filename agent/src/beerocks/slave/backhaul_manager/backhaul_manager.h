@@ -438,7 +438,16 @@ public:
     std::shared_ptr<sRadioInfo> get_radio(const sMacAddr &radio_mac) const;
 
 private:
-    bool m_backhaul_sta_steering_enable = false;
+    /**
+     * The BSSID of the target BSS in an ongoing backhaul steering operation.
+     * Empty MAC address if no steering operation is in progress.
+     */
+    sMacAddr m_backhaul_steering_bssid = beerocks::net::network_utils::ZERO_MAC;
+
+    /**
+     * File descriptor of the timer to check if a backhaul steering request timed out.
+     */
+    int m_backhaul_steering_timer = beerocks::net::FileDescriptor::invalid_descriptor;
 
     /*
  * State Machines
