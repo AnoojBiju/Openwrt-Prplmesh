@@ -108,7 +108,11 @@ prplmesh_framework_init() {
 
     # This is required for solveing issue which causing meesges not geeting to their destination.
     # For more information see: https://github.com/prplfoundation/prplMesh/pull/1029#issuecomment-608353274
-    ebtables -A FORWARD -d 01:80:c2:00:00:13 -j DROP
+    ebtables -A FORWARD -d 01:80:c2:00:00:13 -j DROP || {
+        printf "Failed to add the required ebtables rule.\n" >&2
+        printf "Please make sure the 'ebtables' kernel module is loaded and try again.\n" >&2
+        exit 1
+    }
 }
 
 prplmesh_framework_deinit() {
