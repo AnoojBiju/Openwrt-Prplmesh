@@ -1294,8 +1294,14 @@ class TlvF:
             lines_cpp.append("%s}" % self.getIndentation(1))
             lines_cpp.append("%ssize_t len = %s::get_initial_size();" %
                              (self.getIndentation(1), param_type))
-            lines_cpp.append("%sif (m_%s__ || getBuffRemainingBytes() < len) {" % (
+            lines_cpp.append("%sif (m_%s__) {" % (
                 self.getIndentation(1), self.MEMBER_LOCK_ALLOCATION))
+            lines_cpp.append(
+                '%sTLVF_LOG(ERROR) << "Can\'t create new element before adding the previous one";' % self.getIndentation(2))
+            lines_cpp.append("%sreturn nullptr;" % self.getIndentation(2))
+            lines_cpp.append("%s}" % self.getIndentation(1))
+            lines_cpp.append("%sif (getBuffRemainingBytes() < len) {" % (
+                self.getIndentation(1)))
             lines_cpp.append(
                 '%sTLVF_LOG(ERROR) << "Not enough available space on buffer";' % self.getIndentation(2))
             lines_cpp.append("%sreturn nullptr;" % self.getIndentation(2))
