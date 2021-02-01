@@ -95,8 +95,9 @@ bool ChannelSelectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint3
         break;
     }
     case ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE: {
-        handle_vendor_specific(cmdu_rx, src_mac, fd, beerocks_header);
-        break;
+        // Internally, the 'handle_vendor_specific' might not really handle
+        // the CMDU, thus we need to return the real return value and not 'true'.
+        return handle_vendor_specific(cmdu_rx, src_mac, fd, beerocks_header);
     }
     default: {
         // Message was not handled, therefore return false.
