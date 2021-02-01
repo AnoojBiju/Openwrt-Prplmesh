@@ -2793,6 +2793,25 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
         return false;
     }
 
+    // If current BSSID is the same as the specified target BSSID, then do not steer and send a
+    // response immediately.
+    if (tlvf::mac_from_string(active_hal->get_bssid()) == bssid) {
+        LOG(WARNING) << "Current BSSID matches target BSSID " << bssid << ". No steering required.";
+
+        auto response =
+            create_backhaul_steering_response(wfa_map::tlvErrorCode::eReasonCode::RESERVED, bssid);
+
+        if (!response) {
+            LOG(ERROR) << "Failed to build Backhaul STA Steering Response message.";
+            return false;
+        }
+
+        send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
+                            tlvf::mac_from_string(bridge_info.mac));
+
+        return true;
+    }
+
     LOG(WARNING) << "Steering to BSSID " << bssid << ", oper_class=" << oper_class
                  << ", channel=" << channel;
     auto associate = active_hal->roam(bssid, channel);
