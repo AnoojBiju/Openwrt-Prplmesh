@@ -61,8 +61,10 @@ class tlvProfile2ChannelScanResult : public BaseClass
         //The timestamp shall be formatted as a string using the typedef dateandtime string
         //format as defined in section 3 of [1] and shall include timesecfrac and time-offset
         //as defined in section 5.6 of [1]
-        uint8_t* timestamp(size_t idx = 0);
-        bool set_timestamp(const void* buffer, size_t size);
+        std::string timestamp_str();
+        char* timestamp(size_t length = 0);
+        bool set_timestamp(const std::string& str);
+        bool set_timestamp(const char buffer[], size_t size);
         bool alloc_timestamp(size_t count = 1);
         //The current channel utilization measured by the radio on the scanned 20 MHz channel
         uint8_t& utilization();
@@ -89,7 +91,7 @@ class tlvProfile2ChannelScanResult : public BaseClass
         uint8_t* m_channel = nullptr;
         eScanStatus* m_success = nullptr;
         uint8_t* m_timestamp_length = nullptr;
-        uint8_t* m_timestamp = nullptr;
+        char* m_timestamp = nullptr;
         size_t m_timestamp_idx__ = 0;
         int m_lock_order_counter__ = 0;
         uint8_t* m_utilization = nullptr;
@@ -118,8 +120,10 @@ class cNeighbors : public BaseClass
         sMacAddr& bssid();
         uint8_t& ssid_length();
         //The SSID indicated by the neighboring BSS
-        uint8_t* ssid(size_t idx = 0);
-        bool set_ssid(const void* buffer, size_t size);
+        std::string ssid_str();
+        char* ssid(size_t length = 0);
+        bool set_ssid(const std::string& str);
+        bool set_ssid(const char buffer[], size_t size);
         bool alloc_ssid(size_t count = 1);
         //An indicator of radio signal strength (RSSI) of the Beacon or Probe
         //Response frames of the neighboring BSS as received by the radio
@@ -128,8 +132,10 @@ class cNeighbors : public BaseClass
         uint8_t& channel_bw_length();
         //String indicating the maximum bandwidth at which the neighbor BSS is
         //operating, e.g., "20" or "40" or "80" or "80+80" or "160" MHz.
-        uint8_t* channels_bw_list(size_t idx = 0);
-        bool set_channels_bw_list(const void* buffer, size_t size);
+        std::string channels_bw_list_str();
+        char* channels_bw_list(size_t length = 0);
+        bool set_channels_bw_list(const std::string& str);
+        bool set_channels_bw_list(const char buffer[], size_t size);
         bool alloc_channels_bw_list(size_t count = 1);
         eBssLoadElementPresent& bss_load_element_present();
         //If "BSS Load Element Present" bit is set to one, this field is present.
@@ -150,12 +156,12 @@ class cNeighbors : public BaseClass
         bool init();
         sMacAddr* m_bssid = nullptr;
         uint8_t* m_ssid_length = nullptr;
-        uint8_t* m_ssid = nullptr;
+        char* m_ssid = nullptr;
         size_t m_ssid_idx__ = 0;
         int m_lock_order_counter__ = 0;
         uint8_t* m_signal_strength = nullptr;
         uint8_t* m_channel_bw_length = nullptr;
-        uint8_t* m_channels_bw_list = nullptr;
+        char* m_channels_bw_list = nullptr;
         size_t m_channels_bw_list_idx__ = 0;
         eBssLoadElementPresent* m_bss_load_element_present = nullptr;
         uint8_t* m_channel_utilization = nullptr;
