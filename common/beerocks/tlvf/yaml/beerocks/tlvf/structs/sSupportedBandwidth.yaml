@@ -1,7 +1,6 @@
 #
 ---
-_include:
-  { bcl/beerocks_defines.h }
+_include: { bcl/beerocks_defines.h }
 
 _namespace: beerocks_message
 
@@ -11,7 +10,7 @@ sSupportedBandwidth:
   rank:
     _type: int32_t
     _value: -1
-    _comment: 0 = Best Rank, UINT16_MAX = Worst Rank, -1 = Undefined.
+    _comment: 0 = Best Rank, INT32_MAX = Worst Rank, -1 = Undefined.
   multiap_preference:
     _type: uint8_t
     _value: 0
