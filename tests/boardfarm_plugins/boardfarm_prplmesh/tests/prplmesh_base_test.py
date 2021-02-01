@@ -12,6 +12,7 @@ from opts import debug
 import connmap
 import environment as env
 import sniffer
+import subprocess
 import time
 
 
@@ -533,6 +534,8 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         for dev in test.dev:
             if dev.model in ['prplWRT_STA', 'STA_dummy'] and dev.associated_vap:
                 dev.wifi_disconnect(dev.associated_vap)
+
+        subprocess.call('pkill iperf3', shell=True)
 
         print("Sniffer - stop")
         test.dev.DUT.wired_sniffer.stop()

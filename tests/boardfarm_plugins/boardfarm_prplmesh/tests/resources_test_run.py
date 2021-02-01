@@ -11,12 +11,12 @@ class ResourcesTestRun(PrplMeshBaseTest):
 
         memory_stats = agent.get_memory_usage()
 
-        debug(f'memory_stats: {memory_stats}')
+        debug('memory_stats' + str(memory_stats))
 
         assert all([isinstance(v, int) for v in memory_stats])
 
         cpu_stats = agent.get_cpu_usage()
 
-        debug(f'cpu_stats: {cpu_stats}')
+        debug('cpu_stats' + str(cpu_stats))
 
         assert all([isinstance(v, float) for v in cpu_stats])
