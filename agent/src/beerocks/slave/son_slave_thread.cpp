@@ -3224,6 +3224,11 @@ bool slave_thread::handle_cmdu_monitor_message(Socket *sd,
             LOG(ERROR) << "Failed building cACTION_CONTROL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE";
             return false;
         }
+
+        response_out_controller->success() = response_in->success();
+
+        send_cmdu_to_controller(cmdu_tx);
+
         auto response_out_backhaul = message_com::create_vs_message<
             beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE>(cmdu_tx);
         if (!response_out_backhaul) {
@@ -3231,10 +3236,8 @@ bool slave_thread::handle_cmdu_monitor_message(Socket *sd,
             return false;
         }
 
-        response_out_controller->success() = response_in->success();
-        response_out_backhaul->success()   = response_in->success();
+        response_out_backhaul->success() = response_in->success();
 
-        send_cmdu_to_controller(cmdu_tx);
         message_com::send_cmdu(backhaul_manager_socket, cmdu_tx);
         break;
     }
