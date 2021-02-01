@@ -481,7 +481,7 @@ void ChannelSelectionTask::zwdfs_fsm()
 
         // If there is a channel with better rank, but did not pass the ranking threshold, print
         // information about it.
-        int current_channel_rank = -1;
+        int32_t current_channel_rank = -1;
         for (const auto &channel_bw_info :
              radio->channels_list.at(radio->channel).supported_bw_list) {
             if (channel_bw_info.bandwidth == radio->bandwidth) {
@@ -489,23 +489,26 @@ void ChannelSelectionTask::zwdfs_fsm()
             }
         }
 
+        // If current channel has invalid rank.
         if (current_channel_rank == -1) {
-            LOG(DEBUG)
-                << "Current channels has rank not found! Setting `current rank` as worst rank "
-                   "and searching for any other channel";
-            current_channel_rank = UINT16_MAX;
-        }
-
-        if (m_selected_channel.rank < current_channel_rank &&
-            uint32_t(current_channel_rank - m_selected_channel.rank) <
-                db->device_conf.best_channel_rank_threshold) {
+            LOG(DEBUG) << "Current channel rank not found! Ignoring rank_threshold_limit="
+                       << db->device_conf.best_channel_rank_threshold
+                       << " switching to the selected channel";
+        } else if ((m_selected_channel.rank < current_channel_rank) &&
+                   (uint32_t(current_channel_rank - m_selected_channel.rank) <
+                    db->device_conf.best_channel_rank_threshold)) {
+            // If current channel has valid rank and selected channel doesn't meet the threshold requirement,
+            // no need to switch-channel
             LOG(INFO)
                 << "Channel " << m_selected_channel.channel << " with bw=" << m_selected_channel.bw
                 << " and dfs_state=" << m_selected_channel.dfs_state
                 << " has better rank than current channel, but did not pass the ranking threshold="
                 << db->device_conf.best_channel_rank_threshold << ", Current channel is selected.";
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            break;
         }
 
+        // If current channel is the best channel - no need to switch-channel
         if (m_selected_channel.channel == radio->channel &&
             m_selected_channel.bw == radio->bandwidth) {
             LOG(DEBUG) << "Failsafe is already second best channel, abort ZWDFS flow";
@@ -723,9 +726,9 @@ ChannelSelectionTask::select_best_usable_channel(const std::string &front_radio_
     }
 
     if (best_rank == -1) {
-        LOG(DEBUG) << "Current channels has rank not found! Setting `current rank` as worst rank "
+        LOG(DEBUG) << "Current channel rank not found! Setting `current rank` as worst rank "
                       "and searching for any other channel";
-        best_rank = UINT16_MAX;
+        best_rank = INT32_MAX;
     }
 
     for (const auto &channel_info_pair : radio->channels_list) {
@@ -740,7 +743,7 @@ ChannelSelectionTask::select_best_usable_channel(const std::string &front_radio_
                 continue;
             }
 
-            // Low rank is better. Best rank include the ranking threshold.
+            // Low rank is better.
             if (supported_bw.rank > best_rank) {
                 continue;
             }
