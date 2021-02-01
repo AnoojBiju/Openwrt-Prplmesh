@@ -60,7 +60,11 @@ std::shared_ptr<cOperatingClassesInfo> tlvApRadioBasicCapabilities::create_opera
         return nullptr;
     }
     size_t len = cOperatingClassesInfo::get_initial_size();
-    if (m_lock_allocation__ || getBuffRemainingBytes() < len) {
+    if (m_lock_allocation__) {
+        TLVF_LOG(ERROR) << "Can't create new element before adding the previous one";
+        return nullptr;
+    }
+    if (getBuffRemainingBytes() < len) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer";
         return nullptr;
     }
