@@ -301,14 +301,13 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
                 tlvf::mac_from_string(node->data.gw_ire.radio[i].radio_identifier,
                                       c->radio_identifier);
 
-                for (int8_t vap_id = beerocks::IFACE_VAP_ID_MIN;
-                     vap_id < int8_t(c->hostap->vaps_info.size()); vap_id++) {
-                    const auto &vap = (c->hostap->vaps_info[vap_id]);
-                    tlvf::mac_from_string(node->data.gw_ire.radio[i].vap[vap_id].bssid, vap.mac);
-                    string_utils::copy_string(node->data.gw_ire.radio[i].vap[vap_id].ssid,
-                                              vap.ssid.c_str(),
-                                              sizeof(node->data.gw_ire.radio[i].vap[0].ssid));
-                    node->data.gw_ire.radio[i].vap[vap_id].backhaul_vap = vap.backhaul_vap;
+                unsigned vap_id = 0;
+                for (const auto &bss : c->get_bsses()) {
+                    auto &vap = node->data.gw_ire.radio[i].vap[vap_id];
+                    std::copy_n(bss.m_bssid.oct, sizeof(vap.bssid), vap.bssid);
+                    string_utils::copy_string(vap.ssid, bss.m_ssid.c_str(), sizeof(vap.ssid));
+                    vap.backhaul_vap = false; // no longer used
+                    vap_id++;
                 }
                 ++i;
             }

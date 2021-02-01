@@ -364,6 +364,9 @@ public:
     /** @brief Remove the BSS with the given BSSID. */
     void remove_bss(const sMacAddr &bssid);
 
+    /** @brief Get all BSSes on the radio. */
+    const std::list<prplmesh::controller::db::bss> &get_bsses() { return m_bsses; }
+
 private:
     class rssi_measurement {
     public:
