@@ -110,6 +110,98 @@ TEST_F(UccServerImplTest, destructor_should_remove_existing_connection)
     EXPECT_TRUE(testing::Mock::VerifyAndClearExpectations(connected_socket.get()));
 }
 
+TEST_F(UccServerImplTest, new_connection_overwrites_existing_connection)
+{
+    auto first_connection       = new StrictMock<beerocks::net::SocketConnectionMock>();
+    auto first_connected_socket = std::make_shared<StrictMock<beerocks::net::SocketMock>>();
+
+    auto second_connection       = new StrictMock<beerocks::net::SocketConnectionMock>();
+    auto second_connected_socket = std::make_shared<StrictMock<beerocks::net::SocketMock>>();
+
+    constexpr int server_socket_fd           = 1;
+    constexpr int first_connected_socket_fd  = 2;
+    constexpr int second_connected_socket_fd = 3;
+
+    beerocks::EventLoop::EventHandlers server_socket_handlers;
+    beerocks::EventLoop::EventHandlers first_connected_socket_handlers;
+    beerocks::EventLoop::EventHandlers second_connected_socket_handlers;
+
+    // Expectations that use this default return value increase the `use_count` of shared_ptr
+    // `socket`. To avoid a leak detection when test ends, `socket` must be destroyed at (or before)
+    // the end of TEST.
+    // In order to work around this, call `VerifyAndClearExpectations` right before the end of
+    // the test.
+    ON_CALL(*m_server_socket, socket()).WillByDefault(Return(m_socket));
+    ON_CALL(*m_socket, fd()).WillByDefault(Return(server_socket_fd));
+
+    // The same concern applies to shared_ptr `connected_socket`
+    ON_CALL(*first_connection, socket()).WillByDefault(Return(first_connected_socket));
+    ON_CALL(*first_connected_socket, fd()).WillByDefault(Return(first_connected_socket_fd));
+    ON_CALL(*second_connection, socket()).WillByDefault(Return(second_connected_socket));
+    ON_CALL(*second_connected_socket, fd()).WillByDefault(Return(second_connected_socket_fd));
+
+    {
+        InSequence sequence;
+
+        EXPECT_CALL(*m_server_socket, socket()).Times(1);
+        EXPECT_CALL(*m_socket, fd()).Times(1);
+        EXPECT_CALL(*m_event_loop, register_handlers(server_socket_fd, _))
+            .WillOnce(DoAll(SaveArg<1>(&server_socket_handlers), Return(true)));
+
+        // A first connection takes place, which is not closed before a second one is established
+        EXPECT_CALL(*m_server_socket, accept_proxy(_)).WillOnce(Return(first_connection));
+
+        EXPECT_CALL(*first_connection, socket()).Times(1);
+        EXPECT_CALL(*first_connected_socket, fd()).Times(1);
+        EXPECT_CALL(*m_event_loop, register_handlers(first_connected_socket_fd, _))
+            .WillOnce(DoAll(SaveArg<1>(&first_connected_socket_handlers), Return(true)));
+
+        // A new connection is established before previous one is closed.
+        EXPECT_CALL(*m_server_socket, accept_proxy(_)).WillOnce(Return(second_connection));
+
+        EXPECT_CALL(*second_connection, socket()).Times(1);
+        EXPECT_CALL(*second_connected_socket, fd()).Times(1);
+        EXPECT_CALL(*m_event_loop, register_handlers(second_connected_socket_fd, _))
+            .WillOnce(DoAll(SaveArg<1>(&second_connected_socket_handlers), Return(true)));
+
+        // UCC server removes first connection because UCC client has created a second connection
+        // without previously closing the first one.
+        EXPECT_CALL(*first_connection, socket()).Times(1);
+        EXPECT_CALL(*first_connected_socket, fd()).Times(1);
+        EXPECT_CALL(*first_connection, socket()).Times(1);
+        EXPECT_CALL(*first_connected_socket, fd()).Times(1);
+        EXPECT_CALL(*m_event_loop, remove_handlers(first_connected_socket_fd))
+            .WillOnce(Return(true));
+
+        EXPECT_CALL(*second_connection, socket()).Times(1);
+        EXPECT_CALL(*second_connected_socket, fd()).Times(1);
+
+        EXPECT_CALL(*m_server_socket, socket()).Times(1);
+        EXPECT_CALL(*m_socket, fd()).Times(1);
+        EXPECT_CALL(*m_event_loop, remove_handlers(server_socket_fd)).WillOnce(Return(true));
+    }
+
+    // Destructor of `ucc_server` must be executed before calling `VerifyAndClearExpectations` so
+    // all expectations for methods called in such destructor are satisfied.
+    {
+        beerocks::UccServerImpl ucc_server(std::move(m_server_socket), m_ucc_parser,
+                                           m_ucc_serializer, m_event_loop);
+
+        // Emulate a new client is connected to the server socket.
+        server_socket_handlers.on_read(first_connected_socket_fd, *m_event_loop);
+
+        // Emulate a new client is connected before previous one gets disconnected.
+        server_socket_handlers.on_read(second_connected_socket_fd, *m_event_loop);
+
+        // Emulate the second client gets disconnected from the server socket.
+        second_connected_socket_handlers.on_disconnect(second_connected_socket_fd, *m_event_loop);
+    }
+
+    EXPECT_TRUE(testing::Mock::VerifyAndClearExpectations(m_socket.get()));
+    EXPECT_TRUE(testing::Mock::VerifyAndClearExpectations(first_connected_socket.get()));
+    EXPECT_TRUE(testing::Mock::VerifyAndClearExpectations(second_connected_socket.get()));
+}
+
 TEST_F(UccServerImplTest, receive_command_should_succeed)
 {
     auto connection       = new StrictMock<beerocks::net::SocketConnectionMock>();
