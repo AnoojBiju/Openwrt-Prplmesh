@@ -1405,6 +1405,22 @@ public:
     bool set_radio_utilization(const sMacAddr &bssid, uint8_t utilization);
 
     /**
+     * @brief Set radio metrics values in Controler Data Model.
+     *
+     * Objects are Noise, Transmit, ReceiveSelf and ReceiveOther.
+     * Data model path example: "Controller.Network.Device.1.Radio.1.Noise"
+     *
+     * @param[in] uid uid for specific radio.
+     * @param[in] noise Noise value [0, 220].
+     * @param[in] transmit Transmit value.
+     * @param[in] receive_self ReceiveSelf value.
+     * @param[in] receive_other ReceiveOther value.
+     * @return true on success, otherwise false.
+     */
+    bool set_radio_metrics(const sMacAddr &uid, uint8_t noise, uint8_t transmit,
+                           uint8_t receive_self, uint8_t receive_other);
+
+    /**
      * @brief Set estimated service parameters BE in Controler Data Model.
      * Data model path example: "Controller.Network.Device.1.Radio.1.BSS.1.EstServiceParametersBE"
      *
