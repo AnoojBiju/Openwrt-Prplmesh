@@ -56,7 +56,11 @@ std::shared_ptr<cRadiosToScan> tlvProfile2ChannelScanRequest::create_radio_list(
         return nullptr;
     }
     size_t len = cRadiosToScan::get_initial_size();
-    if (m_lock_allocation__ || getBuffRemainingBytes() < len) {
+    if (m_lock_allocation__) {
+        TLVF_LOG(ERROR) << "Can't create new element before adding the previous one";
+        return nullptr;
+    }
+    if (getBuffRemainingBytes() < len) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer";
         return nullptr;
     }
@@ -242,6 +246,10 @@ std::tuple<bool, cRadiosToScan::sOperatingClasses&> cRadiosToScan::operating_cla
 bool cRadiosToScan::alloc_operating_classes_list(size_t count) {
     if (m_lock_order_counter__ > 0) {;
         TLVF_LOG(ERROR) << "Out of order allocation for variable length list operating_classes_list, abort!";
+        return false;
+    }
+    if (m_lock_allocation__) {
+        TLVF_LOG(ERROR) << "Can't create new element before adding the previous one";
         return false;
     }
     size_t len = sizeof(sOperatingClasses) * count;

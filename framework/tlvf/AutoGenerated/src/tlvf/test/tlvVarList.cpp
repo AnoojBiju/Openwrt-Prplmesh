@@ -170,7 +170,11 @@ std::shared_ptr<cInner> tlvTestVarList::create_complex_list() {
         return nullptr;
     }
     size_t len = cInner::get_initial_size();
-    if (m_lock_allocation__ || getBuffRemainingBytes() < len) {
+    if (m_lock_allocation__) {
+        TLVF_LOG(ERROR) << "Can't create new element before adding the previous one";
+        return nullptr;
+    }
+    if (getBuffRemainingBytes() < len) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer";
         return nullptr;
     }
@@ -248,7 +252,11 @@ std::shared_ptr<cInner> tlvTestVarList::create_var1() {
         return nullptr;
     }
     size_t len = cInner::get_initial_size();
-    if (m_lock_allocation__ || getBuffRemainingBytes() < len) {
+    if (m_lock_allocation__) {
+        TLVF_LOG(ERROR) << "Can't create new element before adding the previous one";
+        return nullptr;
+    }
+    if (getBuffRemainingBytes() < len) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer";
         return nullptr;
     }
@@ -305,7 +313,11 @@ std::shared_ptr<cInner> tlvTestVarList::create_var3() {
         return nullptr;
     }
     size_t len = cInner::get_initial_size();
-    if (m_lock_allocation__ || getBuffRemainingBytes() < len) {
+    if (m_lock_allocation__) {
+        TLVF_LOG(ERROR) << "Can't create new element before adding the previous one";
+        return nullptr;
+    }
+    if (getBuffRemainingBytes() < len) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer";
         return nullptr;
     }
@@ -382,7 +394,11 @@ std::shared_ptr<cInner> tlvTestVarList::create_unknown_length_list() {
         return nullptr;
     }
     size_t len = cInner::get_initial_size();
-    if (m_lock_allocation__ || getBuffRemainingBytes() < len) {
+    if (m_lock_allocation__) {
+        TLVF_LOG(ERROR) << "Can't create new element before adding the previous one";
+        return nullptr;
+    }
+    if (getBuffRemainingBytes() < len) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer";
         return nullptr;
     }

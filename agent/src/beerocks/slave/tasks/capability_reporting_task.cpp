@@ -421,11 +421,21 @@ bool CapabilityReportingTask::add_cac_capabilities_tlv()
                 }
 
                 // add to cac type
-                cac_type_tlv->add_operating_classes(operating_classes_tlv);
+                if (!cac_type_tlv->add_operating_classes(operating_classes_tlv)) {
+                    LOG(ERROR) << "Failed adding operating classes to CAC type TLV";
+                    return false;
+                }
+            }
+            if (!radios_tlv->add_cac_types(cac_type_tlv)) {
+                LOG(ERROR) << "Failed adding CAC types to CAC radios tlv";
+                return false;
             }
         }
         // add the cac type back to the radios tlv
-        cac_capabilities_tlv->add_cac_radios(radios_tlv);
+        if (!cac_capabilities_tlv->add_cac_radios(radios_tlv)) {
+            LOG(ERROR) << "Failed adding CAC radios to CAC capabilities TLV";
+            return false;
+        }
     }
     return true;
 }

@@ -72,7 +72,11 @@ std::shared_ptr<cCacCapabilitiesRadio> tlvProfile2CacCapabilities::create_cac_ra
         return nullptr;
     }
     size_t len = cCacCapabilitiesRadio::get_initial_size();
-    if (m_lock_allocation__ || getBuffRemainingBytes() < len) {
+    if (m_lock_allocation__) {
+        TLVF_LOG(ERROR) << "Can't create new element before adding the previous one";
+        return nullptr;
+    }
+    if (getBuffRemainingBytes() < len) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer";
         return nullptr;
     }
@@ -263,7 +267,11 @@ std::shared_ptr<cCacTypes> cCacCapabilitiesRadio::create_cac_types() {
         return nullptr;
     }
     size_t len = cCacTypes::get_initial_size();
-    if (m_lock_allocation__ || getBuffRemainingBytes() < len) {
+    if (m_lock_allocation__) {
+        TLVF_LOG(ERROR) << "Can't create new element before adding the previous one";
+        return nullptr;
+    }
+    if (getBuffRemainingBytes() < len) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer";
         return nullptr;
     }
@@ -447,7 +455,11 @@ std::shared_ptr<cCacCapabilitiesOperatingClasses> cCacTypes::create_operating_cl
         return nullptr;
     }
     size_t len = cCacCapabilitiesOperatingClasses::get_initial_size();
-    if (m_lock_allocation__ || getBuffRemainingBytes() < len) {
+    if (m_lock_allocation__) {
+        TLVF_LOG(ERROR) << "Can't create new element before adding the previous one";
+        return nullptr;
+    }
+    if (getBuffRemainingBytes() < len) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer";
         return nullptr;
     }

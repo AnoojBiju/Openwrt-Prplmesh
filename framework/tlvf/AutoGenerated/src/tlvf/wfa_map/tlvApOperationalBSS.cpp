@@ -52,7 +52,11 @@ std::shared_ptr<cRadioInfo> tlvApOperationalBSS::create_radio_list() {
         return nullptr;
     }
     size_t len = cRadioInfo::get_initial_size();
-    if (m_lock_allocation__ || getBuffRemainingBytes() < len) {
+    if (m_lock_allocation__) {
+        TLVF_LOG(ERROR) << "Can't create new element before adding the previous one";
+        return nullptr;
+    }
+    if (getBuffRemainingBytes() < len) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer";
         return nullptr;
     }
@@ -233,7 +237,11 @@ std::shared_ptr<cRadioBssInfo> cRadioInfo::create_radio_bss_list() {
         return nullptr;
     }
     size_t len = cRadioBssInfo::get_initial_size();
-    if (m_lock_allocation__ || getBuffRemainingBytes() < len) {
+    if (m_lock_allocation__) {
+        TLVF_LOG(ERROR) << "Can't create new element before adding the previous one";
+        return nullptr;
+    }
+    if (getBuffRemainingBytes() < len) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer";
         return nullptr;
     }
