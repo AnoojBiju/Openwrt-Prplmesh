@@ -94,14 +94,13 @@ bool agent_ucc_listener::handle_dev_get_param(std::unordered_map<std::string, st
             value = "missing ruid";
             return false;
         }
-        auto ruid_str = tlvf::mac_to_string(std::strtoull(params["ruid"].c_str(), nullptr, 16));
-        auto ruid     = tlvf::mac_from_string(ruid_str);
+        auto ruid = tlvf::mac_from_string(params["ruid"]);
         if (params.find("ssid") == params.end()) {
             // No ssid was given, we need to return the backhaul sta mac.
             auto radio = db->get_radio_by_mac(ruid, AgentDB::eMacType::RADIO);
             if (!radio) {
                 LOG(ERROR) << "No radio with ruid '" << ruid << "' found!";
-                value = "No radio with ruid " + ruid_str;
+                value = "No radio with ruid " + tlvf::mac_to_string(ruid);
                 return false;
             }
             value = tlvf::mac_to_string(radio->back.iface_mac);
@@ -110,9 +109,10 @@ bool agent_ucc_listener::handle_dev_get_param(std::unordered_map<std::string, st
         auto ssid = params["ssid"];
         // there is an ssid, lookup the corresponding mac address
         if (!db->get_mac_by_ssid(ruid, ssid, mac_value)) {
-            LOG(ERROR) << " failed to find the MAC address for ruid '" << ruid_str << "'"
+            LOG(ERROR) << " failed to find the MAC address for ruid '" << ruid << "'"
                        << " ssid '" << ssid << "'";
-            value = "macaddr/bssid not found for ruid " + ruid_str + " ssid " + ssid;
+            value =
+                "macaddr/bssid not found for ruid " + tlvf::mac_to_string(ruid) + " ssid " + ssid;
             return false;
         }
         value = tlvf::mac_to_string(mac_value);
@@ -126,14 +126,14 @@ bool agent_ucc_listener::handle_dev_get_param(std::unordered_map<std::string, st
             value = "missing ssid";
             return false;
         }
-        auto ruid_str = tlvf::mac_to_string(std::strtoull(params["ruid"].c_str(), nullptr, 16));
-        auto ruid     = tlvf::mac_from_string(ruid_str);
-        auto ssid     = params["ssid"];
+        auto ruid = tlvf::mac_from_string(params["ruid"]);
+        auto ssid = params["ssid"];
 
         if (!db->get_mac_by_ssid(ruid, ssid, mac_value)) {
-            LOG(ERROR) << " failed to find the BSSID for ruid '" << ruid_str << "'"
+            LOG(ERROR) << " failed to find the BSSID for ruid '" << ruid << "'"
                        << " ssid '" << ssid << "'";
-            value = "macaddr/bssid not found for ruid " + ruid_str + " ssid " + ssid;
+            value =
+                "macaddr/bssid not found for ruid " + tlvf::mac_to_string(ruid) + " ssid " + ssid;
             return false;
         }
         value = tlvf::mac_to_string(mac_value);
@@ -276,9 +276,8 @@ bool agent_ucc_listener::handle_dev_set_rfeature(
     auto ruid_it  = params.find("ruid");
     auto bssid_it = params.find("bssid");
     if (ruid_it != params.end()) {
-        auto ruid_str = tlvf::mac_to_string(std::strtoull(ruid_it->second.c_str(), nullptr, 16));
-        ruid          = tlvf::mac_from_string(ruid_str);
-        bssid         = net::network_utils::ZERO_MAC;
+        ruid  = tlvf::mac_from_string(ruid_it->second);
+        bssid = net::network_utils::ZERO_MAC;
     } else if (bssid_it != params.end()) {
         bssid      = tlvf::mac_from_string(bssid_it->second);
         auto db    = AgentDB::get();
