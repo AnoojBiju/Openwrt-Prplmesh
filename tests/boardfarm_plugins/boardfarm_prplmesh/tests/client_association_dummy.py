@@ -44,8 +44,9 @@ class ClientAssociationDummy(PrplMeshBaseTest):
 
         self.dev.DUT.wired_sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
 
-        # Send BWL event repeater 1 wlan0 EVENT AP-STA-CONNECTED
-        debug("Connect dummy STA to wlan0")
+        debug("Connect dummy STA to wlan0 with SSID ClientAssocDummy")
+        self.configure_ssids(['ClientAssocDummy'])
+        time.sleep(2)
         sta.wifi_connect_check(agent.radios[0].vaps[0])
 
         time.sleep(1)
