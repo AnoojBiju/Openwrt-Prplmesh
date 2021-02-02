@@ -2255,7 +2255,10 @@ bool Controller::handle_cmdu_1905_topology_notification(const std::string &src_m
             LOG(WARNING) << "Failed to notify disconnection event.";
         }
 
-        son_actions::handle_dead_node(client_mac_str, bssid_str, database, cmdu_tx, tasks);
+        bool reported_by_parent = bssid_str == database.get_node_parent(client_mac_str);
+        // TODO this is probably wrong - if reported_by_parent is true, the client has already
+        // connected to something else so it is not dead at all.
+        son_actions::handle_dead_node(client_mac_str, reported_by_parent, database, cmdu_tx, tasks);
     }
 
     return true;
@@ -2356,9 +2359,7 @@ bool Controller::handle_cmdu_1905_topology_response(const std::string &src_mac,
             reported_fronthaul_radios.end()) {
             LOG(DEBUG) << "radio " << fronthaul_radio_on_db
                        << " is not reported on Device Information TLV, removing the radio node";
-            son_actions::handle_dead_node(fronthaul_radio_on_db,
-                                          database.get_node_parent(fronthaul_radio_on_db), database,
-                                          cmdu_tx, tasks);
+            son_actions::handle_dead_node(fronthaul_radio_on_db, true, database, cmdu_tx, tasks);
         }
     }
 
@@ -2501,8 +2502,7 @@ bool Controller::handle_cmdu_1905_topology_response(const std::string &src_mac,
 
             LOG(DEBUG) << "known neighbor al_mac  " << neighbor_al_mac_on_db
                        << " is not reported on 1905 Neighbor Device TLV, removing the al_mac node";
-            son_actions::handle_dead_node(backhhaul_mac, database.get_node_parent(backhhaul_mac),
-                                          database, cmdu_tx, tasks);
+            son_actions::handle_dead_node(backhhaul_mac, true, database, cmdu_tx, tasks);
         }
     }
 
@@ -3340,7 +3340,7 @@ bool Controller::handle_cmdu_control_message(
         auto client_list = database.get_node_children(disabled_bssid, beerocks::TYPE_CLIENT);
 
         for (auto &client : client_list) {
-            son_actions::handle_dead_node(client, disabled_bssid, database, cmdu_tx, tasks);
+            son_actions::handle_dead_node(client, true, database, cmdu_tx, tasks);
         }
 
         database.remove_vap(hostap_mac, vap_id);
@@ -3537,9 +3537,8 @@ bool Controller::handle_cmdu_control_message(
         // Since the transport layer is accelerated, the OS may incorrectly decide
         // that a connected client has disconnected.
         //  if(notification->params.type == ARP_TYPE_DELNEIGH && !database.is_node_wireless(client_mac)) {
-        //     auto eth_switch = database.get_node_parent(client_mac);
         //     LOG(INFO) << "ARP type RTM_DELNEIGH received!! handle dead client mac = " << client_mac;
-        //     son_actions::handle_dead_node(client_mac, eth_switch, database, tasks);
+        //     son_actions::handle_dead_node(client_mac, true, database, tasks);
         //     break;
         //  }
 
@@ -3776,7 +3775,8 @@ bool Controller::handle_cmdu_control_message(
             LOG(INFO) << "IRE CLIENT_NO_RESPONSE_NOTIFICATION, client_mac=" << client_mac
                       << " hostap mac=" << hostap_mac
                       << " closing socket and marking as disconnected";
-            son_actions::handle_dead_node(client_mac, hostap_mac, database, cmdu_tx, tasks);
+            bool reported_by_parent = hostap_mac == database.get_node_parent(client_mac);
+            son_actions::handle_dead_node(client_mac, reported_by_parent, database, cmdu_tx, tasks);
         }
         break;
     }

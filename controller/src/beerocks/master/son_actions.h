@@ -51,7 +51,7 @@ public:
     static void send_cli_debug_message(db &database, ieee1905_1::CmduMessageTx &cmdu_tx,
                                        std::stringstream &ss);
 
-    static void handle_dead_node(std::string mac, std::string hostap_mac, db &database,
+    static void handle_dead_node(std::string mac, bool reported_by_parent, db &database,
                                  ieee1905_1::CmduMessageTx &cmdu_tx, task_pool &tasks);
     static bool validate_beacon_measurement_report(beerocks_message::sBeaconResponse11k report,
                                                    std::string sta_mac, std::string bssid);
