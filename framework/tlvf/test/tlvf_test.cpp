@@ -8,6 +8,7 @@
 
 #include "tlvf/CmduMessageRx.h"
 #include "tlvf/CmduMessageTx.h"
+#include "tlvf/tlvftypes.h"
 #include <cstring>
 #include <iostream>
 #include <sstream>
@@ -459,7 +460,7 @@ int test_all()
 
     /**
      * @brief Diffie helman key exchange
-     * 
+     *
      */
     uint8_t key1[192];
     uint8_t key2[192];
@@ -758,6 +759,63 @@ int test_all()
     return errors;
 }
 
+int test_mac_from_string()
+{
+    int errors = 0;
+
+    // To make tests easy, we use MAC digits in the range 0x30-0x39, which is just 0-9 as string.
+    // To have some letters as well, we can use 0x3d which is = and 0x3f which is ?
+    auto check_success = [&errors](const std::string &mac, const char *as_int) {
+        uint8_t mac_oct[6] = {0x20, 0x30, 0x40, 0x50, 0x60};
+        if (tlvf::mac_from_string(mac_oct, mac)) {
+            if (std::memcmp(mac_oct, as_int, 6) != 0) {
+                MAPF_INFO("mac_from_string doesn't match expected: "
+                          << mac << " -> " << as_int << " got " << tlvf::mac_to_string(mac_oct));
+                errors++;
+            }
+        } else {
+            MAPF_INFO("mac_from_string failed for " << mac);
+            errors++;
+        }
+    };
+
+    check_success("30:31:32:33:34:35", "012345");
+    check_success("0x363738393d3f", "6789=?");
+    check_success("333333333333", "333333");
+    check_success("", "\0\0\0\0\0\0");
+
+    auto check_fail = [&errors](const std::string &mac) {
+        uint8_t mac_oct[6] = {0x20, 0x30, 0x40, 0x50, 0x60};
+        if (tlvf::mac_from_string(mac_oct, mac)) {
+            MAPF_INFO("mac_from_string should fail for " << mac << " got "
+                                                         << tlvf::mac_to_string(mac_oct));
+            errors++;
+        } else {
+            const uint8_t zero[6] = {0, 0, 0, 0, 0, 0};
+            if (std::memcmp(mac_oct, zero, 6) != 0) {
+                MAPF_INFO("mac_oct not wiped after failed conversion of " << mac);
+                errors++;
+            }
+        }
+    };
+    check_fail("1");
+    check_fail("30:31:32:33:34:3g");    // Non-hex digit
+    check_fail("30:31:32:33:34");       // Too few
+    check_fail("30:31:32:33:34:35:36"); // Too many
+    check_fail("30:31:32:33:34:35:3");  // Wrong format
+    check_fail("30:31:32:33:340:35:3"); // Wrong format
+
+    check_fail("0x363738393d3g");  // Non-hex digit
+    check_fail("0x363738393d3");   // Too few
+    check_fail("0x363738393d3f3"); // Too many
+
+    check_fail("363738393d3g");  // Non-hex digit
+    check_fail("363738393d3");   // Too few
+    check_fail("363738393d3f3"); // Too many
+
+    return errors;
+}
+
 int main(int argc, char *argv[])
 {
     int errors = 0;
@@ -767,6 +825,7 @@ int main(int argc, char *argv[])
     errors += test_complex_list();
     errors += test_all();
     errors += test_parser();
+    errors += test_mac_from_string();
     MAPF_INFO(__FUNCTION__ << " Finished, errors = " << errors << std::endl);
     return errors;
 }

@@ -52,21 +52,35 @@ std::string mac_to_string(const uint64_t mac)
     return mac_to_string(mac_address);
 }
 
-void mac_from_string(uint8_t *buf, const std::string &mac)
+bool mac_from_string(uint8_t *buf, const std::string &mac)
 {
+    std::fill_n(buf, ETH_ALEN, 0);
     if (buf) {
+        std::string stripped_mac;
         if (mac.empty()) {
-            memset(buf, 0, ETH_ALEN);
+            return true;
+        } else if (mac.size() == 17) { // Assume XX:XX:XX:XX:XX:XX format
+            stripped_mac = mac;
+            stripped_mac.erase(std::remove_if(stripped_mac.begin(), stripped_mac.end(),
+                                              [](char c) { return c == mac_bytes_separator; }),
+                               stripped_mac.end());
+        } else if (mac.size() == 14) { // Assume 0xXXXXXXXXXX format
+            stripped_mac = mac.substr(2);
+        } else if (mac.size() == 12) { // Assume XXXXXXXXXX format
+            stripped_mac = mac;
         } else {
-            std::stringstream mac_ss(mac);
-            std::string token;
-
-            for (int i = 0; i < ETH_ALEN; i++) {
-                std::getline(mac_ss, token, mac_bytes_separator);
-                buf[i] = std::strtoul(token.c_str(), nullptr, 16);
-            }
+            return false;
+        }
+        char *end        = nullptr;
+        uint64_t mac_int = std::strtoull(stripped_mac.c_str(), &end, 16);
+        if (!end || end != stripped_mac.c_str() + 12) { // Should be exactly 12 hex digits
+            return false;
+        }
+        for (int i = 0; i < ETH_ALEN; i++) {
+            buf[i] = mac_int >> ((ETH_ALEN - i - 1) * 8);
         }
     }
+    return true;
 }
 
 sMacAddr mac_from_string(const std::string &mac)
