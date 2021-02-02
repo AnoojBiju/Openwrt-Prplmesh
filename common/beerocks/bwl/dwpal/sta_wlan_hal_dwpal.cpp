@@ -478,19 +478,26 @@ bool sta_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std
 
         parse_event(buffer, parsed_obj);
 
-        // Multi-AP Profile
-        if (!read_param("multi_ap_profile", parsed_obj, tmp_int)) {
-            LOG(ERROR) << "Failed reading 'multi_ap_profile' parameter!";
-            return false;
-        }
-        msg->multi_ap_profile = tmp_int;
+        // Since prplwrt does not include the changes on the wpa_supplicant which add the Multi-AP
+        // Profile to the association response, do not fail if it does not exist, and put default
+        // value of profile-1.
+        // TODO: When the changes will be ported to prplwrt, need to treas the "Multi-AP Profile"
+        // parameter as mandatory.
 
-        // Multi-AP Primary VLAN ID
-        if (!read_param("multi_ap_primary_vlanid", parsed_obj, tmp_int)) {
-            LOG(ERROR) << "Failed reading 'multi_ap_primary_vlanid' parameter!";
-            return false;
+        // Multi-AP Profile
+        if (read_param("multi_ap_profile", parsed_obj, tmp_int)) {
+            msg->multi_ap_profile = tmp_int;
+        } else {
+            msg->multi_ap_profile = 1;
+            LOG(ERROR) << "Failed reading 'multi_ap_profile' parameter!";
         }
-        msg->multi_ap_primary_vlan_id = tmp_int;
+
+        // Multi-AP Primary VLAN ID - Not mandatory
+        if (read_param("multi_ap_primary_vlanid", parsed_obj, tmp_int)) {
+            msg->multi_ap_primary_vlan_id = tmp_int;
+        } else {
+            msg->multi_ap_primary_vlan_id = 0;
+        }
 
         // Forward the event
         event_queue_push(event, msg_buff);
