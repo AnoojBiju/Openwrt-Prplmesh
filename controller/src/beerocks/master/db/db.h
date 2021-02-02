@@ -605,6 +605,14 @@ public:
     std::unordered_map<int8_t, sVapElement> &get_hostap_vap_list(const std::string &mac);
     std::set<std::string> get_hostap_vaps_bssids(const std::string &mac);
     bool remove_vap(const std::string &mac, int vap_id);
+
+    /** Remove the VAP with the given BSSID on the given radio. */
+    bool remove_vap(const sMacAddr &radio_uid, const sMacAddr &bssid);
+
+    /** Remove all VAPs on the given radio if their BSSID is not in bssids. */
+    bool remove_unused_vaps(const sMacAddr &radio_uid, const std::vector<sMacAddr> &bssids,
+                            std::vector<sMacAddr> &removed_clients);
+
     bool add_vap(const std::string &radio_mac, int vap_id, const std::string &bssid,
                  const std::string &ssid, bool backhual);
 

@@ -2285,6 +2285,47 @@ bool db::remove_vap(const std::string &radio_mac, int vap_id)
     return true;
 }
 
+bool db::remove_vap(const sMacAddr &radio_uid, const sMacAddr &bssid)
+{
+    int vap_id = get_hostap_vap_id(tlvf::mac_to_string(bssid));
+    if (vap_id < 0) {
+        return false;
+    }
+    return remove_vap(tlvf::mac_to_string(radio_uid), vap_id);
+}
+
+bool db::remove_unused_vaps(const sMacAddr &radio_uid, const std::vector<sMacAddr> &bssids,
+                            std::vector<sMacAddr> &removed_clients)
+{
+    auto radio = get_node(radio_uid);
+    if (!radio) {
+        LOG(ERROR) << "No radio with MAC " << radio_uid;
+        return false;
+    }
+
+    // Although for a std::list, it is possible to erase elements while iterating, the iterator
+    // itself is invalidated. This means we can't use the remove_vap function within the loop.
+    // Therefore, collect the bsses to remove first and then remove them.
+
+    std::vector<sMacAddr> bsses_to_remove;
+    for (const auto &bss : radio->get_bsses()) {
+        auto it = std::find_if(bssids.begin(), bssids.end(),
+                               [bss](const sMacAddr &bssid) { return bss.m_bssid == bssid; });
+        if (it == bssids.end()) {
+            bsses_to_remove.emplace_back(bss.m_bssid);
+            for (auto client : get_node_children(radio, TYPE_CLIENT, STATE_ANY,
+                                                 tlvf::mac_to_string(bss.m_bssid))) {
+                removed_clients.emplace_back(tlvf::mac_from_string(client->mac));
+            }
+        }
+    }
+
+    for (auto &bssid : bsses_to_remove) {
+        remove_vap(radio_uid, bssid);
+    }
+    return true;
+}
+
 bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bssid,
                  const std::string &ssid, bool backhual)
 {

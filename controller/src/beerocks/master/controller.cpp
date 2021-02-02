@@ -2189,16 +2189,26 @@ bool Controller::handle_cmdu_1905_topology_response(const std::string &src_mac,
                 LOG(WARNING) << "OperationalBSS on unknown radio " << radio.radio_uid();
                 continue;
             }
+            std::vector<sMacAddr> reported_bsses;
             for (uint8_t j = 0; j < radio.radio_bss_list_length(); j++) {
                 auto bss = std::get<1>(radio.radio_bss_list(j));
                 LOG(DEBUG) << "Operational BSS " << bss.radio_bssid();
 
+                reported_bsses.emplace_back(bss.radio_bssid());
                 // TODO "backhaul" is not set in this TLV, so just assume false
                 if (!database.update_vap(radio.radio_uid(), bss.radio_bssid(), bss.ssid_str(),
                                          false)) {
                     LOG(ERROR) << "Failed to update VAP for radio " << radio.radio_uid() << " BSS "
                                << bss.radio_bssid() << " SSID " << bss.ssid_str();
                 }
+            }
+
+            // Remove any un-reported bsses
+            std::vector<sMacAddr> removed_clients;
+            database.remove_unused_vaps(radio.radio_uid(), reported_bsses, removed_clients);
+            for (const auto &client_mac : removed_clients) {
+                son_actions::handle_dead_node(tlvf::mac_to_string(client_mac), true, database,
+                                              cmdu_tx, tasks);
             }
         }
     }
