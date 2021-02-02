@@ -981,3 +981,98 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
                << " Scan-Result TLV(s)";
     return m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac);
 }
+
+std::shared_ptr<ChannelScanTask::StoredResultsVector>
+ChannelScanTask::get_scan_results_for_request(const std::shared_ptr<sScanRequest> request)
+{
+    auto results = std::make_shared<StoredResultsVector>();
+    using results_map =
+        std::unordered_map<uint8_t, std::pair<std::chrono::system_clock::time_point,
+                                              std::vector<beerocks_message::sChannelScanResults>>>;
+    auto add_fresh_scan_results =
+        [results](std::shared_ptr<beerocks::ChannelScanTask::sRadioScan> radio_scan,
+                  const results_map &stored_scan_results_map,
+                  const std::chrono::system_clock::time_point &scan_start_timestamp) {
+            /**
+             * A fresh scan is requested with classes and a channel list.
+             * Return the results that have a matching timestamp only.
+             */
+            for (const auto &class_iter : radio_scan->operating_classes) {
+                const uint8_t operating_class = class_iter.operating_class;
+                for (const uint8_t channel : class_iter.channel_list) {
+                    /**
+                     * Check if channel has any stored results
+                     * It is possible that a channel has no neighbors
+                     */
+                    const auto &stored_scan_results_iter = stored_scan_results_map.find(channel);
+                    if (stored_scan_results_iter == stored_scan_results_map.end()) {
+                        LOG(TRACE) << "There are no stored results for channel #" << channel
+                                   << " on radio " << radio_scan->radio_mac;
+                        continue;
+                    }
+                    const auto &stored_scan_results_pair = stored_scan_results_iter->second;
+                    /**
+                     * Check if stored results are from the current request
+                     * Old results are disregarded.
+                     */
+                    if (stored_scan_results_pair.first != scan_start_timestamp) {
+                        LOG(TRACE) << "The results stored for channel #" << channel
+                                   << " are not part of the current scan.";
+                        continue;
+                    }
+                    results->push_back(sStoredScanResults(
+                        radio_scan->radio_mac, operating_class, channel, radio_scan->scan_status,
+                        stored_scan_results_pair.first, stored_scan_results_pair.second));
+                }
+            }
+        };
+
+    auto add_stored_results =
+        [results](std::shared_ptr<beerocks::ChannelScanTask::sRadioScan> radio_scan,
+                  const results_map &stored_scan_results_map,
+                  const beerocks::eWiFiBandwidth &bandwidth) {
+            /**
+             * The given scan request requested to returned all stored results
+             */
+            for (const auto &stored_scan_results_item : stored_scan_results_map) {
+                /**
+                 *  The scanned neighbors lists are stored in a map of
+                 *      Key: channel number
+                 *      Value: result pair
+                 *          First: Timestamp of associated request
+                 *          Second: vector of Stored Neighbors
+                 */
+                const auto channel         = stored_scan_results_item.first;
+                const auto operating_class = son::wireless_utils::get_operating_class_by_channel(
+                    beerocks::message::sWifiChannel(channel, bandwidth));
+                const auto &stored_scan_results_pair = stored_scan_results_item.second;
+                results->push_back(sStoredScanResults(
+                    radio_scan->radio_mac, operating_class, channel, radio_scan->scan_status,
+                    stored_scan_results_pair.first, stored_scan_results_pair.second));
+            }
+        };
+
+    auto db = AgentDB::get();
+
+    const auto request_info =
+        std::static_pointer_cast<sControllerRequestInfo>(request->request_info);
+
+    for (const auto &radio_scan_iter : request->radio_scans) {
+        auto radio = db->radio(radio_scan_iter.first);
+        if (!radio) {
+            LOG(ERROR) << "No radio with iface '" << radio_scan_iter.first << "' found!";
+            continue;
+        }
+        const auto &stored_scan_results_map = radio->channel_scan_results;
+
+        if (request_info->perform_fresh_scan ==
+            wfa_map::tlvProfile2ChannelScanRequest::ePerformFreshScan::
+                PERFORM_A_FRESH_SCAN_AND_RETURN_RESULTS) {
+            add_fresh_scan_results(radio_scan_iter.second, stored_scan_results_map,
+                                   request->scan_start_timestamp);
+        } else {
+            add_stored_results(radio_scan_iter.second, stored_scan_results_map, radio->bandwidth);
+        }
+    }
+    return results;
+}
