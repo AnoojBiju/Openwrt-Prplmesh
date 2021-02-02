@@ -2389,26 +2389,6 @@ bool db::update_vap(const sMacAddr &radio_mac, const sMacAddr &bssid, const std:
     return dm_set_radio_bss(radio_mac, bssid, ssid);
 }
 
-std::set<std::string> db::get_hostap_vaps_bssids(const std::string &mac)
-{
-    std::set<std::string> bssid_set;
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return bssid_set;
-    }
-
-    if (n->get_type() != beerocks::TYPE_SLAVE) {
-        // Only slaves have vap's
-        return bssid_set;
-    }
-    auto vap_list = get_hostap_vap_list(mac);
-    for (auto &vap : vap_list) {
-        bssid_set.insert(vap.second.mac);
-    }
-    return bssid_set;
-}
-
 std::string db::get_hostap_ssid(const std::string &mac)
 {
     auto n = get_node(mac);

@@ -603,7 +603,6 @@ public:
     bool set_hostap_vap_list(const std::string &mac,
                              const std::unordered_map<int8_t, sVapElement> &vap_list);
     std::unordered_map<int8_t, sVapElement> &get_hostap_vap_list(const std::string &mac);
-    std::set<std::string> get_hostap_vaps_bssids(const std::string &mac);
     bool remove_vap(const std::string &mac, int vap_id);
 
     /** Remove the VAP with the given BSSID on the given radio. */
