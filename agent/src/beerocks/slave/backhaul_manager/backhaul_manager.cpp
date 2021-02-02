@@ -2312,6 +2312,52 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
         if (FSM_IS_IN_STATE(WAIT_WPS)) {
             return true;
         }
+        if (FSM_IS_IN_STATE(OPERATIONAL) &&
+            m_backhaul_steering_bssid != beerocks::net::network_utils::ZERO_MAC) {
+
+            LOG(DEBUG) << "Received scan results while a steering bssid is set.";
+
+            auto active_hal = get_wireless_hal();
+            if (!active_hal) {
+                LOG(ERROR) << "Couldn't get active HAL";
+                return false;
+            }
+
+            auto db = AgentDB::get();
+
+            // TODO: query the supplicant to check that it has an entry for
+            // the BSS. If not, reply with
+            // "BACKHAUL_STEERING_REQUEST_REJECTED_TARGET_BSS_SIGNAL_NOT_SUITABLE"
+            // immediately.
+
+            LOG(DEBUG) << "Steering to BSSID " << m_backhaul_steering_bssid
+                       << ", channel=" << m_backhaul_steering_channel;
+            auto associate =
+                active_hal->roam(m_backhaul_steering_bssid, m_backhaul_steering_channel);
+            if (!associate) {
+                LOG(ERROR) << "Couldn't associate active HAL with bssid: "
+                           << m_backhaul_steering_bssid;
+
+                auto response = create_backhaul_steering_response(
+                    wfa_map::tlvErrorCode::eReasonCode::
+                        BACKHAUL_STEERING_REQUEST_REJECTED_TARGET_BSS_SIGNAL_NOT_SUITABLE,
+                    m_backhaul_steering_bssid);
+
+                if (!response) {
+                    LOG(ERROR) << "Failed to build Backhaul STA Steering Response message.";
+                    return false;
+                }
+
+                send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
+                                    tlvf::mac_from_string(bridge_info.mac));
+
+                return false;
+            }
+            // Resetting m_backhaul_steering_bssid is done by a timer.
+            // Sending the steering response is done when receiving
+            // the CONNECTED event.
+            return true;
+        }
         if (!FSM_IS_IN_STATE(WAIT_FOR_SCAN_RESULTS)) {
             LOG(DEBUG) << "not waiting for scan results, ignoring event";
             return true;
@@ -2812,32 +2858,22 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
         return true;
     }
 
-    LOG(WARNING) << "Steering to BSSID " << bssid << ", oper_class=" << oper_class
-                 << ", channel=" << channel;
-    auto associate = active_hal->roam(bssid, channel);
-    if (!associate) {
-        LOG(ERROR) << "Couldn't associate active HAL with bssid: " << bssid;
+    // Trigger (asynchronously) a scan of the target BSSID on the
+    // target channel. The steering itself will be done when the scan
+    // results are received.
+    auto scan_result = active_hal->scan_type_only(bssid, channel);
 
-        auto response = create_backhaul_steering_response(
-            wfa_map::tlvErrorCode::eReasonCode::
-                BACKHAUL_STEERING_REQUEST_REJECTED_TARGET_BSS_SIGNAL_NOT_SUITABLE,
-            bssid);
-
-        if (!response) {
-            LOG(ERROR) << "Failed to build Backhaul STA Steering Response message.";
-            return false;
-        }
-
-        send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
-                            tlvf::mac_from_string(bridge_info.mac));
-
+    if (!scan_result) {
+        LOG(ERROR) << "Failed to scan for the target BSSID: " << bssid << " on channel " << channel
+                   << ".";
         return false;
     }
 
     // We should only send a Backhaul Steering Response message with "success" result code if we
     // succeed to associate with the specified BSSID within 10 seconds.
-    // Set the BSSID of the target BSS so we can check it later.
-    m_backhaul_steering_bssid = bssid;
+    // Set the channel and BSSID of the target BSS so we can use them later.
+    m_backhaul_steering_bssid   = bssid;
+    m_backhaul_steering_channel = channel;
 
     // Create a timer to check if this Backhaul Steering Request times out.
     if (m_backhaul_steering_timer != beerocks::net::FileDescriptor::invalid_descriptor) {
@@ -2846,7 +2882,8 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
     m_backhaul_steering_timer = m_timer_manager->add_timer(
         backhaul_steering_timeout, std::chrono::milliseconds::zero(),
         [&](int fd, beerocks::EventLoop &loop) {
-            m_backhaul_steering_bssid = beerocks::net::network_utils::ZERO_MAC;
+            m_backhaul_steering_bssid   = beerocks::net::network_utils::ZERO_MAC;
+            m_backhaul_steering_channel = 0;
             m_timer_manager->remove_timer(m_backhaul_steering_timer);
             m_backhaul_steering_timer = beerocks::net::FileDescriptor::invalid_descriptor;
 

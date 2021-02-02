@@ -445,6 +445,12 @@ private:
     sMacAddr m_backhaul_steering_bssid = beerocks::net::network_utils::ZERO_MAC;
 
     /**
+     * The channel of the target BSS in an ongoing backhaul steering operation.
+     * Zero if no steering operation is in progress.
+     */
+    int m_backhaul_steering_channel = 0;
+
+    /**
      * File descriptor of the timer to check if a backhaul steering request timed out.
      */
     int m_backhaul_steering_timer = beerocks::net::FileDescriptor::invalid_descriptor;
