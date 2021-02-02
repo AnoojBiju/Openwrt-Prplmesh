@@ -5438,8 +5438,13 @@ std::set<std::shared_ptr<node>> db::get_node_children(std::shared_ptr<node> n, i
         return children;
     }
 
-    auto bssids = get_hostap_vaps_bssids(n->mac);
-    bssids.insert(n->mac);
+    const auto &bsses  = n->get_bsses();
+    auto is_parent_bss = [&bsses](const sMacAddr &bssid) {
+        return bsses.end() != std::find_if(bsses.begin(), bsses.end(),
+                                           [bssid](const prplmesh::controller::db::bss &bss) {
+                                               return bssid == bss.m_bssid;
+                                           });
+    };
 
     int hierarchy = get_node_hierarchy(n) + 1;
 
@@ -5447,7 +5452,8 @@ std::set<std::shared_ptr<node>> db::get_node_children(std::shared_ptr<node> n, i
         for (auto &node_element : nodes[hierarchy]) {
             auto child = node_element.second;
             if ((child->mac == node_element.first) &&
-                (bssids.find(child->parent_mac) != bssids.end() &&
+                ((child->parent_mac == n->mac ||
+                  is_parent_bss(tlvf::mac_from_string(child->parent_mac))) &&
                  (type == beerocks::TYPE_ANY || child->get_type() == type) &&
                  (state == beerocks::STATE_ANY || child->state == state) &&
                  (parent_mac.empty() || child->parent_mac == parent_mac))) {
