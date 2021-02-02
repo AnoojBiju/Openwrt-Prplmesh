@@ -2818,10 +2818,6 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
     if (!associate) {
         LOG(ERROR) << "Couldn't associate active HAL with bssid: " << bssid;
 
-        LOG(DEBUG) << "Sending ACK message to the originator, mid=" << std::hex << mid;
-        send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
-                            tlvf::mac_from_string(bridge_info.mac));
-
         auto response = create_backhaul_steering_response(
             wfa_map::tlvErrorCode::eReasonCode::
                 BACKHAUL_STEERING_REQUEST_REJECTED_TARGET_BSS_SIGNAL_NOT_SUITABLE,
