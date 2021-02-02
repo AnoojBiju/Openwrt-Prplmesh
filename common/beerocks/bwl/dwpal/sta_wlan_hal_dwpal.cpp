@@ -116,6 +116,26 @@ bool sta_wlan_hal_dwpal::initiate_scan()
     return true;
 }
 
+bool sta_wlan_hal_dwpal::scan_type_only(const sMacAddr &bssid, uint8_t channel)
+{
+    if (bssid == beerocks::net::network_utils::ZERO_MAC || channel == 0) {
+        LOG(ERROR) << "Invalid parameters";
+        return false;
+    }
+    auto freq = son::wireless_utils::channel_to_freq(channel);
+
+    LOG(DEBUG) << "Scan with TYPE=ONLY on interface: " << get_iface_name() << " for bssid " << bssid
+               << " channel " << channel << " (frequency " << freq << ").";
+
+    // Start the scan
+    if (!dwpal_send_cmd("SCAN TYPE=ONLY freq=" + std::to_string(freq) +
+                        " bssid=" + tlvf::mac_to_string(bssid))) {
+        LOG(ERROR) << "scan_type_only - dwpal_send_cmd failed for " << get_iface_name();
+        return false;
+    }
+    return true;
+}
+
 int sta_wlan_hal_dwpal::get_scan_results(const std::string &ssid, std::vector<SScanResult> &list,
                                          bool parse_vsie)
 {
