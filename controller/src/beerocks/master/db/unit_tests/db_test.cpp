@@ -414,7 +414,7 @@ TEST_F(DbTest, test_set_ap_he_capabilities)
     EXPECT_CALL(*m_ambiorix, add_instance(he_capabilities_path + "supported_MCS"))
         .WillRepeatedly(Return(he_capabilities_path + "supported_MCS." +
                                std::to_string(supported_MCS_index++)));
-    EXPECT_CALL(*m_ambiorix, set(_, "supported_MCS_size", Matcher<const int32_t &>(_)))
+    EXPECT_CALL(*m_ambiorix, set(_, "MCS", Matcher<const int32_t &>(_)))
         .WillRepeatedly(Return(true));
 
     //execute test

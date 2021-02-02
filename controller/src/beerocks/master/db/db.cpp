@@ -1507,10 +1507,10 @@ bool db::set_ap_he_capabilities(wfa_map::tlvApHeCapabilities &he_caps_tlv)
             return_val = false;
             continue;
         }
-        if (!m_ambiorix_datamodel->set(path_to_obj_instance + '.', "supported_MCS_size",
+        if (!m_ambiorix_datamodel->set(path_to_obj_instance + '.', "MCS",
                                        *he_caps_tlv.supported_he_mcs(i))) {
             LOG(WARNING) << "Failed to set " << path_to_obj_instance
-                         << "supported_MCS_size: " << he_caps_tlv.supported_he_mcs(i);
+                         << "MCS: " << he_caps_tlv.supported_he_mcs(i);
             return_val = false;
         }
     }
@@ -1732,7 +1732,7 @@ bool db::set_station_capabilities(const std::string &client_mac,
     // Remove previous capabilities objects, if they exist
     m_ambiorix_datamodel->remove_optional_subobject(path_to_sta, "HTCapabilities");
     m_ambiorix_datamodel->remove_optional_subobject(path_to_sta, "VHTCapabilities");
-    LOG(ERROR) << "Path path_to_sta: " << path_to_sta;
+
     // TODO: Remove HECapabilities before setting new one.
 
     if (sta_cap.ht_bw != 0xFF && !dm_set_sta_ht_capabilities(path_to_sta, sta_cap)) {
