@@ -59,8 +59,7 @@ void channel_selection_task::handle_events_timeout(std::multiset<int> pending_ev
          ++it) {
         TASK_LOG(ERROR) << "event " << *it << " timed out on hostap " << hostap_mac
                         << ", going to idle state -> handle_dead_node";
-        son_actions::handle_dead_node(hostap_mac, database.get_node_parent(hostap_mac), database,
-                                      cmdu_tx, tasks);
+        son_actions::handle_dead_node(hostap_mac, true, database, cmdu_tx, tasks);
         //TODO check state of timeout event
         switch (fsm_state) {
         case eState::WAIT_FOR_RESTRICTED_CHANNEL_RESPONSE: {
@@ -273,8 +272,7 @@ void channel_selection_task::work()
                 auto cac_pending       = cac_pending_hostap_check();
                 if (dfs_cac_pending_hostap->timeout_expired) {
                     TASK_LOG(DEBUG) << "handle_dead_node, hostap mac = " << hostap_mac;
-                    son_actions::handle_dead_node(hostap_mac, database.get_node_parent(hostap_mac),
-                                                  database, cmdu_tx, tasks);
+                    son_actions::handle_dead_node(hostap_mac, true, database, cmdu_tx, tasks);
                 }
                 if (cac_pending) {
                     queue_pop_event();

@@ -58,13 +58,12 @@ void network_health_check_task::work()
             auto last_seen_delta =
                 std::chrono::duration_cast<std::chrono::milliseconds>(now - last_seen).count();
             if (last_seen_delta > ire_last_seen_timeout_ms) {
-                auto backhaul        = database.get_node_parent(ire);
-                auto backhaul_parent = database.get_node_parent(backhaul);
+                auto backhaul = database.get_node_parent(ire);
                 TASK_LOG(DEBUG) << "handle_dead_node ire(backhaul) = " << ire
                                 << " hostap = " << backhaul_manager_hostap
                                 << " backhaul = " << backhaul
                                 << " last_seen_delta=" << int(last_seen_delta);
-                son_actions::handle_dead_node(backhaul, backhaul_parent, database, cmdu_tx, tasks);
+                son_actions::handle_dead_node(backhaul, true, database, cmdu_tx, tasks);
             }
         }
         state = CLIENT_HEALTH_CHECK;
@@ -200,10 +199,9 @@ void network_health_check_task::handle_responses_timeout(
             if (suspected_dis_clients.find(pending_node) != suspected_dis_clients.end()) {
                 suspected_dis_clients.erase(pending_node);
                 //TASK_LOG(DEBUG) << "suspected_dis_clients.erase " << pending_node;
-                auto eth_switch = database.get_node_parent(pending_node);
                 LOG(WARNING) << "CLIENT is not responding!! handle dead client mac = "
                              << pending_node;
-                son_actions::handle_dead_node(pending_node, eth_switch, database, cmdu_tx, tasks);
+                son_actions::handle_dead_node(pending_node, true, database, cmdu_tx, tasks);
                 pending_node.clear();
                 return;
             }

@@ -260,16 +260,15 @@ void son_actions::send_cli_debug_message(db &database, ieee1905_1::CmduMessageTx
     }
 }
 
-void son_actions::handle_dead_node(std::string mac, std::string hostap_mac, db &database,
+void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db &database,
                                    ieee1905_1::CmduMessageTx &cmdu_tx, task_pool &tasks)
 {
     int prev_task_id;
-    beerocks::eType mac_type      = database.get_node_type(mac);
-    std::string parent_hostap_mac = database.get_node_parent(mac);
-    auto node_state               = database.get_node_state(mac);
+    beerocks::eType mac_type = database.get_node_type(mac);
+    auto node_state          = database.get_node_state(mac);
 
     LOG(DEBUG) << "NOTICE: handling dead node " << mac << " type enum " << int(mac_type)
-               << " hostap_mac " << hostap_mac;
+               << " reported by parent " << reported_by_parent;
 
     if ((mac_type == beerocks::TYPE_IRE_BACKHAUL || mac_type == beerocks::TYPE_CLIENT) &&
         database.is_node_wireless(mac)) {
@@ -280,7 +279,7 @@ void son_actions::handle_dead_node(std::string mac, std::string hostap_mac, db &
         }
     }
 
-    if (parent_hostap_mac == hostap_mac) {
+    if (reported_by_parent) {
         if (mac_type == beerocks::TYPE_IRE_BACKHAUL || mac_type == beerocks::TYPE_CLIENT) {
             database.set_node_state(mac, beerocks::STATE_DISCONNECTED);
 
