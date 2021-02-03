@@ -615,6 +615,23 @@ public:
     bool add_vap(const std::string &radio_mac, int vap_id, const std::string &bssid,
                  const std::string &ssid, bool backhual);
 
+    /**
+     * @brief Get the BSSes on the given radio.
+     *
+     * If the radio doesn't exist, an error is logged and empty list is returned.
+     */
+    const std::list<prplmesh::controller::db::bss> &get_bsses(const sMacAddr &radio_uid);
+
+    /**
+     * @brief Get the BSSes on the given radio with the given ssid.
+     *
+     * If the radio doesn't exist, an error is logged and empty list is returned.
+     *
+     * If no BSS with the given ssid is configured on the radio, an empty list is returned.
+     */
+    std::vector<std::reference_wrapper<const prplmesh::controller::db::bss>>
+    get_bsses_with_ssid(const sMacAddr &radio_uid, const std::string &ssid);
+
     /** Update VAP information
      *
      * Add or update the VAP information for the given BSSID on the given radio. If the VAP exists

@@ -118,6 +118,7 @@ void son_actions::unblock_sta(db &database, ieee1905_1::CmduMessageTx &cmdu_tx, 
     const auto &ssid          = database.get_hostap_ssid(current_bssid);
 
     for (auto &hostap : hostaps) {
+        auto radio_uid = tlvf::mac_from_string(hostap);
         /*
          * unblock client from all hostaps to prevent it from getting locked out
          */
@@ -126,11 +127,8 @@ void son_actions::unblock_sta(db &database, ieee1905_1::CmduMessageTx &cmdu_tx, 
             continue;
         }
 
-        const auto &hostap_vaps = database.get_hostap_vap_list(hostap);
-        for (const auto &hostap_vap : hostap_vaps) {
-            if (hostap_vap.second.ssid != ssid) {
-                continue;
-            }
+        const auto &bsses = database.get_bsses_with_ssid(radio_uid, ssid);
+        for (const auto &bss : bsses) {
             auto agent_mac = database.get_node_parent_ire(hostap);
             if (!cmdu_tx.create(
                     0, ieee1905_1::eMessageType::CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE)) {
@@ -144,8 +142,7 @@ void son_actions::unblock_sta(db &database, ieee1905_1::CmduMessageTx &cmdu_tx, 
                 LOG(ERROR) << "addClass wfa_map::tlvClientAssociationControlRequest failed";
                 break;
             }
-            association_control_request_tlv->bssid_to_block_client() =
-                tlvf::mac_from_string(hostap_vap.second.mac);
+            association_control_request_tlv->bssid_to_block_client() = bss.get().m_bssid;
             association_control_request_tlv->association_control() =
                 wfa_map::tlvClientAssociationControlRequest::UNBLOCK;
             association_control_request_tlv->alloc_sta_list();

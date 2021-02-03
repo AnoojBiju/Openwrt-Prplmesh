@@ -2389,6 +2389,30 @@ bool db::update_vap(const sMacAddr &radio_mac, const sMacAddr &bssid, const std:
     return dm_set_radio_bss(radio_mac, bssid, ssid);
 }
 
+const std::list<prplmesh::controller::db::bss> &db::get_bsses(const sMacAddr &radio_uid)
+{
+    static std::list<prplmesh::controller::db::bss> empty;
+    auto n = get_node(radio_uid);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << radio_uid << " does not exist!";
+        return empty;
+    }
+    return n->get_bsses();
+}
+
+std::vector<std::reference_wrapper<const prplmesh::controller::db::bss>>
+db::get_bsses_with_ssid(const sMacAddr &radio_uid, const std::string &ssid)
+{
+    const auto &bsses = get_bsses(radio_uid);
+    std::vector<std::reference_wrapper<const prplmesh::controller::db::bss>> ret;
+    for (auto &bss : bsses) {
+        if (bss.m_ssid == ssid) {
+            ret.push_back(bss);
+        }
+    }
+    return ret;
+}
+
 std::string db::get_hostap_ssid(const std::string &mac)
 {
     auto n = get_node(mac);
