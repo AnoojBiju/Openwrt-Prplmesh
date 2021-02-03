@@ -54,7 +54,7 @@ class PrplMeshBase(linux.LinuxDevice):
 
         Purpose is to close connection to device's consoles.
         """
-        pass
+        self.copy_logs()
 
     def isalive(self):
         """Method required by boardfarm.
@@ -77,3 +77,7 @@ class PrplMeshBase(linux.LinuxDevice):
         if self.role == "controller":
             return self.controller_entity
         return self.agent_entity
+
+    def copy_logs(self):
+        """Copy logs from the device"""
+        pass

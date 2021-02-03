@@ -230,3 +230,7 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
         Return True if operational.
         """
         return self._prplmesh_status_poll()
+
+    def copy_logs(self):
+        """Copy logs from the device"""
+       pass
