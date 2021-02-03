@@ -20,6 +20,15 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
 
     Contains common methods used by other(derived) prplmesh test cases.
     """
+    def startMarker(self):
+        """Calls method with the same name in base class and then prints current topology.
+        This method is called right before the test.
+        """
+        super().startMarker()
+        debug("Current network topology:")
+        topology = self.get_topology()
+        for value in topology.values():
+            debug(value)
 
     def check_log(self, entity_or_radio: Union[env.ALEntity, env.Radio], regex: str,
                   start_line: int = 0, timeout: float = 0.6, fail_on_mismatch: bool = True) -> bool:
