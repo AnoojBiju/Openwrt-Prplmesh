@@ -249,5 +249,22 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
 
     def copy_logs(self):
         """Copy logs from the device"""
-        pass
 
+        logdir = f'../logs/device-{self.wan_ip}'
+
+        dirs_to_copy = [
+            # beerock logs
+            ('/tmp/beerocks/logs', 'beerock_logs'),
+        ]
+
+        commands_to_run = [
+            # UCI settings
+            ('uci show', 'uci.log'),
+            # syslog logs
+            ('logread', 'syslog.log'),
+            # network status
+            ('ifconfig', 'ifconfig.log'),
+            ('brctl show', 'bridges.log'),
+        ]
+
+        self.copy_logs_over_ssh(logdir, dirs_to_copy, commands_to_run)
