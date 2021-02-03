@@ -896,6 +896,65 @@ bool tlvPrefilledData::add_tlv_value_mac(const std::string &value, uint16_t &len
     return true;
 }
 
+bool tlvPrefilledData::add_tlv_from_strings(const beerocks_ucc_listener::tlv_hex_t &tlv,
+                                            std::string &err_string)
+{
+    if (!tlv.length || !tlv.type || !tlv.value) {
+        err_string = "Invalid TLV struct with nullptr value";
+        return false;
+    }
+
+    uint8_t type = std::strtoul((*tlv.type).c_str(), nullptr, 16);
+
+    uint16_t length = std::strtoul((*tlv.length).c_str(), nullptr, 16);
+
+    // "+3" = size of type and length fields
+    if (getBuffRemainingBytes() < unsigned(length + 3)) {
+        err_string = "not enough space on buffer";
+        return false;
+    }
+
+    *m_buff_ptr__ = type;
+    m_buff_ptr__++;
+    *m_buff_ptr__ = uint8_t(length >> 8);
+    m_buff_ptr__++;
+    *m_buff_ptr__ = uint8_t(length);
+    m_buff_ptr__++;
+
+    auto values = string_utils::str_split(*tlv.value, ' ');
+    for (auto value : values) {
+        //Do conversion if needed
+        if (value[1] == 'x') {
+            if (!add_tlv_value_hex_string(value, length)) {
+                err_string = "length smaller than data";
+                return false;
+            }
+        } else if (value[2] == ':') {
+            if (!add_tlv_value_mac(value, length)) {
+                err_string = "length smaller than data";
+                return false;
+            }
+        } else if (value[1] == 'd') {
+            if (!add_tlv_value_decimal_string(value, length)) {
+                err_string = "length smaller than data";
+                return false;
+            }
+        } else if (value[1] == 'b') {
+            if (!add_tlv_value_binary_string(value, length)) {
+                err_string = "length smaller than data";
+                return false;
+            }
+        }
+    }
+
+    if (length != 0) {
+        err_string = "data smaller than length";
+        return false;
+    }
+
+    return true;
+}
+
 /**
  * @brief Writes TLVs from TLVs list 'tlv_hex_list' into the class buffer.
  * 
@@ -907,52 +966,7 @@ bool tlvPrefilledData::add_tlvs_from_list(std::list<beerocks_ucc_listener::tlv_h
                                           std::string &err_string)
 {
     for (const auto &tlv : tlv_hex_list) {
-
-        uint8_t type = std::strtoul((*tlv.type).c_str(), nullptr, 16);
-
-        uint16_t length = std::strtoul((*tlv.length).c_str(), nullptr, 16);
-
-        // "+3" = size of type and length fields
-        if (getBuffRemainingBytes() < unsigned(length + 3)) {
-            err_string = "not enough space on buffer";
-            return false;
-        }
-
-        *m_buff_ptr__ = type;
-        m_buff_ptr__++;
-        *m_buff_ptr__ = uint8_t(length >> 8);
-        m_buff_ptr__++;
-        *m_buff_ptr__ = uint8_t(length);
-        m_buff_ptr__++;
-
-        auto values = string_utils::str_split(*tlv.value, ' ');
-        for (auto value : values) {
-            //Do conversion if needed
-            if (value[1] == 'x') {
-                if (!add_tlv_value_hex_string(value, length)) {
-                    err_string = "length smaller than data";
-                    return false;
-                }
-            } else if (value[2] == ':') {
-                if (!add_tlv_value_mac(value, length)) {
-                    err_string = "length smaller than data";
-                    return false;
-                }
-            } else if (value[1] == 'd') {
-                if (!add_tlv_value_decimal_string(value, length)) {
-                    err_string = "length smaller than data";
-                    return false;
-                }
-            } else if (value[1] == 'b') {
-                if (!add_tlv_value_binary_string(value, length)) {
-                    err_string = "length smaller than data";
-                    return false;
-                }
-            }
-        }
-
-        if (length != 0) {
-            err_string = "data smaller than length";
+        if (!add_tlv_from_strings(tlv, err_string)) {
             return false;
         }
     }
