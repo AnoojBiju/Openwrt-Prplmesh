@@ -6412,11 +6412,20 @@ bool db::dm_remove_interface_element(const sMacAddr &device_mac, const sMacAddr 
         LOG(ERROR) << "Failed to get Interface index for interface with mac: " << interface_mac;
         return false;
     }
-    if (!m_ambiorix_datamodel->remove_instance(interface_path, interface_index)) {
-        LOG(ERROR) << "Failed to remove " << interface_path << "." << interface_index
-                   << " instance.";
-        return false;
-    }
+
+    do {
+        if (!m_ambiorix_datamodel->remove_instance(interface_path, interface_index)) {
+            LOG(ERROR) << "Failed to remove " << interface_path << "." << interface_index
+                       << " instance.";
+            return false;
+        }
+
+        // Check for duplicated MAC Address
+        interface_index = m_ambiorix_datamodel->get_instance_index(
+            interface_path + ".[MACAddress == '%s']", tlvf::mac_to_string(interface_mac));
+
+    } while (interface_index);
+
     return true;
 }
 
