@@ -676,29 +676,83 @@ void beerocks_ucc_listener::handle_wfa_ca_command(int fd, const std::string &com
         break;
     }
     case eWfaCaCommand::DEV_SET_CONFIG: {
-        // NOTE: Note sure this parameters are actually needed. There is a controversial
-        // between TestPlan and CAPI specification regarding if these params are required.
-        std::unordered_map<std::string, std::string> params{
-            // {"name", std::string()},
-            // {"program", std::string()},
-        };
+        // In general we expect each command to be with a format of key1,value1,key2,value2....
+        // Since this is the assumption we parse the command into an unordered map of strings.
+        // The R2 CAPI commands presented a new dev_set_config command with the format:
+        //  dev_set_config,program,map,bss_info1,00:50:43:23:f6:ec 8x Multi-AP-24G-1 0x0020 0x0008 maprocks1 0 1 ,
+        //  tlv_type1,0xB5,tlv_length1,0x0003,tlv_value1,{0x000A 0x00},tlv_type2,0xB6,tlv_length2,0x0012,tlv_value2,
+        //  {0x01 {0x0E  Multi-AP-24G-1  0x000A}},
+        //  bss_info2,00:50:43:23:f6:ec 8x Multi-AP-24G-3 0x0020 0x0008 maprocks3 0 1 ,
+        //  tlv_type1,0xB5,tlv_length1,0x0003,tlv_value1,{0x000A 0x00},
+        //  tlv_type2,0xB6,tlv_length2,0x0012,tlv_value2,{0x01 {0x0E  Multi-AP-24G-3  0x0014}}
+        //
+        // The TLV values are possibly added to each of the bss_infos. Since the TLV value have same "keys" -
+        // tlv_type1, tlv_value1 - in all the bss_infos we had to break the parsing to handle each bss_info separately
+        // to avoid overriding in the unordered_map.
 
-        if (!parse_params(cmd_tokens_vec, params, err_string)) {
-            LOG(ERROR) << err_string;
-            reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
-            break;
+        std::vector<std::string> common_tokens;
+        // Each element on the outer vector contains a vector of tokens belongs to a specific bss
+        // configuration.
+        std::vector<std::vector<std::string>> bss_infos;
+        static const std::string bss_info_prefix("bss_info");
+        for (const auto &token : cmd_tokens_vec) {
+            // Check if token starts with "bss_info", initialize the first element in the
+            // outer vector with the common tokens.
+            if (token.compare(0, bss_info_prefix.size(), bss_info_prefix) == 0) {
+                // Push common tokens
+                bss_infos.push_back(common_tokens);
+                bss_infos.back().push_back(bss_info_prefix);
+                continue;
+            }
+            // If "bss_info" string hasn't been found yet, push the token to the common tokens
+            // vector.
+            if (bss_infos.empty()) {
+                common_tokens.push_back(token);
+                continue;
+            }
+            // Push the token to the last bss_info vector that was added.
+            bss_infos.back().push_back(token);
+        }
+        // If it is an agent command, the bss_infos vector will be empty, so push the the common
+        // tokens as the first and only element.
+        if (bss_infos.empty()) {
+            // Push common tokens
+            bss_infos.push_back(common_tokens);
         }
 
         // Input check
-        if (params.find("program") != params.end()) {
-            if (!validate_program_parameter(params["program"], err_string)) {
-                // errors are logged by validate_program_parameter
+        // NOTE: Not sure these parameters are actually needed. There is a controversial
+        // between TestPlan and CAPI specification regarding if these params are required.
+        auto common_it = std::find(common_tokens.begin(), common_tokens.end(), "program");
+        if (common_it != common_tokens.end()) {
+            if (!validate_program_parameter(*std::next(common_it), err_string)) {
+                LOG(ERROR) << err_string;
                 reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
                 break;
             }
         }
 
-        if (!handle_dev_set_config(params, err_string)) {
+        bool first = true;
+        for (const auto &bss_info_vector : bss_infos) {
+            std::unordered_map<std::string, std::string> params;
+
+            if (!parse_params(bss_info_vector, params, err_string)) {
+                break;
+            }
+            // Add signal that this is the first element to handle. Originally all the bss_infos
+            // were handled in one shot - all at once - so it was easy to know when it is safe to
+            // clean previous configurations.
+            // Since we broke the bss_info configuration to one at a time - we need to mark that we are starting
+            // to handle a list of bss_infos and that it is safe to clear the previous configurations.
+            if (first) {
+                params["first_bss"] = std::string();
+                first               = false;
+            }
+            if (!handle_dev_set_config(params, err_string)) {
+                break;
+            }
+        }
+        if (!err_string.empty()) {
             LOG(ERROR) << err_string;
             reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
             break;

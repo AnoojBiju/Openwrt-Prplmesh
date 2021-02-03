@@ -126,35 +126,41 @@ bool controller_ucc_listener::handle_dev_set_rfeature(
 bool controller_ucc_listener::handle_dev_set_config(
     std::unordered_map<std::string, std::string> &params, std::string &err_string)
 {
-    std::unordered_set<sMacAddr> al_mac_cleared_conf;
     if (params.find("backhaul") != params.end()) {
         err_string = "parameter 'backhaul' is not relevant to the controller";
         return false;
     }
 
-    for (uint8_t bss_info_idx = 1; bss_info_idx < UINT8_MAX; bss_info_idx++) {
-        std::string key("bss_info");
-        key += std::to_string(bss_info_idx);
-        if (params.find(key) == params.end()) {
-            if (bss_info_idx == 1) {
-                err_string = "command has no bss_info configuration";
-                return false;
-            }
-            break;
-        }
+    static const std::string key("bss_info");
+    if (params.find(key) == params.end()) {
+        err_string = "command has no bss_info configuration";
+        return false;
+    }
 
-        son::wireless_utils::sBssInfoConf bss_info_conf;
-        auto al_mac = parse_bss_info(params[key], bss_info_conf, err_string);
-        if (al_mac.empty()) {
-            err_string += (" on " + key);
-            return false;
-        }
+    if (params.find("first_bss") != params.end()) {
+        m_bss_info_cleared_mac.clear();
+    }
 
-        auto mac = tlvf::mac_from_string(al_mac);
-        if (al_mac_cleared_conf.find(mac) == al_mac_cleared_conf.end()) {
-            m_database.clear_bss_info_configuration(mac);
-            al_mac_cleared_conf.insert(mac);
-        }
+    son::wireless_utils::sBssInfoConf bss_info_conf;
+    auto al_mac = parse_bss_info(params[key], bss_info_conf, err_string);
+    if (al_mac.empty()) {
+        err_string += (" on " + key);
+        return false;
+    }
+
+    auto mac = tlvf::mac_from_string(al_mac);
+    if (m_bss_info_cleared_mac.find(mac) == m_bss_info_cleared_mac.end()) {
+        m_database.clear_bss_info_configuration(mac);
+        m_bss_info_cleared_mac.insert(mac);
+    }
+
+    //If SSID is empty, tear down - clear configuraion for this mac.
+    if (bss_info_conf.ssid.empty()) {
+        m_database.clear_bss_info_configuration(mac);
+        return true;
+    }
+    m_database.add_bss_info_configuration(mac, bss_info_conf);
+
 
         //If SSID is empty, tear down - do not add bss_info_conf to database.
         if (bss_info_conf.ssid.empty()) {

@@ -40,6 +40,7 @@ private:
                                       std::string &err_string);
 
     db &m_database;
+    std::unordered_set<sMacAddr> m_bss_info_cleared_mac;
 };
 
 } // namespace beerocks
