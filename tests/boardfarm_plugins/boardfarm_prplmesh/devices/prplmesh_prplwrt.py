@@ -231,6 +231,23 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
         """
         return self._prplmesh_status_poll()
 
+    def copy_logs_over_ssh(self, logdir, dirs_to_copy, commands_to_run):
+        """Specialized version of `copy_logs`. Copies logs via ssh/scp.
+        """
+        print(f'Copying logs from {self.wan_ip} to {logdir}')
+
+        os.makedirs(logdir, exist_ok=True)
+
+        for src, dst in dirs_to_copy:
+            cmd = ['scp', '-r', f'root@{self.wan_ip}:{src}', f'{logdir}/{dst}']
+            subprocess.run(cmd)
+
+        for command, output_filename in commands_to_run:
+            with open(f'{logdir}/{output_filename}', 'w') as outfile:
+                subprocess.run(['ssh', f'root@{self.wan_ip}', command], stdout=outfile,
+                               stderr=outfile)
+
     def copy_logs(self):
         """Copy logs from the device"""
-       pass
+        pass
+
