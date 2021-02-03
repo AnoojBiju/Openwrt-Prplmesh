@@ -70,19 +70,14 @@ bool controller_ucc_listener::handle_dev_get_param(
         }
         auto ruid = tlvf::mac_from_string(params["ruid"]);
         auto ssid = params["ssid"];
-        auto vaps = m_database.get_hostap_vap_list(tlvf::mac_to_string(ruid));
-        if (vaps.empty()) {
-            value = "ruid " + tlvf::mac_to_string(ruid) + " not found";
+        value     = m_database.get_hostap_vap_with_ssid(tlvf::mac_to_string(ruid), ssid);
+        if (value.empty()) {
+            value =
+                "macaddr/bssid not found for ruid " + tlvf::mac_to_string(ruid) + " ssid " + ssid;
             return false;
+        } else {
+            return true;
         }
-        for (const auto &vap : vaps) {
-            if (std::string(vap.second.ssid) == ssid) {
-                value = vap.second.mac;
-                return true;
-            }
-        }
-        value = "macaddr/bssid not found for ruid " + tlvf::mac_to_string(ruid) + " ssid " + ssid;
-        return false;
     }
     value = "parameter " + parameter + " not supported";
     return false;
