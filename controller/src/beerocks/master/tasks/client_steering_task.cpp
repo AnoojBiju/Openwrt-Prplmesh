@@ -199,16 +199,13 @@ void client_steering_task::steer_sta()
     std::string original_radio_mac = m_database.get_node_parent_radio(m_original_bssid);
     hostaps.erase(radio_mac); // remove chosen hostap from the general list
     for (auto &hostap : hostaps) {
+        auto radio_uid = tlvf::mac_from_string(hostap);
         /*
         * send disallow to all others
         */
-        const auto &hostap_vaps = m_database.get_hostap_vap_list(hostap);
-        const auto &ssid        = m_database.get_hostap_ssid(m_target_bssid);
-        for (const auto &hostap_vap : hostap_vaps) {
-            if (hostap_vap.second.ssid != ssid) {
-                continue;
-            }
-
+        const auto &ssid  = m_database.get_hostap_ssid(m_target_bssid);
+        const auto &bsses = m_database.get_bsses_with_ssid(radio_uid, ssid);
+        for (const auto &bss : bsses) {
             agent_mac = m_database.get_node_parent_ire(hostap);
             if (!m_cmdu_tx.create(
                     0, ieee1905_1::eMessageType::CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE)) {
@@ -223,8 +220,7 @@ void client_steering_task::steer_sta()
                 LOG(ERROR) << "addClass wfa_map::tlvClientAssociationControlRequest failed";
                 return;
             }
-            association_control_block_request_tlv->bssid_to_block_client() =
-                tlvf::mac_from_string(hostap_vap.second.mac);
+            association_control_block_request_tlv->bssid_to_block_client() = bss.get().m_bssid;
             association_control_block_request_tlv->association_control() =
                 wfa_map::tlvClientAssociationControlRequest::BLOCK;
             association_control_block_request_tlv->validity_period_sec() =
@@ -234,7 +230,7 @@ void client_steering_task::steer_sta()
             std::get<1>(sta_list_block) = tlvf::mac_from_string(m_sta_mac);
             son_actions::send_cmdu_to_agent(agent_mac, m_cmdu_tx, m_database, hostap);
             TASK_LOG(DEBUG) << "sending disallow request for " << m_sta_mac << " to bssid "
-                            << hostap_vap.second.mac << " with validity period = "
+                            << bss.get().m_bssid << " with validity period = "
                             << association_control_block_request_tlv->validity_period_sec()
                             << "sec,  id=" << int(id);
 
