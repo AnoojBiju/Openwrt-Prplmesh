@@ -1,4 +1,4 @@
-#!/bin/sh -e
+#!/bin/bash -e
 ###############################################################
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 # SPDX-FileCopyrightText: 2020 the prplMesh contributors (see AUTHORS.md)
@@ -11,7 +11,7 @@ mkdir -p files/etc
 #   We need to keep the hashes in the firmware, to later know if an upgrade is needed:
 printf '%s=%s\n' "OPENWRT_REPOSITORY" "$OPENWRT_REPOSITORY" >> files/etc/prplwrt-version
 printf '%s=%s\n' "OPENWRT_VERSION" "$OPENWRT_VERSION" >> files/etc/prplwrt-version
-case $TARGET_DEVICE in 
+case $TARGET_DEVICE in
     netgear-rax40|axepoint|nec-wx3000hp|intel_mips)
         # Add prplmesh to the list of packages of the profile:
         sed -i 's/packages:/packages:\n  - prplmesh-dwpal/g' profiles/"$TARGET_DEVICE".yml
@@ -19,20 +19,41 @@ case $TARGET_DEVICE in
         yq write --inplace profiles/"$TARGET_DEVICE".yml feeds -f profiles_feeds/netgear-rax40.yml
         # Then merge adding to  the packages for amx
         yq merge --append --inplace profiles/"$TARGET_DEVICE".yml profiles_feeds/packages-rax40.yml
-        ./scripts/gen_config.py "$TARGET_DEVICE" debug
+
+        args=("debug")
+        if [ -n "$MMX_FEED" ] ; then
+            cp profiles_feeds/mmx.yml profiles/mmx.yml
+            args+=("mmx")
+        fi
+
+        ./scripts/gen_config.py "$TARGET_DEVICE" "${args[@]}"
         cat profiles_feeds/netgear-rax40.yml >> files/etc/prplwrt-version
+
     ;;
     *)
         cp feeds.conf.default feeds.conf
         echo "src-git prpl $PRPL_FEED" >> feeds.conf
         echo "src-git sah  $SAH_FEED" >> feeds.conf
+
+        if [ -n "$MMX_FEED" ] ; then
+            echo "src-git mmx $MMX_FEED" >> feeds.conf
+        fi
+
         scripts/feeds update -a
         scripts/feeds install -a
         # Add optional prplMesh dependencies (or a different toolchain
         # for example) from our 'configs' directory:
-        cat configs/* > .config
+        cat configs/ambiorix.config >> .config
+        cat configs/debug.config >> .config
+
+        if [ -n "$MMX_FEED" ] ; then
+            cat configs/mmx.config >> .config
+            printf '%s=%s\n' "MMX_FEED" "$MMX_FEED" >> files/etc/prplwrt-version
+        fi
+
         printf '%s=%s\n' "PRPL_FEED" "$PRPL_FEED" >> files/etc/prplwrt-version
         printf '%s=%s\n' "SAH_FEED" "$SAH_FEED" >> files/etc/prplwrt-version
+
         # Include our optional dependencies in prplwrt-version so that
         # prplwrt is flashed again if those dependencies are changes.
         printf 'custom packages:\n' >> files/etc/prplwrt-version

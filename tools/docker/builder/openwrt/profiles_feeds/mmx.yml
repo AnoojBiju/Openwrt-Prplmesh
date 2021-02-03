@@ -1,0 +1,17 @@
+feeds:
+  - name: mmx
+    uri: https://github.com/InangoSystems/feed-mmx.git
+    hash: 3dd041ee090c1cf9de968a1aed0d06e42400eb5d
+
+packages:
+  - luaxml
+  - mmx-web-lib-chartist
+  - libing-gen-utils
+  - libmicroxml
+  - libmmx-backapi
+  - libmmx-frontapi
+  - mmx-cli
+  - mmx-ep
+  - mmx-web
+  - inango-prplmesh-en
+  - prplmesh-be
