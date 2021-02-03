@@ -6141,7 +6141,7 @@ bool db::remove_hostap_supported_operating_classes(const sMacAddr &radio_mac)
         return true;
     }
 
-    auto op_class_path = radio_path + ".OperatingClasses";
+    auto op_class_path = radio_path + ".Capabilities.OperatingClasses";
     if (!m_ambiorix_datamodel->remove_all_instances(op_class_path)) {
         LOG(ERROR) << "Failed to remove all instances for: " << op_class_path;
         return false;
