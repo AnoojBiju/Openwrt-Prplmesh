@@ -8,7 +8,7 @@
  */
 
 %config {
-	define-behavior = { 
+	define-behavior = {
 		existing-object = "update"
 	};
 }
@@ -55,6 +55,24 @@
 			%read-only string MACAddress = "00:00:00:00:00:00";
 			%read-only string Name = "NoName";
 			%read-only uint16 MediaType = "0";
+
+			object Stats {
+				%read-only uint64 BytesSent  = 0;
+				%read-only uint64 BytesReceived  = 0;
+				%read-only uint64 PacketsSent  = 0;
+				%read-only uint64 PacketsReceived  = 0;
+				%read-only uint32 ErrorsSent  = 0;
+				%read-only uint32 ErrorsReceived  = 0;
+				%read-only uint64 UnicastPacketsSent = 0;
+				%read-only uint64 UnicastPacketsReceived = 0;
+				%read-only uint32 DiscardPacketsSent = 0;
+				%read-only uint32 DiscardPacketsReceived = 0;
+				%read-only uint64 MulticastPacketsSent = 0;
+				%read-only uint64 MulticastPacketsReceived = 0;
+				%read-only uint64 BroadcastPacketsSent = 0;
+				%read-only uint64 BroadcastPacketsReceived = 0;
+			}
+
 			counted with NumberOfInterfaces;
 		}
 
