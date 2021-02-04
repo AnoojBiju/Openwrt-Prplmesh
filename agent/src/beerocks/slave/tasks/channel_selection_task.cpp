@@ -630,6 +630,7 @@ void ChannelSelectionTask::zwdfs_fsm()
         if (m_selected_channel.channel == 0) {
             LOG(ERROR) << "Error occurred on second best channel selection";
             ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            break;
         }
 
         auto db = AgentDB::get();
@@ -861,7 +862,7 @@ void ChannelSelectionTask::zwdfs_fsm()
     }
     case eZwdfsState::WAIT_FOR_ZWDFS_SWITCH_ANT_OFF_RESPONSE: {
         if (std::chrono::steady_clock::now() > m_zwdfs_fsm_timeout) {
-            LOG(ERROR) << "Reached timeout waiting for ZWDFS_SWITCH_ANT_OFF notification!";
+            LOG(ERROR) << "Reached timeout waiting for ZWDFS_SWITCH_ANT_OFF response!";
             ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
         }
         break;
