@@ -52,7 +52,11 @@ std::shared_ptr<cBssInfo> tlvAssociatedClients::create_bss_list() {
         return nullptr;
     }
     size_t len = cBssInfo::get_initial_size();
-    if (m_lock_allocation__ || getBuffRemainingBytes() < len) {
+    if (m_lock_allocation__) {
+        TLVF_LOG(ERROR) << "Can't create new element before adding the previous one";
+        return nullptr;
+    }
+    if (getBuffRemainingBytes() < len) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer";
         return nullptr;
     }
@@ -233,7 +237,11 @@ std::shared_ptr<cClientInfo> cBssInfo::create_clients_associated_list() {
         return nullptr;
     }
     size_t len = cClientInfo::get_initial_size();
-    if (m_lock_allocation__ || getBuffRemainingBytes() < len) {
+    if (m_lock_allocation__) {
+        TLVF_LOG(ERROR) << "Can't create new element before adding the previous one";
+        return nullptr;
+    }
+    if (getBuffRemainingBytes() < len) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer";
         return nullptr;
     }

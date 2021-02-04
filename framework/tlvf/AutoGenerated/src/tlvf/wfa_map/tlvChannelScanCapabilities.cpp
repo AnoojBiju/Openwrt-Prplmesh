@@ -52,7 +52,11 @@ std::shared_ptr<cRadiosWithScanCapabilities> tlvChannelScanCapabilities::create_
         return nullptr;
     }
     size_t len = cRadiosWithScanCapabilities::get_initial_size();
-    if (m_lock_allocation__ || getBuffRemainingBytes() < len) {
+    if (m_lock_allocation__) {
+        TLVF_LOG(ERROR) << "Can't create new element before adding the previous one";
+        return nullptr;
+    }
+    if (getBuffRemainingBytes() < len) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer";
         return nullptr;
     }
@@ -241,7 +245,11 @@ std::shared_ptr<cOperatingClasses> cRadiosWithScanCapabilities::create_operating
         return nullptr;
     }
     size_t len = cOperatingClasses::get_initial_size();
-    if (m_lock_allocation__ || getBuffRemainingBytes() < len) {
+    if (m_lock_allocation__) {
+        TLVF_LOG(ERROR) << "Can't create new element before adding the previous one";
+        return nullptr;
+    }
+    if (getBuffRemainingBytes() < len) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer";
         return nullptr;
     }
