@@ -131,7 +131,11 @@ std::shared_ptr<cApChannelReports> tlvBeaconMetricsQuery::create_ap_channel_repo
         return nullptr;
     }
     size_t len = cApChannelReports::get_initial_size();
-    if (m_lock_allocation__ || getBuffRemainingBytes() < len) {
+    if (m_lock_allocation__) {
+        TLVF_LOG(ERROR) << "Can't create new element before adding the previous one";
+        return nullptr;
+    }
+    if (getBuffRemainingBytes() < len) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer";
         return nullptr;
     }
