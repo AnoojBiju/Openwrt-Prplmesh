@@ -174,12 +174,9 @@ main() {
     export SAH_FEED
     export PRPLMESH_VARIANT
 
-    if [ $IMAGE_ONLY = true ] ; then
-        build_image
-        exit $?
-    fi
-
     build_image "$rootdir/build/$TARGET_DEVICE"
+    [ $IMAGE_ONLY = true ] && exit $?
+
     build_prplmesh "$rootdir/build/$TARGET_DEVICE"
 
 }
