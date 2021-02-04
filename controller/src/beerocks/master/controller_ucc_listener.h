@@ -26,6 +26,7 @@ public:
 private:
     std::string fill_version_reply_string() override;
     bool clear_configuration() override;
+    bool clear_configuration(const sMacAddr &al_mac);
     bool send_cmdu_to_destination(ieee1905_1::CmduMessageTx &cmdu_tx,
                                   const std::string &dest_mac = std::string()) override;
     bool handle_start_wps_registration(const std::string &band, std::string &err_string) override;
@@ -40,6 +41,7 @@ private:
                                       std::string &err_string);
 
     db &m_database;
+    std::unordered_set<sMacAddr> m_bss_info_cleared_mac;
 };
 
 } // namespace beerocks

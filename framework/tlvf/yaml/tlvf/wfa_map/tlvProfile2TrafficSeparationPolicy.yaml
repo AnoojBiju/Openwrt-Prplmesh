@@ -9,7 +9,6 @@ tlvProfile2TrafficSeparationPolicy:
     _type: eTlvTypeMap
     _value_const: TLV_PROFILE2_TRAFFIC_SEPARATION_POLICY
   length: uint16_t
-  number_of_ssids: uint8_t
   ssids_vlan_id_list_length:
     _type: uint8_t
     _length_var: True

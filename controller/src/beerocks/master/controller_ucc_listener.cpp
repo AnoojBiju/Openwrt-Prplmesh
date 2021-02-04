@@ -10,6 +10,9 @@
 #include "son_actions.h"
 #include <unordered_set>
 
+#include <tlvf/wfa_map/tlvProfile2Default802dotQSettings.h>
+#include <tlvf/wfa_map/tlvProfile2TrafficSeparationPolicy.h>
+
 using namespace beerocks;
 
 controller_ucc_listener::controller_ucc_listener(db &database, ieee1905_1::CmduMessageTx &cmdu,
@@ -38,6 +41,21 @@ std::string controller_ucc_listener::fill_version_reply_string()
 bool controller_ucc_listener::clear_configuration()
 {
     m_database.clear_bss_info_configuration();
+    m_database.clear_traffic_separation_configurations();
+    m_database.clear_default_8021q_settings();
+    return true;
+}
+
+/**
+ * @brief Clear configuration on Controller database for an Agent.
+ * 
+ * @return true on success and false otherwise.
+ */
+bool controller_ucc_listener::clear_configuration(const sMacAddr &al_mac)
+{
+    m_database.clear_bss_info_configuration(al_mac);
+    m_database.clear_traffic_separation_configurations(al_mac);
+    m_database.clear_default_8021q_settings(al_mac);
     return true;
 }
 
@@ -126,42 +144,101 @@ bool controller_ucc_listener::handle_dev_set_rfeature(
 bool controller_ucc_listener::handle_dev_set_config(
     std::unordered_map<std::string, std::string> &params, std::string &err_string)
 {
-    std::unordered_set<sMacAddr> al_mac_cleared_conf;
     if (params.find("backhaul") != params.end()) {
         err_string = "parameter 'backhaul' is not relevant to the controller";
         return false;
     }
 
-    for (uint8_t bss_info_idx = 1; bss_info_idx < UINT8_MAX; bss_info_idx++) {
-        std::string key("bss_info");
-        key += std::to_string(bss_info_idx);
-        if (params.find(key) == params.end()) {
-            if (bss_info_idx == 1) {
-                err_string = "command has no bss_info configuration";
-                return false;
-            }
-            break;
-        }
+    static const std::string key("bss_info");
+    if (params.find(key) == params.end()) {
+        err_string = "command has no bss_info configuration";
+        return false;
+    }
 
-        son::wireless_utils::sBssInfoConf bss_info_conf;
-        auto al_mac = parse_bss_info(params[key], bss_info_conf, err_string);
-        if (al_mac.empty()) {
-            err_string += (" on " + key);
+    if (params.find("first_bss") != params.end()) {
+        m_bss_info_cleared_mac.clear();
+    }
+
+    son::wireless_utils::sBssInfoConf bss_info_conf;
+    auto al_mac = parse_bss_info(params[key], bss_info_conf, err_string);
+    if (al_mac.empty()) {
+        err_string += (" on " + key);
+        return false;
+    }
+
+    auto mac = tlvf::mac_from_string(al_mac);
+    if (m_bss_info_cleared_mac.find(mac) == m_bss_info_cleared_mac.end()) {
+        clear_configuration(mac);
+        m_bss_info_cleared_mac.insert(mac);
+    }
+
+    //If SSID is empty, tear down - clear configuraion for this mac.
+    if (bss_info_conf.ssid.empty()) {
+        clear_configuration(mac);
+        return true;
+    }
+    m_database.add_bss_info_configuration(mac, bss_info_conf);
+
+    std::list<tlv_hex_t> tlv_hex_list;
+    if (!get_send_1905_1_tlv_hex_list(tlv_hex_list, params, err_string)) {
+        return false;
+    }
+
+    if (tlv_hex_list.empty()) {
+        // TLV list is not mandatory
+        return true;
+    }
+
+    // Use CMDU_TX buffer as a temporary buffer
+    uint8_t *buffer      = m_cmdu_tx.getMessageBuff();
+    size_t buffer_length = m_cmdu_tx.getMessageBuffLength();
+    for (const auto &tlv : tlv_hex_list) {
+        tlvPrefilledData prefilled_tlv(buffer, buffer_length);
+
+        if (!prefilled_tlv.add_tlv_from_strings(tlv, err_string)) {
+            LOG(ERROR) << err_string;
             return false;
         }
 
-        auto mac = tlvf::mac_from_string(al_mac);
-        if (al_mac_cleared_conf.find(mac) == al_mac_cleared_conf.end()) {
-            m_database.clear_bss_info_configuration(mac);
-            al_mac_cleared_conf.insert(mac);
-        }
+        wfa_map::eTlvTypeMap type =
+            wfa_map::eTlvTypeMap(std::strtoul((*tlv.type).c_str(), nullptr, 16));
+        switch (type) {
+        case wfa_map::eTlvTypeMap::TLV_PROFILE2_DEFAULT_802_1Q_SETTINGS: {
+            wfa_map::tlvProfile2Default802dotQSettings default_802_1q_tlv(buffer, buffer_length,
+                                                                          true);
 
-        //If SSID is empty, tear down - do not add bss_info_conf to database.
-        if (bss_info_conf.ssid.empty()) {
-            continue;
+            wireless_utils::s8021QSettings config;
+            config.primary_vlan_id = default_802_1q_tlv.primary_vlan_id();
+            config.default_pcp     = default_802_1q_tlv.default_pcp();
+            m_database.add_default_8021q_settings(mac, config);
+        } break;
+        case wfa_map::eTlvTypeMap::TLV_PROFILE2_TRAFFIC_SEPARATION_POLICY: {
+            wfa_map::tlvProfile2TrafficSeparationPolicy traffic_separation_policy(
+                buffer, buffer_length, true);
+
+            uint8_t ssids_length = traffic_separation_policy.ssids_vlan_id_list_length();
+            for (uint8_t idx = 0; idx < ssids_length; idx++) {
+                auto ssid_tuple = traffic_separation_policy.ssids_vlan_id_list(idx);
+                if (!std::get<0>(ssid_tuple)) {
+                    err_string = "Failed getting ssid on index " + std::to_string(idx);
+                    LOG(ERROR) << err_string;
+                    return false;
+                }
+
+                auto &ssid_conf = std::get<1>(ssid_tuple);
+
+                wireless_utils::sTrafficSeparationSsid config;
+                config.ssid    = ssid_conf.ssid_name_str();
+                config.vlan_id = ssid_conf.vlan_id();
+                m_database.add_traffic_separataion_configuration(mac, config);
+            }
+        } break;
+        default: {
+            LOG(WARNING) << "Unexpected TLV type " << std::hex << int(type) << std::dec;
+        } break;
         }
-        m_database.add_bss_info_configuration(mac, bss_info_conf);
     }
+
     return true;
 }
 
