@@ -90,7 +90,7 @@ public:
 
     /**
      * @brief Start client steering initiated by NBAPI.
-     * 
+     *
      * @param sta_mac Mac address of client.
      * @param target_bssid Target BSSID.
      * @return True if client steering started successfully, false otherwise.
@@ -163,6 +163,19 @@ private:
                                                    ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_cmdu_1905_autoconfiguration_WSC(const std::string &src_mac,
                                                 ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Handles CMDU of 1905 Link Metric Response
+     *
+     * This handler is written to handle Link Metric Response is given for
+     * all neighbors and TX/RX together. Metric Msg. FLAGS are needs to be set in this manner!
+     * If only RX or TX is received, link_metric_data_map will hold only what it is given.
+     * But interface stats work just as fine.
+     *
+     * @param src_mac Source MAC address.
+     * @param cmdu_rx Received CMDU to be handled.
+     * @return true on success and false otherwise.
+     */
     bool handle_cmdu_1905_link_metric_response(const std::string &src_mac,
                                                ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_cmdu_1905_ap_metric_response(const std::string &src_mac,
@@ -207,7 +220,7 @@ private:
     /**
      * @brief Get info from 'AP HT Capabilities' TLV,
      * set data to AP HTCapabilities data element from Controller Data Model.
-     * 
+     *
      * @param cmdu_rx AP Capability Report message
      * @return true on success, false otherwise
     */
@@ -216,7 +229,7 @@ private:
     /**
      * @brief Get info from 'AP HE Capabilities' TLV,
      * set data to AP HECapabilities data element.
-     * 
+     *
      * @param cmdu_rx AP Capability Report message.
      * @return True on success, false otherwise.
     */
@@ -225,7 +238,7 @@ private:
     /**
      * @brief Get info from 'AP VHT Capabilities' TLV,
      * set data to AP VHTCapabilities data element.
-     * 
+     *
      * @param cmdu_rx AP Capability Report message.
      * @return True on success, false otherwise.
     */

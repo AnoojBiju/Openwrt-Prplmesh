@@ -59,9 +59,7 @@ controller/src/beerocks/master/beerocks_master_main.cpp: style: Variable 'bridge
 controller/src/beerocks/master/controller.cpp: style: Parameter 'ap_metric_data' can be declared with const [constParameter]print_ap_metric_map(std::unordered_map<sMacAddr, son::node::ap_metrics_data> &ap_metric_data)
 controller/src/beerocks/master/controller.cpp: style: Parameter 'link_metric_data' can be declared with const [constParameter]        &link_metric_data)
 controller/src/beerocks/master/controller.cpp: style: Parameter 'm1' can be declared with const [constParameter]    WSC::m1 &m1, std::string bridge_mac, std::string radio_mac, ieee1905_1::CmduMessageTx &cmdu_tx)
-controller/src/beerocks/master/controller.cpp: style: The scope of the variable 'old_link_metrics_removed' can be reduced. [variableScope]    bool old_link_metrics_removed = false;
 controller/src/beerocks/master/controller.cpp: style: Variable 'ap_metric_data' can be declared with const [constVariable]    auto &ap_metric_data = database.get_ap_metric_data_map();
-controller/src/beerocks/master/controller.cpp: style: Variable 'old_link_metrics_removed' is assigned a value that is never used. [unreadVariable]            old_link_metrics_removed = true;
 controller/src/beerocks/master/controller_ucc_listener.cpp: style: Variable 'bit_5_str' can be declared with const [constVariable]    auto &bit_5_str = confs[7];
 controller/src/beerocks/master/controller_ucc_listener.cpp: style: Variable 'bit_6_str' can be declared with const [constVariable]    auto &bit_6_str = confs[6];
 controller/src/beerocks/master/controller_ucc_listener.cpp: style: Variable 'operating_class_str' can be declared with const [constVariable]    auto &operating_class_str = confs[1];

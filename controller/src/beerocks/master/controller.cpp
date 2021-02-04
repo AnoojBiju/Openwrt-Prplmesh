@@ -1432,27 +1432,28 @@ static void print_link_metric_map(
 {
     LOG(DEBUG) << "Printing Link Metrics data map";
     for (auto const &pair_agent : link_metric_data) {
-        LOG(DEBUG) << "  sent from al_mac= " << pair_agent.first << std::endl;
+        LOG(DEBUG) << "  sent from al_mac= " << pair_agent.first;
 
         for (auto const &pair_neighbor : pair_agent.second) {
-            LOG(DEBUG) << "  reporting neighbor al_mac= " << pair_neighbor.first << std::endl;
+            LOG(DEBUG) << "  reporting neighbor al_mac= " << pair_neighbor.first;
 
             auto &vrx = pair_neighbor.second.receiverLinkMetrics;
             for (unsigned int i = 0; i < vrx.size(); ++i) {
                 LOG(DEBUG) << "  rx interface metric data # " << i
-                           << "  neighbor interface MAC:" << vrx[i].neighbor_interface_mac
-                           << "  receiving al_mac:" << vrx[i].rc_interface_mac
+                           << "  neighbor interface MAC=" << vrx[i].neighbor_interface_mac
+                           << "  interface MAC=" << vrx[i].rc_interface_mac
                            << "  rssi= " << std::hex << int(vrx[i].link_metric_info.rssi_db)
-                           << std::endl;
+                           << "  packets received= " << vrx[i].link_metric_info.packets_received;
             }
 
             auto &vtx = pair_neighbor.second.transmitterLinkMetrics;
             for (unsigned int i = 0; i < vtx.size(); i++) {
                 LOG(DEBUG) << "  tx interface metric data # " << i
-                           << "  neighbor interface MAC:" << vtx[i].neighbor_interface_mac
-                           << "  receiving al_mac:" << vtx[i].rc_interface_mac
+                           << "  neighbor interface MAC=" << vtx[i].neighbor_interface_mac
+                           << "  interface MAC=" << vtx[i].rc_interface_mac
                            << "  phy_rate= " << std::hex << int(vtx[i].link_metric_info.phy_rate)
-                           << std::endl;
+                           << "  packets transmitted= "
+                           << vtx[i].link_metric_info.transmitted_packets;
             }
         }
     }
@@ -1493,91 +1494,170 @@ print_ap_metric_map(std::unordered_map<sMacAddr, son::node::ap_metrics_data> &ap
 bool Controller::handle_cmdu_1905_link_metric_response(const std::string &src_mac,
                                                        ieee1905_1::CmduMessageRx &cmdu_rx)
 {
-
     auto mid = cmdu_rx.getMessageId();
-    LOG(INFO) << "Received LINK_METRIC_RESPONSE_MESSAGE, mid=" << std::dec << int(mid);
+    LOG(INFO) << "Received LINK_METRIC_RESPONSE_MESSAGE, mid=" << std::dec << int(mid)
+              << " src_mac:" << src_mac;
 
     //getting reference for link metric data storage from db
-    auto &link_metric_data = database.get_link_metric_data_map();
+    auto &link_metric_data          = database.get_link_metric_data_map();
+    bool old_link_metrics_removed   = false;
+    sMacAddr reporting_agent_al_mac = beerocks::net::network_utils::ZERO_MAC;
 
-    //will hold new link metric data from Reporting Agent
-    son::node::link_metrics_data new_link_metric_data;
+    // Neighbor related new metric data. The link metric information is collected in this structure
+    // to be stored in the database link_metric_data_map.
+    std::unordered_map<sMacAddr, son::node::link_metrics_data> new_link_metrics;
 
-    bool old_link_metrics_removed = false;
+    // Interface related metric data. The link metric information is collected in this structure
+    // per reporting device's interface, to be stored in the device interface stats.
+    std::unordered_map<sMacAddr, ieee1905_1::tlvTransmitterLinkMetric::sLinkMetricInfo>
+        iface_tx_link_metrics;
+    std::unordered_map<sMacAddr, ieee1905_1::tlvReceiverLinkMetric::sLinkMetricInfo>
+        iface_rx_link_metrics;
 
-    // holds mac address of the reporting agent, used as link_metric_data key
-    sMacAddr reporting_agent_al_mac;
+    auto tx_link_metrics = cmdu_rx.getClassList<ieee1905_1::tlvTransmitterLinkMetric>();
 
-    // holds mac address of the neighbor, used as the second link_metric_data key
-    sMacAddr neighbor_mac;
-
-    auto TxLinkMetricData = cmdu_rx.getClass<ieee1905_1::tlvTransmitterLinkMetric>();
-    if (!TxLinkMetricData) {
-        LOG(ERROR) << "getClass ieee1905_1::tlvTransmitterLinkMetric has failed";
-        return false;
+    if (tx_link_metrics.size() == 0) {
+        LOG(DEBUG) << "getClassList ieee1905_1::tlvTransmitterLinkMetric contains zero metrics.";
     }
 
-    reporting_agent_al_mac = TxLinkMetricData->reporter_al_mac();
-    if (reporting_agent_al_mac != beerocks::net::network_utils::ZERO_MAC) {
-        //clear agent reports when recieving a new link metric from that agent
+    for (const auto &tx_metric : tx_link_metrics) {
+
+        if (tx_metric->reporter_al_mac() == beerocks::net::network_utils::ZERO_MAC) {
+            LOG(ERROR) << "Zero MAC reported for Agent in tx_link_metrics";
+            continue;
+        }
+
+        // Verify the MAC of Agent, if it is matching with rest of the metrics.
+        // It assumes that the first one is the correct one.
+        if (reporting_agent_al_mac != tx_metric->reporter_al_mac() &&
+            reporting_agent_al_mac != beerocks::net::network_utils::ZERO_MAC) {
+            LOG(ERROR) << "Reporting Agent MAC is different in reported tx_link_metrics "
+                       << reporting_agent_al_mac << " " << tx_metric->reporter_al_mac();
+            continue;
+        }
+        reporting_agent_al_mac = tx_metric->reporter_al_mac();
+
+        // Clear all agent reports (neighbors) when receiving a new link metric from that agent
         if (!old_link_metrics_removed) {
-            //clear agent reports when recieving a new link metric from that agent
             link_metric_data[reporting_agent_al_mac].clear();
             old_link_metrics_removed = true;
         }
 
         LOG(DEBUG) << "Received TLV_TRANSMITTER_LINK_METRIC from al_mac =" << reporting_agent_al_mac
-                   << std::endl
-                   << "reported  al_mac =" << TxLinkMetricData->neighbor_al_mac() << std::endl;
+                   << " reported neighbor al_mac =" << tx_metric->neighbor_al_mac();
 
-        //fill tx data from TLV
-        if (!new_link_metric_data.add_transmitter_link_metric(TxLinkMetricData)) {
-            LOG(ERROR) << "adding TxLinkMetricData has failed";
-            return false;
+        // Fill Tx data from TLV for specified Neighbor
+        if (!new_link_metrics[tx_metric->neighbor_al_mac()].add_transmitter_link_metric(
+                tx_metric)) {
+            LOG(ERROR) << "Adding Tx Link Metric Data has failed for neighbor mac:"
+                       << tx_metric->neighbor_al_mac();
         }
     }
 
-    auto RxLinkMetricData = cmdu_rx.getClass<ieee1905_1::tlvReceiverLinkMetric>();
-    if (!RxLinkMetricData) {
-        LOG(ERROR) << "getClass ieee1905_1::tlvReceiverLinkMetric has failed";
-        return false;
+    auto rx_link_metrics = cmdu_rx.getClassList<ieee1905_1::tlvReceiverLinkMetric>();
+
+    if (rx_link_metrics.size() == 0) {
+        LOG(DEBUG) << "getClassList ieee1905_1::tlvReceiverLinkMetric contains zero metrics.";
     }
 
-    if (reporting_agent_al_mac != beerocks::net::network_utils::ZERO_MAC) {
-        if (reporting_agent_al_mac != RxLinkMetricData->reporter_al_mac()) {
-            LOG(ERROR) << "TLV_RECEIVER_LINK_METRIC reporter al_mac =" << reporting_agent_al_mac
-                       << std::endl
-                       << " and TLV_TRANSMITTER_LINK_METRIC reporter al_mac ="
-                       << RxLinkMetricData->reporter_al_mac() << std::endl
-                       << " not the same";
-            return false;
+    for (const auto &rx_metric : rx_link_metrics) {
+
+        if (rx_metric->reporter_al_mac() == beerocks::net::network_utils::ZERO_MAC) {
+            LOG(ERROR) << "Zero MAC reported for Agent in rx_link_metrics";
+            continue;
+        }
+
+        // Controlling the MAC of Agent, if it is matching with rest of the metrics.
+        // It assumes that the first one is the correct one.
+        if (reporting_agent_al_mac != rx_metric->reporter_al_mac() &&
+            reporting_agent_al_mac != beerocks::net::network_utils::ZERO_MAC) {
+            LOG(ERROR) << "Reporting Agent MAC is different in reported rx_link_metrics "
+                       << reporting_agent_al_mac << " " << rx_metric->reporter_al_mac();
+            continue;
+        }
+        reporting_agent_al_mac = rx_metric->reporter_al_mac();
+
+        // Clear agent all reports (neighbors) when recieving a new link metric from that agent
+        if (!old_link_metrics_removed) {
+            link_metric_data[reporting_agent_al_mac].clear();
+            old_link_metrics_removed = true;
+        }
+
+        LOG(DEBUG) << "Received TLV_RECEIVER_LINK_METRIC from al_mac =" << reporting_agent_al_mac
+                   << " reported neighbor al_mac =" << rx_metric->neighbor_al_mac();
+
+        // Fill Rx data from TLV for specified Neighbor
+        if (!new_link_metrics[rx_metric->neighbor_al_mac()].add_receiver_link_metric(rx_metric)) {
+            LOG(ERROR) << "Adding Rx Link Metric Data has failed for neighbor mac:"
+                       << rx_metric->neighbor_al_mac();
         }
     }
 
-    neighbor_mac = TxLinkMetricData->neighbor_al_mac();
-    if (neighbor_mac != beerocks::net::network_utils::ZERO_MAC &&
-        neighbor_mac != RxLinkMetricData->neighbor_al_mac()) {
-        LOG(ERROR) << "TLV_RECEIVER_LINK_METRIC neighbor_mac =" << neighbor_mac
-                   << " and TLV_TRANSMITTER_LINK_METRIC reporter neighbor_mac ="
-                   << RxLinkMetricData->neighbor_al_mac() << " are not the same";
-        return false;
+    for (const auto &new_link : new_link_metrics) {
+
+        // Add neighbor to Link Metric Data Map
+        link_metric_data[reporting_agent_al_mac][new_link.first] = new_link.second;
+
+        // Fill up Interface Link Metric to separate metrics according to Interface MACs.
+        for (const auto &tx_link : new_link.second.transmitterLinkMetrics) {
+
+            if (tx_link.rc_interface_mac == beerocks::net::network_utils::ZERO_MAC) {
+                LOG(ERROR) << "Zero MAC Interface is reported for agent mac:"
+                           << reporting_agent_al_mac << " and neighbor mac:" << new_link.first;
+                continue;
+            }
+
+            // Check it for interface is already added or not
+            auto iface = iface_tx_link_metrics.find(tx_link.rc_interface_mac);
+
+            if (iface != iface_tx_link_metrics.end()) {
+                LOG(DEBUG) << "Interface is already added with mac:" << tx_link.rc_interface_mac
+                           << ", so sum up metric stats.";
+
+                iface->second.packet_errors += tx_link.link_metric_info.packet_errors;
+                iface->second.transmitted_packets += tx_link.link_metric_info.transmitted_packets;
+            } else {
+                iface_tx_link_metrics.insert({tx_link.rc_interface_mac, tx_link.link_metric_info});
+            }
+        }
+
+        for (const auto &rx_link : new_link.second.receiverLinkMetrics) {
+
+            if (rx_link.rc_interface_mac == beerocks::net::network_utils::ZERO_MAC) {
+                LOG(ERROR) << "Zero MAC Interface is reported for agent mac:"
+                           << reporting_agent_al_mac << " and neighbor mac:" << new_link.first;
+                continue;
+            }
+
+            // Check it for interface is already added or not
+            auto iface = iface_rx_link_metrics.find(rx_link.rc_interface_mac);
+
+            if (iface != iface_rx_link_metrics.end()) {
+                LOG(DEBUG) << "Interface is already adde with mac:" << rx_link.rc_interface_mac
+                           << ", so sum up metric informations.";
+
+                iface->second.packet_errors += rx_link.link_metric_info.packet_errors;
+                iface->second.packets_received += rx_link.link_metric_info.packets_received;
+            } else {
+                iface_rx_link_metrics.insert({rx_link.rc_interface_mac, rx_link.link_metric_info});
+            }
+        }
     }
 
-    LOG(DEBUG) << "Received TLV_RECEIVER_LINK_METRIC from al_mac=" << reporting_agent_al_mac
-               << std::endl
-               << "reported  al_mac =" << RxLinkMetricData->neighbor_al_mac() << std::endl;
-
-    //fill rx data from TLV
-    if (!new_link_metric_data.add_receiver_link_metric(RxLinkMetricData)) {
-        LOG(ERROR) << "adding RxLinkMetricData has failed";
-        return false;
+    // Update data model of Device Interface Stats
+    for (const auto &iface_tx_link : iface_tx_link_metrics) {
+        database.dm_update_interface_tx_stats(reporting_agent_al_mac, iface_tx_link.first,
+                                              iface_tx_link.second.transmitted_packets,
+                                              iface_tx_link.second.packet_errors);
+    }
+    for (const auto &iface_rx_link : iface_rx_link_metrics) {
+        database.dm_update_interface_rx_stats(reporting_agent_al_mac, iface_rx_link.first,
+                                              iface_rx_link.second.packets_received,
+                                              iface_rx_link.second.packet_errors);
     }
 
-    link_metric_data[reporting_agent_al_mac][neighbor_mac] = new_link_metric_data;
-
-    LOG(DEBUG) << " Added metric data from "
-               << " al_mac = " << reporting_agent_al_mac << std::endl
-               << std::endl;
+    LOG(DEBUG) << "Metrics data are added from al_mac = " << reporting_agent_al_mac << " with "
+               << new_link_metrics.size() << " neighbors.";
 
     print_link_metric_map(link_metric_data);
 
