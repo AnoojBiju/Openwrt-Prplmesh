@@ -54,6 +54,8 @@ echo "$PYTHONPATH"
 export PYTHONPATH
 export BFT_DEBUG=y
 
+echo "TEST_ARGS = ${TEST_ARGS[@]}"
+
 bft -c "${bf_plugins_dir}"/boardfarm_prplmesh/prplmesh_config.json \
         -n "$DUT" "${TEST_ARGS[@]}" -o "${resultdir}" || exit 255
 
