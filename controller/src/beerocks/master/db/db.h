@@ -1244,6 +1244,67 @@ public:
     void clear_bss_info_configuration(const sMacAddr &al_mac);
 
     /**
+     * @brief Store traffic separation policy for agent.
+     * 
+     * @param[in] al_mac AL MAC address of agent.
+     * @param[in] config Traffic separation policy configuration.
+     */
+    void
+    add_traffic_separataion_configuration(const sMacAddr &al_mac,
+                                          const wireless_utils::sTrafficSeparationSsid &config);
+    /**
+     * @brief Store default 802.1Q settings for agent.
+     * 
+     * @param[in] al_mac AL MAC address of agent.
+     * @param[in] config Default 802.1Q setting configuration.
+     */
+    void add_default_8021q_settings(const sMacAddr &al_mac,
+                                    const wireless_utils::s8021QSettings &config);
+
+    /**
+     * @brief Get traffic separation policy for agent.
+     * 
+     * @param[in] al_mac AL MAC address of agent.
+     * 
+     * @return List of policies for the AL mac. If not found, return empty list.
+     */
+    const std::list<wireless_utils::sTrafficSeparationSsid>
+    get_traffic_separataion_configuration(const sMacAddr &al_mac);
+
+    /**
+     * @brief Get default 802.1Q settings for agent.
+     * 
+     * @param[in] al_mac AL MAC address of agent.
+     * 
+     * @return Default 8021Q settings for the AL mac. If not found, return empty struct.
+     */
+    wireless_utils::s8021QSettings get_default_8021q_setting(const sMacAddr &al_mac);
+
+    /**
+     * @brief Clear all known traffic separation configurations.
+     */
+    void clear_traffic_separation_configurations();
+
+    /**
+     * @brief Clear traffic separation configuration for an agent.
+     * 
+     * @param[in] al_mac AL MAC address of agent.
+     */
+    void clear_traffic_separation_configurations(const sMacAddr &al_mac);
+
+    /**
+     * @brief Clear all known default 802.1Q settings.
+     */
+    void clear_default_8021q_settings();
+
+    /**
+     * @brief Clear traffic separation configuration for an agent.
+     * 
+     * @param[in] al_mac AL MAC address of agent.
+     */
+    void clear_default_8021q_settings(const sMacAddr &al_mac);
+
+    /**
      * @brief Set radio utilization value in Controler Data Model.
      * Data model path example: "Controller.Network.Device.1.Radio.1.Utilization"
      *
@@ -1707,6 +1768,17 @@ private:
     std::shared_ptr<uint8_t> certification_tx_buffer;
     std::unordered_map<sMacAddr, std::list<wireless_utils::sBssInfoConf>> bss_infos; // key=al_mac
     std::list<wireless_utils::sBssInfoConf> bss_infos_global;
+
+    /*
+    * This map holds traffic separation policy per Agent sMacAddr.
+    */
+    std::unordered_map<sMacAddr, std::list<wireless_utils::sTrafficSeparationSsid>>
+        traffic_separation_policy_configurations; // key=al_mac
+    /*
+    * This map holds default 802.1Q settings per Agent sMacAddr.
+    */
+    std::unordered_map<sMacAddr, wireless_utils::s8021QSettings>
+        default_8021q_settings; // key=al_mac
 
     Controller *m_controller_ctx = nullptr;
     const std::string m_local_bridge_mac;

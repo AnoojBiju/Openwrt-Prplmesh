@@ -37,7 +37,6 @@ class tlvProfile2TrafficSeparationPolicy : public BaseClass
 
         const eTlvTypeMap& type();
         const uint16_t& length();
-        uint8_t& number_of_ssids();
         uint8_t& ssids_vlan_id_list_length();
         std::tuple<bool, cSsidVlanId&> ssids_vlan_id_list(size_t idx);
         std::shared_ptr<cSsidVlanId> create_ssids_vlan_id_list();
@@ -50,7 +49,6 @@ class tlvProfile2TrafficSeparationPolicy : public BaseClass
         bool init();
         eTlvTypeMap* m_type = nullptr;
         uint16_t* m_length = nullptr;
-        uint8_t* m_number_of_ssids = nullptr;
         uint8_t* m_ssids_vlan_id_list_length = nullptr;
         cSsidVlanId* m_ssids_vlan_id_list = nullptr;
         size_t m_ssids_vlan_id_list_idx__ = 0;

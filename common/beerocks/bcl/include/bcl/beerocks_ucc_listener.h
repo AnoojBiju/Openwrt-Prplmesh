@@ -60,6 +60,17 @@ protected:
     };
     eUccListenerRunOn m_ucc_listener_run_on = eUccListenerRunOn::NONE;
 
+    struct tlv_hex_t {
+        std::string *type   = nullptr;
+        std::string *length = nullptr;
+        std::string *value  = nullptr;
+    };
+    static bool get_send_1905_1_tlv_hex_list(std::list<tlv_hex_t> &tlv_hex_list,
+                                             std::unordered_map<std::string, std::string> &params,
+                                             std::string &err_string);
+    // Variables
+    ieee1905_1::CmduMessageTx &m_cmdu_tx;
+
 private:
     // Helper functions
     enum class eWfaCaCommand : uint8_t {
@@ -82,15 +93,6 @@ private:
                              std::unordered_map<std::string, std::string> &params,
                              std::string &err_string);
 
-    struct tlv_hex_t {
-        std::string *type   = nullptr;
-        std::string *length = nullptr;
-        std::string *value  = nullptr;
-    };
-    static bool get_send_1905_1_tlv_hex_list(std::list<tlv_hex_t> &tlv_hex_list,
-                                             std::unordered_map<std::string, std::string> &params,
-                                             std::string &err_string);
-
     // Class functions
     void handle_wfa_ca_command(int fd, const std::string &command);
     bool reply_ucc(int fd, eWfaCaStatus status, const std::string &description = std::string());
@@ -105,9 +107,6 @@ private:
     bool validate_program_parameter(const std::string &parameter, std::string &err_string);
 
     friend class tlvPrefilledData;
-
-    // Variables
-    ieee1905_1::CmduMessageTx &m_cmdu_tx;
 
     /**
      * UCC server to communicate with a UCC client by exchanging commands and replies.
@@ -139,6 +138,17 @@ public:
     bool add_tlv_value_decimal_string(const std::string &value, uint16_t &length);
     bool add_tlv_value_binary_string(const std::string &value, uint16_t &length);
     bool add_tlv_value_mac(const std::string &value, uint16_t &length);
+
+    /**
+     * @brief Add a tlv to the buffer from a single tlv_hex struct of strings.
+     * 
+     * @param[in] tlv_hex Struct of strings.
+     * @param[out] err_string string to report incase of an error.
+     * 
+     * @return True on success, False on failure.
+     */
+    bool add_tlv_from_strings(const beerocks_ucc_listener::tlv_hex_t &tlv_hex,
+                              std::string &err_string);
     bool add_tlvs_from_list(std::list<beerocks_ucc_listener::tlv_hex_t> &tlv_hex_list,
                             std::string &err_string);
 };
