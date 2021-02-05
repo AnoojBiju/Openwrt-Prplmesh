@@ -435,7 +435,6 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         for ssid in ssids:
             self.configure_ssid(ssid)
 
-        self.checkpoint()
         self.dev.lan.controller_entity.nbapi_command("Controller.Network", "AccessPointCommit")
         # TODO check that renew was sent to all agents
         # TODO check that all agents have been configured with the SSIDs
