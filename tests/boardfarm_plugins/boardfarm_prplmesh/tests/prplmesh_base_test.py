@@ -23,9 +23,18 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
 
     def startMarker(self):
         """Calls method with the same name in base class and then prints current topology.
+
+        To make sure all devices are always in a known state before the test starts, clears
+        existing SSID configuration on all agents. If required, a particular test must configure
+        the SSIDs for that test (as part of the test logic).
+
         This method is called right before the test.
         """
         super().startMarker()
+
+        '''Clear existing SSID configuration on all agents.'''
+        self.configure_ssids([])
+
         debug("Current network topology:")
         topology = self.get_topology()
         for value in topology.values():
