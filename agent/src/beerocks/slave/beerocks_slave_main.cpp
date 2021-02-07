@@ -169,7 +169,9 @@ static void fill_son_slave_config(const beerocks::config_file::sConfigSlave &bee
     son_slave_conf.vendor    = beerocks_slave_conf.vendor;
     son_slave_conf.model     = beerocks_slave_conf.model;
     son_slave_conf.ucc_listener_port =
-        beerocks::string_utils::stoi(beerocks_slave_conf.ucc_listener_port);
+        (!beerocks_slave_conf.ucc_listener_port.empty())
+            ? beerocks::string_utils::stoi(beerocks_slave_conf.ucc_listener_port)
+            : static_cast<uint16_t>(beerocks::eGlobals::UCC_LISTENER_PORT);
     son_slave_conf.bridge_iface             = beerocks_slave_conf.bridge_iface;
     son_slave_conf.backhaul_preferred_bssid = beerocks_slave_conf.backhaul_preferred_bssid;
     son_slave_conf.backhaul_wire_iface      = beerocks_slave_conf.backhaul_wire_iface;
@@ -179,12 +181,16 @@ static void fill_son_slave_config(const beerocks::config_file::sConfigSlave &bee
         beerocks_slave_conf.hostap_iface_type[slave_num]);
     son_slave_conf.hostap_iface = hostap_iface;
     son_slave_conf.hostap_ant_gain =
-        beerocks::string_utils::stoi(beerocks_slave_conf.hostap_ant_gain[slave_num]);
+        (!beerocks_slave_conf.hostap_ant_gain[slave_num].empty())
+            ? beerocks::string_utils::stoi(beerocks_slave_conf.hostap_ant_gain[slave_num])
+            : 0;
     son_slave_conf.radio_identifier = beerocks_slave_conf.radio_identifier[slave_num];
     son_slave_conf.backhaul_wireless_iface =
         get_sta_iface_from_hostap_iface(son_slave_conf.hostap_iface);
     son_slave_conf.backhaul_wireless_iface_filter_low =
-        beerocks::string_utils::stoi(beerocks_slave_conf.sta_iface_filter_low[slave_num]);
+        (!beerocks_slave_conf.sta_iface_filter_low[slave_num].empty())
+            ? beerocks::string_utils::stoi(beerocks_slave_conf.sta_iface_filter_low[slave_num])
+            : 0;
 
     // disable stopping on failure initially. Later on, it will be read from BPL as part of
     // cACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE

@@ -107,6 +107,7 @@ enum eGlobals {
     BH_SIGNAL_RSSI_THRESHOLD_HIGH           = -40,
     BH_SIGNAL_RSSI_THRESHOLD_HYSTERESIS     = 8,
     TOUCH_PID_TIMEOUT_SECONDS               = 4, // beerocks_watchdog cycle (10 secs) / 2 - 1
+    UCC_LISTENER_PORT                       = 8002,
 };
 
 enum eBeeRocksProcesses : uint8_t {
