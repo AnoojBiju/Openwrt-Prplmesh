@@ -495,13 +495,23 @@ void ChannelSelectionTask::handle_vs_zwdfs_ant_channel_switch_response(
                << sender_iface_name;
 
     if (m_zwdfs_state == eZwdfsState::WAIT_FOR_ZWDFS_SWITCH_ANT_OFF_RESPONSE) {
-        m_zwdfs_ant_in_use = false;
-        ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+        if (notification->success()) {
+            m_zwdfs_ant_in_use = false;
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            return;
+        }
+
+        LOG(ERROR) << "Failed to switch ZWDFS antenna off";
+        // increase retry counter
+        ++m_retry_counter;
+
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+        return;
     }
 
     // Get here after switching on the ZWDFS antenna.
     if (!notification->success()) {
-        LOG(ERROR) << "Failed to switch ZWDFS antenna and channel";
+        LOG(ERROR) << "Failed to switch ZWDFS antenna on and into channel";
         m_zwdfs_ant_in_use = true;
         ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
     }

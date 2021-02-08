@@ -193,6 +193,8 @@ private:
 
     BackhaulManager &m_btl_ctx;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
+
+    uint8_t m_retry_counter = 0;
 };
 
 } // namespace beerocks
