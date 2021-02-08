@@ -440,8 +440,9 @@ bool ChannelScanTask::trigger_radio_scan(const std::string &radio_iface,
     std::for_each(radio_scan_info->operating_classes.begin(),
                   radio_scan_info->operating_classes.end(),
                   [&channels_to_be_scanned](const sOperationalClass &op_cls) {
-                      channels_to_be_scanned.insert(std::begin(op_cls.channel_list),
-                                                    std::end(op_cls.channel_list));
+                      for (uint32_t channel = 0; channel < op_cls.channel_list_length; channel++) {
+                          channels_to_be_scanned.insert(op_cls.channel_list[channel]);
+                      }
                   });
     // Set scan params in CMDU
     trigger_request->scan_params().radio_mac         = radio_scan_info->radio_mac;
@@ -611,7 +612,7 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
             auto &op_cls_entry    = std::get<1>(op_cls_tuple);
             const auto op_cls_num = op_cls_entry.operating_class();
             const auto ch_lst_len = op_cls_entry.channel_list_length();
-            const auto ch_lst_arr = op_cls_entry.channel_list();
+            uint8_t *ch_lst_arr   = (ch_lst_len > 0) ? op_cls_entry.channel_list() : nullptr;
 
             std::stringstream ss;
             ss << "[ ";

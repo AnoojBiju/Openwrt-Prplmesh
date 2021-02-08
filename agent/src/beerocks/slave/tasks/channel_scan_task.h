@@ -99,7 +99,9 @@ private:
                           uint8_t _channel_list_length)
             : operating_class(_operating_class), channel_list_length(_channel_list_length)
         {
-            std::copy_n(_channel_list, _channel_list_length, channel_list);
+            if (_channel_list) {
+                std::copy_n(_channel_list, _channel_list_length, channel_list);
+            }
         }
     };
     struct sRadioScan {

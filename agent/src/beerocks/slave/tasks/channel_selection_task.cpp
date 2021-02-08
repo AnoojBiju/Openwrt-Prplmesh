@@ -205,38 +205,40 @@ bool ChannelSelectionTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmd
     // switch-case on "ACTION_BACKHAUL" only.
     // Once the son_slave will be unified, need to replace the expected action to
     // "ACTION_AP_MANAGER". PPM-352.
-    if (beerocks_header->action() == beerocks_message::ACTION_BACKHAUL) {
-        switch (beerocks_header->action_op()) {
-        case beerocks_message::ACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION: {
-            handle_vs_csa_notification(cmdu_rx, sd, beerocks_header);
-            break;
-        }
-        case beerocks_message::ACTION_BACKHAUL_HOSTAP_CSA_ERROR_NOTIFICATION: {
-            handle_vs_csa_error_notification(cmdu_rx, sd, beerocks_header);
-            break;
-        }
-        case beerocks_message::ACTION_BACKHAUL_HOSTAP_DFS_CAC_STARTED_NOTIFICATION: {
-            handle_vs_cac_started_notification(cmdu_rx, sd, beerocks_header);
-            break;
-        }
-        case beerocks_message::ACTION_BACKHAUL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION: {
-            handle_vs_dfs_cac_completed_notification(cmdu_rx, sd, beerocks_header);
-            break;
-        }
-        case beerocks_message::ACTION_BACKHAUL_CHANNELS_LIST_RESPONSE: {
-            handle_vs_channels_list_response(cmdu_rx, sd, beerocks_header);
-            break;
-        }
-        case beerocks_message::ACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE: {
-            handle_vs_zwdfs_ant_channel_switch_response(cmdu_rx, sd, beerocks_header);
-            break;
-        }
+    if (beerocks_header->action() != beerocks_message::ACTION_BACKHAUL) {
+        return false;
+    }
 
-        default: {
-            // Message was not handled, therfore return false.
-            return false;
-        }
-        }
+    switch (beerocks_header->action_op()) {
+    case beerocks_message::ACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION: {
+        handle_vs_csa_notification(cmdu_rx, sd, beerocks_header);
+        break;
+    }
+    case beerocks_message::ACTION_BACKHAUL_HOSTAP_CSA_ERROR_NOTIFICATION: {
+        handle_vs_csa_error_notification(cmdu_rx, sd, beerocks_header);
+        break;
+    }
+    case beerocks_message::ACTION_BACKHAUL_HOSTAP_DFS_CAC_STARTED_NOTIFICATION: {
+        handle_vs_cac_started_notification(cmdu_rx, sd, beerocks_header);
+        break;
+    }
+    case beerocks_message::ACTION_BACKHAUL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION: {
+        handle_vs_dfs_cac_completed_notification(cmdu_rx, sd, beerocks_header);
+        break;
+    }
+    case beerocks_message::ACTION_BACKHAUL_CHANNELS_LIST_RESPONSE: {
+        handle_vs_channels_list_response(cmdu_rx, sd, beerocks_header);
+        break;
+    }
+    case beerocks_message::ACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE: {
+        handle_vs_zwdfs_ant_channel_switch_response(cmdu_rx, sd, beerocks_header);
+        break;
+    }
+
+    default: {
+        // Message was not handled, therfore return false.
+        return false;
+    }
     }
     return true;
 }
