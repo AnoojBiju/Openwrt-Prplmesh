@@ -334,10 +334,13 @@ bool CapabilityReportingTask::add_channel_scan_capabilities(
         LOG(ERROR) << "create_radio_list() has failed!";
         return false;
     }
-    radio_channel_scan_capabilities->radio_uid()                 = radio->front.iface_mac;
-    radio_channel_scan_capabilities->capabilities().on_boot_only = 1;
-    radio_channel_scan_capabilities->capabilities().scan_impact =
-        0x2; // Time slicing impairment (Radio may go off channel for a series of short intervals)
+    radio_channel_scan_capabilities->radio_uid() = radio->front.iface_mac;
+    // We support "on demand" scans so set the on_boot_only flag to 0
+    radio_channel_scan_capabilities->capabilities().on_boot_only = 0;
+    // Time slicing impairment (Radio may go off channel for a series of short intervals)
+    radio_channel_scan_capabilities->capabilities().scan_impact = wfa_map::
+        cRadiosWithScanCapabilities::eScanImpact::SCAN_IMPACT_REDUCED_NUMBER_OF_SPATIAL_STREAM;
+
     // Create operating class object
     auto op_class_channels = radio_channel_scan_capabilities->create_operating_classes_list();
     if (!op_class_channels) {
