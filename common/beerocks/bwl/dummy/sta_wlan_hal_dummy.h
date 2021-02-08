@@ -36,6 +36,7 @@ public:
     virtual bool detach() override;
 
     virtual bool initiate_scan() override;
+    bool scan_type_only(const sMacAddr &bssid, uint8_t channel) override;
     virtual int get_scan_results(const std::string &ssid, std::vector<SScanResult> &list,
                                  bool parse_vsie = false) override;
 

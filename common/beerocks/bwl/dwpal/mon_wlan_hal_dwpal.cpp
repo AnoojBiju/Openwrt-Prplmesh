@@ -50,13 +50,6 @@ enum ie_type : uint8_t {
 #define WLAN_CAPABILITY_PRIVACY (1 << 4)
 #define GET_OP_CLASS(channel) ((channel < 14) ? 4 : 5)
 
-// Allocate a char array wrapped in a shared_ptr
-#define ALLOC_SMART_BUFFER(size)                                                                   \
-    std::shared_ptr<char>(new char[size], [](char *obj) {                                          \
-        if (obj)                                                                                   \
-            delete[] obj;                                                                          \
-    })
-
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////// Local Module Functions ///////////////////////////
 //////////////////////////////////////////////////////////////////////////////

@@ -29,13 +29,6 @@ namespace dummy {
 #define GET_OP_CLASS(channel) ((channel < 14) ? 4 : 5)
 #define BUFFER_SIZE 4096
 
-// Allocate a char array wrapped in a shared_ptr
-#define ALLOC_SMART_BUFFER(size)                                                                   \
-    std::shared_ptr<char>(new char[size], [](char *obj) {                                          \
-        if (obj)                                                                                   \
-            delete[] obj;                                                                          \
-    })
-
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////// Local Module Functions ///////////////////////////
 //////////////////////////////////////////////////////////////////////////////

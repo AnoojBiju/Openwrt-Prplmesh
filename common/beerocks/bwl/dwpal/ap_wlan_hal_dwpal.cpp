@@ -36,13 +36,6 @@ namespace dwpal {
 
 #define CSA_EVENT_FILTERING_TIMEOUT_MS 1000
 
-// Allocate a char array wrapped in a shared_ptr
-#define ALLOC_SMART_BUFFER(size)                                                                   \
-    std::shared_ptr<char>(new char[size], [](char *obj) {                                          \
-        if (obj)                                                                                   \
-            delete[] obj;                                                                          \
-    })
-
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////// Local Module Functions ///////////////////////////
 //////////////////////////////////////////////////////////////////////////////
