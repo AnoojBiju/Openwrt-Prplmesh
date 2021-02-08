@@ -42,14 +42,22 @@ sCapabilities:
       0: False (Agent can perform Requested scans)
   scan_impact:
     _bit_range: [6, 5]
-    _comment: |
-      0x00: No impact (independent radio is available for scanning that is not used for Fronthaul
-      or backhaul)
-      0x01: Reduced number of spatial streams
-      0x02: Time slicing impairment (Radio may go off channel for a series of short intervals)
-      0x03: Radio unavailable for >= 2 seconds)
   reserved:
     _bit_range: [4, 0]
+
+eScanImpact:
+  _type: enum
+  _enum_storage: uint8_t
+  SCAN_IMPACT_NO_IMPACT: 0x00
+  SCAN_IMPACT_REDUCED_NUMBER_OF_SPATIAL_STREAM: 0x01
+  SCAN_IMPACT_TIME_SLICING_IMPAIRMENT: 0x02
+  SCAN_IMPACT_RADIO_UNAVAILABLE: 0x03
+  _comment: |
+    0x00: No impact (independent radio is available for scanning that is not used for Fronthaul
+    or backhaul)
+    0x01: Reduced number of spatial streams
+    0x02: Time slicing impairment (Radio may go off channel for a series of short intervals)
+    0x03: Radio unavailable for >= 2 seconds)
 
 cOperatingClasses:
   _type: class

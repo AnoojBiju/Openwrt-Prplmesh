@@ -85,6 +85,13 @@ class cRadiosWithScanCapabilities : public BaseClass
             }
         } __attribute__((packed)) sCapabilities;
         
+        enum eScanImpact: uint8_t {
+            SCAN_IMPACT_NO_IMPACT = 0x0,
+            SCAN_IMPACT_REDUCED_NUMBER_OF_SPATIAL_STREAM = 0x1,
+            SCAN_IMPACT_TIME_SLICING_IMPAIRMENT = 0x2,
+            SCAN_IMPACT_RADIO_UNAVAILABLE = 0x3,
+        };
+        
         sMacAddr& radio_uid();
         sCapabilities& capabilities();
         //The minimum interval in seconds between the start of two consecutive channel scans on this radio
