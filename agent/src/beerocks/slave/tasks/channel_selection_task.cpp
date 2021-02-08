@@ -461,8 +461,8 @@ void ChannelSelectionTask::handle_vs_dfs_cac_completed_notification(
         auto db                                   = AgentDB::get();
         db->statuses.zwdfs_cac_remaining_time_sec = 0;
         if (notification->params().success != 1) {
-            LOG(ERROR) << "CAC has failed!";
-            ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+            LOG(ERROR) << "CAC has failed! Trying next-best-channel";
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::REQUEST_CHANNELS_LIST);
             return;
         }
         ZWDFS_FSM_MOVE_STATE(eZwdfsState::SWITCH_CHANNEL_PRIMARY_RADIO);
