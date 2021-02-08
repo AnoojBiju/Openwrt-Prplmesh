@@ -687,7 +687,12 @@ void ChannelSelectionTask::zwdfs_fsm()
         if (m_selected_channel.channel == radio->channel &&
             m_selected_channel.bw == radio->bandwidth) {
             LOG(DEBUG) << "Failsafe is already second best channel, abort ZWDFS flow";
-            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            if (m_zwdfs_ant_in_use) {
+                LOG(DEBUG) << "Release ZWDFS antenna in use";
+                ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+            } else {
+                ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            }
             break;
         }
 
