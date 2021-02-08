@@ -502,9 +502,23 @@ void ChannelSelectionTask::handle_vs_zwdfs_ant_channel_switch_response(
         }
 
         LOG(ERROR) << "Failed to switch ZWDFS antenna off";
+
+        if (m_retry_counter >= ZWDFS_FLOW_MAX_RETRIES) {
+            LOG(WARNING) << "Release the antenna max retries(" << ZWDFS_FLOW_MAX_RETRIES
+                         << ") is reached, aborting.";
+            m_next_retry_time = std::chrono::steady_clock::now();
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            return;
+        }
+
         // increase retry counter
         ++m_retry_counter;
 
+        LOG(DEBUG) << "Retry release the antenna within " << ZWDFS_FLOW_DELAY_BETWEEN_RETRIES_MSEC
+                   << " milliseconds";
+        m_next_retry_time = std::chrono::steady_clock::now() +
+                            std::chrono::milliseconds(ZWDFS_FLOW_DELAY_BETWEEN_RETRIES_MSEC);
+        // Retry to switch antenna off
         ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
         return;
     }
@@ -605,6 +619,7 @@ void ChannelSelectionTask::zwdfs_fsm()
 {
     switch (m_zwdfs_state) {
     case eZwdfsState::NOT_RUNNING: {
+        m_retry_counter = 0;
         break;
     }
     case eZwdfsState::REQUEST_CHANNELS_LIST: {
@@ -851,6 +866,12 @@ void ChannelSelectionTask::zwdfs_fsm()
         break;
     }
     case eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST: {
+
+        // Wait between retries if needed
+        if (std::chrono::steady_clock::now() < m_next_retry_time) {
+            break;
+        }
+
         // Block switching back 2.4G antenna if its radio is during background scan.
         if (radio_scan_in_progress(eFreqType::FREQ_24G)) {
             break;
