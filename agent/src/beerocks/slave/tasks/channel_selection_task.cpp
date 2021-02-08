@@ -296,8 +296,21 @@ void ChannelSelectionTask::handle_vs_csa_notification(
                 auto external_channel_switch =
                     (m_zwdfs_state != eZwdfsState::WAIT_FOR_PRIMARY_RADIO_CSA_NOTIFICATION);
 
-                abort_zwdfs_flow(external_channel_switch);
-                return;
+                if (external_channel_switch) {
+                    abort_zwdfs_flow(true);
+                    return;
+                } else {
+                    // When clearing the next-best-channel - if CAC fails we try again on the next-next-best-channel.
+                    // The general case expects the next channel to also be a DFS channel so we do not release the antenna just yet.
+                    // In case the next-next-best-channel will be non-DFS, we need to make sure to release the antenna when flow completes.
+                    if (m_zwdfs_ant_in_use) {
+                        LOG(DEBUG) << "Release ZWDFS antenna in use";
+                        ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+                    } else {
+                        ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+                    }
+                    return;
+                }
             }
         }
     }
