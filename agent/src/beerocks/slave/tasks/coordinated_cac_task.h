@@ -30,16 +30,19 @@ enum class fsm_state {
     WAIT_FOR_CHANNEL_LIST_READY,
     WAIT_FOR_SWITCH_CHANNEL_REPORT_I,
     WAIT_FOR_SWITCH_CHANNEL_REPORT_II,
+    WAIT_FOR_CAC_TERMINATION,
     ERROR
 };
 enum class fsm_event {
     CAC_REQUEST,
+    CAC_TERMINATION_REQUEST,
+    CAC_TERMINATION_RESPONSE,
     CHANNEL_LIST_READY,
     SWITCH_CHANNEL_REPORT,
     SWITCH_CHANNEL_DURATION_TIME,
     PERIODIC,
     CAC_COMPLETED_NOTIFICATION,
-    CAC_STARTED_NOTIFICATION
+    CAC_STARTED_NOTIFICATION,
 };
 
 class CacFsm : public beerocks::beerocks_fsm<fsm_state, fsm_event> {
@@ -67,6 +70,7 @@ private:
     void reset();
     bool is_timeout_waiting_for_switch_channel_report();
     bool is_timeout_waiting_for_channel_list();
+    bool is_timeout_waiting_for_cac_termination();
 
     void db_store_cac_status(std::shared_ptr<sSwitchChannelReport> switch_channel_report);
     void db_store_cac_status(std::shared_ptr<sCacStartedNotification> cac_started);
@@ -84,12 +88,17 @@ private:
     std::shared_ptr<sSwitchChannelRequest> m_first_switch_channel_request  = nullptr;
     std::shared_ptr<sSwitchChannelRequest> m_second_switch_channel_request = nullptr;
 
+    std::shared_ptr<bool> m_cac_termination_success = nullptr;
+
     // extracted form the request
     std::string m_ifname;
     wfa_map::tlvProfile2CacRequest::sCacRequestRadio m_cac_request_radio;
 
-    uint8_t m_original_channel          = 0;
-    eWiFiBandwidth m_original_bandwidth = eWiFiBandwidth::BANDWIDTH_UNKNOWN;
+    // original values
+    uint8_t m_original_channel                  = 0;
+    eWiFiBandwidth m_original_bandwidth         = eWiFiBandwidth::BANDWIDTH_UNKNOWN;
+    uint16_t m_original_center_frequency        = 0;
+    uint8_t m_original_secondary_channel_offset = 0;
 
     // max time to wait for switch channel
     static constexpr std::chrono::seconds DEFAULT_MAX_WAIT_FOR_SWITCH_CHANNEL{3};
@@ -97,6 +106,13 @@ private:
 
     // the point in time we we started waiting for switch channel
     std::chrono::time_point<std::chrono::steady_clock> m_switch_channel_start_time_point;
+
+    // max time to wait for cac termination
+    static constexpr std::chrono::seconds DEFAULT_MAX_WAIT_FOR_CAC_TERMINATION{180};
+    std::chrono::seconds m_max_wait_for_cac_termination = DEFAULT_MAX_WAIT_FOR_CAC_TERMINATION;
+
+    // the point in time we we started waiting for cac termination
+    std::chrono::time_point<std::chrono::steady_clock> m_terminate_cac_start_time_point;
 
     // max time to wait for channel list
     static constexpr std::chrono::seconds DEFAULT_MAX_WAIT_FOR_CHANNEL_LIST{3};
@@ -106,7 +122,7 @@ private:
     // the point in time we we started waiting for channel list
     std::chrono::time_point<std::chrono::steady_clock> m_channel_list_start_time_point;
 
-    // cac termination
+    // cac termination (1905.1)
     std::shared_ptr<wfa_map::tlvProfile2CacTermination> m_cac_termination = nullptr;
 };
 
@@ -124,6 +140,9 @@ public:
     virtual bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
                              const sMacAddr &dst_mac, const sMacAddr &src_mac, int fd,
                              std::shared_ptr<beerocks_header> beerocks_header);
+
+    virtual bool handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac,
+                                        int sd, std::shared_ptr<beerocks_header> beerocks_header);
 
 private:
     BackhaulManager &m_backhaul_manager;
