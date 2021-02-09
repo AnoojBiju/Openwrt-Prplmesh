@@ -5,6 +5,14 @@
 # See LICENSE file for more details.
 ###############################################################
 
+variables:
+  PACKAGE_REGISTRY_BASE_URL: "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic"
+  TURRIS_OMNIA_FULLIMAGE: "openwrt-mvebu-cortexa9-cznic_turris-omnia-sysupgrade.img.gz"
+  GLINET_B1300_FULLIMAGE: "openwrt-ipq40xx-generic-glinet_gl-b1300-squashfs-sysupgrade.bin"
+  AXEPOINT_FULLIMAGE: "AX3000_1600_ETH_11AXUCI-squashfs-fullimage.img"
+  NEC_WX3000HP_FULLIMAGE: "AX3000_1600_ETH_11AXUCI_ASURADA-initramfs-kernel.bin"
+  NETGEAR_RAX40_FULLIMAGE: "NETGEAR_RAX40-squashfs-fullimage.img"
+
 workflow:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
@@ -16,6 +24,8 @@ stages:
   - certification-turris-omnia-bhwifi
   - certification-axepoint
   - certification-axepoint-bhwifi
+  - upload
+  - release
 
 include:
   - local: "/ci/templates.yml"
@@ -49,6 +59,17 @@ build-for-axepoint:
   extends: .build-for-openwrt
   variables:
     TARGET_DEVICE: "axepoint"
+
+# Since we don't have a NEC device in CI yet and the build is almost
+# identical to the axepoint, it's only done for scheduled jobs and
+# releases.
+build-for-nec-wx3000hp:
+  extends: .build-for-openwrt
+  variables:
+    TARGET_DEVICE: "nec-wx3000hp"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: $CI_COMMIT_TAG
 
 test-on-turris-omnia:
   extends: .test-on-target
@@ -120,3 +141,50 @@ run-certification-tests-platform-isr:
     - job: build-for-turris-omnia
   rules:
     - if: '$TESTS_TO_RUN && $DEVICE_UNDER_TEST != "prplmesh" && $WFA_CERTIFICATION_RUNNER == "ISR"'
+
+upload-release-artifacts:
+  stage: upload
+  image: curlimages/curl:7.74.0
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /\A\d+\.\d+\.\d+\z/'
+  script:
+    - |
+      upload_command() {
+        # $1 is the target name under 'build/'. It will also be used for the name of the uploaded fullimage.
+        export PACKAGE_REGISTRY_URL="${PACKAGE_REGISTRY_BASE_URL}/$1/${CI_COMMIT_TAG}"
+        curl --fail --show-error --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file "build/$1/prplmesh.ipk" "${PACKAGE_REGISTRY_URL}/prplmesh_${CI_COMMIT_TAG}_$1.ipk"
+        # $2 is the name of the fullimage.
+        curl --fail --show-error --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file "build/$1/$2" "${PACKAGE_REGISTRY_URL}/$CI_COMMIT_TAG-$2"
+      }
+    - upload_command "turris-omnia" "$TURRIS_OMNIA_FULLIMAGE"
+    - upload_command "glinet-b1300" "$GLINET_B1300_FULLIMAGE"
+    - upload_command "axepoint" "$AXEPOINT_FULLIMAGE"
+    - upload_command "nec-wx3000hp" "$NEC_WX3000HP_FULLIMAGE"
+    - upload_command "netgear-rax40" "$NETGEAR_RAX40_FULLIMAGE"
+  needs:
+    - job: build-for-axepoint
+    - job: build-for-turris-omnia
+    - job: build-for-glinet-b1300
+    - job: build-for-nec-wx3000hp
+    - job: build-for-netgear-rax40
+
+release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:v0.5.0
+  rules:
+    - if: $CI_COMMIT_TAG
+  script:
+    - |
+      release-cli create --name "Release $CI_COMMIT_TAG" --tag-name $CI_COMMIT_TAG \
+        --assets-link "{\"name\":\"axepoint prplmesh ipk\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/axepoint/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_axepoint.ipk\"}" \
+        --assets-link "{\"name\":\"axepoint fullimage\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/axepoint/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$AXEPOINT_FULLIMAGE\"}" \
+        --assets-link "{\"name\":\"glinet-b1300 prplmesh ipk\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/glinet-b1300/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_glinet-b1300.ipk\"}" \
+        --assets-link "{\"name\":\"glinet-b1300 fullimage\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/glinet-b1300/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$GLINET_B1300_FULLIMAGE\"}" \
+        --assets-link "{\"name\":\"turris-omnia prplmesh ipk\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_turris-omnia.ipk\"}" \
+        --assets-link "{\"name\":\"turris-omnia fullimage\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$TURRIS_OMNIA_FULLIMAGE\"}" \
+        --assets-link "{\"name\":\"nec-wx3000hp prplmesh ipk\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/nec-wx3000hp/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_nec-wx3000hp.ipk\"}" \
+        --assets-link "{\"name\":\"nec-wx3000hp fullimage\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/nec-wx3000hp/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$NEC_WX3000HP_FULLIMAGE\"}" \
+        --assets-link "{\"name\":\"netgear-rax40 prplmesh ipk\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/netgear-rax40/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_netgear-rax40.ipk\"}" \
+        --assets-link "{\"name\":\"netgear-rax40 fullimage\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/netgear-rax40/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$NETGEAR_RAX40_FULLIMAGE\"}"
+  needs:
+    - job: upload-release-artifacts
