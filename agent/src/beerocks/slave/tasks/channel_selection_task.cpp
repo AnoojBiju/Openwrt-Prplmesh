@@ -633,6 +633,11 @@ void ChannelSelectionTask::zwdfs_fsm()
     }
     case eZwdfsState::REQUEST_CHANNELS_LIST: {
 
+        // Wait between retries if needed
+        if (std::chrono::steady_clock::now() < m_next_retry_time) {
+            break;
+        }
+
         // Block the begining of the flow if background scan is running on one of the radios.
         // 2.4G because it is forbidden to switch zwdfs antenna during scan.
         // 5G because we don't want the ZWDFS flow will switch channel on the primary 5G radio
@@ -668,7 +673,23 @@ void ChannelSelectionTask::zwdfs_fsm()
     case eZwdfsState::WAIT_FOR_CHANNELS_LIST: {
         if (std::chrono::steady_clock::now() > m_zwdfs_fsm_timeout) {
             LOG(ERROR) << "Reached timeout waiting for channels list response";
-            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+
+            if (m_retry_counter >= ZWDFS_FLOW_MAX_RETRIES) {
+                LOG(ERROR) << "Too many retries getting channels list response("
+                           << int(ZWDFS_FLOW_MAX_RETRIES) << "), aborting.";
+                m_next_retry_time = std::chrono::steady_clock::now();
+                ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+                break;
+            }
+
+            // Retry getting channels list response
+            ++m_retry_counter;
+            LOG(DEBUG) << "zw-dfs flow retry (" << m_retry_counter << "/"
+                       << int(ZWDFS_FLOW_MAX_RETRIES) << ")";
+            m_next_retry_time = std::chrono::steady_clock::now() +
+                                std::chrono::milliseconds(ZWDFS_FLOW_DELAY_BETWEEN_RETRIES_MSEC);
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::REQUEST_CHANNELS_LIST);
+            break;
         }
         break;
     }
