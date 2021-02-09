@@ -988,7 +988,21 @@ void ChannelSelectionTask::zwdfs_fsm()
     case eZwdfsState::WAIT_FOR_ZWDFS_SWITCH_ANT_OFF_RESPONSE: {
         if (std::chrono::steady_clock::now() > m_zwdfs_fsm_timeout) {
             LOG(ERROR) << "Reached timeout waiting for ZWDFS_SWITCH_ANT_OFF response!";
-            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+
+            if (m_retry_counter >= ZWDFS_FLOW_MAX_RETRIES) {
+                LOG(WARNING) << "Too many retries getting ....(" << ZWDFS_FLOW_MAX_RETRIES
+                             << "), aborting.";
+                m_next_retry_time = std::chrono::steady_clock::now();
+                ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+                break;
+            }
+
+            // Retry ZWDFS_SWITCH_ANT_OFF_REQUEST
+            ++m_retry_counter;
+            m_next_retry_time = std::chrono::steady_clock::now() +
+                                std::chrono::milliseconds(ZWDFS_FLOW_DELAY_BETWEEN_RETRIES_MSEC);
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+            break;
         }
         break;
     }
