@@ -91,12 +91,29 @@ private:
         wfa_map::tlvChannelScanCapabilities &channel_scan_capabilities_tlv);
 
     /**
-     * @brief add cac-capabilities to the given cmdu_tx
+     * @brief Adds cac-capabilities to AP Capability Report message.
      * 
-     * @param cmdu_tx CMDU object to add the cac capabilities to.
      * @return true if the tlv was added, otherwise false.
      */
     bool add_cac_capabilities_tlv();
+
+public:
+    /* Note:
+     * Profile-2 AP Capability TLV is being added by to the AutoConfiguration Message with M1, and
+     * here too on the AP CAPABILITY REPORT message.
+     * Therefore, set this tlv add function as public, so when the the task will run on the Unified
+     * Agent context, the AutoConfiguration could use it.
+     * 
+
+    /**
+     * @brief Add Profile-2 AP Capability to given CMDU. 
+     * 
+     * @param cmdu_tx CMDU object to add the Profile-2 AP capabilities to.
+     * @return true on success, otherwise false.
+     */
+    bool add_profile2_ap_capability_tlv(ieee1905_1::CmduMessageTx &cmdu_tx);
+
+private:
 };
 
 } // namespace beerocks
