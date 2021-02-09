@@ -771,6 +771,11 @@ void ChannelSelectionTask::zwdfs_fsm()
     }
     case eZwdfsState::ZWDFS_SWITCH_ANT_SET_CHANNEL_REQUEST: {
 
+        // Wait between retries if needed
+        if (std::chrono::steady_clock::now() < m_next_retry_time) {
+            break;
+        }
+
         // Stop ZWDFS flow from doing CAC if a background scan has started before we switch the
         // ZWDFS antenna. Since at the time when the background scan will be over, the selected
         // channel might not be relevant anymore, the FSM will start over and jum to the initial
@@ -828,7 +833,21 @@ void ChannelSelectionTask::zwdfs_fsm()
     case eZwdfsState::WAIT_FOR_ZWDFS_CAC_STARTED: {
         if (std::chrono::steady_clock::now() > m_zwdfs_fsm_timeout) {
             LOG(ERROR) << "Reached timeout waiting for CAC-STARTED notification!";
-            ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+
+            if (m_retry_counter >= ZWDFS_FLOW_MAX_RETRIES) {
+                LOG(WARNING) << "Too many retries waiting for CAC-STARTED ("
+                             << ZWDFS_FLOW_MAX_RETRIES << "), aborting.";
+                m_next_retry_time = std::chrono::steady_clock::now();
+                ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+                break;
+            }
+
+            // Retry ZWDFS_SWITCH_ANT_SET_CHANNEL_REQUEST
+            ++m_retry_counter;
+            m_next_retry_time = std::chrono::steady_clock::now() +
+                                std::chrono::milliseconds(ZWDFS_FLOW_DELAY_BETWEEN_RETRIES_MSEC);
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_SET_CHANNEL_REQUEST);
+            break;
         }
         break;
     }
