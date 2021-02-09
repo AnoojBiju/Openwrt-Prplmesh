@@ -2250,8 +2250,9 @@ bool Controller::handle_cmdu_1905_topology_response(const std::string &src_mac,
         const auto media_type_group = media_type >> 8;
 
         interface_macs.push_back(iface_mac);
+
         // TODO Name and Status of Interface should be add
-        database.dm_add_interface_element(al_mac, iface_mac, media_type);
+        database.add_interface(al_mac, iface_mac, media_type);
 
         // For wireless interface it is defined on IEEE 1905.1 that the size of the media info
         // is n=10 octets, which the size of s802_11SpecificInformation struct.
