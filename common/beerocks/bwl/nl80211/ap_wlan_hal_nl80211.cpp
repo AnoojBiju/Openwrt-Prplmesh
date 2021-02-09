@@ -598,8 +598,8 @@ bool ap_wlan_hal_nl80211::update_vap_credentials(
                 LOG(DEBUG) << "Autoconfiguration for ssid: " << bss_it->ssid
                            << " auth_type: " << auth_type << " encr_type: " << enc_type
                            << " network_key: " << bss_it->network_key
-                           << " fronthaul=" << beerocks::string_utils::bool_str(bss_it->fronthaul)
-                           << " backhaul=" << beerocks::string_utils::bool_str(bss_it->backhaul);
+                           << " fronthaul: " << beerocks::string_utils::bool_str(bss_it->fronthaul)
+                           << " backhaul: " << beerocks::string_utils::bool_str(bss_it->backhaul);
 
                 conf.set_create_vap_value(vap, "ssid", bss_it->ssid);
                 conf.set_create_vap_value(vap, "wps_state", bss_it->fronthaul ? "2" : "");
