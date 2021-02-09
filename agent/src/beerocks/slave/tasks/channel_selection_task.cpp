@@ -296,8 +296,21 @@ void ChannelSelectionTask::handle_vs_csa_notification(
                 auto external_channel_switch =
                     (m_zwdfs_state != eZwdfsState::WAIT_FOR_PRIMARY_RADIO_CSA_NOTIFICATION);
 
-                abort_zwdfs_flow(external_channel_switch);
-                return;
+                if (external_channel_switch) {
+                    abort_zwdfs_flow(true);
+                    return;
+                } else {
+                    // When clearing the next-best-channel - if CAC fails we try again on the next-next-best-channel.
+                    // The general case expects the next channel to also be a DFS channel so we do not release the antenna just yet.
+                    // In case the next-next-best-channel will be non-DFS, we need to make sure to release the antenna when flow completes.
+                    if (m_zwdfs_ant_in_use) {
+                        LOG(DEBUG) << "Release ZWDFS antenna in use";
+                        ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+                    } else {
+                        ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+                    }
+                    return;
+                }
             }
         }
     }
@@ -448,8 +461,8 @@ void ChannelSelectionTask::handle_vs_dfs_cac_completed_notification(
         auto db                                   = AgentDB::get();
         db->statuses.zwdfs_cac_remaining_time_sec = 0;
         if (notification->params().success != 1) {
-            LOG(ERROR) << "CAC has failed!";
-            ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+            LOG(ERROR) << "CAC has failed! Trying next-best-channel";
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::REQUEST_CHANNELS_LIST);
             return;
         }
         ZWDFS_FSM_MOVE_STATE(eZwdfsState::SWITCH_CHANNEL_PRIMARY_RADIO);
@@ -482,13 +495,37 @@ void ChannelSelectionTask::handle_vs_zwdfs_ant_channel_switch_response(
                << sender_iface_name;
 
     if (m_zwdfs_state == eZwdfsState::WAIT_FOR_ZWDFS_SWITCH_ANT_OFF_RESPONSE) {
-        m_zwdfs_ant_in_use = false;
-        ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+        if (notification->success()) {
+            m_zwdfs_ant_in_use = false;
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            return;
+        }
+
+        LOG(ERROR) << "Failed to switch ZWDFS antenna off";
+
+        if (m_retry_counter >= ZWDFS_FLOW_MAX_RETRIES) {
+            LOG(WARNING) << "Release the antenna max retries(" << ZWDFS_FLOW_MAX_RETRIES
+                         << ") is reached, aborting.";
+            m_next_retry_time = std::chrono::steady_clock::now();
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            return;
+        }
+
+        // increase retry counter
+        ++m_retry_counter;
+
+        LOG(DEBUG) << "Retry release the antenna within " << ZWDFS_FLOW_DELAY_BETWEEN_RETRIES_MSEC
+                   << " milliseconds";
+        m_next_retry_time = std::chrono::steady_clock::now() +
+                            std::chrono::milliseconds(ZWDFS_FLOW_DELAY_BETWEEN_RETRIES_MSEC);
+        // Retry to switch antenna off
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+        return;
     }
 
     // Get here after switching on the ZWDFS antenna.
     if (!notification->success()) {
-        LOG(ERROR) << "Failed to switch ZWDFS antenna and channel";
+        LOG(ERROR) << "Failed to switch ZWDFS antenna on and into channel";
         m_zwdfs_ant_in_use = true;
         ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
     }
@@ -582,6 +619,7 @@ void ChannelSelectionTask::zwdfs_fsm()
 {
     switch (m_zwdfs_state) {
     case eZwdfsState::NOT_RUNNING: {
+        m_retry_counter = 0;
         break;
     }
     case eZwdfsState::REQUEST_CHANNELS_LIST: {
@@ -630,6 +668,7 @@ void ChannelSelectionTask::zwdfs_fsm()
         if (m_selected_channel.channel == 0) {
             LOG(ERROR) << "Error occurred on second best channel selection";
             ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            break;
         }
 
         auto db = AgentDB::get();
@@ -673,7 +712,12 @@ void ChannelSelectionTask::zwdfs_fsm()
         if (m_selected_channel.channel == radio->channel &&
             m_selected_channel.bw == radio->bandwidth) {
             LOG(DEBUG) << "Failsafe is already second best channel, abort ZWDFS flow";
-            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            if (m_zwdfs_ant_in_use) {
+                LOG(DEBUG) << "Release ZWDFS antenna in use";
+                ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+            } else {
+                ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            }
             break;
         }
 
@@ -822,6 +866,12 @@ void ChannelSelectionTask::zwdfs_fsm()
         break;
     }
     case eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST: {
+
+        // Wait between retries if needed
+        if (std::chrono::steady_clock::now() < m_next_retry_time) {
+            break;
+        }
+
         // Block switching back 2.4G antenna if its radio is during background scan.
         if (radio_scan_in_progress(eFreqType::FREQ_24G)) {
             break;
@@ -861,7 +911,7 @@ void ChannelSelectionTask::zwdfs_fsm()
     }
     case eZwdfsState::WAIT_FOR_ZWDFS_SWITCH_ANT_OFF_RESPONSE: {
         if (std::chrono::steady_clock::now() > m_zwdfs_fsm_timeout) {
-            LOG(ERROR) << "Reached timeout waiting for ZWDFS_SWITCH_ANT_OFF notification!";
+            LOG(ERROR) << "Reached timeout waiting for ZWDFS_SWITCH_ANT_OFF response!";
             ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
         }
         break;
