@@ -46,6 +46,9 @@ std::ostream &operator<<(std::ostream &out, const fsm_event &value)
     case fsm_event::CAC_REQUEST:
         out << "CAC_REQUEST";
         break;
+    case fsm_event::CAC_TERMINATION:
+        out << "CAC_TERMINATION";
+        break;
     case fsm_event::CHANNEL_LIST_READY:
         out << "CHANNEL_LIST_READY";
         break;
@@ -82,8 +85,10 @@ void CacFsm::reset()
     m_first_switch_channel_request.reset();
     m_second_switch_channel_request.reset();
 
-    m_original_channel   = 0;
-    m_original_bandwidth = eWiFiBandwidth::BANDWIDTH_UNKNOWN;
+    m_original_channel                  = 0;
+    m_original_bandwidth                = eWiFiBandwidth::BANDWIDTH_UNKNOWN;
+    m_original_center_frequency         = 0;
+    m_original_secondary_channel_offset = 0;
 
     m_max_wait_for_switch_channel = DEFAULT_MAX_WAIT_FOR_SWITCH_CHANNEL;
     m_max_wait_for_channel_list   = DEFAULT_MAX_WAIT_FOR_CHANNEL_LIST;
@@ -209,8 +214,10 @@ void CacFsm::config_fsm()
                         m_cac_request_radio.operating_class);
 
                 // save current channel - to know where to switch back if needed
-                m_original_channel   = db_radio->channel;
-                m_original_bandwidth = db_radio->bandwidth;
+                m_original_channel                  = db_radio->channel;
+                m_original_bandwidth                = db_radio->bandwidth;
+                m_original_center_frequency         = db_radio->vht_center_frequency;
+                m_original_secondary_channel_offset = db_radio->channel_ext_above_primary ? 1 : -1;
 
                 // save the time point we started the switch channel
                 m_switch_channel_start_time_point = std::chrono::steady_clock::now();
@@ -236,6 +243,9 @@ void CacFsm::config_fsm()
 
         // it is ok to receive this event, we just stay in the same state
         .on(fsm_event::CHANNEL_LIST_READY, fsm_state::IDLE)
+
+        // nothing to terminate
+        .on(fsm_event::CAC_TERMINATION, fsm_state::IDLE)
 
         /////////////////////////////////////////
         ////// WAIT_FOR_CHANNEL_LIST_READY //////
@@ -286,8 +296,10 @@ void CacFsm::config_fsm()
                         m_cac_request_radio.operating_class);
 
                 // save current channel - to know where to switch back if needed
-                m_original_channel   = db_radio->channel;
-                m_original_bandwidth = db_radio->bandwidth;
+                m_original_channel                  = db_radio->channel;
+                m_original_bandwidth                = db_radio->bandwidth;
+                m_original_center_frequency         = db_radio->vht_center_frequency;
+                m_original_secondary_channel_offset = db_radio->channel_ext_above_primary ? 1 : -1;
 
                 // save the time point we started the switch channel
                 m_switch_channel_start_time_point = std::chrono::steady_clock::now();
@@ -318,6 +330,10 @@ void CacFsm::config_fsm()
                 // returning false means "stay in the same state"
                 return false;
             })
+
+        // while waiting for channel list we were requested to teminate
+        // the cac. we simply switch to IDLE.
+        .on(fsm_event::CAC_TERMINATION, fsm_state::IDLE)
 
         /////////////////////////////////////////
         //// WAIT_FOR_SWITCH_CHANNEL_REPORT_I ///
@@ -420,6 +436,81 @@ void CacFsm::config_fsm()
                 return false;
             })
 
+        .on(fsm_event::CAC_TERMINATION, fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT_II,
+            [&](TTransition &transition, const void *args) -> bool {
+                m_cac_termination =
+                    *(reinterpret_cast<std::shared_ptr<wfa_map::tlvProfile2CacTermination> *>(
+                        const_cast<void *>(args)));
+                if (!m_cac_termination) {
+                    LOG(ERROR) << "null cac termination. ignoring";
+                    return false;
+                }
+
+                // validate that the termination refers to the running cac request
+                auto termination_cac_radio = m_cac_termination->cac_radios(0);
+                if (!std::get<0>(termination_cac_radio)) {
+                    LOG(ERROR) << "empty cac termination. ignoring";
+                    return false;
+                }
+
+                auto request_cac_radio = m_cac_request->cac_radios(0);
+                if (!std::get<0>(request_cac_radio)) {
+                    LOG(ERROR) << "empty cac request. ignoring";
+                    return false;
+                }
+
+                bool termination_on_active_request =
+                    std::get<1>(termination_cac_radio).operating_class ==
+                        std::get<1>(request_cac_radio).operating_class &&
+                    std::get<1>(termination_cac_radio).channel ==
+                        std::get<1>(request_cac_radio).channel;
+
+                if (!termination_on_active_request) {
+                    LOG(WARNING) << "requested cac termination not on the active request. ignoring";
+                    return false;
+                }
+
+                // 2. send stop-cac request to the driver
+
+                // save the time point we asked for stopping the cac
+                m_terminate_cac_start_time_point = std::chrono::steady_clock::now();
+
+                // create cancel cac request
+                auto cancel_cac_request = message_com::create_vs_message<
+                    beerocks_message::cACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC>(m_cmdu_tx);
+                if (!cancel_cac_request) {
+                    LOG(ERROR) << "Failed to build cancel cac message";
+                    return false;
+                }
+
+                cancel_cac_request->cs_params().channel              = m_original_channel;
+                cancel_cac_request->cs_params().bandwidth            = m_original_bandwidth;
+                cancel_cac_request->cs_params().vht_center_frequency = m_original_center_frequency;
+                cancel_cac_request->cs_params().channel_ext_above_primary =
+                    m_original_secondary_channel_offset;
+
+                // find fd using the if-name
+                int ifname_fd = m_backhaul_manager.front_iface_name_to_socket(m_ifname);
+
+                if (ifname_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
+                    LOG(ERROR) << "can't find a socket for front interface name: " << m_ifname;
+                    transition.change_destination(fsm_state::ERROR);
+
+                    return true;
+                }
+
+                // send the cmdu using the fd
+                bool cmdu_sent = m_backhaul_manager.send_cmdu(ifname_fd, m_cmdu_tx);
+                if (!cmdu_sent) {
+                    LOG(ERROR) << "Failed to send cancel cac request";
+                    transition.change_destination(fsm_state::ERROR);
+                    return true;
+                }
+
+                // moving to next state: WAIT_FOR_SWITCH_CHANNEL_REPORT_II
+                return true;
+            })
+
         .on(fsm_event::CHANNEL_LIST_READY, fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT_I)
 
         //////////////////////////////////////////
@@ -458,6 +549,7 @@ void CacFsm::config_fsm()
             })
 
         .on(fsm_event::CHANNEL_LIST_READY, fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT_II)
+        .on(fsm_event::CAC_TERMINATION, fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT_II)
 
         //////////////
         //// ERROR ///
@@ -466,7 +558,8 @@ void CacFsm::config_fsm()
 
         // for now - just going back to idle
         .on(fsm_event::PERIODIC, fsm_state::IDLE)
-        .on(fsm_event::CHANNEL_LIST_READY, fsm_state::ERROR);
+        .on(fsm_event::CHANNEL_LIST_READY, fsm_state::ERROR)
+        .on(fsm_event::CAC_TERMINATION, fsm_state::ERROR);
 
     start();
 }
@@ -537,6 +630,13 @@ bool CacFsm::is_timeout_waiting_for_channel_list()
     // check channel list timeout
     return (std::chrono::steady_clock::now() - m_channel_list_start_time_point) >
            m_max_wait_for_channel_list;
+}
+
+bool CacFsm::is_timeout_waiting_for_cac_termination()
+{
+    // check cac termination timeout
+    return (std::chrono::steady_clock::now() - m_terminate_cac_start_time_point) >
+           m_max_wait_for_cac_termination;
 }
 
 void CacFsm::db_store_cac_status(std::shared_ptr<sSwitchChannelReport> switch_channel_report)
@@ -716,6 +816,22 @@ bool CacTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_ind
         m_fsm.fire(fsm_event::CAC_REQUEST, reinterpret_cast<const void *>(&cac_request_tlv));
     } break;
 
+    case ieee1905_1::eMessageType::CAC_TERMINATION_MESSAGE: {
+        const auto mid           = cmdu_rx.getMessageId();
+        auto cac_termination_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2CacTermination>();
+        if (!cac_termination_tlv) {
+            LOG(ERROR) << "CAC TERMINATION CMDU mid=" << std::hex << mid
+                       << " does not have profile 2 cac itermination TLV";
+            return true;
+        }
+        // send ACK to the controller
+        bool ack_sent = m_backhaul_manager.send_ack_to_controller(m_cmdu_tx, mid);
+        LOG(DEBUG) << "Ack was sent to controller? " << std::boolalpha << ack_sent;
+
+        // let the fsm handle the termination
+        m_fsm.fire(fsm_event::CAC_TERMINATION,
+                   reinterpret_cast<const void *>(&cac_termination_tlv));
+    } break;
     default: {
         return false;
     }
