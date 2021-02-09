@@ -531,7 +531,23 @@ void ChannelSelectionTask::handle_vs_zwdfs_ant_channel_switch_response(
     if (!notification->success()) {
         LOG(ERROR) << "Failed to switch ZWDFS antenna on and into channel";
         m_zwdfs_ant_in_use = true;
-        ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+
+        if (m_retry_counter >= ZWDFS_FLOW_MAX_RETRIES) {
+            LOG(ERROR) << "Too many retries switching ZWDFS antenna on and into channel ("
+                       << int(ZWDFS_FLOW_MAX_RETRIES) << "), aborting.";
+            m_next_retry_time = std::chrono::steady_clock::now();
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+            return;
+        }
+
+        // Retry ZWDFS_SWITCH_ANT_SET_CHANNEL_REQUEST
+        ++m_retry_counter;
+        LOG(DEBUG) << "zw-dfs flow retry (" << m_retry_counter << "/" << int(ZWDFS_FLOW_MAX_RETRIES)
+                   << ")";
+        m_next_retry_time = std::chrono::steady_clock::now() +
+                            std::chrono::milliseconds(ZWDFS_FLOW_DELAY_BETWEEN_RETRIES_MSEC);
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_SET_CHANNEL_REQUEST);
+        return;
     }
 }
 
