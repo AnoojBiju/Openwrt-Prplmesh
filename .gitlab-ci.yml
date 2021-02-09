@@ -189,13 +189,6 @@ build-in-docker-static:
     EXTRA_CMAKE_FLAGS: "-DBUILD_SHARED_LIBS=OFF"
   rules: *expensive-job
 
-build-for-nec-wx3000hp:
-  extends: .build-for-openwrt
-  variables:
-    TARGET_DEVICE: "nec-wx3000hp"
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
-
 tlvf_test:
   extends: .run-test-in-docker
 
