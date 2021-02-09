@@ -56,6 +56,7 @@ struct sScanCfgParamsBG_legacy {
 struct sScanCfgParamsBG : sScanCfgParamsBG_legacy {
     unsigned int window_slice;
     unsigned int window_slice_overlap;
+    unsigned int cts_to_self_duration;
 };
 
 constexpr size_t ScanCfgParams_size         = sizeof(sScanCfgParams);
