@@ -691,7 +691,19 @@ void ChannelSelectionTask::zwdfs_fsm()
         m_selected_channel = select_best_usable_channel(m_zwdfs_primary_radio_iface);
         if (m_selected_channel.channel == 0) {
             LOG(ERROR) << "Error occurred on second best channel selection";
-            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            if (m_retry_counter >= ZWDFS_FLOW_MAX_RETRIES) {
+                LOG(WARNING) << "Too many retries getting ....(" << ZWDFS_FLOW_MAX_RETRIES
+                             << "), aborting.";
+                m_next_retry_time = std::chrono::steady_clock::now();
+                ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+                break;
+            }
+
+            // Retry REQUEST_CHANNELS_LIST
+            ++m_retry_counter;
+            m_next_retry_time = std::chrono::steady_clock::now() +
+                                std::chrono::milliseconds(ZWDFS_FLOW_DELAY_BETWEEN_RETRIES_MSEC);
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::REQUEST_CHANNELS_LIST);
             break;
         }
 
