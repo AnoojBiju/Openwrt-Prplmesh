@@ -302,7 +302,11 @@ def _docker_wait_for_log(container: str, programs: [str], regex: str, start_line
         return (False, start_line, None)
 
 
-def _device_wait_for_log(device: None, log_path: str, regex: str,
+# Temporary workaround
+# Since we have multiple log files that correspond to a radio, multiple log files are passed
+# as argument. In the log messages, we only use the first one.
+# This should be reverted again as part of Unified Agent.
+def _device_wait_for_log(device: None, log_paths: [str], regex: str,
                          timeout: int, start_line: int = 0):
     """Waits for log matching regex expression to show up."""
     # Interrupt any running command:
@@ -311,14 +315,15 @@ def _device_wait_for_log(device: None, log_path: str, regex: str,
     # the last one. Doing this will make sure we don't keep old data
     # in the buffer.
     device.expect(['{}$'.format(device.prompt), pexpect.TIMEOUT, pexpect.EOF])
-    device.sendline("tail -f -n +{:d} {}".format(start_line + 1, log_path))
+    device.sendline("tail -f -n +{:d} {}".format(start_line + 1, " ".join(log_paths)))
     device.expect(regex, timeout=timeout)
     match = device.match.group(0)
     # Send Ctrl-C to interrupt tail -f
     device.send('\003')
     device.expect(device.prompt)
     if match:
-        device.sendline("tail -n +{:d} {} | grep -n \"{}\"".format(start_line, log_path, match))
+        device.sendline("tail -n +{:d} {} | grep -n \"{}\"".format(start_line, " ".join(log_paths),
+                                                                   match))
         # Typical output of grep -n from log: "line_num:severity"
         # this regex has to capture just number of line in log
         device.expect(r"(?P<line_number>[0-9]+):[A-Z]+\s[0-9]", timeout=timeout)
@@ -592,7 +597,7 @@ class ALEntityPrplWrt(ALEntity):
         program = "controller" if self.is_controller else "agent"
         # Multiply timeout by 100, as test sets it in float.
         return _device_wait_for_log(self.device,
-                                    "{}/beerocks_{}.log".format(self.log_folder, program),
+                                    ["{}/beerocks_{}.log".format(self.log_folder, program)],
                                     regex, timeout, start_line)
 
     def nbapi_command(self, path: str, command: str, args: Dict = None) -> Dict:
@@ -630,9 +635,14 @@ class RadioHostapd(Radio):
     def wait_for_log(self, regex: str, start_line: int, timeout: float,
                      fail_on_mismatch: bool = True):
         ''' Poll the Radio's logfile until it match regular expression '''
+
+        log_files = [
+            "{}/beerocks_agent_{}.log".format(self.log_folder, self.iface_name),
+            "{}/beerocks_ap_manager_{}.log".format(self.log_folder, self.iface_name)
+        ]
+
         # Multiply timeout by 100, as test sets it in float.
-        return _device_wait_for_log(self.agent.device, "{}/beerocks_agent_{}.log".format(
-            self.log_folder, self.iface_name), regex, timeout, start_line)
+        return _device_wait_for_log(self.agent.device, log_files, regex, timeout, start_line)
 
     def get_mac(self, iface: str) -> str:
         """Return mac of specified iface"""
