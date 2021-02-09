@@ -171,6 +171,10 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
         }
     }
 
+    if (!add_profile2_ap_capability_tlv(m_cmdu_tx)) {
+        return;
+    }
+
     // 2. The tlvs created here are defined in the
     // specification as "One" (multi-ap specification v2, 17.1.7).
     // the one tlv may contain information about few radios
@@ -440,6 +444,32 @@ bool CapabilityReportingTask::add_cac_capabilities_tlv()
             return false;
         }
     }
+    return true;
+}
+
+bool CapabilityReportingTask::add_profile2_ap_capability_tlv(ieee1905_1::CmduMessageTx &cmdu_tx)
+{
+    auto profile2_ap_capability_tlv = cmdu_tx.addClass<wfa_map::tlvProfile2ApCapability>();
+    if (!profile2_ap_capability_tlv) {
+        LOG(ERROR) << "Failed building message!";
+        return false;
+    }
+    // If the Multi-AP Agent onboards to a Multi-AP Controller that implements Profile-1, the
+    // Multi-AP Agent shall set the Byte Counter Units field to 0x00 (bytes) and report the
+    // values of the BytesSent and BytesReceived fields in the Associated STA Traffic Stats TLV
+    // in bytes. Currently we send it on bytes unit, so set it to bytes.
+    profile2_ap_capability_tlv->capabilities_bit_field().byte_counter_units =
+        wfa_map::tlvProfile2ApCapability::eByteCounterUnits::BYTES;
+
+    auto db = AgentDB::get();
+
+    // Calculate max total number of VLANs which can be configured on the Agent, and save it on
+    // on the AgentDB.
+    db->traffic_separation.max_number_of_vlans_ids =
+        db->get_radios_list().size() * eBeeRocksIfaceIds::IFACE_TOTAL_VAPS;
+
+    profile2_ap_capability_tlv->max_total_number_of_vids() =
+        db->traffic_separation.max_number_of_vlans_ids;
     return true;
 }
 
