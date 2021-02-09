@@ -354,7 +354,21 @@ void ChannelSelectionTask::handle_vs_csa_error_notification(
         }
         LOG(DEBUG) << "Failed to switch channel on " << which_radio << " radio, "
                    << sender_iface_name << ". Reset ZWDFS flow !";
+
+        if (m_retry_counter >= ZWDFS_FLOW_MAX_RETRIES) {
+            LOG(WARNING) << "Too many retries to switch channel (" << ZWDFS_FLOW_MAX_RETRIES
+                         << "), aborting.";
+            m_next_retry_time = std::chrono::steady_clock::now();
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            return;
+        }
+
+        // Retry restarting the ZWDFS flow
+        ++m_retry_counter;
+        m_next_retry_time = std::chrono::steady_clock::now() +
+                            std::chrono::milliseconds(ZWDFS_FLOW_DELAY_BETWEEN_RETRIES_MSEC);
         ZWDFS_FSM_MOVE_STATE(eZwdfsState::REQUEST_CHANNELS_LIST);
+        return;
     }
 }
 
