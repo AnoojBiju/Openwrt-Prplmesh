@@ -290,7 +290,7 @@ void ChannelSelectionTask::handle_vs_csa_notification(
 
                 m_zwdfs_primary_radio_iface = sender_radio->front.iface_name;
                 // Start ZWDFS flow
-                ZWDFS_FSM_MOVE_STATE(eZwdfsState::REQUEST_CHANNELS_LIST);
+                ZWDFS_FSM_MOVE_STATE(eZwdfsState::INIT_ZWDFS_FLOW);
                 return;
             }
         } else if (zwdfs_in_process()) {
@@ -623,7 +623,12 @@ void ChannelSelectionTask::zwdfs_fsm()
 {
     switch (m_zwdfs_state) {
     case eZwdfsState::NOT_RUNNING: {
-        m_retry_counter = 0;
+        break;
+    }
+    case eZwdfsState::INIT_ZWDFS_FLOW: {
+        m_retry_counter   = 0;
+        m_next_retry_time = std::chrono::steady_clock::now();
+        ZWDFS_FSM_MOVE_STATE(eZwdfsState::REQUEST_CHANNELS_LIST);
         break;
     }
     case eZwdfsState::REQUEST_CHANNELS_LIST: {
