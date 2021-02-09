@@ -1453,6 +1453,29 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         message_com::send_cmdu(ap_manager_socket, cmdu_tx);
         break;
     }
+
+    case beerocks_message::ACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC: {
+        LOG(DEBUG) << "received ACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC";
+        auto request_in =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC>();
+        if (!request_in) {
+            LOG(ERROR) << "addClass cACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC failed";
+            return false;
+        }
+
+        auto request_out = message_com::create_vs_message<
+            beerocks_message::cACTION_APMANAGER_HOSTAP_CANCEL_ACTIVE_CAC>(cmdu_tx);
+        if (!request_out) {
+            LOG(ERROR) << "Failed building message!";
+            return false;
+        }
+
+        LOG(DEBUG) << "send cACTION_APMANAGER_HOSTAP_CANCEL_ACTIVE_CAC";
+        request_out->cs_params() = request_in->cs_params();
+        message_com::send_cmdu(ap_manager_socket, cmdu_tx);
+        break;
+    }
     case beerocks_message::ACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST: {
         LOG(TRACE) << "Received ACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST";
         auto request_in = beerocks_header->addClass<
