@@ -48,6 +48,14 @@
     - docker-build
   needs: []
 
+.build-for-openwrt-mmx:
+  when: manual
+  extends: .build-for-openwrt
+  script:
+    - mkdir -p "build/$TARGET_DEVICE"
+    - tools/docker/builder/openwrt/build.sh --verbose -d "$TARGET_DEVICE" -t "prplmesh-builder-$TARGET_DEVICE:$CI_COMMIT_SHORT_SHA-$CI_PIPELINE_ID" --mmx 2>&1
+
+
 .build-for-rdkb:
   stage: build
   script:

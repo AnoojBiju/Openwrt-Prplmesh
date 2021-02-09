@@ -25,6 +25,7 @@ usage() {
     echo "      -o|--openwrt-version - the openwrt version to use"
     echo "      -r|--openwrt-repository - the openwrt repository to use"
     echo "      -t|--tag - the tag to use for the builder image"
+    echo "      --mmx - enable mmx as part of builds"
     echo " -d is always required."
     echo ""
     echo "The following environment variables will affect the build:"
@@ -32,6 +33,8 @@ usage() {
     echo "   default: $PRPL_FEED"
     echo " - SAH_FEED: the SAH feed that will be used to install bus agnostic API."
     echo "   default: $SAH_FEED"
+    echo " - MMX_FEED: the MMX feed that will be used to install MMX Web and MMX CLI if option --mmx used."
+    echo "   default: $MMX_FEED"
 
 }
 
@@ -47,6 +50,7 @@ build_image() {
            --build-arg TARGET_PROFILE="$TARGET_PROFILE" \
            --build-arg PRPL_FEED="$PRPL_FEED" \
            --build-arg SAH_FEED="$SAH_FEED" \
+           --build-arg MMX_FEED="$MMX_FEED" \
            --build-arg PRPLMESH_VARIANT="$PRPLMESH_VARIANT" \
            --target="$DOCKER_TARGET_STAGE" \
            "$scriptdir/" \
@@ -89,7 +93,7 @@ main() {
         exit 1
     fi
 
-    if ! OPTS=$(getopt -o 'hvd:io:r:t:' --long help,verbose,target-device:,docker-target-stage:,image,openwrt-version:,openwrt-repository:,tag: -n 'parse-options' -- "$@"); then
+    if ! OPTS=$(getopt -o 'hvd:io:r:t:' --long help,verbose,target-device:,docker-target-stage:,mmx,image,openwrt-version:,openwrt-repository:,tag: -n 'parse-options' -- "$@"); then
         err "Failed parsing options." >&2
         usage
         exit 1
@@ -109,6 +113,7 @@ main() {
             -o | --openwrt-version)    OPENWRT_VERSION="$2"; shift; shift ;;
             -r | --openwrt-repository) OPENWRT_REPOSITORY="$2"; shift; shift ;;
             -t | --tag)                TAG="$2"; shift ; shift ;;
+            --mmx)                     MMX_ENABLE=true; shift ;;
             -- ) shift; break ;;
             * ) err "unsupported argument $1"; usage; exit 1 ;;
         esac
@@ -140,10 +145,15 @@ main() {
             ;;
     esac
 
+    if [ $MMX_ENABLE = true ] ; then
+        MMX_FEED='https://github.com/InangoSystems/feed-mmx.git^3dd041ee090c1cf9de968a1aed0d06e42400eb5d'
+    fi
+
     dbg "OPENWRT_REPOSITORY=$OPENWRT_REPOSITORY"
     dbg "OPENWRT_VERSION=$OPENWRT_VERSION"
     dbg "PRPL_FEED=$PRPL_FEED"
     dbg "SAH_FEED=$SAH_FEED"
+    dbg "MMX_FEED=$MMX_FEED"
     dbg "IMAGE_ONLY=$IMAGE_ONLY"
     dbg "TARGET_DEVICE=$TARGET_DEVICE"
     dbg "TAG=$TAG"
@@ -172,6 +182,7 @@ main() {
     export PRPLMESH_VERSION
     export PRPL_FEED
     export SAH_FEED
+    export MMX_FEED
     export PRPLMESH_VARIANT
 
     build_image "$rootdir/build/$TARGET_DEVICE"

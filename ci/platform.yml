@@ -52,6 +52,26 @@ build-for-axepoint:
   variables:
     TARGET_DEVICE: "axepoint"
 
+build-for-turris-omnia-mmx:
+  extends: .build-for-openwrt-mmx
+  variables:
+    TARGET_DEVICE: "turris-omnia"
+
+build-for-glinet-b1300-mmx:
+  extends: .build-for-openwrt-mmx
+  variables:
+    TARGET_DEVICE: "glinet-b1300"
+
+build-for-netgear-rax40-mmx:
+  extends: .build-for-openwrt-mmx
+  variables:
+    TARGET_DEVICE: "netgear-rax40"
+
+build-for-axepoint-mmx:
+  extends: .build-for-openwrt-mmx
+  variables:
+    TARGET_DEVICE: "axepoint"
+
 test-on-turris-omnia:
   extends: .test-on-target
   variables:
