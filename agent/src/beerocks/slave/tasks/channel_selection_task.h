@@ -99,6 +99,9 @@ private:
     void handle_ap_enable_event(const std::string &iface);
 
     /* ZWDFS */
+    static constexpr int8_t ZWDFS_FLOW_MAX_RETRIES                 = 5;
+    static constexpr int16_t ZWDFS_FLOW_DELAY_BETWEEN_RETRIES_MSEC = 1000;
+
     bool zwdfs_in_process() { return m_zwdfs_state != eZwdfsState::NOT_RUNNING; }
 
     enum eZwdfsState : uint8_t {
@@ -193,6 +196,10 @@ private:
 
     BackhaulManager &m_btl_ctx;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
+
+    uint8_t m_retry_counter = 0;
+    std::chrono::steady_clock::time_point m_next_retry_time =
+        std::chrono::steady_clock::time_point::min(); // way in the past;
 };
 
 } // namespace beerocks
