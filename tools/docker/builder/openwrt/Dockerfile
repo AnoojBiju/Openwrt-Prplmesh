@@ -62,6 +62,9 @@ ENV PRPL_FEED=$PRPL_FEED
 # The feed to use to build HLAPI.
 ARG SAH_FEED
 ENV SAH_FEED=$SAH_FEED
+# optional: the feed to use to build MMX.
+ARG MMX_FEED
+ENV MMX_FEED=$MMX_FEED
 # optional: intel feed to use.
 ARG INTEL_FEED
 ENV INTEL_FEED=$INTEL_FEED
