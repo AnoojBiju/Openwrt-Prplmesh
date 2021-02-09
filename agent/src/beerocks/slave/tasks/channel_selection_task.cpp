@@ -862,7 +862,23 @@ void ChannelSelectionTask::zwdfs_fsm()
     case eZwdfsState::WAIT_FOR_ZWDFS_CAC_COMPLETED: {
         if (std::chrono::steady_clock::now() > m_zwdfs_fsm_timeout) {
             LOG(ERROR) << "Reached timeout waiting for CAC-COMPLETED notification!";
-            ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+
+            if (m_retry_counter >= ZWDFS_FLOW_MAX_RETRIES) {
+                LOG(ERROR) << "Too many retries waiting for CAC_COMPLETED ("
+                           << int(ZWDFS_FLOW_MAX_RETRIES) << "), aborting.";
+                m_next_retry_time = std::chrono::steady_clock::now();
+                ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+                break;
+            }
+
+            // Retry ZWDFS_SWITCH_ANT_SET_CHANNEL_REQUEST
+            ++m_retry_counter;
+            LOG(DEBUG) << "zw-dfs flow retry (" << m_retry_counter << "/"
+                       << int(ZWDFS_FLOW_MAX_RETRIES) << ")";
+            m_next_retry_time = std::chrono::steady_clock::now() +
+                                std::chrono::milliseconds(ZWDFS_FLOW_DELAY_BETWEEN_RETRIES_MSEC);
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_SET_CHANNEL_REQUEST);
+            break;
         }
         auto db = AgentDB::get();
 
