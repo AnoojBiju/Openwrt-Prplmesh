@@ -890,6 +890,12 @@ void ChannelSelectionTask::zwdfs_fsm()
         break;
     }
     case eZwdfsState::SWITCH_CHANNEL_PRIMARY_RADIO: {
+
+        // Wait between retries if needed
+        if (std::chrono::steady_clock::now() < m_next_retry_time) {
+            break;
+        }
+
         auto request = message_com::create_vs_message<
             beerocks_message::cACTION_BACKHAUL_HOSTAP_CHANNEL_SWITCH_ACS_START>(m_cmdu_tx);
         if (!request) {
@@ -928,7 +934,22 @@ void ChannelSelectionTask::zwdfs_fsm()
     case eZwdfsState::WAIT_FOR_PRIMARY_RADIO_CSA_NOTIFICATION: {
         if (std::chrono::steady_clock::now() > m_zwdfs_fsm_timeout) {
             LOG(ERROR) << "Reached timeout waiting for PRIMARY_RADIO_CSA notification!";
-            ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+            if (m_retry_counter >= ZWDFS_FLOW_MAX_RETRIES) {
+                LOG(ERROR) << "Too many retries waiting for PRIMARY_RADIO_CSA_NOTIFICATION ("
+                           << int(ZWDFS_FLOW_MAX_RETRIES) << "), aborting.";
+                m_next_retry_time = std::chrono::steady_clock::now();
+                ZWDFS_FSM_MOVE_STATE(eZwdfsState::ZWDFS_SWITCH_ANT_OFF_REQUEST);
+                break;
+            }
+
+            // Retry SWITCH_CHANNEL_PRIMARY_RADIO
+            ++m_retry_counter;
+            LOG(DEBUG) << "zw-dfs flow retry (" << m_retry_counter << "/"
+                       << int(ZWDFS_FLOW_MAX_RETRIES) << ")";
+            m_next_retry_time = std::chrono::steady_clock::now() +
+                                std::chrono::milliseconds(ZWDFS_FLOW_DELAY_BETWEEN_RETRIES_MSEC);
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::SWITCH_CHANNEL_PRIMARY_RADIO);
+            break;
         }
         break;
     }
