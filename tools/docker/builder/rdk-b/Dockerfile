@@ -82,7 +82,8 @@ RUN git config --global \
 WORKDIR /home/rdk/rdk-b
 
 RUN printf '\033[1;35m%s Cloning RDK-B\n\033[0m' "$(date --iso-8601=seconds --universal)" \
-    && yes | repo init -u https://code.rdkcentral.com/r/manifests -m rdkb-turris-extsrc.xml -b yocto-dunfell-upgrade \
+    && yes | repo init -u https://code.rdkcentral.com/r/reference/manifests \
+                       -m turris-tags/Turris_rdkb_extender_Jan31.xml -b master \
     && repo sync
 
 # Fix a bug in "current" turris setup with meta-rdk-ext
