@@ -61,13 +61,14 @@ protected:
     eUccListenerRunOn m_ucc_listener_run_on = eUccListenerRunOn::NONE;
 
     struct tlv_hex_t {
-        std::string *type   = nullptr;
-        std::string *length = nullptr;
-        std::string *value  = nullptr;
+        std::string type;
+        std::string length;
+        std::string value;
     };
-    static bool get_send_1905_1_tlv_hex_list(std::list<tlv_hex_t> &tlv_hex_list,
-                                             std::unordered_map<std::string, std::string> &params,
-                                             std::string &err_string);
+    static bool
+    get_send_1905_1_tlv_hex_list(std::list<tlv_hex_t> &tlv_hex_list,
+                                 const std::unordered_map<std::string, std::string> &params,
+                                 std::string &err_string);
     // Variables
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
 

@@ -201,7 +201,7 @@ bool controller_ucc_listener::handle_dev_set_config(
         }
 
         wfa_map::eTlvTypeMap type =
-            wfa_map::eTlvTypeMap(std::strtoul((*tlv.type).c_str(), nullptr, 16));
+            wfa_map::eTlvTypeMap(std::strtoul(tlv.type.c_str(), nullptr, 16));
         switch (type) {
         case wfa_map::eTlvTypeMap::TLV_PROFILE2_DEFAULT_802_1Q_SETTINGS: {
             wfa_map::tlvProfile2Default802dotQSettings default_802_1q_tlv(buffer, buffer_length,
