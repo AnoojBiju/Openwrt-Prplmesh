@@ -21,7 +21,7 @@ class Topology(PrplMeshBaseTest):
         mid = controller.dev_send_1905(agent.mac, 0x0002)
         debug("Confirming topology query was received")
         self.check_log(agent,
-                       r"TOPOLOGY_QUERY_MESSAGE.*mid=0x{:x}".format(mid))
+                       r"TOPOLOGY_QUERY_MESSAGE[^\n\r]*mid=0x{:x}".format(mid))
 
     @classmethod
     def teardown_class(cls):
