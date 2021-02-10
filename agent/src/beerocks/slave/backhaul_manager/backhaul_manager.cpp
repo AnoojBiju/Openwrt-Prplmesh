@@ -82,6 +82,11 @@ constexpr auto fsm_timer_period = std::chrono::milliseconds(500);
  */
 constexpr auto backhaul_steering_timeout = std::chrono::milliseconds(10000);
 
+/**
+ * Timeout to process a "dev_reset_default" WFA-CA command.
+ */
+constexpr auto dev_reset_default_timeout = std::chrono::seconds(UCC_REPLY_COMPLETE_TIMEOUT_SEC);
+
 //////////////////////////////////////////////////////////////////////////////
 ////////////////////////// Local Module Definitions //////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -795,31 +800,23 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
     // falling into the "default" case...
 
     // UCC FSM. If UCC is in RESET, we have to stay in (or move to) ENABLED state.
-    if (m_agent_ucc_listener && m_agent_ucc_listener->is_in_reset()) {
-        auto active_hal = get_wireless_hal();
-        if (active_hal) {
-            active_hal->disconnect();
-        }
-
-        // Add wired interface to the bridge
-        // It will be removed later on (dev_set_config) in case of wireless backhaul connection is needed.
-        auto db            = AgentDB::get();
-        auto bridge        = db->bridge.iface_name;
-        auto bridge_ifaces = beerocks::net::network_utils::linux_get_iface_list_from_bridge(bridge);
-        auto eth_iface     = db->ethernet.iface_name;
-        if (std::find(bridge_ifaces.begin(), bridge_ifaces.end(), eth_iface) !=
-            bridge_ifaces.end()) {
-            LOG(INFO) << "The wired interface is already in the bridge";
-        } else {
-            if (!beerocks::net::network_utils::linux_add_iface_to_bridge(bridge, eth_iface)) {
-                LOG(ERROR) << "Failed to add iface '" << eth_iface << "' to bridge '" << bridge
-                           << "' !";
-                return false;
-            }
-        }
-
+    if (m_is_in_reset_state) {
         if (m_eFSMState == EState::ENABLED) {
-            m_agent_ucc_listener->reset_completed();
+            if (!m_dev_reset_default_completed) {
+                // The "dev_reset_default" asynchronous command processing is complete.
+                m_dev_reset_default_completed = true;
+
+                if (m_dev_reset_default_timer !=
+                    beerocks::net::FileDescriptor::invalid_descriptor) {
+                    // Send back second reply to UCC client.
+                    m_agent_ucc_listener->send_async_reply(m_dev_reset_default_fd);
+
+                    // Cancel timer to check if a "dev_reset_default" command handling timed out.
+                    m_timer_manager->remove_timer(m_dev_reset_default_timer);
+                    m_dev_reset_default_timer = beerocks::net::FileDescriptor::invalid_descriptor;
+                }
+            }
+
             // Stay in ENABLE state until onboarding_state will change
             return true;
         } else if (m_eFSMState > EState::ENABLED) {
@@ -858,10 +855,6 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
     // Received Backhaul Enable command
     case EState::ENABLED: {
 
-        std::string selected_backhaul;
-        if (m_agent_ucc_listener) {
-            selected_backhaul = m_agent_ucc_listener->get_selected_backhaul();
-        }
         // If reached here without getting DEV_RESET_DEFAULT from UCC, 'selected_backhaul' will stay
         // empty, and the state machine will not be affected.
 
@@ -912,7 +905,7 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
                 }
             }
             if ((wired_link_state == wan_monitor::ELinkState::eUp) &&
-                (selected_backhaul.empty() || selected_backhaul == DEV_SET_ETH)) {
+                (m_selected_backhaul.empty() || m_selected_backhaul == DEV_SET_ETH)) {
 
                 auto it = std::find(ifaces.begin(), ifaces.end(), db->ethernet.iface_name);
                 if (it == ifaces.end()) {
@@ -927,10 +920,10 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
                 db->backhaul.selected_iface_name = db->ethernet.iface_name;
 
             } else {
-                auto selected_ruid = db->get_radio_by_mac(tlvf::mac_from_string(selected_backhaul),
-                                                          AgentDB::eMacType::RADIO);
+                auto selected_ruid = db->get_radio_by_mac(
+                    tlvf::mac_from_string(m_selected_backhaul), AgentDB::eMacType::RADIO);
 
-                if (!selected_backhaul.empty() && !selected_ruid) {
+                if (!m_selected_backhaul.empty() && !selected_ruid) {
                     LOG(ERROR) << "UCC configured backhaul RUID which is not enabled";
                     // Restart state will update the onboarding status to failure.
                     FSM_MOVE_STATE(RESTART);
@@ -974,7 +967,7 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
                 return false;
             }
 
-            if (!m_agent_ucc_listener->has_received_dev_set_config()) {
+            if (m_selected_backhaul.empty()) {
                 break;
             }
         }
@@ -1651,6 +1644,18 @@ bool BackhaulManager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo> 
                 LOG(ERROR) << "failed creating agent_ucc_listener";
                 return false;
             }
+
+            // Install handlers for WFA-CA received commands
+            beerocks::beerocks_ucc_listener::CommandHandlers handlers;
+            handlers.on_dev_reset_default =
+                [&](int fd, const std::unordered_map<std::string, std::string> &params,
+                    std::string &err_string) {
+                    return handle_dev_reset_default(fd, params, err_string);
+                };
+            handlers.on_dev_set_config =
+                [&](const std::unordered_map<std::string, std::string> &params,
+                    std::string &err_string) { return handle_dev_set_config(params, err_string); };
+            m_agent_ucc_listener->set_handlers(handlers);
         }
 
         LOG(DEBUG) << "ACTION_BACKHAUL_REGISTER_REQUEST sta_iface=" << soc->sta_iface
@@ -3112,12 +3117,10 @@ bool BackhaulManager::set_mbo_assoc_disallow(const sMacAddr &radio_mac, const sM
 
 std::shared_ptr<bwl::sta_wlan_hal> BackhaulManager::get_selected_backhaul_sta_wlan_hal()
 {
-    std::string selected_backhaul = m_agent_ucc_listener->get_selected_backhaul();
-    auto selected_backhaul_it =
-        std::find_if(slaves_sockets.begin(), slaves_sockets.end(),
-                     [&selected_backhaul](std::shared_ptr<sRadioInfo> soc) {
-                         return tlvf::mac_from_string(selected_backhaul) == soc->radio_mac;
-                     });
+    auto selected_backhaul_it = std::find_if(
+        slaves_sockets.begin(), slaves_sockets.end(), [&](const std::shared_ptr<sRadioInfo> &soc) {
+            return tlvf::mac_from_string(m_selected_backhaul) == soc->radio_mac;
+        });
     if (selected_backhaul_it == slaves_sockets.end()) {
         LOG(ERROR) << "Invalid backhaul";
         return nullptr;
@@ -3157,4 +3160,132 @@ std::string BackhaulManager::socket_to_front_iface_name(int fd)
 
     return {};
 }
+
+bool BackhaulManager::handle_dev_reset_default(
+    int fd, const std::unordered_map<std::string, std::string> &params, std::string &err_string)
+{
+    // Certification tests will do "dev_reset_default" multiple times without "dev_set_config" in
+    // between. In that case, do nothing but reply.
+    if (m_is_in_reset_state) {
+        // Send back second reply to UCC client.
+        m_agent_ucc_listener->send_async_reply(fd);
+        return true;
+    }
+
+    // Store socket descriptor to send reply to UCC client when command processing is completed.
+    m_dev_reset_default_fd = fd;
+
+    // Get the HAL for the connected wireless interface and, if any, disconnect the interface
+    auto active_hal = get_wireless_hal();
+    if (active_hal) {
+        active_hal->disconnect();
+    }
+
+    // Add wired interface to the bridge
+    // It will be removed later on (dev_set_config) in case of wireless backhaul connection is needed.
+    auto db            = AgentDB::get();
+    auto bridge        = db->bridge.iface_name;
+    auto bridge_ifaces = beerocks::net::network_utils::linux_get_iface_list_from_bridge(bridge);
+    auto eth_iface     = db->ethernet.iface_name;
+    if (std::find(bridge_ifaces.begin(), bridge_ifaces.end(), eth_iface) != bridge_ifaces.end()) {
+        LOG(INFO) << "The wired interface is already in the bridge";
+    } else {
+        if (!beerocks::net::network_utils::linux_add_iface_to_bridge(bridge, eth_iface)) {
+            LOG(ERROR) << "Failed to add iface '" << eth_iface << "' to bridge '" << bridge
+                       << "' !";
+            return false;
+        }
+    }
+
+    m_dev_reset_default_timer = m_timer_manager->add_timer(
+        std::chrono::duration_cast<std::chrono::milliseconds>(dev_reset_default_timeout),
+        std::chrono::milliseconds::zero(), [&](int fd, beerocks::EventLoop &loop) {
+            m_timer_manager->remove_timer(m_dev_reset_default_timer);
+            m_dev_reset_default_timer = beerocks::net::FileDescriptor::invalid_descriptor;
+
+            LOG(DEBUG) << "dev_reset_default timed out";
+
+            // Do not send any reply to UCC client in case of timeout.
+
+            return true;
+        });
+    if (m_dev_reset_default_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
+        LOG(ERROR) << "Failed to create the dev_reset_default timeout timer";
+        return false;
+    }
+
+    if (m_eFSMState > EState::ENABLED) {
+        FSM_MOVE_STATE(RESTART);
+    }
+
+    m_selected_backhaul           = "";
+    m_is_in_reset_state           = true;
+    m_dev_reset_default_completed = false;
+
+    return true;
+}
+
+bool BackhaulManager::handle_dev_set_config(
+    const std::unordered_map<std::string, std::string> &params, std::string &err_string)
+{
+    if (!m_is_in_reset_state) {
+        err_string = "Command not expected at this moment";
+        return false;
+    }
+
+    if (params.find("bss_info") != params.end()) {
+        err_string = "parameter 'bss_info' is not relevant to the agent";
+        return false;
+    }
+
+    if (params.find("backhaul") == params.end()) {
+        err_string = "parameter 'backhaul' is missing";
+        return false;
+    }
+
+    // Get the selected backhaul specified in received command.
+    auto backhaul = params.at("backhaul");
+    std::transform(backhaul.begin(), backhaul.end(), backhaul.begin(), ::tolower);
+    if (backhaul == DEV_SET_ETH) {
+        // wired backhaul connection.
+        m_selected_backhaul = DEV_SET_ETH;
+    } else {
+        // wireless backhaul connection.
+        // backhaul param must be a radio UID, in hex, starting with 0x
+        sMacAddr backhaul_radio_uid = net::network_utils::ZERO_MAC;
+        const std::string hex_prefix{"0x"};
+        const size_t radio_uid_size = hex_prefix.size() + 2 * sizeof(backhaul_radio_uid.oct);
+        if ((backhaul.substr(0, 2) != hex_prefix) || (backhaul.size() != radio_uid_size) ||
+            backhaul.find_first_not_of("0123456789abcdef", 2) != std::string::npos) {
+            err_string = "parameter 'backhaul' is not 'eth' nor MAC address";
+            return false;
+        }
+        for (size_t idx = 0; idx < sizeof(backhaul_radio_uid.oct); idx++) {
+            backhaul_radio_uid.oct[idx] = std::stoul(backhaul.substr(2 + 2 * idx, 2), 0, 16);
+        }
+        m_selected_backhaul = tlvf::mac_to_string(backhaul_radio_uid);
+
+        // remove wired (ethernet) interface from the bridge
+        auto db            = AgentDB::get();
+        auto bridge        = db->bridge.iface_name;
+        auto bridge_ifaces = beerocks::net::network_utils::linux_get_iface_list_from_bridge(bridge);
+        auto eth_iface     = db->ethernet.iface_name;
+        if (std::find(bridge_ifaces.begin(), bridge_ifaces.end(), eth_iface) !=
+            bridge_ifaces.end()) {
+            if (!beerocks::net::network_utils::linux_remove_iface_from_bridge(bridge, eth_iface)) {
+                LOG(ERROR) << "Failed to remove interface '" << eth_iface << "' from bridge '"
+                           << bridge << "' !";
+                return false;
+            }
+        } else {
+            LOG(INFO) << "Interface '" << eth_iface << "' not found in bridge '" << bridge << "' !";
+        }
+    }
+
+    // Signal to backhaul manager that it can continue onboarding.
+    m_is_in_reset_state = false;
+
+    return true;
+}
+
 } // namespace beerocks
