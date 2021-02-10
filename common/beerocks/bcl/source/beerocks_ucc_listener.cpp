@@ -390,6 +390,12 @@ beerocks_ucc_listener::~beerocks_ucc_listener()
     }
 }
 
+bool beerocks_ucc_listener::send_reply(int fd, const std::string &err_string)
+{
+    return reply_ucc(fd, err_string.empty() ? eWfaCaStatus::COMPLETE : eWfaCaStatus::ERROR,
+                     err_string);
+}
+
 /**
  * @brief Generate WFA-CA reply message and send it.
  * 

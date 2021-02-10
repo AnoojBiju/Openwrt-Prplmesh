@@ -28,9 +28,137 @@ static constexpr std::array<const char *, 2> supported_programs = {"map", "mapr2
 
 class beerocks_ucc_listener {
 public:
+    /**
+     * Error string included in WFA-CA reply when no handler has been set by the application to 
+     * handle received command.
+     */
+    static constexpr auto unhandled_command_error_string = "No handler for command was set";
+
+    /**
+     * @brief Handler function for "dev_reset_default" WFA-CA command.
+     *
+     * @param[in] fd File descriptor of the socket connection the command was received through. The 
+     * second reply to the command must be sent through this connection.
+     * @param[in] params Command parameters.
+     */
+    using DevResetDefaultHandler =
+        std::function<void(int fd, const std::unordered_map<std::string, std::string> &params)>;
+
+    /**
+     * @brief Handler function for "dev_set_config" WFA-CA command.
+     *
+     * @param[in] params Command parameters.
+     * @param[out] err_string Contains an error description if the function fails.
+     * 
+     * @return true on success and false otherwise.
+     */
+    using DevSetConfigHandler = std::function<bool(
+        const std::unordered_map<std::string, std::string> &params, std::string &err_string)>;
+
+    /**
+     * Set of command handler functions, one function to handle each possible WFA-CA command 
+     * received.
+     * Handlers are grouped into a struct to facilitate passing them as a single parameter to the
+     * method used to set the handlers.
+     * Command handlers are optional and if not set for a given command, that command will be 
+     * rejected with an error.
+     */
+    struct CommandHandlers {
+        /**
+         * Handler function called back by the UCC listener to process "dev_reset_default".
+         */
+        DevResetDefaultHandler on_dev_reset_default;
+
+        /**
+         * Handler function called back by the UCC listener to process "dev_set_config".
+         */
+        DevSetConfigHandler on_dev_set_config;
+    };
+
     beerocks_ucc_listener(ieee1905_1::CmduMessageTx &cmdu,
                           std::unique_ptr<beerocks::UccServer> ucc_server);
     virtual ~beerocks_ucc_listener();
+
+    /**
+     * @brief Sets the command handler functions.
+     *
+     * Sets the callback functions to be executed whenever a WFA-CA command is received.
+     * The command handler functions are all optional and if any of them is not set, the 
+     * corresponding command will be rejected with an error.
+     *
+     * @param handlers Command handler functions.
+     */
+    void set_handlers(const CommandHandlers &handlers) { m_handlers = handlers; }
+
+    /**
+     * @brief Clears previously set command handler functions.
+     */
+    void clear_handlers() { m_handlers = {}; }
+
+    /** 
+     * @brief Sends second WFA-CA reply message to UCC client.
+     * 
+     * This method must be invoked when the processing of a WFA-CA command is complete, in order to 
+     * send the second reply to UCC client. 
+     * 
+     * The status code included in the reply is eWfaCaStatus::COMPLETE on success and 
+     * eWfaCaStatus::ERROR otherwise (i.e.: if given error description is not empty).
+     * 
+     * @param[in] fd File descriptor of the socket connection the command was received through. The 
+     * reply to the command will be sent through this connection too.
+     * @param[in] err_string Empty on success and error description otherwise.
+     * 
+     * @return true on success and false otherwise.
+     */
+    bool send_reply(int fd, const std::string &err_string = std::string());
+
+    /**
+     * @brief Calls back handler function for "dev_reset_default" WFA-CA command.
+     *
+     * @param[in] fd File descriptor of the socket connection the command was received through.
+     * @param[in] params Command parameters.
+     * @param[out] err_string Contains an error description if the function fails.
+     * 
+     * @return true on success and false otherwise.
+     */
+    bool handle_dev_reset_default(int fd,
+                                  const std::unordered_map<std::string, std::string> &params,
+                                  std::string &err_string) const
+    {
+        if (!m_handlers.on_dev_reset_default) {
+            err_string = unhandled_command_error_string;
+            return false;
+        }
+
+        m_handlers.on_dev_reset_default(fd, params);
+        return true;
+    }
+
+    /**
+     * @brief Calls back handler function for "dev_set_config" WFA-CA command.
+     *
+     * @param[in] params Command parameters.
+     * @param[out] err_string Contains an error description if the function fails.
+     * 
+     * @return true on success and false otherwise.
+     */
+    bool handle_dev_set_config(const std::unordered_map<std::string, std::string> &params,
+                               std::string &err_string) const
+    {
+        if (!m_handlers.on_dev_set_config) {
+            err_string = unhandled_command_error_string;
+            return false;
+        }
+
+        return m_handlers.on_dev_set_config(params, err_string);
+    }
+
+private:
+    /**
+     * Set of command handler functions that are called back whenever a WFA-CA command is received 
+     * on this listener.
+     */
+    CommandHandlers m_handlers;
 
 protected:
     // Helper functions
