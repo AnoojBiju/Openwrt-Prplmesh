@@ -28,19 +28,15 @@ class DevResetDefaultMultiple(PrplMeshBaseTest):
 
         self.dev.DUT.wired_sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
 
-        previous_line_nb = 0
         for attempt in range(1, 4):
             print("Resetting agent 1")
             agent.ucc_socket.cmd_reply("dev_reset_default,devrole,agent,program,map,type,DUT")
-            print("Checking if it was actually reset (after line {})".format(previous_line_nb + 1))
-            (found, matched_line_nb, _) = self.check_log(agent, "FSM: OPERATIONAL --> RESTART",
-                                                         previous_line_nb + 1)
-            if found:
-                print("Matched at line {}".format(matched_line_nb))
-            if matched_line_nb <= previous_line_nb:
-                self.fail("The agent was not reset on attempt {}".format(attempt))
-            previous_line_nb = matched_line_nb
 
             time.sleep(10)
+            print("Resetting agent 1 twice")
+            agent.ucc_socket.cmd_reply("dev_reset_default,devrole,agent,program,map,type,DUT")
+
+            time.sleep(1)
+            print("Configuring agent 1")
             agent.ucc_socket.cmd_reply("dev_set_config,backhaul,eth")
             time.sleep(10)
