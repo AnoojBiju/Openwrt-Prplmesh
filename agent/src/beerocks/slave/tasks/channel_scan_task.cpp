@@ -25,6 +25,12 @@ using namespace beerocks;
         radio_scan_info->current_state = new_state;                                                \
     })
 
+#define FSM_MOVE_TIMEOUT_STATE(radio_scan_info, new_state, timeout_sec)                            \
+    ({                                                                                             \
+        FSM_MOVE_STATE(radio_scan_info, new_state);                                                \
+        radio_scan_info->timeout = std::chrono::system_clock::now() + timeout_sec;                 \
+    })
+
 /**
  * ToDo: Remove this "default" parameter after PPM-747 is resolved.
  */
@@ -231,7 +237,8 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
         }
 
         LOG(INFO) << "Scan was triggered successfully, wait for RESULTS_READY_NOTIFICATION.";
-        FSM_MOVE_STATE(m_current_scan_info.radio_scan, eState::WAIT_FOR_RESULTS_READY);
+        FSM_MOVE_TIMEOUT_STATE(m_current_scan_info.radio_scan, eState::WAIT_FOR_RESULTS_READY,
+                               SCAN_RESULTS_DUMP_WAIT_TIME);
 
         break;
     }
@@ -252,7 +259,8 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
         if (notification->is_dump() == 0) {
             if (!is_current_scan_in_state(eState::WAIT_FOR_RESULTS_READY)) {
                 LOG(INFO) << "Scan results are ready, wait for RESULTS_DUMP_NOTIFICATION.";
-                FSM_MOVE_STATE(m_current_scan_info.radio_scan, eState::WAIT_FOR_RESULTS_DUMP);
+                FSM_MOVE_TIMEOUT_STATE(m_current_scan_info.radio_scan,
+                                       eState::WAIT_FOR_RESULTS_DUMP, SCAN_RESULTS_DUMP_WAIT_TIME);
             }
             // Todo
         } else {
@@ -266,7 +274,8 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
             }
             LOG(INFO) << "Scan result received, wait for another RESULTS_DUMP_NOTIFICATION or "
                          "SCAN_FINISHED_NOTIFICATION.";
-            FSM_MOVE_STATE(m_current_scan_info.radio_scan, eState::WAIT_FOR_RESULTS_DUMP);
+            FSM_MOVE_TIMEOUT_STATE(m_current_scan_info.radio_scan, eState::WAIT_FOR_RESULTS_DUMP,
+                                   SCAN_RESULTS_DUMP_WAIT_TIME);
         }
         break;
     }
