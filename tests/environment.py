@@ -322,8 +322,9 @@ def _device_wait_for_log(device: None, log_paths: [str], regex: str,
     device.send('\003')
     device.expect(device.prompt)
     if match:
-        device.sendline("tail -n +{:d} {} | grep -n \"{}\"".format(start_line, " ".join(log_paths),
-                                                                   match))
+        device.sendline("tail -n +{:d} {} | grep -a -n \"{}\"".format(start_line,
+                                                                      " ".join(log_paths),
+                                                                      match))
         # Typical output of grep -n from log: "line_num:severity"
         # this regex has to capture just number of line in log
         device.expect(r"(?P<line_number>[0-9]+):[A-Z]+\s[0-9]", timeout=timeout)
