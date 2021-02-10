@@ -104,6 +104,10 @@ typedef struct sWifiChannel {
     int32_t rank              = -1;
     eDfsState dfs_state       = DFS_STATE_MAX;
     sWifiChannel(){};
+    sWifiChannel(uint8_t _channel, uint8_t _channel_bandwidth)
+        : channel(_channel), channel_bandwidth(_channel_bandwidth)
+    {
+    }
     void struct_swap() {}
     void struct_init()
     {
