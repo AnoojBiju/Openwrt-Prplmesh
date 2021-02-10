@@ -93,14 +93,14 @@ private:
 
     struct sOperationalClass {
         uint8_t operating_class;
-        uint8_t channel_list[10];
-        uint8_t channel_list_length;
+        std::vector<uint8_t> channel_list;
         sOperationalClass(uint8_t _operating_class, uint8_t *_channel_list,
                           uint8_t _channel_list_length)
-            : operating_class(_operating_class), channel_list_length(_channel_list_length)
+            : operating_class(_operating_class)
         {
             if (_channel_list) {
-                std::copy_n(_channel_list, _channel_list_length, channel_list);
+                channel_list.insert(channel_list.end(), _channel_list,
+                                    _channel_list + _channel_list_length);
             }
         }
     };

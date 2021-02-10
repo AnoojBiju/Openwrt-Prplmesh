@@ -189,6 +189,7 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
         }
         return true;
     };
+    auto db = AgentDB::get();
 
     /**
      * Since currently we handle only action_ops of action type "ACTION_BACKHAUL", use a single
@@ -208,7 +209,7 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
         }
 
         if (!is_current_scan_running() || !does_current_scan_match_incoming_src(src_mac) ||
-            !is_current_scan_in_state(eState::WAIT_FOR_SCAN_TRIGGERED)) {
+            !is_current_scan_in_state(eState::PENDING_TRIGGER)) {
             return false;
         }
 
@@ -218,6 +219,8 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
             return true;
         }
 
+        FSM_MOVE_TIMEOUT_STATE(m_current_scan_info.radio_scan, eState::WAIT_FOR_SCAN_TRIGGERED,
+                               SCAN_TRIGGERED_WAIT_TIME);
         LOG(INFO) << "scan request was successful for radio (" << src_mac
                   << "). Wait for SCAN_TRIGGERED notification";
         break;
@@ -258,11 +261,12 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
 
         if (notification->is_dump() == 0) {
             if (!is_current_scan_in_state(eState::WAIT_FOR_RESULTS_READY)) {
-                LOG(INFO) << "Scan results are ready, wait for RESULTS_DUMP_NOTIFICATION.";
-                FSM_MOVE_TIMEOUT_STATE(m_current_scan_info.radio_scan,
-                                       eState::WAIT_FOR_RESULTS_DUMP, SCAN_RESULTS_DUMP_WAIT_TIME);
+                return false;
             }
-            // Todo
+
+            LOG(INFO) << "Scan results are ready, wait for RESULTS_DUMP_NOTIFICATION.";
+            FSM_MOVE_TIMEOUT_STATE(m_current_scan_info.radio_scan, eState::WAIT_FOR_RESULTS_DUMP,
+                                   SCAN_RESULTS_DUMP_WAIT_TIME);
         } else {
             if (!is_current_scan_in_state(eState::WAIT_FOR_RESULTS_DUMP)) {
                 return false;
@@ -294,7 +298,7 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
             return false;
         }
 
-        auto radio = AgentDB::get()->get_radio_by_mac(src_mac);
+        auto radio = db->get_radio_by_mac(src_mac);
         if (!radio) {
             return false;
         }
@@ -317,7 +321,7 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
             return false;
         }
 
-        auto radio = AgentDB::get()->get_radio_by_mac(src_mac);
+        auto radio = db->get_radio_by_mac(src_mac);
         if (!radio) {
             break;
         }
@@ -428,7 +432,8 @@ bool ChannelScanTask::trigger_radio_scan(const std::string &radio_iface,
         LOG(DEBUG) << "socket to fronthaul not found: " << radio_iface;
         return false;
     }
-    auto radio = AgentDB::get()->radio(radio_iface);
+    auto db    = AgentDB::get();
+    auto radio = db->radio(radio_iface);
     if (!radio) {
         LOG(ERROR) << "Failed to get radio info from Agent DB for " << radio_iface;
         return false;
@@ -448,9 +453,9 @@ bool ChannelScanTask::trigger_radio_scan(const std::string &radio_iface,
     std::unordered_set<uint8_t> channels_to_be_scanned;
     std::for_each(radio_scan_info->operating_classes.begin(),
                   radio_scan_info->operating_classes.end(),
-                  [&channels_to_be_scanned](const sOperationalClass &op_cls) {
-                      for (uint32_t channel = 0; channel < op_cls.channel_list_length; channel++) {
-                          channels_to_be_scanned.insert(op_cls.channel_list[channel]);
+                  [&channels_to_be_scanned](const sOperationalClass &operating_class) {
+                      for (const uint8_t channel : operating_class.channel_list) {
+                          channels_to_be_scanned.insert(channel);
                       }
                   });
     // Set scan params in CMDU
@@ -486,7 +491,8 @@ bool ChannelScanTask::store_radio_scan_result(const std::shared_ptr<sScanRequest
                                               beerocks_message::sChannelScanResults results)
 {
     LOG(TRACE) << "Handling scan result from " << radio_mac;
-    auto radio = AgentDB::get()->get_radio_by_mac(radio_mac);
+    auto db    = AgentDB::get();
+    auto radio = db->get_radio_by_mac(radio_mac);
     if (!radio) {
         LOG(ERROR) << "Failed to get radio info from Agent DB for " << radio_mac;
         return false;
@@ -582,10 +588,10 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
             LOG(ERROR) << "Failed to get radio_list[" << radio_i << "]. Continuing...";
             continue;
         }
-        auto &radio_list_entry     = std::get<1>(radio_list_tuple);
-        const auto radio_mac       = radio_list_entry.radio_uid();
-        const auto op_cls_list_len = radio_list_entry.operating_classes_list_length();
-        if (op_cls_list_len == 0 && perform_fresh_scan) {
+        auto &radio_list_entry    = std::get<1>(radio_list_tuple);
+        const auto radio_mac      = radio_list_entry.radio_uid();
+        const auto class_list_len = radio_list_entry.operating_classes_list_length();
+        if (class_list_len == 0 && perform_fresh_scan) {
             LOG(ERROR) << "Invalid request! A fresh scan was requested, but no operating classed "
                           "were sent";
             return false;
@@ -600,7 +606,7 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
         LOG(TRACE) << "radio_list[" << radio_i << "]:" << std::endl
                    << "\tRadio iface: " << radio_iface << std::endl
                    << "\tRadio MAC: " << radio_mac << std::endl
-                   << "\tOperating class list length:" << int(op_cls_list_len);
+                   << "\tOperating class list length:" << int(class_list_len);
 
         // Create new radio scan
         auto new_radio_scan = std::shared_ptr<sRadioScan>(new sRadioScan(), [](sRadioScan *ptr) {
@@ -611,30 +617,30 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
         new_radio_scan->current_state = eState::PENDING_TRIGGER;
 
         // Iterate over operating classes
-        for (int op_cls_idx = 0; op_cls_idx < op_cls_list_len; op_cls_idx++) {
-            const auto &op_cls_tuple = radio_list_entry.operating_classes_list(op_cls_idx);
-            if (!std::get<0>(op_cls_tuple)) {
-                LOG(ERROR) << "Failed to get operating class[" << op_cls_idx << "]. Continuing...";
+        for (int class_idx = 0; class_idx < class_list_len; class_idx++) {
+            const auto &class_tuple = radio_list_entry.operating_classes_list(class_idx);
+            if (!std::get<0>(class_tuple)) {
+                LOG(ERROR) << "Failed to get operating class[" << class_idx << "]. Continuing...";
                 continue;
             }
 
-            auto &op_cls_entry    = std::get<1>(op_cls_tuple);
-            const auto op_cls_num = op_cls_entry.operating_class();
-            const auto ch_lst_len = op_cls_entry.channel_list_length();
-            uint8_t *ch_lst_arr   = (ch_lst_len > 0) ? op_cls_entry.channel_list() : nullptr;
+            auto &class_entry    = std::get<1>(class_tuple);
+            const auto class_num = class_entry.operating_class();
+            const auto list_len  = class_entry.channel_list_length();
+            uint8_t *list_arr    = class_entry.channel_list();
 
             std::stringstream ss;
             ss << "[ ";
-            for (int c_idx = 0; c_idx < ch_lst_len; c_idx++) {
-                ss << int(ch_lst_arr[c_idx]) << " ";
+            for (int channel_idx = 0; channel_idx < list_len; channel_idx++) {
+                ss << int(list_arr[channel_idx]) << " ";
             }
             ss << "]";
-            LOG(TRACE) << "Operating class[" << op_cls_idx << "]:" << std::endl
-                       << "\tOperating class : #" << int(op_cls_num) << std::endl
-                       << "\tChannel list length:" << int(ch_lst_len) << std::endl
+            LOG(TRACE) << "Operating class[" << class_idx << "]:" << std::endl
+                       << "\tOperating class : #" << int(class_num) << std::endl
+                       << "\tChannel list length:" << int(list_len) << std::endl
                        << "\tChannel list: " << ss.str() << ".";
 
-            new_radio_scan->operating_classes.emplace_back(op_cls_num, ch_lst_arr, ch_lst_len);
+            new_radio_scan->operating_classes.emplace_back(class_num, list_arr, list_len);
         }
 
         // Add radio scan info to radio scans map in the request
