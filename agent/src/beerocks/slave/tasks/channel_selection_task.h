@@ -106,6 +106,7 @@ private:
 
     enum eZwdfsState : uint8_t {
         NOT_RUNNING,
+        INIT_ZWDFS_FLOW,
         REQUEST_CHANNELS_LIST,
         WAIT_FOR_CHANNELS_LIST,
         CHOOSE_NEXT_BEST_CHANNEL,
@@ -121,6 +122,7 @@ private:
     // clang-format off
     const std::unordered_map<eZwdfsState, std::string, std::hash<int>> m_zwdfs_states_string = {
       { eZwdfsState::NOT_RUNNING,                             "NOT_RUNNING"                             },
+      { eZwdfsState::INIT_ZWDFS_FLOW,                          "INIT_ZWDFS_FLOW"                         },
       { eZwdfsState::REQUEST_CHANNELS_LIST,                   "REQUEST_CHANNELS_LIST"                   },
       { eZwdfsState::WAIT_FOR_CHANNELS_LIST,                  "WAIT_FOR_CHANNELS_LIST"                  },
       { eZwdfsState::CHOOSE_NEXT_BEST_CHANNEL,                "CHOOSE_NEXT_BEST_CHANNEL"                },
