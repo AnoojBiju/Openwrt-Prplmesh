@@ -126,7 +126,8 @@ base_wlan_hal::create_mgmt_frame_notification(const char *mgmt_frame_hex)
         } else if (action_category == eActionCategory::WNM &&
                    action_code == eActionCode::WNM_BSS_TRANS_MGMT_QUERY) {
             mgmt_frame->type = eManagementFrameType::BTM_QUERY;
-        } else if (action_category == eActionCategory::PUBLIC &&
+        } else if ((action_category == eActionCategory::PUBLIC ||
+                    action_category == eActionCategory::PROTECTED_DUAL) &&
                    action_code == eActionCode::ANQP_REQ) {
             mgmt_frame->type = eManagementFrameType::ANQP_REQUEST;
         } else {
