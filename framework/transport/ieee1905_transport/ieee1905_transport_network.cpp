@@ -25,65 +25,6 @@ namespace transport {
 // Use transport messaging classes
 using namespace beerocks::transport::messages;
 
-// helper class to manage socket filter programs (Berkely Socket Filter)
-//
-// Note: I chose to use here the classic BPF implementation. Once all targets move to kernel version >= 3.19
-// this code and the Ieee1905SocketFilter class could be migrated to the extended BPF (eBPF) system - see bpf(2)
-// http://man7.org/linux/man-pages/man2/bpf.2.html
-class Ieee1905SocketFilter {
-public:
-    // create a filter that accepts packets that match the basic transport requirements - see below.
-    // The two addresses are here to specify the AL MAC address and the interface's hardware address
-    Ieee1905SocketFilter(const uint8_t *addr0 = NULL, const uint8_t *addr1 = NULL)
-    {
-        MAPF_WARN_IF(!addr0 && !addr1,
-                     "at least one address should be specified for socket filter.");
-
-        static const uint8_t ieee1905_multicast_address[ETH_ALEN] = {
-            0x01, 0x80, 0xc2, 0x00, 0x00, 0x13}; // 01:80:c2:00:00:13
-
-        // use the IEEE1905 Multicast Address as default value (it is passed by the filter anyway)
-        if (!addr0)
-            addr0 = ieee1905_multicast_address;
-
-        if (!addr1)
-            addr1 = ieee1905_multicast_address;
-
-        filter[4].k = (uint32_t)addr0[2] << 24 | (uint32_t)addr0[3] << 16 |
-                      (uint32_t)addr0[4] << 8 | (uint32_t)addr0[5];
-        filter[6].k = (uint32_t)addr0[0] << 8 | (uint32_t)addr0[1];
-
-        filter[7].k = (uint32_t)addr1[2] << 24 | (uint32_t)addr1[3] << 16 |
-                      (uint32_t)addr1[4] << 8 | (uint32_t)addr1[5];
-        filter[9].k = (uint32_t)addr1[0] << 8 | (uint32_t)addr1[1];
-    }
-
-    const struct sock_fprog &sock_fprog() const { return fprog; }
-
-private:
-    struct sock_filter filter[17] = {
-        // This BPF is designed to accepts the following packets:
-        // - IEEE1905 multicast packets (with IEEE1905 Multicast Address set as destination address)
-        // - LLDP multicast packets (with LLDP Multicast Address as destination address)
-        // - IEEE1905 unicast packets (with either this devices' AL MAC address or the interface's HW address set as destination address)
-        //
-        // generated using: tcpdump -dd '(ether proto 0x893a and (ether dst 01:80:c2:00:00:13 or ether dst 11:22:33:44:55:66 or ether dst 77:88:99:aa:bb:cc)) or (ether proto 0x88cc and ether dst 01:80:c2:00:00:0e)'
-        // the two dummy addresses in this filter 11:22... and 77:88... will be replaced in runtime with the AL MAC address and the interface's HW address
-        //
-        {0x28, 0, 0, 0x0000000c}, {0x15, 0, 8, 0x0000893a}, {0x20, 0, 0, 0x00000002},
-        {0x15, 9, 0, 0xc2000013}, {0x15, 0, 2, 0x33445566}, // 4: replace with AL MAC Addr [2..5]
-        {0x28, 0, 0, 0x00000000}, {0x15, 8, 9, 0x00001122}, // 6: replace with AL MAC Addr [0..1]
-        {0x15, 0, 8, 0x99aabbcc},                           // 7: replace with IF MAC Addr [2..5]
-        {0x28, 0, 0, 0x00000000}, {0x15, 5, 6, 0x00007788}, // 9: replace with IF MAC Addr [0..1]
-        {0x15, 0, 5, 0x000088cc}, {0x20, 0, 0, 0x00000002}, {0x15, 0, 3, 0xc200000e},
-        {0x28, 0, 0, 0x00000000}, {0x15, 0, 1, 0x00000180}, {0x6, 0, 0, 0x0000ffff},
-        {0x6, 0, 0, 0x00000000},
-    };
-
-    struct sock_fprog fprog = {.len    = sizeof(filter) / sizeof(struct sock_filter),
-                               .filter = filter};
-};
-
 void Ieee1905Transport::update_network_interfaces(
     std::map<std::string, NetworkInterface> updated_network_interfaces)
 {
@@ -244,7 +185,6 @@ bool Ieee1905Transport::attach_interface_socket_filter(NetworkInterface &interfa
     // 1st step is to put the interface in promiscuous mode.
     // promiscuous mode is required since we expect to receive packets destined to
     // the AL MAC address (which is different the the interfaces HW address)
-    //
     struct packet_mreq mr = {0};
     mr.mr_ifindex         = if_nametoindex(interface.ifname.c_str());
     mr.mr_type            = PACKET_MR_PROMISC;
@@ -254,14 +194,43 @@ bool Ieee1905Transport::attach_interface_socket_filter(NetworkInterface &interfa
         return false;
     }
 
-    // prepare linux packet filter for this interface
-    struct sock_fprog fprog = Ieee1905SocketFilter(al_mac_addr_, interface.addr).sock_fprog();
+    // This BPF is designed to accepts the following packets:
+    // - IEEE1905 multicast packets (with IEEE1905 Multicast Address [01:80:c2:00:00:13] set as destination address)
+    // - LLDP multicast packets (with LLDP Multicast Address as destination address)
+    // - IEEE1905 unicast packets (with either this devices' AL MAC address or the interface's HW address set as destination address)
+    //
+    // BPF template is generated using the following command:
+    // tcpdump -dd '(ether proto 0x893a and (ether dst 01:80:c2:00:00:13 or ether dst 11:22:33:44:55:66 or ether dst 77:88:99:aa:bb:cc)) or (ether proto 0x88cc and ether dst 01:80:c2:00:00:0e)'
+    //
+    // The two dummy addresses in this filter 11:22... and 77:88... will be replaced in runtime with the AL MAC address and the interface's HW address
+    struct sock_filter code[17] = {
+        {0x28, 0, 0, 0x0000000c}, {0x15, 0, 8, 0x0000893a}, {0x20, 0, 0, 0x00000002},
+        {0x15, 9, 0, 0xc2000013}, {0x15, 0, 2, 0x33445566}, // 4: replace with AL MAC Addr [2..5]
+        {0x28, 0, 0, 0x00000000}, {0x15, 8, 9, 0x00001122}, // 6: replace with AL MAC Addr [0..1]
+        {0x15, 0, 8, 0x99aabbcc},                           // 7: replace with IF MAC Addr [2..5]
+        {0x28, 0, 0, 0x00000000}, {0x15, 5, 6, 0x00007788}, // 9: replace with IF MAC Addr [0..1]
+        {0x15, 0, 5, 0x000088cc}, {0x20, 0, 0, 0x00000002}, {0x15, 0, 3, 0xc200000e},
+        {0x28, 0, 0, 0x00000000}, {0x15, 0, 1, 0x00000180}, {0x6, 0, 0, 0x0000ffff},
+        {0x6, 0, 0, 0x00000000},
+    };
 
-    // attach filter
-    if (setsockopt(interface.fd->getSocketFd(), SOL_SOCKET, SO_ATTACH_FILTER, &fprog,
-                   sizeof(fprog)) == -1) {
-        MAPF_ERR("cannot attach socket filter for FD (" << fd << "), error: \"" << strerror(errno)
-                                                        << "\" (" << errno << ").");
+    // Replace dummy values with AL MAC
+    code[4].k = (uint32_t(al_mac_addr_[2]) << 24) | (uint32_t(al_mac_addr_[3]) << 16) |
+                (uint32_t(al_mac_addr_[4]) << 8) | (uint32_t(al_mac_addr_[5]));
+    code[6].k = (uint32_t(al_mac_addr_[0]) << 8) | (uint32_t(al_mac_addr_[1]));
+
+    // Replace dummy values with the Interface MAC
+    code[7].k = (uint32_t(interface.addr[2]) << 24) | (uint32_t(interface.addr[3]) << 16) |
+                (uint32_t(interface.addr[4]) << 8) | (uint32_t(interface.addr[5]));
+    code[9].k = (uint32_t(interface.addr[0]) << 8) | (uint32_t(interface.addr[1]));
+
+    // BPF filter structure
+    struct sock_fprog bpf = {.len = (sizeof(code) / sizeof((code)[0])), .filter = code};
+
+    // Attach the filter
+    MAPF_DBG("Attaching filter on iface = '" << interface.ifname << "' (" << fd << ")");
+    if (setsockopt(fd, SOL_SOCKET, SO_ATTACH_FILTER, &bpf, sizeof(bpf)) == -1) {
+        MAPF_ERR("Failed attaching filter for '" << interface.ifname << "': " << strerror(errno));
         return false;
     }
 
