@@ -97,7 +97,10 @@ base_wlan_hal::create_mgmt_frame_notification(const char *mgmt_frame_hex)
     mgmt_frame->mac = mgmt_frame_header->header.sa;
 
     // Check the frame subtype and update the frame type accordingly
-    switch (s80211MgmtFrame::eType(mgmt_frame_header->header.frame_control.bits.subtype)) {
+    auto mgmt_frame_subtype =
+        s80211MgmtFrame::eType(mgmt_frame_header->header.frame_control.bits.subtype);
+
+    switch (mgmt_frame_subtype) {
     case s80211MgmtFrame::eType::ASSOC_REQ: {
         mgmt_frame->type = eManagementFrameType::ASSOCIATION_REQUEST;
     } break;
@@ -131,13 +134,15 @@ base_wlan_hal::create_mgmt_frame_notification(const char *mgmt_frame_hex)
                    action_code == eActionCode::ANQP_REQ) {
             mgmt_frame->type = eManagementFrameType::ANQP_REQUEST;
         } else {
-            LOG(DEBUG) << "Received unhandled management action frame. Ignoring.";
+            LOG(DEBUG) << "Received unhandled management action frame (category: "
+                       << int(action_category) << ", code: " << int(action_code) << "). Ignoring.";
             return nullptr;
         }
 
     } break;
     default: {
-        LOG(DEBUG) << "Received unhandled management frame. Ignoring.";
+        LOG(DEBUG) << "Received unhandled management frame (" << int(mgmt_frame_subtype)
+                   << "). Ignoring.";
         return nullptr;
     }
     }
