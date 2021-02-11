@@ -27,8 +27,6 @@ agent_ucc_listener::agent_ucc_listener(BackhaulManager &btl_ctx, ieee1905_1::Cmd
     m_ucc_listener_run_on = eUccListenerRunOn::AGENT;
 }
 
-agent_ucc_listener::~agent_ucc_listener() { m_in_reset = false; }
-
 /**
  * @brief Returns string filled with reply to "DEVICE_GET_INFO" command.
  *
@@ -39,33 +37,6 @@ std::string agent_ucc_listener::fill_version_reply_string()
     auto db = AgentDB::get();
     return std::string("vendor,") + db->device_conf.vendor + std::string(",model,") +
            db->device_conf.model + std::string(",version,") + BEEROCKS_VERSION;
-}
-
-/**
- * @brief Clear configuration on Agent, and initiate onboarding sequence.
- *
- * @return true on success and false otherwise.
- */
-bool agent_ucc_listener::clear_configuration()
-{
-    m_in_reset                = true;
-    m_reset_completed         = false;
-    m_received_dev_set_config = false;
-
-    auto timeout =
-        std::chrono::steady_clock::now() + std::chrono::seconds(UCC_REPLY_COMPLETE_TIMEOUT_SEC);
-
-    while (m_in_reset && (!m_reset_completed)) {
-
-        if (std::chrono::steady_clock::now() > timeout) {
-            LOG(ERROR) << "Reached timeout!";
-            return false;
-        }
-
-        UTILS_SLEEP_MSEC(1000);
-    }
-
-    return m_in_reset;
 }
 
 /**
@@ -258,11 +229,3 @@ bool agent_ucc_listener::handle_dev_set_rfeature(
     }
     return true;
 }
-
-/**
- * @brief Get the selected backhaul which has been received on "DEV_SET_CONFIG" command from UCC.
- *
- * @return std::string "eth" or RUID of selected radio or empty string if "DEV_SET_CONFIG" has not
- * been received.
- */
-std::string agent_ucc_listener::get_selected_backhaul() { return m_selected_backhaul; }

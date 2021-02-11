@@ -175,7 +175,6 @@ protected:
 
     // Virtual functions
     virtual std::string fill_version_reply_string()                                    = 0;
-    virtual bool clear_configuration()                                                 = 0;
     virtual bool send_cmdu_to_destination(ieee1905_1::CmduMessageTx &cmdu_tx,
                                           const std::string &dest_mac = std::string()) = 0;
     virtual bool handle_start_wps_registration(const std::string &band,
