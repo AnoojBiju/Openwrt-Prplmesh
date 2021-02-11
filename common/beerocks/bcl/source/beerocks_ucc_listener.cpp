@@ -962,8 +962,8 @@ bool tlvPrefilledData::add_tlv_from_strings(const beerocks_ucc_listener::tlv_hex
  * @param[out] err_string Contains an error description if the function fails.
  * @return true if successful, false if not.
  */
-bool tlvPrefilledData::add_tlvs_from_list(std::list<beerocks_ucc_listener::tlv_hex_t> &tlv_hex_list,
-                                          std::string &err_string)
+bool tlvPrefilledData::add_tlvs_from_list(
+    const std::list<beerocks_ucc_listener::tlv_hex_t> &tlv_hex_list, std::string &err_string)
 {
     for (const auto &tlv : tlv_hex_list) {
         if (!add_tlv_from_strings(tlv, err_string)) {
