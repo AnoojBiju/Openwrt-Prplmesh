@@ -1784,42 +1784,50 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
             return false;
         }
 
-        auto timeout =
-            std::chrono::steady_clock::now() + std::chrono::seconds(MAX_RADIO_DISBALED_TIMEOUT_SEC);
-        auto notify_disabled = true;
-
-        while (std::chrono::steady_clock::now() < timeout) {
-            if (!ap_wlan_hal->refresh_radio_info()) {
-                LOG(WARNING) << "refresh_radio_info failed!, radio could be disabled";
-                continue;
-            }
-
-            auto state = ap_wlan_hal->get_radio_info().radio_state;
-            if ((state > bwl::eRadioState::DISABLED) && (state != bwl::eRadioState::UNKNOWN)) {
-                notify_disabled = false;
-                break;
-            }
-            UTILS_SLEEP_MSEC(500);
-        }
-
-        if (!notify_disabled) {
-            break;
-        }
-
         auto msg = static_cast<bwl::sHOSTAP_DISABLED_NOTIFICATION *>(data);
         LOG(INFO) << "AP_Disabled on vap_id = " << int(msg->vap_id);
 
-        auto response = message_com::create_vs_message<
-            beerocks_message::cACTION_APMANAGER_HOSTAP_AP_DISABLED_NOTIFICATION>(cmdu_tx);
-        if (response == nullptr) {
-            LOG(ERROR)
-                << "Failed building cACTION_APMANAGER_HOSTAP_AP_DISABLED_NOTIFICATION message!";
-            break;
+        if (msg->vap_id == beerocks::IFACE_RADIO_ID) {
+            auto timeout = std::chrono::steady_clock::now() +
+                           std::chrono::seconds(MAX_RADIO_DISBALED_TIMEOUT_SEC);
+            auto notify_disabled = true;
+
+            while (std::chrono::steady_clock::now() < timeout) {
+                if (!ap_wlan_hal->refresh_radio_info()) {
+                    LOG(WARNING) << "Radio could be temporary disabled, wait grace time "
+                                 << std::chrono::duration_cast<std::chrono::seconds>(
+                                        timeout - std::chrono::steady_clock::now())
+                                        .count()
+                                 << " sec.";
+                    UTILS_SLEEP_MSEC(500);
+                    continue;
+                }
+
+                auto state = ap_wlan_hal->get_radio_info().radio_state;
+                if ((state > bwl::eRadioState::DISABLED) && (state != bwl::eRadioState::UNKNOWN)) {
+                    LOG(DEBUG) << "Radio is not disabled (state=" << state
+                               << "), not forwarding disabled notification.";
+                    notify_disabled = false;
+                    break;
+                }
+                UTILS_SLEEP_MSEC(500);
+            }
+
+            if (!notify_disabled) {
+                break;
+            }
+
+            auto response = message_com::create_vs_message<
+                beerocks_message::cACTION_APMANAGER_HOSTAP_AP_DISABLED_NOTIFICATION>(cmdu_tx);
+            if (response == nullptr) {
+                LOG(ERROR)
+                    << "Failed building cACTION_APMANAGER_HOSTAP_AP_DISABLED_NOTIFICATION message!";
+                break;
+            }
+
+            response->vap_id() = msg->vap_id;
+            message_com::send_cmdu(slave_socket, cmdu_tx);
         }
-
-        response->vap_id() = msg->vap_id;
-        message_com::send_cmdu(slave_socket, cmdu_tx);
-
     } break;
     case Event::Interface_Disabled: {
 
