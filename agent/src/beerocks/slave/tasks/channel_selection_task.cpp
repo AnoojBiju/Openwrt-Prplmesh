@@ -533,7 +533,8 @@ void ChannelSelectionTask::handle_vs_zwdfs_ant_channel_switch_response(
 
         // increase retry counter
         ++m_retry_counter;
-
+        LOG(DEBUG) << "zw-dfs flow retry (" << m_retry_counter << "/" << int(ZWDFS_FLOW_MAX_RETRIES)
+                   << ")";
         LOG(DEBUG) << "Retry release the antenna within " << ZWDFS_FLOW_DELAY_BETWEEN_RETRIES_MSEC
                    << " milliseconds";
         m_next_retry_time = std::chrono::steady_clock::now() +
