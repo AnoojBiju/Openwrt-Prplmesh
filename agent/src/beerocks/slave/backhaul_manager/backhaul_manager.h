@@ -550,6 +550,66 @@ private:
      * Broker client to exchange CMDU messages with broker server running in transport process.
      */
     std::unique_ptr<beerocks::btl::BrokerClient> m_broker_client;
+
+private:
+    /**
+     * @brief Callback handler function for "dev_reset_default" WFA-CA command.
+     *
+     * @param[in] fd File descriptor of the socket connection the command was received through.
+     * @param[in] params Command parameters.
+     */
+    void handle_dev_reset_default(int fd,
+                                  const std::unordered_map<std::string, std::string> &params);
+
+    /**
+     * @brief Callback handler function for "dev_set_config" WFA-CA command.
+     *
+     * @param[in] params Command parameters.
+     * @param[out] err_string Contains an error description if the function fails.
+     * 
+     * @return true on success and false otherwise.
+     */
+    bool handle_dev_set_config(const std::unordered_map<std::string, std::string> &params,
+                               std::string &err_string);
+
+    /** 
+     * Flag meaning that agent is in the reset state. 
+     * 
+     * Agent is held in the reset state from the moment "dev_reset_default" command is received and 
+     * until the "dev_set_config" command is received and processed or a timeout expires. 
+     */
+    bool m_is_in_reset_state = false;
+
+    /** 
+     * Flag meaning that reset is completed.
+     *
+     * The "dev_reset_default" WFA-CA command should only return when reset is completed, i.e. when
+     * the device is ready to accept commands. In particular, when later on a "dev_set_config" is
+     * received, that command should be able to configure the backhaul right away. Therefore, the
+     * "dev_reset_default" command should only return when the backhaul is connected to the slaves
+     * again. This function allows the backhaul to signal that it has reached that state.
+     */
+    bool m_dev_reset_default_completed = false;
+
+    /**
+     * File descriptor of the timer to check if a "dev_reset_default" command handling timed out.
+     */
+    int m_dev_reset_default_timer = beerocks::net::FileDescriptor::invalid_descriptor;
+
+    /**
+     * File descriptor of the socket that the "dev_reset_default" command was received through.
+     * 
+     * The socket descriptor is used to send the reply to UCC client when command processing is 
+     * completed. 
+     */
+    int m_dev_reset_default_fd = beerocks::net::FileDescriptor::invalid_descriptor;
+
+    /**
+     * Selected backhaul received on "dev_set_config" WFA-CA command from UCC client.
+     * Possible values are "eth" for wired backhaul, the RUID of selected radio or empty string if 
+     * "dev_set_config" command has not been received yet.
+     */
+    std::string m_selected_backhaul;
 };
 
 } // namespace beerocks

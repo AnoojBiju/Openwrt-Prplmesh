@@ -20,7 +20,21 @@ controller_ucc_listener::controller_ucc_listener(db &database, ieee1905_1::CmduM
     : beerocks_ucc_listener(cmdu, std::move(ucc_server)), m_database(database)
 {
     m_ucc_listener_run_on = eUccListenerRunOn::CONTROLLER;
+
+    // Install handlers for WFA-CA commands
+    beerocks::beerocks_ucc_listener::CommandHandlers handlers;
+    handlers.on_dev_reset_default =
+        [&](int fd, const std::unordered_map<std::string, std::string> &params) {
+            handle_dev_reset_default(fd, params);
+        };
+    handlers.on_dev_set_config = [&](const std::unordered_map<std::string, std::string> &params,
+                                     std::string &err_string) {
+        return handle_dev_set_config(params, err_string);
+    };
+    set_handlers(handlers);
 }
+
+controller_ucc_listener::~controller_ucc_listener() { clear_handlers(); }
 
 /**
  * @brief Returns string filled with reply to "DEVICE_GET_INFO" command.
@@ -133,16 +147,18 @@ bool controller_ucc_listener::handle_dev_set_rfeature(
     return false;
 }
 
-/**
- * @brief Handle DEV_SET_CONFIG command. Parse the command and save the parameters on the controller
- * database.
- * 
- * @param[in] params Command parameters.
- * @param[out] err_string Contains an error description if the function fails.
- * @return true if successful, false if not.
- */
-bool controller_ucc_listener::handle_dev_set_config_deprecated(
-    std::unordered_map<std::string, std::string> &params, std::string &err_string)
+void controller_ucc_listener::handle_dev_reset_default(
+    int fd, const std::unordered_map<std::string, std::string> &params)
+{
+    // Clear configuration on Controller's database.
+    clear_configuration();
+
+    // Send back second reply to UCC client.
+    send_reply(fd);
+}
+
+bool controller_ucc_listener::handle_dev_set_config(
+    const std::unordered_map<std::string, std::string> &params, std::string &err_string)
 {
     if (params.find("backhaul") != params.end()) {
         err_string = "parameter 'backhaul' is not relevant to the controller";
@@ -160,7 +176,7 @@ bool controller_ucc_listener::handle_dev_set_config_deprecated(
     }
 
     son::wireless_utils::sBssInfoConf bss_info_conf;
-    auto al_mac = parse_bss_info(params[key], bss_info_conf, err_string);
+    auto al_mac = parse_bss_info(params.at(key), bss_info_conf, err_string);
     if (al_mac.empty()) {
         err_string += (" on " + key);
         return false;
@@ -172,7 +188,7 @@ bool controller_ucc_listener::handle_dev_set_config_deprecated(
         m_bss_info_cleared_mac.insert(mac);
     }
 
-    //If SSID is empty, tear down - clear configuraion for this mac.
+    // If SSID is empty, tear down - clear configuration for this mac.
     if (bss_info_conf.ssid.empty()) {
         clear_configuration(mac);
         return true;
