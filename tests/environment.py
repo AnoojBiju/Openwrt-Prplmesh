@@ -307,7 +307,7 @@ def _docker_wait_for_log(container: str, programs: [str], regex: str, start_line
 # as argument. In the log messages, we only use the first one.
 # This should be reverted again as part of Unified Agent.
 def _device_wait_for_log(device: None, log_paths: [str], regex: str,
-                         timeout: int, start_line: int = 0):
+                         timeout: int, start_line: int = 0, fail_on_mismatch = True):
     """Waits for log matching regex expression to show up."""
     # Interrupt any running command:
     device.send('\003')
@@ -321,18 +321,24 @@ def _device_wait_for_log(device: None, log_paths: [str], regex: str,
     # Send Ctrl-C to interrupt tail -f
     device.send('\003')
     device.expect(device.prompt)
-    if match:
-        first_matched_line = match.partition('\r\n')[0]
-        device.sendline("tail -n +{:d} {} | grep -a -n \"{}\"".format(start_line,
-                                                                      " ".join(log_paths),
-                                                                      first_matched_line))
-        # Typical output of grep -n from log: "line_num:severity"
-        # this regex has to capture just number of line in log
-        device.expect(r"(?P<line_number>[0-9]+):[A-Z]+\s[0-9]", timeout=timeout)
-        matched_line = int(device.match.group('line_number')) + start_line
-        return (True, matched_line, match)
-    else:
-        return (False, start_line, None)
+    try:
+        if match:
+            first_matched_line = match.partition('\r\n')[0]
+            device.sendline("tail -n +{:d} {} | grep -a -n \"{}\"".format(start_line,
+                                                                          " ".join(log_paths),
+                                                                          first_matched_line))
+            # Typical output of grep -n from log: "line_num:severity"
+            # this regex has to capture just number of line in log
+            device.expect(r"(?P<line_number>[0-9]+):[A-Z]+\s[0-9]", timeout=timeout)
+            matched_line = int(device.match.group('line_number')) + start_line
+            return (True, matched_line, match)
+        else:
+            return (False, start_line, None)
+    except pexpect.exceptions.TIMEOUT as e:
+        if fail_on_mismatch:
+            raise e
+        else:
+            return (False, start_line, None)
 
 
 class ALEntityDocker(ALEntity):
@@ -600,7 +606,7 @@ class ALEntityPrplWrt(ALEntity):
         # Multiply timeout by 100, as test sets it in float.
         return _device_wait_for_log(self.device,
                                     ["{}/beerocks_{}.log".format(self.log_folder, program)],
-                                    regex, timeout, start_line)
+                                    regex, timeout, start_line, fail_on_mismatch)
 
     def nbapi_command(self, path: str, command: str, args: Dict = None) -> Dict:
         return nbapi_ubus_command(self, path, command, args)
@@ -644,7 +650,8 @@ class RadioHostapd(Radio):
         ]
 
         # Multiply timeout by 100, as test sets it in float.
-        return _device_wait_for_log(self.agent.device, log_files, regex, timeout, start_line)
+        return _device_wait_for_log(self.agent.device, log_files, regex, timeout, start_line,
+                                    fail_on_mismatch)
 
     def get_mac(self, iface: str) -> str:
         """Return mac of specified iface"""
