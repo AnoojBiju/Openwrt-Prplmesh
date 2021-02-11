@@ -141,7 +141,7 @@ bool controller_ucc_listener::handle_dev_set_rfeature(
  * @param[out] err_string Contains an error description if the function fails.
  * @return true if successful, false if not.
  */
-bool controller_ucc_listener::handle_dev_set_config(
+bool controller_ucc_listener::handle_dev_set_config_deprecated(
     std::unordered_map<std::string, std::string> &params, std::string &err_string)
 {
     if (params.find("backhaul") != params.end()) {

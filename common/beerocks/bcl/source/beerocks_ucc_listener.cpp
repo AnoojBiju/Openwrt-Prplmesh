@@ -748,7 +748,7 @@ void beerocks_ucc_listener::handle_wfa_ca_command(int fd, const std::string &com
                 params["first_bss"] = std::string();
                 first               = false;
             }
-            if (!handle_dev_set_config(params, err_string)) {
+            if (!handle_dev_set_config_deprecated(params, err_string)) {
                 break;
             }
         }

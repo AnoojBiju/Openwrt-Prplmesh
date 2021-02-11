@@ -44,14 +44,15 @@ protected:
     virtual bool clear_configuration()                                                 = 0;
     virtual bool send_cmdu_to_destination(ieee1905_1::CmduMessageTx &cmdu_tx,
                                           const std::string &dest_mac = std::string()) = 0;
-    virtual bool handle_dev_set_config(std::unordered_map<std::string, std::string> &params,
-                                       std::string &err_string)                        = 0;
+    virtual bool
+    handle_dev_set_config_deprecated(std::unordered_map<std::string, std::string> &params,
+                                     std::string &err_string)           = 0;
     virtual bool handle_start_wps_registration(const std::string &band,
-                                               std::string &err_string)                = 0;
+                                               std::string &err_string) = 0;
     virtual bool handle_dev_get_param(std::unordered_map<std::string, std::string> &params,
-                                      std::string &value)                              = 0;
+                                      std::string &value)               = 0;
     virtual bool handle_dev_set_rfeature(const std::unordered_map<std::string, std::string> &params,
-                                         std::string &err_string)                      = 0;
+                                         std::string &err_string)       = 0;
 
     enum class eUccListenerRunOn : uint8_t {
         CONTROLLER,

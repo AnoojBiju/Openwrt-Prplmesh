@@ -192,8 +192,8 @@ bool agent_ucc_listener::handle_start_wps_registration(const std::string &band,
  * @param[out] err_string Contains an error description if the function fails.
  * @return true if successful, false if not.
  */
-bool agent_ucc_listener::handle_dev_set_config(std::unordered_map<std::string, std::string> &params,
-                                               std::string &err_string)
+bool agent_ucc_listener::handle_dev_set_config_deprecated(
+    std::unordered_map<std::string, std::string> &params, std::string &err_string)
 {
 
     if (params.find("bss_info") != params.end()) {
