@@ -50,17 +50,55 @@ class MapRadio:
         return "  Radio " + '\n'.join([self.uid] + [str(vap) for vap in self.vaps.values()])
 
 
+class MapNeighbor:
+    '''Represents a Neighbor in the connection map.'''
+
+    def __init__(self, neighbor_mac: str):
+        self.mac = neighbor_mac
+
+    def __str__(self):
+        return "    Neighbor " + self.mac
+
+
+class MapInterface:
+    '''Represents a interface in the connection map.'''
+
+    def __init__(self, mac: str):
+        self.mac = mac
+        self.neighbors = {}
+
+    def add_neighbor(self, neighbor_mac: str):
+        neighbor = MapNeighbor(neighbor_mac)
+        self.neighbors[neighbor_mac] = neighbor
+        return neighbor
+
+    def __str__(self):
+        return "  Interface " + "\n".join(
+            [self.mac] + [str(neighbor) for neighbor in self.neighbors.values()]
+        )
+
+
 class MapDevice:
     '''Represents a device in the connection map.'''
 
     def __init__(self, mac: str):
         self.mac = mac
         self.radios = {}
+        self.interfaces = {}
 
     def add_radio(self, uid: str):
         radio = MapRadio(uid)
         self.radios[uid] = radio
         return radio
 
+    def add_interface(self, mac: str):
+        interface = MapInterface(mac)
+        self.interfaces[mac] = interface
+        return interface
+
     def __str__(self):
-        return "Agent " + '\n'.join([self.mac] + [str(radio) for radio in self.radios.values()])
+        return "Agent " + "\n".join(
+            [self.mac]
+            + [str(radio) for radio in self.radios.values()]
+            + [str(interface) for interface in self.interfaces.values()]
+        )
