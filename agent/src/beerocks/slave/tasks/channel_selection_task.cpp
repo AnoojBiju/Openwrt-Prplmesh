@@ -26,6 +26,10 @@
 
 namespace beerocks {
 
+// Declaration for static class constants
+constexpr int8_t ChannelSelectionTask::ZWDFS_FLOW_MAX_RETRIES;
+constexpr int16_t ChannelSelectionTask::ZWDFS_FLOW_DELAY_BETWEEN_RETRIES_MSEC;
+
 ChannelSelectionTask::ChannelSelectionTask(BackhaulManager &btl_ctx,
                                            ieee1905_1::CmduMessageTx &cmdu_tx)
     : Task(eTaskType::CHANNEL_SELECTION), m_btl_ctx(btl_ctx), m_cmdu_tx(cmdu_tx)
