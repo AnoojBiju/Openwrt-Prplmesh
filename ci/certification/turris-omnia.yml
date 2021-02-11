@@ -4,7 +4,7 @@
   variables:
     RUN_ON_DEVICE: "turris-omnia"
   before_script:
-    - tools/deploy_firmware.py --device turris-omnia --target-name "$RUN_ON_DEVICE" --image openwrt-mvebu-cortexa9-cznic_turris-omnia-sysupgrade.img.gz
+    - tools/deploy_firmware.py --device turris-omnia --target-name "$RUN_ON_DEVICE" --image "$TURRIS_OMNIA_FULLIMAGE"
     - |
       if [ -f tests/certification/$RUN_ON_DEVICE/uci.sh ] ; then
         echo "Applying UCI configuration"

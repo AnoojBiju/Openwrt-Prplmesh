@@ -124,10 +124,10 @@
     - |
       case "$DEVICE_UNDER_TEST" in
           axepoint)
-              IMAGE_NAME=AX3000_1600_ETH_11AXUCI-squashfs-fullimage.img
+              IMAGE_NAME="$AXEPOINT_FULLIMAGE"
           ;;
           turris-omnia)
-              IMAGE_NAME=openwrt-mvebu-cortexa9-cznic_turris-omnia-sysupgrade.img.gz
+              IMAGE_NAME="$TURRIS_OMNIA_FULLIMAGE"
           ;;
           *)
               IMAGE_NAME=''
