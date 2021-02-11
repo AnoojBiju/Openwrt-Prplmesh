@@ -26,11 +26,15 @@ include:
   - local: "/ci/certification/axepoint-bhwifi.yml"
   - local: "/ci/certification/axepoint-controller.yml"
 
-build-for-rdkb-turris-omnia:
-  extends: .build-for-rdkb
-  variables:
-    TARGET_DEVICE: "turris-omnia"
-  retry: 2
+# Temporarily disabled because the build of CSSP started failing.
+# Switching to a tag fails to build as well.
+# See https://gitlab.com/prpl-foundation/prplmesh/prplMesh/-/merge_requests/2143
+# https://jira.prplfoundation.org/browse/PPM-1092
+#build-for-rdkb-turris-omnia:
+#  extends: .build-for-rdkb
+#  variables:
+#    TARGET_DEVICE: "turris-omnia"
+#  retry: 2
 
 build-for-turris-omnia:
   extends: .build-for-openwrt
