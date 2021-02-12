@@ -116,7 +116,7 @@ bool sta_wlan_hal_dwpal::initiate_scan()
     return true;
 }
 
-bool sta_wlan_hal_dwpal::scan_type_only(const sMacAddr &bssid, uint8_t channel)
+bool sta_wlan_hal_dwpal::scan_bss(const sMacAddr &bssid, uint8_t channel)
 {
     if (bssid == beerocks::net::network_utils::ZERO_MAC || channel == 0) {
         LOG(ERROR) << "Invalid parameters";
@@ -130,7 +130,7 @@ bool sta_wlan_hal_dwpal::scan_type_only(const sMacAddr &bssid, uint8_t channel)
     // Start the scan
     if (!dwpal_send_cmd("SCAN TYPE=ONLY freq=" + std::to_string(freq) +
                         " bssid=" + tlvf::mac_to_string(bssid))) {
-        LOG(ERROR) << "scan_type_only - dwpal_send_cmd failed for " << get_iface_name();
+        LOG(ERROR) << "scan_bss - dwpal_send_cmd failed for " << get_iface_name();
         return false;
     }
     return true;
