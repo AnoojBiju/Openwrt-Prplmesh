@@ -334,11 +334,14 @@ def _device_wait_for_log(device: None, log_paths: [str], regex: str,
             return (True, matched_line, match)
         else:
             return (False, start_line, None)
-    except pexpect.exceptions.TIMEOUT as e:
-        if fail_on_mismatch:
-            raise e
-        else:
-            return (False, start_line, None)
+    # except pexpect.exceptions.TIMEOUT as e:
+    #
+    #    if fail_on_mismatch:
+    #        raise e
+    #    else:
+    #        return (False, start_line, None)
+    except Exception as e:
+        raise Exception("Exception name: %s" % type(e).__name__)
 
 
 class ALEntityDocker(ALEntity):
