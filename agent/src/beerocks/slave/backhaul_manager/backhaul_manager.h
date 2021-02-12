@@ -210,13 +210,11 @@ private:
      *        and Error Code.
      *
      * @param error_code One of the error codes presented in wfa_map::tlvErrorCode::eReasonCode.
-     * @param target_bssid The bssid to steer to.
-     *        If empty or ZERO_MAC, the bssid we're currently connected to will be used.
+     * @param target_bssid The target BSSID to steer to.
      * @return True on success and false otherwise
      */
-    bool create_backhaul_steering_response(
-        const wfa_map::tlvErrorCode::eReasonCode &error_code,
-        const sMacAddr &target_bssid = beerocks::net::network_utils::ZERO_MAC);
+    bool create_backhaul_steering_response(wfa_map::tlvErrorCode::eReasonCode error_code,
+                                           const sMacAddr &target_bssid);
 
     // cmdu handlers
     bool handle_master_message(ieee1905_1::CmduMessageRx &cmdu_rx,
