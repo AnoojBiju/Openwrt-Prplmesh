@@ -2363,6 +2363,10 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
                 send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
                                     tlvf::mac_from_string(bridge_info.mac));
 
+                // Steering operation has failed so cancel it to avoid sending a second reply when
+                // timer expires.
+                cancel_backhaul_steering_operation();
+
                 return false;
             }
             // Resetting m_backhaul_steering_bssid is done by a timer.
