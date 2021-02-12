@@ -216,6 +216,11 @@ private:
     bool create_backhaul_steering_response(wfa_map::tlvErrorCode::eReasonCode error_code,
                                            const sMacAddr &target_bssid);
 
+    /**
+     * @brief Cancels on-going backhaul steering operation.
+     */
+    void cancel_backhaul_steering_operation();
+
     // cmdu handlers
     bool handle_master_message(ieee1905_1::CmduMessageRx &cmdu_rx,
                                std::shared_ptr<beerocks_message::cACTION_HEADER> beerocks_header);

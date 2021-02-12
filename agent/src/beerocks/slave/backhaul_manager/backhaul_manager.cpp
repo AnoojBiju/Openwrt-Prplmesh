@@ -2884,6 +2884,15 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
                      << channel << ".";
     }
 
+    // If a timer exists already, it means that there is a steering on-going. What are we supposed
+    // to do in such a case? Send the response for the first request immediately? Or send only a
+    // response for the second request?
+    // This doesn't seem to be specified. Thus, what we do here is OK: only send a response for the
+    // second request.
+    if (m_backhaul_steering_timer != beerocks::net::FileDescriptor::invalid_descriptor) {
+        cancel_backhaul_steering_operation();
+    }
+
     // We should only send a Backhaul Steering Response message with "success" result code if we
     // succeed to associate with the specified BSSID within 10 seconds.
     // Set the channel and BSSID of the target BSS so we can use them later.
@@ -2891,21 +2900,10 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
     m_backhaul_steering_channel = channel;
 
     // Create a timer to check if this Backhaul Steering Request times out.
-    // If a timer exists already, it means that there is a steering on-going. What are we supposed
-    // to do in such a case? Send the response for the first request immediately? Or send only a
-    // response for the second request?
-    // This doesn't seem to be specified. Thus, what we do here is OK: only send a response for the
-    // second request.
-    if (m_backhaul_steering_timer != beerocks::net::FileDescriptor::invalid_descriptor) {
-        m_timer_manager->remove_timer(m_backhaul_steering_timer);
-    }
     m_backhaul_steering_timer = m_timer_manager->add_timer(
         backhaul_steering_timeout, std::chrono::milliseconds::zero(),
         [&](int fd, beerocks::EventLoop &loop) {
-            m_backhaul_steering_bssid   = beerocks::net::network_utils::ZERO_MAC;
-            m_backhaul_steering_channel = 0;
-            m_timer_manager->remove_timer(m_backhaul_steering_timer);
-            m_backhaul_steering_timer = beerocks::net::FileDescriptor::invalid_descriptor;
+            cancel_backhaul_steering_operation();
 
             create_backhaul_steering_response(
                 wfa_map::tlvErrorCode::eReasonCode::
@@ -2984,6 +2982,15 @@ bool BackhaulManager::create_backhaul_steering_response(
     }
 
     return true;
+}
+
+void BackhaulManager::cancel_backhaul_steering_operation()
+{
+    m_backhaul_steering_bssid   = beerocks::net::network_utils::ZERO_MAC;
+    m_backhaul_steering_channel = 0;
+
+    m_timer_manager->remove_timer(m_backhaul_steering_timer);
+    m_backhaul_steering_timer = beerocks::net::FileDescriptor::invalid_descriptor;
 }
 
 std::string BackhaulManager::freq_to_radio_mac(eFreqType freq) const
