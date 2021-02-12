@@ -47,6 +47,7 @@
 #include <tlvf/ieee_1905_1/tlvDeviceInformation.h>
 #include <tlvf/ieee_1905_1/tlvEndOfMessage.h>
 #include <tlvf/ieee_1905_1/tlvMacAddress.h>
+#include <tlvf/ieee_1905_1/tlvNon1905neighborDeviceList.h>
 #include <tlvf/ieee_1905_1/tlvReceiverLinkMetric.h>
 #include <tlvf/ieee_1905_1/tlvSearchedRole.h>
 #include <tlvf/ieee_1905_1/tlvSupportedFreqBand.h>
@@ -2250,8 +2251,9 @@ bool Controller::handle_cmdu_1905_topology_response(const std::string &src_mac,
         const auto media_type_group = media_type >> 8;
 
         interface_macs.push_back(iface_mac);
+
         // TODO Name and Status of Interface should be add
-        database.dm_add_interface_element(al_mac, iface_mac, media_type);
+        database.add_interface(al_mac, iface_mac, media_type);
 
         // For wireless interface it is defined on IEEE 1905.1 that the size of the media info
         // is n=10 octets, which the size of s802_11SpecificInformation struct.
@@ -2325,46 +2327,89 @@ bool Controller::handle_cmdu_1905_topology_response(const std::string &src_mac,
         }
     }
 
+    // Clear neighbor informations of all interfaces.
+    for (const auto &iface : interface_macs) {
+        database.dm_remove_interface_neighbors(al_mac, iface);
+    }
+
     // The reported neighbors list might not be correct since the reporting al_mac hasn't received
     // a Topology Discovery from its neighbors yet. Therefore, remove a neighbor node only if more
     // than 65 seconds (timeout according to standard + 5 seconds grace) have passed since we added
     // this node. This promise that the reported al_mac will get the Topology Discovery messages
     // from its neighbors and add them to the report.
-    auto last_state_change_timestamp = database.get_last_state_change(src_mac);
-    if (last_state_change_timestamp +
-            std::chrono::seconds(beerocks::ieee1905_1_consts::DISCOVERY_NOTIFICATION_TIMEOUT_SEC +
-                                 5) <
-        std::chrono::steady_clock::now()) {
-        LOG(TRACE) << "Checking if one of " << src_mac << " neighbors is no longer connected";
-        std::unordered_set<sMacAddr> reported_neighbor_al_macs;
-        auto tlv1905NeighborDeviceList = cmdu_rx.getClassList<ieee1905_1::tlv1905NeighborDevice>();
-        for (const auto &tlv1905NeighborDevice : tlv1905NeighborDeviceList) {
-            if (!tlv1905NeighborDevice) {
-                LOG(ERROR) << "ieee1905_1::tlv1905NeighborDevice has invalid pointer";
+    bool check_dead_neighbors =
+        (database.get_last_state_change(src_mac) +
+             std::chrono::seconds(beerocks::ieee1905_1_consts::DISCOVERY_NOTIFICATION_TIMEOUT_SEC +
+                                  5) <
+         std::chrono::steady_clock::now());
+
+    std::unordered_set<sMacAddr> reported_neighbor_al_macs;
+    auto tlv1905NeighborDeviceList = cmdu_rx.getClassList<ieee1905_1::tlv1905NeighborDevice>();
+
+    for (const auto &tlv1905NeighborDevice : tlv1905NeighborDeviceList) {
+        if (!tlv1905NeighborDevice) {
+            LOG(ERROR) << "ieee1905_1::tlv1905NeighborDevice has invalid pointer";
+            return false;
+        }
+
+        auto device_count = tlv1905NeighborDevice->mac_al_1905_device_length() /
+                            sizeof(ieee1905_1::tlv1905NeighborDevice::sMacAl1905Device);
+
+        for (size_t i = 0; i < device_count; i++) {
+            const auto neighbor_al_mac_tuple = tlv1905NeighborDevice->mac_al_1905_device(i);
+            if (!std::get<0>(neighbor_al_mac_tuple)) {
+                LOG(ERROR) << "Getting al_mac element has failed";
                 return false;
             }
-            auto device_count = tlv1905NeighborDevice->mac_al_1905_device_length() /
-                                sizeof(ieee1905_1::tlv1905NeighborDevice::sMacAl1905Device);
-            for (size_t i = 0; i < device_count; i++) {
-                const auto neighbor_al_mac_tuple = tlv1905NeighborDevice->mac_al_1905_device(i);
-                if (!std::get<0>(neighbor_al_mac_tuple)) {
-                    LOG(ERROR) << "Getting al_mac element has failed";
-                    return false;
-                }
 
-                auto &neighbor_al_mac = std::get<1>(neighbor_al_mac_tuple).mac;
-                LOG(DEBUG) << "Inserting reported neighbor " << neighbor_al_mac << " to the list";
-                reported_neighbor_al_macs.insert(neighbor_al_mac);
-            }
+            // Add neighbor to related interface
+            database.dm_add_interface_neighbor(al_mac, tlv1905NeighborDevice->mac_local_iface(),
+                                               std::get<1>(neighbor_al_mac_tuple).mac, true);
+
+            auto &neighbor_al_mac = std::get<1>(neighbor_al_mac_tuple).mac;
+            LOG(DEBUG) << "Inserting reported neighbor " << neighbor_al_mac << " to the list";
+            reported_neighbor_al_macs.insert(neighbor_al_mac);
         }
+    }
+
+    auto tlvNon1905NeighborDeviceList =
+        cmdu_rx.getClassList<ieee1905_1::tlvNon1905neighborDeviceList>();
+
+    for (const auto &tlvNon1905NeighborDevice : tlvNon1905NeighborDeviceList) {
+        if (!tlvNon1905NeighborDevice) {
+            LOG(ERROR) << "ieee1905_1::tlvNon1905NeighborDevice has invalid pointer";
+            return false;
+        }
+
+        auto device_count =
+            tlvNon1905NeighborDevice->mac_non_1905_device_length() / sizeof(sMacAddr);
+
+        for (size_t i = 0; i < device_count; i++) {
+            const auto neighbor_al_mac_tuple = tlvNon1905NeighborDevice->mac_non_1905_device(i);
+            if (!std::get<0>(neighbor_al_mac_tuple)) {
+                LOG(ERROR) << "Getting al_mac element has failed";
+                return false;
+            }
+
+            // Add neighbor to related interface
+            database.dm_add_interface_neighbor(al_mac, tlvNon1905NeighborDevice->mac_local_iface(),
+                                               std::get<1>(neighbor_al_mac_tuple), false);
+        }
+    }
+
+    if (check_dead_neighbors) {
+        LOG(TRACE) << "Checking if one of " << src_mac << " neighbors is no longer connected";
 
         auto neighbor_al_macs_on_db = database.get_1905_1_neighbors(al_mac);
         LOG(DEBUG) << "Comparing reported neighbors to neighbors on the database, neighbors_on_db="
                    << neighbor_al_macs_on_db.size();
+
         for (const auto &neighbor_al_mac_on_db : neighbor_al_macs_on_db) {
-            // If reported al_mac is on the db skip it, otherwise remove the node.
+
             LOG(DEBUG) << "Checks if al_mac " << al_mac << " neighbor " << neighbor_al_mac_on_db
                        << " is reported in this message";
+
+            // If reported al_mac is on the db skip it, otherwise remove the node.
             if (reported_neighbor_al_macs.find(neighbor_al_mac_on_db) !=
                 reported_neighbor_al_macs.end()) {
                 continue;
