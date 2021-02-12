@@ -268,7 +268,7 @@ bool beerocks_ucc_listener::parse_params(const std::vector<std::string> &command
  * @return true if successful, false if not.
  */
 bool beerocks_ucc_listener::get_send_1905_1_tlv_hex_list(
-    std::list<tlv_hex_t> &tlv_hex_list, std::unordered_map<std::string, std::string> &params,
+    std::list<tlv_hex_t> &tlv_hex_list, const std::unordered_map<std::string, std::string> &params,
     std::string &err_string)
 {
     static const int max_tlv                          = 256; // Magic number
@@ -300,16 +300,16 @@ bool beerocks_ucc_listener::get_send_1905_1_tlv_hex_list(
 
             // Type
             if (tlv_member_idx == 0) {
-                tlv_hex.type = &it->second;
-                if (!validate_hex_notation(*tlv_hex.type, 1)) {
+                tlv_hex.type = it->second;
+                if (!validate_hex_notation(tlv_hex.type, 1)) {
                     err_string = "param name '" + lookup_str + "' has invalid hex notation value";
                     return false;
                 }
 
                 // Length
             } else if (tlv_member_idx == 1) {
-                tlv_hex.length = &it->second;
-                if (!validate_hex_notation(*tlv_hex.length, 2)) {
+                tlv_hex.length = it->second;
+                if (!validate_hex_notation(tlv_hex.length, 2)) {
                     err_string = "param name '" + lookup_str + "' has invalid hex notation value";
                     return false;
                 }
@@ -317,14 +317,15 @@ bool beerocks_ucc_listener::get_send_1905_1_tlv_hex_list(
                 // Value
             } else if (tlv_member_idx == 2) {
                 // The hex values contains '{' and '}' delimiters, but we don't care about them.
-                it->second.erase(std::remove(it->second.begin(), it->second.end(), '{'),
-                                 it->second.end());
-                it->second.erase(std::remove(it->second.begin(), it->second.end(), '}'),
-                                 it->second.end());
+                std::string param_value = it->second;
+                param_value.erase(std::remove(param_value.begin(), param_value.end(), '{'),
+                                  param_value.end());
+                param_value.erase(std::remove(param_value.begin(), param_value.end(), '}'),
+                                  param_value.end());
 
                 std::string tmp_value;
-                auto values = string_utils::str_split(it->second, ' ');
-                for (auto &value : values) {
+                auto values = string_utils::str_split(param_value, ' ');
+                for (const auto &value : values) {
                     // Validate hex notation on list of values separated by space
                     if ((validate_hex_notation(value) || net::network_utils::is_valid_mac(value) ||
                          validate_binary_notation(value) || validate_decimal_notation(value))) {
@@ -333,14 +334,13 @@ bool beerocks_ucc_listener::get_send_1905_1_tlv_hex_list(
                     } else {
                         // If we got here, assuming we have received a string. Convert the string into ASCII hex values.
                         std::stringstream ss;
-                        for (char &c : value) {
+                        for (char c : value) {
                             ss << "0x" << std::hex << int(c) << " ";
                         }
                         tmp_value += ss.str();
                     }
                 }
-                it->second    = tmp_value;
-                tlv_hex.value = &it->second;
+                tlv_hex.value = tmp_value;
             } else {
                 LOG(ERROR) << "Illegal tlv_member_idx value: " << int(tlv_member_idx);
                 err_string = err_internal;
@@ -388,6 +388,12 @@ beerocks_ucc_listener::~beerocks_ucc_listener()
     if (m_ucc_server) {
         m_ucc_server->clear_command_received_handler();
     }
+}
+
+bool beerocks_ucc_listener::send_async_reply(int fd, const std::string &err_string)
+{
+    return reply_ucc(fd, err_string.empty() ? eWfaCaStatus::COMPLETE : eWfaCaStatus::ERROR,
+                     err_string);
 }
 
 /**
@@ -570,21 +576,12 @@ void beerocks_ucc_listener::handle_wfa_ca_command(int fd, const std::string &com
         }
 
         // TODO: Find out what to do with value of param "name".
-        // Perform this operation in a background thread and continue.
-        // Send reply only when device reset completes. Do not send anything in case of timeout.
-        // TODO: PPM-889 Notify reset completed asynchronously.
-        // "This is horribly ugly and should be (eventually) replaced with an async action. I.e.,
-        // ucc_listener should have a method reset_completed or something like that, which is called
-        // when the reset is completed. In the controller, it can be called directly from
-        // clear_configuration(). In the agent, it would be called from the backhaul manager state
-        // machine.
-        std::thread thread([fd, this]() {
-            if (clear_configuration()) {
-                // Send back second reply
-                reply_ucc(fd, eWfaCaStatus::COMPLETE);
-            }
-        });
-        thread.detach();
+
+        // This command is processed asynchronously so second reply is not sent here.
+        // The file descriptor is passed as parameter to allow sending that reply later on.
+        if (!handle_dev_reset_default(fd, params, err_string)) {
+            reply_ucc(fd, eWfaCaStatus::ERROR, err_string);
+        }
 
         break;
     }
@@ -899,14 +896,9 @@ bool tlvPrefilledData::add_tlv_value_mac(const std::string &value, uint16_t &len
 bool tlvPrefilledData::add_tlv_from_strings(const beerocks_ucc_listener::tlv_hex_t &tlv,
                                             std::string &err_string)
 {
-    if (!tlv.length || !tlv.type || !tlv.value) {
-        err_string = "Invalid TLV struct with nullptr value";
-        return false;
-    }
+    uint8_t type = std::strtoul(tlv.type.c_str(), nullptr, 16);
 
-    uint8_t type = std::strtoul((*tlv.type).c_str(), nullptr, 16);
-
-    uint16_t length = std::strtoul((*tlv.length).c_str(), nullptr, 16);
+    uint16_t length = std::strtoul(tlv.length.c_str(), nullptr, 16);
 
     // "+3" = size of type and length fields
     if (getBuffRemainingBytes() < unsigned(length + 3)) {
@@ -921,8 +913,8 @@ bool tlvPrefilledData::add_tlv_from_strings(const beerocks_ucc_listener::tlv_hex
     *m_buff_ptr__ = uint8_t(length);
     m_buff_ptr__++;
 
-    auto values = string_utils::str_split(*tlv.value, ' ');
-    for (auto value : values) {
+    auto values = string_utils::str_split(tlv.value, ' ');
+    for (const auto &value : values) {
         //Do conversion if needed
         if (value[1] == 'x') {
             if (!add_tlv_value_hex_string(value, length)) {
@@ -962,8 +954,8 @@ bool tlvPrefilledData::add_tlv_from_strings(const beerocks_ucc_listener::tlv_hex
  * @param[out] err_string Contains an error description if the function fails.
  * @return true if successful, false if not.
  */
-bool tlvPrefilledData::add_tlvs_from_list(std::list<beerocks_ucc_listener::tlv_hex_t> &tlv_hex_list,
-                                          std::string &err_string)
+bool tlvPrefilledData::add_tlvs_from_list(
+    const std::list<beerocks_ucc_listener::tlv_hex_t> &tlv_hex_list, std::string &err_string)
 {
     for (const auto &tlv : tlv_hex_list) {
         if (!add_tlv_from_strings(tlv, err_string)) {

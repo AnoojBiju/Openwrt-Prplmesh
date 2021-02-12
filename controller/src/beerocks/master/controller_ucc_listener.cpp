@@ -20,7 +20,20 @@ controller_ucc_listener::controller_ucc_listener(db &database, ieee1905_1::CmduM
     : beerocks_ucc_listener(cmdu, std::move(ucc_server)), m_database(database)
 {
     m_ucc_listener_run_on = eUccListenerRunOn::CONTROLLER;
+
+    // Install handlers for WFA-CA received commands
+    beerocks::beerocks_ucc_listener::CommandHandlers handlers;
+    handlers.on_dev_reset_default =
+        [&](int fd, const std::unordered_map<std::string, std::string> &params,
+            std::string &err_string) { return handle_dev_reset_default(fd, params, err_string); };
+    handlers.on_dev_set_config = [&](const std::unordered_map<std::string, std::string> &params,
+                                     std::string &err_string) {
+        return handle_dev_set_config(params, err_string);
+    };
+    set_handlers(handlers);
 }
+
+controller_ucc_listener::~controller_ucc_listener() { clear_handlers(); }
 
 /**
  * @brief Returns string filled with reply to "DEVICE_GET_INFO" command.
@@ -133,16 +146,20 @@ bool controller_ucc_listener::handle_dev_set_rfeature(
     return false;
 }
 
-/**
- * @brief Handle DEV_SET_CONFIG command. Parse the command and save the parameters on the controller
- * database.
- * 
- * @param[in] params Command parameters.
- * @param[out] err_string Contains an error description if the function fails.
- * @return true if successful, false if not.
- */
+bool controller_ucc_listener::handle_dev_reset_default(
+    int fd, const std::unordered_map<std::string, std::string> &params, std::string &err_string)
+{
+    // Clear configuration on Controller's database.
+    clear_configuration();
+
+    // Send back second reply to UCC client.
+    send_async_reply(fd);
+
+    return true;
+}
+
 bool controller_ucc_listener::handle_dev_set_config(
-    std::unordered_map<std::string, std::string> &params, std::string &err_string)
+    const std::unordered_map<std::string, std::string> &params, std::string &err_string)
 {
     if (params.find("backhaul") != params.end()) {
         err_string = "parameter 'backhaul' is not relevant to the controller";
@@ -160,7 +177,7 @@ bool controller_ucc_listener::handle_dev_set_config(
     }
 
     son::wireless_utils::sBssInfoConf bss_info_conf;
-    auto al_mac = parse_bss_info(params[key], bss_info_conf, err_string);
+    auto al_mac = parse_bss_info(params.at(key), bss_info_conf, err_string);
     if (al_mac.empty()) {
         err_string += (" on " + key);
         return false;
@@ -172,7 +189,7 @@ bool controller_ucc_listener::handle_dev_set_config(
         m_bss_info_cleared_mac.insert(mac);
     }
 
-    //If SSID is empty, tear down - clear configuraion for this mac.
+    //If SSID is empty, tear down - clear configuration for this mac.
     if (bss_info_conf.ssid.empty()) {
         clear_configuration(mac);
         return true;
@@ -201,7 +218,7 @@ bool controller_ucc_listener::handle_dev_set_config(
         }
 
         wfa_map::eTlvTypeMap type =
-            wfa_map::eTlvTypeMap(std::strtoul((*tlv.type).c_str(), nullptr, 16));
+            wfa_map::eTlvTypeMap(std::strtoul(tlv.type.c_str(), nullptr, 16));
         switch (type) {
         case wfa_map::eTlvTypeMap::TLV_PROFILE2_DEFAULT_802_1Q_SETTINGS: {
             wfa_map::tlvProfile2Default802dotQSettings default_802_1q_tlv(buffer, buffer_length,
