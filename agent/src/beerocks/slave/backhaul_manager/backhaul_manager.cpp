@@ -2909,9 +2909,14 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
         [&](int fd, beerocks::EventLoop &loop) {
             cancel_backhaul_steering_operation();
 
+            // We'll end up in this situation only if an attempt to scan and associate was made, but
+            // we didn't manage to actually connect within 10 seconds, so that's probably indicative
+            // of bad reception.
+            // There is no suitable reason code for "timeout" so "target BSS signal not suitable" is
+            // used as it seems to be the more appropriate of all the reason codes available.
             create_backhaul_steering_response(
                 wfa_map::tlvErrorCode::eReasonCode::
-                    BACKHAUL_STEERING_REQUEST_AUTHENTICATION_OR_ASSOCIATION_REJECTED,
+                    BACKHAUL_STEERING_REQUEST_REJECTED_TARGET_BSS_SIGNAL_NOT_SUITABLE,
                 bssid);
 
             LOG(DEBUG)
