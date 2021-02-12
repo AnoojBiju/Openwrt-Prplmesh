@@ -2870,15 +2870,18 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
         return true;
     }
 
-    // Trigger (asynchronously) a scan of the target BSSID on the
-    // target channel. The steering itself will be done when the scan
-    // results are received.
+    // Trigger (asynchronously) a scan of the target BSSID on the target channel.
+    // The steering itself will be done when the scan results are received.
+    // If this function call fails for some reason (for example because a scan was already in
+    // progress - We don't know if the supplicant returns a failure or not in that case), there is
+    // still the possibility that we receive scan results and do the steering. Thus do not send a
+    // Backhaul Steering Response message with "error" result code if this function fails nor return
+    // false, just log a warning and let the execution continue. If we do not steer after the
+    // timeout elapses, a response will anyway be sent to the controller.
     auto scan_result = active_hal->scan_type_only(bssid, channel);
-
     if (!scan_result) {
-        LOG(ERROR) << "Failed to scan for the target BSSID: " << bssid << " on channel " << channel
-                   << ".";
-        return false;
+        LOG(WARNING) << "Failed to scan for the target BSSID: " << bssid << " on channel "
+                     << channel << ".";
     }
 
     // We should only send a Backhaul Steering Response message with "success" result code if we
