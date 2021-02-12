@@ -2356,7 +2356,7 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
                     m_backhaul_steering_bssid);
 
                 if (!response) {
-                    LOG(ERROR) << "Failed to build Backhaul STA Steering Response message.";
+                    LOG(ERROR) << "Failed to build Backhaul Steering Response message.";
                     return false;
                 }
 
@@ -2831,7 +2831,7 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
             bssid);
 
         if (!response) {
-            LOG(ERROR) << "Failed to build Backhaul STA Steering Response message.";
+            LOG(ERROR) << "Failed to build Backhaul Steering Response message.";
             return false;
         }
 
@@ -2860,7 +2860,7 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
             create_backhaul_steering_response(wfa_map::tlvErrorCode::eReasonCode::RESERVED, bssid);
 
         if (!response) {
-            LOG(ERROR) << "Failed to build Backhaul STA Steering Response message.";
+            LOG(ERROR) << "Failed to build Backhaul Steering Response message.";
             return false;
         }
 
@@ -2929,7 +2929,7 @@ bool BackhaulManager::create_backhaul_steering_response(
     auto cmdu_tx_header =
         cmdu_tx.create(0, ieee1905_1::eMessageType::BACKHAUL_STEERING_RESPONSE_MESSAGE);
     if (!cmdu_tx_header) {
-        LOG(ERROR) << "Failed to create Backhoul STA Steering Response message";
+        LOG(ERROR) << "Failed to create Backhaul Steering Response message";
         return false;
     }
 
