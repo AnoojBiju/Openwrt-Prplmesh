@@ -951,6 +951,40 @@ public:
                                   bool single_scan);
 
     /**
+     * @brief Check if the report records have the given timestamp.
+     * 
+     * @param ISO_8601_timestamp Channel scan report's timestamp.
+     * @return True if record exists, false otherwise.
+     */
+    bool has_channel_report_record(const std::string &ISO_8601_timestamp);
+
+    /**
+     * @brief Get the channel scan report's MID.
+     * 
+     * @param ISO_8601_timestamp Channel scan report's timestamp.
+     * @return -1 if the timestamp was not found in the records.
+     * @return MID value of the found channel scan report record.
+     */
+    int get_channel_report_record_mid(const std::string &ISO_8601_timestamp);
+
+    /**
+     * @brief Set the channel scan report's MID.
+     * 
+     * @param ISO_8601_timestamp Channel scan report's timestamp.
+     * @param mid Channel scan report's MID.
+     * @return True on success, false otherwise.
+     */
+    bool set_channel_report_record_mid(const std::string &ISO_8601_timestamp, int mid);
+
+    /**
+     * @brief Clear the channel scan report record for the given timestamp.
+     * 
+     * @param ISO_8601_timestamp Channel scan report's timestamp.
+     * @return True on success, false otherwise.
+     */
+    bool clear_channel_report_record(const std::string &ISO_8601_timestamp);
+
+    /**
      * @brief
      *
      * @param RUID Radio UID
@@ -1842,6 +1876,10 @@ private:
     int m_persistent_db_clients_count = 0;
 
     std::shared_ptr<beerocks::nbapi::Ambiorix> m_ambiorix_datamodel;
+
+    // Key:     std::string ISO-8601-timestamp
+    // Value:   int         Report-message-MID
+    std::unordered_map<std::string, int> m_channel_scan_report_records;
 };
 
 } // namespace son

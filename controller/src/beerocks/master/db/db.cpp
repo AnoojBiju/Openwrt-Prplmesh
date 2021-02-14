@@ -3232,6 +3232,37 @@ const std::list<sChannelScanResults> &db::get_channel_scan_results(const sMacAdd
     return (single_scan ? hostap->single_scan_results : hostap->continuous_scan_results);
 }
 
+bool db::has_channel_report_record(const std::string &ISO_8601_timestamp)
+{
+    return m_channel_scan_report_records.find(ISO_8601_timestamp) !=
+           m_channel_scan_report_records.end();
+}
+
+int db::get_channel_report_record_mid(const std::string &ISO_8601_timestamp)
+{
+    auto report_record_iter = m_channel_scan_report_records.find(ISO_8601_timestamp);
+    if (report_record_iter == m_channel_scan_report_records.end()) {
+        return -1;
+    }
+    return report_record_iter->second;
+}
+
+bool db::set_channel_report_record_mid(const std::string &ISO_8601_timestamp, int mid)
+{
+    if (mid) {
+        LOG(ERROR) << "Cannot associate mid = 0";
+        return false;
+    }
+    m_channel_scan_report_records[ISO_8601_timestamp] = mid;
+    return true;
+}
+
+bool db::clear_channel_report_record(const std::string &ISO_8601_timestamp)
+{
+    // unordered_map::erase(const key_type& k) returns the number of elements erased
+    return m_channel_scan_report_records.erase(ISO_8601_timestamp) == 1;
+}
+
 bool db::add_channel_report(const sMacAddr &RUID, const uint8_t &operating_class,
                             const uint8_t &channel,
                             const std::vector<wfa_map::cNeighbors> &neighbors, uint8_t avg_noise,
