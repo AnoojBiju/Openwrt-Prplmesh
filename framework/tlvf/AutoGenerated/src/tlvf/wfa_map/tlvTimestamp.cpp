@@ -37,21 +37,28 @@ uint8_t& tlvTimestamp::timestamp_length() {
     return (uint8_t&)(*m_timestamp_length);
 }
 
-uint8_t* tlvTimestamp::timestamp(size_t idx) {
-    if ( (m_timestamp_idx__ == 0) || (m_timestamp_idx__ <= idx) ) {
-        TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
-        return nullptr;
-    }
-    return &(m_timestamp[idx]);
+std::string tlvTimestamp::timestamp_str() {
+    char *timestamp_ = timestamp();
+    if (!timestamp_) { return std::string(); }
+    return std::string(timestamp_, m_timestamp_idx__);
 }
 
-bool tlvTimestamp::set_timestamp(const void* buffer, size_t size) {
-    if (buffer == nullptr) {
+char* tlvTimestamp::timestamp(size_t length) {
+    if( (m_timestamp_idx__ == 0) || (m_timestamp_idx__ < length) ) {
+        TLVF_LOG(ERROR) << "timestamp length is smaller than requested length";
+        return nullptr;
+    }
+    return ((char*)m_timestamp);
+}
+
+bool tlvTimestamp::set_timestamp(const std::string& str) { return set_timestamp(str.c_str(), str.size()); }
+bool tlvTimestamp::set_timestamp(const char str[], size_t size) {
+    if (str == nullptr) {
         TLVF_LOG(WARNING) << "set_timestamp received a null pointer.";
         return false;
     }
     if (!alloc_timestamp(size)) { return false; }
-    std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_timestamp);
+    std::copy(str, str + size, m_timestamp);
     return true;
 }
 bool tlvTimestamp::alloc_timestamp(size_t count) {
@@ -59,7 +66,7 @@ bool tlvTimestamp::alloc_timestamp(size_t count) {
         TLVF_LOG(ERROR) << "Out of order allocation for variable length list timestamp, abort!";
         return false;
     }
-    size_t len = sizeof(uint8_t) * count;
+    size_t len = sizeof(char) * count;
     if(getBuffRemainingBytes() < len )  {
         TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
         return false;
@@ -148,11 +155,11 @@ bool tlvTimestamp::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_timestamp = (uint8_t*)m_buff_ptr__;
+    m_timestamp = (char*)m_buff_ptr__;
     uint8_t timestamp_length = *m_timestamp_length;
     m_timestamp_idx__ = timestamp_length;
-    if (!buffPtrIncrementSafe(sizeof(uint8_t) * (timestamp_length))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (timestamp_length) << ") Failed!";
+    if (!buffPtrIncrementSafe(sizeof(char) * (timestamp_length))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (timestamp_length) << ") Failed!";
         return false;
     }
     if (m_parse__) { class_swap(); }

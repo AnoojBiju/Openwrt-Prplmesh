@@ -53,21 +53,28 @@ uint8_t& tlvProfile2ChannelScanResult::timestamp_length() {
     return (uint8_t&)(*m_timestamp_length);
 }
 
-uint8_t* tlvProfile2ChannelScanResult::timestamp(size_t idx) {
-    if ( (m_timestamp_idx__ == 0) || (m_timestamp_idx__ <= idx) ) {
-        TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
-        return nullptr;
-    }
-    return &(m_timestamp[idx]);
+std::string tlvProfile2ChannelScanResult::timestamp_str() {
+    char *timestamp_ = timestamp();
+    if (!timestamp_) { return std::string(); }
+    return std::string(timestamp_, m_timestamp_idx__);
 }
 
-bool tlvProfile2ChannelScanResult::set_timestamp(const void* buffer, size_t size) {
-    if (buffer == nullptr) {
+char* tlvProfile2ChannelScanResult::timestamp(size_t length) {
+    if( (m_timestamp_idx__ == 0) || (m_timestamp_idx__ < length) ) {
+        TLVF_LOG(ERROR) << "timestamp length is smaller than requested length";
+        return nullptr;
+    }
+    return ((char*)m_timestamp);
+}
+
+bool tlvProfile2ChannelScanResult::set_timestamp(const std::string& str) { return set_timestamp(str.c_str(), str.size()); }
+bool tlvProfile2ChannelScanResult::set_timestamp(const char str[], size_t size) {
+    if (str == nullptr) {
         TLVF_LOG(WARNING) << "set_timestamp received a null pointer.";
         return false;
     }
     if (!alloc_timestamp(size)) { return false; }
-    std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_timestamp);
+    std::copy(str, str + size, m_timestamp);
     return true;
 }
 bool tlvProfile2ChannelScanResult::alloc_timestamp(size_t count) {
@@ -75,7 +82,7 @@ bool tlvProfile2ChannelScanResult::alloc_timestamp(size_t count) {
         TLVF_LOG(ERROR) << "Out of order allocation for variable length list timestamp, abort!";
         return false;
     }
-    size_t len = sizeof(uint8_t) * count;
+    size_t len = sizeof(char) * count;
     if(getBuffRemainingBytes() < len )  {
         TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
         return false;
@@ -307,11 +314,11 @@ bool tlvProfile2ChannelScanResult::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_timestamp = (uint8_t*)m_buff_ptr__;
+    m_timestamp = (char*)m_buff_ptr__;
     uint8_t timestamp_length = *m_timestamp_length;
     m_timestamp_idx__ = timestamp_length;
-    if (!buffPtrIncrementSafe(sizeof(uint8_t) * (timestamp_length))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (timestamp_length) << ") Failed!";
+    if (!buffPtrIncrementSafe(sizeof(char) * (timestamp_length))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (timestamp_length) << ") Failed!";
         return false;
     }
     m_utilization = reinterpret_cast<uint8_t*>(m_buff_ptr__);
@@ -390,21 +397,28 @@ uint8_t& cNeighbors::ssid_length() {
     return (uint8_t&)(*m_ssid_length);
 }
 
-uint8_t* cNeighbors::ssid(size_t idx) {
-    if ( (m_ssid_idx__ == 0) || (m_ssid_idx__ <= idx) ) {
-        TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
-        return nullptr;
-    }
-    return &(m_ssid[idx]);
+std::string cNeighbors::ssid_str() {
+    char *ssid_ = ssid();
+    if (!ssid_) { return std::string(); }
+    return std::string(ssid_, m_ssid_idx__);
 }
 
-bool cNeighbors::set_ssid(const void* buffer, size_t size) {
-    if (buffer == nullptr) {
+char* cNeighbors::ssid(size_t length) {
+    if( (m_ssid_idx__ == 0) || (m_ssid_idx__ < length) ) {
+        TLVF_LOG(ERROR) << "ssid length is smaller than requested length";
+        return nullptr;
+    }
+    return ((char*)m_ssid);
+}
+
+bool cNeighbors::set_ssid(const std::string& str) { return set_ssid(str.c_str(), str.size()); }
+bool cNeighbors::set_ssid(const char str[], size_t size) {
+    if (str == nullptr) {
         TLVF_LOG(WARNING) << "set_ssid received a null pointer.";
         return false;
     }
     if (!alloc_ssid(size)) { return false; }
-    std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_ssid);
+    std::copy(str, str + size, m_ssid);
     return true;
 }
 bool cNeighbors::alloc_ssid(size_t count) {
@@ -412,7 +426,7 @@ bool cNeighbors::alloc_ssid(size_t count) {
         TLVF_LOG(ERROR) << "Out of order allocation for variable length list ssid, abort!";
         return false;
     }
-    size_t len = sizeof(uint8_t) * count;
+    size_t len = sizeof(char) * count;
     if(getBuffRemainingBytes() < len )  {
         TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
         return false;
@@ -426,7 +440,7 @@ bool cNeighbors::alloc_ssid(size_t count) {
     }
     m_signal_strength = (uint8_t *)((uint8_t *)(m_signal_strength) + len);
     m_channel_bw_length = (uint8_t *)((uint8_t *)(m_channel_bw_length) + len);
-    m_channels_bw_list = (uint8_t *)((uint8_t *)(m_channels_bw_list) + len);
+    m_channels_bw_list = (char *)((uint8_t *)(m_channels_bw_list) + len);
     m_bss_load_element_present = (eBssLoadElementPresent *)((uint8_t *)(m_bss_load_element_present) + len);
     m_channel_utilization = (uint8_t *)((uint8_t *)(m_channel_utilization) + len);
     m_station_count = (uint16_t *)((uint8_t *)(m_station_count) + len);
@@ -447,21 +461,28 @@ uint8_t& cNeighbors::channel_bw_length() {
     return (uint8_t&)(*m_channel_bw_length);
 }
 
-uint8_t* cNeighbors::channels_bw_list(size_t idx) {
-    if ( (m_channels_bw_list_idx__ == 0) || (m_channels_bw_list_idx__ <= idx) ) {
-        TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
-        return nullptr;
-    }
-    return &(m_channels_bw_list[idx]);
+std::string cNeighbors::channels_bw_list_str() {
+    char *channels_bw_list_ = channels_bw_list();
+    if (!channels_bw_list_) { return std::string(); }
+    return std::string(channels_bw_list_, m_channels_bw_list_idx__);
 }
 
-bool cNeighbors::set_channels_bw_list(const void* buffer, size_t size) {
-    if (buffer == nullptr) {
+char* cNeighbors::channels_bw_list(size_t length) {
+    if( (m_channels_bw_list_idx__ == 0) || (m_channels_bw_list_idx__ < length) ) {
+        TLVF_LOG(ERROR) << "channels_bw_list length is smaller than requested length";
+        return nullptr;
+    }
+    return ((char*)m_channels_bw_list);
+}
+
+bool cNeighbors::set_channels_bw_list(const std::string& str) { return set_channels_bw_list(str.c_str(), str.size()); }
+bool cNeighbors::set_channels_bw_list(const char str[], size_t size) {
+    if (str == nullptr) {
         TLVF_LOG(WARNING) << "set_channels_bw_list received a null pointer.";
         return false;
     }
     if (!alloc_channels_bw_list(size)) { return false; }
-    std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_channels_bw_list);
+    std::copy(str, str + size, m_channels_bw_list);
     return true;
 }
 bool cNeighbors::alloc_channels_bw_list(size_t count) {
@@ -469,7 +490,7 @@ bool cNeighbors::alloc_channels_bw_list(size_t count) {
         TLVF_LOG(ERROR) << "Out of order allocation for variable length list channels_bw_list, abort!";
         return false;
     }
-    size_t len = sizeof(uint8_t) * count;
+    size_t len = sizeof(char) * count;
     if(getBuffRemainingBytes() < len )  {
         TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
         return false;
@@ -570,11 +591,11 @@ bool cNeighbors::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_ssid = (uint8_t*)m_buff_ptr__;
+    m_ssid = (char*)m_buff_ptr__;
     uint8_t ssid_length = *m_ssid_length;
     m_ssid_idx__ = ssid_length;
-    if (!buffPtrIncrementSafe(sizeof(uint8_t) * (ssid_length))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (ssid_length) << ") Failed!";
+    if (!buffPtrIncrementSafe(sizeof(char) * (ssid_length))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (ssid_length) << ") Failed!";
         return false;
     }
     m_signal_strength = reinterpret_cast<uint8_t*>(m_buff_ptr__);
@@ -588,11 +609,11 @@ bool cNeighbors::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_channels_bw_list = (uint8_t*)m_buff_ptr__;
+    m_channels_bw_list = (char*)m_buff_ptr__;
     uint8_t channel_bw_length = *m_channel_bw_length;
     m_channels_bw_list_idx__ = channel_bw_length;
-    if (!buffPtrIncrementSafe(sizeof(uint8_t) * (channel_bw_length))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (channel_bw_length) << ") Failed!";
+    if (!buffPtrIncrementSafe(sizeof(char) * (channel_bw_length))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (channel_bw_length) << ") Failed!";
         return false;
     }
     m_bss_load_element_present = reinterpret_cast<eBssLoadElementPresent*>(m_buff_ptr__);

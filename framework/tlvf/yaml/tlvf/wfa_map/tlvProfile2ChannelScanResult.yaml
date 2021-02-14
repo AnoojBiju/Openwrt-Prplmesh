@@ -17,7 +17,7 @@ tlvProfile2ChannelScanResult:
     _type: uint8_t
     _length_var: True
   timestamp:
-    _type: uint8_t
+    _type: char
     _comment: |
       The timestamp shall be formatted as a string using the typedef dateandtime string
       format as defined in section 3 of [1] and shall include timesecfrac and time-offset
@@ -69,7 +69,7 @@ cNeighbors:
     _type: uint8_t
     _length_var: True
   ssid:
-    _type: uint8_t
+    _type: char
     _comment: The SSID indicated by the neighboring BSS
     _length: [ ssid_length ]
   signal_strength:
@@ -82,7 +82,7 @@ cNeighbors:
     _type: uint8_t
     _length_var: True
   channels_bw_list:
-    _type: uint8_t
+    _type: char
     _comment: |
       String indicating the maximum bandwidth at which the neighbor BSS is
       operating, e.g., "20" or "40" or "80" or "80+80" or "160" MHz.

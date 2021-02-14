@@ -50,3 +50,7 @@ tlvVsChannelScanRequestExtension:
   scan_requests_list:
     _type: sScanRequestExtension
     _length: [ scan_requests_list_length ]
+
+tlvVsChannelScanReportDone:
+  _type: class
+  report_done: uint8_t #bool

@@ -1978,8 +1978,11 @@ bool BackhaulManager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo> 
         break;
     }
     default: {
-        bool handled = m_task_pool.handle_cmdu(cmdu_rx, 0, sMacAddr(), sMacAddr(), soc->slave,
-                                               beerocks_header);
+        auto db      = AgentDB::get();
+        auto radio   = db->radio(soc->hostap_iface);
+        bool handled = m_task_pool.handle_cmdu(cmdu_rx, 0, sMacAddr(),
+                                               (!radio ? sMacAddr() : radio->front.iface_mac),
+                                               soc->slave, beerocks_header);
         if (!handled) {
             LOG(ERROR) << "Unhandled message received from the Agent: "
                        << int(beerocks_header->action_op());

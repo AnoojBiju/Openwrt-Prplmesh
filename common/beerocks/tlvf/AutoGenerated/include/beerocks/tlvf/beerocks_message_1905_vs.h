@@ -102,6 +102,27 @@ class tlvVsChannelScanRequestExtension : public BaseClass
         int m_lock_order_counter__ = 0;
 };
 
+class tlvVsChannelScanReportDone : public BaseClass
+{
+    public:
+        tlvVsChannelScanReportDone(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit tlvVsChannelScanReportDone(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~tlvVsChannelScanReportDone();
+
+        static eActionOp_1905_VS get_action_op(){
+            return (eActionOp_1905_VS)(ACTION_TLV_VENDOR_SPECIFIC);
+        }
+        uint8_t& report_done();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_1905_VS* m_action_op = nullptr;
+        uint8_t* m_report_done = nullptr;
+};
+
 }; // close namespace: beerocks_message
 
 #endif //_BEEROCKS/TLVF_BEEROCKS_MESSAGE_1905_VS_H_

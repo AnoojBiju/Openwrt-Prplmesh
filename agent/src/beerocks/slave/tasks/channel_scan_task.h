@@ -93,13 +93,15 @@ private:
 
     struct sOperationalClass {
         uint8_t operating_class;
-        uint8_t channel_list[10];
-        uint8_t channel_list_length;
+        std::vector<uint8_t> channel_list;
         sOperationalClass(uint8_t _operating_class, uint8_t *_channel_list,
                           uint8_t _channel_list_length)
-            : operating_class(_operating_class), channel_list_length(_channel_list_length)
+            : operating_class(_operating_class)
         {
-            std::copy_n(_channel_list, _channel_list_length, channel_list);
+            if (_channel_list) {
+                channel_list.insert(channel_list.end(), _channel_list,
+                                    _channel_list + _channel_list_length);
+            }
         }
     };
     struct sRadioScan {
@@ -143,6 +145,25 @@ private:
         std::shared_ptr<sScanRequest> scan_request = nullptr;
         std::shared_ptr<sRadioScan> radio_scan     = nullptr;
     } m_current_scan_info;
+
+    struct sStoredScanResults {
+        sMacAddr ruid;
+        uint8_t operating_class;
+        uint8_t channel;
+        wfa_map::tlvProfile2ChannelScanResult::eScanStatus status;
+        std::chrono::system_clock::time_point timestamp;
+        std::vector<beerocks_message::sChannelScanResults> results;
+        explicit sStoredScanResults(
+            sMacAddr _ruid, uint8_t _operating_class, uint8_t _channel,
+            wfa_map::tlvProfile2ChannelScanResult::eScanStatus _status,
+            std::chrono::system_clock::time_point _timestamp,
+            const std::vector<beerocks_message::sChannelScanResults> &_results)
+            : ruid(_ruid), operating_class(_operating_class), channel(_channel), status(_status),
+              timestamp(_timestamp), results(_results)
+        {
+        }
+    };
+    typedef std::vector<sStoredScanResults> StoredResultsVector;
 
     BackhaulManager &m_btl_ctx;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
@@ -235,6 +256,16 @@ private:
      * @return True on success, otherwise false.
      */
     bool send_channel_scan_report_to_controller(const std::shared_ptr<sScanRequest> request);
+
+    /**
+     * @brief Get all stored results for the given request
+     * 
+     * @param[in] request request object
+     * 
+     * @return Stored Result vector containing all stored results for the given request
+     */
+    std::shared_ptr<StoredResultsVector>
+    get_scan_results_for_request(const std::shared_ptr<sScanRequest> request);
 };
 
 } // namespace beerocks

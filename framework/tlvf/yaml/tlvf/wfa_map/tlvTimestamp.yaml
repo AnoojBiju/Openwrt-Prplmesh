@@ -13,7 +13,7 @@ tlvTimestamp:
     _type: uint8_t
     _length_var: True
   timestamp:
-    _type: uint8_t
+    _type: char
     _comment: |
       The timestamp shall be formatted as a string using the typedef dateandtime string
       format as defined in section 3 of [1] and shall include timesecfrac and time-offset
