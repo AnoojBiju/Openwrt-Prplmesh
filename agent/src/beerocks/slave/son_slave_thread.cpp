@@ -96,7 +96,7 @@ slave_thread::slave_thread(sSlaveConfig conf, beerocks::logging &logger_)
     m_stop_on_failure_attempts               = db->device_conf.stop_on_failure_attempts;
 
     db->bridge.iface_name        = conf.bridge_iface;
-    db->ethernet.iface_name      = conf.backhaul_wire_iface;
+    db->ethernet.wan.iface_name  = conf.backhaul_wire_iface;
     db->backhaul.preferred_bssid = tlvf::mac_from_string(conf.backhaul_preferred_bssid);
 
     auto radio = db->add_radio(conf.hostap_iface, conf.backhaul_wireless_iface);
@@ -1198,7 +1198,7 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
             if (notification->params().backhaul_is_wireless) {
                 backhaul_params.backhaul_iface = config.backhaul_wireless_iface;
             } else {
-                backhaul_params.backhaul_iface = db->ethernet.iface_name;
+                backhaul_params.backhaul_iface = db->ethernet.wan.iface_name;
             }
 
             LOG(DEBUG) << "goto STATE_BACKHAUL_MANAGER_CONNECTED";
@@ -1635,8 +1635,8 @@ bool slave_thread::handle_cmdu_platform_manager_message(
              */
             auto db = AgentDB::get();
             if (db->device_conf.local_gw) {
-                db->ethernet.iface_name.clear();
-                db->ethernet.mac = network_utils::ZERO_MAC;
+                db->ethernet.wan.iface_name.clear();
+                db->ethernet.wan.mac = network_utils::ZERO_MAC;
             }
 
             m_stop_on_failure_attempts = db->device_conf.stop_on_failure_attempts;
@@ -3497,6 +3497,15 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
         // Update bridge parameters on AgentDB.
         db->bridge.mac = tlvf::mac_from_string(iface_mac);
 
+        if (!network_utils::linux_iface_get_mac(db->ethernet.wan.iface_name, iface_mac)) {
+            LOG(ERROR) << "Failed reading wan mac address! iface=" << db->ethernet.wan.iface_name;
+            m_stop_on_failure_attempts--;
+            slave_reset();
+        }
+
+        // Update wan parameters on AgentDB.
+        db->ethernet.wan.mac = tlvf::mac_from_string(iface_mac);
+
         // Reset the traffic separation configuration as they will be reconfigured on
         // autoconfiguration.
         db->traffic_separation.primary_vlan_id = 0;
@@ -3697,7 +3706,7 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
             break;
         }
 
-        if (db->ethernet.iface_name.empty() && config.backhaul_wireless_iface.empty()) {
+        if (db->ethernet.wan.iface_name.empty() && config.backhaul_wireless_iface.empty()) {
             LOG(DEBUG) << "No valid backhaul iface!";
             platform_notify_error(bpl::eErrorCode::CONFIG_NO_VALID_BACKHAUL_INTERFACE, "");
             error = true;
@@ -3739,7 +3748,8 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
             // removed completely from beerocks including the BPL.
 
             string_utils::copy_string(bh_enable->wire_iface(message::IFACE_NAME_LENGTH),
-                                      db->ethernet.iface_name.c_str(), message::IFACE_NAME_LENGTH);
+                                      db->ethernet.wan.iface_name.c_str(),
+                                      message::IFACE_NAME_LENGTH);
         }
 
         bh_enable->iface_mac() = radio->front.iface_mac;
@@ -3798,7 +3808,7 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
             backhaul_params.backhaul_is_wireless = 0;
             backhaul_params.backhaul_iface_type  = beerocks::IFACE_TYPE_GW_BRIDGE;
             if (is_backhaul_manager) {
-                backhaul_params.backhaul_iface = db->ethernet.iface_name;
+                backhaul_params.backhaul_iface = db->ethernet.wan.iface_name;
             }
         }
 
