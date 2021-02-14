@@ -157,8 +157,8 @@ public:
     }
     ~monitor_vap_node() {}
 
-    std::string get_iface() { return iface; }
-    int8_t get_vap_id() { return vap_id; }
+    std::string get_iface() const { return iface; }
+    int8_t get_vap_id() const { return vap_id; }
 
     void set_mac(const std::string &ap_mac_) { mac = ap_mac_; }
     std::string get_mac() const { return mac; }
@@ -229,10 +229,10 @@ public:
     ~monitor_radio_node() {}
 
     void set_iface(const std::string &iface_) { iface = iface_; }
-    std::string get_iface() { return iface; }
+    std::string get_iface() const { return iface; }
 
     void set_channel(const uint8_t channel_) { channel = channel_; }
-    uint8_t get_channel() { return channel; }
+    uint8_t get_channel() const { return channel; }
 
     double get_rx_bit_rate();
     double get_tx_bit_rate();
@@ -300,6 +300,43 @@ public:
         uint8_t ap_metrics_channel_utilization_reporting_value = 0;
 
         /**
+         *  TBD. Specifications:
+         *  An indicator of the average radio noise plus interference
+         *  power measured for the primary operating channel.
+         *  Encoding as defined for ANPI in section 11.11.9.4 of [1]. Reserved: 221-224.
+         */
+        uint8_t ap_metrics_radio_noise = 0;
+
+        /**
+         *  TBD. Specification:
+         *  The percentage of time (linearly scaled with 255 representing 100%)
+         *  the radio has spent on individually or group addressed transmissions by the AP.
+         *  When more than one channel is in use by BSS operating on the radio,
+         *  then the Transmit value is calculated only for the primary channel.
+         */
+        uint8_t ap_metrics_radio_transmit = 0;
+
+        /**
+         *  TBD. Specification:
+         *  The percentage of time (linearly scaled with 255 representing 100%)
+         *  the radio has spent on receiving individually or group addressed transmissions
+         *  from any STA associated with any BSS operating on this radio.
+         *  When more than one channel is in use by BSS operating on the radio,
+         *  then the ReceiveSelf value is calculated only for the primary channel.
+         */
+        uint8_t ap_metrics_radio_receive_self = 0;
+
+        /**
+         *  TBD. Specification: The percentage of time (linearly scaled with 255
+         *  representing 100%) the radio has spent on receiving valid IEEE
+         *  802.11 PPDUs that are not associated with any BSS operating on this
+         *  radio. When more than one channel is in use by BSS operating on the
+         *  radio, then the ReceiveOther value is calculated only for the
+         *  primary channel.
+        */
+        uint8_t ap_metrics_radio_receive_other = 0;
+
+        /**
          * Time point at which channel utilization was reported for the last time.
          */
         std::chrono::steady_clock::time_point
@@ -307,6 +344,10 @@ public:
     };
 
     sApMetricsReportingInfo &ap_metrics_reporting_info() { return m_ap_metrics_reporting_info; }
+    const sApMetricsReportingInfo &ap_metrics_reporting_info() const
+    {
+        return m_ap_metrics_reporting_info;
+    }
 
     uint8_t get_channel_utilization() const
     {
