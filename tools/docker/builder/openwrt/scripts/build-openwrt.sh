@@ -36,6 +36,10 @@ fi
 
 ./scripts/gen_config.py "${args[@]}"
 
+# patch to prplwrt
+cp patches/0001-undo-isolation-to-pass-4-7-10.patch \
+    feeds/feed_intel/wlan_6x/wlan_wave_feed/swpal_6x-uci/patches
+
 for profile in "${args[@]}" ; do
     printf "\nProfile %s:\n" "${profile}" >> files/etc/prplwrt-version
     cat "profiles/${profile}.yml" >> files/etc/prplwrt-version

@@ -102,4 +102,6 @@ RUN rm -rf build_dir/target*/ubus*
 ####
 FROM openwrt-builder as prplmesh-builder
 
+ADD patches patches
+
 RUN scripts/build-openwrt.sh
