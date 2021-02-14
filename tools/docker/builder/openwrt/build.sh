@@ -195,7 +195,7 @@ main() {
 VERBOSE=false
 IMAGE_ONLY=false
 OPENWRT_REPOSITORY='https://gitlab.com/prpl-foundation/prplwrt/prplwrt.git'
-OPENWRT_VERSION='b69b71d0a3d4eac25357b546a7e847501c053912'
+OPENWRT_VERSION='fe9ea5a03dc1485888e83c746252c7f3834b91ff'
 PRPL_FEED='https://gitlab.com/prpl-foundation/prplwrt/feed-prpl.git^011528773655c40d14784f6fde830708d640266b'
 SAH_FEED='https://gitlab.com/soft.at.home/buildsystems/openwrt/sah-packages.git^3c8fef0f760b26d3c54cc518dd71f6bc5f79680a'
 PRPLMESH_VARIANT="-nl80211"

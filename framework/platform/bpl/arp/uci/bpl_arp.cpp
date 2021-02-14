@@ -20,7 +20,7 @@
 
 extern "C" {
 #define FEATURE_BRCTL_SHOWMACS_IFNAME
-#include <libbridge-ugw.h>
+#include <libbridge.h>
 }
 
 #include <mapf/common/logger.h>
