@@ -940,6 +940,12 @@ bool ap_wlan_hal_nl80211::set_radio_mbo_assoc_disallow(bool enable)
     return true;
 }
 
+bool ap_wlan_hal_nl80211::set_primary_vlan_id(uint16_t primary_vlan_id)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return true;
+}
+
 bool ap_wlan_hal_nl80211::get_vap_enable(const std::string &iface_name, bool &enable)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";

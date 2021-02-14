@@ -780,57 +780,75 @@ bool base_wlan_hal_nl80211::refresh_vaps_info(int id)
         return false;
     }
 
-    // Scan all VAPs
-    if (id == beerocks::IFACE_RADIO_ID) {
-
-        for (int vap_id = beerocks::IFACE_VAP_ID_MIN; vap_id <= beerocks::IFACE_VAP_ID_MAX;
-             vap_id++) {
-            VAPElement vap_element;
-
-            // Try reading values of the requested VAP
-            vap_element.bss  = reply["bss[" + std::to_string(vap_id) + "]"];
-            vap_element.mac  = reply["bssid[" + std::to_string(vap_id) + "]"];
-            vap_element.ssid = reply["ssid[" + std::to_string(vap_id) + "]"];
-            // TODO https://github.com/prplfoundation/prplMesh/issues/1175
-            vap_element.fronthaul = true;
-            vap_element.backhaul  = false;
-
-            // VAP does not exists
-            if (vap_element.mac.empty()) {
-                if (m_radio_info.available_vaps.find(vap_id) != m_radio_info.available_vaps.end()) {
-                    m_radio_info.available_vaps.erase(vap_id);
-                }
-                continue;
-            }
-
-            // Store the VAP element
-            LOG(DEBUG) << "Detected VAP ID (" << vap_id << ") - MAC: " << vap_element.mac
-                       << ", SSID: " << vap_element.ssid << ", BSS: " << vap_element.bss;
-
-            m_radio_info.available_vaps[vap_id] = vap_element;
-        }
-    } else {
-
+    auto fill_bss_info = [&](uint16_t vap_id) {
         VAPElement vap_element;
 
+        // The "STATUS" command reply looks like this:
+        // bss[0] = 'Radio Iface'
+        // bss[1] = 'VAP 0 Iface'
+        // bss[2] = 'VAP 1 Iface'
+        // This means we should add '1' to the vap_id to get the correct index bss index.
+
+        auto idx = vap_id + 1;
+
         // Try reading values of the requested VAP
-        vap_element.bss  = reply["bss[" + std::to_string(id) + "]"];
-        vap_element.mac  = reply["bssid[" + std::to_string(id) + "]"];
-        vap_element.ssid = reply["ssid[" + std::to_string(id) + "]"];
+        vap_element.bss  = reply["bss[" + std::to_string(idx) + "]"];
+        vap_element.mac  = reply["bssid[" + std::to_string(idx) + "]"];
+        vap_element.ssid = reply["ssid[" + std::to_string(idx) + "]"];
         // TODO https://github.com/prplfoundation/prplMesh/issues/1175
         vap_element.fronthaul = true;
         vap_element.backhaul  = false;
 
         // VAP does not exists
         if (vap_element.mac.empty()) {
-            if (m_radio_info.available_vaps.find(id) != m_radio_info.available_vaps.end()) {
-                m_radio_info.available_vaps.erase(id);
+            if (m_radio_info.available_vaps.find(vap_id) != m_radio_info.available_vaps.end()) {
+                m_radio_info.available_vaps.erase(vap_id);
             }
 
             return false;
         }
 
-        m_radio_info.available_vaps[id] = vap_element;
+        // Store the VAP element
+        LOG(DEBUG) << "Detected VAP ID (" << vap_id << ") - MAC: " << vap_element.mac
+                   << ", SSID: " << vap_element.ssid << ", BSS: " << vap_element.bss;
+
+        // Since some of the required information is not exist on the "STATUS" command reply, it
+        // was pre-inserted when configured the BSSs. Therefore, not overriding the whole struct at
+        // the mapped value of "available_vaps[vap_id]", instead copy the struct members one by one,
+        // if possible.
+
+        auto &mapped_vap_element = m_radio_info.available_vaps[vap_id];
+        if (mapped_vap_element.bss.empty()) {
+            LOG(WARNING) << "BSS " << vap_element.bss << " is not preconfigured!"
+                         << "Overriding VAP element.";
+
+            mapped_vap_element = vap_element;
+            return true;
+
+        } else if (mapped_vap_element.bss != vap_element.bss) {
+            LOG(ERROR) << "bss mismatch! vap_element.bss=" << vap_element.bss
+                       << ", mapped_vap_element.bss=" << mapped_vap_element.bss;
+            return false;
+        }
+
+        // If reached here, assume that the BSS information is already exist on the container,
+        // therefore there is no need to update the information except the BSS mac that is not
+        // preset.
+        mapped_vap_element.mac = vap_element.mac;
+
+        return true;
+    };
+
+    // If the ID is the radio ID, read all VAPS.
+    if (id == beerocks::IFACE_RADIO_ID) {
+        for (uint16_t vap_id = beerocks::IFACE_VAP_ID_MIN; vap_id <= beerocks::IFACE_VAP_ID_MAX;
+             vap_id++) {
+            if (!fill_bss_info(vap_id)) {
+                break;
+            }
+        }
+    } else {
+        fill_bss_info(id);
     }
 
     return true;
