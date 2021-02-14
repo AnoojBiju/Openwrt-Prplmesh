@@ -387,6 +387,12 @@ bool ap_wlan_hal_dummy::set_radio_mbo_assoc_disallow(bool enable)
     return true;
 }
 
+bool ap_wlan_hal_dummy::set_primary_vlan_id(uint16_t primary_vlan_id)
+{
+    LOG(DEBUG) << "set_primary_vlan_id " << primary_vlan_id;
+    return true;
+}
+
 std::string ap_wlan_hal_dummy::get_radio_driver_version() { return std::string("dummy"); }
 
 bool ap_wlan_hal_dummy::process_dummy_data(parsed_obj_map_t &parsed_obj) { return true; }

@@ -83,19 +83,25 @@ static void copy_vaps_info(std::shared_ptr<bwl::ap_wlan_hal> &ap_wlan_hal,
         vaps[i] = {};
 
         // If the VAP ID exists
-        if (radio_vaps.find(vap_id) != radio_vaps.end()) {
-            const auto &curr_vap = radio_vaps.at(vap_id);
-
-            LOG(DEBUG) << "vap_id = " << int(vap_id) << ", mac = " << curr_vap.mac
-                       << ", ssid = " << curr_vap.ssid
-                       << ", fronthaul = " << beerocks::string_utils::bool_str(curr_vap.fronthaul)
-                       << ", backhaul = " << beerocks::string_utils::bool_str(curr_vap.backhaul);
-
-            // Copy the VAP MAC and SSID
-            vaps[i].mac = tlvf::mac_from_string(curr_vap.mac);
-            beerocks::string_utils::copy_string(vaps[i].ssid, curr_vap.ssid.c_str(),
-                                                beerocks::message::WIFI_SSID_MAX_LENGTH);
+        if (radio_vaps.find(vap_id) == radio_vaps.end()) {
+            continue;
         }
+        const auto &curr_vap = radio_vaps.at(vap_id);
+
+        LOG(DEBUG) << "vap_id=" << int(vap_id) << ", mac=" << curr_vap.mac
+                   << ", ssid=" << curr_vap.ssid << ", fronthaul=" << curr_vap.fronthaul
+                   << ", backhaul=" << curr_vap.backhaul;
+
+        // Copy the VAP MAC and SSID
+        vaps[i].mac = tlvf::mac_from_string(curr_vap.mac);
+        beerocks::string_utils::copy_string(vaps[i].ssid, curr_vap.ssid.c_str(),
+                                            beerocks::message::WIFI_SSID_MAX_LENGTH);
+
+        vaps[i].backhaul_vap = curr_vap.backhaul;
+        vaps[i].profile1_backhaul_sta_association_disallowed =
+            curr_vap.profile1_backhaul_sta_association_disallowed;
+        vaps[i].profile1_backhaul_sta_association_disallowed =
+            curr_vap.profile1_backhaul_sta_association_disallowed;
     }
 }
 
@@ -1154,6 +1160,12 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
                 backhaul_wps_ssid       = config_data.ssid_str();
                 backhaul_wps_passphrase = config_data.network_key_str();
             }
+            bss_info_conf.profile1_backhaul_sta_association_disallowed =
+                bss_type &
+                WSC::eWscVendorExtSubelementBssType::PROFILE1_BACKHAUL_STA_ASSOCIATION_DISALLOWED;
+            bss_info_conf.profile2_backhaul_sta_association_disallowed =
+                bss_type &
+                WSC::eWscVendorExtSubelementBssType::PROFILE2_BACKHAUL_STA_ASSOCIATION_DISALLOWED;
 
             bss_info_conf.ssid                = config_data.ssid_str();
             bss_info_conf.authentication_type = config_data.authentication_type_attr().data;
@@ -1356,6 +1368,16 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
         LOG(INFO) << "send cACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE, success="
                   << int(response->success());
         message_com::send_cmdu(slave_socket, cmdu_tx);
+        break;
+    }
+    case beerocks_message::ACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST: {
+        auto request = beerocks_header->addClass<
+            beerocks_message::cACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST>();
+        if (!request) {
+            LOG(ERROR) << "addClass has failed";
+            return false;
+        }
+        ap_wlan_hal->set_primary_vlan_id(request->primary_vlan_id());
         break;
     }
     default: {
