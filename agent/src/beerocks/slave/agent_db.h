@@ -171,9 +171,17 @@ public:
         sMacAddr preferred_bssid;
     } backhaul;
 
-    struct sEthernet {
-        sMacAddr mac;
-        std::string iface_name;
+    struct {
+        struct sEthernetPort {
+            explicit sEthernetPort(const std::string &iface_name_)
+                : iface_name(iface_name_), mac(net::network_utils::ZERO_MAC)
+            {
+            }
+            sEthernetPort() : mac(net::network_utils::ZERO_MAC){};
+            std::string iface_name;
+            sMacAddr mac;
+        } wan;
+        std::vector<sEthernetPort> lan;
     } ethernet;
 
     struct sRadio {
