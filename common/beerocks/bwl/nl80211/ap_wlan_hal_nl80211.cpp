@@ -392,6 +392,9 @@ bool ap_wlan_hal_nl80211::update_vap_credentials(
         return false;
     }
 
+    // Clear all VAPs from the available container, since we preset it with configuration.
+    m_radio_info.available_vaps.clear();
+
     // If a Multi-AP Agent receives an AP-Autoconfiguration WSC message containing one or
     // more M2, it shall validate each M2 (based on its 1905 AL MAC address) and configure
     // a BSS on the corresponding radio for each of the M2. If the Multi-AP Agent is currently

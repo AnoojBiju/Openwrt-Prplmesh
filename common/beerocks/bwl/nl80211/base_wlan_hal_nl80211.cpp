@@ -783,18 +783,10 @@ bool base_wlan_hal_nl80211::refresh_vaps_info(int id)
     auto fill_bss_info = [&](uint16_t vap_id) {
         VAPElement vap_element;
 
-        // The "STATUS" command reply looks like this:
-        // bss[0] = 'Radio Iface'
-        // bss[1] = 'VAP 0 Iface'
-        // bss[2] = 'VAP 1 Iface'
-        // This means we should add '1' to the vap_id to get the correct index bss index.
-
-        auto idx = vap_id + 1;
-
         // Try reading values of the requested VAP
-        vap_element.bss  = reply["bss[" + std::to_string(idx) + "]"];
-        vap_element.mac  = reply["bssid[" + std::to_string(idx) + "]"];
-        vap_element.ssid = reply["ssid[" + std::to_string(idx) + "]"];
+        vap_element.bss  = reply["bss[" + std::to_string(vap_id) + "]"];
+        vap_element.mac  = reply["bssid[" + std::to_string(vap_id) + "]"];
+        vap_element.ssid = reply["ssid[" + std::to_string(vap_id) + "]"];
         // TODO https://github.com/prplfoundation/prplMesh/issues/1175
         vap_element.fronthaul = true;
         vap_element.backhaul  = false;
