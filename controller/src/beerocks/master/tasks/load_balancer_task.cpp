@@ -488,3 +488,9 @@ void load_balancer_task::handle_responses_timeout(
         hostaps.erase(mac);
     }
 }
+
+bool load_balancer_task::handle_ieee1905_1_msg(const std::string &src_mac,
+                                               ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    return false;
+}

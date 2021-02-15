@@ -35,6 +35,19 @@ public:
     bool is_done();
     void kill();
 
+    /**
+     * @brief Handle ieee1905 message.
+     *
+     * @param src_mac MAC address of the message sender.
+     * @param cmdu_rx CMDU object containing the received message to be handled.
+     * @return True if the message has been handled, otherwise false.
+     */
+    virtual bool handle_ieee1905_1_msg(const std::string &src_mac,
+                                       ieee1905_1::CmduMessageRx &cmdu_rx)
+    {
+        return false;
+    }
+
     void set_last_exec_time(std::chrono::steady_clock::time_point time) { last_exec_time = time; }
     std::chrono::steady_clock::time_point get_last_exec_time() { return last_exec_time; }
 

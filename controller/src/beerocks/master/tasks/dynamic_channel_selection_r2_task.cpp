@@ -560,3 +560,9 @@ bool dynamic_channel_selection_r2_task::handle_timeout_in_busy_agents()
     }
     return timeout_found;
 }
+
+bool dynamic_channel_selection_r2_task::handle_ieee1905_1_msg(const std::string &src_mac,
+                                                              ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    return false;
+}
