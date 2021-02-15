@@ -108,6 +108,20 @@ public:
     virtual bool set_channel(int chan, beerocks::eWiFiBandwidth bw, int center_channel) = 0;
 
     /**
+     * @brief Set the AP channel and also set a secondary channel
+     * 
+     * @param [in] chan The channel to switch to.
+     * @param [in] bw The bandwidth (in Mhz) of the target channel.
+     * @param [in] center_channel VHT center frequency.
+     * @param [in] secondary_channel_offset The secondary channel's offset
+     * from chan. either: -1, 0, or +1
+     * 
+     * @return true on success or false on error.
+     */
+    virtual bool set_channel_with_secondary(int chan, beerocks::eWiFiBandwidth bw,
+                                            int center_channel, int secondary_channel_offset) = 0;
+
+    /**
      * @brief Allow the station with the given MAC address to connect.
      *
      * @param [in] mac The MAC address of the station.
@@ -240,6 +254,21 @@ public:
      * @return true on success or false on error.
      */
     virtual bool switch_channel(int chan, int bw, int vht_center_frequency) = 0;
+
+    /**
+     * @brief cancel active cac if exsits.
+     *
+     * @param [in] chan The channel to switch to after the cancelation.
+     * @param [in] bw The bandwidth (in Mhz) of the target channel.
+     * @param [in] vht_center_frequency VHT center frequency.
+     * @param [in] secondary_channel_offset The secondary channel's offset
+     * from chan. either: -1, 0, or +1
+     *
+     * @return true if everything went well or false on error.
+     * note: returns true if there was no active cac.
+     */
+    virtual bool cancel_cac(int chan, beerocks::eWiFiBandwidth bw, int vht_center_frequency,
+                            int secondary_channel_offset) = 0;
 
     /**
      * @brief Update the Radio antenna configuration.

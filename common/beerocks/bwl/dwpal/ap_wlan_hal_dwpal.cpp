@@ -960,6 +960,44 @@ bool ap_wlan_hal_dwpal::set_start_disabled(bool enable, int vap_id)
     return ret;
 }
 
+bool ap_wlan_hal_dwpal::set_wifi_bw(beerocks::eWiFiBandwidth bw)
+{
+    if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_UNKNOWN) {
+        LOG(INFO) << "unknown bandwidth, skip setting vht_oper_chwidth.";
+        return true;
+    }
+
+    int wifi_bw = 0;
+    // based on hostapd.conf @ https://w1.fi/cgit/hostap/plain/hostapd/hostapd.conf
+    // # 0 = 20 or 40 MHz operating Channel width
+    // # 1 = 80 MHz channel width
+    // # 2 = 160 MHz channel width
+    // 80+80 MHz channel width not currently supported by Mxl Wifi driver
+    // #vht_oper_chwidth=1
+
+    if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_20 ||
+        bw == beerocks::eWiFiBandwidth::BANDWIDTH_40) {
+        wifi_bw = 0;
+    } else if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_80) {
+        wifi_bw = 1;
+    } else if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_160) {
+        wifi_bw = 2;
+    } else if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_80_80) {
+        LOG(ERROR) << "80+80 Mhz channel width not currently supported by this platform.";
+        return false;
+    } else {
+        LOG(ERROR) << "Unknown BW " << bw;
+        return false;
+    }
+
+    if (!set("vht_oper_chwidth", std::to_string(wifi_bw))) {
+        LOG(ERROR) << "Failed setting vht_oper_chwidth";
+        return false;
+    }
+
+    return true;
+}
+
 bool ap_wlan_hal_dwpal::set_channel(int chan, beerocks::eWiFiBandwidth bw, int center_channel)
 {
     if (chan < 0) {
@@ -977,34 +1015,9 @@ bool ap_wlan_hal_dwpal::set_channel(int chan, beerocks::eWiFiBandwidth bw, int c
         return false;
     }
 
-    if (bw != beerocks::eWiFiBandwidth::BANDWIDTH_UNKNOWN) {
-        int wifi_bw = 0;
-        // based on hostapd.conf @ https://w1.fi/cgit/hostap/plain/hostapd/hostapd.conf
-        // # 0 = 20 or 40 MHz operating Channel width
-        // # 1 = 80 MHz channel width
-        // # 2 = 160 MHz channel width
-        // 80+80 MHz channel width not currently supported by Mxl Wifi driver
-        // #vht_oper_chwidth=1
-
-        if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_20 ||
-            bw == beerocks::eWiFiBandwidth::BANDWIDTH_40) {
-            wifi_bw = 0;
-        } else if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_80) {
-            wifi_bw = 1;
-        } else if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_160) {
-            wifi_bw = 2;
-        } else if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_80_80) {
-            LOG(ERROR) << "80+80 Mhz channel width not currently supported by this platform.";
-            return false;
-        } else {
-            LOG(ERROR) << "Unknown BW " << bw;
-            return false;
-        }
-
-        if (!set("vht_oper_chwidth", std::to_string(wifi_bw))) {
-            LOG(ERROR) << "Failed setting vht_oper_chwidth";
-            return false;
-        }
+    if (!set_wifi_bw(bw)) {
+        LOG(ERROR) << "Failed setting bandwidth";
+        return false;
     }
 
     if (center_channel > 0) {
@@ -1012,6 +1025,21 @@ bool ap_wlan_hal_dwpal::set_channel(int chan, beerocks::eWiFiBandwidth bw, int c
             LOG(ERROR) << "Failed setting vht_oper_centr_freq_seg0_idx";
             return false;
         }
+    }
+
+    return true;
+}
+
+bool ap_wlan_hal_dwpal::set_channel_with_secondary(int chan, beerocks::eWiFiBandwidth bw,
+                                                   int center_channel, int secondary_channel)
+{
+    if (!set_channel(chan, bw, center_channel)) {
+        return false;
+    }
+
+    if (!set("secondary_channel", std::to_string(secondary_channel))) {
+        LOG(ERROR) << "Failed setting secondary channel " << chan;
+        return false;
     }
 
     return true;
@@ -1507,6 +1535,61 @@ bool ap_wlan_hal_dwpal::switch_channel(int chan, int bw, int vht_center_frequenc
     LOG(DEBUG) << "switch channel command: " << cmd;
     if (!dwpal_send_cmd(cmd)) {
         LOG(ERROR) << "switch_channel() failed!";
+        return false;
+    }
+
+    return true;
+}
+
+bool ap_wlan_hal_dwpal::cancel_cac(int chan, beerocks::eWiFiBandwidth bw, int vht_center_frequency,
+                                   int secondary_chan_offset)
+{
+    // the following hostapd sequence
+    // disables cac and re-enables
+    // the radio with the given parameters:
+    // disable (cac canceled)
+    // SET channel X
+    // SET secondary_channel X
+    // SET vht_oper_chwidth X
+    // SET vht_oper_centr_freq_seg0_idx X
+    // enable (radio enabled back on channel X)
+
+    // get center channel from the center frequency
+    auto center_channel = son::wireless_utils::freq_to_channel(vht_center_frequency);
+
+    LOG(DEBUG) << "canceling cac with the following parameters:"
+               << "channel: " << chan << "bandwidth (eWiFiBandwidth): " << bw
+               << "vht center frequency (input but not used directly): " << vht_center_frequency
+               << "center channel (computed from vht_center_frequency): " << center_channel
+               << "secondary_chan_offset: " << secondary_chan_offset;
+
+    if (!disable()) {
+        LOG(ERROR) << "Failed disabling radio";
+        return false;
+    }
+
+    if (!set("channel", std::to_string(chan))) {
+        LOG(ERROR) << "Failed setting channel " << chan;
+        return false;
+    }
+
+    if (!set_wifi_bw(bw)) {
+        LOG(ERROR) << "Failed setting bandwidth " << bw;
+        return false;
+    }
+
+    if (!set("vht_oper_centr_freq_seg0_idx", std::to_string(center_channel))) {
+        LOG(ERROR) << "Failed setting vht center frequency " << center_channel;
+        return false;
+    }
+
+    if (!set("secondary_channel", std::to_string(secondary_chan_offset))) {
+        LOG(ERROR) << "Failed setting secondary channel offset " << secondary_chan_offset;
+        return false;
+    }
+
+    if (!enable()) {
+        LOG(ERROR) << "Failed enabling radio";
         return false;
     }
 

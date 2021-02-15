@@ -41,6 +41,7 @@ using namespace beerocks::net;
 #define OPERATION_FAIL -1
 #define WAIT_FOR_RADIO_ENABLE_TIMEOUT_SEC 100
 #define MAX_RADIO_DISBALED_TIMEOUT_SEC 4
+#define MAX_CANCEL_CAC_TIMEOUT_SEC 600
 
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////// Local Module Functions ///////////////////////////
@@ -806,6 +807,55 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
         }
         break;
     }
+
+    case beerocks_message::ACTION_APMANAGER_HOSTAP_CANCEL_ACTIVE_CAC_REQUEST: {
+        auto request =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_APMANAGER_HOSTAP_CANCEL_ACTIVE_CAC_REQUEST>();
+        if (request == nullptr) {
+            LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_CANCEL_ACTIVE_CAC_REQUEST failed";
+            return false;
+        }
+
+        ap_wlan_hal->cancel_cac(request->cs_params().channel,
+                                utils::convert_bandwidth_to_enum(request->cs_params().bandwidth),
+                                request->cs_params().vht_center_frequency,
+                                request->cs_params().channel_ext_above_primary);
+
+        // polling until enabled or timedout
+
+        // set the point in time that is considered timeout
+        auto timeout =
+            std::chrono::steady_clock::now() + std::chrono::seconds(MAX_CANCEL_CAC_TIMEOUT_SEC);
+        bool enabled = false;
+        while (!enabled && std::chrono::steady_clock::now() < timeout) {
+            if (ap_wlan_hal->get_radio_info().radio_state == bwl::eRadioState::ENABLED) {
+                enabled = true;
+            } else {
+                LOG(WARNING) << "radio state is still not enabled, waiting for more "
+                             << std::chrono::duration_cast<std::chrono::seconds>(
+                                    timeout - std::chrono::steady_clock::now())
+                                    .count()
+                             << " seconds.";
+                UTILS_SLEEP_MSEC(500);
+            }
+        }
+
+        // send the result
+        auto response = message_com::create_vs_message<
+            beerocks_message::cACTION_APMANAGER_HOSTAP_CANCEL_ACTIVE_CAC_RESPONSE>(
+            cmdu_tx, beerocks_header->id());
+        if (!response) {
+            LOG(ERROR) << "Failed building cACTION_APMANAGER_HOSTAP_CANCEL_ACTIVE_CAC_RESPONSE!";
+            return false;
+        }
+        response->success() = enabled;
+
+        message_com::send_cmdu(slave_socket, cmdu_tx);
+
+        break;
+    }
+
     case beerocks_message::ACTION_APMANAGER_HOSTAP_SET_NEIGHBOR_11K_REQUEST: {
         LOG(WARNING) << "UNIMPLEMENTED - ACTION_APMANAGER_HOSTAP_SET_NEIGHBOR_11K_REQUEST";
         // auto request = (message::sACTION_APMANAGER_HOSTAP_SET_NEIGHBOR_11K_REQUEST*)rx_buffer;
