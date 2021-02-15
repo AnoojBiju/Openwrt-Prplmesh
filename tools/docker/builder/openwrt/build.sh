@@ -134,6 +134,7 @@ main() {
             TARGET_SYSTEM=intel_mips
             SUBTARGET=xrx500
             TARGET_PROFILE=
+            PRPLMESH_VARIANT=-dwpal
             ;;
         *)
             err "Unknown target device: $TARGET_DEVICE"
