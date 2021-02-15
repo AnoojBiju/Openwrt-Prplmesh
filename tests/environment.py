@@ -629,6 +629,7 @@ class RadioHostapd(Radio):
     def __init__(self, agent: ALEntityPrplWrt, iface_name: str):
         self.iface_name = iface_name
         self.agent = agent
+        _device_clear_input_buffer(self.agent.device)
         ip_raw = self.agent.command("ip link list dev {}".format(self.iface_name))
         mac = re.search(r"link/ether (([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})",
                         ip_raw).group(1)
