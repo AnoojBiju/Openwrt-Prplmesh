@@ -145,6 +145,14 @@ cACTION_BACKHAUL_HOSTAP_CHANNEL_SWITCH_ACS_START:
   tx_limit: int8_t
   tx_limit_valid: uint8_t #bool
 
+cACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC_REQUEST:
+  _type: class
+  cs_params: sApChannelSwitch # the channel to restore to after cancellation.
+
+cACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC_RESPONSE:
+  _type: class
+  success : uint8_t # bool
+
 cACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION:
   _type: class
   cs_params: sApChannelSwitch
