@@ -49,8 +49,17 @@ if (TARGET_PLATFORM STREQUAL "openwrt")
 
         # libbridge-ugw
         find_path(LIBBRIDGE_INCLUDE_DIR NAMES "libbridge-ugw.h")
-        include_directories(${LIBBRIDGE_INCLUDE_DIR})
-        find_library(bridge-ugw NAMES libbridge-ugw.a)
+        if (LIBBRIDGE_INCLUDE_DIR)
+            include_directories(${LIBBRIDGE_INCLUDE_DIR})
+            find_library(bridge-ugw NAMES libbridge-ugw.a)
+            add_definitions(-DLIB_BRIDGE_UGW)
+        else()
+            file(GLOB LIBBRIDGE_SEARCH_PATHS "${PLATFORM_BUILD_DIR}/linux-intel_*/bridge-utils*/libbridge")
+            find_path(LIBBRIDGE_INCLUDE_DIR NAMES "libbridge.h" PATHS "${LIBBRIDGE_SEARCH_PATHS}" NO_CMAKE_FIND_ROOT_PATH)
+            include_directories(${LIBBRIDGE_INCLUDE_DIR})
+            link_directories(${LIBBRIDGE_INCLUDE_DIR})
+            set(bridge-ugw "bridge")
+        endif()
 
         # UCI BPL
         file(GLOB_RECURSE bpl_platform_sources ${MODULE_PATH}/*/uci/*.c*)
