@@ -349,6 +349,21 @@ def _docker_wait_for_log(container: str, programs: [str], regex: str, start_line
         return (False, start_line, None)
 
 
+def _device_reset_console(device):
+    ''' Reset console input.
+
+    Interrupt any running command and wait for an input prompt.
+    '''
+
+    # Interrupt any running command
+    device.send('\003')
+
+    # Expect the prompt and the end of the line, to make sure we match
+    # the last one. Doing this will make sure we don't keep old data
+    # in the buffer.
+    device.expect(device.prompt)
+
+
 # Temporary workaround
 # Since we have multiple log files that correspond to a radio, multiple log files are passed
 # as argument. In the log messages, we only use the first one.
@@ -356,12 +371,9 @@ def _docker_wait_for_log(container: str, programs: [str], regex: str, start_line
 def _device_wait_for_log(device: None, log_paths: [str], regex: str,
                          timeout: int, start_line: int = 0, fail_on_mismatch: bool = True):
     """Waits for log matching regex expression to show up."""
-    # Interrupt any running command:
-    device.send('\003')
-    # Expect the prompt and the end of the line, to make sure we match
-    # the last one. Doing this will make sure we don't keep old data
-    # in the buffer.
-    device.expect(device.prompt)
+
+    _device_reset_console(device)
+
     device.sendline("tail -f -n +{:d} {}".format(start_line + 1, " ".join(log_paths)))
 
     match = None
@@ -376,9 +388,8 @@ def _device_wait_for_log(device: None, log_paths: [str], regex: str,
                 return (False, start_line, None)
         match = device.match.group(0)
     finally:
-        # Send Ctrl-C to interrupt tail -f
-        device.send('\003')
-        device.expect(device.prompt)
+        # Interrupt tail -f
+        _device_reset_console(device)
 
     if match:
         first_matched_line = match.partition('\r\n')[0]
