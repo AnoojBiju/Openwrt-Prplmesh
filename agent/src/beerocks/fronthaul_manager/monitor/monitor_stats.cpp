@@ -18,6 +18,7 @@
 #include <tlvf/wfa_map/tlvApMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
+#include <tlvf/wfa_map/tlvProfile2RadioMetrics.h>
 
 using namespace beerocks;
 using namespace net;
@@ -463,6 +464,21 @@ bool monitor_stats::add_ap_metrics(ieee1905_1::CmduMessageTx &cmdu_tx,
         return false;
     }
     std::fill_n(ap_metrics_response_tlv->estimated_service_info_field(), 3, 0);
+
+    // add profile-2 radio metrics tlv
+    auto radio_metrics_tlv = cmdu_tx.addClass<wfa_map::tlvProfile2RadioMetrics>();
+    if (!radio_metrics_tlv) {
+        LOG(ERROR) << "Failed to add class tlvProfile2RadioMetrics";
+        return false;
+    }
+    radio_metrics_tlv->radio_uid() = tlvf::mac_from_string(radio_node.get_iface());
+    radio_metrics_tlv->noise()     = radio_node.ap_metrics_reporting_info().ap_metrics_radio_noise;
+    radio_metrics_tlv->transmit() =
+        radio_node.ap_metrics_reporting_info().ap_metrics_radio_transmit;
+    radio_metrics_tlv->receive_self() =
+        radio_node.ap_metrics_reporting_info().ap_metrics_radio_receive_self;
+    radio_metrics_tlv->receive_other() =
+        radio_node.ap_metrics_reporting_info().ap_metrics_radio_receive_other;
 
     return true;
 }
