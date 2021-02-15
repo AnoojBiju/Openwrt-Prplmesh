@@ -55,7 +55,6 @@ platform:
   needs:
     - build-in-docker
     - image-build-boardfarm-ci
-  rules: *expensive-job
   variables:
     TESTS_TO_RUN: $TESTS_TO_RUN
     DEVICE_UNDER_TEST: $DEVICE_UNDER_TEST
