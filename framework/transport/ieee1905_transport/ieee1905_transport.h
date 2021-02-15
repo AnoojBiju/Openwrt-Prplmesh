@@ -339,6 +339,7 @@ private:
     void handle_broker_cmdu_tx_message(messages::CmduTxMessage &msg);
     void handle_broker_interface_configuration_request_message(
         messages::InterfaceConfigurationRequestMessage &msg);
+    void handle_al_mac_addr_configuration_message(messages::AlMacAddressConfigurationMessage &msg);
     bool send_packet_to_broker(Packet &packet);
     uint16_t get_next_message_id();
 
