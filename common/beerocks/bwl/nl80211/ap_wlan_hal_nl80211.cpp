@@ -264,6 +264,17 @@ bool ap_wlan_hal_nl80211::set_channel(int chan, beerocks::eWiFiBandwidth bw, int
     return true;
 }
 
+bool ap_wlan_hal_nl80211::set_channel_with_secondary(int chan, beerocks::eWiFiBandwidth bw,
+                                                     int center_channel,
+                                                     int secondary_channel_offset)
+{
+    LOG(WARNING)
+        << "please implement full function. currently secondary channel offset is not taken into "
+           "considaration.";
+
+    return set_channel(chan, bw, center_channel);
+}
+
 bool ap_wlan_hal_nl80211::sta_allow(const std::string &mac, const std::string &bssid)
 {
     LOG(TRACE) << __func__ << " mac: " << mac << ", bssid: " << bssid;
@@ -763,6 +774,12 @@ bool ap_wlan_hal_nl80211::switch_channel(int chan, int bw, int vht_center_freque
     }
 
     return true;
+}
+
+bool ap_wlan_hal_nl80211::cancel_cac(int chan, int bw, int vht_center_frequency, int secondary_chan)
+{
+    // TODO: implement
+    return false;
 }
 
 bool ap_wlan_hal_nl80211::set_antenna_mode(AntMode mode)

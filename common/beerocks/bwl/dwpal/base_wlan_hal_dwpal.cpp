@@ -863,6 +863,7 @@ bool base_wlan_hal_dwpal::refresh_radio_info()
 
     // Read Radio status
     const char *tmp_str;
+    int64_t tmp_int;
     parsed_line_t reply_obj;
 
     std::string cmd = "STATUS";
@@ -871,6 +872,13 @@ bool base_wlan_hal_dwpal::refresh_radio_info()
         LOG(ERROR) << __func__ << " failed";
         return false;
     }
+
+    // secondary channel (a.k.a channel_ext_above)
+    if (!read_param("secondary_channel", reply_obj, tmp_int)) {
+        LOG(ERROR) << "Failed reading 'secondary_channel' parameter!";
+        return false;
+    }
+    m_radio_info.channel_ext_above = tmp_int;
 
     // RSSI
     if (!read_param("state", reply_obj, &tmp_str)) {

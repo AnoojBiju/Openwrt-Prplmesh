@@ -142,6 +142,14 @@ bool ap_wlan_hal_dummy::set_channel(int chan, beerocks::eWiFiBandwidth bw, int c
     return write_status_file("channel", value.str());
 }
 
+bool ap_wlan_hal_dummy::set_channel_with_secondary(int chan, beerocks::eWiFiBandwidth bw,
+                                                   int center_channel, int secondary_channel_offset)
+{
+    set_channel(chan, bw, center_channel);
+    m_radio_info.channel_ext_above = secondary_channel_offset;
+    return true;
+}
+
 bool ap_wlan_hal_dummy::sta_allow(const std::string &mac, const std::string &bssid)
 {
     LOG(DEBUG) << "Got client allow request for " << mac << " on bssid " << bssid;
@@ -267,6 +275,13 @@ bool ap_wlan_hal_dummy::switch_channel(int chan, int bw, int vht_center_frequenc
     event_queue_push(Event::ACS_Completed);
     event_queue_push(Event::CSA_Finished);
 
+    return set_channel(chan, beerocks::utils::convert_bandwidth_to_enum(bw), vht_center_frequency);
+}
+
+bool ap_wlan_hal_dummy::cancel_cac(int chan, int bw, int vht_center_frequency, int secondary_chan)
+{
+    disable();
+    enable();
     return set_channel(chan, beerocks::utils::convert_bandwidth_to_enum(bw), vht_center_frequency);
 }
 
