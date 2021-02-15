@@ -68,6 +68,7 @@
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
 #include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>
 #include <tlvf/wfa_map/tlvProfile2Default802dotQSettings.h>
+#include <tlvf/wfa_map/tlvProfile2RadioMetrics.h>
 #include <tlvf/wfa_map/tlvProfile2TrafficSeparationPolicy.h>
 #include <tlvf/wfa_map/tlvRadioOperationRestriction.h>
 #include <tlvf/wfa_map/tlvSearchedService.h>
@@ -1908,6 +1909,12 @@ bool Controller::handle_cmdu_1905_ap_metric_response(const std::string &src_mac,
                 return false;
             }
         }
+    }
+
+    for (auto radio_tlv : cmdu_rx.getClassList<wfa_map::tlvProfile2RadioMetrics>()) {
+        database.set_radio_metrics(radio_tlv->radio_uid(), radio_tlv->noise(),
+                                   radio_tlv->transmit(), radio_tlv->receive_self(),
+                                   radio_tlv->receive_other());
     }
 
     print_ap_metric_map(ap_metric_data);
