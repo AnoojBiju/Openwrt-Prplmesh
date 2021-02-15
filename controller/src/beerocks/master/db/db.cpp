@@ -4310,15 +4310,6 @@ bool db::set_hostap_stats_info(const std::string &mac,
         if (radio_path.empty()) {
             return true;
         }
-
-        // TODO: PPM-945
-        // Radio.Noise parameter should be filled up after receiving specific R2 message.
-        // For avoiding spam in controller log decided to comment code below.
-        // // Path to the variable example: Controller.Network.Device.1.Radio.1.Noise
-        // if (!m_ambiorix_datamodel->set(radio_path, "Noise", p->noise)) {
-        //     LOG(ERROR) << "Failed to set: " << radio_path << "Noise parameter.";
-        //     return false;
-        // }
     }
 
     return true;
@@ -6349,6 +6340,45 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
     */
     if (!m_ambiorix_datamodel->set(bss_instance, "TimeStamp", timestamp)) {
         LOG(ERROR) << "Failed to set " << bss_instance << "TimeStamp: " << timestamp;
+        return false;
+    }
+
+    return true;
+}
+
+bool db::set_radio_metrics(const sMacAddr &radio_mac, uint8_t noise, uint8_t transmit,
+                           uint8_t receive_self, uint8_t receive_other)
+{
+
+    auto radio_node = get_node(radio_mac);
+    if (!radio_node) {
+        LOG(ERROR) << "Failed to get radio node for mac: " << radio_mac;
+        return false;
+    }
+
+    auto radio_path = radio_node->dm_path;
+    if (radio_path.empty()) {
+        return true;
+    }
+
+    // Data model path example: Controller.Network.Device.1.Radio.1.Noise
+    if (!m_ambiorix_datamodel->set(radio_path, "Noise", noise)) {
+        LOG(ERROR) << "Failed to set " << radio_path << ".Noise " << noise;
+        return false;
+    }
+
+    if (!m_ambiorix_datamodel->set(radio_path, "Transmit", transmit)) {
+        LOG(ERROR) << "Failed to set " << radio_path << ".Transmit " << transmit;
+        return false;
+    }
+
+    if (!m_ambiorix_datamodel->set(radio_path, "ReceiveSelf", receive_self)) {
+        LOG(ERROR) << "Failed to set " << radio_path << ".ReceiveSelf " << receive_self;
+        return false;
+    }
+
+    if (!m_ambiorix_datamodel->set(radio_path, "ReceiveOther", receive_other)) {
+        LOG(ERROR) << "Failed to set " << radio_path << ".ReceiveOther " << receive_other;
         return false;
     }
 
