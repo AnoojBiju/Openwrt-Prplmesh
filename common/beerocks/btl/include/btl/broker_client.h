@@ -128,9 +128,22 @@ public:
      * monitor the bridge for changes as interfaces are added to and/or removed from the bridge.
      *
      * @param bridge_name Name of the bridge to use in the transport process.
+     *
      * @return true on success and false otherwise
      */
-    virtual bool configure(const std::string &bridge_name) = 0;
+    virtual bool configure_interfaces(const std::string &bridge_name) = 0;
+
+    /**
+     * @brief Configures the transport process to bind a given local bridge al_mac address.
+     *
+     * Builds a configuration message with the al_mac address of the bridge and sends it
+     * to the server. The transport process will set the shipped mac address value.
+     *
+     * @param al_mac Mac address of the bridge to use in the transport process.
+     *
+     * @return true on success and false otherwise
+     */
+    virtual bool configure_al_mac(const sMacAddr &al_mac) = 0;
 
     /**
      * @brief Sends a CDMU message to the transport process for dispatching.

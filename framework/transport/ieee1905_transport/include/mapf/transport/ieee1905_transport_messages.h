@@ -11,6 +11,8 @@
 
 #include <bcl/network/socket.h>
 #include <mapf/common/err.h>
+#include <tlvf/common/sMacAddr.h>
+#include <tlvf/tlvftypes.h>
 
 #include <net/if.h>
 #include <netinet/ether.h>
@@ -40,7 +42,8 @@ enum class Type {
     CmduTxMessage                        = 2,
     SubscribeMessage                     = 3,
     CmduTxConfirmationMessage            = 4,
-    InterfaceConfigurationRequestMessage = 5
+    InterfaceConfigurationRequestMessage = 5,
+    AlMacAddressConfigurationMessage     = 6
 };
 
 class Message {
@@ -421,6 +424,45 @@ public:
         ss << " metadata:" << std::endl;
         ss << " version: " << (unsigned)m->version << std::endl;
         ss << " name: " << m->bridge_name << std::endl;
+
+        return os << ss.str();
+    }
+};
+
+class AlMacAddressConfigurationMessage : public Message {
+    static const uint8_t kVersion = 0;
+
+public:
+    struct Metadata {
+        uint8_t version = kVersion;
+        sMacAddr al_mac;
+    };
+
+    explicit AlMacAddressConfigurationMessage(std::initializer_list<Frame> frames = {})
+        : Message(Type::AlMacAddressConfigurationMessage, frames)
+    {
+        // maximum one frame is allowed (if none are given we will allocate one below)
+        mapf_assert(this->frames().size() <= 1);
+
+        if (this->frames().empty()) {
+            Message::Frame frame(sizeof(Metadata));
+            Add(frame);
+        } else if (this->frames().back().len() < sizeof(Metadata)) {
+            this->frames().back().set_size(sizeof(Metadata));
+        }
+    }
+
+    Metadata *metadata() const { return reinterpret_cast<Metadata *>(frames().back().data()); };
+
+    virtual std::ostream &print(std::ostream &os) const override
+    {
+        Message::print(os);
+
+        std::stringstream ss;
+        Metadata *m = metadata();
+        ss << " metadata:" << std::endl;
+        ss << " version: " << (unsigned)m->version << std::endl;
+        ss << " al_mac:" << m->al_mac;
 
         return os << ss.str();
     }

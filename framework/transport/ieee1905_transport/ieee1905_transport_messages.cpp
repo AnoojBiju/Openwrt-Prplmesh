@@ -41,6 +41,9 @@ create_transport_message(Type type, std::initializer_list<messages::Message::Fra
     case messages::Type::InterfaceConfigurationRequestMessage:
         return std::unique_ptr<messages::InterfaceConfigurationRequestMessage>{
             new messages::InterfaceConfigurationRequestMessage(frame)};
+    case messages::Type::AlMacAddressConfigurationMessage:
+        return std::unique_ptr<messages::AlMacAddressConfigurationMessage>{
+            new messages::AlMacAddressConfigurationMessage(frame)};
     default:
         LOG(WARNING) << "Received unknown message type: " << int(type);
         return std::unique_ptr<messages::Message>{new messages::Message(Type::Invalid, frame)};

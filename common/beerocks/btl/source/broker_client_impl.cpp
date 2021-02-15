@@ -92,13 +92,24 @@ bool BrokerClientImpl::subscribe(const std::set<ieee1905_1::eMessageType> &msg_t
     return send_message(message);
 }
 
-bool BrokerClientImpl::configure(const std::string &bridge_name)
+bool BrokerClientImpl::configure_interfaces(const std::string &bridge_name)
 {
     beerocks::transport::messages::InterfaceConfigurationRequestMessage message;
 
     string_utils::copy_string(message.metadata()->bridge_name, bridge_name.c_str(), IF_NAMESIZE);
 
     LOG(DEBUG) << "Configuring bridge " << bridge_name << " to ieee1905 transport";
+
+    return send_message(message);
+}
+
+bool BrokerClientImpl::configure_al_mac(const sMacAddr &al_mac)
+{
+    beerocks::transport::messages::AlMacAddressConfigurationMessage message;
+
+    message.metadata()->al_mac = al_mac;
+
+    LOG(DEBUG) << "Configuring AL MAC " << al_mac << " to ieee1905 transport";
 
     return send_message(message);
 }
