@@ -1,8 +1,0 @@
-- name: feed_intel
-  uri: https://gitlab.com/prpl-foundation/prplwrt/feed-intel.git
-  tracking_branch: ugw-8.4.2-cleanup
-  revision: 735c53bf0c8089eefffdd17017c7338386534d6b
-- name: feed_prpl
-  uri: https://gitlab.com/prpl-foundation/prplwrt/feed-prpl.git
-  tracking_branch: prpl-19.07
-  revision: ee7c1bbce5209cc7b6f12c01a99759c45528f506

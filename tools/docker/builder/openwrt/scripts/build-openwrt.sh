@@ -13,13 +13,23 @@ printf '%s=%s\n' "OPENWRT_REPOSITORY" "$OPENWRT_REPOSITORY" >> files/etc/prplwrt
 printf '%s=%s\n' "OPENWRT_VERSION" "$OPENWRT_VERSION" >> files/etc/prplwrt-version
 case $TARGET_DEVICE in
     netgear-rax40|axepoint|nec-wx3000hp|intel_mips)
-        # Add prplmesh to the list of packages of the profile:
-        sed -i 's/packages:/packages:\n  - prplmesh-dwpal/g' profiles/"$TARGET_DEVICE".yml
-        # First replace the profiles
-        yq write --inplace profiles/"$TARGET_DEVICE".yml feeds -f profiles_feeds/netgear-rax40.yml
+        # Arguments to gen_config.py:
+        args=("$TARGET_SYSTEM")
 
-        # The additional profiles that will be used:
-        args=("debug")
+        # The additional profiles that will be used. 'debug' contains
+        # additional packages that are useful when developing:
+        args+=("debug")
+
+        # intel_mips depends on iwlwav-iw, which clashes with iw-full,
+        # so remove it for this platform:
+        sed -i '/iw-full$/d' "profiles/debug.yml"
+
+        # feed-prpl is in the prpl profile:
+        args+=("prpl")
+
+        # prplMesh is not yet in the prpl profile, so add it
+        # manually. TODO: remove once PPM-1112 is done:
+        sed -i 's/packages:/packages:\n  - prplmesh-dwpal/g' "profiles/prpl.yml"
 
         # Add the SAH feed and its packages:
         cp profiles_feeds/sah.yml profiles/sah.yml
@@ -34,9 +44,7 @@ case $TARGET_DEVICE in
             cat "profiles/${profile}.yml" >> files/etc/prplwrt-version
         done
 
-        ./scripts/gen_config.py "$TARGET_DEVICE" "${args[@]}"
-        cat profiles_feeds/netgear-rax40.yml >> files/etc/prplwrt-version
-
+        ./scripts/gen_config.py "${args[@]}"
     ;;
     *)
         cp feeds.conf.default feeds.conf
