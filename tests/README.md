@@ -168,8 +168,9 @@ TODO: translate this presentation into markdown format (.md)
 - check logs controller ACK_MESSAGE
 
 ### topology
-- send 0x0002 (Topology Query message) to repeater 1 as Gateway 
-- check receiving message on repeater 1
+- waits at least 60 sec. to topology gets discovered
+- send 0x0002 (Topology Query message) to repeater 1 as Gateway
+- check topology contains Controller MAC appears on Agent Neighbor List
 
 ## Mapping of certification tests
 
