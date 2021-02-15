@@ -595,6 +595,27 @@ class cACTION_BACKHAUL_HOSTAP_CHANNEL_SWITCH_ACS_START : public BaseClass
         uint8_t* m_tx_limit_valid = nullptr;
 };
 
+class cACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC : public BaseClass
+{
+    public:
+        cACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC();
+
+        static eActionOp_BACKHAUL get_action_op(){
+            return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC);
+        }
+        sApChannelSwitch& cs_params();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_BACKHAUL* m_action_op = nullptr;
+        sApChannelSwitch* m_cs_params = nullptr;
+};
+
 class cACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION : public BaseClass
 {
     public:
