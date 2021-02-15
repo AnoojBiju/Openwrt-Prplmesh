@@ -9,6 +9,7 @@
 #ifndef _DB_H_
 #define _DB_H_
 
+#include "agent.h"
 #include "node.h"
 
 #include <bcl/beerocks_defines.h>
@@ -171,6 +172,8 @@ public:
         // Params
         bool client_optimal_path_roaming_prefer_signal_strength = false;
     } sDbMasterSettings;
+
+    beerocks::mac_map<prplmesh::controller::db::sAgent> m_agents;
 
     db(sDbMasterConfig &config_, beerocks::logging &logger_, const std::string &local_bridge_mac,
        std::shared_ptr<beerocks::nbapi::Ambiorix> ambiorix_object)

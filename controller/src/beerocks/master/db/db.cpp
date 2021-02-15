@@ -211,6 +211,8 @@ bool db::add_node_gateway(const sMacAddr &mac, const sMacAddr &radio_identifier)
         return false;
     }
 
+    m_agents.add(mac);
+
     auto data_model_path = dm_add_device_element(mac);
     if (data_model_path.empty()) {
         LOG(ERROR) << "Failed to add device element for the gateway, mac: " << mac;
@@ -234,6 +236,8 @@ bool db::add_node_ire(const sMacAddr &mac, const sMacAddr &parent_mac,
         LOG(ERROR) << "Failed to add ire node, mac: " << mac;
         return false;
     }
+
+    m_agents.add(mac);
 
     auto data_model_path = dm_add_device_element(mac);
     if (data_model_path.empty()) {
@@ -312,6 +316,14 @@ bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac,
         return false;
     }
 
+    auto agent = m_agents.get(parent_mac);
+    if (!agent) {
+        LOG(ERROR) << "While adding radio " << mac << " parent agent " << parent_mac
+                   << " not found.";
+        return false;
+    }
+    agent->radios.add(mac);
+
     auto data_model_path =
         dm_add_radio_element(tlvf::mac_to_string(mac), tlvf::mac_to_string(parent_mac));
 
@@ -352,6 +364,11 @@ bool db::add_node_client(const sMacAddr &mac, const sMacAddr &parent_mac,
 
 bool db::remove_node(const sMacAddr &mac)
 {
+    if (m_agents.erase(mac) != 1) {
+        LOG(ERROR) << "remove_node: no agent with mac " << mac << " found";
+        // Since the code paths leading up to this are a bit iffy, don't return false in this case.
+    }
+
     int i;
     for (i = 0; i < HIERARCHY_MAX; i++) {
         auto it = nodes[i].find(tlvf::mac_to_string(mac));
