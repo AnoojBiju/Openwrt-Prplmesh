@@ -794,6 +794,28 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
         }
         break;
     }
+
+    case beerocks_message::ACTION_APMANAGER_HOSTAP_CANCEL_ACTIVE_CAC: {
+        auto request =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_APMANAGER_HOSTAP_CANCEL_ACTIVE_CAC>();
+        if (request == nullptr) {
+            LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_CANCEL_ACTIVE_CAC failed";
+            return false;
+        }
+
+        bool canceled =
+            ap_wlan_hal->cancel_cac(request->cs_params().channel, request->cs_params().bandwidth,
+                                    request->cs_params().vht_center_frequency,
+                                    request->cs_params().channel_ext_above_primary);
+        if (!canceled) {
+            LOG(ERROR) << "Failed to cancel CAC";
+            return false;
+        }
+
+        break;
+    }
+
     case beerocks_message::ACTION_APMANAGER_HOSTAP_SET_NEIGHBOR_11K_REQUEST: {
         LOG(WARNING) << "UNIMPLEMENTED - ACTION_APMANAGER_HOSTAP_SET_NEIGHBOR_11K_REQUEST";
         // auto request = (message::sACTION_APMANAGER_HOSTAP_SET_NEIGHBOR_11K_REQUEST*)rx_buffer;

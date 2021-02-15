@@ -864,6 +864,21 @@ bool ap_wlan_hal_dwpal::set_channel(int chan, beerocks::eWiFiBandwidth bw, int c
     return true;
 }
 
+bool ap_wlan_hal_dwpal::set_channel_with_secondary(int chan, beerocks::eWiFiBandwidth bw,
+                                                   int center_channel, int secondary_channel)
+{
+    if (!set_channel(chan, bw, center_channel)) {
+        return false;
+    }
+
+    if (!set("secondary_channel", std::to_string(secondary_channel))) {
+        LOG(ERROR) << "Failed setting secondary channel " << chan;
+        return false;
+    }
+
+    return true;
+}
+
 bool ap_wlan_hal_dwpal::sta_allow(const std::string &mac, const std::string &bssid)
 {
     // Check if the requested BSSID is part of this radio
@@ -1350,6 +1365,52 @@ bool ap_wlan_hal_dwpal::switch_channel(int chan, int bw, int vht_center_frequenc
     LOG(DEBUG) << "switch channel command: " << cmd;
     if (!dwpal_send_cmd(cmd)) {
         LOG(ERROR) << "switch_channel() failed!";
+        return false;
+    }
+
+    return true;
+}
+
+bool ap_wlan_hal_dwpal::cancel_cac(int chan, int bw, int vht_center_frequency,
+                                   int secondary_chan_offset)
+{
+    // the following hostapd sequence
+    // disables cac and re-enables
+    // the radio with the given parameters:
+    // disable (cac canceled)
+    // SET channel X
+    // SET secondary_channel X
+    // SET vht_oper_chwidth X
+    // SET vht_oper_centr_freq_seg0_idx X
+    // enable (radio enabled back on channel X)
+
+    if (!disable()) {
+        LOG(ERROR) << "Failed disabling radio";
+        return false;
+    }
+
+    if (!set("channel", std::to_string(chan))) {
+        LOG(ERROR) << "Failed setting channel " << chan;
+        return false;
+    }
+
+    if (!set("secondary_channel", std::to_string(secondary_chan_offset))) {
+        LOG(ERROR) << "Failed setting bandwidth " << bw;
+        return false;
+    }
+
+    if (!set("vht_oper_chwidth", std::to_string(bw))) {
+        LOG(ERROR) << "Failed setting bandwidth " << bw;
+        return false;
+    }
+
+    if (!set("vht_oper_centr_freq_seg0_idx", std::to_string(vht_center_frequency))) {
+        LOG(ERROR) << "Failed setting vht center frequency " << vht_center_frequency;
+        return false;
+    }
+
+    if (!enable()) {
+        LOG(ERROR) << "Failed enabling radio";
         return false;
     }
 
