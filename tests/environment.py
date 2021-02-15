@@ -302,6 +302,15 @@ def _docker_wait_for_log(container: str, programs: [str], regex: str, start_line
         return (False, start_line, None)
 
 
+def _device_clear_input_buffer(device):
+    """Clears input buffer of boardfarm"""
+    # Interrupt any running command:
+    device.send('\003')
+    # Expect the prompt and the end of the line, to make sure we match
+    # the last one. Doing this will make sure we don't keep old data
+    # in the buffer.
+    device.expect(['{}$'.format(device.prompt), pexpect.TIMEOUT, pexpect.EOF])
+
 # Temporary workaround
 # Since we have multiple log files that correspond to a radio, multiple log files are passed
 # as argument. In the log messages, we only use the first one.
@@ -309,12 +318,8 @@ def _docker_wait_for_log(container: str, programs: [str], regex: str, start_line
 def _device_wait_for_log(device: None, log_paths: [str], regex: str,
                          timeout: int, start_line: int = 0, fail_on_mismatch = True):
     """Waits for log matching regex expression to show up."""
-    # Interrupt any running command:
-    device.send('\003')
-    # Expect the prompt and the end of the line, to make sure we match
-    # the last one. Doing this will make sure we don't keep old data
-    # in the buffer.
-    device.expect(['{}$'.format(device.prompt), pexpect.TIMEOUT, pexpect.EOF])
+    _device_clear_input_buffer(device)
+
     device.sendline("tail -f -n +{:d} {}".format(start_line + 1, " ".join(log_paths)))
     device.expect(regex, timeout=timeout)
     match = device.match.group(0)
