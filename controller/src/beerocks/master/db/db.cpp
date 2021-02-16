@@ -675,6 +675,7 @@ bool db::set_node_state(const std::string &mac, beerocks::eNodeState state)
 {
     auto n = get_node(mac);
     if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
         return false;
     }
     n->state             = state;
@@ -5701,6 +5702,10 @@ uint64_t db::get_client_remaining_sec(const std::pair<std::string, ValuesMap> &c
 bool db::clear_ap_capabilities(const sMacAddr &radio_mac)
 {
     auto radio_node = get_node(radio_mac);
+    if (!radio_node) {
+        LOG(WARNING) << " - node " << radio_mac << " does not exist!";
+        return false;
+    }
 
     std::string path_to_obj = dm_get_path_to_radio(*radio_node);
     if (path_to_obj.empty()) {
