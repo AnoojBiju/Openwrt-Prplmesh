@@ -869,8 +869,8 @@ class RadioHostapd(Radio):
     def get_power_limit(self) -> int:
         device = self.agent.device
         device.sendline("iw {} info".format(self.iface_name))
-        device.expect("txpower (?P<power_limit>[0-9]*[.]?[0-9]*) dBm")
-        return device.match.group('power_limit')
+        device.expect(r"txpower (?P<power_limit>[0-9]*)(\.0+)? dBm")
+        return int(device.match.group('power_limit'))
 
 
 class VirtualAPHostapd(VirtualAP):
