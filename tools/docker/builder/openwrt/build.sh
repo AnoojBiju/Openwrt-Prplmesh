@@ -78,6 +78,12 @@ build_prplmesh() {
     docker cp "${container_name}:/home/openwrt/openwrt/artifacts/" "$build_dir"
     mv "$build_dir/artifacts/"* "$build_dir"
     rm -r "$build_dir/artifacts/"
+    if [ "$TARGET_SYSTEM" = "intel_mips" ] ; then
+        #TODO: remove once PPM-1121 is done
+        for device in axepoint netgear-rax40 nec-wx3000hp ; do
+            ln -s intel_mips "$build_dir/../$device"
+        done
+    fi
 }
 
 main() {
