@@ -4421,30 +4421,30 @@ bool db::set_node_stats_info(const std::string &mac,
         p->stats_delta_ms    = params->stats_delta_ms;
         p->rx_rssi           = params->rx_rssi;
         p->timestamp         = std::chrono::steady_clock::now();
-
-        std::string path_to_sta = n->dm_path;
-
-        if (path_to_sta.empty()) {
-            LOG(ERROR) << "Failed to get path for station with mac: " << mac;
-            return false;
-        }
-
-        if (!m_ambiorix_datamodel->set(path_to_sta, "LastDataDownlinkRate", p->tx_phy_rate_100kb)) {
-            LOG(ERROR) << "Failed to set " << path_to_sta
-                       << "LastDataDownlinkRate: " << p->tx_phy_rate_100kb;
-            return false;
-        }
-        if (!m_ambiorix_datamodel->set(path_to_sta, "LastDataUplinkRate", p->rx_phy_rate_100kb)) {
-            LOG(ERROR) << "Failed to set " << path_to_sta
-                       << "LastDataUplinkRate: " << p->rx_phy_rate_100kb;
-            return false;
-        }
     }
 
     std::string path_to_sta = n->dm_path;
 
     if (path_to_sta.empty()) {
         return true;
+    }
+
+    // Path example to the variable in Data Model
+    // Controller.Network.Device.1.Radio.1.BSS.2.STA.1.LastDataDownlinkRate
+    if (!m_ambiorix_datamodel->set(path_to_sta, "LastDataDownlinkRate",
+                                   n->stats_info->tx_phy_rate_100kb)) {
+        LOG(ERROR) << "Failed to set " << path_to_sta
+                   << "LastDataDownlinkRate: " << n->stats_info->tx_phy_rate_100kb;
+        return false;
+    }
+
+    // Path example to the variable in Data Model
+    // Controller.Network.Device.1.Radio.1.BSS.2.STA.1.LastDataUplinkRate
+    if (!m_ambiorix_datamodel->set(path_to_sta, "LastDataUplinkRate",
+                                   n->stats_info->rx_phy_rate_100kb)) {
+        LOG(ERROR) << "Failed to set " << path_to_sta
+                   << "LastDataUplinkRate: " << n->stats_info->rx_phy_rate_100kb;
+        return false;
     }
 
     // Path example to the variable in Data Model
