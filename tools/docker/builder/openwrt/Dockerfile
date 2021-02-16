@@ -56,45 +56,16 @@ RUN printf '\033[1;35m%s Cloning prplWrt\n\033[0m' "$(date --iso-8601=seconds --
 ARG PRPLMESH_VARIANT
 ENV PRPLMESH_VARIANT=$PRPLMESH_VARIANT
 
-# The feed to use to build prplMesh.
-ARG PRPL_FEED
-ENV PRPL_FEED=$PRPL_FEED
-# The feed to use to build HLAPI.
-ARG SAH_FEED
-ENV SAH_FEED=$SAH_FEED
 # optional: the feed to use to build MMX.
 ARG MMX_FEED
 ENV MMX_FEED=$MMX_FEED
-# optional: intel feed to use.
-ARG INTEL_FEED
-ENV INTEL_FEED=$INTEL_FEED
-# optional: iwlwav feed to use.
-ARG IWLWAV_FEED
-ENV IWLWAV_FEED=$IWLWAV_FEED
-
-# Target to build for (CONFIG_TARGET_ will be prepended).
+# Target system to build for (used for prplwrt gen_config.py script):
 # Example: TARGET_SYSTEM=mvebu
 ARG TARGET_SYSTEM
 ENV TARGET_SYSTEM=$TARGET_SYSTEM
 
-# Subtarget (CONFIG_TARGET_${TARGET_SYSTEM}_ will be prepended).
-# Example: SUBTARGET=cortexa9
-ARG SUBTARGET
-ENV SUBTARGET=$SUBTARGET
-
-# Target profile (CONFIG_TARGET_${TARGET_SYSTEM}_${SUBTARGET}_ will be prepended).
-# Example: TARGET_PROFILE=DEVICE_cznic_turris-omnia
-ARG TARGET_PROFILE
-ENV TARGET_PROFILE=$TARGET_PROFILE
-
-# Target device used for prplwrt gen_config.py script (intel_mips/axepoint/netgear-rax40).
-# Example: TARGET_DEVICE=axepoint
-ARG TARGET_DEVICE
-ENV TARGET_DEVICE=$TARGET_DEVICE
-
 WORKDIR /home/openwrt/openwrt
 
-COPY --chown=openwrt:openwrt configs/ /home/openwrt/openwrt/configs/
 COPY --chown=openwrt:openwrt profiles_feeds/ /home/openwrt/openwrt/profiles_feeds
 COPY --chown=openwrt:openwrt scripts/build-openwrt.sh /home/openwrt/openwrt/scripts/build-openwrt.sh
 

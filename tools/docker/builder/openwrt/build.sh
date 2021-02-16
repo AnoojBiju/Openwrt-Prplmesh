@@ -29,10 +29,6 @@ usage() {
     echo " -d is always required."
     echo ""
     echo "The following environment variables will affect the build:"
-    echo " - PRPL_FEED: the prpl feed that will be used to install prplMesh."
-    echo "   default: $PRPL_FEED"
-    echo " - SAH_FEED: the SAH feed that will be used to install bus agnostic API."
-    echo "   default: $SAH_FEED"
     echo " - MMX_FEED: the MMX feed that will be used to install MMX Web and MMX CLI if option --mmx used."
     echo "   default: $MMX_FEED"
 
@@ -48,8 +44,6 @@ build_image() {
            --build-arg SUBTARGET="$SUBTARGET" \
            --build-arg TARGET_DEVICE="$TARGET_DEVICE" \
            --build-arg TARGET_PROFILE="$TARGET_PROFILE" \
-           --build-arg PRPL_FEED="$PRPL_FEED" \
-           --build-arg SAH_FEED="$SAH_FEED" \
            --build-arg MMX_FEED="$MMX_FEED" \
            --build-arg PRPLMESH_VARIANT="$PRPLMESH_VARIANT" \
            --target="$DOCKER_TARGET_STAGE" \
@@ -152,8 +146,6 @@ main() {
 
     dbg "OPENWRT_REPOSITORY=$OPENWRT_REPOSITORY"
     dbg "OPENWRT_VERSION=$OPENWRT_VERSION"
-    dbg "PRPL_FEED=$PRPL_FEED"
-    dbg "SAH_FEED=$SAH_FEED"
     dbg "MMX_FEED=$MMX_FEED"
     dbg "IMAGE_ONLY=$IMAGE_ONLY"
     dbg "TARGET_DEVICE=$TARGET_DEVICE"
@@ -181,8 +173,6 @@ main() {
     # git version, so we use sed instead.
     PRPLMESH_VERSION="$(git describe --always --dirty | sed -e 's/.*-g//')"
     export PRPLMESH_VERSION
-    export PRPL_FEED
-    export SAH_FEED
     export MMX_FEED
     export PRPLMESH_VARIANT
 
@@ -197,8 +187,6 @@ VERBOSE=false
 IMAGE_ONLY=false
 OPENWRT_REPOSITORY='https://gitlab.com/prpl-foundation/prplwrt/prplwrt.git'
 OPENWRT_VERSION='665125065101f676ef6e58883216eb054b21366d'
-PRPL_FEED='https://gitlab.com/prpl-foundation/prplwrt/feed-prpl.git^ee7c1bbce5209cc7b6f12c01a99759c45528f506'
-SAH_FEED='https://gitlab.com/soft.at.home/buildsystems/openwrt/sah-packages.git^3c8fef0f760b26d3c54cc518dd71f6bc5f79680a'
 PRPLMESH_VARIANT="-nl80211"
 DOCKER_TARGET_STAGE="prplmesh-builder"
 
