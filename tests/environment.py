@@ -684,7 +684,7 @@ class RadioHostapd(Radio):
         device = self.agent.device
         _device_clear_input_buffer(device)
         device.sendline("iw {} info".format(self.iface_name))
-        device.expect("txpower (?P<power_limit>[0-9]*)[.]?[0-9]* dBm")
+        device.expect("txpower (?P<power_limit>[0-9]*)(\.0+)? dBm")
         return int(device.match.group('power_limit'))
 
 
