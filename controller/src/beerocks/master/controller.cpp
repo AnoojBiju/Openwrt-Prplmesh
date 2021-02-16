@@ -2365,23 +2365,36 @@ bool Controller::handle_cmdu_1905_topology_response(const std::string &src_mac,
     auto tlvApInformation = cmdu_rx.getClass<wfa_map::tlvApOperationalBSS>();
     if (tlvApInformation) {
         for (uint8_t i = 0; i < tlvApInformation->radio_list_length(); i++) {
-            auto radio = std::get<1>(tlvApInformation->radio_list(i));
-            LOG(DEBUG) << "Operational BSS radio " << radio.radio_uid();
-            if (fronthaul_radios_on_db.find(tlvf::mac_to_string(radio.radio_uid())) ==
+            auto radio_entry = std::get<1>(tlvApInformation->radio_list(i));
+            LOG(DEBUG) << "Operational BSS radio " << radio_entry.radio_uid();
+            if (fronthaul_radios_on_db.find(tlvf::mac_to_string(radio_entry.radio_uid())) ==
                 fronthaul_radios_on_db.end()) {
-                LOG(WARNING) << "OperationalBSS on unknown radio " << radio.radio_uid();
+                LOG(WARNING) << "OperationalBSS on unknown radio " << radio_entry.radio_uid();
                 continue;
             }
-            for (uint8_t j = 0; j < radio.radio_bss_list_length(); j++) {
-                auto bss = std::get<1>(radio.radio_bss_list(j));
-                LOG(DEBUG) << "Operational BSS " << bss.radio_bssid();
+            // Update BSSes in the sAgent
+            auto radio =
+                database.get_radio(tlvf::mac_from_string(src_mac), radio_entry.radio_uid());
+            if (!radio) {
+                LOG(WARNING) << "OperationalBSS on unknown radio  " << radio_entry.radio_uid()
+                             << " on " << src_mac;
+                continue;
+            }
+
+            for (uint8_t j = 0; j < radio_entry.radio_bss_list_length(); j++) {
+                auto bss_entry = std::get<1>(radio_entry.radio_bss_list(j));
+                LOG(DEBUG) << "Operational BSS " << bss_entry.radio_bssid();
 
                 // TODO "backhaul" is not set in this TLV, so just assume false
-                if (!database.update_vap(radio.radio_uid(), bss.radio_bssid(), bss.ssid_str(),
-                                         false)) {
-                    LOG(ERROR) << "Failed to update VAP for radio " << radio.radio_uid() << " BSS "
-                               << bss.radio_bssid() << " SSID " << bss.ssid_str();
+                if (!database.update_vap(radio_entry.radio_uid(), bss_entry.radio_bssid(),
+                                         bss_entry.ssid_str(), false)) {
+                    LOG(ERROR) << "Failed to update VAP for radio " << radio_entry.radio_uid()
+                               << " BSS " << bss_entry.radio_bssid() << " SSID "
+                               << bss_entry.ssid_str();
                 }
+                auto bss  = radio->bsses.add(bss_entry.radio_bssid());
+                bss->ssid = bss_entry.ssid_str();
+                // backhaul is not reported in this message. Leave it unchanged.
             }
         }
     }
@@ -3332,6 +3345,17 @@ bool Controller::handle_cmdu_control_message(
 
         database.remove_vap(hostap_mac, vap_id);
 
+        // Update BSSes in the sAgent
+        auto radio =
+            database.get_radio(tlvf::mac_from_string(src_mac), tlvf::mac_from_string(hostap_mac));
+        if (!radio) {
+            LOG(ERROR) << "No radio found for radio_uid " << hostap_mac << " on " << src_mac;
+            break;
+        }
+        if (radio->bsses.erase(tlvf::mac_from_string(disabled_bssid)) != 1) {
+            LOG(ERROR) << "No BSS " << disabled_bssid << " could be erased on " << hostap_mac;
+        }
+
         break;
     }
     case beerocks_message::ACTION_CONTROL_HOSTAP_AP_ENABLED_NOTIFICATION: {
@@ -3349,10 +3373,25 @@ bool Controller::handle_cmdu_control_message(
                   << " vap_id=" << vap_id;
 
         std::string radio_mac = hostap_mac;
-        auto bssid            = tlvf::mac_to_string(notification->vap_info().mac);
+        auto bssid            = notification->vap_info().mac;
         auto ssid             = std::string((char *)notification->vap_info().ssid);
 
-        database.add_vap(radio_mac, vap_id, bssid, ssid, notification->vap_info().backhaul_vap);
+        database.add_vap(radio_mac, vap_id, tlvf::mac_to_string(bssid), ssid,
+                         notification->vap_info().backhaul_vap);
+
+        // Update BSSes in the sAgent
+        auto radio =
+            database.get_radio(tlvf::mac_from_string(src_mac), tlvf::mac_from_string(hostap_mac));
+        if (!radio) {
+            LOG(ERROR) << "No radio found for radio_uid " << hostap_mac << " on " << src_mac;
+            break;
+        }
+
+        auto bss = radio->bsses.add(bssid, vap_id);
+        LOG_IF(bss->vap_id != vap_id, ERROR)
+            << "BSS " << bssid << " changed vap_id " << bss->vap_id << " -> " << vap_id;
+        bss->ssid     = ssid;
+        bss->backhaul = notification->vap_info().backhaul_vap;
 
         // update bml listeners
         bml_task::connection_change_event new_event;
@@ -3419,12 +3458,26 @@ bool Controller::handle_cmdu_control_message(
             LOG(ERROR) << "addClass cACTION_CONTROL_HOSTAP_ACS_NOTIFICATION failed";
             return false;
         }
+
+        // Update BSSes in the sAgent
+        auto radio =
+            database.get_radio(tlvf::mac_from_string(src_mac), tlvf::mac_from_string(hostap_mac));
+        if (!radio) {
+            LOG(ERROR) << "No radio found for radio_uid " << hostap_mac << " on " << src_mac;
+            break;
+        }
+        radio->bsses.clear();
+
         std::unordered_map<int8_t, sVapElement> vaps_info;
         std::string vaps_list;
         for (int8_t vap_id = beerocks::IFACE_VAP_ID_MIN; vap_id <= beerocks::IFACE_VAP_ID_MAX;
              vap_id++) {
             auto vap_mac = tlvf::mac_to_string(notification->params().vaps[vap_id].mac);
             if (vap_mac != beerocks::net::network_utils::ZERO_MAC_STRING) {
+                auto bss      = radio->bsses.add(notification->params().vaps[vap_id].mac, vap_id);
+                bss->ssid     = std::string((char *)notification->params().vaps[vap_id].ssid);
+                bss->backhaul = notification->params().vaps[vap_id].backhaul_vap;
+
                 vaps_info[vap_id].mac = vap_mac;
                 vaps_info[vap_id].ssid =
                     std::string((char *)notification->params().vaps[vap_id].ssid);

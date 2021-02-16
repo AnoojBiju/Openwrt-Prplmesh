@@ -241,6 +241,19 @@ public:
      */
     static std::chrono::system_clock::time_point timestamp_from_seconds(int timestamp_sec);
 
+    /**
+     * @brief Get radio on a specific agent
+     *
+     * If no agent with the given al_mac exists, an error is logged (and nullptr returned). If no
+     * radio with the given UID exists on the agent, nullptr is returned without logging an error.
+     *
+     * @param al_mac AL-MAC address of the agent (usually source address of a CMDU).
+     * @param radio_uid Radio UID of the radio.
+     * @return The sRadio object, or nullptr if it doesn't exist.
+     */
+    std::shared_ptr<prplmesh::controller::db::sAgent::sRadio> get_radio(const sMacAddr &al_mac,
+                                                                        const sMacAddr &radio_uid);
+
     //logger
     void set_log_level_state(const beerocks::eLogLevel &log_level, const bool &new_state);
 
@@ -955,7 +968,7 @@ public:
 
     /**
      * @brief Check if the report records have the given timestamp.
-     * 
+     *
      * @param ISO_8601_timestamp Channel scan report's timestamp.
      * @return True if record exists, false otherwise.
      */
@@ -963,7 +976,7 @@ public:
 
     /**
      * @brief Get the channel scan report's MID.
-     * 
+     *
      * @param ISO_8601_timestamp Channel scan report's timestamp.
      * @return -1 if the timestamp was not found in the records.
      * @return MID value of the found channel scan report record.
@@ -972,7 +985,7 @@ public:
 
     /**
      * @brief Set the channel scan report's MID.
-     * 
+     *
      * @param ISO_8601_timestamp Channel scan report's timestamp.
      * @param mid Channel scan report's MID.
      * @return True on success, false otherwise.
@@ -981,7 +994,7 @@ public:
 
     /**
      * @brief Clear the channel scan report record for the given timestamp.
-     * 
+     *
      * @param ISO_8601_timestamp Channel scan report's timestamp.
      * @return True on success, false otherwise.
      */

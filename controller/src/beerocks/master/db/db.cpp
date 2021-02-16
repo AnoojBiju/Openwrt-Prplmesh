@@ -84,6 +84,18 @@ std::chrono::system_clock::time_point db::timestamp_from_seconds(int timestamp_s
 
 // static - end
 
+std::shared_ptr<prplmesh::controller::db::sAgent::sRadio> db::get_radio(const sMacAddr &al_mac,
+                                                                        const sMacAddr &radio_uid)
+{
+    auto agent = m_agents.get(al_mac);
+    if (!agent) {
+        LOG(ERROR) << "No agent found for al_mac " << al_mac;
+        return {};
+    }
+    auto radio = agent->radios.get(radio_uid);
+    return radio;
+}
+
 void db::set_log_level_state(const beerocks::eLogLevel &log_level, const bool &new_state)
 {
     logger.set_log_level_state(log_level, new_state);
