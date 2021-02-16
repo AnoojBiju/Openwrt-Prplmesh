@@ -1,5 +1,14 @@
 #!/bin/sh
 
+# We need to source some files which are only available on prplWrt
+# devices, so prevent shellcheck from trying to read them:
+# shellcheck disable=SC1091
+
+# Required for config_load:
+. /lib/functions/system.sh
+# Required for config_foreach:
+. /lib/functions.sh
+
 # Regenerate configuration:
 # Delete wireless configuration and create a fresh new one from scratch to make sure there is no
 # side effect due to an existing setting.
@@ -75,17 +84,34 @@ set prplmesh.radio1.sta_iface='wlan1'
 set prplmesh.radio1.hostap_iface='wlan1-1'
 set prplmesh.radio1.hostap_iface_steer_vaps='wlan1-2'
 
-# TODO: The current channel selection does not work correctly when 80Mhz bandwidths are involved.
-# This temporary workaround forces the use of 20Mhz bands, and will need to be reverted when the 
-# issue is fixed (see https://jira.prplfoundation.org/browse/PPM-258)
-set wireless.radio0.htmode='HT20'
-
-set wireless.radio0.channel=48
-set wireless.radio1.channel=1
-
 set wireless.radio0.disabled=0
 set wireless.radio1.disabled=0
 EOF
+
+# Make sure specific channels are configured. If channel is set to 0,
+# ACS will be configured. If ACS is configured hostapd will refuse to
+# switch channels when we ask it to. Channels 1 and 48 were chosen
+# because they are NOT used in the WFA certification tests (this
+# allows to verify that the device actually switches channel as part
+# of the test).
+set_channel() {
+    if [ "$(uci get "wireless.${1}.hwmode")" = "11g" ] ; then
+        uci set "wireless.${1}.channel"=1
+    else
+        uci set "wireless.${1}.channel"=48
+        # TODO: The current channel selection does not work correctly when
+        # 80Mhz bandwidths are involved.  This temporary workaround forces
+        # the use of 20Mhz bands, and will need to be reverted when the
+        # issue is fixed (see
+        # https://jira.prplfoundation.org/browse/PPM-258)
+        uci set "wireless.${1}.htmode='HT20'"
+    fi
+
+    logger "Channel for ${1} set to \"$(uci get "wireless.${1}.channel")\""
+}
+
+config_load wireless
+config_foreach set_channel wifi-device
 
 uci commit
 
