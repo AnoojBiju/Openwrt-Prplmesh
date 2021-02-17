@@ -2337,11 +2337,6 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
 
             auto db = AgentDB::get();
 
-            // TODO: query the supplicant to check that it has an entry for
-            // the BSS. If not, reply with
-            // "BACKHAUL_STEERING_REQUEST_REJECTED_TARGET_BSS_SIGNAL_NOT_SUITABLE"
-            // immediately.
-
             LOG(DEBUG) << "Steering to BSSID " << m_backhaul_steering_bssid
                        << ", channel=" << m_backhaul_steering_channel;
             auto associate =
