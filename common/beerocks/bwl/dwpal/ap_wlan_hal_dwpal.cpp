@@ -1331,7 +1331,7 @@ bool ap_wlan_hal_dwpal::switch_channel(int chan, int bw, int vht_center_frequenc
         }
 
         // Channel bandwidth
-        if (bw == beerocks::BANDWIDTH_80) {
+        if ((bw == beerocks::BANDWIDTH_80) || (bw == beerocks::BANDWIDTH_160)) {
             cmd += " center_freq1=" + wave_vht_center_frequency;
         }
 
@@ -1341,7 +1341,7 @@ bool ap_wlan_hal_dwpal::switch_channel(int chan, int bw, int vht_center_frequenc
         // Supported Standard n/ac
         if (bw == beerocks::BANDWIDTH_20 || bw == beerocks::BANDWIDTH_40) {
             cmd += " ht"; //n
-        } else if (bw == beerocks::BANDWIDTH_80) {
+        } else if ((bw == beerocks::BANDWIDTH_80) || (bw == beerocks::BANDWIDTH_160)) {
             cmd += " vht"; // ac
         }
     }
