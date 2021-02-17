@@ -26,7 +26,7 @@ class ApConfigBSSTeardown(PrplMeshBaseTest):
         controller.cmd_reply("DEV_RESET_DEFAULT")
         controller.cmd_reply(
             "DEV_SET_CONFIG,bss_info1,"
-            "{} 8x Multi-AP-24G-3 0x0020 0x0008 maprocks1 0 1".format(agent.mac))
+            "{} 8x Boardfarm-Tests-24G-3 0x0020 0x0008 maprocks1 0 1".format(agent.mac))
         controller.dev_send_1905(agent.mac, 0x000A,
                                  tlv(0x01, 0x0006, "{" + controller.mac + "}"),
                                  tlv(0x0F, 0x0001, "{0x00}"),
@@ -36,15 +36,15 @@ class ApConfigBSSTeardown(PrplMeshBaseTest):
         time.sleep(3)
 
         self.check_log(agent.radios[0],
-                       r"Received credentials for ssid: Multi-AP-24G-3 .*"
+                       r"Received credentials for ssid: Boardfarm-Tests-24G-3 .*"
                        r"fronthaul: true backhaul: false")
         self.check_log(agent.radios[1], r".* tear down radio")
         conn_map = controller.get_conn_map()
         repeater1 = conn_map[agent.mac]
         repeater1_wlan0 = repeater1.radios[agent.radios[0].mac]
         for vap in repeater1_wlan0.vaps.values():
-            if vap.ssid not in (b'Multi-AP-24G-3', b'N/A'):
-                self.fail('Wrong SSID: {vap.ssid} instead of Multi-AP-24G-3'.format(vap=vap))
+            if vap.ssid not in (b'Boardfarm-Tests-24G-3', b'N/A'):
+                self.fail('Wrong SSID: {vap.ssid} instead of Boardfarm-Tests-24G-3'.format(vap=vap))
         repeater1_wlan2 = repeater1.radios[agent.radios[1].mac]
         for vap in repeater1_wlan2.vaps.values():
             if vap.ssid != b'N/A':

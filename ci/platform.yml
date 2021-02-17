@@ -111,16 +111,7 @@ boardfarm-on-netgear-rax40:
     # TODO: set the BH iface in UCI once https://jira.prplfoundation.org/browse/PPM-230 is done:
     - ssh "$TARGET_DEVICE_NAME" "sed -ri 's/backhaul_wire_iface=eth1/backhaul_wire_iface=eth0_1/' /opt/prplmesh/config/beerocks_agent.conf"
     - ./dctest.py --dut netgear-rax40-1 --test-suite test_flows_on_prplwrt
-    - |
-      # Reset the device to controller mode to not break existing test-on-netgear-rax40:
-      ssh "$TARGET_DEVICE_NAME" <<'EOF'
-        uci set prplmesh.config.management_mode='Multi-AP-Controller-and-Agent'
-        uci set prplmesh.config.operating_mode='Gateway'
-        uci set prplmesh.config.wired_backhaul=0
-        uci set prplmesh.config.master=1
-        uci set prplmesh.config.gateway=1
-        uci commit prplmesh
-      EOF
+    - ssh "$TARGET_DEVICE_NAME" 'wifi down'
   needs:
     - build-for-netgear-rax40
 

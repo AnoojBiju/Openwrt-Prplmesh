@@ -26,7 +26,7 @@ class ApConfigBSSTeardownCli(PrplMeshBaseTest):
         controller.beerocks_cli_command('bml_clear_wifi_credentials {}'.format(agent.mac))
         controller.beerocks_cli_command('bml_set_wifi_credentials {} {} {} {} {}'
                                         .format(agent.mac,
-                                                "Multi-AP-24G-3-cli",
+                                                "Boardfarm-Tests-24G-3-cli",
                                                 "maprocks1",
                                                 "24g",
                                                 "fronthaul"))
@@ -36,15 +36,15 @@ class ApConfigBSSTeardownCli(PrplMeshBaseTest):
         time.sleep(3)
 
         self.check_log(agent.radios[0],
-                       r"Received credentials for ssid: Multi-AP-24G-3-cli .*"
+                       r"Received credentials for ssid: Boardfarm-Tests-24G-3-cli .*"
                        r"fronthaul: true backhaul: false")
         self.check_log(agent.radios[1], r".* tear down radio")
         conn_map = controller.get_conn_map()
         repeater1 = conn_map[agent.mac]
         repeater1_wlan0 = repeater1.radios[agent.radios[0].mac]
         for vap in repeater1_wlan0.vaps.values():
-            if vap.ssid not in (b'Multi-AP-24G-3-cli', b'N/A'):
-                self.fail('Wrong SSID: {vap.ssid} instead of Multi-AP-24G-3-cli'.format
+            if vap.ssid not in (b'Boardfarm-Tests-24G-3-cli', b'N/A'):
+                self.fail('Wrong SSID: {vap.ssid} instead of Boardfarm-Tests-24G-3-cli'.format
                           (vap=vap))
         repeater1_wlan2 = repeater1.radios[agent.radios[1].mac]
         for vap in repeater1_wlan2.vaps.values():
