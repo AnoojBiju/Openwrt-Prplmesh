@@ -8,6 +8,7 @@
 
 #include "switch_channel_task.h"
 #include "../backhaul_manager/backhaul_manager.h"
+#include <bcl/beerocks_state_machine.h>
 
 namespace beerocks {
 namespace switch_channel {
@@ -220,6 +221,35 @@ void SwitchChannelFsm::config_fsm()
                 return true;
             })
 
+        .on(fsm_event::CSA, {fsm_state::ERROR},
+            [&](TTransition &transition, const void *args) -> bool {
+                // CSA means that the switch channel happened "unexpectedly"
+                // from the point of view of the switch channel task.
+                // it may be that the switch happened from some other reason,
+                // therefore we just report about it and stay in the same
+                // state.
+
+                // we are taking all information and sending the report
+                auto switch_channel_notification =
+                    *(reinterpret_cast<std::shared_ptr<sSwitchChannelNotification> *>(
+                        const_cast<void *>(args)));
+
+                // prepare the report
+                auto switch_channel_report = std::make_shared<sSwitchChannelReport>(
+                    false, nullptr, switch_channel_notification, nullptr, nullptr);
+
+                if (!switch_channel_report) {
+                    LOG(ERROR) << "failed to create switch channel report for " << m_ifname;
+                    transition.change_destination(fsm_state::ERROR);
+
+                    return true;
+                }
+                // report
+                m_task_pool.send_event(eTaskEvent::SWITCH_CHANNEL_REPORT, switch_channel_report);
+
+                return false;
+            })
+
         .on(fsm_event::PERIODIC, fsm_state::IDLE)
 
         //////////////////////////////////////////////////////
@@ -361,6 +391,45 @@ void SwitchChannelFsm::config_fsm()
                 }
                 // returning false means "stay in the same state"
                 return false;
+            })
+
+        .on(fsm_event::SWITCH_CHANNEL_REQUEST, fsm_state::WAIT_FOR_SWITCH_CHANNEL_NOTIFICATION,
+            [&](TTransition &transition, const void *args) -> bool {
+                return report_switch_channel_in_progress(transition, args);
+            })
+
+        .on(fsm_event::CSA, {fsm_state::IDLE, fsm_state::ERROR},
+            [&](TTransition &transition, const void *args) -> bool {
+                // CSA means that the switch channel happened "unexpectedly"
+                // from the point of view of the switch channel task.
+                // it may be that the switch happened from some other reason,
+                // therefore we just report about it and stay in the same
+                // state.
+
+                // we are taking all information and sending the report
+                auto m_switch_channel_notification =
+                    *(reinterpret_cast<std::shared_ptr<sSwitchChannelNotification> *>(
+                        const_cast<void *>(args)));
+
+                // prepare the report
+                auto switch_channel_report = std::make_shared<sSwitchChannelReport>(
+                    false, m_switch_channel_request, m_switch_channel_notification, nullptr,
+                    nullptr);
+
+                if (!switch_channel_report) {
+                    LOG(ERROR) << "failed to create switch channel report for " << m_ifname;
+                    transition.change_destination(fsm_state::ERROR);
+
+                    return true;
+                }
+                // report
+                m_task_pool.send_event(eTaskEvent::SWITCH_CHANNEL_REPORT, switch_channel_report);
+
+                // we are no longer waiting for cac-completed
+                // reset and go back to idel
+                reset();
+
+                return true;
             })
         //////////////////////////////////////////////////////
         //////// ERROR                                ////////
