@@ -2382,6 +2382,8 @@ bool Controller::handle_cmdu_1905_topology_response(const std::string &src_mac,
                 continue;
             }
 
+            radio->bsses.keep_new_prepare();
+
             for (uint8_t j = 0; j < radio_entry.radio_bss_list_length(); j++) {
                 auto bss_entry = std::get<1>(radio_entry.radio_bss_list(j));
                 LOG(DEBUG) << "Operational BSS " << bss_entry.radio_bssid();
@@ -2396,6 +2398,13 @@ bool Controller::handle_cmdu_1905_topology_response(const std::string &src_mac,
                 auto bss  = radio->bsses.add(bss_entry.radio_bssid());
                 bss->ssid = bss_entry.ssid_str();
                 // backhaul is not reported in this message. Leave it unchanged.
+            }
+
+            auto removed = radio->bsses.keep_new_remove_old();
+            for (const auto &bss : removed) {
+                database.remove_vap(tlvf::mac_to_string(radio->radio_uid), bss->vap_id);
+                son_actions::handle_dead_node(tlvf::mac_to_string(bss->bssid), true, database,
+                                              cmdu_tx, tasks);
             }
         }
     }
