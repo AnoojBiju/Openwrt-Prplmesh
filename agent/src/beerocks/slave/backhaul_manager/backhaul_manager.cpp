@@ -2335,8 +2335,6 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
                 return false;
             }
 
-            auto db = AgentDB::get();
-
             LOG(DEBUG) << "Steering to BSSID " << m_backhaul_steering_bssid
                        << ", channel=" << m_backhaul_steering_channel;
             auto associate =
@@ -2355,6 +2353,7 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
                     return false;
                 }
 
+                auto db = AgentDB::get();
                 send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
                                     tlvf::mac_from_string(bridge_info.mac));
 
