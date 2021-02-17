@@ -145,6 +145,7 @@ boardfarm-on-netgear-rax40:
         uci set prplmesh.config.gateway=1
         uci commit prplmesh
       EOF
+    - ssh "$TARGET_DEVICE_NAME" 'wifi down'
   needs:
     - build-for-netgear-rax40
 
