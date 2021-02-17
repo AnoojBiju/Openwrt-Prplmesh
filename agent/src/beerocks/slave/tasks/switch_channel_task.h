@@ -12,7 +12,6 @@
 #include "task.h"
 #include "task_messages.h"
 #include "task_pool_interface.h"
-#include <bcl/beerocks_state_machine.h>
 #include <beerocks/tlvf/beerocks_message_backhaul.h>
 
 namespace beerocks {
