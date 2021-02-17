@@ -104,7 +104,7 @@ set_channel() {
         # the use of 20Mhz bands, and will need to be reverted when the
         # issue is fixed (see
         # https://jira.prplfoundation.org/browse/PPM-258)
-        uci set "wireless.${1}.htmode='HT20'"
+        uci set "wireless.${1}.htmode"=HT20
     fi
 
     logger "Channel for ${1} set to \"$(uci get "wireless.${1}.channel")\""
