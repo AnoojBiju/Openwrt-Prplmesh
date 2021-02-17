@@ -12,6 +12,7 @@
 #include "controller_ucc_listener.h"
 #include "db/db.h"
 #include "periodic/periodic_operation_pool.h"
+#include "tasks/link_metrics_task.h"
 #include "tasks/optimal_path_task.h"
 #include "tasks/task_pool.h"
 
@@ -156,28 +157,11 @@ private:
                                 WSC::m1 &m1, std::string bridge_mac, std::string radio_mac,
                                 ieee1905_1::CmduMessageTx &cmdu_tx);
 
-    bool construct_combined_infra_metric();
-
     // 1905 messages handlers
     bool handle_cmdu_1905_autoconfiguration_search(const std::string &src_mac,
                                                    ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_cmdu_1905_autoconfiguration_WSC(const std::string &src_mac,
                                                 ieee1905_1::CmduMessageRx &cmdu_rx);
-
-    /**
-     * @brief Handles CMDU of 1905 Link Metric Response
-     *
-     * This handler is written to handle Link Metric Response is given for
-     * all neighbors and TX/RX together. Metric Msg. FLAGS are needs to be set in this manner!
-     * If only RX or TX is received, link_metric_data_map will hold only what it is given.
-     * But interface stats work just as fine.
-     *
-     * @param src_mac Source MAC address.
-     * @param cmdu_rx Received CMDU to be handled.
-     * @return true on success and false otherwise.
-     */
-    bool handle_cmdu_1905_link_metric_response(const std::string &src_mac,
-                                               ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_cmdu_1905_ap_metric_response(const std::string &src_mac,
                                              ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_cmdu_1905_ap_capability_report(const std::string &src_mac,
@@ -278,6 +262,10 @@ private:
     task_pool tasks;
     periodic_operation_pool operations;
     beerocks::controller_ucc_listener m_controller_ucc_listener;
+
+    // It is used only in handle_cmdu_1905_ap_metric_response() to call construct_combined_infra_metric().
+    // TODO It can be removed after cert_cmdu_tx usage is removed (PPM-1130).
+    std::shared_ptr<LinkMetricsTask> m_link_metrics_task;
 
     /**
      * Factory to create broker client instances connected to broker server.
