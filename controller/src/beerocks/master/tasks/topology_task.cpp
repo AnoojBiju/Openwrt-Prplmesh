@@ -246,6 +246,34 @@ bool topology_task::handle_topology_response(const std::string &src_mac,
         }
     }
 
+    recently_reported_neighbors[al_mac] = std::chrono::steady_clock::now();
+    // Remove neighbors from recently_reported_neighbors map if they stay there more than 5 seconds.
+    for (auto neighbor = recently_reported_neighbors.begin();
+         neighbor != recently_reported_neighbors.end();) {
+        if (std::chrono::seconds(5) < (std::chrono::steady_clock::now() - neighbor->second)) {
+            neighbor = recently_reported_neighbors.erase(neighbor);
+        } else {
+            ++neighbor;
+        }
+    }
+
+    for (auto reported_neighbor_mac : reported_neighbor_al_macs) {
+        if (!database.has_node(reported_neighbor_mac) &&
+            recently_reported_neighbors.find(reported_neighbor_mac) ==
+                recently_reported_neighbors.end()) {
+            // Send a Topology Query if any new neighbor was detected.
+            if (!cmdu_tx.create(0, ieee1905_1::eMessageType::TOPOLOGY_QUERY_MESSAGE)) {
+                LOG(ERROR) << "Failed to build TOPOLOGY_QUERY_MESSAGE message!";
+            }
+            // Save just reported new neighbor to avoid sending unnecessary multiple
+            // Topology Query from different devices to the same new node.
+            recently_reported_neighbors.insert(
+                {reported_neighbor_mac, std::chrono::steady_clock::now()});
+            son_actions::send_cmdu_to_agent(tlvf::mac_to_string(reported_neighbor_mac), cmdu_tx,
+                                            database);
+        }
+    }
+
     auto tlvNon1905NeighborDeviceList =
         cmdu_rx.getClassList<ieee1905_1::tlvNon1905neighborDeviceList>();
 

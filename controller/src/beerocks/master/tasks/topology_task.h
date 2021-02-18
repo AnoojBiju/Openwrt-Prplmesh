@@ -62,6 +62,7 @@ private:
     db &database;
     ieee1905_1::CmduMessageTx &cmdu_tx;
     task_pool &tasks;
+    std::unordered_map<sMacAddr, std::chrono::steady_clock::time_point> recently_reported_neighbors;
 };
 
 } // namespace son
