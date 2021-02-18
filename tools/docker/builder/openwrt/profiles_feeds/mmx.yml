@@ -1,7 +1,8 @@
 feeds:
   - name: mmx
     uri: https://github.com/InangoSystems/feed-mmx.git
-    hash: 3dd041ee090c1cf9de968a1aed0d06e42400eb5d
+    tracking_branch: master
+    revision: 3dd041ee090c1cf9de968a1aed0d06e42400eb5d
 
 packages:
   - luaxml
