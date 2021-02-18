@@ -5,6 +5,13 @@
     RUN_ON_DEVICE: "axepoint"
   before_script:
     - tools/deploy_firmware.py --device axepoint --target-name "$RUN_ON_DEVICE" --image "$AXEPOINT_FULLIMAGE"
+    - |
+      if [ -f tests/certification/$RUN_ON_DEVICE/uci.sh ] ; then
+        echo "Applying UCI configuration"
+        scp tests/certification/$RUN_ON_DEVICE/uci.sh $RUN_ON_DEVICE:/tmp
+        ssh "$RUN_ON_DEVICE" 'sh /tmp/uci.sh'
+        echo "Done"
+      fi
     - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE build/$RUN_ON_DEVICE/prplmesh.ipk
   needs:
     - job: build-for-axepoint
@@ -644,4 +651,3 @@ MAP-4.12.2_ETH:axepoint:
       when: on_success
     - when: manual
       allow_failure: true
-

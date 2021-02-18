@@ -181,6 +181,7 @@ class NetgearRax40(PrplwrtDevice):
             # remove overlay and reboot
             shell.sendline("rm -rf /overlay/upper/usr /overlay/upper/opt "
                            "    /overlay/upper/etc/config/wireless "
+                           "    /overlay/upper/lib/netifd "
                            "    /overlay/upper/etc/uci-defaults/15_wireless-generate-macaddr")
             shell.sendline("reboot -f")
             shell.expect(["Hit any key to stop autoboot:",

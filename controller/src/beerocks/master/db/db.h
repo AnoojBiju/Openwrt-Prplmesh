@@ -410,9 +410,27 @@ public:
     bool remove_hostap_supported_operating_classes(const sMacAddr &radio_mac);
 
     /**
+     * @brief Adds Interface Object and updates Interface Data Model Object.
+     *
+     * If instance with @a interface_mac exists, updates it, otherwise add it.
+     * Path example: Controller.Network.Device.1.Interface.1
+     *
+     * @param device_mac device MAC address for node matching
+     * @param interface_mac interface mac address
+     * @param media_type Media type, as per IEEE1905.1 table 6-12
+     * @param status current operational state of the interface
+     * @param name per-device unique and unchanging name for the interface. if unavailable,
+     * use MAC address or linux interface name
+     * @return true on success, false otherwise.
+     */
+    bool add_interface(const sMacAddr &device_mac, const sMacAddr &interface_mac,
+                       uint16_t media_type, const std::string &status = "Up",
+                       const std::string &name = {});
+
+    /**
      * @brief Adds interface instances to Device's Data Model.
      *
-     * If instance with @a interface_mac exists, update it, otherwise add it.
+     * If instance with @a interface_mac exists, updates it, otherwise add it.
      * Path example: Controller.Network.Device.1.Interface.1
      *
      * @param device_mac device MAC address for node matching
@@ -424,11 +442,23 @@ public:
      * @return true on success, false otherwise.
      */
     bool dm_add_interface_element(const sMacAddr &device_mac, const sMacAddr &interface_mac,
-                                  const uint16_t media_type, const std::string &status = "Up",
-                                  const std::string &name = {});
+                                  uint16_t media_type, const std::string &status,
+                                  const std::string &name);
 
     /**
-     * @brief Removes the interface of given MAC from Device's Date Model.
+     * @brief Removes the interface of given MAC of Interface Class and Device's Data Model.
+     *
+     * Searches index of m_interfaces vector and removes it.
+     * After that data model remove method is called within (dm_remove_interface_element).
+     *
+     * @param device_mac device MAC address for node matching
+     * @param interface_mac interface mac to be deleted
+     * @return true on success, false otherwise.
+     */
+    bool remove_interface(const sMacAddr &device_mac, const sMacAddr &interface_mac);
+
+    /**
+     * @brief Removes the interface of given MAC from Device's Data Model.
      *
      * Searches index of Controller.Network.Device.{i}.Interface.{i} according
      * to MACAddress attribute and removes it.
@@ -478,6 +508,32 @@ public:
      */
     bool dm_update_interface_rx_stats(const sMacAddr &device_mac, const sMacAddr &interface_mac,
                                       uint64_t packets_received, uint32_t errors_received);
+
+    /**
+     * @brief Adds or updates instance of Neighbor inside Interface object.
+     *
+     * Searches Neighbor according to ID (MAC Address of Neighbor) updates or adds new one.
+     * Path: Controller.Network.Device.{i}.Interface.{i}.Neighbor.{i}
+     *
+     * @param device_mac device MAC address for node matching
+     * @param interface_macs Interface MAC address of the device
+     * @param neighbor_mac Neighbor MAC address is connected to Interface
+     * @param is_IEEE1905 flag which identify neighbor is IEEE1905 device or not
+     * @return true on success, false otherwise.
+     */
+    bool dm_add_interface_neighbor(const sMacAddr &device_mac, const sMacAddr &interface_mac,
+                                   const sMacAddr &neighbor_mac, bool is_IEEE1905);
+
+    /**
+     * @brief Removes all instances of Neighbors inside Interface object.
+     *
+     * Path: Controller.Network.Device.{i}.Interface.{i}.Neighbor.{i}
+     *
+     * @param device_mac device MAC address for node matching
+     * @param interface_macs Interface MAC address of the device
+     * @return true on success, false otherwise.
+     */
+    bool dm_remove_interface_neighbors(const sMacAddr &device_mac, const sMacAddr &interface_mac);
 
     //
     // DB node functions (get only)
@@ -895,6 +951,40 @@ public:
                                   bool single_scan);
 
     /**
+     * @brief Check if the report records have the given timestamp.
+     * 
+     * @param ISO_8601_timestamp Channel scan report's timestamp.
+     * @return True if record exists, false otherwise.
+     */
+    bool has_channel_report_record(const std::string &ISO_8601_timestamp);
+
+    /**
+     * @brief Get the channel scan report's MID.
+     * 
+     * @param ISO_8601_timestamp Channel scan report's timestamp.
+     * @return -1 if the timestamp was not found in the records.
+     * @return MID value of the found channel scan report record.
+     */
+    int get_channel_report_record_mid(const std::string &ISO_8601_timestamp);
+
+    /**
+     * @brief Set the channel scan report's MID.
+     * 
+     * @param ISO_8601_timestamp Channel scan report's timestamp.
+     * @param mid Channel scan report's MID.
+     * @return True on success, false otherwise.
+     */
+    bool set_channel_report_record_mid(const std::string &ISO_8601_timestamp, int mid);
+
+    /**
+     * @brief Clear the channel scan report record for the given timestamp.
+     * 
+     * @param ISO_8601_timestamp Channel scan report's timestamp.
+     * @return True on success, false otherwise.
+     */
+    bool clear_channel_report_record(const std::string &ISO_8601_timestamp);
+
+    /**
      * @brief
      *
      * @param RUID Radio UID
@@ -1245,7 +1335,7 @@ public:
 
     /**
      * @brief Store traffic separation policy for agent.
-     * 
+     *
      * @param[in] al_mac AL MAC address of agent.
      * @param[in] config Traffic separation policy configuration.
      */
@@ -1254,7 +1344,7 @@ public:
                                           const wireless_utils::sTrafficSeparationSsid &config);
     /**
      * @brief Store default 802.1Q settings for agent.
-     * 
+     *
      * @param[in] al_mac AL MAC address of agent.
      * @param[in] config Default 802.1Q setting configuration.
      */
@@ -1263,9 +1353,9 @@ public:
 
     /**
      * @brief Get traffic separation policy for agent.
-     * 
+     *
      * @param[in] al_mac AL MAC address of agent.
-     * 
+     *
      * @return List of policies for the AL mac. If not found, return empty list.
      */
     const std::list<wireless_utils::sTrafficSeparationSsid>
@@ -1273,9 +1363,9 @@ public:
 
     /**
      * @brief Get default 802.1Q settings for agent.
-     * 
+     *
      * @param[in] al_mac AL MAC address of agent.
-     * 
+     *
      * @return Default 8021Q settings for the AL mac. If not found, return empty struct.
      */
     wireless_utils::s8021QSettings get_default_8021q_setting(const sMacAddr &al_mac);
@@ -1287,7 +1377,7 @@ public:
 
     /**
      * @brief Clear traffic separation configuration for an agent.
-     * 
+     *
      * @param[in] al_mac AL MAC address of agent.
      */
     void clear_traffic_separation_configurations(const sMacAddr &al_mac);
@@ -1299,7 +1389,7 @@ public:
 
     /**
      * @brief Clear traffic separation configuration for an agent.
-     * 
+     *
      * @param[in] al_mac AL MAC address of agent.
      */
     void clear_default_8021q_settings(const sMacAddr &al_mac);
@@ -1313,6 +1403,22 @@ public:
      * @return true on success, otherwise false.
      */
     bool set_radio_utilization(const sMacAddr &bssid, uint8_t utilization);
+
+    /**
+     * @brief Set radio metrics values in Controler Data Model.
+     *
+     * Objects are Noise, Transmit, ReceiveSelf and ReceiveOther.
+     * Data model path example: "Controller.Network.Device.1.Radio.1.Noise"
+     *
+     * @param[in] uid uid for specific radio.
+     * @param[in] noise Noise value [0, 220].
+     * @param[in] transmit Transmit value.
+     * @param[in] receive_self ReceiveSelf value.
+     * @param[in] receive_other ReceiveOther value.
+     * @return true on success, otherwise false.
+     */
+    bool set_radio_metrics(const sMacAddr &uid, uint8_t noise, uint8_t transmit,
+                           uint8_t receive_self, uint8_t receive_other);
 
     /**
      * @brief Set estimated service parameters BE in Controler Data Model.
@@ -1786,6 +1892,10 @@ private:
     int m_persistent_db_clients_count = 0;
 
     std::shared_ptr<beerocks::nbapi::Ambiorix> m_ambiorix_datamodel;
+
+    // Key:     std::string ISO-8601-timestamp
+    // Value:   int         Report-message-MID
+    std::unordered_map<std::string, int> m_channel_scan_report_records;
 };
 
 } // namespace son

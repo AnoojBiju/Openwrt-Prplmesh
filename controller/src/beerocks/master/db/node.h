@@ -10,6 +10,7 @@
 #define _NODE_H_
 
 #include "../tasks/task.h"
+#include "interface.h"
 #include <bcl/network/network_utils.h>
 #include <tlvf/common/sMacAddr.h>
 #include <tlvf/ieee_1905_1/tlvReceiverLinkMetric.h>
@@ -54,12 +55,20 @@ public:
     void set_cross_rx_rssi(const std::string &ap_mac_, int8_t rssi, int8_t rx_packets);
 
     /**
-     * @brief Removes unused interface mac addresses and updates active list
-     * 
+     * @brief Returns unused interface mac addresses
+     *
      * @param active_interfaces_vector vector of active interface macs from topology message
      * @return unused interface mac's returned as vector of sMacAddr
      */
-    std::vector<sMacAddr> update_interfaces(const std::vector<sMacAddr> &active_interfaces_vector);
+    std::vector<sMacAddr>
+    get_unused_interfaces(const std::vector<sMacAddr> &active_interfaces_vector);
+
+    /**
+     * @brief Returns active interface mac addresses via loop through interface objects.
+     *
+     * @return active interface mac's returned as vector of sMacAddr
+     */
+    std::vector<sMacAddr> get_interfaces_mac();
 
     void clear_cross_rssi();
     void clear_node_stats_info();
@@ -352,6 +361,35 @@ public:
      * Persistent configurations - end
      */
 
+    /**
+     * @brief Get Interface with the given MAC, create it if necessary.
+     *
+     * @param mac interface MAC address
+     * @return shared pointer of Interface Object
+     */
+    std::shared_ptr<prplmesh::controller::db::Interface> add_interface(const sMacAddr &mac);
+
+    /**
+     * @brief Get Interface with the given MAC, if there is one. Else returns nullptr.
+     *
+     * @param mac interface MAC address
+     * @return shared pointer of Interface Object on success, nullptr otherwise.
+     */
+    std::shared_ptr<prplmesh::controller::db::Interface> get_interface(const sMacAddr &mac);
+
+    /**
+     * @brief Remove the Interface with the given MAC Address.
+     */
+    void remove_interface(const sMacAddr &mac);
+
+    /**
+     * @brief Get all Interfaces
+     */
+    const std::vector<std::shared_ptr<prplmesh::controller::db::Interface>> &get_interfaces()
+    {
+        return m_interfaces;
+    }
+
 private:
     class rssi_measurement {
     public:
@@ -386,7 +424,14 @@ private:
     beerocks::eType type;
     std::unordered_map<std::string, std::shared_ptr<beacon_measurement>> beacon_measurements;
     std::unordered_map<std::string, std::shared_ptr<rssi_measurement>> cross_rx_rssi;
-    std::vector<sMacAddr> interfaces_mac_list;
+
+    /**
+     * @brief Interfaces configured on this node.
+     *
+     * The Interface objects are kept alive by this list. Only active interfaces should be on this list.
+     *
+     */
+    std::vector<std::shared_ptr<prplmesh::controller::db::Interface>> m_interfaces;
 };
 } // namespace son
 #endif

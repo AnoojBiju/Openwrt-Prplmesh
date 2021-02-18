@@ -5,7 +5,7 @@
 - name: feed_prpl
   uri: https://gitlab.com/prpl-foundation/prplwrt/feed-prpl.git
   tracking_branch: prpl-19.07
-  revision: 52c3f0a7f7d220401fbf08d4bcf59908cf3c3d35
+  revision: ee7c1bbce5209cc7b6f12c01a99759c45528f506
 - name: sah
   uri: https://gitlab.com/soft.at.home/buildsystems/openwrt/sah-packages.git
   tracking_branch: master

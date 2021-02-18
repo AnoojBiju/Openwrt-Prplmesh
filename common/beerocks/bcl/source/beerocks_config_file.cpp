@@ -166,12 +166,22 @@ bool config_file::read_slave_config_file(const std::string &config_file_path, sC
     }
 
     {
-        tConfig slave_global_conf_args = {
+        tConfig slave_backhaul_conf_args = {
             std::make_tuple("backhaul_preferred_bssid=", &conf.backhaul_preferred_bssid, 0),
             std::make_tuple("backhaul_wire_iface=", &conf.backhaul_wire_iface, mandatory_slave),
         };
         std::string config_type = "backhaul";
-        if (!read_config_file(config_file_path, slave_global_conf_args, config_type)) {
+        if (!read_config_file(config_file_path, slave_backhaul_conf_args, config_type)) {
+            return false;
+        }
+    }
+
+    {
+        tConfig slave_ethernet_conf_args = {
+            std::make_tuple("fronthaul_wire_ifaces=", &conf.fronthaul_wire_ifaces, mandatory_slave),
+        };
+        std::string config_type = "ethernet";
+        if (!read_config_file(config_file_path, slave_ethernet_conf_args, config_type)) {
             return false;
         }
     }

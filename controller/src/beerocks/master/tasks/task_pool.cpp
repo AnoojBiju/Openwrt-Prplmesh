@@ -130,3 +130,22 @@ void task_pool::run_tasks(int max_exec_duration_ms)
     // Execution iteration completed, reset the state
     m_exec_iteration_start_time = std::chrono::steady_clock::time_point::max();
 }
+
+bool task_pool::handle_ieee1905_1_msg(const std::string &src_mac,
+                                      ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    if (cmdu_rx.getMessageType() == ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE) {
+        LOG(DEBUG) << "Message with mid: " << cmdu_rx.getMessageId()
+                   << " is VENDOR_SPECIFIC message.";
+        return false;
+    }
+    for (auto &task_element : m_scheduled_tasks) {
+        auto &task = task_element.second;
+        if (task->handle_ieee1905_1_msg(src_mac, cmdu_rx)) {
+            LOG(DEBUG) << "Handled message " << (uint16_t)cmdu_rx.getMessageType()
+                       << " with mid: " << cmdu_rx.getMessageId();
+            return true;
+        }
+    }
+    return false;
+}

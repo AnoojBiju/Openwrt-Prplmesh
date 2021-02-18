@@ -392,6 +392,9 @@ bool ap_wlan_hal_nl80211::update_vap_credentials(
         return false;
     }
 
+    // Clear all VAPs from the available container, since we preset it with configuration.
+    m_radio_info.available_vaps.clear();
+
     // If a Multi-AP Agent receives an AP-Autoconfiguration WSC message containing one or
     // more M2, it shall validate each M2 (based on its 1905 AL MAC address) and configure
     // a BSS on the corresponding radio for each of the M2. If the Multi-AP Agent is currently
@@ -935,6 +938,12 @@ bool ap_wlan_hal_nl80211::set_mbo_assoc_disallow(const std::string &bssid, bool 
 }
 
 bool ap_wlan_hal_nl80211::set_radio_mbo_assoc_disallow(bool enable)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return true;
+}
+
+bool ap_wlan_hal_nl80211::set_primary_vlan_id(uint16_t primary_vlan_id)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return true;

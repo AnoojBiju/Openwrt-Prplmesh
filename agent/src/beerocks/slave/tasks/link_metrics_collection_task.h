@@ -111,6 +111,11 @@ private:
                               ieee1905_1::eLinkMetricsType link_metrics_type);
 
     /**
+     * @brief Adds radio meteric tlv (profile2) to the cmdu-tx member
+     */
+    void add_radio_metrics_tlv();
+
+    /**
      * @brief Creates a new link metrics collector for given media type.
      *
      * Creates a new link metrics collector suitable for the underlying network technology of the

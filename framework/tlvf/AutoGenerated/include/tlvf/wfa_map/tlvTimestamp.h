@@ -39,8 +39,10 @@ class tlvTimestamp : public BaseClass
         //The timestamp shall be formatted as a string using the typedef dateandtime string
         //format as defined in section 3 of [1] and shall include timesecfrac and time-offset
         //as defined in section 5.6 of [1]
-        uint8_t* timestamp(size_t idx = 0);
-        bool set_timestamp(const void* buffer, size_t size);
+        std::string timestamp_str();
+        char* timestamp(size_t length = 0);
+        bool set_timestamp(const std::string& str);
+        bool set_timestamp(const char buffer[], size_t size);
         bool alloc_timestamp(size_t count = 1);
         void class_swap() override;
         bool finalize() override;
@@ -51,7 +53,7 @@ class tlvTimestamp : public BaseClass
         eTlvTypeMap* m_type = nullptr;
         uint16_t* m_length = nullptr;
         uint8_t* m_timestamp_length = nullptr;
-        uint8_t* m_timestamp = nullptr;
+        char* m_timestamp = nullptr;
         size_t m_timestamp_idx__ = 0;
         int m_lock_order_counter__ = 0;
 };

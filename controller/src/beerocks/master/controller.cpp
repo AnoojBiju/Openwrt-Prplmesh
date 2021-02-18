@@ -47,6 +47,7 @@
 #include <tlvf/ieee_1905_1/tlvDeviceInformation.h>
 #include <tlvf/ieee_1905_1/tlvEndOfMessage.h>
 #include <tlvf/ieee_1905_1/tlvMacAddress.h>
+#include <tlvf/ieee_1905_1/tlvNon1905neighborDeviceList.h>
 #include <tlvf/ieee_1905_1/tlvReceiverLinkMetric.h>
 #include <tlvf/ieee_1905_1/tlvSearchedRole.h>
 #include <tlvf/ieee_1905_1/tlvSupportedFreqBand.h>
@@ -67,6 +68,7 @@
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
 #include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>
 #include <tlvf/wfa_map/tlvProfile2Default802dotQSettings.h>
+#include <tlvf/wfa_map/tlvProfile2RadioMetrics.h>
 #include <tlvf/wfa_map/tlvProfile2TrafficSeparationPolicy.h>
 #include <tlvf/wfa_map/tlvRadioOperationRestriction.h>
 #include <tlvf/wfa_map/tlvSearchedService.h>
@@ -400,6 +402,7 @@ bool Controller::handle_cmdu(int fd, uint32_t iface_index, const sMacAddr &dst_m
     } else {
         LOG(DEBUG) << "received 1905.1 cmdu message";
         handle_cmdu_1905_1_message(tlvf::mac_to_string(src_mac), cmdu_rx);
+        tasks.handle_ieee1905_1_msg(tlvf::mac_to_string(src_mac), cmdu_rx);
     }
 
     return true;
@@ -1393,9 +1396,9 @@ bool Controller::handle_cmdu_1905_channel_selection_response(const std::string &
 bool Controller::handle_cmdu_1905_channel_scan_report(const std::string &src_mac,
                                                       ieee1905_1::CmduMessageRx &cmdu_rx)
 {
-    auto mid = cmdu_rx.getMessageId();
+    auto current_message_mid = cmdu_rx.getMessageId();
     LOG(INFO) << "Received CHANNEL_SCAN_REPORT_MESSAGE, src_mac=" << src_mac << ", mid=" << std::hex
-              << mid;
+              << current_message_mid;
 
     // get Timestamp TLV
     auto timestamp_tlv = cmdu_rx.getClass<wfa_map::tlvTimestamp>();
@@ -1403,17 +1406,38 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const std::string &src_mac
         LOG(ERROR) << "getClass wfa_map::tlvTimestamp has failed";
         return false;
     }
-    auto timestamp_str = std::string((char *)timestamp_tlv->timestamp())
-                             .substr(0, timestamp_tlv->timestamp_length());
-    LOG(INFO) << "timestamp=" << timestamp_str;
+    auto ISO_8601_timestamp = timestamp_tlv->timestamp_str();
+    LOG(INFO) << "Report Timestamp: " << ISO_8601_timestamp;
+
+    /**
+     * To correctly store the results of the most current report, we need to know whether to
+     * override any existing records.
+     * In case of fragmentation in prplmesh the entire report could be split into several report
+     * messages, thus to confirm if we should override the existing records we compare the recorded
+     * timestamp against the received timestamp as fragmented reports share the same timestamp.
+     */
+    bool should_override_existing_records = true;
+    int report_mid                        = current_message_mid;
+    if (database.has_channel_report_record(ISO_8601_timestamp)) {
+        LOG(DEBUG) << "Report record found for " << ISO_8601_timestamp
+                   << ", Not overriding existing records";
+        should_override_existing_records = false;
+        report_mid = database.get_channel_report_record_mid(ISO_8601_timestamp);
+        LOG(DEBUG) << "Active report mid: " << std::hex << report_mid;
+    } else {
+        LOG(DEBUG) << "No previous report record were found for " << ISO_8601_timestamp
+                   << ", Setting mid: " << std::hex << current_message_mid
+                   << " as active report mid";
+        database.set_channel_report_record_mid(ISO_8601_timestamp, current_message_mid);
+    }
 
     int result_count = 0;
     for (auto const result_tlv : cmdu_rx.getClassList<wfa_map::tlvProfile2ChannelScanResult>()) {
         auto neighbors_list_length = result_tlv->neighbors_list_length();
-        LOG(DEBUG) << "RUID ,operating_class & channel: " << std::endl
-                   << " " << result_tlv->radio_uid() << std::endl
-                   << " " << result_tlv->operating_class() << std::endl
-                   << " " << result_tlv->channel() << std::endl
+        LOG(DEBUG) << "Received Result TLV for:" << std::endl
+                   << "RUID: " << result_tlv->radio_uid() << ", "
+                   << "Operating Class: " << result_tlv->operating_class() << ", "
+                   << "Channel: " << result_tlv->channel() << ", "
                    << " containing " << neighbors_list_length << " neighbors";
 
         std::vector<wfa_map::cNeighbors> neighbor_vec;
@@ -1425,47 +1449,77 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const std::string &src_mac
             }
 
             auto &neighbor = std::get<1>(neighbor_tuple);
-            // TODO: Remove DEBUG prints
-            LOG(DEBUG) << "neighbor BSSID: " << neighbor.bssid();
-            LOG(DEBUG) << "neighbor Signal Strength: " << neighbor.signal_strength();
-            LOG(DEBUG) << "neighbor BSS Load Element Present: "
-                       << neighbor.bss_load_element_present();
-            LOG(DEBUG) << "neighbor Channel Utilization: " << neighbor.channel_utilization();
             neighbor_vec.push_back(neighbor);
         }
-        LOG(DEBUG) << "Avg noise on channel: " << result_tlv->noise();
-        LOG(DEBUG) << "neighbor Channel Utilization: " << result_tlv->utilization();
         if (!database.add_channel_report(result_tlv->radio_uid(), result_tlv->operating_class(),
                                          result_tlv->channel(), neighbor_vec, result_tlv->noise(),
-                                         result_tlv->utilization())) {
+                                         result_tlv->utilization(),
+                                         should_override_existing_records)) {
             LOG(ERROR) << "Failed to add channel report entry #" << result_count << "!";
             return false;
         }
         result_count++;
     }
-    LOG(DEBUG) << "Done with Channel Scan Result";
+    LOG(DEBUG) << "Done with Channel Scan Results TLVs";
 
     // Build and send ACK message CMDU to the originator.
-    auto cmdu_tx_header = cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE);
+    auto cmdu_tx_header =
+        cmdu_tx.create(current_message_mid, ieee1905_1::eMessageType::ACK_MESSAGE);
     if (!cmdu_tx_header) {
         LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
         return false;
     }
 
     // Zero Error Code TLVs in this ACK message
-
-    LOG(DEBUG) << "Sending ACK message to the originator, mid=" << std::hex << mid;
+    LOG(DEBUG) << "Sending ACK message to the originator, mid=" << std::hex << current_message_mid;
     if (!send_cmdu_to_broker(cmdu_tx, tlvf::mac_from_string(src_mac),
                              tlvf::mac_from_string(database.get_local_bridge_mac()))) {
         LOG(ERROR) << "Failed to send ACK_MESSAGE back to agent";
         return false;
     }
 
-    // Send event to dynamic_channel_selection_r2_task.
-    // This task is will eventually replace the existing DCS task, but
-    // in order not to break existing functionality, it introduced as
-    // a new separate task.
-    // TODO: Send Channel-Scan-Report-Received event to task.
+    /**
+     * To support scan reports that may exceed the maximum size supported by the transport layer
+     * (currently not addressed in the EasyMesh specifications), for prplmesh agent, we might
+     * de-fragment the report across several report messages.
+     * For non-prplmesh agents, receiving the report message means the scan is complete.
+     * For prplmesh agents need to check the report_done flag inside tlvChannelScanReportDone
+     */
+    bool report_done = true;
+    if (database.is_prplmesh(tlvf::mac_from_string(src_mac))) {
+        /**
+         * For prplmesh agents, we wish to support de-fragmentation of channel scan results across
+         * multiple report CMDUs when the size of the results exceeds the max TX buffer size.
+         * This means that only the last report message should clear the report records
+         * NOTE: Clearing the report record will not erase the existing scan results, but the next
+         * incoming report will.
+         */
+        auto beerocks_header = beerocks::message_com::parse_intel_vs_message(cmdu_rx);
+        if (!beerocks_header) {
+            LOG(ERROR) << "expecting wfa_map::tlvChannelScanReportDone";
+            return false;
+        }
+        auto vs_tlv = beerocks_header->addClass<beerocks_message::tlvVsChannelScanReportDone>();
+        if (!vs_tlv) {
+            LOG(ERROR) << "addClass wfa_map::tlvChannelScanReportDone failed";
+            return false;
+        }
+        report_done = vs_tlv->report_done();
+    }
+
+    if (report_done) {
+        LOG(DEBUG) << "Sending RECEIVED_CHANNEL_SCAN_REPORT event to DCS R2 task.";
+        dynamic_channel_selection_r2_task::sScanReportEvent new_event = {};
+
+        new_event.mid       = report_mid;
+        new_event.agent_mac = tlvf::mac_from_string(src_mac);
+        tasks.push_event(database.get_dynamic_channel_selection_r2_task_id(),
+                         dynamic_channel_selection_r2_task::eEvent::RECEIVED_CHANNEL_SCAN_REPORT,
+                         &new_event);
+        LOG(DEBUG) << "Clearing channel report record";
+        database.clear_channel_report_record(ISO_8601_timestamp);
+    }
+    LOG(DEBUG) << "Report handling is done";
     return true;
 }
 
@@ -1856,6 +1910,12 @@ bool Controller::handle_cmdu_1905_ap_metric_response(const std::string &src_mac,
                 return false;
             }
         }
+    }
+
+    for (auto radio_tlv : cmdu_rx.getClassList<wfa_map::tlvProfile2RadioMetrics>()) {
+        database.set_radio_metrics(radio_tlv->radio_uid(), radio_tlv->noise(),
+                                   radio_tlv->transmit(), radio_tlv->receive_self(),
+                                   radio_tlv->receive_other());
     }
 
     print_ap_metric_map(ap_metric_data);
@@ -2250,8 +2310,9 @@ bool Controller::handle_cmdu_1905_topology_response(const std::string &src_mac,
         const auto media_type_group = media_type >> 8;
 
         interface_macs.push_back(iface_mac);
+
         // TODO Name and Status of Interface should be add
-        database.dm_add_interface_element(al_mac, iface_mac, media_type);
+        database.add_interface(al_mac, iface_mac, media_type);
 
         // For wireless interface it is defined on IEEE 1905.1 that the size of the media info
         // is n=10 octets, which the size of s802_11SpecificInformation struct.
@@ -2325,46 +2386,89 @@ bool Controller::handle_cmdu_1905_topology_response(const std::string &src_mac,
         }
     }
 
+    // Clear neighbor informations of all interfaces.
+    for (const auto &iface : interface_macs) {
+        database.dm_remove_interface_neighbors(al_mac, iface);
+    }
+
     // The reported neighbors list might not be correct since the reporting al_mac hasn't received
     // a Topology Discovery from its neighbors yet. Therefore, remove a neighbor node only if more
     // than 65 seconds (timeout according to standard + 5 seconds grace) have passed since we added
     // this node. This promise that the reported al_mac will get the Topology Discovery messages
     // from its neighbors and add them to the report.
-    auto last_state_change_timestamp = database.get_last_state_change(src_mac);
-    if (last_state_change_timestamp +
-            std::chrono::seconds(beerocks::ieee1905_1_consts::DISCOVERY_NOTIFICATION_TIMEOUT_SEC +
-                                 5) <
-        std::chrono::steady_clock::now()) {
-        LOG(TRACE) << "Checking if one of " << src_mac << " neighbors is no longer connected";
-        std::unordered_set<sMacAddr> reported_neighbor_al_macs;
-        auto tlv1905NeighborDeviceList = cmdu_rx.getClassList<ieee1905_1::tlv1905NeighborDevice>();
-        for (const auto &tlv1905NeighborDevice : tlv1905NeighborDeviceList) {
-            if (!tlv1905NeighborDevice) {
-                LOG(ERROR) << "ieee1905_1::tlv1905NeighborDevice has invalid pointer";
+    bool check_dead_neighbors =
+        (database.get_last_state_change(src_mac) +
+             std::chrono::seconds(beerocks::ieee1905_1_consts::DISCOVERY_NOTIFICATION_TIMEOUT_SEC +
+                                  5) <
+         std::chrono::steady_clock::now());
+
+    std::unordered_set<sMacAddr> reported_neighbor_al_macs;
+    auto tlv1905NeighborDeviceList = cmdu_rx.getClassList<ieee1905_1::tlv1905NeighborDevice>();
+
+    for (const auto &tlv1905NeighborDevice : tlv1905NeighborDeviceList) {
+        if (!tlv1905NeighborDevice) {
+            LOG(ERROR) << "ieee1905_1::tlv1905NeighborDevice has invalid pointer";
+            return false;
+        }
+
+        auto device_count = tlv1905NeighborDevice->mac_al_1905_device_length() /
+                            sizeof(ieee1905_1::tlv1905NeighborDevice::sMacAl1905Device);
+
+        for (size_t i = 0; i < device_count; i++) {
+            const auto neighbor_al_mac_tuple = tlv1905NeighborDevice->mac_al_1905_device(i);
+            if (!std::get<0>(neighbor_al_mac_tuple)) {
+                LOG(ERROR) << "Getting al_mac element has failed";
                 return false;
             }
-            auto device_count = tlv1905NeighborDevice->mac_al_1905_device_length() /
-                                sizeof(ieee1905_1::tlv1905NeighborDevice::sMacAl1905Device);
-            for (size_t i = 0; i < device_count; i++) {
-                const auto neighbor_al_mac_tuple = tlv1905NeighborDevice->mac_al_1905_device(i);
-                if (!std::get<0>(neighbor_al_mac_tuple)) {
-                    LOG(ERROR) << "Getting al_mac element has failed";
-                    return false;
-                }
 
-                auto &neighbor_al_mac = std::get<1>(neighbor_al_mac_tuple).mac;
-                LOG(DEBUG) << "Inserting reported neighbor " << neighbor_al_mac << " to the list";
-                reported_neighbor_al_macs.insert(neighbor_al_mac);
-            }
+            // Add neighbor to related interface
+            database.dm_add_interface_neighbor(al_mac, tlv1905NeighborDevice->mac_local_iface(),
+                                               std::get<1>(neighbor_al_mac_tuple).mac, true);
+
+            auto &neighbor_al_mac = std::get<1>(neighbor_al_mac_tuple).mac;
+            LOG(DEBUG) << "Inserting reported neighbor " << neighbor_al_mac << " to the list";
+            reported_neighbor_al_macs.insert(neighbor_al_mac);
         }
+    }
+
+    auto tlvNon1905NeighborDeviceList =
+        cmdu_rx.getClassList<ieee1905_1::tlvNon1905neighborDeviceList>();
+
+    for (const auto &tlvNon1905NeighborDevice : tlvNon1905NeighborDeviceList) {
+        if (!tlvNon1905NeighborDevice) {
+            LOG(ERROR) << "ieee1905_1::tlvNon1905NeighborDevice has invalid pointer";
+            return false;
+        }
+
+        auto device_count =
+            tlvNon1905NeighborDevice->mac_non_1905_device_length() / sizeof(sMacAddr);
+
+        for (size_t i = 0; i < device_count; i++) {
+            const auto neighbor_al_mac_tuple = tlvNon1905NeighborDevice->mac_non_1905_device(i);
+            if (!std::get<0>(neighbor_al_mac_tuple)) {
+                LOG(ERROR) << "Getting al_mac element has failed";
+                return false;
+            }
+
+            // Add neighbor to related interface
+            database.dm_add_interface_neighbor(al_mac, tlvNon1905NeighborDevice->mac_local_iface(),
+                                               std::get<1>(neighbor_al_mac_tuple), false);
+        }
+    }
+
+    if (check_dead_neighbors) {
+        LOG(TRACE) << "Checking if one of " << src_mac << " neighbors is no longer connected";
 
         auto neighbor_al_macs_on_db = database.get_1905_1_neighbors(al_mac);
         LOG(DEBUG) << "Comparing reported neighbors to neighbors on the database, neighbors_on_db="
                    << neighbor_al_macs_on_db.size();
+
         for (const auto &neighbor_al_mac_on_db : neighbor_al_macs_on_db) {
-            // If reported al_mac is on the db skip it, otherwise remove the node.
+
             LOG(DEBUG) << "Checks if al_mac " << al_mac << " neighbor " << neighbor_al_mac_on_db
                        << " is reported in this message";
+
+            // If reported al_mac is on the db skip it, otherwise remove the node.
             if (reported_neighbor_al_macs.find(neighbor_al_mac_on_db) !=
                 reported_neighbor_al_macs.end()) {
                 continue;
@@ -2468,7 +2572,7 @@ bool Controller::handle_cmdu_1905_tunnelled_message(const std::string &src_mac,
 bool Controller::handle_cmdu_1905_failed_connection_message(const std::string &src_mac,
                                                             ieee1905_1::CmduMessageRx &cmdu_rx)
 {
-    LOG(DEBUG) << "Recieved Failed Connection Message for STA";
+    LOG(DEBUG) << "Received Failed Connection Message for STA";
     return true;
 }
 

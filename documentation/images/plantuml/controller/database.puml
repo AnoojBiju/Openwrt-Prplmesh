@@ -1,0 +1,55 @@
+@startuml
+
+class sStation {
+  sMacAddr mac
+  ipv4
+  ipv6
+  capabilities
+  statistics
+}
+
+class sBss {
+  sMacAddr bssid
+  string path_to_dm
+  string ssid
+}
+
+class sRadio {
+  sMacAddr radio_uid
+  string path_to_dm
+  capabilities
+  statistics
+  current operating channel
+}
+
+class sInterface {
+  sMacAddr mac
+  ipv4
+  ipv6
+  statistics
+  neighbors
+}
+
+class sAgent {
+  sMacAddr al_mac
+  string path_to_dm
+  bool is_controller
+  bool is_prplmesh
+  bool is_profile2
+  string manufacturer
+  capabilities
+}
+
+class db {
+  find_bss(bssid)
+}
+
+db *-- sAgent
+db *-- sStation
+sAgent *-- sRadio
+sAgent *-- sInterface
+sRadio *-- sBss
+sStation "0..1" --o sRadio :  backhaul STA
+sStation "*" -- "0..1" sBss
+
+@enduml

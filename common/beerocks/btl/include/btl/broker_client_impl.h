@@ -61,9 +61,16 @@ public:
     /**
      * @brief Configures the transport process to use given network bridge.
      *
-     * @see BrokerClient::configure()
+     * @see BrokerClient::configure_interfaces()
      */
-    bool configure(const std::string &bridge_name) override;
+    bool configure_interfaces(const std::string &bridge_name) override;
+
+    /**
+     * @brief Configures the transport process to bind a given local al_mac address.
+     *
+     * @see BrokerClient::configure_al_mac()
+     */
+    bool configure_al_mac(const sMacAddr &al_mac) override;
 
     /**
      * @brief Sends a CDMU message to the transport process for dispatching.
