@@ -806,7 +806,7 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         auto db            = AgentDB::get();
         auto bridge        = db->bridge.iface_name;
         auto bridge_ifaces = beerocks::net::network_utils::linux_get_iface_list_from_bridge(bridge);
-        auto eth_iface     = db->ethernet.iface_name;
+        auto eth_iface     = db->ethernet.wan.iface_name;
         if (std::find(bridge_ifaces.begin(), bridge_ifaces.end(), eth_iface) !=
             bridge_ifaces.end()) {
             LOG(INFO) << "The wired interface is already in the bridge";
@@ -903,8 +903,8 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
 
             // If a wired (WAN) interface was provided, try it first, check if the interface is UP
             wan_monitor::ELinkState wired_link_state = wan_monitor::ELinkState::eInvalid;
-            if (!db->ethernet.iface_name.empty()) {
-                wired_link_state = wan_mon.initialize(db->ethernet.iface_name);
+            if (!db->ethernet.wan.iface_name.empty()) {
+                wired_link_state = wan_mon.initialize(db->ethernet.wan.iface_name);
                 // Failure might be due to insufficient permissions, datailed error message is being
                 // printed inside.
                 if (wired_link_state == wan_monitor::ELinkState::eInvalid) {
@@ -914,9 +914,9 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
             if ((wired_link_state == wan_monitor::ELinkState::eUp) &&
                 (selected_backhaul.empty() || selected_backhaul == DEV_SET_ETH)) {
 
-                auto it = std::find(ifaces.begin(), ifaces.end(), db->ethernet.iface_name);
+                auto it = std::find(ifaces.begin(), ifaces.end(), db->ethernet.wan.iface_name);
                 if (it == ifaces.end()) {
-                    LOG(ERROR) << "wire iface " << db->ethernet.iface_name
+                    LOG(ERROR) << "wire iface " << db->ethernet.wan.iface_name
                                << " is not on the bridge";
                     FSM_MOVE_STATE(RESTART);
                     break;
@@ -924,7 +924,7 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
 
                 // Mark the connection as WIRED
                 db->backhaul.connection_type     = AgentDB::sBackhaul::eConnectionType::Wired;
-                db->backhaul.selected_iface_name = db->ethernet.iface_name;
+                db->backhaul.selected_iface_name = db->ethernet.wan.iface_name;
 
             } else {
                 auto selected_ruid = db->get_radio_by_mac(tlvf::mac_from_string(selected_backhaul),
@@ -1041,8 +1041,8 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         auto db = AgentDB::get();
 
         eth_link_poll_timer = std::chrono::steady_clock::now();
-        m_eth_link_up =
-            beerocks::net::network_utils::linux_iface_is_up_and_running(db->ethernet.iface_name);
+        m_eth_link_up       = beerocks::net::network_utils::linux_iface_is_up_and_running(
+            db->ethernet.wan.iface_name);
         FSM_MOVE_STATE(PRE_OPERATIONAL);
         break;
     }
@@ -1095,9 +1095,9 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         // if (time_elapsed_ms > POLL_TIMER_TIMEOUT_MS) {
 
         //     eth_link_poll_timer = now;
-        //     bool eth_link_up = beerocks::net::network_utils::linux_iface_is_up_and_running(db->ethernet.iface_name);
+        //     bool eth_link_up = beerocks::net::network_utils::linux_iface_is_up_and_running(db->ethernet.wan.iface_name);
         //     if (eth_link_up != m_eth_link_up) {
-        //         m_eth_link_up = beerocks::net::network_utils::linux_iface_is_up_and_running(db->ethernet.iface_name);
+        //         m_eth_link_up = beerocks::net::network_utils::linux_iface_is_up_and_running(db->ethernet.wan.iface_name);
         //         FSM_MOVE_STATE(RESTART);
         //     }
         // } else {
@@ -1753,7 +1753,7 @@ bool BackhaulManager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo> 
                                << "SSID: " << db->device_conf.back_radio.ssid << ", Pass: ****"
                                << ", Security: " << db->device_conf.back_radio.security_type
                                << ", Bridge: " << db->bridge.iface_name
-                               << ", Wired: " << db->ethernet.iface_name;
+                               << ", Wired: " << db->ethernet.wan.iface_name;
                 }
             }
         }

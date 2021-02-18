@@ -377,7 +377,7 @@ bool TopologyTask::add_device_information_tlv()
     /**
      * Add a LocalInterfaceInfo field for the wired interface, if any.
      */
-    std::string &local_eth_iface_name = db->ethernet.iface_name;
+    std::string &local_eth_iface_name = db->ethernet.wan.iface_name;
     if (!local_eth_iface_name.empty() &&
         network_utils::linux_iface_is_up_and_running(local_eth_iface_name)) {
         ieee1905_1::eMediaType media_type = ieee1905_1::eMediaType::UNKNOWN_MEDIA;

@@ -1013,8 +1013,8 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
     sLinkInterface wired_interface;
     auto db = AgentDB::get();
 
-    wired_interface.iface_name = db->ethernet.iface_name;
-    wired_interface.iface_mac  = db->ethernet.mac;
+    wired_interface.iface_name = db->ethernet.wan.iface_name;
+    wired_interface.iface_mac  = db->ethernet.wan.mac;
 
     if (!MediaType::get_media_type(wired_interface.iface_name,
                                    ieee1905_1::eMediaTypeGroup::IEEE_802_3,
