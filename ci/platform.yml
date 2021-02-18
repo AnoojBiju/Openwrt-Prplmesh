@@ -74,7 +74,7 @@ build-for-nec-wx3000hp:
   variables:
     TARGET_DEVICE: "nec-wx3000hp"
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PARENT_PIPELINE_SOURCE == "schedule"'
     - if: $CI_COMMIT_TAG
 
 build-for-turris-omnia-mmx:
