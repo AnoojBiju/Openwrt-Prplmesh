@@ -2190,7 +2190,7 @@ bool ap_manager_thread::handle_ap_enabled(int vap_id)
 
     auto vap_iter = ap_wlan_hal->get_radio_info().available_vaps.find(vap_id);
     if (vap_iter == ap_wlan_hal->get_radio_info().available_vaps.end()) {
-        LOG(ERROR) << "Recieved AP-ENABLED but can't get vap info";
+        LOG(ERROR) << "Received AP-ENABLED but can't get vap info";
         return false;
     }
 

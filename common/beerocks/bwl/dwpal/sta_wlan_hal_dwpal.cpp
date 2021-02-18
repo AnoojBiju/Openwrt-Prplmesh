@@ -843,7 +843,7 @@ bool sta_wlan_hal_dwpal::parse_fapi_event(const std::string& opcode, std::shared
                 }
             }
 
-            // Read the number of recieved packets
+            // Read the number of received packets
             if (UGW_READ_VALUE(wlObj, "Device.WiFi.AccessPoint.AssociatedDevice.Stats", 0, "PacketsReceived", tmpBuff) != UGW_SUCCESS) {
                 LOG(ERROR) << "PacketsReceived field is missing from the FAPI object!";
                 return false;
