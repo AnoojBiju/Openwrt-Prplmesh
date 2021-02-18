@@ -58,7 +58,6 @@
 #include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvChannelScanCapabilities.h>
 #include <tlvf/wfa_map/tlvChannelSelectionResponse.h>
-#include <tlvf/wfa_map/tlvClientAssociationEvent.h>
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
@@ -474,8 +473,6 @@ bool Controller::handle_cmdu_1905_1_message(const std::string &src_mac,
         return handle_cmdu_1905_operating_channel_report(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::STEERING_COMPLETED_MESSAGE:
         return handle_cmdu_1905_steering_completed_message(src_mac, cmdu_rx);
-    case ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE:
-        return handle_cmdu_1905_topology_notification(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::BACKHAUL_STEERING_RESPONSE_MESSAGE:
         return handle_cmdu_1905_backhaul_sta_steering_response(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::TUNNELLED_MESSAGE:
@@ -1821,144 +1818,6 @@ bool Controller::handle_cmdu_1905_higher_layer_data_message(const std::string &s
     }
     LOG(DEBUG) << "sending ACK message to the agent, mid=" << std::hex << int(mid);
     return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
-}
-
-bool Controller::handle_cmdu_1905_topology_notification(const std::string &src_mac,
-                                                        ieee1905_1::CmduMessageRx &cmdu_rx)
-{
-    auto mid = cmdu_rx.getMessageId();
-    LOG(DEBUG) << "Received TOPOLOGY_NOTIFICATION_MESSAGE, from " << src_mac << ", mid=" << std::hex
-               << int(mid);
-
-    // IEEE 1905.1 defines that TOPOLOGY_NOTIFICATION_MESSAGE must containt one 1905.1 AL MAC
-    // address type TLV, and MultiAp standard extend it with zero or one Client Association Event
-    // TLV. So if we didn't receive Client Association Event TLV, we need to send
-    // TOPOLOGY_QUERY_MESSAGE to figure out what has changed on the topology.
-    auto client_association_event_tlv = cmdu_rx.getClass<wfa_map::tlvClientAssociationEvent>();
-    if (!client_association_event_tlv) {
-        LOG(INFO) << "wfa_map::tlvClientAssociationEvent not found, sending TOPOLOGY_QUERY_MESSAGE";
-
-        if (!cmdu_tx.create(0, ieee1905_1::eMessageType::TOPOLOGY_QUERY_MESSAGE)) {
-            LOG(ERROR) << "Failed building message!";
-            return false;
-        }
-        son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
-        return true;
-    }
-
-    if (!database.is_prplmesh(tlvf::mac_from_string(src_mac))) {
-        LOG(DEBUG) << "Non-prplMesh agent, skipping VS parsing";
-        return true;
-    }
-
-    std::shared_ptr<beerocks_message::tlvVsClientAssociationEvent> vs_tlv = nullptr;
-    auto beerocks_header = beerocks::message_com::parse_intel_vs_message(cmdu_rx);
-    if (beerocks_header) {
-        vs_tlv = beerocks_header->addClass<beerocks_message::tlvVsClientAssociationEvent>();
-        if (!vs_tlv) {
-            LOG(ERROR) << "addClass wfa_map::tlvVsClientAssociationEvent failed";
-            return false;
-        }
-    }
-
-    auto &client_mac    = client_association_event_tlv->client_mac();
-    auto client_mac_str = tlvf::mac_to_string(client_mac);
-
-    auto &bssid    = client_association_event_tlv->bssid();
-    auto bssid_str = tlvf::mac_to_string(bssid);
-
-    auto association_event = client_association_event_tlv->association_event();
-    bool client_connected =
-        (association_event == wfa_map::tlvClientAssociationEvent::CLIENT_HAS_JOINED_THE_BSS);
-
-    LOG(INFO) << "client " << (client_connected ? "connected" : "disconnected")
-              << ", client_mac=" << client_mac_str << ", bssid=" << bssid_str;
-
-    if (client_connected) {
-        //add or update node parent
-        database.add_node_client(client_mac, bssid);
-
-        LOG(INFO) << "client connected, mac=" << client_mac_str << ", bssid=" << bssid_str;
-
-        database.set_node_channel_bw(client_mac_str, database.get_node_channel(bssid_str),
-                                     database.get_node_bw(bssid_str),
-                                     database.get_node_channel_ext_above_secondary(bssid_str), 0,
-                                     database.get_hostap_vht_center_frequency(bssid_str));
-
-        database.clear_node_cross_rssi(client_mac_str);
-        database.clear_node_stats_info(client_mac_str);
-
-        if (!(database.get_node_type(client_mac_str) == beerocks::TYPE_IRE_BACKHAUL &&
-              database.get_node_handoff_flag(client_mac_str))) {
-            // The node is not an IRE in handoff
-            database.set_node_type(client_mac_str, beerocks::TYPE_CLIENT);
-        }
-
-        database.set_node_backhaul_iface_type(client_mac_str,
-                                              beerocks::IFACE_TYPE_WIFI_UNSPECIFIED);
-
-        if (vs_tlv) {
-            database.set_node_vap_id(client_mac_str, vs_tlv->vap_id());
-            database.set_station_capabilities(client_mac_str, vs_tlv->capabilities());
-        }
-
-        // Notify existing steering task of completed connection
-        int prev_steering_task = database.get_steering_task_id(client_mac_str);
-        tasks.push_event(prev_steering_task, client_steering_task::STA_CONNECTED);
-
-#ifdef BEEROCKS_RDKB
-        //push event to rdkb_wlan_hal task
-        if (vs_tlv && database.settings_rdkb_extensions()) {
-            bwl::sClientAssociationParams new_event = {};
-
-            new_event.mac          = client_mac;
-            new_event.bssid        = bssid;
-            new_event.vap_id       = vs_tlv->vap_id();
-            new_event.capabilities = vs_tlv->capabilities();
-
-            tasks.push_event(database.get_rdkb_wlan_task_id(),
-                             rdkb_wlan_task::events::STEERING_EVENT_CLIENT_CONNECT_AVAILABLE,
-                             &new_event);
-        }
-#endif
-
-        son_actions::handle_completed_connection(database, cmdu_tx, tasks, client_mac_str);
-
-    } else {
-        // client disconnected
-
-#ifdef BEEROCKS_RDKB
-
-        // Push event to rdkb_wlan_hal task
-        if (vs_tlv && database.settings_rdkb_extensions()) {
-            beerocks_message::sSteeringEvDisconnect new_event = {};
-            new_event.client_mac                              = client_mac;
-            new_event.bssid                                   = bssid;
-            new_event.reason                                  = vs_tlv->disconnect_reason();
-            new_event.source = beerocks_message::eDisconnectSource(vs_tlv->disconnect_source());
-            new_event.type   = beerocks_message::eDisconnectType(vs_tlv->disconnect_type());
-
-            tasks.push_event(database.get_rdkb_wlan_task_id(),
-                             rdkb_wlan_task::events::STEERING_EVENT_CLIENT_DISCONNECT_AVAILABLE,
-                             &new_event);
-        }
-#endif
-        /*
-          TODO: Notify disconenction should be called if Disassociation Event TLV present
-                in Topology Notification Message.
-                Should be fixed after PPM-864.
-        */
-        if (!database.notify_disconnection(client_mac_str)) {
-            LOG(WARNING) << "Failed to notify disconnection event.";
-        }
-
-        bool reported_by_parent = bssid_str == database.get_node_parent(client_mac_str);
-        // TODO this is probably wrong - if reported_by_parent is true, the client has already
-        // connected to something else so it is not dead at all.
-        son_actions::handle_dead_node(client_mac_str, reported_by_parent, database, cmdu_tx, tasks);
-    }
-
-    return true;
 }
 
 bool Controller::handle_cmdu_1905_backhaul_sta_steering_response(const std::string &src_mac,

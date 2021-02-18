@@ -184,8 +184,6 @@ private:
                                                              ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_cmdu_1905_client_capability_report_message(const std::string &src_mac,
                                                            ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_cmdu_1905_topology_notification(const std::string &src_mac,
-                                                ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_cmdu_1905_beacon_response(const std::string &src_mac,
                                           ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_cmdu_1905_backhaul_sta_steering_response(const std::string &src_mac,
