@@ -20,6 +20,7 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
 
     Contains common methods used by other(derived) prplmesh test cases.
     """
+
     def startMarker(self):
         """Calls method with the same name in base class and then prints current topology.
         This method is called right before the test.
@@ -344,6 +345,16 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
                     for sta_name, sta in stas.items():
                         map_client = map_vap.add_client(sta["MACAddress"])
                         map_client.path = map_vap.path + ".STA." + sta_name[:-1]  # strip trailing .
+            interfaces = controller.nbapi_get_instances(map_device.path + ".Interface")
+            for interface_name, interface in interfaces.items():
+                map_interface = map_device.add_interface(interface["MACAddress"])
+                # strip trailing .
+                map_interface.path = map_device.path + ".Interface." + interface_name[:-1]
+                neighbors = controller.nbapi_get_instances(map_interface.path + ".Neighbor")
+                for neighbor_name, neighbor in neighbors.items():
+                    map_neighbor = map_interface.add_neighbor(neighbor["ID"])
+                    map_neighbor.path = map_interface.path + \
+                        ".Neighbor." + neighbor_name[:-1]  # str
         return map_devices
 
     def configure_ssids_clear(self):
