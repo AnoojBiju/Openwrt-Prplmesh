@@ -487,3 +487,9 @@ bool dynamic_channel_selection_task::finish_scan()
     m_scanning_task_id = -1;
     return true;
 }
+
+bool dynamic_channel_selection_task::handle_ieee1905_1_msg(const std::string &src_mac,
+                                                           ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    return false;
+}
