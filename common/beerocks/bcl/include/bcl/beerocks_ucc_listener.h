@@ -149,7 +149,7 @@ public:
      */
     bool add_tlv_from_strings(const beerocks_ucc_listener::tlv_hex_t &tlv_hex,
                               std::string &err_string);
-    bool add_tlvs_from_list(std::list<beerocks_ucc_listener::tlv_hex_t> &tlv_hex_list,
+    bool add_tlvs_from_list(const std::list<beerocks_ucc_listener::tlv_hex_t> &tlv_hex_list,
                             std::string &err_string);
 };
 } // namespace beerocks
