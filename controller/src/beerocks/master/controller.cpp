@@ -2572,7 +2572,7 @@ bool Controller::handle_cmdu_1905_tunnelled_message(const std::string &src_mac,
 bool Controller::handle_cmdu_1905_failed_connection_message(const std::string &src_mac,
                                                             ieee1905_1::CmduMessageRx &cmdu_rx)
 {
-    LOG(DEBUG) << "Recieved Failed Connection Message for STA";
+    LOG(DEBUG) << "Received Failed Connection Message for STA";
     return true;
 }
 
