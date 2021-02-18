@@ -155,7 +155,11 @@ static bool cfg_get_param(const std::string &name, std::string &value)
         return false;
     }
 
-    value = parameters[name];
+    auto it = parameters.find(name);
+    if (it == parameters.end()) {
+        return false;
+    }
+    value = it->second;
     return true;
 }
 
