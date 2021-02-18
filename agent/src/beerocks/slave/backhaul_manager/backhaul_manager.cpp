@@ -2891,6 +2891,11 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
     m_backhaul_steering_channel = channel;
 
     // Create a timer to check if this Backhaul Steering Request times out.
+    // If a timer exists already, it means that there is a steering on-going. What are we supposed
+    // to do in such a case? Send the response for the first request immediately? Or send only a
+    // response for the second request?
+    // This doesn't seem to be specified. Thus, what we do here is OK: only send a response for the
+    // second request.
     if (m_backhaul_steering_timer != beerocks::net::FileDescriptor::invalid_descriptor) {
         m_timer_manager->remove_timer(m_backhaul_steering_timer);
     }
