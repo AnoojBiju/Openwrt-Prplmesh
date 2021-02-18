@@ -24,8 +24,8 @@ class ApConfigRenew(PrplMeshBaseTest):
         controller.ucc_socket.cmd_reply("DEV_RESET_DEFAULT")
         controller.ucc_socket.cmd_reply(
             "DEV_SET_CONFIG,"
-            "bss_info1,{} 8x Multi-AP-24G-1 0x0020 0x0008 maprocks1 0 1,"
-            "bss_info2,{} 8x Multi-AP-24G-2 0x0020 0x0008 maprocks2 1 0"
+            "bss_info1,{} 8x Boardfarm-Tests-24G-1 0x0020 0x0008 maprocks1 0 1,"
+            "bss_info2,{} 8x Boardfarm-Tests-24G-2 0x0020 0x0008 maprocks2 1 0"
             .format(mac_repeater1_upper, agent.mac))
         controller.ucc_socket.dev_send_1905(agent.mac, 0x000A,
                                             tlv(0x01, 0x0006, "{" + controller.mac + "}"),
@@ -34,11 +34,11 @@ class ApConfigRenew(PrplMeshBaseTest):
 
         time.sleep(5)
         self.check_log(agent.radios[0],
-                       r"ssid: Multi-AP-24G-1 .*"
+                       r"ssid: Boardfarm-Tests-24G-1 .*"
                        r"fronthaul: true backhaul: false",
                        timeout=60)
         self.check_log(agent.radios[0],
-                       r"ssid: Multi-AP-24G-2 .*"
+                       r"ssid: Boardfarm-Tests-24G-2 .*"
                        r"fronthaul: false backhaul: true",
                        timeout=60)
         self.check_log(agent.radios[1],
@@ -47,9 +47,9 @@ class ApConfigRenew(PrplMeshBaseTest):
         bssid1 = agent.ucc_socket.dev_get_parameter('macaddr',
                                                     ruid='0x' +
                                                     agent.radios[0].mac.replace(':', ''),
-                                                    ssid='Multi-AP-24G-1')
+                                                    ssid='Boardfarm-Tests-24G-1')
         if not bssid1:
-            self.fail("repeater1 didn't configure Multi-AP-24G-1")
+            self.fail("repeater1 didn't configure Boardfarm-Tests-24G-1")
         # simulate wps onboarding to the backhaul vap
         agent.ucc_socket.start_wps_registration("24G")
         self.check_log(agent.radios[0], r"Start WPS PBC", timeout=60)

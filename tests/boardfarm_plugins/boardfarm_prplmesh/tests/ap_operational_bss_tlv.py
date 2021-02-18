@@ -27,7 +27,7 @@ class ApOperationalBss(PrplMeshBaseTest):
         controller.beerocks_cli_command('bml_clear_wifi_credentials {}'.format(agent.mac))
         controller.beerocks_cli_command('bml_set_wifi_credentials {} {} {} {} {}'
                                         .format(agent.mac,
-                                                "Multi-AP-24G-5g-1",
+                                                "Boardfarm-Tests-24G-5g-1",
                                                 "maprocks1",
                                                 "24g-5g",
                                                 "fronthaul"))
@@ -63,8 +63,8 @@ class ApOperationalBss(PrplMeshBaseTest):
                                                   bss_interface.ap_bss_local_intf_addr,
                                                   current_radio.vaps[0].bssid))
                 self.safe_check_obj_attribute(bss_interface, 'ap_bss_local_intf_ssid',
-                                              "Multi-AP-24G-5g-1",
-                                              "Wrong mac SSID: {}, expected: Multi-AP-24G-5g-1"
+                                              "Boardfarm-Tests-24G-5g-1",
+                                              "Wrong SSID: {}, expected: Boardfarm-Tests-24G-5g-1"
                                               .format(bss_interface.ap_bss_local_intf_ssid))
         debug("No errors found in the AP Operational TLV.")
 
