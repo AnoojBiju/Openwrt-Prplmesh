@@ -229,7 +229,7 @@ bool agent_ucc_listener::handle_dev_set_config(std::unordered_map<std::string, s
         auto db            = AgentDB::get();
         auto bridge        = db->bridge.iface_name;
         auto bridge_ifaces = network_utils::linux_get_iface_list_from_bridge(bridge);
-        auto eth_iface     = db->ethernet.iface_name;
+        auto eth_iface     = db->ethernet.wan.iface_name;
         if (std::find(bridge_ifaces.begin(), bridge_ifaces.end(), eth_iface) !=
             bridge_ifaces.end()) {
             if (!beerocks::net::network_utils::linux_remove_iface_from_bridge(bridge, eth_iface)) {

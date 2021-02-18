@@ -96,6 +96,7 @@ public:
         std::string bridge_iface;
         std::string backhaul_preferred_bssid;
         std::string backhaul_wire_iface;
+        std::string fronthaul_wire_ifaces;
         std::string enable_system_hang_test;
         std::string const_backhaul_slave;
         //[slaveX]
