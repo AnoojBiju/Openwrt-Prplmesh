@@ -204,7 +204,7 @@ public:
     bool can_handle(const TEvent &event) { return (m_events.find(event) != m_events.end()); }
 
     // Process an event and return the next state
-    const TState &handle(const TEvent &event, const void *args = nullptr)
+    const TState handle(const TEvent &event, const void *args = nullptr)
     {
         // Check if the given event was registered for this state
         auto iter = m_events.find(event);
