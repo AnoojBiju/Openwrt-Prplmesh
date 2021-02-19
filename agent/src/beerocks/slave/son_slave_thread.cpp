@@ -3530,6 +3530,17 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
         db->traffic_separation.secondaries_vlans_ids.clear();
         db->traffic_separation.ssid_vid_mapping.clear();
 
+        // Clear the channel_list
+        // When FCC/ETSI is set, the prplmesh is not restarted, but the salve is.
+        // Must clear the map to prevent residues of previous country configuration.
+        // This is needed since the map is not cleared when read.
+        auto radio = db->radio(m_fronthaul_iface);
+        if (!radio) {
+            LOG(FATAL) << "Radio of interface " << m_fronthaul_iface << " does not exist on the db";
+            return false;
+        }
+        radio->channels_list.clear();
+
         slave_state = STATE_CONNECT_TO_PLATFORM_MANAGER;
         break;
     }
