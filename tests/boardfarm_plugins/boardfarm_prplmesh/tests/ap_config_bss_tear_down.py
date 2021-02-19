@@ -36,7 +36,7 @@ class ApConfigBSSTeardown(PrplMeshBaseTest):
         time.sleep(3)
 
         self.check_log(agent.radios[0],
-                       r"Received credentials for ssid: Boardfarm-Tests-24G-3 .*"
+                       r"Autoconfiguration for ssid: Boardfarm-Tests-24G-3 .*"
                        r"fronthaul: true backhaul: false")
         self.check_log(agent.radios[1], r".* tear down radio")
         conn_map = controller.get_conn_map()
