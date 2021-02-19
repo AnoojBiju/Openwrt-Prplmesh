@@ -17,14 +17,22 @@ case $TARGET_DEVICE in
         sed -i 's/packages:/packages:\n  - prplmesh-dwpal/g' profiles/"$TARGET_DEVICE".yml
         # First replace the profiles
         yq write --inplace profiles/"$TARGET_DEVICE".yml feeds -f profiles_feeds/netgear-rax40.yml
-        # Then merge adding to  the packages for amx
-        yq merge --append --inplace profiles/"$TARGET_DEVICE".yml profiles_feeds/packages-rax40.yml
 
+        # The additional profiles that will be used:
         args=("debug")
+
+        # Add the SAH feed and its packages:
+        cp profiles_feeds/sah.yml profiles/sah.yml
+        args+=("sah")
+
         if [ -n "$MMX_FEED" ] ; then
             cp profiles_feeds/mmx.yml profiles/mmx.yml
             args+=("mmx")
         fi
+
+        for profile in "${args[@]}" ; do
+            cat "profiles/${profile}.yml" >> files/etc/prplwrt-version
+        done
 
         ./scripts/gen_config.py "$TARGET_DEVICE" "${args[@]}"
         cat profiles_feeds/netgear-rax40.yml >> files/etc/prplwrt-version
