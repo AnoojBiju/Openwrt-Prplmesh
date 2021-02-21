@@ -903,7 +903,7 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
 
             // If a wired (WAN) interface was provided, try it first, check if the interface is UP
             wan_monitor::ELinkState wired_link_state = wan_monitor::ELinkState::eInvalid;
-            if (!db->ethernet.wan.iface_name.empty()) {
+            if (!db->device_conf.local_gw && !db->ethernet.wan.iface_name.empty()) {
                 wired_link_state = wan_mon.initialize(db->ethernet.wan.iface_name);
                 // Failure might be due to insufficient permissions, datailed error message is being
                 // printed inside.

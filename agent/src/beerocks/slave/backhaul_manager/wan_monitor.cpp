@@ -69,6 +69,11 @@ wan_monitor::~wan_monitor()
 
 wan_monitor::ELinkState wan_monitor::initialize(const std::string &strWanIfaceName)
 {
+    if (strWanIfaceName.empty()) {
+        LOG(ERROR) << "WAN Monitor intialized on empty interface name!";
+        return ELinkState::eInvalid;
+    }
+
     // Close the previous FD
     if (m_iNetlinkFD != -1) {
         // NOTE: If the FD is used in an external select(), it's up to the
