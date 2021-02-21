@@ -3504,14 +3504,20 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
         // Update bridge parameters on AgentDB.
         db->bridge.mac = tlvf::mac_from_string(iface_mac);
 
-        if (!network_utils::linux_iface_get_mac(db->ethernet.wan.iface_name, iface_mac)) {
-            LOG(ERROR) << "Failed reading wan mac address! iface=" << db->ethernet.wan.iface_name;
-            m_stop_on_failure_attempts--;
-            slave_reset();
-        }
+        // On GW Platform, we clear the WAN interface from the database, once getting the
+        // configuration from the Platform Manager. Since we initialize the local_gw flag later,
+        // check if the WAN interface is empty instead of the local_gw flag.
+        if (!db->ethernet.wan.iface_name.empty()) {
+            if (!network_utils::linux_iface_get_mac(db->ethernet.wan.iface_name, iface_mac)) {
+                LOG(ERROR) << "Failed reading wan mac address! iface="
+                           << db->ethernet.wan.iface_name;
+                m_stop_on_failure_attempts--;
+                slave_reset();
+            }
 
-        // Update wan parameters on AgentDB.
-        db->ethernet.wan.mac = tlvf::mac_from_string(iface_mac);
+            // Update wan parameters on AgentDB.
+            db->ethernet.wan.mac = tlvf::mac_from_string(iface_mac);
+        }
 
         for (auto &eth_iface : db->ethernet.lan) {
             if (!network_utils::linux_iface_get_mac(eth_iface.iface_name, iface_mac)) {
