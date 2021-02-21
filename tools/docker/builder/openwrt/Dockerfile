@@ -94,4 +94,6 @@ COPY --chown=openwrt:openwrt scripts/build-openwrt.sh /home/openwrt/openwrt/scri
 ####
 FROM openwrt-builder as prplmesh-builder
 
+ADD patches patches
+
 RUN scripts/build-openwrt.sh
