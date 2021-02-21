@@ -377,9 +377,10 @@ bool TopologyTask::add_device_information_tlv()
     /**
      * Add a LocalInterfaceInfo field for the wired interface, if any.
      */
-    std::string &local_eth_iface_name = db->ethernet.wan.iface_name;
-    if (!local_eth_iface_name.empty() &&
-        network_utils::linux_iface_is_up_and_running(local_eth_iface_name)) {
+    auto fill_eth_device_information = [&](const std::string &local_eth_iface_name) {
+        if (!network_utils::linux_iface_is_up_and_running(local_eth_iface_name)) {
+            LOG(ERROR) << "Failed to query interface status on " << local_eth_iface_name;
+        }
         ieee1905_1::eMediaType media_type = ieee1905_1::eMediaType::UNKNOWN_MEDIA;
         if (!MediaType::get_media_type(local_eth_iface_name,
                                        ieee1905_1::eMediaTypeGroup::IEEE_802_3, media_type)) {
@@ -398,6 +399,23 @@ bool TopologyTask::add_device_information_tlv()
         localInterfaceInfo->media_info_length() = 0;
 
         tlvDeviceInformation->add_local_interface_list(localInterfaceInfo);
+        return true;
+    };
+
+    // Add WAN interface
+    if (!db->device_conf.local_gw && !db->ethernet.wan.iface_name.empty()) {
+        if (!fill_eth_device_information(db->ethernet.wan.iface_name)) {
+            // Error message inside the lambda function.
+            return false;
+        }
+    }
+
+    // Add LAN interfaces
+    for (const auto &lan_iface_info : db->ethernet.lan) {
+        if (!fill_eth_device_information(lan_iface_info.iface_name)) {
+            // Error message inside the lambda function.
+            return false;
+        }
     }
 
     /**

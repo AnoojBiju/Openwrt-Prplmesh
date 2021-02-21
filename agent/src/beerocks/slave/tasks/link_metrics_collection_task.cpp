@@ -1010,29 +1010,49 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
     // Note that when processing Topology Discovery message we must store the IEEE 1905.1 AL MAC
     // address of the transmitting device together with the interface that such message is
     // received through.
-    sLinkInterface wired_interface;
     auto db = AgentDB::get();
 
-    wired_interface.iface_name = db->ethernet.wan.iface_name;
-    wired_interface.iface_mac  = db->ethernet.wan.mac;
+    auto add_eth_neighbor = [&](const std::string &iface_name, const sMacAddr &iface_mac) {
+        sLinkInterface wired_interface;
+        wired_interface.iface_name = iface_name;
+        wired_interface.iface_mac  = iface_mac;
 
-    if (!MediaType::get_media_type(wired_interface.iface_name,
-                                   ieee1905_1::eMediaTypeGroup::IEEE_802_3,
-                                   wired_interface.media_type)) {
-        LOG(ERROR) << "Unable to compute media type for interface " << wired_interface.iface_name;
-        return false;
+        if (!MediaType::get_media_type(wired_interface.iface_name,
+                                       ieee1905_1::eMediaTypeGroup::IEEE_802_3,
+                                       wired_interface.media_type)) {
+            LOG(ERROR) << "Unable to compute media type for interface "
+                       << wired_interface.iface_name;
+            return false;
+        }
+
+        for (const auto &neighbors_on_local_iface : db->neighbor_devices) {
+            auto &neighbors = neighbors_on_local_iface.second;
+            for (const auto &neighbor_entry : neighbors) {
+                sLinkNeighbor neighbor;
+                neighbor.al_mac    = neighbor_entry.first;
+                neighbor.iface_mac = neighbor_entry.second.transmitting_iface_mac;
+                if ((neighbor_mac_filter == net::network_utils::ZERO_MAC) ||
+                    (neighbor_mac_filter == neighbor.al_mac)) {
+                    neighbor_links_map[wired_interface].push_back(neighbor);
+                }
+            }
+        }
+        return true;
+    };
+
+    // Add WAN interface
+    if (!db->device_conf.local_gw && !db->ethernet.wan.iface_name.empty()) {
+        if (!add_eth_neighbor(db->ethernet.wan.iface_name, db->ethernet.wan.mac)) {
+            // Error message inside the lambda function.
+            return false;
+        }
     }
 
-    for (const auto &neighbors_on_local_iface : db->neighbor_devices) {
-        auto &neighbors = neighbors_on_local_iface.second;
-        for (const auto &neighbor_entry : neighbors) {
-            sLinkNeighbor neighbor;
-            neighbor.al_mac    = neighbor_entry.first;
-            neighbor.iface_mac = neighbor_entry.second.transmitting_iface_mac;
-            if ((neighbor_mac_filter == net::network_utils::ZERO_MAC) ||
-                (neighbor_mac_filter == neighbor.al_mac)) {
-                neighbor_links_map[wired_interface].push_back(neighbor);
-            }
+    // Add LAN interfaces
+    for (const auto &lan_iface_info : db->ethernet.lan) {
+        if (!add_eth_neighbor(lan_iface_info.iface_name, lan_iface_info.mac)) {
+            // Error message inside the lambda function.
+            return false;
         }
     }
 
