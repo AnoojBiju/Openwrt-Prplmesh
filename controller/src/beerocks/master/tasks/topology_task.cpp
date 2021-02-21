@@ -359,12 +359,7 @@ bool topology_task::handle_topology_notification(const std::string &src_mac,
     if (!client_association_event_tlv) {
         LOG(INFO) << "wfa_map::tlvClientAssociationEvent not found, sending TOPOLOGY_QUERY_MESSAGE";
 
-        if (!cmdu_tx.create(0, ieee1905_1::eMessageType::TOPOLOGY_QUERY_MESSAGE)) {
-            LOG(ERROR) << "Failed building message!";
-            return false;
-        }
-        son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
-        return true;
+        return son_actions::send_topology_query_msg(src_mac, cmdu_tx, database);
     }
 
     if (!database.is_prplmesh(tlvf::mac_from_string(src_mac))) {
