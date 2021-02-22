@@ -139,8 +139,11 @@ static bool fill_platform_settings(
     current_country[0] = params.country_code[0];
     current_country[1] = params.country_code[1];
 
-    if (current_country != db->device_conf.country_code && !db->device_conf.country_code.empty()) {
-        LOG(ERROR) << "strangly enough this agent exists in more than one country: "
+    bool db_country_code_empty =
+        (db->device_conf.country_code[0] == 0) && (db->device_conf.country_code[1] == 0);
+
+    if (current_country != db->device_conf.country_code && !db_country_code_empty) {
+        LOG(ERROR) << "strangely enough this agent exists in more than one country: "
                    << current_country[0] << current_country[1] << " and "
                    << db->device_conf.country_code[0] << db->device_conf.country_code[1];
     }
