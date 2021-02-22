@@ -428,6 +428,7 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         self.dev.lan.controller_entity.nbapi_command("Controller.Network", "AccessPointCommit")
         # TODO check that renew was sent to all agents
         # TODO check that all agents have been configured with the SSIDs
+        time.sleep(5)  # Temporary until above TODOs are fixed
 
     @classmethod
     def teardown_class(cls):
