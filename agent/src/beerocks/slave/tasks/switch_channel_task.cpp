@@ -467,7 +467,7 @@ SwitchChannelTask::~SwitchChannelTask() {}
 
 std::vector<eTaskEvent> SwitchChannelTask::get_task_event_list() const
 {
-    return {eTaskEvent::SWTICH_CHANNEL_REQUEST, eTaskEvent::CAC_STARTED_NOTIFICATION,
+    return {eTaskEvent::SWITCH_CHANNEL_REQUEST, eTaskEvent::CAC_STARTED_NOTIFICATION,
             eTaskEvent::CAC_COMPLETED_NOTIFICATION, eTaskEvent::SWITCH_CHANNEL_NOTIFICATION_EVENT};
 }
 
@@ -513,7 +513,7 @@ void SwitchChannelTask::handle_event(eTaskEvent event, std::shared_ptr<void> eve
     LOG(DEBUG) << "Received event to handle: " << static_cast<uint8_t>(event);
 
     switch (event) {
-    case eTaskEvent::SWTICH_CHANNEL_REQUEST: {
+    case eTaskEvent::SWITCH_CHANNEL_REQUEST: {
         auto switch_channel_request =
             std::static_pointer_cast<const sSwitchChannelRequest>(event_obj);
         if (!switch_channel_request) {
