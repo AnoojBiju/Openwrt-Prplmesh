@@ -44,21 +44,17 @@ public:
     virtual bool initiate_scan() = 0;
 
     /*
-     * @brief Trigger a scan using TYPE=ONLY. This can be used for
-     * example to make sure the supplicant has an entry for a BSS we
-     * would like to steer to.
-     *
-     * @details See the hostapd documentation for more
-     * details. Specifically this commit message: usual manual scan
-     * request may cause reassociation due to several reasons. This is
-     * intended to perform pure scan without taking any automatic
-     * action based on the results.
+     * @brief Trigger a scan for a specific BSS.
+     * 
+     * Do scan requests for the given BSS on the given channel. It is necessary to do this before 
+     * connecting to the BSS, unless a full channel scan (triggered by initiate_scan()) has been 
+     * done before.
      *
      * @param[in] bssid The BSSID to scan for.
      * @param[in] channel The channel to scan on.
      * If not provided, all channels are scanned.
      */
-    virtual bool scan_type_only(const sMacAddr &bssid, uint8_t channel) = 0;
+    virtual bool scan_bss(const sMacAddr &bssid, uint8_t channel) = 0;
 
     virtual int get_scan_results(const std::string &ssid, std::vector<SScanResult> &list,
                                  bool parse_vsie = false) = 0;
