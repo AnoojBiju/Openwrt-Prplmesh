@@ -240,6 +240,8 @@ class Generic(PrplwrtDevice):
             # make the shell prompt appear:
             self.set_prompt(shell)
             shell.expect(self.serial_prompt)
+            # Turn off the wifi to make sure it doesn't prevent the upgrade:
+            shell.sendline("wifi down")
             # Do the upgrade
             shell.sendline("sysupgrade -v /tmp/{}".format(self.image))
             # first give it 30 seconds, and fail early if the upgrade didn't start:

@@ -11,67 +11,41 @@ mkdir -p files/etc
 #   We need to keep the hashes in the firmware, to later know if an upgrade is needed:
 printf '%s=%s\n' "OPENWRT_REPOSITORY" "$OPENWRT_REPOSITORY" >> files/etc/prplwrt-version
 printf '%s=%s\n' "OPENWRT_VERSION" "$OPENWRT_VERSION" >> files/etc/prplwrt-version
-case $TARGET_DEVICE in
-    netgear-rax40|axepoint|nec-wx3000hp|intel_mips)
-        # Add prplmesh to the list of packages of the profile:
-        sed -i 's/packages:/packages:\n  - prplmesh-dwpal/g' profiles/"$TARGET_DEVICE".yml
-        # First replace the profiles
-        yq write --inplace profiles/"$TARGET_DEVICE".yml feeds -f profiles_feeds/netgear-rax40.yml
-        # Then merge adding to  the packages for amx
-        yq merge --append --inplace profiles/"$TARGET_DEVICE".yml profiles_feeds/packages-rax40.yml
 
-        args=("debug")
-        if [ -n "$MMX_FEED" ] ; then
-            cp profiles_feeds/mmx.yml profiles/mmx.yml
-            args+=("mmx")
-        fi
+# Arguments to gen_config.py:
+args=("$TARGET_SYSTEM")
 
-        ./scripts/gen_config.py "$TARGET_DEVICE" "${args[@]}"
-        cat profiles_feeds/netgear-rax40.yml >> files/etc/prplwrt-version
+# The additional profiles that will be used. 'debug' contains
+# additional packages that are useful when developing:
+args+=("debug")
 
-    ;;
-    *)
-        cp feeds.conf.default feeds.conf
-        echo "src-git prpl $PRPL_FEED" >> feeds.conf
-        echo "src-git sah  $SAH_FEED" >> feeds.conf
+if [ "$TARGET_SYSTEM" = "intel_mips" ]; then
+    # intel_mips depends on iwlwav-iw, which clashes with iw-full:
+    sed -i '/iw-full$/d' "profiles/debug.yml"
+fi
 
-        if [ -n "$MMX_FEED" ] ; then
-            echo "src-git mmx $MMX_FEED" >> feeds.conf
-        fi
+# feed-prpl is in the prpl profile:
+args+=("prpl")
 
-        scripts/feeds update -a
-        scripts/feeds install -a
-        # Add optional prplMesh dependencies (or a different toolchain
-        # for example) from our 'configs' directory:
-        cat configs/ambiorix.config >> .config
-        cat configs/debug.config >> .config
+# prplMesh is not yet in the prpl profile, so add it
+# manually. TODO: remove once PPM-1112 is done:
+sed -i "s/packages:/packages:\n  - prplmesh${PRPLMESH_VARIANT}/g" "profiles/prpl.yml"
 
-        if [ -n "$MMX_FEED" ] ; then
-            cat configs/mmx.config >> .config
-            printf '%s=%s\n' "MMX_FEED" "$MMX_FEED" >> files/etc/prplwrt-version
-        fi
+# Add the SAH feed and its packages:
+cp profiles_feeds/sah.yml profiles/sah.yml
+args+=("sah")
 
-        printf '%s=%s\n' "PRPL_FEED" "$PRPL_FEED" >> files/etc/prplwrt-version
-        printf '%s=%s\n' "SAH_FEED" "$SAH_FEED" >> files/etc/prplwrt-version
+if [ -n "$MMX_FEED" ] ; then
+    cp profiles_feeds/mmx.yml profiles/mmx.yml
+    args+=("mmx")
+fi
 
-        # Include our optional dependencies in prplwrt-version so that
-        # prplwrt is flashed again if those dependencies are changes.
-        printf 'custom packages:\n' >> files/etc/prplwrt-version
-        cat .config >> files/etc/prplwrt-version
-        {
-            # note that the result from diffconfig.sh with a minimal
-            # configuration has the 3 CONFIG_TARGET items we set here, but NOT
-            # the individual CONFIG_TARGET_${SUBTARGET} and
-            # CONFIG_TARGET_${TARGET_PROFILE}, which means we don't need to
-            # set them.
-            echo "CONFIG_TARGET_${TARGET_SYSTEM}=y"
-            echo "CONFIG_TARGET_${TARGET_SYSTEM}_${SUBTARGET}=y"
-            echo "CONFIG_TARGET_${TARGET_SYSTEM}_${SUBTARGET}_${TARGET_PROFILE}=y"
-            echo "CONFIG_PACKAGE_prplmesh${PRPLMESH_VARIANT}=y"
-        } >> .config
-        make defconfig
-    ;;
-esac
+./scripts/gen_config.py "${args[@]}"
+
+for profile in "${args[@]}" ; do
+    printf "\nProfile %s:\n" "${profile}" >> files/etc/prplwrt-version
+    cat "profiles/${profile}.yml" >> files/etc/prplwrt-version
+done
 
 printf '\033[1;35m%s Building prplWrt\n\033[0m' "$(date --iso-8601=seconds --universal)"
 make -j"$(nproc)" V=sc
