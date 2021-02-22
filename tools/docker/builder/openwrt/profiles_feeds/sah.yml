@@ -1,0 +1,17 @@
+feeds:
+  - name: sah
+    uri: https://gitlab.com/soft.at.home/buildsystems/openwrt/sah-packages.git
+    tracking_branch: master
+    revision: 3c8fef0f760b26d3c54cc518dd71f6bc5f79680a
+
+packages:
+  - sah-build-compatibility
+  - libamxb
+  - libamxc
+  - libamxd
+  - libamxj
+  - libamxo
+  - libamxp
+  - uriparser
+  - yajl
+  - amxb-ubus

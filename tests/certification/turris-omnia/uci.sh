@@ -12,6 +12,13 @@
 # Regenerate configuration:
 # Delete wireless configuration and create a fresh new one from scratch to make sure there is no
 # side effect due to an existing setting.
+
+pgrep -f '/sbin/wifi' && {
+    logger -t prplmesh -p daemon.warn "wifi script running, waiting some more."
+    sleep 30
+}
+
+logger -t prplmesh -p daemon.info "Applying wifi configuration."
 rm -f /etc/config/wireless
 wifi config
 
@@ -104,7 +111,7 @@ set_channel() {
         # the use of 20Mhz bands, and will need to be reverted when the
         # issue is fixed (see
         # https://jira.prplfoundation.org/browse/PPM-258)
-        uci set "wireless.${1}.htmode='HT20'"
+        uci set "wireless.${1}.htmode"=HT20
     fi
 
     logger "Channel for ${1} set to \"$(uci get "wireless.${1}.channel")\""
