@@ -44,7 +44,6 @@
         "board_type": "prplWRT",
         "role": "agent",
         "docker_network": "prplMesh-net-rax40-1",
-        "conn_cmd": "cu -s 115200 -l /dev/netgear-rax40-1 -f",
         "delay": "30",
         "iface_to_device": "enx00909e9aaea3",
         "wan_ip": "192.168.1.120",
