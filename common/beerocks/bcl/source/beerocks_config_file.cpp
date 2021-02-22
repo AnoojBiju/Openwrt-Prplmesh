@@ -178,7 +178,7 @@ bool config_file::read_slave_config_file(const std::string &config_file_path, sC
 
     {
         tConfig slave_ethernet_conf_args = {
-            std::make_tuple("fronthaul_wire_ifaces=", &conf.fronthaul_wire_ifaces, mandatory_slave),
+            std::make_tuple("fronthaul_wire_ifaces=", &conf.fronthaul_wire_ifaces, 0),
         };
         std::string config_type = "ethernet";
         if (!read_config_file(config_file_path, slave_ethernet_conf_args, config_type)) {
