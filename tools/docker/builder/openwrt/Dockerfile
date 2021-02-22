@@ -49,14 +49,13 @@ ENV TARGET_SYSTEM=$TARGET_SYSTEM
 
 WORKDIR /home/openwrt
 
-RUN printf '\033[1;35m%s Cloning prplWrt\n\033[0m' "$(date --iso-8601=seconds --universal)" \
-    && git clone "$OPENWRT_REPOSITORY" openwrt
-
 # Checkout and build a fixed revision as a base. It's used to get a
 # compiled toolchain for the target, and it's not meant to change
 # often (it will be updated as required when OPENWRT_VERSION changes
 # to a new release).
-RUN printf '\033[1;35m%s Building base prplWrt tree\n\033[0m' "$(date --iso-8601=seconds --universal)" \
+RUN printf '\033[1;35m%s Cloning prplWrt\n\033[0m' "$(date --iso-8601=seconds --universal)" \
+    && git clone "$OPENWRT_REPOSITORY" openwrt \
+    && printf '\033[1;35m%s Building base prplWrt tree\n\033[0m' "$(date --iso-8601=seconds --universal)" \
     && cd openwrt \
     && git checkout f35e28847dcc8b990ec4525fb04cb84b8392edee \
     && ./scripts/gen_config.py "$TARGET_SYSTEM" \
