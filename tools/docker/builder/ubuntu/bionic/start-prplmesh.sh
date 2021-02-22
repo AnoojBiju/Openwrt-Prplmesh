@@ -19,6 +19,10 @@ run() {
 bridge_ip="$(ip addr show dev eth1 | awk '/^ *inet / {print $2}')"
 
 run ip link add          br-lan   type bridge
+run ip link add          eth0_1   type dummy
+run ip link add          eth0_2   type dummy
+run ip link add          eth0_3   type dummy
+run ip link add          eth0_4   type dummy
 run ip link add          wlan0    type dummy
 run ip link add          wlan2    type dummy
 
@@ -28,11 +32,20 @@ run ip link add          wlan2    type dummy
 bridge_mac="$(ip link show dev br-lan | awk '/^ *link\/ether / {print $2}')"
 
 run ip link set      dev eth1     master br-lan
+run ip link set      dev eth0_1   master br-lan
+run ip link set      dev eth0_2   master br-lan
+run ip link set      dev eth0_3   master br-lan
+run ip link set      dev eth0_4   master br-lan
 run ip link set      dev wlan0    master br-lan
 run ip link set      dev wlan2    master br-lan
 run ip address flush dev eth1
+run ip link set      dev eth0_1   up
+run ip link set      dev eth0_2   up
+run ip link set      dev eth0_3   up
+run ip link set      dev eth0_4   up
 run ip link set      dev wlan0    up
 run ip link set      dev wlan2    up
+
 run ip link set      dev br-lan   addr "$bridge_mac"
 run ip address add   dev br-lan "$bridge_ip"
 run ip link set      dev br-lan   up
