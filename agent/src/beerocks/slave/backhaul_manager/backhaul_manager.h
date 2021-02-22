@@ -370,8 +370,12 @@ private:
     const int RSSI_BAND_DELTA_THRESHOLD = 5;
 
     std::chrono::steady_clock::time_point rssi_poll_timer;
-    std::chrono::steady_clock::time_point eth_link_poll_timer;
-    bool m_eth_link_up  = false;
+    // This snippet is commented out since the only place that use it, is also commented out.
+    // An event-driven solution will be implemented as part of the task:
+    // [TASK] Dynamic switching between wired and wireless
+    // https://github.com/prplfoundation/prplMesh/issues/866
+    // std::chrono::steady_clock::time_point eth_link_poll_timer;
+    // bool m_eth_link_up  = false;
     bool pending_enable = false;
 
     std::string bssid_bridge_mac;
