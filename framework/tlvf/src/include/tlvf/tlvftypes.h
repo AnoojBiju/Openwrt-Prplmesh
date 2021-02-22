@@ -42,14 +42,6 @@ std::string mac_to_string(const uint8_t *mac_address);
  */
 
 std::string mac_to_string(const sMacAddr &mac);
-/**
- * @brief Converts a mac address to a human-readable formatted string
- *
- * @param mac_address mac address to convert (uint64_t)
- * @return std::string of the format xx:xx:xx:xx:xx:xx
- */
-
-std::string mac_to_string(const uint64_t mac);
 
 /**
  * @brief Converts a string to a binary MAC address (6 bytes buffer)
