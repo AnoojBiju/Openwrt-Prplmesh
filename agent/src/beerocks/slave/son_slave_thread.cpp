@@ -102,7 +102,16 @@ slave_thread::slave_thread(sSlaveConfig conf, beerocks::logging &logger_)
     // Let only the slave that lock the DB first to add elements to the LAN ifaces vector.
     if (db->ethernet.lan.empty()) {
         for (const auto &eth_iface : conf.fronthaul_wire_ifaces) {
-            db->ethernet.lan.emplace_back(eth_iface);
+            // Since the LAN ports configured on the CMAKE file are exist only on an Axepoint
+            // platform, other platforms that run openWRT would not have these interfaces.
+            // Therefore, do not insert the configured interfaces into the database if they are not
+            // exist.
+            // This is a temporary hack so we can run some certification tests on Axepoint.
+            // Need to replace the CMAKE configuration which reflected on "beerocks_agent.conf", to
+            // UCI reading.
+            if (network_utils::linux_iface_exists(eth_iface)) {
+                db->ethernet.lan.emplace_back(eth_iface);
+            }
         }
     }
 
