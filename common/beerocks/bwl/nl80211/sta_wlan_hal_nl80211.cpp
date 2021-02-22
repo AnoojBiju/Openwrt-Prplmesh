@@ -79,7 +79,7 @@ bool sta_wlan_hal_nl80211::start_wps_pbc()
 
 bool sta_wlan_hal_nl80211::initiate_scan() { return true; }
 
-bool sta_wlan_hal_nl80211::scan_type_only(const sMacAddr &bssid, uint8_t channel)
+bool sta_wlan_hal_nl80211::scan_bss(const sMacAddr &bssid, uint8_t channel)
 {
     if (bssid == beerocks::net::network_utils::ZERO_MAC || channel == 0) {
         LOG(ERROR) << "Invalid parameters";
@@ -93,7 +93,7 @@ bool sta_wlan_hal_nl80211::scan_type_only(const sMacAddr &bssid, uint8_t channel
     // Start the scan
     if (!wpa_ctrl_send_msg("SCAN TYPE=ONLY freq=" + std::to_string(freq) +
                            " bssid=" + tlvf::mac_to_string(bssid))) {
-        LOG(ERROR) << "scan_type_only - wpa_ctrl_send_msg failed for " << get_iface_name();
+        LOG(ERROR) << "scan_bss - wpa_ctrl_send_msg failed for " << get_iface_name();
         return false;
     }
     return true;

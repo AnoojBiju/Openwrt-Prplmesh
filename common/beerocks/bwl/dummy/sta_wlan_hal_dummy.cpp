@@ -31,7 +31,7 @@ bool sta_wlan_hal_dummy::detach() { return true; }
 
 bool sta_wlan_hal_dummy::initiate_scan() { return true; }
 
-bool sta_wlan_hal_dummy::scan_type_only(const sMacAddr &bssid, uint8_t channel) { return true; }
+bool sta_wlan_hal_dummy::scan_bss(const sMacAddr &bssid, uint8_t channel) { return true; }
 
 int sta_wlan_hal_dummy::get_scan_results(const std::string &ssid, std::vector<SScanResult> &list,
                                          bool parse_vsie)
