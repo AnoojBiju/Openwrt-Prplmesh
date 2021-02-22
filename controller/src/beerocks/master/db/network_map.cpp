@@ -259,17 +259,40 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
     if (n_type != beerocks::TYPE_CLIENT) {
         tlvf::mac_from_string(node->data.gw_ire.backhaul_mac,
                               database.get_node_parent_backhaul(n->mac)); // local parent backhaul
-        auto children = database.get_node_children(n, beerocks::TYPE_SLAVE);
-        int i         = 0;
-        for (auto c : children) {
-            if (c->state == beerocks::STATE_CONNECTED) {
-                if (i >= int(beerocks::utils::array_length(node->data.gw_ire.radio))) {
-                    LOG(ERROR) << "exceeded size of data.gw_ire.radio[]";
+        const auto agent = database.m_agents.get(tlvf::mac_from_string(n->mac));
+        if (!agent) {
+            LOG(ERROR) << "No agent found for node " << n->mac;
+            return node_len;
+        }
+        size_t i = 0;
+        for (const auto &radio : agent->radios) {
+            if (i >= beerocks::utils::array_length(node->data.gw_ire.radio)) {
+                LOG(ERROR) << "exceeded size of data.gw_ire.radio[]";
+                break;
+            }
+            std::copy_n(radio.first.oct, sizeof(radio.first.oct),
+                        node->data.gw_ire.radio[i].radio_mac);
+
+            unsigned vap_id = 0;
+            for (const auto &bss : radio.second->bsses) {
+                if (vap_id >= beerocks::utils::array_length(node->data.gw_ire.radio[i].vap)) {
+                    LOG(ERROR) << "exceeded size of data.gw_ire.radio[i].vap[] on " << radio.first;
                     break;
                 }
+                std::copy_n(bss.first.oct, sizeof(bss.first.oct),
+                            node->data.gw_ire.radio[i].vap[vap_id].bssid);
+                string_utils::copy_string(node->data.gw_ire.radio[i].vap[vap_id].ssid,
+                                          bss.second->ssid.c_str(),
+                                          sizeof(node->data.gw_ire.radio[i].vap[0].ssid));
+                node->data.gw_ire.radio[i].vap[vap_id].backhaul_vap = bss.second->backhaul;
+                vap_id++;
+            }
 
-                tlvf::mac_from_string(node->data.gw_ire.radio[i].radio_mac,
-                                      c->mac); // local parent backhaul
+            auto c = database.get_node(radio.first);
+            if (!c) {
+                LOG(ERROR) << "No radio node for " << radio.first;
+            }
+            if (c->state == beerocks::STATE_CONNECTED) {
 
                 // Copy the interface name
                 string_utils::copy_string(node->data.gw_ire.radio[i].iface_name,
@@ -301,15 +324,6 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
                 tlvf::mac_from_string(node->data.gw_ire.radio[i].radio_identifier,
                                       c->radio_identifier);
 
-                for (int8_t vap_id = beerocks::IFACE_VAP_ID_MIN;
-                     vap_id < int8_t(c->hostap->vaps_info.size()); vap_id++) {
-                    const auto &vap = (c->hostap->vaps_info[vap_id]);
-                    tlvf::mac_from_string(node->data.gw_ire.radio[i].vap[vap_id].bssid, vap.mac);
-                    string_utils::copy_string(node->data.gw_ire.radio[i].vap[vap_id].ssid,
-                                              vap.ssid.c_str(),
-                                              sizeof(node->data.gw_ire.radio[i].vap[0].ssid));
-                    node->data.gw_ire.radio[i].vap[vap_id].backhaul_vap = vap.backhaul_vap;
-                }
                 ++i;
             }
         }
