@@ -144,6 +144,7 @@ public:
         int max_timelife_delay_minutes;
         int unfriendly_device_max_timelife_delay_minutes;
         unsigned int persistent_db_commit_changes_interval_seconds;
+        std::chrono::seconds link_metrics_request_interval_seconds;
     } sDbMasterConfig;
 
     typedef struct {

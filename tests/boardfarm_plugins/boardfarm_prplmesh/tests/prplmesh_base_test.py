@@ -196,6 +196,17 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         assert not packet_tlvs, "Packet has unexpected tlvs:\n {}".format(
             "\n ".join(map(str, packet_tlvs)))
 
+    def check_cmdu_contains_tlvs(
+        self, packet: Union[sniffer.Packet, None], tlvs: [sniffer.Tlv]
+    ) -> NoReturn:
+        '''Check that the CMDU contains the TLVs given.'''
+        assert packet, "Packet not found"
+        assert packet.ieee1905, "Packet is not IEEE1905: {}".format(packet)
+
+        packet_tlvs = list(packet.ieee1905_tlvs)
+        for t in tlvs:
+            assert t in packet_tlvs, "Packet misses tlv:\n {}".format(str(t))
+
     def checkpoint(self) -> None:
         '''Checkpoint the current state.
 

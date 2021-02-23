@@ -120,6 +120,10 @@ constexpr int DEFAULT_ZWDFS_ENABLE = 0;
 // Using threshold to avoid high frequency channel switch.
 // By default best channel ranking threshold is 0.
 constexpr int DEFAULT_BEST_CHANNEL_RANKING_TH = 0;
+
+// Link metrics tasks send request with this interval.
+constexpr std::chrono::seconds DEFAULT_LINK_METRICS_REQUEST_INTERVAL_VALUE_SEC{60};
+
 /****************************************************************************/
 /******************************* Structures *********************************/
 /****************************************************************************/
@@ -328,8 +332,8 @@ int cfg_get_band_steering();
 int cfg_get_client_roaming();
 
 /**
- * Returns miscellaneous Wi-Fi parameters. 
- * 
+ * Returns miscellaneous Wi-Fi parameters.
+ *
  * @param [in] iface Interface name for the requested parameters.
  * @param [out] WLAN parameters structure.
  *
@@ -341,8 +345,8 @@ int cfg_get_client_roaming();
 int cfg_get_wifi_params(const char *iface, struct BPL_WLAN_PARAMS *wlan_params);
 
 /**
- * Returns backhaul vaps configuration. 
- * 
+ * Returns backhaul vaps configuration.
+ *
  * @param [out] max_vaps an int.
  * @param [out] network_enabled 1 if network is enabled or 0 otherwise.
  * @param [out] preferred_radio_band BPL_RADIO_BAND_5G or BPL_RADIO_BAND_2G or BPL_RADIO_BAND_AUTO
@@ -353,8 +357,8 @@ int cfg_get_wifi_params(const char *iface, struct BPL_WLAN_PARAMS *wlan_params);
 int cfg_get_backhaul_params(int *max_vaps, int *network_enabled, int *preferred_radio_band);
 
 /**
- * Returns backhaul vaps list. 
- * 
+ * Returns backhaul vaps list.
+ *
  * @param [out] backhaul_vaps_buf buffer for backhaul vaps list.
  * @param [in]  buf_len buffer length.
  *
@@ -381,7 +385,7 @@ int cfg_get_beerocks_credentials(const int radio_dir, char ssid[BPL_SSID_LEN],
 
 /**
  * @brief Returns the platform SDL policy which is represented by 'mem_only_psk' flag.
- * 'mem_only_psk' flag sets whether the platform shall save the credentials in some encrypted DB so 
+ * 'mem_only_psk' flag sets whether the platform shall save the credentials in some encrypted DB so
  * the wpa-supplicant will get from there in runtime, without supply it on `connect` API, or not.
  *
  * @return mem_only_psk flag on success.
@@ -422,12 +426,12 @@ int cfg_notify_fw_version_mismatch();
 
 /**
  * Notify the platform about an error.
- * 
+ *
  * @param [in] error_code Error code (of type BPL_ERR...)
  * @param [in] error_str "printf" style formatted string.
  *
  * @return 0 Success.
- * @return -1 Error. 
+ * @return -1 Error.
  */
 int cfg_notify_error(int code, const char str[BPL_ERROR_STRING_LEN]);
 
@@ -476,7 +480,7 @@ int cfg_get_all_prplmesh_wifi_interfaces(BPL_WLAN_IFACE *interfaces, int *num_of
 
 /**
  * @brief Returns whether the zwdfs feature is enabled.
- * 
+ *
  * @param [out] enable true if the zwdfs is enabled, otherwise false.
  * @return true on success, otherwise false.
  */
@@ -484,7 +488,7 @@ bool cfg_get_zwdfs_enable(bool &enable);
 
 /**
  * @brief Returns best channel ranking threshold.
- * 
+ *
  * @param [out] threshold Ranking value used to determine best channel candidate.
  * Threshold will be used to avoid high frequency channel switch.
  * @return true on success, otherwise false.
@@ -493,7 +497,7 @@ bool cfg_get_best_channel_rank_threshold(uint32_t &threshold);
 
 /**
  * @brief Returns whether the persistent DB is enabled.
- * 
+ *
  * @param [out] enable true if the DB is enabled and false otherwise.
  * @return true on success, otherwise false.
  */
@@ -501,15 +505,15 @@ bool cfg_get_persistent_db_enable(bool &enable);
 
 /**
  * @brief Returns commit_changes_interval (seconds) value.
- * 
- * @param[out] interval_sec The interval in seconds between periodic persistent data commit operations. 
+ *
+ * @param[out] interval_sec The interval in seconds between periodic persistent data commit operations.
  * @return true on success, otherwise false.
  */
 bool cfg_get_persistent_db_commit_changes_interval(unsigned int &interval_sec);
 
 /**
  * @brief Returns the max number of clients in the persistent DB.
- * 
+ *
  * @param [out] max_size Max number of clients the persistent-db supports.
  * @return true on success, otherwise false.
  */
@@ -517,7 +521,7 @@ bool cfg_get_clients_persistent_db_max_size(int &max_size);
 
 /**
  * @brief Returns the max time-life delay of clients (used for aging of client's persistent data).
- * 
+ *
  * @param [out] max_timelife_delay_minutes Max clients' timelife delay.
  * @return true on success, otherwise false.
  */
@@ -525,7 +529,7 @@ bool cfg_get_max_timelife_delay_minutes(int &max_timelife_delay_minutes);
 
 /**
  * @brief Returns the max time-life delay for unfriendly clients.
- * 
+ *
  * @param [out] unfriendly_device_max_timelife_delay_minutes Max unfriendly clients' timelife delay.
  * @return true on success, otherwise false.
  */
@@ -534,7 +538,7 @@ bool cfg_get_unfriendly_device_max_timelife_delay_minutes(
 
 /**
  * @brief Returns the interval to check the persistent DB aging
- * 
+ *
  * @param [out] persistent_db_aging_interval Interval for checking persistent DB aging.
  * @return true on success, otherwise false
  */
@@ -567,6 +571,14 @@ bool bpl_cfg_get_hostapd_ctrl_path(const std::string &iface, std::string &hostap
  */
 bool bpl_cfg_get_wifi_credentials(const std::string &iface,
                                   son::wireless_utils::sBssInfoConf &configuration);
+
+/**
+ * @brief Reads link metrics request interval configuration for periodic requests from agents.
+ *
+ * @param [out] link_metrics_request_interval_sec Interval for periodic link metrics request.
+ * @return true on success, otherwise false
+ */
+bool cfg_get_link_metrics_request_interval(std::chrono::seconds &link_metrics_request_interval_sec);
 
 /**
  * @brief Writes wireless network configuration for the given interface.

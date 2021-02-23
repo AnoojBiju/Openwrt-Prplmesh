@@ -155,7 +155,11 @@ static bool cfg_get_param(const std::string &name, std::string &value)
         return false;
     }
 
-    value = parameters[name];
+    auto it = parameters.find(name);
+    if (it == parameters.end()) {
+        return false;
+    }
+    value = it->second;
     return true;
 }
 
@@ -603,6 +607,20 @@ bool bpl_cfg_get_wifi_credentials(const std::string &iface,
     configuration.encryption_type = get_encryption_type(parameters[prefix + "security_mode"]);
 
     configuration.network_key = parameters[prefix + "psk"];
+
+    return true;
+}
+
+bool cfg_get_link_metrics_request_interval(std::chrono::seconds &link_metrics_request_interval_sec)
+{
+    int val = -1;
+    if (cfg_get_param_int("link_metrics_request_interval", val) == RETURN_ERR) {
+        MAPF_INFO("Failed to read link_metrics_request_interval parameter - setting "
+                  "default value");
+        link_metrics_request_interval_sec = DEFAULT_LINK_METRICS_REQUEST_INTERVAL_VALUE_SEC;
+    } else {
+        link_metrics_request_interval_sec = std::chrono::seconds{val};
+    }
 
     return true;
 }
