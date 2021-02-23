@@ -903,7 +903,7 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
 
             // If a wired (WAN) interface was provided, try it first, check if the interface is UP
             wan_monitor::ELinkState wired_link_state = wan_monitor::ELinkState::eInvalid;
-            if (!db->ethernet.wan.iface_name.empty()) {
+            if (!db->device_conf.local_gw && !db->ethernet.wan.iface_name.empty()) {
                 wired_link_state = wan_mon.initialize(db->ethernet.wan.iface_name);
                 // Failure might be due to insufficient permissions, datailed error message is being
                 // printed inside.
@@ -1038,11 +1038,20 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         LOG(DEBUG) << "clearing blacklist";
         ap_blacklist.clear();
 
-        auto db = AgentDB::get();
+        // This snippet is commented out since the only place that use it, is also commented out.
+        // An event-driven solution will be implemented as part of the task:
+        // [TASK] Dynamic switching between wired and wireless
+        // https://github.com/prplfoundation/prplMesh/issues/866
+        // auto db = AgentDB::get();
 
-        eth_link_poll_timer = std::chrono::steady_clock::now();
-        m_eth_link_up       = beerocks::net::network_utils::linux_iface_is_up_and_running(
-            db->ethernet.wan.iface_name);
+        // if (!db->device_conf.local_gw()) {
+        //     if (db->ethernet.wan.iface_name.empty()) {
+        //         LOG(WARNING) << "WAN interface is empty on Repeater platform configuration!";
+        //     }
+        //     eth_link_poll_timer = std::chrono::steady_clock::now();
+        //     m_eth_link_up       = beerocks::net::network_utils::linux_iface_is_up_and_running(
+        //         db->ethernet.wan.iface_name);
+        // }
         FSM_MOVE_STATE(PRE_OPERATIONAL);
         break;
     }
@@ -1085,9 +1094,14 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         //  * Get current time. It is later used to compute elapsed time since some start time and
         //  * check if a timeout has expired to perform periodic actions.
         //  */
+        // auto db = AgentDB::get();
+        //
         // auto now = std::chrono::steady_clock::now();
         //
-        // auto db = AgentDB::get();
+        // if (!db->device_conf.local_gw()) {
+        //     if (db->ethernet.wan.iface_name.empty()) {
+        //         LOG(WARNING) << "WAN interface is empty on Repeater platform configuration!";
+        //     }
         // int time_elapsed_ms =
         //     std::chrono::duration_cast<std::chrono::milliseconds>(now - eth_link_poll_timer)
         //         .count();
@@ -1100,7 +1114,8 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         //         m_eth_link_up = beerocks::net::network_utils::linux_iface_is_up_and_running(db->ethernet.wan.iface_name);
         //         FSM_MOVE_STATE(RESTART);
         //     }
-        // } else {
+        // }
+        // }
         break;
     }
     case EState::RESTART: {
