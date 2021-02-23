@@ -10,6 +10,8 @@
 #define _BWL_AP_WLAN_HAL_DWPAL_H_
 
 #include "base_wlan_hal_dwpal.h"
+#include <bcl/network/network_utils.h>
+
 #include <bwl/ap_wlan_hal.h>
 
 namespace bwl {
@@ -118,6 +120,14 @@ private:
 
     bool m_drop_csa = false;
     std::chrono::steady_clock::time_point m_csa_event_filtering_timestamp;
+
+    static constexpr int INVALID_VAP_ID = -1;
+
+    std::set<int> m_completed_vaps;
+    std::unordered_set<sMacAddr> m_handled_clients;
+    sMacAddr m_prev_client_mac = beerocks::net::network_utils::ZERO_MAC;
+    bool m_queried_first       = false;
+    int m_vap_id_in_progress   = INVALID_VAP_ID;
 };
 
 } // namespace dwpal

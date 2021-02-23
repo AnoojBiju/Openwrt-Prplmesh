@@ -126,6 +126,8 @@ private:
     const uint8_t HEARTBEAT_NOTIFICATION_DELAY_SEC = 1;
 
     bool acs_completed_vap_update = false;
+
+    bool m_generate_connected_clients_events = false;
 };
 
 } // namespace son
