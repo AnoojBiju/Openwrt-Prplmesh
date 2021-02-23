@@ -2255,7 +2255,10 @@ bool Controller::handle_cmdu_1905_topology_notification(const std::string &src_m
             LOG(WARNING) << "Failed to notify disconnection event.";
         }
 
-        son_actions::handle_dead_node(client_mac_str, bssid_str, database, cmdu_tx, tasks);
+        bool reported_by_parent = bssid_str == database.get_node_parent(client_mac_str);
+        // TODO this is probably wrong - if reported_by_parent is true, the client has already
+        // connected to something else so it is not dead at all.
+        son_actions::handle_dead_node(client_mac_str, reported_by_parent, database, cmdu_tx, tasks);
     }
 
     return true;
@@ -2356,32 +2359,52 @@ bool Controller::handle_cmdu_1905_topology_response(const std::string &src_mac,
             reported_fronthaul_radios.end()) {
             LOG(DEBUG) << "radio " << fronthaul_radio_on_db
                        << " is not reported on Device Information TLV, removing the radio node";
-            son_actions::handle_dead_node(fronthaul_radio_on_db,
-                                          database.get_node_parent(fronthaul_radio_on_db), database,
-                                          cmdu_tx, tasks);
+            son_actions::handle_dead_node(fronthaul_radio_on_db, true, database, cmdu_tx, tasks);
         }
     }
 
     auto tlvApInformation = cmdu_rx.getClass<wfa_map::tlvApOperationalBSS>();
     if (tlvApInformation) {
         for (uint8_t i = 0; i < tlvApInformation->radio_list_length(); i++) {
-            auto radio = std::get<1>(tlvApInformation->radio_list(i));
-            LOG(DEBUG) << "Operational BSS radio " << radio.radio_uid();
-            if (fronthaul_radios_on_db.find(tlvf::mac_to_string(radio.radio_uid())) ==
+            auto radio_entry = std::get<1>(tlvApInformation->radio_list(i));
+            LOG(DEBUG) << "Operational BSS radio " << radio_entry.radio_uid();
+            if (fronthaul_radios_on_db.find(tlvf::mac_to_string(radio_entry.radio_uid())) ==
                 fronthaul_radios_on_db.end()) {
-                LOG(WARNING) << "OperationalBSS on unknown radio " << radio.radio_uid();
+                LOG(WARNING) << "OperationalBSS on unknown radio " << radio_entry.radio_uid();
                 continue;
             }
-            for (uint8_t j = 0; j < radio.radio_bss_list_length(); j++) {
-                auto bss = std::get<1>(radio.radio_bss_list(j));
-                LOG(DEBUG) << "Operational BSS " << bss.radio_bssid();
+            // Update BSSes in the sAgent
+            auto radio =
+                database.get_radio(tlvf::mac_from_string(src_mac), radio_entry.radio_uid());
+            if (!radio) {
+                LOG(WARNING) << "OperationalBSS on unknown radio  " << radio_entry.radio_uid()
+                             << " on " << src_mac;
+                continue;
+            }
+
+            radio->bsses.keep_new_prepare();
+
+            for (uint8_t j = 0; j < radio_entry.radio_bss_list_length(); j++) {
+                auto bss_entry = std::get<1>(radio_entry.radio_bss_list(j));
+                LOG(DEBUG) << "Operational BSS " << bss_entry.radio_bssid();
 
                 // TODO "backhaul" is not set in this TLV, so just assume false
-                if (!database.update_vap(radio.radio_uid(), bss.radio_bssid(), bss.ssid_str(),
-                                         false)) {
-                    LOG(ERROR) << "Failed to update VAP for radio " << radio.radio_uid() << " BSS "
-                               << bss.radio_bssid() << " SSID " << bss.ssid_str();
+                if (!database.update_vap(radio_entry.radio_uid(), bss_entry.radio_bssid(),
+                                         bss_entry.ssid_str(), false)) {
+                    LOG(ERROR) << "Failed to update VAP for radio " << radio_entry.radio_uid()
+                               << " BSS " << bss_entry.radio_bssid() << " SSID "
+                               << bss_entry.ssid_str();
                 }
+                auto bss  = radio->bsses.add(bss_entry.radio_bssid());
+                bss->ssid = bss_entry.ssid_str();
+                // backhaul is not reported in this message. Leave it unchanged.
+            }
+
+            auto removed = radio->bsses.keep_new_remove_old();
+            for (const auto &bss : removed) {
+                database.remove_vap(tlvf::mac_to_string(radio->radio_uid), bss->vap_id);
+                son_actions::handle_dead_node(tlvf::mac_to_string(bss->bssid), true, database,
+                                              cmdu_tx, tasks);
             }
         }
     }
@@ -2488,8 +2511,7 @@ bool Controller::handle_cmdu_1905_topology_response(const std::string &src_mac,
 
             LOG(DEBUG) << "known neighbor al_mac  " << neighbor_al_mac_on_db
                        << " is not reported on 1905 Neighbor Device TLV, removing the al_mac node";
-            son_actions::handle_dead_node(backhhaul_mac, database.get_node_parent(backhhaul_mac),
-                                          database, cmdu_tx, tasks);
+            son_actions::handle_dead_node(backhhaul_mac, true, database, cmdu_tx, tasks);
         }
     }
 
@@ -3327,10 +3349,21 @@ bool Controller::handle_cmdu_control_message(
         auto client_list = database.get_node_children(disabled_bssid, beerocks::TYPE_CLIENT);
 
         for (auto &client : client_list) {
-            son_actions::handle_dead_node(client, disabled_bssid, database, cmdu_tx, tasks);
+            son_actions::handle_dead_node(client, true, database, cmdu_tx, tasks);
         }
 
         database.remove_vap(hostap_mac, vap_id);
+
+        // Update BSSes in the sAgent
+        auto radio =
+            database.get_radio(tlvf::mac_from_string(src_mac), tlvf::mac_from_string(hostap_mac));
+        if (!radio) {
+            LOG(ERROR) << "No radio found for radio_uid " << hostap_mac << " on " << src_mac;
+            break;
+        }
+        if (radio->bsses.erase(tlvf::mac_from_string(disabled_bssid)) != 1) {
+            LOG(ERROR) << "No BSS " << disabled_bssid << " could be erased on " << hostap_mac;
+        }
 
         break;
     }
@@ -3349,10 +3382,25 @@ bool Controller::handle_cmdu_control_message(
                   << " vap_id=" << vap_id;
 
         std::string radio_mac = hostap_mac;
-        auto bssid            = tlvf::mac_to_string(notification->vap_info().mac);
+        auto bssid            = notification->vap_info().mac;
         auto ssid             = std::string((char *)notification->vap_info().ssid);
 
-        database.add_vap(radio_mac, vap_id, bssid, ssid, notification->vap_info().backhaul_vap);
+        database.add_vap(radio_mac, vap_id, tlvf::mac_to_string(bssid), ssid,
+                         notification->vap_info().backhaul_vap);
+
+        // Update BSSes in the sAgent
+        auto radio =
+            database.get_radio(tlvf::mac_from_string(src_mac), tlvf::mac_from_string(hostap_mac));
+        if (!radio) {
+            LOG(ERROR) << "No radio found for radio_uid " << hostap_mac << " on " << src_mac;
+            break;
+        }
+
+        auto bss = radio->bsses.add(bssid, vap_id);
+        LOG_IF(bss->vap_id != vap_id, ERROR)
+            << "BSS " << bssid << " changed vap_id " << bss->vap_id << " -> " << vap_id;
+        bss->ssid     = ssid;
+        bss->backhaul = notification->vap_info().backhaul_vap;
 
         // update bml listeners
         bml_task::connection_change_event new_event;
@@ -3419,12 +3467,26 @@ bool Controller::handle_cmdu_control_message(
             LOG(ERROR) << "addClass cACTION_CONTROL_HOSTAP_ACS_NOTIFICATION failed";
             return false;
         }
+
+        // Update BSSes in the sAgent
+        auto radio =
+            database.get_radio(tlvf::mac_from_string(src_mac), tlvf::mac_from_string(hostap_mac));
+        if (!radio) {
+            LOG(ERROR) << "No radio found for radio_uid " << hostap_mac << " on " << src_mac;
+            break;
+        }
+        radio->bsses.clear();
+
         std::unordered_map<int8_t, sVapElement> vaps_info;
         std::string vaps_list;
         for (int8_t vap_id = beerocks::IFACE_VAP_ID_MIN; vap_id <= beerocks::IFACE_VAP_ID_MAX;
              vap_id++) {
             auto vap_mac = tlvf::mac_to_string(notification->params().vaps[vap_id].mac);
             if (vap_mac != beerocks::net::network_utils::ZERO_MAC_STRING) {
+                auto bss      = radio->bsses.add(notification->params().vaps[vap_id].mac, vap_id);
+                bss->ssid     = std::string((char *)notification->params().vaps[vap_id].ssid);
+                bss->backhaul = notification->params().vaps[vap_id].backhaul_vap;
+
                 vaps_info[vap_id].mac = vap_mac;
                 vaps_info[vap_id].ssid =
                     std::string((char *)notification->params().vaps[vap_id].ssid);
@@ -3484,9 +3546,8 @@ bool Controller::handle_cmdu_control_message(
         // Since the transport layer is accelerated, the OS may incorrectly decide
         // that a connected client has disconnected.
         //  if(notification->params.type == ARP_TYPE_DELNEIGH && !database.is_node_wireless(client_mac)) {
-        //     auto eth_switch = database.get_node_parent(client_mac);
         //     LOG(INFO) << "ARP type RTM_DELNEIGH received!! handle dead client mac = " << client_mac;
-        //     son_actions::handle_dead_node(client_mac, eth_switch, database, tasks);
+        //     son_actions::handle_dead_node(client_mac, true, database, tasks);
         //     break;
         //  }
 
@@ -3723,7 +3784,8 @@ bool Controller::handle_cmdu_control_message(
             LOG(INFO) << "IRE CLIENT_NO_RESPONSE_NOTIFICATION, client_mac=" << client_mac
                       << " hostap mac=" << hostap_mac
                       << " closing socket and marking as disconnected";
-            son_actions::handle_dead_node(client_mac, hostap_mac, database, cmdu_tx, tasks);
+            bool reported_by_parent = hostap_mac == database.get_node_parent(client_mac);
+            son_actions::handle_dead_node(client_mac, reported_by_parent, database, cmdu_tx, tasks);
         }
         break;
     }
