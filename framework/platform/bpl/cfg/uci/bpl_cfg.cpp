@@ -567,6 +567,21 @@ bool bpl_cfg_get_hostapd_ctrl_path(const std::string &iface, std::string &hostap
     return true;
 }
 
+bool cfg_get_link_metrics_request_interval(std::chrono::seconds &link_metrics_request_interval_sec)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int_default(
+            "link_metrics_request_interval", &retVal,
+            DEFAULT_LINK_METRICS_REQUEST_INTERVAL_VALUE_SEC.count()) == RETURN_ERR) {
+        MAPF_ERR("Failed to read link_metrics_request_interval parameter - setting "
+                 "default value");
+        return false;
+    }
+
+    link_metrics_request_interval_sec = std::chrono::seconds{retVal};
+    return true;
+}
+
 bool bpl_cfg_get_wifi_credentials(const std::string &iface,
                                   son::wireless_utils::sBssInfoConf &configuration)
 {

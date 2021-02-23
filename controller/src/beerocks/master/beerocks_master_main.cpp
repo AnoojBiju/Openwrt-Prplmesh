@@ -293,6 +293,14 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
         master_conf.persistent_db_commit_changes_interval_seconds =
             beerocks::bpl::DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE_SEC;
     }
+    if (!beerocks::bpl::cfg_get_link_metrics_request_interval(
+            master_conf.link_metrics_request_interval_seconds)) {
+        LOG(DEBUG) << "failed to read link_metrics_request interval, setting to default value: "
+                   << beerocks::bpl::DEFAULT_LINK_METRICS_REQUEST_INTERVAL_VALUE_SEC.count();
+
+        master_conf.link_metrics_request_interval_seconds =
+            beerocks::bpl::DEFAULT_LINK_METRICS_REQUEST_INTERVAL_VALUE_SEC;
+    }
 }
 
 int main(int argc, char *argv[])
