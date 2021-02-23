@@ -25,6 +25,7 @@
 #include "tlvf/ieee_1905_1/tlvWsc.h"
 #include "tlvf/wfa_map/tlvApCapability.h"
 #include <tlvf/test/tlvVarList.h>
+#include <tlvf/tlvftypes.h>
 
 #include <mapf/common/encryption.h>
 #include <mapf/common/err.h>
@@ -51,7 +52,7 @@ int test_int_len_list()
     memset(tx_buffer, 0, sizeof(tx_buffer));
     {
         auto tlv = tlvMacAddress(tx_buffer, sizeof(tx_buffer), false);
-        std::copy_n(gTlvMacAddress, 6, tlv.mac().oct);
+        tlvf::mac_from_array(gTlvMacAddress, tlv.mac());
         tlv.class_swap(); //finalize
         LOG(DEBUG) << "TX: " << std::endl << utils::dump_buffer(tx_buffer, tlv.getLen());
     }
@@ -499,7 +500,7 @@ int test_all()
 
     auto mactlv                     = msg.addClass<tlvMacAddress>();
     const uint8_t gTlvMacAddress[6] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06};
-    std::copy_n(gTlvMacAddress, 6, mactlv->mac().oct);
+    tlvf::mac_from_array(gTlvMacAddress, mactlv->mac());
 
     MAPF_DBG("TLV LENGHT MAC: " << mactlv->length());
 

@@ -120,8 +120,8 @@ TEST_F(CmduParserStreamImplTest, parse_cmdu_should_succeed)
 
     beerocks::message::sUdsHeader uds_header;
     uds_header.if_index = expected_iface_index;
-    std::copy_n(expected_dst_mac.oct, beerocks::net::MAC_ADDR_LEN, uds_header.dst_bridge_mac);
-    std::copy_n(expected_src_mac.oct, beerocks::net::MAC_ADDR_LEN, uds_header.src_bridge_mac);
+    tlvf::mac_to_array(expected_dst_mac, uds_header.dst_bridge_mac);
+    tlvf::mac_to_array(expected_src_mac, uds_header.src_bridge_mac);
     uds_header.length = cmdu_tx.getMessageLength();
 
     const size_t length = size_of_uds_header + uds_header.length;

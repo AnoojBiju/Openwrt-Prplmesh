@@ -45,8 +45,8 @@ bool CmduSerializerStreamImpl::serialize_cmdu(uint32_t iface_index, const sMacAd
     // Fill in UDS header
     message::sUdsHeader uds_header;
     uds_header.if_index = iface_index;
-    std::copy_n(src_mac.oct, MAC_ADDR_LEN, uds_header.src_bridge_mac);
-    std::copy_n(dst_mac.oct, MAC_ADDR_LEN, uds_header.dst_bridge_mac);
+    tlvf::mac_to_array(src_mac, uds_header.src_bridge_mac);
+    tlvf::mac_to_array(dst_mac, uds_header.dst_bridge_mac);
     uds_header.length = cmdu_length;
 
     // Fill in the buffer with header and payload

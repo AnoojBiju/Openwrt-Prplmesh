@@ -17,6 +17,7 @@
 
 #include <beerocks/tlvf/beerocks_message.h>
 
+#include <tlvf/tlvftypes.h>
 #include <tlvf/wfa_map/tlvApMetricQuery.h>
 
 #include <cmath>
@@ -1216,10 +1217,8 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
         bwl_request.repeats          = request->params().repeats;
         bwl_request.rand_ival        = request->params().rand_ival;
         bwl_request.duration         = request->params().duration;
-        std::copy_n(request->params().sta_mac.oct, sizeof(bwl_request.sta_mac.oct),
-                    bwl_request.sta_mac.oct);
-        std::copy_n(request->params().bssid.oct, sizeof(bwl_request.bssid.oct),
-                    bwl_request.bssid.oct);
+        tlvf::mac_to_array(request->params().sta_mac, bwl_request.sta_mac.oct);
+        tlvf::mac_to_array(request->params().bssid, bwl_request.bssid.oct);
         bwl_request.parallel               = request->params().parallel;
         bwl_request.enable                 = request->params().enable;
         bwl_request.request                = request->params().request;
@@ -1286,8 +1285,7 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
         bwl_request.new_ch_width             = request->params().new_ch_width;
         bwl_request.new_ch_center_freq_seg_0 = request->params().new_ch_center_freq_seg_0;
         bwl_request.new_ch_center_freq_seg_1 = request->params().new_ch_center_freq_seg_1;
-        std::copy_n(request->params().sta_mac.oct, sizeof(bwl_request.sta_mac.oct),
-                    bwl_request.sta_mac.oct);
+        tlvf::mac_to_array(request->params().sta_mac, bwl_request.sta_mac.oct);
 
         mon_wlan_hal->sta_channel_load_11k_request(bwl_request);
         break;
@@ -1559,8 +1557,7 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
         response->params().new_ch_width             = hal_data->new_ch_width;
         response->params().new_ch_center_freq_seg_0 = hal_data->new_ch_center_freq_seg_0;
         response->params().new_ch_center_freq_seg_1 = hal_data->new_ch_center_freq_seg_1;
-        std::copy_n(hal_data->sta_mac.oct, sizeof(response->params().sta_mac.oct),
-                    response->params().sta_mac.oct);
+        tlvf::mac_from_array(hal_data->sta_mac.oct, response->params().sta_mac);
 
         // debug_channel_load_11k_response(msg);
 
@@ -1641,10 +1638,8 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
                 response->params().new_ch_center_freq_seg_1 = hal_data->new_ch_center_freq_seg_1;
                 response->params().use_optional_wide_band_ch_switch =
                     hal_data->use_optional_wide_band_ch_switch;
-                std::copy_n(hal_data->sta_mac.oct, sizeof(response->params().sta_mac.oct),
-                            response->params().sta_mac.oct);
-                std::copy_n(hal_data->bssid.oct, sizeof(response->params().bssid.oct),
-                            response->params().bssid.oct);
+                tlvf::mac_from_array(hal_data->sta_mac.oct, response->params().sta_mac);
+                tlvf::mac_from_array(hal_data->bssid.oct, response->params().bssid);
 
                 it = pending_11k_events.erase(it);
                 LOG(INFO) << "Sending beacon measurement reponse on BSSID: "
@@ -1753,7 +1748,7 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
             // Arrays
             string_utils::copy_string(out_result.ssid, in_result.ssid,
                                       beerocks::message::WIFI_SSID_MAX_LENGTH);
-            std::copy_n(in_result.bssid.oct, sizeof(out_result.bssid.oct), out_result.bssid.oct);
+            out_result.bssid = in_result.bssid;
             std::copy(in_result.basic_data_transfer_rates_kbps.begin(),
                       in_result.basic_data_transfer_rates_kbps.end(),
                       out_result.basic_data_transfer_rates_kbps);

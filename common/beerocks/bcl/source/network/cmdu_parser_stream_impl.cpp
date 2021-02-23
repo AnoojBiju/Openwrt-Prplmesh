@@ -58,8 +58,8 @@ bool CmduParserStreamImpl::parse_cmdu(Buffer &buffer, uint32_t &iface_index, sMa
                        << utils::dump_buffer(cmdu_data, cmdu_length);
         } else {
             iface_index = uds_header->if_index;
-            std::copy_n(uds_header->dst_bridge_mac, MAC_ADDR_LEN, dst_mac.oct);
-            std::copy_n(uds_header->src_bridge_mac, MAC_ADDR_LEN, src_mac.oct);
+            tlvf::mac_from_array(uds_header->dst_bridge_mac, dst_mac);
+            tlvf::mac_from_array(uds_header->src_bridge_mac, src_mac);
 
             result = true;
         }

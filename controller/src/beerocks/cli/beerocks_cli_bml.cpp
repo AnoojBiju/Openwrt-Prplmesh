@@ -232,8 +232,8 @@ static void steering_set_group_string_to_struct(const std::string &str_cfg_2,
     for (const auto &elem : v_str_cfg_5) {
         std::cout << "v_str_cfg_5 : " << elem << std::endl;
     }
-    std::copy_n(tlvf::mac_from_string(v_str_cfg_2[0]).oct, BML_MAC_ADDR_LEN, cfg2.bssid);
-    std::copy_n(tlvf::mac_from_string(v_str_cfg_5[0]).oct, BML_MAC_ADDR_LEN, cfg5.bssid);
+    tlvf::mac_to_array(tlvf::mac_from_string(v_str_cfg_2[0]), cfg2.bssid);
+    tlvf::mac_to_array(tlvf::mac_from_string(v_str_cfg_5[0]), cfg5.bssid);
     cfg2.utilCheckIntervalSec   = string_utils::stoi(v_str_cfg_2[1]);
     cfg5.utilCheckIntervalSec   = string_utils::stoi(v_str_cfg_5[1]);
     cfg2.utilAvgCount           = string_utils::stoi(v_str_cfg_2[2]);
@@ -243,10 +243,8 @@ static void steering_set_group_string_to_struct(const std::string &str_cfg_2,
     cfg2.inactCheckThresholdSec = string_utils::stoi(v_str_cfg_2[4]);
     cfg5.inactCheckThresholdSec = string_utils::stoi(v_str_cfg_5[4]);
 
-    sMacAddr bssid2;
-    sMacAddr bssid5;
-    std::copy_n(cfg2.bssid, sizeof(sMacAddr::oct), bssid2.oct);
-    std::copy_n(cfg5.bssid, sizeof(sMacAddr::oct), bssid5.oct);
+    sMacAddr bssid2 = tlvf::mac_from_array(cfg2.bssid);
+    sMacAddr bssid5 = tlvf::mac_from_array(cfg5.bssid);
 
     std::cout << "cfg2.bssid = " << bssid2 << std::endl
               << "cfg2.utilCheckIntervalSec = " << cfg2.utilCheckIntervalSec << std::endl
@@ -2147,7 +2145,7 @@ int cli_bml::start_dcs_single_scan(const std::string &radio_mac, int32_t dwell_t
  * @param [in] radio_mac radio MAC of selected radio
  * @param [in] max_results_size Max number of the returned results
  * @param [in] is_single_scan Flag indicating if the results belong to a single scan or not
- * 
+ *
  * @return 0 on success.
  */
 int cli_bml::get_dcs_scan_results(const std::string &radio_mac, uint32_t max_results_size,
@@ -2221,7 +2219,7 @@ int cli_bml::get_dcs_scan_results(const std::string &radio_mac, uint32_t max_res
 
 /**
  * get all client list.
- * 
+ *
  * @return 0 on success.
  */
 int cli_bml::client_get_client_list()
@@ -2245,7 +2243,7 @@ int cli_bml::client_get_client_list()
 
 /**
  * Set specific client according to MAC.
- * 
+ *
  * @param [in] sta_mac MAC address of requested client.
  * @param [in] selected_bands comma-seperated selected bands.
  * @param [in] stay_on_initial_radio Whather to stay on initial radio or not.
@@ -2277,9 +2275,9 @@ int cli_bml::client_set_client(const std::string &sta_mac, int8_t selected_bands
 
 /**
  * get specific client according to MAC.
- * 
+ *
  * @param [in] sta_mac MAC address of requested client
- * 
+ *
  * @return 0 on success.
  */
 int cli_bml::client_get_client(const std::string &sta_mac)
@@ -2345,7 +2343,7 @@ int cli_bml::client_get_client(const std::string &sta_mac)
 
 /**
  * @brief clear persistent DB information for the specified client.
- * 
+ *
  * @param [in] sta_mac MAC address of requested client.
  * @return 0 on success, -1 on failure.
  */
