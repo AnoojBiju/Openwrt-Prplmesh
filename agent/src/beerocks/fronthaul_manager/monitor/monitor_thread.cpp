@@ -329,7 +329,9 @@ void monitor_thread::after_select(bool timeout)
             message_com::send_cmdu(slave_socket, cmdu_tx);
 
             // Generate pre-existing client STA_Connected
-            mon_wlan_hal->generate_connected_clients_events();
+            bool is_finished_all_clients = false;
+            mon_wlan_hal->generate_connected_clients_events(is_finished_all_clients,
+                                                            awake_timeout());
 
             // start local monitors //
             LOG(TRACE) << "mon_stats.start()";

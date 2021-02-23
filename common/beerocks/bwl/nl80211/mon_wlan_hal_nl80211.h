@@ -43,7 +43,17 @@ public:
     virtual bool channel_scan_trigger(int dwell_time_msec,
                                       const std::vector<unsigned int> &channel_pool) override;
     virtual bool channel_scan_dump_results() override;
-    virtual bool generate_connected_clients_events() override;
+
+    /**
+     * @brief Adds a new timer with given schedule.
+     *
+     * @see mon_wlan_hal::generate_connected_clients_events
+     */
+    virtual bool generate_connected_clients_events(
+        bool &is_finished_all_clients,
+        const std::chrono::steady_clock::time_point max_iteration_timeout =
+            std::chrono::steady_clock::time_point::max()) override;
+
     virtual bool channel_scan_abort() override;
     // Protected methods:
 protected:

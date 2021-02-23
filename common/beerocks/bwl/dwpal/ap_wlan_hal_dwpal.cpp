@@ -1787,7 +1787,8 @@ bool ap_wlan_hal_dwpal::set_primary_vlan_id(uint16_t primary_vlan_id)
     return true;
 }
 
-bool ap_wlan_hal_dwpal::generate_connected_clients_events()
+bool ap_wlan_hal_dwpal::generate_connected_clients_events(
+    bool &is_finished_all_clients, std::chrono::steady_clock::time_point max_iteration_timeout)
 {
     bool queried_first = false;
     std::string cmd;

@@ -1313,7 +1313,8 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
     }
     case beerocks_message::
         ACTION_APMANAGER_HOSTAP_GENERATE_CLIENT_ASSOCIATION_NOTIFICATIONS_REQUEST: {
-        ap_wlan_hal->generate_connected_clients_events();
+        bool is_finished_all_clients = false;
+        ap_wlan_hal->generate_connected_clients_events(is_finished_all_clients, awake_timeout());
         break;
     }
     case beerocks_message::ACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST: {
