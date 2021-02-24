@@ -506,6 +506,25 @@ class cACTION_BACKHAUL_SET_ASSOC_DISALLOW_REQUEST : public BaseClass
         sMacAddr* m_bssid = nullptr;
 };
 
+class cACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST : public BaseClass
+{
+    public:
+        cACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST();
+
+        static eActionOp_BACKHAUL get_action_op(){
+            return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST);
+        }
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_BACKHAUL* m_action_op = nullptr;
+};
+
 class cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED : public BaseClass
 {
     public:
