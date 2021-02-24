@@ -3673,6 +3673,10 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
             db->ethernet.wan.mac = tlvf::mac_from_string(iface_mac);
         }
 
+        // Reset the traffic separation configuration as they will be reconfigured on
+        // autoconfiguration.
+        TrafficSeparation::traffic_seperation_configuration_clear();
+
         // Clear the channel_list
         // When FCC/ETSI is set, the prplmesh is not restarted, but the salve is.
         // Must clear the map to prevent residues of previous country configuration.
