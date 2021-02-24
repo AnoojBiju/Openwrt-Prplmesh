@@ -582,8 +582,12 @@ class VirtualAPHostapd(VirtualAP):
         # We are looking for SSID definition
         # ssid Multi-AP-24G-1
         # type AP
-        device.expect("ssid (?P<ssid>.*)\r\n\ttype AP\r\n\t")
-        return device.match.group('ssid')
+        match_id = device.expect(["ssid (?P<ssid>[^\r\n]+)\r\n\ttype AP\r\n\t",
+                                  "addr ..:..:..:..:..:..\r\n\ttype AP\r\n\t"])
+        if match_id == 0:
+            return device.match.group('ssid')
+        else:
+            return 'N/A'
 
     def get_psk(self) -> str:
         """Get SSIDs personal key set during last autoconfiguration. Return string"""
