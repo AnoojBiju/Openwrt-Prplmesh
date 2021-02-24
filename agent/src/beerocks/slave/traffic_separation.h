@@ -60,6 +60,15 @@ namespace net {
 
 class TrafficSeparation {
 
+public:
+    /**
+     * @brief Apply traffic separation policy on the given radio interfaces, and all not
+     * radio related interface (e.g bridge, LAN ports).
+     * 
+     * @param radio_iface Radio interface to apply VLAN policy on. If not given, apply the policy
+     * only on the bridge, ethernet ports and the wireless backhaul interface.
+     */
+    static void apply_traffic_separation(const std::string &radio_iface = {});
 };
 } // namespace net
 } // namespace beerocks
