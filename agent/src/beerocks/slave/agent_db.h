@@ -217,7 +217,7 @@ public:
                 sMacAddr mac;
                 std::string ssid;
                 bool fronthaul_bss;
-                bool backhual_bss;
+                bool backhaul_bss;
                 bool backhaul_bss_disallow_profile1_agent_association;
                 bool backhaul_bss_disallow_profile2_agent_association;
             };
@@ -316,7 +316,7 @@ public:
         std::unordered_map<std::string, uint16_t> ssid_vid_mapping;
         uint16_t primary_vlan_id;
         uint8_t default_pcp;
-        std::unordered_set<uint16_t> secondaries_vlans_ids;
+        std::unordered_set<uint16_t> secondary_vlans_ids;
     } traffic_separation;
 
     struct {
