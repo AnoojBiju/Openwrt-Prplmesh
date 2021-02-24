@@ -18,6 +18,8 @@ RUN apt-get update && apt-get -y upgrade \
     # Install Helper tools
     bash-completion locales ninja-build pkg-config shellcheck \
     flake8 clang-format vim bridge-utils \
+    # Ambiorix dependecies
+    bison curl flex libevent-dev libyajl-dev lua5.1 liblua5.1-0-dev liburiparser-dev \
     # Network capturing
     tcpdump tshark wireshark-common openssh-server
 
@@ -43,10 +45,59 @@ RUN apt-get -y install apt-transport-https ca-certificates \
     && apt update \
     && apt -y install docker-ce docker-ce-cli containerd.io
 
+# Install docker compose
+RUN curl -L "https://github.com/docker/compose/releases/download/1.28.4/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose \
+    && chmod +x /usr/local/bin/docker-compose
+
+# We need liburiparser-dev > v. 9.0 which isn't avalaible in default
+# 18.04 Ubuntu repos. So add Ubuntu 19.10 repo which has v. 0.9.3-2
+RUN echo "deb http://old-releases.ubuntu.com/ubuntu eoan main universe" | tee -a /etc/apt/sources.list.d/eoan.list && \
+    apt-get update && apt-get install -y --only-upgrade liburiparser-dev && \
+    rm /etc/apt/sources.list.d/eoan.list
+
+RUN curl https://storage.googleapis.com/git-repo-downloads/repo > /usr/bin/repo && \
+    chmod +x /usr/bin/repo
+
+# Install Ambiorix libraries
+WORKDIR /tmp/ambiorix
+
+# Fetch, checkout on fixed commit which works and install libubox
+RUN git clone git://git.openwrt.org/project/libubox.git && \
+    cd libubox && git checkout 9e52171d70def760a6949676800d0b73f85ee22d && \
+    cmake -H"$(pwd)"/. -B"$(pwd)"/build/. -DCMAKE_INSTALL_PREFIX=/usr && \
+    make install -C build
+
+# Fetch, checkout on fixed commit which works and install Ubus daemon
+RUN git clone git://git.openwrt.org/project/ubus.git && \
+    cd ubus && git checkout 13a4438b4ebdf85d301999e0a615640ac4c9b0a8 && \
+    cmake -H"$(pwd)"/. -B"$(pwd)"/build/. -DCMAKE_INSTALL_PREFIX=/usr && \
+    make install -C build
+
+# Fetch and intall Bus Agnostic API libs, applications.
+# As they have some internal dependencies - we should build & install
+# them in specific order.
+RUN repo init -u https://gitlab.com/soft.at.home/ambiorix/ambiorix.git \
+    -b refs/tags/v0.3.2 < /dev/null && \
+    repo sync && \
+    make install -C libraries/libamxc && \
+    make install -C libraries/libamxp && \
+    make install -C libraries/libamxd && \
+    make install -C libraries/libamxj && \
+    make install -C libraries/libamxo && \
+    make install -C libraries/libamxb && \
+    make install -C applications/amxb-inspect && \
+    make install -C applications/amxo-cg && \
+    make -C bus_adaptors/amxb_ubus && \
+    make install -C bus_adaptors/amxb_ubus
+
+# Switch back into the workspace directory
+WORKDIR /workspace
+
 # Clean up
 RUN apt-get autoremove -y \
-    && apt clean -y \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get clean -y \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /tmp/ambiorix
 
 # Update locale
 RUN locale-gen en_US.UTF-8 && update-locale
