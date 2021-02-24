@@ -1305,3 +1305,69 @@ bool network_utils::set_vlan_filtering(const std::string &bridge_iface, uint16_t
     beerocks::os_utils::system_call(cmd, 2, true);
     return true;
 }
+
+bool network_utils::set_iface_vid_policy(const std::string &iface, bool del, uint16_t vid,
+                                         bool is_bridge, bool pvid, bool untagged)
+{
+    if (vid > MAX_VLAN_ID) {
+        LOG(ERROR) << "Given VID is invalid: " << vid;
+        return false;
+    }
+
+    if (vid == 0 && pvid) {
+        LOG(ERROR) << "Given VID is '0' (All VIDS) and PVID is set";
+        return false;
+    }
+
+    std::string vid_str;
+    vid_str.reserve(10);
+    if (vid == 0) {
+        vid_str.assign(std::to_string(MIN_VLAN_ID)).append("-").append(std::to_string(MAX_VLAN_ID));
+    } else {
+        vid_str.assign(std::to_string(vid));
+    }
+
+    std::string cmd;
+    // Reserve 100 bytes for appended data to prevent reallocations.
+    cmd.reserve(100);
+
+    cmd.assign("bridge vlan ");
+
+    if (del) {
+        cmd.append("del ");
+    } else {
+        cmd.append("add ");
+    }
+
+    cmd.append("vid ").append(vid_str).append(" ");
+    cmd.append("dev ").append(iface).append(" ");
+
+    if (del) {
+        cmd.pop_back(); // Pop extra space.
+        if (is_bridge) {
+            cmd.append(" self");
+        }
+        beerocks::os_utils::system_call(cmd, 2, false);
+        return true;
+    }
+
+    if (is_bridge) {
+        cmd.append("self ");
+    }
+
+    if (pvid) {
+        cmd.append("pvid ");
+    }
+
+    if (untagged) {
+        cmd.append("untagged ");
+    }
+
+    // Pop back last space character.
+    cmd.pop_back();
+    auto ret_str = os_utils::system_call(cmd, 2, false);
+    if (!ret_str.empty()) {
+        LOG(DEBUG) << "Answer: " << ret_str;
+    }
+    return true;
+}
