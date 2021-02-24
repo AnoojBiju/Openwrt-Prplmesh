@@ -33,6 +33,9 @@
 namespace beerocks {
 namespace net {
 
+constexpr uint16_t MIN_VLAN_ID = 1;
+constexpr uint16_t MAX_VLAN_ID = 4094;
+
 class network_utils {
 public:
     static const std::string ZERO_IP_STRING;
@@ -199,6 +202,16 @@ public:
      */
     static std::list<std::string> get_extended_bss_ifaces(const std::string &bss_iface,
                                                           const std::string &bridge_iface);
+
+    /**
+     * @brief Create a vlan interface.
+     * 
+     * @param iface Interface to attach the VLAN interface to.
+     * @param vid VLAN ID.
+     * @return New interface name.
+     */
+    static std::string create_vlan_interface(const std::string &iface, uint16_t vid);
+
 };
 } // namespace net
 } // namespace beerocks
