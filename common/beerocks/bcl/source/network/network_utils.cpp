@@ -1246,3 +1246,38 @@ std::vector<std::string> network_utils::get_bss_ifaces(const std::string &bss_if
     }
     return bss_ifaces;
 }
+
+std::string network_utils::create_vlan_interface(const std::string &iface, uint16_t vid)
+{
+    if (iface.empty()) {
+        LOG(ERROR) << "iface is empty!";
+        return {};
+    }
+
+    if (vid < net::MIN_VLAN_ID || vid > net::MAX_VLAN_ID) {
+        LOG(ERROR) << "Given VID is invalid: " << vid;
+        return {};
+    }
+
+    // Command example:
+    // ip link add <iface>.<vid> link <iface> type vlan id <vid>
+
+    std::string cmd;
+    // Reserve 60 bytes for appended data to prevent reallocations.
+    cmd.reserve(60);
+
+    std::string new_iface_name;
+    new_iface_name.reserve(IFNAMSIZ);
+    auto vid_str = std::to_string(vid);
+    new_iface_name.assign(iface).append(".").append(vid_str);
+
+    cmd.assign("ip link add ")
+        .append(new_iface_name)
+        .append(" link ")
+        .append(iface)
+        .append(" type vlan id ")
+        .append(vid_str);
+
+    beerocks::os_utils::system_call(cmd, 2, true);
+    return new_iface_name;
+}
