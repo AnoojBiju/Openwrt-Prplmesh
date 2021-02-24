@@ -15,6 +15,7 @@
 #include "net_struct.h"
 #include <cstdint>
 #include <easylogging++.h>
+#include <list>
 #include <string>
 #include <vector>
 
@@ -108,6 +109,13 @@ public:
 
     //temp
     static std::string get_mac_from_arp_table(const std::string &ipv4);
+
+    /**
+     * @brief Get list of linux interfaces.
+     * 
+     * @return List of linux interfaces.
+     */
+    static std::list<std::string> linux_get_iface_list();
 
     static std::vector<std::string> linux_get_iface_list_from_bridge(const std::string &bridge);
 
