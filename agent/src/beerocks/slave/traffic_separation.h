@@ -69,6 +69,22 @@ public:
      * only on the bridge, ethernet ports and the wireless backhaul interface.
      */
     static void apply_traffic_separation(const std::string &radio_iface = {});
+
+private:
+    enum ePortMode { UNTAGGED_PORT, TAGGED_PORT_PRIMARY_UNTAGGED, TAGGED_PORT_PRIMARY_TAGGED };
+
+    /**
+     * @brief Set the VLAN policy on a given @a 'iface'.
+     * 
+     * @param iface An interface to set the VLAN policy on.
+     * @param port_mode Indicate what is the desired port policy. 
+     * @param is_bridge Should be set to true if the @a 'port_mode' is 
+     * @b 'TAGGED_PORT_PRIMARY_UNTAGGED' or @b 'TAGGED_PORT_PRIMARY_TAGGED' and the given @a 'iface'
+     * is a bridge interface.
+     * @param untagged_port_vid The interface VID when @a 'port_mode' is @b 'UNTAGGED_PORT'. 
+     */
+    static void set_vlan_policy(const std::string &iface, ePortMode port_mode, bool is_bridge,
+                                uint16_t untagged_port_vid = 0);
 };
 } // namespace net
 } // namespace beerocks

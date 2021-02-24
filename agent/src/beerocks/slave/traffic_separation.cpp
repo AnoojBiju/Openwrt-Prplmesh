@@ -27,7 +27,67 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
     if (db->traffic_separation.primary_vlan_id == 0) {
         return;
     }
+}
 
+void TrafficSeparation::set_vlan_policy(const std::string &iface, ePortMode port_mode,
+                                        bool is_bridge, uint16_t untagged_port_vid)
+{
+    if (iface.empty()) {
+        LOG(ERROR) << "iface is empty!";
+        return;
+    }
+
+    // Helper variables to make the code more readable.
+    bool del = true; // First, remove all VIDs (vid=0).
+    bool pvid;
+    bool untagged;
+
+    network_utils::set_iface_vid_policy(iface, del, 0, is_bridge);
+
+    del = false;
+
+    if (port_mode == TAGGED_PORT_PRIMARY_UNTAGGED || port_mode == TAGGED_PORT_PRIMARY_TAGGED) {
+        if (port_mode == TAGGED_PORT_PRIMARY_UNTAGGED) {
+            // Set the new Primary VLAN with "PVID" and "Egress Untagged" policy.
+            pvid     = true;
+            untagged = true;
+        } else {
+            // Set the new Primary VLAN as Not "PVID" and Not "Egress Untagged" policy.
+            pvid     = false;
+            untagged = false;
+        }
+        auto db = AgentDB::get();
+        network_utils::set_iface_vid_policy(iface, del, db->traffic_separation.primary_vlan_id,
+                                            is_bridge, pvid, untagged);
+
+        // Add secondary VIDs.
+        pvid     = false;
+        untagged = false;
+        for (const auto sec_vid : db->traffic_separation.secondaries_vlans_ids) {
+            network_utils::set_iface_vid_policy(iface, del, sec_vid, is_bridge, pvid, untagged);
+        }
+
+        // Double tagged packets with S-Tag must be filtered on tagged ports.
+        if (!is_bridge) {
+            network_utils::set_vlan_packet_filter(true, iface);
+        }
+    }
+    // port_mode == UNTAGGED_PORT
+    else {
+        if (!untagged_port_vid) {
+            LOG(ERROR) << "Untagged Port VID was not set on port_mode of UNTAGGED_PORT";
+            return;
+        }
+        // Set the new Primary VLAN with "PVID" and "Egress Untagged" policy.
+        pvid      = true;
+        untagged  = true;
+        is_bridge = false; // Untagged Port cannot be a bridge interface.
+        network_utils::set_iface_vid_policy(iface, del, untagged_port_vid, is_bridge, pvid,
+                                            untagged);
+
+        // Filter packets containing the VID of the Untagged Port.
+        network_utils::set_vlan_packet_filter(true, iface, untagged_port_vid);
+    }
 }
 
 } // namespace net
