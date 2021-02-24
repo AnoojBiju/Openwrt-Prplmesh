@@ -35,10 +35,18 @@ class ApConfigBSSTeardown(PrplMeshBaseTest):
         # Wait a bit for the renew to complete
         time.sleep(3)
 
-        self.check_log(agent.radios[0],
-                       r"Autoconfiguration for ssid: Boardfarm-Tests-24G-3 .*"
-                       r"fronthaul: true backhaul: false")
-        self.check_log(agent.radios[1], r".* tear down radio")
+        vap_found = False
+        for vap in agent.radios[0].vaps:
+            if vap.get_ssid() == "Boardfarm-Tests-24G-3":
+                vap_found = True
+
+        if not vap_found:
+            self.fail("VAP with ssid Boardfarm-Tests-24G-3 not found")
+
+        for vap in agent.radios[1].vaps:
+            if vap.get_ssid() == "Boardfarm-Tests-24G-3":
+                self.fail("Second radio is not supposed to have ssid Boardfarm-Tests-24G-3")
+
         conn_map = controller.get_conn_map()
         repeater1 = conn_map[agent.mac]
         repeater1_wlan0 = repeater1.radios[agent.radios[0].mac]
@@ -60,7 +68,11 @@ class ApConfigBSSTeardown(PrplMeshBaseTest):
                                  tlv(0x10, 0x0001, "{0x00}"))
 
         time.sleep(3)
-        self.check_log(agent.radios[0], r".* tear down radio")
+
+        for vap in agent.radios[1].vaps:
+            if vap.get_ssid() == "Boardfarm-Tests-24G-3":
+                self.fail("First radio is supposed to have ssid Boardfarm-Tests-24G-3 torn down")
+
         conn_map = controller.get_conn_map()
         repeater1 = conn_map[agent.mac]
         repeater1_wlan0 = repeater1.radios[agent.radios[0].mac]
