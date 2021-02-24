@@ -3726,9 +3726,7 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
 
         // Reset the traffic separation configuration as they will be reconfigured on
         // autoconfiguration.
-        db->traffic_separation.primary_vlan_id = 0;
-        db->traffic_separation.secondaries_vlans_ids.clear();
-        db->traffic_separation.ssid_vid_mapping.clear();
+        TrafficSeparation::traffic_seperation_configuration_clear();
 
         // Clear the channel_list
         // When FCC/ETSI is set, the prplmesh is not restarted, but the salve is.
