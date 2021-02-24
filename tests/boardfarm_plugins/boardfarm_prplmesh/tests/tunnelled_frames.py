@@ -62,13 +62,16 @@ class TunnelledFrames(PrplMeshBaseTest):
         # Allow the events to propagate
         sleep(1)
 
+        # Since only the frame's body is tunnelled, strip the header (24 bytes)
+        # from the event data passed to the validation function
+
         # Validate the first (WNM Request) event
         self.validate_tunnelled_frame(controller, agent1.mac, sta1.mac,
-                                      event1_type, event1_data)
+                                      event1_type, event1_data[24*2:])
 
         # Validate the second (ANQP REQUEST) event
         self.validate_tunnelled_frame(controller, agent2.mac, sta2.mac,
-                                      event2_type, event2_data)
+                                      event2_type, event2_data[24*2:])
 
         # Disconnect the stations
         vap1.disassociate(sta1)
