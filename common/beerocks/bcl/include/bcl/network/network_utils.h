@@ -184,6 +184,22 @@ public:
 
     static bool icmp_send(const std::string &ip, uint16_t id, int count, int icmp_socket);
     static uint16_t icmp_checksum(uint16_t *buf, int32_t len);
+
+    /**
+     * @brief Get list of BSS interfaces.
+     * 
+     * A BSS could have more than one interface that belongs to it. Specifically, when configuring
+     * a BSS as bBSS, a platform could create several virtual netdevs of which only one backhaul
+     * station could connect.
+     * This function returns a list of the base BSS interface name and all of its
+     * extended interfaces.
+     * 
+     * @param bss_iface BSS interface name.
+     * @param bridge_iface Bridge interface name.
+     * @return List of the base BSS interface name and all of its extended interfaces.
+     */
+    static std::vector<std::string> get_bss_ifaces(const std::string &bss_iface,
+                                                   const std::string &bridge_iface);
 };
 } // namespace net
 } // namespace beerocks
