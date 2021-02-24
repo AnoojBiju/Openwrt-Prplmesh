@@ -32,6 +32,18 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
     // Update the Bridge Policy
     bool is_bridge = true;
     set_vlan_policy(db->bridge.iface_name, TAGGED_PORT_PRIMARY_UNTAGGED, is_bridge);
+
+    // Since we already set the bridge, and there are no more bridge interfaces, the 'bridge_iface'
+    // is set to 'false' from now on.
+    is_bridge = false;
+
+    // Update WAN and LAN Ports.
+    if (!db->device_conf.local_gw) {
+        set_vlan_policy(db->ethernet.wan.iface_name, TAGGED_PORT_PRIMARY_UNTAGGED, is_bridge);
+    }
+    for (const auto &lan_iface_info : db->ethernet.lan) {
+        set_vlan_policy(lan_iface_info.iface_name, TAGGED_PORT_PRIMARY_UNTAGGED, is_bridge);
+    }
 }
 
 void TrafficSeparation::set_vlan_policy(const std::string &iface, ePortMode port_mode,
