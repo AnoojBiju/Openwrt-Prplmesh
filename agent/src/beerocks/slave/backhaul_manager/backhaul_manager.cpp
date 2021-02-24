@@ -2239,6 +2239,22 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
                                 tlvf::mac_from_string(bridge_info.mac));
         }
 
+        // TODO: Need to unite WAIT_WPS and WIRELESS_ASSOCIATE_4ADDR_WAIT handling
+        if (FSM_IS_IN_STATE(WAIT_WPS) || FSM_IS_IN_STATE(WIRELESS_ASSOCIATE_4ADDR_WAIT)) {
+            auto msg = static_cast<bwl::sACTION_BACKHAUL_CONNECTED_NOTIFICATION *>(data);
+            LOG(INFO) << "Multi-AP-Profile: " << msg->multi_ap_profile
+                      << ", Multi-AP Primary VLAN ID: " << msg->multi_ap_primary_vlan_id;
+
+            db->traffic_separation.primary_vlan_id = msg->multi_ap_primary_vlan_id;
+            db->backhaul.bssid_multi_ap_profile    = msg->multi_ap_profile;
+
+            auto request = message_com::create_vs_message<
+                beerocks_message::cACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST>(cmdu_tx);
+
+            // Send the message to one of the son_slaves.
+            send_cmdu(slaves_sockets.back()->slave, cmdu_tx);
+        }
+
         if (FSM_IS_IN_STATE(WAIT_WPS)) {
             db->backhaul.selected_iface_name = iface;
             db->backhaul.connection_type     = AgentDB::sBackhaul::eConnectionType::Wireless;
@@ -2298,14 +2314,6 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
             }
             roam_flag      = false;
             state_attempts = 0;
-
-            auto msg = static_cast<bwl::sACTION_BACKHAUL_CONNECTED_NOTIFICATION *>(data);
-            LOG(INFO) << "Multi-AP-Profile: " << msg->multi_ap_profile
-                      << ", Multi-AP Primary VLAN ID: " << msg->multi_ap_primary_vlan_id;
-
-            // TODO:
-            // 1. Set the Primary VLAN ID on L2.
-            // 2. Configure the the wireless interface according to the Profile of the BSS.
 
             // Send slaves to enable the AP's
             send_slaves_enable();
