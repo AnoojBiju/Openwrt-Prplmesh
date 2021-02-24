@@ -11,9 +11,13 @@ from boardfarm.exceptions import SkipTest
 
 
 class DevResetDefault(PrplMeshBaseTest):
-    """
-        Devices used in test setup:
-        AP1 - Agent1 [DUT]
+    """Test that dev_reset_default resets the agent (even when it's called
+        multiple times).
+    Check that no autoconfig search is sent while in reset.
+
+    Devices used in test setup:
+        - Agent1 [DUT]
+
     """
 
     def runTest(self):
@@ -25,10 +29,15 @@ class DevResetDefault(PrplMeshBaseTest):
 
         self.dev.DUT.wired_sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
 
-        agent.ucc_socket.cmd_reply("dev_reset_default,devrole,agent,program,map,type,DUT")
-        self.checkpoint()
-        time.sleep(2)
-        self.check_no_cmdu_type("autoconfig search while in reset", 0x0007, agent.mac)
+        for attempt in range(1, 4):
+            print("Resetting agent 1")
+            self.checkpoint()
+            agent.ucc_socket.cmd_reply("dev_reset_default,devrole,agent,program,map,type,DUT")
+
+            time.sleep(2)
+            self.check_no_cmdu_type("autoconfig search while in reset", 0x0007, agent.mac)
+
+        print("Configuring agent 1")
         self.checkpoint()
         agent.ucc_socket.cmd_reply("dev_set_config,backhaul,eth")
         time.sleep(2)
