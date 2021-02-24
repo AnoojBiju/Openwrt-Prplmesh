@@ -154,6 +154,96 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
             }
         }
     }
+
+    // Create a VLAN interface linked to the bridge interface for each Secondary VLAN.
+    auto linux_ifaces = network_utils::linux_get_iface_list();
+
+    std::string bridge_vlan_base_str = db->bridge.iface_name + ".";
+
+    std::list<sBridgeVlanInfo> bridge_vlan_interfaces;
+    for (const auto &iface : linux_ifaces) {
+        auto char_pos = iface.find(bridge_vlan_base_str);
+        if (char_pos == std::string::npos) {
+            continue;
+        }
+
+        // If there is a vlan interface linked to the bridge, bring it down. This is to prevent of
+        // residues of previous interface configuration to have effect.
+        network_utils::linux_iface_ctrl(iface, false);
+    }
+
+    std::string ipv4_str;
+    network_utils::iface_info bridge_iface_info;
+    if (network_utils::get_iface_info(bridge_iface_info, db->bridge.iface_name) != 0) {
+        LOG(ERROR) << "Failed to get iface info of bridge " << db->bridge.iface_name;
+        return;
+    }
+
+    sIpv4Addr bridge_ipv4 = network_utils::ipv4_from_string(bridge_iface_info.ip);
+    sIpv4Addr subnetmask  = network_utils::ipv4_from_string(bridge_iface_info.netmask);
+
+    // Subnetmask least significant byte.
+    // 255.255.255.0 = 2, 255.255.0.0 = 1, 255.0.0.0 = 0
+    int8_t subnetmask_lsb = subnetmask.oct[2] ? 2 : subnetmask.oct[1] ? 1 : 0;
+
+    auto bridge_vlan_ipv4 = bridge_ipv4;
+
+    // Increment subnet IP address by one safely.
+    auto increment_subnet_ip_safe = [&](sIpv4Addr &br_vlan_ipv4, int8_t &sub_lsb) {
+        if (sub_lsb < 0) {
+            LOG(ERROR) << "Subnetmask least significant byte is -1!";
+            return false;
+        }
+        br_vlan_ipv4.oct[sub_lsb]++;
+        if (br_vlan_ipv4 == bridge_ipv4) {
+            sub_lsb--;
+            br_vlan_ipv4.oct[sub_lsb]++;
+        }
+        return true;
+    };
+
+    static const std::unordered_map<int8_t, std::string> subnetmasks = {
+        {0, "255.0.0.0"}, {1, "255.255.0.0"}, {2, "255.255.255.0"}};
+
+    // Create a VLAN interface linked to the bridge for each secondary VLAN, and to each one, set an
+    // IP address on a different host if it running on the GW. On non GW platform the IP should be
+    // set with DHCP flow.
+    for (auto secondary_vid : db->traffic_separation.secondaries_vlans_ids) {
+        auto vlan_iface_of_bridge =
+            network_utils::create_vlan_interface(db->bridge.iface_name, secondary_vid);
+
+        if (vlan_iface_of_bridge.empty()) {
+            return;
+        }
+        // Increment the subnet by one.
+        if (!increment_subnet_ip_safe(bridge_vlan_ipv4, subnetmask_lsb)) {
+            return;
+        }
+
+        auto bridge_vlan_ipv4_str       = network_utils::ipv4_to_string(bridge_vlan_ipv4);
+        auto bridge_vlan_subnetmask_str = subnetmasks.at(subnetmask_lsb);
+
+        if (db->device_conf.local_gw) {
+            subnetmask = network_utils::ipv4_from_string(bridge_vlan_subnetmask_str);
+
+            // Find subnet
+            auto &bridge_vlan_subnet = bridge_vlan_ipv4;
+            for (uint8_t i = 0; i < sizeof(sIpv4Addr::oct); i++) {
+                bridge_vlan_subnet.oct[i] &= subnetmask.oct[i];
+            }
+
+            bridge_vlan_interfaces.emplace_back(vlan_iface_of_bridge, bridge_vlan_subnet,
+                                                bridge_vlan_subnetmask_str);
+        } else {
+            bridge_vlan_interfaces.emplace_back(vlan_iface_of_bridge);
+        }
+
+        if (!network_utils::linux_iface_ctrl(vlan_iface_of_bridge, true, bridge_vlan_ipv4_str,
+                                             bridge_vlan_subnetmask_str)) {
+            LOG(ERROR) << "Bringing interface " << vlan_iface_of_bridge << " up has failed";
+            return;
+        }
+    }
 }
 
 void TrafficSeparation::set_vlan_policy(const std::string &iface, ePortMode port_mode,
