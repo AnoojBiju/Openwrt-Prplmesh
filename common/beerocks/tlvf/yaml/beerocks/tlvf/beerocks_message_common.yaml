@@ -28,9 +28,18 @@ sVapInfo:
   ssid:
     _type: char
     _length: ["beerocks::message::WIFI_SSID_MAX_LENGTH"]
-  backhaul_vap: uint8_t
-  profile1_backhaul_sta_association_disallowed: uint8_t
-  profile2_backhaul_sta_association_disallowed: uint8_t
+  fronthaul_vap: 
+    _type: uint8_t
+    comment: boolean
+  backhaul_vap: 
+    _type: uint8_t
+    _comment: boolean
+  profile1_backhaul_sta_association_disallowed: 
+    _type: uint8_t
+    _comment: boolean
+  profile2_backhaul_sta_association_disallowed:
+    _type: uint8_t
+    _comment: boolean
 
 sSonConfig:
   _type: struct
