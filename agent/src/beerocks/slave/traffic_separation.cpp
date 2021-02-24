@@ -68,6 +68,93 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
     if (radio_iface.empty()) {
         return;
     }
+
+    // Update Policy given Radio interface.
+    auto radio = db->radio(radio_iface);
+    if (!radio) {
+        return;
+    }
+
+    for (const auto &bss : radio->front.bssids) {
+
+        // Skip unconfigured BSS.
+        if (bss.ssid.empty()) {
+            continue;
+        }
+
+        LOG(DEBUG) << "BSS " << bss.mac << ", ssid:" << bss.ssid << ", fBSS: " << bss.fronthaul_bss
+                   << ", bBSS: " << bss.backhual_bss
+                   << ", p1_dis: " << bss.backhaul_bss_disallow_profile1_agent_association
+                   << ", p2_dis: " << bss.backhaul_bss_disallow_profile2_agent_association;
+
+        std::string bss_iface;
+
+        if (!network_utils::linux_iface_get_name(bss.mac, bss_iface)) {
+            LOG(INFO) << "Interface with MAC " << bss.mac << " does not exist";
+            continue;
+        }
+
+        // fBSS
+        if (bss.fronthaul_bss && !bss.backhual_bss) {
+            auto ssid_vlan_pair_iter = db->traffic_separation.ssid_vid_mapping.find(bss.ssid);
+            if (ssid_vlan_pair_iter == db->traffic_separation.ssid_vid_mapping.end()) {
+                LOG(INFO) << "SSID '" << bss.ssid << "'not found on SSID VID map, skip.";
+                continue;
+            }
+            auto vid_to_set = ssid_vlan_pair_iter->second;
+            set_vlan_policy(bss_iface, UNTAGGED_PORT, is_bridge, vid_to_set);
+        }
+        // bBSS
+        else if (!bss.fronthaul_bss && bss.backhual_bss) {
+            if (bss.backhaul_bss_disallow_profile1_agent_association ==
+                bss.backhaul_bss_disallow_profile2_agent_association) {
+                LOG(WARNING) << "bBSS invalid configuration - "
+                             << "backhaul_bss_disallow_profile1_agent_association = "
+                                "backhaul_bss_disallow_profile2_agent_association = "
+                             << bss.backhaul_bss_disallow_profile1_agent_association;
+                return;
+            }
+            auto bss_extended_ifaces =
+                network_utils::get_extended_bss_ifaces(bss_iface, db->bridge.iface_name);
+
+            for (const auto &bss_extended_iface : bss_extended_ifaces) {
+                // Profile-2 Backhaul BSS
+                if (bss.backhaul_bss_disallow_profile1_agent_association) {
+                    set_vlan_policy(bss_extended_iface, TAGGED_PORT_PRIMARY_UNTAGGED, is_bridge);
+                }
+                // Profile-1 Backhual BSS
+                else {
+                    set_vlan_policy(bss_extended_iface, UNTAGGED_PORT, is_bridge,
+                                    db->traffic_separation.primary_vlan_id);
+                }
+            }
+        }
+        // Combined fBSS & bBSS - Currently Support only Profile-1
+        else {
+            if (!bss.backhaul_bss_disallow_profile2_agent_association) {
+                LOG(WARNING) << "bBSS invalid configuration! "
+                             << "Combined BSS not supported with Profile-2 bBSS - Skip";
+                continue;
+            }
+            if (bss.backhaul_bss_disallow_profile1_agent_association) {
+                LOG(ERROR) << "bBSS invalid configuration! "
+                           << "Profile-1 and Profile-2 Backhaul connection are both disallowed - "
+                              "Skip";
+                continue;
+            }
+
+            set_vlan_policy(bss_iface, UNTAGGED_PORT, is_bridge,
+                            db->traffic_separation.primary_vlan_id);
+
+            auto bss_extended_ifaces =
+                network_utils::get_extended_bss_ifaces(bss_iface, db->bridge.iface_name);
+
+            for (const auto &bss_extended_iface : bss_extended_ifaces) {
+                set_vlan_policy(bss_extended_iface, UNTAGGED_PORT, is_bridge,
+                                db->traffic_separation.primary_vlan_id);
+            }
+        }
+    }
 }
 
 void TrafficSeparation::set_vlan_policy(const std::string &iface, ePortMode port_mode,
