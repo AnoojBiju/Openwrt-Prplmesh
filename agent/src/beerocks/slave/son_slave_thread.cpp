@@ -1255,6 +1255,11 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         slave_reset();
         break;
     }
+    case beerocks_message::ACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST: {
+        LOG(DEBUG) << "Apply_traffic_separation";
+        TrafficSeparation::apply_traffic_separation();
+        break;
+    }
     case beerocks_message::ACTION_BACKHAUL_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE: {
         LOG(DEBUG) << "ACTION_BACKHAUL_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE";
 
