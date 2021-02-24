@@ -321,11 +321,20 @@ def _device_wait_for_log(device: None, log_paths: [str], regex: str,
     _device_clear_input_buffer(device)
 
     device.sendline("tail -f -n +{:d} {}".format(start_line + 1, " ".join(log_paths)))
-    device.expect(regex, timeout=timeout)
+
+    if not fail_on_mismatch:
+        match_id = device.expect([regex, pexpect.TIMEOUT], timeout=timeout)
+        if match_id == 1:
+            # Timeout
+            return (False, start_line, None)
+    else:
+        device.expect(regex, timeout=timeout)
+
     match = device.match.group(0)
     # Send Ctrl-C to interrupt tail -f
     device.send('\003')
     device.expect(device.prompt)
+
     try:
         if match:
             first_matched_line = match.partition('\r\n')[0]
