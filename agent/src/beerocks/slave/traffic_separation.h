@@ -73,6 +73,18 @@ public:
 private:
     enum ePortMode { UNTAGGED_PORT, TAGGED_PORT_PRIMARY_UNTAGGED, TAGGED_PORT_PRIMARY_TAGGED };
 
+    struct sBridgeVlanInfo {
+        explicit sBridgeVlanInfo(const std::string &iface_name_,
+                                 const net::sIpv4Addr &subnet_ipv4_ = {},
+                                 const std::string &subnetmask_     = std::string())
+            : iface_name(iface_name_), subnet_ipv4(subnet_ipv4_), subnetmask(subnetmask_)
+        {
+        }
+        std::string iface_name;
+        net::sIpv4Addr subnet_ipv4;
+        std::string subnetmask;
+    };
+
     /**
      * @brief Set the VLAN policy on a given @a 'iface'.
      * 
