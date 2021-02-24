@@ -11,6 +11,7 @@
 
 #include "base_wlan_hal_dwpal.h"
 #include "mon_wlan_hal_dwpal_types.h"
+#include <bcl/network/network_utils.h>
 #include <bwl/mon_wlan_hal.h>
 
 namespace bwl {
@@ -148,6 +149,14 @@ private:
     uint32_t m_nl_seq = 0;
     // Flag indicating if we are currently in a dump sequence
     bool m_scan_dump_in_progress = false;
+
+    static constexpr int INVALID_VAP_ID = -1;
+
+    std::set<int> m_completed_vaps;
+    std::unordered_set<sMacAddr> m_handled_clients;
+    sMacAddr m_prev_client_mac = beerocks::net::network_utils::ZERO_MAC;
+    bool m_queried_first       = false;
+    int m_vap_id_in_progress   = INVALID_VAP_ID;
 };
 
 } // namespace dwpal
