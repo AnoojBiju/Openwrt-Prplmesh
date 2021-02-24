@@ -45,7 +45,7 @@ void TrafficSeparation::traffic_seperation_configuration_clear()
     network_utils::set_vlan_packet_filter(false, db->ethernet.wan.iface_name);
 
     db->traffic_separation.primary_vlan_id = 0;
-    db->traffic_separation.secondaries_vlans_ids.clear();
+    db->traffic_separation.secondary_vlans_ids.clear();
     db->traffic_separation.ssid_vid_mapping.clear();
     network_utils::set_vlan_filtering(db->bridge.iface_name, 0);
 }
@@ -161,7 +161,7 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
                     set_vlan_policy(bss_iface_netdev, ePortMode::TAGGED_PORT_PRIMARY_UNTAGGED,
                                     is_bridge);
                 }
-                // Profile-1 Backhual BSS
+                // Profile-1 Backhaul BSS
                 else {
                     set_vlan_policy(bss_iface_netdev, ePortMode::UNTAGGED_PORT, is_bridge,
                                     db->traffic_separation.primary_vlan_id);
@@ -248,7 +248,7 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
     // Create a VLAN interface linked to the bridge for each secondary VLAN, and to each one, set an
     // IP address on a different host if it running on the GW. On non GW platform the IP should be
     // set with DHCP flow.
-    for (auto secondary_vid : db->traffic_separation.secondaries_vlans_ids) {
+    for (auto secondary_vid : db->traffic_separation.secondary_vlans_ids) {
         auto vlan_iface_of_bridge =
             network_utils::create_vlan_interface(db->bridge.iface_name, secondary_vid);
 
@@ -327,7 +327,7 @@ void TrafficSeparation::set_vlan_policy(const std::string &iface, ePortMode port
         // Add secondary VIDs.
         pvid     = false;
         untagged = false;
-        for (const auto sec_vid : db->traffic_separation.secondaries_vlans_ids) {
+        for (const auto sec_vid : db->traffic_separation.secondary_vlans_ids) {
             network_utils::set_iface_vid_policy(iface, del, sec_vid, is_bridge, pvid, untagged);
         }
 

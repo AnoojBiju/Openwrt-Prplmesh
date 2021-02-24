@@ -1162,7 +1162,7 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
 
             // Already sent join_master request, mark as reconfiguration
             if (slave_state >= STATE_WAIT_FOR_JOINED_RESPONSE && slave_state <= STATE_OPERATIONAL)
-                is_backhual_reconf = true;
+                is_backhaul_reconf = true;
 
             is_backhaul_manager = (bool)notification->params().is_backhaul_manager;
             LOG_IF(is_backhaul_manager, DEBUG) << "Selected as backhaul manager";
@@ -4142,8 +4142,8 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
                 return false;
             }
 
-            notification->is_slave_reconf() = is_backhual_reconf;
-            is_backhual_reconf              = false;
+            notification->is_slave_reconf() = is_backhaul_reconf;
+            is_backhaul_reconf              = false;
 
             // Version
             string_utils::copy_string(notification->slave_version(message::VERSION_LENGTH),
@@ -4965,7 +4965,7 @@ bool slave_thread::handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMess
             config.bss_type = WSC::eWscVendorExtSubelementBssType::TEARDOWN;
 
         } else if (bBSS && !bBSS_p1_disallowed && !bBSS_p2_disallowed &&
-                   db->traffic_separation.secondaries_vlans_ids.size() > 0) {
+                   db->traffic_separation.secondary_vlans_ids.size() > 0) {
             LOG(WARNING) << "Controller configured Backhaul BSS for combined Profile1 and "
                          << "Profile2, but it is not supported!";
             bss_errors.push_back(
