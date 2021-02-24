@@ -1210,3 +1210,35 @@ uint16_t network_utils::icmp_checksum(uint16_t *buf, int32_t len)
     answer = ~sum;
     return answer;
 }
+
+std::list<std::string> network_utils::get_extended_bss_ifaces(const std::string &bss_iface,
+                                                              const std::string &bridge_iface)
+{
+    if (bss_iface.empty()) {
+        LOG(ERROR) << "bss_iface is empty!";
+        return std::list<std::string>();
+    }
+    if (bridge_iface.empty()) {
+        LOG(ERROR) << "bridge_iface is empty!";
+        return std::list<std::string>();
+    }
+
+    auto ifaces_on_bridge = linux_get_iface_list_from_bridge(bridge_iface);
+
+    // Find all extended interfaces which starts with "bN_<bss_iface_name>".
+    // (e.g b0_wlan0.0, b1_wlan0.1 etc).
+    std::list<std::string> bss_extended_ifaces = {bss_iface};
+    for (const auto &iface : ifaces_on_bridge) {
+        auto char_pos = iface.rfind(bss_iface);
+        if (char_pos == std::string::npos) {
+            continue;
+        }
+        if (char_pos == 0) {
+            continue;
+        }
+        if (iface.at(char_pos - 1) == '_') {
+            bss_extended_ifaces.push_back(iface);
+        }
+    }
+    return bss_extended_ifaces;
+}
