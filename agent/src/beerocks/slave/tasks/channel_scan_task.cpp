@@ -1053,70 +1053,49 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
 std::shared_ptr<ChannelScanTask::StoredResultsVector>
 ChannelScanTask::get_scan_results_for_request(const std::shared_ptr<sScanRequest> request)
 {
-    auto results = std::make_shared<StoredResultsVector>();
-    using results_map =
-        std::unordered_map<uint8_t, std::pair<std::chrono::system_clock::time_point,
-                                              std::vector<beerocks_message::sChannelScanResults>>>;
-    auto add_fresh_scan_results =
-        [results](std::shared_ptr<beerocks::ChannelScanTask::sRadioScan> radio_scan,
-                  const results_map &stored_scan_results_map,
-                  const std::chrono::system_clock::time_point &scan_start_timestamp) {
-            /**
-             * A fresh scan is requested with classes and a channel list.
-             * Return the results that have a matching timestamp only.
-             */
-            for (const auto &class_iter : radio_scan->operating_classes) {
-                const uint8_t operating_class = class_iter.operating_class;
-                for (const uint8_t channel : class_iter.channel_list) {
-                    /**
-                     * Check if channel has any stored results
-                     * It is possible that a channel has no neighbors
-                     */
-                    const auto &stored_scan_results_iter = stored_scan_results_map.find(channel);
-                    if (stored_scan_results_iter == stored_scan_results_map.end()) {
-                        LOG(TRACE) << "There are no stored results for channel #" << channel
-                                   << " on radio " << radio_scan->radio_mac;
-                        continue;
-                    }
-                    const auto &stored_scan_results_pair = stored_scan_results_iter->second;
-                    /**
-                     * Check if stored results are from the current request
-                     * Old results are disregarded.
-                     */
-                    if (stored_scan_results_pair.first != scan_start_timestamp) {
-                        LOG(TRACE) << "The results stored for channel #" << channel
-                                   << " are not part of the current scan.";
-                        continue;
-                    }
-                    results->push_back(sStoredScanResults(
-                        radio_scan->radio_mac, operating_class, channel, radio_scan->scan_status,
-                        stored_scan_results_pair.first, stored_scan_results_pair.second));
-                }
+    auto final_results = std::make_shared<StoredResultsVector>();
+    using ScanResults  = std::pair<std::chrono::system_clock::time_point,
+                                  std::vector<beerocks_message::sChannelScanResults>>;
+    using ResultsMap   = std::unordered_map<uint8_t, ScanResults>;
+    // Add found results to final results
+    auto add_scan_result =
+        [&final_results](bool fresh_scan_requested, const sMacAddr &ruid,
+                         const uint8_t operating_class, const uint8_t channel,
+                         const wfa_map::tlvProfile2ChannelScanResult::eScanStatus status,
+                         const std::chrono::system_clock::time_point &request_timestamp,
+                         const std::chrono::system_clock::time_point &results_timestamp =
+                             std::chrono::system_clock::time_point::min(),
+                         const std::vector<beerocks_message::sChannelScanResults> &results =
+                             std::vector<beerocks_message::sChannelScanResults>()) {
+            // If a fresh scan was requested, return only "fresh" results.
+            // Otherwise all results need to be returned
+            if (!fresh_scan_requested ||
+                (results_timestamp == request_timestamp ||
+                 results_timestamp == std::chrono::system_clock::time_point::min())) {
+                final_results->emplace_back(ruid, operating_class, channel, status,
+                                            results_timestamp, results);
             }
         };
 
-    auto add_stored_results =
-        [results](std::shared_ptr<beerocks::ChannelScanTask::sRadioScan> radio_scan,
-                  const results_map &stored_scan_results_map,
-                  const beerocks::eWiFiBandwidth &bandwidth) {
-            /**
-             * The given scan request requested to returned all stored results
-             */
-            for (const auto &stored_scan_results_item : stored_scan_results_map) {
-                /**
-                 *  The scanned neighbors lists are stored in a map of
-                 *      Key: channel number
-                 *      Value: result pair
-                 *          First: Timestamp of associated request
-                 *          Second: vector of Stored Neighbors
-                 */
-                const auto channel         = stored_scan_results_item.first;
-                const auto operating_class = son::wireless_utils::get_operating_class_by_channel(
-                    beerocks::message::sWifiChannel(channel, bandwidth));
-                const auto &stored_scan_results_pair = stored_scan_results_item.second;
-                results->push_back(sStoredScanResults(
-                    radio_scan->radio_mac, operating_class, channel, radio_scan->scan_status,
-                    stored_scan_results_pair.first, stored_scan_results_pair.second));
+    auto get_results_for_channel_list =
+        [&add_scan_result](bool fresh_scan_requested, const sMacAddr &ruid,
+                           const uint8_t operating_class,
+                           const wfa_map::tlvProfile2ChannelScanResult::eScanStatus status,
+                           const std::chrono::system_clock::time_point &scan_start_timestamp,
+                           const std::vector<uint8_t> &channel_list, const ResultsMap &results) {
+            // If channel list present, iterate over requested channels only
+            for (uint8_t channel : channel_list) {
+                if (results.find(channel) == results.end()) {
+                    LOG(DEBUG) << "No results found for channel " << channel
+                               << ", adding blank results";
+                    add_scan_result(fresh_scan_requested, ruid, operating_class, channel, status,
+                                    scan_start_timestamp);
+                } else {
+                    auto channel_results = results.at(channel);
+                    add_scan_result(fresh_scan_requested, ruid, operating_class, channel, status,
+                                    scan_start_timestamp, channel_results.first,
+                                    channel_results.second);
+                }
             }
         };
 
@@ -1132,15 +1111,18 @@ ChannelScanTask::get_scan_results_for_request(const std::shared_ptr<sScanRequest
             continue;
         }
         const auto &stored_scan_results_map = radio->channel_scan_results;
-
-        if (request_info->perform_fresh_scan ==
+        const bool fresh_scan_requested =
+            request_info->perform_fresh_scan ==
             wfa_map::tlvProfile2ChannelScanRequest::ePerformFreshScan::
-                PERFORM_A_FRESH_SCAN_AND_RETURN_RESULTS) {
-            add_fresh_scan_results(radio_scan_iter.second, stored_scan_results_map,
-                                   request->scan_start_timestamp);
-        } else {
-            add_stored_results(radio_scan_iter.second, stored_scan_results_map, radio->bandwidth);
+                PERFORM_A_FRESH_SCAN_AND_RETURN_RESULTS;
+        const auto &radio_scan_element = radio_scan_iter.second;
+        for (const auto &operating_class_iter : radio_scan_element->operating_classes) {
+            get_results_for_channel_list(
+                fresh_scan_requested, radio_scan_element->radio_mac,
+                operating_class_iter.operating_class, radio_scan_element->scan_status,
+                request->scan_start_timestamp, operating_class_iter.channel_list,
+                stored_scan_results_map);
         }
     }
-    return results;
+    return final_results;
 }
