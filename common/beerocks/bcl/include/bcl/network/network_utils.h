@@ -184,6 +184,21 @@ public:
 
     static bool icmp_send(const std::string &ip, uint16_t id, int count, int icmp_socket);
     static uint16_t icmp_checksum(uint16_t *buf, int32_t len);
+
+    /**
+     * @brief Get the extended bss interfaces.
+     * 
+     * @details When defining a bBSS which with the parameter 'max_num_sta' > 1 , the Hostapd on
+     * MaxLinear platforms, will create new interfaces, which for each one of them only one bSTA
+     * could connect. This function returns a list of the base BSS interface name and all of its
+     * extended interfaces.
+     * 
+     * @param bss_iface BSS interface name.
+     * @param bridge_iface Bridge interface name.
+     * @return List of the base BSS interface name and all of its extended interfaces.
+     */
+    static std::list<std::string> get_extended_bss_ifaces(const std::string &bss_iface,
+                                                          const std::string &bridge_iface);
 };
 } // namespace net
 } // namespace beerocks
