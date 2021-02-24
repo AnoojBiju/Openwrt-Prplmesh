@@ -40,6 +40,7 @@ ARG PACKAGES_FOR_TEST="\
     clang-format \
     iperf3 \
     gcovr \
+    python3-pytest \
     "
 
 ARG PACKAGES_FOR_RUN="\
