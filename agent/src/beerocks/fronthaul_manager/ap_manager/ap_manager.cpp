@@ -102,7 +102,8 @@ static void copy_vaps_info(std::shared_ptr<bwl::ap_wlan_hal> &ap_wlan_hal,
         beerocks::string_utils::copy_string(vaps[i].ssid, curr_vap.ssid.c_str(),
                                             beerocks::message::WIFI_SSID_MAX_LENGTH);
 
-        vaps[i].backhaul_vap = curr_vap.backhaul;
+        vaps[i].fronthaul_vap = curr_vap.fronthaul;
+        vaps[i].backhaul_vap  = curr_vap.backhaul;
         vaps[i].profile1_backhaul_sta_association_disallowed =
             curr_vap.profile1_backhaul_sta_association_disallowed;
         vaps[i].profile1_backhaul_sta_association_disallowed =

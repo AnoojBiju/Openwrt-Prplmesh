@@ -219,7 +219,7 @@ public:
                 sMacAddr mac;
                 std::string ssid;
                 bool fronthaul_bss;
-                bool backhual_bss;
+                bool backhaul_bss;
                 bool backhaul_bss_disallow_profile1_agent_association;
                 bool backhaul_bss_disallow_profile2_agent_association;
             };
