@@ -97,6 +97,26 @@ private:
      */
     static void set_vlan_policy(const std::string &iface, ePortMode port_mode, bool is_bridge,
                                 uint16_t untagged_port_vid = 0);
+
+    /**
+     * @brief Reconfigure DHCP server with list of interfaces.
+     * 
+     * @details This function should be used only on the GW.
+     * 
+     * @param vlans_of_bridge List of VLANs of the bridge information. 
+     * @return true on success, false otherwise.
+     */
+    static bool reconf_dhcp(std::list<sBridgeVlanInfo> &vlans_of_bridge);
+
+    /**
+     * @brief Send DHCP request on each VLAN of the bridge and assing the responsed IP to the VLAN
+     * interface.
+     * 
+     * @details This function should be used only on the Repeater.
+     * 
+     * @param vlans_of_bridge List of VLANs of the bridge information. 
+     */
+    static void assign_ip_to_vlan_iface(const std::list<sBridgeVlanInfo> &vlans_of_bridge);
 };
 } // namespace net
 } // namespace beerocks

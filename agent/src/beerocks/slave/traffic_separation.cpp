@@ -307,5 +307,74 @@ void TrafficSeparation::set_vlan_policy(const std::string &iface, ePortMode port
     }
 }
 
+bool TrafficSeparation::reconf_dhcp(std::list<sBridgeVlanInfo> &vlans_of_bridge)
+{
+    constexpr char base_cmd[]            = "/etc/init.d/dnsmasq ";
+    constexpr char pid_file_path[]       = "/var/run/dnsmasq/";
+    constexpr char pid_file_name[]       = "dnsmasq.cfg01411c.pid";
+    constexpr char conf_file_full_path[] = "/var/etc/dnsmasq.conf.cfg01411c";
+
+    // Kill the the running DHCP server (dnsmasq).
+    // Doing it with kill function instead of "/etc/init.d/dnsmasq stop" since it would fail to stop
+    // dnsmasq which was not brought up by "/etc/init.d/dnsmasq start".
+    // If the running dnsmasq has been brought up by prplMesh only kill command can stop it.
+    beerocks::os_utils::kill_pid(pid_file_path, pid_file_name);
+
+    std::string cmd;
+    // Reserve 100 bytes for appended data to prevent reallocations.
+    cmd.reserve(100);
+
+    // When restarting dnsmasq it restore the configuration to default.
+    cmd.assign(base_cmd).append("restart");
+    os_utils::system_call(cmd, false);
+
+    // Stop dnsmasq, since we need to run it manually because it needs to use the configuration
+    // file with modifications. If we would run it with "/etc/init.d/dnsmasq start" it will discard
+    // any changes we did to the configuration file.
+    cmd.assign(base_cmd).append("stop");
+    os_utils::system_call(cmd, false);
+
+    // Add interfaces to lease IP addresses on, in the DHCP configuration file.
+    std::ofstream outfile;
+    outfile.open(conf_file_full_path, std::ios_base::app); // open in append mode
+    if (outfile.fail()) {
+        LOG(ERROR) << "Failed to open file " << conf_file_full_path << ": " << std::strerror(errno);
+        return false;
+    }
+
+    for (auto &vlan_info : vlans_of_bridge) {
+        // Configuration looks like:
+        // dhcp-range=interface:<iface_name>,<min IP>,<max IP>,<subnetmask>,12h
+        vlan_info.subnet_ipv4.oct[3] = 100;
+        auto min_ip                  = network_utils::ipv4_to_string(vlan_info.subnet_ipv4);
+        vlan_info.subnet_ipv4.oct[3] = 200;
+        auto max_ip                  = network_utils::ipv4_to_string(vlan_info.subnet_ipv4);
+        outfile << "dhcp-range=interface:" << vlan_info.iface_name << "," << min_ip << "," << max_ip
+                << "," << vlan_info.subnetmask << ",12h" << std::endl;
+    }
+    outfile.close();
+
+    // Create cmd string to run manually DHCP server.
+    cmd.assign("/usr/sbin/dnsmasq -C ")
+        .append(conf_file_full_path)
+        .append(" -k -x ")
+        .append(pid_file_path)
+        .append(pid_file_name);
+
+    // Run DHCP server manually.
+    os_utils::system_call(cmd, true);
+    return true;
+}
+
+void TrafficSeparation::assign_ip_to_vlan_iface(const std::list<sBridgeVlanInfo> &vlans_of_bridge)
+{
+    std::string cmd;
+    // Reserve 40 bytes for appended data to prevent reallocations.
+    cmd.reserve(40);
+    for (auto &vlan_info : vlans_of_bridge) {
+        cmd.assign("udhcpc -i ").append(vlan_info.iface_name).append(" -f -S -q -n");
+        os_utils::system_call(cmd, false);
+    }
+}
 } // namespace net
 } // namespace beerocks
