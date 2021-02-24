@@ -109,7 +109,7 @@
         "deauth",
         "reassoc",
         "ambiorix",
-        "backhual",
+        "backhaul",
         "fronthaul"
     ],
     "git.alwaysSignOff": true,

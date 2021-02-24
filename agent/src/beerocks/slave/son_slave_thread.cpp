@@ -1176,7 +1176,7 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
 
             // Already sent join_master request, mark as reconfiguration
             if (slave_state >= STATE_WAIT_FOR_JOINED_RESPONSE && slave_state <= STATE_OPERATIONAL)
-                is_backhual_reconf = true;
+                is_backhaul_reconf = true;
 
             is_backhaul_manager = (bool)notification->params().is_backhaul_manager;
             LOG_IF(is_backhaul_manager, DEBUG) << "Selected as backhaul manager";
@@ -2018,7 +2018,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             bss.mac           = notification_in->params().vaps[vap_idx].mac;
             bss.ssid          = notification_in->params().vaps[vap_idx].ssid;
             bss.fronthaul_bss = notification_in->params().vaps[vap_idx].fronthaul_vap;
-            bss.backhual_bss  = notification_in->params().vaps[vap_idx].backhaul_vap;
+            bss.backhaul_bss  = notification_in->params().vaps[vap_idx].backhaul_vap;
             bss.backhaul_bss_disallow_profile1_agent_association =
                 notification_in->params()
                     .vaps[vap_idx]
@@ -2030,7 +2030,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
 
             if (notification_in->params().vaps[vap_idx].mac != network_utils::ZERO_MAC) {
                 LOG(DEBUG) << "BSS " << bss.mac << ", ssid:" << bss.ssid
-                           << ", fBSS: " << bss.fronthaul_bss << ", bBSS: " << bss.backhual_bss
+                           << ", fBSS: " << bss.fronthaul_bss << ", bBSS: " << bss.backhaul_bss
                            << ", p1_dis: " << bss.backhaul_bss_disallow_profile1_agent_association
                            << ", p2_dis: " << bss.backhaul_bss_disallow_profile2_agent_association;
             }
@@ -3967,8 +3967,8 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
                 return false;
             }
 
-            notification->is_slave_reconf() = is_backhual_reconf;
-            is_backhual_reconf              = false;
+            notification->is_slave_reconf() = is_backhaul_reconf;
+            is_backhaul_reconf              = false;
 
             // Version
             string_utils::copy_string(notification->slave_version(message::VERSION_LENGTH),
@@ -4614,11 +4614,11 @@ bool slave_thread::handle_profile2_traffic_separation_policy_tlv(
         // old configuration from previous configurations messages.
         db->traffic_separation.ssid_vid_mapping = tmp_ssid_vid_mapping;
 
-        // Fill secondaries VLANs IDs to the database.
+        // Fill secondary VLANs IDs to the database.
         for (const auto &ssid_vid_pair : db->traffic_separation.ssid_vid_mapping) {
             auto vlan_id = ssid_vid_pair.second;
             if (vlan_id != db->traffic_separation.primary_vlan_id) {
-                db->traffic_separation.secondaries_vlans_ids.insert(vlan_id);
+                db->traffic_separation.secondary_vlans_ids.insert(vlan_id);
             }
         }
     }
@@ -4823,7 +4823,7 @@ bool slave_thread::handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMess
             config.bss_type = WSC::eWscVendorExtSubelementBssType::TEARDOWN;
 
         } else if (bBSS && !bBSS_p1_disallowed && !bBSS_p2_disallowed &&
-                   db->traffic_separation.secondaries_vlans_ids.size() > 0) {
+                   db->traffic_separation.secondary_vlans_ids.size() > 0) {
             LOG(WARNING) << "Controller configured Backhaul BSS for combined Profile1 and "
                          << "Profile2, but it is not supproted!";
             bss_errors.push_back(

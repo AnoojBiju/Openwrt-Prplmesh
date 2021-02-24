@@ -20,7 +20,7 @@ void TrafficSeparation::traffic_seperation_configuration_clear()
     auto db = AgentDB::get();
 
     db->traffic_separation.primary_vlan_id = 0;
-    db->traffic_separation.secondaries_vlans_ids.clear();
+    db->traffic_separation.secondary_vlans_ids.clear();
     db->traffic_separation.ssid_vid_mapping.clear();
     network_utils::set_vlan_filtering(db->bridge.iface_name, 0);
 }
@@ -94,7 +94,7 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
         }
 
         LOG(DEBUG) << "BSS " << bss.mac << ", ssid:" << bss.ssid << ", fBSS: " << bss.fronthaul_bss
-                   << ", bBSS: " << bss.backhual_bss
+                   << ", bBSS: " << bss.backhaul_bss
                    << ", p1_dis: " << bss.backhaul_bss_disallow_profile1_agent_association
                    << ", p2_dis: " << bss.backhaul_bss_disallow_profile2_agent_association;
 
@@ -106,7 +106,7 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
         }
 
         // fBSS
-        if (bss.fronthaul_bss && !bss.backhual_bss) {
+        if (bss.fronthaul_bss && !bss.backhaul_bss) {
             auto ssid_vlan_pair_iter = db->traffic_separation.ssid_vid_mapping.find(bss.ssid);
             if (ssid_vlan_pair_iter == db->traffic_separation.ssid_vid_mapping.end()) {
                 LOG(ERROR) << "SSID not found on SSID VID map";
@@ -116,7 +116,7 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
             set_vlan_policy(bss_iface, UNTAGGED_PORT, is_bridge, vid_to_set);
         }
         // bBSS
-        else if (!bss.fronthaul_bss && bss.backhual_bss) {
+        else if (!bss.fronthaul_bss && bss.backhaul_bss) {
             if (bss.backhaul_bss_disallow_profile1_agent_association ==
                 bss.backhaul_bss_disallow_profile2_agent_association) {
                 LOG(WARNING) << "bBSS invalid configuration - "
@@ -133,7 +133,7 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
                 if (bss.backhaul_bss_disallow_profile1_agent_association) {
                     set_vlan_policy(bss_extended_iface, TAGGED_PORT_PRIMARY_UNTAGGED, is_bridge);
                 }
-                // Profile-1 Backhual BSS
+                // Profile-1 backhaul BSS
                 else {
                     set_vlan_policy(bss_extended_iface, UNTAGGED_PORT, is_bridge,
                                     db->traffic_separation.primary_vlan_id);
@@ -221,7 +221,7 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
     static const std::unordered_map<int8_t, std::string> subnetmasks = {
         {0, "255.0.0.0"}, {1, "255.255.0.0"}, {2, "255.255.255.0"}};
 
-    for (auto secondary_vid : db->traffic_separation.secondaries_vlans_ids) {
+    for (auto secondary_vid : db->traffic_separation.secondary_vlans_ids) {
         auto vlan_iface_of_bridge =
             network_utils::create_vlan_interface(db->bridge.iface_name, secondary_vid);
 
@@ -299,7 +299,7 @@ void TrafficSeparation::set_vlan_policy(const std::string &iface, ePortMode port
         // Add secondary VIDs.
         pvid     = false;
         untagged = false;
-        for (const auto sec_vid : db->traffic_separation.secondaries_vlans_ids) {
+        for (const auto sec_vid : db->traffic_separation.secondary_vlans_ids) {
             network_utils::set_iface_vid_policy(iface, del, sec_vid, is_bridge, pvid, untagged);
         }
     }

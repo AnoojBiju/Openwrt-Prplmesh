@@ -494,7 +494,7 @@ bool sta_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std
         // Since prplwrt does not include the changes on the wpa_supplicant which add the Multi-AP
         // Profile to the association response, do not fail if it does not exist, and put default
         // value of profile-1.
-        // TODO: When the changes will be ported to prplwrt, need to treas the "Multi-AP Profile"
+        // TODO: When the changes will be ported to prplwrt, need to treat the "Multi-AP Profile"
         // parameter as mandatory.
 
         // Multi-AP Profile
