@@ -27,6 +27,11 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
     if (db->traffic_separation.primary_vlan_id == 0) {
         return;
     }
+
+    // The Bridge, the WAN ports and the LAN ports should all have "Tagged Port" policy.
+    // Update the Bridge Policy
+    bool is_bridge = true;
+    set_vlan_policy(db->bridge.iface_name, TAGGED_PORT_PRIMARY_UNTAGGED, is_bridge);
 }
 
 void TrafficSeparation::set_vlan_policy(const std::string &iface, ePortMode port_mode,
