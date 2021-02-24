@@ -169,6 +169,12 @@ clang-format:
     paths:
       - build/install
 
+pytest:
+  extends: .build-in-docker
+  script:
+    - cd tools
+    - pytest-3
+
 build-in-docker:
   extends: .build-in-docker
   variables:
