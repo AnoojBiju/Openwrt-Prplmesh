@@ -176,6 +176,7 @@ public:
         enum class eConnectionType { Invalid = 0, Wired, Wireless } connection_type;
         std::string selected_iface_name;
         sMacAddr preferred_bssid;
+        uint8_t bssid_multi_ap_profile;
     } backhaul;
 
     struct {
