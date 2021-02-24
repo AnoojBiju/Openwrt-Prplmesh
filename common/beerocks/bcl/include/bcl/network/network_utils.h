@@ -223,6 +223,21 @@ public:
      * @return true on success, false otherwise.
      */
     static bool set_vlan_filtering(const std::string &bridge_iface, uint16_t default_vlan_id);
+
+    /**
+     * @brief Set a specific @a VID policy on a bridged interface - @a 'iface'.
+     * 
+     * @param iface Bridged interface to set the VLAN ID policy on.
+     * @param del If true, remove the VLAN ID policy from the given interface. Also, optional
+     * arguments are irrelevant in that case.
+     * @param vid VLAN ID to set/remove, if the given value is '0' apply for all possible VIDs.
+     * @param is_bridge Whether the given interface is a bridge interface or not. 
+     * @param pvid If true, apply PVID policy on the given @a VID.
+     * @param untagged If true, apply Egress Untagged policy on the given @a VID. 
+     * @return true on success, false otherwise.
+     */
+    static bool set_iface_vid_policy(const std::string &iface, bool del, uint16_t vid,
+                                     bool is_bridge, bool pvid = false, bool untagged = false);
 };
 } // namespace net
 } // namespace beerocks
