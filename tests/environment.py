@@ -928,11 +928,13 @@ class VirtualAPHostapd(VirtualAP):
         # We are looking for SSID definition
         # ssid Multi-AP-24G-1
         # type AP
-        regex = "ssid (?P<ssid>.*)\r\n\ttype AP\r\n\t"
+        regex = r"addr ..:..:..:..:..:..\r\n\t(ssid (?P<ssid>.*)\r\n\t)?type AP\r\n\t"
 
         output = self.radio.agent.command(command)
         match = re.search(regex, output)
-        return match.group('ssid')
+
+        ssid = match.group('ssid')
+        return 'N/A' if ssid is None else ssid
 
     def get_psk(self) -> str:
         """Get SSIDs personal key set during last autoconfiguration. Return string"""
