@@ -44,6 +44,30 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
     for (const auto &lan_iface_info : db->ethernet.lan) {
         set_vlan_policy(lan_iface_info.iface_name, TAGGED_PORT_PRIMARY_UNTAGGED, is_bridge);
     }
+
+    // Wireless Backhaul
+    if (!db->device_conf.local_gw && !db->backhaul.selected_iface_name.empty() &&
+        db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wireless) {
+
+        auto radio = db->radio(db->backhaul.selected_iface_name);
+        if (!radio) {
+            LOG(ERROR) << "Could not find Backhaul Radio interface!";
+            return;
+        }
+        if (db->backhaul.bssid_multi_ap_profile > 1) {
+            set_vlan_policy(radio->back.iface_name, TAGGED_PORT_PRIMARY_TAGGED, is_bridge);
+        } else {
+            set_vlan_policy(radio->back.iface_name, UNTAGGED_PORT, is_bridge);
+        }
+    }
+
+    // If radio interface has not been given, then stop configuring the VLAN policy after finished
+    // to configure the bridge, ethernet ports and wireless backhaul interface.
+    // This should happen whenever the backhaul connects, and we need to update the Primary VLAN
+    // of the platform so we would be able to get messages from the Controller.
+    if (radio_iface.empty()) {
+        return;
+    }
 }
 
 void TrafficSeparation::set_vlan_policy(const std::string &iface, ePortMode port_mode,
