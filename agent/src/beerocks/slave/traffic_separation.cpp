@@ -14,6 +14,42 @@
 namespace beerocks {
 namespace net {
 
+void TrafficSeparation::traffic_seperation_configuration_clear()
+{
+    LOG(DEBUG) << "Clearing traffic separation policy!";
+
+    auto db = AgentDB::get();
+
+    for (auto &radio : db->get_radios_list()) {
+        for (uint8_t bss_id = 0; bss_id < radio->front.bssids.size(); bss_id++) {
+            auto &bss      = radio->front.bssids[bss_id];
+            auto &ssid_map = db->traffic_separation.ssid_vid_mapping;
+            auto found_it  = ssid_map.find(bss.ssid);
+            if (found_it == ssid_map.end()) {
+                continue;
+            }
+
+            // TODO: Save the bss iface name on the database instead of using bss ID.
+            auto bss_iface_name =
+                utils::get_iface_string_from_iface_vap_ids(radio->front.iface_name, bss_id);
+            auto vid = found_it->second;
+
+            // Remove VLAN packet filter.
+            network_utils::set_vlan_packet_filter(false, bss_iface_name, vid);
+        }
+    }
+
+    for (auto &eth_port : db->ethernet.lan) {
+        network_utils::set_vlan_packet_filter(false, eth_port.iface_name);
+    }
+    network_utils::set_vlan_packet_filter(false, db->ethernet.wan.iface_name);
+
+    db->traffic_separation.primary_vlan_id = 0;
+    db->traffic_separation.secondaries_vlans_ids.clear();
+    db->traffic_separation.ssid_vid_mapping.clear();
+    network_utils::set_vlan_filtering(db->bridge.iface_name, 0);
+}
+
 void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
 {
     // Since the following call is locking the database, thread safety is promised on this function.

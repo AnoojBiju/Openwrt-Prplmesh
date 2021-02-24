@@ -70,6 +70,12 @@ public:
      */
     static void apply_traffic_separation(const std::string &radio_iface = {});
 
+    /**
+     * @brief Clear the traffic separation configuration from the Agent and the platform.
+     * 
+     */
+    static void traffic_seperation_configuration_clear();
+
 private:
     enum ePortMode { UNTAGGED_PORT, TAGGED_PORT_PRIMARY_UNTAGGED, TAGGED_PORT_PRIMARY_TAGGED };
 
