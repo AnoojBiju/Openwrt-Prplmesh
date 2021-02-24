@@ -57,6 +57,10 @@
 #include <tlvf/wfa_map/tlvSteeringRequest.h>
 #include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
 
+#include "gate/1905_beacon_query_to_vs.h"
+#include "gate/vs_beacon_response_to_1905.h"
+#include "traffic_separation.h"
+
 // BPL Error Codes
 #include <bpl/bpl_cfg.h>
 #include <bpl/bpl_err.h>
@@ -2099,9 +2103,12 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
                     .profile2_backhaul_sta_association_disallowed;
         }
 
+        LOG(DEBUG) << "Apply_traffic_separation";
+        TrafficSeparation::apply_traffic_separation(m_fronthaul_iface);
+
         auto notification_out = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION>(cmdu_tx);
-        if (notification_out == nullptr) {
+        if (!notification_out) {
             LOG(ERROR) << "Failed building message!";
             return false;
         }
@@ -4766,16 +4773,6 @@ bool slave_thread::handle_profile2_traffic_separation_policy_tlv(
                 db->traffic_separation.secondaries_vlans_ids.insert(vlan_id);
             }
         }
-
-        // TODO:
-        // - Add Bridge VLAN to each secondary VLAN ID.
-        // - Add the Secondary VLAN ID to the bridge (not pvid and tagged mode).
-        // - On repeater/extender
-        //   1. Add to bSTA interfaces the secondary VLAN ID (not pvid and tagged mode)
-        //   2. Add to the backhaul wire interface the secondary VLAN ID (not pvid and tagged mode).
-        if (!db->device_conf.local_gw) {
-            // TODO
-        }
     }
 
     if (db->traffic_separation.ssid_vid_mapping.size() >
@@ -5205,7 +5202,11 @@ bool slave_thread::handle_multi_ap_policy_config_request(Socket *sd,
 
     if (bss_errors.size()) {
         send_error_response(bss_errors);
+        return false;
     }
+
+    LOG(DEBUG) << "Apply_traffic_separation";
+    TrafficSeparation::apply_traffic_separation(m_fronthaul_iface);
 
     return true;
 }
