@@ -39,8 +39,12 @@ enum eDHCPOp: uint8_t {
 typedef struct sVapInfo {
     sMacAddr mac;
     char ssid[beerocks::message::WIFI_SSID_MAX_LENGTH];
+    uint8_t fronthaul_vap;
+    //boolean
     uint8_t backhaul_vap;
+    //boolean
     uint8_t profile1_backhaul_sta_association_disallowed;
+    //boolean
     uint8_t profile2_backhaul_sta_association_disallowed;
     void struct_swap(){
         mac.struct_swap();
