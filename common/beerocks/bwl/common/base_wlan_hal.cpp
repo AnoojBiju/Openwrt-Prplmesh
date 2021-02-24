@@ -80,12 +80,11 @@ base_wlan_hal::create_mgmt_frame_notification(const char *mgmt_frame_hex)
         return nullptr; // Just a warning, do not fail
     }
 
-    // Convert the frame data from hex string to vector
-    mgmt_frame->data = beerocks::string_utils::hex_to_bytes<decltype(mgmt_frame->data)>(hex_data);
+    // Convert the frame data from hex string to a vector (of mgmt_frame->data type)
+    auto raw_frame = beerocks::string_utils::hex_to_bytes<decltype(mgmt_frame->data)>(hex_data);
 
     // Check the type of the received event
-    s80211MgmtFrame *mgmt_frame_header =
-        reinterpret_cast<s80211MgmtFrame *>(mgmt_frame->data.data());
+    s80211MgmtFrame *mgmt_frame_header = reinterpret_cast<s80211MgmtFrame *>(raw_frame.data());
 
     // Ignore non-management frames
     if (mgmt_frame_header->header.frame_control.bits.type != 0) {
@@ -110,7 +109,7 @@ base_wlan_hal::create_mgmt_frame_notification(const char *mgmt_frame_hex)
     case s80211MgmtFrame::eType::ACTION: {
         // Re-validate the size of the data to make sure it also contains the
         // action frame header
-        if (mgmt_frame->data.size() <
+        if (raw_frame.size() <
             sizeof(s80211MgmtFrame::sHeader) + sizeof(s80211MgmtFrame::uBody::sAction)) {
             LOG(WARNING) << "Action frame too small: " << mgmt_frame->data.size();
             return nullptr;
@@ -146,6 +145,10 @@ base_wlan_hal::create_mgmt_frame_notification(const char *mgmt_frame_hex)
         return nullptr;
     }
     }
+
+    // Copy the frame body (omitting control and header)
+    mgmt_frame->data.insert(mgmt_frame->data.begin(),
+                            raw_frame.begin() + sizeof(s80211MgmtFrame::sHeader), raw_frame.end());
 
     return mgmt_frame;
 }
