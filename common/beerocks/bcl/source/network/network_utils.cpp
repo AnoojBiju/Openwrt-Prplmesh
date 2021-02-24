@@ -1278,3 +1278,30 @@ std::string network_utils::create_vlan_interface(const std::string &iface, uint1
     beerocks::os_utils::system_call(cmd, 2, false);
     return new_iface_name;
 }
+
+bool network_utils::set_vlan_filtering(const std::string &bridge_iface, uint16_t default_vlan_id)
+{
+    if (bridge_iface.empty()) {
+        LOG(ERROR) << "Given bridge interface name is empty!";
+        return false;
+    }
+
+    std::string cmd;
+    // Reserve 100 bytes for appended data to prevent reallocations.
+    cmd.reserve(100);
+
+    cmd.assign("ip link set ");
+
+    cmd.append(bridge_iface).append(" type bridge vlan_filtering ");
+
+    if (default_vlan_id == 0) {
+        cmd.append("0 ");
+        beerocks::os_utils::system_call(cmd, 2, true);
+        return true;
+    }
+    cmd.append("1 ");
+
+    cmd.append("vlan_default_pvid ").append(std::to_string(default_vlan_id));
+    beerocks::os_utils::system_call(cmd, 2, true);
+    return true;
+}

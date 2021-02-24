@@ -212,6 +212,15 @@ public:
      */
     static std::string create_vlan_interface(const std::string &iface, uint16_t vid);
 
+    /**
+     * @brief Enable or disable "vlan_filtering" on the bridge.
+     * 
+     * @param default_vlan_id If 'default_vlan_id is not zero, turn on vlan_filtering and set the
+     * given value as the default VLAN which will be set on all interfaces in the bridge as 
+     * "PVID and Egress Untagged".
+     * @return true on success, false otherwise.
+     */
+    static bool set_vlan_filtering(const std::string &bridge_iface, uint16_t default_vlan_id);
 };
 } // namespace net
 } // namespace beerocks
