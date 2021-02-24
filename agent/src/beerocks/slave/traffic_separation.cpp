@@ -13,6 +13,18 @@
 namespace beerocks {
 namespace net {
 
+void TrafficSeparation::traffic_seperation_configuration_clear()
+{
+    LOG(DEBUG) << "Clearing traffic sparation policy!";
+
+    auto db = AgentDB::get();
+
+    db->traffic_separation.primary_vlan_id = 0;
+    db->traffic_separation.secondaries_vlans_ids.clear();
+    db->traffic_separation.ssid_vid_mapping.clear();
+    network_utils::set_vlan_filtering(db->bridge.iface_name, 0);
+}
+
 void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
 {
     // Since the following call is locking the database, thread safety is promised on this function.
