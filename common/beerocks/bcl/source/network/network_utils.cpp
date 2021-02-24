@@ -504,6 +504,29 @@ std::string network_utils::get_mac_from_arp_table(const std::string &ipv4)
     return std::string();
 }
 
+std::list<std::string> network_utils::linux_get_iface_list()
+{
+    std::list<std::string> ifaces;
+
+    std::string path = "/sys/class/net/";
+
+    DIR *d;
+    struct dirent *dir;
+    d = opendir(path.c_str());
+    if (!d) {
+        return ifaces;
+    }
+    while ((dir = readdir(d)) != NULL) {
+        std::string ifname = dir->d_name;
+        if (ifname == "." || ifname == "..") {
+            continue;
+        }
+        ifaces.push_back(ifname);
+    }
+    closedir(d);
+    return ifaces;
+}
+
 std::vector<std::string> network_utils::linux_get_iface_list_from_bridge(const std::string &bridge)
 {
     std::vector<std::string> ifs;
