@@ -34,20 +34,29 @@ class PrplMeshBase(linux.LinuxDevice):
         self.log += "$ " + entry + "\r\n" + res
 
     def check_status(self):
+        print("\n\nRunning check_status() on %s" % self.name)
+
+        self.sendline(
+            "\nexpr 12345679 \* 8"
+        )
+        self.expect_exact(
+            'expr 12345679 \* 8'
+        )
+        self.expect('98765432', timeout=5)
+        self.expect(self.prompt, timeout=5)
+
+        return True
+
+    def check_dev_get_info(self):
         """Method required by boardfarm.
 
         It is used by boardfarm to indicate that spawned device instance is ready for test
         and also after test - to insure that device still operational.
-
-        Currently always returns True.
         """
-        # TODO: enable actual check
 
-        # entity = self.get_active_entity()
+        entity = self.get_active_entity()
 
-        # entity.ucc_socket.cmd_reply("device_get_info")
-
-        return True
+        entity.ucc_socket.cmd_reply("device_get_info")
 
     def close(self):
         """Method required by boardfarm.

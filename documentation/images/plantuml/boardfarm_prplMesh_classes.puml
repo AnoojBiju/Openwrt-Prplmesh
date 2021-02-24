@@ -29,14 +29,14 @@ package prplMesh_devices <<Frame>> {
         IPv4Network wan_network
         IPv4Address wan_gateway
 
-        check_status()
+        check_dev_get_info()
     }
 
     class PrplMeshBase {
     }
 
     class PrplMeshDocker {
-        check_status()
+        check_dev_get_info()
         isalive()
     }
 
