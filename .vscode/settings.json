@@ -127,7 +127,14 @@
         "vaps",
         "vids",
         "wifi",
-        "zwdfs"
+        "stoul",
+        "dwpal",
+        "zwdfs",
+        "deauth",
+        "reassoc",
+        "ambiorix",
+        "backhaul",
+        "fronthaul"
     ],
     "git.alwaysSignOff": true,
     "python.pythonPath": "/usr/bin/python3"
