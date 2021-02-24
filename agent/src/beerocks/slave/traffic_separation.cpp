@@ -244,6 +244,12 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
             return;
         }
     }
+
+    if (db->device_conf.local_gw) {
+        reconf_dhcp(bridge_vlan_interfaces);
+    } else {
+        assign_ip_to_vlan_iface(bridge_vlan_interfaces);
+    }
 }
 
 void TrafficSeparation::set_vlan_policy(const std::string &iface, ePortMode port_mode,
