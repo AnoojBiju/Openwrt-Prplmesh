@@ -454,8 +454,7 @@ bool dynamic_channel_selection_r2_task::handle_scan_report_event(
 
     auto agent_it = m_agents_status_map.find(agent_mac);
     if (agent_it == m_agents_status_map.end()) {
-        LOG(WARNING) << "Unexpected scan report - agent_mac " << agent_mac
-                     << " not found in status container ";
+        // Ignore external scan reports - agent_mac not found in status container;
         return false;
     }
 
