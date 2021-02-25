@@ -341,13 +341,11 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
 
         // to support both certification flow and DCS old flow this code segment should be done on each
         // SCAN_FINISHED event for this src-mac
-        if (m_current_scan_info.radio_scan->radio_mac == src_mac) {
-            auto radio = db->get_radio_by_mac(src_mac);
-            if (!radio) {
-                return false;
-            }
-            radio->statuses.channel_scan_in_progress = false;
+        auto radio = db->get_radio_by_mac(src_mac);
+        if (!radio) {
+            return false;
         }
+        radio->statuses.channel_scan_in_progress = false;
 
         if (!is_current_scan_running() || !does_current_scan_match_incoming_src(src_mac) ||
             !is_current_scan_in_state(eState::WAIT_FOR_RESULTS_DUMP)) {
@@ -370,13 +368,11 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
 
         // to support both certification flow and DCS old flow this code segment should be done on each
         // SCAN_ABORTED event for this src-mac
-        if (m_current_scan_info.radio_scan->radio_mac == src_mac) {
-            auto radio = db->get_radio_by_mac(src_mac);
-            if (!radio) {
-                return false;
-            }
-            radio->statuses.channel_scan_in_progress = false;
+        auto radio = db->get_radio_by_mac(src_mac);
+        if (!radio) {
+            return false;
         }
+        radio->statuses.channel_scan_in_progress = false;
 
         if (!is_current_scan_running() || !does_current_scan_match_incoming_src(src_mac)) {
             return false;
