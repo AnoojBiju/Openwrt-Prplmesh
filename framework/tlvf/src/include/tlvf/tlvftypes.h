@@ -17,7 +17,7 @@
 namespace tlvf {
 /**
  * @brief convert integer to hexadecimal string
- * 
+ *
  * @param integer integer to convert
  * @param number_of_digits  represent how much digits the number should have, so the function will
  *                          pad the number with zeroes from left, if necessary.
@@ -28,7 +28,7 @@ std::string int_to_hex_string(const unsigned int integer, const uint8_t number_o
 
 /**
  * @brief Converts a mac address to a human-readable formatted string
- * 
+ *
  * @param mac_address mac address to convert (uint8_t array)
  * @return std::string of the format xx:xx:xx:xx:xx:xx
  */
@@ -36,32 +36,36 @@ std::string mac_to_string(const uint8_t *mac_address);
 
 /**
  * @brief Converts a mac address to a human-readable formatted string
- * 
+ *
  * @param mac_address mac address to convert (sMacAddr)
  * @return std::string of the format xx:xx:xx:xx:xx:xx
  */
 
 std::string mac_to_string(const sMacAddr &mac);
-/**
- * @brief Converts a mac address to a human-readable formatted string
- * 
- * @param mac_address mac address to convert (uint64_t)
- * @return std::string of the format xx:xx:xx:xx:xx:xx
- */
-
-std::string mac_to_string(const uint64_t mac);
 
 /**
- * @brief Concerts a string to binary mac address (6 bytes buffer)
- * 
+ * @brief Converts a string to a binary MAC address (6 bytes buffer)
+ *
+ * The string may be in one of the following formats (X is an upper or lower case hex digit):
+ * @li XX:XX:XX:XX:XX:XX
+ * @li 0xXXXXXXXXXX
+ * @li XXXXXXXXXX
+ * @li empty string (returns all-0 MAC address)
+ *
  * @param[OUT] buf output buffer (has to be 6 bytes long)
  * @param[IN] mac string to convert
+ * @return false if conversion failed - @a buf is reset to 0 in this case
  */
-void mac_from_string(uint8_t *buf, const std::string &mac);
+bool mac_from_string(uint8_t *buf, const std::string &mac);
 
 /**
  * @brief Converts a string representing a MAC address to sMacAddr
- * 
+ *
+ * The string may be in one of the following formats (X is an upper or lower case hex digit):
+ * @li XX:XX:XX:XX:XX:XX
+ * @li 0xXXXXXXXXXX
+ * @li XXXXXXXXXX
+ *
  * @param mac mac std::string to convert
  * @return sMacAddr converted mac address
  */
