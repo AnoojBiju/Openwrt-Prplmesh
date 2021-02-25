@@ -736,18 +736,22 @@ bool base_wlan_hal_dwpal::dwpal_nl_cmd_scan_dump()
     // Passing a lambda with capture is not supported for standard C function
     // pointers. As a workaround, we create a static (but thread local) wrapper
     // function that calls the capturing lambda function.
-    static __thread std::function<DWPAL_Ret(struct nl_msg * msg)> nl_handler_cb_wrapper;
-    nl_handler_cb_wrapper = [&](struct nl_msg *msg) -> DWPAL_Ret {
-        if (!process_dwpal_nl_event(msg)) {
+    static __thread std::function<DWPAL_Ret(struct nl_msg * msg, void *arg)> nl_handler_cb_wrapper;
+    nl_handler_cb_wrapper = [&](struct nl_msg *msg, void *arg) -> DWPAL_Ret {
+        if (!process_dwpal_nl_event(msg, arg)) {
             LOG(ERROR) << "User's netlink handler function failed!";
             return DWPAL_FAILURE;
         }
         return DWPAL_SUCCESS;
     };
-    auto nl_handler_cb = [](struct nl_msg *msg) -> DWPAL_Ret { return nl_handler_cb_wrapper(msg); };
+    auto nl_handler_cb = [](struct nl_msg *msg, void *arg) -> int {
+        return nl_handler_cb_wrapper(msg, arg);
+    };
 
-    if (dwpal_driver_nl_scan_dump(m_dwpal_nl_ctx, (char *)m_radio_info.iface_name.c_str(),
-                                  nl_handler_cb) != DWPAL_SUCCESS) {
+    int cmd_res = 0;
+    auto ret    = dwpal_driver_nl_scan_dump_sync(
+        m_dwpal_nl_ctx, (char *)m_radio_info.iface_name.c_str(), &cmd_res, nl_handler_cb, nullptr);
+    if (ret != DWPAL_SUCCESS && cmd_res != 0) {
         LOG(ERROR) << "dwpal_driver_nl_scan_dump Failed to request the nl scan dump";
         return false;
     }
