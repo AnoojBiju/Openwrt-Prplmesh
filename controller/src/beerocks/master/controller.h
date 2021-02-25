@@ -235,6 +235,16 @@ private:
                                        uint8_t authkey[32], uint8_t keywrapkey[16]);
 
     /**
+     * @brief Sends Tlv metric resporting policy within 'MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE'
+     *
+     * @param dst_mac Destination MAC address.
+     * @param ruid Radio ID.
+     * @param cmdu_tx CMDU to be transmitted.
+     * @return True on success, false otherwise.
+    */
+    bool send_tlv_metric_reporting_policy(const std::string &dst_mac, const std::string &ruid,
+                                          ieee1905_1::CmduMessageTx &cmdu_tx);
+    /**
      * Buffer to hold CMDU to be transmitted.
      */
     uint8_t m_tx_buffer[beerocks::message::MESSAGE_BUFFER_LENGTH];
