@@ -130,9 +130,9 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
                 LOG(ERROR) << "Triggering a scan for radio " << radio_scan_request.first
                            << " aborted";
 
+                database.set_channel_scan_in_progress(radio_mac, false, is_single_scan);
                 database.set_channel_scan_results_status(
                     radio_mac, beerocks::eChannelScanStatusCode::INTERNAL_FAILURE, is_single_scan);
-                database.set_channel_scan_in_progress(radio_mac, false, is_single_scan);
             }
 
             //clear all radio_scan_request in agent
@@ -467,7 +467,8 @@ bool dynamic_channel_selection_r2_task::handle_scan_report_event(
             //      If the radio status is SCAN_IN_PROGRESS, it is assumed to expect the scan report of this agent.
             auto &radio_mac = scan_it->first;
             database.set_channel_scan_in_progress(radio_mac, false, is_single_scan);
-
+            database.set_channel_scan_results_status(
+                radio_mac, beerocks::eChannelScanStatusCode::SUCCESS, is_single_scan);
             scan_it = radio_scans.erase(scan_it);
         } else {
             ++scan_it;
@@ -547,6 +548,9 @@ bool dynamic_channel_selection_r2_task::handle_timeout_in_busy_agents()
                     LOG(WARNING) << "Scan request timeout for radio: " << radio_mac
                                  << " - aborting scan";
                     database.set_channel_scan_in_progress(radio_mac, false, is_single_scan);
+                    database.set_channel_scan_results_status(
+                        radio_mac, beerocks::eChannelScanStatusCode::CHANNEL_SCAN_REPORT_TIMEOUT,
+                        is_single_scan);
 
                     scan_it = agent_status.radio_scans.erase(scan_it);
                 } else {
