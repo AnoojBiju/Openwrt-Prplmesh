@@ -1398,7 +1398,7 @@ bool mon_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std
     return true;
 }
 
-bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg)
+bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
 {
     struct nlmsghdr *nlh    = nlmsg_hdr(msg);
     struct genlmsghdr *gnlh = (genlmsghdr *)nlmsg_data(nlh);
