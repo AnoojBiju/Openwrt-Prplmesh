@@ -28,6 +28,7 @@
 		"twxs.cmake",
 		"eamodio.gitlens",
 		"ms-python.python",
+		"ms-python.vscode-pylance",
 		"redhat.vscode-yaml",
 		"streetsidesoftware.code-spell-checker",
 		"yzhang.markdown-all-in-one",
