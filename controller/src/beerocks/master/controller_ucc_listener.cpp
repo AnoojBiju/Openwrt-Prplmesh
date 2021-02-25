@@ -38,7 +38,7 @@ controller_ucc_listener::~controller_ucc_listener() { clear_handlers(); }
 
 /**
  * @brief Returns string filled with reply to "DEVICE_GET_INFO" command.
- * 
+ *
  * @return const std::string Device info in UCC reply format.
  */
 std::string controller_ucc_listener::fill_version_reply_string()
@@ -49,7 +49,7 @@ std::string controller_ucc_listener::fill_version_reply_string()
 
 /**
  * @brief Clear configuration on Controller database.
- * 
+ *
  * @return true on success and false otherwise.
  */
 bool controller_ucc_listener::clear_configuration()
@@ -100,11 +100,11 @@ bool controller_ucc_listener::handle_dev_get_param(
             value = "missing ssid";
             return false;
         }
-        auto ruid = tlvf::mac_to_string(std::strtoull(params["ruid"].c_str(), nullptr, 16));
+        auto ruid = tlvf::mac_from_string(params["ruid"]);
         auto ssid = params["ssid"];
-        auto vaps = m_database.get_hostap_vap_list(ruid);
+        auto vaps = m_database.get_hostap_vap_list(tlvf::mac_to_string(ruid));
         if (vaps.empty()) {
-            value = "ruid " + ruid + " not found";
+            value = "ruid " + tlvf::mac_to_string(ruid) + " not found";
             return false;
         }
         for (const auto &vap : vaps) {
@@ -113,7 +113,7 @@ bool controller_ucc_listener::handle_dev_get_param(
                 return true;
             }
         }
-        value = "macaddr/bssid not found for ruid " + ruid + " ssid " + ssid;
+        value = "macaddr/bssid not found for ruid " + tlvf::mac_to_string(ruid) + " ssid " + ssid;
         return false;
     }
     value = "parameter " + parameter + " not supported";
@@ -122,7 +122,7 @@ bool controller_ucc_listener::handle_dev_get_param(
 
 /**
  * @brief Send CMDU to destined Agent.
- * 
+ *
  * @param[in] dest_mac Agents mac address.
  * @param[in] cmdu_tx CMDU object.
  * @return true if successful, false if not.
@@ -260,7 +260,7 @@ bool controller_ucc_listener::handle_dev_set_config(
 
 /**
  * @brief Parse bss_info string into bss_info_conf_struct.
- * 
+ *
  * @param[in] bss_info_str String containing bss info configuration.
  * @param[out] bss_info_conf Controller database struct filled with configuration.
  * @param[out] err_string Contains an error description if the function fails.
@@ -274,7 +274,7 @@ controller_ucc_listener::parse_bss_info(const std::string &bss_info_str,
     auto confs = string_utils::str_split(bss_info_str, ' ');
 
     /*
-    The Control API specification defines 8 parameters except for the case of 
+    The Control API specification defines 8 parameters except for the case of
     clearing the BSS info stored for a specific operating class, define only
     two parameters: ALID and operating class.
     */
