@@ -352,7 +352,7 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
 
         if (!success) {
             abort_scan_in_current_agent();
-            return false; //tlv creation failed - Trigger the next agent
+            continue; //tlv creation failed - Trigger the next agent
         }
 
         // Send CHANNEL_SCAN_REQUEST_MESSAGE to the agent
@@ -361,7 +361,7 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
 
         if (!success) {
             abort_scan_in_current_agent();
-            return false; //tlv creation failed - Trigger the next agent
+            continue; //sending scan request to one of the agents failed - Trigger the next agent
         }
 
         agent.second.status  = eAgentStatus::BUSY;
