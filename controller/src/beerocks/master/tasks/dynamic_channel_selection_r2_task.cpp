@@ -518,9 +518,9 @@ bool son::dynamic_channel_selection_r2_task::create_channel_scan_request_message
     //       once MID will be globally assigned and available to the controller.
     mid = cmdu_tx.getMessageId();
 
-    //TODO: Assuming perform_fresh_scan=0 for now => no operating_classes_list.
+    //TODO: Assuming perform_fresh_scan=1 for now => include operating_classes_list.
     channel_scan_request_tlv->perform_fresh_scan() = wfa_map::tlvProfile2ChannelScanRequest::
-        ePerformFreshScan::RETURN_STORED_RESULTS_OF_LAST_SUCCESSFUL_SCAN;
+        ePerformFreshScan::PERFORM_A_FRESH_SCAN_AND_RETURN_RESULTS;
 
     return true;
 }
