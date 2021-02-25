@@ -980,6 +980,8 @@ bool mon_wlan_hal_dwpal::channel_scan_dump_results()
         LOG(ERROR) << "Channel scan results dump failed";
         return false;
     }
+    // If scan dump succeeded need to manually send the finished event
+    event_queue_push(Event::Channel_Scan_Finished);
 
     return true;
 }
