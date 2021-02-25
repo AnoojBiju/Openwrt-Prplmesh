@@ -483,7 +483,8 @@ enum class eChannelScanStatusCode : uint8_t {
     RESULTS_DUMP_EVENT_TIMEOUT,
     ABORTED_BY_DRIVER,
     RESULTS_EMPTY,
-    INVALID_PARAMS
+    INVALID_PARAMS,
+    CHANNEL_SCAN_REPORT_TIMEOUT
 };
 
 enum class eChannelScanOperationCode : uint8_t {
