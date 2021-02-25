@@ -8,7 +8,7 @@
       "type": "shell",
       "options": {
         "env": {
-          "BUILD_ARGS": "-G Ninja -f BUILD_TESTS=ON CMAKE_BUILD_TYPE=Debug",
+          "BUILD_ARGS": "-G Ninja -f BUILD_TESTS=ON CMAKE_BUILD_TYPE=Debug ENABLE_NBAPI=ON",
           // "CMAKE_TOOLCHAIN_FILE": "${workspaceFolder}/tools/cmake/toolchain/openwrt.cmake",
           // "PRPLMESH_PLATFORM_TYPE": "ugw",
           // "PRPLMESH_PLATFORM_BASE_DIR": "/workspaces/ugw_sw/2020_09_17/openwrt",
@@ -65,13 +65,10 @@
       "problemMatcher": []
     },
     {
-      "label": "Run test flows",
+      "label": "Run boardfarm tests",
       "type": "shell",
       "linux": {
-        "command": "./tests/test_flows.py",
-        "args": [
-          "-v"
-        ]
+        "command": "./dctest.py"
       },
       "problemMatcher": []
     },
