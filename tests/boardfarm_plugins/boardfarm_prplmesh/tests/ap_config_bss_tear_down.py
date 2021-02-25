@@ -47,6 +47,10 @@ class ApConfigBSSTeardown(PrplMeshBaseTest):
             if vap.get_ssid() == "Boardfarm-Tests-24G-3":
                 self.fail("Second radio is not supposed to have ssid Boardfarm-Tests-24G-3")
 
+        print(f"agent mac is {agent.mac}")
+        print(f"radio 0 mac is {agent.radios[0].mac}")
+        print(f"radio 1 mac is {agent.radios[1].mac}")
+
         conn_map = controller.get_conn_map()
         repeater1 = conn_map[agent.mac]
         repeater1_wlan0 = repeater1.radios[agent.radios[0].mac]
@@ -72,6 +76,10 @@ class ApConfigBSSTeardown(PrplMeshBaseTest):
         for vap in agent.radios[1].vaps:
             if vap.get_ssid() == "Boardfarm-Tests-24G-3":
                 self.fail("First radio is supposed to have ssid Boardfarm-Tests-24G-3 torn down")
+
+        print(f"agent mac is {agent.mac}")
+        print(f"radio 0 mac is {agent.radios[0].mac}")
+        print(f"radio 1 mac is {agent.radios[1].mac}")
 
         conn_map = controller.get_conn_map()
         repeater1 = conn_map[agent.mac]
