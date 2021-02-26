@@ -194,7 +194,7 @@ bool LinkMetricsTask::handle_cmdu_1905_link_metric_response(const std::string &s
 
             if (iface != iface_tx_link_metrics.end()) {
                 LOG(DEBUG) << "Interface is already added with mac:" << tx_link.rc_interface_mac
-                           << ", so sum up metric stats.";
+                           << " so assign it as sum of rx stats.";
 
                 iface->second.packet_errors += tx_link.link_metric_info.packet_errors;
                 iface->second.transmitted_packets += tx_link.link_metric_info.transmitted_packets;
@@ -215,8 +215,8 @@ bool LinkMetricsTask::handle_cmdu_1905_link_metric_response(const std::string &s
             auto iface = iface_rx_link_metrics.find(rx_link.rc_interface_mac);
 
             if (iface != iface_rx_link_metrics.end()) {
-                LOG(DEBUG) << "Interface is already adde with mac:" << rx_link.rc_interface_mac
-                           << ", so sum up metric informations.";
+                LOG(DEBUG) << "Interface is already added with mac:" << rx_link.rc_interface_mac
+                           << " so assign it as sum of tx stats.";
 
                 iface->second.packet_errors += rx_link.link_metric_info.packet_errors;
                 iface->second.packets_received += rx_link.link_metric_info.packets_received;
