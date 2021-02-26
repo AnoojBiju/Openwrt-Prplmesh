@@ -861,8 +861,8 @@ class RadioHostapd(Radio):
         device = self.agent.device
         device.sendline("iw {} info".format(self.iface_name))
         device.expect(
-            "channel (?P<channel>[0-9]+) .*width.* (?P<width>[0-9]+) " +
-            "MHz.*center1.* (?P<center>[0-9]+) MHz")
+            r"channel (?P<channel>[0-9]+) [^\r\n]*width[^\r\n]* (?P<width>[0-9]+) " +
+            r"MHz[^\r\n]*center1[^\r\n]* (?P<center>[0-9]+) MHz")
         return ChannelInfo(device.match.group('channel'), device.match.group('width'),
                            device.match.group('center'))
 
