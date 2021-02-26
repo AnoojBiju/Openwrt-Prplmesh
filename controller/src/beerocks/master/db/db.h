@@ -21,6 +21,8 @@
 #include <tlvf/wfa_map/tlvApHtCapabilities.h>
 #include <tlvf/wfa_map/tlvApRadioBasicCapabilities.h>
 #include <tlvf/wfa_map/tlvApVhtCapabilities.h>
+#include <tlvf/wfa_map/tlvAssociatedStaExtendedLinkMetrics.h>
+#include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
 #include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>
 
 #include <algorithm>
@@ -173,6 +175,16 @@ public:
         // Params
         bool client_optimal_path_roaming_prefer_signal_strength = false;
     } sDbMasterSettings;
+
+    typedef struct {
+        uint32_t m_byte_sent            = 0;
+        uint32_t m_byte_received        = 0;
+        uint32_t m_packets_sent         = 0;
+        uint32_t m_packets_received     = 0;
+        uint32_t m_tx_packets_error     = 0;
+        uint32_t m_rx_packets_error     = 0;
+        uint32_t m_retransmission_count = 0;
+    } sAssociatedStaTrafficStats;
 
     beerocks::mac_map<prplmesh::controller::db::sAgent> m_agents;
 
@@ -552,6 +564,40 @@ public:
      */
     bool dm_remove_interface_neighbors(const sMacAddr &device_mac, const sMacAddr &interface_mac);
 
+    /**
+     * @brief Sets Extended Link Metrics for corresponding STA.
+     *
+     * Path: Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}
+     *
+     * @param sta_mac sta MAC address for node matching
+     * @param metrics extended metrics of associated sta
+     * @return true on success, false otherwise.
+     */
+    bool dm_set_sta_extended_link_metrics(
+        const sMacAddr &sta_mac,
+        const wfa_map::tlvAssociatedStaExtendedLinkMetrics::sMetrics &metrics);
+
+    /**
+     * @brief Sets Traffic Stats for corresponding STA.
+     *
+     * Path: Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}
+     *
+     * @param sta_mac sta MAC address for node matching
+     * @param stats stats of associated sta traffic
+     * @return true on success, false otherwise.
+     */
+    bool dm_set_sta_traffic_stats(const sMacAddr &sta_mac, db::sAssociatedStaTrafficStats &stats);
+
+    /**
+     * @brief Clears all stats for corresponding STA.
+     *
+     * Path: Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}
+     *
+     * @param sta_mac sta MAC address for node matching
+     * @return true on success, false otherwise.
+     */
+    bool dm_clear_sta_stats(const sMacAddr &sta_mac);
+
     //
     // DB node functions (get only)
     //
@@ -632,8 +678,8 @@ public:
      * of the uplink from the Non-AP STA - measured in dBm.
      * @return True on success, false otherwise.
      */
-    bool set_sta_link_metrics(const sMacAddr &sta_mac, uint32_t downlink_est_mac_data_rate,
-                              uint32_t uplink_est_mac_data_rate, uint8_t signal_strength);
+    bool dm_set_sta_link_metrics(const sMacAddr &sta_mac, uint32_t downlink_est_mac_data_rate,
+                                 uint32_t uplink_est_mac_data_rate, uint8_t signal_strength);
 
     const beerocks::message::sRadioCapabilities *
     get_station_current_capabilities(const std::string &mac);
