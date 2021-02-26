@@ -56,6 +56,7 @@
 #include <tlvf/wfa_map/tlvApOperationalBSS.h>
 #include <tlvf/wfa_map/tlvApRadioIdentifier.h>
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
+#include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringResponse.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvChannelScanCapabilities.h>
@@ -1579,6 +1580,8 @@ bool Controller::handle_cmdu_1905_ap_metric_response(const std::string &src_mac,
     auto mid = cmdu_rx.getMessageId();
     LOG(INFO) << "Received AP_METRICS_RESPONSE_MESSAGE, mid=" << std::dec << int(mid);
 
+    bool ret_val = true;
+
     //getting reference for ap metric data storage from db
     auto &ap_metric_data = database.get_ap_metric_data_map();
 
@@ -1589,7 +1592,8 @@ bool Controller::handle_cmdu_1905_ap_metric_response(const std::string &src_mac,
         if (!database.set_radio_utilization(reporting_agent_bssid,
                                             ap_metric_tlv->channel_utilization())) {
             LOG(ERROR) << "Failed to set radio utilization dor bssid: " << reporting_agent_bssid;
-            return false;
+            ret_val = false;
+            continue;
         }
 
         LOG(DEBUG) << "received tlvApMetrics from BSSID =" << reporting_agent_bssid;
@@ -1597,7 +1601,8 @@ bool Controller::handle_cmdu_1905_ap_metric_response(const std::string &src_mac,
         //fill tx data from TLV
         if (!ap_metric_data[reporting_agent_bssid].add_ap_metric_data(ap_metric_tlv)) {
             LOG(ERROR) << "adding apMetricData from tlv has failed";
-            return false;
+            ret_val = false;
+            continue;
         }
 
         if (ap_metric_tlv->estimated_service_parameters().include_ac_be) {
@@ -1613,7 +1618,8 @@ bool Controller::handle_cmdu_1905_ap_metric_response(const std::string &src_mac,
                     reporting_agent_bssid, ntohl(estimated_service_parameters.value))) {
                 LOG(ERROR) << "Failed to set estimated service parameters be for bssid: "
                            << reporting_agent_bssid;
-                return false;
+                ret_val = false;
+                continue;
             }
         } else {
             LOG(WARNING)
@@ -1621,16 +1627,21 @@ bool Controller::handle_cmdu_1905_ap_metric_response(const std::string &src_mac,
             if (!database.set_estimated_service_parameters_be(reporting_agent_bssid, 0)) {
                 LOG(ERROR) << "Failed to set estimated service parameters be for bssid: "
                            << reporting_agent_bssid;
-                return false;
+                ret_val = false;
+                continue;
             }
         }
     }
 
     for (auto radio_tlv : cmdu_rx.getClassList<wfa_map::tlvProfile2RadioMetrics>()) {
-        database.set_radio_metrics(radio_tlv->radio_uid(), radio_tlv->noise(),
-                                   radio_tlv->transmit(), radio_tlv->receive_self(),
-                                   radio_tlv->receive_other());
+        ret_val &= database.set_radio_metrics(radio_tlv->radio_uid(), radio_tlv->noise(),
+                                              radio_tlv->transmit(), radio_tlv->receive_self(),
+                                              radio_tlv->receive_other());
     }
+
+    ret_val &= handle_tlv_associated_sta_link_metrics(src_mac, cmdu_rx);
+    ret_val &= handle_tlv_associated_sta_extended_link_metrics(src_mac, cmdu_rx);
+    ret_val &= handle_tlv_associated_sta_traffic_stats(src_mac, cmdu_rx);
 
     print_ap_metric_map(ap_metric_data);
 
@@ -1638,7 +1649,7 @@ bool Controller::handle_cmdu_1905_ap_metric_response(const std::string &src_mac,
     if (database.setting_certification_mode())
         m_link_metrics_task->construct_combined_infra_metric();
 
-    return true;
+    return ret_val;
 }
 
 bool Controller::handle_tlv_ap_ht_capabilities(ieee1905_1::CmduMessageRx &cmdu_rx)
@@ -1671,31 +1682,105 @@ bool Controller::handle_tlv_ap_he_capabilities(ieee1905_1::CmduMessageRx &cmdu_r
 bool Controller::handle_cmdu_1905_associated_sta_link_metrics_response_message(
     const std::string &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
-    auto mid     = cmdu_rx.getMessageId();
-    bool success = true;
-
+    auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Received ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE, mid=" << std::hex << mid;
+    handle_tlv_associated_sta_link_metrics(src_mac, cmdu_rx);
+    handle_tlv_associated_sta_extended_link_metrics(src_mac, cmdu_rx);
+    return true;
+}
+
+bool Controller::handle_tlv_associated_sta_link_metrics(const std::string &src_mac,
+                                                        ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    bool ret_val = true;
+
     for (auto &sta_link_metric : cmdu_rx.getClassList<wfa_map::tlvAssociatedStaLinkMetrics>()) {
-        if (!sta_link_metric) {
-            LOG(ERROR) << "Failed getClassList<wfa_map::tlvAssociatedStaLinkMetrics>";
-            continue;
-        }
+
+        // STA Metrics can hold information from different BSS sources, mostly when steering
+        // Metrics of last registered and active value needs to be considered.
         auto response_list = sta_link_metric->bssid_info_list(0);
 
         if (!std::get<0>(response_list)) {
-            LOG(ERROR) << "Fail to get bssid info list.";
+            LOG(ERROR) << "Failed to get bssid info list.";
             continue;
         }
+
         auto bssid_info = std::get<1>(response_list);
-        if (!database.set_sta_link_metrics(sta_link_metric->sta_mac(),
-                                           bssid_info.downlink_estimated_mac_data_rate_mbps,
-                                           bssid_info.uplink_estimated_mac_data_rate_mbps,
-                                           bssid_info.sta_measured_uplink_rssi_dbm_enc)) {
-            LOG(ERROR) << "Fail to set value for Estimated MAC Data Rate or for signal strength.";
-            success = false;
+
+        // Verify reported BSSID and data model registered STAs BSSID is same.
+        if (database.get_node_parent_radio(tlvf::mac_to_string(sta_link_metric->sta_mac())) !=
+            tlvf::mac_to_string(bssid_info.bssid)) {
+            LOG(INFO) << "Reported STA BSSID is not matching with datamodel. Reported bssid:"
+                      << bssid_info.bssid;
+            continue;
+        }
+        if (!database.dm_set_sta_link_metrics(sta_link_metric->sta_mac(),
+                                              bssid_info.downlink_estimated_mac_data_rate_mbps,
+                                              bssid_info.uplink_estimated_mac_data_rate_mbps,
+                                              bssid_info.sta_measured_uplink_rssi_dbm_enc)) {
+            LOG(ERROR) << "Failed to set link metrics for STA:" << sta_link_metric->sta_mac();
+            ret_val = false;
         }
     }
-    return success;
+    return ret_val;
+}
+
+bool Controller::handle_tlv_associated_sta_extended_link_metrics(const std::string &src_mac,
+                                                                 ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    bool ret_val = true;
+
+    for (auto &sta_extended_link_metric :
+         cmdu_rx.getClassList<wfa_map::tlvAssociatedStaExtendedLinkMetrics>()) {
+        auto metrics_list = sta_extended_link_metric->metrics_list(0);
+
+        if (!std::get<0>(metrics_list)) {
+            LOG(ERROR) << "Failed to get metrics info list.";
+            continue;
+        }
+
+        auto metrics = std::get<1>(metrics_list);
+
+        // Verify reported BSSID and data model registered STAs BSSID is same.
+        if (database.get_node_parent_radio(
+                tlvf::mac_to_string(sta_extended_link_metric->associated_sta())) !=
+            tlvf::mac_to_string(metrics.bssid)) {
+            LOG(INFO) << "Reported STA BSSID is not matching with datamodel. Reported bssid:"
+                      << metrics.bssid;
+            continue;
+        }
+        if (!database.dm_set_sta_extended_link_metrics(sta_extended_link_metric->associated_sta(),
+                                                       metrics)) {
+            LOG(ERROR) << "Failed to set extended link metrics for STA:"
+                       << sta_extended_link_metric->associated_sta();
+            ret_val = false;
+        }
+    }
+    return ret_val;
+}
+
+bool Controller::handle_tlv_associated_sta_traffic_stats(const std::string &src_mac,
+                                                         ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    bool ret_val = true;
+
+    for (auto &sta_traffic_stat : cmdu_rx.getClassList<wfa_map::tlvAssociatedStaTrafficStats>()) {
+
+        db::sAssociatedStaTrafficStats stats;
+        stats.m_byte_received        = sta_traffic_stat->byte_recived();
+        stats.m_byte_sent            = sta_traffic_stat->byte_sent();
+        stats.m_packets_received     = sta_traffic_stat->packets_recived();
+        stats.m_packets_sent         = sta_traffic_stat->packets_sent();
+        stats.m_retransmission_count = sta_traffic_stat->retransmission_count();
+        stats.m_rx_packets_error     = sta_traffic_stat->rx_packets_error();
+        stats.m_tx_packets_error     = sta_traffic_stat->tx_packets_error();
+
+        if (!database.dm_set_sta_traffic_stats(sta_traffic_stat->sta_mac(), stats)) {
+            LOG(ERROR) << "Failed to set traffic stats for STA:" << sta_traffic_stat->sta_mac();
+            ret_val = false;
+        }
+    }
+    return ret_val;
 }
 
 bool Controller::handle_tlv_ap_vht_capabilities(ieee1905_1::CmduMessageRx &cmdu_rx)
