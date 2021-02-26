@@ -651,6 +651,10 @@ bool Ieee1905Transport::forward_packet(Packet &packet)
     // Change the packet destination each time to the neighbour AL MAC
     ch->SetRelayIndicator(false);
     for (const auto &neigh : neighbors_map_) {
+        if (packet.src == neigh.second.al_mac) {
+            // Do not send to ourselves.
+            continue;
+        }
         packet.dst = neigh.second.al_mac;
         if (!forward_packet_single(packet)) {
             MAPF_ERR("Reliable multicast failed, dropped packet: " << packet);
