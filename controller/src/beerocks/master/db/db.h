@@ -1301,9 +1301,6 @@ public:
      * @param mac string with STA mac address
      */
     bool notify_disconnection(const std::string &mac);
-    bool set_node_stats_info(const std::string &mac,
-                             const beerocks_message::sStaStatsParams *params);
-    void clear_node_stats_info(const std::string &mac);
 
     /**
      * @brief Set virtual AP metrics info

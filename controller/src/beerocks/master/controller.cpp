@@ -3362,7 +3362,6 @@ bool Controller::handle_cmdu_control_message(
                            << ", update is invalid!";
                 continue;
             }
-            database.set_node_stats_info(client_mac, &sta_stats);
         }
 
         if (response->ap_stats_size() == 0) {
