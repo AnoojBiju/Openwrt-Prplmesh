@@ -1177,9 +1177,14 @@ static bool set_vap_multiap_mode(std::vector<std::string> &vap_hostapd_config, b
         return false;
     }
 
-    LOG(DEBUG) << "Configuring VAP " << ifname << ": bssid=" << bssid
-               << ", fronthaul=" << beerocks::string_utils::bool_str(fronthaul)
-               << ", backhaul=" << beerocks::string_utils::bool_str(backhaul);
+    LOG(DEBUG) << "Configuring VAP " << ifname << ": bssid=" << bssid << ", fronthaul=" << fronthaul
+               << ", backhaul=" << backhaul;
+
+    if (backhaul) {
+        LOG(DEBUG) << "disallow_profile1=" << disallow_profile1
+                   << ", disallow_profile2=" << disallow_profile2;
+    }
+
     // BSS type (backhaul, fronthaul or both)
     // Use Intel Mesh-Mode (upstream Multi-AP functionality not supported by Intel):
     // Not supporting hybrid mode for in mesh mode (TODO - move to hybrid mode after
