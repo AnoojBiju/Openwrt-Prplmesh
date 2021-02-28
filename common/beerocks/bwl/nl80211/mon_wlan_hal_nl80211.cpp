@@ -417,7 +417,13 @@ bool mon_wlan_hal_nl80211::generate_connected_clients_events(
     bool &is_finished_all_clients, std::chrono::steady_clock::time_point max_iteration_timeout)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
-    return false;
+    is_finished_all_clients = true;
+
+    // TODO: implement the API (PPM-1152)
+    // currently returning true even though not implemented in order not to break
+    // the flow if this HAL is used by any flow, since the API return value is checked by
+    // a common flow in the monitor.
+    return true;
 }
 
 bool mon_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
