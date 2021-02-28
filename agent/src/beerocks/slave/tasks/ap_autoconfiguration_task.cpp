@@ -16,6 +16,7 @@
 #include <tlvf/ieee_1905_1/tlvSearchedRole.h>
 #include <tlvf/ieee_1905_1/tlvSupportedFreqBand.h>
 #include <tlvf/ieee_1905_1/tlvSupportedRole.h>
+#include <tlvf/wfa_map/tlvProfile2MultiApProfile.h>
 #include <tlvf/wfa_map/tlvSearchedService.h>
 #include <tlvf/wfa_map/tlvSupportedService.h>
 
@@ -223,81 +224,114 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_search_message(
         return false;
     }
 
-    auto cmdu_header =
-        m_cmdu_tx.create(0, ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_SEARCH_MESSAGE);
-    if (!cmdu_header) {
-        LOG(ERROR) << "cmdu creation of type AP_AUTOCONFIGURATION_SEARCH_MESSAGE, has failed";
-        return false;
+    auto create_autoconfig_search = [&]() -> bool {
+        auto cmdu_header =
+            m_cmdu_tx.create(0, ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_SEARCH_MESSAGE);
+        if (!cmdu_header) {
+            LOG(ERROR) << "cmdu creation of type AP_AUTOCONFIGURATION_SEARCH_MESSAGE, has failed";
+            return false;
+        }
+
+        auto tlvAlMacAddress = m_cmdu_tx.addClass<ieee1905_1::tlvAlMacAddress>();
+        if (!tlvAlMacAddress) {
+            LOG(ERROR) << "addClass ieee1905_1::tlvAlMacAddress failed";
+            return false;
+        }
+        tlvAlMacAddress->mac() = db->bridge.mac;
+
+        auto tlvSearchedRole = m_cmdu_tx.addClass<ieee1905_1::tlvSearchedRole>();
+        if (!tlvSearchedRole) {
+            LOG(ERROR) << "addClass ieee1905_1::tlvSearchedRole failed";
+            return false;
+        }
+        tlvSearchedRole->value() = ieee1905_1::tlvSearchedRole::REGISTRAR;
+
+        auto tlvAutoconfigFreqBand = m_cmdu_tx.addClass<ieee1905_1::tlvAutoconfigFreqBand>();
+        if (!tlvAutoconfigFreqBand) {
+            LOG(ERROR) << "addClass ieee1905_1::tlvAutoconfigFreqBand failed";
+            return false;
+        }
+        tlvAutoconfigFreqBand->value() = freq_band;
+
+        auto tlvSupportedService = m_cmdu_tx.addClass<wfa_map::tlvSupportedService>();
+        if (!tlvSupportedService) {
+            LOG(ERROR) << "addClass wfa_map::tlvSupportedService failed";
+            return false;
+        }
+        if (!tlvSupportedService->alloc_supported_service_list()) {
+            LOG(ERROR) << "alloc_supported_service_list failed";
+            return false;
+        }
+        auto supportedServiceTuple = tlvSupportedService->supported_service_list(0);
+        if (!std::get<0>(supportedServiceTuple)) {
+            LOG(ERROR) << "Failed accessing supported_service_list";
+            return false;
+        }
+        std::get<1>(supportedServiceTuple) =
+            wfa_map::tlvSupportedService::eSupportedService::MULTI_AP_AGENT;
+
+        auto tlvSearchedService = m_cmdu_tx.addClass<wfa_map::tlvSearchedService>();
+        if (!tlvSearchedService) {
+            LOG(ERROR) << "addClass wfa_map::tlvSearchedService failed";
+            return false;
+        }
+        if (!tlvSearchedService->alloc_searched_service_list()) {
+            LOG(ERROR) << "alloc_searched_service_list failed";
+            return false;
+        }
+        auto searchedServiceTuple = tlvSearchedService->searched_service_list(0);
+        if (!std::get<0>(searchedServiceTuple)) {
+            LOG(ERROR) << "Failed accessing searched_service_list";
+            return false;
+        }
+        std::get<1>(searchedServiceTuple) =
+            wfa_map::tlvSearchedService::eSearchedService::MULTI_AP_CONTROLLER;
+
+        // Add prplMesh handshake in a vendor specific TLV.
+        // If the controller is prplMesh, it will reply to the autoconfig search with
+        // handshake response.
+        auto request =
+            message_com::add_vs_tlv<beerocks_message::cACTION_CONTROL_SLAVE_HANDSHAKE_REQUEST>(
+                m_cmdu_tx);
+        if (!request) {
+            LOG(ERROR) << "Failed adding cACTION_CONTROL_SLAVE_HANDSHAKE_REQUEST";
+            return false;
+        }
+        auto beerocks_header                      = message_com::get_beerocks_header(m_cmdu_tx);
+        beerocks_header->actionhdr()->direction() = beerocks::BEEROCKS_DIRECTION_CONTROLLER;
+        LOG(DEBUG) << "sending autoconfig search message, bridge_mac=" << db->bridge.mac;
+        return true;
+    };
+
+    create_autoconfig_search();
+    if (db->controller_info.profile_support ==
+        AgentDB::sControllerInfo::eProfileSupport::Profile1) {
+        return m_btl_ctx.send_cmdu_to_broker(
+            m_cmdu_tx, tlvf::mac_from_string(network_utils::MULTICAST_1905_MAC_ADDR),
+            db->bridge.mac);
+    } else if (db->controller_info.profile_support ==
+               AgentDB::sControllerInfo::eProfileSupport::Unknown) {
+        // If we still not know what profile the controller support send 2 autoconfig search messages:
+        // one witout the MultiAp profile TLV and one with it.
+        // We do this since we came across certified agents that don't respond to a search message that contain
+        // the newly added TLV. So to make sure we will get a response send both options.
+        m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx,
+                                      tlvf::mac_from_string(network_utils::MULTICAST_1905_MAC_ADDR),
+                                      db->bridge.mac);
+        create_autoconfig_search();
     }
 
-    auto tlvAlMacAddress = m_cmdu_tx.addClass<ieee1905_1::tlvAlMacAddress>();
-    if (!tlvAlMacAddress) {
-        LOG(ERROR) << "addClass ieee1905_1::tlvAlMacAddress failed";
+    auto tlvProfile2MultiApProfile = m_cmdu_tx.addClass<wfa_map::tlvProfile2MultiApProfile>();
+    if (!tlvProfile2MultiApProfile) {
+        LOG(ERROR) << "addClass wfa_map::tlvProfile2MultiApProfile failed";
         return false;
     }
-    tlvAlMacAddress->mac() = db->bridge.mac;
+    tlvProfile2MultiApProfile->profile() =
+        wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2;
 
-    auto tlvSearchedRole = m_cmdu_tx.addClass<ieee1905_1::tlvSearchedRole>();
-    if (!tlvSearchedRole) {
-        LOG(ERROR) << "addClass ieee1905_1::tlvSearchedRole failed";
-        return false;
-    }
-    tlvSearchedRole->value() = ieee1905_1::tlvSearchedRole::REGISTRAR;
+    LOG(DEBUG) << "sending autoconfig search message, bridge_mac=" << db->bridge.mac
+               << " with Profile TLV";
 
-    auto tlvAutoconfigFreqBand = m_cmdu_tx.addClass<ieee1905_1::tlvAutoconfigFreqBand>();
-    if (!tlvAutoconfigFreqBand) {
-        LOG(ERROR) << "addClass ieee1905_1::tlvAutoconfigFreqBand failed";
-        return false;
-    }
-    tlvAutoconfigFreqBand->value() = freq_band;
-
-    auto tlvSupportedService = m_cmdu_tx.addClass<wfa_map::tlvSupportedService>();
-    if (!tlvSupportedService) {
-        LOG(ERROR) << "addClass wfa_map::tlvSupportedService failed";
-        return false;
-    }
-    if (!tlvSupportedService->alloc_supported_service_list()) {
-        LOG(ERROR) << "alloc_supported_service_list failed";
-        return false;
-    }
-    auto supportedServiceTuple = tlvSupportedService->supported_service_list(0);
-    if (!std::get<0>(supportedServiceTuple)) {
-        LOG(ERROR) << "Failed accessing supported_service_list";
-        return false;
-    }
-    std::get<1>(supportedServiceTuple) =
-        wfa_map::tlvSupportedService::eSupportedService::MULTI_AP_AGENT;
-
-    auto tlvSearchedService = m_cmdu_tx.addClass<wfa_map::tlvSearchedService>();
-    if (!tlvSearchedService) {
-        LOG(ERROR) << "addClass wfa_map::tlvSearchedService failed";
-        return false;
-    }
-    if (!tlvSearchedService->alloc_searched_service_list()) {
-        LOG(ERROR) << "alloc_searched_service_list failed";
-        return false;
-    }
-    auto searchedServiceTuple = tlvSearchedService->searched_service_list(0);
-    if (!std::get<0>(searchedServiceTuple)) {
-        LOG(ERROR) << "Failed accessing searched_service_list";
-        return false;
-    }
-    std::get<1>(searchedServiceTuple) =
-        wfa_map::tlvSearchedService::eSearchedService::MULTI_AP_CONTROLLER;
-
-    // Add prplMesh handshake in a vendor specific TLV.
-    // If the controller is prplMesh, it will reply to the autoconfig search with
-    // handshake response.
-    auto request =
-        message_com::add_vs_tlv<beerocks_message::cACTION_CONTROL_SLAVE_HANDSHAKE_REQUEST>(
-            m_cmdu_tx);
-    if (!request) {
-        LOG(ERROR) << "Failed adding cACTION_CONTROL_SLAVE_HANDSHAKE_REQUEST";
-        return false;
-    }
-    auto beerocks_header                      = message_com::get_beerocks_header(m_cmdu_tx);
-    beerocks_header->actionhdr()->direction() = beerocks::BEEROCKS_DIRECTION_CONTROLLER;
-    LOG(DEBUG) << "sending autoconfig search message, bridge_mac=" << db->bridge.mac;
     return m_btl_ctx.send_cmdu_to_broker(
         m_cmdu_tx, tlvf::mac_from_string(network_utils::MULTICAST_1905_MAC_ADDR), db->bridge.mac);
 }
@@ -388,6 +422,11 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(
         LOG(WARNING)
             << "Invalid tlvSupportedService - supported service is not MULTI_AP_CONTROLLER";
         return;
+    }
+
+    auto multiap_profile_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2MultiApProfile>();
+    if (multiap_profile_tlv) {
+        db->controller_info.set_profile_support_from_tlv(multiap_profile_tlv->profile());
     }
 
     // Mark discovery status completed on band mentioned on the response and fill AgentDB fields.

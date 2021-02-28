@@ -66,6 +66,7 @@ enum class eTlvTypeMap : uint8_t {
     TLV_PROFILE2_CAC_COMPLETION_REPORT = 0xaf,
     TLV_PROFILE2_CAC_STATUS_REPORT = 0xb1,
     TLV_PROFILE2_CAC_CAPABILITIES = 0xb2,
+    TLV_PROFILE2_MULTIAP_PROFILE = 0xb3,
     TLV_PROFILE2_AP_CAPABILITY = 0xb4,
     TLV_PROFILE2_DEFAULT_802_1Q_SETTINGS = 0xb5,
     TLV_PROFILE2_TRAFFIC_SEPARATION_POLICY = 0xb6,
@@ -134,6 +135,7 @@ public:
         case 0xaf:
         case 0xb1:
         case 0xb2:
+        case 0xb3:
         case 0xb4:
         case 0xb5:
         case 0xb6:

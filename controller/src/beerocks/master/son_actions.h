@@ -61,6 +61,8 @@ public:
                                    db &database, const std::string &radio_mac = std::string());
     static bool send_ap_config_renew_msg(ieee1905_1::CmduMessageTx &cmdu_tx, db &database,
                                          const sMacAddr &al_mac);
+    static bool send_topology_query_msg(const std::string &dest_mac,
+                                        ieee1905_1::CmduMessageTx &cmdu_tx, db &database);
 
 private:
     static bool
