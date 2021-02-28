@@ -194,9 +194,15 @@ bool topology_task::handle_topology_response(const std::string &src_mac,
 
             auto removed = radio->bsses.keep_new_remove_old();
             for (const auto &bss : removed) {
+                // Remove all clients from that vap
+                auto client_list = database.get_node_children(tlvf::mac_to_string(bss->bssid),
+                                                              beerocks::TYPE_CLIENT);
+                for (auto &client : client_list) {
+                    son_actions::handle_dead_node(client, true, database, cmdu_tx, tasks);
+                }
+
+                // Remove the vap from DB
                 database.remove_vap(tlvf::mac_to_string(radio->radio_uid), bss->vap_id);
-                son_actions::handle_dead_node(tlvf::mac_to_string(bss->bssid), true, database,
-                                              cmdu_tx, tasks);
             }
         }
     }
