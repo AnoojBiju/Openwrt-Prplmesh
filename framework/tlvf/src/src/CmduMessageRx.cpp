@@ -72,6 +72,7 @@
 #include <tlvf/wfa_map/tlvProfile2Default802dotQSettings.h>
 #include <tlvf/wfa_map/tlvProfile2ErrorCode.h>
 #include <tlvf/wfa_map/tlvProfile2MetricCollectionInterval.h>
+#include <tlvf/wfa_map/tlvProfile2MultiApProfile.h>
 #include <tlvf/wfa_map/tlvProfile2RadioMetrics.h>
 #include <tlvf/wfa_map/tlvProfile2ReasonCode.h>
 #include <tlvf/wfa_map/tlvProfile2StatusCode.h>
@@ -343,6 +344,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_PROFILE2_CAC_CAPABILITIES): {
         return msg.addClass<wfa_map::tlvProfile2CacCapabilities>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_PROFILE2_MULTIAP_PROFILE): {
+        return msg.addClass<wfa_map::tlvProfile2MultiApProfile>();
     }
     case (wfa_map::eTlvTypeMap::TLV_PROFILE2_AP_CAPABILITY): {
         return msg.addClass<wfa_map::tlvProfile2ApCapability>();

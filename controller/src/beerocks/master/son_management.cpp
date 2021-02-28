@@ -1628,17 +1628,10 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
 
         auto al_mac = tlvf::mac_to_string(bml_request->al_mac());
 
-        auto cmdu_header = cmdu_tx.create(0, ieee1905_1::eMessageType::TOPOLOGY_QUERY_MESSAGE);
-
         LOG(INFO) << "ACTION_BML_TRIGGER_TOPOLOGY_QUERY al_mac:" << al_mac;
 
-        if (cmdu_header == nullptr) {
-            LOG(ERROR) << "Failed building IEEE1905 TOPOLOGY_QUERY_MESSAGE";
-            return;
-        }
-
         // In case bridge is not yet connected (bus not active) query will not
-        // be send to a local agent , sending empty bml response instead.
+        // be sent to a local agent, sending empty bml response instead.
         if ((database.get_local_bridge_mac() == al_mac) &&
             (database.get_node_state(al_mac) != beerocks::STATE_CONNECTED)) {
             LOG(WARNING) << "Bridge is not connected yet, TOPOLOGY_QUERY_MESSAGE will not be sent";
@@ -1655,7 +1648,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             return;
         }
 
-        son_actions::send_cmdu_to_agent(al_mac, cmdu_tx, database);
+        son_actions::send_topology_query_msg(al_mac, cmdu_tx, database);
 
     } break;
 
