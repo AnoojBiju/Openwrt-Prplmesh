@@ -1009,6 +1009,18 @@ void ChannelSelectionTask::zwdfs_fsm()
             break;
         }
 
+        // The task is always started in switch-antenna off state to release
+        // the antenna on startup in case of recovery from a crash of the agent,
+        // but we must not touch the antenna at all if the feature is not enabled
+        // in configuration - not to interfere in case external daemon manages
+        // the feature.
+        // Skip this case if the feature is disabled and move directly to not-running.
+        auto db = AgentDB::get();
+        if (!db->device_conf.zwdfs_enable) {
+            ZWDFS_FSM_MOVE_STATE(eZwdfsState::NOT_RUNNING);
+            break;
+        }
+
         // Block switching back 2.4G antenna if its radio is during background scan.
         if (radio_scan_in_progress(eFreqType::FREQ_24G)) {
             break;
