@@ -2088,20 +2088,26 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             return false;
         }
         for (uint8_t vap_idx = 0; vap_idx < eBeeRocksIfaceIds::IFACE_TOTAL_VAPS; vap_idx++) {
-            radio->front.bssids[vap_idx].mac  = notification_in->params().vaps[vap_idx].mac;
-            radio->front.bssids[vap_idx].ssid = notification_in->params().vaps[vap_idx].ssid;
-            radio->front.bssids[vap_idx].fronthaul_bss =
-                notification_in->params().vaps[vap_idx].fronthaul_vap;
-            radio->front.bssids[vap_idx].backhaul_bss =
-                notification_in->params().vaps[vap_idx].backhaul_vap;
-            radio->front.bssids[vap_idx].backhaul_bss_disallow_profile1_agent_association =
+            auto &bss         = radio->front.bssids[vap_idx];
+            bss.mac           = notification_in->params().vaps[vap_idx].mac;
+            bss.ssid          = notification_in->params().vaps[vap_idx].ssid;
+            bss.fronthaul_bss = notification_in->params().vaps[vap_idx].fronthaul_vap;
+            bss.backhaul_bss  = notification_in->params().vaps[vap_idx].backhaul_vap;
+            bss.backhaul_bss_disallow_profile1_agent_association =
                 notification_in->params()
                     .vaps[vap_idx]
                     .profile1_backhaul_sta_association_disallowed;
-            radio->front.bssids[vap_idx].backhaul_bss_disallow_profile2_agent_association =
+            bss.backhaul_bss_disallow_profile2_agent_association =
                 notification_in->params()
                     .vaps[vap_idx]
                     .profile2_backhaul_sta_association_disallowed;
+
+            if (notification_in->params().vaps[vap_idx].mac != network_utils::ZERO_MAC) {
+                LOG(DEBUG) << "BSS " << bss.mac << ", ssid:" << bss.ssid
+                           << ", fBSS: " << bss.fronthaul_bss << ", bBSS: " << bss.backhaul_bss
+                           << ", p1_dis: " << bss.backhaul_bss_disallow_profile1_agent_association
+                           << ", p2_dis: " << bss.backhaul_bss_disallow_profile2_agent_association;
+            }
         }
 
         LOG(DEBUG) << "Apply_traffic_separation";
@@ -4712,6 +4718,7 @@ bool slave_thread::handle_profile2_default_802dotq_settings_tlv(ieee1905_1::Cmdu
     auto dot1q_settings = cmdu_rx.getClass<wfa_map::tlvProfile2Default802dotQSettings>();
     // tlvProfile2Default802dotQSettings is not mandatory.
     if (!dot1q_settings) {
+        LOG(INFO) << "No tlvProfile2Default802dotQSettings, setting Primary VLAN ID to 0!";
         // If no primary VLAN has been configured, set it to zero.
         db->traffic_separation.primary_vlan_id = 0;
         db->traffic_separation.default_pcp     = 0;
@@ -4721,7 +4728,7 @@ bool slave_thread::handle_profile2_default_802dotq_settings_tlv(ieee1905_1::Cmdu
         return true;
     }
 
-    LOG(DEBUG) << "Primary VLAN ID:" << dot1q_settings->primary_vlan_id()
+    LOG(DEBUG) << "Primary VLAN ID: " << dot1q_settings->primary_vlan_id()
                << ", PCP: " << dot1q_settings->default_pcp();
 
     db->traffic_separation.primary_vlan_id = dot1q_settings->primary_vlan_id();
@@ -4911,6 +4918,17 @@ bool slave_thread::handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMess
             bool(config.bss_type &
                  WSC::eWscVendorExtSubelementBssType::PROFILE2_BACKHAUL_STA_ASSOCIATION_DISALLOWED);
         bool teardown = bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::TEARDOWN);
+
+        LOG(INFO) << "BSS configuration - ";
+        LOG(INFO) << "bssid: " << config.bssid;
+        LOG(INFO) << "ssid: " << config.ssid;
+        LOG(INFO) << "fBSS: " << fBSS;
+        LOG(INFO) << "bBSS: " << bBSS;
+        LOG(INFO) << "Teardown: " << teardown;
+        if (bBSS) {
+            LOG(INFO) << "profile1_backhaul_sta_association_disallowed: " << bBSS_p1_disallowed;
+            LOG(INFO) << "profile2_backhaul_sta_association_disallowed: " << bBSS_p2_disallowed;
+        }
 
         // TODO - revisit this in the future
         // In practice, some controllers simply send an empty config data when asked for tear down,
