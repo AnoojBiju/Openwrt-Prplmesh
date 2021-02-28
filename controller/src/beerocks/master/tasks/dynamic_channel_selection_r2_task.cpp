@@ -122,21 +122,26 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
             continue;
         }
 
-        auto abort_scan_in_current_agent = [&]() {
+        auto abort_active_scans_in_current_agent = [&]() {
             LOG(ERROR) << "aborting all scans for agent " << agent.first;
 
-            for (auto &radio_scan_request : agent.second.radio_scans) {
-                auto &radio_mac = radio_scan_request.first;
-                LOG(ERROR) << "Triggering a scan for radio " << radio_scan_request.first
-                           << " aborted";
+            // remove all radio_scan_request in-progress from agent queue
+            auto scan_it = agent.second.radio_scans.begin();
+            while (scan_it != agent_status.radio_scans.end()) {
+                if (scan_it->second.status != eRadioScanStatus::PENDING) {
+                    auto &radio_mac = scan_it->first;
+                    LOG(WARNING) << "aborting scan for radio: " << radio_mac;
+                    database.set_channel_scan_in_progress(radio_mac, false, is_single_scan);
+                    database.set_channel_scan_results_status(
+                        radio_mac, beerocks::eChannelScanStatusCode::INTERNAL_FAILURE,
+                        is_single_scan);
 
-                database.set_channel_scan_in_progress(radio_mac, false, is_single_scan);
-                database.set_channel_scan_results_status(
-                    radio_mac, beerocks::eChannelScanStatusCode::INTERNAL_FAILURE, is_single_scan);
+                    scan_it = agent_status.radio_scans.erase(scan_it);
+                } else {
+                    ++scan_it;
+                }
             }
 
-            //clear all radio_scan_request in agent
-            agent.second.radio_scans.clear();
             agent.second.status = eAgentStatus::IDLE;
         };
 
@@ -260,7 +265,7 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
         if ((!create_channel_scan_request_message(agent_mac, mid, channel_scan_request_tlv)) ||
             (!channel_scan_request_tlv)) {
             LOG(ERROR) << "create_channel_scan_request_message() failed for agent " << agent_mac;
-            abort_scan_in_current_agent();
+            abort_active_scans_in_current_agent();
             continue; //CMDU creation failed - Trigger the next agent
         }
 
@@ -290,7 +295,7 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
             }
         }
         if (!success) {
-            abort_scan_in_current_agent();
+            abort_active_scans_in_current_agent();
             continue; //tlv creation failed - Trigger the next agent
         }
 
@@ -301,7 +306,7 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
 
             if (!channel_scan_request_extension_vs_tlv) {
                 LOG(ERROR) << "Failed building tlvVsChannelScanRequestExtension message!";
-                abort_scan_in_current_agent();
+                abort_active_scans_in_current_agent();
                 continue; //tlv creation failed - Trigger the next agent
             }
 
@@ -310,7 +315,7 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
             auto num_of_radios = agent.second.radio_scans.size();
             if (!channel_scan_request_extension_vs_tlv->alloc_scan_requests_list(num_of_radios)) {
                 LOG(ERROR) << "Failed to alloc_scan_requests_list(" << num_of_radios << ")!";
-                abort_scan_in_current_agent();
+                abort_active_scans_in_current_agent();
                 continue; //tlv creation failed - Trigger the next agent
             }
 
@@ -351,7 +356,7 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
         }
 
         if (!success) {
-            abort_scan_in_current_agent();
+            abort_active_scans_in_current_agent();
             continue; //tlv creation failed - Trigger the next agent
         }
 
@@ -360,7 +365,7 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
         success = send_scan_request_to_agent(agent_mac);
 
         if (!success) {
-            abort_scan_in_current_agent();
+            abort_active_scans_in_current_agent();
             continue; //sending scan request to one of the agents failed - Trigger the next agent
         }
 
