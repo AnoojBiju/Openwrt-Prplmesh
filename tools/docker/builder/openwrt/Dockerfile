@@ -85,7 +85,6 @@ ENV MMX_ENABLE=$MMX_ENABLE
 
 WORKDIR /home/openwrt/openwrt
 
-COPY --chown=openwrt:openwrt profiles_feeds/ /home/openwrt/openwrt/profiles_feeds
 COPY --chown=openwrt:openwrt scripts/build-openwrt.sh /home/openwrt/openwrt/scripts/build-openwrt.sh
 
 ####
