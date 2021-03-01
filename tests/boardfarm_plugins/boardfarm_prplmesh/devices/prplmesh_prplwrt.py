@@ -35,6 +35,7 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
     linesep = "\r"
     agent_entity = None
     controller_entity = None
+    beerocks_logs_location = '/tmp/beerocks/logs'
 
     def __init__(self, *args, **kwargs):
         """Initialize device."""
@@ -103,6 +104,10 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
         # communicate:
         self.add_host_iface_to_bridge(self.host_iface_to_device,
                                       _get_bridge_interface(self.unique_id))
+
+        # Remove the logs to make sure we only get the ones from the
+        # next prplMesh start:
+        self.prplmesh_remove_logs()
 
         # prplMesh has to be started before creating the ALEntity,
         # since the latter requires the ucc listener to be running.
@@ -254,7 +259,7 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
 
         dirs_to_copy = [
             # beerock logs
-            ('/tmp/beerocks/logs', 'beerock_logs'),
+            (self.beerocks_logs_location, 'beerock_logs'),
         ]
 
         commands_to_run = [
@@ -268,3 +273,8 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
         ]
 
         self.copy_logs_over_ssh(logdir, dirs_to_copy, commands_to_run)
+
+    def prplmesh_remove_logs(self):
+        command = ["rm", "-rf", "{}/*".format(self.beerocks_logs_location)]
+        self.sendline(" ".join(command))
+        self.expect(self.prompt, timeout=10)
