@@ -37,9 +37,6 @@ build_image() {
            --build-arg OPENWRT_REPOSITORY="$OPENWRT_REPOSITORY" \
            --build-arg OPENWRT_VERSION="$OPENWRT_VERSION" \
            --build-arg TARGET_SYSTEM="$TARGET_SYSTEM" \
-           --build-arg SUBTARGET="$SUBTARGET" \
-           --build-arg TARGET_DEVICE="$TARGET_DEVICE" \
-           --build-arg TARGET_PROFILE="$TARGET_PROFILE" \
            --build-arg MMX_ENABLE="$MMX_ENABLE" \
            --build-arg PRPLMESH_VARIANT="$PRPLMESH_VARIANT" \
            --target="$DOCKER_TARGET_STAGE" \
@@ -60,9 +57,6 @@ build_prplmesh() {
     docker run -i \
            --name "$container_name" \
            -e TARGET_SYSTEM \
-           -e SUBTARGET \
-           -e TARGET_DEVICE \
-           -e TARGET_PROFILE \
            -e OPENWRT_VERSION \
            -e PRPLMESH_VERSION \
            -v "$scriptdir/scripts:/home/openwrt/openwrt/build_scripts/:ro" \
@@ -118,19 +112,12 @@ main() {
     case "$TARGET_DEVICE" in
         turris-omnia)
             TARGET_SYSTEM=mvebu
-            SUBTARGET=cortexa9
-            TARGET_PROFILE=DEVICE_cznic_turris-omnia
             ;;
         glinet-b1300)
             TARGET_SYSTEM=ipq40xx
-            SUBTARGET=generic
-            TARGET_PROFILE=DEVICE_glinet_gl-b1300
             ;;
         netgear-rax40|axepoint|intel_mips|nec-wx3000hp)
             TARGET_SYSTEM=intel_mips
-            SUBTARGET=xrx500
-            TARGET_PROFILE=
-            PRPLMESH_VARIANT=-dwpal
             ;;
         *)
             err "Unknown target device: $TARGET_DEVICE"
@@ -146,11 +133,8 @@ main() {
     dbg "OPENWRT_VERSION=$OPENWRT_VERSION"
     dbg "MMX_ENABLE=$MMX_ENABLE"
     dbg "IMAGE_ONLY=$IMAGE_ONLY"
-    dbg "TARGET_DEVICE=$TARGET_DEVICE"
     dbg "TAG=$TAG"
     dbg "TARGET_SYSTEM=$TARGET_SYSTEM"
-    dbg "SUBTARGET=$SUBTARGET"
-    dbg "TARGET_PROFILE=$TARGET_PROFILE"
     dbg "PRPLMESH_VARIANT=$PRPLMESH_VARIANT"
 
     if [ -n "$TAG" ] ; then
@@ -163,8 +147,6 @@ main() {
     export OPENWRT_REPOSITORY
     export OPENWRT_VERSION
     export TARGET_SYSTEM
-    export SUBTARGET
-    export TARGET_PROFILE
     # We want to exclude tags from the git-describe output because we
     # have no relevant tags to use at the moment.
     # The '--exclude' option of git-describe is not available on older
