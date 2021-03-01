@@ -51,7 +51,7 @@ class ApConfigBSSTeardown(PrplMeshBaseTest):
         print(f"radio 0 mac is {agent.radios[0].mac}")
         print(f"radio 1 mac is {agent.radios[1].mac}")
 
-        conn_map = controller.get_conn_map()
+        conn_map = self.get_topology()
         repeater1 = conn_map[agent.mac]
         repeater1_wlan0 = repeater1.radios[agent.radios[0].mac]
         for vap in repeater1_wlan0.vaps.values():
