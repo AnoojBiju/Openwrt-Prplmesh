@@ -55,11 +55,11 @@ class ApConfigBSSTeardown(PrplMeshBaseTest):
         repeater1 = conn_map[agent.mac]
         repeater1_wlan0 = repeater1.radios[agent.radios[0].mac]
         for vap in repeater1_wlan0.vaps.values():
-            if vap.ssid not in (b'Boardfarm-Tests-24G-3', b'N/A'):
+            if vap.ssid not in (b'Boardfarm-Tests-24G-3', b''):
                 self.fail('Wrong SSID: {vap.ssid} instead of Boardfarm-Tests-24G-3'.format(vap=vap))
         repeater1_wlan2 = repeater1.radios[agent.radios[1].mac]
         for vap in repeater1_wlan2.vaps.values():
-            if vap.ssid != b'N/A':
+            if vap.ssid != b'':
                 self.fail('Wrong SSID: {vap.ssid} instead torn down'.format(vap=vap))
 
         # SSIDs have been removed for the CTT Agent1's front radio
