@@ -465,21 +465,6 @@ bool monitor_stats::add_ap_metrics(ieee1905_1::CmduMessageTx &cmdu_tx,
     }
     std::fill_n(ap_metrics_response_tlv->estimated_service_info_field(), 3, 0);
 
-    // add profile-2 radio metrics tlv
-    auto radio_metrics_tlv = cmdu_tx.addClass<wfa_map::tlvProfile2RadioMetrics>();
-    if (!radio_metrics_tlv) {
-        LOG(ERROR) << "Failed to add class tlvProfile2RadioMetrics";
-        return false;
-    }
-    radio_metrics_tlv->radio_uid() = tlvf::mac_from_string(radio_node.get_iface());
-    radio_metrics_tlv->noise()     = radio_node.ap_metrics_reporting_info().ap_metrics_radio_noise;
-    radio_metrics_tlv->transmit() =
-        radio_node.ap_metrics_reporting_info().ap_metrics_radio_transmit;
-    radio_metrics_tlv->receive_self() =
-        radio_node.ap_metrics_reporting_info().ap_metrics_radio_receive_self;
-    radio_metrics_tlv->receive_other() =
-        radio_node.ap_metrics_reporting_info().ap_metrics_radio_receive_other;
-
     return true;
 }
 
@@ -533,6 +518,28 @@ bool monitor_stats::add_ap_assoc_sta_link_metric(ieee1905_1::CmduMessageTx &cmdu
     bss_info.downlink_estimated_mac_data_rate_mbps = sta_stats.rx_phy_rate_100kb_avg / 10;
     bss_info.uplink_estimated_mac_data_rate_mbps   = sta_stats.tx_phy_rate_100kb_avg / 10;
     bss_info.sta_measured_uplink_rssi_dbm_enc      = sta_stats.rx_rssi_curr;
+
+    return true;
+}
+
+bool monitor_stats::add_radio_metrics(ieee1905_1::CmduMessageTx &cmdu_tx, const sMacAddr &radio_mac,
+                                      const monitor_radio_node &radio_node) const
+{
+    // add profile-2 radio metrics tlv
+    auto radio_metrics_tlv = cmdu_tx.addClass<wfa_map::tlvProfile2RadioMetrics>();
+    if (!radio_metrics_tlv) {
+        LOG(ERROR) << "Failed to add class tlvProfile2RadioMetrics";
+        return false;
+    }
+    LOG(DEBUG) << "adding tlvProfile2RadioMetrics for iface:" << radio_node.get_iface();
+    radio_metrics_tlv->radio_uid() = radio_mac;
+    radio_metrics_tlv->noise()     = radio_node.ap_metrics_reporting_info().ap_metrics_radio_noise;
+    radio_metrics_tlv->transmit() =
+        radio_node.ap_metrics_reporting_info().ap_metrics_radio_transmit;
+    radio_metrics_tlv->receive_self() =
+        radio_node.ap_metrics_reporting_info().ap_metrics_radio_receive_self;
+    radio_metrics_tlv->receive_other() =
+        radio_node.ap_metrics_reporting_info().ap_metrics_radio_receive_other;
 
     return true;
 }
