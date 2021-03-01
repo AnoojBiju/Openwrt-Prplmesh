@@ -28,10 +28,6 @@ usage() {
     echo "      --mmx - enable mmx as part of builds"
     echo " -d is always required."
     echo ""
-    echo "The following environment variables will affect the build:"
-    echo " - MMX_FEED: the MMX feed that will be used to install MMX Web and MMX CLI if option --mmx used."
-    echo "   default: $MMX_FEED"
-
 }
 
 build_image() {
@@ -44,7 +40,7 @@ build_image() {
            --build-arg SUBTARGET="$SUBTARGET" \
            --build-arg TARGET_DEVICE="$TARGET_DEVICE" \
            --build-arg TARGET_PROFILE="$TARGET_PROFILE" \
-           --build-arg MMX_FEED="$MMX_FEED" \
+           --build-arg MMX_ENABLE="$MMX_ENABLE" \
            --build-arg PRPLMESH_VARIANT="$PRPLMESH_VARIANT" \
            --target="$DOCKER_TARGET_STAGE" \
            "$scriptdir/" \
@@ -146,13 +142,9 @@ main() {
             ;;
     esac
 
-    if [ $MMX_ENABLE = true ] ; then
-        MMX_FEED='https://github.com/InangoSystems/feed-mmx.git^3dd041ee090c1cf9de968a1aed0d06e42400eb5d'
-    fi
-
     dbg "OPENWRT_REPOSITORY=$OPENWRT_REPOSITORY"
     dbg "OPENWRT_VERSION=$OPENWRT_VERSION"
-    dbg "MMX_FEED=$MMX_FEED"
+    dbg "MMX_ENABLE=$MMX_ENABLE"
     dbg "IMAGE_ONLY=$IMAGE_ONLY"
     dbg "TARGET_DEVICE=$TARGET_DEVICE"
     dbg "TAG=$TAG"
@@ -179,7 +171,7 @@ main() {
     # git version, so we use sed instead.
     PRPLMESH_VERSION="$(git describe --always --dirty | sed -e 's/.*-g//')"
     export PRPLMESH_VERSION
-    export MMX_FEED
+    export MMX_ENABLE
     export PRPLMESH_VARIANT
 
     build_image "$rootdir/build/$TARGET_DEVICE"

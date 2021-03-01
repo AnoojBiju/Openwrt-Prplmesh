@@ -79,9 +79,9 @@ RUN cd openwrt \
 ARG PRPLMESH_VARIANT
 ENV PRPLMESH_VARIANT=$PRPLMESH_VARIANT
 
-# optional: the feed to use to build MMX.
-ARG MMX_FEED
-ENV MMX_FEED=$MMX_FEED
+# optional: whether to include MMX in the build or not.
+ARG MMX_ENABLE
+ENV MMX_ENABLE=$MMX_ENABLE
 
 WORKDIR /home/openwrt/openwrt
 

@@ -35,7 +35,7 @@ sed -i "s/packages:/packages:\n  - prplmesh${PRPLMESH_VARIANT}/g" "profiles/prpl
 cp profiles_feeds/sah.yml profiles/sah.yml
 args+=("sah")
 
-if [ -n "$MMX_FEED" ] ; then
+if [ -n "$MMX_ENABLE" ] ; then
     cp profiles_feeds/mmx.yml profiles/mmx.yml
     args+=("mmx")
 fi
