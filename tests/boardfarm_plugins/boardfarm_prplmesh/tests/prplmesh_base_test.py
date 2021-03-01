@@ -387,11 +387,16 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         for name, access_point in access_points.items():
             controller.nbapi_command('Controller.Network.AccessPoint', 'del', {'name': name})
 
-    def configure_ssid(self, ssid: str) -> str:
+    def configure_ssid(self, ssid: str, multi_ap_mode: str = "Fronthaul",
+                       bands: Dict = None) -> str:
         '''Configure an SSID.
 
-        Adds a Controller.Network.AccessPoint instance and configures it with the given SSID.
-        The SSID is enabled on all bands as fronthaul-only in open mode.
+        Adds a Controller.Network.AccessPoint instance and configures it with the given SSID,
+        bands and multi AP mode.
+        If parameter 'bands' was not passed the SSID will be enabled on all bands.
+        If one of the band was not specified its value will be set to false.
+        The value of 'multi_ap_mode' can be one of "Fronthaul","Backhaul","Fronthaul+Backhaul".
+        By default, multi AP mode set as fronthaul-only in open mode.
 
         Parameters
         ----------
@@ -403,13 +408,16 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         str
             Path to the Controller.Network.AccessPoint instance.
         '''
+        if not bands:
+            bands = {"Band5GH": True, "Band6G":  True, "Band5GL": True, "Band2_4G": True}
+
         controller = self.dev.lan.controller_entity
         params = {"parameters": {
-            "MultiApMode": "Fronthaul",
-            "Band5GH": True,
-            "Band6G": True,
-            "Band5GL": True,
-            "Band2_4G": True,
+            "MultiApMode": multi_ap_mode,
+            "Band5GH": bands.get("Band5GH", False),
+            "Band6G": bands.get("Band6G", False),
+            "Band5GL": bands.get("Band5GL", False),
+            "Band2_4G": bands.get("Band2_4G", False),
             "SSID": ssid,
         }}
         new_inst = controller.nbapi_command("Controller.Network.AccessPoint", "add", params)
