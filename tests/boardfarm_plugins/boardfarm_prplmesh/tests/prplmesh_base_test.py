@@ -457,6 +457,41 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         # TODO check that all agents have been configured with the SSIDs
         time.sleep(5)  # Temporary until above TODOs are fixed
 
+    def send_and_check_policy_config_metric_reporting(self, controller,
+                                                      agent, include_sta_traffic_stats=True,
+                                                      include_sta_link_metrics=True):
+        '''Configure SSIDs on all agents.
+
+        Send multi-ap policy config request with metric reporting policy to agent
+        and verifies policy config request was acknowledged by agent
+
+        Parameters
+        ---------
+        controller: entity
+            Device that policy is being sent from
+        agent: entity
+            Device that policy is sent
+        include_sta_traffic_stats: bool
+            Sets AP Metric Request policy to include STA Traffic Stats
+        include_sta_link_metrics: bool
+            Sets AP Metric Request policy to include STA Link Metrics
+        '''
+        debug("Send multi-ap policy config request with metric reporting policy to agent")
+        reporting_value = 0
+        if include_sta_traffic_stats:
+            reporting_value |= 0x80
+        if include_sta_link_metrics:
+            reporting_value |= 0x40
+        radio_policies = ["{%s 0x00 0x00 0x01 0x%02x}" % (radio.mac, reporting_value)
+                          for radio in agent.radios]
+        metric_reporting_tlv = tlv(0x8a, 2 + 10 * len(radio_policies),
+                                   "{0x00 0x%02x %s}" % (len(radio_policies),
+                                                         " ".join(radio_policies)))
+        mid = controller.dev_send_1905(agent.mac, 0x8003, metric_reporting_tlv)
+        time.sleep(1)
+        debug("Confirming multi-ap policy config request was acked by agent")
+        self.check_cmdu_type_single("ACK", 0x8000, agent.mac, controller.mac, mid)
+
     @classmethod
     def teardown_class(cls):
         """Teardown method, optional for boardfarm tests."""

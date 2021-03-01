@@ -13,8 +13,10 @@ from opts import debug
 import time
 
 
-class CombinedInfraMetrics(PrplMeshBaseTest):
-    """
+class ApMetricsResponse(PrplMeshBaseTest):
+    '''
+        Checks AP Metric Response CMDU.
+
         Devices used in test setup:
         STA1 - WIFI repeater
         STA2 - WIFI repeater
@@ -22,7 +24,7 @@ class CombinedInfraMetrics(PrplMeshBaseTest):
         AP2 - Agent2 [LAN2]
 
         GW - Controller
-    """
+    '''
 
     def runTest(self):
         # Locate test participants
@@ -42,7 +44,7 @@ class CombinedInfraMetrics(PrplMeshBaseTest):
 
         self.dev.DUT.wired_sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
 
-        self.configure_ssids(['CombInfraMetrics-1'])
+        self.configure_ssids(['ApMetricsResponse-1'])
 
         sta1.wifi_connect(vap1)
         sta2.wifi_connect(vap2)
@@ -118,39 +120,6 @@ class CombinedInfraMetrics(PrplMeshBaseTest):
             elif sta_metrics_2.bss[0].bssid != vap2.bssid:
                 self.fail("STA metrics with wrong BSSID {} instead of {}".format(
                     sta_metrics_2.bss[0].bssid, vap2.bssid))
-
-        debug("Send 1905 Link metric query to agent 1 (neighbor STA)")
-        mid = controller.dev_send_1905(agent1.mac, 0x0005,
-                                       tlv(0x08, 0x0008, "0x01 {%s} 0x02" % sta1.mac))
-        time.sleep(1)
-        response = self.check_cmdu_type_single("Link metrics response", 0x0006, agent1.mac,
-                                               controller.mac, mid)
-        # We requested specific neighbour, so only one transmitter and receiver link metrics TLV
-        time.sleep(1)
-
-        debug("Check link metrics response has transmitter link metrics")
-        tx_metrics_1 = self.check_cmdu_has_tlv_single(response, 9)
-        debug("Check link metrics response has receiver link metrics")
-        rx_metrics_1 = self.check_cmdu_has_tlv_single(response, 10)
-
-        # Trigger combined infra metrics
-        debug("Send Combined infrastructure metrics message to agent 1")
-        mid = controller.dev_send_1905(agent1.mac, 0x8013)
-
-        time.sleep(1)
-        combined_infra_metrics = self.check_cmdu_type_single("Combined infra metrics", 0x8013,
-                                                             controller.mac, agent1.mac,
-                                                             mid)
-
-        # Combined infra metrics should *not* contain STA stats/metrics
-        expected_tlvs = filter(None, [ap_metrics_1, ap_metrics_2, tx_metrics_1, rx_metrics_1])
-        self.check_cmdu_contains_tlvs(combined_infra_metrics, expected_tlvs)
-        # TODO for now, just check that it has link metrics
-        self.check_cmdu_has_tlv_single(response, 9)
-        self.check_cmdu_has_tlv_single(response, 10)
-        (combined_infra_metrics, expected_tlvs)  # Work around unused variable flake8 check
-
-        self.check_cmdu_type_single("ACK", 0x8000, agent1.mac, controller.mac, mid)
 
         sta1.wifi_disconnect(vap1)
         sta2.wifi_disconnect(vap2)
