@@ -10,6 +10,8 @@
 #define _BWL_AP_WLAN_HAL_DWPAL_H_
 
 #include "base_wlan_hal_dwpal.h"
+#include <bcl/network/network_utils.h>
+
 #include <bwl/ap_wlan_hal.h>
 
 namespace bwl {
@@ -82,7 +84,17 @@ public:
     virtual std::string get_radio_driver_version() override;
     virtual bool set_vap_enable(const std::string &iface_name, const bool enable) override;
     virtual bool get_vap_enable(const std::string &iface_name, bool &enable) override;
-    virtual bool generate_connected_clients_events() override;
+
+    /**
+     * @brief Adds a new timer with given schedule.
+     *
+     * @see ap_wlan_hal::generate_connected_clients_events
+     */
+    virtual bool generate_connected_clients_events(
+        bool &is_finished_all_clients,
+        const std::chrono::steady_clock::time_point max_iteration_timeout =
+            std::chrono::steady_clock::time_point::max()) override;
+
     virtual bool start_wps_pbc() override;
     virtual bool set_mbo_assoc_disallow(const std::string &bssid, bool enable) override;
     virtual bool set_radio_mbo_assoc_disallow(bool enable) override;
@@ -108,6 +120,14 @@ private:
 
     bool m_drop_csa = false;
     std::chrono::steady_clock::time_point m_csa_event_filtering_timestamp;
+
+    static constexpr int INVALID_VAP_ID = -1;
+
+    std::set<int> m_completed_vaps;
+    std::unordered_set<sMacAddr> m_handled_clients;
+    sMacAddr m_prev_client_mac = beerocks::net::network_utils::ZERO_MAC;
+    bool m_queried_first       = false;
+    int m_vap_id_in_progress   = INVALID_VAP_ID;
 };
 
 } // namespace dwpal
