@@ -45,7 +45,8 @@ class CapiWirelessOnboarding(PrplMeshBaseTest):
             "autoconfig search while awaiting onboarding", 0x0007, agent.mac)
 
         # Step 3: start WPS
-        agent.ucc_socket.cmd_reply("start_wps_registration,band,24G,WpsConfigMethod,PBC")
+        agent.ucc_socket.start_wps_registration("24G")
+        self.check_log(agent, r"Initiating wps_pbc", timeout=60)
 
         # TODO start WPS on CTT agent as well to complete onboarding
         # On dummy, it does nothing anyway
