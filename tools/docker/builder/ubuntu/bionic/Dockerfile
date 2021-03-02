@@ -99,7 +99,7 @@ RUN \
 # them in specific order.
 RUN \
     repo init -u https://gitlab.com/soft.at.home/ambiorix/ambiorix.git \
-        -b refs/tags/v0.3.2 < /dev/null && \
+        -b refs/tags/v0.6.2 < /dev/null && \
     repo sync && \
     make install -C libraries/libamxc && \
     make install -C libraries/libamxp && \

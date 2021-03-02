@@ -39,10 +39,6 @@ add_executable(${PROJECT_NAME} ${beerocks_agent_sources})
 set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,-z,defs")
 target_link_libraries(${PROJECT_NAME} rt dl bcl btl tlvf elpp btlvf bwl bpl nbapi ${LIBS})
 
-if (TARGET_PLATFORM STREQUAL "openwrt")
-    set(UBUS_SOCK "-DAMBIORIX_BUS_URI=\"\\\"ubus:/var/run/ubus.sock\\\"\"")
-endif()
-
 if (ENABLE_NBAPI)
     # Include AMBIORIX in the build
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_NBAPI ${UBUS_SOCK}")

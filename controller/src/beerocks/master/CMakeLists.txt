@@ -24,10 +24,6 @@ ${controller_operations_sources} ${controller_db_sources} ${controller_actions})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,-z,defs")
 
-if (TARGET_PLATFORM STREQUAL "openwrt")
-    set(UBUS_SOCK "-DAMBIORIX_BUS_URI=\"\\\"ubus:/var/run/ubus.sock\\\"\"")
-endif()
-
 list(APPEND LINKED_LIBS bpl bcl btl tlvf elpp btlvf nbapi ieee1905_transport_lib)
 if (ENABLE_NBAPI)
     # Include AMBIORIX in the build
