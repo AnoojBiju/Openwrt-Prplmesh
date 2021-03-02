@@ -64,7 +64,7 @@ class ApConfigBSSTeardown(PrplMeshBaseTest):
         repeater1 = conn_map[agent.mac]
         repeater1_wlan0 = repeater1.radios[agent.radios[0].mac]
         for vap in repeater1_wlan0.vaps.values():
-            if (not ssid_is_empty(vap.ssid)) and (vap.ssid != b'Boardfarm-Tests-24G-3'):
+            if (not ssid_is_empty(vap.ssid)) and (vap.ssid != 'Boardfarm-Tests-24G-3'):
                 self.fail('Wrong SSID: {vap.ssid} instead of Boardfarm-Tests-24G-3'.format(vap=vap))
         repeater1_wlan2 = repeater1.radios[agent.radios[1].mac]
         for vap in repeater1_wlan2.vaps.values():
