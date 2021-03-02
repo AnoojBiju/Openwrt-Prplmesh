@@ -633,49 +633,58 @@ bool base_wlan_hal_nl80211::refresh_radio_info()
         if (m_nl80211_client->get_radio_info(get_iface_name(), radio_info)) {
             if (!radio_info.bands.empty()) {
                 nl80211_client::band_info band_info;
-                /*
-                   If there are multiple bands, use the 5G one only.
-                   TODO: properly support dual bands radio:
-                   https://jira.prplfoundation.org/browse/PPM-366
-                 */
+
+                // Find the supported frequencies:
                 if (radio_info.bands.size() > 1) {
-                    auto band_5G = find_if(
-                        radio_info.bands.begin(), radio_info.bands.end(),
-                        [&](const nl80211_client::band_info &band) { return band.is_5ghz_band(); });
-                    if (band_5G == radio_info.bands.end()) {
-                        LOG(ERROR) << "Dual band radio has no 5Ghz band: " << get_iface_name();
+                    // If there are multiple bands, check if it's a
+                    // 2.4+5Ghz radio:
+                    std::vector<beerocks::eFreqType> radio_frequencies;
+                    auto band_to_frequency = [](nl80211_client::band_info band) {
+                        return band.get_frequency_band();
+                    };
+                    std::transform(radio_info.bands.begin(), radio_info.bands.end(),
+                                   radio_frequencies.begin(), band_to_frequency);
+                    std::array<beerocks::eFreqType, 2> dual_bands{beerocks::eFreqType::FREQ_24G,
+                                                                  beerocks::eFreqType::FREQ_5G};
+
+                    if (std::is_permutation(radio_frequencies.begin(), radio_frequencies.end(),
+                                            dual_bands.begin())) {
+                        m_radio_info.frequency_band = beerocks::eFreqType::FREQ_24G_5G;
+                    } else {
+                        LOG(ERROR) << "Radio has unknown bands combination: " << get_iface_name();
                         return false;
                     }
-                    band_info = *band_5G;
                 } else if (radio_info.bands.size() == 1) {
-                    band_info = radio_info.bands.at(0);
+                    m_radio_info.frequency_band = band_info.get_frequency_band();
                 } else {
                     LOG(ERROR) << "Unable to find any band for the radio: " << get_iface_name();
                     return false;
                 }
 
-                m_radio_info.frequency_band = band_info.get_frequency_band();
-                m_radio_info.max_bandwidth  = band_info.get_max_bandwidth();
-                m_radio_info.ht_supported   = band_info.ht_supported;
-                m_radio_info.ht_capability  = band_info.ht_capability;
+                for (const auto &band : radio_info.bands) {
+                    for (auto const &pair : band.supported_channels) {
+                        auto &channel_info = pair.second;
+                        for (auto bw : channel_info.supported_bandwidths) {
+                            beerocks::message::sWifiChannel channel;
+                            channel.channel           = channel_info.number;
+                            channel.channel_bandwidth = bw;
+                            channel.tx_pow            = channel_info.tx_power;
+                            channel.is_dfs_channel    = channel_info.is_dfs;
+                            channel.dfs_state         = channel_info.dfs_state;
+                            m_radio_info.supported_channels.push_back(channel);
+                        }
+                    }
+                }
+
+                band_info                  = radio_info.bands.at(0);
+                m_radio_info.max_bandwidth = band_info.get_max_bandwidth();
+                m_radio_info.ht_supported  = band_info.ht_supported;
+                m_radio_info.ht_capability = band_info.ht_capability;
                 m_radio_info.ht_mcs_set.assign(band_info.ht_mcs_set, sizeof(band_info.ht_mcs_set));
                 m_radio_info.vht_supported  = band_info.vht_supported;
                 m_radio_info.vht_capability = band_info.vht_capability;
                 m_radio_info.vht_mcs_set.assign(band_info.vht_mcs_set,
                                                 sizeof(band_info.vht_mcs_set));
-
-                for (auto const &pair : band_info.supported_channels) {
-                    auto &channel_info = pair.second;
-                    for (auto bw : channel_info.supported_bandwidths) {
-                        beerocks::message::sWifiChannel channel;
-                        channel.channel           = channel_info.number;
-                        channel.channel_bandwidth = bw;
-                        channel.tx_pow            = channel_info.tx_power;
-                        channel.is_dfs_channel    = channel_info.is_dfs;
-                        channel.dfs_state         = channel_info.dfs_state;
-                        m_radio_info.supported_channels.push_back(channel);
-                    }
-                }
             }
         }
     }
