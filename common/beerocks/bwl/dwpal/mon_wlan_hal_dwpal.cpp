@@ -886,6 +886,38 @@ bool mon_wlan_hal_dwpal::sta_link_measurements_11k_request(const std::string &st
     return true;
 }
 
+nl_msg *mon_wlan_hal_dwpal::generate_nl_message(int nl80211_id, int flags, uint8_t command)
+{
+    LOG(DEBUG) << "Generating NL message, "
+               << "NL80211 ID: " << nl80211_id << ", flags: " << flags << ", CMD: " << command;
+
+    auto devidx = if_nametoindex(m_radio_info.iface_name.c_str());
+    if (!devidx) {
+        LOG(ERROR) << "Failed to get devidx for " << m_radio_info.iface_name;
+        return nullptr;
+    }
+
+    nl_msg *msg = nlmsg_alloc();
+    if (!msg) {
+        LOG(ERROR) << "Failed to allocate nl_msg";
+        return nullptr;
+    }
+
+    if (!genlmsg_put(msg, 0, 0, nl80211_id, 0, flags, command, 0)) {
+        LOG(ERROR) << "Failed to set NL MSG values";
+        nlmsg_free(msg);
+        return nullptr;
+    }
+
+    if (nla_put_u32(msg, NL80211_ATTR_IFINDEX, devidx) < 0) {
+        LOG(ERROR) << "Failed to set device ID: " << devidx;
+        nlmsg_free(msg);
+        return nullptr;
+    }
+
+    return msg;
+}
+
 bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
                                               const std::vector<unsigned int> &channel_pool)
 {
@@ -896,6 +928,83 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
     sScanCfgParams org_fg, new_fg;   //foreground scan param
     sScanCfgParamsBG org_bg, new_bg; //background scan param
     size_t bg_size = ScanCfgParams_size_invalid, fg_size = ScanCfgParams_size_invalid;
+
+    auto request_channel_scan = [this](const ScanParams &channel_scan_params) -> bool {
+        auto context   = get_dwpal_nl_ctx();
+        int nl80211_id = 0;
+
+        if (dwpal_nl80211_id_get(context, &nl80211_id) != DWPAL_SUCCESS) {
+            LOG(ERROR) << "Failed to get nl80211 ID";
+            return false;
+        }
+
+        auto msg = generate_nl_message(nl80211_id, 0 /*No flag*/, NL80211_CMD_TRIGGER_SCAN);
+        if (!msg) {
+            LOG(ERROR) << "Failed to generate NL80211_CMD_TRIGGER_SCAN CMD message";
+            return false;
+        }
+
+        // must set NL80211_SCAN_FLAG_AP as single wifi won't allow scan on an AP without this flag
+        if (nla_put_u32(msg, NL80211_ATTR_SCAN_FLAGS, NL80211_SCAN_FLAG_AP) < 0) {
+            LOG(ERROR) << "Failed to set scan flags (NL80211_ATTR_SCAN_FLAGS)";
+            nlmsg_free(msg);
+            return false;
+        }
+
+        nl_msg *freqs = nullptr;
+        for (int i = 0; channel_scan_params.freq[i] != 0; i++) {
+            // freqs need to be allocated only once.
+            if (!freqs) {
+                freqs = nlmsg_alloc();
+                if (!freqs) {
+                    LOG(ERROR) << "Failed to allocate \"freqs\" nl_msg buffer";
+                    nlmsg_free(msg);
+                    return false;
+                }
+            }
+            // Place frequency within "freqs" nl_msg buffer
+            if (nla_put_u32(freqs, i, channel_scan_params.freq[i]) < 0) {
+                LOG(ERROR) << "Failed to set channel frequency freq[" << i
+                           << "]: " << channel_scan_params.freq[i];
+                nlmsg_free(msg);
+                nlmsg_free(freqs);
+                return false;
+            }
+        }
+
+        if (!freqs) {
+            LOG(DEBUG) << "Triggering a scan without any set frequencies";
+            // return false;
+        } else {
+            LOG(DEBUG) << "Setting NL80211_ATTR_SCAN_FREQUENCIES";
+            nla_put_nested(msg, NL80211_ATTR_SCAN_FREQUENCIES, freqs);
+        }
+
+        LOG(TRACE) << "Sending scan trigger CMD (NL80211_CMD_TRIGGER_SCAN)";
+        int ret                 = DWPAL_FAILURE;
+        auto empty_function_ptr = +[](nl_msg *msg, void *arg) -> int { return DWPAL_SUCCESS; };
+        auto cmd_ret = dwpal_nl80211_cmd_send(context, msg, &ret, empty_function_ptr, nullptr);
+        // "ret" correlates to
+        // https://www-numi.fnal.gov/offline_software/srt_public_context/WebDocs/Errors/unix_system_errors.html
+        LOG(TRACE) << "ret: " << ret << " cmd_ret: " << int(cmd_ret);
+        if (cmd_ret != DWPAL_SUCCESS || ret < 0) {
+            LOG(ERROR) << "Sending scan trigger CMD (NL80211_CMD_TRIGGER_SCAN) failed";
+            nlmsg_free(msg);
+            nlmsg_free(freqs);
+            return false;
+        }
+
+        LOG(DEBUG) << "Scan trigger CMD (NL80211_CMD_TRIGGER_SCAN) sent successfully!";
+        nlmsg_free(msg);
+        nlmsg_free(freqs);
+        return true;
+    };
+
+    auto restore_original_scan_params = [&org_fg, &org_bg, fg_size, bg_size, this]() {
+        LOG(ERROR) << "restoring original scan parameters";
+        dwpal_set_scan_params_fg(org_fg, fg_size);
+        dwpal_set_scan_params_bg(org_bg, bg_size);
+    };
 
     // get original scan params
     if (!dwpal_get_scan_params_fg(org_fg, fg_size) || !dwpal_get_scan_params_bg(org_bg, bg_size)) {
@@ -911,50 +1020,42 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
     new_bg.passive_dwell_time = dwell_time_msec;
     new_bg.active_dwell_time  = dwell_time_msec;
 
-    // set new scan params & get newly set values for validation
+    // set new scan params
     if (!dwpal_set_scan_params_fg(new_fg, fg_size) || !dwpal_set_scan_params_bg(new_bg, bg_size)) {
-        LOG(ERROR) << "Failed setting new values, restoring original scan parameters";
-        dwpal_set_scan_params_fg(org_fg, fg_size);
-        dwpal_set_scan_params_bg(org_bg, bg_size);
+        LOG(ERROR) << "Failed setting new values";
+        restore_original_scan_params();
         return false;
     }
 
+    // get "new" scan params to validate the previous set
     if (!dwpal_get_scan_params_fg(new_fg, fg_size) || !dwpal_get_scan_params_bg(new_bg, bg_size) ||
         (new_fg.active_dwell_time != dwell_time_msec) ||
         (new_fg.passive_dwell_time != dwell_time_msec) ||
         (new_bg.active_dwell_time != dwell_time_msec) ||
         (new_bg.passive_dwell_time != dwell_time_msec)) {
-        LOG(ERROR) << "Validation failed, restoring original scan parameters";
-        dwpal_set_scan_params_fg(org_fg, fg_size);
-        dwpal_set_scan_params_bg(org_bg, bg_size);
+        LOG(ERROR) << "Validation failed";
+        restore_original_scan_params();
         return false;
     }
 
-    // get frequencies from channel pool and set in scan_params
+    // get frequencies from channel pool and set in channel_scan_params
     if (!dwpal_get_channel_scan_freq(channel_pool, m_radio_info.channel, m_radio_info.iface_name,
                                      channel_scan_params)) {
-        LOG(ERROR) << "Failed getting frequencies, restoring original scan parameters";
-        dwpal_set_scan_params_fg(org_fg, fg_size);
-        dwpal_set_scan_params_bg(org_bg, bg_size);
+        LOG(ERROR) << "Failed getting frequencies";
+        restore_original_scan_params();
         return false;
     }
 
-    // must as single wifi won't allow scan on ap without this flag
-    channel_scan_params.ap_force = 1;
-
-    if (dwpal_driver_nl_scan_trigger(get_dwpal_nl_ctx(), (char *)m_radio_info.iface_name.c_str(),
-                                     &channel_scan_params) != DWPAL_SUCCESS) {
-        LOG(ERROR) << " scan trigger failed! Abort scan, restoring original scan parameters";
-        dwpal_set_scan_params_fg(org_fg, fg_size);
-        dwpal_set_scan_params_bg(org_bg, bg_size);
+    if (!request_channel_scan(channel_scan_params)) {
+        LOG(ERROR) << "Channel scan request failed";
+        restore_original_scan_params();
         return false;
     }
 
     // restoring channel scan params with original dwell time.
-    // dwpal_driver_nl_scan_trigger() API doesn't include dwell time parameter
-    // so we have to change and restore driver scan parameters on the fly.
-    // no reason to check since we restore the original params here anyway
-    // and the next validation will validate the change.
+    // We have to change and restore driver scan parameters manually.
+    // There is no reason to check since we restore the original params here anyway
+    // and the next validation will validate this change.
     dwpal_set_scan_params_fg(org_fg, fg_size);
     dwpal_set_scan_params_bg(org_bg, bg_size);
 
