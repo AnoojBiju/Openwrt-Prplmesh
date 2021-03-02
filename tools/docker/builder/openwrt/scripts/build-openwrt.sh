@@ -19,6 +19,14 @@ args=("$TARGET_SYSTEM")
 # additional packages that are useful when developing:
 args+=("debug")
 
+./scripts/gen_config.py "$TARGET_DEVICE" "${args[@]}"
+cat profiles_feeds/netgear-rax40.yml >> files/etc/prplwrt-version
+
+# test hostapd fix to cac termination flow 
+cp patches/0001-add-an-option-to-set-secondary-channel.patch \
+    feeds/feed_intel/wlan_6x/wlan_wave_feed/iwlwav-hostap-uci/patches
+cat profiles_feeds/netgear-rax40.yml >> files/etc/prplwrt-version
+
 if [ "$TARGET_SYSTEM" = "intel_mips" ]; then
     # intel_mips depends on iwlwav-iw, which clashes with iw-full:
     sed -i '/iw-full$/d' "profiles/debug.yml"
