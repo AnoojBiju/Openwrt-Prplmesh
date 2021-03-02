@@ -302,37 +302,60 @@ def _docker_wait_for_log(container: str, programs: [str], regex: str, start_line
         return (False, start_line, None)
 
 
+def _device_clear_input_buffer(device):
+    """Clears input buffer of boardfarm"""
+    # Expect the prompt and the end of the line, to make sure we match
+    # the last one. Doing this will make sure we don't keep old data
+    # in the buffer.
+    device.expect(['{}$'.format(device.prompt), pexpect.TIMEOUT, pexpect.EOF])
+
 # Temporary workaround
 # Since we have multiple log files that correspond to a radio, multiple log files are passed
 # as argument. In the log messages, we only use the first one.
 # This should be reverted again as part of Unified Agent.
 def _device_wait_for_log(device: None, log_paths: [str], regex: str,
-                         timeout: int, start_line: int = 0):
+                         timeout: int, start_line: int = 0, fail_on_mismatch = True):
     """Waits for log matching regex expression to show up."""
     # Interrupt any running command:
     device.send('\003')
-    # Expect the prompt and the end of the line, to make sure we match
-    # the last one. Doing this will make sure we don't keep old data
-    # in the buffer.
-    device.expect(['{}$'.format(device.prompt), pexpect.TIMEOUT, pexpect.EOF])
+    _device_clear_input_buffer(device)
+
     device.sendline("tail -f -n +{:d} {}".format(start_line + 1, " ".join(log_paths)))
-    device.expect(regex, timeout=timeout)
+
+    if not fail_on_mismatch:
+        match_id = device.expect([regex, pexpect.TIMEOUT], timeout=timeout)
+        if match_id == 1:
+            # Timeout
+            return (False, start_line, None)
+    else:
+        device.expect(regex, timeout=timeout)
+
     match = device.match.group(0)
     # Send Ctrl-C to interrupt tail -f
     device.send('\003')
     device.expect(device.prompt)
-    if match:
-        first_matched_line = match.partition('\r\n')[0]
-        device.sendline("tail -n +{:d} {} | grep -a -n \"{}\"".format(start_line,
-                                                                      " ".join(log_paths),
-                                                                      first_matched_line))
-        # Typical output of grep -n from log: "line_num:severity"
-        # this regex has to capture just number of line in log
-        device.expect(r"(?P<line_number>[0-9]+):[A-Z]+\s[0-9]", timeout=timeout)
-        matched_line = int(device.match.group('line_number')) + start_line
-        return (True, matched_line, match)
-    else:
-        return (False, start_line, None)
+
+    try:
+        if match:
+            first_matched_line = match.partition('\r\n')[0]
+            device.sendline("tail -n +{:d} {} | grep -a -n \"{}\"".format(start_line,
+                                                                          " ".join(log_paths),
+                                                                          first_matched_line))
+            # Typical output of grep -n from log: "line_num:severity"
+            # this regex has to capture just number of line in log
+            device.expect(r"(?P<line_number>[0-9]+):[A-Z]+\s[0-9]", timeout=timeout)
+            matched_line = int(device.match.group('line_number')) + start_line
+            return (True, matched_line, match)
+        else:
+            return (False, start_line, None)
+    # except pexpect.exceptions.TIMEOUT as e:
+    #
+    #    if fail_on_mismatch:
+    #        raise e
+    #    else:
+    #        return (False, start_line, None)
+    except Exception as e:
+        raise Exception("Exception name: %s" % type(e).__name__)
 
 
 class ALEntityDocker(ALEntity):
@@ -600,7 +623,7 @@ class ALEntityPrplWrt(ALEntity):
         # Multiply timeout by 100, as test sets it in float.
         return _device_wait_for_log(self.device,
                                     ["{}/beerocks_{}.log".format(self.log_folder, program)],
-                                    regex, timeout, start_line)
+                                    regex, timeout, start_line, fail_on_mismatch)
 
     def nbapi_command(self, path: str, command: str, args: Dict = None) -> Dict:
         return nbapi_ubus_command(self, path, command, args)
@@ -615,6 +638,7 @@ class RadioHostapd(Radio):
     def __init__(self, agent: ALEntityPrplWrt, iface_name: str):
         self.iface_name = iface_name
         self.agent = agent
+        _device_clear_input_buffer(self.agent.device)
         ip_raw = self.agent.command("ip link list dev {}".format(self.iface_name))
         mac = re.search(r"link/ether (([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})",
                         ip_raw).group(1)
@@ -644,17 +668,20 @@ class RadioHostapd(Radio):
         ]
 
         # Multiply timeout by 100, as test sets it in float.
-        return _device_wait_for_log(self.agent.device, log_files, regex, timeout, start_line)
+        return _device_wait_for_log(self.agent.device, log_files, regex, timeout, start_line,
+                                    fail_on_mismatch)
 
     def get_mac(self, iface: str) -> str:
         """Return mac of specified iface"""
         device = self.agent.device
+        _device_clear_input_buffer(device)
         device.sendline("ip link show {}".format(iface))
         device.expect("link/ether (?P<mac>([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})")
         return device.match.group('mac')
 
     def get_current_channel(self) -> ChannelInfo:
         device = self.agent.device
+        _device_clear_input_buffer(device)
         device.sendline("iw {} info".format(self.iface_name))
         device.expect(
             "channel (?P<channel>[0-9]+) .*width.* (?P<width>[0-9]+) " +
@@ -664,9 +691,10 @@ class RadioHostapd(Radio):
 
     def get_power_limit(self) -> int:
         device = self.agent.device
+        _device_clear_input_buffer(device)
         device.sendline("iw {} info".format(self.iface_name))
-        device.expect("txpower (?P<power_limit>[0-9]*[.]?[0-9]*) dBm")
-        return device.match.group('power_limit')
+        device.expect("txpower (?P<power_limit>[0-9]*)(\.0+)? dBm")
+        return int(device.match.group('power_limit'))
 
 
 class VirtualAPHostapd(VirtualAP):
