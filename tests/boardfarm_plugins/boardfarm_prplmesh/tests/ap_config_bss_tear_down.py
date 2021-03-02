@@ -10,6 +10,15 @@ from capi import tlv
 import time
 
 
+def ssid_is_empty(ssid):
+    if ssid is None:
+        return True
+    elif ssid in [b'N/A', 'N/A', b'', '']:
+        return True
+    else:
+        return False
+
+
 class ApConfigBSSTeardown(PrplMeshBaseTest):
 
     def runTest(self):
@@ -55,11 +64,11 @@ class ApConfigBSSTeardown(PrplMeshBaseTest):
         repeater1 = conn_map[agent.mac]
         repeater1_wlan0 = repeater1.radios[agent.radios[0].mac]
         for vap in repeater1_wlan0.vaps.values():
-            if vap.ssid not in (b'Boardfarm-Tests-24G-3', b''):
+            if (not ssid_is_empty(vap.ssid)) and (vap.ssid != b'Boardfarm-Tests-24G-3'):
                 self.fail('Wrong SSID: {vap.ssid} instead of Boardfarm-Tests-24G-3'.format(vap=vap))
         repeater1_wlan2 = repeater1.radios[agent.radios[1].mac]
         for vap in repeater1_wlan2.vaps.values():
-            if vap.ssid != b'':
+            if not ssid_is_empty(vap.ssid):
                 self.fail('Wrong SSID: {vap.ssid} instead torn down'.format(vap=vap))
 
         # SSIDs have been removed for the CTT Agent1's front radio
@@ -85,11 +94,11 @@ class ApConfigBSSTeardown(PrplMeshBaseTest):
         repeater1 = conn_map[agent.mac]
         repeater1_wlan0 = repeater1.radios[agent.radios[0].mac]
         for vap in repeater1_wlan0.vaps.values():
-            if vap.ssid != b'N/A':
+            if not ssid_is_empty(vap.ssid):
                 self.fail('Wrong SSID: {vap.ssid} instead torn down'.format(vap=vap))
         repeater1_wlan2 = repeater1.radios[agent.radios[1].mac]
         for vap in repeater1_wlan2.vaps.values():
-            if vap.ssid != b'N/A':
+            if not ssid_is_empty(vap.ssid):
                 self.fail('Wrong SSID: {vap.ssid} instead torn down'.format(vap=vap))
 
     @classmethod
