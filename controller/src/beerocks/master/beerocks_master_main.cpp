@@ -34,7 +34,7 @@
 #endif // AMBIORIX_BACKEND_PATH
 
 #ifndef AMBIORIX_BUS_URI
-#define AMBIORIX_BUS_URI "ubus:/var/run/ubus/ubus.sock"
+#define AMBIORIX_BUS_URI "ubus:"
 #endif // AMBIORIX_BUS_URI
 
 #ifndef CONTROLLER_DATAMODEL_PATH
