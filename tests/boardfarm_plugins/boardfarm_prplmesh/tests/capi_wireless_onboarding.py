@@ -68,6 +68,8 @@ class CapiWirelessOnboarding(PrplMeshBaseTest):
         except AttributeError as ae:
             raise SkipTest(ae)
 
+        super().teardown_class()
+
         try:
             agent.ucc_socket.cmd_reply("dev_reset_default,devrole,agent,program,map,type,DUT")
             test.checkpoint()
@@ -82,13 +84,7 @@ class CapiWirelessOnboarding(PrplMeshBaseTest):
             # moment, that the sockets to the son_slaves are open. Add a delay to make sure
             # that the son_slaves are operational before continuing to the next test.
             time.sleep(3)
-        finally:
-            test.dev.DUT.wired_sniffer.stop()
-
-        try:
-            test.dev.DUT.agent_entity.device.send('\003')
-        except AttributeError:
-            # If AttributeError was raised - we are dealing with dummy devices.
-            # We don't have to additionaly send Ctrl+C for dummy devices.
+        except Exception:
             pass
+
         # Clean up: reset to ethernet backhaul
