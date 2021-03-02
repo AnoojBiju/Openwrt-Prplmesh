@@ -163,10 +163,12 @@ bool mon_wlan_hal_dummy::channel_scan_dump_results()
     return false;
 }
 
-bool mon_wlan_hal_dummy::generate_connected_clients_events()
+bool mon_wlan_hal_dummy::generate_connected_clients_events(
+    bool &is_finished_all_clients, std::chrono::steady_clock::time_point max_iteration_timeout)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
-    return false;
+    is_finished_all_clients = true;
+    return true;
 }
 
 bool mon_wlan_hal_dummy::channel_scan_abort()

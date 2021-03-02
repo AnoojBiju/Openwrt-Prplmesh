@@ -328,8 +328,8 @@ void monitor_thread::after_select(bool timeout)
             }
             message_com::send_cmdu(slave_socket, cmdu_tx);
 
-            // Generate pre-existing client STA_Connected
-            mon_wlan_hal->generate_connected_clients_events();
+            // On init - set the flag to generate pre-existing client STA_Connected to true
+            m_generate_connected_clients_events = true;
 
             // start local monitors //
             LOG(TRACE) << "mon_stats.start()";
@@ -437,6 +437,18 @@ void monitor_thread::after_select(bool timeout)
                     ++it;
                 }
             }
+        }
+
+        if (m_generate_connected_clients_events) {
+            bool is_finished_all_clients = false;
+            // Reset the flag if finished to generate all clients' events
+            if (!mon_wlan_hal->generate_connected_clients_events(is_finished_all_clients,
+                                                                 awake_timeout())) {
+                LOG(ERROR) << "Failed to generate connected clients events";
+                stop_monitor_thread();
+                return;
+            }
+            m_generate_connected_clients_events = !is_finished_all_clients;
         }
 
         auto now = std::chrono::steady_clock::now();

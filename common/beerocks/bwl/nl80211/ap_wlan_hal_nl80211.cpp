@@ -955,7 +955,8 @@ bool ap_wlan_hal_nl80211::get_vap_enable(const std::string &iface_name, bool &en
     return true;
 }
 
-bool ap_wlan_hal_nl80211::generate_connected_clients_events()
+bool ap_wlan_hal_nl80211::generate_connected_clients_events(
+    bool &is_finished_all_clients, std::chrono::steady_clock::time_point max_iteration_timeout)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return true;
