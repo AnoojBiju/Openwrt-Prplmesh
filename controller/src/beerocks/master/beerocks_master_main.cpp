@@ -413,7 +413,7 @@ int main(int argc, char *argv[])
     std::string base_master_name = std::string(BEEROCKS_CONTROLLER);
 
     //kill running master
-    beerocks::os_utils::kill_pid(beerocks_master_conf.temp_path, base_master_name);
+    beerocks::os_utils::kill_pid(beerocks_master_conf.temp_path + "pid/", base_master_name);
 
     // only kill and exit
     if (s_kill_master) {

@@ -625,7 +625,8 @@ int main(int argc, char *argv[])
     }
 
     // killall running slave
-    beerocks::os_utils::kill_pid(beerocks_slave_conf.temp_path, std::string(BEEROCKS_AGENT));
+    beerocks::os_utils::kill_pid(beerocks_slave_conf.temp_path + "pid/",
+                                 std::string(BEEROCKS_AGENT));
 
     // Remove any residual agent files not cleared by previous instance
     remove_residual_agent_files(beerocks_slave_conf.temp_path, std::string(BEEROCKS_AGENT));

@@ -4357,7 +4357,7 @@ void slave_thread::fronthaul_stop()
     }
 
     // Kill Fronthaul pid
-    os_utils::kill_pid(config.temp_path,
+    os_utils::kill_pid(config.temp_path + "pid/",
                        std::string(BEEROCKS_FRONTHAUL) + "_" + config.hostap_iface);
 }
 
