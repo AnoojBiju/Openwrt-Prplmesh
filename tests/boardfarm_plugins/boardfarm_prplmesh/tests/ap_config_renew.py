@@ -68,6 +68,3 @@ class ApConfigRenew(PrplMeshBaseTest):
                                                     ssid=ssid_1)
         if not bssid1:
             self.fail(f"repeater1 didn't configure {ssid_1}")
-        # simulate wps onboarding to the backhaul vap
-        agent.ucc_socket.start_wps_registration("24G")
-        self.check_log(agent.radios[0], r"Start WPS PBC", timeout=60)
