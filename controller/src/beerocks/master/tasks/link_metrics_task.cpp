@@ -302,6 +302,10 @@ bool LinkMetricsTask::construct_combined_infra_metric()
             if (vrx.size()) {
                 auto link_metric_rx_tlv =
                     cert_cmdu_tx.addClass<ieee1905_1::tlvReceiverLinkMetric>();
+                if (!link_metric_rx_tlv) {
+                    LOG(ERROR) << "addClass ieee1905_1::tlvReceiverLinkMetric failed";
+                    return false;
+                }
                 link_metric_rx_tlv->reporter_al_mac() = agent.first;
                 link_metric_rx_tlv->neighbor_al_mac() = per_neighbor.first;
                 if (!link_metric_rx_tlv->alloc_interface_pair_info(vrx.size())) {
@@ -323,6 +327,10 @@ bool LinkMetricsTask::construct_combined_infra_metric()
             if (vtx.size()) {
                 auto link_metric_tx_tlv =
                     cert_cmdu_tx.addClass<ieee1905_1::tlvTransmitterLinkMetric>();
+                if (!link_metric_tx_tlv) {
+                    LOG(ERROR) << "addClass ieee1905_1::tlvTransmitterLinkMetric failed";
+                    return false;
+                }
                 link_metric_tx_tlv->reporter_al_mac() = agent.first;
                 link_metric_tx_tlv->neighbor_al_mac() = per_neighbor.first;
                 for (auto &interface_pair_info : vtx) {
@@ -348,8 +356,12 @@ bool LinkMetricsTask::construct_combined_infra_metric()
     // Getting reference for ap metric data storage from db
     const auto &ap_metric_data = database.get_ap_metric_data_map();
     for (auto &it : ap_metric_data) {
-        auto metric_data_per_agent            = it.second;
-        auto ap_metrics_tlv                   = cert_cmdu_tx.addClass<wfa_map::tlvApMetrics>();
+        auto metric_data_per_agent = it.second;
+        auto ap_metrics_tlv        = cert_cmdu_tx.addClass<wfa_map::tlvApMetrics>();
+        if (!ap_metrics_tlv) {
+            LOG(ERROR) << "addClass wfa_map::tlvApMetrics failed";
+            return false;
+        }
         ap_metrics_tlv->bssid()               = metric_data_per_agent.bssid;
         ap_metrics_tlv->channel_utilization() = metric_data_per_agent.channel_utilization;
         ap_metrics_tlv->number_of_stas_currently_associated() =
