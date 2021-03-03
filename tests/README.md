@@ -172,6 +172,36 @@ TODO: translate this presentation into markdown format (.md)
 - send 0x0002 (Topology Query message) to repeater 1 as Gateway
 - check topology contains Controller MAC appears on Agent Neighbor List
 
+### nbapi_access_point
+- Add BSSes with following SSIDs, bands and MultiAPMode enabled:
+- SSID: "Test-all-bands"; bands enabled: 24G, 5GH, 5GL, 6G; MultiApMode: "Fronthaul"
+        ModeEnabled: "WPA2-Personal"; KeyPassphrase: "key_passphrease_value";
+- SSID: "Test-5GH-24G"; bands enabled: 24G, 5GH; MultiApMode: "Fronthaul"
+- SSID: "Test-5GL"; bands enabled: 5GL; MultiApMode: "Fronthaul"
+- SSID: "Test-6G"; bands enabled: 6G; MultiApMode: "Fronthaul"
+- SSID: "Test-Fronthaul+Backhaul"; bands enabled: 24G, 5GH; MultiApMode: "Fronthaul", "Backhaul"
+- call NBAPI AccessPointCommit method
+- sleep 5s
+- check logs repeaters 1, 2 radios 0, 1:
+    - 'ssid: Test-all-bands auth_type: WPA2-PSK  encr_type: AES
+    - network_key: key_passphrease_value fronthaul: true backhaul: false'
+- check logs repeaters 1, 2 radios 0, 1:
+    - 'ssid: Test-5GH-24G auth_type: NONE  encr_type: NONE
+    - network_key:  fronthaul: true backhaul: false'
+- check logs repeaters 1, 2 radio 1:
+    - 'ssid: Test-5GL auth_type: NONE  encr_type: NONE
+    - network_key:  fronthaul: true backhaul: false'
+- check logs repeaters 1, 2 radios 0, 1:
+    - 'ssid: F+B auth_type: NONE  encr_type: NONE
+    - network_key:  fronthaul: true backhaul: true'
+- check log wlan1 received credentials SSID Test-all-bands bss_type 2
+- check log wlan1 received credentials SSID Test-5GH-24G bss_type 2
+- check on UBUS, reapeters 1, 2 radio 1, BSS with SSID "5GL" is enabled
+- check on UBUS, reapeters 1, 2 radio 0, BSS with SSID "5GL" is disabled
+- check on UBUS, reapeters 1, 2 have BSSes with SSIDs: "Test-all-bands", "Test-5GH-24G",
+"Test-Fronthaul+Backhaul" on each radio enabled
+- check on UBUS BSS with SSID "Test-6G" does not appear on any radio on any reapeter
+
 ## Mapping of certification tests
 
 Flow tests between parenthesis don't fully cover the certification test.
