@@ -25,7 +25,11 @@ sta_wlan_hal_dummy::sta_wlan_hal_dummy(const std::string &iface_name, hal_event_
 
 sta_wlan_hal_dummy::~sta_wlan_hal_dummy() { sta_wlan_hal_dummy::detach(); }
 
-bool sta_wlan_hal_dummy::start_wps_pbc() { return true; }
+bool sta_wlan_hal_dummy::start_wps_pbc()
+{
+    LOG(DEBUG) << "Initiating wps_pbc on interface: " << get_iface_name();
+    return true;
+}
 
 bool sta_wlan_hal_dummy::detach() { return true; }
 
