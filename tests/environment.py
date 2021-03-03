@@ -22,6 +22,9 @@ from opts import opts, debug, err
 from typing import Dict, Any
 import sniffer
 
+MemoryStat = namedtuple('MemoryStat', 'total_memory free_memory buffers cached used_memory')
+CpuStat = namedtuple('CpuStat', 'cpu_usage cpu_avg')
+
 
 class ALEntity:
     '''Abstract representation of a MultiAP device (1905.1 AL Entity).
@@ -119,6 +122,32 @@ class ALEntity:
             if not re.match("^[0-9]", k):
                 del values[k]
         return values
+
+    def get_memory_usage(self):
+        cmd_output = self.command(
+            'awk', '/MemTotal/ || /MemFree/ || /Buffers/ || /^Cached/ {print $2}', '/proc/meminfo')
+        tot_m, free_m, buff, cached = map(int, cmd_output.split())
+
+        return MemoryStat(tot_m, free_m, buff, cached, tot_m - free_m - buff - cached)
+
+    def get_cpu_usage(self):
+        '''Get percentage sum of %CPU column in top command
+
+        Runs one iteration of the top command and locates the index of
+        the %CPU column. Then proceeds to sum all the values on the index
+        '''
+        cmd_output = self.command('top', 'b', '-n', '1')
+        cpu_column = False
+        cpu_usage = 0.0
+        for line in cmd_output.decode().split('\n'):
+            if not cpu_column and re.findall(r'%CPU', line):
+                cpu_column = line.split().index('%CPU')
+                continue
+            if cpu_column and line:
+                cpu_usage += float(line.split()[cpu_column].replace('%', ''))
+        cmd_output = self.command('cat', '/proc/loadavg')
+        cpu_avg = float(cmd_output.decode().split()[0])
+        return CpuStat(cpu_usage/100, cpu_avg)
 
 
 ChannelInfo = namedtuple("ChannelInfo", "channel bandwidth center_channel")
