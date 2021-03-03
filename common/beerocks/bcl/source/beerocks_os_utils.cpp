@@ -110,7 +110,7 @@ void os_utils::kill_pid(const std::string &path, const std::string &file_name)
 
 bool os_utils::is_pid_running(const std::string &path, std::string file_name, int *pid_out)
 {
-    std::string pid_file_name = path + "pid/" + file_name;
+    std::string pid_file_name = path + file_name;
     std::string pid_str;
     std::string cmdline;
 
