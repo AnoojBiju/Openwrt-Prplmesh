@@ -157,6 +157,12 @@ class Radio:
         '''Get the current tx_power information.'''
         raise NotImplementedError("get_power_limit is not implemented in abstract class Radio")
 
+    def get_vap(self, ssid: str):
+        for vap in self.vaps:
+            if vap.get_ssid() == ssid:
+                return vap
+        return None
+
 
 class Station:
     '''Placeholder for a wireless (fronthaul) station.
@@ -382,6 +388,8 @@ class ALEntityDocker(ALEntity):
         RadioDocker(self, "wlan0")
         RadioDocker(self, "wlan2")
 
+        self.refresh_vaps()
+
     def command(self, *command: str) -> bytes:
         '''Execute `command` in docker container and return its output.'''
         return subprocess.check_output(("docker", "exec", self.name) + command)
@@ -435,6 +443,13 @@ class ALEntityDocker(ALEntity):
                 cur_vap.add_client(client.group('mac').decode('utf-8'))
         return conn_map
 
+    def refresh_vaps(self):
+        for radio in self.radios:
+            radio.vaps = []
+            vap_file = yaml.safe_load(radio.read_tmp_file("vap"))
+            for vap in vap_file:
+                VirtualAPDocker(radio, vap['bssid'])
+
 
 class RadioDocker(Radio):
     '''Docker implementation of a radio.'''
@@ -445,10 +460,6 @@ class RadioDocker(Radio):
         mac = re.search(r"link/ether (([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})",
                         ip_output).group(1)
         super().__init__(agent, mac)
-
-        # Since dummy bwl always uses the first VAP, in practice we always have a single VAP with
-        # the radio MAC as the bssid.
-        VirtualAPDocker(self, mac)
 
     def wait_for_log(self, regex: str, start_line: int, timeout: float,
                      fail_on_mismatch: bool = True) -> bool:
@@ -480,11 +491,26 @@ class RadioDocker(Radio):
         return power_info["tx_power"]
 
 
+class BssType(Enum):
+    Disabled = (0, 0)
+    Fronthaul = (1, 0)
+    Backhaul = (0, 1)
+    Hybrid = (1, 1)
+
+
 class VirtualAPDocker(VirtualAP):
     '''Docker implementation of a VAP.'''
 
     def __init__(self, radio: RadioDocker, bssid: str):
         super().__init__(radio, bssid)
+
+    def get_ssid(self) -> str:
+        '''Get current SSID of attached radio. Return string.'''
+        vaps_info = yaml.safe_load(self.radio.read_tmp_file("vap"))
+        vap_info = [vap for vap in vaps_info if vap['bssid'] == self.bssid]
+        if vap_info:
+            return 'N/A' if not vap_info[0]['ssid'] else vap_info[0]['ssid']
+        return None
 
     def associate(self, sta: Station) -> bool:
         '''Associate "sta" with this VAP.'''
@@ -493,6 +519,29 @@ class VirtualAPDocker(VirtualAP):
     def disassociate(self, sta: Station) -> bool:
         '''Disassociate "sta" from this VAP.'''
         self.radio.send_bwl_event("EVENT AP-STA-DISCONNECTED {}".format(sta.mac))
+
+    def get_bss_type(self) -> int:
+        '''
+        0 = disabled (default)
+        1 = AP supports backhaul BSS
+        2 = AP supports fronthaul BSS
+        3 = AP supports both backhaul BSS and fronthaul BSS
+        '''
+        vaps_info = yaml.safe_load(self.radio.read_tmp_file("vap"))
+        vap_info = [(vap['fronthaul'], vap['backhaul'])
+                    for vap in vaps_info if vap['bssid'] == self.bssid]
+        if vap_info:
+            return self.bss_from_bits(*vap_info[0])
+        return None
+
+    @staticmethod
+    def bss_from_bits(fronthaul: bool, backhaul: bool):
+        return {
+            (False, False): BssType.Disabled,
+            (False, True): BssType.Backhaul,
+            (True, False): BssType.Fronthaul,
+            (True, True): BssType.Hybrid
+        }.get((fronthaul, backhaul), BssType.Disabled)
 
 
 def _get_bridge_interface(unique_id: str):
@@ -713,3 +762,27 @@ class VirtualAPHostapd(VirtualAP):
         ''' Disassociate "sta" from this VAP.'''
         # TODO: complete this stub
         return True
+
+    def get_bss_type(self) -> int:
+        device = self.radio.agent.device
+        device.sendline(f"hostapd_cli -i {self.iface} get_mesh_mode {self.iface}")
+        device.expect(r"mesh_mode\=\w+ \((?P<bss_type>\d?)\)")
+        multi_ap_value = self.bss_from_bits_intel(device.match.group('bss_type'))
+        return multi_ap_value
+
+    @staticmethod
+    def bss_from_bits(bss_type: str):
+        return {
+            '0': BssType.Disabled,
+            '1': BssType.Backhaul,
+            '2': BssType.Fronthaul,
+            '3': BssType.Hybrid
+        }.get(bss_type, BssType.Disabled)
+
+    @staticmethod
+    def bss_from_bits_intel(bss_type: str):
+        return {
+            '0': BssType.Fronthaul,
+            '1': BssType.Backhaul,
+            '2': BssType.Hybrid
+        }.get(bss_type, BssType.Disabled)
