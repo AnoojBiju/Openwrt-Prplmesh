@@ -4863,17 +4863,6 @@ bool slave_thread::handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMess
         return false;
     }
 
-    if (!handle_profile2_default_802dotq_settings_tlv(cmdu_rx)) {
-        LOG(ERROR) << "handle_profile2_default_802dotq_settings_tlv has failed!";
-        return false;
-    }
-
-    std::unordered_set<std::string> misconfigured_ssids;
-    if (!handle_profile2_traffic_separation_policy_tlv(cmdu_rx, misconfigured_ssids)) {
-        LOG(ERROR) << "handle_profile2_traffic_separation_policy_tlv has failed!";
-        return false;
-    }
-
     auto db = AgentDB::get();
 
     auto radio = db->radio(m_fronthaul_iface);
@@ -4886,6 +4875,17 @@ bool slave_thread::handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMess
         LOG(DEBUG) << "Message should be handled by another son_slave - ruid "
                    << radio->front.iface_mac << " != " << ruid->radio_uid();
         return true;
+    }
+
+    if (!handle_profile2_default_802dotq_settings_tlv(cmdu_rx)) {
+        LOG(ERROR) << "handle_profile2_default_802dotq_settings_tlv has failed!";
+        return false;
+    }
+
+    std::unordered_set<std::string> misconfigured_ssids;
+    if (!handle_profile2_traffic_separation_policy_tlv(cmdu_rx, misconfigured_ssids)) {
+        LOG(ERROR) << "handle_profile2_traffic_separation_policy_tlv has failed!";
+        return false;
     }
 
     std::deque<std::pair<wfa_map::tlvProfile2ErrorCode::eReasonCode, sMacAddr>> bss_errors;
