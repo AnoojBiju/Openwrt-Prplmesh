@@ -385,10 +385,10 @@ bool node::ap_metrics_data::add_ap_metric_data(std::shared_ptr<wfa_map::tlvApMet
     number_of_stas_currently_associated = ApMetricData->number_of_stas_currently_associated();
 
     //copy all fields to database vector
-    std::copy(ApMetricData->estimated_service_info_field(),
-              ApMetricData->estimated_service_info_field() +
-                  ApMetricData->estimated_service_info_field_length(),
-              std::back_inserter(estimated_service_info_fields));
+    estimated_service_info_fields.clear();
+    std::copy_n(ApMetricData->estimated_service_info_field(),
+                ApMetricData->estimated_service_info_field_length(),
+                std::back_inserter(estimated_service_info_fields));
     if (ApMetricData->estimated_service_parameters().include_ac_bk) {
         include_ac_bk = true;
     }

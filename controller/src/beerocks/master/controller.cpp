@@ -1550,9 +1550,8 @@ print_ap_metric_map(std::unordered_map<sMacAddr, son::node::ap_metrics_data> &ap
         LOG(DEBUG) << std::endl
                    << "  Ap Metrics from agent with bssid= " << pair_agent.first << std::endl
                    << "  channel_utilization =" << int(pair_agent.second.channel_utilization)
-                   << std::endl
                    << "  number_of_stas_currently_associated="
-                   << int(pair_agent.second.number_of_stas_currently_associated) << std::endl
+                   << int(pair_agent.second.number_of_stas_currently_associated)
                    << "  estimated_service_info_field_ac_be = 0x" << std::hex
                    << int(pair_agent.second.estimated_service_info_fields[0])
                    << int(pair_agent.second.estimated_service_info_fields[1])
@@ -1622,8 +1621,8 @@ bool Controller::handle_cmdu_1905_ap_metric_response(const std::string &src_mac,
                 continue;
             }
         } else {
-            LOG(WARNING)
-                << "Include bit for the Estimated Service Parameters AC = BE should always be 1";
+            LOG(WARNING) << "Include bit for the Estimated Service Parameters AC = BE should "
+                            "always be 1";
             if (!database.set_estimated_service_parameters_be(reporting_agent_bssid, 0)) {
                 LOG(ERROR) << "Failed to set estimated service parameters be for bssid: "
                            << reporting_agent_bssid;
