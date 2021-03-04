@@ -102,6 +102,22 @@ TODO: translate this presentation into markdown format (.md)
 - check logs repeater 1 agent Received TLV_TRANSMITTER_LINK_METRIC
 - check logs repeater 1 agent Received TLV_RECEIVER_LINK_METRIC
 
+### ap_metrics_response
+- send 0x800B (AP Metrics Query Message) + 0x0007 (AP- Autoconfiguration Search message) to repeater 1 as Gateway
+- check log repeater 1 wlan0 AP_METRICS_QUERY_MESSAGE message received
+- send 0x800C (AP Metrics Response message) as Repeater 1 to Gateway
+- check log controller AP_METRICS_RESPONSE_MESSAGE received
+- send 0x800B (AP Metrics Query Message) + 0x0007 (AP- Autoconfiguration Search message) to repeater 2 as Gateway
+- check log repeater 2 wlan2 message AP_METRICS_QUERY_MESSAGE received
+- send 0x800C (AP Metrics Response message) as Repeater 2 to Gateway
+- check log controller AP_METRICS_RESPONSE_MESSAGE received
+
+### link_metrics
+- send 0x0005 to repeater 1 as Gateway
+- check logs repeater 1 wlan0 Received LINK_METRIC_QUERY_MESSAGE
+- send 0x0006 to Gateway as repeater 1
+- check logs controller Received LINK_METRIC_RESPONSE_MESSAGE
+
 ### client_capability_query
 - send 0x8009 (Client Capability Query message) as Gateway to repeater 1 with `{sta_mac1}`
 - check logs repeater 1 agent CLIENT_CAPABILITY_QUERY_MESSAGE

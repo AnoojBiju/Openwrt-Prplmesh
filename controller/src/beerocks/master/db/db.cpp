@@ -4428,107 +4428,6 @@ bool db::notify_disconnection(const std::string &client_mac)
     return true;
 }
 
-bool db::set_node_stats_info(const std::string &mac,
-                             const beerocks_message::sStaStatsParams *params)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return false;
-    }
-    if (params == nullptr) { // clear stats
-        n->clear_node_stats_info();
-    } else {
-        auto p               = n->stats_info;
-        p->rx_packets        = params->rx_packets;
-        p->tx_packets        = params->tx_packets;
-        p->tx_bytes          = params->tx_bytes;
-        p->rx_bytes          = params->rx_bytes;
-        p->retrans_count     = params->retrans_count;
-        p->tx_phy_rate_100kb = params->tx_phy_rate_100kb;
-        p->rx_phy_rate_100kb = params->rx_phy_rate_100kb;
-        p->tx_load_percent   = params->tx_load_percent;
-        p->rx_load_percent   = params->rx_load_percent;
-        p->stats_delta_ms    = params->stats_delta_ms;
-        p->rx_rssi           = params->rx_rssi;
-        p->timestamp         = std::chrono::steady_clock::now();
-    }
-
-    std::string path_to_sta = n->dm_path;
-
-    if (path_to_sta.empty()) {
-        return true;
-    }
-
-    // Path example to the variable in Data Model
-    // Controller.Network.Device.1.Radio.1.BSS.2.STA.1.LastDataDownlinkRate
-    if (!m_ambiorix_datamodel->set(path_to_sta, "LastDataDownlinkRate",
-                                   n->stats_info->tx_phy_rate_100kb)) {
-        LOG(ERROR) << "Failed to set " << path_to_sta
-                   << "LastDataDownlinkRate: " << n->stats_info->tx_phy_rate_100kb;
-        return false;
-    }
-
-    // Path example to the variable in Data Model
-    // Controller.Network.Device.1.Radio.1.BSS.2.STA.1.LastDataUplinkRate
-    if (!m_ambiorix_datamodel->set(path_to_sta, "LastDataUplinkRate",
-                                   n->stats_info->rx_phy_rate_100kb)) {
-        LOG(ERROR) << "Failed to set " << path_to_sta
-                   << "LastDataUplinkRate: " << n->stats_info->rx_phy_rate_100kb;
-        return false;
-    }
-
-    // Path example to the variable in Data Model
-    // Controller.Network.Device.1.Radio.1.BSS.2.STA.1.BytesSent
-    if (!m_ambiorix_datamodel->set(path_to_sta, "BytesSent", n->stats_info->tx_bytes)) {
-        LOG(ERROR) << "Failed to set " << path_to_sta << "BytesSent: " << n->stats_info->tx_bytes;
-        return false;
-    }
-
-    // Path example to the variable in Data Model
-    // Controller.Network.Device.1.Radio.1.BSS.3.STA.1.BytesReceived
-    if (!m_ambiorix_datamodel->set(path_to_sta, "BytesReceived", n->stats_info->rx_bytes)) {
-        LOG(ERROR) << "Failed to set " << path_to_sta
-                   << "BytesReceived: " << n->stats_info->rx_bytes;
-        return false;
-    }
-
-    // Path example to the variable in Data Model
-    // Controller.Network.Device.1.Radio.1.BSS.2.STA.1.PacketsSent
-    if (!m_ambiorix_datamodel->set(path_to_sta, "PacketsSent", n->stats_info->tx_packets)) {
-        LOG(ERROR) << "Failed to set " << path_to_sta
-                   << "PacketsSent: " << n->stats_info->tx_packets;
-        return false;
-    }
-
-    // Path example to the variable in Data Model
-    // Controller.Network.Device.1.Radio.1.BSS.1.STA.2.PacketsReceived
-    if (!m_ambiorix_datamodel->set(path_to_sta, "PacketsReceived", n->stats_info->rx_packets)) {
-        LOG(ERROR) << "Failed to set " << path_to_sta
-                   << "PacketsReceived: " << n->stats_info->rx_packets;
-        return false;
-    }
-
-    // Path example to the variable in Data Model
-    // Controller.Network.Device.1.Radio.1.BSS.2.STA.4.RetransCount
-    if (!m_ambiorix_datamodel->set(path_to_sta, "RetransCount", n->stats_info->retrans_count)) {
-        LOG(ERROR) << "Failed to set " << path_to_sta
-                   << "RetransCount: " << n->stats_info->retrans_count;
-        return false;
-    }
-
-    // Path example to the variable in Data Model
-    // Controller.Network.Device.1.Radio.1.BSS.2.STA.1.ErrorsSent
-    // PPM-40: ToDo: should be set after processing STA Traffic Stats, not implemented yet.
-    if (!m_ambiorix_datamodel->set(path_to_sta, "ErrorsSent", 0)) {
-        LOG(ERROR) << "Failed to set " << path_to_sta << "ErrorsSent: " << 0;
-        return false;
-    }
-
-    return true;
-}
-
-void db::clear_node_stats_info(const std::string &mac) { set_node_stats_info(mac, nullptr); }
-
 bool db::set_vap_stats_info(const std::string &bssid, uint32_t uc_tx_bytes, uint32_t uc_rx_bytes,
                             uint32_t mc_tx_bytes, uint32_t mc_rx_bytes, uint32_t bc_tx_bytes,
                             uint32_t bc_rx_bytes)
@@ -5330,8 +5229,8 @@ void db::clear_default_8021q_settings(const sMacAddr &al_mac)
     default_8021q_settings.erase(al_mac);
 }
 
-bool db::set_sta_link_metrics(const sMacAddr &sta_mac, uint32_t downlink_est_mac_data_rate,
-                              uint32_t uplink_est_mac_data_rate, uint8_t signal_strength)
+bool db::dm_set_sta_link_metrics(const sMacAddr &sta_mac, uint32_t downlink_est_mac_data_rate,
+                                 uint32_t uplink_est_mac_data_rate, uint8_t signal_strength)
 {
     auto sta_node = get_node(sta_mac);
 
@@ -5350,16 +5249,16 @@ bool db::set_sta_link_metrics(const sMacAddr &sta_mac, uint32_t downlink_est_mac
     if (!m_ambiorix_datamodel->set(path_to_sta, "EstMACDataRateDownlink",
                                    downlink_est_mac_data_rate)) {
         LOG(ERROR) << "Failed to set" << path_to_sta
-                   << "EstMACDataRateDownlink: " << downlink_est_mac_data_rate;
+                   << ".EstMACDataRateDownlink: " << downlink_est_mac_data_rate;
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_sta, "EstMACDataRateUplink", uplink_est_mac_data_rate)) {
         LOG(ERROR) << "Failed to set " << path_to_sta
-                   << "EstMACDataRateUplink: " << uplink_est_mac_data_rate;
+                   << ".EstMACDataRateUplink: " << uplink_est_mac_data_rate;
         return_val = false;
     }
     if (!m_ambiorix_datamodel->set(path_to_sta, "SignalStrength", signal_strength)) {
-        LOG(ERROR) << "Failed to set " << path_to_sta << "SignalStrength: " << signal_strength;
+        LOG(ERROR) << "Failed to set " << path_to_sta << ".SignalStrength: " << signal_strength;
         return_val = false;
     }
     return return_val;
@@ -6283,7 +6182,7 @@ bool db::set_radio_utilization(const sMacAddr &bssid, uint8_t utilization)
 
     // Path to the object example: Controller.Network.Device.1.Radio.1.Utilization
     if (!m_ambiorix_datamodel->set(radio_path, "Utilization", utilization)) {
-        LOG(ERROR) << "Failed to set " << radio_path << "Utilization: " << utilization;
+        LOG(ERROR) << "Failed to set " << radio_path << ".Utilization: " << utilization;
         return false;
     }
 
@@ -6477,7 +6376,7 @@ bool db::set_estimated_service_parameters_be(const sMacAddr &bssid,
     if (!m_ambiorix_datamodel->set(path_to_bss, "EstServiceParametersBE",
                                    estimated_service_parameters_be)) {
         LOG(ERROR) << "Failed to set " << path_to_bss
-                   << "EstServiceParametersBE: " << estimated_service_parameters_be;
+                   << ".EstServiceParametersBE: " << estimated_service_parameters_be;
         return false;
     }
 
@@ -6774,5 +6673,136 @@ bool db::dm_remove_interface_neighbors(const sMacAddr &device_mac, const sMacAdd
         return false;
     }
 
+    return true;
+}
+
+bool db::dm_set_sta_extended_link_metrics(
+    const sMacAddr &sta_mac, const wfa_map::tlvAssociatedStaExtendedLinkMetrics::sMetrics &metrics)
+{
+    auto sta_node = get_node(sta_mac);
+
+    if (!sta_node || sta_node->get_type() != TYPE_CLIENT) {
+        LOG(ERROR) << "Failed to get station node with mac: " << sta_mac;
+        return false;
+    }
+
+    std::string path_to_sta = sta_node->dm_path;
+
+    if (path_to_sta.empty()) {
+        return true;
+    }
+
+    // Path example to the variable in Data Model
+    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.LastDataDownlinkRate
+    if (!m_ambiorix_datamodel->set(path_to_sta, "LastDataDownlinkRate",
+                                   metrics.last_data_down_link_rate)) {
+        LOG(ERROR) << "Failed to set " << path_to_sta
+                   << ".LastDataDownlinkRate: " << metrics.last_data_down_link_rate;
+        return false;
+    }
+
+    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.LastDataUplinkRate
+    if (!m_ambiorix_datamodel->set(path_to_sta, "LastDataUplinkRate",
+                                   metrics.last_data_up_link_rate)) {
+        LOG(ERROR) << "Failed to set " << path_to_sta
+                   << ".LastDataUplinkRate: " << metrics.last_data_up_link_rate;
+        return false;
+    }
+
+    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.UtilizationReceive
+    if (!m_ambiorix_datamodel->set(path_to_sta, "UtilizationReceive",
+                                   metrics.utilization_receive)) {
+        LOG(ERROR) << "Failed to set " << path_to_sta
+                   << ".UtilizationReceive: " << metrics.utilization_receive;
+        return false;
+    }
+
+    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.UtilizationTransmit
+    if (!m_ambiorix_datamodel->set(path_to_sta, "UtilizationTransmit",
+                                   metrics.utilization_transmit)) {
+        LOG(ERROR) << "Failed to set " << path_to_sta
+                   << ".UtilizationTransmit: " << metrics.utilization_transmit;
+        return false;
+    }
+    return true;
+}
+
+bool db::dm_set_sta_traffic_stats(const sMacAddr &sta_mac, sAssociatedStaTrafficStats &stats)
+{
+    auto sta_node = get_node(sta_mac);
+
+    if (!sta_node || sta_node->get_type() != TYPE_CLIENT) {
+        LOG(ERROR) << "Failed to get station node with mac: " << sta_mac;
+        return false;
+    }
+
+    std::string path_to_sta = sta_node->dm_path;
+
+    if (path_to_sta.empty()) {
+        return true;
+    }
+
+    // Path example to the variable in Data Model
+    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.BytesSent
+    if (!m_ambiorix_datamodel->set(path_to_sta, "BytesSent", stats.m_byte_sent)) {
+        LOG(ERROR) << "Failed to set " << path_to_sta << ".BytesSent: " << stats.m_byte_sent;
+        return false;
+    }
+
+    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.BytesReceived
+    if (!m_ambiorix_datamodel->set(path_to_sta, "BytesReceived", stats.m_byte_received)) {
+        LOG(ERROR) << "Failed to set " << path_to_sta
+                   << ".BytesReceived: " << stats.m_byte_received;
+        return false;
+    }
+
+    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.PacketsSent
+    if (!m_ambiorix_datamodel->set(path_to_sta, "PacketsSent", stats.m_packets_sent)) {
+        LOG(ERROR) << "Failed to set " << path_to_sta << ".PacketsSent: " << stats.m_packets_sent;
+        return false;
+    }
+
+    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.PacketsReceived
+    if (!m_ambiorix_datamodel->set(path_to_sta, "PacketsReceived", stats.m_packets_received)) {
+        LOG(ERROR) << "Failed to set " << path_to_sta
+                   << ".PacketsReceived: " << stats.m_packets_received;
+        return false;
+    }
+
+    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.4.RetransCount
+    if (!m_ambiorix_datamodel->set(path_to_sta, "RetransCount", stats.m_retransmission_count)) {
+        LOG(ERROR) << "Failed to set " << path_to_sta
+                   << ".RetransCount: " << stats.m_retransmission_count;
+        return false;
+    }
+
+    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.ErrorsSent
+    if (!m_ambiorix_datamodel->set(path_to_sta, "ErrorsSent", stats.m_tx_packets_error)) {
+        LOG(ERROR) << "Failed to set " << path_to_sta
+                   << ".ErrorsSent: " << stats.m_tx_packets_error;
+        return false;
+    }
+
+    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.ErrorsReceived
+    if (!m_ambiorix_datamodel->set(path_to_sta, "ErrorsReceived", stats.m_rx_packets_error)) {
+        LOG(ERROR) << "Failed to set " << path_to_sta
+                   << ".ErrorsReceived: " << stats.m_rx_packets_error;
+        return false;
+    }
+    return true;
+}
+
+bool db::dm_clear_sta_stats(const sMacAddr &sta_mac)
+{
+    dm_set_sta_link_metrics(sta_mac, 0, 0, 0);
+
+    wfa_map::tlvAssociatedStaExtendedLinkMetrics::sMetrics metrics;
+    metrics.last_data_down_link_rate = 0;
+    metrics.last_data_up_link_rate   = 0;
+    metrics.utilization_receive      = 0;
+    metrics.utilization_transmit     = 0;
+    dm_set_sta_extended_link_metrics(sta_mac, metrics);
+    sAssociatedStaTrafficStats stats;
+    dm_set_sta_traffic_stats(sta_mac, stats);
     return true;
 }
