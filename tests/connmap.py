@@ -11,6 +11,7 @@ class MapClient:
 
     def __init__(self, mac: str):
         self.mac = mac
+        self.path = ""
 
     def __str__(self):
         return "      STA   {}".format(self.mac)
@@ -22,6 +23,7 @@ class MapVap:
     def __init__(self, bssid: str, ssid: bytes):
         self.bssid = bssid
         self.ssid = ssid
+        self.path = ""
         self.clients = {}
 
     def add_client(self, mac: str):
@@ -39,6 +41,7 @@ class MapRadio:
 
     def __init__(self, uid: str):
         self.uid = uid
+        self.path = ""
         self.vaps = {}
 
     def add_vap(self, bssid: str, ssid: bytes):
@@ -55,6 +58,7 @@ class MapNeighbor:
 
     def __init__(self, neighbor_mac: str):
         self.mac = neighbor_mac
+        self.path = ""
 
     def __str__(self):
         return "    Neighbor " + self.mac
@@ -65,6 +69,7 @@ class MapInterface:
 
     def __init__(self, mac: str):
         self.mac = mac
+        self.path = ""
         self.neighbors = {}
 
     def add_neighbor(self, neighbor_mac: str):
@@ -83,6 +88,7 @@ class MapDevice:
 
     def __init__(self, mac: str):
         self.mac = mac
+        self.path = ""
         self.radios = {}
         self.interfaces = {}
 
