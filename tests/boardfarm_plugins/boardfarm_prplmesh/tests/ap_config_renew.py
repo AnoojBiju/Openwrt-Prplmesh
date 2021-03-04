@@ -8,6 +8,7 @@ import time
 
 from .prplmesh_base_test import PrplMeshBaseTest
 from capi import tlv
+import environment
 
 
 class ApConfigRenew(PrplMeshBaseTest):
@@ -33,20 +34,37 @@ class ApConfigRenew(PrplMeshBaseTest):
                                             tlv(0x10, 0x0001, "{0x00}"))
 
         time.sleep(5)
-        self.check_log(agent.radios[0],
-                       r"ssid: Boardfarm-Tests-24G-1 .*"
-                       r"fronthaul: true backhaul: false",
-                       timeout=60)
-        self.check_log(agent.radios[0],
-                       r"ssid: Boardfarm-Tests-24G-2 .*"
-                       r"fronthaul: false backhaul: true",
-                       timeout=60)
+
+        ssid_1 = 'Boardfarm-Tests-24G-1'
+        radio_0_vap_0 = agent.radios[0].get_vap(ssid_1)
+        if not radio_0_vap_0:
+            self.fail("Radio 0 vap {} not found".format(ssid_1))
+
+        vap_bss_type = radio_0_vap_0.get_bss_type()
+
+        if vap_bss_type != environment.BssType.Fronthaul:
+            self.fail(
+                f"Radio 0 vap {ssid_1} bss type is {vap_bss_type.name}"
+                " when it should be Fronthaul")
+
+        ssid_2 = 'Boardfarm-Tests-24G-2'
+        radio_0_vap_1 = agent.radios[0].get_vap(ssid_2)
+        if not radio_0_vap_1:
+            self.fail("Radio 1 vap {} not found".format(ssid_2))
+
+        vap_bss_type = radio_0_vap_1.get_bss_type()
+
+        if vap_bss_type != environment.BssType.Backhaul:
+            self.fail(
+                f"Radio 1 vap {ssid_2} bss type is {vap_bss_type.name}"
+                " when it should be Backhaul")
+
         self.check_log(agent.radios[1],
                        r"tear down radio",
                        timeout=60)
         bssid1 = agent.ucc_socket.dev_get_parameter('macaddr',
                                                     ruid='0x' +
                                                     agent.radios[0].mac.replace(':', ''),
-                                                    ssid='Boardfarm-Tests-24G-1')
+                                                    ssid=ssid_1)
         if not bssid1:
-            self.fail("repeater1 didn't configure Boardfarm-Tests-24G-1")
+            self.fail(f"repeater1 didn't configure {ssid_1}")

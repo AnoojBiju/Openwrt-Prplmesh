@@ -24,10 +24,11 @@ class ApOperationalBss(PrplMeshBaseTest):
 
         self.dev.DUT.wired_sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
         self.checkpoint()
+        ssid = 'Boardfarm-Tests-24G-5g-1'
         controller.beerocks_cli_command('bml_clear_wifi_credentials {}'.format(agent.mac))
         controller.beerocks_cli_command('bml_set_wifi_credentials {} {} {} {} {}'
                                         .format(agent.mac,
-                                                "Boardfarm-Tests-24G-5g-1",
+                                                ssid,
                                                 "maprocks1",
                                                 "24g-5g",
                                                 "fronthaul"))
@@ -56,14 +57,16 @@ class ApOperationalBss(PrplMeshBaseTest):
                 self.fail("No AP BSS interface found. bss_local_interface_list is empty.")
             if hasattr(radio, 'ap_operational_bss_local_interface') == 0:
                 self.fail("Missing ap_operational_bss_local_interface.")
+            radio_vap = current_radio.get_vap(ssid)
             for bss_interface in radio.ap_operational_bss_local_interface:
                 self.safe_check_obj_attribute(bss_interface, 'ap_bss_local_intf_addr',
-                                              current_radio.vaps[0].bssid,
+                                              radio_vap.bssid,
                                               "Wrong BSSID: {}, expected: {}".format(
                                                   bss_interface.ap_bss_local_intf_addr,
-                                                  current_radio.vaps[0].bssid))
+                                                  radio_vap.bssid))
                 self.safe_check_obj_attribute(bss_interface, 'ap_bss_local_intf_ssid',
-                                              "Boardfarm-Tests-24G-5g-1",
-                                              "Wrong SSID: {}, expected: Boardfarm-Tests-24G-5g-1"
-                                              .format(bss_interface.ap_bss_local_intf_ssid))
+                                              ssid,
+                                              "Wrong mac SSID: {}, expected: {}"
+                                              .format(bss_interface.ap_bss_local_intf_ssid,
+                                                      ssid))
         debug("No errors found in the AP Operational TLV.")

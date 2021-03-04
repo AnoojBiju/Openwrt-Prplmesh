@@ -37,6 +37,24 @@ if (NOT PRPLMESH_REVISION)
         OUTPUT_VARIABLE PRPLMESH_REVISION
     )
 endif()
+if (NOT PRPLMESH_VERSION_GIT)
+    execute_process(
+        COMMAND "git" "describe" "--tags" "--abbrev=0"
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        OUTPUT_VARIABLE PRPLMESH_VERSION_GIT
+    )
+endif()
+if( PRPLMESH_VERSION_GIT MATCHES "^(0|[1-9][0-9]*)[.](0|[1-9][0-9]*)[.](0|[1-9][0-9]*)(-[.0-9A-Za-z-]+)?$" )
+    set( version_major "${CMAKE_MATCH_1}" )
+    set( version_minor "${CMAKE_MATCH_2}" )
+    set( version_patch "${CMAKE_MATCH_3}" )
+    set( identifiers   "${CMAKE_MATCH_4}" )
+    set( metadata      "${CMAKE_MATCH_5}" )
+else()
+    message( FATAL_ERROR "Git tag isn't valid semantic version: [${PRPLMESH_VERSION_GIT}]" )
+endif()
+set( prplmesh_VERSION ${version_major}.${version_minor}.${version_patch} )
 
 if (NOT BUILD_DATE)
     execute_process(COMMAND "date" "+%F_%H-%M-%S" OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE BUILD_DATE)

@@ -230,6 +230,18 @@ bool ap_wlan_hal_dummy::update_vap_credentials(
         m_radio_info.available_vaps[vap_id++].ssid.clear();
     }
 
+    /* Write current conf to tmp file*/
+    std::stringstream value;
+    for (int id = beerocks::IFACE_VAP_ID_MIN; id < predefined_vaps_num; id++) {
+        value << "- vap_" << id << ":" << std::endl;
+        value << "  bssid: " << m_radio_info.available_vaps[id].mac << std::endl;
+        value << "  ssid: '" << m_radio_info.available_vaps[id].ssid << "'" << std::endl;
+        value << "  fronthaul: " << m_radio_info.available_vaps[id].fronthaul << std::endl;
+        value << "  backhaul: " << m_radio_info.available_vaps[id].backhaul << std::endl;
+    }
+
+    write_status_file("vap", value.str());
+
     return true;
 }
 

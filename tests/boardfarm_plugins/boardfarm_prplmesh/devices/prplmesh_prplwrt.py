@@ -87,6 +87,7 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
         conn_cmd = "ssh -o PubkeyAuthentication=no" \
                    " -o StrictHostKeyChecking=no" \
                    " {}@{}".format(self.username, self.wan_ip)
+
         self.connection = connection_decider.connection(device=self,
                                                         conn_type="ssh",
                                                         conn_cmd=conn_cmd)
