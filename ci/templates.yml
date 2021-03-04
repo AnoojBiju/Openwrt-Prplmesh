@@ -89,6 +89,7 @@
     # kill prplmesh on each target to make sure they don't interfere with the test
     - for i in $ALL_TARGETS ; do ssh "$i" 'pgrep -f beerocks | xargs kill -9 2>/dev/null' || true ; done
     - tools/deploy_firmware.py --device "$TARGET_DEVICE" --target-name "$TARGET_DEVICE_NAME" --image "$OPENWRT_IMAGE"
+    - tools/setup_uci.sh --target-type "$TARGET_DEVICE" --target-name "$TARGET_DEVICE_NAME"
     - tools/deploy_ipk.sh $TARGET_DEVICE_NAME "build/$TARGET_DEVICE/"prplmesh.ipk
   script:
     - |
@@ -135,12 +136,7 @@
       if [ -n "$IMAGE_NAME" ] ; then
           echo "Checking if the firmware on $DEVICE_UNDER_TEST needs to be updated"
           tools/deploy_firmware.py --device $DEVICE_UNDER_TEST --target-name "$DEVICE_UNDER_TEST" --image $IMAGE_NAME
-          if [ -f tests/certification/$DEVICE_UNDER_TEST/uci.sh ] ; then
-              echo "Applying UCI configuration"
-              scp tests/certification/$DEVICE_UNDER_TEST/uci.sh $DEVICE_UNDER_TEST:/tmp
-              ssh "$DEVICE_UNDER_TEST" 'sh /tmp/uci.sh'
-              echo "Done"
-          fi
+          tools/setup_uci.sh --target-type "$DEVICE_UNDER_TEST" --target-name "$DEVICE_UNDER_TEST"
           echo "Deploying prplMesh to $DEVICE_UNDER_TEST"
           tools/deploy_ipk.sh --certification-mode $DEVICE_UNDER_TEST build/$DEVICE_UNDER_TEST/prplmesh.ipk
       fi
