@@ -120,23 +120,29 @@ boardfarm-on-netgear-rax40:
 
 run-certification-tests-platform-essensium:
   extends: .run-certification-tests
+  before_script:
+    - echo "$TESTS_TO_RUN_ESSENSIUM" > .tests-to-run
+    - echo "$DEVICE_UNDER_TEST_ESSENSIUM" > .device-under-test
   tags:
     - certs-tests-essensium
   needs:
     - job: build-for-intel-mips
     - job: build-for-turris-omnia
   rules:
-    - if: '$TESTS_TO_RUN && $DEVICE_UNDER_TEST != "prplmesh" && $WFA_CERTIFICATION_RUNNER == "ESSENSIUM"'
+    - if: '$TESTS_TO_RUN_ESSENSIUM !~ /^\$/ && $DEVICE_UNDER_TEST_ESSENSIUM != "prplmesh"'
 
 run-certification-tests-platform-isr:
   extends: .run-certification-tests
+  before_script:
+    - echo "$TESTS_TO_RUN_ISR" > .tests-to-run
+    - echo "$DEVICE_UNDER_TEST_ISR" > .device-under-test
   tags:
     - certs-tests-isr
   needs:
     - job: build-for-intel-mips
     - job: build-for-turris-omnia
   rules:
-    - if: '$TESTS_TO_RUN && $DEVICE_UNDER_TEST != "prplmesh" && $WFA_CERTIFICATION_RUNNER == "ISR"'
+    - if: '$TESTS_TO_RUN_ISR !~ /^\$/ && $DEVICE_UNDER_TEST_ISR != "prplmesh"'
 
 upload-release-artifacts:
   stage: upload
