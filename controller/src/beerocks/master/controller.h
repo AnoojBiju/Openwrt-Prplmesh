@@ -235,6 +235,46 @@ private:
                                        uint8_t authkey[32], uint8_t keywrapkey[16]);
 
     /**
+     * @brief Sends Tlv metric resporting policy within 'MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE'
+     *
+     * @param dst_mac Destination MAC address.
+     * @param ruid Radio ID.
+     * @param cmdu_tx CMDU to be transmitted.
+     * @return True on success, false otherwise.
+    */
+    bool send_tlv_metric_reporting_policy(const std::string &dst_mac, const std::string &ruid,
+                                          ieee1905_1::CmduMessageTx &cmdu_tx);
+
+    /**
+     * @brief Handles Tlv of STA Link Metrics (tlvAssociatedStaLinkMetrics).
+     *
+     * @param src_mac Source MAC address.
+     * @param cmdu_rx  AP Metrics Response or Associated STA Link Metrics Response message.
+     * @return True on success, false otherwise.
+    */
+    bool handle_tlv_associated_sta_link_metrics(const std::string &src_mac,
+                                                ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Handles Tlv of STA Extended Link Metrics (tlvAssociatedStaExtendedLinkMetrics).
+     *
+     * @param src_mac Source MAC address.
+     * @param cmdu_rx  AP Metrics Response or Associated STA Link Metrics Response message.
+     * @return True on success, false otherwise.
+    */
+    bool handle_tlv_associated_sta_extended_link_metrics(const std::string &src_mac,
+                                                         ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Handles Tlv of STA Traffic Stats (tlvAssociatedStaTrafficStats).
+     *
+     * @param src_mac Source MAC address.
+     * @param cmdu_rx  AP Metrics Response message.
+     * @return True on success, false otherwise.
+    */
+    bool handle_tlv_associated_sta_traffic_stats(const std::string &src_mac,
+                                                 ieee1905_1::CmduMessageRx &cmdu_rx);
+    /**
      * Buffer to hold CMDU to be transmitted.
      */
     uint8_t m_tx_buffer[beerocks::message::MESSAGE_BUFFER_LENGTH];

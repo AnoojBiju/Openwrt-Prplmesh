@@ -524,50 +524,61 @@ TEST_F(DbTest, test_set_node_stats_info)
     EXPECT_EQ(std::string(g_radio_1_bss_path_1) + ".STA.1",
               m_db->get_node_data_model_path(g_client_mac));
 
-    //expectations for set_node_stats_info
-    beerocks_message::sStaStatsParams params;
-    params.mac               = tlvf::mac_from_string(g_client_mac);
-    params.rx_packets        = 1;
-    params.tx_packets        = 2;
-    params.tx_bytes          = 3;
-    params.rx_bytes          = 4;
-    params.retrans_count     = 5;
-    params.tx_phy_rate_100kb = 6;
-    params.rx_phy_rate_100kb = 7;
-    params.tx_load_percent   = 8;
-    params.rx_load_percent   = 9;
-    params.stats_delta_ms    = 10;
-    params.rx_rssi           = 11;
+    //expectations for dm_set_sta_extended_link_metrics
+    wfa_map::tlvAssociatedStaExtendedLinkMetrics::sMetrics metrics;
+    metrics.last_data_down_link_rate = 1;
+    metrics.last_data_up_link_rate   = 2;
+    metrics.utilization_receive      = 3;
+    metrics.utilization_transmit     = 4;
+    //expectations for dm_set_sta_traffic_stats
+    son::db::sAssociatedStaTrafficStats stats;
+    stats.m_byte_received        = 5;
+    stats.m_byte_sent            = 6;
+    stats.m_packets_received     = 7;
+    stats.m_packets_sent         = 8;
+    stats.m_retransmission_count = 9;
+    stats.m_rx_packets_error     = 10;
+    stats.m_tx_packets_error     = 11;
 
     EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_client_mac)).WillRepeatedly(Return(1));
 
     EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1), "LastDataDownlinkRate",
-                                 Matcher<const int32_t &>(params.tx_phy_rate_100kb)))
+                                 Matcher<const uint32_t &>(metrics.last_data_down_link_rate)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1), "LastDataUplinkRate",
-                                 Matcher<const int32_t &>(params.rx_phy_rate_100kb)))
+                                 Matcher<const uint32_t &>(metrics.last_data_up_link_rate)))
+        .WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1), "UtilizationReceive",
+                                 Matcher<const uint32_t &>(metrics.utilization_receive)))
+        .WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1), "UtilizationTransmit",
+                                 Matcher<const uint32_t &>(metrics.utilization_transmit)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1), "BytesSent",
-                                 Matcher<const uint32_t &>(params.tx_bytes)))
+                                 Matcher<const uint32_t &>(stats.m_byte_sent)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1), "BytesReceived",
-                                 Matcher<const uint32_t &>(params.rx_bytes)))
+                                 Matcher<const uint32_t &>(stats.m_byte_received)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1), "PacketsSent",
-                                 Matcher<const uint32_t &>(params.tx_packets)))
+                                 Matcher<const uint32_t &>(stats.m_packets_sent)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1), "PacketsReceived",
-                                 Matcher<const uint32_t &>(params.rx_packets)))
+                                 Matcher<const uint32_t &>(stats.m_packets_received)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1), "RetransCount",
-                                 Matcher<const uint32_t &>(params.retrans_count)))
+                                 Matcher<const uint32_t &>(stats.m_retransmission_count)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix,
-                set(std::string(g_sta_path_1), "ErrorsSent", Matcher<const int32_t &>(0)))
+    EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1), "ErrorsSent",
+                                 Matcher<const uint32_t &>(stats.m_tx_packets_error)))
+        .WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1), "ErrorsReceived",
+                                 Matcher<const uint32_t &>(stats.m_rx_packets_error)))
         .WillOnce(Return(true));
 
-    //execute test
-    EXPECT_TRUE(m_db->set_node_stats_info(g_client_mac, &params));
+    EXPECT_TRUE(
+        m_db->dm_set_sta_extended_link_metrics(tlvf::mac_from_string(g_client_mac), metrics));
+    EXPECT_TRUE(m_db->dm_set_sta_traffic_stats(tlvf::mac_from_string(g_client_mac), stats));
 }
 
 TEST_F(DbTest, test_set_vap_stats_info)
@@ -854,7 +865,7 @@ TEST_F(DbTest, test_set_sta_link_metrics)
         .WillOnce(Return(true));
 
     //execute test
-    EXPECT_TRUE(m_db->set_sta_link_metrics(tlvf::mac_from_string(g_client_mac), 1, 2, 3));
+    EXPECT_TRUE(m_db->dm_set_sta_link_metrics(tlvf::mac_from_string(g_client_mac), 1, 2, 3));
 }
 
 } // namespace
