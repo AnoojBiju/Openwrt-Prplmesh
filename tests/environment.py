@@ -109,6 +109,14 @@ class ALEntity:
         values = self.nbapi_get(path, {"parameters": [parameter]})
         return values and values[parameter]
 
+    def nbapi_set_parameters(self, path: str, parameters: Dict) -> Any:
+        '''Set a parameter for nbapi object.
+
+        Sets value for "parameters" of northbound API object specified with "path".
+        '''
+        ret = self.nbapi_command(path, "set", {"parameters": parameters})
+        return ret
+
     def nbapi_get_instances(self, path: str) -> Dict[str, Dict[str, Any]]:
         '''Get all instances of a template object from nbapi.
 
