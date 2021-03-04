@@ -1,10 +1,9 @@
 cmake_minimum_required(VERSION 3.1)
 cmake_policy(VERSION 3.1)
+include(cmake/multiap-helpers.cmake)
 project(prplmesh
         LANGUAGES C CXX
-        VERSION 1.5.0)
-
-include(cmake/multiap-helpers.cmake)
+        VERSION ${prplmesh_VERSION})
 
 if(NOT DEFINED TARGET_PLATFORM)
     set(TARGET_PLATFORM "linux")
