@@ -56,14 +56,18 @@ RUN printf '\033[1;35m%s Cloning prplWrt\n\033[0m' "$(date --iso-8601=seconds --
 # compiled toolchain for the target, and it's not meant to change
 # often (it will be updated as required when OPENWRT_VERSION changes
 # to a new release).
+# Remove bin/ to make sure any artifact we save is regenerated with the version from the next steps.
+# Remove some of the build directories because they are used with wildcard in the feed_intel
+# Makefiles, and it might match two or the wrong directories
 RUN printf '\033[1;35m%s Building base prplWrt tree\n\033[0m' "$(date --iso-8601=seconds --universal)" \
     && cd openwrt \
     && git checkout f35e28847dcc8b990ec4525fb04cb84b8392edee \
     && ./scripts/gen_config.py "$TARGET_SYSTEM" \
     && make -j"$(nproc)" \
-    && rm -rf bin
-    # Remove bin/ to make sure any artifact we save
-    # is regenerated with the version from the next steps.
+    && rm -rf bin \
+    && rm -rf build_dir/target*/libnl-3* \
+    && rm -rf build_dir/target*/openssl* \
+    && rm -rf build_dir/target*/iwlwav*
 
 # The following args are mandatory, do not expect the build to
 # succeed without specifying them on the command line.
