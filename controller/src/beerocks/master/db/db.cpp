@@ -6717,35 +6717,6 @@ bool db::dm_remove_interface_neighbor(const std::string &dm_path)
     return true;
 }
 
-bool db::dm_remove_interface_neighbors(const sMacAddr &device_mac, const sMacAddr &interface_mac)
-{
-    auto device = get_node(device_mac);
-    if (!device) {
-        LOG(ERROR) << "Failed to get device node with mac: " << device_mac;
-        return false;
-    }
-
-    auto iface = device->get_interface(interface_mac);
-    if (!iface) {
-        LOG(ERROR) << "Failed to get interface with mac: " << interface_mac;
-        return false;
-    }
-
-    if (iface->m_dm_path.empty()) {
-        return true;
-    }
-
-    // Set value for the path as Controller.Network.Device.{i}.Interface.{i}.Neighbor.{i}
-    auto neighbor_path = iface->m_dm_path + ".Neighbor";
-
-    if (!m_ambiorix_datamodel->remove_all_instances(neighbor_path)) {
-        LOG(ERROR) << "Failed to remove all instances for: " << neighbor_path;
-        return false;
-    }
-
-    return true;
-}
-
 bool db::dm_set_sta_extended_link_metrics(
     const sMacAddr &sta_mac, const wfa_map::tlvAssociatedStaExtendedLinkMetrics::sMetrics &metrics)
 {

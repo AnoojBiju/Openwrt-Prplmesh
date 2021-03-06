@@ -598,17 +598,6 @@ public:
     bool dm_remove_interface_neighbor(const std::string &dm_path);
 
     /**
-     * @brief Removes all instances of Neighbors inside Interface object.
-     *
-     * Path: Controller.Network.Device.{i}.Interface.{i}.Neighbor.{i}
-     *
-     * @param device_mac device MAC address for node matching
-     * @param interface_macs Interface MAC address of the device
-     * @return true on success, false otherwise.
-     */
-    bool dm_remove_interface_neighbors(const sMacAddr &device_mac, const sMacAddr &interface_mac);
-
-    /**
      * @brief Sets Extended Link Metrics for corresponding STA.
      *
      * Path: Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}
