@@ -255,6 +255,18 @@ public:
     static std::chrono::system_clock::time_point timestamp_from_seconds(int timestamp_sec);
 
     /**
+     * @brief Get index and instance path from full data model path. Simplifies ambiorix/nbapi calls.
+     *
+     * Data model levels are noted with '.', so method splits according to last dot.
+     * Example: DM Path: Controller.Network.Device.2.Interface.3
+     * Returns: <instance, index> <Controller.Network.Device.2.Interface, 3>
+     *
+     * @param dm_path Full data model path.
+     * @return std::pair <std::string instance path, int index>
+     */
+    static std::pair<std::string, int> get_dm_index_from_path(const std::string &dm_path);
+
+    /**
      * @brief Get radio on a specific agent
      *
      * If no agent with the given al_mac exists, an error is logged (and nullptr returned). If no
@@ -457,6 +469,16 @@ public:
                        const std::string &name = {});
 
     /**
+     * @brief Gets Interface Node according to device and interface MAC addresses.
+     *
+     * @param device_mac device MAC address for node matching
+     * @param interface_mac interface mac address for node matching
+     * @return returns node shared pointer.
+     */
+    std::shared_ptr<prplmesh::controller::db::Interface>
+    get_interface_node(const sMacAddr &device_mac, const sMacAddr &interface_mac);
+
+    /**
      * @brief Adds interface instances to Device's Data Model.
      *
      * If instance with @a interface_mac exists, updates it, otherwise add it.
@@ -516,7 +538,7 @@ public:
      * Path: Controller.Network.Device.{i}.Interface.{i}.Stats
      *
      * @param device_mac device MAC address for node matching
-     * @param interface_macs Interface MAC addresses of the device
+     * @param interface_mac Interface MAC address of the device
      * @param packets_sent send packets counter
      * @param errors_sent send error counter
      * @return true on success, false otherwise.
@@ -530,7 +552,7 @@ public:
      * Path: Controller.Network.Device.{i}.Interface.{i}.Stats
      *
      * @param device_mac device MAC address for node matching
-     * @param interface_macs Interface MAC address of the device
+     * @param interface_mac Interface MAC address of the device
      * @param packets_received received packets counter
      * @param errors_received receive error counter
      * @return true on success, false otherwise.
@@ -541,17 +563,39 @@ public:
     /**
      * @brief Adds or updates instance of Neighbor inside Interface object.
      *
-     * Searches Neighbor according to ID (MAC Address of Neighbor) updates or adds new one.
      * Path: Controller.Network.Device.{i}.Interface.{i}.Neighbor.{i}
      *
      * @param device_mac device MAC address for node matching
-     * @param interface_macs Interface MAC address of the device
+     * @param interface_mac Interface MAC address of the device
      * @param neighbor_mac Neighbor MAC address is connected to Interface
      * @param is_IEEE1905 flag which identify neighbor is IEEE1905 device or not
      * @return true on success, false otherwise.
      */
-    bool dm_add_interface_neighbor(const sMacAddr &device_mac, const sMacAddr &interface_mac,
-                                   const sMacAddr &neighbor_mac, bool is_IEEE1905);
+    bool add_neighbor(const sMacAddr &device_mac, const sMacAddr &interface_mac,
+                      const sMacAddr &neighbor_mac, bool is_IEEE1905);
+
+    /**
+     * @brief Adds or updates instance of Neighbor inside Interface Data Model.
+     *
+     * Path: Controller.Network.Device.{i}.Interface.{i}.Neighbor.{i}
+     *
+     * @param interface Interface object that Neighbor relates to
+     * @param neighbor Neighbor object is used to create/update data model of neighbor
+     * @return true on success, false otherwise.
+     */
+    bool dm_add_interface_neighbor(
+        std::shared_ptr<prplmesh::controller::db::Interface> &interface,
+        std::shared_ptr<prplmesh::controller::db::Interface::sNeighbor> &neighbor);
+
+    /**
+     * @brief Remove instance of Neighbors inside Interface Data Model.
+     *
+     * Path: Controller.Network.Device.{i}.Interface.{i}.Neighbor.{i}
+     *
+     * @param dm_path datamodel path of neighbor
+     * @return true on success, false otherwise.
+     */
+    bool dm_remove_interface_neighbor(const std::string &dm_path);
 
     /**
      * @brief Removes all instances of Neighbors inside Interface object.
