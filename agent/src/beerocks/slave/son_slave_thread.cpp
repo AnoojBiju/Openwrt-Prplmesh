@@ -4766,6 +4766,25 @@ bool slave_thread::handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMess
             LOG(INFO) << "profile2_backhaul_sta_association_disallowed: " << bBSS_p2_disallowed;
         }
 
+        // If the Controller is Profile-1, it isn't aware of the Profile-2 AP Capability TLV which
+        // the Agent sends on M1 and contains a flag which says whether the Agent supports Combined
+        // bBSS for Profile-1 and Profile-2 Backhaul station connection.
+        // As well, the Profile-1 Controller does not aware of the "Profile-1/2_Backhaul Station
+        // Association Disallowed" bits which were added to the Multi-AP Extention subelement.
+        // If the Agent does not support Combined Profile Backhaul station connection, and a
+        // Profile-1 Controller configures a bBSS, it will send the "Profile-1/2_Backhaul Station
+        // Association Disallowed" set to zero which is interpreted as "Combined Profile bBSS" which
+        // we don't support.
+        // To resolve this, downgrade the bBSS link to Profile-1 Only. This promise that we will
+        // pass R1 Agent certification tests which use Profile-1 Controller.
+        if (db->controller_info.profile_support ==
+                wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
+            bBSS && !bBSS_p1_disallowed && !bBSS_p2_disallowed) {
+            LOG(INFO) << "Downgrading bBSS Backhaul station link to Profile-1";
+            config.bss_type |=
+                WSC::eWscVendorExtSubelementBssType::PROFILE2_BACKHAUL_STA_ASSOCIATION_DISALLOWED;
+        }
+
         // TODO - revisit this in the future
         // In practice, some controllers simply send an empty config data when asked for tear down,
         // so tear down the radio if the SSID is empty.
