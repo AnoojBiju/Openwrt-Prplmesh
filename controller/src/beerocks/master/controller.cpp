@@ -1067,8 +1067,12 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const std::string &src_m
     }
 
     if (!send_tlv_metric_reporting_policy(src_mac, ruid, cmdu_tx)) {
-        LOG(ERROR) << "Failed to sent Metric Reporting Policy to radio agent=" << al_mac
+        LOG(ERROR) << "Failed to sent Metric Reporting Policy to radio agent=" << src_mac
                    << " ruid=" << ruid << ")";
+    }
+
+    if (!send_tlv_empty_channel_selection_request(src_mac, cmdu_tx)) {
+        LOG(ERROR) << "Failed to sent Channel Selection Request to radio agent=" << src_mac;
     }
 
     if (!database.setting_certification_mode()) {
@@ -3898,6 +3902,17 @@ bool Controller::send_tlv_metric_reporting_policy(const std::string &dst_mac,
     reporting_conf.sta_metrics_reporting_rcpi_threshold                  = 0;
     reporting_conf.sta_metrics_reporting_rcpi_hysteresis_margin_override = 0;
     reporting_conf.ap_channel_utilization_reporting_threshold            = 0;
+
+    return son_actions::send_cmdu_to_agent(dst_mac, cmdu_tx, database);
+}
+
+bool Controller::send_tlv_empty_channel_selection_request(const std::string &dst_mac,
+                                                          ieee1905_1::CmduMessageTx &cmdu_tx)
+{
+    if (!cmdu_tx.create(0, ieee1905_1::eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE)) {
+        LOG(ERROR) << "Failed building CHANNEL_SELECTION_REQUEST_MESSAGE ! ";
+        return false;
+    }
 
     return son_actions::send_cmdu_to_agent(dst_mac, cmdu_tx, database);
 }
