@@ -4900,6 +4900,18 @@ bool slave_thread::handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMess
             LOG(ERROR) << "Invalid config data, skip it";
             continue;
         }
+
+        bool bSTA = bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::BACKHAUL_STA);
+        bool fBSS = bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::FRONTHAUL_BSS);
+        bool bBSS = bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::BACKHAUL_BSS);
+        bool bBSS_p1_disallowed =
+            bool(config.bss_type &
+                 WSC::eWscVendorExtSubelementBssType::PROFILE1_BACKHAUL_STA_ASSOCIATION_DISALLOWED);
+        bool bBSS_p2_disallowed =
+            bool(config.bss_type &
+                 WSC::eWscVendorExtSubelementBssType::PROFILE2_BACKHAUL_STA_ASSOCIATION_DISALLOWED);
+        bool teardown = bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::TEARDOWN);
+
         // TODO - revisit this in the future
         // In practice, some controllers simply send an empty config data when asked for tear down,
         // so tear down the radio if the SSID is empty.
@@ -4910,13 +4922,13 @@ bool slave_thread::handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMess
         }
 
         LOG(INFO) << "bss_type: " << std::hex << int(config.bss_type);
-        if (config.bss_type & WSC::eWscVendorExtSubelementBssType::TEARDOWN) {
+        if (teardown) {
             LOG(INFO) << "Teardown bit set, tear down radio";
             configs.clear();
             break;
         }
         // BACKHAUL_STA bit is not expected to be set
-        if (config.bss_type & WSC::eWscVendorExtSubelementBssType::BACKHAUL_STA) {
+        if (bSTA) {
             LOG(WARNING) << "Unexpected backhaul STA bit";
         }
 
@@ -4927,9 +4939,7 @@ bool slave_thread::handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMess
 
             // Multi-AP standard requires to tear down any misconfigured BSS.
             config.bss_type = WSC::eWscVendorExtSubelementBssType::TEARDOWN;
-        } else if (config.bss_type & WSC::eWscVendorExtSubelementBssType::FRONTHAUL_BSS &&
-                   config.bss_type & WSC::eWscVendorExtSubelementBssType::BACKHAUL_BSS &&
-                   !radio->front.hybrid_mode_supported) {
+        } else if (fBSS && bBSS && !radio->front.hybrid_mode_supported) {
             LOG(WARNING) << "Controller configured hybrid mode, but it is not supported!";
             bss_errors.push_back(
                 {wfa_map::tlvProfile2ErrorCode::eReasonCode::
@@ -4939,11 +4949,7 @@ bool slave_thread::handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMess
             // Multi-AP standard requires to tear down any misconfigured BSS.
             config.bss_type = WSC::eWscVendorExtSubelementBssType::TEARDOWN;
 
-        } else if (config.bss_type & WSC::eWscVendorExtSubelementBssType::BACKHAUL_BSS &&
-                   !(config.bss_type & WSC::eWscVendorExtSubelementBssType::
-                                           PROFILE1_BACKHAUL_STA_ASSOCIATION_DISALLOWED) &&
-                   !(config.bss_type & WSC::eWscVendorExtSubelementBssType::
-                                           PROFILE2_BACKHAUL_STA_ASSOCIATION_DISALLOWED) &&
+        } else if (bBSS && !bBSS_p1_disallowed && !bBSS_p2_disallowed &&
                    db->traffic_separation.secondaries_vlans_ids.size() > 0) {
             LOG(WARNING) << "Controller configured Backhaul BSS for combined Profile1 and "
                          << "Profile2, but it is not supported!";
