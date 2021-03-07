@@ -151,23 +151,8 @@ public:
     struct sControllerInfo {
         bool prplmesh_controller;
         sMacAddr bridge_mac;
-        enum class eProfileSupport { Unknown, Profile1, Profile2 };
-        eProfileSupport profile_support = eProfileSupport::Unknown;
-        void
-        set_profile_support_from_tlv(wfa_map::tlvProfile2MultiApProfile::eMultiApProfile profile)
-        {
-            switch (profile) {
-            case wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1: {
-                profile_support = eProfileSupport::Profile1;
-            } break;
-            case wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2: {
-                profile_support = eProfileSupport::Profile2;
-            } break;
-            default: {
-                profile_support = eProfileSupport::Unknown;
-            } break;
-            }
-        }
+        wfa_map::tlvProfile2MultiApProfile::eMultiApProfile profile_support =
+            wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_UNKNOWN;
     } controller_info;
 
     struct sStatus {
