@@ -82,6 +82,27 @@ std::chrono::system_clock::time_point db::timestamp_from_seconds(int timestamp_s
     return std::chrono::system_clock::time_point(std::chrono::seconds(timestamp_sec));
 }
 
+std::pair<std::string, int> db::get_dm_index_from_path(const std::string &dm_path)
+{
+    std::pair<std::string, int> result = std::make_pair("", 0);
+
+    if (dm_path.empty()) {
+        LOG(ERROR) << "Empty data model path.";
+        return result;
+    }
+
+    std::size_t found = dm_path.find_last_of(".");
+
+    // Verifies errors as not finding dot and finding it as last member.
+    if (found == std::string::npos || found >= dm_path.size()) {
+        LOG(ERROR) << "Not suitable data model path: " << dm_path;
+        return result;
+    }
+    result.first  = dm_path.substr(0, found);
+    result.second = std::stoul(dm_path.substr(found + 1));
+    return result;
+}
+
 // static - end
 
 std::shared_ptr<prplmesh::controller::db::sAgent::sRadio> db::get_radio(const sMacAddr &al_mac,
@@ -6401,6 +6422,18 @@ bool db::add_interface(const sMacAddr &device_mac, const sMacAddr &interface_mac
     return dm_add_interface_element(device_mac, interface_mac, media_type, status, name);
 }
 
+std::shared_ptr<prplmesh::controller::db::Interface>
+db::get_interface_node(const sMacAddr &device_mac, const sMacAddr &interface_mac)
+{
+    auto device = get_node(device_mac);
+    if (!device) {
+        LOG(ERROR) << "Failed to get device node with mac: " << device_mac;
+        return nullptr;
+    }
+
+    return device->get_interface(interface_mac);
+}
+
 bool db::dm_add_interface_element(const sMacAddr &device_mac, const sMacAddr &interface_mac,
                                   uint16_t media_type, const std::string &status,
                                   const std::string &name)
@@ -6418,7 +6451,7 @@ bool db::dm_add_interface_element(const sMacAddr &device_mac, const sMacAddr &in
     }
 
     // Empty data path refers for newly created object, so add instance to data model.
-    if (iface->dm_path.empty()) {
+    if (iface->m_dm_path.empty()) {
 
         // Disabled NBAPI error prevention
         if (device->dm_path.empty()) {
@@ -6435,29 +6468,29 @@ bool db::dm_add_interface_element(const sMacAddr &device_mac, const sMacAddr &in
             return false;
         }
 
-        iface->dm_path = interface_instance;
+        iface->m_dm_path = interface_instance;
     }
 
     // Prepare path to the Interface object Status, like Controller.Network.Device.{i}.Interface.{i}.Status
-    if (!m_ambiorix_datamodel->set(iface->dm_path, "Status", status)) {
-        LOG(ERROR) << "Failed to set " << iface->dm_path << ".Status: " << status;
+    if (!m_ambiorix_datamodel->set(iface->m_dm_path, "Status", status)) {
+        LOG(ERROR) << "Failed to set " << iface->m_dm_path << ".Status: " << status;
         return false;
     }
     // Prepare path to the Interface object MACAddress, like Controller.Network.Device.{i}.Interface.{i}.MACAddress
-    if (!m_ambiorix_datamodel->set(iface->dm_path, "MACAddress",
+    if (!m_ambiorix_datamodel->set(iface->m_dm_path, "MACAddress",
                                    tlvf::mac_to_string(interface_mac))) {
-        LOG(ERROR) << "Failed to set " << iface->dm_path << ".MACAddress: " << interface_mac;
+        LOG(ERROR) << "Failed to set " << iface->m_dm_path << ".MACAddress: " << interface_mac;
         return false;
     }
     // Prepare path to the Interface object Name, like Controller.Network.Device.{i}.Interface.{i}.Name
-    if (!m_ambiorix_datamodel->set(iface->dm_path, "Name",
+    if (!m_ambiorix_datamodel->set(iface->m_dm_path, "Name",
                                    (name.empty() ? tlvf::mac_to_string(interface_mac) : name))) {
-        LOG(ERROR) << "Failed to set " << iface->dm_path << ".Name: " << name;
+        LOG(ERROR) << "Failed to set " << iface->m_dm_path << ".Name: " << name;
         return false;
     }
     // Prepare path to the Interface object MediaType, like Controller.Network.Device.{i}.Interface.{i}.MediaType
-    if (!m_ambiorix_datamodel->set(iface->dm_path, "MediaType", media_type)) {
-        LOG(ERROR) << "Failed to set " << iface->dm_path << ".MediaType: " << media_type;
+    if (!m_ambiorix_datamodel->set(iface->m_dm_path, "MediaType", media_type)) {
+        LOG(ERROR) << "Failed to set " << iface->m_dm_path << ".MediaType: " << media_type;
         return false;
     }
     return true;
@@ -6490,16 +6523,14 @@ bool db::dm_remove_interface_element(const sMacAddr &device_mac, const sMacAddr 
         return false;
     }
 
-    if (iface->dm_path.empty()) {
+    if (iface->m_dm_path.empty()) {
         return true;
     }
 
-    std::size_t found   = iface->dm_path.find_last_of(".");
-    auto interface_path = iface->dm_path.substr(0, found);
-    auto index          = std::stoul(iface->dm_path.substr(found + 1));
+    auto instance = get_dm_index_from_path(iface->m_dm_path);
 
-    if (!m_ambiorix_datamodel->remove_instance(interface_path, index)) {
-        LOG(ERROR) << "Failed to remove " << interface_path << "." << index << " instance.";
+    if (!m_ambiorix_datamodel->remove_instance(instance.first, instance.second)) {
+        LOG(ERROR) << "Failed to remove " << iface->m_dm_path << " instance.";
         return false;
     }
 
@@ -6537,12 +6568,12 @@ bool db::dm_update_interface_tx_stats(const sMacAddr &device_mac, const sMacAddr
         return false;
     }
 
-    if (iface->dm_path.empty()) {
+    if (iface->m_dm_path.empty()) {
         return true;
     }
 
     // Prepare path to the Interface object Stats, like Controller.Network.Device.{i}.Interface.{i}.Stats
-    auto stats_path = iface->dm_path + ".Stats";
+    auto stats_path = iface->m_dm_path + ".Stats";
 
     // Set value for the path as Controller.Network.Device.{i}.Interface.{i}.Stats.PacketsSent
     if (!m_ambiorix_datamodel->set(stats_path, "PacketsSent", packets_sent)) {
@@ -6574,12 +6605,12 @@ bool db::dm_update_interface_rx_stats(const sMacAddr &device_mac, const sMacAddr
         return false;
     }
 
-    if (iface->dm_path.empty()) {
+    if (iface->m_dm_path.empty()) {
         return true;
     }
 
     // Prepare path to the Interface object Stats, like Controller.Network.Device.{i}.Interface.{i}.Stats
-    auto stats_path = iface->dm_path + ".Stats";
+    auto stats_path = iface->m_dm_path + ".Stats";
 
     // Set value for the path as Controller.Network.Device.{i}.Interface.{i}.Stats.PacketsReceived
     if (!m_ambiorix_datamodel->set(stats_path, "PacketsReceived", packets_received)) {
@@ -6596,8 +6627,8 @@ bool db::dm_update_interface_rx_stats(const sMacAddr &device_mac, const sMacAddr
     return true;
 }
 
-bool db::dm_add_interface_neighbor(const sMacAddr &device_mac, const sMacAddr &interface_mac,
-                                   const sMacAddr &neighbor_mac, bool is_IEEE1905)
+bool db::add_neighbor(const sMacAddr &device_mac, const sMacAddr &interface_mac,
+                      const sMacAddr &neighbor_mac, bool is_IEEE1905)
 {
     auto device = get_node(device_mac);
     if (!device) {
@@ -6611,68 +6642,78 @@ bool db::dm_add_interface_neighbor(const sMacAddr &device_mac, const sMacAddr &i
         return false;
     }
 
-    if (iface->dm_path.empty()) {
-        return true;
+    auto neighbor = device->add_neighbor(interface_mac, neighbor_mac, is_IEEE1905);
+    if (!neighbor) {
+        LOG(ERROR) << "Failed to add neighbor with mac: " << neighbor_mac;
+        return false;
     }
 
-    // Set value for the path as Controller.Network.Device.{i}.Interface.{i}.Neighbor.{i}
-    std::string neighbor_instance;
-    auto neighbor_path  = iface->dm_path + ".Neighbor";
-    auto neighbor_index = m_ambiorix_datamodel->get_instance_index(
-        neighbor_path + ".[ID == '%s']", tlvf::mac_to_string(neighbor_mac));
+    return dm_add_interface_neighbor(iface, neighbor);
+}
 
-    // If instance is already added, only update values.
-    if (!neighbor_index) {
-        neighbor_instance = m_ambiorix_datamodel->add_instance(neighbor_path);
+bool db::dm_add_interface_neighbor(
+    std::shared_ptr<prplmesh::controller::db::Interface> &interface,
+    std::shared_ptr<prplmesh::controller::db::Interface::sNeighbor> &neighbor)
+{
+
+    if (!interface) {
+        LOG(ERROR) << "Failed because of nullptr interface.";
+        return false;
+    }
+
+    if (!neighbor) {
+        LOG(ERROR) << "Failed because of nullptr neighbor.";
+        return false;
+    }
+
+    // Empty data path refers for newly created object, so add instance to data model.
+    if (neighbor->dm_path.empty()) {
+
+        // Disabled NBAPI error prevention
+        if (interface->m_dm_path.empty()) {
+            return true;
+        }
+
+        // Set value for the path as Controller.Network.Device.{i}.Interface.{i}.Neighbor.{i}
+        auto neighbor_path = interface->m_dm_path + ".Neighbor";
+
+        auto neighbor_instance = m_ambiorix_datamodel->add_instance(neighbor_path);
         if (neighbor_instance.empty()) {
-            LOG(ERROR) << "Failed to add " << neighbor_path << ".Neighbor MAC: " << neighbor_mac;
+            LOG(ERROR) << "Failed to add " << neighbor_path << ". Neighbor MAC: " << neighbor->mac;
             return false;
         }
-    } else {
-        neighbor_instance = neighbor_path + "." + std::to_string(neighbor_index);
+
+        neighbor->dm_path = neighbor_instance;
     }
 
     // Set value for the path as Controller.Network.Device.{i}.Interface.{i}.Neighbor.{i}.ID
-    if (!m_ambiorix_datamodel->set(neighbor_instance, "ID", tlvf::mac_to_string(neighbor_mac))) {
-        LOG(ERROR) << "Failed to set " << neighbor_instance << ".ID: " << neighbor_mac;
+    if (!m_ambiorix_datamodel->set(neighbor->dm_path, "ID", tlvf::mac_to_string(neighbor->mac))) {
+        LOG(ERROR) << "Failed to set " << neighbor->dm_path << ".ID: " << neighbor->mac;
         return false;
     }
 
     // Set value for the path as Controller.Network.Device.{i}.Interface.{i}.Neighbor.{i}.IsIEEE1905
-    if (!m_ambiorix_datamodel->set(neighbor_instance, "IsIEEE1905", is_IEEE1905)) {
-        LOG(ERROR) << "Failed to set " << neighbor_instance << ".IsIEEE1905: " << is_IEEE1905;
+    if (!m_ambiorix_datamodel->set(neighbor->dm_path, "IsIEEE1905", neighbor->ieee1905_flag)) {
+        LOG(ERROR) << "Failed to set " << neighbor->dm_path
+                   << ".IsIEEE1905: " << neighbor->ieee1905_flag;
         return false;
     }
 
     return true;
 }
 
-bool db::dm_remove_interface_neighbors(const sMacAddr &device_mac, const sMacAddr &interface_mac)
+bool db::dm_remove_interface_neighbor(const std::string &dm_path)
 {
-    auto device = get_node(device_mac);
-    if (!device) {
-        LOG(ERROR) << "Failed to get device node with mac: " << device_mac;
-        return false;
-    }
-
-    auto iface = device->get_interface(interface_mac);
-    if (!iface) {
-        LOG(ERROR) << "Failed to get interface with mac: " << interface_mac;
-        return false;
-    }
-
-    if (iface->dm_path.empty()) {
+    if (dm_path.empty()) {
         return true;
     }
 
-    // Set value for the path as Controller.Network.Device.{i}.Interface.{i}.Neighbor.{i}
-    auto neighbor_path = iface->dm_path + ".Neighbor";
+    auto instance = get_dm_index_from_path(dm_path);
 
-    if (!m_ambiorix_datamodel->remove_all_instances(neighbor_path)) {
-        LOG(ERROR) << "Failed to remove all instances for: " << neighbor_path;
+    if (!m_ambiorix_datamodel->remove_instance(instance.first, instance.second)) {
+        LOG(ERROR) << "Failed to remove " << dm_path << " instance.";
         return false;
     }
-
     return true;
 }
 
@@ -6802,6 +6843,7 @@ bool db::dm_clear_sta_stats(const sMacAddr &sta_mac)
     metrics.utilization_receive      = 0;
     metrics.utilization_transmit     = 0;
     dm_set_sta_extended_link_metrics(sta_mac, metrics);
+
     sAssociatedStaTrafficStats stats;
     dm_set_sta_traffic_stats(sta_mac, stats);
     return true;

@@ -9,6 +9,7 @@
 #ifndef INTERFACE_H
 #define INTERFACE_H
 
+#include <bcl/beerocks_mac_map.h>
 #include <string>
 #include <tlvf/common/sMacAddr.h>
 
@@ -21,16 +22,30 @@ namespace prplmesh {
 namespace controller {
 namespace db {
 
-/** Node that represents a Interface in the controller database. */
+/**
+ * Node that represents a Device's Interface in database.
+ */
 class Interface {
 public:
     Interface(const sMacAddr &mac, son::node &node) : m_mac(mac), m_node(node) {}
 
-    const sMacAddr m_mac; // interface mac
+    // Neighbor that connects to the interface
+    struct sNeighbor {
 
-    // Node on which the Interface exists.
-    son::node &m_node;
-    std::string dm_path; // data model path
+        const sMacAddr mac;  //!< Neighbor AL-MAC
+        bool ieee1905_flag;  //!< IEEE 1905 flag
+        std::string dm_path; //!< Data model path
+
+        sNeighbor(const sMacAddr &mac_, bool ieee1905_flag_)
+            : mac(mac_), ieee1905_flag(ieee1905_flag_)
+        {
+        }
+    };
+
+    const sMacAddr m_mac;  //!< Interface MAC address
+    son::node &m_node;     //!< Node on which the Interface exists.
+    std::string m_dm_path; //!< Data model path
+    beerocks::mac_map<sNeighbor> m_neighbors;
 };
 
 } // namespace db

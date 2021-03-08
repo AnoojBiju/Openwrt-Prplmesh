@@ -471,3 +471,15 @@ std::vector<sMacAddr> node::get_interfaces_mac()
 
     return result;
 }
+
+std::shared_ptr<prplmesh::controller::db::Interface::sNeighbor>
+node::add_neighbor(const sMacAddr &interface_mac, const sMacAddr &neighbor_mac, bool flag_ieee1905)
+{
+    auto interface = get_interface(interface_mac);
+    if (!interface) {
+        LOG(ERROR) << "Failed to get interface with mac:" << interface_mac;
+        return nullptr;
+    }
+
+    return interface->m_neighbors.add(neighbor_mac, flag_ieee1905);
+}
