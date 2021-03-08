@@ -2941,7 +2941,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
     return true;
 }
 
-bool ap_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg)
+bool ap_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
 {
     LOG(ERROR) << __func__ << "isn't implemented by this derived and shouldn't be called";
     return false;

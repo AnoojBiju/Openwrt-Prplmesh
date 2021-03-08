@@ -942,8 +942,11 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
     // must as single wifi won't allow scan on ap without this flag
     channel_scan_params.ap_force = 1;
 
-    if (dwpal_driver_nl_scan_trigger(get_dwpal_nl_ctx(), (char *)m_radio_info.iface_name.c_str(),
-                                     &channel_scan_params) != DWPAL_SUCCESS) {
+    int cmd_res = 0;
+    auto ret    = dwpal_driver_nl_scan_trigger_sync(get_dwpal_nl_ctx(),
+                                                 (char *)m_radio_info.iface_name.c_str(), &cmd_res,
+                                                 &channel_scan_params);
+    if (ret != DWPAL_SUCCESS && cmd_res != 0) {
         LOG(ERROR) << " scan trigger failed! Abort scan, restoring original scan parameters";
         dwpal_set_scan_params_fg(org_fg, fg_size);
         dwpal_set_scan_params_bg(org_bg, bg_size);
@@ -977,6 +980,8 @@ bool mon_wlan_hal_dwpal::channel_scan_dump_results()
         LOG(ERROR) << "Channel scan results dump failed";
         return false;
     }
+    // If scan dump succeeded need to manually send the finished event
+    event_queue_push(Event::Channel_Scan_Finished);
 
     return true;
 }
@@ -1398,7 +1403,7 @@ bool mon_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std
     return true;
 }
 
-bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg)
+bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
 {
     struct nlmsghdr *nlh    = nlmsg_hdr(msg);
     struct genlmsghdr *gnlh = (genlmsghdr *)nlmsg_data(nlh);
