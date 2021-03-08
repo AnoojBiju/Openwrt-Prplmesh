@@ -1199,6 +1199,18 @@ static bool set_vap_multiap_mode(std::vector<std::string> &vap_hostapd_config, b
     }
     hostapd_config_set_value(vap_hostapd_config, "wps_state", fronthaul ? "2" : "");
     hostapd_config_set_value(vap_hostapd_config, "wps_independent", "0");
+
+    // Open source hostapd states that a "multi_ap" field must be set in this way:
+    // "Enable Multi-AP functionality
+    // 0 = disabled (default)
+    // 1 = AP support backhaul BSS
+    // 2 = AP support fronthaul BSS
+    // 3 = AP supports both backhaul BSS and fronthaul BSS"
+    uint8_t multi_ap_mode = 0;
+    multi_ap_mode |= backhaul ? 0x01 : 0x00;
+    multi_ap_mode |= fronthaul ? 0x02 : 0x00;
+    hostapd_config_set_value(vap_hostapd_config, "multi_ap", std::to_string(multi_ap_mode));
+
     hostapd_config_set_value(vap_hostapd_config, "mesh_mode", backhaul ? "bAP" : "fAP");
     // Setting max_num_sta to an bAP interface definces number of repeaters that can
     // connect to this VAP. What actualy Maxlinear driver does (proprietry feature) is
