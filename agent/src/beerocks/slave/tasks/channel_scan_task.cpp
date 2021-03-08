@@ -1001,15 +1001,30 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
         neighbor_res->bss_load_element_present() =
             wfa_map::cNeighbors::eBssLoadElementPresent::FIELD_NOT_PRESENT;
 
+        if (neighbor_res->bss_load_element_present() ==
+            wfa_map::cNeighbors::eBssLoadElementPresent::FIELD_NOT_PRESENT) {
+            return true;
+        }
+
+        if (!neighbor_res->alloc_bss_load_element()) {
+            LOG(ERROR) << "Failed allocating bss_load_element!";
+            return false;
+        }
+
+        auto bss_load_element_tuple = neighbor_res->bss_load_element(0);
+        if (!std::get<0>(bss_load_element_tuple)) {
+            LOG(ERROR) << "Failed getting bss_load_element!";
+            return false;
+        }
+
+        auto &bss_load_element = std::get<1>(bss_load_element_tuple);
         // Channel Utilization
         // Resolve as part of PPM-1045
-        // Since BSS Load Element Present is set to "Not Present" no need to set  Channel Utilization.
-        // neighbor_res->bss_load_element().channel_utilization = neighbor.channel_utilization;
+        bss_load_element.channel_utilization = neighbor.channel_utilization;
 
         // Station Count
         // Resolve as part of PPM-1045
-        // Since BSS Load Element Present is set to "Not Present" no need to set Station Count.
-        // neighbor_res->bss_load_element().station_count = 0;
+        bss_load_element.station_count = 0;
 
         return true;
     };

@@ -88,8 +88,16 @@ cNeighbors:
       operating, e.g., "20" or "40" or "80" or "80+80" or "160" MHz.
     _length: [ channel_bw_length ]
   bss_load_element_present: eBssLoadElementPresent
+  # The addition of the bss_load_element_length breaks compability to the R2 spec.
+  # This is used only for generation of variable sized list APIs as a preperation for
+  # manually adding conditional fields.
+  bss_load_element_length:
+    _type: uint8_t
+    _length_var: True
   bss_load_element:
     _type: sBssLoadElement
+    _length: [ bss_load_element_length ]
+    _length_max: 1
 
 eBssLoadElementPresent:
   _type: enum
