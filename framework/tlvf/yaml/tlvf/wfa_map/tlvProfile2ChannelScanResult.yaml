@@ -88,28 +88,28 @@ cNeighbors:
       operating, e.g., "20" or "40" or "80" or "80+80" or "160" MHz.
     _length: [ channel_bw_length ]
   bss_load_element_present: eBssLoadElementPresent
-  # Those elements are conditional based on the `bss_load_element_present` value.
-  # When the value is set to `FIELD_NOT_PRESENT` those elements should be omited.
-  # Since TLVF doesn't support conditional elements YET, comment the following elements as a workaround.
-  # The channel_scan_task always set `bss_load_element_present` to `FIELD_NOT_PRESENT`.
-  # Should be fixed as part of PPM-1136
-  # channel_utilization:
-  #   _type: uint8_t
-  #   _comment: |
-  #     If "BSS Load Element Present" bit is set to one, this field is present.
-  #     Otherwise it is omitted.
-  #     The value of the "Channel Utilization" field as reported by the neighboring
-  #     BSS in the BSS Load element
-  # station_count:
-  #   _type: uint16_t
-  #   _comment: |
-  #     If "BSS Load Element Present" bit is set to one, this field is present.
-  #     Otherwise it is omitted.
-  #     The value of the "Channel Utilization" field as reported by the neighboring
-  #     BSS in the BSS Load element
+  bss_load_element:
+    _type: sBssLoadElement
 
 eBssLoadElementPresent:
   _type: enum
   _enum_storage: uint8_t
   FIELD_PRESENT: 0x80
   FIELD_NOT_PRESENT: 0x00
+
+sBssLoadElement:
+  _type: struct
+  channel_utilization:
+    _type: uint8_t
+    _comment: |
+      If "BSS Load Element Present" bit is set to one, this field is present.
+      Otherwise it is omitted.
+      The value of the "Channel Utilization" field as reported by the neighboring
+      BSS in the BSS Load element
+  station_count:
+    _type: uint16_t
+    _comment: |
+      If "BSS Load Element Present" bit is set to one, this field is present.
+      Otherwise it is omitted.
+      The value of the "Channel Utilization" field as reported by the neighboring
+      BSS in the BSS Load element

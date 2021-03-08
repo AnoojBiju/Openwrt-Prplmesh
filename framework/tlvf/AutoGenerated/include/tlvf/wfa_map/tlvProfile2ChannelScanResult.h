@@ -117,6 +117,24 @@ class cNeighbors : public BaseClass
             FIELD_NOT_PRESENT = 0x0,
         };
         
+        typedef struct sBssLoadElement {
+            //If "BSS Load Element Present" bit is set to one, this field is present.
+            //Otherwise it is omitted.
+            //The value of the "Channel Utilization" field as reported by the neighboring
+            //BSS in the BSS Load element
+            uint8_t channel_utilization;
+            //If "BSS Load Element Present" bit is set to one, this field is present.
+            //Otherwise it is omitted.
+            //The value of the "Channel Utilization" field as reported by the neighboring
+            //BSS in the BSS Load element
+            uint16_t station_count;
+            void struct_swap(){
+                tlvf_swap(16, reinterpret_cast<uint8_t*>(&station_count));
+            }
+            void struct_init(){
+            }
+        } __attribute__((packed)) sBssLoadElement;
+        
         sMacAddr& bssid();
         uint8_t& ssid_length();
         //The SSID indicated by the neighboring BSS
@@ -138,6 +156,7 @@ class cNeighbors : public BaseClass
         bool set_channels_bw_list(const char buffer[], size_t size);
         bool alloc_channels_bw_list(size_t count = 1);
         eBssLoadElementPresent& bss_load_element_present();
+        sBssLoadElement& bss_load_element();
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -154,6 +173,7 @@ class cNeighbors : public BaseClass
         char* m_channels_bw_list = nullptr;
         size_t m_channels_bw_list_idx__ = 0;
         eBssLoadElementPresent* m_bss_load_element_present = nullptr;
+        sBssLoadElement* m_bss_load_element = nullptr;
 };
 
 }; // close namespace: wfa_map

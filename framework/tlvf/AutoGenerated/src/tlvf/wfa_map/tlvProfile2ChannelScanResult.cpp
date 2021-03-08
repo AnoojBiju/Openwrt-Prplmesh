@@ -450,6 +450,7 @@ bool cNeighbors::alloc_ssid(size_t count) {
     m_channel_bw_length = (uint8_t *)((uint8_t *)(m_channel_bw_length) + len);
     m_channels_bw_list = (char *)((uint8_t *)(m_channels_bw_list) + len);
     m_bss_load_element_present = (eBssLoadElementPresent *)((uint8_t *)(m_bss_load_element_present) + len);
+    m_bss_load_element = (sBssLoadElement *)((uint8_t *)(m_bss_load_element) + len);
     m_ssid_idx__ += count;
     *m_ssid_length += count;
     if (!buffPtrIncrementSafe(len)) {
@@ -513,6 +514,7 @@ bool cNeighbors::alloc_channels_bw_list(size_t count) {
         std::copy_n(src, move_length, dst);
     }
     m_bss_load_element_present = (eBssLoadElementPresent *)((uint8_t *)(m_bss_load_element_present) + len);
+    m_bss_load_element = (sBssLoadElement *)((uint8_t *)(m_bss_load_element) + len);
     m_channels_bw_list_idx__ += count;
     *m_channel_bw_length += count;
     if (!buffPtrIncrementSafe(len)) {
@@ -526,10 +528,15 @@ cNeighbors::eBssLoadElementPresent& cNeighbors::bss_load_element_present() {
     return (eBssLoadElementPresent&)(*m_bss_load_element_present);
 }
 
+cNeighbors::sBssLoadElement& cNeighbors::bss_load_element() {
+    return (sBssLoadElement&)(*m_bss_load_element);
+}
+
 void cNeighbors::class_swap()
 {
     m_bssid->struct_swap();
     tlvf_swap(8*sizeof(eBssLoadElementPresent), reinterpret_cast<uint8_t*>(m_bss_load_element_present));
+    m_bss_load_element->struct_swap();
 }
 
 bool cNeighbors::finalize()
@@ -567,6 +574,7 @@ size_t cNeighbors::get_initial_size()
     class_size += sizeof(uint8_t); // signal_strength
     class_size += sizeof(uint8_t); // channel_bw_length
     class_size += sizeof(eBssLoadElementPresent); // bss_load_element_present
+    class_size += sizeof(sBssLoadElement); // bss_load_element
     return class_size;
 }
 
@@ -618,6 +626,12 @@ bool cNeighbors::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(eBssLoadElementPresent) << ") Failed!";
         return false;
     }
+    m_bss_load_element = reinterpret_cast<sBssLoadElement*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sBssLoadElement))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sBssLoadElement) << ") Failed!";
+        return false;
+    }
+    if (!m_parse__) { m_bss_load_element->struct_init(); }
     if (m_parse__) { class_swap(); }
     return true;
 }

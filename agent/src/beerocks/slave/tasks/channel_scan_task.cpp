@@ -1004,12 +1004,12 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
         // Channel Utilization
         // Resolve as part of PPM-1045
         // Since BSS Load Element Present is set to "Not Present" no need to set  Channel Utilization.
-        // neighbor_res->channel_utilization() = neighbor.channel_utilization;
+        // neighbor_res->bss_load_element().channel_utilization = neighbor.channel_utilization;
 
         // Station Count
         // Resolve as part of PPM-1045
         // Since BSS Load Element Present is set to "Not Present" no need to set Station Count.
-        // neighbor_res->station_count() = 0;
+        // neighbor_res->bss_load_element().station_count = 0;
 
         return true;
     };
