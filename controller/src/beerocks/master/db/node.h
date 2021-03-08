@@ -53,23 +53,6 @@ public:
     void set_beacon_measurement(const std::string &ap_mac_, int8_t rcpi, uint8_t rsni);
     bool get_cross_rx_rssi(const std::string &ap_mac_, int8_t &rssi, int8_t &rx_packets);
     void set_cross_rx_rssi(const std::string &ap_mac_, int8_t rssi, int8_t rx_packets);
-
-    /**
-     * @brief Returns unused interface mac addresses
-     *
-     * @param active_interfaces_vector vector of active interface macs from topology message
-     * @return unused interface mac's returned as vector of sMacAddr
-     */
-    std::vector<sMacAddr>
-    get_unused_interfaces(const std::vector<sMacAddr> &active_interfaces_vector);
-
-    /**
-     * @brief Returns active interface mac addresses via loop through interface objects.
-     *
-     * @return active interface mac's returned as vector of sMacAddr
-     */
-    std::vector<sMacAddr> get_interfaces_mac();
-
     void clear_cross_rssi();
     void clear_node_stats_info();
     void clear_hostap_stats_info();
@@ -362,6 +345,13 @@ public:
      */
 
     /**
+     * @brief Returns active interface mac addresses via loop through interface objects.
+     *
+     * @return active interface mac's returned as vector of sMacAddr
+     */
+    std::vector<sMacAddr> get_interfaces_mac();
+
+    /**
      * @brief Get Interface with the given MAC, create it if necessary.
      *
      * @param mac interface MAC address
@@ -389,6 +379,25 @@ public:
     {
         return m_interfaces;
     }
+
+    /**
+     * @brief Returns unused interface mac addresses
+     *
+     * @param new_interfaces vector of active interface macs from topology message
+     * @return unused interface mac's returned as vector of sMacAddr
+     */
+    std::vector<sMacAddr> get_unused_interfaces(const std::vector<sMacAddr> &new_interfaces);
+
+    /**
+     * @brief Get Neighbor with the given MAC, create it if necessary within Interface.
+     *
+     * @param interface_mac interface MAC address
+     * @param neighbor_mac neighbor MAC address
+     * @param flag_ieee1905 is IEEE1905 Flag
+     * @return shared pointer of Neighbor Object
+     */
+    std::shared_ptr<prplmesh::controller::db::Interface::sNeighbor>
+    add_neighbor(const sMacAddr &interface_mac, const sMacAddr &neighbor_mac, bool flag_ieee1905);
 
 private:
     class rssi_measurement {

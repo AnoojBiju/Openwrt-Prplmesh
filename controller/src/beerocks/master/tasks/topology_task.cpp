@@ -207,9 +207,14 @@ bool topology_task::handle_topology_response(const std::string &src_mac,
         }
     }
 
-    // Clear neighbor informations of all interfaces.
-    for (const auto &iface : interface_macs) {
-        database.dm_remove_interface_neighbors(al_mac, iface);
+    for (const auto &iface_mac : interface_macs) {
+
+        auto iface_node = database.get_interface_node(al_mac, iface_mac);
+        if (!iface_node) {
+            LOG(ERROR) << "Failed to get interface node with mac: " << iface_mac;
+            continue;
+        }
+        iface_node->m_neighbors.keep_new_prepare();
     }
 
     // The reported neighbors list might not be correct since the reporting al_mac hasn't received
@@ -242,12 +247,13 @@ bool topology_task::handle_topology_response(const std::string &src_mac,
                 return false;
             }
 
-            // Add neighbor to related interface
-            database.dm_add_interface_neighbor(al_mac, tlv1905NeighborDevice->mac_local_iface(),
-                                               std::get<1>(neighbor_al_mac_tuple).mac, true);
-
             auto &neighbor_al_mac = std::get<1>(neighbor_al_mac_tuple).mac;
-            LOG(DEBUG) << "Inserting reported neighbor " << neighbor_al_mac << " to the list";
+
+            // Add neighbor to related the interface
+            database.add_neighbor(al_mac, tlv1905NeighborDevice->mac_local_iface(), neighbor_al_mac,
+                                  true);
+
+            LOG(DEBUG) << "Inserting reported 1905 neighbor " << neighbor_al_mac << " to the list";
             reported_neighbor_al_macs.insert(neighbor_al_mac);
         }
     }
@@ -299,15 +305,38 @@ bool topology_task::handle_topology_response(const std::string &src_mac,
                 return false;
             }
 
-            // Add neighbor to related interface
-            database.dm_add_interface_neighbor(al_mac, tlvNon1905NeighborDevice->mac_local_iface(),
-                                               std::get<1>(neighbor_al_mac_tuple), false);
+            auto &neighbor_al_mac = std::get<1>(neighbor_al_mac_tuple);
+
+            // Add neighbor to related the interface
+            database.add_neighbor(al_mac, tlvNon1905NeighborDevice->mac_local_iface(),
+                                  neighbor_al_mac, false);
+
+            LOG(DEBUG) << "Inserting reported non 1905 neighbor " << neighbor_al_mac
+                       << " to the list";
         }
     }
 
     if (check_dead_neighbors) {
         handle_dead_neighbors(src_mac, al_mac, reported_neighbor_al_macs);
     }
+
+    // Update active neighbors mac list of the interface node
+    for (const auto &iface_mac : interface_macs) {
+
+        auto iface_node = database.get_interface_node(al_mac, iface_mac);
+        if (!iface_node) {
+            LOG(ERROR) << "Failed to get interface node with mac: " << iface_mac;
+            continue;
+        }
+
+        auto removed_neighbors = iface_node->m_neighbors.keep_new_remove_old();
+
+        // Removed members needs to be cleaned up from datamodel also.
+        for (const auto &removed_neighbor : removed_neighbors) {
+            database.dm_remove_interface_neighbor(removed_neighbor->dm_path);
+        }
+    }
+
     return true;
 }
 
