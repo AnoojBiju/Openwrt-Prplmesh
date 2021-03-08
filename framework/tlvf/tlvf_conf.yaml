@@ -30,7 +30,7 @@ include_yaml_path: {
     "tlvf/wfa_map/tlvChannelScanCapabilities.yaml",
     "tlvf/wfa_map/tlvChannelScanReportingPolicy.yaml",
     "tlvf/wfa_map/tlvProfile2ChannelScanRequest.yaml",
-    "tlvf/wfa_map/tlvProfile2ChannelScanResult.yaml",
+    # "tlvf/wfa_map/tlvProfile2ChannelScanResult.yaml", # This should be reverted after PPM-1136 
     "tlvf/wfa_map/tlvChannelSelectionResponse.yaml",
     "tlvf/wfa_map/tlvClientAssociationControlRequest.yaml",
     "tlvf/wfa_map/tlvClientAssociationEvent.yaml",
