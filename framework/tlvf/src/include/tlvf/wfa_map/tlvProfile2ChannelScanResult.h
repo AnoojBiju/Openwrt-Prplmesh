@@ -12,6 +12,7 @@
 
 #ifndef _TLVF_WFA_MAP_TLVPROFILE2CHANNELSCANRESULT_H_
 #define _TLVF_WFA_MAP_TLVPROFILE2CHANNELSCANRESULT_H_
+// clang-format off
 
 #include <cstddef>
 #include <stdint.h>
@@ -156,7 +157,6 @@ class cNeighbors : public BaseClass
         bool set_channels_bw_list(const char buffer[], size_t size);
         bool alloc_channels_bw_list(size_t count = 1);
         eBssLoadElementPresent& bss_load_element_present();
-        uint8_t& bss_load_element_length();
         std::tuple<bool, sBssLoadElement&> bss_load_element(size_t idx);
         bool alloc_bss_load_element(size_t count = 1);
         void class_swap() override;
@@ -175,7 +175,6 @@ class cNeighbors : public BaseClass
         char* m_channels_bw_list = nullptr;
         size_t m_channels_bw_list_idx__ = 0;
         eBssLoadElementPresent* m_bss_load_element_present = nullptr;
-        uint8_t* m_bss_load_element_length = nullptr;
         sBssLoadElement* m_bss_load_element = nullptr;
         size_t m_bss_load_element_idx__ = 0;
 };
