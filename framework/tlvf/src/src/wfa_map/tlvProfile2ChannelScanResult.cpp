@@ -673,7 +673,7 @@ bool cNeighbors::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(eBssLoadElementPresent) << ") Failed!";
         return false;
     }
-    m_bss_load_element = (sBssLoadElement*)m_buff_ptr__;
+    m_bss_load_element = reinterpret_cast<sBssLoadElement*>(m_buff_ptr__);
     m_bss_load_element_idx__ = 0;
     if (m_parse__ && *m_bss_load_element_present == eBssLoadElementPresent::FIELD_PRESENT) {
         if (!alloc_bss_load_element(1)) {
