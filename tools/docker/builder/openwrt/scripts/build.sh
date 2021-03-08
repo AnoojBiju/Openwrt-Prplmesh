@@ -11,11 +11,11 @@ make package/prplmesh/prepare USE_SOURCE_DIR="/home/openwrt/prplMesh" V=s
 make package/prplmesh/compile V=sc -j"$(nproc)"
 mkdir -p artifacts
 cat << EOT >> artifacts/prplmesh.buildinfo
-TARGET_PROFILE=${TARGET_PROFILE}
+TARGET_SYSTEM=${TARGET_SYSTEM}
 OPENWRT_VERSION=${OPENWRT_VERSION}
 PRPLMESH_VERSION=${PRPLMESH_VERSION}
 EOT
 find bin -name 'prplmesh*.ipk' -exec cp -v {} "artifacts/prplmesh.ipk" \;
-find bin/targets/"$TARGET_SYSTEM"/"$SUBTARGET"/ -type f -maxdepth 1 -exec cp -v {} "artifacts/" \;
+find bin/targets/"$TARGET_SYSTEM"/*/ -type f -maxdepth 1 -exec cp -v {} "artifacts/" \;
 cp .config artifacts/openwrt.config
 cp files/etc/prplwrt-version artifacts/

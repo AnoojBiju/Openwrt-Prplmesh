@@ -28,10 +28,6 @@ usage() {
     echo "      --mmx - enable mmx as part of builds"
     echo " -d is always required."
     echo ""
-    echo "The following environment variables will affect the build:"
-    echo " - MMX_FEED: the MMX feed that will be used to install MMX Web and MMX CLI if option --mmx used."
-    echo "   default: $MMX_FEED"
-
 }
 
 build_image() {
@@ -41,10 +37,7 @@ build_image() {
            --build-arg OPENWRT_REPOSITORY="$OPENWRT_REPOSITORY" \
            --build-arg OPENWRT_VERSION="$OPENWRT_VERSION" \
            --build-arg TARGET_SYSTEM="$TARGET_SYSTEM" \
-           --build-arg SUBTARGET="$SUBTARGET" \
-           --build-arg TARGET_DEVICE="$TARGET_DEVICE" \
-           --build-arg TARGET_PROFILE="$TARGET_PROFILE" \
-           --build-arg MMX_FEED="$MMX_FEED" \
+           --build-arg MMX_ENABLE="$MMX_ENABLE" \
            --build-arg PRPLMESH_VARIANT="$PRPLMESH_VARIANT" \
            --target="$DOCKER_TARGET_STAGE" \
            "$scriptdir/" \
@@ -64,9 +57,6 @@ build_prplmesh() {
     docker run -i \
            --name "$container_name" \
            -e TARGET_SYSTEM \
-           -e SUBTARGET \
-           -e TARGET_DEVICE \
-           -e TARGET_PROFILE \
            -e OPENWRT_VERSION \
            -e PRPLMESH_VERSION \
            -v "$scriptdir/scripts:/home/openwrt/openwrt/build_scripts/:ro" \
@@ -122,19 +112,12 @@ main() {
     case "$TARGET_DEVICE" in
         turris-omnia)
             TARGET_SYSTEM=mvebu
-            SUBTARGET=cortexa9
-            TARGET_PROFILE=DEVICE_cznic_turris-omnia
             ;;
         glinet-b1300)
             TARGET_SYSTEM=ipq40xx
-            SUBTARGET=generic
-            TARGET_PROFILE=DEVICE_glinet_gl-b1300
             ;;
         netgear-rax40|axepoint|intel_mips|nec-wx3000hp)
             TARGET_SYSTEM=intel_mips
-            SUBTARGET=xrx500
-            TARGET_PROFILE=
-            PRPLMESH_VARIANT=-dwpal
             ;;
         *)
             err "Unknown target device: $TARGET_DEVICE"
@@ -146,19 +129,12 @@ main() {
             ;;
     esac
 
-    if [ $MMX_ENABLE = true ] ; then
-        MMX_FEED='https://github.com/InangoSystems/feed-mmx.git^3dd041ee090c1cf9de968a1aed0d06e42400eb5d'
-    fi
-
     dbg "OPENWRT_REPOSITORY=$OPENWRT_REPOSITORY"
     dbg "OPENWRT_VERSION=$OPENWRT_VERSION"
-    dbg "MMX_FEED=$MMX_FEED"
+    dbg "MMX_ENABLE=$MMX_ENABLE"
     dbg "IMAGE_ONLY=$IMAGE_ONLY"
-    dbg "TARGET_DEVICE=$TARGET_DEVICE"
     dbg "TAG=$TAG"
     dbg "TARGET_SYSTEM=$TARGET_SYSTEM"
-    dbg "SUBTARGET=$SUBTARGET"
-    dbg "TARGET_PROFILE=$TARGET_PROFILE"
     dbg "PRPLMESH_VARIANT=$PRPLMESH_VARIANT"
 
     if [ -n "$TAG" ] ; then
@@ -171,15 +147,13 @@ main() {
     export OPENWRT_REPOSITORY
     export OPENWRT_VERSION
     export TARGET_SYSTEM
-    export SUBTARGET
-    export TARGET_PROFILE
     # We want to exclude tags from the git-describe output because we
     # have no relevant tags to use at the moment.
     # The '--exclude' option of git-describe is not available on older
     # git version, so we use sed instead.
     PRPLMESH_VERSION="$(git describe --always --dirty | sed -e 's/.*-g//')"
     export PRPLMESH_VERSION
-    export MMX_FEED
+    export MMX_ENABLE
     export PRPLMESH_VARIANT
 
     build_image "$rootdir/build/$TARGET_DEVICE"
@@ -192,7 +166,7 @@ main() {
 VERBOSE=false
 IMAGE_ONLY=false
 OPENWRT_REPOSITORY='https://gitlab.com/prpl-foundation/prplwrt/prplwrt.git'
-OPENWRT_VERSION='665125065101f676ef6e58883216eb054b21366d'
+OPENWRT_VERSION='f6a02a187bb5a0822b54a84bfcd04c02f510b254'
 PRPLMESH_VARIANT="-nl80211"
 DOCKER_TARGET_STAGE="prplmesh-builder"
 
