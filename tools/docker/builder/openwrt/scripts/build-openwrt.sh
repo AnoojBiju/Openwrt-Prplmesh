@@ -27,16 +27,10 @@ fi
 # feed-prpl is in the prpl profile:
 args+=("prpl")
 
-# prplMesh is not yet in the prpl profile, so add it
-# manually. TODO: remove once PPM-1112 is done:
-sed -i "s/packages:/packages:\n  - prplmesh${PRPLMESH_VARIANT}/g" "profiles/prpl.yml"
-
 # Add the SAH feed and its packages:
-cp profiles_feeds/sah.yml profiles/sah.yml
 args+=("sah")
 
-if [ -n "$MMX_FEED" ] ; then
-    cp profiles_feeds/mmx.yml profiles/mmx.yml
+if [ -n "$MMX_ENABLE" ] ; then
     args+=("mmx")
 fi
 

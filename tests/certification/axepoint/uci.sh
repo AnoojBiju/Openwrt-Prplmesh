@@ -14,6 +14,9 @@ set wireless.radio2.htmode='HT20'
 set wireless.radio0.notify_action_frame='1' 
 set wireless.radio2.notify_action_frame='1' 
 
+set wireless.radio0.disabled=0
+set wireless.radio2.disabled=0
+
 EOF
 
 uci commit
