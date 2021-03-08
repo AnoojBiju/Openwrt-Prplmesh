@@ -1083,7 +1083,7 @@ bool network_utils::arp_send(const std::string &iface, const std::string &dst_ip
     sock.sll_family  = AF_PACKET;
     sock.sll_ifindex = if_nametoindex(iface.c_str());
     sock.sll_halen   = MAC_ADDR_LEN;
-    std::copy_n(dst_mac.oct, MAC_ADDR_LEN, sock.sll_addr);
+    tlvf::mac_to_array(dst_mac, sock.sll_addr);
 
     // build ARP header
     arphdr.htype  = htons(1);        //type: 1 for ethernet
@@ -1091,15 +1091,15 @@ bool network_utils::arp_send(const std::string &iface, const std::string &dst_ip
     arphdr.hlen   = MAC_ADDR_LEN;    // mac addr len
     arphdr.plen   = IP_ADDR_LEN;     // ip addr len
     arphdr.opcode = htons(ARPOP_REQUEST);
-    std::copy_n(src_mac.oct, MAC_ADDR_LEN, arphdr.sender_mac);
+    tlvf::mac_to_array(src_mac, arphdr.sender_mac);
     std::copy_n((uint8_t *)&src_ip_uint, IP_ADDR_LEN, arphdr.sender_ip);
-    std::copy_n(dst_mac.oct, MAC_ADDR_LEN, arphdr.target_mac);
+    tlvf::mac_to_array(dst_mac, arphdr.target_mac);
     std::copy_n((uint8_t *)&dst_ip_uint, IP_ADDR_LEN, arphdr.target_ip);
 
     // build ethernet frame
     tx_len = 2 * MAC_ADDR_LEN + 2 + ARP_HDRLEN; // dest mac, src mac, type, arp header len
-    std::copy_n(dst_mac.oct, MAC_ADDR_LEN, packet_buffer);
-    std::copy_n(src_mac.oct, MAC_ADDR_LEN, packet_buffer + MAC_ADDR_LEN);
+    tlvf::mac_to_array(dst_mac, packet_buffer);
+    tlvf::mac_to_array(src_mac, packet_buffer + MAC_ADDR_LEN);
     packet_buffer[12] = ETH_P_ARP / 256;
     packet_buffer[13] = ETH_P_ARP % 256;
 

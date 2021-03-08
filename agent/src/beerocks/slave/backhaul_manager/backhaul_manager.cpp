@@ -2430,8 +2430,7 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
                 LOG(ERROR) << "Failed building message!";
                 break;
             }
-            std::copy_n(msg->params.result.mac.oct, sizeof(msg->params.result.mac.oct),
-                        response->params().result.mac.oct);
+            response->params().result.mac        = msg->params.result.mac;
             response->params().result.channel    = msg->params.result.channel;
             response->params().result.rssi       = msg->params.result.rssi;
             response->params().rx_phy_rate_100kb = msg->params.rx_phy_rate_100kb;
@@ -2728,8 +2727,7 @@ void BackhaulManager::get_scan_measurement()
                 //insert new entry
                 beerocks::net::sScanResult scan_measurement;
 
-                std::copy_n(scan_result.bssid.oct, beerocks::net::MAC_ADDR_LEN,
-                            scan_measurement.mac.oct);
+                scan_measurement.mac         = scan_result.bssid;
                 scan_measurement.channel     = scan_result.channel;
                 scan_measurement.rssi        = scan_result.rssi;
                 scan_measurement_list[bssid] = scan_measurement;

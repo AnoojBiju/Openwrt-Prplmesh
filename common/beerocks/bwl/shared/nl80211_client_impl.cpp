@@ -108,7 +108,7 @@ bool nl80211_client_impl::get_interface_info(const std::string &interface_name,
             if (tb[NL80211_ATTR_MAC]) {
                 const uint8_t *data = static_cast<const uint8_t *>(nla_data(tb[NL80211_ATTR_MAC]));
 
-                std::copy_n(data, sizeof(interface_info.addr.oct), interface_info.addr.oct);
+                tlvf::mac_from_array(data, interface_info.addr);
             }
 
             if (tb[NL80211_ATTR_SSID]) {

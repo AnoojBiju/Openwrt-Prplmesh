@@ -95,4 +95,22 @@ sMacAddr mac_from_string(const std::string &mac)
 
     return ret;
 }
+
+void mac_to_array(const sMacAddr &mac, uint8_t array[sizeof(sMacAddr::oct)])
+{
+    std::copy_n(mac.oct, sizeof(sMacAddr::oct), array);
+}
+
+void mac_from_array(const uint8_t array[sizeof(sMacAddr::oct)], sMacAddr &mac)
+{
+    std::copy_n(array, sizeof(sMacAddr::oct), mac.oct);
+}
+
+sMacAddr mac_from_array(const uint8_t array[sizeof(sMacAddr::oct)])
+{
+    sMacAddr ret;
+    mac_from_array(array, ret);
+    return ret;
+}
+
 } // namespace tlvf

@@ -230,10 +230,8 @@ void BrokerClientImpl::handle_message(const beerocks::transport::messages::Messa
 
     // Set the rest of fields to notify
     uint32_t iface_index = cmdu_rx_msg->metadata()->if_index;
-    sMacAddr dst_mac;
-    std::copy_n(cmdu_rx_msg->metadata()->dst, sizeof(dst_mac.oct), dst_mac.oct);
-    sMacAddr src_mac;
-    std::copy_n(cmdu_rx_msg->metadata()->src, sizeof(src_mac.oct), src_mac.oct);
+    sMacAddr dst_mac     = tlvf::mac_from_array(cmdu_rx_msg->metadata()->dst);
+    sMacAddr src_mac     = tlvf::mac_from_array(cmdu_rx_msg->metadata()->src);
 
     // Finally, notify that a CMDU has been received from broker server
     notify_cmdu_received(iface_index, dst_mac, src_mac, cmdu_rx);
@@ -269,8 +267,8 @@ bool BrokerClientImpl::send_cmdu_message(ieee1905_1::CmduMessage &cmdu, const sM
 
     beerocks::transport::messages::CmduTxMessage message;
 
-    std::copy_n(src_mac.oct, sizeof(src_mac.oct), message.metadata()->src);
-    std::copy_n(dst_mac.oct, sizeof(dst_mac.oct), message.metadata()->dst);
+    tlvf::mac_to_array(src_mac, message.metadata()->src);
+    tlvf::mac_to_array(dst_mac, message.metadata()->dst);
 
     message.metadata()->ether_type        = ETH_P_1905_1;
     message.metadata()->length            = cmdu.getMessageLength();

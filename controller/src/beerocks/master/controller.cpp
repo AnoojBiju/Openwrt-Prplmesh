@@ -3083,10 +3083,9 @@ bool Controller::handle_cmdu_control_message(
         if (database.settings_rdkb_extensions() &&
             (beerocks_header->id() == database.get_rdkb_wlan_task_id())) {
             beerocks_message::sSteeringEvSnr new_event;
-            new_event.snr = notification->params().rx_snr;
-            std::copy_n(notification->params().result.mac.oct, sizeof(new_event.client_mac.oct),
-                        new_event.client_mac.oct);
-            new_event.bssid = tlvf::mac_from_string(
+            new_event.snr        = notification->params().rx_snr;
+            new_event.client_mac = notification->params().result.mac;
+            new_event.bssid      = tlvf::mac_from_string(
                 database.get_hostap_vap_mac(ap_mac, notification->params().vap_id));
             tasks.push_event(database.get_rdkb_wlan_task_id(),
                              rdkb_wlan_task::events::STEERING_EVENT_SNR_AVAILABLE, &new_event);
