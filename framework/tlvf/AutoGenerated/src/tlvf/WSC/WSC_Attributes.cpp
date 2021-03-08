@@ -355,8 +355,8 @@ bool cConfigData::alloc_ssid(size_t count) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
         return false;
     }
-    if (count > WSC_MAX_SSID_LENGTH )  {
-        TLVF_LOG(ERROR) << "Can't allocate " << count << " elements (max length is " << WSC_MAX_SSID_LENGTH << ")";
+    if (m_ssid_idx__ + count > WSC_MAX_SSID_LENGTH )  {
+        TLVF_LOG(ERROR) << "Can't allocate " << count << " elements (max length is " << WSC_MAX_SSID_LENGTH << " current length is " << m_ssid_idx__ << ")";
         return false;
     }
     m_lock_order_counter__ = 0;
@@ -436,8 +436,8 @@ bool cConfigData::alloc_network_key(size_t count) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
         return false;
     }
-    if (count > WSC_MAX_NETWORK_KEY_LENGTH )  {
-        TLVF_LOG(ERROR) << "Can't allocate " << count << " elements (max length is " << WSC_MAX_NETWORK_KEY_LENGTH << ")";
+    if (m_network_key_idx__ + count > WSC_MAX_NETWORK_KEY_LENGTH )  {
+        TLVF_LOG(ERROR) << "Can't allocate " << count << " elements (max length is " << WSC_MAX_NETWORK_KEY_LENGTH << " current length is " << m_network_key_idx__ << ")";
         return false;
     }
     m_lock_order_counter__ = 1;

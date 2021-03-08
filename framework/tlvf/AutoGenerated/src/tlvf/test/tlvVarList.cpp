@@ -124,8 +124,8 @@ bool tlvTestVarList::alloc_test_string(size_t count) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
         return false;
     }
-    if (count > 8 )  {
-        TLVF_LOG(ERROR) << "Can't allocate " << count << " elements (max length is " << 8 << ")";
+    if (m_test_string_idx__ + count > 8 )  {
+        TLVF_LOG(ERROR) << "Can't allocate " << count << " elements (max length is " << 8 << " current length is " << m_test_string_idx__ << ")";
         return false;
     }
     m_lock_order_counter__ = 1;
