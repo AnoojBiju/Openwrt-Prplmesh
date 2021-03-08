@@ -16,6 +16,7 @@
 #include <bcl/beerocks_string_utils.h>
 
 #include <tlvf/common/sMacAddr.h>
+#include <tlvf/tlvftypes.h>
 
 #include <linux/rtnetlink.h>
 #include <netinet/ether.h>
@@ -164,7 +165,7 @@ public:
         m_address.sll_family  = AF_PACKET;
         m_address.sll_ifindex = iface_index;
         m_address.sll_halen   = sizeof(sMacAddr);
-        std::copy_n(mac.oct, sizeof(sMacAddr), m_address.sll_addr);
+        tlvf::mac_to_array(mac, m_address.sll_addr);
     }
 
     const struct sockaddr *sockaddr() const override

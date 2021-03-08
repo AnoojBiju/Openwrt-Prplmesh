@@ -69,7 +69,7 @@ static void translate_channel_scan_results(const beerocks_message::sChannelScanR
 {
     string_utils::copy_string(res_out.ap_SSID, res_in.ssid,
                               beerocks::message::WIFI_SSID_MAX_LENGTH);
-    std::copy_n(res_in.bssid.oct, BML_MAC_ADDR_LEN, res_out.ap_BSSID);
+    tlvf::mac_to_array(res_in.bssid, res_out.ap_BSSID);
     std::copy_n(res_in.security_mode_enabled, beerocks::message::CHANNEL_SCAN_LIST_LENGTH,
                 res_out.ap_SecurityModeEnabled);
     std::copy_n(res_in.encryption_mode, beerocks::message::CHANNEL_SCAN_LIST_LENGTH,
@@ -1234,11 +1234,10 @@ int bml_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beerocks_
                 break;
             }
 
-            std::copy_n(response->client().sta_mac.oct, BML_MAC_ADDR_LEN, m_client->sta_mac);
+            tlvf::mac_to_array(response->client().sta_mac, m_client->sta_mac);
             m_client->timestamp_sec         = response->client().timestamp_sec;
             m_client->stay_on_initial_radio = response->client().stay_on_initial_radio;
-            std::copy_n(response->client().initial_radio.oct, BML_MAC_ADDR_LEN,
-                        m_client->initial_radio);
+            tlvf::mac_to_array(response->client().initial_radio, m_client->initial_radio);
             // TODO: add stay_on_selected_device to BML_CLIENT when support is added
             //m_client->stay_on_selected_device = response->client().stay_on_selected_device;
             m_client->selected_bands          = response->client().selected_bands;

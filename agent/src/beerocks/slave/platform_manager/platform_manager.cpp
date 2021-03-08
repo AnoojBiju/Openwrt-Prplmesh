@@ -1153,7 +1153,7 @@ bool PlatformManager::handle_arp_monitor()
     }
 
     // Copy entry values
-    std::copy_n(entry.mac, sizeof(sMacAddr::oct), arp_notif->params().mac.oct);
+    tlvf::mac_from_array(entry.mac, arp_notif->params().mac);
     std::copy_n(entry.ip, sizeof(beerocks::net::sIpv4Addr::oct), arp_notif->params().ipv4.oct);
     arp_notif->params().iface_idx = entry.iface_idx;
     arp_notif->params().state     = entry.state;
@@ -1277,7 +1277,7 @@ bool PlatformManager::handle_arp_raw()
     }
 
     // Copy entry values
-    std::copy_n(entry.mac, sizeof(arp_resp->params().mac.oct), arp_resp->params().mac.oct);
+    tlvf::mac_from_array(entry.mac, arp_resp->params().mac);
     std::copy_n(entry.ip, sizeof(arp_resp->params().ipv4.oct), arp_resp->params().ipv4.oct);
     arp_resp->params().iface_idx = entry.iface_idx;
     arp_resp->params().state     = entry.state;

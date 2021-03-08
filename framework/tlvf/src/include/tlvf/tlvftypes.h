@@ -70,6 +70,28 @@ bool mac_from_string(uint8_t *buf, const std::string &mac);
  * @return sMacAddr converted mac address
  */
 sMacAddr mac_from_string(const std::string &mac);
+
+/**
+ * @brief Copy a MAC address from a sMacAddr object into an array.
+ * @param mac sMacAddr object to copy
+ * @param array Destination array
+ */
+void mac_to_array(const sMacAddr &mac, uint8_t array[sizeof(sMacAddr::oct)]);
+
+/**
+ * @brief Copy a MAC address from an array into a sMacAddr object.
+ * @param array Array to copy
+ * @param mac Destination sMacAddr object
+ */
+void mac_from_array(const uint8_t array[sizeof(sMacAddr::oct)], sMacAddr &mac);
+
+/**
+ * @brief Create an sMacAddr object from an array.
+ * @param array Array to copy
+ * @return sMacAddr object with the same MAC address
+ */
+sMacAddr mac_from_array(const uint8_t array[sizeof(sMacAddr::oct)]);
+
 } // namespace tlvf
 
 inline std::ostream &operator<<(std::ostream &os, const sMacAddr &addr)

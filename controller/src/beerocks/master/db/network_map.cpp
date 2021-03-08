@@ -270,8 +270,7 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
                 LOG(ERROR) << "exceeded size of data.gw_ire.radio[]";
                 break;
             }
-            std::copy_n(radio.first.oct, sizeof(radio.first.oct),
-                        node->data.gw_ire.radio[i].radio_mac);
+            tlvf::mac_to_array(radio.first, node->data.gw_ire.radio[i].radio_mac);
 
             unsigned vap_id = 0;
             for (const auto &bss : radio.second->bsses) {
@@ -285,8 +284,7 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
                     LOG(ERROR) << "exceeded size of data.gw_ire.radio[i].vap[] on " << radio.first;
                     break;
                 }
-                std::copy_n(bss.first.oct, sizeof(bss.first.oct),
-                            node->data.gw_ire.radio[i].vap[vap_id].bssid);
+                tlvf::mac_to_array(bss.first, node->data.gw_ire.radio[i].vap[vap_id].bssid);
                 string_utils::copy_string(node->data.gw_ire.radio[i].vap[vap_id].ssid,
                                           bss.second->ssid.c_str(),
                                           sizeof(node->data.gw_ire.radio[i].vap[0].ssid));
