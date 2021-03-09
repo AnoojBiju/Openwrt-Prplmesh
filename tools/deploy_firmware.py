@@ -30,6 +30,10 @@ class PrplwrtDevice:
     baudrate = 115200
     """The baudrate of the serial connection to the device."""
 
+    initialization_time = 60
+    """The time (in seconds) the device needs to initialize when it boots
+    for the first time after flashing a new image."""
+
     def __init__(self, device: str, name: str, image: str, username: str = "root"):
         """
 
@@ -206,7 +210,7 @@ class NetgearRax40(PrplwrtDevice):
         if not self.reach(attempts=10):
             raise ValueError("The device was not reachable after the upgrade!")
         # Wait at least for the CAC timer:
-        time.sleep(60)
+        time.sleep(self.initialization_time)
 
 
 class Generic(PrplwrtDevice):
@@ -256,6 +260,7 @@ class Generic(PrplwrtDevice):
             shell.sendline("exit")
         if not self.reach(attempts=10):
             raise ValueError("The device was not reachable after the upgrade!")
+        time.sleep(self.initialization_time)
 
 
 def main():
