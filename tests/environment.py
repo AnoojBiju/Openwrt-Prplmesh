@@ -19,7 +19,7 @@ from capi import UCCSocket
 from collections import namedtuple
 from connmap import MapDevice
 from opts import opts, debug, err
-from typing import Dict, Any
+from typing import Dict, Any, List
 import sniffer
 
 
@@ -95,6 +95,14 @@ class ALEntity:
         assert len(ret) == 1, "NBAPI 'get' should return a single object"
         return ret[path + "."]
 
+    def nbapi_list(self, path: str, args: Dict = None) -> Dict:
+        '''Run a northbound API 'list' command.
+
+        Run northbound API "list" on the object specified with "path" with arguments "args".
+        '''
+
+        return self.nbapi_command(path, 'list', args)
+
     def nbapi_get_parameter(self, path: str, parameter: str) -> Any:
         '''Get a parameter from nbapi.
 
@@ -119,6 +127,15 @@ class ALEntity:
             if not re.match("^[0-9]", k):
                 del values[k]
         return values
+
+    def nbapi_get_list_instances(self, path: str) -> List[str]:
+        '''Get all instances of a template object from nbapi.
+
+        Gets the northbound API objects instantiated from the template object "path". Returns a
+        list of strings - path to specific object.
+        '''
+        instances = self.nbapi_list(path)['instances']
+        return [f"{path}.{instance['index']}" for instance in instances]
 
 
 ChannelInfo = namedtuple("ChannelInfo", "channel bandwidth center_channel")
