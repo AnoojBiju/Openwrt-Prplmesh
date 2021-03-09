@@ -154,6 +154,26 @@ class NetgearRax40(PrplwrtDevice):
     uboot_prompt = "GRX500 #"
     """The u-boot prompt on the target."""
 
+    def _update_fullimage(self, shell: pexpect.fdpexpect.fdspawn):
+        """Stop the u-boot sequence, set env variables and run update_fullimage
+
+        Parameters
+        ----------
+        shell: pexpect.fdpexpect.fdspawn
+            The serial console to send commands to.
+        """
+        shell.expect(["Hit any key to stop autoboot:",
+                      pexpect.EOF, pexpect.TIMEOUT], timeout=120)
+        # stop autoboot:
+        shell.sendline("")
+        shell.expect(self.uboot_prompt)
+        # set the image name and save it:
+        shell.sendline("setenv fullimage {} ; saveenv".format(self.image))
+        shell.expect(self.uboot_prompt)
+        # do the actual upgrade:
+        shell.sendline("run update_fullimage")
+        shell.expect(self.uboot_prompt, timeout=600)
+
     def upgrade_uboot(self):
         """Upgrade the device through u-boot.
 
@@ -188,17 +208,14 @@ class NetgearRax40(PrplwrtDevice):
                            "    /overlay/upper/lib/netifd "
                            "    /overlay/upper/etc/uci-defaults/15_wireless-generate-macaddr")
             shell.sendline("reboot -f")
-            shell.expect(["Hit any key to stop autoboot:",
-                          pexpect.EOF, pexpect.TIMEOUT], timeout=120)
-            # stop autoboot:
-            shell.sendline("")
-            shell.expect(self.uboot_prompt)
-            # set the image name and save it:
-            shell.sendline("setenv fullimage {} ; saveenv".format(self.image))
-            shell.expect(self.uboot_prompt)
-            # do the actual upgrade:
-            shell.sendline("run update_fullimage")
-            shell.expect(self.uboot_prompt, timeout=600)
+            try:
+                self._update_fullimage(shell)
+            except pexpect.exceptions.TIMEOUT:
+                print("The upgrade timed out, trying one more time after a reboot.")
+                # Interrupt any running command:
+                shell.send('\003')
+                shell.sendline("reset")
+                self._update_fullimage(shell)
             # reboot:
             shell.sendline("reset")
             shell.expect("Please press Enter to activate this console", timeout=180)
