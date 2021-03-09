@@ -54,6 +54,10 @@ bool tlvApHeCapabilities::set_supported_he_mcs(const void* buffer, size_t size) 
         TLVF_LOG(WARNING) << "set_supported_he_mcs received a null pointer.";
         return false;
     }
+    if (m_supported_he_mcs_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_supported_he_mcs was already allocated!";
+        return false;
+    }
     if (!alloc_supported_he_mcs(size)) { return false; }
     std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_supported_he_mcs);
     return true;

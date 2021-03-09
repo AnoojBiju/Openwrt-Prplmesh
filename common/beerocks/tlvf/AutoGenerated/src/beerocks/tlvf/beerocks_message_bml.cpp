@@ -227,6 +227,10 @@ bool cACTION_BML_NW_MAP_RESPONSE::set_buffer(const char str[], size_t size) {
         TLVF_LOG(WARNING) << "set_buffer received a null pointer.";
         return false;
     }
+    if (m_buffer_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_buffer was already allocated!";
+        return false;
+    }
     if (!alloc_buffer(size)) { return false; }
     std::copy(str, str + size, m_buffer);
     return true;
@@ -364,6 +368,10 @@ bool cACTION_BML_NW_MAP_UPDATE::set_buffer(const std::string& str) { return set_
 bool cACTION_BML_NW_MAP_UPDATE::set_buffer(const char str[], size_t size) {
     if (str == nullptr) {
         TLVF_LOG(WARNING) << "set_buffer received a null pointer.";
+        return false;
+    }
+    if (m_buffer_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_buffer was already allocated!";
         return false;
     }
     if (!alloc_buffer(size)) { return false; }
@@ -505,6 +513,10 @@ bool cACTION_BML_STATS_UPDATE::set_buffer(const char str[], size_t size) {
         TLVF_LOG(WARNING) << "set_buffer received a null pointer.";
         return false;
     }
+    if (m_buffer_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_buffer was already allocated!";
+        return false;
+    }
     if (!alloc_buffer(size)) { return false; }
     std::copy(str, str + size, m_buffer);
     return true;
@@ -638,6 +650,10 @@ bool cACTION_BML_EVENTS_UPDATE::set_buffer(const std::string& str) { return set_
 bool cACTION_BML_EVENTS_UPDATE::set_buffer(const char str[], size_t size) {
     if (str == nullptr) {
         TLVF_LOG(WARNING) << "set_buffer received a null pointer.";
+        return false;
+    }
+    if (m_buffer_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_buffer was already allocated!";
         return false;
     }
     if (!alloc_buffer(size)) { return false; }
@@ -3628,6 +3644,10 @@ bool cACTION_BML_WIFI_CREDENTIALS_SET_REQUEST::set_ssid(const char str[], size_t
         TLVF_LOG(WARNING) << "set_ssid received a null pointer.";
         return false;
     }
+    if (m_ssid_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_ssid was already allocated!";
+        return false;
+    }
     if (!alloc_ssid(size)) { return false; }
     std::copy(str, str + size, m_ssid);
     return true;
@@ -3686,6 +3706,10 @@ bool cACTION_BML_WIFI_CREDENTIALS_SET_REQUEST::set_network_key(const char str[],
         TLVF_LOG(WARNING) << "set_network_key received a null pointer.";
         return false;
     }
+    if (m_network_key_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_network_key was already allocated!";
+        return false;
+    }
     if (!alloc_network_key(size)) { return false; }
     std::copy(str, str + size, m_network_key);
     return true;
@@ -3733,6 +3757,10 @@ uint8_t* cACTION_BML_WIFI_CREDENTIALS_SET_REQUEST::operating_classes(size_t idx)
 bool cACTION_BML_WIFI_CREDENTIALS_SET_REQUEST::set_operating_classes(const void* buffer, size_t size) {
     if (buffer == nullptr) {
         TLVF_LOG(WARNING) << "set_operating_classes received a null pointer.";
+        return false;
+    }
+    if (m_operating_classes_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_operating_classes was already allocated!";
         return false;
     }
     if (!alloc_operating_classes(size)) { return false; }
@@ -5754,6 +5782,10 @@ bool cACTION_BML_STEERING_EVENTS_UPDATE::set_buffer(const std::string& str) { re
 bool cACTION_BML_STEERING_EVENTS_UPDATE::set_buffer(const char str[], size_t size) {
     if (str == nullptr) {
         TLVF_LOG(WARNING) << "set_buffer received a null pointer.";
+        return false;
+    }
+    if (m_buffer_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_buffer was already allocated!";
         return false;
     }
     if (!alloc_buffer(size)) { return false; }

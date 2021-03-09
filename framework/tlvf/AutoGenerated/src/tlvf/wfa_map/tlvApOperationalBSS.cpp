@@ -411,6 +411,10 @@ bool cRadioBssInfo::set_ssid(const char str[], size_t size) {
         TLVF_LOG(WARNING) << "set_ssid received a null pointer.";
         return false;
     }
+    if (m_ssid_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_ssid was already allocated!";
+        return false;
+    }
     if (!alloc_ssid(size)) { return false; }
     std::copy(str, str + size, m_ssid);
     return true;

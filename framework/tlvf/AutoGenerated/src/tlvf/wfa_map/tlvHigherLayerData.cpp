@@ -50,6 +50,10 @@ bool tlvHigherLayerData::set_payload(const void* buffer, size_t size) {
         TLVF_LOG(WARNING) << "set_payload received a null pointer.";
         return false;
     }
+    if (m_payload_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_payload was already allocated!";
+        return false;
+    }
     if (!alloc_payload(size)) { return false; }
     std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_payload);
     return true;

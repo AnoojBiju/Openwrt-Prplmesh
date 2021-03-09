@@ -252,6 +252,10 @@ bool cLocalInterfaceInfo::set_media_info(const void* buffer, size_t size) {
         TLVF_LOG(WARNING) << "set_media_info received a null pointer.";
         return false;
     }
+    if (m_media_info_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_media_info was already allocated!";
+        return false;
+    }
     if (!alloc_media_info(size)) { return false; }
     std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_media_info);
     return true;

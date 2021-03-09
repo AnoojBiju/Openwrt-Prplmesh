@@ -626,6 +626,10 @@ bool cCacCapabilitiesOperatingClasses::set_channels(const void* buffer, size_t s
         TLVF_LOG(WARNING) << "set_channels received a null pointer.";
         return false;
     }
+    if (m_channels_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_channels was already allocated!";
+        return false;
+    }
     if (!alloc_channels(size)) { return false; }
     std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_channels);
     return true;

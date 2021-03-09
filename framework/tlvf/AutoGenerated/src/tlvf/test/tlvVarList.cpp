@@ -57,6 +57,10 @@ bool tlvTestVarList::alloc_simple_list(size_t count) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
         return false;
     }
+    if (m_simple_list_idx__ + count > 8 )  {
+        TLVF_LOG(ERROR) << "Can't allocate " << count << " elements (max length is " << 8 << " current length is " << m_simple_list_idx__ << ")";
+        return false;
+    }
     m_lock_order_counter__ = 0;
     uint8_t *src = (uint8_t *)&m_simple_list[*m_simple_list_length];
     uint8_t *dst = src + len;
@@ -110,6 +114,10 @@ bool tlvTestVarList::set_test_string(const char str[], size_t size) {
         TLVF_LOG(WARNING) << "set_test_string received a null pointer.";
         return false;
     }
+    if (m_test_string_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_test_string was already allocated!";
+        return false;
+    }
     if (!alloc_test_string(size)) { return false; }
     std::copy(str, str + size, m_test_string);
     return true;
@@ -124,8 +132,8 @@ bool tlvTestVarList::alloc_test_string(size_t count) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
         return false;
     }
-    if (count > 8 )  {
-        TLVF_LOG(ERROR) << "Can't allocate " << count << " elements (max length is " << 8 << ")";
+    if (m_test_string_idx__ + count > 8 )  {
+        TLVF_LOG(ERROR) << "Can't allocate " << count << " elements (max length is " << 8 << " current length is " << m_test_string_idx__ << ")";
         return false;
     }
     m_lock_order_counter__ = 1;
@@ -683,6 +691,10 @@ bool cInner::set_list(const void* buffer, size_t size) {
         TLVF_LOG(WARNING) << "set_list received a null pointer.";
         return false;
     }
+    if (m_list_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_list was already allocated!";
+        return false;
+    }
     if (!alloc_list(size)) { return false; }
     std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_list);
     return true;
@@ -738,6 +750,10 @@ bool cInner::set_unknown_length_list_inner(const std::string& str) { return set_
 bool cInner::set_unknown_length_list_inner(const char str[], size_t size) {
     if (str == nullptr) {
         TLVF_LOG(WARNING) << "set_unknown_length_list_inner received a null pointer.";
+        return false;
+    }
+    if (m_unknown_length_list_inner_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_unknown_length_list_inner was already allocated!";
         return false;
     }
     if (!alloc_unknown_length_list_inner(size)) { return false; }

@@ -427,6 +427,10 @@ bool cOperatingClasses::set_channel_list(const void* buffer, size_t size) {
         TLVF_LOG(WARNING) << "set_channel_list received a null pointer.";
         return false;
     }
+    if (m_channel_list_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_channel_list was already allocated!";
+        return false;
+    }
     if (!alloc_channel_list(size)) { return false; }
     std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_channel_list);
     return true;
