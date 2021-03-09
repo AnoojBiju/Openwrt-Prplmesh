@@ -110,6 +110,12 @@ int test_complex_list()
         errors++;
     }
 
+    // test additional set of correct length (less then max)
+    if (true == fourthTlv->set_test_string("1234567")) {
+        LOG(ERROR) << "FAIL test normal size string set twice";
+        errors++;
+    }
+
     for (int i = 0; i < complex_list_entries; i++) {
         auto cmplx    = fourthTlv->create_complex_list();
         cmplx->var1() = 0xbbbbaaaa;
@@ -510,6 +516,11 @@ int test_all()
     mapf_assert(allocation_succeed);
     *(fourthTlv->simple_list(0)) = 0x0bb0;
     *(fourthTlv->simple_list(1)) = 0x0bb1;
+
+    if (fourthTlv->alloc_simple_list(7)) {
+        LOG(ERROR) << "Allocation succeeded despite list max length overflow!";
+        errors++;
+    }
 
     auto cmplx = fourthTlv->create_complex_list();
     cmplx->alloc_list(3);

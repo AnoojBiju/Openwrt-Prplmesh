@@ -57,6 +57,10 @@ bool tlvTestVarList::alloc_simple_list(size_t count) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
         return false;
     }
+    if (m_simple_list_idx__ + count > 8 )  {
+        TLVF_LOG(ERROR) << "Can't allocate " << count << " elements (max length is " << 8 << " current length is " << m_simple_list_idx__ << ")";
+        return false;
+    }
     m_lock_order_counter__ = 0;
     uint8_t *src = (uint8_t *)&m_simple_list[*m_simple_list_length];
     uint8_t *dst = src + len;
