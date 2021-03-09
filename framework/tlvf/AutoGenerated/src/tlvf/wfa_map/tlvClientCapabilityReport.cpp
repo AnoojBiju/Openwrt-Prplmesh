@@ -50,6 +50,10 @@ bool tlvClientCapabilityReport::set_association_frame(const void* buffer, size_t
         TLVF_LOG(WARNING) << "set_association_frame received a null pointer.";
         return false;
     }
+    if (m_association_frame_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_association_frame was already allocated!";
+        return false;
+    }
     if (!alloc_association_frame(size)) { return false; }
     std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_association_frame);
     return true;

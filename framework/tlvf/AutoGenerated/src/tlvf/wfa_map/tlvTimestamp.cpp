@@ -57,6 +57,10 @@ bool tlvTimestamp::set_timestamp(const char str[], size_t size) {
         TLVF_LOG(WARNING) << "set_timestamp received a null pointer.";
         return false;
     }
+    if (m_timestamp_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_timestamp was already allocated!";
+        return false;
+    }
     if (!alloc_timestamp(size)) { return false; }
     std::copy(str, str + size, m_timestamp);
     return true;

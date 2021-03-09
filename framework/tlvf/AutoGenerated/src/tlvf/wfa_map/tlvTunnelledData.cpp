@@ -46,6 +46,10 @@ bool tlvTunnelledData::set_data(const void* buffer, size_t size) {
         TLVF_LOG(WARNING) << "set_data received a null pointer.";
         return false;
     }
+    if (m_data_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_data was already allocated!";
+        return false;
+    }
     if (!alloc_data(size)) { return false; }
     std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_data);
     return true;

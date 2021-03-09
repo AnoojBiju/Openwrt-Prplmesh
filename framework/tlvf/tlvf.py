@@ -1193,6 +1193,12 @@ class TlvF:
                     lines_cpp.append("%sreturn false;" % self.getIndentation(2))
                     lines_cpp.append("%s}" % self.getIndentation(1))
                 else:
+                    lines_cpp.append("%sif (m_%s_idx__ != 0) {" %
+                                     (self.getIndentation(1), param_name))
+                    lines_cpp.append('%sTLVF_LOG(ERROR) << "set_%s was already allocated!";' % (
+                        self.getIndentation(2), param_name))
+                    lines_cpp.append("%sreturn false;" % self.getIndentation(2))
+                    lines_cpp.append("%s}" % self.getIndentation(1))
                     lines_cpp.append("%sif (!alloc_%s(size)) { return false; }" % (
                         self.getIndentation(1), param_name))
                 lines_cpp.append("%sstd::copy(str, str + size, m_%s);" %
@@ -1231,6 +1237,12 @@ class TlvF:
                         lines_cpp.append("%sreturn false;" % self.getIndentation(2))
                         lines_cpp.append("%s}" % self.getIndentation(1))
                     else:
+                        lines_cpp.append("%sif (m_%s_idx__ != 0) {" %
+                                         (self.getIndentation(1), param_name))
+                        lines_cpp.append('%sTLVF_LOG(ERROR) << "set_%s was already allocated!";' % (
+                            self.getIndentation(2), param_name))
+                        lines_cpp.append("%sreturn false;" % self.getIndentation(2))
+                        lines_cpp.append("%s}" % self.getIndentation(1))
                         lines_cpp.append("%sif (!alloc_%s(size)) { return false; }" % (
                             self.getIndentation(1), param_name))
                     lines_cpp.append(
@@ -1408,10 +1420,11 @@ class TlvF:
             lines_cpp.append("%sreturn false;" % self.getIndentation(2))
             lines_cpp.append("%s}" % self.getIndentation(1))
             if param_meta.length_max:
-                lines_cpp.append("%sif (count > %s )  {" % (
-                    self.getIndentation(1), param_meta.length_max))
-                lines_cpp.append('%sTLVF_LOG(ERROR) << "Can\'t allocate " << count << " elements (max length is " << %s << ")";' % (
-                    self.getIndentation(2), param_meta.length_max))
+                lines_cpp.append("%sif (m_%s_idx__ + count > %s )  {" % (
+                    self.getIndentation(1), param_name, param_meta.length_max))
+                lines_cpp.append('%sTLVF_LOG(ERROR) << "Can\'t allocate " << count << " elements (max length is " << %s '
+                                 '<< " current length is " << m_%s_idx__ << ")";' % (
+                                     self.getIndentation(2), param_meta.length_max, param_name))
                 lines_cpp.append("%sreturn false;" % self.getIndentation(2))
                 lines_cpp.append("%s}" % self.getIndentation(1))
             lines_cpp.append("%sm_%s__ = %s;" % (self.getIndentation(

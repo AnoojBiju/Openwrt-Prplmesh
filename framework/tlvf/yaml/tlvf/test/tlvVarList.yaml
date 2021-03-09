@@ -17,6 +17,7 @@ tlvTestVarList:
   simple_list:
     _type: uint16_t
     _length: [ simple_list_length ]
+    _length_max: 8
   
   test_string_length: uint8_t
   test_string:

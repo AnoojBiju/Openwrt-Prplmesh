@@ -170,6 +170,10 @@ bool cWscAttrVendorExtension::set_vendor_data(const void* buffer, size_t size) {
         TLVF_LOG(WARNING) << "set_vendor_data received a null pointer.";
         return false;
     }
+    if (m_vendor_data_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_vendor_data was already allocated!";
+        return false;
+    }
     if (!alloc_vendor_data(size)) { return false; }
     std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_vendor_data);
     return true;
@@ -341,6 +345,10 @@ bool cConfigData::set_ssid(const char str[], size_t size) {
         TLVF_LOG(WARNING) << "set_ssid received a null pointer.";
         return false;
     }
+    if (m_ssid_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_ssid was already allocated!";
+        return false;
+    }
     if (!alloc_ssid(size)) { return false; }
     std::copy(str, str + size, m_ssid);
     return true;
@@ -355,8 +363,8 @@ bool cConfigData::alloc_ssid(size_t count) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
         return false;
     }
-    if (count > WSC_MAX_SSID_LENGTH )  {
-        TLVF_LOG(ERROR) << "Can't allocate " << count << " elements (max length is " << WSC_MAX_SSID_LENGTH << ")";
+    if (m_ssid_idx__ + count > WSC_MAX_SSID_LENGTH )  {
+        TLVF_LOG(ERROR) << "Can't allocate " << count << " elements (max length is " << WSC_MAX_SSID_LENGTH << " current length is " << m_ssid_idx__ << ")";
         return false;
     }
     m_lock_order_counter__ = 0;
@@ -422,6 +430,10 @@ bool cConfigData::set_network_key(const char str[], size_t size) {
         TLVF_LOG(WARNING) << "set_network_key received a null pointer.";
         return false;
     }
+    if (m_network_key_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_network_key was already allocated!";
+        return false;
+    }
     if (!alloc_network_key(size)) { return false; }
     std::copy(str, str + size, m_network_key);
     return true;
@@ -436,8 +448,8 @@ bool cConfigData::alloc_network_key(size_t count) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
         return false;
     }
-    if (count > WSC_MAX_NETWORK_KEY_LENGTH )  {
-        TLVF_LOG(ERROR) << "Can't allocate " << count << " elements (max length is " << WSC_MAX_NETWORK_KEY_LENGTH << ")";
+    if (m_network_key_idx__ + count > WSC_MAX_NETWORK_KEY_LENGTH )  {
+        TLVF_LOG(ERROR) << "Can't allocate " << count << " elements (max length is " << WSC_MAX_NETWORK_KEY_LENGTH << " current length is " << m_network_key_idx__ << ")";
         return false;
     }
     m_lock_order_counter__ = 1;
@@ -655,6 +667,10 @@ bool cWscAttrEncryptedSettings::set_encrypted_settings(const std::string& str) {
 bool cWscAttrEncryptedSettings::set_encrypted_settings(const char str[], size_t size) {
     if (str == nullptr) {
         TLVF_LOG(WARNING) << "set_encrypted_settings received a null pointer.";
+        return false;
+    }
+    if (m_encrypted_settings_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_encrypted_settings was already allocated!";
         return false;
     }
     if (!alloc_encrypted_settings(size)) { return false; }
@@ -1607,6 +1623,10 @@ bool cWscAttrManufacturer::set_manufacturer(const char str[], size_t size) {
         TLVF_LOG(WARNING) << "set_manufacturer received a null pointer.";
         return false;
     }
+    if (m_manufacturer_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_manufacturer was already allocated!";
+        return false;
+    }
     if (!alloc_manufacturer(size)) { return false; }
     std::copy(str, str + size, m_manufacturer);
     return true;
@@ -1748,6 +1768,10 @@ bool cWscAttrModelName::set_model(const std::string& str) { return set_model(str
 bool cWscAttrModelName::set_model(const char str[], size_t size) {
     if (str == nullptr) {
         TLVF_LOG(WARNING) << "set_model received a null pointer.";
+        return false;
+    }
+    if (m_model_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_model was already allocated!";
         return false;
     }
     if (!alloc_model(size)) { return false; }
@@ -1893,6 +1917,10 @@ bool cWscAttrModelNumber::set_model_number(const char str[], size_t size) {
         TLVF_LOG(WARNING) << "set_model_number received a null pointer.";
         return false;
     }
+    if (m_model_number_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_model_number was already allocated!";
+        return false;
+    }
     if (!alloc_model_number(size)) { return false; }
     std::copy(str, str + size, m_model_number);
     return true;
@@ -2034,6 +2062,10 @@ bool cWscAttrSerialNumber::set_serial_number(const std::string& str) { return se
 bool cWscAttrSerialNumber::set_serial_number(const char str[], size_t size) {
     if (str == nullptr) {
         TLVF_LOG(WARNING) << "set_serial_number received a null pointer.";
+        return false;
+    }
+    if (m_serial_number_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_serial_number was already allocated!";
         return false;
     }
     if (!alloc_serial_number(size)) { return false; }
@@ -2297,6 +2329,10 @@ bool cWscAttrDeviceName::set_device_name(const std::string& str) { return set_de
 bool cWscAttrDeviceName::set_device_name(const char str[], size_t size) {
     if (str == nullptr) {
         TLVF_LOG(WARNING) << "set_device_name received a null pointer.";
+        return false;
+    }
+    if (m_device_name_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_device_name was already allocated!";
         return false;
     }
     if (!alloc_device_name(size)) { return false; }
@@ -3552,6 +3588,10 @@ bool cWscAttrSsid::set_ssid(const char str[], size_t size) {
         TLVF_LOG(WARNING) << "set_ssid received a null pointer.";
         return false;
     }
+    if (m_ssid_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_ssid was already allocated!";
+        return false;
+    }
     if (!alloc_ssid(size)) { return false; }
     std::copy(str, str + size, m_ssid);
     return true;
@@ -3883,6 +3923,10 @@ bool cWscAttrNetworkKey::set_key(const std::string& str) { return set_key(str.c_
 bool cWscAttrNetworkKey::set_key(const char str[], size_t size) {
     if (str == nullptr) {
         TLVF_LOG(WARNING) << "set_key received a null pointer.";
+        return false;
+    }
+    if (m_key_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_key was already allocated!";
         return false;
     }
     if (!alloc_key(size)) { return false; }
