@@ -49,6 +49,10 @@ bool cACTION_APMANAGER_UP_NOTIFICATION::set_iface_name(const char str[], size_t 
         TLVF_LOG(WARNING) << "set_iface_name received a null pointer.";
         return false;
     }
+    if (m_iface_name_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_iface_name was already allocated!";
+        return false;
+    }
     if (!alloc_iface_name(size)) { return false; }
     std::copy(str, str + size, m_iface_name);
     return true;
@@ -2237,6 +2241,10 @@ uint8_t* cACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION::association_frame(siz
 bool cACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION::set_association_frame(const void* buffer, size_t size) {
     if (buffer == nullptr) {
         TLVF_LOG(WARNING) << "set_association_frame received a null pointer.";
+        return false;
+    }
+    if (m_association_frame_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_association_frame was already allocated!";
         return false;
     }
     if (!alloc_association_frame(size)) { return false; }

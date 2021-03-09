@@ -73,6 +73,10 @@ bool tlvProfile2ChannelScanResult::set_timestamp(const char str[], size_t size) 
         TLVF_LOG(WARNING) << "set_timestamp received a null pointer.";
         return false;
     }
+    if (m_timestamp_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_timestamp was already allocated!";
+        return false;
+    }
     if (!alloc_timestamp(size)) { return false; }
     std::copy(str, str + size, m_timestamp);
     return true;
@@ -417,6 +421,10 @@ bool cNeighbors::set_ssid(const char str[], size_t size) {
         TLVF_LOG(WARNING) << "set_ssid received a null pointer.";
         return false;
     }
+    if (m_ssid_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_ssid was already allocated!";
+        return false;
+    }
     if (!alloc_ssid(size)) { return false; }
     std::copy(str, str + size, m_ssid);
     return true;
@@ -479,6 +487,10 @@ bool cNeighbors::set_channels_bw_list(const std::string& str) { return set_chann
 bool cNeighbors::set_channels_bw_list(const char str[], size_t size) {
     if (str == nullptr) {
         TLVF_LOG(WARNING) << "set_channels_bw_list received a null pointer.";
+        return false;
+    }
+    if (m_channels_bw_list_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_channels_bw_list was already allocated!";
         return false;
     }
     if (!alloc_channels_bw_list(size)) { return false; }

@@ -110,6 +110,10 @@ bool tlvTestVarList::set_test_string(const char str[], size_t size) {
         TLVF_LOG(WARNING) << "set_test_string received a null pointer.";
         return false;
     }
+    if (m_test_string_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_test_string was already allocated!";
+        return false;
+    }
     if (!alloc_test_string(size)) { return false; }
     std::copy(str, str + size, m_test_string);
     return true;
@@ -683,6 +687,10 @@ bool cInner::set_list(const void* buffer, size_t size) {
         TLVF_LOG(WARNING) << "set_list received a null pointer.";
         return false;
     }
+    if (m_list_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_list was already allocated!";
+        return false;
+    }
     if (!alloc_list(size)) { return false; }
     std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_list);
     return true;
@@ -738,6 +746,10 @@ bool cInner::set_unknown_length_list_inner(const std::string& str) { return set_
 bool cInner::set_unknown_length_list_inner(const char str[], size_t size) {
     if (str == nullptr) {
         TLVF_LOG(WARNING) << "set_unknown_length_list_inner received a null pointer.";
+        return false;
+    }
+    if (m_unknown_length_list_inner_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_unknown_length_list_inner was already allocated!";
         return false;
     }
     if (!alloc_unknown_length_list_inner(size)) { return false; }

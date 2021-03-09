@@ -77,6 +77,10 @@ bool tlvBeaconMetricsQuery::set_ssid(const char str[], size_t size) {
         TLVF_LOG(WARNING) << "set_ssid received a null pointer.";
         return false;
     }
+    if (m_ssid_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_ssid was already allocated!";
+        return false;
+    }
     if (!alloc_ssid(size)) { return false; }
     std::copy(str, str + size, m_ssid);
     return true;
@@ -206,6 +210,10 @@ uint8_t* tlvBeaconMetricsQuery::elemnt_id_list(size_t idx) {
 bool tlvBeaconMetricsQuery::set_elemnt_id_list(const void* buffer, size_t size) {
     if (buffer == nullptr) {
         TLVF_LOG(WARNING) << "set_elemnt_id_list received a null pointer.";
+        return false;
+    }
+    if (m_elemnt_id_list_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_elemnt_id_list was already allocated!";
         return false;
     }
     if (!alloc_elemnt_id_list(size)) { return false; }
@@ -429,6 +437,10 @@ uint8_t* cApChannelReports::ap_channel_report_list(size_t idx) {
 bool cApChannelReports::set_ap_channel_report_list(const void* buffer, size_t size) {
     if (buffer == nullptr) {
         TLVF_LOG(WARNING) << "set_ap_channel_report_list received a null pointer.";
+        return false;
+    }
+    if (m_ap_channel_report_list_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_ap_channel_report_list was already allocated!";
         return false;
     }
     if (!alloc_ap_channel_report_list(size)) { return false; }

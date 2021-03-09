@@ -62,6 +62,10 @@ bool tlvApMetrics::set_estimated_service_info_field(const void* buffer, size_t s
         TLVF_LOG(WARNING) << "set_estimated_service_info_field received a null pointer.";
         return false;
     }
+    if (m_estimated_service_info_field_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_estimated_service_info_field was already allocated!";
+        return false;
+    }
     if (!alloc_estimated_service_info_field(size)) { return false; }
     std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_estimated_service_info_field);
     return true;

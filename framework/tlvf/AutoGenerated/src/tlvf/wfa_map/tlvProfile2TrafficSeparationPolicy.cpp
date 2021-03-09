@@ -238,6 +238,10 @@ bool cSsidVlanId::set_ssid_name(const char str[], size_t size) {
         TLVF_LOG(WARNING) << "set_ssid_name received a null pointer.";
         return false;
     }
+    if (m_ssid_name_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_ssid_name was already allocated!";
+        return false;
+    }
     if (!alloc_ssid_name(size)) { return false; }
     std::copy(str, str + size, m_ssid_name);
     return true;

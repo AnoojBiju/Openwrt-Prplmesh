@@ -263,6 +263,10 @@ bool cOperatingClassesInfo::set_statically_non_operable_channels_list(const void
         TLVF_LOG(WARNING) << "set_statically_non_operable_channels_list received a null pointer.";
         return false;
     }
+    if (m_statically_non_operable_channels_list_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_statically_non_operable_channels_list was already allocated!";
+        return false;
+    }
     if (!alloc_statically_non_operable_channels_list(size)) { return false; }
     std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_statically_non_operable_channels_list);
     return true;

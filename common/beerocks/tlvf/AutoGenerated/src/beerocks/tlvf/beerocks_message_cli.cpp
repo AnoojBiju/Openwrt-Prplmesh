@@ -400,6 +400,10 @@ bool cACTION_CLI_RESPONSE_STR::set_buffer(const char str[], size_t size) {
         TLVF_LOG(WARNING) << "set_buffer received a null pointer.";
         return false;
     }
+    if (m_buffer_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_buffer was already allocated!";
+        return false;
+    }
     if (!alloc_buffer(size)) { return false; }
     std::copy(str, str + size, m_buffer);
     return true;

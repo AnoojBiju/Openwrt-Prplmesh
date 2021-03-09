@@ -58,6 +58,10 @@ bool tlvBeaconMetricsResponse::set_measurement_report_list(const void* buffer, s
         TLVF_LOG(WARNING) << "set_measurement_report_list received a null pointer.";
         return false;
     }
+    if (m_measurement_report_list_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_measurement_report_list was already allocated!";
+        return false;
+    }
     if (!alloc_measurement_report_list(size)) { return false; }
     std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_measurement_report_list);
     return true;
