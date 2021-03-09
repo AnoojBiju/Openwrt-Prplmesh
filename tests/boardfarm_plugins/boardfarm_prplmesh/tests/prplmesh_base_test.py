@@ -399,9 +399,9 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         Removes all Controller.Network.AccessPoint instances in the northbound API.
         '''
         controller = self.dev.lan.controller_entity
-        access_points = controller.nbapi_get_instances('Controller.Network.AccessPoint')
-        for name, access_point in access_points.items():
-            controller.nbapi_command('Controller.Network.AccessPoint', 'del', {'name': name})
+        access_points = controller.nbapi_get_list_instances('Controller.Network.AccessPoint')
+        for access_point_path in access_points:
+            controller.nbapi_command(access_point_path, 'del', {})
 
     def configure_ssid(self, ssid: str) -> str:
         '''Configure an SSID.
