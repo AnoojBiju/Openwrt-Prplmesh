@@ -114,20 +114,6 @@ class ALEntity:
         values = self.nbapi_get(path, {"parameters": [parameter]})
         return values and values[parameter]
 
-    def nbapi_get_instances(self, path: str) -> Dict[str, Dict[str, Any]]:
-        '''Get all instances of a template object from nbapi.
-
-        Gets the northbound API objects instantiated from the template object "path". Returns a
-        dictionary of dictionaries corresponding to the instances. The key of the outer dictionary
-        is the instance name (i.e., "1.", "2." etc.).
-        '''
-        values = self.nbapi_get(path, {"depth": 1})
-        # Filter out the template parameters, i.e. anything that doesn't start with a number
-        for k in list(values.keys()):
-            if not re.match("^[0-9]", k):
-                del values[k]
-        return values
-
     def nbapi_get_list_instances(self, path: str) -> List[str]:
         '''Get all instances of a template object from nbapi.
 
