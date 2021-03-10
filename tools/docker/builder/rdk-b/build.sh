@@ -55,7 +55,7 @@ build_prplmesh() {
            -v "${rootdir}:/home/rdk/prplMesh_source:ro" \
            -v "${CACHE_DIR}/downloads:/home/rdk/rdk-b/downloads" \
            -v "${CACHE_DIR}/sstate-cache:/home/rdk/rdk-b/sstate-cache" \
-           -v "${build_dir}:/home/rdk/artifacts" \
+           -v "${build_dir}:/artifacts" \
            "$image_tag" \
            /home/rdk/scripts/build.sh
 }
