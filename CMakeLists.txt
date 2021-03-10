@@ -3,7 +3,8 @@ cmake_policy(VERSION 3.1)
 include(cmake/multiap-helpers.cmake)
 project(prplmesh
         LANGUAGES C CXX
-        VERSION ${prplmesh_VERSION})
+        VERSION ${prplmesh_VERSION}
+        DESCRIPTION ${prplmesh_DESCRIPTION})
 
 if(NOT DEFINED TARGET_PLATFORM)
     set(TARGET_PLATFORM "linux")
