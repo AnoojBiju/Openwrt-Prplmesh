@@ -47,6 +47,15 @@ for profile in "${args[@]}" ; do
     cat "profiles/${profile}.yml" >> files/etc/prplwrt-version
 done
 
+# MMX EP sends response to WebUI up to 32K size but default luasocket
+# cannot receive it fully because of 8K buffer size for UDP datagrams.
+# MMX feed contains luasocket with patch fixing that issue.
+if [ -n "$MMX_FEED" ] ; then
+    ./scripts/feeds uninstall luasocket
+    ./scripts/feeds install -f -p mmx luasocket
+    make defconfig
+fi
+
 printf '\033[1;35m%s Building prplWrt\n\033[0m' "$(date --iso-8601=seconds --universal)"
 make -j"$(nproc)" V=sc
 
