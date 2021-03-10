@@ -73,7 +73,7 @@
     - tools/docker/builder/rdk-b/build.sh --verbose --target-device "$TARGET_DEVICE" --tag "$CI_PIPELINE_ID" --cache "$RDK_CACHE_DIR"
   artifacts:
     paths:
-      - "build/$TARGET_DEVICE/"
+      - "build/${TARGET_DEVICE}-rdk/"
     expire_in: 4 weeks
     when: always
   tags:

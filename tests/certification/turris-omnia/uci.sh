@@ -13,11 +13,6 @@
 # Delete wireless configuration and create a fresh new one from scratch to make sure there is no
 # side effect due to an existing setting.
 
-pgrep -f '/sbin/wifi' && {
-    logger -t prplmesh -p daemon.warn "wifi script running, waiting some more."
-    sleep 30
-}
-
 logger -t prplmesh -p daemon.info "Applying wifi configuration."
 rm -f /etc/config/wireless
 wifi config
