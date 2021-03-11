@@ -1420,7 +1420,7 @@ bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg)
     case Event::Channel_Scan_Triggered: {
         if (m_radio_info.iface_name != iface_name) {
             // ifname doesn't match current interface
-            // meaning the event was recevied for a diffrent channel
+            // meaning the event was received for a diffrent channel
             return true;
         }
         if (!m_scan_was_triggered_internally) {
@@ -1496,7 +1496,8 @@ bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg)
             return false;
         }
 
-        LOG(DEBUG) << "Processing results for BSSID:" << results->channel_scan_results.bssid;
+        LOG(DEBUG) << "Processing results for BSSID:" << results->channel_scan_results.bssid
+                   << " on Channel: " << results->channel_scan_results.channel;
         event_queue_push(event, results);
         break;
     }
