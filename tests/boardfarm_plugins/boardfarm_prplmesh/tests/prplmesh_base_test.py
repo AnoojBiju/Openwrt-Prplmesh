@@ -30,15 +30,19 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
 
         This method is called right before the test.
         """
-        super().startMarker()
+        try:
+            super().startMarker()
 
-        '''Clear existing SSID configuration on all agents.'''
-        self.configure_ssids([])
+            '''Clear existing SSID configuration on all agents.'''
+            self.configure_ssids([])
 
-        debug("Current network topology:")
-        topology = self.get_topology()
-        for value in topology.values():
-            debug(value)
+            debug("Current network topology:")
+            topology = self.get_topology()
+            for value in topology.values():
+                debug(value)
+        except Exception as e:
+            debug("Failed to start test:\n{}".format(e))
+            raise e
 
     def check_log(self, entity_or_radio: Union[env.ALEntity, env.Radio], regex: str,
                   start_line: int = 0, timeout: float = 0.6, fail_on_mismatch: bool = True) -> bool:
