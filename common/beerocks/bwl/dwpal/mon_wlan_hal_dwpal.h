@@ -149,6 +149,8 @@ private:
     uint32_t m_nl_seq = 0;
     // Flag indicating if we are currently in a dump sequence
     bool m_scan_dump_in_progress = false;
+    // Flag indicating if a scan was triggered internally
+    bool m_scan_was_triggered_internally = true;
 
     static constexpr int INVALID_VAP_ID = -1;
 
