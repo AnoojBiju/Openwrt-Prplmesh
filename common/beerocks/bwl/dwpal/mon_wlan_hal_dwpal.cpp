@@ -346,7 +346,8 @@ static void parse_info_elements(unsigned char *ie, int ielen, sChannelScanResult
         } break;
 
         default: {
-            LOG(ERROR) << "Unhandled element received: " << int(key);
+            // Ignoring received element as it is unhandled
+            // LOG(DEBUG) << "Unhandled element received: " << int(key);
         } break;
         }
 
