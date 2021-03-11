@@ -213,10 +213,6 @@ bool ap_wlan_hal_dummy::update_vap_credentials(
                    << " network_key: " << bss_info_conf.network_key
                    << " fronthaul: " << beerocks::string_utils::bool_str(bss_info_conf.fronthaul)
                    << " backhaul: " << beerocks::string_utils::bool_str(bss_info_conf.backhaul);
-        if (bss_info_conf.fronthaul && bss_info_conf.backhaul) {
-            LOG(ERROR) << "Not supporting hybrid VAP";
-            return false;
-        }
 
         m_radio_info.available_vaps[vap_id].fronthaul = bss_info_conf.fronthaul;
         m_radio_info.available_vaps[vap_id].backhaul  = bss_info_conf.backhaul;
@@ -304,7 +300,7 @@ bool ap_wlan_hal_dummy::is_zwdfs_supported() { return false; }
 bool ap_wlan_hal_dummy::set_zwdfs_antenna(bool enable) { return false; }
 bool ap_wlan_hal_dummy::is_zwdfs_antenna_enabled() { return false; }
 
-bool ap_wlan_hal_dummy::hybrid_mode_supported() { return false; }
+bool ap_wlan_hal_dummy::hybrid_mode_supported() { return true; }
 
 bool ap_wlan_hal_dummy::restricted_channels_set(char *channel_list) { return true; }
 
