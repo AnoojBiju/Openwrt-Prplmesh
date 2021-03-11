@@ -347,34 +347,50 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         '''
         controller = self.dev.lan.controller_entity
 
-        devices = controller.nbapi_get_instances("Controller.Network.Device")
+        devices = controller.nbapi_get_list_instances("Controller.Network.Device")
         map_devices = {}
-        for name, device in devices.items():
-            map_device = connmap.MapDevice(device["ID"])
-            map_device.path = "Controller.Network.Device." + name[:-1]  # strip trailing .
+
+        for device_path in devices:
+            map_device = connmap.MapDevice(controller.nbapi_get_parameter(device_path, "ID"))
+
+            map_device.path = device_path
             map_devices[map_device.mac] = map_device
-            radios = controller.nbapi_get_instances(map_device.path + ".Radio")
-            for radio_name, radio in radios.items():
-                map_radio = map_device.add_radio(radio["ID"])
-                map_radio.path = map_device.path + ".Radio." + radio_name[:-1]  # strip trailing .
-                bsses = controller.nbapi_get_instances(map_radio.path + ".BSS")
-                for bss_name, bss in bsses.items():
-                    map_vap = map_radio.add_vap(bss["BSSID"], bss["SSID"])
-                    map_vap.path = map_radio.path + ".BSS." + bss_name[:-1]  # strip trailing .
-                    stas = controller.nbapi_get_instances(map_vap.path + ".STA")
-                    for sta_name, sta in stas.items():
-                        map_client = map_vap.add_client(sta["MACAddress"])
-                        map_client.path = map_vap.path + ".STA." + sta_name[:-1]  # strip trailing .
-            interfaces = controller.nbapi_get_instances(map_device.path + ".Interface")
-            for interface_name, interface in interfaces.items():
-                map_interface = map_device.add_interface(interface["MACAddress"])
-                # strip trailing .
-                map_interface.path = map_device.path + ".Interface." + interface_name[:-1]
-                neighbors = controller.nbapi_get_instances(map_interface.path + ".Neighbor")
-                for neighbor_name, neighbor in neighbors.items():
-                    map_neighbor = map_interface.add_neighbor(neighbor["ID"])
-                    map_neighbor.path = map_interface.path + \
-                        ".Neighbor." + neighbor_name[:-1]  # str
+
+            radios = controller.nbapi_get_list_instances(map_device.path + ".Radio")
+
+            for radio_path in radios:
+                map_radio = map_device.add_radio(controller.nbapi_get_parameter(radio_path, "ID"))
+                map_radio.path = radio_path
+
+                bsses = controller.nbapi_get_list_instances(map_radio.path + ".BSS")
+
+                for bss_path in bsses:
+                    bssid = controller.nbapi_get_parameter(bss_path, "BSSID")
+                    ssid = controller.nbapi_get_parameter(bss_path, "SSID")
+
+                    map_vap = map_radio.add_vap(bssid, ssid)
+                    map_vap.path = bss_path
+
+                    stas = controller.nbapi_get_list_instances(map_vap.path + ".STA")
+                    for sta_path in stas:
+                        map_client = map_vap.add_client(
+                            controller.nbapi_get_parameter(sta_path, "MACAddress"))
+                        map_client.path = sta_path
+
+            interfaces = controller.nbapi_get_list_instances(device_path + ".Interface")
+            for interface in interfaces:
+                map_interface = map_device.add_interface(
+                    controller.nbapi_get_parameter(interface, "MACAddress"))
+
+                map_interface.path = interface
+                neighbors_list = controller.nbapi_get_list_instances(
+                    map_interface.path + ".Neighbor")
+
+                for neighbor in neighbors_list:
+                    map_neighbor = map_interface.add_neighbor(
+                        controller.nbapi_get_parameter(neighbor, "ID"))
+                    map_neighbor.path = neighbor
+
         return map_devices
 
     def configure_ssids_clear(self):
@@ -383,9 +399,9 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         Removes all Controller.Network.AccessPoint instances in the northbound API.
         '''
         controller = self.dev.lan.controller_entity
-        access_points = controller.nbapi_get_instances('Controller.Network.AccessPoint')
-        for name, access_point in access_points.items():
-            controller.nbapi_command('Controller.Network.AccessPoint', 'del', {'name': name})
+        access_points = controller.nbapi_get_list_instances('Controller.Network.AccessPoint')
+        for access_point_path in access_points:
+            controller.nbapi_command(access_point_path, 'del', {})
 
     def configure_ssid(self, ssid: str) -> str:
         '''Configure an SSID.
