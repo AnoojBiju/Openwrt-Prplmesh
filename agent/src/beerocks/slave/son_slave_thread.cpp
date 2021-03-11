@@ -1439,6 +1439,67 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         message_com::send_cmdu(ap_manager_socket, cmdu_tx);
         break;
     }
+
+    case beerocks_message::ACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC_REQUEST: {
+        LOG(DEBUG) << "received ACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC_REQUEST";
+        auto request_in =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC_REQUEST>();
+        if (!request_in) {
+            LOG(ERROR) << "addClass cACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC_REQUEST failed";
+            return false;
+        }
+
+        // we are about to (re)configure
+        configuration_in_progress = true;
+
+        auto request_out = message_com::create_vs_message<
+            beerocks_message::cACTION_APMANAGER_HOSTAP_CANCEL_ACTIVE_CAC_REQUEST>(cmdu_tx);
+        if (!request_out) {
+            LOG(ERROR) << "Failed building message!";
+            return false;
+        }
+
+        LOG(DEBUG) << "send cACTION_APMANAGER_HOSTAP_CANCEL_ACTIVE_CAC_REQUEST";
+        request_out->cs_params() = request_in->cs_params();
+        message_com::send_cmdu(ap_manager_socket, cmdu_tx);
+        break;
+    }
+
+    case beerocks_message::ACTION_APMANAGER_HOSTAP_CANCEL_ACTIVE_CAC_RESPONSE: {
+        // no more configuration
+        configuration_in_progress = false;
+
+        LOG(DEBUG) << "received ACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC_RESPONSE";
+        auto response_in =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC_RESPONSE>();
+        if (!response_in) {
+            LOG(ERROR) << "addClass cACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC_RESPONSE failed";
+            return false;
+        }
+
+        // report about the status
+        auto response_out = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC_RESPONSE>(cmdu_tx);
+        if (!response_out) {
+            LOG(ERROR) << "Failed building message!";
+            return false;
+        }
+        response_out->success() = response_in->success();
+
+        LOG(DEBUG) << "send cACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC_RESPONSE";
+        message_com::send_cmdu(backhaul_manager_socket, cmdu_tx);
+
+        // take actions when the cancelation failed
+        if (!response_in->success()) {
+            LOG(ERROR) << "cancel active cac failed - resetting the slave";
+            slave_reset();
+        }
+
+        break;
+    }
+
     case beerocks_message::ACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST: {
         LOG(TRACE) << "Received ACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST";
         auto request_in = beerocks_header->addClass<
@@ -2812,7 +2873,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
 
         // fill status report
         auto available_channels =
-            cac_status_database.get_availiable_channels(radio->front.iface_mac);
+            cac_status_database.get_available_channels(radio->front.iface_mac);
 
         if (!cac_status_report_tlv->alloc_available_channels(available_channels.size())) {
             LOG(ERROR) << "Failed to allocate " << available_channels.size()
@@ -5974,9 +6035,14 @@ void slave_thread::save_cac_capabilities_params_to_db()
         // actually performed. We set the value to 10 minutes as default.
         cac_capabilities_local.cac_duration_sec = 600;
 
-        // add the operating class for all supported channels
-        for (const auto &wifi_channel : radio->front.supported_channels) {
-            if (wifi_channel.is_dfs_channel) {
+        for (const auto &channel_info_element : radio->channels_list) {
+            auto channel       = channel_info_element.first;
+            auto &channel_info = channel_info_element.second;
+            if (channel_info.get_dfs_state() == beerocks_message::eDfsState::NOT_DFS) {
+                continue;
+            }
+            for (auto &bw_info : channel_info.supported_bw_list) {
+                auto wifi_channel    = beerocks::message::sWifiChannel(channel, bw_info.bandwidth);
                 auto operating_class = wireless_utils::get_operating_class_by_channel(wifi_channel);
                 if (operating_class == 0) {
                     continue;
@@ -5985,6 +6051,7 @@ void slave_thread::save_cac_capabilities_params_to_db()
                     wifi_channel.channel);
             }
         }
+
         cac_capabilities_local.cac_method = eCacMethod::CAC_METHOD_CONTINUOUS;
 
         // insert "regular" 5g
