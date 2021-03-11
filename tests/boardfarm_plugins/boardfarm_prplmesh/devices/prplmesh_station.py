@@ -36,9 +36,10 @@ class PrplMeshStation(DebianWifi):
             'iface', 'wlan0')
         self.driver_name = config.get("driver", "nl80211,wext")
         self.mac = self.get_mac()
+        self.associated_vap = None
 
         # kill all wpa_supplicant relevant to active interface
-        self.wifi_disconnect()
+        self.wifi_disconnect(None)
         # Turn on and off wlan iface just in case
         self.disable_and_enable_wifi()
 
@@ -62,7 +63,14 @@ class PrplMeshStation(DebianWifi):
         self.sudo_sendline("wpa_supplicant -B -D{} -i{} -c{}".format(
             self.driver_name, self.iface_wifi, config_file_path))
         self.expect("Successfully initialized wpa_supplicant")
+        self.associated_vap = vap
         return bool(self.match)
+
+    def wifi_disconnect(self, vap: VirtualAPHostapd) -> bool:
+        assert vap == self.associated_vap
+        super().wifi_disconnect()
+        self.associated_vap = None
+        return True
 
     def wifi_connect_check(self, vap: VirtualAPHostapd) -> bool:
         """Connect to a SSID and verify WIFI connectivity"""
@@ -73,7 +81,7 @@ class PrplMeshStation(DebianWifi):
             if verify_connect:
                 break
             else:
-                self.wifi_disconnect()
+                self.wifi_disconnect(None)
         return verify_connect
 
     def wifi_connectivity_verify(self):
