@@ -19,7 +19,7 @@ from capi import UCCSocket
 from collections import namedtuple
 from connmap import MapDevice
 from opts import opts, debug, err
-from typing import Dict, Any
+from typing import Dict, Any, List
 import sniffer
 
 MemoryStat = namedtuple('MemoryStat', 'total_memory free_memory buffers cached used_memory')
@@ -98,6 +98,14 @@ class ALEntity:
         assert len(ret) == 1, "NBAPI 'get' should return a single object"
         return ret[path + "."]
 
+    def nbapi_list(self, path: str, args: Dict = None) -> Dict:
+        '''Run a northbound API 'list' command.
+
+        Run northbound API "list" on the object specified with "path" with arguments "args".
+        '''
+
+        return self.nbapi_command(path, 'list', args)
+
     def nbapi_get_parameter(self, path: str, parameter: str) -> Any:
         '''Get a parameter from nbapi.
 
@@ -117,19 +125,14 @@ class ALEntity:
         ret = self.nbapi_command(path, "set", {"parameters": parameters})
         return ret
 
-    def nbapi_get_instances(self, path: str) -> Dict[str, Dict[str, Any]]:
+    def nbapi_get_list_instances(self, path: str) -> List[str]:
         '''Get all instances of a template object from nbapi.
 
         Gets the northbound API objects instantiated from the template object "path". Returns a
-        dictionary of dictionaries corresponding to the instances. The key of the outer dictionary
-        is the instance name (i.e., "1.", "2." etc.).
+        list of strings - path to specific object.
         '''
-        values = self.nbapi_get(path, {"depth": 1})
-        # Filter out the template parameters, i.e. anything that doesn't start with a number
-        for k in list(values.keys()):
-            if not re.match("^[0-9]", k):
-                del values[k]
-        return values
+        instances = self.nbapi_list(path)['instances']
+        return [f"{path}.{instance['index']}" for instance in instances]
 
     def get_memory_usage(self):
         cmd_output = self.command(

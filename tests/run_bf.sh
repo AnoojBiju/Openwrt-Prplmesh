@@ -43,30 +43,36 @@ bft -c "${bf_plugins_dir}"/boardfarm_prplmesh/prplmesh_config.json \
 
 mapfile -t failed <<< "$(jq -c '.test_results[] | select(.grade == "FAIL") | .name' "${resultdir}"/test_results.json)"
 mapfile -t passed <<< "$(jq -c '.test_results[] | select(.grade == "OK") | .name' "${resultdir}"/test_results.json)"
-mapfile -t skipped <<< "$(jq -c '.test_results[] | select(.grade == "SKIP") | .name' "${resultdir}"/test_results.json)"
+mapfile -t skipped <<< "$(jq -c '.test_results[] | select(.grade == null) | .name' "${resultdir}"/test_results.json)"
 
 if [[ -n "${passed[*]/$'\n'/}" ]]; then
-if [[ -n "${failed[*]/$'\n'/}" ]]; then
-    printf '\n\033[2;32m%s\033[0m\n' "${#passed[@]} tests passed!"
-    for test in ${passed[*]};do
-	    printf '%s\n' "$test"
-    done
-else
-    printf '\n\033[2;32mAll tests passed!\033[0m\n\n'
-fi
+    if [[ -n "${failed[*]/$'\n'/}" ]]; then
+        printf '\n\033[2;32m%s\033[0m\n' "${#passed[@]} tests passed!"
+        for test in ${passed[*]};do
+            printf '%s\n' "$test"
+        done
+    else
+        printf '\n\033[2;32mAll tests passed!\033[0m\n\n'
+    fi
 fi
 
+exit_code=0
 if [[ -n "${skipped[*]/$'\n'/}" ]]; then
-    printf '\n\033[1;36m%s\033[0m\n' "${#skipped[@]} tests skipped!" 
-for test in ${skipped[*]};do
-	printf '%s\n' "$test"
-done
+    printf '\n\033[1;36m%s\033[0m\n' "${#skipped[@]} tests skipped!"
+    for test in ${skipped[*]};do
+        printf '%s\n' "$test"
+    done
+
+    exit_code=1
 fi
 
 if [[ -n "${failed[*]/$'\n'/}" ]]; then
-    printf '\n\033[1;31m%s\033[0m\n' "${#failed[@]} tests failed!" 
-for test in ${failed[*]};do
-	printf '%s\n' "$test"
-done
-exit 1
+    printf '\n\033[1;31m%s\033[0m\n' "${#failed[@]} tests failed!"
+    for test in ${failed[*]};do
+        printf '%s\n' "$test"
+    done
+
+    exit_code=1
 fi
+
+exit $exit_code
