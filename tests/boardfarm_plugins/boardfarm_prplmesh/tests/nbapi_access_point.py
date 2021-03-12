@@ -68,21 +68,26 @@ class NbapiAccessPoint(PrplMeshBaseTest):
             "5GH_24G": "Test-5GH-24G",
             "5GL": "Test-5GL",
             "6G": "Test-6G",
-            "F+B": "Test-Fronthaul+Backhaul"
+            "F+B": "Test-FronthaulBackhaul"
         }
 
         all_bands_security_obj_path = self.configure_ssid(ssid["all_bands"]) + ".Security"
         self.configure_ssid(ssid["5GH_24G"], "Fronthaul", {"Band2_4G": True, "Band5GH": True})
         self.configure_ssid(ssid["5GL"], "Fronthaul", {"Band5GL": True})
         self.configure_ssid(ssid["6G"], "Fronthaul", {"Band6G": True})
-        self.configure_ssid(ssid["F+B"], "Fronthaul+Backhaul", {"5GH_24G": True})
+        self.configure_ssid(ssid["F+B"], "Fronthaul+Backhaul")
 
         controller.nbapi_set_parameters(all_bands_security_obj_path,
                                         {"ModeEnabled": "WPA2-Personal"})
         controller.nbapi_set_parameters(all_bands_security_obj_path,
                                         {"KeyPassphrase": "key_passphrease_value"})
+
         controller.nbapi_command("Controller.Network", "AccessPointCommit")
         time.sleep(5)
+
+        topology = self.get_topology()
+        for device in topology.values():
+            print(device)
 
         config_all_bands = {
             "fronthaul": "true", "backhaul": "false",
@@ -128,17 +133,16 @@ class NbapiAccessPoint(PrplMeshBaseTest):
         # assert dm_key_passphrase == "",\
         #     f"KeyPassphrase for {all_bands_security_obj_path} should be hidden."
 
-        topology = self.get_topology()
         repeater1 = topology[agent.mac]
         repeater2 = topology[agent2.mac]
         self.check_bss_in_radio(
             ssid["5GL"], repeater1.radios[agent.radios[1].mac], ssid, controller)
         self.check_bss_in_radio(
-            ssid["5GL"], repeater2.radios[agent.radios[1].mac], ssid, controller)
+            ssid["5GL"], repeater2.radios[agent2.radios[1].mac], ssid, controller)
         self.check_bss_is_disabled(
             ssid["5GL"], repeater1.radios[agent.radios[0].mac], controller)
         self.check_bss_is_disabled(
-            ssid["5GL"], repeater2.radios[agent.radios[0].mac], controller)
+            ssid["5GL"], repeater2.radios[agent2.radios[0].mac], controller)
 
         # Verify Access Point with all bands enabled: 2/4G, 5GH, 5GL, 6G
         for device in topology.values():
