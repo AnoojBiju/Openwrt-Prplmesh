@@ -42,6 +42,7 @@ class CombinedInfraMetrics(PrplMeshBaseTest):
 
         self.dev.DUT.wired_sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
 
+        self.device_reset_then_set_config()
         self.configure_ssids(['CombInfraMetrics-1'])
 
         sta1.wifi_connect(vap1)
@@ -125,7 +126,7 @@ class CombinedInfraMetrics(PrplMeshBaseTest):
         time.sleep(1)
         response = self.check_cmdu_type_single("Link metrics response", 0x0006, agent1.mac,
                                                controller.mac, mid)
-        # We requested specific neighbour, so only one transmitter and receiver link metrics TLV
+        # We requested specific neighbor, so only one transmitter and receiver link metrics TLV
         time.sleep(1)
 
         debug("Check link metrics response has transmitter link metrics")

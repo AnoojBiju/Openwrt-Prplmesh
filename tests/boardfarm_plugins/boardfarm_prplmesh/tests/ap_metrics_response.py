@@ -44,6 +44,7 @@ class ApMetricsResponse(PrplMeshBaseTest):
 
         self.dev.DUT.wired_sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
 
+        self.device_reset_then_set_config()
         self.configure_ssids(['ApMetricsResponse-1'])
 
         sta1.wifi_connect(vap1)

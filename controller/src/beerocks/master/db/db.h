@@ -1488,6 +1488,11 @@ public:
     void clear_default_8021q_settings(const sMacAddr &al_mac);
 
     /**
+     * @brief Disable periodic link metrics requests by setting interval to zero.
+     */
+    void disable_periodic_link_metrics_requests();
+
+    /**
      * @brief Set radio utilization value in Controler Data Model.
      * Data model path example: "Controller.Network.Device.1.Radio.1.Utilization"
      *

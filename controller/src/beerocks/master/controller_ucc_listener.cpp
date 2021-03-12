@@ -57,12 +57,13 @@ bool controller_ucc_listener::clear_configuration()
     m_database.clear_bss_info_configuration();
     m_database.clear_traffic_separation_configurations();
     m_database.clear_default_8021q_settings();
+    m_database.disable_periodic_link_metrics_requests();
     return true;
 }
 
 /**
  * @brief Clear configuration on Controller database for an Agent.
- * 
+ *
  * @return true on success and false otherwise.
  */
 bool controller_ucc_listener::clear_configuration(const sMacAddr &al_mac)
