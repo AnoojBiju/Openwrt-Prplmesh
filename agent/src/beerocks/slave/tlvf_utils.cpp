@@ -28,7 +28,7 @@ bool tlvf_utils::add_ap_radio_basic_capabilities(
     }
     radio_basic_caps->radio_uid() = ruid;
     //TODO get maximum supported VAPs from AP Capabilities from BWL
-    radio_basic_caps->maximum_number_of_bsss_supported() = 2;
+    radio_basic_caps->maximum_number_of_bsss_supported() = 4;
 
     operating_classes = son::wireless_utils::get_supported_operating_classes(supported_channels);
 

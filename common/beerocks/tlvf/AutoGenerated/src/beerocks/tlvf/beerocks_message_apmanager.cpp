@@ -2357,7 +2357,14 @@ bool cACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION::init()
         return false;
     }
     m_association_frame = (uint8_t*)m_buff_ptr__;
-    m_association_frame_idx__ = getBuffRemainingBytes();
+    if (m_parse__) {
+        size_t len = getBuffRemainingBytes();
+        m_association_frame_idx__ = len/sizeof(uint8_t);
+        if (!buffPtrIncrementSafe(len)) {
+            LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
+            return false;
+        }
+    }
     if (m_parse__) { class_swap(); }
     return true;
 }
