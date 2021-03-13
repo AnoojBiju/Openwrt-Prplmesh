@@ -29,6 +29,12 @@ LinkMetricsTask::LinkMetricsTask(db &database_, ieee1905_1::CmduMessageTx &cmdu_
 
 void LinkMetricsTask::work()
 {
+
+    // Zero setting means do not sent any periodic request.
+    if (database.config.link_metrics_request_interval_seconds == std::chrono::seconds::zero()) {
+        return;
+    }
+
     auto now = std::chrono::steady_clock::now();
     auto last_seen_delta =
         std::chrono::duration_cast<std::chrono::seconds>(now - last_query_request);
