@@ -9,6 +9,14 @@
 scriptdir="$(dirname "$(readlink -f "${0}")")"
 PRPLMESH_DIR="$(cd "${scriptdir}/.." && pwd)"
 
+# Explicitely ignore SIGPIPE to make sure the processes we start in
+# the background do not stop in case stdout/stderr gets closed early
+# (because the SSH connection calling the script is closed as soon as
+# the utils script exits for example). Similarly, ignore SIGHUP to
+# make sure the processes do not stop when the session leader
+# terminates:
+trap '' HUP PIPE
+
 dbg() {
     [ "$VERBOSE" = "true" ] && echo "$@"
 }
