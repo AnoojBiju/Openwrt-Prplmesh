@@ -212,7 +212,7 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
 
     auto is_current_scan_running = [this]() -> bool {
         if (!m_current_scan_info.is_scan_currently_running) {
-            LOG(ERROR) << "No scan is currently running";
+            LOG(DEBUG) << "ERROR: No scan is currently running";
             return false;
         }
         return true;
@@ -330,7 +330,7 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_CHANNEL_SCAN_FINISHED_NOTIFICATION: {
-        LOG(DEBUG) << "ACTION_BACKHAUL_CHANNEL_SCAN_FINISHED_NOTIFICATION from mac " << src_mac;
+        LOG(TRACE) << "ACTION_BACKHAUL_CHANNEL_SCAN_FINISHED_NOTIFICATION from mac " << src_mac;
         auto notification =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_FINISHED_NOTIFICATION>();
@@ -356,7 +356,7 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_CHANNEL_SCAN_ABORTED_NOTIFICATION: {
-        LOG(DEBUG) << "ACTION_BACKHAUL_CHANNEL_SCAN_ABORTED_NOTIFICATION from mac " << src_mac;
+        LOG(TRACE) << "ACTION_BACKHAUL_CHANNEL_SCAN_ABORTED_NOTIFICATION from mac " << src_mac;
 
         auto notification =
             beerocks_header
