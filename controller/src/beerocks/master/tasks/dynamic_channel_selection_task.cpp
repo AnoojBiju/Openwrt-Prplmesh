@@ -263,7 +263,7 @@ void dynamic_channel_selection_task::handle_event(int event_type, void *obj)
     bool event_handled = false;
     switch (eEvent(event_type)) {
     case eEvent::TRIGGER_SINGLE_SCAN: {
-        TASK_LOG(DEBUG) << "TRIGGER_SINGLE_SCAN received";
+        TASK_LOG(TRACE) << "TRIGGER_SINGLE_SCAN received";
         auto single_scan_event = reinterpret_cast<sScanEvent *>(obj);
         event_handled          = true;
         TASK_LOG(DEBUG) << "TRIGGER_SINGLE_SCAN handled on: " << single_scan_event->radio_mac;
@@ -271,7 +271,7 @@ void dynamic_channel_selection_task::handle_event(int event_type, void *obj)
         break;
     }
     case eEvent::SCAN_TRIGGER_FAILED: {
-        TASK_LOG(DEBUG) << "SCAN_TRIGGER_FAILED received";
+        TASK_LOG(TRACE) << "SCAN_TRIGGER_FAILED received";
         if (fsm_in_state(eState::WAIT_FOR_SCAN_TRIGGERED)) {
             auto scan_trigger_failed_event = reinterpret_cast<sScanEvent *>(obj);
             event_handled                  = true;
@@ -284,7 +284,7 @@ void dynamic_channel_selection_task::handle_event(int event_type, void *obj)
         break;
     }
     case eEvent::SCAN_TRIGGERED: {
-        TASK_LOG(DEBUG) << "SCAN_TRIGGERED received";
+        TASK_LOG(TRACE) << "SCAN_TRIGGERED received";
         if (fsm_in_state(eState::WAIT_FOR_SCAN_TRIGGERED)) {
             auto scan_triggered_event = reinterpret_cast<sScanEvent *>(obj);
             event_handled             = true;
@@ -301,7 +301,7 @@ void dynamic_channel_selection_task::handle_event(int event_type, void *obj)
         break;
     }
     case eEvent::SCAN_RESULTS_READY: {
-        TASK_LOG(DEBUG) << "SCAN_RESULTS_READY received";
+        TASK_LOG(TRACE) << "SCAN_RESULTS_READY received";
         if (fsm_in_state(eState::WAIT_FOR_RESULTS_READY)) {
             auto scan_results_ready_event = reinterpret_cast<sScanEvent *>(obj);
             event_handled                 = true;
@@ -326,7 +326,7 @@ void dynamic_channel_selection_task::handle_event(int event_type, void *obj)
         break;
     }
     case eEvent::SCAN_RESULTS_DUMP: {
-        TASK_LOG(DEBUG) << "SCAN_RESULTS_DUMP received";
+        TASK_LOG(TRACE) << "SCAN_RESULTS_DUMP received";
         if (fsm_in_state(eState::WAIT_FOR_RESULTS_DUMP)) {
             auto scan_results_dump_event = reinterpret_cast<sScanEvent *>(obj);
             event_handled                = true;
@@ -357,7 +357,7 @@ void dynamic_channel_selection_task::handle_event(int event_type, void *obj)
         break;
     }
     case eEvent::SCAN_FINISHED: {
-        TASK_LOG(DEBUG) << "SCAN_FINISHED received";
+        TASK_LOG(TRACE) << "SCAN_FINISHED received";
         if (fsm_in_state(eState::WAIT_FOR_RESULTS_DUMP)) {
             auto scan_finished_event = reinterpret_cast<sScanEvent *>(obj);
             event_handled            = true;
@@ -374,7 +374,7 @@ void dynamic_channel_selection_task::handle_event(int event_type, void *obj)
         break;
     }
     case eEvent::SCAN_ABORTED: {
-        TASK_LOG(DEBUG) << "SCAN_ABORTED received";
+        TASK_LOG(TRACE) << "SCAN_ABORTED received";
         auto scan_abort_event = reinterpret_cast<sScanEvent *>(obj);
         event_handled         = true;
         TASK_LOG(DEBUG) << "SCAN_FINISHED handled on: " << scan_abort_event->radio_mac;
@@ -386,7 +386,7 @@ void dynamic_channel_selection_task::handle_event(int event_type, void *obj)
         break;
     }
     case eEvent::SCAN_ENABLE_CHANGE: {
-        TASK_LOG(DEBUG) << "SCAN_ENABLE_CHANGE received";
+        TASK_LOG(TRACE) << "SCAN_ENABLE_CHANGE received";
         auto scan_enable_change_event = reinterpret_cast<sScanEvent *>(obj);
         event_handled                 = true;
         TASK_LOG(DEBUG) << "SCAN_FINISHED handled on: " << scan_enable_change_event->radio_mac;
