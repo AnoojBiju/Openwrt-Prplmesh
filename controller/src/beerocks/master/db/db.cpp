@@ -5250,6 +5250,11 @@ void db::clear_default_8021q_settings(const sMacAddr &al_mac)
     default_8021q_settings.erase(al_mac);
 }
 
+void db::disable_periodic_link_metrics_requests()
+{
+    config.link_metrics_request_interval_seconds = std::chrono::seconds::zero();
+}
+
 bool db::dm_set_sta_link_metrics(const sMacAddr &sta_mac, uint32_t downlink_est_mac_data_rate,
                                  uint32_t uplink_est_mac_data_rate, uint8_t signal_strength)
 {
