@@ -38,6 +38,7 @@ ARG PACKAGES_FOR_AMBIORIX="\
 
 ARG PACKAGES_FOR_TEST="\
     clang-format \
+    iperf3 \
     gcovr \
     "
 
