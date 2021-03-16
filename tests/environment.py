@@ -7,6 +7,7 @@
 
 from enum import Enum
 import json
+import iperf3
 import os
 import platform
 import re
@@ -490,6 +491,75 @@ class ALEntityDocker(ALEntity):
             for vap in vap_file:
                 VirtualAPDocker(radio, vap['bssid'])
 
+    def iperf_throughput(self, to_dut: bool, duration: int = 5, protocol: str = 'tcp',
+                         omit: int = 2, num_streams: int = 5,
+                         print_output: bool = False) -> float:
+        '''Starts an iperf server on the agent and connects boardfarm as client
+            Parameters
+            ----------
+            to_dut: bool
+                True - Download
+                False - Upload
+
+            duration: int = 5
+                Time in seconds
+
+            protocol: str tcp
+                Protocol used
+
+            omit: int = 2
+                Seconds to be removed from a test result
+
+            num_streams: int = 5
+                Parallel streams
+
+            Raises
+            ------
+            CalledProcessError
+                If exit code was non-zero
+
+            Returns
+            ------
+            inspect: dict
+                dict containing the inspected docker network
+        '''
+
+        self.command('iperf3', '--daemon', '-s', '-J', '-1')
+
+        client = iperf3.Client()
+        client.server_hostname = self.get_iface_ip()
+        client.duration = duration
+        client.omit = omit
+        client.num_streams = num_streams
+        client.reverse = to_dut
+        client.protocol = protocol
+        debug('Running {} iperf {}'.format(protocol,
+                                           {True: "download",
+                                            False: "upload"}.get(to_dut)))
+        debug('Connecting to {}:{}'.format(client.server_hostname,
+                                           client.port))
+        result = client.run()
+
+        if result.error:
+            raise Exception(result.error)
+        else:
+            if print_output:
+                debug(result)
+            throughput_intervals = list(
+                x['sum']['bits_per_second'] for x in result.json['intervals']
+                if x['sum']['omitted'] is False)
+            throughput_average = int(sum(throughput_intervals) /
+                                     len(throughput_intervals)) / 10 ** 6
+            return throughput_average
+
+    def get_iface_ip(self):
+        '''Returns the IP of the data interface'''
+        prplmesh_net = _docker_inspect_network_json(os.getenv("RUN_ID"))
+
+        container_info = [v for v in prplmesh_net['Containers'].values()
+                          if v['Name'] == self.name][0]
+        return container_info['IPv4Address'].split('/')[0]
+
 
 class RadioDocker(Radio):
     '''Docker implementation of a radio.'''
@@ -584,8 +654,24 @@ class VirtualAPDocker(VirtualAP):
         }.get((fronthaul, backhaul), BssType.Disabled)
 
 
-def _get_bridge_interface(unique_id: str):
-    '''Use docker network inspect to get the docker bridge interface.'''
+def _docker_inspect_network_json(unique_id: str):
+    """Use docker network inspect to get the docker bridge interface.
+
+            Parameters
+            ----------
+            unique_id: str
+                index ID of the current run
+
+            Raises
+            ------
+            CalledProcessError
+                If exit code was non-zero
+
+            Returns
+            ------
+            inspect: dict
+                dict containing the inspected docker network
+    """
     docker_network = 'prplMesh-net-{}'.format(unique_id)
     docker_network_inspect_cmd = ('docker', 'network', 'inspect', docker_network)
     inspect_result = subprocess.run(docker_network_inspect_cmd, stdout=subprocess.PIPE)
@@ -603,7 +689,12 @@ def _get_bridge_interface(unique_id: str):
                                         stdout=subprocess.PIPE)
 
     inspect = json.loads(inspect_result.stdout)
-    prplmesh_net = inspect[0]
+    return inspect[0]
+
+
+def _get_bridge_interface(unique_id: str):
+    prplmesh_net = _docker_inspect_network_json(unique_id)
+
     # podman adds a 'plugins' indirection that docker doesn't have.
     if 'plugins' in prplmesh_net:
         bridge = prplmesh_net['plugins'][0]['bridge']
