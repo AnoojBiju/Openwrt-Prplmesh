@@ -45,6 +45,20 @@ protected:
         std::make_shared<StrictMock<beerocks::EventLoopMock>>();
 };
 
+/**
+ * UccServerImpl must remove pending client connections, if any, when it goes out of scope.
+ * This test checks that resources are properly deallocated if a client remains connected to the 
+ * server when the server's destructor is executed. 
+ * 
+ * In all other tests we emulate that a client connects to the server at the beginning of the test 
+ * and disconnects from the server at the end of the test. In this test, on the contrary, the client 
+ * does not disconnect from the server to set up the required scenario.
+ * 
+ * To verify that the connection is closed by the server, we set an expectation for 
+ * EventLoop::remove_handlers() on the connected socket. In all other tests no expectation is set
+ * because when the client closes the connection, it is the EventLoop implementation who would 
+ * remove the handlers before notifying the disconnected event.
+ */
 TEST_F(UccServerImplTest, destructor_should_remove_existing_connection)
 {
     auto connection       = new StrictMock<beerocks::net::SocketConnectionMock>();
