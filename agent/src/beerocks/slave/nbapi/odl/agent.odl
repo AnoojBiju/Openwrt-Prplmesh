@@ -11,6 +11,6 @@
 
     // Define main data model
     object Agent {
-        %read-only %persistent string MACAddress = "00:00:00:00:00:00";
+        %read-only string MACAddress = "00:00:00:00:00:00";
     }
 }
