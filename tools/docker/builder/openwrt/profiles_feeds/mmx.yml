@@ -2,9 +2,10 @@ feeds:
   - name: mmx
     uri: https://github.com/InangoSystems/feed-mmx.git
     tracking_branch: master
-    revision: 3dd041ee090c1cf9de968a1aed0d06e42400eb5d
+    revision: fde47470e0ac362b0220629e9908f051537dd79e
 
 packages:
+  - luasocket
   - luaxml
   - mmx-web-lib-chartist
   - libing-gen-utils
