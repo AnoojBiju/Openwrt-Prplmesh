@@ -66,10 +66,6 @@
             %read-only string MACAddress = "";
         }
 
-        object UnassociatedSTA [] {
-            counted with NumberOfUnassocSTA;
-        }
-
         object ScanResult {
             // DataElements:ScanResult
         }

@@ -142,5 +142,4 @@ include "neighbor_bss.odl";
 include "sta.odl";
 include "association_event.odl";
 include "disassociation_event.odl";
-include "unassociated_sta.odl";
 include "access_point.odl";
