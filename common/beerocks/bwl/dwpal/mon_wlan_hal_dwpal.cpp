@@ -346,7 +346,8 @@ static void parse_info_elements(unsigned char *ie, int ielen, sChannelScanResult
         } break;
 
         default: {
-            LOG(ERROR) << "Unhandled element received: " << int(key);
+            // Ignoring received element as it is unhandled
+            // LOG(DEBUG) << "Unhandled element received: " << int(key);
         } break;
         }
 
@@ -952,6 +953,7 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
         dwpal_set_scan_params_bg(org_bg, bg_size);
         return false;
     }
+    m_scan_was_triggered_internally = true;
 
     // restoring channel scan params with original dwell time.
     // dwpal_driver_nl_scan_trigger() API doesn't include dwell time parameter
@@ -1423,7 +1425,11 @@ bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
     case Event::Channel_Scan_Triggered: {
         if (m_radio_info.iface_name != iface_name) {
             // ifname doesn't match current interface
-            // meaning the event was recevied for a diffrent channel
+            // meaning the event was received for a diffrent channel
+            return true;
+        }
+        if (!m_scan_was_triggered_internally) {
+            // Scan was not triggered internally, no need to handle the event
             return true;
         }
         LOG(DEBUG) << "DWPAL NL event channel scan triggered";
@@ -1437,6 +1443,10 @@ bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
         if (m_radio_info.iface_name != iface_name) {
             // ifname doesn't match current interface
             // meaning the event was received for a diffrent channel
+            return true;
+        }
+        if (!m_scan_was_triggered_internally) {
+            // Scan was not triggered internally, no need to handle the event
             return true;
         }
 
@@ -1491,7 +1501,8 @@ bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
             return false;
         }
 
-        LOG(DEBUG) << "Processing results for BSSID:" << results->channel_scan_results.bssid;
+        LOG(DEBUG) << "Processing results for BSSID:" << results->channel_scan_results.bssid
+                   << " on Channel: " << results->channel_scan_results.channel;
         event_queue_push(event, results);
         break;
     }
@@ -1502,16 +1513,24 @@ bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
             // meaning the event was recevied for a diffrent channel
             return true;
         }
+        if (!m_scan_was_triggered_internally) {
+            // Scan was not triggered internally, no need to handle the event
+            return true;
+        }
         LOG(DEBUG) << "DWPAL NL event channel scan aborted";
 
         //reset scan indicators for next scan
-        m_nl_seq                = 0;
-        m_scan_dump_in_progress = false;
+        m_nl_seq                        = 0;
+        m_scan_dump_in_progress         = false;
+        m_scan_was_triggered_internally = false;
         event_queue_push(event);
         break;
     }
     case Event::Channel_Scan_Finished: {
-
+        if (!m_scan_was_triggered_internally) {
+            // Scan was not triggered internally, no need to handle the event
+            return true;
+        }
         // We are not in a dump sequence, ignoring the message
         if (!m_scan_dump_in_progress) {
             return true;
@@ -1529,8 +1548,9 @@ bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
                    << (int)nlh->nlmsg_seq;
 
         //reset scan indicators for next scan
-        m_nl_seq                = 0;
-        m_scan_dump_in_progress = false;
+        m_nl_seq                        = 0;
+        m_scan_dump_in_progress         = false;
+        m_scan_was_triggered_internally = false;
         event_queue_push(event);
         break;
     }
