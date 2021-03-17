@@ -77,9 +77,10 @@ class ApMetricsResponse(PrplMeshBaseTest):
         mid = controller.dev_send_1905(agent1.mac, 0x800B,
                                        tlv(0x93, 0x0007, "0x01 {%s}" % (vap1.bssid)))
 
-        time.sleep(1)
+        time.sleep(3)
         response = self.check_cmdu_type_single("AP metrics response", 0x800C, agent1.mac,
                                                controller.mac, mid)
+
         debug("Check AP metrics response has AP metrics")
         ap_metrics_1 = self.check_cmdu_has_tlv_single(response, 0x94)
         if ap_metrics_1:
