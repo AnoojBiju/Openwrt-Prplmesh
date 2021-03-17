@@ -8,18 +8,18 @@
  */
 
 %config {
-	define-behavior = { 
-		existing-object = "update"
-	};
+    define-behavior = {
+        existing-object = "update"
+    };
 }
 
 %define {
-	select Controller.Network.Device {
-		object UnassociatedSTA [] {
-			%read-only string MACAddress = "0";
-			%read-only uint32 SignalStrength = 0 {
-				on action validate call check_range [0, 220];
-			}
-		}
-	}
+    select Controller.Network.Device.Radio.UnassociatedSTA {
+        object UnassociatedSTA [] {
+            %read-only string MACAddress = "00:00:00:00:00:00";
+            %read-only uint32 SignalStrength = 0 {
+                on action validate call check_range [0, 220];
+            }
+        }
+    }
 }

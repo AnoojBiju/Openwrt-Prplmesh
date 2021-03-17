@@ -8,25 +8,25 @@
  */
 
 %config {
-	define-behavior = { 
-		existing-object = "update"
-	};
+    define-behavior = {
+        existing-object = "update"
+    };
 }
 
 %define {
-	select Controller.Network.Device.Radio.ScanResult {
+    select Controller.Network.Device.Radio.ScanResult {
 
-		object OpClassScan [] {
-			%read-only uint32 OperatingClass = 0 {
-				on action validate call check_range [0, 255];
-			}
+        object OpClassScan [] {
+            %read-only uint32 OperatingClass = 0 {
+                on action validate call check_range [0, 255];
+            }
 
-			object ChannelScan [] {
-				counted with NumberOfChannelScans;
-			}
-			counted with NumberOfOpClassScans;
-		}
+            object ChannelScan [] {
+                counted with NumberOfChannelScans;
+            }
+            counted with NumberOfOpClassScans;
+        }
 
-		%read-only datetime TimeStamp = "2020-08-31T11:22:39Z";
-	}
+        %read-only datetime TimeStamp = "2020-08-31T11:22:39Z";
+    }
 }
