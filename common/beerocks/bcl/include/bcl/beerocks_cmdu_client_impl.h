@@ -25,7 +25,7 @@ namespace beerocks {
  * processes must have already been established with a server socket. The framing protocol used is
  * defined by the CMDU parser and serializer objects given constructor.
  */
-class CmduClientImpl : public CmduClient, public CmduPeer {
+class CmduClientImpl : public CmduClient {
 public:
     /**
      * @brief Class constructor.
@@ -83,6 +83,11 @@ private:
      * @param remove_handlers Flag to signal if event handlers must be removed from event loop.
      */
     void close_connection(bool remove_handlers = false);
+
+    /**
+     * Class used to send and receive CMDU messages through a socket connection.
+     */
+    CmduPeer m_peer;
 
     /**
      * Connection established with CMDU server.
