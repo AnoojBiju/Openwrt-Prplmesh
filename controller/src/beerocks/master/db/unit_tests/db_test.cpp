@@ -78,11 +78,13 @@ private:
         EXPECT_CALL(*m_ambiorix, set(g_device_path_multiapcaps, "AgentInitiatedRCPIBasedSteering",
                                      Matcher<const bool &>(false)))
             .WillOnce(Return(true));
-        EXPECT_CALL(*m_ambiorix, set(g_device_path_multiapcaps, "USTALinkMatricCurrentlyOn",
-                                     Matcher<const bool &>(false)))
+        EXPECT_CALL(*m_ambiorix,
+                    set(g_device_path_multiapcaps, "UnassociatedSTALinkMetricsCurrentlyOn",
+                        Matcher<const bool &>(false)))
             .WillOnce(Return(true));
-        EXPECT_CALL(*m_ambiorix, set(g_device_path_multiapcaps, "USTALinkMatricCurrentlyOff",
-                                     Matcher<const bool &>(false)))
+        EXPECT_CALL(*m_ambiorix,
+                    set(g_device_path_multiapcaps, "UnassociatedSTALinkMetricsCurrentlyOff",
+                        Matcher<const bool &>(false)))
             .WillOnce(Return(true));
 
         m_db->set_prplmesh(tlvf::mac_from_string(g_bridge_mac));
