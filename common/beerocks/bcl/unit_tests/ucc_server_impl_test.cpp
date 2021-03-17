@@ -295,7 +295,7 @@ TEST_F(UccServerImplTest, receive_command_should_succeed)
         // Emulate a new client is connected to the server socket
         server_socket_handlers.on_read(connected_socket_fd, *m_event_loop);
 
-        // Emulate the client sends a CMDU message
+        // Emulate the client sends a message
         connected_socket_handlers.on_read(connected_socket_fd, *m_event_loop);
 
         // Assert that command-received event handler function has been called back
@@ -388,7 +388,7 @@ TEST_F(UccServerImplTest, receive_command_should_fail_if_parse_command_fails)
         // Emulate a new client is connected to the server socket
         server_socket_handlers.on_read(connected_socket_fd, *m_event_loop);
 
-        // Emulate the client sends a CMDU message
+        // Emulate the client sends a message
         connected_socket_handlers.on_read(connected_socket_fd, *m_event_loop);
 
         // Assert that command-received event handler function has not been called back
