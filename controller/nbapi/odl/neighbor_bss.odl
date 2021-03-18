@@ -8,33 +8,33 @@
  */
 
 %config {
-	define-behavior = { 
-		existing-object = "update"
-	};
+    define-behavior = {
+        existing-object = "update"
+    };
 }
 
 %define {
-	select Controller.Network.Device.Radio.ScanResult.OpClassScan.ChannelScan.NeighborBSS {
-		%read-only %persistent uint64 BSSID = 0;
+    select Controller.Network.Device.Radio.ScanResult.OpClassScan.ChannelScan.NeighborBSS {
+        %read-only string BSSID = "00:00:00:00:00:00";
 
-		%read-only %persistent string SSID = "0" {
-			
-		}
+        %read-only string SSID = "00:00:00:00:00:00" {
 
-		%read-only %persistent uint32 SignalStrength = 0 {
-			on action validate call check_range [0, 220];
-		}
+        }
 
-		%read-only %persistent string ChannelBandwidth = "0" {
-			
-		}
+        %read-only uint32 SignalStrength = 0 {
+            on action validate call check_range [0, 220];
+        }
 
-		%read-only %persistent uint32 ChannelUtilization = 0 {
-			on action validate call check_range [0, 255];
-		}
+        %read-only string ChannelBandwidth = "0" {
 
-		%read-only %persistent uint32 StationCount = 0 {
-			on action validate call check_range [0, 65535];
-		}
-	}
+        }
+
+        %read-only uint32 ChannelUtilization = 0 {
+            on action validate call check_range [0, 255];
+        }
+
+        %read-only uint32 StationCount = 0 {
+            on action validate call check_range [0, 65535];
+        }
+    }
 }

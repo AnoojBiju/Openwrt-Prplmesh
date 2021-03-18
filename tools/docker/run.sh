@@ -89,6 +89,7 @@ main() {
         -v "${installdir}:${installdir}"
         -v "${rootdir}:${rootdir}"
         -v "${rootdir}/logs/${NAME}:/tmp/beerocks/logs"
+        -v "/lib/modules:/lib/modules:ro"
         --name "${NAME}"
     )
 

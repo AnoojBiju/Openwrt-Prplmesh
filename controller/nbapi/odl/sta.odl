@@ -8,55 +8,55 @@
  */
 
 %config {
-	define-behavior = { 
-		existing-object = "update"
-	};
+    define-behavior = {
+        existing-object = "update"
+    };
 }
 
 %define {
-	select Controller.Network.Device.Radio.BSS.STA {
-		%read-only string MACAddress = "00:00:00:00:00:00";
-		%read-only string TimeStamp = "2020-08-31T11:22:39Z";
+    select Controller.Network.Device.Radio.BSS.STA {
+        %read-only string MACAddress = "00:00:00:00:00:00";
+        %read-only string TimeStamp = "2020-08-31T11:22:39Z";
 
-		/**
-		** Need to add here HTCapabilities, VHTCapabilities, HECapabilities
-		** from mids which defined in controller.odl
-		**/
+        /**
+        ** Need to add here HTCapabilities, VHTCapabilities, HECapabilities
+        ** from mids which defined in controller.odl
+        **/
 
-		%read-only uint32 LastDataDownlinkRate = 0;
-		%read-only uint32 LastDataUplinkRate = 0;
-		%read-only uint32 UtilizationReceive = 0 {
-			on action validate call check_minimum 0;
-		}
+        %read-only uint32 LastDataDownlinkRate = 0;
+        %read-only uint32 LastDataUplinkRate = 0;
+        %read-only uint32 UtilizationReceive = 0 {
+            on action validate call check_minimum 0;
+        }
 
-		%read-only uint32 UtilizationTransmit = 0 {
-			on action validate call check_minimum 0;
-		}
+        %read-only uint32 UtilizationTransmit = 0 {
+            on action validate call check_minimum 0;
+        }
 
-		%read-only uint32 EstMACDataRateDownlink = 0;
-		%read-only uint32 EstMACDataRateUplink = 0;
+        %read-only uint32 EstMACDataRateDownlink = 0;
+        %read-only uint32 EstMACDataRateUplink = 0;
 
-		%read-only uint8 SignalStrength = 0 {
-			on action validate call check_range [0, 220];
-		}
+        %read-only uint8 SignalStrength = 0 {
+            on action validate call check_range [0, 220];
+        }
 
-		%read-only uint32 LastConnectTime = 0 {
-			on action read call action_read_last_change;
-		}
+        %read-only uint32 LastConnectTime = 0 {
+            on action read call action_read_last_change;
+        }
 
-		uint32 BytesSent = 0;
-		uint32 BytesReceived = 0;
-		%read-only uint32 PacketsSent = 0;
-		%read-only uint32 PacketsReceived = 0;
-		%read-only uint32 ErrorsSent = 0;
-		%read-only uint32 ErrorsReceived = 0;
-		%read-only uint32 RetransCount = 0;
-		%read-only string IPV4Address = "0";
-		%read-only string IPV6Address = "0";
-		%read-only string Hostname = "0";
+        uint32 BytesSent = 0;
+        uint32 BytesReceived = 0;
+        %read-only uint32 PacketsSent = 0;
+        %read-only uint32 PacketsReceived = 0;
+        %read-only uint32 ErrorsSent = 0;
+        %read-only uint32 ErrorsReceived = 0;
+        %read-only uint32 RetransCount = 0;
+        %read-only string IPV4Address = "0";
+        %read-only string IPV6Address = "0";
+        %read-only string Hostname = "0";
 
-		object MeasurementReport [] {
-			counted with NumberOfMeasureReports;
-		}
-	}
+        object MeasurementReport [] {
+            counted with NumberOfMeasureReports;
+        }
+    }
 }

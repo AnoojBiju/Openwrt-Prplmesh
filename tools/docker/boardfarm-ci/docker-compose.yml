@@ -31,6 +31,7 @@ services:
         container_name: lan-$RUN_ID
         entrypoint: ["/root/start-prplmesh.sh", "start-controller-agent"]
         volumes:
+            - "/lib/modules:/lib/modules:ro"
             - "$ROOT_DIR:${FINAL_ROOT_DIR}"
             - "$ROOT_DIR/logs/lan-$RUN_ID/:/tmp/beerocks/logs/"
 
@@ -39,6 +40,7 @@ services:
         container_name: agent-$RUN_ID
         entrypoint: ["bash", "-c", "sleep 7; /root/start-prplmesh.sh start-agent"]
         volumes:
+            - "/lib/modules:/lib/modules:ro"
             - "$ROOT_DIR:${FINAL_ROOT_DIR}"
             - "$ROOT_DIR/logs/agent-$RUN_ID/:/tmp/beerocks/logs/"
         depends_on:
@@ -49,6 +51,7 @@ services:
         container_name: lan2-$RUN_ID
         entrypoint: ["bash", "-c", "sleep 12; /root/start-prplmesh.sh start-agent"]
         volumes:
+            - "/lib/modules:/lib/modules:ro"
             - "$ROOT_DIR:${FINAL_ROOT_DIR}"
             - "$ROOT_DIR/logs/lan2-$RUN_ID/:/tmp/beerocks/logs/"
         depends_on:
