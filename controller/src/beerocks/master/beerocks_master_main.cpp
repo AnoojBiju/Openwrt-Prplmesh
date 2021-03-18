@@ -432,7 +432,8 @@ int main(int argc, char *argv[])
     auto amb_dm_obj         = std::make_shared<beerocks::nbapi::AmbiorixImpl>(
         event_loop, on_action_handlers, events_list, funcs_list);
     LOG_IF(!amb_dm_obj, FATAL) << "Unable to create Ambiorix!";
-    amb_dm_obj->init(AMBIORIX_BACKEND_PATH, AMBIORIX_BUS_URI, controller_dm_path);
+    LOG_IF(!amb_dm_obj->init(AMBIORIX_BACKEND_PATH, AMBIORIX_BUS_URI, controller_dm_path), FATAL)
+        << "Unable to init ambiorix object!";
 #else
     auto amb_dm_obj = std::make_shared<beerocks::nbapi::AmbiorixDummy>();
 #endif //ENABLE_NBAPI
