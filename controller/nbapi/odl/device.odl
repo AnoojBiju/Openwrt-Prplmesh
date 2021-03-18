@@ -8,90 +8,97 @@
  */
 
 %config {
-	define-behavior = {
-		existing-object = "update"
-	};
+    define-behavior = {
+        existing-object = "update"
+    };
 }
 
 %define {
-	select Controller.Network.Device {
-		/*
-		** A unique identifier for this particular device
-		** within the Wi-Fi network
-		*/
-		%read-only string ID = "0" {
-		}
+    select Controller.Network.Device {
+        /*
+        ** A unique identifier for this particular device
+        ** within the Wi-Fi network
+        */
+        %read-only string ID = "00:00:00:00:00:00";
 
-		/*
-		** The Multi-AP capabilities supported by this device
-		*/
-		object MultiAPCapabilities {
-			%read-only bool USTALinkMatricCurrentlyOn;			/* Support Unassociated STA Link Metrics reporting
-																** on the channels its BSSs are currently operating on. */
-			%read-only bool USTALinkMatricCurrentlyOff;			/* Support Unassociated STA Link Metrics reporting on channels
-																** its BSSs are not currently operating on.*/
-			%read-only bool AgentInitiatedRCPIBasedSteering;	/* Support Agent-initiated RCPI-based Steering */
-		}
+        /*
+        ** The Multi-AP capabilities supported by this device
+        */
+        object MultiAPCapabilities {
 
-		/*
-		** The list of Radio objects.
-		*/
-		object Radio [] {
-			counted with NumberOfRadios;
-		}
+            /* Support Unassociated STA Link Metrics reporting
+            ** on the channels its BSSs are currently operating on.
+            */
+            %read-only bool UnassociatedSTALinkMetricsCurrentlyOn = false;
 
-		/*
-		** The list of Interface objects.
-		*/
-		object Interface [] {
-			%read-only string Status {
-				default "Down";
-				on action validate call check_enum [
-					"Up",
-					"Down",
-					"Dormant"
-				];
-			}
-			%read-only string MACAddress = "00:00:00:00:00:00";
-			%read-only string Name = "NoName";
-			%read-only uint16 MediaType = "0";
+            /* Support Unassociated STA Link Metrics reporting on channels
+            ** its BSSs are not currently operating on.
+            */
+            %read-only bool UnassociatedSTALinkMetricsCurrentlyOff = false;
 
-			object Stats {
-				%read-only uint64 BytesSent  = 0;
-				%read-only uint64 BytesReceived  = 0;
-				%read-only uint64 PacketsSent  = 0;
-				%read-only uint64 PacketsReceived  = 0;
-				%read-only uint32 ErrorsSent  = 0;
-				%read-only uint32 ErrorsReceived  = 0;
-				%read-only uint64 UnicastPacketsSent = 0;
-				%read-only uint64 UnicastPacketsReceived = 0;
-				%read-only uint32 DiscardPacketsSent = 0;
-				%read-only uint32 DiscardPacketsReceived = 0;
-				%read-only uint64 MulticastPacketsSent = 0;
-				%read-only uint64 MulticastPacketsReceived = 0;
-				%read-only uint64 BroadcastPacketsSent = 0;
-				%read-only uint64 BroadcastPacketsReceived = 0;
-			}
+            /* Support Agent-initiated RCPI-based Steering */
+            %read-only bool AgentInitiatedRCPIBasedSteering = false;
+        }
 
-			object Neighbor [] {
+        /*
+        ** The list of Radio objects.
+        */
+        object Radio [] {
+            counted with NumberOfRadios;
+        }
 
-				/*
-				** Neighbor AL-MAC address.
-				*/
-				%read-only string ID = "00:00:00:00:00:00";
-				%read-only bool IsIEEE1905 = false;
-				counted with NumberOfNeighbors;
-			}
+        /*
+        ** The list of Interface objects.
+        */
+        object Interface [] {
+            %read-only string Status {
+                default "Down";
+                on action validate call check_enum [
+                    "Up",
+                    "Down",
+                    "Dormant"
+                ];
+            }
+            %read-only string MACAddress = "00:00:00:00:00:00";
+            %read-only string Name = "NoName";
+            %read-only uint16 MediaType = 0;
 
-			counted with NumberOfInterfaces;
-		}
+            object Stats {
+                %read-only uint64 BytesSent  = 0;
+                %read-only uint64 BytesReceived  = 0;
+                %read-only uint64 PacketsSent  = 0;
+                %read-only uint64 PacketsReceived  = 0;
+                %read-only uint32 ErrorsSent  = 0;
+                %read-only uint32 ErrorsReceived  = 0;
+                %read-only uint64 UnicastPacketsSent = 0;
+                %read-only uint64 UnicastPacketsReceived = 0;
+                %read-only uint32 DiscardPacketsSent = 0;
+                %read-only uint32 DiscardPacketsReceived = 0;
+                %read-only uint64 MulticastPacketsSent = 0;
+                %read-only uint64 MulticastPacketsReceived = 0;
+                %read-only uint64 BroadcastPacketsSent = 0;
+                %read-only uint64 BroadcastPacketsReceived = 0;
+            }
 
-		/*
-		** The interval between the collection of consecutive measurements of the most
-		** frequently updated Data Element from this device (milliseconds).
-		*/
-		%read-only uint32 CollectionInterval = 0 {
-			on action validate call check_minimum 0;
-		}
-	}
+            object Neighbor [] {
+
+                /*
+                ** Neighbor AL-MAC address.
+                */
+                %read-only string ID = "00:00:00:00:00:00";
+                %read-only bool IsIEEE1905 = false;
+                counted with NumberOfNeighbors;
+            }
+
+            counted with NumberOfInterfaces;
+        }
+
+        /*
+        ** The interval between the collection of consecutive measurements of the most
+        ** frequently updated Data Element from this device (milliseconds).
+        */
+        %read-only uint32 CollectionInterval = 0 {
+            on action validate call check_minimum 0;
+        }
+    }
 }

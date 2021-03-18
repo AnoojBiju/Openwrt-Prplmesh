@@ -6036,14 +6036,16 @@ bool db::dm_set_device_multi_ap_capabilities(const std::string &device_mac)
                    << "AgentInitiatedRCPIBasedSteering: " << false;
         return_val = false;
     }
-    // USTALinkMatricCurrentlyOn not supported for now (PPM-172)
-    if (!m_ambiorix_datamodel->set(path_to_obj, "USTALinkMatricCurrentlyOn", false)) {
-        LOG(ERROR) << "Failed to set: " << path_to_obj << "USTALinkMatricCurrentlyOn: " << false;
+    // UnassociatedSTALinkMetricsCurrentlyOn not supported for now (PPM-172)
+    if (!m_ambiorix_datamodel->set(path_to_obj, "UnassociatedSTALinkMetricsCurrentlyOn", false)) {
+        LOG(ERROR) << "Failed to set: " << path_to_obj
+                   << "UnassociatedSTALinkMetricsCurrentlyOn: " << false;
         return_val = false;
     }
-    // USTALinkMatricCurrentlyOff not supported for now (PPM-172)
-    if (!m_ambiorix_datamodel->set(path_to_obj, "USTALinkMatricCurrentlyOff", false)) {
-        LOG(ERROR) << "Failed to set : " << path_to_obj << "USTALinkMatricCurrentlyOff: " << false;
+    // UnassociatedSTALinkMetricsCurrentlyOff not supported for now (PPM-172)
+    if (!m_ambiorix_datamodel->set(path_to_obj, "UnassociatedSTALinkMetricsCurrentlyOff", false)) {
+        LOG(ERROR) << "Failed to set : " << path_to_obj
+                   << "UnassociatedSTALinkMetricsCurrentlyOff: " << false;
         return_val = false;
     }
     return return_val;
