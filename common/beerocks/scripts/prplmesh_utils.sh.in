@@ -357,14 +357,19 @@ status_function() {
 
         error=0
         report "Main agent operational" main_agent_operational $LOGS_PATH
-        report "@BEEROCKS_WLAN1_IFACE@ radio agent operational" radio_agent_operational $LOGS_PATH @BEEROCKS_WLAN1_IFACE@
-        report "@BEEROCKS_WLAN2_IFACE@ radio agent operational" radio_agent_operational $LOGS_PATH @BEEROCKS_WLAN2_IFACE@
-
-        [ "$VERBOSE" = "true" ] && [  $error = 1 ] && {
-            cat $LOGS_PATH/beerocks_agent@BEEROCKS_LOG_FILES_SUFFIX@
-            cat $LOGS_PATH/beerocks_agent_@BEEROCKS_WLAN1_IFACE@@BEEROCKS_LOG_FILES_SUFFIX@
-            cat $LOGS_PATH/beerocks_agent_@BEEROCKS_WLAN2_IFACE@@BEEROCKS_LOG_FILES_SUFFIX@
-        }
+        # For each existing slave log file, check if they are OPERATIONAL:
+        radio_logfile_found=0
+        for radio_log in "$LOGS_PATH"/beerocks_agent_*@BEEROCKS_LOG_FILES_SUFFIX@ ; do
+            # skip files that aren't symlinks (and skip the literal glob if there is no matching file):
+            [ -L "$radio_log" ] || continue
+            radio_logfile_found=1
+            radio="$(printf '%s' "$radio_log" | sed -n -e 's#.*/beerocks_agent_\(.*\)@BEEROCKS_LOG_FILES_SUFFIX@#\1#p')"
+            report "$radio radio agent operational" radio_agent_operational "$LOGS_PATH" "$radio"
+        done
+        if [ "$radio_logfile_found" = 0 ] ; then
+            err "No slave log file found! Cannot check if the slaves are operational."
+            error=1
+        fi
 
         exit $error
     fi
