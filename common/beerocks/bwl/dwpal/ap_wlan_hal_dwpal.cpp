@@ -1186,17 +1186,14 @@ static bool set_vap_multiap_mode(std::vector<std::string> &vap_hostapd_config, b
         return false;
     }
 
-    LOG(DEBUG) << "Configuring VAP " << ifname << ": bssid=" << bssid
-               << ", fronthaul=" << beerocks::string_utils::bool_str(fronthaul)
-               << ", backhaul=" << beerocks::string_utils::bool_str(backhaul);
-    // BSS type (backhaul, fronthaul or both)
-    // Use Intel Mesh-Mode (upstream Multi-AP functionality not supported by Intel):
-    // Not supporting hybrid mode for in mesh mode (TODO - move to hybrid mode after
-    // https://github.com/prplfoundation/prplMesh/issues/889)
-    if (fronthaul && backhaul) {
-        LOG(ERROR) << "Not supporting hybrid VAP";
-        return false;
+    LOG(DEBUG) << "Configuring VAP " << ifname << ": bssid=" << bssid << ", fronthaul=" << fronthaul
+               << ", backhaul=" << backhaul;
+
+    if (backhaul) {
+        LOG(DEBUG) << "disallow_profile1=" << disallow_profile1
+                   << ", disallow_profile2=" << disallow_profile2;
     }
+
     hostapd_config_set_value(vap_hostapd_config, "wps_state", fronthaul ? "2" : "");
     hostapd_config_set_value(vap_hostapd_config, "wps_independent", "0");
 
@@ -1820,7 +1817,7 @@ bool ap_wlan_hal_dwpal::is_zwdfs_antenna_enabled()
     return reply_str == "1";
 }
 
-bool ap_wlan_hal_dwpal::hybrid_mode_supported() { return false; }
+bool ap_wlan_hal_dwpal::hybrid_mode_supported() { return true; }
 
 bool ap_wlan_hal_dwpal::restricted_channels_set(char *channel_list)
 {
