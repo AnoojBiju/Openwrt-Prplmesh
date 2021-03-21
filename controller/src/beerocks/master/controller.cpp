@@ -3836,6 +3836,20 @@ bool Controller::send_tlv_metric_reporting_policy(const std::string &dst_mac,
         return false;
     }
 
+    auto default_8021q_config = database.get_default_8021q_setting(tlvf::mac_from_string(dst_mac));
+    if (default_8021q_config.primary_vlan_id > 0) {
+        auto tlv_default_8021q_settings =
+            cmdu_tx.addClass<wfa_map::tlvProfile2Default802dotQSettings>();
+        if (!tlv_default_8021q_settings) {
+            LOG(ERROR) << "Failed adding tlvProfile2Default802dotQSettings";
+            return false;
+        }
+        tlv_default_8021q_settings->primary_vlan_id() = default_8021q_config.primary_vlan_id;
+        tlv_default_8021q_settings->default_pcp()     = default_8021q_config.default_pcp;
+    } else {
+        LOG(INFO) << "No default 802.1q settings for " << dst_mac;
+    }
+
     auto metric_reporting_policy_tlv = cmdu_tx.addClass<wfa_map::tlvMetricReportingPolicy>();
     if (!metric_reporting_policy_tlv) {
         LOG(ERROR) << "addClass wfa_map::tlvMetricReportingPolicy has failed";
