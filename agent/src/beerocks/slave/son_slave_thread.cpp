@@ -5065,6 +5065,17 @@ bool slave_thread::handle_multi_ap_policy_config_request(Socket *sd,
     auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Received MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE, mid=" << std::hex << int(mid);
 
+    if (!handle_profile2_default_802dotq_settings_tlv(cmdu_rx)) {
+        LOG(ERROR) << "handle_profile2_default_802dotq_settings_tlv has failed!";
+        return false;
+    }
+
+    std::unordered_set<std::string> misconfigured_ssids;
+    if (!handle_profile2_traffic_separation_policy_tlv(cmdu_rx, misconfigured_ssids)) {
+        LOG(ERROR) << "handle_profile2_traffic_separation_policy_tlv has failed!";
+        return false;
+    }
+
     auto channel_scan_reporing_policy = cmdu_rx.getClass<wfa_map::tlvChannelScanReportingPolicy>();
     if (channel_scan_reporing_policy) {
         auto db = AgentDB::get();
@@ -5091,17 +5102,6 @@ bool slave_thread::handle_multi_ap_policy_config_request(Socket *sd,
     cmdu_rx.swap(); // swap back before forwarding
     if (!message_com::forward_cmdu_to_uds(monitor_socket, cmdu_rx, length)) {
         LOG(ERROR) << "Failed to forward message to monitor";
-        return false;
-    }
-
-    if (!handle_profile2_default_802dotq_settings_tlv(cmdu_rx)) {
-        LOG(ERROR) << "handle_profile2_default_802dotq_settings_tlv has failed!";
-        return false;
-    }
-
-    std::unordered_set<std::string> misconfigured_ssids;
-    if (!handle_profile2_traffic_separation_policy_tlv(cmdu_rx, misconfigured_ssids)) {
-        LOG(ERROR) << "handle_profile2_traffic_separation_policy_tlv has failed!";
         return false;
     }
 
