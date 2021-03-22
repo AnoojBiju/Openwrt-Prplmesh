@@ -555,13 +555,28 @@ bool ChannelScanTask::trigger_radio_scan(const std::string &radio_iface,
      * Using an unordered_set since we do not want duplicated channels in out channel pool
      */
     std::unordered_set<uint8_t> channels_to_be_scanned;
-    std::for_each(radio_scan_info->operating_classes.begin(),
-                  radio_scan_info->operating_classes.end(),
-                  [&channels_to_be_scanned](const sOperationalClass &operating_class) {
-                      for (const uint8_t channel : operating_class.channel_list) {
-                          channels_to_be_scanned.insert(channel);
-                      }
-                  });
+    std::for_each(
+        radio_scan_info->operating_classes.begin(), radio_scan_info->operating_classes.end(),
+        [&channels_to_be_scanned, this](sOperatingClass &operating_class) {
+            for (auto &channel_element : operating_class.channel_list) {
+                // Scan only the channels without an error status
+                if (channel_element.scan_status == sChannel::eScanStatus::SUCCESS) {
+                    if (!get_20MHz_channels(channel_element.channel_number, operating_class.bw,
+                                            channels_to_be_scanned)) {
+                        channel_element.scan_status = sChannel::eScanStatus::
+                            SCAN_NOT_SUPPORTED_ON_THIS_OPERATING_CLASS_AND_CHANNEL_ON_THIS_RADIO;
+                        m_previous_scans.at(operating_class.operating_class)
+                            .erase(channel_element.channel_number);
+                    }
+                }
+            }
+        });
+    if (channels_to_be_scanned.empty()) {
+        LOG(TRACE) << "There were no channels to be scanned";
+        FSM_MOVE_STATE(radio_scan_info, eState::SCAN_DONE);
+        return true;
+    }
+
     // Set scan params in CMDU
     trigger_request->scan_params().radio_mac         = radio_scan_info->radio_mac;
     trigger_request->scan_params().dwell_time_ms     = PREFERRED_DWELLTIME_MS;
