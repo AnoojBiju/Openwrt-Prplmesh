@@ -84,6 +84,57 @@ constexpr size_t TLV_HEADER            = 3; // Bytes;
 // should be fragmented into smaller than 1500 bytes fragments.
 constexpr size_t MAX_TLV_FRAGMENT_SIZE = 1500;
 
+/**
+ * @brief Retrive the subset of 20MHz channels of the given channel & bandwidth
+ * 
+ * @param [in] channel_number File name of the log file.
+ * @param [in] operating_bandwidth Log file configuration.
+ * @param [out] resulting_channels set containing the resulting 20MHz channels
+ * @return true if the operation was successful, otherwise false. 
+ */
+static bool get_20MHz_channels(const uint8_t channel_number,
+                               const beerocks::eWiFiBandwidth operating_bandwidth,
+                               std::unordered_set<uint8_t> &resulting_channels)
+{
+    auto get_range = [&resulting_channels](std::pair<uint8_t, uint8_t> channels_range) {
+        constexpr uint8_t _20MHz_channel_range = 4;
+        for (auto iter = channels_range.first; iter <= channels_range.second;
+             iter += _20MHz_channel_range) {
+            resulting_channels.insert(iter);
+        }
+    };
+    if (operating_bandwidth >= beerocks::eWiFiBandwidth::BANDWIDTH_80) {
+        // "channel_number" is a central channel
+        for (const auto &channel_it : son::wireless_utils::channels_table_5g) {
+            const auto bw_channel_elem = channel_it.second.find(operating_bandwidth);
+            if (bw_channel_elem == channel_it.second.end()) {
+                continue;
+            }
+            if (bw_channel_elem->second.center_channel != channel_number) {
+                continue;
+            }
+            get_range(bw_channel_elem->second.overlap_beacon_channels_range);
+        }
+    } else if (operating_bandwidth == beerocks::eWiFiBandwidth::BANDWIDTH_40) {
+        // "channel_number" in an actual channel, but we need to get the whole bandwidth
+        const auto &channel_elem = son::wireless_utils::channels_table_5g.find(channel_number);
+        if (channel_elem == son::wireless_utils::channels_table_5g.end()) {
+            return false;
+        }
+        const auto bw_channel_elem = channel_elem->second.find(operating_bandwidth);
+        if (bw_channel_elem == channel_elem->second.end()) {
+            return false;
+        }
+        get_range(bw_channel_elem->second.overlap_beacon_channels_range);
+        return true;
+    } else /* operating_bandwidth == beerocks::eWiFiBandwidth::BANDWIDTH_20 */ {
+        // "channel_number" is an actual channel
+        resulting_channels.insert(channel_number);
+        return true;
+    }
+    return false;
+};
+
 ChannelScanTask::ChannelScanTask(BackhaulManager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx)
     : Task(eTaskType::CHANNEL_SCAN), m_btl_ctx(btl_ctx), m_cmdu_tx(cmdu_tx)
 {
