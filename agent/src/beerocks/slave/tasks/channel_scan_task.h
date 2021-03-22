@@ -139,6 +139,7 @@ private:
         std::unordered_map<std::string, std::shared_ptr<sRadioScan>> radio_scans;
         bool ready_to_send_report;
     };
+    std::unordered_map<uint8_t, std::unordered_set<uint8_t>> m_previous_scans;
     std::deque<std::shared_ptr<sScanRequest>> m_pending_requests;
 
     /**
