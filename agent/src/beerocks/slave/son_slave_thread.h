@@ -176,6 +176,8 @@ private:
 
     bool is_backhaul_manager = false;
 
+    bool m_autoconfiguration_completed;
+
     //slave FSM //
     eSlaveState slave_state;
     std::chrono::steady_clock::time_point slave_state_timer;

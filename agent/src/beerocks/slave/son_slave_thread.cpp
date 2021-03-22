@@ -2113,6 +2113,10 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         LOG(DEBUG) << "Apply_traffic_separation";
         TrafficSeparation::apply_traffic_separation(m_fronthaul_iface);
 
+        // When the AP-Manager sends VAPS_LIST_UPDATE_NOTIFICATION the autoconfiguration is
+        // is completed
+        m_autoconfiguration_completed = true;
+
         auto notification_out = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION>(cmdu_tx);
         if (!notification_out) {
@@ -3695,6 +3699,8 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
         }
         radio->channels_list.clear();
 
+        m_autoconfiguration_completed = false;
+
         slave_state = STATE_CONNECT_TO_PLATFORM_MANAGER;
         break;
     }
@@ -5234,8 +5240,13 @@ bool slave_thread::handle_multi_ap_policy_config_request(Socket *sd,
         return false;
     }
 
-    LOG(DEBUG) << "Apply_traffic_separation";
-    TrafficSeparation::apply_traffic_separation(m_fronthaul_iface);
+    if (m_autoconfiguration_completed) {
+        LOG(DEBUG) << "Apply_traffic_separation";
+        TrafficSeparation::apply_traffic_separation(m_fronthaul_iface);
+    } else {
+        LOG(WARNING) << "autoconfiguration procedure is not completed yet, traffic separation "
+                     << "policy cannot be applied";
+    }
 
     return true;
 }
