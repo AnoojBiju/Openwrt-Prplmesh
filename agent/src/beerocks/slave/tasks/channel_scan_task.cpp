@@ -627,6 +627,94 @@ bool ChannelScanTask::store_radio_scan_result(const std::shared_ptr<sScanRequest
 bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                   const sMacAddr &src_mac)
 {
+    auto create_channel_vector = [](const std::vector<uint8_t> &channel_list,
+                                    const uint8_t operating_class) -> std::vector<sChannel> {
+        std::vector<sChannel> channel_vector;
+        if (channel_list.empty()) {
+            auto channel_set = son::wireless_utils::operating_class_to_channel_set(operating_class);
+            std::transform(channel_set.begin(), channel_set.end(),
+                           std::back_inserter(channel_vector),
+                           [](const uint8_t channel) -> sChannel { return sChannel(channel); });
+        }
+        std::transform(
+            channel_list.begin(), channel_list.end(), std::back_inserter(channel_vector),
+            [&operating_class](const uint8_t channel) -> sChannel {
+                return son::wireless_utils::is_channel_in_operating_class(operating_class, channel)
+                           ? sChannel(channel)
+                           : sChannel(
+                                 channel,
+                                 sChannel::eScanStatus::
+                                     SCAN_NOT_SUPPORTED_ON_THIS_OPERATING_CLASS_AND_CHANNEL_ON_THIS_RADIO);
+            });
+        return channel_vector;
+    };
+
+    auto create_fresh_operating_class =
+        [this, &create_channel_vector](wfa_map::cOperatingClasses &class_entry) -> sOperatingClass {
+        const auto class_number = class_entry.operating_class();
+        const auto bandwidth    = son::wireless_utils::operating_class_to_bandwidth(class_number);
+        const auto channel_list_length = class_entry.channel_list_length();
+        std::vector<uint8_t> channel_list;
+        if (channel_list_length > 0) {
+            const auto channel_array = class_entry.channel_list();
+            channel_list.insert(channel_list.end(), channel_array,
+                                channel_array + channel_list_length);
+        }
+        std::vector<sChannel> channel_vector;
+        std::transform(
+            channel_list.begin(), channel_list.end(), std::back_inserter(channel_vector),
+            [&class_number, this](const uint8_t channel_number) -> sChannel {
+                if (son::wireless_utils::is_channel_in_operating_class(class_number,
+                                                                       channel_number)) {
+                    m_previous_scans[class_number].emplace(channel_number);
+                    return sChannel(channel_number);
+                } else {
+                    return sChannel(
+                        channel_number,
+                        sChannel::eScanStatus::
+                            SCAN_NOT_SUPPORTED_ON_THIS_OPERATING_CLASS_AND_CHANNEL_ON_THIS_RADIO);
+                }
+            });
+
+        std::stringstream ss;
+        ss << "[ ";
+        for (auto channel_element : channel_vector) {
+            ss << int(channel_element.channel_number) << " ";
+        }
+        ss << "]";
+        LOG(TRACE) << "Operating class: #" << int(class_number) << std::endl
+                   << "\tChannel list length:" << int(channel_vector.size()) << std::endl
+                   << "\tChannel list: " << ss.str() << ".";
+
+        return sOperatingClass(class_number, bandwidth, channel_vector);
+    };
+
+    auto create_stored_operating_classes =
+        [this, &create_channel_vector]() -> std::vector<sOperatingClass> {
+        std::vector<sOperatingClass> operating_vector;
+        for (const auto previous_scan : m_previous_scans) {
+            const auto operating_class = previous_scan.first;
+            const auto bandwidth =
+                son::wireless_utils::operating_class_to_bandwidth(operating_class);
+            std::vector<sChannel> channel_vector;
+            std::transform(previous_scan.second.begin(), previous_scan.second.end(),
+                           std::back_inserter(channel_vector),
+                           [](const uint8_t channel) -> sChannel { return sChannel(channel); });
+
+            std::stringstream ss;
+            ss << "[ ";
+            for (auto channel_element : channel_vector) {
+                ss << int(channel_element.channel_number) << " ";
+            }
+            ss << "]";
+            LOG(TRACE) << "Operating class: #" << int(operating_class) << std::endl
+                       << "\tChannel list length:" << int(channel_vector.size()) << std::endl
+                       << "\tChannel list: " << ss.str() << ".";
+            operating_vector.emplace_back(operating_class, bandwidth, channel_vector);
+        }
+        return operating_vector;
+    };
+
     const auto scan_start_timestamp = std::chrono::system_clock::now();
     const auto mid                  = cmdu_rx.getMessageId();
 
