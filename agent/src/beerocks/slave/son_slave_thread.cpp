@@ -4566,7 +4566,6 @@ bool slave_thread::handle_profile2_default_802dotq_settings_tlv(ieee1905_1::Cmdu
         db->traffic_separation.default_pcp     = 0;
 
         pvid_set_request->primary_vlan_id() = 0;
-        // TODO: Remove VLAN filtering from the bridge.
         return true;
     }
 
@@ -4580,15 +4579,6 @@ bool slave_thread::handle_profile2_default_802dotq_settings_tlv(ieee1905_1::Cmdu
 
     // Send ACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST.
     message_com::send_cmdu(ap_manager_socket, cmdu_tx);
-
-    // TODO:
-    // - Configure L2 to bridge filtering with Primary VLAN ID
-    // - Create VLAN to the bridge
-    // - On repeater/extender add to bSTA interfaces the primary VLAN ID
-    //   (not pvid and tagged mode):
-    if (!db->device_conf.local_gw) {
-        // TODO
-    }
 
     return true;
 }

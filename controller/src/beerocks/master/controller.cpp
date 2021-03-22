@@ -526,6 +526,12 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const std::string &sr
         return false;
     }
 
+    auto multi_ap_profile          = wfa_map::tlvProfile2MultiApProfile::MULTIAP_PROFILE_UNKNOWN;
+    auto tlvProfile2MultiApProfile = cmdu_rx.getClass<wfa_map::tlvProfile2MultiApProfile>();
+    if (tlvProfile2MultiApProfile) {
+        multi_ap_profile = tlvProfile2MultiApProfile->profile();
+    }
+
     auto al_mac = tlvf::mac_to_string((const unsigned char *)tlvAlMacAddress->mac().oct);
     LOG(DEBUG) << "mac=" << al_mac;
 
@@ -566,6 +572,12 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const std::string &sr
             return false;
         }
     }
+
+    // Update Agent node on the database
+    auto agent_node = database.m_agents.add(tlvAlMacAddress->mac());
+
+    // Update the agent node
+    agent_node->profile = multi_ap_profile;
 
     auto cmdu_header = cmdu_tx.create(
         cmdu_rx.getMessageId(), ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_RESPONSE_MESSAGE);
@@ -860,7 +872,21 @@ bool Controller::autoconfig_wsc_add_m2(WSC::m1 &m1,
         }
         if (bss_info_conf->backhaul) {
             cfg.bss_type |= WSC::eWscVendorExtSubelementBssType::BACKHAUL_BSS;
+
+            if (bss_info_conf->profile1_backhaul_sta_association_disallowed) {
+                cfg.bss_type |= WSC::eWscVendorExtSubelementBssType::
+                    PROFILE1_BACKHAUL_STA_ASSOCIATION_DISALLOWED;
+                LOG(DEBUG) << "Add PROFILE1_BACKHAUL_STA_ASSOCIATION_DISALLOWED";
+            }
+
+            if (bss_info_conf->profile2_backhaul_sta_association_disallowed) {
+                cfg.bss_type |= WSC::eWscVendorExtSubelementBssType::
+                    PROFILE2_BACKHAUL_STA_ASSOCIATION_DISALLOWED;
+                LOG(DEBUG) << "Add PROFILE2_BACKHAUL_STA_ASSOCIATION_DISALLOWED";
+            }
         }
+
+        //database.m_agents.get()
 
         LOG(DEBUG) << "WSC config_data:" << std::hex << std::endl
                    << "     ssid: " << cfg.ssid << std::endl
@@ -966,6 +992,76 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const std::string &src_m
 
     tlvRuid->radio_uid() = tlvf::mac_from_string(ruid);
 
+    auto operating_classes_list_length = radio_basic_caps->operating_classes_info_list_length();
+    std::list<uint8_t> op_classes_list;
+
+    for (int oc_idx = 0; oc_idx < operating_classes_list_length; oc_idx++) {
+        auto operating_class_tuple = radio_basic_caps->operating_classes_info_list(oc_idx);
+        auto &op_class             = std::get<1>(operating_class_tuple);
+        auto operating_class       = op_class.operating_class();
+        op_classes_list.push_back(operating_class);
+    }
+
+    std::string opclass_str;
+    opclass_str.reserve(100);
+    for (const auto op : op_classes_list) {
+        opclass_str.append(std::to_string(op)).append(",");
+    }
+
+    LOG(INFO) << "OP CLASSES: " << opclass_str;
+    {
+        son::wireless_utils::sBssInfoConf bss_info_conf;
+        database.clear_bss_info_configuration(m1->mac_addr());
+
+        bss_info_conf.operating_class = {81,  83,  84,  115, 116, 117, 118, 119,
+                                         120, 121, 122, 123, 124, 125, 126, 127};
+
+        bss_info_conf.authentication_type = WSC::eWscAuth::WSC_AUTH_WPA2PSK;
+        bss_info_conf.fronthaul           = true;
+        bss_info_conf.backhaul            = false;
+        bss_info_conf.encryption_type     = WSC::eWscEncr(m1->encr_type_flags());
+        bss_info_conf.network_key         = "maprocks1";
+
+        // database.remove_hostap_supported_operating_classes(radio_basic_caps->radio_uid());
+        bss_info_conf.profile1_backhaul_sta_association_disallowed = false;
+        bss_info_conf.profile2_backhaul_sta_association_disallowed = false;
+
+        bss_info_conf.ssid = "VLAN10_SSID";
+        database.add_bss_info_configuration(m1->mac_addr(), bss_info_conf);
+
+        bss_info_conf.ssid = "VLAN20_SSID";
+        database.add_bss_info_configuration(m1->mac_addr(), bss_info_conf);
+
+        if (std::find(op_classes_list.begin(), op_classes_list.end(), 81) !=
+            op_classes_list.end()) {
+            bss_info_conf.ssid                                         = "MULTIAP_SSID";
+            bss_info_conf.fronthaul                                    = true;
+            bss_info_conf.backhaul                                     = true;
+            bss_info_conf.profile1_backhaul_sta_association_disallowed = false;
+            bss_info_conf.profile2_backhaul_sta_association_disallowed = true;
+            database.add_bss_info_configuration(m1->mac_addr(), bss_info_conf);
+            LOG(DEBUG) << "ADDED BSS INFO CONF " << m1->mac_addr();
+            LOG(DEBUG) << "profile1_backhaul_sta_association_disallowed: "
+                       << bss_info_conf.profile1_backhaul_sta_association_disallowed;
+            LOG(DEBUG) << "profile2_backhaul_sta_association_disallowed: "
+                       << bss_info_conf.profile2_backhaul_sta_association_disallowed;
+        }
+    }
+
+    wireless_utils::sTrafficSeparationSsid config1;
+    config1.ssid    = "VLAN10_SSID";
+    config1.vlan_id = 10;
+    database.add_traffic_separataion_configuration(m1->mac_addr(), config1);
+    config1.ssid    = "VLAN20_SSID";
+    config1.vlan_id = 20;
+    database.add_traffic_separataion_configuration(m1->mac_addr(), config1);
+
+    wireless_utils::s8021QSettings config2;
+    config2.primary_vlan_id = 10;
+    config2.default_pcp     = 1;
+    database.add_default_8021q_settings(m1->mac_addr(), config2);
+    LOG(DEBUG) << "NOTICE: Set PVID=" << config2.primary_vlan_id << " on " << m1->mac_addr();
+
     const auto &bss_info_confs = database.get_bss_info_configuration(m1->mac_addr());
     uint8_t num_bsss           = 0;
 
@@ -990,6 +1086,12 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const std::string &src_m
             LOG(INFO) << "Configured #BSS exceeds maximum for " << al_mac << " radio " << ruid;
             break;
         }
+
+        LOG(DEBUG) << "profile1_backhaul_sta_association_disallowed: "
+                   << bss_info_conf.profile1_backhaul_sta_association_disallowed;
+        LOG(DEBUG) << "profile2_backhaul_sta_association_disallowed: "
+                   << bss_info_conf.profile2_backhaul_sta_association_disallowed;
+
         if (!autoconfig_wsc_add_m2(*m1, &bss_info_conf)) {
             LOG(ERROR) << "Failed setting M2 attributes";
             return false;
@@ -1043,6 +1145,8 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const std::string &src_m
             }
             tlv_default_8021q_settings->primary_vlan_id() = default_8021q_config.primary_vlan_id;
             tlv_default_8021q_settings->default_pcp()     = default_8021q_config.default_pcp;
+            LOG(DEBUG) << "NOTICE: Sends PVID=" << default_8021q_config.primary_vlan_id << " on "
+                       << m1->mac_addr();
         }
     }
 
@@ -3831,6 +3935,7 @@ bool Controller::send_tlv_metric_reporting_policy(const std::string &dst_mac,
                                                   const std::string &ruid,
                                                   ieee1905_1::CmduMessageTx &cmdu_tx)
 {
+    LOG(DEBUG) << "NOTICE: Sending MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE";
     if (!cmdu_tx.create(0, ieee1905_1::eMessageType::MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE)) {
         LOG(ERROR) << "Failed building MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE ! ";
         return false;
@@ -3844,6 +3949,8 @@ bool Controller::send_tlv_metric_reporting_policy(const std::string &dst_mac,
             LOG(ERROR) << "Failed adding tlvProfile2Default802dotQSettings";
             return false;
         }
+        LOG(DEBUG) << "NOTICE: Sends PVID=" << default_8021q_config.primary_vlan_id << " on "
+                   << dst_mac;
         tlv_default_8021q_settings->primary_vlan_id() = default_8021q_config.primary_vlan_id;
         tlv_default_8021q_settings->default_pcp()     = default_8021q_config.default_pcp;
     } else {

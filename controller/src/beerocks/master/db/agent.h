@@ -15,6 +15,7 @@
 #include <string>
 #include <tlvf/common/sMacAddr.h>
 #include <tlvf/tlvftypes.h>
+#include <tlvf/wfa_map/tlvProfile2MultiApProfile.h>
 
 // Forward declaration of son::node
 namespace son {
@@ -36,6 +37,9 @@ public:
 
     /** AL-MAC address of the agent. */
     const sMacAddr al_mac;
+
+    /** Multi-AP Profile of the Agent */
+    wfa_map::tlvProfile2MultiApProfile::eMultiApProfile profile;
 
     struct sRadio {
         sRadio()               = delete;
