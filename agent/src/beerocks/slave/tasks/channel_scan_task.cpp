@@ -1218,21 +1218,39 @@ ChannelScanTask::get_scan_results_for_request(const std::shared_ptr<sScanRequest
 
     auto get_results_for_channel_list =
         [&add_scan_result](bool fresh_scan_requested, const sMacAddr &ruid,
-                           const uint8_t operating_class,
-                           const wfa_map::tlvProfile2ChannelScanResult::eScanStatus status,
-                           const std::chrono::system_clock::time_point &scan_start_timestamp,
-                           const std::vector<uint8_t> &channel_list, const ResultsMap &results) {
+                           const uint8_t operating_class, const beerocks::eWiFiBandwidth bw,
+                           const std::chrono::system_clock::time_point &request_timestamp,
+                           const std::vector<sChannel> &channel_list, const ResultsMap &results) {
             // If channel list present, iterate over requested channels only
-            for (uint8_t channel : channel_list) {
-                if (results.find(channel) == results.end()) {
-                    LOG(DEBUG) << "No results found for channel " << channel
+            for (auto &channel_element : channel_list) {
+                auto channel_number = channel_element.channel_number;
+                auto scan_status    = channel_element.scan_status;
+                // Check results only for successful scans
+                if (scan_status != sChannel::eScanStatus::SUCCESS) {
+                    LOG(DEBUG) << "Scan status is not successful for channel " << channel_number
                                << ", adding blank results";
-                    add_scan_result(fresh_scan_requested, ruid, operating_class, channel, status,
-                                    scan_start_timestamp);
-                } else {
-                    auto channel_results = results.at(channel);
-                    add_scan_result(fresh_scan_requested, ruid, operating_class, channel, status,
-                                    scan_start_timestamp, channel_results.first,
+                    add_scan_result(fresh_scan_requested, ruid, operating_class, channel_number,
+                                    scan_status, request_timestamp);
+                    continue;
+                }
+                std::unordered_set<uint8_t> subchannels_20MHz;
+                if (!get_20MHz_channels(channel_number, bw, subchannels_20MHz)) {
+                    // This shouldn't be reached as it would have been handled in trigger_radio_scan
+                    continue;
+                }
+                for (const uint8_t primary_channel : subchannels_20MHz) {
+                    // Validate channel exists in results
+                    auto channel_results_iter = results.find(primary_channel);
+                    if (channel_results_iter == results.end()) {
+                        LOG(DEBUG) << "No results found for channel " << primary_channel
+                                   << ", adding blank results";
+                        add_scan_result(fresh_scan_requested, ruid, operating_class,
+                                        primary_channel, scan_status, request_timestamp);
+                        continue;
+                    }
+                    auto channel_results = channel_results_iter->second;
+                    add_scan_result(fresh_scan_requested, ruid, operating_class, primary_channel,
+                                    scan_status, request_timestamp, channel_results.first,
                                     channel_results.second);
                 }
             }
@@ -1256,11 +1274,11 @@ ChannelScanTask::get_scan_results_for_request(const std::shared_ptr<sScanRequest
                 PERFORM_A_FRESH_SCAN_AND_RETURN_RESULTS;
         const auto &radio_scan_element = radio_scan_iter.second;
         for (const auto &operating_class_iter : radio_scan_element->operating_classes) {
-            get_results_for_channel_list(
-                fresh_scan_requested, radio_scan_element->radio_mac,
-                operating_class_iter.operating_class, radio_scan_element->scan_status,
-                request->scan_start_timestamp, operating_class_iter.channel_list,
-                stored_scan_results_map);
+            get_results_for_channel_list(fresh_scan_requested, radio_scan_element->radio_mac,
+                                         operating_class_iter.operating_class,
+                                         operating_class_iter.bw, request->scan_start_timestamp,
+                                         operating_class_iter.channel_list,
+                                         stored_scan_results_map);
         }
     }
     return final_results;
