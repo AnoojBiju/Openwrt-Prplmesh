@@ -180,13 +180,19 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
                 std::unordered_map<uint8_t, std::set<uint8_t>> operating_class_to_classes_map;
 
                 for (auto const &ch : current_channel_pool) {
-                    beerocks::message::sWifiChannel channel;
-                    channel.channel = ch;
-                    channel.channel_bandwidth =
-                        database.get_node_bw(tlvf::mac_to_string(radio_mac));
-                    auto operating_class = wireless_utils::get_operating_class_by_channel(channel);
-                    operating_class_to_classes_map[operating_class].insert(ch);
-                    LOG(INFO) << "ch:" << channel.channel << ", bw:" << channel.channel_bandwidth
+                    auto bw              = database.get_node_bw(tlvf::mac_to_string(radio_mac));
+                    auto operating_class = wireless_utils::get_operating_class_by_channel(
+                        beerocks::message::sWifiChannel(ch, bw));
+                    auto channel = ch;
+                    if (bw >= beerocks::eWiFiBandwidth::BANDWIDTH_80) {
+                        /**
+                         * Channels that belong to Operation classes 128,129 & 130 need to send the
+                         * central channels and not the primal channels 
+                         */
+                        channel = wireless_utils::get_5g_center_channel(ch, bw, true);
+                    }
+                    operating_class_to_classes_map[operating_class].insert(channel);
+                    LOG(INFO) << "ch:" << channel << ", bw:" << bw
                               << " => op_class:" << operating_class;
                 }
 
