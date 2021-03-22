@@ -102,6 +102,8 @@
         uci commit prplmesh
       EOF
     - tests/openwrt/test_status.sh $TARGET_DEVICE_NAME
+  after_script:
+    - tests/openwrt/capture_logs.sh $TARGET_DEVICE_NAME
   artifacts:
     paths:
       - logs
