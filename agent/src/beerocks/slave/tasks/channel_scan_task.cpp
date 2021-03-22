@@ -759,7 +759,6 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
     }
 
     sControllerRequestInfo request_info;
-    request_info.mid                = mid;
     request_info.src_mac            = src_mac;
     request_info.perform_fresh_scan = perform_fresh_scan;
 
@@ -807,31 +806,21 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
         new_radio_scan->radio_mac     = radio_mac;
         new_radio_scan->current_state = eState::PENDING_TRIGGER;
 
-        // Iterate over operating classes
-        for (int class_idx = 0; class_idx < class_list_len; class_idx++) {
-            const auto &class_tuple = radio_list_entry.operating_classes_list(class_idx);
-            if (!std::get<0>(class_tuple)) {
-                LOG(ERROR) << "Failed to get operating class[" << class_idx << "]. Continuing...";
-                continue;
+        if (!perform_fresh_scan) {
+            new_radio_scan->operating_classes = create_stored_operating_classes();
+        } else {
+            // Iterate over operating classes
+            for (int class_idx = 0; class_idx < class_list_len; class_idx++) {
+                const auto &class_tuple = radio_list_entry.operating_classes_list(class_idx);
+                if (!std::get<0>(class_tuple)) {
+                    LOG(ERROR) << "Failed to get operating class[" << class_idx
+                               << "]. Continuing...";
+                    continue;
+                }
+                auto &class_entry = std::get<1>(class_tuple);
+                new_radio_scan->operating_classes.push_back(
+                    create_fresh_operating_class(class_entry));
             }
-
-            auto &class_entry    = std::get<1>(class_tuple);
-            const auto class_num = class_entry.operating_class();
-            const auto list_len  = class_entry.channel_list_length();
-            uint8_t *list_arr    = class_entry.channel_list();
-
-            std::stringstream ss;
-            ss << "[ ";
-            for (int channel_idx = 0; channel_idx < list_len; channel_idx++) {
-                ss << int(list_arr[channel_idx]) << " ";
-            }
-            ss << "]";
-            LOG(TRACE) << "Operating class[" << class_idx << "]:" << std::endl
-                       << "\tOperating class : #" << int(class_num) << std::endl
-                       << "\tChannel list length:" << int(list_len) << std::endl
-                       << "\tChannel list: " << ss.str() << ".";
-
-            new_radio_scan->operating_classes.emplace_back(class_num, list_arr, list_len);
         }
 
         // Add radio scan info to radio scans map in the request
