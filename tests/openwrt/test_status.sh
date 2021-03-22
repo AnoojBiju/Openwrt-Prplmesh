@@ -1,7 +1,10 @@
 #!/bin/sh
-
-scriptdir=$(dirname "$(readlink -f "$0")")
-rootdir=$(realpath "$scriptdir/../..")
+###############################################################
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+# SPDX-FileCopyrightText: 2019-2021 the prplMesh contributors (see AUTHORS.md)
+# This code is subject to the terms of the BSD+Patent license.
+# See LICENSE file for more details.
+###############################################################
 
 usage() {
     echo "usage: $(basename "$0") <target>"
@@ -13,29 +16,6 @@ if [ -z "$1" ] ; then
 fi
 
 TARGET="$1"
-LOG_DIR="$rootdir/logs/${TARGET}"
-
-mkdir -p "$LOG_DIR"
-
-# Collect diagnostic data before the restart
-echo "Collecting pre-test-run diagnostic data..."
-ssh "$TARGET" <<"EOF" > "$LOG_DIR/${TARGET}_diags.log"
-date
-echo "Release:"
-cat /etc/*_release
-echo "Version:"
-cat /etc/*_version
-echo
-echo "UCI Configuration (prplMesh, network and wireless):"
-uci export prplmesh
-uci export network
-uci export wireless
-echo
-echo "ifconfig output:"
-ifconfig
-echo "'iw list' output:"
-iw list
-EOF
 
 # The first start currently never succeeds, we need to restart it first.
 echo "Attempting to start/restart prplMesh ..."
@@ -54,24 +34,6 @@ exit 1
 EOF
 # Save exit status
 TEST_STATUS=$?
-
-# Collect post-run diagnostics
-echo "Collecting post-test-run diagnostic data..."
-ssh "$TARGET" <<"EOF" > "$LOG_DIR/conn_map.txt"
-date
-echo "Output of bml_conn_map:"
-/opt/prplmesh/bin/beerocks_cli -c bml_conn_map 2>&1
-echo "Output of bml_nw_map_query:"
-/opt/prplmesh/bin/beerocks_cli -c bml_nw_map_query 2>&1
-EOF
-
-ssh "$TARGET" "dmesg" > "$LOG_DIR/dmesg.txt"
-
-# Capture the logs
-echo "Capturing the prplMesh logs..."
-scp -r "$TARGET:/tmp/beerocks/logs/*" "$LOG_DIR"
-
-scp "$TARGET:/var/run/hostapd-phy*.conf" "$LOG_DIR"
 
 echo "Stopping prplMesh"
 ssh "$TARGET" /opt/prplmesh/prplmesh_utils.sh stop
