@@ -42,6 +42,12 @@ if (NOT BUILD_DATE)
     execute_process(COMMAND "date" "+%F_%H-%M-%S" OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE BUILD_DATE)
 endif()
 
+if (NOT PRPLMESH_VERSION)
+    set(prplmesh_VERSION "1.6.0")
+else()
+    set(prplmesh_VERSION ${PRPLMESH_VERSION})
+endif()
+
 message(STATUS "prplmesh Version: ${prplmesh_VERSION}")
 message(STATUS "prplmesh Build Date: ${BUILD_DATE}")
 message(STATUS "prplmesh Revision: ${PRPLMESH_REVISION}")
