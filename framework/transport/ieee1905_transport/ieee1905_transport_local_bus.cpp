@@ -26,15 +26,15 @@ void Ieee1905Transport::handle_broker_pollin_event(std::unique_ptr<messages::Mes
         handle_broker_cmdu_tx_message(*cmdu_tx_msg);
     } else if (auto *interface_configuration_request_msg =
                    dynamic_cast<InterfaceConfigurationRequestMessage *>(msg.get())) {
-        MAPF_DBG("received InterfaceConfigurationRequestMessage message:"
-                 << std::endl
-                 << *interface_configuration_request_msg);
+        MAPF_INFO("received InterfaceConfigurationRequestMessage message:"
+                  << std::endl
+                  << *interface_configuration_request_msg);
         handle_broker_interface_configuration_request_message(*interface_configuration_request_msg);
     } else if (auto *al_mac_addr_configuration_msg =
                    dynamic_cast<AlMacAddressConfigurationMessage *>(msg.get())) {
-        MAPF_DBG("received AlMacAddressConfigurationMessage message:"
-                 << std::endl
-                 << *al_mac_addr_configuration_msg);
+        MAPF_INFO("received AlMacAddressConfigurationMessage message:"
+                  << std::endl
+                  << *al_mac_addr_configuration_msg);
         handle_al_mac_addr_configuration_message(*al_mac_addr_configuration_msg);
     } else {
         // should never receive messages which we are not subscribed to
