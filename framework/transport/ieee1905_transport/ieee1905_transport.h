@@ -324,7 +324,7 @@ private:
     bool attach_interface_socket_filter(NetworkInterface &iface_name);
     void activate_interface(NetworkInterface &interface);
     void deactivate_interface(NetworkInterface &interface);
-    void handle_interface_status_change(const std::string &iface_name, bool is_active);
+    void handle_interface_state_change(const std::string &iface_name, bool is_active);
     void handle_bridge_state_change(const std::string &bridge_name, const std::string &iface_name,
                                     bool iface_added);
     void handle_interface_pollin_event(int fd);
