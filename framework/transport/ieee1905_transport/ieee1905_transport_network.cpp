@@ -116,13 +116,15 @@ bool Ieee1905Transport::update_network_interface(const std::string &bridge_name,
                        << " that has not been previously configured.";
             return false;
         }
-        auto &iface = network_interfaces_[ifname];
+
+        auto &interface = network_interfaces_[ifname];
 
         MAPF_INFO("Removing interface " << ifname << " from the transport");
-        if (iface.fd) {
-            m_event_loop->remove_handlers(iface.fd->getSocketFd());
-            iface.fd = nullptr;
+
+        if (interface.fd) {
+            deactivate_interface(interface);
         }
+
         network_interfaces_.erase(ifname);
     }
     return true;
