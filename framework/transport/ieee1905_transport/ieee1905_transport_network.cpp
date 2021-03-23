@@ -37,7 +37,6 @@ void Ieee1905Transport::update_network_interfaces(
             MAPF_INFO("interface " << ifname << " is no longer used.");
             if (network_interface.fd) {
                 m_event_loop->remove_handlers(network_interface.fd->getSocketFd());
-                close(network_interface.fd->getSocketFd());
                 network_interface.fd = nullptr;
             }
 
@@ -132,7 +131,6 @@ bool Ieee1905Transport::update_network_interface(const std::string &bridge_name,
 bool Ieee1905Transport::open_interface_socket(NetworkInterface &interface)
 {
     if (interface.fd) {
-        close(interface.fd->getSocketFd());
         interface.fd = nullptr;
     }
 
@@ -271,7 +269,6 @@ void Ieee1905Transport::deactivate_interface(NetworkInterface &interface)
 
     if (interface.fd) {
         m_event_loop->remove_handlers(interface.fd->getSocketFd());
-        close(interface.fd->getSocketFd());
         interface.fd = nullptr;
     }
 }
