@@ -237,7 +237,7 @@ bool Ieee1905Transport::attach_interface_socket_filter(NetworkInterface &interfa
     return true;
 }
 
-void Ieee1905Transport::handle_interface_status_change(const std::string &ifname, bool is_active)
+void Ieee1905Transport::handle_interface_state_change(const std::string &ifname, bool is_active)
 {
     auto it = network_interfaces_.find(ifname);
     if (it == network_interfaces_.end()) {
