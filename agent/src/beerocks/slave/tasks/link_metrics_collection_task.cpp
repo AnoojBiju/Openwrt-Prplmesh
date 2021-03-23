@@ -1096,4 +1096,20 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
     return true;
 }
 
+void LinkMetricsCollectionTask::handle_event(uint8_t event_enum_value, const void *event_obj)
+{
+    switch (eEvent(event_enum_value)) {
+    case RESET_QUERIES: {
+        LOG(DEBUG) << "Received RESET_QUERIES event.";
+        m_ap_metric_query.clear();
+        m_ap_metrics_reporting_info.reporting_interval_s = 0;
+        break;
+    }
+    default: {
+        LOG(DEBUG) << "Message handler doesn't exist for event type " << event_enum_value;
+        break;
+    }
+    }
+}
+
 } // namespace beerocks
