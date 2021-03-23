@@ -43,7 +43,7 @@ void Ieee1905Transport::update_neighbours(const Packet &packet)
             auto age = std::chrono::duration_cast<std::chrono::seconds>(
                 std::chrono::steady_clock::now() - neigh->second.last_seen);
             if (age > kMaximumNeighbourAge) {
-                MAPF_INFO("Deleting aged out neighbour with almac " << neigh->first);
+                MAPF_INFO("Deleting aged out neighbor with AL MAC " << neigh->first);
                 neigh = neighbors_map_.erase(neigh);
                 continue;
             }
@@ -51,18 +51,18 @@ void Ieee1905Transport::update_neighbours(const Packet &packet)
         ++neigh;
     }
 
-    // Add new neighbours
+    // Add new neighbors
     auto neighbor_iter = neighbors_map_.find(packet.src);
     if (neighbor_iter == neighbors_map_.end()) {
         Ieee1905Transport::ieee1905_neighbor neigh = {0};
         neigh.al_mac                               = packet.src;
         neigh.if_index                             = packet.src_if_index;
         neigh.last_seen                            = std::chrono::steady_clock::now();
-        MAPF_INFO("Adding new neighbour with almac " << packet.src);
+        MAPF_INFO("Adding new neighbor with AL MAC " << packet.src);
         neighbors_map_[packet.src] = neigh;
     } else {
-        // Update last seen for new / updated neighbours
-        MAPF_DBG("Updating last seen for neighbour with almac " << packet.src);
+        // Update last seen for new / updated neighbors
+        MAPF_DBG("Updating last seen for neighbor with AL MAC " << packet.src);
         neighbors_map_[packet.src].last_seen = std::chrono::steady_clock::now();
     }
 }
@@ -645,10 +645,10 @@ bool Ieee1905Transport::forward_packet(Packet &packet)
         return true;
     }
 
-    // Reliable multicast - send to all known neighbours.
+    // Reliable multicast - send to all known neighbors.
     // Note - we are reusing the same packet, so this part has to come
     // after the original packet (relayed multicast) has been sent.
-    // Change the packet destination each time to the neighbour AL MAC
+    // Change the packet destination each time to the neighbor AL MAC
     ch->SetRelayIndicator(false);
     for (const auto &neigh : neighbors_map_) {
         packet.dst = neigh.second.al_mac;
