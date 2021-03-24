@@ -18,6 +18,7 @@
 #include <algorithm>
 
 using ::testing::_;
+using ::testing::InSequence;
 using ::testing::Invoke;
 using ::testing::StrictMock;
 
@@ -90,12 +91,31 @@ TEST(BridgeStateManagerImpl, notify_state_changed_should_succeed)
     updated_iface_names.emplace(iface_name);
     std::set<std::string> iface_names;
 
-    EXPECT_CALL(*reader, read_state(bridge_name, _))
-        .WillOnce(
-            Invoke([&](const std::string &bridge_name, std::set<std::string> &iface_names) -> bool {
-                iface_names = initial_iface_names;
-                return true;
-            }));
+    {
+        InSequence sequence;
+
+        // Expectation for the initial read
+        EXPECT_CALL(*reader, read_state(bridge_name, _))
+            .WillOnce(Invoke(
+                [&](const std::string &bridge_name, std::set<std::string> &iface_names) -> bool {
+                    iface_names = initial_iface_names;
+                    return true;
+                }));
+        // Expectation for the verification performed after the interface is added to the bridge
+        EXPECT_CALL(*reader, read_state(bridge_name, _))
+            .WillOnce(Invoke(
+                [&](const std::string &bridge_name, std::set<std::string> &iface_names) -> bool {
+                    iface_names = updated_iface_names;
+                    return true;
+                }));
+        // Expectation for the verification performed after the interface is removed from the bridge
+        EXPECT_CALL(*reader, read_state(bridge_name, _))
+            .WillOnce(Invoke(
+                [&](const std::string &bridge_name, std::set<std::string> &iface_names) -> bool {
+                    iface_names = initial_iface_names;
+                    return true;
+                }));
+    }
 
     // The monitor mock is needed to emulate that a state-changed event has occurred.
     // Since the unique_ptr to the monitor mock is moved into the bridge state manager, it
@@ -132,4 +152,74 @@ TEST(BridgeStateManagerImpl, notify_state_changed_should_succeed)
     // Verify that cache has been updated and now it does not contain the removed interface
     ASSERT_TRUE(bridge_state_manager.read_state(bridge_name, iface_names));
     ASSERT_EQ(iface_names, initial_iface_names);
+}
+
+TEST(BridgeStateManagerImpl, notify_state_changed_should_succeed_with_misplaced_add_event)
+{
+    auto monitor = std::make_unique<StrictMock<beerocks::net::BridgeStateMonitorMock>>();
+    auto reader  = std::make_unique<StrictMock<beerocks::net::BridgeStateReaderMock>>();
+
+    const char *bridge_name = "test_bridge";
+    const char *iface_name  = "test_iface";
+    std::set<std::string> initial_iface_names{iface_name, "test_iface_0", "test_iface_1",
+                                              "test_iface_2"};
+    std::set<std::string> updated_iface_names = initial_iface_names;
+    updated_iface_names.erase(iface_name);
+    std::set<std::string> iface_names;
+
+    {
+        InSequence sequence;
+
+        // Expectation for the initial read
+        EXPECT_CALL(*reader, read_state(bridge_name, _))
+            .WillOnce(Invoke(
+                [&](const std::string &bridge_name, std::set<std::string> &iface_names) -> bool {
+                    iface_names = initial_iface_names;
+                    return true;
+                }));
+        // Expectation for the verification performed after the interface is removed from the bridge
+        EXPECT_CALL(*reader, read_state(bridge_name, _))
+            .WillOnce(Invoke(
+                [&](const std::string &bridge_name, std::set<std::string> &iface_names) -> bool {
+                    iface_names = updated_iface_names;
+                    return true;
+                }));
+        // Expectation for the verification performed after the misplaced add event is received
+        // (the list of interfaces returned is the same as in previous expectation)
+        EXPECT_CALL(*reader, read_state(bridge_name, _))
+            .WillOnce(Invoke(
+                [&](const std::string &bridge_name, std::set<std::string> &iface_names) -> bool {
+                    iface_names = updated_iface_names;
+                    return true;
+                }));
+    }
+
+    // The monitor mock is needed to emulate that a state-changed event has occurred.
+    // Since the unique_ptr to the monitor mock is moved into the bridge state manager, it
+    // is not available later. To overcome this problem, we use the raw pointer instead.
+    auto monitor_raw_ptr = monitor.get();
+
+    beerocks::net::BridgeStateManagerImpl bridge_state_manager(std::move(monitor),
+                                                               std::move(reader));
+
+    bridge_state_manager.set_handler(
+        [&](const std::string &bridge_name, const std::string &iface_name, bool iface_in_bridge) {
+            if (iface_in_bridge) {
+                iface_names.emplace(iface_name);
+            } else {
+                iface_names.erase(iface_name);
+            }
+        });
+
+    ASSERT_TRUE(bridge_state_manager.read_state(bridge_name, iface_names));
+    ASSERT_EQ(iface_names, initial_iface_names);
+
+    // Emulate that an existing interface is removed from the bridge
+    monitor_raw_ptr->notify_state_changed(bridge_name, iface_name, false);
+    ASSERT_EQ(std::find(iface_names.begin(), iface_names.end(), iface_name), iface_names.end());
+
+    // Emulate that a misplaced RTM_NEWLINK event is received from kernel and assert that it is
+    // ignored
+    monitor_raw_ptr->notify_state_changed(bridge_name, iface_name, true);
+    ASSERT_EQ(std::find(iface_names.begin(), iface_names.end(), iface_name), iface_names.end());
 }

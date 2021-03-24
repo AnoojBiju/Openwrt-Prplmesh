@@ -44,7 +44,7 @@ bool Ieee1905Transport::start()
         });
 
     m_interface_state_manager->set_handler([&](const std::string &iface_name, bool iface_state) {
-        handle_interface_status_change(iface_name, iface_state);
+        handle_interface_state_change(iface_name, iface_state);
     });
 
     m_bridge_state_manager->set_handler(

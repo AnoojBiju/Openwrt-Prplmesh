@@ -26,15 +26,15 @@ void Ieee1905Transport::handle_broker_pollin_event(std::unique_ptr<messages::Mes
         handle_broker_cmdu_tx_message(*cmdu_tx_msg);
     } else if (auto *interface_configuration_request_msg =
                    dynamic_cast<InterfaceConfigurationRequestMessage *>(msg.get())) {
-        MAPF_DBG("received InterfaceConfigurationRequestMessage message:"
-                 << std::endl
-                 << *interface_configuration_request_msg);
+        MAPF_INFO("received InterfaceConfigurationRequestMessage message:"
+                  << std::endl
+                  << *interface_configuration_request_msg);
         handle_broker_interface_configuration_request_message(*interface_configuration_request_msg);
     } else if (auto *al_mac_addr_configuration_msg =
                    dynamic_cast<AlMacAddressConfigurationMessage *>(msg.get())) {
-        MAPF_DBG("received AlMacAddressConfigurationMessage message:"
-                 << std::endl
-                 << *al_mac_addr_configuration_msg);
+        MAPF_INFO("received AlMacAddressConfigurationMessage message:"
+                  << std::endl
+                  << *al_mac_addr_configuration_msg);
         handle_al_mac_addr_configuration_message(*al_mac_addr_configuration_msg);
     } else {
         // should never receive messages which we are not subscribed to
@@ -99,18 +99,21 @@ void Ieee1905Transport::handle_broker_interface_configuration_request_message(
     InterfaceConfigurationRequestMessage &msg)
 {
     std::map<std::string, NetworkInterface> updated_network_interfaces;
-    // fill a set with the interfaces that are part of the bridge:
-    std::set<std::string> bridge_state{};
 
     auto bridge_name = msg.metadata()->bridge_name;
+    MAPF_INFO("Using bridge: " << bridge_name);
+
+    // fill a set with the interfaces that are part of the bridge:
+    std::set<std::string> bridge_state{};
     LOG_IF(!m_bridge_state_manager->read_state(bridge_name, bridge_state), ERROR)
-        << "Failed reading the bridge state!";
+        << "Failed reading the bridge " << bridge_name << " state!";
+
     updated_network_interfaces[bridge_name].ifname      = bridge_name;
     updated_network_interfaces[bridge_name].bridge_name = std::string();
     updated_network_interfaces[bridge_name].is_bridge   = true;
 
     for (const auto &ifname : bridge_state) {
-        MAPF_INFO("bridge state iface: " << ifname);
+        MAPF_INFO("  Using interface: " << ifname);
         updated_network_interfaces[ifname].ifname      = ifname;
         updated_network_interfaces[ifname].bridge_name = bridge_name;
     }
@@ -122,6 +125,7 @@ void Ieee1905Transport::handle_al_mac_addr_configuration_message(
     AlMacAddressConfigurationMessage &msg)
 {
     auto al_mac = msg.metadata()->al_mac;
+    MAPF_INFO("Using AL MAC: " << al_mac);
 
     set_al_mac_addr(al_mac.oct);
 }
