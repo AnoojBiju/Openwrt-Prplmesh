@@ -700,5 +700,23 @@ bool bpl_cfg_set_wifi_credentials(const std::string &iface,
     return true;
 }
 
+bool bpl_cfg_get_mandatory_interfaces(std::string &mandatory_interfaces)
+{
+    mandatory_interfaces.clear();
+
+    constexpr int MANDATORY_INTERFACES_SIZE = BPL_IFNAME_LEN * BPL_NUM_OF_INTERFACES + 1;
+    char tmp_mandatory_interfaces[MANDATORY_INTERFACES_SIZE];
+
+    if (cfg_get_prplmesh_param("mandatory_interfaces", tmp_mandatory_interfaces,
+                               MANDATORY_INTERFACES_SIZE) < 0) {
+        LOG(DEBUG) << "Optional parameter mandatory_interfaces doesn't exist";
+        return true;
+    }
+
+    mandatory_interfaces = std::string(tmp_mandatory_interfaces);
+
+    return true;
+}
+
 } // namespace bpl
 } // namespace beerocks

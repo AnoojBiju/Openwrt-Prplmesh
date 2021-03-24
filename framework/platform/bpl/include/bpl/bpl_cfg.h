@@ -590,6 +590,14 @@ bool cfg_get_link_metrics_request_interval(std::chrono::seconds &link_metrics_re
 bool bpl_cfg_set_wifi_credentials(const std::string &iface,
                                   const son::wireless_utils::sBssInfoConf &configuration);
 
+/**
+ * @brief Reads mandatory interfaces configuration.
+ *
+ * @param[out] mandatory_interfaces Comma-separated list of interfaces which are mandatory and need to create son_slaves for even if currently they are down.
+ * @return true on success, otherwise false
+ */
+bool bpl_cfg_get_mandatory_interfaces(std::string &mandatory_interfaces);
+
 } // namespace bpl
 } // namespace beerocks
 
