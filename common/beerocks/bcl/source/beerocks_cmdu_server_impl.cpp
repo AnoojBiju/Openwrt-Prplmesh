@@ -8,6 +8,7 @@
 
 #include <bcl/beerocks_cmdu_server_impl.h>
 
+#include <bcl/beerocks_backport.h>
 #include <bcl/network/sockets_impl.h>
 
 #include <easylogging++.h>
@@ -18,7 +19,7 @@ CmduServerImpl::CmduServerImpl(std::unique_ptr<beerocks::net::ServerSocket> serv
                                std::shared_ptr<beerocks::net::CmduParser> cmdu_parser,
                                std::shared_ptr<beerocks::net::CmduSerializer> cmdu_serializer,
                                std::shared_ptr<beerocks::EventLoop> event_loop)
-    : CmduPeer(cmdu_parser, cmdu_serializer), m_server_socket(std::move(server_socket)),
+    : m_peer(cmdu_parser, cmdu_serializer), m_server_socket(std::move(server_socket)),
       m_event_loop(event_loop)
 {
     LOG_IF(!m_server_socket, FATAL) << "Server socket is a null pointer!";
@@ -93,7 +94,7 @@ bool CmduServerImpl::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
 
     auto &context = it->second;
 
-    return CmduPeer::send_cmdu(*context.connection, cmdu_tx);
+    return m_peer.send_cmdu(*context.connection, cmdu_tx);
 }
 
 bool CmduServerImpl::forward_cmdu(int fd, uint32_t iface_index, const sMacAddr &dst_mac,
@@ -108,7 +109,7 @@ bool CmduServerImpl::forward_cmdu(int fd, uint32_t iface_index, const sMacAddr &
 
     auto &context = it->second;
 
-    return CmduPeer::forward_cmdu(*context.connection, iface_index, dst_mac, src_mac, cmdu_rx);
+    return m_peer.forward_cmdu(*context.connection, iface_index, dst_mac, src_mac, cmdu_rx);
 }
 
 bool CmduServerImpl::add_connection(int fd,
@@ -208,7 +209,7 @@ void CmduServerImpl::handle_read(int fd)
                        ieee1905_1::CmduMessageRx &cmdu_rx) {
         notify_cmdu_received(fd, iface_index, dst_mac, src_mac, cmdu_rx);
     };
-    CmduPeer::receive_cmdus(*context.connection, context.buffer, handler);
+    m_peer.receive_cmdus(*context.connection, context.buffer, handler);
 }
 
 void CmduServerImpl::handle_close(int fd)

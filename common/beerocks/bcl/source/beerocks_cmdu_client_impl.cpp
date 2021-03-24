@@ -8,6 +8,8 @@
 
 #include <bcl/beerocks_cmdu_client_impl.h>
 
+#include <bcl/beerocks_backport.h>
+
 #include <easylogging++.h>
 
 namespace beerocks {
@@ -16,7 +18,7 @@ CmduClientImpl::CmduClientImpl(std::unique_ptr<beerocks::net::Socket::Connection
                                std::shared_ptr<beerocks::net::CmduParser> cmdu_parser,
                                std::shared_ptr<beerocks::net::CmduSerializer> cmdu_serializer,
                                std::shared_ptr<beerocks::EventLoop> event_loop)
-    : CmduPeer(cmdu_parser, cmdu_serializer), m_connection(std::move(connection)),
+    : m_peer(cmdu_parser, cmdu_serializer), m_connection(std::move(connection)),
       m_event_loop(event_loop)
 {
     LOG_IF(!m_connection, FATAL) << "Connection is a null pointer!";
@@ -63,7 +65,7 @@ bool CmduClientImpl::send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx)
     }
 
     // Send given CMDU through the socket connection established with CMDU server
-    return CmduPeer::send_cmdu(*m_connection, cmdu_tx);
+    return m_peer.send_cmdu(*m_connection, cmdu_tx);
 }
 
 void CmduClientImpl::handle_read(int fd)
@@ -74,7 +76,7 @@ void CmduClientImpl::handle_read(int fd)
                        ieee1905_1::CmduMessageRx &cmdu_rx) {
         notify_cmdu_received(iface_index, dst_mac, src_mac, cmdu_rx);
     };
-    CmduPeer::receive_cmdus(*m_connection, m_buffer, handler);
+    m_peer.receive_cmdus(*m_connection, m_buffer, handler);
 }
 
 void CmduClientImpl::handle_close(int fd)
