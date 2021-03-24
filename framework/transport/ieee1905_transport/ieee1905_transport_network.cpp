@@ -261,7 +261,7 @@ void Ieee1905Transport::handle_bridge_state_change(const std::string &bridge_nam
     update_network_interface(bridge_name, iface_name, iface_added);
 }
 
-void Ieee1905Transport::deactivate_interface(NetworkInterface &interface)
+void Ieee1905Transport::deactivate_interface(NetworkInterface &interface, bool remove_handlers)
 {
     if (!interface.fd) {
         return;
@@ -273,7 +273,10 @@ void Ieee1905Transport::deactivate_interface(NetworkInterface &interface)
     // event handlers were registered when the socket was open, neither they have to be removed
     // when the socket is closed.
     if (!interface.is_bridge) {
-        m_event_loop->remove_handlers(interface.fd->getSocketFd());
+        // If requested, remove event handlers for the connected socket
+        if (remove_handlers) {
+            m_event_loop->remove_handlers(interface.fd->getSocketFd());
+        }
     }
     interface.fd = nullptr;
 }
@@ -323,7 +326,7 @@ void Ieee1905Transport::activate_interface(NetworkInterface &interface)
                     LOG(ERROR) << "Error on FD (" << fd << ")" << error_message
                                << ". Disabling interface " << interface.ifname;
 
-                    deactivate_interface(interface);
+                    deactivate_interface(interface, false);
                     return true;
                 },
         };
