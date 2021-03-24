@@ -88,10 +88,12 @@ RUN \
     cmake -H"$(pwd)"/. -B"$(pwd)"/build/. -DCMAKE_INSTALL_PREFIX=/usr && \
     make install -C build
 
-# Fetch, checkout on fixed commit which works and install Ubus daemon
+# Fetch, checkout on fixed commit which works, patch and install Ubus daemon
+ADD ubus/0001-ubusd-convert-tx_queue-to-linked-list.patch .
 RUN \
     git clone git://git.openwrt.org/project/ubus.git && \
     cd ubus && git checkout 13a4438b4ebdf85d301999e0a615640ac4c9b0a8 && \
+    patch -p1 -i ../0001-ubusd-convert-tx_queue-to-linked-list.patch && \
     cmake -H"$(pwd)"/. -B"$(pwd)"/build/. -DCMAKE_INSTALL_PREFIX=/usr && \
     make install -C build
 
