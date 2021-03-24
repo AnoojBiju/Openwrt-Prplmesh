@@ -943,36 +943,24 @@ bool base_wlan_hal_dwpal::refresh_radio_info()
 
 bool base_wlan_hal_dwpal::get_vap_type(const std::string &ifname, bool &fronthaul, bool &backhaul)
 {
-    char *reply              = nullptr;
-    size_t numOfValidArgs[1] = {0}, replyLen = 0;
-    char mode[16]                 = {0};
-    FieldsToParse fieldsToParse[] = {
-        {(void *)mode, &numOfValidArgs[0], DWPAL_STR_PARAM, "mesh_mode=", sizeof(mode)},
-        /* Must be at the end */
-        {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+    const char *tmp_str;
+    parsed_line_t reply;
+
     std::string cmd = "GET_MESH_MODE " + ifname;
 
-    if (!dwpal_send_cmd(cmd, &reply) || reply[0] == '\0') {
+    if (!dwpal_send_cmd(cmd, reply)) {
+        LOG(ERROR) << __func__ << " failed";
+        return false;
+    }
+
+    // RSSI
+    if (!read_param("mesh_mode", reply, &tmp_str)) {
+        LOG(INFO) << "mesh_mode field does not exist for " << ifname;
         fronthaul = true; // if mesh_mode not defined at all, assume fronthaul
         return true;
     }
 
-    replyLen = strnlen(reply, HOSTAPD_TO_DWPAL_MSG_LENGTH);
-
-    if (dwpal_string_to_struct_parse(reply, replyLen, fieldsToParse, sizeof(mode)) ==
-        DWPAL_FAILURE) {
-        LOG(ERROR) << "DWPAL parse error on " << ifname;
-        return false;
-    }
-
-    for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
-        if (numOfValidArgs[i] == 0) {
-            LOG(ERROR) << "Failed reading parsed parameter " << (int)i << " ==> Abort";
-            return false;
-        }
-    }
-
-    std::string mesh_mode = std::string(mode);
+    std::string mesh_mode = tmp_str;
     if (mesh_mode.find("bAP") != std::string::npos) {
         backhaul = true;
         return true;
