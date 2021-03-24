@@ -270,7 +270,12 @@ void Ieee1905Transport::deactivate_interface(NetworkInterface &interface)
     MAPF_INFO("interface " << interface.ifname << " is deactivated.");
 
     if (interface.fd) {
-        m_event_loop->remove_handlers(interface.fd->getSocketFd());
+        // The bridge interface is not used for receiving but for sending packets only. Since no 
+        // event handlers were registered when the socket was open, neither they have to be removed 
+        // when the socket is closed.
+        if (!interface.is_bridge) {
+            m_event_loop->remove_handlers(interface.fd->getSocketFd());
+        }
         interface.fd = nullptr;
     }
 }
