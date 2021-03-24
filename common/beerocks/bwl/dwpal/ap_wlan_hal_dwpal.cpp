@@ -2048,10 +2048,8 @@ bool ap_wlan_hal_dwpal::set_primary_vlan_id(uint16_t primary_vlan_id)
 {
     LOG(DEBUG) << "set_primary_vlan_id " << primary_vlan_id;
 
-    std::string cmd = "set multi_ap_primary_vlanid " + std::to_string(primary_vlan_id);
-
     // Send command
-    if (!dwpal_send_cmd(cmd)) {
+    if (!set("multi_ap_primary_vlanid", std::to_string(primary_vlan_id))) {
         LOG(ERROR) << "set_primary_vlan_id() failed!";
         return false;
     }
