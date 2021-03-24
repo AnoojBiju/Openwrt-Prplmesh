@@ -21,12 +21,12 @@
 namespace beerocks {
 
 /**
- * @brief The CMDU peer is the base class for @see CmduServerImpl and @see CmduClientImpl classes.
+ * @brief The CMDU peer class is used by @see CmduServerImpl and @see CmduClientImpl classes.
  * It contains the methods common to both classes to send and receive CMDU messages through a socket
  * connection, using the frame protocol defined by a CmduParser and CmduSerializer.
  */
 class CmduPeer {
-protected:
+public:
     /**
      * @brief CMDU-received event handler function.
      *
@@ -46,9 +46,6 @@ protected:
 
     /**
      * @brief Class constructor.
-     *
-     * This class is (intended as) an abstract class. Constructor is protected to avoid objects to
-     * be instantiated from the class except through derived classes.
      *
      * @param cmdu_parser CMDU parser used to get CMDU messages out of a byte array received
      * through a socket connection.
