@@ -1235,10 +1235,12 @@ static bool set_vap_multiap_mode(std::vector<std::string> &vap_hostapd_config, b
 
     hostapd_config_set_value(vap_hostapd_config, "mesh_mode", mesh_mode);
 
-    hostapd_config_set_value(vap_hostapd_config, "multi_ap_profile1_disallow",
-                             disallow_profile1 ? "1" : "");
-    hostapd_config_set_value(vap_hostapd_config, "multi_ap_profile2_disallow",
-                             disallow_profile2 ? "1" : "");
+    if (backhaul) {
+        hostapd_config_set_value(vap_hostapd_config, "multi_ap_profile1_disallow",
+                                 disallow_profile1 ? "1" : "0");
+        hostapd_config_set_value(vap_hostapd_config, "multi_ap_profile2_disallow",
+                                 disallow_profile2 ? "1" : "0");
+    }
 
     if (fronthaul && !backhaul_wps_ssid.empty()) {
         // Oddly enough, multi_ap_backhaul_wpa_passphrase has to be quoted, while wpa_passphrase does not...
