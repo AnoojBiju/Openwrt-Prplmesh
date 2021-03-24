@@ -1208,19 +1208,33 @@ static bool set_vap_multiap_mode(std::vector<std::string> &vap_hostapd_config, b
     multi_ap_mode |= fronthaul ? 0x02 : 0x00;
     hostapd_config_set_value(vap_hostapd_config, "multi_ap", std::to_string(multi_ap_mode));
 
-    hostapd_config_set_value(vap_hostapd_config, "mesh_mode", backhaul ? "bAP" : "fAP");
-    // Setting max_num_sta to an bAP interface definces number of repeaters that can
-    // connect to this VAP. What actualy Maxlinear driver does (proprietry feature) is
-    // to create more virtual vaps. So if wlan2.0 has max_num_sta=3 configuration
-    // there will be 2 aaditional vaps created by the driver.
-    // Since currently in prplwrt we are already using 6 vaps (4 fAP, 1 dummy, 1 STA)
-    // and WAV654 (wifi card on AX3000) limits number of VAPS to 8 + 8 (8 in 2.4G and 8 in 5G)
-    // we can set max_num_sta to 3.
-    // note: this works only for 1 backhaul interface per radio.
-    // Defining more that one backhaul interfaces requires:
-    // 1. counting nuber of interfaces in use.
-    // 2. knowing number of VAP supported on the platform.
-    hostapd_config_set_value(vap_hostapd_config, "max_num_sta", backhaul ? "3" : "");
+    std::string mesh_mode;
+    if (backhaul && fronthaul) {
+        mesh_mode.assign("ext_hybrid");
+
+        // On ext_hybrid mode, the hostapd will create additional virtual net devices for bAP.
+        // The number of new virtual net decives is determined by "num_vrt_bkh_netdevs" parameter,
+        // and need to be set to one less than "max_num_sta" if was set on bAP interface (see
+        // explanation below), since the main interface is used for 3 address stations.
+        hostapd_config_set_value(vap_hostapd_config, "num_vrt_bkh_netdevs", "2");
+    } else {
+        mesh_mode.assign(backhaul ? "bAP" : "fAP");
+        // Setting max_num_sta to an bAP interface defines number of repeaters that can
+        // connect to this VAP. What actually Maxlinear driver does (proprietary feature) is
+        // to create more virtual vaps. So if wlan2.0 has max_num_sta=3 configuration
+        // there will be 2 additional vaps created by the driver.
+        // Since currently in prplwrt we are already using 6 vaps (4 fAP, 1 dummy, 1 STA)
+        // and WAV654 (wifi card on AX3000) limits number of VAPS to 8 + 8 (8 in 2.4G and 8 in 5G)
+        // we can set max_num_sta to 3.
+        // note: this works only for 1 backhaul interface per radio.
+        // Defining more that one backhaul interfaces requires:
+        // 1. Counting number of interfaces in use.
+        // 2. Knowing number of VAP supported on the platform.
+        hostapd_config_set_value(vap_hostapd_config, "max_num_sta", backhaul ? "3" : "");
+    }
+
+    hostapd_config_set_value(vap_hostapd_config, "mesh_mode", mesh_mode);
+
     hostapd_config_set_value(vap_hostapd_config, "multi_ap_profile1_disallow",
                              disallow_profile1 ? "1" : "");
     hostapd_config_set_value(vap_hostapd_config, "multi_ap_profile2_disallow",
