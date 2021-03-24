@@ -1102,6 +1102,15 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
         return false;
     }
 
+    if (results_vec->size() == 0) {
+        // No results are avaliable, sending an empty report.
+        if (!send_channel_scan_report_cmdu(request_info->src_mac, true)) {
+            LOG(ERROR) << "Failed to Send Channel Scan Report Message";
+            return false;
+        }
+        return true;
+    }
+
     // Results parameters, used to ease the iteration process
     auto stored_scan_results_iter = results_vec->begin();
     auto results_neighbors        = stored_scan_results_iter->results;
