@@ -47,7 +47,7 @@
         "conn_cmd": "cu -s 115200 -l /dev/netgear-rax40-1 -f",
         "delay": "30",
         "iface_to_device": "to-dut",
-        "wan_ip": "192.168.1.120",
+        "control_ip": "192.168.200.120",
         "devices": [
             {
                 "name": "lan",
