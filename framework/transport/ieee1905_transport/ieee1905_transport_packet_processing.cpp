@@ -306,11 +306,6 @@ bool Ieee1905Transport::de_fragment_packet(Packet &packet)
 
     // concat the fragment body (excluding the IEEE1905 header)
     size_t fragmentTlvsLength = packet.payload.iov_len - sizeof(Ieee1905CmduHeader);
-    // Only count end of message TLV for the last fragment
-    if (ch->GetLastFragmentIndicator() == 0) {
-        fragmentTlvsLength -= sizeof(Tlv);
-    }
-
     if (val.bufIndex + fragmentTlvsLength >= kMaximumDeFragmentionSize) {
         MAPF_WARN("defragmentation buffer overflow - dropping fragment");
         return false;
@@ -422,10 +417,6 @@ bool Ieee1905Transport::fragment_and_send_packet_to_network_interface(unsigned i
 
         fragment_packet.payload.iov_base = buf;
         fragment_packet.payload.iov_len  = sizeof(Ieee1905CmduHeader) + fragmentTlvsLength;
-        if (remainingPacketLength) {
-            // add EOM tlv for all fragments but the last which already has it
-            fragment_packet.payload.iov_len += sizeof(Tlv);
-        }
 
         // send the fragment
         MAPF_DBG("sending fragment " << (int)fragmentId
