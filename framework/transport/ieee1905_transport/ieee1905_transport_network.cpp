@@ -26,7 +26,7 @@ namespace transport {
 using namespace beerocks::transport::messages;
 
 void Ieee1905Transport::update_network_interfaces(
-    std::map<std::string, NetworkInterface> updated_network_interfaces)
+    const std::map<std::string, NetworkInterface> &updated_network_interfaces)
 {
     // find and remove interfaces that are no longer in use
     for (auto it = network_interfaces_.begin(); it != network_interfaces_.end();) {

@@ -308,8 +308,8 @@ private:
     //
     // NETWORK INTERFACE STUFF
     //
-    void
-    update_network_interfaces(std::map<std::string, NetworkInterface> updated_network_interfaces);
+    void update_network_interfaces(
+        const std::map<std::string, NetworkInterface> &updated_network_interfaces);
     /**
      * @brief Add or remove and interface to/from the transport.
      *
