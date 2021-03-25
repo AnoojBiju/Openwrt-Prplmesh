@@ -84,6 +84,19 @@ bool Ieee1905Transport::update_network_interface(const std::string &bridge_name,
         LOG(INFO) << "Interface " << ifname << " with index " << if_index << " and address "
                   << tlvf::mac_from_array(interface.addr) << " is used.";
 
+        // If the interface is in the bridge but it is not up and running, then do not activate it
+        // yet. Otherwise operations on the socket created for the interface would fail.
+        // The interface will be activated later, when its state changes to up.
+        bool iface_state;
+        if (!m_interface_state_manager->read_state(ifname, iface_state)) {
+            LOG(ERROR) << "Failed to read state of interface " << ifname << ".";
+            return false;
+        }
+        if (!iface_state) {
+            LOG(INFO) << "Interface " << ifname << " is not up and running.";
+            return true;
+        }
+
         activate_interface(interface);
     } else {
         if (network_interfaces_.count(ifname) == 0) {
