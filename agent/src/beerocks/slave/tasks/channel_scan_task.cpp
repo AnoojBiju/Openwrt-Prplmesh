@@ -921,18 +921,19 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
             [](const beerocks_message::eChannelScanResultChannelBandwidth &bw) -> std::string {
             switch (bw) {
             case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_20MHz:
-                return "20";
+                return "20MHz";
             case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_40MHz:
-                return "40";
+                return "40MHz";
             case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80MHz:
-                return "80";
+                return "80MHz";
             case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80_80:
-                return "80+80";
+                return "80+80MHz";
             case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_160MHz:
-                return "160";
+                return "160MHz";
             case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_NA:
             default:
-                return "";
+                LOG(DEBUG) << "Unknown BW value, setting 20MHz";
+                return "20MHz";
             }
         };
         auto bw_str =
