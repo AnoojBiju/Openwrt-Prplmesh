@@ -118,7 +118,16 @@ void LinkMetricsCollectionTask::work()
     // AP Metrics Response messages and messages received from monitor thread
     // due to channel utilization crossed configured threshold value.
     // As a temporary solution, set MID to UINT16_MAX here.
-    // TODO: to be fixed as part of #1328
+    // TODO: to be fixed as part of #1328 - PPM-40
+
+    // AP Metrics Queries can be originated both from periodic or other sources.
+    // There is no differentiation in ap_metric_query about requested queries source.
+    // m_ap_metric_query can be converted to map (mid, requested bssid vector).
+    // Concurrent time based and explicit query based requests are problematic,
+    // especially, if periodic is triggered right after, explicits will be dropped.
+    // To fix existing problem (PPM-1203) of remained un-answered queries,
+    // query can be cleared in case of query is sent to all bissids.
+    m_ap_metric_query.clear();
 
     // Send ap_metrics query on all bssids exists on the Agent.
     send_ap_metric_query_message(UINT16_MAX);
@@ -1094,6 +1103,22 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
     }
 
     return true;
+}
+
+void LinkMetricsCollectionTask::handle_event(uint8_t event_enum_value, const void *event_obj)
+{
+    switch (eEvent(event_enum_value)) {
+    case RESET_QUERIES: {
+        LOG(DEBUG) << "Received RESET_QUERIES event.";
+        m_ap_metric_query.clear();
+        m_ap_metrics_reporting_info.reporting_interval_s = 0;
+        break;
+    }
+    default: {
+        LOG(DEBUG) << "Message handler doesn't exist for event type " << event_enum_value;
+        break;
+    }
+    }
 }
 
 } // namespace beerocks
