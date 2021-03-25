@@ -35,6 +35,17 @@ public:
                      std::shared_ptr<beerocks_header> beerocks_header) override;
 
     void work() override;
+    void handle_event(uint8_t event_enum_value, const void *event_obj) override;
+
+    /**
+     * @brief eEvent list is used on link metrics task.
+     *
+     * RESET_QUERIES is sent when DEV_RESET_DEFAULT is triggered, to clean up already started processes.
+     *
+     */
+    enum eEvent : uint8_t {
+        RESET_QUERIES,
+    };
 
 private:
     BackhaulManager &m_btl_ctx;

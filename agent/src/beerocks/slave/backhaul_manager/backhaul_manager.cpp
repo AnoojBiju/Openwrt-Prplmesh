@@ -1161,6 +1161,9 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
             FSM_MOVE_STATE(INIT);
         }
 
+        m_task_pool.send_event(eTaskType::LINK_METRICS_COLLECTION,
+                               LinkMetricsCollectionTask::eEvent::RESET_QUERIES);
+
         ap_blacklist.clear();
 
         break;
