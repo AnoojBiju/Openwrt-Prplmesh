@@ -301,9 +301,8 @@ private:
     std::map<DeFragmentationKey, DeFragmentationValue, DeFragmentationKeyCompare>
         de_fragmentation_map_;
 
-    static const int kIeee1905FragmentationThreashold =
-        1500 -
-        sizeof(Tlv); // IEEE1905 packets (CMDU) should be fragmented if larger than this threashold
+    static const int kIeee1905FragmentationThreashold = tlvf::
+        MAX_TLV_SIZE; // IEEE1905 packets (CMDU) should be fragmented if larger than this threashold
 
     //
     // NETWORK INTERFACE STUFF
