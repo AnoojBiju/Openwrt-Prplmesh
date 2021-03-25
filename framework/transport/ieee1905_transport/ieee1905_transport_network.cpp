@@ -47,33 +47,13 @@ void Ieee1905Transport::update_network_interfaces(
     }
 
     // add new interfaces or update existing ones
-    for (auto it = updated_network_interfaces.begin(); it != updated_network_interfaces.end();
-         ++it) {
-        auto &updated_network_interface = it->second;
-        auto &ifname                    = updated_network_interface.ifname;
-        unsigned int if_index           = if_nametoindex(ifname.c_str());
-        if (if_index == 0) {
-            MAPF_ERR("Failed to get index for interface " << ifname
-                                                          << ". Interface will be ignored.");
-            continue;
-        }
+    for (const auto &entry : updated_network_interfaces) {
+        auto &updated_network_interface = entry.second;
 
-        auto &interface       = network_interfaces_[ifname]; // Creates the interface object.
-        interface.ifname      = updated_network_interface.ifname;
-        interface.bridge_name = updated_network_interface.bridge_name;
-        interface.is_bridge   = updated_network_interface.is_bridge;
+        auto &bridge_name = updated_network_interface.bridge_name;
+        auto &ifname      = updated_network_interface.ifname;
 
-        // must be called before open_interface_socket (address is used for packet filtering)
-        if (!get_interface_mac_addr(if_index, interface.addr)) {
-            MAPF_ERR("Failed to get address of interface " << ifname << " with index " << if_index
-                                                           << ".");
-            continue;
-        }
-
-        LOG(INFO) << "Interface " << ifname << " with index " << if_index << " and address "
-                  << tlvf::mac_from_array(interface.addr) << " is used.";
-
-        activate_interface(interface);
+        update_network_interface(bridge_name, ifname, true);
     }
 }
 
@@ -92,7 +72,7 @@ bool Ieee1905Transport::update_network_interface(const std::string &bridge_name,
             network_interfaces_[ifname]; // Creates the interface object if it doesn't exist yet..
         interface.ifname      = ifname;
         interface.bridge_name = bridge_name;
-        interface.is_bridge   = false;
+        interface.is_bridge   = bridge_name.empty();
 
         // must be called before open_interface_socket (address is used for packet filtering)
         if (!get_interface_mac_addr(if_index, interface.addr)) {
