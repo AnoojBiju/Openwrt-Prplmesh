@@ -65,6 +65,7 @@ bool Ieee1905Transport::update_network_interface(const std::string &bridge_name,
         unsigned int if_index = if_nametoindex(ifname.c_str());
         if (if_index == 0) {
             MAPF_ERR("Failed to get index for interface " << ifname);
+            remove_network_interface(ifname);
             return false;
         }
 
@@ -78,6 +79,7 @@ bool Ieee1905Transport::update_network_interface(const std::string &bridge_name,
         if (!get_interface_mac_addr(if_index, interface.addr)) {
             MAPF_ERR("Failed to get address of interface " << ifname << " with index " << if_index
                                                            << ".");
+            remove_network_interface(ifname);
             return false;
         }
 
@@ -90,6 +92,7 @@ bool Ieee1905Transport::update_network_interface(const std::string &bridge_name,
         bool iface_state;
         if (!m_interface_state_manager->read_state(ifname, iface_state)) {
             LOG(ERROR) << "Failed to read state of interface " << ifname << ".";
+            remove_network_interface(ifname);
             return false;
         }
         if (!iface_state) {
@@ -105,14 +108,25 @@ bool Ieee1905Transport::update_network_interface(const std::string &bridge_name,
             return false;
         }
 
-        auto &interface = network_interfaces_[ifname];
-
         MAPF_INFO("Removing interface " << ifname << " from the transport");
 
-        deactivate_interface(interface);
-
-        network_interfaces_.erase(ifname);
+        remove_network_interface(ifname);
     }
+    return true;
+}
+
+bool Ieee1905Transport::remove_network_interface(const std::string &ifname)
+{
+    if (network_interfaces_.count(ifname) == 0) {
+        return false;
+    }
+
+    auto &interface = network_interfaces_[ifname];
+
+    deactivate_interface(interface);
+
+    network_interfaces_.erase(ifname);
+
     return true;
 }
 
