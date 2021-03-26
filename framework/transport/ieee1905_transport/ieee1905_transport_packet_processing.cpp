@@ -76,6 +76,11 @@ void Ieee1905Transport::handle_packet(Packet &packet)
 
     MAPF_DBG("handling packet:" << std::endl << packet);
 
+    if (packet.ether_type != ETH_P_1905_1) {
+        // Silently ignore non IEEE 1905.1 packets
+        return;
+    }
+
     update_neighbours(packet);
 
     if (!de_duplicate_packet(packet)) {
