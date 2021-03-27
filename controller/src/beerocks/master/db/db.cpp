@@ -382,8 +382,7 @@ bool db::add_node_client(const sMacAddr &mac, const sMacAddr &parent_mac,
     // for connected station (WiFI client)
     auto data_model_path = dm_add_sta_element(parent_mac, mac);
     if (data_model_path.empty()) {
-        LOG(ERROR) << "Failed to add client instance, mac: " << mac;
-        return false;
+        return true;
     }
     // Add the MAC to the association event */
     if (!dm_add_association_event(parent_mac, mac)) {
@@ -5992,7 +5991,15 @@ std::string db::dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client
     }
 
     std::string path_to_sta = path_to_bss + "STA";
-    auto sta_instance       = m_ambiorix_datamodel->add_instance(path_to_sta);
+
+    auto index = m_ambiorix_datamodel->get_instance_index(path_to_sta + ".[MACAddress == '%s'].",
+                                                          tlvf::mac_to_string(client_mac));
+    if (index) {
+        LOG(WARNING) << "STA with MACAddress: " << client_mac << " exists in the data model!";
+        return {};
+    }
+
+    auto sta_instance = m_ambiorix_datamodel->add_instance(path_to_sta);
     if (sta_instance.empty()) {
         LOG(ERROR) << "Failed to add sta instance " << path_to_sta << ". STA mac: " << client_mac;
         return {};
