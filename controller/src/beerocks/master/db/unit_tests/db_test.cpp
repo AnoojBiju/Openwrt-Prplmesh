@@ -495,6 +495,7 @@ TEST_F(DbTest, test_set_node_stats_info)
               m_db->get_node_data_model_path(g_radio_mac_1));
 
     //expectations for add_node_client
+    EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_client_mac)).WillRepeatedly(Return(0));
     EXPECT_CALL(*m_ambiorix, add_instance(std::string(g_radio_1_bss_path_1) + ".STA"))
         .WillOnce(Return(std::string(g_radio_1_bss_path_1) + ".STA.1"));
     EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1), "MACAddress",
@@ -664,6 +665,7 @@ TEST_F(DbTest, test_set_station_capabilities)
               m_db->get_node_data_model_path(g_radio_mac_1));
 
     //expectations for add_node_client
+    EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_client_mac)).WillRepeatedly(Return(0));
     EXPECT_CALL(*m_ambiorix, add_instance(std::string(g_radio_1_bss_path_1) + ".STA"))
         .WillOnce(Return(std::string(g_radio_1_bss_path_1) + ".STA.1"));
     EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1), "MACAddress",
@@ -822,6 +824,7 @@ TEST_F(DbTest, test_set_sta_link_metrics)
               m_db->get_node_data_model_path(g_radio_mac_1));
 
     //expectations for add_node_client
+    EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_client_mac)).WillRepeatedly(Return(0));
     EXPECT_CALL(*m_ambiorix, add_instance(std::string(g_radio_1_bss_path_1) + ".STA"))
         .WillOnce(Return(std::string(g_radio_1_bss_path_1) + ".STA.1"));
     EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1), "MACAddress",
