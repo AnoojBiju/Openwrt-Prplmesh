@@ -172,6 +172,8 @@ class NetgearRax40(PrplwrtDevice):
         shell.expect(self.uboot_prompt)
         # do the actual upgrade:
         shell.sendline("run update_fullimage")
+        shell.expect("Creating dynamic volume .* of size", timeout=120)
+        shell.expect(r"Writing to NAND\.\.\. OK", timeout=60)
         shell.expect(self.uboot_prompt, timeout=600)
 
     def upgrade_uboot(self):
@@ -216,6 +218,7 @@ class NetgearRax40(PrplwrtDevice):
                 shell.send('\003')
                 shell.sendline("reset")
                 self._update_fullimage(shell)
+            print("The upgrade is done, rebooting.")
             # reboot:
             shell.sendline("reset")
             shell.expect("Please press Enter to activate this console", timeout=180)
