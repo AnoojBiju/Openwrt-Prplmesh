@@ -6870,3 +6870,22 @@ bool db::dm_clear_sta_stats(const sMacAddr &sta_mac)
     dm_set_sta_traffic_stats(sta_mac, stats);
     return true;
 }
+
+bool db::dm_remove_sta(const sMacAddr &sta_mac)
+{
+    auto sta_node = get_node(sta_mac);
+
+    if (!sta_node || sta_node->get_type() != TYPE_CLIENT) {
+        LOG(ERROR) << "Failed to get station node with mac: " << sta_mac;
+        return false;
+    }
+
+    auto instance = get_dm_index_from_path(sta_node->dm_path);
+
+    if (!m_ambiorix_datamodel->remove_instance(instance.first, instance.second)) {
+        LOG(ERROR) << "Failed to remove " << sta_node->dm_path << " instance.";
+        return false;
+    }
+
+    return true;
+}

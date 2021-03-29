@@ -631,6 +631,16 @@ public:
      */
     bool dm_clear_sta_stats(const sMacAddr &sta_mac);
 
+    /**
+     * @brief Remove STA from datamodel with given MAC Address.
+     *
+     * Path: Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}
+     *
+     * @param sta_mac sta MAC address for node matching
+     * @return true on success, false otherwise.
+     */
+    bool dm_remove_sta(const sMacAddr &sta_mac);
+
     //
     // DB node functions (get only)
     //
