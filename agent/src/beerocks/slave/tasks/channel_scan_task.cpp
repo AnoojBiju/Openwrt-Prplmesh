@@ -631,6 +631,9 @@ bool ChannelScanTask::store_radio_scan_result(const std::shared_ptr<sScanRequest
             channel_scan_results.first = request->scan_start_timestamp;
             channel_scan_results.second.clear();
         }
+    } else {
+        // if there is no entry for the channel yet, create a new one with the request's timestamp
+        radio->channel_scan_results[results.channel].first = request->scan_start_timestamp;
     }
     radio->channel_scan_results[results.channel].second.push_back(results);
     return true;
