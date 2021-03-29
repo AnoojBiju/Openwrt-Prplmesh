@@ -304,6 +304,11 @@ private:
     static const int kIeee1905FragmentationThreashold = tlvf::
         MAX_TLV_SIZE; // IEEE1905 packets (CMDU) should be fragmented if larger than this threashold
 
+    // When fragmenting a message it is expected that only the last fragment will have an END OF MESSAGE TLV.
+    // However, when sending a TLV smaller than then the minimum ethernet frame, a padding is added to the frame.
+    // This padding might cause us having unwanted EOM TLV.
+    static const int kIeee1905FragmentationMinimum = 64 - 2 * 6 /* src, dest MAC */ - 2 /* Type */;
+
     //
     // NETWORK INTERFACE STUFF
     //

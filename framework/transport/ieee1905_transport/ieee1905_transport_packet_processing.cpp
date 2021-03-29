@@ -417,6 +417,11 @@ bool Ieee1905Transport::fragment_and_send_packet_to_network_interface(unsigned i
         fragment_packet.payload.iov_base = buf;
         fragment_packet.payload.iov_len  = sizeof(Ieee1905CmduHeader) + fragmentTlvsLength;
 
+        if (remainingPacketLength > 0 &&
+            fragment_packet.payload.iov_len < kIeee1905FragmentationMinimum) {
+            MAPF_WARN("Fragment is too small - possiblly padded EOM!");
+        }
+
         // send the fragment
         MAPF_DBG("sending fragment " << (int)fragmentId
                                      << " (length=" << fragment_packet.payload.iov_len << ").");
