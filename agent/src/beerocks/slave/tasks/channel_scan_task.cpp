@@ -873,11 +873,10 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
     const std::shared_ptr<sScanRequest> request)
 {
     // Lambda function that creates a Channel-Scan-Report-Message
-    auto create_channel_scan_report_message =
-        [this](int mid = 0) -> std::shared_ptr<ieee1905_1::cCmduHeader> {
+    auto create_channel_scan_report_message = [this]() -> std::shared_ptr<ieee1905_1::cCmduHeader> {
         LOG(DEBUG) << "Creating new Channel Scan Report Message";
         auto cmdu_tx_header =
-            m_cmdu_tx.create(mid, ieee1905_1::eMessageType::CHANNEL_SCAN_REPORT_MESSAGE);
+            m_cmdu_tx.create(0, ieee1905_1::eMessageType::CHANNEL_SCAN_REPORT_MESSAGE);
         if (!cmdu_tx_header) {
             LOG(ERROR) << "Failed to create CMDU of type CHANNEL_SCAN_REPORT_MESSAGE";
             return nullptr;
@@ -1092,7 +1091,7 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
     LOG(TRACE) << results_vec->size() << " results vectors found!";
 
     // Create new Report-Message
-    auto channel_scan_report_header = create_channel_scan_report_message(request_info->mid);
+    auto channel_scan_report_header = create_channel_scan_report_message();
     if (!channel_scan_report_header) {
         LOG(ERROR) << "Failed to Create Channel Scan Report Message";
         return false;
@@ -1121,7 +1120,7 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
                 LOG(ERROR) << "Failed to Send Channel Scan Report Message";
                 return false;
             }
-            // Create new Report-Message with no mid (mid = 0)
+            // Create new Report-Message
             channel_scan_report_header = create_channel_scan_report_message();
             if (!channel_scan_report_header) {
                 LOG(ERROR) << "Failed to Create Channel Scan Report Message";
