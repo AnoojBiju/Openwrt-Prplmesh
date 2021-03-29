@@ -264,7 +264,6 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
 
     auto is_current_scan_running = [this]() -> bool {
         if (!m_current_scan_info.is_scan_currently_running) {
-            LOG(DEBUG) << "ERROR: No scan is currently running";
             return false;
         }
         return true;
@@ -332,7 +331,13 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
             return false;
         }
 
-        if (!is_current_scan_running() || !does_current_scan_match_incoming_src(src_mac) ||
+        if (!is_current_scan_running()) {
+            LOG(INFO) << "No channel scan is currently running, ignore channel scan notifications "
+                         "gracefully.";
+            return true;
+        }
+
+        if (!does_current_scan_match_incoming_src(src_mac) ||
             !is_current_scan_in_state(eState::WAIT_FOR_SCAN_TRIGGERED)) {
             return false;
         }
@@ -353,7 +358,11 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
             return false;
         }
 
-        if (!is_current_scan_running() || !does_current_scan_match_incoming_src(src_mac)) {
+        if (!is_current_scan_running()) {
+            return true;
+        }
+
+        if (!does_current_scan_match_incoming_src(src_mac)) {
             return false;
         }
 
@@ -399,7 +408,11 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
         }
         radio->statuses.channel_scan_in_progress = false;
 
-        if (!is_current_scan_running() || !does_current_scan_match_incoming_src(src_mac) ||
+        if (!is_current_scan_running()) {
+            return true;
+        }
+
+        if (!does_current_scan_match_incoming_src(src_mac) ||
             !is_current_scan_in_state(eState::WAIT_FOR_RESULTS_DUMP)) {
             return false;
         }
