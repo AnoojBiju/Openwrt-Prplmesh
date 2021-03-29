@@ -22,6 +22,8 @@
 
 #include <chrono>
 
+constexpr uint8_t INTERVAL_TIME_BETWEEN_RETRIES_ON_FAILURE_SEC = 120;
+
 namespace son {
 
 class dynamic_channel_selection_r2_task : public task, public std::enable_shared_from_this<task> {
@@ -31,8 +33,13 @@ public:
     bool handle_ieee1905_1_msg(const std::string &src_mac,
                                ieee1905_1::CmduMessageRx &cmdu_rx) override;
 
-    struct sScanRequestEvent {
+    struct sSingleScanRequestEvent {
         sMacAddr radio_mac;
+    };
+
+    struct sContinuousScanRequestStateChangeEvent {
+        sMacAddr radio_mac;
+        bool enable;
     };
 
     struct sScanReportEvent {
@@ -40,9 +47,14 @@ public:
         uint16_t mid;
     };
 
-    enum eEvent : uint8_t { TRIGGER_SINGLE_SCAN, RECEIVED_CHANNEL_SCAN_REPORT };
+    enum eEvent : uint8_t {
+        TRIGGER_SINGLE_SCAN,
+        RECEIVED_CHANNEL_SCAN_REPORT,
+        CONTINUOUS_STATE_CHANGED_PER_RADIO
+    };
 
     enum class eRadioScanStatus : uint8_t { PENDING, TRIGGERED_WAIT_FOR_ACK, SCAN_IN_PROGRESS };
+
     enum class eAgentStatus : uint8_t { IDLE, BUSY };
 
     // Struct of the status of an agent and it's scan requests
