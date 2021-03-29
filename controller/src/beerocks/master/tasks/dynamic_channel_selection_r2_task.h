@@ -146,7 +146,7 @@ private:
      * @param scan_request_event Refernce to sScanRequestEvent object.
      * @return true if successful, false otherwise.
      */
-    bool handle_scan_request_event(const sScanRequestEvent &scan_request_event);
+    bool handle_scan_request_event();
 
     /**
      * @brief Handle scan report events
