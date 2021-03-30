@@ -640,7 +640,6 @@ bool dynamic_channel_selection_r2_task::handle_continuous_scan_request_event(
 bool dynamic_channel_selection_r2_task::handle_scan_report_event(
     const sScanReportEvent &scan_report_event)
 {
-
     // Remove all active scans from the agent and mark it as idle.
 
     //TODO: Insert mid_to_agent_map validation here when mid of outgoing request messages is known.
@@ -654,7 +653,65 @@ bool dynamic_channel_selection_r2_task::handle_scan_report_event(
         return false;
     }
 
+    auto agent_status = agent_it->second;
+
+    if (!agent_status.single_radio_scans.empty()) {
+        // remove all radio_scan_request in-progress from agent queue
+        auto scan_it = agent_it->second.single_radio_scans.begin();
+        while (scan_it != agent_it->second.single_radio_scans.end()) {
+            if (scan_it->second.status == eRadioScanStatus::SCAN_IN_PROGRESS) {
+                auto radio_mac = scan_it->first;
+                database.set_channel_scan_in_progress(radio_mac, false,
+                                                      scan_it->second.is_single_scan);
+                database.set_channel_scan_results_status(radio_mac,
+                                                         beerocks::eChannelScanStatusCode::SUCCESS,
+                                                         scan_it->second.is_single_scan);
+
+                scan_it = m_agents_status_map[agent_mac].single_radio_scans.erase(scan_it);
+            } else {
+                ++scan_it;
+            }
+        }
+    }
+
+    if (!agent_status.continuous_radio_scans.empty()) {
+        auto scan_it = agent_it->second.continuous_radio_scans.begin();
+        while (scan_it != agent_it->second.continuous_radio_scans.end()) {
+            if (scan_it->second.status == eRadioScanStatus::SCAN_IN_PROGRESS) {
+                auto radio_mac = scan_it->first;
+                database.set_channel_scan_in_progress(radio_mac, false,
+                                                      scan_it->second.is_single_scan);
+                database.set_channel_scan_results_status(radio_mac,
+                                                         beerocks::eChannelScanStatusCode::SUCCESS,
+                                                         scan_it->second.is_single_scan);
+
+                if (database.get_channel_scan_is_enabled(radio_mac)) {
+                    // Reschedule continuous scan
+                    auto interval =
+                        std::chrono::seconds(database.get_channel_scan_interval_sec(radio_mac));
+                    m_agents_status_map[agent_mac].continuous_radio_scans[radio_mac].status =
+                        eRadioScanStatus::PENDING;
+
+                    m_agents_status_map[agent_mac]
+                        .continuous_radio_scans[radio_mac]
+                        .next_time_scan = std::chrono::system_clock::now() + interval;
+                    ++scan_it;
+                } else {
+                    scan_it = m_agents_status_map[agent_mac].continuous_radio_scans.erase(scan_it);
+                }
+            } else {
+                ++scan_it;
+            }
+        }
+    }
+
     agent_it->second.status = eAgentStatus::IDLE;
+
+    // Remove an empty sAgentScanStatus object
+    if (agent_it->second.single_radio_scans.empty() &&
+        agent_it->second.continuous_radio_scans.empty()) {
+        m_agents_status_map.erase(agent_it);
+    }
 
     return true;
 }
