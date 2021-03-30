@@ -820,6 +820,12 @@ class RadioHostapd(Radio):
     def __init__(self, agent: ALEntityPrplWrt, iface_name: str):
         self.iface_name = iface_name
         self.agent = agent
+
+        # Workaround.
+        # One radio has an extra prompt in the input. The second one does not.
+        # Support both situations.
+        self.agent.device.expect(self.agent.device.prompt + [pexpect.TIMEOUT], timeout=5)
+
         ip_raw = self.agent.command("ip link list dev {}".format(self.iface_name))
         mac = re.search(r"link/ether (([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})",
                         ip_raw).group(1)
