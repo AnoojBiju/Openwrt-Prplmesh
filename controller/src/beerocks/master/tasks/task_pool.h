@@ -35,9 +35,8 @@ public:
      *
      * @param src_mac MAC address of the message sender.
      * @param cmdu_rx CMDU object containing the received message to be handled.
-     * @return True if the message has been handled, otherwise false.
      */
-    bool handle_ieee1905_1_msg(const std::string &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
+    void handle_ieee1905_1_msg(const std::string &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
 
 private:
     std::unordered_map<int, std::shared_ptr<task>> m_scheduled_tasks;
