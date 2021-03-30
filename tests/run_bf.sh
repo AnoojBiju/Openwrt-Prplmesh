@@ -20,7 +20,31 @@ while [[ "$#" -gt 0 ]]; do
         --test-suite)
             shift
             [[ "$#" -eq 0 ]] && echo "no test suite specified" && exit 1
-            TEST_SUITE="$1"
+            if [[ "$1" =~ ^TEST_LIST:(.*)$ ]]; then
+                # Boardfarm implied interactive mode if tests are supplied via command line.
+                # So we have to create a temporary file with the tests wrapped in a test suite.
+
+                TESTS="${BASH_REMATCH[1]}"
+                echo "Preparing environment to run following tests: ${TESTS}"
+
+                temp_bf_plugins_dir="$(mktemp -d -t boardfarm_plugins-XXXX)"
+                trap 'rm -rf "$temp_bf_plugins_dir"' EXIT
+
+                echo "Copying ${bf_plugins_dir} to ${temp_bf_plugins_dir}"
+                cp -R "${bf_plugins_dir}/." "${temp_bf_plugins_dir}"
+
+                bf_plugins_dir="${temp_bf_plugins_dir}"
+
+                test_suites_file="${bf_plugins_dir}/boardfarm_prplmesh/testsuites.cfg"
+                echo "Generating test suite file in ${test_suites_file}"
+
+                echo "[testsuite]" > "$test_suites_file"
+                echo "${TESTS}" | tr ',' '\n' >> "$test_suites_file"
+
+                TEST_SUITE="testsuite"
+            else
+                TEST_SUITE="$1"
+            fi
             shift
             ;;
         *)
