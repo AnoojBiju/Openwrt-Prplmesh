@@ -49,7 +49,7 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
         self.role = config.get("role", "agent")
         self.connection_type = config.get("connection_type", None)
         self.conn_cmd = config.get("conn_cmd", None)
-        self.wan_ip = config.get("wan_ip", None)
+        self.control_ip = config.get("control_ip", None)
         self.username = config.get("username", "root")
         self.host_iface_to_device = config.get("iface_to_device")
         if not self.host_iface_to_device:
@@ -64,7 +64,7 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
 
         # If no WAN IP is set in config file retrieve IP from docker network set in config
         # X.X.X.245 IP will be selected from docker network
-        if not self.wan_ip:
+        if not self.control_ip:
             self.connection = connection_decider.connection(device=self,
                                                             conn_type="local_serial",
                                                             **kwargs)
@@ -72,8 +72,8 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
             self.consoles = [self]
             self.logfile_read = sys.stdout
             self.wan_network = self.get_docker_subnet()
-            self.wan_ip = self.wan_network[+245]
-            self.set_iface_ip("br-lan", self.wan_ip, self.wan_network.prefixlen)
+            self.control_ip = self.wan_network[+245]
+            self.set_iface_ip("br-lan", self.control_ip, self.wan_network.prefixlen)
             self.close()
             self.kill(signal.SIGTERM)
             # Removal of PID is required by pexpect in order to spawn a new process
@@ -86,7 +86,7 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
         # Boards will be reflashed from time to time and it will change their ssh identity.
         conn_cmd = "ssh -o PubkeyAuthentication=no" \
                    " -o StrictHostKeyChecking=no" \
-                   " {}@{}".format(self.username, self.wan_ip)
+                   " {}@{}".format(self.username, self.control_ip)
 
         self.connection = connection_decider.connection(device=self,
                                                         conn_type="ssh",
@@ -238,23 +238,23 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
     def copy_logs_over_ssh(self, logdir, dirs_to_copy, commands_to_run):
         """Specialized version of `copy_logs`. Copies logs via ssh/scp.
         """
-        print(f'Copying logs from {self.wan_ip} to {logdir}')
+        print(f'Copying logs from {self.control_ip} to {logdir}')
 
         os.makedirs(logdir, exist_ok=True)
 
         for src, dst in dirs_to_copy:
-            cmd = ['scp', '-r', f'root@{self.wan_ip}:{src}', f'{logdir}/{dst}']
+            cmd = ['scp', '-r', f'root@{self.control_ip}:{src}', f'{logdir}/{dst}']
             subprocess.run(cmd)
 
         for command, output_filename in commands_to_run:
             with open(f'{logdir}/{output_filename}', 'w') as outfile:
-                subprocess.run(['ssh', f'root@{self.wan_ip}', command], stdout=outfile,
+                subprocess.run(['ssh', f'root@{self.control_ip}', command], stdout=outfile,
                                stderr=outfile)
 
     def copy_logs(self):
         """Copy logs from the device"""
 
-        logdir = f'../logs/device-{self.wan_ip}'
+        logdir = f'../logs/device-{self.control_ip}'
 
         dirs_to_copy = [
             # beerock logs
