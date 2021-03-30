@@ -18,6 +18,10 @@
 #include <easylogging++.h>
 #include <math.h>
 
+extern "C" {
+#include <dwpal.h>
+}
+
 #ifdef USE_LIBSAFEC
 #define restrict __restrict
 #include <libsafec/safe_str_lib.h>
@@ -81,6 +85,16 @@ static ap_wlan_hal::Event dwpal_to_bwl_event(const std::string &opcode)
     }
 
     return ap_wlan_hal::Event::Invalid;
+}
+
+static ap_wlan_hal::Event dwpal_nl_to_bwl_event(uint8_t cmd)
+{
+    switch (cmd) {
+    case NL80211_CMD_GET_WIPHY:
+        return ap_wlan_hal::Event::Get_Wiphy_Returned;
+    default:
+        break;
+    }
 }
 
 static uint8_t dwpal_bw_to_beerocks_bw(const uint8_t chan_width)
@@ -1420,6 +1434,43 @@ bool ap_wlan_hal_dwpal::wds_clear_list()
     return true;
 }
 
+bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
+{
+    struct nlmsghdr *nlh    = nlmsg_hdr(msg);
+    struct genlmsghdr *gnlh = (genlmsghdr *)nlmsg_data(nlh);
+    std::string iface_name;
+
+    struct nlattr *tb[NL80211_ATTR_MAX + 1];
+    nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0), genlmsg_attrlen(gnlh, 0), NULL);
+
+    if (tb[NL80211_ATTR_IFINDEX]) {
+        auto index = nla_get_u32(tb[NL80211_ATTR_IFINDEX]);
+        iface_name = beerocks::net::network_utils::linux_get_iface_name(index);
+    }
+
+    auto event = dwpal_nl_to_bwl_event(gnlh->cmd);
+
+    switch (event) {
+    case Event::Get_Wiphy_Returned: {
+        if (m_radio_info.iface_name != iface_name) {
+            // ifname doesn't match current interface
+            // meaning the event was received for a diffrent channel
+            return true;
+        }
+
+        if (tb[NL80211_ATTR_WIPHY_DFS_ANTENNA]) {
+            auto index = nla_get_bool(tb[NL80211_ATTR_WIPHY_DFS_ANTENNA]);
+        }
+        break;
+    }
+    // Gracefully ignore unhandled events
+    default:
+        LOG(ERROR) << "Unknown DWPAL NL event received: " << int(event);
+        break;
+    }
+    return true;
+}
+
 bool ap_wlan_hal_dwpal::failsafe_channel_set(int chan, int bw, int vht_center_frequency)
 {
     // Channel number of the new channel or ‘0’ to trigger low level channel selection algorithm.
@@ -1502,9 +1553,15 @@ bool ap_wlan_hal_dwpal::failsafe_channel_get(int &chan, int &bw)
 
 bool ap_wlan_hal_dwpal::is_zwdfs_supported()
 {
-    // This is a temporary w/a until NL80211_ATTR_WIPHY_DFS_ANTENNA is implemented.
-    // For now we can identify zwdfs interface by making sure it has no vaps.
-    return (m_radio_info.available_vaps.size() == 0);
+    char *reply = nullptr;
+    // Build command string
+    std::string cmd = "GET_WIPHY" + get_iface_name();
+
+    // Send command
+    if (!dwpal_send_cmd(cmd, &reply)) {
+        LOG(ERROR) << "get_wiphy() with radio name: " << get_iface_name() << "failed!";
+        return false;
+    }
 }
 
 bool ap_wlan_hal_dwpal::set_zwdfs_antenna(bool enable)

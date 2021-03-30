@@ -65,7 +65,9 @@ public:
         DFS_RADAR_Detected,
         AP_MGMT_FRAME_RECEIVED,
 
-        MGMT_Frame /**< 802.11 management frame payload */
+        MGMT_Frame, /**< 802.11 management frame payload */
+
+        Get_Wiphy_Returned
     };
 
     // Public methods
