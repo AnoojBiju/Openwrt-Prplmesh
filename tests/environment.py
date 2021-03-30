@@ -361,7 +361,7 @@ def _device_wait_for_log(device: None, log_paths: [str], regex: str,
     # Expect the prompt and the end of the line, to make sure we match
     # the last one. Doing this will make sure we don't keep old data
     # in the buffer.
-    device.expect(['{}$'.format(device.prompt), pexpect.TIMEOUT, pexpect.EOF])
+    device.expect(device.prompt)
     device.sendline("tail -f -n +{:d} {}".format(start_line + 1, " ".join(log_paths)))
 
     match = None
