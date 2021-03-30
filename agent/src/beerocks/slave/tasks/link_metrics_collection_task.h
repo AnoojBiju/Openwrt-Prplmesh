@@ -221,6 +221,15 @@ private:
     };
 
     std::vector<sApMetricsResponse> m_ap_metric_response;
+
+    struct sRadioMetrics {
+        sMacAddr radio_uid;
+        uint8_t noise;
+        uint8_t transmit;
+        uint8_t receive_self;
+        uint8_t receive_other;
+    };
+    std::vector<sRadioMetrics> m_radio_ap_metric_response;
 };
 
 } // namespace beerocks

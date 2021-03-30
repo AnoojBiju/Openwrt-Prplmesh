@@ -36,6 +36,7 @@
 #include <tlvf/wfa_map/tlvApRadioBasicCapabilities.h>
 #include <tlvf/wfa_map/tlvApRadioIdentifier.h>
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
+#include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
 #include <tlvf/wfa_map/tlvBeaconMetricsResponse.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvChannelScanReportingPolicy.h>
@@ -48,8 +49,10 @@
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 #include <tlvf/wfa_map/tlvProfile2ApRadioAdvancedCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2Default802dotQSettings.h>
+#include <tlvf/wfa_map/tlvProfile2ReasonCode.h>
 #include <tlvf/wfa_map/tlvProfile2SteeringRequest.h>
 #include <tlvf/wfa_map/tlvProfile2TrafficSeparationPolicy.h>
+#include <tlvf/wfa_map/tlvStaMacAddressType.h>
 #include <tlvf/wfa_map/tlvSteeringBTMReport.h>
 #include <tlvf/wfa_map/tlvSteeringRequest.h>
 #include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
@@ -2224,7 +2227,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         auto &bssid      = notification_in->params().bssid;
         LOG(INFO) << "client disconnected sta_mac=" << client_mac << " from bssid=" << bssid;
 
-        //notify master
+        // notify master
         if (!master_socket) {
             LOG(DEBUG) << "Controller is not connected";
             return true;
@@ -2269,6 +2272,43 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             vs_tlv->disconnect_source() = notification_in->params().source;
             vs_tlv->disconnect_type()   = notification_in->params().type;
         }
+
+        send_cmdu_to_controller(cmdu_tx);
+
+        // profile-2
+
+        // build 1905.1 0x8022 Client Disassociation Stats
+        // message CMDU to send to the controller
+        if (!cmdu_tx.create(0, ieee1905_1::eMessageType::CLIENT_DISASSOCIATION_STATS_MESSAGE)) {
+            LOG(ERROR) << "cmdu creation of type CLIENT_DISASSOCIATION_STATS_MESSAGE, has failed";
+            return false;
+        }
+
+        // 17.2.23 STA MAC Address Type
+        auto sta_mac_address_tlv = cmdu_tx.addClass<wfa_map::tlvStaMacAddressType>();
+        if (!sta_mac_address_tlv) {
+            LOG(ERROR) << "addClass sta_mac_address_tlv failed";
+            return false;
+        }
+        sta_mac_address_tlv->sta_mac() = notification_in->params().mac;
+
+        // 17.2.64 Reason Code
+        auto reason_code_tlv = cmdu_tx.addClass<wfa_map::tlvProfile2ReasonCode>();
+        if (!reason_code_tlv) {
+            LOG(ERROR) << "addClass reason_code_tlv failed";
+            return false;
+        }
+        reason_code_tlv->reason_code() = wfa_map::tlvProfile2ReasonCode::LEAVING_NETWORK_DISASSOC;
+
+        // 17.2.35 Associated STA Traffic Stats
+        // TEMPORARY: adding empty statistics
+        auto associated_sta_traffic_stats_tlv =
+            cmdu_tx.addClass<wfa_map::tlvAssociatedStaTrafficStats>();
+        if (!associated_sta_traffic_stats_tlv) {
+            LOG(ERROR) << "addClass associated_sta_traffic_stats_tlv failed";
+            return false;
+        }
+        associated_sta_traffic_stats_tlv->sta_mac() = notification_in->params().mac;
 
         send_cmdu_to_controller(cmdu_tx);
 
@@ -5331,9 +5371,6 @@ bool slave_thread::handle_beacon_metrics_query(Socket *sd, ieee1905_1::CmduMessa
 
 bool slave_thread::handle_ap_metrics_query(Socket &sd, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
-    const auto mid = cmdu_rx.getMessageId();
-    LOG(DEBUG) << "Forwarding AP_METRICS_QUERY_MESSAGE to monitor_socket, mid=" << std::hex
-               << int(mid);
     uint16_t length = message_com::get_uds_header(cmdu_rx)->length;
     cmdu_rx.swap(); // swap back before forwarding
     if (!message_com::forward_cmdu_to_uds(monitor_socket, cmdu_rx, length)) {
@@ -5346,17 +5383,12 @@ bool slave_thread::handle_ap_metrics_query(Socket &sd, ieee1905_1::CmduMessageRx
 bool slave_thread::handle_monitor_ap_metrics_response(Socket &sd,
                                                       ieee1905_1::CmduMessageRx &cmdu_rx)
 {
-    const auto mid = cmdu_rx.getMessageId();
-    LOG(DEBUG) << "Forwarding AP_METRICS_RESPONSE_MESSAGE to backhaul_manager, mid=" << std::hex
-               << int(mid);
-
     uint16_t length = message_com::get_uds_header(cmdu_rx)->length;
     cmdu_rx.swap(); // swap back before forwarding
     if (!message_com::forward_cmdu_to_uds(backhaul_manager_socket, cmdu_rx, length)) {
         LOG(ERROR) << "Failed sending AP_METRICS_RESPONSE_MESSAGE message to backhaul_manager";
         return false;
     }
-
     return true;
 }
 
