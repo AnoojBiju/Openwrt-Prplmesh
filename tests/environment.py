@@ -877,8 +877,8 @@ class RadioHostapd(Radio):
         device.expect(
             r"channel (?P<channel>[0-9]+) [^\r\n]*width[^\r\n]* (?P<width>[0-9]+) " +
             r"MHz[^\r\n]*center1[^\r\n]* (?P<center>[0-9]+) MHz")
-        return ChannelInfo(device.match.group('channel'), device.match.group('width'),
-                           device.match.group('center'))
+        return ChannelInfo(int(device.match.group('channel')), int(device.match.group('width')),
+                           int(device.match.group('center')))
 
     def get_power_limit(self) -> int:
         device = self.agent.device
