@@ -503,6 +503,11 @@ bool topology_task::handle_topology_notification(const std::string &src_mac,
             LOG(WARNING) << "Failed to notify disconnection event.";
         }
 
+        // After disassociation STA needs to be removed from data model.
+        if (!database.dm_remove_sta(tlvf::mac_from_string(client_mac_str))) {
+            LOG(ERROR) << "Failed to remove STA from data model mac:" << client_mac_str;
+        }
+
         bool reported_by_parent = bssid_str == database.get_node_parent(client_mac_str);
         // TODO this is probably wrong - if reported_by_parent is true, the client has already
         // connected to something else so it is not dead at all.

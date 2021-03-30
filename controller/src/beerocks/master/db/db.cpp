@@ -5992,11 +5992,25 @@ std::string db::dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client
     }
 
     std::string path_to_sta = path_to_bss + "STA";
-    auto sta_instance       = m_ambiorix_datamodel->add_instance(path_to_sta);
-    if (sta_instance.empty()) {
-        LOG(ERROR) << "Failed to add sta instance " << path_to_sta << ". STA mac: " << client_mac;
-        return {};
+    std::string sta_instance;
+
+    // TODO remove after refactoring Database nodes PPM-1057.
+    // Verifying a STA is already added or not with datamodel method is bad practice.
+    // Database node handling eliminate this action.
+    auto sta_index = m_ambiorix_datamodel->get_instance_index(
+        path_to_sta + ".[MACAddress == '%s'].", tlvf::mac_to_string(client_mac));
+
+    if (sta_index) {
+        sta_instance = path_to_sta + "." + std::to_string(sta_index);
+    } else {
+        sta_instance = m_ambiorix_datamodel->add_instance(path_to_sta);
+        if (sta_instance.empty()) {
+            LOG(ERROR) << "Failed to add sta instance " << path_to_sta
+                       << ". STA mac: " << client_mac;
+            return {};
+        }
     }
+
     if (!m_ambiorix_datamodel->set(sta_instance, "MACAddress", tlvf::mac_to_string(client_mac))) {
         LOG(ERROR) << "Failed to set " << sta_instance << ".MACAddress: " << client_mac;
         return {};
@@ -6012,6 +6026,7 @@ std::string db::dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client
         LOG(ERROR) << "Failed to set " << sta_instance << ".TimeStamp: " << time_stamp;
         return {};
     }
+
     uint64_t add_sta_time = time(NULL);
     if (!m_ambiorix_datamodel->set(sta_instance, "LastConnectTime", add_sta_time)) {
         LOG(ERROR) << "Failed to set " << sta_instance << ".LastConnectTime: " << add_sta_time;
@@ -6853,5 +6868,24 @@ bool db::dm_clear_sta_stats(const sMacAddr &sta_mac)
 
     sAssociatedStaTrafficStats stats;
     dm_set_sta_traffic_stats(sta_mac, stats);
+    return true;
+}
+
+bool db::dm_remove_sta(const sMacAddr &sta_mac)
+{
+    auto sta_node = get_node(sta_mac);
+
+    if (!sta_node || sta_node->get_type() != TYPE_CLIENT) {
+        LOG(ERROR) << "Failed to get station node with mac: " << sta_mac;
+        return false;
+    }
+
+    auto instance = get_dm_index_from_path(sta_node->dm_path);
+
+    if (!m_ambiorix_datamodel->remove_instance(instance.first, instance.second)) {
+        LOG(ERROR) << "Failed to remove " << sta_node->dm_path << " instance.";
+        return false;
+    }
+
     return true;
 }
