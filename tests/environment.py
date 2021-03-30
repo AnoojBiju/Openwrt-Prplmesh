@@ -792,6 +792,8 @@ class ALEntityPrplWrt(ALEntity):
 
     def command(self, *command: str) -> bytes:
         """Execute `command` in device and return its output."""
+        _device_reset_console(self.device)
+
         self.device.sendline(" ".join(command))
         self.device.expect(self.device.prompt, timeout=10)
         return self.device.before
@@ -853,12 +855,18 @@ class RadioHostapd(Radio):
     def get_mac(self, iface: str) -> str:
         """Return mac of specified iface"""
         device = self.agent.device
+
+        _device_reset_console(device)
+
         device.sendline("ip link show {}".format(iface))
         device.expect("link/ether (?P<mac>([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})")
         return device.match.group('mac')
 
     def get_current_channel(self) -> ChannelInfo:
         device = self.agent.device
+
+        _device_reset_console(device)
+
         device.sendline("iw {} info".format(self.iface_name))
         device.expect(
             r"channel (?P<channel>[0-9]+) [^\r\n]*width[^\r\n]* (?P<width>[0-9]+) " +
@@ -868,6 +876,9 @@ class RadioHostapd(Radio):
 
     def get_power_limit(self) -> int:
         device = self.agent.device
+
+        _device_reset_console(device)
+
         device.sendline("iw {} info".format(self.iface_name))
         device.expect(r"txpower (?P<power_limit>[0-9]*)(\.0+)? dBm")
         return int(device.match.group('power_limit'))
