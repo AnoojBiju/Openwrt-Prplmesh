@@ -4821,7 +4821,7 @@ bool slave_thread::handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMess
                                            PROFILE2_BACKHAUL_STA_ASSOCIATION_DISALLOWED) &&
                    db->traffic_separation.secondaries_vlans_ids.size() > 0) {
             LOG(WARNING) << "Controller configured Backhaul BSS for combined Profile1 and "
-                         << "Profile2, but it is not supproted!";
+                         << "Profile2, but it is not supported!";
             bss_errors.push_back(
                 {wfa_map::tlvProfile2ErrorCode::eReasonCode::
                      TRAFFIC_SEPARATION_ON_COMBINED_PROFILE1_BACKHAUL_AND_PROFILE2_BACKHAUL_UNSUPPORTED,
