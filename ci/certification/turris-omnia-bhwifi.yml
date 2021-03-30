@@ -9,11 +9,8 @@ MAP-4.2.2_BH24G:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.2_BH24G:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
-    - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train"'
-      when: on_success
     - when: manual
       allow_failure: true
-  retry: 2
 
 MAP-4.2.2_BH5GL:turris-omnia:
   extends: .certification:turris-omnia-bhwifi
