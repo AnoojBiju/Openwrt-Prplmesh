@@ -31,7 +31,7 @@ Properties related to both setup and device:
 	* Empty if current console is the remote console (typically for docker devices).
 	* For real devices:
 		* in practice:  this parameter is ignored. It has just to be present.
-		  SSH connection to **wan_ip** is used.
+		  SSH connection to **control_ip** is used.
 		* in theory: It is meant to be a command to connect via serial port/ssh/etc.
 		  Example: `cu -s 115200 -l /dev/ttyUSB0 -f`.
 * **docker\_network**: docker network name.
@@ -45,7 +45,7 @@ Setup properties:
 	Currently only one interface is supported.
 	If you need more than one you can either modify the source code (the change is trivial)
 	or connect all your devices via an intermediate switch.
-* **wan_ip**: IP address of the connected prplMesh device. This is used to connect to the device using SSH.
+* **control_ip**: IP address of the connected prplMesh device on control network. This is used to connect to the device using SSH.
 
 Device properties:
 ------------------
