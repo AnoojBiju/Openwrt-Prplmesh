@@ -20,8 +20,11 @@ MAP-4.2.1:turris-omnia:
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.1:turris-omnia.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
+    - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train"'
+      when: on_success
     - when: manual
       allow_failure: true
+  retry: 2
 
 MAP-4.2.3_ETH_FH24G:turris-omnia:
   extends: .certification:turris-omnia
@@ -642,4 +645,3 @@ MAP-4.12.2_ETH:turris-omnia:
       when: on_success
     - when: manual
       allow_failure: true
-
