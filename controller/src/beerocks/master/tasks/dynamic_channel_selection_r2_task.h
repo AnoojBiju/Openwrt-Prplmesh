@@ -146,6 +146,25 @@ private:
     task_pool &tasks;
 
     /**
+     * @brief Handle single scan request events.
+     * Add a radio scan request in the event to pending scan requests.
+     * 
+     * @param scan_request_event Refernce to sSingleScanRequestEvent object.
+     * @return true if successful, false otherwise.
+     */
+    bool handle_single_scan_request_event(const sSingleScanRequestEvent &scan_request_event);
+
+    /**
+     * @brief Handle continuous scan request events.
+     * Add a radio scan request in the event to pending scan requests.
+     * 
+     * @param scan_request_event Refernce to sContinuousScanRequestStateChangeEvent object.
+     * @return true if successful, false otherwise.
+     */
+    bool handle_continuous_scan_request_event(
+        const sContinuousScanRequestStateChangeEvent &scan_request_event);
+
+    /**
      * @brief Check the scans queue for any pending requests in idle agents
      * 
      * @return true if pending scan in idle agent found, false otherwise.

@@ -64,7 +64,11 @@ void dynamic_channel_selection_r2_task::handle_event(int event_enum_value, void 
 {
     switch (eEvent(event_enum_value)) {
     case TRIGGER_SINGLE_SCAN: {
+        auto scan_request_event = reinterpret_cast<const sSingleScanRequestEvent *>(event_obj);
+        LOG(TRACE) << "Received TRIGGER_SINGLE_SCAN event for mac:"
+                   << scan_request_event->radio_mac;
 
+        handle_single_scan_request_event(*scan_request_event);
         break;
     }
     case RECEIVED_CHANNEL_SCAN_REPORT: {
@@ -74,6 +78,15 @@ void dynamic_channel_selection_r2_task::handle_event(int event_enum_value, void 
                    << scan_report_event->mid;
 
         handle_scan_report_event(*scan_report_event);
+        break;
+    }
+    case CONTINUOUS_STATE_CHANGED_PER_RADIO: {
+        auto scan_request_event =
+            reinterpret_cast<const sContinuousScanRequestStateChangeEvent *>(event_obj);
+        LOG(TRACE) << "Received CONTINUOUS_STATE_CHANGED_PER_RADIO event for mac:"
+                   << scan_request_event->radio_mac << " enable: " << scan_request_event->enable;
+
+        handle_continuous_scan_request_event(*scan_request_event);
         break;
     }
     default: {
@@ -128,7 +141,130 @@ bool dynamic_channel_selection_r2_task::is_scan_triggered_for_radio(const sMacAd
     return true;
 }
 
-bool dynamic_channel_selection_r2_task::handle_scan_request_event() { return true; }
+bool dynamic_channel_selection_r2_task::handle_single_scan_request_event(
+    const sSingleScanRequestEvent &scan_request_event)
+{
+    // Add pending scan request for radio to the task status container
+    const auto &radio_mac = scan_request_event.radio_mac;
+
+    // Get parent agent mac from radio mac
+    auto radio_mac_str = tlvf::mac_to_string(radio_mac);
+    auto ire           = database.get_node_parent_ire(radio_mac_str);
+    if (ire.empty()) {
+        LOG(ERROR) << "Failed to get node_parent_ire!";
+        return false;
+    }
+
+    // Add agent to the container if it doesn't exist yet
+    auto ire_mac = tlvf::mac_from_string(ire);
+    auto agent   = m_agents_status_map.find(ire_mac);
+    if (agent == m_agents_status_map.end()) {
+        // Add agent to the queue
+        m_agents_status_map[ire_mac] = sAgentScanStatus();
+    }
+
+    auto agent_it = m_agents_status_map.find(ire_mac);
+    if (agent_it != m_agents_status_map.end()) {
+        auto agent_mac      = tlvf::mac_from_string(ire);
+        const auto &scan_it = m_agents_status_map[agent_mac].single_radio_scans.find(radio_mac);
+        if (scan_it != m_agents_status_map[agent_mac].single_radio_scans.cend()) {
+            return false;
+        }
+    }
+
+    const auto &pool = database.get_channel_scan_pool(scan_request_event.radio_mac, true);
+    if (pool.empty()) {
+        LOG(TRACE) << "continuous_scan cannot proceed without channel_scan list";
+        return false;
+    }
+
+    int32_t dwell_time_msec = database.get_channel_scan_dwell_time_msec(radio_mac, true);
+    if (dwell_time_msec <= 0) {
+        LOG(TRACE) << "continuous_scan cannot proceed without dwell_time value";
+        return false;
+    }
+
+    m_agents_status_map[ire_mac].single_radio_scans[radio_mac] =
+        sAgentScanStatus::sRadioScanRequest();
+    m_agents_status_map[ire_mac].single_radio_scans[radio_mac].is_single_scan = true;
+
+    return true;
+}
+
+bool dynamic_channel_selection_r2_task::handle_continuous_scan_request_event(
+    const sContinuousScanRequestStateChangeEvent &scan_request_event)
+{
+    // Add pending scan request for radio to the task status container
+    const auto &radio_mac = scan_request_event.radio_mac;
+
+    // Get parent agent mac from radio mac
+    auto radio_mac_str = tlvf::mac_to_string(radio_mac);
+    auto ire           = database.get_node_parent_ire(radio_mac_str);
+    if (ire.empty()) {
+        LOG(ERROR) << "Failed to get node_parent_ire!";
+        return false;
+    }
+
+    auto agent_mac = tlvf::mac_from_string(ire);
+
+    // If received "enable" add the continuous radio request (and the agent that manages it if it doesn't exist yet).
+    // If received "disable" and the radio is in the agent's status map and not in progress, remove it. If after
+    // the removal the agent has no radio scan requests (is empty) then it will also be removed.
+    // If continuous radio scan request is in progress then we will not remove it and it will be removed when the scan
+    // is complete. Otherwise, do nothing.
+    const auto &agent = m_agents_status_map.find(agent_mac);
+    if (agent == m_agents_status_map.cend()) {
+        // Add agent to the queue
+        m_agents_status_map[agent_mac] = sAgentScanStatus();
+    }
+    // If the instruction is to disable the request, remove if pending.
+    // If not pending then will be removed when current scan is completed/aborted.
+    if (!scan_request_event.enable) {
+        // If it's not in the container stop.
+        const auto &scan_it = m_agents_status_map[agent_mac].continuous_radio_scans.find(
+            scan_request_event.radio_mac);
+        if (scan_it == m_agents_status_map[agent_mac].continuous_radio_scans.cend()) {
+            return false;
+        }
+        // If it's not pending stop
+        if (scan_it->second.status != eRadioScanStatus::PENDING) {
+            LOG(WARNING) << "scan is currently pending will be removed at the next response";
+            return false;
+        }
+
+        // We can remove it now
+        m_agents_status_map[agent_mac].continuous_radio_scans.erase(scan_request_event.radio_mac);
+
+        LOG(DEBUG) << "Continuous Radio Scan"
+                   << " mac: " << scan_it->first << " was succesfuly deleted from the container";
+        return false;
+    }
+
+    if (database.get_channel_scan_interval_sec(scan_request_event.radio_mac) <= 0) {
+        LOG(ERROR) << "continuous_scan cannot proceed without channel_scan interval";
+        return false;
+    }
+
+    const auto &pool = database.get_channel_scan_pool(scan_request_event.radio_mac, false);
+    if (pool.empty()) {
+        LOG(ERROR) << "continuous_scan cannot proceed without channel_scan list";
+        return false;
+    }
+
+    int32_t dwell_time_msec = database.get_channel_scan_dwell_time_msec(radio_mac, false);
+    if (dwell_time_msec <= 0) {
+        LOG(ERROR) << "continuous_scan cannot proceed without dwell_time value";
+        return false;
+    }
+
+    m_agents_status_map[agent_mac].continuous_radio_scans[radio_mac] =
+        sAgentScanStatus::sRadioScanRequest();
+    m_agents_status_map[agent_mac].continuous_radio_scans[radio_mac].is_single_scan = false;
+    m_agents_status_map[agent_mac].continuous_radio_scans[radio_mac].next_time_scan =
+        std::chrono::system_clock::now();
+
+    return true;
+}
 
 bool dynamic_channel_selection_r2_task::handle_scan_report_event(
     const sScanReportEvent &scan_report_event)
