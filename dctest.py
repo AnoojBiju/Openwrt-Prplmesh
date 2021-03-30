@@ -182,10 +182,21 @@ if __name__ == '__main__':
                         help='Specify the id to use for build/shell/comp/clean')
     parser.add_argument('--dut', dest='dut', type=str, help='Device under test',
                         default='prplmesh_compose')
-    parser.add_argument('--test-suite', dest='test_suite', type=str,
-                        default='test_flows', help='Test suite to be run')
+
+    test_group = parser.add_mutually_exclusive_group()
+    test_group.add_argument('--test', dest='test', type=str,
+                            help='Comma-separated list of individual tests to run')
+    test_group.add_argument('--test-suite', dest='test_suite', type=str,
+                            help='Test suite to be run')
 
     args, rest = parser.parse_known_args()
+
+    if args.test is not None:
+        # We abuse `test_suite` argument to contain a list of tests.
+        # This value will be parsed in `run_bf.sh`.
+        args.test_suite = "TEST_LIST:" + args.test
+    elif args.test_suite is None:
+        args.test_suite = "test_flows"
 
     if os.getenv('CI_PIPELINE_ID') is not None:
         args.bid == os.getenv('CI_PIPELINE_ID')
