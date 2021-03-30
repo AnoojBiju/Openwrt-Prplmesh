@@ -70,6 +70,7 @@ enum class eMessageType : uint16_t {
     CHANNEL_SCAN_REPORT_MESSAGE = 0x801c,
     CAC_REQUEST_MESSAGE = 0x8020,
     CAC_TERMINATION_MESSAGE = 0x8021,
+    CLIENT_DISASSOCIATION_STATS_MESSAGE = 0x8022,
     ERROR_RESPONSE_MESSAGE = 0x8024,
     ASSOCIATION_STATUS_NOTIFICATION_MESSAGE = 0x8025,
     TUNNELLED_MESSAGE = 0x8026,
@@ -130,6 +131,7 @@ public:
         case 0x801c:
         case 0x8020:
         case 0x8021:
+        case 0x8022:
         case 0x8024:
         case 0x8025:
         case 0x8026:

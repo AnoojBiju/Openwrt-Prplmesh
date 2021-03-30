@@ -545,55 +545,80 @@ bool LinkMetricsCollectionTask::send_ap_metric_query_message(
         if (!radio) {
             continue;
         }
-        for (const auto &bssid : radio->front.bssids) {
-            if (!bssid_list.empty() && bssid_list.find(bssid.mac) == bssid_list.end()) {
-                continue;
-            }
-            if (bssid.mac == net::network_utils::ZERO_MAC) {
-                continue;
-            }
-            LOG(DEBUG) << "Forwarding AP_METRICS_QUERY_MESSAGE message to fronthaul, bssid: "
-                       << bssid.mac;
 
-            if (!m_cmdu_tx.create(mid, ieee1905_1::eMessageType::AP_METRICS_QUERY_MESSAGE)) {
-                LOG(ERROR) << "Failed to create AP_METRICS_QUERY_MESSAGE";
-                return false;
-            }
+        // copy all relevant bssids to bssid_query
+        std::vector<sMacAddr> bssid_query;
 
-            auto query = m_cmdu_tx.addClass<wfa_map::tlvApMetricQuery>();
-            if (!query) {
-                LOG(ERROR) << "Failed addClass<wfa_map::tlvApMetricQuery>";
-                return false;
+        if (bssid_list.empty()) {
+            // we were given an empty list,
+            // therefore we copy ALL non ZERO_MAC bssids
+            for (const auto &bssid : radio->front.bssids) {
+                if (bssid.mac != net::network_utils::ZERO_MAC) {
+                    bssid_query.emplace_back(bssid.mac);
+                }
             }
-
-            if (!query->alloc_bssid_list(1)) {
-                LOG(ERROR) << "Failed to allocate memory for bssid_list";
-                return false;
+        } else {
+            // we were given a non empty list,
+            // therefore we copy only those that are both in the
+            // radio and in the given list
+            for (const auto &bssid : radio->front.bssids) {
+                if (bssid.mac != net::network_utils::ZERO_MAC &&
+                    bssid_list.find(bssid.mac) != bssid_list.end()) {
+                    bssid_query.emplace_back(bssid.mac);
+                }
             }
+        }
 
-            auto list = query->bssid_list(0);
+        // create ap metrics query message
+        if (!m_cmdu_tx.create(mid, ieee1905_1::eMessageType::AP_METRICS_QUERY_MESSAGE)) {
+            LOG(ERROR) << "Failed to create AP_METRICS_QUERY_MESSAGE";
+            return false;
+        }
+
+        // add ap metrics tlv
+        auto query = m_cmdu_tx.addClass<wfa_map::tlvApMetricQuery>();
+        if (!query) {
+            LOG(ERROR) << "Failed addClass<wfa_map::tlvApMetricQuery>";
+            return false;
+        }
+
+        auto bssid_query_size = bssid_query.size();
+
+        // allocate enough bssids
+        if (!query->alloc_bssid_list(bssid_query_size)) {
+            LOG(ERROR) << "Failed to allocate memory for bssid_list, required size: "
+                       << bssid_query_size;
+            return false;
+        }
+
+        // find radio-info of this radio
+        auto radio_info = m_btl_ctx.get_radio(radio->front.iface_mac);
+        if (!radio_info) {
+            LOG(ERROR) << "Failed to get radio info for " << radio->front.iface_mac;
+            return false;
+        }
+
+        // pack all bssids in the query
+        for (size_t i = 0; i < bssid_query_size; ++i) {
+            auto list = query->bssid_list(i);
             if (!std::get<0>(list)) {
                 LOG(ERROR) << "Failed to get element of bssid_list";
             }
-            std::get<1>(list) = bssid.mac;
+            std::get<1>(list) = bssid_query[i];
 
-            auto radio_info = m_btl_ctx.get_radio(radio->front.iface_mac);
-            if (!radio_info) {
-                LOG(ERROR) << "Failed to get radio info for " << radio->front.iface_mac;
-                return false;
-            }
+            // responses are coming one by one - each bssid alone,
+            // so we keep track of each bssid in the query
+            m_ap_metric_query.push_back({radio_info->slave, bssid_query[i]});
+        }
 
-            /*
-             * TODO: https://jira.prplfoundation.org/browse/PPM-657
-             *
-             * When link metric collection task moves to agent context
-             * send the message to fronthaul, not slave.
-             */
-            if (!m_btl_ctx.send_cmdu(radio_info->slave, m_cmdu_tx)) {
-                LOG(ERROR) << "Failed forwarding AP_METRICS_QUERY_MESSAGE message to fronthaul";
-            }
-
-            m_ap_metric_query.push_back({radio_info->slave, bssid.mac});
+        /*
+         * TODO: https://jira.prplfoundation.org/browse/PPM-657
+         *
+         * When link metric collection task moves to agent context
+         * send the message to fronthaul, not slave.
+         */
+        if (!m_btl_ctx.send_cmdu(radio_info->slave, m_cmdu_tx)) {
+            LOG(ERROR) << "Failed forwarding AP_METRICS_QUERY_MESSAGE message to fronthaul";
         }
     }
     return true;
@@ -734,73 +759,98 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
         mid = 0;
     }
 
-    auto ap_metrics_tlv = cmdu_rx.getClass<wfa_map::tlvApMetrics>();
-    if (!ap_metrics_tlv) {
-        LOG(ERROR) << "Failed cmdu_rx.getClass<wfa_map::tlvApMetrics>(), mid=" << std::hex << mid;
+    // radio metrics
+    auto in_radio_metrics_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2RadioMetrics>();
+    if (!in_radio_metrics_tlv) {
+        LOG(ERROR) << "Failed to get class tlvProfile2RadioMetrics";
         return;
     }
+    sRadioMetrics radio_metrics;
+    radio_metrics.radio_uid     = in_radio_metrics_tlv->radio_uid();
+    radio_metrics.noise         = in_radio_metrics_tlv->noise();
+    radio_metrics.transmit      = in_radio_metrics_tlv->transmit();
+    radio_metrics.receive_self  = in_radio_metrics_tlv->receive_self();
+    radio_metrics.receive_other = in_radio_metrics_tlv->receive_other();
+    m_radio_ap_metric_response.push_back(radio_metrics);
 
-    auto bssid_tlv = ap_metrics_tlv->bssid();
-    auto mac       = std::find_if(
-        m_ap_metric_query.begin(), m_ap_metric_query.end(),
-        [&bssid_tlv](sApMetricsQuery const &query) { return query.bssid == bssid_tlv; });
-
-    if (mac == m_ap_metric_query.end()) {
-        LOG(ERROR) << "Failed search in ap_metric_query for bssid: " << bssid_tlv
-                   << " from mid=" << std::hex << mid;
-        return;
+    // bss metrics
+    auto ap_metrics_tlv_list = cmdu_rx.getClassList<wfa_map::tlvApMetrics>();
+    if (ap_metrics_tlv_list.empty()) {
+        LOG(WARNING) << "got empty ap metrics response for mid=" << std::hex << mid;
     }
 
-    sApMetrics metric;
-    // Copy data to the response vector
-    metric.bssid               = ap_metrics_tlv->bssid();
-    metric.channel_utilization = ap_metrics_tlv->channel_utilization();
-    metric.number_of_stas_currently_associated =
-        ap_metrics_tlv->number_of_stas_currently_associated();
-    metric.estimated_service_parameters = ap_metrics_tlv->estimated_service_parameters();
-    auto info                           = ap_metrics_tlv->estimated_service_info_field();
-    for (size_t i = 0; i < ap_metrics_tlv->estimated_service_info_field_length(); i++) {
-        metric.estimated_service_info_field.push_back(info[i]);
-    }
-    std::vector<sStaTrafficStats> traffic_stats_response;
+    for (auto ap_metrics_tlv : ap_metrics_tlv_list) {
 
-    for (auto &sta_traffic : cmdu_rx.getClassList<wfa_map::tlvAssociatedStaTrafficStats>()) {
-        if (!sta_traffic) {
-            LOG(ERROR) << "Failed to get class list for tlvAssociatedStaTrafficStats";
+        if (!ap_metrics_tlv) {
+            LOG(WARNING) << "found null ap_metrics_tlv in response, skipping. mid=" << std::hex
+                         << mid;
             continue;
         }
 
-        traffic_stats_response.push_back(
-            {sta_traffic->sta_mac(), sta_traffic->byte_sent(), sta_traffic->byte_recived(),
-             sta_traffic->packets_sent(), sta_traffic->packets_recived(),
-             sta_traffic->tx_packets_error(), sta_traffic->rx_packets_error(),
-             sta_traffic->retransmission_count()});
-    }
+        auto bssid_tlv = ap_metrics_tlv->bssid();
+        auto mac       = std::find_if(
+            m_ap_metric_query.begin(), m_ap_metric_query.end(),
+            [&bssid_tlv](sApMetricsQuery const &query) { return query.bssid == bssid_tlv; });
 
-    std::vector<sStaLinkMetrics> link_metrics_response;
-    for (auto &sta_link_metric : cmdu_rx.getClassList<wfa_map::tlvAssociatedStaLinkMetrics>()) {
-        if (!sta_link_metric) {
-            LOG(ERROR) << "Failed getClassList<wfa_map::tlvAssociatedStaLinkMetrics>";
-            continue;
+        if (mac == m_ap_metric_query.end()) {
+            LOG(ERROR) << "Failed search in ap_metric_query for bssid: " << bssid_tlv
+                       << " from mid=" << std::hex << mid;
+            return;
         }
-        if (sta_link_metric->bssid_info_list_length() != 1) {
-            LOG(ERROR) << "sta_link_metric->bssid_info_list_length() should be equal to 1";
-            continue;
+
+        sApMetrics metric;
+        // Copy data to the response vector
+        metric.bssid               = ap_metrics_tlv->bssid();
+        metric.channel_utilization = ap_metrics_tlv->channel_utilization();
+        metric.number_of_stas_currently_associated =
+            ap_metrics_tlv->number_of_stas_currently_associated();
+        metric.estimated_service_parameters = ap_metrics_tlv->estimated_service_parameters();
+        auto info                           = ap_metrics_tlv->estimated_service_info_field();
+        for (size_t i = 0; i < ap_metrics_tlv->estimated_service_info_field_length(); i++) {
+            metric.estimated_service_info_field.push_back(info[i]);
         }
-        auto response_list = sta_link_metric->bssid_info_list(0);
-        link_metrics_response.push_back({sta_link_metric->sta_mac(), std::get<1>(response_list)});
+        std::vector<sStaTrafficStats> traffic_stats_response;
+
+        for (auto &sta_traffic : cmdu_rx.getClassList<wfa_map::tlvAssociatedStaTrafficStats>()) {
+            if (!sta_traffic) {
+                LOG(ERROR) << "Failed to get class list for tlvAssociatedStaTrafficStats";
+                continue;
+            }
+
+            traffic_stats_response.push_back(
+                {sta_traffic->sta_mac(), sta_traffic->byte_sent(), sta_traffic->byte_recived(),
+                 sta_traffic->packets_sent(), sta_traffic->packets_recived(),
+                 sta_traffic->tx_packets_error(), sta_traffic->rx_packets_error(),
+                 sta_traffic->retransmission_count()});
+        }
+
+        std::vector<sStaLinkMetrics> link_metrics_response;
+        for (auto &sta_link_metric : cmdu_rx.getClassList<wfa_map::tlvAssociatedStaLinkMetrics>()) {
+            if (!sta_link_metric) {
+                LOG(ERROR) << "Failed getClassList<wfa_map::tlvAssociatedStaLinkMetrics>";
+                continue;
+            }
+            if (sta_link_metric->bssid_info_list_length() != 1) {
+                LOG(ERROR) << "sta_link_metric->bssid_info_list_length() should be equal to 1";
+                continue;
+            }
+            auto response_list = sta_link_metric->bssid_info_list(0);
+            link_metrics_response.push_back(
+                {sta_link_metric->sta_mac(), std::get<1>(response_list)});
+        }
+
+        // Fill a response vector
+        m_ap_metric_response.push_back({metric, traffic_stats_response, link_metrics_response});
+
+        // Remove an entry from the processed query
+        m_ap_metric_query.erase(
+            std::remove_if(m_ap_metric_query.begin(), m_ap_metric_query.end(),
+                           [&](sApMetricsQuery const &query) { return mac->bssid == query.bssid; }),
+            m_ap_metric_query.end());
     }
-
-    // Fill a response vector
-    m_ap_metric_response.push_back({metric, traffic_stats_response, link_metrics_response});
-
-    // Remove an entry from the processed query
-    m_ap_metric_query.erase(
-        std::remove_if(m_ap_metric_query.begin(), m_ap_metric_query.end(),
-                       [&](sApMetricsQuery const &query) { return mac->bssid == query.bssid; }),
-        m_ap_metric_query.end());
 
     if (!m_ap_metric_query.empty()) {
+        LOG(DEBUG) << "Still expecting " << m_ap_metric_query.size() << " ap metric responses.";
         return;
     }
 
@@ -881,22 +931,27 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
                 std::get<1>(sta_link_metric_response_tlv->bssid_info_list(0));
             sta_link_metric_response = link_metric.bssid_info;
         }
+    }
 
-        // just copy the radio metrics
-        auto radio_metrics_tlv = m_cmdu_tx.addClass<wfa_map::tlvProfile2RadioMetrics>();
-        if (!radio_metrics_tlv) {
+    // add radios tlv
+    for (auto &response : m_radio_ap_metric_response) {
+        auto out_radio_metrics_tlv = m_cmdu_tx.addClass<wfa_map::tlvProfile2RadioMetrics>();
+        if (!out_radio_metrics_tlv) {
             LOG(ERROR) << "Failed to add class tlvProfile2RadioMetrics";
             continue;
         }
-        radio_metrics_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2RadioMetrics>();
-        if (!radio_metrics_tlv) {
-            LOG(ERROR) << "Failed to get class tlvProfile2RadioMetrics";
-            continue;
-        }
+        // just copy the radio metrics
+        out_radio_metrics_tlv->radio_uid()     = response.radio_uid;
+        out_radio_metrics_tlv->noise()         = response.noise;
+        out_radio_metrics_tlv->transmit()      = response.transmit;
+        out_radio_metrics_tlv->receive_self()  = response.receive_self;
+        out_radio_metrics_tlv->receive_other() = response.receive_other;
     }
 
-    // Clear the m_ap_metric_response vector after preparing response to the controller
+    // Clear m_radio_ap_metric_response and m_ap_metric_response vectors
+    // after preparing response to the controller
     m_ap_metric_response.clear();
+    m_radio_ap_metric_response.clear();
 
     LOG(DEBUG) << "Sending AP_METRICS_RESPONSE_MESSAGE, mid=" << std::hex << mid;
     m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);

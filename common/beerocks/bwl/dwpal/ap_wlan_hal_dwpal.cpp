@@ -2903,29 +2903,26 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
 
     case Event::AP_Sta_Possible_Psk_Mismatch: {
 
+        parsed_line_t parsed_obj;
+        parse_event(buffer, parsed_obj);
+
         auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sSTA_MISMATCH_PSK));
         auto msg      = reinterpret_cast<sSTA_MISMATCH_PSK *>(msg_buff.get());
         LOG_IF(!msg, FATAL) << "Memory allocation failed!";
 
-        memset(msg_buff.get(), 0, sizeof(sHOSTAP_DISABLED_NOTIFICATION));
+        // Initialize the message
+        memset(msg_buff.get(), 0, sizeof(sSTA_MISMATCH_PSK));
 
-        char client_mac[MAC_ADDR_SIZE] = {0};
-        size_t numOfValidArgs[2]       = {0};
+        const char *client_mac_str;
 
-        FieldsToParse fieldsToParse[] = {
-            {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
-            {(void *)client_mac, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, sizeof(client_mac)},
-            /* Must be at the end */
-            {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
-
-        if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(client_mac)) ==
-            DWPAL_FAILURE) {
-            LOG(ERROR) << "DWPAL parse error ==> Abort";
+        if (!read_param("_mac", parsed_obj, &client_mac_str)) {
             return false;
         }
-        msg->sta_mac = tlvf::mac_from_string(client_mac);
+        msg->sta_mac = tlvf::mac_from_string(client_mac_str);
+        LOG(DEBUG) << "sta possible psk mismatch: offending STA mac: " << msg->sta_mac;
 
-        event_queue_push(Event::AP_Disabled, msg_buff); // send message to the AP manager
+        event_queue_push(Event::AP_Sta_Possible_Psk_Mismatch,
+                         msg_buff); // send message to the AP manager
         break;
     }
 

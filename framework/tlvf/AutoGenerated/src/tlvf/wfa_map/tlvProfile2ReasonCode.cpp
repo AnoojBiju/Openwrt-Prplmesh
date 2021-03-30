@@ -33,14 +33,14 @@ const uint16_t& tlvProfile2ReasonCode::length() {
     return (const uint16_t&)(*m_length);
 }
 
-uint16_t& tlvProfile2ReasonCode::reason_code() {
-    return (uint16_t&)(*m_reason_code);
+tlvProfile2ReasonCode::eReasonCode& tlvProfile2ReasonCode::reason_code() {
+    return (eReasonCode&)(*m_reason_code);
 }
 
 void tlvProfile2ReasonCode::class_swap()
 {
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_length));
-    tlvf_swap(16, reinterpret_cast<uint8_t*>(m_reason_code));
+    tlvf_swap(8*sizeof(eReasonCode), reinterpret_cast<uint8_t*>(m_reason_code));
 }
 
 bool tlvProfile2ReasonCode::finalize()
@@ -76,7 +76,7 @@ size_t tlvProfile2ReasonCode::get_initial_size()
     size_t class_size = 0;
     class_size += sizeof(eTlvTypeMap); // type
     class_size += sizeof(uint16_t); // length
-    class_size += sizeof(uint16_t); // reason_code
+    class_size += sizeof(eReasonCode); // reason_code
     return class_size;
 }
 
@@ -98,12 +98,12 @@ bool tlvProfile2ReasonCode::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
-    m_reason_code = reinterpret_cast<uint16_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint16_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
+    m_reason_code = reinterpret_cast<eReasonCode*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(eReasonCode))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(eReasonCode) << ") Failed!";
         return false;
     }
-    if(m_length && !m_parse__){ (*m_length) += sizeof(uint16_t); }
+    if(m_length && !m_parse__){ (*m_length) += sizeof(eReasonCode); }
     if (m_parse__) { class_swap(); }
     if (m_parse__) {
         if (*m_type != eTlvTypeMap::TLV_PROFILE2_REASON_CODE) {
