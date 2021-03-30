@@ -308,10 +308,10 @@ private:
     //
     // NETWORK INTERFACE STUFF
     //
-    void
-    update_network_interfaces(std::map<std::string, NetworkInterface> updated_network_interfaces);
+    void update_network_interfaces(
+        const std::map<std::string, NetworkInterface> &updated_network_interfaces);
     /**
-     * @brief Add or remove and interface to/from the transport.
+     * @brief Add or remove an interface to/from the transport.
      *
      * @param[in] bridge_name The bridge the interface is part of.
      * @param[in] ifname The name of the interface that was added/removed.
@@ -320,11 +320,18 @@ private:
      **/
     bool update_network_interface(const std::string &bridge_name, const std::string &ifname,
                                   bool iface_added);
+    /**
+     * @brief Removes an interface from the transport.
+     *
+     * @param[in] ifname The name of the interface that was removed.
+     * @return true on success and false otherwise.
+     **/
+    bool remove_network_interface(const std::string &ifname);
     bool open_interface_socket(NetworkInterface &interface);
     bool attach_interface_socket_filter(NetworkInterface &iface_name);
     void activate_interface(NetworkInterface &interface);
-    void deactivate_interface(NetworkInterface &interface);
-    void handle_interface_status_change(const std::string &iface_name, bool is_active);
+    void deactivate_interface(NetworkInterface &interface, bool remove_handlers = true);
+    void handle_interface_state_change(const std::string &iface_name, bool is_active);
     void handle_bridge_state_change(const std::string &bridge_name, const std::string &iface_name,
                                     bool iface_added);
     void handle_interface_pollin_event(int fd);

@@ -26,7 +26,7 @@ namespace transport {
 using namespace beerocks::transport::messages;
 
 void Ieee1905Transport::update_network_interfaces(
-    std::map<std::string, NetworkInterface> updated_network_interfaces)
+    const std::map<std::string, NetworkInterface> &updated_network_interfaces)
 {
     // find and remove interfaces that are no longer in use
     for (auto it = network_interfaces_.begin(); it != network_interfaces_.end();) {
@@ -37,7 +37,6 @@ void Ieee1905Transport::update_network_interfaces(
             MAPF_INFO("interface " << ifname << " is no longer used.");
             if (network_interface.fd) {
                 m_event_loop->remove_handlers(network_interface.fd->getSocketFd());
-                close(network_interface.fd->getSocketFd());
                 network_interface.fd = nullptr;
             }
 
@@ -48,31 +47,13 @@ void Ieee1905Transport::update_network_interfaces(
     }
 
     // add new interfaces or update existing ones
-    for (auto it = updated_network_interfaces.begin(); it != updated_network_interfaces.end();
-         ++it) {
-        auto &updated_network_interface = it->second;
-        auto &ifname                    = updated_network_interface.ifname;
-        unsigned int if_index           = if_nametoindex(ifname.c_str());
-        if (if_index == 0) {
-            MAPF_WARN("Failed to get index for interface " << ifname
-                                                           << ". Interface will be ignored.");
-            continue;
-        }
+    for (const auto &entry : updated_network_interfaces) {
+        auto &updated_network_interface = entry.second;
 
-        MAPF_INFO("interface " << ifname << " if_index " << if_index << " is used.");
-        auto &interface       = network_interfaces_[ifname]; // Creates the interface object.
-        interface.ifname      = updated_network_interface.ifname;
-        interface.bridge_name = updated_network_interface.bridge_name;
-        interface.is_bridge   = updated_network_interface.is_bridge;
+        auto &bridge_name = updated_network_interface.bridge_name;
+        auto &ifname      = updated_network_interface.ifname;
 
-        // must be called before open_interface_socket (address is used for packet filtering)
-        if (!get_interface_mac_addr(if_index, interface.addr)) {
-            MAPF_WARN("cannot get address of interface " << if_index << ".");
-        }
-
-        if (!interface.fd) {
-            activate_interface(interface);
-        }
+        update_network_interface(bridge_name, ifname, true);
     }
 }
 
@@ -83,48 +64,75 @@ bool Ieee1905Transport::update_network_interface(const std::string &bridge_name,
         // Add the new interface to network_interfaces_
         unsigned int if_index = if_nametoindex(ifname.c_str());
         if (if_index == 0) {
-            MAPF_WARN("Failed to get index for interface " << ifname);
+            MAPF_ERR("Failed to get index for interface " << ifname);
+            remove_network_interface(ifname);
             return false;
         }
 
-        MAPF_INFO("interface " << ifname << " if_index " << if_index << " is used.");
         auto &interface =
             network_interfaces_[ifname]; // Creates the interface object if it doesn't exist yet..
         interface.ifname      = ifname;
         interface.bridge_name = bridge_name;
-        interface.is_bridge   = false;
+        interface.is_bridge   = bridge_name.empty();
 
         // must be called before open_interface_socket (address is used for packet filtering)
         if (!get_interface_mac_addr(if_index, interface.addr)) {
-            MAPF_WARN("cannot get address of interface " << if_index << ".");
+            MAPF_ERR("Failed to get address of interface " << ifname << " with index " << if_index
+                                                           << ".");
+            remove_network_interface(ifname);
             return false;
         }
 
-        if (!interface.fd) {
-            activate_interface(interface);
+        LOG(INFO) << "Interface " << ifname << " with index " << if_index << " and address "
+                  << tlvf::mac_from_array(interface.addr) << " is used.";
+
+        // If the interface is in the bridge but it is not up and running, then do not activate it
+        // yet. Otherwise operations on the socket created for the interface would fail.
+        // The interface will be activated later, when its state changes to up.
+        bool iface_state;
+        if (!m_interface_state_manager->read_state(ifname, iface_state)) {
+            LOG(ERROR) << "Failed to read state of interface " << ifname << ".";
+            remove_network_interface(ifname);
+            return false;
+        }
+        if (!iface_state) {
+            LOG(INFO) << "Interface " << ifname << " is not up and running.";
+            return true;
         }
 
+        activate_interface(interface);
     } else {
         if (network_interfaces_.count(ifname) == 0) {
-            LOG(ERROR) << "Trying to remove an interface that has not been previously configured.";
+            LOG(ERROR) << "Trying to remove interface " << ifname
+                       << " that has not been previously configured.";
             return false;
         }
-        auto &iface = network_interfaces_[ifname];
 
         MAPF_INFO("Removing interface " << ifname << " from the transport");
-        if (iface.fd) {
-            m_event_loop->remove_handlers(iface.fd->getSocketFd());
-            iface.fd = nullptr;
-        }
-        network_interfaces_.erase(ifname);
+
+        remove_network_interface(ifname);
     }
+    return true;
+}
+
+bool Ieee1905Transport::remove_network_interface(const std::string &ifname)
+{
+    if (network_interfaces_.count(ifname) == 0) {
+        return false;
+    }
+
+    auto &interface = network_interfaces_[ifname];
+
+    deactivate_interface(interface);
+
+    network_interfaces_.erase(ifname);
+
     return true;
 }
 
 bool Ieee1905Transport::open_interface_socket(NetworkInterface &interface)
 {
     if (interface.fd) {
-        close(interface.fd->getSocketFd());
         interface.fd = nullptr;
     }
 
@@ -231,14 +239,17 @@ bool Ieee1905Transport::attach_interface_socket_filter(NetworkInterface &interfa
     return true;
 }
 
-void Ieee1905Transport::handle_interface_status_change(const std::string &ifname, bool is_active)
+void Ieee1905Transport::handle_interface_state_change(const std::string &ifname, bool is_active)
 {
     auto it = network_interfaces_.find(ifname);
     if (it == network_interfaces_.end()) {
-        MAPF_ERR("un-tracked interface " << ifname << ".");
+        MAPF_INFO("Ignoring event from untracked interface " << ifname << ".");
         return;
     }
     auto &interface = it->second;
+
+    MAPF_INFO("Interface state change - interface " << ifname << " " << (is_active ? "up" : "down")
+                                                    << ".");
 
     if (is_active) {
         activate_interface(interface);
@@ -250,71 +261,83 @@ void Ieee1905Transport::handle_interface_status_change(const std::string &ifname
 void Ieee1905Transport::handle_bridge_state_change(const std::string &bridge_name,
                                                    const std::string &iface_name, bool iface_added)
 {
-    MAPF_INFO("Bridge state change - interface '"
-              << iface_name << "' " << (iface_added ? "added to " : "removed from ") << "bridge '"
-              << bridge_name << "'.");
+    MAPF_INFO("Bridge state change - interface "
+              << iface_name << " " << (iface_added ? "added to" : "removed from") << " bridge "
+              << bridge_name << ".");
 
     update_network_interface(bridge_name, iface_name, iface_added);
 }
 
-void Ieee1905Transport::deactivate_interface(NetworkInterface &interface)
+void Ieee1905Transport::deactivate_interface(NetworkInterface &interface, bool remove_handlers)
 {
-    MAPF_INFO("interface " << interface.ifname << " is deactivated.");
-
-    if (interface.fd) {
-        m_event_loop->remove_handlers(interface.fd->getSocketFd());
-        close(interface.fd->getSocketFd());
-        interface.fd = nullptr;
+    if (!interface.fd) {
+        return;
     }
+
+    MAPF_INFO("Deactivating interface " << interface.ifname << ".");
+
+    // The bridge interface is not used for receiving but for sending packets only. Since no
+    // event handlers were registered when the socket was open, neither they have to be removed
+    // when the socket is closed.
+    if (!interface.is_bridge) {
+        // If requested, remove event handlers for the connected socket
+        if (remove_handlers) {
+            m_event_loop->remove_handlers(interface.fd->getSocketFd());
+        }
+    }
+    interface.fd = nullptr;
 }
 
 void Ieee1905Transport::activate_interface(NetworkInterface &interface)
 {
-    MAPF_INFO("interface " << interface.ifname << " is activated.");
+    if (interface.fd) {
+        return;
+    }
 
-    if (!interface.fd) {
-        if (!open_interface_socket(interface)) {
-            MAPF_ERR("cannot open network interface " << interface.ifname << ".");
-            return;
-        }
-        // Handle network events, but not for bridges
-        if (!interface.is_bridge) {
-            EventLoop::EventHandlers handlers = {
-                // Accept incoming connections
-                .on_read =
-                    [&](int fd, EventLoop &loop) {
-                        LOG(DEBUG) << "Incoming message on interface " << interface.ifname
-                                   << " FD (" << fd << ")";
-                        handle_interface_pollin_event(fd);
-                        return true;
-                    },
+    MAPF_INFO("Activating interface " << interface.ifname << ".");
 
-                // Not implemented
-                .on_write      = nullptr,
-                .on_disconnect = nullptr,
+    // Open a socket on the interface to send/receive packets through it.
+    if (!open_interface_socket(interface)) {
+        MAPF_ERR("cannot open network interface " << interface.ifname << ".");
+        return;
+    }
 
-                // Handle interface errors
-                .on_error =
-                    [&](int fd, EventLoop &loop) {
-                        std::string error_message;
+    // Handle network events, but not for the bridge which is used for sending only.
+    if (!interface.is_bridge) {
+        EventLoop::EventHandlers handlers = {
+            // Accept incoming connections
+            .on_read =
+                [&](int fd, EventLoop &loop) {
+                    LOG(DEBUG) << "Incoming message on interface " << interface.ifname << " FD ("
+                               << fd << ")";
+                    handle_interface_pollin_event(fd);
+                    return true;
+                },
 
-                        int error        = 0;
-                        socklen_t errlen = sizeof(error);
-                        if (0 == getsockopt(fd, SOL_SOCKET, SO_ERROR, (void *)&error, &errlen)) {
-                            error_message = ": \"" + std::string(strerror(error)) + "\" (" +
-                                            std::to_string(error) + ")";
-                        }
+            // Not implemented
+            .on_write      = nullptr,
+            .on_disconnect = nullptr,
 
-                        LOG(ERROR) << "Error on FD (" << fd << ")" << error_message
-                                   << ". Disabling interface " << interface.ifname;
-                        ;
+            // Handle interface errors
+            .on_error =
+                [&](int fd, EventLoop &loop) {
+                    std::string error_message;
 
-                        deactivate_interface(interface);
-                        return true;
-                    },
-            };
-            m_event_loop->register_handlers(interface.fd->getSocketFd(), handlers);
-        }
+                    int error        = 0;
+                    socklen_t errlen = sizeof(error);
+                    if (0 == getsockopt(fd, SOL_SOCKET, SO_ERROR, (void *)&error, &errlen)) {
+                        error_message = ": \"" + std::string(strerror(error)) + "\" (" +
+                                        std::to_string(error) + ")";
+                    }
+
+                    LOG(ERROR) << "Error on FD (" << fd << ")" << error_message
+                               << ". Disabling interface " << interface.ifname;
+
+                    deactivate_interface(interface, false);
+                    return true;
+                },
+        };
+        m_event_loop->register_handlers(interface.fd->getSocketFd(), handlers);
     }
 }
 
