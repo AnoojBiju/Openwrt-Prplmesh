@@ -62,22 +62,48 @@ public:
 
         // Struct of a radio scan request
         struct sRadioScanRequest {
-            uint16_t mid            = INVALID_MID_ID;
-            eRadioScanStatus status = eRadioScanStatus::PENDING;
-
-            int32_t dwell_time_msec;
-            std::unordered_set<uint8_t> channel_pool;
+            uint16_t mid                                         = INVALID_MID_ID;
+            eRadioScanStatus status                              = eRadioScanStatus::PENDING;
+            std::chrono::system_clock::time_point next_time_scan = {};
+            bool is_single_scan                                  = true;
         };
 
-        eAgentStatus status;
         /**
          * @brief Map of radio scans
          * 
          * Key:     radio mac.
          * Value:   radio scan request as sRadioScanRequest struct.
          */
-        std::unordered_map<sMacAddr, sRadioScanRequest> radio_scans;
+        using RadioScanMap = std::unordered_map<sMacAddr, sRadioScanRequest>;
+        /**
+         * @brief Pair of continuous radio scans Map
+         * 
+         * Key:     radio mac.
+         * Value:   radio scan request as sRadioScanRequest struct.
+         */
+        using RadioScanPair = std::pair<sMacAddr, sRadioScanRequest>;
+
+        eAgentStatus status;
+
+        RadioScanMap single_radio_scans;
+        RadioScanMap continuous_radio_scans;
+
         std::chrono::system_clock::time_point timeout;
+
+        /**
+         * @brief Check the if the scan passed its interval duration
+         * @param request The radio's request
+         * 
+         * @return true if scan is on time, false otherwise.
+         */
+        static bool is_continuous_scan_interval_passed(const sRadioScanRequest &request)
+        {
+            if (std::chrono::system_clock::now() >= request.next_time_scan) {
+                return true;
+            }
+
+            return false;
+        }
     };
 
     /**
