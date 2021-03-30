@@ -10,7 +10,27 @@
 #include <tlvf/tlvfdefines.h>
 #include <tlvf/tlvflogging.h>
 
-using namespace WSC;
+#include <vector>
+
+namespace WSC {
+
+/**
+ * @brief Helper class that keeps ownership of the buffer of the payload.
+ *
+ * This class keeps a copy of the buffer containing the attributes. This allows manipulation of
+ * those attributes (e.g. swapping them) without affecting the original buffer. The copy will be
+ * cleaned up when the m1 object itself is deleted.
+ */
+class M1Buff : public m1 {
+public:
+    explicit M1Buff(std::vector<uint8_t> &&buf)
+        : m1(buf.data(), buf.size(), true), m_buf(std::move(buf))
+    {
+    }
+
+private:
+    std::vector<uint8_t> m_buf;
+};
 
 std::shared_ptr<m1> m1::parse(ieee1905_1::tlvWsc &tlv)
 {
@@ -18,7 +38,8 @@ std::shared_ptr<m1> m1::parse(ieee1905_1::tlvWsc &tlv)
         TLVF_LOG(ERROR) << "No room to add attribute list (payload length = 0)";
         return nullptr;
     }
-    auto attributes = std::make_shared<m1>(tlv.payload(), tlv.payload_length(), true);
+    auto attributes = std::make_shared<M1Buff>(
+        std::vector<uint8_t>(tlv.payload(), tlv.payload() + tlv.payload_length()));
     if (!attributes) {
         TLVF_LOG(ERROR) << "Failed to initialize attributes";
         return nullptr;
@@ -318,3 +339,5 @@ bool m1::valid() const
     }
     return true;
 }
+
+} // namespace WSC
