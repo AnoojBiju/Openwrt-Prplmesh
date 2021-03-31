@@ -771,6 +771,49 @@ HALState ap_wlan_hal_dwpal::attach(bool block)
     return state;
 }
 
+bool ap_wlan_hal_dwpal::refresh_radio_info()
+{
+    // Obtain frequency band, maximum supported bandwidth and supported channels using NL80211.
+    nl80211_client::radio_info radio_info;
+
+    if (!m_nl80211_client->get_radio_info(get_iface_name(), radio_info)) {
+        LOG(ERROR) << "Reading radio info from the NL has failed";
+        return false;
+    }
+    if (radio_info.bands.empty()) {
+        LOG(ERROR) << "Radio does not support a single band type";
+        return false;
+    }
+
+    // Currently we support only radio with single band.
+    nl80211_client::band_info band_info = radio_info.bands.at(0);
+
+    m_radio_info.frequency_band = band_info.get_frequency_band();
+    m_radio_info.max_bandwidth  = band_info.get_max_bandwidth();
+    m_radio_info.ht_supported   = band_info.ht_supported;
+    m_radio_info.ht_capability  = band_info.ht_capability;
+    m_radio_info.ht_mcs_set.assign(band_info.ht_mcs_set, sizeof(band_info.ht_mcs_set));
+    m_radio_info.vht_supported  = band_info.vht_supported;
+    m_radio_info.vht_capability = band_info.vht_capability;
+    m_radio_info.vht_mcs_set.assign(band_info.vht_mcs_set, sizeof(band_info.vht_mcs_set));
+
+    m_radio_info.supported_channels.clear();
+    for (auto const &pair : band_info.supported_channels) {
+        auto &channel_info = pair.second;
+        for (auto bw : channel_info.supported_bandwidths) {
+            beerocks::message::sWifiChannel channel;
+            channel.channel           = channel_info.number;
+            channel.channel_bandwidth = bw;
+            channel.tx_pow            = channel_info.tx_power;
+            channel.is_dfs_channel    = channel_info.is_dfs;
+            channel.dfs_state         = channel_info.dfs_state;
+            m_radio_info.supported_channels.push_back(channel);
+        }
+    }
+
+    return base_wlan_hal_dwpal::refresh_radio_info();
+}
+
 bool ap_wlan_hal_dwpal::enable()
 {
     if (!dwpal_send_cmd("ENABLE")) {
