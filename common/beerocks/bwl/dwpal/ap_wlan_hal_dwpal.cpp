@@ -1700,35 +1700,20 @@ bool ap_wlan_hal_dwpal::read_acs_report()
 
 bool ap_wlan_hal_dwpal::read_preferred_channels()
 {
-    auto ifname = get_radio_info().iface_name;
-    LOG(TRACE) << "for interface: " << ifname;
-
-    bwl::nl80211_client::radio_info radio_info;
-
-    if (!m_nl80211_client->get_radio_info(ifname, radio_info)) {
-        LOG(TRACE) << "Failed to get channels info from nl80211";
-        return false;
-    }
-    std::vector<beerocks::message::sWifiChannel> preferred_channels;
-    for (auto const &band : radio_info.bands) {
-        for (auto const &pair : band.supported_channels) {
-            auto &channel_info = pair.second;
-            for (auto bw : channel_info.supported_bandwidths) {
-                beerocks::message::sWifiChannel channel;
-                channel.channel           = channel_info.number;
-                channel.channel_bandwidth = bw;
-                channel.tx_pow            = channel_info.tx_power;
-                channel.is_dfs_channel    = channel_info.is_dfs;
-                preferred_channels.push_back(channel);
-            }
-        }
-    }
+    LOG(TRACE) << __func__ << " for interface: " << get_radio_info().iface_name;
 
     // Clear the supported channels vector
     m_radio_info.preferred_channels.clear();
-    // Resize the supported channels vector
+
+    // Copy the list of supported channels into the list of preferred channels.
+    // The list of preferred channels must be a subset of the supported channels or otherwise the
+    // AP manager will complain and crash.
+    // The list of supported channels must have been obtained prior to calling this method. This is
+    // not a problem since we do it at least in state nl80211_fsm_state::GetRadioInfo, on event
+    // dwpal_fsm_event::Attach
     m_radio_info.preferred_channels.insert(m_radio_info.preferred_channels.begin(),
-                                           preferred_channels.begin(), preferred_channels.end());
+                                           m_radio_info.supported_channels.begin(),
+                                           m_radio_info.supported_channels.end());
     return true;
 }
 
