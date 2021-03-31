@@ -91,23 +91,30 @@ private:
     };
     // clang-format on
 
-    struct sOperationalClass {
-        uint8_t operating_class;
-        std::vector<uint8_t> channel_list;
-        sOperationalClass(uint8_t _operating_class, uint8_t *_channel_list,
-                          uint8_t _channel_list_length)
-            : operating_class(_operating_class)
+    struct sChannel {
+        using eScanStatus = wfa_map::tlvProfile2ChannelScanResult::eScanStatus;
+        uint8_t channel_number;
+        eScanStatus scan_status;
+        explicit sChannel(const uint8_t _channel_number,
+                          const eScanStatus _scan_status = eScanStatus::SUCCESS)
+            : channel_number(_channel_number), scan_status(_scan_status)
         {
-            if (_channel_list) {
-                channel_list.insert(channel_list.end(), _channel_list,
-                                    _channel_list + _channel_list_length);
-            }
+        }
+    };
+    struct sOperatingClass {
+        uint8_t operating_class;
+        beerocks::eWiFiBandwidth bw;
+        std::vector<sChannel> channel_list;
+        explicit sOperatingClass(const uint8_t _operating_class, const beerocks::eWiFiBandwidth _bw,
+                                 const std::vector<sChannel> &_channel_list)
+            : operating_class(_operating_class), bw(_bw),
+              channel_list(_channel_list.begin(), _channel_list.end())
+        {
         }
     };
     struct sRadioScan {
         sMacAddr radio_mac;
-        std::vector<sOperationalClass> operating_classes;
-        wfa_map::tlvProfile2ChannelScanResult::eScanStatus scan_status;
+        std::vector<sOperatingClass> operating_classes;
         eState current_state;
         std::chrono::system_clock::time_point timeout;
         int dwell_time;
@@ -122,7 +129,6 @@ private:
         explicit sRequestInfo(eScanRequestType _request_type) : request_type(_request_type) {}
     };
     struct sControllerRequestInfo : sRequestInfo {
-        int mid;
         sMacAddr src_mac;
         sControllerRequestInfo() : sRequestInfo(eScanRequestType::ControllerRequested) {}
     };
@@ -132,6 +138,12 @@ private:
         std::unordered_map<std::string, std::shared_ptr<sRadioScan>> radio_scans;
         bool ready_to_send_report;
     };
+    /**
+     * Map containing previous successful scans
+     * Key: Oeprating Class
+     * Value: Channel List
+     */
+    std::unordered_map<uint8_t, std::unordered_set<uint8_t>> m_previous_scans;
     std::deque<std::shared_ptr<sScanRequest>> m_pending_requests;
 
     /**
