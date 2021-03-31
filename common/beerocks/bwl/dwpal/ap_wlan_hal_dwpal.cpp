@@ -773,42 +773,147 @@ HALState ap_wlan_hal_dwpal::attach(bool block)
 
 bool ap_wlan_hal_dwpal::refresh_radio_info()
 {
-    // Obtain frequency band, maximum supported bandwidth and supported channels using NL80211.
+    // Obtain radio information (frequency band, maximum supported bandwidth, capabilities and
+    // supported channels) using NL80211.
+    // Most of this data does not change during runtime. An exception is, for example, the DFS
+    // state. So, to read the latest value, we need to refresh data on every call.
+
     nl80211_client::radio_info radio_info;
-
     if (!m_nl80211_client->get_radio_info(get_iface_name(), radio_info)) {
-        LOG(ERROR) << "Reading radio info from the NL has failed";
+        LOG(ERROR) << "Unable to read radio info for interface " << m_radio_info.iface_name;
         return false;
     }
+
     if (radio_info.bands.empty()) {
-        LOG(ERROR) << "Radio does not support a single band type";
+        LOG(ERROR) << "Unable to read any band in radio for interface " << m_radio_info.iface_name;
         return false;
     }
 
-    // Currently we support only radio with single band.
-    nl80211_client::band_info band_info = radio_info.bands.at(0);
+    if (m_radio_info.frequency_band == beerocks::eFreqType::FREQ_UNKNOWN) {
 
-    m_radio_info.frequency_band = band_info.get_frequency_band();
-    m_radio_info.max_bandwidth  = band_info.get_max_bandwidth();
-    m_radio_info.ht_supported   = band_info.ht_supported;
-    m_radio_info.ht_capability  = band_info.ht_capability;
-    m_radio_info.ht_mcs_set.assign(band_info.ht_mcs_set, sizeof(band_info.ht_mcs_set));
-    m_radio_info.vht_supported  = band_info.vht_supported;
-    m_radio_info.vht_capability = band_info.vht_capability;
-    m_radio_info.vht_mcs_set.assign(band_info.vht_mcs_set, sizeof(band_info.vht_mcs_set));
+        if (radio_info.bands.size() == 1) {
 
-    m_radio_info.supported_channels.clear();
-    for (auto const &pair : band_info.supported_channels) {
-        auto &channel_info = pair.second;
-        for (auto bw : channel_info.supported_bandwidths) {
-            beerocks::message::sWifiChannel channel;
-            channel.channel           = channel_info.number;
-            channel.channel_bandwidth = bw;
-            channel.tx_pow            = channel_info.tx_power;
-            channel.is_dfs_channel    = channel_info.is_dfs;
-            channel.dfs_state         = channel_info.dfs_state;
-            m_radio_info.supported_channels.push_back(channel);
+            // If there is just one band, then select it.
+            m_radio_info.frequency_band = radio_info.bands[0].get_frequency_band();
+
+        } else {
+
+            // If there are multiple bands, then select the band which frequency matches the
+            // operation mode read from hostapd.conf file.
+            // For efficiency reasons, parse hostapd.conf only once, the first time this method is
+            // called.
+
+            // Load hostapd config for the radio
+            std::string fname;
+            std::vector<std::string> hostapd_config_head;
+            std::map<std::string, std::vector<std::string>> hostapd_config_vaps;
+            if (!load_hostapd_config(m_radio_info.iface_name, fname, hostapd_config_head,
+                                     hostapd_config_vaps)) {
+                LOG(ERROR) << "Unable to load hostapd config for interface "
+                           << m_radio_info.iface_name;
+                return false;
+            }
+
+            auto get_value = [](const std::vector<std::string> &lines, const std::string &key) {
+                std::string value;
+
+                for (const auto &line_ : lines) {
+                    // Get a non-const copy of the line to be able to make changes on it
+                    std::string line = line_;
+
+                    // Remove spaces
+                    beerocks::string_utils::trim(line);
+
+                    // Ignore empty lines
+                    if (line.empty()) {
+                        continue;
+                    }
+
+                    // Ignore comments
+                    if (line.at(0) == '#') {
+                        continue;
+                    }
+
+                    // Remove comments to the right
+                    auto pos = line.find("#");
+                    if (pos != std::string::npos) {
+                        line.erase(pos, line.size());
+                        beerocks::string_utils::rtrim(line);
+                    }
+
+                    pos = line.find("=");
+
+                    // Ignore if not a name=value
+                    if (pos == std::string::npos) {
+                        continue;
+                    }
+
+                    std::string name = line.substr(0, pos);
+                    beerocks::string_utils::trim(name);
+                    if (name == key) {
+                        value = line.substr(pos + 1, line.size());
+                        beerocks::string_utils::trim(value);
+                        break;
+                    }
+                }
+
+                return value;
+            };
+
+            // Compute frequency band out of parameter `hw_mode` in hostapd.conf
+            auto hw_mode = get_value(hostapd_config_head, "hw_mode");
+
+            // The mode used by hostapd (11b, 11g, 11n, 11ac, 11ax) is governed by several
+            // parameters in the configuration file. However, as explained in the comment below from
+            // hostapd.conf, the hw_mode parameter is sufficient to determine the band.
+            //
+            // # Operation mode (a = IEEE 802.11a (5 GHz), b = IEEE 802.11b (2.4 GHz),
+            // # g = IEEE 802.11g (2.4 GHz), ad = IEEE 802.11ad (60 GHz); a/g options are used
+            // # with IEEE 802.11n (HT), too, to specify band). For IEEE 802.11ac (VHT), this
+            // # needs to be set to hw_mode=a. For IEEE 802.11ax (HE) on 6 GHz this needs
+            // # to be set to hw_mode=a.
+            //
+            // Note that this will need to be revisited for 6GHz operation, which we don't support
+            // at the moment.
+            if (hw_mode.empty() || (hw_mode == "b") || (hw_mode == "g")) {
+                m_radio_info.frequency_band = beerocks::eFreqType::FREQ_24G;
+            } else if (hw_mode == "a") {
+                m_radio_info.frequency_band = beerocks::eFreqType::FREQ_5G;
+            } else {
+                LOG(ERROR) << "Unknown operation mode for interface " << m_radio_info.iface_name;
+                return false;
+            }
         }
+    }
+
+    for (const auto &band_info : radio_info.bands) {
+        if (m_radio_info.frequency_band != band_info.get_frequency_band()) {
+            continue;
+        }
+
+        m_radio_info.max_bandwidth = band_info.get_max_bandwidth();
+        m_radio_info.ht_supported  = band_info.ht_supported;
+        m_radio_info.ht_capability = band_info.ht_capability;
+        m_radio_info.ht_mcs_set.assign(band_info.ht_mcs_set, sizeof(band_info.ht_mcs_set));
+        m_radio_info.vht_supported  = band_info.vht_supported;
+        m_radio_info.vht_capability = band_info.vht_capability;
+        m_radio_info.vht_mcs_set.assign(band_info.vht_mcs_set, sizeof(band_info.vht_mcs_set));
+
+        m_radio_info.supported_channels.clear();
+        for (auto const &pair : band_info.supported_channels) {
+            auto &channel_info = pair.second;
+            for (auto bw : channel_info.supported_bandwidths) {
+                beerocks::message::sWifiChannel channel;
+                channel.channel           = channel_info.number;
+                channel.channel_bandwidth = bw;
+                channel.tx_pow            = channel_info.tx_power;
+                channel.is_dfs_channel    = channel_info.is_dfs;
+                channel.dfs_state         = channel_info.dfs_state;
+                m_radio_info.supported_channels.push_back(channel);
+            }
+        }
+
+        break;
     }
 
     return base_wlan_hal_dwpal::refresh_radio_info();
