@@ -662,5 +662,15 @@ bool bpl_cfg_set_wifi_credentials(const std::string &iface,
     return true;
 }
 
+bool bpl_cfg_get_mandatory_interfaces(std::string &mandatory_interfaces)
+{
+
+    // For linux implementation this feature is not used.
+    // This means we will not create son_slaves for currently-not-existing interfaces.
+    mandatory_interfaces.clear();
+
+    return true;
+}
+
 } // namespace bpl
 } // namespace beerocks

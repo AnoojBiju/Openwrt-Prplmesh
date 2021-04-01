@@ -591,25 +591,36 @@ int main(int argc, char *argv[])
     beerocks::bpl::BPL_WLAN_IFACE interfaces[beerocks::IRE_MAX_SLAVES] = {0};
     int num_of_interfaces                                              = beerocks::IRE_MAX_SLAVES;
     if (beerocks::bpl::cfg_get_all_prplmesh_wifi_interfaces(interfaces, &num_of_interfaces)) {
-        std::cout << "failed to read interfaces map" << std::endl;
+        std::cout << "ERROR: Failed to read interfaces map" << std::endl;
         return 1;
     }
 
-    //create unordered_map of interfaces
+    std::string mandatory_interfaces;
+    std::vector<std::string> mandatory_interfaces_vec;
+    // Read the mandatory interfaces list from config and parse it if not empty
+    if (beerocks::bpl::bpl_cfg_get_mandatory_interfaces(mandatory_interfaces)) {
+        if (!mandatory_interfaces.empty()) {
+            mandatory_interfaces_vec = beerocks::string_utils::str_split(mandatory_interfaces, ',');
+        }
+    }
+
+    // Create unordered_map of interfaces.
+    // This map contains all the radios that we expect to be there.
+    // We don't go to operational until the slaves for these interfaces are operational.
     std::unordered_map<int, std::string> interfaces_map;
     for (int i = 0; i < num_of_interfaces; i++) {
-        if (beerocks::net::network_utils::linux_iface_exists(interfaces[i].ifname)) {
-            LOG(DEBUG) << "radio" << i << ".hostap_iface=" << interfaces[i].ifname;
+        // If interface is mandatory
+        if (std::find(mandatory_interfaces_vec.begin(), mandatory_interfaces_vec.end(),
+                      interfaces[i].ifname) != mandatory_interfaces_vec.end()) {
             interfaces_map[interfaces[i].radio_num] = std::string(interfaces[i].ifname);
-        } else {
-            // mask slave iface that do not exist
-            LOG(DEBUG) << "hostap iface " << interfaces[i].ifname
-                       << " does not exist, not adding it to config";
+        } else if (beerocks::net::network_utils::linux_iface_exists(interfaces[i].ifname)) {
+            // if interface is not mandatory and exists
+            interfaces_map[interfaces[i].radio_num] = std::string(interfaces[i].ifname);
         }
     }
 
     if (interfaces_map.empty()) {
-        LOG(INFO) << "No radio interfaces are available";
+        std::cout << "INFO: No radio interfaces are available" << std::endl;
         return 0;
     }
 
