@@ -25,9 +25,9 @@ message. A fixed delay is added to the message for each hop in the path.
 '''
 
 from collections import defaultdict
-from devices import Network, Device
+from devices import Link, Message, Network, Device
 import logging
-from typing import Any, Callable, Union
+from typing import Any, Callable, Optional, Union
 
 
 class Tick(int):
@@ -137,6 +137,32 @@ class Algorithm:
             Time point at which the device starts up.
         device : Device
             The device on which the algorithm runs.
+        '''
+        pass
+
+    def handle_message(self, when: Tick, device: Device, message: Message, src: Device,
+                       dst: Optional[Device], src_link: Optional[Link]):
+        '''Handle an incoming message.
+
+        To be implemented by derived classes.
+
+        This method is called when a message arrives on the device. Its implementation should use
+        the message.msg_type to determine if this algorithm is supposed to process it.
+
+        Default implementation does nothing.
+
+        Parameters
+        ----------
+        when : Tick
+            Time point at which the message arrives.
+        device : Device
+            The device on which the message arrives.
+        src: Device
+            The sending device
+        dst: Optional[Device]
+            The destination device. If None, it's a multicast message.
+        src_link: Optional[Link]
+            The link on which the message arrives. If None, it's a locally generated message.
         '''
         pass
 
@@ -258,3 +284,98 @@ class Simulation:
             self.now = when
             event.callback(when, event.description)
             checker(when, self.network, event.description)
+
+
+def forward_msg(message: Message, src: Device, dst: Optional[Device],
+                on_device: Device, src_link: Optional[Link], simulation: Simulation):
+    '''Forward a message according to the bridge logic.
+
+    Parameters
+    ----------
+    message: Message
+        The message to send. May also be a tuple from which the message is constructed.
+
+    src: Device
+        The sending device
+
+    dst: Optional[Device]
+        The destination device. If None, it's a multicast message.
+
+    on_device: Device
+        The device on which the forwarding happens.
+
+    src_link: Optional[Link]
+        The link on which the message arrives. If None, it's a locally generated message.
+
+    simulation: Simulation
+        The simulation in which to model this. Is used for timing. Every hop takes one Tick.
+    '''
+    assert src in simulation.network.devices
+    assert not dst or dst in simulation.network.devices
+    assert on_device in simulation.network.devices
+    assert not src_link or on_device in src_link.devices
+
+    if src_link:
+        if src_link not in on_device.bridged_links:
+            logging.debug(f"Incoming message from {src_link} not in bridge of {on_device}.")
+            return
+
+        # Update forwarding db
+        on_device.forwarding_db[src] = src_link
+
+    if dst == on_device or dst is None:
+        logging.debug(f"{message} arrives on {on_device}")
+        for algorithm in simulation.algorithms[on_device]:
+            algorithm.handle_message(simulation.now, on_device, message, src, dst, src_link)
+
+    if dst == on_device:
+        # No forwarding
+        return
+
+    dst_link = on_device.forwarding_db.get(dst)
+    if dst_link:
+        if dst_link not in on_device.bridged_links:
+            logging.debug(f"Link to {dst} from {on_device} forwarding_db is no longer "
+                          "in the bridge: {dst_link}")
+            dst_link = None
+
+    if dst is None or dst_link is None:
+        # Forward to all neighbours but don't hairpin
+        forward_links = list(on_device.bridged_links)
+        if src_link:
+            forward_links.remove(src_link)
+    else:
+        forward_links = [dst_link]
+
+    # Helper function for forwarding event
+    def fwd(when, event):
+        (_, src, dst, next_hop, link, simulation) = event
+        forward_msg(message, src, dst, next_hop, link, simulation)
+
+    for link in forward_links:
+        simulation.add_event(-1, fwd, ("Forward", src, dst, link.other(on_device), link,
+                                       simulation))
+
+
+def send_msg(message: Message, src: Device, dst: Optional[Device], simulation: Simulation):
+    '''Send a message to destination device.
+
+    Send a message across the bridges to the destination device. It uses bridge logic and flooding
+    to reach the destination. There is no error if the destination is not reachable. One simulation
+    tick is added for every hop traversed.
+
+    Parameters
+    ----------
+    message: Message
+        The message to send. May also be a tuple from which the message is constructed.
+
+    src: Device
+        The sending device
+
+    dst: Optional[Device]
+        The destination device. If None, it's a multicast message.
+
+    simulation: Simulation
+        The simulation in which to model this. Is used for timing. Every hop takes one Tick.
+    '''
+    return forward_msg(message, src, dst, src, None, simulation)
