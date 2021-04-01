@@ -138,16 +138,6 @@ class cNeighbors : public BaseClass
         bool set_channels_bw_list(const char buffer[], size_t size);
         bool alloc_channels_bw_list(size_t count = 1);
         eBssLoadElementPresent& bss_load_element_present();
-        //If "BSS Load Element Present" bit is set to one, this field is present.
-        //Otherwise it is omitted.
-        //The value of the "Channel Utilization" field as reported by the neighboring
-        //BSS in the BSS Load element
-        uint8_t& channel_utilization();
-        //If "BSS Load Element Present" bit is set to one, this field is present.
-        //Otherwise it is omitted.
-        //The value of the "Channel Utilization" field as reported by the neighboring
-        //BSS in the BSS Load element
-        uint16_t& station_count();
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -164,8 +154,6 @@ class cNeighbors : public BaseClass
         char* m_channels_bw_list = nullptr;
         size_t m_channels_bw_list_idx__ = 0;
         eBssLoadElementPresent* m_bss_load_element_present = nullptr;
-        uint8_t* m_channel_utilization = nullptr;
-        uint16_t* m_station_count = nullptr;
 };
 
 }; // close namespace: wfa_map

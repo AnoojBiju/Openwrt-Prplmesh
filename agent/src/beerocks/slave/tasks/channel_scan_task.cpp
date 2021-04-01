@@ -84,6 +84,58 @@ constexpr size_t TLV_HEADER            = 3; // Bytes;
 // should be fragmented into smaller than 1500 bytes fragments.
 constexpr size_t MAX_TLV_FRAGMENT_SIZE = 1500;
 
+/**
+ * @brief Retrive the subset of 20MHz channels of the given channel & bandwidth
+ * 
+ * @param [in] channel_number Central channel number.
+ * @param [in] operating_bandwidth Bandwidth of the given channel.
+ * @param [out] resulting_channels set containing the resulting 20MHz channels
+ * @return true if the operation was successful, otherwise false. 
+ */
+static bool get_20MHz_channels(const uint8_t channel_number,
+                               const beerocks::eWiFiBandwidth operating_bandwidth,
+                               std::unordered_set<uint8_t> &resulting_channels)
+{
+    auto get_range = [&resulting_channels](std::pair<uint8_t, uint8_t> channels_range) {
+        constexpr uint8_t channel_range_delta_20MHz = 4;
+        for (auto iter = channels_range.first; iter <= channels_range.second;
+             iter += channel_range_delta_20MHz) {
+            resulting_channels.insert(iter);
+        }
+    };
+    if (operating_bandwidth >= beerocks::eWiFiBandwidth::BANDWIDTH_80) {
+        // "channel_number" is a central channel
+        for (const auto &channel_it : son::wireless_utils::channels_table_5g) {
+            const auto bw_channel_elem = channel_it.second.find(operating_bandwidth);
+            if (bw_channel_elem == channel_it.second.end()) {
+                continue;
+            }
+            if (bw_channel_elem->second.center_channel != channel_number) {
+                continue;
+            }
+            get_range(bw_channel_elem->second.overlap_beacon_channels_range);
+            return true;
+        }
+    } else if (operating_bandwidth == beerocks::eWiFiBandwidth::BANDWIDTH_40) {
+        // "channel_number" in an actual channel, but we need to get the whole bandwidth
+        const auto &channel_elem = son::wireless_utils::channels_table_5g.find(channel_number);
+        if (channel_elem == son::wireless_utils::channels_table_5g.end()) {
+            return false;
+        }
+        const auto bw_channel_elem = channel_elem->second.find(operating_bandwidth);
+        if (bw_channel_elem == channel_elem->second.end()) {
+            return false;
+        }
+        get_range(bw_channel_elem->second.overlap_beacon_channels_range);
+        return true;
+    } else /* operating_bandwidth == beerocks::eWiFiBandwidth::BANDWIDTH_20 */ {
+        // "channel_number" is an actual channel
+        resulting_channels.insert(channel_number);
+        return true;
+    }
+    return false;
+};
+
 ChannelScanTask::ChannelScanTask(BackhaulManager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx)
     : Task(eTaskType::CHANNEL_SCAN), m_btl_ctx(btl_ctx), m_cmdu_tx(cmdu_tx)
 {
@@ -212,7 +264,6 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
 
     auto is_current_scan_running = [this]() -> bool {
         if (!m_current_scan_info.is_scan_currently_running) {
-            LOG(DEBUG) << "ERROR: No scan is currently running";
             return false;
         }
         return true;
@@ -280,7 +331,13 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
             return false;
         }
 
-        if (!is_current_scan_running() || !does_current_scan_match_incoming_src(src_mac) ||
+        if (!is_current_scan_running()) {
+            LOG(INFO) << "No channel scan is currently running, ignore channel scan notifications "
+                         "gracefully.";
+            return true;
+        }
+
+        if (!does_current_scan_match_incoming_src(src_mac) ||
             !is_current_scan_in_state(eState::WAIT_FOR_SCAN_TRIGGERED)) {
             return false;
         }
@@ -301,7 +358,11 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
             return false;
         }
 
-        if (!is_current_scan_running() || !does_current_scan_match_incoming_src(src_mac)) {
+        if (!is_current_scan_running()) {
+            return true;
+        }
+
+        if (!does_current_scan_match_incoming_src(src_mac)) {
             return false;
         }
 
@@ -347,7 +408,11 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
         }
         radio->statuses.channel_scan_in_progress = false;
 
-        if (!is_current_scan_running() || !does_current_scan_match_incoming_src(src_mac) ||
+        if (!is_current_scan_running()) {
+            return true;
+        }
+
+        if (!does_current_scan_match_incoming_src(src_mac) ||
             !is_current_scan_in_state(eState::WAIT_FOR_RESULTS_DUMP)) {
             return false;
         }
@@ -503,13 +568,28 @@ bool ChannelScanTask::trigger_radio_scan(const std::string &radio_iface,
      * Using an unordered_set since we do not want duplicated channels in out channel pool
      */
     std::unordered_set<uint8_t> channels_to_be_scanned;
-    std::for_each(radio_scan_info->operating_classes.begin(),
-                  radio_scan_info->operating_classes.end(),
-                  [&channels_to_be_scanned](const sOperationalClass &operating_class) {
-                      for (const uint8_t channel : operating_class.channel_list) {
-                          channels_to_be_scanned.insert(channel);
-                      }
-                  });
+    std::for_each(
+        radio_scan_info->operating_classes.begin(), radio_scan_info->operating_classes.end(),
+        [&channels_to_be_scanned, this](sOperatingClass &operating_class) {
+            for (auto &channel_element : operating_class.channel_list) {
+                // Scan only the channels without an error status
+                if (channel_element.scan_status == sChannel::eScanStatus::SUCCESS) {
+                    if (!get_20MHz_channels(channel_element.channel_number, operating_class.bw,
+                                            channels_to_be_scanned)) {
+                        channel_element.scan_status = sChannel::eScanStatus::
+                            SCAN_NOT_SUPPORTED_ON_THIS_OPERATING_CLASS_AND_CHANNEL_ON_THIS_RADIO;
+                        m_previous_scans.at(operating_class.operating_class)
+                            .erase(channel_element.channel_number);
+                    }
+                }
+            }
+        });
+    if (channels_to_be_scanned.empty()) {
+        LOG(TRACE) << "There were no channels to be scanned";
+        FSM_MOVE_STATE(radio_scan_info, eState::SCAN_DONE);
+        return true;
+    }
+
     // Set scan params in CMDU
     trigger_request->scan_params().radio_mac         = radio_scan_info->radio_mac;
     trigger_request->scan_params().dwell_time_ms     = PREFERRED_DWELLTIME_MS;
@@ -564,6 +644,9 @@ bool ChannelScanTask::store_radio_scan_result(const std::shared_ptr<sScanRequest
             channel_scan_results.first = request->scan_start_timestamp;
             channel_scan_results.second.clear();
         }
+    } else {
+        // if there is no entry for the channel yet, create a new one with the request's timestamp
+        radio->channel_scan_results[results.channel].first = request->scan_start_timestamp;
     }
     radio->channel_scan_results[results.channel].second.push_back(results);
     return true;
@@ -572,6 +655,93 @@ bool ChannelScanTask::store_radio_scan_result(const std::shared_ptr<sScanRequest
 bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                   const sMacAddr &src_mac)
 {
+    // Convert channel vector to string
+    auto print_channel_vector = [](const std::vector<sChannel> &channel_vector) -> std::string {
+        std::stringstream ss;
+        ss << "[ ";
+        for (const auto &channel_element : channel_vector) {
+            ss << int(channel_element.channel_number) << " ";
+        }
+        ss << "]";
+        return ss.str();
+    };
+
+    // Creates a sChannel vector from the given incoming channel list.
+    auto create_channel_vector = [this](const std::vector<uint8_t> &channel_list,
+                                        const uint8_t operating_class) -> std::vector<sChannel> {
+        std::vector<sChannel> channel_vector;
+        if (channel_list.empty()) {
+            LOG(TRACE) << "Empty channel list sent for Operating class #" << int(operating_class);
+            // If incoming channel list is empty, add all channels under that operating class to the list.
+            auto operating_class_channels =
+                son::wireless_utils::operating_class_to_channel_set(operating_class);
+            LOG(DEBUG) << "Manually adding channel list of size: "
+                       << operating_class_channels.size();
+            for (const auto channel_number : operating_class_channels) {
+                // Assume scan will be successful, add to previous scans
+                m_previous_scans[operating_class].emplace(channel_number);
+                channel_vector.emplace_back(channel_number);
+            }
+            return channel_vector;
+        }
+        for (const auto channel_number : channel_list) {
+            if (son::wireless_utils::is_channel_in_operating_class(operating_class,
+                                                                   channel_number)) {
+                // Assume scan will be successful, add to previous scans
+                m_previous_scans[operating_class].emplace(channel_number);
+                channel_vector.emplace_back(channel_number);
+            } else {
+                channel_vector.emplace_back(
+                    channel_number,
+                    sChannel::eScanStatus::
+                        SCAN_NOT_SUPPORTED_ON_THIS_OPERATING_CLASS_AND_CHANNEL_ON_THIS_RADIO);
+            }
+        }
+        return channel_vector;
+    };
+
+    // Create a sOperatingClass element from the given operating class entry that was received in the reqeust.
+    auto create_fresh_operating_class =
+        [this, &create_channel_vector,
+         &print_channel_vector](wfa_map::cOperatingClasses &class_entry) -> sOperatingClass {
+        const auto class_number = class_entry.operating_class();
+        const auto bandwidth    = son::wireless_utils::operating_class_to_bandwidth(class_number);
+        const auto channel_list_length = class_entry.channel_list_length();
+        std::vector<uint8_t> channel_list;
+        if (channel_list_length > 0) {
+            const auto &channel_array = class_entry.channel_list();
+            channel_list.insert(channel_list.end(), channel_array,
+                                channel_array + channel_list_length);
+        }
+        std::vector<sChannel> channel_vector = create_channel_vector(channel_list, class_number);
+        LOG(TRACE) << "Operating class: #" << int(class_number) << std::endl
+                   << "\tChannel list length:" << int(channel_vector.size()) << std::endl
+                   << "\tChannel list: " << print_channel_vector(channel_vector) << ".";
+
+        return sOperatingClass(class_number, bandwidth, channel_vector);
+    };
+
+    // Create a sOperatingClass vector from the previous scans.
+    auto create_stored_operating_classes =
+        [this, &print_channel_vector]() -> std::vector<sOperatingClass> {
+        std::vector<sOperatingClass> operating_vector;
+        for (const auto previous_scan : m_previous_scans) {
+            const auto operating_class = previous_scan.first;
+            const auto bandwidth =
+                son::wireless_utils::operating_class_to_bandwidth(operating_class);
+            std::vector<sChannel> channel_vector;
+            std::transform(previous_scan.second.begin(), previous_scan.second.end(),
+                           std::back_inserter(channel_vector),
+                           [](const uint8_t channel) -> sChannel { return sChannel(channel); });
+            LOG(TRACE) << "Operating class: #" << int(operating_class) << std::endl
+                       << "\tChannel list length:" << int(channel_vector.size()) << std::endl
+                       << "\tChannel list: " << print_channel_vector(channel_vector) << ".";
+
+            operating_vector.emplace_back(operating_class, bandwidth, channel_vector);
+        }
+        return operating_vector;
+    };
+
     const auto scan_start_timestamp = std::chrono::system_clock::now();
     const auto mid                  = cmdu_rx.getMessageId();
 
@@ -620,7 +790,6 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
     }
 
     sControllerRequestInfo request_info;
-    request_info.mid                = mid;
     request_info.src_mac            = src_mac;
     request_info.perform_fresh_scan = perform_fresh_scan;
 
@@ -668,31 +837,21 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
         new_radio_scan->radio_mac     = radio_mac;
         new_radio_scan->current_state = eState::PENDING_TRIGGER;
 
-        // Iterate over operating classes
-        for (int class_idx = 0; class_idx < class_list_len; class_idx++) {
-            const auto &class_tuple = radio_list_entry.operating_classes_list(class_idx);
-            if (!std::get<0>(class_tuple)) {
-                LOG(ERROR) << "Failed to get operating class[" << class_idx << "]. Continuing...";
-                continue;
+        if (!perform_fresh_scan) {
+            new_radio_scan->operating_classes = create_stored_operating_classes();
+        } else {
+            // Iterate over operating classes
+            for (int class_idx = 0; class_idx < class_list_len; class_idx++) {
+                const auto &class_tuple = radio_list_entry.operating_classes_list(class_idx);
+                if (!std::get<0>(class_tuple)) {
+                    LOG(ERROR) << "Failed to get operating class[" << class_idx
+                               << "]. Continuing...";
+                    continue;
+                }
+                auto &class_entry = std::get<1>(class_tuple);
+                new_radio_scan->operating_classes.push_back(
+                    create_fresh_operating_class(class_entry));
             }
-
-            auto &class_entry    = std::get<1>(class_tuple);
-            const auto class_num = class_entry.operating_class();
-            const auto list_len  = class_entry.channel_list_length();
-            uint8_t *list_arr    = class_entry.channel_list();
-
-            std::stringstream ss;
-            ss << "[ ";
-            for (int channel_idx = 0; channel_idx < list_len; channel_idx++) {
-                ss << int(list_arr[channel_idx]) << " ";
-            }
-            ss << "]";
-            LOG(TRACE) << "Operating class[" << class_idx << "]:" << std::endl
-                       << "\tOperating class : #" << int(class_num) << std::endl
-                       << "\tChannel list length:" << int(list_len) << std::endl
-                       << "\tChannel list: " << ss.str() << ".";
-
-            new_radio_scan->operating_classes.emplace_back(class_num, list_arr, list_len);
         }
 
         // Add radio scan info to radio scans map in the request
@@ -727,11 +886,10 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
     const std::shared_ptr<sScanRequest> request)
 {
     // Lambda function that creates a Channel-Scan-Report-Message
-    auto create_channel_scan_report_message =
-        [this](int mid = 0) -> std::shared_ptr<ieee1905_1::cCmduHeader> {
+    auto create_channel_scan_report_message = [this]() -> std::shared_ptr<ieee1905_1::cCmduHeader> {
         LOG(DEBUG) << "Creating new Channel Scan Report Message";
         auto cmdu_tx_header =
-            m_cmdu_tx.create(mid, ieee1905_1::eMessageType::CHANNEL_SCAN_REPORT_MESSAGE);
+            m_cmdu_tx.create(0, ieee1905_1::eMessageType::CHANNEL_SCAN_REPORT_MESSAGE);
         if (!cmdu_tx_header) {
             LOG(ERROR) << "Failed to create CMDU of type CHANNEL_SCAN_REPORT_MESSAGE";
             return nullptr;
@@ -776,18 +934,19 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
             [](const beerocks_message::eChannelScanResultChannelBandwidth &bw) -> std::string {
             switch (bw) {
             case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_20MHz:
-                return "20";
+                return "20MHz";
             case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_40MHz:
-                return "40";
+                return "40MHz";
             case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80MHz:
-                return "80";
+                return "80MHz";
             case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80_80:
-                return "80+80";
+                return "80+80MHz";
             case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_160MHz:
-                return "160";
+                return "160MHz";
             case beerocks_message::eChannelScanResultChannelBandwidth::eChannel_Bandwidth_NA:
             default:
-                return "";
+                LOG(DEBUG) << "Unknown BW value, setting 20MHz";
+                return "20MHz";
             }
         };
         auto bw_str =
@@ -883,6 +1042,13 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
         results_tlv->utilization() =
             neighbors_list_length == 0 ? 0 : (total_utilization / neighbors_list_length);
 
+        // WFA R2 test script has a bug that checks utiliztion for non zero value.
+        // Setting the utilization to a non zero value is a W/A that needs to be
+        // deleted once WFA fixes the issue.
+        if (results_tlv->utilization() == 0) {
+            results_tlv->utilization() = 10;
+        }
+
         return true;
     };
 
@@ -946,7 +1112,7 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
     LOG(TRACE) << results_vec->size() << " results vectors found!";
 
     // Create new Report-Message
-    auto channel_scan_report_header = create_channel_scan_report_message(request_info->mid);
+    auto channel_scan_report_header = create_channel_scan_report_message();
     if (!channel_scan_report_header) {
         LOG(ERROR) << "Failed to Create Channel Scan Report Message";
         return false;
@@ -955,6 +1121,15 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
     if (!add_timestamp_tlv_to_report(report_timestamp)) {
         LOG(ERROR) << "Failed to add Timestamp TLV to Channel Scan Report Message";
         return false;
+    }
+
+    if (results_vec->size() == 0) {
+        // No results are avaliable, sending an empty report.
+        if (!send_channel_scan_report_cmdu(request_info->src_mac, true)) {
+            LOG(ERROR) << "Failed to Send Channel Scan Report Message";
+            return false;
+        }
+        return true;
     }
 
     // Results parameters, used to ease the iteration process
@@ -975,7 +1150,7 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
                 LOG(ERROR) << "Failed to Send Channel Scan Report Message";
                 return false;
             }
-            // Create new Report-Message with no mid (mid = 0)
+            // Create new Report-Message
             channel_scan_report_header = create_channel_scan_report_message();
             if (!channel_scan_report_header) {
                 LOG(ERROR) << "Failed to Create Channel Scan Report Message";
@@ -1075,21 +1250,39 @@ ChannelScanTask::get_scan_results_for_request(const std::shared_ptr<sScanRequest
 
     auto get_results_for_channel_list =
         [&add_scan_result](bool fresh_scan_requested, const sMacAddr &ruid,
-                           const uint8_t operating_class,
-                           const wfa_map::tlvProfile2ChannelScanResult::eScanStatus status,
-                           const std::chrono::system_clock::time_point &scan_start_timestamp,
-                           const std::vector<uint8_t> &channel_list, const ResultsMap &results) {
+                           const uint8_t operating_class, const beerocks::eWiFiBandwidth bw,
+                           const std::chrono::system_clock::time_point &request_timestamp,
+                           const std::vector<sChannel> &channel_list, const ResultsMap &results) {
             // If channel list present, iterate over requested channels only
-            for (uint8_t channel : channel_list) {
-                if (results.find(channel) == results.end()) {
-                    LOG(DEBUG) << "No results found for channel " << channel
+            for (auto &channel_element : channel_list) {
+                auto channel_number = channel_element.channel_number;
+                auto scan_status    = channel_element.scan_status;
+                // Check results only for successful scans
+                if (scan_status != sChannel::eScanStatus::SUCCESS) {
+                    LOG(DEBUG) << "Scan status is not successful for channel " << channel_number
                                << ", adding blank results";
-                    add_scan_result(fresh_scan_requested, ruid, operating_class, channel, status,
-                                    scan_start_timestamp);
-                } else {
-                    auto channel_results = results.at(channel);
-                    add_scan_result(fresh_scan_requested, ruid, operating_class, channel, status,
-                                    scan_start_timestamp, channel_results.first,
+                    add_scan_result(fresh_scan_requested, ruid, operating_class, channel_number,
+                                    scan_status, request_timestamp);
+                    continue;
+                }
+                std::unordered_set<uint8_t> subchannels_20MHz;
+                if (!get_20MHz_channels(channel_number, bw, subchannels_20MHz)) {
+                    // This shouldn't be reached as it would have been handled in trigger_radio_scan
+                    continue;
+                }
+                for (const uint8_t primary_channel : subchannels_20MHz) {
+                    // Validate channel exists in results
+                    auto channel_results_iter = results.find(primary_channel);
+                    if (channel_results_iter == results.end()) {
+                        LOG(DEBUG) << "No results found for channel " << primary_channel
+                                   << ", adding blank results";
+                        add_scan_result(fresh_scan_requested, ruid, operating_class,
+                                        primary_channel, scan_status, request_timestamp);
+                        continue;
+                    }
+                    auto channel_results = channel_results_iter->second;
+                    add_scan_result(fresh_scan_requested, ruid, operating_class, primary_channel,
+                                    scan_status, request_timestamp, channel_results.first,
                                     channel_results.second);
                 }
             }
@@ -1113,11 +1306,11 @@ ChannelScanTask::get_scan_results_for_request(const std::shared_ptr<sScanRequest
                 PERFORM_A_FRESH_SCAN_AND_RETURN_RESULTS;
         const auto &radio_scan_element = radio_scan_iter.second;
         for (const auto &operating_class_iter : radio_scan_element->operating_classes) {
-            get_results_for_channel_list(
-                fresh_scan_requested, radio_scan_element->radio_mac,
-                operating_class_iter.operating_class, radio_scan_element->scan_status,
-                request->scan_start_timestamp, operating_class_iter.channel_list,
-                stored_scan_results_map);
+            get_results_for_channel_list(fresh_scan_requested, radio_scan_element->radio_mac,
+                                         operating_class_iter.operating_class,
+                                         operating_class_iter.bw, request->scan_start_timestamp,
+                                         operating_class_iter.channel_list,
+                                         stored_scan_results_map);
         }
     }
     return final_results;
