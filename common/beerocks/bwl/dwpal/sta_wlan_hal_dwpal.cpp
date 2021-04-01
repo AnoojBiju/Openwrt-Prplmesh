@@ -580,7 +580,6 @@ bool sta_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std
     //       sending empty or irrelevant events...
     default:
         LOG(WARNING) << "Unhandled event received: " << opcode;
-        return true;
         break;
     }
 
