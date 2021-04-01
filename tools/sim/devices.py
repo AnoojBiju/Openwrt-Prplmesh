@@ -26,7 +26,7 @@ destroying the link.
 # objects make the model easier to understand.
 
 import collections
-from typing import Dict, List, NamedTuple
+from typing import Any, Dict, List, NamedTuple
 
 
 class Metric(NamedTuple):
@@ -42,6 +42,15 @@ class Metric(NamedTuple):
         down/broken.
     '''
     bitrate_mbps: float
+
+
+class Message(NamedTuple):
+    '''Model of a message sent over the network.
+
+    The message has a type and payload. The type is used to dispatch. The payload can be anything.
+    '''
+    msg_type: Any
+    payload: Any
 
 
 class Network:
@@ -172,6 +181,10 @@ class Device:
     bridged_links: {Link}
         Links that are currently included in the bridge, i.e. messages can be forwarded over these
         links.
+    forwarding_db: {Device: Link}
+        Forwarding database, maps destination Device to the link over which the message is to
+        be forwarded. Updated every time a message is received over a link.
+        TODO: expiry of the forwarding database is not implemented.
     '''
 
     def __init__(self, idx: int):
@@ -179,6 +192,7 @@ class Device:
         self.idx = idx
         self.links = collections.defaultdict(list)
         self.bridged_links = set()
+        self.forwarding_db = {}
 
     def add_link(self, other: 'Device', metric: Metric) -> 'Link':
         '''Create a link between this device and another device.'''
