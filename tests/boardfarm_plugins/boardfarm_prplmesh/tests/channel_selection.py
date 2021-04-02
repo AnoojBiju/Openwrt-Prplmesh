@@ -36,17 +36,20 @@ class ChannelSelection(PrplMeshBaseTest):
                                                   controller.mac, cs_req_mid)  # noqa E501
             if cs_resp:
                 cs_resp_tlvs = self.check_cmdu_has_tlvs(cs_resp, 0x8e)
+                radio_macs = [radio.mac for radio in agent.radios]
+
                 for cs_resp_tlv in cs_resp_tlvs:
-                    if cs_resp_tlv.channel_select_radio_id not in (agent.radios[0].mac,
-                                                                   agent.radios[1].mac):
+                    if cs_resp_tlv.channel_select_radio_id not in radio_macs:
                         if int(cs_resp_tlv.channel_select_response_code, 16) != resp_code:
-                            self.fail("Unexpected radio ID {}\n"
+                            self.fail("Unexpected radio ID {}, expecting one of {}\n"
                                       "Channel selection unexpected response code {}".format(
                                 cs_resp_tlv.channel_select_radio_id,  # noqa E501
+                                ", ".join(radio_macs),
                                 cs_resp_tlv.channel_select_response_code
                             ))
-                        self.fail("Unexpected radio ID {}".format(
-                            cs_resp_tlv.channel_select_radio_id))
+                        self.fail("Unexpected radio ID {}, expecting one of {}".format(
+                            cs_resp_tlv.channel_select_radio_id,
+                            ", ".join(radio_macs)))
 
         # Locate test participants
         try:

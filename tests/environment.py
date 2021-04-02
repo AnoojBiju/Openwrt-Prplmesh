@@ -349,6 +349,21 @@ def _docker_wait_for_log(container: str, programs: [str], regex: str, start_line
         return (False, start_line, None)
 
 
+def _device_reset_console(device):
+    ''' Reset console input.
+
+    Interrupt any running command and wait for an input prompt.
+    '''
+
+    # Interrupt any running command
+    device.send('\003')
+
+    # Expect the prompt and the end of the line, to make sure we match
+    # the last one. Doing this will make sure we don't keep old data
+    # in the buffer.
+    device.expect(device.prompt)
+
+
 # Temporary workaround
 # Since we have multiple log files that correspond to a radio, multiple log files are passed
 # as argument. In the log messages, we only use the first one.
@@ -356,12 +371,9 @@ def _docker_wait_for_log(container: str, programs: [str], regex: str, start_line
 def _device_wait_for_log(device: None, log_paths: [str], regex: str,
                          timeout: int, start_line: int = 0, fail_on_mismatch: bool = True):
     """Waits for log matching regex expression to show up."""
-    # Interrupt any running command:
-    device.send('\003')
-    # Expect the prompt and the end of the line, to make sure we match
-    # the last one. Doing this will make sure we don't keep old data
-    # in the buffer.
-    device.expect(device.prompt)
+
+    _device_reset_console(device)
+
     device.sendline("tail -f -n +{:d} {}".format(start_line + 1, " ".join(log_paths)))
 
     match = None
@@ -376,9 +388,8 @@ def _device_wait_for_log(device: None, log_paths: [str], regex: str,
                 return (False, start_line, None)
         match = device.match.group(0)
     finally:
-        # Send Ctrl-C to interrupt tail -f
-        device.send('\003')
-        device.expect(device.prompt)
+        # Interrupt tail -f
+        _device_reset_console(device)
 
     if match:
         first_matched_line = match.partition('\r\n')[0]
@@ -781,6 +792,8 @@ class ALEntityPrplWrt(ALEntity):
 
     def command(self, *command: str) -> bytes:
         """Execute `command` in device and return its output."""
+        _device_reset_console(self.device)
+
         self.device.sendline(" ".join(command))
         self.device.expect(self.device.prompt, timeout=10)
         return self.device.before
@@ -807,6 +820,12 @@ class RadioHostapd(Radio):
     def __init__(self, agent: ALEntityPrplWrt, iface_name: str):
         self.iface_name = iface_name
         self.agent = agent
+
+        # Workaround.
+        # One radio has an extra prompt in the input. The second one does not.
+        # Support both situations.
+        self.agent.device.expect(self.agent.device.prompt + [pexpect.TIMEOUT], timeout=5)
+
         ip_raw = self.agent.command("ip link list dev {}".format(self.iface_name))
         mac = re.search(r"link/ether (([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})",
                         ip_raw).group(1)
@@ -842,24 +861,33 @@ class RadioHostapd(Radio):
     def get_mac(self, iface: str) -> str:
         """Return mac of specified iface"""
         device = self.agent.device
+
+        _device_reset_console(device)
+
         device.sendline("ip link show {}".format(iface))
         device.expect("link/ether (?P<mac>([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})")
         return device.match.group('mac')
 
     def get_current_channel(self) -> ChannelInfo:
         device = self.agent.device
+
+        _device_reset_console(device)
+
         device.sendline("iw {} info".format(self.iface_name))
         device.expect(
-            "channel (?P<channel>[0-9]+) .*width.* (?P<width>[0-9]+) " +
-            "MHz.*center1.* (?P<center>[0-9]+) MHz")
-        return ChannelInfo(device.match.group('channel'), device.match.group('width'),
-                           device.match.group('center'))
+            r"channel (?P<channel>[0-9]+) [^\r\n]*width[^\r\n]* (?P<width>[0-9]+) " +
+            r"MHz[^\r\n]*center1[^\r\n]* (?P<center>[0-9]+) MHz")
+        return ChannelInfo(int(device.match.group('channel')), int(device.match.group('width')),
+                           int(device.match.group('center')))
 
     def get_power_limit(self) -> int:
         device = self.agent.device
+
+        _device_reset_console(device)
+
         device.sendline("iw {} info".format(self.iface_name))
-        device.expect("txpower (?P<power_limit>[0-9]*[.]?[0-9]*) dBm")
-        return device.match.group('power_limit')
+        device.expect(r"txpower (?P<power_limit>[0-9]*)(\.0+)? dBm")
+        return int(device.match.group('power_limit'))
 
 
 class VirtualAPHostapd(VirtualAP):
