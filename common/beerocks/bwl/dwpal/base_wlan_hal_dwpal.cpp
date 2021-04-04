@@ -1044,6 +1044,11 @@ bool base_wlan_hal_dwpal::refresh_vap_info(int vap_id)
         LOG(ERROR) << "bss mismatch! vap_element.bss=" << vapElement.bss
                    << ", mapped_vap_element.bss=" << mapped_vap_element.bss;
         return false;
+    } else if (mapped_vap_element.ssid != vapElement.ssid) {
+        LOG(DEBUG) << "SSID changed from " << mapped_vap_element.ssid << ", to " << vapElement.ssid
+                   << ". Overriding VAP element.";
+        mapped_vap_element = vapElement;
+        return true;
     }
 
     // If reached here, assume that the BSS information is already exist on the container,

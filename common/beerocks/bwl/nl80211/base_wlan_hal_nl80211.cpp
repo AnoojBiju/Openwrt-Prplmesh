@@ -821,6 +821,11 @@ bool base_wlan_hal_nl80211::refresh_vaps_info(int id)
             LOG(ERROR) << "bss mismatch! vap_element.bss=" << vap_element.bss
                        << ", mapped_vap_element.bss=" << mapped_vap_element.bss;
             return false;
+        } else if (mapped_vap_element.ssid != vap_element.ssid) {
+            LOG(DEBUG) << "SSID changed from " << mapped_vap_element.ssid << ", to "
+                       << vap_element.ssid << ". Overriding VAP element.";
+            mapped_vap_element = vap_element;
+            return true;
         }
 
         // If reached here, assume that the BSS information is already exist on the container,
