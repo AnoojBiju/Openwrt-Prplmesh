@@ -124,6 +124,16 @@ protected:
      */
     bool dwpal_nl_cmd_set(const std::string &ifname, unsigned int nl_cmd, const void *vendor_data,
                           size_t vendor_data_size);
+
+    /**
+     * @brief Get information from the NL using a blocking dwpal API
+     * 
+     * @return true 
+     * @return false 
+     */
+    bool dwpal_nl_cmd_send_and_recv(int command, DWPAL_nl80211Callback nl_callback,
+                                    void *callback_args);
+
     bool dwpal_nl_cmd_scan_dump();
     void *get_dwpal_nl_ctx() const { return (m_dwpal_nl_ctx); }
 
