@@ -245,6 +245,8 @@ public:
         };
 
         struct channel_scan_status {
+            // The scan is pending flag will be used to indicate when a single scan was requested
+            bool scan_is_pending  = false;
             bool scan_in_progress = false;
             beerocks::eChannelScanStatusCode last_scan_error_code =
                 beerocks::eChannelScanStatusCode::SUCCESS;

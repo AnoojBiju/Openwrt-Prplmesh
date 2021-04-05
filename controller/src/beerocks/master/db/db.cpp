@@ -3078,6 +3078,19 @@ int db::get_channel_scan_interval_sec(const sMacAddr &mac)
     return hostap->continuous_scan_config.interval_sec;
 }
 
+bool db::set_channel_scan_is_pending(const sMacAddr &mac, bool scan_is_pending)
+{
+    auto hostap = get_hostap_by_mac(mac);
+    if (!hostap) {
+        LOG(ERROR) << "Failed to get hostap";
+        return false;
+    }
+
+    hostap->single_scan_status.scan_is_pending = scan_is_pending;
+
+    return true;
+}
+
 bool db::set_channel_scan_in_progress(const sMacAddr &mac, bool scan_in_progress, bool single_scan)
 {
     auto hostap = get_hostap_by_mac(mac);
@@ -3101,9 +3114,12 @@ bool db::get_channel_scan_in_progress(const sMacAddr &mac, bool single_scan)
         LOG(ERROR) << "unable to get hostap";
         return false;
     }
-
-    return (single_scan ? hostap->single_scan_status : hostap->continuous_scan_status)
-        .scan_in_progress;
+    if (single_scan) {
+        return (hostap->single_scan_status.scan_in_progress &&
+                hostap->single_scan_status.scan_is_pending);
+    } else {
+        return hostap->continuous_scan_status.scan_in_progress;
+    }
 }
 
 bool db::set_channel_scan_results_status(const sMacAddr &mac,
