@@ -386,7 +386,7 @@ bool db::add_node_client(const sMacAddr &mac, const sMacAddr &parent_mac,
         return false;
     }
     // Add the MAC to the association event */
-    if (!dm_add_association_event(parent_mac, mac)) {
+    if (dm_add_association_event(parent_mac, mac).empty()) {
         LOG(ERROR) << "Failed to add association event, mac: " << mac;
     }
 
@@ -1797,23 +1797,33 @@ bool db::set_station_capabilities(const std::string &client_mac,
 
     // TODO: Fill up HE Capabilities for STA, PPM-567
 
-    // Prepare path to AssociationEvent.AssocData object
-    std::string path_to_eventdata = "Controller.Notification.AssociationEvent.AssocData.";
+    std::string path_to_eventdata =
+        "Controller.Notification.AssociationEvent.AssociationEventData.";
+    int index = m_assoc_indx[client_mac].back();
+
+    if (index) {
+        path_to_eventdata += std::to_string(index) + '.';
+    } else {
+        path_to_eventdata = dm_add_association_event(tlvf::mac_from_string(parent_radio),
+                                                     tlvf::mac_from_string(client_mac));
+        if (path_to_eventdata.empty()) {
+            return false;
+        }
+    }
 
     // Remove previous entry
     m_ambiorix_datamodel->remove_optional_subobject(path_to_eventdata, "HTCapabilities");
     m_ambiorix_datamodel->remove_optional_subobject(path_to_eventdata, "VHTCapabilities");
     // TODO: Remove HECapabilities before setting new one.
 
-    // Fill up HT Capabilities for Controller.Notification.AssociationEvent.AssocData
+    // Fill up HT Capabilities for Controller.Notification.AssociationEvent.AssociationEventData.1
     if (sta_cap.ht_bw != 0xFF && !dm_set_sta_ht_capabilities(path_to_eventdata, sta_cap)) {
         LOG(ERROR) << "Failed to set station HT Capabilities into " << path_to_eventdata;
         return false;
     }
-
-    // Fill up VHT Capabilities for Controller.Notification.AssociationEvent.AssocData
+    // Fill up VHT Capabilities for Controller.Notification.AssociationEvent.AssociationEventData.1
     if (sta_cap.vht_bw != 0xFF && !dm_set_sta_vht_capabilities(path_to_eventdata, sta_cap)) {
-        LOG(ERROR) << "Failed to set station VHT Capabilities";
+        LOG(ERROR) << "Failed to set station VHT Capabilities into " << path_to_eventdata;
         return false;
     }
 
@@ -6042,18 +6052,24 @@ std::string db::dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client
     return sta_instance;
 }
 
-bool db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac)
+std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac)
 {
-    const std::string path_association_event =
-        "Controller.Notification.AssociationEvent.AssocData.";
+    std::string path_association_event =
+        "Controller.Notification.AssociationEvent.AssociationEventData";
+
+    path_association_event = m_ambiorix_datamodel->add_instance(path_association_event);
+
+    if (path_association_event.empty()) {
+        return {};
+    }
     if (!m_ambiorix_datamodel->set(path_association_event, "BSSID", tlvf::mac_to_string(bssid))) {
-        LOG(ERROR) << "Failed to set " << path_association_event << "BSSID: " << bssid;
-        return false;
+        LOG(ERROR) << "Failed to set " << path_association_event << ".BSSID: " << bssid;
+        return {};
     }
     if (!m_ambiorix_datamodel->set(path_association_event, "MACAddress",
                                    tlvf::mac_to_string(client_mac))) {
-        LOG(ERROR) << "Failed to set " << path_association_event << "MACAddress: " << client_mac;
-        return false;
+        LOG(ERROR) << "Failed to set " << path_association_event << ".MACAddress: " << client_mac;
+        return {};
     }
 
     /*
@@ -6063,11 +6079,17 @@ bool db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_
     */
     if (!m_ambiorix_datamodel->set(path_association_event, "StatusCode",
                                    static_cast<uint32_t>(0))) {
-        LOG(ERROR) << "Failed to set " << path_association_event << "StatusCode: " << 0;
-        return false;
+        LOG(ERROR) << "Failed to set " << path_association_event << ".StatusCode: " << 0;
+        return {};
     }
+    m_ambiorix_datamodel->set_current_time(path_association_event);
 
-    return true;
+    if (24 < m_assoc_indx.size()) {
+        m_assoc_indx.clear();
+    }
+    auto index = get_dm_index_from_path(path_association_event);
+    m_assoc_indx[tlvf::mac_to_string(client_mac)].push_back(index.second);
+    return path_association_event;
 }
 
 std::string db::dm_add_device_element(const sMacAddr &mac)

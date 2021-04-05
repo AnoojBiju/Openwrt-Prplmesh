@@ -1867,13 +1867,16 @@ private:
     std::string dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client_mac);
 
     /**
-     * @brief Adds last STA to the Controller.Notifiation.AssociationEvent
-     *
+     * @brief Adds to data model an instance of object AssociationEventData.
+     * This object describes an event generated when a STA associates to a BSS.
+     * Example of full path to object:
+     * 'Controller.Notification.AssociationEvent.AssociationEventData.1'.
+     * 
      * @param bssid BSS mac address.
      * @param client_mac Client mac address.
-     * @return True on success, false otherwise.
+     * @return Path to object on success, empty sring otherwise.
      */
-    bool dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac);
+    std::string dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac);
 
     /**
      * @brief Prepares path to the BSS data element with correct index (i).
@@ -2016,6 +2019,11 @@ private:
     // Key:     std::string ISO-8601-timestamp
     // Value:   int         Report-message-MID
     std::unordered_map<std::string, int> m_channel_scan_report_records;
+
+    /*
+    * key = client mac, value = index of NBAPI AssociationEventData
+    */
+    std::map<std::string, std::list<int>> m_assoc_indx;
 };
 
 } // namespace son
