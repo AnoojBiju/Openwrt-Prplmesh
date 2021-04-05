@@ -17,6 +17,7 @@
 #include <bcl/son/son_wireless_utils.h>
 #include <easylogging++.h>
 #include <math.h>
+#include <net/if.h> // if_nametoindex
 
 #ifdef USE_LIBSAFEC
 #define restrict __restrict
@@ -26,6 +27,10 @@
 #else
 #error "No safe C library defined, define either USE_LIBSAFEC or USE_SLIBC"
 #endif
+
+extern "C" {
+#include <dwpal.h>
+}
 
 //////////////////////////////////////////////////////////////////////////////
 ////////////////////////// Local Module Definitions //////////////////////////
@@ -1500,11 +1505,65 @@ bool ap_wlan_hal_dwpal::failsafe_channel_get(int &chan, int &bw)
     return true;
 }
 
+static int get_zwdfs_supported_from_wiphy_dump_cb(struct nl_msg *msg, void *arg)
+{
+    if (!msg) {
+        LOG(ERROR) << "Invalid input! msg == NULL";
+        return DWPAL_FAILURE;
+    }
+
+    if (!arg) {
+        LOG(ERROR) << "Invalid input! arg == NULL";
+        return DWPAL_FAILURE;
+    }
+
+    struct nlattr *tb_msg[NL80211_ATTR_MAX + 1];
+    struct genlmsghdr *gnlh = (struct genlmsghdr *)nlmsg_data(nlmsg_hdr(msg));
+    bool *zwdfs_supported   = (bool *)arg;
+    // char phy_name[MAX_UCI_BUF_LEN] = {'\0'};
+
+    nla_parse(tb_msg, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0), genlmsg_attrlen(gnlh, 0), NULL);
+
+    // if (tb_msg[NL80211_ATTR_WIPHY_NAME]) {
+    //     strncpy_s(phy_name, sizeof(phy_name), nla_get_string(tb_msg[NL80211_ATTR_WIPHY_NAME]),
+    //               sizeof(phy_name) - 1);
+    // }
+
+    if (tb_msg[NL80211_ATTR_WIPHY_DFS_ANTENNA]) {
+        // INFO("zwdfs interface found %s\n", phy_name);
+        LOG(DEBUG) << "zwdfs interface found";
+        *zwdfs_supported = true;
+    }
+
+    return DWPAL_SUCCESS;
+}
+
 bool ap_wlan_hal_dwpal::is_zwdfs_supported()
 {
-    // This is a temporary w/a until NL80211_ATTR_WIPHY_DFS_ANTENNA is implemented.
-    // For now we can identify zwdfs interface by making sure it has no vaps.
-    return (m_radio_info.available_vaps.size() == 0);
+    // Passing a lambda with capture is not supported for standard C function
+    // pointers. As a workaround, we create a static (but thread local) wrapper
+    // function that calls the capturing lambda function.
+    static __thread std::function<DWPAL_Ret(struct nl_msg * msg, void *arg)> nl_handler_cb_wrapper;
+    nl_handler_cb_wrapper = [&](struct nl_msg *msg, void *arg) -> DWPAL_Ret {
+        if (!get_zwdfs_supported_from_wiphy_dump_cb(msg, arg)) {
+            LOG(ERROR) << "User's netlink handler function failed!";
+            return DWPAL_FAILURE;
+        }
+        return DWPAL_SUCCESS;
+    };
+    auto nl_handler_cb = [](struct nl_msg *msg, void *arg) -> int {
+        return nl_handler_cb_wrapper(msg, arg);
+    };
+
+    bool supported = false;
+    if (!dwpal_nl_cmd_send_and_recv(NL80211_CMD_GET_WIPHY, nl_handler_cb, &supported)) {
+        LOG(ERROR) << "Failed to check if zwdfs supported by reading NL wiphy info";
+        return false;
+    }
+
+    LOG(DEBUG) << "ZWDFS is" << ((supported) ? "" : " not") << " supported";
+
+    return supported;
 }
 
 bool ap_wlan_hal_dwpal::set_zwdfs_antenna(bool enable)
