@@ -414,6 +414,11 @@ bool base_wlan_hal_dummy::refresh_radio_info()
         }
     }
 
+    m_radio_info.ht_supported   = true;
+    m_radio_info.ht_capability  = 0;
+    m_radio_info.vht_supported  = true;
+    m_radio_info.vht_capability = 0;
+
     std::string radio_mac;
     beerocks::net::network_utils::linux_iface_get_mac(m_radio_info.iface_name, radio_mac);
     for (int vap_id = 0; vap_id < predefined_vaps_num; vap_id++) {
