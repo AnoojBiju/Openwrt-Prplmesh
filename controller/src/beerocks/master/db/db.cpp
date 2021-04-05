@@ -4401,15 +4401,19 @@ bool db::notify_disconnection(const std::string &client_mac)
         return false;
     }
 
-    std::string path_to_eventdata = "Controller.Notification.DisassociationEvent.DisassocData.";
+    std::string path_to_disassoc_event_data =
+        "Controller.Notification.DisassociationEvent.DisassociationEventData";
+    std::string path_to_eventdata = m_ambiorix_datamodel->add_instance(path_to_disassoc_event_data);
 
-    if (!m_ambiorix_datamodel->set(path_to_eventdata, "BSSID", n->parent_mac)) {
-        LOG(ERROR) << "Failed to set " << path_to_eventdata << "BSSID: " << n->parent_mac;
+    if (path_to_eventdata.empty()) {
         return false;
     }
-
+    if (!m_ambiorix_datamodel->set(path_to_eventdata, "BSSID", n->parent_mac)) {
+        LOG(ERROR) << "Failed to set " << path_to_eventdata << ".BSSID: " << n->parent_mac;
+        return false;
+    }
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "MACAddress", client_mac)) {
-        LOG(ERROR) << "Failed to set " << path_to_eventdata << "MACAddress: " << client_mac;
+        LOG(ERROR) << "Failed to set " << path_to_eventdata << ".MACAddress: " << client_mac;
         return false;
     }
 
@@ -4421,32 +4425,32 @@ bool db::notify_disconnection(const std::string &client_mac)
     */
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "ReasonCode", static_cast<uint32_t>(1))) {
         LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << "ReasonCode: " << static_cast<uint32_t>(1);
+                   << ".ReasonCode: " << static_cast<uint32_t>(1);
         return false;
     }
 
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "BytesSent", n->stats_info->tx_bytes)) {
         LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << "BytesSent: " << n->stats_info->tx_bytes;
+                   << ".BytesSent: " << n->stats_info->tx_bytes;
         return false;
     }
 
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "BytesReceived", n->stats_info->rx_bytes)) {
         LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << "BytesReceived: " << n->stats_info->rx_bytes;
+                   << ".BytesReceived: " << n->stats_info->rx_bytes;
         return false;
     }
 
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "PacketsSent", n->stats_info->tx_packets)) {
         LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << "PacketsSent: " << n->stats_info->tx_packets;
+                   << ".PacketsSent: " << n->stats_info->tx_packets;
         return false;
     }
 
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "PacketsReceived",
                                    n->stats_info->rx_packets)) {
         LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << "PacketsReceived: " << n->stats_info->rx_packets;
+                   << ".PacketsReceived: " << n->stats_info->rx_packets;
         return false;
     }
 
@@ -4455,23 +4459,23 @@ bool db::notify_disconnection(const std::string &client_mac)
     */
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "ErrorsSent", static_cast<uint32_t>(0))) {
         LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << "ErrorsSent: " << static_cast<uint32_t>(0);
+                   << ".ErrorsSent: " << static_cast<uint32_t>(0);
         return false;
     }
 
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "ErrorsReceived", static_cast<uint32_t>(0))) {
         LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << "ErrorsReceived: " << static_cast<uint32_t>(0);
+                   << ".ErrorsReceived: " << static_cast<uint32_t>(0);
         return false;
     }
 
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "RetransCount",
                                    n->stats_info->retrans_count)) {
         LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << "RetransCount: " << n->stats_info->retrans_count;
+                   << ".RetransCount: " << n->stats_info->retrans_count;
         return false;
     }
-
+    m_ambiorix_datamodel->set_current_time(path_to_eventdata);
     return true;
 }
 

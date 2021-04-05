@@ -1352,8 +1352,8 @@ public:
     void clear_hostap_stats_info(const std::string &mac);
 
     /**
-     * @brief Notificatify about client disconnection
-     * @param mac string with STA mac address
+     * @brief Notify about client disconnection.
+     * @param mac String with STA mac address.
      */
     bool notify_disconnection(const std::string &mac);
 
