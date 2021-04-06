@@ -651,6 +651,7 @@ bool AmbiorixImpl::remove_all_instances(const std::string &relative_path)
     LOG(DEBUG) << "All instances removed for: " << relative_path;
     return true;
 }
+
 AmbiorixImpl::~AmbiorixImpl()
 {
     remove_event_loop();

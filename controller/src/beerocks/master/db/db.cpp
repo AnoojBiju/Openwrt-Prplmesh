@@ -4403,10 +4403,26 @@ bool db::notify_disconnection(const std::string &client_mac)
 
     std::string path_to_disassoc_event_data =
         "Controller.Notification.DisassociationEvent.DisassociationEventData";
+
+    while (MAX_EVENT_HISTORY_SIZE <= m_disassoc_events.size()) {
+        uint32_t indx = m_disassoc_events.front();
+
+        if (!m_ambiorix_datamodel->remove_instance(path_to_disassoc_event_data, indx)) {
+            LOG(ERROR) << "Failed to remove " << path_to_disassoc_event_data << indx
+                       << " instance.";
+        }
+        m_disassoc_events.pop();
+    }
+
     std::string path_to_eventdata = m_ambiorix_datamodel->add_instance(path_to_disassoc_event_data);
 
     if (path_to_eventdata.empty()) {
         return false;
+    }
+    auto index = get_dm_index_from_path(path_to_eventdata);
+
+    if (index.second) {
+        m_disassoc_events.push(index.second);
     }
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "BSSID", n->parent_mac)) {
         LOG(ERROR) << "Failed to set " << path_to_eventdata << ".BSSID: " << n->parent_mac;
@@ -6061,10 +6077,24 @@ std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &
     std::string path_association_event =
         "Controller.Notification.AssociationEvent.AssociationEventData";
 
+    while (MAX_EVENT_HISTORY_SIZE <= m_assoc_events.size()) {
+        uint32_t indx = m_assoc_events.front();
+
+        if (!m_ambiorix_datamodel->remove_instance(path_association_event, indx)) {
+            LOG(ERROR) << "Failed to remove " << path_association_event << indx << " instance.";
+        }
+        m_assoc_events.pop();
+    }
+
     path_association_event = m_ambiorix_datamodel->add_instance(path_association_event);
 
     if (path_association_event.empty()) {
         return {};
+    }
+    auto index = get_dm_index_from_path(path_association_event);
+
+    if (index.second) {
+        m_assoc_events.push(index.second);
     }
     if (!m_ambiorix_datamodel->set(path_association_event, "BSSID", tlvf::mac_to_string(bssid))) {
         LOG(ERROR) << "Failed to set " << path_association_event << ".BSSID: " << bssid;
@@ -6088,10 +6118,9 @@ std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &
     }
     m_ambiorix_datamodel->set_current_time(path_association_event);
 
-    if (24 < m_assoc_indx.size()) {
+    if (MAX_EVENT_HISTORY_SIZE < m_assoc_indx.size()) {
         m_assoc_indx.clear();
     }
-    auto index = get_dm_index_from_path(path_association_event);
     m_assoc_indx[tlvf::mac_to_string(client_mac)].push_back(index.second);
     return path_association_event;
 }

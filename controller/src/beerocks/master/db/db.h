@@ -2024,6 +2024,21 @@ private:
     * key = client mac, value = index of NBAPI AssociationEventData
     */
     std::map<std::string, std::list<int>> m_assoc_indx;
+
+    /*
+    * Maximum amount of events registered on the system bus NBAPI
+    */
+    const uint8_t MAX_EVENT_HISTORY_SIZE = 24;
+
+    /*
+    * The queue with indexes of NBAPI disassociation events.
+    */
+    std::queue<uint32_t> m_disassoc_events;
+
+    /*
+    * The queue with indexes of NBAPI association events.
+    */
+    std::queue<uint32_t> m_assoc_events;
 };
 
 } // namespace son
