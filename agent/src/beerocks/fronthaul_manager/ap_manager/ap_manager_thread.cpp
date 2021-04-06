@@ -173,7 +173,7 @@ static void unify_channels_list(
         }
         auto channel_it = channels_list.find(pchannel.channel);
         if (channel_it == channels_list.end()) {
-            LOG(FATAL) << "ACS reported channel not supproted by the radio: "
+            LOG(FATAL) << "ACS reported channel not supported by the radio: "
                        << int(pchannel.channel);
             continue;
         }
@@ -182,7 +182,7 @@ static void unify_channels_list(
         auto bw_it =
             channel_info.bw_info_list.find(beerocks::eWiFiBandwidth(pchannel.channel_bandwidth));
         if (bw_it == channel_info.bw_info_list.end()) {
-            LOG(FATAL) << "ACS reported bw not supproted by the radio, channel="
+            LOG(FATAL) << "ACS reported bw not supported by the radio, channel="
                        << int(pchannel.channel) << ", bw="
                        << beerocks::utils::convert_bandwidth_to_int(
                               beerocks::eWiFiBandwidth(pchannel.channel_bandwidth));
