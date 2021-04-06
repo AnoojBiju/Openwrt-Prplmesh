@@ -456,12 +456,10 @@ int main(int argc, char *argv[])
             if (isprint(optopt)) {
                 std::cout << "Unknown option -" << optopt << "!" << std::endl;
                 return false;
-            } else {
-                std::cout << "Unknown character " << optopt << "!" << std::endl;
-                ;
-                return false;
             }
-            break;
+
+            std::cout << "Unknown character " << optopt << "!" << std::endl;
+            return false;
         }
         }
     }

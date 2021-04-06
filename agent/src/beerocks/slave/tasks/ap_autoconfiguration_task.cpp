@@ -195,7 +195,6 @@ bool ApAutoConfigurationTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, ui
         return false;
     }
     }
-    return true;
 }
 
 bool ApAutoConfigurationTask::send_ap_autoconfiguration_search_message(

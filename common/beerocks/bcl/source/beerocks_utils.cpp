@@ -197,7 +197,6 @@ std::string utils::convert_channel_ext_above_to_string(bool channel_ext_above_se
     switch (bandwidth) {
     case beerocks::BANDWIDTH_20:
         return std::string();
-        break;
     case beerocks::BANDWIDTH_40:
     case beerocks::BANDWIDTH_80:
     case beerocks::BANDWIDTH_80_80:

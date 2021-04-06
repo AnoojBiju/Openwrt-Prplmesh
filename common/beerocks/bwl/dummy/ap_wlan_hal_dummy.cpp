@@ -566,8 +566,6 @@ bool ap_wlan_hal_dummy::process_dummy_event(parsed_obj_map_t &parsed_obj)
     // Gracefully ignore unhandled events
     default: {
         LOG(DEBUG) << "Unhandled event received: " << opcode;
-        return true;
-
     } break;
     }
 

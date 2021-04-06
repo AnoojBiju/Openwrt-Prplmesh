@@ -132,11 +132,10 @@ static bool parse_arguments(int argc, char *argv[])
             if (isprint(optopt)) {
                 LOG(ERROR) << "Unknown option -" << optopt << "!";
                 return false;
-            } else {
-                LOG(ERROR) << "Unknown character " << optopt << "!";
-                return false;
             }
-            break;
+
+            LOG(ERROR) << "Unknown character " << optopt << "!";
+            return false;
         }
         }
     }

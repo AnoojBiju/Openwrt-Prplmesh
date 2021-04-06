@@ -196,8 +196,6 @@ bool BrokerServer::handle_msg(std::shared_ptr<Socket> sd)
         return m_internal_message_handler(message, *this);
     }
     }
-
-    return true;
 }
 
 bool BrokerServer::handle_subscribe(std::shared_ptr<Socket> sd,

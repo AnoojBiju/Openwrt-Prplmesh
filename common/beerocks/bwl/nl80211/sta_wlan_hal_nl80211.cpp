@@ -329,7 +329,6 @@ bool sta_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
     // TODO: Should be changed to an error once we handle hostapd all expected events
     default:
         LOG(DEBUG) << "Unhandled event received: " << opcode;
-        return true;
         break;
     }
 
