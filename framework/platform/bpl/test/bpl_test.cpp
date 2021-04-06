@@ -50,7 +50,6 @@ int main()
             break;
         case 11:
             return 0;
-            break;
         default:
             printf("Invalid selection\n");
             break;

@@ -1123,8 +1123,6 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
     //       sending empty or irrelevant events...
     default: {
         LOG(DEBUG) << "Unhandled event received: " << opcode;
-        return true;
-
     } break;
     }
 

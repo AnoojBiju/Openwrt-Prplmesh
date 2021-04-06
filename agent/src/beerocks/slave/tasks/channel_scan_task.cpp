@@ -250,7 +250,6 @@ bool ChannelScanTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t i
         return false;
     }
     }
-    return true;
 }
 
 bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,

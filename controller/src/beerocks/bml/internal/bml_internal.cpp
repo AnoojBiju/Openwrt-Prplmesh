@@ -581,7 +581,6 @@ int bml_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beerocks_
                 // after signaling the thread m_prmDeviceDataGet is no longer in use
                 m_prmDeviceDataGet = nullptr;
             }
-            return BML_RET_OK;
         } break;
         // Network Map Response
         case beerocks_message::ACTION_BML_NW_MAP_RESPONSE: {
