@@ -961,12 +961,18 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
             break;
         }
 
-        if (db->device_conf.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
-            // Configure the transport process to use the network bridge
-            if (!m_broker_client->configure_interfaces(db->bridge.iface_name)) {
-                LOG(ERROR) << "Failed configuring transport process!";
-                FSM_MOVE_STATE(RESTART);
-                break;
+        // In certification mode, if prplMesh is configured with local controller, do not enable the
+        // transport process until agent has connected to controller. This way we prevent the agent
+        // from connecting to another controller in the testbed, which might still be running from a
+        // previous test.
+        if (!(db->device_conf.certification_mode && db->device_conf.local_controller)) {
+            if (db->device_conf.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
+                // Configure the transport process to use the network bridge
+                if (!m_broker_client->configure_interfaces(db->bridge.iface_name)) {
+                    LOG(ERROR) << "Failed configuring transport process!";
+                    FSM_MOVE_STATE(RESTART);
+                    break;
+                }
             }
         }
 
@@ -990,6 +996,22 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
     }
     // Successfully connected to the master
     case EState::CONNECTED: {
+        auto db = AgentDB::get();
+
+        // In certification mode, if prplMesh is configured with local controller, do not enable the
+        // transport process until agent has connected to controller. This way we prevent the agent
+        // from connecting to another controller in the testbed, which might still be running from a
+        // previous test.
+        if (db->device_conf.certification_mode && db->device_conf.local_controller) {
+            if (db->device_conf.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
+                // Configure the transport process to use the network bridge
+                if (!m_broker_client->configure_interfaces(db->bridge.iface_name)) {
+                    LOG(ERROR) << "Failed configuring transport process!";
+                    FSM_MOVE_STATE(RESTART);
+                    break;
+                }
+            }
+        }
 
         /**
          * According to the 1905.1 specification section 8.2.1.1 - A 1905.1 management entity shall
