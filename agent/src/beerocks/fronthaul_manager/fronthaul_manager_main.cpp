@@ -195,7 +195,7 @@ int main(int argc, char *argv[])
     //get command line options
     if (!parse_arguments(argc, argv)) {
         std::cout << "Usage: " << argv[0] << " -i <fronthaul iface>" << std::endl;
-        return 0;
+        return 1;
     }
 
     // read slave config file
