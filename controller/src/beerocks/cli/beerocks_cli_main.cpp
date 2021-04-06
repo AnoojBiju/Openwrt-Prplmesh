@@ -453,13 +453,7 @@ int main(int argc, char *argv[])
             break;
         }
         default: { /* '?' */
-            if (isprint(optopt)) {
-                std::cout << "Unknown option -" << optopt << "!" << std::endl;
-                return false;
-            }
-
-            std::cout << "Unknown character " << optopt << "!" << std::endl;
-            return false;
+            return 1;
         }
         }
     }

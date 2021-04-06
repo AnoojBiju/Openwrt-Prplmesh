@@ -100,12 +100,6 @@ static bool parse_arguments(int argc, char *argv[])
             break;
         }
         case '?': {
-            if (isprint(optopt)) {
-                LOG(ERROR) << "Unknown option -" << optopt << "!";
-                return false;
-            }
-
-            LOG(ERROR) << "Unknown character " << optopt << "!";
             return false;
         }
         }
@@ -201,7 +195,7 @@ int main(int argc, char *argv[])
     //get command line options
     if (!parse_arguments(argc, argv)) {
         std::cout << "Usage: " << argv[0] << " -i <fronthaul iface>" << std::endl;
-        return 0;
+        return 1;
     }
 
     // read slave config file
