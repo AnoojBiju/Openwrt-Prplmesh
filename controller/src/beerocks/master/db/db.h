@@ -929,6 +929,16 @@ public:
     int get_channel_scan_interval_sec(const sMacAddr &mac);
 
     /**
+     * @brief Set the channel scan is pending object
+     * 
+     * @param mac:              MAC address of radio
+     * @param scan_in_progress: Flag of current channel scan
+     * @return true on success
+     * @return false on failure 
+     */
+    bool set_channel_scan_is_pending(const sMacAddr &mac, bool scan_is_pending);
+
+    /**
      * @brief Set the channel scan in progress object
      *
      * @param mac:              MAC address of radio
@@ -938,9 +948,11 @@ public:
      * @return false on failure
      */
     bool set_channel_scan_in_progress(const sMacAddr &mac, bool scan_in_progress, bool single_scan);
+
     /**
      * @brief Get the channel scan in progress object
-     *
+     * In the case of single scan also check the scan is pending flag
+     * 
      * @param mac          MAC address of radio
      * @param single_scan: Indicated if to use single scan or continuous
      * @return Flag of current channel scan

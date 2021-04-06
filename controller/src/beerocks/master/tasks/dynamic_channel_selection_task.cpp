@@ -143,6 +143,10 @@ void dynamic_channel_selection_task::work()
         // Before sending any request, set the scan_in_progress flag to true
         // So another scan request would not launch on the same radio simultaneously
         database.set_channel_scan_in_progress(m_radio_mac, true, m_single_scan);
+        if (m_single_scan) {
+            // Clear Scan Is Pending flag
+            database.set_channel_scan_is_pending(m_radio_mac, false);
+        }
 
         // When a scan is requested, check the Dwell time parameter,
         // Normally send a "trigger scan" request.
@@ -267,6 +271,7 @@ void dynamic_channel_selection_task::handle_event(int event_type, void *obj)
         auto single_scan_event = reinterpret_cast<sScanEvent *>(obj);
         event_handled          = true;
         TASK_LOG(DEBUG) << "TRIGGER_SINGLE_SCAN handled on: " << single_scan_event->radio_mac;
+        database.set_channel_scan_is_pending(m_radio_mac, true);
         m_single_scan_request_pending = true;
         break;
     }
