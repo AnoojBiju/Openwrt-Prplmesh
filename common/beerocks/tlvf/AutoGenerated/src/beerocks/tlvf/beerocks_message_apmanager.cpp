@@ -2262,7 +2262,7 @@ bool cACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION::alloc_association_frame(s
         return false;
     }
     m_lock_order_counter__ = 0;
-    uint8_t *src = (uint8_t *)m_association_frame;
+    uint8_t *src = (uint8_t *)&m_association_frame[m_association_frame_idx__];
     uint8_t *dst = src + len;
     if (!m_parse__) {
         size_t move_length = getBuffRemainingBytes(src) - len;

@@ -771,7 +771,7 @@ bool cInner::alloc_unknown_length_list_inner(size_t count) {
         return false;
     }
     m_lock_order_counter__ = 1;
-    uint8_t *src = (uint8_t *)m_unknown_length_list_inner;
+    uint8_t *src = (uint8_t *)&m_unknown_length_list_inner[m_unknown_length_list_inner_idx__];
     uint8_t *dst = src + len;
     if (!m_parse__) {
         size_t move_length = getBuffRemainingBytes(src) - len;

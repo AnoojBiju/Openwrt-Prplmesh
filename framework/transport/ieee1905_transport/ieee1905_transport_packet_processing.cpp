@@ -306,11 +306,6 @@ bool Ieee1905Transport::de_fragment_packet(Packet &packet)
 
     // concat the fragment body (excluding the IEEE1905 header)
     size_t fragmentTlvsLength = packet.payload.iov_len - sizeof(Ieee1905CmduHeader);
-    // Only count end of message TLV for the last fragment
-    if (ch->GetLastFragmentIndicator() == 0) {
-        fragmentTlvsLength -= sizeof(Tlv);
-    }
-
     if (val.bufIndex + fragmentTlvsLength >= kMaximumDeFragmentionSize) {
         MAPF_WARN("defragmentation buffer overflow - dropping fragment");
         return false;
@@ -350,14 +345,14 @@ bool Ieee1905Transport::fragment_and_send_packet_to_network_interface(unsigned i
 {
     // only fragment IEEE1905 packets longer than the threashold, that originate from the local device
     if (packet.ether_type != ETH_P_1905_1 ||
-        packet.payload.iov_len <= kIeee1905FragmentationThreashold ||
+        packet.payload.iov_len <= kIeee1905FragmentationThreashold + sizeof(Ieee1905CmduHeader) ||
         packet.src_if_type != CmduRxMessage::IF_TYPE_LOCAL_BUS) {
         return send_packet_to_network_interface(if_index, packet);
     }
 
     // reuse most of the original packet metadata for all fragments (except for the payload iov)
-    Packet fragment_packet                                      = packet;
-    uint8_t buf[kIeee1905FragmentationThreashold + sizeof(Tlv)] = {
+    Packet fragment_packet                                                     = packet;
+    uint8_t buf[kIeee1905FragmentationThreashold + sizeof(Ieee1905CmduHeader)] = {
         0}; // fragment size + TLV end of message size
 
     // copy the IEEE1905 header (will be reused by all fragments)
@@ -388,7 +383,7 @@ bool Ieee1905Transport::fragment_and_send_packet_to_network_interface(unsigned i
                           << remainingPacketLength);
                 return false;
             }
-            if (sizeof(Ieee1905CmduHeader) + nextTlv->size() > kIeee1905FragmentationThreashold) {
+            if (nextTlv->size() > kIeee1905FragmentationThreashold) {
                 // this TLV is too large to fit in any fragment
                 MAPF_WARN("bad packet format - oversized TLV found.");
                 return false;
@@ -397,8 +392,7 @@ bool Ieee1905Transport::fragment_and_send_packet_to_network_interface(unsigned i
                 MAPF_WARN("bad packet format - TLV exceeds packet bounds.");
                 return false;
             }
-            if (sizeof(Ieee1905CmduHeader) + fragmentTlvsLength + nextTlv->size() >=
-                kIeee1905FragmentationThreashold) {
+            if (fragmentTlvsLength + nextTlv->size() >= kIeee1905FragmentationThreashold) {
                 // including the next TLV will go over the threashold - let's fragment at this TLV's boundary
                 break;
             }
@@ -422,9 +416,10 @@ bool Ieee1905Transport::fragment_and_send_packet_to_network_interface(unsigned i
 
         fragment_packet.payload.iov_base = buf;
         fragment_packet.payload.iov_len  = sizeof(Ieee1905CmduHeader) + fragmentTlvsLength;
-        if (remainingPacketLength) {
-            // add EOM tlv for all fragments but the last which already has it
-            fragment_packet.payload.iov_len += sizeof(Tlv);
+
+        if (remainingPacketLength > 0 &&
+            fragment_packet.payload.iov_len < kIeee1905FragmentationMinimum) {
+            MAPF_WARN("Fragment is too small - possiblly padded EOM!");
         }
 
         // send the fragment
