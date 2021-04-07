@@ -124,6 +124,9 @@ constexpr int DEFAULT_BEST_CHANNEL_RANKING_TH = 0;
 // Link metrics tasks send request with this interval.
 constexpr std::chrono::seconds DEFAULT_LINK_METRICS_REQUEST_INTERVAL_VALUE_SEC{60};
 
+// Default Linux Lan interface names. It needs to be space separeted.
+constexpr char DEFAULT_LINUX_LAN_INTERFACE_NAMES[] = "eth0_1 eth0_2 eth0_3 eth0_4";
+
 /****************************************************************************/
 /******************************* Structures *********************************/
 /****************************************************************************/
@@ -579,6 +582,14 @@ bool bpl_cfg_get_wifi_credentials(const std::string &iface,
  * @return true on success, otherwise false
  */
 bool cfg_get_link_metrics_request_interval(std::chrono::seconds &link_metrics_request_interval_sec);
+
+/**
+ * @brief Reads lan interfaces names from bridge configuration.
+ *
+ * @param [out] lan_iface_list lan interfaces name list
+ * @return true on success, otherwise false
+ */
+bool bpl_get_lan_interfaces(std::vector<std::string> &lan_iface_list);
 
 /**
  * @brief Writes wireless network configuration for the given interface.
