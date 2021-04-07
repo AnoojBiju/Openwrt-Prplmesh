@@ -385,6 +385,8 @@ def _device_reset_console(device):
     Interrupt any running command and wait for an input prompt.
     '''
 
+    _device_clear_input_buffer(device)
+
     # Interrupt any running command
     device.send('\003')
 
@@ -392,6 +394,8 @@ def _device_reset_console(device):
     # the last one. Doing this will make sure we don't keep old data
     # in the buffer.
     device.expect(device.prompt)
+
+    _device_clear_input_buffer(device)
 
 
 # Temporary workaround
