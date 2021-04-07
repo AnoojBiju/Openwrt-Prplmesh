@@ -349,6 +349,36 @@ def _docker_wait_for_log(container: str, programs: [str], regex: str, start_line
         return (False, start_line, None)
 
 
+def _device_clear_input_buffer(device, timeout=0.5):
+    '''
+    Clear input buffer
+
+    Parameters
+    ----------
+    device: PrplMeshPrplWRT
+        An agent or controller device class.
+
+    timeout: float
+        Number of seconds to wait for a new input to arrive.
+
+        If timeout is zero it discards input buffer and exits.
+
+        If timeout is greater than 0 it disards input until there is a `timeout`-long period
+            of time without new input.
+    '''
+
+    attempts = 20
+
+    try:
+        # Limit number of attempts in case of a periodic input arriving more often
+        # than `timeout` seconds
+        while attempts > 0:
+            device.read_nonblocking(size=128*1024, timeout=timeout)
+            attempts -= 1
+    except pexpect.TIMEOUT:
+        pass
+
+
 def _device_reset_console(device):
     ''' Reset console input.
 
