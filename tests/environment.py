@@ -924,31 +924,36 @@ class VirtualAPHostapd(VirtualAP):
 
     def get_ssid(self) -> str:
         """Get current SSID of attached radio. Return string."""
-        device = self.radio.agent.device
-        device.sendline("iw dev {} info".format(self.iface))
+        command = "iw dev {} info".format(self.iface)
         # We are looking for SSID definition
         # ssid Multi-AP-24G-1
         # type AP
-        device.expect("ssid (?P<ssid>.*)\r\n\ttype AP\r\n\t")
-        return device.match.group('ssid')
+        regex = "ssid (?P<ssid>.*)\r\n\ttype AP\r\n\t"
+
+        output = self.radio.agent.command(command)
+        match = re.search(regex, output)
+        return match.group('ssid')
 
     def get_psk(self) -> str:
         """Get SSIDs personal key set during last autoconfiguration. Return string"""
-        device = self.radio.agent.device
         ssid = self.get_ssid()
-        device.sendline(("grep \"Autoconfiguration for ssid: " +
-                         "{}\" \"{}/beerocks_agent_{}.log\" | tail -n 1")
-                        .format(ssid, self.radio.log_folder, self.radio.iface_name))
+        command = 'grep "Autoconfiguration for ssid: {}" "{}/beerocks_agent_{}.log" | tail -n 1' \
+            .format(ssid, self.radio.log_folder, self.radio.iface_name)
         # We looking for key, which was set during last autoconfiguration. E.g of such string:
         # network_key: maprocks2 fronthaul:
-        device.expect("network_key: (?P<psk>.*) fronthaul")
-        return device.match.group('psk')
+        regex = "network_key: (?P<psk>.*) fronthaul"
+
+        output = self.radio.agent.command(command)
+        match = re.search(regex, output)
+        return match.group('psk')
 
     def get_iface(self, bssid: str) -> str:
-        device = self.radio.agent.device
-        device.sendline("ip link list | grep -B1 \"{}\"".format(bssid))
-        device.expect("[0-9]{1,4}: (?P<iface_name>wlan[0-9.]{1,4}): <")
-        return device.match.group('iface_name')
+        command = "ip link list | grep -B1 \"{}\"".format(bssid)
+        regex = "[0-9]{1,4}: (?P<iface_name>wlan[0-9.]{1,4}): <"
+
+        output = self.radio.agent.command(command)
+        match = re.search(regex, output)
+        return match.group('iface_name')
 
     def associate(self, sta: Station) -> bool:
         ''' Associate "sta" with this VAP '''
@@ -961,11 +966,13 @@ class VirtualAPHostapd(VirtualAP):
         return True
 
     def get_bss_type(self) -> int:
-        device = self.radio.agent.device
-        device.sendline(f"hostapd_cli -i {self.iface} get_mesh_mode {self.iface}")
-        device.expect(r"mesh_mode\=\w+ \((?P<bss_type>\d?)\)")
-        multi_ap_value = self.bss_from_bits_intel(device.match.group('bss_type'))
-        return multi_ap_value
+        command = f"hostapd_cli -i {self.iface} get_mesh_mode {self.iface}"
+        regex = r"mesh_mode\=\w+ \((?P<bss_type>\d?)\)"
+
+        output = self.radio.agent.command(command)
+        match = re.search(regex, output)
+
+        return self.bss_from_bits_intel(match.group('bss_type'))
 
     @staticmethod
     def bss_from_bits(bss_type: str):
