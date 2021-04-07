@@ -265,6 +265,20 @@ static bool fill_platform_settings(
     db->device_conf.load_balancing_enabled   = 0; // for v1.3 TODO read from CAL DB
     db->device_conf.service_fairness_enabled = 0; // for v1.3 TODO read from CAL DB
 
+    std::vector<std::string> lan_iface_list;
+    if (beerocks::bpl::bpl_get_lan_interfaces(lan_iface_list)) {
+
+        db->ethernet.lan.clear();
+
+        std::string iface_mac;
+        for (const auto &lan_iface : lan_iface_list) {
+
+            if (beerocks::net::network_utils::linux_iface_get_mac(lan_iface, iface_mac)) {
+                db->ethernet.lan.emplace_back(lan_iface, tlvf::mac_from_string(iface_mac));
+            }
+        }
+    }
+
     LOG(DEBUG) << "iface " << iface_name << " settings:";
     LOG(DEBUG) << "client_band_steering_enabled: " << db->device_conf.client_band_steering_enabled;
     LOG(DEBUG) << "client_optimal_path_roaming_enabled: "
