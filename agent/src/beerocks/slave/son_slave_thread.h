@@ -44,7 +44,6 @@ public:
         bool enable_repeater_mode;
         std::string backhaul_wire_iface;
         std::string backhaul_wireless_iface;
-        std::vector<std::string> fronthaul_wire_ifaces;
         bool backhaul_wireless_iface_filter_low;
         std::string backhaul_preferred_bssid;
         std::string hostap_iface;

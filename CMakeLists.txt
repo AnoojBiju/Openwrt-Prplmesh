@@ -133,7 +133,6 @@ set(BEEROCKS_WLAN2_IFACE   "wlan2" CACHE STRING "2nd WLAN iface")
 set(BEEROCKS_WLAN3_IFACE   "wlan4" CACHE STRING "3rd WLAN iface")
 set(BEEROCKS_BRIDGE_IFACE  "br-lan" CACHE STRING "LAN bridge")
 set(BEEROCKS_BH_WIRE_IFACE "eth1" CACHE STRING "Backhaul wire iface")
-set(BEEROCKS_FH_WIRE_IFACE "eth0_1,eth0_2,eth0_3,eth0_4" CACHE STRING "Fronthaul wire iface")
 
 # Logging configuration - cached (are set only if not previously set)
 set(BEEROCKS_LOG_FILES_ENABLED   "true" CACHE STRING "Write prplMesh logs into files")
