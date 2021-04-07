@@ -189,7 +189,7 @@ bool cWscAttrVendorExtension::alloc_vendor_data(size_t count) {
         return false;
     }
     m_lock_order_counter__ = 0;
-    uint8_t *src = (uint8_t *)m_vendor_data;
+    uint8_t *src = (uint8_t *)&m_vendor_data[m_vendor_data_idx__];
     uint8_t *dst = src + len;
     if (!m_parse__) {
         size_t move_length = getBuffRemainingBytes(src) - len;
@@ -688,7 +688,7 @@ bool cWscAttrEncryptedSettings::alloc_encrypted_settings(size_t count) {
         return false;
     }
     m_lock_order_counter__ = 0;
-    uint8_t *src = (uint8_t *)m_encrypted_settings;
+    uint8_t *src = (uint8_t *)&m_encrypted_settings[m_encrypted_settings_idx__];
     uint8_t *dst = src + len;
     if (!m_parse__) {
         size_t move_length = getBuffRemainingBytes(src) - len;
@@ -1642,7 +1642,7 @@ bool cWscAttrManufacturer::alloc_manufacturer(size_t count) {
         return false;
     }
     m_lock_order_counter__ = 0;
-    uint8_t *src = (uint8_t *)m_manufacturer;
+    uint8_t *src = (uint8_t *)&m_manufacturer[m_manufacturer_idx__];
     uint8_t *dst = src + len;
     if (!m_parse__) {
         size_t move_length = getBuffRemainingBytes(src) - len;
@@ -1789,7 +1789,7 @@ bool cWscAttrModelName::alloc_model(size_t count) {
         return false;
     }
     m_lock_order_counter__ = 0;
-    uint8_t *src = (uint8_t *)m_model;
+    uint8_t *src = (uint8_t *)&m_model[m_model_idx__];
     uint8_t *dst = src + len;
     if (!m_parse__) {
         size_t move_length = getBuffRemainingBytes(src) - len;
@@ -1936,7 +1936,7 @@ bool cWscAttrModelNumber::alloc_model_number(size_t count) {
         return false;
     }
     m_lock_order_counter__ = 0;
-    uint8_t *src = (uint8_t *)m_model_number;
+    uint8_t *src = (uint8_t *)&m_model_number[m_model_number_idx__];
     uint8_t *dst = src + len;
     if (!m_parse__) {
         size_t move_length = getBuffRemainingBytes(src) - len;
@@ -2083,7 +2083,7 @@ bool cWscAttrSerialNumber::alloc_serial_number(size_t count) {
         return false;
     }
     m_lock_order_counter__ = 0;
-    uint8_t *src = (uint8_t *)m_serial_number;
+    uint8_t *src = (uint8_t *)&m_serial_number[m_serial_number_idx__];
     uint8_t *dst = src + len;
     if (!m_parse__) {
         size_t move_length = getBuffRemainingBytes(src) - len;
@@ -2350,7 +2350,7 @@ bool cWscAttrDeviceName::alloc_device_name(size_t count) {
         return false;
     }
     m_lock_order_counter__ = 0;
-    uint8_t *src = (uint8_t *)m_device_name;
+    uint8_t *src = (uint8_t *)&m_device_name[m_device_name_idx__];
     uint8_t *dst = src + len;
     if (!m_parse__) {
         size_t move_length = getBuffRemainingBytes(src) - len;
@@ -3607,7 +3607,7 @@ bool cWscAttrSsid::alloc_ssid(size_t count) {
         return false;
     }
     m_lock_order_counter__ = 0;
-    uint8_t *src = (uint8_t *)m_ssid;
+    uint8_t *src = (uint8_t *)&m_ssid[m_ssid_idx__];
     uint8_t *dst = src + len;
     if (!m_parse__) {
         size_t move_length = getBuffRemainingBytes(src) - len;
@@ -3944,7 +3944,7 @@ bool cWscAttrNetworkKey::alloc_key(size_t count) {
         return false;
     }
     m_lock_order_counter__ = 0;
-    uint8_t *src = (uint8_t *)m_key;
+    uint8_t *src = (uint8_t *)&m_key[m_key_idx__];
     uint8_t *dst = src + len;
     if (!m_parse__) {
         size_t move_length = getBuffRemainingBytes(src) - len;

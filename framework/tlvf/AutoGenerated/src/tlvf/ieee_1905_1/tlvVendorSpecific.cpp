@@ -69,7 +69,7 @@ bool tlvVendorSpecific::alloc_payload(size_t count) {
         return false;
     }
     m_lock_order_counter__ = 0;
-    uint8_t *src = (uint8_t *)m_payload;
+    uint8_t *src = (uint8_t *)&m_payload[m_payload_idx__];
     uint8_t *dst = src + len;
     if (!m_parse__) {
         size_t move_length = getBuffRemainingBytes(src) - len;

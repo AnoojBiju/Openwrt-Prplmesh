@@ -57,7 +57,7 @@ bool tlvNon1905neighborDeviceList::alloc_mac_non_1905_device(size_t count) {
         return false;
     }
     m_lock_order_counter__ = 0;
-    uint8_t *src = (uint8_t *)m_mac_non_1905_device;
+    uint8_t *src = (uint8_t *)&m_mac_non_1905_device[m_mac_non_1905_device_idx__];
     uint8_t *dst = src + len;
     if (!m_parse__) {
         size_t move_length = getBuffRemainingBytes(src) - len;
