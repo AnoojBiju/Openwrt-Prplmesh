@@ -547,23 +547,34 @@ bool TopologyTask::add_1905_neighbor_device_tlv()
      * devices inferred from that interface.
      */
     for (auto &neighbors_on_local_iface_entry : db->neighbor_devices) {
-        auto tlv1905NeighborDevice = m_cmdu_tx.addClass<ieee1905_1::tlv1905NeighborDevice>();
-        if (!tlv1905NeighborDevice) {
-            LOG(ERROR) << "addClass ieee1905_1::tlv1905NeighborDevice failed";
-            return false;
-        }
+        std::shared_ptr<ieee1905_1::tlv1905NeighborDevice> tlv1905NeighborDevice = nullptr;
 
-        tlv1905NeighborDevice->mac_local_iface() = neighbors_on_local_iface_entry.first;
-        auto &neighbors_on_local_iface           = neighbors_on_local_iface_entry.second;
-
-        if (!tlv1905NeighborDevice->alloc_mac_al_1905_device(neighbors_on_local_iface.size())) {
-            LOG(ERROR) << "alloc_mac_al_1905_device() has failed";
-            return false;
-        }
+        auto &neighbors_on_local_iface = neighbors_on_local_iface_entry.second;
 
         size_t index = 0;
         for (const auto &neighbor_on_local_iface_entry : neighbors_on_local_iface) {
             auto &neighbor_al_mac = neighbor_on_local_iface_entry.first;
+
+            // Make sure there is enough space for another device.
+            // If not, add new TLV so the transport will be able to fragment the packet.
+            if (!tlv1905NeighborDevice ||
+                (tlv1905NeighborDevice->get_initial_size() +
+                     ((index + 1) * sizeof(ieee1905_1::tlv1905NeighborDevice::sMacAl1905Device)) >
+                 tlvf::MAX_TLV_SIZE)) {
+                tlv1905NeighborDevice = m_cmdu_tx.addClass<ieee1905_1::tlv1905NeighborDevice>();
+                if (!tlv1905NeighborDevice) {
+                    LOG(ERROR) << "addClass ieee1905_1::tlv1905NeighborDevice failed";
+                    return false;
+                }
+                tlv1905NeighborDevice->mac_local_iface() = neighbors_on_local_iface_entry.first;
+
+                index = 0;
+            }
+
+            if (!tlv1905NeighborDevice->alloc_mac_al_1905_device()) {
+                LOG(ERROR) << "alloc_mac_al_1905_device() has failed";
+                return false;
+            }
 
             auto mac_al_1905_device_tuple = tlv1905NeighborDevice->mac_al_1905_device(index);
             if (!std::get<0>(mac_al_1905_device_tuple)) {

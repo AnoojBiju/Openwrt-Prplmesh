@@ -1507,8 +1507,8 @@ class TlvF:
                     lines_cpp.append(
                         "%suint8_t *src = (uint8_t *)&m_%s[*m_%s];" % (self.getIndentation(1), param_meta.name, param_length))
                 else:
-                    lines_cpp.append("%suint8_t *src = (uint8_t *)m_%s;" %
-                                     (self.getIndentation(1), param_meta.name))
+                    lines_cpp.append("%suint8_t *src = (uint8_t *)&m_%s[m_%s_idx__];" %
+                                     (self.getIndentation(1), param_meta.name, param_meta.name))
                 lines_cpp.append("%suint8_t *dst = src + len;" % (self.getIndentation(1)))
                 lines_cpp.append("%sif (!m_parse__) {" % self.getIndentation(1))
                 lines_cpp.append(

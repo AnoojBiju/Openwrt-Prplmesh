@@ -12,9 +12,13 @@
 #include <easylogging++.h>
 #include <iomanip>
 #include <sstream>
+#include <tlvf/CmduMessageTx.h>
 #include <tlvf/common/sMacAddr.h>
 
 namespace tlvf {
+
+constexpr size_t MAX_TLV_SIZE = MTU_SIZE - ieee1905_1::CmduMessage::kCmduHeaderLength;
+
 /**
  * @brief convert integer to hexadecimal string
  *

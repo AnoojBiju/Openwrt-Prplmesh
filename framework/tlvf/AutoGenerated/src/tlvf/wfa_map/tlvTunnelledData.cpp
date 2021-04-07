@@ -65,7 +65,7 @@ bool tlvTunnelledData::alloc_data(size_t count) {
         return false;
     }
     m_lock_order_counter__ = 0;
-    uint8_t *src = (uint8_t *)m_data;
+    uint8_t *src = (uint8_t *)&m_data[m_data_idx__];
     uint8_t *dst = src + len;
     if (!m_parse__) {
         size_t move_length = getBuffRemainingBytes(src) - len;
