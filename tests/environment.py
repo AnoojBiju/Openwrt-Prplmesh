@@ -889,34 +889,30 @@ class RadioHostapd(Radio):
 
     def get_mac(self, iface: str) -> str:
         """Return mac of specified iface"""
-        device = self.agent.device
+        command = "ip link show {}".format(iface)
+        regex = "link/ether (?P<mac>([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})"
 
-        _device_reset_console(device)
-
-        device.sendline("ip link show {}".format(iface))
-        device.expect("link/ether (?P<mac>([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})")
-        return device.match.group('mac')
+        output = self.agent.command(command)
+        match = re.search(regex, output)
+        return match.group('mac')
 
     def get_current_channel(self) -> ChannelInfo:
-        device = self.agent.device
+        command = "iw dev {} info".format(self.iface_name)
+        regex = r"channel (?P<channel>[0-9]+) [^\r\n]*width[^\r\n]* (?P<width>[0-9]+) " + \
+            r"MHz[^\r\n]*center1[^\r\n]* (?P<center>[0-9]+) MHz"
 
-        _device_reset_console(device)
-
-        device.sendline("iw dev {} info".format(self.iface_name))
-        device.expect(
-            r"channel (?P<channel>[0-9]+) [^\r\n]*width[^\r\n]* (?P<width>[0-9]+) " +
-            r"MHz[^\r\n]*center1[^\r\n]* (?P<center>[0-9]+) MHz")
-        return ChannelInfo(int(device.match.group('channel')), int(device.match.group('width')),
-                           int(device.match.group('center')))
+        output = self.agent.command(command)
+        match = re.search(regex, output)
+        return ChannelInfo(int(match.group('channel')), int(match.group('width')),
+                           int(match.group('center')))
 
     def get_power_limit(self) -> int:
-        device = self.agent.device
+        command = "iw dev {} info".format(self.iface_name)
+        regex = r"txpower (?P<power_limit>[0-9]*)(\.0+)? dBm"
 
-        _device_reset_console(device)
-
-        device.sendline("iw dev {} info".format(self.iface_name))
-        device.expect(r"txpower (?P<power_limit>[0-9]*)(\.0+)? dBm")
-        return int(device.match.group('power_limit'))
+        output = self.agent.command(command)
+        match = re.search(regex, output)
+        return int(match.group('power_limit'))
 
 
 class VirtualAPHostapd(VirtualAP):
