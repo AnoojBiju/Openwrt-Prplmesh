@@ -310,6 +310,36 @@ bool Ieee1905Transport::de_fragment_packet(Packet &packet)
         MAPF_WARN("defragmentation buffer overflow - dropping fragment");
         return false;
     }
+
+    // Only count end of message TLV for the last fragment
+    if (ch->GetLastFragmentIndicator() == 0) {
+        Tlv *tlv          = reinterpret_cast<Tlv *>((uint8_t *)packet.payload.iov_base +
+                                           sizeof(Ieee1905CmduHeader));
+        size_t tlvsLength = fragmentTlvsLength;
+
+        // Find EOM TLV in the fragment
+        while (tlv->type() != 0) {
+            if (tlv->size() > tlvsLength) {
+                // This can only happen if one of the TLVs is corrupt
+                MAPF_ERR("Found corrupt TLV! Dropping the fragment.");
+                return false;
+            }
+
+            tlvsLength -= tlv->size();
+
+            if (tlvsLength < sizeof(Tlv)) {
+                // No EOM TLV or some padding. Good.
+                break;
+            }
+
+            tlv = tlv->next();
+        }
+
+        // Remove any leftover at the end of the buffer.
+        // It might be as a result of padding or EOM TLV.
+        fragmentTlvsLength -= tlvsLength;
+    }
+
     std::copy_n((uint8_t *)packet.payload.iov_base + sizeof(Ieee1905CmduHeader), fragmentTlvsLength,
                 val.buf + val.bufIndex);
     val.bufIndex += fragmentTlvsLength;
