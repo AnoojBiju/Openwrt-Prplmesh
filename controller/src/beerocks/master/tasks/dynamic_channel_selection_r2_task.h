@@ -22,6 +22,8 @@
 
 #include <chrono>
 
+constexpr uint8_t INTERVAL_TIME_BETWEEN_RETRIES_ON_FAILURE_SEC = 120;
+
 namespace son {
 
 class dynamic_channel_selection_r2_task : public task, public std::enable_shared_from_this<task> {
@@ -31,8 +33,13 @@ public:
     bool handle_ieee1905_1_msg(const std::string &src_mac,
                                ieee1905_1::CmduMessageRx &cmdu_rx) override;
 
-    struct sScanRequestEvent {
+    struct sSingleScanRequestEvent {
         sMacAddr radio_mac;
+    };
+
+    struct sContinuousScanRequestStateChangeEvent {
+        sMacAddr radio_mac;
+        bool enable;
     };
 
     struct sScanReportEvent {
@@ -40,9 +47,14 @@ public:
         uint16_t mid;
     };
 
-    enum eEvent : uint8_t { TRIGGER_SINGLE_SCAN, RECEIVED_CHANNEL_SCAN_REPORT };
+    enum eEvent : uint8_t {
+        TRIGGER_SINGLE_SCAN,
+        RECEIVED_CHANNEL_SCAN_REPORT,
+        CONTINUOUS_STATE_CHANGED_PER_RADIO
+    };
 
     enum class eRadioScanStatus : uint8_t { PENDING, TRIGGERED_WAIT_FOR_ACK, SCAN_IN_PROGRESS };
+
     enum class eAgentStatus : uint8_t { IDLE, BUSY };
 
     // Struct of the status of an agent and it's scan requests
@@ -50,22 +62,48 @@ public:
 
         // Struct of a radio scan request
         struct sRadioScanRequest {
-            uint16_t mid            = INVALID_MID_ID;
-            eRadioScanStatus status = eRadioScanStatus::PENDING;
-
-            int32_t dwell_time_msec;
-            std::unordered_set<uint8_t> channel_pool;
+            uint16_t mid                                         = INVALID_MID_ID;
+            eRadioScanStatus status                              = eRadioScanStatus::PENDING;
+            std::chrono::system_clock::time_point next_time_scan = {};
+            bool is_single_scan                                  = true;
         };
 
-        eAgentStatus status;
         /**
          * @brief Map of radio scans
          * 
          * Key:     radio mac.
          * Value:   radio scan request as sRadioScanRequest struct.
          */
-        std::unordered_map<sMacAddr, sRadioScanRequest> radio_scans;
+        using RadioScanMap = std::unordered_map<sMacAddr, sRadioScanRequest>;
+        /**
+         * @brief Pair of continuous radio scans Map
+         * 
+         * Key:     radio mac.
+         * Value:   radio scan request as sRadioScanRequest struct.
+         */
+        using RadioScanPair = std::pair<sMacAddr, sRadioScanRequest>;
+
+        eAgentStatus status;
+
+        RadioScanMap single_radio_scans;
+        RadioScanMap continuous_radio_scans;
+
         std::chrono::system_clock::time_point timeout;
+
+        /**
+         * @brief Check the if the scan passed its interval duration
+         * @param request The radio's request
+         * 
+         * @return true if scan is on time, false otherwise.
+         */
+        static bool is_continuous_scan_interval_passed(const sRadioScanRequest &request)
+        {
+            if (std::chrono::system_clock::now() >= request.next_time_scan) {
+                return true;
+            }
+
+            return false;
+        }
     };
 
     /**
@@ -108,6 +146,25 @@ private:
     task_pool &tasks;
 
     /**
+     * @brief Handle single scan request events.
+     * Add a radio scan request in the event to pending scan requests.
+     * 
+     * @param scan_request_event Refernce to sSingleScanRequestEvent object.
+     * @return true if successful, false otherwise.
+     */
+    bool handle_single_scan_request_event(const sSingleScanRequestEvent &scan_request_event);
+
+    /**
+     * @brief Handle continuous scan request events.
+     * Add a radio scan request in the event to pending scan requests.
+     * 
+     * @param scan_request_event Refernce to sContinuousScanRequestStateChangeEvent object.
+     * @return true if successful, false otherwise.
+     */
+    bool handle_continuous_scan_request_event(
+        const sContinuousScanRequestStateChangeEvent &scan_request_event);
+
+    /**
      * @brief Check the scans queue for any pending requests in idle agents
      * 
      * @return true if pending scan in idle agent found, false otherwise.
@@ -135,9 +192,10 @@ private:
      * @brief Check if a scan was triggered for a given radio
      * 
      * @param radio_mac MAC address of the radio 
-     * @return true if successful, false otherwise.
+     * @param is_single_scan boolean value that represents the type of the scan
+     * @return true if scan is triggered, false otherwise.
      */
-    bool is_scan_triggered_for_radio(const sMacAddr &radio_mac);
+    bool is_scan_triggered_for_radio(const sMacAddr &radio_mac, bool is_single_scan);
 
     /**
      * @brief Handle scan request events.
@@ -146,7 +204,7 @@ private:
      * @param scan_request_event Refernce to sScanRequestEvent object.
      * @return true if successful, false otherwise.
      */
-    bool handle_scan_request_event(const sScanRequestEvent &scan_request_event);
+    bool handle_scan_request_event();
 
     /**
      * @brief Handle scan report events
