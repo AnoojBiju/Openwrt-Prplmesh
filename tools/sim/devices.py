@@ -26,6 +26,7 @@ destroying the link.
 # objects make the model easier to understand.
 
 import collections
+import logging
 from typing import Any, Dict, List, NamedTuple
 
 
@@ -145,7 +146,15 @@ class Network:
             for link in device.bridged_links:
                 if link == backhaul_link:
                     continue
+
                 other = link.other(device)
+
+                if link not in other.bridged_links:
+                    # If the link is not bridged, it doesn't form a backhaul path. It also can't
+                    # form a loop. It is a strange situation though so warn about it.
+                    logging.warning(f"{link} not in bridge of {other} but in bridge of {device}")
+                    continue
+
                 if other in paths:
                     # Calculate the exact loop
                     loop = [link]
@@ -154,6 +163,7 @@ class Network:
                         if other in looplink.devices:
                             break
                     raise Network.LoopDetected(loop)
+
                 paths[other] = [link] + path
                 add_paths_for_neighbors(other, link)
 

@@ -137,6 +137,24 @@ def test_connectivity_chain_broken(chain_network):
         assert chain_network.devices[idx] not in backhaul_tree
 
 
+def test_connectivity_chain_broken_upstream_bridge(chain_network):
+    broken_link = chain_network.devices[3].links[chain_network.devices[2]][0]
+    chain_network.devices[2].bridged_links.remove(broken_link)
+    backhaul_tree = chain_network.calculate_backhaul_tree()
+    assert_backhaul_path(chain_network, backhaul_tree, (2, 1, 0))
+    for idx in range(3, len(chain_network.devices)):
+        assert chain_network.devices[idx] not in backhaul_tree
+
+
+def test_connectivity_chain_broken_downstream_bridge(chain_network):
+    broken_link = chain_network.devices[3].links[chain_network.devices[2]][0]
+    chain_network.devices[3].bridged_links.remove(broken_link)
+    backhaul_tree = chain_network.calculate_backhaul_tree()
+    assert_backhaul_path(chain_network, backhaul_tree, (2, 1, 0))
+    for idx in range(3, len(chain_network.devices)):
+        assert chain_network.devices[idx] not in backhaul_tree
+
+
 def test_connectivity_chain_loop(chain_network):
     device_1 = chain_network.devices[1]
     device_4 = chain_network.devices[4]
