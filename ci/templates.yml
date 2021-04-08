@@ -143,6 +143,8 @@
           tools/deploy_ipk.sh --certification-mode $DEVICE_UNDER_TEST build/$DEVICE_UNDER_TEST/prplmesh.ipk
       fi
     - sudo -E /easymesh_cert/run_test_file.py --upload-results  --verbose --log-folder logs --device-under-test $DEVICE_UNDER_TEST $TESTS_TO_RUN
+  after_script:
+    - ci/certification/R1_marvell_station.sh
   artifacts:
     paths:
       - logs
@@ -158,6 +160,8 @@
     - echo $CI_COMMIT_DESCRIPTION
     - ci/git-clean-reset.sh /easymesh_cert "$(<"ci/easymesh_cert_version")"
     - sudo -E /easymesh_cert/run_test_file.py -v -o logs -d $RUN_ON_DEVICE "${CI_JOB_NAME%%:*}"
+  after_script:
+    - ci/certification/R1_marvell_station.sh
   artifacts:
     paths:
       - logs
