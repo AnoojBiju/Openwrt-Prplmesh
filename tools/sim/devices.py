@@ -26,7 +26,7 @@ destroying the link.
 # objects make the model easier to understand.
 
 import collections
-from typing import NamedTuple
+from typing import Dict, List, NamedTuple
 
 
 class Metric(NamedTuple):
@@ -56,6 +56,26 @@ class Network:
     devices: [Device]
         List of devices that belong to the network. The first device is the gateway.
     '''
+
+    class LoopDetected(Exception):
+        '''Exception indicating that a loop is detected in the network.
+
+        Attributes
+        ----------
+        links: [Link]
+            List of links that form a loop. The first and last link will have the same device.
+        '''
+        def __init__(self, links):
+            self.links = links
+            common = self.links[0].devices & self.links[-1].devices
+            assert len(common) == 1, "Loop links must start and end with the same device"
+            device = common.pop()
+
+            s = f'Loop detected: {device}'
+            for link in self.links:
+                device = link.other(device)
+                s += f' -> {device}'
+            super().__init__(self, s)
 
     def __init__(self):
         self.devices = []
@@ -88,6 +108,49 @@ class Network:
             for device in new_devices:
                 new_device.add_link(device, metric)
             new_devices.append(new_device)
+
+    def calculate_backhaul_tree(self) -> Dict["Device", List["Link"]]:
+        '''Calculate the backhaul link tree.
+
+        Based on the bridged_links of each Device, calculate for each Device the path to the
+        gateway (i.e. self.devices[0]).
+
+        Raises
+        ------
+        Network.LoopDetected
+            If a loop is detected, the LoopDetected exception is raised.
+
+        Returns
+        -------
+        {"Device", ["Link"]}
+            A mapping from each device in the network to their backhaul path. The backhaul path is
+            a list of links, starting at the device and ending at the gateway. For the gateway
+            itself this is the empty list. Devices that have no path to the gateway are not
+            included. Thus, full connectivity can be checked by checking that the keys of the return
+            value is equal to network.devices.
+        '''
+        paths = {self.devices[0]: []}
+
+        def add_paths_for_neighbors(device, backhaul_link):
+            path = paths[device]
+            for link in device.bridged_links:
+                if link == backhaul_link:
+                    continue
+                other = link.other(device)
+                if other in paths:
+                    # Calculate the exact loop
+                    loop = [link]
+                    for looplink in path:
+                        loop.append(looplink)
+                        if other in looplink.devices:
+                            break
+                    raise Network.LoopDetected(loop)
+                paths[other] = [link] + path
+                add_paths_for_neighbors(other, link)
+
+        add_paths_for_neighbors(self.devices[0], None)
+
+        return paths
 
 
 class Device:
