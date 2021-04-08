@@ -166,6 +166,30 @@ class Algorithm:
         '''
         pass
 
+    def handle_link_activate(self, when: Tick, device: Device, link: Link, active: bool):
+        """Handle a link (de)activation event.
+
+        To be implemented by derived classes.
+
+        When one of the links on a device becomes active or inactive, the device will detect that,
+        so algorithms can react to it. This method is called when one of the links on a device
+        changes active state.
+
+        Default implementation does nothing.
+
+        Parameters
+        ----------
+        when : Tick
+            Time point at which the message arrives.
+        device : Device
+            The device on which the message arrives.
+        link: Link
+            The link that becomes (in)active.
+        active: bool
+            True if the link is activated, False if it is deactivated.
+        """
+        pass
+
     def set_start(self, when: Tick, device: Device) -> None:
         '''Add a startup event at the specified tick.'''
         self.simulation.add_event(when, lambda when, _: self.start(when, device),
@@ -338,12 +362,14 @@ def forward_msg(message: Message, src: Device, dst: Optional[Device],
             logging.debug(f"Link to {dst} from {on_device} forwarding_db is no longer "
                           "in the bridge: {dst_link}")
             dst_link = None
+        elif not dst_link.active:
+            logging.debug(f"Cached link {dst_link} is no longer active")
+            dst_link = None
 
     if dst is None or dst_link is None:
         # Forward to all neighbours but don't hairpin
-        forward_links = list(on_device.bridged_links)
-        if src_link:
-            forward_links.remove(src_link)
+        forward_links = [link for link in on_device.bridged_links
+                         if link.active and link != src_link]
     else:
         forward_links = [dst_link]
 
@@ -379,3 +405,32 @@ def send_msg(message: Message, src: Device, dst: Optional[Device], simulation: S
         The simulation in which to model this. Is used for timing. Every hop takes one Tick.
     '''
     return forward_msg(message, src, dst, src, None, simulation)
+
+
+def set_link_de_activate_event(when: Tick, link: Link, simulation: Simulation, activate: bool):
+    """Create an event to activate or deactivate a link.
+
+    We want to simulate links being broken or being established. This function registers such an
+    event.
+
+    Parameters
+    ----------
+    when: Tick
+        When the link (de)activates.
+    link: Link
+        The link to (de)activate.
+    simulation: Simulation
+        The simulation in which to (de)activate the link.
+    activate: bool
+        If True, set the link to active; if false, set to inactive.
+    """
+
+    def activate_link_callback(when, event):
+        link.active = activate
+        # We could add a delay before triggering the activate handlers, but there's not much point.
+        for device in link.devices:
+            for algorithm in simulation.algorithms[device]:
+                algorithm.handle_link_activate(when, device, link, activate)
+
+    description = "Activate" if activate else "Deactivate"
+    simulation.add_event(when, activate_link_callback, description)

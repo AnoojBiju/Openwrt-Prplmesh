@@ -129,8 +129,7 @@ def test_connectivity_tree(tree_network):
 
 def test_connectivity_chain_broken(chain_network):
     broken_link = chain_network.devices[3].links[chain_network.devices[2]][0]
-    chain_network.devices[3].bridged_links.remove(broken_link)
-    chain_network.devices[2].bridged_links.remove(broken_link)
+    broken_link.active = False
     backhaul_tree = chain_network.calculate_backhaul_tree()
     assert_backhaul_path(chain_network, backhaul_tree, (2, 1, 0))
     for idx in range(3, len(chain_network.devices)):

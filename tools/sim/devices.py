@@ -147,6 +147,9 @@ class Network:
                 if link == backhaul_link:
                     continue
 
+                if not link.active:
+                    continue
+
                 other = link.other(device)
 
                 if link not in other.bridged_links:
@@ -237,6 +240,10 @@ class Link:
         allowed, this is modeled as a set which always has two elements.
     metric: Metric
         The metric of the link.
+    active: bool
+        Indicates if the link is active (established). A link that is not active does not give
+        backhaul connectivity and does not pass messages. True by default, set to False to
+        deactivate the link.
     '''
 
     def __init__(self, dev1: Device, dev2: Device, metric: Metric):
@@ -244,6 +251,7 @@ class Link:
 
         self.devices = {dev1, dev2}
         self.metric = metric
+        self.active = True
 
         dev1.links[dev2].append(self)
         dev2.links[dev1].append(self)

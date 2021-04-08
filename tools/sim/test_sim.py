@@ -82,6 +82,10 @@ class AlgorithmTest(sim.Algorithm):
         self.checker.check_event(when, 'start', f'{device}_{self.name}_Startup', device)
         self.set_timeout(sim.Tick.s(-1.0), device, self.checker.timeout_callback)
 
+    def handle_link_activate(self, when, device, link, active):
+        description = "Activate" if active else "Deactivate"
+        self.checker.check_event(when, 'activate', description, (device, link, active))
+
 
 def test_simulation_event(a_simulation):
     checker = Expect()
@@ -98,6 +102,16 @@ def test_simulation_start_and_timeout(a_simulation):
         a_simulation.add_algorithm_to_device(algorithm, device)
         checker.add_expectation(1, 'start', device)
         checker.add_expectation(sim.Tick.s(1.0) + 1, 'timeout', device)
+
+    d3, d4 = a_simulation.network.devices[3:5]
+    link = d3.links[d4][0]
+    sim.set_link_de_activate_event(sim.Tick.s(2), link, a_simulation, False)
+    checker.add_expectation(sim.Tick.s(2), 'activate', (d3, link, False))
+    checker.add_expectation(sim.Tick.s(2), 'activate', (d4, link, False))
+    sim.set_link_de_activate_event(sim.Tick.s(3), link, a_simulation, True)
+    checker.add_expectation(sim.Tick.s(3), 'activate', (d3, link, True))
+    checker.add_expectation(sim.Tick.s(3), 'activate', (d4, link, True))
+
     a_simulation.run(checker.check_run)
     checker.check_done()
 
@@ -137,5 +151,19 @@ def test_message_multicast(a_simulation, a_message):  # noqa: F811
         checker.add_expectation(idx, 'message', (src, None, device))
 
     sim.send_msg(a_message, src, None, a_simulation)
+    a_simulation.run(checker.check_run)
+    checker.check_done()
+
+
+def test_message_unicast_broken_link(a_simulation, a_message):  # noqa: F811
+    checker = Expect()
+    algorithm = AlgorithmTestMessage(a_simulation, checker)
+    for device in a_simulation.network.devices:
+        a_simulation.add_algorithm_to_device(algorithm, device)
+
+    a_simulation.network.devices[3].links[a_simulation.network.devices[2]][0].active = False
+    # Message is expected *not* to arrive
+    sim.send_msg(a_message, a_simulation.network.devices[0], a_simulation.network.devices[5],
+                 a_simulation)
     a_simulation.run(checker.check_run)
     checker.check_done()
