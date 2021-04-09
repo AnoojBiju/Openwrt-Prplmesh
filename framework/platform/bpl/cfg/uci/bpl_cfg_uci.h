@@ -63,6 +63,9 @@ extern "C" {
 #define RETURN_ERR -1
 #define RETURN_OK 0
 
+// Default UCI Lan interface names. It needs to be space separeted.
+constexpr char DEFAULT_UCI_LAN_INTERFACE_NAMES[] = "eth0_1 eth0_2 eth0_3 eth0_4";
+
 namespace beerocks {
 namespace bpl {
 
@@ -78,7 +81,7 @@ int cfg_uci_get_wireless_from_ifname(enum paramType type, const char *interface_
  * section type
  *
  * Results stored in `option` map as [Key: Section name, Value: Option value]
- * 
+ *
  * @param [in] pkg_name package name to lookup
  * @param [in] sct_type section type to filter within the package
  * @param [in] opt_name option to take the value of
@@ -88,6 +91,22 @@ int cfg_uci_get_wireless_from_ifname(enum paramType type, const char *interface_
  **/
 int cfg_uci_get_all_options_by_section_type(char *pkg_name, char *sct_type, char *opt_name,
                                             std::unordered_map<std::string, std::string> &options);
+
+/**
+ * Read lan interface names from network configuration.
+ *
+ * This method return always true, for RDKB builds.
+ * In case of failed uci call, returns default list.
+ *
+ * Uci path network.@network_name.ifname
+ * Example interface_names network.lan.ifname='eth0_1 eth0_2'
+ *
+ * @param [in] network_name network_name Network section name to look up.
+ * @param [out] interface_names lan interface names separated by spaces.
+ *
+ * @return 0 on success or -1 on error.
+ **/
+int cfg_uci_get_lan_interfaces(const std::string &network_name, std::string &interface_names);
 
 } // namespace bpl
 } // namespace beerocks

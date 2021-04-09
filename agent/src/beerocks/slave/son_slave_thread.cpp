@@ -102,22 +102,6 @@ slave_thread::slave_thread(sSlaveConfig conf, beerocks::logging &logger_)
     db->ethernet.wan.iface_name  = conf.backhaul_wire_iface;
     db->backhaul.preferred_bssid = tlvf::mac_from_string(conf.backhaul_preferred_bssid);
 
-    // Let only the slave that lock the DB first to add elements to the LAN ifaces vector.
-    if (db->ethernet.lan.empty()) {
-        for (const auto &eth_iface : conf.fronthaul_wire_ifaces) {
-            // Since the LAN ports configured on the CMAKE file are exist only on an Axepoint
-            // platform, other platforms that run openWRT would not have these interfaces.
-            // Therefore, do not insert the configured interfaces into the database if they are not
-            // exist.
-            // This is a temporary hack so we can run some certification tests on Axepoint.
-            // Need to replace the CMAKE configuration which reflected on "beerocks_agent.conf", to
-            // UCI reading.
-            if (network_utils::linux_iface_exists(eth_iface)) {
-                db->ethernet.lan.emplace_back(eth_iface);
-            }
-        }
-    }
-
     auto radio = db->add_radio(conf.hostap_iface, conf.backhaul_wireless_iface);
     if (!radio) {
         m_constructor_failed = true;
@@ -3566,17 +3550,6 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
 
             // Update wan parameters on AgentDB.
             db->ethernet.wan.mac = tlvf::mac_from_string(iface_mac);
-        }
-
-        for (auto &eth_iface : db->ethernet.lan) {
-            if (!network_utils::linux_iface_get_mac(eth_iface.iface_name, iface_mac)) {
-                LOG(ERROR) << "Failed reading lan mac address! iface=" << eth_iface.iface_name;
-                m_stop_on_failure_attempts--;
-                slave_reset();
-            }
-
-            // Update ethernet lan parameters on AgentDB.
-            eth_iface.mac = tlvf::mac_from_string(iface_mac);
         }
 
         // Reset the traffic separation configuration as they will be reconfigured on

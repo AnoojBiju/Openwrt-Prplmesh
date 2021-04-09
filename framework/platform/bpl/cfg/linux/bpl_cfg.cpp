@@ -8,6 +8,7 @@
 
 #include "../common/utils/utils.h"
 #include "../common/utils/utils_net.h"
+#include <bcl/beerocks_string_utils.h>
 #include <bpl/bpl_cfg.h>
 #include <mapf/common/logger.h>
 #include <mapf/common/utils.h>
@@ -669,6 +670,14 @@ bool bpl_cfg_get_mandatory_interfaces(std::string &mandatory_interfaces)
     // This means we will not create son_slaves for currently-not-existing interfaces.
     mandatory_interfaces.clear();
 
+    return true;
+}
+
+bool bpl_get_lan_interfaces(std::vector<std::string> &lan_iface_list)
+{
+
+    // TODO Default value is returned, add/set capability can be added in platform DB.
+    lan_iface_list = beerocks::string_utils::str_split(DEFAULT_LINUX_LAN_INTERFACE_NAMES, ' ');
     return true;
 }
 

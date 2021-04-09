@@ -394,7 +394,7 @@ bool TopologyTask::add_device_information_tlv()
      */
     auto fill_eth_device_information = [&](const std::string &local_eth_iface_name) {
         if (!network_utils::linux_iface_is_up_and_running(local_eth_iface_name)) {
-            LOG(ERROR) << "Failed to query interface status on " << local_eth_iface_name;
+            LOG(INFO) << "Interface is down iface_name: " << local_eth_iface_name;
         }
         ieee1905_1::eMediaType media_type = ieee1905_1::eMediaType::UNKNOWN_MEDIA;
         if (!MediaType::get_media_type(local_eth_iface_name,

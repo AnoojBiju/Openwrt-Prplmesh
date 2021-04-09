@@ -191,8 +191,9 @@ public:
 
     struct {
         struct sEthernetPort {
-            explicit sEthernetPort(const std::string &iface_name_)
-                : iface_name(iface_name_), mac(net::network_utils::ZERO_MAC)
+            explicit sEthernetPort(const std::string &iface_name_,
+                                   const sMacAddr &mac_ = net::network_utils::ZERO_MAC)
+                : iface_name(iface_name_), mac(mac_)
             {
             }
             sEthernetPort() : mac(net::network_utils::ZERO_MAC){};
