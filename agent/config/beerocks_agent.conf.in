@@ -16,9 +16,6 @@ enable_arp_monitor=0
 bridge_iface=@BEEROCKS_BRIDGE_IFACE@
 enable_system_hang_test=0 # 0 - disabled
 
-[ethernet]
-fronthaul_wire_ifaces=@BEEROCKS_FH_WIRE_IFACE@
-
 [backhaul]
 backhaul_preferred_bssid=
 backhaul_wire_iface=@BEEROCKS_BH_WIRE_IFACE@

@@ -237,5 +237,24 @@ int cfg_uci_get_all_options_by_section_type(char *pkg_name, char *sct_type, char
     return RETURN_OK;
 }
 
+int cfg_uci_get_lan_interfaces(const std::string &network_name, std::string &interface_names)
+{
+    char value[MAX_UCI_BUF_LEN] = "";
+    char path[MAX_UCI_BUF_LEN]  = "";
+
+    mapf::utils::copy_string(path, std::string("network." + network_name + ".ifname").c_str(),
+                             MAX_UCI_BUF_LEN);
+
+    interface_names.clear();
+    if (cfg_uci_get(path, value, MAX_UCI_BUF_LEN) == RETURN_OK) {
+        interface_names.assign(value);
+    } else {
+
+        // In case of read error, fill default ethernet name list for RDKB (PPM-1269).
+        interface_names.assign(DEFAULT_UCI_LAN_INTERFACE_NAMES);
+    }
+    return RETURN_OK;
+}
+
 } // namespace bpl
 } // namespace beerocks

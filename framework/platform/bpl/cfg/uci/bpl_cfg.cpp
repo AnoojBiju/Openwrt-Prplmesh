@@ -15,6 +15,7 @@
 #include "bpl_cfg_helper.h"
 #include "bpl_cfg_uci.h"
 
+#include <bcl/beerocks_string_utils.h>
 #include <mapf/common/logger.h>
 #include <mapf/common/utils.h>
 
@@ -715,6 +716,17 @@ bool bpl_cfg_get_mandatory_interfaces(std::string &mandatory_interfaces)
 
     mandatory_interfaces = std::string(tmp_mandatory_interfaces);
 
+    return true;
+}
+
+bool bpl_get_lan_interfaces(std::vector<std::string> &lan_iface_list)
+{
+    std::string iface_names;
+    if (cfg_uci_get_lan_interfaces("lan", iface_names) != RETURN_OK) {
+        LOG(ERROR) << "Read network lan interfaces names from UCI failed.";
+    }
+
+    lan_iface_list = beerocks::string_utils::str_split(iface_names, ' ');
     return true;
 }
 
