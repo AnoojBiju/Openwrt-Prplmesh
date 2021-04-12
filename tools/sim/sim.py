@@ -282,7 +282,7 @@ class Simulation:
         self.algorithms[device].append(algorithm)
         algorithm.set_start(self.now + 1, device)
 
-    def run(self, checker: Callable[[Tick, Network, Any], None]) -> None:
+    def run(self, checker: Callable[[Tick, Network, Any], None], end: Tick = None) -> None:
         '''Run the simulation.
 
         This triggers the events in the order of their ticks.
@@ -296,8 +296,10 @@ class Simulation:
             After an event has processed, the checker is called. Its arguments are `when`, the
             current simulation tick, `network`, the Network that is simulated, and `last_event`,
             the description of the last event that was simulated.
+        end: Tick
+            When to end the simulation. If None, run until no events are scheduled.
         '''
-        while self.events:
+        while self.events and (end is None or self.now < end):
             # Note that Python sort is stable, so events with the same `when` will be kept in the
             # order they were added.
             self.events.sort(key=lambda event: event.when)
