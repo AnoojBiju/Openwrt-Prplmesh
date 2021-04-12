@@ -873,7 +873,7 @@ class RadioHostapd(Radio):
 
         _device_reset_console(device)
 
-        device.sendline("iw {} info".format(self.iface_name))
+        device.sendline("iw dev {} info".format(self.iface_name))
         device.expect(
             r"channel (?P<channel>[0-9]+) [^\r\n]*width[^\r\n]* (?P<width>[0-9]+) " +
             r"MHz[^\r\n]*center1[^\r\n]* (?P<center>[0-9]+) MHz")
@@ -885,7 +885,7 @@ class RadioHostapd(Radio):
 
         _device_reset_console(device)
 
-        device.sendline("iw {} info".format(self.iface_name))
+        device.sendline("iw dev {} info".format(self.iface_name))
         device.expect(r"txpower (?P<power_limit>[0-9]*)(\.0+)? dBm")
         return int(device.match.group('power_limit'))
 
@@ -900,7 +900,7 @@ class VirtualAPHostapd(VirtualAP):
     def get_ssid(self) -> str:
         """Get current SSID of attached radio. Return string."""
         device = self.radio.agent.device
-        device.sendline("iw {} info".format(self.iface))
+        device.sendline("iw dev {} info".format(self.iface))
         # We are looking for SSID definition
         # ssid Multi-AP-24G-1
         # type AP
