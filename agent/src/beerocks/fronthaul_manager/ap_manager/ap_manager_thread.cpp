@@ -272,9 +272,6 @@ static void unify_channels_list(
             supported_bw_info_tlv.rank      = bw_it->second;
 
             auto print_channel_info = [&]() {
-                if (supported_bw_info_tlv.rank == -1) {
-                    return;
-                }
                 auto dfs_state_to_string = [&]() {
                     if (channel_info.dfs_state == beerocks_message::eDfsState::NOT_DFS) {
                         return "NOT_DFS";
