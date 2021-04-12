@@ -312,7 +312,6 @@ public:
         std::array<uint8_t, beerocks::message::VHT_MCS_SET_SIZE> vht_mcs_set;
 
         bool he_supported = false; ///< Is 802.11ax (High Efficiency) protocol supported
-        bool report_indepent_scans_policy = false;
     };
     struct {
         uint16_t max_number_of_vlans_ids;
@@ -322,6 +321,10 @@ public:
         uint8_t default_pcp;
         std::unordered_set<uint16_t> secondaries_vlans_ids;
     } traffic_separation;
+
+    struct {
+        bool report_indepent_scans_policy = false;
+    } channel_scan_policy;
 
     /**
      * @brief Get pointer to the radio data struct of a specific interface. The function can

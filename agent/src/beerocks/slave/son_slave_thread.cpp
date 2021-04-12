@@ -39,7 +39,6 @@
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
 #include <tlvf/wfa_map/tlvBeaconMetricsResponse.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
-#include <tlvf/wfa_map/tlvChannelScanReportingPolicy.h>
 #include <tlvf/wfa_map/tlvChannelSelectionResponse.h>
 #include <tlvf/wfa_map/tlvClientAssociationControlRequest.h>
 #include <tlvf/wfa_map/tlvClientAssociationEvent.h>
@@ -5073,20 +5072,6 @@ bool slave_thread::handle_multi_ap_policy_config_request(Socket *sd,
      */
     auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Received MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE, mid=" << std::hex << int(mid);
-
-    auto channel_scan_reporing_policy = cmdu_rx.getClass<wfa_map::tlvChannelScanReportingPolicy>();
-    if (channel_scan_reporing_policy) {
-        auto db = AgentDB::get();
-
-        auto radio = db->radio(m_fronthaul_iface);
-        if (!radio) {
-            LOG(ERROR) << "Failed setting channel scan reporting policy - radio not found!";
-            return false;
-        }
-        radio->report_indepent_scans_policy =
-            (channel_scan_reporing_policy->report_independent_channel_scans() ==
-             channel_scan_reporing_policy->REPORT_INDEPENDENT_CHANNEL_SCANS);
-    }
 
     /**
      * The slave in turn, forwards the request message again "as is" to the monitor thread.

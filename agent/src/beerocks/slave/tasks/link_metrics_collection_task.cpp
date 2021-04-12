@@ -24,6 +24,7 @@
 #include <tlvf/wfa_map/tlvAssociatedStaExtendedLinkMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
 #include <tlvf/wfa_map/tlvBeaconMetricsQuery.h>
+#include <tlvf/wfa_map/tlvChannelScanReportingPolicy.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
 #include <tlvf/wfa_map/tlvProfile2RadioMetrics.h>
 #include <tlvf/wfa_map/tlvProfile2UnsuccessfulAssociationPolicy.h>
@@ -688,13 +689,20 @@ void LinkMetricsCollectionTask::handle_multi_ap_policy_config_request(
         m_ap_metrics_reporting_info.last_reporting_time_point = std::chrono::steady_clock::now();
     }
 
+    auto db                           = AgentDB::get();
+    auto channel_scan_reporing_policy = cmdu_rx.getClass<wfa_map::tlvChannelScanReportingPolicy>();
+    if (channel_scan_reporing_policy) {
+        db->channel_scan_policy.report_indepent_scans_policy =
+            (channel_scan_reporing_policy->report_independent_channel_scans() ==
+             channel_scan_reporing_policy->REPORT_INDEPENDENT_CHANNEL_SCANS);
+    }
+
     // send ACK_MESSAGE back to the controller
     if (!m_cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE)) {
         LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
         return;
     }
 
-    auto db = AgentDB::get();
     m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac);
 
     const auto unsuccessful_association_policy_tlv =
