@@ -212,24 +212,28 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
 
     // 2.2 radio independent tlvs
 
-    // profile 2 ap capability
-    if (!add_profile2_ap_capability_tlv(m_cmdu_tx)) {
-        return;
-    }
+    if (db->controller_info.profile_support ==
+        AgentDB::sControllerInfo::eProfileSupport::Profile2) {
 
-    // profile 2 metric collection interval
-    // Note: at the moment we are not setting a value for collection_interval
-    auto profile2_meteric_collection_interval_tlv =
-        m_cmdu_tx.addClass<wfa_map::tlvProfile2MetricCollectionInterval>();
-    if (!profile2_meteric_collection_interval_tlv) {
-        LOG(ERROR) << "error creating TLV_PROFILE2_METERIC_COLLECTION_INTERVAL";
-        return;
-    }
+        // profile 2 ap capability
+        if (!add_profile2_ap_capability_tlv(m_cmdu_tx)) {
+            return;
+        }
 
-    // 3. tlvs added by external sources
-    if (!add_cac_capabilities_tlv()) {
-        LOG(ERROR) << "error filling cac capabilities tlv";
-        return;
+        // profile 2 metric collection interval
+        // Note: at the moment we are not setting a value for collection_interval
+        auto profile2_meteric_collection_interval_tlv =
+            m_cmdu_tx.addClass<wfa_map::tlvProfile2MetricCollectionInterval>();
+        if (!profile2_meteric_collection_interval_tlv) {
+            LOG(ERROR) << "error creating TLV_PROFILE2_METERIC_COLLECTION_INTERVAL";
+            return;
+        }
+
+        // 3. tlvs added by external sources
+        if (!add_cac_capabilities_tlv()) {
+            LOG(ERROR) << "error filling cac capabilities tlv";
+            return;
+        }
     }
 
     // send the constructed report
