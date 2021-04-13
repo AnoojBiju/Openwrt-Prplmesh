@@ -193,10 +193,6 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
         }
     }
 
-    if (!add_profile2_ap_capability_tlv(m_cmdu_tx)) {
-        return;
-    }
-
     // 2. The tlvs created here are defined in the
     // specification as "One" (multi-ap specification v2, 17.1.7).
     // the one tlv may contain information about few radios
@@ -217,13 +213,9 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
     // 2.2 radio independent tlvs
 
     // profile 2 ap capability
-    auto profile2_ap_capability_tlv = m_cmdu_tx.addClass<wfa_map::tlvProfile2ApCapability>();
-    if (!profile2_ap_capability_tlv) {
-        LOG(ERROR) << "Error creating TLV_PROFILE2_AP_CAPABILITIES";
+    if (!add_profile2_ap_capability_tlv(m_cmdu_tx)) {
         return;
     }
-    // set kilobytes (KiB)
-    profile2_ap_capability_tlv->capabilities_bit_field().byte_counter_units = 1;
 
     // profile 2 metric collection interval
     // Note: at the moment we are not setting a value for collection_interval
