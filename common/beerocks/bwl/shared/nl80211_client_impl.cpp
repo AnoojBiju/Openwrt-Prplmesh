@@ -47,9 +47,55 @@
 #include <math.h>
 namespace bwl {
 
+std::string nl80211_parse_ifname(struct nlattr *tb[])
+{
+    std::string ifname;
+
+    if (tb[NL80211_ATTR_IFNAME]) {
+        size_t length    = nla_len(tb[NL80211_ATTR_IFNAME]);
+        const char *data = static_cast<const char *>(nla_data(tb[NL80211_ATTR_IFNAME]));
+
+        LOG_IF(length == 0, FATAL) << "Interface name is empty";
+        LOG_IF(data[length - 1] != '\0', FATAL) << "Interface name is not null-terminated";
+
+        ifname.assign(data);
+    }
+
+    return ifname;
+}
+
 nl80211_client_impl::nl80211_client_impl(std::unique_ptr<nl80211_socket> socket)
     : m_socket(std::move(socket))
 {
+}
+
+bool nl80211_client_impl::get_interfaces(std::vector<std::string> &interfaces)
+{
+    interfaces.clear();
+
+    if (!m_socket) {
+        LOG(ERROR) << "Socket is NULL!";
+        return false;
+    }
+
+    return m_socket.get()->send_receive_msg(
+        NL80211_CMD_GET_INTERFACE, NLM_F_DUMP, [](struct nl_msg *msg) -> bool { return true; },
+        [&](struct nl_msg *msg) {
+            struct nlattr *tb[NL80211_ATTR_MAX + 1];
+            struct genlmsghdr *gnlh = (struct genlmsghdr *)nlmsg_data(nlmsg_hdr(msg));
+
+            // Parse the netlink message
+            if (nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0), genlmsg_attrlen(gnlh, 0),
+                          NULL)) {
+                LOG(ERROR) << "Failed to parse netlink message!";
+                return;
+            }
+
+            std::string ifname = nl80211_parse_ifname(tb);
+            if (!ifname.empty()) {
+                interfaces.push_back(ifname);
+            }
+        });
 }
 
 bool nl80211_client_impl::get_interface_info(const std::string &interface_name,
@@ -89,15 +135,7 @@ bool nl80211_client_impl::get_interface_info(const std::string &interface_name,
                 return;
             }
 
-            if (tb[NL80211_ATTR_IFNAME]) {
-                size_t length = nla_len(tb[NL80211_ATTR_IFNAME]);
-                const uint8_t *data =
-                    static_cast<const uint8_t *>(nla_data(tb[NL80211_ATTR_IFNAME]));
-
-                for (size_t i = 0; i < length; i++) {
-                    interface_info.name += static_cast<char>(data[i]);
-                }
-            }
+            interface_info.name = nl80211_parse_ifname(tb);
 
             if (tb[NL80211_ATTR_IFINDEX]) {
                 interface_info.index = nla_get_u32(tb[NL80211_ATTR_IFINDEX]);
@@ -132,19 +170,8 @@ bool nl80211_client_impl::get_interface_info(const std::string &interface_name,
                 LOG(DEBUG) << "NL80211_ATTR_WIPHY attribute is missing";
             }
 
-            if (tb[NL80211_ATTR_CHANNEL_WIDTH]) {
-                LOG(DEBUG) << "NL80211_ATTR_CHANNEL_WIDTH"
-                           << nla_get_u32(tb[NL80211_ATTR_CHANNEL_WIDTH]);
-            }
-
-            if (tb[NL80211_ATTR_CENTER_FREQ1]) {
-                LOG(DEBUG) << "NL80211_ATTR_CENTER_FREQ1"
-                           << nla_get_u32(tb[NL80211_ATTR_CENTER_FREQ1]);
-            }
-            if (tb[NL80211_ATTR_CENTER_FREQ2]) {
-                LOG(DEBUG) << "NL80211_ATTR_CENTER_FREQ2"
-                           << nla_get_u32(tb[NL80211_ATTR_CENTER_FREQ2]);
-            }
+            // Unused attributes:
+            // NL80211_ATTR_CHANNEL_WIDTH, NL80211_ATTR_CENTER_FREQ1, NL80211_ATTR_CENTER_FREQ2
         });
 }
 

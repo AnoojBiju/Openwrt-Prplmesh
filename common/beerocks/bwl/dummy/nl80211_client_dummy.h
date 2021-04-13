@@ -22,6 +22,15 @@ class nl80211_client_dummy : public nl80211_client {
 
 public:
     /**
+     * @brief Gets a list with the names of existing wireless VAP interfaces.
+     *
+     * @param[out] interfaces List with the names of wireless interfaces.
+     *
+     * @return True on success and false otherwise.
+     */
+    bool get_interfaces(std::vector<std::string> &interfaces) override;
+
+    /**
      * @brief Gets interface information.
      *
      * Interface information contains, among others, the MAC address and SSID of the given network

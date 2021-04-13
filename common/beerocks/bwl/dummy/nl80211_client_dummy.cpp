@@ -13,6 +13,15 @@
 
 namespace bwl {
 
+bool nl80211_client_dummy::get_interfaces(std::vector<std::string> &interfaces)
+{
+    interfaces.clear();
+    interfaces.push_back("wlan0");
+    interfaces.push_back("wlan1");
+
+    return true;
+}
+
 bool nl80211_client_dummy::get_interface_info(const std::string &interface_name,
                                               interface_info &interface_info)
 {
