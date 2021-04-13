@@ -3954,42 +3954,45 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
             return false;
         }
 
-        /* One Profile-2 AP Capability TLV */
-        auto profile2_ap_capability_tlv = cmdu_tx.addClass<wfa_map::tlvProfile2ApCapability>();
-        if (!profile2_ap_capability_tlv) {
-            LOG(ERROR) << "Failed building message!";
-            return false;
+        if (db->controller_info.profile_support ==
+            AgentDB::sControllerInfo::eProfileSupport::Profile2) {
+            /* One Profile-2 AP Capability TLV */
+            auto profile2_ap_capability_tlv = cmdu_tx.addClass<wfa_map::tlvProfile2ApCapability>();
+            if (!profile2_ap_capability_tlv) {
+                LOG(ERROR) << "Failed building message!";
+                return false;
+            }
+            // If the Multi-AP Agent onboards to a Multi-AP Controller that implements Profile-1, the
+            // Multi-AP Agent shall set the Byte Counter Units field to 0x00 (bytes) and report the
+            // values of the BytesSent and BytesReceived fields in the Associated STA Traffic Stats TLV
+            // in bytes. Currently we send it on bytes unit, so set it to bytes.
+            profile2_ap_capability_tlv->capabilities_bit_field().byte_counter_units =
+                wfa_map::tlvProfile2ApCapability::eByteCounterUnits::BYTES;
+
+            // Calculate max total number of VLANs which can be configured on the Agent, and save it on
+            // on the AgentDB.
+            db->traffic_separation.max_number_of_vlans_ids =
+                db->get_radios_list().size() * eBeeRocksIfaceIds::IFACE_TOTAL_VAPS;
+
+            profile2_ap_capability_tlv->max_total_number_of_vids() =
+                db->traffic_separation.max_number_of_vlans_ids;
+
+            /* One AP Radio Advanced Capabilities TLV */
+            auto ap_radio_advanced_capabilities_tlv =
+                cmdu_tx.addClass<wfa_map::tlvProfile2ApRadioAdvancedCapabilities>();
+            if (!ap_radio_advanced_capabilities_tlv) {
+                LOG(ERROR) << "Failed building message!";
+                return false;
+            }
+
+            ap_radio_advanced_capabilities_tlv->radio_uid() = radio->front.iface_mac;
+
+            // Currently Set the flag as we don't support traffic separation.
+            ap_radio_advanced_capabilities_tlv->traffic_separation_flag().combined_front_back =
+                radio->front.hybrid_mode_supported;
+            ap_radio_advanced_capabilities_tlv->traffic_separation_flag()
+                .combined_profile1_and_profile2 = 0;
         }
-        // If the Multi-AP Agent onboards to a Multi-AP Controller that implements Profile-1, the
-        // Multi-AP Agent shall set the Byte Counter Units field to 0x00 (bytes) and report the
-        // values of the BytesSent and BytesReceived fields in the Associated STA Traffic Stats TLV
-        // in bytes. Currently we send it on bytes unit, so set it to bytes.
-        profile2_ap_capability_tlv->capabilities_bit_field().byte_counter_units =
-            wfa_map::tlvProfile2ApCapability::eByteCounterUnits::BYTES;
-
-        // Calculate max total number of VLANs which can be configured on the Agent, and save it on
-        // on the AgentDB.
-        db->traffic_separation.max_number_of_vlans_ids =
-            db->get_radios_list().size() * eBeeRocksIfaceIds::IFACE_TOTAL_VAPS;
-
-        profile2_ap_capability_tlv->max_total_number_of_vids() =
-            db->traffic_separation.max_number_of_vlans_ids;
-
-        /* One AP Radio Advanced Capabilities TLV */
-        auto ap_radio_advanced_capabilities_tlv =
-            cmdu_tx.addClass<wfa_map::tlvProfile2ApRadioAdvancedCapabilities>();
-        if (!ap_radio_advanced_capabilities_tlv) {
-            LOG(ERROR) << "Failed building message!";
-            return false;
-        }
-
-        ap_radio_advanced_capabilities_tlv->radio_uid() = radio->front.iface_mac;
-
-        // Currently Set the flag as we don't support traffic separation.
-        ap_radio_advanced_capabilities_tlv->traffic_separation_flag().combined_front_back =
-            radio->front.hybrid_mode_supported;
-        ap_radio_advanced_capabilities_tlv->traffic_separation_flag()
-            .combined_profile1_and_profile2 = 0;
 
         if (!db->controller_info.prplmesh_controller) {
             LOG(INFO) << "Configured as non-prplMesh, not sending SLAVE_JOINED_NOTIFICATION";
