@@ -170,19 +170,8 @@ bool nl80211_client_impl::get_interface_info(const std::string &interface_name,
                 LOG(DEBUG) << "NL80211_ATTR_WIPHY attribute is missing";
             }
 
-            if (tb[NL80211_ATTR_CHANNEL_WIDTH]) {
-                LOG(DEBUG) << "NL80211_ATTR_CHANNEL_WIDTH"
-                           << nla_get_u32(tb[NL80211_ATTR_CHANNEL_WIDTH]);
-            }
-
-            if (tb[NL80211_ATTR_CENTER_FREQ1]) {
-                LOG(DEBUG) << "NL80211_ATTR_CENTER_FREQ1"
-                           << nla_get_u32(tb[NL80211_ATTR_CENTER_FREQ1]);
-            }
-            if (tb[NL80211_ATTR_CENTER_FREQ2]) {
-                LOG(DEBUG) << "NL80211_ATTR_CENTER_FREQ2"
-                           << nla_get_u32(tb[NL80211_ATTR_CENTER_FREQ2]);
-            }
+            // Unused attributes:
+            // NL80211_ATTR_CHANNEL_WIDTH, NL80211_ATTR_CENTER_FREQ1, NL80211_ATTR_CENTER_FREQ2
         });
 }
 
