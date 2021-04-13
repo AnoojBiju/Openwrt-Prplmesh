@@ -349,11 +349,43 @@ def _docker_wait_for_log(container: str, programs: [str], regex: str, start_line
         return (False, start_line, None)
 
 
+def _device_clear_input_buffer(device, timeout=0.5):
+    '''
+    Clear input buffer
+
+    Parameters
+    ----------
+    device: PrplMeshPrplWRT
+        An agent or controller device class.
+
+    timeout: float
+        Number of seconds to wait for a new input to arrive.
+
+        If timeout is zero it discards input buffer and exits.
+
+        If timeout is greater than 0 it disards input until there is a `timeout`-long period
+            of time without new input.
+    '''
+
+    attempts = 20
+
+    try:
+        # Limit number of attempts in case of a periodic input arriving more often
+        # than `timeout` seconds
+        while attempts > 0:
+            device.read_nonblocking(size=128*1024, timeout=timeout)
+            attempts -= 1
+    except pexpect.TIMEOUT:
+        pass
+
+
 def _device_reset_console(device):
     ''' Reset console input.
 
     Interrupt any running command and wait for an input prompt.
     '''
+
+    _device_clear_input_buffer(device)
 
     # Interrupt any running command
     device.send('\003')
@@ -362,6 +394,8 @@ def _device_reset_console(device):
     # the last one. Doing this will make sure we don't keep old data
     # in the buffer.
     device.expect(device.prompt)
+
+    _device_clear_input_buffer(device)
 
 
 # Temporary workaround
@@ -821,11 +855,6 @@ class RadioHostapd(Radio):
         self.iface_name = iface_name
         self.agent = agent
 
-        # Workaround.
-        # One radio has an extra prompt in the input. The second one does not.
-        # Support both situations.
-        self.agent.device.expect(self.agent.device.prompt + [pexpect.TIMEOUT], timeout=5)
-
         ip_raw = self.agent.command("ip link list dev {}".format(self.iface_name))
         mac = re.search(r"link/ether (([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})",
                         ip_raw).group(1)
@@ -860,34 +889,30 @@ class RadioHostapd(Radio):
 
     def get_mac(self, iface: str) -> str:
         """Return mac of specified iface"""
-        device = self.agent.device
+        command = "ip link show {}".format(iface)
+        regex = "link/ether (?P<mac>([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})"
 
-        _device_reset_console(device)
-
-        device.sendline("ip link show {}".format(iface))
-        device.expect("link/ether (?P<mac>([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})")
-        return device.match.group('mac')
+        output = self.agent.command(command)
+        match = re.search(regex, output)
+        return match.group('mac')
 
     def get_current_channel(self) -> ChannelInfo:
-        device = self.agent.device
+        command = "iw dev {} info".format(self.iface_name)
+        regex = r"channel (?P<channel>[0-9]+) [^\r\n]*width[^\r\n]* (?P<width>[0-9]+) " + \
+            r"MHz[^\r\n]*center1[^\r\n]* (?P<center>[0-9]+) MHz"
 
-        _device_reset_console(device)
-
-        device.sendline("iw dev {} info".format(self.iface_name))
-        device.expect(
-            r"channel (?P<channel>[0-9]+) [^\r\n]*width[^\r\n]* (?P<width>[0-9]+) " +
-            r"MHz[^\r\n]*center1[^\r\n]* (?P<center>[0-9]+) MHz")
-        return ChannelInfo(int(device.match.group('channel')), int(device.match.group('width')),
-                           int(device.match.group('center')))
+        output = self.agent.command(command)
+        match = re.search(regex, output)
+        return ChannelInfo(int(match.group('channel')), int(match.group('width')),
+                           int(match.group('center')))
 
     def get_power_limit(self) -> int:
-        device = self.agent.device
+        command = "iw dev {} info".format(self.iface_name)
+        regex = r"txpower (?P<power_limit>[0-9]*)(\.0+)? dBm"
 
-        _device_reset_console(device)
-
-        device.sendline("iw dev {} info".format(self.iface_name))
-        device.expect(r"txpower (?P<power_limit>[0-9]*)(\.0+)? dBm")
-        return int(device.match.group('power_limit'))
+        output = self.agent.command(command)
+        match = re.search(regex, output)
+        return int(match.group('power_limit'))
 
 
 class VirtualAPHostapd(VirtualAP):
@@ -899,31 +924,36 @@ class VirtualAPHostapd(VirtualAP):
 
     def get_ssid(self) -> str:
         """Get current SSID of attached radio. Return string."""
-        device = self.radio.agent.device
-        device.sendline("iw dev {} info".format(self.iface))
+        command = "iw dev {} info".format(self.iface)
         # We are looking for SSID definition
         # ssid Multi-AP-24G-1
         # type AP
-        device.expect("ssid (?P<ssid>.*)\r\n\ttype AP\r\n\t")
-        return device.match.group('ssid')
+        regex = "ssid (?P<ssid>.*)\r\n\ttype AP\r\n\t"
+
+        output = self.radio.agent.command(command)
+        match = re.search(regex, output)
+        return match.group('ssid')
 
     def get_psk(self) -> str:
         """Get SSIDs personal key set during last autoconfiguration. Return string"""
-        device = self.radio.agent.device
         ssid = self.get_ssid()
-        device.sendline(("grep \"Autoconfiguration for ssid: " +
-                         "{}\" \"{}/beerocks_agent_{}.log\" | tail -n 1")
-                        .format(ssid, self.radio.log_folder, self.radio.iface_name))
+        command = 'grep "Autoconfiguration for ssid: {}" "{}/beerocks_agent_{}.log" | tail -n 1' \
+            .format(ssid, self.radio.log_folder, self.radio.iface_name)
         # We looking for key, which was set during last autoconfiguration. E.g of such string:
         # network_key: maprocks2 fronthaul:
-        device.expect("network_key: (?P<psk>.*) fronthaul")
-        return device.match.group('psk')
+        regex = "network_key: (?P<psk>.*) fronthaul"
+
+        output = self.radio.agent.command(command)
+        match = re.search(regex, output)
+        return match.group('psk')
 
     def get_iface(self, bssid: str) -> str:
-        device = self.radio.agent.device
-        device.sendline("ip link list | grep -B1 \"{}\"".format(bssid))
-        device.expect("[0-9]{1,4}: (?P<iface_name>wlan[0-9.]{1,4}): <")
-        return device.match.group('iface_name')
+        command = "ip link list | grep -B1 \"{}\"".format(bssid)
+        regex = "[0-9]{1,4}: (?P<iface_name>wlan[0-9.]{1,4}): <"
+
+        output = self.radio.agent.command(command)
+        match = re.search(regex, output)
+        return match.group('iface_name')
 
     def associate(self, sta: Station) -> bool:
         ''' Associate "sta" with this VAP '''
@@ -936,11 +966,13 @@ class VirtualAPHostapd(VirtualAP):
         return True
 
     def get_bss_type(self) -> int:
-        device = self.radio.agent.device
-        device.sendline(f"hostapd_cli -i {self.iface} get_mesh_mode {self.iface}")
-        device.expect(r"mesh_mode\=\w+ \((?P<bss_type>\d?)\)")
-        multi_ap_value = self.bss_from_bits_intel(device.match.group('bss_type'))
-        return multi_ap_value
+        command = f"hostapd_cli -i {self.iface} get_mesh_mode {self.iface}"
+        regex = r"mesh_mode\=\w+ \((?P<bss_type>\d?)\)"
+
+        output = self.radio.agent.command(command)
+        match = re.search(regex, output)
+
+        return self.bss_from_bits_intel(match.group('bss_type'))
 
     @staticmethod
     def bss_from_bits(bss_type: str):
