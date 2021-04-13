@@ -251,6 +251,26 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
                 subprocess.run(['ssh', f'root@{self.control_ip}', command], stdout=outfile,
                                stderr=outfile)
 
+    def copy_hostapd_configuration_over_ssh(self, logdir):
+        def remote_command_output(cmd):
+            return subprocess.check_output(['ssh', f'root@{self.control_ip}', cmd]).decode().split()
+
+        # Get list of hostapd files in /var/run/
+        output = remote_command_output('echo /var/run/hostapd-*.conf')
+        files_to_copy = [(file, '.') for file in output]
+
+        # Get list of network interfaces
+        network_interfaces = remote_command_output('iwinfo | grep ESSID | cut -d " " -f 1')
+
+        commands_to_run = []
+        for iface in network_interfaces:
+            commands_to_run += [
+                (f'hostapd_cli -i {iface} status', f'{iface}_status'),
+                (f'hostapd_cli -i {iface} get_config', f'{iface}_get_config'),
+            ]
+
+        self.copy_logs_over_ssh(logdir, files_to_copy, commands_to_run)
+
     def copy_logs(self):
         """Copy logs from the device"""
 
@@ -272,6 +292,7 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
         ]
 
         self.copy_logs_over_ssh(logdir, dirs_to_copy, commands_to_run)
+        self.copy_hostapd_configuration_over_ssh(f'{logdir}/hostapd')
 
     def prplmesh_remove_logs(self):
         command = ["rm", "-rf", "{}/*".format(self.beerocks_logs_location)]
