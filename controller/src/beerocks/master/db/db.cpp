@@ -6032,16 +6032,7 @@ std::string db::dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client
         return {};
     }
 
-    auto time_stamp = m_ambiorix_datamodel->get_datamodel_time_format();
-    if (time_stamp.empty()) {
-        LOG(ERROR) << "Failed to get Date and Time in RFC 3339 format.";
-        return {};
-    }
-
-    if (!m_ambiorix_datamodel->set(sta_instance, "TimeStamp", time_stamp)) {
-        LOG(ERROR) << "Failed to set " << sta_instance << ".TimeStamp: " << time_stamp;
-        return {};
-    }
+    m_ambiorix_datamodel->set_current_time(sta_instance);
 
     uint64_t add_sta_time = time(NULL);
     if (!m_ambiorix_datamodel->set(sta_instance, "LastConnectTime", add_sta_time)) {
@@ -6126,18 +6117,7 @@ bool db::add_current_op_class(const sMacAddr &radio_mac, uint8_t op_class, uint8
         return false;
     }
 
-    auto time_stamp = m_ambiorix_datamodel->get_datamodel_time_format();
-    if (time_stamp.empty()) {
-        LOG(ERROR) << "Failed to get Date and Time in RFC 3339 format.";
-        return false;
-    }
-
-    //Set TimeStamp
-    //Data model path example: Controller.Network.Device.1.Radio.1.CurrentOperatingClasses.TimeStamp
-    if (!m_ambiorix_datamodel->set(op_class_path_instance, "TimeStamp", time_stamp)) {
-        LOG(ERROR) << "Failed to set " << op_class_path_instance << ".TimeStamp: " << time_stamp;
-        return false;
-    }
+    m_ambiorix_datamodel->set_current_time(op_class_path_instance);
 
     //Set Operating class
     //Data model path: Controller.Network.Device.1.Radio.1.CurrentOperatingClasses.Class
@@ -6319,22 +6299,7 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
         LOG(ERROR) << "Failed to set " << bss_instance << "LastChange: " << creation_time;
         return false;
     }
-
-    auto timestamp = m_ambiorix_datamodel->get_datamodel_time_format();
-    if (timestamp.empty()) {
-        LOG(ERROR) << "Failed to get Date and Time in RFC 3339 format.";
-        return false;
-    }
-
-    /*
-        Set value for TimeStamp variable
-        Example: Controller.Network.Device.1.Radio.1.BSS.1.TimeStamp
-    */
-    if (!m_ambiorix_datamodel->set(bss_instance, "TimeStamp", timestamp)) {
-        LOG(ERROR) << "Failed to set " << bss_instance << "TimeStamp: " << timestamp;
-        return false;
-    }
-
+    m_ambiorix_datamodel->set_current_time(bss_instance);
     return true;
 }
 
