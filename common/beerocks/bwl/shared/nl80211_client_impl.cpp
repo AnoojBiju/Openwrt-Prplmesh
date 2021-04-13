@@ -135,15 +135,7 @@ bool nl80211_client_impl::get_interface_info(const std::string &interface_name,
                 return;
             }
 
-            if (tb[NL80211_ATTR_IFNAME]) {
-                size_t length = nla_len(tb[NL80211_ATTR_IFNAME]);
-                const uint8_t *data =
-                    static_cast<const uint8_t *>(nla_data(tb[NL80211_ATTR_IFNAME]));
-
-                for (size_t i = 0; i < length; i++) {
-                    interface_info.name += static_cast<char>(data[i]);
-                }
-            }
+            interface_info.name = nl80211_parse_ifname(tb);
 
             if (tb[NL80211_ATTR_IFINDEX]) {
                 interface_info.index = nla_get_u32(tb[NL80211_ATTR_IFINDEX]);
