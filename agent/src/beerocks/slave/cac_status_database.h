@@ -18,7 +18,6 @@ public:
     std::vector<sMacAddr> get_cac_radios() const override;
     CacAvailableChannels get_available_channels(const sMacAddr &radio) const override;
     CacNonOccupancyChannels get_non_occupancy_channels(const sMacAddr &radio) const override;
-    CacActiveChannels get_active_channels(const sMacAddr &radio) const override;
     CacCompletionStatus get_completion_status(const sMacAddr &radio) const override;
 };
 

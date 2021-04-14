@@ -69,51 +69,6 @@ CacNonOccupancyChannels CacStatusDatabase::get_non_occupancy_channels(const sMac
     return {};
 }
 
-CacActiveChannels CacStatusDatabase::get_active_channels(const sMacAddr &radio_mac) const
-{
-    CacActiveChannels ret;
-
-    auto db = AgentDB::get();
-
-    const auto radio = db->get_radio_by_mac(radio_mac);
-    if (!radio) {
-        LOG(ERROR) << "Failed to find the Radio with mac: " << radio_mac;
-        return ret;
-    }
-
-    for (const std::pair<uint8_t, AgentDB::sRadio::sChannelInfo> &channel_channel_info :
-         radio->channels_list) {
-        uint8_t channel = channel_channel_info.first;
-
-        auto &channel_info = channel_channel_info.second;
-        if (channel_info.is_active_cac()) {
-
-            std::transform(
-                channel_info.supported_bw_list.begin(), channel_info.supported_bw_list.end(),
-                std::back_inserter(ret),
-                [&channel_info, channel](const beerocks_message::sSupportedBandwidth &supported) {
-                    sCacStatus ret;
-
-                    // channel
-                    ret.channel = channel;
-
-                    // operating class
-                    beerocks::message::sWifiChannel wifi;
-                    wifi.channel = channel;
-                    wifi.channel_bandwidth =
-                        beerocks::utils::convert_bandwidth_to_int(supported.bandwidth);
-                    ret.operating_class = son::wireless_utils::get_operating_class_by_channel(wifi);
-
-                    ret.duration = std::chrono::duration_cast<std::chrono::seconds>(
-                        std::chrono::steady_clock::now() - channel_info.get_active_cac_since());
-
-                    return ret;
-                });
-        }
-    }
-    return ret;
-}
-
 CacCompletionStatus CacStatusDatabase::get_completion_status(const sMacAddr &radio_mac) const
 {
     CacCompletionStatus ret;

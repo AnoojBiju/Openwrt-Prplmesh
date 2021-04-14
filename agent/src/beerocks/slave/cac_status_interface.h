@@ -51,7 +51,6 @@ public:
 
     virtual CacAvailableChannels get_available_channels(const sMacAddr &radio) const        = 0;
     virtual CacNonOccupancyChannels get_non_occupancy_channels(const sMacAddr &radio) const = 0;
-    virtual CacActiveChannels get_active_channels(const sMacAddr &radio) const              = 0;
     virtual CacCompletionStatus get_completion_status(const sMacAddr &radio) const          = 0;
 };
 
