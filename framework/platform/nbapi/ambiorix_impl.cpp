@@ -636,6 +636,71 @@ bool AmbiorixImpl::remove_all_instances(const std::string &relative_path)
     LOG(DEBUG) << "All instances removed for: " << relative_path;
     return true;
 }
+
+std::string AmbiorixImpl::get_data_from_bus(const std::string &specific_path,
+                                            const std::string &method, const std::string &field,
+                                            const std::string &filter)
+{
+    std::string ret_val;
+    char *dyncast_result = nullptr;
+    amxp_expr_t expr;
+    amxc_var_t data;
+    amxc_var_init(&data);
+
+    // TODO convert it to async call (libamxb issues/7).
+    if (!amxb_call(m_bus_ctx, specific_path.c_str(), method.c_str(), 0, &data, 1)) {
+        LOG(ERROR) << "Failed to get path:" << specific_path << " with method:" << method;
+        amxc_var_clean(&data);
+        return ret_val;
+    }
+
+    // amxb_call returns as list with 1 member for ubus. 0 means first element.
+    amxc_var_t *field_var = GETP_ARG(&data, ("0." + field).c_str());
+
+    if (!field_var) {
+        LOG(ERROR) << "Failed to get data with field " << field;
+        amxc_var_clean(&data);
+        return ret_val;
+    }
+
+    switch (amxc_var_type_of(field_var)) {
+    case AMXC_VAR_ID_LIST: {
+
+        amxp_expr_init(&expr, filter.c_str());
+        amxc_llist_iterate(it, &field_var->data.vl)
+        {
+            amxc_var_t *item = amxc_var_from_llist_it(it);
+
+            // If filter is empty, combine all members
+            if (filter == std::string()) {
+
+                dyncast_result = amxc_var_dyncast(cstring_t, item);
+                std::string list_member{dyncast_result};
+
+                // Separate list members with semicolon
+                ret_val += ((!ret_val.empty()) ? ";" : "") + list_member;
+                free(dyncast_result);
+
+            } else if (amxp_expr_eval_var(&expr, item, NULL)) {
+
+                dyncast_result = amxc_var_dyncast(cstring_t, item);
+                ret_val.assign(dyncast_result);
+                break;
+            }
+        }
+    } break;
+    default: {
+        dyncast_result = amxc_var_dyncast(cstring_t, field_var);
+        ret_val.assign(dyncast_result);
+    } break;
+    }
+
+    free(dyncast_result);
+    amxp_expr_clean(&expr);
+    amxc_var_clean(&data);
+    return ret_val;
+}
+
 AmbiorixImpl::~AmbiorixImpl()
 {
     remove_event_loop();

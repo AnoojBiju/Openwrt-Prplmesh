@@ -115,6 +115,10 @@ public:
      */
     virtual bool remove_optional_subobject(const std::string &path_to_obj,
                                            const std::string &subobject_name) = 0;
+
+    virtual std::string get_data_from_bus(const std::string &specific_path,
+                                          const std::string &method, const std::string &field,
+                                          const std::string &filter = std::string()) = 0;
 };
 
 inline Ambiorix::~Ambiorix() {}
