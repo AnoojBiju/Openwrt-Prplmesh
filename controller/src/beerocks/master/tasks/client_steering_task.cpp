@@ -116,8 +116,6 @@ void client_steering_task::steer_sta()
                    << " not found, exiting steering task";
         return;
     }
-    m_original_bssid = m_database.get_node_parent(m_sta_mac);
-
     // Send 17.1.27	Client Association Control Request
     if (!m_cmdu_tx.create(0,
                           ieee1905_1::eMessageType::CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE)) {
