@@ -2137,6 +2137,25 @@ bool BackhaulManager::send_slaves_enable()
     return true;
 }
 
+bool BackhaulManager::send_slaves_tear_down()
+{
+    for (const auto &soc : slaves_sockets) {
+        auto msg = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_RADIO_TEAR_DOWN_REQUEST>(cmdu_tx);
+        if (!msg) {
+            LOG(ERROR) << "Failed building cACTION_BACKHAUL_RADIO_TEAR_DOWN_REQUEST";
+            return false;
+        }
+        LOG(DEBUG) << "Request agent to tear down the radio interface " << soc->hostap_iface;
+        if (!send_cmdu(soc->slave, cmdu_tx)) {
+            LOG(ERROR) << "Failed to send cACTION_BACKHAUL_RADIO_TEAR_DOWN_REQUEST";
+            return false;
+        }
+    }
+
+    return true;
+}
+
 bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr,
                                         std::string iface)
 {
@@ -3204,6 +3223,9 @@ void BackhaulManager::handle_dev_reset_default(
         m_agent_ucc_listener->send_reply(fd);
         return;
     }
+
+    // Tear down all VAPs in all radios to make sure no station can connect while in reset state.
+    send_slaves_tear_down();
 
     // Store socket descriptor to send reply to UCC client when command processing is completed.
     m_dev_reset_default_fd = fd;
