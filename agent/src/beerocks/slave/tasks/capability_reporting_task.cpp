@@ -193,10 +193,6 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
         }
     }
 
-    if (!add_profile2_ap_capability_tlv(m_cmdu_tx)) {
-        return;
-    }
-
     // 2. The tlvs created here are defined in the
     // specification as "One" (multi-ap specification v2, 17.1.7).
     // the one tlv may contain information about few radios
@@ -216,28 +212,28 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
 
     // 2.2 radio independent tlvs
 
-    // profile 2 ap capability
-    auto profile2_ap_capability_tlv = m_cmdu_tx.addClass<wfa_map::tlvProfile2ApCapability>();
-    if (!profile2_ap_capability_tlv) {
-        LOG(ERROR) << "Error creating TLV_PROFILE2_AP_CAPABILITIES";
-        return;
-    }
-    // set kilobytes (KiB)
-    profile2_ap_capability_tlv->capabilities_bit_field().byte_counter_units = 1;
+    if (db->controller_info.profile_support ==
+        AgentDB::sControllerInfo::eProfileSupport::Profile2) {
 
-    // profile 2 metric collection interval
-    // Note: at the moment we are not setting a value for collection_interval
-    auto profile2_meteric_collection_interval_tlv =
-        m_cmdu_tx.addClass<wfa_map::tlvProfile2MetricCollectionInterval>();
-    if (!profile2_meteric_collection_interval_tlv) {
-        LOG(ERROR) << "error creating TLV_PROFILE2_METERIC_COLLECTION_INTERVAL";
-        return;
-    }
+        // profile 2 ap capability
+        if (!add_profile2_ap_capability_tlv(m_cmdu_tx)) {
+            return;
+        }
 
-    // 3. tlvs added by external sources
-    if (!add_cac_capabilities_tlv()) {
-        LOG(ERROR) << "error filling cac capabilities tlv";
-        return;
+        // profile 2 metric collection interval
+        // Note: at the moment we are not setting a value for collection_interval
+        auto profile2_meteric_collection_interval_tlv =
+            m_cmdu_tx.addClass<wfa_map::tlvProfile2MetricCollectionInterval>();
+        if (!profile2_meteric_collection_interval_tlv) {
+            LOG(ERROR) << "error creating TLV_PROFILE2_METERIC_COLLECTION_INTERVAL";
+            return;
+        }
+
+        // 3. tlvs added by external sources
+        if (!add_cac_capabilities_tlv()) {
+            LOG(ERROR) << "error filling cac capabilities tlv";
+            return;
+        }
     }
 
     // send the constructed report
