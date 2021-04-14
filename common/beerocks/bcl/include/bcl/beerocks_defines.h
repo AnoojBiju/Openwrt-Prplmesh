@@ -203,13 +203,11 @@ enum eWiFiBandwidth : uint8_t {
  * @UNAVAILABLE: A radar has been detected on this channel, it
  *	is therefore marked as not available.
  * @AVAILABLE: The channel has been CAC checked and is available.
- * @CAC_SCAN: The channel is beeing CAC checked at the moment.
  */
 enum eDfsState : uint8_t {
     USABLE,
     UNAVAILABLE,
     AVAILABLE,
-    CAC_SCAN,
     DFS_STATE_MAX,
 };
 
