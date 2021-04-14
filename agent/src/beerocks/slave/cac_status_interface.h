@@ -46,12 +46,10 @@ using CacCompletionStatus = std::pair<sCacStatus, std::vector<std::pair<uint8_t,
 
 class CacStatusInterface {
 public:
-    virtual ~CacStatusInterface()                        = default;
-    virtual std::vector<sMacAddr> get_cac_radios() const = 0;
-
-    virtual CacAvailableChannels get_available_channels(const sMacAddr &radio) const        = 0;
-    virtual CacNonOccupancyChannels get_non_occupancy_channels(const sMacAddr &radio) const = 0;
-    virtual CacCompletionStatus get_completion_status(const sMacAddr &radio) const          = 0;
+    virtual ~CacStatusInterface()                                                    = default;
+    virtual std::vector<sMacAddr> get_cac_radios() const                             = 0;
+    virtual CacAvailableChannels get_available_channels(const sMacAddr &radio) const = 0;
+    virtual CacCompletionStatus get_completion_status(const sMacAddr &radio) const   = 0;
 };
 
 // utilities based on CacCapabilities interface

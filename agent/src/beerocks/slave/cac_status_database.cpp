@@ -64,11 +64,6 @@ CacAvailableChannels CacStatusDatabase::get_available_channels(const sMacAddr &r
     return ret;
 }
 
-CacNonOccupancyChannels CacStatusDatabase::get_non_occupancy_channels(const sMacAddr &radio) const
-{
-    return {};
-}
-
 CacCompletionStatus CacStatusDatabase::get_completion_status(const sMacAddr &radio_mac) const
 {
     CacCompletionStatus ret;
