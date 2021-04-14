@@ -17,13 +17,13 @@
 namespace beerocks {
 
 enum eCacCompletionStatus : uint8_t {
-    CAC_COMPLETION_SUCCESSFUL           = 0x0,
-    CAC_COMPLETION_RADAR_DETECTED       = 0x1,
-    CAC_COMPLETION_CAC_NOT_SUPPORTED    = 0x2,
-    CAC_COMPLETION_RADIO_TOO_BUSY       = 0x3,
-    CAC_COMPLETION_NOT_UNDER_REGULATION = 0x4,
-    CAC_COMPLETION_OTHER_ERROR          = 0x5,
-    CAC_COMPLETION_NOT_PERFORMED        = 0xff,
+    SUCCESSFUL           = 0x0,
+    RADAR_DETECTED       = 0x1,
+    CAC_NOT_SUPPORTED    = 0x2,
+    RADIO_TOO_BUSY       = 0x3,
+    NOT_UNDER_REGULATION = 0x4,
+    OTHER_ERROR          = 0x5,
+    NOT_PERFORMED        = 0xff,
 };
 
 struct sCacStatus {
@@ -31,7 +31,7 @@ struct sCacStatus {
     uint8_t channel         = 0;
     // duration is used based on the context
     std::chrono::seconds duration          = std::chrono::seconds(0);
-    eCacCompletionStatus completion_status = eCacCompletionStatus::CAC_COMPLETION_NOT_PERFORMED;
+    eCacCompletionStatus completion_status = eCacCompletionStatus::NOT_PERFORMED;
 };
 
 using CacAvailableChannels    = std::vector<sCacStatus>;

@@ -51,10 +51,10 @@ eCompletionStatus:
       0x06-0xFF: Reserved
       0xFF: prplmesh addition - CAC was not performed
     _enum_storage: uint8_t
-    CAC_COMPLETION_SUCCESSFUL:              0x00
-    CAC_COMPLETION_RADAR_DETECTED:          0x01
-    CAC_COMPLETION_CAC_NOT_SUPPORTED:       0x02
-    CAC_COMPLETION_RADIO_TOO_BUSY:          0x03
-    CAC_COMPLETION_NOT_UNDER_REGULATION:    0x04
-    CAC_COMPLETION_OTHER_ERROR:             0x05 
-    CAC_COMPLETION_NOT_PERFORMED:           0xFF
+    SUCCESSFUL:              0x00
+    RADAR_DETECTED:          0x01
+    CAC_NOT_SUPPORTED:       0x02
+    RADIO_TOO_BUSY:          0x03
+    NOT_UNDER_REGULATION:    0x04
+    OTHER_ERROR:             0x05 
+    NOT_PERFORMED:           0xFF
