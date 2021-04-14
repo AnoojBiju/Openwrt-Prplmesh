@@ -721,9 +721,6 @@ void CacFsm::db_store_cac_status(std::shared_ptr<sCacStartedNotification> cac_st
                    << " channel: " << cac_started->cac_started_params.channel;
         return;
     }
-
-    // update the dfs state of this channel
-    channel_record->second.set_active_cac();
 }
 
 void CacFsm::db_store_cac_status(std::shared_ptr<sCacCompletedNotification> cac_completed)
@@ -751,11 +748,10 @@ void CacFsm::db_store_cac_status(std::shared_ptr<sCacCompletedNotification> cac_
 
     if (!cac_completed->cac_completed_params.success) {
         LOG(WARNING) << "cac comleted with fauilre";
-        channel_record->second.set_dfs_state(beerocks_message::eDfsState::USABLE);
+        channel_record->second.dfs_state = beerocks_message::eDfsState::USABLE;
         return;
     }
-    channel_record->second.set_dfs_state(beerocks_message::eDfsState::AVAILABLE);
-    channel_record->second.set_active_cac(false);
+    channel_record->second.dfs_state = beerocks_message::eDfsState::AVAILABLE;
 }
 
 ///////////////

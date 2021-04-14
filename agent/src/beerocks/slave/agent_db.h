@@ -258,55 +258,10 @@ public:
         } cac_capabilities;
 
         struct sChannelInfo {
-            sChannelInfo()
-                : tx_power_dbm(0),
-                  cac_completion_status(eCacCompletionStatus::CAC_COMPLETION_NOT_PERFORMED),
-                  dfs_state(beerocks_message::eDfsState::NOT_DFS)
-            {
-            }
-
             int8_t tx_power_dbm;
             std::vector<beerocks_message::sSupportedBandwidth> supported_bw_list;
             eCacCompletionStatus cac_completion_status;
-
-            void set_dfs_state(beerocks_message::eDfsState dfs_state_)
-            {
-                if (dfs_state == dfs_state_) {
-                    // no real change in the state, nothing to do
-                    return;
-                }
-                dfs_state       = dfs_state_;
-                dfs_state_since = std::chrono::steady_clock::now();
-            }
-
-            beerocks_message::eDfsState get_dfs_state() const { return dfs_state; }
-
-            std::chrono::time_point<std::chrono::steady_clock> get_dfs_state_since() const
-            {
-                return dfs_state_since;
-            }
-
-            void set_active_cac(bool active = true)
-            {
-                active_cac       = active;
-                active_cac_since = std::chrono::steady_clock::now();
-            }
-
-            bool is_active_cac() const { return active_cac; }
-
-            std::chrono::time_point<std::chrono::steady_clock> get_active_cac_since() const
-            {
-                return active_cac_since;
-            }
-
-        private:
-            // dfs state and the point in time this state started
             beerocks_message::eDfsState dfs_state;
-            std::chrono::time_point<std::chrono::steady_clock> dfs_state_since;
-
-            // active cac and the point in time the cac started
-            bool active_cac;
-            std::chrono::time_point<std::chrono::steady_clock> active_cac_since;
         };
 
         // Key: Channel

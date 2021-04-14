@@ -35,8 +35,8 @@ CacAvailableChannels CacStatusDatabase::get_available_channels(const sMacAddr &r
         uint8_t channel    = channel_channel_info.first;
         auto &channel_info = channel_channel_info.second;
 
-        if (channel_info.get_dfs_state() == beerocks_message::eDfsState::USABLE ||
-            channel_info.get_dfs_state() == beerocks_message::eDfsState::AVAILABLE) {
+        if (channel_info.dfs_state == beerocks_message::eDfsState::USABLE ||
+            channel_info.dfs_state == beerocks_message::eDfsState::AVAILABLE) {
 
             std::transform(channel_info.supported_bw_list.begin(),
                            channel_info.supported_bw_list.end(), std::back_inserter(ret),
@@ -97,7 +97,7 @@ CacCompletionStatus CacStatusDatabase::get_completion_status(const sMacAddr &rad
     ret.first.operating_class = son::wireless_utils::get_operating_class_by_channel(wifi);
 
     // fill the detected operting class and channels.
-    if (channel_info->second.get_dfs_state() == beerocks_message::eDfsState::UNAVAILABLE) {
+    if (channel_info->second.dfs_state == beerocks_message::eDfsState::UNAVAILABLE) {
 
         auto overlapping = son::wireless_utils::get_overlapping_channels(
             radio->last_swich_channel_request->channel);
