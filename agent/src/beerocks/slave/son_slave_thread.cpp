@@ -1479,6 +1479,36 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         message_com::send_cmdu(ap_manager_socket, cmdu_tx);
         break;
     }
+    case beerocks_message::ACTION_BACKHAUL_RADIO_TEAR_DOWN_REQUEST: {
+        LOG(DEBUG) << "ACTION_BACKHAUL_RADIO_TEAR_DOWN_REQUEST";
+
+        ///////////////////////////////////////////////////////////////////
+        // Short term solution
+        // In non-EasyMesh mode, never modify hostapd configuration
+        // and in this case VAPs credentials
+        //
+        // Long term solution
+        // All EasyMesh VAPs will be stored in the platform DB.
+        // All other VAPs are manual, AKA should not be modified by prplMesh
+        ////////////////////////////////////////////////////////////////////
+        auto db = AgentDB::get();
+        if (db->device_conf.management_mode == BPL_MGMT_MODE_NOT_MULTIAP) {
+            LOG(WARNING) << "non-EasyMesh mode - skip updating VAP credentials";
+            break;
+        }
+
+        // Tear down all VAPS in the radio by sending an update request with an empty configuration.
+        auto request_out = message_com::create_vs_message<
+            beerocks_message::cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST>(cmdu_tx);
+        if (!request_out) {
+            LOG(ERROR)
+                << "Failed building message cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST!";
+            return false;
+        }
+
+        message_com::send_cmdu(ap_manager_socket, cmdu_tx);
+        break;
+    }
     case beerocks_message::ACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST: {
         LOG(TRACE) << "ACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST";
         auto request_in =
