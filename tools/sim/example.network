@@ -1,0 +1,43 @@
+# This is an example topology file
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+# SPDX-FileCopyrightText: 2021 the prplMesh contributors (see AUTHORS.md)
+# This code is subject to the terms of the BSD+Patent license.
+# See LICENSE file for more details.
+#
+# File format:
+# - Comments are indicated with # and go to EOL.
+# - Empty lines are ignored.
+# - Any amount of whitespace delimits fields.
+# - Every line represents a Device.
+# - The gateway device is not included.
+# - The contents is a lower triangular matrix, i.e. the first line contains 1 pair, the second 2,
+#   etc.
+# - The first field indicates the type: A for an agent, S for a switch.
+# - The following fields indicates the links. The first is to Device 0 (i.e. the gateway), the
+#   second to Device 1, etc.
+# - Every field is a semicolon-separated list of links. A link can be either a number (representing
+#   the metric, in Mbps) or a - (indicating the link doesn't exist). Normally, the first link is
+#   wireless and \the second is wired. The number can be followed by one or more letters to
+#   indicate link properties. A if the device corresponding to the line initially has the AP role
+#   and the device in the column has the STA role. S if the device in the line initally has the STA
+#   role. U if the link is initially unconfigured (default). D if the link is wireD. For switch-type
+#   devices, all links are wired so no letters are needed.
+
+#  GW       S1      A1     A2
+S 1000
+A 400     1000D
+A 100U    1000     400S
+A  -      100      200A  100;100
+
+# The topology is as follows:
+# The gateway and all agents are connected by a switch. The third agent has a 100Mbps link to the
+# switch, the other agents have a 1Gbps link. The wireless link between gateway and A1 can sustain
+# 400Mbps but is unconfigured. The wireless link between gateway and A2 can sustain 100Mbps and is
+# unconfigured. The wireless link between gateway and A3 is not possible. A2 is initially configured
+# as a station on A1, and A1 is configured as a station on A3. A3 has a wireless and a wired
+# connection to A2, both of which are 100Mbps.
+# There are quite a few loops in this topology, so STP is needed to establish the backhaul paths.
+# The wireless backhaul connectivity in the initial configuration is pretty bad: it's a chain A2 -
+# A1 - A3, with no wireless connection at all to the gateway. So at least one wired link has to be
+# put in the bridge, and if the switch goes down, the active wireless connections are insufficient.
