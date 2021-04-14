@@ -26,6 +26,7 @@ cCacCompletionReportRadio:
   channel: uint8_t                  # line 6
   cac_completion_status:            # line 7
     _type: eCompletionStatus
+    _value: NOT_PERFORMED
   number_of_detected_pairs:                                   # line 8
     _type: uint8_t
     _length_var: True

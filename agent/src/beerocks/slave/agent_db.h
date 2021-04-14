@@ -260,7 +260,6 @@ public:
         struct sChannelInfo {
             int8_t tx_power_dbm;
             std::vector<beerocks_message::sSupportedBandwidth> supported_bw_list;
-            eCacCompletionStatus cac_completion_status;
             beerocks_message::eDfsState dfs_state;
         };
 
