@@ -613,6 +613,21 @@ std::string AmbiorixImpl::get_datamodel_time_format()
     return result_time;
 }
 
+bool AmbiorixImpl::set_current_time(const std::string &path_to_object)
+{
+    auto time_stamp = get_datamodel_time_format();
+
+    if (time_stamp.empty()) {
+        LOG(ERROR) << "Failed to get Date and Time in RFC 3339 format.";
+        return false;
+    }
+    if (!set(path_to_object, "TimeStamp", time_stamp)) {
+        LOG(ERROR) << "Failed to set " << path_to_object << ".TimeStamp: " << time_stamp;
+        return false;
+    }
+    return true;
+}
+
 bool AmbiorixImpl::remove_all_instances(const std::string &relative_path)
 {
     amxd_trans_t transaction;
@@ -636,6 +651,7 @@ bool AmbiorixImpl::remove_all_instances(const std::string &relative_path)
     LOG(DEBUG) << "All instances removed for: " << relative_path;
     return true;
 }
+
 AmbiorixImpl::~AmbiorixImpl()
 {
     remove_event_loop();
