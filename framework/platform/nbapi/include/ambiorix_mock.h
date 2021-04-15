@@ -59,6 +59,7 @@ public:
                 (const std::string &path_to_obj, const std::string &subobject_name), (override));
     MOCK_METHOD(bool, remove_optional_subobject,
                 (const std::string &path_to_obj, const std::string &subobject_name), (override));
+    MOCK_METHOD(bool, set_current_time, (const std::string &path_to_obj), (override));
 };
 
 } // namespace nbapi

@@ -48,18 +48,16 @@
 
 %populate {
     object Notification.AssociationEvent {
-        instance add() {
-            object AssocData {
-            }
+        object AssociationEventData {
+            instance add() {}
         }
     }
 }
 
 %populate {
     object Notification.DisassociationEvent {
-        instance add() {
-            object DisassocData {
-            }
+        object DisassociationEventData {
+            instance add() {}
         }
     }
 }
