@@ -16,9 +16,10 @@
 
 // Ambiorix
 #include <amxc/amxc.h>
+#include <amxc/amxc_variant.h>
+#include <amxc/amxc_variant_type.h>
 #include <amxp/amxp.h>
 
-#include <amxc/amxc.h>
 #include <amxd/amxd_action.h>
 #include <amxd/amxd_dm.h>
 #include <amxd/amxd_object.h>
@@ -26,6 +27,7 @@
 #include <amxd/amxd_transaction.h>
 
 #include <amxb/amxb.h>
+#include <amxb/amxb_operators.h>
 #include <amxb/amxb_register.h>
 
 #include <amxo/amxo.h>
@@ -124,6 +126,43 @@ public:
 
     bool remove_optional_subobject(const std::string &path_to_obj,
                                    const std::string &subobject_name) override;
+
+    /**
+     * @brief Get data from bus from path with specific method.
+     *
+     * This method should only be used after init(). It uses m_bus_ctx is inside.
+     * Note that m_bus_ctx is not thread safe.
+     *
+     * Field parameter is used to search specific data member inside returned answer from call.
+     * See examples below.
+     *
+     * If key contains '.', either put key in quotes like in example or add '/' before inside field arg.
+     *
+     * Examples of search examples:
+     * get_data_from_bus("luci-rpc", "getDHCPLeases", "dhcp_leases", "macaddr == '00:3A:4C:68:01:F5'");
+     * Returns duid:01:00:e0:4c:00:01:00,macaddr:00:3A:4C:68:01:F5,hostname:xxxx,expires:39222,ipaddr:192.168.3.216
+     *
+     * get_data_from_bus("luci-rpc", "getDHCPLeases", "dhcp_leases");
+     * Returns all leases as below with semicolon separeted.
+     * duid:01:00:00:fc:e9:00:25,macaddr:AA:DD:FC:E9:F1:25,expires:39185,ipaddr:192.168.3.104;
+     * duid:01:00:e0:4c:00:01:00,macaddr:00:3A:4C:68:01:F5,hostname:lenovo,expires:39222,ipaddr:192.168.3.216
+     *
+     * get_data_from_bus("Agent", "get", "'Agent.'.MACAddress")
+     * Returns "11:3A:1A:22:01:12", agent mac address
+     *
+     * get_data_from_bus("Controller.Network.Device.1.Radio", "list", "instances.0.name")
+     * Returns "1", first index of radio instance
+     *
+     * @param specific_path Path to the data model definition ODL file.
+     * @param method Path to the data model definition ODL file.
+     * @param field Field
+     * @param filter Optional paramater. It filters only list to match a member.
+     * @return True on success and false otherwise.
+     */
+
+    std::string get_data_from_bus(const std::string &specific_path, const std::string &method,
+                                  const std::string &field,
+                                  const std::string &filter = std::string()) override;
 
 private:
     // Methods

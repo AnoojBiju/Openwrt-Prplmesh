@@ -72,5 +72,12 @@ bool AmbiorixDummy::remove_optional_subobject(const std::string &path_to_obj,
     return true;
 }
 
+std::string AmbiorixDummy::get_data_from_bus(const std::string &specific_path,
+                                             const std::string &method, const std::string &field,
+                                             const std::string &filter)
+{
+    return "";
+}
+
 } // namespace nbapi
 } // namespace beerocks

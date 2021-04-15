@@ -74,11 +74,10 @@ if (ENABLE_NBAPI AND BUILD_TESTS)
         PUBLIC
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     )
-    list(REMOVE_ITEM NBAPI_LIBS amxb)
+
     target_link_libraries(${TEST_PROJECT_NAME} ${NBAPI_LIBS} mapfcommon elpp bcl)
     target_link_libraries(${TEST_PROJECT_NAME} gtest_main gmock)
 
     install(TARGETS ${TEST_PROJECT_NAME} DESTINATION tests)
     add_test(NAME ${TEST_PROJECT_NAME} COMMAND $<TARGET_FILE:${TEST_PROJECT_NAME}>)
 endif()
-
