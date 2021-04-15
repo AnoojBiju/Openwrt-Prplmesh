@@ -5,6 +5,7 @@
 # See LICENSE file for more details.
 ###############################################################
 
+import collections
 import devices
 import pytest
 import sim
@@ -27,7 +28,7 @@ class Expect:
     '''Helper class that registers expectations.'''
     def __init__(self):
         '''Create checker.'''
-        self.expectations = []
+        self.expectations = collections.defaultdict(list)  # Tick -> [(what, arg)]
         self.last_when = -1
         self.last_event = None
 
@@ -43,12 +44,16 @@ class Expect:
         arg: Any
             An object argument associated with the event.
         '''
-        self.expectations.append((sim.Tick(when), what, arg))
-        self.expectations.sort(key=lambda t: t[0])
+        self.expectations[sim.Tick(when)].append((what, arg))
 
     def check_event(self, when, what, description, arg):
-        expected = self.expectations.pop(0)
-        assert (when, what, arg) == expected
+        when_expectations = self.expectations[when]
+        assert when_expectations, f"@{when} Unexpected event {what} {description}"
+        assert (what, arg) in when_expectations, f"@{when} Unexpected event {what} {description}," \
+                                                 " expected {len(when_expectations)} others"
+        when_expectations.remove((what, arg))
+        if not when_expectations:
+            del self.expectations[when]  # Allows us to use `not self.expectations` in check_done
         self.last_when = when
         self.last_event = description
 
