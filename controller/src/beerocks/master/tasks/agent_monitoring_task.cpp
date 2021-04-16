@@ -151,3 +151,51 @@ bool agent_monitoring_task::send_tlv_empty_channel_selection_request(
     }
     return son_actions::send_cmdu_to_agent(dst_mac, cmdu_tx, database);
 }
+
+bool agent_monitoring_task::add_profile_2default_802q_settings_tlv(
+    db &database, ieee1905_1::CmduMessageTx &cmdu_tx, std::shared_ptr<WSC::m1> m1)
+{
+    auto default_8021q_config = database.get_default_8021q_setting(m1->mac_addr());
+    if (default_8021q_config.primary_vlan_id > 0) {
+        auto tlv_default_8021q_settings =
+            cmdu_tx.addClass<wfa_map::tlvProfile2Default802dotQSettings>();
+        if (!tlv_default_8021q_settings) {
+            LOG(ERROR) << "Failed adding tlvProfile2Default802dotQSettings";
+            return false;
+        }
+        tlv_default_8021q_settings->primary_vlan_id() = default_8021q_config.primary_vlan_id;
+        tlv_default_8021q_settings->default_pcp()     = default_8021q_config.default_pcp;
+    }
+    return true;
+}
+
+bool agent_monitoring_task::add_traffic_policy_tlv(db &database, ieee1905_1::CmduMessageTx &cmdu_tx,
+                                                   std::shared_ptr<WSC::m1> m1)
+{
+    auto traffic_separation_configs =
+        database.get_traffic_separataion_configuration(m1->mac_addr());
+    if (!traffic_separation_configs.empty()) {
+        auto tlv_traffic_policy = cmdu_tx.addClass<wfa_map::tlvProfile2TrafficSeparationPolicy>();
+        if (!tlv_traffic_policy) {
+            LOG(ERROR) << "Failed adding tlvProfile2TrafficSeparationPolicy";
+            return false;
+        }
+        for (auto &config : traffic_separation_configs) {
+            auto ssid_vlan_id_entry = tlv_traffic_policy->create_ssids_vlan_id_list();
+            if (!ssid_vlan_id_entry) {
+                LOG(ERROR) << "Failed creating ssid_vlan_id entry";
+                return false;
+            }
+            if (!ssid_vlan_id_entry->set_ssid_name(config.ssid)) {
+                LOG(ERROR) << "Failed setting ssid";
+                return false;
+            }
+            ssid_vlan_id_entry->vlan_id() = config.vlan_id;
+            if (!tlv_traffic_policy->add_ssids_vlan_id_list(ssid_vlan_id_entry)) {
+                LOG(ERROR) << "Failed adding ssid_vlan_entry";
+                return false;
+            }
+        }
+    }
+    return true;
+}
