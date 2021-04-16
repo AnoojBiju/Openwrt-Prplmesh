@@ -50,7 +50,7 @@ class Expect:
         when_expectations = self.expectations[when]
         assert when_expectations, f"@{when} Unexpected event {what} {description}"
         assert (what, arg) in when_expectations, f"@{when} Unexpected event {what} {description}," \
-                                                 " expected {len(when_expectations)} others"
+                                                 f" expected {len(when_expectations)} others"
         when_expectations.remove((what, arg))
         if not when_expectations:
             del self.expectations[when]  # Allows us to use `not self.expectations` in check_done
