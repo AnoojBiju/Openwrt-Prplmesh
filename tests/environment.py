@@ -407,7 +407,7 @@ def _device_reset_console(device):
 # as argument. In the log messages, we only use the first one.
 # This should be reverted again as part of Unified Agent.
 def _device_wait_for_log(device: None, log_paths: [str], regex: str,
-                         timeout: int, start_line: int = 0, fail_on_mismatch: bool = True):
+                         timeout: float, start_line: int = 0, fail_on_mismatch: bool = True):
     """Waits for log matching regex expression to show up."""
 
     _device_reset_console(device)
