@@ -36,6 +36,7 @@ public:
     virtual ~ap_wlan_hal_dwpal();
 
     virtual HALState attach(bool block = false) override;
+    bool refresh_radio_info() override;
     virtual bool enable() override;
     virtual bool disable() override;
     virtual bool set_start_disabled(bool enable, int vap_id = beerocks::IFACE_RADIO_ID) override;
