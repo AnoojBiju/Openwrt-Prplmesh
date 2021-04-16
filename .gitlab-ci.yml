@@ -293,6 +293,10 @@ upload-artifacts:
       project: $CI_PROJECT_PATH
       ref: $CI_COMMIT_REF_NAME
       artifacts: true
+    - job: build-for-rdkb-turris-omnia
+      project: $CI_PROJECT_PATH
+      ref: $CI_COMMIT_REF_NAME
+      artifacts: true
     - job: build-for-glinet-b1300
       project: $CI_PROJECT_PATH
       ref: $CI_COMMIT_REF_NAME
