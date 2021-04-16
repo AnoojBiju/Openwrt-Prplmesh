@@ -306,8 +306,8 @@ on_wsl = "microsoft" in platform.uname()[3].lower()
 # Since we have multiple log files that correspond to a radio, multiple programs are passed
 # as argument. In the log messages, we only use the first one.
 # This should be reverted again as part of Unified Agent.
-def _docker_wait_for_log(container: str, programs: [str], regex: str, start_line: int,
-                         timeout: float, fail_on_mismatch: bool = True) -> bool:
+def _docker_wait_for_log(container: str, programs: [str], regex: str, timeout: float,
+                         start_line: int, fail_on_mismatch: bool = True) -> bool:
     def logfilename(program):
         logfilename = os.path.join(rootdir, 'logs', container, 'beerocks_{}.log'.format(program))
 
@@ -500,7 +500,7 @@ class ALEntityDocker(ALEntity):
                      fail_on_mismatch: bool = True) -> bool:
         '''Poll the entity's logfile until it contains "regex" or times out.'''
         program = "controller" if self.is_controller else "agent"
-        return _docker_wait_for_log(self.name, [program], regex, start_line, timeout,
+        return _docker_wait_for_log(self.name, [program], regex, timeout, start_line,
                                     fail_on_mismatch=fail_on_mismatch)
 
     def nbapi_command(self, path: str, command: str, args: Dict = None) -> Dict:
@@ -636,8 +636,8 @@ class RadioDocker(Radio):
                      fail_on_mismatch: bool = True) -> bool:
         '''Poll the radio's logfile until it contains "regex" or times out.'''
         programs = ("agent_" + self.iface_name, "ap_manager_" + self.iface_name)
-        return _docker_wait_for_log(self.agent.name, programs, regex,
-                                    start_line, timeout, fail_on_mismatch=fail_on_mismatch)
+        return _docker_wait_for_log(self.agent.name, programs, regex, timeout, start_line,
+                                    fail_on_mismatch=fail_on_mismatch)
 
     def send_bwl_event(self, event: str) -> None:
         # The file is only available within the docker container so we need to use an echo command.
