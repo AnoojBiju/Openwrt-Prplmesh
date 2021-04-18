@@ -155,7 +155,7 @@ void CacFsm::config_fsm()
                 }
                 m_cac_request_radio = std::get<1>(request_radio);
                 if (m_cac_request_radio.cac_method_bit_field.cac_method !=
-                    0x000) { // 000 is continues-cac
+                    wfa_map::eCacMethod::CONTINUOUS_CAC) {
                     LOG(ERROR) << "Only continues-cac is supported";
                     transition.change_destination(fsm_state::ERROR);
                     return true;
@@ -385,14 +385,17 @@ void CacFsm::config_fsm()
                 // 2. --> WAIT_FOR_SWITCH_CHANNEL_REPORT_II
 
                 // stay on channel
-                if (m_cac_request_radio.cac_method_bit_field.cac_completion_action == 0x00) {
+                if (m_cac_request_radio.cac_method_bit_field.cac_completion_action ==
+                    wfa_map::tlvProfile2CacRequest::eCacCompletionAction::REMAIN_ON_CHANNEL) {
                     // we were requested to stay on the same channel
                     // therefore we are done
                     LOG(DEBUG)
                         << "Controller requested to stay on the same channel after performing CAC";
                     transition.change_destination(fsm_state::IDLE);
                     return true;
-                } else if (m_cac_request_radio.cac_method_bit_field.cac_completion_action == 0x01) {
+                } else if (m_cac_request_radio.cac_method_bit_field.cac_completion_action ==
+                           wfa_map::tlvProfile2CacRequest::eCacCompletionAction::
+                               RETURN_PREVIOUS_CHANNEL) {
 
                     LOG(DEBUG) << "Controller requested to return to original channel after "
                                   "performing CAC";

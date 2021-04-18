@@ -418,7 +418,7 @@ bool CapabilityReportingTask::add_cac_capabilities_tlv()
                 LOG(ERROR) << "unable to create cac types";
                 return false;
             }
-            cac_type_tlv->cac_method() = static_cast<wfa_map::cCacTypes::eCacMethod>(cac_method);
+            cac_type_tlv->cac_method() = static_cast<wfa_map::eCacMethod>(cac_method);
 
             uint32_t duration = m_cac_capabilities.get_cac_completion_duration(radio, cac_method);
             memcpy(cac_type_tlv->duration(), &duration, 3);

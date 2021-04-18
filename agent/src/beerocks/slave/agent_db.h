@@ -249,12 +249,12 @@ public:
 
         struct sCacCapabilities {
             struct sCacMethodCapabilities {
-                eCacMethod cac_method;
+                wfa_map::eCacMethod cac_method;
                 uint32_t cac_duration_sec;
                 CacCapabilities::CacOperatingClasses operating_classes;
             };
             // for each cac method - the capabilities for it
-            std::map<eCacMethod, sCacMethodCapabilities> cac_method_capabilities;
+            std::map<wfa_map::eCacMethod, sCacMethodCapabilities> cac_method_capabilities;
         } cac_capabilities;
 
         struct sChannelInfo {

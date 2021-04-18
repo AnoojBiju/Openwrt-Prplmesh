@@ -6052,7 +6052,7 @@ void slave_thread::save_cac_capabilities_params_to_db()
             }
         }
 
-        cac_capabilities_local.cac_method = eCacMethod::CAC_METHOD_CONTINUOUS;
+        cac_capabilities_local.cac_method = wfa_map::eCacMethod::CONTINUOUS_CAC;
 
         // insert "regular" 5g
         radio->cac_capabilities.cac_method_capabilities.insert(
@@ -6060,7 +6060,7 @@ void slave_thread::save_cac_capabilities_params_to_db()
 
         // insert zwdfs 5g
         if (radio->front.zwdfs) {
-            cac_capabilities_local.cac_method = eCacMethod::CAC_METHOD_MIMO_DIMENSION_REDUCED;
+            cac_capabilities_local.cac_method = wfa_map::eCacMethod::MIMO_DIMENSION_REDUCED;
             radio->cac_capabilities.cac_method_capabilities.insert(
                 std::make_pair(cac_capabilities_local.cac_method, cac_capabilities_local));
         }

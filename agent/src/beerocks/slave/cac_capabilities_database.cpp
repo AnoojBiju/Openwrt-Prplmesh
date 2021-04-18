@@ -43,7 +43,7 @@ std::vector<sMacAddr> CacCapabilitiesDatabase::get_cac_radios() const
 }
 
 bool CacCapabilitiesDatabase::is_cac_method_supported(const sMacAddr &radio_mac,
-                                                      beerocks::eCacMethod method) const
+                                                      wfa_map::eCacMethod method) const
 {
     auto db          = AgentDB::get();
     const auto radio = db->get_radio_by_mac(radio_mac);
@@ -60,12 +60,12 @@ bool CacCapabilitiesDatabase::is_cac_method_supported(const sMacAddr &radio_mac,
     }
 
     // all 5g radios supports continues method
-    if (method == beerocks::eCacMethod::CAC_METHOD_CONTINUOUS) {
+    if (method == wfa_map::eCacMethod::CONTINUOUS_CAC) {
         return true;
     }
 
     // zwdf existance means that de facto we support mimo dimension reduced
-    if (method == beerocks::eCacMethod::CAC_METHOD_MIMO_DIMENSION_REDUCED) {
+    if (method == wfa_map::eCacMethod::CONTINUOUS_CAC_WITH_DEDICATED_RADIO) {
         return db->device_conf.zwdfs_enable;
     }
 
@@ -74,7 +74,7 @@ bool CacCapabilitiesDatabase::is_cac_method_supported(const sMacAddr &radio_mac,
 }
 
 uint32_t CacCapabilitiesDatabase::get_cac_completion_duration(const sMacAddr &radio_mac,
-                                                              beerocks::eCacMethod method) const
+                                                              wfa_map::eCacMethod method) const
 {
     auto db          = AgentDB::get();
     const auto radio = db->get_radio_by_mac(radio_mac);
@@ -99,7 +99,7 @@ uint32_t CacCapabilitiesDatabase::get_cac_completion_duration(const sMacAddr &ra
 
 CacCapabilities::CacOperatingClasses
 CacCapabilitiesDatabase::get_cac_operating_classes(const sMacAddr &radio_mac,
-                                                   beerocks::eCacMethod method) const
+                                                   wfa_map::eCacMethod method) const
 {
     auto db          = AgentDB::get();
     const auto radio = db->get_radio_by_mac(radio_mac);
