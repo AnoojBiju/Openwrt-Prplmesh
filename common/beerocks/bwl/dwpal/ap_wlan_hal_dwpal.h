@@ -43,9 +43,6 @@ public:
     virtual bool
     set_channel(int chan, beerocks::eWiFiBandwidth bw = beerocks::eWiFiBandwidth::BANDWIDTH_UNKNOWN,
                 int center_channel = 0) override;
-    virtual bool set_channel_with_secondary(int chan, beerocks::eWiFiBandwidth bw,
-                                            int center_channel,
-                                            int secondary_channel_offset) override;
     virtual bool sta_allow(const std::string &mac, const std::string &bssid) override;
     virtual bool sta_deny(const std::string &mac, const std::string &bssid) override;
     virtual bool sta_disassoc(int8_t vap_id, const std::string &mac, uint32_t reason = 0) override;

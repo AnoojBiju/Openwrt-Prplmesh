@@ -1030,21 +1030,6 @@ bool ap_wlan_hal_dwpal::set_channel(int chan, beerocks::eWiFiBandwidth bw, int c
     return true;
 }
 
-bool ap_wlan_hal_dwpal::set_channel_with_secondary(int chan, beerocks::eWiFiBandwidth bw,
-                                                   int center_channel, int secondary_channel)
-{
-    if (!set_channel(chan, bw, center_channel)) {
-        return false;
-    }
-
-    if (!set("secondary_channel", std::to_string(secondary_channel))) {
-        LOG(ERROR) << "Failed setting secondary channel " << chan;
-        return false;
-    }
-
-    return true;
-}
-
 bool ap_wlan_hal_dwpal::sta_allow(const std::string &mac, const std::string &bssid)
 {
     // Check if the requested BSSID is part of this radio
