@@ -22,23 +22,23 @@ std::vector<sMacAddr> CacCapabilitiesDatabase::get_cac_radios() const
 {
     auto db = AgentDB::get();
 
-    const auto &interfaces = db->get_radios_list();
-
     std::vector<AgentDB::sRadio *> radios_5g;
 
     // all 5g radios are cac radios
-    std::copy_if(interfaces.begin(), interfaces.end(), std::back_inserter(radios_5g),
-                 [&db](const AgentDB::sRadio *radio) {
-                     if (!radio) {
-                         return false;
-                     }
-                     return son::wireless_utils::is_frequency_band_5ghz(radio->freq_type);
-                 });
+    for (auto radio : db->get_radios_list()) {
+        if (!radio) {
+            return {};
+        }
+        if (son::wireless_utils::is_frequency_band_5ghz(radio->freq_type)) {
+            radios_5g.push_back(radio);
+        }
+    }
 
     // copy just the mac
     std::vector<sMacAddr> ret;
-    std::transform(radios_5g.begin(), radios_5g.end(), std::back_inserter(ret),
-                   [](const AgentDB::sRadio *radio_5g) { return radio_5g->front.iface_mac; });
+    for (auto &radio_5g : radios_5g) {
+        ret.push_back(radio_5g->front.iface_mac);
+    }
     return ret;
 }
 

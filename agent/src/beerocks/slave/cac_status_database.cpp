@@ -38,27 +38,17 @@ CacAvailableChannels CacStatusDatabase::get_available_channels(const sMacAddr &r
         if (channel_info.dfs_state == beerocks_message::eDfsState::USABLE ||
             channel_info.dfs_state == beerocks_message::eDfsState::AVAILABLE) {
 
-            std::transform(channel_info.supported_bw_list.begin(),
-                           channel_info.supported_bw_list.end(), std::back_inserter(ret),
-                           [channel](const beerocks_message::sSupportedBandwidth &supported) {
-                               sCacStatus ret;
+            for (auto &bw_info : channel_info.supported_bw_list) {
+                beerocks::message::sWifiChannel wifi_ch(channel, bw_info.bandwidth);
+                sCacStatus cac_status;
+                cac_status.channel = channel;
+                cac_status.operating_class =
+                    son::wireless_utils::get_operating_class_by_channel(wifi_ch);
 
-                               // channel
-                               ret.channel = channel;
-
-                               // operating class
-                               beerocks::message::sWifiChannel wifi;
-                               wifi.channel           = channel;
-                               wifi.channel_bandwidth = supported.bandwidth;
-                               ret.operating_class =
-                                   son::wireless_utils::get_operating_class_by_channel(wifi);
-
-                               // duration
-                               // Todo: https://jira.prplfoundation.org/browse/PPM-1088
-                               ret.duration = std::chrono::seconds(0);
-
-                               return ret;
-                           });
+                // Todo: https://jira.prplfoundation.org/browse/PPM-1088
+                cac_status.duration = std::chrono::seconds(0);
+                ret.push_back(cac_status);
+            }
         }
     }
     return ret;
@@ -91,28 +81,20 @@ CacCompletionStatus CacStatusDatabase::get_completion_status(const sMacAddr &rad
     }
 
     // main operating class and chanel
-    beerocks::message::sWifiChannel wifi;
-    wifi.channel              = main_channel;
-    wifi.channel_bandwidth    = radio->last_swich_channel_request->bandwidth;
-    ret.first.operating_class = son::wireless_utils::get_operating_class_by_channel(wifi);
+    message::sWifiChannel wifi_ch(main_channel, radio->last_swich_channel_request->bandwidth);
+    ret.first.operating_class = son::wireless_utils::get_operating_class_by_channel(wifi_ch);
 
     // fill the detected operting class and channels.
     if (channel_info->second.dfs_state == beerocks_message::eDfsState::UNAVAILABLE) {
-
-        auto overlapping = son::wireless_utils::get_overlapping_channels(
+        auto overlapping_channels = son::wireless_utils::get_overlapping_channels(
             radio->last_swich_channel_request->channel);
-        std::vector<std::pair<uint8_t, uint8_t>> radar_detected_operating_class_channel_list;
-        std::transform(overlapping.begin(), overlapping.end(),
-                       std::back_inserter(radar_detected_operating_class_channel_list),
-                       [](const std::pair<uint8_t, beerocks::eWiFiBandwidth> &overlapping) {
-                           beerocks::message::sWifiChannel wifi;
-                           wifi.channel           = overlapping.first;
-                           wifi.channel_bandwidth = overlapping.second;
-                           return std::make_pair(
-                               son::wireless_utils::get_operating_class_by_channel(wifi),
-                               overlapping.first);
-                       });
-        ret.second = radar_detected_operating_class_channel_list;
+
+        for (auto &overlap_ch : overlapping_channels) {
+            message::sWifiChannel overlap_wifi_ch(overlap_ch.first, overlap_ch.second);
+            ret.second.emplace_back(
+                son::wireless_utils::get_operating_class_by_channel(overlap_wifi_ch),
+                overlap_ch.first);
+        }
     }
 
     return ret;

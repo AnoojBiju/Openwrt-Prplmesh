@@ -2776,7 +2776,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             auto channel       = channel_info.beacon_channel();
             radio->channels_list[channel].tx_power_dbm = channel_info.tx_power_dbm();
             radio->channels_list[channel].dfs_state    = channel_info.dfs_state();
-            auto supported_bw_size = channel_info.supported_bandwidths_length();
+            auto supported_bw_size                     = channel_info.supported_bandwidths_length();
             radio->channels_list[channel].supported_bw_list.resize(supported_bw_size);
             std::copy_n(&std::get<1>(channel_info.supported_bandwidths(0)), supported_bw_size,
                         radio->channels_list[channel].supported_bw_list.begin());
