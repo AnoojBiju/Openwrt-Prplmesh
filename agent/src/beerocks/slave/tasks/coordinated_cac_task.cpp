@@ -28,11 +28,11 @@ std::ostream &operator<<(std::ostream &out, const fsm_state &value)
     case fsm_state::WAIT_FOR_CHANNEL_LIST_READY:
         out << "WAIT_FOR_CHANNEL_LIST_READY";
         break;
-    case fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT_I:
-        out << "WAIT_FOR_SWITCH_CHANNEL_REPORT_I";
+    case fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT:
+        out << "WAIT_FOR_SWITCH_CHANNEL_REPORT";
         break;
-    case fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT_II:
-        out << "WAIT_FOR_SWITCH_CHANNEL_REPORT_II";
+    case fsm_state::WAIT_FOR_SWITCH_BACK_TO_ORIGINAL_CHANNEL_REPORT:
+        out << "WAIT_FOR_SWITCH_BACK_TO_ORIGINAL_CHANNEL_REPORT";
         break;
     case fsm_state::WAIT_FOR_CAC_TERMINATION:
         out << "WAIT_FOR_CAC_TERMINATION";
@@ -118,8 +118,11 @@ void CacFsm::config_fsm()
         })
 
         .on(fsm_event::CAC_REQUEST,
-            {fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT_I, fsm_state::WAIT_FOR_CHANNEL_LIST_READY,
-             fsm_state::ERROR},
+            {
+                fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT,
+                fsm_state::WAIT_FOR_CHANNEL_LIST_READY,
+                fsm_state::ERROR,
+            },
             [&](TTransition &transition, const void *args) -> bool {
                 if (m_cac_request) {
                     LOG(ERROR) << "another cac request in progress, ignoring.";
@@ -246,7 +249,7 @@ void CacFsm::config_fsm()
                 // store the request in the database
                 db_radio->last_swich_channel_request = m_first_switch_channel_request;
 
-                // moving to next state: WAIT_FOR_SWITCH_CHANNEL_REPORT_I
+                // moving to next state: WAIT_FOR_SWITCH_CHANNEL_REPORT
                 return true;
             })
 
@@ -265,7 +268,7 @@ void CacFsm::config_fsm()
         .state(fsm_state::WAIT_FOR_CHANNEL_LIST_READY)
 
         .on(fsm_event::CHANNEL_LIST_READY,
-            {fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT_I, fsm_state::ERROR},
+            {fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT, fsm_state::ERROR},
             [&](TTransition &transition, const void *args) -> bool {
                 if (!m_cac_request) {
                     LOG(ERROR) << "Received channel switching request without data.";
@@ -328,7 +331,7 @@ void CacFsm::config_fsm()
                 // store the request in the database
                 db_radio->last_swich_channel_request = m_first_switch_channel_request;
 
-                // moving to next state: WAIT_FOR_SWITCH_CHANNEL_REPORT_I
+                // moving to next state: WAIT_FOR_SWITCH_CHANNEL_REPORT
                 return true;
             })
 
@@ -348,11 +351,11 @@ void CacFsm::config_fsm()
         .on(fsm_event::CAC_TERMINATION_REQUEST, fsm_state::IDLE)
 
         /////////////////////////////////////////
-        //// WAIT_FOR_SWITCH_CHANNEL_REPORT_I ///
+        //// WAIT_FOR_SWITCH_CHANNEL_REPORT ///
         /////////////////////////////////////////
-        .state(fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT_I)
+        .state(fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT)
 
-        .on(fsm_event::SWITCH_CHANNEL_DURATION_TIME, {fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT_I},
+        .on(fsm_event::SWITCH_CHANNEL_DURATION_TIME, {fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT},
             [&](TTransition &transition, const void *args) -> bool {
                 // update the wait time
                 m_max_wait_for_switch_channel =
@@ -363,7 +366,8 @@ void CacFsm::config_fsm()
             })
 
         .on(fsm_event::SWITCH_CHANNEL_REPORT,
-            {fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT_II, fsm_state::IDLE, fsm_state::ERROR},
+            {fsm_state::WAIT_FOR_SWITCH_BACK_TO_ORIGINAL_CHANNEL_REPORT, fsm_state::IDLE,
+             fsm_state::ERROR},
             [&](TTransition &transition, const void *args) -> bool {
                 auto switch_channel_report =
                     *(reinterpret_cast<std::shared_ptr<sSwitchChannelReport> *>(
@@ -382,7 +386,7 @@ void CacFsm::config_fsm()
                 // remain on the same channel --> IDLE
                 // go back to the previous -->
                 // 1. send switch channel request
-                // 2. --> WAIT_FOR_SWITCH_CHANNEL_REPORT_II
+                // 2. --> WAIT_FOR_SWITCH_BACK_TO_ORIGINAL_CHANNEL_REPORT
 
                 // stay on channel
                 if (m_cac_request_radio.cac_method_bit_field.cac_completion_action ==
@@ -414,7 +418,7 @@ void CacFsm::config_fsm()
                         return true;
                     }
 
-                    // switch to the first state in the list: WAIT_FOR_SWITCH_CHANNEL_REPORT_II
+                    // switch to the first state in the list: WAIT_FOR_SWITCH_BACK_TO_ORIGINAL_CHANNEL_REPORT
                     return true;
 
                 } else {
@@ -426,7 +430,7 @@ void CacFsm::config_fsm()
                 return true;
             })
 
-        .on(fsm_event::CAC_STARTED_NOTIFICATION, fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT_I,
+        .on(fsm_event::CAC_STARTED_NOTIFICATION, fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT,
             [&](TTransition &transition, const void *args) -> bool {
                 auto cac_started_notification =
                     *(reinterpret_cast<std::shared_ptr<sCacStartedNotification> *>(
@@ -435,7 +439,7 @@ void CacFsm::config_fsm()
                 return true;
             })
 
-        .on(fsm_event::CAC_COMPLETED_NOTIFICATION, fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT_I,
+        .on(fsm_event::CAC_COMPLETED_NOTIFICATION, fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT,
             [&](TTransition &transition, const void *args) -> bool {
                 auto cac_completed_notification =
                     *(reinterpret_cast<std::shared_ptr<sCacCompletedNotification> *>(
@@ -444,7 +448,7 @@ void CacFsm::config_fsm()
                 return true;
             })
 
-        .on(fsm_event::PERIODIC, {fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT_I, fsm_state::ERROR},
+        .on(fsm_event::PERIODIC, {fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT, fsm_state::ERROR},
             [&](TTransition &transition, const void *args) -> bool {
                 if (is_timeout_waiting_for_switch_channel_report()) {
                     LOG(ERROR) << "Timeout occurred waiting for switch channel report (I)";
@@ -527,18 +531,19 @@ void CacFsm::config_fsm()
                     return true;
                 }
 
-                // moving to next state: WAIT_FOR_SWITCH_CHANNEL_REPORT_II
+                // moving to next state: WAIT_FOR_SWITCH_BACK_TO_ORIGINAL_CHANNEL_REPORT
                 return true;
             })
 
-        .on(fsm_event::CHANNEL_LIST_READY, fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT_I)
+        .on(fsm_event::CHANNEL_LIST_READY, fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT)
 
         //////////////////////////////////////////
-        //// WAIT_FOR_SWITCH_CHANNEL_REPORT_II ///
+        //// WAIT_FOR_SWITCH_BACK_TO_ORIGINAL_CHANNEL_REPORT ///
         //////////////////////////////////////////
-        .state(fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT_II)
+        .state(fsm_state::WAIT_FOR_SWITCH_BACK_TO_ORIGINAL_CHANNEL_REPORT)
 
-        .on(fsm_event::SWITCH_CHANNEL_DURATION_TIME, {fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT_II},
+        .on(fsm_event::SWITCH_CHANNEL_DURATION_TIME,
+            {fsm_state::WAIT_FOR_SWITCH_BACK_TO_ORIGINAL_CHANNEL_REPORT},
             [&](TTransition &transition, const void *args) -> bool {
                 // update the wait time
                 m_max_wait_for_switch_channel =
@@ -556,7 +561,8 @@ void CacFsm::config_fsm()
                 // currently we are satisfied just from getting in here
                 return true;
             })
-        .on(fsm_event::PERIODIC, {fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT_II, fsm_state::ERROR},
+        .on(fsm_event::PERIODIC,
+            {fsm_state::WAIT_FOR_SWITCH_BACK_TO_ORIGINAL_CHANNEL_REPORT, fsm_state::ERROR},
             [&](TTransition &transition, const void *args) -> bool {
                 // check timeout
                 if (is_timeout_waiting_for_switch_channel_report()) {
@@ -568,8 +574,10 @@ void CacFsm::config_fsm()
                 return false;
             })
 
-        .on(fsm_event::CHANNEL_LIST_READY, fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT_II)
-        .on(fsm_event::CAC_TERMINATION_REQUEST, fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT_II)
+        .on(fsm_event::CHANNEL_LIST_READY,
+            fsm_state::WAIT_FOR_SWITCH_BACK_TO_ORIGINAL_CHANNEL_REPORT)
+        .on(fsm_event::CAC_TERMINATION_REQUEST,
+            fsm_state::WAIT_FOR_SWITCH_BACK_TO_ORIGINAL_CHANNEL_REPORT)
 
         /////////////////////////////////
         //// WAIT_FOR_CAC_TERMINATION ///
@@ -591,7 +599,7 @@ void CacFsm::config_fsm()
                 return true;
             })
 
-        .on(fsm_event::PERIODIC, fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT_II,
+        .on(fsm_event::PERIODIC, fsm_state::WAIT_FOR_SWITCH_BACK_TO_ORIGINAL_CHANNEL_REPORT,
             [&](TTransition &transition, const void *args) -> bool {
                 // check timeout
                 if (is_timeout_waiting_for_cac_termination()) {
