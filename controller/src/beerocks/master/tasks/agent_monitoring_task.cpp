@@ -60,7 +60,7 @@ bool agent_monitoring_task::handle_ieee1905_1_msg(const std::string &src_mac,
 bool agent_monitoring_task::start_task(const std::string &src_mac, std::shared_ptr<WSC::m1> m1,
                                        ieee1905_1::CmduMessageRx &cmdu_rx)
 {
-    if (!send_tlv_metric_reporting_policy(src_mac, cmdu_rx, cmdu_tx)) {
+    if (!send_tlv_metric_reporting_policy(src_mac, m1, cmdu_rx, cmdu_tx)) {
         LOG(ERROR) << "Failed to send Metric Reporting Policy to radio agent=" << src_mac;
     }
     if (!send_tlv_empty_channel_selection_request(src_mac, cmdu_tx)) {
@@ -90,6 +90,7 @@ bool agent_monitoring_task::start_task(const std::string &src_mac, std::shared_p
 }
 
 bool agent_monitoring_task::send_tlv_metric_reporting_policy(const std::string &dst_mac,
+                                                             std::shared_ptr<WSC::m1> m1,
                                                              ieee1905_1::CmduMessageRx &cmdu_rx,
                                                              ieee1905_1::CmduMessageTx &cmdu_tx)
 {
@@ -99,11 +100,31 @@ bool agent_monitoring_task::send_tlv_metric_reporting_policy(const std::string &
         return false;
     }
 
-    auto ruid = radio_basic_caps->radio_uid();
+    auto ruid                  = radio_basic_caps->radio_uid();
+    auto al_mac                = tlvf::mac_to_string(m1->mac_addr());
+    const auto &bss_info_confs = database.get_bss_info_configuration(m1->mac_addr());
+    uint8_t num_bsss           = 0;
+
+    for (const auto &bss_info_conf : bss_info_confs) {
+        // Check if the radio supports it
+        if (!son_actions::has_matching_operating_class(*radio_basic_caps, bss_info_conf)) {
+            continue;
+        }
+        if (num_bsss >= radio_basic_caps->maximum_number_of_bsss_supported()) {
+            LOG(INFO) << "Configured BSSes exceed maximum for " << al_mac << " radio " << ruid;
+            break;
+        }
+        num_bsss++;
+    }
 
     if (!cmdu_tx.create(0, ieee1905_1::eMessageType::MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE)) {
         LOG(ERROR) << "Failed building MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE ! ";
         return false;
+    }
+
+    if (num_bsss) {
+        add_traffic_policy_tlv(database, cmdu_tx, m1);
+        add_profile_2default_802q_settings_tlv(database, cmdu_tx, m1);
     }
 
     auto metric_reporting_policy_tlv = cmdu_tx.addClass<wfa_map::tlvMetricReportingPolicy>();
