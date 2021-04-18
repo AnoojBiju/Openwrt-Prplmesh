@@ -30,6 +30,13 @@ namespace wfa_map {
 class cCacCapabilitiesRadio;
 class cCacTypes;
 class cCacCapabilitiesOperatingClasses;
+enum eCacMethod: uint8_t {
+    CONTINUOUS_CAC = 0x0,
+    CONTINUOUS_CAC_WITH_DEDICATED_RADIO = 0x1,
+    MIMO_DIMENSION_REDUCED = 0x2,
+    TIME_SLICED = 0x3,
+};
+
 
 class tlvProfile2CacCapabilities : public BaseClass
 {
@@ -98,13 +105,6 @@ class cCacTypes : public BaseClass
         explicit cCacTypes(std::shared_ptr<BaseClass> base, bool parse = false);
         ~cCacTypes();
 
-        enum eCacMethod: uint8_t {
-            CAC_METHOD_CONTINUOUS_CAC = 0x0,
-            CAC_METHOD_CONTINUOUS_CAC_WITH_DEDICATED_RADIO = 0x1,
-            CAC_METHOD_MIMO_DIMENSION_REDUCED = 0x2,
-            CAC_METHOD_TIME_SLICED = 0x3,
-        };
-        
         eCacMethod& cac_method();
         uint8_t* duration(size_t idx = 0);
         bool set_duration(const void* buffer, size_t size);
