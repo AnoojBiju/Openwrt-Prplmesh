@@ -53,6 +53,7 @@ void client_steering_task::work()
         m_state = FINALIZE;
         if (m_steer_restricted) {
             finish();
+            break;
         }
         wait_for_event(STA_DISCONNECTED);
         wait_for_event(STA_CONNECTED);
