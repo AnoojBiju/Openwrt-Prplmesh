@@ -371,7 +371,6 @@ void CacFsm::config_fsm()
                 // the original switch channel, or the report that the
                 // old
 
-                db_store_cac_status(switch_channel_report);
                 send_preference_report();
 
                 // depends on the completion action:
@@ -427,7 +426,6 @@ void CacFsm::config_fsm()
                 auto cac_started_notification =
                     *(reinterpret_cast<std::shared_ptr<sCacStartedNotification> *>(
                         const_cast<void *>(args)));
-                db_store_cac_status(cac_started_notification);
                 return true;
             })
 
@@ -436,7 +434,6 @@ void CacFsm::config_fsm()
                 auto cac_completed_notification =
                     *(reinterpret_cast<std::shared_ptr<sCacCompletedNotification> *>(
                         const_cast<void *>(args)));
-                db_store_cac_status(cac_completed_notification);
                 return true;
             })
 
@@ -676,72 +673,6 @@ bool CacFsm::is_timeout_waiting_for_cac_termination()
     // check cac termination timeout
     return (std::chrono::steady_clock::now() - m_terminate_cac_start_time_point) >
            m_max_wait_for_cac_termination;
-}
-
-void CacFsm::db_store_cac_status(std::shared_ptr<sSwitchChannelReport> switch_channel_report)
-{
-    if (!switch_channel_report) {
-        LOG(ERROR) << "can't store null switch-channel-report";
-        return;
-    }
-
-    if (switch_channel_report->cac_happened) {
-        db_store_cac_status(switch_channel_report->cac_completed_notification);
-    }
-}
-
-void CacFsm::db_store_cac_status(std::shared_ptr<sCacStartedNotification> cac_started)
-{
-    if (!cac_started) {
-        LOG(WARNING) << "can't store empty cac-completed";
-        return;
-    }
-
-    auto db    = AgentDB::get();
-    auto radio = db->radio(m_ifname);
-    if (!radio) {
-        LOG(ERROR) << "can't find radio in the databse for " << m_ifname;
-        return;
-    }
-
-    const auto channel_record = radio->channels_list.find(cac_started->cac_started_params.channel);
-    if (channel_record == radio->channels_list.end()) {
-        LOG(ERROR) << "received cac started on non existed channel: "
-                   << "ifname: " << m_ifname
-                   << " channel: " << cac_started->cac_started_params.channel;
-        return;
-    }
-}
-
-void CacFsm::db_store_cac_status(std::shared_ptr<sCacCompletedNotification> cac_completed)
-{
-    if (!cac_completed) {
-        LOG(WARNING) << "can't store empty cac-completed";
-        return;
-    }
-
-    auto db    = AgentDB::get();
-    auto radio = db->radio(m_ifname);
-    if (!radio) {
-        LOG(ERROR) << "can't find radio in the databse for " << m_ifname;
-        return;
-    }
-
-    const auto channel_record =
-        radio->channels_list.find(cac_completed->cac_completed_params.channel);
-    if (channel_record == radio->channels_list.end()) {
-        LOG(ERROR) << "received cac completed on non existed channel: "
-                   << "ifname: " << m_ifname
-                   << " channel: " << cac_completed->cac_completed_params.channel;
-        return;
-    }
-
-    if (!cac_completed->cac_completed_params.success) {
-        LOG(WARNING) << "cac comleted with fauilre";
-        channel_record->second.dfs_state = beerocks_message::eDfsState::USABLE;
-        return;
-    }
-    channel_record->second.dfs_state = beerocks_message::eDfsState::AVAILABLE;
 }
 
 ///////////////

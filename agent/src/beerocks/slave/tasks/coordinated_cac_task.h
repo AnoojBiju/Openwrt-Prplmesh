@@ -72,10 +72,6 @@ private:
     bool is_timeout_waiting_for_channel_list();
     bool is_timeout_waiting_for_cac_termination();
 
-    void db_store_cac_status(std::shared_ptr<sSwitchChannelReport> switch_channel_report);
-    void db_store_cac_status(std::shared_ptr<sCacStartedNotification> cac_started);
-    void db_store_cac_status(std::shared_ptr<sCacCompletedNotification> cac_completed);
-
 private:
     // environment
     TaskPoolInterface &m_task_pool;
