@@ -211,11 +211,11 @@ public:
     using OverlappingChannels = std::vector<std::pair<uint8_t, beerocks::eWiFiBandwidth>>;
 
     /**
-     * #brief calculates the list of overlapping channels and bandwidths
-     * for the given source channel
+     * @brief Calculates the list of overlapping channels and bandwidths
+     * for the given source channel.
      *
      * @param source_channel The channel to calculate its overlapping pairs.
-     * @return OverlappingChannles A vector of the overlapping channles for the
+     * @return OverlappingChannles A vector of the overlapping channels for the
      * given source channel. Empty list if not as such.
      */
     static OverlappingChannels get_overlapping_channels(uint8_t source_channel);

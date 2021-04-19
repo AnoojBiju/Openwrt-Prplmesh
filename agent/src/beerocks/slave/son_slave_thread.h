@@ -210,7 +210,7 @@ private:
     /**
      * @brief check if there was an error in the constructor
      *
-     * @return false if no errors occured in the constructor, true otherwise
+     * @return false if no errors occurred in the constructor, true otherwise
      */
     bool m_constructor_failed = false;
 

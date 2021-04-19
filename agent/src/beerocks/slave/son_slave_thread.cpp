@@ -44,7 +44,6 @@
 #include <tlvf/wfa_map/tlvClientAssociationControlRequest.h>
 #include <tlvf/wfa_map/tlvClientAssociationEvent.h>
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
-#include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 #include <tlvf/wfa_map/tlvProfile2ApRadioAdvancedCapabilities.h>
@@ -104,7 +103,7 @@ slave_thread::slave_thread(sSlaveConfig conf, beerocks::logging &logger_)
     auto radio = db->add_radio(conf.hostap_iface, conf.backhaul_wireless_iface);
     if (!radio) {
         m_constructor_failed = true;
-        // No need to print here anything, 'add_radio()' does it internaly
+        // No need to print here anything, 'add_radio()' does it internally
         return;
     }
     m_fronthaul_iface = conf.hostap_iface;
@@ -4557,7 +4556,7 @@ bool slave_thread::send_cmdu_to_controller(ieee1905_1::CmduMessageTx &cmdu_tx)
  *        class member params authkey and keywrapauth are computed
  *        on success.
  *
- * @param[in] m2 WSC M2 recived from the controller
+ * @param[in] m2 WSC M2 received from the controller
  * @param[out] authkey 32 bytes calculated authentication key
  * @param[out] keywrapkey 16 bytes calculated key wrap key
  * @return true on success
@@ -5248,6 +5247,7 @@ bool slave_thread::parse_non_intel_join_response(Socket *sd)
 bool slave_thread::handle_multi_ap_policy_config_request(Socket *sd,
                                                          ieee1905_1::CmduMessageRx &cmdu_rx)
 {
+
     /**
      * The Multi-AP Policy Config Request message is sent by the controller and received by the
      * backhaul manager.
@@ -5459,7 +5459,7 @@ bool slave_thread::handle_client_steering_request(Socket *sd, ieee1905_1::CmduMe
         // NOTE: the implementation below does not actually take the steering
         // opportunity and tries to steer. Instead, it just reports ACK
         // and steering-completed.
-        // Taking no action is a legitimate result of steering opporunity request,
+        // Taking no action is a legitimate result of steering opportunity request,
         // and this is what is done here.
         // Later in time we may actually implement the opportunity to steer.
 
@@ -6032,7 +6032,8 @@ void slave_thread::save_cac_capabilities_params_to_db()
 
         // we'll update the value when we receive cac-started event.
         // there is no way to query the hardware until a CAC is
-        // actually performed. We set the value to 10 minutes as default.
+        // actually performed.
+        // Until PPM-855 is solved we will set the value to 10 minutes as default.
         cac_capabilities_local.cac_duration_sec = 600;
 
         for (const auto &channel_info_element : radio->channels_list) {

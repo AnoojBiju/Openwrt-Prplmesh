@@ -139,7 +139,7 @@ void CacFsm::config_fsm()
                     return true;
                 }
 
-                // escape on currently non supported
+                // escape on currently non supported. PPM-1313.
                 if (msg->number_of_cac_radios() != 1) {
                     LOG(ERROR) << "Only one radio is supported for cac request";
                     transition.change_destination(fsm_state::ERROR);
@@ -148,7 +148,7 @@ void CacFsm::config_fsm()
                 std::tuple<bool, wfa_map::tlvProfile2CacRequest::sCacRequestRadio &> request_radio =
                     msg->cac_radios(0);
                 if (!std::get<0>(request_radio)) {
-                    LOG(ERROR) << "Coudn't find the one (and only) expected sCacRequestRadio in "
+                    LOG(ERROR) << "Couldn't find the one (and only) expected sCacRequestRadio in "
                                   "the request";
                     transition.change_destination(fsm_state::ERROR);
                     return true;
@@ -162,16 +162,16 @@ void CacFsm::config_fsm()
                 }
 
                 // prepare for switch channel
-                std::shared_ptr<BackhaulManager::sRadioInfo> backhaul_radio =
+                std::shared_ptr<BackhaulManager::sRadioInfo> radio_info =
                     m_backhaul_manager.get_radio(m_cac_request_radio.radio_uid);
-                if (!backhaul_radio) {
+                if (!radio_info) {
                     LOG(ERROR) << "Can't find " << m_cac_request_radio.radio_uid
                                << " radio in the backhaul manager";
                     transition.change_destination(fsm_state::ERROR);
                     return true;
                 }
 
-                m_ifname      = backhaul_radio->hostap_iface;
+                m_ifname      = radio_info->hostap_iface;
                 auto db       = AgentDB::get();
                 auto db_radio = db->radio(m_ifname);
                 if (!db_radio) {
@@ -180,7 +180,7 @@ void CacFsm::config_fsm()
                     return true;
                 }
 
-                if (db_radio->channels_list.empty()) {
+                // This is a w/a until PPM-655 will be implemented.
                     // since the channel list is empty
                     // we send a request for populating it
                     auto request = message_com::create_vs_message<
@@ -244,7 +244,7 @@ void CacFsm::config_fsm()
                 }
 
                 // store the request in the database
-                db_radio->last_swich_channel_request = m_first_switch_channel_request;
+                db_radio->last_switch_channel_request = m_first_switch_channel_request;
 
                 // moving to next state: WAIT_FOR_SWITCH_CHANNEL_REPORT
                 return true;
@@ -267,16 +267,16 @@ void CacFsm::config_fsm()
         .on(fsm_event::CHANNEL_LIST_READY,
             {fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT, fsm_state::ERROR},
             [&](TTransition &transition, const void *args) -> bool {
-                std::shared_ptr<BackhaulManager::sRadioInfo> backhaul_radio =
+                std::shared_ptr<BackhaulManager::sRadioInfo> radio_info =
                     m_backhaul_manager.get_radio(m_cac_request_radio.radio_uid);
-                if (!backhaul_radio) {
+                if (!radio_info) {
                     LOG(ERROR) << "Failed to find " << m_cac_request_radio.radio_uid
                                << " radio in the backhaul";
                     transition.change_destination(fsm_state::ERROR);
                     return true;
                 }
 
-                m_ifname      = backhaul_radio->hostap_iface;
+                m_ifname      = radio_info->hostap_iface;
                 auto db       = AgentDB::get();
                 auto db_radio = db->radio(m_ifname);
                 if (!db_radio) {
@@ -321,7 +321,7 @@ void CacFsm::config_fsm()
                 }
 
                 // store the request in the database
-                db_radio->last_swich_channel_request = m_first_switch_channel_request;
+                db_radio->last_switch_channel_request = m_first_switch_channel_request;
 
                 // moving to next state: WAIT_FOR_SWITCH_CHANNEL_REPORT
                 return true;
@@ -330,7 +330,7 @@ void CacFsm::config_fsm()
         .on(fsm_event::PERIODIC, {fsm_state::WAIT_FOR_CHANNEL_LIST_READY, fsm_state::ERROR},
             [&](TTransition &transition, const void *args) -> bool {
                 if (is_timeout_waiting_for_channel_list()) {
-                    LOG(ERROR) << "Timeout occured waiting for channel list.";
+                    LOG(ERROR) << "Timeout occurred waiting for channel list.";
                     transition.change_destination(fsm_state::ERROR);
                     return true;
                 }
@@ -338,7 +338,7 @@ void CacFsm::config_fsm()
                 return false;
             })
 
-        // while waiting for channel list we were requested to teminate
+        // while waiting for channel list we were requested to terminate
         // the cac. we simply switch to IDLE.
         .on(fsm_event::CAC_TERMINATION_REQUEST, fsm_state::IDLE)
 
@@ -513,7 +513,7 @@ void CacFsm::config_fsm()
                     return true;
                 }
 
-                // moving to next state: WAIT_FOR_SWITCH_BACK_TO_ORIGINAL_CHANNEL_REPORT
+                // moving to next state: WAIT_FOR_CAC_TERMINATION
                 return true;
             })
 
@@ -548,7 +548,7 @@ void CacFsm::config_fsm()
             [&](TTransition &transition, const void *args) -> bool {
                 // check timeout
                 if (is_timeout_waiting_for_switch_channel_report()) {
-                    LOG(ERROR) << "timeout occured waiting for switch channel report (II)";
+                    LOG(ERROR) << "timeout occurred waiting for switch channel report (II)";
                     transition.change_destination(fsm_state::ERROR);
                     return true;
                 }
@@ -584,7 +584,7 @@ void CacFsm::config_fsm()
             [&](TTransition &transition, const void *args) -> bool {
                 // check timeout
                 if (is_timeout_waiting_for_cac_termination()) {
-                    LOG(ERROR) << "timeout occured waiting for cac termination";
+                    LOG(ERROR) << "timeout occurred waiting for cac termination";
                     transition.change_destination(fsm_state::ERROR);
                     return true;
                 }
@@ -607,7 +607,7 @@ void CacFsm::config_fsm()
 
 bool CacFsm::send_preference_report()
 {
-    LOG(DEBUG) << "time to send preference report";
+    LOG(DEBUG) << "sending preference report";
 
     // we are triggering preference report by sending
     // channel list request. The end of this request
@@ -777,7 +777,7 @@ bool CoordinatedCacTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_
         }
         // send ACK to the controller
         bool ack_sent = m_backhaul_manager.send_ack_to_controller(m_cmdu_tx, mid);
-        LOG(DEBUG) << "CAC REQUEST: Ack was sent to controller? " << std::boolalpha << ack_sent;
+        LOG(DEBUG) << "CAC REQUEST: Ack was sent to controller? " << ack_sent;
 
         // let the fsm handle the request
         m_fsm.fire(fsm_event::CAC_REQUEST, reinterpret_cast<const void *>(&cac_request_tlv));
@@ -788,12 +788,12 @@ bool CoordinatedCacTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_
         auto cac_termination_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2CacTermination>();
         if (!cac_termination_tlv) {
             LOG(ERROR) << "CAC TERMINATION CMDU mid=" << std::hex << mid
-                       << " does not have profile 2 cac itermination TLV";
+                       << " does not have profile 2 cac termination TLV";
             return true;
         }
         // send ACK to the controller
         bool ack_sent = m_backhaul_manager.send_ack_to_controller(m_cmdu_tx, mid);
-        LOG(DEBUG) << "CAC TERMINATION: Ack was sent to controller? " << std::boolalpha << ack_sent;
+        LOG(DEBUG) << "CAC TERMINATION: Ack was sent to controller? " << ack_sent;
 
         // let the fsm handle the termination
         m_fsm.fire(fsm_event::CAC_TERMINATION_REQUEST,

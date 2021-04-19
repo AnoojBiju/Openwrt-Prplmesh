@@ -53,17 +53,17 @@ public:
     // interface for sending inter-task communications messages
     TaskPoolInterface &m_task_pool;
 
-    // temportary - interface for sending CMDUs
+    // temportary - interface for sending Cmdu
     // should be replaced with a decent interface instead of the whole backhaul
     BackhaulManager &m_backhaul_manager;
 
-    // a container for sending cmdus
+    // a container for sending cmdu
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
 
     // the switch chanel request
     std::shared_ptr<const sSwitchChannelRequest> m_switch_channel_request;
 
-    // switch chanel notificatoin (aka csa)
+    // switch chanel notification (aka csa)
     std::shared_ptr<sSwitchChannelNotification> m_switch_channel_notification;
 
     // cac started data
@@ -82,7 +82,7 @@ public:
     // max time to wait for cac-completed
     std::chrono::seconds m_max_wait_for_cac_completed_sec = std::chrono::seconds(0);
 
-    // the point in time we we started waiting for cac-comleted
+    // the point in time we we started waiting for cac-completed
     std::chrono::time_point<std::chrono::steady_clock> m_cac_started_time_point;
 
     // a factor used to calculate how long to wait for cac-completed
@@ -300,7 +300,7 @@ void SwitchChannelFsm::config_fsm()
                         const_cast<void *>(args)));
 
                 if (!m_cac_started_notification) {
-                    LOG(ERROR) << "can't handle cac started without cac-started-notfication";
+                    LOG(ERROR) << "can't handle cac started without cac-started-notifcation";
                     transition.change_destination(fsm_state::ERROR);
 
                     return true;
@@ -384,7 +384,7 @@ void SwitchChannelFsm::config_fsm()
                                m_max_wait_for_cac_completed_sec;
 
                 if (timeout) {
-                    LOG(ERROR) << "timeout occured waiting for cac completed";
+                    LOG(ERROR) << "timeout occurred waiting for cac completed";
                     transition.change_destination(fsm_state::ERROR);
 
                     return true;
@@ -421,7 +421,7 @@ void SwitchChannelFsm::config_fsm()
                 m_task_pool.send_event(eTaskEvent::SWITCH_CHANNEL_REPORT, switch_channel_report);
 
                 // we are no longer waiting for cac-completed
-                // reset and go back to idel
+                // reset and go back to idle
                 reset();
 
                 return true;

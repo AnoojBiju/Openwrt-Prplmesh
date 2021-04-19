@@ -302,7 +302,9 @@ public:
         bool he_supported = false; ///< Is 802.11ax (High Efficiency) protocol supported
         bool report_indepent_scans_policy = false;
 
-        std::shared_ptr<sSwitchChannelRequest> last_swich_channel_request;
+        // Information on the last channel switch request which containing the requested channel
+        // and bandwidth.
+        std::shared_ptr<sSwitchChannelRequest> last_switch_channel_request;
     };
     struct {
         uint16_t max_number_of_vlans_ids;

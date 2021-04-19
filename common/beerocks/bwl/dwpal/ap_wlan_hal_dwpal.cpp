@@ -1529,14 +1529,13 @@ bool ap_wlan_hal_dwpal::switch_channel(int chan, int bw, int vht_center_frequenc
 bool ap_wlan_hal_dwpal::cancel_cac(int chan, beerocks::eWiFiBandwidth bw, int vht_center_frequency,
                                    int secondary_chan_offset)
 {
-    // the following hostapd sequence
-    // disables cac and re-enables
-    // the radio with the given parameters:
+    // The following hostapd sequence disables cac and re-enables the radio with the given
+    // parameters:
     // disable (cac canceled)
     // SET channel X
     // SET secondary_channel X
     // SET vht_oper_chwidth X
-    // SET vht_oper_centr_freq_seg0_idx X
+    // SET vht_oper_center_freq_seg0_idx X
     // enable (radio enabled back on channel X)
 
     // get center channel from the center frequency

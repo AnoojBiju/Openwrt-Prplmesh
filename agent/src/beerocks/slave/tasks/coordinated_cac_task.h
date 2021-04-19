@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-2-Clause-Patent
  *
- * SPDX-FileCopyrightText: 2020 the prplMesh contributors (see AUTHORS.md)
+ * SPDX-FileCopyrightText: 2021 the prplMesh contributors (see AUTHORS.md)
  *
  * This code is subject to the terms of the BSD+Patent license.
  * See LICENSE file for more details.
@@ -63,7 +63,7 @@ private:
      * @param channel The channel to switch to
      * @param bandwidth The bandwidth to switch to
      * @return A pointer to the switch-channel-request that was sent or
-     * nullptr if an error occured.
+     * nullptr if an error occurred.
      */
     std::shared_ptr<sSwitchChannelRequest>
     send_switch_channel_request(uint8_t channel, beerocks::eWiFiBandwidth bandwidth);

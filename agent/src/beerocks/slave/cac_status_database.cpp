@@ -66,12 +66,12 @@ CacCompletionStatus CacStatusDatabase::get_completion_status(const sMacAddr &rad
         return ret;
     }
 
-    if (!radio->last_swich_channel_request) {
+    if (!radio->last_switch_channel_request) {
         LOG(ERROR) << "No switch channel request to relate to, thus completion status is empty"
                    << " for radio " << radio_mac;
         return ret;
     }
-    uint8_t main_channel = radio->last_swich_channel_request->channel;
+    uint8_t main_channel = radio->last_switch_channel_request->channel;
 
     auto channel_info = radio->channels_list.find(main_channel);
     if (channel_info == radio->channels_list.end()) {
@@ -80,15 +80,15 @@ CacCompletionStatus CacStatusDatabase::get_completion_status(const sMacAddr &rad
         return ret;
     }
 
-    // main operating class and chanel
-    message::sWifiChannel wifi_ch(main_channel, radio->last_swich_channel_request->bandwidth);
+    // main operating class and channel
+    message::sWifiChannel wifi_ch(main_channel, radio->last_switch_channel_request->bandwidth);
     ret.first.operating_class = son::wireless_utils::get_operating_class_by_channel(wifi_ch);
 
-    // fill the detected operting class and channels.
+    // fill the detected operating class and channels.
     if (channel_info->second.dfs_state == beerocks_message::eDfsState::UNAVAILABLE) {
         auto overlapping_channels = son::wireless_utils::get_overlapping_channels(
-            radio->last_swich_channel_request->channel);
-
+            radio->last_switch_channel_request->channel);
+        // TODO: Add missing values. See PPM-1089.
         for (auto &overlap_ch : overlapping_channels) {
             message::sWifiChannel overlap_wifi_ch(overlap_ch.first, overlap_ch.second);
             ret.second.emplace_back(

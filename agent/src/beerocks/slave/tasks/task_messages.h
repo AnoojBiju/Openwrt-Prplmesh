@@ -44,7 +44,7 @@ std::ostream &operator<<(std::ostream &os,
  *
  * @param ifname The interface name this message relates to.
  * @param ap_channel_switch Values related to the channel.
- * @param switched Boolean indication if really switched or error occured.
+ * @param switched Boolean indication if really switched or error occurred.
  */
 struct sSwitchChannelNotification {
     std::string ifname;

@@ -30,10 +30,12 @@ using CacAvailableChannels    = std::vector<sCacStatus>;
 using CacNonOccupancyChannels = std::vector<sCacStatus>;
 using CacActiveChannels       = std::vector<sCacStatus>;
 
-// comletion status is:
-//  * operating class + channel + completion status (duration has no meaning)
-//  * a vector of operating class + channel that are overlapping with the first pair
-//  of operating class and channel
+/**
+ * Completion status is:
+ * operating class + channel + completion status (duration has no meaning)
+ * a vector of operating class + channel that are overlapping with the first pair of operating
+ * class and channel
+ */
 using CacCompletionStatus = std::pair<sCacStatus, std::vector<std::pair<uint8_t, uint8_t>>>;
 
 class CacStatusInterface {
