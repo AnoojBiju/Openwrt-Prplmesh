@@ -198,6 +198,10 @@ class Radio:
         '''Get the current tx_power information.'''
         raise NotImplementedError("get_power_limit is not implemented in abstract class Radio")
 
+    def update_vap_list(self):
+        ''' Initialize / update VAP list '''
+        pass
+
     def get_vap(self, ssid: str):
         for vap in self.vaps:
             if vap.get_ssid() == ssid:
@@ -860,6 +864,13 @@ class RadioHostapd(Radio):
                         ip_raw).group(1)
         self.log_folder = agent.log_folder
         super().__init__(agent, mac)
+
+        self.update_vap_list()
+
+    def update_vap_list(self):
+        iface_name = self.iface_name
+
+        self.vaps = []
 
         output = self.agent.command(f'iwinfo | grep ^{iface_name} | cut -d " " -f 1')
         # Workaround.
