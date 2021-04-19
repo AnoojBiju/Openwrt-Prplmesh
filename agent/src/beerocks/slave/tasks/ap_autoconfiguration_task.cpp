@@ -325,9 +325,6 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_search_message(
         LOG(ERROR) << "addClass wfa_map::tlvProfile2MultiApProfile failed";
         return false;
     }
-    tlvProfile2MultiApProfile->profile() =
-        wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2;
-
     LOG(DEBUG) << "sending autoconfig search message, bridge_mac=" << db->bridge.mac
                << " with Profile TLV";
 

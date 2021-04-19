@@ -12,7 +12,9 @@ tlvProfile2MultiApProfile:
     _type: eTlvTypeMap
     _value_const: TLV_PROFILE2_MULTIAP_PROFILE
   length: uint16_t
-  profile: eMultiApProfile
+  profile: 
+    _type: eMultiApProfile
+    _value: eMultiApProfile::MULTIAP_PROFILE_2
 
 eMultiApProfile:
   _type: enum
