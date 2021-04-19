@@ -99,7 +99,7 @@ private:
     std::chrono::time_point<std::chrono::steady_clock> m_switch_channel_start_time_point;
 
     // max time to wait for cac termination
-    static constexpr std::chrono::seconds DEFAULT_MAX_WAIT_FOR_CAC_TERMINATION{180};
+    static constexpr std::chrono::seconds DEFAULT_MAX_WAIT_FOR_CAC_TERMINATION{10};
     std::chrono::seconds m_max_wait_for_cac_termination = DEFAULT_MAX_WAIT_FOR_CAC_TERMINATION;
 
     // the point in time we we started waiting for cac termination
