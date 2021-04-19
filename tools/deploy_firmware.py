@@ -217,7 +217,10 @@ class NetgearRax40(PrplwrtDevice):
                 # Interrupt any running command:
                 shell.send('\003')
                 shell.sendline("reset")
-                self._update_fullimage(shell)
+                try:
+                    self._update_fullimage(shell)
+                except pexpect.exceptions.TIMEOUT:
+                    print("The upgrade failed again, aborting.")
             print("The upgrade is done, rebooting.")
             # reboot:
             shell.sendline("reset")
