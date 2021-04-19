@@ -826,7 +826,8 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
             std::chrono::steady_clock::now() + std::chrono::seconds(MAX_CANCEL_CAC_TIMEOUT_SEC);
         bool enabled = false;
         while (!enabled && std::chrono::steady_clock::now() < timeout) {
-            if (ap_wlan_hal->get_radio_info().radio_state == bwl::eRadioState::ENABLED) {
+            if (ap_wlan_hal->get_radio_info().radio_state == bwl::eRadioState::ENABLED ||
+                (ap_wlan_hal->get_radio_info().radio_state == bwl::eRadioState::DFS)) {
                 enabled = true;
             } else {
                 LOG(WARNING) << "radio state is still not enabled, waiting for more "
