@@ -200,6 +200,13 @@ void TopologyTask::handle_topology_discovery(ieee1905_1::CmduMessageRx &cmdu_rx,
             LOG(ERROR) << "cmdu creation of type TOPOLOGY_NOTIFICATION_MESSAGE, has failed";
             return;
         }
+
+        auto tlvAlMacAddress = m_cmdu_tx.addClass<ieee1905_1::tlvAlMacAddress>();
+        if (!tlvAlMacAddress) {
+            LOG(ERROR) << "addClass ieee1905_1::tlvAlMacAddress failed";
+            return;
+        }
+        tlvAlMacAddress->mac() = db->bridge.mac;
         m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx,
                                       tlvf::mac_from_string(network_utils::MULTICAST_1905_MAC_ADDR),
                                       db->bridge.mac);
@@ -366,6 +373,14 @@ void TopologyTask::send_topology_notification()
         return;
     }
     auto db = AgentDB::get();
+
+    auto tlvAlMacAddress = m_cmdu_tx.addClass<ieee1905_1::tlvAlMacAddress>();
+    if (!tlvAlMacAddress) {
+        LOG(ERROR) << "addClass ieee1905_1::tlvAlMacAddress failed";
+        return;
+    }
+    tlvAlMacAddress->mac() = db->bridge.mac;
+
     m_btl_ctx.send_cmdu_to_broker(
         m_cmdu_tx, tlvf::mac_from_string(network_utils::MULTICAST_1905_MAC_ADDR), db->bridge.mac);
 }

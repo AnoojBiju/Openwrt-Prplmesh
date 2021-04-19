@@ -2062,6 +2062,13 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             LOG(ERROR) << "cmdu creation of type TOPOLOGY_NOTIFICATION_MESSAGE, has failed";
             return false;
         }
+
+        auto tlvAlMacAddress = cmdu_tx.addClass<ieee1905_1::tlvAlMacAddress>();
+        if (!tlvAlMacAddress) {
+            LOG(ERROR) << "addClass ieee1905_1::tlvAlMacAddress failed";
+            return false;
+        }
+        tlvAlMacAddress->mac() = db->bridge.mac;
         send_cmdu_to_controller(cmdu_tx);
 
         break;
@@ -2225,6 +2232,13 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             LOG(ERROR) << "cmdu creation of type TOPOLOGY_NOTIFICATION_MESSAGE, has failed";
             return false;
         }
+
+        auto tlvAlMacAddress = cmdu_tx.addClass<ieee1905_1::tlvAlMacAddress>();
+        if (!tlvAlMacAddress) {
+            LOG(ERROR) << "addClass ieee1905_1::tlvAlMacAddress failed";
+            return false;
+        }
+        tlvAlMacAddress->mac() = db->bridge.mac;
 
         auto client_association_event_tlv = cmdu_tx.addClass<wfa_map::tlvClientAssociationEvent>();
         if (!client_association_event_tlv) {
@@ -2525,6 +2539,13 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             LOG(ERROR) << "cmdu creation of type TOPOLOGY_NOTIFICATION_MESSAGE, has failed";
             return false;
         }
+
+        auto tlvAlMacAddress = cmdu_tx.addClass<ieee1905_1::tlvAlMacAddress>();
+        if (!tlvAlMacAddress) {
+            LOG(ERROR) << "addClass ieee1905_1::tlvAlMacAddress failed";
+            return false;
+        }
+        tlvAlMacAddress->mac() = db->bridge.mac;
 
         auto client_association_event_tlv = cmdu_tx.addClass<wfa_map::tlvClientAssociationEvent>();
         if (!client_association_event_tlv) {
