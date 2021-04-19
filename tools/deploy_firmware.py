@@ -173,7 +173,7 @@ class NetgearRax40(PrplwrtDevice):
         # do the actual upgrade:
         shell.sendline("run update_fullimage")
         shell.expect("Creating dynamic volume .* of size", timeout=120)
-        shell.expect(r"Writing to NAND\.\.\. OK", timeout=60)
+        shell.expect(r"(?i)Writing to nand\.\.\. (ok|done)", timeout=60)
         shell.expect(self.uboot_prompt, timeout=600)
 
     def upgrade_uboot(self):
