@@ -39,6 +39,20 @@ private:
     task_pool &tasks;
 
     /**
+     * @brief Map with key=ruid and value BSSes that were configured
+     * for radio with ruid (key) in M2.
+     */
+    std::unordered_map<sMacAddr, std::list<wireless_utils::sBssInfoConf>> m_bss_configured;
+
+    /**
+     * @brief Recive Topology Response message, checks that Agent configured BSSes
+     * reported in M2 message. If it's so agent monitoring should start.
+     * @param src_mac MAC address of agent.
+     * @param cmdu_rx is a Topology Response message.
+     */
+    bool start_agent_monitoring(const std::string &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
     * @brief Sends topology query, policy configuration,
     * AP capability query, start dynamic channel selection task.
     * 

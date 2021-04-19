@@ -13,6 +13,7 @@
 
 #include <bpl/bpl_cfg.h>
 #include <easylogging++.h>
+#include <tlvf/wfa_map/tlvApOperationalBSS.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
 #include <tlvf/wfa_map/tlvProfile2Default802dotQSettings.h>
 #include <tlvf/wfa_map/tlvProfile2TrafficSeparationPolicy.h>
@@ -48,11 +49,71 @@ bool agent_monitoring_task::handle_ieee1905_1_msg(const std::string &src_mac,
         return start_task(src_mac, m1, cmdu_rx);
     }
     case ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE: {
+        start_agent_monitoring(src_mac, cmdu_rx);
         break;
     }
     default: {
         return false;
     }
+    }
+    return true;
+}
+
+bool agent_monitoring_task::start_agent_monitoring(const std::string &src_mac,
+                                                   ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto tlvDeviceInformation = cmdu_rx.getClass<ieee1905_1::tlvDeviceInformation>();
+    if (!tlvDeviceInformation) {
+        LOG(ERROR) << "ieee1905_1::tlvDeviceInformation not found";
+        return false;
+    }
+
+    const auto &al_mac    = tlvDeviceInformation->mac();
+    auto tlvApInformation = cmdu_rx.getClass<wfa_map::tlvApOperationalBSS>();
+    if (tlvApInformation) {
+        LOG(ERROR) << "ieee1905_1::tlvApOperationalBSS not found";
+        return false;
+    }
+
+    for (uint8_t i = 0; i < tlvApInformation->radio_list_length(); i++) {
+        auto radio_entry   = std::get<1>(tlvApInformation->radio_list(i));
+        auto ruid          = radio_entry.radio_uid();
+        auto bsses_from_m2 = m_bss_configured[ruid];
+
+        for (uint8_t j = 0; j < radio_entry.radio_bss_list_length(); j++) {
+            auto bss_entry = std::get<1>(radio_entry.radio_bss_list(j));
+            bool found     = false;
+
+            for (const auto &bss_from_m2 : bsses_from_m2) {
+                if (bss_from_m2.ssid == bss_entry.ssid_str()) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                LOG(WARNING) << "Configured BSS [" << bss_entry.ssid_str()
+                             << "] for radio: " << ruid << " of device " << al_mac
+                             << "came from nowhere (wasn't specified in M2)";
+                return false;
+            }
+        }
+        for (const auto &bss_from_m2 : bsses_from_m2) {
+            bool found = false;
+
+            for (uint8_t j = 0; j < radio_entry.radio_bss_list_length(); j++) {
+                auto bss_entry = std::get<1>(radio_entry.radio_bss_list(j));
+                if (bss_from_m2.ssid == bss_entry.ssid_str()) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                LOG(WARNING) << "BSS [" << bss_from_m2.ssid
+                             << "] reported in M2 was not configured for : " << ruid
+                             << " of device " << al_mac;
+                return false;
+            }
+        }
     }
     return true;
 }
@@ -114,6 +175,7 @@ bool agent_monitoring_task::send_tlv_metric_reporting_policy(const std::string &
             LOG(INFO) << "Configured BSSes exceed maximum for " << al_mac << " radio " << ruid;
             break;
         }
+        m_bss_configured[ruid].push_back(bss_info_conf);
         num_bsss++;
     }
 
