@@ -859,7 +859,9 @@ bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
 
         //clear the pwd in the memory
         memset(&pass, 0, sizeof(pass));
-        //memset might be optimized and compiler might not set it 0 if its not used after memset
+
+        // deepcode ignore CopyPasteError: <memset might be optimized and compiler might not set it
+        // 0 if its not used after memset>
         *(volatile char *)pass = *(volatile char *)pass;
 
     } break;
@@ -1041,7 +1043,8 @@ bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
             //clear the pwd in the memory
             memset(&pass, 0, sizeof(pass));
 
-            //memset might be optimized and compiler might not set it 0 if its not used after memset
+            // deepcode ignore CopyPasteError: <memset might be optimized and compiler might not set
+            // it 0 if its not used after memset>
             *(volatile char *)pass = *(volatile char *)pass;
 
             return true;
