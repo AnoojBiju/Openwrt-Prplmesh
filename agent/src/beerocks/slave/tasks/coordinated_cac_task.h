@@ -55,7 +55,7 @@ public:
 
 private:
     void config_fsm();
-    bool send_preference_report(TTransition &transition, const void *args);
+    bool send_preference_report();
 
     /* @brief Send switch channel request to the interface managed
      * by this fsm according to the given parameters.
@@ -82,13 +82,8 @@ private:
     BackhaulManager &m_backhaul_manager;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
 
-    // the cac request
-    std::shared_ptr<wfa_map::tlvProfile2CacRequest> m_cac_request = nullptr;
-
     std::shared_ptr<sSwitchChannelRequest> m_first_switch_channel_request  = nullptr;
     std::shared_ptr<sSwitchChannelRequest> m_second_switch_channel_request = nullptr;
-
-    std::shared_ptr<bool> m_cac_termination_success = nullptr;
 
     // extracted form the request
     std::string m_ifname;
@@ -121,9 +116,6 @@ private:
 
     // the point in time we we started waiting for channel list
     std::chrono::time_point<std::chrono::steady_clock> m_channel_list_start_time_point;
-
-    // cac termination (1905.1)
-    std::shared_ptr<wfa_map::tlvProfile2CacTermination> m_cac_termination = nullptr;
 };
 
 //////////

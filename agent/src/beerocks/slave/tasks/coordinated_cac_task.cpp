@@ -88,7 +88,7 @@ CacFsm::CacFsm(TaskPoolInterface &task_pool, BackhaulManager &backhaul_manager,
 
 void CacFsm::reset()
 {
-    m_cac_request.reset();
+    m_cac_request_radio = {};
     m_first_switch_channel_request.reset();
     m_second_switch_channel_request.reset();
 
@@ -99,8 +99,6 @@ void CacFsm::reset()
 
     m_max_wait_for_switch_channel = DEFAULT_MAX_WAIT_FOR_SWITCH_CHANNEL;
     m_max_wait_for_channel_list   = DEFAULT_MAX_WAIT_FOR_CHANNEL_LIST;
-
-    m_cac_termination.reset();
 }
 
 void CacFsm::config_fsm()
@@ -124,7 +122,7 @@ void CacFsm::config_fsm()
                 fsm_state::ERROR,
             },
             [&](TTransition &transition, const void *args) -> bool {
-                if (m_cac_request) {
+                if (m_cac_request_radio.radio_uid != net::network_utils::ZERO_MAC) {
                     LOG(ERROR) << "another cac request in progress, ignoring.";
                     // TODO: send preference report with an error
                     // https://jira.prplfoundation.org/browse/PPM-1090
@@ -132,24 +130,23 @@ void CacFsm::config_fsm()
                     return true;
                 }
 
-                m_cac_request =
-                    *(reinterpret_cast<std::shared_ptr<wfa_map::tlvProfile2CacRequest> *>(
-                        const_cast<void *>(args)));
+                auto msg = *(reinterpret_cast<std::shared_ptr<wfa_map::tlvProfile2CacRequest> *>(
+                    const_cast<void *>(args)));
 
-                if (!m_cac_request) {
+                if (!msg) {
                     LOG(ERROR) << "Received CAC request without data";
                     transition.change_destination(fsm_state::ERROR);
                     return true;
                 }
 
                 // escape on currently non supported
-                if (m_cac_request->number_of_cac_radios() != 1) {
+                if (msg->number_of_cac_radios() != 1) {
                     LOG(ERROR) << "Only one radio is supported for cac request";
                     transition.change_destination(fsm_state::ERROR);
                     return true;
                 }
                 std::tuple<bool, wfa_map::tlvProfile2CacRequest::sCacRequestRadio &> request_radio =
-                    m_cac_request->cac_radios(0);
+                    msg->cac_radios(0);
                 if (!std::get<0>(request_radio)) {
                     LOG(ERROR) << "Coudn't find the one (and only) expected sCacRequestRadio in "
                                   "the request";
@@ -270,11 +267,6 @@ void CacFsm::config_fsm()
         .on(fsm_event::CHANNEL_LIST_READY,
             {fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT, fsm_state::ERROR},
             [&](TTransition &transition, const void *args) -> bool {
-                if (!m_cac_request) {
-                    LOG(ERROR) << "Received channel switching request without data.";
-                    transition.change_destination(fsm_state::ERROR);
-                    return true;
-                }
                 std::shared_ptr<BackhaulManager::sRadioInfo> backhaul_radio =
                     m_backhaul_manager.get_radio(m_cac_request_radio.radio_uid);
                 if (!backhaul_radio) {
@@ -380,7 +372,7 @@ void CacFsm::config_fsm()
                 // old
 
                 db_store_cac_status(switch_channel_report);
-                send_preference_report(transition, args);
+                send_preference_report();
 
                 // depends on the completion action:
                 // remain on the same channel --> IDLE
@@ -461,32 +453,25 @@ void CacFsm::config_fsm()
 
         .on(fsm_event::CAC_TERMINATION_REQUEST, fsm_state::WAIT_FOR_CAC_TERMINATION,
             [&](TTransition &transition, const void *args) -> bool {
-                m_cac_termination =
+                auto cac_termination =
                     *(reinterpret_cast<std::shared_ptr<wfa_map::tlvProfile2CacTermination> *>(
                         const_cast<void *>(args)));
-                if (!m_cac_termination) {
+                if (!cac_termination) {
                     LOG(ERROR) << "null cac termination. ignoring";
                     return false;
                 }
 
                 // validate that the termination refers to the running cac request
-                auto termination_cac_radio = m_cac_termination->cac_radios(0);
+                auto termination_cac_radio = cac_termination->cac_radios(0);
                 if (!std::get<0>(termination_cac_radio)) {
                     LOG(ERROR) << "empty cac termination. ignoring";
                     return false;
                 }
 
-                auto request_cac_radio = m_cac_request->cac_radios(0);
-                if (!std::get<0>(request_cac_radio)) {
-                    LOG(ERROR) << "empty cac request. ignoring";
-                    return false;
-                }
-
                 bool termination_on_active_request =
                     std::get<1>(termination_cac_radio).operating_class ==
-                        std::get<1>(request_cac_radio).operating_class &&
-                    std::get<1>(termination_cac_radio).channel ==
-                        std::get<1>(request_cac_radio).channel;
+                        m_cac_request_radio.operating_class &&
+                    std::get<1>(termination_cac_radio).channel == m_cac_request_radio.channel;
 
                 if (!termination_on_active_request) {
                     LOG(WARNING) << "requested cac termination not on the active request. ignoring";
@@ -586,8 +571,7 @@ void CacFsm::config_fsm()
 
         .on(fsm_event::CAC_TERMINATION_RESPONSE, {fsm_state::IDLE, fsm_state::ERROR},
             [&](TTransition &transition, const void *args) -> bool {
-                auto success =
-                    (*(reinterpret_cast<std::shared_ptr<bool> *>(const_cast<void *>(args))));
+                auto success = (reinterpret_cast<uint8_t *>(const_cast<void *>(args)));
                 if (!success) {
                     LOG(ERROR) << "null cac-termination success pointer";
                     transition.change_destination(fsm_state::ERROR);
@@ -595,7 +579,7 @@ void CacFsm::config_fsm()
                 }
 
                 // just reporting
-                LOG(DEBUG) << "cancel cac reported as ended with: " << std::hex << *success;
+                LOG(DEBUG) << "cancel cac reported as ended with: " << bool(*success);
                 return true;
             })
 
@@ -624,14 +608,9 @@ void CacFsm::config_fsm()
     start();
 }
 
-bool CacFsm::send_preference_report(TTransition &transition, const void *args)
+bool CacFsm::send_preference_report()
 {
     LOG(DEBUG) << "time to send preference report";
-
-    if (m_cac_termination) {
-        LOG(DEBUG) << "but cac-termination was requested, so skipping";
-        return false;
-    }
 
     // we are triggering preference report by sending
     // channel list request. The end of this request
@@ -928,9 +907,8 @@ bool CoordinatedCacTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_
             LOG(ERROR) << "addClass cACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC_RESPONSE failed";
             return false;
         }
-        auto cancel_cac_success = std::make_shared<bool>(cac_response->success());
         m_fsm.fire(fsm_event::CAC_TERMINATION_RESPONSE,
-                   reinterpret_cast<const void *>(&cancel_cac_success));
+                   reinterpret_cast<const void *>(&cac_response->success()));
         break;
     }
     default: {
