@@ -9,6 +9,7 @@
 #ifndef _COORDINATED_CAC_TASK_H_
 #define _COORDINATED_CAC_TASK_H_
 
+#include "../agent_db.h"
 #include "task.h"
 #include "task_messages.h"
 #include <bcl/beerocks_state_machine.h>
@@ -67,6 +68,7 @@ private:
      */
     std::shared_ptr<sSwitchChannelRequest>
     send_switch_channel_request(uint8_t channel, beerocks::eWiFiBandwidth bandwidth);
+    bool send_cac_request(beerocks::AgentDB::sRadio *db_radio);
     void reset();
     bool is_timeout_waiting_for_switch_channel_report();
     bool is_timeout_waiting_for_channel_list();

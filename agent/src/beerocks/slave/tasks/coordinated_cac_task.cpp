@@ -207,44 +207,10 @@ void CacFsm::config_fsm()
                     return true;
                 }
 
-                auto channel_info = db_radio->channels_list.find(m_cac_request_radio.channel);
-                if (channel_info == db_radio->channels_list.end()) {
-                    LOG(ERROR) << "the channel " << m_cac_request_radio.channel
-                               << " is not supported for " << m_ifname;
+                if (!send_cac_request(db_radio)) {
                     transition.change_destination(fsm_state::ERROR);
                     return true;
                 }
-
-                // find the bandwidth based on the operating class in the request
-                beerocks::eWiFiBandwidth bandwidth =
-                    son::wireless_utils::operating_class_to_bandwidth(
-                        m_cac_request_radio.operating_class);
-
-                // save current channel - to know where to switch back if needed
-                m_original_channel          = db_radio->channel;
-                m_original_bandwidth        = db_radio->bandwidth;
-                m_original_center_frequency = db_radio->vht_center_frequency;
-                if (m_original_bandwidth == eWiFiBandwidth::BANDWIDTH_20) {
-                    m_original_secondary_channel_offset = 0;
-                } else {
-                    m_original_secondary_channel_offset =
-                        db_radio->channel_ext_above_primary ? 1 : -1;
-                }
-
-                // save the time point we started the switch channel
-                m_switch_channel_start_time_point = std::chrono::steady_clock::now();
-
-                // sending switch channel request (I)
-                m_first_switch_channel_request =
-                    send_switch_channel_request(m_cac_request_radio.channel, bandwidth);
-                if (!m_first_switch_channel_request) {
-                    LOG(ERROR) << "Failed to send switch channel request.";
-                    transition.change_destination(fsm_state::ERROR);
-                    return true;
-                }
-
-                // store the request in the database
-                db_radio->last_switch_channel_request = m_first_switch_channel_request;
 
                 // moving to next state: WAIT_FOR_SWITCH_CHANNEL_REPORT
                 return true;
@@ -285,43 +251,10 @@ void CacFsm::config_fsm()
                     return true;
                 }
 
-                auto channel_info = db_radio->channels_list.find(m_cac_request_radio.channel);
-                if (channel_info == db_radio->channels_list.end()) {
-                    LOG(ERROR) << "the channel " << m_cac_request_radio.channel
-                               << " is not supported for " << m_ifname;
-                    LOG(DEBUG) << "you may try - ";
-                    for (const auto &it : db_radio->channels_list) {
-                        LOG(DEBUG) << "channel: " << +it.first;
-                    }
+                if (!send_cac_request(db_radio)) {
                     transition.change_destination(fsm_state::ERROR);
                     return true;
                 }
-
-                // find the bandwidth based on the operating class in the request
-                beerocks::eWiFiBandwidth bandwidth =
-                    son::wireless_utils::operating_class_to_bandwidth(
-                        m_cac_request_radio.operating_class);
-
-                // save current channel - to know where to switch back if needed
-                m_original_channel                  = db_radio->channel;
-                m_original_bandwidth                = db_radio->bandwidth;
-                m_original_center_frequency         = db_radio->vht_center_frequency;
-                m_original_secondary_channel_offset = db_radio->channel_ext_above_primary ? 1 : -1;
-
-                // save the time point we started the switch channel
-                m_switch_channel_start_time_point = std::chrono::steady_clock::now();
-
-                // sending switch channel request (I)
-                m_first_switch_channel_request =
-                    send_switch_channel_request(m_cac_request_radio.channel, bandwidth);
-                if (!m_first_switch_channel_request) {
-                    LOG(ERROR) << "Failed to send first channel switching request.";
-                    transition.change_destination(fsm_state::ERROR);
-                    return true;
-                }
-
-                // store the request in the database
-                db_radio->last_switch_channel_request = m_first_switch_channel_request;
 
                 // moving to next state: WAIT_FOR_SWITCH_CHANNEL_REPORT
                 return true;
@@ -652,6 +585,49 @@ CacFsm::send_switch_channel_request(uint8_t channel, beerocks::eWiFiBandwidth ba
     m_task_pool.send_event(eTaskEvent::SWITCH_CHANNEL_REQUEST, switch_channel_request);
 
     return switch_channel_request;
+}
+
+bool CacFsm::send_cac_request(beerocks::AgentDB::sRadio *db_radio)
+{
+    if (!db_radio) {
+        return false;
+    }
+    auto channel_info = db_radio->channels_list.find(m_cac_request_radio.channel);
+    if (channel_info == db_radio->channels_list.end()) {
+        LOG(ERROR) << "the channel " << m_cac_request_radio.channel << " is not supported for "
+                   << m_ifname;
+        return false;
+    }
+
+    // find the bandwidth based on the operating class in the request
+    beerocks::eWiFiBandwidth bandwidth =
+        son::wireless_utils::operating_class_to_bandwidth(m_cac_request_radio.operating_class);
+
+    // save current channel - to know where to switch back if needed
+    m_original_channel          = db_radio->channel;
+    m_original_bandwidth        = db_radio->bandwidth;
+    m_original_center_frequency = db_radio->vht_center_frequency;
+    if (m_original_bandwidth == eWiFiBandwidth::BANDWIDTH_20) {
+        m_original_secondary_channel_offset = 0;
+    } else {
+        m_original_secondary_channel_offset = db_radio->channel_ext_above_primary ? 1 : -1;
+    }
+
+    // save the time point we started the switch channel
+    m_switch_channel_start_time_point = std::chrono::steady_clock::now();
+
+    // sending switch channel request (I)
+    m_first_switch_channel_request =
+        send_switch_channel_request(m_cac_request_radio.channel, bandwidth);
+    if (!m_first_switch_channel_request) {
+        LOG(ERROR) << "Failed to send switch channel request.";
+        return false;
+    }
+
+    // store the request in the database
+    db_radio->last_switch_channel_request = m_first_switch_channel_request;
+
+    return true;
 }
 
 bool CacFsm::is_timeout_waiting_for_switch_channel_report()
