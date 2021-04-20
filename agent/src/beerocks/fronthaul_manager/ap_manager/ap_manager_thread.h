@@ -14,9 +14,10 @@
 // AP HAL
 #include <bwl/ap_wlan_hal.h>
 
+#include <bcl/beerocks_event_loop.h>
 #include <bcl/beerocks_logging.h>
-
 #include <beerocks/tlvf/beerocks_message_apmanager.h>
+
 #include <list>
 #include <set>
 
@@ -25,7 +26,7 @@ class ap_manager_thread : public beerocks::socket_thread {
 
 public:
     ap_manager_thread(const std::string &slave_uds_, const std::string &iface,
-                      beerocks::logging &logger);
+                      beerocks::logging &logger, std::shared_ptr<beerocks::EventLoop> event_loop);
     virtual ~ap_manager_thread();
 
     virtual bool init() override;
@@ -128,6 +129,11 @@ private:
     bool acs_completed_vap_update = false;
 
     bool m_generate_connected_clients_events = false;
+
+    /**
+     * Application event loop used by the process to wait for I/O events.
+     */
+    std::shared_ptr<beerocks::EventLoop> m_event_loop;
 };
 
 } // namespace son
