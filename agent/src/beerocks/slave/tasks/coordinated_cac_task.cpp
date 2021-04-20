@@ -513,7 +513,8 @@ void CacFsm::config_fsm()
                 return true;
             })
 
-        .on(fsm_event::PERIODIC, fsm_state::WAIT_FOR_SWITCH_BACK_TO_ORIGINAL_CHANNEL_REPORT,
+        .on(fsm_event::PERIODIC,
+            {fsm_state::WAIT_FOR_SWITCH_BACK_TO_ORIGINAL_CHANNEL_REPORT, fsm_state::ERROR},
             [&](TTransition &transition, const void *args) -> bool {
                 // check timeout
                 if (is_timeout_waiting_for_cac_termination()) {
