@@ -9,11 +9,13 @@
 #include "ap_manager/ap_manager_thread.h"
 #include "monitor/monitor_thread.h"
 
+#include <bcl/beerocks_event_loop_impl.h>
 #include <bcl/beerocks_logging.h>
 #include <bcl/beerocks_os_utils.h>
 #include <bcl/beerocks_version.h>
-#include <easylogging++.h>
 #include <mapf/common/utils.h>
+
+#include <easylogging++.h>
 
 // Do not use this macro anywhere else in ire process
 // It should only be there in one place in each executable module
@@ -241,12 +243,17 @@ int main(int argc, char *argv[])
     std::string pid_file_path =
         beerocks_slave_conf.temp_path + "pid/" + base_fronthaul_name; // For file touching
 
+    // Create application event loop to wait for blocking I/O operations.
+    auto event_loop = std::make_shared<beerocks::EventLoopImpl>();
+    LOG_IF(!event_loop, FATAL) << "Unable to create event loop!";
+
     // Get Agent UDS file
     std::string agent_uds =
         beerocks_slave_conf.temp_path + std::string(BEEROCKS_SLAVE_UDS) + "_" + fronthaul_iface;
 
     // Create ap_manager
-    son::ap_manager_thread ap_manager(agent_uds, fronthaul_iface, *g_logger_ap_mananger);
+    son::ap_manager_thread ap_manager(agent_uds, fronthaul_iface, *g_logger_ap_mananger,
+                                      event_loop);
 
     if (!ap_manager.init()) {
         CLOG(ERROR, g_logger_ap_mananger->get_logger_id()) << "ap manager init() has failed!";

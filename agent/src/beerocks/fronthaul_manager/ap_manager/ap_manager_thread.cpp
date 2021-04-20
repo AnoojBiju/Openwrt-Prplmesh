@@ -327,9 +327,12 @@ using namespace beerocks;
 using namespace son;
 
 ap_manager_thread::ap_manager_thread(const std::string &slave_uds_, const std::string &iface,
-                                     beerocks::logging &logger)
-    : socket_thread(), m_logger(logger)
+                                     beerocks::logging &logger,
+                                     std::shared_ptr<beerocks::EventLoop> event_loop)
+    : socket_thread(), m_logger(logger), m_event_loop(event_loop)
 {
+    LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
+
     thread_name = "ap_manager";
     logger.set_thread_name(thread_name);
     slave_uds = slave_uds_;
