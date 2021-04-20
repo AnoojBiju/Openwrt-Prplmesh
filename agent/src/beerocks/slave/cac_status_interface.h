@@ -40,7 +40,7 @@ using CacCompletionStatus = std::pair<sCacStatus, std::vector<std::pair<uint8_t,
 
 class CacStatusInterface {
 public:
-    virtual ~CacStatusInterface()                                                    = default;
+    virtual ~CacStatusInterface() = default;
 
     /**
      * @brief Get a list of all CAC-able channels (Available of Usable) of a given radio mac.
@@ -56,7 +56,7 @@ public:
      * @param radio Radio MAC.
      * @return CacCompletionStatus object of the channel.
      */
-    virtual CacCompletionStatus get_completion_status(const sMacAddr &radio) const   = 0;
+    virtual CacCompletionStatus get_completion_status(const sMacAddr &radio) const = 0;
 };
 
 // utilities based on CacCapabilities interface
