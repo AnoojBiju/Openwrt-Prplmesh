@@ -3955,7 +3955,7 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
         }
 
         if (db->controller_info.profile_support ==
-            AgentDB::sControllerInfo::eProfileSupport::Profile2) {
+            wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2) {
             /* One Profile-2 AP Capability TLV */
             auto profile2_ap_capability_tlv = cmdu_tx.addClass<wfa_map::tlvProfile2ApCapability>();
             if (!profile2_ap_capability_tlv) {
