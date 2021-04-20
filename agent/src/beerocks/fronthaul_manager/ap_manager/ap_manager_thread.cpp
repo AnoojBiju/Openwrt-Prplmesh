@@ -326,11 +326,14 @@ static void unify_channels_list(
 using namespace beerocks;
 using namespace son;
 
-ap_manager_thread::ap_manager_thread(const std::string &slave_uds_, const std::string &iface,
-                                     beerocks::logging &logger,
-                                     std::shared_ptr<beerocks::EventLoop> event_loop)
-    : socket_thread(), m_logger(logger), m_event_loop(event_loop)
+ap_manager_thread::ap_manager_thread(
+    const std::string &slave_uds_, const std::string &iface, beerocks::logging &logger,
+    std::unique_ptr<beerocks::CmduClientFactory> slave_cmdu_client_factory,
+    std::shared_ptr<beerocks::EventLoop> event_loop)
+    : socket_thread(), m_logger(logger),
+      m_slave_cmdu_client_factory(std::move(slave_cmdu_client_factory)), m_event_loop(event_loop)
 {
+    LOG_IF(!m_slave_cmdu_client_factory, FATAL) << "CMDU client factory is a null pointer!";
     LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
 
     thread_name = "ap_manager";
