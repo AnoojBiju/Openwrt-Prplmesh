@@ -392,6 +392,15 @@ public:
     virtual ~nl80211_client() = default;
 
     /**
+     * @brief Gets a list with the names of existing wireless VAP interfaces.
+     *
+     * @param[out] interfaces List with the names of wireless interfaces.
+     *
+     * @return True on success and false otherwise.
+     */
+    virtual bool get_interfaces(std::vector<std::string> &interfaces) = 0;
+
+    /**
      * @brief Gets interface information.
      *
      * Interface information contains, among others, the MAC address and SSID of the given network
