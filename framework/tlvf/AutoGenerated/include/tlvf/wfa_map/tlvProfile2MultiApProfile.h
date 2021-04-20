@@ -33,6 +33,7 @@ class tlvProfile2MultiApProfile : public BaseClass
         ~tlvProfile2MultiApProfile();
 
         enum eMultiApProfile: uint8_t {
+            PRPLMESH_PROFILE_UNKNOWN = 0x0,
             MULTIAP_PROFILE_1 = 0x1,
             MULTIAP_PROFILE_2 = 0x2,
         };

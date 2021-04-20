@@ -19,5 +19,6 @@ tlvProfile2MultiApProfile:
 eMultiApProfile:
   _type: enum
   _enum_storage: uint8_t
+  PRPLMESH_PROFILE_UNKNOWN: 0x0
   MULTIAP_PROFILE_1: 0x1
   MULTIAP_PROFILE_2: 0x2
