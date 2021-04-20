@@ -9,6 +9,7 @@
 #include "ap_manager/ap_manager_thread.h"
 #include "monitor/monitor_thread.h"
 
+#include <bcl/beerocks_cmdu_client_factory_factory.h>
 #include <bcl/beerocks_event_loop_impl.h>
 #include <bcl/beerocks_logging.h>
 #include <bcl/beerocks_os_utils.h>
@@ -248,12 +249,18 @@ int main(int argc, char *argv[])
     LOG_IF(!event_loop, FATAL) << "Unable to create event loop!";
 
     // Get Agent UDS file
-    std::string agent_uds =
+    std::string slave_uds_path =
         beerocks_slave_conf.temp_path + std::string(BEEROCKS_SLAVE_UDS) + "_" + fronthaul_iface;
 
+    // Create CMDU client factory to create CMDU clients connected to CMDU server running in
+    // slave when requested
+    auto slave_cmdu_client_factory =
+        beerocks::create_cmdu_client_factory(slave_uds_path, event_loop);
+    LOG_IF(!slave_cmdu_client_factory, FATAL) << "Unable to create CMDU client factory!";
+
     // Create ap_manager
-    son::ap_manager_thread ap_manager(agent_uds, fronthaul_iface, *g_logger_ap_mananger,
-                                      event_loop);
+    son::ap_manager_thread ap_manager(slave_uds_path, fronthaul_iface, *g_logger_ap_mananger,
+                                      std::move(slave_cmdu_client_factory), event_loop);
 
     if (!ap_manager.init()) {
         CLOG(ERROR, g_logger_ap_mananger->get_logger_id()) << "ap manager init() has failed!";
@@ -261,7 +268,8 @@ int main(int argc, char *argv[])
     }
 
     // Create Monitor
-    son::monitor_thread monitor(agent_uds, fronthaul_iface, beerocks_slave_conf, *g_logger_monitor);
+    son::monitor_thread monitor(slave_uds_path, fronthaul_iface, beerocks_slave_conf,
+                                *g_logger_monitor);
 
     auto touch_time_stamp_timeout = std::chrono::steady_clock::now();
     while (g_running) {
