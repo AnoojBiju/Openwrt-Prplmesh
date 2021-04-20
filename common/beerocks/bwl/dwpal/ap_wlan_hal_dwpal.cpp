@@ -17,6 +17,7 @@
 #include <bcl/son/son_wireless_utils.h>
 #include <easylogging++.h>
 #include <math.h>
+#include <net/if.h> // if_nametoindex
 
 #ifdef USE_LIBSAFEC
 #define restrict __restrict
@@ -26,6 +27,10 @@
 #else
 #error "No safe C library defined, define either USE_LIBSAFEC or USE_SLIBC"
 #endif
+
+extern "C" {
+#include <dwpal.h>
+}
 
 //////////////////////////////////////////////////////////////////////////////
 ////////////////////////// Local Module Definitions //////////////////////////
@@ -1648,11 +1653,45 @@ bool ap_wlan_hal_dwpal::failsafe_channel_get(int &chan, int &bw)
     return true;
 }
 
+static int get_zwdfs_supported_from_wiphy_dump_cb(struct nl_msg *msg, void *arg)
+{
+    if (!msg) {
+        LOG(ERROR) << "Invalid input! msg == NULL";
+        return DWPAL_FAILURE;
+    }
+
+    if (!arg) {
+        LOG(ERROR) << "Invalid input! arg == NULL";
+        return DWPAL_FAILURE;
+    }
+
+    struct nlattr *tb_msg[NL80211_ATTR_MAX + 1];
+    struct genlmsghdr *gnlh = static_cast<genlmsghdr *>(nlmsg_data(nlmsg_hdr(msg)));
+    bool *zwdfs_supported   = static_cast<bool *>(arg);
+
+    nla_parse(tb_msg, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0), genlmsg_attrlen(gnlh, 0), NULL);
+
+    if (tb_msg[NL80211_ATTR_WIPHY_DFS_ANTENNA]) {
+        LOG(DEBUG) << "zwdfs interface found";
+        *zwdfs_supported = true;
+    }
+
+    return DWPAL_SUCCESS;
+}
+
 bool ap_wlan_hal_dwpal::is_zwdfs_supported()
 {
-    // This is a temporary w/a until NL80211_ATTR_WIPHY_DFS_ANTENNA is implemented.
-    // For now we can identify zwdfs interface by making sure it has no vaps.
-    return (m_radio_info.available_vaps.size() == 0);
+    bool supported = false;
+    if (!dwpal_nl_cmd_send_and_recv(NL80211_CMD_GET_WIPHY, get_zwdfs_supported_from_wiphy_dump_cb,
+                                    &supported)) {
+        LOG(ERROR) << "Failed to check if zwdfs supported by reading NL wiphy info, default value "
+                      "is set to 'false'";
+        return false;
+    }
+
+    LOG(DEBUG) << "ZWDFS is" << ((supported) ? "" : " not") << " supported";
+
+    return supported;
 }
 
 bool ap_wlan_hal_dwpal::set_zwdfs_antenna(bool enable)
