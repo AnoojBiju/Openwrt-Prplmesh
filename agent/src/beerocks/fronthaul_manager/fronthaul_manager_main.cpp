@@ -13,6 +13,8 @@
 #include <bcl/beerocks_event_loop_impl.h>
 #include <bcl/beerocks_logging.h>
 #include <bcl/beerocks_os_utils.h>
+#include <bcl/beerocks_timer_factory_impl.h>
+#include <bcl/beerocks_timer_manager_impl.h>
 #include <bcl/beerocks_version.h>
 #include <mapf/common/utils.h>
 
@@ -248,6 +250,14 @@ int main(int argc, char *argv[])
     auto event_loop = std::make_shared<beerocks::EventLoopImpl>();
     LOG_IF(!event_loop, FATAL) << "Unable to create event loop!";
 
+    // Create timer factory to create instances of timers.
+    auto timer_factory = std::make_shared<beerocks::TimerFactoryImpl>();
+    LOG_IF(!timer_factory, FATAL) << "Unable to create timer factory!";
+
+    // Create timer manager to help using application timers.
+    auto timer_manager = std::make_shared<beerocks::TimerManagerImpl>(timer_factory, event_loop);
+    LOG_IF(!timer_manager, FATAL) << "Unable to create timer manager!";
+
     // Get Agent UDS file
     std::string slave_uds_path =
         beerocks_slave_conf.temp_path + std::string(BEEROCKS_SLAVE_UDS) + "_" + fronthaul_iface;
@@ -260,7 +270,8 @@ int main(int argc, char *argv[])
 
     // Create ap_manager
     son::ap_manager_thread ap_manager(slave_uds_path, fronthaul_iface, *g_logger_ap_mananger,
-                                      std::move(slave_cmdu_client_factory), event_loop);
+                                      std::move(slave_cmdu_client_factory), timer_manager,
+                                      event_loop);
 
     if (!ap_manager.init()) {
         CLOG(ERROR, g_logger_ap_mananger->get_logger_id()) << "ap manager init() has failed!";
