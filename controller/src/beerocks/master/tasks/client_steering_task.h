@@ -56,8 +56,16 @@ private:
     bool m_steering_success  = false;
     bool m_disassoc_imminent = true;
     const int m_disassoc_timer_ms;
-    bool m_btm_report_received                 = false;
-    bool m_steer_restricted                    = false;
+    bool m_btm_report_received = false;
+    bool m_steer_restricted    = false;
+    /**
+     * @brief A flag to determine if a steer was actually performed or not since in case 
+     * that the client decided to move on its own to the target BSSID, we would not want
+     * to flag it as non-responsive or consider the flow as failed.
+     * This flag helps to differentiate between failed steer attempts and
+     * no-need-to-steer decisions.
+     */
+    bool m_steer_try_performed                 = false;
     static constexpr int STEERING_WAIT_TIME_MS = 25000;
 
     enum states {

@@ -48,11 +48,20 @@ void client_steering_task::work()
         m_original_bssid = m_database.get_node_parent(m_sta_mac);
         m_ssid_name      = m_database.get_hostap_ssid(m_original_bssid);
 
+        if (m_original_bssid == m_target_bssid) {
+            TASK_LOG(DEBUG) << "Target and original BSSIDs are the same:" << m_target_bssid
+                            << ". Aborting steering task.";
+            m_steer_try_performed = false;
+            finish();
+            break;
+        }
+
         steer_sta();
 
         m_state = FINALIZE;
         if (m_steer_restricted) {
             finish();
+            break;
         }
         wait_for_event(STA_DISCONNECTED);
         wait_for_event(STA_CONNECTED);
@@ -116,8 +125,6 @@ void client_steering_task::steer_sta()
                    << " not found, exiting steering task";
         return;
     }
-    m_original_bssid = m_database.get_node_parent(m_sta_mac);
-
     // Send 17.1.27	Client Association Control Request
     if (!m_cmdu_tx.create(0,
                           ieee1905_1::eMessageType::CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE)) {
@@ -285,7 +292,9 @@ void client_steering_task::steer_sta()
                     << m_original_bssid << " to bssid " << m_target_bssid << " channel "
                     << std::to_string(std::get<1>(bssid_list).target_bss_channel_number)
                     << " disassoc_timer=" << m_disassoc_timer_ms
-                    << " m_disassoc_imminent=" << m_disassoc_imminent << " id=" << int(id);
+                    << " disassoc_imminent=" << m_disassoc_imminent << " id=" << int(id);
+
+    m_steer_try_performed = true;
 
     // update bml listeners
     bml_task::bss_tm_req_available_event bss_tm_event;
@@ -353,7 +362,7 @@ void client_steering_task::handle_event(int event_type, void *obj)
 
 void client_steering_task::handle_task_end()
 {
-    if (!m_btm_report_received) {
+    if (m_steer_try_performed && !m_btm_report_received) {
         TASK_LOG(DEBUG) << "client didn't respond to 11v request, updating responsiveness";
         m_database.update_node_11v_responsiveness(m_sta_mac, false);
     }
