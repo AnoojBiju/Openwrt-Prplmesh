@@ -96,16 +96,13 @@ bool netlink_socket::send_receive_msg(std::function<bool(struct nl_msg *msg)> ms
         return NL_STOP;
     };
 
-    // Passing a lambda with capture is not supported for standard C function
-    // pointers. As a workaround, we create a static (but thread local) wrapper
-    // function that calls the capturing lambda function.
-    static thread_local std::function<int(struct nl_msg * msg, void *arg)> nl_handler_cb_wrapper;
-    nl_handler_cb_wrapper = [&](struct nl_msg *msg, void *arg) -> int {
-        msg_handle(msg);
-        return NL_SKIP;
-    };
+    // Response handler
     auto nl_handler_cb = [](struct nl_msg *msg, void *arg) -> int {
-        return nl_handler_cb_wrapper(msg, arg);
+        // Delegate to the user's response message handling function
+        auto msg_handle = static_cast<std::function<void(struct nl_msg * msg)> *>(arg);
+        (*msg_handle)(msg);
+
+        return NL_SKIP;
     };
 
     // Call the user's message create function
@@ -114,13 +111,11 @@ bool netlink_socket::send_receive_msg(std::function<bool(struct nl_msg *msg)> ms
         return false;
     }
 
-    // Set the callbacks
-    nl_cb_err(nl_callback.get(), NL_CB_CUSTOM, nl_err_cb, &error); // error
-    nl_cb_set(nl_callback.get(), NL_CB_FINISH, NL_CB_CUSTOM, nl_finish_cb,
-              &error);                                                        // finish
-    nl_cb_set(nl_callback.get(), NL_CB_ACK, NL_CB_CUSTOM, nl_ack_cb, &error); // ack
-    nl_cb_set(nl_callback.get(), NL_CB_VALID, NL_CB_CUSTOM, nl_handler_cb,
-              nullptr); // response handler
+    // Set the callbacks to handle the events fired by the Netlink library
+    nl_cb_err(nl_callback.get(), NL_CB_CUSTOM, nl_err_cb, &error);
+    nl_cb_set(nl_callback.get(), NL_CB_FINISH, NL_CB_CUSTOM, nl_finish_cb, &error);
+    nl_cb_set(nl_callback.get(), NL_CB_ACK, NL_CB_CUSTOM, nl_ack_cb, &error);
+    nl_cb_set(nl_callback.get(), NL_CB_VALID, NL_CB_CUSTOM, nl_handler_cb, &msg_handle);
 
     // Send the netlink message
     int rc = nl_send_auto_complete(m_nl_socket.get(), nl_message.get());
