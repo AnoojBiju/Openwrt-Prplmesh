@@ -245,6 +245,13 @@ private:
     void platform_notify_error(bpl::eErrorCode code, const std::string &error_data);
     bool send_slaves_enable();
 
+    /**
+     * @brief Tears down all VAPs in all radios.
+     * 
+     * @return true on success and false otherwise.
+     */
+    bool send_slaves_tear_down();
+
     std::shared_ptr<bwl::sta_wlan_hal> get_wireless_hal(std::string iface = "");
 
     /**
