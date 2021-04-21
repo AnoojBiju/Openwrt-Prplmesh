@@ -192,7 +192,7 @@ bool db::add_node(const sMacAddr &mac, const sMacAddr &parent_mac, beerocks::eTy
         adjust_subtree_hierarchy(subtree, offset);
     } else {
         LOG(DEBUG) << "node with mac " << mac << " being created, the type is " << type;
-        n             = std::make_shared<node>(type, tlvf::mac_to_string(mac));
+        n             = create_node(type, tlvf::mac_to_string(mac));
         n->parent_mac = tlvf::mac_to_string(parent_mac);
     }
     n->radio_identifier = tlvf::mac_to_string(radio_identifier);
