@@ -483,3 +483,26 @@ node::add_neighbor(const sMacAddr &interface_mac, const sMacAddr &neighbor_mac, 
 
     return interface->m_neighbors.add(neighbor_mac, flag_ieee1905);
 }
+
+std::shared_ptr<node> son::create_node(beerocks::eType type_, const std::string &mac) {
+    switch(type_) {
+    case beerocks::eType::TYPE_GW:
+        return std::make_shared<node_gw>(mac);
+    case beerocks::eType::TYPE_IRE:
+        return std::make_shared<node_ire>(mac);
+    case beerocks::eType::TYPE_IRE_BACKHAUL:
+        return std::make_shared<node_ire_backhaul>(mac);
+    case beerocks::eType::TYPE_SLAVE:
+        return std::make_shared<node_slave>(mac);
+    case beerocks::eType::TYPE_CLIENT:
+        return std::make_shared<node_client>(mac);
+    case beerocks::eType::TYPE_ETH_SWITCH:
+        return std::make_shared<node_eth_switch>(mac);
+    case beerocks::eType::TYPE_ANY:
+        return std::make_shared<node_any>(mac);
+    default: {
+        LOG(ERROR) << "Cannot create node of type " << static_cast<int>(type_);
+        return nullptr;
+    }
+    }
+}

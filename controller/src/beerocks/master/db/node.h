@@ -480,5 +480,7 @@ public:
     node_any(const std::string &mac): node(beerocks::eType::TYPE_ANY, mac) {};
 };
 
+std::shared_ptr<node> create_node(beerocks::eType type_, const std::string &mac);
+
 } // namespace son
 #endif
