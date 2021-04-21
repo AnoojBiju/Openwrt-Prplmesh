@@ -171,7 +171,11 @@ cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST:
 cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE:
   _type: class
   success: uint8_t #bool
+
 cACTION_BACKHAUL_RADIO_DISABLE_REQUEST:
+  _type: class
+
+cACTION_BACKHAUL_RADIO_TEAR_DOWN_REQUEST:
   _type: class
 
 ################################################
