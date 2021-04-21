@@ -27,8 +27,6 @@
 
 #include <numeric>
 
-using namespace beerocks::net;
-
 //////////////////////////////////////////////////////////////////////////////
 ////////////////////////// Local Module Definitions //////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -1342,7 +1340,7 @@ void ap_manager_thread::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         auto bssid = tlvf::mac_to_string(request->bssid());
 
-        if (bssid == net::network_utils::ZERO_MAC_STRING) {
+        if (bssid == beerocks::net::network_utils::ZERO_MAC_STRING) {
             if (!ap_wlan_hal->set_radio_mbo_assoc_disallow(request->enable())) {
                 LOG(ERROR) << "Failed to set MBO AssocDisallow";
                 return;
