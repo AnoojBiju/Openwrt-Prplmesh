@@ -415,7 +415,7 @@ void BackhaulManager::handle_disconnected(int fd)
             LOG(INFO) << "disconnected slave sockets has been deleted";
 
             if (m_eFSMState >= EState::CONNECT_TO_MASTER) {
-                LOG(INFO) << "Sending topology notification on son_slave disconnect";
+                LOG(INFO) << "Sending topologsy notification on son_slave disconnect";
                 m_task_pool.send_event(eTaskType::TOPOLOGY,
                                        TopologyTask::eEvent::AGENT_RADIO_STATE_CHANGED);
             }
