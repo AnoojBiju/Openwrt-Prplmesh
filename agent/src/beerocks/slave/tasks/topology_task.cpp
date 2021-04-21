@@ -200,6 +200,13 @@ void TopologyTask::handle_topology_discovery(ieee1905_1::CmduMessageRx &cmdu_rx,
             LOG(ERROR) << "cmdu creation of type TOPOLOGY_NOTIFICATION_MESSAGE, has failed";
             return;
         }
+
+        auto tlvAlMacAddress = m_cmdu_tx.addClass<ieee1905_1::tlvAlMacAddress>();
+        if (!tlvAlMacAddress) {
+            LOG(ERROR) << "addClass ieee1905_1::tlvAlMacAddress failed";
+            return;
+        }
+        tlvAlMacAddress->mac() = db->bridge.mac;
         m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx,
                                       tlvf::mac_from_string(network_utils::MULTICAST_1905_MAC_ADDR),
                                       db->bridge.mac);
@@ -242,7 +249,7 @@ void TopologyTask::handle_topology_query(ieee1905_1::CmduMessageRx &cmdu_rx,
 
     auto multiap_profile_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2MultiApProfile>();
     if (multiap_profile_tlv) {
-        db->controller_info.set_profile_support_from_tlv(multiap_profile_tlv->profile());
+        db->controller_info.profile_support = multiap_profile_tlv->profile();
 
         auto tlvProfile2MultiApProfile = m_cmdu_tx.addClass<wfa_map::tlvProfile2MultiApProfile>();
         if (!tlvProfile2MultiApProfile) {
@@ -251,7 +258,8 @@ void TopologyTask::handle_topology_query(ieee1905_1::CmduMessageRx &cmdu_rx,
         }
     } else {
         // If the controller didn't add the MultiAp Profile TLV assume that the controller is Profile1
-        db->controller_info.profile_support = AgentDB::sControllerInfo::eProfileSupport::Profile1;
+        db->controller_info.profile_support =
+            wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1;
     }
 
     LOG(DEBUG) << "Sending topology response message, mid=" << std::hex << mid;
@@ -365,6 +373,14 @@ void TopologyTask::send_topology_notification()
         return;
     }
     auto db = AgentDB::get();
+
+    auto tlvAlMacAddress = m_cmdu_tx.addClass<ieee1905_1::tlvAlMacAddress>();
+    if (!tlvAlMacAddress) {
+        LOG(ERROR) << "addClass ieee1905_1::tlvAlMacAddress failed";
+        return;
+    }
+    tlvAlMacAddress->mac() = db->bridge.mac;
+
     m_btl_ctx.send_cmdu_to_broker(
         m_cmdu_tx, tlvf::mac_from_string(network_utils::MULTICAST_1905_MAC_ADDR), db->bridge.mac);
 }

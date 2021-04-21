@@ -530,8 +530,5 @@ bool son_actions::send_topology_query_msg(const std::string &dest_mac,
         LOG(ERROR) << "addClass wfa_map::tlvProfile2MultiApProfile failed";
         return false;
     }
-    tlvProfile2MultiApProfile->profile() =
-        wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2;
-
     return send_cmdu_to_agent(dest_mac, cmdu_tx, database);
 }
