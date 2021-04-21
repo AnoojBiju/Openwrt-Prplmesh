@@ -130,7 +130,7 @@ void CacFsm::config_fsm()
                     return true;
                 }
 
-                auto msg = *(reinterpret_cast<std::shared_ptr<wfa_map::tlvProfile2CacRequest> *>(
+                auto msg = *(static_cast<std::shared_ptr<wfa_map::tlvProfile2CacRequest> *>(
                     const_cast<void *>(args)));
 
                 if (!msg) {
@@ -284,7 +284,7 @@ void CacFsm::config_fsm()
             [&](TTransition &transition, const void *args) -> bool {
                 // update the wait time
                 m_max_wait_for_switch_channel =
-                    (*(reinterpret_cast<std::shared_ptr<sSwitchChannelDurationTime> *>(
+                    (*(static_cast<std::shared_ptr<sSwitchChannelDurationTime> *>(
                          const_cast<void *>(args))))
                         ->duration_sec;
                 return true;
@@ -294,9 +294,8 @@ void CacFsm::config_fsm()
             {fsm_state::WAIT_FOR_SWITCH_BACK_TO_ORIGINAL_CHANNEL_REPORT, fsm_state::IDLE,
              fsm_state::ERROR},
             [&](TTransition &transition, const void *args) -> bool {
-                auto switch_channel_report =
-                    *(reinterpret_cast<std::shared_ptr<sSwitchChannelReport> *>(
-                        const_cast<void *>(args)));
+                auto switch_channel_report = *(
+                    static_cast<std::shared_ptr<sSwitchChannelReport> *>(const_cast<void *>(args)));
 
                 // validate that the report belongs to the active
                 // cac. it might belong to another switch channel
@@ -357,7 +356,7 @@ void CacFsm::config_fsm()
         .on(fsm_event::CAC_STARTED_NOTIFICATION, fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT,
             [&](TTransition &transition, const void *args) -> bool {
                 auto cac_started_notification =
-                    *(reinterpret_cast<std::shared_ptr<sCacStartedNotification> *>(
+                    *(static_cast<std::shared_ptr<sCacStartedNotification> *>(
                         const_cast<void *>(args)));
                 return true;
             })
@@ -365,7 +364,7 @@ void CacFsm::config_fsm()
         .on(fsm_event::CAC_COMPLETED_NOTIFICATION, fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT,
             [&](TTransition &transition, const void *args) -> bool {
                 auto cac_completed_notification =
-                    *(reinterpret_cast<std::shared_ptr<sCacCompletedNotification> *>(
+                    *(static_cast<std::shared_ptr<sCacCompletedNotification> *>(
                         const_cast<void *>(args)));
                 return true;
             })
@@ -384,7 +383,7 @@ void CacFsm::config_fsm()
         .on(fsm_event::CAC_TERMINATION_REQUEST, fsm_state::WAIT_FOR_CAC_TERMINATION,
             [&](TTransition &transition, const void *args) -> bool {
                 auto cac_termination =
-                    *(reinterpret_cast<std::shared_ptr<wfa_map::tlvProfile2CacTermination> *>(
+                    *(static_cast<std::shared_ptr<wfa_map::tlvProfile2CacTermination> *>(
                         const_cast<void *>(args)));
                 if (!cac_termination) {
                     LOG(ERROR) << "null cac termination. ignoring";
@@ -462,7 +461,7 @@ void CacFsm::config_fsm()
             [&](TTransition &transition, const void *args) -> bool {
                 // update the wait time
                 m_max_wait_for_switch_channel =
-                    (*(reinterpret_cast<std::shared_ptr<sSwitchChannelDurationTime> *>(
+                    (*(static_cast<std::shared_ptr<sSwitchChannelDurationTime> *>(
                          const_cast<void *>(args))))
                         ->duration_sec;
                 return true;
@@ -501,7 +500,7 @@ void CacFsm::config_fsm()
 
         .on(fsm_event::CAC_TERMINATION_RESPONSE, {fsm_state::IDLE, fsm_state::ERROR},
             [&](TTransition &transition, const void *args) -> bool {
-                auto success = (reinterpret_cast<uint8_t *>(const_cast<void *>(args)));
+                auto success = (static_cast<uint8_t *>(const_cast<void *>(args)));
                 if (!success) {
                     LOG(ERROR) << "null cac-termination success pointer";
                     transition.change_destination(fsm_state::ERROR);

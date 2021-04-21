@@ -170,9 +170,8 @@ void SwitchChannelFsm::config_fsm()
         .on(fsm_event::SWITCH_CHANNEL_REQUEST,
             {fsm_state::WAIT_FOR_SWITCH_CHANNEL_NOTIFICATION, fsm_state::ERROR},
             [&](TTransition &transition, const void *args) -> bool {
-                m_switch_channel_request =
-                    *(reinterpret_cast<std::shared_ptr<sSwitchChannelRequest> *>(
-                        const_cast<void *>(args)));
+                m_switch_channel_request = *(static_cast<std::shared_ptr<sSwitchChannelRequest> *>(
+                    const_cast<void *>(args)));
 
                 if (!m_switch_channel_request) {
                     LOG(ERROR) << "request for switch channel with no data";
@@ -231,7 +230,7 @@ void SwitchChannelFsm::config_fsm()
 
                 // we are taking all information and sending the report
                 auto switch_channel_notification =
-                    *(reinterpret_cast<std::shared_ptr<sSwitchChannelNotification> *>(
+                    *(static_cast<std::shared_ptr<sSwitchChannelNotification> *>(
                         const_cast<void *>(args)));
 
                 // prepare the report
@@ -268,7 +267,7 @@ void SwitchChannelFsm::config_fsm()
                 // CSA means that the switch channel ended,
                 // we are taking all information and sending the report
                 m_switch_channel_notification =
-                    *(reinterpret_cast<std::shared_ptr<sSwitchChannelNotification> *>(
+                    *(static_cast<std::shared_ptr<sSwitchChannelNotification> *>(
                         const_cast<void *>(args)));
 
                 // prepare the report
@@ -296,7 +295,7 @@ void SwitchChannelFsm::config_fsm()
                 // the indication for switch channel that is about to happen
                 // starts here with a cac started notification
                 m_cac_started_notification =
-                    *(reinterpret_cast<std::shared_ptr<sCacStartedNotification> *>(
+                    *(static_cast<std::shared_ptr<sCacStartedNotification> *>(
                         const_cast<void *>(args)));
 
                 if (!m_cac_started_notification) {
@@ -350,7 +349,7 @@ void SwitchChannelFsm::config_fsm()
                 // TODO: add validation that the completed-params matches the started-params
 
                 m_cac_completed_notification =
-                    *(reinterpret_cast<std::shared_ptr<sCacCompletedNotification> *>(
+                    *(static_cast<std::shared_ptr<sCacCompletedNotification> *>(
                         const_cast<void *>(args)));
 
                 // send the report
@@ -403,7 +402,7 @@ void SwitchChannelFsm::config_fsm()
 
                 // we are taking all information and sending the report
                 auto m_switch_channel_notification =
-                    *(reinterpret_cast<std::shared_ptr<sSwitchChannelNotification> *>(
+                    *(static_cast<std::shared_ptr<sSwitchChannelNotification> *>(
                         const_cast<void *>(args)));
 
                 // prepare the report
