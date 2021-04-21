@@ -20,9 +20,6 @@ node::node(beerocks::eType type_, const std::string &mac_)
     type = type_;
     if ((type == beerocks::TYPE_CLIENT) || (type == beerocks::TYPE_IRE_BACKHAUL)) {
         stats_info = std::make_shared<sta_stats_params>();
-    } else if (type == beerocks::TYPE_SLAVE) {
-        hostap             = std::make_shared<radio>();
-        hostap->stats_info = std::make_shared<radio::ap_stats_params>();
     }
     m_sta_5ghz_capabilities.valid  = false;
     m_sta_24ghz_capabilities.valid = false;
@@ -495,6 +492,11 @@ node::add_neighbor(const sMacAddr &interface_mac, const sMacAddr &neighbor_mac, 
 
     return interface->m_neighbors.add(neighbor_mac, flag_ieee1905);
 }
+
+node_slave::node_slave(const std::string &mac): node(beerocks::eType::TYPE_SLAVE, mac) {
+    hostap             = std::make_shared<radio>();
+    hostap->stats_info = std::make_shared<radio::ap_stats_params>();
+};
 
 std::shared_ptr<node> son::create_node(beerocks::eType type_, const std::string &mac) {
     switch(type_) {
