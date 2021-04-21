@@ -13,12 +13,6 @@
 
 namespace beerocks {
 
-std::vector<sMacAddr> CacStatusDatabase::get_cac_radios() const
-{
-    // the list of radios is coming form the capabilities
-    return CacCapabilitiesDatabase().get_cac_radios();
-}
-
 CacAvailableChannels CacStatusDatabase::get_available_channels(const sMacAddr &radio_mac) const
 {
     CacAvailableChannels ret;

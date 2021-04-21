@@ -90,7 +90,6 @@ void CacFsm::reset()
 {
     m_cac_request_radio = {};
     m_first_switch_channel_request.reset();
-    m_second_switch_channel_request.reset();
 
     m_original_channel                  = 0;
     m_original_bandwidth                = eWiFiBandwidth::BANDWIDTH_UNKNOWN;
@@ -145,14 +144,7 @@ void CacFsm::config_fsm()
                     transition.change_destination(fsm_state::ERROR);
                     return true;
                 }
-                std::tuple<bool, wfa_map::tlvProfile2CacRequest::sCacRequestRadio &> request_radio =
-                    msg->cac_radios(0);
-                if (!std::get<0>(request_radio)) {
-                    LOG(ERROR) << "Couldn't find the one (and only) expected sCacRequestRadio in "
-                                  "the request";
-                    transition.change_destination(fsm_state::ERROR);
-                    return true;
-                }
+                auto request_radio  = msg->cac_radios(0);
                 m_cac_request_radio = std::get<1>(request_radio);
                 if (m_cac_request_radio.cac_method_bit_field.cac_method !=
                     wfa_map::eCacMethod::CONTINUOUS_CAC) {
@@ -162,25 +154,18 @@ void CacFsm::config_fsm()
                 }
 
                 // prepare for switch channel
-                std::shared_ptr<BackhaulManager::sRadioInfo> radio_info =
-                    m_backhaul_manager.get_radio(m_cac_request_radio.radio_uid);
-                if (!radio_info) {
-                    LOG(ERROR) << "Can't find " << m_cac_request_radio.radio_uid
-                               << " radio in the backhaul manager";
-                    transition.change_destination(fsm_state::ERROR);
-                    return true;
-                }
+                auto db = AgentDB::get();
+                auto radio =
+                    db->get_radio_by_mac(m_cac_request_radio.radio_uid, AgentDB::eMacType::RADIO);
 
-                m_ifname      = radio_info->hostap_iface;
-                auto db       = AgentDB::get();
-                auto db_radio = db->radio(m_ifname);
-                if (!db_radio) {
+                if (!radio) {
                     LOG(ERROR) << "Failed to find database record for interface: " << m_ifname;
                     transition.change_destination(fsm_state::ERROR);
                     return true;
                 }
 
                 // This is a w/a until PPM-655 will be implemented.
+                if (radio->channels_list.empty()) {
                     // since the channel list is empty
                     // we send a request for populating it
                     auto request = message_com::create_vs_message<
@@ -207,7 +192,7 @@ void CacFsm::config_fsm()
                     return true;
                 }
 
-                if (!send_cac_request(db_radio)) {
+                if (!send_cac_request(radio)) {
                     transition.change_destination(fsm_state::ERROR);
                     return true;
                 }
@@ -233,25 +218,17 @@ void CacFsm::config_fsm()
         .on(fsm_event::CHANNEL_LIST_READY,
             {fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT, fsm_state::ERROR},
             [&](TTransition &transition, const void *args) -> bool {
-                std::shared_ptr<BackhaulManager::sRadioInfo> radio_info =
-                    m_backhaul_manager.get_radio(m_cac_request_radio.radio_uid);
-                if (!radio_info) {
-                    LOG(ERROR) << "Failed to find " << m_cac_request_radio.radio_uid
-                               << " radio in the backhaul";
-                    transition.change_destination(fsm_state::ERROR);
-                    return true;
-                }
+                auto db = AgentDB::get();
+                auto radio =
+                    db->get_radio_by_mac(m_cac_request_radio.radio_uid, AgentDB::eMacType::RADIO);
 
-                m_ifname      = radio_info->hostap_iface;
-                auto db       = AgentDB::get();
-                auto db_radio = db->radio(m_ifname);
-                if (!db_radio) {
+                if (!radio) {
                     LOG(ERROR) << "Failed to find database record for interface: " << m_ifname;
                     transition.change_destination(fsm_state::ERROR);
                     return true;
                 }
 
-                if (!send_cac_request(db_radio)) {
+                if (!send_cac_request(radio)) {
                     transition.change_destination(fsm_state::ERROR);
                     return true;
                 }
@@ -333,13 +310,7 @@ void CacFsm::config_fsm()
                     m_max_wait_for_switch_channel = DEFAULT_MAX_WAIT_FOR_SWITCH_CHANNEL;
 
                     // sending switch channel request (II)
-                    m_second_switch_channel_request =
-                        send_switch_channel_request(m_original_channel, m_original_bandwidth);
-                    if (!m_second_switch_channel_request) {
-                        LOG(ERROR) << "Failed to send second switch channel request";
-                        transition.change_destination(fsm_state::ERROR);
-                        return true;
-                    }
+                    send_switch_channel_request(m_original_channel, m_original_bandwidth);
 
                     // switch to the first state in the list: WAIT_FOR_SWITCH_BACK_TO_ORIGINAL_CHANNEL_REPORT
                     return true;

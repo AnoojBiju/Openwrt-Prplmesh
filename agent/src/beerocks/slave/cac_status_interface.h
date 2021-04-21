@@ -43,13 +43,6 @@ public:
     virtual ~CacStatusInterface()                                                    = default;
 
     /**
-     * @brief Get a list of Mac addresses of radios that supports CAC.
-     * 
-     * @return std::vector<sMacAddr> A list of Mac addresses of radios that supports CAC.
-     */
-    virtual std::vector<sMacAddr> get_cac_radios() const                             = 0;
-
-    /**
      * @brief Get a list of all CAC-able channels (Available of Usable) of a given radio mac.
      * 
      * @param radio A radio MAC. 

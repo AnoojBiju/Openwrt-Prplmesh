@@ -80,8 +80,7 @@ private:
     BackhaulManager &m_backhaul_manager;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
 
-    std::shared_ptr<sSwitchChannelRequest> m_first_switch_channel_request  = nullptr;
-    std::shared_ptr<sSwitchChannelRequest> m_second_switch_channel_request = nullptr;
+    std::shared_ptr<sSwitchChannelRequest> m_first_switch_channel_request = nullptr;
 
     // extracted form the request
     std::string m_ifname;
