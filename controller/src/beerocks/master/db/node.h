@@ -57,7 +57,7 @@ public:
     void clear_node_stats_info();
     void clear_hostap_stats_info();
 
-    beerocks::eType get_type();
+    beerocks::eType get_type() const;
     bool set_type(beerocks::eType type_);
 
     int8_t vap_id = beerocks::IFACE_ID_INVALID;
@@ -443,6 +443,8 @@ private:
      *
      */
     std::vector<std::shared_ptr<prplmesh::controller::db::Interface>> m_interfaces;
+
+    virtual void print_node(std::ostream &os) const;
 };
 
 class node_gw: public node {
