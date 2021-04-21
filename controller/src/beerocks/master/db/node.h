@@ -444,5 +444,41 @@ private:
      */
     std::vector<std::shared_ptr<prplmesh::controller::db::Interface>> m_interfaces;
 };
+
+class node_gw: public node {
+public:
+    node_gw(const std::string &mac): node(beerocks::eType::TYPE_GW, mac) {};
+};
+
+class node_ire: public node {
+public:
+    node_ire(const std::string &mac): node(beerocks::eType::TYPE_IRE, mac) {};
+};
+
+class node_ire_backhaul: public node {
+public:
+    node_ire_backhaul(const std::string &mac): node(beerocks::eType::TYPE_IRE_BACKHAUL, mac) {};
+};
+
+class node_slave: public node {
+public:
+    node_slave(const std::string &mac): node(beerocks::eType::TYPE_SLAVE, mac) {};
+};
+
+class node_client: public node {
+public:
+    node_client(const std::string &mac): node(beerocks::eType::TYPE_CLIENT, mac) {};
+};
+
+class node_eth_switch: public node {
+public:
+    node_eth_switch(const std::string &mac): node(beerocks::eType::TYPE_ETH_SWITCH, mac) {};
+};
+
+class node_any: public node {
+public:
+    node_any(const std::string &mac): node(beerocks::eType::TYPE_ANY, mac) {};
+};
+
 } // namespace son
 #endif
