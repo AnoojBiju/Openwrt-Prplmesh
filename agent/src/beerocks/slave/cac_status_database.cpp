@@ -76,11 +76,13 @@ CacCompletionStatus CacStatusDatabase::get_completion_status(const sMacAddr &rad
 
     // main operating class and channel
     message::sWifiChannel wifi_ch(main_channel, radio->last_switch_channel_request->bandwidth);
+    ret.first.channel         = main_channel;
     ret.first.operating_class = son::wireless_utils::get_operating_class_by_channel(wifi_ch);
 
     // fill the detected operating class and channels.
     if (channel_info->second.dfs_state == beerocks_message::eDfsState::UNAVAILABLE) {
-        auto overlapping_channels = son::wireless_utils::get_overlapping_channels(
+        ret.first.completion_status = sCacStatus::eCacCompletionStatus::RADAR_DETECTED;
+        auto overlapping_channels   = son::wireless_utils::get_overlapping_channels(
             radio->last_switch_channel_request->channel);
         // TODO: Add missing values. See PPM-1089.
         for (auto &overlap_ch : overlapping_channels) {
@@ -89,6 +91,8 @@ CacCompletionStatus CacStatusDatabase::get_completion_status(const sMacAddr &rad
                 son::wireless_utils::get_operating_class_by_channel(overlap_wifi_ch),
                 overlap_ch.first);
         }
+    } else {
+        ret.first.completion_status = sCacStatus::eCacCompletionStatus::SUCCESSFUL;
     }
 
     return ret;

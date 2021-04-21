@@ -2911,8 +2911,8 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         const auto &cac_completion =
             cac_status_database.get_completion_status(radio->front.iface_mac);
 
-        cac_radio->operating_class() = cac_completion.first.operating_class;
-        cac_radio->channel()         = cac_completion.first.channel;
+        cac_radio->operating_class()       = cac_completion.first.operating_class;
+        cac_radio->channel()               = cac_completion.first.channel;
         cac_radio->cac_completion_status() = cac_completion.first.completion_status;
 
         if (!cac_completion.second.empty()) {
