@@ -116,6 +116,9 @@ class NbapiSta(PrplMeshBaseTest):
                         f"Wrong BSSID [{bss.bssid}] specified for sta {sta.mac}"
                     assert time_stamp != 0, "Value for TimeStamp is not specified."
 
+                    self.get_nbapi_ht_capabilities(sta.path)
+                    self.get_nbapi_vht_capabilities(sta.path)
+
                     time_sta = dateutil.parser.isoparse(time_stamp)
                     # TO DO: PPM-1230
                     if time_sta <= time_before_query:
