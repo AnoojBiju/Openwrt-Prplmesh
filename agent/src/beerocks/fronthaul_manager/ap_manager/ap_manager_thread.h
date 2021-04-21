@@ -93,7 +93,15 @@ private:
      */
     void handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx);
 
-    void ap_manager_fsm();
+    /**
+     * @brief Runs the Finite State Machine of the AP manager.
+     * 
+     * @param[out] continue_processing Flag that means that state machine transitioned to a 
+     * transient state and thus processing could and should continue immediately (no need to wait).
+     * @return true on success and false otherwise.
+     */
+    bool ap_manager_fsm(bool &continue_processing);
+
     bool hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr);
     // bool hostap_handle_event(std::string& event, void* event_obj);
     void handle_hostapd_attached();
