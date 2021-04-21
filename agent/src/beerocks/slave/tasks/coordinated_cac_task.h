@@ -122,16 +122,16 @@ class CoordinatedCacTask : public Task {
 public:
     CoordinatedCacTask(TaskPoolInterface &task_pool, BackhaulManager &backhaul_manager,
                        ieee1905_1::CmduMessageTx &cmdu_tx);
-    virtual std::vector<eTaskEvent> get_task_event_list() const;
-    virtual void work();
-    virtual void handle_event(uint8_t event_enum_value, const void *event_obj);
-    virtual void handle_event(eTaskEvent event, std::shared_ptr<void> event_obj);
-    virtual bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
-                             const sMacAddr &dst_mac, const sMacAddr &src_mac, int fd,
-                             std::shared_ptr<beerocks_header> beerocks_header);
+    std::vector<eTaskEvent> get_task_event_list() const override;
+    void work();
+    void handle_event(uint8_t event_enum_value, const void *event_obj) override;
+    void handle_event(eTaskEvent event, std::shared_ptr<void> event_obj) override;
+    bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
+                     const sMacAddr &dst_mac, const sMacAddr &src_mac, int fd,
+                     std::shared_ptr<beerocks_header> beerocks_header) override;
 
-    virtual bool handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac,
-                                        int sd, std::shared_ptr<beerocks_header> beerocks_header);
+    bool handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac, int sd,
+                                std::shared_ptr<beerocks_header> beerocks_header);
 
 private:
     BackhaulManager &m_backhaul_manager;
