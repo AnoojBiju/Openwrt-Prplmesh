@@ -374,7 +374,7 @@ bool ap_manager_thread::create_ap_wlan_hal()
     LOG_IF(!ap_wlan_hal, FATAL) << "Failed creating HAL instance!";
 
     if (!ap_wlan_hal->wds_set_mode(bwl::ap_wlan_hal::WDSMode::Dynamic)) {
-        LOG(ERROR) << "Failed to enabling WDS Dynamic mode!";
+        LOG(ERROR) << "Failed enabling WDS Dynamic mode!";
         return false;
     }
 
@@ -829,12 +829,23 @@ void ap_manager_thread::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         return;
     }
 
+    // Ignore configuration message if already configured.
+    if (ap_wlan_hal &&
+        (beerocks_header->action_op() == beerocks_message::ACTION_APMANAGER_CONFIGURE)) {
+        LOG(ERROR) << "Already configured. Ignoring configuration message";
+        return;
+    }
+
+    // Ignore messages other than the configuration message if not yet configured.
+    if (!ap_wlan_hal &&
+        (beerocks_header->action_op() != beerocks_message::ACTION_APMANAGER_CONFIGURE)) {
+        LOG(ERROR) << "Not configured. Ignoring message with op="
+                   << int(beerocks_header->action_op());
+        return;
+    }
+
     switch (beerocks_header->action_op()) {
     case beerocks_message::ACTION_APMANAGER_CONFIGURE: {
-        if (m_ap_manager_configured) {
-            break;
-        }
-
         LOG(TRACE) << "ACTION_APMANAGER_CONFIGURE";
 
         auto config = beerocks_header->addClass<beerocks_message::cACTION_APMANAGER_CONFIGURE>();
@@ -845,12 +856,12 @@ void ap_manager_thread::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         acs_enabled = config->channel() == 0;
 
-        m_ap_manager_configured = true;
-
-        create_ap_wlan_hal();
-
-        LOG(DEBUG) << "Move to ATTACHING state";
-        m_state = eApManagerState::ATTACHING;
+        if (create_ap_wlan_hal()) {
+            LOG(DEBUG) << "Move to ATTACHING state";
+            m_state = eApManagerState::ATTACHING;
+        } else {
+            m_state = eApManagerState::TERMINATED;
+        }
 
         break;
     }
@@ -2420,8 +2431,12 @@ void ap_manager_thread::stop_ap_manager_thread()
 {
     LOG(TRACE) << __func__;
 
-    if (m_ap_hal_ext_events != beerocks::net::FileDescriptor::invalid_descriptor) {
+    if (ap_wlan_hal) {
         ap_wlan_hal->detach();
+        ap_wlan_hal.reset();
+    }
+
+    if (m_ap_hal_ext_events != beerocks::net::FileDescriptor::invalid_descriptor) {
         remove_socket(m_fd_to_socket_map[m_ap_hal_ext_events]);
         delete m_fd_to_socket_map[m_ap_hal_ext_events];
         m_fd_to_socket_map[m_ap_hal_ext_events] = nullptr;
@@ -2448,8 +2463,6 @@ void ap_manager_thread::stop_ap_manager_thread()
     }
 
     m_state = eApManagerState::INIT;
-
-    m_ap_manager_configured = false;
 
     should_stop = true;
 }

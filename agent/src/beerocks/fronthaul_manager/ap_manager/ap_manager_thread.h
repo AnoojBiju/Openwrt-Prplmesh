@@ -146,7 +146,6 @@ private:
     std::string slave_uds;
     std::string m_iface;
     beerocks::logging &m_logger;
-    bool m_ap_manager_configured = false;
     bool acs_enabled;
     bool m_ap_support_zwdfs;
 
