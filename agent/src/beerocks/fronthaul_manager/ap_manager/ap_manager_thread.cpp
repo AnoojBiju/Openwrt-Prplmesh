@@ -409,12 +409,16 @@ void ap_manager_thread::connect_to_agent()
     m_fd_to_socket_map[m_slave_fd] = slave_socket;
 }
 
-void ap_manager_thread::ap_manager_fsm()
+bool ap_manager_thread::ap_manager_fsm(bool &continue_processing)
 {
+    // Continue processing events if the state machine is in a transient state.
+    // Transient states are INIT and ATTACHED. All other states are steady states.
+    continue_processing = false;
+
     switch (m_state) {
     case eApManagerState::INIT: {
         if (m_slave_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
-            return;
+            return false;
         }
         auto request =
             message_com::create_vs_message<beerocks_message::cACTION_APMANAGER_UP_NOTIFICATION>(
@@ -422,13 +426,15 @@ void ap_manager_thread::ap_manager_fsm()
 
         if (!request) {
             LOG(ERROR) << "Failed building message!";
-            return;
+            break;
         }
         request->set_iface_name(m_iface);
 
         send_cmdu(cmdu_tx);
 
         m_state = eApManagerState::WAIT_FOR_CONFIGURATION;
+
+        continue_processing = true;
 
         // Set the timout to next select cycle
         m_state_timeout =
@@ -440,7 +446,7 @@ void ap_manager_thread::ap_manager_fsm()
         // change to ATTACHING state.
         if (std::chrono::steady_clock::now() > m_state_timeout) {
             LOG(ERROR) << "Agent did not send configuration message";
-            stop_ap_manager_thread();
+            return false;
         }
         break;
     }
@@ -456,8 +462,7 @@ void ap_manager_thread::ap_manager_fsm()
         if (attach_state == bwl::HALState::Failed) {
             LOG(ERROR) << "Failed attaching to WLAN HAL, call stop_ap_manager_thread()";
             thread_last_error_code = APMANAGER_THREAD_ERROR_ATTACH_FAIL;
-            stop_ap_manager_thread();
-            return;
+            return false;
         }
 
         LOG(INFO) << "waiting to attach to " << ap_wlan_hal->get_radio_info().iface_name;
@@ -476,8 +481,7 @@ void ap_manager_thread::ap_manager_fsm()
         } else {
             LOG(ERROR) << "Invalid external event file descriptor: " << m_ap_hal_ext_events;
             thread_last_error_code = APMANAGER_THREAD_ERROR_ATTACH_FAIL;
-            stop_ap_manager_thread();
-            return;
+            return false;
         }
 
         // Internal events
@@ -493,8 +497,7 @@ void ap_manager_thread::ap_manager_fsm()
         } else {
             LOG(ERROR) << "Invalid internal event file descriptor: " << m_ap_hal_int_events;
             thread_last_error_code = APMANAGER_THREAD_ERROR_ATTACH_FAIL;
-            stop_ap_manager_thread();
-            return;
+            return false;
         }
 
         // Set the time for the next heartbeat notification
@@ -506,6 +509,9 @@ void ap_manager_thread::ap_manager_fsm()
 
         LOG(DEBUG) << "Move to OPERATIONAL state";
         m_state = eApManagerState::OPERATIONAL;
+
+        continue_processing = true;
+
         break;
     }
     case eApManagerState::OPERATIONAL: {
@@ -516,8 +522,7 @@ void ap_manager_thread::ap_manager_fsm()
                 if (!ap_wlan_hal->process_ext_events()) {
                     LOG(ERROR) << "process_ext_events() failed!";
                     thread_last_error_code = APMANAGER_THREAD_ERROR_REPORT_PROCESS_FAIL;
-                    stop_ap_manager_thread();
-                    return;
+                    return false;
                 }
             }
         } else {
@@ -526,8 +531,7 @@ void ap_manager_thread::ap_manager_fsm()
             if (!ap_wlan_hal->process_ext_events()) {
                 LOG(ERROR) << "process_ext_events() failed!";
                 thread_last_error_code = APMANAGER_THREAD_ERROR_REPORT_PROCESS_FAIL;
-                stop_ap_manager_thread();
-                return;
+                return false;
             }
         }
 
@@ -538,8 +542,7 @@ void ap_manager_thread::ap_manager_fsm()
             if (!ap_wlan_hal->process_int_events()) {
                 LOG(ERROR) << "process_int_events() failed!";
                 thread_last_error_code = APMANAGER_THREAD_ERROR_REPORT_PROCESS_FAIL;
-                stop_ap_manager_thread();
-                return;
+                return false;
             }
         }
 
@@ -557,8 +560,7 @@ void ap_manager_thread::ap_manager_fsm()
             if (!ap_wlan_hal->generate_connected_clients_events(is_finished_all_clients,
                                                                 awake_timeout())) {
                 LOG(ERROR) << "Failed to generate connected clients events";
-                stop_ap_manager_thread();
-                return;
+                return false;
             }
             m_generate_connected_clients_events = !is_finished_all_clients;
         }
@@ -571,11 +573,7 @@ void ap_manager_thread::ap_manager_fsm()
         break;
     }
 
-    // There is no point waiting for select timeout on non OPERATIONAL state, except ATTACHING
-    // state which could take a while, so skip it.
-    if (m_state != eApManagerState::OPERATIONAL && m_state != eApManagerState::ATTACHING) {
-        skip_next_select_timeout();
-    }
+    return true;
 }
 
 void ap_manager_thread::after_select(bool timeout)
@@ -586,7 +584,12 @@ void ap_manager_thread::after_select(bool timeout)
         return;
     }
 
-    ap_manager_fsm();
+    bool continue_processing = false;
+    do {
+        if (!ap_manager_fsm(continue_processing)) {
+            stop_ap_manager_thread();
+        }
+    } while (continue_processing);
 }
 
 bool ap_manager_thread::socket_disconnected(Socket *sd)
