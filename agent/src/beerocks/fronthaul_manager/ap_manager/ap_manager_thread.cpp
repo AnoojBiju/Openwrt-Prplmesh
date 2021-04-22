@@ -45,7 +45,7 @@ constexpr auto fsm_timer_period = std::chrono::milliseconds(1000);
 #define OPERATION_SUCCESS 0
 #define OPERATION_FAIL -1
 #define WAIT_FOR_RADIO_ENABLE_TIMEOUT_SEC 100
-#define MAX_RADIO_DISBALED_TIMEOUT_SEC 4
+#define MAX_RADIO_DISABLED_TIMEOUT_SEC 4
 #define MAX_CANCEL_CAC_TIMEOUT_SEC 10
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2110,7 +2110,7 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
 
         if (msg->vap_id == beerocks::IFACE_RADIO_ID) {
             auto timeout = std::chrono::steady_clock::now() +
-                           std::chrono::seconds(MAX_RADIO_DISBALED_TIMEOUT_SEC);
+                           std::chrono::seconds(MAX_RADIO_DISABLED_TIMEOUT_SEC);
             auto notify_disabled = true;
 
             while (std::chrono::steady_clock::now() < timeout) {
