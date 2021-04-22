@@ -169,5 +169,9 @@ int dhcp_mon_stop()
     return 0;
 }
 
+bool dhcp_manual_procedure_init() { return false; }
+
+bool dhcp_get_leases(leases_pair_t &leases_map) { return false; }
+
 } // namespace bpl
 } // namespace beerocks

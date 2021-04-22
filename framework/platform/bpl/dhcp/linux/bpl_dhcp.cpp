@@ -17,5 +17,9 @@ int dhcp_mon_handle_event() { return 0; }
 
 int dhcp_mon_stop() { return 0; }
 
+bool dhcp_manual_procedure_init() { return true; }
+
+bool dhcp_get_leases(leases_pair_t &leases_map) { return true; }
+
 } // namespace bpl
 } // namespace beerocks
