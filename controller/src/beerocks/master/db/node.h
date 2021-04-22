@@ -332,9 +332,16 @@ public:
     node_ire(const std::string &mac): node(beerocks::eType::TYPE_IRE, mac) {};
 };
 
-class node_ire_backhaul: public node {
+class node_ire_bh_or_client: public node {
 public:
-    node_ire_backhaul(const std::string &mac): node(beerocks::eType::TYPE_IRE_BACKHAUL, mac) {};
+    node_ire_bh_or_client(beerocks::eType type_, const std::string &mac):
+        node(type_, mac) {};
+};
+
+class node_ire_backhaul: public node_ire_bh_or_client {
+public:
+    node_ire_backhaul(const std::string &mac):
+        node_ire_bh_or_client(beerocks::eType::TYPE_IRE_BACKHAUL, mac) {};
 };
 
 class node_slave: public node {
@@ -469,9 +476,10 @@ public:
     void print_node(std::ostream &os) const override;
 };
 
-class node_client: public node {
+class node_client: public node_ire_bh_or_client {
 public:
-    node_client(const std::string &mac): node(beerocks::eType::TYPE_CLIENT, mac) {};
+    node_client(const std::string &mac):
+        node_ire_bh_or_client(beerocks::eType::TYPE_CLIENT, mac) {};
 };
 
 class node_eth_switch: public node {
