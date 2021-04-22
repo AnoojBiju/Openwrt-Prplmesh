@@ -717,10 +717,19 @@ bool ap_manager_thread::ap_manager_fsm(bool &continue_processing)
         }
 
         if (m_generate_connected_clients_events) {
+            // Long running operations prevent the event loop from doing anything else (i.e.: the
+            // event loop is not able to react to any incoming request in the meantime).
+            // Therefore, limit the maximum amount of time that the following method can run to 50%
+            // of the FSM poll time, instead of letting it run non-stop for what could be quite a
+            // long time if there are many clients already connected.
+            // If there is not enough time to generate all events, the method will be called in the
+            // next FSM iteration, and so on until all connected clients are eventually reported.
+            auto max_iteration_timeout = std::chrono::steady_clock::now() + fsm_timer_period / 2;
+
             bool is_finished_all_clients = false;
             // Reset the flag if finished to generate all clients' events
             if (!ap_wlan_hal->generate_connected_clients_events(is_finished_all_clients,
-                                                                awake_timeout())) {
+                                                                max_iteration_timeout)) {
                 LOG(ERROR) << "Failed to generate connected clients events";
                 return false;
             }
