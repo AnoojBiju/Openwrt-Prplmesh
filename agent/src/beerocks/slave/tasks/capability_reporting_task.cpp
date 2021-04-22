@@ -213,7 +213,7 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
     // 2.2 radio independent tlvs
 
     if (db->controller_info.profile_support ==
-        AgentDB::sControllerInfo::eProfileSupport::Profile2) {
+        wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2) {
 
         // profile 2 ap capability
         if (!add_profile2_ap_capability_tlv(m_cmdu_tx)) {
