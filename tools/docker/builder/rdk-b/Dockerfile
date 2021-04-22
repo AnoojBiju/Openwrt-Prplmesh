@@ -1,6 +1,6 @@
 ###############################################################
 # SPDX-License-Identifier: BSD-2-Clause-Patent
-# SPDX-FileCopyrightText: 2020 the prplMesh contributors (see AUTHORS.md)
+# SPDX-FileCopyrightText: 2020-2021 the prplMesh contributors (see AUTHORS.md)
 # This code is subject to the terms of the BSD+Patent license.
 # See LICENSE file for more details.
 ###############################################################
@@ -92,7 +92,6 @@ RUN printf '\033[1;35m%s Cloning RDK-B\n\033[0m' "$(date --iso-8601=seconds --un
 RUN cp meta-turris/recipes-connectivity/openssl/openssl_%.bbappend \
        meta-turris/recipes-connectivity/openssl/openssl-1.0.2o_%.bbappend
 
-RUN printf '\033[1;35m%s Cloning meta-prplmesh\n\033[0m' "$(date --iso-8601=seconds --universal)" \
-    && git clone https://gitlab.com/prpl-foundation/prplmesh/meta-prplmesh \
-    && cd meta-prplmesh \
-    && git checkout b70faeda76379313eb785727d5d74d3dd69c0490
+ADD get-git-hash.sh /bin/
+
+RUN get-git-hash.sh meta-prplmesh
