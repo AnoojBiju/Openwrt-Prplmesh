@@ -40,7 +40,6 @@ tlvProfile2MultiApProfile::eMultiApProfile& tlvProfile2MultiApProfile::profile()
 void tlvProfile2MultiApProfile::class_swap()
 {
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_length));
-    tlvf_swap(8*sizeof(eMultiApProfile), reinterpret_cast<uint8_t*>(m_profile));
 }
 
 bool tlvProfile2MultiApProfile::finalize()
@@ -99,6 +98,7 @@ bool tlvProfile2MultiApProfile::init()
         return false;
     }
     m_profile = reinterpret_cast<eMultiApProfile*>(m_buff_ptr__);
+    if (!m_parse__) *m_profile = eMultiApProfile::MULTIAP_PROFILE_2;
     if (!buffPtrIncrementSafe(sizeof(eMultiApProfile))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(eMultiApProfile) << ") Failed!";
         return false;

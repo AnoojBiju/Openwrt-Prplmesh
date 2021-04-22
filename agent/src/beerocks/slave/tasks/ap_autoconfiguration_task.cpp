@@ -304,12 +304,12 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_search_message(
 
     create_autoconfig_search();
     if (db->controller_info.profile_support ==
-        AgentDB::sControllerInfo::eProfileSupport::Profile1) {
+        wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1) {
         return m_btl_ctx.send_cmdu_to_broker(
             m_cmdu_tx, tlvf::mac_from_string(network_utils::MULTICAST_1905_MAC_ADDR),
             db->bridge.mac);
     } else if (db->controller_info.profile_support ==
-               AgentDB::sControllerInfo::eProfileSupport::Unknown) {
+               wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::PRPLMESH_PROFILE_UNKNOWN) {
         // If we still not know what profile the controller support send 2 autoconfig search messages:
         // one witout the MultiAp profile TLV and one with it.
         // We do this since we came across certified agents that don't respond to a search message that contain
@@ -325,9 +325,6 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_search_message(
         LOG(ERROR) << "addClass wfa_map::tlvProfile2MultiApProfile failed";
         return false;
     }
-    tlvProfile2MultiApProfile->profile() =
-        wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2;
-
     LOG(DEBUG) << "sending autoconfig search message, bridge_mac=" << db->bridge.mac
                << " with Profile TLV";
 
@@ -425,7 +422,7 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(
 
     auto multiap_profile_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2MultiApProfile>();
     if (multiap_profile_tlv) {
-        db->controller_info.set_profile_support_from_tlv(multiap_profile_tlv->profile());
+        db->controller_info.profile_support = multiap_profile_tlv->profile();
     }
 
     // Mark discovery status completed on band mentioned on the response and fill AgentDB fields.

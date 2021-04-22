@@ -1349,6 +1349,10 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
         hostapd_config_set_value(vap_hostapd_config, "ssid", std::string());
         // Disable the VAP
         hostapd_config_set_value(vap_hostapd_config, "start_disabled", "1");
+        // Disable backhaul BSS
+        hostapd_config_set_value(vap_hostapd_config, "multi_ap", "0");
+        hostapd_config_set_value(vap_hostapd_config, "multi_ap_backhaul_ssid", "");
+        hostapd_config_set_value(vap_hostapd_config, "multi_ap_backhaul_wpa_passphrase", "");
     }
 
     // If we are still here, then autoconfiguration was successful,

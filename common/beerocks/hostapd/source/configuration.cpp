@@ -256,6 +256,18 @@ bool Configuration::disable_vap(const std::string &vap)
         LOG(ERROR) << "Unable to remove ssid on vap '" << vap << "'.";
         return false;
     }
+    if (!set_create_vap_value(vap, "multi_ap", "0")) {
+        LOG(ERROR) << "Unable to set multi_ap on vap '" << vap << "'.";
+        return false;
+    }
+    if (!set_create_vap_value(vap, "multi_ap_backhaul_ssid", "")) {
+        LOG(ERROR) << "Unable to remove multi_ap_backhaul_ssid on vap '" << vap << "'.";
+        return false;
+    }
+    if (!set_create_vap_value(vap, "multi_ap_backhaul_wpa_passphrase", "")) {
+        LOG(ERROR) << "Unable to remove multi_ap_backhaul_wpa_passphrase on vap '" << vap << "'.";
+        return false;
+    }
     return true;
 }
 

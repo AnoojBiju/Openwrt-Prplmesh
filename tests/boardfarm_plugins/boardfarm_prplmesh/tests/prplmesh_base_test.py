@@ -335,9 +335,10 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
 
         # check for requested event
         debug("Check for event: sta mac={}, bssid={}, event={}".format(sta.mac, bssid, event))
-        if mcast.ieee1905_tlvs[0].assoc_event_client_mac != sta.mac or \
-                mcast.ieee1905_tlvs[0].assoc_event_agent_bssid != bssid or \
-                int(mcast.ieee1905_tlvs[0].assoc_event_flags, 16) != event.value:
+        assoc_event_tlv = self.check_cmdu_has_tlv_single(mcast, 0x92)
+        if assoc_event_tlv.assoc_event_client_mac != sta.mac or \
+                assoc_event_tlv.assoc_event_agent_bssid != bssid or \
+                int(assoc_event_tlv.assoc_event_flags, 16) != event.value:
             self.fail("No match for association event")
             return False
 

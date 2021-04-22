@@ -631,9 +631,6 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const std::string &sr
             LOG(ERROR) << "addClass wfa_map::tlvProfile2MultiApProfile failed";
             return false;
         }
-
-        tlvProfile2MultiApProfile->profile() =
-            wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2;
     }
 
     auto beerocks_header = beerocks::message_com::parse_intel_vs_message(cmdu_rx);
