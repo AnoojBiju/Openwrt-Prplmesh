@@ -6,7 +6,7 @@
  * See LICENSE file for more details.
  */
 
-#include "ap_manager_thread.h"
+#include "ap_manager.h"
 
 #include <bcl/beerocks_string_utils.h>
 #include <bcl/beerocks_utils.h>
@@ -330,11 +330,10 @@ static void unify_channels_list(
 using namespace beerocks;
 using namespace son;
 
-ap_manager_thread::ap_manager_thread(
-    const std::string &iface, beerocks::logging &logger,
-    std::unique_ptr<beerocks::CmduClientFactory> slave_cmdu_client_factory,
-    std::shared_ptr<beerocks::TimerManager> timer_manager,
-    std::shared_ptr<beerocks::EventLoop> event_loop)
+ApManager::ApManager(const std::string &iface, beerocks::logging &logger,
+                     std::unique_ptr<beerocks::CmduClientFactory> slave_cmdu_client_factory,
+                     std::shared_ptr<beerocks::TimerManager> timer_manager,
+                     std::shared_ptr<beerocks::EventLoop> event_loop)
     : cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer)), m_logger(logger),
       m_slave_cmdu_client_factory(std::move(slave_cmdu_client_factory)),
       m_timer_manager(timer_manager), m_event_loop(event_loop)
@@ -346,7 +345,7 @@ ap_manager_thread::ap_manager_thread(
     m_iface = iface;
 }
 
-bool ap_manager_thread::create_ap_wlan_hal()
+bool ApManager::create_ap_wlan_hal()
 {
     using namespace std::placeholders; // for `_1`
 
@@ -359,8 +358,8 @@ bool ap_manager_thread::create_ap_wlan_hal()
     }
 
     // Create a new AP HAL instance
-    ap_wlan_hal = bwl::ap_wlan_hal_create(
-        m_iface, hal_conf, std::bind(&ap_manager_thread::hal_event_handler, this, _1));
+    ap_wlan_hal = bwl::ap_wlan_hal_create(m_iface, hal_conf,
+                                          std::bind(&ApManager::hal_event_handler, this, _1));
 
     LOG_IF(!ap_wlan_hal, FATAL) << "Failed creating HAL instance!";
 
@@ -372,7 +371,7 @@ bool ap_manager_thread::create_ap_wlan_hal()
     return true;
 }
 
-bool ap_manager_thread::start()
+bool ApManager::start()
 {
     if (m_slave_client) {
         LOG(ERROR) << "AP manager is already started";
@@ -437,7 +436,7 @@ bool ap_manager_thread::start()
     return true;
 }
 
-bool ap_manager_thread::stop()
+bool ApManager::stop()
 {
     bool ok = true;
 
@@ -469,12 +468,12 @@ bool ap_manager_thread::stop()
     return ok;
 }
 
-bool ap_manager_thread::send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx)
+bool ApManager::send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx)
 {
     return m_slave_client->send_cmdu(cmdu_tx);
 }
 
-bool ap_manager_thread::ap_manager_fsm(bool &continue_processing)
+bool ApManager::ap_manager_fsm(bool &continue_processing)
 {
     // Continue processing events if the state machine is in a transient state.
     // Transient states are INIT and ATTACHED. All other states are steady states.
@@ -672,7 +671,7 @@ bool ap_manager_thread::ap_manager_fsm(bool &continue_processing)
     return true;
 }
 
-void ap_manager_thread::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
+void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto beerocks_header = message_com::parse_intel_vs_message(cmdu_rx);
     if (beerocks_header == nullptr) {
@@ -1543,7 +1542,7 @@ void ap_manager_thread::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
     }
 }
 
-void ap_manager_thread::fill_cs_params(beerocks_message::sApChannelSwitch &params)
+void ApManager::fill_cs_params(beerocks_message::sApChannelSwitch &params)
 {
     params.tx_power  = static_cast<int8_t>(ap_wlan_hal->get_radio_info().tx_power);
     params.channel   = ap_wlan_hal->get_radio_info().channel;
@@ -1555,7 +1554,7 @@ void ap_manager_thread::fill_cs_params(beerocks_message::sApChannelSwitch &param
     params.is_dfs_channel            = ap_wlan_hal->get_radio_info().is_dfs_channel;
 }
 
-bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
+bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
 {
     if (!event_ptr) {
         LOG(ERROR) << "Invalid event!";
@@ -2179,7 +2178,7 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
     return true;
 }
 
-void ap_manager_thread::handle_hostapd_attached()
+void ApManager::handle_hostapd_attached()
 {
     LOG(DEBUG) << "handling enabled hostapd";
 
@@ -2190,7 +2189,7 @@ void ap_manager_thread::handle_hostapd_attached()
             read_acs_attempt++;
             if (read_acs_attempt >= READ_ACS_ATTEMPT_MAX) {
                 LOG(ERROR) << "retrieving ACS report fails " << int(READ_ACS_ATTEMPT_MAX)
-                           << " times - stop ap_manager_thread";
+                           << " times - stop ApManager";
                 m_state = eApManagerState::TERMINATED;
                 break;
             }
@@ -2284,7 +2283,7 @@ void ap_manager_thread::handle_hostapd_attached()
     send_cmdu(cmdu_tx);
 }
 
-void ap_manager_thread::send_heartbeat()
+void ApManager::send_heartbeat()
 {
     //LOG(DEBUG) << "sending HEARTBEAT notification";
     auto request =
@@ -2299,7 +2298,7 @@ void ap_manager_thread::send_heartbeat()
     send_cmdu(cmdu_tx);
 }
 
-bool ap_manager_thread::handle_ap_enabled(int vap_id)
+bool ApManager::handle_ap_enabled(int vap_id)
 {
     LOG(INFO) << "AP_Enabled on vap_id = " << int(vap_id);
 
@@ -2340,8 +2339,8 @@ bool ap_manager_thread::handle_ap_enabled(int vap_id)
     return true;
 }
 
-void ap_manager_thread::send_steering_return_status(beerocks_message::eActionOp_APMANAGER ActionOp,
-                                                    int32_t status)
+void ApManager::send_steering_return_status(beerocks_message::eActionOp_APMANAGER ActionOp,
+                                            int32_t status)
 {
     switch (ActionOp) {
     case beerocks_message::ACTION_APMANAGER_CLIENT_DISCONNECT_RESPONSE: {
@@ -2374,11 +2373,10 @@ void ap_manager_thread::send_steering_return_status(beerocks_message::eActionOp_
     return;
 }
 
-void ap_manager_thread::remove_client_from_disallowed_list(const sMacAddr &mac,
-                                                           const sMacAddr &bssid)
+void ApManager::remove_client_from_disallowed_list(const sMacAddr &mac, const sMacAddr &bssid)
 {
     auto it = std::find_if(m_disallowed_clients.begin(), m_disallowed_clients.end(),
-                           [&](const son::ap_manager_thread::disallowed_client_t &element) {
+                           [&](const son::ApManager::disallowed_client_t &element) {
                                return ((element.mac == mac) && (element.bssid == bssid));
                            });
 
@@ -2388,7 +2386,7 @@ void ap_manager_thread::remove_client_from_disallowed_list(const sMacAddr &mac,
     }
 }
 
-void ap_manager_thread::allow_expired_clients()
+void ApManager::allow_expired_clients()
 {
     // check if any client disallow period has expired and allow it.
     for (auto it = m_disallowed_clients.begin(); it != m_disallowed_clients.end();) {
@@ -2402,7 +2400,7 @@ void ap_manager_thread::allow_expired_clients()
     }
 }
 
-bool ap_manager_thread::zwdfs_ap() const
+bool ApManager::zwdfs_ap() const
 {
     if (m_state != eApManagerState::OPERATIONAL) {
         LOG(WARNING) << "Requested ZWDFS support status, but AP is not attached to BWL";

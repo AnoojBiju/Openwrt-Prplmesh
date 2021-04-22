@@ -6,8 +6,8 @@
  * See LICENSE file for more details.
  */
 
-#ifndef _AP_MANAGER_THREAD_H
-#define _AP_MANAGER_THREAD_H
+#ifndef _AP_MANAGER_H
+#define _AP_MANAGER_H
 
 // AP HAL
 #include <bwl/ap_wlan_hal.h>
@@ -23,13 +23,13 @@
 #include <set>
 
 namespace son {
-class ap_manager_thread {
+class ApManager {
 
 public:
-    ap_manager_thread(const std::string &iface, beerocks::logging &logger,
-                      std::unique_ptr<beerocks::CmduClientFactory> slave_cmdu_client_factory,
-                      std::shared_ptr<beerocks::TimerManager> timer_manager,
-                      std::shared_ptr<beerocks::EventLoop> event_loop);
+    ApManager(const std::string &iface, beerocks::logging &logger,
+              std::unique_ptr<beerocks::CmduClientFactory> slave_cmdu_client_factory,
+              std::shared_ptr<beerocks::TimerManager> timer_manager,
+              std::shared_ptr<beerocks::EventLoop> event_loop);
 
     /**
      * @brief Starts AP manager.

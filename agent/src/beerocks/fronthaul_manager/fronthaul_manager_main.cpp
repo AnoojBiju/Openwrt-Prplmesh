@@ -6,7 +6,7 @@
  * See LICENSE file for more details.
  */
 
-#include "ap_manager/ap_manager_thread.h"
+#include "ap_manager/ap_manager.h"
 #include "monitor/monitor_thread.h"
 
 #include <bcl/beerocks_cmdu_client_factory_factory.h>
@@ -269,9 +269,8 @@ int main(int argc, char *argv[])
     LOG_IF(!slave_cmdu_client_factory, FATAL) << "Unable to create CMDU client factory!";
 
     // Create ap_manager
-    son::ap_manager_thread ap_manager(fronthaul_iface, *g_logger_ap_mananger,
-                                      std::move(slave_cmdu_client_factory), timer_manager,
-                                      event_loop);
+    son::ApManager ap_manager(fronthaul_iface, *g_logger_ap_mananger,
+                              std::move(slave_cmdu_client_factory), timer_manager, event_loop);
 
     LOG_IF(!ap_manager.start(), FATAL) << "Unable to start AP manager!";
 
@@ -305,7 +304,7 @@ int main(int argc, char *argv[])
         auto ap_manager_state = ap_manager.get_state();
         // If the fronthaul is defined as ZWDFS, do not bring the Monitor thread since a ZWDFS
         // interface shall only use for ZWDFS purpose, and shall not Monitor anything by definition.
-        if (ap_manager_state == son::ap_manager_thread::eApManagerState::OPERATIONAL) {
+        if (ap_manager_state == son::ApManager::eApManagerState::OPERATIONAL) {
             if (monitor.is_running() || ap_manager.zwdfs_ap()) {
                 continue;
             } else if (!monitor.start()) {
