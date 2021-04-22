@@ -34,17 +34,6 @@ INHERIT += "externalsrc"
 EXTERNALSRC_pn-prplmesh = "/home/rdk/prplMesh"
 EOF
 
-rdk_tag=nightly/20210227-dunfell
-cat >> conf/local.conf <<EOF
-# Use fixed tags for all components
-RDK_GIT_BRANCH           = "$rdk_tag"
-CCSP_GIT_BRANCH          = "$rdk_tag"
-CMF_GIT_BRANCH           = "$rdk_tag"
-CMF_GIT_MASTER_BRANCH    = "$rdk_tag"
-CMF_GITHUB_MAIN_BRANCH   = "$rdk_tag"
-CMF_GITHUB_MASTER_BRANCH = "$rdk_tag"
-EOF
-
 printf '\033[1;35m%s Building RDK-B\n\033[0m' "$(date --iso-8601=seconds --universal)"
 
 bitbake rdk-generic-broadband-image
