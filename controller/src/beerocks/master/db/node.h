@@ -55,7 +55,6 @@ public:
     void set_cross_rx_rssi(const std::string &ap_mac_, int8_t rssi, int8_t rx_packets);
     void clear_cross_rssi();
     void clear_node_stats_info();
-    void clear_hostap_stats_info();
 
     beerocks::eType get_type() const;
     bool set_type(beerocks::eType type_);
@@ -466,6 +465,7 @@ class node_slave: public node {
 public:
     node_slave(const std::string &mac): node(beerocks::eType::TYPE_SLAVE, mac) {};
 
+    void clear_hostap_stats_info();
     void print_node(std::ostream &os) const override;
 };
 

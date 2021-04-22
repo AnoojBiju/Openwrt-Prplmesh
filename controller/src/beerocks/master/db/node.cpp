@@ -322,7 +322,7 @@ void node::clear_cross_rssi()
 
 void node::clear_node_stats_info() { stats_info = std::make_shared<sta_stats_params>(); }
 
-void node::clear_hostap_stats_info()
+void node_slave::clear_hostap_stats_info()
 {
     hostap->stats_info = std::make_shared<radio::ap_stats_params>();
 }
