@@ -164,89 +164,95 @@ void node::print_node(std::ostream &os) const
                << "   ClientIsUnfriendly: " << client_is_unfriendly << std::endl;
         }
 
-    } else if (node_type == beerocks::TYPE_SLAVE) {
-        os << " Type: HOSTAP" << std::endl
-           << " IfaceType: " << utils::get_iface_type_string(hostap->iface_type) << std::endl
-           << " State: " << state << std::endl
-           << " Active: " << bool(hostap->active) << std::endl
-           << " Is backhual manager: " << hostap->is_backhaul_manager << std::endl
-           << " Manufacturer: " << manufacturer << std::endl
-           << " Channel: " << int(channel) << std::endl
-           << " ChannelBandwidth: " << int(bandwidth) << std::endl
-           << " ChannelExtAboveSecondary: " << bool(channel_ext_above_secondary) << std::endl
-           << " cac_completed: " << bool(hostap->cac_completed) << std::endl
-           << " on_fail_safe_channel: " << bool(hostap->on_fail_safe_channel) << std::endl
-           << " on_sub_band_channel: " << bool(hostap->on_sub_band_channel) << std::endl
-           << " on_dfs_reentry: " << bool(hostap->on_dfs_reentry) << std::endl
-           << " ap_activity_mode: "
-           << ((uint8_t(hostap->ap_activity_mode)) ? "AP_ACTIVE_MODE" : "AP_IDLE_MODE")
-           << std::endl
-           << " Radio Identifier: " << radio_identifier << std::endl
-           << " SupportedChannels: " << std::endl;
-        for (auto val : hostap->supported_channels) {
-            if (val.channel > 0) {
-                os << " ch=" << int(val.channel) << " | dfs=" << int(val.is_dfs_channel)
-                   << " | tx_pow=" << int(val.tx_pow) << " | noise=" << int(val.noise)
-                   << " [dbm] | bss_overlap=" << int(val.bss_overlap) << std::endl;
-            }
-        }
-        os << " AntGain: " << int(hostap->ant_gain) << std::endl
-           << " ConductedPower: " << int(hostap->tx_power) << std::endl
-           << " AntNum: " << int(capabilities.ant_num) << std::endl
-           << " Statistics:" << std::endl
-           << "   LastUpdate: "
-           << float((std::chrono::duration_cast<std::chrono::duration<double>>(
-                         tCurrTime_steady - hostap->stats_info->timestamp))
-                        .count())
-           << "[sec]" << std::endl
-           << "   StatsDelta: " << float(hostap->stats_info->stats_delta_ms) / 1000.0 << "[sec]"
-           << std::endl
-           << "   ActiveStaCount: " << int(hostap->stats_info->active_sta_count) << std::endl
-           << "   Packets (RX|TX): " << int(hostap->stats_info->rx_packets) << " | "
-           << int(hostap->stats_info->tx_packets) << std::endl
-           << "   Bytes (RX|TX): " << int(hostap->stats_info->rx_bytes) << " | "
-           << int(hostap->stats_info->tx_bytes) << std::endl
-           << "   ChannelLoad: " << int(hostap->stats_info->channel_load_percent) << " [%]"
-           << std::endl
-           << "   TotalStaLoad (RX|TX): " << int(hostap->stats_info->total_client_rx_load_percent)
-           << " | " << int(hostap->stats_info->total_client_tx_load_percent) << " [%] "
-           << std::endl
-           << "**radar statistics**" << std::endl;
-        for_each(begin(hostap->Radar_stats), end(hostap->Radar_stats),
-                 [&](sWifiChannelRadarStats radar_stat) {
-                     //for(auto radar_stat : hostap->Radar_stats) {
-                     auto delta_radar =
-                         std::chrono::duration_cast<std::chrono::seconds>(
-                             radar_stat.csa_exit_timestamp - radar_stat.csa_enter_timestamp)
-                             .count();
-                     // if(delta// _radar)
-                     os << "channel = " << int(radar_stat.channel)
-                        << " bw = " << int(radar_stat.bandwidth)
-                        << " time_in_channel = " << int(delta_radar) << std::endl;
-                     //}
-                 });
-        os << "   RX Load: [";
-
-        for (int i = 0; i < 10; ++i) {
-            if (i < hostap->stats_info->total_client_rx_load_percent / 10) {
-                os << "#";
-            } else {
-                os << "_";
-            }
-        }
-
-        os << "] | TX Load: [";
-
-        for (int i = 0; i < 10; ++i) {
-            if (i < hostap->stats_info->total_client_tx_load_percent / 10) {
-                os << "#";
-            } else {
-                os << "_";
-            }
-        }
-
-        os << "]";
     }
+}
+
+void node_slave::print_node(std::ostream &os) const
+{
+    std::chrono::steady_clock::time_point tCurrTime_steady = std::chrono::steady_clock::now();
+
+    os << std::endl
+       << " Type: HOSTAP" << std::endl
+       << " IfaceType: " << utils::get_iface_type_string(hostap->iface_type) << std::endl
+       << " State: " << state << std::endl
+       << " Active: " << bool(hostap->active) << std::endl
+       << " Is backhual manager: " << hostap->is_backhaul_manager << std::endl
+       << " Manufacturer: " << manufacturer << std::endl
+       << " Channel: " << int(channel) << std::endl
+       << " ChannelBandwidth: " << int(bandwidth) << std::endl
+       << " ChannelExtAboveSecondary: " << bool(channel_ext_above_secondary) << std::endl
+       << " cac_completed: " << bool(hostap->cac_completed) << std::endl
+       << " on_fail_safe_channel: " << bool(hostap->on_fail_safe_channel) << std::endl
+       << " on_sub_band_channel: " << bool(hostap->on_sub_band_channel) << std::endl
+       << " on_dfs_reentry: " << bool(hostap->on_dfs_reentry) << std::endl
+       << " ap_activity_mode: "
+       << ((uint8_t(hostap->ap_activity_mode)) ? "AP_ACTIVE_MODE" : "AP_IDLE_MODE")
+       << std::endl
+       << " Radio Identifier: " << radio_identifier << std::endl
+       << " SupportedChannels: " << std::endl;
+    for (auto val : hostap->supported_channels) {
+        if (val.channel > 0) {
+            os << " ch=" << int(val.channel) << " | dfs=" << int(val.is_dfs_channel)
+               << " | tx_pow=" << int(val.tx_pow) << " | noise=" << int(val.noise)
+               << " [dbm] | bss_overlap=" << int(val.bss_overlap) << std::endl;
+        }
+    }
+    os << " AntGain: " << int(hostap->ant_gain) << std::endl
+       << " ConductedPower: " << int(hostap->tx_power) << std::endl
+       << " AntNum: " << int(capabilities.ant_num) << std::endl
+       << " Statistics:" << std::endl
+       << "   LastUpdate: "
+       << float((std::chrono::duration_cast<std::chrono::duration<double>>(
+                     tCurrTime_steady - hostap->stats_info->timestamp))
+                    .count())
+       << "[sec]" << std::endl
+       << "   StatsDelta: " << float(hostap->stats_info->stats_delta_ms) / 1000.0 << "[sec]"
+       << std::endl
+       << "   ActiveStaCount: " << int(hostap->stats_info->active_sta_count) << std::endl
+       << "   Packets (RX|TX): " << int(hostap->stats_info->rx_packets) << " | "
+       << int(hostap->stats_info->tx_packets) << std::endl
+       << "   Bytes (RX|TX): " << int(hostap->stats_info->rx_bytes) << " | "
+       << int(hostap->stats_info->tx_bytes) << std::endl
+       << "   ChannelLoad: " << int(hostap->stats_info->channel_load_percent) << " [%]"
+       << std::endl
+       << "   TotalStaLoad (RX|TX): " << int(hostap->stats_info->total_client_rx_load_percent)
+       << " | " << int(hostap->stats_info->total_client_tx_load_percent) << " [%] "
+       << std::endl
+       << "**radar statistics**" << std::endl;
+    for_each(begin(hostap->Radar_stats), end(hostap->Radar_stats),
+             [&](sWifiChannelRadarStats radar_stat) {
+                 //for(auto radar_stat : hostap->Radar_stats) {
+                 auto delta_radar =
+                     std::chrono::duration_cast<std::chrono::seconds>(
+                         radar_stat.csa_exit_timestamp - radar_stat.csa_enter_timestamp)
+                         .count();
+                 // if(delta// _radar)
+                 os << "channel = " << int(radar_stat.channel)
+                    << " bw = " << int(radar_stat.bandwidth)
+                    << " time_in_channel = " << int(delta_radar) << std::endl;
+                 //}
+             });
+    os << "   RX Load: [";
+
+    for (int i = 0; i < 10; ++i) {
+        if (i < hostap->stats_info->total_client_rx_load_percent / 10) {
+            os << "#";
+        } else {
+            os << "_";
+        }
+    }
+
+    os << "] | TX Load: [";
+
+    for (int i = 0; i < 10; ++i) {
+        if (i < hostap->stats_info->total_client_tx_load_percent / 10) {
+            os << "#";
+        } else {
+            os << "_";
+        }
+    }
+
+    os << "]";
 }
 
 std::ostream &operator<<(std::ostream &os, const node *n) { return (os << (const node &)(*n)); }

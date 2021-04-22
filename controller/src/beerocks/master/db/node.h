@@ -465,6 +465,8 @@ public:
 class node_slave: public node {
 public:
     node_slave(const std::string &mac): node(beerocks::eType::TYPE_SLAVE, mac) {};
+
+    void print_node(std::ostream &os) const override;
 };
 
 class node_client: public node {
