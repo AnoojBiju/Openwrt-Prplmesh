@@ -1,7 +1,7 @@
 #! /bin/bash
 ###############################################################
 # SPDX-License-Identifier: BSD-2-Clause-Patent
-# SPDX-FileCopyrightText: 2019-2020 the prplMesh contributors (see AUTHORS.md)
+# SPDX-FileCopyrightText: 2019-2021 the prplMesh contributors (see AUTHORS.md)
 # This code is subject to the terms of the BSD+Patent license.
 # See LICENSE file for more details.
 ###############################################################
@@ -17,6 +17,7 @@ source meta-turris/setup-environment || {
     exit 1
 }
 
+echo "BBLAYERS += \"\${RDKROOT}/meta-amx\"" >> conf/bblayers.conf
 echo "BBLAYERS += \"\${RDKROOT}/meta-prplmesh\"" >> conf/bblayers.conf
 
 # Copy in prplmesh. The build tries to write in the source directory, so we can't use mount

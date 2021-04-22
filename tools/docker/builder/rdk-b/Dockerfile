@@ -15,6 +15,7 @@ FROM ubuntu:18.04
 # container's python (not the one from yocto)
 # python-yaml is needed to build the tlvfs
 # vim and less are there to debug builds at run time
+# fakeroot is used by Ambiorix - though this requirement will be removed in the next release
 RUN apt-get update \
     && apt-get -y install --no-install-recommends \
         build-essential \
@@ -22,6 +23,7 @@ RUN apt-get update \
         cpio \
         debianutils \
         diffstat \
+        fakeroot \
         file \
         gawk \
         gcc-multilib \
@@ -94,4 +96,6 @@ RUN cp meta-turris/recipes-connectivity/openssl/openssl_%.bbappend \
 
 ADD get-git-hash.sh /bin/
 
-RUN get-git-hash.sh meta-prplmesh
+RUN get-git-hash.sh meta-prplmesh && \
+    get-git-hash.sh meta-amx && \
+    get-git-hash.sh meta-componentlst
