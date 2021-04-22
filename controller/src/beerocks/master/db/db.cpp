@@ -4687,29 +4687,25 @@ bool db::set_node_channel_bw(const std::string &mac, int channel, beerocks::eWiF
         return false;
     }
     if (n->get_type() == beerocks::TYPE_SLAVE) {
-        if (n->hostap != nullptr) {
-            n->hostap->channel_ext_above_primary = channel_ext_above_primary;
-            n->hostap->vht_center_frequency      = vht_center_frequency;
-            auto is_dfs                          = wireless_utils::is_dfs_channel(channel);
-            set_hostap_is_dfs(mac, is_dfs);
-            if (channel >= 1 && channel <= 13) {
-                n->hostap->operating_class = 81;
-            } else if (channel == 14) {
-                n->hostap->operating_class = 82;
-            } else if (channel >= 36 && channel <= 48) {
-                n->hostap->operating_class = 115;
-            } else if (channel >= 52 && channel <= 64) {
-                n->hostap->operating_class = 118;
-            } else if (channel >= 100 && channel <= 140) {
-                n->hostap->operating_class = 121;
-            } else if (channel >= 149 && channel <= 169) {
-                n->hostap->operating_class = 125;
-            } else {
-                LOG(ERROR) << "Unsupported Operating Class for channel=" << channel;
-            }
+        auto hostap = std::dynamic_pointer_cast<node_slave>(n)->hostap;
+        hostap->channel_ext_above_primary = channel_ext_above_primary;
+        hostap->vht_center_frequency      = vht_center_frequency;
+        auto is_dfs                       = wireless_utils::is_dfs_channel(channel);
+        set_hostap_is_dfs(mac, is_dfs);
+        if (channel >= 1 && channel <= 13) {
+            hostap->operating_class = 81;
+        } else if (channel == 14) {
+            hostap->operating_class = 82;
+        } else if (channel >= 36 && channel <= 48) {
+            hostap->operating_class = 115;
+        } else if (channel >= 52 && channel <= 64) {
+            hostap->operating_class = 118;
+        } else if (channel >= 100 && channel <= 140) {
+            hostap->operating_class = 121;
+        } else if (channel >= 149 && channel <= 169) {
+            hostap->operating_class = 125;
         } else {
-            LOG(ERROR) << __FUNCTION__ << " - node " << mac << " is null!";
-            return false;
+            LOG(ERROR) << "Unsupported Operating Class for channel=" << channel;
         }
     }
 
