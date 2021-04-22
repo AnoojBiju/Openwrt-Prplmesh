@@ -48,120 +48,129 @@ std::ostream &operator<<(std::ostream &os, const node &n)
 
 void node::print_node(std::ostream &os) const
 {
+    os << std::endl;
+}
+
+void node_ire_bh_or_client::print_node(std::ostream &os) const
+{
     std::chrono::steady_clock::time_point tCurrTime_steady = std::chrono::steady_clock::now();
-    std::chrono::system_clock::time_point tCurrTime_system = std::chrono::system_clock::now();
     auto node_type                                         = get_type();
 
-    os << std::endl;
-    if ((node_type == beerocks::TYPE_IRE_BACKHAUL) || (node_type == beerocks::TYPE_CLIENT)) {
-        os << " Type: " << ((node_type == beerocks::TYPE_IRE_BACKHAUL) ? "IRE" : "CLIENT")
-           << std::endl
-           << " State: " << state << std::endl
-           << " Name: " << name << std::endl
-           << " Mac: " << mac << std::endl
-           << " Ipv4: " << ipv4 << std::endl
-           << " Manufacturer: " << manufacturer << std::endl
-           << " ParentMac: " << parent_mac << std::endl
-           << " PreviousParentMac: " << previous_parent_mac << std::endl
-           << " Channel: " << int(channel) << std::endl
-           << " Bandwidth : " << int(bandwidth) << std::endl
-           << " Radio Identifier: " << radio_identifier << std::endl
-           << " StaCapabilities: " << std::endl
-           << "   ht_mcs=" << int(capabilities.ht_mcs) << " ht_ss=" << int(capabilities.ht_ss)
-           << "  ht_bw= " << int(capabilities.ht_bw) << std::endl
-           << "   vht_mcs=" << int(capabilities.vht_mcs)
-           << " vht_ss=" << int(capabilities.vht_ss) << "  vht_bw= " << int(capabilities.vht_bw)
-           << std::endl
-           << "   ant_num=" << int(capabilities.ant_num) << " wifi_standard="
-           << (capabilities.wifi_standard == beerocks::STANDARD_AC
-                   ? "ac"
-                   : (capabilities.wifi_standard == beerocks::STANDARD_N ? "n" : "none ac/n"))
-           << std::endl
-           << " Hierarchy: " << int(hierarchy) << std::endl
-           << " State: " << int(state) << std::endl
-           << " Supports5ghz: " << bool(supports_5ghz) << std::endl
-           << " Supports24ghz: " << bool(supports_24ghz) << std::endl
-           << " Statistics:" << std::endl
-           << "   LastUpdate: "
-           << float((std::chrono::duration_cast<std::chrono::duration<double>>(
-                         tCurrTime_steady - stats_info->timestamp))
-                        .count())
-           << "[sec]" << std::endl
-           << "   StatsDelta: " << float(stats_info->stats_delta_ms) / 1000.0 << "[sec]"
-           << std::endl
-           << "   RSSI (RX): " << int(stats_info->rx_rssi) << " [dBm] " << std::endl
-           << "   Packets (RX|TX): " << int(stats_info->rx_packets) << " | "
-           << int(stats_info->tx_packets) << std::endl
-           << "   Bytes (RX|TX): " << int(stats_info->rx_bytes) << " | "
-           << int(stats_info->tx_bytes) << std::endl
-           << "   PhyRate (RX|TX): " << int(stats_info->rx_phy_rate_100kb / 10.0) << " | "
-           << int(stats_info->tx_phy_rate_100kb / 10.0) << " [Mbps]" << std::endl
-           << "   Load (RX|TX): " << int(stats_info->rx_load_percent) << " | "
-           << int(stats_info->tx_load_percent) << " [%]" << std::endl
-           << "   RX Load: [";
+    os << std::endl
+       << " Type: " << ((node_type == beerocks::TYPE_IRE_BACKHAUL) ? "IRE" : "CLIENT")
+       << std::endl
+       << " State: " << state << std::endl
+       << " Name: " << name << std::endl
+       << " Mac: " << mac << std::endl
+       << " Ipv4: " << ipv4 << std::endl
+       << " Manufacturer: " << manufacturer << std::endl
+       << " ParentMac: " << parent_mac << std::endl
+       << " PreviousParentMac: " << previous_parent_mac << std::endl
+       << " Channel: " << int(channel) << std::endl
+       << " Bandwidth : " << int(bandwidth) << std::endl
+       << " Radio Identifier: " << radio_identifier << std::endl
+       << " StaCapabilities: " << std::endl
+       << "   ht_mcs=" << int(capabilities.ht_mcs) << " ht_ss=" << int(capabilities.ht_ss)
+       << "  ht_bw= " << int(capabilities.ht_bw) << std::endl
+       << "   vht_mcs=" << int(capabilities.vht_mcs)
+       << " vht_ss=" << int(capabilities.vht_ss) << "  vht_bw= " << int(capabilities.vht_bw)
+       << std::endl
+       << "   ant_num=" << int(capabilities.ant_num) << " wifi_standard="
+       << (capabilities.wifi_standard == beerocks::STANDARD_AC
+               ? "ac"
+               : (capabilities.wifi_standard == beerocks::STANDARD_N ? "n" : "none ac/n"))
+       << std::endl
+       << " Hierarchy: " << int(hierarchy) << std::endl
+       << " State: " << int(state) << std::endl
+       << " Supports5ghz: " << bool(supports_5ghz) << std::endl
+       << " Supports24ghz: " << bool(supports_24ghz) << std::endl
+       << " Statistics:" << std::endl
+       << "   LastUpdate: "
+       << float((std::chrono::duration_cast<std::chrono::duration<double>>(
+                     tCurrTime_steady - stats_info->timestamp))
+                    .count())
+       << "[sec]" << std::endl
+       << "   StatsDelta: " << float(stats_info->stats_delta_ms) / 1000.0 << "[sec]"
+       << std::endl
+       << "   RSSI (RX): " << int(stats_info->rx_rssi) << " [dBm] " << std::endl
+       << "   Packets (RX|TX): " << int(stats_info->rx_packets) << " | "
+       << int(stats_info->tx_packets) << std::endl
+       << "   Bytes (RX|TX): " << int(stats_info->rx_bytes) << " | "
+       << int(stats_info->tx_bytes) << std::endl
+       << "   PhyRate (RX|TX): " << int(stats_info->rx_phy_rate_100kb / 10.0) << " | "
+       << int(stats_info->tx_phy_rate_100kb / 10.0) << " [Mbps]" << std::endl
+       << "   Load (RX|TX): " << int(stats_info->rx_load_percent) << " | "
+       << int(stats_info->tx_load_percent) << " [%]" << std::endl
+       << "   RX Load: [";
 
-        for (int i = 0; i < 10; ++i) {
-            if (i < stats_info->rx_load_percent / 10) {
-                os << "#";
-            } else {
-                os << " ";
-            }
+    for (int i = 0; i < 10; ++i) {
+        if (i < stats_info->rx_load_percent / 10) {
+            os << "#";
+        } else {
+            os << " ";
         }
-
-        os << "] | TX Load: [";
-
-        for (int i = 0; i < 10; ++i) {
-            if (i < stats_info->tx_load_percent / 10) {
-                os << "#";
-            } else {
-                os << " ";
-            }
-        }
-
-        os << "]" << std::endl
-           << "   LastSeen: "
-           << float((std::chrono::duration_cast<std::chrono::duration<double>>(tCurrTime_steady -
-                                                                               last_seen))
-                        .count())
-           << "[sec]" << std::endl
-           << "   LastStateChange: "
-           << float((std::chrono::duration_cast<std::chrono::duration<double>>(tCurrTime_steady -
-                                                                               last_state_change))
-                        .count())
-           << "[sec]" << std::endl;
-
-        if (node_type == beerocks::TYPE_IRE_BACKHAUL) {
-            os << "   IfaceType: " << utils::get_iface_type_string(iface_type) << std::endl
-               << "   IreHandoff: " << bool(ire_handoff) << std::endl;
-        } else if (node_type == beerocks::TYPE_CLIENT) {
-            os << "   Handoff: " << bool(handoff) << std::endl
-               << "   Confined: " << bool(confined) << std::endl
-               << "   Failed5ghzSteerAttemps: " << int(failed_5ghz_steer_attemps) << std::endl
-               << "   Failed24ghzSteerAttemps: " << int(failed_24ghz_steer_attemps) << std::endl;
-        }
-
-        // persistent db
-        if (node_type == beerocks::TYPE_CLIENT) {
-            auto client_parameters_last_edit_minutes =
-                std::chrono::duration_cast<std::chrono::minutes>(tCurrTime_system -
-                                                                 client_parameters_last_edit)
-                    .count();
-            auto client_time_life_delay_minutes_count = client_time_life_delay_minutes.count();
-
-            os << "Persistent configuration and data:" << std::endl
-               << "   ClientParametersLastEdit: " << (client_parameters_last_edit_minutes / 60)
-               << " hours, " << (client_parameters_last_edit_minutes % 60) << " minutes"
-               << std::endl
-               << "   ClientTimeLifeDelay: " << (client_time_life_delay_minutes_count / 60)
-               << " hours, "
-               << (client_time_life_delay_minutes_count % 60) << " minutes" << std::endl
-               << "   ClientStayOnInitialRadio: " << client_stay_on_initial_radio << std::endl
-               << "   ClientInitialRadio: " << client_initial_radio << std::endl
-               << "   ClientSelectedBands: " << client_selected_bands << std::endl
-               << "   ClientIsUnfriendly: " << client_is_unfriendly << std::endl;
-        }
-
     }
+
+    os << "] | TX Load: [";
+
+    for (int i = 0; i < 10; ++i) {
+        if (i < stats_info->tx_load_percent / 10) {
+            os << "#";
+        } else {
+            os << " ";
+        }
+    }
+
+    os << "]" << std::endl
+       << "   LastSeen: "
+       << float((std::chrono::duration_cast<std::chrono::duration<double>>(tCurrTime_steady -
+                                                                           last_seen))
+                    .count())
+       << "[sec]" << std::endl
+       << "   LastStateChange: "
+       << float((std::chrono::duration_cast<std::chrono::duration<double>>(tCurrTime_steady -
+                                                                           last_state_change))
+                    .count())
+       << "[sec]" << std::endl;
+}
+
+void node_ire_backhaul::print_node(std::ostream &os) const
+{
+    node_ire_bh_or_client::print_node(os);
+
+    os << "   IfaceType: " << utils::get_iface_type_string(iface_type) << std::endl
+       << "   IreHandoff: " << bool(ire_handoff) << std::endl;
+}
+
+void node_client::print_node(std::ostream &os) const
+{
+    node_ire_bh_or_client::print_node(os);
+
+    std::chrono::system_clock::time_point tCurrTime_system = std::chrono::system_clock::now();
+
+    os << "   Handoff: " << bool(handoff) << std::endl
+       << "   Confined: " << bool(confined) << std::endl
+       << "   Failed5ghzSteerAttemps: " << int(failed_5ghz_steer_attemps) << std::endl
+       << "   Failed24ghzSteerAttemps: " << int(failed_24ghz_steer_attemps) << std::endl;
+
+    // persistent db
+    auto client_parameters_last_edit_minutes =
+        std::chrono::duration_cast<std::chrono::minutes>(tCurrTime_system -
+                                                         client_parameters_last_edit)
+            .count();
+    auto client_time_life_delay_minutes_count = client_time_life_delay_minutes.count();
+
+    os << "Persistent configuration and data:" << std::endl
+       << "   ClientParametersLastEdit: " << (client_parameters_last_edit_minutes / 60)
+       << " hours, " << (client_parameters_last_edit_minutes % 60) << " minutes"
+       << std::endl
+       << "   ClientTimeLifeDelay: " << (client_time_life_delay_minutes_count / 60)
+       << " hours, "
+       << (client_time_life_delay_minutes_count % 60) << " minutes" << std::endl
+       << "   ClientStayOnInitialRadio: " << client_stay_on_initial_radio << std::endl
+       << "   ClientInitialRadio: " << client_initial_radio << std::endl
+       << "   ClientSelectedBands: " << client_selected_bands << std::endl
+       << "   ClientIsUnfriendly: " << client_is_unfriendly << std::endl;
 }
 
 void node_slave::print_node(std::ostream &os) const
