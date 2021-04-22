@@ -1057,10 +1057,12 @@ std::set<std::string> db::get_active_hostaps()
     std::set<std::string> ret;
     for (auto node_map : nodes) {
         for (auto kv : node_map) {
-            if (kv.second->get_type() == beerocks::TYPE_SLAVE && kv.second->hostap != nullptr &&
-                kv.second->state == beerocks::STATE_CONNECTED && kv.first == kv.second->mac &&
-                kv.second->hostap->active) {
-                ret.insert(kv.first);
+            if (kv.second->get_type() == beerocks::TYPE_SLAVE) {
+                auto slave = std::dynamic_pointer_cast<node_slave>(kv.second);
+                if (kv.second->state == beerocks::STATE_CONNECTED && kv.first == kv.second->mac &&
+                        slave->hostap->active) {
+                    ret.insert(kv.first);
+                }
             }
         }
     }
@@ -1087,9 +1089,11 @@ std::set<std::string> db::get_all_backhaul_manager_slaves()
     std::set<std::string> ret;
     for (auto node_map : nodes) {
         for (auto kv : node_map) {
-            if (kv.second->get_type() == beerocks::TYPE_SLAVE && kv.second->hostap != nullptr &&
-                kv.first == kv.second->mac && kv.second->hostap->is_backhaul_manager) {
-                ret.insert(kv.first);
+            if (kv.second->get_type() == beerocks::TYPE_SLAVE) {
+                auto slave = std::dynamic_pointer_cast<node_slave>(kv.second);
+                if (kv.first == kv.second->mac && slave->hostap->is_backhaul_manager) {
+                    ret.insert(kv.first);
+                }
             }
         }
     }
