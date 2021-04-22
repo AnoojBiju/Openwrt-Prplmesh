@@ -292,7 +292,7 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
                 vap_id++;
             }
 
-            auto c = database.get_node(radio.first);
+            auto c = database.get_slave_node(radio.first);
             if (!c) {
                 LOG(ERROR) << "No radio node for " << radio.first;
             }
