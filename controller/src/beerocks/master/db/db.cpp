@@ -5411,6 +5411,22 @@ std::shared_ptr<node> db::get_node_verify_type(const std::string &key, beerocks:
     return node;
 }
 
+std::shared_ptr<node_slave> db::get_slave_node(const sMacAddr &mac) {
+    auto node = get_node_verify_type(mac, beerocks::TYPE_SLAVE);
+    if (!node) {
+        return nullptr;
+    }
+    return std::dynamic_pointer_cast<node_slave>(node);
+}
+
+std::shared_ptr<node_slave> db::get_slave_node(const std::string &key) {
+    auto node = get_node_verify_type(key, beerocks::TYPE_SLAVE);
+    if (!node) {
+        return nullptr;
+    }
+    return std::dynamic_pointer_cast<node_slave>(node);
+}
+
 std::shared_ptr<node::radio> db::get_hostap_by_mac(const sMacAddr &mac)
 {
     auto n = get_node(mac);
