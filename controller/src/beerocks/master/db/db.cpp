@@ -5396,6 +5396,21 @@ std::shared_ptr<node> db::get_node_verify_type(const sMacAddr &mac, beerocks::eT
     return node;
 }
 
+std::shared_ptr<node> db::get_node_verify_type(const std::string &key, beerocks::eType type)
+{
+    auto node = get_node(key);
+    if (!node) {
+        LOG(ERROR) << "node not found for key " << key;
+        return nullptr;
+    } else if (node->get_type() != type) {
+        LOG(ERROR) << "node " << key << " type(" << node->get_type() << ") != requested-type("
+                   << type << ")";
+        return nullptr;
+    }
+
+    return node;
+}
+
 std::shared_ptr<node::radio> db::get_hostap_by_mac(const sMacAddr &mac)
 {
     auto n = get_node(mac);
