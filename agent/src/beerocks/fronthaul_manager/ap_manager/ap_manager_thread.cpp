@@ -813,22 +813,28 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
             LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_CANCEL_ACTIVE_CAC_REQUEST failed";
             return false;
         }
+        bool cancel_cac_success = false;
 
-        ap_wlan_hal->cancel_cac(request->cs_params().channel,
-                                utils::convert_bandwidth_to_enum(request->cs_params().bandwidth),
-                                request->cs_params().vht_center_frequency,
-                                request->cs_params().channel_ext_above_primary);
+        if (ap_wlan_hal->cancel_cac(
+                request->cs_params().channel,
+                utils::convert_bandwidth_to_enum(request->cs_params().bandwidth),
+                request->cs_params().vht_center_frequency,
+                request->cs_params().channel_ext_above_primary)) {
+            LOG(ERROR) << "Cancel cac failed!";
+        }
 
-        // polling until enabled or timedout
-
-        // set the point in time that is considered timeout
+        // In order to make sure cac was actually canceled and radio is operational again
+        // we need to poll until radio state is ENABLED or DFS (in case radio is
+        // enabled back on DFS channel) or timeout.
+        // NOTE: bwl implementations default radio_state == UNKNOWN so consider them
+        // also as ENABLED.
         auto timeout =
             std::chrono::steady_clock::now() + std::chrono::seconds(MAX_CANCEL_CAC_TIMEOUT_SEC);
-        bool enabled = false;
-        while (!enabled && std::chrono::steady_clock::now() < timeout) {
+        while (cancel_cac_success && std::chrono::steady_clock::now() < timeout) {
             if (ap_wlan_hal->get_radio_info().radio_state == bwl::eRadioState::ENABLED ||
-                (ap_wlan_hal->get_radio_info().radio_state == bwl::eRadioState::DFS)) {
-                enabled = true;
+                (ap_wlan_hal->get_radio_info().radio_state == bwl::eRadioState::DFS) ||
+                (ap_wlan_hal->get_radio_info().radio_state == bwl::eRadioState::UNKNOWN)) {
+                cancel_cac_success = true;
             } else {
                 LOG(WARNING) << "radio state is still not enabled, waiting for more "
                              << std::chrono::duration_cast<std::chrono::seconds>(
@@ -847,7 +853,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
             LOG(ERROR) << "Failed building cACTION_APMANAGER_HOSTAP_CANCEL_ACTIVE_CAC_RESPONSE!";
             return false;
         }
-        response->success() = enabled;
+        response->success() = cancel_cac_success;
 
         message_com::send_cmdu(slave_socket, cmdu_tx);
 
@@ -1886,7 +1892,8 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
                 }
 
                 auto state = ap_wlan_hal->get_radio_info().radio_state;
-                if ((state > bwl::eRadioState::DISABLED) && (state != bwl::eRadioState::UNKNOWN)) {
+                if ((state != bwl::eRadioState::DISABLED) &&
+                    (state != bwl::eRadioState::UNINITIALIZED)) {
                     LOG(DEBUG) << "Radio is not disabled (state=" << state
                                << "), not forwarding disabled notification.";
                     notify_disabled = false;
