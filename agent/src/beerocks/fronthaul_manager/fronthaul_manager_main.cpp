@@ -269,11 +269,11 @@ int main(int argc, char *argv[])
     LOG_IF(!slave_cmdu_client_factory, FATAL) << "Unable to create CMDU client factory!";
 
     // Create ap_manager
-    son::ap_manager_thread ap_manager(slave_uds_path, fronthaul_iface, *g_logger_ap_mananger,
+    son::ap_manager_thread ap_manager(fronthaul_iface, *g_logger_ap_mananger,
                                       std::move(slave_cmdu_client_factory), timer_manager,
                                       event_loop);
 
-    LOG_IF(!ap_manager.to_be_renamed_to_start(), FATAL) << "Unable to start AP manager!";
+    LOG_IF(!ap_manager.start(), FATAL) << "Unable to start AP manager!";
 
     // Create Monitor
     son::monitor_thread monitor(slave_uds_path, fronthaul_iface, beerocks_slave_conf,
@@ -317,7 +317,7 @@ int main(int argc, char *argv[])
 
     monitor.stop();
 
-    ap_manager.to_be_renamed_to_stop();
+    ap_manager.stop();
 
     return 0;
 }

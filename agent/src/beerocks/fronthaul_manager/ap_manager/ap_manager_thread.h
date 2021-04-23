@@ -9,8 +9,6 @@
 #ifndef _AP_MANAGER_THREAD_H
 #define _AP_MANAGER_THREAD_H
 
-#include <bcl/beerocks_socket_thread.h>
-
 // AP HAL
 #include <bwl/ap_wlan_hal.h>
 
@@ -25,11 +23,10 @@
 #include <set>
 
 namespace son {
-class ap_manager_thread : public beerocks::socket_thread {
+class ap_manager_thread {
 
 public:
-    ap_manager_thread(const std::string &slave_uds_, const std::string &iface,
-                      beerocks::logging &logger,
+    ap_manager_thread(const std::string &iface, beerocks::logging &logger,
                       std::unique_ptr<beerocks::CmduClientFactory> slave_cmdu_client_factory,
                       std::shared_ptr<beerocks::TimerManager> timer_manager,
                       std::shared_ptr<beerocks::EventLoop> event_loop);
@@ -39,16 +36,14 @@ public:
      *
      * @return true on success and false otherwise.
      */
-    bool to_be_renamed_to_start();
+    bool start();
 
     /**
      * @brief Stops AP manager.
      *
      * @return true on success and false otherwise.
      */
-    bool to_be_renamed_to_stop();
-
-    virtual bool init() override;
+    bool stop();
 
     enum class eApManagerState {
         INIT,
@@ -71,16 +66,6 @@ public:
         std::chrono::steady_clock::time_point timeout;
     };
 
-    enum eThreadErrors : uint32_t {
-        APMANAGER_THREAD_ERROR_NO_ERROR            = 0,
-        APMANAGER_THREAD_ERROR_HOSTAP_DISABLED     = 1,
-        APMANAGER_THREAD_ERROR_ATTACH_FAIL         = 2,
-        APMANAGER_THREAD_ERROR_SUDDEN_DETACH       = 3,
-        APMANAGER_THREAD_ERROR_HAL_DISCONNECTED    = 4,
-        APMANAGER_THREAD_ERROR_CAC_TIMEOUT         = 5,
-        APMANAGER_THREAD_ERROR_REPORT_PROCESS_FAIL = 6,
-    };
-
     eApManagerState get_state() const { return m_state; }
 
     /**
@@ -89,13 +74,6 @@ public:
      * @return true if the radio is ZWDFS radio, otherwise false. 
      */
     bool zwdfs_ap() const;
-
-protected:
-    virtual bool handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx) override;
-    virtual void after_select(bool timeout) override;
-    virtual void on_thread_stop() override;
-    virtual bool socket_disconnected(Socket *sd) override;
-    virtual std::string print_cmdu_types(const beerocks::message::sUdsHeader *cmdu_header) override;
 
 private:
     /**
@@ -123,13 +101,10 @@ private:
     bool ap_manager_fsm(bool &continue_processing);
 
     bool hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr);
-    // bool hostap_handle_event(std::string& event, void* event_obj);
     void handle_hostapd_attached();
     bool handle_ap_enabled(int vap_id);
     void fill_cs_params(beerocks_message::sApChannelSwitch &params);
-    void stop_ap_manager_thread();
     bool create_ap_wlan_hal();
-    void connect_to_agent();
     void send_heartbeat();
     void send_steering_return_status(beerocks_message::eActionOp_APMANAGER ActionOp,
                                      int32_t status);
@@ -142,7 +117,16 @@ private:
         (beerocks::BSS_STEER_DISASSOC_TIMER_MS / BEACON_TRANSMIT_TIME_MS);
     static constexpr uint8_t BSS_STEER_VALID_INT_BTT = 2; // 200ms
 
-    std::string slave_uds;
+    /**
+     * Buffer to hold CMDU to be transmitted.
+     */
+    uint8_t m_tx_buffer[beerocks::message::MESSAGE_BUFFER_LENGTH];
+
+    /**
+     * CMDU to be transmitted.
+     */
+    ieee1905_1::CmduMessageTx cmdu_tx;
+
     std::string m_iface;
     beerocks::logging &m_logger;
     bool acs_enabled;
@@ -161,11 +145,6 @@ private:
 
     std::list<pending_disable_vap_t> pending_disable_vaps;
 
-    /** 
-     * File descriptor of the socket connection established to the CMDU server in slave. 
-     */
-    int m_slave_fd = beerocks::net::FileDescriptor::invalid_descriptor;
-
     /**
      * File descriptor to the external events queue.
      */
@@ -181,7 +160,6 @@ private:
     std::shared_ptr<bwl::ap_wlan_hal> ap_wlan_hal;
 
     std::chrono::steady_clock::time_point next_heartbeat_notification_timestamp;
-    std::chrono::steady_clock::time_point next_tx_polling_timestamp;
 
     const uint8_t HEARTBEAT_NOTIFICATION_DELAY_SEC = 1;
 
@@ -203,12 +181,6 @@ private:
      * Application event loop used by the process to wait for I/O events.
      */
     std::shared_ptr<beerocks::EventLoop> m_event_loop;
-
-    /**
-     * Map of file descriptors to pointers to Socket class instances.
-     * This member variable is temporary and will be removed at the end of PPM-966
-     */
-    std::unordered_map<int, Socket *> m_fd_to_socket_map;
 
     /**
      * File descriptor of the timer to run the Finite State Machine.
