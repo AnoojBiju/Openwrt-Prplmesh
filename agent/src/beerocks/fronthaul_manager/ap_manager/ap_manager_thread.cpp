@@ -11,7 +11,6 @@
 #include <bcl/beerocks_string_utils.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
-#include <bcl/network/sockets.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <bcl/transaction.h>
 #include <bpl/bpl_cfg.h>
@@ -332,11 +331,11 @@ using namespace beerocks;
 using namespace son;
 
 ap_manager_thread::ap_manager_thread(
-    const std::string &slave_uds_, const std::string &iface, beerocks::logging &logger,
+    const std::string &iface, beerocks::logging &logger,
     std::unique_ptr<beerocks::CmduClientFactory> slave_cmdu_client_factory,
     std::shared_ptr<beerocks::TimerManager> timer_manager,
     std::shared_ptr<beerocks::EventLoop> event_loop)
-    : socket_thread(), m_logger(logger),
+    : cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer)), m_logger(logger),
       m_slave_cmdu_client_factory(std::move(slave_cmdu_client_factory)),
       m_timer_manager(timer_manager), m_event_loop(event_loop)
 {
@@ -344,14 +343,8 @@ ap_manager_thread::ap_manager_thread(
     LOG_IF(!m_timer_manager, FATAL) << "Timer manager is a null pointer!";
     LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
 
-    thread_name = "ap_manager";
-    logger.set_thread_name(thread_name);
-    slave_uds = slave_uds_;
-    m_iface   = iface;
-    set_select_timeout(SELECT_TIMEOUT_MSC);
+    m_iface = iface;
 }
-
-void ap_manager_thread::on_thread_stop() { stop_ap_manager_thread(); }
 
 bool ap_manager_thread::create_ap_wlan_hal()
 {
@@ -379,8 +372,7 @@ bool ap_manager_thread::create_ap_wlan_hal()
     return true;
 }
 
-// The name of this method is temporary and will be renamed at the end of PPM-966.
-bool ap_manager_thread::to_be_renamed_to_start()
+bool ap_manager_thread::start()
 {
     if (m_slave_client) {
         LOG(ERROR) << "AP manager is already started";
@@ -445,8 +437,7 @@ bool ap_manager_thread::to_be_renamed_to_start()
     return true;
 }
 
-// The name of this method is temporary and will be renamed at the end of PPM-966.
-bool ap_manager_thread::to_be_renamed_to_stop()
+bool ap_manager_thread::stop()
 {
     bool ok = true;
 
@@ -478,39 +469,9 @@ bool ap_manager_thread::to_be_renamed_to_stop()
     return ok;
 }
 
-bool ap_manager_thread::init()
-{
-    stop_ap_manager_thread();
-    return true;
-}
-
 bool ap_manager_thread::send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx)
 {
     return m_slave_client->send_cmdu(cmdu_tx);
-}
-
-void ap_manager_thread::connect_to_agent()
-{
-    if (m_slave_fd != beerocks::net::FileDescriptor::invalid_descriptor) {
-        LOG(WARNING) << "Agent socket is already open";
-        return;
-    }
-
-    Socket *slave_socket = new SocketClient(slave_uds);
-    std::string err      = slave_socket->getError();
-    if (!err.empty()) {
-        LOG(ERROR) << "slave_socket: " << err;
-        delete slave_socket;
-        return;
-    }
-
-    add_socket(slave_socket);
-
-    // Get the file descriptor for the socket just created
-    m_slave_fd = slave_socket->getSocketFd();
-
-    // Save the pair { fd x Socket* } for later retrieval
-    m_fd_to_socket_map[m_slave_fd] = slave_socket;
 }
 
 bool ap_manager_thread::ap_manager_fsm(bool &continue_processing)
@@ -562,7 +523,6 @@ bool ap_manager_thread::ap_manager_fsm(bool &continue_processing)
 
         if (attach_state == bwl::HALState::Failed) {
             LOG(ERROR) << "Failed attaching to WLAN HAL";
-            thread_last_error_code = APMANAGER_THREAD_ERROR_ATTACH_FAIL;
             return false;
         }
 
@@ -606,7 +566,6 @@ bool ap_manager_thread::ap_manager_fsm(bool &continue_processing)
                 << "No external event FD is available, periodic polling will be done instead.";
         } else {
             LOG(ERROR) << "Invalid external event file descriptor: " << m_ap_hal_ext_events;
-            thread_last_error_code = APMANAGER_THREAD_ERROR_ATTACH_FAIL;
             return false;
         }
 
@@ -643,7 +602,6 @@ bool ap_manager_thread::ap_manager_fsm(bool &continue_processing)
             LOG(DEBUG) << "Internal events queue with fd = " << m_ap_hal_int_events;
         } else {
             LOG(ERROR) << "Invalid internal event file descriptor: " << m_ap_hal_int_events;
-            thread_last_error_code = APMANAGER_THREAD_ERROR_ATTACH_FAIL;
             return false;
         }
 
@@ -668,7 +626,6 @@ bool ap_manager_thread::ap_manager_fsm(bool &continue_processing)
             // to process any available periodically
             if (!ap_wlan_hal->process_ext_events()) {
                 LOG(ERROR) << "process_ext_events() failed!";
-                thread_last_error_code = APMANAGER_THREAD_ERROR_REPORT_PROCESS_FAIL;
                 return false;
             }
         }
@@ -711,80 +668,6 @@ bool ap_manager_thread::ap_manager_fsm(bool &continue_processing)
     default:
         break;
     }
-
-    return true;
-}
-
-void ap_manager_thread::after_select(bool timeout)
-{
-    // Continue only if the Agent is connected, otherwise connect to it.
-    if (m_slave_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
-        connect_to_agent();
-        return;
-    }
-
-    bool continue_processing = false;
-    do {
-        if (!ap_manager_fsm(continue_processing)) {
-            stop_ap_manager_thread();
-        }
-    } while (continue_processing);
-}
-
-bool ap_manager_thread::socket_disconnected(Socket *sd)
-{
-    if (!sd) {
-        LOG(ERROR) << "socket is nullptr";
-        return false;
-    }
-
-    // Get the file descriptor for the given socket instance
-    int fd = sd->getSocketFd();
-
-    if (fd == m_slave_fd) {
-        LOG(ERROR) << "slave socket disconnected!";
-        stop_ap_manager_thread();
-        return false;
-    } else if (fd == m_ap_hal_ext_events) {
-        LOG(ERROR) << "ap_hal_ext_events disconnected!";
-        thread_last_error_code = APMANAGER_THREAD_ERROR_HAL_DISCONNECTED;
-        stop_ap_manager_thread();
-        return false;
-    } else if (fd == m_ap_hal_int_events) {
-        LOG(ERROR) << "ap_hal_int_events socket disconnected!";
-        thread_last_error_code = APMANAGER_THREAD_ERROR_HAL_DISCONNECTED;
-        stop_ap_manager_thread();
-        return false;
-    }
-
-    return true;
-}
-
-std::string ap_manager_thread::print_cmdu_types(const message::sUdsHeader *cmdu_header)
-{
-    return message_com::print_cmdu_types(cmdu_header);
-}
-
-// This method is temporary and will be removed at the end of PPM-966.
-// It is intended to allow the temporary coexistence of Socket* and file descriptors to refer to
-// accepted sockets.
-bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
-{
-    if (!sd) {
-        LOG(ERROR) << "socket is nullptr";
-        return false;
-    }
-
-    // Get the file descriptor for the given socket instance
-    int fd = sd->getSocketFd();
-
-    if (m_slave_fd != fd) {
-        LOG(ERROR) << "m_slave_fd != fd";
-        return false;
-    }
-
-    // Call the method with the new signature
-    handle_cmdu(cmdu_rx);
 
     return true;
 }
@@ -1163,7 +1046,8 @@ void ap_manager_thread::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         ap_wlan_hal->sta_deny(sta_mac, bssid);
 
         // Check if validity period is set then add it to the "disallowed client timeouts" list
-        // This list will be polled in after_select()
+        // This list will be polled in ap_manager_fsm() while in operational state through method
+        // `allow_expired_clients()`
         // When validity period is timed out sta_allow will be called.
         if (request->validity_period_sec()) {
 
@@ -2129,7 +2013,6 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
     case Event::Interface_Disabled: {
 
         LOG(ERROR) << "Interface_Disabled event!";
-        thread_last_error_code = APMANAGER_THREAD_ERROR_HOSTAP_DISABLED;
         m_state = eApManagerState::TERMINATED;
 
     } break;
@@ -2399,46 +2282,6 @@ void ap_manager_thread::handle_hostapd_attached()
 
     // Send CMDU
     send_cmdu(cmdu_tx);
-}
-
-void ap_manager_thread::stop_ap_manager_thread()
-{
-    LOG(TRACE) << __func__;
-
-    if (ap_wlan_hal) {
-        ap_wlan_hal->detach();
-        ap_wlan_hal.reset();
-    }
-
-    if (m_ap_hal_ext_events != beerocks::net::FileDescriptor::invalid_descriptor) {
-        remove_socket(m_fd_to_socket_map[m_ap_hal_ext_events]);
-        delete m_fd_to_socket_map[m_ap_hal_ext_events];
-        m_fd_to_socket_map[m_ap_hal_ext_events] = nullptr;
-
-        m_ap_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
-    }
-
-    if (m_ap_hal_int_events != beerocks::net::FileDescriptor::invalid_descriptor) {
-        remove_socket(m_fd_to_socket_map[m_ap_hal_int_events]);
-        delete m_fd_to_socket_map[m_ap_hal_int_events];
-        m_fd_to_socket_map[m_ap_hal_int_events] = nullptr;
-
-        m_ap_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
-    }
-
-    if (m_slave_fd != beerocks::net::FileDescriptor::invalid_descriptor) {
-        remove_socket(m_fd_to_socket_map[m_slave_fd]);
-        m_fd_to_socket_map[m_slave_fd]->closeSocket();
-
-        delete m_fd_to_socket_map[m_slave_fd];
-        m_fd_to_socket_map[m_slave_fd] = nullptr;
-
-        m_slave_fd = beerocks::net::FileDescriptor::invalid_descriptor;
-    }
-
-    m_state = eApManagerState::INIT;
-
-    should_stop = true;
 }
 
 void ap_manager_thread::send_heartbeat()
