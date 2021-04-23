@@ -51,6 +51,14 @@ build_prplmesh() {
     build_dir="$1"
     mkdir -p "$build_dir"
     mkdir -p "${CACHE_DIR}/downloads" "${CACHE_DIR}/sstate-cache"
+    # Sometimes, the git cache gets corrupted: the directory is there, but it's not a git directory.
+    # Run fsck on all git directories to overcome this.
+    for dir in "${CACHE_DIR}/downloads/git2"/*/; do
+        if ! (cd "$dir"; git rev-parse --is-inside-work-tree >/dev/null 2>&1); then
+            echo "Remove broken git cache $dir"
+            rm -rf "$dir"
+        fi
+    done
     # Make sure prplmesh is rebuilt
     rm -f "${CACHE_DIR}/"sstate-cache/*/sstate:prplmesh*
     docker run --rm --user "$(id -u):$(id -g)" \
