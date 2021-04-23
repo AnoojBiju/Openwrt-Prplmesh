@@ -2123,10 +2123,10 @@ bool db::update_node_failed_24ghz_steer_attempt(const std::string &mac)
 
 bool db::can_start_client_steering(const std::string &sta_mac, const std::string &target_bssid)
 {
-    auto sta        = get_node(sta_mac);
+    auto sta        = get_client_node(tlvf::mac_from_string(sta_mac));
     auto target_bss = get_node(target_bssid);
 
-    if (!sta || get_node_type(sta_mac) != TYPE_CLIENT) {
+    if (!sta) {
         LOG(ERROR) << "Device with mac " << sta_mac << " is not a station.";
         return false;
     }
@@ -5120,9 +5120,9 @@ void db::disable_periodic_link_metrics_requests()
 bool db::dm_set_sta_link_metrics(const sMacAddr &sta_mac, uint32_t downlink_est_mac_data_rate,
                                  uint32_t uplink_est_mac_data_rate, uint8_t signal_strength)
 {
-    auto sta_node = get_node(sta_mac);
+    auto sta_node = get_client_node(sta_mac);
 
-    if (!sta_node || sta_node->get_type() != TYPE_CLIENT) {
+    if (!sta_node) {
         LOG(ERROR) << "Fail to get station node with mac: " << sta_mac;
         return {};
     }
@@ -6628,9 +6628,9 @@ bool db::dm_remove_interface_neighbor(const std::string &dm_path)
 bool db::dm_set_sta_extended_link_metrics(
     const sMacAddr &sta_mac, const wfa_map::tlvAssociatedStaExtendedLinkMetrics::sMetrics &metrics)
 {
-    auto sta_node = get_node(sta_mac);
+    auto sta_node = get_client_node(sta_mac);
 
-    if (!sta_node || sta_node->get_type() != TYPE_CLIENT) {
+    if (!sta_node) {
         LOG(ERROR) << "Failed to get station node with mac: " << sta_mac;
         return false;
     }
@@ -6678,9 +6678,9 @@ bool db::dm_set_sta_extended_link_metrics(
 
 bool db::dm_set_sta_traffic_stats(const sMacAddr &sta_mac, sAssociatedStaTrafficStats &stats)
 {
-    auto sta_node = get_node(sta_mac);
+    auto sta_node = get_client_node(sta_mac);
 
-    if (!sta_node || sta_node->get_type() != TYPE_CLIENT) {
+    if (!sta_node) {
         LOG(ERROR) << "Failed to get station node with mac: " << sta_mac;
         return false;
     }
@@ -6759,9 +6759,9 @@ bool db::dm_clear_sta_stats(const sMacAddr &sta_mac)
 
 bool db::dm_remove_sta(const sMacAddr &sta_mac)
 {
-    auto sta_node = get_node(sta_mac);
+    auto sta_node = get_client_node(sta_mac);
 
-    if (!sta_node || sta_node->get_type() != TYPE_CLIENT) {
+    if (!sta_node) {
         LOG(ERROR) << "Failed to get station node with mac: " << sta_mac;
         return false;
     }
