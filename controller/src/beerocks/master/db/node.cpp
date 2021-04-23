@@ -23,7 +23,6 @@ node::node(beerocks::eType type_, const std::string &mac_)
     }
     m_sta_5ghz_capabilities.valid  = false;
     m_sta_24ghz_capabilities.valid = false;
-    client_initial_radio           = net::network_utils::ZERO_MAC;
 }
 
 namespace son {
@@ -506,6 +505,10 @@ node_slave::node_slave(const std::string &mac): node(beerocks::eType::TYPE_SLAVE
     hostap             = std::make_shared<radio>();
     hostap->stats_info = std::make_shared<radio::ap_stats_params>();
 };
+
+node_client::node_client(const std::string &mac):
+   node_ire_bh_or_client(beerocks::eType::TYPE_CLIENT, mac),
+   client_initial_radio(net::network_utils::ZERO_MAC) {};
 
 std::shared_ptr<node> son::create_node(beerocks::eType type_, const std::string &mac) {
     switch(type_) {
