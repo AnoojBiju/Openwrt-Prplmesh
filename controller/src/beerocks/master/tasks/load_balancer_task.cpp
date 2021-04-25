@@ -125,7 +125,7 @@ void load_balancer_task::work()
         int ap_total_duration_ms =
             database.get_hostap_stats_measurement_duration(most_loaded_radio_mac);
         int ap_sta_load_percent =
-            database.get_hostap_total_client_tx_load_percent(most_loaded_hostap) +
+            database.get_hostap_total_client_tx_load_percent(most_loaded_radio_mac) +
             database.get_hostap_total_client_rx_load_percent(most_loaded_hostap);
         int ap_tx_bytes = database.get_hostap_total_sta_tx_bytes(most_loaded_radio_mac);
         int ap_rx_bytes = database.get_hostap_total_sta_rx_bytes(most_loaded_radio_mac);
