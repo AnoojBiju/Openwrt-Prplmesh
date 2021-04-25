@@ -2075,7 +2075,7 @@ bool db::set_hostap_band_capability(const sMacAddr &mac, beerocks::eRadioBandCap
     return true;
 }
 
-beerocks::eRadioBandCapability db::get_hostap_band_capability(const std::string &mac)
+beerocks::eRadioBandCapability db::get_hostap_band_capability(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2091,7 +2091,7 @@ beerocks::eRadioBandCapability db::get_hostap_band_capability(const std::string 
 bool db::capability_check(const std::string &mac, int channel)
 {
     auto band       = wireless_utils::which_subband(channel);
-    auto capability = get_hostap_band_capability(mac);
+    auto capability = get_hostap_band_capability(tlvf::mac_from_string(mac));
     if (band == beerocks::SUBBAND_UNKNOWN || capability == beerocks::SUBBAND_CAPABILITY_UNKNOWN) {
         LOG(ERROR) << "band or capability unknown!!";
         return false;
