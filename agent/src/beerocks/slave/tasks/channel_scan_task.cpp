@@ -157,6 +157,7 @@ void ChannelScanTask::work()
         case eState::WAIT_FOR_SCAN_TRIGGERED: {
             if (current_radio_scan->timeout < std::chrono::system_clock::now()) {
                 LOG(ERROR) << "Reached timeout for PENDING_TRIGGER";
+                set_radio_scan_status(current_radio_scan, eScanStatus::SCAN_NOT_COMPLETED);
                 FSM_MOVE_STATE(current_radio_scan, eState::SCAN_FAILED);
             }
             break;
@@ -164,6 +165,7 @@ void ChannelScanTask::work()
         case eState::WAIT_FOR_RESULTS_READY: {
             if (current_radio_scan->timeout < std::chrono::system_clock::now()) {
                 LOG(ERROR) << "Reached timeout for WAIT_FOR_RESULTS_READY";
+                set_radio_scan_status(current_radio_scan, eScanStatus::SCAN_NOT_COMPLETED);
                 FSM_MOVE_STATE(current_radio_scan, eState::SCAN_FAILED);
             }
             break;
@@ -171,6 +173,7 @@ void ChannelScanTask::work()
         case eState::WAIT_FOR_RESULTS_DUMP: {
             if (current_radio_scan->timeout < std::chrono::system_clock::now()) {
                 LOG(ERROR) << "Reached timeout for WAIT_FOR_RESULTS_DUMP";
+                set_radio_scan_status(current_radio_scan, eScanStatus::SCAN_NOT_COMPLETED);
                 FSM_MOVE_STATE(current_radio_scan, eState::SCAN_FAILED);
             }
             break;
@@ -336,6 +339,8 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
 
         if (!response->success()) {
             LOG(ERROR) << "Failed to trigger scan on radio (" << src_mac << ")";
+            // Expand the response reason to give a better scan status in the report as part of PPM-1324.
+            set_radio_scan_status(m_current_scan_info.radio_scan, eScanStatus::SCAN_NOT_COMPLETED);
             FSM_MOVE_STATE(m_current_scan_info.radio_scan, eState::SCAN_FAILED);
             return true;
         }
@@ -467,6 +472,7 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
             return false;
         }
 
+        set_radio_scan_status(m_current_scan_info.radio_scan, eScanStatus::SCAN_ABORTED);
         FSM_MOVE_STATE(m_current_scan_info.radio_scan, eState::SCAN_ABORTED);
         break;
     }
@@ -565,6 +571,20 @@ bool ChannelScanTask::trigger_next_radio_scan(const std::shared_ptr<sScanRequest
     return true;
 }
 
+bool ChannelScanTask::set_radio_scan_status(const std::shared_ptr<sRadioScan> radio_scan_info,
+                                            const eScanStatus status)
+{
+    // If a scan fails because of an Abort notification, a timeout event, or any other similar failure, each channel's status needs to be updated.
+    // Because we currently have no way to know which channel failed, we set the status for all the channels.
+    // Later, when retrieving the results for the report, we will check each channel for their results' status and add them to the report accordingly.
+    for (auto &op_cls : radio_scan_info->operating_classes) {
+        for (auto &chan_elem : op_cls.channel_list) {
+            chan_elem.scan_status = status;
+        }
+    }
+    return true;
+}
+
 bool ChannelScanTask::trigger_radio_scan(const std::string &radio_iface,
                                          const std::shared_ptr<sRadioScan> radio_scan_info)
 {
@@ -577,6 +597,7 @@ bool ChannelScanTask::trigger_radio_scan(const std::string &radio_iface,
     auto radio = db->radio(radio_iface);
     if (!radio) {
         LOG(ERROR) << "Failed to get radio info from Agent DB for " << radio_iface;
+        set_radio_scan_status(radio_scan_info, eScanStatus::SCAN_NOT_COMPLETED);
         return false;
     }
 
@@ -584,6 +605,7 @@ bool ChannelScanTask::trigger_radio_scan(const std::string &radio_iface,
         beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST>(m_cmdu_tx);
     if (!trigger_request) {
         LOG(ERROR) << "Failed to build cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_REQUEST";
+        set_radio_scan_status(radio_scan_info, eScanStatus::SCAN_NOT_COMPLETED);
         return false;
     }
 
@@ -639,7 +661,11 @@ bool ChannelScanTask::trigger_radio_scan(const std::string &radio_iface,
                              trigger_request->scan_params().channel_pool_size);
 
     // Send CMDU
-    return m_btl_ctx.send_cmdu(fronthaul_sd, m_cmdu_tx);
+    if (!m_btl_ctx.send_cmdu(fronthaul_sd, m_cmdu_tx)) {
+        set_radio_scan_status(radio_scan_info, eScanStatus::SCAN_NOT_COMPLETED);
+        return false;
+    }
+    return true;
 }
 
 bool ChannelScanTask::store_radio_scan_result(const std::shared_ptr<sScanRequest> request,

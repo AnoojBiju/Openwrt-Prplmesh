@@ -213,6 +213,17 @@ private:
     /* Radio Scan handling helper functions */
 
     /**
+     * @brief Sets the status for the individual channels within a given scan.
+     * 
+     * @param radio_scan_info A shared pointer to the radio scan info.
+     * @param status The new scan status that needs to be set.
+     * 
+     * @return True if the operation was successful, false otherwise.
+     */
+    bool set_radio_scan_status(const std::shared_ptr<sRadioScan> radio_scan_info,
+                               const eScanStatus status);
+
+    /**
      * @brief Send a Trigger Scan Request CMDU to the monitor.
      * 
      * @param radio_iface  Iface name of the radio to which we want to send the CMDU.
