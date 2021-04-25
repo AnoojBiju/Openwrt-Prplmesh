@@ -4880,7 +4880,7 @@ bool db::get_node_channel_ext_above_secondary(const std::string &mac)
     return n->channel_ext_above_secondary;
 }
 
-bool db::get_hostap_channel_ext_above_primary(const std::string &hostap_mac)
+bool db::get_hostap_channel_ext_above_primary(const sMacAddr &hostap_mac)
 {
     auto n = get_node(hostap_mac);
     if (!n) {

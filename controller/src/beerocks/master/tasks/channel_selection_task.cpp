@@ -1208,7 +1208,8 @@ void channel_selection_task::ccl_fill_active_channels()
         auto channel                     = database.get_node_channel(hostap);
         auto bw                          = database.get_node_bw(hostap);
         auto channel_ext_above_secondary = database.get_node_channel_ext_above_secondary(hostap);
-        auto channel_ext_above_primary   = database.get_hostap_channel_ext_above_primary(hostap);
+        auto channel_ext_above_primary =
+            database.get_hostap_channel_ext_above_primary(tlvf::mac_from_string(hostap));
         TASK_LOG(DEBUG) << "hostap = " << hostap << " channel = " << int(channel)
                         << " bw = " << int(bw)
                         << " channel_ext_above_secondary = " << int(channel_ext_above_secondary);
