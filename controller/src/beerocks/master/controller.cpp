@@ -3277,7 +3277,7 @@ bool Controller::handle_cmdu_control_message(
             return false;
         }
         auto &ap_stats = std::get<1>(ap_stats_tuple);
-        database.set_hostap_stats_info(hostap_mac, &ap_stats);
+        database.set_hostap_stats_info(tlvf::mac_from_string(hostap_mac), &ap_stats);
         break;
     }
     case beerocks_message::ACTION_CONTROL_HOSTAP_LOAD_MEASUREMENT_NOTIFICATION: {
