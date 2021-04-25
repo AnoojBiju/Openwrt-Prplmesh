@@ -281,8 +281,6 @@ bool ap_wlan_hal_dummy::switch_channel(int chan, int bw, int vht_center_frequenc
 bool ap_wlan_hal_dummy::cancel_cac(int chan, beerocks::eWiFiBandwidth bw, int vht_center_frequency,
                                    int secondary_chan)
 {
-    disable();
-    enable();
     return set_channel(chan, bw, vht_center_frequency);
 }
 
