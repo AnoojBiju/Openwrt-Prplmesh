@@ -791,7 +791,8 @@ void channel_selection_task::work()
         auto vec_channels = wireless_utils::get_5g_20MHz_channels(
             beerocks::eWiFiBandwidth(dfs_channel_available->params.bandwidth),
             dfs_channel_available->params.vht_center_frequency);
-        database.set_supported_channel_radar_affected(hostap_mac, vec_channels, false);
+        database.set_supported_channel_radar_affected(tlvf::mac_from_string(hostap_mac),
+                                                      vec_channels, false);
         FSM_MOVE_STATE(GOTO_IDLE);
         break;
     }
@@ -851,7 +852,8 @@ void channel_selection_task::work()
                 prev_bandwidth, prev_vht_center_frequency,
                 beerocks::eWiFiBandwidth(csa_event->cs_params.bandwidth),
                 csa_event->cs_params.vht_center_frequency);
-            database.set_supported_channel_radar_affected(hostap_mac, vec_channels, true);
+            database.set_supported_channel_radar_affected(tlvf::mac_from_string(hostap_mac),
+                                                          vec_channels, true);
             FSM_MOVE_STATE(ACTIVATE_SLAVE);
             break;
         }

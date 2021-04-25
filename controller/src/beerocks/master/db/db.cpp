@@ -2755,7 +2755,7 @@ bool db::set_radar_hit_stats(const sMacAddr &mac, uint8_t channel, uint8_t bw, b
     return true;
 }
 
-bool db::set_supported_channel_radar_affected(const std::string &mac,
+bool db::set_supported_channel_radar_affected(const sMacAddr &mac,
                                               const std::vector<uint8_t> &channels, bool affected)
 {
     std::shared_ptr<node> n = get_node(mac);
