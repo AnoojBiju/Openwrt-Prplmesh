@@ -4514,7 +4514,7 @@ bool db::commit_persistent_db_changes()
 
 bool db::is_commit_to_persistent_db_required() { return persistent_db_changes_made; }
 
-int db::get_hostap_stats_measurement_duration(const std::string &mac)
+int db::get_hostap_stats_measurement_duration(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {

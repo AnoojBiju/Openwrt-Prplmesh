@@ -1412,7 +1412,7 @@ public:
     bool commit_persistent_db_changes();
     bool is_commit_to_persistent_db_required();
 
-    int get_hostap_stats_measurement_duration(const std::string &mac);
+    int get_hostap_stats_measurement_duration(const sMacAddr &mac);
     std::chrono::steady_clock::time_point get_node_stats_info_timestamp(const std::string &mac);
     std::chrono::steady_clock::time_point get_hostap_stats_info_timestamp(const std::string &mac);
 
