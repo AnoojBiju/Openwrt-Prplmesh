@@ -1938,7 +1938,7 @@ int db::get_hostap_tx_power(const sMacAddr &mac)
     return n->hostap->tx_power;
 }
 
-bool db::set_hostap_supported_channels(const std::string &mac,
+bool db::set_hostap_supported_channels(const sMacAddr &mac,
                                        beerocks::message::sWifiChannel *channels, int length)
 {
     auto n = get_node(mac);
@@ -2051,7 +2051,8 @@ bool db::add_hostap_supported_operating_class(const std::string &radio_mac, uint
     // Set values for Controller.Network.Device.Radio.Capabilities.OperatingClasses
     dm_add_ap_operating_classes(radio_mac, tx_power, operating_class, non_operable_channels);
 
-    set_hostap_supported_channels(radio_mac, &supported_channels[0], supported_channels.size());
+    set_hostap_supported_channels(tlvf::mac_from_string(radio_mac), &supported_channels[0],
+                                  supported_channels.size());
     // dump new supported channels state
     // LOG(DEBUG) << "New supported channels for hostap" << radio_mac << " operating class "
     //            << int(operating_class) << std::endl
