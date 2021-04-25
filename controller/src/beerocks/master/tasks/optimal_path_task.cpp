@@ -1124,8 +1124,7 @@ void optimal_path_task::work()
             hostap_params.is_5ghz = database.is_node_5ghz(hostap);
 
             if ((hostap_params.is_5ghz && !database.get_node_5ghz_support(sta_mac)) ||
-                (!hostap_params.is_5ghz && !database.get_node_24ghz_support(sta_mac)) ||
-                database.get_hostap_exclude_from_steering_flag(hostap)) {
+                (!hostap_params.is_5ghz && !database.get_node_24ghz_support(sta_mac))) {
                 TASK_LOG(DEBUG) << "AP candidate and STA must support same band | SKIP " << hostap;
                 continue;
             }
@@ -1444,7 +1443,6 @@ bool optimal_path_task::check_if_sta_can_steer_to_ap(const std::string &ap_mac)
 
     if ((hostap_is_5ghz && !database.get_node_5ghz_support(sta_mac)) ||
         (!hostap_is_5ghz && !database.get_node_24ghz_support(sta_mac)) ||
-        (database.get_hostap_exclude_from_steering_flag(ap_mac)) ||
         (!database.settings_client_band_steering() && (sta_is_5ghz != hostap_is_5ghz))) {
         TASK_LOG(DEBUG) << "sta " << sta_mac << " cannot steer to hostap " << ap_mac << std::endl
                         << "  hostap_is_5ghz = " << hostap_is_5ghz << std::endl
@@ -1453,8 +1451,6 @@ bool optimal_path_task::check_if_sta_can_steer_to_ap(const std::string &ap_mac)
                         << std::endl
                         << "  node_24ghz_support = " << database.get_node_24ghz_support(sta_mac)
                         << std::endl
-                        << "  hostap_exclude_from_steering = "
-                        << database.get_hostap_exclude_from_steering_flag(ap_mac) << std::endl
                         << "  client_band_steering = " << database.settings_client_band_steering();
         return false;
     }
