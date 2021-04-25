@@ -2561,7 +2561,7 @@ bool db::set_hostap_repeater_mode_flag(const sMacAddr &mac, bool flag)
     return true;
 }
 
-bool db::set_hostap_iface_name(const std::string &mac, const std::string &iface_name)
+bool db::set_hostap_iface_name(const sMacAddr &mac, const std::string &iface_name)
 {
     auto n = get_node(mac);
     if (!n) {
