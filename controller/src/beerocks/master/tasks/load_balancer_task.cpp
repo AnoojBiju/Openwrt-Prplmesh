@@ -127,7 +127,7 @@ void load_balancer_task::work()
             database.get_hostap_total_client_tx_load_percent(most_loaded_hostap) +
             database.get_hostap_total_client_rx_load_percent(most_loaded_hostap);
         int ap_tx_bytes = database.get_hostap_total_sta_tx_bytes(most_loaded_hostap);
-        int ap_rx_bytes = database.get_hostap_total_sta_rx_bytes(most_loaded_hostap);
+        int ap_rx_bytes = database.get_hostap_total_sta_rx_bytes(most_loaded_radio_mac);
 
         ASSERT_NONZERO(ap_tx_bytes);
         ASSERT_NONZERO(ap_rx_bytes);
