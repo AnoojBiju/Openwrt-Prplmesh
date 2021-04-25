@@ -2060,8 +2060,7 @@ bool db::add_hostap_supported_operating_class(const std::string &radio_mac, uint
     return true;
 }
 
-bool db::set_hostap_band_capability(const std::string &mac,
-                                    beerocks::eRadioBandCapability capability)
+bool db::set_hostap_band_capability(const sMacAddr &mac, beerocks::eRadioBandCapability capability)
 {
     auto n = get_node(mac);
     if (!n) {
