@@ -1367,7 +1367,7 @@ public:
     double get_node_cross_estimated_tx_phy_rate(const std::string &mac);
 
     bool set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApStatsParams *params);
-    void clear_hostap_stats_info(const std::string &mac);
+    void clear_hostap_stats_info(const sMacAddr &mac);
 
     /**
      * @brief Notify about client disconnection.
