@@ -783,7 +783,7 @@ public:
     bool set_hostap_iface_type(const sMacAddr &mac, beerocks::eIfaceType iface_type);
     beerocks::eIfaceType get_hostap_iface_type(const std::string &mac);
 
-    bool set_hostap_driver_version(const std::string &mac, const std::string &version);
+    bool set_hostap_driver_version(const sMacAddr &mac, const std::string &version);
     std::string get_hostap_driver_version(const std::string &mac);
 
     bool set_hostap_iface_id(const sMacAddr &mac, int8_t iface_id);

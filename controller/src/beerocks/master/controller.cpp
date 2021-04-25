@@ -2262,7 +2262,8 @@ bool Controller::handle_intel_slave_join(
     database.set_hostap_iface_name(tlvf::mac_from_string(radio_mac),
                                    notification->hostap().iface_name);
     database.set_hostap_iface_type(tlvf::mac_from_string(radio_mac), hostap_iface_type);
-    database.set_hostap_driver_version(radio_mac, notification->hostap().driver_version);
+    database.set_hostap_driver_version(tlvf::mac_from_string(radio_mac),
+                                       notification->hostap().driver_version);
 
     database.set_hostap_ant_num(radio_mac, (beerocks::eWiFiAntNum)notification->hostap().ant_num);
     database.set_hostap_ant_gain(radio_mac, notification->hostap().ant_gain);

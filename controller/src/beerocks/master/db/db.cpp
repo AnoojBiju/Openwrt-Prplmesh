@@ -2633,7 +2633,7 @@ bool db::set_node_backhaul_iface_type(const std::string &mac, beerocks::eIfaceTy
     return true;
 }
 
-bool db::set_hostap_driver_version(const std::string &mac, const std::string &version)
+bool db::set_hostap_driver_version(const sMacAddr &mac, const std::string &version)
 {
     auto n = get_node(mac);
     if (!n) {
