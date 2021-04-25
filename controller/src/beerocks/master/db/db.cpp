@@ -2534,7 +2534,7 @@ int8_t db::get_hostap_vap_id(const std::string &mac)
     return IFACE_ID_INVALID;
 }
 
-bool db::get_hostap_repeater_mode_flag(const std::string &mac)
+bool db::get_hostap_repeater_mode_flag(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
