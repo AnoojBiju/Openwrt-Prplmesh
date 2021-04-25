@@ -768,7 +768,7 @@ public:
     bool set_hostap_tx_power(const sMacAddr &mac, int tx_power);
     int get_hostap_tx_power(const sMacAddr &mac);
 
-    bool set_hostap_supported_channels(const std::string &mac,
+    bool set_hostap_supported_channels(const sMacAddr &mac,
                                        beerocks::message::sWifiChannel *supported_channels,
                                        int length);
     std::vector<beerocks::message::sWifiChannel>
