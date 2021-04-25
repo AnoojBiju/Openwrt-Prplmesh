@@ -2844,7 +2844,7 @@ bool db::set_hostap_cac_completed(const std::string &mac, bool enable)
     return true;
 }
 
-bool db::get_hostap_cac_completed(const std::string &mac)
+bool db::get_hostap_cac_completed(const sMacAddr &mac)
 {
     std::shared_ptr<node> n = get_node(mac);
 

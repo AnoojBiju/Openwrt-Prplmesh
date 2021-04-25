@@ -712,7 +712,7 @@ void channel_selection_task::work()
                                            csa_event->cs_params.bandwidth);
                     if (database.get_hostap_on_dfs_reentry(hostap_mac)) {
                         TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac << " DFS reentry flow";
-                        if (database.get_hostap_cac_completed(hostap_mac)) {
+                        if (database.get_hostap_cac_completed(tlvf::mac_from_string(hostap_mac))) {
                             TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
                                             << " was on reentry back on dfs channel";
                             //database.set_hostap_is_on_fail_safe(hostap_mac , false);

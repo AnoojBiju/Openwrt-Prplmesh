@@ -1928,8 +1928,10 @@ double optimal_path_task::calculate_weighted_phy_rate(const std::string &node_ma
 bool optimal_path_task::is_hostap_on_cs_process(const std::string &hostap_mac)
 {
     if (database.get_hostap_on_dfs_reentry(hostap_mac) ||
-        (database.is_node_5ghz(hostap_mac) && database.get_hostap_is_dfs(tlvf::mac_from_string(hostap_mac)) &&         !database.get_hostap_cac_completed(hostap_mac)) /* ||
-       database.get_hostap_is_on_fail_safe(hostap_mac) */) {
+        (database.is_node_5ghz(hostap_mac) &&
+         database.get_hostap_is_dfs(tlvf::mac_from_string(hostap_mac)) &&
+         !database.get_hostap_cac_completed(tlvf::mac_from_string(
+             hostap_mac))) /* ||       database.get_hostap_is_on_fail_safe(hostap_mac) */) {
         TASK_LOG(DEBUG) << "is_hostap_on_cs_process return true";
         return true;
     }
