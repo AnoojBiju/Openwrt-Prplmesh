@@ -117,9 +117,11 @@ void load_balancer_task::work()
              * now that the hostap was found we need to find its least efficient sta in case of a 5ghz ap
              * or the most efficient sta in case of a 2.4ghz ap
              */
+        auto most_loaded_radio_mac = tlvf::mac_from_string(most_loaded_hostap);
+
         bool current_ap_is_5ghz = database.is_node_5ghz(most_loaded_hostap);
         int ap_total_duration_ms =
-            database.get_hostap_stats_measurement_duration(most_loaded_hostap);
+            database.get_hostap_stats_measurement_duration(most_loaded_radio_mac);
         int ap_sta_load_percent =
             database.get_hostap_total_client_tx_load_percent(most_loaded_hostap) +
             database.get_hostap_total_client_rx_load_percent(most_loaded_hostap);
@@ -335,7 +337,7 @@ void load_balancer_task::work()
 
             //double predicted_chosen_client_phy_rate = son::wireless_utils::estimate_ap_tx_phy_rate(hostap_dl_rssi, sta_capabilities, hostap_params.bw, hostap_params.is_5ghz);
 
-            int hostap_duration_ms = database.get_hostap_stats_measurement_duration(hostap);
+            int hostap_duration_ms = database.get_hostap_stats_measurement_duration(radio_mac);
 
             ASSERT_NONZERO(ap_total_duration_ms);
             uint64_t normalized_chosen_client_bytes =
