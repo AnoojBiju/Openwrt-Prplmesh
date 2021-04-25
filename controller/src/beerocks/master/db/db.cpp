@@ -2252,7 +2252,7 @@ bool db::set_hostap_iface_id(const sMacAddr &mac, int8_t iface_id)
     return true;
 }
 
-int8_t db::get_hostap_iface_id(const std::string &mac)
+int8_t db::get_hostap_iface_id(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
