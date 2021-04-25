@@ -2823,7 +2823,7 @@ bool Controller::handle_cmdu_control_message(
             }
         }
 
-        database.set_hostap_vap_list(radio_mac, vaps_info);
+        database.set_hostap_vap_list(tlvf::mac_from_string(radio_mac), vaps_info);
 
         // update bml listeners
         bml_task::connection_change_event new_event;

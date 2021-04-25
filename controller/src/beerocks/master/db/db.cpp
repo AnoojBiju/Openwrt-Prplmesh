@@ -2265,7 +2265,7 @@ int8_t db::get_hostap_iface_id(const sMacAddr &mac)
     return n->hostap->iface_id;
 }
 
-bool db::set_hostap_vap_list(const std::string &mac,
+bool db::set_hostap_vap_list(const sMacAddr &mac,
                              const std::unordered_map<int8_t, sVapElement> &vap_list)
 {
     auto n = get_node(mac);
