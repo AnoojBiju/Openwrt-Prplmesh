@@ -842,7 +842,8 @@ void channel_selection_task::work()
                         << " csa_event->cs_params.switch_reason "
                         << int(csa_event->cs_params.switch_reason);
         if (csa_event->cs_params.switch_reason == beerocks::CH_SWITCH_REASON_RADAR) {
-            database.set_radar_hit_stats(hostap_mac, prev_channel, prev_bandwidth, false);
+            database.set_radar_hit_stats(tlvf::mac_from_string(hostap_mac), prev_channel,
+                                         prev_bandwidth, false);
             TASK_LOG(DEBUG)
                 << "hostap_mac - " << hostap_mac
                 << " csa - reason radar, moved to fail safe , update channel radar affected";
@@ -1736,7 +1737,7 @@ void channel_selection_task::wait_for_cac_completed(uint8_t channel, uint8_t ban
 {
     TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac << " channel = " << int(channel)
                     << " bandwidth = " << int(bandwidth);
-    database.set_radar_hit_stats(hostap_mac, channel, bandwidth, true);
+    database.set_radar_hit_stats(tlvf::mac_from_string(hostap_mac), channel, bandwidth, true);
     //hostap handle the CAC-completed event async pushing to deck.
     TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac << " enter to cac pending";
     hostaps_cac_pending.insert({hostap_mac, std::chrono::steady_clock::now()});

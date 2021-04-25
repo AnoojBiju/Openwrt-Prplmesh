@@ -2713,7 +2713,7 @@ beerocks::eApActiveMode db::get_hostap_activity_mode(const sMacAddr &mac)
     return n->hostap->ap_activity_mode;
 }
 
-bool db::set_radar_hit_stats(const std::string &mac, uint8_t channel, uint8_t bw, bool is_csa_entry)
+bool db::set_radar_hit_stats(const sMacAddr &mac, uint8_t channel, uint8_t bw, bool is_csa_entry)
 {
     std::shared_ptr<node> n = get_node(mac);
 
