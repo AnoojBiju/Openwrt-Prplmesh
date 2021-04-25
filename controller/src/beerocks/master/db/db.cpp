@@ -2590,7 +2590,7 @@ std::string db::get_hostap_iface_name(const std::string &mac)
     return n->hostap->iface_name;
 }
 
-bool db::set_hostap_iface_type(const std::string &mac, beerocks::eIfaceType iface_type)
+bool db::set_hostap_iface_type(const sMacAddr &mac, beerocks::eIfaceType iface_type)
 {
     auto n = get_node(mac);
     if (!n) {
