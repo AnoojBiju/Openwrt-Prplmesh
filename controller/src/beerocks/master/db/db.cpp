@@ -2920,7 +2920,7 @@ bool db::get_hostap_is_on_sub_band(const std::string &mac)
     return n->hostap->on_sub_band_channel;
 }
 
-bool db::set_hostap_on_dfs_reentry(const std::string &mac, bool enable)
+bool db::set_hostap_on_dfs_reentry(const sMacAddr &mac, bool enable)
 {
     auto n = get_node(mac);
 

@@ -716,7 +716,8 @@ void channel_selection_task::work()
                             TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
                                             << " was on reentry back on dfs channel";
                             //database.set_hostap_is_on_fail_safe(hostap_mac , false);
-                            database.set_hostap_on_dfs_reentry(hostap_mac, false);
+                            database.set_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac),
+                                                               false);
                             FSM_MOVE_STATE(STEER_STA_BACK_AFTER_DFS_REENTRY);
                         } else {
                             TASK_LOG(DEBUG)
@@ -730,7 +731,8 @@ void channel_selection_task::work()
                         TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
                                         << " was on reentry back on dfs channel";
                         database.set_hostap_is_on_fail_safe(hostap_mac, false);
-                        database.set_hostap_on_dfs_reentry(hostap_mac, false);
+                        database.set_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac),
+                                                           false);
                         FSM_MOVE_STATE(STEER_STA_BACK_AFTER_DFS_REENTRY);
                         break;
                     }
@@ -771,7 +773,7 @@ void channel_selection_task::work()
                 TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
                                 << " was on reentry back on dfs channel";
                 database.set_hostap_is_on_fail_safe(hostap_mac, false);
-                database.set_hostap_on_dfs_reentry(hostap_mac, false);
+                database.set_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac), false);
                 //optimal path for all non dfs reentry clients
                 run_optimal_path_for_connected_clients();
                 FSM_MOVE_STATE(STEER_STA_BACK_AFTER_DFS_REENTRY);
@@ -903,7 +905,7 @@ void channel_selection_task::work()
             TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
                             << " found at list one 80 Mhz un-affected band  ";
             FSM_MOVE_STATE(STEER_STA_BEFORE_DFS_REENTRY);
-            database.set_hostap_on_dfs_reentry(hostap_mac, true);
+            database.set_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac), true);
             break;
         }
         TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
