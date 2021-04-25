@@ -119,6 +119,7 @@ private:
         eState current_state;
         std::chrono::system_clock::time_point timeout;
         int dwell_time;
+        std::map<uint8_t, std::vector<beerocks_message::sChannelScanResults>> cached_results;
     };
     struct sRequestInfo {
         enum eScanRequestType {

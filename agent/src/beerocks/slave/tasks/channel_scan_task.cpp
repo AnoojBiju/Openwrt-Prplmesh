@@ -180,6 +180,31 @@ void ChannelScanTask::work()
                 LOG(INFO) << "Wait for other scans to complete";
                 trigger_next_radio_scan(current_scan_request);
             } else {
+                auto db    = AgentDB::get();
+                auto radio = db->get_radio_by_mac(current_radio_scan->radio_mac);
+                if (!radio) {
+                    LOG(ERROR) << "Failed to get radio info from Agent DB for "
+                               << current_radio_scan->radio_mac;
+                    return;
+                }
+                // Once the scan is done, update the AgentDB with the cached results.
+                for (const auto &op_cls : current_radio_scan->operating_classes) {
+                    for (const auto &channel_elem : op_cls.channel_list) {
+                        const uint8_t channel_num = channel_elem.channel_number;
+                        const auto &cached_result_iter =
+                            current_radio_scan->cached_results.find(channel_num);
+                        if (cached_result_iter == current_radio_scan->cached_results.end()) {
+                            // If a channel does not exist in the cached results clear it's record.
+                            radio->channel_scan_results.erase(channel_num);
+                        } else {
+                            // Add the cached results to the AgentDB.
+                            // Note: This will override previous results for the given channel.
+                            radio->channel_scan_results[channel_num] =
+                                std::make_pair(current_scan_request->scan_start_timestamp,
+                                               cached_result_iter->second);
+                        }
+                    }
+                }
                 current_scan_request->ready_to_send_report = true;
             }
             break;
@@ -628,26 +653,8 @@ bool ChannelScanTask::store_radio_scan_result(const std::shared_ptr<sScanRequest
         LOG(ERROR) << "Failed to get radio info from Agent DB for " << radio_mac;
         return false;
     }
-
-    auto channel_scan_results_iter = radio->channel_scan_results.find(results.channel);
-    if (channel_scan_results_iter != radio->channel_scan_results.end()) {
-        // Previous results are found for the given channel.
-        auto &channel_scan_results = channel_scan_results_iter->second;
-        // channel_scan_results: pair<system_clock::time_point, vector<sChannelScanResults>>
-        //      First:  Scan results timestamp
-        //      Second: Scan results vector
-        if (channel_scan_results.first < request->scan_start_timestamp) {
-            // The currently stored channel scan results are older then the incoming results and
-            // are to be considered aged/invalid.
-            // Reset currently stored channel scan results.
-            channel_scan_results.first = request->scan_start_timestamp;
-            channel_scan_results.second.clear();
-        }
-    } else {
-        // if there is no entry for the channel yet, create a new one with the request's timestamp
-        radio->channel_scan_results[results.channel].first = request->scan_start_timestamp;
-    }
-    radio->channel_scan_results[results.channel].second.push_back(results);
+    auto radio_scan_info = request->radio_scans[radio->front.iface_name];
+    radio_scan_info->cached_results[results.channel].push_back(results);
     return true;
 }
 
