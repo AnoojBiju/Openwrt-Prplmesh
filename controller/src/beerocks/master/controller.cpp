@@ -3302,7 +3302,8 @@ bool Controller::handle_cmdu_control_message(
         if (active_client_count > database.config.monitor_min_active_clients &&
             client_load_percent >
                 database.config.monitor_total_ch_load_notification_hi_th_percent &&
-            database.settings_load_balancing() && database.is_hostap_active(hostap_mac) &&
+            database.settings_load_balancing() &&
+            database.is_hostap_active(tlvf::mac_from_string(hostap_mac)) &&
             database.get_node_state(ire_mac) == beerocks::STATE_CONNECTED &&
             database.get_node_type(ire_mac) != beerocks::TYPE_CLIENT) {
             /*

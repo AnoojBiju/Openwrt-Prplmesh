@@ -918,12 +918,12 @@ void channel_selection_task::work()
                         << " client connected to reentry hostap steering to 2.4 hostap ";
         database.set_hostap_dfs_reentry_clients(hostap_mac, set_reentry_clients);
         auto hostaps_sibling = database.get_node_siblings(hostap_mac, beerocks::TYPE_SLAVE);
-        auto hostap_mac_2g =
-            std::find_if(std::begin(hostaps_sibling), std::end(hostaps_sibling),
-                         [&](std::string hostap_sibling) {
-                             return (is_2G_channel(database.get_node_channel(hostap_sibling)) &&
-                                     database.is_hostap_active(hostap_sibling));
-                         });
+        auto hostap_mac_2g   = std::find_if(
+            std::begin(hostaps_sibling), std::end(hostaps_sibling),
+            [&](std::string hostap_sibling) {
+                return (is_2G_channel(database.get_node_channel(hostap_sibling)) &&
+                        database.is_hostap_active(tlvf::mac_from_string(hostap_sibling)));
+            });
         if (hostap_mac_2g == std::end(hostaps_sibling)) {
             TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
                             << " no 2.4G hostap found - band not active ";
@@ -1772,7 +1772,7 @@ void channel_selection_task::run_optimal_path_for_connected_clients()
     auto hostap_mac_2g   = std::find_if(
         std::begin(hostaps_sibling), std::end(hostaps_sibling), [&](std::string hostap_sibling) {
             return (is_2G_channel(database.get_node_channel(hostap_sibling)) &&
-                    database.is_hostap_active(hostap_sibling));
+                    database.is_hostap_active(tlvf::mac_from_string(hostap_sibling)));
         });
 
     if (hostap_mac_2g != std::end(hostaps_sibling)) {
