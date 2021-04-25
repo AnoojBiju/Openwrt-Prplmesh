@@ -4567,7 +4567,7 @@ uint32_t db::get_node_tx_bytes(const std::string &mac)
     return n->stats_info->tx_bytes;
 }
 
-uint32_t db::get_hostap_total_sta_rx_bytes(const std::string &mac)
+uint32_t db::get_hostap_total_sta_rx_bytes(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
