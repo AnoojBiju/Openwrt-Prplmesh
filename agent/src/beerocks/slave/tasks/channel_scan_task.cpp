@@ -572,10 +572,10 @@ bool ChannelScanTask::trigger_radio_scan(const std::string &radio_iface,
         [&channels_to_be_scanned, this](sOperatingClass &operating_class) {
             for (auto &channel_element : operating_class.channel_list) {
                 // Scan only the channels without an error status
-                if (channel_element.scan_status == sChannel::eScanStatus::SUCCESS) {
+                if (channel_element.scan_status == eScanStatus::SUCCESS) {
                     if (!get_20MHz_channels(channel_element.channel_number, operating_class.bw,
                                             channels_to_be_scanned)) {
-                        channel_element.scan_status = sChannel::eScanStatus::
+                        channel_element.scan_status = eScanStatus::
                             SCAN_NOT_SUPPORTED_ON_THIS_OPERATING_CLASS_AND_CHANNEL_ON_THIS_RADIO;
                         m_previous_scans.at(operating_class.operating_class)
                             .erase(channel_element.channel_number);
@@ -692,7 +692,7 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
             } else {
                 channel_vector.emplace_back(
                     channel_number,
-                    sChannel::eScanStatus::
+                    eScanStatus::
                         SCAN_NOT_SUPPORTED_ON_THIS_OPERATING_CLASS_AND_CHANNEL_ON_THIS_RADIO);
             }
         }
@@ -977,8 +977,7 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
     // The Lambda is also responsible for adding the found neighboring APs to the TLV
     auto add_scan_results_tlv_to_report =
         [this, &set_neighbor_in_scan_results_tlv](
-            sMacAddr ruid, uint8_t operating_class, uint8_t channel,
-            wfa_map::tlvProfile2ChannelScanResult::eScanStatus status,
+            sMacAddr ruid, uint8_t operating_class, uint8_t channel, eScanStatus status,
             std::chrono::system_clock::time_point timestamp,
             std::vector<beerocks_message::sChannelScanResults> results) -> bool {
         LOG(DEBUG) << "Adding new Scan Results TLV";
@@ -995,7 +994,7 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
 
         // Set Results TLV status
         results_tlv->success() = status;
-        if (results_tlv->success() != wfa_map::tlvProfile2ChannelScanResult::eScanStatus::SUCCESS) {
+        if (results_tlv->success() != eScanStatus::SUCCESS) {
             // If results status is not successful, need to finish TLV.
             return true;
         }
@@ -1231,7 +1230,7 @@ ChannelScanTask::get_scan_results_for_request(const std::shared_ptr<sScanRequest
     auto add_scan_result =
         [&final_results](bool fresh_scan_requested, const sMacAddr &ruid,
                          const uint8_t operating_class, const uint8_t channel,
-                         const wfa_map::tlvProfile2ChannelScanResult::eScanStatus status,
+                         const eScanStatus status,
                          const std::chrono::system_clock::time_point &request_timestamp,
                          const std::chrono::system_clock::time_point &results_timestamp =
                              std::chrono::system_clock::time_point::min(),
@@ -1257,7 +1256,7 @@ ChannelScanTask::get_scan_results_for_request(const std::shared_ptr<sScanRequest
                 auto channel_number = channel_element.channel_number;
                 auto scan_status    = channel_element.scan_status;
                 // Check results only for successful scans
-                if (scan_status != sChannel::eScanStatus::SUCCESS) {
+                if (scan_status != eScanStatus::SUCCESS) {
                     LOG(DEBUG) << "Scan status is not successful for channel " << channel_number
                                << ", adding blank results";
                     add_scan_result(fresh_scan_requested, ruid, operating_class, channel_number,

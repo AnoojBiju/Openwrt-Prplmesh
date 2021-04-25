@@ -91,8 +91,9 @@ private:
     };
     // clang-format on
 
+    // Adding a type alias for eScanStatus to use instead of the long descriptor.
+    using eScanStatus = wfa_map::tlvProfile2ChannelScanResult::eScanStatus;
     struct sChannel {
-        using eScanStatus = wfa_map::tlvProfile2ChannelScanResult::eScanStatus;
         uint8_t channel_number;
         eScanStatus scan_status;
         explicit sChannel(const uint8_t _channel_number,
@@ -162,12 +163,11 @@ private:
         sMacAddr ruid;
         uint8_t operating_class;
         uint8_t channel;
-        wfa_map::tlvProfile2ChannelScanResult::eScanStatus status;
+        eScanStatus status;
         std::chrono::system_clock::time_point timestamp;
         std::vector<beerocks_message::sChannelScanResults> results;
         explicit sStoredScanResults(
-            sMacAddr _ruid, uint8_t _operating_class, uint8_t _channel,
-            wfa_map::tlvProfile2ChannelScanResult::eScanStatus _status,
+            sMacAddr _ruid, uint8_t _operating_class, uint8_t _channel, eScanStatus _status,
             std::chrono::system_clock::time_point _timestamp,
             const std::vector<beerocks_message::sChannelScanResults> &_results)
             : ruid(_ruid), operating_class(_operating_class), channel(_channel), status(_status),
