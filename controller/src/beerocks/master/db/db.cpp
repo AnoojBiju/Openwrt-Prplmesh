@@ -5208,6 +5208,14 @@ int db::get_persistent_db_data_commit_operation_id()
     return persistent_db_data_commit_operation_id;
 }
 
+bool db::assign_dhcp_task_id(int new_task_id)
+{
+    dhcp_task_id = new_task_id;
+    return true;
+}
+
+int db::get_dhcp_task_id() { return dhcp_task_id; }
+
 void db::lock() { db_mutex.lock(); }
 
 void db::unlock() { db_mutex.unlock(); }

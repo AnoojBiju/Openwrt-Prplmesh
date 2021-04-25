@@ -147,6 +147,7 @@ public:
         int unfriendly_device_max_timelife_delay_minutes;
         unsigned int persistent_db_commit_changes_interval_seconds;
         std::chrono::seconds link_metrics_request_interval_seconds;
+        std::chrono::seconds dhcp_monitor_interval_seconds;
     } sDbMasterConfig;
 
     typedef struct {
@@ -1622,6 +1623,9 @@ public:
     bool assign_persistent_db_data_commit_operation_id(int new_operation_id);
     int get_persistent_db_data_commit_operation_id();
 
+    bool assign_dhcp_task_id(int new_task_id);
+    int get_dhcp_task_id();
+
     void lock();
     void unlock();
 
@@ -1965,6 +1969,7 @@ private:
     int config_update_task_id                  = -1;
     int persistent_db_aging_operation_id       = -1;
     int persistent_db_data_commit_operation_id = -1;
+    int dhcp_task_id                           = -1;
 
     std::shared_ptr<node> last_accessed_node;
     std::string last_accessed_node_mac;

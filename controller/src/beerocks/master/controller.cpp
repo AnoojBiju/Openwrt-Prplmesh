@@ -152,6 +152,9 @@ Controller::Controller(db &database_,
     m_link_metrics_task = std::make_shared<LinkMetricsTask>(database, cmdu_tx, cert_cmdu_tx, tasks);
     LOG_IF(!tasks.add_task(m_link_metrics_task), FATAL) << "Failed adding link metrics task!";
 
+    LOG_IF(!tasks.add_task(std::make_shared<DhcpTask>(database, timer_manager)), FATAL)
+        << "Failed adding dhcp task!";
+
     beerocks::CmduServer::EventHandlers handlers{
         .on_client_connected    = [&](int fd) { handle_connected(fd); },
         .on_client_disconnected = [&](int fd) { handle_disconnected(fd); },
