@@ -2794,7 +2794,7 @@ bool db::set_supported_channel_radar_affected(const sMacAddr &mac,
     return true;
 }
 
-bool db::set_hostap_is_dfs(const std::string &mac, bool enable)
+bool db::set_hostap_is_dfs(const sMacAddr &mac, bool enable)
 {
     std::shared_ptr<node> n = get_node(mac);
 
@@ -4812,7 +4812,7 @@ bool db::set_node_channel_bw(const std::string &mac, int channel, beerocks::eWiF
             n->hostap->channel_ext_above_primary = channel_ext_above_primary;
             n->hostap->vht_center_frequency      = vht_center_frequency;
             auto is_dfs                          = wireless_utils::is_dfs_channel(channel);
-            set_hostap_is_dfs(mac, is_dfs);
+            set_hostap_is_dfs(tlvf::mac_from_string(mac), is_dfs);
             if (channel >= 1 && channel <= 13) {
                 n->hostap->operating_class = 81;
             } else if (channel == 14) {
