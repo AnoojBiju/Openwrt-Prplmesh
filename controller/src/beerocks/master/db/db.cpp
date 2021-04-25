@@ -2198,12 +2198,6 @@ bool db::can_start_client_steering(const std::string &sta_mac, const std::string
                    << "  node_24ghz_support = " << get_node_24ghz_support(sta_mac) << std::endl;
         return false;
     }
-    if ((get_hostap_exclude_from_steering_flag(target_bssid))) {
-        LOG(DEBUG) << "Sta " << sta_mac << " can't steer to hostap " << target_bssid << std::endl
-                   << "  hostap_exclude_from_steering = "
-                   << get_hostap_exclude_from_steering_flag(target_bssid) << std::endl;
-        return false;
-    }
     return true;
 }
 
@@ -4800,32 +4794,6 @@ bool db::set_measurement_window_size(const std::string &mac, int window_size)
         return false;
     }
     n->measurement_window_size = window_size;
-    return true;
-}
-
-bool db::get_hostap_exclude_from_steering_flag(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        return false;
-    }
-    return n->hostap->exclude_from_steering;
-}
-
-bool db::set_hostap_exclude_from_steering_flag(const std::string &mac, bool flag)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        return false;
-    }
-
-    n->hostap->exclude_from_steering = flag;
     return true;
 }
 
