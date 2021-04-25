@@ -914,7 +914,7 @@ void channel_selection_task::work()
         break;
     }
     case eState::STEER_STA_BEFORE_DFS_REENTRY: {
-        database.clear_hostap_dfs_reentry_clients(hostap_mac);
+        database.clear_hostap_dfs_reentry_clients(tlvf::mac_from_string(hostap_mac));
 
         auto set_reentry_clients =
             database.get_node_children(hostap_mac, TYPE_CLIENT, STATE_CONNECTED);

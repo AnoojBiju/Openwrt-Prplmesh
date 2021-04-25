@@ -2991,7 +2991,7 @@ std::set<std::string> db::get_hostap_dfs_reentry_clients(const std::string &mac)
     return n->hostap->dfs_reentry_clients;
 }
 
-bool db::clear_hostap_dfs_reentry_clients(const std::string &mac)
+bool db::clear_hostap_dfs_reentry_clients(const sMacAddr &mac)
 {
     auto n = get_node(mac);
 
