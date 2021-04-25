@@ -20,10 +20,11 @@
 #include <memory>
 #include <tlvf/BaseClass.h>
 #include <tlvf/ClassList.h>
-#include "tlvf/wfa_map/eTlvTypeMap.h"
 #include <tuple>
 #include <asm/byteorder.h>
 #include "tlvf/common/sMacAddr.h"
+#include "tlvf/wfa_map/eTlvTypeMap.h"
+#include "tlvf/wfa_map/tlvProfile2CacRequest.h"
 
 namespace wfa_map {
 
@@ -35,6 +36,11 @@ class tlvProfile2CacRequest : public BaseClass
         explicit tlvProfile2CacRequest(std::shared_ptr<BaseClass> base, bool parse = false);
         ~tlvProfile2CacRequest();
 
+        enum eCacCompletionAction {
+            REMAIN_ON_CHANNEL = 0x0,
+            RETURN_PREVIOUS_CHANNEL = 0x1,
+        };
+        
         typedef struct sCacMethod {
             #if defined(__LITTLE_ENDIAN_BITFIELD)
             uint8_t reserved : 3;

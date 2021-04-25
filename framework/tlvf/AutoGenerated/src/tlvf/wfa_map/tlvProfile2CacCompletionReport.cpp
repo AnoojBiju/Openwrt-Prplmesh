@@ -341,6 +341,7 @@ bool cCacCompletionReportRadio::init()
         return false;
     }
     m_cac_completion_status = reinterpret_cast<eCompletionStatus*>(m_buff_ptr__);
+    if (!m_parse__) *m_cac_completion_status = NOT_PERFORMED;
     if (!buffPtrIncrementSafe(sizeof(eCompletionStatus))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(eCompletionStatus) << ") Failed!";
         return false;

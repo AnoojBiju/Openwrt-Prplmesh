@@ -1695,7 +1695,8 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
                 }
 
                 auto state = mon_wlan_hal->get_radio_info().radio_state;
-                if ((state > bwl::eRadioState::DISABLED) && (state != bwl::eRadioState::UNKNOWN)) {
+                if ((state != bwl::eRadioState::DISABLED) &&
+                    (state != bwl::eRadioState::UNINITIALIZED)) {
                     LOG(DEBUG) << "Radio is not disabled (state=" << state
                                << "), not forwarding disabled notification.";
                     notify_disabled = false;

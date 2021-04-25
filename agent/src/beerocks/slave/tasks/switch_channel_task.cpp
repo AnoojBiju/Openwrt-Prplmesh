@@ -8,6 +8,7 @@
 
 #include "switch_channel_task.h"
 #include "../backhaul_manager/backhaul_manager.h"
+#include <bcl/beerocks_state_machine.h>
 
 namespace beerocks {
 namespace switch_channel {
@@ -52,17 +53,17 @@ public:
     // interface for sending inter-task communications messages
     TaskPoolInterface &m_task_pool;
 
-    // temportary - interface for sending CMDUs
+    // temportary - interface for sending Cmdu
     // should be replaced with a decent interface instead of the whole backhaul
     BackhaulManager &m_backhaul_manager;
 
-    // a container for sending cmdus
+    // a container for sending cmdu
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
 
     // the switch chanel request
     std::shared_ptr<const sSwitchChannelRequest> m_switch_channel_request;
 
-    // switch chanel notificatoin (aka csa)
+    // switch chanel notification (aka csa)
     std::shared_ptr<sSwitchChannelNotification> m_switch_channel_notification;
 
     // cac started data
@@ -81,7 +82,7 @@ public:
     // max time to wait for cac-completed
     std::chrono::seconds m_max_wait_for_cac_completed_sec = std::chrono::seconds(0);
 
-    // the point in time we we started waiting for cac-comleted
+    // the point in time we we started waiting for cac-completed
     std::chrono::time_point<std::chrono::steady_clock> m_cac_started_time_point;
 
     // a factor used to calculate how long to wait for cac-completed
@@ -169,9 +170,8 @@ void SwitchChannelFsm::config_fsm()
         .on(fsm_event::SWITCH_CHANNEL_REQUEST,
             {fsm_state::WAIT_FOR_SWITCH_CHANNEL_NOTIFICATION, fsm_state::ERROR},
             [&](TTransition &transition, const void *args) -> bool {
-                m_switch_channel_request =
-                    *(reinterpret_cast<std::shared_ptr<sSwitchChannelRequest> *>(
-                        const_cast<void *>(args)));
+                m_switch_channel_request = *(static_cast<std::shared_ptr<sSwitchChannelRequest> *>(
+                    const_cast<void *>(args)));
 
                 if (!m_switch_channel_request) {
                     LOG(ERROR) << "request for switch channel with no data";
@@ -220,6 +220,35 @@ void SwitchChannelFsm::config_fsm()
                 return true;
             })
 
+        .on(fsm_event::CSA, {fsm_state::ERROR},
+            [&](TTransition &transition, const void *args) -> bool {
+                // CSA means that the switch channel happened "unexpectedly"
+                // from the point of view of the switch channel task.
+                // it may be that the switch happened from some other reason,
+                // therefore we just report about it and stay in the same
+                // state.
+
+                // we are taking all information and sending the report
+                auto switch_channel_notification =
+                    *(static_cast<std::shared_ptr<sSwitchChannelNotification> *>(
+                        const_cast<void *>(args)));
+
+                // prepare the report
+                auto switch_channel_report = std::make_shared<sSwitchChannelReport>(
+                    false, nullptr, switch_channel_notification, nullptr, nullptr);
+
+                if (!switch_channel_report) {
+                    LOG(ERROR) << "failed to create switch channel report for " << m_ifname;
+                    transition.change_destination(fsm_state::ERROR);
+
+                    return true;
+                }
+                // report
+                m_task_pool.send_event(eTaskEvent::SWITCH_CHANNEL_REPORT, switch_channel_report);
+
+                return false;
+            })
+
         .on(fsm_event::PERIODIC, fsm_state::IDLE)
 
         //////////////////////////////////////////////////////
@@ -238,7 +267,7 @@ void SwitchChannelFsm::config_fsm()
                 // CSA means that the switch channel ended,
                 // we are taking all information and sending the report
                 m_switch_channel_notification =
-                    *(reinterpret_cast<std::shared_ptr<sSwitchChannelNotification> *>(
+                    *(static_cast<std::shared_ptr<sSwitchChannelNotification> *>(
                         const_cast<void *>(args)));
 
                 // prepare the report
@@ -266,11 +295,11 @@ void SwitchChannelFsm::config_fsm()
                 // the indication for switch channel that is about to happen
                 // starts here with a cac started notification
                 m_cac_started_notification =
-                    *(reinterpret_cast<std::shared_ptr<sCacStartedNotification> *>(
+                    *(static_cast<std::shared_ptr<sCacStartedNotification> *>(
                         const_cast<void *>(args)));
 
                 if (!m_cac_started_notification) {
-                    LOG(ERROR) << "can't handle cac started without cac-started-notfication";
+                    LOG(ERROR) << "can't handle cac started without cac-started-notifcation";
                     transition.change_destination(fsm_state::ERROR);
 
                     return true;
@@ -320,7 +349,7 @@ void SwitchChannelFsm::config_fsm()
                 // TODO: add validation that the completed-params matches the started-params
 
                 m_cac_completed_notification =
-                    *(reinterpret_cast<std::shared_ptr<sCacCompletedNotification> *>(
+                    *(static_cast<std::shared_ptr<sCacCompletedNotification> *>(
                         const_cast<void *>(args)));
 
                 // send the report
@@ -354,13 +383,47 @@ void SwitchChannelFsm::config_fsm()
                                m_max_wait_for_cac_completed_sec;
 
                 if (timeout) {
-                    LOG(ERROR) << "timeout occured waiting for cac completed";
+                    LOG(ERROR) << "timeout occurred waiting for cac completed";
                     transition.change_destination(fsm_state::ERROR);
 
                     return true;
                 }
                 // returning false means "stay in the same state"
                 return false;
+            })
+
+        .on(fsm_event::CSA, {fsm_state::IDLE, fsm_state::ERROR},
+            [&](TTransition &transition, const void *args) -> bool {
+                // CSA means that the switch channel happened "unexpectedly"
+                // from the point of view of the switch channel task.
+                // it may be that the switch happened from some other reason,
+                // therefore we just report about it and stay in the same
+                // state.
+
+                // we are taking all information and sending the report
+                auto m_switch_channel_notification =
+                    *(static_cast<std::shared_ptr<sSwitchChannelNotification> *>(
+                        const_cast<void *>(args)));
+
+                // prepare the report
+                auto switch_channel_report = std::make_shared<sSwitchChannelReport>(
+                    false, m_switch_channel_request, m_switch_channel_notification, nullptr,
+                    nullptr);
+
+                if (!switch_channel_report) {
+                    LOG(ERROR) << "failed to create switch channel report for " << m_ifname;
+                    transition.change_destination(fsm_state::ERROR);
+
+                    return true;
+                }
+                // report
+                m_task_pool.send_event(eTaskEvent::SWITCH_CHANNEL_REPORT, switch_channel_report);
+
+                // we are no longer waiting for cac-completed
+                // reset and go back to idle
+                reset();
+
+                return true;
             })
         //////////////////////////////////////////////////////
         //////// ERROR                                ////////
@@ -467,7 +530,7 @@ SwitchChannelTask::~SwitchChannelTask() {}
 
 std::vector<eTaskEvent> SwitchChannelTask::get_task_event_list() const
 {
-    return {eTaskEvent::SWTICH_CHANNEL_REQUEST, eTaskEvent::CAC_STARTED_NOTIFICATION,
+    return {eTaskEvent::SWITCH_CHANNEL_REQUEST, eTaskEvent::CAC_STARTED_NOTIFICATION,
             eTaskEvent::CAC_COMPLETED_NOTIFICATION, eTaskEvent::SWITCH_CHANNEL_NOTIFICATION_EVENT};
 }
 
@@ -510,10 +573,10 @@ void SwitchChannelTask::handle_event(eTaskEvent event, std::shared_ptr<void> eve
         return;
     }
 
-    LOG(DEBUG) << "Received event to handle: " << static_cast<uint8_t>(event);
+    LOG(DEBUG) << "Received event to handle: " << event;
 
     switch (event) {
-    case eTaskEvent::SWTICH_CHANNEL_REQUEST: {
+    case eTaskEvent::SWITCH_CHANNEL_REQUEST: {
         auto switch_channel_request =
             std::static_pointer_cast<const sSwitchChannelRequest>(event_obj);
         if (!switch_channel_request) {

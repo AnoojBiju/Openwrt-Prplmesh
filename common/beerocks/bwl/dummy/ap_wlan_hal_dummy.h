@@ -63,6 +63,8 @@ public:
     virtual bool sta_softblock_remove(const std::string &vap_name,
                                       const std::string &client_mac) override;
     virtual bool switch_channel(int chan, int bw, int vht_center_frequency) override;
+    virtual bool cancel_cac(int chan, beerocks::eWiFiBandwidth bw, int vht_center_frequency,
+                            int secondary_chan) override;
     virtual bool set_antenna_mode(AntMode mode) override;
     virtual bool wds_set_mode(WDSMode mode) override;
     virtual bool wds_add_sta(const std::string &mac) override;

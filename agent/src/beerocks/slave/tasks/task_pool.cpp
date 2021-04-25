@@ -32,9 +32,9 @@ void TaskPool::add_task(const std::shared_ptr<Task> new_task)
     const auto &events = new_task->get_task_event_list();
 
     // insert into event-to-task map
-    std::transform(events.begin(), events.end(),
-                   std::inserter(m_event_to_tasks_map, m_event_to_tasks_map.begin()),
-                   [new_task](const eTaskEvent &event) { return std::make_pair(event, new_task); });
+    for (const auto &event : events) {
+        m_event_to_tasks_map.emplace(event, new_task);
+    }
 
     // insert into regular list
     add_task_no_events(new_task);

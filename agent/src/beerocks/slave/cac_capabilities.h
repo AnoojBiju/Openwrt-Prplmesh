@@ -9,7 +9,9 @@
 #ifndef _CAC_CAPABILITIES_H_
 #define _CAC_CAPABILITIES_H_
 
-#include "tlvf/common/sMacAddr.h"
+#include <tlvf/common/sMacAddr.h>
+#include <tlvf/wfa_map/tlvProfile2CacCapabilities.h>
+
 #include <map>
 #include <vector>
 
@@ -17,13 +19,6 @@ namespace beerocks {
 
 // 2 letters country code (see ISO-3166)
 using CountryCode = std::array<char, 2>;
-
-enum class eCacMethod {
-    CAC_METHOD_CONTINUOUS                      = 0x00,
-    CAC_METHOD_CONTINUOUS_WITH_DEDICATED_RADIO = 0x01,
-    CAC_METHOD_MIMO_DIMENSION_REDUCED          = 0x02,
-    CAC_METHOD_TIME_SLICED                     = 0x03
-};
 
 /**
  * @brief Interface to query cac capabilities of an agent
@@ -54,7 +49,8 @@ public:
      * @return true if the requested cac is supported for this radio
      * false otherwise (including wrong radio for example)
      */
-    virtual bool is_cac_method_supported(const sMacAddr &radio, eCacMethod cac_method) const = 0;
+    virtual bool is_cac_method_supported(const sMacAddr &radio,
+                                         wfa_map::eCacMethod cac_method) const = 0;
 
     /**
      * @brief cac duration
@@ -64,7 +60,7 @@ public:
      * given radio to complete cac scan using the given method
      */
     virtual uint32_t get_cac_completion_duration(const sMacAddr &radio,
-                                                 eCacMethod cac_method) const = 0;
+                                                 wfa_map::eCacMethod cac_method) const = 0;
 
     /**
      * @brief operating classes and channels
@@ -75,7 +71,7 @@ public:
      */
     using CacOperatingClasses = std::map<uint8_t, std::vector<uint8_t>>;
     virtual CacOperatingClasses get_cac_operating_classes(const sMacAddr &radio,
-                                                          eCacMethod cac_method) const = 0;
+                                                          wfa_map::eCacMethod cac_method) const = 0;
 };
 
 // utilities based on CacCapabilities interface
@@ -84,7 +80,7 @@ public:
   * @brief a structure that holds for each radio its cac supported methods
   * an empty vector indicates that cac is not supported at all
   */
-using CacMethodForRadio = std::pair<sMacAddr, std::vector<eCacMethod>>;
+using CacMethodForRadio = std::pair<sMacAddr, std::vector<wfa_map::eCacMethod>>;
 
 /**
  * @brief fill radio to method capabilities structure

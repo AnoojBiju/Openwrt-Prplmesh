@@ -729,9 +729,9 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
             const auto bandwidth =
                 son::wireless_utils::operating_class_to_bandwidth(operating_class);
             std::vector<sChannel> channel_vector;
-            std::transform(previous_scan.second.begin(), previous_scan.second.end(),
-                           std::back_inserter(channel_vector),
-                           [](const uint8_t channel) -> sChannel { return sChannel(channel); });
+            for (const auto prev_scan_channel : previous_scan.second) {
+                channel_vector.emplace_back(prev_scan_channel);
+            }
             LOG(TRACE) << "Operating class: #" << int(operating_class) << std::endl
                        << "\tChannel list length:" << int(channel_vector.size()) << std::endl
                        << "\tChannel list: " << print_channel_vector(channel_vector) << ".";
