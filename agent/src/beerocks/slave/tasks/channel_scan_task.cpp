@@ -229,6 +229,9 @@ void ChannelScanTask::work()
 
         // Handle finished requests.
         if (current_scan_request->ready_to_send_report) {
+            // Report was sent back, clear any remaining scan info.
+            m_current_scan_info.radio_scan                = nullptr;
+            m_current_scan_info.scan_request              = nullptr;
             m_current_scan_info.is_scan_currently_running = false;
             if (!send_channel_scan_report(current_scan_request)) {
                 LOG(ERROR) << "Failed to send channel scan report!";
@@ -1242,6 +1245,7 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
             neighbor_iterator = results_neighbors.begin();
         }
     }
+
     // Send final Report-Message
     if (channel_scan_report_header) {
         if (!send_channel_scan_report_cmdu(request_info->src_mac, true)) {
