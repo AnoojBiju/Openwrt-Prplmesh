@@ -593,7 +593,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
         /*
              * start load balancing
              */
-        if (database.is_hostap_active(hostap_mac) &&
+        if (database.is_hostap_active(tlvf::mac_from_string(hostap_mac)) &&
             database.get_node_state(ire_mac) == beerocks::STATE_CONNECTED &&
             database.get_node_type(ire_mac) != beerocks::TYPE_CLIENT) {
             /*
@@ -1280,7 +1280,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             if (dst_mac == network_utils::WILD_MAC_STRING) {
                 auto slaves = database.get_active_hostaps();
                 for (const auto &slave : slaves) {
-                    if (database.is_hostap_active(slave)) {
+                    if (database.is_hostap_active(tlvf::mac_from_string(slave))) {
                         auto agent_mac = database.get_node_parent_ire(slave);
                         son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, slave);
                     }

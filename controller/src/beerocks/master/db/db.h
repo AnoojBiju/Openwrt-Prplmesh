@@ -395,7 +395,7 @@ public:
     std::chrono::steady_clock::time_point get_node_last_seen(const std::string &mac);
 
     bool set_hostap_active(const sMacAddr &mac, bool active);
-    bool is_hostap_active(const std::string &mac);
+    bool is_hostap_active(const sMacAddr &mac);
 
     bool set_hostap_backhaul_manager(const sMacAddr &mac, bool is_backhaul_manager);
     bool is_hostap_backhaul_manager(const std::string &mac);

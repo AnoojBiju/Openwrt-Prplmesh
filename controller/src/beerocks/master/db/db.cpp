@@ -946,7 +946,7 @@ bool db::set_hostap_active(const sMacAddr &mac, bool active)
     return true;
 }
 
-bool db::is_hostap_active(const std::string &mac)
+bool db::is_hostap_active(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2179,7 +2179,7 @@ bool db::can_start_client_steering(const std::string &sta_mac, const std::string
         LOG(ERROR) << "Device with mac " << sta_mac << " is not a station.";
         return false;
     }
-    if (!target_bss || !is_hostap_active(target_bssid)) {
+    if (!target_bss || !is_hostap_active(tlvf::mac_from_string(target_bssid))) {
         LOG(ERROR) << "Invalid or inactive BSS " << target_bssid;
         return false;
     }

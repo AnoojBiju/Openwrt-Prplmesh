@@ -193,7 +193,7 @@ void optimal_path_task::work()
                 int8_t rx_rssi, dummy;
                 bool sta_is_5ghz = database.is_node_5ghz(sta_mac);
                 database.get_node_cross_rx_rssi(sta_mac, current_hostap, rx_rssi, dummy);
-                if ((!database.is_hostap_active(hostap)) ||
+                if ((!database.is_hostap_active(tlvf::mac_from_string(hostap))) ||
                     (!check_if_sta_can_steer_to_ap(hostap)) ||
                     (database.settings_client_optimal_path_roaming_prefer_signal_strength() &&
                      sta_is_5ghz && database.is_ap_out_of_band(hostap, sta_mac) &&
@@ -786,7 +786,8 @@ void optimal_path_task::work()
                     database.is_hostap_backhaul_manager(hostap) ? hostap : hostap_backhaul_manager;
                 int hostap_channel = database.get_node_channel(hostap);
                 if (database.is_ap_out_of_band(hostap, sta_mac) ||
-                    (!database.is_hostap_active(hostap)) || is_hostap_on_cs_process(hostap)) {
+                    (!database.is_hostap_active(tlvf::mac_from_string(hostap))) ||
+                    is_hostap_on_cs_process(hostap)) {
                     TASK_LOG(DEBUG) << "continue " << hostap;
                     continue;
                 }
@@ -823,7 +824,7 @@ void optimal_path_task::work()
             if (!found_band_match) {
                 for (auto hostap : ire_hostaps) {
                     if (hostap == current_hostap || database.is_ap_out_of_band(hostap, sta_mac) ||
-                        (!database.is_hostap_active(hostap))) {
+                        (!database.is_hostap_active(tlvf::mac_from_string(hostap)))) {
                         continue;
                     }
                     if (database.capability_check(hostap, channel)) {
@@ -925,7 +926,8 @@ void optimal_path_task::work()
         if (database.settings_client_band_steering()) {
             auto hostap_siblings = database.get_node_siblings(current_hostap);
             for (auto sibling : hostap_siblings) {
-                if (!database.is_hostap_active(sibling) || is_hostap_on_cs_process(sibling)) {
+                if (!database.is_hostap_active(tlvf::mac_from_string(sibling)) ||
+                    is_hostap_on_cs_process(sibling)) {
                     TASK_LOG(DEBUG) << "continue " << sibling;
                     continue;
                 }
@@ -949,7 +951,7 @@ void optimal_path_task::work()
                         //adding the backhaul_manager band_steering candidate
                         if (database.settings_client_band_steering()) {
                             //band steering candidate
-                            if (database.is_hostap_active(sibling) ||
+                            if (database.is_hostap_active(tlvf::mac_from_string(sibling)) ||
                                 !is_hostap_on_cs_process(sibling)) {
                                 hostap_candidates.push_back({sibling, true});
                             } else {
@@ -963,7 +965,7 @@ void optimal_path_task::work()
                 if (database.settings_client_band_steering()) {
                     auto hostap_siblings = database.get_node_siblings(hostap);
                     for (auto &sibling : hostap_siblings) {
-                        if (!database.is_hostap_active(sibling) ||
+                        if (!database.is_hostap_active(tlvf::mac_from_string(sibling)) ||
                             is_hostap_on_cs_process(sibling)) {
                             TASK_LOG(DEBUG) << "continue " << sibling;
                             continue;
