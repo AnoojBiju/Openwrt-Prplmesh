@@ -783,7 +783,9 @@ void optimal_path_task::work()
             for (auto &hostap : ire_hostaps) {
                 hostap_backhaul = database.get_node_parent_backhaul(hostap);
                 hostap_backhaul_manager =
-                    database.is_hostap_backhaul_manager(hostap) ? hostap : hostap_backhaul_manager;
+                    database.is_hostap_backhaul_manager(tlvf::mac_from_string(hostap))
+                        ? hostap
+                        : hostap_backhaul_manager;
                 int hostap_channel = database.get_node_channel(hostap);
                 if (database.is_ap_out_of_band(hostap, sta_mac) ||
                     (!database.is_hostap_active(tlvf::mac_from_string(hostap))) ||
@@ -940,7 +942,7 @@ void optimal_path_task::work()
             if (hostap == current_hostap)
                 continue;
             //when hostap is backhaul manager , the mathing candidate is his same band sibling
-            if (database.is_hostap_backhaul_manager(hostap) &&
+            if (database.is_hostap_backhaul_manager(tlvf::mac_from_string(hostap)) &&
                 database.get_node_type(database.get_node_parent(hostap)) != beerocks::TYPE_GW) {
                 auto sibling_backhaul_manager = database.get_node_siblings(hostap);
                 for (auto &sibling : sibling_backhaul_manager) {
@@ -1639,7 +1641,8 @@ bool optimal_path_task::is_measurement_valid(const std::set<std::string> &temp_c
     int8_t rx_rssi, rx_packets;
     for (auto &hostap : temp_cross_hostaps) {
         std::string hostap_tmp = hostap;
-        if (database.is_hostap_backhaul_manager(hostap) && database.is_node_5ghz(sta_mac)) {
+        if (database.is_hostap_backhaul_manager(tlvf::mac_from_string(hostap)) &&
+            database.is_node_5ghz(sta_mac)) {
             hostap_tmp = database.get_5ghz_sibling_hostap(hostap);
         }
         if (hostap_tmp.empty() ||
@@ -1667,7 +1670,8 @@ bool optimal_path_task::all_measurement_succeed(const std::set<std::string> &tem
     bool all_hostapd_got_packets = false;
     for (auto &hostap : temp_cross_hostaps) {
         std::string hostap_tmp = hostap;
-        if (database.is_hostap_backhaul_manager(hostap) && database.is_node_5ghz(sta_mac)) {
+        if (database.is_hostap_backhaul_manager(tlvf::mac_from_string(hostap)) &&
+            database.is_node_5ghz(sta_mac)) {
             hostap_tmp = database.get_5ghz_sibling_hostap(hostap);
         }
         if (hostap_tmp.empty() ||
