@@ -2653,7 +2653,8 @@ bool Controller::handle_cmdu_control_message(
         LOG(INFO) << "received ACTION_CONTROL_HOSTAP_AP_DISABLED_NOTIFICATION from " << hostap_mac
                   << " vap_id=" << vap_id;
 
-        const auto disabled_bssid = database.get_hostap_vap_mac(hostap_mac, vap_id);
+        const auto disabled_bssid =
+            database.get_hostap_vap_mac(tlvf::mac_from_string(hostap_mac), vap_id);
         if (disabled_bssid.empty()) {
             LOG(INFO) << "AP Disabled on unknown vap, vap_id=" << vap_id;
             break;
@@ -2983,7 +2984,8 @@ bool Controller::handle_cmdu_control_message(
         std::string client_mac = tlvf::mac_to_string(notification->params().result.mac);
         std::string ap_mac     = hostap_mac;
         bool is_parent         = (database.get_node_parent(client_mac) ==
-                          database.get_hostap_vap_mac(ap_mac, notification->params().vap_id));
+                          database.get_hostap_vap_mac(tlvf::mac_from_string(ap_mac),
+                                                      notification->params().vap_id));
 
         LOG_CLI(DEBUG,
                 "rssi measurement response: "
@@ -3024,8 +3026,8 @@ bool Controller::handle_cmdu_control_message(
             beerocks_message::sSteeringEvSnr new_event;
             new_event.snr        = notification->params().rx_snr;
             new_event.client_mac = notification->params().result.mac;
-            new_event.bssid      = tlvf::mac_from_string(
-                database.get_hostap_vap_mac(ap_mac, notification->params().vap_id));
+            new_event.bssid      = tlvf::mac_from_string(database.get_hostap_vap_mac(
+                tlvf::mac_from_string(ap_mac), notification->params().vap_id));
             tasks.push_event(database.get_rdkb_wlan_task_id(),
                              rdkb_wlan_task::events::STEERING_EVENT_SNR_AVAILABLE, &new_event);
         }
@@ -3041,7 +3043,8 @@ bool Controller::handle_cmdu_control_message(
         }
         std::string client_mac        = tlvf::mac_to_string(notification->params().result.mac);
         std::string client_parent_mac = database.get_node_parent(client_mac);
-        std::string bssid = database.get_hostap_vap_mac(hostap_mac, notification->params().vap_id);
+        std::string bssid = database.get_hostap_vap_mac(tlvf::mac_from_string(hostap_mac),
+                                                        notification->params().vap_id);
         bool is_parent    = (client_parent_mac == bssid);
 
         int rx_rssi = int(notification->params().rx_rssi);

@@ -2475,7 +2475,7 @@ std::string db::get_hostap_vap_with_ssid(const std::string &mac, const std::stri
     return it->second.mac;
 }
 
-std::string db::get_hostap_vap_mac(const std::string &mac, int vap_id)
+std::string db::get_hostap_vap_mac(const sMacAddr &mac, int vap_id)
 {
     auto n = get_node(mac);
     if (!n) {
