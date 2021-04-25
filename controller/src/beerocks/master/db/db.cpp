@@ -6924,3 +6924,74 @@ bool db::dm_remove_sta(const sMacAddr &sta_mac)
 
     return true;
 }
+
+bool db::set_sta_dhcp_v4_lease(const sMacAddr &sta_mac, const std::string &host_name,
+                               const std::string &ipv4_address)
+{
+    auto sta_node = get_node(sta_mac);
+
+    if (!sta_node || sta_node->get_type() != TYPE_CLIENT) {
+        return false;
+    }
+
+    // Update node attributes.
+    sta_node->ipv4 = ipv4_address;
+    sta_node->name = host_name;
+
+    // Update datamodel attributes.
+    std::string path_to_sta = sta_node->dm_path;
+
+    if (path_to_sta.empty()) {
+        return true;
+    }
+
+    // Path example to the variable in Data Model
+    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.Hostname
+    if (!m_ambiorix_datamodel->set(path_to_sta, "Hostname", host_name)) {
+        LOG(ERROR) << "Failed to set " << path_to_sta << ".Hostname: " << host_name;
+        return false;
+    }
+
+    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.IPV4Address
+    if (!m_ambiorix_datamodel->set(path_to_sta, "IPV4Address", ipv4_address)) {
+        LOG(ERROR) << "Failed to set " << path_to_sta << ".IPV4Address: " << ipv4_address;
+        return false;
+    }
+
+    return true;
+}
+
+bool db::set_sta_dhcp_v6_lease(const sMacAddr &sta_mac, const std::string &host_name,
+                               const std::string &ipv6_address)
+{
+    auto sta_node = get_node(sta_mac);
+
+    if (!sta_node || sta_node->get_type() != TYPE_CLIENT) {
+        return false;
+    }
+
+    // Update node attributes.
+    sta_node->name = host_name;
+
+    // Update datamodel attributes.
+    std::string path_to_sta = sta_node->dm_path;
+
+    if (path_to_sta.empty()) {
+        return true;
+    }
+
+    // Path example to the variable in Data Model
+    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.Hostname
+    if (!m_ambiorix_datamodel->set(path_to_sta, "Hostname", host_name)) {
+        LOG(ERROR) << "Failed to set " << path_to_sta << ".Hostname: " << host_name;
+        return false;
+    }
+
+    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.IPV6Address
+    if (!m_ambiorix_datamodel->set(path_to_sta, "IPV6Address", ipv6_address)) {
+        LOG(ERROR) << "Failed to set " << path_to_sta << ".IPV6Address: " << ipv6_address;
+        return false;
+    }
+
+    return true;
+}

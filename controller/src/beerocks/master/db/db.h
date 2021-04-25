@@ -641,6 +641,32 @@ public:
      */
     bool dm_remove_sta(const sMacAddr &sta_mac);
 
+    /**
+     * @brief Set STA DHCPv4 lease information for both node and datamodel.
+     *
+     * Path: Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}
+     *
+     * @param sta_mac sta MAC address for node matching
+     * @param host_name sta host name
+     * @param ipv4_address sta ipv4 address given by dhcp
+     * @return true on success, false otherwise.
+     */
+    bool set_sta_dhcp_v4_lease(const sMacAddr &sta_mac, const std::string &host_name,
+                               const std::string &ipv4_address);
+
+    /**
+     * @brief Set STA DHCPv6 lease information for both node and datamodel.
+     *
+     * Path: Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}
+     *
+     * @param sta_mac sta MAC address for node matching
+     * @param host_name sta host name
+     * @param ipv6_address sta ipv6 address given by dhcp
+     * @return true on success, false otherwise.
+     */
+    bool set_sta_dhcp_v6_lease(const sMacAddr &sta_mac, const std::string &host_name,
+                               const std::string &ipv6_address);
+
     //
     // DB node functions (get only)
     //
@@ -929,11 +955,11 @@ public:
 
     /**
      * @brief Set the channel scan is pending object
-     * 
+     *
      * @param mac:              MAC address of radio
      * @param scan_in_progress: Flag of current channel scan
      * @return true on success
-     * @return false on failure 
+     * @return false on failure
      */
     bool set_channel_scan_is_pending(const sMacAddr &mac, bool scan_is_pending);
 
@@ -951,7 +977,7 @@ public:
     /**
      * @brief Get the channel scan in progress object
      * In the case of single scan also check the scan is pending flag
-     * 
+     *
      * @param mac          MAC address of radio
      * @param single_scan: Indicated if to use single scan or continuous
      * @return Flag of current channel scan
@@ -1870,7 +1896,7 @@ private:
      * This object describes an event generated when a STA associates to a BSS.
      * Example of full path to object:
      * 'Controller.Notification.AssociationEvent.AssociationEventData.1'.
-     * 
+     *
      * @param bssid BSS mac address.
      * @param client_mac Client mac address.
      * @return Path to object on success, empty sring otherwise.
