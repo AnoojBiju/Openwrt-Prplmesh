@@ -858,7 +858,7 @@ public:
     // CS - DFS
     //
     bool set_hostap_activity_mode(const std::string &mac, beerocks::eApActiveMode ap_activity_mode);
-    beerocks::eApActiveMode get_hostap_activity_mode(const std::string &mac);
+    beerocks::eApActiveMode get_hostap_activity_mode(const sMacAddr &mac);
     bool set_radar_hit_stats(const std::string &mac, uint8_t channel, uint8_t bw,
                              bool is_csa_entry);
     bool set_supported_channel_radar_affected(const std::string &mac,

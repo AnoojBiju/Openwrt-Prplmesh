@@ -2701,7 +2701,7 @@ bool db::set_hostap_activity_mode(const std::string &mac, eApActiveMode ap_activ
     return true;
 }
 
-beerocks::eApActiveMode db::get_hostap_activity_mode(const std::string &mac)
+beerocks::eApActiveMode db::get_hostap_activity_mode(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {

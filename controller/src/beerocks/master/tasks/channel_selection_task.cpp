@@ -891,7 +891,8 @@ void channel_selection_task::work()
 
         ccl_fill_affected_supported_channels();
         auto has_unaffected_channels = ccl_has_free_dfs_channels(beerocks::BANDWIDTH_160);
-        auto ap_idle_mode = (database.get_hostap_activity_mode(hostap_mac) == AP_IDLE_MODE);
+        auto ap_idle_mode =
+            (database.get_hostap_activity_mode(tlvf::mac_from_string(hostap_mac)) == AP_IDLE_MODE);
         TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
                         << " has_unaffected_channels = " << int(has_unaffected_channels)
                         << " ap_idle_mode = " << int(ap_idle_mode);
