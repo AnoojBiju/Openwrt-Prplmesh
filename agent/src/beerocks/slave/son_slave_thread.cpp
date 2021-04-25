@@ -12,12 +12,12 @@
 #include "../fronthaul_manager/monitor/monitor_thread.h"
 #include "tlvf_utils.h"
 
+#include "cac_status_database.h"
+#include "gate/1905_beacon_query_to_vs.h"
+#include "gate/vs_beacon_response_to_1905.h"
 #include <bcl/beerocks_utils.h>
 #include <bcl/beerocks_version.h>
 #include <bcl/network/network_utils.h>
-#include <easylogging++.h>
-#include <mapf/common/utils.h>
-
 #include <beerocks/tlvf/beerocks_message.h>
 #include <beerocks/tlvf/beerocks_message_1905_vs.h>
 #include <beerocks/tlvf/beerocks_message_apmanager.h>
@@ -25,7 +25,8 @@
 #include <beerocks/tlvf/beerocks_message_control.h>
 #include <beerocks/tlvf/beerocks_message_monitor.h>
 #include <beerocks/tlvf/beerocks_message_platform.h>
-
+#include <easylogging++.h>
+#include <mapf/common/utils.h>
 #include <tlvf/WSC/AttrList.h>
 #include <tlvf/ieee_1905_1/tlvAlMacAddress.h>
 #include <tlvf/ieee_1905_1/tlvLinkMetricQuery.h>
@@ -43,10 +44,11 @@
 #include <tlvf/wfa_map/tlvClientAssociationControlRequest.h>
 #include <tlvf/wfa_map/tlvClientAssociationEvent.h>
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
-#include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 #include <tlvf/wfa_map/tlvProfile2ApRadioAdvancedCapabilities.h>
+#include <tlvf/wfa_map/tlvProfile2CacCompletionReport.h>
+#include <tlvf/wfa_map/tlvProfile2CacStatusReport.h>
 #include <tlvf/wfa_map/tlvProfile2Default802dotQSettings.h>
 #include <tlvf/wfa_map/tlvProfile2ReasonCode.h>
 #include <tlvf/wfa_map/tlvProfile2SteeringRequest.h>
@@ -55,9 +57,6 @@
 #include <tlvf/wfa_map/tlvSteeringBTMReport.h>
 #include <tlvf/wfa_map/tlvSteeringRequest.h>
 #include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
-
-#include "gate/1905_beacon_query_to_vs.h"
-#include "gate/vs_beacon_response_to_1905.h"
 
 // BPL Error Codes
 #include <bpl/bpl_cfg.h>
@@ -104,7 +103,7 @@ slave_thread::slave_thread(sSlaveConfig conf, beerocks::logging &logger_)
     auto radio = db->add_radio(conf.hostap_iface, conf.backhaul_wireless_iface);
     if (!radio) {
         m_constructor_failed = true;
-        // No need to print here anything, 'add_radio()' does it internaly
+        // No need to print here anything, 'add_radio()' does it internally
         return;
     }
     m_fronthaul_iface = conf.hostap_iface;
@@ -1439,6 +1438,33 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         message_com::send_cmdu(ap_manager_socket, cmdu_tx);
         break;
     }
+
+    case beerocks_message::ACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC_REQUEST: {
+        LOG(DEBUG) << "received ACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC_REQUEST";
+        auto request_in =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC_REQUEST>();
+        if (!request_in) {
+            LOG(ERROR) << "addClass cACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC_REQUEST failed";
+            return false;
+        }
+
+        // we are about to (re)configure
+        configuration_in_progress = true;
+
+        auto request_out = message_com::create_vs_message<
+            beerocks_message::cACTION_APMANAGER_HOSTAP_CANCEL_ACTIVE_CAC_REQUEST>(cmdu_tx);
+        if (!request_out) {
+            LOG(ERROR) << "Failed building message!";
+            return false;
+        }
+
+        LOG(DEBUG) << "send cACTION_APMANAGER_HOSTAP_CANCEL_ACTIVE_CAC_REQUEST";
+        request_out->cs_params() = request_in->cs_params();
+        message_com::send_cmdu(ap_manager_socket, cmdu_tx);
+        break;
+    }
+
     case beerocks_message::ACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST: {
         LOG(TRACE) << "Received ACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST";
         auto request_in = beerocks_header->addClass<
@@ -2799,9 +2825,111 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             }
         }
 
+        // cac tlvs //
+
+        // create status report
+        auto cac_status_report_tlv = cmdu_tx.addClass<wfa_map::tlvProfile2CacStatusReport>();
+        if (!cac_status_report_tlv) {
+            LOG(ERROR) << "Failed to create cac-status-report-tlv";
+            return false;
+        }
+
+        CacStatusDatabase cac_status_database;
+
+        // fill status report
+        auto available_channels =
+            cac_status_database.get_available_channels(radio->front.iface_mac);
+
+        if (!cac_status_report_tlv->alloc_available_channels(available_channels.size())) {
+            LOG(ERROR) << "Failed to allocate " << available_channels.size()
+                       << " structures for available channels";
+            return false;
+        }
+        for (unsigned int i = 0; i < available_channels.size(); ++i) {
+            auto &available_ref = std::get<1>(cac_status_report_tlv->available_channels(i));
+            available_ref.operating_class = available_channels[i].operating_class;
+            available_ref.channel         = available_channels[i].channel;
+            available_ref.minutes_since_cac_completion =
+                std::chrono::duration_cast<std::chrono::minutes>(available_channels[i].duration)
+                    .count();
+        }
+
+        // TODO
+        // Complete status report
+        // https://jira.prplfoundation.org/browse/PPM-1089
+
+        // create completion report
+        auto cac_completion_report_tlv =
+            cmdu_tx.addClass<wfa_map::tlvProfile2CacCompletionReport>();
+        if (!cac_completion_report_tlv) {
+            LOG(ERROR) << "Failed to create cac-completion-report-tlv";
+            return false;
+        }
+
+        // fill completion report
+        auto cac_radio = cac_completion_report_tlv->create_cac_radios();
+        if (!cac_radio) {
+            LOG(ERROR) << "Failed to create cac radio for " << radio->front.iface_mac;
+            return false;
+        }
+        cac_radio->radio_uid() = radio->front.iface_mac;
+
+        const auto &cac_completion =
+            cac_status_database.get_completion_status(radio->front.iface_mac);
+
+        cac_radio->operating_class()       = cac_completion.first.operating_class;
+        cac_radio->channel()               = cac_completion.first.channel;
+        cac_radio->cac_completion_status() = cac_completion.first.completion_status;
+
+        if (!cac_completion.second.empty()) {
+            cac_radio->alloc_detected_pairs(cac_completion.second.size());
+            for (unsigned int i = 0; i < cac_completion.second.size(); ++i) {
+                if (std::get<0>(cac_radio->detected_pairs(i))) {
+                    auto &cac_detected_pair = std::get<1>(cac_radio->detected_pairs(i));
+                    cac_detected_pair.operating_class_detected = cac_completion.second[i].first;
+                    cac_detected_pair.channel_detected         = cac_completion.second[i].second;
+                }
+            }
+        }
+
+        cac_completion_report_tlv->add_cac_radios(cac_radio);
+
         LOG(DEBUG) << "sending channel preference report for ruid=" << radio->front.iface_mac;
 
         send_cmdu_to_controller(cmdu_tx);
+
+        break;
+    }
+    case beerocks_message::ACTION_APMANAGER_HOSTAP_CANCEL_ACTIVE_CAC_RESPONSE: {
+        // no more configuration
+        configuration_in_progress = false;
+
+        LOG(DEBUG) << "received ACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC_RESPONSE";
+        auto response_in =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC_RESPONSE>();
+        if (!response_in) {
+            LOG(ERROR) << "addClass cACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC_RESPONSE failed";
+            return false;
+        }
+
+        // report about the status
+        auto response_out = message_com::create_vs_message<
+            beerocks_message::cACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC_RESPONSE>(cmdu_tx);
+        if (!response_out) {
+            LOG(ERROR) << "Failed building message!";
+            return false;
+        }
+        response_out->success() = response_in->success();
+
+        LOG(DEBUG) << "send cACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC_RESPONSE";
+        message_com::send_cmdu(backhaul_manager_socket, cmdu_tx);
+
+        // take actions when the cancelation failed
+        if (!response_in->success()) {
+            LOG(ERROR) << "cancel active cac failed - resetting the slave";
+            slave_reset();
+        }
 
         break;
     }
@@ -4427,7 +4555,7 @@ bool slave_thread::send_cmdu_to_controller(ieee1905_1::CmduMessageTx &cmdu_tx)
  *        class member params authkey and keywrapauth are computed
  *        on success.
  *
- * @param[in] m2 WSC M2 recived from the controller
+ * @param[in] m2 WSC M2 received from the controller
  * @param[out] authkey 32 bytes calculated authentication key
  * @param[out] keywrapkey 16 bytes calculated key wrap key
  * @return true on success
@@ -5118,6 +5246,7 @@ bool slave_thread::parse_non_intel_join_response(Socket *sd)
 bool slave_thread::handle_multi_ap_policy_config_request(Socket *sd,
                                                          ieee1905_1::CmduMessageRx &cmdu_rx)
 {
+
     /**
      * The Multi-AP Policy Config Request message is sent by the controller and received by the
      * backhaul manager.
@@ -5329,7 +5458,7 @@ bool slave_thread::handle_client_steering_request(Socket *sd, ieee1905_1::CmduMe
         // NOTE: the implementation below does not actually take the steering
         // opportunity and tries to steer. Instead, it just reports ACK
         // and steering-completed.
-        // Taking no action is a legitimate result of steering opporunity request,
+        // Taking no action is a legitimate result of steering opportunity request,
         // and this is what is done here.
         // Later in time we may actually implement the opportunity to steer.
 
@@ -5902,12 +6031,18 @@ void slave_thread::save_cac_capabilities_params_to_db()
 
         // we'll update the value when we receive cac-started event.
         // there is no way to query the hardware until a CAC is
-        // actually performed. We set the value to 10 minutes as default.
+        // actually performed.
+        // Until PPM-855 is solved we will set the value to 10 minutes as default.
         cac_capabilities_local.cac_duration_sec = 600;
 
-        // add the operating class for all supported channels
-        for (const auto &wifi_channel : radio->front.supported_channels) {
-            if (wifi_channel.is_dfs_channel) {
+        for (const auto &channel_info_element : radio->channels_list) {
+            auto channel       = channel_info_element.first;
+            auto &channel_info = channel_info_element.second;
+            if (channel_info.dfs_state == beerocks_message::eDfsState::NOT_DFS) {
+                continue;
+            }
+            for (auto &bw_info : channel_info.supported_bw_list) {
+                auto wifi_channel    = beerocks::message::sWifiChannel(channel, bw_info.bandwidth);
                 auto operating_class = wireless_utils::get_operating_class_by_channel(wifi_channel);
                 if (operating_class == 0) {
                     continue;
@@ -5916,7 +6051,8 @@ void slave_thread::save_cac_capabilities_params_to_db()
                     wifi_channel.channel);
             }
         }
-        cac_capabilities_local.cac_method = eCacMethod::CAC_METHOD_CONTINUOUS;
+
+        cac_capabilities_local.cac_method = wfa_map::eCacMethod::CONTINUOUS_CAC;
 
         // insert "regular" 5g
         radio->cac_capabilities.cac_method_capabilities.insert(
@@ -5924,7 +6060,7 @@ void slave_thread::save_cac_capabilities_params_to_db()
 
         // insert zwdfs 5g
         if (radio->front.zwdfs) {
-            cac_capabilities_local.cac_method = eCacMethod::CAC_METHOD_MIMO_DIMENSION_REDUCED;
+            cac_capabilities_local.cac_method = wfa_map::eCacMethod::MIMO_DIMENSION_REDUCED;
             radio->cac_capabilities.cac_method_capabilities.insert(
                 std::make_pair(cac_capabilities_local.cac_method, cac_capabilities_local));
         }

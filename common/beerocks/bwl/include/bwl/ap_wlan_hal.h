@@ -242,6 +242,21 @@ public:
     virtual bool switch_channel(int chan, int bw, int vht_center_frequency) = 0;
 
     /**
+     * @brief cancel active cac if exsits.
+     *
+     * @param [in] chan The channel to switch to after the cancelation.
+     * @param [in] bw The bandwidth (in Mhz) of the target channel.
+     * @param [in] vht_center_frequency VHT center frequency.
+     * @param [in] secondary_channel_offset The secondary channel's offset
+     * from chan. either: -1, 0, or +1
+     *
+     * @return true if everything went well or false on error.
+     * note: returns true if there was no active cac.
+     */
+    virtual bool cancel_cac(int chan, beerocks::eWiFiBandwidth bw, int vht_center_frequency,
+                            int secondary_channel_offset) = 0;
+
+    /**
      * @brief Update the Radio antenna configuration.
      * 
      * @param [in] mode Radio antenna configuration.

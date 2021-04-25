@@ -864,6 +864,13 @@ bool ap_wlan_hal_nl80211::switch_channel(int chan, int bw, int vht_center_freque
     return true;
 }
 
+bool ap_wlan_hal_nl80211::cancel_cac(int chan, beerocks::eWiFiBandwidth bw,
+                                     int vht_center_frequency, int secondary_chan)
+{
+    // TODO: implement
+    return false;
+}
+
 bool ap_wlan_hal_nl80211::set_antenna_mode(AntMode mode)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";

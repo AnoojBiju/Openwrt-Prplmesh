@@ -26,6 +26,7 @@ cCacCompletionReportRadio:
   channel: uint8_t                  # line 6
   cac_completion_status:            # line 7
     _type: eCompletionStatus
+    _value: NOT_PERFORMED
   number_of_detected_pairs:                                   # line 8
     _type: uint8_t
     _length_var: True
@@ -49,10 +50,12 @@ eCompletionStatus:
       0x04: Request was considered to be non-conformant to regulations in the country in which the Multi-AP Agent is operating
       0x05: Other error
       0x06-0xFF: Reserved
+      0xFF: prplmesh addition - CAC was not performed
     _enum_storage: uint8_t
-    CAC_COMPLETION_SUCCESSFUL:              0x00
-    CAC_COMPLETION_RADAR_DETECTED:          0x01
-    CAC_COMPLETION_CAC_NOT_SUPPORTED:       0x02
-    CAC_COMPLETION_RADIO_TOO_BUSY:          0x03
-    CAC_COMPLETION_NOT_UNDER_REGULATION:    0x04
-    CAC_COMPLETION_OTHER_ERROR:             0x05 
+    SUCCESSFUL:              0x00
+    RADAR_DETECTED:          0x01
+    CAC_NOT_SUPPORTED:       0x02
+    RADIO_TOO_BUSY:          0x03
+    NOT_UNDER_REGULATION:    0x04
+    OTHER_ERROR:             0x05 
+    NOT_PERFORMED:           0xFF

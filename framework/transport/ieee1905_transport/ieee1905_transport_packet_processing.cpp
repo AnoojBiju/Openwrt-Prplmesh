@@ -514,7 +514,7 @@ bool Ieee1905Transport::forward_packet_single(Packet &packet)
     } else if (packet.dst_if_type == CmduRxMessage::IF_TYPE_NET && packet.dst_if_index != 0) {
         std::string ifname = if_index2name(packet.dst_if_index);
         if (ifname.empty()) {
-            MAPF_ERR("Coudn't find ifname for index " << packet.dst_if_index);
+            MAPF_ERR("Couldn't find ifname for index " << packet.dst_if_index);
             return false;
         }
         MAPF_DBG("forwarding packet to interface " << ifname << ".");

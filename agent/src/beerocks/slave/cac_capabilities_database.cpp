@@ -22,28 +22,28 @@ std::vector<sMacAddr> CacCapabilitiesDatabase::get_cac_radios() const
 {
     auto db = AgentDB::get();
 
-    const auto &interfaces = db->get_radios_list();
-
     std::vector<AgentDB::sRadio *> radios_5g;
 
     // all 5g radios are cac radios
-    std::copy_if(interfaces.begin(), interfaces.end(), std::back_inserter(radios_5g),
-                 [&db](const AgentDB::sRadio *radio) {
-                     if (!radio) {
-                         return false;
-                     }
-                     return son::wireless_utils::is_frequency_band_5ghz(radio->freq_type);
-                 });
+    for (auto radio : db->get_radios_list()) {
+        if (!radio) {
+            return {};
+        }
+        if (son::wireless_utils::is_frequency_band_5ghz(radio->freq_type)) {
+            radios_5g.push_back(radio);
+        }
+    }
 
     // copy just the mac
     std::vector<sMacAddr> ret;
-    std::transform(radios_5g.begin(), radios_5g.end(), std::back_inserter(ret),
-                   [](const AgentDB::sRadio *radio_5g) { return radio_5g->front.iface_mac; });
+    for (auto &radio_5g : radios_5g) {
+        ret.push_back(radio_5g->front.iface_mac);
+    }
     return ret;
 }
 
 bool CacCapabilitiesDatabase::is_cac_method_supported(const sMacAddr &radio_mac,
-                                                      beerocks::eCacMethod method) const
+                                                      wfa_map::eCacMethod method) const
 {
     auto db          = AgentDB::get();
     const auto radio = db->get_radio_by_mac(radio_mac);
@@ -60,12 +60,12 @@ bool CacCapabilitiesDatabase::is_cac_method_supported(const sMacAddr &radio_mac,
     }
 
     // all 5g radios supports continues method
-    if (method == beerocks::eCacMethod::CAC_METHOD_CONTINUOUS) {
+    if (method == wfa_map::eCacMethod::CONTINUOUS_CAC) {
         return true;
     }
 
     // zwdf existance means that de facto we support mimo dimension reduced
-    if (method == beerocks::eCacMethod::CAC_METHOD_MIMO_DIMENSION_REDUCED) {
+    if (method == wfa_map::eCacMethod::CONTINUOUS_CAC_WITH_DEDICATED_RADIO) {
         return db->device_conf.zwdfs_enable;
     }
 
@@ -74,7 +74,7 @@ bool CacCapabilitiesDatabase::is_cac_method_supported(const sMacAddr &radio_mac,
 }
 
 uint32_t CacCapabilitiesDatabase::get_cac_completion_duration(const sMacAddr &radio_mac,
-                                                              beerocks::eCacMethod method) const
+                                                              wfa_map::eCacMethod method) const
 {
     auto db          = AgentDB::get();
     const auto radio = db->get_radio_by_mac(radio_mac);
@@ -99,7 +99,7 @@ uint32_t CacCapabilitiesDatabase::get_cac_completion_duration(const sMacAddr &ra
 
 CacCapabilities::CacOperatingClasses
 CacCapabilitiesDatabase::get_cac_operating_classes(const sMacAddr &radio_mac,
-                                                   beerocks::eCacMethod method) const
+                                                   wfa_map::eCacMethod method) const
 {
     auto db          = AgentDB::get();
     const auto radio = db->get_radio_by_mac(radio_mac);

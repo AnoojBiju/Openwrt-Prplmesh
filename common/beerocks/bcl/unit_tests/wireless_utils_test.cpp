@@ -280,4 +280,61 @@ INSTANTIATE_TEST_SUITE_P(InvalidParamsInstance, WirelessUtilsGetOperatingClassBy
                          testing::ValuesIn(get_operating_class_by_channel_invalid_parameters()),
                          operating_class_by_channel_param_to_string);
 
+TEST(overlapping_channels, channel_112)
+{
+    // channel 112 test
+    son::wireless_utils::OverlappingChannels result =
+        son::wireless_utils::get_overlapping_channels(112);
+
+    EXPECT_EQ(result.size(), 15);
+    EXPECT_FALSE(std::find(result.begin(), result.end(),
+                           std::pair<uint8_t, beerocks::eWiFiBandwidth>(
+                               100, beerocks::BANDWIDTH_20)) != result.end());
+    EXPECT_TRUE(std::find(result.begin(), result.end(),
+                          std::pair<uint8_t, beerocks::eWiFiBandwidth>(
+                              100, beerocks::BANDWIDTH_80)) != result.end());
+    EXPECT_TRUE(std::find(result.begin(), result.end(),
+                          std::pair<uint8_t, beerocks::eWiFiBandwidth>(
+                              100, beerocks::BANDWIDTH_160)) != result.end());
+    EXPECT_TRUE(std::find(result.begin(), result.end(),
+                          std::pair<uint8_t, beerocks::eWiFiBandwidth>(
+                              104, beerocks::BANDWIDTH_80)) != result.end());
+    EXPECT_TRUE(std::find(result.begin(), result.end(),
+                          std::pair<uint8_t, beerocks::eWiFiBandwidth>(
+                              104, beerocks::BANDWIDTH_160)) != result.end());
+    EXPECT_TRUE(std::find(result.begin(), result.end(),
+                          std::pair<uint8_t, beerocks::eWiFiBandwidth>(
+                              108, beerocks::BANDWIDTH_40)) != result.end());
+    EXPECT_TRUE(std::find(result.begin(), result.end(),
+                          std::pair<uint8_t, beerocks::eWiFiBandwidth>(
+                              108, beerocks::BANDWIDTH_80)) != result.end());
+    EXPECT_TRUE(std::find(result.begin(), result.end(),
+                          std::pair<uint8_t, beerocks::eWiFiBandwidth>(
+                              108, beerocks::BANDWIDTH_160)) != result.end());
+    EXPECT_TRUE(std::find(result.begin(), result.end(),
+                          std::pair<uint8_t, beerocks::eWiFiBandwidth>(
+                              112, beerocks::BANDWIDTH_20)) != result.end());
+    EXPECT_TRUE(std::find(result.begin(), result.end(),
+                          std::pair<uint8_t, beerocks::eWiFiBandwidth>(
+                              112, beerocks::BANDWIDTH_40)) != result.end());
+    EXPECT_TRUE(std::find(result.begin(), result.end(),
+                          std::pair<uint8_t, beerocks::eWiFiBandwidth>(
+                              112, beerocks::BANDWIDTH_80)) != result.end());
+    EXPECT_TRUE(std::find(result.begin(), result.end(),
+                          std::pair<uint8_t, beerocks::eWiFiBandwidth>(
+                              112, beerocks::BANDWIDTH_160)) != result.end());
+    EXPECT_TRUE(std::find(result.begin(), result.end(),
+                          std::pair<uint8_t, beerocks::eWiFiBandwidth>(
+                              116, beerocks::BANDWIDTH_160)) != result.end());
+    EXPECT_TRUE(std::find(result.begin(), result.end(),
+                          std::pair<uint8_t, beerocks::eWiFiBandwidth>(
+                              120, beerocks::BANDWIDTH_160)) != result.end());
+    EXPECT_TRUE(std::find(result.begin(), result.end(),
+                          std::pair<uint8_t, beerocks::eWiFiBandwidth>(
+                              124, beerocks::BANDWIDTH_160)) != result.end());
+    EXPECT_TRUE(std::find(result.begin(), result.end(),
+                          std::pair<uint8_t, beerocks::eWiFiBandwidth>(
+                              128, beerocks::BANDWIDTH_160)) != result.end());
+}
+
 } // namespace

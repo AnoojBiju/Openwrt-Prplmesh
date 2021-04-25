@@ -84,7 +84,7 @@ public:
      * 
      * @param cmdu_rx CMDU object containing the received message to be handled.
      * @param iface_index Index of the network interface that the CMDU message was received on.
-     * @param dst_mac Destination MAC address.
+     * @param dst_mac Destination AL MAC address.
      * @param src_mac AL MAC address of the sender.
      * @param fd File descriptor of the socket connection with the slave that sent the message.
      * @param beerocks_header Beerocks Message header (Only on VS message).

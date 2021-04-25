@@ -9,6 +9,8 @@
 #define _AGENT_DB_H_
 
 #include "cac_capabilities.h"
+#include "cac_status_interface.h"
+#include "tasks/task_messages.h"
 #include <bcl/beerocks_defines.h>
 #include <bcl/network/network_utils.h>
 #include <beerocks/tlvf/beerocks_message.h>
@@ -247,19 +249,20 @@ public:
 
         struct sCacCapabilities {
             struct sCacMethodCapabilities {
-                eCacMethod cac_method;
+                wfa_map::eCacMethod cac_method;
                 uint32_t cac_duration_sec;
                 CacCapabilities::CacOperatingClasses operating_classes;
             };
             // for each cac method - the capabilities for it
-            std::map<eCacMethod, sCacMethodCapabilities> cac_method_capabilities;
+            std::map<wfa_map::eCacMethod, sCacMethodCapabilities> cac_method_capabilities;
         } cac_capabilities;
 
         struct sChannelInfo {
             int8_t tx_power_dbm;
-            beerocks_message::eDfsState dfs_state;
             std::vector<beerocks_message::sSupportedBandwidth> supported_bw_list;
+            beerocks_message::eDfsState dfs_state;
         };
+
         // Key: Channel
         std::unordered_map<uint8_t, sChannelInfo> channels_list;
 
@@ -297,6 +300,11 @@ public:
         std::array<uint8_t, beerocks::message::VHT_MCS_SET_SIZE> vht_mcs_set;
 
         bool he_supported = false; ///< Is 802.11ax (High Efficiency) protocol supported
+        bool report_indepent_scans_policy = false;
+
+        // Information on the last channel switch request which containing the requested channel
+        // and bandwidth.
+        std::shared_ptr<sSwitchChannelRequest> last_switch_channel_request;
     };
     struct {
         uint16_t max_number_of_vlans_ids;

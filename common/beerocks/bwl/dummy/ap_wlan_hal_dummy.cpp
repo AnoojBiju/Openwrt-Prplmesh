@@ -278,6 +278,12 @@ bool ap_wlan_hal_dummy::switch_channel(int chan, int bw, int vht_center_frequenc
     return set_channel(chan, beerocks::utils::convert_bandwidth_to_enum(bw), vht_center_frequency);
 }
 
+bool ap_wlan_hal_dummy::cancel_cac(int chan, beerocks::eWiFiBandwidth bw, int vht_center_frequency,
+                                   int secondary_chan)
+{
+    return set_channel(chan, bw, vht_center_frequency);
+}
+
 bool ap_wlan_hal_dummy::set_antenna_mode(AntMode mode) { return true; }
 
 bool ap_wlan_hal_dummy::wds_set_mode(WDSMode mode) { return true; }

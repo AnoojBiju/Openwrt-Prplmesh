@@ -75,12 +75,13 @@ class cCacCompletionReportRadio : public BaseClass
         } __attribute__((packed)) sCacDetectedPair;
         
         enum eCompletionStatus: uint8_t {
-            CAC_COMPLETION_SUCCESSFUL = 0x0,
-            CAC_COMPLETION_RADAR_DETECTED = 0x1,
-            CAC_COMPLETION_CAC_NOT_SUPPORTED = 0x2,
-            CAC_COMPLETION_RADIO_TOO_BUSY = 0x3,
-            CAC_COMPLETION_NOT_UNDER_REGULATION = 0x4,
-            CAC_COMPLETION_OTHER_ERROR = 0x5,
+            SUCCESSFUL = 0x0,
+            RADAR_DETECTED = 0x1,
+            CAC_NOT_SUPPORTED = 0x2,
+            RADIO_TOO_BUSY = 0x3,
+            NOT_UNDER_REGULATION = 0x4,
+            OTHER_ERROR = 0x5,
+            NOT_PERFORMED = 0xff,
         };
         
         sMacAddr& radio_uid();
