@@ -972,7 +972,7 @@ bool db::set_hostap_backhaul_manager(const sMacAddr &mac, bool is_backhaul_manag
     return true;
 }
 
-bool db::is_hostap_backhaul_manager(const std::string &mac)
+bool db::is_hostap_backhaul_manager(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -997,7 +997,7 @@ std::string db::get_hostap_backhaul_manager(const std::string &ire)
     }
     auto ire_hostaps = get_node_children(ire, beerocks::TYPE_SLAVE);
     for (auto &hostap : ire_hostaps) {
-        if ((is_hostap_backhaul_manager(hostap)) &&
+        if ((is_hostap_backhaul_manager(tlvf::mac_from_string(hostap))) &&
             get_node_state(hostap) == beerocks::STATE_CONNECTED) {
             return hostap;
         }

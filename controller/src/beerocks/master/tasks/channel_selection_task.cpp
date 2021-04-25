@@ -1590,7 +1590,7 @@ void channel_selection_task::send_backhaul_reset()
 
 bool channel_selection_task::get_backhaul_manager_slave(std::string &backhaul_manager_slave_mac)
 {
-    if (database.is_hostap_backhaul_manager(hostap_mac)) {
+    if (database.is_hostap_backhaul_manager(tlvf::mac_from_string(hostap_mac))) {
         TASK_LOG(INFO) << " is backhaul_manager_slave! , hostap = " << hostap_mac;
         backhaul_manager_slave_mac = hostap_mac;
         return true;
@@ -1598,7 +1598,7 @@ bool channel_selection_task::get_backhaul_manager_slave(std::string &backhaul_ma
 
     auto siblings = database.get_node_siblings(hostap_mac);
     for (auto &sibling : siblings) {
-        if (database.is_hostap_backhaul_manager(sibling)) {
+        if (database.is_hostap_backhaul_manager(tlvf::mac_from_string(sibling))) {
             TASK_LOG(INFO) << " backhaul_manager_slave joined , sibling = " << hostap_mac;
             backhaul_manager_slave_mac = sibling;
             return true;

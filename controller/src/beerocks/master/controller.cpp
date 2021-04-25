@@ -2994,7 +2994,7 @@ bool Controller::handle_cmdu_control_message(
                     << " vap_id=" << int(notification->params().vap_id));
 
         //response return from slave backhaul manager , updating the matching same band sibling.
-        if (database.is_hostap_backhaul_manager(ap_mac) &&
+        if (database.is_hostap_backhaul_manager(tlvf::mac_from_string(ap_mac)) &&
             database.is_node_wireless(database.get_node_parent_backhaul(ap_mac)) &&
             database.is_node_5ghz(client_mac)) {
             auto priv_ap_mac = ap_mac;
