@@ -710,7 +710,7 @@ void channel_selection_task::work()
                     database.set_hostap_is_on_fail_safe(hostap_mac, false);
                     wait_for_cac_completed(csa_event->cs_params.channel,
                                            csa_event->cs_params.bandwidth);
-                    if (database.get_hostap_on_dfs_reentry(hostap_mac)) {
+                    if (database.get_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac))) {
                         TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac << " DFS reentry flow";
                         if (database.get_hostap_cac_completed(tlvf::mac_from_string(hostap_mac))) {
                             TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
@@ -727,7 +727,7 @@ void channel_selection_task::work()
                         break;
                     }
                 } else {
-                    if (database.get_hostap_on_dfs_reentry(hostap_mac)) {
+                    if (database.get_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac))) {
                         TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
                                         << " was on reentry back on dfs channel";
                         database.set_hostap_is_on_fail_safe(hostap_mac, false);
@@ -769,7 +769,7 @@ void channel_selection_task::work()
             //optimal path for all non dfs reentry clients
             run_optimal_path_for_connected_clients();
 
-            if (database.get_hostap_on_dfs_reentry(hostap_mac)) {
+            if (database.get_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac))) {
                 TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
                                 << " was on reentry back on dfs channel";
                 database.set_hostap_is_on_fail_safe(hostap_mac, false);
@@ -870,7 +870,7 @@ void channel_selection_task::work()
             FSM_MOVE_STATE(GOTO_IDLE);
             break;
         }
-        if (database.get_hostap_on_dfs_reentry(hostap_mac)) {
+        if (database.get_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac))) {
             LOG(DEBUG) << "hostapd " << hostap_mac << "is already on dfs reentry";
             FSM_MOVE_STATE(GOTO_IDLE);
             break;

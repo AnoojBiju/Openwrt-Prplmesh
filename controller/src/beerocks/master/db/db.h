@@ -877,7 +877,7 @@ public:
     bool get_hostap_is_on_sub_band(const std::string &mac);
 
     bool set_hostap_on_dfs_reentry(const sMacAddr &mac, bool enable);
-    bool get_hostap_on_dfs_reentry(const std::string &mac);
+    bool get_hostap_on_dfs_reentry(const sMacAddr &mac);
 
     bool set_hostap_dfs_reentry_clients(const std::string &mac,
                                         const std::set<std::string> &dfs_reentry_clients);
