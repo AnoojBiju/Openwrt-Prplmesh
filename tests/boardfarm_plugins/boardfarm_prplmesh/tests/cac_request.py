@@ -26,8 +26,8 @@ class CacRequest(PrplMeshBaseTest):
         operating_class = 121
         channel = 104
         cac_request_tlv = tlv(
-                0xAD, 0xA, '0x{:02x} {} 0x{:01x} 0x{:01x} 0x00'
-                .format(number_of_radios, agent.radios[1].mac, operating_class, channel))
+            0xAD, 0xA, '0x{:02x} {} 0x{:01x} 0x{:01x} 0x00'
+            .format(number_of_radios, agent.radios[1].mac, operating_class, channel))
 
         print("CAC Request TLV: ", cac_request_tlv)
 
@@ -39,8 +39,8 @@ class CacRequest(PrplMeshBaseTest):
         time.sleep(2)
 
         cac_termination_tlv = tlv(
-                0xAE, 0xA, '0x{:02x} {} 0x{:01x} 0x{:01x} 0x00'
-                .format(number_of_radios, agent.radios[1].mac, operating_class, channel))
+            0xAE, 0xA, '0x{:02x} {} 0x{:01x} 0x{:01x} 0x00'
+            .format(number_of_radios, agent.radios[1].mac, operating_class, channel))
 
         print("CAC Termination TLV: ", cac_termination_tlv)
 
@@ -51,19 +51,3 @@ class CacRequest(PrplMeshBaseTest):
 
         # TODO
         # verify that the agent sends beacons
-
-    @classmethod
-    def teardown_class(cls):
-        """Teardown method, optional for boardfarm tests."""
-        test = cls.test_obj
-        print("Sniffer - stop")
-        test.dev.DUT.wired_sniffer.stop()
-        # Send additional Ctrl+C to the device to terminate "tail -f"
-        # Which is used to read log from device. Required only for tests on HW
-        try:
-            test.dev.DUT.agent_entity.device.send('\003')
-        except AttributeError:
-            # If AttributeError was raised - we are dealing with dummy devices.
-            # We don't have to additionaly send Ctrl+C for dummy devices.
-            pass
-        test.dev.wifi.disable_wifi()
