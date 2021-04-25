@@ -4631,7 +4631,7 @@ uint16_t db::get_node_tx_phy_rate_100kb(const std::string &mac)
     return n->stats_info->tx_phy_rate_100kb;
 }
 
-int db::get_hostap_channel_load_percent(const std::string &mac)
+int db::get_hostap_channel_load_percent(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
