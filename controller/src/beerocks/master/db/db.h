@@ -865,7 +865,7 @@ public:
     //bool get_supported_channel_all_availble(const std::string &mac );
 
     bool set_hostap_is_dfs(const std::string &mac, bool enable);
-    bool get_hostap_is_dfs(const std::string &mac);
+    bool get_hostap_is_dfs(const sMacAddr &mac);
 
     bool set_hostap_cac_completed(const std::string &mac, bool enable);
     bool get_hostap_cac_completed(const std::string &mac);

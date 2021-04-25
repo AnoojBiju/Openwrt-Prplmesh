@@ -2814,7 +2814,7 @@ bool db::set_hostap_is_dfs(const std::string &mac, bool enable)
     return true;
 }
 
-bool db::get_hostap_is_dfs(const std::string &mac)
+bool db::get_hostap_is_dfs(const sMacAddr &mac)
 {
     auto n = get_node(mac);
 
