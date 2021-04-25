@@ -2238,7 +2238,7 @@ bool db::get_node_11v_capability(const std::string &mac)
     return n->supports_11v;
 }
 
-bool db::set_hostap_iface_id(const std::string &mac, int8_t iface_id)
+bool db::set_hostap_iface_id(const sMacAddr &mac, int8_t iface_id)
 {
     auto n = get_node(mac);
     if (!n) {
