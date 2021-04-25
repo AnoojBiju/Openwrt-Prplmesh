@@ -780,7 +780,7 @@ public:
                                               const std::vector<uint8_t> &non_operable_channels);
 
     bool set_hostap_band_capability(const sMacAddr &mac, beerocks::eRadioBandCapability capability);
-    beerocks::eRadioBandCapability get_hostap_band_capability(const std::string &mac);
+    beerocks::eRadioBandCapability get_hostap_band_capability(const sMacAddr &mac);
 
     bool capability_check(const std::string &mac, int channel);
 
