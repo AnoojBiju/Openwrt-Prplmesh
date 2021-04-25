@@ -1433,7 +1433,7 @@ public:
     uint32_t get_hostap_total_sta_rx_bytes(const sMacAddr &mac);
     uint32_t get_hostap_total_sta_tx_bytes(const sMacAddr &mac);
 
-    int get_hostap_total_client_tx_load_percent(const std::string &mac);
+    int get_hostap_total_client_tx_load_percent(const sMacAddr &mac);
     int get_hostap_total_client_rx_load_percent(const std::string &mac);
 
     int get_node_rx_load_percent(const std::string &mac);
