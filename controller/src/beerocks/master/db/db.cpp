@@ -4285,8 +4285,7 @@ double db::get_node_cross_estimated_tx_phy_rate(const std::string &mac)
     return n->cross_estimated_tx_phy_rate;
 }
 
-bool db::set_hostap_stats_info(const std::string &mac,
-                               const beerocks_message::sApStatsParams *params)
+bool db::set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApStatsParams *params)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -4325,7 +4324,10 @@ bool db::set_hostap_stats_info(const std::string &mac,
     return true;
 }
 
-void db::clear_hostap_stats_info(const std::string &mac) { set_hostap_stats_info(mac, nullptr); }
+void db::clear_hostap_stats_info(const std::string &mac)
+{
+    set_hostap_stats_info(tlvf::mac_from_string(mac), nullptr);
+}
 
 bool db::notify_disconnection(const std::string &client_mac)
 {
