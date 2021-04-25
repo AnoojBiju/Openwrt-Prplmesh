@@ -67,10 +67,11 @@ void load_balancer_task::work()
         }
 
         for (auto hostap : hostaps) {
-            if (database.get_hostap_stats_info_timestamp(hostap) <= start_timestamp) {
+            if (database.get_hostap_stats_info_timestamp(tlvf::mac_from_string(hostap)) <=
+                start_timestamp) {
                 /*
-                     * if the load info is not up-to-date, request a new report
-                     */
+                 * if the load info is not up-to-date, request a new report
+                 */
                 TASK_LOG(DEBUG) << "load info outdated, requestsing load measurement from hostap "
                                 << hostap;
                 son_actions::send_cmdu_to_agent(database.get_node_parent_ire(hostap), cmdu_tx,

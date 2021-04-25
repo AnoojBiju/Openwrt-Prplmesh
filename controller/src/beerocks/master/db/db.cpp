@@ -4536,7 +4536,7 @@ std::chrono::steady_clock::time_point db::get_node_stats_info_timestamp(const st
     return n->stats_info->timestamp;
 }
 
-std::chrono::steady_clock::time_point db::get_hostap_stats_info_timestamp(const std::string &mac)
+std::chrono::steady_clock::time_point db::get_hostap_stats_info_timestamp(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
