@@ -99,7 +99,8 @@ void load_balancer_task::work()
         int max_load = 0;
 
         for (auto hostap : hostaps) {
-            int hostap_channel_load = database.get_hostap_channel_load_percent(hostap);
+            int hostap_channel_load =
+                database.get_hostap_channel_load_percent(tlvf::mac_from_string(hostap));
             if (hostap_channel_load > max_load) {
                 most_loaded_hostap = hostap;
                 max_load           = hostap_channel_load;
