@@ -2946,7 +2946,7 @@ bool db::clear_hostap_dfs_reentry_clients(const sMacAddr &mac)
     return true;
 }
 
-bool db::set_hostap_is_acs_enabled(const std::string &mac, bool enable)
+bool db::set_hostap_is_acs_enabled(const sMacAddr &mac, bool enable)
 {
     auto n = get_node(mac);
 
