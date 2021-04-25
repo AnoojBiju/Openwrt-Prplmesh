@@ -1475,7 +1475,8 @@ void optimal_path_task::send_rssi_measurement_request(const std::string &agent_m
     request->params().channel                = channel;
     request->params().bandwidth              = database.get_node_bw(hostap_mac);
     request->params().mon_ping_burst_pkt_num = database.get_measurement_window_size(current_hostap);
-    request->params().vht_center_frequency   = database.get_hostap_vht_center_frequency(hostap_mac);
+    request->params().vht_center_frequency =
+        database.get_hostap_vht_center_frequency(tlvf::mac_from_string(hostap_mac));
     TASK_LOG(DEBUG) << "vht_center_frequency = " << int(request->params().vht_center_frequency);
     //taking measurement request time stamp
     database.set_measurement_sent_timestamp(hostap);

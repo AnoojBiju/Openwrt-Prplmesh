@@ -1462,7 +1462,7 @@ public:
     int get_node_bw_int(const std::string &mac);
     bool get_hostap_channel_ext_above_primary(const sMacAddr &hostap_mac);
     bool get_node_channel_ext_above_secondary(const std::string &mac);
-    uint16_t get_hostap_vht_center_frequency(const std::string &mac);
+    uint16_t get_hostap_vht_center_frequency(const sMacAddr &mac);
 
     void add_bss_info_configuration(const sMacAddr &al_mac,
                                     const wireless_utils::sBssInfoConf &bss_info);

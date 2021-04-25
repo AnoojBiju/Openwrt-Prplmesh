@@ -797,9 +797,10 @@ void channel_selection_task::work()
                        << " channel_ext_above_primary = "
                        << int(csa_event->cs_params.channel_ext_above_primary);
         auto freq = wireless_utils::channel_to_freq(csa_event->cs_params.channel);
-        auto prev_vht_center_frequency = database.get_hostap_vht_center_frequency(hostap_mac);
-        auto prev_channel              = database.get_node_channel(hostap_mac);
-        auto prev_bandwidth            = database.get_node_bw(hostap_mac);
+        auto prev_vht_center_frequency =
+            database.get_hostap_vht_center_frequency(tlvf::mac_from_string(hostap_mac));
+        auto prev_channel   = database.get_node_channel(hostap_mac);
+        auto prev_bandwidth = database.get_node_bw(hostap_mac);
         auto channel_ext_above_secondary =
             (freq < csa_event->cs_params.vht_center_frequency) ? true : false;
         auto channel_ext_above_primary =

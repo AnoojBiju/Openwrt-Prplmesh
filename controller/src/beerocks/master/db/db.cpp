@@ -4913,7 +4913,7 @@ std::string db::get_node_key(const std::string &al_mac, const std::string &ruid)
     return al_mac + "_" + ruid;
 }
 
-uint16_t db::get_hostap_vht_center_frequency(const std::string &mac)
+uint16_t db::get_hostap_vht_center_frequency(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {

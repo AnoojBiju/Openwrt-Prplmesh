@@ -288,8 +288,9 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
         request->params().channel = database.get_node_channel(sta_parent);
         request->params().bandwidth = database.get_node_bw(sta_parent);
         request->params().vht_center_frequency =
-            cli_request->center_frequency() ? cli_request->center_frequency()
-                                            : database.get_hostap_vht_center_frequency(sta_parent);
+            cli_request->center_frequency()
+                ? cli_request->center_frequency()
+                : database.get_hostap_vht_center_frequency(tlvf::mac_from_string(sta_parent));
         request->params().cross                  = 0;
         request->params().mon_ping_burst_pkt_num = 0;
 
@@ -1610,7 +1611,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         new_event.params.channel   = database.get_node_channel(sta_parent);
         new_event.params.bandwidth = database.get_node_bw(sta_parent);
         new_event.params.vht_center_frequency =
-            database.get_hostap_vht_center_frequency(sta_parent);
+            database.get_hostap_vht_center_frequency(tlvf::mac_from_string(sta_parent));
         new_event.params.cross                  = 0;
         new_event.params.mon_ping_burst_pkt_num = 0;
 
