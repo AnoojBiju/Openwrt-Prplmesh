@@ -2229,7 +2229,7 @@ bool Controller::handle_intel_slave_join(
             database.set_node_type(radio_mac, beerocks::TYPE_SLAVE);
             LOG(ERROR) << "Existing mac node is not TYPE_SLAVE";
         }
-        database.clear_hostap_stats_info(radio_mac);
+        database.clear_hostap_stats_info(mac);
     } else {
         database.add_node_radio(mac, tlvf::mac_from_string(bridge_mac),
                                 tlvf::mac_from_string(radio_identifier));
@@ -2537,7 +2537,7 @@ bool Controller::handle_non_intel_slave_join(
             database.set_node_type(radio_mac, beerocks::TYPE_SLAVE);
             LOG(ERROR) << "Existing mac node is not TYPE_SLAVE";
         }
-        database.clear_hostap_stats_info(radio_mac);
+        database.clear_hostap_stats_info(ruid);
     } else {
         // TODO Intel Slave Join has separate radio MAC and UID; we use radio_mac for both.
         database.add_node_radio(ruid, tlvf::mac_from_string(bridge_mac), ruid);

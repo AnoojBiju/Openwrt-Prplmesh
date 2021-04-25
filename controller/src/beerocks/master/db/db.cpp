@@ -4324,10 +4324,7 @@ bool db::set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApS
     return true;
 }
 
-void db::clear_hostap_stats_info(const std::string &mac)
-{
-    set_hostap_stats_info(tlvf::mac_from_string(mac), nullptr);
-}
+void db::clear_hostap_stats_info(const sMacAddr &mac) { set_hostap_stats_info(mac, nullptr); }
 
 bool db::notify_disconnection(const std::string &client_mac)
 {
