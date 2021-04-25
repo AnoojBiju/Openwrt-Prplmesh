@@ -2252,7 +2252,8 @@ bool Controller::handle_intel_slave_join(
             }
         }
     }
-    database.set_hostap_repeater_mode_flag(radio_mac, notification->enable_repeater_mode());
+    database.set_hostap_repeater_mode_flag(tlvf::mac_from_string(radio_mac),
+                                           notification->enable_repeater_mode());
     database.set_hostap_backhaul_manager(radio_mac, backhaul_manager);
 
     database.set_node_state(radio_mac, beerocks::STATE_CONNECTED);
@@ -2551,7 +2552,7 @@ bool Controller::handle_non_intel_slave_join(
     database.set_hostap_is_acs_enabled(radio_mac, false);
 
     // TODO Assume repeater mode
-    database.set_hostap_repeater_mode_flag(radio_mac, true);
+    database.set_hostap_repeater_mode_flag(tlvf::mac_from_string(radio_mac), true);
     // TODO Assume no backhaul manager
     database.set_hostap_backhaul_manager(radio_mac, false);
 

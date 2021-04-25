@@ -2547,7 +2547,7 @@ bool db::get_hostap_repeater_mode_flag(const sMacAddr &mac)
     return n->hostap->enable_repeater_mode;
 }
 
-bool db::set_hostap_repeater_mode_flag(const std::string &mac, bool flag)
+bool db::set_hostap_repeater_mode_flag(const sMacAddr &mac, bool flag)
 {
     auto n = get_node(mac);
     if (!n) {
