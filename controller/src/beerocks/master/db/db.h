@@ -906,7 +906,7 @@ public:
     bool clear_hostap_dfs_reentry_clients(const sMacAddr &mac);
 
     bool set_hostap_is_acs_enabled(const sMacAddr &mac, bool enable);
-    bool get_hostap_is_acs_enabled(const std::string &mac);
+    bool get_hostap_is_acs_enabled(const sMacAddr &mac);
 
     //
     // Channel Scan
