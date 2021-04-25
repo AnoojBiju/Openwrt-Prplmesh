@@ -4657,7 +4657,7 @@ int db::get_hostap_total_client_tx_load_percent(const sMacAddr &mac)
     return n->hostap->stats_info->total_client_tx_load_percent;
 }
 
-int db::get_hostap_total_client_rx_load_percent(const std::string &mac)
+int db::get_hostap_total_client_rx_load_percent(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
