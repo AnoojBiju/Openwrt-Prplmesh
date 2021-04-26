@@ -1735,7 +1735,11 @@ private:
      * @return std::shared_ptr<node> pointer to the node on success, nullptr otherwise.
      */
     std::shared_ptr<node> get_node_verify_type(const sMacAddr &mac, beerocks::eType type);
-    std::shared_ptr<node::radio> get_hostap_by_mac(const sMacAddr &mac);
+    std::shared_ptr<node> get_node_verify_type(const std::string &key, beerocks::eType type);
+    std::shared_ptr<node_slave> get_slave_node(const sMacAddr &mac);
+    std::shared_ptr<node_slave> get_slave_node(const std::string &key);
+    std::shared_ptr<node_client> get_client_node(const sMacAddr &mac);
+    std::shared_ptr<node_slave::radio> get_hostap_by_mac(const sMacAddr &mac);
     int get_node_hierarchy(std::shared_ptr<node> n);
     std::set<std::shared_ptr<node>> get_node_subtree(std::shared_ptr<node> n);
     void adjust_subtree_hierarchy(std::shared_ptr<node> n);

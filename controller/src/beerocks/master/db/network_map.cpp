@@ -292,7 +292,7 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
                 vap_id++;
             }
 
-            auto c = database.get_node(radio.first);
+            auto c = database.get_slave_node(radio.first);
             if (!c) {
                 LOG(ERROR) << "No radio node for " << radio.first;
             }
@@ -778,6 +778,9 @@ std::ptrdiff_t network_map::fill_bml_node_statistics(db &database, std::shared_p
     switch (n_type) {
     case beerocks::TYPE_SLAVE: {
         //LOG(DEBUG) << "fill TYPE_SLAVE";
+
+        auto hostap = std::dynamic_pointer_cast<node_slave>(n)->hostap;
+
         //prepearing buffer and calc size
         auto radio_stats_bulk = (BML_STATS *)tx_buffer;
 
@@ -786,18 +789,18 @@ std::ptrdiff_t network_map::fill_bml_node_statistics(db &database, std::shared_p
         tlvf::mac_from_string(radio_stats_bulk->mac, n->mac);
         radio_stats_bulk->type = BML_STAT_TYPE_RADIO;
 
-        radio_stats_bulk->bytes_sent              = n->hostap->stats_info->tx_bytes;
-        radio_stats_bulk->bytes_received          = n->hostap->stats_info->rx_bytes;
-        radio_stats_bulk->packets_sent            = n->hostap->stats_info->tx_packets;
-        radio_stats_bulk->packets_received        = n->hostap->stats_info->rx_packets;
-        radio_stats_bulk->measurement_window_msec = n->hostap->stats_info->stats_delta_ms;
+        radio_stats_bulk->bytes_sent              = hostap->stats_info->tx_bytes;
+        radio_stats_bulk->bytes_received          = hostap->stats_info->rx_bytes;
+        radio_stats_bulk->packets_sent            = hostap->stats_info->tx_packets;
+        radio_stats_bulk->packets_received        = hostap->stats_info->rx_packets;
+        radio_stats_bulk->measurement_window_msec = hostap->stats_info->stats_delta_ms;
 
-        radio_stats_bulk->errors_sent       = n->hostap->stats_info->errors_sent;
-        radio_stats_bulk->errors_received   = n->hostap->stats_info->errors_received;
-        radio_stats_bulk->retrans_count     = n->hostap->stats_info->retrans_count;
-        radio_stats_bulk->uType.radio.noise = n->hostap->stats_info->noise;
+        radio_stats_bulk->errors_sent       = hostap->stats_info->errors_sent;
+        radio_stats_bulk->errors_received   = hostap->stats_info->errors_received;
+        radio_stats_bulk->retrans_count     = hostap->stats_info->retrans_count;
+        radio_stats_bulk->uType.radio.noise = hostap->stats_info->noise;
 
-        radio_stats_bulk->uType.radio.bss_load = n->hostap->stats_info->channel_load_percent;
+        radio_stats_bulk->uType.radio.bss_load = hostap->stats_info->channel_load_percent;
         break;
     }
     case beerocks::TYPE_IRE_BACKHAUL: {

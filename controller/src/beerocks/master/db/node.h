@@ -55,9 +55,8 @@ public:
     void set_cross_rx_rssi(const std::string &ap_mac_, int8_t rssi, int8_t rx_packets);
     void clear_cross_rssi();
     void clear_node_stats_info();
-    void clear_hostap_stats_info();
 
-    beerocks::eType get_type();
+    beerocks::eType get_type() const;
     bool set_type(beerocks::eType type_);
 
     int8_t vap_id = beerocks::IFACE_ID_INVALID;
@@ -148,6 +147,172 @@ public:
     bool transition_to_4addr_mode         = false;
     bool ire_handoff                      = false;
 
+    class link_metrics_data {
+    public:
+        link_metrics_data(){};
+        ~link_metrics_data(){};
+
+        std::vector<ieee1905_1::tlvTransmitterLinkMetric::sInterfacePairInfo>
+            transmitterLinkMetrics;
+        std::vector<ieee1905_1::tlvReceiverLinkMetric::sInterfacePairInfo> receiverLinkMetrics;
+
+        bool add_transmitter_link_metric(
+            std::shared_ptr<ieee1905_1::tlvTransmitterLinkMetric> TxLinkMetricData);
+        bool add_receiver_link_metric(
+            std::shared_ptr<ieee1905_1::tlvReceiverLinkMetric> RxLinkMetricData);
+    };
+
+    class ap_metrics_data {
+    public:
+        ap_metrics_data(){};
+        ~ap_metrics_data(){};
+
+        sMacAddr bssid                               = beerocks::net::network_utils::ZERO_MAC;
+        uint8_t channel_utilization                  = 0;
+        uint16_t number_of_stas_currently_associated = 0;
+        std::vector<uint8_t> estimated_service_info_fields;
+        bool include_ac_vo = false;
+        bool include_ac_bk = false;
+        bool include_ac_vi = false;
+
+        bool add_ap_metric_data(std::shared_ptr<wfa_map::tlvApMetrics> ApMetricData);
+    };
+
+    bool is_prplmesh                = false;
+    beerocks::eBandType band_type   = beerocks::eBandType::INVALID_BAND;
+    beerocks::eIfaceType iface_type = beerocks::IFACE_TYPE_ETHERNET;
+    std::chrono::steady_clock::time_point last_seen;
+
+    friend std::ostream &operator<<(std::ostream &os, const node &node);
+    friend std::ostream &operator<<(std::ostream &os, const node *node);
+
+    /**
+     * @brief Returns active interface mac addresses via loop through interface objects.
+     *
+     * @return active interface mac's returned as vector of sMacAddr
+     */
+    std::vector<sMacAddr> get_interfaces_mac();
+
+    /**
+     * @brief Get Interface with the given MAC, create it if necessary.
+     *
+     * @param mac interface MAC address
+     * @return shared pointer of Interface Object
+     */
+    std::shared_ptr<prplmesh::controller::db::Interface> add_interface(const sMacAddr &mac);
+
+    /**
+     * @brief Get Interface with the given MAC, if there is one. Else returns nullptr.
+     *
+     * @param mac interface MAC address
+     * @return shared pointer of Interface Object on success, nullptr otherwise.
+     */
+    std::shared_ptr<prplmesh::controller::db::Interface> get_interface(const sMacAddr &mac);
+
+    /**
+     * @brief Remove the Interface with the given MAC Address.
+     */
+    void remove_interface(const sMacAddr &mac);
+
+    /**
+     * @brief Get all Interfaces
+     */
+    const std::vector<std::shared_ptr<prplmesh::controller::db::Interface>> &get_interfaces()
+    {
+        return m_interfaces;
+    }
+
+    /**
+     * @brief Returns unused interface mac addresses
+     *
+     * @param new_interfaces vector of active interface macs from topology message
+     * @return unused interface mac's returned as vector of sMacAddr
+     */
+    std::vector<sMacAddr> get_unused_interfaces(const std::vector<sMacAddr> &new_interfaces);
+
+    /**
+     * @brief Get Neighbor with the given MAC, create it if necessary within Interface.
+     *
+     * @param interface_mac interface MAC address
+     * @param neighbor_mac neighbor MAC address
+     * @param flag_ieee1905 is IEEE1905 Flag
+     * @return shared pointer of Neighbor Object
+     */
+    std::shared_ptr<prplmesh::controller::db::Interface::sNeighbor>
+    add_neighbor(const sMacAddr &interface_mac, const sMacAddr &neighbor_mac, bool flag_ieee1905);
+
+private:
+    class rssi_measurement {
+    public:
+        rssi_measurement(const std::string &ap_mac_, int8_t rssi_, int8_t packets_)
+            : ap_mac(ap_mac_)
+        {
+            rssi      = rssi_;
+            packets   = packets_;
+            timestamp = std::chrono::steady_clock::now();
+        }
+        const std::string ap_mac;
+        int8_t rssi = beerocks::RSSI_INVALID;
+        int8_t packets;
+        std::chrono::steady_clock::time_point timestamp;
+    };
+
+    class beacon_measurement {
+    public:
+        beacon_measurement(const std::string &ap_mac_, int8_t rcpi_, uint8_t rsni_)
+            : ap_mac(ap_mac_)
+        {
+            rcpi      = rcpi_; // received channel power indication (like rssi)
+            rsni      = rsni_; // received signal noise indication (SNR)
+            timestamp = std::chrono::steady_clock::now();
+        }
+        const std::string ap_mac;
+        int8_t rcpi  = beerocks::RSSI_INVALID;
+        uint8_t rsni = 0;
+        std::chrono::steady_clock::time_point timestamp;
+    };
+
+    beerocks::eType type;
+    std::unordered_map<std::string, std::shared_ptr<beacon_measurement>> beacon_measurements;
+    std::unordered_map<std::string, std::shared_ptr<rssi_measurement>> cross_rx_rssi;
+
+    /**
+     * @brief Interfaces configured on this node.
+     *
+     * The Interface objects are kept alive by this list. Only active interfaces should be on this list.
+     *
+     */
+    std::vector<std::shared_ptr<prplmesh::controller::db::Interface>> m_interfaces;
+
+    virtual void print_node(std::ostream &os) const;
+};
+
+class node_gw: public node {
+public:
+    node_gw(const std::string &mac): node(beerocks::eType::TYPE_GW, mac) {};
+};
+
+class node_ire: public node {
+public:
+    node_ire(const std::string &mac): node(beerocks::eType::TYPE_IRE, mac) {};
+};
+
+class node_ire_bh_or_client: public node {
+public:
+    node_ire_bh_or_client(beerocks::eType type_, const std::string &mac):
+        node(type_, mac) {};
+    virtual void print_node(std::ostream &os) const override;
+};
+
+class node_ire_backhaul: public node_ire_bh_or_client {
+public:
+    node_ire_backhaul(const std::string &mac):
+        node_ire_bh_or_client(beerocks::eType::TYPE_IRE_BACKHAUL, mac) {};
+    void print_node(std::ostream &os) const override;
+};
+
+class node_slave: public node {
+public:
     class radio {
     public:
         int8_t iface_id           = beerocks::IFACE_ID_INVALID;
@@ -272,45 +437,14 @@ public:
     };
     std::shared_ptr<radio> hostap;
 
-    class link_metrics_data {
-    public:
-        link_metrics_data(){};
-        ~link_metrics_data(){};
+    node_slave(const std::string &mac);
 
-        std::vector<ieee1905_1::tlvTransmitterLinkMetric::sInterfacePairInfo>
-            transmitterLinkMetrics;
-        std::vector<ieee1905_1::tlvReceiverLinkMetric::sInterfacePairInfo> receiverLinkMetrics;
+    void clear_hostap_stats_info();
+    void print_node(std::ostream &os) const override;
+};
 
-        bool add_transmitter_link_metric(
-            std::shared_ptr<ieee1905_1::tlvTransmitterLinkMetric> TxLinkMetricData);
-        bool add_receiver_link_metric(
-            std::shared_ptr<ieee1905_1::tlvReceiverLinkMetric> RxLinkMetricData);
-    };
-
-    class ap_metrics_data {
-    public:
-        ap_metrics_data(){};
-        ~ap_metrics_data(){};
-
-        sMacAddr bssid                               = beerocks::net::network_utils::ZERO_MAC;
-        uint8_t channel_utilization                  = 0;
-        uint16_t number_of_stas_currently_associated = 0;
-        std::vector<uint8_t> estimated_service_info_fields;
-        bool include_ac_vo = false;
-        bool include_ac_bk = false;
-        bool include_ac_vi = false;
-
-        bool add_ap_metric_data(std::shared_ptr<wfa_map::tlvApMetrics> ApMetricData);
-    };
-
-    bool is_prplmesh                = false;
-    beerocks::eBandType band_type   = beerocks::eBandType::INVALID_BAND;
-    beerocks::eIfaceType iface_type = beerocks::IFACE_TYPE_ETHERNET;
-    std::chrono::steady_clock::time_point last_seen;
-
-    friend std::ostream &operator<<(std::ostream &os, const node &node);
-    friend std::ostream &operator<<(std::ostream &os, const node *node);
-
+class node_client: public node_ire_bh_or_client {
+public:
     /*
      * Persistent configurations - start
      * Client persistent configuration aging is refreshed on persistent configurations set
@@ -346,103 +480,21 @@ public:
      * Persistent configurations - end
      */
 
-    /**
-     * @brief Returns active interface mac addresses via loop through interface objects.
-     *
-     * @return active interface mac's returned as vector of sMacAddr
-     */
-    std::vector<sMacAddr> get_interfaces_mac();
-
-    /**
-     * @brief Get Interface with the given MAC, create it if necessary.
-     *
-     * @param mac interface MAC address
-     * @return shared pointer of Interface Object
-     */
-    std::shared_ptr<prplmesh::controller::db::Interface> add_interface(const sMacAddr &mac);
-
-    /**
-     * @brief Get Interface with the given MAC, if there is one. Else returns nullptr.
-     *
-     * @param mac interface MAC address
-     * @return shared pointer of Interface Object on success, nullptr otherwise.
-     */
-    std::shared_ptr<prplmesh::controller::db::Interface> get_interface(const sMacAddr &mac);
-
-    /**
-     * @brief Remove the Interface with the given MAC Address.
-     */
-    void remove_interface(const sMacAddr &mac);
-
-    /**
-     * @brief Get all Interfaces
-     */
-    const std::vector<std::shared_ptr<prplmesh::controller::db::Interface>> &get_interfaces()
-    {
-        return m_interfaces;
-    }
-
-    /**
-     * @brief Returns unused interface mac addresses
-     *
-     * @param new_interfaces vector of active interface macs from topology message
-     * @return unused interface mac's returned as vector of sMacAddr
-     */
-    std::vector<sMacAddr> get_unused_interfaces(const std::vector<sMacAddr> &new_interfaces);
-
-    /**
-     * @brief Get Neighbor with the given MAC, create it if necessary within Interface.
-     *
-     * @param interface_mac interface MAC address
-     * @param neighbor_mac neighbor MAC address
-     * @param flag_ieee1905 is IEEE1905 Flag
-     * @return shared pointer of Neighbor Object
-     */
-    std::shared_ptr<prplmesh::controller::db::Interface::sNeighbor>
-    add_neighbor(const sMacAddr &interface_mac, const sMacAddr &neighbor_mac, bool flag_ieee1905);
-
-private:
-    class rssi_measurement {
-    public:
-        rssi_measurement(const std::string &ap_mac_, int8_t rssi_, int8_t packets_)
-            : ap_mac(ap_mac_)
-        {
-            rssi      = rssi_;
-            packets   = packets_;
-            timestamp = std::chrono::steady_clock::now();
-        }
-        const std::string ap_mac;
-        int8_t rssi = beerocks::RSSI_INVALID;
-        int8_t packets;
-        std::chrono::steady_clock::time_point timestamp;
-    };
-
-    class beacon_measurement {
-    public:
-        beacon_measurement(const std::string &ap_mac_, int8_t rcpi_, uint8_t rsni_)
-            : ap_mac(ap_mac_)
-        {
-            rcpi      = rcpi_; // received channel power indication (like rssi)
-            rsni      = rsni_; // received signal noise indication (SNR)
-            timestamp = std::chrono::steady_clock::now();
-        }
-        const std::string ap_mac;
-        int8_t rcpi  = beerocks::RSSI_INVALID;
-        uint8_t rsni = 0;
-        std::chrono::steady_clock::time_point timestamp;
-    };
-
-    beerocks::eType type;
-    std::unordered_map<std::string, std::shared_ptr<beacon_measurement>> beacon_measurements;
-    std::unordered_map<std::string, std::shared_ptr<rssi_measurement>> cross_rx_rssi;
-
-    /**
-     * @brief Interfaces configured on this node.
-     *
-     * The Interface objects are kept alive by this list. Only active interfaces should be on this list.
-     *
-     */
-    std::vector<std::shared_ptr<prplmesh::controller::db::Interface>> m_interfaces;
+    node_client(const std::string &mac);
+    void print_node(std::ostream &os) const override;
 };
+
+class node_eth_switch: public node {
+public:
+    node_eth_switch(const std::string &mac): node(beerocks::eType::TYPE_ETH_SWITCH, mac) {};
+};
+
+class node_any: public node {
+public:
+    node_any(const std::string &mac): node(beerocks::eType::TYPE_ANY, mac) {};
+};
+
+std::shared_ptr<node> create_node(beerocks::eType type_, const std::string &mac);
+
 } // namespace son
 #endif
