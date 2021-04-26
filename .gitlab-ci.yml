@@ -25,6 +25,12 @@ stages:
 include:
   - local: "/ci/templates.yml"
 
+.testing-altran-runner:
+  scripts:
+    - echo "hello world"
+  tags:
+    - test_flows_on_altran
+
 .rules-for-expensive-job: &expensive-job
   - if: '$CI_PIPELINE_SOURCE == "schedule"'
   - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train"'
