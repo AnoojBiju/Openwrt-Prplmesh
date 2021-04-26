@@ -25,12 +25,6 @@ stages:
 include:
   - local: "/ci/templates.yml"
 
-.testing-altran-runner:
-  scripts:
-    - echo "hello world"
-  tags:
-    - test_flows_on_altran
-
 .rules-for-expensive-job: &expensive-job
   - if: '$CI_PIPELINE_SOURCE == "schedule"'
   - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train"'
@@ -267,6 +261,13 @@ run-certification-tests-prplmesh-isr:
     - job: build-in-docker
   rules:
     - if: '$TESTS_TO_RUN_ISR !~ /^\$/ && $DEVICE_UNDER_TEST_ISR == "prplmesh"'
+
+.testing-altran-runner:
+  stage: platform
+  scripts:
+    - echo "hello world"
+  tags:
+    - test_flows_on_altran
 
 upload-artifacts:
   stage: upload
