@@ -752,8 +752,7 @@ public:
                                               uint8_t tx_power,
                                               const std::vector<uint8_t> &non_operable_channels);
 
-    bool set_hostap_band_capability(const std::string &mac,
-                                    beerocks::eRadioBandCapability capability);
+    bool set_hostap_band_capability(const sMacAddr &mac, beerocks::eRadioBandCapability capability);
     beerocks::eRadioBandCapability get_hostap_band_capability(const std::string &mac);
 
     bool capability_check(const std::string &mac, int channel);
@@ -778,19 +777,19 @@ public:
     bool update_node_11v_responsiveness(const std::string &mac, bool success);
     bool get_node_11v_capability(const std::string &mac);
 
-    bool set_hostap_iface_name(const std::string &mac, const std::string &iface_name);
+    bool set_hostap_iface_name(const sMacAddr &mac, const std::string &iface_name);
     std::string get_hostap_iface_name(const std::string &mac);
 
-    bool set_hostap_iface_type(const std::string &mac, beerocks::eIfaceType iface_type);
+    bool set_hostap_iface_type(const sMacAddr &mac, beerocks::eIfaceType iface_type);
     beerocks::eIfaceType get_hostap_iface_type(const std::string &mac);
 
-    bool set_hostap_driver_version(const std::string &mac, const std::string &version);
+    bool set_hostap_driver_version(const sMacAddr &mac, const std::string &version);
     std::string get_hostap_driver_version(const std::string &mac);
 
-    bool set_hostap_iface_id(const std::string &mac, int8_t iface_id);
-    int8_t get_hostap_iface_id(const std::string &mac);
+    bool set_hostap_iface_id(const sMacAddr &mac, int8_t iface_id);
+    int8_t get_hostap_iface_id(const sMacAddr &mac);
 
-    bool set_hostap_vap_list(const std::string &mac,
+    bool set_hostap_vap_list(const sMacAddr &mac,
                              const std::unordered_map<int8_t, sVapElement> &vap_list);
     std::unordered_map<int8_t, sVapElement> &get_hostap_vap_list(const std::string &mac);
     std::set<std::string> get_hostap_vaps_bssids(const std::string &mac);
@@ -819,7 +818,7 @@ public:
      */
     bool is_vap_on_steer_list(const std::string &bssid);
     std::string get_hostap_vap_with_ssid(const std::string &mac, const std::string &ssid);
-    std::string get_hostap_vap_mac(const std::string &mac, int vap_id);
+    std::string get_hostap_vap_mac(const sMacAddr &mac, int vap_id);
     std::string get_node_parent_radio(const std::string &mac);
 
     /**
@@ -833,8 +832,8 @@ public:
 
     int8_t get_hostap_vap_id(const std::string &mac);
 
-    bool set_hostap_repeater_mode_flag(const std::string &mac, bool flag);
-    bool get_hostap_repeater_mode_flag(const std::string &mac);
+    bool set_hostap_repeater_mode_flag(const sMacAddr &mac, bool flag);
+    bool get_hostap_repeater_mode_flag(const sMacAddr &mac);
 
     bool set_node_backhaul_iface_type(const std::string &mac, beerocks::eIfaceType iface_type);
     beerocks::eIfaceType get_node_backhaul_iface_type(const std::string &mac);

@@ -2060,8 +2060,7 @@ bool db::add_hostap_supported_operating_class(const std::string &radio_mac, uint
     return true;
 }
 
-bool db::set_hostap_band_capability(const std::string &mac,
-                                    beerocks::eRadioBandCapability capability)
+bool db::set_hostap_band_capability(const sMacAddr &mac, beerocks::eRadioBandCapability capability)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2239,7 +2238,7 @@ bool db::get_node_11v_capability(const std::string &mac)
     return n->supports_11v;
 }
 
-bool db::set_hostap_iface_id(const std::string &mac, int8_t iface_id)
+bool db::set_hostap_iface_id(const sMacAddr &mac, int8_t iface_id)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2253,7 +2252,7 @@ bool db::set_hostap_iface_id(const std::string &mac, int8_t iface_id)
     return true;
 }
 
-int8_t db::get_hostap_iface_id(const std::string &mac)
+int8_t db::get_hostap_iface_id(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2266,7 +2265,7 @@ int8_t db::get_hostap_iface_id(const std::string &mac)
     return n->hostap->iface_id;
 }
 
-bool db::set_hostap_vap_list(const std::string &mac,
+bool db::set_hostap_vap_list(const sMacAddr &mac,
                              const std::unordered_map<int8_t, sVapElement> &vap_list)
 {
     auto n = get_node(mac);
@@ -2476,7 +2475,7 @@ std::string db::get_hostap_vap_with_ssid(const std::string &mac, const std::stri
     return it->second.mac;
 }
 
-std::string db::get_hostap_vap_mac(const std::string &mac, int vap_id)
+std::string db::get_hostap_vap_mac(const sMacAddr &mac, int vap_id)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2535,7 +2534,7 @@ int8_t db::get_hostap_vap_id(const std::string &mac)
     return IFACE_ID_INVALID;
 }
 
-bool db::get_hostap_repeater_mode_flag(const std::string &mac)
+bool db::get_hostap_repeater_mode_flag(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2548,7 +2547,7 @@ bool db::get_hostap_repeater_mode_flag(const std::string &mac)
     return n->hostap->enable_repeater_mode;
 }
 
-bool db::set_hostap_repeater_mode_flag(const std::string &mac, bool flag)
+bool db::set_hostap_repeater_mode_flag(const sMacAddr &mac, bool flag)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2562,7 +2561,7 @@ bool db::set_hostap_repeater_mode_flag(const std::string &mac, bool flag)
     return true;
 }
 
-bool db::set_hostap_iface_name(const std::string &mac, const std::string &iface_name)
+bool db::set_hostap_iface_name(const sMacAddr &mac, const std::string &iface_name)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2591,7 +2590,7 @@ std::string db::get_hostap_iface_name(const std::string &mac)
     return n->hostap->iface_name;
 }
 
-bool db::set_hostap_iface_type(const std::string &mac, beerocks::eIfaceType iface_type)
+bool db::set_hostap_iface_type(const sMacAddr &mac, beerocks::eIfaceType iface_type)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2634,7 +2633,7 @@ bool db::set_node_backhaul_iface_type(const std::string &mac, beerocks::eIfaceTy
     return true;
 }
 
-bool db::set_hostap_driver_version(const std::string &mac, const std::string &version)
+bool db::set_hostap_driver_version(const sMacAddr &mac, const std::string &version)
 {
     auto n = get_node(mac);
     if (!n) {

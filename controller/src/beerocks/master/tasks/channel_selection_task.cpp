@@ -389,7 +389,7 @@ void channel_selection_task::work()
     case eState::COMPUTE_IRE_CANDIDATE_CHANNELS: {
 
         bool eth_bh = !hostap_params.backhaul_is_wireless;
-        //bool hostap_repeater_mode_flag = database.get_hostap_repeater_mode_flag(hostap_mac);
+        //bool hostap_repeater_mode_flag = database.get_hostap_repeater_mode_flag(tlvf::mac_from_string(hostap_mac));
 
         TASK_LOG(DEBUG) << "eth_bh " << int(eth_bh)
                         << " hostap_params.backhaul_is_2G = " << int(hostap_params.backhaul_is_2G)

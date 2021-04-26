@@ -2252,15 +2252,18 @@ bool Controller::handle_intel_slave_join(
             }
         }
     }
-    database.set_hostap_repeater_mode_flag(radio_mac, notification->enable_repeater_mode());
+    database.set_hostap_repeater_mode_flag(tlvf::mac_from_string(radio_mac),
+                                           notification->enable_repeater_mode());
     database.set_hostap_backhaul_manager(radio_mac, backhaul_manager);
 
     database.set_node_state(radio_mac, beerocks::STATE_CONNECTED);
     database.set_node_backhaul_iface_type(radio_mac, is_gw_slave ? beerocks::IFACE_TYPE_GW_BRIDGE
                                                                  : beerocks::IFACE_TYPE_BRIDGE);
-    database.set_hostap_iface_name(radio_mac, notification->hostap().iface_name);
-    database.set_hostap_iface_type(radio_mac, hostap_iface_type);
-    database.set_hostap_driver_version(radio_mac, notification->hostap().driver_version);
+    database.set_hostap_iface_name(tlvf::mac_from_string(radio_mac),
+                                   notification->hostap().iface_name);
+    database.set_hostap_iface_type(tlvf::mac_from_string(radio_mac), hostap_iface_type);
+    database.set_hostap_driver_version(tlvf::mac_from_string(radio_mac),
+                                       notification->hostap().driver_version);
 
     database.set_hostap_ant_num(radio_mac, (beerocks::eWiFiAntNum)notification->hostap().ant_num);
     database.set_hostap_ant_gain(radio_mac, notification->hostap().ant_gain);
@@ -2272,12 +2275,15 @@ bool Controller::handle_intel_slave_join(
 
     if (database.get_node_5ghz_support(radio_mac)) {
         if (notification->low_pass_filter_on()) {
-            database.set_hostap_band_capability(radio_mac, beerocks::LOW_SUBBAND_ONLY);
+            database.set_hostap_band_capability(tlvf::mac_from_string(radio_mac),
+                                                beerocks::LOW_SUBBAND_ONLY);
         } else {
-            database.set_hostap_band_capability(radio_mac, beerocks::BOTH_SUBBAND);
+            database.set_hostap_band_capability(tlvf::mac_from_string(radio_mac),
+                                                beerocks::BOTH_SUBBAND);
         }
     } else {
-        database.set_hostap_band_capability(radio_mac, beerocks::SUBBAND_CAPABILITY_UNKNOWN);
+        database.set_hostap_band_capability(tlvf::mac_from_string(radio_mac),
+                                            beerocks::SUBBAND_CAPABILITY_UNKNOWN);
     }
     autoconfig_wsc_parse_radio_caps(radio_mac, radio_caps);
 
@@ -2548,15 +2554,16 @@ bool Controller::handle_non_intel_slave_join(
     database.set_hostap_is_acs_enabled(radio_mac, false);
 
     // TODO Assume repeater mode
-    database.set_hostap_repeater_mode_flag(radio_mac, true);
+    database.set_hostap_repeater_mode_flag(tlvf::mac_from_string(radio_mac), true);
     // TODO Assume no backhaul manager
     database.set_hostap_backhaul_manager(radio_mac, false);
 
     database.set_node_state(radio_mac, beerocks::STATE_CONNECTED);
     database.set_node_backhaul_iface_type(radio_mac, beerocks::IFACE_TYPE_BRIDGE);
     // TODO driver_version will not be set
-    database.set_hostap_iface_name(radio_mac, "N/A");
-    database.set_hostap_iface_type(radio_mac, beerocks::IFACE_TYPE_WIFI_UNSPECIFIED);
+    database.set_hostap_iface_name(tlvf::mac_from_string(radio_mac), "N/A");
+    database.set_hostap_iface_type(tlvf::mac_from_string(radio_mac),
+                                   beerocks::IFACE_TYPE_WIFI_UNSPECIFIED);
 
     // TODO number of antennas comes from HT/VHT capabilities (implicit from NxM)
     // TODO ant_gain and tx_power will not be set
@@ -2574,12 +2581,13 @@ bool Controller::handle_non_intel_slave_join(
     // TODO
     //        if (database.get_node_5ghz_support(radio_mac)) {
     //            if (notification->low_pass_filter_on()) {
-    //                database.set_hostap_band_capability(radio_mac, beerocks::LOW_SUBBAND_ONLY);
+    //                database.set_hostap_band_capability(tlvf::mac_from_string(radio_mac), beerocks::LOW_SUBBAND_ONLY);
     //            } else {
-    //                database.set_hostap_band_capability(radio_mac, beerocks::BOTH_SUBBAND);
+    //                database.set_hostap_band_capability(tlvf::mac_from_string(radio_mac), beerocks::BOTH_SUBBAND);
     //            }
     //        } else {
-    database.set_hostap_band_capability(radio_mac, beerocks::SUBBAND_CAPABILITY_UNKNOWN);
+    database.set_hostap_band_capability(tlvf::mac_from_string(radio_mac),
+                                        beerocks::SUBBAND_CAPABILITY_UNKNOWN);
     //        }
 
     // update bml listeners
@@ -2649,7 +2657,8 @@ bool Controller::handle_cmdu_control_message(
         LOG(INFO) << "received ACTION_CONTROL_HOSTAP_AP_DISABLED_NOTIFICATION from " << hostap_mac
                   << " vap_id=" << vap_id;
 
-        const auto disabled_bssid = database.get_hostap_vap_mac(hostap_mac, vap_id);
+        const auto disabled_bssid =
+            database.get_hostap_vap_mac(tlvf::mac_from_string(hostap_mac), vap_id);
         if (disabled_bssid.empty()) {
             LOG(INFO) << "AP Disabled on unknown vap, vap_id=" << vap_id;
             break;
@@ -2819,7 +2828,7 @@ bool Controller::handle_cmdu_control_message(
             }
         }
 
-        database.set_hostap_vap_list(radio_mac, vaps_info);
+        database.set_hostap_vap_list(tlvf::mac_from_string(radio_mac), vaps_info);
 
         // update bml listeners
         bml_task::connection_change_event new_event;
@@ -2979,7 +2988,8 @@ bool Controller::handle_cmdu_control_message(
         std::string client_mac = tlvf::mac_to_string(notification->params().result.mac);
         std::string ap_mac     = hostap_mac;
         bool is_parent         = (database.get_node_parent(client_mac) ==
-                          database.get_hostap_vap_mac(ap_mac, notification->params().vap_id));
+                          database.get_hostap_vap_mac(tlvf::mac_from_string(ap_mac),
+                                                      notification->params().vap_id));
 
         LOG_CLI(DEBUG,
                 "rssi measurement response: "
@@ -3020,8 +3030,8 @@ bool Controller::handle_cmdu_control_message(
             beerocks_message::sSteeringEvSnr new_event;
             new_event.snr        = notification->params().rx_snr;
             new_event.client_mac = notification->params().result.mac;
-            new_event.bssid      = tlvf::mac_from_string(
-                database.get_hostap_vap_mac(ap_mac, notification->params().vap_id));
+            new_event.bssid      = tlvf::mac_from_string(database.get_hostap_vap_mac(
+                tlvf::mac_from_string(ap_mac), notification->params().vap_id));
             tasks.push_event(database.get_rdkb_wlan_task_id(),
                              rdkb_wlan_task::events::STEERING_EVENT_SNR_AVAILABLE, &new_event);
         }
@@ -3037,7 +3047,8 @@ bool Controller::handle_cmdu_control_message(
         }
         std::string client_mac        = tlvf::mac_to_string(notification->params().result.mac);
         std::string client_parent_mac = database.get_node_parent(client_mac);
-        std::string bssid = database.get_hostap_vap_mac(hostap_mac, notification->params().vap_id);
+        std::string bssid = database.get_hostap_vap_mac(tlvf::mac_from_string(hostap_mac),
+                                                        notification->params().vap_id);
         bool is_parent    = (client_parent_mac == bssid);
 
         int rx_rssi = int(notification->params().rx_rssi);
