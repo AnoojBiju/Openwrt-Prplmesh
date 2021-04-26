@@ -1903,21 +1903,33 @@ bool BackhaulManager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo> 
             return false;
         }
 
-        // adding (currently empty) an associated sta EXTENDED link metrics tlv
-        auto extended = cmdu_tx.addClass<wfa_map::tlvAssociatedStaExtendedLinkMetrics>();
-        if (!extended) {
-            LOG(ERROR) << "adding wfa_map::tlvAssociatedStaExtendedLinkMetrics failed";
+        auto response_out = cmdu_tx.addClass<wfa_map::tlvAssociatedStaLinkMetrics>();
+        if (!response_out) {
+            LOG(ERROR) << "adding wfa_map::tlvAssociatedStaLinkMetrics failed";
             return false;
         }
 
-        auto response_out = cmdu_tx.addClass<wfa_map::tlvAssociatedStaLinkMetrics>();
+        response_out->sta_mac() = response_in->sta_mac();
 
         if (!response_out->alloc_bssid_info_list(response_in->bssid_info_list_length())) {
             LOG(ERROR) << "alloc_per_bss_sta_link_metrics failed";
             return false;
         }
 
-        response_out->sta_mac() = response_in->sta_mac();
+        // adding (currently empty) an associated sta EXTENDED link metrics tlv.
+        // The values will be filled part of PPM-1259
+        auto extended = cmdu_tx.addClass<wfa_map::tlvAssociatedStaExtendedLinkMetrics>();
+        if (!extended) {
+            LOG(ERROR) << "adding wfa_map::tlvAssociatedStaExtendedLinkMetrics failed";
+            return false;
+        }
+
+        extended->associated_sta() = response_in->sta_mac();
+
+        if (!extended->alloc_metrics_list(response_in->bssid_info_list_length())) {
+            LOG(ERROR) << "allocation of per BSS STA metrics failed";
+            return false;
+        }
 
         auto db = AgentDB::get();
 
