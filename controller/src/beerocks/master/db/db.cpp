@@ -2858,36 +2858,6 @@ bool db::get_hostap_cac_completed(const sMacAddr &mac)
 
     return n->hostap->cac_completed;
 }
-bool db::set_hostap_is_on_fail_safe(const std::string &mac, bool enable)
-{
-    std::shared_ptr<node> n = get_node(mac);
-
-    if (!n) {
-        LOG(ERROR) << "node not found.... ";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(ERROR) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return false;
-    }
-
-    n->hostap->on_fail_safe_channel = enable;
-    return true;
-}
-
-bool db::get_hostap_is_on_fail_safe(const std::string &mac)
-{
-    std::shared_ptr<node> n = get_node(mac);
-
-    if (!n) {
-        LOG(ERROR) << "node not found.... ";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(ERROR) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return false;
-    }
-
-    return n->hostap->on_fail_safe_channel;
-}
 
 bool db::set_hostap_is_on_sub_band(const std::string &mac, bool enable)
 {

@@ -707,7 +707,6 @@ void channel_selection_task::work()
             if (!is_2G_channel(csa_event->cs_params.channel)) {
                 TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac << " csa_event != null";
                 if (csa_event->cs_params.is_dfs_channel) {
-                    database.set_hostap_is_on_fail_safe(hostap_mac, false);
                     wait_for_cac_completed(csa_event->cs_params.channel,
                                            csa_event->cs_params.bandwidth);
                     if (database.get_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac))) {
@@ -715,7 +714,6 @@ void channel_selection_task::work()
                         if (database.get_hostap_cac_completed(tlvf::mac_from_string(hostap_mac))) {
                             TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
                                             << " was on reentry back on dfs channel";
-                            //database.set_hostap_is_on_fail_safe(hostap_mac , false);
                             database.set_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac),
                                                                false);
                             FSM_MOVE_STATE(STEER_STA_BACK_AFTER_DFS_REENTRY);
@@ -730,7 +728,6 @@ void channel_selection_task::work()
                     if (database.get_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac))) {
                         TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
                                         << " was on reentry back on dfs channel";
-                        database.set_hostap_is_on_fail_safe(hostap_mac, false);
                         database.set_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac),
                                                            false);
                         FSM_MOVE_STATE(STEER_STA_BACK_AFTER_DFS_REENTRY);
@@ -772,7 +769,6 @@ void channel_selection_task::work()
             if (database.get_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac))) {
                 TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
                                 << " was on reentry back on dfs channel";
-                database.set_hostap_is_on_fail_safe(hostap_mac, false);
                 database.set_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac), false);
                 //optimal path for all non dfs reentry clients
                 run_optimal_path_for_connected_clients();
