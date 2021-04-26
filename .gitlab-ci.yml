@@ -264,7 +264,7 @@ run-certification-tests-prplmesh-isr:
 
 testing-altran-runner:
   stage: platform
-  scripts:
+  script:
     - echo "hello world"
   tags:
     - test_flows_on_altran
