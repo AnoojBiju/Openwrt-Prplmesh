@@ -169,7 +169,6 @@ public:
         int8_t channel_ext_above_primary          = 1;
         bool is_dfs                               = false;
         bool cac_completed                        = false;
-        bool on_sub_band_channel                  = false;
         bool on_dfs_reentry                       = false;
         std::set<std::string> dfs_reentry_clients;
         beerocks::eApActiveMode ap_activity_mode = beerocks::AP_ACTIVE_MODE;

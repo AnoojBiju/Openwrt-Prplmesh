@@ -692,12 +692,6 @@ void channel_selection_task::work()
             tasks.add_task(new_task);
         }
 
-        if (database.get_hostap_is_on_sub_band(hostap_mac)) {
-            database.set_hostap_is_on_sub_band(hostap_mac, false);
-            FSM_MOVE_STATE(GOTO_IDLE);
-            break;
-        }
-
         if (!database.get_hostap_is_acs_enabled(hostap_mac)) {
             FSM_MOVE_STATE(GOTO_IDLE);
             break;
@@ -860,7 +854,6 @@ void channel_selection_task::work()
         break;
     }
     case eState::ON_FAIL_SAFE_CHANNEL: {
-        database.set_hostap_is_on_sub_band(hostap_mac, false);
         if (!database.settings_dfs_reentry()) {
             LOG(DEBUG) << "DFS reentry feature is not enabled";
             FSM_MOVE_STATE(GOTO_IDLE);
