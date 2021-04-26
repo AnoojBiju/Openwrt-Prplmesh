@@ -262,7 +262,7 @@ run-certification-tests-prplmesh-isr:
   rules:
     - if: '$TESTS_TO_RUN_ISR !~ /^\$/ && $DEVICE_UNDER_TEST_ISR == "prplmesh"'
 
-.testing-altran-runner:
+testing-altran-runner:
   stage: platform
   scripts:
     - echo "hello world"
