@@ -983,6 +983,7 @@ bool mon_wlan_hal_dwpal::channel_scan_dump_results()
         return false;
     }
     // If scan dump succeeded need to manually send the finished event
+    LOG(DEBUG) << "Scan sequence: " << (int)m_nl_seq << " finished, sending Finish notification.";
     event_queue_push(Event::Channel_Scan_Finished);
 
     return true;
