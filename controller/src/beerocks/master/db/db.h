@@ -738,7 +738,7 @@ public:
     bool set_hostap_ant_gain(const std::string &mac, int ant_gain);
     int get_hostap_ant_gain(const sMacAddr &mac);
 
-    bool set_hostap_tx_power(const std::string &mac, int tx_power);
+    bool set_hostap_tx_power(const sMacAddr &mac, int tx_power);
     int get_hostap_tx_power(const sMacAddr &mac);
 
     bool set_hostap_supported_channels(const std::string &mac,

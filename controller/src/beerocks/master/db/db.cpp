@@ -1911,7 +1911,7 @@ int db::get_hostap_ant_gain(const sMacAddr &mac)
     return n->hostap->ant_gain;
 }
 
-bool db::set_hostap_tx_power(const std::string &mac, int tx_power)
+bool db::set_hostap_tx_power(const sMacAddr &mac, int tx_power)
 {
     auto n = get_node(mac);
     if (!n) {
