@@ -1857,7 +1857,7 @@ db::get_station_capabilities(const std::string &client_mac, bool is_bandtype_5gh
     }
 }
 
-bool db::set_hostap_ant_num(const std::string &mac, beerocks::eWiFiAntNum ant_num)
+bool db::set_hostap_ant_num(const sMacAddr &mac, beerocks::eWiFiAntNum ant_num)
 {
     auto n = get_node(mac);
     if (!n) {

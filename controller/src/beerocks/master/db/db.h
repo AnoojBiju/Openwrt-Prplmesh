@@ -732,7 +732,7 @@ public:
     bool set_station_capabilities(const std::string &client_mac,
                                   const beerocks::message::sRadioCapabilities &sta_cap);
 
-    bool set_hostap_ant_num(const std::string &mac, beerocks::eWiFiAntNum ant_num);
+    bool set_hostap_ant_num(const sMacAddr &mac, beerocks::eWiFiAntNum ant_num);
     beerocks::eWiFiAntNum get_hostap_ant_num(const sMacAddr &mac);
 
     bool set_hostap_ant_gain(const sMacAddr &mac, int ant_gain);
