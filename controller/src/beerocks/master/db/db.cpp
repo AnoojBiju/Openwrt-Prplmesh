@@ -608,7 +608,7 @@ bool db::set_global_restricted_channels(const uint8_t *restricted_channels)
 
 std::vector<uint8_t> db::get_global_restricted_channels() { return global_restricted_channels; }
 
-bool db::set_hostap_conf_restricted_channels(const std::string &hostap_mac,
+bool db::set_hostap_conf_restricted_channels(const sMacAddr &hostap_mac,
                                              const uint8_t *restricted_channels)
 {
     auto n = get_node(hostap_mac);

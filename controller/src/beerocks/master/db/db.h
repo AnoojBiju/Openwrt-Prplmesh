@@ -847,7 +847,7 @@ public:
 
     bool set_global_restricted_channels(const uint8_t *restricted_channels);
     std::vector<uint8_t> get_global_restricted_channels();
-    bool set_hostap_conf_restricted_channels(const std::string &hostap_mac,
+    bool set_hostap_conf_restricted_channels(const sMacAddr &hostap_mac,
                                              const uint8_t *restricted_channels);
     std::vector<uint8_t> get_hostap_conf_restricted_channels(const std::string &hostap_mac);
     bool
