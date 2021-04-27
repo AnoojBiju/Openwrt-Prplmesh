@@ -1925,7 +1925,7 @@ bool db::set_hostap_tx_power(const std::string &mac, int tx_power)
     return true;
 }
 
-int db::get_hostap_tx_power(const std::string &mac)
+int db::get_hostap_tx_power(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {

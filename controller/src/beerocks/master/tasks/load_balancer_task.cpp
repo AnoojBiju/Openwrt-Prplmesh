@@ -300,10 +300,12 @@ void load_balancer_task::work()
                 continue;
             }
 
+            auto radio_mac = tlvf::mac_from_string(hostap);
+
             hostap_params.bw       = database.get_node_bw(hostap);
             hostap_params.ant_num  = database.get_hostap_ant_num(hostap);
             hostap_params.ant_gain = database.get_hostap_ant_gain(hostap);
-            hostap_params.tx_power = database.get_hostap_tx_power(hostap);
+            hostap_params.tx_power = database.get_hostap_tx_power(radio_mac);
 
             int ul_rssi;
             //int estimated_ul_rssi, hostap_dl_rssi = beerocks::RSSI_INVALID;
