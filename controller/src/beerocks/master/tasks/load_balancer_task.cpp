@@ -304,7 +304,7 @@ void load_balancer_task::work()
 
             hostap_params.bw       = database.get_node_bw(hostap);
             hostap_params.ant_num  = database.get_hostap_ant_num(hostap);
-            hostap_params.ant_gain = database.get_hostap_ant_gain(hostap);
+            hostap_params.ant_gain = database.get_hostap_ant_gain(radio_mac);
             hostap_params.tx_power = database.get_hostap_tx_power(radio_mac);
 
             int ul_rssi;
