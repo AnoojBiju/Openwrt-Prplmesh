@@ -577,7 +577,7 @@ void optimal_path_task::work()
                     son::wireless_utils::sPhyApParams hostap_params;
                     hostap_params.is_5ghz  = hostap_is_5ghz;
                     hostap_params.bw       = hostap_bw;
-                    hostap_params.ant_num  = database.get_hostap_ant_num(hostap);
+                    hostap_params.ant_num  = database.get_hostap_ant_num(radio_mac);
                     hostap_params.ant_gain = database.get_hostap_ant_gain(radio_mac);
                     hostap_params.tx_power = database.get_hostap_tx_power(radio_mac);
 
@@ -662,7 +662,7 @@ void optimal_path_task::work()
                     son::wireless_utils::sPhyApParams hostap_params;
                     hostap_params.is_5ghz  = database.is_node_5ghz(hostap);
                     hostap_params.bw       = database.get_node_bw(hostap);
-                    hostap_params.ant_num  = database.get_hostap_ant_num(hostap);
+                    hostap_params.ant_num  = database.get_hostap_ant_num(radio_mac);
                     hostap_params.ant_gain = database.get_hostap_ant_gain(radio_mac);
                     hostap_params.tx_power = database.get_hostap_tx_power(radio_mac);
 
@@ -1150,7 +1150,7 @@ void optimal_path_task::work()
                             << " vht_bw=" << int(sta_capabilities->vht_bw);
 
             hostap_params.bw       = database.get_node_bw(hostap);
-            hostap_params.ant_num  = database.get_hostap_ant_num(hostap);
+            hostap_params.ant_num  = database.get_hostap_ant_num(radio_mac);
             hostap_params.ant_gain = database.get_hostap_ant_gain(radio_mac);
             hostap_params.tx_power = database.get_hostap_tx_power(radio_mac);
 

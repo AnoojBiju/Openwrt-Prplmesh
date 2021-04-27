@@ -1871,7 +1871,7 @@ bool db::set_hostap_ant_num(const std::string &mac, beerocks::eWiFiAntNum ant_nu
     return true;
 }
 
-beerocks::eWiFiAntNum db::get_hostap_ant_num(const std::string &mac)
+beerocks::eWiFiAntNum db::get_hostap_ant_num(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
