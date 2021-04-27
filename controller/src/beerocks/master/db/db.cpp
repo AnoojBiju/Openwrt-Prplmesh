@@ -959,7 +959,7 @@ bool db::is_hostap_active(const std::string &mac)
     return n->hostap->active;
 }
 
-bool db::set_hostap_backhaul_manager(const std::string &mac, bool is_backhaul_manager)
+bool db::set_hostap_backhaul_manager(const sMacAddr &mac, bool is_backhaul_manager)
 {
     auto n = get_node(mac);
     if (!n) {

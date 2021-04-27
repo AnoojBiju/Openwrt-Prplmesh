@@ -2249,12 +2249,12 @@ bool Controller::handle_intel_slave_join(
         auto ire_hostaps = database.get_node_children(bridge_mac, beerocks::TYPE_SLAVE);
         for (auto tmp_slave_mac : ire_hostaps) {
             if (tmp_slave_mac != radio_mac) {
-                database.set_hostap_backhaul_manager(tmp_slave_mac, false);
+                database.set_hostap_backhaul_manager(tlvf::mac_from_string(tmp_slave_mac), false);
             }
         }
     }
     database.set_hostap_repeater_mode_flag(mac, notification->enable_repeater_mode());
-    database.set_hostap_backhaul_manager(radio_mac, backhaul_manager);
+    database.set_hostap_backhaul_manager(mac, backhaul_manager);
 
     database.set_node_state(radio_mac, beerocks::STATE_CONNECTED);
     database.set_node_backhaul_iface_type(radio_mac, is_gw_slave ? beerocks::IFACE_TYPE_GW_BRIDGE
@@ -2550,7 +2550,7 @@ bool Controller::handle_non_intel_slave_join(
     // TODO Assume repeater mode
     database.set_hostap_repeater_mode_flag(ruid, true);
     // TODO Assume no backhaul manager
-    database.set_hostap_backhaul_manager(radio_mac, false);
+    database.set_hostap_backhaul_manager(ruid, false);
 
     database.set_node_state(radio_mac, beerocks::STATE_CONNECTED);
     database.set_node_backhaul_iface_type(radio_mac, beerocks::IFACE_TYPE_BRIDGE);

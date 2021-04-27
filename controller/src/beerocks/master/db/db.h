@@ -396,7 +396,7 @@ public:
     bool set_hostap_active(const std::string &mac, bool active);
     bool is_hostap_active(const std::string &mac);
 
-    bool set_hostap_backhaul_manager(const std::string &mac, bool is_backhaul_manager);
+    bool set_hostap_backhaul_manager(const sMacAddr &mac, bool is_backhaul_manager);
     bool is_hostap_backhaul_manager(const std::string &mac);
     std::string get_hostap_backhaul_manager(const std::string &ire);
 
