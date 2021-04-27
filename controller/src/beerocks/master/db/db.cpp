@@ -918,7 +918,7 @@ std::unordered_map<sMacAddr, son::node::ap_metrics_data> &db::get_ap_metric_data
     return m_ap_metric_data;
 }
 
-bool db::set_hostap_active(const std::string &mac, bool active)
+bool db::set_hostap_active(const sMacAddr &mac, bool active)
 {
     auto n = get_node(mac);
     if (!n) {
