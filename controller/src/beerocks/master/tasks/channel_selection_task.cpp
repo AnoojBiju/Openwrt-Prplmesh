@@ -1512,7 +1512,8 @@ bool channel_selection_task::fill_restricted_channels_from_ccl_and_supported(uin
         }
     }
     auto global_restricted_chn = database.get_global_restricted_channels();
-    auto db_restricted         = database.get_hostap_conf_restricted_channels(hostap_mac);
+    auto db_restricted =
+        database.get_hostap_conf_restricted_channels(tlvf::mac_from_string(hostap_mac));
     auto configured_restricted_chn =
         !global_restricted_chn.empty() ? global_restricted_chn : db_restricted;
     if (!configured_restricted_chn.empty()) {

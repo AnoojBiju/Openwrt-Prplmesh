@@ -849,7 +849,7 @@ public:
     std::vector<uint8_t> get_global_restricted_channels();
     bool set_hostap_conf_restricted_channels(const sMacAddr &hostap_mac,
                                              const uint8_t *restricted_channels);
-    std::vector<uint8_t> get_hostap_conf_restricted_channels(const std::string &hostap_mac);
+    std::vector<uint8_t> get_hostap_conf_restricted_channels(const sMacAddr &hostap_mac);
     bool
     fill_radio_channel_scan_capabilites(const sMacAddr &radio_mac,
                                         wfa_map::cRadiosWithScanCapabilities &radio_capabilities);

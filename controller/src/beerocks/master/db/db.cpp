@@ -631,7 +631,7 @@ bool db::set_hostap_conf_restricted_channels(const sMacAddr &hostap_mac,
     return true;
 }
 
-std::vector<uint8_t> db::get_hostap_conf_restricted_channels(const std::string &hostap_mac)
+std::vector<uint8_t> db::get_hostap_conf_restricted_channels(const sMacAddr &hostap_mac)
 {
     auto n = get_node(hostap_mac);
     if (!n) {
