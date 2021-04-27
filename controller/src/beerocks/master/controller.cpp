@@ -2264,7 +2264,7 @@ bool Controller::handle_intel_slave_join(
     database.set_hostap_driver_version(mac, notification->hostap().driver_version);
 
     database.set_hostap_ant_num(radio_mac, (beerocks::eWiFiAntNum)notification->hostap().ant_num);
-    database.set_hostap_ant_gain(radio_mac, notification->hostap().ant_gain);
+    database.set_hostap_ant_gain(mac, notification->hostap().ant_gain);
     database.set_hostap_tx_power(mac, notification->hostap().tx_power);
 
     database.set_node_name(radio_mac, slave_name + "_AP");
@@ -2561,7 +2561,7 @@ bool Controller::handle_non_intel_slave_join(
     // TODO number of antennas comes from HT/VHT capabilities (implicit from NxM)
     // TODO ant_gain and tx_power will not be set
     database.set_hostap_ant_num(radio_mac, beerocks::eWiFiAntNum::ANT_NONE);
-    database.set_hostap_ant_gain(radio_mac, 0);
+    database.set_hostap_ant_gain(ruid, 0);
     database.set_hostap_tx_power(ruid, 0);
     database.set_hostap_active(radio_mac, true);
     database.set_node_name(radio_mac, manufacturer + "_AP");
