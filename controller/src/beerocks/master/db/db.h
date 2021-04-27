@@ -393,10 +393,10 @@ public:
 
     std::chrono::steady_clock::time_point get_node_last_seen(const std::string &mac);
 
-    bool set_hostap_active(const std::string &mac, bool active);
+    bool set_hostap_active(const sMacAddr &mac, bool active);
     bool is_hostap_active(const std::string &mac);
 
-    bool set_hostap_backhaul_manager(const std::string &mac, bool is_backhaul_manager);
+    bool set_hostap_backhaul_manager(const sMacAddr &mac, bool is_backhaul_manager);
     bool is_hostap_backhaul_manager(const std::string &mac);
     std::string get_hostap_backhaul_manager(const std::string &ire);
 
@@ -732,14 +732,14 @@ public:
     bool set_station_capabilities(const std::string &client_mac,
                                   const beerocks::message::sRadioCapabilities &sta_cap);
 
-    bool set_hostap_ant_num(const std::string &mac, beerocks::eWiFiAntNum ant_num);
-    beerocks::eWiFiAntNum get_hostap_ant_num(const std::string &mac);
+    bool set_hostap_ant_num(const sMacAddr &mac, beerocks::eWiFiAntNum ant_num);
+    beerocks::eWiFiAntNum get_hostap_ant_num(const sMacAddr &mac);
 
-    bool set_hostap_ant_gain(const std::string &mac, int ant_gain);
-    int get_hostap_ant_gain(const std::string &mac);
+    bool set_hostap_ant_gain(const sMacAddr &mac, int ant_gain);
+    int get_hostap_ant_gain(const sMacAddr &mac);
 
-    bool set_hostap_tx_power(const std::string &mac, int tx_power);
-    int get_hostap_tx_power(const std::string &mac);
+    bool set_hostap_tx_power(const sMacAddr &mac, int tx_power);
+    int get_hostap_tx_power(const sMacAddr &mac);
 
     bool set_hostap_supported_channels(const std::string &mac,
                                        beerocks::message::sWifiChannel *supported_channels,
@@ -847,9 +847,9 @@ public:
 
     bool set_global_restricted_channels(const uint8_t *restricted_channels);
     std::vector<uint8_t> get_global_restricted_channels();
-    bool set_hostap_conf_restricted_channels(const std::string &hostap_mac,
+    bool set_hostap_conf_restricted_channels(const sMacAddr &hostap_mac,
                                              const uint8_t *restricted_channels);
-    std::vector<uint8_t> get_hostap_conf_restricted_channels(const std::string &hostap_mac);
+    std::vector<uint8_t> get_hostap_conf_restricted_channels(const sMacAddr &hostap_mac);
     bool
     fill_radio_channel_scan_capabilites(const sMacAddr &radio_mac,
                                         wfa_map::cRadiosWithScanCapabilities &radio_capabilities);

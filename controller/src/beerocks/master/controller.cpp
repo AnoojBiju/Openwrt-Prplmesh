@@ -2226,14 +2226,15 @@ bool Controller::handle_intel_slave_join(
     /*
     * handle the HOSTAP node
     */
-    if (database.has_node(tlvf::mac_from_string(radio_mac))) {
+    auto mac = tlvf::mac_from_string(radio_mac);
+    if (database.has_node(mac)) {
         if (database.get_node_type(radio_mac) != beerocks::TYPE_SLAVE) {
             database.set_node_type(radio_mac, beerocks::TYPE_SLAVE);
             LOG(ERROR) << "Existing mac node is not TYPE_SLAVE";
         }
         database.clear_hostap_stats_info(radio_mac);
     } else {
-        database.add_node_radio(tlvf::mac_from_string(radio_mac), tlvf::mac_from_string(bridge_mac),
+        database.add_node_radio(mac, tlvf::mac_from_string(bridge_mac),
                                 tlvf::mac_from_string(radio_identifier));
     }
     database.set_hostap_is_acs_enabled(radio_mac, acs_enabled);
@@ -2248,26 +2249,23 @@ bool Controller::handle_intel_slave_join(
         auto ire_hostaps = database.get_node_children(bridge_mac, beerocks::TYPE_SLAVE);
         for (auto tmp_slave_mac : ire_hostaps) {
             if (tmp_slave_mac != radio_mac) {
-                database.set_hostap_backhaul_manager(tmp_slave_mac, false);
+                database.set_hostap_backhaul_manager(tlvf::mac_from_string(tmp_slave_mac), false);
             }
         }
     }
-    database.set_hostap_repeater_mode_flag(tlvf::mac_from_string(radio_mac),
-                                           notification->enable_repeater_mode());
-    database.set_hostap_backhaul_manager(radio_mac, backhaul_manager);
+    database.set_hostap_repeater_mode_flag(mac, notification->enable_repeater_mode());
+    database.set_hostap_backhaul_manager(mac, backhaul_manager);
 
     database.set_node_state(radio_mac, beerocks::STATE_CONNECTED);
     database.set_node_backhaul_iface_type(radio_mac, is_gw_slave ? beerocks::IFACE_TYPE_GW_BRIDGE
                                                                  : beerocks::IFACE_TYPE_BRIDGE);
-    database.set_hostap_iface_name(tlvf::mac_from_string(radio_mac),
-                                   notification->hostap().iface_name);
-    database.set_hostap_iface_type(tlvf::mac_from_string(radio_mac), hostap_iface_type);
-    database.set_hostap_driver_version(tlvf::mac_from_string(radio_mac),
-                                       notification->hostap().driver_version);
+    database.set_hostap_iface_name(mac, notification->hostap().iface_name);
+    database.set_hostap_iface_type(mac, hostap_iface_type);
+    database.set_hostap_driver_version(mac, notification->hostap().driver_version);
 
-    database.set_hostap_ant_num(radio_mac, (beerocks::eWiFiAntNum)notification->hostap().ant_num);
-    database.set_hostap_ant_gain(radio_mac, notification->hostap().ant_gain);
-    database.set_hostap_tx_power(radio_mac, notification->hostap().tx_power);
+    database.set_hostap_ant_num(mac, (beerocks::eWiFiAntNum)notification->hostap().ant_num);
+    database.set_hostap_ant_gain(mac, notification->hostap().ant_gain);
+    database.set_hostap_tx_power(mac, notification->hostap().tx_power);
 
     database.set_node_name(radio_mac, slave_name + "_AP");
     database.set_node_ipv4(radio_mac, bridge_ipv4);
@@ -2275,19 +2273,15 @@ bool Controller::handle_intel_slave_join(
 
     if (database.get_node_5ghz_support(radio_mac)) {
         if (notification->low_pass_filter_on()) {
-            database.set_hostap_band_capability(tlvf::mac_from_string(radio_mac),
-                                                beerocks::LOW_SUBBAND_ONLY);
+            database.set_hostap_band_capability(mac, beerocks::LOW_SUBBAND_ONLY);
         } else {
-            database.set_hostap_band_capability(tlvf::mac_from_string(radio_mac),
-                                                beerocks::BOTH_SUBBAND);
+            database.set_hostap_band_capability(mac, beerocks::BOTH_SUBBAND);
         }
     } else {
-        database.set_hostap_band_capability(tlvf::mac_from_string(radio_mac),
-                                            beerocks::SUBBAND_CAPABILITY_UNKNOWN);
+        database.set_hostap_band_capability(mac, beerocks::SUBBAND_CAPABILITY_UNKNOWN);
     }
     autoconfig_wsc_parse_radio_caps(radio_mac, radio_caps);
 
-    auto mac = tlvf::mac_from_string(radio_mac);
     if (tasks.is_task_running(database.get_dynamic_channel_selection_task_id(mac))) {
         LOG(DEBUG) << "dynamic channel selection task already running for " << mac;
     } else {
@@ -2387,7 +2381,7 @@ bool Controller::handle_intel_slave_join(
         // it is required to re-activate the AP in the nodes-map since it is set as not-active
         // when the topology-response not containing it is received by the controller.
         // When it joins the controller we need to activate it if not activated.
-        database.set_hostap_active(radio_mac, true);
+        database.set_hostap_active(mac, true);
     }
 
     //Update all (Slaves) last seen timestamp
@@ -2479,6 +2473,7 @@ bool Controller::handle_non_intel_slave_join(
     std::string eth_switch_mac   = tlvf::mac_to_string(mac);
     std::string parent_bssid_mac = beerocks::net::network_utils::ZERO_MAC_STRING;
     auto manufacturer            = m1.manufacturer();
+    auto ruid                    = tlvf::mac_from_string(radio_mac);
     LOG(INFO) << "IRE generic Slave joined" << std::endl
               << "    manufacturer=" << manufacturer << std::endl
               << "    parent_bssid_mac=" << parent_bssid_mac << std::endl
@@ -2540,7 +2535,7 @@ bool Controller::handle_non_intel_slave_join(
     database.set_node_manufacturer(eth_switch_mac, eth_switch_mac);
 
     // Update existing node, or add a new one
-    if (database.has_node(tlvf::mac_from_string(radio_mac))) {
+    if (database.has_node(ruid)) {
         if (database.get_node_type(radio_mac) != beerocks::TYPE_SLAVE) {
             database.set_node_type(radio_mac, beerocks::TYPE_SLAVE);
             LOG(ERROR) << "Existing mac node is not TYPE_SLAVE";
@@ -2548,29 +2543,27 @@ bool Controller::handle_non_intel_slave_join(
         database.clear_hostap_stats_info(radio_mac);
     } else {
         // TODO Intel Slave Join has separate radio MAC and UID; we use radio_mac for both.
-        database.add_node_radio(tlvf::mac_from_string(radio_mac), tlvf::mac_from_string(bridge_mac),
-                                tlvf::mac_from_string(radio_mac));
+        database.add_node_radio(ruid, tlvf::mac_from_string(bridge_mac), ruid);
     }
     database.set_hostap_is_acs_enabled(radio_mac, false);
 
     // TODO Assume repeater mode
-    database.set_hostap_repeater_mode_flag(tlvf::mac_from_string(radio_mac), true);
+    database.set_hostap_repeater_mode_flag(ruid, true);
     // TODO Assume no backhaul manager
-    database.set_hostap_backhaul_manager(radio_mac, false);
+    database.set_hostap_backhaul_manager(ruid, false);
 
     database.set_node_state(radio_mac, beerocks::STATE_CONNECTED);
     database.set_node_backhaul_iface_type(radio_mac, beerocks::IFACE_TYPE_BRIDGE);
     // TODO driver_version will not be set
-    database.set_hostap_iface_name(tlvf::mac_from_string(radio_mac), "N/A");
-    database.set_hostap_iface_type(tlvf::mac_from_string(radio_mac),
-                                   beerocks::IFACE_TYPE_WIFI_UNSPECIFIED);
+    database.set_hostap_iface_name(ruid, "N/A");
+    database.set_hostap_iface_type(ruid, beerocks::IFACE_TYPE_WIFI_UNSPECIFIED);
 
     // TODO number of antennas comes from HT/VHT capabilities (implicit from NxM)
     // TODO ant_gain and tx_power will not be set
-    database.set_hostap_ant_num(radio_mac, beerocks::eWiFiAntNum::ANT_NONE);
-    database.set_hostap_ant_gain(radio_mac, 0);
-    database.set_hostap_tx_power(radio_mac, 0);
-    database.set_hostap_active(radio_mac, true);
+    database.set_hostap_ant_num(ruid, beerocks::eWiFiAntNum::ANT_NONE);
+    database.set_hostap_ant_gain(ruid, 0);
+    database.set_hostap_tx_power(ruid, 0);
+    database.set_hostap_active(ruid, true);
     database.set_node_name(radio_mac, manufacturer + "_AP");
     database.set_node_manufacturer(radio_mac, manufacturer);
     // TODO ipv4 will not be set
@@ -2581,13 +2574,12 @@ bool Controller::handle_non_intel_slave_join(
     // TODO
     //        if (database.get_node_5ghz_support(radio_mac)) {
     //            if (notification->low_pass_filter_on()) {
-    //                database.set_hostap_band_capability(tlvf::mac_from_string(radio_mac), beerocks::LOW_SUBBAND_ONLY);
+    //                database.set_hostap_band_capability(ruid, beerocks::LOW_SUBBAND_ONLY);
     //            } else {
-    //                database.set_hostap_band_capability(tlvf::mac_from_string(radio_mac), beerocks::BOTH_SUBBAND);
+    //                database.set_hostap_band_capability(ruid, beerocks::BOTH_SUBBAND);
     //            }
     //        } else {
-    database.set_hostap_band_capability(tlvf::mac_from_string(radio_mac),
-                                        beerocks::SUBBAND_CAPABILITY_UNKNOWN);
+    database.set_hostap_band_capability(ruid, beerocks::SUBBAND_CAPABILITY_UNKNOWN);
     //        }
 
     // update bml listeners
