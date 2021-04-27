@@ -116,13 +116,11 @@
 .run-certification-tests:
   interruptible: false
   stage: test
-  variables:
-    GIT_CLONE_PATH: "/builds/prpl-foundation/prplmesh/prplMesh/"
+  before_script:
+    - ci/git-clean-reset.sh ~/easymesh_cert "$(<"ci/easymesh_cert_version")"
   script:
     - export TESTS_TO_RUN="$(cat .tests-to-run)"
     - export DEVICE_UNDER_TEST="$(cat .device-under-test)"
-    - ci/git-clean-reset.sh /easymesh_cert "$(<"ci/easymesh_cert_version")"
-    - /easymesh_cert/utils/power_cycle/power_cycle.py --force
     - |
       case "$DEVICE_UNDER_TEST" in
           axepoint)
@@ -145,28 +143,40 @@
           echo "Deploying prplMesh to $DEVICE_UNDER_TEST"
           tools/deploy_ipk.sh --certification-mode $DEVICE_UNDER_TEST build/$DEVICE_UNDER_TEST/prplmesh.ipk
       fi
-    - sudo -E /easymesh_cert/run_test_file.py --upload-results  --verbose --log-folder logs --device-under-test $DEVICE_UNDER_TEST $TESTS_TO_RUN
-  after_script:
-    - ci/certification/R1_marvell_station.sh
+    - ~/easymesh_cert/run_test_file.py --easymesh-revision "$EASYMESH_REVISION" --upload-results --verbose --log-folder logs --device-under-test $DEVICE_UNDER_TEST $TESTS_TO_RUN
   artifacts:
     paths:
       - logs
     when: always
   timeout: 36h
 
-.certification-generic:
-  interruptible: false
+.run-certification-tests-R1:
+  extends: .run-certification-tests
   variables:
-    # RUN_ON_DEVICE need to be set when extending the job
     GIT_CLONE_PATH: "/builds/prpl-foundation/prplmesh/prplMesh/"
-  script:
-    - echo $CI_COMMIT_DESCRIPTION
-    - ci/git-clean-reset.sh /easymesh_cert "$(<"ci/easymesh_cert_version")"
-    - sudo -E /easymesh_cert/run_test_file.py -v -o logs -d $RUN_ON_DEVICE "${CI_JOB_NAME%%:*}"
+    EASYMESH_REVISION: "R1"
+  before_script:
+    - ci/git-clean-reset.sh ~/easymesh_cert "$(<"ci/easymesh_cert_version")"
+    - ~/easymesh_cert/utils/power_cycle/power_cycle.py --force
   after_script:
     - ci/certification/R1_marvell_station.sh
+
+.certification-generic:
+  interruptible: false
+  # RUN_ON_DEVICE variable need to be set when extending the job
+  script:
+    - ci/git-clean-reset.sh ~/easymesh_cert "$(<"ci/easymesh_cert_version")"
+    - ~/easymesh_cert/run_test_file.py --verbose --log-folder logs --easymesh-revision "$EASYMESH_REVISION" --device-under-test $RUN_ON_DEVICE "${CI_JOB_NAME%%:*}"
   artifacts:
     paths:
       - logs
     when: always
   timeout: 45min
+
+.certification-generic-R1:
+  extends: .certification-generic
+  variables:
+    GIT_CLONE_PATH: "/builds/prpl-foundation/prplmesh/prplMesh/"
+    EASYMESH_REVISION: "R1"
+  after_script:
+    - ci/certification/R1_marvell_station.sh

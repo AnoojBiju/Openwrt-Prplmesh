@@ -238,9 +238,10 @@ boardfarm-stability-tests:
   rules:
     - if: '$STABILITY_TESTS'
 
-run-certification-tests-prplmesh-essensium:
-  extends: .run-certification-tests
+run-certification-tests-R1-prplmesh-essensium:
+  extends: .run-certification-tests-R1
   before_script:
+    - !reference [.run-certification-tests-R1, before_script]
     - echo "$TESTS_TO_RUN_ESSENSIUM" > .tests-to-run
     - echo "$DEVICE_UNDER_TEST_ESSENSIUM" > .device-under-test
   tags:
@@ -250,9 +251,10 @@ run-certification-tests-prplmesh-essensium:
   rules:
     - if: '$TESTS_TO_RUN_ESSENSIUM !~ /^\$/ && $DEVICE_UNDER_TEST_ESSENSIUM == "prplmesh"'
 
-run-certification-tests-prplmesh-isr:
-  extends: .run-certification-tests
+run-certification-tests-R1-prplmesh-isr:
+  extends: .run-certification-tests-R1
   before_script:
+    - !reference [.run-certification-tests-R1, before_script]
     - echo "$TESTS_TO_RUN_ISR" > .tests-to-run
     - echo "$DEVICE_UNDER_TEST_ISR" > .device-under-test
   tags:
