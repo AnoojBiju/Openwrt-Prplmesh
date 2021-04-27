@@ -128,6 +128,9 @@
           axepoint)
               IMAGE_NAME="$AXEPOINT_FULLIMAGE"
           ;;
+          nec-wx3000hp)
+              IMAGE_NAME="$NEC_WX3000HP_FULLIMAGE"
+          ;;
           turris-omnia)
               IMAGE_NAME="$TURRIS_OMNIA_FULLIMAGE"
           ;;
