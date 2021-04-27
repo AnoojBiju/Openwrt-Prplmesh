@@ -161,6 +161,11 @@
   after_script:
     - ci/certification/R1_marvell_station.sh
 
+.run-certification-tests-R2:
+  extends: .run-certification-tests
+  variables:
+    EASYMESH_REVISION: "R2"
+
 .certification-generic:
   interruptible: false
   # RUN_ON_DEVICE variable need to be set when extending the job
