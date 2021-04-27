@@ -180,3 +180,13 @@
     EASYMESH_REVISION: "R1"
   after_script:
     - ci/certification/R1_marvell_station.sh
+
+.certification-generic-R2:
+  extends: .certification-generic
+  variables:
+    EASYMESH_REVISION: "R2"
+  before_script:
+    - tools/deploy_firmware.py --device "$RUN_ON_DEVICE"  --target-name "$RUN_ON_DEVICE" --image "$AXEPOINT_FULLIMAGE"
+    - tools/setup_uci.sh --target-type "$RUN_ON_DEVICE" --target-name "$RUN_ON_DEVICE"
+    - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE build/$RUN_ON_DEVICE/prplmesh.ipk
+
