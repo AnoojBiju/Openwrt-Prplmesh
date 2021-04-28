@@ -2277,7 +2277,7 @@ bool Controller::handle_intel_slave_join(
     } else {
         database.set_hostap_band_capability(mac, beerocks::SUBBAND_CAPABILITY_UNKNOWN);
     }
-    autoconfig_wsc_parse_radio_caps(radio_mac, radio_caps);
+    autoconfig_wsc_parse_radio_caps(mac, radio_caps);
 
     if (tasks.is_task_running(database.get_dynamic_channel_selection_task_id(mac))) {
         LOG(DEBUG) << "dynamic channel selection task already running for " << mac;
@@ -2399,7 +2399,7 @@ bool Controller::handle_intel_slave_join(
  * @return false on failure
  */
 bool Controller::autoconfig_wsc_parse_radio_caps(
-    std::string radio_mac, std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps)
+    const sMacAddr &radio_mac, std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps)
 {
     // read all operating class list
     auto operating_classes_list_length = radio_caps->operating_classes_info_list_length();
@@ -2412,7 +2412,7 @@ bool Controller::autoconfig_wsc_parse_radio_caps(
     ** Here need to remove the OperatingClasses data element
     ** from the Controler Data Model because we are entering a new one
     */
-    database.remove_hostap_supported_operating_classes(tlvf::mac_from_string(radio_mac));
+    database.remove_hostap_supported_operating_classes(radio_mac);
 
     std::stringstream ss;
     for (int oc_idx = 0; oc_idx < operating_classes_list_length; oc_idx++) {
@@ -2444,14 +2444,13 @@ bool Controller::autoconfig_wsc_parse_radio_caps(
         }
         ss << " }" << std::endl;
         // store operating class in the DB for this hostap
-        database.add_hostap_supported_operating_class(tlvf::mac_from_string(radio_mac),
-                                                      operating_class, maximum_transmit_power_dbm,
-                                                      non_operable_channels);
+        database.add_hostap_supported_operating_class(
+            radio_mac, operating_class, maximum_transmit_power_dbm, non_operable_channels);
     }
     LOG(DEBUG) << "Radio basic capabilities:" << std::endl
                << ss.str() << std::endl
                << "Supported Channels:" << std::endl
-               << database.get_hostap_supported_channels_string(tlvf::mac_from_string(radio_mac));
+               << database.get_hostap_supported_channels_string(radio_mac);
 
     return true;
 }
@@ -2566,7 +2565,7 @@ bool Controller::handle_non_intel_slave_join(
     database.set_node_manufacturer(radio_mac, manufacturer);
     // TODO ipv4 will not be set
 
-    autoconfig_wsc_parse_radio_caps(radio_mac, radio_caps);
+    autoconfig_wsc_parse_radio_caps(ruid, radio_caps);
     // TODO assume SSIDs are not hidden
 
     // TODO
