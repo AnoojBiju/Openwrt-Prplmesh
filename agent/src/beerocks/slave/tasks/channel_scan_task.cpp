@@ -190,18 +190,23 @@ void ChannelScanTask::work()
                                << current_radio_scan->radio_mac;
                     return;
                 }
-                // Once the scan is done, update the AgentDB with the cached results.
+                // Once the scan is done we want to update the AgentDB with the cached results.
+                // If no neighbours are found on some channel, the cached result for that channel
+                // will simply not exist. But a cached result also doesn't exist if that channel
+                // was not scanned at all. In that case, we want to keep the result that is already
+                // in the DB. Therefore, we need to iterate over all the requested channels,
+                // and update the DB accordingly.
                 for (const auto &op_cls : current_radio_scan->operating_classes) {
                     for (const auto &channel_elem : op_cls.channel_list) {
                         const uint8_t channel_num = channel_elem.channel_number;
                         const auto &cached_result_iter =
                             current_radio_scan->cached_results.find(channel_num);
                         if (cached_result_iter == current_radio_scan->cached_results.end()) {
-                            // If a channel does not exist in the cached results clear it's record.
+                            // If a requested channel is not present in the cached results we can assume the channel did not contain results.
+                            // Therefore we need to clear the stored results from the DB to reflect the most recent results.
                             radio->channel_scan_results.erase(channel_num);
                         } else {
-                            // Add the cached results to the AgentDB.
-                            // Note: This will override previous results for the given channel.
+                            // If a request channel is present in te cached results we need to override any existing stored results.
                             radio->channel_scan_results[channel_num] =
                                 std::make_pair(current_scan_request->scan_start_timestamp,
                                                cached_result_iter->second);
