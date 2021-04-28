@@ -3124,7 +3124,7 @@ bool db::get_channel_scan_in_progress(const sMacAddr &mac, bool single_scan)
         return false;
     }
     if (single_scan) {
-        return (hostap->single_scan_status.scan_in_progress &&
+        return (hostap->single_scan_status.scan_in_progress ||
                 hostap->single_scan_status.scan_is_pending);
     } else {
         return hostap->continuous_scan_status.scan_in_progress;
