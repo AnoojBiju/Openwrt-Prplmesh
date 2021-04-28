@@ -893,7 +893,7 @@ public:
     bool set_hostap_is_dfs(const sMacAddr &mac, bool enable);
     bool get_hostap_is_dfs(const sMacAddr &mac);
 
-    bool set_hostap_cac_completed(const std::string &mac, bool enable);
+    bool set_hostap_cac_completed(const sMacAddr &mac, bool enable);
     bool get_hostap_cac_completed(const sMacAddr &mac);
 
     bool set_hostap_on_dfs_reentry(const sMacAddr &mac, bool enable);

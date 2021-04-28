@@ -370,7 +370,7 @@ void channel_selection_task::work()
             if (wireless_utils::is_dfs_channel(hostap_params.channel)) {
                 TASK_LOG(INFO) << "not waiting for CAC completed on static DFS channel "
                                   "configuration, setting CAC completed flag to true";
-                database.set_hostap_cac_completed(hostap_mac, true);
+                database.set_hostap_cac_completed(tlvf::mac_from_string(hostap_mac), true);
             }
         }
 
@@ -735,7 +735,7 @@ void channel_selection_task::work()
             }
         } else {
             // CAC completed will not arrive in passive mode, so set the indication to 'completed'
-            database.set_hostap_cac_completed(hostap_mac, true);
+            database.set_hostap_cac_completed(tlvf::mac_from_string(hostap_mac), true);
         }
         FSM_MOVE_STATE(GOTO_IDLE);
         break;
@@ -745,7 +745,7 @@ void channel_selection_task::work()
         auto it_cac = hostaps_cac_pending.find(hostap_mac);
 
         if (it_cac != std::end(hostaps_cac_pending)) {
-            database.set_hostap_cac_completed(it_cac->first, true);
+            database.set_hostap_cac_completed(tlvf::mac_from_string(it_cac->first), true);
             it_cac = hostaps_cac_pending.erase(it_cac);
             TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
                             << " cac completed - found in pending cac - erasing, update DB";
@@ -1739,7 +1739,7 @@ void channel_selection_task::wait_for_cac_completed(uint8_t channel, uint8_t ban
     //hostap handle the CAC-completed event async pushing to deck.
     TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac << " enter to cac pending";
     hostaps_cac_pending.insert({hostap_mac, std::chrono::steady_clock::now()});
-    database.set_hostap_cac_completed(hostap_mac, false);
+    database.set_hostap_cac_completed(tlvf::mac_from_string(hostap_mac), false);
 
     // update bml listeners
     bml_task::cac_status_changed_notification_event cac_status_changed_event;
