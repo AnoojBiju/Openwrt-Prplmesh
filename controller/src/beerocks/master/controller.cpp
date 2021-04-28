@@ -2450,7 +2450,7 @@ bool Controller::autoconfig_wsc_parse_radio_caps(
     LOG(DEBUG) << "Radio basic capabilities:" << std::endl
                << ss.str() << std::endl
                << "Supported Channels:" << std::endl
-               << database.get_hostap_supported_channels_string(radio_mac);
+               << database.get_hostap_supported_channels_string(tlvf::mac_from_string(radio_mac));
 
     return true;
 }
