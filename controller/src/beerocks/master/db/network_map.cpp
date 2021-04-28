@@ -314,9 +314,10 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
                 }
 
                 // Copy the driver version string
-                string_utils::copy_string(node->data.gw_ire.radio[i].driver_version,
-                                          database.get_hostap_driver_version(c->mac).c_str(),
-                                          BML_WLAN_DRIVER_VERSION_LEN);
+                string_utils::copy_string(
+                    node->data.gw_ire.radio[i].driver_version,
+                    database.get_hostap_driver_version(tlvf::mac_from_string(c->mac)).c_str(),
+                    BML_WLAN_DRIVER_VERSION_LEN);
 
                 node->data.gw_ire.radio[i].channel       = !c->channel ? 255 : c->channel;
                 node->data.gw_ire.radio[i].cac_completed = c->hostap->cac_completed;
