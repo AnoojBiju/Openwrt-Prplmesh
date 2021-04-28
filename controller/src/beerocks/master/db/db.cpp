@@ -2427,7 +2427,7 @@ bool db::is_vap_on_steer_list(const std::string &bssid)
         return true;
     }
 
-    auto vap_name = get_hostap_iface_name(bssid);
+    auto vap_name = get_hostap_iface_name(tlvf::mac_from_string(bssid));
     if (vap_name == "INVALID") {
         LOG(ERROR) << "vap name is invalid for bssid " << bssid;
         return false;
@@ -2570,7 +2570,7 @@ bool db::set_hostap_iface_name(const sMacAddr &mac, const std::string &iface_nam
     return true;
 }
 
-std::string db::get_hostap_iface_name(const std::string &mac)
+std::string db::get_hostap_iface_name(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {

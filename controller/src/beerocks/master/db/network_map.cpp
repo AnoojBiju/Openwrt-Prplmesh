@@ -299,9 +299,10 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
             if (c->state == beerocks::STATE_CONNECTED) {
 
                 // Copy the interface name
-                string_utils::copy_string(node->data.gw_ire.radio[i].iface_name,
-                                          database.get_hostap_iface_name(c->mac).c_str(),
-                                          BML_NODE_IFACE_NAME_LEN);
+                string_utils::copy_string(
+                    node->data.gw_ire.radio[i].iface_name,
+                    database.get_hostap_iface_name(tlvf::mac_from_string(c->mac)).c_str(),
+                    BML_NODE_IFACE_NAME_LEN);
 
                 // Radio Vendor
                 switch (database.get_hostap_iface_type(c->mac)) {
