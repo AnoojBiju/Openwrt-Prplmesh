@@ -771,8 +771,7 @@ public:
     bool set_hostap_supported_channels(const sMacAddr &mac,
                                        beerocks::message::sWifiChannel *supported_channels,
                                        int length);
-    std::vector<beerocks::message::sWifiChannel>
-    get_hostap_supported_channels(const std::string &mac);
+    std::vector<beerocks::message::sWifiChannel> get_hostap_supported_channels(const sMacAddr &mac);
     std::string get_hostap_supported_channels_string(const std::string &radio_mac);
 
     bool add_hostap_supported_operating_class(const std::string &radio_mac, uint8_t operating_class,

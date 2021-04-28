@@ -57,7 +57,7 @@ static bool get_pool_of_all_supported_channels(std::unordered_set<uint8_t> &chan
 {
     LOG(DEBUG) << "Setting channel pool to all channels";
     channel_pool_set.clear();
-    auto all_channels = database.get_hostap_supported_channels(tlvf::mac_to_string(radio_mac));
+    auto all_channels = database.get_hostap_supported_channels(radio_mac);
     if (all_channels.empty()) {
         LOG(ERROR) << "Supported channel list is empty, failed to set channel pool!";
         return false;
