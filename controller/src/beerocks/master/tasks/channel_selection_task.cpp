@@ -1168,7 +1168,8 @@ void channel_selection_task::ccl_fill_supported_channels()
 {
     TASK_LOG(DEBUG) << "*****************ccl_fill_supported_channels**************************** :";
     //Get the supported channels list from the db
-    auto hostap_supported_channels = database.get_hostap_supported_channels(hostap_mac);
+    auto hostap_supported_channels =
+        database.get_hostap_supported_channels(tlvf::mac_from_string(hostap_mac));
 
     /*1. Fill active channel list with the suppoted channels and
         2. Initialize all the supported channels as available in active list to start with*/
@@ -1188,7 +1189,8 @@ void channel_selection_task::ccl_fill_affected_supported_channels()
 {
     TASK_LOG(DEBUG)
         << "*****************ccl_fill_affected_supported_channels**************************** :";
-    auto hostap_supported_channels = database.get_hostap_supported_channels(hostap_mac);
+    auto hostap_supported_channels =
+        database.get_hostap_supported_channels(tlvf::mac_from_string(hostap_mac));
 
     /*1. Fill active channel list with the radar affected suppoted channels */
     for (auto hostap_channel : hostap_supported_channels) {

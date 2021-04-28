@@ -1972,8 +1972,7 @@ bool db::set_hostap_supported_channels(const sMacAddr &mac,
     return true;
 }
 
-std::vector<beerocks::message::sWifiChannel>
-db::get_hostap_supported_channels(const std::string &mac)
+std::vector<beerocks::message::sWifiChannel> db::get_hostap_supported_channels(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -1989,7 +1988,7 @@ db::get_hostap_supported_channels(const std::string &mac)
 std::string db::get_hostap_supported_channels_string(const std::string &radio_mac)
 {
     std::ostringstream os;
-    auto supported_channels = get_hostap_supported_channels(radio_mac);
+    auto supported_channels = get_hostap_supported_channels(tlvf::mac_from_string(radio_mac));
     for (const auto &val : supported_channels) {
         if (val.channel > 0) {
             os << " ch = " << int(val.channel) << " | dfs = " << int(val.is_dfs_channel)
@@ -2019,7 +2018,7 @@ bool db::add_hostap_supported_operating_class(const std::string &radio_mac, uint
                                               uint8_t tx_power,
                                               const std::vector<uint8_t> &non_operable_channels)
 {
-    auto supported_channels = get_hostap_supported_channels(radio_mac);
+    auto supported_channels = get_hostap_supported_channels(tlvf::mac_from_string(radio_mac));
     auto channel_set        = wireless_utils::operating_class_to_channel_set(operating_class);
     auto class_bw           = wireless_utils::operating_class_to_bandwidth(operating_class);
     // Update current channels
@@ -3136,7 +3135,7 @@ int db::get_channel_scan_dwell_time_msec(const sMacAddr &mac, bool single_scan)
 bool db::is_channel_scan_pool_supported(const sMacAddr &mac,
                                         const std::unordered_set<uint8_t> &channel_pool)
 {
-    auto supported_channels = get_hostap_supported_channels(tlvf::mac_to_string(mac));
+    auto supported_channels = get_hostap_supported_channels(mac);
     for (const auto &channel : channel_pool) {
         auto found_channel =
             std::find_if(supported_channels.begin(), supported_channels.end(),
@@ -6168,7 +6167,7 @@ bool db::remove_current_op_classes(const sMacAddr &radio_mac)
 
 bool db::remove_hostap_supported_operating_classes(const sMacAddr &radio_mac)
 {
-    auto supported_channels = get_hostap_supported_channels(tlvf::mac_to_string(radio_mac));
+    auto supported_channels = get_hostap_supported_channels(radio_mac);
     auto radio_node         = get_node(radio_mac);
 
     // Remove from data model
