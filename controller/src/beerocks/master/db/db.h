@@ -835,7 +835,7 @@ public:
     bool update_vap(const sMacAddr &radio_mac, const sMacAddr &bssid, const std::string &ssid,
                     bool backhaul);
 
-    std::string get_hostap_ssid(const std::string &mac);
+    std::string get_hostap_ssid(const sMacAddr &mac);
     /**
      * @brief checks if vap name is on the steer list.
      *

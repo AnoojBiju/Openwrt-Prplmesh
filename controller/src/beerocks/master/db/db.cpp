@@ -2403,7 +2403,7 @@ std::set<std::string> db::get_hostap_vaps_bssids(const std::string &mac)
     return bssid_set;
 }
 
-std::string db::get_hostap_ssid(const std::string &mac)
+std::string db::get_hostap_ssid(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2414,7 +2414,7 @@ std::string db::get_hostap_ssid(const std::string &mac)
         return std::string();
     }
     for (auto const &it : n->hostap->vaps_info) {
-        if (it.second.mac == mac) {
+        if (tlvf::mac_from_string(it.second.mac) == mac) {
             return it.second.ssid;
         }
     }
