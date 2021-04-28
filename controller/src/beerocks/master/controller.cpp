@@ -3657,6 +3657,8 @@ bool Controller::handle_cmdu_control_message(
             return false;
         }
 
+        LOG(DEBUG) << "Scan results " << (notification->is_dump() == 1 ? "dump." : "are ready.");
+
         //get the mac from hostap_mac
         auto radio_mac = tlvf::mac_from_string(hostap_mac);
 
