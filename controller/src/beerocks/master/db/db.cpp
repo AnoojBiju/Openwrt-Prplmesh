@@ -2642,7 +2642,7 @@ bool db::set_hostap_driver_version(const sMacAddr &mac, const std::string &versi
     return true;
 }
 
-std::string db::get_hostap_driver_version(const std::string &mac)
+std::string db::get_hostap_driver_version(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
