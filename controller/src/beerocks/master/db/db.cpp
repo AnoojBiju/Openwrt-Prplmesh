@@ -2447,7 +2447,7 @@ bool db::is_vap_on_steer_list(const std::string &bssid)
     return true;
 }
 
-std::string db::get_hostap_vap_with_ssid(const std::string &mac, const std::string &ssid)
+std::string db::get_hostap_vap_with_ssid(const sMacAddr &mac, const std::string &ssid)
 {
     auto n = get_node(mac);
     if (!n) {
