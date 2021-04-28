@@ -608,7 +608,7 @@ bool db::set_global_restricted_channels(const uint8_t *restricted_channels)
 
 std::vector<uint8_t> db::get_global_restricted_channels() { return global_restricted_channels; }
 
-bool db::set_hostap_conf_restricted_channels(const std::string &hostap_mac,
+bool db::set_hostap_conf_restricted_channels(const sMacAddr &hostap_mac,
                                              const uint8_t *restricted_channels)
 {
     auto n = get_node(hostap_mac);
@@ -631,7 +631,7 @@ bool db::set_hostap_conf_restricted_channels(const std::string &hostap_mac,
     return true;
 }
 
-std::vector<uint8_t> db::get_hostap_conf_restricted_channels(const std::string &hostap_mac)
+std::vector<uint8_t> db::get_hostap_conf_restricted_channels(const sMacAddr &hostap_mac)
 {
     auto n = get_node(hostap_mac);
     if (!n) {
@@ -918,7 +918,7 @@ std::unordered_map<sMacAddr, son::node::ap_metrics_data> &db::get_ap_metric_data
     return m_ap_metric_data;
 }
 
-bool db::set_hostap_active(const std::string &mac, bool active)
+bool db::set_hostap_active(const sMacAddr &mac, bool active)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -959,7 +959,7 @@ bool db::is_hostap_active(const std::string &mac)
     return n->hostap->active;
 }
 
-bool db::set_hostap_backhaul_manager(const std::string &mac, bool is_backhaul_manager)
+bool db::set_hostap_backhaul_manager(const sMacAddr &mac, bool is_backhaul_manager)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -1857,7 +1857,7 @@ db::get_station_capabilities(const std::string &client_mac, bool is_bandtype_5gh
     }
 }
 
-bool db::set_hostap_ant_num(const std::string &mac, beerocks::eWiFiAntNum ant_num)
+bool db::set_hostap_ant_num(const sMacAddr &mac, beerocks::eWiFiAntNum ant_num)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -1871,7 +1871,7 @@ bool db::set_hostap_ant_num(const std::string &mac, beerocks::eWiFiAntNum ant_nu
     return true;
 }
 
-beerocks::eWiFiAntNum db::get_hostap_ant_num(const std::string &mac)
+beerocks::eWiFiAntNum db::get_hostap_ant_num(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -1884,7 +1884,7 @@ beerocks::eWiFiAntNum db::get_hostap_ant_num(const std::string &mac)
     return beerocks::eWiFiAntNum(n->capabilities.ant_num);
 }
 
-bool db::set_hostap_ant_gain(const std::string &mac, int ant_gain)
+bool db::set_hostap_ant_gain(const sMacAddr &mac, int ant_gain)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -1898,7 +1898,7 @@ bool db::set_hostap_ant_gain(const std::string &mac, int ant_gain)
     return true;
 }
 
-int db::get_hostap_ant_gain(const std::string &mac)
+int db::get_hostap_ant_gain(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -1911,7 +1911,7 @@ int db::get_hostap_ant_gain(const std::string &mac)
     return n->hostap->ant_gain;
 }
 
-bool db::set_hostap_tx_power(const std::string &mac, int tx_power)
+bool db::set_hostap_tx_power(const sMacAddr &mac, int tx_power)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -1925,7 +1925,7 @@ bool db::set_hostap_tx_power(const std::string &mac, int tx_power)
     return true;
 }
 
-int db::get_hostap_tx_power(const std::string &mac)
+int db::get_hostap_tx_power(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {

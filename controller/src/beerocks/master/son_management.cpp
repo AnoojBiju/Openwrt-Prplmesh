@@ -1194,9 +1194,8 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         if (request->params().is_global) {
             database.set_global_restricted_channels(request->params().restricted_channels);
         } else {
-            database.set_hostap_conf_restricted_channels(
-                tlvf::mac_to_string(request->params().hostap_mac),
-                request->params().restricted_channels);
+            database.set_hostap_conf_restricted_channels(request->params().hostap_mac,
+                                                         request->params().restricted_channels);
         }
 
         //send restricted channel event to channel selection task
@@ -1239,10 +1238,10 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        auto vec_restricted_channels = request->params().is_global
-                                           ? database.get_global_restricted_channels()
-                                           : database.get_hostap_conf_restricted_channels(
-                                                 tlvf::mac_to_string(request->params().hostap_mac));
+        auto vec_restricted_channels =
+            request->params().is_global
+                ? database.get_global_restricted_channels()
+                : database.get_hostap_conf_restricted_channels(request->params().hostap_mac);
         std::copy(vec_restricted_channels.begin(), vec_restricted_channels.end(),
                   response->params().restricted_channels);
 
