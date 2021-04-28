@@ -2658,7 +2658,7 @@ bool Controller::handle_cmdu_control_message(
             son_actions::handle_dead_node(client, true, database, cmdu_tx, tasks);
         }
 
-        database.remove_vap(hostap_mac, vap_id);
+        database.remove_vap(tlvf::mac_from_string(hostap_mac), vap_id);
 
         // Update BSSes in the sAgent
         auto radio =

@@ -2289,16 +2289,16 @@ std::unordered_map<int8_t, sVapElement> &db::get_hostap_vap_list(const sMacAddr 
     return n->hostap->vaps_info;
 }
 
-bool db::remove_vap(const std::string &radio_mac, int vap_id)
+bool db::remove_vap(const sMacAddr &radio_mac, int vap_id)
 {
 
-    auto radio_node = get_node(tlvf::mac_from_string(radio_mac));
+    auto radio_node = get_node(radio_mac);
     if (!radio_node) {
         LOG(ERROR) << "Failed to get radio node, mac: " << radio_mac;
         return false;
     }
 
-    auto vap_list = get_hostap_vap_list(tlvf::mac_from_string(radio_mac));
+    auto vap_list = get_hostap_vap_list(radio_mac);
     auto vap      = vap_list.find(vap_id);
 
     if (vap == vap_list.end()) {
