@@ -2014,11 +2014,11 @@ std::string db::get_hostap_supported_channels_string(const sMacAddr &radio_mac)
  * @return true on success
  * @return false on failure
  */
-bool db::add_hostap_supported_operating_class(const std::string &radio_mac, uint8_t operating_class,
+bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t operating_class,
                                               uint8_t tx_power,
                                               const std::vector<uint8_t> &non_operable_channels)
 {
-    auto supported_channels = get_hostap_supported_channels(tlvf::mac_from_string(radio_mac));
+    auto supported_channels = get_hostap_supported_channels(radio_mac);
     auto channel_set        = wireless_utils::operating_class_to_channel_set(operating_class);
     auto class_bw           = wireless_utils::operating_class_to_bandwidth(operating_class);
     // Update current channels
@@ -2048,10 +2048,10 @@ bool db::add_hostap_supported_operating_class(const std::string &radio_mac, uint
     }
 
     // Set values for Controller.Network.Device.Radio.Capabilities.OperatingClasses
-    dm_add_ap_operating_classes(radio_mac, tx_power, operating_class, non_operable_channels);
+    dm_add_ap_operating_classes(tlvf::mac_to_string(radio_mac), tx_power, operating_class,
+                                non_operable_channels);
 
-    set_hostap_supported_channels(tlvf::mac_from_string(radio_mac), &supported_channels[0],
-                                  supported_channels.size());
+    set_hostap_supported_channels(radio_mac, &supported_channels[0], supported_channels.size());
     // dump new supported channels state
     // LOG(DEBUG) << "New supported channels for hostap" << radio_mac << " operating class "
     //            << int(operating_class) << std::endl

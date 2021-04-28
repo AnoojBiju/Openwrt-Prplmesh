@@ -329,8 +329,8 @@ TEST_F(DbTest, test_add_hostap_supported_operating_class)
         .WillOnce(Return(true));
 
     //execute test
-    EXPECT_TRUE(m_db->add_hostap_supported_operating_class(g_radio_mac_1, 0xFF, 0x01,
-                                                           std::vector<uint8_t>{0x01, 0x02, 0x03}));
+    EXPECT_TRUE(m_db->add_hostap_supported_operating_class(
+        tlvf::mac_from_string(g_radio_mac_1), 0xFF, 0x01, std::vector<uint8_t>{0x01, 0x02, 0x03}));
 }
 
 TEST_F(DbTest, test_set_ap_he_capabilities)

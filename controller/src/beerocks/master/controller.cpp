@@ -2444,8 +2444,9 @@ bool Controller::autoconfig_wsc_parse_radio_caps(
         }
         ss << " }" << std::endl;
         // store operating class in the DB for this hostap
-        database.add_hostap_supported_operating_class(
-            radio_mac, operating_class, maximum_transmit_power_dbm, non_operable_channels);
+        database.add_hostap_supported_operating_class(tlvf::mac_from_string(radio_mac),
+                                                      operating_class, maximum_transmit_power_dbm,
+                                                      non_operable_channels);
     }
     LOG(DEBUG) << "Radio basic capabilities:" << std::endl
                << ss.str() << std::endl
