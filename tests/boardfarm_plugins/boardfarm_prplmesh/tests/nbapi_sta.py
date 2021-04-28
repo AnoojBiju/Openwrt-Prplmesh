@@ -22,9 +22,6 @@ class NbapiSta(PrplMeshBaseTest):
     Path to this object: Controller.Network.Device.Radio.BSS.STA
     '''
 
-    def assertStats(self, name: str, actual: int, expected: str):
-        assert actual == int(expected), f"Wrong value for {name}: {actual} expected {expected}"
-
     def runTest(self):
         try:
             agent = self.dev.DUT.agent_entity
@@ -75,40 +72,29 @@ class NbapiSta(PrplMeshBaseTest):
                 for sta in bss.clients.values():
                     sta_mac = controller.nbapi_get_parameter(sta.path, "MACAddress")
                     time_stamp = controller.nbapi_get_parameter(sta.path, "TimeStamp")
-                    est_mac_data_rate_downlink = controller.nbapi_get_parameter(
-                        sta.path, "EstMACDataRateDownlink")
-                    est_mac_data_rate_uplink = controller.nbapi_get_parameter(
-                        sta.path, "EstMACDataRateUplink")
                     signal_strength = controller.nbapi_get_parameter(sta.path, "SignalStrength")
-                    bytes_sent = controller.nbapi_get_parameter(sta.path, "BytesSent")
-                    bytes_received = controller.nbapi_get_parameter(sta.path, "BytesReceived")
-                    packets_sent = controller.nbapi_get_parameter(sta.path, "PacketsSent")
-                    packets_received = controller.nbapi_get_parameter(sta.path, "PacketsReceived")
-                    error_sent = controller.nbapi_get_parameter(sta.path, "ErrorsSent")
-                    errors_received = controller.nbapi_get_parameter(sta.path, "ErrorsReceived")
-                    retrans_count = controller.nbapi_get_parameter(sta.path, "RetransCount")
                     ipv4_address = controller.nbapi_get_parameter(sta.path, "IPV4Address")
                     ipv6_address = controller.nbapi_get_parameter(sta.path, "IPV6Address")
                     hostname = controller.nbapi_get_parameter(sta.path, "Hostname")
 
                     assert sta_mac == sta1.mac, f"Wrong sta mac {sta_mac} expect {sta1.mac}"
-                    self.assertStats("BytesSent", bytes_sent,
+                    self.assertEqual(sta.path, "BytesSent",
                                      traffic_stats.assoc_sta_traffic_stats_bytes_sent)
-                    self.assertStats("BytesReceived", bytes_received,
+                    self.assertEqual(sta.path, "BytesReceived",
                                      traffic_stats.assoc_sta_traffic_stats_bytes_rcvd)
-                    self.assertStats("PacketsSent", packets_sent,
+                    self.assertEqual(sta.path, "PacketsSent",
                                      traffic_stats.assoc_sta_traffic_stats_packets_sent)
-                    self.assertStats("PacketsReceived", packets_received,
+                    self.assertEqual(sta.path, "PacketsReceived",
                                      traffic_stats.assoc_sta_traffic_stats_packets_rcvd)
-                    self.assertStats("ErrorsReceived", errors_received,
+                    self.assertEqual(sta.path, "ErrorsReceived",
                                      traffic_stats.assoc_sta_traffic_stats_rx_packet_errs)
-                    self.assertStats("ErrorsSent", error_sent,
+                    self.assertEqual(sta.path, "ErrorsSent",
                                      traffic_stats.assoc_sta_traffic_stats_tx_pkt_errs)
-                    self.assertStats("RetransCount", retrans_count,
+                    self.assertEqual(sta.path, "RetransCount",
                                      traffic_stats.assoc_sta_traffic_stats_retrans_count)
-                    self.assertStats("EstMACDataRateDownlink", est_mac_data_rate_downlink,
+                    self.assertEqual(sta.path, "EstMACDataRateDownlink",
                                      sta_link_metrics.bss[0].down_rate)
-                    self.assertStats("EstMACDataRateUplink", est_mac_data_rate_uplink,
+                    self.assertEqual(sta.path, "EstMACDataRateUplink",
                                      sta_link_metrics.bss[0].up_rate)
                     assert signal_strength == sta_link_metrics.bss[0].rssi, \
                         f"Wrong value for SignalStrength {signal_strength}"
