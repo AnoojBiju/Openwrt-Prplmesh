@@ -103,7 +103,7 @@ bool controller_ucc_listener::handle_dev_get_param(
         }
         auto ruid = tlvf::mac_from_string(params["ruid"]);
         auto ssid = params["ssid"];
-        auto vaps = m_database.get_hostap_vap_list(tlvf::mac_to_string(ruid));
+        auto vaps = m_database.get_hostap_vap_list(ruid);
         if (vaps.empty()) {
             value = "ruid " + tlvf::mac_to_string(ruid) + " not found";
             return false;

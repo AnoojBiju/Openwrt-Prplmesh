@@ -209,7 +209,7 @@ void client_steering_task::steer_sta()
         /*
         * send disallow to all others
         */
-        const auto &hostap_vaps = m_database.get_hostap_vap_list(hostap);
+        const auto &hostap_vaps = m_database.get_hostap_vap_list(tlvf::mac_from_string(hostap));
         const auto &ssid        = m_database.get_hostap_ssid(m_target_bssid);
         for (const auto &hostap_vap : hostap_vaps) {
             if (hostap_vap.second.ssid != ssid) {
