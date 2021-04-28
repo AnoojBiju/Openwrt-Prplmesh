@@ -202,7 +202,7 @@ void son_actions::disconnect_client(db &database, ieee1905_1::CmduMessageTx &cmd
         return;
     }
     request->mac()    = tlvf::mac_from_string(client_mac);
-    request->vap_id() = database.get_hostap_vap_id(bssid);
+    request->vap_id() = database.get_hostap_vap_id(tlvf::mac_from_string(bssid));
     request->type()   = type;
     request->reason() = reason;
 

@@ -2433,7 +2433,7 @@ bool db::is_vap_on_steer_list(const std::string &bssid)
         return false;
     }
 
-    auto vap_id = get_hostap_vap_id(bssid);
+    auto vap_id = get_hostap_vap_id(tlvf::mac_from_string(bssid));
     if (vap_id == IFACE_ID_INVALID) {
         LOG(ERROR) << "vap id is invalid for bssid " << bssid;
         return false;
@@ -2509,7 +2509,7 @@ std::string db::get_node_data_model_path(const sMacAddr &mac)
     return get_node_data_model_path(tlvf::mac_to_string(mac));
 }
 
-int8_t db::get_hostap_vap_id(const std::string &mac)
+int8_t db::get_hostap_vap_id(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2521,7 +2521,7 @@ int8_t db::get_hostap_vap_id(const std::string &mac)
     }
 
     for (auto const &it : n->hostap->vaps_info) {
-        if (it.second.mac == mac) {
+        if (tlvf::mac_from_string(it.second.mac) == mac) {
             return it.first;
         }
     }
