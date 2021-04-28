@@ -116,7 +116,7 @@ void son_actions::unblock_sta(db &database, ieee1905_1::CmduMessageTx &cmdu_tx, 
 
     auto hostaps              = database.get_active_hostaps();
     const auto &current_bssid = database.get_node_parent(sta_mac);
-    const auto &ssid          = database.get_hostap_ssid(current_bssid);
+    const auto &ssid          = database.get_hostap_ssid(tlvf::mac_from_string(current_bssid));
 
     for (auto &hostap : hostaps) {
         /*
