@@ -856,7 +856,7 @@ public:
     std::string get_node_data_model_path(const std::string &mac);
     std::string get_node_data_model_path(const sMacAddr &mac);
 
-    int8_t get_hostap_vap_id(const std::string &mac);
+    int8_t get_hostap_vap_id(const sMacAddr &mac);
 
     bool set_hostap_repeater_mode_flag(const sMacAddr &mac, bool flag);
     bool get_hostap_repeater_mode_flag(const sMacAddr &mac);
