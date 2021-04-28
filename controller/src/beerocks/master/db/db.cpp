@@ -1985,10 +1985,10 @@ std::vector<beerocks::message::sWifiChannel> db::get_hostap_supported_channels(c
     return n->hostap->supported_channels;
 }
 
-std::string db::get_hostap_supported_channels_string(const std::string &radio_mac)
+std::string db::get_hostap_supported_channels_string(const sMacAddr &radio_mac)
 {
     std::ostringstream os;
-    auto supported_channels = get_hostap_supported_channels(tlvf::mac_from_string(radio_mac));
+    auto supported_channels = get_hostap_supported_channels(radio_mac);
     for (const auto &val : supported_channels) {
         if (val.channel > 0) {
             os << " ch = " << int(val.channel) << " | dfs = " << int(val.is_dfs_channel)
