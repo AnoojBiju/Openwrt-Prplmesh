@@ -804,7 +804,7 @@ public:
     bool get_node_11v_capability(const std::string &mac);
 
     bool set_hostap_iface_name(const sMacAddr &mac, const std::string &iface_name);
-    std::string get_hostap_iface_name(const std::string &mac);
+    std::string get_hostap_iface_name(const sMacAddr &mac);
 
     bool set_hostap_iface_type(const sMacAddr &mac, beerocks::eIfaceType iface_type);
     beerocks::eIfaceType get_hostap_iface_type(const std::string &mac);
