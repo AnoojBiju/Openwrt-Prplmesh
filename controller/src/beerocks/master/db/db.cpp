@@ -2598,7 +2598,7 @@ bool db::set_hostap_iface_type(const sMacAddr &mac, beerocks::eIfaceType iface_t
     return true;
 }
 
-beerocks::eIfaceType db::get_hostap_iface_type(const std::string &mac)
+beerocks::eIfaceType db::get_hostap_iface_type(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
