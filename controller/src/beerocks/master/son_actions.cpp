@@ -122,7 +122,8 @@ void son_actions::unblock_sta(db &database, ieee1905_1::CmduMessageTx &cmdu_tx, 
         /*
          * unblock client from all hostaps to prevent it from getting locked out
          */
-        const auto &hostap_vaps = database.get_hostap_vap_list(hostap);
+        const auto &hostap_vaps = database.get_hostap_vap_list(tlvf::mac_from_string(hostap));
+
         for (const auto &hostap_vap : hostap_vaps) {
             if (hostap_vap.second.ssid != ssid) {
                 continue;

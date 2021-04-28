@@ -2274,7 +2274,7 @@ bool db::set_hostap_vap_list(const sMacAddr &mac,
     return true;
 }
 
-std::unordered_map<int8_t, sVapElement> &db::get_hostap_vap_list(const std::string &mac)
+std::unordered_map<int8_t, sVapElement> &db::get_hostap_vap_list(const sMacAddr &mac)
 {
     static std::unordered_map<int8_t, sVapElement> invalid_vap_list;
     auto n = get_node(mac);
@@ -2298,7 +2298,7 @@ bool db::remove_vap(const std::string &radio_mac, int vap_id)
         return false;
     }
 
-    auto vap_list = get_hostap_vap_list(radio_mac);
+    auto vap_list = get_hostap_vap_list(tlvf::mac_from_string(radio_mac));
     auto vap      = vap_list.find(vap_id);
 
     if (vap == vap_list.end()) {
@@ -2345,7 +2345,7 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
         return false;
     }
 
-    auto &vaps_info                = get_hostap_vap_list(radio_mac);
+    auto &vaps_info                = get_hostap_vap_list(tlvf::mac_from_string(radio_mac));
     vaps_info[vap_id].mac          = bssid;
     vaps_info[vap_id].ssid         = ssid;
     vaps_info[vap_id].backhaul_vap = backhual;
@@ -2360,7 +2360,7 @@ bool db::update_vap(const sMacAddr &radio_mac, const sMacAddr &bssid, const std:
         return false;
     }
 
-    auto &vaps_info = get_hostap_vap_list(tlvf::mac_to_string(radio_mac));
+    auto &vaps_info = get_hostap_vap_list(radio_mac);
     auto it         = std::find_if(vaps_info.begin(), vaps_info.end(),
                            [&](const std::pair<int8_t, sVapElement> &vap) {
                                return vap.second.mac == tlvf::mac_to_string(bssid);
@@ -2396,7 +2396,7 @@ std::set<std::string> db::get_hostap_vaps_bssids(const std::string &mac)
         // Only slaves have vap's
         return bssid_set;
     }
-    auto vap_list = get_hostap_vap_list(mac);
+    auto vap_list = get_hostap_vap_list(tlvf::mac_from_string(mac));
     for (auto &vap : vap_list) {
         bssid_set.insert(vap.second.mac);
     }
