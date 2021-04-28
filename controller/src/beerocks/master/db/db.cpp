@@ -2823,7 +2823,7 @@ bool db::get_hostap_is_dfs(const sMacAddr &mac)
     return n->hostap->is_dfs;
 }
 
-bool db::set_hostap_cac_completed(const std::string &mac, bool enable)
+bool db::set_hostap_cac_completed(const sMacAddr &mac, bool enable)
 {
     std::shared_ptr<node> n = get_node(mac);
 
