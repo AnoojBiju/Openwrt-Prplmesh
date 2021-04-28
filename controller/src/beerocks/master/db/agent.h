@@ -27,7 +27,7 @@ namespace prplmesh {
 namespace controller {
 namespace db {
 
-class Station;
+struct sStation;
 
 /** All information about an agent in the controller database. */
 struct sAgent {
@@ -114,7 +114,7 @@ public:
             bool backhaul = false;
 
             /** Stations (backhaul or fronthaul) connected to this BSS. */
-            beerocks::mac_map<Station> connected_stations;
+            beerocks::mac_map<sStation> connected_stations;
         };
 
         /** BSSes configured/reported on this radio. */

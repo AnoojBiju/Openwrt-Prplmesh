@@ -11,6 +11,7 @@
 
 #include "agent.h"
 #include "node.h"
+#include "station.h"
 
 #include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_logging.h>
