@@ -305,7 +305,7 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
                     BML_NODE_IFACE_NAME_LEN);
 
                 // Radio Vendor
-                switch (database.get_hostap_iface_type(c->mac)) {
+                switch (database.get_hostap_iface_type(tlvf::mac_from_string(c->mac))) {
                 case beerocks::eIfaceType::IFACE_TYPE_WIFI_INTEL:
                     node->data.gw_ire.radio[i].vendor = BML_WLAN_VENDOR_INTEL;
                     break;
