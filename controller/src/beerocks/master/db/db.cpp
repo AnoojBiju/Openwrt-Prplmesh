@@ -2421,19 +2421,19 @@ std::string db::get_hostap_ssid(const sMacAddr &mac)
     return std::string();
 }
 
-bool db::is_vap_on_steer_list(const std::string &bssid)
+bool db::is_vap_on_steer_list(const sMacAddr &bssid)
 {
     if (config.load_steer_on_vaps.empty()) {
         return true;
     }
 
-    auto vap_name = get_hostap_iface_name(tlvf::mac_from_string(bssid));
+    auto vap_name = get_hostap_iface_name(bssid);
     if (vap_name == "INVALID") {
         LOG(ERROR) << "vap name is invalid for bssid " << bssid;
         return false;
     }
 
-    auto vap_id = get_hostap_vap_id(tlvf::mac_from_string(bssid));
+    auto vap_id = get_hostap_vap_id(bssid);
     if (vap_id == IFACE_ID_INVALID) {
         LOG(ERROR) << "vap id is invalid for bssid " << bssid;
         return false;

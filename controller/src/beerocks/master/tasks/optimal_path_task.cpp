@@ -98,7 +98,7 @@ void optimal_path_task::work()
         current_hostap_vap = database.get_node_parent(sta_mac);
         // Steering allowed on all vaps unless load_steer_on_vaps list is defined
         // on the platform , in that case verify that vap is on that list
-        if (!database.is_vap_on_steer_list(current_hostap_vap)) {
+        if (!database.is_vap_on_steer_list(tlvf::mac_from_string(current_hostap_vap))) {
             TASK_LOG(WARNING) << "client " << sta_mac << " is connected to vap "
                               << current_hostap_vap << " that is currently not in steer list: "
                               << database.config.load_steer_on_vaps << " aborting optimal task";
@@ -223,7 +223,7 @@ void optimal_path_task::work()
 
             // Steering allowed on all vaps unless load_steer_on_vaps list is defined
             // on the platform , in that case verify that vap is on that list
-            if (!database.is_vap_on_steer_list(candidate_bssid)) {
+            if (!database.is_vap_on_steer_list(tlvf::mac_from_string(candidate_bssid))) {
                 TASK_LOG(INFO) << "Remove candidate " << it->first << " , vap " << candidate_bssid
                                << " is not in steer list: " << database.config.load_steer_on_vaps;
                 it = potential_11k_aps.erase(it);
@@ -994,7 +994,7 @@ void optimal_path_task::work()
 
             // Steering allowed on all vaps unless load_steer_on_vaps list is defined
             // on the platform, in that case, verify that vap is on that list.
-            if (!database.is_vap_on_steer_list(candidate_bssid)) {
+            if (!database.is_vap_on_steer_list(tlvf::mac_from_string(candidate_bssid))) {
                 TASK_LOG(INFO) << "Remove candidate " << it->first << " , vap " << candidate_bssid
                                << " is not in steer list: " << database.config.load_steer_on_vaps;
                 it = hostap_candidates.erase(it);
