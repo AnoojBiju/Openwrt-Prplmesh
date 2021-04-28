@@ -2682,7 +2682,7 @@ std::string db::get_5ghz_sibling_hostap(const std::string &mac)
     return std::string();
 }
 
-bool db::set_hostap_activity_mode(const std::string &mac, eApActiveMode ap_activity_mode)
+bool db::set_hostap_activity_mode(const sMacAddr &mac, eApActiveMode ap_activity_mode)
 {
     auto n = get_node(mac);
     if (!n) {

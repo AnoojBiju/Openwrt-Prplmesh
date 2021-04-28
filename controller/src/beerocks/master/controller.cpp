@@ -3439,7 +3439,8 @@ bool Controller::handle_cmdu_control_message(
         }
 
         database.set_hostap_activity_mode(
-            hostap_mac, beerocks::eApActiveMode(notification->params().ap_activity_mode));
+            tlvf::mac_from_string(hostap_mac),
+            beerocks::eApActiveMode(notification->params().ap_activity_mode));
         if (notification->params().ap_activity_mode == beerocks::AP_IDLE_MODE) {
             LOG(DEBUG) << "CS_task,sending AP_ACTIVITY_IDLE_EVENT for mac " << hostap_mac;
             auto new_event =
