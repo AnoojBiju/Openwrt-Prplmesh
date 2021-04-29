@@ -536,6 +536,25 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         # TODO check that all agents have been configured with the SSIDs
         time.sleep(5)  # Temporary until above TODOs are fixed
 
+    def assertEqual(self, path: str, name: str, expected: str):
+        ''' Get specified with 'name' parameter of given in 'path' NBAPI object,
+            compare this value with expected and raise an error, if they don't match.
+
+        Parameters
+        ---------
+        path: str
+            Path to NBAPI object which contains a parameter to check.
+            Return parameter should be of type int.
+        name: str
+            Name of parameter to compare.
+        expected: str
+            Expected value (casted to int).
+        '''
+        controller = self.dev.lan.controller_entity
+        actual = controller.nbapi_get_parameter(path, name)
+        assert actual == int(expected), \
+            f"Wrong value for {name}, actual: {actual}, expected: {expected}"
+
     def send_and_check_policy_config_metric_reporting(self, controller,
                                                       agent, include_sta_traffic_stats=True,
                                                       include_sta_link_metrics=True):
