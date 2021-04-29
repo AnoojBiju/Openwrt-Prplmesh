@@ -9,6 +9,7 @@ import os
 import json
 from collections import OrderedDict
 import subprocess
+import re
 from opts import debug, err, status
 from typing import Callable
 
@@ -32,6 +33,7 @@ class TlvStruct:
                     value = [TlvStruct(value, level + 1)]
                 else:
                     value = [TlvStruct(v, level + 1) for k, v in value.items()]
+            name = self.valid_var_name(name)
             setattr(self, name, value)
 
     def __repr__(self):
@@ -42,6 +44,8 @@ class TlvStruct:
 
     def __eq__(self, other):
         return self._d() == other._d()
+
+    def valid_var_name(self, varStr): return re.sub(r'\W|^(?=\d)', '_', varStr)
 
 
 class Tlv(TlvStruct):
