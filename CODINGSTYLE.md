@@ -56,8 +56,8 @@ public:
     set_foo(int foo);
     int calculate_something(int param_1, int param_2);
 private:
-    int x_foo;
-    int y_bar;
+    int m_x_foo;
+    int m_y_bar;
 };
 ```
 
