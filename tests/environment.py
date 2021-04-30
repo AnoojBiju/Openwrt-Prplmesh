@@ -830,11 +830,12 @@ class ALEntityPrplWrt(ALEntity):
 
     def command(self, *command: str) -> bytes:
         """Execute `command` in device and return its output."""
-        _device_reset_console(self.device)
 
-        self.device.sendline(" ".join(command))
-        self.device.expect(self.device.prompt, timeout=10)
-        return self.device.before
+        command_str = " ".join(command)
+        debug("--- Executing command: {}".format(command_str))
+
+        output = subprocess.check_output(["ssh", self.device.control_ip, command_str]).decode()
+        return output
 
     def wait_for_log(self, regex: str, start_line: int, timeout: float,
                      fail_on_mismatch: bool = True) -> bool:
@@ -873,10 +874,7 @@ class RadioHostapd(Radio):
         self.vaps = []
 
         output = self.agent.command(f'iwinfo | grep ^{iface_name} | cut -d " " -f 1')
-        # Workaround.
-        # `command` includes command as a part of output,
-        # so we need to search by `iface_name` once more.
-        vap_candidates = [vap for vap in output.split() if re.search(f'^{iface_name}', vap)]
+        vap_candidates = output.split()
 
         debug("vap candidates : " + " * ".join(vap_candidates))
 
@@ -964,7 +962,7 @@ class VirtualAPHostapd(VirtualAP):
         # We are looking for SSID definition
         # ssid Multi-AP-24G-1
         # type AP
-        regex = r"addr ..:..:..:..:..:..\r\n\t(ssid (?P<ssid>.*)\r\n\t)?type AP\r\n\t"
+        regex = r"addr ..:..:..:..:..:..\n\t(ssid (?P<ssid>.*)\n\t)?type AP\n\t"
 
         output = self.radio.agent.command(command)
         match = re.search(regex, output)
