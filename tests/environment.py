@@ -877,24 +877,36 @@ class RadioHostapd(Radio):
 
         self.vaps = []
 
-        output = self.agent.command(f'iwinfo | grep ^{iface_name} | cut -d " " -f 1')
-        vap_candidates = output.split()
+        output = self.agent.command("iw dev {} info | grep wiphy".format(iface_name)).rstrip()
+        match = re.search('wiphy (.*)', output)
+        if match is None:
+            raise Exception("Cannot find wiphy of {}".format(iface_name))
+        iface_wiphy = match.group(1)
+        debug("--- {}'s wiphy is {}".format(iface_name, iface_wiphy))
 
-        debug("vap candidates : " + " * ".join(vap_candidates))
+        all_ifaces = self.agent.command("iw dev | grep Interface | sed -e 's/.*Interface //g'")\
+            .splitlines()
 
-        for vap_iface in vap_candidates:
-            iwinfo_output = self.agent.command(f'iw dev {vap_iface} info')
+        debug("--- All found interfaces: {}".format(" ".join(all_ifaces)))
 
-            if re.search('dummy_ssid', iwinfo_output):
+        for vap_iface in all_ifaces:
+            iw_output = self.agent.command(f'iw dev {vap_iface} info')
+
+            if re.search('dummy_ssid', iw_output):
                 # On MaxLinear devices (e.g. Netgear RAX40) wlan0 and wlan2 are dummy interfaces.
                 # They are not VAPs.
                 # These interfaces have SSIDs "dummy_ssid_0" and "dummy_ssid_2".
                 debug(f"Skip {vap_iface} since it has dummy SSID")
                 continue
 
-            if not re.search('type AP', iwinfo_output):
+            if not re.search('type AP', iw_output):
                 # Skip backhaul/station interfaces.
                 debug(f"Skip {vap_iface} since it is a station interface")
+                continue
+
+            # wiphy of VAP and radio should be the same
+            if not re.search(r'wiphy {}\b'.format(iface_wiphy), iw_output):
+                debug(f"Skip {vap_iface} since its wiphy is different")
                 continue
 
             debug(f"Add {vap_iface} to the list of VAPs")
@@ -907,6 +919,8 @@ class RadioHostapd(Radio):
             # wlan2 is not a VAP itself, remove it.
             #
             # TODO: PPM-1312: find a better way to detect this.
+            debug("Clearing VAP list because only 1 VAP detected")
+            debug("It can be uninitialized `wlan2` interface on RAX40")
             self.vaps = []
 
         vaps = [vap.iface for vap in self.vaps]
