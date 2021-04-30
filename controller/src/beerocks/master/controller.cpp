@@ -2648,11 +2648,12 @@ bool Controller::handle_cmdu_control_message(
 
         const auto disabled_bssid =
             database.get_hostap_vap_mac(tlvf::mac_from_string(hostap_mac), vap_id);
-        if (disabled_bssid.empty()) {
+        if (disabled_bssid == beerocks::net::network_utils::ZERO_MAC) {
             LOG(INFO) << "AP Disabled on unknown vap, vap_id=" << vap_id;
             break;
         }
-        auto client_list = database.get_node_children(disabled_bssid, beerocks::TYPE_CLIENT);
+        auto client_list =
+            database.get_node_children(tlvf::mac_to_string(disabled_bssid), beerocks::TYPE_CLIENT);
 
         for (auto &client : client_list) {
             son_actions::handle_dead_node(client, true, database, cmdu_tx, tasks);
@@ -2667,7 +2668,7 @@ bool Controller::handle_cmdu_control_message(
             LOG(ERROR) << "No radio found for radio_uid " << hostap_mac << " on " << src_mac;
             break;
         }
-        if (radio->bsses.erase(tlvf::mac_from_string(disabled_bssid)) != 1) {
+        if (radio->bsses.erase(disabled_bssid) != 1) {
             LOG(ERROR) << "No BSS " << disabled_bssid << " could be erased on " << hostap_mac;
         }
 
@@ -2976,7 +2977,7 @@ bool Controller::handle_cmdu_control_message(
 
         std::string client_mac = tlvf::mac_to_string(notification->params().result.mac);
         std::string ap_mac     = hostap_mac;
-        bool is_parent         = (database.get_node_parent(client_mac) ==
+        bool is_parent         = (tlvf::mac_from_string(database.get_node_parent(client_mac)) ==
                           database.get_hostap_vap_mac(tlvf::mac_from_string(ap_mac),
                                                       notification->params().vap_id));
 
@@ -3019,8 +3020,8 @@ bool Controller::handle_cmdu_control_message(
             beerocks_message::sSteeringEvSnr new_event;
             new_event.snr        = notification->params().rx_snr;
             new_event.client_mac = notification->params().result.mac;
-            new_event.bssid      = tlvf::mac_from_string(database.get_hostap_vap_mac(
-                tlvf::mac_from_string(ap_mac), notification->params().vap_id));
+            new_event.bssid      = database.get_hostap_vap_mac(tlvf::mac_from_string(ap_mac),
+                                                          notification->params().vap_id);
             tasks.push_event(database.get_rdkb_wlan_task_id(),
                              rdkb_wlan_task::events::STEERING_EVENT_SNR_AVAILABLE, &new_event);
         }
@@ -3036,9 +3037,9 @@ bool Controller::handle_cmdu_control_message(
         }
         std::string client_mac        = tlvf::mac_to_string(notification->params().result.mac);
         std::string client_parent_mac = database.get_node_parent(client_mac);
-        std::string bssid = database.get_hostap_vap_mac(tlvf::mac_from_string(hostap_mac),
-                                                        notification->params().vap_id);
-        bool is_parent    = (client_parent_mac == bssid);
+        sMacAddr bssid = database.get_hostap_vap_mac(tlvf::mac_from_string(hostap_mac),
+                                                     notification->params().vap_id);
+        bool is_parent = (tlvf::mac_from_string(client_parent_mac) == bssid);
 
         int rx_rssi = int(notification->params().rx_rssi);
 

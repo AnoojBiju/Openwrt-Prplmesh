@@ -2442,19 +2442,20 @@ std::string db::get_hostap_vap_with_ssid(const sMacAddr &mac, const std::string 
     return it->second.mac;
 }
 
-std::string db::get_hostap_vap_mac(const sMacAddr &mac, int vap_id)
+sMacAddr db::get_hostap_vap_mac(const sMacAddr &mac, int vap_id)
 {
     auto n = get_node(mac);
     if (!n) {
         LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return std::string();
+        return beerocks::net::network_utils::ZERO_MAC;
     } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
         LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return std::string();
+        return beerocks::net::network_utils::ZERO_MAC;
     }
 
     auto it = n->hostap->vaps_info.find(vap_id);
-    return (it != n->hostap->vaps_info.end()) ? it->second.mac : std::string();
+    return (it != n->hostap->vaps_info.end()) ? tlvf::mac_from_string(it->second.mac)
+                                              : network_utils::ZERO_MAC;
 }
 
 std::string db::get_node_parent_radio(const std::string &mac)
