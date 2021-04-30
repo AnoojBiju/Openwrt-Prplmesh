@@ -1,7 +1,7 @@
 #! /bin/bash
 ###############################################################
 # SPDX-License-Identifier: BSD-2-Clause-Patent
-# SPDX-FileCopyrightText: 2019-2020 the prplMesh contributors (see AUTHORS.md)
+# SPDX-FileCopyrightText: 2019-2021 the prplMesh contributors (see AUTHORS.md)
 # This code is subject to the terms of the BSD+Patent license.
 # See LICENSE file for more details.
 ###############################################################
@@ -17,6 +17,7 @@ source meta-turris/setup-environment || {
     exit 1
 }
 
+echo "BBLAYERS += \"\${RDKROOT}/meta-amx\"" >> conf/bblayers.conf
 echo "BBLAYERS += \"\${RDKROOT}/meta-prplmesh\"" >> conf/bblayers.conf
 
 # Copy in prplmesh. The build tries to write in the source directory, so we can't use mount
@@ -32,17 +33,6 @@ cat >> conf/local.conf <<EOF
 
 INHERIT += "externalsrc"
 EXTERNALSRC_pn-prplmesh = "/home/rdk/prplMesh"
-EOF
-
-rdk_tag=nightly/20210227-dunfell
-cat >> conf/local.conf <<EOF
-# Use fixed tags for all components
-RDK_GIT_BRANCH           = "$rdk_tag"
-CCSP_GIT_BRANCH          = "$rdk_tag"
-CMF_GIT_BRANCH           = "$rdk_tag"
-CMF_GIT_MASTER_BRANCH    = "$rdk_tag"
-CMF_GITHUB_MAIN_BRANCH   = "$rdk_tag"
-CMF_GITHUB_MASTER_BRANCH = "$rdk_tag"
 EOF
 
 printf '\033[1;35m%s Building RDK-B\n\033[0m' "$(date --iso-8601=seconds --universal)"
