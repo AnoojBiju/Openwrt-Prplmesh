@@ -28,12 +28,15 @@ Structs shall not inherit, not shall others inherit from it.
 * Struct definition shall use camel case with `s` prefix: `sSomeStruct`.
 * Struct members and initialization function shall use `lower_snake_case` with no prefix.
 * Struct shall not be defined with `typedef` keyword on C++ code.
+* Struct shall be referenced without the `struct` keyword (unlike in C where the `struct` keyword must be added).
 
 ```cpp
 struct sSomeStruct {
     int x_foo;
     int y_bar;
 };
+
+sSomeStruct my_some_struct;
 ```
 
 #### Classes
@@ -53,8 +56,8 @@ public:
     set_foo(int foo);
     int calculate_something(int param_1, int param_2);
 private:
-    int x_foo;
-    int y_bar;
+    int m_x_foo;
+    int m_y_bar;
 };
 ```
 
