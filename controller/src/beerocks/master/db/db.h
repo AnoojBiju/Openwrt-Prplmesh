@@ -565,6 +565,23 @@ public:
                                       uint64_t packets_received, uint32_t errors_received);
 
     /**
+     * @brief Adds to data model Scan Result and fill up data for its parameters.
+     *
+     * @param ruid Radio unique identifier.
+     * @param operating_class Scaned operating class.
+     * @param channel Scaned channel.
+     * @param noise Channel noise.
+     * @param utilization Channel utilization.
+     * @param neighbors List of discovered neighbors.
+     * @param ISO_8601_timestamp Channel scan report's timestamp.
+     * @return True on success, false otherwise.
+     */
+    bool dm_add_scan_result(const sMacAddr &ruid, const uint8_t &operating_class,
+                            const uint8_t &channel, const uint8_t noise, const uint8_t utilization,
+                            const std::vector<wfa_map::cNeighbors> &neighbors,
+                            const std::string &ISO_8601_timestamp);
+
+    /**
      * @brief Adds or updates instance of Neighbor inside Interface object.
      *
      * Path: Controller.Network.Device.{i}.Interface.{i}.Neighbor.{i}
@@ -2085,6 +2102,16 @@ private:
     * The queue with paths of NBAPI association events.
     */
     std::queue<std::string> m_assoc_events;
+
+    /*
+    * Maximum amount of NBAPI ScanResults registered on the system bus.
+    */
+    const uint8_t MAX_SCAN_RESULT_HISTORY_SIZE = 5;
+
+    /*
+    * The queue with paths of NBAPI ScanResults.
+    */
+    std::queue<std::string> m_scan_results;
 };
 
 } // namespace son
