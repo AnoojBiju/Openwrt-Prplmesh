@@ -259,13 +259,13 @@ int main(int argc, char *argv[])
     LOG_IF(!timer_manager, FATAL) << "Unable to create timer manager!";
 
     // Get Agent UDS file
-    std::string slave_uds_path =
+    std::string fronthaul_uds_path =
         beerocks_slave_conf.temp_path + std::string(BEEROCKS_SLAVE_UDS) + "_" + fronthaul_iface;
 
     // Create CMDU client factory to create CMDU clients connected to CMDU server running in
     // slave when requested
     auto slave_cmdu_client_factory =
-        beerocks::create_cmdu_client_factory(slave_uds_path, event_loop);
+        beerocks::create_cmdu_client_factory(fronthaul_uds_path, event_loop);
     LOG_IF(!slave_cmdu_client_factory, FATAL) << "Unable to create CMDU client factory!";
 
     // Create ap_manager
@@ -275,7 +275,7 @@ int main(int argc, char *argv[])
     LOG_IF(!ap_manager.start(), FATAL) << "Unable to start AP manager!";
 
     // Create Monitor
-    son::monitor_thread monitor(slave_uds_path, fronthaul_iface, beerocks_slave_conf,
+    son::monitor_thread monitor(fronthaul_uds_path, fronthaul_iface, beerocks_slave_conf,
                                 *g_logger_monitor);
 
     auto touch_time_stamp_timeout = std::chrono::steady_clock::now();
