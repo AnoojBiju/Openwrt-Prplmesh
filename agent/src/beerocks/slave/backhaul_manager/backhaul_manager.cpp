@@ -20,6 +20,7 @@
 
 #include <bcl/beerocks_utils.h>
 #include <bcl/son/son_wireless_utils.h>
+#include <bcl/transaction.h>
 #include <easylogging++.h>
 
 #include <beerocks/tlvf/beerocks_message.h>
@@ -162,12 +163,7 @@ bool BackhaulManager::start()
     // In case of error in one of the steps of this method, we have to undo all the previous steps
     // (like when rolling back a database transaction, where either all steps get executed or none
     // of them gets executed)
-    std::deque<std::function<void()>> rollback_actions;
-    auto rollback = [&]() {
-        for (const auto &action : rollback_actions) {
-            action();
-        }
-    };
+    beerocks::Transaction transaction;
 
     // Create a timer to run internal tasks periodically
     m_tasks_timer = m_timer_manager->add_timer(
@@ -181,7 +177,7 @@ bool BackhaulManager::start()
         return false;
     }
     LOG(DEBUG) << "Tasks timer created with fd = " << m_tasks_timer;
-    rollback_actions.emplace_front([&]() { m_timer_manager->remove_timer(m_tasks_timer); });
+    transaction.add_rollback_action([&]() { m_timer_manager->remove_timer(m_tasks_timer); });
 
     // Create a timer to run the FSM periodically
     m_fsm_timer = m_timer_manager->add_timer(fsm_timer_period, fsm_timer_period,
@@ -197,21 +193,19 @@ bool BackhaulManager::start()
                                              });
     if (m_fsm_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
         LOG(ERROR) << "Failed to create the FSM timer";
-        rollback();
         return false;
     }
     LOG(DEBUG) << "FSM timer created with fd = " << m_fsm_timer;
-    rollback_actions.emplace_front([&]() { m_timer_manager->remove_timer(m_fsm_timer); });
+    transaction.add_rollback_action([&]() { m_timer_manager->remove_timer(m_fsm_timer); });
 
     // Create an instance of a broker client connected to the broker server that is running in the
     // transport process
     m_broker_client = m_broker_client_factory->create_instance();
     if (!m_broker_client) {
         LOG(ERROR) << "Failed to create instance of broker client";
-        rollback();
         return false;
     }
-    rollback_actions.emplace_front([&]() { m_broker_client.reset(); });
+    transaction.add_rollback_action([&]() { m_broker_client.reset(); });
 
     beerocks::btl::BrokerClient::EventHandlers handlers;
     // Install a CMDU-received event handler for CMDU messages received from the transport process.
@@ -228,7 +222,7 @@ bool BackhaulManager::start()
     handlers.on_connection_closed = [&]() { LOG(FATAL) << "Broker client got disconnected!"; };
 
     m_broker_client->set_handlers(handlers);
-    rollback_actions.emplace_front([&]() { m_broker_client->clear_handlers(); });
+    transaction.add_rollback_action([&]() { m_broker_client->clear_handlers(); });
 
     // Subscribe for the reception of CMDU messages that this process is interested in
     if (!m_broker_client->subscribe(std::set<ieee1905_1::eMessageType>{
@@ -258,11 +252,13 @@ bool BackhaulManager::start()
             ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE,
         })) {
         LOG(ERROR) << "Failed subscribing to the Bus";
-        rollback();
         return false;
     }
 
+    transaction.commit();
+
     LOG(DEBUG) << "started";
+
     return true;
 }
 

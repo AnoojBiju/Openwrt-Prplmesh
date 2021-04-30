@@ -34,6 +34,7 @@
 #include <bcl/beerocks_version.h>
 #include <bcl/network/sockets.h>
 #include <bcl/son/son_wireless_utils.h>
+#include <bcl/transaction.h>
 #include <bpl/bpl_cfg.h>
 
 #include <easylogging++.h>
@@ -179,12 +180,7 @@ bool Controller::start()
     // In case of error in one of the steps of this method, we have to undo all the previous steps
     // (like when rolling back a database transaction, where either all steps get executed or none
     // of them gets executed)
-    std::deque<std::function<void()>> rollback_actions;
-    auto rollback = [&]() {
-        for (const auto &action : rollback_actions) {
-            action();
-        }
-    };
+    beerocks::Transaction transaction;
 
     LOG(DEBUG) << "persistent db enable=" << database.config.persistent_db;
     if (database.config.persistent_db) {
@@ -225,11 +221,10 @@ bool Controller::start()
         });
     if (m_tasks_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
         LOG(ERROR) << "Failed to create the tasks timer";
-        rollback();
         return false;
     }
     LOG(DEBUG) << "Tasks timer created with fd = " << m_tasks_timer;
-    rollback_actions.emplace_front([&]() {
+    transaction.add_rollback_action([&]() {
         m_timer_manager->remove_timer(m_tasks_timer);
         m_tasks_timer = beerocks::net::FileDescriptor::invalid_descriptor;
     });
@@ -243,11 +238,10 @@ bool Controller::start()
         });
     if (m_operations_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
         LOG(ERROR) << "Failed to create the operations timer";
-        rollback();
         return false;
     }
     LOG(DEBUG) << "Operations timer created with fd = " << m_operations_timer;
-    rollback_actions.emplace_front([&]() {
+    transaction.add_rollback_action([&]() {
         m_timer_manager->remove_timer(m_operations_timer);
         m_operations_timer = beerocks::net::FileDescriptor::invalid_descriptor;
     });
@@ -257,10 +251,9 @@ bool Controller::start()
     m_broker_client = m_broker_client_factory->create_instance();
     if (!m_broker_client) {
         LOG(ERROR) << "Failed to create instance of broker client";
-        rollback();
         return false;
     }
-    rollback_actions.emplace_front([&]() { m_broker_client.reset(); });
+    transaction.add_rollback_action([&]() { m_broker_client.reset(); });
 
     beerocks::btl::BrokerClient::EventHandlers handlers;
     // Install a CMDU-received event handler for CMDU messages received from the transport process.
@@ -277,7 +270,7 @@ bool Controller::start()
     handlers.on_connection_closed = [&]() { LOG(FATAL) << "Broker client got disconnected!"; };
 
     m_broker_client->set_handlers(handlers);
-    rollback_actions.emplace_front([&]() { m_broker_client->clear_handlers(); });
+    transaction.add_rollback_action([&]() { m_broker_client->clear_handlers(); });
 
     // Subscribe for the reception of CMDU messages that this process is interested in
     if (!m_broker_client->subscribe(std::set<ieee1905_1::eMessageType>{
@@ -304,9 +297,10 @@ bool Controller::start()
             ieee1905_1::eMessageType::FAILED_CONNECTION_MESSAGE,
         })) {
         LOG(ERROR) << "Failed subscribing to the Bus";
-        rollback();
         return false;
     }
+
+    transaction.commit();
 
     LOG(DEBUG) << "started";
 
