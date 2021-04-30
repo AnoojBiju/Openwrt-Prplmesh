@@ -1408,6 +1408,12 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const std::string &src_mac
             LOG(ERROR) << "Failed to add channel report entry #" << result_count << "!";
             return false;
         }
+        if (result_tlv->success() == 0 &&
+            !database.dm_add_scan_result(
+                result_tlv->radio_uid(), result_tlv->operating_class(), result_tlv->channel(),
+                result_tlv->noise(), result_tlv->utilization(), neighbor_vec, ISO_8601_timestamp)) {
+            LOG(ERROR) << "Failed to add ScanResult entry #" << result_count << " !";
+        }
         result_count++;
     }
     LOG(DEBUG) << "Done with Channel Scan Results TLVs";
