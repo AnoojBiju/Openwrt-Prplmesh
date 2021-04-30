@@ -150,7 +150,6 @@ public:
 
     class radio {
     public:
-        int8_t iface_id           = beerocks::IFACE_ID_INVALID;
         bool active               = false;
         bool is_backhaul_manager  = false;
         bool is_acs_enabled       = false;

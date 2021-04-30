@@ -812,9 +812,6 @@ public:
     bool set_hostap_driver_version(const sMacAddr &mac, const std::string &version);
     std::string get_hostap_driver_version(const sMacAddr &mac);
 
-    bool set_hostap_iface_id(const sMacAddr &mac, int8_t iface_id);
-    int8_t get_hostap_iface_id(const sMacAddr &mac);
-
     bool set_hostap_vap_list(const sMacAddr &mac,
                              const std::unordered_map<int8_t, sVapElement> &vap_list);
     std::unordered_map<int8_t, sVapElement> &get_hostap_vap_list(const sMacAddr &mac);
