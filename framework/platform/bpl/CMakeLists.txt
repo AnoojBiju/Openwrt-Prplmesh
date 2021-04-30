@@ -80,13 +80,16 @@ if (TARGET_PLATFORM STREQUAL "openwrt")
 
         file(GLOB_RECURSE bpl_platform_sources
           ${MODULE_PATH}/arp/linux/*.c*
-          ${MODULE_PATH}/dhcp/linux/*.c*
+          ${MODULE_PATH}/dhcp/luci_rpc/*.c*
           ${MODULE_PATH}/db/uci/*.c*
           ${MODULE_PATH}/cfg/uci/*.c*
           ${MODULE_PATH}/common/uci/*.c*
         )
 
-        list(APPEND BPL_LIBS uci)
+        find_package(ubus REQUIRED)
+
+        link_directories(${PLATFORM_STAGING_DIR}/usr/lib)
+        list(APPEND BPL_LIBS ubus ubox uci)
 
     endif()
 

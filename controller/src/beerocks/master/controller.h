@@ -12,6 +12,7 @@
 #include "controller_ucc_listener.h"
 #include "db/db.h"
 #include "periodic/periodic_operation_pool.h"
+#include "tasks/dhcp_task.h"
 #include "tasks/link_metrics_task.h"
 #include "tasks/optimal_path_task.h"
 #include "tasks/task_pool.h"

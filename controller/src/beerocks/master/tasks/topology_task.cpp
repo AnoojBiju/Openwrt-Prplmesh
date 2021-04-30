@@ -12,6 +12,7 @@
 #include "../son_actions.h"
 #include "bml_task.h"
 #include "client_steering_task.h"
+#include "dhcp_task.h"
 
 #include <beerocks/tlvf/beerocks_message_1905_vs.h>
 #include <easylogging++.h>
@@ -456,6 +457,9 @@ bool topology_task::handle_topology_notification(const std::string &src_mac,
         // Notify existing steering task of completed connection
         int prev_steering_task = database.get_steering_task_id(client_mac_str);
         tasks.push_event(prev_steering_task, client_steering_task::STA_CONNECTED);
+
+        int dhcp_task = database.get_dhcp_task_id();
+        tasks.push_event(dhcp_task, DhcpTask::STA_CONNECTED);
 
 #ifdef BEEROCKS_RDKB
         //push event to rdkb_wlan_hal task
