@@ -121,12 +121,13 @@ class NbapiSta(PrplMeshBaseTest):
                         r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+(Z|[-+]\d{2}:\d{2})',
                         time_stamp)
                     if check_time_format is None:
-                        self.fail(f'Fail. NBAPI time stamp has unncorrect format: {time_stamp}')
-                    # TO DO: PPM-535, PPM-534 Uncomment after issues are complete.
-                    # assert ipv6_address != "0" or ipv4_address != "0",\
-                    #     "Value for ipv4 and for ipv6 address not specified."
-                    # assert hostname != 0, "Missing value for ipv4 address."
-                    (ipv4_address)
-                    (ipv6_address)
-                    (hostname)
+                        self.fail(f'Fail. NBAPI time stamp has inncorrect format: {time_stamp}')
+
+                    assert hostname == sta1.hostname, \
+                        f"Wrong hostname {hostname} expect {sta1.hostname}"
+                    assert ipv4_address == sta1.ipv4, \
+                        f"Wrong ipv4_address {ipv4_address} expect {sta1.ipv4}"
+                    assert ipv6_address == sta1.ipv6, \
+                        f"Wrong ipv6_address {ipv6_address} expect {sta1.ipv6}"
+
         sta1.wifi_disconnect(vap1)

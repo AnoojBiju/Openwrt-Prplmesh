@@ -23,18 +23,27 @@
                 "name": "wifi",
                 "type": "STA_dummy",
                 "mac": "51:a1:10:20:00:01",
+                "hostname": "wifi",
+                "ipv4": "192.168.100.101",
+                "ipv6": "fe80::0000:0000:0000:0101",
                 "conn_cmd": ""
             },
             {
                 "name": "wifi2",
                 "type": "STA_dummy",
                 "mac": "51:a1:10:20:00:02",
+                "hostname": "wifi2",
+                "ipv4": "192.168.100.102",
+                "ipv6": "fe80::0000:0000:0000:0102",
                 "conn_cmd": ""
             },
             {
                 "name": "wifi3",
                 "type": "STA_dummy",
                 "mac": "51:a1:10:20:00:03",
+                "hostname": "wifi3",
+                "ipv4": "192.168.100.103",
+                "ipv6": "fe80::0000:0000:0000:0103",
                 "conn_cmd": ""
             }
         ]
