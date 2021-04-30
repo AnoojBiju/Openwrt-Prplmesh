@@ -182,7 +182,7 @@ void slave_thread::slave_reset()
         slave_state_timer =
             std::chrono::steady_clock::now() + std::chrono::seconds(SLAVE_INIT_DELAY_SEC);
         LOG(DEBUG) << "goto STATE_WAIT_BEFORE_INIT";
-        slave_state = STATE_WAIT_BERFORE_INIT;
+        slave_state = STATE_WAIT_BEFORE_INIT;
     } else {
         LOG(DEBUG) << "goto STATE_INIT";
         slave_state = STATE_INIT;
@@ -3691,7 +3691,7 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
     bool slave_ok = true;
 
     switch (slave_state) {
-    case STATE_WAIT_BERFORE_INIT: {
+    case STATE_WAIT_BEFORE_INIT: {
         if (std::chrono::steady_clock::now() > slave_state_timer) {
             is_backhaul_disconnected = false;
             LOG(TRACE) << "goto STATE_INIT";
