@@ -802,6 +802,10 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
                 // The "dev_reset_default" asynchronous command processing is complete.
                 m_dev_reset_default_completed = true;
 
+                // Tear down all VAPs in all radios to make sure no station can connect until APs
+                // are given a fresh configuration.
+                send_slaves_tear_down();
+
                 if (m_dev_reset_default_timer !=
                     beerocks::net::FileDescriptor::invalid_descriptor) {
                     // Send back second reply to UCC client.
@@ -3241,9 +3245,6 @@ void BackhaulManager::handle_dev_reset_default(
         m_agent_ucc_listener->send_reply(fd);
         return;
     }
-
-    // Tear down all VAPs in all radios to make sure no station can connect while in reset state.
-    send_slaves_tear_down();
 
     // Store socket descriptor to send reply to UCC client when command processing is completed.
     m_dev_reset_default_fd = fd;
