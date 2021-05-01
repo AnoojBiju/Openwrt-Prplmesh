@@ -389,19 +389,12 @@ void channel_selection_task::work()
     case eState::COMPUTE_IRE_CANDIDATE_CHANNELS: {
 
         bool eth_bh = !hostap_params.backhaul_is_wireless;
-        //bool hostap_repeater_mode_flag = database.get_hostap_repeater_mode_flag(tlvf::mac_from_string(hostap_mac));
 
         TASK_LOG(DEBUG) << "eth_bh " << int(eth_bh)
                         << " hostap_params.backhaul_is_2G = " << int(hostap_params.backhaul_is_2G)
                         << " hostap_params.is_2G = " << int(hostap_params.is_2G)
                         << " hostap_params.channel = " << int();
 
-#if 0
-            if( (!eth_bh) && hostap_repeater_mode_flag){
-                FSM_MOVE_STATE(ACTIVATE_SLAVE);
-                break;
-            }
-#endif
         if ((!eth_bh) && (!hostap_params.backhaul_is_2G) && (!hostap_params.is_2G)) {
             // 5G / 5G concurrent, remove BH subband
             ccl_remove_5G_subband(hostap_params.backhaul_subband);

@@ -2502,33 +2502,6 @@ int8_t db::get_hostap_vap_id(const sMacAddr &mac)
     return IFACE_ID_INVALID;
 }
 
-bool db::get_hostap_repeater_mode_flag(const sMacAddr &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return false;
-    }
-    return n->hostap->enable_repeater_mode;
-}
-
-bool db::set_hostap_repeater_mode_flag(const sMacAddr &mac, bool flag)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return false;
-    }
-    n->hostap->enable_repeater_mode = flag;
-    return true;
-}
-
 bool db::set_hostap_iface_name(const sMacAddr &mac, const std::string &iface_name)
 {
     auto n = get_node(mac);
