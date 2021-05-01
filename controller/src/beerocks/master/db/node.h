@@ -150,10 +150,9 @@ public:
 
     class radio {
     public:
-        bool active               = false;
-        bool is_backhaul_manager  = false;
-        bool is_acs_enabled       = false;
-        bool enable_repeater_mode = false;
+        bool active              = false;
+        bool is_backhaul_manager = false;
+        bool is_acs_enabled      = false;
         std::string iface_name;
         beerocks::eIfaceType iface_type;
         std::string driver_version;

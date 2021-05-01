@@ -855,9 +855,6 @@ public:
 
     int8_t get_hostap_vap_id(const sMacAddr &mac);
 
-    bool set_hostap_repeater_mode_flag(const sMacAddr &mac, bool flag);
-    bool get_hostap_repeater_mode_flag(const sMacAddr &mac);
-
     bool set_node_backhaul_iface_type(const std::string &mac, beerocks::eIfaceType iface_type);
     beerocks::eIfaceType get_node_backhaul_iface_type(const std::string &mac);
 
