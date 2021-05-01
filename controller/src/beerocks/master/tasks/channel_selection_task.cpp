@@ -57,9 +57,10 @@ void channel_selection_task::handle_events_timeout(std::multiset<int> pending_ev
     // only one event is expected
     for (std::multiset<int>::iterator it = pending_events.begin(); it != pending_events.end();
          ++it) {
-        TASK_LOG(ERROR) << "event " << *it << " timed out on hostap " << hostap_mac
+        TASK_LOG(ERROR) << "event " << *it << " timed out on radio " << radio_mac
                         << ", going to idle state -> handle_dead_node";
-        son_actions::handle_dead_node(hostap_mac, true, database, cmdu_tx, tasks);
+        son_actions::handle_dead_node(tlvf::mac_to_string(radio_mac), true, database, cmdu_tx,
+                                      tasks);
         //TODO check state of timeout event
         switch (fsm_state) {
         case eState::WAIT_FOR_RESTRICTED_CHANNEL_RESPONSE: {
@@ -89,7 +90,7 @@ void channel_selection_task::handle_event(int event_type, void *obj)
         return;
     }
     auto event_hostap_mac = tlvf::mac_to_string(((sMacAddr *)obj)->oct);
-    if (hostap_mac == event_hostap_mac) {
+    if (radio_mac == tlvf::mac_from_string(event_hostap_mac)) {
         bool handle_event = false;
         switch (eEvent(event_type)) {
         case eEvent::ACS_RESPONSE_EVENT: {
@@ -206,7 +207,7 @@ void channel_selection_task::work()
         break;
     }
     case eState::GOTO_IDLE: {
-        hostap_mac.clear();
+        radio_mac = beerocks::net::network_utils::ZERO_MAC;
         ccl.clear();
         if (event_handle_in_progress) {
             event_handle_in_progress = false;
@@ -221,7 +222,7 @@ void channel_selection_task::work()
             eEvent event_type;
             auto event_obj = queue_get_event(event_type);
             //TASK_LOG(DEBUG) << "event_obj = " << int(event_obj) ;
-            hostap_mac               = tlvf::mac_to_string(((sMacAddr *)event_obj)->oct);
+            memcpy(&radio_mac, event_obj, sizeof(radio_mac));
             event_handle_in_progress = true;
             switch (event_type) {
             case eEvent::SLAVE_JOINED_EVENT: {
@@ -240,7 +241,7 @@ void channel_selection_task::work()
                 break;
             }
             case eEvent::DELETED_EVENT: {
-                TASK_LOG(DEBUG) << "DELETED_EVENT for hostap mac = " << hostap_mac;
+                TASK_LOG(DEBUG) << "DELETED_EVENT for radio mac = " << radio_mac;
                 FSM_MOVE_STATE(GOTO_IDLE);
                 break;
             }
@@ -253,12 +254,12 @@ void channel_selection_task::work()
                 dfs_reentry_pending_steered_clients =
                     (sDfsReEntrySampleSteeredClients_event *)event_obj;
                 if (reentry_steered_client_check()) {
-                    TASK_LOG(DEBUG) << "condition true hostap mac = " << hostap_mac;
+                    TASK_LOG(DEBUG) << "condition true radio mac = " << radio_mac;
                     FSM_MOVE_STATE(SEND_ACS);
                     break;
                 }
                 //pending cases stays in IDLE while condition did not meet or timeout expired.
-                //TASK_LOG(DEBUG) << "condition false, hostap mac = " << hostap_mac;
+                //TASK_LOG(DEBUG) << "condition false, radio mac = " << radio_mac;
                 if (!dfs_reentry_pending_steered_clients->timeout_expired) {
                     queue_pop_event();
                 } else {
@@ -271,8 +272,9 @@ void channel_selection_task::work()
                 dfs_cac_pending_hostap = (sDfsCacPendinghostap_event *)event_obj;
                 auto cac_pending       = cac_pending_hostap_check();
                 if (dfs_cac_pending_hostap->timeout_expired) {
-                    TASK_LOG(DEBUG) << "handle_dead_node, hostap mac = " << hostap_mac;
-                    son_actions::handle_dead_node(hostap_mac, true, database, cmdu_tx, tasks);
+                    TASK_LOG(DEBUG) << "handle_dead_node, radio mac = " << radio_mac;
+                    son_actions::handle_dead_node(tlvf::mac_to_string(radio_mac), true, database,
+                                                  cmdu_tx, tasks);
                 }
                 if (cac_pending) {
                     queue_pop_event();
@@ -285,25 +287,25 @@ void channel_selection_task::work()
             case eEvent::CAC_COMPLETED_EVENT: {
                 if (!hostaps_cac_pending.empty()) {
                     cac_completed_event = (sCacCompleted_event *)event_obj;
-                    TASK_LOG(DEBUG) << "CAC_COMPLETED_EVENT for hostap mac = " << hostap_mac;
+                    TASK_LOG(DEBUG) << "CAC_COMPLETED_EVENT for radio mac = " << radio_mac;
                     FSM_MOVE_STATE(ON_CAC_COMPLETED_NOTIFICATION);
                     break;
                 }
-                TASK_LOG(DEBUG) << "CAC_COMPLETED_EVENT for hostap mac = " << hostap_mac
+                TASK_LOG(DEBUG) << "CAC_COMPLETED_EVENT for radio mac = " << radio_mac
                                 << "no pending hostaps cac ignored";
                 FSM_MOVE_STATE(GOTO_IDLE);
                 break;
             }
             case eEvent::DFS_CHANNEL_AVAILABLE_EVENT: {
                 dfs_channel_available = (sDfsChannelAvailable_event *)event_obj;
-                TASK_LOG(DEBUG) << "DFS_CHANNEL_AVAILABLE_EVENT for hostap mac = " << hostap_mac;
+                TASK_LOG(DEBUG) << "DFS_CHANNEL_AVAILABLE_EVENT for radio mac = " << radio_mac;
                 FSM_MOVE_STATE(ON_DFS_CHANNEL_AVAILABLE);
                 break;
             }
             case eEvent::CONFIGURED_RESTRICTED_CHANNELS_EVENT: {
                 configured_restricted_channels = (sConfiguredRestrictedChannels_event *)event_obj;
-                TASK_LOG(DEBUG) << "CONFIGURED_RESTRICTED_CHANNELS_EVENT for hostap mac = "
-                                << hostap_mac;
+                TASK_LOG(DEBUG) << "CONFIGURED_RESTRICTED_CHANNELS_EVENT for radio mac = "
+                                << radio_mac;
                 FSM_MOVE_STATE(ON_CONFIGURED_RESTRICTED_CHANNELS);
                 break;
             }
@@ -311,13 +313,13 @@ void channel_selection_task::work()
                 TASK_LOG(ERROR) << "only pending event in queue stay in IDLE "
                                 << EVENT_STR(eEvent(event_type))
                                 << " in state: " << FSM_CURR_STATE_STR
-                                << " from hostap: " << hostap_mac;
+                                << " from radio: " << radio_mac;
                 break;
             }
             default: {
                 TASK_LOG(ERROR) << "unexpected event: " << EVENT_STR(eEvent(event_type))
                                 << " in state: " << FSM_CURR_STATE_STR
-                                << " from hostap: " << hostap_mac;
+                                << " from radio: " << radio_mac;
                 FSM_MOVE_STATE(GOTO_IDLE);
             }
             }
@@ -332,15 +334,15 @@ void channel_selection_task::work()
 
         auto channel_ext_above_secondary = (freq < vht_center_frequency) ? true : false;
         if (!database.set_node_channel_bw(
-                hostap_mac, slave_joined_event->channel,
+                tlvf::mac_to_string(radio_mac), slave_joined_event->channel,
                 (beerocks::eWiFiBandwidth)slave_joined_event->cs_params.bandwidth,
                 bool(channel_ext_above_secondary), channel_ext_above_primary,
                 vht_center_frequency)) {
-            TASK_LOG(ERROR) << "set node hostap bw failed, mac=" << hostap_mac;
+            TASK_LOG(ERROR) << "set node hostap bw failed, mac=" << radio_mac;
         } else {
             // update bml listeners
             bml_task::connection_change_event new_event;
-            new_event.mac = database.get_node_parent(hostap_mac);
+            new_event.mac = database.get_node_parent(tlvf::mac_to_string(radio_mac));
             tasks.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE, &new_event);
             TASK_LOG(DEBUG) << "BML, sending CONNECTION_CHANGE for mac " << new_event.mac;
         }
@@ -366,11 +368,11 @@ void channel_selection_task::work()
         channel_switch_required = false;
         get_hostap_params();
 
-        if (!database.get_hostap_is_acs_enabled(tlvf::mac_from_string(hostap_mac))) {
+        if (!database.get_hostap_is_acs_enabled(radio_mac)) {
             if (wireless_utils::is_dfs_channel(hostap_params.channel)) {
                 TASK_LOG(INFO) << "not waiting for CAC completed on static DFS channel "
                                   "configuration, setting CAC completed flag to true";
-                database.set_hostap_cac_completed(tlvf::mac_from_string(hostap_mac), true);
+                database.set_hostap_cac_completed(radio_mac, true);
             }
         }
 
@@ -439,8 +441,9 @@ void channel_selection_task::work()
         request->params().failsafe_channel_bandwidth = database.config.fail_safe_5G_bw;
         request->params().vht_center_frequency       = database.config.fail_safe_5G_vht_frequency;
         memset(request->params().restricted_channels, 0, message::RESTRICTED_CHANNEL_LENGTH);
-        auto agent_mac = database.get_node_parent_ire(hostap_mac);
-        son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, hostap_mac);
+        auto agent_mac = database.get_node_parent_ire(tlvf::mac_to_string(radio_mac));
+        son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database,
+                                        tlvf::mac_to_string(radio_mac));
 
         set_events_timeout(RESTRICTED_CHANNEL_RESPONSE_WAIT_TIME);
         cs_wait_for_event(eEvent::RESTRICTED_CHANNEL_RESPONSE_EVENT);
@@ -468,7 +471,7 @@ void channel_selection_task::work()
             hostap_params.is_2G ? 0 : database.config.fail_safe_5G_vht_frequency;
         memset(request->params().restricted_channels, 0, message::RESTRICTED_CHANNEL_LENGTH);
         fill_restricted_channels_from_ccl_and_supported(request->params().restricted_channels);
-        TASK_LOG(INFO) << "***** send_restricted_channel to hostap: " << hostap_mac;
+        TASK_LOG(INFO) << "***** send_restricted_channel to hostap: " << radio_mac;
         for (auto i = 0; i < message::RESTRICTED_CHANNEL_LENGTH; i++) {
             if (!request->params().restricted_channels[i]) {
                 continue;
@@ -476,8 +479,9 @@ void channel_selection_task::work()
             TASK_LOG(INFO) << " restricted_channels: "
                            << int(request->params().restricted_channels[i]);
         }
-        auto agent_mac = database.get_node_parent_ire(hostap_mac);
-        son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, hostap_mac);
+        auto agent_mac = database.get_node_parent_ire(tlvf::mac_to_string(radio_mac));
+        son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database,
+                                        tlvf::mac_to_string(radio_mac));
 
         set_events_timeout(RESTRICTED_CHANNEL_RESPONSE_WAIT_TIME);
         cs_wait_for_event(eEvent::RESTRICTED_CHANNEL_RESPONSE_EVENT);
@@ -498,9 +502,10 @@ void channel_selection_task::work()
         request->params().failsafe_channel           = 0;
         request->params().failsafe_channel_bandwidth = 0;
         memset(request->params().restricted_channels, 0, message::RESTRICTED_CHANNEL_LENGTH);
-        TASK_LOG(INFO) << "***** clear 2.4G restricted channel for " << hostap_mac;
-        auto agent_mac = database.get_node_parent_ire(hostap_mac);
-        son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, hostap_mac);
+        TASK_LOG(INFO) << "***** clear 2.4G restricted channel for " << radio_mac;
+        auto agent_mac = database.get_node_parent_ire(tlvf::mac_to_string(radio_mac));
+        son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database,
+                                        tlvf::mac_to_string(radio_mac));
 
         set_events_timeout(RESTRICTED_CHANNEL_RESPONSE_WAIT_TIME);
         cs_wait_for_event(eEvent::RESTRICTED_CHANNEL_RESPONSE_EVENT);
@@ -528,7 +533,7 @@ void channel_selection_task::work()
             hostap_params.is_2G ? 0 : database.config.fail_safe_5G_vht_frequency;
         memset(request->params().restricted_channels, 0, message::RESTRICTED_CHANNEL_LENGTH);
         fill_restricted_channels_from_ccl_busy_bands(request->params().restricted_channels);
-        TASK_LOG(INFO) << "***** send_restricted_channel to hostap: " << hostap_mac;
+        TASK_LOG(INFO) << "***** send_restricted_channel to hostap: " << radio_mac;
         for (auto i = 0; i < message::RESTRICTED_CHANNEL_LENGTH; i++) {
             if (request->params().restricted_channels[i] == 0) {
                 continue;
@@ -536,8 +541,9 @@ void channel_selection_task::work()
             TASK_LOG(INFO) << " restricted_channels: "
                            << int(request->params().restricted_channels[i]);
         }
-        auto agent_mac = database.get_node_parent_ire(hostap_mac);
-        son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, hostap_mac);
+        auto agent_mac = database.get_node_parent_ire(tlvf::mac_to_string(radio_mac));
+        son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database,
+                                        tlvf::mac_to_string(radio_mac));
 
         set_events_timeout(RESTRICTED_CHANNEL_RESPONSE_WAIT_TIME);
         cs_wait_for_event(eEvent::RESTRICTED_CHANNEL_RESPONSE_EVENT);
@@ -575,8 +581,9 @@ void channel_selection_task::work()
         request->cs_params().channel              = 0;
         request->cs_params().bandwidth            = beerocks::BANDWIDTH_20;
         request->cs_params().vht_center_frequency = 0;
-        auto agent_mac                            = database.get_node_parent_ire(hostap_mac);
-        if (!son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, hostap_mac)) {
+        auto agent_mac = database.get_node_parent_ire(tlvf::mac_to_string(radio_mac));
+        if (!son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database,
+                                             tlvf::mac_to_string(radio_mac))) {
             LOG(ERROR) << "Send cmdu failed!";
             FSM_MOVE_STATE(GOTO_IDLE);
             break;
@@ -587,7 +594,7 @@ void channel_selection_task::work()
 
         // update bml listeners
         bml_task::acs_start_event acs_start_event;
-        acs_start_event.hostap_mac = hostap_mac;
+        acs_start_event.hostap_mac = tlvf::mac_to_string(radio_mac);
         tasks.push_event(database.get_bml_task_id(), bml_task::ACS_START_EVENT_AVAILABLE,
                          &acs_start_event);
 
@@ -595,7 +602,7 @@ void channel_selection_task::work()
         break;
     }
     case eState::SEND_CHANNEL_SWITCH: {
-        auto agent_mac = database.get_node_parent_ire(hostap_mac);
+        auto agent_mac = database.get_node_parent_ire(tlvf::mac_to_string(radio_mac));
 
         // CMDU Message
         auto request = message_com::create_vs_message<
@@ -606,7 +613,8 @@ void channel_selection_task::work()
         }
 
         request->cs_params() = channel_switch_request;
-        son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, hostap_mac);
+        son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database,
+                                        tlvf::mac_to_string(radio_mac));
 
         set_events_timeout(ACS_RESPONSE_WAIT_TIME);
         cs_wait_for_event(eEvent::CSA_EVENT);
@@ -620,7 +628,7 @@ void channel_selection_task::work()
         break;
     }
     case eState::ON_ACS_RESPONSE: {
-        //database.set_hostap_supported_channels(hostap_mac, acs_response_event->supported_channels, message::SUPPORTED_CHANNELS_LENGTH);
+        //database.set_hostap_supported_channels(radio_mac, acs_response_event->supported_channels, message::SUPPORTED_CHANNELS_LENGTH);
 
         cs_wait_for_event(eEvent::CSA_EVENT);
         set_events_timeout(CSA_NOTIFICATION_RESPONSE_WAIT_TIME);
@@ -634,7 +642,7 @@ void channel_selection_task::work()
         break;
     }
     case eState::ON_CSA_NOTIFICATION: {
-        TASK_LOG(INFO) << "CSA for hostap = " << hostap_mac
+        TASK_LOG(INFO) << "CSA for hostap = " << radio_mac
                        << " bandwidth = " << int(csa_event->cs_params.bandwidth)
                        << " channel = " << int(csa_event->cs_params.channel)
                        << " channel_ext_above_primary = "
@@ -648,17 +656,17 @@ void channel_selection_task::work()
         auto channel_ext_above_secondary = (freq < vht_center_frequency) ? true : false;
         auto channel_ext_above_primary =
             (csa_event->cs_params.channel_ext_above_primary > 0) ? true : false;
-        if (!database.set_node_channel_bw(hostap_mac, csa_event->cs_params.channel,
-                                          (beerocks::eWiFiBandwidth)csa_event->cs_params.bandwidth,
-                                          bool(channel_ext_above_secondary),
-                                          bool(channel_ext_above_primary),
-                                          csa_event->cs_params.vht_center_frequency)) {
-            TASK_LOG(ERROR) << "set node channel bw failed, mac=" << hostap_mac;
+        if (!database.set_node_channel_bw(
+                tlvf::mac_to_string(radio_mac), csa_event->cs_params.channel,
+                (beerocks::eWiFiBandwidth)csa_event->cs_params.bandwidth,
+                bool(channel_ext_above_secondary), bool(channel_ext_above_primary),
+                csa_event->cs_params.vht_center_frequency)) {
+            TASK_LOG(ERROR) << "set node channel bw failed, mac=" << radio_mac;
         }
 
         // update bml listeners
         bml_task::csa_notification_event csa_notification_event;
-        csa_notification_event.hostap_mac = hostap_mac;
+        csa_notification_event.hostap_mac = tlvf::mac_to_string(radio_mac);
         csa_notification_event.bandwidth  = int(csa_event->cs_params.bandwidth);
         csa_notification_event.channel    = int(csa_event->cs_params.channel);
         csa_notification_event.channel_ext_above_primary =
@@ -671,12 +679,13 @@ void channel_selection_task::work()
         break;
     }
     case eState::ACTIVATE_SLAVE: {
-        if (!son_actions::set_hostap_active(database, tasks, hostap_mac, true)) {
-            TASK_LOG(ERROR) << "set node hostap active failed, mac=" << hostap_mac;
+        if (!son_actions::set_hostap_active(database, tasks, tlvf::mac_to_string(radio_mac),
+                                            true)) {
+            TASK_LOG(ERROR) << "set node hostap active failed, mac=" << radio_mac;
         }
         //the connected looks irelevant for the hostap - adding this line so it would appear on network map
-        if (!database.set_node_state(hostap_mac, beerocks::STATE_CONNECTED)) {
-            TASK_LOG(ERROR) << "set node state failed, mac=" << hostap_mac;
+        if (!database.set_node_state(tlvf::mac_to_string(radio_mac), beerocks::STATE_CONNECTED)) {
+            TASK_LOG(ERROR) << "set node state failed, mac=" << radio_mac;
         }
         if (database.settings_ire_roaming()) {
             TASK_LOG(DEBUG) << "add ire_network_optimization_task";
@@ -685,67 +694,64 @@ void channel_selection_task::work()
             tasks.add_task(new_task);
         }
 
-        if (!database.get_hostap_is_acs_enabled(tlvf::mac_from_string(hostap_mac))) {
+        if (!database.get_hostap_is_acs_enabled(radio_mac)) {
             FSM_MOVE_STATE(GOTO_IDLE);
             break;
         }
 
         if (csa_event) {
             if (!is_2G_channel(csa_event->cs_params.channel)) {
-                TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac << " csa_event != null";
+                TASK_LOG(DEBUG) << "radio_mac - " << radio_mac << " csa_event != null";
                 if (csa_event->cs_params.is_dfs_channel) {
                     wait_for_cac_completed(csa_event->cs_params.channel,
                                            csa_event->cs_params.bandwidth);
-                    if (database.get_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac))) {
-                        TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac << " DFS reentry flow";
-                        if (database.get_hostap_cac_completed(tlvf::mac_from_string(hostap_mac))) {
-                            TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
+                    if (database.get_hostap_on_dfs_reentry(radio_mac)) {
+                        TASK_LOG(DEBUG) << "radio_mac - " << radio_mac << " DFS reentry flow";
+                        if (database.get_hostap_cac_completed(radio_mac)) {
+                            TASK_LOG(DEBUG) << "radio_mac - " << radio_mac
                                             << " was on reentry back on dfs channel";
-                            database.set_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac),
-                                                               false);
+                            database.set_hostap_on_dfs_reentry(radio_mac, false);
                             FSM_MOVE_STATE(STEER_STA_BACK_AFTER_DFS_REENTRY);
                         } else {
                             TASK_LOG(DEBUG)
-                                << "hostap_mac - " << hostap_mac << " cac completed pending";
+                                << "radio_mac - " << radio_mac << " cac completed pending";
                             FSM_MOVE_STATE(GOTO_IDLE);
                         }
                         break;
                     }
                 } else {
-                    if (database.get_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac))) {
-                        TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
-                                        << " was on reentry back on dfs channel";
-                        database.set_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac),
-                                                           false);
+                    if (database.get_hostap_on_dfs_reentry(radio_mac)) {
+                        TASK_LOG(DEBUG)
+                            << "radio_mac - " << radio_mac << " was on reentry back on dfs channel";
+                        database.set_hostap_on_dfs_reentry(radio_mac, false);
                         FSM_MOVE_STATE(STEER_STA_BACK_AFTER_DFS_REENTRY);
                         break;
                     }
-                    TASK_LOG(DEBUG)
-                        << "hostap_mac - " << hostap_mac << " non DFS not a reentry flow";
+                    TASK_LOG(DEBUG) << "radio_mac - " << radio_mac << " non DFS not a reentry flow";
                 }
             } else {
                 TASK_LOG(DEBUG) << "2G AP ignore";
             }
         } else {
             // CAC completed will not arrive in passive mode, so set the indication to 'completed'
-            database.set_hostap_cac_completed(tlvf::mac_from_string(hostap_mac), true);
+            database.set_hostap_cac_completed(radio_mac, true);
         }
         FSM_MOVE_STATE(GOTO_IDLE);
         break;
     }
     case eState::ON_CAC_COMPLETED_NOTIFICATION: {
 
-        auto it_cac = hostaps_cac_pending.find(hostap_mac);
+        auto it_cac = hostaps_cac_pending.find(tlvf::mac_to_string(radio_mac));
 
         if (it_cac != std::end(hostaps_cac_pending)) {
             database.set_hostap_cac_completed(tlvf::mac_from_string(it_cac->first), true);
             it_cac = hostaps_cac_pending.erase(it_cac);
-            TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
+            TASK_LOG(DEBUG) << "radio_mac - " << radio_mac
                             << " cac completed - found in pending cac - erasing, update DB";
 
             // update bml listeners
             bml_task::cac_status_changed_notification_event cac_status_changed_event;
-            cac_status_changed_event.hostap_mac    = hostap_mac;
+            cac_status_changed_event.hostap_mac    = tlvf::mac_to_string(radio_mac);
             cac_status_changed_event.cac_completed = 1;
             tasks.push_event(database.get_bml_task_id(),
                              bml_task::CAC_STATUS_CHANGED_NOTIFICATION_EVENT_AVAILABLE,
@@ -753,17 +759,17 @@ void channel_selection_task::work()
             //optimal path for all non dfs reentry clients
             run_optimal_path_for_connected_clients();
 
-            if (database.get_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac))) {
-                TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
+            if (database.get_hostap_on_dfs_reentry(radio_mac)) {
+                TASK_LOG(DEBUG) << "radio_mac - " << radio_mac
                                 << " was on reentry back on dfs channel";
-                database.set_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac), false);
+                database.set_hostap_on_dfs_reentry(radio_mac, false);
                 //optimal path for all non dfs reentry clients
                 run_optimal_path_for_connected_clients();
                 FSM_MOVE_STATE(STEER_STA_BACK_AFTER_DFS_REENTRY);
                 break;
             }
         } else {
-            TASK_LOG(ERROR) << "hostap_mac - " << hostap_mac
+            TASK_LOG(ERROR) << "radio_mac - " << radio_mac
                             << " cac completed - not found - not suppose to happen ignore";
         }
 
@@ -771,44 +777,42 @@ void channel_selection_task::work()
         break;
     }
     case eState::ON_DFS_CHANNEL_AVAILABLE: {
-        TASK_LOG(ERROR) << "hostap_mac - " << hostap_mac
+        TASK_LOG(ERROR) << "radio_mac - " << radio_mac
                         << " channel availble - clear radar affected";
         auto vec_channels = wireless_utils::get_5g_20MHz_channels(
             beerocks::eWiFiBandwidth(dfs_channel_available->params.bandwidth),
             dfs_channel_available->params.vht_center_frequency);
-        database.set_supported_channel_radar_affected(tlvf::mac_from_string(hostap_mac),
-                                                      vec_channels, false);
+        database.set_supported_channel_radar_affected(radio_mac, vec_channels, false);
         FSM_MOVE_STATE(GOTO_IDLE);
         break;
     }
     case eState::ON_CSA_UNEXPECTED_NOTIFICATION: {
         //updating ap and children nodes.
         TASK_LOG(INFO) << "UNEXPECTED CSA event";
-        TASK_LOG(INFO) << "CSA for hostap = " << hostap_mac
+        TASK_LOG(INFO) << "CSA for radio = " << radio_mac
                        << " bandwidth = " << int(csa_event->cs_params.bandwidth)
                        << " channel = " << int(csa_event->cs_params.channel)
                        << " channel_ext_above_primary = "
                        << int(csa_event->cs_params.channel_ext_above_primary);
         auto freq = wireless_utils::channel_to_freq(csa_event->cs_params.channel);
-        auto prev_vht_center_frequency =
-            database.get_hostap_vht_center_frequency(tlvf::mac_from_string(hostap_mac));
-        auto prev_channel   = database.get_node_channel(hostap_mac);
-        auto prev_bandwidth = database.get_node_bw(hostap_mac);
+        auto prev_vht_center_frequency = database.get_hostap_vht_center_frequency(radio_mac);
+        auto prev_channel              = database.get_node_channel(tlvf::mac_to_string(radio_mac));
+        auto prev_bandwidth            = database.get_node_bw(tlvf::mac_to_string(radio_mac));
         auto channel_ext_above_secondary =
             (freq < csa_event->cs_params.vht_center_frequency) ? true : false;
         auto channel_ext_above_primary =
             (csa_event->cs_params.channel_ext_above_primary > 0) ? true : false;
-        if (!database.set_node_channel_bw(hostap_mac, csa_event->cs_params.channel,
-                                          beerocks::eWiFiBandwidth(csa_event->cs_params.bandwidth),
-                                          bool(channel_ext_above_secondary),
-                                          bool(channel_ext_above_primary),
-                                          csa_event->cs_params.vht_center_frequency)) {
-            TASK_LOG(ERROR) << "set node channel bw failed, mac=" << hostap_mac;
+        if (!database.set_node_channel_bw(
+                tlvf::mac_to_string(radio_mac), csa_event->cs_params.channel,
+                beerocks::eWiFiBandwidth(csa_event->cs_params.bandwidth),
+                bool(channel_ext_above_secondary), bool(channel_ext_above_primary),
+                csa_event->cs_params.vht_center_frequency)) {
+            TASK_LOG(ERROR) << "set node channel bw failed, mac=" << radio_mac;
         }
 
         // update bml listeners
         bml_task::csa_notification_event csa_notification_event;
-        csa_notification_event.hostap_mac = hostap_mac;
+        csa_notification_event.hostap_mac = tlvf::mac_to_string(radio_mac);
         csa_notification_event.bandwidth  = int(csa_event->cs_params.bandwidth);
         csa_notification_event.channel    = int(csa_event->cs_params.channel);
         csa_notification_event.channel_ext_above_primary =
@@ -818,7 +822,7 @@ void channel_selection_task::work()
         tasks.push_event(database.get_bml_task_id(), bml_task::CSA_NOTIFICATION_EVENT_AVAILABLE,
                          &csa_notification_event);
 
-        if (!database.get_hostap_is_acs_enabled(tlvf::mac_from_string(hostap_mac))) {
+        if (!database.get_hostap_is_acs_enabled(radio_mac)) {
             TASK_LOG(DEBUG) << " vht_center_frequency";
             FSM_MOVE_STATE(GOTO_IDLE);
             break;
@@ -829,17 +833,15 @@ void channel_selection_task::work()
                         << " csa_event->cs_params.switch_reason "
                         << int(csa_event->cs_params.switch_reason);
         if (csa_event->cs_params.switch_reason == beerocks::CH_SWITCH_REASON_RADAR) {
-            database.set_radar_hit_stats(tlvf::mac_from_string(hostap_mac), prev_channel,
-                                         prev_bandwidth, false);
+            database.set_radar_hit_stats(radio_mac, prev_channel, prev_bandwidth, false);
             TASK_LOG(DEBUG)
-                << "hostap_mac - " << hostap_mac
+                << "radio_mac - " << radio_mac
                 << " csa - reason radar, moved to fail safe , update channel radar affected";
             auto vec_channels = wireless_utils::calc_5g_20MHz_subband_channels(
                 prev_bandwidth, prev_vht_center_frequency,
                 beerocks::eWiFiBandwidth(csa_event->cs_params.bandwidth),
                 csa_event->cs_params.vht_center_frequency);
-            database.set_supported_channel_radar_affected(tlvf::mac_from_string(hostap_mac),
-                                                          vec_channels, true);
+            database.set_supported_channel_radar_affected(radio_mac, vec_channels, true);
             FSM_MOVE_STATE(ACTIVATE_SLAVE);
             break;
         }
@@ -853,14 +855,15 @@ void channel_selection_task::work()
             FSM_MOVE_STATE(GOTO_IDLE);
             break;
         }
-        if (database.get_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac))) {
-            LOG(DEBUG) << "hostapd " << hostap_mac << "is already on dfs reentry";
+        if (database.get_hostap_on_dfs_reentry(radio_mac)) {
+            LOG(DEBUG) << "radio " << radio_mac << "is already on dfs reentry";
             FSM_MOVE_STATE(GOTO_IDLE);
             break;
         }
 
         if (!database.settings_client_band_steering()) {
-            auto clients = database.get_node_children(hostap_mac, beerocks::TYPE_CLIENT);
+            auto clients =
+                database.get_node_children(tlvf::mac_to_string(radio_mac), beerocks::TYPE_CLIENT);
             auto it =
                 std::find_if(clients.begin(), clients.end(), [&](const std::string &client_mac) {
                     auto client_state = (uint8_t)database.get_node_state(client_mac);
@@ -870,8 +873,8 @@ void channel_selection_task::work()
 
             if (it != clients.end()) {
                 LOG(DEBUG) << "band steering feature is not enabled and client are connected to "
-                              "hostap_mac="
-                           << hostap_mac << ", can't run DFS reentry";
+                              "radio_mac="
+                           << radio_mac << ", can't run DFS reentry";
                 FSM_MOVE_STATE(GOTO_IDLE);
                 break;
             }
@@ -879,46 +882,47 @@ void channel_selection_task::work()
 
         ccl_fill_affected_supported_channels();
         auto has_unaffected_channels = ccl_has_free_dfs_channels(beerocks::BANDWIDTH_160);
-        auto ap_idle_mode =
-            (database.get_hostap_activity_mode(tlvf::mac_from_string(hostap_mac)) == AP_IDLE_MODE);
-        TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
+        auto ap_idle_mode = (database.get_hostap_activity_mode(radio_mac) == AP_IDLE_MODE);
+        TASK_LOG(DEBUG) << "radio_mac - " << radio_mac
                         << " has_unaffected_channels = " << int(has_unaffected_channels)
                         << " ap_idle_mode = " << int(ap_idle_mode);
         if (has_unaffected_channels && ap_idle_mode) {
-            TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
+            TASK_LOG(DEBUG) << "radio_mac - " << radio_mac
                             << " found at list one 80 Mhz un-affected band  ";
             FSM_MOVE_STATE(STEER_STA_BEFORE_DFS_REENTRY);
-            database.set_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac), true);
+            database.set_hostap_on_dfs_reentry(radio_mac, true);
             break;
         }
-        TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
+        TASK_LOG(DEBUG) << "radio_mac - " << radio_mac
                         << " ap activity mode is active or all dfs channels are radar affected";
         FSM_MOVE_STATE(GOTO_IDLE);
         break;
     }
     case eState::STEER_STA_BEFORE_DFS_REENTRY: {
-        database.clear_hostap_dfs_reentry_clients(tlvf::mac_from_string(hostap_mac));
+        database.clear_hostap_dfs_reentry_clients(radio_mac);
 
-        auto set_reentry_clients =
-            database.get_node_children(hostap_mac, TYPE_CLIENT, STATE_CONNECTED);
+        auto set_reentry_clients = database.get_node_children(tlvf::mac_to_string(radio_mac),
+                                                              TYPE_CLIENT, STATE_CONNECTED);
         if (set_reentry_clients.empty()) {
-            TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
+            TASK_LOG(DEBUG) << "radio_mac - " << radio_mac
                             << " no client connected to reentry hostap ";
             FSM_MOVE_STATE(SEND_ACS);
             break;
         }
-        TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
+        TASK_LOG(DEBUG) << "radio_mac - " << radio_mac
                         << " client connected to reentry hostap steering to 2.4 hostap ";
-        database.set_hostap_dfs_reentry_clients(hostap_mac, set_reentry_clients);
-        auto hostaps_sibling = database.get_node_siblings(hostap_mac, beerocks::TYPE_SLAVE);
-        auto hostap_mac_2g   = std::find_if(
+        database.set_hostap_dfs_reentry_clients(tlvf::mac_to_string(radio_mac),
+                                                set_reentry_clients);
+        auto hostaps_sibling =
+            database.get_node_siblings(tlvf::mac_to_string(radio_mac), beerocks::TYPE_SLAVE);
+        auto hostap_mac_2g = std::find_if(
             std::begin(hostaps_sibling), std::end(hostaps_sibling),
             [&](std::string hostap_sibling) {
                 return (is_2G_channel(database.get_node_channel(hostap_sibling)) &&
                         database.is_hostap_active(tlvf::mac_from_string(hostap_sibling)));
             });
         if (hostap_mac_2g == std::end(hostaps_sibling)) {
-            TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
+            TASK_LOG(DEBUG) << "radio_mac - " << radio_mac
                             << " no 2.4G hostap found - band not active ";
             FSM_MOVE_STATE(GOTO_IDLE);
             break;
@@ -930,7 +934,7 @@ void channel_selection_task::work()
                           int disassoc_timer_ms  = DISASSOC_STEER_TIMER_MS;
                           auto steer_restricted  = true;
                           std::string triggered_by{" Before DFS Reentry "};
-                          TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac << " steer sta "
+                          TASK_LOG(DEBUG) << "radio_mac - " << radio_mac << " steer sta "
                                           << set_reentry_client << " to 2.4G - " << *hostap_mac_2g;
                           son_actions::steer_sta(database, cmdu_tx, tasks, set_reentry_client,
                                                  *hostap_mac_2g, triggered_by, std::string(),
@@ -942,7 +946,7 @@ void channel_selection_task::work()
 
         //inject event for sample client on reentry hostap after steering them to 2.4G hostap
         auto new_event = CHANNEL_SELECTION_ALLOCATE_EVENT(sDfsReEntrySampleSteeredClients_event);
-        new_event->hostap_mac      = tlvf::mac_from_string(hostap_mac);
+        new_event->hostap_mac      = radio_mac;
         new_event->timestamp       = std::chrono::steady_clock::now();
         new_event->timeout_expired = false;
         tasks.push_event(database.get_channel_selection_task_id(),
@@ -952,9 +956,10 @@ void channel_selection_task::work()
         break;
     }
     case eState::STEER_STA_BACK_AFTER_DFS_REENTRY: {
-        auto set_reentry_clients = database.get_hostap_dfs_reentry_clients(hostap_mac);
+        auto set_reentry_clients =
+            database.get_hostap_dfs_reentry_clients(tlvf::mac_to_string(radio_mac));
         if (set_reentry_clients.empty()) {
-            TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
+            TASK_LOG(DEBUG) << "radio_mac - " << radio_mac
                             << "no dfs_reentry_clients - not supposed to happen!!!";
         }
         std::for_each(std::begin(set_reentry_clients), std::end(set_reentry_clients),
@@ -962,11 +967,12 @@ void channel_selection_task::work()
                           auto disassoc_imminent = true;
                           int disassoc_timer_ms  = DISASSOC_STEER_TIMER_MS;
                           std::string triggered_by{" After DFS Rentry [imminent] "};
-                          TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac << " steer sta "
-                                          << set_reentry_client << " back to - " << hostap_mac;
+                          TASK_LOG(DEBUG) << "radio_mac - " << radio_mac << " steer sta "
+                                          << set_reentry_client << " back to - " << radio_mac;
                           son_actions::steer_sta(database, cmdu_tx, tasks, set_reentry_client,
-                                                 hostap_mac, triggered_by, std::string(),
-                                                 disassoc_imminent, disassoc_timer_ms);
+                                                 tlvf::mac_to_string(radio_mac), triggered_by,
+                                                 std::string(), disassoc_imminent,
+                                                 disassoc_timer_ms);
                       });
         FSM_MOVE_STATE(GOTO_IDLE);
         break;
@@ -1048,8 +1054,8 @@ bool channel_selection_task::reentry_steered_client_check()
                                          now - dfs_reentry_pending_steered_clients->timestamp)
                                          .count();
     if (dfs_reentry_clients_delta < REENTRY_STEERED_CLIENTS_WAIT) {
-        auto set_reentry_clients =
-            database.get_node_children(hostap_mac, TYPE_CLIENT, STATE_CONNECTED);
+        auto set_reentry_clients = database.get_node_children(tlvf::mac_to_string(radio_mac),
+                                                              TYPE_CLIENT, STATE_CONNECTED);
 
         if (set_reentry_clients.empty()) {
             TASK_LOG(DEBUG) << "no client connected to reentry hostap ";
@@ -1060,9 +1066,9 @@ bool channel_selection_task::reentry_steered_client_check()
                      //LOG(DEBUG) << "set_reentry_client connected = " << set_reentry_client;
                  });
         //inject the event back to the end of the queue
-        //TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac << " sta's are still connected injecting sta sample event ";
+        //TASK_LOG(DEBUG) << "radio_mac - " << radio_mac << " sta's are still connected injecting sta sample event ";
         auto new_event = CHANNEL_SELECTION_ALLOCATE_EVENT(sDfsReEntrySampleSteeredClients_event);
-        new_event->hostap_mac      = tlvf::mac_from_string(hostap_mac);
+        new_event->hostap_mac      = radio_mac;
         new_event->timestamp       = dfs_reentry_pending_steered_clients->timestamp;
         new_event->timeout_expired = false;
         tasks.push_event(database.get_channel_selection_task_id(),
@@ -1070,7 +1076,7 @@ bool channel_selection_task::reentry_steered_client_check()
                          (void *)new_event);
     } else {
         dfs_reentry_pending_steered_clients->timeout_expired = true;
-        TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac << " sta's sample timeout expired "
+        TASK_LOG(DEBUG) << "radio_mac - " << radio_mac << " sta's sample timeout expired "
                         << int(dfs_reentry_clients_delta);
     }
     return false;
@@ -1080,9 +1086,9 @@ bool channel_selection_task::cac_pending_hostap_check()
 {
     if (!hostaps_cac_pending.empty()) {
         auto now            = std::chrono::steady_clock::now();
-        auto it_cac_pending = hostaps_cac_pending.find(hostap_mac);
+        auto it_cac_pending = hostaps_cac_pending.find(tlvf::mac_to_string(radio_mac));
         if (it_cac_pending == std::end(hostaps_cac_pending)) {
-            TASK_LOG(INFO) << "cac complete already arrived for hostap_mac = " << hostap_mac;
+            TASK_LOG(INFO) << "cac complete already arrived for radio_mac = " << radio_mac;
             return true;
         }
         auto cac_complete_delta =
@@ -1096,18 +1102,18 @@ bool channel_selection_task::cac_pending_hostap_check()
             return true;
         } else {
             //inject again the event to check for cac completed.
-            //TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac << " inject cac sample event";
+            //TASK_LOG(DEBUG) << "radio_mac - " << radio_mac << " inject cac sample event";
             auto new_event        = CHANNEL_SELECTION_ALLOCATE_EVENT(sDfsCacPendinghostap_event);
-            new_event->hostap_mac = tlvf::mac_from_string(hostap_mac);
+            new_event->hostap_mac = radio_mac;
             new_event->timeout_expired = false;
-            //TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac << " timeout_expired = " << int(new_event->timeout_expired);
+            //TASK_LOG(DEBUG) << "radio_mac - " << radio_mac << " timeout_expired = " << int(new_event->timeout_expired);
             tasks.push_event(database.get_channel_selection_task_id(),
                              (int)channel_selection_task::eEvent::DFS_CAC_PENDING_HOSTAP_EVENT,
                              (void *)new_event);
             return true;
         }
     }
-    TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac << " no hostap pending cac ";
+    TASK_LOG(DEBUG) << "radio_mac - " << radio_mac << " no hostap pending cac ";
     return false;
 }
 bool channel_selection_task::is_2G_channel(int channel)
@@ -1117,9 +1123,9 @@ bool channel_selection_task::is_2G_channel(int channel)
 
 void channel_selection_task::get_hostap_params()
 {
-    hostap_params.channel = database.get_node_channel(hostap_mac);
+    hostap_params.channel = database.get_node_channel(tlvf::mac_to_string(radio_mac));
     hostap_params.is_2G   = is_2G_channel(hostap_params.channel);
-    TASK_LOG(DEBUG) << "get_hostap_params()  for = " << hostap_mac;
+    TASK_LOG(DEBUG) << "get_hostap_params()  for = " << radio_mac;
     //use slave_joined_event as backhaul may have not connected yet
     if (slave_joined_event) {
         hostap_params.backhaul_is_wireless = slave_joined_event->backhaul_is_wireless;
@@ -1142,7 +1148,7 @@ void channel_selection_task::get_hostap_params()
                         << " slave_joined_event->low_pass_filter_on = "
                         << int(slave_joined_event->low_pass_filter_on);
     } else {
-        auto backhaul_mac                  = database.get_node_parent_backhaul(hostap_mac);
+        auto backhaul_mac = database.get_node_parent_backhaul(tlvf::mac_to_string(radio_mac));
         hostap_params.backhaul_is_wireless = backhaul_mac.empty();
         hostap_params.backhaul_channel     = database.get_node_channel(hostap_params.backhaul_mac);
         //TODO add low_pass_filter_on to the DB, only needed for DFS
@@ -1151,7 +1157,7 @@ void channel_selection_task::get_hostap_params()
         son::wireless_utils::which_subband(hostap_params.backhaul_channel);
     hostap_params.backhaul_is_2G = is_2G_channel(hostap_params.backhaul_channel);
 
-    TASK_LOG(DEBUG) << "hostap_mac = " << hostap_mac
+    TASK_LOG(DEBUG) << "radio_mac = " << radio_mac
                     << " hostap_params.channel = " << int(hostap_params.channel)
                     << " hostap_params.backhaul_channel = " << int(hostap_params.backhaul_channel)
                     << " hostap_params.bandwidth = " << int(hostap_params.bandwidth);
@@ -1161,8 +1167,7 @@ void channel_selection_task::ccl_fill_supported_channels()
 {
     TASK_LOG(DEBUG) << "*****************ccl_fill_supported_channels**************************** :";
     //Get the supported channels list from the db
-    auto hostap_supported_channels =
-        database.get_hostap_supported_channels(tlvf::mac_from_string(hostap_mac));
+    auto hostap_supported_channels = database.get_hostap_supported_channels(radio_mac);
 
     /*1. Fill active channel list with the suppoted channels and
         2. Initialize all the supported channels as available in active list to start with*/
@@ -1182,8 +1187,7 @@ void channel_selection_task::ccl_fill_affected_supported_channels()
 {
     TASK_LOG(DEBUG)
         << "*****************ccl_fill_affected_supported_channels**************************** :";
-    auto hostap_supported_channels =
-        database.get_hostap_supported_channels(tlvf::mac_from_string(hostap_mac));
+    auto hostap_supported_channels = database.get_hostap_supported_channels(radio_mac);
 
     /*1. Fill active channel list with the radar affected suppoted channels */
     for (auto hostap_channel : hostap_supported_channels) {
@@ -1504,8 +1508,7 @@ bool channel_selection_task::fill_restricted_channels_from_ccl_and_supported(uin
         }
     }
     auto global_restricted_chn = database.get_global_restricted_channels();
-    auto db_restricted =
-        database.get_hostap_conf_restricted_channels(tlvf::mac_from_string(hostap_mac));
+    auto db_restricted         = database.get_hostap_conf_restricted_channels(radio_mac);
     auto configured_restricted_chn =
         !global_restricted_chn.empty() ? global_restricted_chn : db_restricted;
     if (!configured_restricted_chn.empty()) {
@@ -1563,10 +1566,10 @@ bool channel_selection_task::find_all_scan_hostap(const std::string &hostap_pare
 void channel_selection_task::send_backhaul_reset()
 {
     TASK_LOG(DEBUG) << "*****************send_backhaul_reset**************************** :";
-    auto hostap_parent_mac = database.get_node_parent(hostap_mac);
+    auto hostap_parent_mac = database.get_node_parent(tlvf::mac_to_string(radio_mac));
     std::string backhaul_manager_slave_mac;
     TASK_LOG(DEBUG) << "insert ire_mac_should_reset to hostap_parent_mac = " << hostap_parent_mac
-                    << " hostap_mac = " << hostap_mac;
+                    << " radio_mac = " << radio_mac;
     if (get_backhaul_manager_slave(backhaul_manager_slave_mac)) {
         auto agent_mac = database.get_node_parent_ire(backhaul_manager_slave_mac);
 
@@ -1579,22 +1582,22 @@ void channel_selection_task::send_backhaul_reset()
         }
         son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, backhaul_manager_slave_mac);
     } else {
-        TASK_LOG(INFO) << " hostap_backhaul manager, not joined yet, hostap = " << hostap_mac;
+        TASK_LOG(INFO) << " hostap_backhaul manager, not joined yet, radio = " << radio_mac;
     }
 }
 
 bool channel_selection_task::get_backhaul_manager_slave(std::string &backhaul_manager_slave_mac)
 {
-    if (database.is_hostap_backhaul_manager(tlvf::mac_from_string(hostap_mac))) {
-        TASK_LOG(INFO) << " is backhaul_manager_slave! , hostap = " << hostap_mac;
-        backhaul_manager_slave_mac = hostap_mac;
+    if (database.is_hostap_backhaul_manager(radio_mac)) {
+        TASK_LOG(INFO) << " is backhaul_manager_slave! , radio = " << radio_mac;
+        backhaul_manager_slave_mac = tlvf::mac_to_string(radio_mac);
         return true;
     }
 
-    auto siblings = database.get_node_siblings(hostap_mac);
+    auto siblings = database.get_node_siblings(tlvf::mac_to_string(radio_mac));
     for (auto &sibling : siblings) {
         if (database.is_hostap_backhaul_manager(tlvf::mac_from_string(sibling))) {
-            TASK_LOG(INFO) << " backhaul_manager_slave joined , sibling = " << hostap_mac;
+            TASK_LOG(INFO) << " backhaul_manager_slave joined , sibling = " << radio_mac;
             backhaul_manager_slave_mac = sibling;
             return true;
         }
@@ -1706,7 +1709,7 @@ void channel_selection_task::align_channel_to_80Mhz()
 
 void channel_selection_task::send_ap_disabled_notification()
 {
-    auto agent_mac = database.get_node_parent_ire(hostap_mac);
+    auto agent_mac = database.get_node_parent_ire(tlvf::mac_to_string(radio_mac));
     auto request =
         message_com::create_vs_message<beerocks_message::cACTION_CONTROL_HOSTAP_DISABLED_BY_MASTER>(
             cmdu_tx);
@@ -1714,8 +1717,8 @@ void channel_selection_task::send_ap_disabled_notification()
         LOG(ERROR) << "Failed building message!";
         return;
     }
-    TASK_LOG(DEBUG) << "send ACTION_CONTROL_HOSTAP_DISABLED_BY_MASTER to mac " << hostap_mac;
-    son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, hostap_mac);
+    TASK_LOG(DEBUG) << "send ACTION_CONTROL_HOSTAP_DISABLED_BY_MASTER to mac " << radio_mac;
+    son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, tlvf::mac_to_string(radio_mac));
 }
 
 void channel_selection_task::cs_wait_for_event(eEvent cs_event)
@@ -1726,28 +1729,28 @@ void channel_selection_task::cs_wait_for_event(eEvent cs_event)
 
 void channel_selection_task::wait_for_cac_completed(uint8_t channel, uint8_t bandwidth)
 {
-    TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac << " channel = " << int(channel)
+    TASK_LOG(DEBUG) << "radio_mac - " << radio_mac << " channel = " << int(channel)
                     << " bandwidth = " << int(bandwidth);
-    database.set_radar_hit_stats(tlvf::mac_from_string(hostap_mac), channel, bandwidth, true);
+    database.set_radar_hit_stats(radio_mac, channel, bandwidth, true);
     //hostap handle the CAC-completed event async pushing to deck.
-    TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac << " enter to cac pending";
-    hostaps_cac_pending.insert({hostap_mac, std::chrono::steady_clock::now()});
-    database.set_hostap_cac_completed(tlvf::mac_from_string(hostap_mac), false);
+    TASK_LOG(DEBUG) << "radio_mac - " << radio_mac << " enter to cac pending";
+    hostaps_cac_pending.insert({tlvf::mac_to_string(radio_mac), std::chrono::steady_clock::now()});
+    database.set_hostap_cac_completed(radio_mac, false);
 
     // update bml listeners
     bml_task::cac_status_changed_notification_event cac_status_changed_event;
-    cac_status_changed_event.hostap_mac    = hostap_mac;
+    cac_status_changed_event.hostap_mac    = tlvf::mac_to_string(radio_mac);
     cac_status_changed_event.cac_completed = 0;
     tasks.push_event(database.get_bml_task_id(),
                      bml_task::CAC_STATUS_CHANGED_NOTIFICATION_EVENT_AVAILABLE,
                      &cac_status_changed_event);
 
     //inject event to check for cac completed.
-    TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac << " inject cac sample event";
+    TASK_LOG(DEBUG) << "radio_mac - " << radio_mac << " inject cac sample event";
     auto new_event             = CHANNEL_SELECTION_ALLOCATE_EVENT(sDfsCacPendinghostap_event);
-    new_event->hostap_mac      = tlvf::mac_from_string(hostap_mac);
+    new_event->hostap_mac      = radio_mac;
     new_event->timeout_expired = false;
-    TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
+    TASK_LOG(DEBUG) << "radio_mac - " << radio_mac
                     << " timeout_expired = " << int(new_event->timeout_expired);
     tasks.push_event(database.get_channel_selection_task_id(),
                      (int)channel_selection_task::eEvent::DFS_CAC_PENDING_HOSTAP_EVENT,
@@ -1763,15 +1766,17 @@ void channel_selection_task::assign_config_global_restricted_channel_to_db()
 }
 void channel_selection_task::run_optimal_path_for_connected_clients()
 {
-    auto hostaps_sibling = database.get_node_siblings(hostap_mac, beerocks::TYPE_SLAVE);
-    auto hostap_mac_2g   = std::find_if(
+    auto hostaps_sibling =
+        database.get_node_siblings(tlvf::mac_to_string(radio_mac), beerocks::TYPE_SLAVE);
+    auto hostap_mac_2g = std::find_if(
         std::begin(hostaps_sibling), std::end(hostaps_sibling), [&](std::string hostap_sibling) {
             return (is_2G_channel(database.get_node_channel(hostap_sibling)) &&
                     database.is_hostap_active(tlvf::mac_from_string(hostap_sibling)));
         });
 
     if (hostap_mac_2g != std::end(hostaps_sibling)) {
-        auto dfs_reentry_clients = database.get_hostap_dfs_reentry_clients(hostap_mac);
+        auto dfs_reentry_clients =
+            database.get_hostap_dfs_reentry_clients(tlvf::mac_to_string(radio_mac));
         auto conn_clients =
             database.get_node_children(*hostap_mac_2g, TYPE_CLIENT, STATE_CONNECTED);
         for (auto &dfs_reentry_client : dfs_reentry_clients) {
