@@ -9,6 +9,7 @@
 #include "bml.h"
 #include "internal/bml_internal.h"
 
+#include <bcl/beerocks_logging.h>
 #include <bcl/beerocks_string_utils.h>
 #include <bcl/network/network_utils.h>
 #include <bcl/son/son_wireless_utils.h>
@@ -16,6 +17,35 @@
 #include <easylogging++.h>
 
 using namespace beerocks::net;
+
+int bml_configure_external_logging(const char *beerocks_conf_dir_path,
+                                   const unsigned int path_length, const char *module_name,
+                                   const unsigned int module_name_length)
+{
+    if (!beerocks_conf_dir_path || (path_length == 0) || !module_name ||
+        (module_name_length == 0)) {
+        std::cout << "ERROR! Failed to configure BML logging - Invalid input!" << std::endl;
+        return (-BML_RET_INVALID_ARGS);
+    }
+
+    // read controller config file
+    std::string controller_config_file_path =
+        std::string(beerocks_conf_dir_path) + "/" + std::string(BEEROCKS_CONTROLLER) +
+        ".conf"; //search first in platform-specific default directory
+    beerocks::config_file::sConfigMaster beerocks_controller_conf;
+    if (!beerocks::config_file::read_master_config_file(controller_config_file_path,
+                                                        beerocks_controller_conf)) {
+        return (-BML_RET_OP_FAILED);
+    }
+
+    beerocks::logging external_app_logger(module_name, beerocks_controller_conf.sLog);
+    // Init logger
+    external_app_logger.apply_settings();
+
+    LOG(DEBUG) << "BML logger configuration completed successfully";
+
+    return (BML_RET_OK);
+}
 
 int bml_connect(BML_CTX *ctx, const char *beerocks_conf_path, void *user_data)
 {
