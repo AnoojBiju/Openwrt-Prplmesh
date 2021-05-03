@@ -16,6 +16,22 @@ extern "C" {
 #include "bml_defs.h"
 
 /**
+ * @brief Configure Logging Preference for BML for external application.
+ * External C application cannot use the beerocks::logging class in order to configure the logging
+ * mechanism of the BML library. This API defines the beerocks::logging internally and can be used by
+ * external c-applications that link to the BML library to configure the logger.
+ * 
+ * @param beerocks_conf_dir_path Full path to the directory in which the configuration file is located.
+ * @param path_length Length of the provided path string.
+ * @param module_name Name of the module that will be used in the log prints.
+ * @param module_name_length Length of the provided module name string.
+ * @return BML_RET_OK on success.
+ */
+int bml_configure_external_logging(const char *beerocks_conf_dir_path,
+                                   const unsigned int path_length, const char *module_name,
+                                   const unsigned int module_name_length);
+
+/**
  * Initialize the BML library and connect to Beerocks.
  *
  * @param [out] ctx BML Context.
