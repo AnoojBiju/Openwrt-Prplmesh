@@ -955,8 +955,7 @@ void channel_selection_task::work()
         break;
     }
     case eState::STEER_STA_BACK_AFTER_DFS_REENTRY: {
-        auto set_reentry_clients =
-            database.get_hostap_dfs_reentry_clients(tlvf::mac_to_string(radio_mac));
+        auto set_reentry_clients = database.get_hostap_dfs_reentry_clients(radio_mac);
         if (set_reentry_clients.empty()) {
             TASK_LOG(DEBUG) << "radio_mac - " << radio_mac
                             << "no dfs_reentry_clients - not supposed to happen!!!";
@@ -1774,8 +1773,7 @@ void channel_selection_task::run_optimal_path_for_connected_clients()
         });
 
     if (hostap_mac_2g != std::end(hostaps_sibling)) {
-        auto dfs_reentry_clients =
-            database.get_hostap_dfs_reentry_clients(tlvf::mac_to_string(radio_mac));
+        auto dfs_reentry_clients = database.get_hostap_dfs_reentry_clients(radio_mac);
         auto conn_clients =
             database.get_node_children(*hostap_mac_2g, TYPE_CLIENT, STATE_CONNECTED);
         for (auto &dfs_reentry_client : dfs_reentry_clients) {
