@@ -1940,7 +1940,7 @@ bool Controller::handle_intel_slave_join(
 
     std::string slave_version =
         std::string(notification->slave_version(beerocks::message::VERSION_LENGTH));
-    std::string radio_mac = tlvf::mac_to_string(notification->hostap().iface_mac);
+    sMacAddr radio_mac = notification->hostap().iface_mac;
     std::string gw_ipv4 =
         beerocks::net::network_utils::ipv4_to_string(notification->backhaul_params().gw_ipv4);
     std::string gw_bridge_mac = tlvf::mac_to_string(notification->backhaul_params().gw_bridge_mac);
@@ -2185,7 +2185,7 @@ bool Controller::handle_intel_slave_join(
 
     bool local_master = (bool)notification->platform_settings().local_master;
     if (local_master) {
-        database.set_local_slave_mac(radio_mac);
+        database.set_local_slave_mac(tlvf::mac_to_string(radio_mac));
         LOG(DEBUG) << "local_slave_mac = " << radio_mac;
 #ifdef BEEROCKS_RDKB
         LOG(DEBUG) << "platform rdkb_extensions_enabled="
@@ -2223,21 +2223,20 @@ bool Controller::handle_intel_slave_join(
     /*
     * handle the HOSTAP node
     */
-    auto mac = tlvf::mac_from_string(radio_mac);
-    if (database.has_node(mac)) {
-        if (database.get_node_type(radio_mac) != beerocks::TYPE_SLAVE) {
-            database.set_node_type(radio_mac, beerocks::TYPE_SLAVE);
+    if (database.has_node(radio_mac)) {
+        if (database.get_node_type(tlvf::mac_to_string(radio_mac)) != beerocks::TYPE_SLAVE) {
+            database.set_node_type(tlvf::mac_to_string(radio_mac), beerocks::TYPE_SLAVE);
             LOG(ERROR) << "Existing mac node is not TYPE_SLAVE";
         }
-        database.clear_hostap_stats_info(mac);
+        database.clear_hostap_stats_info(radio_mac);
     } else {
-        database.add_node_radio(mac, tlvf::mac_from_string(bridge_mac),
+        database.add_node_radio(radio_mac, tlvf::mac_from_string(bridge_mac),
                                 tlvf::mac_from_string(radio_identifier));
     }
-    database.set_hostap_is_acs_enabled(mac, acs_enabled);
+    database.set_hostap_is_acs_enabled(radio_mac, acs_enabled);
 
     if (!notification->is_slave_reconf()) {
-        son_actions::set_hostap_active(database, tasks, radio_mac,
+        son_actions::set_hostap_active(database, tasks, tlvf::mac_to_string(radio_mac),
                                        false); // make sure AP is marked as not active
     }
 
@@ -2245,44 +2244,45 @@ bool Controller::handle_intel_slave_join(
         // clear backhaul manager flag for all slaves except for this backhaul_manager slave
         auto ire_hostaps = database.get_node_children(bridge_mac, beerocks::TYPE_SLAVE);
         for (auto tmp_slave_mac : ire_hostaps) {
-            if (tmp_slave_mac != radio_mac) {
+            if (tlvf::mac_from_string(tmp_slave_mac) != radio_mac) {
                 database.set_hostap_backhaul_manager(tlvf::mac_from_string(tmp_slave_mac), false);
             }
         }
     }
-    database.set_hostap_backhaul_manager(mac, backhaul_manager);
+    database.set_hostap_backhaul_manager(radio_mac, backhaul_manager);
 
-    database.set_node_state(radio_mac, beerocks::STATE_CONNECTED);
-    database.set_node_backhaul_iface_type(radio_mac, is_gw_slave ? beerocks::IFACE_TYPE_GW_BRIDGE
-                                                                 : beerocks::IFACE_TYPE_BRIDGE);
-    database.set_hostap_iface_name(mac, notification->hostap().iface_name);
-    database.set_hostap_iface_type(mac, hostap_iface_type);
-    database.set_hostap_driver_version(mac, notification->hostap().driver_version);
+    database.set_node_state(tlvf::mac_to_string(radio_mac), beerocks::STATE_CONNECTED);
+    database.set_node_backhaul_iface_type(tlvf::mac_to_string(radio_mac),
+                                          is_gw_slave ? beerocks::IFACE_TYPE_GW_BRIDGE
+                                                      : beerocks::IFACE_TYPE_BRIDGE);
+    database.set_hostap_iface_name(radio_mac, notification->hostap().iface_name);
+    database.set_hostap_iface_type(radio_mac, hostap_iface_type);
+    database.set_hostap_driver_version(radio_mac, notification->hostap().driver_version);
 
-    database.set_hostap_ant_num(mac, (beerocks::eWiFiAntNum)notification->hostap().ant_num);
-    database.set_hostap_ant_gain(mac, notification->hostap().ant_gain);
-    database.set_hostap_tx_power(mac, notification->hostap().tx_power);
+    database.set_hostap_ant_num(radio_mac, (beerocks::eWiFiAntNum)notification->hostap().ant_num);
+    database.set_hostap_ant_gain(radio_mac, notification->hostap().ant_gain);
+    database.set_hostap_tx_power(radio_mac, notification->hostap().tx_power);
 
-    database.set_node_name(radio_mac, slave_name + "_AP");
-    database.set_node_ipv4(radio_mac, bridge_ipv4);
-    database.set_node_manufacturer(radio_mac, "Intel");
+    database.set_node_name(tlvf::mac_to_string(radio_mac), slave_name + "_AP");
+    database.set_node_ipv4(tlvf::mac_to_string(radio_mac), bridge_ipv4);
+    database.set_node_manufacturer(tlvf::mac_to_string(radio_mac), "Intel");
 
-    if (database.get_node_5ghz_support(radio_mac)) {
+    if (database.get_node_5ghz_support(tlvf::mac_to_string(radio_mac))) {
         if (notification->low_pass_filter_on()) {
-            database.set_hostap_band_capability(mac, beerocks::LOW_SUBBAND_ONLY);
+            database.set_hostap_band_capability(radio_mac, beerocks::LOW_SUBBAND_ONLY);
         } else {
-            database.set_hostap_band_capability(mac, beerocks::BOTH_SUBBAND);
+            database.set_hostap_band_capability(radio_mac, beerocks::BOTH_SUBBAND);
         }
     } else {
-        database.set_hostap_band_capability(mac, beerocks::SUBBAND_CAPABILITY_UNKNOWN);
+        database.set_hostap_band_capability(radio_mac, beerocks::SUBBAND_CAPABILITY_UNKNOWN);
     }
-    autoconfig_wsc_parse_radio_caps(mac, radio_caps);
+    autoconfig_wsc_parse_radio_caps(radio_mac, radio_caps);
 
-    if (tasks.is_task_running(database.get_dynamic_channel_selection_task_id(mac))) {
-        LOG(DEBUG) << "dynamic channel selection task already running for " << mac;
+    if (tasks.is_task_running(database.get_dynamic_channel_selection_task_id(radio_mac))) {
+        LOG(DEBUG) << "dynamic channel selection task already running for " << radio_mac;
     } else {
         auto new_task =
-            std::make_shared<dynamic_channel_selection_task>(database, cmdu_tx, tasks, mac);
+            std::make_shared<dynamic_channel_selection_task>(database, cmdu_tx, tasks, radio_mac);
         tasks.add_task(new_task);
     }
 
@@ -2343,7 +2343,7 @@ bool Controller::handle_intel_slave_join(
         cs_new_event->low_pass_filter_on   = notification->low_pass_filter_on();
         LOG(DEBUG) << "cs_new_event->low_pass_filter_on = " << int(cs_new_event->low_pass_filter_on)
                    << " cs_new_event = " << intptr_t(cs_new_event);
-        cs_new_event->hostap_mac = tlvf::mac_from_string(radio_mac);
+        cs_new_event->hostap_mac = radio_mac;
         cs_new_event->cs_params  = notification->cs_params();
 
         std::copy_n(notification->backhaul_params().backhaul_scan_measurement_list,
@@ -2367,7 +2367,7 @@ bool Controller::handle_intel_slave_join(
         if (database.settings_rdkb_extensions()) {
             LOG(DEBUG) << "rdkb_wlan_task,sending STEERING_SLAVE_JOIN for mac " << radio_mac;
             rdkb_wlan_task::steering_slave_join_event new_event{};
-            new_event.radio_mac = radio_mac;
+            new_event.radio_mac = tlvf::mac_to_string(radio_mac);
             tasks.push_event(database.get_rdkb_wlan_task_id(),
                              rdkb_wlan_task::events::STEERING_SLAVE_JOIN, &new_event);
         }
@@ -2377,12 +2377,12 @@ bool Controller::handle_intel_slave_join(
         // it is required to re-activate the AP in the nodes-map since it is set as not-active
         // when the topology-response not containing it is received by the controller.
         // When it joins the controller we need to activate it if not activated.
-        database.set_hostap_active(mac, true);
+        database.set_hostap_active(radio_mac, true);
     }
 
     //Update all (Slaves) last seen timestamp
-    if (database.get_node_type(radio_mac) == beerocks::TYPE_SLAVE) {
-        database.update_node_last_seen(radio_mac);
+    if (database.get_node_type(tlvf::mac_to_string(radio_mac)) == beerocks::TYPE_SLAVE) {
+        database.update_node_last_seen(tlvf::mac_to_string(radio_mac));
     }
 
     return true;
