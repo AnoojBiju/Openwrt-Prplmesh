@@ -1371,3 +1371,52 @@ bool network_utils::set_iface_vid_policy(const std::string &iface, bool del, uin
     }
     return true;
 }
+
+bool network_utils::set_vlan_packet_filter(bool set, const std::string &bss_iface, uint16_t vid)
+{
+    if (bss_iface.empty()) {
+        LOG(ERROR) << "Given BSS interface name is empty!";
+        return false;
+    }
+
+    // VID
+    if (vid < (MIN_VLAN_ID - 1) || vid > MAX_VLAN_ID) {
+        LOG(ERROR) << "Skip invalid VID: " << vid;
+        return false;
+    }
+
+    std::string cmd;
+    cmd.reserve(150);
+
+    cmd.append("ebtables -t nat ");
+
+    if (set) {
+        // Append rule.
+        cmd.append("-A ");
+    } else {
+        // Delete rule.
+        cmd.append("-D ");
+    }
+
+    cmd.append("PREROUTING -p 802_1q -j DROP -i ").append(bss_iface);
+    auto cmd_base_len = cmd.length();
+
+    if (vid != 0) {
+        // Filter packets carrying the vlan tag of the interface.
+        cmd.append(" --vlan-id ").append(std::to_string(vid));
+        auto ret_str = os_utils::system_call(cmd, 2, false);
+        if (!ret_str.empty()) {
+            LOG(DEBUG) << "Answer: " << ret_str;
+        }
+
+        cmd.erase(cmd_base_len);
+    }
+
+    // Filter double tagged packets which are encapsulated with a S-Tag.
+    cmd.append(" --vlan-encap 802_1Q");
+    auto ret_str = os_utils::system_call(cmd, 2, false);
+    if (!ret_str.empty()) {
+        LOG(DEBUG) << "Answer: " << ret_str;
+    }
+    return true;
+}
