@@ -916,18 +916,14 @@ bool base_wlan_hal_nl80211::send_nl80211_msg(uint8_t command, int flags,
         return NL_STOP;
     };
 
-    // Passing a lambda with capture is not supported for standard C function
-    // pointers. As a workaround, we create a static (but thread local) wrapper
-    // function that calls the capturing lambda function.
-    static __thread std::function<int(struct nl_msg * msg, void *arg)> nl_handler_cb_wrapper;
-    nl_handler_cb_wrapper = [&](struct nl_msg *msg, void *arg) -> int {
-        if (!msg_handle(msg)) {
+    // Response handler
+    auto nl_handler_cb = [](struct nl_msg *msg, void *arg) -> int {
+        // Delegate to the user's response message handling function
+        auto msg_handle = static_cast<std::function<bool(struct nl_msg * msg)> *>(arg);
+        if (!(*msg_handle)(msg)) {
             LOG(ERROR) << "User's netlink handler function failed!";
         }
         return NL_SKIP;
-    };
-    auto nl_handler_cb = [](struct nl_msg *msg, void *arg) -> int {
-        return nl_handler_cb_wrapper(msg, arg);
     };
 
     // Initialize the netlink message
@@ -943,12 +939,11 @@ bool base_wlan_hal_nl80211::send_nl80211_msg(uint8_t command, int flags,
         return false;
     }
 
-    // Set the callbacks
-    nl_cb_err(nl_callback.get(), NL_CB_CUSTOM, nl_err_cb, &err);                  // error
-    nl_cb_set(nl_callback.get(), NL_CB_FINISH, NL_CB_CUSTOM, nl_finish_cb, &err); // finish
-    nl_cb_set(nl_callback.get(), NL_CB_ACK, NL_CB_CUSTOM, nl_ack_cb, &err);       // ack
-    nl_cb_set(nl_callback.get(), NL_CB_VALID, NL_CB_CUSTOM, nl_handler_cb,
-              nullptr); // response handler
+    // Set the callbacks to handle the events fired by the Netlink library
+    nl_cb_err(nl_callback.get(), NL_CB_CUSTOM, nl_err_cb, &err);
+    nl_cb_set(nl_callback.get(), NL_CB_FINISH, NL_CB_CUSTOM, nl_finish_cb, &err);
+    nl_cb_set(nl_callback.get(), NL_CB_ACK, NL_CB_CUSTOM, nl_ack_cb, &err);
+    nl_cb_set(nl_callback.get(), NL_CB_VALID, NL_CB_CUSTOM, nl_handler_cb, &msg_handle);
 
     // Send the netlink message
     err = nl_send_auto_complete(m_nl80211_sock.get(), nl_message.get());
