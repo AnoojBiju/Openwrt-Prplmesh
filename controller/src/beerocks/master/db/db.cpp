@@ -2852,7 +2852,7 @@ bool db::set_hostap_dfs_reentry_clients(const sMacAddr &mac,
     return true;
 }
 
-std::set<std::string> db::get_hostap_dfs_reentry_clients(const std::string &mac)
+std::set<std::string> db::get_hostap_dfs_reentry_clients(const sMacAddr &mac)
 {
     auto n = get_node(mac);
 
