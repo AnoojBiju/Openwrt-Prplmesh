@@ -938,7 +938,7 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const std::string &src_m
         return false;
     }
     auto al_mac = tlvf::mac_to_string(m1->mac_addr());
-    auto ruid   = tlvf::mac_to_string(radio_basic_caps->radio_uid());
+    auto ruid   = radio_basic_caps->radio_uid();
     LOG(INFO) << "AP_AUTOCONFIGURATION_WSC M1 al_mac=" << al_mac << " ruid=" << ruid;
     LOG(DEBUG) << "   device " << m1->manufacturer() << " " << m1->model_name() << " "
                << m1->device_name() << " " << m1->serial_number();
@@ -961,7 +961,7 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const std::string &src_m
         return false;
     }
 
-    tlvRuid->radio_uid() = tlvf::mac_from_string(ruid);
+    tlvRuid->radio_uid() = ruid;
 
     const auto &bss_info_confs = database.get_bss_info_configuration(m1->mac_addr());
     uint8_t num_bsss           = 0;
@@ -1018,8 +1018,7 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const std::string &src_m
         // Multi-AP Agent doesn't say anything about the bridge, so we have to rely on Intel Slave Join for that.
         // We'll use AL-MAC as the bridge
         // TODO convert source address into AL-MAC address
-        if (!handle_non_intel_slave_join(src_mac, radio_basic_caps, *m1, al_mac,
-                                         tlvf::mac_from_string(ruid), cmdu_tx)) {
+        if (!handle_non_intel_slave_join(src_mac, radio_basic_caps, *m1, al_mac, ruid, cmdu_tx)) {
             LOG(ERROR) << "Non-Intel radio agent join failed (al_mac=" << al_mac << " ruid=" << ruid
                        << ")";
             return false;
