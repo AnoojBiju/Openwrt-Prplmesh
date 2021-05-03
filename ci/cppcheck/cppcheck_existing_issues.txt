@@ -53,7 +53,6 @@ controller/src/beerocks/cli/beerocks_cli_socket.cpp: performance: Function param
 controller/src/beerocks/cli/beerocks_cli_socket.cpp: performance: Function parameter 'temp_path_' should be passed by const reference. [passedByValue]cli_socket::cli_socket(std::string temp_path_, std::string proxy_ip_)
 controller/src/beerocks/master/beerocks_master_main.cpp: style: Parameter 'main_master_conf' can be declared with const [constParameter]                               beerocks::config_file::sConfigMaster &main_master_conf)
 controller/src/beerocks/master/beerocks_master_main.cpp: style: Variable 'bridge_iface' can be declared with const [constVariable]    auto &bridge_iface = beerocks_slave_conf.bridge_iface;
-controller/src/beerocks/master/controller.cpp: style: Parameter 'm1' can be declared with const [constParameter]    WSC::m1 &m1, std::string bridge_mac, std::string radio_mac, ieee1905_1::CmduMessageTx &cmdu_tx)
 controller/src/beerocks/master/controller_ucc_listener.cpp: style: Variable 'bit_5_str' can be declared with const [constVariable]    auto &bit_5_str = confs[7];
 controller/src/beerocks/master/controller_ucc_listener.cpp: style: Variable 'bit_6_str' can be declared with const [constVariable]    auto &bit_6_str = confs[6];
 controller/src/beerocks/master/controller_ucc_listener.cpp: style: Variable 'operating_class_str' can be declared with const [constVariable]    auto &operating_class_str = confs[1];
