@@ -10,8 +10,7 @@
   needs:
     - job: build-for-turris-omnia
   tags:
-    - certs-tests
-    - turris-omnia
+    - certs-tests-isr
 
 MAP-4.2.1:turris-omnia:
   extends: .certification:turris-omnia
