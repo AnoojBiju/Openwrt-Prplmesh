@@ -198,6 +198,10 @@ class Radio:
         '''Get the current tx_power information.'''
         raise NotImplementedError("get_power_limit is not implemented in abstract class Radio")
 
+    def update_vap_list(self):
+        ''' Initialize / update VAP list '''
+        pass
+
     def get_vap(self, ssid: str):
         for vap in self.vaps:
             if vap.get_ssid() == ssid:
@@ -861,18 +865,50 @@ class RadioHostapd(Radio):
         self.log_folder = agent.log_folder
         super().__init__(agent, mac)
 
-        # Find out amount of VAPs avalaible on device.
-        # If 0 - spawn one VAP to represent AP.
-        self.agent.device.sendline("ip link list | grep -c \"{}\\.\"".format(self.iface_name))
-        # Look for number of 1 or 2 digits surrounded by CRLF.
-        self.agent.device.expect("\r\n(?P<vaps>[0-9]{1,2})\r\n")
-        vap_amount = int(self.agent.device.match.group('vaps'))
-        if vap_amount == 0:
-            VirtualAPHostapd(self, mac)
-        else:
-            for vap_number in range(0, vap_amount):
-                vap_mac = self.get_mac("{}.{}".format(self.iface_name, vap_number))
-                VirtualAPHostapd(self, vap_mac)
+        self.update_vap_list()
+
+    def update_vap_list(self):
+        iface_name = self.iface_name
+
+        self.vaps = []
+
+        output = self.agent.command(f'iwinfo | grep ^{iface_name} | cut -d " " -f 1')
+        # Workaround.
+        # `command` includes command as a part of output,
+        # so we need to search by `iface_name` once more.
+        vap_candidates = [vap for vap in output.split() if re.search(f'^{iface_name}', vap)]
+
+        debug("vap candidates : " + " * ".join(vap_candidates))
+
+        for vap_iface in vap_candidates:
+            iwinfo_output = self.agent.command(f'iw dev {vap_iface} info')
+
+            if re.search('dummy_ssid', iwinfo_output):
+                # On MaxLinear devices (e.g. Netgear RAX40) wlan0 and wlan2 are dummy interfaces.
+                # They are not VAPs.
+                # These interfaces have SSIDs "dummy_ssid_0" and "dummy_ssid_2".
+                debug(f"Skip {vap_iface} since it has dummy SSID")
+                continue
+
+            if not re.search('type AP', iwinfo_output):
+                # Skip backhaul/station interfaces.
+                debug(f"Skip {vap_iface} since it is a station interface")
+                continue
+
+            debug(f"Add {vap_iface} to the list of VAPs")
+
+            vap_mac = self.get_mac(vap_iface)
+            VirtualAPHostapd(self, vap_mac)
+
+        if len(self.vaps) == 1:
+            # On RAX40 wlan2 has no SSID until it obtains real VAPs
+            # wlan2 is not a VAP itself, remove it.
+            #
+            # TODO: PPM-1312: find a better way to detect this.
+            self.vaps = []
+
+        vaps = [vap.iface for vap in self.vaps]
+        debug("Radio {} has following VAPs: {}".format(iface_name, " ".join(vaps)))
 
     def wait_for_log(self, regex: str, start_line: int, timeout: float,
                      fail_on_mismatch: bool = True):
@@ -928,11 +964,13 @@ class VirtualAPHostapd(VirtualAP):
         # We are looking for SSID definition
         # ssid Multi-AP-24G-1
         # type AP
-        regex = "ssid (?P<ssid>.*)\r\n\ttype AP\r\n\t"
+        regex = r"addr ..:..:..:..:..:..\r\n\t(ssid (?P<ssid>.*)\r\n\t)?type AP\r\n\t"
 
         output = self.radio.agent.command(command)
         match = re.search(regex, output)
-        return match.group('ssid')
+
+        ssid = match.group('ssid')
+        return 'N/A' if ssid is None else ssid
 
     def get_psk(self) -> str:
         """Get SSIDs personal key set during last autoconfiguration. Return string"""
