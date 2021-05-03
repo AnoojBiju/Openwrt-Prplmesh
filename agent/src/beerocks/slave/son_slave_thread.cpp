@@ -4754,16 +4754,28 @@ bool slave_thread::handle_profile2_default_802dotq_settings_tlv(ieee1905_1::Cmdu
         return false;
     }
 
+    /**
+     * The traffic separation policy can be set on the autoconfiguration message which is sent
+     * separately to each radio.
+     * There could be a scenario in which a radio gets some configuration TLV, and then the other
+     * radio gets not configuration TLV which will cause to reset the configuration.
+     * Added protection that creates a timezone of 5 seconds in which the configuration cannot be
+     * overridden if configuration TLV is not found.
+     */
+    constexpr uint8_t TRAFFIC_SEPRATION_CONFIGURATION_PROTECTION_SEC = 5;
+    bool protect_conf = std::chrono::steady_clock::now() <
+                        db->traffic_separation.timestamp +
+                            std::chrono::seconds(TRAFFIC_SEPRATION_CONFIGURATION_PROTECTION_SEC);
+
     auto dot1q_settings = cmdu_rx.getClass<wfa_map::tlvProfile2Default802dotQSettings>();
     // tlvProfile2Default802dotQSettings is not mandatory.
-    if (!dot1q_settings) {
+    if (!dot1q_settings && !protect_conf) {
         LOG(INFO) << "No tlvProfile2Default802dotQSettings, setting Primary VLAN ID to 0!";
         // If no primary VLAN has been configured, set it to zero.
         db->traffic_separation.primary_vlan_id = 0;
         db->traffic_separation.default_pcp     = 0;
 
         pvid_set_request->primary_vlan_id() = 0;
-        // TODO: Remove VLAN filtering from the bridge.
         return true;
     }
 
@@ -4775,17 +4787,10 @@ bool slave_thread::handle_profile2_default_802dotq_settings_tlv(ieee1905_1::Cmdu
 
     pvid_set_request->primary_vlan_id() = dot1q_settings->primary_vlan_id();
 
+    db->traffic_separation.timestamp = std::chrono::steady_clock::now();
+
     // Send ACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST.
     message_com::send_cmdu(ap_manager_socket, cmdu_tx);
-
-    // TODO:
-    // - Configure L2 to bridge filtering with Primary VLAN ID
-    // - Create VLAN to the bridge
-    // - On repeater/extender add to bSTA interfaces the primary VLAN ID
-    //   (not pvid and tagged mode):
-    if (!db->device_conf.local_gw) {
-        // TODO
-    }
 
     return true;
 }

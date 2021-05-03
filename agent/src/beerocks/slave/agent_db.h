@@ -317,6 +317,16 @@ public:
         uint16_t primary_vlan_id;
         uint8_t default_pcp;
         std::unordered_set<uint16_t> secondary_vlans_ids;
+
+        /**
+         * Timestamp of the traffic separation configuration time.
+         * Need to save it, since the controller might send to one radio a configuration and to the
+         * other radio not send, which will end up clearing the the configuration of the previously 
+         * configured settings.
+         * Saving the timestamp is used to creat a time zone of which the configuration could not
+         * be overwritten.
+         */
+        std::chrono::steady_clock::time_point timestamp;
     } traffic_separation;
 
     struct {
