@@ -208,7 +208,7 @@ bool ap_wlan_hal_dummy::update_vap_credentials(
             return false;
         }
 
-        LOG(DEBUG) << "Received credentials for ssid: " << bss_info_conf.ssid
+        LOG(DEBUG) << "Autoconfiguration for ssid: " << bss_info_conf.ssid
                    << " auth_type: " << auth_type << " encr_type: " << enc_type
                    << " network_key: " << bss_info_conf.network_key
                    << " fronthaul: " << beerocks::string_utils::bool_str(bss_info_conf.fronthaul)
