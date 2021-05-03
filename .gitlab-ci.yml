@@ -262,6 +262,13 @@ run-certification-tests-prplmesh-isr:
   rules:
     - if: '$TESTS_TO_RUN_ISR !~ /^\$/ && $DEVICE_UNDER_TEST_ISR == "prplmesh"'
 
+testing-altran-runner:
+  stage: platform
+  script:
+    - echo "hello world"
+  tags:
+    - test_flows_on_altran
+
 upload-artifacts:
   stage: upload
   extends: .in-prplmesh-builder
