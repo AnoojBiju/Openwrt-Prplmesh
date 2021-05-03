@@ -1,7 +1,7 @@
 #!/bin/sh -e
 ###############################################################
 # SPDX-License-Identifier: BSD-2-Clause-Patent
-# SPDX-FileCopyrightText: 2019-2020 the prplMesh contributors (see AUTHORS.md)
+# SPDX-FileCopyrightText: 2019-2021 the prplMesh contributors (see AUTHORS.md)
 # This code is subject to the terms of the BSD+Patent license.
 # See LICENSE file for more details.
 ###############################################################
@@ -36,6 +36,9 @@ build_image() {
         err "RDK_GIT_TOKEN not set, can't clone RDK-B!"
         exit 1
     fi
+
+    # Docker doesn't allow symlinks pointing outside of the directory, so we need to copy it
+    cp "${rootdir}/tools/get-git-hash.sh" "$scriptdir"
     docker build --tag "$image_tag" \
            --build-arg RDK_GIT_USER="$RDK_GIT_USER" \
            --build-arg RDK_GIT_TOKEN="$RDK_GIT_TOKEN" \
@@ -48,6 +51,14 @@ build_prplmesh() {
     build_dir="$1"
     mkdir -p "$build_dir"
     mkdir -p "${CACHE_DIR}/downloads" "${CACHE_DIR}/sstate-cache"
+    # Sometimes, the git cache gets corrupted: the directory is there, but it's not a git directory.
+    # Run fsck on all git directories to overcome this.
+    for dir in "${CACHE_DIR}/downloads/git2"/*/; do
+        if ! (cd "$dir"; git rev-parse --is-inside-work-tree >/dev/null 2>&1); then
+            echo "Remove broken git cache $dir"
+            rm -rf "$dir"
+        fi
+    done
     # Make sure prplmesh is rebuilt
     rm -f "${CACHE_DIR}/"sstate-cache/*/sstate:prplmesh*
     docker run --rm --user "$(id -u):$(id -g)" \
