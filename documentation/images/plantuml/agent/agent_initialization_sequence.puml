@@ -71,6 +71,8 @@ backhaul_manager -> transport: configure_al_mac()
 backhaul_manager -> transport: configure_interfaces()
 backhaul_manager -> backhaul_manager: goto WAIT_FOR_AUTOCONFIG_COMPLETE
 note right of backhaul_manager: AP Autoconfiguration Task
+backhaul_manager -> son_slave: ACTION_BACKHAUL_CONNECTED_NOTIFICATION
+son_slave -> son_slave: goto STATE_BACKHAUL_MANAGER_CONNECTED
 ...
 backhaul_manager -> backhaul_manager: goto CONNECT_TO_MASTER
 backhaul_manager -> backhaul_manager: goto CONNECTED
