@@ -1,6 +1,7 @@
 version: '3.5'
 
 networks:
+    # Note that the network names are used by dctest.py's clean option.
     prplmesh:
         name: prplMesh-net-$RUN_ID
         driver: bridge
