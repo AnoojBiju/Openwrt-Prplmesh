@@ -911,8 +911,7 @@ void channel_selection_task::work()
         }
         TASK_LOG(DEBUG) << "radio_mac - " << radio_mac
                         << " client connected to reentry hostap steering to 2.4 hostap ";
-        database.set_hostap_dfs_reentry_clients(tlvf::mac_to_string(radio_mac),
-                                                set_reentry_clients);
+        database.set_hostap_dfs_reentry_clients(radio_mac, set_reentry_clients);
         auto hostaps_sibling =
             database.get_node_siblings(tlvf::mac_to_string(radio_mac), beerocks::TYPE_SLAVE);
         auto hostap_mac_2g = std::find_if(

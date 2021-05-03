@@ -2831,7 +2831,7 @@ bool db::get_hostap_on_dfs_reentry(const sMacAddr &mac)
     return n->hostap->on_dfs_reentry;
 }
 
-bool db::set_hostap_dfs_reentry_clients(const std::string &mac,
+bool db::set_hostap_dfs_reentry_clients(const sMacAddr &mac,
                                         const std::set<std::string> &dfs_reentry_clients)
 {
     auto n = get_node(mac);
