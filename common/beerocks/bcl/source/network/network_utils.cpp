@@ -1374,3 +1374,55 @@ bool network_utils::set_iface_vid_policy(const std::string &iface, bool del, uin
     os_utils::system_call(cmd, 2, false);
     return true;
 }
+
+bool network_utils::set_vlan_packet_filter(bool set, const std::string &bss_iface, uint16_t vid)
+{
+    if (bss_iface.empty()) {
+        LOG(ERROR) << "Given BSS interface name is empty!";
+        return false;
+    }
+
+    // VID
+    if (vid > MAX_VLAN_ID) {
+        LOG(ERROR) << "Skip invalid VID: " << vid;
+        return false;
+    }
+
+    // Command example:
+    // ebtables -t <table> -{A (Append)|D (Delete)} <Chain> [-p <protocol>]
+    // [-J <jump target {ACCEPT|DROP|CONTINUE|RETURN}>] [-i <iface>]
+    // If "-p 802_1q":
+    //      [--vlan-id <vid>] [--vlan-encap <protocol>]
+
+    // Using like this:
+    // ebtables -t nat -{A|D} PREROUTING -p 802_1Q -j DROP -i <iface> --vlan-id <vid>
+    // ebtables -t nat -{A|D} PREROUTING -p 802_1Q -j DROP -i <iface> --vlan-encap 802_1Q
+
+    std::string cmd;
+    cmd.reserve(150);
+
+    cmd.append("ebtables -t nat ");
+
+    if (set) {
+        // Append rule.
+        cmd.append("-A ");
+    } else {
+        // Delete rule.
+        cmd.append("-D ");
+    }
+
+    cmd.append("PREROUTING -p 802_1Q -j DROP -i ").append(bss_iface);
+    auto cmd_base_len = cmd.length();
+
+    if (vid != 0) {
+        // Filter packets carrying the VLAN tag of the interface.
+        cmd.append(" --vlan-id ").append(std::to_string(vid));
+        os_utils::system_call(cmd, 2, false);
+        cmd.erase(cmd_base_len);
+    }
+
+    // Filter double-tagged packets that are encapsulated with an S-Tag.
+    cmd.append(" --vlan-encap 802_1Q");
+    os_utils::system_call(cmd, 2, false);
+    return true;
+}
