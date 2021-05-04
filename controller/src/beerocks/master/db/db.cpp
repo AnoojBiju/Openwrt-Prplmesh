@@ -2701,7 +2701,7 @@ bool db::set_hostap_activity_mode(const std::string &mac, eApActiveMode ap_activ
     return true;
 }
 
-beerocks::eApActiveMode db::get_hostap_activity_mode(const std::string &mac)
+beerocks::eApActiveMode db::get_hostap_activity_mode(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2713,7 +2713,7 @@ beerocks::eApActiveMode db::get_hostap_activity_mode(const std::string &mac)
     return n->hostap->ap_activity_mode;
 }
 
-bool db::set_radar_hit_stats(const std::string &mac, uint8_t channel, uint8_t bw, bool is_csa_entry)
+bool db::set_radar_hit_stats(const sMacAddr &mac, uint8_t channel, uint8_t bw, bool is_csa_entry)
 {
     std::shared_ptr<node> n = get_node(mac);
 
@@ -2755,7 +2755,7 @@ bool db::set_radar_hit_stats(const std::string &mac, uint8_t channel, uint8_t bw
     return true;
 }
 
-bool db::set_supported_channel_radar_affected(const std::string &mac,
+bool db::set_supported_channel_radar_affected(const sMacAddr &mac,
                                               const std::vector<uint8_t> &channels, bool affected)
 {
     std::shared_ptr<node> n = get_node(mac);
@@ -2814,7 +2814,7 @@ bool db::set_hostap_is_dfs(const std::string &mac, bool enable)
     return true;
 }
 
-bool db::get_hostap_is_dfs(const std::string &mac)
+bool db::get_hostap_is_dfs(const sMacAddr &mac)
 {
     auto n = get_node(mac);
 
@@ -2844,7 +2844,7 @@ bool db::set_hostap_cac_completed(const std::string &mac, bool enable)
     return true;
 }
 
-bool db::get_hostap_cac_completed(const std::string &mac)
+bool db::get_hostap_cac_completed(const sMacAddr &mac)
 {
     std::shared_ptr<node> n = get_node(mac);
 
@@ -2858,69 +2858,8 @@ bool db::get_hostap_cac_completed(const std::string &mac)
 
     return n->hostap->cac_completed;
 }
-bool db::set_hostap_is_on_fail_safe(const std::string &mac, bool enable)
-{
-    std::shared_ptr<node> n = get_node(mac);
 
-    if (!n) {
-        LOG(ERROR) << "node not found.... ";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(ERROR) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return false;
-    }
-
-    n->hostap->on_fail_safe_channel = enable;
-    return true;
-}
-
-bool db::get_hostap_is_on_fail_safe(const std::string &mac)
-{
-    std::shared_ptr<node> n = get_node(mac);
-
-    if (!n) {
-        LOG(ERROR) << "node not found.... ";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(ERROR) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return false;
-    }
-
-    return n->hostap->on_fail_safe_channel;
-}
-
-bool db::set_hostap_is_on_sub_band(const std::string &mac, bool enable)
-{
-    std::shared_ptr<node> n = get_node(mac);
-
-    if (!n) {
-        LOG(ERROR) << "node not found.... ";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(ERROR) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return false;
-    }
-
-    n->hostap->on_sub_band_channel = enable;
-    return true;
-}
-
-bool db::get_hostap_is_on_sub_band(const std::string &mac)
-{
-    std::shared_ptr<node> n = get_node(mac);
-
-    if (!n) {
-        LOG(ERROR) << "node not found.... ";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(ERROR) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return false;
-    }
-
-    return n->hostap->on_sub_band_channel;
-}
-
-bool db::set_hostap_on_dfs_reentry(const std::string &mac, bool enable)
+bool db::set_hostap_on_dfs_reentry(const sMacAddr &mac, bool enable)
 {
     auto n = get_node(mac);
 
@@ -2936,7 +2875,7 @@ bool db::set_hostap_on_dfs_reentry(const std::string &mac, bool enable)
     return true;
 }
 
-bool db::get_hostap_on_dfs_reentry(const std::string &mac)
+bool db::get_hostap_on_dfs_reentry(const sMacAddr &mac)
 {
     auto n = get_node(mac);
 
@@ -2991,7 +2930,7 @@ std::set<std::string> db::get_hostap_dfs_reentry_clients(const std::string &mac)
     return n->hostap->dfs_reentry_clients;
 }
 
-bool db::clear_hostap_dfs_reentry_clients(const std::string &mac)
+bool db::clear_hostap_dfs_reentry_clients(const sMacAddr &mac)
 {
     auto n = get_node(mac);
 

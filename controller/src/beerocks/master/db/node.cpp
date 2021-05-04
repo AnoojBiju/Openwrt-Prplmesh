@@ -167,8 +167,6 @@ std::ostream &operator<<(std::ostream &os, const node &n)
            << " ChannelBandwidth: " << int(n.bandwidth) << std::endl
            << " ChannelExtAboveSecondary: " << bool(n.channel_ext_above_secondary) << std::endl
            << " cac_completed: " << bool(n.hostap->cac_completed) << std::endl
-           << " on_fail_safe_channel: " << bool(n.hostap->on_fail_safe_channel) << std::endl
-           << " on_sub_band_channel: " << bool(n.hostap->on_sub_band_channel) << std::endl
            << " on_dfs_reentry: " << bool(n.hostap->on_dfs_reentry) << std::endl
            << " ap_activity_mode: "
            << ((uint8_t(n.hostap->ap_activity_mode)) ? "AP_ACTIVE_MODE" : "AP_IDLE_MODE")
