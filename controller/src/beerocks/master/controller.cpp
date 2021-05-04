@@ -3262,6 +3262,9 @@ bool Controller::handle_cmdu_control_message(
                            << ", update is invalid!";
                 continue;
             }
+            // Note: The Database node stats and the Datamodels' stats are not the same.
+            // Therefore, client information in data model and in node DB might differ.
+            database.set_node_stats_info(sta_stats.mac, &sta_stats);
         }
 
         if (response->ap_stats_size() == 0) {
