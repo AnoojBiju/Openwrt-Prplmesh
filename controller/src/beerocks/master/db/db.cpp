@@ -386,7 +386,7 @@ bool db::add_node_client(const sMacAddr &mac, const sMacAddr &parent_mac,
         return false;
     }
     // Add the MAC to the association event */
-    if (!dm_add_association_event(parent_mac, mac)) {
+    if (dm_add_association_event(parent_mac, mac).empty()) {
         LOG(ERROR) << "Failed to add association event, mac: " << mac;
     }
 
@@ -1797,23 +1797,33 @@ bool db::set_station_capabilities(const std::string &client_mac,
 
     // TODO: Fill up HE Capabilities for STA, PPM-567
 
-    // Prepare path to AssociationEvent.AssocData object
-    std::string path_to_eventdata = "Controller.Notification.AssociationEvent.AssocData.";
+    std::string path_to_eventdata =
+        "Controller.Notification.AssociationEvent.AssociationEventData.";
+    int index = m_assoc_indx[client_mac].back();
+
+    if (index) {
+        path_to_eventdata += std::to_string(index) + '.';
+    } else {
+        path_to_eventdata = dm_add_association_event(tlvf::mac_from_string(parent_radio),
+                                                     tlvf::mac_from_string(client_mac));
+        if (path_to_eventdata.empty()) {
+            return false;
+        }
+    }
 
     // Remove previous entry
     m_ambiorix_datamodel->remove_optional_subobject(path_to_eventdata, "HTCapabilities");
     m_ambiorix_datamodel->remove_optional_subobject(path_to_eventdata, "VHTCapabilities");
     // TODO: Remove HECapabilities before setting new one.
 
-    // Fill up HT Capabilities for Controller.Notification.AssociationEvent.AssocData
+    // Fill up HT Capabilities for Controller.Notification.AssociationEvent.AssociationEventData.1
     if (sta_cap.ht_bw != 0xFF && !dm_set_sta_ht_capabilities(path_to_eventdata, sta_cap)) {
         LOG(ERROR) << "Failed to set station HT Capabilities into " << path_to_eventdata;
         return false;
     }
-
-    // Fill up VHT Capabilities for Controller.Notification.AssociationEvent.AssocData
+    // Fill up VHT Capabilities for Controller.Notification.AssociationEvent.AssociationEventData.1
     if (sta_cap.vht_bw != 0xFF && !dm_set_sta_vht_capabilities(path_to_eventdata, sta_cap)) {
-        LOG(ERROR) << "Failed to set station VHT Capabilities";
+        LOG(ERROR) << "Failed to set station VHT Capabilities into " << path_to_eventdata;
         return false;
     }
 
@@ -4391,15 +4401,35 @@ bool db::notify_disconnection(const std::string &client_mac)
         return false;
     }
 
-    std::string path_to_eventdata = "Controller.Notification.DisassociationEvent.DisassocData.";
+    std::string path_to_disassoc_event_data =
+        "Controller.Notification.DisassociationEvent.DisassociationEventData";
 
-    if (!m_ambiorix_datamodel->set(path_to_eventdata, "BSSID", n->parent_mac)) {
-        LOG(ERROR) << "Failed to set " << path_to_eventdata << "BSSID: " << n->parent_mac;
-        return false;
+    while (MAX_EVENT_HISTORY_SIZE <= m_disassoc_events.size()) {
+        uint32_t indx = m_disassoc_events.front();
+
+        if (!m_ambiorix_datamodel->remove_instance(path_to_disassoc_event_data, indx)) {
+            LOG(ERROR) << "Failed to remove " << path_to_disassoc_event_data << indx
+                       << " instance.";
+        }
+        m_disassoc_events.pop();
     }
 
+    std::string path_to_eventdata = m_ambiorix_datamodel->add_instance(path_to_disassoc_event_data);
+
+    if (path_to_eventdata.empty()) {
+        return false;
+    }
+    auto index = get_dm_index_from_path(path_to_eventdata);
+
+    if (index.second) {
+        m_disassoc_events.push(index.second);
+    }
+    if (!m_ambiorix_datamodel->set(path_to_eventdata, "BSSID", n->parent_mac)) {
+        LOG(ERROR) << "Failed to set " << path_to_eventdata << ".BSSID: " << n->parent_mac;
+        return false;
+    }
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "MACAddress", client_mac)) {
-        LOG(ERROR) << "Failed to set " << path_to_eventdata << "MACAddress: " << client_mac;
+        LOG(ERROR) << "Failed to set " << path_to_eventdata << ".MACAddress: " << client_mac;
         return false;
     }
 
@@ -4411,32 +4441,32 @@ bool db::notify_disconnection(const std::string &client_mac)
     */
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "ReasonCode", static_cast<uint32_t>(1))) {
         LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << "ReasonCode: " << static_cast<uint32_t>(1);
+                   << ".ReasonCode: " << static_cast<uint32_t>(1);
         return false;
     }
 
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "BytesSent", n->stats_info->tx_bytes)) {
         LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << "BytesSent: " << n->stats_info->tx_bytes;
+                   << ".BytesSent: " << n->stats_info->tx_bytes;
         return false;
     }
 
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "BytesReceived", n->stats_info->rx_bytes)) {
         LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << "BytesReceived: " << n->stats_info->rx_bytes;
+                   << ".BytesReceived: " << n->stats_info->rx_bytes;
         return false;
     }
 
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "PacketsSent", n->stats_info->tx_packets)) {
         LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << "PacketsSent: " << n->stats_info->tx_packets;
+                   << ".PacketsSent: " << n->stats_info->tx_packets;
         return false;
     }
 
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "PacketsReceived",
                                    n->stats_info->rx_packets)) {
         LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << "PacketsReceived: " << n->stats_info->rx_packets;
+                   << ".PacketsReceived: " << n->stats_info->rx_packets;
         return false;
     }
 
@@ -4445,23 +4475,23 @@ bool db::notify_disconnection(const std::string &client_mac)
     */
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "ErrorsSent", static_cast<uint32_t>(0))) {
         LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << "ErrorsSent: " << static_cast<uint32_t>(0);
+                   << ".ErrorsSent: " << static_cast<uint32_t>(0);
         return false;
     }
 
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "ErrorsReceived", static_cast<uint32_t>(0))) {
         LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << "ErrorsReceived: " << static_cast<uint32_t>(0);
+                   << ".ErrorsReceived: " << static_cast<uint32_t>(0);
         return false;
     }
 
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "RetransCount",
                                    n->stats_info->retrans_count)) {
         LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << "RetransCount: " << n->stats_info->retrans_count;
+                   << ".RetransCount: " << n->stats_info->retrans_count;
         return false;
     }
-
+    m_ambiorix_datamodel->set_current_time(path_to_eventdata);
     return true;
 }
 
@@ -6032,16 +6062,7 @@ std::string db::dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client
         return {};
     }
 
-    auto time_stamp = m_ambiorix_datamodel->get_datamodel_time_format();
-    if (time_stamp.empty()) {
-        LOG(ERROR) << "Failed to get Date and Time in RFC 3339 format.";
-        return {};
-    }
-
-    if (!m_ambiorix_datamodel->set(sta_instance, "TimeStamp", time_stamp)) {
-        LOG(ERROR) << "Failed to set " << sta_instance << ".TimeStamp: " << time_stamp;
-        return {};
-    }
+    m_ambiorix_datamodel->set_current_time(sta_instance);
 
     uint64_t add_sta_time = time(NULL);
     if (!m_ambiorix_datamodel->set(sta_instance, "LastConnectTime", add_sta_time)) {
@@ -6051,18 +6072,38 @@ std::string db::dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client
     return sta_instance;
 }
 
-bool db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac)
+std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac)
 {
-    const std::string path_association_event =
-        "Controller.Notification.AssociationEvent.AssocData.";
+    std::string path_association_event =
+        "Controller.Notification.AssociationEvent.AssociationEventData";
+
+    while (MAX_EVENT_HISTORY_SIZE <= m_assoc_events.size()) {
+        uint32_t indx = m_assoc_events.front();
+
+        if (!m_ambiorix_datamodel->remove_instance(path_association_event, indx)) {
+            LOG(ERROR) << "Failed to remove " << path_association_event << indx << " instance.";
+        }
+        m_assoc_events.pop();
+    }
+
+    path_association_event = m_ambiorix_datamodel->add_instance(path_association_event);
+
+    if (path_association_event.empty()) {
+        return {};
+    }
+    auto index = get_dm_index_from_path(path_association_event);
+
+    if (index.second) {
+        m_assoc_events.push(index.second);
+    }
     if (!m_ambiorix_datamodel->set(path_association_event, "BSSID", tlvf::mac_to_string(bssid))) {
-        LOG(ERROR) << "Failed to set " << path_association_event << "BSSID: " << bssid;
-        return false;
+        LOG(ERROR) << "Failed to set " << path_association_event << ".BSSID: " << bssid;
+        return {};
     }
     if (!m_ambiorix_datamodel->set(path_association_event, "MACAddress",
                                    tlvf::mac_to_string(client_mac))) {
-        LOG(ERROR) << "Failed to set " << path_association_event << "MACAddress: " << client_mac;
-        return false;
+        LOG(ERROR) << "Failed to set " << path_association_event << ".MACAddress: " << client_mac;
+        return {};
     }
 
     /*
@@ -6072,11 +6113,16 @@ bool db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_
     */
     if (!m_ambiorix_datamodel->set(path_association_event, "StatusCode",
                                    static_cast<uint32_t>(0))) {
-        LOG(ERROR) << "Failed to set " << path_association_event << "StatusCode: " << 0;
-        return false;
+        LOG(ERROR) << "Failed to set " << path_association_event << ".StatusCode: " << 0;
+        return {};
     }
+    m_ambiorix_datamodel->set_current_time(path_association_event);
 
-    return true;
+    if (MAX_EVENT_HISTORY_SIZE < m_assoc_indx.size()) {
+        m_assoc_indx.clear();
+    }
+    m_assoc_indx[tlvf::mac_to_string(client_mac)].push_back(index.second);
+    return path_association_event;
 }
 
 std::string db::dm_add_device_element(const sMacAddr &mac)
@@ -6126,18 +6172,7 @@ bool db::add_current_op_class(const sMacAddr &radio_mac, uint8_t op_class, uint8
         return false;
     }
 
-    auto time_stamp = m_ambiorix_datamodel->get_datamodel_time_format();
-    if (time_stamp.empty()) {
-        LOG(ERROR) << "Failed to get Date and Time in RFC 3339 format.";
-        return false;
-    }
-
-    //Set TimeStamp
-    //Data model path example: Controller.Network.Device.1.Radio.1.CurrentOperatingClasses.TimeStamp
-    if (!m_ambiorix_datamodel->set(op_class_path_instance, "TimeStamp", time_stamp)) {
-        LOG(ERROR) << "Failed to set " << op_class_path_instance << ".TimeStamp: " << time_stamp;
-        return false;
-    }
+    m_ambiorix_datamodel->set_current_time(op_class_path_instance);
 
     //Set Operating class
     //Data model path: Controller.Network.Device.1.Radio.1.CurrentOperatingClasses.Class
@@ -6319,22 +6354,7 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
         LOG(ERROR) << "Failed to set " << bss_instance << "LastChange: " << creation_time;
         return false;
     }
-
-    auto timestamp = m_ambiorix_datamodel->get_datamodel_time_format();
-    if (timestamp.empty()) {
-        LOG(ERROR) << "Failed to get Date and Time in RFC 3339 format.";
-        return false;
-    }
-
-    /*
-        Set value for TimeStamp variable
-        Example: Controller.Network.Device.1.Radio.1.BSS.1.TimeStamp
-    */
-    if (!m_ambiorix_datamodel->set(bss_instance, "TimeStamp", timestamp)) {
-        LOG(ERROR) << "Failed to set " << bss_instance << "TimeStamp: " << timestamp;
-        return false;
-    }
-
+    m_ambiorix_datamodel->set_current_time(bss_instance);
     return true;
 }
 

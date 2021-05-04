@@ -117,6 +117,14 @@ public:
 
     std::string get_datamodel_time_format() override;
 
+    /**
+     * @brief Set current data and time in RFC 3339 format.
+     * 
+     * @param path_to_object Path to NBAPI object which has parameter TimeStamp.
+     * @return True if date and time successfully set, false otherwise.
+     */
+    bool set_current_time(const std::string &path_to_object) override;
+
     bool remove_all_instances(const std::string &relative_path) override;
 
     bool add_optional_subobject(const std::string &path_to_obj,

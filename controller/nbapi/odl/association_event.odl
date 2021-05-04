@@ -15,22 +15,21 @@
 
 %define {
     select Controller.Notification  {
+        // The events generated when a STA associates to a BSS.
         object AssociationEvent {
-            /*
-            ** The data provided in the event when an association event is generated
-            */
-            object AssocData {
-
+            object AssociationEventData[] {
                 /**
                 ** Need to add here HTCapabilities, VHTCapabilities, HECapabilities
                 ** from mids which defined in controller.odl
                 **/
-
                 %read-only string BSSID;  /* The MAC address of the logical BSS (BSSID) which is
                                             reporting the association event. */
                 %read-only string MACAddress;  /* MAC address of the associating station */
                 %read-only uint32 StatusCode;  /* The status code sent to the STA in the
                                                 latest Association Response frame */
+                // The time this event was collected
+                %read-only string TimeStamp = "2020-08-31T11:22:39Z";
+                counted with AssociationEventDataNumberOfEntries;
             }
         }
     }
