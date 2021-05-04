@@ -504,6 +504,29 @@ std::string network_utils::get_mac_from_arp_table(const std::string &ipv4)
     return std::string();
 }
 
+std::list<std::string> network_utils::linux_get_iface_list()
+{
+    std::list<std::string> ifaces;
+
+    constexpr char path[] = "/sys/class/net/";
+
+    DIR *d;
+    dirent *dir;
+    d = opendir(path);
+    if (!d) {
+        return ifaces;
+    }
+    while ((dir = readdir(d)) != NULL) {
+        std::string ifname(dir->d_name);
+        if (ifname == "." || ifname == "..") {
+            continue;
+        }
+        ifaces.push_back(ifname);
+    }
+    closedir(d);
+    return ifaces;
+}
+
 std::vector<std::string> network_utils::linux_get_iface_list_from_bridge(const std::string &bridge)
 {
     std::vector<std::string> ifs;
@@ -1186,4 +1209,220 @@ uint16_t network_utils::icmp_checksum(uint16_t *buf, int32_t len)
     sum += (sum >> 16);
     answer = ~sum;
     return answer;
+}
+
+std::vector<std::string> network_utils::get_bss_ifaces(const std::string &bss_iface,
+                                                       const std::string &bridge_iface)
+{
+    if (bss_iface.empty()) {
+        LOG(ERROR) << "bss_iface is empty!";
+        return {};
+    }
+    if (bridge_iface.empty()) {
+        LOG(ERROR) << "bridge_iface is empty!";
+        return {};
+    }
+
+    auto ifaces_on_bridge = linux_get_iface_list_from_bridge(bridge_iface);
+
+    /** 
+     * Find all interfaces that their name contain the base bss name.
+     * On upstream Hostapd the pattern is: "<bss_iface_name>.staN"
+     * (e.g wlan0.0.sta1, wlan0.0.sta2 etc)
+     * On MaxLinear platforms the pattern is: "bN_<bss_iface_name>"
+     * (e.g b0_wlan0.0, b1_wlan0.0 etc).
+     * 
+     * NOTE: If the VAP interface is wlan-long0.0, then the STA interface name will use an
+     * abbreviated version b0_wlan-long0 instead of b0_wlan-long0.0.
+     * It doesn't really work anyway because with that truncation, you may get conflicts between
+     * wlan-long0.0 and wlan-lang0.1.
+     */
+
+    std::vector<std::string> bss_ifaces;
+    for (const auto &iface : ifaces_on_bridge) {
+        if (iface.find(bss_iface) != std::string::npos) {
+            bss_ifaces.push_back(iface);
+        }
+    }
+    return bss_ifaces;
+}
+
+std::string network_utils::create_vlan_interface(const std::string &iface, uint16_t vid)
+{
+    if (iface.empty()) {
+        LOG(ERROR) << "iface is empty!";
+        return {};
+    }
+
+    if (vid < net::MIN_VLAN_ID || vid > net::MAX_VLAN_ID) {
+        LOG(ERROR) << "Given VID is invalid: " << vid;
+        return {};
+    }
+
+    // Command example:
+    // ip link add <iface>.<vid> link <iface> type vlan id <vid>
+
+    std::string cmd;
+    // Reserve 60 bytes for appended data to prevent reallocations.
+    cmd.reserve(60);
+
+    std::string new_iface_name;
+    new_iface_name.reserve(IFNAMSIZ);
+    auto vid_str = std::to_string(vid);
+    new_iface_name.assign(iface).append(".").append(vid_str);
+
+    cmd.assign("ip link add ")
+        .append(new_iface_name)
+        .append(" link ")
+        .append(iface)
+        .append(" type vlan id ")
+        .append(vid_str);
+
+    beerocks::os_utils::system_call(cmd, 2, true);
+    return new_iface_name;
+}
+
+bool network_utils::set_vlan_filtering(const std::string &bridge_iface, uint16_t default_vlan_id)
+{
+    if (bridge_iface.empty()) {
+        LOG(ERROR) << "Given bridge interface name is empty!";
+        return false;
+    }
+
+    // Command example:
+    // Turn on:  ip link set <bridge_iface> type bridge vlan_filtering 1 vlan_default_pvid 10
+    // Turn off: ip link set <bridge_iface> type bridge vlan_filtering 0
+
+    std::string cmd;
+    // Reserve 100 bytes for appended data to prevent reallocations.
+    cmd.reserve(100);
+
+    cmd.assign("ip link set ");
+
+    cmd.append(bridge_iface).append(" type bridge vlan_filtering ");
+
+    if (default_vlan_id == 0) {
+        cmd.append("0 ");
+    } else {
+        cmd.append("1 vlan_default_pvid ").append(std::to_string(default_vlan_id));
+    }
+
+    beerocks::os_utils::system_call(cmd, 2, true);
+    return true;
+}
+
+bool network_utils::set_iface_vid_policy(const std::string &iface, bool del, uint16_t vid,
+                                         bool is_bridge, bool pvid, bool untagged)
+{
+    if (vid > MAX_VLAN_ID) {
+        LOG(ERROR) << "Given VID is invalid: " << vid;
+        return false;
+    }
+
+    if (vid == 0 && pvid) {
+        LOG(ERROR) << "Given VID is '0' (All VIDS) and PVID is set";
+        return false;
+    }
+
+    // Command example:
+    // bridge vlan {add|del} vid <vid> dev <iface> [ pvid ] [ untagged ] [ self (only on bridge)]
+
+    std::string vid_str;
+    vid_str.reserve(10);
+    if (vid == 0) {
+        vid_str.assign(std::to_string(MIN_VLAN_ID)).append("-").append(std::to_string(MAX_VLAN_ID));
+    } else {
+        vid_str.assign(std::to_string(vid));
+    }
+
+    std::string cmd;
+    // Reserve 100 bytes for appended data to prevent reallocations.
+    cmd.reserve(100);
+
+    cmd.assign("bridge vlan ");
+
+    if (del) {
+        cmd.append("del ");
+    } else {
+        cmd.append("add ");
+    }
+
+    cmd.append("vid ").append(vid_str).append(" ");
+    cmd.append("dev ").append(iface).append(" ");
+
+    if (is_bridge) {
+        cmd.append("self ");
+    }
+
+    if (del) {
+        cmd.pop_back(); // Pop extra space.
+        beerocks::os_utils::system_call(cmd, 2, false);
+        return true;
+    }
+
+    if (pvid) {
+        cmd.append("pvid ");
+    }
+
+    if (untagged) {
+        cmd.append("untagged ");
+    }
+
+    // Pop back last space character.
+    cmd.pop_back();
+
+    os_utils::system_call(cmd, 2, false);
+    return true;
+}
+
+bool network_utils::set_vlan_packet_filter(bool set, const std::string &bss_iface, uint16_t vid)
+{
+    if (bss_iface.empty()) {
+        LOG(ERROR) << "Given BSS interface name is empty!";
+        return false;
+    }
+
+    // VID
+    if (vid > MAX_VLAN_ID) {
+        LOG(ERROR) << "Skip invalid VID: " << vid;
+        return false;
+    }
+
+    // Command example:
+    // ebtables -t <table> -{A (Append)|D (Delete)} <Chain> [-p <protocol>]
+    // [-J <jump target {ACCEPT|DROP|CONTINUE|RETURN}>] [-i <iface>]
+    // If "-p 802_1q":
+    //      [--vlan-id <vid>] [--vlan-encap <protocol>]
+
+    // Using like this:
+    // ebtables -t nat -{A|D} PREROUTING -p 802_1Q -j DROP -i <iface> --vlan-id <vid>
+    // ebtables -t nat -{A|D} PREROUTING -p 802_1Q -j DROP -i <iface> --vlan-encap 802_1Q
+
+    std::string cmd;
+    cmd.reserve(150);
+
+    cmd.append("ebtables -t nat ");
+
+    if (set) {
+        // Append rule.
+        cmd.append("-A ");
+    } else {
+        // Delete rule.
+        cmd.append("-D ");
+    }
+
+    cmd.append("PREROUTING -p 802_1Q -j DROP -i ").append(bss_iface);
+    auto cmd_base_len = cmd.length();
+
+    if (vid != 0) {
+        // Filter packets carrying the VLAN tag of the interface.
+        cmd.append(" --vlan-id ").append(std::to_string(vid));
+        os_utils::system_call(cmd, 2, false);
+        cmd.erase(cmd_base_len);
+    }
+
+    // Filter double-tagged packets that are encapsulated with an S-Tag.
+    cmd.append(" --vlan-encap 802_1Q");
+    os_utils::system_call(cmd, 2, false);
+    return true;
 }
