@@ -20,6 +20,7 @@
 #include <bcl/beerocks_event_loop.h>
 #include <bcl/beerocks_logging.h>
 #include <bcl/beerocks_socket_thread.h>
+#include <bcl/beerocks_timer_manager.h>
 #include <beerocks/tlvf/beerocks_message_monitor.h>
 
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
@@ -34,6 +35,7 @@ public:
                    beerocks::config_file::sConfigSlave &beerocks_slave_conf_,
                    beerocks::logging &logger_,
                    std::shared_ptr<beerocks::CmduClientFactory> slave_cmdu_client_factory,
+                   std::shared_ptr<beerocks::TimerManager> timer_manager,
                    std::shared_ptr<beerocks::EventLoop> event_loop);
     virtual ~monitor_thread();
 
@@ -156,6 +158,11 @@ private:
      * Factory to create CMDU client instances connected to CMDU server running in slave.
      */
     std::shared_ptr<beerocks::CmduClientFactory> m_slave_cmdu_client_factory;
+
+    /**
+     * Timer manager to help using application timers.
+     */
+    std::shared_ptr<beerocks::TimerManager> m_timer_manager;
 
     /**
      * Application event loop used by the process to wait for I/O events.

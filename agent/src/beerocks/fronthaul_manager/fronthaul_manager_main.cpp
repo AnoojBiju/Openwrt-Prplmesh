@@ -276,7 +276,8 @@ int main(int argc, char *argv[])
 
     // Create Monitor
     son::monitor_thread monitor(fronthaul_uds_path, fronthaul_iface, beerocks_slave_conf,
-                                *g_logger_monitor, slave_cmdu_client_factory, event_loop);
+                                *g_logger_monitor, slave_cmdu_client_factory, timer_manager,
+                                event_loop);
 
     auto touch_time_stamp_timeout = std::chrono::steady_clock::now();
     while (g_running) {
