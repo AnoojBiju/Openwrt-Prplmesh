@@ -1384,6 +1384,23 @@ public:
     bool notify_disconnection(const std::string &mac);
 
     /**
+     * @brief Update the node stats info
+     * 
+     * @param[in] mac MAC address of the given node
+     * @param[in] params pointer to the incoming parameters
+     * 
+     * @return true on success, otherwise false.
+     */
+    bool set_node_stats_info(const sMacAddr &mac, const beerocks_message::sStaStatsParams *params);
+
+    /**
+     * @brief Clear any existing node stats info
+     * 
+     * @param[in] mac MAC address of the given node
+     */
+    void clear_node_stats_info(const sMacAddr &mac);
+
+    /**
      * @brief Set virtual AP metrics info
      *
      * @param[in] bssid vap mac address.

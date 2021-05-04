@@ -4494,6 +4494,35 @@ bool db::notify_disconnection(const std::string &client_mac)
     return true;
 }
 
+bool db::set_node_stats_info(const sMacAddr &mac, const beerocks_message::sStaStatsParams *params)
+
+{
+    auto n = get_node(mac);
+    if (!n) {
+        return false;
+    }
+    if (params == nullptr) { // clear stats
+        n->clear_node_stats_info();
+    } else {
+        auto p               = n->stats_info;
+        p->rx_packets        = params->rx_packets;
+        p->tx_packets        = params->tx_packets;
+        p->tx_bytes          = params->tx_bytes;
+        p->rx_bytes          = params->rx_bytes;
+        p->retrans_count     = params->retrans_count;
+        p->tx_phy_rate_100kb = params->tx_phy_rate_100kb;
+        p->rx_phy_rate_100kb = params->rx_phy_rate_100kb;
+        p->tx_load_percent   = params->tx_load_percent;
+        p->rx_load_percent   = params->rx_load_percent;
+        p->stats_delta_ms    = params->stats_delta_ms;
+        p->rx_rssi           = params->rx_rssi;
+        p->timestamp         = std::chrono::steady_clock::now();
+    }
+    return true;
+}
+
+void db::clear_node_stats_info(const sMacAddr &mac) { set_node_stats_info(mac, nullptr); }
+
 bool db::set_vap_stats_info(const std::string &bssid, uint32_t uc_tx_bytes, uint32_t uc_rx_bytes,
                             uint32_t mc_tx_bytes, uint32_t mc_rx_bytes, uint32_t bc_tx_bytes,
                             uint32_t bc_rx_bytes)

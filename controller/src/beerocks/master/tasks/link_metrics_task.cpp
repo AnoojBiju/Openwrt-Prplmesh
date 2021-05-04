@@ -175,6 +175,8 @@ bool LinkMetricsTask::handle_cmdu_1905_link_metric_response(const std::string &s
                    << " reported neighbor al_mac =" << rx_metric->neighbor_al_mac();
 
         // Fill Rx data from TLV for specified Neighbor
+        // Note: The Database node stats and the Datamodels' stats are not the same.
+        // Therefore, client information in data model and in node DB might differ.
         if (!new_link_metrics[rx_metric->neighbor_al_mac()].add_receiver_link_metric(rx_metric)) {
             LOG(ERROR) << "Adding Rx Link Metric Data has failed for neighbor mac:"
                        << rx_metric->neighbor_al_mac();
