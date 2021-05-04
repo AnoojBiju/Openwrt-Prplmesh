@@ -15,6 +15,7 @@
 #include "net_struct.h"
 #include <cstdint>
 #include <easylogging++.h>
+#include <list>
 #include <string>
 #include <vector>
 
@@ -31,6 +32,9 @@
 
 namespace beerocks {
 namespace net {
+
+constexpr uint16_t MIN_VLAN_ID = 1;
+constexpr uint16_t MAX_VLAN_ID = 4094;
 
 class network_utils {
 public:
@@ -109,6 +113,13 @@ public:
     //temp
     static std::string get_mac_from_arp_table(const std::string &ipv4);
 
+    /**
+     * @brief Get list of linux interfaces.
+     * 
+     * @return List of linux interfaces.
+     */
+    static std::list<std::string> linux_get_iface_list();
+
     static std::vector<std::string> linux_get_iface_list_from_bridge(const std::string &bridge);
 
     /**
@@ -176,6 +187,68 @@ public:
 
     static bool icmp_send(const std::string &ip, uint16_t id, int count, int icmp_socket);
     static uint16_t icmp_checksum(uint16_t *buf, int32_t len);
+
+    /**
+     * @brief Get list of BSS interfaces.
+     * 
+     * A BSS could have more than one interface that belongs to it. Specifically, when configuring
+     * a BSS as bBSS, a platform could create several virtual netdevs of which only one backhaul
+     * station could connect.
+     * This function returns a list of the base BSS interface name and all of its
+     * extended interfaces.
+     * 
+     * @param bss_iface BSS interface name.
+     * @param bridge_iface Bridge interface name.
+     * @return List of the base BSS interface name and all of its extended interfaces.
+     */
+    static std::vector<std::string> get_bss_ifaces(const std::string &bss_iface,
+                                                   const std::string &bridge_iface);
+
+    /**
+     * @brief Create a VLAN interface.
+     * 
+     * @param iface Interface to attach the VLAN interface to.
+     * @param vid VLAN ID.
+     * @return New interface name.
+     */
+    static std::string create_vlan_interface(const std::string &iface, uint16_t vid);
+
+    /**
+     * @brief Enable or disable "vlan_filtering" on the bridge.
+     * 
+     * @param default_vlan_id If 'default_vlan_id is not zero, turn on "vlan_filtering" and set the
+     * given value as the default VLAN which will be set on all interfaces in the bridge as 
+     * "PVID and Egress Untagged".
+     * If 'default_vlan_id is zero the "vlan_filtering" is disabled.
+     * @return true on success, false otherwise.
+     */
+    static bool set_vlan_filtering(const std::string &bridge_iface, uint16_t default_vlan_id);
+
+    /**
+     * @brief Set a specific @a VID policy on a bridged interface - @a 'iface'.
+     * 
+     * @param iface Bridged interface to set the VLAN ID policy on.
+     * @param del If true, remove the VLAN ID policy from the given interface. Also, optional
+     * arguments are irrelevant in that case.
+     * @param vid VLAN ID to set/remove, if the given value is '0' apply for all possible VIDs.
+     * @param is_bridge Whether the given interface is a bridge interface or not. 
+     * @param pvid If true, apply PVID policy on the given @a VID.
+     * @param untagged If true, apply Egress Untagged policy on the given @a VID. 
+     * @return true on success, false otherwise.
+     */
+    static bool set_iface_vid_policy(const std::string &iface, bool del, uint16_t vid,
+                                     bool is_bridge, bool pvid = false, bool untagged = false);
+
+    /**
+     * @brief Filter (or Remove Filter) packets containing a given VLAN ID and double-tagged packets
+     * with S-Tag, by adding new rules to the nat table.
+     * 
+     * @param set If true, set the filter, otherwise clear it.
+     * @param bss_iface An interface name to apply the rule on.
+     * @param vid VLAN IDs. If zero (default value), only filter double-tagged packets.
+     * @return true on success, false otherwise.
+     */
+    static bool set_vlan_packet_filter(bool set, const std::string &bss_iface, uint16_t vid = 0);
 };
 } // namespace net
 } // namespace beerocks
