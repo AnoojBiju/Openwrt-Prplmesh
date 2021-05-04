@@ -16,9 +16,9 @@
 #include "monitor_db.h"
 #include "monitor_stats.h"
 
+#include <bcl/beerocks_event_loop.h>
 #include <bcl/beerocks_logging.h>
 #include <bcl/beerocks_socket_thread.h>
-
 #include <beerocks/tlvf/beerocks_message_monitor.h>
 
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
@@ -31,7 +31,7 @@ class monitor_thread : public beerocks::socket_thread {
 public:
     monitor_thread(const std::string &slave_uds_, const std::string &monitor_iface_,
                    beerocks::config_file::sConfigSlave &beerocks_slave_conf_,
-                   beerocks::logging &logger_);
+                   beerocks::logging &logger_, std::shared_ptr<beerocks::EventLoop> event_loop);
     virtual ~monitor_thread();
 
     virtual bool init() override;
@@ -148,6 +148,11 @@ private:
 
     bool handle_multi_ap_policy_config_request(Socket &sd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_ap_metrics_query(Socket &sd, ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * Application event loop used by the process to wait for I/O events.
+     */
+    std::shared_ptr<beerocks::EventLoop> m_event_loop;
 };
 } // namespace son
 

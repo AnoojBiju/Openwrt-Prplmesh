@@ -41,15 +41,18 @@ static constexpr uint8_t ap_metrics_channel_utilization_measurement_period_s = 1
 
 monitor_thread::monitor_thread(const std::string &slave_uds_, const std::string &monitor_iface_,
                                beerocks::config_file::sConfigSlave &beerocks_slave_conf_,
-                               beerocks::logging &logger_)
+                               beerocks::logging &logger_,
+                               std::shared_ptr<beerocks::EventLoop> event_loop)
     : socket_thread(), monitor_iface(monitor_iface_), beerocks_slave_conf(beerocks_slave_conf_),
       bridge_iface(beerocks_slave_conf.bridge_iface), slave_uds(slave_uds_), logger(logger_),
       mon_rssi(cmdu_tx),
 #ifdef BEEROCKS_RDKB
       mon_rdkb_hal(cmdu_tx),
 #endif
-      mon_stats(cmdu_tx)
+      mon_stats(cmdu_tx), m_event_loop(event_loop)
 {
+    LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
+
     thread_name = "monitor";
 
     /**
