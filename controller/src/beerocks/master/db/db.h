@@ -1352,8 +1352,8 @@ public:
     void clear_hostap_stats_info(const std::string &mac);
 
     /**
-     * @brief Notificatify about client disconnection
-     * @param mac string with STA mac address
+     * @brief Notify about client disconnection.
+     * @param mac String with STA mac address.
      */
     bool notify_disconnection(const std::string &mac);
 
@@ -1867,13 +1867,16 @@ private:
     std::string dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client_mac);
 
     /**
-     * @brief Adds last STA to the Controller.Notifiation.AssociationEvent
-     *
+     * @brief Adds to data model an instance of object AssociationEventData.
+     * This object describes an event generated when a STA associates to a BSS.
+     * Example of full path to object:
+     * 'Controller.Notification.AssociationEvent.AssociationEventData.1'.
+     * 
      * @param bssid BSS mac address.
      * @param client_mac Client mac address.
-     * @return True on success, false otherwise.
+     * @return Path to object on success, empty sring otherwise.
      */
-    bool dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac);
+    std::string dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac);
 
     /**
      * @brief Prepares path to the BSS data element with correct index (i).
@@ -2016,6 +2019,26 @@ private:
     // Key:     std::string ISO-8601-timestamp
     // Value:   int         Report-message-MID
     std::unordered_map<std::string, int> m_channel_scan_report_records;
+
+    /*
+    * key = client mac, value = index of NBAPI AssociationEventData
+    */
+    std::map<std::string, std::list<int>> m_assoc_indx;
+
+    /*
+    * Maximum amount of events registered on the system bus NBAPI
+    */
+    const uint8_t MAX_EVENT_HISTORY_SIZE = 24;
+
+    /*
+    * The queue with indexes of NBAPI disassociation events.
+    */
+    std::queue<uint32_t> m_disassoc_events;
+
+    /*
+    * The queue with indexes of NBAPI association events.
+    */
+    std::queue<uint32_t> m_assoc_events;
 };
 
 } // namespace son

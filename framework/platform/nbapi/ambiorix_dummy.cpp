@@ -72,5 +72,7 @@ bool AmbiorixDummy::remove_optional_subobject(const std::string &path_to_obj,
     return true;
 }
 
+bool AmbiorixDummy::set_current_time(const std::string &path_to_object) { return true; }
+
 } // namespace nbapi
 } // namespace beerocks

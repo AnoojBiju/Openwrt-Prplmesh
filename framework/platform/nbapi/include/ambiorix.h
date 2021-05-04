@@ -115,6 +115,13 @@ public:
      */
     virtual bool remove_optional_subobject(const std::string &path_to_obj,
                                            const std::string &subobject_name) = 0;
+    /**
+     * @brief Set current data and time in RFC 3339 format.
+     * 
+     * @param path_to_object Path to NBAPI object which has parameter TimeStamp.
+     * @return True if date and time successfully set, false otherwise.
+     */
+    virtual bool set_current_time(const std::string &path_to_object) = 0;
 };
 
 inline Ambiorix::~Ambiorix() {}
