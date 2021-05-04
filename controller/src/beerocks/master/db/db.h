@@ -885,32 +885,25 @@ public:
     // CS - DFS
     //
     bool set_hostap_activity_mode(const std::string &mac, beerocks::eApActiveMode ap_activity_mode);
-    beerocks::eApActiveMode get_hostap_activity_mode(const std::string &mac);
-    bool set_radar_hit_stats(const std::string &mac, uint8_t channel, uint8_t bw,
-                             bool is_csa_entry);
-    bool set_supported_channel_radar_affected(const std::string &mac,
+    beerocks::eApActiveMode get_hostap_activity_mode(const sMacAddr &mac);
+    bool set_radar_hit_stats(const sMacAddr &mac, uint8_t channel, uint8_t bw, bool is_csa_entry);
+    bool set_supported_channel_radar_affected(const sMacAddr &mac,
                                               const std::vector<uint8_t> &channels, bool affected);
     //bool get_supported_channel_all_availble(const std::string &mac );
 
     bool set_hostap_is_dfs(const std::string &mac, bool enable);
-    bool get_hostap_is_dfs(const std::string &mac);
+    bool get_hostap_is_dfs(const sMacAddr &mac);
 
     bool set_hostap_cac_completed(const std::string &mac, bool enable);
-    bool get_hostap_cac_completed(const std::string &mac);
+    bool get_hostap_cac_completed(const sMacAddr &mac);
 
-    bool set_hostap_is_on_fail_safe(const std::string &mac, bool enable);
-    bool get_hostap_is_on_fail_safe(const std::string &mac);
-
-    bool set_hostap_is_on_sub_band(const std::string &mac, bool enable);
-    bool get_hostap_is_on_sub_band(const std::string &mac);
-
-    bool set_hostap_on_dfs_reentry(const std::string &mac, bool enable);
-    bool get_hostap_on_dfs_reentry(const std::string &mac);
+    bool set_hostap_on_dfs_reentry(const sMacAddr &mac, bool enable);
+    bool get_hostap_on_dfs_reentry(const sMacAddr &mac);
 
     bool set_hostap_dfs_reentry_clients(const std::string &mac,
                                         const std::set<std::string> &dfs_reentry_clients);
     std::set<std::string> get_hostap_dfs_reentry_clients(const std::string &mac);
-    bool clear_hostap_dfs_reentry_clients(const std::string &mac);
+    bool clear_hostap_dfs_reentry_clients(const sMacAddr &mac);
 
     bool set_hostap_is_acs_enabled(const std::string &mac, bool enable);
     bool get_hostap_is_acs_enabled(const std::string &mac);

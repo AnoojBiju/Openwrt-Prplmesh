@@ -692,12 +692,6 @@ void channel_selection_task::work()
             tasks.add_task(new_task);
         }
 
-        if (database.get_hostap_is_on_sub_band(hostap_mac)) {
-            database.set_hostap_is_on_sub_band(hostap_mac, false);
-            FSM_MOVE_STATE(GOTO_IDLE);
-            break;
-        }
-
         if (!database.get_hostap_is_acs_enabled(hostap_mac)) {
             FSM_MOVE_STATE(GOTO_IDLE);
             break;
@@ -707,16 +701,15 @@ void channel_selection_task::work()
             if (!is_2G_channel(csa_event->cs_params.channel)) {
                 TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac << " csa_event != null";
                 if (csa_event->cs_params.is_dfs_channel) {
-                    database.set_hostap_is_on_fail_safe(hostap_mac, false);
                     wait_for_cac_completed(csa_event->cs_params.channel,
                                            csa_event->cs_params.bandwidth);
-                    if (database.get_hostap_on_dfs_reentry(hostap_mac)) {
+                    if (database.get_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac))) {
                         TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac << " DFS reentry flow";
-                        if (database.get_hostap_cac_completed(hostap_mac)) {
+                        if (database.get_hostap_cac_completed(tlvf::mac_from_string(hostap_mac))) {
                             TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
                                             << " was on reentry back on dfs channel";
-                            //database.set_hostap_is_on_fail_safe(hostap_mac , false);
-                            database.set_hostap_on_dfs_reentry(hostap_mac, false);
+                            database.set_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac),
+                                                               false);
                             FSM_MOVE_STATE(STEER_STA_BACK_AFTER_DFS_REENTRY);
                         } else {
                             TASK_LOG(DEBUG)
@@ -726,11 +719,11 @@ void channel_selection_task::work()
                         break;
                     }
                 } else {
-                    if (database.get_hostap_on_dfs_reentry(hostap_mac)) {
+                    if (database.get_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac))) {
                         TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
                                         << " was on reentry back on dfs channel";
-                        database.set_hostap_is_on_fail_safe(hostap_mac, false);
-                        database.set_hostap_on_dfs_reentry(hostap_mac, false);
+                        database.set_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac),
+                                                           false);
                         FSM_MOVE_STATE(STEER_STA_BACK_AFTER_DFS_REENTRY);
                         break;
                     }
@@ -767,11 +760,10 @@ void channel_selection_task::work()
             //optimal path for all non dfs reentry clients
             run_optimal_path_for_connected_clients();
 
-            if (database.get_hostap_on_dfs_reentry(hostap_mac)) {
+            if (database.get_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac))) {
                 TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
                                 << " was on reentry back on dfs channel";
-                database.set_hostap_is_on_fail_safe(hostap_mac, false);
-                database.set_hostap_on_dfs_reentry(hostap_mac, false);
+                database.set_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac), false);
                 //optimal path for all non dfs reentry clients
                 run_optimal_path_for_connected_clients();
                 FSM_MOVE_STATE(STEER_STA_BACK_AFTER_DFS_REENTRY);
@@ -791,7 +783,8 @@ void channel_selection_task::work()
         auto vec_channels = wireless_utils::get_5g_20MHz_channels(
             beerocks::eWiFiBandwidth(dfs_channel_available->params.bandwidth),
             dfs_channel_available->params.vht_center_frequency);
-        database.set_supported_channel_radar_affected(hostap_mac, vec_channels, false);
+        database.set_supported_channel_radar_affected(tlvf::mac_from_string(hostap_mac),
+                                                      vec_channels, false);
         FSM_MOVE_STATE(GOTO_IDLE);
         break;
     }
@@ -842,7 +835,8 @@ void channel_selection_task::work()
                         << " csa_event->cs_params.switch_reason "
                         << int(csa_event->cs_params.switch_reason);
         if (csa_event->cs_params.switch_reason == beerocks::CH_SWITCH_REASON_RADAR) {
-            database.set_radar_hit_stats(hostap_mac, prev_channel, prev_bandwidth, false);
+            database.set_radar_hit_stats(tlvf::mac_from_string(hostap_mac), prev_channel,
+                                         prev_bandwidth, false);
             TASK_LOG(DEBUG)
                 << "hostap_mac - " << hostap_mac
                 << " csa - reason radar, moved to fail safe , update channel radar affected";
@@ -850,7 +844,8 @@ void channel_selection_task::work()
                 prev_bandwidth, prev_vht_center_frequency,
                 beerocks::eWiFiBandwidth(csa_event->cs_params.bandwidth),
                 csa_event->cs_params.vht_center_frequency);
-            database.set_supported_channel_radar_affected(hostap_mac, vec_channels, true);
+            database.set_supported_channel_radar_affected(tlvf::mac_from_string(hostap_mac),
+                                                          vec_channels, true);
             FSM_MOVE_STATE(ACTIVATE_SLAVE);
             break;
         }
@@ -859,13 +854,12 @@ void channel_selection_task::work()
         break;
     }
     case eState::ON_FAIL_SAFE_CHANNEL: {
-        database.set_hostap_is_on_sub_band(hostap_mac, false);
         if (!database.settings_dfs_reentry()) {
             LOG(DEBUG) << "DFS reentry feature is not enabled";
             FSM_MOVE_STATE(GOTO_IDLE);
             break;
         }
-        if (database.get_hostap_on_dfs_reentry(hostap_mac)) {
+        if (database.get_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac))) {
             LOG(DEBUG) << "hostapd " << hostap_mac << "is already on dfs reentry";
             FSM_MOVE_STATE(GOTO_IDLE);
             break;
@@ -891,7 +885,8 @@ void channel_selection_task::work()
 
         ccl_fill_affected_supported_channels();
         auto has_unaffected_channels = ccl_has_free_dfs_channels(beerocks::BANDWIDTH_160);
-        auto ap_idle_mode = (database.get_hostap_activity_mode(hostap_mac) == AP_IDLE_MODE);
+        auto ap_idle_mode =
+            (database.get_hostap_activity_mode(tlvf::mac_from_string(hostap_mac)) == AP_IDLE_MODE);
         TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
                         << " has_unaffected_channels = " << int(has_unaffected_channels)
                         << " ap_idle_mode = " << int(ap_idle_mode);
@@ -899,7 +894,7 @@ void channel_selection_task::work()
             TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
                             << " found at list one 80 Mhz un-affected band  ";
             FSM_MOVE_STATE(STEER_STA_BEFORE_DFS_REENTRY);
-            database.set_hostap_on_dfs_reentry(hostap_mac, true);
+            database.set_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac), true);
             break;
         }
         TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
@@ -908,7 +903,7 @@ void channel_selection_task::work()
         break;
     }
     case eState::STEER_STA_BEFORE_DFS_REENTRY: {
-        database.clear_hostap_dfs_reentry_clients(hostap_mac);
+        database.clear_hostap_dfs_reentry_clients(tlvf::mac_from_string(hostap_mac));
 
         auto set_reentry_clients =
             database.get_node_children(hostap_mac, TYPE_CLIENT, STATE_CONNECTED);
@@ -1736,7 +1731,7 @@ void channel_selection_task::wait_for_cac_completed(uint8_t channel, uint8_t ban
 {
     TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac << " channel = " << int(channel)
                     << " bandwidth = " << int(bandwidth);
-    database.set_radar_hit_stats(hostap_mac, channel, bandwidth, true);
+    database.set_radar_hit_stats(tlvf::mac_from_string(hostap_mac), channel, bandwidth, true);
     //hostap handle the CAC-completed event async pushing to deck.
     TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac << " enter to cac pending";
     hostaps_cac_pending.insert({hostap_mac, std::chrono::steady_clock::now()});
