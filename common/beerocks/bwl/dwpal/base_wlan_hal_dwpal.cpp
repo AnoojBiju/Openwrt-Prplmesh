@@ -13,6 +13,7 @@
 #include <bcl/network/network_utils.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <bwl/nl80211_client_factory.h>
+#include <net/if.h> // if_nametoindex
 
 #include <easylogging++.h>
 
@@ -146,7 +147,7 @@ bool base_wlan_hal_dwpal::fsm_setup()
                     if (dwpal_driver_nl_attach(&m_dwpal_nl_ctx) == DWPAL_FAILURE) {
                         LOG(ERROR)
                             << "dwpal_driver_nl_attach returned ERROR for: "
-                            << m_radio_info.iface_name << "disbling netlink for this platform";
+                            << m_radio_info.iface_name << ", disabling netlink for this platform";
                         m_dwpal_nl_ctx = nullptr;
                     } else {
                         LOG(DEBUG)
@@ -316,7 +317,7 @@ bool base_wlan_hal_dwpal::fsm_setup()
                 if (m_dwpal_nl_ctx) {
                     if (dwpal_driver_nl_fd_get(m_dwpal_nl_ctx, &m_fd_nl_events, &m_fd_nl_cmd_get)) {
                         LOG(ERROR) << "getting nl fd failed for: " << m_radio_info.iface_name
-                                   << "disbling netlink for this platform";
+                                   << ", disabling netlink for this platform";
                         m_dwpal_nl_ctx = nullptr;
                     } else {
                         LOG(DEBUG) << "Attach event interface to nl - SUCCESS! for: "
@@ -731,6 +732,58 @@ ssize_t base_wlan_hal_dwpal::dwpal_nl_cmd_get(const std::string &ifname, unsigne
     return data_size;
 }
 
+bool base_wlan_hal_dwpal::dwpal_nl_cmd_send_and_recv(int command, DWPAL_nl80211Callback nl_callback,
+                                                     void *callback_args)
+{
+    LOG(TRACE) << "dwpal_nl_cmd_send_and_recv";
+
+    int ret = -1;
+    struct nl_msg *msg;
+    signed long long devidx = 0;
+
+    LOG(TRACE) << "ifname=" << m_radio_info.iface_name;
+
+    msg = nlmsg_alloc();
+    if (msg == NULL) {
+        LOG(ERROR) << "nlmsg_alloc returned NULL ==> Abort!";
+        return false;
+    }
+
+    int nl80211_id = -1;
+    if (dwpal_nl80211_id_get(m_dwpal_nl_ctx, &nl80211_id) == DWPAL_FAILURE) {
+        LOG(ERROR) << "getting nl id failed for: " << m_radio_info.iface_name
+                   << ", unable to send nl command, nl80211_id=" << nl80211_id;
+        nlmsg_free(msg);
+        return false;
+    }
+
+    /* calling genlmsg_put() is a must! without it, the callback won't be called! */
+    genlmsg_put(msg, 0, 0, nl80211_id, 0, NLM_F_DUMP, command, 0);
+
+    devidx = if_nametoindex(m_radio_info.iface_name.c_str());
+    if (devidx < 0) {
+        LOG(ERROR) << "Invalid devidx=" << devidx << " ==> Abort!";
+        nlmsg_free(msg);
+        return false;
+    }
+
+    ret = nla_put_u32(msg, NL80211_ATTR_IFINDEX, devidx); /* DWPAL_NETDEV_ID */
+    if (ret < 0) {
+        LOG(ERROR) << "building message failed ==> Abort!";
+        nlmsg_free(msg);
+        return false;
+    }
+
+    int cmd_res = 0;
+    ret         = dwpal_nl80211_cmd_send(m_dwpal_nl_ctx, msg, &cmd_res, nl_callback, callback_args);
+    if (ret != DWPAL_SUCCESS && cmd_res != 0) {
+        LOG(ERROR) << "dwpal_nl80211_cmd_send failed, msg=" << msg << ", cmd_res=" << cmd_res;
+        return false;
+    }
+
+    return true;
+}
+
 bool base_wlan_hal_dwpal::dwpal_nl_cmd_scan_dump()
 {
     // Passing a lambda with capture is not supported for standard C function
@@ -762,44 +815,6 @@ bool base_wlan_hal_dwpal::dwpal_nl_cmd_scan_dump()
 bool base_wlan_hal_dwpal::refresh_radio_info()
 {
     char *reply = nullptr;
-
-    // Obtain frequency band, maximum supported bandwidth and supported channels using NL80211.
-    nl80211_client::radio_info radio_info;
-
-    if (!m_nl80211_client->get_radio_info(get_iface_name(), radio_info)) {
-        LOG(ERROR) << "Reading radio info from the NL has failed";
-        return false;
-    }
-    if (radio_info.bands.empty()) {
-        LOG(ERROR) << "Radio does not support a single band type";
-        return false;
-    }
-
-    // Currently we support only radio with single band.
-    nl80211_client::band_info band_info = radio_info.bands.at(0);
-
-    m_radio_info.frequency_band = band_info.get_frequency_band();
-    m_radio_info.max_bandwidth  = band_info.get_max_bandwidth();
-    m_radio_info.ht_supported   = band_info.ht_supported;
-    m_radio_info.ht_capability  = band_info.ht_capability;
-    m_radio_info.ht_mcs_set.assign(band_info.ht_mcs_set, sizeof(band_info.ht_mcs_set));
-    m_radio_info.vht_supported  = band_info.vht_supported;
-    m_radio_info.vht_capability = band_info.vht_capability;
-    m_radio_info.vht_mcs_set.assign(band_info.vht_mcs_set, sizeof(band_info.vht_mcs_set));
-
-    m_radio_info.supported_channels.clear();
-    for (auto const &pair : band_info.supported_channels) {
-        auto &channel_info = pair.second;
-        for (auto bw : channel_info.supported_bandwidths) {
-            beerocks::message::sWifiChannel channel;
-            channel.channel           = channel_info.number;
-            channel.channel_bandwidth = bw;
-            channel.tx_pow            = channel_info.tx_power;
-            channel.is_dfs_channel    = channel_info.is_dfs;
-            channel.dfs_state         = channel_info.dfs_state;
-            m_radio_info.supported_channels.push_back(channel);
-        }
-    }
 
     // TODO: Add radio_info get for station
 
@@ -867,6 +882,7 @@ bool base_wlan_hal_dwpal::refresh_radio_info()
 
     // Read Radio status
     const char *tmp_str;
+    int64_t tmp_int;
     parsed_line_t reply_obj;
 
     std::string cmd = "STATUS";
@@ -875,6 +891,13 @@ bool base_wlan_hal_dwpal::refresh_radio_info()
         LOG(ERROR) << __func__ << " failed";
         return false;
     }
+
+    // secondary channel (a.k.a channel_ext_above)
+    if (!read_param("secondary_channel", reply_obj, tmp_int)) {
+        LOG(ERROR) << "Failed reading 'secondary_channel' parameter!";
+        return false;
+    }
+    m_radio_info.channel_ext_above = tmp_int;
 
     // RSSI
     if (!read_param("state", reply_obj, &tmp_str)) {

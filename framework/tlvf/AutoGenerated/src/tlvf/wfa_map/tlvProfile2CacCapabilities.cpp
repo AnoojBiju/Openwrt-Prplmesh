@@ -412,7 +412,7 @@ BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
 }
 cCacTypes::~cCacTypes() {
 }
-cCacTypes::eCacMethod& cCacTypes::cac_method() {
+eCacMethod& cCacTypes::cac_method() {
     return (eCacMethod&)(*m_cac_method);
 }
 

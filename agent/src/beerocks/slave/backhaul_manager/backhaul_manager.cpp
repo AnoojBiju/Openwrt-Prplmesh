@@ -13,12 +13,14 @@
 #include "../tasks/capability_reporting_task.h"
 #include "../tasks/channel_scan_task.h"
 #include "../tasks/channel_selection_task.h"
+#include "../tasks/coordinated_cac_task.h"
 #include "../tasks/link_metrics_collection_task.h"
 #include "../tasks/switch_channel_task.h"
 #include "../tasks/topology_task.h"
 
 #include <bcl/beerocks_utils.h>
 #include <bcl/son/son_wireless_utils.h>
+#include <bcl/transaction.h>
 #include <easylogging++.h>
 
 #include <beerocks/tlvf/beerocks_message.h>
@@ -139,6 +141,8 @@ BackhaulManager::BackhaulManager(
     m_task_pool.add_task(std::make_shared<LinkMetricsCollectionTask>(*this, cmdu_tx));
     m_task_pool.add_task(
         std::make_shared<switch_channel::SwitchChannelTask>(m_task_pool, *this, cmdu_tx));
+    m_task_pool.add_task(
+        std::make_shared<coordinated_cac::CoordinatedCacTask>(m_task_pool, *this, cmdu_tx));
 
     beerocks::CmduServer::EventHandlers handlers{
         .on_client_connected    = [&](int fd) { handle_connected(fd); },
@@ -159,12 +163,7 @@ bool BackhaulManager::start()
     // In case of error in one of the steps of this method, we have to undo all the previous steps
     // (like when rolling back a database transaction, where either all steps get executed or none
     // of them gets executed)
-    std::deque<std::function<void()>> rollback_actions;
-    auto rollback = [&]() {
-        for (const auto &action : rollback_actions) {
-            action();
-        }
-    };
+    beerocks::Transaction transaction;
 
     // Create a timer to run internal tasks periodically
     m_tasks_timer = m_timer_manager->add_timer(
@@ -178,7 +177,7 @@ bool BackhaulManager::start()
         return false;
     }
     LOG(DEBUG) << "Tasks timer created with fd = " << m_tasks_timer;
-    rollback_actions.emplace_front([&]() { m_timer_manager->remove_timer(m_tasks_timer); });
+    transaction.add_rollback_action([&]() { m_timer_manager->remove_timer(m_tasks_timer); });
 
     // Create a timer to run the FSM periodically
     m_fsm_timer = m_timer_manager->add_timer(fsm_timer_period, fsm_timer_period,
@@ -194,21 +193,19 @@ bool BackhaulManager::start()
                                              });
     if (m_fsm_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
         LOG(ERROR) << "Failed to create the FSM timer";
-        rollback();
         return false;
     }
     LOG(DEBUG) << "FSM timer created with fd = " << m_fsm_timer;
-    rollback_actions.emplace_front([&]() { m_timer_manager->remove_timer(m_fsm_timer); });
+    transaction.add_rollback_action([&]() { m_timer_manager->remove_timer(m_fsm_timer); });
 
     // Create an instance of a broker client connected to the broker server that is running in the
     // transport process
     m_broker_client = m_broker_client_factory->create_instance();
     if (!m_broker_client) {
         LOG(ERROR) << "Failed to create instance of broker client";
-        rollback();
         return false;
     }
-    rollback_actions.emplace_front([&]() { m_broker_client.reset(); });
+    transaction.add_rollback_action([&]() { m_broker_client.reset(); });
 
     beerocks::btl::BrokerClient::EventHandlers handlers;
     // Install a CMDU-received event handler for CMDU messages received from the transport process.
@@ -225,7 +222,7 @@ bool BackhaulManager::start()
     handlers.on_connection_closed = [&]() { LOG(FATAL) << "Broker client got disconnected!"; };
 
     m_broker_client->set_handlers(handlers);
-    rollback_actions.emplace_front([&]() { m_broker_client->clear_handlers(); });
+    transaction.add_rollback_action([&]() { m_broker_client->clear_handlers(); });
 
     // Subscribe for the reception of CMDU messages that this process is interested in
     if (!m_broker_client->subscribe(std::set<ieee1905_1::eMessageType>{
@@ -236,7 +233,10 @@ bool BackhaulManager::start()
             ieee1905_1::eMessageType::AP_CAPABILITY_QUERY_MESSAGE,
             ieee1905_1::eMessageType::AP_METRICS_QUERY_MESSAGE,
             ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE,
+            ieee1905_1::eMessageType::BACKHAUL_STEERING_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::BEACON_METRICS_QUERY_MESSAGE,
+            ieee1905_1::eMessageType::CAC_REQUEST_MESSAGE,
+            ieee1905_1::eMessageType::CAC_TERMINATION_MESSAGE,
             ieee1905_1::eMessageType::CHANNEL_PREFERENCE_QUERY_MESSAGE,
             ieee1905_1::eMessageType::CHANNEL_SCAN_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE,
@@ -250,14 +250,15 @@ bool BackhaulManager::start()
             ieee1905_1::eMessageType::TOPOLOGY_DISCOVERY_MESSAGE,
             ieee1905_1::eMessageType::TOPOLOGY_QUERY_MESSAGE,
             ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE,
-            ieee1905_1::eMessageType::BACKHAUL_STEERING_REQUEST_MESSAGE,
         })) {
         LOG(ERROR) << "Failed subscribing to the Bus";
-        rollback();
         return false;
     }
 
+    transaction.commit();
+
     LOG(DEBUG) << "started";
+
     return true;
 }
 
@@ -346,6 +347,23 @@ bool BackhaulManager::send_cmdu_to_broker(ieee1905_1::CmduMessageTx &cmdu_tx,
     }
 
     return m_broker_client->send_cmdu(cmdu_tx, dst_mac, src_mac, iface_index);
+}
+
+bool BackhaulManager::send_ack_to_controller(ieee1905_1::CmduMessageTx &cmdu_tx, uint32_t mid)
+{
+    // build ACK message CMDU
+    auto cmdu_tx_header = cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE);
+    if (!cmdu_tx_header) {
+        LOG(ERROR) << "Failed to create ieee1905_1::eMessageType::ACK_MESSAGE";
+        return false;
+    }
+
+    auto db = AgentDB::get();
+
+    LOG(DEBUG) << "Sending ACK message to the controller, mid=" << std::hex << mid;
+    bool ret = send_cmdu_to_broker(cmdu_tx, db->controller_info.bridge_mac,
+                                   tlvf::mac_from_string(bridge_info.mac));
+    return ret;
 }
 
 bool BackhaulManager::forward_cmdu_to_broker(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -783,6 +801,10 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
             if (!m_dev_reset_default_completed) {
                 // The "dev_reset_default" asynchronous command processing is complete.
                 m_dev_reset_default_completed = true;
+
+                // Tear down all VAPs in all radios to make sure no station can connect until APs
+                // are given a fresh configuration.
+                send_slaves_tear_down();
 
                 if (m_dev_reset_default_timer !=
                     beerocks::net::FileDescriptor::invalid_descriptor) {
@@ -3235,9 +3257,6 @@ void BackhaulManager::handle_dev_reset_default(
         m_agent_ucc_listener->send_reply(fd);
         return;
     }
-
-    // Tear down all VAPs in all radios to make sure no station can connect while in reset state.
-    send_slaves_tear_down();
 
     // Store socket descriptor to send reply to UCC client when command processing is completed.
     m_dev_reset_default_fd = fd;

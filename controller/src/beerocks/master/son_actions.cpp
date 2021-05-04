@@ -176,7 +176,7 @@ int son_actions::steer_sta(db &database, ieee1905_1::CmduMessageTx &cmdu_tx, tas
 bool son_actions::set_hostap_active(db &database, task_pool &tasks, std::string hostap_mac,
                                     bool active)
 {
-    bool result = database.set_hostap_active(hostap_mac, active);
+    bool result = database.set_hostap_active(tlvf::mac_from_string(hostap_mac), active);
 
     if (result) {
         bml_task::connection_change_event new_event;

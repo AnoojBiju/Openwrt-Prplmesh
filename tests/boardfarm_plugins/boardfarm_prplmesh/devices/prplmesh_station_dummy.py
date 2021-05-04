@@ -23,6 +23,9 @@ class PrplMeshStationDummy(PrplMeshBase):
 
         self.name = config.get("name", "station")
         self.mac = config.get("mac", None)
+        self.hostname = config.get("hostname", None)
+        self.ipv4 = config.get("ipv4", None)
+        self.ipv6 = config.get("ipv6", None)
         self.associated_vap = None
 
         if self.mac is None:

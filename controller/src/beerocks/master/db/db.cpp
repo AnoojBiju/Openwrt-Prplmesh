@@ -386,7 +386,7 @@ bool db::add_node_client(const sMacAddr &mac, const sMacAddr &parent_mac,
         return false;
     }
     // Add the MAC to the association event */
-    if (!dm_add_association_event(parent_mac, mac)) {
+    if (dm_add_association_event(parent_mac, mac).empty()) {
         LOG(ERROR) << "Failed to add association event, mac: " << mac;
     }
 
@@ -608,7 +608,7 @@ bool db::set_global_restricted_channels(const uint8_t *restricted_channels)
 
 std::vector<uint8_t> db::get_global_restricted_channels() { return global_restricted_channels; }
 
-bool db::set_hostap_conf_restricted_channels(const std::string &hostap_mac,
+bool db::set_hostap_conf_restricted_channels(const sMacAddr &hostap_mac,
                                              const uint8_t *restricted_channels)
 {
     auto n = get_node(hostap_mac);
@@ -631,7 +631,7 @@ bool db::set_hostap_conf_restricted_channels(const std::string &hostap_mac,
     return true;
 }
 
-std::vector<uint8_t> db::get_hostap_conf_restricted_channels(const std::string &hostap_mac)
+std::vector<uint8_t> db::get_hostap_conf_restricted_channels(const sMacAddr &hostap_mac)
 {
     auto n = get_node(hostap_mac);
     if (!n) {
@@ -918,7 +918,7 @@ std::unordered_map<sMacAddr, son::node::ap_metrics_data> &db::get_ap_metric_data
     return m_ap_metric_data;
 }
 
-bool db::set_hostap_active(const std::string &mac, bool active)
+bool db::set_hostap_active(const sMacAddr &mac, bool active)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -959,7 +959,7 @@ bool db::is_hostap_active(const std::string &mac)
     return n->hostap->active;
 }
 
-bool db::set_hostap_backhaul_manager(const std::string &mac, bool is_backhaul_manager)
+bool db::set_hostap_backhaul_manager(const sMacAddr &mac, bool is_backhaul_manager)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -1797,23 +1797,33 @@ bool db::set_station_capabilities(const std::string &client_mac,
 
     // TODO: Fill up HE Capabilities for STA, PPM-567
 
-    // Prepare path to AssociationEvent.AssocData object
-    std::string path_to_eventdata = "Controller.Notification.AssociationEvent.AssocData.";
+    std::string path_to_eventdata =
+        "Controller.Notification.AssociationEvent.AssociationEventData.";
+    int index = m_assoc_indx[client_mac].back();
+
+    if (index) {
+        path_to_eventdata += std::to_string(index) + '.';
+    } else {
+        path_to_eventdata = dm_add_association_event(tlvf::mac_from_string(parent_radio),
+                                                     tlvf::mac_from_string(client_mac));
+        if (path_to_eventdata.empty()) {
+            return false;
+        }
+    }
 
     // Remove previous entry
     m_ambiorix_datamodel->remove_optional_subobject(path_to_eventdata, "HTCapabilities");
     m_ambiorix_datamodel->remove_optional_subobject(path_to_eventdata, "VHTCapabilities");
     // TODO: Remove HECapabilities before setting new one.
 
-    // Fill up HT Capabilities for Controller.Notification.AssociationEvent.AssocData
+    // Fill up HT Capabilities for Controller.Notification.AssociationEvent.AssociationEventData.1
     if (sta_cap.ht_bw != 0xFF && !dm_set_sta_ht_capabilities(path_to_eventdata, sta_cap)) {
         LOG(ERROR) << "Failed to set station HT Capabilities into " << path_to_eventdata;
         return false;
     }
-
-    // Fill up VHT Capabilities for Controller.Notification.AssociationEvent.AssocData
+    // Fill up VHT Capabilities for Controller.Notification.AssociationEvent.AssociationEventData.1
     if (sta_cap.vht_bw != 0xFF && !dm_set_sta_vht_capabilities(path_to_eventdata, sta_cap)) {
-        LOG(ERROR) << "Failed to set station VHT Capabilities";
+        LOG(ERROR) << "Failed to set station VHT Capabilities into " << path_to_eventdata;
         return false;
     }
 
@@ -1847,7 +1857,7 @@ db::get_station_capabilities(const std::string &client_mac, bool is_bandtype_5gh
     }
 }
 
-bool db::set_hostap_ant_num(const std::string &mac, beerocks::eWiFiAntNum ant_num)
+bool db::set_hostap_ant_num(const sMacAddr &mac, beerocks::eWiFiAntNum ant_num)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -1861,7 +1871,7 @@ bool db::set_hostap_ant_num(const std::string &mac, beerocks::eWiFiAntNum ant_nu
     return true;
 }
 
-beerocks::eWiFiAntNum db::get_hostap_ant_num(const std::string &mac)
+beerocks::eWiFiAntNum db::get_hostap_ant_num(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -1874,7 +1884,7 @@ beerocks::eWiFiAntNum db::get_hostap_ant_num(const std::string &mac)
     return beerocks::eWiFiAntNum(n->capabilities.ant_num);
 }
 
-bool db::set_hostap_ant_gain(const std::string &mac, int ant_gain)
+bool db::set_hostap_ant_gain(const sMacAddr &mac, int ant_gain)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -1888,7 +1898,7 @@ bool db::set_hostap_ant_gain(const std::string &mac, int ant_gain)
     return true;
 }
 
-int db::get_hostap_ant_gain(const std::string &mac)
+int db::get_hostap_ant_gain(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -1901,7 +1911,7 @@ int db::get_hostap_ant_gain(const std::string &mac)
     return n->hostap->ant_gain;
 }
 
-bool db::set_hostap_tx_power(const std::string &mac, int tx_power)
+bool db::set_hostap_tx_power(const sMacAddr &mac, int tx_power)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -1915,7 +1925,7 @@ bool db::set_hostap_tx_power(const std::string &mac, int tx_power)
     return true;
 }
 
-int db::get_hostap_tx_power(const std::string &mac)
+int db::get_hostap_tx_power(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2050,8 +2060,7 @@ bool db::add_hostap_supported_operating_class(const std::string &radio_mac, uint
     return true;
 }
 
-bool db::set_hostap_band_capability(const std::string &mac,
-                                    beerocks::eRadioBandCapability capability)
+bool db::set_hostap_band_capability(const sMacAddr &mac, beerocks::eRadioBandCapability capability)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2229,7 +2238,7 @@ bool db::get_node_11v_capability(const std::string &mac)
     return n->supports_11v;
 }
 
-bool db::set_hostap_iface_id(const std::string &mac, int8_t iface_id)
+bool db::set_hostap_iface_id(const sMacAddr &mac, int8_t iface_id)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2243,7 +2252,7 @@ bool db::set_hostap_iface_id(const std::string &mac, int8_t iface_id)
     return true;
 }
 
-int8_t db::get_hostap_iface_id(const std::string &mac)
+int8_t db::get_hostap_iface_id(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2256,7 +2265,7 @@ int8_t db::get_hostap_iface_id(const std::string &mac)
     return n->hostap->iface_id;
 }
 
-bool db::set_hostap_vap_list(const std::string &mac,
+bool db::set_hostap_vap_list(const sMacAddr &mac,
                              const std::unordered_map<int8_t, sVapElement> &vap_list)
 {
     auto n = get_node(mac);
@@ -2466,7 +2475,7 @@ std::string db::get_hostap_vap_with_ssid(const std::string &mac, const std::stri
     return it->second.mac;
 }
 
-std::string db::get_hostap_vap_mac(const std::string &mac, int vap_id)
+std::string db::get_hostap_vap_mac(const sMacAddr &mac, int vap_id)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2525,7 +2534,7 @@ int8_t db::get_hostap_vap_id(const std::string &mac)
     return IFACE_ID_INVALID;
 }
 
-bool db::get_hostap_repeater_mode_flag(const std::string &mac)
+bool db::get_hostap_repeater_mode_flag(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2538,7 +2547,7 @@ bool db::get_hostap_repeater_mode_flag(const std::string &mac)
     return n->hostap->enable_repeater_mode;
 }
 
-bool db::set_hostap_repeater_mode_flag(const std::string &mac, bool flag)
+bool db::set_hostap_repeater_mode_flag(const sMacAddr &mac, bool flag)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2552,7 +2561,7 @@ bool db::set_hostap_repeater_mode_flag(const std::string &mac, bool flag)
     return true;
 }
 
-bool db::set_hostap_iface_name(const std::string &mac, const std::string &iface_name)
+bool db::set_hostap_iface_name(const sMacAddr &mac, const std::string &iface_name)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2581,7 +2590,7 @@ std::string db::get_hostap_iface_name(const std::string &mac)
     return n->hostap->iface_name;
 }
 
-bool db::set_hostap_iface_type(const std::string &mac, beerocks::eIfaceType iface_type)
+bool db::set_hostap_iface_type(const sMacAddr &mac, beerocks::eIfaceType iface_type)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2624,7 +2633,7 @@ bool db::set_node_backhaul_iface_type(const std::string &mac, beerocks::eIfaceTy
     return true;
 }
 
-bool db::set_hostap_driver_version(const std::string &mac, const std::string &version)
+bool db::set_hostap_driver_version(const sMacAddr &mac, const std::string &version)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -3115,7 +3124,7 @@ bool db::get_channel_scan_in_progress(const sMacAddr &mac, bool single_scan)
         return false;
     }
     if (single_scan) {
-        return (hostap->single_scan_status.scan_in_progress &&
+        return (hostap->single_scan_status.scan_in_progress ||
                 hostap->single_scan_status.scan_is_pending);
     } else {
         return hostap->continuous_scan_status.scan_in_progress;
@@ -4391,15 +4400,35 @@ bool db::notify_disconnection(const std::string &client_mac)
         return false;
     }
 
-    std::string path_to_eventdata = "Controller.Notification.DisassociationEvent.DisassocData.";
+    std::string path_to_disassoc_event_data =
+        "Controller.Notification.DisassociationEvent.DisassociationEventData";
 
-    if (!m_ambiorix_datamodel->set(path_to_eventdata, "BSSID", n->parent_mac)) {
-        LOG(ERROR) << "Failed to set " << path_to_eventdata << "BSSID: " << n->parent_mac;
-        return false;
+    while (MAX_EVENT_HISTORY_SIZE <= m_disassoc_events.size()) {
+        uint32_t indx = m_disassoc_events.front();
+
+        if (!m_ambiorix_datamodel->remove_instance(path_to_disassoc_event_data, indx)) {
+            LOG(ERROR) << "Failed to remove " << path_to_disassoc_event_data << indx
+                       << " instance.";
+        }
+        m_disassoc_events.pop();
     }
 
+    std::string path_to_eventdata = m_ambiorix_datamodel->add_instance(path_to_disassoc_event_data);
+
+    if (path_to_eventdata.empty()) {
+        return false;
+    }
+    auto index = get_dm_index_from_path(path_to_eventdata);
+
+    if (index.second) {
+        m_disassoc_events.push(index.second);
+    }
+    if (!m_ambiorix_datamodel->set(path_to_eventdata, "BSSID", n->parent_mac)) {
+        LOG(ERROR) << "Failed to set " << path_to_eventdata << ".BSSID: " << n->parent_mac;
+        return false;
+    }
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "MACAddress", client_mac)) {
-        LOG(ERROR) << "Failed to set " << path_to_eventdata << "MACAddress: " << client_mac;
+        LOG(ERROR) << "Failed to set " << path_to_eventdata << ".MACAddress: " << client_mac;
         return false;
     }
 
@@ -4411,32 +4440,32 @@ bool db::notify_disconnection(const std::string &client_mac)
     */
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "ReasonCode", static_cast<uint32_t>(1))) {
         LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << "ReasonCode: " << static_cast<uint32_t>(1);
+                   << ".ReasonCode: " << static_cast<uint32_t>(1);
         return false;
     }
 
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "BytesSent", n->stats_info->tx_bytes)) {
         LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << "BytesSent: " << n->stats_info->tx_bytes;
+                   << ".BytesSent: " << n->stats_info->tx_bytes;
         return false;
     }
 
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "BytesReceived", n->stats_info->rx_bytes)) {
         LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << "BytesReceived: " << n->stats_info->rx_bytes;
+                   << ".BytesReceived: " << n->stats_info->rx_bytes;
         return false;
     }
 
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "PacketsSent", n->stats_info->tx_packets)) {
         LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << "PacketsSent: " << n->stats_info->tx_packets;
+                   << ".PacketsSent: " << n->stats_info->tx_packets;
         return false;
     }
 
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "PacketsReceived",
                                    n->stats_info->rx_packets)) {
         LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << "PacketsReceived: " << n->stats_info->rx_packets;
+                   << ".PacketsReceived: " << n->stats_info->rx_packets;
         return false;
     }
 
@@ -4445,23 +4474,23 @@ bool db::notify_disconnection(const std::string &client_mac)
     */
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "ErrorsSent", static_cast<uint32_t>(0))) {
         LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << "ErrorsSent: " << static_cast<uint32_t>(0);
+                   << ".ErrorsSent: " << static_cast<uint32_t>(0);
         return false;
     }
 
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "ErrorsReceived", static_cast<uint32_t>(0))) {
         LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << "ErrorsReceived: " << static_cast<uint32_t>(0);
+                   << ".ErrorsReceived: " << static_cast<uint32_t>(0);
         return false;
     }
 
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "RetransCount",
                                    n->stats_info->retrans_count)) {
         LOG(ERROR) << "Failed to set " << path_to_eventdata
-                   << "RetransCount: " << n->stats_info->retrans_count;
+                   << ".RetransCount: " << n->stats_info->retrans_count;
         return false;
     }
-
+    m_ambiorix_datamodel->set_current_time(path_to_eventdata);
     return true;
 }
 
@@ -5178,6 +5207,14 @@ int db::get_persistent_db_data_commit_operation_id()
 {
     return persistent_db_data_commit_operation_id;
 }
+
+bool db::assign_dhcp_task_id(int new_task_id)
+{
+    dhcp_task_id = new_task_id;
+    return true;
+}
+
+int db::get_dhcp_task_id() { return dhcp_task_id; }
 
 void db::lock() { db_mutex.lock(); }
 
@@ -6032,16 +6069,7 @@ std::string db::dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client
         return {};
     }
 
-    auto time_stamp = m_ambiorix_datamodel->get_datamodel_time_format();
-    if (time_stamp.empty()) {
-        LOG(ERROR) << "Failed to get Date and Time in RFC 3339 format.";
-        return {};
-    }
-
-    if (!m_ambiorix_datamodel->set(sta_instance, "TimeStamp", time_stamp)) {
-        LOG(ERROR) << "Failed to set " << sta_instance << ".TimeStamp: " << time_stamp;
-        return {};
-    }
+    m_ambiorix_datamodel->set_current_time(sta_instance);
 
     uint64_t add_sta_time = time(NULL);
     if (!m_ambiorix_datamodel->set(sta_instance, "LastConnectTime", add_sta_time)) {
@@ -6051,18 +6079,38 @@ std::string db::dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client
     return sta_instance;
 }
 
-bool db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac)
+std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac)
 {
-    const std::string path_association_event =
-        "Controller.Notification.AssociationEvent.AssocData.";
+    std::string path_association_event =
+        "Controller.Notification.AssociationEvent.AssociationEventData";
+
+    while (MAX_EVENT_HISTORY_SIZE <= m_assoc_events.size()) {
+        uint32_t indx = m_assoc_events.front();
+
+        if (!m_ambiorix_datamodel->remove_instance(path_association_event, indx)) {
+            LOG(ERROR) << "Failed to remove " << path_association_event << indx << " instance.";
+        }
+        m_assoc_events.pop();
+    }
+
+    path_association_event = m_ambiorix_datamodel->add_instance(path_association_event);
+
+    if (path_association_event.empty()) {
+        return {};
+    }
+    auto index = get_dm_index_from_path(path_association_event);
+
+    if (index.second) {
+        m_assoc_events.push(index.second);
+    }
     if (!m_ambiorix_datamodel->set(path_association_event, "BSSID", tlvf::mac_to_string(bssid))) {
-        LOG(ERROR) << "Failed to set " << path_association_event << "BSSID: " << bssid;
-        return false;
+        LOG(ERROR) << "Failed to set " << path_association_event << ".BSSID: " << bssid;
+        return {};
     }
     if (!m_ambiorix_datamodel->set(path_association_event, "MACAddress",
                                    tlvf::mac_to_string(client_mac))) {
-        LOG(ERROR) << "Failed to set " << path_association_event << "MACAddress: " << client_mac;
-        return false;
+        LOG(ERROR) << "Failed to set " << path_association_event << ".MACAddress: " << client_mac;
+        return {};
     }
 
     /*
@@ -6072,11 +6120,16 @@ bool db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_
     */
     if (!m_ambiorix_datamodel->set(path_association_event, "StatusCode",
                                    static_cast<uint32_t>(0))) {
-        LOG(ERROR) << "Failed to set " << path_association_event << "StatusCode: " << 0;
-        return false;
+        LOG(ERROR) << "Failed to set " << path_association_event << ".StatusCode: " << 0;
+        return {};
     }
+    m_ambiorix_datamodel->set_current_time(path_association_event);
 
-    return true;
+    if (MAX_EVENT_HISTORY_SIZE < m_assoc_indx.size()) {
+        m_assoc_indx.clear();
+    }
+    m_assoc_indx[tlvf::mac_to_string(client_mac)].push_back(index.second);
+    return path_association_event;
 }
 
 std::string db::dm_add_device_element(const sMacAddr &mac)
@@ -6126,18 +6179,7 @@ bool db::add_current_op_class(const sMacAddr &radio_mac, uint8_t op_class, uint8
         return false;
     }
 
-    auto time_stamp = m_ambiorix_datamodel->get_datamodel_time_format();
-    if (time_stamp.empty()) {
-        LOG(ERROR) << "Failed to get Date and Time in RFC 3339 format.";
-        return false;
-    }
-
-    //Set TimeStamp
-    //Data model path example: Controller.Network.Device.1.Radio.1.CurrentOperatingClasses.TimeStamp
-    if (!m_ambiorix_datamodel->set(op_class_path_instance, "TimeStamp", time_stamp)) {
-        LOG(ERROR) << "Failed to set " << op_class_path_instance << ".TimeStamp: " << time_stamp;
-        return false;
-    }
+    m_ambiorix_datamodel->set_current_time(op_class_path_instance);
 
     //Set Operating class
     //Data model path: Controller.Network.Device.1.Radio.1.CurrentOperatingClasses.Class
@@ -6319,22 +6361,7 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
         LOG(ERROR) << "Failed to set " << bss_instance << "LastChange: " << creation_time;
         return false;
     }
-
-    auto timestamp = m_ambiorix_datamodel->get_datamodel_time_format();
-    if (timestamp.empty()) {
-        LOG(ERROR) << "Failed to get Date and Time in RFC 3339 format.";
-        return false;
-    }
-
-    /*
-        Set value for TimeStamp variable
-        Example: Controller.Network.Device.1.Radio.1.BSS.1.TimeStamp
-    */
-    if (!m_ambiorix_datamodel->set(bss_instance, "TimeStamp", timestamp)) {
-        LOG(ERROR) << "Failed to set " << bss_instance << "TimeStamp: " << timestamp;
-        return false;
-    }
-
+    m_ambiorix_datamodel->set_current_time(bss_instance);
     return true;
 }
 
@@ -6900,6 +6927,77 @@ bool db::dm_remove_sta(const sMacAddr &sta_mac)
 
     if (!m_ambiorix_datamodel->remove_instance(instance.first, instance.second)) {
         LOG(ERROR) << "Failed to remove " << sta_node->dm_path << " instance.";
+        return false;
+    }
+
+    return true;
+}
+
+bool db::set_sta_dhcp_v4_lease(const sMacAddr &sta_mac, const std::string &host_name,
+                               const std::string &ipv4_address)
+{
+    auto sta_node = get_node(sta_mac);
+
+    if (!sta_node || sta_node->get_type() != TYPE_CLIENT) {
+        return false;
+    }
+
+    // Update node attributes.
+    sta_node->ipv4 = ipv4_address;
+    sta_node->name = host_name;
+
+    // Update datamodel attributes.
+    std::string path_to_sta = sta_node->dm_path;
+
+    if (path_to_sta.empty()) {
+        return true;
+    }
+
+    // Path example to the variable in Data Model
+    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.Hostname
+    if (!m_ambiorix_datamodel->set(path_to_sta, "Hostname", host_name)) {
+        LOG(ERROR) << "Failed to set " << path_to_sta << ".Hostname: " << host_name;
+        return false;
+    }
+
+    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.IPV4Address
+    if (!m_ambiorix_datamodel->set(path_to_sta, "IPV4Address", ipv4_address)) {
+        LOG(ERROR) << "Failed to set " << path_to_sta << ".IPV4Address: " << ipv4_address;
+        return false;
+    }
+
+    return true;
+}
+
+bool db::set_sta_dhcp_v6_lease(const sMacAddr &sta_mac, const std::string &host_name,
+                               const std::string &ipv6_address)
+{
+    auto sta_node = get_node(sta_mac);
+
+    if (!sta_node || sta_node->get_type() != TYPE_CLIENT) {
+        return false;
+    }
+
+    // Update node attributes.
+    sta_node->name = host_name;
+
+    // Update datamodel attributes.
+    std::string path_to_sta = sta_node->dm_path;
+
+    if (path_to_sta.empty()) {
+        return true;
+    }
+
+    // Path example to the variable in Data Model
+    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.Hostname
+    if (!m_ambiorix_datamodel->set(path_to_sta, "Hostname", host_name)) {
+        LOG(ERROR) << "Failed to set " << path_to_sta << ".Hostname: " << host_name;
+        return false;
+    }
+
+    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.IPV6Address
+    if (!m_ambiorix_datamodel->set(path_to_sta, "IPV6Address", ipv6_address)) {
+        LOG(ERROR) << "Failed to set " << path_to_sta << ".IPV6Address: " << ipv6_address;
         return false;
     }
 

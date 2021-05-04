@@ -389,7 +389,7 @@ void channel_selection_task::work()
     case eState::COMPUTE_IRE_CANDIDATE_CHANNELS: {
 
         bool eth_bh = !hostap_params.backhaul_is_wireless;
-        //bool hostap_repeater_mode_flag = database.get_hostap_repeater_mode_flag(hostap_mac);
+        //bool hostap_repeater_mode_flag = database.get_hostap_repeater_mode_flag(tlvf::mac_from_string(hostap_mac));
 
         TASK_LOG(DEBUG) << "eth_bh " << int(eth_bh)
                         << " hostap_params.backhaul_is_2G = " << int(hostap_params.backhaul_is_2G)
@@ -1512,7 +1512,8 @@ bool channel_selection_task::fill_restricted_channels_from_ccl_and_supported(uin
         }
     }
     auto global_restricted_chn = database.get_global_restricted_channels();
-    auto db_restricted         = database.get_hostap_conf_restricted_channels(hostap_mac);
+    auto db_restricted =
+        database.get_hostap_conf_restricted_channels(tlvf::mac_from_string(hostap_mac));
     auto configured_restricted_chn =
         !global_restricted_chn.empty() ? global_restricted_chn : db_restricted;
     if (!configured_restricted_chn.empty()) {

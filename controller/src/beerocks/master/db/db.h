@@ -147,6 +147,7 @@ public:
         int unfriendly_device_max_timelife_delay_minutes;
         unsigned int persistent_db_commit_changes_interval_seconds;
         std::chrono::seconds link_metrics_request_interval_seconds;
+        std::chrono::seconds dhcp_monitor_interval_seconds;
     } sDbMasterConfig;
 
     typedef struct {
@@ -393,10 +394,10 @@ public:
 
     std::chrono::steady_clock::time_point get_node_last_seen(const std::string &mac);
 
-    bool set_hostap_active(const std::string &mac, bool active);
+    bool set_hostap_active(const sMacAddr &mac, bool active);
     bool is_hostap_active(const std::string &mac);
 
-    bool set_hostap_backhaul_manager(const std::string &mac, bool is_backhaul_manager);
+    bool set_hostap_backhaul_manager(const sMacAddr &mac, bool is_backhaul_manager);
     bool is_hostap_backhaul_manager(const std::string &mac);
     std::string get_hostap_backhaul_manager(const std::string &ire);
 
@@ -641,6 +642,32 @@ public:
      */
     bool dm_remove_sta(const sMacAddr &sta_mac);
 
+    /**
+     * @brief Set STA DHCPv4 lease information for both node and datamodel.
+     *
+     * Path: Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}
+     *
+     * @param sta_mac sta MAC address for node matching
+     * @param host_name sta host name
+     * @param ipv4_address sta ipv4 address given by dhcp
+     * @return true on success, false otherwise.
+     */
+    bool set_sta_dhcp_v4_lease(const sMacAddr &sta_mac, const std::string &host_name,
+                               const std::string &ipv4_address);
+
+    /**
+     * @brief Set STA DHCPv6 lease information for both node and datamodel.
+     *
+     * Path: Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}
+     *
+     * @param sta_mac sta MAC address for node matching
+     * @param host_name sta host name
+     * @param ipv6_address sta ipv6 address given by dhcp
+     * @return true on success, false otherwise.
+     */
+    bool set_sta_dhcp_v6_lease(const sMacAddr &sta_mac, const std::string &host_name,
+                               const std::string &ipv6_address);
+
     //
     // DB node functions (get only)
     //
@@ -732,14 +759,14 @@ public:
     bool set_station_capabilities(const std::string &client_mac,
                                   const beerocks::message::sRadioCapabilities &sta_cap);
 
-    bool set_hostap_ant_num(const std::string &mac, beerocks::eWiFiAntNum ant_num);
-    beerocks::eWiFiAntNum get_hostap_ant_num(const std::string &mac);
+    bool set_hostap_ant_num(const sMacAddr &mac, beerocks::eWiFiAntNum ant_num);
+    beerocks::eWiFiAntNum get_hostap_ant_num(const sMacAddr &mac);
 
-    bool set_hostap_ant_gain(const std::string &mac, int ant_gain);
-    int get_hostap_ant_gain(const std::string &mac);
+    bool set_hostap_ant_gain(const sMacAddr &mac, int ant_gain);
+    int get_hostap_ant_gain(const sMacAddr &mac);
 
-    bool set_hostap_tx_power(const std::string &mac, int tx_power);
-    int get_hostap_tx_power(const std::string &mac);
+    bool set_hostap_tx_power(const sMacAddr &mac, int tx_power);
+    int get_hostap_tx_power(const sMacAddr &mac);
 
     bool set_hostap_supported_channels(const std::string &mac,
                                        beerocks::message::sWifiChannel *supported_channels,
@@ -752,8 +779,7 @@ public:
                                               uint8_t tx_power,
                                               const std::vector<uint8_t> &non_operable_channels);
 
-    bool set_hostap_band_capability(const std::string &mac,
-                                    beerocks::eRadioBandCapability capability);
+    bool set_hostap_band_capability(const sMacAddr &mac, beerocks::eRadioBandCapability capability);
     beerocks::eRadioBandCapability get_hostap_band_capability(const std::string &mac);
 
     bool capability_check(const std::string &mac, int channel);
@@ -778,19 +804,19 @@ public:
     bool update_node_11v_responsiveness(const std::string &mac, bool success);
     bool get_node_11v_capability(const std::string &mac);
 
-    bool set_hostap_iface_name(const std::string &mac, const std::string &iface_name);
+    bool set_hostap_iface_name(const sMacAddr &mac, const std::string &iface_name);
     std::string get_hostap_iface_name(const std::string &mac);
 
-    bool set_hostap_iface_type(const std::string &mac, beerocks::eIfaceType iface_type);
+    bool set_hostap_iface_type(const sMacAddr &mac, beerocks::eIfaceType iface_type);
     beerocks::eIfaceType get_hostap_iface_type(const std::string &mac);
 
-    bool set_hostap_driver_version(const std::string &mac, const std::string &version);
+    bool set_hostap_driver_version(const sMacAddr &mac, const std::string &version);
     std::string get_hostap_driver_version(const std::string &mac);
 
-    bool set_hostap_iface_id(const std::string &mac, int8_t iface_id);
-    int8_t get_hostap_iface_id(const std::string &mac);
+    bool set_hostap_iface_id(const sMacAddr &mac, int8_t iface_id);
+    int8_t get_hostap_iface_id(const sMacAddr &mac);
 
-    bool set_hostap_vap_list(const std::string &mac,
+    bool set_hostap_vap_list(const sMacAddr &mac,
                              const std::unordered_map<int8_t, sVapElement> &vap_list);
     std::unordered_map<int8_t, sVapElement> &get_hostap_vap_list(const std::string &mac);
     std::set<std::string> get_hostap_vaps_bssids(const std::string &mac);
@@ -819,7 +845,7 @@ public:
      */
     bool is_vap_on_steer_list(const std::string &bssid);
     std::string get_hostap_vap_with_ssid(const std::string &mac, const std::string &ssid);
-    std::string get_hostap_vap_mac(const std::string &mac, int vap_id);
+    std::string get_hostap_vap_mac(const sMacAddr &mac, int vap_id);
     std::string get_node_parent_radio(const std::string &mac);
 
     /**
@@ -833,8 +859,8 @@ public:
 
     int8_t get_hostap_vap_id(const std::string &mac);
 
-    bool set_hostap_repeater_mode_flag(const std::string &mac, bool flag);
-    bool get_hostap_repeater_mode_flag(const std::string &mac);
+    bool set_hostap_repeater_mode_flag(const sMacAddr &mac, bool flag);
+    bool get_hostap_repeater_mode_flag(const sMacAddr &mac);
 
     bool set_node_backhaul_iface_type(const std::string &mac, beerocks::eIfaceType iface_type);
     beerocks::eIfaceType get_node_backhaul_iface_type(const std::string &mac);
@@ -848,9 +874,9 @@ public:
 
     bool set_global_restricted_channels(const uint8_t *restricted_channels);
     std::vector<uint8_t> get_global_restricted_channels();
-    bool set_hostap_conf_restricted_channels(const std::string &hostap_mac,
+    bool set_hostap_conf_restricted_channels(const sMacAddr &hostap_mac,
                                              const uint8_t *restricted_channels);
-    std::vector<uint8_t> get_hostap_conf_restricted_channels(const std::string &hostap_mac);
+    std::vector<uint8_t> get_hostap_conf_restricted_channels(const sMacAddr &hostap_mac);
     bool
     fill_radio_channel_scan_capabilites(const sMacAddr &radio_mac,
                                         wfa_map::cRadiosWithScanCapabilities &radio_capabilities);
@@ -930,11 +956,11 @@ public:
 
     /**
      * @brief Set the channel scan is pending object
-     * 
+     *
      * @param mac:              MAC address of radio
      * @param scan_in_progress: Flag of current channel scan
      * @return true on success
-     * @return false on failure 
+     * @return false on failure
      */
     bool set_channel_scan_is_pending(const sMacAddr &mac, bool scan_is_pending);
 
@@ -952,7 +978,7 @@ public:
     /**
      * @brief Get the channel scan in progress object
      * In the case of single scan also check the scan is pending flag
-     * 
+     *
      * @param mac          MAC address of radio
      * @param single_scan: Indicated if to use single scan or continuous
      * @return Flag of current channel scan
@@ -1352,8 +1378,8 @@ public:
     void clear_hostap_stats_info(const std::string &mac);
 
     /**
-     * @brief Notificatify about client disconnection
-     * @param mac string with STA mac address
+     * @brief Notify about client disconnection.
+     * @param mac String with STA mac address.
      */
     bool notify_disconnection(const std::string &mac);
 
@@ -1596,6 +1622,9 @@ public:
 
     bool assign_persistent_db_data_commit_operation_id(int new_operation_id);
     int get_persistent_db_data_commit_operation_id();
+
+    bool assign_dhcp_task_id(int new_task_id);
+    int get_dhcp_task_id();
 
     void lock();
     void unlock();
@@ -1867,13 +1896,16 @@ private:
     std::string dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client_mac);
 
     /**
-     * @brief Adds last STA to the Controller.Notifiation.AssociationEvent
+     * @brief Adds to data model an instance of object AssociationEventData.
+     * This object describes an event generated when a STA associates to a BSS.
+     * Example of full path to object:
+     * 'Controller.Notification.AssociationEvent.AssociationEventData.1'.
      *
      * @param bssid BSS mac address.
      * @param client_mac Client mac address.
-     * @return True on success, false otherwise.
+     * @return Path to object on success, empty sring otherwise.
      */
-    bool dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac);
+    std::string dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac);
 
     /**
      * @brief Prepares path to the BSS data element with correct index (i).
@@ -1937,6 +1969,7 @@ private:
     int config_update_task_id                  = -1;
     int persistent_db_aging_operation_id       = -1;
     int persistent_db_data_commit_operation_id = -1;
+    int dhcp_task_id                           = -1;
 
     std::shared_ptr<node> last_accessed_node;
     std::string last_accessed_node_mac;
@@ -2016,6 +2049,26 @@ private:
     // Key:     std::string ISO-8601-timestamp
     // Value:   int         Report-message-MID
     std::unordered_map<std::string, int> m_channel_scan_report_records;
+
+    /*
+    * key = client mac, value = index of NBAPI AssociationEventData
+    */
+    std::map<std::string, std::list<int>> m_assoc_indx;
+
+    /*
+    * Maximum amount of events registered on the system bus NBAPI
+    */
+    const uint8_t MAX_EVENT_HISTORY_SIZE = 24;
+
+    /*
+    * The queue with indexes of NBAPI disassociation events.
+    */
+    std::queue<uint32_t> m_disassoc_events;
+
+    /*
+    * The queue with indexes of NBAPI association events.
+    */
+    std::queue<uint32_t> m_assoc_events;
 };
 
 } // namespace son

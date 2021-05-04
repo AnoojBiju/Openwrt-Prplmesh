@@ -126,6 +126,8 @@ run-certification-tests-platform-essensium:
     - job: build-for-turris-omnia
   rules:
     - if: '$TESTS_TO_RUN_ESSENSIUM !~ /^\$/ && $DEVICE_UNDER_TEST_ESSENSIUM != "prplmesh"'
+    - when: manual
+      allow_failure: true
 
 run-certification-tests-platform-isr:
   extends: .run-certification-tests
@@ -139,6 +141,8 @@ run-certification-tests-platform-isr:
     - job: build-for-turris-omnia
   rules:
     - if: '$TESTS_TO_RUN_ISR !~ /^\$/ && $DEVICE_UNDER_TEST_ISR != "prplmesh"'
+    - when: manual
+      allow_failure: true
 
 upload-release-artifacts:
   stage: upload

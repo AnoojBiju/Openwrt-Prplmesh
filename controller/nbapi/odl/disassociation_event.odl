@@ -15,30 +15,24 @@
 
 %define {
     select Controller.Notification  {
+        // The events generated when a STA disassociates from a BSS.
         object DisassociationEvent {
-            object DisassocData {
-
+            object DisassociationEventData[] {
                 %read-only string BSSID = "00:00:00:00:00:00";
-
                 %read-only string MACAddress = "00:00:00:00:00:00";
-
                 %read-only uint32 ReasonCode = 0 {
                     on action validate call check_range [0, 65535];
                 }
-
                 %read-only uint32 BytesSent = 0;
-
                 %read-only uint32 BytesReceived = 0;
-
                 %read-only uint32 PacketsSent = 0;
-
                 %read-only uint32 PacketsReceived = 0;
-
                 %read-only uint32 ErrorsSent = 0;
-
                 %read-only uint32 ErrorsReceived = 0;
-
                 %read-only uint32 RetransCount = 0;
+                // The time this event was collected
+                %read-only string TimeStamp = "2020-08-31T11:22:39Z";
+                counted with DisassociationEventDataNumberOfEntries;
             }
         }
     }

@@ -12,6 +12,7 @@
 
 #include <bcl/network/network_utils.h>
 #include <bcl/network/sockets_impl.h>
+#include <bcl/transaction.h>
 #include <easylogging++.h>
 
 #include <beerocks/tlvf/beerocks_message.h>
@@ -387,12 +388,7 @@ bool PlatformManager::start()
     // In case of error in one of the steps of this method, we have to undo all the previous steps
     // (like when rolling back a database transaction, where either all steps get executed or none
     // of them gets executed)
-    std::deque<std::function<void()>> rollback_actions;
-    auto rollback = [&]() {
-        for (const auto &action : rollback_actions) {
-            action();
-        }
-    };
+    beerocks::Transaction transaction;
 
     // Create a timer to periodically check if WLAN parameters have changed
     m_check_wlan_params_changed_timer = m_timer_manager->add_timer(
@@ -407,7 +403,7 @@ bool PlatformManager::start()
     }
     LOG(DEBUG) << "Check-WLAN-parameters-changed timer created with fd = "
                << m_check_wlan_params_changed_timer;
-    rollback_actions.emplace_front([&]() {
+    transaction.add_rollback_action([&]() {
         m_timer_manager->remove_timer(m_check_wlan_params_changed_timer);
         m_check_wlan_params_changed_timer = beerocks::net::FileDescriptor::invalid_descriptor;
     });
@@ -415,10 +411,9 @@ bool PlatformManager::start()
     // Initialize the BPL (Beerocks Platform Library)
     if (bpl::bpl_init() < 0) {
         LOG(ERROR) << "Failed to initialize BPL!";
-        rollback();
         return false;
     }
-    rollback_actions.emplace_front([&]() { bpl::bpl_close(); });
+    transaction.add_rollback_action([&]() { bpl::bpl_close(); });
 
     int i = 0;
     for (int slave_num = 0; slave_num < IRE_MAX_SLAVES && i < BPL_NUM_OF_INTERFACES; ++slave_num) {
@@ -463,9 +458,10 @@ bool PlatformManager::start()
     m_should_stop = false;
     if (!work_queue.start()) {
         LOG(ERROR) << "Failed starting asynchronous work queue";
-        rollback();
         return false;
     }
+
+    transaction.commit();
 
     return true;
 }

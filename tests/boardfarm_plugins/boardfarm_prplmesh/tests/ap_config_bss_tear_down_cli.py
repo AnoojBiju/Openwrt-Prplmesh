@@ -58,12 +58,14 @@ class ApConfigBSSTeardownCli(PrplMeshBaseTest):
         self.check_log(agent.radios[1], r".* tear down radio")
 
         for vap in agent.radios[0].vaps:
-            if vap.get_ssid() not in (ssid, 'N/A'):
-                self.fail(f'Wrong SSID: {vap.ssid} instead of {ssid}')
+            vap_ssid = vap.get_ssid()
+            if vap_ssid not in (ssid, 'N/A'):
+                self.fail(f'Wrong SSID: {vap_ssid} instead of {ssid}')
 
         for vap in agent.radios[1].vaps:
-            if vap.get_ssid() != 'N/A':
-                self.fail('Wrong SSID: {vap.ssid} instead torn down'.format(vap=vap))
+            vap_ssid = vap.get_ssid()
+            if vap_ssid != 'N/A':
+                self.fail(f'Wrong SSID: {vap_ssid} instead torn down')
 
         controller.beerocks_cli_command('bml_clear_wifi_credentials {}'.format(agent.mac))
         controller.beerocks_cli_command('bml_update_wifi_credentials {}'.format(agent.mac))

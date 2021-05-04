@@ -30,7 +30,7 @@ bool Configuration::load(const std::set<std::string> &vap_indications)
     m_hostapd_config_head.clear();
     m_hostapd_config_vaps.clear();
 
-    // strat reading
+    // start reading
     std::ifstream ifs(m_configuration_file);
     std::string line;
 
@@ -74,7 +74,7 @@ bool Configuration::load(const std::set<std::string> &vap_indications)
 
     std::stringstream load_message;
     load_message << "load() final message: os - " << strerror(errno) << "; existing vaps - "
-                 << std::boolalpha << parsing_vaps;
+                 << parsing_vaps;
     m_last_message = load_message.str();
 
     // if we've got to parsing vaps and no read errors, assume all is good
@@ -317,7 +317,7 @@ bool Configuration::is_key_in_line(const std::string &line, const std::string &k
 std::ostream &operator<<(std::ostream &os, const Configuration &conf)
 {
     os << "== configuration details ==\n"
-       << "= ok:           " << std::boolalpha << conf.m_ok << '\n'
+       << "= ok:           " << conf.m_ok << '\n'
        << "= last message: " << conf.m_last_message << '\n'
        << "= file:         " << conf.m_configuration_file << '\n'
        << "= head:         " << '\n';

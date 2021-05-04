@@ -23,11 +23,12 @@ public:
     CacCapabilitiesDatabase() = default;
     const beerocks::CountryCode get_country_code() const override;
     std::vector<sMacAddr> get_cac_radios() const override;
-    bool is_cac_method_supported(const sMacAddr &, beerocks::eCacMethod method) const override;
-    uint32_t get_cac_completion_duration(const sMacAddr &,
-                                         beerocks::eCacMethod method) const override;
-    CacOperatingClasses get_cac_operating_classes(const sMacAddr &,
-                                                  beerocks::eCacMethod) const override;
+    bool is_cac_method_supported(const sMacAddr &radio_mac,
+                                 wfa_map::eCacMethod method) const override;
+    uint32_t get_cac_completion_duration(const sMacAddr &radio_mac,
+                                         wfa_map::eCacMethod method) const override;
+    CacOperatingClasses get_cac_operating_classes(const sMacAddr &radio_mac,
+                                                  wfa_map::eCacMethod method) const override;
 };
 
 } // namespace beerocks

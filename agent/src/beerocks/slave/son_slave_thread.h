@@ -69,7 +69,7 @@ public:
     } sSlaveBackhaulParams;
 
     enum eSlaveState {
-        STATE_WAIT_BERFORE_INIT = 0,
+        STATE_WAIT_BEFORE_INIT = 0,
         STATE_INIT,
         STATE_CONNECT_TO_PLATFORM_MANAGER,
         STATE_WAIT_FOR_PLATFORM_MANAGER_ONBOARD_QUERY_RESPONSE,
@@ -210,7 +210,7 @@ private:
     /**
      * @brief check if there was an error in the constructor
      *
-     * @return false if no errors occured in the constructor, true otherwise
+     * @return false if no errors occurred in the constructor, true otherwise
      */
     bool m_constructor_failed = false;
 

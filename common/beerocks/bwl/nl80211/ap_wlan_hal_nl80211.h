@@ -34,6 +34,7 @@ public:
     virtual ~ap_wlan_hal_nl80211();
 
     virtual HALState attach(bool block = false) override;
+    bool refresh_radio_info() override;
     virtual bool enable() override;
     virtual bool disable() override;
     virtual bool set_start_disabled(bool enable, int vap_id = beerocks::IFACE_RADIO_ID) override;
@@ -60,6 +61,8 @@ public:
     virtual bool sta_softblock_remove(const std::string &vap_name,
                                       const std::string &client_mac) override;
     virtual bool switch_channel(int chan, int bw, int vht_center_frequency) override;
+    virtual bool cancel_cac(int chan, beerocks::eWiFiBandwidth bw, int vht_center_frequency,
+                            int secondary_chan) override;
     virtual bool set_antenna_mode(AntMode mode) override;
     virtual bool wds_set_mode(WDSMode mode) override;
     virtual bool wds_add_sta(const std::string &mac) override;
