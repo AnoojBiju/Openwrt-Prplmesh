@@ -122,11 +122,6 @@ void son_actions::unblock_sta(db &database, ieee1905_1::CmduMessageTx &cmdu_tx, 
         /*
          * unblock client from all hostaps to prevent it from getting locked out
          */
-        if (database.get_hostap_exclude_from_steering_flag(hostap)) {
-            LOG(DEBUG) << "hostap " << hostap << " is excluded from steering, skipping";
-            continue;
-        }
-
         const auto &hostap_vaps = database.get_hostap_vap_list(hostap);
         for (const auto &hostap_vap : hostap_vaps) {
             if (hostap_vap.second.ssid != ssid) {

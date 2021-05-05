@@ -159,10 +159,9 @@ public:
         beerocks::eIfaceType iface_type;
         std::string driver_version;
         std::vector<beerocks::message::sWifiChannel> supported_channels;
-        uint8_t operating_class    = 0;
-        int ant_gain               = 0;
-        int tx_power               = 0;
-        bool exclude_from_steering = false;
+        uint8_t operating_class = 0;
+        int ant_gain            = 0;
+        int tx_power            = 0;
         std::string ssid;
         beerocks::eRadioBandCapability capability = beerocks::SUBBAND_CAPABILITY_UNKNOWN;
         uint16_t vht_center_frequency             = 0;

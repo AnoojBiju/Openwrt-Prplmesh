@@ -2229,7 +2229,7 @@ bool Controller::handle_intel_slave_join(
             database.set_node_type(radio_mac, beerocks::TYPE_SLAVE);
             LOG(ERROR) << "Existing mac node is not TYPE_SLAVE";
         }
-        database.clear_hostap_stats_info(radio_mac);
+        database.clear_hostap_stats_info(mac);
     } else {
         database.add_node_radio(mac, tlvf::mac_from_string(bridge_mac),
                                 tlvf::mac_from_string(radio_identifier));
@@ -2537,7 +2537,7 @@ bool Controller::handle_non_intel_slave_join(
             database.set_node_type(radio_mac, beerocks::TYPE_SLAVE);
             LOG(ERROR) << "Existing mac node is not TYPE_SLAVE";
         }
-        database.clear_hostap_stats_info(radio_mac);
+        database.clear_hostap_stats_info(ruid);
     } else {
         // TODO Intel Slave Join has separate radio MAC and UID; we use radio_mac for both.
         database.add_node_radio(ruid, tlvf::mac_from_string(bridge_mac), ruid);
@@ -2994,7 +2994,7 @@ bool Controller::handle_cmdu_control_message(
                     << " vap_id=" << int(notification->params().vap_id));
 
         //response return from slave backhaul manager , updating the matching same band sibling.
-        if (database.is_hostap_backhaul_manager(ap_mac) &&
+        if (database.is_hostap_backhaul_manager(tlvf::mac_from_string(ap_mac)) &&
             database.is_node_wireless(database.get_node_parent_backhaul(ap_mac)) &&
             database.is_node_5ghz(client_mac)) {
             auto priv_ap_mac = ap_mac;
@@ -3277,7 +3277,7 @@ bool Controller::handle_cmdu_control_message(
             return false;
         }
         auto &ap_stats = std::get<1>(ap_stats_tuple);
-        database.set_hostap_stats_info(hostap_mac, &ap_stats);
+        database.set_hostap_stats_info(tlvf::mac_from_string(hostap_mac), &ap_stats);
         break;
     }
     case beerocks_message::ACTION_CONTROL_HOSTAP_LOAD_MEASUREMENT_NOTIFICATION: {
@@ -3302,7 +3302,8 @@ bool Controller::handle_cmdu_control_message(
         if (active_client_count > database.config.monitor_min_active_clients &&
             client_load_percent >
                 database.config.monitor_total_ch_load_notification_hi_th_percent &&
-            database.settings_load_balancing() && database.is_hostap_active(hostap_mac) &&
+            database.settings_load_balancing() &&
+            database.is_hostap_active(tlvf::mac_from_string(hostap_mac)) &&
             database.get_node_state(ire_mac) == beerocks::STATE_CONNECTED &&
             database.get_node_type(ire_mac) != beerocks::TYPE_CLIENT) {
             /*

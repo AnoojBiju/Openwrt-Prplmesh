@@ -797,9 +797,10 @@ void channel_selection_task::work()
                        << " channel_ext_above_primary = "
                        << int(csa_event->cs_params.channel_ext_above_primary);
         auto freq = wireless_utils::channel_to_freq(csa_event->cs_params.channel);
-        auto prev_vht_center_frequency = database.get_hostap_vht_center_frequency(hostap_mac);
-        auto prev_channel              = database.get_node_channel(hostap_mac);
-        auto prev_bandwidth            = database.get_node_bw(hostap_mac);
+        auto prev_vht_center_frequency =
+            database.get_hostap_vht_center_frequency(tlvf::mac_from_string(hostap_mac));
+        auto prev_channel   = database.get_node_channel(hostap_mac);
+        auto prev_bandwidth = database.get_node_bw(hostap_mac);
         auto channel_ext_above_secondary =
             (freq < csa_event->cs_params.vht_center_frequency) ? true : false;
         auto channel_ext_above_primary =
@@ -917,12 +918,12 @@ void channel_selection_task::work()
                         << " client connected to reentry hostap steering to 2.4 hostap ";
         database.set_hostap_dfs_reentry_clients(hostap_mac, set_reentry_clients);
         auto hostaps_sibling = database.get_node_siblings(hostap_mac, beerocks::TYPE_SLAVE);
-        auto hostap_mac_2g =
-            std::find_if(std::begin(hostaps_sibling), std::end(hostaps_sibling),
-                         [&](std::string hostap_sibling) {
-                             return (is_2G_channel(database.get_node_channel(hostap_sibling)) &&
-                                     database.is_hostap_active(hostap_sibling));
-                         });
+        auto hostap_mac_2g   = std::find_if(
+            std::begin(hostaps_sibling), std::end(hostaps_sibling),
+            [&](std::string hostap_sibling) {
+                return (is_2G_channel(database.get_node_channel(hostap_sibling)) &&
+                        database.is_hostap_active(tlvf::mac_from_string(hostap_sibling)));
+            });
         if (hostap_mac_2g == std::end(hostaps_sibling)) {
             TASK_LOG(DEBUG) << "hostap_mac - " << hostap_mac
                             << " no 2.4G hostap found - band not active ";
@@ -1208,7 +1209,8 @@ void channel_selection_task::ccl_fill_active_channels()
         auto channel                     = database.get_node_channel(hostap);
         auto bw                          = database.get_node_bw(hostap);
         auto channel_ext_above_secondary = database.get_node_channel_ext_above_secondary(hostap);
-        auto channel_ext_above_primary   = database.get_hostap_channel_ext_above_primary(hostap);
+        auto channel_ext_above_primary =
+            database.get_hostap_channel_ext_above_primary(tlvf::mac_from_string(hostap));
         TASK_LOG(DEBUG) << "hostap = " << hostap << " channel = " << int(channel)
                         << " bw = " << int(bw)
                         << " channel_ext_above_secondary = " << int(channel_ext_above_secondary);
@@ -1588,7 +1590,7 @@ void channel_selection_task::send_backhaul_reset()
 
 bool channel_selection_task::get_backhaul_manager_slave(std::string &backhaul_manager_slave_mac)
 {
-    if (database.is_hostap_backhaul_manager(hostap_mac)) {
+    if (database.is_hostap_backhaul_manager(tlvf::mac_from_string(hostap_mac))) {
         TASK_LOG(INFO) << " is backhaul_manager_slave! , hostap = " << hostap_mac;
         backhaul_manager_slave_mac = hostap_mac;
         return true;
@@ -1596,7 +1598,7 @@ bool channel_selection_task::get_backhaul_manager_slave(std::string &backhaul_ma
 
     auto siblings = database.get_node_siblings(hostap_mac);
     for (auto &sibling : siblings) {
-        if (database.is_hostap_backhaul_manager(sibling)) {
+        if (database.is_hostap_backhaul_manager(tlvf::mac_from_string(sibling))) {
             TASK_LOG(INFO) << " backhaul_manager_slave joined , sibling = " << hostap_mac;
             backhaul_manager_slave_mac = sibling;
             return true;
@@ -1770,7 +1772,7 @@ void channel_selection_task::run_optimal_path_for_connected_clients()
     auto hostap_mac_2g   = std::find_if(
         std::begin(hostaps_sibling), std::end(hostaps_sibling), [&](std::string hostap_sibling) {
             return (is_2G_channel(database.get_node_channel(hostap_sibling)) &&
-                    database.is_hostap_active(hostap_sibling));
+                    database.is_hostap_active(tlvf::mac_from_string(hostap_sibling)));
         });
 
     if (hostap_mac_2g != std::end(hostaps_sibling)) {

@@ -946,7 +946,7 @@ bool db::set_hostap_active(const sMacAddr &mac, bool active)
     return true;
 }
 
-bool db::is_hostap_active(const std::string &mac)
+bool db::is_hostap_active(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -972,7 +972,7 @@ bool db::set_hostap_backhaul_manager(const sMacAddr &mac, bool is_backhaul_manag
     return true;
 }
 
-bool db::is_hostap_backhaul_manager(const std::string &mac)
+bool db::is_hostap_backhaul_manager(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -997,7 +997,7 @@ std::string db::get_hostap_backhaul_manager(const std::string &ire)
     }
     auto ire_hostaps = get_node_children(ire, beerocks::TYPE_SLAVE);
     for (auto &hostap : ire_hostaps) {
-        if ((is_hostap_backhaul_manager(hostap)) &&
+        if ((is_hostap_backhaul_manager(tlvf::mac_from_string(hostap))) &&
             get_node_state(hostap) == beerocks::STATE_CONNECTED) {
             return hostap;
         }
@@ -1938,7 +1938,7 @@ int db::get_hostap_tx_power(const sMacAddr &mac)
     return n->hostap->tx_power;
 }
 
-bool db::set_hostap_supported_channels(const std::string &mac,
+bool db::set_hostap_supported_channels(const sMacAddr &mac,
                                        beerocks::message::sWifiChannel *channels, int length)
 {
     auto n = get_node(mac);
@@ -2051,7 +2051,8 @@ bool db::add_hostap_supported_operating_class(const std::string &radio_mac, uint
     // Set values for Controller.Network.Device.Radio.Capabilities.OperatingClasses
     dm_add_ap_operating_classes(radio_mac, tx_power, operating_class, non_operable_channels);
 
-    set_hostap_supported_channels(radio_mac, &supported_channels[0], supported_channels.size());
+    set_hostap_supported_channels(tlvf::mac_from_string(radio_mac), &supported_channels[0],
+                                  supported_channels.size());
     // dump new supported channels state
     // LOG(DEBUG) << "New supported channels for hostap" << radio_mac << " operating class "
     //            << int(operating_class) << std::endl
@@ -2074,7 +2075,7 @@ bool db::set_hostap_band_capability(const sMacAddr &mac, beerocks::eRadioBandCap
     return true;
 }
 
-beerocks::eRadioBandCapability db::get_hostap_band_capability(const std::string &mac)
+beerocks::eRadioBandCapability db::get_hostap_band_capability(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2090,7 +2091,7 @@ beerocks::eRadioBandCapability db::get_hostap_band_capability(const std::string 
 bool db::capability_check(const std::string &mac, int channel)
 {
     auto band       = wireless_utils::which_subband(channel);
-    auto capability = get_hostap_band_capability(mac);
+    auto capability = get_hostap_band_capability(tlvf::mac_from_string(mac));
     if (band == beerocks::SUBBAND_UNKNOWN || capability == beerocks::SUBBAND_CAPABILITY_UNKNOWN) {
         LOG(ERROR) << "band or capability unknown!!";
         return false;
@@ -2179,7 +2180,7 @@ bool db::can_start_client_steering(const std::string &sta_mac, const std::string
         LOG(ERROR) << "Device with mac " << sta_mac << " is not a station.";
         return false;
     }
-    if (!target_bss || !is_hostap_active(target_bssid)) {
+    if (!target_bss || !is_hostap_active(tlvf::mac_from_string(target_bssid))) {
         LOG(ERROR) << "Invalid or inactive BSS " << target_bssid;
         return false;
     }
@@ -2196,12 +2197,6 @@ bool db::can_start_client_steering(const std::string &sta_mac, const std::string
         LOG(DEBUG) << "Sta " << sta_mac << " can't steer to hostap " << target_bssid << std::endl
                    << "  node_5ghz_support = " << get_node_5ghz_support(sta_mac) << std::endl
                    << "  node_24ghz_support = " << get_node_24ghz_support(sta_mac) << std::endl;
-        return false;
-    }
-    if ((get_hostap_exclude_from_steering_flag(target_bssid))) {
-        LOG(DEBUG) << "Sta " << sta_mac << " can't steer to hostap " << target_bssid << std::endl
-                   << "  hostap_exclude_from_steering = "
-                   << get_hostap_exclude_from_steering_flag(target_bssid) << std::endl;
         return false;
     }
     return true;
@@ -2799,7 +2794,7 @@ bool db::set_supported_channel_radar_affected(const sMacAddr &mac,
     return true;
 }
 
-bool db::set_hostap_is_dfs(const std::string &mac, bool enable)
+bool db::set_hostap_is_dfs(const sMacAddr &mac, bool enable)
 {
     std::shared_ptr<node> n = get_node(mac);
 
@@ -4290,8 +4285,7 @@ double db::get_node_cross_estimated_tx_phy_rate(const std::string &mac)
     return n->cross_estimated_tx_phy_rate;
 }
 
-bool db::set_hostap_stats_info(const std::string &mac,
-                               const beerocks_message::sApStatsParams *params)
+bool db::set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApStatsParams *params)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -4330,7 +4324,7 @@ bool db::set_hostap_stats_info(const std::string &mac,
     return true;
 }
 
-void db::clear_hostap_stats_info(const std::string &mac) { set_hostap_stats_info(mac, nullptr); }
+void db::clear_hostap_stats_info(const sMacAddr &mac) { set_hostap_stats_info(mac, nullptr); }
 
 bool db::notify_disconnection(const std::string &client_mac)
 {
@@ -4803,32 +4797,6 @@ bool db::set_measurement_window_size(const std::string &mac, int window_size)
     return true;
 }
 
-bool db::get_hostap_exclude_from_steering_flag(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        return false;
-    }
-    return n->hostap->exclude_from_steering;
-}
-
-bool db::set_hostap_exclude_from_steering_flag(const std::string &mac, bool flag)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        return false;
-    }
-
-    n->hostap->exclude_from_steering = flag;
-    return true;
-}
-
 bool db::set_node_channel_bw(const std::string &mac, int channel, beerocks::eWiFiBandwidth bw,
                              bool channel_ext_above_secondary, int8_t channel_ext_above_primary,
                              uint16_t vht_center_frequency)
@@ -4843,7 +4811,7 @@ bool db::set_node_channel_bw(const std::string &mac, int channel, beerocks::eWiF
             n->hostap->channel_ext_above_primary = channel_ext_above_primary;
             n->hostap->vht_center_frequency      = vht_center_frequency;
             auto is_dfs                          = wireless_utils::is_dfs_channel(channel);
-            set_hostap_is_dfs(mac, is_dfs);
+            set_hostap_is_dfs(tlvf::mac_from_string(mac), is_dfs);
             if (channel >= 1 && channel <= 13) {
                 n->hostap->operating_class = 81;
             } else if (channel == 14) {
@@ -4912,7 +4880,7 @@ bool db::get_node_channel_ext_above_secondary(const std::string &mac)
     return n->channel_ext_above_secondary;
 }
 
-bool db::get_hostap_channel_ext_above_primary(const std::string &hostap_mac)
+bool db::get_hostap_channel_ext_above_primary(const sMacAddr &hostap_mac)
 {
     auto n = get_node(hostap_mac);
     if (!n) {
@@ -4945,7 +4913,7 @@ std::string db::get_node_key(const std::string &al_mac, const std::string &ruid)
     return al_mac + "_" + ruid;
 }
 
-uint16_t db::get_hostap_vht_center_frequency(const std::string &mac)
+uint16_t db::get_hostap_vht_center_frequency(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
