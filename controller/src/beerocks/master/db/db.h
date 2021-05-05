@@ -395,10 +395,10 @@ public:
     std::chrono::steady_clock::time_point get_node_last_seen(const std::string &mac);
 
     bool set_hostap_active(const sMacAddr &mac, bool active);
-    bool is_hostap_active(const std::string &mac);
+    bool is_hostap_active(const sMacAddr &mac);
 
     bool set_hostap_backhaul_manager(const sMacAddr &mac, bool is_backhaul_manager);
-    bool is_hostap_backhaul_manager(const std::string &mac);
+    bool is_hostap_backhaul_manager(const sMacAddr &mac);
     std::string get_hostap_backhaul_manager(const std::string &ire);
 
     bool is_ap_out_of_band(const std::string &mac, const std::string &sta_mac);
@@ -768,7 +768,7 @@ public:
     bool set_hostap_tx_power(const sMacAddr &mac, int tx_power);
     int get_hostap_tx_power(const sMacAddr &mac);
 
-    bool set_hostap_supported_channels(const std::string &mac,
+    bool set_hostap_supported_channels(const sMacAddr &mac,
                                        beerocks::message::sWifiChannel *supported_channels,
                                        int length);
     std::vector<beerocks::message::sWifiChannel>
@@ -780,7 +780,7 @@ public:
                                               const std::vector<uint8_t> &non_operable_channels);
 
     bool set_hostap_band_capability(const sMacAddr &mac, beerocks::eRadioBandCapability capability);
-    beerocks::eRadioBandCapability get_hostap_band_capability(const std::string &mac);
+    beerocks::eRadioBandCapability get_hostap_band_capability(const sMacAddr &mac);
 
     bool capability_check(const std::string &mac, int channel);
 
@@ -891,7 +891,7 @@ public:
                                               const std::vector<uint8_t> &channels, bool affected);
     //bool get_supported_channel_all_availble(const std::string &mac );
 
-    bool set_hostap_is_dfs(const std::string &mac, bool enable);
+    bool set_hostap_is_dfs(const sMacAddr &mac, bool enable);
     bool get_hostap_is_dfs(const sMacAddr &mac);
 
     bool set_hostap_cac_completed(const std::string &mac, bool enable);
@@ -1366,9 +1366,8 @@ public:
     bool set_node_cross_estimated_tx_phy_rate(const std::string &mac, double phy_rate);
     double get_node_cross_estimated_tx_phy_rate(const std::string &mac);
 
-    bool set_hostap_stats_info(const std::string &mac,
-                               const beerocks_message::sApStatsParams *params);
-    void clear_hostap_stats_info(const std::string &mac);
+    bool set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApStatsParams *params);
+    void clear_hostap_stats_info(const sMacAddr &mac);
 
     /**
      * @brief Notify about client disconnection.
@@ -1455,17 +1454,14 @@ public:
     int get_measurement_window_size(const std::string &mac);
     bool set_measurement_window_size(const std::string &mac, int window_size);
 
-    bool get_hostap_exclude_from_steering_flag(const std::string &mac);
-    bool set_hostap_exclude_from_steering_flag(const std::string &mac, bool flag);
-
     bool set_node_channel_bw(const std::string &mac, int channel, beerocks::eWiFiBandwidth bw,
                              bool channel_ext_above_secondary, int8_t channel_ext_above_primary,
                              uint16_t vht_center_frequency);
     beerocks::eWiFiBandwidth get_node_bw(const std::string &mac);
     int get_node_bw_int(const std::string &mac);
-    bool get_hostap_channel_ext_above_primary(const std::string &hostap_mac);
+    bool get_hostap_channel_ext_above_primary(const sMacAddr &hostap_mac);
     bool get_node_channel_ext_above_secondary(const std::string &mac);
-    uint16_t get_hostap_vht_center_frequency(const std::string &mac);
+    uint16_t get_hostap_vht_center_frequency(const sMacAddr &mac);
 
     void add_bss_info_configuration(const sMacAddr &al_mac,
                                     const wireless_utils::sBssInfoConf &bss_info);
