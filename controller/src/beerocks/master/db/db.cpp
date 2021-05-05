@@ -2946,7 +2946,7 @@ bool db::clear_hostap_dfs_reentry_clients(const sMacAddr &mac)
     return true;
 }
 
-bool db::set_hostap_is_acs_enabled(const std::string &mac, bool enable)
+bool db::set_hostap_is_acs_enabled(const sMacAddr &mac, bool enable)
 {
     auto n = get_node(mac);
 
@@ -2962,7 +2962,7 @@ bool db::set_hostap_is_acs_enabled(const std::string &mac, bool enable)
     return true;
 }
 
-bool db::get_hostap_is_acs_enabled(const std::string &mac)
+bool db::get_hostap_is_acs_enabled(const sMacAddr &mac)
 {
     auto n = get_node(mac);
 
@@ -4514,7 +4514,7 @@ bool db::commit_persistent_db_changes()
 
 bool db::is_commit_to_persistent_db_required() { return persistent_db_changes_made; }
 
-int db::get_hostap_stats_measurement_duration(const std::string &mac)
+int db::get_hostap_stats_measurement_duration(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -4536,7 +4536,7 @@ std::chrono::steady_clock::time_point db::get_node_stats_info_timestamp(const st
     return n->stats_info->timestamp;
 }
 
-std::chrono::steady_clock::time_point db::get_hostap_stats_info_timestamp(const std::string &mac)
+std::chrono::steady_clock::time_point db::get_hostap_stats_info_timestamp(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -4567,7 +4567,7 @@ uint32_t db::get_node_tx_bytes(const std::string &mac)
     return n->stats_info->tx_bytes;
 }
 
-uint32_t db::get_hostap_total_sta_rx_bytes(const std::string &mac)
+uint32_t db::get_hostap_total_sta_rx_bytes(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -4580,7 +4580,7 @@ uint32_t db::get_hostap_total_sta_rx_bytes(const std::string &mac)
     return n->hostap->stats_info->rx_bytes;
 }
 
-uint32_t db::get_hostap_total_sta_tx_bytes(const std::string &mac)
+uint32_t db::get_hostap_total_sta_tx_bytes(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -4631,7 +4631,7 @@ uint16_t db::get_node_tx_phy_rate_100kb(const std::string &mac)
     return n->stats_info->tx_phy_rate_100kb;
 }
 
-int db::get_hostap_channel_load_percent(const std::string &mac)
+int db::get_hostap_channel_load_percent(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -4644,7 +4644,7 @@ int db::get_hostap_channel_load_percent(const std::string &mac)
     return n->hostap->stats_info->channel_load_percent;
 }
 
-int db::get_hostap_total_client_tx_load_percent(const std::string &mac)
+int db::get_hostap_total_client_tx_load_percent(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -4657,7 +4657,7 @@ int db::get_hostap_total_client_tx_load_percent(const std::string &mac)
     return n->hostap->stats_info->total_client_tx_load_percent;
 }
 
-int db::get_hostap_total_client_rx_load_percent(const std::string &mac)
+int db::get_hostap_total_client_rx_load_percent(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {

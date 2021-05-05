@@ -2234,7 +2234,7 @@ bool Controller::handle_intel_slave_join(
         database.add_node_radio(mac, tlvf::mac_from_string(bridge_mac),
                                 tlvf::mac_from_string(radio_identifier));
     }
-    database.set_hostap_is_acs_enabled(radio_mac, acs_enabled);
+    database.set_hostap_is_acs_enabled(mac, acs_enabled);
 
     if (!notification->is_slave_reconf()) {
         son_actions::set_hostap_active(database, tasks, radio_mac,
@@ -2542,7 +2542,7 @@ bool Controller::handle_non_intel_slave_join(
         // TODO Intel Slave Join has separate radio MAC and UID; we use radio_mac for both.
         database.add_node_radio(ruid, tlvf::mac_from_string(bridge_mac), ruid);
     }
-    database.set_hostap_is_acs_enabled(radio_mac, false);
+    database.set_hostap_is_acs_enabled(ruid, false);
 
     // TODO Assume repeater mode
     database.set_hostap_repeater_mode_flag(ruid, true);

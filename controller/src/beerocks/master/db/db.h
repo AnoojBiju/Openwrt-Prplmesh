@@ -905,8 +905,8 @@ public:
     std::set<std::string> get_hostap_dfs_reentry_clients(const std::string &mac);
     bool clear_hostap_dfs_reentry_clients(const sMacAddr &mac);
 
-    bool set_hostap_is_acs_enabled(const std::string &mac, bool enable);
-    bool get_hostap_is_acs_enabled(const std::string &mac);
+    bool set_hostap_is_acs_enabled(const sMacAddr &mac, bool enable);
+    bool get_hostap_is_acs_enabled(const sMacAddr &mac);
 
     //
     // Channel Scan
@@ -1412,9 +1412,9 @@ public:
     bool commit_persistent_db_changes();
     bool is_commit_to_persistent_db_required();
 
-    int get_hostap_stats_measurement_duration(const std::string &mac);
+    int get_hostap_stats_measurement_duration(const sMacAddr &mac);
     std::chrono::steady_clock::time_point get_node_stats_info_timestamp(const std::string &mac);
-    std::chrono::steady_clock::time_point get_hostap_stats_info_timestamp(const std::string &mac);
+    std::chrono::steady_clock::time_point get_hostap_stats_info_timestamp(const sMacAddr &mac);
 
     uint32_t get_node_rx_bytes(const std::string &mac);
     uint32_t get_node_tx_bytes(const std::string &mac);
@@ -1428,13 +1428,13 @@ public:
     uint16_t get_node_rx_phy_rate_100kb(const std::string &mac);
     uint16_t get_node_tx_phy_rate_100kb(const std::string &mac);
 
-    int get_hostap_channel_load_percent(const std::string &mac);
+    int get_hostap_channel_load_percent(const sMacAddr &mac);
 
-    uint32_t get_hostap_total_sta_rx_bytes(const std::string &mac);
-    uint32_t get_hostap_total_sta_tx_bytes(const std::string &mac);
+    uint32_t get_hostap_total_sta_rx_bytes(const sMacAddr &mac);
+    uint32_t get_hostap_total_sta_tx_bytes(const sMacAddr &mac);
 
-    int get_hostap_total_client_tx_load_percent(const std::string &mac);
-    int get_hostap_total_client_rx_load_percent(const std::string &mac);
+    int get_hostap_total_client_tx_load_percent(const sMacAddr &mac);
+    int get_hostap_total_client_rx_load_percent(const sMacAddr &mac);
 
     int get_node_rx_load_percent(const std::string &mac);
     int get_node_tx_load_percent(const std::string &mac);
