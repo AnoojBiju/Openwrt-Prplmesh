@@ -452,6 +452,19 @@ int main(int argc, char *argv[])
     prplmesh::controller::actions::g_data_model = beerocks::nbapi::g_data_model;
 #endif
 
+    // The prplMesh controller needs to be configured with the SSIDs and credentials that have to
+    // be configured on the agents. Even though NBAPI exists to configure this, there is a lot of
+    // existing software out there that doesn't use it. Therefore, prplMesh should also read the
+    // configuration out of the legacy wireless settings.
+    std::list<son::wireless_utils::sBssInfoConf> wireless_settings;
+    if (beerocks::bpl::bpl_cfg_get_wireless_settings(wireless_settings)) {
+        for (const auto &configuration : wireless_settings) {
+            master_db.add_bss_info_configuration(configuration);
+        }
+    } else {
+        LOG(DEBUG) << "failed to read wireless settings";
+    }
+
     // diagnostics_thread diagnostics(master_db);
 
     // UCC server must be created in certification mode only and if a valid TCP port has been set
