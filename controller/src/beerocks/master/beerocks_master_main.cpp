@@ -137,7 +137,7 @@ static bool parse_arguments(int argc, char *argv[])
 }
 
 static void fill_master_config(son::db::sDbMasterConfig &master_conf,
-                               beerocks::config_file::sConfigMaster &main_master_conf)
+                               const beerocks::config_file::sConfigMaster &main_master_conf)
 {
     master_conf.vendor = main_master_conf.vendor;
     master_conf.model  = main_master_conf.model;
