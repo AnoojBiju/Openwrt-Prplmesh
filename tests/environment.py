@@ -873,6 +873,24 @@ class RadioHostapd(Radio):
         self.update_vap_list()
 
     def update_vap_list(self):
+        attempts = 15
+
+        while attempts > 0:
+            attempts -= 1
+
+            debug("Updating VAP list on {}".format(self.iface_name))
+            self._update_vap_list()
+
+            if len(self.vaps) == 0:
+                debug("Failed to update VAP list. {} attempts remaining".format(attempts))
+            else:
+                return
+
+            time.sleep(10)
+
+        err("Updating VAP list on {} failed".format(self.iface_name))
+
+    def _update_vap_list(self):
         iface_name = self.iface_name
 
         self.vaps = []
