@@ -29,6 +29,9 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         existing SSID configuration on all agents. If required, a particular test must configure
         the SSIDs for that test (as part of the test logic).
 
+        To make sure VAP list is not affected by CAC or previous test(s) update VAP list
+        on every agents radios.
+
         This method is called right before the test.
         """
         try:
@@ -36,6 +39,19 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
 
             '''Clear existing SSID configuration on all agents.'''
             self.configure_ssids([])
+
+            '''Update VAP list on all agents radios'''
+            for dev in self.dev:
+                if not hasattr(dev, 'agent_entity'):
+                    continue
+
+                agent = dev.agent_entity
+
+                if not hasattr(agent, 'radios'):
+                    continue
+
+                for radio in agent.radios:
+                    radio.update_vap_list()
 
             debug("Current network topology:")
             topology = self.get_topology()
