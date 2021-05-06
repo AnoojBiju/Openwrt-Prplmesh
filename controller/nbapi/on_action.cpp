@@ -184,19 +184,24 @@ amxd_status_t access_point_commit(amxd_object_t *object, amxd_function_t *func, 
 amxd_status_t client_steering(amxd_object_t *object, amxd_function_t *func, amxc_var_t *args,
                               amxc_var_t *ret)
 {
-    amxc_var_t *argc_station_mac  = GET_ARG(args, "station_mac");
-    amxc_var_t *argc_target_bssid = GET_ARG(args, "target_bssid");
-    char *sta_mac                 = amxc_var_dyncast(cstring_t, argc_station_mac);
-    char *target_bssid            = amxc_var_dyncast(cstring_t, argc_target_bssid);
-    auto controller_ctx           = g_database->get_controller_ctx();
+    auto controller_ctx = g_database->get_controller_ctx();
+
+    auto sta_mac      = GET_CHAR(args, "station_mac");
+    auto target_bssid = GET_CHAR(args, "target_bssid");
+
+    if (!sta_mac || !target_bssid) {
+        LOG(ERROR) << "Failed to get proper arguments.";
+        return amxd_status_parameter_not_found;
+    }
 
     if (!controller_ctx) {
         LOG(ERROR) << "Failed to get controller context.";
         return amxd_status_unknown_error;
     }
+
     if (!g_database->can_start_client_steering(sta_mac, target_bssid)) {
-        LOG(WARNING) << "Fail initiate steering for client: " << sta_mac
-                     << " with atemp connect to AP with BSSID: " << target_bssid;
+        LOG(WARNING) << "Failed to initiate steering on the client: " << sta_mac
+                     << " with attempt connecting to an AP with BSSID: " << target_bssid;
     } else {
         controller_ctx->start_client_steering(sta_mac, target_bssid);
     }
