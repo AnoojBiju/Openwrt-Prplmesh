@@ -566,6 +566,17 @@ bool bpl_cfg_get_wpa_supplicant_ctrl_path(const std::string &iface, std::string 
 bool bpl_cfg_get_hostapd_ctrl_path(const std::string &iface, std::string &hostapd_ctrl_path);
 
 /**
+ * @brief Reads wireless settings (SSIDs and WiFi credentials) for all fronthaul interfaces.
+ *
+ * This method is intended to be used from the controller, to import existing wireless settings and 
+ * later apply them to the whole network. 
+ * 
+ * @param [out] wireless_settings List of wireless network configurations.
+ * @return true on success and false otherwise.
+ */
+bool bpl_cfg_get_wireless_settings(std::list<son::wireless_utils::sBssInfoConf> &wireless_settings);
+
+/**
  * @brief Reads wireless network configuration for the given interface.
  *
  * @param [in] iface Interface name.
