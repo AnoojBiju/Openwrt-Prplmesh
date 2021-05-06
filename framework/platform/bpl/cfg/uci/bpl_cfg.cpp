@@ -583,29 +583,12 @@ bool cfg_get_link_metrics_request_interval(std::chrono::seconds &link_metrics_re
     return true;
 }
 
-bool bpl_cfg_get_wifi_credentials(const std::string &iface,
-                                  son::wireless_utils::sBssInfoConf &configuration)
+static bool bpl_cfg_get_bss_configuration(const std::string &section_name,
+                                          son::wireless_utils::sBssInfoConf &configuration)
 {
-    // Find the "wireless.wifi-iface" section in UCI configuration for the given interface
-    const std::string package_name = "wireless";
-    const std::string section_type = "wifi-iface";
-    const std::string option_name  = "ifname";
-    std::string section_name;
-    if (!uci_find_section_by_option(package_name, section_type, option_name, iface, section_name)) {
-        LOG(ERROR) << "Failed to find configuration section for interface " << iface;
-        return false;
-    }
-
-    if (section_name.empty()) {
-        LOG(ERROR) << "Configuration for interface " << iface << " not found";
-        return false;
-    }
-
-    // Read all UCI options in the "wireless.wifi-iface" section for the given interface.
     OptionsUnorderedMap options;
-    if (!uci_get_section(package_name, section_type, section_name, options)) {
-        LOG(ERROR) << "Failed to get wireless configuration for interface " << iface
-                   << " at section " << section_name;
+    if (!uci_get_section("wireless", "wifi-iface", section_name, options)) {
+        LOG(ERROR) << "Failed to get values for section " << section_name;
         return false;
     }
 
@@ -646,6 +629,31 @@ bool bpl_cfg_get_wifi_credentials(const std::string &iface,
     configuration.encryption_type = get_encryption_type(options["encryption"]);
 
     configuration.network_key = options["key"];
+
+    return true;
+}
+
+bool bpl_cfg_get_wifi_credentials(const std::string &iface,
+                                  son::wireless_utils::sBssInfoConf &configuration)
+{
+    // Find the "wireless.wifi-iface" section in UCI configuration for the given interface
+    std::string section_name;
+    if (!uci_find_section_by_option("wireless", "wifi-iface", "ifname", iface, section_name)) {
+        LOG(ERROR) << "Failed to find configuration section for interface " << iface;
+        return false;
+    }
+
+    if (section_name.empty()) {
+        LOG(ERROR) << "Configuration for interface " << iface << " not found";
+        return false;
+    }
+
+    // Get SSID and wireless credentials for the given interface.
+    if (!bpl_cfg_get_bss_configuration(section_name, configuration)) {
+        LOG(ERROR) << "Failed to get wireless configuration for interface " << iface
+                   << " at section " << section_name;
+        return false;
+    }
 
     return true;
 }
