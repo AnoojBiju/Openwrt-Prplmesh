@@ -2923,74 +2923,74 @@ bool db::get_hostap_is_acs_enabled(const sMacAddr &mac)
 //
 bool db::set_channel_scan_is_enabled(const sMacAddr &mac, bool enable)
 {
-    auto hostap = get_hostap_by_mac(mac);
-    if (!hostap) {
-        LOG(ERROR) << "unable to get hostap";
+    auto radio = get_radio_by_uid(mac);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << mac;
         return false;
     }
 
-    hostap->continuous_scan_config.is_enabled = enable;
+    radio->continuous_scan_config.is_enabled = enable;
     return true;
 }
 
 bool db::get_channel_scan_is_enabled(const sMacAddr &mac)
 {
-    auto hostap = get_hostap_by_mac(mac);
-    if (!hostap) {
-        LOG(ERROR) << "unable to get hostap";
+    auto radio = get_radio_by_uid(mac);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << mac;
         return false;
     }
 
-    return hostap->continuous_scan_config.is_enabled;
+    return radio->continuous_scan_config.is_enabled;
 }
 
 bool db::set_channel_scan_interval_sec(const sMacAddr &mac, int interval_sec)
 {
-    auto hostap = get_hostap_by_mac(mac);
-    if (!hostap) {
-        LOG(ERROR) << "unable to get hostap";
+    auto radio = get_radio_by_uid(mac);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << mac;
         return false;
     }
 
-    hostap->continuous_scan_config.interval_sec = interval_sec;
+    radio->continuous_scan_config.interval_sec = interval_sec;
     return true;
 }
 
 int db::get_channel_scan_interval_sec(const sMacAddr &mac)
 {
-    auto hostap = get_hostap_by_mac(mac);
-    if (!hostap) {
-        LOG(ERROR) << "unable to get hostap";
+    auto radio = get_radio_by_uid(mac);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << mac;
         return false;
     }
 
-    return hostap->continuous_scan_config.interval_sec;
+    return radio->continuous_scan_config.interval_sec;
 }
 
 bool db::set_channel_scan_is_pending(const sMacAddr &mac, bool scan_is_pending)
 {
-    auto hostap = get_hostap_by_mac(mac);
-    if (!hostap) {
-        LOG(ERROR) << "Failed to get hostap";
+    auto radio = get_radio_by_uid(mac);
+    if (!radio) {
+        LOG(ERROR) << "Failed to get radio " << mac;
         return false;
     }
 
-    hostap->single_scan_status.scan_is_pending = scan_is_pending;
+    radio->single_scan_status.scan_is_pending = scan_is_pending;
 
     return true;
 }
 
 bool db::set_channel_scan_in_progress(const sMacAddr &mac, bool scan_in_progress, bool single_scan)
 {
-    auto hostap = get_hostap_by_mac(mac);
-    if (!hostap) {
-        LOG(ERROR) << "unable to get hostap";
+    auto radio = get_radio_by_uid(mac);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << mac;
         return false;
     }
 
     LOG(DEBUG) << (single_scan ? "single" : "continuous") << " scan "
                << (scan_in_progress ? "is" : "isn't") << " in progress.";
-    (single_scan ? hostap->single_scan_status : hostap->continuous_scan_status).scan_in_progress =
+    (single_scan ? radio->single_scan_status : radio->continuous_scan_status).scan_in_progress =
         scan_in_progress;
 
     return true;
@@ -2998,16 +2998,16 @@ bool db::set_channel_scan_in_progress(const sMacAddr &mac, bool scan_in_progress
 
 bool db::get_channel_scan_in_progress(const sMacAddr &mac, bool single_scan)
 {
-    auto hostap = get_hostap_by_mac(mac);
-    if (!hostap) {
-        LOG(ERROR) << "unable to get hostap";
+    auto radio = get_radio_by_uid(mac);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << mac;
         return false;
     }
     if (single_scan) {
-        return (hostap->single_scan_status.scan_in_progress ||
-                hostap->single_scan_status.scan_is_pending);
+        return (radio->single_scan_status.scan_in_progress ||
+                radio->single_scan_status.scan_is_pending);
     } else {
-        return hostap->continuous_scan_status.scan_in_progress;
+        return radio->continuous_scan_status.scan_in_progress;
     }
 }
 
@@ -3015,17 +3015,17 @@ bool db::set_channel_scan_results_status(const sMacAddr &mac,
                                          beerocks::eChannelScanStatusCode error_code,
                                          bool single_scan)
 {
-    auto hostap = get_hostap_by_mac(mac);
-    if (!hostap) {
-        LOG(ERROR) << "unable to get hostap";
+    auto radio = get_radio_by_uid(mac);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << mac;
         return false;
     }
 
     LOG(DEBUG) << (single_scan ? "single" : "continuous")
                << " scan, last scan error code = " << int(error_code);
 
-    (single_scan ? hostap->single_scan_status : hostap->continuous_scan_status)
-        .last_scan_error_code = error_code;
+    (single_scan ? radio->single_scan_status : radio->continuous_scan_status).last_scan_error_code =
+        error_code;
 
     return true;
 }
@@ -3033,22 +3033,22 @@ bool db::set_channel_scan_results_status(const sMacAddr &mac,
 beerocks::eChannelScanStatusCode db::get_channel_scan_results_status(const sMacAddr &mac,
                                                                      bool single_scan)
 {
-    auto hostap = get_hostap_by_mac(mac);
-    if (!hostap) {
-        LOG(ERROR) << "unable to get hostap";
+    auto radio = get_radio_by_uid(mac);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << mac;
         return beerocks::eChannelScanStatusCode::INTERNAL_FAILURE;
     }
 
-    return (single_scan ? hostap->single_scan_status : hostap->continuous_scan_status)
+    return (single_scan ? radio->single_scan_status : radio->continuous_scan_status)
         .last_scan_error_code;
 }
 
 bool db::set_channel_scan_dwell_time_msec(const sMacAddr &mac, int dwell_time_msec,
                                           bool single_scan)
 {
-    auto hostap = get_hostap_by_mac(mac);
-    if (!hostap) {
-        LOG(ERROR) << "unable to get hostap";
+    auto radio = get_radio_by_uid(mac);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << mac;
         return false;
     }
 
@@ -3061,7 +3061,7 @@ bool db::set_channel_scan_dwell_time_msec(const sMacAddr &mac, int dwell_time_ms
         return false;
     }
 
-    (single_scan ? hostap->single_scan_config : hostap->continuous_scan_config).dwell_time_msec =
+    (single_scan ? radio->single_scan_config : radio->continuous_scan_config).dwell_time_msec =
         dwell_time_msec;
 
     return true;
@@ -3069,13 +3069,13 @@ bool db::set_channel_scan_dwell_time_msec(const sMacAddr &mac, int dwell_time_ms
 
 int db::get_channel_scan_dwell_time_msec(const sMacAddr &mac, bool single_scan)
 {
-    auto hostap = get_hostap_by_mac(mac);
-    if (!hostap) {
-        LOG(ERROR) << "unable to get hostap";
+    auto radio = get_radio_by_uid(mac);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << mac;
         return false;
     }
 
-    return (single_scan ? hostap->single_scan_config : hostap->continuous_scan_config)
+    return (single_scan ? radio->single_scan_config : radio->continuous_scan_config)
         .dwell_time_msec;
 }
 
@@ -3100,9 +3100,9 @@ bool db::is_channel_scan_pool_supported(const sMacAddr &mac,
 bool db::set_channel_scan_pool(const sMacAddr &mac, const std::unordered_set<uint8_t> &channel_pool,
                                bool single_scan)
 {
-    auto hostap = get_hostap_by_mac(mac);
-    if (!hostap) {
-        LOG(ERROR) << "unable to get hostap";
+    auto radio = get_radio_by_uid(mac);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << mac;
         return false;
     }
 
@@ -3111,7 +3111,7 @@ bool db::set_channel_scan_pool(const sMacAddr &mac, const std::unordered_set<uin
         return false;
     }
 
-    (single_scan ? hostap->single_scan_config : hostap->continuous_scan_config).channel_pool =
+    (single_scan ? radio->single_scan_config : radio->continuous_scan_config).channel_pool =
         channel_pool;
 
     LOG(DEBUG) << (single_scan ? "single" : "continuous")
@@ -3124,37 +3124,37 @@ const std::unordered_set<uint8_t> &db::get_channel_scan_pool(const sMacAddr &mac
 {
     static std::unordered_set<uint8_t> empty;
 
-    auto hostap = get_hostap_by_mac(mac);
-    if (!hostap) {
-        LOG(ERROR) << "unable to get hostap";
+    auto radio = get_radio_by_uid(mac);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << mac;
         return empty;
     }
 
-    return (single_scan ? hostap->single_scan_config : hostap->continuous_scan_config).channel_pool;
+    return (single_scan ? radio->single_scan_config : radio->continuous_scan_config).channel_pool;
 }
 
 bool db::is_channel_in_pool(const sMacAddr &mac, uint8_t channel, bool single_scan)
 {
-    auto hostap = get_hostap_by_mac(mac);
-    if (!hostap) {
-        LOG(ERROR) << "unable to get hostap";
+    auto radio = get_radio_by_uid(mac);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << mac;
         return false;
     }
 
     auto &pool =
-        (single_scan ? hostap->single_scan_config : hostap->continuous_scan_config).channel_pool;
+        (single_scan ? radio->single_scan_config : radio->continuous_scan_config).channel_pool;
     return pool.find(channel) != pool.end();
 }
 
 bool db::clear_channel_scan_results(const sMacAddr &mac, bool single_scan)
 {
-    auto hostap = get_hostap_by_mac(mac);
-    if (!hostap) {
-        LOG(ERROR) << "unable to get hostap";
+    auto radio = get_radio_by_uid(mac);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << mac;
         return false;
     }
 
-    (single_scan ? hostap->single_scan_results : hostap->continuous_scan_results).clear();
+    (single_scan ? radio->single_scan_results : radio->continuous_scan_results).clear();
 
     return true;
 }
@@ -3162,13 +3162,13 @@ bool db::clear_channel_scan_results(const sMacAddr &mac, bool single_scan)
 bool db::add_channel_scan_results(const sMacAddr &mac, const sChannelScanResults &scan_result,
                                   bool single_scan)
 {
-    auto hostap = get_hostap_by_mac(mac);
-    if (!hostap) {
-        LOG(ERROR) << "unable to get hostap";
+    auto radio = get_radio_by_uid(mac);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << mac;
         return false;
     }
 
-    (single_scan ? hostap->single_scan_results : hostap->continuous_scan_results)
+    (single_scan ? radio->single_scan_results : radio->continuous_scan_results)
         .push_back(scan_result);
 
     return true;
@@ -3179,13 +3179,13 @@ const std::list<sChannelScanResults> &db::get_channel_scan_results(const sMacAdd
 {
     static std::list<sChannelScanResults> empty;
 
-    auto hostap = get_hostap_by_mac(mac);
-    if (!hostap) {
-        LOG(ERROR) << "unable to get hostap";
+    auto radio = get_radio_by_uid(mac);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << mac;
         return empty;
     }
 
-    return (single_scan ? hostap->single_scan_results : hostap->continuous_scan_results);
+    return (single_scan ? radio->single_scan_results : radio->continuous_scan_results);
 }
 
 bool db::has_channel_report_record(const std::string &ISO_8601_timestamp)
@@ -3224,15 +3224,15 @@ bool db::add_channel_report(const sMacAddr &RUID, const uint8_t &operating_class
                             const std::vector<wfa_map::cNeighbors> &neighbors, uint8_t avg_noise,
                             uint8_t avg_utilization, bool override_existing_data)
 {
-    auto hostap = get_hostap_by_mac(RUID);
-    if (!hostap) {
-        LOG(ERROR) << "unable to get hostap";
+    auto radio = get_radio_by_uid(RUID);
+    if (!radio) {
+        LOG(ERROR) << "unable to get radio " << RUID;
         return false;
     }
     const auto &key = std::make_pair(operating_class, channel);
     // Get report as reference.
     // if not report exist of the given key, this will create a new report.
-    auto &db_report = hostap->scan_report[key];
+    auto &db_report = radio->scan_report[key];
     if (override_existing_data) {
         // Clear neighbors if Override flag is set.
         db_report.neighbors.clear();
@@ -5285,16 +5285,16 @@ std::shared_ptr<node> db::get_node_verify_type(const sMacAddr &mac, beerocks::eT
     return node;
 }
 
-std::shared_ptr<node::radio> db::get_hostap_by_mac(const sMacAddr &mac)
+std::shared_ptr<node::radio> db::get_radio_by_uid(const sMacAddr &radio_uid)
 {
-    auto n = get_node(mac);
+    auto n = get_node(radio_uid);
     beerocks::eType t;
     if (!n) {
         LOG(ERROR) << "node not found.... ";
         return nullptr;
     } else if ((t = n->get_type()) != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(ERROR) << "node " << tlvf::mac_to_string(mac) << " type is #" << (int)t;
-        LOG(ERROR) << "node " << tlvf::mac_to_string(mac) << " is not a valid hostap!";
+        LOG(ERROR) << "node " << radio_uid << " type is #" << (int)t;
+        LOG(ERROR) << "node " << radio_uid << " is not a valid hostap!";
         return nullptr;
     }
 
