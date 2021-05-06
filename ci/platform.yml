@@ -10,7 +10,7 @@ variables:
   TURRIS_OMNIA_FULLIMAGE: "openwrt-mvebu-cortexa9-cznic_turris-omnia-sysupgrade.img.gz"
   GLINET_B1300_FULLIMAGE: "openwrt-ipq40xx-generic-glinet_gl-b1300-squashfs-sysupgrade.bin"
   AXEPOINT_FULLIMAGE: "AX3000_1600_ETH_11AXUCI-squashfs-fullimage.img"
-  NEC_WX3000HP_FULLIMAGE: "AX3000_1600_ETH_11AXUCI_ASURADA-initramfs-kernel.bin"
+  NEC_WX3000HP_FULLIMAGE: "AX3000_1600_ETH_11AXUCI_ASURADA-squashfs-fullimage.img"
   NETGEAR_RAX40_FULLIMAGE: "NETGEAR_RAX40-squashfs-fullimage.img"
 
 workflow:
