@@ -351,8 +351,6 @@ ap_manager_thread::ap_manager_thread(
     set_select_timeout(SELECT_TIMEOUT_MSC);
 }
 
-ap_manager_thread::~ap_manager_thread() { stop_ap_manager_thread(); }
-
 void ap_manager_thread::on_thread_stop() { stop_ap_manager_thread(); }
 
 bool ap_manager_thread::create_ap_wlan_hal()
@@ -488,7 +486,7 @@ bool ap_manager_thread::init()
 
 bool ap_manager_thread::send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx)
 {
-    return message_com::send_cmdu(m_fd_to_socket_map[m_slave_fd], cmdu_tx);
+    return m_slave_client->send_cmdu(cmdu_tx);
 }
 
 void ap_manager_thread::connect_to_agent()
@@ -523,9 +521,6 @@ bool ap_manager_thread::ap_manager_fsm(bool &continue_processing)
 
     switch (m_state) {
     case eApManagerState::INIT: {
-        if (m_slave_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
-            return false;
-        }
         auto request =
             message_com::create_vs_message<beerocks_message::cACTION_APMANAGER_UP_NOTIFICATION>(
                 cmdu_tx);
@@ -566,7 +561,7 @@ bool ap_manager_thread::ap_manager_fsm(bool &continue_processing)
         }
 
         if (attach_state == bwl::HALState::Failed) {
-            LOG(ERROR) << "Failed attaching to WLAN HAL, call stop_ap_manager_thread()";
+            LOG(ERROR) << "Failed attaching to WLAN HAL";
             thread_last_error_code = APMANAGER_THREAD_ERROR_ATTACH_FAIL;
             return false;
         }
@@ -578,9 +573,6 @@ bool ap_manager_thread::ap_manager_fsm(bool &continue_processing)
         // External events
         m_ap_hal_ext_events = ap_wlan_hal->get_ext_events_fd();
         if (m_ap_hal_ext_events > 0) {
-            Socket *socket = new Socket(m_ap_hal_ext_events);
-            add_socket(socket);
-            m_fd_to_socket_map[m_ap_hal_ext_events] = socket;
             beerocks::EventLoop::EventHandlers ext_events_handlers{
                 .on_read =
                     [&](int fd, EventLoop &loop) {
@@ -621,13 +613,6 @@ bool ap_manager_thread::ap_manager_fsm(bool &continue_processing)
         // Internal events
         m_ap_hal_int_events = ap_wlan_hal->get_int_events_fd();
         if (m_ap_hal_int_events > 0) {
-
-            // NOTE: Eventhough the internal events are not socket based, at this
-            //       point we have to use the Socket class wrapper to add the
-            //       file descriptor into the select()
-            Socket *socket = new Socket(m_ap_hal_int_events);
-            add_socket(socket);
-            m_fd_to_socket_map[m_ap_hal_int_events] = socket;
             beerocks::EventLoop::EventHandlers int_events_handlers{
                 .on_read =
                     [&](int fd, EventLoop &loop) {
@@ -678,31 +663,11 @@ bool ap_manager_thread::ap_manager_fsm(bool &continue_processing)
     }
     case eApManagerState::OPERATIONAL: {
         // Process external events
-        if (m_fd_to_socket_map[m_ap_hal_ext_events]) {
-            if (read_ready(m_fd_to_socket_map[m_ap_hal_ext_events])) {
-                clear_ready(m_fd_to_socket_map[m_ap_hal_ext_events]);
-                if (!ap_wlan_hal->process_ext_events()) {
-                    LOG(ERROR) << "process_ext_events() failed!";
-                    thread_last_error_code = APMANAGER_THREAD_ERROR_REPORT_PROCESS_FAIL;
-                    return false;
-                }
-            }
-        } else {
+        if (m_ap_hal_ext_events == 0) {
             // There is no socket for external events, so we simply try
             // to process any available periodically
             if (!ap_wlan_hal->process_ext_events()) {
                 LOG(ERROR) << "process_ext_events() failed!";
-                thread_last_error_code = APMANAGER_THREAD_ERROR_REPORT_PROCESS_FAIL;
-                return false;
-            }
-        }
-
-        // Process internal events
-        if (read_ready(m_fd_to_socket_map[m_ap_hal_int_events])) {
-            // A callback (hal_event_handler()) will invoked for pending events
-            clear_ready(m_fd_to_socket_map[m_ap_hal_int_events]);
-            if (!ap_wlan_hal->process_int_events()) {
-                LOG(ERROR) << "process_int_events() failed!";
                 thread_last_error_code = APMANAGER_THREAD_ERROR_REPORT_PROCESS_FAIL;
                 return false;
             }
@@ -1713,8 +1678,8 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
         return false;
     }
 
-    if (m_slave_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
-        LOG(ERROR) << "m_slave_fd == invalid_descriptor";
+    if (!m_slave_client) {
+        LOG(ERROR) << "Not connected to slave!";
         return false;
     }
 
@@ -2163,9 +2128,9 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
     } break;
     case Event::Interface_Disabled: {
 
-        LOG(ERROR) << " event Interface_Disabled call stop_ap_manager_thread()";
+        LOG(ERROR) << "Interface_Disabled event!";
         thread_last_error_code = APMANAGER_THREAD_ERROR_HOSTAP_DISABLED;
-        stop_ap_manager_thread();
+        m_state = eApManagerState::TERMINATED;
 
     } break;
 
@@ -2343,7 +2308,7 @@ void ap_manager_thread::handle_hostapd_attached()
             if (read_acs_attempt >= READ_ACS_ATTEMPT_MAX) {
                 LOG(ERROR) << "retrieving ACS report fails " << int(READ_ACS_ATTEMPT_MAX)
                            << " times - stop ap_manager_thread";
-                stop_ap_manager_thread();
+                m_state = eApManagerState::TERMINATED;
                 break;
             }
 
@@ -2478,11 +2443,6 @@ void ap_manager_thread::stop_ap_manager_thread()
 
 void ap_manager_thread::send_heartbeat()
 {
-    if (m_slave_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
-        LOG(ERROR) << "process_keep_alive(): slave socket descriptor is invalid!";
-        return;
-    }
-
     //LOG(DEBUG) << "sending HEARTBEAT notification";
     auto request =
         message_com::create_vs_message<beerocks_message::cACTION_APMANAGER_HEARTBEAT_NOTIFICATION>(
