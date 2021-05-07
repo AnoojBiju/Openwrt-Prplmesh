@@ -942,9 +942,10 @@ bool db::is_hostap_active(const sMacAddr &mac)
     return radio->active;
 }
 
-bool db::set_hostap_backhaul_manager(const sMacAddr &mac, bool is_backhaul_manager)
+bool db::set_hostap_backhaul_manager(const sMacAddr &al_mac, const sMacAddr &mac,
+                                     bool is_backhaul_manager)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto radio = get_radio(al_mac, mac);
     if (!radio) {
         LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
         return false;
@@ -1862,9 +1863,9 @@ beerocks::eWiFiAntNum db::get_hostap_ant_num(const sMacAddr &mac)
     return beerocks::eWiFiAntNum(n->capabilities.ant_num);
 }
 
-bool db::set_hostap_ant_gain(const sMacAddr &mac, int ant_gain)
+bool db::set_hostap_ant_gain(const sMacAddr &al_mac, const sMacAddr &mac, int ant_gain)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto radio = get_radio(al_mac, mac);
     if (!radio) {
         LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
         return false;
@@ -1883,9 +1884,9 @@ int db::get_hostap_ant_gain(const sMacAddr &mac)
     return radio->ant_gain;
 }
 
-bool db::set_hostap_tx_power(const sMacAddr &mac, int tx_power)
+bool db::set_hostap_tx_power(const sMacAddr &al_mac, const sMacAddr &mac, int tx_power)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto radio = get_radio(al_mac, mac);
     if (!radio) {
         LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
         return false;
@@ -2025,9 +2026,10 @@ bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t
     return true;
 }
 
-bool db::set_hostap_band_capability(const sMacAddr &mac, beerocks::eRadioBandCapability capability)
+bool db::set_hostap_band_capability(const sMacAddr &al_mac, const sMacAddr &mac,
+                                    beerocks::eRadioBandCapability capability)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto radio = get_radio(al_mac, mac);
     if (!radio) {
         LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
         return false;
@@ -2443,9 +2445,10 @@ int8_t db::get_hostap_vap_id(const sMacAddr &mac)
     return IFACE_ID_INVALID;
 }
 
-bool db::set_hostap_iface_name(const sMacAddr &mac, const std::string &iface_name)
+bool db::set_hostap_iface_name(const sMacAddr &al_mac, const sMacAddr &mac,
+                               const std::string &iface_name)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto radio = get_radio(al_mac, mac);
     if (!radio) {
         LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
         return false;
@@ -2466,9 +2469,10 @@ std::string db::get_hostap_iface_name(const sMacAddr &mac)
     return radio->iface_name;
 }
 
-bool db::set_hostap_iface_type(const sMacAddr &mac, beerocks::eIfaceType iface_type)
+bool db::set_hostap_iface_type(const sMacAddr &al_mac, const sMacAddr &mac,
+                               beerocks::eIfaceType iface_type)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto radio = get_radio(al_mac, mac);
     if (!radio) {
         LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
         return false;
@@ -2503,11 +2507,12 @@ bool db::set_node_backhaul_iface_type(const std::string &mac, beerocks::eIfaceTy
     return true;
 }
 
-bool db::set_hostap_driver_version(const sMacAddr &mac, const std::string &version)
+bool db::set_hostap_driver_version(const sMacAddr &al_mac, const sMacAddr &mac,
+                                   const std::string &version)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto radio = get_radio(al_mac, mac);
     if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
         return false;
     }
 
@@ -2772,9 +2777,9 @@ bool db::clear_hostap_dfs_reentry_clients(const sMacAddr &mac)
     return true;
 }
 
-bool db::set_hostap_is_acs_enabled(const sMacAddr &mac, bool enable)
+bool db::set_hostap_is_acs_enabled(const sMacAddr &al_mac, const sMacAddr &mac, bool enable)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto radio = get_radio(al_mac, mac);
 
     if (!radio) {
         LOG(ERROR) << "radio " << mac << " not found.... ";
@@ -4142,7 +4147,10 @@ bool db::set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApS
     return true;
 }
 
-void db::clear_hostap_stats_info(const sMacAddr &mac) { set_hostap_stats_info(mac, nullptr); }
+void db::clear_hostap_stats_info(const sMacAddr &al_mac, const sMacAddr &mac)
+{
+    set_hostap_stats_info(mac, nullptr);
+}
 
 bool db::notify_disconnection(const std::string &client_mac)
 {
