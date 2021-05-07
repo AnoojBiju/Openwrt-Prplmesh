@@ -11,7 +11,9 @@
 #include <bcl/beerocks_string_utils.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
+#include <bcl/network/sockets.h>
 #include <bcl/son/son_wireless_utils.h>
+#include <bcl/transaction.h>
 #include <bpl/bpl_cfg.h>
 #include <easylogging++.h>
 
@@ -30,6 +32,11 @@
 //////////////////////////////////////////////////////////////////////////////
 ////////////////////////// Local Module Definitions //////////////////////////
 //////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Time between successive timer executions of the FSM timer
+ */
+constexpr auto fsm_timer_period = std::chrono::milliseconds(1000);
 
 #define SELECT_TIMEOUT_MSC 1000
 #define ACS_READ_SLEEP_USC 1000
@@ -374,6 +381,105 @@ bool ap_manager_thread::create_ap_wlan_hal()
     return true;
 }
 
+// The name of this method is temporary and will be renamed at the end of PPM-966.
+bool ap_manager_thread::to_be_renamed_to_start()
+{
+    if (m_slave_client) {
+        LOG(ERROR) << "AP manager is already started";
+        return false;
+    }
+
+    // In case of error in one of the steps of this method, we have to undo all the previous steps
+    // (like when rolling back a database transaction, where either all steps get executed or none
+    // of them gets executed)
+    beerocks::Transaction transaction;
+
+    // Create a timer to run the FSM periodically
+    m_fsm_timer = m_timer_manager->add_timer(fsm_timer_period, fsm_timer_period,
+                                             [&](int fd, beerocks::EventLoop &loop) {
+                                                 bool continue_processing = true;
+                                                 while (continue_processing) {
+                                                     if (!ap_manager_fsm(continue_processing)) {
+                                                         return false;
+                                                     }
+                                                 }
+
+                                                 return true;
+                                             });
+    if (m_fsm_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
+        LOG(ERROR) << "Failed to create the FSM timer";
+        return false;
+    }
+    LOG(DEBUG) << "FSM timer created with fd = " << m_fsm_timer;
+    transaction.add_rollback_action([&]() { m_timer_manager->remove_timer(m_fsm_timer); });
+
+    // Create an instance of a CMDU client connected to the CMDU server that is running in the slave
+    m_slave_client = m_slave_cmdu_client_factory->create_instance();
+    if (!m_slave_client) {
+        LOG(ERROR) << "Failed to create instance of CMDU client";
+        return false;
+    }
+    transaction.add_rollback_action([&]() { m_slave_client.reset(); });
+
+    beerocks::CmduClient::EventHandlers handlers;
+    // Install a CMDU-received event handler for CMDU messages received from the slave.
+    handlers.on_cmdu_received = [&](uint32_t iface_index, const sMacAddr &dst_mac,
+                                    const sMacAddr &src_mac,
+                                    ieee1905_1::CmduMessageRx &cmdu_rx) { handle_cmdu(cmdu_rx); };
+
+    // Install a connection-closed event handler.
+    handlers.on_connection_closed = [&]() {
+        LOG(ERROR) << "Slave socket disconnected!";
+        m_slave_client.reset();
+
+        m_state = eApManagerState::TERMINATED;
+    };
+
+    m_slave_client->set_handlers(handlers);
+    transaction.add_rollback_action([&]() { m_slave_client->clear_handlers(); });
+
+    m_state = eApManagerState::INIT;
+
+    transaction.commit();
+
+    LOG(DEBUG) << "started";
+
+    return true;
+}
+
+// The name of this method is temporary and will be renamed at the end of PPM-966.
+bool ap_manager_thread::to_be_renamed_to_stop()
+{
+    bool ok = true;
+
+    if (m_slave_client) {
+        m_slave_client.reset();
+    }
+
+    if (!m_timer_manager->remove_timer(m_fsm_timer)) {
+        ok = false;
+    }
+
+    if (ap_wlan_hal) {
+        if (m_ap_hal_ext_events > 0) {
+            m_event_loop->remove_handlers(m_ap_hal_ext_events);
+        }
+
+        if (m_ap_hal_int_events > 0) {
+            m_event_loop->remove_handlers(m_ap_hal_int_events);
+        }
+
+        ap_wlan_hal->detach();
+        ap_wlan_hal.reset();
+    }
+
+    m_state = eApManagerState::TERMINATED;
+
+    LOG(DEBUG) << "stopped";
+
+    return ok;
+}
+
 bool ap_manager_thread::init()
 {
     stop_ap_manager_thread();
@@ -475,6 +581,34 @@ bool ap_manager_thread::ap_manager_fsm(bool &continue_processing)
             Socket *socket = new Socket(m_ap_hal_ext_events);
             add_socket(socket);
             m_fd_to_socket_map[m_ap_hal_ext_events] = socket;
+            beerocks::EventLoop::EventHandlers ext_events_handlers{
+                .on_read =
+                    [&](int fd, EventLoop &loop) {
+                        if (!ap_wlan_hal->process_ext_events()) {
+                            LOG(ERROR) << "process_ext_events() failed!";
+                            return false;
+                        }
+                        return true;
+                    },
+                .on_write = nullptr,
+                .on_disconnect =
+                    [&](int fd, EventLoop &loop) {
+                        LOG(ERROR) << "ap_hal_ext_events disconnected!";
+                        m_ap_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
+                        return false;
+                    },
+                .on_error =
+                    [&](int fd, EventLoop &loop) {
+                        LOG(ERROR) << "ap_hal_ext_events error!";
+                        m_ap_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
+                        return false;
+                    },
+            };
+            if (!m_event_loop->register_handlers(m_ap_hal_ext_events, ext_events_handlers)) {
+                LOG(ERROR) << "Unable to register handlers for external events queue!";
+                return false;
+            }
+            LOG(DEBUG) << "External events queue with fd = " << m_ap_hal_ext_events;
         } else if (m_ap_hal_ext_events == 0) {
             LOG(DEBUG)
                 << "No external event FD is available, periodic polling will be done instead.";
@@ -494,6 +628,34 @@ bool ap_manager_thread::ap_manager_fsm(bool &continue_processing)
             Socket *socket = new Socket(m_ap_hal_int_events);
             add_socket(socket);
             m_fd_to_socket_map[m_ap_hal_int_events] = socket;
+            beerocks::EventLoop::EventHandlers int_events_handlers{
+                .on_read =
+                    [&](int fd, EventLoop &loop) {
+                        if (!ap_wlan_hal->process_int_events()) {
+                            LOG(ERROR) << "process_int_events() failed!";
+                            return false;
+                        }
+                        return true;
+                    },
+                .on_write = nullptr,
+                .on_disconnect =
+                    [&](int fd, EventLoop &loop) {
+                        LOG(ERROR) << "ap_hal_int_events disconnected!";
+                        m_ap_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
+                        return false;
+                    },
+                .on_error =
+                    [&](int fd, EventLoop &loop) {
+                        LOG(ERROR) << "ap_hal_int_events error!";
+                        m_ap_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
+                        return false;
+                    },
+            };
+            if (!m_event_loop->register_handlers(m_ap_hal_int_events, int_events_handlers)) {
+                LOG(ERROR) << "Unable to register handlers for internal events queue!";
+                return false;
+            }
+            LOG(DEBUG) << "Internal events queue with fd = " << m_ap_hal_int_events;
         } else {
             LOG(ERROR) << "Invalid internal event file descriptor: " << m_ap_hal_int_events;
             thread_last_error_code = APMANAGER_THREAD_ERROR_ATTACH_FAIL;
@@ -568,6 +730,9 @@ bool ap_manager_thread::ap_manager_fsm(bool &continue_processing)
         // Allow clients with expired blocking period timer
         allow_expired_clients();
         break;
+    }
+    case eApManagerState::TERMINATED: {
+        return false;
     }
     default:
         break;
