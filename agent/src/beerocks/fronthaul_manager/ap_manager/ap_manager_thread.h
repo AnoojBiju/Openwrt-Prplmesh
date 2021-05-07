@@ -35,9 +35,30 @@ public:
                       std::shared_ptr<beerocks::EventLoop> event_loop);
     virtual ~ap_manager_thread();
 
+    /**
+     * @brief Starts AP manager.
+     *
+     * @return true on success and false otherwise.
+     */
+    bool to_be_renamed_to_start();
+
+    /**
+     * @brief Stops AP manager.
+     *
+     * @return true on success and false otherwise.
+     */
+    bool to_be_renamed_to_stop();
+
     virtual bool init() override;
 
-    enum class eApManagerState { INIT, WAIT_FOR_CONFIGURATION, ATTACHING, ATTACHED, OPERATIONAL };
+    enum class eApManagerState {
+        INIT,
+        WAIT_FOR_CONFIGURATION,
+        ATTACHING,
+        ATTACHED,
+        OPERATIONAL,
+        TERMINATED
+    };
 
     /**
      * disallowed client parameters
@@ -131,7 +152,7 @@ private:
 
     int bss_steer_valid_int          = BSS_STEER_VALID_INT_BTT;
     int bss_steer_imminent_valid_int = BSS_STEER_IMMINENT_VALID_INT_BTT;
-    eApManagerState m_state          = eApManagerState::INIT;
+    eApManagerState m_state          = eApManagerState::TERMINATED;
     std::chrono::steady_clock::time_point m_state_timeout;
     std::vector<disallowed_client_t> m_disallowed_clients;
 
@@ -190,6 +211,18 @@ private:
      * This member variable is temporary and will be removed at the end of PPM-966
      */
     std::unordered_map<int, Socket *> m_fd_to_socket_map;
+
+    /**
+     * File descriptor of the timer to run the Finite State Machine.
+     */
+    int m_fsm_timer = beerocks::net::FileDescriptor::invalid_descriptor;
+
+    /**
+     * CMDU client connected to the the CMDU server running in slave.
+     * This object is dynamically created using the CMDU client factory for the slave provided in 
+     * class constructor.
+     */
+    std::unique_ptr<beerocks::CmduClient> m_slave_client;
 };
 
 } // namespace son
