@@ -1018,8 +1018,7 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const std::string &src_m
         // Multi-AP Agent doesn't say anything about the bridge, so we have to rely on Intel Slave Join for that.
         // We'll use AL-MAC as the bridge
         // TODO convert source address into AL-MAC address
-        if (!handle_non_intel_slave_join(src_mac, radio_basic_caps, *m1,
-                                         tlvf::mac_to_string(al_mac), ruid, cmdu_tx)) {
+        if (!handle_non_intel_slave_join(src_mac, radio_basic_caps, *m1, al_mac, ruid, cmdu_tx)) {
             LOG(ERROR) << "Non-Intel radio agent join failed (al_mac=" << al_mac << " ruid=" << ruid
                        << ")";
             return false;
@@ -2454,14 +2453,14 @@ bool Controller::autoconfig_wsc_parse_radio_caps(
 
 bool Controller::handle_non_intel_slave_join(
     const std::string &src_mac, std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps,
-    const WSC::m1 &m1, std::string bridge_mac, const sMacAddr &radio_mac,
+    const WSC::m1 &m1, const sMacAddr &bridge_mac, const sMacAddr &radio_mac,
     ieee1905_1::CmduMessageTx &cmdu_tx)
 {
 
     // Multi-AP Agent doesn't say anything about the backhaul, so simulate ethernet backhaul to satisfy
     // network map. MAC address is the bridge MAC with the last octet incremented by 1.
     // The mac address for the backhaul is the same since it is ethernet backhaul.
-    sMacAddr mac = tlvf::mac_from_string(bridge_mac);
+    sMacAddr mac = bridge_mac;
     mac.oct[5]++;
     std::string backhaul_mac = tlvf::mac_to_string(mac);
     mac.oct[5]++;
@@ -2503,27 +2502,27 @@ bool Controller::handle_non_intel_slave_join(
     // Assume repeater
     beerocks::eType ire_type = beerocks::TYPE_IRE;
 
+    std::string bridge_mac_str = tlvf::mac_to_string(bridge_mac);
+
     // bridge_mac node may have been created from DHCP/ARP event, if so delete it
     // this may only occur once
-    if (database.has_node(tlvf::mac_from_string(bridge_mac)) &&
-        (database.get_node_type(bridge_mac) != ire_type)) {
-        database.remove_node(tlvf::mac_from_string(bridge_mac));
+    if (database.has_node(bridge_mac) && (database.get_node_type(bridge_mac_str) != ire_type)) {
+        database.remove_node(bridge_mac);
     }
     // add new GW/IRE bridge_mac
     LOG(DEBUG) << "adding node " << bridge_mac << " under " << backhaul_mac << ", and mark as type "
                << ire_type;
 
-    database.add_node_ire(tlvf::mac_from_string(bridge_mac), tlvf::mac_from_string(backhaul_mac));
-    database.set_node_state(bridge_mac, beerocks::STATE_CONNECTED);
+    database.add_node_ire(bridge_mac, tlvf::mac_from_string(backhaul_mac));
+    database.set_node_state(bridge_mac_str, beerocks::STATE_CONNECTED);
     database.set_node_backhaul_iface_type(backhaul_mac, beerocks::eIfaceType::IFACE_TYPE_ETHERNET);
-    database.set_node_backhaul_iface_type(bridge_mac, beerocks::IFACE_TYPE_BRIDGE);
+    database.set_node_backhaul_iface_type(bridge_mac_str, beerocks::IFACE_TYPE_BRIDGE);
     database.set_node_manufacturer(backhaul_mac, manufacturer);
-    database.set_node_manufacturer(bridge_mac, manufacturer);
+    database.set_node_manufacturer(bridge_mac_str, manufacturer);
     database.set_node_type(backhaul_mac, beerocks::TYPE_IRE_BACKHAUL);
     database.set_node_name(backhaul_mac, manufacturer + "_BH");
-    database.set_node_name(bridge_mac, manufacturer);
-    database.add_node_wired_bh(tlvf::mac_from_string(eth_switch_mac),
-                               tlvf::mac_from_string(bridge_mac));
+    database.set_node_name(bridge_mac_str, manufacturer);
+    database.add_node_wired_bh(tlvf::mac_from_string(eth_switch_mac), bridge_mac);
     database.set_node_state(eth_switch_mac, beerocks::STATE_CONNECTED);
     database.set_node_name(eth_switch_mac, manufacturer + "_ETH");
     database.set_node_manufacturer(eth_switch_mac, eth_switch_mac);
@@ -2537,7 +2536,7 @@ bool Controller::handle_non_intel_slave_join(
         database.clear_hostap_stats_info(radio_mac);
     } else {
         // TODO Intel Slave Join has separate radio MAC and UID; we use radio_mac for both.
-        database.add_node_radio(radio_mac, tlvf::mac_from_string(bridge_mac), radio_mac);
+        database.add_node_radio(radio_mac, bridge_mac, radio_mac);
     }
     database.set_hostap_is_acs_enabled(radio_mac, false);
 
@@ -2577,7 +2576,7 @@ bool Controller::handle_non_intel_slave_join(
 
     // update bml listeners
     bml_task::connection_change_event bml_new_event;
-    bml_new_event.mac = bridge_mac;
+    bml_new_event.mac = bridge_mac_str;
     tasks.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE, &bml_new_event);
     LOG(DEBUG) << "BML, sending IRE connect CONNECTION_CHANGE for mac " << bml_new_event.mac;
 
