@@ -6,14 +6,19 @@
  * See LICENSE file for more details.
  */
 
-#include "ap_manager/ap_manager_thread.h"
+#include "ap_manager/ap_manager.h"
 #include "monitor/monitor_thread.h"
 
+#include <bcl/beerocks_cmdu_client_factory_factory.h>
+#include <bcl/beerocks_event_loop_impl.h>
 #include <bcl/beerocks_logging.h>
 #include <bcl/beerocks_os_utils.h>
+#include <bcl/beerocks_timer_factory_impl.h>
+#include <bcl/beerocks_timer_manager_impl.h>
 #include <bcl/beerocks_version.h>
-#include <easylogging++.h>
 #include <mapf/common/utils.h>
+
+#include <easylogging++.h>
 
 // Do not use this macro anywhere else in ire process
 // It should only be there in one place in each executable module
@@ -241,20 +246,37 @@ int main(int argc, char *argv[])
     std::string pid_file_path =
         beerocks_slave_conf.temp_path + "pid/" + base_fronthaul_name; // For file touching
 
+    // Create application event loop to wait for blocking I/O operations.
+    auto event_loop = std::make_shared<beerocks::EventLoopImpl>();
+    LOG_IF(!event_loop, FATAL) << "Unable to create event loop!";
+
+    // Create timer factory to create instances of timers.
+    auto timer_factory = std::make_shared<beerocks::TimerFactoryImpl>();
+    LOG_IF(!timer_factory, FATAL) << "Unable to create timer factory!";
+
+    // Create timer manager to help using application timers.
+    auto timer_manager = std::make_shared<beerocks::TimerManagerImpl>(timer_factory, event_loop);
+    LOG_IF(!timer_manager, FATAL) << "Unable to create timer manager!";
+
     // Get Agent UDS file
-    std::string agent_uds =
+    std::string fronthaul_uds_path =
         beerocks_slave_conf.temp_path + std::string(BEEROCKS_SLAVE_UDS) + "_" + fronthaul_iface;
 
-    // Create ap_manager
-    son::ap_manager_thread ap_manager(agent_uds, fronthaul_iface, *g_logger_ap_mananger);
+    // Create CMDU client factory to create CMDU clients connected to CMDU server running in
+    // slave when requested
+    auto slave_cmdu_client_factory =
+        beerocks::create_cmdu_client_factory(fronthaul_uds_path, event_loop);
+    LOG_IF(!slave_cmdu_client_factory, FATAL) << "Unable to create CMDU client factory!";
 
-    if (!ap_manager.init()) {
-        CLOG(ERROR, g_logger_ap_mananger->get_logger_id()) << "ap manager init() has failed!";
-        return 1;
-    }
+    // Create ap_manager
+    son::ApManager ap_manager(fronthaul_iface, *g_logger_ap_mananger,
+                              std::move(slave_cmdu_client_factory), timer_manager, event_loop);
+
+    LOG_IF(!ap_manager.start(), FATAL) << "Unable to start AP manager!";
 
     // Create Monitor
-    son::monitor_thread monitor(agent_uds, fronthaul_iface, beerocks_slave_conf, *g_logger_monitor);
+    son::monitor_thread monitor(fronthaul_uds_path, fronthaul_iface, beerocks_slave_conf,
+                                *g_logger_monitor);
 
     auto touch_time_stamp_timeout = std::chrono::steady_clock::now();
     while (g_running) {
@@ -271,16 +293,18 @@ int main(int argc, char *argv[])
                                        std::chrono::seconds(beerocks::TOUCH_PID_TIMEOUT_SECONDS);
         }
 
-        if (!ap_manager.work()) {
+        // Run application event loop and break on error.
+        if (event_loop->run() < 0) {
+            LOG(ERROR) << "Event loop failure!";
             break;
         }
 
-        // The ap_manager is the main process thread. After the ap_manager is finished the attach
-        // process, start the monitor thread. There is no point to start it before.
+        // After the ap_manager finishes the attach process, start the monitor thread. There is no
+        // point in starting it before.
         auto ap_manager_state = ap_manager.get_state();
         // If the fronthaul is defined as ZWDFS, do not bring the Monitor thread since a ZWDFS
         // interface shall only use for ZWDFS purpose, and shall not Monitor anything by definition.
-        if (ap_manager_state == son::ap_manager_thread::eApManagerState::OPERATIONAL) {
+        if (ap_manager_state == son::ApManager::eApManagerState::OPERATIONAL) {
             if (monitor.is_running() || ap_manager.zwdfs_ap()) {
                 continue;
             } else if (!monitor.start()) {
@@ -291,6 +315,8 @@ int main(int argc, char *argv[])
     }
 
     monitor.stop();
+
+    ap_manager.stop();
 
     return 0;
 }

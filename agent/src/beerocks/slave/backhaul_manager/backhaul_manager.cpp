@@ -1276,7 +1276,7 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
                             },
                     };
                     if (!m_event_loop->register_handlers(int_events_fd, int_events_handlers)) {
-                        LOG(ERROR) << "Unable to register handlers for external events queue!";
+                        LOG(ERROR) << "Unable to register handlers for internal events queue!";
                         return false;
                     }
 
