@@ -273,10 +273,7 @@ int main(int argc, char *argv[])
                                       std::move(slave_cmdu_client_factory), timer_manager,
                                       event_loop);
 
-    if (!ap_manager.init()) {
-        CLOG(ERROR, g_logger_ap_mananger->get_logger_id()) << "ap manager init() has failed!";
-        return 1;
-    }
+    LOG_IF(!ap_manager.to_be_renamed_to_start(), FATAL) << "Unable to start AP manager!";
 
     // Create Monitor
     son::monitor_thread monitor(slave_uds_path, fronthaul_iface, beerocks_slave_conf,
@@ -297,12 +294,14 @@ int main(int argc, char *argv[])
                                        std::chrono::seconds(beerocks::TOUCH_PID_TIMEOUT_SECONDS);
         }
 
-        if (!ap_manager.work()) {
+        // Run application event loop and break on error.
+        if (event_loop->run() < 0) {
+            LOG(ERROR) << "Event loop failure!";
             break;
         }
 
-        // The ap_manager is the main process thread. After the ap_manager is finished the attach
-        // process, start the monitor thread. There is no point to start it before.
+        // After the ap_manager finishes the attach process, start the monitor thread. There is no
+        // point in starting it before.
         auto ap_manager_state = ap_manager.get_state();
         // If the fronthaul is defined as ZWDFS, do not bring the Monitor thread since a ZWDFS
         // interface shall only use for ZWDFS purpose, and shall not Monitor anything by definition.
@@ -317,6 +316,8 @@ int main(int argc, char *argv[])
     }
 
     monitor.stop();
+
+    ap_manager.to_be_renamed_to_stop();
 
     return 0;
 }
