@@ -382,30 +382,40 @@ bool ap_manager_thread::init()
     return true;
 }
 
+bool ap_manager_thread::send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx)
+{
+    return message_com::send_cmdu(m_fd_to_socket_map[m_slave_fd], cmdu_tx);
+}
+
 void ap_manager_thread::connect_to_agent()
 {
-    if (slave_socket) {
+    if (m_slave_fd != beerocks::net::FileDescriptor::invalid_descriptor) {
         LOG(WARNING) << "Agent socket is already open";
         return;
     }
 
-    slave_socket    = new SocketClient(slave_uds);
-    std::string err = slave_socket->getError();
+    Socket *slave_socket = new SocketClient(slave_uds);
+    std::string err      = slave_socket->getError();
     if (!err.empty()) {
         LOG(ERROR) << "slave_socket: " << err;
         delete slave_socket;
-        slave_socket = nullptr;
         return;
     }
 
     add_socket(slave_socket);
+
+    // Get the file descriptor for the socket just created
+    m_slave_fd = slave_socket->getSocketFd();
+
+    // Save the pair { fd x Socket* } for later retrieval
+    m_fd_to_socket_map[m_slave_fd] = slave_socket;
 }
 
 void ap_manager_thread::ap_manager_fsm()
 {
     switch (m_state) {
     case eApManagerState::INIT: {
-        if (!slave_socket) {
+        if (m_slave_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
             return;
         }
         auto request =
@@ -417,7 +427,8 @@ void ap_manager_thread::ap_manager_fsm()
             return;
         }
         request->set_iface_name(m_iface);
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+
+        send_cmdu(cmdu_tx);
 
         m_state = eApManagerState::WAIT_FOR_CONFIGURATION;
 
@@ -456,31 +467,33 @@ void ap_manager_thread::ap_manager_fsm()
     }
     case eApManagerState::ATTACHED: {
         // External events
-        int ext_events_fd = ap_wlan_hal->get_ext_events_fd();
-        if (ext_events_fd > 0) {
-            ap_hal_ext_events = new Socket(ext_events_fd);
-            add_socket(ap_hal_ext_events);
-            // No external event FD is available, we will trigger the process method periodically
-        } else if (ext_events_fd == 0) {
-            ap_hal_ext_events = nullptr;
+        m_ap_hal_ext_events = ap_wlan_hal->get_ext_events_fd();
+        if (m_ap_hal_ext_events > 0) {
+            Socket *socket = new Socket(m_ap_hal_ext_events);
+            add_socket(socket);
+            m_fd_to_socket_map[m_ap_hal_ext_events] = socket;
+        } else if (m_ap_hal_ext_events == 0) {
+            LOG(DEBUG)
+                << "No external event FD is available, periodic polling will be done instead.";
         } else {
-            LOG(ERROR) << "Invalid external event file descriptor: " << ext_events_fd;
+            LOG(ERROR) << "Invalid external event file descriptor: " << m_ap_hal_ext_events;
             thread_last_error_code = APMANAGER_THREAD_ERROR_ATTACH_FAIL;
             stop_ap_manager_thread();
             return;
         }
 
         // Internal events
-        int int_events_fd = ap_wlan_hal->get_int_events_fd();
-        if (int_events_fd > 0) {
+        m_ap_hal_int_events = ap_wlan_hal->get_int_events_fd();
+        if (m_ap_hal_int_events > 0) {
 
             // NOTE: Eventhough the internal events are not socket based, at this
             //       point we have to use the Socket class wrapper to add the
             //       file descriptor into the select()
-            ap_hal_int_events = new Socket(int_events_fd);
-            add_socket(ap_hal_int_events);
+            Socket *socket = new Socket(m_ap_hal_int_events);
+            add_socket(socket);
+            m_fd_to_socket_map[m_ap_hal_int_events] = socket;
         } else {
-            LOG(ERROR) << "Invalid internal event file descriptor: " << int_events_fd;
+            LOG(ERROR) << "Invalid internal event file descriptor: " << m_ap_hal_int_events;
             thread_last_error_code = APMANAGER_THREAD_ERROR_ATTACH_FAIL;
             stop_ap_manager_thread();
             return;
@@ -499,9 +512,9 @@ void ap_manager_thread::ap_manager_fsm()
     }
     case eApManagerState::OPERATIONAL: {
         // Process external events
-        if (ap_hal_ext_events) {
-            if (read_ready(ap_hal_ext_events)) {
-                clear_ready(ap_hal_ext_events);
+        if (m_fd_to_socket_map[m_ap_hal_ext_events]) {
+            if (read_ready(m_fd_to_socket_map[m_ap_hal_ext_events])) {
+                clear_ready(m_fd_to_socket_map[m_ap_hal_ext_events]);
                 if (!ap_wlan_hal->process_ext_events()) {
                     LOG(ERROR) << "process_ext_events() failed!";
                     thread_last_error_code = APMANAGER_THREAD_ERROR_REPORT_PROCESS_FAIL;
@@ -521,9 +534,9 @@ void ap_manager_thread::ap_manager_fsm()
         }
 
         // Process internal events
-        if (read_ready(ap_hal_int_events)) {
+        if (read_ready(m_fd_to_socket_map[m_ap_hal_int_events])) {
             // A callback (hal_event_handler()) will invoked for pending events
-            clear_ready(ap_hal_int_events);
+            clear_ready(m_fd_to_socket_map[m_ap_hal_int_events]);
             if (!ap_wlan_hal->process_int_events()) {
                 LOG(ERROR) << "process_int_events() failed!";
                 thread_last_error_code = APMANAGER_THREAD_ERROR_REPORT_PROCESS_FAIL;
@@ -570,7 +583,7 @@ void ap_manager_thread::ap_manager_fsm()
 void ap_manager_thread::after_select(bool timeout)
 {
     // Continue only if the Agent is connected, otherwise connect to it.
-    if (!slave_socket) {
+    if (m_slave_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
         connect_to_agent();
         return;
     }
@@ -580,21 +593,30 @@ void ap_manager_thread::after_select(bool timeout)
 
 bool ap_manager_thread::socket_disconnected(Socket *sd)
 {
-    if (slave_socket && (sd == slave_socket)) {
+    if (!sd) {
+        LOG(ERROR) << "socket is nullptr";
+        return false;
+    }
+
+    // Get the file descriptor for the given socket instance
+    int fd = sd->getSocketFd();
+
+    if (fd == m_slave_fd) {
         LOG(ERROR) << "slave socket disconnected!";
         stop_ap_manager_thread();
         return false;
-    } else if (ap_hal_ext_events && (sd == ap_hal_ext_events)) {
+    } else if (fd == m_ap_hal_ext_events) {
         LOG(ERROR) << "ap_hal_ext_events disconnected!";
         thread_last_error_code = APMANAGER_THREAD_ERROR_HAL_DISCONNECTED;
         stop_ap_manager_thread();
         return false;
-    } else if (ap_hal_int_events && (sd == ap_hal_int_events)) {
+    } else if (fd == m_ap_hal_int_events) {
         LOG(ERROR) << "ap_hal_int_events socket disconnected!";
         thread_last_error_code = APMANAGER_THREAD_ERROR_HAL_DISCONNECTED;
         stop_ap_manager_thread();
         return false;
     }
+
     return true;
 }
 
@@ -603,21 +625,42 @@ std::string ap_manager_thread::print_cmdu_types(const message::sUdsHeader *cmdu_
     return message_com::print_cmdu_types(cmdu_header);
 }
 
+// This method is temporary and will be removed at the end of PPM-966.
+// It is intended to allow the temporary coexistence of Socket* and file descriptors to refer to
+// accepted sockets.
 bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    if (!sd) {
+        LOG(ERROR) << "socket is nullptr";
+        return false;
+    }
+
+    // Get the file descriptor for the given socket instance
+    int fd = sd->getSocketFd();
+
+    if (m_slave_fd != fd) {
+        LOG(ERROR) << "m_slave_fd != fd";
+        return false;
+    }
+
+    // Call the method with the new signature
+    handle_cmdu(cmdu_rx);
+
+    return true;
+}
+
+void ap_manager_thread::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto beerocks_header = message_com::parse_intel_vs_message(cmdu_rx);
     if (beerocks_header == nullptr) {
         LOG(ERROR) << "Not a vendor specific message";
-        return false;
+        return;
     }
 
     if (beerocks_header->action() != beerocks_message::ACTION_APMANAGER) {
         LOG(ERROR) << "Unsupported action: " << int(beerocks_header->action())
                    << " op=" << int(beerocks_header->action_op());
-        return false;
-    } else if (slave_socket != sd) {
-        LOG(ERROR) << "slave_socket != sd";
-        return false;
+        return;
     }
 
     switch (beerocks_header->action_op()) {
@@ -631,7 +674,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
         auto config = beerocks_header->addClass<beerocks_message::cACTION_APMANAGER_CONFIGURE>();
         if (!config) {
             LOG(ERROR) << "addClass cACTION_APMANAGER_CONFIGURE failed";
-            return false;
+            return;
         }
 
         acs_enabled = config->channel() == 0;
@@ -652,7 +695,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
             beerocks_header->addClass<beerocks_message::cACTION_APMANAGER_ENABLE_APS_REQUEST>();
         if (!notification) {
             LOG(ERROR) << "addClass cACTION_APMANAGER_ENABLE_APS_REQUEST failed";
-            return false;
+            return;
         }
 
         auto response =
@@ -661,7 +704,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
 
         if (!response) {
             LOG(ERROR) << "Failed building message!";
-            return false;
+            return;
         }
 
         response->success() = true;
@@ -683,7 +726,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
                                       notification->center_channel())) {
             LOG(ERROR) << "Failed setting set_channel";
             response->success() = false;
-            message_com::send_cmdu(slave_socket, cmdu_tx);
+            send_cmdu(cmdu_tx);
             break;
         }
 
@@ -695,7 +738,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
 
         LOG(INFO) << "send ACTION_APMANAGER_ENABLE_APS_RESPONSE, success="
                   << int(response->success());
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        send_cmdu(cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_APMANAGER_HOSTAP_SET_RESTRICTED_FAILSAFE_CHANNEL_REQUEST: {
@@ -705,7 +748,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
         if (request == nullptr) {
             LOG(ERROR) << "addClass "
                           "cACTION_APMANAGER_HOSTAP_SET_RESTRICTED_FAILSAFE_CHANNEL_REQUEST failed";
-            return false;
+            return;
         }
 
         bool success = true;
@@ -751,10 +794,11 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
             cmdu_tx);
         if (response == nullptr) {
             LOG(ERROR) << "Failed building message!";
-            return false;
+            return;
         }
         response->success() = success;
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+
+        send_cmdu(cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START: {
@@ -763,7 +807,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
                 ->addClass<beerocks_message::cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START>();
         if (request == nullptr) {
             LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START failed";
-            return false;
+            return;
         }
         LOG(DEBUG) << "ACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START: requested channel="
                    << int(request->cs_params().channel) << " bandwidth="
@@ -781,11 +825,11 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
                     beerocks_message::cACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION>(cmdu_tx);
                 if (!notification) {
                     LOG(ERROR) << "Failed building message!";
-                    return false;
+                    return;
                 }
                 ap_wlan_hal->refresh_radio_info();
                 fill_cs_params(notification->cs_params());
-                message_com::send_cmdu(slave_socket, cmdu_tx);
+                send_cmdu(cmdu_tx);
             }
         }
 
@@ -805,11 +849,11 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
                 cmdu_tx, beerocks_header->id());
             if (notification == nullptr) {
                 LOG(ERROR) << "Failed building message!";
-                return false;
+                return;
             }
             fill_cs_params(notification->cs_params());
-            message_com::send_cmdu(slave_socket, cmdu_tx);
-            return false;
+            send_cmdu(cmdu_tx);
+            return;
         }
         break;
     }
@@ -820,7 +864,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
                 ->addClass<beerocks_message::cACTION_APMANAGER_HOSTAP_CANCEL_ACTIVE_CAC_REQUEST>();
         if (request == nullptr) {
             LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_CANCEL_ACTIVE_CAC_REQUEST failed";
-            return false;
+            return;
         }
         bool cancel_cac_success = false;
 
@@ -860,11 +904,11 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
             cmdu_tx, beerocks_header->id());
         if (!response) {
             LOG(ERROR) << "Failed building cACTION_APMANAGER_HOSTAP_CANCEL_ACTIVE_CAC_RESPONSE!";
-            return false;
+            return;
         }
         response->success() = cancel_cac_success;
 
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        send_cmdu(cmdu_tx);
 
         break;
     }
@@ -891,7 +935,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
                 ->addClass<beerocks_message::cACTION_APMANAGER_HOSTAP_ADD_4ADDR_STA_UPDATE>();
         if (update == nullptr) {
             LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_ADD_4ADDR_STA_UPDATE failed";
-            return false;
+            return;
         }
         std::string mac = tlvf::mac_to_string(update->mac());
         LOG(DEBUG) << "add 4addr sta update for mac=" << mac;
@@ -904,7 +948,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
                 ->addClass<beerocks_message::cACTION_APMANAGER_HOSTAP_DEL_4ADDR_STA_UPDATE>();
         if (update == nullptr) {
             LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_DEL_4ADDR_STA_UPDATE failed";
-            return false;
+            return;
         }
         std::string mac = tlvf::mac_to_string(update->mac());
         LOG(DEBUG) << "del 4addr sta update for mac=" << mac;
@@ -919,7 +963,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
             LOG(ERROR) << "addClass cACTION_APMANAGER_CLIENT_DISCONNECT_REQUEST failed";
             send_steering_return_status(
                 beerocks_message::ACTION_APMANAGER_CLIENT_DISCONNECT_RESPONSE, OPERATION_FAIL);
-            return false;
+            return;
         }
         std::string sta_mac = tlvf::mac_to_string(request->mac());
         auto vap_id         = request->vap_id();
@@ -946,7 +990,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
                 ->addClass<beerocks_message::cACTION_APMANAGER_CLIENT_DISALLOW_REQUEST>();
         if (request == nullptr) {
             LOG(ERROR) << "addClass cACTION_APMANAGER_CLIENT_DISALLOW_REQUEST failed";
-            return false;
+            return;
         }
 
         std::string sta_mac = tlvf::mac_to_string(request->mac());
@@ -960,7 +1004,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
 
         if (it == vap_unordered_map.end()) {
             //AP does not have the requested vap, probably will be handled on the other AP
-            return true;
+            return;
         }
 
         LOG(DEBUG) << "CLIENT_DISALLOW: mac = " << sta_mac << ", bssid = " << bssid;
@@ -1004,7 +1048,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
             beerocks_header->addClass<beerocks_message::cACTION_APMANAGER_CLIENT_ALLOW_REQUEST>();
         if (request == nullptr) {
             LOG(ERROR) << "addClass cACTION_APMANAGER_CLIENT_ALLOW_REQUEST failed";
-            return false;
+            return;
         }
 
         std::string sta_mac = tlvf::mac_to_string(request->mac());
@@ -1018,7 +1062,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
 
         if (it == vap_unordered_map.end()) {
             //AP does not have the requested vap, probably will be handled on the other AP
-            return true;
+            return;
         }
 
         remove_client_from_disallowed_list(request->mac(), request->bssid());
@@ -1033,14 +1077,14 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
         // Read preferred Channels (From ACS Report)
         if (!ap_wlan_hal->read_acs_report()) {
             LOG(ERROR) << "Failed to read acs report";
-            return false;
+            return;
         }
 
         // Read supported_channels (From Netlink HW Features)
         // Refreshing the radio info updates the supported_channels list
         if (!ap_wlan_hal->refresh_radio_info()) {
             LOG(ERROR) << "Failed to refresh_radio_info";
-            return false;
+            return;
         }
 
         auto response = message_com::create_vs_message<
@@ -1048,7 +1092,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
                                                                         beerocks_header->id());
         if (!response) {
             LOG(ERROR) << "Failed building message!";
-            return false;
+            return;
         }
 
         // Copy preferred_channels
@@ -1056,7 +1100,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
                 ap_wlan_hal->get_radio_info().preferred_channels.size())) {
             LOG(ERROR) << "Failed to allocate preferred_channels ["
                        << int(ap_wlan_hal->get_radio_info().preferred_channels.size()) << "]!";
-            return false;
+            return;
         }
         auto tuple_preferred_channels = response->preferred_channels(0);
         std::copy_n(ap_wlan_hal->get_radio_info().preferred_channels.begin(),
@@ -1066,7 +1110,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
         if (!response->alloc_supported_channels(
                 ap_wlan_hal->get_radio_info().supported_channels.size())) {
             LOG(ERROR) << "Failed to allocate supported_channels!";
-            return false;
+            return;
         }
         auto tuple_supported_channels = response->supported_channels(0);
         std::copy_n(ap_wlan_hal->get_radio_info().supported_channels.begin(),
@@ -1076,7 +1120,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
         unify_channels_list(ap_wlan_hal->get_radio_info().supported_channels,
                             ap_wlan_hal->get_radio_info().preferred_channels, response);
 
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        send_cmdu(cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_APMANAGER_CLIENT_RX_RSSI_MEASUREMENT_REQUEST: {
@@ -1084,7 +1128,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
             beerocks_message::cACTION_APMANAGER_CLIENT_RX_RSSI_MEASUREMENT_REQUEST>();
         if (request == nullptr) {
             LOG(ERROR) << "addClass cACTION_APMANAGER_CLIENT_RX_RSSI_MEASUREMENT_REQUEST failed";
-            return false;
+            return;
         }
         std::string sta_mac = tlvf::mac_to_string(request->params().mac);
         LOG(DEBUG) << "APMANAGER_CLIENT_RX_RSSI_MEASUREMENT_REQUEST cross, curr id="
@@ -1098,11 +1142,11 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
                 cmdu_tx, beerocks_header->id());
             if (response == nullptr) {
                 LOG(ERROR) << "Failed building message!";
-                return false;
+                return;
             }
 
             response->mac() = tlvf::mac_from_string(sta_mac);
-            message_com::send_cmdu(slave_socket, cmdu_tx);
+            send_cmdu(cmdu_tx);
             LOG(DEBUG)
                 << "send sACTION_APMANAGER_CLIENT_RX_RSSI_MEASUREMENT_CMD_RESPONSE, sta_mac = "
                 << sta_mac;
@@ -1137,13 +1181,14 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
                 cmdu_tx, beerocks_header->id());
             if (response == nullptr) {
                 LOG(ERROR) << "Failed building message!";
-                return false;
+                return;
             }
             response->params().result.mac = request->params().mac;
             response->params().rx_rssi    = beerocks::RSSI_INVALID;
             response->params().rx_snr     = beerocks::SNR_INVALID;
             response->params().rx_packets = -1;
-            message_com::send_cmdu(slave_socket, cmdu_tx);
+
+            send_cmdu(cmdu_tx);
         }
         break;
     }
@@ -1153,7 +1198,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
                 ->addClass<beerocks_message::cACTION_APMANAGER_CLIENT_BSS_STEER_REQUEST>();
         if (request == nullptr) {
             LOG(ERROR) << "addClass cACTION_APMANAGER_CLIENT_BSS_STEER_REQUEST failed";
-            return false;
+            return;
         }
 
         auto bssid                    = tlvf::mac_to_string(request->params().cur_bssid);
@@ -1165,7 +1210,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
 
         if (it == vap_unordered_map.end()) {
             //AP does not have the requested vap, probably will be handled on the other AP
-            return true;
+            return;
         }
         //TODO Check for STA errors, if error ACK with ErrorCodeTLV
         auto response = message_com::create_vs_message<beerocks_message::cACTION_APMANAGER_ACK>(
@@ -1173,9 +1218,10 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
 
         if (!response) {
             LOG(ERROR) << "Failed building message!";
-            return false;
+            return;
         }
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+
+        send_cmdu(cmdu_tx);
 
         std::string sta_mac       = tlvf::mac_to_string(request->params().mac);
         std::string target_bssid  = tlvf::mac_to_string(request->params().target.bssid);
@@ -1199,7 +1245,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
                 ->addClass<beerocks_message::cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST>();
         if (!request) {
             LOG(ERROR) << "addClass ACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST failed";
-            return false;
+            return;
         }
 
         std::list<son::wireless_utils::sBssInfoConf> bss_info_conf_list;
@@ -1211,7 +1257,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
             auto config_data_tuple = request->wifi_credentials(i);
             if (!std::get<0>(config_data_tuple)) {
                 LOG(ERROR) << "getting config data entry has failed!";
-                return false;
+                return;
             }
             auto &config_data = std::get<1>(config_data_tuple);
 
@@ -1279,7 +1325,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
         LOG(DEBUG) << "Got ACTION_APMANAGER_START_WPS_PBC_REQUEST";
         if (!ap_wlan_hal->start_wps_pbc()) {
             LOG(ERROR) << "Failed to start WPS PBC";
-            return false;
+            return;
         }
         break;
     }
@@ -1291,7 +1337,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
                 ->addClass<beerocks_message::cACTION_APMANAGER_SET_ASSOC_DISALLOW_REQUEST>();
         if (!request) {
             LOG(ERROR) << "addClass ACTION_APMANAGER_SET_ASSOC_DISALLOW_REQUEST failed";
-            return false;
+            return;
         }
 
         auto bssid = tlvf::mac_to_string(request->bssid());
@@ -1299,12 +1345,12 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
         if (bssid == net::network_utils::ZERO_MAC_STRING) {
             if (!ap_wlan_hal->set_radio_mbo_assoc_disallow(request->enable())) {
                 LOG(ERROR) << "Failed to set MBO AssocDisallow";
-                return false;
+                return;
             }
         } else {
             if (!ap_wlan_hal->set_mbo_assoc_disallow(bssid, request->enable())) {
                 LOG(ERROR) << "Failed to set MBO AssocDisallow";
-                return false;
+                return;
             }
         }
         break;
@@ -1314,7 +1360,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
         // Disable the radio interface
         if (!ap_wlan_hal->disable()) {
             LOG(ERROR) << "Failed disabling radio on iface: " << ap_wlan_hal->get_iface_name();
-            return false;
+            return;
         }
         break;
     }
@@ -1327,7 +1373,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
             LOG(ERROR) << "addClass cACTION_APMANAGER_STEERING_CLIENT_SET_REQUEST failed";
             send_steering_return_status(
                 beerocks_message::ACTION_APMANAGER_STEERING_CLIENT_SET_RESPONSE, OPERATION_FAIL);
-            return false;
+            return;
         }
 
         auto bssid                    = tlvf::mac_to_string(request->params().bssid);
@@ -1339,7 +1385,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
 
         if (vap_unordered_map.end() == it) {
             LOG(ERROR) << "BSSID " << bssid << " not found";
-            return false;
+            return;
         }
 
         auto vap_name = it->second.bss;
@@ -1374,14 +1420,14 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
             beerocks_message::cACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION>(cmdu_tx);
         if (notification == nullptr) {
             LOG(ERROR) << "Failed building message!";
-            return false;
+            return;
         }
 
         copy_vaps_info(ap_wlan_hal, notification->params().vaps);
         LOG(DEBUG) << "Sending Vap List update to controller";
-        if (!message_com::send_cmdu(slave_socket, cmdu_tx)) {
+        if (!send_cmdu(cmdu_tx)) {
             LOG(ERROR) << "Failed sending cmdu!";
-            return false;
+            return;
         }
 
         break;
@@ -1399,7 +1445,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
         if (!notification) {
             LOG(ERROR)
                 << "addClass cACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST failed";
-            return false;
+            return;
         }
 
         auto response = message_com::create_vs_message<
@@ -1407,7 +1453,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
 
         if (!response) {
             LOG(ERROR) << "Failed building message!";
-            return false;
+            return;
         }
 
         response->success() = true;
@@ -1442,7 +1488,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
 
         LOG(INFO) << "send cACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE, success="
                   << int(response->success());
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        send_cmdu(cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST: {
@@ -1450,7 +1496,7 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
             beerocks_message::cACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST>();
         if (!request) {
             LOG(ERROR) << "addClass has failed";
-            return false;
+            return;
         }
         ap_wlan_hal->set_primary_vlan_id(request->primary_vlan_id());
         break;
@@ -1460,8 +1506,6 @@ bool ap_manager_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_
         break;
     }
     }
-
-    return true;
 }
 
 void ap_manager_thread::fill_cs_params(beerocks_message::sApChannelSwitch &params)
@@ -1483,8 +1527,8 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
         return false;
     }
 
-    if (!slave_socket) {
-        LOG(ERROR) << "slave_socket == nullptr";
+    if (m_slave_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
+        LOG(ERROR) << "m_slave_fd == invalid_descriptor";
         return false;
     }
 
@@ -1556,7 +1600,7 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
             fill_cs_params(notification->cs_params());
         }
 
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        send_cmdu(cmdu_tx);
 
     } break;
 
@@ -1599,7 +1643,7 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
 
         notification->multi_ap_profile() = msg->params.multi_ap_profile;
 
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        send_cmdu(cmdu_tx);
     } break;
 
     // STA Disconnected
@@ -1647,7 +1691,7 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
         notification->params().source = msg->params.source;
         notification->params().type   = msg->params.type;
 
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        send_cmdu(cmdu_tx);
     } break;
 
     // BSS Transition (802.11v)
@@ -1676,7 +1720,7 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
         response->params().source_bssid = msg->params.source_bssid;
         // TODO: add the optional target BSSID
 
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        send_cmdu(cmdu_tx);
 
     } break;
 
@@ -1711,7 +1755,7 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
             response->params().rx_packets        = msg->params.rx_packets;
             response->params().src_module        = msg->params.src_module;
 
-            message_com::send_cmdu(slave_socket, cmdu_tx);
+            send_cmdu(cmdu_tx);
         } else {
             LOG(ERROR) << "sta_unassociated_rssi_measurement_header_id == -1";
             return false;
@@ -1749,7 +1793,8 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
         notification->params().rx_snr     = msg->params.rx_snr;
         notification->params().blocked    = msg->params.blocked;
         notification->params().broadcast  = msg->params.broadcast;
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+
+        send_cmdu(cmdu_tx);
 
     } break;
 
@@ -1780,7 +1825,8 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
         notification->params().blocked    = msg->params.blocked;
         notification->params().reject     = msg->params.reject;
         notification->params().reason     = msg->params.reason;
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+
+        send_cmdu(cmdu_tx);
 
     } break;
 
@@ -1806,7 +1852,7 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
         response->params().bandwidth         = msg->params.bandwidth;
         response->params().cac_duration_sec  = msg->params.cac_duration_sec;
 
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        send_cmdu(cmdu_tx);
 
     } break;
 
@@ -1838,7 +1884,7 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
         response->params().channel           = msg->params.channel;
         response->params().bandwidth         = msg->params.bandwidth;
 
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        send_cmdu(cmdu_tx);
 
     } break;
 
@@ -1870,7 +1916,8 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
         response->params().channel              = msg->params.channel;
         response->params().bandwidth            = msg->params.bandwidth;
         response->params().vht_center_frequency = msg->params.vht_center_frequency;
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+
+        send_cmdu(cmdu_tx);
 
     } break;
 
@@ -1924,7 +1971,8 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
             }
 
             response->vap_id() = msg->vap_id;
-            message_com::send_cmdu(slave_socket, cmdu_tx);
+
+            send_cmdu(cmdu_tx);
         }
     } break;
     case Event::Interface_Disabled: {
@@ -1957,7 +2005,7 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
         notification->cs_params().switch_reason =
             uint8_t(ap_wlan_hal->get_radio_info().last_csa_sw_reason);
 
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        send_cmdu(cmdu_tx);
 
     } break;
     case Event::MGMT_Frame: {
@@ -2050,7 +2098,7 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
         }
 
         // Send the tunnelled message
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        send_cmdu(cmdu_tx);
 
     } break;
     case Event::AP_Sta_Possible_Psk_Mismatch: {
@@ -2086,7 +2134,7 @@ bool ap_manager_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t ev
             return false;
         }
         // Send the mismatched message
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        send_cmdu(cmdu_tx);
     } break;
     // Unhandled events
     default:
@@ -2199,34 +2247,38 @@ void ap_manager_thread::handle_hostapd_attached()
               << get_radio_channels_string(ap_wlan_hal->get_radio_info().supported_channels);
 
     // Send CMDU
-    message_com::send_cmdu(slave_socket, cmdu_tx);
+    send_cmdu(cmdu_tx);
 }
 
 void ap_manager_thread::stop_ap_manager_thread()
 {
     LOG(TRACE) << __func__;
 
-    // if(ap_hal_ext_events || slave_socket) LOG(DEBUG) << "stop_ap_manager_thread()";
-
-    if (ap_hal_ext_events) {
+    if (m_ap_hal_ext_events != beerocks::net::FileDescriptor::invalid_descriptor) {
         ap_wlan_hal->detach();
-        remove_socket(ap_hal_ext_events);
-        delete ap_hal_ext_events;
-        ap_hal_ext_events = nullptr;
+        remove_socket(m_fd_to_socket_map[m_ap_hal_ext_events]);
+        delete m_fd_to_socket_map[m_ap_hal_ext_events];
+        m_fd_to_socket_map[m_ap_hal_ext_events] = nullptr;
+
+        m_ap_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
     }
 
-    if (ap_hal_int_events) {
-        remove_socket(ap_hal_int_events);
-        delete ap_hal_int_events;
-        ap_hal_int_events = nullptr;
+    if (m_ap_hal_int_events != beerocks::net::FileDescriptor::invalid_descriptor) {
+        remove_socket(m_fd_to_socket_map[m_ap_hal_int_events]);
+        delete m_fd_to_socket_map[m_ap_hal_int_events];
+        m_fd_to_socket_map[m_ap_hal_int_events] = nullptr;
+
+        m_ap_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
     }
 
-    if (slave_socket) {
-        remove_socket(slave_socket);
-        slave_socket->closeSocket();
+    if (m_slave_fd != beerocks::net::FileDescriptor::invalid_descriptor) {
+        remove_socket(m_fd_to_socket_map[m_slave_fd]);
+        m_fd_to_socket_map[m_slave_fd]->closeSocket();
 
-        delete slave_socket;
-        slave_socket = nullptr;
+        delete m_fd_to_socket_map[m_slave_fd];
+        m_fd_to_socket_map[m_slave_fd] = nullptr;
+
+        m_slave_fd = beerocks::net::FileDescriptor::invalid_descriptor;
     }
 
     m_state = eApManagerState::INIT;
@@ -2238,8 +2290,8 @@ void ap_manager_thread::stop_ap_manager_thread()
 
 void ap_manager_thread::send_heartbeat()
 {
-    if (slave_socket == nullptr) {
-        LOG(ERROR) << "process_keep_alive(): slave_socket is nullptr!";
+    if (m_slave_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
+        LOG(ERROR) << "process_keep_alive(): slave socket descriptor is invalid!";
         return;
     }
 
@@ -2253,7 +2305,7 @@ void ap_manager_thread::send_heartbeat()
         return;
     }
 
-    message_com::send_cmdu(slave_socket, cmdu_tx);
+    send_cmdu(cmdu_tx);
 }
 
 bool ap_manager_thread::handle_ap_enabled(int vap_id)
@@ -2292,7 +2344,7 @@ bool ap_manager_thread::handle_ap_enabled(int vap_id)
                               beerocks::message::WIFI_SSID_MAX_LENGTH);
     notification->vap_info().backhaul_vap = vap_info.backhaul;
 
-    message_com::send_cmdu(slave_socket, cmdu_tx);
+    send_cmdu(cmdu_tx);
 
     return true;
 }
@@ -2309,7 +2361,7 @@ void ap_manager_thread::send_steering_return_status(beerocks_message::eActionOp_
             break;
         }
         response->params().error_code = status;
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        send_cmdu(cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_APMANAGER_STEERING_CLIENT_SET_RESPONSE: {
@@ -2320,7 +2372,7 @@ void ap_manager_thread::send_steering_return_status(beerocks_message::eActionOp_
             break;
         }
         response->params().error_code = status;
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        send_cmdu(cmdu_tx);
         break;
     }
     default: {
