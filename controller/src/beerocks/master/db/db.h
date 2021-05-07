@@ -771,11 +771,10 @@ public:
     bool set_hostap_supported_channels(const sMacAddr &mac,
                                        beerocks::message::sWifiChannel *supported_channels,
                                        int length);
-    std::vector<beerocks::message::sWifiChannel>
-    get_hostap_supported_channels(const std::string &mac);
-    std::string get_hostap_supported_channels_string(const std::string &radio_mac);
+    std::vector<beerocks::message::sWifiChannel> get_hostap_supported_channels(const sMacAddr &mac);
+    std::string get_hostap_supported_channels_string(const sMacAddr &radio_mac);
 
-    bool add_hostap_supported_operating_class(const std::string &radio_mac, uint8_t operating_class,
+    bool add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t operating_class,
                                               uint8_t tx_power,
                                               const std::vector<uint8_t> &non_operable_channels);
 
@@ -805,22 +804,22 @@ public:
     bool get_node_11v_capability(const std::string &mac);
 
     bool set_hostap_iface_name(const sMacAddr &mac, const std::string &iface_name);
-    std::string get_hostap_iface_name(const std::string &mac);
+    std::string get_hostap_iface_name(const sMacAddr &mac);
 
     bool set_hostap_iface_type(const sMacAddr &mac, beerocks::eIfaceType iface_type);
-    beerocks::eIfaceType get_hostap_iface_type(const std::string &mac);
+    beerocks::eIfaceType get_hostap_iface_type(const sMacAddr &mac);
 
     bool set_hostap_driver_version(const sMacAddr &mac, const std::string &version);
-    std::string get_hostap_driver_version(const std::string &mac);
+    std::string get_hostap_driver_version(const sMacAddr &mac);
 
     bool set_hostap_iface_id(const sMacAddr &mac, int8_t iface_id);
     int8_t get_hostap_iface_id(const sMacAddr &mac);
 
     bool set_hostap_vap_list(const sMacAddr &mac,
                              const std::unordered_map<int8_t, sVapElement> &vap_list);
-    std::unordered_map<int8_t, sVapElement> &get_hostap_vap_list(const std::string &mac);
+    std::unordered_map<int8_t, sVapElement> &get_hostap_vap_list(const sMacAddr &mac);
     std::set<std::string> get_hostap_vaps_bssids(const std::string &mac);
-    bool remove_vap(const std::string &mac, int vap_id);
+    bool remove_vap(const sMacAddr &mac, int vap_id);
     bool add_vap(const std::string &radio_mac, int vap_id, const std::string &bssid,
                  const std::string &ssid, bool backhual);
 
@@ -836,15 +835,15 @@ public:
     bool update_vap(const sMacAddr &radio_mac, const sMacAddr &bssid, const std::string &ssid,
                     bool backhaul);
 
-    std::string get_hostap_ssid(const std::string &mac);
+    std::string get_hostap_ssid(const sMacAddr &mac);
     /**
      * @brief checks if vap name is on the steer list.
      *
      * @param[in] bssid vap mac address.
      * @return true if vap name is on the steer list.
      */
-    bool is_vap_on_steer_list(const std::string &bssid);
-    std::string get_hostap_vap_with_ssid(const std::string &mac, const std::string &ssid);
+    bool is_vap_on_steer_list(const sMacAddr &bssid);
+    std::string get_hostap_vap_with_ssid(const sMacAddr &mac, const std::string &ssid);
     std::string get_hostap_vap_mac(const sMacAddr &mac, int vap_id);
     std::string get_node_parent_radio(const std::string &mac);
 
@@ -857,7 +856,7 @@ public:
     std::string get_node_data_model_path(const std::string &mac);
     std::string get_node_data_model_path(const sMacAddr &mac);
 
-    int8_t get_hostap_vap_id(const std::string &mac);
+    int8_t get_hostap_vap_id(const sMacAddr &mac);
 
     bool set_hostap_repeater_mode_flag(const sMacAddr &mac, bool flag);
     bool get_hostap_repeater_mode_flag(const sMacAddr &mac);
@@ -884,7 +883,7 @@ public:
     //
     // CS - DFS
     //
-    bool set_hostap_activity_mode(const std::string &mac, beerocks::eApActiveMode ap_activity_mode);
+    bool set_hostap_activity_mode(const sMacAddr &mac, beerocks::eApActiveMode ap_activity_mode);
     beerocks::eApActiveMode get_hostap_activity_mode(const sMacAddr &mac);
     bool set_radar_hit_stats(const sMacAddr &mac, uint8_t channel, uint8_t bw, bool is_csa_entry);
     bool set_supported_channel_radar_affected(const sMacAddr &mac,
@@ -894,7 +893,7 @@ public:
     bool set_hostap_is_dfs(const sMacAddr &mac, bool enable);
     bool get_hostap_is_dfs(const sMacAddr &mac);
 
-    bool set_hostap_cac_completed(const std::string &mac, bool enable);
+    bool set_hostap_cac_completed(const sMacAddr &mac, bool enable);
     bool get_hostap_cac_completed(const sMacAddr &mac);
 
     bool set_hostap_on_dfs_reentry(const sMacAddr &mac, bool enable);

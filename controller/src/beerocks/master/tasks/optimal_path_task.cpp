@@ -98,7 +98,7 @@ void optimal_path_task::work()
         current_hostap_vap = database.get_node_parent(sta_mac);
         // Steering allowed on all vaps unless load_steer_on_vaps list is defined
         // on the platform , in that case verify that vap is on that list
-        if (!database.is_vap_on_steer_list(current_hostap_vap)) {
+        if (!database.is_vap_on_steer_list(tlvf::mac_from_string(current_hostap_vap))) {
             TASK_LOG(WARNING) << "client " << sta_mac << " is connected to vap "
                               << current_hostap_vap << " that is currently not in steer list: "
                               << database.config.load_steer_on_vaps << " aborting optimal task";
@@ -131,7 +131,7 @@ void optimal_path_task::work()
         }
 
         current_hostap      = database.get_node_parent_radio(current_hostap_vap);
-        current_hostap_ssid = database.get_hostap_ssid(current_hostap_vap);
+        current_hostap_ssid = database.get_hostap_ssid(tlvf::mac_from_string(current_hostap_vap));
 
         auto gw_br_node = database.get_nodes(beerocks::TYPE_GW);
         auto gw_slaves  = database.get_node_children(*gw_br_node.begin(), beerocks::TYPE_SLAVE);
@@ -211,8 +211,8 @@ void optimal_path_task::work()
         auto it = potential_11k_aps.begin();
         while (it != potential_11k_aps.end()) {
 
-            std::string candidate_bssid =
-                database.get_hostap_vap_with_ssid(it->first, current_hostap_ssid);
+            std::string candidate_bssid = database.get_hostap_vap_with_ssid(
+                tlvf::mac_from_string(it->first), current_hostap_ssid);
 
             if (candidate_bssid.empty()) {
                 LOG(INFO) << "Remove candidate " << it->first
@@ -223,7 +223,7 @@ void optimal_path_task::work()
 
             // Steering allowed on all vaps unless load_steer_on_vaps list is defined
             // on the platform , in that case verify that vap is on that list
-            if (!database.is_vap_on_steer_list(candidate_bssid)) {
+            if (!database.is_vap_on_steer_list(tlvf::mac_from_string(candidate_bssid))) {
                 TASK_LOG(INFO) << "Remove candidate " << it->first << " , vap " << candidate_bssid
                                << " is not in steer list: " << database.config.load_steer_on_vaps;
                 it = potential_11k_aps.erase(it);
@@ -247,8 +247,8 @@ void optimal_path_task::work()
             if (potential_11k_aps.find(tlvf::mac_to_string(client_initial_radio)) !=
                 potential_11k_aps.end()) {
                 // Initial client hostap is on the candidate list, force steer the client there.
-                chosen_bssid = database.get_hostap_vap_with_ssid(
-                    tlvf::mac_to_string(client_initial_radio), current_hostap_ssid);
+                chosen_bssid =
+                    database.get_hostap_vap_with_ssid(client_initial_radio, current_hostap_ssid);
                 state          = SEND_STEER_ACTION;
                 is_force_steer = true;
 
@@ -281,8 +281,8 @@ void optimal_path_task::work()
                                  });
 
                 if (sibling_it != current_hostap_siblings.end()) {
-                    chosen_bssid =
-                        database.get_hostap_vap_with_ssid(sibling_it->data(), current_hostap_ssid);
+                    chosen_bssid = database.get_hostap_vap_with_ssid(
+                        tlvf::mac_from_string(sibling_it->data()), current_hostap_ssid);
                     state          = SEND_STEER_ACTION;
                     is_force_steer = true;
                     chosen_method.append("Found local radio " + std::string(sibling_it->data()) +
@@ -376,8 +376,8 @@ void optimal_path_task::work()
                             beerocks::BEACON_MEASURE_DEFAULT_ACTIVE_DURATION;
                     }
                     // ap_mac is a radio mac, but we need to request measurement on some vap since radio don't beacon
-                    const std::string vap_mac =
-                        database.get_hostap_vap_with_ssid(ap_mac, current_hostap_ssid);
+                    const std::string vap_mac = database.get_hostap_vap_with_ssid(
+                        tlvf::mac_from_string(ap_mac), current_hostap_ssid);
                     if (vap_mac.empty()) {
                         LOG(ERROR) << "Failed to get vap for client beacon request, skipping "
                                       "measurement for "
@@ -723,7 +723,8 @@ void optimal_path_task::work()
                                << " could not find a better path for sta " << sta_mac << std::endl);
             finish();
         } else {
-            chosen_bssid = database.get_hostap_vap_with_ssid(chosen_hostap, current_hostap_ssid);
+            chosen_bssid = database.get_hostap_vap_with_ssid(tlvf::mac_from_string(chosen_hostap),
+                                                             current_hostap_ssid);
             if (!database.settings_client_optimal_path_roaming_prefer_signal_strength()) {
                 LOG_CLI(DEBUG, "optimal_path_task:" << std::endl
                                                     << "    best hostap for " << sta_mac << " is "
@@ -981,8 +982,8 @@ void optimal_path_task::work()
         // Check if hostap has suitable ssid
         auto it = hostap_candidates.begin();
         while (it != hostap_candidates.end()) {
-            std::string candidate_bssid =
-                database.get_hostap_vap_with_ssid(it->first, current_hostap_ssid);
+            std::string candidate_bssid = database.get_hostap_vap_with_ssid(
+                tlvf::mac_from_string(it->first), current_hostap_ssid);
 
             if (candidate_bssid.empty()) {
                 LOG(INFO) << "Remove candidate " << it->first
@@ -993,7 +994,7 @@ void optimal_path_task::work()
 
             // Steering allowed on all vaps unless load_steer_on_vaps list is defined
             // on the platform, in that case, verify that vap is on that list.
-            if (!database.is_vap_on_steer_list(candidate_bssid)) {
+            if (!database.is_vap_on_steer_list(tlvf::mac_from_string(candidate_bssid))) {
                 TASK_LOG(INFO) << "Remove candidate " << it->first << " , vap " << candidate_bssid
                                << " is not in steer list: " << database.config.load_steer_on_vaps;
                 it = hostap_candidates.erase(it);
@@ -1025,8 +1026,8 @@ void optimal_path_task::work()
 
             if (hostap_it != hostap_candidates.end()) {
                 // Initial client radio is on the candidate list, force steer the client there.
-                chosen_bssid =
-                    database.get_hostap_vap_with_ssid(hostap_it->first, current_hostap_ssid);
+                chosen_bssid = database.get_hostap_vap_with_ssid(
+                    tlvf::mac_from_string(hostap_it->first), current_hostap_ssid);
                 state          = SEND_STEER_ACTION;
                 is_force_steer = true;
                 chosen_method.append("Steer client imminently to initial radio " +
@@ -1058,8 +1059,8 @@ void optimal_path_task::work()
                                  });
 
                 if (sibling_it != current_hostap_siblings.end()) {
-                    chosen_bssid =
-                        database.get_hostap_vap_with_ssid(sibling_it->data(), current_hostap_ssid);
+                    chosen_bssid = database.get_hostap_vap_with_ssid(
+                        tlvf::mac_from_string(sibling_it->data()), current_hostap_ssid);
                     state          = SEND_STEER_ACTION;
                     is_force_steer = true;
                     chosen_method.append("Found local radio " + std::string(sibling_it->data()) +
@@ -1346,7 +1347,8 @@ void optimal_path_task::work()
             }
         }
 
-        chosen_bssid = database.get_hostap_vap_with_ssid(chosen_hostap, current_hostap_ssid);
+        chosen_bssid = database.get_hostap_vap_with_ssid(tlvf::mac_from_string(chosen_hostap),
+                                                         current_hostap_ssid);
 
         if (chosen_hostap.empty() || (chosen_hostap == current_hostap) || chosen_bssid.empty()) {
             LOG_CLI(DEBUG, "optimal_path_task:" << std::endl

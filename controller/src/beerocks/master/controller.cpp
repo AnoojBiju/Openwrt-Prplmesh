@@ -2277,7 +2277,7 @@ bool Controller::handle_intel_slave_join(
     } else {
         database.set_hostap_band_capability(mac, beerocks::SUBBAND_CAPABILITY_UNKNOWN);
     }
-    autoconfig_wsc_parse_radio_caps(radio_mac, radio_caps);
+    autoconfig_wsc_parse_radio_caps(mac, radio_caps);
 
     if (tasks.is_task_running(database.get_dynamic_channel_selection_task_id(mac))) {
         LOG(DEBUG) << "dynamic channel selection task already running for " << mac;
@@ -2399,7 +2399,7 @@ bool Controller::handle_intel_slave_join(
  * @return false on failure
  */
 bool Controller::autoconfig_wsc_parse_radio_caps(
-    std::string radio_mac, std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps)
+    const sMacAddr &radio_mac, std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps)
 {
     // read all operating class list
     auto operating_classes_list_length = radio_caps->operating_classes_info_list_length();
@@ -2412,7 +2412,7 @@ bool Controller::autoconfig_wsc_parse_radio_caps(
     ** Here need to remove the OperatingClasses data element
     ** from the Controler Data Model because we are entering a new one
     */
-    database.remove_hostap_supported_operating_classes(tlvf::mac_from_string(radio_mac));
+    database.remove_hostap_supported_operating_classes(radio_mac);
 
     std::stringstream ss;
     for (int oc_idx = 0; oc_idx < operating_classes_list_length; oc_idx++) {
@@ -2565,7 +2565,7 @@ bool Controller::handle_non_intel_slave_join(
     database.set_node_manufacturer(radio_mac, manufacturer);
     // TODO ipv4 will not be set
 
-    autoconfig_wsc_parse_radio_caps(radio_mac, radio_caps);
+    autoconfig_wsc_parse_radio_caps(ruid, radio_caps);
     // TODO assume SSIDs are not hidden
 
     // TODO
@@ -2658,7 +2658,7 @@ bool Controller::handle_cmdu_control_message(
             son_actions::handle_dead_node(client, true, database, cmdu_tx, tasks);
         }
 
-        database.remove_vap(hostap_mac, vap_id);
+        database.remove_vap(tlvf::mac_from_string(hostap_mac), vap_id);
 
         // Update BSSes in the sAgent
         auto radio =
@@ -3439,7 +3439,8 @@ bool Controller::handle_cmdu_control_message(
         }
 
         database.set_hostap_activity_mode(
-            hostap_mac, beerocks::eApActiveMode(notification->params().ap_activity_mode));
+            tlvf::mac_from_string(hostap_mac),
+            beerocks::eApActiveMode(notification->params().ap_activity_mode));
         if (notification->params().ap_activity_mode == beerocks::AP_IDLE_MODE) {
             LOG(DEBUG) << "CS_task,sending AP_ACTIVITY_IDLE_EVENT for mac " << hostap_mac;
             auto new_event =

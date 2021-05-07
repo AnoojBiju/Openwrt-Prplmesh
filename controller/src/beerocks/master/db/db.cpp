@@ -1972,8 +1972,7 @@ bool db::set_hostap_supported_channels(const sMacAddr &mac,
     return true;
 }
 
-std::vector<beerocks::message::sWifiChannel>
-db::get_hostap_supported_channels(const std::string &mac)
+std::vector<beerocks::message::sWifiChannel> db::get_hostap_supported_channels(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -1986,7 +1985,7 @@ db::get_hostap_supported_channels(const std::string &mac)
     return n->hostap->supported_channels;
 }
 
-std::string db::get_hostap_supported_channels_string(const std::string &radio_mac)
+std::string db::get_hostap_supported_channels_string(const sMacAddr &radio_mac)
 {
     std::ostringstream os;
     auto supported_channels = get_hostap_supported_channels(radio_mac);
@@ -2015,7 +2014,7 @@ std::string db::get_hostap_supported_channels_string(const std::string &radio_ma
  * @return true on success
  * @return false on failure
  */
-bool db::add_hostap_supported_operating_class(const std::string &radio_mac, uint8_t operating_class,
+bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t operating_class,
                                               uint8_t tx_power,
                                               const std::vector<uint8_t> &non_operable_channels)
 {
@@ -2049,10 +2048,10 @@ bool db::add_hostap_supported_operating_class(const std::string &radio_mac, uint
     }
 
     // Set values for Controller.Network.Device.Radio.Capabilities.OperatingClasses
-    dm_add_ap_operating_classes(radio_mac, tx_power, operating_class, non_operable_channels);
+    dm_add_ap_operating_classes(tlvf::mac_to_string(radio_mac), tx_power, operating_class,
+                                non_operable_channels);
 
-    set_hostap_supported_channels(tlvf::mac_from_string(radio_mac), &supported_channels[0],
-                                  supported_channels.size());
+    set_hostap_supported_channels(radio_mac, &supported_channels[0], supported_channels.size());
     // dump new supported channels state
     // LOG(DEBUG) << "New supported channels for hostap" << radio_mac << " operating class "
     //            << int(operating_class) << std::endl
@@ -2275,7 +2274,7 @@ bool db::set_hostap_vap_list(const sMacAddr &mac,
     return true;
 }
 
-std::unordered_map<int8_t, sVapElement> &db::get_hostap_vap_list(const std::string &mac)
+std::unordered_map<int8_t, sVapElement> &db::get_hostap_vap_list(const sMacAddr &mac)
 {
     static std::unordered_map<int8_t, sVapElement> invalid_vap_list;
     auto n = get_node(mac);
@@ -2290,10 +2289,10 @@ std::unordered_map<int8_t, sVapElement> &db::get_hostap_vap_list(const std::stri
     return n->hostap->vaps_info;
 }
 
-bool db::remove_vap(const std::string &radio_mac, int vap_id)
+bool db::remove_vap(const sMacAddr &radio_mac, int vap_id)
 {
 
-    auto radio_node = get_node(tlvf::mac_from_string(radio_mac));
+    auto radio_node = get_node(radio_mac);
     if (!radio_node) {
         LOG(ERROR) << "Failed to get radio node, mac: " << radio_mac;
         return false;
@@ -2346,7 +2345,7 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
         return false;
     }
 
-    auto &vaps_info                = get_hostap_vap_list(radio_mac);
+    auto &vaps_info                = get_hostap_vap_list(tlvf::mac_from_string(radio_mac));
     vaps_info[vap_id].mac          = bssid;
     vaps_info[vap_id].ssid         = ssid;
     vaps_info[vap_id].backhaul_vap = backhual;
@@ -2361,7 +2360,7 @@ bool db::update_vap(const sMacAddr &radio_mac, const sMacAddr &bssid, const std:
         return false;
     }
 
-    auto &vaps_info = get_hostap_vap_list(tlvf::mac_to_string(radio_mac));
+    auto &vaps_info = get_hostap_vap_list(radio_mac);
     auto it         = std::find_if(vaps_info.begin(), vaps_info.end(),
                            [&](const std::pair<int8_t, sVapElement> &vap) {
                                return vap.second.mac == tlvf::mac_to_string(bssid);
@@ -2397,14 +2396,14 @@ std::set<std::string> db::get_hostap_vaps_bssids(const std::string &mac)
         // Only slaves have vap's
         return bssid_set;
     }
-    auto vap_list = get_hostap_vap_list(mac);
+    auto vap_list = get_hostap_vap_list(tlvf::mac_from_string(mac));
     for (auto &vap : vap_list) {
         bssid_set.insert(vap.second.mac);
     }
     return bssid_set;
 }
 
-std::string db::get_hostap_ssid(const std::string &mac)
+std::string db::get_hostap_ssid(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2415,14 +2414,14 @@ std::string db::get_hostap_ssid(const std::string &mac)
         return std::string();
     }
     for (auto const &it : n->hostap->vaps_info) {
-        if (it.second.mac == mac) {
+        if (tlvf::mac_from_string(it.second.mac) == mac) {
             return it.second.ssid;
         }
     }
     return std::string();
 }
 
-bool db::is_vap_on_steer_list(const std::string &bssid)
+bool db::is_vap_on_steer_list(const sMacAddr &bssid)
 {
     if (config.load_steer_on_vaps.empty()) {
         return true;
@@ -2448,7 +2447,7 @@ bool db::is_vap_on_steer_list(const std::string &bssid)
     return true;
 }
 
-std::string db::get_hostap_vap_with_ssid(const std::string &mac, const std::string &ssid)
+std::string db::get_hostap_vap_with_ssid(const sMacAddr &mac, const std::string &ssid)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2510,7 +2509,7 @@ std::string db::get_node_data_model_path(const sMacAddr &mac)
     return get_node_data_model_path(tlvf::mac_to_string(mac));
 }
 
-int8_t db::get_hostap_vap_id(const std::string &mac)
+int8_t db::get_hostap_vap_id(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2522,7 +2521,7 @@ int8_t db::get_hostap_vap_id(const std::string &mac)
     }
 
     for (auto const &it : n->hostap->vaps_info) {
-        if (it.second.mac == mac) {
+        if (tlvf::mac_from_string(it.second.mac) == mac) {
             return it.first;
         }
     }
@@ -2571,7 +2570,7 @@ bool db::set_hostap_iface_name(const sMacAddr &mac, const std::string &iface_nam
     return true;
 }
 
-std::string db::get_hostap_iface_name(const std::string &mac)
+std::string db::get_hostap_iface_name(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2599,7 +2598,7 @@ bool db::set_hostap_iface_type(const sMacAddr &mac, beerocks::eIfaceType iface_t
     return true;
 }
 
-beerocks::eIfaceType db::get_hostap_iface_type(const std::string &mac)
+beerocks::eIfaceType db::get_hostap_iface_type(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2643,7 +2642,7 @@ bool db::set_hostap_driver_version(const sMacAddr &mac, const std::string &versi
     return true;
 }
 
-std::string db::get_hostap_driver_version(const std::string &mac)
+std::string db::get_hostap_driver_version(const sMacAddr &mac)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2683,7 +2682,7 @@ std::string db::get_5ghz_sibling_hostap(const std::string &mac)
     return std::string();
 }
 
-bool db::set_hostap_activity_mode(const std::string &mac, eApActiveMode ap_activity_mode)
+bool db::set_hostap_activity_mode(const sMacAddr &mac, eApActiveMode ap_activity_mode)
 {
     auto n = get_node(mac);
     if (!n) {
@@ -2824,7 +2823,7 @@ bool db::get_hostap_is_dfs(const sMacAddr &mac)
     return n->hostap->is_dfs;
 }
 
-bool db::set_hostap_cac_completed(const std::string &mac, bool enable)
+bool db::set_hostap_cac_completed(const sMacAddr &mac, bool enable)
 {
     std::shared_ptr<node> n = get_node(mac);
 
@@ -3136,7 +3135,7 @@ int db::get_channel_scan_dwell_time_msec(const sMacAddr &mac, bool single_scan)
 bool db::is_channel_scan_pool_supported(const sMacAddr &mac,
                                         const std::unordered_set<uint8_t> &channel_pool)
 {
-    auto supported_channels = get_hostap_supported_channels(tlvf::mac_to_string(mac));
+    auto supported_channels = get_hostap_supported_channels(mac);
     for (const auto &channel : channel_pool) {
         auto found_channel =
             std::find_if(supported_channels.begin(), supported_channels.end(),
@@ -6168,7 +6167,7 @@ bool db::remove_current_op_classes(const sMacAddr &radio_mac)
 
 bool db::remove_hostap_supported_operating_classes(const sMacAddr &radio_mac)
 {
-    auto supported_channels = get_hostap_supported_channels(tlvf::mac_to_string(radio_mac));
+    auto supported_channels = get_hostap_supported_channels(radio_mac);
     auto radio_node         = get_node(radio_mac);
 
     // Remove from data model

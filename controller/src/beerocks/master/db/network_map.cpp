@@ -299,12 +299,13 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
             if (c->state == beerocks::STATE_CONNECTED) {
 
                 // Copy the interface name
-                string_utils::copy_string(node->data.gw_ire.radio[i].iface_name,
-                                          database.get_hostap_iface_name(c->mac).c_str(),
-                                          BML_NODE_IFACE_NAME_LEN);
+                string_utils::copy_string(
+                    node->data.gw_ire.radio[i].iface_name,
+                    database.get_hostap_iface_name(tlvf::mac_from_string(c->mac)).c_str(),
+                    BML_NODE_IFACE_NAME_LEN);
 
                 // Radio Vendor
-                switch (database.get_hostap_iface_type(c->mac)) {
+                switch (database.get_hostap_iface_type(tlvf::mac_from_string(c->mac))) {
                 case beerocks::eIfaceType::IFACE_TYPE_WIFI_INTEL:
                     node->data.gw_ire.radio[i].vendor = BML_WLAN_VENDOR_INTEL;
                     break;
@@ -313,9 +314,10 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
                 }
 
                 // Copy the driver version string
-                string_utils::copy_string(node->data.gw_ire.radio[i].driver_version,
-                                          database.get_hostap_driver_version(c->mac).c_str(),
-                                          BML_WLAN_DRIVER_VERSION_LEN);
+                string_utils::copy_string(
+                    node->data.gw_ire.radio[i].driver_version,
+                    database.get_hostap_driver_version(tlvf::mac_from_string(c->mac)).c_str(),
+                    BML_WLAN_DRIVER_VERSION_LEN);
 
                 node->data.gw_ire.radio[i].channel       = !c->channel ? 255 : c->channel;
                 node->data.gw_ire.radio[i].cac_completed = c->hostap->cac_completed;
