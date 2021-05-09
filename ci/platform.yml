@@ -25,6 +25,7 @@ stages:
   - certification-axepoint
   - certification-axepoint-bhwifi
   - certification-axepoint-controller
+  - certification-R2-nec-wx3000hp
   - upload
   - release
 
@@ -35,6 +36,7 @@ include:
   - local: "/ci/certification/axepoint.yml"
   - local: "/ci/certification/axepoint-bhwifi.yml"
   - local: "/ci/certification/axepoint-controller.yml"
+  - local: "/ci/certification/R2/nec-wx3000hp.yml"
 
 build-for-rdkb-turris-omnia:
   extends: .build-for-rdkb
@@ -114,9 +116,10 @@ boardfarm-on-netgear-rax40:
  needs:
    - build-for-intel-mips
 
-run-certification-tests-platform-essensium:
-  extends: .run-certification-tests
+run-certification-tests-R1-platform-essensium:
+  extends: .run-certification-tests-R1
   before_script:
+    - !reference [.run-certification-tests-R1, before_script]
     - echo "$TESTS_TO_RUN_ESSENSIUM" > .tests-to-run
     - echo "$DEVICE_UNDER_TEST_ESSENSIUM" > .device-under-test
   tags:
@@ -129,9 +132,26 @@ run-certification-tests-platform-essensium:
     - when: manual
       allow_failure: true
 
-run-certification-tests-platform-isr:
-  extends: .run-certification-tests
+run-certification-tests-R2-platform-essensium:
+  extends: .run-certification-tests-R2
   before_script:
+    - !reference [.run-certification-tests-R2, before_script]
+    - echo "$TESTS_TO_RUN_R2_ESSENSIUM" > .tests-to-run
+    - echo "$DEVICE_UNDER_TEST_R2_ESSENSIUM" > .device-under-test
+  rules:
+    - if: '$TESTS_TO_RUN_R2_ESSENSIUM !~ /^\$/ && $DEVICE_UNDER_TEST_R2_ESSENSIUM != "prplmesh"'
+    - when: manual
+      allow_failure: true
+  tags:
+    - certs-tests-R2-essensium
+  needs:
+    - job: build-for-intel-mips
+    - job: build-for-turris-omnia
+
+run-certification-tests-R1-platform-isr:
+  extends: .run-certification-tests-R1
+  before_script:
+    - !reference [.run-certification-tests-R1, before_script]
     - echo "$TESTS_TO_RUN_ISR" > .tests-to-run
     - echo "$DEVICE_UNDER_TEST_ISR" > .device-under-test
   tags:

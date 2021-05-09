@@ -1,6 +1,6 @@
 .certification:turris-omnia:
   stage: certification-turris-omnia
-  extends: .certification-generic
+  extends: .certification-generic-R1
   variables:
     RUN_ON_DEVICE: "turris-omnia"
   before_script:
