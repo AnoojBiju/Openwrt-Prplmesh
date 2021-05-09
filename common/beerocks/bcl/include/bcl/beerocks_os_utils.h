@@ -77,7 +77,27 @@ public:
     ///
     static bool file_exists(const std::string &fname);
 
-    static std::string system_call(std::string cmd, int log_lvl = 0, bool detached = false);
+    /**
+     * @brief Operates system call.
+     *
+     * Detached flag operate command without blocking.
+     *
+     * @param [in] cmd command string.
+     * @param [in] detached flag to request to run command in detached mode.
+     */
+    static void system_call(const std::string &cmd, bool detached = false);
+
+    /**
+     * @brief Operates system call and return its output.
+     *
+     * If enable_stderr is enabled, requested call stdout and stderr are returned.
+     * Output of command is limited to size of buffer defined in the method (10kb).
+     *
+     * @param [in] cmd command string.
+     * @param [in] enable_stderr request get output from stderr with stdout.
+     * @return Returns system call output string.
+     */
+    static std::string system_call_with_output(const std::string &cmd, bool enable_stderr = false);
 
     static void kill_pid(const std::string &path, const std::string &file_name);
 
@@ -86,7 +106,7 @@ public:
 
     /**
      * @brief Reads a PID from the file in the provided path.
-     * 
+     *
      * @param path Path to where the file is located.
      * @param file_name Name of the pid file for the process in question.
      * @param[out] pid Process id read from the file
@@ -104,7 +124,7 @@ public:
 
     /**
      * @brief Removes the residue files from previous process instance.
-     * 
+     *
      * @param path Path to where the residual file are located.
      * @param file_name Name of the file to be removed if exist.
      */
