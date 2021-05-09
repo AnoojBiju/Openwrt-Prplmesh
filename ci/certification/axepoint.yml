@@ -1,6 +1,6 @@
 .certification:axepoint:
   stage: certification-axepoint
-  extends: .certification-generic
+  extends: .certification-generic-R1
   variables:
     RUN_ON_DEVICE: "axepoint"
   before_script:
