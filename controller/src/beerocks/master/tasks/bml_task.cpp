@@ -342,7 +342,7 @@ void bml_task::handle_event(int event_type, void *obj)
             auto iface_mac_str                             = tlvf::mac_to_string(iface_mac);
             response->device_data().radios[i].iface_mac    = iface_mac;
             response->device_data().radios[i].iface_status = database.get_node_state(iface_mac_str);
-            std::copy_n(database.get_hostap_iface_name(iface_mac_str).c_str(),
+            std::copy_n(database.get_hostap_iface_name(iface_mac).c_str(),
                         beerocks::message::IFACE_NAME_LENGTH,
                         response->device_data().radios[i].iface_name);
             i++;

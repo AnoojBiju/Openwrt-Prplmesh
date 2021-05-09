@@ -116,13 +116,14 @@ void son_actions::unblock_sta(db &database, ieee1905_1::CmduMessageTx &cmdu_tx, 
 
     auto hostaps              = database.get_active_hostaps();
     const auto &current_bssid = database.get_node_parent(sta_mac);
-    const auto &ssid          = database.get_hostap_ssid(current_bssid);
+    const auto &ssid          = database.get_hostap_ssid(tlvf::mac_from_string(current_bssid));
 
     for (auto &hostap : hostaps) {
         /*
          * unblock client from all hostaps to prevent it from getting locked out
          */
-        const auto &hostap_vaps = database.get_hostap_vap_list(hostap);
+        const auto &hostap_vaps = database.get_hostap_vap_list(tlvf::mac_from_string(hostap));
+
         for (const auto &hostap_vap : hostap_vaps) {
             if (hostap_vap.second.ssid != ssid) {
                 continue;
@@ -201,7 +202,7 @@ void son_actions::disconnect_client(db &database, ieee1905_1::CmduMessageTx &cmd
         return;
     }
     request->mac()    = tlvf::mac_from_string(client_mac);
-    request->vap_id() = database.get_hostap_vap_id(bssid);
+    request->vap_id() = database.get_hostap_vap_id(tlvf::mac_from_string(bssid));
     request->type()   = type;
     request->reason() = reason;
 
