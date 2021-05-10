@@ -55,7 +55,6 @@ public:
     void set_cross_rx_rssi(const std::string &ap_mac_, int8_t rssi, int8_t rx_packets);
     void clear_cross_rssi();
     void clear_node_stats_info();
-    void clear_hostap_stats_info();
 
     beerocks::eType get_type();
     bool set_type(beerocks::eType type_);

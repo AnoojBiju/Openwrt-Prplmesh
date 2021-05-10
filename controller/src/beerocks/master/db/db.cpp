@@ -4242,7 +4242,7 @@ bool db::set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApS
         return false;
     }
     if (params == nullptr) { // clear stats
-        n->clear_hostap_stats_info();
+        n->hostap->stats_info = std::make_shared<node::radio::ap_stats_params>();
     } else {
         auto p                          = n->hostap->stats_info;
         p->active_sta_count             = params->active_client_count;
