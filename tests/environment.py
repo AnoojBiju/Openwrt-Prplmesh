@@ -306,8 +306,8 @@ on_wsl = "microsoft" in platform.uname()[3].lower()
 # Since we have multiple log files that correspond to a radio, multiple programs are passed
 # as argument. In the log messages, we only use the first one.
 # This should be reverted again as part of Unified Agent.
-def _docker_wait_for_log(container: str, programs: [str], regex: str, start_line: int,
-                         timeout: float, fail_on_mismatch: bool = True) -> bool:
+def _docker_wait_for_log(container: str, programs: [str], regex: str, timeout: float,
+                         start_line: int, fail_on_mismatch: bool = True) -> bool:
     def logfilename(program):
         logfilename = os.path.join(rootdir, 'logs', container, 'beerocks_{}.log'.format(program))
 
@@ -407,40 +407,41 @@ def _device_reset_console(device):
 # as argument. In the log messages, we only use the first one.
 # This should be reverted again as part of Unified Agent.
 def _device_wait_for_log(device: None, log_paths: [str], regex: str,
-                         timeout: int, start_line: int = 0, fail_on_mismatch: bool = True):
+                         timeout: float, start_line: int = 0, fail_on_mismatch: bool = True):
     """Waits for log matching regex expression to show up."""
 
-    _device_reset_console(device)
+    debug("--- Looking for {}".format(regex))
+    debug("    in {}".format(" ".join(log_paths)))
+    debug("    starting at line {}".format(start_line))
+    debug("    timeout: {} second(s)".format(timeout))
 
-    device.sendline("tail -f -n +{:d} {}".format(start_line + 1, " ".join(log_paths)))
+    # Current approach reads remote files in a loop.
+    # It may cause some delays that should be invisible to the user,
+    # so increase timeout.
+    timeout += 2
 
-    match = None
+    deadline = time.monotonic() + timeout
 
-    try:
-        if fail_on_mismatch:
-            device.expect(regex, timeout=timeout)
-        else:
-            match_id = device.expect([regex, pexpect.TIMEOUT], timeout=timeout)
-            if match_id == 1:
-                # Timeout
-                return (False, start_line, None)
-        match = device.match.group(0)
-    finally:
-        # Interrupt tail -f
-        _device_reset_console(device)
+    while time.monotonic() < deadline:
+        for logfilename in log_paths:
+            command = ['tail', '-n', f'+{start_line}', logfilename]
+            output = subprocess.check_output(['ssh', device.control_ip] + command)
 
-    if match:
-        first_matched_line = match.partition('\r\n')[0]
-        device.sendline("tail -n +{:d} {} | grep -a -n \"{}\"".format(start_line,
-                                                                      " ".join(log_paths),
-                                                                      first_matched_line))
-        # Typical output of grep -n from log: "line_num:severity"
-        # this regex has to capture just number of line in log
-        device.expect(r"(?P<line_number>[0-9]+):[A-Z]+\s[0-9]", timeout=timeout)
-        matched_line = int(device.match.group('line_number')) + start_line
-        return (True, matched_line, match)
+            for (i, v) in enumerate(output.split(b"\n")):
+                search = re.search(regex.encode('utf-8'), v)
+                if search:
+                    debug("--- Found at line {}:".format(i))
+                    debug(v)
+                    return (True, i + start_line, search.groups())
+
+        time.sleep(.3)
+
+    if fail_on_mismatch:
+        err("--- Cannot find {} in {}".format(regex, " ".join(log_paths)))
     else:
-        return (False, start_line, None)
+        debug("--- Not found")
+
+    return (False, start_line, None)
 
 
 class ALEntityDocker(ALEntity):
@@ -500,7 +501,7 @@ class ALEntityDocker(ALEntity):
                      fail_on_mismatch: bool = True) -> bool:
         '''Poll the entity's logfile until it contains "regex" or times out.'''
         program = "controller" if self.is_controller else "agent"
-        return _docker_wait_for_log(self.name, [program], regex, start_line, timeout,
+        return _docker_wait_for_log(self.name, [program], regex, timeout, start_line,
                                     fail_on_mismatch=fail_on_mismatch)
 
     def nbapi_command(self, path: str, command: str, args: Dict = None) -> Dict:
@@ -636,8 +637,8 @@ class RadioDocker(Radio):
                      fail_on_mismatch: bool = True) -> bool:
         '''Poll the radio's logfile until it contains "regex" or times out.'''
         programs = ("agent_" + self.iface_name, "ap_manager_" + self.iface_name)
-        return _docker_wait_for_log(self.agent.name, programs, regex,
-                                    start_line, timeout, fail_on_mismatch=fail_on_mismatch)
+        return _docker_wait_for_log(self.agent.name, programs, regex, timeout, start_line,
+                                    fail_on_mismatch=fail_on_mismatch)
 
     def send_bwl_event(self, event: str) -> None:
         # The file is only available within the docker container so we need to use an echo command.
