@@ -10,8 +10,10 @@
 #define _BPL_DHCP_H_
 
 #include "bpl.h"
+#include <bcl/network/network_utils.h>
 #include <tlvf/common/sMacAddr.h>
 
+#include <chrono>
 #include <string>
 #include <unordered_map>
 
@@ -29,6 +31,7 @@ namespace bpl {
 struct sIPv4Lease {
     std::string ip_address;
     std::string host_name;
+    std::chrono::milliseconds validity{0};
 
     sIPv4Lease() {}
     sIPv4Lease(const std::string &ip_address_, const std::string &host_name_)
@@ -40,17 +43,20 @@ struct sIPv4Lease {
 typedef std::unordered_map<sMacAddr, sIPv4Lease> ipv4_lease_map_t;
 
 struct sIPv6Lease {
+    sMacAddr mac{beerocks::net::network_utils::ZERO_MAC};
     std::string ip_address;
     std::string host_name;
+    std::chrono::milliseconds validity{0};
 
     sIPv6Lease() {}
-    sIPv6Lease(const std::string &ip_address_, const std::string &host_name_)
-        : ip_address(ip_address_), host_name(host_name_)
+    sIPv6Lease(const sMacAddr &mac_, const std::string &ip_address_, const std::string &host_name_)
+        : mac(mac_), ip_address(ip_address_), host_name(host_name_)
     {
     }
 };
 
-typedef std::unordered_map<sMacAddr, sIPv6Lease> ipv6_lease_map_t;
+// Key for IPv6 leases are DUID.
+typedef std::unordered_map<std::string, sIPv6Lease> ipv6_lease_map_t;
 typedef std::pair<ipv4_lease_map_t, ipv6_lease_map_t> leases_pair_t;
 
 /*
