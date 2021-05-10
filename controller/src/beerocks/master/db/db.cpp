@@ -1061,7 +1061,7 @@ std::set<std::string> db::get_active_hostaps()
         for (auto kv : node_map) {
             if (kv.second->get_type() == beerocks::TYPE_SLAVE && kv.second->hostap != nullptr &&
                 kv.second->state == beerocks::STATE_CONNECTED && kv.first == kv.second->mac &&
-                kv.second->hostap->active) {
+                is_hostap_active(tlvf::mac_from_string(kv.second->mac))) {
                 ret.insert(kv.first);
             }
         }
@@ -1089,8 +1089,8 @@ std::set<std::string> db::get_all_backhaul_manager_slaves()
     std::set<std::string> ret;
     for (auto node_map : nodes) {
         for (auto kv : node_map) {
-            if (kv.second->get_type() == beerocks::TYPE_SLAVE && kv.second->hostap != nullptr &&
-                kv.first == kv.second->mac && kv.second->hostap->is_backhaul_manager) {
+            if (kv.second->get_type() == beerocks::TYPE_SLAVE && kv.first == kv.second->mac &&
+                is_hostap_backhaul_manager(tlvf::mac_from_string(kv.second->mac))) {
                 ret.insert(kv.first);
             }
         }
