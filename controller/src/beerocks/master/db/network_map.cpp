@@ -295,7 +295,15 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
             auto c = database.get_node(radio.first);
             if (!c) {
                 LOG(ERROR) << "No radio node for " << radio.first;
+                continue;
             }
+
+            auto r = database.get_radio_by_uid(radio.first);
+            if (!r) {
+                LOG(ERROR) << "No radio for " << radio.first;
+                continue;
+            }
+
             if (c->state == beerocks::STATE_CONNECTED) {
 
                 // Copy the interface name
@@ -320,11 +328,11 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
                     BML_WLAN_DRIVER_VERSION_LEN);
 
                 node->data.gw_ire.radio[i].channel       = !c->channel ? 255 : c->channel;
-                node->data.gw_ire.radio[i].cac_completed = c->hostap->cac_completed;
+                node->data.gw_ire.radio[i].cac_completed = r->cac_completed;
                 node->data.gw_ire.radio[i].bw            = c->bandwidth;
                 node->data.gw_ire.radio[i].channel_ext_above_secondary =
                     c->channel_ext_above_secondary;
-                node->data.gw_ire.radio[i].ap_active = c->hostap->active;
+                node->data.gw_ire.radio[i].ap_active = r->active;
 
                 // Copy the radio identifier string
                 tlvf::mac_from_string(node->data.gw_ire.radio[i].radio_identifier,
@@ -779,6 +787,12 @@ std::ptrdiff_t network_map::fill_bml_node_statistics(db &database, std::shared_p
 
     switch (n_type) {
     case beerocks::TYPE_SLAVE: {
+        auto radio = database.get_radio_by_uid(tlvf::mac_from_string(n->mac));
+        if (!radio) {
+            LOG(ERROR) << "radio " << n->mac << " does not exist";
+            return 0;
+        }
+
         //LOG(DEBUG) << "fill TYPE_SLAVE";
         //prepearing buffer and calc size
         auto radio_stats_bulk = (BML_STATS *)tx_buffer;
@@ -788,18 +802,18 @@ std::ptrdiff_t network_map::fill_bml_node_statistics(db &database, std::shared_p
         tlvf::mac_from_string(radio_stats_bulk->mac, n->mac);
         radio_stats_bulk->type = BML_STAT_TYPE_RADIO;
 
-        radio_stats_bulk->bytes_sent              = n->hostap->stats_info->tx_bytes;
-        radio_stats_bulk->bytes_received          = n->hostap->stats_info->rx_bytes;
-        radio_stats_bulk->packets_sent            = n->hostap->stats_info->tx_packets;
-        radio_stats_bulk->packets_received        = n->hostap->stats_info->rx_packets;
-        radio_stats_bulk->measurement_window_msec = n->hostap->stats_info->stats_delta_ms;
+        radio_stats_bulk->bytes_sent              = radio->stats_info->tx_bytes;
+        radio_stats_bulk->bytes_received          = radio->stats_info->rx_bytes;
+        radio_stats_bulk->packets_sent            = radio->stats_info->tx_packets;
+        radio_stats_bulk->packets_received        = radio->stats_info->rx_packets;
+        radio_stats_bulk->measurement_window_msec = radio->stats_info->stats_delta_ms;
 
-        radio_stats_bulk->errors_sent       = n->hostap->stats_info->errors_sent;
-        radio_stats_bulk->errors_received   = n->hostap->stats_info->errors_received;
-        radio_stats_bulk->retrans_count     = n->hostap->stats_info->retrans_count;
-        radio_stats_bulk->uType.radio.noise = n->hostap->stats_info->noise;
+        radio_stats_bulk->errors_sent       = radio->stats_info->errors_sent;
+        radio_stats_bulk->errors_received   = radio->stats_info->errors_received;
+        radio_stats_bulk->retrans_count     = radio->stats_info->retrans_count;
+        radio_stats_bulk->uType.radio.noise = radio->stats_info->noise;
 
-        radio_stats_bulk->uType.radio.bss_load = n->hostap->stats_info->channel_load_percent;
+        radio_stats_bulk->uType.radio.bss_load = radio->stats_info->channel_load_percent;
         break;
     }
     case beerocks::TYPE_IRE_BACKHAUL: {
