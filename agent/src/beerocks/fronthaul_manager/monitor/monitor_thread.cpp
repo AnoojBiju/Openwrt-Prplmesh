@@ -24,7 +24,6 @@
 #include <vector>
 
 using namespace beerocks;
-using namespace net;
 using namespace son;
 
 #define HAL_MAX_COMMAND_FAILURES 10
@@ -65,10 +64,10 @@ monitor_thread::monitor_thread(
      * This MAC address will later on be used to, for example, extract the information in messages
      * received from controller that is addressed to this monitor instance.
      */
-    std::string radio_mac = network_utils::ZERO_MAC_STRING;
-    if (!network_utils::linux_iface_get_mac(monitor_iface, radio_mac)) {
+    std::string radio_mac = beerocks::net::network_utils::ZERO_MAC_STRING;
+    if (!beerocks::net::network_utils::linux_iface_get_mac(monitor_iface, radio_mac)) {
         LOG(ERROR) << "Failed getting MAC address for interface: " << monitor_iface;
-        m_radio_mac = network_utils::ZERO_MAC;
+        m_radio_mac = beerocks::net::network_utils::ZERO_MAC;
     } else {
         m_radio_mac = tlvf::mac_from_string(radio_mac);
     }
@@ -1026,8 +1025,8 @@ void monitor_thread::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
             LOG(ERROR) << "addClass cACTION_MONITOR_CLIENT_START_MONITORING_REQUEST failed";
             return;
         }
-        std::string sta_mac              = tlvf::mac_to_string(request->params().mac);
-        std::string sta_ipv4             = network_utils::ipv4_to_string(request->params().ipv4);
+        std::string sta_mac  = tlvf::mac_to_string(request->params().mac);
+        std::string sta_ipv4 = beerocks::net::network_utils::ipv4_to_string(request->params().ipv4);
         std::string set_bridge_4addr_mac = tlvf::mac_to_string(request->params().bridge_4addr_mac);
         LOG(INFO) << "ACTION_MONITOR_CLIENT_START_MONITORING_REQUEST=" << sta_mac
                   << " ip=" << sta_ipv4 << " set_bridge_4addr_mac=" << set_bridge_4addr_mac;
@@ -1067,7 +1066,7 @@ void monitor_thread::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
         std::string sta_mac  = tlvf::mac_to_string(notification->mac());
-        std::string sta_ipv4 = network_utils::ipv4_to_string(notification->ipv4());
+        std::string sta_ipv4 = beerocks::net::network_utils::ipv4_to_string(notification->ipv4());
 
         auto sta_node = mon_db.sta_find(sta_mac);
         if (!sta_node) {
@@ -1890,8 +1889,8 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
 
         LOG(INFO) << "STA_Connected: mac=" << sta_mac << " vap_id=" << int(vap_id);
 
-        std::string sta_ipv4             = network_utils::ZERO_IP_STRING;
-        std::string set_bridge_4addr_mac = network_utils::ZERO_MAC_STRING;
+        std::string sta_ipv4             = beerocks::net::network_utils::ZERO_IP_STRING;
+        std::string set_bridge_4addr_mac = beerocks::net::network_utils::ZERO_MAC_STRING;
 
         auto old_node = mon_db.sta_find(sta_mac);
         if (old_node) {
@@ -2067,8 +2066,8 @@ void monitor_thread::update_vaps_in_db()
 
     std::string bridge_iface_mac;
     std::string bridge_iface_ip;
-    network_utils::linux_iface_get_mac(bridge_iface, bridge_iface_mac);
-    network_utils::linux_iface_get_ip(bridge_iface, bridge_iface_ip);
+    beerocks::net::network_utils::linux_iface_get_mac(bridge_iface, bridge_iface_mac);
+    beerocks::net::network_utils::linux_iface_get_ip(bridge_iface, bridge_iface_ip);
 
     for (int vap_id = beerocks::IFACE_VAP_ID_MIN; vap_id <= beerocks::IFACE_VAP_ID_MAX; vap_id++) {
 
