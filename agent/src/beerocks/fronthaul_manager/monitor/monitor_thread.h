@@ -78,6 +78,13 @@ private:
      */
     void handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx);
 
+    /**
+     * @brief Runs the Finite State Machine of the AP manager.
+     * 
+     * @return true on success and false otherwise.
+     */
+    bool monitor_fsm();
+
     void stop_monitor_thread();
     bool hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr);
 

@@ -280,11 +280,17 @@ void monitor_thread::after_select(bool timeout)
         return;
     }
 
+    if (!monitor_fsm()) {
+        stop_monitor_thread();
+    }
+}
+
+bool monitor_thread::monitor_fsm()
+{
     // ???
     if (received_error_notification_ack_retry == 0) {
         LOG(TRACE) << "received_error_notification_ack_retry";
-        stop_monitor_thread();
-        return;
+        return false;
     }
 
     // Unexpected HAL detach or too many failed commands
@@ -293,8 +299,7 @@ void monitor_thread::after_select(bool timeout)
         LOG(ERROR) << "Unexpected HAL detach detected - Failed commands: "
                    << hal_command_failures_count;
         thread_last_error_code = MONITOR_THREAD_ERROR_SUDDEN_DETACH;
-        stop_monitor_thread();
-        return;
+        return false;
     }
 
     // If the HAL is not yet attached
@@ -325,8 +330,7 @@ void monitor_thread::after_select(bool timeout)
                 LOG(ERROR) << "Invalid external event file descriptor: " << m_mon_hal_ext_events;
                 m_mon_hal_ext_events   = beerocks::net::FileDescriptor::invalid_descriptor;
                 thread_last_error_code = MONITOR_THREAD_ERROR_ATTACH_FAIL;
-                stop_monitor_thread();
-                return;
+                return false;
             }
 
             // Internal events
@@ -343,8 +347,7 @@ void monitor_thread::after_select(bool timeout)
                 LOG(ERROR) << "Invalid internal event file descriptor: " << m_mon_hal_int_events;
                 m_mon_hal_int_events   = beerocks::net::FileDescriptor::invalid_descriptor;
                 thread_last_error_code = MONITOR_THREAD_ERROR_ATTACH_FAIL;
-                stop_monitor_thread();
-                return;
+                return false;
             }
 
             m_mon_hal_nl_events = mon_wlan_hal->get_nl_events_fd();
@@ -364,7 +367,7 @@ void monitor_thread::after_select(bool timeout)
                 beerocks_message::cACTION_MONITOR_JOINED_NOTIFICATION>(cmdu_tx);
             if (request == nullptr) {
                 LOG(ERROR) << "Failed building message!";
-                return;
+                return false;
             }
             send_cmdu(cmdu_tx);
 
@@ -376,8 +379,7 @@ void monitor_thread::after_select(bool timeout)
             if (!mon_stats.start(&mon_db, m_fd_to_socket_map[m_slave_fd])) {
                 LOG(ERROR) << "mon_stats.start() failed";
                 thread_last_error_code = MONITOR_THREAD_ERROR_ATTACH_FAIL;
-                stop_monitor_thread();
-                return;
+                return false;
             }
 
             LOG(TRACE) << "mon_rssi.start()";
@@ -398,8 +400,7 @@ void monitor_thread::after_select(bool timeout)
             if (!mon_rdkb_hal.start(&mon_db, m_fd_to_socket_map[m_slave_fd])) {
                 LOG(ERROR) << "mon_rdkb_hal.start() failed";
                 thread_last_error_code = MONITOR_THREAD_ERROR_ATTACH_FAIL;
-                stop_monitor_thread();
-                return;
+                return false;
             }
 #endif
 
@@ -409,10 +410,9 @@ void monitor_thread::after_select(bool timeout)
             mon_hal_attached = true;
 
         } else if (attach_state == bwl::HALState::Failed) {
-            LOG(ERROR) << "Failed attaching to WLAN HAL, call stop_monitor_thread()";
+            LOG(ERROR) << "Failed attaching to WLAN HAL";
             thread_last_error_code = MONITOR_THREAD_ERROR_ATTACH_FAIL;
-            stop_monitor_thread();
-            return;
+            return false;
         }
 
         // HAL is attached and operational
@@ -430,8 +430,7 @@ void monitor_thread::after_select(bool timeout)
                 if (!mon_wlan_hal->process_ext_events()) {
                     LOG(ERROR) << "process_ext_events() failed!";
                     thread_last_error_code = MONITOR_THREAD_ERROR_REPORT_PROCESS_FAIL;
-                    stop_monitor_thread();
-                    return;
+                    return false;
                 }
                 clear_ready(m_fd_to_socket_map[m_mon_hal_ext_events]);
             }
@@ -441,8 +440,7 @@ void monitor_thread::after_select(bool timeout)
             if (!mon_wlan_hal->process_ext_events()) {
                 LOG(ERROR) << "process_ext_events() failed!";
                 thread_last_error_code = MONITOR_THREAD_ERROR_REPORT_PROCESS_FAIL;
-                stop_monitor_thread();
-                return;
+                return false;
             }
         }
 
@@ -453,8 +451,7 @@ void monitor_thread::after_select(bool timeout)
             if (!mon_wlan_hal->process_int_events()) {
                 LOG(ERROR) << "process_int_events() failed!";
                 thread_last_error_code = MONITOR_THREAD_ERROR_REPORT_PROCESS_FAIL;
-                stop_monitor_thread();
-                return;
+                return false;
             }
         }
 
@@ -464,8 +461,7 @@ void monitor_thread::after_select(bool timeout)
                 if (!mon_wlan_hal->process_nl_events()) {
                     LOG(ERROR) << "process_nl_events() failed!";
                     thread_last_error_code = MONITOR_THREAD_ERROR_NL_REPORT_PROCESS_FAIL;
-                    stop_monitor_thread();
-                    return;
+                    return false;
                 }
                 clear_ready(m_fd_to_socket_map[m_mon_hal_nl_events]);
             }
@@ -488,8 +484,7 @@ void monitor_thread::after_select(bool timeout)
             if (!mon_wlan_hal->generate_connected_clients_events(is_finished_all_clients,
                                                                  awake_timeout())) {
                 LOG(ERROR) << "Failed to generate connected clients events";
-                stop_monitor_thread();
-                return;
+                return false;
             }
             m_generate_connected_clients_events = !is_finished_all_clients;
         }
@@ -530,13 +525,12 @@ void monitor_thread::after_select(bool timeout)
                     if (notification == nullptr) {
                         LOG(ERROR) << "Failed building "
                                       "cACTION_MONITOR_HOSTAP_AP_DISABLED_NOTIFICATION message!";
-                        stop_monitor_thread();
-                        return;
+                        return false;
                     }
 
                     notification->vap_id() = beerocks::IFACE_RADIO_ID;
                     send_cmdu(cmdu_tx);
-                    return;
+                    return true;
                 }
             }
 
@@ -598,6 +592,8 @@ void monitor_thread::after_select(bool timeout)
             }
         }
     }
+
+    return true;
 }
 
 void monitor_thread::on_channel_utilization_measurement_period_elapsed()
