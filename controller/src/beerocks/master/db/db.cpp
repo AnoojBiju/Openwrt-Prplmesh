@@ -1042,7 +1042,7 @@ std::set<std::string> db::get_active_hostaps()
     std::set<std::string> ret;
     for (auto node_map : nodes) {
         for (auto kv : node_map) {
-            if (kv.second->get_type() == beerocks::TYPE_SLAVE && kv.second->hostap != nullptr &&
+            if (kv.second->get_type() == beerocks::TYPE_SLAVE &&
                 kv.second->state == beerocks::STATE_CONNECTED && kv.first == kv.second->mac &&
                 is_hostap_active(tlvf::mac_from_string(kv.second->mac))) {
                 ret.insert(kv.first);
@@ -1824,7 +1824,7 @@ bool db::set_hostap_ant_num(const sMacAddr &mac, beerocks::eWiFiAntNum ant_num)
     if (!n) {
         LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
         return -1;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+    } else if (n->get_type() != beerocks::TYPE_SLAVE) {
         LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return -1;
     }
@@ -1838,7 +1838,7 @@ beerocks::eWiFiAntNum db::get_hostap_ant_num(const sMacAddr &mac)
     if (!n) {
         LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
         return beerocks::ANT_NONE;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+    } else if (n->get_type() != beerocks::TYPE_SLAVE) {
         LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return beerocks::ANT_NONE;
     }
@@ -4223,7 +4223,8 @@ bool db::set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApS
     }
 
     if (params == nullptr) { // clear stats
-        radio->stats_info = std::make_shared<node::radio::ap_stats_params>();
+        radio->stats_info =
+            std::make_shared<prplmesh::controller::db::sAgent::sRadio::ap_stats_params>();
     } else {
         auto p                          = radio->stats_info;
         p->active_sta_count             = params->active_client_count;
@@ -5243,20 +5244,18 @@ std::shared_ptr<node> db::get_node_verify_type(const sMacAddr &mac, beerocks::eT
     return node;
 }
 
-std::shared_ptr<node::radio> db::get_radio_by_uid(const sMacAddr &radio_uid)
+std::shared_ptr<prplmesh::controller::db::sAgent::sRadio>
+db::get_radio_by_uid(const sMacAddr &radio_uid)
 {
-    auto n = get_node(radio_uid);
-    beerocks::eType t;
-    if (!n) {
-        LOG(ERROR) << "node not found.... ";
-        return nullptr;
-    } else if ((t = n->get_type()) != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(ERROR) << "node " << radio_uid << " type is #" << (int)t;
-        LOG(ERROR) << "node " << radio_uid << " is not a valid hostap!";
-        return nullptr;
+    for (const auto &agent : m_agents) {
+        auto radio = agent.second->radios.get(radio_uid);
+        if (radio) {
+            return radio;
+        }
     }
 
-    return n->hostap;
+    LOG(ERROR) << "Radio " << radio_uid << " does not exist";
+    return nullptr;
 }
 
 std::set<std::shared_ptr<node>> db::get_node_subtree(std::shared_ptr<node> n)
