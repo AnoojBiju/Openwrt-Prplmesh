@@ -730,6 +730,36 @@ void LinkMetricsCollectionTask::handle_multi_ap_policy_config_request(
     }
 }
 
+uint32_t LinkMetricsCollectionTask::recalculate_byte_units(uint32_t &bytes)
+{
+    if (bytes == 0) {
+        return bytes;
+    }
+    const auto &byte_counter_units = AgentDB::get()->device_conf.byte_counter_units;
+    if (byte_counter_units == wfa_map::tlvProfile2ApCapability::eByteCounterUnits::KIBIBYTES) {
+        bytes = bytes / 1000;
+    } else if (byte_counter_units ==
+               wfa_map::tlvProfile2ApCapability::eByteCounterUnits::MEBIBYTES) {
+        bytes = bytes / 1000 / 1000;
+    }
+    return bytes;
+}
+
+void LinkMetricsCollectionTask::recalculate_byte_units(ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    for (auto &sta_traffic : cmdu_rx.getClassList<wfa_map::tlvAssociatedStaTrafficStats>()) {
+        if (!sta_traffic) {
+            LOG(ERROR) << "Failed to get class list for tlvAssociatedStaTrafficStats";
+            continue;
+        }
+        recalculate_byte_units(sta_traffic->byte_sent());
+        recalculate_byte_units(sta_traffic->byte_recived());
+    }
+
+    // AP Extended Metrics TLV values should also be recalculated.
+    // Will be done part of PPM-1170
+}
+
 void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                            const sMacAddr &src_mac)
 {
@@ -751,6 +781,7 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
      * periodic metrics reporting interval has elapsed.
      */
     if (0 == mid) {
+        recalculate_byte_units(cmdu_rx);
         m_btl_ctx.forward_cmdu_to_broker(cmdu_rx, db->controller_info.bridge_mac, db->bridge.mac);
         return;
     }
@@ -826,10 +857,10 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
             }
 
             traffic_stats_response.push_back(
-                {sta_traffic->sta_mac(), sta_traffic->byte_sent(), sta_traffic->byte_recived(),
-                 sta_traffic->packets_sent(), sta_traffic->packets_recived(),
-                 sta_traffic->tx_packets_error(), sta_traffic->rx_packets_error(),
-                 sta_traffic->retransmission_count()});
+                {sta_traffic->sta_mac(), recalculate_byte_units(sta_traffic->byte_sent()),
+                 recalculate_byte_units(sta_traffic->byte_recived()), sta_traffic->packets_sent(),
+                 sta_traffic->packets_recived(), sta_traffic->tx_packets_error(),
+                 sta_traffic->rx_packets_error(), sta_traffic->retransmission_count()});
         }
 
         std::vector<sStaLinkMetrics> link_metrics_response;

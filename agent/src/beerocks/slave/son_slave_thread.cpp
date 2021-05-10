@@ -4133,6 +4133,13 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
             return false;
         }
 
+        // If the Multi-AP Agent onboards to a Multi-AP Controller that implements Profile-1, the
+        // Multi-AP Agent shall set the Byte Counter Units field to 0x00 (bytes) and report the
+        // values of the BytesSent and BytesReceived fields in the Associated STA Traffic Stats TLV
+        // in bytes. Section 9.1 of the spec.
+        db->device_conf.byte_counter_units =
+            wfa_map::tlvProfile2ApCapability::eByteCounterUnits::BYTES;
+
         if (db->controller_info.profile_support ==
             wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2) {
             /* One Profile-2 AP Capability TLV */
@@ -4141,12 +4148,13 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
                 LOG(ERROR) << "Failed building message!";
                 return false;
             }
-            // If the Multi-AP Agent onboards to a Multi-AP Controller that implements Profile-1, the
-            // Multi-AP Agent shall set the Byte Counter Units field to 0x00 (bytes) and report the
-            // values of the BytesSent and BytesReceived fields in the Associated STA Traffic Stats TLV
-            // in bytes. Currently we send it on bytes unit, so set it to bytes.
+
+            // If a Multi-AP Agent that implements Profile-2 sends a Profile-2 AP Capability TLV
+            // shall set the Byte Counter Units field to 0x01 (KiB (kibibytes)). Section 9.1 of the spec.
+            db->device_conf.byte_counter_units =
+                wfa_map::tlvProfile2ApCapability::eByteCounterUnits::KIBIBYTES;
             profile2_ap_capability_tlv->capabilities_bit_field().byte_counter_units =
-                wfa_map::tlvProfile2ApCapability::eByteCounterUnits::BYTES;
+                db->device_conf.byte_counter_units;
 
             // Calculate max total number of VLANs which can be configured on the Agent, and save it on
             // on the AgentDB.

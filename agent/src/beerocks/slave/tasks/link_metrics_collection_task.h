@@ -16,6 +16,7 @@
 #include <tlvf/ieee_1905_1/eMediaType.h>
 #include <tlvf/wfa_map/tlvApMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
+#include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
 
 #include "bcl/network/network_utils.h"
 
@@ -157,6 +158,32 @@ private:
     bool
     get_neighbor_links(const sMacAddr &neighbor_mac_filter,
                        std::map<sLinkInterface, std::vector<sLinkNeighbor>> &neighbor_links_map);
+
+    /**
+     * @brief Recalculate single value of byte units to support R2 spec
+     * 
+     * R2 specification require associated station traffic stats to be in KB units while R1 only
+     * support Byte units. The monitor produces the value in Byte units so it need to be recalculated
+     * according to the controller expectation.
+     *
+     * @param[in/out] bytes Number of bytes to recalculate
+     * 
+     * @return Recalculate value of the bytes
+     */
+    uint32_t recalculate_byte_units(uint32_t &bytes);
+
+    /**
+     * @brief Recalculate all byte units of TLVs to support R2 spec
+     * 
+     * R2 specification require associated station traffic stats to be in KB units while R1 only
+     * support Byte units. The monitor produces the value in Byte units so it need to be recalculated
+     * according to the controller expectation.
+     *
+     * @param[in] cmdu_rx CMDU message containing associated station traffic stats TLVs
+     * 
+     * @return None
+     */
+    void recalculate_byte_units(ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
      * AP Metrics Reporting configuration and status information type.
