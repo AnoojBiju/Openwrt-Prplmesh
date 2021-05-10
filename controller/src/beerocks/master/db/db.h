@@ -1447,7 +1447,7 @@ public:
     int get_measurement_window_size(const std::string &mac);
     bool set_measurement_window_size(const std::string &mac, int window_size);
 
-    bool set_node_channel_bw(const std::string &mac, int channel, beerocks::eWiFiBandwidth bw,
+    bool set_node_channel_bw(const sMacAddr &mac, int channel, beerocks::eWiFiBandwidth bw,
                              bool channel_ext_above_secondary, int8_t channel_ext_above_primary,
                              uint16_t vht_center_frequency);
     beerocks::eWiFiBandwidth get_node_bw(const std::string &mac);

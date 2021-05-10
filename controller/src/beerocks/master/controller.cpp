@@ -3207,7 +3207,7 @@ bool Controller::handle_cmdu_control_message(
             (notification->params().frequency < notification->params().center_frequency1) ? true
                                                                                           : false;
         if (!database.set_node_channel_bw(
-                hostap_mac, notification->params().channel,
+                tlvf::mac_from_string(hostap_mac), notification->params().channel,
                 beerocks::eWiFiBandwidth(notification->params().bandwidth), channel_ext_above,
                 channel_ext_above, notification->params().center_frequency1)) {
             LOG(ERROR) << "set node channel bw failed, mac=" << hostap_mac;

@@ -4743,7 +4743,7 @@ bool db::set_measurement_window_size(const std::string &mac, int window_size)
     return true;
 }
 
-bool db::set_node_channel_bw(const std::string &mac, int channel, beerocks::eWiFiBandwidth bw,
+bool db::set_node_channel_bw(const sMacAddr &mac, int channel, beerocks::eWiFiBandwidth bw,
                              bool channel_ext_above_secondary, int8_t channel_ext_above_primary,
                              uint16_t vht_center_frequency)
 {
@@ -4757,7 +4757,7 @@ bool db::set_node_channel_bw(const std::string &mac, int channel, beerocks::eWiF
             n->hostap->channel_ext_above_primary = channel_ext_above_primary;
             n->hostap->vht_center_frequency      = vht_center_frequency;
             auto is_dfs                          = wireless_utils::is_dfs_channel(channel);
-            set_hostap_is_dfs(tlvf::mac_from_string(mac), is_dfs);
+            set_hostap_is_dfs(mac, is_dfs);
             if (channel >= 1 && channel <= 13) {
                 n->hostap->operating_class = 81;
             } else if (channel == 14) {

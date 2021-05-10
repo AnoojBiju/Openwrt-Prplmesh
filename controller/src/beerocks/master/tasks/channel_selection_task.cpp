@@ -334,7 +334,7 @@ void channel_selection_task::work()
 
         auto channel_ext_above_secondary = (freq < vht_center_frequency) ? true : false;
         if (!database.set_node_channel_bw(
-                tlvf::mac_to_string(radio_mac), slave_joined_event->channel,
+                radio_mac, slave_joined_event->channel,
                 (beerocks::eWiFiBandwidth)slave_joined_event->cs_params.bandwidth,
                 bool(channel_ext_above_secondary), channel_ext_above_primary,
                 vht_center_frequency)) {
@@ -656,11 +656,11 @@ void channel_selection_task::work()
         auto channel_ext_above_secondary = (freq < vht_center_frequency) ? true : false;
         auto channel_ext_above_primary =
             (csa_event->cs_params.channel_ext_above_primary > 0) ? true : false;
-        if (!database.set_node_channel_bw(
-                tlvf::mac_to_string(radio_mac), csa_event->cs_params.channel,
-                (beerocks::eWiFiBandwidth)csa_event->cs_params.bandwidth,
-                bool(channel_ext_above_secondary), bool(channel_ext_above_primary),
-                csa_event->cs_params.vht_center_frequency)) {
+        if (!database.set_node_channel_bw(radio_mac, csa_event->cs_params.channel,
+                                          (beerocks::eWiFiBandwidth)csa_event->cs_params.bandwidth,
+                                          bool(channel_ext_above_secondary),
+                                          bool(channel_ext_above_primary),
+                                          csa_event->cs_params.vht_center_frequency)) {
             TASK_LOG(ERROR) << "set node channel bw failed, mac=" << radio_mac;
         }
 
@@ -802,11 +802,11 @@ void channel_selection_task::work()
             (freq < csa_event->cs_params.vht_center_frequency) ? true : false;
         auto channel_ext_above_primary =
             (csa_event->cs_params.channel_ext_above_primary > 0) ? true : false;
-        if (!database.set_node_channel_bw(
-                tlvf::mac_to_string(radio_mac), csa_event->cs_params.channel,
-                beerocks::eWiFiBandwidth(csa_event->cs_params.bandwidth),
-                bool(channel_ext_above_secondary), bool(channel_ext_above_primary),
-                csa_event->cs_params.vht_center_frequency)) {
+        if (!database.set_node_channel_bw(radio_mac, csa_event->cs_params.channel,
+                                          beerocks::eWiFiBandwidth(csa_event->cs_params.bandwidth),
+                                          bool(channel_ext_above_secondary),
+                                          bool(channel_ext_above_primary),
+                                          csa_event->cs_params.vht_center_frequency)) {
             TASK_LOG(ERROR) << "set node channel bw failed, mac=" << radio_mac;
         }
 

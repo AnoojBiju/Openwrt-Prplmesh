@@ -432,7 +432,7 @@ bool topology_task::handle_topology_notification(const std::string &src_mac,
 
         LOG(INFO) << "client connected, mac=" << client_mac_str << ", bssid=" << bssid_str;
 
-        database.set_node_channel_bw(client_mac_str, database.get_node_channel(bssid_str),
+        database.set_node_channel_bw(client_mac, database.get_node_channel(bssid_str),
                                      database.get_node_bw(bssid_str),
                                      database.get_node_channel_ext_above_secondary(bssid_str), 0,
                                      database.get_hostap_vht_center_frequency(bssid));
