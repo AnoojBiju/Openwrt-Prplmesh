@@ -90,6 +90,16 @@ bool dhcp_manual_procedure_init()
     return true;
 }
 
+bool dhcp_manual_procedure_destroy()
+{
+    if (s_pUbusCtx) {
+        ubus_free(s_pUbusCtx);
+        s_pUbusCtx = nullptr;
+    }
+
+    return true;
+}
+
 static void lease_data_handler(ubus_request *req, int type, blob_attr *msg)
 {
     if (!msg || !req->priv) {

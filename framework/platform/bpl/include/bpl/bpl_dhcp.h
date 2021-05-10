@@ -100,7 +100,7 @@ int dhcp_mon_handle_event();
 int dhcp_mon_stop();
 
 /**
- * @brief Initialize manual procedure for reading leases
+ * @brief Initialize manual procedure for reading leases.
  *
  * For example, in case of luci-rpc/openwrt platforms
  * It inits ubus context to enable manual ubus calls.
@@ -109,6 +109,13 @@ int dhcp_mon_stop();
  * @return Returns true in case of success.
  */
 bool dhcp_manual_procedure_init();
+
+/**
+ * @brief Stops and free resources in manual procedure for reading leases.
+ *
+ * @return Returns true in case of success.
+ */
+bool dhcp_manual_procedure_destroy();
 
 /**
  * @brief Get dhcp leases from lucy-rpc via ubus.

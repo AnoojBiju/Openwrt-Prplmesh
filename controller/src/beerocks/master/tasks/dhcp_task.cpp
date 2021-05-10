@@ -35,6 +35,8 @@ DhcpTask::~DhcpTask()
     if (m_periodic_timer != beerocks::net::FileDescriptor::invalid_descriptor) {
         m_timer_manager->remove_timer(m_periodic_timer);
     }
+
+    bpl::dhcp_manual_procedure_destroy();
 }
 
 void DhcpTask::handle_timer_timeout()
