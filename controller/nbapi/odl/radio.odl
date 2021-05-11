@@ -55,6 +55,11 @@
             }
             counted with NumberOfCurrOpClass;
         }
+        
+        %template %instance bool ScanTrigger(
+            %in %mandatory string channels_list,
+            %in %mandatory uint32 channels_num
+        );
 
         object Capabilities;
 

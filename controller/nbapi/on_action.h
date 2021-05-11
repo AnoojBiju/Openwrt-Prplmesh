@@ -47,6 +47,11 @@ beerocks::nbapi::ambiorix_func_ptr get_access_point_commit(void);
 extern son::db *g_database;
 extern amxd_dm_t *g_data_model;
 
+/**
+* dwell time (40 milliseconds)
+*/
+constexpr int PREFERRED_DWELLTIME_MS = 40;
+
 } // namespace actions
 } // namespace controller
 } // namespace prplmesh
