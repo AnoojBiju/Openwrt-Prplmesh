@@ -367,6 +367,13 @@ bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac,
 
     set_node_data_model_path(mac, data_model_path);
 
+    auto radio = get_radio(parent_mac, mac);
+    if (!radio) {
+        LOG(ERROR) << "Radio " << mac << " not found";
+        return false;
+    }
+    radio->dm_path = data_model_path;
+
     return true;
 }
 
