@@ -1944,9 +1944,8 @@ bool Controller::handle_intel_slave_join(
     std::string gw_ipv4 =
         beerocks::net::network_utils::ipv4_to_string(notification->backhaul_params().gw_ipv4);
     std::string gw_bridge_mac = tlvf::mac_to_string(notification->backhaul_params().gw_bridge_mac);
-    std::string parent_bssid_mac =
-        tlvf::mac_to_string(notification->backhaul_params().backhaul_bssid);
-    std::string backhaul_mac = tlvf::mac_to_string(notification->backhaul_params().backhaul_mac);
+    sMacAddr parent_bssid_mac = notification->backhaul_params().backhaul_bssid;
+    std::string backhaul_mac  = tlvf::mac_to_string(notification->backhaul_params().backhaul_mac);
     std::string backhaul_ipv4 =
         beerocks::net::network_utils::ipv4_to_string(notification->backhaul_params().backhaul_ipv4);
     beerocks::eIfaceType backhaul_iface_type =
@@ -2000,12 +1999,13 @@ bool Controller::handle_intel_slave_join(
         // and is not yet in map
         if (!notification->platform_settings().local_master) {
             // rejecting join if gw haven't joined yet
-            if ((parent_bssid_mac != beerocks::net::network_utils::ZERO_MAC_STRING) &&
-                (!database.has_node(tlvf::mac_from_string(parent_bssid_mac)) ||
-                 (database.get_node_state(parent_bssid_mac) != beerocks::STATE_CONNECTED))) {
+            if ((parent_bssid_mac != beerocks::net::network_utils::ZERO_MAC) &&
+                (!database.has_node(parent_bssid_mac) ||
+                 (database.get_node_state(tlvf::mac_to_string(parent_bssid_mac)) !=
+                  beerocks::STATE_CONNECTED))) {
                 LOG(DEBUG) << "sending back join reject!";
                 LOG(DEBUG) << "reject_debug: parent_bssid_has_node="
-                           << (int)(database.has_node(tlvf::mac_from_string(parent_bssid_mac)));
+                           << (int)(database.has_node(parent_bssid_mac));
 
                 join_response->err_code() = beerocks::JOIN_RESP_REJECT;
                 return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
@@ -2024,12 +2024,11 @@ bool Controller::handle_intel_slave_join(
         }
 
         //TODO might need to handle bssids of VAP nodes as well in this case
-        if (parent_bssid_mac != beerocks::net::network_utils::ZERO_MAC_STRING) {
+        if (parent_bssid_mac != beerocks::net::network_utils::ZERO_MAC) {
             //add a placeholder
             LOG(DEBUG) << "add a placeholder backhaul_mac = " << backhaul_mac
                        << ", parent_bssid_mac = " << parent_bssid_mac;
-            database.add_node_wireless_bh(tlvf::mac_from_string(backhaul_mac),
-                                          tlvf::mac_from_string(parent_bssid_mac));
+            database.add_node_wireless_bh(tlvf::mac_from_string(backhaul_mac), parent_bssid_mac);
         } else if (database.get_node_state(backhaul_mac) != beerocks::STATE_CONNECTED) {
             /* if the backhaul node doesn't exist, or is not already marked as connected,
             * we assume it is connected to the GW's LAN switch
