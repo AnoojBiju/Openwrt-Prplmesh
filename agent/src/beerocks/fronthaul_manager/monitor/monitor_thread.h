@@ -19,7 +19,6 @@
 #include <bcl/beerocks_cmdu_client_factory.h>
 #include <bcl/beerocks_event_loop.h>
 #include <bcl/beerocks_logging.h>
-#include <bcl/beerocks_socket_thread.h>
 #include <bcl/beerocks_timer_manager.h>
 #include <bcl/network/file_descriptor.h>
 #include <beerocks/tlvf/beerocks_message_monitor.h>
@@ -30,9 +29,9 @@
 #include <bwl/mon_wlan_hal.h>
 
 namespace son {
-class monitor_thread : public beerocks::socket_thread {
+class monitor_thread {
 public:
-    monitor_thread(const std::string &slave_uds_, const std::string &monitor_iface_,
+    monitor_thread(const std::string &monitor_iface_,
                    beerocks::config_file::sConfigSlave &beerocks_slave_conf_,
                    beerocks::logging &logger_,
                    std::shared_ptr<beerocks::CmduClientFactory> slave_cmdu_client_factory,
@@ -44,24 +43,14 @@ public:
      *
      * @return true on success and false otherwise.
      */
-    bool to_be_renamed_to_start();
+    bool start();
 
     /**
      * @brief Stops monitor.
      *
      * @return true on success and false otherwise.
      */
-    bool to_be_renamed_to_stop();
-
-    virtual bool init() override;
-
-protected:
-    virtual bool handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx) override;
-    virtual void before_select() override;
-    virtual void after_select(bool timeout) override;
-    virtual void on_thread_stop() override;
-    virtual bool socket_disconnected(Socket *sd) override;
-    virtual std::string print_cmdu_types(const beerocks::message::sUdsHeader *cmdu_header) override;
+    bool stop();
 
 private:
     /**
@@ -86,7 +75,6 @@ private:
      */
     bool monitor_fsm();
 
-    void stop_monitor_thread();
     bool hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr);
 
     /**
@@ -136,12 +124,18 @@ private:
     std::string monitor_iface;
     beerocks::config_file::sConfigSlave &beerocks_slave_conf;
     std::string bridge_iface;
-    std::string slave_uds;
 
-    /** 
-     * File descriptor of the socket connection established to the CMDU server in slave. 
+    uint32_t thread_last_error_code = 0;
+
+    /**
+     * Buffer to hold CMDU to be transmitted.
      */
-    int m_slave_fd = beerocks::net::FileDescriptor::invalid_descriptor;
+    uint8_t m_tx_buffer[beerocks::message::MESSAGE_BUFFER_LENGTH];
+
+    /**
+     * CMDU to be transmitted.
+     */
+    ieee1905_1::CmduMessageTx cmdu_tx;
 
     /** 
      * File descriptor of the ARP socket. 
@@ -164,7 +158,6 @@ private:
     int m_mon_hal_nl_events = beerocks::net::FileDescriptor::invalid_descriptor;
 
     beerocks::logging &logger;
-    bool m_logger_configured = false;
 
     typedef struct {
         std::string sta_mac;
@@ -212,12 +205,6 @@ private:
      * Application event loop used by the process to wait for I/O events.
      */
     std::shared_ptr<beerocks::EventLoop> m_event_loop;
-
-    /**
-     * Map of file descriptors to pointers to Socket class instances.
-     * This member variable is temporary and will be removed at the end of PPM-967
-     */
-    std::unordered_map<int, Socket *> m_fd_to_socket_map;
 
     /**
      * File descriptor of the timer to run the Finite State Machine.

@@ -46,14 +46,14 @@ static constexpr uint8_t ap_metrics_channel_utilization_measurement_period_s = 1
 constexpr auto fsm_timer_period = std::chrono::milliseconds(250);
 
 monitor_thread::monitor_thread(
-    const std::string &slave_uds_, const std::string &monitor_iface_,
-    beerocks::config_file::sConfigSlave &beerocks_slave_conf_, beerocks::logging &logger_,
+    const std::string &monitor_iface_, beerocks::config_file::sConfigSlave &beerocks_slave_conf_,
+    beerocks::logging &logger_,
     std::shared_ptr<beerocks::CmduClientFactory> slave_cmdu_client_factory,
     std::shared_ptr<beerocks::TimerManager> timer_manager,
     std::shared_ptr<beerocks::EventLoop> event_loop)
-    : socket_thread(), monitor_iface(monitor_iface_), beerocks_slave_conf(beerocks_slave_conf_),
-      bridge_iface(beerocks_slave_conf.bridge_iface), slave_uds(slave_uds_), logger(logger_),
-      mon_rssi(cmdu_tx),
+    : monitor_iface(monitor_iface_), beerocks_slave_conf(beerocks_slave_conf_),
+      bridge_iface(beerocks_slave_conf.bridge_iface), cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer)),
+      logger(logger_), mon_rssi(cmdu_tx),
 #ifdef BEEROCKS_RDKB
       mon_rdkb_hal(cmdu_tx),
 #endif
@@ -63,8 +63,6 @@ monitor_thread::monitor_thread(
     LOG_IF(!m_slave_cmdu_client_factory, FATAL) << "CMDU client factory is a null pointer!";
     LOG_IF(!m_timer_manager, FATAL) << "Timer manager is a null pointer!";
     LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
-
-    thread_name = "monitor";
 
     /**
      * Get the MAC address of the radio interface that this monitor instance operates on.
@@ -83,108 +81,12 @@ monitor_thread::monitor_thread(
     radio_node->set_iface(monitor_iface);
 }
 
-void monitor_thread::on_thread_stop()
-{
-    LOG(DEBUG) << "on_thread_stop() - call stop_monitor_thread()";
-    stop_monitor_thread();
-}
-
-void monitor_thread::stop_monitor_thread()
-{
-    if (m_arp_fd != beerocks::net::FileDescriptor::invalid_descriptor) {
-        remove_socket(m_fd_to_socket_map[m_arp_fd]);
-        m_fd_to_socket_map.erase(m_arp_fd);
-        m_arp_fd = beerocks::net::FileDescriptor::invalid_descriptor;
-    }
-
-    mon_rssi.stop();
-    mon_stats.stop();
-#ifdef BEEROCKS_RDKB
-    mon_rdkb_hal.stop();
-#endif
-    mon_wlan_hal->detach();
-
-    LOG(ERROR) << "disconnecting monitor_thread sockets";
-    if (m_mon_hal_ext_events > 0) {
-        LOG(DEBUG) << "stopping mon_hal_ext_events!";
-        remove_socket(m_fd_to_socket_map[m_mon_hal_ext_events]);
-        delete m_fd_to_socket_map[m_mon_hal_ext_events];
-        m_fd_to_socket_map.erase(m_mon_hal_ext_events);
-        m_mon_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
-    }
-
-    if (m_mon_hal_int_events > 0) {
-        LOG(DEBUG) << "stopping mon_hal_int_events!";
-        remove_socket(m_fd_to_socket_map[m_mon_hal_int_events]);
-        delete m_fd_to_socket_map[m_mon_hal_int_events];
-        m_fd_to_socket_map.erase(m_mon_hal_int_events);
-        m_mon_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
-    }
-
-    if (m_mon_hal_nl_events > 0) {
-        LOG(DEBUG) << "stopping mon_hal_nl_events!";
-        remove_socket(m_fd_to_socket_map[m_mon_hal_nl_events]);
-        delete m_fd_to_socket_map[m_mon_hal_nl_events];
-        m_fd_to_socket_map.erase(m_mon_hal_nl_events);
-        m_mon_hal_nl_events = beerocks::net::FileDescriptor::invalid_descriptor;
-    }
-
-    if (m_slave_fd != beerocks::net::FileDescriptor::invalid_descriptor) {
-        LOG(DEBUG) << "stopping slave_socket!";
-        remove_socket(m_fd_to_socket_map[m_slave_fd]);
-        delete m_fd_to_socket_map[m_slave_fd];
-        m_fd_to_socket_map.erase(m_slave_fd);
-        m_slave_fd = beerocks::net::FileDescriptor::invalid_descriptor;
-    }
-
-    should_stop = true;
-}
-
 bool monitor_thread::send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx)
 {
     return m_slave_client->send_cmdu(cmdu_tx);
 }
 
-bool monitor_thread::socket_disconnected(Socket *sd)
-{
-    LOG(TRACE) << "socket disconnected!";
-
-    if (!sd) {
-        LOG(ERROR) << "Invalid socket!";
-        return false;
-    }
-
-    // Get the file descriptor for the given socket instance
-    int fd = sd->getSocketFd();
-
-    if (fd == m_slave_fd) {
-        LOG(ERROR) << "slave socket disconnected!, stop_monitor_thread()";
-        stop_monitor_thread();
-        return false;
-    } else if (fd == m_mon_hal_ext_events) {
-        LOG(ERROR) << "mon_hal_ext_events socket disconnected!";
-        stop_monitor_thread();
-        return false;
-    } else if (fd == m_mon_hal_int_events) {
-        LOG(ERROR) << "mon_hal_int_events socket disconnected!";
-        stop_monitor_thread();
-        return false;
-    } else if (fd == m_mon_hal_nl_events) {
-        LOG(ERROR) << "mon_hal_nl_events socket disconnected!";
-        stop_monitor_thread();
-        return false;
-    }
-
-    return true;
-}
-
-std::string monitor_thread::print_cmdu_types(const message::sUdsHeader *cmdu_header)
-{
-    return message_com::print_cmdu_types(cmdu_header);
-}
-
-// The name of this method is temporary and will be renamed at the end of PPM-967.
-bool monitor_thread::to_be_renamed_to_start()
+bool monitor_thread::start()
 {
     if (m_slave_client) {
         LOG(ERROR) << "Monitor is already started";
@@ -255,7 +157,7 @@ bool monitor_thread::to_be_renamed_to_start()
 }
 
 // The name of this method is temporary and will be renamed at the end of PPM-967.
-bool monitor_thread::to_be_renamed_to_stop()
+bool monitor_thread::stop()
 {
     bool ok = true;
 
@@ -297,73 +199,6 @@ bool monitor_thread::to_be_renamed_to_stop()
     LOG(DEBUG) << "stopped";
 
     return ok;
-}
-
-bool monitor_thread::init()
-{
-    if (m_slave_fd != beerocks::net::FileDescriptor::invalid_descriptor) {
-        LOG(DEBUG) << "Already initialized!";
-        return false;
-    }
-
-    LOG(DEBUG) << "init() start";
-
-    set_select_timeout(mon_db.MONITOR_DB_POLLING_RATE_MSEC);
-
-    // Initialize the monitor hal
-    // if(!mon_hal.init(&mon_db)){
-    //     LOG(ERROR) << "mon_hal initialization failed";
-    //     return false;
-    // }
-
-    //connect to slave //
-    Socket *slave_socket = new SocketClient(slave_uds);
-    std::string err      = slave_socket->getError();
-    if (!err.empty()) {
-        LOG(ERROR) << "slave_socket: " << err;
-        delete slave_socket;
-        slave_socket = nullptr;
-        return false;
-    }
-
-    add_socket(slave_socket);
-
-    // Get the file descriptor for the socket just created
-    m_slave_fd = slave_socket->getSocketFd();
-
-    // Save the pair { fd x Socket* } for later retrieval
-    m_fd_to_socket_map[m_slave_fd] = slave_socket;
-
-    LOG(DEBUG) << "init() end";
-    return true;
-}
-
-void monitor_thread::before_select()
-{
-    if (!m_logger_configured) {
-        logger.set_thread_name(thread_name);
-        logger.attach_current_thread_to_logger_id();
-        m_logger_configured = true;
-    }
-}
-
-void monitor_thread::after_select(bool timeout)
-{
-    if (!m_logger_configured) {
-        logger.set_thread_name(thread_name);
-        logger.attach_current_thread_to_logger_id();
-        m_logger_configured = true;
-    }
-
-    // Continue only if slave is connected
-    if (m_slave_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
-        LOG(DEBUG) << "slave_socket == nullptr";
-        return;
-    }
-
-    if (!monitor_fsm()) {
-        stop_monitor_thread();
-    }
 }
 
 bool monitor_thread::monitor_fsm()
@@ -1018,30 +853,6 @@ bool monitor_thread::update_ap_stats()
         vap_stats.delta_ms         = float(time_span_vap.count());
         vap_stats.last_update_time = now;
     }
-
-    return true;
-}
-
-// This method is temporary and will be removed at the end of PPM-967.
-// It is intended to allow the temporary coexistence of Socket* and file descriptors to refer to
-// accepted sockets.
-bool monitor_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
-{
-    if (!sd) {
-        LOG(ERROR) << "socket is nullptr";
-        return false;
-    }
-
-    // Get the file descriptor for the given socket instance
-    int fd = sd->getSocketFd();
-
-    if (m_slave_fd != fd) {
-        LOG(ERROR) << "m_slave_fd != fd";
-        return false;
-    }
-
-    // Call the method with the new signature
-    handle_cmdu(cmdu_rx);
 
     return true;
 }

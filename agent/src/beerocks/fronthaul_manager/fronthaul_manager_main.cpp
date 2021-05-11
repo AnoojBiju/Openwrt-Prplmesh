@@ -275,9 +275,8 @@ int main(int argc, char *argv[])
     LOG_IF(!ap_manager.start(), FATAL) << "Unable to start AP manager!";
 
     // Create Monitor
-    son::monitor_thread monitor(fronthaul_uds_path, fronthaul_iface, beerocks_slave_conf,
-                                *g_logger_monitor, slave_cmdu_client_factory, timer_manager,
-                                event_loop);
+    son::monitor_thread monitor(fronthaul_iface, beerocks_slave_conf, *g_logger_monitor,
+                                slave_cmdu_client_factory, timer_manager, event_loop);
 
     bool monitor_is_running = false;
 
@@ -310,7 +309,7 @@ int main(int argc, char *argv[])
         if (ap_manager_state == son::ApManager::eApManagerState::OPERATIONAL) {
             if (monitor_is_running || ap_manager.zwdfs_ap()) {
                 continue;
-            } else if (monitor.to_be_renamed_to_start()) {
+            } else if (monitor.start()) {
                 monitor_is_running = true;
             } else {
                 CLOG(ERROR, g_logger_monitor->get_logger_id()) << "Unable to start monitor!";
@@ -320,7 +319,7 @@ int main(int argc, char *argv[])
     }
 
     if (monitor_is_running) {
-        monitor.to_be_renamed_to_stop();
+        monitor.stop();
     }
 
     ap_manager.stop();
