@@ -665,11 +665,19 @@ bool monitor_thread::monitor_fsm()
             }
         }
 
+        // Long running operations prevent the event loop from doing anything else (i.e.: the
+        // event loop is not able to react to any incoming request in the meantime).
+        // Therefore, limit the maximum amount of time for an iteration to 50% of the FSM poll time,
+        // instead of letting it run non-stop for what could be quite a long time.
+        auto max_iteration_timeout = std::chrono::steady_clock::now() + fsm_timer_period / 2;
+
         if (m_generate_connected_clients_events) {
             bool is_finished_all_clients = false;
             // Reset the flag if finished to generate all clients' events
+            // If there is not enough time to generate all events, the method will be called in the
+            // next FSM iteration, and so on until all connected clients are eventually reported.
             if (!mon_wlan_hal->generate_connected_clients_events(is_finished_all_clients,
-                                                                 awake_timeout())) {
+                                                                 max_iteration_timeout)) {
                 LOG(ERROR) << "Failed to generate connected clients events";
                 return false;
             }
@@ -686,7 +694,7 @@ bool monitor_thread::monitor_fsm()
                 std::chrono::milliseconds(mon_db.MONITOR_DB_POLLING_RATE_MSEC));
 
             // Update the statistics
-            update_sta_stats();
+            update_sta_stats(max_iteration_timeout);
             // NOTE: Radio & VAP statistics are updated only on last poll cycle
             if (mon_db.is_last_poll())
                 update_ap_stats();
@@ -899,7 +907,7 @@ bool monitor_thread::create_ap_metrics_response(uint16_t mid,
     return true;
 }
 
-bool monitor_thread::update_sta_stats()
+bool monitor_thread::update_sta_stats(const std::chrono::steady_clock::time_point &timeout)
 {
     auto poll_cnt  = mon_db.get_poll_cnt();
     auto poll_last = mon_db.is_last_poll();
@@ -927,11 +935,10 @@ bool monitor_thread::update_sta_stats()
             continue;
         }
 
-        if (std::chrono::steady_clock::now() > awake_timeout()) {
-            // If we haven't finish to iterate on all stations, skip one time on the select timeout
-            // so the select will not be stuck on full select timeout and the thread will be able to
-            // finish this operation quickly.
-            skip_next_select_timeout();
+        if (std::chrono::steady_clock::now() > timeout) {
+            // This is a potentially long running operation.
+            // If we haven't finished iterating on all stations, stop here and continue on next
+            // method call from this point on.
             return true;
         }
 
