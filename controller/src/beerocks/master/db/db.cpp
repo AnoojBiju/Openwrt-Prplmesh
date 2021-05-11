@@ -355,7 +355,8 @@ bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac,
                    << " not found.";
         return false;
     }
-    agent->radios.add(mac);
+
+    auto radio = agent->radios.add(mac);
 
     auto data_model_path =
         dm_add_radio_element(tlvf::mac_to_string(mac), tlvf::mac_to_string(parent_mac));
@@ -366,6 +367,7 @@ bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac,
     }
 
     set_node_data_model_path(mac, data_model_path);
+    radio->dm_path = data_model_path;
 
     return true;
 }
