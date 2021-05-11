@@ -21,6 +21,7 @@
 #include <bcl/beerocks_logging.h>
 #include <bcl/beerocks_socket_thread.h>
 #include <bcl/beerocks_timer_manager.h>
+#include <bcl/network/file_descriptor.h>
 #include <beerocks/tlvf/beerocks_message_monitor.h>
 
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
@@ -62,6 +63,21 @@ protected:
     virtual std::string print_cmdu_types(const beerocks::message::sUdsHeader *cmdu_header) override;
 
 private:
+    /**
+     * @brief Sends given CMDU message to the slave.
+     *
+     * @param cmdu_tx CMDU message to send.
+     * @return true on success and false otherwise.
+     */
+    bool send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx);
+
+    /**
+     * @brief Handles CMDU message received from slave.
+     *
+     * @param cmdu_rx Received CMDU to be handled.
+     */
+    void handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx);
+
     void stop_monitor_thread();
     bool hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr);
 
@@ -113,10 +129,32 @@ private:
     beerocks::config_file::sConfigSlave &beerocks_slave_conf;
     std::string bridge_iface;
     std::string slave_uds;
-    Socket *slave_socket       = nullptr;
-    Socket *mon_hal_ext_events = nullptr;
-    Socket *mon_hal_int_events = nullptr;
-    Socket *mon_hal_nl_events  = nullptr;
+
+    /** 
+     * File descriptor of the socket connection established to the CMDU server in slave. 
+     */
+    int m_slave_fd = beerocks::net::FileDescriptor::invalid_descriptor;
+
+    /** 
+     * File descriptor of the ARP socket. 
+     */
+    int m_arp_fd = beerocks::net::FileDescriptor::invalid_descriptor;
+
+    /**
+     * File descriptor to the external events queue.
+     */
+    int m_mon_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
+
+    /**
+     * File descriptor to the internal events queue.
+     */
+    int m_mon_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
+
+    /**
+     * File descriptor to the Netlink events queue.
+     */
+    int m_mon_hal_nl_events = beerocks::net::FileDescriptor::invalid_descriptor;
+
     beerocks::logging &logger;
     bool m_logger_configured = false;
 
@@ -148,11 +186,11 @@ private:
 
     bool m_generate_connected_clients_events = false;
 
-    bool handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_cmdu_ieee1905_1_message(Socket &sd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    void handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx);
+    void handle_cmdu_ieee1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx);
 
-    bool handle_multi_ap_policy_config_request(Socket &sd, ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_ap_metrics_query(Socket &sd, ieee1905_1::CmduMessageRx &cmdu_rx);
+    void handle_multi_ap_policy_config_request(ieee1905_1::CmduMessageRx &cmdu_rx);
+    void handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
      * Factory to create CMDU client instances connected to CMDU server running in slave.
@@ -168,6 +206,12 @@ private:
      * Application event loop used by the process to wait for I/O events.
      */
     std::shared_ptr<beerocks::EventLoop> m_event_loop;
+
+    /**
+     * Map of file descriptors to pointers to Socket class instances.
+     * This member variable is temporary and will be removed at the end of PPM-967
+     */
+    std::unordered_map<int, Socket *> m_fd_to_socket_map;
 };
 } // namespace son
 
