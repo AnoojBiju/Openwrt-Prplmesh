@@ -10,6 +10,8 @@
 
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
+#include <bcl/network/sockets.h>
+#include <bcl/transaction.h>
 
 #define BEEROCKS_CUSTOM_LOGGER_ID BEEROCKS_MONITOR
 #include <bcl/beerocks_logging_custom.h>
@@ -37,6 +39,11 @@ using namespace son;
  * configuration.
  */
 static constexpr uint8_t ap_metrics_channel_utilization_measurement_period_s = 10;
+
+/**
+ * Time between successive timer executions of the FSM timer
+ */
+constexpr auto fsm_timer_period = std::chrono::milliseconds(250);
 
 monitor_thread::monitor_thread(
     const std::string &slave_uds_, const std::string &monitor_iface_,
@@ -189,6 +196,122 @@ std::string monitor_thread::print_cmdu_types(const message::sUdsHeader *cmdu_hea
     return message_com::print_cmdu_types(cmdu_header);
 }
 
+// The name of this method is temporary and will be renamed at the end of PPM-967.
+bool monitor_thread::to_be_renamed_to_start()
+{
+    if (m_slave_client) {
+        LOG(ERROR) << "Monitor is already started";
+        return false;
+    }
+
+    // In case of error in one of the steps of this method, we have to undo all the previous steps
+    // (like when rolling back a database transaction, where either all steps get executed or none
+    // of them gets executed)
+    beerocks::Transaction transaction;
+
+    // Create a timer to run the FSM periodically
+    m_fsm_timer = m_timer_manager->add_timer(
+        fsm_timer_period, fsm_timer_period,
+        [&](int fd, beerocks::EventLoop &loop) { return monitor_fsm(); });
+    if (m_fsm_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
+        LOG(ERROR) << "Failed to create the FSM timer";
+        return false;
+    }
+    LOG(DEBUG) << "FSM timer created with fd = " << m_fsm_timer;
+    transaction.add_rollback_action([&]() { m_timer_manager->remove_timer(m_fsm_timer); });
+
+    // Create an instance of a CMDU client connected to the CMDU server that is running in the slave
+    m_slave_client = std::move(m_slave_cmdu_client_factory->create_instance());
+    if (!m_slave_client) {
+        LOG(ERROR) << "Failed to create instance of CMDU client";
+        return false;
+    }
+    transaction.add_rollback_action([&]() { m_slave_client.reset(); });
+
+    beerocks::CmduClient::EventHandlers handlers;
+    // Install a CMDU-received event handler for CMDU messages received from the slave.
+    handlers.on_cmdu_received = [&](uint32_t iface_index, const sMacAddr &dst_mac,
+                                    const sMacAddr &src_mac,
+                                    ieee1905_1::CmduMessageRx &cmdu_rx) { handle_cmdu(cmdu_rx); };
+
+    // Install a connection-closed event handler.
+    handlers.on_connection_closed = [&]() {
+        LOG(ERROR) << "Slave socket disconnected!";
+        m_slave_client.reset();
+    };
+
+    m_slave_client->set_handlers(handlers);
+    transaction.add_rollback_action([&]() { m_slave_client->clear_handlers(); });
+
+    // Create new Monitor HAL instance
+    bwl::hal_conf_t hal_conf;
+    if (!beerocks::bpl::bpl_cfg_get_hostapd_ctrl_path(monitor_iface, hal_conf.wpa_ctrl_path)) {
+        LOG(ERROR) << "Couldn't get hostapd control path for interface " << monitor_iface;
+        return false;
+    }
+
+    using namespace std::placeholders; // for `_1`
+    mon_wlan_hal = bwl::mon_wlan_hal_create(
+        monitor_iface, std::bind(&monitor_thread::hal_event_handler, this, _1), hal_conf);
+    if (!mon_wlan_hal) {
+        LOG(ERROR) << "Failed to create HAL instance!";
+        return false;
+    }
+
+    mon_hal_attached = false;
+
+    transaction.commit();
+
+    LOG(DEBUG) << "started";
+
+    return true;
+}
+
+// The name of this method is temporary and will be renamed at the end of PPM-967.
+bool monitor_thread::to_be_renamed_to_stop()
+{
+    bool ok = true;
+
+    if (m_slave_client) {
+        m_slave_client.reset();
+    }
+
+    if (!m_timer_manager->remove_timer(m_fsm_timer)) {
+        ok = false;
+    }
+
+    if (mon_wlan_hal) {
+        if (m_arp_fd != beerocks::net::FileDescriptor::invalid_descriptor) {
+            m_event_loop->remove_handlers(m_arp_fd);
+        }
+
+        if (m_mon_hal_ext_events > 0) {
+            m_event_loop->remove_handlers(m_mon_hal_ext_events);
+        }
+
+        if (m_mon_hal_int_events > 0) {
+            m_event_loop->remove_handlers(m_mon_hal_int_events);
+        }
+
+        if (m_mon_hal_nl_events > 0) {
+            m_event_loop->remove_handlers(m_mon_hal_nl_events);
+        }
+
+        mon_rssi.stop();
+        mon_stats.stop();
+#ifdef BEEROCKS_RDKB
+        mon_rdkb_hal.stop();
+#endif
+
+        mon_wlan_hal->detach();
+        mon_wlan_hal.reset();
+    }
+
+    LOG(DEBUG) << "stopped";
+
+    return ok;
+}
+
 bool monitor_thread::init()
 {
     if (m_slave_fd != beerocks::net::FileDescriptor::invalid_descriptor) {
@@ -290,6 +413,36 @@ bool monitor_thread::monitor_fsm()
                 Socket *socket = new Socket(m_mon_hal_ext_events);
                 add_socket(socket);
                 m_fd_to_socket_map[m_mon_hal_ext_events] = socket;
+                beerocks::EventLoop::EventHandlers ext_events_handlers{
+                    .on_read =
+                        [&](int fd, EventLoop &loop) {
+                            if (!mon_wlan_hal->process_ext_events()) {
+                                LOG(ERROR) << "process_ext_events() failed!";
+                                return false;
+                            }
+                            return true;
+                        },
+                    .on_write = nullptr,
+                    .on_disconnect =
+                        [&](int fd, EventLoop &loop) {
+                            LOG(ERROR) << "mon_hal_ext_events disconnected!";
+                            m_mon_hal_ext_events =
+                                beerocks::net::FileDescriptor::invalid_descriptor;
+                            return false;
+                        },
+                    .on_error =
+                        [&](int fd, EventLoop &loop) {
+                            LOG(ERROR) << "mon_hal_ext_events error!";
+                            m_mon_hal_ext_events =
+                                beerocks::net::FileDescriptor::invalid_descriptor;
+                            return false;
+                        },
+                };
+                if (!m_event_loop->register_handlers(m_mon_hal_ext_events, ext_events_handlers)) {
+                    LOG(ERROR) << "Unable to register handlers for external events queue!";
+                    return false;
+                }
+                LOG(DEBUG) << "External events queue with fd = " << m_mon_hal_ext_events;
             } else if (m_mon_hal_ext_events == 0) {
                 LOG(DEBUG)
                     << "No external event FD is available, periodic polling will be done instead.";
@@ -309,6 +462,36 @@ bool monitor_thread::monitor_fsm()
                 Socket *socket = new Socket(m_mon_hal_int_events);
                 add_socket(socket);
                 m_fd_to_socket_map[m_mon_hal_int_events] = socket;
+                beerocks::EventLoop::EventHandlers int_events_handlers{
+                    .on_read =
+                        [&](int fd, EventLoop &loop) {
+                            if (!mon_wlan_hal->process_int_events()) {
+                                LOG(ERROR) << "process_int_events() failed!";
+                                return false;
+                            }
+                            return true;
+                        },
+                    .on_write = nullptr,
+                    .on_disconnect =
+                        [&](int fd, EventLoop &loop) {
+                            LOG(ERROR) << "mon_hal_int_events disconnected!";
+                            m_mon_hal_int_events =
+                                beerocks::net::FileDescriptor::invalid_descriptor;
+                            return false;
+                        },
+                    .on_error =
+                        [&](int fd, EventLoop &loop) {
+                            LOG(ERROR) << "mon_hal_int_events error!";
+                            m_mon_hal_int_events =
+                                beerocks::net::FileDescriptor::invalid_descriptor;
+                            return false;
+                        },
+                };
+                if (!m_event_loop->register_handlers(m_mon_hal_int_events, int_events_handlers)) {
+                    LOG(ERROR) << "Unable to register handlers for internal events queue!";
+                    return false;
+                }
+                LOG(DEBUG) << "Internal events queue with fd = " << m_mon_hal_int_events;
             } else {
                 LOG(ERROR) << "Invalid internal event file descriptor: " << m_mon_hal_int_events;
                 m_mon_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
@@ -320,7 +503,34 @@ bool monitor_thread::monitor_fsm()
                 Socket *socket = new Socket(m_mon_hal_nl_events);
                 add_socket(socket);
                 m_fd_to_socket_map[m_mon_hal_nl_events] = socket;
-                LOG(DEBUG) << "nl socket created for FD #" << m_mon_hal_nl_events;
+                beerocks::EventLoop::EventHandlers nl_events_handlers{
+                    .on_read =
+                        [&](int fd, EventLoop &loop) {
+                            if (!mon_wlan_hal->process_nl_events()) {
+                                LOG(ERROR) << "process_nl_events() failed!";
+                                return false;
+                            }
+                            return true;
+                        },
+                    .on_write = nullptr,
+                    .on_disconnect =
+                        [&](int fd, EventLoop &loop) {
+                            LOG(ERROR) << "mon_hal_nl_events disconnected!";
+                            m_mon_hal_nl_events = beerocks::net::FileDescriptor::invalid_descriptor;
+                            return false;
+                        },
+                    .on_error =
+                        [&](int fd, EventLoop &loop) {
+                            LOG(ERROR) << "mon_hal_nl_events error!";
+                            m_mon_hal_nl_events = beerocks::net::FileDescriptor::invalid_descriptor;
+                            return false;
+                        },
+                };
+                if (!m_event_loop->register_handlers(m_mon_hal_nl_events, nl_events_handlers)) {
+                    LOG(ERROR) << "Unable to register handlers for Netlink events queue!";
+                    return false;
+                }
+                LOG(DEBUG) << "Netlink events queue with fd = " << m_mon_hal_nl_events;
             } else {
                 LOG(ERROR) << "Couldn't get NL socket ";
                 m_mon_hal_nl_events = beerocks::net::FileDescriptor::invalid_descriptor;
@@ -356,6 +566,26 @@ bool monitor_thread::monitor_fsm()
                 add_socket(socket);
                 m_arp_fd                     = socket->getSocketFd();
                 m_fd_to_socket_map[m_arp_fd] = socket;
+                beerocks::EventLoop::EventHandlers arp_events_handlers{
+                    .on_read =
+                        [&](int fd, EventLoop &loop) {
+                            mon_rssi.arp_recv();
+                            return true;
+                        },
+                    .on_write = nullptr,
+                    .on_disconnect =
+                        [&](int fd, EventLoop &loop) {
+                            LOG(ERROR) << "ARP socket disconnected!";
+                            m_arp_fd = beerocks::net::FileDescriptor::invalid_descriptor;
+                            return false;
+                        },
+                    .on_error =
+                        [&](int fd, EventLoop &loop) {
+                            LOG(ERROR) << "ARP socket error!";
+                            m_arp_fd = beerocks::net::FileDescriptor::invalid_descriptor;
+                            return false;
+                        },
+                };
             }
 
 #ifdef BEEROCKS_RDKB

@@ -40,6 +40,20 @@ public:
                    std::shared_ptr<beerocks::EventLoop> event_loop);
     virtual ~monitor_thread();
 
+    /**
+     * @brief Starts monitor.
+     *
+     * @return true on success and false otherwise.
+     */
+    bool to_be_renamed_to_start();
+
+    /**
+     * @brief Stops monitor.
+     *
+     * @return true on success and false otherwise.
+     */
+    bool to_be_renamed_to_stop();
+
     virtual bool init() override;
 
 protected:
@@ -205,6 +219,18 @@ private:
      * This member variable is temporary and will be removed at the end of PPM-967
      */
     std::unordered_map<int, Socket *> m_fd_to_socket_map;
+
+    /**
+     * File descriptor of the timer to run the Finite State Machine.
+     */
+    int m_fsm_timer = beerocks::net::FileDescriptor::invalid_descriptor;
+
+    /**
+     * CMDU client connected to the CMDU server running in slave.
+     * This object is dynamically created using the CMDU client factory for the slave provided in 
+     * class constructor.
+     */
+    std::shared_ptr<beerocks::CmduClient> m_slave_client;
 };
 } // namespace son
 
