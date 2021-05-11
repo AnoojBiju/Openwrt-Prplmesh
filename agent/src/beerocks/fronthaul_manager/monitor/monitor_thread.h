@@ -42,18 +42,6 @@ public:
 
     virtual bool init() override;
 
-    enum eThreadErrors : uint32_t {
-        MONITOR_THREAD_ERROR_NO_ERROR                      = 0,
-        MONITOR_THREAD_ERROR_HOSTAP_DISABLED               = 1,
-        MONITOR_THREAD_ERROR_ATTACH_FAIL                   = 2,
-        MONITOR_THREAD_ERROR_SUDDEN_DETACH                 = 3,
-        MONITOR_THREAD_ERROR_HAL_DISCONNECTED              = 4,
-        MONITOR_THREAD_ERROR_REPORT_PROCESS_FAIL           = 5,
-        MONITOR_THREAD_ERROR_NL_ATTACH_FAIL                = 6,
-        MONITOR_THREAD_ERROR_NL_REPORT_PROCESS_FAIL        = 7,
-        MONITOR_THREAD_ERROR_NL_EVENTS_SOCKET_DISCONNECTED = 8,
-    };
-
 protected:
     virtual bool handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx) override;
     virtual void before_select() override;
@@ -179,8 +167,6 @@ private:
     monitor_rdkb_hal mon_rdkb_hal;
 #endif
     monitor_stats mon_stats;
-
-    int8_t received_error_notification_ack_retry = -1;
 
     int hal_command_failures_count = 0;
 

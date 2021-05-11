@@ -97,70 +97,50 @@ void monitor_thread::on_thread_stop()
 
 void monitor_thread::stop_monitor_thread()
 {
-    if (received_error_notification_ack_retry == -1) {
-        received_error_notification_ack_retry = 5;
+    if (m_arp_fd != beerocks::net::FileDescriptor::invalid_descriptor) {
+        remove_socket(m_fd_to_socket_map[m_arp_fd]);
+        m_fd_to_socket_map.erase(m_arp_fd);
+        m_arp_fd = beerocks::net::FileDescriptor::invalid_descriptor;
     }
 
-    if (received_error_notification_ack_retry > 0) {
-
-        auto notification =
-            message_com::create_vs_message<beerocks_message::cACTION_MONITOR_ERROR_NOTIFICATION>(
-                cmdu_tx);
-        if (notification == nullptr) {
-            LOG(ERROR) << "Failed building cACTION_MONITOR_ERROR_NOTIFICATION message!";
-            return;
-        }
-        notification->error_code() = thread_last_error_code;
-        send_cmdu(cmdu_tx);
-        received_error_notification_ack_retry--;
-
-    } else {
-
-        if (m_arp_fd != beerocks::net::FileDescriptor::invalid_descriptor) {
-            remove_socket(m_fd_to_socket_map[m_arp_fd]);
-            m_fd_to_socket_map.erase(m_arp_fd);
-            m_arp_fd = beerocks::net::FileDescriptor::invalid_descriptor;
-        }
-
-        mon_rssi.stop();
-        mon_stats.stop();
+    mon_rssi.stop();
+    mon_stats.stop();
 #ifdef BEEROCKS_RDKB
-        mon_rdkb_hal.stop();
+    mon_rdkb_hal.stop();
 #endif
-        mon_wlan_hal->detach();
+    mon_wlan_hal->detach();
 
-        LOG(ERROR) << "disconnecting monitor_thread sockets";
-        if (m_mon_hal_ext_events > 0) {
-            LOG(DEBUG) << "stopping mon_hal_ext_events!";
-            remove_socket(m_fd_to_socket_map[m_mon_hal_ext_events]);
-            delete m_fd_to_socket_map[m_mon_hal_ext_events];
-            m_fd_to_socket_map.erase(m_mon_hal_ext_events);
-            m_mon_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
-        }
+    LOG(ERROR) << "disconnecting monitor_thread sockets";
+    if (m_mon_hal_ext_events > 0) {
+        LOG(DEBUG) << "stopping mon_hal_ext_events!";
+        remove_socket(m_fd_to_socket_map[m_mon_hal_ext_events]);
+        delete m_fd_to_socket_map[m_mon_hal_ext_events];
+        m_fd_to_socket_map.erase(m_mon_hal_ext_events);
+        m_mon_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
+    }
 
-        if (m_mon_hal_int_events > 0) {
-            LOG(DEBUG) << "stopping mon_hal_int_events!";
-            remove_socket(m_fd_to_socket_map[m_mon_hal_int_events]);
-            delete m_fd_to_socket_map[m_mon_hal_int_events];
-            m_fd_to_socket_map.erase(m_mon_hal_int_events);
-            m_mon_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
-        }
+    if (m_mon_hal_int_events > 0) {
+        LOG(DEBUG) << "stopping mon_hal_int_events!";
+        remove_socket(m_fd_to_socket_map[m_mon_hal_int_events]);
+        delete m_fd_to_socket_map[m_mon_hal_int_events];
+        m_fd_to_socket_map.erase(m_mon_hal_int_events);
+        m_mon_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
+    }
 
-        if (m_mon_hal_nl_events > 0) {
-            LOG(DEBUG) << "stopping mon_hal_nl_events!";
-            remove_socket(m_fd_to_socket_map[m_mon_hal_nl_events]);
-            delete m_fd_to_socket_map[m_mon_hal_nl_events];
-            m_fd_to_socket_map.erase(m_mon_hal_nl_events);
-            m_mon_hal_nl_events = beerocks::net::FileDescriptor::invalid_descriptor;
-        }
+    if (m_mon_hal_nl_events > 0) {
+        LOG(DEBUG) << "stopping mon_hal_nl_events!";
+        remove_socket(m_fd_to_socket_map[m_mon_hal_nl_events]);
+        delete m_fd_to_socket_map[m_mon_hal_nl_events];
+        m_fd_to_socket_map.erase(m_mon_hal_nl_events);
+        m_mon_hal_nl_events = beerocks::net::FileDescriptor::invalid_descriptor;
+    }
 
-        if (m_slave_fd != beerocks::net::FileDescriptor::invalid_descriptor) {
-            LOG(DEBUG) << "stopping slave_socket!";
-            remove_socket(m_fd_to_socket_map[m_slave_fd]);
-            delete m_fd_to_socket_map[m_slave_fd];
-            m_fd_to_socket_map.erase(m_slave_fd);
-            m_slave_fd = beerocks::net::FileDescriptor::invalid_descriptor;
-        }
+    if (m_slave_fd != beerocks::net::FileDescriptor::invalid_descriptor) {
+        LOG(DEBUG) << "stopping slave_socket!";
+        remove_socket(m_fd_to_socket_map[m_slave_fd]);
+        delete m_fd_to_socket_map[m_slave_fd];
+        m_fd_to_socket_map.erase(m_slave_fd);
+        m_slave_fd = beerocks::net::FileDescriptor::invalid_descriptor;
     }
 
     should_stop = true;
@@ -189,17 +169,14 @@ bool monitor_thread::socket_disconnected(Socket *sd)
         return false;
     } else if (fd == m_mon_hal_ext_events) {
         LOG(ERROR) << "mon_hal_ext_events socket disconnected!";
-        thread_last_error_code = MONITOR_THREAD_ERROR_HAL_DISCONNECTED;
         stop_monitor_thread();
         return false;
     } else if (fd == m_mon_hal_int_events) {
         LOG(ERROR) << "mon_hal_int_events socket disconnected!";
-        thread_last_error_code = MONITOR_THREAD_ERROR_HAL_DISCONNECTED;
         stop_monitor_thread();
         return false;
     } else if (fd == m_mon_hal_nl_events) {
         LOG(ERROR) << "mon_hal_nl_events socket disconnected!";
-        thread_last_error_code = MONITOR_THREAD_ERROR_NL_EVENTS_SOCKET_DISCONNECTED;
         stop_monitor_thread();
         return false;
     }
@@ -225,8 +202,6 @@ bool monitor_thread::init()
     radio_node->set_iface(monitor_iface);
 
     set_select_timeout(mon_db.MONITOR_DB_POLLING_RATE_MSEC);
-
-    received_error_notification_ack_retry = -1;
 
     // Initialize the monitor hal
     // if(!mon_hal.init(&mon_db)){
@@ -286,18 +261,11 @@ void monitor_thread::after_select(bool timeout)
 
 bool monitor_thread::monitor_fsm()
 {
-    // ???
-    if (received_error_notification_ack_retry == 0) {
-        LOG(TRACE) << "received_error_notification_ack_retry";
-        return false;
-    }
-
     // Unexpected HAL detach or too many failed commands
     if ((mon_wlan_hal->get_state() != bwl::HALState::Operational && mon_hal_attached == true) ||
         (hal_command_failures_count > HAL_MAX_COMMAND_FAILURES)) {
         LOG(ERROR) << "Unexpected HAL detach detected - Failed commands: "
                    << hal_command_failures_count;
-        thread_last_error_code = MONITOR_THREAD_ERROR_SUDDEN_DETACH;
         return false;
     }
 
@@ -327,8 +295,7 @@ bool monitor_thread::monitor_fsm()
                     << "No external event FD is available, periodic polling will be done instead.";
             } else {
                 LOG(ERROR) << "Invalid external event file descriptor: " << m_mon_hal_ext_events;
-                m_mon_hal_ext_events   = beerocks::net::FileDescriptor::invalid_descriptor;
-                thread_last_error_code = MONITOR_THREAD_ERROR_ATTACH_FAIL;
+                m_mon_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
                 return false;
             }
 
@@ -344,8 +311,7 @@ bool monitor_thread::monitor_fsm()
                 m_fd_to_socket_map[m_mon_hal_int_events] = socket;
             } else {
                 LOG(ERROR) << "Invalid internal event file descriptor: " << m_mon_hal_int_events;
-                m_mon_hal_int_events   = beerocks::net::FileDescriptor::invalid_descriptor;
-                thread_last_error_code = MONITOR_THREAD_ERROR_ATTACH_FAIL;
+                m_mon_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
                 return false;
             }
 
@@ -357,8 +323,7 @@ bool monitor_thread::monitor_fsm()
                 LOG(DEBUG) << "nl socket created for FD #" << m_mon_hal_nl_events;
             } else {
                 LOG(ERROR) << "Couldn't get NL socket ";
-                m_mon_hal_nl_events    = beerocks::net::FileDescriptor::invalid_descriptor;
-                thread_last_error_code = MONITOR_THREAD_ERROR_NL_ATTACH_FAIL;
+                m_mon_hal_nl_events = beerocks::net::FileDescriptor::invalid_descriptor;
             }
 
             LOG(DEBUG) << "sending ACTION_MONITOR_JOINED_NOTIFICATION";
@@ -377,7 +342,6 @@ bool monitor_thread::monitor_fsm()
             LOG(TRACE) << "mon_stats.start()";
             if (!mon_stats.start(&mon_db, m_fd_to_socket_map[m_slave_fd])) {
                 LOG(ERROR) << "mon_stats.start() failed";
-                thread_last_error_code = MONITOR_THREAD_ERROR_ATTACH_FAIL;
                 return false;
             }
 
@@ -398,7 +362,6 @@ bool monitor_thread::monitor_fsm()
             LOG(TRACE) << "mon_rdkb_hal.start()";
             if (!mon_rdkb_hal.start(&mon_db, m_fd_to_socket_map[m_slave_fd])) {
                 LOG(ERROR) << "mon_rdkb_hal.start() failed";
-                thread_last_error_code = MONITOR_THREAD_ERROR_ATTACH_FAIL;
                 return false;
             }
 #endif
@@ -410,7 +373,6 @@ bool monitor_thread::monitor_fsm()
 
         } else if (attach_state == bwl::HALState::Failed) {
             LOG(ERROR) << "Failed attaching to WLAN HAL";
-            thread_last_error_code = MONITOR_THREAD_ERROR_ATTACH_FAIL;
             return false;
         }
 
@@ -428,7 +390,6 @@ bool monitor_thread::monitor_fsm()
             if (read_ready(m_fd_to_socket_map[m_mon_hal_ext_events])) {
                 if (!mon_wlan_hal->process_ext_events()) {
                     LOG(ERROR) << "process_ext_events() failed!";
-                    thread_last_error_code = MONITOR_THREAD_ERROR_REPORT_PROCESS_FAIL;
                     return false;
                 }
                 clear_ready(m_fd_to_socket_map[m_mon_hal_ext_events]);
@@ -438,7 +399,6 @@ bool monitor_thread::monitor_fsm()
             // to process any available periodically
             if (!mon_wlan_hal->process_ext_events()) {
                 LOG(ERROR) << "process_ext_events() failed!";
-                thread_last_error_code = MONITOR_THREAD_ERROR_REPORT_PROCESS_FAIL;
                 return false;
             }
         }
@@ -449,7 +409,6 @@ bool monitor_thread::monitor_fsm()
             // NOTE: A callback (hal_event_handler()) will be invoked for pending events
             if (!mon_wlan_hal->process_int_events()) {
                 LOG(ERROR) << "process_int_events() failed!";
-                thread_last_error_code = MONITOR_THREAD_ERROR_REPORT_PROCESS_FAIL;
                 return false;
             }
         }
@@ -459,7 +418,6 @@ bool monitor_thread::monitor_fsm()
             if (read_ready(m_fd_to_socket_map[m_mon_hal_nl_events])) {
                 if (!mon_wlan_hal->process_nl_events()) {
                     LOG(ERROR) << "process_nl_events() failed!";
-                    thread_last_error_code = MONITOR_THREAD_ERROR_NL_REPORT_PROCESS_FAIL;
                     return false;
                 }
                 clear_ready(m_fd_to_socket_map[m_mon_hal_nl_events]);
@@ -1009,11 +967,6 @@ void monitor_thread::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
         }
         logger.set_log_level_state((eLogLevel)request->params().log_level,
                                    request->params().enable);
-        break;
-    }
-    case beerocks_message::ACTION_MONITOR_ERROR_NOTIFICATION_ACK: {
-        LOG(TRACE) << "received ACTION_MONITOR_ERROR_NOTIFICATION_ACK";
-        received_error_notification_ack_retry = 0;
         break;
     }
     case beerocks_message::ACTION_MONITOR_CLIENT_START_MONITORING_REQUEST: {
