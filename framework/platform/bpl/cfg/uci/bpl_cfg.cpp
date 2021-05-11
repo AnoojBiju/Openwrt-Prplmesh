@@ -583,29 +583,12 @@ bool cfg_get_link_metrics_request_interval(std::chrono::seconds &link_metrics_re
     return true;
 }
 
-bool bpl_cfg_get_wifi_credentials(const std::string &iface,
-                                  son::wireless_utils::sBssInfoConf &configuration)
+static bool bpl_cfg_get_bss_configuration(const std::string &section_name,
+                                          son::wireless_utils::sBssInfoConf &configuration)
 {
-    // Find the "wireless.wifi-iface" section in UCI configuration for the given interface
-    const std::string package_name = "wireless";
-    const std::string section_type = "wifi-iface";
-    const std::string option_name  = "ifname";
-    std::string section_name;
-    if (!uci_find_section_by_option(package_name, section_type, option_name, iface, section_name)) {
-        LOG(ERROR) << "Failed to find configuration section for interface " << iface;
-        return false;
-    }
-
-    if (section_name.empty()) {
-        LOG(ERROR) << "Configuration for interface " << iface << " not found";
-        return false;
-    }
-
-    // Read all UCI options in the "wireless.wifi-iface" section for the given interface.
     OptionsUnorderedMap options;
-    if (!uci_get_section(package_name, section_type, section_name, options)) {
-        LOG(ERROR) << "Failed to get wireless configuration for interface " << iface
-                   << " at section " << section_name;
+    if (!uci_get_section("wireless", "wifi-iface", section_name, options)) {
+        LOG(ERROR) << "Failed to get values for section " << section_name;
         return false;
     }
 
@@ -646,6 +629,118 @@ bool bpl_cfg_get_wifi_credentials(const std::string &iface,
     configuration.encryption_type = get_encryption_type(options["encryption"]);
 
     configuration.network_key = options["key"];
+
+    return true;
+}
+
+bool bpl_cfg_get_wireless_settings(std::list<son::wireless_utils::sBssInfoConf> &wireless_settings)
+{
+    // Get all "wireless.wifi-iface" section names in UCI configuration
+    const std::string package_name = "wireless";
+    const std::string section_type = "wifi-iface";
+    std::vector<std::string> sections;
+    if (!uci_get_all_sections(package_name, section_type, sections)) {
+        LOG(ERROR) << "Failed to get section names";
+        return false;
+    }
+
+    // Read SSID and WiFi credentials from each "wireless.wifi-iface" section found.
+    for (const auto &section_name : sections) {
+        std::string mode;
+        if (!uci_get_option(package_name, section_type, section_name, "mode", mode)) {
+            LOG(DEBUG) << "Failed to get 'mode' from section " << section_name;
+            continue;
+        }
+
+        // Silently ignore sections that do not configure a fronthaul interface
+        if (mode != "ap") {
+            continue;
+        }
+
+        son::wireless_utils::sBssInfoConf configuration;
+        if (!bpl_cfg_get_bss_configuration(section_name, configuration)) {
+            LOG(DEBUG) << "Failed to get SSID and WiFi credentials from section " << section_name;
+            continue;
+        }
+
+        // Operating classes are not specified in UCI configuration, but we can guess based on
+        // the mode used by hostapd that was set for the radio.
+        // To get the mode, first get the device and then the mode inside the section for that
+        // device.
+        std::string device;
+        if (!uci_get_option(package_name, section_type, section_name, "device", device)) {
+            LOG(DEBUG) << "Failed to get 'device' from section " << section_name;
+            continue;
+        }
+
+        // Option "hwmode" in device section selects the wireless protocol to use, possible values
+        // are 11b, 11g, and 11a.
+        std::string hwmode;
+        if (!uci_get_option(package_name, "wifi-device", device, "hwmode", hwmode)) {
+            LOG(DEBUG) << "Failed to get 'hwmode' from section " << device;
+            continue;
+        }
+
+        // The mode used by hostapd (11b, 11g, 11n, 11ac, 11ax) is governed by several parameters in
+        // the configuration file. However, as explained in the comment below from hostapd.conf, the
+        // hw_mode parameter is sufficient to determine the band.
+        //
+        // # Operation mode (a = IEEE 802.11a (5 GHz), b = IEEE 802.11b (2.4 GHz),
+        // # g = IEEE 802.11g (2.4 GHz), ad = IEEE 802.11ad (60 GHz); a/g options are used
+        // # with IEEE 802.11n (HT), too, to specify band). For IEEE 802.11ac (VHT), this
+        // # needs to be set to hw_mode=a. For IEEE 802.11ax (HE) on 6 GHz this needs
+        // # to be set to hw_mode=a.
+        //
+        // Note that this will need to be revisited for 6GHz operation, which we don't support
+        // at the moment.
+        if (hwmode.empty() || (hwmode == "11b") || (hwmode == "11g")) {
+            configuration.operating_class.splice(
+                configuration.operating_class.end(),
+                son::wireless_utils::string_to_wsc_oper_class("24g"));
+        } else if (hwmode == "11a") {
+            configuration.operating_class.splice(
+                configuration.operating_class.end(),
+                son::wireless_utils::string_to_wsc_oper_class("5g"));
+        } else {
+            LOG(DEBUG) << "Failed to get frequency band for SSID " << configuration.ssid
+                       << " from hwmode " << hwmode;
+            continue;
+        }
+
+        // Multi-AP mode
+        configuration.fronthaul = true;
+        configuration.backhaul  = false;
+
+        wireless_settings.push_back(configuration);
+
+        LOG(DEBUG) << "Configuration added for SSID " << configuration.ssid
+                   << " (hwmode = " << hwmode << ")";
+    }
+
+    return true;
+}
+
+bool bpl_cfg_get_wifi_credentials(const std::string &iface,
+                                  son::wireless_utils::sBssInfoConf &configuration)
+{
+    // Find the "wireless.wifi-iface" section in UCI configuration for the given interface
+    std::string section_name;
+    if (!uci_find_section_by_option("wireless", "wifi-iface", "ifname", iface, section_name)) {
+        LOG(ERROR) << "Failed to find configuration section for interface " << iface;
+        return false;
+    }
+
+    if (section_name.empty()) {
+        LOG(ERROR) << "Configuration for interface " << iface << " not found";
+        return false;
+    }
+
+    // Get SSID and wireless credentials for the given interface.
+    if (!bpl_cfg_get_bss_configuration(section_name, configuration)) {
+        LOG(ERROR) << "Failed to get wireless configuration for interface " << iface
+                   << " at section " << section_name;
+        return false;
+    }
 
     return true;
 }

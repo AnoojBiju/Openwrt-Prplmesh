@@ -571,6 +571,24 @@ bool bpl_cfg_get_hostapd_ctrl_path(const std::string &iface, std::string &hostap
     return true;
 }
 
+bool bpl_cfg_get_wireless_settings(std::list<son::wireless_utils::sBssInfoConf> &wireless_settings)
+{
+    int num_of_interfaces = beerocks::IRE_MAX_SLAVES;
+    for (int index = 0; index < num_of_interfaces; index++) {
+        char iface[BPL_IFNAME_LEN];
+        if (cfg_get_hostap_iface(index, iface) == RETURN_ERR) {
+            break;
+        }
+
+        son::wireless_utils::sBssInfoConf configuration;
+        if (bpl_cfg_get_wifi_credentials(iface, configuration)) {
+            wireless_settings.push_back(configuration);
+        }
+    }
+
+    return true;
+}
+
 bool bpl_cfg_get_wifi_credentials(const std::string &iface,
                                   son::wireless_utils::sBssInfoConf &configuration)
 {
