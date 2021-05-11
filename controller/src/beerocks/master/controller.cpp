@@ -2464,12 +2464,10 @@ bool Controller::handle_non_intel_slave_join(
     mac.oct[5]++;
     std::string backhaul_mac = tlvf::mac_to_string(mac);
     mac.oct[5]++;
-    std::string eth_switch_mac   = tlvf::mac_to_string(mac);
-    std::string parent_bssid_mac = beerocks::net::network_utils::ZERO_MAC_STRING;
-    auto manufacturer            = m1.manufacturer();
+    std::string eth_switch_mac = tlvf::mac_to_string(mac);
+    auto manufacturer          = m1.manufacturer();
     LOG(INFO) << "IRE generic Slave joined" << std::endl
               << "    manufacturer=" << manufacturer << std::endl
-              << "    parent_bssid_mac=" << parent_bssid_mac << std::endl
               << "    al_mac=" << bridge_mac << std::endl
               << "    eth_switch_mac=" << eth_switch_mac << std::endl
               << "    backhaul_mac=" << backhaul_mac << std::endl
