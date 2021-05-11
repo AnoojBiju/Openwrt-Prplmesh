@@ -812,9 +812,6 @@ public:
     bool set_hostap_driver_version(const sMacAddr &mac, const std::string &version);
     std::string get_hostap_driver_version(const sMacAddr &mac);
 
-    bool set_hostap_iface_id(const sMacAddr &mac, int8_t iface_id);
-    int8_t get_hostap_iface_id(const sMacAddr &mac);
-
     bool set_hostap_vap_list(const sMacAddr &mac,
                              const std::unordered_map<int8_t, sVapElement> &vap_list);
     std::unordered_map<int8_t, sVapElement> &get_hostap_vap_list(const sMacAddr &mac);
@@ -844,7 +841,7 @@ public:
      */
     bool is_vap_on_steer_list(const sMacAddr &bssid);
     std::string get_hostap_vap_with_ssid(const sMacAddr &mac, const std::string &ssid);
-    std::string get_hostap_vap_mac(const sMacAddr &mac, int vap_id);
+    sMacAddr get_hostap_vap_mac(const sMacAddr &mac, int vap_id);
     std::string get_node_parent_radio(const std::string &mac);
 
     /**
@@ -857,9 +854,6 @@ public:
     std::string get_node_data_model_path(const sMacAddr &mac);
 
     int8_t get_hostap_vap_id(const sMacAddr &mac);
-
-    bool set_hostap_repeater_mode_flag(const sMacAddr &mac, bool flag);
-    bool get_hostap_repeater_mode_flag(const sMacAddr &mac);
 
     bool set_node_backhaul_iface_type(const std::string &mac, beerocks::eIfaceType iface_type);
     beerocks::eIfaceType get_node_backhaul_iface_type(const std::string &mac);
@@ -899,9 +893,9 @@ public:
     bool set_hostap_on_dfs_reentry(const sMacAddr &mac, bool enable);
     bool get_hostap_on_dfs_reentry(const sMacAddr &mac);
 
-    bool set_hostap_dfs_reentry_clients(const std::string &mac,
+    bool set_hostap_dfs_reentry_clients(const sMacAddr &mac,
                                         const std::set<std::string> &dfs_reentry_clients);
-    std::set<std::string> get_hostap_dfs_reentry_clients(const std::string &mac);
+    std::set<std::string> get_hostap_dfs_reentry_clients(const sMacAddr &mac);
     bool clear_hostap_dfs_reentry_clients(const sMacAddr &mac);
 
     bool set_hostap_is_acs_enabled(const sMacAddr &mac, bool enable);
@@ -1453,7 +1447,7 @@ public:
     int get_measurement_window_size(const std::string &mac);
     bool set_measurement_window_size(const std::string &mac, int window_size);
 
-    bool set_node_channel_bw(const std::string &mac, int channel, beerocks::eWiFiBandwidth bw,
+    bool set_node_channel_bw(const sMacAddr &mac, int channel, beerocks::eWiFiBandwidth bw,
                              bool channel_ext_above_secondary, int8_t channel_ext_above_primary,
                              uint16_t vht_center_frequency);
     beerocks::eWiFiBandwidth get_node_bw(const std::string &mac);

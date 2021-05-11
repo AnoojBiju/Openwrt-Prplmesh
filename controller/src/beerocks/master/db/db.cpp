@@ -2232,33 +2232,6 @@ bool db::get_node_11v_capability(const std::string &mac)
     return n->supports_11v;
 }
 
-bool db::set_hostap_iface_id(const sMacAddr &mac, int8_t iface_id)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return false;
-    }
-    n->hostap->iface_id = iface_id;
-    return true;
-}
-
-int8_t db::get_hostap_iface_id(const sMacAddr &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return beerocks::IFACE_TYPE_UNSUPPORTED;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return beerocks::IFACE_TYPE_UNSUPPORTED;
-    }
-    return n->hostap->iface_id;
-}
-
 bool db::set_hostap_vap_list(const sMacAddr &mac,
                              const std::unordered_map<int8_t, sVapElement> &vap_list)
 {
@@ -2469,19 +2442,20 @@ std::string db::get_hostap_vap_with_ssid(const sMacAddr &mac, const std::string 
     return it->second.mac;
 }
 
-std::string db::get_hostap_vap_mac(const sMacAddr &mac, int vap_id)
+sMacAddr db::get_hostap_vap_mac(const sMacAddr &mac, int vap_id)
 {
     auto n = get_node(mac);
     if (!n) {
         LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return std::string();
+        return beerocks::net::network_utils::ZERO_MAC;
     } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
         LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return std::string();
+        return beerocks::net::network_utils::ZERO_MAC;
     }
 
     auto it = n->hostap->vaps_info.find(vap_id);
-    return (it != n->hostap->vaps_info.end()) ? it->second.mac : std::string();
+    return (it != n->hostap->vaps_info.end()) ? tlvf::mac_from_string(it->second.mac)
+                                              : network_utils::ZERO_MAC;
 }
 
 std::string db::get_node_parent_radio(const std::string &mac)
@@ -2526,33 +2500,6 @@ int8_t db::get_hostap_vap_id(const sMacAddr &mac)
         }
     }
     return IFACE_ID_INVALID;
-}
-
-bool db::get_hostap_repeater_mode_flag(const sMacAddr &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return false;
-    }
-    return n->hostap->enable_repeater_mode;
-}
-
-bool db::set_hostap_repeater_mode_flag(const sMacAddr &mac, bool flag)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return false;
-    }
-    n->hostap->enable_repeater_mode = flag;
-    return true;
 }
 
 bool db::set_hostap_iface_name(const sMacAddr &mac, const std::string &iface_name)
@@ -2884,7 +2831,7 @@ bool db::get_hostap_on_dfs_reentry(const sMacAddr &mac)
     return n->hostap->on_dfs_reentry;
 }
 
-bool db::set_hostap_dfs_reentry_clients(const std::string &mac,
+bool db::set_hostap_dfs_reentry_clients(const sMacAddr &mac,
                                         const std::set<std::string> &dfs_reentry_clients)
 {
     auto n = get_node(mac);
@@ -2905,7 +2852,7 @@ bool db::set_hostap_dfs_reentry_clients(const std::string &mac,
     return true;
 }
 
-std::set<std::string> db::get_hostap_dfs_reentry_clients(const std::string &mac)
+std::set<std::string> db::get_hostap_dfs_reentry_clients(const sMacAddr &mac)
 {
     auto n = get_node(mac);
 
@@ -4796,7 +4743,7 @@ bool db::set_measurement_window_size(const std::string &mac, int window_size)
     return true;
 }
 
-bool db::set_node_channel_bw(const std::string &mac, int channel, beerocks::eWiFiBandwidth bw,
+bool db::set_node_channel_bw(const sMacAddr &mac, int channel, beerocks::eWiFiBandwidth bw,
                              bool channel_ext_above_secondary, int8_t channel_ext_above_primary,
                              uint16_t vht_center_frequency)
 {
@@ -4810,7 +4757,7 @@ bool db::set_node_channel_bw(const std::string &mac, int channel, beerocks::eWiF
             n->hostap->channel_ext_above_primary = channel_ext_above_primary;
             n->hostap->vht_center_frequency      = vht_center_frequency;
             auto is_dfs                          = wireless_utils::is_dfs_channel(channel);
-            set_hostap_is_dfs(tlvf::mac_from_string(mac), is_dfs);
+            set_hostap_is_dfs(mac, is_dfs);
             if (channel >= 1 && channel <= 13) {
                 n->hostap->operating_class = 81;
             } else if (channel == 14) {

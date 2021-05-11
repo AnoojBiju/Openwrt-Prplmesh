@@ -260,7 +260,7 @@ private:
 
     db &database;
     ieee1905_1::CmduMessageTx &cmdu_tx;
-    std::string hostap_mac;
+    sMacAddr radio_mac;
     sHostapParams hostap_params;
     std::unordered_map<uint8_t, sCandidateChannel> ccl;
     std::unordered_map<std::string, sScanList> backhaul_scan_measurement_list;
