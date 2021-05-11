@@ -79,6 +79,9 @@ monitor_thread::monitor_thread(
         m_radio_mac = tlvf::mac_from_string(radio_mac);
     }
 
+    auto radio_node = mon_db.get_radio_node();
+    radio_node->set_iface(monitor_iface);
+
     using namespace std::placeholders; // for `_1`
 
     bwl::hal_conf_t hal_conf;
@@ -320,9 +323,6 @@ bool monitor_thread::init()
     }
 
     LOG(DEBUG) << "init() start";
-
-    auto radio_node = mon_db.get_radio_node();
-    radio_node->set_iface(monitor_iface);
 
     set_select_timeout(mon_db.MONITOR_DB_POLLING_RATE_MSEC);
 
