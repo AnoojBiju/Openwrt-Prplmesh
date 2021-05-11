@@ -11,6 +11,7 @@
 
 #include "monitor_db.h"
 
+#include <bcl/beerocks_cmdu_client.h>
 #include <bcl/beerocks_message_structs.h>
 #include <bcl/network/socket.h>
 
@@ -26,7 +27,7 @@ class monitor_rssi {
 public:
     explicit monitor_rssi(ieee1905_1::CmduMessageTx &cmdu_tx_);
     ~monitor_rssi() {}
-    bool start(monitor_db *mon_db_, Socket *slave_socket_);
+    bool start(monitor_db *mon_db_, std::shared_ptr<beerocks::CmduClient> slave_client);
     void stop();
     Socket *get_arp_socket();
 
@@ -43,7 +44,12 @@ private:
     void monitor_idle_station(const std::string &sta_mac, monitor_sta_node *sta_node);
 
     monitor_db *mon_db = nullptr;
-    Socket *slave_socket;
+
+    /**
+     * CMDU client to send messages to the CMDU server running in slave.
+     */
+    std::shared_ptr<beerocks::CmduClient> m_slave_client;
+
     int arp_socket;
     Socket *arp_socket_class;
 

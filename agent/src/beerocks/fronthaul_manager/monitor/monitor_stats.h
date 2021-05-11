@@ -11,6 +11,7 @@
 
 #include "monitor_db.h"
 
+#include <bcl/beerocks_cmdu_client.h>
 #include <bcl/beerocks_message_structs.h>
 #include <bcl/network/network_utils.h>
 #include <bcl/network/socket.h>
@@ -23,7 +24,7 @@ class monitor_stats {
 public:
     explicit monitor_stats(ieee1905_1::CmduMessageTx &cmdu_tx_);
     ~monitor_stats() {}
-    bool start(monitor_db *mon_db_, Socket *slave_socket_);
+    bool start(monitor_db *mon_db_, std::shared_ptr<beerocks::CmduClient> slave_client);
     void stop();
 
     void add_request(uint16_t id, uint8_t sync,
@@ -64,8 +65,13 @@ private:
                                int active_sta_th);
 
     std::string parent_thread_name;
-    monitor_db *mon_db   = nullptr;
-    Socket *slave_socket = nullptr;
+    monitor_db *mon_db = nullptr;
+
+    /**
+     * CMDU client to send messages to the CMDU server running in slave.
+     */
+    std::shared_ptr<beerocks::CmduClient> m_slave_client;
+
     uint32_t next_poll_id;
 
     struct sMeasurementsRequest {

@@ -279,6 +279,8 @@ int main(int argc, char *argv[])
                                 *g_logger_monitor, slave_cmdu_client_factory, timer_manager,
                                 event_loop);
 
+    bool monitor_is_running = false;
+
     auto touch_time_stamp_timeout = std::chrono::steady_clock::now();
     while (g_running) {
 
@@ -300,22 +302,26 @@ int main(int argc, char *argv[])
             break;
         }
 
-        // After the ap_manager finishes the attach process, start the monitor thread. There is no
+        // After the ap_manager finishes the attach process, start the monitor. There is no
         // point in starting it before.
         auto ap_manager_state = ap_manager.get_state();
-        // If the fronthaul is defined as ZWDFS, do not bring the Monitor thread since a ZWDFS
-        // interface shall only use for ZWDFS purpose, and shall not Monitor anything by definition.
+        // If the fronthaul is defined as ZWDFS, do not start the monitor since a ZWDFS interface
+        // shall only be used for ZWDFS purpose, and shall not monitor anything by definition.
         if (ap_manager_state == son::ApManager::eApManagerState::OPERATIONAL) {
-            if (monitor.is_running() || ap_manager.zwdfs_ap()) {
+            if (monitor_is_running || ap_manager.zwdfs_ap()) {
                 continue;
-            } else if (!monitor.start()) {
-                CLOG(ERROR, g_logger_monitor->get_logger_id()) << "monitor.start() has failed";
+            } else if (monitor.to_be_renamed_to_start()) {
+                monitor_is_running = true;
+            } else {
+                CLOG(ERROR, g_logger_monitor->get_logger_id()) << "Unable to start monitor!";
                 break;
             }
         }
     }
 
-    monitor.stop();
+    if (monitor_is_running) {
+        monitor.to_be_renamed_to_stop();
+    }
 
     ap_manager.stop();
 

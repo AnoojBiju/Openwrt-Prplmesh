@@ -38,7 +38,6 @@ public:
                    std::shared_ptr<beerocks::CmduClientFactory> slave_cmdu_client_factory,
                    std::shared_ptr<beerocks::TimerManager> timer_manager,
                    std::shared_ptr<beerocks::EventLoop> event_loop);
-    virtual ~monitor_thread();
 
     /**
      * @brief Starts monitor.

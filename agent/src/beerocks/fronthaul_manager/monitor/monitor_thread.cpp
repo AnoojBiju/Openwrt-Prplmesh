@@ -81,23 +81,7 @@ monitor_thread::monitor_thread(
 
     auto radio_node = mon_db.get_radio_node();
     radio_node->set_iface(monitor_iface);
-
-    using namespace std::placeholders; // for `_1`
-
-    bwl::hal_conf_t hal_conf;
-
-    if (!beerocks::bpl::bpl_cfg_get_hostapd_ctrl_path(monitor_iface, hal_conf.wpa_ctrl_path)) {
-        LOG(ERROR) << "Couldn't get hostapd control path for interface " << monitor_iface;
-    }
-
-    // Create new Monitor HAL instance
-    mon_wlan_hal = bwl::mon_wlan_hal_create(
-        monitor_iface_, std::bind(&monitor_thread::hal_event_handler, this, _1), hal_conf);
-
-    LOG_IF(!mon_wlan_hal, FATAL) << "Failed creating HAL instance!";
 }
-
-monitor_thread::~monitor_thread() { stop_monitor_thread(); }
 
 void monitor_thread::on_thread_stop()
 {
@@ -158,7 +142,7 @@ void monitor_thread::stop_monitor_thread()
 
 bool monitor_thread::send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx)
 {
-    return message_com::send_cmdu(m_fd_to_socket_map[m_slave_fd], cmdu_tx);
+    return m_slave_client->send_cmdu(cmdu_tx);
 }
 
 bool monitor_thread::socket_disconnected(Socket *sd)
@@ -384,6 +368,11 @@ void monitor_thread::after_select(bool timeout)
 
 bool monitor_thread::monitor_fsm()
 {
+    if (!m_slave_client) {
+        LOG(ERROR) << "Not connected to slave!";
+        return false;
+    }
+
     // Unexpected HAL detach or too many failed commands
     if ((mon_wlan_hal->get_state() != bwl::HALState::Operational && mon_hal_attached == true) ||
         (hal_command_failures_count > HAL_MAX_COMMAND_FAILURES)) {
@@ -410,9 +399,6 @@ bool monitor_thread::monitor_fsm()
             // External events
             m_mon_hal_ext_events = mon_wlan_hal->get_ext_events_fd();
             if (m_mon_hal_ext_events > 0) {
-                Socket *socket = new Socket(m_mon_hal_ext_events);
-                add_socket(socket);
-                m_fd_to_socket_map[m_mon_hal_ext_events] = socket;
                 beerocks::EventLoop::EventHandlers ext_events_handlers{
                     .on_read =
                         [&](int fd, EventLoop &loop) {
@@ -455,13 +441,6 @@ bool monitor_thread::monitor_fsm()
             // Internal events
             m_mon_hal_int_events = mon_wlan_hal->get_int_events_fd();
             if (m_mon_hal_int_events > 0) {
-
-                // NOTE: Eventhough the internal events are not socket based, at this
-                //       point we have to use the Socket class wrapper to add the
-                //       file descriptor into the select()
-                Socket *socket = new Socket(m_mon_hal_int_events);
-                add_socket(socket);
-                m_fd_to_socket_map[m_mon_hal_int_events] = socket;
                 beerocks::EventLoop::EventHandlers int_events_handlers{
                     .on_read =
                         [&](int fd, EventLoop &loop) {
@@ -500,9 +479,6 @@ bool monitor_thread::monitor_fsm()
 
             m_mon_hal_nl_events = mon_wlan_hal->get_nl_events_fd();
             if (m_mon_hal_nl_events > 0) {
-                Socket *socket = new Socket(m_mon_hal_nl_events);
-                add_socket(socket);
-                m_fd_to_socket_map[m_mon_hal_nl_events] = socket;
                 beerocks::EventLoop::EventHandlers nl_events_handlers{
                     .on_read =
                         [&](int fd, EventLoop &loop) {
@@ -550,22 +526,19 @@ bool monitor_thread::monitor_fsm()
 
             // start local monitors //
             LOG(TRACE) << "mon_stats.start()";
-            if (!mon_stats.start(&mon_db, m_fd_to_socket_map[m_slave_fd])) {
+            if (!mon_stats.start(&mon_db, m_slave_client)) {
                 LOG(ERROR) << "mon_stats.start() failed";
                 return false;
             }
 
             LOG(TRACE) << "mon_rssi.start()";
-            if (!mon_rssi.start(&mon_db, m_fd_to_socket_map[m_slave_fd])) {
+            if (!mon_rssi.start(&mon_db, m_slave_client)) {
                 // If monitor rssi failed to start, continue without it. It might failed due to
                 // insufficient permissions. Detailed error message is printed inside.
                 LOG(WARNING) << "mon_rssi.start() failed, ignore and continue without it";
                 mon_rssi.stop();
             } else {
-                Socket *socket = mon_rssi.get_arp_socket();
-                add_socket(socket);
-                m_arp_fd                     = socket->getSocketFd();
-                m_fd_to_socket_map[m_arp_fd] = socket;
+                m_arp_fd = mon_rssi.get_arp_socket()->getSocketFd();
                 beerocks::EventLoop::EventHandlers arp_events_handlers{
                     .on_read =
                         [&](int fd, EventLoop &loop) {
@@ -590,7 +563,7 @@ bool monitor_thread::monitor_fsm()
 
 #ifdef BEEROCKS_RDKB
             LOG(TRACE) << "mon_rdkb_hal.start()";
-            if (!mon_rdkb_hal.start(&mon_db, m_fd_to_socket_map[m_slave_fd])) {
+            if (!mon_rdkb_hal.start(&mon_db, m_slave_client)) {
                 LOG(ERROR) << "mon_rdkb_hal.start() failed";
                 return false;
             }
@@ -609,48 +582,13 @@ bool monitor_thread::monitor_fsm()
         // HAL is attached and operational
     } else {
 
-        // Process ARP events
-        if (m_arp_fd != beerocks::net::FileDescriptor::invalid_descriptor) {
-            clear_ready(m_fd_to_socket_map[m_arp_fd]);
-            mon_rssi.arp_recv();
-        }
-
         // Process external events
-        if (m_mon_hal_ext_events > 0) {
-            if (read_ready(m_fd_to_socket_map[m_mon_hal_ext_events])) {
-                if (!mon_wlan_hal->process_ext_events()) {
-                    LOG(ERROR) << "process_ext_events() failed!";
-                    return false;
-                }
-                clear_ready(m_fd_to_socket_map[m_mon_hal_ext_events]);
-            }
-        } else if (m_mon_hal_ext_events == 0) {
+        if (m_mon_hal_ext_events == 0) {
             // There is no socket for external events, so we simply try
             // to process any available periodically
             if (!mon_wlan_hal->process_ext_events()) {
                 LOG(ERROR) << "process_ext_events() failed!";
                 return false;
-            }
-        }
-
-        // Process internal events
-        if ((m_mon_hal_int_events > 0) && read_ready(m_fd_to_socket_map[m_mon_hal_int_events])) {
-            clear_ready(m_fd_to_socket_map[m_mon_hal_int_events]);
-            // NOTE: A callback (hal_event_handler()) will be invoked for pending events
-            if (!mon_wlan_hal->process_int_events()) {
-                LOG(ERROR) << "process_int_events() failed!";
-                return false;
-            }
-        }
-
-        // Process nl events
-        if (m_mon_hal_nl_events > 0) {
-            if (read_ready(m_fd_to_socket_map[m_mon_hal_nl_events])) {
-                if (!mon_wlan_hal->process_nl_events()) {
-                    LOG(ERROR) << "process_nl_events() failed!";
-                    return false;
-                }
-                clear_ready(m_fd_to_socket_map[m_mon_hal_nl_events]);
             }
         }
 
@@ -1766,8 +1704,8 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
         return false;
     }
 
-    if (m_slave_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
-        LOG(ERROR) << "slave_socket == nullptr";
+    if (!m_slave_client) {
+        LOG(ERROR) << "Not connected to slave!";
         return false;
     }
 
@@ -2229,8 +2167,8 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
 
 void monitor_thread::send_heartbeat()
 {
-    if (m_slave_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
-        LOG(ERROR) << "process_keep_alive(): slave_socket is nullptr!";
+    if (!m_slave_client) {
+        LOG(ERROR) << "Not connected to slave!";
         return;
     }
 
