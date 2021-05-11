@@ -610,7 +610,7 @@ bool bpl_cfg_get_wifi_credentials(const std::string &iface,
 
     auto get_authentication_type = [](const std::string &security_mode) {
         if ((security_mode == "wpa2") || (security_mode == "wpa2-psk")) {
-            return WSC::eWscAuth::WSC_AUTH_WPA2;
+            return WSC::eWscAuth::WSC_AUTH_WPA2PSK;
         }
         return WSC::eWscAuth::WSC_AUTH_OPEN;
     };
@@ -660,7 +660,7 @@ bool bpl_cfg_set_wifi_credentials(const std::string &iface,
 
     auto get_security_mode = [](WSC::eWscAuth authentication_type, WSC::eWscEncr encryption_type) {
         std::string security_mode = "none";
-        if ((authentication_type == WSC::eWscAuth::WSC_AUTH_WPA2) &&
+        if ((authentication_type == WSC::eWscAuth::WSC_AUTH_WPA2PSK) &&
             (encryption_type == WSC::eWscEncr::WSC_ENCR_AES)) {
             security_mode = "wpa2-psk";
         }
