@@ -7,7 +7,7 @@
  */
 
 #include "ap_manager/ap_manager.h"
-#include "monitor/monitor_thread.h"
+#include "monitor/monitor.h"
 
 #include <bcl/beerocks_cmdu_client_factory_factory.h>
 #include <bcl/beerocks_event_loop_impl.h>
@@ -275,8 +275,8 @@ int main(int argc, char *argv[])
     LOG_IF(!ap_manager.start(), FATAL) << "Unable to start AP manager!";
 
     // Create Monitor
-    son::monitor_thread monitor(fronthaul_iface, beerocks_slave_conf, *g_logger_monitor,
-                                slave_cmdu_client_factory, timer_manager, event_loop);
+    son::Monitor monitor(fronthaul_iface, beerocks_slave_conf, *g_logger_monitor,
+                         slave_cmdu_client_factory, timer_manager, event_loop);
 
     bool monitor_is_running = false;
 

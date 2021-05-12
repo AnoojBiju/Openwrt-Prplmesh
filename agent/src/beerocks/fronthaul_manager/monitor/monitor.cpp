@@ -6,7 +6,7 @@
  * See LICENSE file for more details.
  */
 
-#include "monitor_thread.h"
+#include "monitor.h"
 
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
@@ -45,12 +45,12 @@ static constexpr uint8_t ap_metrics_channel_utilization_measurement_period_s = 1
  */
 constexpr auto fsm_timer_period = std::chrono::milliseconds(250);
 
-monitor_thread::monitor_thread(
-    const std::string &monitor_iface_, beerocks::config_file::sConfigSlave &beerocks_slave_conf_,
-    beerocks::logging &logger_,
-    std::shared_ptr<beerocks::CmduClientFactory> slave_cmdu_client_factory,
-    std::shared_ptr<beerocks::TimerManager> timer_manager,
-    std::shared_ptr<beerocks::EventLoop> event_loop)
+Monitor::Monitor(const std::string &monitor_iface_,
+                 beerocks::config_file::sConfigSlave &beerocks_slave_conf_,
+                 beerocks::logging &logger_,
+                 std::shared_ptr<beerocks::CmduClientFactory> slave_cmdu_client_factory,
+                 std::shared_ptr<beerocks::TimerManager> timer_manager,
+                 std::shared_ptr<beerocks::EventLoop> event_loop)
     : monitor_iface(monitor_iface_), beerocks_slave_conf(beerocks_slave_conf_),
       bridge_iface(beerocks_slave_conf.bridge_iface), cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer)),
       logger(logger_), mon_rssi(cmdu_tx),
@@ -81,12 +81,12 @@ monitor_thread::monitor_thread(
     radio_node->set_iface(monitor_iface);
 }
 
-bool monitor_thread::send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx)
+bool Monitor::send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx)
 {
     return m_slave_client->send_cmdu(cmdu_tx);
 }
 
-bool monitor_thread::start()
+bool Monitor::start()
 {
     if (m_slave_client) {
         LOG(ERROR) << "Monitor is already started";
@@ -141,7 +141,7 @@ bool monitor_thread::start()
 
     using namespace std::placeholders; // for `_1`
     mon_wlan_hal = bwl::mon_wlan_hal_create(
-        monitor_iface, std::bind(&monitor_thread::hal_event_handler, this, _1), hal_conf);
+        monitor_iface, std::bind(&Monitor::hal_event_handler, this, _1), hal_conf);
     if (!mon_wlan_hal) {
         LOG(ERROR) << "Failed to create HAL instance!";
         return false;
@@ -157,7 +157,7 @@ bool monitor_thread::start()
 }
 
 // The name of this method is temporary and will be renamed at the end of PPM-967.
-bool monitor_thread::stop()
+bool Monitor::stop()
 {
     bool ok = true;
 
@@ -201,7 +201,7 @@ bool monitor_thread::stop()
     return ok;
 }
 
-bool monitor_thread::monitor_fsm()
+bool Monitor::monitor_fsm()
 {
     if (!m_slave_client) {
         LOG(ERROR) << "Not connected to slave!";
@@ -564,7 +564,7 @@ bool monitor_thread::monitor_fsm()
     return true;
 }
 
-void monitor_thread::on_channel_utilization_measurement_period_elapsed()
+void Monitor::on_channel_utilization_measurement_period_elapsed()
 {
     /**
      * Measure current channel utilization on the radio.
@@ -615,8 +615,7 @@ void monitor_thread::on_channel_utilization_measurement_period_elapsed()
     }
 }
 
-bool monitor_thread::create_ap_metrics_response(uint16_t mid,
-                                                const std::vector<sMacAddr> &bssid_list)
+bool Monitor::create_ap_metrics_response(uint16_t mid, const std::vector<sMacAddr> &bssid_list)
 {
     auto cmdu_tx_header =
         cmdu_tx.create(mid, ieee1905_1::eMessageType::AP_METRICS_RESPONSE_MESSAGE);
@@ -680,7 +679,7 @@ bool monitor_thread::create_ap_metrics_response(uint16_t mid,
     return true;
 }
 
-bool monitor_thread::update_sta_stats(const std::chrono::steady_clock::time_point &timeout)
+bool Monitor::update_sta_stats(const std::chrono::steady_clock::time_point &timeout)
 {
     auto poll_cnt  = mon_db.get_poll_cnt();
     auto poll_last = mon_db.is_last_poll();
@@ -795,7 +794,7 @@ bool monitor_thread::update_sta_stats(const std::chrono::steady_clock::time_poin
     return true;
 }
 
-bool monitor_thread::update_ap_stats()
+bool Monitor::update_ap_stats()
 {
     // Radio Statistics
     auto &radio_stats = mon_db.get_radio_node()->get_stats();
@@ -857,7 +856,7 @@ bool monitor_thread::update_ap_stats()
     return true;
 }
 
-void monitor_thread::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
+void Monitor::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     if (cmdu_rx.getMessageType() == ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE) {
         handle_cmdu_vs_message(cmdu_rx);
@@ -866,7 +865,7 @@ void monitor_thread::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
     }
 }
 
-void monitor_thread::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
+void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto beerocks_header = message_com::parse_intel_vs_message(cmdu_rx);
     if (beerocks_header == nullptr) {
@@ -1403,7 +1402,7 @@ void monitor_thread::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
     }
 }
 
-void monitor_thread::handle_cmdu_ieee1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx)
+void Monitor::handle_cmdu_ieee1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto cmdu_message_type = cmdu_rx.getMessageType();
 
@@ -1419,7 +1418,7 @@ void monitor_thread::handle_cmdu_ieee1905_1_message(ieee1905_1::CmduMessageRx &c
     }
 }
 
-void monitor_thread::handle_multi_ap_policy_config_request(ieee1905_1::CmduMessageRx &cmdu_rx)
+void Monitor::handle_multi_ap_policy_config_request(ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     /**
      * The Multi-AP Policy Config Request message is sent by the controller, received and
@@ -1474,7 +1473,7 @@ void monitor_thread::handle_multi_ap_policy_config_request(ieee1905_1::CmduMessa
     }
 }
 
-void monitor_thread::handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx)
+void Monitor::handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     const auto mid           = cmdu_rx.getMessageId();
     auto ap_metric_query_tlv = cmdu_rx.getClass<wfa_map::tlvApMetricQuery>();
@@ -1508,7 +1507,7 @@ void monitor_thread::handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx)
     send_cmdu(cmdu_tx);
 }
 
-bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
+bool Monitor::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
 {
     if (!event_ptr) {
         LOG(ERROR) << "Invalid event!";
@@ -1882,7 +1881,7 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
     return true;
 }
 
-// void monitor_thread::debug_channel_load_11k_request(message::sACTION_MONITOR_CLIENT_CHANNEL_LOAD_11K_REQUEST* request)
+// void Monitor::debug_channel_load_11k_request(message::sACTION_MONITOR_CLIENT_CHANNEL_LOAD_11K_REQUEST* request)
 // {
 //     LOG(DEBUG) << "ACTION_MONITOR_CLIENT_CLIENT_CHANNEL_LOAD_11K_REQUEST:"
 //     << std::endl << "channel: "              << (int)request->params.channel
@@ -1906,7 +1905,7 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
 //     // << std::endl << "new_ch_center_freq_seg_1: "             << (int)request->params.new_ch_center_freq_seg_1;
 // }
 
-// void monitor_thread::debug_beacon_11k_request(message::sACTION_MONITOR_CLIENT_BEACON_11K_REQUEST *request)
+// void Monitor::debug_beacon_11k_request(message::sACTION_MONITOR_CLIENT_BEACON_11K_REQUEST *request)
 // {
 //     LOG(DEBUG) << "ACTION_MONITOR_CLIENT_BEACON_REQUEST:" << std::endl
 //     << std::endl << "measurement_mode: "                 << (int)request->params.measurement_mode
@@ -1936,7 +1935,7 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
 //     ;
 // }
 
-// void monitor_thread::debug_channel_load_11k_response(message::sACTION_MONITOR_CLIENT_CHANNEL_LOAD_11K_RESPONSE* event)
+// void Monitor::debug_channel_load_11k_response(message::sACTION_MONITOR_CLIENT_CHANNEL_LOAD_11K_RESPONSE* event)
 // {
 //     LOG(DEBUG) << "DATA TEST:"
 //     << std::endl << "sta_mac: "              << event->params.sta_mac
@@ -1953,7 +1952,7 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
 //     ;
 // }
 
-// void monitor_thread::debug_beacon_11k_response(message::sACTION_MONITOR_CLIENT_BEACON_11K_RESPONSE* event)
+// void Monitor::debug_beacon_11k_response(message::sACTION_MONITOR_CLIENT_BEACON_11K_RESPONSE* event)
 // {
 //     LOG(DEBUG) << "DATA TEST:"
 //     << std::endl << "sta_mac: "              << event->params.sta_mac
@@ -1976,7 +1975,7 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
 //     ;
 // }
 
-void monitor_thread::send_heartbeat()
+void Monitor::send_heartbeat()
 {
     if (!m_slave_client) {
         LOG(ERROR) << "Not connected to slave!";
@@ -1995,7 +1994,7 @@ void monitor_thread::send_heartbeat()
     send_cmdu(cmdu_tx);
 }
 
-void monitor_thread::update_vaps_in_db()
+void Monitor::update_vaps_in_db()
 {
     if (!mon_wlan_hal->refresh_vaps_info()) {
         LOG(ERROR) << "Failed to refresh vaps info!";
@@ -2029,8 +2028,8 @@ void monitor_thread::update_vaps_in_db()
     }
 }
 #ifdef BEEROCKS_RDKB
-void monitor_thread::send_steering_return_status(beerocks_message::eActionOp_MONITOR ActionOp,
-                                                 int32_t status)
+void Monitor::send_steering_return_status(beerocks_message::eActionOp_MONITOR ActionOp,
+                                          int32_t status)
 {
     switch (ActionOp) {
     case beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_GROUP_RESPONSE: {

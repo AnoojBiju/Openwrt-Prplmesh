@@ -29,14 +29,13 @@
 #include <bwl/mon_wlan_hal.h>
 
 namespace son {
-class monitor_thread {
+class Monitor {
 public:
-    monitor_thread(const std::string &monitor_iface_,
-                   beerocks::config_file::sConfigSlave &beerocks_slave_conf_,
-                   beerocks::logging &logger_,
-                   std::shared_ptr<beerocks::CmduClientFactory> slave_cmdu_client_factory,
-                   std::shared_ptr<beerocks::TimerManager> timer_manager,
-                   std::shared_ptr<beerocks::EventLoop> event_loop);
+    Monitor(const std::string &monitor_iface_,
+            beerocks::config_file::sConfigSlave &beerocks_slave_conf_, beerocks::logging &logger_,
+            std::shared_ptr<beerocks::CmduClientFactory> slave_cmdu_client_factory,
+            std::shared_ptr<beerocks::TimerManager> timer_manager,
+            std::shared_ptr<beerocks::EventLoop> event_loop);
 
     /**
      * @brief Starts monitor.
