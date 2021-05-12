@@ -1135,6 +1135,15 @@ public:
     bool clear_channel_report_record(const std::string &ISO_8601_timestamp);
 
     /**
+     * @brief Get the channel pool containing all the supported channels.
+     *
+     * @param[out] channel_pool_set  Set containing the current channel pool.
+     * @param[in] radio_mac         MAC address of radio.
+     */
+    bool get_pool_of_all_supported_channels(std::unordered_set<uint8_t> &channel_pool_set,
+                                            const sMacAddr &radio_mac);
+
+    /**
      * @brief
      *
      * @param RUID Radio UID
