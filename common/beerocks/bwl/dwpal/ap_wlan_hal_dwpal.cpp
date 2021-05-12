@@ -1248,6 +1248,8 @@ static bool set_vap_multiap_mode(std::vector<std::string> &vap_hostapd_config, b
                                  "\"" + backhaul_wps_ssid + "\"");
         hostapd_config_set_value(vap_hostapd_config, "multi_ap_backhaul_wpa_passphrase",
                                  backhaul_wps_passphrase);
+
+        hostapd_config_set_value(vap_hostapd_config, "eap_server", "1");
     }
 
     return true;
