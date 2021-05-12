@@ -881,26 +881,6 @@ bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
         send_cmdu(fd, m_cmdu_tx);
 
     } break;
-    case beerocks_message::ACTION_PLATFORM_VERSION_MISMATCH_NOTIFICATION: {
-        auto notification =
-            beerocks_header
-                ->addClass<beerocks_message::cACTION_PLATFORM_VERSION_MISMATCH_NOTIFICATION>();
-        if (notification == nullptr) {
-            LOG(ERROR) << "addClass cACTION_PLATFORM_VERSION_MISMATCH_NOTIFICATION failed";
-            return false;
-        }
-        std::string master_version(notification->versions().master_version);
-        std::string slave_version(notification->versions().slave_version);
-
-        // Notify the SL asynchronously
-        work_queue.enqueue<void>([master_version, slave_version]() {
-            LOG(DEBUG) << "call bpl_version_mismatch_notification"
-                       << ", master = " << master_version << ", slave = " << slave_version;
-
-            bpl::cfg_notify_fw_version_mismatch();
-        });
-
-    } break;
     case beerocks_message::ACTION_PLATFORM_MASTER_SLAVE_VERSIONS_NOTIFICATION: {
         auto notification =
             beerocks_header
