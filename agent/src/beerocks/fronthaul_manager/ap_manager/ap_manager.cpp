@@ -331,12 +331,12 @@ using namespace beerocks;
 using namespace son;
 
 ApManager::ApManager(const std::string &iface, beerocks::logging &logger,
-                     std::unique_ptr<beerocks::CmduClientFactory> slave_cmdu_client_factory,
+                     std::shared_ptr<beerocks::CmduClientFactory> slave_cmdu_client_factory,
                      std::shared_ptr<beerocks::TimerManager> timer_manager,
                      std::shared_ptr<beerocks::EventLoop> event_loop)
     : cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer)), m_logger(logger),
-      m_slave_cmdu_client_factory(std::move(slave_cmdu_client_factory)),
-      m_timer_manager(timer_manager), m_event_loop(event_loop)
+      m_slave_cmdu_client_factory(slave_cmdu_client_factory), m_timer_manager(timer_manager),
+      m_event_loop(event_loop)
 {
     LOG_IF(!m_slave_cmdu_client_factory, FATAL) << "CMDU client factory is a null pointer!";
     LOG_IF(!m_timer_manager, FATAL) << "Timer manager is a null pointer!";

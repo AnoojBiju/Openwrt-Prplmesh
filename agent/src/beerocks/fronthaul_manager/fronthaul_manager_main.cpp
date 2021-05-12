@@ -264,13 +264,13 @@ int main(int argc, char *argv[])
 
     // Create CMDU client factory to create CMDU clients connected to CMDU server running in
     // slave when requested
-    auto slave_cmdu_client_factory =
-        beerocks::create_cmdu_client_factory(fronthaul_uds_path, event_loop);
+    std::shared_ptr<beerocks::CmduClientFactory> slave_cmdu_client_factory =
+        std::move(beerocks::create_cmdu_client_factory(fronthaul_uds_path, event_loop));
     LOG_IF(!slave_cmdu_client_factory, FATAL) << "Unable to create CMDU client factory!";
 
     // Create ap_manager
-    son::ApManager ap_manager(fronthaul_iface, *g_logger_ap_mananger,
-                              std::move(slave_cmdu_client_factory), timer_manager, event_loop);
+    son::ApManager ap_manager(fronthaul_iface, *g_logger_ap_mananger, slave_cmdu_client_factory,
+                              timer_manager, event_loop);
 
     LOG_IF(!ap_manager.start(), FATAL) << "Unable to start AP manager!";
 
