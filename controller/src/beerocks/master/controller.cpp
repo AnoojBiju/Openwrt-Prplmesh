@@ -225,10 +225,7 @@ bool Controller::start()
         return false;
     }
     LOG(DEBUG) << "Tasks timer created with fd = " << m_tasks_timer;
-    transaction.add_rollback_action([&]() {
-        m_timer_manager->remove_timer(m_tasks_timer);
-        m_tasks_timer = beerocks::net::FileDescriptor::invalid_descriptor;
-    });
+    transaction.add_rollback_action([&]() { m_timer_manager->remove_timer(m_tasks_timer); });
 
     // Create a timer to execute periodic operations
     // TODO: as an enhancement, each periodic operation should have its own timer (PPM-717)
@@ -242,10 +239,7 @@ bool Controller::start()
         return false;
     }
     LOG(DEBUG) << "Operations timer created with fd = " << m_operations_timer;
-    transaction.add_rollback_action([&]() {
-        m_timer_manager->remove_timer(m_operations_timer);
-        m_operations_timer = beerocks::net::FileDescriptor::invalid_descriptor;
-    });
+    transaction.add_rollback_action([&]() { m_timer_manager->remove_timer(m_operations_timer); });
 
     // Create an instance of a broker client connected to the broker server that is running in the
     // transport process
@@ -321,14 +315,12 @@ bool Controller::stop()
         if (!m_timer_manager->remove_timer(m_operations_timer)) {
             ok = false;
         }
-        m_operations_timer = beerocks::net::FileDescriptor::invalid_descriptor;
     }
 
     if (m_tasks_timer != beerocks::net::FileDescriptor::invalid_descriptor) {
         if (!m_timer_manager->remove_timer(m_tasks_timer)) {
             ok = false;
         }
-        m_tasks_timer = beerocks::net::FileDescriptor::invalid_descriptor;
     }
 
     LOG(DEBUG) << "stopped";
