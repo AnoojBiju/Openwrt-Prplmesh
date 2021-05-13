@@ -77,7 +77,7 @@ public:
      *
      * @see TimerManager::remove_timer
      */
-    bool remove_timer(int fd) override;
+    bool remove_timer(int &fd) override;
 
 private:
     /**

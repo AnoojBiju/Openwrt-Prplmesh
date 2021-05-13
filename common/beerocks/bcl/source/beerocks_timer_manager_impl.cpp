@@ -83,7 +83,7 @@ int TimerManagerImpl::add_timer(std::chrono::milliseconds delay, std::chrono::mi
     return fd;
 }
 
-bool TimerManagerImpl::remove_timer(int fd)
+bool TimerManagerImpl::remove_timer(int &fd)
 {
     auto it = m_timers.find(fd);
     if (m_timers.end() == it) {
@@ -106,6 +106,8 @@ bool TimerManagerImpl::remove_timer(int fd)
     }
 
     LOG(DEBUG) << "Timer removed, fd = " << fd;
+
+    fd = beerocks::net::FileDescriptor::invalid_descriptor;
 
     return true;
 }
