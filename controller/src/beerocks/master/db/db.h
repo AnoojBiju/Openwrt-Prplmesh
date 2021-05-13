@@ -867,9 +867,9 @@ public:
 
     bool set_global_restricted_channels(const uint8_t *restricted_channels);
     std::vector<uint8_t> get_global_restricted_channels();
-    bool set_hostap_conf_restricted_channels(const sMacAddr &hostap_mac,
+    bool set_hostap_conf_restricted_channels(const sMacAddr &radio_mac,
                                              const uint8_t *restricted_channels);
-    std::vector<uint8_t> get_hostap_conf_restricted_channels(const sMacAddr &hostap_mac);
+    std::vector<uint8_t> get_hostap_conf_restricted_channels(const sMacAddr &radio_mac);
     bool
     fill_radio_channel_scan_capabilites(const sMacAddr &radio_mac,
                                         wfa_map::cRadiosWithScanCapabilities &radio_capabilities);
@@ -1452,7 +1452,7 @@ public:
                              uint16_t vht_center_frequency);
     beerocks::eWiFiBandwidth get_node_bw(const std::string &mac);
     int get_node_bw_int(const std::string &mac);
-    bool get_hostap_channel_ext_above_primary(const sMacAddr &hostap_mac);
+    bool get_hostap_channel_ext_above_primary(const sMacAddr &radio_mac);
     bool get_node_channel_ext_above_secondary(const std::string &mac);
     uint16_t get_hostap_vht_center_frequency(const sMacAddr &mac);
 
@@ -1763,7 +1763,8 @@ private:
      * @return std::shared_ptr<node> pointer to the node on success, nullptr otherwise.
      */
     std::shared_ptr<node> get_node_verify_type(const sMacAddr &mac, beerocks::eType type);
-    std::shared_ptr<node::radio> get_hostap_by_mac(const sMacAddr &mac);
+    std::shared_ptr<prplmesh::controller::db::sAgent::sRadio>
+    get_radio_by_uid(const sMacAddr &radio_uid);
     int get_node_hierarchy(std::shared_ptr<node> n);
     std::set<std::shared_ptr<node>> get_node_subtree(std::shared_ptr<node> n);
     void adjust_subtree_hierarchy(std::shared_ptr<node> n);
