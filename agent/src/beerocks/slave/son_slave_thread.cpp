@@ -2021,6 +2021,29 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         LOG(INFO) << "received ACTION_APMANAGER_HOSTAP_AP_ENABLED_NOTIFICATION vap_id="
                   << int(notification_in->vap_id());
 
+        auto db    = AgentDB::get();
+        auto radio = db->radio(m_fronthaul_iface);
+        if (!radio) {
+            LOG(ERROR) << "Radio of iface " << m_fronthaul_iface << " does not exist on the db";
+            return false;
+        }
+
+        const auto &vap_info = notification_in->vap_info();
+        auto bssid =
+            std::find_if(radio->front.bssids.begin(), radio->front.bssids.end(),
+                         [&vap_info](const beerocks::AgentDB::sRadio::sFront::sBssid &bssid) {
+                             return bssid.mac == vap_info.mac;
+                         });
+        if (bssid == radio->front.bssids.end()) {
+            LOG(ERROR) << "Radio does not contain BSSID: " << vap_info.mac;
+            return false;
+        }
+
+        // Update VAP info (BSSID) in the AgentDB
+        bssid->ssid = vap_info.ssid;
+        bssid->type = vap_info.backhaul_vap ? AgentDB::sRadio::sFront::sBssid::eType::bAP
+                                            : AgentDB::sRadio::sFront::sBssid::eType::fAP;
+
         auto notification_out = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_HOSTAP_AP_ENABLED_NOTIFICATION>(cmdu_tx);
         if (notification_out == nullptr) {
