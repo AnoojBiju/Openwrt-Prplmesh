@@ -1968,6 +1968,15 @@ private:
      */
     bool set_node_data_model_path(const sMacAddr &mac, const std::string &data_model_path);
 
+    /**
+     * @brief Removes excessive NBAPI objects from system bus
+     * if amount of them succeed the limit.
+     *
+     * @param paths Queue with paths to NBAPI objects of particular type.
+     * @param limit The maximum allowed amount of those objects.
+     */
+    void check_history_limit(std::queue<std::string> &paths, uint8_t limit);
+
     int network_optimization_task_id           = -1;
     int channel_selection_task_id              = -1;
     int dynamic_channel_selection_r2_task_id   = -1;
@@ -2068,14 +2077,14 @@ private:
     const uint8_t MAX_EVENT_HISTORY_SIZE = 24;
 
     /*
-    * The queue with indexes of NBAPI disassociation events.
+    * The queue with paths of NBAPI disassociation events.
     */
-    std::queue<uint32_t> m_disassoc_events;
+    std::queue<std::string> m_disassoc_events;
 
     /*
-    * The queue with indexes of NBAPI association events.
+    * The queue with paths of NBAPI association events.
     */
-    std::queue<uint32_t> m_assoc_events;
+    std::queue<std::string> m_assoc_events;
 };
 
 } // namespace son
