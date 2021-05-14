@@ -20,6 +20,7 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
+#include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 #include <tlvf/wfa_map/tlvProfile2MultiApProfile.h>
 #include <unordered_set>
 
@@ -148,6 +149,7 @@ public:
         std::string model;
         uint16_t ucc_listener_port;
         CountryCode country_code;
+        wfa_map::tlvProfile2ApCapability::eByteCounterUnits byte_counter_units;
     } device_conf;
 
     struct sControllerInfo {
