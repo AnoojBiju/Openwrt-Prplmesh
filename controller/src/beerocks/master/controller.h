@@ -155,7 +155,7 @@ private:
     bool
     handle_non_intel_slave_join(const std::string &src_mac,
                                 std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps,
-                                const WSC::m1 &m1, std::string bridge_mac,
+                                const WSC::m1 &m1, const sMacAddr &bridge_mac,
                                 const sMacAddr &radio_mac, ieee1905_1::CmduMessageTx &cmdu_tx);
 
     // 1905 messages handlers
@@ -196,7 +196,7 @@ private:
     bool handle_cmdu_1905_associated_sta_link_metrics_response_message(
         const std::string &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool autoconfig_wsc_parse_radio_caps(
-        const sMacAddr &radio_mac,
+        const sMacAddr &bridge_mac, const sMacAddr &radio_mac,
         std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps);
 
     /**
