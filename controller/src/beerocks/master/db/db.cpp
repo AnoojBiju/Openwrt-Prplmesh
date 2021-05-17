@@ -1014,19 +1014,6 @@ std::set<std::string> db::get_nodes(int type)
     return ret;
 }
 
-std::set<std::string> db::get_device_nodes()
-{
-    std::set<std::string> ret;
-    for (auto node_map : nodes) {
-        for (auto kv : node_map) {
-            if ((kv.second->get_type() != beerocks::TYPE_SLAVE) && (kv.second->mac == kv.first)) {
-                ret.insert(kv.first);
-            }
-        }
-    }
-    return ret;
-}
-
 std::set<std::string> db::get_active_hostaps()
 {
     std::set<std::string> ret;

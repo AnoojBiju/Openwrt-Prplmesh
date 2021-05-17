@@ -689,7 +689,6 @@ public:
     //
     int get_node_hierarchy(const std::string &mac);
     std::set<std::string> get_nodes(int type = -1);
-    std::set<std::string> get_device_nodes();
     std::set<std::string> get_active_hostaps();
     std::set<std::string> get_all_connected_ires();
     std::set<std::string> get_all_backhaul_manager_slaves();
