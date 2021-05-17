@@ -397,7 +397,8 @@ public:
     bool set_hostap_active(const sMacAddr &mac, bool active);
     bool is_hostap_active(const sMacAddr &mac);
 
-    bool set_hostap_backhaul_manager(const sMacAddr &mac, bool is_backhaul_manager);
+    bool set_hostap_backhaul_manager(const sMacAddr &al_mac, const sMacAddr &mac,
+                                     bool is_backhaul_manager);
     bool is_hostap_backhaul_manager(const sMacAddr &mac);
     std::string get_hostap_backhaul_manager(const std::string &ire);
 
@@ -447,9 +448,11 @@ public:
      * Path example: Controller.Network.Device.1.Radio.1.Capabilities.OperatingClasses
      *
      * @param radio_mac MAC address for Radio which reporting Operating Class
+     * @param al_mac AL MAC address for Radio
      * @return true on success, false otherwise.
      */
-    bool remove_hostap_supported_operating_classes(const sMacAddr &radio_mac);
+    bool remove_hostap_supported_operating_classes(const sMacAddr &al_mac,
+                                                   const sMacAddr &radio_mac);
 
     /**
      * @brief Adds Interface Object and updates Interface Data Model Object.
@@ -762,10 +765,10 @@ public:
     bool set_hostap_ant_num(const sMacAddr &mac, beerocks::eWiFiAntNum ant_num);
     beerocks::eWiFiAntNum get_hostap_ant_num(const sMacAddr &mac);
 
-    bool set_hostap_ant_gain(const sMacAddr &mac, int ant_gain);
+    bool set_hostap_ant_gain(const sMacAddr &al_mac, const sMacAddr &mac, int ant_gain);
     int get_hostap_ant_gain(const sMacAddr &mac);
 
-    bool set_hostap_tx_power(const sMacAddr &mac, int tx_power);
+    bool set_hostap_tx_power(const sMacAddr &al_mac, const sMacAddr &mac, int tx_power);
     int get_hostap_tx_power(const sMacAddr &mac);
 
     bool set_hostap_supported_channels(const sMacAddr &mac,
@@ -774,11 +777,12 @@ public:
     std::vector<beerocks::message::sWifiChannel> get_hostap_supported_channels(const sMacAddr &mac);
     std::string get_hostap_supported_channels_string(const sMacAddr &radio_mac);
 
-    bool add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t operating_class,
-                                              uint8_t tx_power,
+    bool add_hostap_supported_operating_class(const sMacAddr &al_mac, const sMacAddr &radio_mac,
+                                              uint8_t operating_class, uint8_t tx_power,
                                               const std::vector<uint8_t> &non_operable_channels);
 
-    bool set_hostap_band_capability(const sMacAddr &mac, beerocks::eRadioBandCapability capability);
+    bool set_hostap_band_capability(const sMacAddr &al_mac, const sMacAddr &mac,
+                                    beerocks::eRadioBandCapability capability);
     beerocks::eRadioBandCapability get_hostap_band_capability(const sMacAddr &mac);
 
     bool capability_check(const std::string &mac, int channel);
@@ -803,13 +807,16 @@ public:
     bool update_node_11v_responsiveness(const std::string &mac, bool success);
     bool get_node_11v_capability(const std::string &mac);
 
-    bool set_hostap_iface_name(const sMacAddr &mac, const std::string &iface_name);
+    bool set_hostap_iface_name(const sMacAddr &al_mac, const sMacAddr &mac,
+                               const std::string &iface_name);
     std::string get_hostap_iface_name(const sMacAddr &mac);
 
-    bool set_hostap_iface_type(const sMacAddr &mac, beerocks::eIfaceType iface_type);
+    bool set_hostap_iface_type(const sMacAddr &al_mac, const sMacAddr &mac,
+                               beerocks::eIfaceType iface_type);
     beerocks::eIfaceType get_hostap_iface_type(const sMacAddr &mac);
 
-    bool set_hostap_driver_version(const sMacAddr &mac, const std::string &version);
+    bool set_hostap_driver_version(const sMacAddr &al_mac, const sMacAddr &mac,
+                                   const std::string &version);
     std::string get_hostap_driver_version(const sMacAddr &mac);
 
     bool set_hostap_vap_list(const sMacAddr &mac,
@@ -898,7 +905,7 @@ public:
     std::set<std::string> get_hostap_dfs_reentry_clients(const sMacAddr &mac);
     bool clear_hostap_dfs_reentry_clients(const sMacAddr &mac);
 
-    bool set_hostap_is_acs_enabled(const sMacAddr &mac, bool enable);
+    bool set_hostap_is_acs_enabled(const sMacAddr &al_mac, const sMacAddr &mac, bool enable);
     bool get_hostap_is_acs_enabled(const sMacAddr &mac);
 
     //
@@ -1360,7 +1367,7 @@ public:
     double get_node_cross_estimated_tx_phy_rate(const std::string &mac);
 
     bool set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApStatsParams *params);
-    void clear_hostap_stats_info(const sMacAddr &mac);
+    void clear_hostap_stats_info(const sMacAddr &al_mac, const sMacAddr &mac);
 
     /**
      * @brief Notify about client disconnection.
@@ -1933,10 +1940,10 @@ private:
      * @param radio_mac mac address of radio which reporting operating class.
      * @param max_tx_power max transmit power.
      * @param op_class operating class.
-     * @param non_operable_channels list of non oparable channels.
+     * @param non_operable_channels list of non operable channels.
      * @return true on success, false otherwise.
      */
-    bool dm_add_ap_operating_classes(const std::string &radio_mac, uint8_t max_tx_power,
+    bool dm_add_ap_operating_classes(const sMacAddr &radio_mac, uint8_t max_tx_power,
                                      uint8_t op_class,
                                      const std::vector<uint8_t> &non_operable_channels);
 
