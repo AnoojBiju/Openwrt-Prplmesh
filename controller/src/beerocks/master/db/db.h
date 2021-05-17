@@ -691,7 +691,6 @@ public:
     std::set<std::string> get_nodes(int type = -1);
     std::set<std::string> get_active_hostaps();
     std::set<std::string> get_all_connected_ires();
-    std::set<std::string> get_all_backhaul_manager_slaves();
     std::set<std::string> get_nodes_from_hierarchy(int hierarchy, int type = -1);
     std::string get_gw_mac();
     std::set<std::string> get_node_subtree(const std::string &mac);

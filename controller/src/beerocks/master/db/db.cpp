@@ -1044,20 +1044,6 @@ std::set<std::string> db::get_all_connected_ires()
     return ret;
 }
 
-std::set<std::string> db::get_all_backhaul_manager_slaves()
-{
-    std::set<std::string> ret;
-    for (auto node_map : nodes) {
-        for (auto kv : node_map) {
-            if (kv.second->get_type() == beerocks::TYPE_SLAVE && kv.first == kv.second->mac &&
-                is_hostap_backhaul_manager(tlvf::mac_from_string(kv.second->mac))) {
-                ret.insert(kv.first);
-            }
-        }
-    }
-    return ret;
-}
-
 std::set<std::string> db::get_nodes_from_hierarchy(int hierarchy, int type)
 {
     std::set<std::string> result;
