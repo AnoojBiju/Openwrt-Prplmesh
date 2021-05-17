@@ -27,7 +27,7 @@ import argparse
 import os
 import sys
 import json
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, run
 
 if not (sys.version_info.major == 3 and sys.version_info.minor >= 5):
     print("This script requires Python 3.5 or higher!")
@@ -220,7 +220,15 @@ if __name__ == '__main__':
             print('Specify --id for the --clean parameter')
             sys.exit(0)
         services = Services(dut=args.dut, test_suite=args.test_suite, bid=args.bid)
-        rc = services.dc(['down', '--remove-orphans', '--rmi', 'all'])
+        rc = services.dc(['down', '--remove-orphans'])
+        network_names_cmd = ["docker", "network", "ls", "-q", "--filter",
+                             r"name=^(\d+-)?prplMesh-net-.*"]
+        network_names = run(network_names_cmd,
+                            check=True, capture_output=True).stdout.decode("utf-8").splitlines()
+        print("Removing networks (if unused): {}".format(str(network_names)))
+        network_rm_cmd = ["docker", "network", "rm"] + network_names
+        run(network_rm_cmd, check=False, capture_output=True)
+
         cleanup(rc)
     elif args.shell:
         if not args.bid:
