@@ -565,6 +565,23 @@ public:
                                       uint64_t packets_received, uint32_t errors_received);
 
     /**
+     * @brief Adds to data model Scan Result and fill up data for its parameters.
+     *
+     * @param ruid Radio unique identifier.
+     * @param operating_class Scaned operating class.
+     * @param channel Scaned channel.
+     * @param noise Channel noise.
+     * @param utilization Channel utilization.
+     * @param neighbors List of discovered neighbors.
+     * @param ISO_8601_timestamp Channel scan report's timestamp.
+     * @return True on success, false otherwise.
+     */
+    bool dm_add_scan_result(const sMacAddr &ruid, const uint8_t &operating_class,
+                            const uint8_t &channel, const uint8_t noise, const uint8_t utilization,
+                            const std::vector<wfa_map::cNeighbors> &neighbors,
+                            const std::string &ISO_8601_timestamp);
+
+    /**
      * @brief Adds or updates instance of Neighbor inside Interface object.
      *
      * Path: Controller.Network.Device.{i}.Interface.{i}.Neighbor.{i}
@@ -1968,6 +1985,15 @@ private:
      */
     bool set_node_data_model_path(const sMacAddr &mac, const std::string &data_model_path);
 
+    /**
+     * @brief Removes excessive NBAPI objects from system bus
+     * if amount of them succeed the limit.
+     *
+     * @param paths Queue with paths to NBAPI objects of particular type.
+     * @param limit The maximum allowed amount of those objects.
+     */
+    void check_history_limit(std::queue<std::string> &paths, uint8_t limit);
+
     int network_optimization_task_id           = -1;
     int channel_selection_task_id              = -1;
     int dynamic_channel_selection_r2_task_id   = -1;
@@ -2068,14 +2094,24 @@ private:
     const uint8_t MAX_EVENT_HISTORY_SIZE = 24;
 
     /*
-    * The queue with indexes of NBAPI disassociation events.
+    * The queue with paths of NBAPI disassociation events.
     */
-    std::queue<uint32_t> m_disassoc_events;
+    std::queue<std::string> m_disassoc_events;
 
     /*
-    * The queue with indexes of NBAPI association events.
+    * The queue with paths of NBAPI association events.
     */
-    std::queue<uint32_t> m_assoc_events;
+    std::queue<std::string> m_assoc_events;
+
+    /*
+    * Maximum amount of NBAPI ScanResults registered on the system bus.
+    */
+    const uint8_t MAX_SCAN_RESULT_HISTORY_SIZE = 5;
+
+    /*
+    * The queue with paths of NBAPI ScanResults.
+    */
+    std::queue<std::string> m_scan_results;
 };
 
 } // namespace son

@@ -3129,6 +3129,123 @@ bool db::add_channel_report(const sMacAddr &RUID, const uint8_t &operating_class
     return true;
 }
 
+static void dm_add_neighbors(std::shared_ptr<beerocks::nbapi::Ambiorix> m_ambiorix_datamodel,
+                             const std::string &channel_path,
+                             const std::vector<wfa_map::cNeighbors> &neighbors)
+{
+    for (auto neighbor : neighbors) {
+        // Controller.Network.Device.1.Radio.2.ScanResult.3.OpClassScan.4.ChannelScan.5.NeighborBSS
+        auto neighbor_path = m_ambiorix_datamodel->add_instance(channel_path + ".NeighborBSS");
+
+        if (neighbor_path.empty()) {
+            LOG(ERROR) << "Failed to add NeighborBSS to " << channel_path;
+            return;
+        }
+        m_ambiorix_datamodel->set(neighbor_path, "BSSID", tlvf::mac_to_string(neighbor.bssid()));
+        m_ambiorix_datamodel->set(neighbor_path, "SSID", neighbor.ssid_str());
+        m_ambiorix_datamodel->set(neighbor_path, "SignalStrength", neighbor.signal_strength());
+        m_ambiorix_datamodel->set(neighbor_path, "ChannelBandwidth",
+                                  neighbor.channels_bw_list_str());
+        m_ambiorix_datamodel->set(neighbor_path, "ChannelUtilization", 0); // TO DO: PPM-1358
+        m_ambiorix_datamodel->set(neighbor_path, "StationCount", 0);       // TO DO: PPM-1358
+    }
+}
+
+static std::string
+dm_add_channel_scan(std::shared_ptr<beerocks::nbapi::Ambiorix> m_ambiorix_datamodel,
+                    const std::string &class_path, const uint8_t &channel, const uint8_t noise,
+                    const uint8_t utilization, const std::string &ISO_8601_timestamp)
+{
+    // Controller.Network.Device.1.Radio.2.ScanResult.3.OpClassScan.4.ChannelScan.5
+    std::string channel_path;
+    uint32_t channel_index = m_ambiorix_datamodel->get_instance_index(
+        class_path + ".ChannelScan.[Channel == '%s'].", std::to_string(channel));
+
+    if (channel_index) {
+        channel_path = class_path + ".ChannelScan." + std::to_string(channel_index);
+    } else {
+        channel_path = m_ambiorix_datamodel->add_instance(class_path + ".ChannelScan");
+        if (channel_path.empty()) {
+            LOG(ERROR) << "Failed to add ChannelScan instance to " << class_path;
+            return {};
+        }
+    }
+    m_ambiorix_datamodel->set(channel_path, "TimeStamp", ISO_8601_timestamp);
+    m_ambiorix_datamodel->set(channel_path, "Channel", channel);
+    m_ambiorix_datamodel->set(channel_path, "Utilization", utilization);
+    m_ambiorix_datamodel->set(channel_path, "Noise", noise);
+    return channel_path;
+}
+
+static std::string
+dm_add_op_class_scan(std::shared_ptr<beerocks::nbapi::Ambiorix> m_ambiorix_datamodel,
+                     const std::string &scan_result_path, const uint8_t &operating_class)
+{
+    // Controller.Network.Device.1.Radio.2.ScanResult.3.OpClassScan.4
+    std::string class_path;
+    uint32_t class_index = m_ambiorix_datamodel->get_instance_index(
+        scan_result_path + ".OpClassScan.[OperatingClass == '%s'].",
+        std::to_string(operating_class));
+
+    if (class_index) {
+        class_path = scan_result_path + ".OpClassScan." + std::to_string(class_index);
+    } else {
+        class_path = m_ambiorix_datamodel->add_instance(scan_result_path + ".OpClassScan");
+        if (class_path.empty()) {
+            LOG(ERROR) << "Failed to add OpClassScan instance to " << scan_result_path;
+            return {};
+        }
+    }
+    m_ambiorix_datamodel->set(class_path, "OperatingClass", operating_class);
+    return class_path;
+}
+
+bool db::dm_add_scan_result(const sMacAddr &ruid, const uint8_t &operating_class,
+                            const uint8_t &channel, const uint8_t noise, const uint8_t utilization,
+                            const std::vector<wfa_map::cNeighbors> &neighbors,
+                            const std::string &ISO_8601_timestamp)
+{
+    check_history_limit(m_scan_results, MAX_SCAN_RESULT_HISTORY_SIZE);
+
+    std::string radio_path = get_node_data_model_path(ruid);
+
+    if (radio_path.empty()) {
+        LOG(DEBUG) << "Missing path to NBAPI radio: " << ruid;
+        return true;
+    }
+
+    // Controller.Network.Device.1.Radio.2.ScanResult.3
+    std::string scan_result_path;
+    uint32_t scan_result_index = m_ambiorix_datamodel->get_instance_index(
+        radio_path + ".ScanResult.[TimeStamp == '%s'].", ISO_8601_timestamp);
+
+    if (scan_result_index) {
+        scan_result_path = radio_path + ".ScanResult." + std::to_string(scan_result_index);
+    } else {
+        scan_result_path = m_ambiorix_datamodel->add_instance(radio_path + ".ScanResult");
+        if (scan_result_path.empty()) {
+            LOG(ERROR) << "Failed to add ScanResult ";
+            return false;
+        }
+
+        // Keeps track of the objects amount.
+        m_scan_results.push(scan_result_path);
+
+        if (!m_ambiorix_datamodel->set(scan_result_path, "TimeStamp", ISO_8601_timestamp)) {
+            LOG(ERROR) << "Failed to set " << scan_result_path
+                       << ".TimeStamp: " << ISO_8601_timestamp;
+            return false;
+        }
+    }
+
+    auto op_class_path =
+        dm_add_op_class_scan(m_ambiorix_datamodel, scan_result_path, operating_class);
+    auto channel_path = dm_add_channel_scan(m_ambiorix_datamodel, op_class_path, channel, noise,
+                                            utilization, ISO_8601_timestamp);
+    dm_add_neighbors(m_ambiorix_datamodel, channel_path, neighbors);
+    return true;
+}
+
 //
 // Client Persistent Data
 //
@@ -4153,6 +4270,19 @@ void db::clear_hostap_stats_info(const sMacAddr &al_mac, const sMacAddr &mac)
     set_hostap_stats_info(mac, nullptr);
 }
 
+void db::check_history_limit(std::queue<std::string> &paths, uint8_t limit)
+{
+    while (limit <= paths.size()) {
+        std::string obj_path = paths.front();
+        auto index           = get_dm_index_from_path(obj_path);
+
+        if (!m_ambiorix_datamodel->remove_instance(obj_path, index.second)) {
+            LOG(ERROR) << "Failed to remove " << obj_path;
+        }
+        paths.pop();
+    }
+}
+
 bool db::notify_disconnection(const std::string &client_mac)
 {
     auto n = get_node(client_mac);
@@ -4163,26 +4293,16 @@ bool db::notify_disconnection(const std::string &client_mac)
     std::string path_to_disassoc_event_data =
         "Controller.Notification.DisassociationEvent.DisassociationEventData";
 
-    while (MAX_EVENT_HISTORY_SIZE <= m_disassoc_events.size()) {
-        uint32_t indx = m_disassoc_events.front();
-
-        if (!m_ambiorix_datamodel->remove_instance(path_to_disassoc_event_data, indx)) {
-            LOG(ERROR) << "Failed to remove " << path_to_disassoc_event_data << indx
-                       << " instance.";
-        }
-        m_disassoc_events.pop();
-    }
+    check_history_limit(m_disassoc_events, MAX_EVENT_HISTORY_SIZE);
 
     std::string path_to_eventdata = m_ambiorix_datamodel->add_instance(path_to_disassoc_event_data);
 
     if (path_to_eventdata.empty()) {
         return false;
     }
-    auto index = get_dm_index_from_path(path_to_eventdata);
 
-    if (index.second) {
-        m_disassoc_events.push(index.second);
-    }
+    m_disassoc_events.push(path_to_eventdata);
+
     if (!m_ambiorix_datamodel->set(path_to_eventdata, "BSSID", n->parent_mac)) {
         LOG(ERROR) << "Failed to set " << path_to_eventdata << ".BSSID: " << n->parent_mac;
         return false;
@@ -5821,25 +5941,15 @@ std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &
     std::string path_association_event =
         "Controller.Notification.AssociationEvent.AssociationEventData";
 
-    while (MAX_EVENT_HISTORY_SIZE <= m_assoc_events.size()) {
-        uint32_t indx = m_assoc_events.front();
-
-        if (!m_ambiorix_datamodel->remove_instance(path_association_event, indx)) {
-            LOG(ERROR) << "Failed to remove " << path_association_event << indx << " instance.";
-        }
-        m_assoc_events.pop();
-    }
+    check_history_limit(m_assoc_events, MAX_EVENT_HISTORY_SIZE);
 
     path_association_event = m_ambiorix_datamodel->add_instance(path_association_event);
 
     if (path_association_event.empty()) {
         return {};
     }
-    auto index = get_dm_index_from_path(path_association_event);
 
-    if (index.second) {
-        m_assoc_events.push(index.second);
-    }
+    m_assoc_events.push(path_association_event);
     if (!m_ambiorix_datamodel->set(path_association_event, "BSSID", tlvf::mac_to_string(bssid))) {
         LOG(ERROR) << "Failed to set " << path_association_event << ".BSSID: " << bssid;
         return {};
@@ -5861,6 +5971,8 @@ std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &
         return {};
     }
     m_ambiorix_datamodel->set_current_time(path_association_event);
+
+    auto index = get_dm_index_from_path(path_association_event);
 
     if (MAX_EVENT_HISTORY_SIZE < m_assoc_indx.size()) {
         m_assoc_indx.clear();

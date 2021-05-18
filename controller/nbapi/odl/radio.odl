@@ -66,8 +66,8 @@
             %read-only string MACAddress = "";
         }
 
-        object ScanResult {
-            // DataElements:ScanResult
+        %read-only object ScanResult [] {
+            counted with ScanResultNumberOfEntries;
         }
     }
 }
