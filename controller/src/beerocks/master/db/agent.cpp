@@ -17,7 +17,8 @@ std::ostream &operator<<(std::ostream &os, const sAgent::sRadio &radio)
        << " cac_completed: " << bool(radio.cac_completed) << std::endl
        << " on_dfs_reentry: " << bool(radio.on_dfs_reentry) << std::endl
        << " ap_activity_mode: "
-       << ((uint8_t(radio.ap_activity_mode)) ? "AP_ACTIVE_MODE" : "AP_IDLE_MODE") << std::endl;
+       << ((uint8_t(radio.ap_activity_mode)) ? "AP_ACTIVE_MODE" : "AP_IDLE_MODE") << std::endl
+       << " SupportedChannels: " << std::endl;
 
     for (auto val : radio.supported_channels) {
         if (val.channel > 0) {
