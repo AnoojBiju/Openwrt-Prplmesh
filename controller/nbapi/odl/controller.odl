@@ -137,8 +137,6 @@ include "radio.odl";
 include "bss.odl";
 include "capabilities.odl";
 include "scan_result.odl";
-include "channel_scan.odl";
-include "neighbor_bss.odl";
 include "sta.odl";
 include "association_event.odl";
 include "disassociation_event.odl";
