@@ -1839,29 +1839,23 @@ db::get_station_capabilities(const std::string &client_mac, bool is_bandtype_5gh
 
 bool db::set_hostap_ant_num(const sMacAddr &mac, beerocks::eWiFiAntNum ant_num)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return -1;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE) {
-        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
+    auto radio = get_radio_by_uid(mac);
+    if (!radio) {
+        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
         return -1;
     }
-    n->capabilities.ant_num = ant_num;
+    radio->ant_num = ant_num;
     return true;
 }
 
 beerocks::eWiFiAntNum db::get_hostap_ant_num(const sMacAddr &mac)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return beerocks::ANT_NONE;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE) {
-        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
+    auto radio = get_radio_by_uid(mac);
+    if (!radio) {
+        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
         return beerocks::ANT_NONE;
     }
-    return beerocks::eWiFiAntNum(n->capabilities.ant_num);
+    return beerocks::eWiFiAntNum(radio->ant_num);
 }
 
 bool db::set_hostap_ant_gain(const sMacAddr &al_mac, const sMacAddr &mac, int ant_gain)

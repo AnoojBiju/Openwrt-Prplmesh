@@ -28,6 +28,7 @@ std::ostream &operator<<(std::ostream &os, const sAgent::sRadio &radio)
     }
 
     os << " AntGain: " << int(radio.ant_gain) << std::endl
+       << " AntNum: " << int(radio.ant_num) << std::endl
        << " ConductedPower: " << int(radio.tx_power) << std::endl
        << " Statistics:" << std::endl
        << "   LastUpdate: "

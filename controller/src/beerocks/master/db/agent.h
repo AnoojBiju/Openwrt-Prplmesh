@@ -70,6 +70,7 @@ public:
         std::vector<beerocks::message::sWifiChannel> supported_channels;
         uint8_t operating_class = 0;
         int ant_gain            = 0;
+        uint8_t ant_num         = 0;
         int tx_power            = 0;
         std::string ssid;
         beerocks::eRadioBandCapability capability = beerocks::SUBBAND_CAPABILITY_UNKNOWN;

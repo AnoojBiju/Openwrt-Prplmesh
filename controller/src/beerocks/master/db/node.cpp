@@ -161,8 +161,7 @@ std::ostream &operator<<(std::ostream &os, const node &n)
            << " ChannelBandwidth: " << int(n.bandwidth) << std::endl
            << " ChannelExtAboveSecondary: " << bool(n.channel_ext_above_secondary) << std::endl
            << " Radio Identifier: " << n.radio_identifier << std::endl
-           << " SupportedChannels: " << std::endl
-           << " AntNum: " << int(n.capabilities.ant_num) << std::endl;
+           << " SupportedChannels: " << std::endl;
     }
 
     return (os);
