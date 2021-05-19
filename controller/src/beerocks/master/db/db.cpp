@@ -517,12 +517,16 @@ int db::get_node_channel(const std::string &mac)
 
 int db::get_hostap_operating_class(const sMacAddr &mac)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << "radio " << mac << " does not exist!";
+    auto mac_str = tlvf::mac_to_string(mac);
+    auto n       = get_node(mac_str);
+    if (!n) {
+        LOG(WARNING) << "node " << mac_str << " does not exist!";
+        return 0;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || !n->hostap) {
+        LOG(WARNING) << "node " << mac_str << " is not a valid hostap!";
         return 0;
     }
-    return radio->operating_class;
+    return n->hostap->operating_class;
 }
 
 bool db::set_node_vap_id(const std::string &mac, int8_t vap_id)
@@ -595,54 +599,68 @@ bool db::set_global_restricted_channels(const uint8_t *restricted_channels)
 
 std::vector<uint8_t> db::get_global_restricted_channels() { return global_restricted_channels; }
 
-bool db::set_hostap_conf_restricted_channels(const sMacAddr &radio_mac,
+bool db::set_hostap_conf_restricted_channels(const sMacAddr &hostap_mac,
                                              const uint8_t *restricted_channels)
 {
-    auto radio = get_radio_by_uid(radio_mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << radio_mac << " does not exist!";
+    auto n = get_node(hostap_mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << hostap_mac << " does not exist!";
+        return false;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << hostap_mac << " is not a valid hostap!";
         return false;
     } else if (!restricted_channels) {
-        LOG(WARNING) << __FUNCTION__ << "radio " << radio_mac << " restricted_channels not valid";
+        LOG(WARNING) << __FUNCTION__ << "node " << hostap_mac << " restricted_channels not valid";
         return false;
     }
-    radio->conf_restricted_channels.clear();
+    n->hostap->conf_restricted_channels.clear();
     std::copy(restricted_channels, restricted_channels + message::RESTRICTED_CHANNEL_LENGTH,
-              std::back_inserter(radio->conf_restricted_channels));
-    for (const auto elm : radio->conf_restricted_channels) {
+              std::back_inserter(n->hostap->conf_restricted_channels));
+    for (auto elm : n->hostap->conf_restricted_channels) {
         LOG(WARNING) << __FUNCTION__ << " elm = " << int(elm);
     }
     return true;
 }
 
-std::vector<uint8_t> db::get_hostap_conf_restricted_channels(const sMacAddr &radio_mac)
+std::vector<uint8_t> db::get_hostap_conf_restricted_channels(const sMacAddr &hostap_mac)
 {
-    auto radio = get_radio_by_uid(radio_mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << radio_mac << " does not exist!";
+    auto n = get_node(hostap_mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << hostap_mac << " does not exist!";
+        return std::vector<uint8_t>();
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << hostap_mac << " is not a valid hostap!";
         return std::vector<uint8_t>();
     }
-    return radio->conf_restricted_channels;
+    return n->hostap->conf_restricted_channels;
 }
 
 bool db::fill_radio_channel_scan_capabilites(
     const sMacAddr &radio_mac, wfa_map::cRadiosWithScanCapabilities &radio_capabilities)
 {
     LOG(DEBUG) << "Fill radio channel scan capabilities for " << radio_mac;
-    auto radio = get_radio_by_uid(radio_mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << radio_mac << " does not exist!";
+    auto node = get_node(radio_mac);
+    if (!node) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << radio_mac << " does not exist!";
         return false;
     }
 
-    radio->scan_capabilities.on_boot_only          = radio_capabilities.capabilities().on_boot_only;
-    radio->scan_capabilities.scan_impact           = radio_capabilities.capabilities().scan_impact;
-    radio->scan_capabilities.minimum_scan_interval = radio_capabilities.minimum_scan_interval();
+    if (node->get_type() != beerocks::TYPE_SLAVE || node->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << radio_mac << " is not a valid radio!";
+        return false;
+    }
+
+    node->hostap->scan_capabilities.on_boot_only = radio_capabilities.capabilities().on_boot_only;
+    node->hostap->scan_capabilities.scan_impact  = radio_capabilities.capabilities().scan_impact;
+    node->hostap->scan_capabilities.minimum_scan_interval =
+        radio_capabilities.minimum_scan_interval();
 
     std::stringstream ss;
-    ss << "on_boot_only=" << std::hex << int(radio->scan_capabilities.on_boot_only) << std::endl
-       << "scan_impact=" << std::oct << int(radio->scan_capabilities.scan_impact) << std::endl
-       << "minimum_scan_interval=" << int(radio->scan_capabilities.minimum_scan_interval)
+    ss << "on_boot_only=" << std::hex << int(node->hostap->scan_capabilities.on_boot_only)
+       << std::endl
+       << "scan_impact=" << std::oct << int(node->hostap->scan_capabilities.scan_impact)
+       << std::endl
+       << "minimum_scan_interval=" << int(node->hostap->scan_capabilities.minimum_scan_interval)
        << std::endl;
 
     auto operating_classes_list_length = radio_capabilities.operating_classes_list_length();
@@ -668,7 +686,7 @@ bool db::fill_radio_channel_scan_capabilites(
         }
 
         //std::vector<beerocks::message::sWifiChannel> channels_list;
-        auto &operating_classes = radio->scan_capabilities.operating_classes;
+        auto &operating_classes = node->hostap->scan_capabilities.operating_classes;
         operating_classes.clear();
         for (int ch_idx = 0; ch_idx < channel_list_length; ch_idx++) {
             auto channel = operating_class_struct.channel_list(ch_idx);
@@ -884,18 +902,14 @@ std::unordered_map<sMacAddr, son::node::ap_metrics_data> &db::get_ap_metric_data
 
 bool db::set_hostap_active(const sMacAddr &mac, bool active)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
-        return false;
-    }
-    radio->active = active;
-
     auto n = get_node(mac);
     if (!n) {
         LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
         return false;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        return false;
     }
+    n->hostap->active = active;
 
     // Enabled variable is a part of Radio data element and
     // need to get path like Controller.Device.{i}.Radio.{i}. for setting Enabled variable
@@ -916,34 +930,43 @@ bool db::set_hostap_active(const sMacAddr &mac, bool active)
 
 bool db::is_hostap_active(const sMacAddr &mac)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return false;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return false;
     }
-    return radio->active;
+    return n->hostap->active;
 }
 
 bool db::set_hostap_backhaul_manager(const sMacAddr &al_mac, const sMacAddr &mac,
                                      bool is_backhaul_manager)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return false;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return false;
     }
-    radio->is_backhaul_manager = is_backhaul_manager;
+    n->hostap->is_backhaul_manager = is_backhaul_manager;
     return true;
 }
 
 bool db::is_hostap_backhaul_manager(const sMacAddr &mac)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return false;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return false;
     }
-    return radio->is_backhaul_manager;
+    return n->hostap->is_backhaul_manager;
 }
 
 std::string db::get_hostap_backhaul_manager(const std::string &ire)
@@ -1847,44 +1870,56 @@ beerocks::eWiFiAntNum db::get_hostap_ant_num(const sMacAddr &mac)
 
 bool db::set_hostap_ant_gain(const sMacAddr &al_mac, const sMacAddr &mac, int ant_gain)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return false;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return false;
     }
-    radio->ant_gain = ant_gain;
+    n->hostap->ant_gain = ant_gain;
     return true;
 }
 
 int db::get_hostap_ant_gain(const sMacAddr &mac)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return -1;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return -1;
     }
-    return radio->ant_gain;
+    return n->hostap->ant_gain;
 }
 
 bool db::set_hostap_tx_power(const sMacAddr &al_mac, const sMacAddr &mac, int tx_power)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return false;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return false;
     }
-    radio->tx_power = tx_power;
+    n->hostap->tx_power = tx_power;
     return true;
 }
 
 int db::get_hostap_tx_power(const sMacAddr &mac)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return -1;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return -1;
     }
-    return radio->tx_power;
+    return n->hostap->tx_power;
 }
 
 bool db::set_hostap_supported_channels(const sMacAddr &mac,
@@ -1894,29 +1929,27 @@ bool db::set_hostap_supported_channels(const sMacAddr &mac,
     if (!n) {
         LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
         return false;
-    }
-
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return false;
     }
-
     std::vector<beerocks::message::sWifiChannel> supported_channels_(channels, channels + length);
-    radio->supported_channels = supported_channels_;
+    n->hostap->supported_channels = supported_channels_;
 
-    if (radio->supported_channels.size() == 0) {
+    if (n->hostap->supported_channels.size() == 0) {
         LOG(ERROR) << "No supported channels";
         return false;
     }
 
-    if (wireless_utils::which_freq(radio->supported_channels[0].channel) == eFreqType::FREQ_5G) {
+    if (wireless_utils::which_freq(n->hostap->supported_channels[0].channel) ==
+        eFreqType::FREQ_5G) {
         n->supports_5ghz = true;
-    } else if (wireless_utils::which_freq(radio->supported_channels[0].channel) ==
+    } else if (wireless_utils::which_freq(n->hostap->supported_channels[0].channel) ==
                eFreqType::FREQ_24G) {
         n->supports_24ghz = true;
     } else {
-        LOG(ERROR) << "unknown frequency! channel:" << int(radio->supported_channels[0].channel);
+        LOG(ERROR) << "unknown frequency! channel:"
+                   << int(n->hostap->supported_channels[0].channel);
         return false;
     }
 
@@ -1925,12 +1958,15 @@ bool db::set_hostap_supported_channels(const sMacAddr &mac,
 
 std::vector<beerocks::message::sWifiChannel> db::get_hostap_supported_channels(const sMacAddr &mac)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return std::vector<beerocks::message::sWifiChannel>();
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return std::vector<beerocks::message::sWifiChannel>();
     }
-    return radio->supported_channels;
+    return n->hostap->supported_channels;
 }
 
 std::string db::get_hostap_supported_channels_string(const sMacAddr &radio_mac)
@@ -2011,23 +2047,29 @@ bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t
 bool db::set_hostap_band_capability(const sMacAddr &al_mac, const sMacAddr &mac,
                                     beerocks::eRadioBandCapability capability)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return false;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return false;
     }
-    radio->capability = capability;
+    n->hostap->capability = capability;
     return true;
 }
 
 beerocks::eRadioBandCapability db::get_hostap_band_capability(const sMacAddr &mac)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return beerocks::SUBBAND_CAPABILITY_UNKNOWN;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return beerocks::SUBBAND_CAPABILITY_UNKNOWN;
     }
-    return radio->capability;
+    return n->hostap->capability;
 }
 
 bool db::capability_check(const std::string &mac, int channel)
@@ -2178,25 +2220,31 @@ bool db::get_node_11v_capability(const std::string &mac)
 bool db::set_hostap_vap_list(const sMacAddr &mac,
                              const std::unordered_map<int8_t, sVapElement> &vap_list)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return false;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return false;
     }
-    radio->vaps_info = vap_list;
+    n->hostap->vaps_info = vap_list;
     return true;
 }
 
 std::unordered_map<int8_t, sVapElement> &db::get_hostap_vap_list(const sMacAddr &mac)
 {
     static std::unordered_map<int8_t, sVapElement> invalid_vap_list;
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return invalid_vap_list;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " is not a valid hostap!";
         return invalid_vap_list;
     }
 
-    return radio->vaps_info;
+    return n->hostap->vaps_info;
 }
 
 bool db::remove_vap(const sMacAddr &radio_mac, int vap_id)
@@ -2315,12 +2363,15 @@ std::set<std::string> db::get_hostap_vaps_bssids(const std::string &mac)
 
 std::string db::get_hostap_ssid(const sMacAddr &mac)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return std::string();
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return std::string();
     }
-    for (auto const &it : radio->vaps_info) {
+    for (auto const &it : n->hostap->vaps_info) {
         if (tlvf::mac_from_string(it.second.mac) == mac) {
             return it.second.ssid;
         }
@@ -2356,17 +2407,20 @@ bool db::is_vap_on_steer_list(const sMacAddr &bssid)
 
 std::string db::get_hostap_vap_with_ssid(const sMacAddr &mac, const std::string &ssid)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return std::string();
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return std::string();
     }
 
     auto it = std::find_if(
-        radio->vaps_info.begin(), radio->vaps_info.end(),
+        n->hostap->vaps_info.begin(), n->hostap->vaps_info.end(),
         [&](const std::pair<int8_t, sVapElement> &vap) { return vap.second.ssid == ssid; });
 
-    if (it == radio->vaps_info.end()) {
+    if (it == n->hostap->vaps_info.end()) {
         // no vap with same ssid is found
         return std::string();
     }
@@ -2375,15 +2429,18 @@ std::string db::get_hostap_vap_with_ssid(const sMacAddr &mac, const std::string 
 
 sMacAddr db::get_hostap_vap_mac(const sMacAddr &mac, int vap_id)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return beerocks::net::network_utils::ZERO_MAC;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return beerocks::net::network_utils::ZERO_MAC;
     }
 
-    auto it = radio->vaps_info.find(vap_id);
-    return (it != radio->vaps_info.end()) ? tlvf::mac_from_string(it->second.mac)
-                                          : network_utils::ZERO_MAC;
+    auto it = n->hostap->vaps_info.find(vap_id);
+    return (it != n->hostap->vaps_info.end()) ? tlvf::mac_from_string(it->second.mac)
+                                              : network_utils::ZERO_MAC;
 }
 
 std::string db::get_node_parent_radio(const std::string &mac)
@@ -2413,13 +2470,16 @@ std::string db::get_node_data_model_path(const sMacAddr &mac)
 
 int8_t db::get_hostap_vap_id(const sMacAddr &mac)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return IFACE_ID_INVALID;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return IFACE_ID_INVALID;
     }
 
-    for (auto const &it : radio->vaps_info) {
+    for (auto const &it : n->hostap->vaps_info) {
         if (tlvf::mac_from_string(it.second.mac) == mac) {
             return it.first;
         }
@@ -2430,47 +2490,59 @@ int8_t db::get_hostap_vap_id(const sMacAddr &mac)
 bool db::set_hostap_iface_name(const sMacAddr &al_mac, const sMacAddr &mac,
                                const std::string &iface_name)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return false;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return false;
     }
 
-    radio->iface_name = iface_name;
+    n->hostap->iface_name = iface_name;
     return true;
 }
 
 std::string db::get_hostap_iface_name(const sMacAddr &mac)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return "INVALID";
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return "INVALID";
     }
 
-    return radio->iface_name;
+    return n->hostap->iface_name;
 }
 
 bool db::set_hostap_iface_type(const sMacAddr &al_mac, const sMacAddr &mac,
                                beerocks::eIfaceType iface_type)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return false;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return false;
     }
-    radio->iface_type = iface_type;
+    n->hostap->iface_type = iface_type;
     return true;
 }
 
 beerocks::eIfaceType db::get_hostap_iface_type(const sMacAddr &mac)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return beerocks::IFACE_TYPE_UNSUPPORTED;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return beerocks::IFACE_TYPE_UNSUPPORTED;
     }
-    return radio->iface_type;
+    return n->hostap->iface_type;
 }
 
 bool db::set_node_backhaul_iface_type(const std::string &mac, beerocks::eIfaceType iface_type)
@@ -2492,25 +2564,31 @@ bool db::set_node_backhaul_iface_type(const std::string &mac, beerocks::eIfaceTy
 bool db::set_hostap_driver_version(const sMacAddr &al_mac, const sMacAddr &mac,
                                    const std::string &version)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
+    auto n = get_node(mac);
+    if (!n) {
         LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return false;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return false;
     }
 
-    radio->driver_version = version;
+    n->hostap->driver_version = version;
     return true;
 }
 
 std::string db::get_hostap_driver_version(const sMacAddr &mac)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return "INVALID";
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return "INVALID";
     }
 
-    return radio->driver_version;
+    return n->hostap->driver_version;
 }
 
 beerocks::eIfaceType db::get_node_backhaul_iface_type(const std::string &mac)
@@ -2541,31 +2619,38 @@ std::string db::get_5ghz_sibling_hostap(const std::string &mac)
 
 bool db::set_hostap_activity_mode(const sMacAddr &mac, eApActiveMode ap_activity_mode)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(ERROR) << "radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(ERROR) << "node " << mac << " does not exist!";
+        return false;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
         return false;
     }
-    radio->ap_activity_mode = ap_activity_mode;
+    n->hostap->ap_activity_mode = ap_activity_mode;
     return true;
 }
 
 beerocks::eApActiveMode db::get_hostap_activity_mode(const sMacAddr &mac)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(ERROR) << "radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(ERROR) << "node " << mac << " does not exist!";
+        return AP_INVALID_MODE;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
         return AP_INVALID_MODE;
     }
-    return radio->ap_activity_mode;
+    return n->hostap->ap_activity_mode;
 }
 
 bool db::set_radar_hit_stats(const sMacAddr &mac, uint8_t channel, uint8_t bw, bool is_csa_entry)
 {
-    auto radio = get_radio_by_uid(mac);
+    std::shared_ptr<node> n = get_node(mac);
 
-    if (!radio) {
-        LOG(ERROR) << "radio " << mac << " not found.... ";
+    if (!n) {
+        LOG(ERROR) << "node not found.... ";
+        return false;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(ERROR) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return false;
     }
     sWifiChannelRadarStats radar_statistics = {
@@ -2573,15 +2658,15 @@ bool db::set_radar_hit_stats(const sMacAddr &mac, uint8_t channel, uint8_t bw, b
 
     //CSA enter channel
     if (is_csa_entry) {
-        if (radio->Radar_stats.size() == RADAR_STATS_LIST_MAX) {
-            radio->Radar_stats.pop_back();
+        if (n->hostap->Radar_stats.size() == RADAR_STATS_LIST_MAX) {
+            n->hostap->Radar_stats.pop_back();
         }
         auto now                             = std::chrono::steady_clock::now();
         radar_statistics.csa_enter_timestamp = now;
         radar_statistics.csa_exit_timestamp  = now;
-        radio->Radar_stats.push_front(radar_statistics);
+        n->hostap->Radar_stats.push_front(radar_statistics);
         // for_each(begin(n.hostap->Radar_stats) , end(n.hostap->Radar_stats), [&](sWifiChannelRadarStats radar_stat){
-        for (auto &radar_stat : radio->Radar_stats) {
+        for (auto &radar_stat : n->hostap->Radar_stats) {
             auto delta_radar = std::chrono::duration_cast<std::chrono::seconds>(
                                    radar_stat.csa_exit_timestamp - radar_stat.csa_enter_timestamp)
                                    .count();
@@ -2594,7 +2679,7 @@ bool db::set_radar_hit_stats(const sMacAddr &mac, uint8_t channel, uint8_t bw, b
         return true;
     }
     //CSA exit channel
-    radio->Radar_stats.front().csa_exit_timestamp = std::chrono::steady_clock::now();
+    n->hostap->Radar_stats.front().csa_exit_timestamp = std::chrono::steady_clock::now();
 
     return true;
 }
@@ -2602,10 +2687,13 @@ bool db::set_radar_hit_stats(const sMacAddr &mac, uint8_t channel, uint8_t bw, b
 bool db::set_supported_channel_radar_affected(const sMacAddr &mac,
                                               const std::vector<uint8_t> &channels, bool affected)
 {
-    auto radio = get_radio_by_uid(mac);
+    std::shared_ptr<node> n = get_node(mac);
 
-    if (!radio) {
-        LOG(ERROR) << "radio " << mac << " not found.... ";
+    if (!n) {
+        LOG(ERROR) << "node not found.... ";
+        return false;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(ERROR) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return false;
     }
     auto channels_count = channels.size();
@@ -2614,12 +2702,13 @@ bool db::set_supported_channel_radar_affected(const sMacAddr &mac,
         LOG(ERROR) << "the given channel list must contain at least one value";
         return false;
     }
-    auto it = find_if(std::begin(radio->supported_channels), std::end(radio->supported_channels),
-                      [&](beerocks::message::sWifiChannel supported_channel) {
-                          return supported_channel.channel == *channels.begin();
-                      });
+    auto it =
+        find_if(std::begin(n->hostap->supported_channels), std::end(n->hostap->supported_channels),
+                [&](beerocks::message::sWifiChannel supported_channel) {
+                    return supported_channel.channel == *channels.begin();
+                });
 
-    if (it == std::end(radio->supported_channels)) {
+    if (it == std::end(n->hostap->supported_channels)) {
         LOG(ERROR) << "channels not found ,not suppose to happen!!";
         return false;
     }
@@ -2641,89 +2730,110 @@ bool db::set_supported_channel_radar_affected(const sMacAddr &mac,
 
 bool db::set_hostap_is_dfs(const sMacAddr &mac, bool enable)
 {
-    auto radio = get_radio_by_uid(mac);
+    std::shared_ptr<node> n = get_node(mac);
 
-    if (!radio) {
-        LOG(ERROR) << "radio " << mac << " not found.... ";
+    if (!n) {
+        LOG(ERROR) << "node not found.... ";
+        return false;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return false;
     }
-    radio->is_dfs = enable;
+    n->hostap->is_dfs = enable;
     return true;
 }
 
 bool db::get_hostap_is_dfs(const sMacAddr &mac)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto n = get_node(mac);
 
-    if (!radio) {
-        LOG(ERROR) << "radio " << mac << " not found.... ";
+    if (!n) {
+        LOG(ERROR) << "node not found.... ";
+        return false;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(ERROR) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return false;
     }
 
-    return radio->is_dfs;
+    return n->hostap->is_dfs;
 }
 
 bool db::set_hostap_cac_completed(const sMacAddr &mac, bool enable)
 {
-    auto radio = get_radio_by_uid(mac);
+    std::shared_ptr<node> n = get_node(mac);
 
-    if (!radio) {
-        LOG(ERROR) << "radio " << mac << " not found.... ";
+    if (!n) {
+        LOG(ERROR) << "node not found.... ";
+        return false;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return false;
     }
-    radio->cac_completed = enable;
+    n->hostap->cac_completed = enable;
     return true;
 }
 
 bool db::get_hostap_cac_completed(const sMacAddr &mac)
 {
-    auto radio = get_radio_by_uid(mac);
+    std::shared_ptr<node> n = get_node(mac);
 
-    if (!radio) {
-        LOG(ERROR) << "radio " << mac << " not found.... ";
+    if (!n) {
+        LOG(ERROR) << "node not found.... ";
+        return false;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return false;
     }
 
-    return radio->cac_completed;
+    return n->hostap->cac_completed;
 }
 
 bool db::set_hostap_on_dfs_reentry(const sMacAddr &mac, bool enable)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto n = get_node(mac);
 
-    if (!radio) {
-        LOG(ERROR) << "radio " << mac << " not found.... ";
+    if (!n) {
+        LOG(ERROR) << "node not found.... ";
+        return false;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(ERROR) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return false;
     }
 
-    radio->on_dfs_reentry = enable;
+    n->hostap->on_dfs_reentry = enable;
     return true;
 }
 
 bool db::get_hostap_on_dfs_reentry(const sMacAddr &mac)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto n = get_node(mac);
 
-    if (!radio) {
-        LOG(ERROR) << "radio " << mac << " not found.... ";
+    if (!n) {
+        LOG(ERROR) << "node not found.... ";
+        return false;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(ERROR) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return false;
     }
 
-    return radio->on_dfs_reentry;
+    return n->hostap->on_dfs_reentry;
 }
 
 bool db::set_hostap_dfs_reentry_clients(const sMacAddr &mac,
                                         const std::set<std::string> &dfs_reentry_clients)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto n = get_node(mac);
 
-    if (!radio) {
-        LOG(ERROR) << "radio " << mac << " not found.... ";
+    if (!n) {
+        LOG(ERROR) << "node not found.... ";
+        return false;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(ERROR) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return false;
     }
 
-    radio->dfs_reentry_clients = dfs_reentry_clients;
-    for_each(begin(radio->dfs_reentry_clients), end(radio->dfs_reentry_clients),
+    n->hostap->dfs_reentry_clients = dfs_reentry_clients;
+    for_each(begin(n->hostap->dfs_reentry_clients), end(n->hostap->dfs_reentry_clients),
              [&](const std::string &dfs_reentry_client) {
                  LOG(DEBUG) << "dfs_reentry_client = " << dfs_reentry_client;
              });
@@ -2732,56 +2842,67 @@ bool db::set_hostap_dfs_reentry_clients(const sMacAddr &mac,
 
 std::set<std::string> db::get_hostap_dfs_reentry_clients(const sMacAddr &mac)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto n = get_node(mac);
 
     std::set<std::string> ret;
-    if (!radio) {
-        LOG(ERROR) << "radio " << mac << " not found.... ";
+    if (!n) {
+        LOG(ERROR) << "node not found.... ";
+        return ret;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(ERROR) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return ret;
     }
-    for_each(begin(radio->dfs_reentry_clients), end(radio->dfs_reentry_clients),
+    for_each(begin(n->hostap->dfs_reentry_clients), end(n->hostap->dfs_reentry_clients),
              [&](const std::string &dfs_reentry_client) {
                  LOG(DEBUG) << "dfs_reentry_client = " << dfs_reentry_client;
              });
-    return radio->dfs_reentry_clients;
+    return n->hostap->dfs_reentry_clients;
 }
 
 bool db::clear_hostap_dfs_reentry_clients(const sMacAddr &mac)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto n = get_node(mac);
 
-    if (!radio) {
-        LOG(ERROR) << "radio " << mac << " not found.... ";
+    if (!n) {
+        LOG(ERROR) << "node not found.... ";
+        return false;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(ERROR) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return false;
     }
 
-    radio->dfs_reentry_clients.clear();
+    n->hostap->dfs_reentry_clients.clear();
     return true;
 }
 
 bool db::set_hostap_is_acs_enabled(const sMacAddr &al_mac, const sMacAddr &mac, bool enable)
 {
-    auto radio = get_radio_by_uid(mac);
-
-    if (!radio) {
-        LOG(ERROR) << "radio " << mac << " not found.... ";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(ERROR) << "node not found.... ";
+        return false;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(ERROR) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return false;
     }
     LOG(DEBUG) << __FUNCTION__ << ", enable = " << int(enable);
-    radio->is_acs_enabled = enable;
+    n->hostap->is_acs_enabled = enable;
     return true;
 }
 
 bool db::get_hostap_is_acs_enabled(const sMacAddr &mac)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto n = get_node(mac);
 
-    if (!radio) {
-        LOG(ERROR) << "radio " << mac << " not found.... ";
+    if (!n) {
+        LOG(ERROR) << "node not found.... ";
+        return false;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(ERROR) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return false;
     }
-    LOG(DEBUG) << __FUNCTION__ << " is_acs_enabled = " << int(radio->is_acs_enabled);
-    return radio->is_acs_enabled;
+    LOG(DEBUG) << __FUNCTION__ << "n->hostap->is_acs_enabled = " << int(n->hostap->is_acs_enabled);
+    return n->hostap->is_acs_enabled;
 }
 
 //
@@ -4216,16 +4337,18 @@ double db::get_node_cross_estimated_tx_phy_rate(const std::string &mac)
 
 bool db::set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApStatsParams *params)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return false;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return false;
     }
-
     if (params == nullptr) { // clear stats
-        radio->stats_info = std::make_shared<node::radio::ap_stats_params>();
+        n->hostap->stats_info = std::make_shared<node::radio::ap_stats_params>();
     } else {
-        auto p                          = radio->stats_info;
+        auto p                          = n->hostap->stats_info;
         p->active_sta_count             = params->active_client_count;
         p->rx_packets                   = params->rx_packets;
         p->tx_packets                   = params->tx_packets;
@@ -4240,6 +4363,12 @@ bool db::set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApS
         p->total_client_rx_load_percent = params->client_rx_load_percent;
         p->stats_delta_ms               = params->stats_delta_ms;
         p->timestamp                    = std::chrono::steady_clock::now();
+
+        auto radio_path = n->dm_path;
+
+        if (radio_path.empty()) {
+            return true;
+        }
     }
 
     return true;
@@ -4438,12 +4567,15 @@ bool db::is_commit_to_persistent_db_required() { return persistent_db_changes_ma
 
 int db::get_hostap_stats_measurement_duration(const sMacAddr &mac)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return -1;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return -1;
     }
-    return radio->stats_info->stats_delta_ms;
+    return n->hostap->stats_info->stats_delta_ms;
 }
 
 std::chrono::steady_clock::time_point db::get_node_stats_info_timestamp(const std::string &mac)
@@ -4457,12 +4589,15 @@ std::chrono::steady_clock::time_point db::get_node_stats_info_timestamp(const st
 
 std::chrono::steady_clock::time_point db::get_hostap_stats_info_timestamp(const sMacAddr &mac)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        std::chrono::steady_clock::time_point();
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         std::chrono::steady_clock::time_point();
     }
-    return radio->stats_info->timestamp;
+    return n->hostap->stats_info->timestamp;
 }
 
 uint32_t db::get_node_rx_bytes(const std::string &mac)
@@ -4485,22 +4620,28 @@ uint32_t db::get_node_tx_bytes(const std::string &mac)
 
 uint32_t db::get_hostap_total_sta_rx_bytes(const sMacAddr &mac)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return -1;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return -1;
     }
-    return radio->stats_info->rx_bytes;
+    return n->hostap->stats_info->rx_bytes;
 }
 
 uint32_t db::get_hostap_total_sta_tx_bytes(const sMacAddr &mac)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return -1;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return -1;
     }
-    return radio->stats_info->tx_bytes;
+    return n->hostap->stats_info->tx_bytes;
 }
 
 double db::get_node_rx_bitrate(const std::string &mac)
@@ -4543,32 +4684,41 @@ uint16_t db::get_node_tx_phy_rate_100kb(const std::string &mac)
 
 int db::get_hostap_channel_load_percent(const sMacAddr &mac)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return -1;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return -1;
     }
-    return radio->stats_info->channel_load_percent;
+    return n->hostap->stats_info->channel_load_percent;
 }
 
 int db::get_hostap_total_client_tx_load_percent(const sMacAddr &mac)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return -1;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return -1;
     }
-    return radio->stats_info->total_client_tx_load_percent;
+    return n->hostap->stats_info->total_client_tx_load_percent;
 }
 
 int db::get_hostap_total_client_rx_load_percent(const sMacAddr &mac)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return -1;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return -1;
     }
-    return radio->stats_info->total_client_rx_load_percent;
+    return n->hostap->stats_info->total_client_rx_load_percent;
 }
 
 int db::get_node_rx_load_percent(const std::string &mac)
@@ -4713,31 +4863,29 @@ bool db::set_node_channel_bw(const sMacAddr &mac, int channel, beerocks::eWiFiBa
         LOG(ERROR) << "node " << mac << "does not exist ";
         return false;
     }
-
-    auto radio = get_radio_by_uid(mac);
-    if (radio) {
-        if (radio != nullptr) {
-            radio->channel_ext_above_primary = channel_ext_above_primary;
-            radio->vht_center_frequency      = vht_center_frequency;
-            auto is_dfs                      = wireless_utils::is_dfs_channel(channel);
+    if (n->get_type() == beerocks::TYPE_SLAVE) {
+        if (n->hostap != nullptr) {
+            n->hostap->channel_ext_above_primary = channel_ext_above_primary;
+            n->hostap->vht_center_frequency      = vht_center_frequency;
+            auto is_dfs                          = wireless_utils::is_dfs_channel(channel);
             set_hostap_is_dfs(mac, is_dfs);
             if (channel >= 1 && channel <= 13) {
-                radio->operating_class = 81;
+                n->hostap->operating_class = 81;
             } else if (channel == 14) {
-                radio->operating_class = 82;
+                n->hostap->operating_class = 82;
             } else if (channel >= 36 && channel <= 48) {
-                radio->operating_class = 115;
+                n->hostap->operating_class = 115;
             } else if (channel >= 52 && channel <= 64) {
-                radio->operating_class = 118;
+                n->hostap->operating_class = 118;
             } else if (channel >= 100 && channel <= 140) {
-                radio->operating_class = 121;
+                n->hostap->operating_class = 121;
             } else if (channel >= 149 && channel <= 169) {
-                radio->operating_class = 125;
+                n->hostap->operating_class = 125;
             } else {
                 LOG(ERROR) << "Unsupported Operating Class for channel=" << channel;
             }
         } else {
-            LOG(ERROR) << __FUNCTION__ << " - radio " << mac << " is null!";
+            LOG(ERROR) << __FUNCTION__ << " - node " << mac << " is null!";
             return false;
         }
     }
@@ -4789,14 +4937,17 @@ bool db::get_node_channel_ext_above_secondary(const std::string &mac)
     return n->channel_ext_above_secondary;
 }
 
-bool db::get_hostap_channel_ext_above_primary(const sMacAddr &radio_mac)
+bool db::get_hostap_channel_ext_above_primary(const sMacAddr &hostap_mac)
 {
-    auto radio = get_radio_by_uid(radio_mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << radio_mac << " does not exist!";
+    auto n = get_node(hostap_mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << hostap_mac << " does not exist!";
+        return -1;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
+        LOG(WARNING) << __FUNCTION__ << "node " << hostap_mac << " is not a valid hostap!";
         return -1;
     }
-    return radio->channel_ext_above_primary;
+    return n->hostap->channel_ext_above_primary;
 }
 
 int db::get_node_bw_int(const std::string &mac)
@@ -4821,12 +4972,14 @@ std::string db::get_node_key(const std::string &al_mac, const std::string &ruid)
 
 uint16_t db::get_hostap_vht_center_frequency(const sMacAddr &mac)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
+    auto n = get_node(mac);
+    if (!n) {
+        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        return 0;
+    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
         return 0;
     }
-    return radio->vht_center_frequency;
+    return n->hostap->vht_center_frequency;
 }
 
 //
