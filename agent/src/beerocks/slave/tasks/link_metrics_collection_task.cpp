@@ -20,6 +20,7 @@
 #include <tlvf/ieee_1905_1/tlvLinkMetricResultCode.h>
 #include <tlvf/ieee_1905_1/tlvReceiverLinkMetric.h>
 #include <tlvf/ieee_1905_1/tlvTransmitterLinkMetric.h>
+#include <tlvf/wfa_map/tlvApExtendedMetrics.h>
 #include <tlvf/wfa_map/tlvApMetricQuery.h>
 #include <tlvf/wfa_map/tlvAssociatedStaExtendedLinkMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
@@ -756,8 +757,18 @@ void LinkMetricsCollectionTask::recalculate_byte_units(ieee1905_1::CmduMessageRx
         recalculate_byte_units(sta_traffic->byte_recived());
     }
 
-    // AP Extended Metrics TLV values should also be recalculated.
-    // Will be done part of PPM-1170
+    for (auto &extended_metric : cmdu_rx.getClassList<wfa_map::tlvApExtendedMetrics>()) {
+        if (!extended_metric) {
+            LOG(ERROR) << "Failed to get class list for tlvApExtendedMetrics";
+            continue;
+        }
+        recalculate_byte_units(extended_metric->broadcast_bytes_sent());
+        recalculate_byte_units(extended_metric->broadcast_bytes_received());
+        recalculate_byte_units(extended_metric->multicast_bytes_sent());
+        recalculate_byte_units(extended_metric->multicast_bytes_received());
+        recalculate_byte_units(extended_metric->unicast_bytes_sent());
+        recalculate_byte_units(extended_metric->unicast_bytes_received());
+    }
 }
 
 void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -837,6 +848,17 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
             return;
         }
 
+        sApExtendedMetrics extended_metrics;
+
+        //TO DO: PPM-1388 Set correct values for this params.
+        extended_metrics.bssid                    = ap_metrics_tlv->bssid();
+        extended_metrics.broadcast_bytes_sent     = 0;
+        extended_metrics.broadcast_bytes_received = 0;
+        extended_metrics.multicast_bytes_sent     = 0;
+        extended_metrics.multicast_bytes_received = 0;
+        extended_metrics.unicast_bytes_sent       = 0;
+        extended_metrics.unicast_bytes_received   = 0;
+
         sApMetrics metric;
         // Copy data to the response vector
         metric.bssid               = ap_metrics_tlv->bssid();
@@ -879,7 +901,8 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
         }
 
         // Fill a response vector
-        m_ap_metric_response.push_back({metric, traffic_stats_response, link_metrics_response});
+        m_ap_metric_response.push_back(
+            {metric, extended_metrics, traffic_stats_response, link_metrics_response});
 
         // Remove an entry from the processed query
         m_ap_metric_query.erase(
@@ -924,6 +947,26 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
         std::copy_n(response.metric.estimated_service_info_field.begin(),
                     response.metric.estimated_service_info_field.size(),
                     ap_metrics_response_tlv->estimated_service_info_field());
+
+        auto ap_extended_metrics_tlv = m_cmdu_tx.addClass<wfa_map::tlvApExtendedMetrics>();
+
+        if (!ap_extended_metrics_tlv) {
+            LOG(ERROR) << "Failed addClass<wfa_map::tlvApExtendedMetrics>";
+            return;
+        }
+
+        ap_extended_metrics_tlv->bssid()              = response.extended_metric.bssid;
+        ap_extended_metrics_tlv->unicast_bytes_sent() = response.extended_metric.unicast_bytes_sent;
+        ap_extended_metrics_tlv->unicast_bytes_received() =
+            response.extended_metric.unicast_bytes_received;
+        ap_extended_metrics_tlv->broadcast_bytes_sent() =
+            response.extended_metric.broadcast_bytes_sent;
+        ap_extended_metrics_tlv->broadcast_bytes_received() =
+            response.extended_metric.broadcast_bytes_received;
+        ap_extended_metrics_tlv->multicast_bytes_sent() =
+            response.extended_metric.multicast_bytes_sent;
+        ap_extended_metrics_tlv->multicast_bytes_received() =
+            response.extended_metric.multicast_bytes_received;
 
         for (auto &stat : response.sta_traffic_stats) {
             auto sta_traffic_response_tlv =

@@ -241,8 +241,19 @@ private:
         std::vector<uint8_t> estimated_service_info_field;
     };
 
+    struct sApExtendedMetrics {
+        sMacAddr bssid;
+        uint32_t unicast_bytes_sent;
+        uint32_t unicast_bytes_received;
+        uint32_t broadcast_bytes_sent;
+        uint32_t broadcast_bytes_received;
+        uint32_t multicast_bytes_sent;
+        uint32_t multicast_bytes_received;
+    };
+
     struct sApMetricsResponse {
         sApMetrics metric;
+        sApExtendedMetrics extended_metric;
         std::vector<sStaTrafficStats> sta_traffic_stats;
         std::vector<sStaLinkMetrics> sta_link_metrics;
     };
