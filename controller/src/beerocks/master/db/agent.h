@@ -176,8 +176,6 @@ public:
         std::list<beerocks_message::sChannelScanResults>
             single_scan_results; /**< single scan results list  */
 
-        std::string dm_path; /**< data model path */
-
         struct sBss {
             sBss()             = delete;
             sBss(const sBss &) = delete;
