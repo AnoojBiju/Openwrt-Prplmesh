@@ -1955,10 +1955,10 @@ private:
      * @param radio_mac mac address of radio which reporting operating class.
      * @param max_tx_power max transmit power.
      * @param op_class operating class.
-     * @param non_operable_channels list of non operable channels.
+     * @param non_operable_channels list of non oparable channels.
      * @return true on success, false otherwise.
      */
-    bool dm_add_ap_operating_classes(const sMacAddr &radio_mac, uint8_t max_tx_power,
+    bool dm_add_ap_operating_classes(const std::string &radio_mac, uint8_t max_tx_power,
                                      uint8_t op_class,
                                      const std::vector<uint8_t> &non_operable_channels);
 
