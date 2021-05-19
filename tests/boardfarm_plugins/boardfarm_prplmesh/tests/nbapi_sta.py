@@ -44,11 +44,6 @@ class NbapiSta(PrplMeshBaseTest):
             "DATA STA-UPDATE-STATS {} rssi=-38,-39,-40,-41 snr=38,39,40,41 "
             "uplink=1000 downlink=800".format(sta1.mac))
 
-        print("\nNetwork topology after settings:")
-        topology = self.get_topology()
-        for device in topology.values():
-            print(device)
-
         time_before_query = datetime.now()
         time_before_query = pytz.utc.localize(time_before_query)
 
@@ -67,12 +62,18 @@ class NbapiSta(PrplMeshBaseTest):
         debug("Check AP metrics response has STA Link Metrics")
         sta_link_metrics = self.check_cmdu_has_tlv_single(ap_metrics_resp, 0x96)
 
+        print("\nNetwork topology after settings:")
+        topology = self.get_topology()
+        for device in topology.values():
+            print(device)
+
         for radio in topology[agent.mac].radios.values():
             for bss in radio.vaps.values():
                 for sta in bss.clients.values():
                     sta_mac = controller.nbapi_get_parameter(sta.path, "MACAddress")
                     time_stamp = controller.nbapi_get_parameter(sta.path, "TimeStamp")
                     signal_strength = controller.nbapi_get_parameter(sta.path, "SignalStrength")
+                    time.sleep(3)  # This sleep needed by dhcp_task itself to register DHCP Leases.
                     ipv4_address = controller.nbapi_get_parameter(sta.path, "IPV4Address")
                     ipv6_address = controller.nbapi_get_parameter(sta.path, "IPV6Address")
                     hostname = controller.nbapi_get_parameter(sta.path, "Hostname")
@@ -96,9 +97,9 @@ class NbapiSta(PrplMeshBaseTest):
                                      sta_link_metrics.bss[0].down_rate)
                     self.assertEqual(sta.path, "EstMACDataRateUplink",
                                      sta_link_metrics.bss[0].up_rate)
-                    assert signal_strength == sta_link_metrics.bss[0].rssi, \
+                    assert signal_strength == sta_link_metrics.bss[0].rssi,\
                         f"Wrong value for SignalStrength {signal_strength}"
-                    assert sta_link_metrics.bss[0].bssid == bss.bssid, \
+                    assert sta_link_metrics.bss[0].bssid == bss.bssid,\
                         f"Wrong BSSID [{bss.bssid}] specified for sta {sta.mac}"
                     assert time_stamp != 0, "Value for TimeStamp is not specified."
 
