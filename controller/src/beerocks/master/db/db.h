@@ -448,11 +448,9 @@ public:
      * Path example: Controller.Network.Device.1.Radio.1.Capabilities.OperatingClasses
      *
      * @param radio_mac MAC address for Radio which reporting Operating Class
-     * @param al_mac AL MAC address for Radio
      * @return true on success, false otherwise.
      */
-    bool remove_hostap_supported_operating_classes(const sMacAddr &al_mac,
-                                                   const sMacAddr &radio_mac);
+    bool remove_hostap_supported_operating_classes(const sMacAddr &radio_mac);
 
     /**
      * @brief Adds Interface Object and updates Interface Data Model Object.
@@ -794,8 +792,8 @@ public:
     std::vector<beerocks::message::sWifiChannel> get_hostap_supported_channels(const sMacAddr &mac);
     std::string get_hostap_supported_channels_string(const sMacAddr &radio_mac);
 
-    bool add_hostap_supported_operating_class(const sMacAddr &al_mac, const sMacAddr &radio_mac,
-                                              uint8_t operating_class, uint8_t tx_power,
+    bool add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t operating_class,
+                                              uint8_t tx_power,
                                               const std::vector<uint8_t> &non_operable_channels);
 
     bool set_hostap_band_capability(const sMacAddr &al_mac, const sMacAddr &mac,
