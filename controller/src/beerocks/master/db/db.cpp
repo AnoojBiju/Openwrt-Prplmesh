@@ -108,6 +108,12 @@ std::pair<std::string, int> db::get_dm_index_from_path(const std::string &dm_pat
 std::shared_ptr<prplmesh::controller::db::sAgent::sRadio> db::get_radio(const sMacAddr &al_mac,
                                                                         const sMacAddr &radio_uid)
 {
+    auto node = get_node(radio_uid);
+    if (node && node->get_type() != beerocks::eType::TYPE_SLAVE) {
+        LOG(ERROR) << "Not returning radio for " << radio_uid << " since node type is not radio";
+        return nullptr;
+    }
+
     auto agent = m_agents.get(al_mac);
     if (!agent) {
         LOG(ERROR) << "No agent found for al_mac " << al_mac;
@@ -5265,6 +5271,12 @@ std::shared_ptr<node> db::get_node_verify_type(const sMacAddr &mac, beerocks::eT
 std::shared_ptr<prplmesh::controller::db::sAgent::sRadio>
 db::get_radio_by_uid(const sMacAddr &radio_uid)
 {
+    auto node = get_node(radio_uid);
+    if (node && node->get_type() != beerocks::eType::TYPE_SLAVE) {
+        LOG(ERROR) << "Not returning radio for " << radio_uid << " since node type is not radio";
+        return nullptr;
+    }
+
     for (auto &agent : m_agents) {
         auto radio = agent.second->radios.get(radio_uid);
         if (radio) {
