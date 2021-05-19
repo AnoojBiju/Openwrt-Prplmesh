@@ -448,11 +448,9 @@ public:
      * Path example: Controller.Network.Device.1.Radio.1.Capabilities.OperatingClasses
      *
      * @param radio_mac MAC address for Radio which reporting Operating Class
-     * @param al_mac AL MAC address for Radio
      * @return true on success, false otherwise.
      */
-    bool remove_hostap_supported_operating_classes(const sMacAddr &al_mac,
-                                                   const sMacAddr &radio_mac);
+    bool remove_hostap_supported_operating_classes(const sMacAddr &radio_mac);
 
     /**
      * @brief Adds Interface Object and updates Interface Data Model Object.
@@ -794,8 +792,8 @@ public:
     std::vector<beerocks::message::sWifiChannel> get_hostap_supported_channels(const sMacAddr &mac);
     std::string get_hostap_supported_channels_string(const sMacAddr &radio_mac);
 
-    bool add_hostap_supported_operating_class(const sMacAddr &al_mac, const sMacAddr &radio_mac,
-                                              uint8_t operating_class, uint8_t tx_power,
+    bool add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t operating_class,
+                                              uint8_t tx_power,
                                               const std::vector<uint8_t> &non_operable_channels);
 
     bool set_hostap_band_capability(const sMacAddr &al_mac, const sMacAddr &mac,
@@ -891,9 +889,9 @@ public:
 
     bool set_global_restricted_channels(const uint8_t *restricted_channels);
     std::vector<uint8_t> get_global_restricted_channels();
-    bool set_hostap_conf_restricted_channels(const sMacAddr &radio_mac,
+    bool set_hostap_conf_restricted_channels(const sMacAddr &hostap_mac,
                                              const uint8_t *restricted_channels);
-    std::vector<uint8_t> get_hostap_conf_restricted_channels(const sMacAddr &radio_mac);
+    std::vector<uint8_t> get_hostap_conf_restricted_channels(const sMacAddr &hostap_mac);
     bool
     fill_radio_channel_scan_capabilites(const sMacAddr &radio_mac,
                                         wfa_map::cRadiosWithScanCapabilities &radio_capabilities);
@@ -1476,7 +1474,7 @@ public:
                              uint16_t vht_center_frequency);
     beerocks::eWiFiBandwidth get_node_bw(const std::string &mac);
     int get_node_bw_int(const std::string &mac);
-    bool get_hostap_channel_ext_above_primary(const sMacAddr &radio_mac);
+    bool get_hostap_channel_ext_above_primary(const sMacAddr &hostap_mac);
     bool get_node_channel_ext_above_secondary(const std::string &mac);
     uint16_t get_hostap_vht_center_frequency(const sMacAddr &mac);
 
@@ -1787,8 +1785,7 @@ private:
      * @return std::shared_ptr<node> pointer to the node on success, nullptr otherwise.
      */
     std::shared_ptr<node> get_node_verify_type(const sMacAddr &mac, beerocks::eType type);
-    std::shared_ptr<prplmesh::controller::db::sAgent::sRadio>
-    get_radio_by_uid(const sMacAddr &radio_uid);
+    std::shared_ptr<node::radio> get_radio_by_uid(const sMacAddr &radio_uid);
     int get_node_hierarchy(std::shared_ptr<node> n);
     std::set<std::shared_ptr<node>> get_node_subtree(std::shared_ptr<node> n);
     void adjust_subtree_hierarchy(std::shared_ptr<node> n);
@@ -1957,10 +1954,10 @@ private:
      * @param radio_mac mac address of radio which reporting operating class.
      * @param max_tx_power max transmit power.
      * @param op_class operating class.
-     * @param non_operable_channels list of non operable channels.
+     * @param non_operable_channels list of non oparable channels.
      * @return true on success, false otherwise.
      */
-    bool dm_add_ap_operating_classes(const sMacAddr &radio_mac, uint8_t max_tx_power,
+    bool dm_add_ap_operating_classes(const std::string &radio_mac, uint8_t max_tx_power,
                                      uint8_t op_class,
                                      const std::vector<uint8_t> &non_operable_channels);
 
