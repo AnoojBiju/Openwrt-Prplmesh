@@ -1956,7 +1956,6 @@ std::string db::get_hostap_supported_channels_string(const sMacAddr &radio_mac)
  * class to a set of supported channels and updates the list of currently
  * supported channels.
  *
- * @param al_mac radio AL mac
  * @param mac radio mac
  * @param operating class operating class to add
  * @tx_power transmit power
@@ -1964,8 +1963,8 @@ std::string db::get_hostap_supported_channels_string(const sMacAddr &radio_mac)
  * @return true on success
  * @return false on failure
  */
-bool db::add_hostap_supported_operating_class(const sMacAddr &al_mac, const sMacAddr &radio_mac,
-                                              uint8_t operating_class, uint8_t tx_power,
+bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t operating_class,
+                                              uint8_t tx_power,
                                               const std::vector<uint8_t> &non_operable_channels)
 {
     auto supported_channels = get_hostap_supported_channels(radio_mac);
@@ -6062,11 +6061,10 @@ bool db::remove_current_op_classes(const sMacAddr &radio_mac)
     return true;
 }
 
-bool db::remove_hostap_supported_operating_classes(const sMacAddr &al_mac,
-                                                   const sMacAddr &radio_mac)
+bool db::remove_hostap_supported_operating_classes(const sMacAddr &radio_mac)
 {
     auto supported_channels = get_hostap_supported_channels(radio_mac);
-    auto radio              = get_radio(al_mac, radio_mac);
+    auto radio              = get_radio_by_uid(radio_mac);
 
     // Remove from data model
     if (!radio) {
