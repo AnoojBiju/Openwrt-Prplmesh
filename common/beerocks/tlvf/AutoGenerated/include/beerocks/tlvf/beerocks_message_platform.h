@@ -449,27 +449,6 @@ class cACTION_PLATFORM_LOCAL_MASTER_GET_RESPONSE : public BaseClass
         uint8_t* m_local_master = nullptr;
 };
 
-class cACTION_PLATFORM_VERSION_MISMATCH_NOTIFICATION : public BaseClass
-{
-    public:
-        cACTION_PLATFORM_VERSION_MISMATCH_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cACTION_PLATFORM_VERSION_MISMATCH_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cACTION_PLATFORM_VERSION_MISMATCH_NOTIFICATION();
-
-        static eActionOp_PLATFORM get_action_op(){
-            return (eActionOp_PLATFORM)(ACTION_PLATFORM_VERSION_MISMATCH_NOTIFICATION);
-        }
-        sVersions& versions();
-        void class_swap() override;
-        bool finalize() override;
-        static size_t get_initial_size();
-
-    private:
-        bool init();
-        eActionOp_PLATFORM* m_action_op = nullptr;
-        sVersions* m_versions = nullptr;
-};
-
 class cACTION_PLATFORM_MASTER_SLAVE_VERSIONS_NOTIFICATION : public BaseClass
 {
     public:

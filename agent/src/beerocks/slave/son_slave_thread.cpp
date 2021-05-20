@@ -5023,27 +5023,12 @@ bool slave_thread::parse_intel_join_response(Socket *sd, beerocks::beerocks_head
     auto slave_version_s  = version::version_from_string(BEEROCKS_VERSION);
     auto master_version_s = version::version_from_string(master_version);
 
-    // check if mismatch notification is needed
-    if ((master_version_s.major > slave_version_s.major) ||
-        ((master_version_s.major == slave_version_s.major) &&
-         (master_version_s.minor > slave_version_s.minor)) ||
-        ((master_version_s.major == slave_version_s.major) &&
-         (master_version_s.minor == slave_version_s.minor) &&
-         (master_version_s.build_number > slave_version_s.build_number))) {
-        LOG(INFO) << "master_version > slave_version, sending "
-                     "ACTION_CONTROL_VERSION_MISMATCH_NOTIFICATION";
-        auto notification = message_com::create_vs_message<
-            beerocks_message::cACTION_PLATFORM_VERSION_MISMATCH_NOTIFICATION>(cmdu_tx);
-        if (notification == nullptr) {
-            LOG(ERROR) << "Failed building message!";
-            return false;
-        }
-
-        string_utils::copy_string(notification->versions().master_version, master_version.c_str(),
-                                  sizeof(beerocks_message::sVersions::master_version));
-        string_utils::copy_string(notification->versions().slave_version, BEEROCKS_VERSION,
-                                  sizeof(beerocks_message::sVersions::slave_version));
-        message_com::send_cmdu(platform_manager_socket, cmdu_tx);
+    // check for mismatch
+    if (master_version_s.major != slave_version_s.major ||
+        master_version_s.minor != slave_version_s.minor ||
+        master_version_s.build_number != slave_version_s.build_number) {
+        LOG(WARNING) << "master_version != slave_version";
+        LOG(WARNING) << "Version (Master/Slave): " << master_version << "/" << BEEROCKS_VERSION;
     }
 
     // check if fatal mismatch
