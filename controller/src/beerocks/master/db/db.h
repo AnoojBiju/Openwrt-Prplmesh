@@ -1417,7 +1417,7 @@ public:
      * @param[in] bc_rx_bytes broadcast received bytes
      * @return true on success, otherwise false.
      */
-    bool set_vap_stats_info(const std::string &bssid, uint32_t uc_tx_bytes, uint32_t uc_rx_bytes,
+    bool set_vap_stats_info(const sMacAddr &bssid, uint32_t uc_tx_bytes, uint32_t uc_rx_bytes,
                             uint32_t mc_tx_bytes, uint32_t mc_rx_bytes, uint32_t bc_tx_bytes,
                             uint32_t bc_rx_bytes);
 

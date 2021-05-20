@@ -54,6 +54,7 @@
 #include <tlvf/ieee_1905_1/tlvSearchedRole.h>
 #include <tlvf/ieee_1905_1/tlvSupportedFreqBand.h>
 #include <tlvf/ieee_1905_1/tlvSupportedRole.h>
+#include <tlvf/wfa_map/tlvApExtendedMetrics.h>
 #include <tlvf/wfa_map/tlvApMetrics.h>
 #include <tlvf/wfa_map/tlvApOperationalBSS.h>
 #include <tlvf/wfa_map/tlvApRadioIdentifier.h>
@@ -1537,6 +1538,16 @@ bool Controller::handle_cmdu_1905_ap_metric_response(const std::string &src_mac,
                 continue;
             }
         }
+    }
+
+    for (auto ap_extended_metric_tlv : cmdu_rx.getClassList<wfa_map::tlvApExtendedMetrics>()) {
+        ret_val &= database.set_vap_stats_info(ap_extended_metric_tlv->bssid(),
+                                               ap_extended_metric_tlv->unicast_bytes_sent(),
+                                               ap_extended_metric_tlv->unicast_bytes_received(),
+                                               ap_extended_metric_tlv->multicast_bytes_sent(),
+                                               ap_extended_metric_tlv->multicast_bytes_received(),
+                                               ap_extended_metric_tlv->broadcast_bytes_sent(),
+                                               ap_extended_metric_tlv->broadcast_bytes_received());
     }
 
     for (auto radio_tlv : cmdu_rx.getClassList<wfa_map::tlvProfile2RadioMetrics>()) {
