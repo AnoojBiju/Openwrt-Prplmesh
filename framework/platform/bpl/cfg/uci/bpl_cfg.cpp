@@ -333,8 +333,6 @@ int cfg_notify_onboarding_completed(const char ssid[BPL_SSID_LEN], const char pa
     return 0;
 }
 
-int cfg_notify_fw_version_mismatch() { return 0; }
-
 int cfg_notify_error(int code, const char data[BPL_ERROR_STRING_LEN]) { return 0; }
 
 int cfg_get_administrator_credentials(char pass[BPL_PASS_LEN]) { return 0; }

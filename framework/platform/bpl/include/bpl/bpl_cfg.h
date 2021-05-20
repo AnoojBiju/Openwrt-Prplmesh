@@ -423,14 +423,6 @@ int cfg_notify_onboarding_completed(const char ssid[BPL_SSID_LEN], const char pa
                                     const char iface_name[BPL_IFNAME_LEN], const int success);
 
 /**
- * Notify the platform about a FW version mismatch.
- *
- * @return 0 Success.
- * @return -1 Error.
- */
-int cfg_notify_fw_version_mismatch();
-
-/**
  * Notify the platform about an error.
  *
  * @param [in] error_code Error code (of type BPL_ERR...)
