@@ -6981,6 +6981,7 @@ bool db::set_sta_dhcp_v6_lease(const sMacAddr &sta_mac, const std::string &host_
     }
 
     // Update node attributes.
+    sta_node->ipv6 = ipv6_address;
     sta_node->name = host_name;
 
     // Update datamodel attributes.

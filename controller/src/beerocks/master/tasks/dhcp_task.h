@@ -38,7 +38,7 @@ private:
     int m_periodic_timer{beerocks::net::FileDescriptor::invalid_descriptor};
     bool m_successful_init; //!< Flag for successful initialized ubus context.
 
-    const std::chrono::milliseconds DELAY_AFTER_STA_CONNECTED_MS{1000};
+    const std::chrono::milliseconds DELAY_AFTER_STA_CONNECTED_MS{5000};
 
     /**
      * @brief Start periodical DHCP IPv4/IPv6 lease poll with timer.

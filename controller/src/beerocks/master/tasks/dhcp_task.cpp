@@ -35,6 +35,8 @@ DhcpTask::~DhcpTask()
     if (m_periodic_timer != beerocks::net::FileDescriptor::invalid_descriptor) {
         m_timer_manager->remove_timer(m_periodic_timer);
     }
+
+    bpl::dhcp_manual_procedure_destroy();
 }
 
 void DhcpTask::handle_timer_timeout()
@@ -47,7 +49,8 @@ void DhcpTask::handle_timer_timeout()
     }
 
     for (const auto &ipv6 : leases.second) {
-        m_database.set_sta_dhcp_v6_lease(ipv6.first, ipv6.second.host_name, ipv6.second.ip_address);
+        m_database.set_sta_dhcp_v6_lease(ipv6.second.mac, ipv6.second.host_name,
+                                         ipv6.second.ip_address);
     }
 
     // To give precedence ipv4 hostname in database in case of host name conflict,
