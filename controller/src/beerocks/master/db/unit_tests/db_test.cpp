@@ -611,7 +611,7 @@ TEST_F(DbTest, test_set_vap_stats_info)
     EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_bridge_mac)).WillRepeatedly(Return(1));
 
     //must fail because VAD does not exists
-    EXPECT_FALSE(m_db->set_vap_stats_info(g_bssid_1, 1, 2, 3, 4, 5, 6));
+    EXPECT_FALSE(m_db->set_vap_stats_info(tlvf::mac_from_string(g_bssid_1), 1, 2, 3, 4, 5, 6));
 
     //expectations for add_node_radio
     EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_radio_mac_1)).WillRepeatedly(Return(1));
@@ -648,8 +648,21 @@ TEST_F(DbTest, test_set_vap_stats_info)
                                  Matcher<const uint32_t &>(2U)))
         .WillOnce(Return(true));
 
+    EXPECT_CALL(*m_ambiorix, set(std::string(g_radio_1_bss_path_1) + '.', "MulticastBytesSent",
+                                 Matcher<const uint32_t &>(3U)))
+        .WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set(std::string(g_radio_1_bss_path_1) + '.', "MulticastBytesReceived",
+                                 Matcher<const uint32_t &>(4U)))
+        .WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set(std::string(g_radio_1_bss_path_1) + '.', "BroadcastBytesSent",
+                                 Matcher<const uint32_t &>(5U)))
+        .WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set(std::string(g_radio_1_bss_path_1) + '.', "BroadcastBytesReceived",
+                                 Matcher<const uint32_t &>(6U)))
+        .WillOnce(Return(true));
+
     //execute test
-    EXPECT_TRUE(m_db->set_vap_stats_info(g_bssid_1, 1, 2, 3, 4, 5, 6));
+    EXPECT_TRUE(m_db->set_vap_stats_info(tlvf::mac_from_string(g_bssid_1), 1, 2, 3, 4, 5, 6));
 }
 
 TEST_F(DbTestRadio1Sta1, test_set_station_capabilities)
