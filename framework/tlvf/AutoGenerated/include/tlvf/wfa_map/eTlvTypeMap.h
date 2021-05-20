@@ -80,6 +80,7 @@ enum class eTlvTypeMap : uint8_t {
     TLV_PROFILE2_UNSUCCESSFUL_ASSOCIATION_POLICY = 0xc4,
     TLV_PROFILE2_METRIC_COLLECTION_INTERVAL = 0xc5,
     TLV_PROFILE2_RADIO_METRICS = 0xc6,
+    TLV_AP_EXTENDED_METRICS = 0xc7,
     TLV_ASSOCIATED_STA_EXTENDED_LINK_METRICS = 0xc8,
     TLV_PROFILE2_STATUS_CODE = 0xc9,
     TLV_PROFILE2_REASON_CODE = 0xca,
@@ -149,6 +150,7 @@ public:
         case 0xc4:
         case 0xc5:
         case 0xc6:
+        case 0xc7:
         case 0xc8:
         case 0xc9:
         case 0xca:
