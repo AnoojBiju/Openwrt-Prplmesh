@@ -104,10 +104,6 @@ cACTION_PLATFORM_LOCAL_MASTER_GET_RESPONSE:
   _type: class
   local_master: uint8_t
 
-cACTION_PLATFORM_VERSION_MISMATCH_NOTIFICATION:
-  _type: class
-  versions: sVersions
-
 cACTION_PLATFORM_MASTER_SLAVE_VERSIONS_NOTIFICATION:
   _type: class
   versions: sVersions

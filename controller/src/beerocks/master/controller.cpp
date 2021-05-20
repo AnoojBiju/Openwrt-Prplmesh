@@ -2224,19 +2224,13 @@ bool Controller::handle_intel_slave_join(
     beerocks::string_utils::copy_string(join_response->master_version(), BEEROCKS_VERSION,
                                         beerocks::message::VERSION_LENGTH);
 
-    // check if fatal mismatch
+    // check if mismatch
     if (slave_version_s.major != master_version_s.major ||
         slave_version_s.minor != master_version_s.minor) {
-        LOG(INFO) << "IRE Slave joined, Mismatch version! slave_version="
-                  << std::string(slave_version)
-                  << " master_version=" << std::string(BEEROCKS_VERSION);
-        LOG(INFO) << " bridge_mac=" << bridge_mac << " bridge_ipv4=" << bridge_ipv4;
-
-        join_response->err_code() = beerocks::JOIN_RESP_VERSION_MISMATCH;
-        beerocks::string_utils::copy_string(
-            join_response->master_version(beerocks::message::VERSION_LENGTH), BEEROCKS_VERSION,
-            beerocks::message::VERSION_LENGTH);
-        return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
+        LOG(WARNING) << "IRE Slave joined, Mismatch version! slave_version="
+                     << std::string(slave_version)
+                     << " master_version=" << std::string(BEEROCKS_VERSION);
+        LOG(WARNING) << " bridge_mac=" << bridge_mac << " bridge_ipv4=" << bridge_ipv4;
     }
 
     beerocks::eIfaceType hostap_iface_type =
