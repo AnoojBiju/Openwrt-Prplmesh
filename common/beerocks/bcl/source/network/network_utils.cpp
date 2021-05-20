@@ -1225,13 +1225,13 @@ std::vector<std::string> network_utils::get_bss_ifaces(const std::string &bss_if
 
     auto ifaces_on_bridge = linux_get_iface_list_from_bridge(bridge_iface);
 
-    /** 
+    /**
      * Find all interfaces that their name contain the base bss name.
      * On upstream Hostapd the pattern is: "<bss_iface_name>.staN"
      * (e.g wlan0.0.sta1, wlan0.0.sta2 etc)
      * On MaxLinear platforms the pattern is: "bN_<bss_iface_name>"
      * (e.g b0_wlan0.0, b1_wlan0.0 etc).
-     * 
+     *
      * NOTE: If the VAP interface is wlan-long0.0, then the STA interface name will use an
      * abbreviated version b0_wlan-long0 instead of b0_wlan-long0.0.
      * It doesn't really work anyway because with that truncation, you may get conflicts between
@@ -1278,7 +1278,7 @@ std::string network_utils::create_vlan_interface(const std::string &iface, uint1
         .append(" type vlan id ")
         .append(vid_str);
 
-    beerocks::os_utils::system_call(cmd, 2, true);
+    beerocks::os_utils::system_call(cmd, true);
     return new_iface_name;
 }
 
@@ -1307,7 +1307,7 @@ bool network_utils::set_vlan_filtering(const std::string &bridge_iface, uint16_t
         cmd.append("1 vlan_default_pvid ").append(std::to_string(default_vlan_id));
     }
 
-    beerocks::os_utils::system_call(cmd, 2, true);
+    beerocks::os_utils::system_call(cmd, true);
     return true;
 }
 
@@ -1356,7 +1356,7 @@ bool network_utils::set_iface_vid_policy(const std::string &iface, bool del, uin
 
     if (del) {
         cmd.pop_back(); // Pop extra space.
-        beerocks::os_utils::system_call(cmd, 2, false);
+        beerocks::os_utils::system_call(cmd);
         return true;
     }
 
@@ -1371,7 +1371,7 @@ bool network_utils::set_iface_vid_policy(const std::string &iface, bool del, uin
     // Pop back last space character.
     cmd.pop_back();
 
-    os_utils::system_call(cmd, 2, false);
+    os_utils::system_call(cmd);
     return true;
 }
 
@@ -1417,12 +1417,12 @@ bool network_utils::set_vlan_packet_filter(bool set, const std::string &bss_ifac
     if (vid != 0) {
         // Filter packets carrying the VLAN tag of the interface.
         cmd.append(" --vlan-id ").append(std::to_string(vid));
-        os_utils::system_call(cmd, 2, false);
+        os_utils::system_call(cmd);
         cmd.erase(cmd_base_len);
     }
 
     // Filter double-tagged packets that are encapsulated with an S-Tag.
     cmd.append(" --vlan-encap 802_1Q");
-    os_utils::system_call(cmd, 2, false);
+    os_utils::system_call(cmd);
     return true;
 }

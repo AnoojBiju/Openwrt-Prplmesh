@@ -34,6 +34,8 @@ int dhcp_mon_stop() { return 0; }
 
 bool dhcp_manual_procedure_init() { return true; }
 
+bool dhcp_manual_procedure_destroy() { return true; }
+
 bool dhcp_get_leases(leases_pair_t &leases_map)
 {
     leases_map.first.clear();
@@ -45,8 +47,9 @@ bool dhcp_get_leases(leases_pair_t &leases_map)
         sIPv4Lease ipv4_lease{lease.ipv4, lease.hostname};
         leases_map.first.insert(std::make_pair(tlvf::mac_from_string(lease.mac), ipv4_lease));
 
-        sIPv6Lease ipv6_lease{lease.ipv6, lease.hostname};
-        leases_map.second.insert(std::make_pair(tlvf::mac_from_string(lease.mac), ipv6_lease));
+        // Use MAC address instead of DUID.
+        sIPv6Lease ipv6_lease{tlvf::mac_from_string(lease.mac), lease.ipv6, lease.hostname};
+        leases_map.second.insert(std::make_pair(lease.mac, ipv6_lease));
     }
 
     return true;

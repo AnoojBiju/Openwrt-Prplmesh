@@ -43,47 +43,50 @@ bool os_utils::file_exists(const std::string &fname)
     return (stat(fname.c_str(), &st) == 0);
 }
 
-std::string os_utils::system_call(std::string cmd, int log_lvl, bool detached)
+void os_utils::system_call(const std::string &cmd, bool detached)
+{
+    if (cmd.empty()) {
+        LOG(ERROR) << "Empty call.";
+        return;
+    }
+
+    auto command{cmd};
+    command += (detached) ? " 2>&1 &" : " 2>&1";
+
+    LOG(INFO) << "System call cmd: " << command;
+
+    auto ret = system(command.c_str());
+    if (ret != 0) {
+        LOG(ERROR) << command << " failed with return code " << ret;
+    }
+}
+
+std::string os_utils::system_call_with_output(const std::string &cmd, bool enable_stderr)
 {
     std::string ret_str;
 
-#ifdef IS_WINDOWS
-    FILE *popen_fd = _popen(cmd.c_str(), "r");
-    if (popen_fd) {
-        char buffer[512];
-        while (fgets(buffer, sizeof(buffer) - 1, popen_fd)) {
-            ret_str.append(buffer);
-        }
-        _pclose(popen_fd);
-    }
-    if (log_lvl == 2)
-        LOG(INFO) << "system_call ret:\n" << ret_str << "\n";
-#else
-    cmd += " 2>&1";
-
-    if (detached) {
-        cmd += " &";
+    if (cmd.empty()) {
+        LOG(ERROR) << "Empty call.";
+        return std::string();
     }
 
-    if (log_lvl >= 1)
-        LOG(INFO) << "system_call cmd: " << cmd;
+    auto command{cmd};
+    command += (enable_stderr) ? " 2>&1" : " 2>/dev/null";
 
-    // *** This code may block indefinitely ...
-    // char buffer[1024];
-    // FILE *popen_fd = popen(cmd.c_str(), "r");
-    // if (popen_fd) {
-    //     if(!detached){
-    //         while (fgets(buffer, sizeof(buffer)-1, popen_fd)) {
-    //             ret_str.append(buffer);
-    //         }
-    //     }
-    //     pclose(popen_fd);
-    // }
+    LOG(INFO) << "System call cmd: " << command;
 
-    auto ret = system(cmd.c_str());
-    LOG_IF(ret, ERROR) << cmd << " failed with return code " << ret;
+    // Maximum output string size.
+    std::array<char, 10000> buffer;
+    std::unique_ptr<FILE, decltype(&pclose)> command_pipe(popen(command.c_str(), "r"), pclose);
 
-#endif
+    if (!command_pipe) {
+        LOG(ERROR) << "Failed to create pipe for " << command;
+        return std::string();
+    }
+
+    auto read_bytes = fread(buffer.data(), 1, buffer.size(), command_pipe.get());
+    ret_str.append(buffer.data(), read_bytes);
+
     return ret_str;
 }
 

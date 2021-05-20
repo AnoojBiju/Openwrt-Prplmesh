@@ -1597,10 +1597,7 @@ bool ap_wlan_hal_dwpal::set_antenna_mode(AntMode mode)
     }
     }
 
-    LOG(DEBUG) << "Send cmd: " << cmd;
-    // Execute the command
-    beerocks::os_utils::system_call(cmd, 2);
-
+    beerocks::os_utils::system_call(cmd);
     return true;
 }
 
@@ -1608,39 +1605,36 @@ bool ap_wlan_hal_dwpal::wds_set_mode(WDSMode mode)
 {
     std::string cmd =
         "iwpriv " + get_radio_info().iface_name + " sFourAddrMode " + std::to_string(int(mode));
-    LOG(DEBUG) << "Send cmd: " << cmd;
-    // Execute the call
-    beerocks::os_utils::system_call(cmd, 2);
+
+    beerocks::os_utils::system_call(cmd);
     return true;
 }
 
 bool ap_wlan_hal_dwpal::wds_add_sta(const std::string &mac)
 {
     std::string cmd = "iwpriv " + get_radio_info().iface_name + " sAddFourAddrSta " + mac;
-    LOG(DEBUG) << "Send cmd: " << cmd;
-    // Execute the call
-    beerocks::os_utils::system_call(cmd, 2);
+
+    beerocks::os_utils::system_call(cmd);
     return true;
 }
 
 bool ap_wlan_hal_dwpal::wds_del_sta(const std::string &mac)
 {
     std::string cmd = "iwpriv " + get_radio_info().iface_name + " sDelFourAddrSta " + mac;
-    LOG(DEBUG) << "Send cmd: " << cmd;
-    // Execute the call
-    beerocks::os_utils::system_call(cmd, 2);
+
+    beerocks::os_utils::system_call(cmd);
     return true;
 }
 
 bool ap_wlan_hal_dwpal::wds_clear_list()
 {
-    // TODO: Check if works... Line extracted from beerocks_utils.sh script
+
+    // Line extracted from beerocks_utils.sh script
     std::string cmd = "iwpriv " + get_radio_info().iface_name +
                       " gFourAddrStas | while read -r line; do iwpriv " +
                       get_radio_info().iface_name + " sDelFourAddrSta \"$line\"; done";
-    LOG(DEBUG) << "Send cmd: " << cmd;
-    // Execute the call
-    beerocks::os_utils::system_call(cmd, 2);
+
+    beerocks::os_utils::system_call(cmd);
     return true;
 }
 

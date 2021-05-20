@@ -4463,7 +4463,7 @@ void slave_thread::fronthaul_start()
         file_name = mapf::utils::get_install_path() + "bin/" + std::string(BEEROCKS_FRONTHAUL);
     }
     std::string cmd = file_name + " -i " + config.hostap_iface;
-    SYSTEM_CALL(cmd, 2, true);
+    SYSTEM_CALL(cmd, true);
 }
 
 void slave_thread::log_son_config()
