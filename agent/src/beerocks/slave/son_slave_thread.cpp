@@ -4753,29 +4753,10 @@ bool slave_thread::handle_profile2_default_802dotq_settings_tlv(ieee1905_1::Cmdu
         LOG(ERROR) << "Failed building message!";
         return false;
     }
-
-    /**
-     * The traffic separation policy can be set on the autoconfiguration message which is sent
-     * separately to each radio.
-     * There could be a scenario in which a radio gets some configuration TLV, and then the other
-     * radio gets not configuration TLV which will cause to reset the configuration.
-     * Added protection that creates a timezone of 5 seconds in which the configuration cannot be
-     * overridden if configuration TLV is not found.
-     */
-    constexpr uint8_t TRAFFIC_SEPRATION_CONFIGURATION_PROTECTION_SEC = 5;
-    bool protect_conf = std::chrono::steady_clock::now() <
-                        db->traffic_separation.timestamp +
-                            std::chrono::seconds(TRAFFIC_SEPRATION_CONFIGURATION_PROTECTION_SEC);
-
     auto dot1q_settings = cmdu_rx.getClass<wfa_map::tlvProfile2Default802dotQSettings>();
     // tlvProfile2Default802dotQSettings is not mandatory.
-    if (!dot1q_settings && !protect_conf) {
-        LOG(INFO) << "No tlvProfile2Default802dotQSettings, setting Primary VLAN ID to 0!";
-        // If no primary VLAN has been configured, set it to zero.
-        db->traffic_separation.primary_vlan_id = 0;
-        db->traffic_separation.default_pcp     = 0;
-
-        pvid_set_request->primary_vlan_id() = 0;
+    if (!dot1q_settings) {
+        LOG(INFO) << "No tlvProfile2Default802dotQSettings";
         return true;
     }
 
@@ -4802,35 +4783,34 @@ bool slave_thread::handle_profile2_traffic_separation_policy_tlv(
         cmdu_rx.getClass<wfa_map::tlvProfile2TrafficSeparationPolicy>();
 
     auto db = AgentDB::get();
-    // tlvProfile2TrafficSeparationPolicy is not mandatory.
-    if (traffic_seperation_policy) {
-        std::unordered_map<std::string, uint16_t> tmp_ssid_vid_mapping;
-        for (int i = 0; i < traffic_seperation_policy->ssids_vlan_id_list_length(); i++) {
-            auto ssid_vid_tuple = traffic_seperation_policy->ssids_vlan_id_list(i);
-            if (!std::get<0>(ssid_vid_tuple)) {
-                LOG(ERROR) << "Failed to get ssid_vid mapping, idx=" << i;
-                return false;
-            }
-            auto &ssid_vid_mapping = std::get<1>(ssid_vid_tuple);
 
-            tmp_ssid_vid_mapping[ssid_vid_mapping.ssid_name_str()] = ssid_vid_mapping.vlan_id();
-            LOG(DEBUG) << "SSID: " << ssid_vid_mapping.ssid_name_str()
-                       << ", VID: " << ssid_vid_mapping.vlan_id();
+    std::unordered_map<std::string, uint16_t> tmp_ssid_vid_mapping;
+    for (int i = 0; i < traffic_seperation_policy->ssids_vlan_id_list_length(); i++) {
+        auto ssid_vid_tuple = traffic_seperation_policy->ssids_vlan_id_list(i);
+        if (!std::get<0>(ssid_vid_tuple)) {
+            LOG(ERROR) << "Failed to get ssid_vid mapping, idx=" << i;
+            return false;
         }
+        auto &ssid_vid_mapping = std::get<1>(ssid_vid_tuple);
 
-        // Overwriting the whole container instead of pushing one by one, since we need to remove
-        // old configuration from previous configurations messages.
-        db->traffic_separation.ssid_vid_mapping = tmp_ssid_vid_mapping;
+        tmp_ssid_vid_mapping[ssid_vid_mapping.ssid_name_str()] = ssid_vid_mapping.vlan_id();
+        LOG(DEBUG) << "SSID: " << ssid_vid_mapping.ssid_name_str()
+                   << ", VID: " << ssid_vid_mapping.vlan_id();
+    }
 
-        // Fill secondary VLANs IDs to the database.
-        for (const auto &ssid_vid_pair : db->traffic_separation.ssid_vid_mapping) {
-            auto vlan_id = ssid_vid_pair.second;
-            if (vlan_id != db->traffic_separation.primary_vlan_id) {
-                db->traffic_separation.secondary_vlans_ids.insert(vlan_id);
-            }
+    // Overwriting the whole container instead of pushing one by one, since we need to remove
+    // old configuration from previous configurations messages.
+    db->traffic_separation.ssid_vid_mapping = tmp_ssid_vid_mapping;
+
+    // Fill secondary VLANs IDs to the database.
+    for (const auto &ssid_vid_pair : db->traffic_separation.ssid_vid_mapping) {
+        auto vlan_id = ssid_vid_pair.second;
+        if (vlan_id != db->traffic_separation.primary_vlan_id) {
+            db->traffic_separation.secondary_vlans_ids.insert(vlan_id);
         }
     }
 
+    // Erase excessive secondary VIDs.
     if (db->traffic_separation.ssid_vid_mapping.size() >
         db->traffic_separation.max_number_of_vlans_ids) {
 
@@ -4927,7 +4907,10 @@ bool slave_thread::handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMess
     }
 
     std::unordered_set<std::string> misconfigured_ssids;
-    if (!handle_profile2_traffic_separation_policy_tlv(cmdu_rx, misconfigured_ssids)) {
+    // tlvProfile2TrafficSeparationPolicy is not mandatory.
+    if (!cmdu_rx.getClass<wfa_map::tlvProfile2TrafficSeparationPolicy>()) {
+        LOG(INFO) << "tlvProfile2TrafficSeparationPolicy not found";
+    } else if (!handle_profile2_traffic_separation_policy_tlv(cmdu_rx, misconfigured_ssids)) {
         LOG(ERROR) << "handle_profile2_traffic_separation_policy_tlv has failed!";
         return false;
     }
@@ -5280,9 +5263,21 @@ bool slave_thread::handle_multi_ap_policy_config_request(Socket *sd,
     }
 
     std::unordered_set<std::string> misconfigured_ssids;
-    if (!handle_profile2_traffic_separation_policy_tlv(cmdu_rx, misconfigured_ssids)) {
+    auto db = AgentDB::get();
+    // tlvProfile2TrafficSeparationPolicy is not mandatory. But if it does not exist, need to clear
+    // traffic separation settings.
+    if (!cmdu_rx.getClass<wfa_map::tlvProfile2TrafficSeparationPolicy>()) {
+        LOG(INFO) << "tlvProfile2TrafficSeparationPolicy not found";
+        db->traffic_separation.ssid_vid_mapping.clear();
+    } else if (!handle_profile2_traffic_separation_policy_tlv(cmdu_rx, misconfigured_ssids)) {
         LOG(ERROR) << "handle_profile2_traffic_separation_policy_tlv has failed!";
         return false;
+    }
+
+    if (db->traffic_separation.ssid_vid_mapping.empty()) {
+        // If SSID VID map is empty, need to clear traffic separation policy.
+        db->traffic_separation.primary_vlan_id = 0;
+        db->traffic_separation.default_pcp     = 0;
     }
 
     /**
