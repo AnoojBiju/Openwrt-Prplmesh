@@ -39,6 +39,8 @@ public:
 
     bool is_prplmesh = false;
 
+    std::string manufacturer;
+
     struct sRadio {
         sRadio()               = delete;
         sRadio(const sRadio &) = delete;
