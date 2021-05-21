@@ -2168,6 +2168,14 @@ bool Controller::handle_intel_slave_join(
         database.add_node_ire(bridge_mac, tlvf::mac_from_string(backhaul_mac));
     }
 
+    // Workaround
+    // add_node_ire/gateway may fail if MAC address already exists in data model
+    auto agent = database.m_agents.get(bridge_mac);
+    if (!agent) {
+        LOG(ERROR) << "Could not get agent on bridge: " << bridge_mac;
+        return false;
+    }
+
     database.set_node_state(bridge_mac_str, beerocks::STATE_CONNECTED);
 
     /*
@@ -2183,8 +2191,9 @@ bool Controller::handle_intel_slave_join(
 
         database.set_node_ipv4(backhaul_mac, bridge_ipv4);
         database.set_node_ipv4(bridge_mac_str, bridge_ipv4);
+
         database.set_node_manufacturer(backhaul_mac, "Intel");
-        database.set_node_manufacturer(bridge_mac_str, "Intel");
+        database.set_agent_manufacturer(*agent, "Intel");
 
         database.set_node_type(backhaul_mac, beerocks::TYPE_IRE_BACKHAUL);
 
@@ -2595,11 +2604,20 @@ bool Controller::handle_non_intel_slave_join(
                << ire_type;
 
     database.add_node_ire(bridge_mac, tlvf::mac_from_string(backhaul_mac));
+
+    // Workaround
+    // add_node_ire may fail if MAC address already exists in data model
+    auto agent = database.m_agents.get(bridge_mac);
+    if (!agent) {
+        LOG(ERROR) << "Could not get agent on bridge: " << bridge_mac;
+        return false;
+    }
+
     database.set_node_state(bridge_mac_str, beerocks::STATE_CONNECTED);
     database.set_node_backhaul_iface_type(backhaul_mac, beerocks::eIfaceType::IFACE_TYPE_ETHERNET);
     database.set_node_backhaul_iface_type(bridge_mac_str, beerocks::IFACE_TYPE_BRIDGE);
     database.set_node_manufacturer(backhaul_mac, manufacturer);
-    database.set_node_manufacturer(bridge_mac_str, manufacturer);
+    database.set_agent_manufacturer(*agent, manufacturer);
     database.set_node_type(backhaul_mac, beerocks::TYPE_IRE_BACKHAUL);
     database.set_node_name(backhaul_mac, manufacturer + "_BH");
     database.set_node_name(bridge_mac_str, manufacturer);

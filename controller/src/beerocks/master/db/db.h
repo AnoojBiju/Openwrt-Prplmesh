@@ -393,6 +393,8 @@ public:
     std::string get_node_ipv4(const std::string &mac);
 
     bool set_node_manufacturer(const std::string &mac, const std::string &manufacturer);
+    bool set_agent_manufacturer(prplmesh::controller::db::sAgent &agent,
+                                const std::string &manufacturer);
 
     int get_node_channel(const std::string &mac);
 

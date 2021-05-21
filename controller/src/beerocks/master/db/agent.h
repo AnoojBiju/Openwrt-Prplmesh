@@ -70,6 +70,8 @@ public:
      */
     uint8_t max_total_number_of_vids = 0;
 
+    std::string manufacturer;
+
     struct sRadio {
         sRadio()               = delete;
         sRadio(const sRadio &) = delete;
