@@ -330,22 +330,42 @@ public:
                             std::pair<uint16_t, uint16_t> &results);
 
     /**
-    * @brief add instance of data element 'radio'
-    *
-    * @param mac address of radio
-    * @param mac address of device
-    * @return data model path if radio instance was successfully added, empty string otherwise
-    */
+     * @brief add instance of data element 'radio'
+     *
+     * @param mac address of radio
+     * @param mac address of device
+     * @return data model path if radio instance was successfully added, empty string otherwise
+     */
     std::string dm_add_radio_element(const std::string &radio_mac, const std::string &device_mac);
 
-    bool add_node_gateway(const sMacAddr &mac);
-    bool add_node_ire(const sMacAddr &mac,
-                      const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
+    /**
+     * @brief add gateway node and sAgent object
+     *
+     * Adds a gateway node and an sAgent object if they don't exist.
+     *
+     * @param mac AL MAC of the gateway.
+     *
+     * @return the existing sAgent if it was already there or the newly added sAgent otherwise.
+     */
+    std::shared_ptr<sAgent> add_node_gateway(const sMacAddr &mac);
+
+    /**
+     * @brief add IRE node and sAgent object
+     *
+     * Adds an IRE node and an sAgent object if they don't exist.
+     *
+     * @param mac AL MAC of the gateway.
+     * @param parent_mac MAC address of the parent node in the legacy node structure.
+     *
+     * @return the existing sAgent if it was already there or the newly added sAgent otherwise.
+     */
+    std::shared_ptr<sAgent>
+    add_node_ire(const sMacAddr &mac,
+                 const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
     bool add_node_wireless_bh(const sMacAddr &mac,
                               const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
     bool add_node_wired_bh(const sMacAddr &mac,
                            const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
-
     bool add_node_radio(const sMacAddr &mac,
                         const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
     bool add_node_client(const sMacAddr &mac,

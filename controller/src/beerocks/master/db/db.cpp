@@ -237,54 +237,52 @@ std::string db::get_node_data_model_path(const std::string &mac)
     return n->dm_path;
 }
 
-bool db::add_node_gateway(const sMacAddr &mac)
+std::shared_ptr<sAgent> db::add_node_gateway(const sMacAddr &mac)
 {
+    auto agent = m_agents.add(mac);
+
     if (!add_node(mac, network_utils::ZERO_MAC, beerocks::TYPE_GW)) {
         LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
-        return false;
+        return agent;
     }
-
-    m_agents.add(mac);
 
     auto data_model_path = dm_add_device_element(mac);
     if (data_model_path.empty()) {
         LOG(ERROR) << "Failed to add device element for the gateway, mac: " << mac;
-        return false;
+        return agent;
     }
 
     set_node_data_model_path(mac, data_model_path);
 
     if (!dm_set_device_multi_ap_capabilities(tlvf::mac_to_string(mac))) {
         LOG(ERROR) << "Failed to set multi ap capabilities";
-        return {};
     }
 
-    return true;
+    return agent;
 }
 
-bool db::add_node_ire(const sMacAddr &mac, const sMacAddr &parent_mac)
+std::shared_ptr<sAgent> db::add_node_ire(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
+    auto agent = m_agents.add(mac);
+
     if (!add_node(mac, parent_mac, beerocks::TYPE_IRE)) {
         LOG(ERROR) << "Failed to add ire node, mac: " << mac;
-        return false;
+        return agent;
     }
-
-    m_agents.add(mac);
 
     auto data_model_path = dm_add_device_element(mac);
     if (data_model_path.empty()) {
         LOG(ERROR) << "Failed to add device element for the ire, mac: " << mac;
-        return false;
+        return agent;
     }
 
     set_node_data_model_path(mac, data_model_path);
 
     if (!dm_set_device_multi_ap_capabilities(tlvf::mac_to_string(mac))) {
         LOG(ERROR) << "Failed to set multi ap capabilities";
-        return {};
     }
 
-    return true;
+    return agent;
 }
 
 bool db::add_node_wireless_bh(const sMacAddr &mac, const sMacAddr &parent_mac)
