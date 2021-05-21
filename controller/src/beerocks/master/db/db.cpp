@@ -5590,25 +5590,25 @@ const std::shared_ptr<db::vaps_list_t> db::get_vap_list() { return m_vap_list; }
 
 bool db::is_prplmesh(const sMacAddr &mac)
 {
-    auto node = get_node(mac);
-    if (!node) {
-        LOG(ERROR) << "can't find node with mac " << mac << ", consider as not prplmesh";
+    auto agent = m_agents.get(mac);
+    if (!agent) {
+        LOG(ERROR) << "can't find agent with mac " << mac << ", consider as not prplmesh";
         return false;
     }
-    return node->is_prplmesh;
+    return agent->is_prplmesh;
 }
 
 void db::set_prplmesh(const sMacAddr &mac)
 {
     auto local_bridge_mac = tlvf::mac_from_string(get_local_bridge_mac());
-    if (!get_node(mac)) {
+    if (!m_agents.get(mac)) {
         if (local_bridge_mac == mac) {
             add_node_gateway(mac);
         } else {
             add_node_ire(mac);
         }
     }
-    get_node(mac)->is_prplmesh = true;
+    m_agents.get(mac)->is_prplmesh = true;
 }
 
 bool db::update_client_entry_in_persistent_db(const sMacAddr &mac, const ValuesMap &values_map)

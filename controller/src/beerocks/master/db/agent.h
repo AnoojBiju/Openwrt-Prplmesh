@@ -37,6 +37,8 @@ public:
     /** AL-MAC address of the agent. */
     const sMacAddr al_mac;
 
+    bool is_prplmesh = false;
+
     struct sRadio {
         sRadio()               = delete;
         sRadio(const sRadio &) = delete;
