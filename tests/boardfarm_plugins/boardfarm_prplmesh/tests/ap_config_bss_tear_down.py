@@ -66,8 +66,9 @@ class ApConfigBSSTeardown(PrplMeshBaseTest):
                                  tlv(0x0F, 0x0001, "{0x00}"),
                                  tlv(0x10, 0x0001, "{0x00}"))
 
-        time.sleep(3)
-        self.check_log(agent.radios[0], r".* tear down radio")
+        self.check_log(agent.radios[0], r".* tear down radio", timeout=6)
+        time.sleep(4)
+
         conn_map = controller.get_conn_map()
         repeater1 = conn_map[agent.mac]
         repeater1_wlan0 = repeater1.radios[agent.radios[0].mac]
