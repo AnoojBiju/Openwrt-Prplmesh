@@ -65,10 +65,6 @@ void network_map::send_bml_network_map_message(db &database, int fd,
     beerocks::eType n_type;
     std::shared_ptr<node> n;
 
-    // because of virtual nodes (vap nodes) are poiting to the radio node,
-    // we want to save the in a list in order to not count them multiple times as the same mac.
-    std::unordered_set<std::string> ap_list;
-
     while (!last || !get_next_node) {
         if (get_next_node) {
             n    = nullptr;
@@ -81,16 +77,6 @@ void network_map::send_bml_network_map_message(db &database, int fd,
             continue;
         }
 
-        // skip virtual vap nodes
-        if (n->get_type() == beerocks::TYPE_SLAVE) {
-            if (ap_list.find(n->mac) == ap_list.end()) {
-                // radio/main vap
-                ap_list.insert(n->mac);
-            } else {
-                // vap node
-                continue;
-            }
-        }
         size_left = beerocks_header->getMessageBuffLength() - beerocks_header->getMessageLength();
 
         // LOG(DEBUG) << "num_of_nodes = " << num_of_nodes << ", size = " << int(size) << ", size_left = " << int(size_left);
