@@ -34,54 +34,30 @@ void network_map::send_bml_network_map_message(db &database, int fd,
         return;
     }
 
-    auto response =
-        message_com::create_vs_message<beerocks_message::cACTION_BML_NW_MAP_RESPONSE>(cmdu_tx, id);
-    if (response == nullptr) {
-        LOG(ERROR) << "Failed building ACTION_BML_NW_MAP_BRIDGE_RESPONSE message!";
-        return;
-    }
-
-    auto beerocks_header = message_com::get_beerocks_header(cmdu_tx);
-
-    if (!beerocks_header) {
-        LOG(ERROR) << "Failed getting beerocks_header!";
-        return;
-    }
-
-    beerocks_header->actionhdr()->last() = 0;
-
     uint8_t *data_start = nullptr;
     // std::ptrdiff_t size=0, size_left=0, node_len=0;
     const size_t gwIreNodeSize  = sizeof(BML_NODE);
     const size_t clientNodeSize = sizeof(BML_NODE) - sizeof(BML_NODE::N_DATA::N_GW_IRE);
 
     std::ptrdiff_t size = 0, size_left = 0, node_len = 0;
-    uint32_t &num_of_nodes = response->node_num();
-    num_of_nodes           = 0;
 
     database.rewind();
-    bool last          = false;
-    bool get_next_node = true;
-    beerocks::eType n_type;
+    bool last = false;
     std::shared_ptr<node> n;
 
-    while (!last || !get_next_node) {
-        if (get_next_node) {
-            n    = nullptr;
-            last = database.get_next_node(n);
-        }
-        // LOG(DEBUG) << "last = " << last << " get_next_node=" << get_next_node;
+    std::vector<std::vector<std::shared_ptr<node>>> nodes_per_message = {{}};
+
+    while (!last) {
+        n    = nullptr;
+        last = database.get_next_node(n);
 
         if (n == nullptr) {
-            // LOG(DEBUG) << "n == nullptr";
             continue;
         }
 
-        size_left = beerocks_header->getMessageBuffLength() - beerocks_header->getMessageLength();
+        size_left = cmdu_tx.getMessageBuffLength() - size;
 
-        // LOG(DEBUG) << "num_of_nodes = " << num_of_nodes << ", size = " << int(size) << ", size_left = " << int(size_left);
-
-        n_type = n->get_type();
+        auto n_type = n->get_type();
         if (n->state == beerocks::STATE_CONNECTED &&
             (n_type == beerocks::TYPE_CLIENT || n_type == beerocks::TYPE_IRE ||
              n_type == beerocks::TYPE_GW)) {
@@ -92,51 +68,66 @@ void network_map::send_bml_network_map_message(db &database, int fd,
                 node_len = gwIreNodeSize;
             }
 
-            if (node_len > size_left && num_of_nodes == 0) {
+            if (node_len > size_left &&
+                nodes_per_message[nodes_per_message.size() - 1].size() == 0) {
                 LOG(ERROR) << "node size is bigger than buffer size";
                 return;
-            } else if (node_len > size_left) {
-                controller_ctx->send_cmdu(fd, cmdu_tx);
-
-                get_next_node = false;
-                response =
-                    message_com::create_vs_message<beerocks_message::cACTION_BML_NW_MAP_RESPONSE>(
-                        cmdu_tx, id);
-
-                if (response == nullptr) {
-                    LOG(ERROR) << "Failed building message!";
-                    return;
-                }
-
-                beerocks_header                      = message_com::get_beerocks_header(cmdu_tx);
-                beerocks_header->actionhdr()->last() = 0;
-                num_of_nodes = response->node_num(); // prepare for next message
-                num_of_nodes = 0;
-                data_start   = nullptr;
-                size         = 0;
-            } else {
-                if (!response->alloc_buffer(node_len)) {
-                    LOG(ERROR) << "Failed allocating buffer!";
-                    return;
-                }
-
-                if (data_start == nullptr) {
-                    data_start = (uint8_t *)response->buffer(0);
-                }
-
-                fill_bml_node_data(database, tlvf::mac_from_string(n->mac), data_start + size,
-                                   size_left);
-
-                num_of_nodes++;
-                size += node_len;
-                get_next_node = true;
             }
+
+            if (node_len > size_left) {
+                nodes_per_message.push_back({});
+                size = 0;
+            }
+
+            nodes_per_message[nodes_per_message.size() - 1].push_back(n);
+            size += node_len;
         }
     }
 
-    beerocks_header->actionhdr()->last() = 1;
-    controller_ctx->send_cmdu(fd, cmdu_tx);
-    //LOG(DEBUG) << "sending message, last=1";
+    for (unsigned i = 0; i < nodes_per_message.size(); ++i) {
+        auto nodes = nodes_per_message[i];
+
+        auto response =
+            message_com::create_vs_message<beerocks_message::cACTION_BML_NW_MAP_RESPONSE>(cmdu_tx,
+                                                                                          id);
+        if (!response) {
+            LOG(ERROR) << "Failed building ACTION_BML_NW_MAP_BRIDGE_RESPONSE message!";
+            return;
+        }
+
+        response->node_num() = nodes.size();
+
+        auto beerocks_header = message_com::get_beerocks_header(cmdu_tx);
+
+        if (!beerocks_header) {
+            LOG(ERROR) << "Failed getting beerocks_header!";
+            return;
+        }
+
+        beerocks_header->actionhdr()->last() = (i == nodes_per_message.size() - 1) ? 1 : 0;
+
+        size = 0;
+
+        for (auto n : nodes) {
+            if (n->get_type() == beerocks::TYPE_CLIENT) {
+                node_len = clientNodeSize;
+            } else {
+                node_len = gwIreNodeSize;
+            }
+
+            if (!response->alloc_buffer(node_len)) {
+                LOG(ERROR) << "Failed allocating buffer!";
+                return;
+            }
+
+            data_start = (uint8_t *)response->buffer(0);
+            fill_bml_node_data(database, tlvf::mac_from_string(n->mac), data_start + size,
+                               size_left);
+            size += node_len;
+        }
+
+        controller_ctx->send_cmdu(fd, cmdu_tx);
+    }
 }
 
 std::ptrdiff_t network_map::fill_bml_node_data(db &database, const sMacAddr &node_mac,
