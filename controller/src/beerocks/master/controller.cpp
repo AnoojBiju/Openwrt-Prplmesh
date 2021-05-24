@@ -2238,7 +2238,7 @@ bool Controller::handle_intel_slave_join(
         database.set_node_backhaul_iface_type(bridge_mac_str, beerocks::IFACE_TYPE_BRIDGE);
 
         database.set_node_ipv4(backhaul_mac, bridge_ipv4);
-        database.set_node_ipv4(bridge_mac_str, bridge_ipv4);
+        agent->ipv4 = bridge_ipv4;
 
         database.set_node_manufacturer(backhaul_mac, agent->manufacturer);
 

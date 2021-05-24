@@ -76,6 +76,7 @@ public:
 
     std::string name;
     std::string manufacturer;
+    std::string ipv4;
 
     beerocks::eNodeState state = beerocks::STATE_CONNECTED;
 

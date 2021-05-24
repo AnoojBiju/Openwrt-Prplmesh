@@ -252,7 +252,7 @@ std::ptrdiff_t network_map::fill_bml_agent_data(db &database, const sMacAddr &no
         }
     }
 
-    network_utils::ipv4_from_string(node->ip_v4, n->ipv4);
+    network_utils::ipv4_from_string(node->ip_v4, agent->ipv4);
     string_utils::copy_string(node->name, agent->name.c_str(), sizeof(node->name));
 
     tlvf::mac_from_string(node->data.gw_ire.backhaul_mac,
