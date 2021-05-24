@@ -2177,6 +2177,7 @@ bool Controller::handle_intel_slave_join(
     }
 
     database.set_node_state(bridge_mac_str, beerocks::STATE_CONNECTED);
+    agent->state = beerocks::STATE_CONNECTED;
 
     /*
     * Set IRE backhaul manager slave
@@ -2613,6 +2614,7 @@ bool Controller::handle_non_intel_slave_join(
         return false;
     }
 
+    agent->state = beerocks::STATE_CONNECTED;
     database.set_node_state(bridge_mac_str, beerocks::STATE_CONNECTED);
     database.set_node_backhaul_iface_type(backhaul_mac, beerocks::eIfaceType::IFACE_TYPE_ETHERNET);
     database.set_node_backhaul_iface_type(bridge_mac_str, beerocks::IFACE_TYPE_BRIDGE);

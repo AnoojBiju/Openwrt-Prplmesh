@@ -339,6 +339,12 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
                                << " as non operational";
                     database.set_node_operational_state(node_mac, false);
 
+                    auto agent = database.m_agents.get(tlvf::mac_from_string(node_mac));
+                    if (!agent) {
+                        LOG(ERROR) << "agent " << node_mac << " not found";
+                        return;
+                    }
+                    agent->state = STATE_DISCONNECTED;
                 } else if (database.get_node_type(node_mac) == beerocks::TYPE_IRE_BACKHAUL ||
                            database.get_node_type(node_mac) == beerocks::TYPE_CLIENT) {
                     // kill old roaming task

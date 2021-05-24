@@ -74,6 +74,8 @@ public:
 
     std::string manufacturer;
 
+    beerocks::eNodeState state = beerocks::STATE_CONNECTED;
+
     struct sRadio {
         sRadio()               = delete;
         sRadio(const sRadio &) = delete;
