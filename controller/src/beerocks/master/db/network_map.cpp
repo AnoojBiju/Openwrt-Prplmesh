@@ -42,8 +42,6 @@ void network_map::send_bml_network_map_message(db &database, int fd,
     std::ptrdiff_t size = 0, size_left = 0, node_len = 0;
 
     database.rewind();
-    bool last = false;
-    std::shared_ptr<node> n;
 
     struct node_to_send {
         sMacAddr mac;
@@ -52,23 +50,18 @@ void network_map::send_bml_network_map_message(db &database, int fd,
 
     std::vector<std::vector<node_to_send>> nodes_per_message = {{}};
 
-    while (!last) {
-        n    = nullptr;
-        last = database.get_next_node(n);
+    for (auto agent_it : database.m_agents) {
+        auto agent = agent_it.second;
+        auto n     = database.get_node(agent->al_mac);
 
-        if (n == nullptr) {
+        if (!n) {
             continue;
         }
 
         size_left = cmdu_tx.getMessageBuffLength() - size;
 
-        auto n_type = n->get_type();
-        if (n->state == beerocks::STATE_CONNECTED &&
-            (n_type == beerocks::TYPE_CLIENT || n_type == beerocks::TYPE_IRE ||
-             n_type == beerocks::TYPE_GW)) {
-
-            bool is_agent = n_type != beerocks::TYPE_IRE;
-            node_len      = is_agent ? gwIreNodeSize : clientNodeSize;
+        if (n->state == beerocks::STATE_CONNECTED) {
+            node_len = gwIreNodeSize;
 
             if (node_len > size_left &&
                 nodes_per_message[nodes_per_message.size() - 1].size() == 0) {
@@ -81,8 +74,36 @@ void network_map::send_bml_network_map_message(db &database, int fd,
                 size = 0;
             }
 
-            auto mac = tlvf::mac_from_string(n->mac);
-            nodes_per_message[nodes_per_message.size() - 1].push_back({mac, is_agent});
+            nodes_per_message[nodes_per_message.size() - 1].push_back({agent->al_mac, true});
+            size += node_len;
+        }
+    }
+
+    for (auto mac_str : database.get_nodes(beerocks::TYPE_CLIENT)) {
+        auto mac = tlvf::mac_from_string(mac_str);
+        auto n   = database.get_node(mac);
+
+        if (!n) {
+            continue;
+        }
+
+        size_left = cmdu_tx.getMessageBuffLength() - size;
+
+        if (n->state == beerocks::STATE_CONNECTED) {
+            node_len = clientNodeSize;
+
+            if (node_len > size_left &&
+                nodes_per_message[nodes_per_message.size() - 1].size() == 0) {
+                LOG(ERROR) << "node size is bigger than buffer size";
+                return;
+            }
+
+            if (node_len > size_left) {
+                nodes_per_message.push_back({});
+                size = 0;
+            }
+
+            nodes_per_message[nodes_per_message.size() - 1].push_back({mac, false});
             size += node_len;
         }
     }
