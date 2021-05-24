@@ -45,7 +45,12 @@ void network_map::send_bml_network_map_message(db &database, int fd,
     bool last = false;
     std::shared_ptr<node> n;
 
-    std::vector<std::vector<std::shared_ptr<node>>> nodes_per_message = {{}};
+    struct node_to_send {
+        sMacAddr mac;
+        bool is_agent;
+    };
+
+    std::vector<std::vector<node_to_send>> nodes_per_message = {{}};
 
     while (!last) {
         n    = nullptr;
@@ -62,11 +67,8 @@ void network_map::send_bml_network_map_message(db &database, int fd,
             (n_type == beerocks::TYPE_CLIENT || n_type == beerocks::TYPE_IRE ||
              n_type == beerocks::TYPE_GW)) {
 
-            if (n_type == beerocks::TYPE_CLIENT) {
-                node_len = clientNodeSize;
-            } else {
-                node_len = gwIreNodeSize;
-            }
+            bool is_agent = n_type != beerocks::TYPE_IRE;
+            node_len      = is_agent ? gwIreNodeSize : clientNodeSize;
 
             if (node_len > size_left &&
                 nodes_per_message[nodes_per_message.size() - 1].size() == 0) {
@@ -79,7 +81,8 @@ void network_map::send_bml_network_map_message(db &database, int fd,
                 size = 0;
             }
 
-            nodes_per_message[nodes_per_message.size() - 1].push_back(n);
+            auto mac = tlvf::mac_from_string(n->mac);
+            nodes_per_message[nodes_per_message.size() - 1].push_back({mac, is_agent});
             size += node_len;
         }
     }
@@ -109,11 +112,7 @@ void network_map::send_bml_network_map_message(db &database, int fd,
         size = 0;
 
         for (auto n : nodes) {
-            if (n->get_type() == beerocks::TYPE_CLIENT) {
-                node_len = clientNodeSize;
-            } else {
-                node_len = gwIreNodeSize;
-            }
+            node_len = n.is_agent ? gwIreNodeSize : clientNodeSize;
 
             if (!response->alloc_buffer(node_len)) {
                 LOG(ERROR) << "Failed allocating buffer!";
@@ -121,8 +120,11 @@ void network_map::send_bml_network_map_message(db &database, int fd,
             }
 
             data_start = (uint8_t *)response->buffer(0);
-            fill_bml_node_data(database, tlvf::mac_from_string(n->mac), data_start + size,
-                               size_left);
+            if (n.is_agent) {
+                fill_bml_agent_data(database, n.mac, data_start + size, size_left);
+            } else {
+                fill_bml_client_data(database, n.mac, data_start + size, size_left);
+            }
             size += node_len;
         }
 
