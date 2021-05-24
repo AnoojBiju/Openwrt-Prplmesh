@@ -17,12 +17,9 @@ public:
     static void send_bml_network_map_message(db &database, int fd,
                                              ieee1905_1::CmduMessageTx &cmdu_tx, uint16_t id);
 
-    static std::ptrdiff_t fill_bml_node_data(db &database, std::shared_ptr<node> n,
+    static std::ptrdiff_t fill_bml_node_data(db &database, const sMacAddr &node_mac,
                                              uint8_t *tx_buffer, const std::ptrdiff_t &buffer_size,
                                              bool force_client_disconnect = false);
-    static std::ptrdiff_t fill_bml_node_data(db &database, std::string node_mac, uint8_t *tx_buffer,
-                                             const std::ptrdiff_t &buffer_size,
-                                             bool force_client_disconnect);
 
     static void
     send_bml_nodes_statistics_message_to_listeners(db &database, ieee1905_1::CmduMessageTx &cmdu_tx,

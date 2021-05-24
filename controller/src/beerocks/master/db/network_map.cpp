@@ -124,7 +124,8 @@ void network_map::send_bml_network_map_message(db &database, int fd,
                     data_start = (uint8_t *)response->buffer(0);
                 }
 
-                fill_bml_node_data(database, n, data_start + size, size_left);
+                fill_bml_node_data(database, tlvf::mac_from_string(n->mac), data_start + size,
+                                   size_left);
 
                 num_of_nodes++;
                 size += node_len;
@@ -138,31 +139,18 @@ void network_map::send_bml_network_map_message(db &database, int fd,
     //LOG(DEBUG) << "sending message, last=1";
 }
 
-std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::string node_mac,
+std::ptrdiff_t network_map::fill_bml_node_data(db &database, const sMacAddr &node_mac,
                                                uint8_t *tx_buffer,
                                                const std::ptrdiff_t &buffer_size,
                                                bool force_client_disconnect)
 {
     auto n = database.get_node(node_mac);
-    if (n == nullptr) {
+    if (!n) {
         LOG(ERROR) << "get_node(), node_mac=" << node_mac << " , n == nullptr !!!";
         return 0;
-    } else {
-        return fill_bml_node_data(database, n, tx_buffer, buffer_size, force_client_disconnect);
     }
-}
 
-std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<node> n,
-                                               uint8_t *tx_buffer,
-                                               const std::ptrdiff_t &buffer_size,
-                                               bool force_client_disconnect)
-{
     auto node = (BML_NODE *)tx_buffer;
-
-    if (n == nullptr) {
-        LOG(ERROR) << " n == nullptr !!!";
-        return 0;
-    }
 
     uint8_t node_type;
     auto n_type = n->get_type();
