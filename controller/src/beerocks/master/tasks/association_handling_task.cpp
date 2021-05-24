@@ -333,15 +333,6 @@ void association_handling_task::handle_response(std::string mac,
         if (son_actions::validate_beacon_measurement_report(response->params(), sta_mac,
                                                             parent_mac)) {
             TASK_LOG(DEBUG) << "sta " << sta_mac << " supports beacon measurement!";
-            uint8_t support_level = beerocks::BEACON_MEAS_BSSID_SUPPORTED;
-
-            if (response->params().rsni) {
-                //on nexus 5x devices rsni always 0, and they are not supports measurement by ssid (special handling)
-                support_level |= beerocks::BEACON_MEAS_SSID_SUPPORTED;
-            }
-
-            database.set_node_beacon_measurement_support_level(
-                sta_mac, beerocks::eBeaconMeasurementSupportLevel(support_level));
             state = REQUEST_RSSI_MEASUREMENT_WAIT;
             break;
         }
