@@ -378,6 +378,7 @@ public:
     bool set_node_name(const std::string &mac, std::string name);
 
     bool set_node_state(const std::string &mac, beerocks::eNodeState state);
+    bool set_agent_state(prplmesh::controller::db::sAgent &agent, beerocks::eNodeState state);
     beerocks::eNodeState get_node_state(const std::string &mac);
 
     bool set_node_operational_state(const std::string &bridge_mac, bool operational);

@@ -774,6 +774,12 @@ bool db::set_node_state(const std::string &mac, beerocks::eNodeState state)
     return true;
 }
 
+bool db::set_agent_state(prplmesh::controller::db::sAgent &agent, beerocks::eNodeState state)
+{
+    agent.state = state;
+    return true;
+}
+
 beerocks::eNodeState db::get_node_state(const std::string &mac)
 {
     auto n = get_node(mac);
