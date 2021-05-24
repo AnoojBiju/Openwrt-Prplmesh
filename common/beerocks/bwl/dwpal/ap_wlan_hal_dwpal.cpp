@@ -69,6 +69,8 @@ static ap_wlan_hal::Event dwpal_to_bwl_event(const std::string &opcode)
         return ap_wlan_hal::Event::ACS_Failed;
     } else if (opcode == "AP-CSA-FINISHED") {
         return ap_wlan_hal::Event::CSA_Finished;
+    } else if (opcode == "BSS-TM-QUERY") {
+        return ap_wlan_hal::Event::BSS_TM_Query;
     } else if (opcode == "BSS-TM-RESP") {
         return ap_wlan_hal::Event::BSS_TM_Response;
     } else if (opcode == "DFS-CAC-START") {
@@ -2807,6 +2809,31 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
             break;
         }
 
+        break;
+    }
+
+    case Event::BSS_TM_Query: {
+        parsed_line_t parsed_obj;
+        parse_event(buffer, parsed_obj);
+
+        const char *client_mac_str;
+        if (!read_param("_mac", parsed_obj, &client_mac_str)) {
+            return false;
+        }
+        // auto sta_mac = tlvf::mac_from_string(client_mac_str);
+
+        const char *vap_name;
+        if (!read_param("_iface", parsed_obj, &vap_name)) {
+            return false;
+        }
+
+        std::string bssid;
+        beerocks::net::network_utils::linux_iface_get_mac(vap_name, bssid);
+
+        auto op_class = son::wireless_utils::get_operating_class_by_channel(
+            beerocks::message::sWifiChannel(m_radio_info.channel, m_radio_info.bandwidth));
+        // disassoc_timer_btt = 0 valid_int_btt=2 (200ms) reason=0 (not specified)
+        sta_bss_steer(client_mac_str, bssid, op_class, m_radio_info.channel, 0, 2, 0);
         break;
     }
 
