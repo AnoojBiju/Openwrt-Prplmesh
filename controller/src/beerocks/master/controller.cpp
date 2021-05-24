@@ -2245,7 +2245,7 @@ bool Controller::handle_intel_slave_join(
         database.set_node_type(backhaul_mac, beerocks::TYPE_IRE_BACKHAUL);
 
         database.set_node_name(backhaul_mac, slave_name + "_BH");
-        database.set_node_name(bridge_mac_str, slave_name);
+        agent->name = slave_name;
 
         //TODO slave should include eth switch mac in the message
         auto eth_sw_mac_binary = bridge_mac;
@@ -2652,13 +2652,14 @@ bool Controller::handle_non_intel_slave_join(
     database.add_node_ire(bridge_mac, tlvf::mac_from_string(backhaul_mac));
 
     agent->state = beerocks::STATE_CONNECTED;
+    agent->name  = agent->manufacturer;
+
     database.set_node_state(bridge_mac_str, beerocks::STATE_CONNECTED);
     database.set_node_backhaul_iface_type(backhaul_mac, beerocks::eIfaceType::IFACE_TYPE_ETHERNET);
     database.set_node_backhaul_iface_type(bridge_mac_str, beerocks::IFACE_TYPE_BRIDGE);
     database.set_node_manufacturer(backhaul_mac, agent->manufacturer);
     database.set_node_type(backhaul_mac, beerocks::TYPE_IRE_BACKHAUL);
     database.set_node_name(backhaul_mac, agent->manufacturer + "_BH");
-    database.set_node_name(bridge_mac_str, agent->manufacturer);
     database.add_node_wired_backhaul(tlvf::mac_from_string(eth_switch_mac), bridge_mac);
     database.set_node_state(eth_switch_mac, beerocks::STATE_CONNECTED);
     database.set_node_name(eth_switch_mac, agent->manufacturer + "_ETH");

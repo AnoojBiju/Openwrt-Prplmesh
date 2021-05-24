@@ -74,6 +74,7 @@ public:
 
     bool is_gateway = false;
 
+    std::string name;
     std::string manufacturer;
 
     beerocks::eNodeState state = beerocks::STATE_CONNECTED;

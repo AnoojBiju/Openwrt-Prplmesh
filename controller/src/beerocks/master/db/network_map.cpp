@@ -184,6 +184,12 @@ std::ptrdiff_t network_map::fill_bml_agent_data(db &database, const sMacAddr &no
         return 0;
     }
 
+    const auto agent = database.m_agents.get(node_mac);
+    if (!agent) {
+        LOG(ERROR) << "No agent found for node " << n->mac;
+        return 0;
+    }
+
     auto node = (BML_NODE *)tx_buffer;
 
     auto n_type             = n->get_type();
@@ -247,15 +253,11 @@ std::ptrdiff_t network_map::fill_bml_agent_data(db &database, const sMacAddr &no
     }
 
     network_utils::ipv4_from_string(node->ip_v4, n->ipv4);
-    string_utils::copy_string(node->name, n->name.c_str(), sizeof(node->name));
+    string_utils::copy_string(node->name, agent->name.c_str(), sizeof(node->name));
 
     tlvf::mac_from_string(node->data.gw_ire.backhaul_mac,
                           database.get_node_parent_backhaul(n->mac)); // local parent backhaul
-    const auto agent = database.m_agents.get(tlvf::mac_from_string(n->mac));
-    if (!agent) {
-        LOG(ERROR) << "No agent found for node " << n->mac;
-        return node_len;
-    }
+
     size_t i = 0;
     for (const auto &radio : agent->radios) {
         if (i >= beerocks::utils::array_length(node->data.gw_ire.radio)) {
