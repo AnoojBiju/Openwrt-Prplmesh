@@ -38,6 +38,7 @@ public:
     const sMacAddr al_mac;
 
     bool is_prplmesh = false;
+    bool is_gateway  = false;
 
     std::string manufacturer;
 

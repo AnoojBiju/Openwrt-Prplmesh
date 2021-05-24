@@ -245,7 +245,8 @@ db::add_node_gateway(const sMacAddr &mac, const sMacAddr &radio_identifier)
         return {};
     }
 
-    auto agent = m_agents.add(mac);
+    auto agent        = m_agents.add(mac);
+    agent->is_gateway = true;
 
     auto data_model_path = dm_add_device_element(mac);
     if (data_model_path.empty()) {
