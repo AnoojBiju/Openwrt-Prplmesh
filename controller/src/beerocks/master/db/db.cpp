@@ -246,6 +246,8 @@ std::shared_ptr<sAgent> db::add_node_gateway(const sMacAddr &mac)
         return agent;
     }
 
+    agent->is_gateway = true;
+
     auto data_model_path = dm_add_device_element(mac);
     if (data_model_path.empty()) {
         LOG(ERROR) << "Failed to add device element for the gateway, mac: " << mac;
