@@ -363,7 +363,7 @@ static void lease_data_handler(ubus_request *req, int type, blob_attr *msg)
             }
 
             // Iterations are not constant map members, because it changes the content.
-            for (auto itr = leases_map->second.begin(); itr != leases_map->second.end(); itr++) {
+            for (auto itr = leases_map->second.begin(); itr != leases_map->second.end();) {
 
                 if (itr->second.mac == beerocks::net::network_utils::ZERO_MAC) {
 
@@ -374,8 +374,10 @@ static void lease_data_handler(ubus_request *req, int type, blob_attr *msg)
                         itr->second.mac = neighbor->second;
                     } else {
                         itr = leases_map->second.erase(itr);
+                        continue;
                     }
                 }
+                itr++;
             }
         }
     }
