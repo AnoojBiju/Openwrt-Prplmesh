@@ -762,15 +762,6 @@ bool db::set_node_name(const std::string &mac, std::string name)
     return true;
 }
 
-std::string db::get_node_name(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return std::string();
-    }
-    return n->name;
-}
-
 bool db::set_node_state(const std::string &mac, beerocks::eNodeState state)
 {
     auto n = get_node(mac);
