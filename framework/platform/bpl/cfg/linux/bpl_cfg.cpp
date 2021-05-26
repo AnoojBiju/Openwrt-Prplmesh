@@ -697,5 +697,17 @@ bool bpl_get_lan_interfaces(std::vector<std::string> &lan_iface_list)
     return true;
 }
 
+bool bpl_cfg_get_backhaul_wire_iface(std::string &iface)
+{
+    std::string param = "backhaul_wire_iface";
+
+    if (!cfg_get_param(param, iface)) {
+        MAPF_ERR("Failed to read: " << param);
+        return false;
+    }
+
+    return true;
+}
+
 } // namespace bpl
 } // namespace beerocks

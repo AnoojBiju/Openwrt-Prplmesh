@@ -98,7 +98,6 @@ slave_thread::slave_thread(sSlaveConfig conf, beerocks::logging &logger_)
     m_stop_on_failure_attempts               = db->device_conf.stop_on_failure_attempts;
 
     db->bridge.iface_name        = conf.bridge_iface;
-    db->ethernet.wan.iface_name  = conf.backhaul_wire_iface;
     db->backhaul.preferred_bssid = tlvf::mac_from_string(conf.backhaul_preferred_bssid);
 
     auto radio = db->add_radio(conf.hostap_iface, conf.backhaul_wireless_iface);

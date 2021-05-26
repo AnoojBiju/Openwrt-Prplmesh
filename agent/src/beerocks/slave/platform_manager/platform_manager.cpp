@@ -446,12 +446,21 @@ bool PlatformManager::start()
         }
     } else {
         LOG(DEBUG) << "Non-onboarding state.";
-        if (!config.bridge_iface.empty()) {
-            load_iface_params(config.bridge_iface, beerocks::ARP_SRC_ETH_FRONT);
+
+        auto db = AgentDB::get();
+
+        if (config.bridge_iface.empty()) {
+            LOG(ERROR) << "bridge_iface is empty!";
+            return false;
         }
-        if (!config.backhaul_wire_iface.empty()) {
-            load_iface_params(config.backhaul_wire_iface, beerocks::ARP_SRC_ETH_BACK);
+        load_iface_params(config.bridge_iface, beerocks::ARP_SRC_ETH_FRONT);
+
+        if (db->ethernet.wan.iface_name.empty()) {
+            LOG(ERROR) << "wan.iface_name is empty!";
+            return false;
         }
+        load_iface_params(db->ethernet.wan.iface_name, beerocks::ARP_SRC_ETH_BACK);
+
         for (int slave_num = 0; slave_num < IRE_MAX_SLAVES; slave_num++) {
             if (!config.sta_iface[slave_num].empty()) {
                 load_iface_params(config.sta_iface[slave_num], beerocks::ARP_SRC_WIRELESS_BACK);

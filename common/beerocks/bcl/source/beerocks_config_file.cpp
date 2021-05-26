@@ -168,7 +168,6 @@ bool config_file::read_slave_config_file(const std::string &config_file_path, sC
     {
         tConfig slave_backhaul_conf_args = {
             std::make_tuple("backhaul_preferred_bssid=", &conf.backhaul_preferred_bssid, 0),
-            std::make_tuple("backhaul_wire_iface=", &conf.backhaul_wire_iface, mandatory_slave),
         };
         std::string config_type = "backhaul";
         if (!read_config_file(config_file_path, slave_backhaul_conf_args, config_type)) {
@@ -268,13 +267,14 @@ bool config_file::read_config_file(std::string config_file_path, tConfig &conf_a
                 }
             }
             if (!hit) {
-                std::cout << "unknown configuration line '" << line << "'" << std::endl;
+                std::cout << "WARNING: ignoring unknown configuration line '" << line << "'"
+                          << std::endl;
                 std::cout << "Valid configuration arguments:" << std::endl;
                 for (auto &conf : conf_args) {
                     std::cout << "    " << std::get<0>(conf) << ", type=" << config_type
                               << ", mandatory=" << int(std::get<2>(conf)) << std::endl;
                 }
-                return false;
+                continue;
             }
         }
     }

@@ -110,7 +110,12 @@ elseif (TARGET_PLATFORM STREQUAL "rdkb")
     list(APPEND BPL_LIBS nl-3 nl-route-3 bridge dl swpal uci ubox ubus slibc)
 
     # Install the UCI DB files
-    file(GLOB_RECURSE bpl_uci_db_files ${MODULE_PATH}/db/uci/prplmesh_db*)
+    set(bpl_uci_db_files ${MODULE_PATH}/db/uci/prplmesh_db_version)
+    configure_file(
+      "${CMAKE_CURRENT_SOURCE_DIR}/db/uci/prplmesh_db.in"
+      "${CMAKE_CURRENT_BINARY_DIR}/prplmesh_db"
+      )
+    list(APPEND bpl_uci_db_files ${CMAKE_CURRENT_BINARY_DIR}/prplmesh_db)
     install(FILES ${bpl_uci_db_files} DESTINATION ${CMAKE_INSTALL_PREFIX}/share)
 
 elseif (TARGET_PLATFORM STREQUAL "linux")
