@@ -374,7 +374,6 @@ public:
     get_node_beacon_measurement_support_level(const std::string &mac);
 
     bool set_node_name(const std::string &mac, std::string name);
-    std::string get_node_name(const std::string &mac);
 
     bool set_node_state(const std::string &mac, beerocks::eNodeState state);
     beerocks::eNodeState get_node_state(const std::string &mac);
