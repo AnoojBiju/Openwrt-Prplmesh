@@ -506,15 +506,6 @@ bool db::set_node_manufacturer(const std::string &mac, const std::string &manufa
     return true;
 }
 
-std::string db::get_node_manufacturer(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return std::string();
-    }
-    return n->manufacturer;
-}
-
 int db::get_node_channel(const std::string &mac)
 {
     auto n = get_node(mac);
@@ -760,15 +751,6 @@ bool db::set_node_name(const std::string &mac, std::string name)
     }
     n->name = name;
     return true;
-}
-
-std::string db::get_node_name(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return std::string();
-    }
-    return n->name;
 }
 
 bool db::set_node_state(const std::string &mac, beerocks::eNodeState state)

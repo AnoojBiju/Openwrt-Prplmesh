@@ -162,7 +162,6 @@ std::ostream &operator<<(std::ostream &os, const node &n)
            << " State: " << n.state << std::endl
            << " Active: " << bool(n.hostap->active) << std::endl
            << " Is backhual manager: " << n.hostap->is_backhaul_manager << std::endl
-           << " Manufacturer: " << n.manufacturer << std::endl
            << " Channel: " << int(n.channel) << std::endl
            << " ChannelBandwidth: " << int(n.bandwidth) << std::endl
            << " ChannelExtAboveSecondary: " << bool(n.channel_ext_above_secondary) << std::endl
