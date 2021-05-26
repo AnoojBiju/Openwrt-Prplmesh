@@ -6947,3 +6947,13 @@ bool db::set_sta_dhcp_v6_lease(const sMacAddr &sta_mac, const std::string &host_
 
     return true;
 }
+
+bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
+{
+    config.load_client_band_steering        = nbapi_config.client_band_steering;
+    config.load_client_optimal_path_roaming = nbapi_config.client_optimal_path_roaming;
+    config.roaming_hysteresis_percent_bonus = nbapi_config.roaming_hysteresis_percent_bonus;
+    config.steering_disassoc_timer_msec     = nbapi_config.steering_disassoc_timer_msec;
+
+    return true;
+}

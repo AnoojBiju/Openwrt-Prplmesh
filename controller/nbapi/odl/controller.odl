@@ -141,6 +141,11 @@
     }
 }
 
+%populate {
+    on event "dm:object-changed" call event_configuration_changed
+        filter 'object matches "Controller\.Configuration\."';
+}
+
 include "device.odl";
 include "radio.odl";
 include "bss.odl";

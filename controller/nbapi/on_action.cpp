@@ -212,11 +212,11 @@ amxd_status_t client_steering(amxd_object_t *object, amxd_function_t *func, amxc
 
 /**
  * @brief Initiate channel scan from NBAPI for given radio and channels.
- * 
+ *
  * Example of usage:
- * ubus call Controller.Network ScanTrigger 
+ * ubus call Controller.Network ScanTrigger
  * '{"channels_list": "36, 44", channels_num: "2"}'
- * 
+ *
  * When channel list does not contain any channels
  * scan triggering for all supported channels of specified radio.
  */
@@ -303,7 +303,7 @@ static void add_string_param(const char *param_name, amxd_object_t *param_owner_
  * from Controller.Network.AccessPoint.*.Security object.
  * event_rm_params() invokes when value of parameter
  * Controller.Network.AccessPoint.*.Security.ModeEnabled changed
- * from "WPA2-Personal" to any of other availeble values.
+ * from "WPA2-Personal" to any of other available values.
  */
 static void event_rm_params(const char *const sig_name, const amxc_var_t *const data,
                             void *const priv)
@@ -339,6 +339,39 @@ static void event_add_hidden_params(const char *const sig_name, const amxc_var_t
     add_string_param("SAEPassphrase", security_obj);
 }
 
+/**
+ * @brief Event handler for controller configuration change.
+ *
+ * event_configuration_changed is invoked when value of parameter
+ * in Controller.Configuration object changes with set command.
+ */
+static void event_configuration_changed(const char *const sig_name, const amxc_var_t *const data,
+                                        void *const priv)
+{
+    amxd_object_t *configuration = amxd_dm_signal_get_object(g_data_model, data);
+
+    if (!configuration) {
+        LOG(WARNING) << "Failed to get object Controller.Configuration";
+        return;
+    }
+
+    son::db::sDbNbapiConfig nbapi_config;
+    nbapi_config.client_band_steering =
+        amxd_object_get_bool(configuration, "BandSteeringEnabled", nullptr);
+    nbapi_config.client_optimal_path_roaming =
+        amxd_object_get_bool(configuration, "ClientSteeringEnabled", nullptr);
+    nbapi_config.roaming_hysteresis_percent_bonus =
+        amxd_object_get_int32_t(configuration, "SteeringCurrentBonus", nullptr);
+    nbapi_config.steering_disassoc_timer_msec = std::chrono::milliseconds{
+        amxd_object_get_int32_t(configuration, "SteeringDisassociationTimer", nullptr)};
+
+    if (!g_database->update_master_configuration(nbapi_config)) {
+        LOG(ERROR) << "Failed update master configuration from NBAPI.";
+    }
+
+    // TODO Save persistent settings with amxo_parser_save() (PPM-1419)
+}
+
 std::vector<beerocks::nbapi::sActionsCallback> get_actions_callback_list(void)
 {
     const std::vector<beerocks::nbapi::sActionsCallback> actions_list = {
@@ -352,6 +385,7 @@ std::vector<beerocks::nbapi::sEvents> get_events_list(void)
     const std::vector<beerocks::nbapi::sEvents> events_list = {
         {"event_rm_params", event_rm_params},
         {"event_add_hidden_params", event_add_hidden_params},
+        {"event_configuration_changed", event_configuration_changed},
     };
     return events_list;
 }
