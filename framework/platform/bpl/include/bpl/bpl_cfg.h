@@ -97,6 +97,7 @@ constexpr int DEFAULT_BAND_STEERING                    = 0;
 constexpr int DEFAULT_CLIENT_ROAMING                   = 0;
 constexpr int DEFAULT_ROAMING_HYSTERESIS_PERCENT_BONUS = 10;
 constexpr std::chrono::milliseconds DEFAULT_STEERING_DISASSOC_TIMER_MSEC{200};
+
 // by-default the persistent DB is disabled to allow backwards compatability
 // if the parameter is not configured in the prplmesh config and set to 1, DB is disabled
 constexpr int DEFAULT_PERSISTENT_DB = 0;
@@ -322,22 +323,20 @@ int cfg_is_onboarding();
 int cfg_get_rdkb_extensions();
 
 /**
- * Checks the state of the Band Steering feature.
+ * @brief Returns whether Band Steering feature is enabled or not.
  *
- * @return 1 Enabled.
- * @return 0 Disabled.
- * @return -1 Error.
+ * @param [out] enable true if the Band Steering is enabled and false otherwise.
+ * @return true on success, otherwise false.
  */
-int cfg_get_band_steering();
+bool cfg_get_band_steering(bool &band_steering);
 
 /**
- * Checks the state of the Client Roaming feature.
+ * @brief Returns whether Client Roaming feature is enabled or not.
  *
- * @return 1 Enabled.
- * @return 0 Disabled.
- * @return -1 Error.
+ * @param [out] enable true if the Client Roaming is enabled and false otherwise.
+ * @return true on success, otherwise false.
  */
-int cfg_get_client_roaming();
+bool cfg_get_client_roaming(bool &client_roaming);
 
 /**
  * Returns miscellaneous Wi-Fi parameters.
@@ -624,6 +623,30 @@ bool bpl_cfg_get_mandatory_interfaces(std::string &mandatory_interfaces);
  * @return true on success, otherwise false.
  */
 bool bpl_cfg_get_backhaul_wire_iface(std::string &iface);
+
+/**
+ * @brief Reads roaming hysteresis percent bonus.
+ *
+ * Bonus (in %) given to current BSS as hysteresis. Setting this to 0 gives no hysteresis at all,
+ * setting to 20 means that an alternative AP has to be estimated to be 20% better than the current one before it's considered.
+ * Maximum value is 10000.
+ *
+ * @param[out] roaming_hysteresis_percent_bonus roaming hysteresis percentage.
+ * @return true on success, otherwise false
+ */
+bool cfg_get_roaming_hysteresis_percent_bonus(int &roaming_hysteresis_percent_bonus);
+
+/**
+ * @brief Reads steering disassociation timer in milliseconds.
+ *
+ * It is the time before the STA is forcefully disassociated.
+ * When STA is triggered to steer, it is not allowed to return to the original BSS in this time period.
+ * Value should be exceed 32-bit. So maximum value is 4 billion, which corresponds to about a month and a half.
+ *
+ * @param[out] steering_disassoc_timer_msec  steering disassociation timer in milliseconds.
+ * @return true on success, otherwise false
+ */
+bool cfg_get_steering_disassoc_timer_msec(std::chrono::milliseconds &steering_disassoc_timer_msec);
 
 } // namespace bpl
 } // namespace beerocks

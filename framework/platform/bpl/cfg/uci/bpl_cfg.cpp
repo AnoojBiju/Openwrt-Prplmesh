@@ -202,27 +202,26 @@ int cfg_get_rdkb_extensions()
     return retVal;
 }
 
-int cfg_get_band_steering()
+bool cfg_get_band_steering(bool &band_steering)
 {
     int retVal = -1;
-    if (cfg_get_prplmesh_param_int_default("band_steering", &retVal, DEFAULT_BAND_STEERING) ==
-        RETURN_ERR) {
-        MAPF_INFO("cfg_get_band_steering: Failed to read BandSteering parameter\n");
-        return RETURN_ERR;
+    if (cfg_get_prplmesh_param_int("band_steering", &retVal) == RETURN_ERR) {
+        return false;
     }
-    return retVal;
+
+    band_steering = (retVal == 1);
+    return true;
 }
 
-int cfg_get_client_roaming()
+bool cfg_get_client_roaming(bool &client_roaming)
 {
     int retVal = -1;
-    if (cfg_get_prplmesh_param_int_default("client_roaming", &retVal, DEFAULT_CLIENT_ROAMING) ==
-        RETURN_ERR) {
-
-        MAPF_INFO("cfg_get_client_roaming: Failed to read ClientRoaming parameter\n");
-        return RETURN_ERR;
+    if (cfg_get_prplmesh_param_int("client_roaming", &retVal) == RETURN_ERR) {
+        return false;
     }
-    return retVal;
+
+    client_roaming = (retVal == 1);
+    return true;
 }
 
 int cfg_get_wifi_params(const char iface[BPL_IFNAME_LEN], struct BPL_WLAN_PARAMS *wlan_params)
@@ -838,5 +837,26 @@ bool bpl_cfg_get_backhaul_wire_iface(std::string &iface)
     return true;
 }
 
+bool cfg_get_roaming_hysteresis_percent_bonus(int &roaming_hysteresis_percent_bonus)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int("roaming_hysteresis_percent_bonus", &retVal) == RETURN_ERR) {
+        return false;
+    }
+
+    roaming_hysteresis_percent_bonus = retVal;
+    return true;
+}
+
+bool cfg_get_steering_disassoc_timer_msec(std::chrono::milliseconds &steering_disassoc_timer_msec)
+{
+    int retVal = -1;
+    if (cfg_get_prplmesh_param_int("steering_disassoc_timer_msec", &retVal) == RETURN_ERR) {
+        return false;
+    }
+
+    steering_disassoc_timer_msec = std::chrono::milliseconds{retVal};
+    return true;
+}
 } // namespace bpl
 } // namespace beerocks

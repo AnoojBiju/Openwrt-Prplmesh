@@ -311,22 +311,26 @@ int cfg_is_onboarding() { return 0; }
 
 int cfg_get_rdkb_extensions() { return 0; }
 
-int cfg_get_band_steering()
+bool cfg_get_band_steering(bool &band_steering)
 {
     int retVal = -1;
     if (cfg_get_param_int("band_steering", retVal) == RETURN_ERR) {
-        retVal = RETURN_ERR;
+        return false;
     }
-    return retVal;
+
+    band_steering = (retVal == 1);
+    return true;
 }
 
-int cfg_get_client_roaming()
+bool cfg_get_client_roaming(bool &client_roaming)
 {
     int retVal = -1;
     if (cfg_get_param_int("client_roaming", retVal) == RETURN_ERR) {
-        retVal = RETURN_ERR;
+        return false;
     }
-    return retVal;
+
+    client_roaming = (retVal == 1);
+    return true;
 }
 
 int cfg_get_wifi_params(const char *iface, struct BPL_WLAN_PARAMS *wlan_params)
@@ -723,5 +727,26 @@ bool bpl_cfg_get_backhaul_wire_iface(std::string &iface)
     return true;
 }
 
+bool cfg_get_roaming_hysteresis_percent_bonus(int &roaming_hysteresis_percent_bonus)
+{
+    int val = -1;
+    if (cfg_get_param_int("roaming_hysteresis_percent_bonus", val) == RETURN_ERR) {
+        return false;
+    }
+
+    roaming_hysteresis_percent_bonus = val;
+    return true;
+}
+
+bool cfg_get_steering_disassoc_timer_msec(std::chrono::milliseconds &steering_disassoc_timer_msec)
+{
+    int val = -1;
+    if (cfg_get_param_int("steering_disassoc_timer_msec", val) == RETURN_ERR) {
+        return false;
+    }
+
+    steering_disassoc_timer_msec = std::chrono::milliseconds{val};
+    return true;
+}
 } // namespace bpl
 } // namespace beerocks

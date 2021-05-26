@@ -148,6 +148,7 @@ public:
         unsigned int persistent_db_commit_changes_interval_seconds;
         std::chrono::seconds link_metrics_request_interval_seconds;
         std::chrono::seconds dhcp_monitor_interval_seconds;
+        std::chrono::milliseconds steering_disassoc_timer_msec;
     } sDbMasterConfig;
 
     typedef struct {
@@ -1394,17 +1395,17 @@ public:
 
     /**
      * @brief Update the node stats info
-     * 
+     *
      * @param[in] mac MAC address of the given node
      * @param[in] params pointer to the incoming parameters
-     * 
+     *
      * @return true on success, otherwise false.
      */
     bool set_node_stats_info(const sMacAddr &mac, const beerocks_message::sStaStatsParams *params);
 
     /**
      * @brief Clear any existing node stats info
-     * 
+     *
      * @param[in] mac MAC address of the given node
      */
     void clear_node_stats_info(const sMacAddr &mac);

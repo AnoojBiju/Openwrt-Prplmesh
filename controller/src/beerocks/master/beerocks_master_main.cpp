@@ -143,13 +143,10 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
     master_conf.model  = main_master_conf.model;
     master_conf.ucc_listener_port =
         beerocks::string_utils::stoi(main_master_conf.ucc_listener_port);
-    master_conf.load_ire_roaming          = (main_master_conf.load_ire_roaming == "1");
-    master_conf.load_service_fairness     = (main_master_conf.load_service_fairness == "1");
-    master_conf.load_dfs_reentry          = (main_master_conf.load_dfs_reentry == "1");
-    master_conf.load_rdkb_extensions      = (main_master_conf.load_rdkb_extensions == "1");
-    master_conf.load_client_band_steering = (main_master_conf.load_client_band_steering == "1");
-    master_conf.load_client_optimal_path_roaming =
-        (main_master_conf.load_client_optimal_path_roaming == "1");
+    master_conf.load_ire_roaming           = (main_master_conf.load_ire_roaming == "1");
+    master_conf.load_service_fairness      = (main_master_conf.load_service_fairness == "1");
+    master_conf.load_dfs_reentry           = (main_master_conf.load_dfs_reentry == "1");
+    master_conf.load_rdkb_extensions       = (main_master_conf.load_rdkb_extensions == "1");
     master_conf.load_client_11k_roaming    = (main_master_conf.load_client_11k_roaming == "1");
     master_conf.load_legacy_client_roaming = (main_master_conf.load_legacy_client_roaming == "1");
     master_conf.load_load_balancing        = (main_master_conf.load_load_balancing == "1");
@@ -163,8 +160,7 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
         beerocks::string_utils::stoi(main_master_conf.diagnostics_measurements_polling_rate_sec);
     master_conf.ire_rssi_report_rate_sec =
         beerocks::string_utils::stoi(main_master_conf.ire_rssi_report_rate_sec);
-    master_conf.roaming_hysteresis_percent_bonus =
-        beerocks::string_utils::stoi(main_master_conf.roaming_hysteresis_percent_bonus);
+
     master_conf.roaming_unconnected_client_rssi_compensation_db = beerocks::string_utils::stoi(
         main_master_conf.roaming_unconnected_client_rssi_compensation_db);
     master_conf.roaming_hop_percent_penalty =
@@ -242,14 +238,14 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
     }
 
     if (!beerocks::bpl::cfg_get_persistent_db_enable(master_conf.persistent_db)) {
-        LOG(DEBUG) << "failed to read persistent db enable, setting to default value: "
+        LOG(DEBUG) << "Failed to read persistent db enable, setting to default value: "
                    << bool(beerocks::bpl::DEFAULT_PERSISTENT_DB);
         master_conf.persistent_db = bool(beerocks::bpl::DEFAULT_PERSISTENT_DB);
     }
     if (!beerocks::bpl::cfg_get_clients_persistent_db_max_size(
             master_conf.clients_persistent_db_max_size)) {
         LOG(DEBUG)
-            << "failed to read max number of clients in persistent db, setting to default value: "
+            << "Failed to read max number of clients in persistent db, setting to default value: "
             << beerocks::bpl::DEFAULT_CLIENTS_PERSISTENT_DB_MAX_SIZE;
         master_conf.clients_persistent_db_max_size =
             beerocks::bpl::DEFAULT_CLIENTS_PERSISTENT_DB_MAX_SIZE;
@@ -257,13 +253,13 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
     if (!beerocks::bpl::cfg_get_max_timelife_delay_minutes(
             master_conf.max_timelife_delay_minutes)) {
         LOG(DEBUG)
-            << "failed to read max lifetime of clients in persistent db, setting to default value: "
+            << "Failed to read max lifetime of clients in persistent db, setting to default value: "
             << beerocks::bpl::DEFAULT_MAX_TIMELIFE_DELAY_MINUTES << " minutes";
         master_conf.max_timelife_delay_minutes = beerocks::bpl::DEFAULT_MAX_TIMELIFE_DELAY_MINUTES;
     }
     if (!beerocks::bpl::cfg_get_unfriendly_device_max_timelife_delay_minutes(
             master_conf.unfriendly_device_max_timelife_delay_minutes)) {
-        LOG(DEBUG) << "failed to read max lifetime of unfriendly clients in persistent db, setting "
+        LOG(DEBUG) << "Failed to read max lifetime of unfriendly clients in persistent db, setting "
                       "to default value: "
                    << beerocks::bpl::DEFAULT_UNFRIENDLY_DEVICE_MAX_TIMELIFE_DELAY_MINUTES
                    << " minutes";
@@ -272,7 +268,7 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
     }
     if (!beerocks::bpl::cfg_get_persistent_db_aging_interval(
             master_conf.persistent_db_aging_interval)) {
-        LOG(DEBUG) << "failed to read persistent DB aging interval in persistent db, setting "
+        LOG(DEBUG) << "Failed to read persistent DB aging interval in persistent db, setting "
                       "to default value: "
                    << beerocks::bpl::DEFAULT_PERSISTENT_DB_AGING_INTERVAL_SEC << " seconds";
         master_conf.persistent_db_aging_interval =
@@ -280,7 +276,7 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
     }
     if (!beerocks::bpl::cfg_get_persistent_db_commit_changes_interval(
             master_conf.persistent_db_commit_changes_interval_seconds)) {
-        LOG(DEBUG) << "failed to read commit_changes interval, setting to default value: "
+        LOG(DEBUG) << "Failed to read commit_changes interval, setting to default value: "
                    << beerocks::bpl::DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE_SEC;
 
         master_conf.persistent_db_commit_changes_interval_seconds =
@@ -288,7 +284,7 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
     }
     if (!beerocks::bpl::cfg_get_link_metrics_request_interval(
             master_conf.link_metrics_request_interval_seconds)) {
-        LOG(DEBUG) << "failed to read link_metrics_request interval, setting to default value: "
+        LOG(DEBUG) << "Failed to read link_metrics_request interval, setting to default value: "
                    << beerocks::bpl::DEFAULT_LINK_METRICS_REQUEST_INTERVAL_VALUE_SEC.count();
 
         master_conf.link_metrics_request_interval_seconds =
@@ -297,6 +293,38 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
 
     master_conf.dhcp_monitor_interval_seconds =
         beerocks::bpl::DEFAULT_DHCP_MONITOR_INTERVAL_VALUE_SEC;
+
+    if (!beerocks::bpl::cfg_get_band_steering(master_conf.load_client_band_steering)) {
+        LOG(DEBUG) << "Failed to read cfg_get_band_steering, setting to default value: "
+                   << beerocks::bpl::DEFAULT_BAND_STEERING;
+
+        master_conf.load_client_band_steering = beerocks::bpl::DEFAULT_BAND_STEERING;
+    }
+
+    if (!beerocks::bpl::cfg_get_client_roaming(master_conf.load_client_optimal_path_roaming)) {
+        LOG(DEBUG) << "Failed to read cfg_get_client_roaming, setting to default value: "
+                   << beerocks::bpl::DEFAULT_CLIENT_ROAMING;
+
+        master_conf.load_client_optimal_path_roaming = beerocks::bpl::DEFAULT_CLIENT_ROAMING;
+    }
+
+    if (!beerocks::bpl::cfg_get_roaming_hysteresis_percent_bonus(
+            master_conf.roaming_hysteresis_percent_bonus)) {
+        LOG(DEBUG) << "Failed to read roaming_hysteresis_percent_bonus, setting to default value: "
+                   << beerocks::bpl::DEFAULT_ROAMING_HYSTERESIS_PERCENT_BONUS;
+
+        master_conf.roaming_hysteresis_percent_bonus =
+            beerocks::bpl::DEFAULT_ROAMING_HYSTERESIS_PERCENT_BONUS;
+    }
+
+    if (!beerocks::bpl::cfg_get_steering_disassoc_timer_msec(
+            master_conf.steering_disassoc_timer_msec)) {
+        LOG(DEBUG) << "Failed to read steering_disassoc_timer_msec, setting to default value: "
+                   << beerocks::bpl::DEFAULT_STEERING_DISASSOC_TIMER_MSEC.count();
+
+        master_conf.steering_disassoc_timer_msec =
+            beerocks::bpl::DEFAULT_STEERING_DISASSOC_TIMER_MSEC;
+    }
 }
 
 int main(int argc, char *argv[])
