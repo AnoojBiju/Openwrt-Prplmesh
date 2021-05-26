@@ -327,6 +327,36 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
     }
 }
 
+/**
+ * @brief Fills Controller Configuration datamodels according to master config.
+ *
+ * @param ambiorix_datamodel datamodel pointer.
+ * @param master_conf master configuration object to read settings.
+ * @return True if success otherwise false.
+ */
+static bool
+fill_nbapi_config_from_master_conf(std::shared_ptr<beerocks::nbapi::Ambiorix> ambiorix_datamodel,
+                                   son::db::sDbMasterConfig &master_conf)
+{
+    bool ret_val = true;
+
+    // ambiorix->set methods trigger data change event. It is not harmfull, but needed to be remembered.
+
+    ret_val &= ambiorix_datamodel->set("Controller.Configuration", "BandSteeringEnabled",
+                                       master_conf.load_client_band_steering);
+
+    ret_val &= ambiorix_datamodel->set("Controller.Configuration", "ClientSteeringEnabled",
+                                       master_conf.load_client_optimal_path_roaming);
+
+    ret_val &= ambiorix_datamodel->set("Controller.Configuration", "SteeringCurrentBonus",
+                                       master_conf.roaming_hysteresis_percent_bonus);
+
+    ret_val &= ambiorix_datamodel->set("Controller.Configuration", "SteeringDisassociationTimer",
+                                       master_conf.steering_disassoc_timer_msec.count());
+
+    return ret_val;
+}
+
 int main(int argc, char *argv[])
 {
     std::cout << "Beerocks Controller Process Start" << std::endl;
@@ -479,6 +509,8 @@ int main(int argc, char *argv[])
     prplmesh::controller::actions::g_database   = &master_db;
     prplmesh::controller::actions::g_data_model = beerocks::nbapi::g_data_model;
 #endif
+
+    fill_nbapi_config_from_master_conf(amb_dm_obj, master_conf);
 
     // The prplMesh controller needs to be configured with the SSIDs and credentials that have to
     // be configured on the agents. Even though NBAPI exists to configure this, there is a lot of
