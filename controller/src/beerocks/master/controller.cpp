@@ -2261,7 +2261,6 @@ bool Controller::handle_intel_slave_join(
     database.set_hostap_ant_gain(bridge_mac, radio_mac, notification->hostap().ant_gain);
     database.set_hostap_tx_power(bridge_mac, radio_mac, notification->hostap().tx_power);
 
-    database.set_node_name(tlvf::mac_to_string(radio_mac), slave_name + "_AP");
     database.set_node_ipv4(tlvf::mac_to_string(radio_mac), bridge_ipv4);
     database.set_node_manufacturer(tlvf::mac_to_string(radio_mac), "Intel");
 
@@ -2556,7 +2555,6 @@ bool Controller::handle_non_intel_slave_join(
     database.set_hostap_ant_gain(bridge_mac, radio_mac, 0);
     database.set_hostap_tx_power(bridge_mac, radio_mac, 0);
     database.set_hostap_active(radio_mac, true);
-    database.set_node_name(tlvf::mac_to_string(radio_mac), manufacturer + "_AP");
     database.set_node_manufacturer(tlvf::mac_to_string(radio_mac), manufacturer);
     // TODO ipv4 will not be set
 
