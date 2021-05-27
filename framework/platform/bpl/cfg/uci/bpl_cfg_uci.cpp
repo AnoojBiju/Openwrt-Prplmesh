@@ -12,6 +12,8 @@
 #include <mapf/common/utils.h>
 
 #include <string>
+#include <cstdlib>
+#include <iostream>
 
 extern "C" {
 #include <uci.h>
@@ -30,17 +32,23 @@ namespace bpl {
 
 int cfg_uci_get(char *path, char *value, size_t length)
 {
+    std::cout << "In cfg_uci_get" << std::endl;
     struct uci_ptr ptr;
     struct uci_context *cont = uci_alloc_context();
 
-    if (!cont)
-        return RETURN_ERR;
-
-    if (uci_lookup_ptr(cont, &ptr, path, true) != UCI_OK || !ptr.o) {
-        uci_free_context(cont);
+    if (!cont) {
+        std::cout << "Failed to get context" << std::endl;
         return RETURN_ERR;
     }
 
+    if (uci_lookup_ptr(cont, &ptr, path, true) != UCI_OK || !ptr.o) {
+        std::cout << "Failed to do the UCI lookup" << std::endl;
+        auto ret = std::system("uci show prplmesh");
+        (void) ret; // avoid the unused value warning
+        uci_free_context(cont);
+        return RETURN_ERR;
+    }
+    std::cout << "Copying UCI value" << std::endl;
     strncpy_s(value, length, ptr.o->v.string, length - 1);
 
     uci_free_context(cont);

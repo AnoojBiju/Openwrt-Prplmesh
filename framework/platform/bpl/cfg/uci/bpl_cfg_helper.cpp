@@ -13,6 +13,8 @@
 
 #include <mapf/common/logger.h>
 #include <mapf/common/utils.h>
+#include <iostream>
+
 
 namespace beerocks {
 namespace bpl {
@@ -24,10 +26,12 @@ int cfg_get_prplmesh_param(const std::string &param, char *buf, size_t buf_len)
     if (buf_len > MAX_UCI_BUF_LEN) {
         buf_len = MAX_UCI_BUF_LEN;
     }
-
-    if (snprintf_s(path, MAX_UCI_BUF_LEN, "prplmesh.config.%s", param.c_str()) <= 0)
+    std::cout << "in get_prplmesh_param" << std::endl;
+    if (snprintf_s(path, MAX_UCI_BUF_LEN, "prplmesh.config.%s", param.c_str()) <= 0) {
+        std::cout << "snprintf failed" << std::endl;
         return RETURN_ERR;
-
+    }
+    std::cout << "snprintf succeeded, path is " << path << std::endl;
     return cfg_uci_get(path, buf, buf_len);
 }
 
