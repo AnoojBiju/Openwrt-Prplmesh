@@ -1840,14 +1840,9 @@ beerocks::eWiFiAntNum db::get_hostap_ant_num(const sMacAddr &mac)
     return beerocks::eWiFiAntNum(n->capabilities.ant_num);
 }
 
-bool db::set_hostap_ant_gain(const sMacAddr &al_mac, const sMacAddr &mac, int ant_gain)
+bool db::set_hostap_ant_gain(sAgent::sRadio &radio, int ant_gain)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
-        return false;
-    }
-    radio->ant_gain = ant_gain;
+    radio.ant_gain = ant_gain;
     return true;
 }
 

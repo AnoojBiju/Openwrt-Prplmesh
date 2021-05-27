@@ -779,7 +779,7 @@ public:
     bool set_hostap_ant_num(const sMacAddr &mac, beerocks::eWiFiAntNum ant_num);
     beerocks::eWiFiAntNum get_hostap_ant_num(const sMacAddr &mac);
 
-    bool set_hostap_ant_gain(const sMacAddr &al_mac, const sMacAddr &mac, int ant_gain);
+    bool set_hostap_ant_gain(sAgent::sRadio &radio, int ant_gain);
     int get_hostap_ant_gain(const sMacAddr &mac);
 
     bool set_hostap_tx_power(const sMacAddr &al_mac, const sMacAddr &mac, int tx_power);
