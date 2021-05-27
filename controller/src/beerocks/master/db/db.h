@@ -878,6 +878,7 @@ public:
     int8_t get_hostap_vap_id(const sMacAddr &mac);
 
     bool set_node_backhaul_iface_type(const std::string &mac, beerocks::eIfaceType iface_type);
+    bool set_radio_backhaul_iface_type(sAgent::sRadio &radio, beerocks::eIfaceType iface_type);
     beerocks::eIfaceType get_node_backhaul_iface_type(const std::string &mac);
 
     std::string get_5ghz_sibling_hostap(const std::string &mac);

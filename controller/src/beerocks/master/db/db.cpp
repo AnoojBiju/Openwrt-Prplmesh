@@ -2463,6 +2463,12 @@ bool db::set_node_backhaul_iface_type(const std::string &mac, beerocks::eIfaceTy
     return true;
 }
 
+bool db::set_radio_backhaul_iface_type(sAgent::sRadio &radio, beerocks::eIfaceType iface_type)
+{
+    radio.iface_type = iface_type;
+    return set_node_backhaul_iface_type(tlvf::mac_to_string(radio.radio_uid), iface_type);
+}
+
 bool db::set_hostap_driver_version(sAgent::sRadio &radio, const std::string &version)
 {
     radio.driver_version = version;
