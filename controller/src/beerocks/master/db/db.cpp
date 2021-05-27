@@ -4512,31 +4512,28 @@ bool db::set_node_stats_info(const sMacAddr &mac, const beerocks_message::sStaSt
 
 void db::clear_node_stats_info(const sMacAddr &mac) { set_node_stats_info(mac, nullptr); }
 
-bool db::set_vap_stats_info(const std::string &bssid, uint32_t uc_tx_bytes, uint32_t uc_rx_bytes,
+bool db::set_vap_stats_info(const sMacAddr &bssid, uint32_t uc_tx_bytes, uint32_t uc_rx_bytes,
                             uint32_t mc_tx_bytes, uint32_t mc_rx_bytes, uint32_t bc_tx_bytes,
                             uint32_t bc_rx_bytes)
 {
     /*
-        ToDo: This method should be called in the handler for AP Extended Metrics TLV (WFA EasyMesh R2)
-    */
-
-    /*
         Prepare path with correct BSS instance.
         Example: Controller.Network.Device.1.Radio.1.BSS.1
     */
-    auto bss_path = dm_get_path_to_bss(tlvf::mac_from_string(bssid));
+    auto bss_path = dm_get_path_to_bss(bssid);
     if (bss_path.empty()) {
         LOG(ERROR) << "Failed to get BSS path with mac: " << bssid;
         return false;
     }
 
+    bool ret_val = true;
     /*
         Set value for UnicastBytesSent variable
         Example: Controller.Network.Device.1.Radio.1.BSS.1.UnicastBytesSent
     */
     if (!m_ambiorix_datamodel->set(bss_path, "UnicastBytesSent", uc_tx_bytes)) {
         LOG(ERROR) << "Failed to set " << bss_path << ".UnicastBytesSent";
-        return false;
+        ret_val &= false;
     }
 
     /*
@@ -4545,10 +4542,14 @@ bool db::set_vap_stats_info(const std::string &bssid, uint32_t uc_tx_bytes, uint
     */
     if (!m_ambiorix_datamodel->set(bss_path, "UnicastBytesReceived", uc_rx_bytes)) {
         LOG(ERROR) << "Failed to set " << bss_path << ".UnicastBytesReceived";
-        return false;
+        ret_val &= false;
     }
 
-    return true;
+    ret_val &= m_ambiorix_datamodel->set(bss_path, "MulticastBytesSent", mc_tx_bytes);
+    ret_val &= m_ambiorix_datamodel->set(bss_path, "MulticastBytesReceived", mc_rx_bytes);
+    ret_val &= m_ambiorix_datamodel->set(bss_path, "BroadcastBytesSent", bc_tx_bytes);
+    ret_val &= m_ambiorix_datamodel->set(bss_path, "BroadcastBytesReceived", bc_rx_bytes);
+    return ret_val;
 }
 
 bool db::commit_persistent_db_changes()

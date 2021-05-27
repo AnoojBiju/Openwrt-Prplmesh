@@ -22,7 +22,6 @@ class NbapiBSS(PrplMeshBaseTest):
     '''
 
     def assertEqual(self, name: str, actual: int, expected: str):
-        print(f'Actual: {actual} expected: {expected}')
         assert actual == int(expected), f"Wrong value for {name}: {actual} expected {expected}"
 
     def runTest(self):
@@ -50,23 +49,21 @@ class NbapiBSS(PrplMeshBaseTest):
         ap_metric_resp = self.check_cmdu_type_single("AP Metrics Response", 0x800C, agent.mac,
                                                      controller.mac, mid)
         ap_metrics = self.check_cmdu_has_tlv_single(ap_metric_resp, 0x94)
-
-        # TO DO: All comments should be uncommented after PPM-1170
-        # ap_extended_metrics = self.check_cmdu_has_tlv_single(ap_metric_resp, 0xC7)
+        ap_extended_metrics = self.check_cmdu_has_tlv_single(ap_metric_resp, 0xC7)
 
         repeater = topology[agent.mac]
         radio = repeater.radios[agent.radios[0].mac]
         for bss in radio.vaps.values():
             time_stamp = controller.nbapi_get_parameter(bss.path, "TimeStamp")
-            # uinicast_bytes_sent = controller.nbapi_get_parameter(bss.path, "UnicastBytesSent")
-            # unicast_bytes_received = controller.nbapi_get_parameter(
-            #     bss.path, "UnicastBytesReceived")
-            # multicast_bytes_sent = controller.nbapi_get_parameter(bss.path, "MulticastBytesSent")
-            # multicast_bytes_received = controller.nbapi_get_parameter(
-            #     bss.path, "MulticastBytesReceived")
-            # broadcast_bytes_sent = controller.nbapi_get_parameter(bss.path, "BroadcastBytesSent")
-            # broadcast_bytes_received = controller.nbapi_get_parameter(
-            #     bss.path, "BroadcastBytesReceived")
+            uinicast_bytes_sent = controller.nbapi_get_parameter(bss.path, "UnicastBytesSent")
+            unicast_bytes_received = controller.nbapi_get_parameter(
+                bss.path, "UnicastBytesReceived")
+            multicast_bytes_sent = controller.nbapi_get_parameter(bss.path, "MulticastBytesSent")
+            multicast_bytes_received = controller.nbapi_get_parameter(
+                bss.path, "MulticastBytesReceived")
+            broadcast_bytes_sent = controller.nbapi_get_parameter(bss.path, "BroadcastBytesSent")
+            broadcast_bytes_received = controller.nbapi_get_parameter(
+                bss.path, "BroadcastBytesReceived")
             est_service_params_be = controller.nbapi_get_parameter(
                 bss.path, "EstServiceParametersBE")
             est_service_params_bk = controller.nbapi_get_parameter(
@@ -86,18 +83,21 @@ class NbapiBSS(PrplMeshBaseTest):
             if re.match(expected_time_format, time_stamp) is None:
                 self.fail(f'Fail. Network time stamp has incorrect format: {time_stamp}')
 
-            # self.assertEqual("UnicastBytesSent", uinicast_bytes_sent,
-            #                  ap_extended_metrics.unicast_bytes_sent)
-            # self.assertEqual("UnicastBytesReceived", unicast_bytes_received,
-            #                  ap_extended_metrics.unicast_bytes_received)
-            # self.assertEqual("MulticastBytesSent", multicast_bytes_sent,
-            #                  ap_extended_metrics.multicast_bytes_sent)
-            # self.assertEqual("MulticastBytesReceived", multicast_bytes_received,
-            #                  ap_extended_metrics.multicast_bytes_received)
-            # self.assertEqual("BroadcastBytesSent", broadcast_bytes_sent,
-            #                  ap_extended_metrics.Broadcast_bytes_sent)
-            # self.assertEqual("BroadcastBytesReceived", broadcast_bytes_received,
-            #                  ap_extended_metrics.broadcast_bytes_received)
+            # The tshark version 2.6.20 used in boardfarm
+            # doesn't properly parse AP Extended Metrics TLV.
+            uc_tx_bytes_tlv = int(ap_extended_metrics.tlv_data[18:29].replace(":", ""), 16)
+            uc_rx_bytes_tlv = int(ap_extended_metrics.tlv_data[30:41].replace(":", ""), 16)
+            mc_tx_bytes_tlv = int(ap_extended_metrics.tlv_data[42:53].replace(":", ""), 16)
+            mc_rx_bytes_tlv = int(ap_extended_metrics.tlv_data[54:65].replace(":", ""), 16)
+            bdc_tx_bytes_tlv = int(ap_extended_metrics.tlv_data[66:77].replace(":", ""), 16)
+            bdc_rx_bytes_tlv = int(ap_extended_metrics.tlv_data[78:89].replace(":", ""), 16)
+
+            self.assertEqual("UnicastBytesSent", uinicast_bytes_sent, uc_tx_bytes_tlv)
+            self.assertEqual("UnicastBytesReceived", unicast_bytes_received, uc_rx_bytes_tlv)
+            self.assertEqual("MulticastBytesSent", multicast_bytes_sent, mc_tx_bytes_tlv)
+            self.assertEqual("MulticastBytesReceived", multicast_bytes_received, mc_rx_bytes_tlv)
+            self.assertEqual("BroadcastBytesSent", broadcast_bytes_sent, bdc_tx_bytes_tlv)
+            self.assertEqual("BroadcastBytesReceived", broadcast_bytes_received, bdc_rx_bytes_tlv)
 
             be = getattr(ap_metrics, 'ap_metrics_est_param_be', 0)
             bk = getattr(ap_metrics, 'ap_metrics_est_param_bk', 0)

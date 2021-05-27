@@ -31,6 +31,7 @@
 #include <tlvf/ieee_1905_1/tlvWsc.h>
 #include <tlvf/wfa_map/eTlvTypeMap.h>
 #include <tlvf/wfa_map/tlvApCapability.h>
+#include <tlvf/wfa_map/tlvApExtendedMetrics.h>
 #include <tlvf/wfa_map/tlvApHeCapabilities.h>
 #include <tlvf/wfa_map/tlvApHtCapabilities.h>
 #include <tlvf/wfa_map/tlvApMetricQuery.h>
@@ -386,6 +387,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_PROFILE2_RADIO_METRICS): {
         return msg.addClass<wfa_map::tlvProfile2RadioMetrics>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_AP_EXTENDED_METRICS): {
+        return msg.addClass<wfa_map::tlvApExtendedMetrics>();
     }
     case (wfa_map::eTlvTypeMap::TLV_ASSOCIATED_STA_EXTENDED_LINK_METRICS): {
         return msg.addClass<wfa_map::tlvAssociatedStaExtendedLinkMetrics>();
