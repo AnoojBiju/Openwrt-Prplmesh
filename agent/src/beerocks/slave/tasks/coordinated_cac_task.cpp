@@ -146,6 +146,15 @@ void CacFsm::config_fsm()
                 }
                 auto request_radio  = msg->cac_radios(0);
                 m_cac_request_radio = std::get<1>(request_radio);
+
+                LOG(DEBUG) << "CAC Request:"
+                           << " radio_uid=" << m_cac_request_radio.radio_uid
+                           << ", operating_class=" << m_cac_request_radio.operating_class
+                           << ", channel=" << m_cac_request_radio.channel
+                           << ", cac_method=" << m_cac_request_radio.cac_method_bit_field.cac_method
+                           << ", cac_completion_action="
+                           << m_cac_request_radio.cac_method_bit_field.cac_completion_action;
+
                 if (m_cac_request_radio.cac_method_bit_field.cac_method !=
                     wfa_map::eCacMethod::CONTINUOUS_CAC) {
                     LOG(ERROR) << "Only continues-cac is supported";
@@ -163,6 +172,8 @@ void CacFsm::config_fsm()
                     transition.change_destination(fsm_state::ERROR);
                     return true;
                 }
+
+                m_ifname = radio->front.iface_name;
 
                 // This is a w/a until PPM-655 will be implemented.
                 if (radio->channels_list.empty()) {
