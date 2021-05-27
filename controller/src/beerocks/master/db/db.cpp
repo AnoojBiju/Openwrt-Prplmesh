@@ -895,21 +895,16 @@ std::unordered_map<sMacAddr, son::node::ap_metrics_data> &db::get_ap_metric_data
     return m_ap_metric_data;
 }
 
-bool db::set_hostap_active(const sMacAddr &mac, bool active)
+bool db::set_hostap_active(sAgent::sRadio &radio, bool active)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
-        return false;
-    }
-    radio->active = active;
+    radio.active = active;
 
     // Enabled variable is a part of Radio data element and
     // need to get path like Controller.Device.{i}.Radio.{i}. for setting Enabled variable
-    auto radio_enable_path = radio->dm_path;
+    auto radio_enable_path = radio.dm_path;
 
     if (radio_enable_path.empty()) {
-        LOG(ERROR) << "Failed to get path to the Radio with mac: " << mac;
+        LOG(ERROR) << "Failed to get path to the Radio with mac: " << radio.radio_uid;
         return false;
     }
 

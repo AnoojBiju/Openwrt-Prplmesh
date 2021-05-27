@@ -280,6 +280,8 @@ public:
      */
     std::shared_ptr<sAgent::sRadio> get_radio(const sMacAddr &al_mac, const sMacAddr &radio_uid);
 
+    std::shared_ptr<sAgent::sRadio> get_radio_by_uid(const sMacAddr &radio_uid);
+
     //logger
     void set_log_level_state(const beerocks::eLogLevel &log_level, const bool &new_state);
 
@@ -393,7 +395,7 @@ public:
 
     std::chrono::steady_clock::time_point get_node_last_seen(const std::string &mac);
 
-    bool set_hostap_active(const sMacAddr &mac, bool active);
+    bool set_hostap_active(sAgent::sRadio &radio, bool active);
     bool is_hostap_active(const sMacAddr &mac);
 
     bool set_hostap_backhaul_manager(sAgent::sRadio &radio, bool is_backhaul_manager);
@@ -1782,7 +1784,6 @@ private:
      * @return std::shared_ptr<node> pointer to the node on success, nullptr otherwise.
      */
     std::shared_ptr<node> get_node_verify_type(const sMacAddr &mac, beerocks::eType type);
-    std::shared_ptr<sAgent::sRadio> get_radio_by_uid(const sMacAddr &radio_uid);
     int get_node_hierarchy(std::shared_ptr<node> n);
     std::set<std::shared_ptr<node>> get_node_subtree(std::shared_ptr<node> n);
     void adjust_subtree_hierarchy(std::shared_ptr<node> n);

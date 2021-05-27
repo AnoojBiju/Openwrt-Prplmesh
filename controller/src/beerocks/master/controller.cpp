@@ -2388,7 +2388,7 @@ bool Controller::handle_intel_slave_join(
         // it is required to re-activate the AP in the nodes-map since it is set as not-active
         // when the topology-response not containing it is received by the controller.
         // When it joins the controller we need to activate it if not activated.
-        database.set_hostap_active(radio_mac, true);
+        database.set_hostap_active(*radio, true);
     }
 
     //Update all (Slaves) last seen timestamp
@@ -2576,7 +2576,7 @@ bool Controller::handle_non_intel_slave_join(
     database.set_hostap_ant_num(radio_mac, beerocks::eWiFiAntNum::ANT_NONE);
     database.set_hostap_ant_gain(*radio, 0);
     database.set_hostap_tx_power(*radio, 0);
-    database.set_hostap_active(radio_mac, true);
+    database.set_hostap_active(*radio, true);
     // TODO ipv4 will not be set
 
     autoconfig_wsc_parse_radio_caps(bridge_mac, radio_mac, radio_caps);

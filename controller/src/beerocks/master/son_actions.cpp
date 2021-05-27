@@ -172,7 +172,13 @@ int son_actions::steer_sta(db &database, ieee1905_1::CmduMessageTx &cmdu_tx, tas
 bool son_actions::set_hostap_active(db &database, task_pool &tasks, std::string hostap_mac,
                                     bool active)
 {
-    bool result = database.set_hostap_active(tlvf::mac_from_string(hostap_mac), active);
+    auto radio = database.get_radio_by_uid(tlvf::mac_from_string(hostap_mac));
+    if (!radio) {
+        LOG(ERROR) << "Radio " << hostap_mac << " does not exist";
+        return false;
+    }
+
+    bool result = database.set_hostap_active(*radio, active);
 
     if (result) {
         bml_task::connection_change_event new_event;
