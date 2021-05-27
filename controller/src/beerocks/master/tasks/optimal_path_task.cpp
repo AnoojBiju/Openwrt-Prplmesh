@@ -791,20 +791,17 @@ void optimal_path_task::work()
         //searching for sub band hostap /backhaul(client) measurement match for each ire
         for (auto &agent : agents_outside_subtree) {
             bool found_band_match = false;
-            std::string hostap_backhaul_manager;
+            std::string hostap_backhaul_manager =
+                tlvf::mac_to_string(agent->backhaul.wireless_backhaul_radio->radio_uid);
             std::string hostap_backhaul;
             if (tlvf::mac_from_string(sta_bridge) == agent->al_mac) {
                 continue;
             }
             //searching for hostap 5Ghz Low/High direct match ,2.4Ghz auto picked when sta is 2.4
             for (const auto &radio_map_element : agent->radios) {
-                auto radio      = radio_map_element.second;
-                auto hostap     = tlvf::mac_to_string(radio->radio_uid);
-                hostap_backhaul = database.get_node_parent_backhaul(hostap);
-                hostap_backhaul_manager =
-                    database.is_hostap_backhaul_manager(tlvf::mac_from_string(hostap))
-                        ? hostap
-                        : hostap_backhaul_manager;
+                auto radio         = radio_map_element.second;
+                auto hostap        = tlvf::mac_to_string(radio->radio_uid);
+                hostap_backhaul    = database.get_node_parent_backhaul(hostap);
                 int hostap_channel = database.get_node_channel(hostap);
                 if (database.is_ap_out_of_band(hostap, sta_mac) ||
                     (!database.is_hostap_active(tlvf::mac_from_string(hostap))) ||
@@ -962,8 +959,18 @@ void optimal_path_task::work()
         for (auto &hostap : hostaps) {
             if (hostap == current_hostap)
                 continue;
+
+            auto agent = database.get_agent_by_radio_uid(tlvf::mac_from_string(hostap));
+            if (!agent) {
+                TASK_LOG(ERROR) << "agent containing radio " << hostap << " not found";
+                continue;
+            }
+
+            bool is_backhaul_manager = (agent->backhaul.wireless_backhaul_radio->radio_uid ==
+                                        tlvf::mac_from_string(hostap));
+
             //when hostap is backhaul manager , the mathing candidate is his same band sibling
-            if (database.is_hostap_backhaul_manager(tlvf::mac_from_string(hostap)) &&
+            if (is_backhaul_manager &&
                 database.get_node_type(database.get_node_parent(hostap)) != beerocks::TYPE_GW) {
                 auto sibling_backhaul_manager = database.get_node_siblings(hostap);
                 for (auto &sibling : sibling_backhaul_manager) {
@@ -1675,9 +1682,17 @@ bool optimal_path_task::is_measurement_valid(const std::set<std::string> &temp_c
     //iterating on cross hostap to check if all measurement succeed (all IRE captured at list 1)
     int8_t rx_rssi, rx_packets;
     for (auto &hostap : temp_cross_hostaps) {
+        auto agent = database.get_agent_by_radio_uid(tlvf::mac_from_string(hostap));
+        if (!agent) {
+            TASK_LOG(ERROR) << "agent containing radio " << hostap << " not found";
+            return false;
+        }
+
+        bool is_backhaul_manager =
+            (agent->backhaul.wireless_backhaul_radio->radio_uid == tlvf::mac_from_string(hostap));
+
         std::string hostap_tmp = hostap;
-        if (database.is_hostap_backhaul_manager(tlvf::mac_from_string(hostap)) &&
-            database.is_node_5ghz(sta_mac)) {
+        if (is_backhaul_manager && database.is_node_5ghz(sta_mac)) {
             hostap_tmp = database.get_5ghz_sibling_hostap(hostap);
         }
         if (hostap_tmp.empty() || !station->get_cross_rx_rssi(hostap_tmp, rx_rssi, rx_packets)) {
@@ -1709,9 +1724,17 @@ bool optimal_path_task::all_measurement_succeed(const std::set<std::string> &tem
     int8_t rx_rssi, rx_packets;
     bool all_hostapd_got_packets = false;
     for (auto &hostap : temp_cross_hostaps) {
+        auto agent = database.get_agent_by_radio_uid(tlvf::mac_from_string(hostap));
+        if (!agent) {
+            TASK_LOG(ERROR) << "agent containing radio " << hostap << " not found";
+            return false;
+        }
+
+        bool is_backhaul_manager =
+            (agent->backhaul.wireless_backhaul_radio->radio_uid == tlvf::mac_from_string(hostap));
+
         std::string hostap_tmp = hostap;
-        if (database.is_hostap_backhaul_manager(tlvf::mac_from_string(hostap)) &&
-            database.is_node_5ghz(sta_mac)) {
+        if (is_backhaul_manager && database.is_node_5ghz(sta_mac)) {
             hostap_tmp = database.get_5ghz_sibling_hostap(hostap);
         }
         if (hostap_tmp.empty() || !station->get_cross_rx_rssi(hostap_tmp, rx_rssi, rx_packets)) {

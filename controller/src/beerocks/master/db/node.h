@@ -112,8 +112,8 @@ public:
 
     class radio {
     public:
-        bool active              = false;
-        bool is_backhaul_manager = false;
+        bool active = false;
+
         std::string iface_name;
         beerocks::eIfaceType iface_type;
         std::vector<beerocks::message::sWifiChannel> supported_channels;

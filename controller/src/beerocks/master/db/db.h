@@ -498,11 +498,6 @@ public:
     bool set_hostap_active(const sMacAddr &mac, bool active);
     bool is_hostap_active(const sMacAddr &mac);
 
-    bool set_hostap_backhaul_manager(const sMacAddr &al_mac, const sMacAddr &mac,
-                                     bool is_backhaul_manager);
-    bool is_hostap_backhaul_manager(const sMacAddr &mac);
-    std::string get_hostap_backhaul_manager(const std::string &ire);
-
     bool is_ap_out_of_band(const std::string &mac, const std::string &sta_mac);
 
     bool is_node_wireless(const std::string &mac);
