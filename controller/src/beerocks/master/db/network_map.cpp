@@ -52,15 +52,10 @@ void network_map::send_bml_network_map_message(db &database, int fd,
 
     for (auto agent_it : database.m_agents) {
         auto agent = agent_it.second;
-        auto n     = database.get_node(agent->al_mac);
-
-        if (!n) {
-            continue;
-        }
 
         size_left = cmdu_tx.getMessageBuffLength() - size;
 
-        if (n->state == beerocks::STATE_CONNECTED) {
+        if (agent->state == beerocks::STATE_CONNECTED) {
             node_len = gwIreNodeSize;
 
             if (node_len > size_left &&
