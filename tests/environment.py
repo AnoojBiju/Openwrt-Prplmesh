@@ -1022,7 +1022,7 @@ class RadioHostapd(Radio):
 
 
 class VirtualAPHostapd(VirtualAP):
-    """Docker implementation of a VAP."""
+    """Abstraction of a VAP in prplWRT device."""
 
     def __init__(self, radio: RadioHostapd, bssid: str):
         super().__init__(radio, bssid)
@@ -1030,16 +1030,13 @@ class VirtualAPHostapd(VirtualAP):
 
     def get_ssid(self) -> str:
         """Get current SSID of attached radio. Return string."""
+        regex = "\nssid=(?P<ssid>.*)\n"
+        output = self.radio.agent.command(
+            "hostapd_cli", "-i", self.iface, "get_config")
         # We are looking for SSID definition
-        # ssid Multi-AP-24G-1
-        # type AP
-        regex = r"addr ..:..:..:..:..:..\n\t(ssid (?P<ssid>.*)\n\t)?type AP\n\t"
-
-        output = self.radio.agent.command("iw", "dev", f"{self.iface}", "info")
+        # ssid=Multi-AP-24G-1
         match = re.search(regex, output)
-
-        ssid = match.group('ssid')
-        return 'N/A' if ssid is None else ssid
+        return 'N/A' if match is None else match.group('ssid')
 
     def get_psk(self) -> str:
         """Get SSIDs personal key set during last autoconfiguration. Return string"""
