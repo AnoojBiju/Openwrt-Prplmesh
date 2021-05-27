@@ -760,6 +760,12 @@ bool db::set_node_state(const std::string &mac, beerocks::eNodeState state)
     return true;
 }
 
+bool db::set_radio_state(sAgent::sRadio &radio, beerocks::eNodeState state)
+{
+    radio.state = state;
+    return set_node_state(tlvf::mac_to_string(radio.radio_uid), state);
+}
+
 beerocks::eNodeState db::get_node_state(const std::string &mac)
 {
     auto n = get_node(mac);

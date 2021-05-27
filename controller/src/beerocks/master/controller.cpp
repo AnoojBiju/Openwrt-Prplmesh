@@ -2263,7 +2263,7 @@ bool Controller::handle_intel_slave_join(
     }
     database.set_hostap_backhaul_manager(*radio, backhaul_manager);
 
-    database.set_node_state(tlvf::mac_to_string(radio_mac), beerocks::STATE_CONNECTED);
+    database.set_radio_state(*radio, beerocks::STATE_CONNECTED);
     database.set_node_backhaul_iface_type(tlvf::mac_to_string(radio_mac),
                                           is_gw_slave ? beerocks::IFACE_TYPE_GW_BRIDGE
                                                       : beerocks::IFACE_TYPE_BRIDGE);
@@ -2563,7 +2563,7 @@ bool Controller::handle_non_intel_slave_join(
     // TODO Assume no backhaul manager
     database.set_hostap_backhaul_manager(*radio, false);
 
-    database.set_node_state(tlvf::mac_to_string(radio_mac), beerocks::STATE_CONNECTED);
+    database.set_radio_state(*radio, beerocks::STATE_CONNECTED);
     database.set_node_backhaul_iface_type(tlvf::mac_to_string(radio_mac),
                                           beerocks::IFACE_TYPE_BRIDGE);
     // TODO driver_version will not be set

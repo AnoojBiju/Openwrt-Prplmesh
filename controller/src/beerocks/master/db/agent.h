@@ -61,6 +61,7 @@ public:
         /** Radio UID. */
         const sMacAddr radio_uid;
 
+        beerocks::eNodeState state = beerocks::STATE_DISCONNECTED;
         std::string ipv4;
 
         bool active              = false;
