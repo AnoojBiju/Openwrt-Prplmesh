@@ -414,9 +414,6 @@ public:
     bool set_node_state(const std::string &mac, beerocks::eNodeState state);
     beerocks::eNodeState get_node_state(const std::string &mac);
 
-    bool set_node_operational_state(const std::string &bridge_mac, bool operational);
-    int8_t get_node_operational_state(const std::string &bridge_mac);
-
     std::chrono::steady_clock::time_point get_last_state_change(const std::string &mac);
 
     bool set_node_handoff_flag(const std::string &mac, bool handoff);

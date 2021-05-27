@@ -312,15 +312,6 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
 
         // close slave socket
         if (mac_type == beerocks::TYPE_SLAVE) {
-            auto slave_parent = database.get_node_parent(mac);
-            LOG(DEBUG) << "slave_parent: " << slave_parent
-                       << " slave_parent_type=" << int(database.get_node_type(slave_parent));
-            if (database.get_node_type(slave_parent) == beerocks::TYPE_GW) {
-                // set platform bridges as non operational
-                LOG(DEBUG) << "setting platform with bridge mac " << slave_parent
-                           << " as non operational";
-                database.set_node_operational_state(slave_parent, false);
-            }
             database.set_node_state(mac, beerocks::STATE_DISCONNECTED);
             set_hostap_active(database, tasks, mac, false);
         }
@@ -337,7 +328,6 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
                     // set all platform bridges as non operational
                     LOG(DEBUG) << "setting platform with bridge mac " << node_mac
                                << " as non operational";
-                    database.set_node_operational_state(node_mac, false);
 
                     auto agent = database.m_agents.get(tlvf::mac_from_string(node_mac));
                     if (!agent) {
