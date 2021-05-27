@@ -19,6 +19,8 @@
 #include <mapf/common/logger.h>
 #include <mapf/common/utils.h>
 
+#include <iostream>
+
 using namespace mapf;
 
 namespace beerocks {
@@ -820,6 +822,24 @@ bool bpl_get_lan_interfaces(std::vector<std::string> &lan_iface_list)
     }
 
     lan_iface_list = beerocks::string_utils::str_split(iface_names, ' ');
+    return true;
+}
+
+bool bpl_cfg_get_backhaul_wire_iface(std::string &iface)
+{
+    char ifname[BPL_IFNAME_LEN + 1] = {0};
+    std::cout << ifname << std::endl;
+    int retVal = cfg_get_prplmesh_param("backhaul_wire_iface", ifname, BPL_IFNAME_LEN);
+    if (retVal == RETURN_ERR) {
+        std::cout << "retval is err" << std::endl;
+        MAPF_ERR("bpl_cfg_get_backhaul_wire_iface: Failed to read backhaul_wire_iface parameter\n");
+        return false;
+    }
+    std::cout << "Have the value" << std::endl;
+
+    iface = ifname;
+    std::cout << "iface assigned" << std::endl;
+
     return true;
 }
 

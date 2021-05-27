@@ -26,6 +26,7 @@
 #include <mapf/common/utils.h>
 
 #include <easylogging++.h>
+#include <iostream>
 
 #ifdef ENABLE_NBAPI
 
@@ -364,15 +365,31 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     auto amb_dm_obj = std::make_shared<beerocks::nbapi::AmbiorixDummy>();
 #endif //ENABLE_NBAPI
 
-    beerocks::AgentDB::get()->init_data_model(amb_dm_obj);
+    {
+        std::cout << "Getting DB" << std::endl;
+        auto db = beerocks::AgentDB::get();
+
+        db->init_data_model(amb_dm_obj);
+        std::cout << "DM initialized" << std::endl;
+
+        if (!beerocks::bpl::bpl_cfg_get_backhaul_wire_iface(db->ethernet.wan.iface_name)) {
+            std::cout << "Failed to get backhaul_wire_iface" << std::endl;
+            LOG(ERROR) << "Failed reading 'backhaul_wire_iface'";
+            return false;
+        }
+        std::cout << "Destroying DB" << std::endl;
+        // Destroy `db` to unlock it.
+    }
+    std::cout << "DB destroyed" << std::endl;
 
     beerocks::PlatformManager platform_manager(beerocks_slave_conf, interfaces_map, *agent_logger,
                                                std::move(platform_manager_cmdu_server),
                                                timer_manager, event_loop);
+    std::cout << "Platform manager constructed" << std::endl;
 
     // Start platform manager
     LOG_IF(!platform_manager.start(), FATAL) << "Unable to start platform manager!";
-
+    std::cout << "Platform manager started" << std::endl;
     // Read the number of failures allowed before stopping agent from platform configuration
     int stop_on_failure_attempts = beerocks::bpl::cfg_get_stop_on_failure_attempts();
 
