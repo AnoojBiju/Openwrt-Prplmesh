@@ -2471,16 +2471,9 @@ bool db::set_node_backhaul_iface_type(const std::string &mac, beerocks::eIfaceTy
     return true;
 }
 
-bool db::set_hostap_driver_version(const sMacAddr &al_mac, const sMacAddr &mac,
-                                   const std::string &version)
+bool db::set_hostap_driver_version(sAgent::sRadio &radio, const std::string &version)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    }
-
-    radio->driver_version = version;
+    radio.driver_version = version;
     return true;
 }
 

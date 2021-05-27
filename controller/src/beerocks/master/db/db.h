@@ -827,8 +827,7 @@ public:
     bool set_hostap_iface_type(sAgent::sRadio &radio, beerocks::eIfaceType iface_type);
     beerocks::eIfaceType get_hostap_iface_type(const sMacAddr &mac);
 
-    bool set_hostap_driver_version(const sMacAddr &al_mac, const sMacAddr &mac,
-                                   const std::string &version);
+    bool set_hostap_driver_version(sAgent::sRadio &radio, const std::string &version);
     std::string get_hostap_driver_version(const sMacAddr &mac);
 
     bool set_hostap_vap_list(const sMacAddr &mac,

@@ -2269,8 +2269,7 @@ bool Controller::handle_intel_slave_join(
                                                       : beerocks::IFACE_TYPE_BRIDGE);
     database.set_hostap_iface_name(*radio, notification->hostap().iface_name);
     database.set_hostap_iface_type(*radio, hostap_iface_type);
-    database.set_hostap_driver_version(bridge_mac, radio_mac,
-                                       notification->hostap().driver_version);
+    database.set_hostap_driver_version(*radio, notification->hostap().driver_version);
 
     database.set_hostap_ant_num(radio_mac, (beerocks::eWiFiAntNum)notification->hostap().ant_num);
     database.set_hostap_ant_gain(bridge_mac, radio_mac, notification->hostap().ant_gain);
