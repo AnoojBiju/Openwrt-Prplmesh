@@ -20,6 +20,7 @@ using namespace beerocks;
 using namespace beerocks_message;
 using namespace son;
 using namespace net;
+using sAgent = prplmesh::controller::db::sAgent;
 
 const std::string db::TIMESTAMP_STR            = "timestamp";
 const std::string db::TIMELIFE_DELAY_STR       = "timelife_minutes";
@@ -105,8 +106,7 @@ std::pair<std::string, int> db::get_dm_index_from_path(const std::string &dm_pat
 
 // static - end
 
-std::shared_ptr<prplmesh::controller::db::sAgent::sRadio> db::get_radio(const sMacAddr &al_mac,
-                                                                        const sMacAddr &radio_uid)
+std::shared_ptr<sAgent::sRadio> db::get_radio(const sMacAddr &al_mac, const sMacAddr &radio_uid)
 {
     auto agent = m_agents.get(al_mac);
     if (!agent) {
@@ -4224,8 +4224,7 @@ bool db::set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApS
     }
 
     if (params == nullptr) { // clear stats
-        radio->stats_info =
-            std::make_shared<prplmesh::controller::db::sAgent::sRadio::ap_stats_params>();
+        radio->stats_info = std::make_shared<sAgent::sRadio::ap_stats_params>();
     } else {
         auto p                          = radio->stats_info;
         p->active_sta_count             = params->active_client_count;
@@ -5245,8 +5244,7 @@ std::shared_ptr<node> db::get_node_verify_type(const sMacAddr &mac, beerocks::eT
     return node;
 }
 
-std::shared_ptr<prplmesh::controller::db::sAgent::sRadio>
-db::get_radio_by_uid(const sMacAddr &radio_uid)
+std::shared_ptr<sAgent::sRadio> db::get_radio_by_uid(const sMacAddr &radio_uid)
 {
     for (const auto &agent : m_agents) {
         auto radio = agent.second->radios.get(radio_uid);
