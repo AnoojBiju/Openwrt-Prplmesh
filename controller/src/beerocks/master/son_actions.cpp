@@ -318,7 +318,12 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
                 // set platform bridges as non operational
                 LOG(DEBUG) << "setting platform with bridge mac " << slave_parent
                            << " as non operational";
-                database.set_node_operational_state(slave_parent, false);
+                auto agent = database.m_agents.get(tlvf::mac_from_string(slave_parent));
+                if (!agent) {
+                    LOG(ERROR) << "agent on slave parent " << slave_parent << " not found";
+                    return;
+                }
+                database.set_agent_operational_state(*agent, false);
             }
             database.set_node_state(mac, beerocks::STATE_DISCONNECTED);
             set_hostap_active(database, tasks, mac, false);
@@ -336,15 +341,15 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
                     // set all platform bridges as non operational
                     LOG(DEBUG) << "setting platform with bridge mac " << node_mac
                                << " as non operational";
-                    database.set_node_operational_state(node_mac, false);
 
                     auto agent = database.m_agents.get(tlvf::mac_from_string(node_mac));
                     if (!agent) {
                         LOG(ERROR) << "agent " << node_mac << " not found";
                         return;
                     }
-                    database.set_agent_state(*agent, beerocks::STATE_DISCONNECTED);
 
+                    database.set_agent_operational_state(*agent, false);
+                    database.set_agent_state(*agent, beerocks::STATE_DISCONNECTED);
                 } else if (database.get_node_type(node_mac) == beerocks::TYPE_IRE_BACKHAUL ||
                            database.get_node_type(node_mac) == beerocks::TYPE_CLIENT) {
                     // kill old roaming task

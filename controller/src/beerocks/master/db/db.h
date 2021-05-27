@@ -381,8 +381,7 @@ public:
     bool set_agent_state(prplmesh::controller::db::sAgent &agent, beerocks::eNodeState state);
     beerocks::eNodeState get_node_state(const std::string &mac);
 
-    bool set_node_operational_state(const std::string &bridge_mac, bool operational);
-    int8_t get_node_operational_state(const std::string &bridge_mac);
+    bool set_agent_operational_state(prplmesh::controller::db::sAgent &agent, bool operational);
 
     std::chrono::steady_clock::time_point get_last_state_change(const std::string &mac);
 

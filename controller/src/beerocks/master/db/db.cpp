@@ -790,37 +790,10 @@ beerocks::eNodeState db::get_node_state(const std::string &mac)
     return n->state;
 }
 
-bool db::set_node_operational_state(const std::string &bridge_mac, bool operational)
+bool db::set_agent_operational_state(prplmesh::controller::db::sAgent &agent, bool operational)
 {
-    auto n = get_node(bridge_mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << bridge_mac << " does not exist!";
-        return false;
-    }
-
-    if (n->get_type() != beerocks::TYPE_GW && n->get_type() != beerocks::TYPE_IRE) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << bridge_mac << " is not bridge type ";
-        return false;
-    }
-
-    n->operational_state = operational;
+    agent.operational_state = operational;
     return true;
-}
-
-int8_t db::get_node_operational_state(const std::string &bridge_mac)
-{
-    auto n = get_node(bridge_mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << bridge_mac << " does not exist!";
-        return -1;
-    }
-
-    if (n->get_type() != beerocks::TYPE_GW && n->get_type() != beerocks::TYPE_IRE) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << bridge_mac << " is not bridge type";
-        return -1;
-    }
-
-    return n->operational_state;
 }
 
 std::chrono::steady_clock::time_point db::get_last_state_change(const std::string &mac)
