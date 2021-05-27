@@ -1856,14 +1856,9 @@ int db::get_hostap_ant_gain(const sMacAddr &mac)
     return radio->ant_gain;
 }
 
-bool db::set_hostap_tx_power(const sMacAddr &al_mac, const sMacAddr &mac, int tx_power)
+bool db::set_hostap_tx_power(sAgent::sRadio &radio, int tx_power)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
-        return false;
-    }
-    radio->tx_power = tx_power;
+    radio.tx_power = tx_power;
     return true;
 }
 
