@@ -2275,7 +2275,7 @@ bool Controller::handle_intel_slave_join(
     database.set_hostap_ant_gain(*radio, notification->hostap().ant_gain);
     database.set_hostap_tx_power(*radio, notification->hostap().tx_power);
 
-    database.set_node_ipv4(tlvf::mac_to_string(radio_mac), bridge_ipv4);
+    database.set_radio_ipv4(*radio, bridge_ipv4);
 
     if (database.get_node_5ghz_support(tlvf::mac_to_string(radio_mac))) {
         if (notification->low_pass_filter_on()) {

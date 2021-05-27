@@ -355,6 +355,7 @@ public:
     std::string get_local_slave_mac();
 
     bool set_node_ipv4(const std::string &mac, const std::string &ipv4 = std::string());
+    bool set_radio_ipv4(sAgent::sRadio &radio, const std::string &ipv4);
     std::string get_node_ipv4(const std::string &mac);
 
     bool set_node_manufacturer(const std::string &mac, const std::string &manufacturer);

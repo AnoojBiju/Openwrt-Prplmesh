@@ -494,6 +494,12 @@ bool db::set_node_ipv4(const std::string &mac, const std::string &ipv4)
     return true;
 }
 
+bool db::set_radio_ipv4(sAgent::sRadio &radio, const std::string &ipv4)
+{
+    radio.ipv4 = ipv4;
+    return set_node_ipv4(tlvf::mac_to_string(radio.radio_uid), ipv4);
+}
+
 std::string db::get_node_ipv4(const std::string &mac)
 {
     auto n = get_node(mac);

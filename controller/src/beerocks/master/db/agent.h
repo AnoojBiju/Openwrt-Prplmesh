@@ -61,6 +61,8 @@ public:
         /** Radio UID. */
         const sMacAddr radio_uid;
 
+        std::string ipv4;
+
         bool active              = false;
         bool is_backhaul_manager = false;
         bool is_acs_enabled      = false;
