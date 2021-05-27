@@ -1009,13 +1009,10 @@ std::set<std::string> db::get_active_hostaps()
 std::set<std::string> db::get_all_connected_ires()
 {
     std::set<std::string> ret;
-    for (auto node_map : nodes) {
-        for (auto kv : node_map) {
-            if (((kv.second->get_type() == beerocks::TYPE_IRE) &&
-                 (kv.second->state == beerocks::STATE_CONNECTED)) ||
-                (kv.second->get_type() == beerocks::TYPE_GW)) {
-                ret.insert(kv.first);
-            }
+    for (const auto &agent_map_element : m_agents) {
+        auto &agent = agent_map_element.second;
+        if (agent->state == beerocks::STATE_CONNECTED) {
+            ret.insert(tlvf::mac_to_string(agent->al_mac));
         }
     }
     return ret;
