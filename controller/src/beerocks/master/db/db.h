@@ -920,7 +920,7 @@ public:
     std::set<std::string> get_hostap_dfs_reentry_clients(const sMacAddr &mac);
     bool clear_hostap_dfs_reentry_clients(const sMacAddr &mac);
 
-    bool set_hostap_is_acs_enabled(const sMacAddr &al_mac, const sMacAddr &mac, bool enable);
+    bool set_hostap_is_acs_enabled(prplmesh::controller::db::sAgent::sRadio &radio, bool enable);
     bool get_hostap_is_acs_enabled(const sMacAddr &mac);
 
     //

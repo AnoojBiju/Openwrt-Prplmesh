@@ -2239,7 +2239,7 @@ bool Controller::handle_intel_slave_join(
         return false;
     }
 
-    database.set_hostap_is_acs_enabled(bridge_mac, radio_mac, acs_enabled);
+    database.set_hostap_is_acs_enabled(*radio, acs_enabled);
 
     if (!notification->is_slave_reconf()) {
         son_actions::set_hostap_active(database, tasks, tlvf::mac_to_string(radio_mac),
@@ -2555,7 +2555,7 @@ bool Controller::handle_non_intel_slave_join(
         return false;
     }
 
-    database.set_hostap_is_acs_enabled(bridge_mac, radio_mac, false);
+    database.set_hostap_is_acs_enabled(*radio, false);
 
     // TODO Assume no backhaul manager
     database.set_hostap_backhaul_manager(bridge_mac, radio_mac, false);
