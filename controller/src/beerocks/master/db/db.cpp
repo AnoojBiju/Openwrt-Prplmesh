@@ -2439,15 +2439,9 @@ std::string db::get_hostap_iface_name(const sMacAddr &mac)
     return radio->iface_name;
 }
 
-bool db::set_hostap_iface_type(const sMacAddr &al_mac, const sMacAddr &mac,
-                               beerocks::eIfaceType iface_type)
+bool db::set_hostap_iface_type(sAgent::sRadio &radio, beerocks::eIfaceType iface_type)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
-        return false;
-    }
-    radio->iface_type = iface_type;
+    radio.iface_type = iface_type;
     return true;
 }
 

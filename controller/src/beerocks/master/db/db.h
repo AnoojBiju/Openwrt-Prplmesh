@@ -824,8 +824,7 @@ public:
     bool set_hostap_iface_name(sAgent::sRadio &radio, const std::string &iface_name);
     std::string get_hostap_iface_name(const sMacAddr &mac);
 
-    bool set_hostap_iface_type(const sMacAddr &al_mac, const sMacAddr &mac,
-                               beerocks::eIfaceType iface_type);
+    bool set_hostap_iface_type(sAgent::sRadio &radio, beerocks::eIfaceType iface_type);
     beerocks::eIfaceType get_hostap_iface_type(const sMacAddr &mac);
 
     bool set_hostap_driver_version(const sMacAddr &al_mac, const sMacAddr &mac,
