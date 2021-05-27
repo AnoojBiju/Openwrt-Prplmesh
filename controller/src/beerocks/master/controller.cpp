@@ -2417,11 +2417,17 @@ bool Controller::autoconfig_wsc_parse_radio_caps(
         operating_classes_list_length = beerocks::message::SUPPORTED_CHANNELS_LENGTH;
     }
 
+    auto radio = database.get_radio(bridge_mac, radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "Radio " << radio_mac << " not found";
+        return false;
+    }
+
     /*
     ** Here need to remove the OperatingClasses data element
     ** from the Controler Data Model because we are entering a new one
     */
-    database.remove_hostap_supported_operating_classes(bridge_mac, radio_mac);
+    database.remove_hostap_supported_operating_classes(*radio);
 
     std::stringstream ss;
     for (int oc_idx = 0; oc_idx < operating_classes_list_length; oc_idx++) {

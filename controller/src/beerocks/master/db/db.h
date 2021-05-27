@@ -448,12 +448,10 @@ public:
 	 * from the Data Model and database.
      * Path example: Controller.Network.Device.1.Radio.1.Capabilities.OperatingClasses
      *
-     * @param radio_mac MAC address for Radio which reporting Operating Class
-     * @param al_mac AL MAC address for Radio
+     * @param radio Radio which reporting Operating Class
      * @return true on success, false otherwise.
      */
-    bool remove_hostap_supported_operating_classes(const sMacAddr &al_mac,
-                                                   const sMacAddr &radio_mac);
+    bool remove_hostap_supported_operating_classes(sAgent::sRadio &radio);
 
     /**
      * @brief Adds Interface Object and updates Interface Data Model Object.

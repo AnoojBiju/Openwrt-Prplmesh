@@ -6025,19 +6025,12 @@ bool db::remove_current_op_classes(const sMacAddr &radio_mac)
     return true;
 }
 
-bool db::remove_hostap_supported_operating_classes(const sMacAddr &al_mac,
-                                                   const sMacAddr &radio_mac)
+bool db::remove_hostap_supported_operating_classes(sAgent::sRadio &radio)
 {
-    auto supported_channels = get_hostap_supported_channels(radio_mac);
-    auto radio              = get_radio(al_mac, radio_mac);
+    auto supported_channels = get_hostap_supported_channels(radio.radio_uid);
 
     // Remove from data model
-    if (!radio) {
-        LOG(ERROR) << "Failed to get radio with mac: " << radio_mac;
-        return false;
-    }
-
-    auto radio_path = radio->dm_path;
+    auto radio_path = radio.dm_path;
     if (radio_path.empty()) {
         return true;
     }
