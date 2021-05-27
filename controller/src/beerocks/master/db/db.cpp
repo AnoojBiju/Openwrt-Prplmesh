@@ -1994,15 +1994,10 @@ bool db::add_hostap_supported_operating_class(const sMacAddr &al_mac, const sMac
     return true;
 }
 
-bool db::set_hostap_band_capability(const sMacAddr &al_mac, const sMacAddr &mac,
+bool db::set_hostap_band_capability(sAgent::sRadio &radio,
                                     beerocks::eRadioBandCapability capability)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
-        return false;
-    }
-    radio->capability = capability;
+    radio.capability = capability;
     return true;
 }
 

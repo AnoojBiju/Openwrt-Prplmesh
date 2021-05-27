@@ -2279,13 +2279,12 @@ bool Controller::handle_intel_slave_join(
 
     if (database.get_node_5ghz_support(tlvf::mac_to_string(radio_mac))) {
         if (notification->low_pass_filter_on()) {
-            database.set_hostap_band_capability(bridge_mac, radio_mac, beerocks::LOW_SUBBAND_ONLY);
+            database.set_hostap_band_capability(*radio, beerocks::LOW_SUBBAND_ONLY);
         } else {
-            database.set_hostap_band_capability(bridge_mac, radio_mac, beerocks::BOTH_SUBBAND);
+            database.set_hostap_band_capability(*radio, beerocks::BOTH_SUBBAND);
         }
     } else {
-        database.set_hostap_band_capability(bridge_mac, radio_mac,
-                                            beerocks::SUBBAND_CAPABILITY_UNKNOWN);
+        database.set_hostap_band_capability(*radio, beerocks::SUBBAND_CAPABILITY_UNKNOWN);
     }
     autoconfig_wsc_parse_radio_caps(bridge_mac, radio_mac, radio_caps);
 
@@ -2590,8 +2589,7 @@ bool Controller::handle_non_intel_slave_join(
     //                database.set_hostap_band_capability(radio_mac, beerocks::BOTH_SUBBAND);
     //            }
     //        } else {
-    database.set_hostap_band_capability(bridge_mac, radio_mac,
-                                        beerocks::SUBBAND_CAPABILITY_UNKNOWN);
+    database.set_hostap_band_capability(*radio, beerocks::SUBBAND_CAPABILITY_UNKNOWN);
     //        }
 
     // update bml listeners

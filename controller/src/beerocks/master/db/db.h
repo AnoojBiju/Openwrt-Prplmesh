@@ -798,7 +798,7 @@ public:
                                               uint8_t operating_class, uint8_t tx_power,
                                               const std::vector<uint8_t> &non_operable_channels);
 
-    bool set_hostap_band_capability(const sMacAddr &al_mac, const sMacAddr &mac,
+    bool set_hostap_band_capability(sAgent::sRadio &radio,
                                     beerocks::eRadioBandCapability capability);
     beerocks::eRadioBandCapability get_hostap_band_capability(const sMacAddr &mac);
 
