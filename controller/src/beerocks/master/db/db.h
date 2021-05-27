@@ -358,7 +358,6 @@ public:
     std::string get_node_ipv4(const std::string &mac);
 
     bool set_node_manufacturer(const std::string &mac, const std::string &manufacturer);
-    std::string get_node_manufacturer(const std::string &mac);
 
     int get_node_channel(const std::string &mac);
 
@@ -374,7 +373,6 @@ public:
     get_node_beacon_measurement_support_level(const std::string &mac);
 
     bool set_node_name(const std::string &mac, std::string name);
-    std::string get_node_name(const std::string &mac);
 
     bool set_node_state(const std::string &mac, beerocks::eNodeState state);
     beerocks::eNodeState get_node_state(const std::string &mac);
