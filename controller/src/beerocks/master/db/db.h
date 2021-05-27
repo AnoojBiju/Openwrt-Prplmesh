@@ -821,8 +821,7 @@ public:
     bool update_node_11v_responsiveness(const std::string &mac, bool success);
     bool get_node_11v_capability(const std::string &mac);
 
-    bool set_hostap_iface_name(const sMacAddr &al_mac, const sMacAddr &mac,
-                               const std::string &iface_name);
+    bool set_hostap_iface_name(sAgent::sRadio &radio, const std::string &iface_name);
     std::string get_hostap_iface_name(const sMacAddr &mac);
 
     bool set_hostap_iface_type(const sMacAddr &al_mac, const sMacAddr &mac,

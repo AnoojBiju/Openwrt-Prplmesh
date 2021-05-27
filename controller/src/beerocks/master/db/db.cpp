@@ -2422,16 +2422,9 @@ int8_t db::get_hostap_vap_id(const sMacAddr &mac)
     return IFACE_ID_INVALID;
 }
 
-bool db::set_hostap_iface_name(const sMacAddr &al_mac, const sMacAddr &mac,
-                               const std::string &iface_name)
+bool db::set_hostap_iface_name(sAgent::sRadio &radio, const std::string &iface_name)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
-        return false;
-    }
-
-    radio->iface_name = iface_name;
+    radio.iface_name = iface_name;
     return true;
 }
 

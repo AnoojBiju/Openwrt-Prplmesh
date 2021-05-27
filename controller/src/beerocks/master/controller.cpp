@@ -2267,7 +2267,7 @@ bool Controller::handle_intel_slave_join(
     database.set_node_backhaul_iface_type(tlvf::mac_to_string(radio_mac),
                                           is_gw_slave ? beerocks::IFACE_TYPE_GW_BRIDGE
                                                       : beerocks::IFACE_TYPE_BRIDGE);
-    database.set_hostap_iface_name(bridge_mac, radio_mac, notification->hostap().iface_name);
+    database.set_hostap_iface_name(*radio, notification->hostap().iface_name);
     database.set_hostap_iface_type(bridge_mac, radio_mac, hostap_iface_type);
     database.set_hostap_driver_version(bridge_mac, radio_mac,
                                        notification->hostap().driver_version);
@@ -2569,7 +2569,7 @@ bool Controller::handle_non_intel_slave_join(
     database.set_node_backhaul_iface_type(tlvf::mac_to_string(radio_mac),
                                           beerocks::IFACE_TYPE_BRIDGE);
     // TODO driver_version will not be set
-    database.set_hostap_iface_name(bridge_mac, radio_mac, "N/A");
+    database.set_hostap_iface_name(*radio, "N/A");
     database.set_hostap_iface_type(bridge_mac, radio_mac, beerocks::IFACE_TYPE_WIFI_UNSPECIFIED);
 
     // TODO number of antennas comes from HT/VHT capabilities (implicit from NxM)
