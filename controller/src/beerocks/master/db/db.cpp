@@ -925,15 +925,9 @@ bool db::is_hostap_active(const sMacAddr &mac)
     return radio->active;
 }
 
-bool db::set_hostap_backhaul_manager(const sMacAddr &al_mac, const sMacAddr &mac,
-                                     bool is_backhaul_manager)
+bool db::set_hostap_backhaul_manager(sAgent::sRadio &radio, bool is_backhaul_manager)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
-        return false;
-    }
-    radio->is_backhaul_manager = is_backhaul_manager;
+    radio.is_backhaul_manager = is_backhaul_manager;
     return true;
 }
 

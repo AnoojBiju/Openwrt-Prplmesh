@@ -2248,15 +2248,20 @@ bool Controller::handle_intel_slave_join(
 
     if (backhaul_manager) {
         // clear backhaul manager flag for all slaves except for this backhaul_manager slave
-        auto ire_hostaps = database.get_node_children(bridge_mac_str, beerocks::TYPE_SLAVE);
-        for (auto tmp_slave_mac : ire_hostaps) {
-            if (tlvf::mac_from_string(tmp_slave_mac) != radio_mac) {
-                database.set_hostap_backhaul_manager(bridge_mac,
-                                                     tlvf::mac_from_string(tmp_slave_mac), false);
+        auto agent = database.m_agents.get(bridge_mac);
+        if (!agent) {
+            LOG(ERROR) << "Cannot get agent " << bridge_mac;
+            return false;
+        }
+        for (auto radio_it : agent->radios) {
+            auto tmp_radio = radio_it.second;
+
+            if (tmp_radio->radio_uid != radio_mac) {
+                database.set_hostap_backhaul_manager(*tmp_radio, false);
             }
         }
     }
-    database.set_hostap_backhaul_manager(bridge_mac, radio_mac, backhaul_manager);
+    database.set_hostap_backhaul_manager(*radio, backhaul_manager);
 
     database.set_node_state(tlvf::mac_to_string(radio_mac), beerocks::STATE_CONNECTED);
     database.set_node_backhaul_iface_type(tlvf::mac_to_string(radio_mac),
@@ -2558,7 +2563,7 @@ bool Controller::handle_non_intel_slave_join(
     database.set_hostap_is_acs_enabled(*radio, false);
 
     // TODO Assume no backhaul manager
-    database.set_hostap_backhaul_manager(bridge_mac, radio_mac, false);
+    database.set_hostap_backhaul_manager(*radio, false);
 
     database.set_node_state(tlvf::mac_to_string(radio_mac), beerocks::STATE_CONNECTED);
     database.set_node_backhaul_iface_type(tlvf::mac_to_string(radio_mac),
