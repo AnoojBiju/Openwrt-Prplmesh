@@ -14,6 +14,7 @@ import environment as env
 import sniffer
 import subprocess
 import time
+import re
 
 
 class PrplMeshBaseTest(bft_base_test.BftBaseTest):
@@ -410,49 +411,72 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         '''
         controller = self.dev.lan.controller_entity
 
-        devices = controller.nbapi_get_list_instances("Controller.Network.Device")
+        data_model = controller.nbapi_get_data_model()
         map_devices = {}
 
-        for device_path in devices:
-            map_device = connmap.MapDevice(controller.nbapi_get_parameter(device_path, "ID"))
+        device_regex = r'^Controller\.Network\.Device\.\d+\.$'
 
-            map_device.path = device_path
+        devices = [obj_path for obj_path in data_model if re.search(
+            device_regex, obj_path)]
+
+        for device in devices:
+            map_device = connmap.MapDevice(data_model[device]["ID"])
+            map_device.path = device[:-1]  # Cut off the dot.
             map_devices[map_device.mac] = map_device
 
-            radios = controller.nbapi_get_list_instances(map_device.path + ".Radio")
+            dot = map_device.path.rfind('.')
+            device_indx = map_device.path[dot + 1:]
+            radio_regex = device_regex[:-6] + device_indx + r'\.Radio\.\d+\.$'
 
-            for radio_path in radios:
-                map_radio = map_device.add_radio(controller.nbapi_get_parameter(radio_path, "ID"))
-                map_radio.path = radio_path
+            radios = [obj_path for obj_path in data_model if re.search(
+                radio_regex, obj_path)]
 
-                bsses = controller.nbapi_get_list_instances(map_radio.path + ".BSS")
+            for radio in radios:
+                map_radio = map_device.add_radio(data_model[radio]["ID"])
+                map_radio.path = radio[:-1]
 
-                for bss_path in bsses:
-                    bssid = controller.nbapi_get_parameter(bss_path, "BSSID")
-                    ssid = controller.nbapi_get_parameter(bss_path, "SSID")
+                dot = map_radio.path.rfind('.')
+                radio_indx = map_radio.path[dot + 1:]
+                bss_regex = radio_regex[:-6] + radio_indx + r'\.BSS\.\d+\.$'
 
-                    map_vap = map_radio.add_vap(bssid, ssid)
-                    map_vap.path = bss_path
+                vaps = [obj_path for obj_path in data_model if re.search(
+                    bss_regex, obj_path)]
 
-                    stas = controller.nbapi_get_list_instances(map_vap.path + ".STA")
-                    for sta_path in stas:
-                        map_client = map_vap.add_client(
-                            controller.nbapi_get_parameter(sta_path, "MACAddress"))
-                        map_client.path = sta_path
+                for vap in vaps:
+                    map_vap = map_radio.add_vap(data_model[vap]["BSSID"],
+                                                data_model[vap]["SSID"])
+                    map_vap.path = vap[:-1]
 
-            interfaces = controller.nbapi_get_list_instances(device_path + ".Interface")
-            for interface in interfaces:
-                map_interface = map_device.add_interface(
-                    controller.nbapi_get_parameter(interface, "MACAddress"))
+                    dot = map_vap.path.rfind('.')
+                    vap_indx = map_vap.path[dot + 1:]
+                    sta_regex = bss_regex[:-6] + vap_indx + r'\.STA\.\d+\.$'
 
-                map_interface.path = interface
-                neighbors_list = controller.nbapi_get_list_instances(
-                    map_interface.path + ".Neighbor")
+                    clients = [obj_path for obj_path in data_model if re.search(
+                        sta_regex, obj_path)]
 
-                for neighbor in neighbors_list:
-                    map_neighbor = map_interface.add_neighbor(
-                        controller.nbapi_get_parameter(neighbor, "ID"))
-                    map_neighbor.path = neighbor
+                    for client in clients:
+                        map_client = map_vap.add_client(data_model[client]["MACAddress"])
+                        map_client.path = client[:-1]
+
+                interface_regex = rf'^Controller\.Network\.Device\.{device_indx}\.Interface\.\d+\.$'
+
+                interfaces = [obj_path for obj_path in data_model if re.search(
+                    interface_regex, obj_path)]
+
+                for interface in interfaces:
+                    map_interface = map_device.add_interface(data_model[interface]["MACAddress"])
+                    map_interface.path = interface[:-1]
+
+                    dot = map_interface.path.rfind('.')
+                    interface_indx = map_interface.path[dot + 1:]
+                    neighbor_regex = interface_regex[:-6] + interface_indx + r'\.Neighbor\.\d+\.$'
+
+                    neighbors = [obj_path for obj_path in data_model if re.search(
+                        neighbor_regex, obj_path)]
+
+                    for neighbor in neighbors:
+                        map_neighbor = map_interface.add_neighbor(data_model[neighbor]["ID"])
+                        map_neighbor.path = neighbor[:-1]
 
         return map_devices
 

@@ -126,6 +126,12 @@ class ALEntity:
         ret = self.nbapi_command(path, "set", {"parameters": parameters})
         return ret
 
+    def nbapi_get_data_model(self):
+        '''Get entire data model tree.'''
+
+        data_model = self.nbapi_command("Controller.Network", "get", {"depth": "10"})
+        return data_model
+
     def nbapi_get_list_instances(self, path: str) -> List[str]:
         '''Get all instances of a template object from nbapi.
 
