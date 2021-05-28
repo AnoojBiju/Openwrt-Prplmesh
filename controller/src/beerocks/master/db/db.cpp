@@ -879,6 +879,12 @@ bool db::update_node_last_seen(const std::string &mac)
     return true;
 }
 
+bool db::update_radio_last_seen(sAgent::sRadio &radio)
+{
+    radio.last_seen = std::chrono::steady_clock::now();
+    return update_node_last_seen(tlvf::mac_to_string(radio.radio_uid));
+}
+
 std::chrono::steady_clock::time_point db::get_node_last_seen(const std::string &mac)
 {
     auto n = get_node(mac);

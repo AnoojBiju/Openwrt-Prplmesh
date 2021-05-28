@@ -393,6 +393,7 @@ public:
     bool get_node_confined_flag(const std::string &mac);
 
     bool update_node_last_seen(const std::string &mac);
+    bool update_radio_last_seen(sAgent::sRadio &radio);
 
     std::chrono::steady_clock::time_point get_node_last_seen(const std::string &mac);
 

@@ -2390,9 +2390,7 @@ bool Controller::handle_intel_slave_join(
     }
 
     //Update all (Slaves) last seen timestamp
-    if (database.get_node_type(tlvf::mac_to_string(radio_mac)) == beerocks::TYPE_SLAVE) {
-        database.update_node_last_seen(tlvf::mac_to_string(radio_mac));
-    }
+    database.update_radio_last_seen(*radio);
 
     return true;
 }

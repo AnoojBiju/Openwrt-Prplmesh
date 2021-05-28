@@ -64,6 +64,8 @@ public:
         beerocks::eNodeState state = beerocks::STATE_DISCONNECTED;
         std::string ipv4;
 
+        std::chrono::steady_clock::time_point last_seen;
+
         bool active              = false;
         bool is_backhaul_manager = false;
         bool is_acs_enabled      = false;
