@@ -70,7 +70,7 @@ bool agent_monitoring_task::start_agent_monitoring(const std::string &src_mac,
 
     const auto &al_mac    = tlvDeviceInformation->mac();
     auto tlvApInformation = cmdu_rx.getClass<wfa_map::tlvApOperationalBSS>();
-    if (tlvApInformation) {
+    if (!tlvApInformation) {
         LOG(ERROR) << "ieee1905_1::tlvApOperationalBSS not found";
         return false;
     }
