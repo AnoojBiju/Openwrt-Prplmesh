@@ -43,7 +43,7 @@ private:
 
     int state = START;
 
-    std::set<std::string> hostaps;
+    std::unordered_map<sMacAddr, std::weak_ptr<sAgent::sRadio>> m_radios;
 };
 
 } // namespace son

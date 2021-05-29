@@ -53,7 +53,18 @@ void load_balancer_task::work()
 
         state = REQUEST_LOAD_MEASUREMENTS;
 
-        hostaps = database.get_node_children(ire_mac, beerocks::TYPE_SLAVE);
+        auto agent = database.m_agents.get(tlvf::mac_from_string(ire_mac));
+        if (!agent) {
+            LOG(ERROR) << "Agent " << ire_mac << " not found";
+            finish();
+            return;
+        }
+
+        m_radios.clear();
+        for (auto r : agent->radios) {
+            m_radios.insert({r.first, r.second});
+        }
+
         break;
     }
     case REQUEST_LOAD_MEASUREMENTS: {
@@ -66,7 +77,13 @@ void load_balancer_task::work()
             return;
         }
 
-        for (auto hostap : hostaps) {
+        for (auto r : m_radios) {
+            auto radio = r.second.lock();
+            if (!radio) {
+                continue;
+            }
+            auto hostap = tlvf::mac_to_string(radio->radio_uid);
+
             if (database.get_hostap_stats_info_timestamp(tlvf::mac_from_string(hostap)) <=
                 start_timestamp) {
                 /*
@@ -98,7 +115,14 @@ void load_balancer_task::work()
         std::string most_loaded_hostap;
         int max_load = 0;
 
-        for (auto hostap : hostaps) {
+        for (auto r : m_radios) {
+            auto radio = r.second.lock();
+            if (!radio) {
+                continue;
+            }
+
+            auto hostap = tlvf::mac_to_string(radio->radio_uid);
+
             int hostap_channel_load =
                 database.get_hostap_channel_load_percent(tlvf::mac_from_string(hostap));
             if (hostap_channel_load > max_load) {
@@ -276,7 +300,7 @@ void load_balancer_task::work()
 //int extra_available_bytes = 0;
 //int extra_available_bytes_per_second = 0;
 #endif
-        hostaps.erase(most_loaded_hostap);
+        m_radios.erase(most_loaded_radio_mac);
         /*
              * now we check how each of the other hostaps' throughput would be affected
              * by transferring the STA to them
@@ -293,7 +317,14 @@ void load_balancer_task::work()
         auto sta_capabilities          = database.get_station_current_capabilities(chosen_client);
         uint16_t sta_phy_tx_rate_100kb = database.get_node_rx_phy_rate_100kb(chosen_client);
 
-        for (auto hostap : hostaps) {
+        for (auto r : m_radios) {
+            auto radio = r.second.lock();
+            if (!radio) {
+                continue;
+            }
+
+            auto hostap = tlvf::mac_to_string(radio->radio_uid);
+
             son::wireless_utils::sPhyApParams hostap_params;
 
             hostap_params.is_5ghz = database.is_node_5ghz(hostap);
@@ -491,7 +522,7 @@ void load_balancer_task::handle_responses_timeout(
     for (auto entry : timed_out_macs) {
         std::string mac = entry.first;
         TASK_LOG(DEBUG) << "response from " << mac << " timed out, removing from list";
-        hostaps.erase(mac);
+        m_radios.erase(tlvf::mac_from_string(mac));
     }
 }
 
