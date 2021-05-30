@@ -169,16 +169,14 @@ void load_balancer_task::work()
              * now that the hostap was found we need to find its least efficient sta in case of a 5ghz ap
              * or the most efficient sta in case of a 2.4ghz ap
              */
-        auto most_loaded_radio_mac = tlvf::mac_from_string(most_loaded_hostap);
-
         bool current_ap_is_5ghz = database.is_node_5ghz(most_loaded_hostap);
         int ap_total_duration_ms =
-            database.get_hostap_stats_measurement_duration(most_loaded_radio_mac);
+            database.get_hostap_stats_measurement_duration(most_loaded_radio->radio_uid);
         int ap_sta_load_percent =
-            database.get_hostap_total_client_tx_load_percent(most_loaded_radio_mac) +
-            database.get_hostap_total_client_rx_load_percent(most_loaded_radio_mac);
-        int ap_tx_bytes = database.get_hostap_total_sta_tx_bytes(most_loaded_radio_mac);
-        int ap_rx_bytes = database.get_hostap_total_sta_rx_bytes(most_loaded_radio_mac);
+            database.get_hostap_total_client_tx_load_percent(most_loaded_radio->radio_uid) +
+            database.get_hostap_total_client_rx_load_percent(most_loaded_radio->radio_uid);
+        int ap_tx_bytes = database.get_hostap_total_sta_tx_bytes(most_loaded_radio->radio_uid);
+        int ap_rx_bytes = database.get_hostap_total_sta_rx_bytes(most_loaded_radio->radio_uid);
 
         ASSERT_NONZERO(ap_tx_bytes);
         ASSERT_NONZERO(ap_rx_bytes);
@@ -328,7 +326,7 @@ void load_balancer_task::work()
 //int extra_available_bytes = 0;
 //int extra_available_bytes_per_second = 0;
 #endif
-        m_radios.erase(most_loaded_radio_mac);
+        m_radios.erase(most_loaded_radio->radio_uid);
         /*
              * now we check how each of the other hostaps' throughput would be affected
              * by transferring the STA to them
