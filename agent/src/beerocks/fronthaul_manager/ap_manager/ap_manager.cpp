@@ -772,6 +772,22 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         LOG(INFO) << "send ACTION_APMANAGER_ENABLE_APS_RESPONSE, success="
                   << int(response->success());
         send_cmdu(cmdu_tx);
+
+        // In case hostapd was re-enabled on different channel there may not
+        // be a CSA (channel switch notification) notification event from hostapd.
+        // Generate CSA notification anyway and send to upper layers to make
+        // sure agent DB is up to date.
+        if (response->success()) {
+            auto csa_notification = message_com::create_vs_message<
+                beerocks_message::cACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION>(cmdu_tx);
+            if (!csa_notification) {
+                LOG(ERROR) << "Failed building message!";
+                return;
+            }
+            ap_wlan_hal->refresh_radio_info();
+            fill_cs_params(csa_notification->cs_params());
+            send_cmdu(cmdu_tx);
+        }
         break;
     }
     case beerocks_message::ACTION_APMANAGER_HOSTAP_SET_RESTRICTED_FAILSAFE_CHANNEL_REQUEST: {
@@ -917,6 +933,16 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         auto timeout =
             std::chrono::steady_clock::now() + std::chrono::seconds(MAX_CANCEL_CAC_TIMEOUT_SEC);
         while (cancel_cac_success && std::chrono::steady_clock::now() < timeout) {
+            if (!ap_wlan_hal->refresh_radio_info()) {
+                LOG(WARNING) << "Radio could be temporary disabled, wait grace time "
+                             << std::chrono::duration_cast<std::chrono::seconds>(
+                                    timeout - std::chrono::steady_clock::now())
+                                    .count()
+                             << " sec.";
+                UTILS_SLEEP_MSEC(500);
+                continue;
+            }
+
             if (ap_wlan_hal->get_radio_info().radio_state == bwl::eRadioState::ENABLED ||
                 (ap_wlan_hal->get_radio_info().radio_state == bwl::eRadioState::DFS) ||
                 (ap_wlan_hal->get_radio_info().radio_state == bwl::eRadioState::UNKNOWN)) {
@@ -940,8 +966,23 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
         response->success() = cancel_cac_success;
-
         send_cmdu(cmdu_tx);
+
+        // As part of cancel CAC flow hostapd is re-enabled on diffrent (previous) channel
+        // and hostapd may not send CSA (channel switch notification) event.
+        // Generate CSA notification anyway and send to upper layers to make
+        // sure agent DB is up to date.
+        if (response->success()) {
+            auto notification = message_com::create_vs_message<
+                beerocks_message::cACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION>(cmdu_tx);
+            if (!notification) {
+                LOG(ERROR) << "Failed building message!";
+                return;
+            }
+            ap_wlan_hal->refresh_radio_info();
+            fill_cs_params(notification->cs_params());
+            send_cmdu(cmdu_tx);
+        }
 
         break;
     }
