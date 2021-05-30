@@ -89,8 +89,8 @@ void load_balancer_task::work()
                 /*
                  * if the load info is not up-to-date, request a new report
                  */
-                TASK_LOG(DEBUG) << "load info outdated, requestsing load measurement from hostap "
-                                << hostap;
+                TASK_LOG(DEBUG) << "load info outdated, requestsing load measurement from radio "
+                                << radio->radio_uid;
                 son_actions::send_cmdu_to_agent(database.get_node_parent_ire(hostap), cmdu_tx,
                                                 database, hostap);
                 add_pending_mac(hostap,
@@ -185,9 +185,9 @@ void load_balancer_task::work()
 
         int max_load = database.get_hostap_channel_load_percent(most_loaded_radio->radio_uid);
 
-        LOG_CLI(DEBUG, "most loaded hostap is "
-                           << most_loaded_hostap << " with " << max_load << " percent channel load"
-                           << std::endl
+        LOG_CLI(DEBUG, "most loaded radio is "
+                           << most_loaded_radio->radio_uid << " with " << max_load
+                           << " percent channel load" << std::endl
                            << "ap_total_duration_ms=" << ap_total_duration_ms
                            << " ap_sta_load_percent=" << ap_sta_load_percent << std::endl
                            << "ap_tx_bytes=" << ap_tx_bytes << " ap_rx_bytes=" << ap_rx_bytes);
@@ -272,8 +272,8 @@ void load_balancer_task::work()
 
         if (!chosen_client.empty()) {
             LOG_CLI(DEBUG,
-                    "chosen client on hostap "
-                        << most_loaded_hostap << " is " << chosen_client << std::endl
+                    "chosen client on radio "
+                        << most_loaded_radio->radio_uid << " is " << chosen_client << std::endl
                         << "chosen_client_efficiency_ratio=" << chosen_client_efficiency_ratio
                         << " chosen_client_airtime_percentage=" << chosen_client_airtime_percentage
                         << std::endl
@@ -374,7 +374,7 @@ void load_balancer_task::work()
             //int estimated_ul_rssi, hostap_dl_rssi = beerocks::RSSI_INVALID;
             int8_t rx_rssi, rx_packets;
             if (database.get_node_cross_rx_rssi(sta_mac, chosen_hostap, rx_rssi, rx_packets)) {
-                LOG(ERROR) << "can't get cross_rx_rssi for hostap " << chosen_hostap;
+                LOG(ERROR) << "can't get cross_rx_rssi for radio " << chosen_hostap;
                 continue;
             }
 
@@ -408,10 +408,11 @@ void load_balancer_task::work()
             int predicted_chosen_client_bitrate =
                 normalized_chosen_client_bytes / hostap_duration_ms;
 
-            LOG_CLI(DEBUG, "load_balancer_task: "
-                               << std::endl
-                               << "   predicted bitrate for sta " << chosen_client << " on hostap "
-                               << hostap << " is " << predicted_chosen_client_bitrate << " b/s");
+            LOG_CLI(DEBUG, "load_balancer_task: " << std::endl
+                                                  << "   predicted bitrate for sta "
+                                                  << chosen_client << " on radio "
+                                                  << radio->radio_uid << " is "
+                                                  << predicted_chosen_client_bitrate << " b/s");
             //int free_hostap_airtime_ms = hostap_duration_ms * float(100 - database.get_hostap_channel_load_percent(hostap)) / 100;
 
             if (predicted_chosen_client_bitrate > chosen_hostap_predicted_bitrate) {
@@ -503,7 +504,7 @@ void load_balancer_task::work()
         }
 
         if (!chosen_hostap.empty()) {
-            TASK_LOG(DEBUG) << "chosen hostap for sta " << chosen_client << " is " << chosen_hostap
+            TASK_LOG(DEBUG) << "chosen radio for sta " << chosen_client << " is " << chosen_hostap
                             << " providing a total gain of "
                             << chosen_hostap_bytes_per_second_gained << "Bps";
 
@@ -511,7 +512,7 @@ void load_balancer_task::work()
 
             LOG_CLI(DEBUG, "load_balancer_task: "
                                << std::endl
-                               << "    chosen hostap for sta " << chosen_client << " is "
+                               << "    chosen radio for sta " << chosen_client << " is "
                                << chosen_hostap << std::endl
                                << "    providing an estimated bitrate of "
                                << chosen_hostap_predicted_bitrate << "Bps" << std::endl
@@ -530,9 +531,9 @@ void load_balancer_task::work()
             //int steering_task_id = son_actions::steer_sta(database, tasks, chosen_client, chosen_hostap);
             sta_mac = chosen_client;
         } else {
-            TASK_LOG(DEBUG) << "couldn't find a better hostap for sta " << chosen_client;
+            TASK_LOG(DEBUG) << "couldn't find a better radio for sta " << chosen_client;
             LOG_CLI(DEBUG, "load_balancer_task: " << std::endl
-                                                  << "   couldn't find a better hostap for sta "
+                                                  << "   couldn't find a better radio for sta "
                                                   << chosen_client << std::endl);
         }
         finish();
