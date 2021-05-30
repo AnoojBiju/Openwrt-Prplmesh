@@ -1275,7 +1275,7 @@ std::string network_utils::create_vlan_interface(const std::string &iface, uint1
         .append(" type vlan id ")
         .append(vid_str);
 
-    beerocks::os_utils::system_call(cmd, 2, false);
+    beerocks::os_utils::system_call(cmd, false);
     return new_iface_name;
 }
 
@@ -1296,13 +1296,13 @@ bool network_utils::set_vlan_filtering(const std::string &bridge_iface, uint16_t
 
     if (default_vlan_id == 0) {
         cmd.append("0 ");
-        beerocks::os_utils::system_call(cmd, 2, true);
+        beerocks::os_utils::system_call(cmd, true);
         return true;
     }
     cmd.append("1 ");
 
     cmd.append("vlan_default_pvid ").append(std::to_string(default_vlan_id));
-    beerocks::os_utils::system_call(cmd, 2, true);
+    beerocks::os_utils::system_call(cmd, true);
     return true;
 }
 
@@ -1347,7 +1347,7 @@ bool network_utils::set_iface_vid_policy(const std::string &iface, bool del, uin
         if (is_bridge) {
             cmd.append(" self");
         }
-        beerocks::os_utils::system_call(cmd, 2, false);
+        beerocks::os_utils::system_call(cmd, false);
         return true;
     }
 
@@ -1365,10 +1365,7 @@ bool network_utils::set_iface_vid_policy(const std::string &iface, bool del, uin
 
     // Pop back last space character.
     cmd.pop_back();
-    auto ret_str = os_utils::system_call(cmd, 2, false);
-    if (!ret_str.empty()) {
-        LOG(DEBUG) << "Answer: " << ret_str;
-    }
+    os_utils::system_call(cmd, false);
     return true;
 }
 
@@ -1404,19 +1401,12 @@ bool network_utils::set_vlan_packet_filter(bool set, const std::string &bss_ifac
     if (vid != 0) {
         // Filter packets carrying the vlan tag of the interface.
         cmd.append(" --vlan-id ").append(std::to_string(vid));
-        auto ret_str = os_utils::system_call(cmd, 2, false);
-        if (!ret_str.empty()) {
-            LOG(DEBUG) << "Answer: " << ret_str;
-        }
-
+        os_utils::system_call(cmd, false);
         cmd.erase(cmd_base_len);
     }
 
     // Filter double tagged packets which are encapsulated with a S-Tag.
     cmd.append(" --vlan-encap 802_1Q");
-    auto ret_str = os_utils::system_call(cmd, 2, false);
-    if (!ret_str.empty()) {
-        LOG(DEBUG) << "Answer: " << ret_str;
-    }
+    os_utils::system_call(cmd, false);
     return true;
 }

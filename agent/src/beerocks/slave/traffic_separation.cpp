@@ -370,19 +370,13 @@ bool TrafficSeparation::reconf_dhcp(std::list<sBridgeVlanInfo> &vlans_of_bridge)
 
     // When restarting dnsmasq it restore the configuration to default.
     cmd.assign(base_cmd).append("restart");
-    auto ret_str = os_utils::system_call(cmd, 2, false);
-    if (!ret_str.empty()) {
-        LOG(DEBUG) << "Answer: " << ret_str;
-    }
+    os_utils::system_call(cmd, false);
 
     // Stop dnsmasq, since we need to run it manually because it needs to use the configuration
     // file with modifications. If we would run it with "/etc/init.d/dnsmasq start" it will discard
     // any changes we did to the configuration file.
     cmd.assign(base_cmd).append("stop");
-    ret_str = os_utils::system_call(cmd, 2, false);
-    if (!ret_str.empty()) {
-        LOG(DEBUG) << "Answer: " << ret_str;
-    }
+    os_utils::system_call(cmd, false);
 
     // Add interfaces to lease IP addresses on, in the DHCP configuration file.
     std::ofstream outfile;
@@ -412,10 +406,7 @@ bool TrafficSeparation::reconf_dhcp(std::list<sBridgeVlanInfo> &vlans_of_bridge)
         .append(pid_file_name);
 
     // Run DHCP server manually.
-    ret_str = os_utils::system_call(cmd, 2, true);
-    if (!ret_str.empty()) {
-        LOG(DEBUG) << "Answer: " << ret_str;
-    }
+    os_utils::system_call(cmd, true);
     return true;
 }
 
@@ -426,10 +417,7 @@ void TrafficSeparation::assign_ip_to_vlan_iface(const std::list<sBridgeVlanInfo>
     cmd.reserve(40);
     for (auto &vlan_info : vlans_of_bridge) {
         cmd.assign("udhcpc -i ").append(vlan_info.iface_name).append(" -f -S -q -n");
-        auto ret_str = os_utils::system_call(cmd, 2, false);
-        if (!ret_str.empty()) {
-            LOG(DEBUG) << "Answer: " << ret_str;
-        }
+        os_utils::system_call(cmd, false);
     }
 }
 } // namespace net
