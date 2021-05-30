@@ -112,32 +112,58 @@ void load_balancer_task::work()
         /*
              * first we need to find the most loaded hostap to perform balancing on
              */
-        std::string most_loaded_hostap;
-        int max_load = 0;
+        auto most_loaded_radio_it = std::max_element(
+            m_radios.begin(), m_radios.end(),
+            [&](decltype(m_radios)::value_type &r1, decltype(m_radios)::value_type &r2) {
+                auto radio1 = r1.second.lock();
+                auto radio2 = r2.second.lock();
 
-        for (auto r : m_radios) {
-            auto radio = r.second.lock();
-            if (!radio) {
-                continue;
-            }
-
-            auto hostap = tlvf::mac_to_string(radio->radio_uid);
-
-            int hostap_channel_load =
-                database.get_hostap_channel_load_percent(tlvf::mac_from_string(hostap));
-            if (hostap_channel_load > max_load) {
-                most_loaded_hostap = hostap;
-                max_load           = hostap_channel_load;
-            } else if (hostap_channel_load == max_load) {
-                if (database.get_node_children(hostap).size() >
-                    database.get_node_children(most_loaded_hostap).size()) {
-                    /*
-                         * TODO might need different sta count criteria for 2.4ghz and 5ghz hostaps
-                         */
-                    most_loaded_hostap = hostap;
+                // treat no longer existing radios as less loaded than any existing ones
+                if (!radio2) {
+                    // if radio1 exists, radio1 > radio2
+                    // if radio1 does not exist, radio = radio2
+                    // in any case, radio1 is never less loaded than radio2
+                    return false;
                 }
-            }
+                if (!radio1) {
+                    // radio2 exists, but radio1 doesn't, so radio1 < radio2
+                    return true;
+                }
+
+                auto load1 = database.get_hostap_channel_load_percent(radio1->radio_uid);
+                auto load2 = database.get_hostap_channel_load_percent(radio2->radio_uid);
+                if (load1 != load2) {
+                    return load1 < load2;
+                }
+
+                auto radio1_str = tlvf::mac_to_string(radio1->radio_uid);
+                auto radio2_str = tlvf::mac_to_string(radio2->radio_uid);
+                if (database.get_node_children(radio1_str).size() <
+                    database.get_node_children(radio2_str).size()) {
+                    return true;
+                }
+
+                /*
+                 * TODO might need different sta count criteria for 2.4ghz and 5ghz hostaps
+                 */
+                return false;
+            });
+
+        if (most_loaded_radio_it == m_radios.end()) {
+            TASK_LOG(ERROR) << "most_loaded_radio_it == m_radios.end()";
+            finish();
+            return;
         }
+
+        std::shared_ptr<sAgent::sRadio> most_loaded_radio = most_loaded_radio_it->second.lock();
+
+        if (!most_loaded_radio) {
+            TASK_LOG(ERROR) << "most loaded radio does not exist";
+            finish();
+            return;
+        }
+
+        std::string most_loaded_hostap = tlvf::mac_to_string(most_loaded_radio->radio_uid);
 
         /*
              * now that the hostap was found we need to find its least efficient sta in case of a 5ghz ap
@@ -156,6 +182,8 @@ void load_balancer_task::work()
 
         ASSERT_NONZERO(ap_tx_bytes);
         ASSERT_NONZERO(ap_rx_bytes);
+
+        int max_load = database.get_hostap_channel_load_percent(most_loaded_radio->radio_uid);
 
         LOG_CLI(DEBUG, "most loaded hostap is "
                            << most_loaded_hostap << " with " << max_load << " percent channel load"
