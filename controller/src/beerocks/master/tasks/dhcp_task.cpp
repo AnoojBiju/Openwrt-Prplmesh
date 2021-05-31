@@ -66,7 +66,6 @@ void DhcpTask::start_periodic_lease_poll(const std::chrono::milliseconds &delay_
     // Remove old periodic timer.
     if (m_periodic_timer != beerocks::net::FileDescriptor::invalid_descriptor) {
         m_timer_manager->remove_timer(m_periodic_timer);
-        m_periodic_timer = beerocks::net::FileDescriptor::invalid_descriptor;
     }
 
     m_periodic_timer =

@@ -42,10 +42,12 @@ public:
     /**
      * @brief Removes previously created timer.
      *
-     * @param fd File descriptor of the timer (obtained when the timer was added).
+     * On success, sets given file descriptor to `invalid_descriptor`.
+     * 
+     * @param[in,out] fd File descriptor of the timer (obtained when the timer was added).
      * @return true on success and false otherwise.
      */
-    virtual bool remove_timer(int fd) = 0;
+    virtual bool remove_timer(int &fd) = 0;
 };
 
 } // namespace beerocks

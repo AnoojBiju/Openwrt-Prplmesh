@@ -813,7 +813,6 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
 
                     // Cancel timer to check if a "dev_reset_default" command handling timed out.
                     m_timer_manager->remove_timer(m_dev_reset_default_timer);
-                    m_dev_reset_default_timer = beerocks::net::FileDescriptor::invalid_descriptor;
                 }
             }
 
@@ -2232,7 +2231,6 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
         if (m_backhaul_steering_bssid == bssid) {
             m_backhaul_steering_bssid = beerocks::net::network_utils::ZERO_MAC;
             m_timer_manager->remove_timer(m_backhaul_steering_timer);
-            m_backhaul_steering_timer = beerocks::net::FileDescriptor::invalid_descriptor;
 
             create_backhaul_steering_response(wfa_map::tlvErrorCode::eReasonCode::RESERVED, bssid);
 
@@ -3062,7 +3060,6 @@ void BackhaulManager::cancel_backhaul_steering_operation()
     m_backhaul_steering_channel = 0;
 
     m_timer_manager->remove_timer(m_backhaul_steering_timer);
-    m_backhaul_steering_timer = beerocks::net::FileDescriptor::invalid_descriptor;
 }
 
 std::string BackhaulManager::freq_to_radio_mac(eFreqType freq) const
@@ -3289,7 +3286,6 @@ void BackhaulManager::handle_dev_reset_default(
         std::chrono::duration_cast<std::chrono::milliseconds>(dev_reset_default_timeout),
         std::chrono::milliseconds::zero(), [&](int fd, beerocks::EventLoop &loop) {
             m_timer_manager->remove_timer(m_dev_reset_default_timer);
-            m_dev_reset_default_timer = beerocks::net::FileDescriptor::invalid_descriptor;
 
             LOG(DEBUG) << "dev_reset_default timed out";
 
