@@ -1172,7 +1172,7 @@ bool ap_wlan_hal_dwpal::sta_bss_steer(const std::string &mac, const std::string 
 }
 
 static bool set_vap_multiap_mode(std::vector<std::string> &vap_hostapd_config, bool fronthaul,
-                                 bool backhaul, const std::string &backhaul_wps_ssid,
+                                 bool backhaul, std::string &backhaul_wps_ssid,
                                  const std::string &backhaul_wps_passphrase, bool disallow_profile1,
                                  bool disallow_profile2)
 {
@@ -1194,10 +1194,7 @@ static bool set_vap_multiap_mode(std::vector<std::string> &vap_hostapd_config, b
                    << ", disallow_profile2=" << disallow_profile2;
     }
 
-    hostapd_config_set_value(vap_hostapd_config, "wps_state", fronthaul ? "2" : "");
-    hostapd_config_set_value(vap_hostapd_config, "wps_independent", "0");
-
-    // Open source hostapd states that a "multi_ap" field must be set in this way:
+    // Open source hostapd state that a "multi_ap" field must be set in this way:
     // "Enable Multi-AP functionality
     // 0 = disabled (default)
     // 1 = AP support backhaul BSS
@@ -1217,6 +1214,9 @@ static bool set_vap_multiap_mode(std::vector<std::string> &vap_hostapd_config, b
         // and need to be set to one less than "max_num_sta" if was set on bAP interface (see
         // explanation below), since the main interface is used for 3 address stations.
         hostapd_config_set_value(vap_hostapd_config, "num_vrt_bkh_netdevs", "2");
+
+        // Clear old configuration.
+        hostapd_config_set_value(vap_hostapd_config, "max_num_sta", "");
     } else {
         mesh_mode.assign(backhaul ? "bAP" : "fAP");
         // Setting max_num_sta to an bAP interface defines number of repeaters that can
@@ -1231,6 +1231,9 @@ static bool set_vap_multiap_mode(std::vector<std::string> &vap_hostapd_config, b
         // 1. Counting number of interfaces in use.
         // 2. Knowing number of VAP supported on the platform.
         hostapd_config_set_value(vap_hostapd_config, "max_num_sta", backhaul ? "3" : "");
+
+        // Clear old configuration.
+        hostapd_config_set_value(vap_hostapd_config, "num_vrt_bkh_netdevs", "");
     }
 
     hostapd_config_set_value(vap_hostapd_config, "mesh_mode", mesh_mode);
@@ -1240,16 +1243,38 @@ static bool set_vap_multiap_mode(std::vector<std::string> &vap_hostapd_config, b
                                  disallow_profile1 ? "1" : "0");
         hostapd_config_set_value(vap_hostapd_config, "multi_ap_profile2_disallow",
                                  disallow_profile2 ? "1" : "0");
+    } else {
+        // Clear old configuration.
+        hostapd_config_set_value(vap_hostapd_config, "multi_ap_profile1_disallow", "");
+        hostapd_config_set_value(vap_hostapd_config, "multi_ap_profile2_disallow", "");
     }
 
+    // Configuration for fBSS that will be used for WPS.
+    // "backhaul_wps_ssid" represent a bBSS credentials (if exist). The wps configurations should be
+    // configured only on a single fBSS. Therefore, we clear given "backhaul_wps_ssid" so WPS
+    // configuration will not be configured twice.
     if (fronthaul && !backhaul_wps_ssid.empty()) {
-        // Oddly enough, multi_ap_backhaul_wpa_passphrase has to be quoted, while wpa_passphrase does not...
+        // Oddly enough, multi_ap_backhaul_wpa_passphrase has to be quoted, while wpa_passphrase
+        // does not.
         hostapd_config_set_value(vap_hostapd_config, "multi_ap_backhaul_ssid",
                                  "\"" + backhaul_wps_ssid + "\"");
         hostapd_config_set_value(vap_hostapd_config, "multi_ap_backhaul_wpa_passphrase",
                                  backhaul_wps_passphrase);
 
+        hostapd_config_set_value(vap_hostapd_config, "wps_state", "2");
         hostapd_config_set_value(vap_hostapd_config, "eap_server", "1");
+        hostapd_config_set_value(vap_hostapd_config, "wps_independent", "0");
+        hostapd_config_set_value(vap_hostapd_config, "config_methods", "push_button");
+
+        // This will make sure only the first fBSS is used to WPS connection.
+        backhaul_wps_ssid.clear();
+    } else {
+        hostapd_config_set_value(vap_hostapd_config, "multi_ap_backhaul_ssid", "");
+        hostapd_config_set_value(vap_hostapd_config, "multi_ap_backhaul_wpa_passphrase", "");
+        hostapd_config_set_value(vap_hostapd_config, "wps_state", "");
+        hostapd_config_set_value(vap_hostapd_config, "eap_server", "0");
+        hostapd_config_set_value(vap_hostapd_config, "wps_independent", "1");
+        hostapd_config_set_value(vap_hostapd_config, "config_methods", "");
     }
 
     return true;
@@ -1295,6 +1320,8 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
 
     // Clear all VAPs from the available container, since we preset it with configuration.
     m_radio_info.available_vaps.clear();
+
+    auto backhaul_wps_ssid_copy(backhaul_wps_ssid);
 
     // Go through the bss_info_conf_list and change the hostapd config accordingly
     for (const auto &bss_info_conf : bss_info_conf_list) {
@@ -1348,7 +1375,7 @@ bool ap_wlan_hal_dwpal::update_vap_credentials(
 
         // Set multi_ap mode
         if (!set_vap_multiap_mode(vap_hostapd_config, bss_info_conf.fronthaul,
-                                  bss_info_conf.backhaul, backhaul_wps_ssid,
+                                  bss_info_conf.backhaul, backhaul_wps_ssid_copy,
                                   backhaul_wps_passphrase,
                                   bss_info_conf.profile1_backhaul_sta_association_disallowed,
                                   bss_info_conf.profile2_backhaul_sta_association_disallowed)) {
