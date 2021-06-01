@@ -42,7 +42,6 @@ public:
         std::string bridge_iface;
         int stop_on_failure_attempts;
         bool enable_repeater_mode;
-        std::string backhaul_wire_iface;
         std::string backhaul_wireless_iface;
         bool backhaul_wireless_iface_filter_low;
         std::string backhaul_preferred_bssid;
