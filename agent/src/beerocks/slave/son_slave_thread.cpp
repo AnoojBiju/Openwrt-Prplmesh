@@ -2050,8 +2050,8 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
 
         // Update VAP info (BSSID) in the AgentDB
         bssid->ssid          = vap_info.ssid;
-        bssid->fronthaul_bss = vap_info.fronthaul_vap;
-        bssid->backhaul_bss  = vap_info.backhaul_vap;
+        // bssid->fronthaul_bss = vap_info.fronthaul_vap;
+        // bssid->backhaul_bss  = vap_info.backhaul_vap;
 
         auto notification_out = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_HOSTAP_AP_ENABLED_NOTIFICATION>(cmdu_tx);
