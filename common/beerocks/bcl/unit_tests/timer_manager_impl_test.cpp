@@ -12,6 +12,7 @@
 #include <bcl/beerocks_event_loop_mock.h>
 #include <bcl/beerocks_timer_factory_impl.h>
 #include <bcl/beerocks_timer_factory_mock.h>
+#include <bcl/network/file_descriptor.h>
 #include <bcl/network/timer_mock.h>
 
 #include <gtest/gtest.h>
@@ -37,9 +38,9 @@ TEST_F(TimerManagerImplTest, add_timer_should_succeed)
 {
     auto timer = new StrictMock<beerocks::net::TimerMock<>>();
 
-    constexpr int timer_fd = 1;
-    constexpr auto delay   = std::chrono::milliseconds(1);
-    constexpr auto period  = std::chrono::milliseconds(2);
+    int timer_fd          = 1;
+    constexpr auto delay  = std::chrono::milliseconds(1);
+    constexpr auto period = std::chrono::milliseconds(2);
 
     beerocks::EventLoop::EventHandlers timer_handlers;
 
@@ -80,22 +81,22 @@ TEST_F(TimerManagerImplTest, add_timer_should_succeed)
     ASSERT_EQ(1U, count);
 }
 
-TEST_F(TimerManagerImplTest, remove_timer_should_fail_with_unknown_socket_fd)
+TEST_F(TimerManagerImplTest, remove_timer_should_fail_with_unknown_timer_fd)
 {
-    constexpr int unknown_socket_fd = 2;
+    int unknown_timer_fd = 2;
 
     beerocks::TimerManagerImpl timer_manager(m_timer_factory, m_event_loop);
 
-    ASSERT_FALSE(timer_manager.remove_timer(unknown_socket_fd));
+    ASSERT_FALSE(timer_manager.remove_timer(unknown_timer_fd));
 }
 
 TEST_F(TimerManagerImplTest, destructor_should_remove_remaining_timers)
 {
     auto timer = new StrictMock<beerocks::net::TimerMock<>>();
 
-    constexpr int timer_fd = 1;
-    constexpr auto delay   = std::chrono::milliseconds(1);
-    constexpr auto period  = std::chrono::milliseconds(2);
+    int timer_fd          = 1;
+    constexpr auto delay  = std::chrono::milliseconds(1);
+    constexpr auto period = std::chrono::milliseconds(2);
 
     ON_CALL(*timer, fd()).WillByDefault(Return(timer_fd));
 
@@ -142,7 +143,9 @@ TEST_F(TimerManagerImplTest, example_of_use)
 
     constexpr auto period = std::chrono::milliseconds(1);
     int timer_fd          = timer_manager.add_timer(period, period, handler);
-    ASSERT_NE(-1, timer_fd);
+    constexpr int expected_timer_fd_after_removing_timer =
+        beerocks::net::FileDescriptor::invalid_descriptor;
+    ASSERT_NE(timer_fd, expected_timer_fd_after_removing_timer);
 
     constexpr uint32_t num_repetitions = 10U;
     for (uint32_t i = 0; i < num_repetitions; i++) {
@@ -150,6 +153,7 @@ TEST_F(TimerManagerImplTest, example_of_use)
     }
 
     ASSERT_TRUE(timer_manager.remove_timer(timer_fd));
+    ASSERT_EQ(timer_fd, expected_timer_fd_after_removing_timer);
     ASSERT_EQ(num_repetitions, count);
 }
 

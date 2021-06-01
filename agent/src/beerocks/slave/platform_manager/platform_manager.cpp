@@ -403,10 +403,8 @@ bool PlatformManager::start()
     }
     LOG(DEBUG) << "Check-WLAN-parameters-changed timer created with fd = "
                << m_check_wlan_params_changed_timer;
-    transaction.add_rollback_action([&]() {
-        m_timer_manager->remove_timer(m_check_wlan_params_changed_timer);
-        m_check_wlan_params_changed_timer = beerocks::net::FileDescriptor::invalid_descriptor;
-    });
+    transaction.add_rollback_action(
+        [&]() { m_timer_manager->remove_timer(m_check_wlan_params_changed_timer); });
 
     // Initialize the BPL (Beerocks Platform Library)
     if (bpl::bpl_init() < 0) {
@@ -490,7 +488,6 @@ bool PlatformManager::stop()
         if (!m_timer_manager->remove_timer(m_check_wlan_params_changed_timer)) {
             result = false;
         }
-        m_check_wlan_params_changed_timer = beerocks::net::FileDescriptor::invalid_descriptor;
     }
 
     return result;
@@ -1513,7 +1510,6 @@ void PlatformManager::stop_arp_monitor()
     // Cancel and remove the clean-old-ARP-entries timer
     if (m_clean_old_arp_entries_timer != beerocks::net::FileDescriptor::invalid_descriptor) {
         m_timer_manager->remove_timer(m_clean_old_arp_entries_timer);
-        m_clean_old_arp_entries_timer = beerocks::net::FileDescriptor::invalid_descriptor;
     }
 }
 
