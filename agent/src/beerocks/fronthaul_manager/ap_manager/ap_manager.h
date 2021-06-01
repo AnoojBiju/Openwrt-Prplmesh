@@ -27,7 +27,7 @@ class ApManager {
 
 public:
     ApManager(const std::string &iface, beerocks::logging &logger,
-              std::unique_ptr<beerocks::CmduClientFactory> slave_cmdu_client_factory,
+              std::shared_ptr<beerocks::CmduClientFactory> slave_cmdu_client_factory,
               std::shared_ptr<beerocks::TimerManager> timer_manager,
               std::shared_ptr<beerocks::EventLoop> event_loop);
 
@@ -170,7 +170,7 @@ private:
     /**
      * Factory to create CMDU client instances connected to CMDU server running in slave.
      */
-    std::unique_ptr<beerocks::CmduClientFactory> m_slave_cmdu_client_factory;
+    std::shared_ptr<beerocks::CmduClientFactory> m_slave_cmdu_client_factory;
 
     /**
      * Timer manager to help using application timers.

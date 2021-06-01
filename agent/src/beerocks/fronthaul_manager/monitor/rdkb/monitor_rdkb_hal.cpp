@@ -21,27 +21,27 @@ using namespace son;
 
 monitor_rdkb_hal::monitor_rdkb_hal(ieee1905_1::CmduMessageTx &cmdu_tx_) : cmdu_tx(cmdu_tx_)
 {
-    mon_db       = nullptr;
-    slave_socket = nullptr;
+    mon_db = nullptr;
 }
 
 void monitor_rdkb_hal::stop()
 {
-    mon_db       = nullptr;
-    slave_socket = nullptr;
+    mon_db         = nullptr;
+    m_slave_client = nullptr;
 }
 
-bool monitor_rdkb_hal::start(monitor_db *mon_db_, Socket *slave_socket_)
+bool monitor_rdkb_hal::start(monitor_db *mon_db_,
+                             std::shared_ptr<beerocks::CmduClient> slave_client)
 {
-    if (!mon_db_ || !slave_socket_) {
+    if (!mon_db_ || !slave_client) {
         LOG(ERROR) << "invalid parameters";
         return false;
     }
 
     stop();
 
-    mon_db       = mon_db_;
-    slave_socket = slave_socket_;
+    mon_db         = mon_db_;
+    m_slave_client = slave_client;
 
     return true;
 }
@@ -243,7 +243,7 @@ void monitor_rdkb_hal::send_activity_event(const std::string &sta_mac, bool acti
     response->params().client_mac = tlvf::mac_from_string(sta_mac);
     response->params().bssid      = tlvf::mac_from_string(vap_node->get_mac());
 
-    message_com::send_cmdu(slave_socket, cmdu_tx);
+    m_slave_client->send_cmdu(cmdu_tx);
 }
 
 void monitor_rdkb_hal::send_snr_crossing_event(const std::string &sta_mac,
@@ -278,7 +278,7 @@ void monitor_rdkb_hal::send_snr_crossing_event(const std::string &sta_mac,
     response->params().highXing    = beerocks_message::eSteeringSnrChange(thrs.high);
     response->params().lowXing     = beerocks_message::eSteeringSnrChange(thrs.low);
 
-    message_com::send_cmdu(slave_socket, cmdu_tx);
+    m_slave_client->send_cmdu(cmdu_tx);
 }
 
 std::shared_ptr<rdkb_hal_sta_config> monitor_rdkb_hal::conf_add_client(const std::string &sta_mac)

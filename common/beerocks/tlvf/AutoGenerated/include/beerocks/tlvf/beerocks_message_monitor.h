@@ -108,46 +108,6 @@ class cACTION_MONITOR_CHANGE_MODULE_LOGGING_LEVEL : public BaseClass
         sLoggingLevelChange* m_params = nullptr;
 };
 
-class cACTION_MONITOR_ERROR_NOTIFICATION : public BaseClass
-{
-    public:
-        cACTION_MONITOR_ERROR_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cACTION_MONITOR_ERROR_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cACTION_MONITOR_ERROR_NOTIFICATION();
-
-        static eActionOp_MONITOR get_action_op(){
-            return (eActionOp_MONITOR)(ACTION_MONITOR_ERROR_NOTIFICATION);
-        }
-        uint32_t& error_code();
-        void class_swap() override;
-        bool finalize() override;
-        static size_t get_initial_size();
-
-    private:
-        bool init();
-        eActionOp_MONITOR* m_action_op = nullptr;
-        uint32_t* m_error_code = nullptr;
-};
-
-class cACTION_MONITOR_ERROR_NOTIFICATION_ACK : public BaseClass
-{
-    public:
-        cACTION_MONITOR_ERROR_NOTIFICATION_ACK(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cACTION_MONITOR_ERROR_NOTIFICATION_ACK(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cACTION_MONITOR_ERROR_NOTIFICATION_ACK();
-
-        static eActionOp_MONITOR get_action_op(){
-            return (eActionOp_MONITOR)(ACTION_MONITOR_ERROR_NOTIFICATION_ACK);
-        }
-        void class_swap() override;
-        bool finalize() override;
-        static size_t get_initial_size();
-
-    private:
-        bool init();
-        eActionOp_MONITOR* m_action_op = nullptr;
-};
-
 class cACTION_MONITOR_HEARTBEAT_NOTIFICATION : public BaseClass
 {
     public:

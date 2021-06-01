@@ -9,7 +9,6 @@
 
 #include "agent_db.h"
 
-#include "../fronthaul_manager/monitor/monitor_thread.h"
 #include "tlvf_utils.h"
 
 #include "cac_status_database.h"
@@ -3356,48 +3355,6 @@ bool slave_thread::handle_cmdu_monitor_message(Socket *sd,
         }
         notification_out->params() = notification_in->params();
         send_cmdu_to_controller(cmdu_tx);
-        break;
-    }
-    case beerocks_message::ACTION_MONITOR_ERROR_NOTIFICATION: {
-        auto notification =
-            beerocks_header->addClass<beerocks_message::cACTION_MONITOR_ERROR_NOTIFICATION>();
-        if (notification == nullptr) {
-            LOG(ERROR) << "addClass cACTION_MONITOR_ERROR_NOTIFICATION failed";
-            return false;
-        }
-        LOG(INFO) << "ACTION_MONITOR_ERROR_NOTIFICATION, error_code="
-                  << int(notification->error_code());
-
-        if (configuration_in_progress) {
-            LOG(INFO) << "configuration is in progress, ignoring";
-            detach_on_conf_change = true;
-            break;
-        }
-
-        monitor_thread::eThreadErrors err_code =
-            monitor_thread::eThreadErrors(notification->error_code());
-        if (err_code == monitor_thread::eThreadErrors::MONITOR_THREAD_ERROR_HOSTAP_DISABLED) {
-            platform_notify_error(bpl::eErrorCode::MONITOR_HOSTAP_DISABLED, "");
-        } else if (err_code == monitor_thread::eThreadErrors::MONITOR_THREAD_ERROR_ATTACH_FAIL) {
-            platform_notify_error(bpl::eErrorCode::MONITOR_ATTACH_FAIL, "");
-        } else if (err_code == monitor_thread::eThreadErrors::MONITOR_THREAD_ERROR_SUDDEN_DETACH) {
-            platform_notify_error(bpl::eErrorCode::MONITOR_SUDDEN_DETACH, "");
-        } else if (err_code ==
-                   monitor_thread::eThreadErrors::MONITOR_THREAD_ERROR_HAL_DISCONNECTED) {
-            platform_notify_error(bpl::eErrorCode::MONITOR_HAL_DISCONNECTED, "");
-        } else if (err_code ==
-                   monitor_thread::eThreadErrors::MONITOR_THREAD_ERROR_REPORT_PROCESS_FAIL) {
-            platform_notify_error(bpl::eErrorCode::MONITOR_REPORT_PROCESS_FAIL, "");
-        }
-
-        auto notification_out = message_com::create_vs_message<
-            beerocks_message::cACTION_MONITOR_ERROR_NOTIFICATION_ACK>(cmdu_tx);
-        if (notification_out == nullptr) {
-            LOG(ERROR) << "Failed building message!";
-            break;
-        }
-
-        message_com::send_cmdu(monitor_socket, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_MONITOR_CLIENT_RX_RSSI_MEASUREMENT_NOTIFICATION: {

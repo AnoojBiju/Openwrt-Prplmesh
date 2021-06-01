@@ -6,10 +6,12 @@
  * See LICENSE file for more details.
  */
 
-#include "monitor_thread.h"
+#include "monitor.h"
 
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
+#include <bcl/network/sockets.h>
+#include <bcl/transaction.h>
 
 #define BEEROCKS_CUSTOM_LOGGER_ID BEEROCKS_MONITOR
 #include <bcl/beerocks_logging_custom.h>
@@ -24,7 +26,6 @@
 #include <vector>
 
 using namespace beerocks;
-using namespace net;
 using namespace son;
 
 #define HAL_MAX_COMMAND_FAILURES 10
@@ -39,219 +40,172 @@ using namespace son;
  */
 static constexpr uint8_t ap_metrics_channel_utilization_measurement_period_s = 10;
 
-monitor_thread::monitor_thread(const std::string &slave_uds_, const std::string &monitor_iface_,
-                               beerocks::config_file::sConfigSlave &beerocks_slave_conf_,
-                               beerocks::logging &logger_)
-    : socket_thread(), monitor_iface(monitor_iface_), beerocks_slave_conf(beerocks_slave_conf_),
-      bridge_iface(beerocks_slave_conf.bridge_iface), slave_uds(slave_uds_), logger(logger_),
-      mon_rssi(cmdu_tx),
+/**
+ * Time between successive timer executions of the FSM timer
+ */
+constexpr auto fsm_timer_period = std::chrono::milliseconds(250);
+
+Monitor::Monitor(const std::string &monitor_iface_,
+                 beerocks::config_file::sConfigSlave &beerocks_slave_conf_,
+                 beerocks::logging &logger_,
+                 std::shared_ptr<beerocks::CmduClientFactory> slave_cmdu_client_factory,
+                 std::shared_ptr<beerocks::TimerManager> timer_manager,
+                 std::shared_ptr<beerocks::EventLoop> event_loop)
+    : monitor_iface(monitor_iface_), beerocks_slave_conf(beerocks_slave_conf_),
+      bridge_iface(beerocks_slave_conf.bridge_iface), cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer)),
+      logger(logger_), mon_rssi(cmdu_tx),
 #ifdef BEEROCKS_RDKB
       mon_rdkb_hal(cmdu_tx),
 #endif
-      mon_stats(cmdu_tx)
+      mon_stats(cmdu_tx), m_slave_cmdu_client_factory(slave_cmdu_client_factory),
+      m_timer_manager(timer_manager), m_event_loop(event_loop)
 {
-    thread_name = "monitor";
+    LOG_IF(!m_slave_cmdu_client_factory, FATAL) << "CMDU client factory is a null pointer!";
+    LOG_IF(!m_timer_manager, FATAL) << "Timer manager is a null pointer!";
+    LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
 
     /**
      * Get the MAC address of the radio interface that this monitor instance operates on.
      * This MAC address will later on be used to, for example, extract the information in messages
      * received from controller that is addressed to this monitor instance.
      */
-    std::string radio_mac = network_utils::ZERO_MAC_STRING;
-    if (!network_utils::linux_iface_get_mac(monitor_iface, radio_mac)) {
+    std::string radio_mac = beerocks::net::network_utils::ZERO_MAC_STRING;
+    if (!beerocks::net::network_utils::linux_iface_get_mac(monitor_iface, radio_mac)) {
         LOG(ERROR) << "Failed getting MAC address for interface: " << monitor_iface;
-        m_radio_mac = network_utils::ZERO_MAC;
+        m_radio_mac = beerocks::net::network_utils::ZERO_MAC;
     } else {
         m_radio_mac = tlvf::mac_from_string(radio_mac);
     }
 
-    using namespace std::placeholders; // for `_1`
-
-    bwl::hal_conf_t hal_conf;
-
-    if (!beerocks::bpl::bpl_cfg_get_hostapd_ctrl_path(monitor_iface, hal_conf.wpa_ctrl_path)) {
-        LOG(ERROR) << "Couldn't get hostapd control path for interface " << monitor_iface;
-    }
-
-    // Create new Monitor HAL instance
-    mon_wlan_hal = bwl::mon_wlan_hal_create(
-        monitor_iface_, std::bind(&monitor_thread::hal_event_handler, this, _1), hal_conf);
-
-    LOG_IF(!mon_wlan_hal, FATAL) << "Failed creating HAL instance!";
-}
-
-monitor_thread::~monitor_thread() { stop_monitor_thread(); }
-
-void monitor_thread::on_thread_stop()
-{
-    LOG(DEBUG) << "on_thread_stop() - call stop_monitor_thread()";
-    stop_monitor_thread();
-}
-
-void monitor_thread::stop_monitor_thread()
-{
-    if (received_error_notification_ack_retry == -1) {
-        received_error_notification_ack_retry = 5;
-    }
-
-    if (received_error_notification_ack_retry > 0) {
-
-        auto notification =
-            message_com::create_vs_message<beerocks_message::cACTION_MONITOR_ERROR_NOTIFICATION>(
-                cmdu_tx);
-        if (notification == nullptr) {
-            LOG(ERROR) << "Failed building cACTION_MONITOR_ERROR_NOTIFICATION message!";
-            return;
-        }
-        notification->error_code() = thread_last_error_code;
-        message_com::send_cmdu(slave_socket, cmdu_tx);
-        received_error_notification_ack_retry--;
-
-    } else {
-
-        LOG(ERROR) << "disconnecting monitor_thread sockets";
-        LOG_IF(mon_hal_ext_events || mon_hal_nl_events || slave_socket, DEBUG)
-            << "stop_monitor_thread()";
-        if (mon_hal_ext_events) {
-            LOG(DEBUG) << "stopping mon_hal_ext_events!";
-            mon_rssi.stop();
-            mon_stats.stop();
-#ifdef BEEROCKS_RDKB
-            mon_rdkb_hal.stop();
-#endif
-            mon_wlan_hal->detach();
-            remove_socket(mon_hal_ext_events);
-            delete mon_hal_ext_events;
-            mon_hal_ext_events = nullptr;
-            remove_socket(mon_rssi.get_arp_socket());
-        }
-
-        if (mon_hal_int_events) {
-            LOG(DEBUG) << "stopping mon_hal_int_events!";
-            remove_socket(mon_hal_int_events);
-            delete mon_hal_int_events;
-            mon_hal_int_events = nullptr;
-        }
-
-        if (mon_hal_nl_events) {
-            LOG(DEBUG) << "stopping mon_hal_nl_events!";
-            remove_socket(mon_hal_nl_events);
-            delete mon_hal_nl_events;
-            mon_hal_nl_events = nullptr;
-        }
-
-        if (slave_socket) {
-            LOG(DEBUG) << "stopping slave_socket!";
-            remove_socket(slave_socket);
-            slave_socket->closeSocket();
-            delete slave_socket;
-            slave_socket = nullptr;
-        }
-    }
-
-    should_stop = true;
-}
-
-bool monitor_thread::socket_disconnected(Socket *sd)
-{
-    LOG(TRACE) << "socket disconnected!";
-
-    if (!sd) {
-        LOG(ERROR) << "Invalid socket!";
-        return false;
-    }
-
-    if (slave_socket && (sd == slave_socket)) {
-        LOG(ERROR) << "slave socket disconnected!, stop_monitor_thread()";
-        stop_monitor_thread();
-        return false;
-    } else if (mon_hal_ext_events && (sd == mon_hal_ext_events)) {
-        LOG(ERROR) << "mon_hal_ext_events socket disconnected!";
-        thread_last_error_code = MONITOR_THREAD_ERROR_HAL_DISCONNECTED;
-        stop_monitor_thread();
-        return false;
-    } else if (mon_hal_int_events && (sd == mon_hal_int_events)) {
-        LOG(ERROR) << "mon_hal_int_events socket disconnected!";
-        thread_last_error_code = MONITOR_THREAD_ERROR_HAL_DISCONNECTED;
-        stop_monitor_thread();
-        return false;
-    } else if (mon_hal_nl_events && (sd == mon_hal_nl_events)) {
-        LOG(ERROR) << "mon_hal_nl_events socket disconnected!";
-        thread_last_error_code = MONITOR_THREAD_ERROR_NL_EVENTS_SOCKET_DISCONNECTED;
-        stop_monitor_thread();
-        return false;
-    }
-
-    return true;
-}
-
-std::string monitor_thread::print_cmdu_types(const message::sUdsHeader *cmdu_header)
-{
-    return message_com::print_cmdu_types(cmdu_header);
-}
-
-bool monitor_thread::init()
-{
-    LOG(DEBUG) << "init() start";
-
     auto radio_node = mon_db.get_radio_node();
     radio_node->set_iface(monitor_iface);
+}
 
-    set_select_timeout(mon_db.MONITOR_DB_POLLING_RATE_MSEC);
+bool Monitor::send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx)
+{
+    return m_slave_client->send_cmdu(cmdu_tx);
+}
 
-    received_error_notification_ack_retry = -1;
-
-    // Initialize the monitor hal
-    // if(!mon_hal.init(&mon_db)){
-    //     LOG(ERROR) << "mon_hal initialization failed";
-    //     return false;
-    // }
-
-    //connect to slave //
-    if (slave_socket)
-        delete slave_socket;
-    slave_socket    = new SocketClient(slave_uds);
-    std::string err = slave_socket->getError();
-    if (!err.empty()) {
-        LOG(ERROR) << "slave_socket: " << err;
-        delete slave_socket;
-        slave_socket = nullptr;
+bool Monitor::start()
+{
+    if (m_slave_client) {
+        LOG(ERROR) << "Monitor is already started";
         return false;
     }
 
-    add_socket(slave_socket);
-    LOG(DEBUG) << "init() end";
+    // In case of error in one of the steps of this method, we have to undo all the previous steps
+    // (like when rolling back a database transaction, where either all steps get executed or none
+    // of them gets executed)
+    beerocks::Transaction transaction;
+
+    // Create a timer to run the FSM periodically
+    m_fsm_timer = m_timer_manager->add_timer(
+        fsm_timer_period, fsm_timer_period,
+        [&](int fd, beerocks::EventLoop &loop) { return monitor_fsm(); });
+    if (m_fsm_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
+        LOG(ERROR) << "Failed to create the FSM timer";
+        return false;
+    }
+    LOG(DEBUG) << "FSM timer created with fd = " << m_fsm_timer;
+    transaction.add_rollback_action([&]() { m_timer_manager->remove_timer(m_fsm_timer); });
+
+    // Create an instance of a CMDU client connected to the CMDU server that is running in the slave
+    m_slave_client = std::move(m_slave_cmdu_client_factory->create_instance());
+    if (!m_slave_client) {
+        LOG(ERROR) << "Failed to create instance of CMDU client";
+        return false;
+    }
+    transaction.add_rollback_action([&]() { m_slave_client.reset(); });
+
+    beerocks::CmduClient::EventHandlers handlers;
+    // Install a CMDU-received event handler for CMDU messages received from the slave.
+    handlers.on_cmdu_received = [&](uint32_t iface_index, const sMacAddr &dst_mac,
+                                    const sMacAddr &src_mac,
+                                    ieee1905_1::CmduMessageRx &cmdu_rx) { handle_cmdu(cmdu_rx); };
+
+    // Install a connection-closed event handler.
+    handlers.on_connection_closed = [&]() {
+        LOG(ERROR) << "Slave socket disconnected!";
+        m_slave_client.reset();
+    };
+
+    m_slave_client->set_handlers(handlers);
+    transaction.add_rollback_action([&]() { m_slave_client->clear_handlers(); });
+
+    // Create new Monitor HAL instance
+    bwl::hal_conf_t hal_conf;
+    if (!beerocks::bpl::bpl_cfg_get_hostapd_ctrl_path(monitor_iface, hal_conf.wpa_ctrl_path)) {
+        LOG(ERROR) << "Couldn't get hostapd control path for interface " << monitor_iface;
+        return false;
+    }
+
+    using namespace std::placeholders; // for `_1`
+    mon_wlan_hal = bwl::mon_wlan_hal_create(
+        monitor_iface, std::bind(&Monitor::hal_event_handler, this, _1), hal_conf);
+    if (!mon_wlan_hal) {
+        LOG(ERROR) << "Failed to create HAL instance!";
+        return false;
+    }
+
+    mon_hal_attached = false;
+
+    transaction.commit();
+
+    LOG(DEBUG) << "started";
+
     return true;
 }
 
-void monitor_thread::before_select()
+// The name of this method is temporary and will be renamed at the end of PPM-967.
+bool Monitor::stop()
 {
-    if (!m_logger_configured) {
-        logger.set_thread_name(thread_name);
-        logger.attach_current_thread_to_logger_id();
-        m_logger_configured = true;
+    bool ok = true;
+
+    if (m_slave_client) {
+        m_slave_client.reset();
     }
+
+    if (!m_timer_manager->remove_timer(m_fsm_timer)) {
+        ok = false;
+    }
+
+    if (mon_wlan_hal) {
+        if (m_arp_fd != beerocks::net::FileDescriptor::invalid_descriptor) {
+            m_event_loop->remove_handlers(m_arp_fd);
+        }
+
+        if (m_mon_hal_ext_events > 0) {
+            m_event_loop->remove_handlers(m_mon_hal_ext_events);
+        }
+
+        if (m_mon_hal_int_events > 0) {
+            m_event_loop->remove_handlers(m_mon_hal_int_events);
+        }
+
+        if (m_mon_hal_nl_events > 0) {
+            m_event_loop->remove_handlers(m_mon_hal_nl_events);
+        }
+
+        mon_rssi.stop();
+        mon_stats.stop();
+#ifdef BEEROCKS_RDKB
+        mon_rdkb_hal.stop();
+#endif
+
+        mon_wlan_hal->detach();
+        mon_wlan_hal.reset();
+    }
+
+    LOG(DEBUG) << "stopped";
+
+    return ok;
 }
 
-void monitor_thread::after_select(bool timeout)
+bool Monitor::monitor_fsm()
 {
-    if (!m_logger_configured) {
-        logger.set_thread_name(thread_name);
-        logger.attach_current_thread_to_logger_id();
-        m_logger_configured = true;
-    }
-
-    // Continue only if slave is connected
-    if (slave_socket == nullptr) {
-        LOG(DEBUG) << "slave_socket == nullptr";
-        return;
-    }
-
-    // ???
-    if (received_error_notification_ack_retry == 0) {
-        LOG(TRACE) << "received_error_notification_ack_retry";
-        stop_monitor_thread();
-        return;
+    if (!m_slave_client) {
+        LOG(ERROR) << "Not connected to slave!";
+        return false;
     }
 
     // Unexpected HAL detach or too many failed commands
@@ -259,13 +213,12 @@ void monitor_thread::after_select(bool timeout)
         (hal_command_failures_count > HAL_MAX_COMMAND_FAILURES)) {
         LOG(ERROR) << "Unexpected HAL detach detected - Failed commands: "
                    << hal_command_failures_count;
-        thread_last_error_code = MONITOR_THREAD_ERROR_SUDDEN_DETACH;
-        stop_monitor_thread();
-        return;
+        return false;
     }
 
     // If the HAL is not yet attached
-    if (mon_hal_int_events == nullptr) { // monitor not attached
+    if (m_mon_hal_int_events ==
+        beerocks::net::FileDescriptor::invalid_descriptor) { // monitor not attached
         auto attach_state = mon_wlan_hal->attach();
         if (last_attach_state != attach_state) {
             LOG(DEBUG) << "attach_state = " << int(attach_state);
@@ -279,45 +232,119 @@ void monitor_thread::after_select(bool timeout)
             update_vaps_in_db();
 
             // External events
-            int ext_events_fd = mon_wlan_hal->get_ext_events_fd();
-            if (ext_events_fd > 0) {
-                mon_hal_ext_events = new Socket(ext_events_fd);
-                add_socket(mon_hal_ext_events);
-                // No external event FD is available, we will trigger the process method periodically
-            } else if (ext_events_fd == 0) {
-                mon_hal_ext_events = nullptr;
+            m_mon_hal_ext_events = mon_wlan_hal->get_ext_events_fd();
+            if (m_mon_hal_ext_events > 0) {
+                beerocks::EventLoop::EventHandlers ext_events_handlers{
+                    .on_read =
+                        [&](int fd, EventLoop &loop) {
+                            if (!mon_wlan_hal->process_ext_events()) {
+                                LOG(ERROR) << "process_ext_events() failed!";
+                                return false;
+                            }
+                            return true;
+                        },
+                    .on_write = nullptr,
+                    .on_disconnect =
+                        [&](int fd, EventLoop &loop) {
+                            LOG(ERROR) << "mon_hal_ext_events disconnected!";
+                            m_mon_hal_ext_events =
+                                beerocks::net::FileDescriptor::invalid_descriptor;
+                            return false;
+                        },
+                    .on_error =
+                        [&](int fd, EventLoop &loop) {
+                            LOG(ERROR) << "mon_hal_ext_events error!";
+                            m_mon_hal_ext_events =
+                                beerocks::net::FileDescriptor::invalid_descriptor;
+                            return false;
+                        },
+                };
+                if (!m_event_loop->register_handlers(m_mon_hal_ext_events, ext_events_handlers)) {
+                    LOG(ERROR) << "Unable to register handlers for external events queue!";
+                    return false;
+                }
+                LOG(DEBUG) << "External events queue with fd = " << m_mon_hal_ext_events;
+            } else if (m_mon_hal_ext_events == 0) {
+                LOG(DEBUG)
+                    << "No external event FD is available, periodic polling will be done instead.";
             } else {
-                LOG(ERROR) << "Invalid external event file descriptor: " << ext_events_fd;
-                thread_last_error_code = MONITOR_THREAD_ERROR_ATTACH_FAIL;
-                stop_monitor_thread();
-                return;
+                LOG(ERROR) << "Invalid external event file descriptor: " << m_mon_hal_ext_events;
+                m_mon_hal_ext_events = beerocks::net::FileDescriptor::invalid_descriptor;
+                return false;
             }
 
             // Internal events
-            int int_events_fd = mon_wlan_hal->get_int_events_fd();
-            if (int_events_fd > 0) {
-
-                // NOTE: Eventhough the internal events are not socket based, at this
-                //       point we have to use the Socket class wrapper to add the
-                //       file descriptor into the select()
-                mon_hal_int_events = new Socket(int_events_fd);
-                add_socket(mon_hal_int_events);
+            m_mon_hal_int_events = mon_wlan_hal->get_int_events_fd();
+            if (m_mon_hal_int_events > 0) {
+                beerocks::EventLoop::EventHandlers int_events_handlers{
+                    .on_read =
+                        [&](int fd, EventLoop &loop) {
+                            if (!mon_wlan_hal->process_int_events()) {
+                                LOG(ERROR) << "process_int_events() failed!";
+                                return false;
+                            }
+                            return true;
+                        },
+                    .on_write = nullptr,
+                    .on_disconnect =
+                        [&](int fd, EventLoop &loop) {
+                            LOG(ERROR) << "mon_hal_int_events disconnected!";
+                            m_mon_hal_int_events =
+                                beerocks::net::FileDescriptor::invalid_descriptor;
+                            return false;
+                        },
+                    .on_error =
+                        [&](int fd, EventLoop &loop) {
+                            LOG(ERROR) << "mon_hal_int_events error!";
+                            m_mon_hal_int_events =
+                                beerocks::net::FileDescriptor::invalid_descriptor;
+                            return false;
+                        },
+                };
+                if (!m_event_loop->register_handlers(m_mon_hal_int_events, int_events_handlers)) {
+                    LOG(ERROR) << "Unable to register handlers for internal events queue!";
+                    return false;
+                }
+                LOG(DEBUG) << "Internal events queue with fd = " << m_mon_hal_int_events;
             } else {
-                LOG(ERROR) << "Invalid internal event file descriptor: " << int_events_fd;
-                thread_last_error_code = MONITOR_THREAD_ERROR_ATTACH_FAIL;
-                stop_monitor_thread();
-                return;
+                LOG(ERROR) << "Invalid internal event file descriptor: " << m_mon_hal_int_events;
+                m_mon_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
+                return false;
             }
 
-            int nl_events_fd = mon_wlan_hal->get_nl_events_fd();
-            if (nl_events_fd > 0) {
-                mon_hal_nl_events = new Socket(nl_events_fd);
-                add_socket(mon_hal_nl_events);
-                LOG(DEBUG) << "nl socket created for FD #" << nl_events_fd;
+            m_mon_hal_nl_events = mon_wlan_hal->get_nl_events_fd();
+            if (m_mon_hal_nl_events > 0) {
+                beerocks::EventLoop::EventHandlers nl_events_handlers{
+                    .on_read =
+                        [&](int fd, EventLoop &loop) {
+                            if (!mon_wlan_hal->process_nl_events()) {
+                                LOG(ERROR) << "process_nl_events() failed!";
+                                return false;
+                            }
+                            return true;
+                        },
+                    .on_write = nullptr,
+                    .on_disconnect =
+                        [&](int fd, EventLoop &loop) {
+                            LOG(ERROR) << "mon_hal_nl_events disconnected!";
+                            m_mon_hal_nl_events = beerocks::net::FileDescriptor::invalid_descriptor;
+                            return false;
+                        },
+                    .on_error =
+                        [&](int fd, EventLoop &loop) {
+                            LOG(ERROR) << "mon_hal_nl_events error!";
+                            m_mon_hal_nl_events = beerocks::net::FileDescriptor::invalid_descriptor;
+                            return false;
+                        },
+                };
+                if (!m_event_loop->register_handlers(m_mon_hal_nl_events, nl_events_handlers)) {
+                    LOG(ERROR) << "Unable to register handlers for Netlink events queue!";
+                    return false;
+                }
+                LOG(DEBUG) << "Netlink events queue with fd = " << m_mon_hal_nl_events;
             } else {
                 LOG(ERROR) << "Couldn't get NL socket ";
-                mon_hal_nl_events      = nullptr;
-                thread_last_error_code = MONITOR_THREAD_ERROR_NL_ATTACH_FAIL;
+                m_mon_hal_nl_events = beerocks::net::FileDescriptor::invalid_descriptor;
             }
 
             LOG(DEBUG) << "sending ACTION_MONITOR_JOINED_NOTIFICATION";
@@ -325,107 +352,78 @@ void monitor_thread::after_select(bool timeout)
                 beerocks_message::cACTION_MONITOR_JOINED_NOTIFICATION>(cmdu_tx);
             if (request == nullptr) {
                 LOG(ERROR) << "Failed building message!";
-                return;
+                return false;
             }
-            message_com::send_cmdu(slave_socket, cmdu_tx);
+            send_cmdu(cmdu_tx);
 
             // On init - set the flag to generate pre-existing client STA_Connected to true
             m_generate_connected_clients_events = true;
 
             // start local monitors //
             LOG(TRACE) << "mon_stats.start()";
-            if (!mon_stats.start(&mon_db, slave_socket)) {
+            if (!mon_stats.start(&mon_db, m_slave_client)) {
                 LOG(ERROR) << "mon_stats.start() failed";
-                thread_last_error_code = MONITOR_THREAD_ERROR_ATTACH_FAIL;
-                stop_monitor_thread();
-                return;
+                return false;
             }
 
             LOG(TRACE) << "mon_rssi.start()";
-            if (!mon_rssi.start(&mon_db, slave_socket)) {
+            if (!mon_rssi.start(&mon_db, m_slave_client)) {
                 // If monitor rssi failed to start, continue without it. It might failed due to
                 // insufficient permissions. Detailed error message is printed inside.
                 LOG(WARNING) << "mon_rssi.start() failed, ignore and continue without it";
                 mon_rssi.stop();
+            } else {
+                m_arp_fd = mon_rssi.get_arp_socket()->getSocketFd();
+                beerocks::EventLoop::EventHandlers arp_events_handlers{
+                    .on_read =
+                        [&](int fd, EventLoop &loop) {
+                            mon_rssi.arp_recv();
+                            return true;
+                        },
+                    .on_write = nullptr,
+                    .on_disconnect =
+                        [&](int fd, EventLoop &loop) {
+                            LOG(ERROR) << "ARP socket disconnected!";
+                            m_arp_fd = beerocks::net::FileDescriptor::invalid_descriptor;
+                            return false;
+                        },
+                    .on_error =
+                        [&](int fd, EventLoop &loop) {
+                            LOG(ERROR) << "ARP socket error!";
+                            m_arp_fd = beerocks::net::FileDescriptor::invalid_descriptor;
+                            return false;
+                        },
+                };
             }
 
 #ifdef BEEROCKS_RDKB
             LOG(TRACE) << "mon_rdkb_hal.start()";
-            if (!mon_rdkb_hal.start(&mon_db, slave_socket)) {
+            if (!mon_rdkb_hal.start(&mon_db, m_slave_client)) {
                 LOG(ERROR) << "mon_rdkb_hal.start() failed";
-                thread_last_error_code = MONITOR_THREAD_ERROR_ATTACH_FAIL;
-                stop_monitor_thread();
-                return;
+                return false;
             }
 #endif
 
             mon_rssi.is_5ghz = mon_wlan_hal->get_radio_info().is_5ghz;
 
-            add_socket(mon_rssi.get_arp_socket());
-
             LOG(DEBUG) << "Monitor attach process finished successfully!";
             mon_hal_attached = true;
 
         } else if (attach_state == bwl::HALState::Failed) {
-            LOG(ERROR) << "Failed attaching to WLAN HAL, call stop_monitor_thread()";
-            thread_last_error_code = MONITOR_THREAD_ERROR_ATTACH_FAIL;
-            stop_monitor_thread();
-            return;
+            LOG(ERROR) << "Failed attaching to WLAN HAL";
+            return false;
         }
 
         // HAL is attached and operational
     } else {
 
-        // Process ARP events
-        if (read_ready(mon_rssi.get_arp_socket())) {
-            clear_ready(mon_rssi.get_arp_socket());
-            mon_rssi.arp_recv();
-        }
-
         // Process external events
-        if (mon_hal_ext_events) {
-            if (read_ready(mon_hal_ext_events)) {
-                if (!mon_wlan_hal->process_ext_events()) {
-                    LOG(ERROR) << "process_ext_events() failed!";
-                    thread_last_error_code = MONITOR_THREAD_ERROR_REPORT_PROCESS_FAIL;
-                    stop_monitor_thread();
-                    return;
-                }
-                clear_ready(mon_hal_ext_events);
-            }
-        } else {
+        if (m_mon_hal_ext_events == 0) {
             // There is no socket for external events, so we simply try
             // to process any available periodically
             if (!mon_wlan_hal->process_ext_events()) {
                 LOG(ERROR) << "process_ext_events() failed!";
-                thread_last_error_code = MONITOR_THREAD_ERROR_REPORT_PROCESS_FAIL;
-                stop_monitor_thread();
-                return;
-            }
-        }
-
-        // Process internal events
-        if (mon_hal_int_events && read_ready(mon_hal_int_events)) {
-            clear_ready(mon_hal_int_events);
-            // NOTE: A callback (hal_event_handler()) will be invoked for pending events
-            if (!mon_wlan_hal->process_int_events()) {
-                LOG(ERROR) << "process_int_events() failed!";
-                thread_last_error_code = MONITOR_THREAD_ERROR_REPORT_PROCESS_FAIL;
-                stop_monitor_thread();
-                return;
-            }
-        }
-
-        // Process nl events
-        if (mon_hal_nl_events) {
-            if (read_ready(mon_hal_nl_events)) {
-                if (!mon_wlan_hal->process_nl_events()) {
-                    LOG(ERROR) << "process_nl_events() failed!";
-                    thread_last_error_code = MONITOR_THREAD_ERROR_NL_REPORT_PROCESS_FAIL;
-                    stop_monitor_thread();
-                    return;
-                }
-                clear_ready(mon_hal_nl_events);
+                return false;
             }
         }
 
@@ -440,14 +438,21 @@ void monitor_thread::after_select(bool timeout)
             }
         }
 
+        // Long running operations prevent the event loop from doing anything else (i.e.: the
+        // event loop is not able to react to any incoming request in the meantime).
+        // Therefore, limit the maximum amount of time for an iteration to 50% of the FSM poll time,
+        // instead of letting it run non-stop for what could be quite a long time.
+        auto max_iteration_timeout = std::chrono::steady_clock::now() + fsm_timer_period / 2;
+
         if (m_generate_connected_clients_events) {
             bool is_finished_all_clients = false;
             // Reset the flag if finished to generate all clients' events
+            // If there is not enough time to generate all events, the method will be called in the
+            // next FSM iteration, and so on until all connected clients are eventually reported.
             if (!mon_wlan_hal->generate_connected_clients_events(is_finished_all_clients,
-                                                                 awake_timeout())) {
+                                                                 max_iteration_timeout)) {
                 LOG(ERROR) << "Failed to generate connected clients events";
-                stop_monitor_thread();
-                return;
+                return false;
             }
             m_generate_connected_clients_events = !is_finished_all_clients;
         }
@@ -462,7 +467,7 @@ void monitor_thread::after_select(bool timeout)
                 std::chrono::milliseconds(mon_db.MONITOR_DB_POLLING_RATE_MSEC));
 
             // Update the statistics
-            update_sta_stats();
+            update_sta_stats(max_iteration_timeout);
             // NOTE: Radio & VAP statistics are updated only on last poll cycle
             if (mon_db.is_last_poll())
                 update_ap_stats();
@@ -488,13 +493,12 @@ void monitor_thread::after_select(bool timeout)
                     if (notification == nullptr) {
                         LOG(ERROR) << "Failed building "
                                       "cACTION_MONITOR_HOSTAP_AP_DISABLED_NOTIFICATION message!";
-                        stop_monitor_thread();
-                        return;
+                        return false;
                     }
 
                     notification->vap_id() = beerocks::IFACE_RADIO_ID;
-                    message_com::send_cmdu(slave_socket, cmdu_tx);
-                    return;
+                    send_cmdu(cmdu_tx);
+                    return true;
                 }
             }
 
@@ -556,9 +560,11 @@ void monitor_thread::after_select(bool timeout)
             }
         }
     }
+
+    return true;
 }
 
-void monitor_thread::on_channel_utilization_measurement_period_elapsed()
+void Monitor::on_channel_utilization_measurement_period_elapsed()
 {
     /**
      * Measure current channel utilization on the radio.
@@ -605,12 +611,11 @@ void monitor_thread::on_channel_utilization_measurement_period_elapsed()
             return;
         }
 
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        send_cmdu(cmdu_tx);
     }
 }
 
-bool monitor_thread::create_ap_metrics_response(uint16_t mid,
-                                                const std::vector<sMacAddr> &bssid_list)
+bool Monitor::create_ap_metrics_response(uint16_t mid, const std::vector<sMacAddr> &bssid_list)
 {
     auto cmdu_tx_header =
         cmdu_tx.create(mid, ieee1905_1::eMessageType::AP_METRICS_RESPONSE_MESSAGE);
@@ -674,7 +679,7 @@ bool monitor_thread::create_ap_metrics_response(uint16_t mid,
     return true;
 }
 
-bool monitor_thread::update_sta_stats()
+bool Monitor::update_sta_stats(const std::chrono::steady_clock::time_point &timeout)
 {
     auto poll_cnt  = mon_db.get_poll_cnt();
     auto poll_last = mon_db.is_last_poll();
@@ -702,11 +707,10 @@ bool monitor_thread::update_sta_stats()
             continue;
         }
 
-        if (std::chrono::steady_clock::now() > awake_timeout()) {
-            // If we haven't finish to iterate on all stations, skip one time on the select timeout
-            // so the select will not be stuck on full select timeout and the thread will be able to
-            // finish this operation quickly.
-            skip_next_select_timeout();
+        if (std::chrono::steady_clock::now() > timeout) {
+            // This is a potentially long running operation.
+            // If we haven't finished iterating on all stations, stop here and continue on next
+            // method call from this point on.
             return true;
         }
 
@@ -790,7 +794,7 @@ bool monitor_thread::update_sta_stats()
     return true;
 }
 
-bool monitor_thread::update_ap_stats()
+bool Monitor::update_ap_stats()
 {
     // Radio Statistics
     auto &radio_stats = mon_db.get_radio_node()->get_stats();
@@ -852,29 +856,26 @@ bool monitor_thread::update_ap_stats()
     return true;
 }
 
-bool monitor_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
+void Monitor::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     if (cmdu_rx.getMessageType() == ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE) {
-        return handle_cmdu_vs_message(*sd, cmdu_rx);
+        handle_cmdu_vs_message(cmdu_rx);
+    } else {
+        handle_cmdu_ieee1905_1_message(cmdu_rx);
     }
-
-    return handle_cmdu_ieee1905_1_message(*sd, cmdu_rx);
 }
 
-bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageRx &cmdu_rx)
+void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto beerocks_header = message_com::parse_intel_vs_message(cmdu_rx);
     if (beerocks_header == nullptr) {
         LOG(ERROR) << "Not a vendor specific message";
-        return false;
+        return;
     }
 
     if (beerocks_header->action() != beerocks_message::ACTION_MONITOR) {
         LOG(ERROR) << "Unsupported action: " << int(beerocks_header->action());
-        return false;
-    } else if (slave_socket != &sd) {
-        LOG(ERROR) << "slave_socket != sd";
-        return false;
+        return;
     }
 
     switch (beerocks_header->action_op()) {
@@ -884,7 +885,7 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
             beerocks_header->addClass<beerocks_message::cACTION_MONITOR_SON_CONFIG_UPDATE>();
         if (update == nullptr) {
             LOG(ERROR) << "addClass cACTION_MONITOR_SON_CONFIG_UPDATE failed";
-            return false;
+            return;
         }
         mon_stats.conf_total_ch_load_notification_hi_th_percent =
             update->config().monitor_total_ch_load_notification_hi_th_percent;
@@ -917,7 +918,7 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
                 ->addClass<beerocks_message::cACTION_MONITOR_HOSTAP_STATS_MEASUREMENT_REQUEST>();
         if (request == nullptr) {
             LOG(ERROR) << "addClass ACTION_MONITOR_HOSTAP_STATS_MEASUREMENT_REQUEST failed";
-            return false;
+            return;
         }
         mon_stats.add_request(beerocks_header->id(), request->sync());
         if (request->sync()) {
@@ -932,7 +933,7 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
         if (!request) {
             LOG(ERROR)
                 << "addClass ACTION_MONITOR_CLIENT_ASSOCIATED_STA_LINK_METRIC_REQUEST failed";
-            return false;
+            return;
         }
         mon_stats.add_request(beerocks_header->id(), request->sync(), request->sta_mac());
         if (request->sync()) {
@@ -947,15 +948,10 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
                 ->addClass<beerocks_message::cACTION_MONITOR_CHANGE_MODULE_LOGGING_LEVEL>();
         if (request == nullptr) {
             LOG(ERROR) << "addClass cACTION_MONITOR_CHANGE_MODULE_LOGGING_LEVEL failed";
-            return false;
+            return;
         }
         logger.set_log_level_state((eLogLevel)request->params().log_level,
                                    request->params().enable);
-        break;
-    }
-    case beerocks_message::ACTION_MONITOR_ERROR_NOTIFICATION_ACK: {
-        LOG(TRACE) << "received ACTION_MONITOR_ERROR_NOTIFICATION_ACK";
-        received_error_notification_ack_retry = 0;
         break;
     }
     case beerocks_message::ACTION_MONITOR_CLIENT_START_MONITORING_REQUEST: {
@@ -965,10 +961,10 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
                 ->addClass<beerocks_message::cACTION_MONITOR_CLIENT_START_MONITORING_REQUEST>();
         if (request == nullptr) {
             LOG(ERROR) << "addClass cACTION_MONITOR_CLIENT_START_MONITORING_REQUEST failed";
-            return false;
+            return;
         }
-        std::string sta_mac              = tlvf::mac_to_string(request->params().mac);
-        std::string sta_ipv4             = network_utils::ipv4_to_string(request->params().ipv4);
+        std::string sta_mac  = tlvf::mac_to_string(request->params().mac);
+        std::string sta_ipv4 = beerocks::net::network_utils::ipv4_to_string(request->params().ipv4);
         std::string set_bridge_4addr_mac = tlvf::mac_to_string(request->params().bridge_4addr_mac);
         LOG(INFO) << "ACTION_MONITOR_CLIENT_START_MONITORING_REQUEST=" << sta_mac
                   << " ip=" << sta_ipv4 << " set_bridge_4addr_mac=" << set_bridge_4addr_mac;
@@ -980,22 +976,22 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
         if (!response) {
             LOG(ERROR)
                 << "Failed building ACTION_MONITOR_CLIENT_START_MONITORING_RESPONSE message!";
-            return false;
+            return;
         }
 
         auto sta_node = mon_db.sta_find(sta_mac);
         if (!sta_node) {
             LOG(ERROR) << "Could not find sta_node " << sta_mac;
             response->success() = false;
-            message_com::send_cmdu(slave_socket, cmdu_tx);
-            return false;
+            send_cmdu(cmdu_tx);
+            return;
         }
 
         sta_node->set_ipv4(sta_ipv4);
         sta_node->set_bridge_4addr_mac(set_bridge_4addr_mac);
 
         response->success() = true;
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        send_cmdu(cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_MONITOR_CLIENT_NEW_IP_ADDRESS_NOTIFICATION: {
@@ -1005,15 +1001,15 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
                 ->addClass<beerocks_message::cACTION_MONITOR_CLIENT_NEW_IP_ADDRESS_NOTIFICATION>();
         if (!notification) {
             LOG(ERROR) << "addClass cACTION_MONITOR_CLIENT_NEW_IP_ADDRESS_NOTIFICATION failed";
-            return false;
+            return;
         }
         std::string sta_mac  = tlvf::mac_to_string(notification->mac());
-        std::string sta_ipv4 = network_utils::ipv4_to_string(notification->ipv4());
+        std::string sta_ipv4 = beerocks::net::network_utils::ipv4_to_string(notification->ipv4());
 
         auto sta_node = mon_db.sta_find(sta_mac);
         if (!sta_node) {
             LOG(ERROR) << "sta " << sta_mac << " hasn't been found on mon_db";
-            return false;
+            return;
         }
         sta_node->set_ipv4(sta_ipv4);
         break;
@@ -1029,7 +1025,7 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
             send_steering_return_status(
                 beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_GROUP_RESPONSE,
                 OPERATION_FAIL);
-            return false;
+            return;
         }
 
         const auto bssid = tlvf::mac_to_string(request->params().cfg.bssid);
@@ -1049,7 +1045,7 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
             send_steering_return_status(
                 beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_GROUP_RESPONSE,
                 OPERATION_FAIL);
-            return false;
+            return;
         }
 
         if (request->params().remove) {
@@ -1058,7 +1054,7 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
                 send_steering_return_status(
                     beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_GROUP_RESPONSE,
                     OPERATION_FAIL);
-                return false;
+                return;
             }
             LOG(INFO) << "vap_id: " << int(vap_id) << " configuration was removed";
             send_steering_return_status(
@@ -1072,7 +1068,7 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
             send_steering_return_status(
                 beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_GROUP_RESPONSE,
                 OPERATION_FAIL);
-            return false;
+            return;
         }
 
         ap->setInactCheckIntervalSec(request->params().cfg.inactCheckIntervalSec);
@@ -1095,7 +1091,7 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
             LOG(ERROR) << "addClass cACTION_MONITOR_STEERING_CLIENT_SET_REQUEST failed";
             send_steering_return_status(
                 beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_RESPONSE, OPERATION_FAIL);
-            return false;
+            return;
         }
 
         std::string sta_mac = tlvf::mac_to_string(request->params().client_mac);
@@ -1104,7 +1100,7 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
                 LOG(ERROR) << "failed removing client:" << sta_mac << " configuration";
                 send_steering_return_status(
                     beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_RESPONSE, OPERATION_FAIL);
-                return false;
+                return;
             }
             LOG(DEBUG) << "client: " << sta_mac << " configuration was removed";
             send_steering_return_status(
@@ -1124,7 +1120,7 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
             LOG(ERROR) << "wrong vap_id:" << int(vap_id);
             send_steering_return_status(
                 beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_RESPONSE, OPERATION_FAIL);
-            return false;
+            return;
         }
 
         auto client = mon_rdkb_hal.conf_add_client(sta_mac);
@@ -1132,7 +1128,7 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
             LOG(ERROR) << "add rdkb_hall client configuration fail";
             send_steering_return_status(
                 beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_RESPONSE, OPERATION_FAIL);
-            return false;
+            return;
         }
 
         client->setSnrHighXing(request->params().config.snrHighXing);
@@ -1153,7 +1149,7 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
                 ->addClass<beerocks_message::cACTION_MONITOR_CLIENT_RX_RSSI_MEASUREMENT_REQUEST>();
         if (request == nullptr) {
             LOG(ERROR) << "addClass cACTION_MONITOR_CLIENT_RX_RSSI_MEASUREMENT_REQUEST failed";
-            return false;
+            return;
         }
         std::string sta_mac = tlvf::mac_to_string(request->params().mac);
         auto sta_node       = mon_db.sta_find(sta_mac);
@@ -1180,7 +1176,7 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
                 break;
             }
             response->mac() = tlvf::mac_from_string(sta_mac);
-            message_com::send_cmdu(slave_socket, cmdu_tx);
+            send_cmdu(cmdu_tx);
             LOG(DEBUG) << "send ACTION_MONITOR_CLIENT_RX_RSSI_MEASUREMENT_CMD_RESPONSE, sta_mac = "
                        << sta_mac << " id=" << beerocks_header->id();
             sta_node->set_arp_state(monitor_sta_node::SEND_ARP);
@@ -1207,7 +1203,7 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
                 ->addClass<beerocks_message::cACTION_MONITOR_CLIENT_BEACON_11K_REQUEST>();
         if (request == nullptr) {
             LOG(ERROR) << "addClass cACTION_MONITOR_CLIENT_BEACON_11K_REQUEST failed";
-            return false;
+            return;
         }
 
         int dialog_token;
@@ -1263,7 +1259,7 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
                 ->addClass<beerocks_message::cACTION_MONITOR_CLIENT_CHANNEL_LOAD_11K_REQUEST>();
         if (request == nullptr) {
             LOG(ERROR) << "addClass cACTION_MONITOR_CLIENT_CHANNEL_LOAD_11K_REQUEST failed";
-            return false;
+            return;
         }
 
         // debug_channel_load_11k_request(request);
@@ -1300,7 +1296,7 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
                 ->addClass<beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST>();
         if (!request) {
             LOG(ERROR) << "addClass cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST failed";
-            return false;
+            return;
         }
 
         auto radio_mac         = request->scan_params().radio_mac;
@@ -1330,14 +1326,14 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
         if (!response_out) {
             LOG(ERROR)
                 << "Failed building cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE message!";
-            return false;
+            return;
         }
 
         response_out->success() =
             mon_wlan_hal->channel_scan_trigger(int(dwell_time_ms), channel_pool_vector);
         LOG_IF(!response_out->success(), ERROR) << "channel_scan_trigger Failed";
 
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        send_cmdu(cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_MONITOR_CHANNEL_SCAN_DUMP_RESULTS_REQUEST: {
@@ -1346,7 +1342,7 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
                 ->addClass<beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_DUMP_RESULTS_REQUEST>();
         if (!request) {
             LOG(ERROR) << "addClass cACTION_MONITOR_CHANNEL_SCAN_DUMP_RESULTS_REQUEST failed";
-            return false;
+            return;
         }
 
         auto response_out = message_com::create_vs_message<
@@ -1355,25 +1351,25 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
         if (!response_out) {
             LOG(ERROR)
                 << "Failed building cACTION_MONITOR_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE message!";
-            return false;
+            return;
         }
 
         bool result = mon_wlan_hal->channel_scan_dump_results();
         LOG_IF(!result, ERROR) << "channel_scan_dump_results Failed";
 
         response_out->success() = (result) ? 1 : 0;
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        send_cmdu(cmdu_tx);
 
         auto notification = message_com::create_vs_message<
             beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_RESULTS_NOTIFICATION>(cmdu_tx);
         if (!notification) {
             LOG(ERROR) << "Failed building cACTION_MONITOR_CHANNEL_SCAN_RESULTS_NOTIFICATION msg";
-            return false;
+            return;
         }
 
         //Sending the cACTION_MONITOR_CHANNEL_SCAN_RESULTS_NOTIFICATION without
         //modifications will cause the DUMP_READY event to trigger in the DCS task
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        send_cmdu(cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_MONITOR_CHANNEL_SCAN_ABORT_REQUEST: {
@@ -1382,7 +1378,7 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
                 ->addClass<beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_ABORT_REQUEST>();
         if (!request) {
             LOG(ERROR) << "addClass cACTION_MONITOR_CHANNEL_SCAN_ABORT_REQUEST failed";
-            return false;
+            return;
         }
 
         auto response_out = message_com::create_vs_message<
@@ -1390,13 +1386,13 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
                                                                            beerocks_header->id());
         if (!response_out) {
             LOG(ERROR) << "Failed building cACTION_MONITOR_CHANNEL_SCAN_ABORT_RESPONSE message!";
-            return false;
+            return;
         }
 
         response_out->success() = mon_wlan_hal->channel_scan_abort();
         LOG_IF(!response_out->success(), ERROR) << "channel_scan_abort failed";
 
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        send_cmdu(cmdu_tx);
         break;
     }
     default: {
@@ -1404,28 +1400,25 @@ bool monitor_thread::handle_cmdu_vs_message(Socket &sd, ieee1905_1::CmduMessageR
         break;
     }
     }
-
-    return true;
 }
 
-bool monitor_thread::handle_cmdu_ieee1905_1_message(Socket &sd, ieee1905_1::CmduMessageRx &cmdu_rx)
+void Monitor::handle_cmdu_ieee1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto cmdu_message_type = cmdu_rx.getMessageType();
 
     switch (cmdu_message_type) {
     case ieee1905_1::eMessageType::AP_METRICS_QUERY_MESSAGE:
-        return handle_ap_metrics_query(sd, cmdu_rx);
+        handle_ap_metrics_query(cmdu_rx);
+        break;
     case ieee1905_1::eMessageType::MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE:
-        return handle_multi_ap_policy_config_request(sd, cmdu_rx);
+        handle_multi_ap_policy_config_request(cmdu_rx);
+        break;
     default:
         LOG(ERROR) << "Unknown CMDU message type: " << std::hex << int(cmdu_message_type);
     }
-
-    return false;
 }
 
-bool monitor_thread::handle_multi_ap_policy_config_request(Socket &sd,
-                                                           ieee1905_1::CmduMessageRx &cmdu_rx)
+void Monitor::handle_multi_ap_policy_config_request(ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     /**
      * The Multi-AP Policy Config Request message is sent by the controller, received and
@@ -1446,7 +1439,7 @@ bool monitor_thread::handle_multi_ap_policy_config_request(Socket &sd,
             if (!std::get<0>(tuple)) {
                 LOG(ERROR) << "Failed to get metrics_reporting_conf[" << i
                            << "] from TLV_METRIC_REPORTING_POLICY";
-                return false;
+                return;
             }
             auto metrics_reporting_conf = std::get<1>(tuple);
 
@@ -1478,17 +1471,15 @@ bool monitor_thread::handle_multi_ap_policy_config_request(Socket &sd,
             break;
         }
     }
-
-    return true;
 }
 
-bool monitor_thread::handle_ap_metrics_query(Socket &sd, ieee1905_1::CmduMessageRx &cmdu_rx)
+void Monitor::handle_ap_metrics_query(ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     const auto mid           = cmdu_rx.getMessageId();
     auto ap_metric_query_tlv = cmdu_rx.getClass<wfa_map::tlvApMetricQuery>();
     if (!ap_metric_query_tlv) {
         LOG(ERROR) << "AP Metrics Query CMDU mid=" << mid << " does not have AP Metric Query TLV";
-        return false;
+        return;
     }
 
     std::vector<sMacAddr> bssid_list;
@@ -1497,7 +1488,7 @@ bool monitor_thread::handle_ap_metrics_query(Socket &sd, ieee1905_1::CmduMessage
         auto bssid_tuple = ap_metric_query_tlv->bssid_list(bssid_idx);
         if (!std::get<0>(bssid_tuple)) {
             LOG(ERROR) << "Failed to get bssid " << bssid_idx << " from AP_METRICS_QUERY";
-            return false;
+            return;
         }
         const auto &bssid = std::get<1>(bssid_tuple);
         LOG(DEBUG) << "Received AP_METRICS_QUERY_MESSAGE, mid=" << std::hex << int(mid)
@@ -1508,23 +1499,23 @@ bool monitor_thread::handle_ap_metrics_query(Socket &sd, ieee1905_1::CmduMessage
 
     if (!create_ap_metrics_response(mid, bssid_list)) {
         LOG(ERROR) << "Unable to create AP Metrics Response message";
-        return false;
+        return;
     }
 
     LOG(DEBUG) << "Sending AP_METRICS_RESPONSE_MESSAGE to slave_socket, mid=" << std::hex
                << int(mid);
-    return message_com::send_cmdu(slave_socket, cmdu_tx);
+    send_cmdu(cmdu_tx);
 }
 
-bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
+bool Monitor::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
 {
     if (!event_ptr) {
         LOG(ERROR) << "Invalid event!";
         return false;
     }
 
-    if (!slave_socket) {
-        LOG(ERROR) << "slave_socket == nullptr";
+    if (!m_slave_client) {
+        LOG(ERROR) << "Not connected to slave!";
         return false;
     }
 
@@ -1565,7 +1556,7 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
 
         // debug_channel_load_11k_response(msg);
 
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        send_cmdu(cmdu_tx);
 
     } break;
 
@@ -1649,7 +1640,7 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
                 LOG(INFO) << "Sending beacon measurement reponse on BSSID: "
                           << response->params().bssid << " to task_id: " << id;
 
-                message_com::send_cmdu(slave_socket, cmdu_tx);
+                send_cmdu(cmdu_tx);
                 break;
             } else {
                 ++it;
@@ -1718,7 +1709,7 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
             }
 
             response->vap_id() = msg->vap_id;
-            message_com::send_cmdu(slave_socket, cmdu_tx);
+            send_cmdu(cmdu_tx);
         }
 
         update_vaps_in_db();
@@ -1732,7 +1723,7 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
             return false;
         }
 
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        send_cmdu(cmdu_tx);
     } break;
     case Event::Channel_Scan_New_Results_Ready:
     case Event::Channel_Scan_Dump_Result: {
@@ -1805,7 +1796,7 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
             notification->is_dump() = 1;
         }
 
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        send_cmdu(cmdu_tx);
     } break;
     case Event::Channel_Scan_Finished: {
         auto notification = message_com::create_vs_message<
@@ -1815,7 +1806,7 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
             return false;
         }
 
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        send_cmdu(cmdu_tx);
     } break;
     case Event::Channel_Scan_Aborted: {
         auto notification = message_com::create_vs_message<
@@ -1825,7 +1816,7 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
             return false;
         }
 
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        send_cmdu(cmdu_tx);
     } break;
     case Event::STA_Connected: {
         LOG(TRACE) << "Received STA_Connected event";
@@ -1836,8 +1827,8 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
 
         LOG(INFO) << "STA_Connected: mac=" << sta_mac << " vap_id=" << int(vap_id);
 
-        std::string sta_ipv4             = network_utils::ZERO_IP_STRING;
-        std::string set_bridge_4addr_mac = network_utils::ZERO_MAC_STRING;
+        std::string sta_ipv4             = beerocks::net::network_utils::ZERO_IP_STRING;
+        std::string set_bridge_4addr_mac = beerocks::net::network_utils::ZERO_MAC_STRING;
 
         auto old_node = mon_db.sta_find(sta_mac);
         if (old_node) {
@@ -1890,7 +1881,7 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
     return true;
 }
 
-// void monitor_thread::debug_channel_load_11k_request(message::sACTION_MONITOR_CLIENT_CHANNEL_LOAD_11K_REQUEST* request)
+// void Monitor::debug_channel_load_11k_request(message::sACTION_MONITOR_CLIENT_CHANNEL_LOAD_11K_REQUEST* request)
 // {
 //     LOG(DEBUG) << "ACTION_MONITOR_CLIENT_CLIENT_CHANNEL_LOAD_11K_REQUEST:"
 //     << std::endl << "channel: "              << (int)request->params.channel
@@ -1914,7 +1905,7 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
 //     // << std::endl << "new_ch_center_freq_seg_1: "             << (int)request->params.new_ch_center_freq_seg_1;
 // }
 
-// void monitor_thread::debug_beacon_11k_request(message::sACTION_MONITOR_CLIENT_BEACON_11K_REQUEST *request)
+// void Monitor::debug_beacon_11k_request(message::sACTION_MONITOR_CLIENT_BEACON_11K_REQUEST *request)
 // {
 //     LOG(DEBUG) << "ACTION_MONITOR_CLIENT_BEACON_REQUEST:" << std::endl
 //     << std::endl << "measurement_mode: "                 << (int)request->params.measurement_mode
@@ -1944,7 +1935,7 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
 //     ;
 // }
 
-// void monitor_thread::debug_channel_load_11k_response(message::sACTION_MONITOR_CLIENT_CHANNEL_LOAD_11K_RESPONSE* event)
+// void Monitor::debug_channel_load_11k_response(message::sACTION_MONITOR_CLIENT_CHANNEL_LOAD_11K_RESPONSE* event)
 // {
 //     LOG(DEBUG) << "DATA TEST:"
 //     << std::endl << "sta_mac: "              << event->params.sta_mac
@@ -1961,7 +1952,7 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
 //     ;
 // }
 
-// void monitor_thread::debug_beacon_11k_response(message::sACTION_MONITOR_CLIENT_BEACON_11K_RESPONSE* event)
+// void Monitor::debug_beacon_11k_response(message::sACTION_MONITOR_CLIENT_BEACON_11K_RESPONSE* event)
 // {
 //     LOG(DEBUG) << "DATA TEST:"
 //     << std::endl << "sta_mac: "              << event->params.sta_mac
@@ -1984,10 +1975,10 @@ bool monitor_thread::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event
 //     ;
 // }
 
-void monitor_thread::send_heartbeat()
+void Monitor::send_heartbeat()
 {
-    if (slave_socket == nullptr) {
-        LOG(ERROR) << "process_keep_alive(): slave_socket is nullptr!";
+    if (!m_slave_client) {
+        LOG(ERROR) << "Not connected to slave!";
         return;
     }
 
@@ -2000,10 +1991,10 @@ void monitor_thread::send_heartbeat()
         return;
     }
 
-    message_com::send_cmdu(slave_socket, cmdu_tx);
+    send_cmdu(cmdu_tx);
 }
 
-void monitor_thread::update_vaps_in_db()
+void Monitor::update_vaps_in_db()
 {
     if (!mon_wlan_hal->refresh_vaps_info()) {
         LOG(ERROR) << "Failed to refresh vaps info!";
@@ -2013,8 +2004,8 @@ void monitor_thread::update_vaps_in_db()
 
     std::string bridge_iface_mac;
     std::string bridge_iface_ip;
-    network_utils::linux_iface_get_mac(bridge_iface, bridge_iface_mac);
-    network_utils::linux_iface_get_ip(bridge_iface, bridge_iface_ip);
+    beerocks::net::network_utils::linux_iface_get_mac(bridge_iface, bridge_iface_mac);
+    beerocks::net::network_utils::linux_iface_get_ip(bridge_iface, bridge_iface_ip);
 
     for (int vap_id = beerocks::IFACE_VAP_ID_MIN; vap_id <= beerocks::IFACE_VAP_ID_MAX; vap_id++) {
 
@@ -2037,8 +2028,8 @@ void monitor_thread::update_vaps_in_db()
     }
 }
 #ifdef BEEROCKS_RDKB
-void monitor_thread::send_steering_return_status(beerocks_message::eActionOp_MONITOR ActionOp,
-                                                 int32_t status)
+void Monitor::send_steering_return_status(beerocks_message::eActionOp_MONITOR ActionOp,
+                                          int32_t status)
 {
     switch (ActionOp) {
     case beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_GROUP_RESPONSE: {
@@ -2049,7 +2040,7 @@ void monitor_thread::send_steering_return_status(beerocks_message::eActionOp_MON
             break;
         }
         response->params().error_code = status;
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        send_cmdu(cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_RESPONSE: {
@@ -2060,7 +2051,7 @@ void monitor_thread::send_steering_return_status(beerocks_message::eActionOp_MON
             break;
         }
         response->params().error_code = status;
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        send_cmdu(cmdu_tx);
         break;
     }
     default: {
