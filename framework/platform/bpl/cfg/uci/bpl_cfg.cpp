@@ -570,10 +570,10 @@ bool cfg_get_link_metrics_request_interval(std::chrono::seconds &link_metrics_re
 {
     int retVal = -1;
     if (cfg_get_prplmesh_param_int_default(
-            "link_metrics_request_interval", &retVal,
+            "link_metrics_request_interval_sec", &retVal,
             DEFAULT_LINK_METRICS_REQUEST_INTERVAL_VALUE_SEC.count()) == RETURN_ERR) {
-        MAPF_ERR("Failed to read link_metrics_request_interval parameter - setting "
-                 "default value");
+        MAPF_INFO("Failed to read link_metrics_request_interval_sec parameter - setting "
+                  "default value");
         return false;
     }
 

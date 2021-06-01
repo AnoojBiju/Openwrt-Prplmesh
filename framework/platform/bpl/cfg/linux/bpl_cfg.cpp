@@ -631,8 +631,8 @@ bool bpl_cfg_get_wifi_credentials(const std::string &iface,
 bool cfg_get_link_metrics_request_interval(std::chrono::seconds &link_metrics_request_interval_sec)
 {
     int val = -1;
-    if (cfg_get_param_int("link_metrics_request_interval", val) == RETURN_ERR) {
-        MAPF_INFO("Failed to read link_metrics_request_interval parameter - setting "
+    if (cfg_get_param_int("link_metrics_request_interval_sec", val) == RETURN_ERR) {
+        MAPF_INFO("Failed to read link_metrics_request_interval_sec parameter - setting "
                   "default value");
         link_metrics_request_interval_sec = DEFAULT_LINK_METRICS_REQUEST_INTERVAL_VALUE_SEC;
     } else {
