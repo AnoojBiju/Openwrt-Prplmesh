@@ -2118,13 +2118,13 @@ bool Controller::handle_intel_slave_join(
             * we assume it is connected to the GW's LAN switch
             */
             LOG(DEBUG) << "connected to the GW's LAN switch ";
-            auto gw_container = database.get_nodes_from_hierarchy(0, beerocks::TYPE_GW);
-            if (gw_container.empty()) {
+            auto gw = database.get_gw();
+            if (!gw) {
                 LOG(ERROR) << "can't get GW node!";
                 return false;
             }
 
-            auto gw_mac          = *gw_container.begin();
+            auto gw_mac          = tlvf::mac_to_string(gw->al_mac);
             auto gw_lan_switches = database.get_node_children(gw_mac, beerocks::TYPE_ETH_SWITCH);
 
             if (gw_lan_switches.empty()) {
@@ -2567,13 +2567,13 @@ bool Controller::handle_non_intel_slave_join(
               << "    radio_identifier = " << radio_mac << std::endl;
 
     LOG(DEBUG) << "simulate backhaul connected to the GW's LAN switch ";
-    auto gw_container = database.get_nodes_from_hierarchy(0, beerocks::TYPE_GW);
-    if (gw_container.empty()) {
+    auto gw = database.get_gw();
+    if (!gw) {
         LOG(ERROR) << "can't get GW node!";
         return false;
     }
 
-    auto gw_mac          = *gw_container.begin();
+    auto gw_mac          = tlvf::mac_to_string(gw->al_mac);
     auto gw_lan_switches = database.get_node_children(gw_mac, beerocks::TYPE_ETH_SWITCH);
 
     if (gw_lan_switches.empty()) {

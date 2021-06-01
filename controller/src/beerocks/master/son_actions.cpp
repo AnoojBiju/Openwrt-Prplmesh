@@ -82,12 +82,12 @@ bool son_actions::add_node_to_default_location(db &database, std::string client_
 {
     std::string gw_lan_switch;
 
-    auto gw_container = database.get_nodes_from_hierarchy(0, beerocks::TYPE_GW);
-    if (gw_container.empty()) {
+    auto gw = database.get_gw();
+    if (!gw) {
         LOG(WARNING)
             << "add_node_to_default_location - can't get GW node, adding to default location...";
     } else {
-        auto gw_mac          = *gw_container.begin();
+        auto gw_mac          = tlvf::mac_to_string(gw->al_mac);
         auto gw_lan_switches = database.get_node_children(gw_mac, beerocks::TYPE_ETH_SWITCH);
         if (gw_lan_switches.empty()) {
             LOG(ERROR) << "add_node_to_default_location - GW has no LAN SWITCH node!";
