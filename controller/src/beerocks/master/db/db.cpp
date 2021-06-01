@@ -1035,17 +1035,17 @@ std::set<std::string> db::get_nodes_from_hierarchy(int hierarchy, int type)
 
     return result;
 }
-std::string db::get_gw_mac()
+
+std::shared_ptr<sAgent> db::get_gw()
 {
-    auto gw_container = get_nodes_from_hierarchy(0, beerocks::TYPE_GW);
-    if (gw_container.empty()) {
-        LOG(ERROR) << "can't get GW node!";
-        return std::string();
+    for (const auto &agent : m_agents) {
+        if (agent.second->is_gateway) {
+            return agent.second;
+        }
     }
 
-    auto gw_mac = *gw_container.begin();
-    LOG(DEBUG) << "gw_mac = " << gw_mac;
-    return gw_mac;
+    LOG(ERROR) << "Gateway not found";
+    return {};
 }
 
 std::set<std::string> db::get_node_subtree(const std::string &mac)
