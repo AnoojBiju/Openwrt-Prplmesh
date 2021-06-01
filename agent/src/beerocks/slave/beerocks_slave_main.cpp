@@ -167,7 +167,6 @@ static void fill_son_slave_config(const beerocks::config_file::sConfigSlave &bee
             : static_cast<uint16_t>(beerocks::eGlobals::UCC_LISTENER_PORT);
     son_slave_conf.bridge_iface             = beerocks_slave_conf.bridge_iface;
     son_slave_conf.backhaul_preferred_bssid = beerocks_slave_conf.backhaul_preferred_bssid;
-    son_slave_conf.backhaul_wire_iface      = beerocks_slave_conf.backhaul_wire_iface;
     son_slave_conf.enable_repeater_mode =
         beerocks_slave_conf.enable_repeater_mode[slave_num] == "1";
     son_slave_conf.hostap_iface_type = beerocks::utils::get_iface_type_from_string(
@@ -364,7 +363,17 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     auto amb_dm_obj = std::make_shared<beerocks::nbapi::AmbiorixDummy>();
 #endif //ENABLE_NBAPI
 
-    beerocks::AgentDB::get()->init_data_model(amb_dm_obj);
+    {
+        auto db = beerocks::AgentDB::get();
+
+        db->init_data_model(amb_dm_obj);
+
+        if (!beerocks::bpl::bpl_cfg_get_backhaul_wire_iface(db->ethernet.wan.iface_name)) {
+            LOG(ERROR) << "Failed reading 'backhaul_wire_iface'";
+            return false;
+        }
+        // Destroy `db` to unlock it.
+    }
 
     beerocks::PlatformManager platform_manager(beerocks_slave_conf, interfaces_map, *agent_logger,
                                                std::move(platform_manager_cmdu_server),
