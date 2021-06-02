@@ -21,7 +21,6 @@ using namespace son;
 monitor_rssi::monitor_rssi(ieee1905_1::CmduMessageTx &cmdu_tx_) : cmdu_tx(cmdu_tx_)
 {
     mon_db                   = nullptr;
-    slave_socket             = nullptr;
     arp_socket               = -1;
     arp_socket_class         = nullptr;
     m_idle_unit_tx_threshold = DEFAULT_IDLE_UNIT_TX_THRESHOLD;
@@ -38,19 +37,22 @@ void monitor_rssi::stop()
         close(arp_socket);
         arp_socket = -1;
     }
+
+    mon_db         = nullptr;
+    m_slave_client = nullptr;
 }
 
-bool monitor_rssi::start(monitor_db *mon_db_, Socket *slave_socket_)
+bool monitor_rssi::start(monitor_db *mon_db_, std::shared_ptr<beerocks::CmduClient> slave_client)
 {
-    if (!mon_db_ || !slave_socket_) {
+    if (!mon_db_ || !slave_client) {
         LOG(ERROR) << "invalid input == NULL";
         return false;
     }
 
     stop();
 
-    mon_db       = mon_db_;
-    slave_socket = slave_socket_;
+    mon_db         = mon_db_;
+    m_slave_client = slave_client;
 
     if ((arp_socket = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ARP))) < 0) {
         LOG(ERROR) << "Opening ARP socket: " << strerror(errno);
@@ -127,7 +129,8 @@ void monitor_rssi::arp_recv()
 
             notification->mac() = tlvf::mac_from_string(sta_node->get_mac());
 
-            message_com::send_cmdu(slave_socket, cmdu_tx);
+            m_slave_client->send_cmdu(cmdu_tx);
+
             LOG(DEBUG)
                 << "send ACTION_MONITOR_CLIENT_RX_RSSI_MEASUREMENT_START_NOTIFICATION, sta_mac = "
                 << sta_node->get_mac() << " id=" << request_id;
@@ -229,7 +232,9 @@ void monitor_rssi::process()
                     notification->params().rx_phy_rate_100kb = sta_stats.rx_phy_rate_100kb_min;
                     notification->params().tx_phy_rate_100kb = sta_stats.tx_phy_rate_100kb_min;
                     notification->params().vap_id            = sta_vap_id;
-                    message_com::send_cmdu(slave_socket, cmdu_tx);
+
+                    m_slave_client->send_cmdu(cmdu_tx);
+
                     LOG(DEBUG) << "state IDLE, DELTA notification MAC: " << sta_mac
                                << " RX RSSI: " << int(sta_stats.rx_rssi_curr)
                                << " delta_val=" << int(delta_val);
@@ -274,7 +279,9 @@ void monitor_rssi::process()
                     }
 
                     notification->mac() = tlvf::mac_from_string(sta_mac);
-                    message_com::send_cmdu(slave_socket, cmdu_tx);
+
+                    m_slave_client->send_cmdu(cmdu_tx);
+
                     LOG(INFO) << "arp_recv_count == 0, max arp retry no recv, send > "
                                  "NO_ACTIVITY_NOTIFICATION";
                     sta_node->clear_rx_rssi_request_id_list();
@@ -375,7 +382,8 @@ void monitor_rssi::send_rssi_measurement_response(const std::string &sta_mac,
         response->params().tx_phy_rate_100kb = sta_stats.tx_phy_rate_100kb_min;
         response->params().vap_id            = sta_node->get_vap_id();
 
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        m_slave_client->send_cmdu(cmdu_tx);
+
         LOG(DEBUG) << "RSSI_MEASUREMENT_RESPONSE sta_mac=" << sta_mac
                    << " rx_rssi: " << int(response->params().rx_rssi) << " id=" << request_id;
     }
@@ -412,7 +420,8 @@ void monitor_rssi::monitor_idle_station(const std::string &sta_mac, monitor_sta_
             }
 
             notification->mac() = tlvf::mac_from_string(sta_mac);
-            message_com::send_cmdu(slave_socket, cmdu_tx);
+
+            m_slave_client->send_cmdu(cmdu_tx);
 
             sta_node->idle_detected       = false;
             sta_node->enable_idle_monitor = false;

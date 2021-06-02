@@ -32,18 +32,18 @@ monitor_stats::monitor_stats(ieee1905_1::CmduMessageTx &cmdu_tx_) : cmdu_tx(cmdu
 
 void monitor_stats::stop()
 {
-    mon_db       = nullptr;
-    slave_socket = nullptr;
+    mon_db         = nullptr;
+    m_slave_client = nullptr;
 }
 
-bool monitor_stats::start(monitor_db *mon_db_, Socket *slave_socket_)
+bool monitor_stats::start(monitor_db *mon_db_, std::shared_ptr<beerocks::CmduClient> slave_client)
 {
-    if (!mon_db_ || !slave_socket_) {
+    if (!mon_db_ || !slave_client) {
         LOG(ERROR) << "invalid input == NULL";
         return false;
     }
-    mon_db       = mon_db_;
-    slave_socket = slave_socket_;
+    mon_db         = mon_db_;
+    m_slave_client = slave_client;
     return true;
 }
 
@@ -131,7 +131,7 @@ void monitor_stats::send_hostap_measurements(const sMeasurementsRequest &request
         const auto &sta_stats = sta_node->get_stats();
 
         if (elements_to_allocate == sta_count) {
-            message_com::send_cmdu(slave_socket, cmdu_tx);
+            m_slave_client->send_cmdu(cmdu_tx);
             response = message_com::create_vs_message<
                 beerocks_message::cACTION_MONITOR_HOSTAP_STATS_MEASUREMENT_RESPONSE>(cmdu_tx);
             if (!response) {
@@ -163,7 +163,7 @@ void monitor_stats::send_hostap_measurements(const sMeasurementsRequest &request
     }
 
     beerocks_header->actionhdr()->id() = request.message_id;
-    message_com::send_cmdu(slave_socket, cmdu_tx);
+    m_slave_client->send_cmdu(cmdu_tx);
 }
 
 // TODO This should use add_ap_assoc_sta_link_metric instead of constructing a VS message
@@ -212,7 +212,7 @@ void monitor_stats::send_associated_sta_link_metrics(const sMeasurementsRequest 
 
     LOG(DEBUG) << "Send ACTION_MONITOR_CLIENT_ASSOCIATED_STA_LINK_METRIC_RESPONSE "
                << "for mac " << sta_metrics->sta_mac() << ", message_id = " << request.message_id;
-    message_com::send_cmdu(slave_socket, cmdu_tx);
+    m_slave_client->send_cmdu(cmdu_tx);
 }
 
 void monitor_stats::process()
@@ -276,7 +276,7 @@ void monitor_stats::process()
         }
 
         notification->params().ap_activity_mode = eApActiveMode;
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+        m_slave_client->send_cmdu(cmdu_tx);
     }
 
     //send response
@@ -433,7 +433,8 @@ void monitor_stats::process()
         notification->params().client_tx_load_percent = radio_stats.client_tx_load_tot_curr;
         notification->params().client_rx_load_percent = radio_stats.client_rx_load_tot_curr;
         notification->params().channel_load_percent   = radio_stats.channel_load_tot_curr;
-        message_com::send_cmdu(slave_socket, cmdu_tx);
+
+        m_slave_client->send_cmdu(cmdu_tx);
     }
 }
 

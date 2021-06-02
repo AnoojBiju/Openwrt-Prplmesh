@@ -11,6 +11,7 @@
 
 #include "../monitor_db.h"
 
+#include <bcl/beerocks_cmdu_client.h>
 #include <bcl/beerocks_message_structs.h>
 #include <bcl/network/socket.h>
 
@@ -135,7 +136,7 @@ public:
 
     explicit monitor_rdkb_hal(ieee1905_1::CmduMessageTx &cmdu_tx_);
     ~monitor_rdkb_hal() {}
-    bool start(monitor_db *mon_db_, Socket *slave_socket_);
+    bool start(monitor_db *mon_db_, std::shared_ptr<beerocks::CmduClient> slave_client);
     void stop();
 
     void process();
@@ -157,8 +158,13 @@ private:
     std::shared_ptr<rdkb_hal_ap_config> conf_find_ap(const int8_t vap_id);
     void print_debug_info(mon_rdkb_debug_info_t &mdi, bool pkts_count_en);
 
-    monitor_db *mon_db   = nullptr;
-    Socket *slave_socket = nullptr;
+    monitor_db *mon_db = nullptr;
+
+    /**
+     * CMDU client to send messages to the CMDU server running in slave.
+     */
+    std::shared_ptr<beerocks::CmduClient> m_slave_client;
+
     ieee1905_1::CmduMessageTx &cmdu_tx;
 
     void sta_erase_all();

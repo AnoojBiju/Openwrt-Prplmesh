@@ -1,4 +1,4 @@
-agent/src/beerocks/fronthaul_manager/monitor/monitor_thread.cpp: style: The if condition is the same as the previous if condition [duplicateCondition]        if (poll_last) {
+agent/src/beerocks/fronthaul_manager/monitor/monitor.cpp: style: The if condition is the same as the previous if condition [duplicateCondition]        if (poll_last) {
 agent/src/beerocks/slave/gate/unit_tests/gate_test.cpp: error: syntax error [syntaxError]TEST(gate_beacon_query_test, loading_vs_from_1905_beacon_query)
 agent/src/beerocks/slave/platform_manager/platform_manager.cpp: warning: Redundant assignment of '*(volatile char*)pass' to itself. [selfAssignment]            *(volatile char *)pass = *(volatile char *)pass;
 agent/src/beerocks/slave/platform_manager/platform_manager.cpp: warning: Redundant assignment of '*(volatile char*)pass' to itself. [selfAssignment]        *(volatile char *)pass = *(volatile char *)pass;
