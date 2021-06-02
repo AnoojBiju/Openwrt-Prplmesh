@@ -57,6 +57,7 @@ public:
         CSA_Finished,
         CTRL_Channel_Switch,
 
+        BSS_TM_Query,
         BSS_TM_Response,
 
         DFS_CAC_Started,
