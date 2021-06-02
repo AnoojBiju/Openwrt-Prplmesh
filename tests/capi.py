@@ -2,8 +2,9 @@
 import argparse
 import logging
 import socket
+import time
 from enum import Enum
-from typing import Dict
+from typing import Dict, Union
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +110,7 @@ class UCCSocket:
             command += "\n"
         self.conn.send(command.encode("utf-8"))
 
-    def get_reply(self, verbose: bool = False) -> Dict[str, str]:
+    def get_reply(self, verbose: bool = False, timeout: Union[int, None] = 120) -> Dict[str, str]:
         """Wait until the server replies with a `CAPIReply` message other than `CAPIReply.RUNNING`.
 
         The replies from the server will be printed as they are received.
@@ -120,6 +121,13 @@ class UCCSocket:
         ----------
         verbose : bool
             If True, print out the valid replies (RUNNING and COMPLETE) as they arrive.
+        timeout : int
+            The maximum amount of time (in seconds) to wait for a reply. Defaults to 120.
+            Note that this method is not guaranteed to return exactly after `timeout` seconds. It
+            will abort after the next read call returns if the timeout is reached, which means that
+            it can take more than `timeout` to execute depending on what data is received.
+            A value of None can be used to wait until a CAPIReply other than RUNNING is received.
+            Regardless of the value of `timeout`, at least one read is always done.
 
         Returns
         -------
@@ -131,15 +139,19 @@ class UCCSocket:
         Raises
         ------
         ValueError
-            If the reply was something other than `CAPIReply.RUNNING`, or `CAPIReply.COMPLETE`.
+            If the reply was something other than `CAPIReply.RUNNING`, or `CAPIReply.COMPLETE`, or
+            `timeout` was reached.
         """
         data = bytearray()
-        while True:
+        start_time = time.time()
+        timed_out = False
+        while not timed_out:
             # resetting data to the next line:
             data = data[data.find(b"\n") + 1:]
-            while b"\n" not in data:
+            while not timed_out and b"\n" not in data:
                 # reading until there is a newline
                 data.extend(self.conn.recv(256))
+                timed_out = time.time() > start_time + timeout if timeout else False
             replies = data.decode("utf-8").split("\n")
             for r in replies:
                 if not r:
@@ -157,6 +169,8 @@ class UCCSocket:
                     raise ValueError("Server replied with {}".format(r))
                 else:
                     raise ValueError("Received an unknown reply from the server:\n {}".format(r))
+        if timed_out:
+            raise ValueError("Timed out when waiting for a reply from the server.")
 
     def cmd_reply(self, command: str, verbose: bool = False) -> Dict[str, str]:
         """Open the connection, send a command and wait for the reply."""
