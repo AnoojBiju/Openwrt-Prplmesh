@@ -30,7 +30,7 @@ class ApConfigBSSTeardown(PrplMeshBaseTest):
         self.dev.DUT.wired_sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
 
         # Configure the controller and send renew
-        controller.cmd_reply("DEV_RESET_DEFAULT")
+        self.device_reset_default()
         controller.cmd_reply(
             "DEV_SET_CONFIG,bss_info1,"
             "{} 8x Boardfarm-Tests-24G-3 0x0020 0x0008 maprocks1 0 1".format(agent.mac))

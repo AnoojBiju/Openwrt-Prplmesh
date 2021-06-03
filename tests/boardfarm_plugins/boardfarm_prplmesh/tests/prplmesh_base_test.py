@@ -614,6 +614,10 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         debug("Confirming multi-ap policy config request was acked by agent")
         self.check_cmdu_type_single("ACK", 0x8000, agent.mac, controller.mac, mid)
 
+    def device_reset_default(self):
+        controller = self.dev.lan.controller_entity
+        controller.cmd_reply("DEV_RESET_DEFAULT")
+
     def device_reset_then_set_config(self):
         '''Resets the controller
 
@@ -625,8 +629,8 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         '''
         controller = self.dev.lan.controller_entity
         agent = self.dev.DUT.agent_entity
+        self.device_reset_default()
 
-        controller.cmd_reply("DEV_RESET_DEFAULT")
         controller.cmd_reply(
             "DEV_SET_CONFIG,bss_info1,{} 8x".format(agent.mac))
 
