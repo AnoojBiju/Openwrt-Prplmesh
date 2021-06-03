@@ -278,17 +278,6 @@ def beerocks_cli_command(command: str) -> bytes:
     return res
 
 
-def checkpoint() -> None:
-    '''Checkpoint the current state.
-
-    Any subsequent calls to functions that query cumulative state (e.g. log files, packet captures)
-    will not match any of the state that was accumulated up till now, but only afterwards.
-
-    TODO: Implement for log functions.
-    '''
-    wired_sniffer.checkpoint()
-
-
 # Helper function used by the implementations based on ubus
 def nbapi_ubus_command(entity: ALEntity, path: str, command: str, args: Dict = None) -> Dict:
     command = ['ubus', 'call', path, command]
