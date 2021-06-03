@@ -612,6 +612,14 @@ bool bpl_cfg_set_wifi_credentials(const std::string &iface,
  */
 bool bpl_cfg_get_mandatory_interfaces(std::string &mandatory_interfaces);
 
+/**
+ * @brief Returns wire backhaul interface.
+ *
+ * @param [out] iface Wire backhaul interface name.
+ * @return true on success, otherwise false.
+ */
+bool bpl_cfg_get_backhaul_wire_iface(std::string &iface);
+
 } // namespace bpl
 } // namespace beerocks
 

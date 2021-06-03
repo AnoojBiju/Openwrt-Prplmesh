@@ -77,8 +77,14 @@ class LinkMetricQuery(PrplMeshBaseTest):
             unexpected_neighbors = []
             for link in links:
                 assert link.responder_mac_addr == agent1.mac, "Responder MAC address is wrong"
-                # a tshark (v3.2.4) bug causes "neighbor_mac_addr" field to
-                # show up as "responder_mac_addr_2"
+                assert link.receiving_al_mac_addr != '00:00:00:00:00:00',\
+                    'Receiving interface MAC is wrong'
+                # a tshark (v2.6.20, v3.2.4) bug causes
+                # "neighbor_mac_addr" field to show up as
+                # "responder_mac_addr_2" and the first transmitting
+                # interface MAC to show up as responder_mac_addr_3.
+                assert link.responder_mac_addr_3 != '00:00:00:00:00:00',\
+                    'Transmitting interface MAC is wrong'
                 if link.responder_mac_addr_2 in expected_neighbors:
                     verified_neighbors += [link.responder_mac_addr_2]
                 else:
