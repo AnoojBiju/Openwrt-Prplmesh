@@ -73,8 +73,6 @@ class ClientSteeringDummy(PrplMeshBaseTest):
                                          sta, env.StationEvent.DISCONNECT,
                                          agent1.radios[0].vaps[0].bssid)
 
-        self.checkpoint()
-
         debug("Connect dummy STA to wlan2")
         sta.wifi_connect(agent1.radios[1].vaps[0])
 
