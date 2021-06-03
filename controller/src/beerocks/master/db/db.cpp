@@ -909,6 +909,7 @@ bool db::set_hostap_active(const sMacAddr &mac, bool active)
     } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
         return false;
     }
+    LOG(DEBUG) << "Setting node '" << mac << "' as " << (active ? "active" : "inactive");
     n->hostap->active = active;
 
     // Enabled variable is a part of Radio data element and

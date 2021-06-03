@@ -7,8 +7,6 @@ from .prplmesh_base_test import PrplMeshBaseTest
 from boardfarm.exceptions import SkipTest
 from capi import tlv
 
-import time
-
 
 class ApConfigBSSTeardown(PrplMeshBaseTest):
     """Check SSID is still available after being torn down
@@ -39,8 +37,11 @@ class ApConfigBSSTeardown(PrplMeshBaseTest):
                                  tlv(0x0F, 0x0001, "{0x00}"),
                                  tlv(0x10, 0x0001, "{0x00}"))
 
-        # Wait a bit for the renew to complete
-        time.sleep(3)
+        # Wait until the connection map is updated:
+        self.check_log(controller,
+                       rf"Setting node '{agent.radios[0].mac}' as active", timeout=10)
+        self.check_log(controller,
+                       rf"Setting node '{agent.radios[1].mac}' as active", timeout=10)
 
         self.check_log(agent.radios[0],
                        r"Autoconfiguration for ssid: Boardfarm-Tests-24G-3 .*"
@@ -57,6 +58,7 @@ class ApConfigBSSTeardown(PrplMeshBaseTest):
             if vap.ssid != 'N/A':
                 self.fail('Wrong SSID: {vap.ssid} instead torn down'.format(vap=vap))
 
+        self.checkpoint()
         # SSIDs have been removed for the CTT Agent1's front radio
         controller.cmd_reply(
             "DEV_SET_CONFIG,bss_info1,{} 8x".format(agent.mac))
@@ -66,7 +68,11 @@ class ApConfigBSSTeardown(PrplMeshBaseTest):
                                  tlv(0x0F, 0x0001, "{0x00}"),
                                  tlv(0x10, 0x0001, "{0x00}"))
 
-        time.sleep(3)
+        self.check_log(controller,
+                       rf"Setting node '{agent.radios[0].mac}' as active", timeout=10)
+        self.check_log(controller,
+                       rf"Setting node '{agent.radios[1].mac}' as active", timeout=10)
+
         self.check_log(agent.radios[0], r".* tear down radio")
         conn_map = controller.get_conn_map()
         repeater1 = conn_map[agent.mac]
