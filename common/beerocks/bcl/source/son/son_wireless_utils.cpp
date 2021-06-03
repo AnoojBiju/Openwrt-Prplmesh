@@ -18,11 +18,6 @@
 
 using namespace son;
 
-struct sOperatingClass {
-    std::set<uint8_t> channels;
-    beerocks::eWiFiBandwidth band;
-};
-
 //Based on hostapd global_op_class struct, file ieee802_11_common.c
 // clang-format off
 static const std::map<uint8_t, sOperatingClass> operating_classes_list = {
@@ -243,12 +238,12 @@ constexpr wireless_utils::sPhyRateTableEntry
 constexpr wireless_utils::sPhyRateBitRateEntry
     wireless_utils::bit_rate_max_table_mbps[BIT_RATE_MAX_TABLE_SIZE];
 
-static bool has_operating_class_channel(const sOperatingClass &oper_class,
-                                        const beerocks::message::sWifiChannel &channel)
+bool wireless_utils::has_operating_class_channel(const sOperatingClass &oper_class, uint8_t channel,
+                                                 beerocks::eWiFiBandwidth bw)
 {
-    if (oper_class.band != channel.channel_bandwidth)
+    if (oper_class.band != bw)
         return false;
-    auto it = oper_class.channels.find(channel.channel);
+    auto it = oper_class.channels.find(channel);
     return it != oper_class.channels.end();
 }
 
@@ -825,7 +820,9 @@ std::list<wireless_utils::sChannelPreference> wireless_utils::get_channel_prefer
     for (const auto &oper_class : operating_classes_list) {
         std::vector<beerocks::message::sWifiChannel> radar_affected_channels;
         for (const auto supported_channel : supported_channels) {
-            if (has_operating_class_channel(oper_class.second, supported_channel) &&
+            if (has_operating_class_channel(
+                    oper_class.second, supported_channel.channel,
+                    beerocks::eWiFiBandwidth(supported_channel.channel_bandwidth)) &&
                 supported_channel.radar_affected) {
                 radar_affected_channels.push_back(supported_channel);
             }

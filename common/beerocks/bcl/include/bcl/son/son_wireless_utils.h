@@ -226,6 +226,13 @@ public:
     };
     static const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, sChannel>> channels_table_5g;
 
+    struct sOperatingClass {
+        std::set<uint8_t> channels;
+        beerocks::eWiFiBandwidth band;
+    };
+    static bool has_operating_class_channel(const sOperatingClass &oper_class, uint8_t channel,
+                                            beerocks::eWiFiBandwidth bw);
+
 private:
     enum eAntennaFactor {
         ANT_FACTOR_1X1 = 0,
