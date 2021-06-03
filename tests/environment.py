@@ -820,6 +820,9 @@ class ALEntityPrplWrt(ALEntity):
 
         super().__init__(mac, ucc_socket, installdir, is_controller)
 
+        program = "controller" if is_controller else "agent"
+        self.logfilenames = ["{}/beerocks_{}.log".format(self.log_folder, program)]
+
         # We always have two radios, wlan0 and wlan2
         RadioHostapd(self, "wlan0")
         RadioHostapd(self, "wlan2")
@@ -836,10 +839,9 @@ class ALEntityPrplWrt(ALEntity):
     def wait_for_log(self, regex: str, start_line: int, timeout: float,
                      fail_on_mismatch: bool = True) -> bool:
         """Poll the entity's logfile until it contains "regex" or times out."""
-        program = "controller" if self.is_controller else "agent"
         # Multiply timeout by 100, as test sets it in float.
         return _device_wait_for_log(self.device,
-                                    ["{}/beerocks_{}.log".format(self.log_folder, program)],
+                                    self.logfilenames,
                                     regex, timeout, start_line, fail_on_mismatch)
 
     def nbapi_command(self, path: str, command: str, args: Dict = None) -> Dict:
@@ -861,6 +863,11 @@ class RadioHostapd(Radio):
                         ip_raw).group(1)
         self.log_folder = agent.log_folder
         super().__init__(agent, mac)
+
+        self.logfilenames = [
+            "{}/beerocks_agent_{}.log".format(self.log_folder, self.iface_name),
+            "{}/beerocks_ap_manager_{}.log".format(self.log_folder, self.iface_name)
+        ]
 
         self.update_vap_list()
 
@@ -908,13 +915,8 @@ class RadioHostapd(Radio):
                      fail_on_mismatch: bool = True):
         ''' Poll the Radio's logfile until it match regular expression '''
 
-        log_files = [
-            "{}/beerocks_agent_{}.log".format(self.log_folder, self.iface_name),
-            "{}/beerocks_ap_manager_{}.log".format(self.log_folder, self.iface_name)
-        ]
-
         # Multiply timeout by 100, as test sets it in float.
-        return _device_wait_for_log(self.agent.device, log_files, regex, timeout, start_line,
+        return _device_wait_for_log(self.agent.device, self.logfilenames, regex, timeout, start_line,
                                     fail_on_mismatch)
 
     def get_mac(self, iface: str) -> str:
