@@ -310,7 +310,7 @@ def _docker_wait_for_log(container: str, logfilenames: [str], regex: str, timeou
         while True:
             for logfilename in logfilenames:
                 with open(logfilename, 'rb') as logfile:
-                    for (i, v) in enumerate(logfile.readlines()):
+                    for (i, v) in enumerate(logfile.readlines(), 1):
                         if i <= start_line:
                             continue
                         search = re.search(regex.encode('utf-8'), v)
