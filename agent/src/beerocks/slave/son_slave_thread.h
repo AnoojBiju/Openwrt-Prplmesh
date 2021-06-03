@@ -23,6 +23,11 @@
 #include <tlvf/ieee_1905_1/tlvWsc.h>
 #include <tlvf/wfa_map/tlvProfile2ErrorCode.h>
 
+// Forward decleration
+namespace beerocks_message {
+class cChannelList;
+}
+
 namespace beerocks {
 namespace bpl {
 enum class eErrorCode;
@@ -241,6 +246,15 @@ private:
     bool send_error_response(
         const std::deque<std::pair<wfa_map::tlvProfile2ErrorCode::eReasonCode, sMacAddr>>
             &bss_errors);
+
+    /**
+     * @brief Save channel list into AgentDB from beerocks_message::cChannelList class.
+     *
+     * @param channel_list_class A shared pointer to channel_list_class.
+     */
+    void fill_channel_list_to_agent_db(
+        const std::shared_ptr<beerocks_message::cChannelList> &channel_list_class);
+
     /**
      * @brief save channel switch parameters in the agent DB
      *
