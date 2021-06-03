@@ -37,7 +37,9 @@
 #endif // ENABLE_NBAPI
 
 using namespace beerocks_message;
-using sAgent = prplmesh::controller::db::sAgent;
+
+using sAgent   = prplmesh::controller::db::sAgent;
+using sStation = prplmesh::controller::db::sStation;
 
 namespace son {
 
