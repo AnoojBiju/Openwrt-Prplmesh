@@ -301,23 +301,10 @@ on_wsl = "microsoft" in platform.uname()[3].lower()
 # Since we have multiple log files that correspond to a radio, multiple programs are passed
 # as argument. In the log messages, we only use the first one.
 # This should be reverted again as part of Unified Agent.
-def _docker_wait_for_log(container: str, programs: [str], regex: str, timeout: float,
+def _docker_wait_for_log(container: str, logfilenames: [str], regex: str, timeout: float,
                          start_line: int, fail_on_mismatch: bool = True) -> bool:
-    def logfilename(program):
-        logfilename = os.path.join(rootdir, 'logs', container, 'beerocks_{}.log'.format(program))
-
+    for logfilename in logfilenames:
         print(' --- logfilename: {}'.format(logfilename))
-
-        # WSL doesn't support symlinks on NTFS, so resolve the symlink manually
-        if on_wsl:
-            logfilename = os.path.join(
-                rootdir, 'logs', container,
-                subprocess.check_output(["tail", "-2", logfilename]).decode('utf-8').
-                rstrip(' \t\r\n\0'))
-        return logfilename
-
-    logfilenames = [logfilename(program) for program in programs]
-
     deadline = time.monotonic() + timeout
     try:
         while True:
@@ -335,16 +322,16 @@ def _docker_wait_for_log(container: str, programs: [str], regex: str, timeout: f
             else:
                 if fail_on_mismatch:
                     err("Can't find '{}'\n\tin log of {} on {} after {}s".format(regex,
-                                                                                 programs[0],
+                                                                                 str(logfilenames),
                                                                                  container,
                                                                                  timeout))
                 else:
                     debug("Can't find '{}'\n\tin log of {} on {},"
-                          "but failure allowed".format(regex, programs[0], container))
+                          "but failure allowed".format(regex, str(logfilenames), container))
 
                 return (False, start_line, None)
     except OSError:
-        err("Can't read log of {} on {}".format(programs[0], container))
+        err("Can't read log of one of {} on {}".format(str(logfilenames), container))
         return (False, start_line, None)
 
 
@@ -481,12 +468,25 @@ class ALEntityDocker(ALEntity):
         mac = ucc_socket.dev_get_parameter('ALid')
 
         super().__init__(mac, ucc_socket, installdir, is_controller)
+        program = "controller" if is_controller else "agent"
+        self.logfilenames = [self.logfilename(program)]
 
         # We always have two radios, wlan0 and wlan2
         RadioDocker(self, "wlan0")
         RadioDocker(self, "wlan2")
 
         self.refresh_vaps()
+
+    def logfilename(self, program):
+        logfilename = os.path.join(rootdir, 'logs', self.name, 'beerocks_{}.log'.format(program))
+
+        # WSL doesn't support symlinks on NTFS, so resolve the symlink manually
+        if on_wsl:
+            logfilename = os.path.join(
+                rootdir, 'logs', self.name,
+                subprocess.check_output(["tail", "-2", logfilename]).decode('utf-8').
+                rstrip(' \t\r\n\0'))
+        return logfilename
 
     def command(self, *command: str) -> bytes:
         '''Execute `command` in docker container and return its output.'''
@@ -495,8 +495,7 @@ class ALEntityDocker(ALEntity):
     def wait_for_log(self, regex: str, start_line: int, timeout: float,
                      fail_on_mismatch: bool = True) -> bool:
         '''Poll the entity's logfile until it contains "regex" or times out.'''
-        program = "controller" if self.is_controller else "agent"
-        return _docker_wait_for_log(self.name, [program], regex, timeout, start_line,
+        return _docker_wait_for_log(self.name, self.logfilenames, regex, timeout, start_line,
                                     fail_on_mismatch=fail_on_mismatch)
 
     def nbapi_command(self, path: str, command: str, args: Dict = None) -> Dict:
@@ -627,12 +626,13 @@ class RadioDocker(Radio):
         mac = re.search(r"link/ether (([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})",
                         ip_output).group(1)
         super().__init__(agent, mac)
+        programs = (f"{prog}_{iface_name}" for prog in ("agent", "ap_manager"))
+        self.logfilenames = [self.agent.logfilename(program) for program in programs]
 
     def wait_for_log(self, regex: str, start_line: int, timeout: float,
                      fail_on_mismatch: bool = True) -> bool:
         '''Poll the radio's logfile until it contains "regex" or times out.'''
-        programs = ("agent_" + self.iface_name, "ap_manager_" + self.iface_name)
-        return _docker_wait_for_log(self.agent.name, programs, regex, timeout, start_line,
+        return _docker_wait_for_log(self.agent.name, self.logfilenames, regex, timeout, start_line,
                                     fail_on_mismatch=fail_on_mismatch)
 
     def send_bwl_event(self, event: str) -> None:
