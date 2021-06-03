@@ -51,12 +51,22 @@ class ALEntity:
         self.installdir = installdir
         self.is_controller = is_controller
         self.radios = []
+        self.logfilenames = []  # List[str]
+        self.checkpoints = {}  # Dict[str, int]
 
         # Convenience functions that propagate to ucc_socket
         self.cmd_reply = self.ucc_socket.cmd_reply
         self.dev_get_parameter = self.ucc_socket.dev_get_parameter
         self.dev_send_1905 = self.ucc_socket.dev_send_1905
         self.start_wps_registration = self.ucc_socket.start_wps_registration
+
+    @staticmethod
+    def get_checkpoints(checkpoints: Dict[str, int], start_line: int):
+        """If a start_line was provided, use it for all
+        checkpoints. Otherwise, keep the checkpoints as-is"""
+        if not start_line:
+            return checkpoints
+        return {checkpoint: start_line for checkpoint in checkpoints}
 
     def command(self, *command: str) -> str:
         '''Run `command` on the device and return its output as bytes.
@@ -76,6 +86,17 @@ class ALEntity:
                      fail_on_mismatch: bool = True) -> bool:
         '''Poll the entity's logfile until it contains "regex" or times out.'''
         raise NotImplementedError("wait_for_log is not implemented in abstract class ALEntity")
+
+    def checkpoint(self):
+        '''Checkpoint the log files for both the entity and its radios.
+
+        Any subsequent calls to check_logs will only return log lines after now.
+        '''
+        for logfilename in self.logfilenames:
+            self.checkpoints[logfilename] = int(self.command("wc", "-l", f"{logfilename}")
+                                                .split(" ")[0])
+        for radio in self.radios:
+            radio.checkpoint()
 
     # Northbound API access functions
 
@@ -183,6 +204,14 @@ class Radio:
         agent.radios.append(self)
         self.mac = mac
         self.vaps = []
+        self.logfilenames = []  # List[str]
+        self.checkpoints = {}  # Dict[str, int]
+
+    def checkpoint(self):
+        for logfilename in self.logfilenames:
+            self.checkpoints[logfilename] = \
+                int(self.agent.command("wc", "-l", f"{logfilename}")
+                    .split(" ")[0])
 
     def wait_for_log(self, regex: str, start_line: int, timeout: float,
                      fail_on_mismatch: bool = True) -> bool:
@@ -301,38 +330,39 @@ on_wsl = "microsoft" in platform.uname()[3].lower()
 # Since we have multiple log files that correspond to a radio, multiple programs are passed
 # as argument. In the log messages, we only use the first one.
 # This should be reverted again as part of Unified Agent.
-def _docker_wait_for_log(container: str, logfilenames: [str], regex: str, timeout: float,
-                         start_line: int, fail_on_mismatch: bool = True) -> bool:
-    for logfilename in logfilenames:
+def _docker_wait_for_log(container: str, checkpoints: Dict[str, int], regex: str, timeout: float,
+                         fail_on_mismatch: bool = True) -> bool:
+    for logfilename in checkpoints.keys():
         print(' --- logfilename: {}'.format(logfilename))
     deadline = time.monotonic() + timeout
     try:
         while True:
-            for logfilename in logfilenames:
+            for logfilename in checkpoints.keys():
+                start_line = checkpoints[logfilename]
                 with open(logfilename, 'rb') as logfile:
                     for (i, v) in enumerate(logfile.readlines(), 1):
                         if i <= start_line:
                             continue
                         search = re.search(regex.encode('utf-8'), v)
                         if search:
-                            debug("Found '{}'\n\tin {}".format(regex, logfilename))
+                            debug("Found '{}'\n\tin {} line {}".format(regex, logfilename, i))
                             return (True, i, search.groups())
             if time.monotonic() < deadline:
                 time.sleep(.3)
             else:
                 if fail_on_mismatch:
                     err("Can't find '{}'\n\tin log of {} on {} after {}s".format(regex,
-                                                                                 str(logfilenames),
+                                                                                 str(checkpoints),
                                                                                  container,
                                                                                  timeout))
                 else:
                     debug("Can't find '{}'\n\tin log of {} on {},"
-                          "but failure allowed".format(regex, str(logfilenames), container))
+                          "but failure allowed".format(regex, str(checkpoints), container))
 
-                return (False, start_line, None)
+                return (False, 0, None)
     except OSError:
-        err("Can't read log of one of {} on {}".format(str(logfilenames), container))
-        return (False, start_line, None)
+        err("Can't read log of one of {} on {}".format(str(checkpoints), container))
+        return (False, 0, None)
 
 
 def _device_clear_input_buffer(device, timeout=0.5):
@@ -388,13 +418,13 @@ def _device_reset_console(device):
 # Since we have multiple log files that correspond to a radio, multiple log files are passed
 # as argument. In the log messages, we only use the first one.
 # This should be reverted again as part of Unified Agent.
-def _device_wait_for_log(device: None, log_paths: [str], regex: str,
-                         timeout: float, start_line: int = 0, fail_on_mismatch: bool = True):
+def _device_wait_for_log(device: None, checkpoints: Dict[str, int], regex: str,
+                         timeout: float, fail_on_mismatch: bool = True):
     """Waits for log matching regex expression to show up."""
 
     debug("--- Looking for {}".format(regex))
-    debug("    in {}".format(" ".join(log_paths)))
-    debug("    starting at line {}".format(start_line))
+    debug("    in {}".format(" ".join(checkpoints.keys())))
+    debug("    starting at lines {}".format(checkpoints))
     debug("    timeout: {} second(s)".format(timeout))
 
     # Current approach reads remote files in a loop.
@@ -405,7 +435,8 @@ def _device_wait_for_log(device: None, log_paths: [str], regex: str,
     deadline = time.monotonic() + timeout
 
     while time.monotonic() < deadline:
-        for logfilename in log_paths:
+        for logfilename in checkpoints.keys():
+            start_line = checkpoints[logfilename]
             command = ['tail', '-n', f'+{start_line}', logfilename]
             output = subprocess.check_output(['ssh', device.control_ip] + command)
 
@@ -419,11 +450,11 @@ def _device_wait_for_log(device: None, log_paths: [str], regex: str,
         time.sleep(.3)
 
     if fail_on_mismatch:
-        err("--- Cannot find {} in {}".format(regex, " ".join(log_paths)))
+        err("--- Cannot find {} in {}".format(regex, " ".join(str(check) for check in checkpoints)))
     else:
         debug("--- Not found")
 
-    return (False, start_line, None)
+    return (False, 0, None)
 
 
 class ALEntityDocker(ALEntity):
@@ -495,7 +526,8 @@ class ALEntityDocker(ALEntity):
     def wait_for_log(self, regex: str, start_line: int, timeout: float,
                      fail_on_mismatch: bool = True) -> bool:
         '''Poll the entity's logfile until it contains "regex" or times out.'''
-        return _docker_wait_for_log(self.name, self.logfilenames, regex, timeout, start_line,
+        checkpoints = ALEntity.get_checkpoints(self.checkpoints, start_line)
+        return _docker_wait_for_log(self.name, checkpoints, regex, timeout,
                                     fail_on_mismatch=fail_on_mismatch)
 
     def nbapi_command(self, path: str, command: str, args: Dict = None) -> Dict:
@@ -632,7 +664,8 @@ class RadioDocker(Radio):
     def wait_for_log(self, regex: str, start_line: int, timeout: float,
                      fail_on_mismatch: bool = True) -> bool:
         '''Poll the radio's logfile until it contains "regex" or times out.'''
-        return _docker_wait_for_log(self.agent.name, self.logfilenames, regex, timeout, start_line,
+        checkpoints = ALEntity.get_checkpoints(self.checkpoints, start_line)
+        return _docker_wait_for_log(self.agent.name, checkpoints, regex, timeout,
                                     fail_on_mismatch=fail_on_mismatch)
 
     def send_bwl_event(self, event: str) -> None:
@@ -838,10 +871,8 @@ class ALEntityPrplWrt(ALEntity):
     def wait_for_log(self, regex: str, start_line: int, timeout: float,
                      fail_on_mismatch: bool = True) -> bool:
         """Poll the entity's logfile until it contains "regex" or times out."""
-        # Multiply timeout by 100, as test sets it in float.
-        return _device_wait_for_log(self.device,
-                                    self.logfilenames,
-                                    regex, timeout, start_line, fail_on_mismatch)
+        checkpoints = ALEntity.get_checkpoints(self.checkpoints, start_line)
+        return _device_wait_for_log(self.device, checkpoints, regex, timeout, fail_on_mismatch)
 
     def nbapi_command(self, path: str, command: str, args: Dict = None) -> Dict:
         return nbapi_ubus_command(self, path, command, args)
@@ -913,9 +944,8 @@ class RadioHostapd(Radio):
     def wait_for_log(self, regex: str, start_line: int, timeout: float,
                      fail_on_mismatch: bool = True):
         ''' Poll the Radio's logfile until it match regular expression '''
-
-        # Multiply timeout by 100, as test sets it in float.
-        return _device_wait_for_log(self.agent.device, self.logfilenames, regex, timeout, start_line,
+        checkpoints = ALEntity.get_checkpoints(self.checkpoints, start_line)
+        return _device_wait_for_log(self.agent.device, checkpoints, regex, timeout,
                                     fail_on_mismatch)
 
     def get_mac(self, iface: str) -> str:

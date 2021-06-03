@@ -42,6 +42,11 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
             topology = self.get_topology()
             for value in topology.values():
                 debug(value)
+            for dev in self.dev.devices:
+                # call checkpoint on any controller or agent:
+                if getattr(dev.obj, "role", None):
+                    dev.obj.get_active_entity().checkpoint()
+
         except Exception as e:
             debug("Failed to start test:\n{}".format(e))
             raise e
@@ -228,9 +233,11 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         Any subsequent calls to functions that query cumulative state
         (e.g. log files, packet captures) will not match any of the state that was
         accumulated up till now, but only afterwards.
-
-        TODO: Implement for log functions.
         '''
+        for dev in self.dev.devices:
+            # call checkpoint on any controller or agent:
+            if getattr(dev.obj, "role", None):
+                dev.obj.get_active_entity().checkpoint()
         self.dev.DUT.wired_sniffer.checkpoint()
 
     def fail(self, msg: str):
@@ -628,6 +635,7 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
     def device_reset_default(self):
         controller = self.dev.lan.controller_entity
         controller.cmd_reply("DEV_RESET_DEFAULT")
+        self.checkpoint()
 
     def device_reset_then_set_config(self):
         '''Resets the controller
