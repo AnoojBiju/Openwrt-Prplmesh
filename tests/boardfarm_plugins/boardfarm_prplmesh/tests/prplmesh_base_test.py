@@ -180,7 +180,7 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         tlvs = [tlv for tlv in packet.ieee1905_tlvs if tlv.tlv_type == tlv_type]
         if not tlvs:
             debug("  {}".format(packet))
-            assert False, "No TLV of type 0x{:02x} found in packet".format(tlv_type)
+            raise ValueError("No TLV of type 0x{:02x} found in packet".format(tlv_type))
         return tlvs
 
     def check_cmdu_has_tlv_single(
