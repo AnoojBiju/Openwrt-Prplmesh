@@ -319,8 +319,28 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         bool
             True for valid topology notification, False otherwise
         """
-        mcast = self.check_cmdu_type_single("topology notification", 0x1, eth_src)
+        mcasts_all = self.check_cmdu_type("topology notification", 0x1, eth_src)
 
+        def filter_mcast_notifications(mcast) -> bool:
+            try:
+                assoc_event_tlv = self.check_cmdu_has_tlv_single(mcast, 0x92)
+            except ValueError:
+                # Skip notifications that don't have the association event tlv.
+                return False
+            return assoc_event_tlv.assoc_event_client_mac == sta.mac and \
+                assoc_event_tlv.assoc_event_agent_bssid == bssid and \
+                int(assoc_event_tlv.assoc_event_flags, 16) == event.value
+
+        mcasts = list(filter(filter_mcast_notifications, mcasts_all))
+        if not mcasts:
+            self.fail(f"No matching topology notification!\n {mcasts}")
+            return False
+
+        if len(mcasts) > 1:
+            self.fail(f"Multiple topology notification found!\n {mcasts}")
+            return False
+
+        mcast = mcasts[0]
         # relay indication should be set
         if not mcast.ieee1905_relay_indicator:
             self.fail("Multicast topology notification should be relayed")
@@ -333,15 +353,6 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
             if ucast.ieee1905_relay_indicator:
                 self.fail("Unicast topology notification should not be relayed")
                 return False
-
-        # check for requested event
-        debug("Check for event: sta mac={}, bssid={}, event={}".format(sta.mac, bssid, event))
-        assoc_event_tlv = self.check_cmdu_has_tlv_single(mcast, 0x92)
-        if assoc_event_tlv.assoc_event_client_mac != sta.mac or \
-                assoc_event_tlv.assoc_event_agent_bssid != bssid or \
-                int(assoc_event_tlv.assoc_event_flags, 16) != event.value:
-            self.fail("No match for association event")
-            return False
 
         return True
 
