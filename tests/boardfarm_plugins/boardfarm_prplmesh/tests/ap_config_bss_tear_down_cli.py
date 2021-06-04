@@ -76,9 +76,9 @@ class ApConfigBSSTeardownCli(PrplMeshBaseTest):
         repeater1 = conn_map[agent.mac]
         repeater1_wlan0 = repeater1.radios[agent.radios[0].mac]
         for vap in repeater1_wlan0.vaps.values():
-            if vap.ssid != b'N/A':
+            if vap.ssid != 'N/A':
                 self.fail('Wrong SSID: {vap.ssid} instead torn down'.format(vap=vap))
         repeater1_wlan2 = repeater1.radios[agent.radios[1].mac]
         for vap in repeater1_wlan2.vaps.values():
-            if vap.ssid != b'N/A':
+            if vap.ssid != 'N/A':
                 self.fail('Wrong SSID: {vap.ssid} instead torn down'.format(vap=vap))

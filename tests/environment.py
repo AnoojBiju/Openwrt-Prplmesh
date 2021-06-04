@@ -58,14 +58,14 @@ class ALEntity:
         self.dev_send_1905 = self.ucc_socket.dev_send_1905
         self.start_wps_registration = self.ucc_socket.start_wps_registration
 
-    def command(self, *command: str) -> bytes:
+    def command(self, *command: str) -> str:
         '''Run `command` on the device and return its output as bytes.
 
         Example: command('ip', 'addr') to get IP addresses of all interfaces.
         '''
         raise NotImplementedError("command is not implemented in abstract class ALEntity")
 
-    def prplmesh_command(self, command: str, *args: str) -> bytes:
+    def prplmesh_command(self, command: str, *args: str) -> str:
         '''Run `command` with "args" on the device and return its output as bytes.
 
         "command" is relative to the installation directory of prplmesh, e.g. "bin/beerocks_cli".
@@ -157,14 +157,14 @@ class ALEntity:
         cmd_output = self.command('top', 'b', '-n', '1')
         cpu_column = False
         cpu_usage = 0.0
-        for line in cmd_output.decode().split('\n'):
+        for line in cmd_output.split('\n'):
             if not cpu_column and re.findall(r'%CPU', line):
                 cpu_column = line.split().index('%CPU')
                 continue
             if cpu_column and line:
                 cpu_usage += float(line.split()[cpu_column].replace('%', ''))
         cmd_output = self.command('cat', '/proc/loadavg')
-        cpu_avg = float(cmd_output.decode().split()[0])
+        cpu_avg = float(cmd_output.split()[0])
         return CpuStat(cpu_usage/100, cpu_avg)
 
 
@@ -270,11 +270,11 @@ controller = None
 agents = []
 
 
-def beerocks_cli_command(command: str) -> bytes:
+def beerocks_cli_command(command: str) -> str:
     '''Execute `command` beerocks_cli command on the controller and return its output.'''
     debug("Send CLI command " + command)
     res = controller.prplmesh_command("bin/beerocks_cli", "-c", command)
-    debug("  Response: " + res.decode('utf-8', errors='replace').strip())
+    debug("  Response: " + res.strip())
     return res
 
 
@@ -462,7 +462,7 @@ class ALEntityDocker(ALEntity):
             device_ip_output = self.command(
                 'ip', '-f', 'inet', 'addr', 'show', ucc_interface_name)
             device_ip = re.search(
-                r'inet (?P<ip>[0-9.]+)', device_ip_output.decode('utf-8')).group('ip')
+                r'inet (?P<ip>[0-9.]+)', device_ip_output).group('ip')
 
         ucc_socket = UCCSocket(device_ip, ucc_port)
         mac = ucc_socket.dev_get_parameter('ALid')
@@ -488,9 +488,9 @@ class ALEntityDocker(ALEntity):
                 rstrip(' \t\r\n\0'))
         return logfilename
 
-    def command(self, *command: str) -> bytes:
+    def command(self, *command: str) -> str:
         '''Execute `command` in docker container and return its output.'''
-        return subprocess.check_output(("docker", "exec", self.name) + command)
+        return subprocess.check_output(("docker", "exec", self.name) + command).decode()
 
     def wait_for_log(self, regex: str, start_line: int, timeout: float,
                      fail_on_mismatch: bool = True) -> bool:
@@ -504,14 +504,14 @@ class ALEntityDocker(ALEntity):
     def prprlmesh_status_check(self):
         return self.device.prprlmesh_status_check()
 
-    def beerocks_cli_command(self, command) -> bytes:
+    def beerocks_cli_command(self, command) -> str:
         '''Execute `command` beerocks_cli command on the controller and return its output.
         Will return None if called from an object that is not a controller.
         '''
         if self.is_controller:
             debug("Send CLI command " + command)
             res = self.prplmesh_command("bin/beerocks_cli", "-c", command)
-            debug("  Response: " + res.decode('utf-8', errors='replace').strip())
+            debug("  Response: " + res.strip())
             return res
         return None
 
@@ -519,25 +519,25 @@ class ALEntityDocker(ALEntity):
         '''Get the connection map from the controller.'''
 
         '''Regular expression to match a MAC address in a bytes string.'''
-        RE_MAC = rb"(?P<mac>([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})"
+        RE_MAC = r"(?P<mac>([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})"
 
         conn_map = {}
-        for line in self.beerocks_cli_command("bml_conn_map").split(b'\n'):
+        for line in self.beerocks_cli_command("bml_conn_map").split('\n'):
             # TODO we need to parse indentation to get the exact topology.
             # For the time being, just parse the repeaters.
-            bridge = re.search(rb' {8}IRE_BRIDGE: .* mac: ' + RE_MAC, line)
-            radio = re.match(rb' {16}RADIO: .* mac: ' + RE_MAC, line)
-            vap = re.match(rb' {20}fVAP.* bssid: ' + RE_MAC + rb', ssid: (?P<ssid>.*)$', line)
-            client = re.match(rb' {24}CLIENT: mac: ' + RE_MAC, line)
+            bridge = re.search(r' {8}IRE_BRIDGE: .* mac: ' + RE_MAC, line)
+            radio = re.match(r' {16}RADIO: .* mac: ' + RE_MAC, line)
+            vap = re.match(r' {20}fVAP.* bssid: ' + RE_MAC + r', ssid: (?P<ssid>.*)$', line)
+            client = re.match(r' {24}CLIENT: mac: ' + RE_MAC, line)
             if bridge:
-                cur_agent = MapDevice(bridge.group('mac').decode('utf-8'))
+                cur_agent = MapDevice(bridge.group('mac'))
                 conn_map[cur_agent.mac] = cur_agent
             elif radio:
-                cur_radio = cur_agent.add_radio(radio.group('mac').decode('utf-8'))
+                cur_radio = cur_agent.add_radio(radio.group('mac'))
             elif vap:
-                cur_vap = cur_radio.add_vap(vap.group('mac').decode('utf-8'), vap.group('ssid'))
+                cur_vap = cur_radio.add_vap(vap.group('mac'), vap.group('ssid'))
             elif client:
-                cur_vap.add_client(client.group('mac').decode('utf-8'))
+                cur_vap.add_client(client.group('mac'))
         return conn_map
 
     def refresh_vaps(self):
@@ -622,7 +622,7 @@ class RadioDocker(Radio):
 
     def __init__(self, agent: ALEntityDocker, iface_name: str):
         self.iface_name = iface_name
-        ip_output = agent.command("ip", "-o",  "link", "list", "dev", self.iface_name).decode()
+        ip_output = agent.command("ip", "-o",  "link", "list", "dev", self.iface_name)
         mac = re.search(r"link/ether (([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})",
                         ip_output).group(1)
         super().__init__(agent, mac)
@@ -827,14 +827,13 @@ class ALEntityPrplWrt(ALEntity):
         RadioHostapd(self, "wlan0")
         RadioHostapd(self, "wlan2")
 
-    def command(self, *command: str) -> bytes:
+    def command(self, *command: str) -> str:
         """Execute `command` in device and return its output."""
 
         command_str = " ".join(command)
         debug("--- Executing command: {}".format(command_str))
 
-        output = subprocess.check_output(["ssh", self.device.control_ip, command_str]).decode()
-        return output
+        return subprocess.check_output(["ssh", self.device.control_ip, command_str]).decode()
 
     def wait_for_log(self, regex: str, start_line: int, timeout: float,
                      fail_on_mismatch: bool = True) -> bool:
