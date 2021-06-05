@@ -133,8 +133,7 @@ public:
     double cross_estimated_rx_phy_rate = 0.0;
     double cross_estimated_tx_phy_rate = 0.0;
 
-    bool transition_to_4addr_mode         = false;
-    bool ire_handoff                      = false;
+    bool ire_handoff = false;
 
     class radio {
     public:
