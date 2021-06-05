@@ -553,25 +553,6 @@ int8_t db::get_node_vap_id(const std::string &mac)
     return n->vap_id;
 }
 
-bool db::get_cs_lb_flag(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return false;
-    }
-    return n->cs_lb;
-}
-
-bool db::set_cs_lb_flag(const std::string &mac, bool flag)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return false;
-    }
-    n->cs_lb = flag;
-    return true;
-}
-
 bool db::set_global_restricted_channels(const uint8_t *restricted_channels)
 {
     if (!restricted_channels) {
