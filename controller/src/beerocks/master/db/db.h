@@ -1619,9 +1619,6 @@ public:
     bool assign_rdkb_wlan_task_id(int new_task_id);
     int get_rdkb_wlan_task_id();
 
-    bool assign_ire_4addr_mode_transition_task_id(const std::string &mac, int new_task_id);
-    int get_ire_4addr_mode_transition_task_id(const std::string &mac);
-
     bool assign_channel_selection_task_id(int new_task_id);
     int get_channel_selection_task_id();
 

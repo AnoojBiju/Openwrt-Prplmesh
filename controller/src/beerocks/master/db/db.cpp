@@ -5067,27 +5067,6 @@ int db::get_client_locating_task_id(const std::string &mac, bool new_connection)
     return n->client_locating_task_id_exist_connection;
 }
 
-bool db::assign_ire_4addr_mode_transition_task_id(const std::string &mac, int new_task_id)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    }
-    n->ire_4addr_mode_transition_task_id = new_task_id;
-    return true;
-}
-
-int db::get_ire_4addr_mode_transition_task_id(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return -1;
-    }
-    return n->ire_4addr_mode_transition_task_id;
-}
-
 bool db::assign_channel_selection_task_id(int new_task_id)
 {
     channel_selection_task_id = new_task_id;

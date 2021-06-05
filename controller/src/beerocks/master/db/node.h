@@ -133,7 +133,6 @@ public:
     double cross_estimated_rx_phy_rate = 0.0;
     double cross_estimated_tx_phy_rate = 0.0;
 
-    int ire_4addr_mode_transition_task_id = 0;
     bool transition_to_4addr_mode         = false;
     bool ire_handoff                      = false;
 
