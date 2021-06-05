@@ -83,10 +83,6 @@ public:
     bool handoff               = false;
     bool confined              = false;
 
-    /// Clear this flag when channel switch is not in progress and channel is optimal path.
-    /// And run optimal path for clients.
-    bool cs_op = false;
-
     /// Clear this flag when channel switch is not in progress and cs_in_prog_optimal_path flag
     /// is clear too. Run load balancer algo.
     bool cs_lb = false;

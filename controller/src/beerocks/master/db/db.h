@@ -880,8 +880,6 @@ public:
 
     std::string get_5ghz_sibling_hostap(const std::string &mac);
 
-    bool set_cs_op_flag(const std::string &mac, bool flag);
-    bool get_cs_op_flag(const std::string &mac);
     bool set_cs_lb_flag(const std::string &mac, bool flag);
     bool get_cs_lb_flag(const std::string &mac);
 
