@@ -46,7 +46,7 @@ void client_steering_task::work()
         m_database.assign_steering_task_id(m_sta_mac, id);
 
         m_original_bssid = m_database.get_node_parent(m_sta_mac);
-        m_ssid_name      = m_database.get_hostap_ssid(tlvf::mac_from_string(m_original_bssid));
+        m_ssid_name      = m_database.get_hostap_vap_ssid(tlvf::mac_from_string(m_original_bssid));
 
         if (m_original_bssid == m_target_bssid) {
             TASK_LOG(DEBUG) << "Target and original BSSIDs are the same:" << m_target_bssid
@@ -210,7 +210,7 @@ void client_steering_task::steer_sta()
         * send disallow to all others
         */
         const auto &hostap_vaps = m_database.get_hostap_vap_list(tlvf::mac_from_string(hostap));
-        const auto &ssid        = m_database.get_hostap_ssid(tlvf::mac_from_string(m_target_bssid));
+        const auto &ssid = m_database.get_hostap_vap_ssid(tlvf::mac_from_string(m_target_bssid));
         for (const auto &hostap_vap : hostap_vaps) {
             if (hostap_vap.second.ssid != ssid) {
                 continue;

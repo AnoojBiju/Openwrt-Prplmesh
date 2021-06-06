@@ -432,10 +432,15 @@ bool topology_task::handle_topology_notification(const std::string &src_mac,
 
         LOG(INFO) << "client connected, mac=" << client_mac_str << ", bssid=" << bssid_str;
 
-        database.set_node_channel_bw(client_mac, database.get_node_channel(bssid_str),
-                                     database.get_node_bw(bssid_str),
-                                     database.get_node_channel_ext_above_secondary(bssid_str), 0,
-                                     database.get_hostap_vht_center_frequency(bssid));
+        auto radio = database.get_node_parent(tlvf::mac_to_string(bssid));
+        if (radio.empty() || (radio == beerocks::net::network_utils::ZERO_MAC_STRING)) {
+            LOG(ERROR) << " - radio for " << bssid << " does not exist!";
+            return false;
+        }
+        database.set_node_channel_bw(
+            client_mac, database.get_node_channel(bssid_str), database.get_node_bw(bssid_str),
+            database.get_node_channel_ext_above_secondary(bssid_str), 0,
+            database.get_hostap_vht_center_frequency(tlvf::mac_from_string(radio)));
 
         // Note: The Database node stats and the Datamodels' stats are not the same.
         // Therefore, client information in data model and in node DB might differ.
