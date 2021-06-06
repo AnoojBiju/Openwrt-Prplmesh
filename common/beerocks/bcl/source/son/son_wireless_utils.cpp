@@ -838,50 +838,6 @@ std::list<wireless_utils::sChannelPreference> wireless_utils::get_channel_prefer
     return preferences;
 }
 
-/**
- * @brief get list of supported operating classes
- *
- * @param supported_channels list of supported channels
- * @return std::vector<uint8_t> vector of supported operating classes
- */
-std::vector<uint8_t> wireless_utils::get_supported_operating_classes(
-    const std::deque<beerocks::message::sWifiChannel> &supported_channels)
-{
-    std::vector<uint8_t> operating_classes;
-    //TODO handle regulatory domain operating classes
-    for (const auto &oper_class : operating_classes_list) {
-        for (const auto supported_channel : supported_channels) {
-            if (has_operating_class_channel(oper_class.second, supported_channel)) {
-                operating_classes.push_back(oper_class.first);
-                break;
-            }
-        }
-    }
-
-    return operating_classes;
-}
-
-/**
- * @brief get maximum transmit power of operating class
- *
- * @param supported_channels list of supported channels
- * @param operating_class operating class to find max tx for
- * @return max tx power for requested operating class
- */
-uint8_t wireless_utils::get_operating_class_max_tx_power(
-    const std::deque<beerocks::message::sWifiChannel> &supported_channels, uint8_t operating_class)
-{
-    uint8_t max_tx_power = 0;
-    auto oper_class      = operating_classes_list.at(operating_class);
-
-    for (const auto supported_channel : supported_channels) {
-        if (has_operating_class_channel(oper_class, supported_channel)) {
-            max_tx_power = std::max(max_tx_power, supported_channel.tx_pow);
-        }
-    }
-    return max_tx_power;
-}
-
 uint8_t wireless_utils::get_5g_center_channel(uint8_t start_channel,
                                               beerocks::eWiFiBandwidth channel_bandwidth,
                                               bool channel_ext_above_secondary)
@@ -915,35 +871,6 @@ wireless_utils::get_operating_class_by_channel(const beerocks::message::sWifiCha
         }
     }
     return 0;
-}
-
-/**
- * @brief get list of permanent non operable channels for operating class
- *
- * @param supported_channels list of supported channels
- * @param operating_class operating class to find non operable channels for
- * @return std::vector<uint8_t> vector of non operable channels
- */
-std::vector<uint8_t> wireless_utils::get_operating_class_non_oper_channels(
-    const std::deque<beerocks::message::sWifiChannel> &supported_channels, uint8_t operating_class)
-{
-    std::vector<uint8_t> non_oper_channels;
-    auto oper_class = operating_classes_list.at(operating_class);
-
-    for (const auto &op_class_channel : oper_class.channels) {
-        uint8_t found = 0;
-        for (const auto supported_channel : supported_channels) {
-            if (op_class_channel == supported_channel.channel &&
-                oper_class.band == supported_channel.channel_bandwidth) {
-                found = 1;
-                break;
-            }
-        }
-        if (!found)
-            non_oper_channels.push_back(op_class_channel);
-    }
-
-    return non_oper_channels;
 }
 
 /**
