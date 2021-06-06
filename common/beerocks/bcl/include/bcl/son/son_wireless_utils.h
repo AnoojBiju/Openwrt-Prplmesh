@@ -230,6 +230,9 @@ public:
         std::set<uint8_t> channels;
         beerocks::eWiFiBandwidth band;
     };
+    // Key: Operating Class
+    static const std::map<uint8_t, sOperatingClass> operating_classes_list;
+
     static bool has_operating_class_channel(const sOperatingClass &oper_class, uint8_t channel,
                                             beerocks::eWiFiBandwidth bw);
 

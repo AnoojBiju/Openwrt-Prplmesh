@@ -20,7 +20,7 @@ using namespace son;
 
 //Based on hostapd global_op_class struct, file ieee802_11_common.c
 // clang-format off
-static const std::map<uint8_t, sOperatingClass> operating_classes_list = {
+const std::map<uint8_t, wireless_utils::sOperatingClass> wireless_utils::operating_classes_list = {
 //  {OP Class   {Channels List,                                                Bandwidth             }}
     {81,        {{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13},                  beerocks::BANDWIDTH_20}},
     {82,        {{14},                                                         beerocks::BANDWIDTH_20}},
