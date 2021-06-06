@@ -229,6 +229,18 @@ public:
      */
     static std::vector<uint8_t> get_overlapping_beacon_channels(uint8_t beacon_channel,
                                                                 beerocks::eWiFiBandwidth bw);
+
+    /**
+     * @brief Get list of all possible beacon channels for a give center channel and bandwidth on
+     * the 5G band.
+     * 
+     * @param center_channel Center channel.
+     * @param bw Bandwidth.
+     * @return List of beacon channels that have the given center channel.
+     */
+    static std::vector<uint8_t> center_channel_5g_to_beacon_channels(uint8_t center_channel,
+                                                                     beerocks::eWiFiBandwidth bw);
+
     struct sChannel {
         uint8_t center_channel;
         std::pair<uint8_t, uint8_t> overlap_beacon_channels_range;

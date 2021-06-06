@@ -1158,3 +1158,43 @@ std::vector<uint8_t> wireless_utils::get_overlapping_beacon_channels(uint8_t bea
     }
     return overlapping_beacon_channels;
 }
+
+std::vector<uint8_t>
+wireless_utils::center_channel_5g_to_beacon_channels(uint8_t center_channel,
+                                                     beerocks::eWiFiBandwidth bw)
+{
+    // Return nothing on 2.4G channels
+    if (center_channel < 36) {
+        return {};
+    }
+
+    std::vector<uint8_t> beacon_channels;
+    uint8_t beacon_channel;
+    switch (bw) {
+    case beerocks::BANDWIDTH_20:
+        beacon_channels.push_back(center_channel);
+        return beacon_channels;
+    case beerocks::BANDWIDTH_40:
+        beacon_channel = center_channel - 2;
+        beacon_channels.reserve(2);
+        break;
+    case beerocks::BANDWIDTH_80:
+        beacon_channel = center_channel - 6;
+        beacon_channels.reserve(4);
+        break;
+    case beerocks::BANDWIDTH_160:
+        beacon_channel = center_channel - 14;
+        beacon_channels.reserve(8);
+        break;
+    default: {
+        LOG(DEBUG) << "Invalid BW: " << bw << ", center_channel=" << center_channel;
+        return {};
+    }
+    }
+
+    for (size_t i = beacon_channel; i < beacon_channels.capacity(); i += 4) {
+        beacon_channels.push_back(i);
+    }
+
+    return beacon_channels;
+}
