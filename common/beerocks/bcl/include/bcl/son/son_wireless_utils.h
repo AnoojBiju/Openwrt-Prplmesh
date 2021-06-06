@@ -220,6 +220,15 @@ public:
      */
     static OverlappingChannels get_overlapping_channels(uint8_t source_channel);
 
+    /**
+     * @brief Get a list of overlapping beacon channel for a given channel and bandwidth.
+     * 
+     * @param beacon_channel Channel.
+     * @param bw Bandwidth.
+     * @return std::vector<uint8_t> List of overlapping beacon channels (20 MHz).
+     */
+    static std::vector<uint8_t> get_overlapping_beacon_channels(uint8_t beacon_channel,
+                                                                beerocks::eWiFiBandwidth bw);
     struct sChannel {
         uint8_t center_channel;
         std::pair<uint8_t, uint8_t> overlap_beacon_channels_range;

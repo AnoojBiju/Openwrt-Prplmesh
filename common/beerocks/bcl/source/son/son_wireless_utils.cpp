@@ -1125,3 +1125,36 @@ wireless_utils::OverlappingChannels wireless_utils::get_overlapping_channels(uin
     }
     return ret;
 }
+
+std::vector<uint8_t> wireless_utils::get_overlapping_beacon_channels(uint8_t beacon_channel,
+                                                                     beerocks::eWiFiBandwidth bw)
+{
+    std::vector<uint8_t> overlapping_beacon_channels;
+
+    auto ch_it = channels_table_5g.find(beacon_channel);
+    if (ch_it == channels_table_5g.end()) {
+        LOG(ERROR) << "Couldn't find channel " << beacon_channel;
+        return {};
+    }
+
+    auto bw_it = ch_it->second.find(bw);
+    if (bw_it == ch_it->second.end()) {
+        LOG(ERROR) << "Couldn't find bw " << beerocks::utils::convert_bandwidth_to_int(bw)
+                   << " on channel " << beacon_channel;
+        return {};
+    }
+
+    auto channel_range_min = bw_it->second.overlap_beacon_channels_range.first;
+    auto channel_range_max = bw_it->second.overlap_beacon_channels_range.second;
+
+    constexpr uint8_t channels_distance_5g = 4;
+    overlapping_beacon_channels.reserve(
+        (channel_range_max - channel_range_min) / channels_distance_5g + 1);
+
+    // Ignore if one of beacon channels is unavailable.
+    for (uint8_t overlap_ch = channel_range_min; overlap_ch <= channel_range_max;
+         overlap_ch += channels_distance_5g) {
+        overlapping_beacon_channels.push_back(overlap_ch);
+    }
+    return overlapping_beacon_channels;
+}
