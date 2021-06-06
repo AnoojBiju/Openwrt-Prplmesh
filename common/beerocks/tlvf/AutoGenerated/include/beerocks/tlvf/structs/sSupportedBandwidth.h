@@ -22,12 +22,12 @@ namespace beerocks_message {
 
 typedef struct sSupportedBandwidth {
     beerocks::eWiFiBandwidth bandwidth;
-    //0 = Best Rank, INT32_MAX = Worst Rank, -1 = Undefined.
+    //0 = Best Rank, INT32_MAX = Worst Rank, -1 = Undefined/Not Operable.
     int32_t rank;
     //The rank converted to preference value:
     //0  - Unusable (e.g due to country code limitation).
     //1  - Lowest preference.
-    //15 - Highest preference.
+    //14 - Highest preference.
     uint8_t multiap_preference;
     void struct_swap(){
         tlvf_swap(8*sizeof(beerocks::eWiFiBandwidth), reinterpret_cast<uint8_t*>(&bandwidth));
