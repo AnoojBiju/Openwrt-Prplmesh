@@ -205,11 +205,13 @@ static void unify_channels_list(
 
     // Multi-AP allows only 15 options of preference whereas the ranking from the ACS-Report has
     // 2^31 options.
-    // To scale the rank to 1-15, group rankings with small delta until only 15 groups are left:
+    // To scale the rank to 1-14 (0 is not operable and represented by a rank of  -1), group
+    // rankings with small delta until only 14 groups are left:
     // {group_rank_average, { rank1, rank2, rank3}}.
     // Note: Since "std::map" is ordered container, we don't have to sort it.
     LOG(DEBUG) << "Narrow ranks to groups, ranks.size()=" << ranks.size();
-    while (ranks.size() > 15) {
+    constexpr uint8_t max_score = wfa_map::cPreferenceOperatingClasses::ePreference::PREFERRED14;
+    while (ranks.size() > max_score) {
         auto min_delta = INT32_MAX;
 
         // Key = Min delta ranks group ID, Value: Min delta ranks
@@ -305,13 +307,19 @@ static void unify_channels_list(
                 continue;
             }
 
+            if (channel_info_tlv->dfs_state() == beerocks_message::eDfsState::UNAVAILABLE) {
+                supported_bw_info_tlv.multiap_preference = 0;
+                supported_bw_info_tlv.rank               = -1;
+                continue;
+            }
+
             // The ranks are sorted since they are on an ordered container. Therefore, use the
             // the index of each element to calculate the Multi-AP preference by subtracting
             // the rank element index from 15 (Best rank).
             for (uint8_t rank_idx = 0; rank_idx < ranks.size(); rank_idx++) {
                 auto &rank_group_set = std::next(ranks.begin(), rank_idx)->second;
                 if (rank_group_set.find(supported_bw_info_tlv.rank) != rank_group_set.end()) {
-                    supported_bw_info_tlv.multiap_preference = 15 - rank_idx; // 15 - Best rank.
+                    supported_bw_info_tlv.multiap_preference = max_score - rank_idx;
                     break;
                 }
             }
