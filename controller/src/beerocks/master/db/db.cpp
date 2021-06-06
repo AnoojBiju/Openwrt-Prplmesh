@@ -2314,19 +2314,27 @@ std::set<std::string> db::get_hostap_vaps_bssids(const std::string &mac)
     return bssid_set;
 }
 
-std::string db::get_hostap_ssid(const sMacAddr &mac)
+std::string db::get_hostap_vap_ssid(const sMacAddr &bssid)
 {
-    auto radio = get_radio_by_uid(mac);
-    if (!radio) {
-        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
-        return std::string();
+    auto radio_mac = get_node_parent_radio(tlvf::mac_to_string(bssid));
+    if (radio_mac.empty() || (radio_mac == beerocks::net::network_utils::ZERO_MAC_STRING)) {
+        LOG(WARNING) << __FUNCTION__ << " - parent of node " << bssid << " does not exist!";
+        return {};
     }
+
+    auto radio = get_radio_by_uid(tlvf::mac_from_string(radio_mac));
+    if (!radio) {
+        LOG(WARNING) << __FUNCTION__ << " - radio " << radio_mac << " does not exist!";
+        return {};
+    }
+
     for (auto const &it : radio->vaps_info) {
-        if (tlvf::mac_from_string(it.second.mac) == mac) {
+        if (tlvf::mac_from_string(it.second.mac) == bssid) {
             return it.second.ssid;
         }
     }
-    return std::string();
+
+    return {};
 }
 
 bool db::is_vap_on_steer_list(const sMacAddr &bssid)
