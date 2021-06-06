@@ -8,6 +8,8 @@
 
 #include "tlvf_utils.h"
 
+#include "agent_db.h"
+
 #include <bcl/son/son_wireless_utils.h>
 #include <easylogging++.h>
 
@@ -124,9 +126,8 @@ std::vector<uint8_t> get_operating_class_non_oper_channels(
     return non_oper_channels;
 }
 
-bool tlvf_utils::add_ap_radio_basic_capabilities(
-    ieee1905_1::CmduMessageTx &cmdu_tx, const sMacAddr &ruid,
-    const std::deque<beerocks::message::sWifiChannel> &supported_channels)
+bool tlvf_utils::add_ap_radio_basic_capabilities(ieee1905_1::CmduMessageTx &cmdu_tx,
+                                                 const sMacAddr &ruid)
 {
     std::vector<uint8_t> operating_classes;
 
@@ -139,7 +140,14 @@ bool tlvf_utils::add_ap_radio_basic_capabilities(
     //TODO get maximum supported VAPs from AP Capabilities from BWL
     radio_basic_caps->maximum_number_of_bsss_supported() = 4;
 
-    operating_classes = son::wireless_utils::get_supported_operating_classes(supported_channels);
+    auto db    = AgentDB::get();
+    auto radio = db->get_radio_by_mac(ruid);
+    if (!radio) {
+        LOG(ERROR) << "ruid not found: " << ruid;
+        return false;
+    }
+    operating_classes = get_supported_operating_classes(radio->channels_list);
+    LOG(DEBUG) << "Filling Supported operating classes on radio " << radio->front.iface_name << ":";
 
     for (auto op_class : operating_classes) {
         auto operationClassesInfo = radio_basic_caps->create_operating_classes_info_list();
@@ -150,18 +158,31 @@ bool tlvf_utils::add_ap_radio_basic_capabilities(
 
         operationClassesInfo->operating_class() = op_class;
         operationClassesInfo->maximum_transmit_power_dbm() =
-            son::wireless_utils::get_operating_class_max_tx_power(supported_channels, op_class);
+            get_operating_class_max_tx_power(radio->channels_list, op_class);
 
-        std::vector<uint8_t> non_oper_channels;
-        non_oper_channels = son::wireless_utils::get_operating_class_non_oper_channels(
-            supported_channels, op_class);
-        // Create list of statically non-oper channels
-        operationClassesInfo->alloc_statically_non_operable_channels_list(non_oper_channels.size());
-        uint8_t idx = 0;
-        for (auto non_oper : non_oper_channels) {
-            *operationClassesInfo->statically_non_operable_channels_list(idx) = non_oper;
-            idx++;
+        auto non_oper_channels =
+            get_operating_class_non_oper_channels(radio->channels_list, op_class);
+        if (!non_oper_channels.empty()) {
+            // Create list of statically non-oper channels
+            operationClassesInfo->alloc_statically_non_operable_channels_list(
+                non_oper_channels.size());
+            uint8_t idx = 0;
+            for (auto non_oper : non_oper_channels) {
+                *operationClassesInfo->statically_non_operable_channels_list(idx) = non_oper;
+                idx++;
+            }
         }
+
+        LOG(DEBUG) << "OpClass=" << op_class
+                   << ", max_tx_dbm=" << operationClassesInfo->maximum_transmit_power_dbm()
+                   << ", non_operable_channels=" << [&](std::vector<uint8_t>) {
+                          std::string out;
+                          for (auto non_oper_ch : non_oper_channels) {
+                              out.append(std::to_string(non_oper_ch)).append(",");
+                          }
+                          out.pop_back();
+                          return out;
+                      }(non_oper_channels);
 
         if (!radio_basic_caps->add_operating_classes_info_list(operationClassesInfo)) {
             LOG(ERROR) << "add_operating_classes_info_list failed";

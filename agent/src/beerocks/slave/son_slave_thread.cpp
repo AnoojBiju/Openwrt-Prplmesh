@@ -4079,11 +4079,7 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
             return false;
         }
 
-        std::deque<beerocks::message::sWifiChannel> supported_channels_deque(
-            radio->front.supported_channels.begin(), radio->front.supported_channels.end());
-
-        if (!tlvf_utils::add_ap_radio_basic_capabilities(cmdu_tx, radio->front.iface_mac,
-                                                         supported_channels_deque)) {
+        if (!tlvf_utils::add_ap_radio_basic_capabilities(cmdu_tx, radio->front.iface_mac)) {
             LOG(ERROR) << "Failed adding AP Radio Basic Capabilities TLV";
             return false;
         }
