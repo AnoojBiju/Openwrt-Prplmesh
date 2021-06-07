@@ -679,7 +679,7 @@ bool bpl_cfg_get_wireless_settings(std::list<son::wireless_utils::sBssInfoConf> 
             continue;
         }
 
-        // The mode used by hostapd (11b, 11g, 11n, 11ac, 11ax) is governed by several parameters in
+        // The mode used by upstream hostapd (11b, 11g, 11n, 11ac, 11ax) is governed by several parameters in
         // the configuration file. However, as explained in the comment below from hostapd.conf, the
         // hw_mode parameter is sufficient to determine the band.
         //
@@ -689,13 +689,16 @@ bool bpl_cfg_get_wireless_settings(std::list<son::wireless_utils::sBssInfoConf> 
         // # needs to be set to hw_mode=a. For IEEE 802.11ax (HE) on 6 GHz this needs
         // # to be set to hw_mode=a.
         //
-        // Note that this will need to be revisited for 6GHz operation, which we don't support
-        // at the moment.
-        if (hwmode.empty() || (hwmode == "11b") || (hwmode == "11g")) {
+        // Note that this will need to be revisited for 6GHz operation, which we don't support at
+        // the moment.
+        //
+        // For MaxLinear's devices, by default '11bgnax' is used for 2.4Ghz bands, and '11anacax' is
+        // used for 5Ghz bands (see 'files/scripts/lib/netifd/wireless/mac80211.sh' in the swpal package).
+        if (hwmode.empty() || (hwmode == "11b") || (hwmode == "11g") || hwmode == "11bgnax") {
             configuration.operating_class.splice(
                 configuration.operating_class.end(),
                 son::wireless_utils::string_to_wsc_oper_class("24g"));
-        } else if (hwmode == "11a") {
+        } else if (hwmode == "11a" || hwmode == "11anacax") {
             configuration.operating_class.splice(
                 configuration.operating_class.end(),
                 son::wireless_utils::string_to_wsc_oper_class("5g"));
