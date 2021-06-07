@@ -237,19 +237,21 @@ std::string db::get_node_data_model_path(const std::string &mac)
     return n->dm_path;
 }
 
-bool db::add_node_gateway(const sMacAddr &mac, const sMacAddr &radio_identifier)
+std::shared_ptr<prplmesh::controller::db::sAgent>
+db::add_node_gateway(const sMacAddr &mac, const sMacAddr &radio_identifier)
 {
     if (!add_node(mac, network_utils::ZERO_MAC, beerocks::TYPE_GW, radio_identifier)) {
         LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
-        return false;
+        return {};
     }
 
-    m_agents.add(mac);
+    auto agent        = m_agents.add(mac);
+    agent->is_gateway = true;
 
     auto data_model_path = dm_add_device_element(mac);
     if (data_model_path.empty()) {
         LOG(ERROR) << "Failed to add device element for the gateway, mac: " << mac;
-        return false;
+        return {};
     }
 
     set_node_data_model_path(mac, data_model_path);
@@ -259,23 +261,23 @@ bool db::add_node_gateway(const sMacAddr &mac, const sMacAddr &radio_identifier)
         return {};
     }
 
-    return true;
+    return agent;
 }
 
-bool db::add_node_ire(const sMacAddr &mac, const sMacAddr &parent_mac,
-                      const sMacAddr &radio_identifier)
+std::shared_ptr<prplmesh::controller::db::sAgent>
+db::add_node_ire(const sMacAddr &mac, const sMacAddr &parent_mac, const sMacAddr &radio_identifier)
 {
     if (!add_node(mac, parent_mac, beerocks::TYPE_IRE, radio_identifier)) {
         LOG(ERROR) << "Failed to add ire node, mac: " << mac;
-        return false;
+        return {};
     }
 
-    m_agents.add(mac);
+    auto agent = m_agents.add(mac);
 
     auto data_model_path = dm_add_device_element(mac);
     if (data_model_path.empty()) {
         LOG(ERROR) << "Failed to add device element for the ire, mac: " << mac;
-        return false;
+        return {};
     }
 
     set_node_data_model_path(mac, data_model_path);
@@ -285,7 +287,7 @@ bool db::add_node_ire(const sMacAddr &mac, const sMacAddr &parent_mac,
         return {};
     }
 
-    return true;
+    return agent;
 }
 
 bool db::add_node_wireless_bh(const sMacAddr &mac, const sMacAddr &parent_mac,
@@ -503,6 +505,13 @@ bool db::set_node_manufacturer(const std::string &mac, const std::string &manufa
         return false;
     }
     n->manufacturer = manufacturer;
+    return true;
+}
+
+bool db::set_agent_manufacturer(prplmesh::controller::db::sAgent &agent,
+                                const std::string &manufacturer)
+{
+    agent.manufacturer = manufacturer;
     return true;
 }
 
@@ -765,6 +774,12 @@ bool db::set_node_state(const std::string &mac, beerocks::eNodeState state)
     return true;
 }
 
+bool db::set_agent_state(prplmesh::controller::db::sAgent &agent, beerocks::eNodeState state)
+{
+    agent.state = state;
+    return true;
+}
+
 beerocks::eNodeState db::get_node_state(const std::string &mac)
 {
     auto n = get_node(mac);
@@ -775,37 +790,10 @@ beerocks::eNodeState db::get_node_state(const std::string &mac)
     return n->state;
 }
 
-bool db::set_node_operational_state(const std::string &bridge_mac, bool operational)
+bool db::set_agent_operational_state(prplmesh::controller::db::sAgent &agent, bool operational)
 {
-    auto n = get_node(bridge_mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << bridge_mac << " does not exist!";
-        return false;
-    }
-
-    if (n->get_type() != beerocks::TYPE_GW && n->get_type() != beerocks::TYPE_IRE) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << bridge_mac << " is not bridge type ";
-        return false;
-    }
-
-    n->operational_state = operational;
+    agent.operational_state = operational;
     return true;
-}
-
-int8_t db::get_node_operational_state(const std::string &bridge_mac)
-{
-    auto n = get_node(bridge_mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << bridge_mac << " does not exist!";
-        return -1;
-    }
-
-    if (n->get_type() != beerocks::TYPE_GW && n->get_type() != beerocks::TYPE_IRE) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << bridge_mac << " is not bridge type";
-        return -1;
-    }
-
-    return n->operational_state;
 }
 
 std::chrono::steady_clock::time_point db::get_last_state_change(const std::string &mac)
@@ -1078,13 +1066,10 @@ std::set<std::string> db::get_active_hostaps()
 std::set<std::string> db::get_all_connected_ires()
 {
     std::set<std::string> ret;
-    for (auto node_map : nodes) {
-        for (auto kv : node_map) {
-            if (((kv.second->get_type() == beerocks::TYPE_IRE) &&
-                 (kv.second->state == beerocks::STATE_CONNECTED)) ||
-                (kv.second->get_type() == beerocks::TYPE_GW)) {
-                ret.insert(kv.first);
-            }
+    for (auto agent_it : m_agents) {
+        auto agent = agent_it.second;
+        if (agent->is_gateway || agent->state == beerocks::STATE_CONNECTED) {
+            ret.insert(tlvf::mac_to_string(agent->al_mac));
         }
     }
     return ret;
@@ -5590,25 +5575,25 @@ const std::shared_ptr<db::vaps_list_t> db::get_vap_list() { return m_vap_list; }
 
 bool db::is_prplmesh(const sMacAddr &mac)
 {
-    auto node = get_node(mac);
-    if (!node) {
-        LOG(ERROR) << "can't find node with mac " << mac << ", consider as not prplmesh";
+    auto agent = m_agents.get(mac);
+    if (!agent) {
+        LOG(ERROR) << "can't find agent with mac " << mac << ", consider as not prplmesh";
         return false;
     }
-    return node->is_prplmesh;
+    return agent->is_prplmesh;
 }
 
 void db::set_prplmesh(const sMacAddr &mac)
 {
     auto local_bridge_mac = tlvf::mac_from_string(get_local_bridge_mac());
-    if (!get_node(mac)) {
+    if (!m_agents.get(mac)) {
         if (local_bridge_mac == mac) {
             add_node_gateway(mac);
         } else {
             add_node_ire(mac);
         }
     }
-    get_node(mac)->is_prplmesh = true;
+    m_agents.get(mac)->is_prplmesh = true;
 }
 
 bool db::update_client_entry_in_persistent_db(const sMacAddr &mac, const ValuesMap &values_map)

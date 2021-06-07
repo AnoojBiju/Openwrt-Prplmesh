@@ -314,12 +314,13 @@ public:
     */
     std::string dm_add_radio_element(const std::string &radio_mac, const std::string &device_mac);
 
-    bool
+    std::shared_ptr<prplmesh::controller::db::sAgent>
     add_node_gateway(const sMacAddr &mac,
                      const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
-    bool add_node_ire(const sMacAddr &mac,
-                      const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,
-                      const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
+    std::shared_ptr<prplmesh::controller::db::sAgent>
+    add_node_ire(const sMacAddr &mac,
+                 const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,
+                 const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
     bool
     add_node_wireless_bh(const sMacAddr &mac,
                          const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,
@@ -358,6 +359,8 @@ public:
     std::string get_node_ipv4(const std::string &mac);
 
     bool set_node_manufacturer(const std::string &mac, const std::string &manufacturer);
+    bool set_agent_manufacturer(prplmesh::controller::db::sAgent &agent,
+                                const std::string &manufacturer);
 
     int get_node_channel(const std::string &mac);
 
@@ -375,10 +378,10 @@ public:
     bool set_node_name(const std::string &mac, std::string name);
 
     bool set_node_state(const std::string &mac, beerocks::eNodeState state);
+    bool set_agent_state(prplmesh::controller::db::sAgent &agent, beerocks::eNodeState state);
     beerocks::eNodeState get_node_state(const std::string &mac);
 
-    bool set_node_operational_state(const std::string &bridge_mac, bool operational);
-    int8_t get_node_operational_state(const std::string &bridge_mac);
+    bool set_agent_operational_state(prplmesh::controller::db::sAgent &agent, bool operational);
 
     std::chrono::steady_clock::time_point get_last_state_change(const std::string &mac);
 

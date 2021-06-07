@@ -100,7 +100,6 @@ public:
         beerocks::BEACON_MEAS_UNSUPPORTED;
     bool supports_11v            = true;
     int failed_11v_request_count = 0;
-    bool operational_state       = false;
 
     //Used by channel-selection to block the clients from connecting to a hostap
     std::vector<std::string> blocked_hostaps;
@@ -298,7 +297,6 @@ public:
         bool add_ap_metric_data(std::shared_ptr<wfa_map::tlvApMetrics> ApMetricData);
     };
 
-    bool is_prplmesh                = false;
     beerocks::eBandType band_type   = beerocks::eBandType::INVALID_BAND;
     beerocks::eIfaceType iface_type = beerocks::IFACE_TYPE_ETHERNET;
     std::chrono::steady_clock::time_point last_seen;

@@ -37,6 +37,14 @@ public:
     /** AL-MAC address of the agent. */
     const sMacAddr al_mac;
 
+    bool is_prplmesh = false;
+    bool is_gateway  = false;
+
+    std::string manufacturer;
+
+    beerocks::eNodeState state = beerocks::STATE_DISCONNECTED;
+    bool operational_state     = false;
+
     struct sRadio {
         sRadio()               = delete;
         sRadio(const sRadio &) = delete;
