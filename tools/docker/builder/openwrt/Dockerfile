@@ -91,12 +91,6 @@ WORKDIR /home/openwrt/openwrt
 
 COPY --chown=openwrt:openwrt scripts/build-openwrt.sh /home/openwrt/openwrt/scripts/build-openwrt.sh
 
-# Temporarily patch ubusd to fix hang when listing many objects (PPM-946)
-# To be removed after merge of https://gitlab.com/prpl-foundation/prplwrt/prplwrt/-/merge_requests/88
-COPY --chown=openwrt:openwrt 0001-ubusd-convert-tx_queue-to-linked-list.patch \
-    package/system/ubus/patches/0001-ubusd-convert-tx_queue-to-linked-list.patch
-RUN rm -rf build_dir/target*/ubus*
-
 ####
 ## Prebuilt OpenWrt and prplMesh dependencies, but not the prplMesh ipk itself
 ####
