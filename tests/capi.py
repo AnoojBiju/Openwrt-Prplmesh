@@ -172,11 +172,11 @@ class UCCSocket:
         if timed_out:
             raise ValueError("Timed out when waiting for a reply from the server.")
 
-    def cmd_reply(self, command: str, verbose: bool = False) -> Dict[str, str]:
+    def cmd_reply(self, command: str, verbose: bool = False, timeout: int = 120) -> Dict[str, str]:
         """Open the connection, send a command and wait for the reply."""
         with self:
             self.send_cmd(command)
-            return self.get_reply(verbose)
+            return self.get_reply(verbose, timeout)
 
     def start_wps_registration(self, band: str) -> None:
         """Call start_wps_registration on a given band.

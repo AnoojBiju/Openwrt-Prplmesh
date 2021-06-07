@@ -22,7 +22,7 @@ class ApConfigRenew(PrplMeshBaseTest):
         self.dev.DUT.wired_sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
         # Regression test: MAC address should be case insensitive
         mac_repeater1_upper = agent.mac.upper()
-        controller.ucc_socket.cmd_reply("DEV_RESET_DEFAULT")
+        self.device_reset_default()
         controller.ucc_socket.cmd_reply(
             "DEV_SET_CONFIG,"
             "bss_info1,{} 8x Boardfarm-Tests-24G-1 0x0020 0x0008 maprocks1 0 1,"
