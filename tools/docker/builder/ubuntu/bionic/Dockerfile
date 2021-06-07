@@ -34,6 +34,7 @@ ARG PACKAGES_FOR_AMBIORIX="\
     lua5.1 \
     liblua5.1-0-dev \
     build-essential \
+    libxml2-dev \
     "
 
 ARG PACKAGES_FOR_TEST="\
@@ -103,7 +104,7 @@ RUN \
 # them in specific order.
 RUN \
     repo init -u https://gitlab.com/soft.at.home/ambiorix/ambiorix.git \
-        -b refs/tags/v0.6.2 < /dev/null && \
+        -b refs/tags/v1.4.0 < /dev/null && \
     repo sync && \
     make install -C libraries/libamxc && \
     make install -C libraries/libamxp && \
