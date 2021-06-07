@@ -506,7 +506,7 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         controller = self.dev.lan.controller_entity
         access_points = controller.nbapi_get_list_instances('Controller.Network.AccessPoint')
         for access_point_path in access_points:
-            controller.nbapi_command(access_point_path, 'del', {})
+            controller.nbapi_command(access_point_path, '_del', {})
 
     def configure_ssid(self, ssid: str, multi_ap_mode: str = "Fronthaul",
                        bands: Dict = None) -> str:
@@ -541,7 +541,7 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
             "Band2_4G": bands.get("Band2_4G", False),
             "SSID": ssid,
         }}
-        new_inst = controller.nbapi_command("Controller.Network.AccessPoint", "add", params)
+        new_inst = controller.nbapi_command("Controller.Network.AccessPoint", "_add", params)
         return "Controller.Network.AccessPoint." + new_inst["name"]
 
     def configure_ssids(self, ssids: [str], clear_old: bool = True):
