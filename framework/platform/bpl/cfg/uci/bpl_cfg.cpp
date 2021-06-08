@@ -617,7 +617,7 @@ static bool bpl_cfg_get_bss_configuration(const std::string &section_name,
     };
 
     auto get_authentication_type = [&](const std::string &encryption) {
-        if ("none" == encryption) {
+        if ("none" == encryption || encryption.empty()) {
             return WSC::eWscAuth::WSC_AUTH_OPEN;
         } else if (starts_with("psk2", encryption)) {
             return WSC::eWscAuth::WSC_AUTH_WPA2PSK;
@@ -629,7 +629,7 @@ static bool bpl_cfg_get_bss_configuration(const std::string &section_name,
     configuration.authentication_type = get_authentication_type(options["encryption"]);
 
     auto get_encryption_type = [&](const std::string &encryption) {
-        if ("none" == encryption) {
+        if ("none" == encryption || encryption.empty()) {
             return WSC::eWscEncr::WSC_ENCR_NONE;
         } else if (contains("+tkip", encryption)) {
             return WSC::eWscEncr::WSC_ENCR_TKIP;
