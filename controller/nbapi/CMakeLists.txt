@@ -11,7 +11,7 @@ set(DATAMODELS_PATH ${CMAKE_CURRENT_SOURCE_DIR}/odl)
 message(STATUS "Test controller data model:")
 
 # Parse controller.odl file
-execute_process(COMMAND amxo-cg ${DATAMODELS_PATH}/controller.odl RESULT_VARIABLE DATAMODEL_PARSE_RESULT)
+execute_process(COMMAND amxo-cg ${DATAMODELS_PATH}/controller.odl --no-warnings RESULT_VARIABLE DATAMODEL_PARSE_RESULT)
 
 # If parser find errors - generate FATAL_ERROR
 if(${DATAMODEL_PARSE_RESULT})

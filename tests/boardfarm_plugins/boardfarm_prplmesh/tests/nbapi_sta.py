@@ -97,7 +97,7 @@ class NbapiSta(PrplMeshBaseTest):
                                      sta_link_metrics.bss[0].down_rate)
                     self.assertEqual(sta.path, "EstMACDataRateUplink",
                                      sta_link_metrics.bss[0].up_rate)
-                    assert signal_strength == sta_link_metrics.bss[0].rssi,\
+                    assert signal_strength == int(sta_link_metrics.bss[0].rssi),\
                         f"Wrong value for SignalStrength {signal_strength}"
                     assert sta_link_metrics.bss[0].bssid == bss.bssid,\
                         f"Wrong BSSID [{bss.bssid}] specified for sta {sta.mac}"
