@@ -193,6 +193,14 @@ roll_logs_function()
         exit 0
     fi
 
+    # Symlinks point to all log files that can be rotated
+    links=$(for file in *; do readlink "$file" > /dev/null && echo "$file"; done)
+
+    for link in $links; do
+        # Keep the last 3 versions of the log file
+        echo "$link" | sed -e 's/log$/*/' | xargs find . -name | sort -r | awk 'NR>3' | xargs rm -f
+    done
+
     # Send USR1 signals to the beerocks processes to trigger log rolling
     killall_program beerocks_controller USR1
     killall_program beerocks_agent USR1
