@@ -5372,6 +5372,19 @@ std::shared_ptr<node::radio> db::get_hostap(const sMacAddr &radio_uid)
     return n->hostap;
 }
 
+std::shared_ptr<sAgent::sRadio> db::get_radio_by_uid(const sMacAddr &radio_uid)
+{
+    for (const auto &agent : m_agents) {
+        auto radio = agent.second->radios.get(radio_uid);
+        if (radio) {
+            return radio;
+        }
+    }
+
+    LOG(ERROR) << "radio " << radio_uid << " not found";
+    return {};
+}
+
 std::set<std::shared_ptr<node>> db::get_node_subtree(std::shared_ptr<node> n)
 {
     std::set<std::shared_ptr<node>> subtree;

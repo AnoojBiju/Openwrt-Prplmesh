@@ -1785,6 +1785,7 @@ private:
      */
     std::shared_ptr<node> get_node_verify_type(const sMacAddr &mac, beerocks::eType type);
     std::shared_ptr<node::radio> get_hostap(const sMacAddr &radio_uid);
+    std::shared_ptr<sAgent::sRadio> get_radio_by_uid(const sMacAddr &radio_uid);
     int get_node_hierarchy(std::shared_ptr<node> n);
     std::set<std::shared_ptr<node>> get_node_subtree(std::shared_ptr<node> n);
     void adjust_subtree_hierarchy(std::shared_ptr<node> n);
