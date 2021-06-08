@@ -661,6 +661,14 @@ bool bpl_cfg_get_wireless_settings(std::list<son::wireless_utils::sBssInfoConf> 
             continue;
         }
 
+        if (configuration.authentication_type == WSC::eWscAuth::WSC_AUTH_INVALID ||
+            configuration.encryption_type == WSC::eWscEncr::WSC_ENCR_INVALID) {
+            LOG(INFO) << "Skipping configuration for section with invalid authentication or "
+                         "encryption type: "
+                      << section_name;
+            continue;
+        }
+
         // Operating classes are not specified in UCI configuration, but we can guess based on
         // the mode used by hostapd that was set for the radio.
         // To get the mode, first get the device and then the mode inside the section for that
