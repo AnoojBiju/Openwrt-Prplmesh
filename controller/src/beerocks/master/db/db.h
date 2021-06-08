@@ -39,6 +39,7 @@
 #endif // ENABLE_NBAPI
 
 using namespace beerocks_message;
+using sAgent = prplmesh::controller::db::sAgent;
 
 namespace son {
 
@@ -187,7 +188,7 @@ public:
         uint32_t m_retransmission_count = 0;
     } sAssociatedStaTrafficStats;
 
-    beerocks::mac_map<prplmesh::controller::db::sAgent> m_agents;
+    beerocks::mac_map<sAgent> m_agents;
 
     db(sDbMasterConfig &config_, beerocks::logging &logger_, const std::string &local_bridge_mac,
        std::shared_ptr<beerocks::nbapi::Ambiorix> ambiorix_object)
@@ -277,8 +278,7 @@ public:
      * @param radio_uid Radio UID of the radio.
      * @return The sRadio object, or nullptr if it doesn't exist.
      */
-    std::shared_ptr<prplmesh::controller::db::sAgent::sRadio> get_radio(const sMacAddr &al_mac,
-                                                                        const sMacAddr &radio_uid);
+    std::shared_ptr<sAgent::sRadio> get_radio(const sMacAddr &al_mac, const sMacAddr &radio_uid);
 
     //logger
     void set_log_level_state(const beerocks::eLogLevel &log_level, const bool &new_state);

@@ -105,8 +105,7 @@ std::pair<std::string, int> db::get_dm_index_from_path(const std::string &dm_pat
 
 // static - end
 
-std::shared_ptr<prplmesh::controller::db::sAgent::sRadio> db::get_radio(const sMacAddr &al_mac,
-                                                                        const sMacAddr &radio_uid)
+std::shared_ptr<sAgent::sRadio> db::get_radio(const sMacAddr &al_mac, const sMacAddr &radio_uid)
 {
     auto agent = m_agents.get(al_mac);
     if (!agent) {
