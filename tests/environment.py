@@ -51,6 +51,8 @@ class ALEntity:
         self.installdir = installdir
         self.is_controller = is_controller
         self.radios = []
+        self.logfilenames = []  # List[str]
+        self.checkpoints = {}  # Dict[str, int]
 
         # Convenience functions that propagate to ucc_socket
         self.cmd_reply = self.ucc_socket.cmd_reply
@@ -58,14 +60,22 @@ class ALEntity:
         self.dev_send_1905 = self.ucc_socket.dev_send_1905
         self.start_wps_registration = self.ucc_socket.start_wps_registration
 
-    def command(self, *command: str) -> bytes:
+    @staticmethod
+    def get_checkpoints(checkpoints: Dict[str, int], start_line: int):
+        """If a start_line was provided, use it for all
+        checkpoints. Otherwise, keep the checkpoints as-is"""
+        if not start_line:
+            return checkpoints
+        return {checkpoint: start_line for checkpoint in checkpoints}
+
+    def command(self, *command: str) -> str:
         '''Run `command` on the device and return its output as bytes.
 
         Example: command('ip', 'addr') to get IP addresses of all interfaces.
         '''
         raise NotImplementedError("command is not implemented in abstract class ALEntity")
 
-    def prplmesh_command(self, command: str, *args: str) -> bytes:
+    def prplmesh_command(self, command: str, *args: str) -> str:
         '''Run `command` with "args" on the device and return its output as bytes.
 
         "command" is relative to the installation directory of prplmesh, e.g. "bin/beerocks_cli".
@@ -76,6 +86,17 @@ class ALEntity:
                      fail_on_mismatch: bool = True) -> bool:
         '''Poll the entity's logfile until it contains "regex" or times out.'''
         raise NotImplementedError("wait_for_log is not implemented in abstract class ALEntity")
+
+    def checkpoint(self):
+        '''Checkpoint the log files for both the entity and its radios.
+
+        Any subsequent calls to check_logs will only return log lines after now.
+        '''
+        for logfilename in self.logfilenames:
+            self.checkpoints[logfilename] = int(self.command("wc", "-l", f"{logfilename}")
+                                                .split(" ")[0])
+        for radio in self.radios:
+            radio.checkpoint()
 
     # Northbound API access functions
 
@@ -157,14 +178,14 @@ class ALEntity:
         cmd_output = self.command('top', 'b', '-n', '1')
         cpu_column = False
         cpu_usage = 0.0
-        for line in cmd_output.decode().split('\n'):
+        for line in cmd_output.split('\n'):
             if not cpu_column and re.findall(r'%CPU', line):
                 cpu_column = line.split().index('%CPU')
                 continue
             if cpu_column and line:
                 cpu_usage += float(line.split()[cpu_column].replace('%', ''))
         cmd_output = self.command('cat', '/proc/loadavg')
-        cpu_avg = float(cmd_output.decode().split()[0])
+        cpu_avg = float(cmd_output.split()[0])
         return CpuStat(cpu_usage/100, cpu_avg)
 
 
@@ -183,6 +204,14 @@ class Radio:
         agent.radios.append(self)
         self.mac = mac
         self.vaps = []
+        self.logfilenames = []  # List[str]
+        self.checkpoints = {}  # Dict[str, int]
+
+    def checkpoint(self):
+        for logfilename in self.logfilenames:
+            self.checkpoints[logfilename] = \
+                int(self.agent.command("wc", "-l", f"{logfilename}")
+                    .split(" ")[0])
 
     def wait_for_log(self, regex: str, start_line: int, timeout: float,
                      fail_on_mismatch: bool = True) -> bool:
@@ -270,23 +299,12 @@ controller = None
 agents = []
 
 
-def beerocks_cli_command(command: str) -> bytes:
+def beerocks_cli_command(command: str) -> str:
     '''Execute `command` beerocks_cli command on the controller and return its output.'''
     debug("Send CLI command " + command)
     res = controller.prplmesh_command("bin/beerocks_cli", "-c", command)
-    debug("  Response: " + res.decode('utf-8', errors='replace').strip())
+    debug("  Response: " + res.strip())
     return res
-
-
-def checkpoint() -> None:
-    '''Checkpoint the current state.
-
-    Any subsequent calls to functions that query cumulative state (e.g. log files, packet captures)
-    will not match any of the state that was accumulated up till now, but only afterwards.
-
-    TODO: Implement for log functions.
-    '''
-    wired_sniffer.checkpoint()
 
 
 # Helper function used by the implementations based on ubus
@@ -312,51 +330,39 @@ on_wsl = "microsoft" in platform.uname()[3].lower()
 # Since we have multiple log files that correspond to a radio, multiple programs are passed
 # as argument. In the log messages, we only use the first one.
 # This should be reverted again as part of Unified Agent.
-def _docker_wait_for_log(container: str, programs: [str], regex: str, timeout: float,
-                         start_line: int, fail_on_mismatch: bool = True) -> bool:
-    def logfilename(program):
-        logfilename = os.path.join(rootdir, 'logs', container, 'beerocks_{}.log'.format(program))
-
+def _docker_wait_for_log(container: str, checkpoints: Dict[str, int], regex: str, timeout: float,
+                         fail_on_mismatch: bool = True) -> bool:
+    for logfilename in checkpoints.keys():
         print(' --- logfilename: {}'.format(logfilename))
-
-        # WSL doesn't support symlinks on NTFS, so resolve the symlink manually
-        if on_wsl:
-            logfilename = os.path.join(
-                rootdir, 'logs', container,
-                subprocess.check_output(["tail", "-2", logfilename]).decode('utf-8').
-                rstrip(' \t\r\n\0'))
-        return logfilename
-
-    logfilenames = [logfilename(program) for program in programs]
-
     deadline = time.monotonic() + timeout
     try:
         while True:
-            for logfilename in logfilenames:
+            for logfilename in checkpoints.keys():
+                start_line = checkpoints[logfilename]
                 with open(logfilename, 'rb') as logfile:
-                    for (i, v) in enumerate(logfile.readlines()):
+                    for (i, v) in enumerate(logfile.readlines(), 1):
                         if i <= start_line:
                             continue
                         search = re.search(regex.encode('utf-8'), v)
                         if search:
-                            debug("Found '{}'\n\tin {}".format(regex, logfilename))
+                            debug("Found '{}'\n\tin {} line {}".format(regex, logfilename, i))
                             return (True, i, search.groups())
             if time.monotonic() < deadline:
                 time.sleep(.3)
             else:
                 if fail_on_mismatch:
                     err("Can't find '{}'\n\tin log of {} on {} after {}s".format(regex,
-                                                                                 programs[0],
+                                                                                 str(checkpoints),
                                                                                  container,
                                                                                  timeout))
                 else:
                     debug("Can't find '{}'\n\tin log of {} on {},"
-                          "but failure allowed".format(regex, programs[0], container))
+                          "but failure allowed".format(regex, str(checkpoints), container))
 
-                return (False, start_line, None)
+                return (False, 0, None)
     except OSError:
-        err("Can't read log of {} on {}".format(programs[0], container))
-        return (False, start_line, None)
+        err("Can't read log of one of {} on {}".format(str(checkpoints), container))
+        return (False, 0, None)
 
 
 def _device_clear_input_buffer(device, timeout=0.5):
@@ -412,13 +418,13 @@ def _device_reset_console(device):
 # Since we have multiple log files that correspond to a radio, multiple log files are passed
 # as argument. In the log messages, we only use the first one.
 # This should be reverted again as part of Unified Agent.
-def _device_wait_for_log(device: None, log_paths: [str], regex: str,
-                         timeout: float, start_line: int = 0, fail_on_mismatch: bool = True):
+def _device_wait_for_log(device: None, checkpoints: Dict[str, int], regex: str,
+                         timeout: float, fail_on_mismatch: bool = True):
     """Waits for log matching regex expression to show up."""
 
     debug("--- Looking for {}".format(regex))
-    debug("    in {}".format(" ".join(log_paths)))
-    debug("    starting at line {}".format(start_line))
+    debug("    in {}".format(" ".join(checkpoints.keys())))
+    debug("    starting at lines {}".format(checkpoints))
     debug("    timeout: {} second(s)".format(timeout))
 
     # Current approach reads remote files in a loop.
@@ -429,7 +435,8 @@ def _device_wait_for_log(device: None, log_paths: [str], regex: str,
     deadline = time.monotonic() + timeout
 
     while time.monotonic() < deadline:
-        for logfilename in log_paths:
+        for logfilename in checkpoints.keys():
+            start_line = checkpoints[logfilename]
             command = ['tail', '-n', f'+{start_line}', logfilename]
             output = subprocess.check_output(['ssh', device.control_ip] + command)
 
@@ -443,11 +450,11 @@ def _device_wait_for_log(device: None, log_paths: [str], regex: str,
         time.sleep(.3)
 
     if fail_on_mismatch:
-        err("--- Cannot find {} in {}".format(regex, " ".join(log_paths)))
+        err("--- Cannot find {} in {}".format(regex, " ".join(str(check) for check in checkpoints)))
     else:
         debug("--- Not found")
 
-    return (False, start_line, None)
+    return (False, 0, None)
 
 
 class ALEntityDocker(ALEntity):
@@ -486,12 +493,14 @@ class ALEntityDocker(ALEntity):
             device_ip_output = self.command(
                 'ip', '-f', 'inet', 'addr', 'show', ucc_interface_name)
             device_ip = re.search(
-                r'inet (?P<ip>[0-9.]+)', device_ip_output.decode('utf-8')).group('ip')
+                r'inet (?P<ip>[0-9.]+)', device_ip_output).group('ip')
 
         ucc_socket = UCCSocket(device_ip, ucc_port)
         mac = ucc_socket.dev_get_parameter('ALid')
 
         super().__init__(mac, ucc_socket, installdir, is_controller)
+        program = "controller" if is_controller else "agent"
+        self.logfilenames = [self.logfilename(program)]
 
         # We always have two radios, wlan0 and wlan2
         RadioDocker(self, "wlan0")
@@ -499,15 +508,26 @@ class ALEntityDocker(ALEntity):
 
         self.refresh_vaps()
 
-    def command(self, *command: str) -> bytes:
+    def logfilename(self, program):
+        logfilename = os.path.join(rootdir, 'logs', self.name, 'beerocks_{}.log'.format(program))
+
+        # WSL doesn't support symlinks on NTFS, so resolve the symlink manually
+        if on_wsl:
+            logfilename = os.path.join(
+                rootdir, 'logs', self.name,
+                subprocess.check_output(["tail", "-2", logfilename]).decode('utf-8').
+                rstrip(' \t\r\n\0'))
+        return logfilename
+
+    def command(self, *command: str) -> str:
         '''Execute `command` in docker container and return its output.'''
-        return subprocess.check_output(("docker", "exec", self.name) + command)
+        return subprocess.check_output(("docker", "exec", self.name) + command).decode()
 
     def wait_for_log(self, regex: str, start_line: int, timeout: float,
                      fail_on_mismatch: bool = True) -> bool:
         '''Poll the entity's logfile until it contains "regex" or times out.'''
-        program = "controller" if self.is_controller else "agent"
-        return _docker_wait_for_log(self.name, [program], regex, timeout, start_line,
+        checkpoints = ALEntity.get_checkpoints(self.checkpoints, start_line)
+        return _docker_wait_for_log(self.name, checkpoints, regex, timeout,
                                     fail_on_mismatch=fail_on_mismatch)
 
     def nbapi_command(self, path: str, command: str, args: Dict = None) -> Dict:
@@ -516,14 +536,14 @@ class ALEntityDocker(ALEntity):
     def prprlmesh_status_check(self):
         return self.device.prprlmesh_status_check()
 
-    def beerocks_cli_command(self, command) -> bytes:
+    def beerocks_cli_command(self, command) -> str:
         '''Execute `command` beerocks_cli command on the controller and return its output.
         Will return None if called from an object that is not a controller.
         '''
         if self.is_controller:
             debug("Send CLI command " + command)
             res = self.prplmesh_command("bin/beerocks_cli", "-c", command)
-            debug("  Response: " + res.decode('utf-8', errors='replace').strip())
+            debug("  Response: " + res.strip())
             return res
         return None
 
@@ -531,25 +551,25 @@ class ALEntityDocker(ALEntity):
         '''Get the connection map from the controller.'''
 
         '''Regular expression to match a MAC address in a bytes string.'''
-        RE_MAC = rb"(?P<mac>([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})"
+        RE_MAC = r"(?P<mac>([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})"
 
         conn_map = {}
-        for line in self.beerocks_cli_command("bml_conn_map").split(b'\n'):
+        for line in self.beerocks_cli_command("bml_conn_map").split('\n'):
             # TODO we need to parse indentation to get the exact topology.
             # For the time being, just parse the repeaters.
-            bridge = re.search(rb' {8}IRE_BRIDGE: .* mac: ' + RE_MAC, line)
-            radio = re.match(rb' {16}RADIO: .* mac: ' + RE_MAC, line)
-            vap = re.match(rb' {20}fVAP.* bssid: ' + RE_MAC + rb', ssid: (?P<ssid>.*)$', line)
-            client = re.match(rb' {24}CLIENT: mac: ' + RE_MAC, line)
+            bridge = re.search(r' {8}IRE_BRIDGE: .* mac: ' + RE_MAC, line)
+            radio = re.match(r' {16}RADIO: .* mac: ' + RE_MAC, line)
+            vap = re.match(r' {20}fVAP.* bssid: ' + RE_MAC + r', ssid: (?P<ssid>.*)$', line)
+            client = re.match(r' {24}CLIENT: mac: ' + RE_MAC, line)
             if bridge:
-                cur_agent = MapDevice(bridge.group('mac').decode('utf-8'))
+                cur_agent = MapDevice(bridge.group('mac'))
                 conn_map[cur_agent.mac] = cur_agent
             elif radio:
-                cur_radio = cur_agent.add_radio(radio.group('mac').decode('utf-8'))
+                cur_radio = cur_agent.add_radio(radio.group('mac'))
             elif vap:
-                cur_vap = cur_radio.add_vap(vap.group('mac').decode('utf-8'), vap.group('ssid'))
+                cur_vap = cur_radio.add_vap(vap.group('mac'), vap.group('ssid'))
             elif client:
-                cur_vap.add_client(client.group('mac').decode('utf-8'))
+                cur_vap.add_client(client.group('mac'))
         return conn_map
 
     def refresh_vaps(self):
@@ -634,16 +654,18 @@ class RadioDocker(Radio):
 
     def __init__(self, agent: ALEntityDocker, iface_name: str):
         self.iface_name = iface_name
-        ip_output = agent.command("ip", "-o",  "link", "list", "dev", self.iface_name).decode()
+        ip_output = agent.command("ip", "-o",  "link", "list", "dev", self.iface_name)
         mac = re.search(r"link/ether (([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})",
                         ip_output).group(1)
         super().__init__(agent, mac)
+        programs = (f"{prog}_{iface_name}" for prog in ("agent", "ap_manager"))
+        self.logfilenames = [self.agent.logfilename(program) for program in programs]
 
     def wait_for_log(self, regex: str, start_line: int, timeout: float,
                      fail_on_mismatch: bool = True) -> bool:
         '''Poll the radio's logfile until it contains "regex" or times out.'''
-        programs = ("agent_" + self.iface_name, "ap_manager_" + self.iface_name)
-        return _docker_wait_for_log(self.agent.name, programs, regex, timeout, start_line,
+        checkpoints = ALEntity.get_checkpoints(self.checkpoints, start_line)
+        return _docker_wait_for_log(self.agent.name, checkpoints, regex, timeout,
                                     fail_on_mismatch=fail_on_mismatch)
 
     def send_bwl_event(self, event: str) -> None:
@@ -831,27 +853,26 @@ class ALEntityPrplWrt(ALEntity):
 
         super().__init__(mac, ucc_socket, installdir, is_controller)
 
+        program = "controller" if is_controller else "agent"
+        self.logfilenames = ["{}/beerocks_{}.log".format(self.log_folder, program)]
+
         # We always have two radios, wlan0 and wlan2
         RadioHostapd(self, "wlan0")
         RadioHostapd(self, "wlan2")
 
-    def command(self, *command: str) -> bytes:
+    def command(self, *command: str) -> str:
         """Execute `command` in device and return its output."""
 
         command_str = " ".join(command)
         debug("--- Executing command: {}".format(command_str))
 
-        output = subprocess.check_output(["ssh", self.device.control_ip, command_str]).decode()
-        return output
+        return subprocess.check_output(["ssh", self.device.control_ip, command_str]).decode()
 
     def wait_for_log(self, regex: str, start_line: int, timeout: float,
                      fail_on_mismatch: bool = True) -> bool:
         """Poll the entity's logfile until it contains "regex" or times out."""
-        program = "controller" if self.is_controller else "agent"
-        # Multiply timeout by 100, as test sets it in float.
-        return _device_wait_for_log(self.device,
-                                    ["{}/beerocks_{}.log".format(self.log_folder, program)],
-                                    regex, timeout, start_line, fail_on_mismatch)
+        checkpoints = ALEntity.get_checkpoints(self.checkpoints, start_line)
+        return _device_wait_for_log(self.device, checkpoints, regex, timeout, fail_on_mismatch)
 
     def nbapi_command(self, path: str, command: str, args: Dict = None) -> Dict:
         return nbapi_ubus_command(self, path, command, args)
@@ -872,6 +893,11 @@ class RadioHostapd(Radio):
                         ip_raw).group(1)
         self.log_folder = agent.log_folder
         super().__init__(agent, mac)
+
+        self.logfilenames = [
+            "{}/beerocks_agent_{}.log".format(self.log_folder, self.iface_name),
+            "{}/beerocks_ap_manager_{}.log".format(self.log_folder, self.iface_name)
+        ]
 
         self.update_vap_list()
 
@@ -918,14 +944,8 @@ class RadioHostapd(Radio):
     def wait_for_log(self, regex: str, start_line: int, timeout: float,
                      fail_on_mismatch: bool = True):
         ''' Poll the Radio's logfile until it match regular expression '''
-
-        log_files = [
-            "{}/beerocks_agent_{}.log".format(self.log_folder, self.iface_name),
-            "{}/beerocks_ap_manager_{}.log".format(self.log_folder, self.iface_name)
-        ]
-
-        # Multiply timeout by 100, as test sets it in float.
-        return _device_wait_for_log(self.agent.device, log_files, regex, timeout, start_line,
+        checkpoints = ALEntity.get_checkpoints(self.checkpoints, start_line)
+        return _device_wait_for_log(self.agent.device, checkpoints, regex, timeout,
                                     fail_on_mismatch)
 
     def get_mac(self, iface: str) -> str:

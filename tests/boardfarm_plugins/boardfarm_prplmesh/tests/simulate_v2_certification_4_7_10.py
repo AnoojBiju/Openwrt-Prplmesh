@@ -153,7 +153,7 @@ class V2Certification_4_7_10(CommonFlows):
         sta3.wifi_disconnect(vap1)
 
         # reset everything
-        controller.cmd_reply("DEV_RESET_DEFAULT")
+        self.device_reset_default()
 
         # wait
         sleep(2)

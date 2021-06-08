@@ -7,8 +7,6 @@ from .prplmesh_base_test import PrplMeshBaseTest
 from boardfarm.exceptions import SkipTest
 from capi import tlv
 
-import time
-
 
 class ApConfigBSSTeardown(PrplMeshBaseTest):
     """Check SSID is still available after being torn down
@@ -30,7 +28,7 @@ class ApConfigBSSTeardown(PrplMeshBaseTest):
         self.dev.DUT.wired_sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
 
         # Configure the controller and send renew
-        controller.cmd_reply("DEV_RESET_DEFAULT")
+        self.device_reset_default()
         controller.cmd_reply(
             "DEV_SET_CONFIG,bss_info1,"
             "{} 8x Boardfarm-Tests-24G-3 0x0020 0x0008 maprocks1 0 1".format(agent.mac))
@@ -39,8 +37,11 @@ class ApConfigBSSTeardown(PrplMeshBaseTest):
                                  tlv(0x0F, 0x0001, "{0x00}"),
                                  tlv(0x10, 0x0001, "{0x00}"))
 
-        # Wait a bit for the renew to complete
-        time.sleep(3)
+        # Wait until the connection map is updated:
+        self.check_log(controller,
+                       rf"Setting node '{agent.radios[0].mac}' as active", timeout=10)
+        self.check_log(controller,
+                       rf"Setting node '{agent.radios[1].mac}' as active", timeout=10)
 
         self.check_log(agent.radios[0],
                        r"Autoconfiguration for ssid: Boardfarm-Tests-24G-3 .*"
@@ -50,13 +51,14 @@ class ApConfigBSSTeardown(PrplMeshBaseTest):
         repeater1 = conn_map[agent.mac]
         repeater1_wlan0 = repeater1.radios[agent.radios[0].mac]
         for vap in repeater1_wlan0.vaps.values():
-            if vap.ssid not in (b'Boardfarm-Tests-24G-3', b'N/A'):
+            if vap.ssid not in ('Boardfarm-Tests-24G-3', 'N/A'):
                 self.fail('Wrong SSID: {vap.ssid} instead of Boardfarm-Tests-24G-3'.format(vap=vap))
         repeater1_wlan2 = repeater1.radios[agent.radios[1].mac]
         for vap in repeater1_wlan2.vaps.values():
-            if vap.ssid != b'N/A':
+            if vap.ssid != 'N/A':
                 self.fail('Wrong SSID: {vap.ssid} instead torn down'.format(vap=vap))
 
+        self.checkpoint()
         # SSIDs have been removed for the CTT Agent1's front radio
         controller.cmd_reply(
             "DEV_SET_CONFIG,bss_info1,{} 8x".format(agent.mac))
@@ -66,15 +68,19 @@ class ApConfigBSSTeardown(PrplMeshBaseTest):
                                  tlv(0x0F, 0x0001, "{0x00}"),
                                  tlv(0x10, 0x0001, "{0x00}"))
 
-        time.sleep(3)
+        self.check_log(controller,
+                       rf"Setting node '{agent.radios[0].mac}' as active", timeout=10)
+        self.check_log(controller,
+                       rf"Setting node '{agent.radios[1].mac}' as active", timeout=10)
+
         self.check_log(agent.radios[0], r".* tear down radio")
         conn_map = controller.get_conn_map()
         repeater1 = conn_map[agent.mac]
         repeater1_wlan0 = repeater1.radios[agent.radios[0].mac]
         for vap in repeater1_wlan0.vaps.values():
-            if vap.ssid != b'N/A':
+            if vap.ssid != 'N/A':
                 self.fail('Wrong SSID: {vap.ssid} instead torn down'.format(vap=vap))
         repeater1_wlan2 = repeater1.radios[agent.radios[1].mac]
         for vap in repeater1_wlan2.vaps.values():
-            if vap.ssid != b'N/A':
+            if vap.ssid != 'N/A':
                 self.fail('Wrong SSID: {vap.ssid} instead torn down'.format(vap=vap))

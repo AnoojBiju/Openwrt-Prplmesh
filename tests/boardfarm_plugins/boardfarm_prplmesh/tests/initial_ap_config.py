@@ -15,9 +15,13 @@ class InitialApConfig(PrplMeshBaseTest):
 
         self.dev.DUT.wired_sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
 
+        agent.ucc_socket.cmd_reply("dev_reset_default,devrole,agent,program,map,type,DUT",
+                                   timeout=60)
+        agent.ucc_socket.cmd_reply("dev_set_config,backhaul,eth")
+
         self.prplmesh_status_check(agent)
         self.check_log(agent.radios[0],
-                       r"\(WSC M2 Encrypted Settings\)")
+                       r"\(WSC M2 Encrypted Settings\)", timeout=30)
         self.check_log(agent.radios[1],
                        r"\(WSC M2 Encrypted Settings\)")
         self.check_log(agent.radios[0],
