@@ -378,6 +378,11 @@ bool db::add_node_client(const sMacAddr &mac, const sMacAddr &parent_mac,
         return false;
     }
 
+    if (parent_mac == network_utils::ZERO_MAC && config.persistent_db) {
+        LOG(DEBUG) << "Skip data model insertion for not-yet-connected persistent clients";
+        return true;
+    }
+
     // Add STA to the controller data model via m_ambiorix_datamodel
     // for connected station (WiFI client)
     auto data_model_path = dm_add_sta_element(parent_mac, mac);
