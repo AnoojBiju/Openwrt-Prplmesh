@@ -90,11 +90,13 @@ namespace bpl {
 #define BPL_GW_DB_OPER_MODE_LEN (127 + 1)   /* Maximal length of OPERATING MODE string */
 
 /* Default values */
-constexpr int DEFAULT_STOP_ON_FAILURE_ATTEMPTS = 1;
-constexpr int DEFAULT_RDKB_EXTENSIONS          = 0;
-constexpr int DEFAULT_BAND_STEERING            = 1;
-constexpr int DEFAULT_DFS_REENTRY              = 1;
-constexpr int DEFAULT_CLIENT_ROAMING           = 1;
+constexpr int DEFAULT_STOP_ON_FAILURE_ATTEMPTS         = 1;
+constexpr int DEFAULT_RDKB_EXTENSIONS                  = 0;
+constexpr int DEFAULT_DFS_REENTRY                      = 1;
+constexpr int DEFAULT_BAND_STEERING                    = 0;
+constexpr int DEFAULT_CLIENT_ROAMING                   = 0;
+constexpr int DEFAULT_ROAMING_HYSTERESIS_PERCENT_BONUS = 10;
+constexpr std::chrono::milliseconds DEFAULT_STEERING_DISASSOC_TIMER_MSEC{200};
 // by-default the persistent DB is disabled to allow backwards compatability
 // if the parameter is not configured in the prplmesh config and set to 1, DB is disabled
 constexpr int DEFAULT_PERSISTENT_DB = 0;
@@ -563,9 +565,9 @@ bool bpl_cfg_get_hostapd_ctrl_path(const std::string &iface, std::string &hostap
 /**
  * @brief Reads wireless settings (SSIDs and WiFi credentials) for all fronthaul interfaces.
  *
- * This method is intended to be used from the controller, to import existing wireless settings and 
- * later apply them to the whole network. 
- * 
+ * This method is intended to be used from the controller, to import existing wireless settings and
+ * later apply them to the whole network.
+ *
  * @param [out] wireless_settings List of wireless network configurations.
  * @return true on success and false otherwise.
  */
