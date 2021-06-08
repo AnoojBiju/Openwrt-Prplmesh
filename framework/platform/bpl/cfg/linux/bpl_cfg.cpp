@@ -311,9 +311,23 @@ int cfg_is_onboarding() { return 0; }
 
 int cfg_get_rdkb_extensions() { return 0; }
 
-int cfg_get_band_steering() { return 1; }
+int cfg_get_band_steering()
+{
+    int retVal = -1;
+    if (cfg_get_param_int("band_steering", retVal) == RETURN_ERR) {
+        retVal = RETURN_ERR;
+    }
+    return retVal;
+}
 
-int cfg_get_client_roaming() { return 1; }
+int cfg_get_client_roaming()
+{
+    int retVal = -1;
+    if (cfg_get_param_int("client_roaming", retVal) == RETURN_ERR) {
+        retVal = RETURN_ERR;
+    }
+    return retVal;
+}
 
 int cfg_get_wifi_params(const char *iface, struct BPL_WLAN_PARAMS *wlan_params)
 {
