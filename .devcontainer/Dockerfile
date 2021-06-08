@@ -19,7 +19,7 @@ RUN apt-get update && apt-get -y upgrade \
     bash-completion locales ninja-build pkg-config shellcheck \
     flake8 clang-format vim bridge-utils \
     # Ambiorix dependecies
-    bison curl flex libevent-dev libyajl-dev lua5.1 liblua5.1-0-dev liburiparser-dev \
+    bison curl flex libevent-dev libyajl-dev lua5.1 liblua5.1-0-dev liburiparser-dev libxml2-dev \
     # Network capturing
     tcpdump tshark wireshark-common openssh-server
 
@@ -77,7 +77,7 @@ RUN git clone git://git.openwrt.org/project/ubus.git && \
 # As they have some internal dependencies - we should build & install
 # them in specific order.
 RUN repo init -u https://gitlab.com/soft.at.home/ambiorix/ambiorix.git \
-    -b refs/tags/v0.3.2 < /dev/null && \
+    -b refs/tags/v1.4.0 < /dev/null && \
     repo sync && \
     make install -C libraries/libamxc && \
     make install -C libraries/libamxp && \

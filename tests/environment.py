@@ -114,7 +114,7 @@ class ALEntity:
         the return value and remove the outer dict (with is always a single-entry dict with 'path.'
         as the key).
         '''
-        ret = self.nbapi_command(path, "get", args)
+        ret = self.nbapi_command(path, "_get", args)
         if not ret:
             return {}
         assert len(ret) == 1, "NBAPI 'get' should return a single object"
@@ -126,7 +126,7 @@ class ALEntity:
         Run northbound API "list" on the object specified with "path" with arguments "args".
         '''
 
-        return self.nbapi_command(path, 'list', args)
+        return self.nbapi_command(path, '_list', args)
 
     def nbapi_get_parameter(self, path: str, parameter: str) -> Any:
         '''Get a parameter from nbapi.
@@ -144,13 +144,13 @@ class ALEntity:
 
         Sets value for "parameters" of northbound API object specified with "path".
         '''
-        ret = self.nbapi_command(path, "set", {"parameters": parameters})
+        ret = self.nbapi_command(path, "_set", {"parameters": parameters})
         return ret
 
     def nbapi_get_data_model(self):
         '''Get entire data model tree.'''
 
-        data_model = self.nbapi_command("Controller.Network", "get", {"depth": "10"})
+        data_model = self.nbapi_command("Controller.Network", "_get", {"depth": "10"})
         return data_model
 
     def nbapi_get_list_instances(self, path: str) -> List[str]:
