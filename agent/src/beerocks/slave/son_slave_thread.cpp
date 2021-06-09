@@ -1934,6 +1934,16 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         // cac
         save_cac_capabilities_params_to_db();
 
+        // Temporarily send a request to fill the channels list. This will be removed on another MR,
+        // which will send the channels list in this (ap joined) message.
+        auto request = message_com::create_vs_message<
+            beerocks_message::cACTION_APMANAGER_CHANNELS_LIST_REQUEST>(cmdu_tx);
+
+        if (!request) {
+            LOG(ERROR) << "Failed building message ACTION_APMANAGER_CHANNELS_LIST_REQUEST!";
+            return false;
+        }
+        message_com::send_cmdu(ap_manager_socket, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_APMANAGER_HOSTAP_SET_RESTRICTED_FAILSAFE_CHANNEL_RESPONSE: {
@@ -5521,7 +5531,7 @@ static uint8_t get_channel_preference(const beerocks::message::sWifiChannel chan
     // so convert channel and bandwidth to center channel.
     // For more info, refer to Table E-4 in the 802.11 specification.
     if (operating_class == 128 || operating_class == 129 || operating_class == 130) {
-        center_channel = wireless_utils::get_5g_center_channel(channel.channel, bw, true);
+        center_channel = wireless_utils::get_5g_center_channel(channel.channel, bw);
     }
 
     // According to Table 23 in the MultiAP Specification, an empty channel list field
