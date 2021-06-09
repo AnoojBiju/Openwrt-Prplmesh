@@ -470,6 +470,8 @@ int main(int argc, char *argv[])
     // UCC server must be created in certification mode only and if a valid TCP port has been set
     uint16_t port = master_db.config.ucc_listener_port;
     std::unique_ptr<beerocks::UccServer> ucc_server;
+    LOG(INFO) << "Certification mode: "
+              << (master_db.setting_certification_mode() ? "True" : "False") << ", port: " << port;
     if (master_db.setting_certification_mode() && (port != 0)) {
 
         LOG(INFO) << "Certification mode enabled (listening on port " << port << ")";
