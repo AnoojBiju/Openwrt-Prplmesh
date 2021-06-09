@@ -241,10 +241,29 @@ constexpr wireless_utils::sPhyRateBitRateEntry
 bool wireless_utils::has_operating_class_channel(const sOperatingClass &oper_class, uint8_t channel,
                                                  beerocks::eWiFiBandwidth bw)
 {
-    if (oper_class.band != bw)
+    if (oper_class.band != bw) {
         return false;
+    }
     auto it = oper_class.channels.find(channel);
-    return it != oper_class.channels.end();
+    if (it != oper_class.channels.end()) {
+        return true;
+    }
+
+    // operating classes 128,129,130 use center channel **unlike the other classes**,
+    // so convert channel and bandwidth to center channel.
+    // For more info, refer to Table E-4 in the 802.11 specification.
+    if (channel < 36) {
+        return false;
+    }
+    auto center_channel = wireless_utils::get_5g_center_channel(channel, bw);
+    if (center_channel == 0) {
+        return false;
+    }
+    it = oper_class.channels.find(center_channel);
+    if (it == oper_class.channels.end()) {
+        return false;
+    }
+    return true;
 }
 
 wireless_utils::sPhyUlParams
