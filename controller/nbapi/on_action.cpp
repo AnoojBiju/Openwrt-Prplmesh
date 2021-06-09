@@ -8,6 +8,8 @@
 
 #include "on_action.h"
 
+#include <beerocks/tlvf/beerocks_message_bml.h>
+
 using namespace beerocks;
 using namespace net;
 using namespace son;
@@ -208,6 +210,72 @@ amxd_status_t client_steering(amxd_object_t *object, amxd_function_t *func, amxc
     return amxd_status_ok;
 }
 
+/**
+ * @brief Initiate channel scan from NBAPI for given radio and channels.
+ * 
+ * Example of usage:
+ * ubus call Controller.Network ScanTrigger 
+ * '{"channels_list": "36, 44", channels_num: "2"}'
+ * 
+ * When channel list does not contain any channels
+ * scan triggering for all supported channels of specified radio.
+ */
+amxd_status_t trigger_scan(amxd_object_t *object, amxd_function_t *func, amxc_var_t *args,
+                           amxc_var_t *ret)
+{
+    auto controller_ctx = g_database->get_controller_ctx();
+
+    if (!controller_ctx) {
+        LOG(ERROR) << "Failed to get controller context.";
+        return amxd_status_unknown_error;
+    }
+
+    amxc_var_t value;
+
+    amxc_var_init(&value);
+    amxd_object_get_param(object, "ID", &value);
+    std::string radio_mac = amxc_var_constcast(cstring_t, &value);
+
+    if (radio_mac.empty()) {
+        LOG(ERROR) << "radio_mac is empty";
+        return amxd_status_parameter_not_found;
+    }
+
+    std::string channels_list = GET_CHAR(args, "channels_list");
+    int pool_size             = amxc_var_dyncast(uint32_t, GET_ARG(args, "channels_num"));
+    std::array<uint8_t, beerocks::message::SUPPORTED_CHANNELS_LENGTH> channel_pool;
+    std::vector<std::string> channels_vec = beerocks::string_utils::str_split(channels_list, ',');
+    int i                                 = 0;
+
+    for (auto channel_str : channels_vec) {
+        if (pool_size == 0) {
+            break;
+        }
+        int channel_num = atoi(channel_str.c_str());
+        if (channel_num < std::numeric_limits<uint8_t>::min() ||
+            std::numeric_limits<uint8_t>::max() < channel_num) {
+            LOG(ERROR) << "Channel #" << channel_num << " is out of range.";
+            return amxd_status_unknown_error;
+        }
+        channel_pool[i] = channel_num;
+        i++;
+    }
+
+    if (i != pool_size) {
+        LOG(ERROR) << "Wrong number of channels: " << pool_size
+                   << " or data entered in wrong format: " << channels_list;
+        return amxd_status_unknown_error;
+    }
+
+    if (!controller_ctx->trigger_scan(tlvf::mac_from_string(radio_mac), channel_pool, pool_size,
+                                      PREFERRED_DWELLTIME_MS)) {
+        LOG(ERROR) << "Failed to trigger scan from NBAPI for radio: " << radio_mac
+                   << " with channels: " << channels_list;
+        return amxd_status_unknown_error;
+    }
+    return amxd_status_ok;
+}
+
 // Events
 
 amxd_dm_t *g_data_model = nullptr;
@@ -293,7 +361,7 @@ std::vector<beerocks::nbapi::sFunctions> get_func_list(void)
     const std::vector<beerocks::nbapi::sFunctions> functions_list = {
         {"access_point_commit", "Controller.Network.AccessPointCommit", access_point_commit},
         {"client_steering", "Controller.Network.ClientSteering", client_steering},
-    };
+        {"trigger_scan", "Controller.Network.Device.Radio.ScanTrigger", trigger_scan}};
     return functions_list;
 }
 

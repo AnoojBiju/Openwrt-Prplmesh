@@ -99,6 +99,20 @@ public:
      */
     bool start_client_steering(const std::string &sta_mac, const std::string &target_bssid);
 
+    /**
+     * @brief Trigger channel scan initiated by NBAPI.
+     *
+     * @param ruid ruid of radio for wich scan requested.
+     * @param channel_pool List of channels.
+     * @param pool_size Channel pool size.
+     * @param dwell_time Channel scan dwell time in milliseconds.
+     * @return True if channel scan tiggered, false otherwise.
+     */
+    bool
+    trigger_scan(const sMacAddr &ruid,
+                 std::array<uint8_t, beerocks::message::SUPPORTED_CHANNELS_LENGTH> channel_pool,
+                 uint8_t pool_size, int dwell_time);
+
 private:
     /**
      * @brief Handles the client-connected event in the CMDU server.

@@ -3761,4 +3761,35 @@ bool Controller::start_client_steering(const std::string &sta_mac, const std::st
     return true;
 }
 
+bool Controller::trigger_scan(
+    const sMacAddr &radio_mac,
+    std::array<uint8_t, beerocks::message::SUPPORTED_CHANNELS_LENGTH> channel_pool,
+    uint8_t pool_size, int dwell_time)
+{
+    auto channel_pool_set = std::unordered_set<uint8_t>(&channel_pool[0], &channel_pool[pool_size]);
+
+    if (pool_size == 0) {
+        LOG(DEBUG) << "Scan for all channels of radio " << radio_mac;
+        if (!database.get_pool_of_all_supported_channels(channel_pool_set, radio_mac)) {
+            return false;
+        }
+    }
+    if (!database.set_channel_scan_pool(radio_mac, channel_pool_set, true)) {
+        LOG(ERROR) << "set_channel_scan_pool failed";
+        return false;
+    }
+    if (!database.set_channel_scan_dwell_time_msec(radio_mac, dwell_time, true)) {
+        LOG(ERROR) << "set_channel_scan_dwell_time_msec failed";
+        return false;
+    }
+
+    LOG(DEBUG) << "NBAPI trigger scan for radio " << radio_mac;
+
+    dynamic_channel_selection_r2_task::sSingleScanRequestEvent new_event = {};
+    new_event.radio_mac                                                  = radio_mac;
+    tasks.push_event(database.get_dynamic_channel_selection_r2_task_id(),
+                     dynamic_channel_selection_r2_task::eEvent::TRIGGER_SINGLE_SCAN, &new_event);
+    return true;
+}
+
 } // namespace son

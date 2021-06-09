@@ -3212,6 +3212,22 @@ bool db::clear_channel_report_record(const std::string &ISO_8601_timestamp)
     return m_channel_scan_report_records.erase(ISO_8601_timestamp) == 1;
 }
 
+bool db::get_pool_of_all_supported_channels(std::unordered_set<uint8_t> &channel_pool_set,
+                                            const sMacAddr &radio_mac)
+{
+    LOG(DEBUG) << "Setting channel pool to all channels";
+    channel_pool_set.clear();
+    auto all_channels = get_hostap_supported_channels(radio_mac);
+    if (all_channels.empty()) {
+        LOG(ERROR) << "Supported channel list is empty, failed to set channel pool!";
+        return false;
+    }
+    std::transform(all_channels.begin(), all_channels.end(),
+                   std::inserter(channel_pool_set, channel_pool_set.end()),
+                   [](const beerocks::message::sWifiChannel &c) -> uint8_t { return c.channel; });
+    return true;
+}
+
 bool db::add_channel_report(const sMacAddr &RUID, const uint8_t &operating_class,
                             const uint8_t &channel,
                             const std::vector<wfa_map::cNeighbors> &neighbors, uint8_t avg_noise,

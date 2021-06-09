@@ -45,29 +45,6 @@ bool is_scan_all_channels_request(std::unordered_set<uint8_t> &channel_pool_set)
     return channel_pool_set.size() == 1 && *channel_pool_set.begin() == SCAN_ALL_CHANNELS;
 }
 
-/**
- * @brief Get the channel pool containing all the supported channels.
- * @param channel_pool_set:  Set containing the current channel pool.
- * @param channel_pool_size: Size of the given set.
- * @param database:          Reference to the DB.
- * @param radio_mac:         MAC address of radio.
- */
-static bool get_pool_of_all_supported_channels(std::unordered_set<uint8_t> &channel_pool_set,
-                                               db &database, const sMacAddr &radio_mac)
-{
-    LOG(DEBUG) << "Setting channel pool to all channels";
-    channel_pool_set.clear();
-    auto all_channels = database.get_hostap_supported_channels(radio_mac);
-    if (all_channels.empty()) {
-        LOG(ERROR) << "Supported channel list is empty, failed to set channel pool!";
-        return false;
-    }
-    std::transform(all_channels.begin(), all_channels.end(),
-                   std::inserter(channel_pool_set, channel_pool_set.end()),
-                   [](beerocks::message::sWifiChannel &c) -> uint8_t { return c.channel; });
-    return true;
-}
-
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////////// Implementation ///////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -1710,16 +1687,15 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
 
         if (dwell_time_ms != CHANNEL_SCAN_INVALID_PARAM &&
             op_error_code == eChannelScanOperationCode::SUCCESS) {
-            op_error_code =
-                database.set_channel_scan_dwell_time_msec(radio_mac, dwell_time_ms, false)
-                    ? op_error_code
-                    : eChannelScanOperationCode::INVALID_PARAMS_DWELLTIME;
+            if (!database.set_channel_scan_dwell_time_msec(radio_mac, dwell_time_ms, false)) {
+                op_error_code = eChannelScanOperationCode::INVALID_PARAMS_DWELLTIME;
+            }
         }
         if (interval_time_sec != CHANNEL_SCAN_INVALID_PARAM &&
             op_error_code == eChannelScanOperationCode::SUCCESS) {
-            op_error_code = database.set_channel_scan_interval_sec(radio_mac, interval_time_sec)
-                                ? op_error_code
-                                : eChannelScanOperationCode::INVALID_PARAMS_SCANTIME;
+            if (!database.set_channel_scan_interval_sec(radio_mac, interval_time_sec)) {
+                op_error_code = eChannelScanOperationCode::INVALID_PARAMS_SCANTIME;
+            }
         }
         if (channel_pool != nullptr && channel_pool_size != CHANNEL_SCAN_INVALID_PARAM &&
             op_error_code == eChannelScanOperationCode::SUCCESS) {
@@ -1727,16 +1703,15 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
                 std::unordered_set<uint8_t>(channel_pool, channel_pool + channel_pool_size);
             // Check if "all-channel" scan is requested
             if (is_scan_all_channels_request(channel_pool_set)) {
-                op_error_code =
-                    get_pool_of_all_supported_channels(channel_pool_set, database, radio_mac)
-                        ? op_error_code
-                        : eChannelScanOperationCode::INVALID_PARAMS_CHANNELPOOL;
+                if (!database.get_pool_of_all_supported_channels(channel_pool_set, radio_mac)) {
+                    op_error_code = eChannelScanOperationCode::INVALID_PARAMS_CHANNELPOOL;
+                }
             }
             // Set the channel pool
             if (op_error_code == eChannelScanOperationCode::SUCCESS) {
-                op_error_code = database.set_channel_scan_pool(radio_mac, channel_pool_set, false)
-                                    ? op_error_code
-                                    : eChannelScanOperationCode::INVALID_PARAMS_CHANNELPOOL;
+                if (!database.set_channel_scan_pool(radio_mac, channel_pool_set, false)) {
+                    op_error_code = eChannelScanOperationCode::INVALID_PARAMS_CHANNELPOOL;
+                }
             }
         }
         response->op_error_code() = uint8_t(op_error_code);
@@ -2002,7 +1977,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         }
 
         if (is_scan_all_channels_request(channel_pool_set))
-            if (!get_pool_of_all_supported_channels(channel_pool_set, database, radio_mac)) {
+            if (!database.get_pool_of_all_supported_channels(channel_pool_set, radio_mac)) {
                 LOG(ERROR) << "set_channel_scan_pool failed";
                 response->op_error_code() =
                     uint8_t(eChannelScanOperationCode::INVALID_PARAMS_CHANNELPOOL);

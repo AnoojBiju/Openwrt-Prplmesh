@@ -107,6 +107,14 @@ class ALEntity:
         '''
         raise NotImplementedError("nbapi_command is not implemented in abstract class ALEntity")
 
+    def nbapi_command_not_fail(self, path: str, command: str, args: Dict = None) -> Dict:
+        '''Run a northbound API command.
+
+        Run northbound API "command" on the object specified with "path" with arguments "args".
+        '''
+        raise NotImplementedError(
+            "nbapi_command_not_fail is not implemented in abstract class ALEntity")
+
     def nbapi_get(self, path: str, args: Dict = None) -> Dict:
         '''Run a northbound API 'get' command.
 
@@ -313,6 +321,24 @@ def nbapi_ubus_command(entity: ALEntity, path: str, command: str, args: Dict = N
     if args:
         command.append(json.dumps(args))
     result = entity.command(*command)
+    if result:
+        return json.loads(result)
+    else:
+        return result
+
+
+# The same as nbapi_ubus_command, except it does not fail when error occurs
+def nbapi_ubus_command_not_fail(entity: ALEntity, path: str, command: str,
+                                args: Dict = None) -> Dict:
+    command = ['ubus', 'call', path, command]
+    result = b''
+    if args:
+        command.append(json.dumps(args))
+    try:
+        result = entity.command(*command)
+    except subprocess.CalledProcessError as error:
+        debug("ubus call command fail")
+        debug(error)
     if result:
         return json.loads(result)
     else:
@@ -532,6 +558,9 @@ class ALEntityDocker(ALEntity):
 
     def nbapi_command(self, path: str, command: str, args: Dict = None) -> Dict:
         return nbapi_ubus_command(self, path, command, args)
+
+    def nbapi_command_not_fail(self, path: str, command: str, args: Dict = None) -> Dict:
+        return nbapi_ubus_command_not_fail(self, path, command, args)
 
     def prprlmesh_status_check(self):
         return self.device.prprlmesh_status_check()
@@ -876,6 +905,9 @@ class ALEntityPrplWrt(ALEntity):
 
     def nbapi_command(self, path: str, command: str, args: Dict = None) -> Dict:
         return nbapi_ubus_command(self, path, command, args)
+
+    def nbapi_command_not_fail(self, path: str, command: str, args: Dict = None) -> Dict:
+        return nbapi_ubus_command_not_fail(self, path, command, args)
 
     def prprlmesh_status_check(self):
         return self.device.prprlmesh_status_check()
