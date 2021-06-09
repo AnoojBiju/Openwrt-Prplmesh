@@ -884,8 +884,7 @@ bool db::set_hostap_active(const sMacAddr &mac, bool active)
     auto radio_enable_path = n->dm_path;
 
     if (radio_enable_path.empty()) {
-        LOG(ERROR) << "Failed to get path to the Radio with mac: " << mac;
-        return false;
+        return true;
     }
 
     if (!m_ambiorix_datamodel->set(radio_enable_path, "Enabled", active)) {
@@ -1286,8 +1285,7 @@ bool db::set_ap_vht_capabilities(wfa_map::tlvApVhtCapabilities &vht_caps_tlv)
 
     auto path_to_obj = radio_node->dm_path;
     if (path_to_obj.empty()) {
-        LOG(ERROR) << "Failed to get path to Radio object";
-        return false;
+        return true;
     }
 
     path_to_obj += ".Capabilities.";
@@ -1374,8 +1372,7 @@ bool db::dm_add_ap_operating_classes(const std::string &radio_mac, uint8_t max_t
 
     std::string path_to_obj = radio_node->dm_path;
     if (path_to_obj.empty()) {
-        LOG(ERROR) << "Failed to find path to radio with mac: " << radio_mac;
-        return false;
+        return true;
     }
 
     path_to_obj += ".Capabilities.OperatingClasses";
@@ -1429,8 +1426,7 @@ bool db::set_ap_he_capabilities(wfa_map::tlvApHeCapabilities &he_caps_tlv)
     bool return_val  = true;
 
     if (path_to_obj.empty()) {
-        LOG(ERROR) << "Failed to get path to object";
-        return false;
+        return true;
     }
 
     path_to_obj += ".Capabilities.";
@@ -5910,8 +5906,7 @@ bool db::set_ap_ht_capabilities(const sMacAddr &radio_mac,
 
     std::string path_to_obj = radio_node->dm_path;
     if (path_to_obj.empty()) {
-        LOG(ERROR) << "Failed to get path for radio with mac: " << radio_mac;
-        return false;
+        return true;
     }
 
     path_to_obj += ".Capabilities.";
