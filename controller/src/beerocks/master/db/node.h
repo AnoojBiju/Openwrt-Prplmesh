@@ -83,14 +83,6 @@ public:
     bool handoff               = false;
     bool confined              = false;
 
-    /// Clear this flag when channel switch is not in progress and channel is optimal path.
-    /// And run optimal path for clients.
-    bool cs_op = false;
-
-    /// Clear this flag when channel switch is not in progress and cs_in_prog_optimal_path flag
-    /// is clear too. Run load balancer algo.
-    bool cs_lb = false;
-
     bool supports_5ghz            = true;
     int failed_5ghz_steer_attemps = 0;
 
@@ -101,9 +93,6 @@ public:
     bool supports_11v            = true;
     int failed_11v_request_count = 0;
     bool operational_state       = false;
-
-    //Used by channel-selection to block the clients from connecting to a hostap
-    std::vector<std::string> blocked_hostaps;
 
     std::chrono::steady_clock::time_point last_state_change;
 
@@ -144,9 +133,7 @@ public:
     double cross_estimated_rx_phy_rate = 0.0;
     double cross_estimated_tx_phy_rate = 0.0;
 
-    int ire_4addr_mode_transition_task_id = 0;
-    bool transition_to_4addr_mode         = false;
-    bool ire_handoff                      = false;
+    bool ire_handoff = false;
 
     class radio {
     public:
