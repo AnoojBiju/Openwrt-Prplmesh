@@ -880,11 +880,6 @@ public:
 
     std::string get_5ghz_sibling_hostap(const std::string &mac);
 
-    bool set_cs_op_flag(const std::string &mac, bool flag);
-    bool get_cs_op_flag(const std::string &mac);
-    bool set_cs_lb_flag(const std::string &mac, bool flag);
-    bool get_cs_lb_flag(const std::string &mac);
-
     bool set_global_restricted_channels(const uint8_t *restricted_channels);
     std::vector<uint8_t> get_global_restricted_channels();
     bool set_hostap_conf_restricted_channels(const sMacAddr &hostap_mac,
@@ -1632,9 +1627,6 @@ public:
 
     bool assign_rdkb_wlan_task_id(int new_task_id);
     int get_rdkb_wlan_task_id();
-
-    bool assign_ire_4addr_mode_transition_task_id(const std::string &mac, int new_task_id);
-    int get_ire_4addr_mode_transition_task_id(const std::string &mac);
 
     bool assign_channel_selection_task_id(int new_task_id);
     int get_channel_selection_task_id();
