@@ -213,6 +213,14 @@ bool cfg_get_band_steering(bool &band_steering)
     return true;
 }
 
+bool cfg_set_band_steering(bool band_steering)
+{
+    std::string option = "band_steering";
+    std::string value  = std::to_string(((int)band_steering));
+
+    return cfg_set_prplmesh_config(option, value);
+}
+
 bool cfg_get_client_roaming(bool &client_roaming)
 {
     int retVal = -1;
@@ -222,6 +230,14 @@ bool cfg_get_client_roaming(bool &client_roaming)
 
     client_roaming = (retVal == 1);
     return true;
+}
+
+bool cfg_set_client_roaming(bool client_roaming)
+{
+    std::string option = "client_roaming";
+    std::string value  = std::to_string(((int)client_roaming));
+
+    return cfg_set_prplmesh_config(option, value);
 }
 
 int cfg_get_wifi_params(const char iface[BPL_IFNAME_LEN], struct BPL_WLAN_PARAMS *wlan_params)
@@ -848,6 +864,14 @@ bool cfg_get_roaming_hysteresis_percent_bonus(int &roaming_hysteresis_percent_bo
     return true;
 }
 
+bool cfg_set_roaming_hysteresis_percent_bonus(int roaming_hysteresis_percent_bonus)
+{
+    std::string option = "roaming_hysteresis_percent_bonus";
+    std::string value  = std::to_string(roaming_hysteresis_percent_bonus);
+
+    return cfg_set_prplmesh_config(option, value);
+}
+
 bool cfg_get_steering_disassoc_timer_msec(std::chrono::milliseconds &steering_disassoc_timer_msec)
 {
     int retVal = -1;
@@ -858,5 +882,14 @@ bool cfg_get_steering_disassoc_timer_msec(std::chrono::milliseconds &steering_di
     steering_disassoc_timer_msec = std::chrono::milliseconds{retVal};
     return true;
 }
+
+bool cfg_set_steering_disassoc_timer_msec(std::chrono::milliseconds &steering_disassoc_timer_msec)
+{
+    std::string option = "steering_disassoc_timer_msec";
+    std::string value  = std::to_string(steering_disassoc_timer_msec.count());
+
+    return cfg_set_prplmesh_config(option, value);
+}
+
 } // namespace bpl
 } // namespace beerocks

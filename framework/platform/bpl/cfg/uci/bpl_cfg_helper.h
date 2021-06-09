@@ -84,6 +84,23 @@ int cfg_get_channel(const std::string &interface_name, int *channel);
 int cfg_get_wep_key(const std::string &interface_name, int keyIndex, char *key);
 
 /**
+ * Sets and commits specified option under "prplmesh.config" section.
+ *
+ * If option is missing, it adds and sets at the same time. Otherwise, it updates the data.
+ *
+ * Option and value should not exceed MAX_UCI_BUF_LEN, othwise it aborts.
+ *
+ * Uci path consists of prplmesh.config.'@@option'.
+ * Example: prplmesh.config.band_steering
+ *
+ * @param [in] option option name.
+ * @param [in] value value to be written under option.
+ *
+ * @return 0 on success or -1 on error.
+ **/
+int cfg_set_prplmesh_config(const std::string &option, const std::string &value);
+
+/**
  * set the VAP credentials
  *
  * @param [in] index interface index

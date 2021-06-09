@@ -39,10 +39,6 @@ std::shared_ptr<uci_context> alloc_context()
 bool uci_section_exists(const std::string &package_name, const std::string &section_type,
                         const std::string &section_name)
 {
-    //package_name.(section_type)section_name
-    LOG(TRACE) << "uci_section_exists() " << package_name << ".(" << section_type << ")"
-               << section_name;
-
     auto ctx = alloc_context();
     if (!ctx) {
         return false;
@@ -221,9 +217,13 @@ bool uci_set_section(const std::string &package_name, const std::string &section
                      const std::string &section_name, const OptionsUnorderedMap &options,
                      bool commit_changes)
 {
+
     //package_name.(section_type)section_name
     LOG(TRACE) << "uci_set_section() " << package_name << ".(" << section_type << ")"
-               << section_name;
+               << section_name << " with options count:" << options.size();
+
+    LOG_IF(options.size() > 0, DEBUG)
+        << "First option: " << options.begin()->first << " value: " << options.begin()->second;
 
     if (!uci_section_exists(package_name, section_type, section_name)) {
         LOG(ERROR) << "section " << section_name << " of type " << section_type

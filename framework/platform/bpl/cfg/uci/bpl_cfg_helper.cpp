@@ -6,6 +6,7 @@
  * See LICENSE file for more details.
  */
 
+#include "../../common/uci/bpl_uci.h"
 #include "../../common/utils/utils.h"
 
 #include "bpl_cfg_helper.h"
@@ -128,6 +129,13 @@ int cfg_get_wep_key(const std::string &interface_name, int keyIndex, char *key)
 {
     /*TODO: implement using d/s-pal apis*/
     return RETURN_OK;
+}
+
+int cfg_set_prplmesh_config(const std::string &option, const std::string &value)
+{
+    OptionsUnorderedMap options{{option, value}};
+
+    return uci_set_section("prplmesh", "", "config", options, true);
 }
 
 } // namespace bpl
