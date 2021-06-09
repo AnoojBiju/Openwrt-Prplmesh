@@ -11,6 +11,7 @@
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/sockets.h>
 #include <bcl/son/son_wireless_utils.h>
+#include <bpl/bpl_cfg.h>
 #include <bpl/bpl_db.h>
 #include <easylogging++.h>
 
@@ -6950,10 +6951,20 @@ bool db::set_sta_dhcp_v6_lease(const sMacAddr &sta_mac, const std::string &host_
 
 bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
 {
+    auto ret_val = true;
+
     config.load_client_band_steering        = nbapi_config.client_band_steering;
     config.load_client_optimal_path_roaming = nbapi_config.client_optimal_path_roaming;
     config.roaming_hysteresis_percent_bonus = nbapi_config.roaming_hysteresis_percent_bonus;
     config.steering_disassoc_timer_msec     = nbapi_config.steering_disassoc_timer_msec;
 
-    return true;
+    // Update persistent configuration.
+    ret_val &= beerocks::bpl::cfg_set_band_steering(config.load_client_band_steering);
+    ret_val &= beerocks::bpl::cfg_set_client_roaming(config.load_client_optimal_path_roaming);
+    ret_val &= beerocks::bpl::cfg_set_roaming_hysteresis_percent_bonus(
+        config.roaming_hysteresis_percent_bonus);
+    ret_val &=
+        beerocks::bpl::cfg_set_steering_disassoc_timer_msec(config.steering_disassoc_timer_msec);
+
+    return ret_val;
 }

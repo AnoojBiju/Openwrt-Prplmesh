@@ -322,6 +322,8 @@ bool cfg_get_band_steering(bool &band_steering)
     return true;
 }
 
+bool cfg_set_band_steering(bool band_steering) { return true; }
+
 bool cfg_get_client_roaming(bool &client_roaming)
 {
     int retVal = -1;
@@ -332,6 +334,8 @@ bool cfg_get_client_roaming(bool &client_roaming)
     client_roaming = (retVal == 1);
     return true;
 }
+
+bool cfg_set_client_roaming(bool client_roaming) { return true; }
 
 int cfg_get_wifi_params(const char *iface, struct BPL_WLAN_PARAMS *wlan_params)
 {
@@ -738,6 +742,8 @@ bool cfg_get_roaming_hysteresis_percent_bonus(int &roaming_hysteresis_percent_bo
     return true;
 }
 
+bool cfg_set_roaming_hysteresis_percent_bonus(int roaming_hysteresis_percent_bonus) { return true; }
+
 bool cfg_get_steering_disassoc_timer_msec(std::chrono::milliseconds &steering_disassoc_timer_msec)
 {
     int val = -1;
@@ -748,5 +754,11 @@ bool cfg_get_steering_disassoc_timer_msec(std::chrono::milliseconds &steering_di
     steering_disassoc_timer_msec = std::chrono::milliseconds{val};
     return true;
 }
+
+bool cfg_set_steering_disassoc_timer_msec(std::chrono::milliseconds &steering_disassoc_timer_msec)
+{
+    return true;
+}
+
 } // namespace bpl
 } // namespace beerocks

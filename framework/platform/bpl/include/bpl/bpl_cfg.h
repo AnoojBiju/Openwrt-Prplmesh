@@ -331,12 +331,28 @@ int cfg_get_rdkb_extensions();
 bool cfg_get_band_steering(bool &band_steering);
 
 /**
+ * @brief Sets Band Steering in configuration.
+ *
+ * @param[in] band_steering  true for enabled band_steering.
+ * @return true on success, otherwise false
+ */
+bool cfg_set_band_steering(bool band_steering);
+
+/**
  * @brief Returns whether Client Roaming feature is enabled or not.
  *
  * @param [out] enable true if the Client Roaming is enabled and false otherwise.
  * @return true on success, otherwise false.
  */
 bool cfg_get_client_roaming(bool &client_roaming);
+
+/**
+ * @brief Sets Client Roaming in configuration.
+ *
+ * @param[in] client_roaming  true for enabled client_roaming.
+ * @return true on success, otherwise false
+ */
+bool cfg_set_client_roaming(bool client_roaming);
 
 /**
  * Returns miscellaneous Wi-Fi parameters.
@@ -637,6 +653,14 @@ bool bpl_cfg_get_backhaul_wire_iface(std::string &iface);
 bool cfg_get_roaming_hysteresis_percent_bonus(int &roaming_hysteresis_percent_bonus);
 
 /**
+ * @brief Sets roaming hysteresis percentage in configuration.
+ *
+ * @param[in] roaming_hysteresis_percent_bonus roaming hysteresis percentage.
+ * @return true on success, otherwise false
+ */
+bool cfg_set_roaming_hysteresis_percent_bonus(int roaming_hysteresis_percent_bonus);
+
+/**
  * @brief Reads steering disassociation timer in milliseconds.
  *
  * It is the time before the STA is forcefully disassociated.
@@ -647,6 +671,14 @@ bool cfg_get_roaming_hysteresis_percent_bonus(int &roaming_hysteresis_percent_bo
  * @return true on success, otherwise false
  */
 bool cfg_get_steering_disassoc_timer_msec(std::chrono::milliseconds &steering_disassoc_timer_msec);
+
+/**
+ * @brief Sets steering disassociation timer in milliseconds in configuration.
+ *
+ * @param[in] steering_disassoc_timer_msec  steering disassociation timer in milliseconds.
+ * @return true on success, otherwise false
+ */
+bool cfg_set_steering_disassoc_timer_msec(std::chrono::milliseconds &steering_disassoc_timer_msec);
 
 } // namespace bpl
 } // namespace beerocks
