@@ -53,7 +53,7 @@ for tempdir in tmp/work/*/*/temp tmp/work/*/*/*/temp tmp/work/*/*/*/*/temp; do
         # shellcheck disable=SC2001
         package="$(echo "$tempdir" | sed 's%^tmp/work/\(.*\)/temp$%\1%')"
         mkdir -p /artifacts/logs/"$package"
-        cp -r "$tempdir"/* /artifacts/logs/"$package"
+        cp -r "$tempdir"/log* /artifacts/logs/"$package"
     fi
 done
 
