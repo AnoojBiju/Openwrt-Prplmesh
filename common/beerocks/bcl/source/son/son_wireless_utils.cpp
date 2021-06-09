@@ -838,13 +838,23 @@ std::list<wireless_utils::sChannelPreference> wireless_utils::get_channel_prefer
     return preferences;
 }
 
-uint8_t wireless_utils::get_5g_center_channel(uint8_t start_channel,
-                                              beerocks::eWiFiBandwidth channel_bandwidth,
-                                              bool channel_ext_above_secondary)
+uint8_t wireless_utils::get_5g_center_channel(uint8_t channel, beerocks::eWiFiBandwidth bandwidth)
 {
-    auto vht_center_freq =
-        channel_to_vht_center_freq(start_channel, channel_bandwidth, channel_ext_above_secondary);
-    return freq_to_channel(vht_center_freq);
+    auto channel_it = channels_table_5g.find(channel);
+    if (channel_it == channels_table_5g.end()) {
+        return 0;
+    }
+    auto &bw_info_map = channel_it->second;
+
+    if (bandwidth == beerocks::eWiFiBandwidth::BANDWIDTH_80_80) {
+        bandwidth = beerocks::eWiFiBandwidth::BANDWIDTH_80;
+    }
+
+    auto bw_info_it = bw_info_map.find(bandwidth);
+    if (bw_info_it == bw_info_map.end()) {
+        return 0;
+    }
+    return bw_info_it->second.center_channel;
 }
 
 /**
@@ -862,7 +872,7 @@ wireless_utils::get_operating_class_by_channel(const beerocks::message::sWifiCha
     auto ch = channel.channel;
     auto bw = static_cast<beerocks::eWiFiBandwidth>(channel.channel_bandwidth);
     if (bw >= beerocks::eWiFiBandwidth::BANDWIDTH_80) {
-        ch = wireless_utils::get_5g_center_channel(ch, bw, true);
+        ch = wireless_utils::get_5g_center_channel(ch, bw);
     }
     for (auto oper_class : operating_classes_list) {
         if (oper_class.second.band == channel.channel_bandwidth &&
