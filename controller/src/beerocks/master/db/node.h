@@ -290,9 +290,6 @@ public:
     beerocks::eIfaceType iface_type = beerocks::IFACE_TYPE_ETHERNET;
     std::chrono::steady_clock::time_point last_seen;
 
-    friend std::ostream &operator<<(std::ostream &os, const node &node);
-    friend std::ostream &operator<<(std::ostream &os, const node *node);
-
     /*
      * Persistent configurations - start
      * Client persistent configuration aging is refreshed on persistent configurations set
