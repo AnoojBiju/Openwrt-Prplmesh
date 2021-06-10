@@ -83,7 +83,7 @@ class NbapiAccessPoint(PrplMeshBaseTest):
                                         {"KeyPassphrase": "key_passphrease_value"})
 
         controller.nbapi_command("Controller.Network", "AccessPointCommit")
-        time.sleep(5)
+        time.sleep(10)
 
         topology = self.get_topology()
         for device in topology.values():
