@@ -175,8 +175,7 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
             continue;
         }
 
-        if (!tlvf_utils::add_ap_radio_basic_capabilities(m_cmdu_tx, radio_mac,
-                                                         radio->front.preferred_channels)) {
+        if (!tlvf_utils::add_ap_radio_basic_capabilities(m_cmdu_tx, radio_mac)) {
             return;
         }
 

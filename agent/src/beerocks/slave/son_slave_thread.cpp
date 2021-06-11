@@ -1934,6 +1934,16 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         // cac
         save_cac_capabilities_params_to_db();
 
+        // Temporarily send a request to fill the channels list. This will be removed on another MR,
+        // which will send the channels list in this (ap joined) message.
+        auto request = message_com::create_vs_message<
+            beerocks_message::cACTION_APMANAGER_CHANNELS_LIST_REQUEST>(cmdu_tx);
+
+        if (!request) {
+            LOG(ERROR) << "Failed building message ACTION_APMANAGER_CHANNELS_LIST_REQUEST!";
+            return false;
+        }
+        message_com::send_cmdu(ap_manager_socket, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_APMANAGER_HOSTAP_SET_RESTRICTED_FAILSAFE_CHANNEL_RESPONSE: {
@@ -2748,33 +2758,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             return false;
         }
 
-        auto db    = AgentDB::get();
-        auto radio = db->radio(m_fronthaul_iface);
-        if (!radio) {
-            LOG(DEBUG) << "Radio of interface " << m_fronthaul_iface << " does not exist on the db";
-            return false;
-        }
-
-        // Copy channels list to the AgentDB
-        auto channels_list_length = response->channel_list()->channels_list_length();
-        for (uint8_t ch_idx = 0; ch_idx < channels_list_length; ch_idx++) {
-            auto &channel_info = std::get<1>(response->channel_list()->channels_list(ch_idx));
-            auto channel       = channel_info.beacon_channel();
-            radio->channels_list[channel].tx_power_dbm = channel_info.tx_power_dbm();
-            radio->channels_list[channel].dfs_state    = channel_info.dfs_state();
-            auto supported_bw_size                     = channel_info.supported_bandwidths_length();
-            radio->channels_list[channel].supported_bw_list.resize(supported_bw_size);
-            std::copy_n(&std::get<1>(channel_info.supported_bandwidths(0)), supported_bw_size,
-                        radio->channels_list[channel].supported_bw_list.begin());
-
-            for (const auto &supported_bw : radio->channels_list[channel].supported_bw_list) {
-                LOG(DEBUG) << "channel=" << int(channel) << ", bw="
-                           << beerocks::utils::convert_bandwidth_to_int(
-                                  beerocks::eWiFiBandwidth(supported_bw.bandwidth))
-                           << ", rank=" << supported_bw.rank
-                           << ", multiap_preference=" << int(supported_bw.multiap_preference);
-            }
-        }
+        fill_channel_list_to_agent_db(response->channel_list());
 
         // Forward channels list to the Backhaul manager
         auto response_out = message_com::create_vs_message<
@@ -2784,6 +2768,13 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             break;
         }
         message_com::send_cmdu(backhaul_manager_socket, cmdu_tx);
+
+        auto db    = AgentDB::get();
+        auto radio = db->radio(m_fronthaul_iface);
+        if (!radio) {
+            LOG(DEBUG) << "Radio of interface " << m_fronthaul_iface << " does not exist on the db";
+            return false;
+        }
 
         // Create Channel preference report
         auto tuple_preferred_channels = response->preferred_channels(0);
@@ -4098,11 +4089,7 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
             return false;
         }
 
-        std::deque<beerocks::message::sWifiChannel> supported_channels_deque(
-            radio->front.supported_channels.begin(), radio->front.supported_channels.end());
-
-        if (!tlvf_utils::add_ap_radio_basic_capabilities(cmdu_tx, radio->front.iface_mac,
-                                                         supported_channels_deque)) {
+        if (!tlvf_utils::add_ap_radio_basic_capabilities(cmdu_tx, radio->front.iface_mac)) {
             LOG(ERROR) << "Failed adding AP Radio Basic Capabilities TLV";
             return false;
         }
@@ -5544,7 +5531,7 @@ static uint8_t get_channel_preference(const beerocks::message::sWifiChannel chan
     // so convert channel and bandwidth to center channel.
     // For more info, refer to Table E-4 in the 802.11 specification.
     if (operating_class == 128 || operating_class == 129 || operating_class == 130) {
-        center_channel = wireless_utils::get_5g_center_channel(channel.channel, bw, true);
+        center_channel = wireless_utils::get_5g_center_channel(channel.channel, bw);
     }
 
     // According to Table 23 in the MultiAP Specification, an empty channel list field
@@ -5972,6 +5959,42 @@ bool slave_thread::autoconfig_wsc_add_m1()
     m1_auth_buf     = new uint8_t[m1_auth_buf_len];
     std::copy_n(attributes->buffer(), m1_auth_buf_len, m1_auth_buf);
     return true;
+}
+
+void slave_thread::fill_channel_list_to_agent_db(
+    const std::shared_ptr<beerocks_message::cChannelList> &channel_list_class)
+{
+    if (!channel_list_class) {
+        LOG(ERROR) << "Channel list is nullptr";
+        return;
+    }
+
+    auto db    = AgentDB::get();
+    auto radio = db->radio(m_fronthaul_iface);
+    if (!radio) {
+        return;
+    }
+
+    // Copy channels list to the AgentDB
+    auto channels_list_length = channel_list_class->channels_list_length();
+    for (uint8_t ch_idx = 0; ch_idx < channels_list_length; ch_idx++) {
+        auto &channel_info = std::get<1>(channel_list_class->channels_list(ch_idx));
+        auto channel       = channel_info.beacon_channel();
+        radio->channels_list[channel].tx_power_dbm = channel_info.tx_power_dbm();
+        radio->channels_list[channel].dfs_state    = channel_info.dfs_state();
+        auto supported_bw_size                     = channel_info.supported_bandwidths_length();
+        radio->channels_list[channel].supported_bw_list.resize(supported_bw_size);
+        std::copy_n(&std::get<1>(channel_info.supported_bandwidths(0)), supported_bw_size,
+                    radio->channels_list[channel].supported_bw_list.begin());
+
+        for (const auto &supported_bw : radio->channels_list[channel].supported_bw_list) {
+            LOG(DEBUG) << "channel=" << int(channel) << ", bw="
+                       << beerocks::utils::convert_bandwidth_to_int(
+                              beerocks::eWiFiBandwidth(supported_bw.bandwidth))
+                       << ", rank=" << supported_bw.rank
+                       << ", multiap_preference=" << int(supported_bw.multiap_preference);
+        }
+    }
 }
 
 void slave_thread::save_channel_params_to_db(beerocks_message::sApChannelSwitch params)

@@ -37,7 +37,7 @@ class NbapiSta(PrplMeshBaseTest):
         self.configure_ssid("ImSSID5GH", "Fronthaul", {"Band5GH": True})
         controller.nbapi_command("Controller.Network", "AccessPointCommit")
 
-        time.sleep(3)
+        time.sleep(5)
         sta1.wifi_connect(vap1)
 
         agent.radios[1].send_bwl_event(
@@ -52,7 +52,7 @@ class NbapiSta(PrplMeshBaseTest):
                                         tlv(0x93, 0x0007, "0x01 {%s}" % (vap1.bssid)))
         debug("Send Associated STA Link Metrics Query message")
         controller.ucc_socket.dev_send_1905(agent.mac, 0x800D, tlv(0x95, 0x0006, sta1.mac))
-        time.sleep(2)
+        time.sleep(5)
 
         ap_metrics_resp = self.check_cmdu_type_single("AP metrics response", 0x800C, agent.mac,
                                                       controller.mac, mid1)
