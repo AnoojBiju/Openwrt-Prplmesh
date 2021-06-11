@@ -334,7 +334,8 @@ bool Monitor::monitor_fsm()
                         [&](int fd, EventLoop &loop) {
                             LOG(ERROR) << "mon_hal_nl_events error!";
                             m_mon_hal_nl_events = beerocks::net::FileDescriptor::invalid_descriptor;
-                            return false;
+                            // TODO: handle or avoid errors properly: PPM-1428
+                            return true;
                         },
                 };
                 if (!m_event_loop->register_handlers(m_mon_hal_nl_events, nl_events_handlers)) {
