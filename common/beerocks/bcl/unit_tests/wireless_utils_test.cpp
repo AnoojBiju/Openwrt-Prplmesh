@@ -158,11 +158,18 @@ std::vector<tGetOperatingClassByChannelParam> get_operating_class_by_channel_inv
                     if (operating_class.bandwidth != bandwidth) {
                         return false;
                     }
-                    return operating_class.channels.end() != operating_class.channels.find(channel);
+                    auto op_class            = operating_class.operating_class;
+                    uint8_t channel_to_check = channel;
+                    if (op_class == 128 || op_class == 129 || op_class == 130) {
+                        channel_to_check =
+                            son::wireless_utils::get_5g_center_channel(channel, bandwidth);
+                    }
+                    return operating_class.channels.end() !=
+                           operating_class.channels.find(channel_to_check);
                 });
             if (it == table.end()) {
                 beerocks::message::sWifiChannel ch;
-                ch.channel           = get_starting_channel(channel, bandwidth);
+                ch.channel           = channel;
                 ch.channel_bandwidth = bandwidth;
 
                 result.emplace_back(std::make_tuple(ch, 0));

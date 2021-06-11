@@ -18,14 +18,9 @@
 
 using namespace son;
 
-struct sOperatingClass {
-    std::set<uint8_t> channels;
-    beerocks::eWiFiBandwidth band;
-};
-
 //Based on hostapd global_op_class struct, file ieee802_11_common.c
 // clang-format off
-static const std::map<uint8_t, sOperatingClass> operating_classes_list = {
+const std::map<uint8_t, wireless_utils::sOperatingClass> wireless_utils::operating_classes_list = {
 //  {OP Class   {Channels List,                                                Bandwidth             }}
     {81,        {{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13},                  beerocks::BANDWIDTH_20}},
     {82,        {{14},                                                         beerocks::BANDWIDTH_20}},
@@ -243,13 +238,32 @@ constexpr wireless_utils::sPhyRateTableEntry
 constexpr wireless_utils::sPhyRateBitRateEntry
     wireless_utils::bit_rate_max_table_mbps[BIT_RATE_MAX_TABLE_SIZE];
 
-static bool has_operating_class_channel(const sOperatingClass &oper_class,
-                                        const beerocks::message::sWifiChannel &channel)
+bool wireless_utils::has_operating_class_channel(const sOperatingClass &oper_class, uint8_t channel,
+                                                 beerocks::eWiFiBandwidth bw)
 {
-    if (oper_class.band != channel.channel_bandwidth)
+    if (oper_class.band != bw) {
         return false;
-    auto it = oper_class.channels.find(channel.channel);
-    return it != oper_class.channels.end();
+    }
+    auto it = oper_class.channels.find(channel);
+    if (it != oper_class.channels.end()) {
+        return true;
+    }
+
+    // operating classes 128,129,130 use center channel **unlike the other classes**,
+    // so convert channel and bandwidth to center channel.
+    // For more info, refer to Table E-4 in the 802.11 specification.
+    if (channel < 36) {
+        return false;
+    }
+    auto center_channel = wireless_utils::get_5g_center_channel(channel, bw);
+    if (center_channel == 0) {
+        return false;
+    }
+    it = oper_class.channels.find(center_channel);
+    if (it == oper_class.channels.end()) {
+        return false;
+    }
+    return true;
 }
 
 wireless_utils::sPhyUlParams
@@ -825,7 +839,9 @@ std::list<wireless_utils::sChannelPreference> wireless_utils::get_channel_prefer
     for (const auto &oper_class : operating_classes_list) {
         std::vector<beerocks::message::sWifiChannel> radar_affected_channels;
         for (const auto supported_channel : supported_channels) {
-            if (has_operating_class_channel(oper_class.second, supported_channel) &&
+            if (has_operating_class_channel(
+                    oper_class.second, supported_channel.channel,
+                    beerocks::eWiFiBandwidth(supported_channel.channel_bandwidth)) &&
                 supported_channel.radar_affected) {
                 radar_affected_channels.push_back(supported_channel);
             }
@@ -841,57 +857,23 @@ std::list<wireless_utils::sChannelPreference> wireless_utils::get_channel_prefer
     return preferences;
 }
 
-/**
- * @brief get list of supported operating classes
- *
- * @param supported_channels list of supported channels
- * @return std::vector<uint8_t> vector of supported operating classes
- */
-std::vector<uint8_t> wireless_utils::get_supported_operating_classes(
-    const std::deque<beerocks::message::sWifiChannel> &supported_channels)
+uint8_t wireless_utils::get_5g_center_channel(uint8_t channel, beerocks::eWiFiBandwidth bandwidth)
 {
-    std::vector<uint8_t> operating_classes;
-    //TODO handle regulatory domain operating classes
-    for (const auto &oper_class : operating_classes_list) {
-        for (const auto supported_channel : supported_channels) {
-            if (has_operating_class_channel(oper_class.second, supported_channel)) {
-                operating_classes.push_back(oper_class.first);
-                break;
-            }
-        }
+    auto channel_it = channels_table_5g.find(channel);
+    if (channel_it == channels_table_5g.end()) {
+        return 0;
+    }
+    auto &bw_info_map = channel_it->second;
+
+    if (bandwidth == beerocks::eWiFiBandwidth::BANDWIDTH_80_80) {
+        bandwidth = beerocks::eWiFiBandwidth::BANDWIDTH_80;
     }
 
-    return operating_classes;
-}
-
-/**
- * @brief get maximum transmit power of operating class
- *
- * @param supported_channels list of supported channels
- * @param operating_class operating class to find max tx for
- * @return max tx power for requested operating class
- */
-uint8_t wireless_utils::get_operating_class_max_tx_power(
-    const std::deque<beerocks::message::sWifiChannel> &supported_channels, uint8_t operating_class)
-{
-    uint8_t max_tx_power = 0;
-    auto oper_class      = operating_classes_list.at(operating_class);
-
-    for (const auto supported_channel : supported_channels) {
-        if (has_operating_class_channel(oper_class, supported_channel)) {
-            max_tx_power = std::max(max_tx_power, supported_channel.tx_pow);
-        }
+    auto bw_info_it = bw_info_map.find(bandwidth);
+    if (bw_info_it == bw_info_map.end()) {
+        return 0;
     }
-    return max_tx_power;
-}
-
-uint8_t wireless_utils::get_5g_center_channel(uint8_t start_channel,
-                                              beerocks::eWiFiBandwidth channel_bandwidth,
-                                              bool channel_ext_above_secondary)
-{
-    auto vht_center_freq =
-        channel_to_vht_center_freq(start_channel, channel_bandwidth, channel_ext_above_secondary);
-    return freq_to_channel(vht_center_freq);
+    return bw_info_it->second.center_channel;
 }
 
 /**
@@ -909,7 +891,7 @@ wireless_utils::get_operating_class_by_channel(const beerocks::message::sWifiCha
     auto ch = channel.channel;
     auto bw = static_cast<beerocks::eWiFiBandwidth>(channel.channel_bandwidth);
     if (bw >= beerocks::eWiFiBandwidth::BANDWIDTH_80) {
-        ch = wireless_utils::get_5g_center_channel(ch, bw, true);
+        ch = wireless_utils::get_5g_center_channel(ch, bw);
     }
     for (auto oper_class : operating_classes_list) {
         if (oper_class.second.band == channel.channel_bandwidth &&
@@ -918,35 +900,6 @@ wireless_utils::get_operating_class_by_channel(const beerocks::message::sWifiCha
         }
     }
     return 0;
-}
-
-/**
- * @brief get list of permanent non operable channels for operating class
- *
- * @param supported_channels list of supported channels
- * @param operating_class operating class to find non operable channels for
- * @return std::vector<uint8_t> vector of non operable channels
- */
-std::vector<uint8_t> wireless_utils::get_operating_class_non_oper_channels(
-    const std::deque<beerocks::message::sWifiChannel> &supported_channels, uint8_t operating_class)
-{
-    std::vector<uint8_t> non_oper_channels;
-    auto oper_class = operating_classes_list.at(operating_class);
-
-    for (const auto &op_class_channel : oper_class.channels) {
-        uint8_t found = 0;
-        for (const auto supported_channel : supported_channels) {
-            if (op_class_channel == supported_channel.channel &&
-                oper_class.band == supported_channel.channel_bandwidth) {
-                found = 1;
-                break;
-            }
-        }
-        if (!found)
-            non_oper_channels.push_back(op_class_channel);
-    }
-
-    return non_oper_channels;
 }
 
 /**
@@ -1127,4 +1080,77 @@ wireless_utils::OverlappingChannels wireless_utils::get_overlapping_channels(uin
         }
     }
     return ret;
+}
+
+std::vector<uint8_t> wireless_utils::get_overlapping_beacon_channels(uint8_t beacon_channel,
+                                                                     beerocks::eWiFiBandwidth bw)
+{
+    std::vector<uint8_t> overlapping_beacon_channels;
+
+    auto ch_it = channels_table_5g.find(beacon_channel);
+    if (ch_it == channels_table_5g.end()) {
+        LOG(ERROR) << "Couldn't find channel " << beacon_channel;
+        return {};
+    }
+
+    auto bw_it = ch_it->second.find(bw);
+    if (bw_it == ch_it->second.end()) {
+        LOG(ERROR) << "Couldn't find bw " << beerocks::utils::convert_bandwidth_to_int(bw)
+                   << " on channel " << beacon_channel;
+        return {};
+    }
+
+    auto channel_range_min = bw_it->second.overlap_beacon_channels_range.first;
+    auto channel_range_max = bw_it->second.overlap_beacon_channels_range.second;
+
+    constexpr uint8_t channels_distance_5g = 4;
+    overlapping_beacon_channels.reserve(
+        (channel_range_max - channel_range_min) / channels_distance_5g + 1);
+
+    // Ignore if one of beacon channels is unavailable.
+    for (uint8_t overlap_ch = channel_range_min; overlap_ch <= channel_range_max;
+         overlap_ch += channels_distance_5g) {
+        overlapping_beacon_channels.push_back(overlap_ch);
+    }
+    return overlapping_beacon_channels;
+}
+
+std::vector<uint8_t>
+wireless_utils::center_channel_5g_to_beacon_channels(uint8_t center_channel,
+                                                     beerocks::eWiFiBandwidth bw)
+{
+    // Return nothing on 2.4G channels
+    if (center_channel < 36) {
+        return {};
+    }
+
+    std::vector<uint8_t> beacon_channels;
+    uint8_t beacon_channel;
+    switch (bw) {
+    case beerocks::BANDWIDTH_20:
+        beacon_channels.push_back(center_channel);
+        return beacon_channels;
+    case beerocks::BANDWIDTH_40:
+        beacon_channel = center_channel - 2;
+        beacon_channels.reserve(2);
+        break;
+    case beerocks::BANDWIDTH_80:
+        beacon_channel = center_channel - 6;
+        beacon_channels.reserve(4);
+        break;
+    case beerocks::BANDWIDTH_160:
+        beacon_channel = center_channel - 14;
+        beacon_channels.reserve(8);
+        break;
+    default: {
+        LOG(DEBUG) << "Invalid BW: " << bw << ", center_channel=" << center_channel;
+        return {};
+    }
+    }
+
+    for (size_t i = beacon_channel; i < beacon_channels.capacity(); i += 4) {
+        beacon_channels.push_back(i);
+    }
+
+    return beacon_channels;
 }

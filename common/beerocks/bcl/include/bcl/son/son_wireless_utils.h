@@ -170,17 +170,7 @@ public:
     static std::string wsc_to_bwl_encryption(WSC::eWscEncr enctype);
     static beerocks::eBssType wsc_to_bwl_bss_type(WSC::eWscVendorExtSubelementBssType bss_type);
     static std::list<uint8_t> string_to_wsc_oper_class(const std::string &operating_class);
-    static std::vector<uint8_t> get_supported_operating_classes(
-        const std::deque<beerocks::message::sWifiChannel> &supported_channels);
-    static uint8_t get_operating_class_max_tx_power(
-        const std::deque<beerocks::message::sWifiChannel> &supported_channels,
-        uint8_t operating_class);
-    static std::vector<uint8_t> get_operating_class_non_oper_channels(
-        const std::deque<beerocks::message::sWifiChannel> &supported_channels,
-        uint8_t operating_class);
-    static uint8_t get_5g_center_channel(uint8_t channel,
-                                         beerocks::eWiFiBandwidth channel_bandwidth,
-                                         bool channel_ext_above_secondary);
+    static uint8_t get_5g_center_channel(uint8_t channel, beerocks::eWiFiBandwidth bandwidth);
     static uint8_t get_operating_class_by_channel(const beerocks::message::sWifiChannel &channel);
     static std::list<sChannelPreference>
     get_channel_preferences(const std::deque<beerocks::message::sWifiChannel> &supported_channels);
@@ -220,11 +210,42 @@ public:
      */
     static OverlappingChannels get_overlapping_channels(uint8_t source_channel);
 
+    /**
+     * @brief Get a list of overlapping beacon channel for a given channel and bandwidth.
+     * 
+     * @param beacon_channel Channel.
+     * @param bw Bandwidth.
+     * @return std::vector<uint8_t> List of overlapping beacon channels (20 MHz).
+     */
+    static std::vector<uint8_t> get_overlapping_beacon_channels(uint8_t beacon_channel,
+                                                                beerocks::eWiFiBandwidth bw);
+
+    /**
+     * @brief Get list of all possible beacon channels for a give center channel and bandwidth on
+     * the 5G band.
+     * 
+     * @param center_channel Center channel.
+     * @param bw Bandwidth.
+     * @return List of beacon channels that have the given center channel.
+     */
+    static std::vector<uint8_t> center_channel_5g_to_beacon_channels(uint8_t center_channel,
+                                                                     beerocks::eWiFiBandwidth bw);
+
     struct sChannel {
         uint8_t center_channel;
         std::pair<uint8_t, uint8_t> overlap_beacon_channels_range;
     };
     static const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, sChannel>> channels_table_5g;
+
+    struct sOperatingClass {
+        std::set<uint8_t> channels;
+        beerocks::eWiFiBandwidth band;
+    };
+    // Key: Operating Class
+    static const std::map<uint8_t, sOperatingClass> operating_classes_list;
+
+    static bool has_operating_class_channel(const sOperatingClass &oper_class, uint8_t channel,
+                                            beerocks::eWiFiBandwidth bw);
 
 private:
     enum eAntennaFactor {

@@ -22,13 +22,11 @@ public:
      *
      * @param[in,out] cmdu_tx CDMU message.
      * @param[in] ruid Radio unique identifier of the radio for which capabilities are reported.
-     * @param[in] supported_channels List of channels supported by AP.
      *
      * @return True on success and false otherwise.
      */
-    static bool add_ap_radio_basic_capabilities(
-        ieee1905_1::CmduMessageTx &cmdu_tx, const sMacAddr &ruid,
-        const std::deque<beerocks::message::sWifiChannel> &supported_channels);
+    static bool add_ap_radio_basic_capabilities(ieee1905_1::CmduMessageTx &cmdu_tx,
+                                                const sMacAddr &ruid);
 };
 
 } // namespace beerocks
