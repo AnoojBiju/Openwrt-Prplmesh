@@ -44,12 +44,12 @@ std::ostream &operator<<(std::ostream &os, eTriStateBool value)
 
 } // namespace son
 
-bool node::get_beacon_measurement(const std::string &ap_mac_, int8_t &rcpi, uint8_t &rsni)
+bool node::get_beacon_measurement(const std::string &ap_mac_, uint8_t &rcpi, uint8_t &rsni)
 {
     auto it = beacon_measurements.find(ap_mac_);
     if (it == beacon_measurements.end()) {
         LOG(ERROR) << "ap_mac " << ap_mac_ << " does not exist!";
-        rcpi = beerocks::RSSI_INVALID;
+        rcpi = beerocks::RCPI_INVALID;
         rsni = 0;
         return false;
     }
@@ -58,7 +58,7 @@ bool node::get_beacon_measurement(const std::string &ap_mac_, int8_t &rcpi, uint
     return true;
 }
 
-void node::set_beacon_measurement(const std::string &ap_mac_, int8_t rcpi, uint8_t rsni)
+void node::set_beacon_measurement(const std::string &ap_mac_, uint8_t rcpi, uint8_t rsni)
 {
     auto it = beacon_measurements.find(ap_mac_);
     if (it == beacon_measurements.end()) {
