@@ -6,6 +6,7 @@
  * See LICENSE file for more details.
  */
 
+#include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_string_utils.h>
 #include <bcl/network/network_utils.h>
 #include <bcl/network/swap.h>
@@ -1425,4 +1426,38 @@ bool network_utils::set_vlan_packet_filter(bool set, const std::string &bss_ifac
     cmd.append(" --vlan-encap 802_1Q");
     os_utils::system_call(cmd);
     return true;
+}
+
+uint8_t network_utils::convert_rcpi_from_rssi(int8_t rssi)
+{
+    uint8_t rcpi;
+
+    // According to 802.11-2016 convertion table (Table 9-154).
+    constexpr int8_t lower_rssi_bound{-109}; // Standart defines as -109.5
+    constexpr int8_t upper_rssi_bound{0};
+
+    if (rssi < lower_rssi_bound) {
+
+        rcpi = RCPI_MIN; //represents RSSI < -109dBm
+
+    } else if ((lower_rssi_bound <= rssi) && (rssi < upper_rssi_bound)) {
+
+        rcpi = RCPI_EQUATION_COEF * (rssi + RCPI_EQUATION_CONSTANT);
+
+    } else {
+
+        rcpi = RCPI_MAX;
+    }
+
+    return rcpi;
+}
+
+int8_t network_utils::convert_rssi_from_rcpi(uint8_t rcpi)
+{
+    if (rcpi > RCPI_MAX) {
+        LOG(ERROR) << "Invalid RCPI value in converion to RSSI.";
+        return RSSI_INVALID;
+    }
+
+    return ((rcpi / RCPI_EQUATION_COEF) - RCPI_EQUATION_CONSTANT);
 }

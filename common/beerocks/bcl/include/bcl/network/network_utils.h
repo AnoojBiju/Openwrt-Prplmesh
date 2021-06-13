@@ -36,6 +36,14 @@ namespace net {
 constexpr uint16_t MIN_VLAN_ID = 1;
 constexpr uint16_t MAX_VLAN_ID = 4094;
 
+// According to 802.11-2016 convertion table (Table 9-154).
+
+/**
+ * @brief According to 802.11-2016 convertion table (Table 9-154), calculation equation parameters.
+ */
+constexpr int RCPI_EQUATION_COEF     = 2;
+constexpr int RCPI_EQUATION_CONSTANT = 110;
+
 class network_utils {
 public:
     static const std::string ZERO_IP_STRING;
@@ -102,10 +110,10 @@ public:
      * The key of the map can be either a MAC address or an IP address, depends on the 'mac_as_key'
      * argument value.
      * If 'mac_as_key' is 'true' then the key is a MAC address, otherwise the key is an IP address.
-     * 
-     * @param[in] mac_as_key Decide whether the key of the returned unordered map object 
+     *
+     * @param[in] mac_as_key Decide whether the key of the returned unordered map object
      * is a MAC or an IP.
-     * @return std::shared_ptr<std::unordered_map<std::string, std::string>> 
+     * @return std::shared_ptr<std::unordered_map<std::string, std::string>>
      */
     static std::shared_ptr<std::unordered_map<std::string, std::string>>
     get_arp_table(bool mac_as_key = true);
@@ -115,7 +123,7 @@ public:
 
     /**
      * @brief Get list of linux interfaces.
-     * 
+     *
      * @return List of linux interfaces.
      */
     static std::list<std::string> linux_get_iface_list();
@@ -190,13 +198,13 @@ public:
 
     /**
      * @brief Get list of BSS interfaces.
-     * 
+     *
      * A BSS could have more than one interface that belongs to it. Specifically, when configuring
      * a BSS as bBSS, a platform could create several virtual netdevs of which only one backhaul
      * station could connect.
      * This function returns a list of the base BSS interface name and all of its
      * extended interfaces.
-     * 
+     *
      * @param bss_iface BSS interface name.
      * @param bridge_iface Bridge interface name.
      * @return List of the base BSS interface name and all of its extended interfaces.
@@ -206,7 +214,7 @@ public:
 
     /**
      * @brief Create a VLAN interface.
-     * 
+     *
      * @param iface Interface to attach the VLAN interface to.
      * @param vid VLAN ID.
      * @return New interface name.
@@ -215,9 +223,9 @@ public:
 
     /**
      * @brief Enable or disable "vlan_filtering" on the bridge.
-     * 
+     *
      * @param default_vlan_id If 'default_vlan_id is not zero, turn on "vlan_filtering" and set the
-     * given value as the default VLAN which will be set on all interfaces in the bridge as 
+     * given value as the default VLAN which will be set on all interfaces in the bridge as
      * "PVID and Egress Untagged".
      * If 'default_vlan_id is zero the "vlan_filtering" is disabled.
      * @return true on success, false otherwise.
@@ -226,14 +234,14 @@ public:
 
     /**
      * @brief Set a specific @a VID policy on a bridged interface - @a 'iface'.
-     * 
+     *
      * @param iface Bridged interface to set the VLAN ID policy on.
      * @param del If true, remove the VLAN ID policy from the given interface. Also, optional
      * arguments are irrelevant in that case.
      * @param vid VLAN ID to set/remove, if the given value is '0' apply for all possible VIDs.
-     * @param is_bridge Whether the given interface is a bridge interface or not. 
+     * @param is_bridge Whether the given interface is a bridge interface or not.
      * @param pvid If true, apply PVID policy on the given @a VID.
-     * @param untagged If true, apply Egress Untagged policy on the given @a VID. 
+     * @param untagged If true, apply Egress Untagged policy on the given @a VID.
      * @return true on success, false otherwise.
      */
     static bool set_iface_vid_policy(const std::string &iface, bool del, uint16_t vid,
@@ -242,13 +250,43 @@ public:
     /**
      * @brief Filter (or Remove Filter) packets containing a given VLAN ID and double-tagged packets
      * with S-Tag, by adding new rules to the nat table.
-     * 
+     *
      * @param set If true, set the filter, otherwise clear it.
      * @param bss_iface An interface name to apply the rule on.
      * @param vid VLAN IDs. If zero (default value), only filter double-tagged packets.
      * @return true on success, false otherwise.
      */
     static bool set_vlan_packet_filter(bool set, const std::string &bss_iface, uint16_t vid = 0);
+
+    /**
+     * @brief Makes conversion from RSSI to RCPI.
+     *
+     * RCPI means Received channel power indicator.
+     * RSSI means Received signal strength indicator.
+     *
+     * This method can only return between 0-220 values.
+     *
+     * Between 221-254 values are reserved (MultiAP Spec.).
+     * 255 means measurement is not avaliable.
+     *
+     * @param rssi signal strength mostly negative value.
+     * @return converted rcpi value.
+     */
+    static uint8_t convert_rcpi_from_rssi(int8_t rssi);
+
+    /**
+     * @brief Makes conversion from RCPI to RSSI.
+     *
+     * RCPI means Received channel power indicator.
+     * RSSI means Received signal strength indicator.
+     *
+     * Between 221-254 values are reserved.
+     * In case of these values are requested to be converted, it returns RSSI_INVALID value.
+     *
+     * @param rcpi signal power indicator value.
+     * @return converted rssi value.
+     */
+    static int8_t convert_rssi_from_rcpi(uint8_t rcpi);
 };
 } // namespace net
 } // namespace beerocks
