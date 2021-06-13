@@ -36,13 +36,13 @@ class tlvApCapability : public BaseClass
         typedef struct sValue {
             #if defined(__LITTLE_ENDIAN_BITFIELD)
             uint8_t reserved : 5;
-            uint8_t support_agent_initiated_rssi_based_steering : 1;
+            uint8_t support_agent_initiated_rcpi_based_steering : 1;
             uint8_t support_unassociated_sta_link_metrics_on_non_operating_bssid : 1;
             uint8_t support_unassociated_sta_link_metrics_on_operating_bssid : 1;
             #elif defined(__BIG_ENDIAN_BITFIELD)
             uint8_t support_unassociated_sta_link_metrics_on_operating_bssid : 1;
             uint8_t support_unassociated_sta_link_metrics_on_non_operating_bssid : 1;
-            uint8_t support_agent_initiated_rssi_based_steering : 1;
+            uint8_t support_agent_initiated_rcpi_based_steering : 1;
             uint8_t reserved : 5;
             #else
             #error "Bitfield macros are not defined"

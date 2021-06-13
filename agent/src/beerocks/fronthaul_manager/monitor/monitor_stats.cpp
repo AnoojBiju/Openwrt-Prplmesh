@@ -204,11 +204,13 @@ void monitor_stats::send_associated_sta_link_metrics(const sMeasurementsRequest 
     beerocks_message::sBssidInfo &bss_info = std::get<1>(sta_metrics->bssid_info_list(0));
 
     bss_info.earliest_measurement_delta = sta_stats.delta_ms;
+
     // TODO: MAC data rate and Phy rate are not necessarily the same
     // https://github.com/prplfoundation/prplMesh/issues/1195
     bss_info.downlink_estimated_mac_data_rate_mbps = sta_stats.rx_phy_rate_100kb_avg / 10;
     bss_info.uplink_estimated_mac_data_rate_mbps   = sta_stats.tx_phy_rate_100kb_avg / 10;
-    bss_info.sta_measured_uplink_rssi_dbm_enc      = sta_stats.rx_rssi_curr;
+    bss_info.sta_measured_uplink_rcpi_dbm_enc =
+        network_utils::convert_rcpi_from_rssi(sta_stats.rx_rssi_curr);
 
     LOG(DEBUG) << "Send ACTION_MONITOR_CLIENT_ASSOCIATED_STA_LINK_METRIC_RESPONSE "
                << "for mac " << sta_metrics->sta_mac() << ", message_id = " << request.message_id;
@@ -514,11 +516,13 @@ bool monitor_stats::add_ap_assoc_sta_link_metric(ieee1905_1::CmduMessageTx &cmdu
     auto &bss_info        = std::get<1>(ap_assoc_sta_link_metric_tlv->bssid_info_list(0));
     bss_info.bssid        = bssid;
     bss_info.earliest_measurement_delta = sta_stats.delta_ms;
+
     // TODO: MAC data rate and Phy rate are not necessarily the same
     // https://github.com/prplfoundation/prplMesh/issues/1195
     bss_info.downlink_estimated_mac_data_rate_mbps = sta_stats.rx_phy_rate_100kb_avg / 10;
     bss_info.uplink_estimated_mac_data_rate_mbps   = sta_stats.tx_phy_rate_100kb_avg / 10;
-    bss_info.sta_measured_uplink_rssi_dbm_enc      = sta_stats.rx_rssi_curr;
+    bss_info.sta_measured_uplink_rcpi_dbm_enc =
+        network_utils::convert_rcpi_from_rssi(sta_stats.rx_rssi_curr);
 
     return true;
 }

@@ -18,7 +18,7 @@ sValue:
       _bit_range: [7,7]
     support_unassociated_sta_link_metrics_on_non_operating_bssid:
       _bit_range: [6,6]
-    support_agent_initiated_rssi_based_steering:
+    support_agent_initiated_rcpi_based_steering:
       _bit_range: [5,5]
     reserved:
       _bit_range: [4,0]
