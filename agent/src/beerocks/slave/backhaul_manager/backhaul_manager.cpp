@@ -833,6 +833,11 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
     case EState::INIT: {
         state_time_stamp_timeout = std::chrono::steady_clock::now() +
                                    std::chrono::seconds(STATE_WAIT_ENABLE_TIMEOUT_SECONDS);
+        auto db                             = AgentDB::get();
+        db->backhaul.connection_type        = AgentDB::sBackhaul::eConnectionType::Invalid;
+        db->backhaul.bssid_multi_ap_profile = 0;
+        db->controller_info.bridge_mac      = beerocks::net::network_utils::ZERO_MAC;
+
         FSM_MOVE_STATE(WAIT_ENABLE);
         break;
     }
@@ -1169,10 +1174,6 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         pending_slave_ifaces.clear();
         pending_slave_ifaces = slave_ap_ifaces;
         pending_enable       = false;
-
-        db->backhaul.connection_type = AgentDB::sBackhaul::eConnectionType::Invalid;
-
-        db->controller_info.bridge_mac = beerocks::net::network_utils::ZERO_MAC;
 
         if (configuration_stop_on_failure_attempts && !stop_on_failure_attempts) {
             LOG(ERROR) << "Reached to max stop on failure attempts!";
