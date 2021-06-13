@@ -81,7 +81,7 @@ private:
             result_size = ScanCfgParams_size_invalid;
             return false;
         }
-        result_size = received_result_size - NL_ATTR_HDR;
+        result_size = received_result_size;
         if (result_size != ScanCfgParams_size) {
             LOG(ERROR) << "LTQ_NL80211_VENDOR_SUBCMD_GET_SCAN_PARAMS failed!"
                        << " expected size = " << ScanCfgParams_size
@@ -89,8 +89,7 @@ private:
             return false;
         }
 
-        std::copy_n(&m_nl_buffer[NL_ATTR_HDR], result_size,
-                    reinterpret_cast<unsigned char *>(&params));
+        std::copy_n(m_nl_buffer, result_size, reinterpret_cast<unsigned char *>(&params));
         return true;
     }
 
@@ -105,7 +104,7 @@ private:
             result_size = ScanCfgParams_size_invalid;
             return false;
         }
-        result_size = received_result_size - NL_ATTR_HDR;
+        result_size = received_result_size;
         if (result_size < ScanCfgParamsBG_min_size) {
             LOG(ERROR) << "LTQ_NL80211_VENDOR_SUBCMD_GET_SCAN_PARAMS_BG failed!"
                        << " expected minimal size = " << ScanCfgParamsBG_min_size
@@ -119,8 +118,7 @@ private:
             return false;
         }
 
-        std::copy_n(&m_nl_buffer[NL_ATTR_HDR], result_size,
-                    reinterpret_cast<unsigned char *>(&params));
+        std::copy_n(m_nl_buffer, result_size, reinterpret_cast<unsigned char *>(&params));
         return true;
     }
 
