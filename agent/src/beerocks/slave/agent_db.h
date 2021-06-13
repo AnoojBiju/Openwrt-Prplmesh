@@ -176,6 +176,7 @@ public:
         enum class eConnectionType { Invalid = 0, Wired, Wireless } connection_type;
         std::string selected_iface_name;
         sMacAddr preferred_bssid;
+        uint8_t bssid_multi_ap_profile;
     } backhaul;
 
     struct {
@@ -217,7 +218,10 @@ public:
             struct sBssid {
                 sMacAddr mac;
                 std::string ssid;
-                enum class eType { fAP, bAP } type;
+                bool fronthaul_bss;
+                bool backhaul_bss;
+                bool backhaul_bss_disallow_profile1_agent_association;
+                bool backhaul_bss_disallow_profile2_agent_association;
             };
             std::array<sBssid, eBeeRocksIfaceIds::IFACE_TOTAL_VAPS> bssids;
         } front;

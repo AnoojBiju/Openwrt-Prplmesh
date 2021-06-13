@@ -1249,6 +1249,11 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         slave_reset();
         break;
     }
+    case beerocks_message::ACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST: {
+        LOG(DEBUG) << "Apply_traffic_separation";
+        // TODO: TrafficSeparation::apply_traffic_separation();
+        break;
+    }
     case beerocks_message::ACTION_BACKHAUL_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE: {
         LOG(DEBUG) << "ACTION_BACKHAUL_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE";
 
@@ -2048,9 +2053,9 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         }
 
         // Update VAP info (BSSID) in the AgentDB
-        bssid->ssid = vap_info.ssid;
-        bssid->type = vap_info.backhaul_vap ? AgentDB::sRadio::sFront::sBssid::eType::bAP
-                                            : AgentDB::sRadio::sFront::sBssid::eType::fAP;
+        bssid->ssid          = vap_info.ssid;
+        bssid->fronthaul_bss = vap_info.fronthaul_vap;
+        bssid->backhaul_bss  = vap_info.backhaul_vap;
 
         auto notification_out = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_HOSTAP_AP_ENABLED_NOTIFICATION>(cmdu_tx);
@@ -2083,54 +2088,18 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         for (uint8_t vap_idx = 0; vap_idx < eBeeRocksIfaceIds::IFACE_TOTAL_VAPS; vap_idx++) {
             radio->front.bssids[vap_idx].mac  = notification_in->params().vaps[vap_idx].mac;
             radio->front.bssids[vap_idx].ssid = notification_in->params().vaps[vap_idx].ssid;
-            radio->front.bssids[vap_idx].type = notification_in->params().vaps[vap_idx].backhaul_vap
-                                                    ? AgentDB::sRadio::sFront::sBssid::eType::bAP
-                                                    : AgentDB::sRadio::sFront::sBssid::eType::fAP;
-
-            if (db->traffic_separation.primary_vlan_id) {
-                auto vlan_mapping_it =
-                    db->traffic_separation.ssid_vid_mapping.find(radio->front.bssids[vap_idx].ssid);
-
-                uint16_t vlan_id = 0;
-                if (vlan_mapping_it != db->traffic_separation.ssid_vid_mapping.end()) {
-                    vlan_id = vlan_mapping_it->second;
-                }
-
-                auto bss_iface =
-                    utils::get_iface_string_from_iface_vap_ids(radio->front.iface_name, vap_idx);
-
-                if (vlan_id && radio->front.bssids[vap_idx].type ==
-                                   AgentDB::sRadio::sFront::sBssid::eType::fAP) {
-                    LOG(DEBUG) << "Configure fBSS iface " << bss_iface
-                               << " to VLAN ID: " << vlan_id;
-                    // TODO: Configure fBSS interface with the required VLAN ID (pvid and untagged)
-                    continue;
-                }
-
-                bool profile1_backhaul_sta_association_disallowed =
-                    notification_in->params()
-                        .vaps[vap_idx]
-                        .profile1_backhaul_sta_association_disallowed;
-
-                bool profile2_backhaul_sta_association_disallowed =
-                    notification_in->params()
-                        .vaps[vap_idx]
-                        .profile2_backhaul_sta_association_disallowed;
-
-                if (radio->front.bssids[vap_idx].type ==
-                    AgentDB::sRadio::sFront::sBssid::eType::bAP) {
-
-                    if (!profile2_backhaul_sta_association_disallowed) {
-                        // TODO:
-                        // Configure bBSS interface for ALL VLANS to be not pvid and tagged.
-                    } else if (!profile1_backhaul_sta_association_disallowed &&
-                               profile2_backhaul_sta_association_disallowed) {
-                        // TODO:
-                        // Configure bBSS interface so the primary VLAN will be pvid and untagged,
-                        // and remove all secondaries VLANS.
-                    }
-                }
-            }
+            radio->front.bssids[vap_idx].fronthaul_bss =
+                notification_in->params().vaps[vap_idx].fronthaul_vap;
+            radio->front.bssids[vap_idx].backhaul_bss =
+                notification_in->params().vaps[vap_idx].backhaul_vap;
+            radio->front.bssids[vap_idx].backhaul_bss_disallow_profile1_agent_association =
+                notification_in->params()
+                    .vaps[vap_idx]
+                    .profile1_backhaul_sta_association_disallowed;
+            radio->front.bssids[vap_idx].backhaul_bss_disallow_profile2_agent_association =
+                notification_in->params()
+                    .vaps[vap_idx]
+                    .profile2_backhaul_sta_association_disallowed;
         }
 
         auto notification_out = message_com::create_vs_message<

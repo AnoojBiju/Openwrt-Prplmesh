@@ -39,6 +39,12 @@ static std::string::size_type find_first_of_delimiter_pair(const std::string &st
     }
     // Search back for the start delimiter from there.
     idx = str.rfind(delim_near, idx);
+
+    // If there is no 'delim_near', return the first character since assuming the first parameter
+    // starts on the buffer begining with no 'delimiter_near' on the left.
+    if (idx == std::string::npos) {
+        idx = 0;
+    }
     return idx;
 }
 
@@ -144,7 +150,9 @@ size_t KeyValueParser::event_buffer_start_process_idx(const std::string &event_s
     if (idx_start != std::string::npos) {
         idx_start++;
     } else {
-        LOG(WARNING) << "Empty event! event_string: " << event_str;
+        // Hostapd prefix "<3> 'EVENT_NAME' not found.
+        // The Supplicant events do not have this prefix.
+        idx_start = 0;
     }
     return idx_start;
 }

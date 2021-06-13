@@ -97,16 +97,24 @@ static void copy_vaps_info(std::shared_ptr<bwl::ap_wlan_hal> &ap_wlan_hal,
                    << ", ssid=" << curr_vap.ssid << ", fronthaul=" << curr_vap.fronthaul
                    << ", backhaul=" << curr_vap.backhaul;
 
+        if (curr_vap.backhaul) {
+            LOG(DEBUG) << "disallow_profile1="
+                       << curr_vap.profile1_backhaul_sta_association_disallowed
+                       << ", disallow_profile2="
+                       << curr_vap.profile2_backhaul_sta_association_disallowed;
+        }
+
         // Copy the VAP MAC and SSID
         vaps[i].mac = tlvf::mac_from_string(curr_vap.mac);
         beerocks::string_utils::copy_string(vaps[i].ssid, curr_vap.ssid.c_str(),
                                             beerocks::message::WIFI_SSID_MAX_LENGTH);
 
-        vaps[i].backhaul_vap = curr_vap.backhaul;
+        vaps[i].fronthaul_vap = curr_vap.fronthaul;
+        vaps[i].backhaul_vap  = curr_vap.backhaul;
         vaps[i].profile1_backhaul_sta_association_disallowed =
             curr_vap.profile1_backhaul_sta_association_disallowed;
-        vaps[i].profile1_backhaul_sta_association_disallowed =
-            curr_vap.profile1_backhaul_sta_association_disallowed;
+        vaps[i].profile2_backhaul_sta_association_disallowed =
+            curr_vap.profile2_backhaul_sta_association_disallowed;
     }
 }
 

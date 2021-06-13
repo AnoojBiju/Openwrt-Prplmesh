@@ -127,6 +127,9 @@ cACTION_BACKHAUL_SET_ASSOC_DISALLOW_REQUEST:
   enable: uint8_t
   bssid: sMacAddr
 
+cACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST:
+  _type: class
+  
 cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED:
   _type: class
   front_iface_name:
