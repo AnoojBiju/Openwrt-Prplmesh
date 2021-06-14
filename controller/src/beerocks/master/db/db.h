@@ -148,6 +148,7 @@ public:
         unsigned int persistent_db_commit_changes_interval_seconds;
         std::chrono::seconds link_metrics_request_interval_seconds;
         std::chrono::seconds dhcp_monitor_interval_seconds;
+        std::chrono::milliseconds steering_disassoc_timer_msec;
     } sDbMasterConfig;
 
     typedef struct {
@@ -176,6 +177,18 @@ public:
         // Params
         bool client_optimal_path_roaming_prefer_signal_strength = false;
     } sDbMasterSettings;
+
+    /**
+     * @brief Avaliable configuration parameters in NBAPI.
+     *
+     * This struct is subset of sDbMasterSettings.
+     */
+    typedef struct {
+        bool client_band_steering;
+        bool client_optimal_path_roaming;
+        int roaming_hysteresis_percent_bonus;
+        std::chrono::milliseconds steering_disassoc_timer_msec;
+    } sDbNbapiConfig;
 
     typedef struct {
         uint32_t m_byte_sent            = 0;
@@ -1394,17 +1407,17 @@ public:
 
     /**
      * @brief Update the node stats info
-     * 
+     *
      * @param[in] mac MAC address of the given node
      * @param[in] params pointer to the incoming parameters
-     * 
+     *
      * @return true on success, otherwise false.
      */
     bool set_node_stats_info(const sMacAddr &mac, const beerocks_message::sStaStatsParams *params);
 
     /**
      * @brief Clear any existing node stats info
-     * 
+     *
      * @param[in] mac MAC address of the given node
      */
     void clear_node_stats_info(const sMacAddr &mac);
@@ -1564,7 +1577,8 @@ public:
     void disable_periodic_link_metrics_requests();
 
     /**
-     * @brief Set radio utilization value in Controler Data Model.
+     * @brief Set radio utilization value in Controller Data Model.
+     *
      * Data model path example: "Controller.Network.Device.1.Radio.1.Utilization"
      *
      * @param[in] bssid BSSID for specific radio.
@@ -1574,7 +1588,7 @@ public:
     bool set_radio_utilization(const sMacAddr &bssid, uint8_t utilization);
 
     /**
-     * @brief Set radio metrics values in Controler Data Model.
+     * @brief Set radio metrics values in Controller Data Model.
      *
      * Objects are Noise, Transmit, ReceiveSelf and ReceiveOther.
      * Data model path example: "Controller.Network.Device.1.Radio.1.Noise"
@@ -1590,7 +1604,8 @@ public:
                            uint8_t receive_self, uint8_t receive_other);
 
     /**
-     * @brief Set estimated service parameters BE in Controler Data Model.
+     * @brief Set estimated service parameters BE in Controller Data Model.
+     *
      * Data model path example: "Controller.Network.Device.1.Radio.1.BSS.1.EstServiceParametersBE"
      *
      * @param[in] bssid BSSID.
@@ -1599,6 +1614,16 @@ public:
      */
     bool set_estimated_service_parameters_be(const sMacAddr &bssid,
                                              uint32_t estimated_service_parameters_be);
+
+    /**
+     * @brief Updates master configuration if a setting is changed through NBAPI.
+     *
+     * Data model path : "Controller.Configuration" defined in controller.odl
+     *
+     * @param nbapi_config Settings read from datamodel with change action.
+     * @return true on success, otherwise false.
+     */
+    bool update_master_configuration(const sDbNbapiConfig &nbapi_config);
 
     //
     // tasks
@@ -1775,8 +1800,10 @@ private:
     std::shared_ptr<node> get_node(const std::string &key); //key can be <mac> or <al_mac>_<ruid>
     std::shared_ptr<node> get_node(const sMacAddr &mac);
     std::shared_ptr<node> get_node(const sMacAddr &al_mac, const sMacAddr &ruid);
+
     /**
      * @brief Returns the node object after verifing node type.
+     *
      * if node is found but type is not requested type a nullptr is returned.
      *
      * @param mac MAC address of the node.
@@ -1845,6 +1872,7 @@ private:
 
     /**
      * @brief Returns the preferred client to be removed.
+     *
      * Preference is determined as follows:
      * - Prefer disconnected clients over connected ones.
      * - According to above, the client with least time left before aging.
@@ -1864,7 +1892,8 @@ private:
     std::string dm_add_device_element(const sMacAddr &mac);
 
     /**
-     * @brief Add station 'HECapabilities' data element, set values to its parametrs.
+     * @brief Add station 'HECapabilities' data element, set values to its parameters.
+     *
      * Example of full path to object:
      * "Controller.Netwok.Device.1.Radio.1.Capabilities.BSS.1.STA.1.HECapabilities".
      *
@@ -1878,7 +1907,8 @@ private:
                                     const beerocks::message::sRadioCapabilities &sta_cap);
 
     /**
-     * @brief Add station 'HTCapabilities' data element, set values to its parametrs.
+     * @brief Add station 'HTCapabilities' data element, set values to its parameters.
+     *
      * Example of full path to object:
      * "Controller.Netwok.Device.1.Radio.1.Capabilities.BSS.1.STA.1.HTCapabilities".
      *
@@ -1892,7 +1922,8 @@ private:
                                     const beerocks::message::sRadioCapabilities &sta_cap);
 
     /**
-     * @brief Add station 'VHTCapabilities' data element, set values to its parametrs.
+     * @brief Add station 'VHTCapabilities' data element, set values to its parameters.
+     *
      * Example of full path to VHTCapabilities object:
      * "Controller.Netwok.Device.1.Radio.1.Capabilities.BSS.1.STA.1.VHTCapabilities".
      *
@@ -1907,7 +1938,8 @@ private:
 
     /**
      * @brief Adds STA instance to the datamodel.
-     * (ex. Controller.Network.Device.1.Radio.1.BSS.2.STA.3)
+     *
+     * Data model path example: "Controller.Network.Device.1.Radio.1.BSS.2.STA.3"
      *
      * @param bssid BSS mac address.
      * @param client_mac Client mac address.
@@ -1917,6 +1949,7 @@ private:
 
     /**
      * @brief Adds to data model an instance of object AssociationEventData.
+     *
      * This object describes an event generated when a STA associates to a BSS.
      * Example of full path to object:
      * 'Controller.Notification.AssociationEvent.AssociationEventData.1'.
@@ -1929,7 +1962,8 @@ private:
 
     /**
      * @brief Prepares path to the BSS data element with correct index (i).
-     * Example: "Controller.Network.Device.1.Radio.1.BSS.2.".
+     *
+     * Data model path example: "Controller.Network.Device.1.Radio.1.BSS.2."
      *
      * @param bssid BSSID.
      * @return Path to bss, empty string otherwise.
@@ -1938,7 +1972,8 @@ private:
 
     /**
      * @brief Set clients (device) multi ap capabilities
-     * Example: "Controller.Network.Device.1.MultiAPCapabilities.{capabilities}"
+     *
+     * Data model path example: "Controller.Network.Device.1.MultiAPCapabilities.{capabilities}"
      *
      * @param device_mac mac address of device
      * @return True on success, false otherwise.
@@ -1946,9 +1981,9 @@ private:
     bool dm_set_device_multi_ap_capabilities(const std::string &device_mac);
 
     /**
-     * @brief Add instance of 'OperatingClasses' data element,
-     * set values for its parameters/subobjects
-     * Example: "Controller.Network.Device.1.Radio.1.Capabilities.OperatingClasses.1."
+     * @brief Add instance of 'OperatingClasses' data element, set values for its parameters.
+     *
+     * Data model path example: "Controller.Network.Device.1.Radio.1.Capabilities.OperatingClasses.1."
      *
      * @param radio_mac mac address of radio which reporting operating class.
      * @param max_tx_power max transmit power.
@@ -1982,8 +2017,7 @@ private:
     bool set_node_data_model_path(const sMacAddr &mac, const std::string &data_model_path);
 
     /**
-     * @brief Removes excessive NBAPI objects from system bus
-     * if amount of them succeed the limit.
+     * @brief Removes excessive NBAPI objects from system bus, if amount of them succeed the limit.
      *
      * @param paths Queue with paths to NBAPI objects of particular type.
      * @param limit The maximum allowed amount of those objects.
@@ -2008,16 +2042,16 @@ private:
     std::unordered_map<std::string, std::shared_ptr<node>> nodes[beerocks::HIERARCHY_MAX];
 
     std::queue<std::string> disconnected_slave_mac_queue;
-    /*
-    * This variable indicates that data is awaiting to be commited over to the persistentDB
+
+    /**
+    *  @brief This variable indicates that data is awaiting to be commited over to the persistentDB.
     */
     bool persistent_db_changes_made = false;
 
     int slaves_stop_on_failure_attempts = 0;
 
-    /*
-     * some operations on unordered_map can cause iterators to be invalidated
-     * use the following with caution.
+    /**
+     * @brief some operations on unordered_map can cause iterators to be invalidated use the following with caution.
      */
     int current_hierarchy = 0;
     std::unordered_map<std::string, std::shared_ptr<node>>::iterator db_it =
@@ -2034,22 +2068,22 @@ private:
 
     std::shared_ptr<vaps_list_t> m_vap_list;
 
-    /*
-    * This map holds link metric "data struct" per reporting Agent sMacAddr .
-    * "data struct" holds map of the actual link_metrics_data vector (tx/rx) per reported Agent sMacAddr.
-    * Map is Used in TYPE_GW/TYPE_IRE nodes.
-    * Map created empty in all other nodes.
-    */
+    /**
+     * @brief This map holds link metric "data struct" per reporting Agent sMacAddr .
+     * "data struct" holds map of the actual link_metrics_data vector (tx/rx) per reported Agent sMacAddr.
+     * Map is Used in TYPE_GW/TYPE_IRE nodes.
+     * Map created empty in all other nodes.
+     */
     //TODO: This map should be moved to the agent nodes instead of being a separate map.
     std::unordered_map<sMacAddr, std::unordered_map<sMacAddr, son::node::link_metrics_data>>
         m_link_metric_data;
 
-    /*
-    * This map holds ap metric data per reporting Agent sMacAddr .
-    * Map is Used in TYPE_GW/TYPE_IRE nodes.
-    * Map created empty in all other nodes.
-    */
-    //TODO:  This map should be moved to the BSS nodes (which currently don't exist) instead of being a separate map.
+    /**
+     * @brief This map holds ap metric data per reporting Agent sMacAddr .
+     * Map is Used in TYPE_GW/TYPE_IRE nodes.
+     * Map created empty in all other nodes.
+     */
+    //TODO: This map should be moved to the BSS nodes (which currently don't exist) instead of being a separate map.
     std::unordered_map<sMacAddr, son::node::ap_metrics_data> m_ap_metric_data;
 
     // certification
@@ -2057,14 +2091,15 @@ private:
     std::unordered_map<sMacAddr, std::list<wireless_utils::sBssInfoConf>> bss_infos; // key=al_mac
     std::list<wireless_utils::sBssInfoConf> bss_infos_global;
 
-    /*
-    * This map holds traffic separation policy per Agent sMacAddr.
-    */
+    /**
+     * @brief This map holds traffic separation policy per Agent sMacAddr.
+     */
     std::unordered_map<sMacAddr, std::list<wireless_utils::sTrafficSeparationSsid>>
         traffic_separation_policy_configurations; // key=al_mac
-    /*
-    * This map holds default 802.1Q settings per Agent sMacAddr.
-    */
+
+    /**
+     * @brief This map holds default 802.1Q settings per Agent sMacAddr.
+     */
     std::unordered_map<sMacAddr, wireless_utils::s8021QSettings>
         default_8021q_settings; // key=al_mac
 
@@ -2079,34 +2114,34 @@ private:
     // Value:   int         Report-message-MID
     std::unordered_map<std::string, int> m_channel_scan_report_records;
 
-    /*
-    * key = client mac, value = index of NBAPI AssociationEventData
-    */
+    /**
+     * @brief key = client mac, value = index of NBAPI AssociationEventData
+     */
     std::map<std::string, std::list<int>> m_assoc_indx;
 
-    /*
-    * Maximum amount of events registered on the system bus NBAPI
-    */
+    /**
+     * @brief Maximum amount of events registered on the system bus NBAPI
+     */
     const uint8_t MAX_EVENT_HISTORY_SIZE = 24;
 
-    /*
-    * The queue with paths of NBAPI disassociation events.
-    */
+    /**
+     * @brief The queue with paths of NBAPI disassociation events.
+     */
     std::queue<std::string> m_disassoc_events;
 
-    /*
-    * The queue with paths of NBAPI association events.
-    */
+    /**
+     * @brief The queue with paths of NBAPI association events.
+     */
     std::queue<std::string> m_assoc_events;
 
-    /*
-    * Maximum amount of NBAPI ScanResults registered on the system bus.
-    */
+    /**
+     * @brief Maximum amount of NBAPI ScanResults registered on the system bus.
+     */
     const uint8_t MAX_SCAN_RESULT_HISTORY_SIZE = 5;
 
-    /*
-    * The queue with paths of NBAPI ScanResults.
-    */
+    /**
+     * @brief The queue with paths of NBAPI ScanResults.
+     */
     std::queue<std::string> m_scan_results;
 };
 

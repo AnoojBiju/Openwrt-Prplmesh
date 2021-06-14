@@ -185,16 +185,22 @@ static bool fill_platform_settings(
         return false;
     }
     db->device_conf.rdkb_extensions_enabled = static_cast<bool>(temp_int);
-    if ((temp_int = bpl::cfg_get_band_steering()) < 0) {
-        LOG(ERROR) << "Failed reading 'band_steering'";
-        return false;
+
+    if (!bpl::cfg_get_band_steering(db->device_conf.client_band_steering_enabled)) {
+        LOG(DEBUG) << "Failed to read cfg_get_band_steering, setting to default value: "
+                   << beerocks::bpl::DEFAULT_BAND_STEERING;
+
+        db->device_conf.client_band_steering_enabled = beerocks::bpl::DEFAULT_BAND_STEERING;
     }
-    db->device_conf.client_band_steering_enabled = temp_int;
-    if ((temp_int = bpl::cfg_get_client_roaming()) < 0) {
-        LOG(ERROR) << "Failed reading 'client_roaming";
-        return false;
+
+    if (!beerocks::bpl::cfg_get_client_roaming(
+            db->device_conf.client_optimal_path_roaming_enabled)) {
+        LOG(DEBUG) << "Failed to read cfg_get_client_roaming, setting to default value: "
+                   << beerocks::bpl::DEFAULT_CLIENT_ROAMING;
+
+        db->device_conf.client_optimal_path_roaming_enabled = beerocks::bpl::DEFAULT_CLIENT_ROAMING;
     }
-    db->device_conf.client_optimal_path_roaming_enabled = temp_int;
+
     if ((temp_int = bpl::cfg_is_master()) < 0) {
         LOG(ERROR) << "Failed reading 'local_controller'";
         return false;
