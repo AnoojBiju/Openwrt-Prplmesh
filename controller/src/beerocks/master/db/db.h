@@ -577,8 +577,8 @@ public:
      * @brief Adds to data model Scan Result and fill up data for its parameters.
      *
      * @param ruid Radio unique identifier.
-     * @param operating_class Scaned operating class.
-     * @param channel Scaned channel.
+     * @param operating_class Scanned operating class.
+     * @param channel Scanned channel.
      * @param noise Channel noise.
      * @param utilization Channel utilization.
      * @param neighbors List of discovered neighbors.
