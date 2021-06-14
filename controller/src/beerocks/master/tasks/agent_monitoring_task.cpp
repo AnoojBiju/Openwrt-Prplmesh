@@ -28,7 +28,30 @@ agent_monitoring_task::agent_monitoring_task(db &database_, ieee1905_1::CmduMess
 {
 }
 
-void agent_monitoring_task::work() {}
+void agent_monitoring_task::work()
+{
+    if (!m_ap_autoconfig_renew_sent) {
+        /**
+         * Usually, the ap-configuration sequence is started when the agent sends the ap-config
+         * search request message, to which the controller responds with the ap-config response
+         * message.
+         * But with the scenario presented in PPM-1390, the controller process is restarted and
+         * loads without ever receiving an ap-config search request message.
+         * To resolve this, we can initialize the ap-config "handshake" by sending a ap-config
+         * renew message, informing the agent of a newly restarted controller process.
+         * To make sure all the tasks in the controller are running correctly, we need to send
+         * the ap-config renew message after the controller finished its startup function,
+         * during the event loop handling.
+         * Doing this will give all the controller tasks enough time to finish their
+         * initialization.
+         * Since the agent_monitoring_task is responsible for handling the AGENT_JOIN as well as
+         * the WSC autoconfiguration, it was suggested as the best place to send the ap-config
+         * renew message from.
+         **/
+        son_actions::send_ap_config_renew_msg(cmdu_tx, database);
+        m_ap_autoconfig_renew_sent = true;
+    }
+}
 
 bool agent_monitoring_task::handle_ieee1905_1_msg(const std::string &src_mac,
                                                   ieee1905_1::CmduMessageRx &cmdu_rx)
