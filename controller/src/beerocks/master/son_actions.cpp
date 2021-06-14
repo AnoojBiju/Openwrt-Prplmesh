@@ -457,12 +457,8 @@ bool son_actions::send_cmdu_to_agent(const std::string &dest_mac,
         tlvf::mac_from_string(database.get_local_bridge_mac()));
 }
 
-bool son_actions::send_ap_config_renew_msg(ieee1905_1::CmduMessageTx &cmdu_tx, db &database,
-                                           const sMacAddr &al_mac)
+bool son_actions::send_ap_config_renew_msg(ieee1905_1::CmduMessageTx &cmdu_tx, db &database)
 {
-    bool result = true;
-
-    auto al_mac_addr    = tlvf::mac_to_string(al_mac);
     auto controller_mac = database.get_local_bridge_mac();
 
     auto ires = database.get_all_connected_ires();
