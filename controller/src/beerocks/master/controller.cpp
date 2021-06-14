@@ -3757,7 +3757,8 @@ bool Controller::start_client_steering(const std::string &sta_mac, const std::st
 
     LOG(DEBUG) << "NBAPI client steer request for " << sta_mac << " to hostap: " << target_bssid;
     son_actions::steer_sta(database, cmdu_tx, tasks, sta_mac, target_bssid, triggered_by,
-                           std::string(), disassoc_imminent);
+                           std::string(), disassoc_imminent,
+                           database.config.steering_disassoc_timer_msec.count());
     return true;
 }
 

@@ -38,8 +38,6 @@ public:
         std::string model;
         std::string ucc_listener_port;
         std::string load_dfs_reentry;
-        std::string load_client_band_steering;
-        std::string load_client_optimal_path_roaming;
         std::string load_client_11k_roaming;
         std::string load_legacy_client_roaming;
         std::string load_ire_roaming;
@@ -54,7 +52,6 @@ public:
         std::string global_restricted_channels;
         std::string diagnostics_measurements_polling_rate_sec;
         std::string ire_rssi_report_rate_sec;
-        std::string roaming_hysteresis_percent_bonus;
         std::string roaming_unconnected_client_rssi_compensation_db;
         std::string roaming_hop_percent_penalty;
         std::string roaming_band_pathloss_delta_db;
