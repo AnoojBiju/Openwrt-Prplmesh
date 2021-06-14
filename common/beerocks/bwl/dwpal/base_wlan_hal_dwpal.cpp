@@ -943,41 +943,34 @@ bool base_wlan_hal_dwpal::refresh_radio_info()
 
 bool base_wlan_hal_dwpal::get_vap_type(const std::string &ifname, bool &fronthaul, bool &backhaul)
 {
-    char *reply              = nullptr;
-    size_t numOfValidArgs[1] = {0}, replyLen = 0;
-    char mode[16]                 = {0};
-    FieldsToParse fieldsToParse[] = {
-        {(void *)mode, &numOfValidArgs[0], DWPAL_STR_PARAM, "mesh_mode=", sizeof(mode)},
-        /* Must be at the end */
-        {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
-    std::string cmd = "GET_MESH_MODE " + ifname;
+    const char *tmp_str;
+    parsed_line_t reply;
 
-    if (!dwpal_send_cmd(cmd, &reply) || reply[0] == '\0') {
-        fronthaul = true; // if mesh_mode not defined at all, assume fronthaul
-        return true;
-    }
+    std::string cmd;
+    cmd.reserve(50);
+    cmd.assign("GET_MESH_MODE ").append(ifname);
 
-    replyLen = strnlen(reply, HOSTAPD_TO_DWPAL_MSG_LENGTH);
-
-    if (dwpal_string_to_struct_parse(reply, replyLen, fieldsToParse, sizeof(mode)) ==
-        DWPAL_FAILURE) {
-        LOG(ERROR) << "DWPAL parse error on " << ifname;
+    if (!dwpal_send_cmd(cmd, reply)) {
+        LOG(ERROR) << __func__ << " failed";
         return false;
     }
 
-    for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
-        if (numOfValidArgs[i] == 0) {
-            LOG(ERROR) << "Failed reading parsed parameter " << (int)i << " ==> Abort";
-            return false;
-        }
+    // Mesh mode
+    if (!read_param("mesh_mode", reply, &tmp_str)) {
+        // if mesh_mode not defined at all, assume fronthaul
+        fronthaul = true;
+        backhaul  = false;
+        return true;
     }
 
-    std::string mesh_mode = std::string(mode);
+    std::string mesh_mode(tmp_str);
     if (mesh_mode.find("bAP") != std::string::npos) {
-        backhaul = true;
+        backhaul  = true;
+        fronthaul = false;
         return true;
     } else if (mesh_mode.find("fAP") != std::string::npos) {
         fronthaul = true;
+        backhaul  = false;
         return true;
     } else if (mesh_mode.find("hybrid") != std::string::npos) {
         fronthaul = true;
