@@ -1374,9 +1374,9 @@ public:
     //
 
     bool set_node_beacon_measurement(const std::string &sta_mac, const std::string &ap_mac,
-                                     int8_t rcpi, uint8_t rsni);
+                                     uint8_t rcpi, uint8_t rsni);
     bool get_node_beacon_measurement(const std::string &sta_mac, const std::string &ap_mac,
-                                     int8_t &rcpi, uint8_t &rsni);
+                                     uint8_t &rcpi, uint8_t &rsni);
 
     bool set_node_cross_rx_rssi(const std::string &sta_mac, const std::string &ap_mac, int8_t rssi,
                                 int8_t rx_packets);

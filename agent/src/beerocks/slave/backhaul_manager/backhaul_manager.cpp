@@ -1980,7 +1980,7 @@ bool BackhaulManager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo> 
                 bss_in.downlink_estimated_mac_data_rate_mbps;
             bss_out.uplink_estimated_mac_data_rate_mbps =
                 bss_in.uplink_estimated_mac_data_rate_mbps;
-            bss_out.sta_measured_uplink_rssi_dbm_enc = bss_in.sta_measured_uplink_rssi_dbm_enc;
+            bss_out.sta_measured_uplink_rcpi_dbm_enc = bss_in.sta_measured_uplink_rcpi_dbm_enc;
         }
 
         LOG(DEBUG) << "Send AssociatedStaLinkMetrics to controller, mid = " << mid;

@@ -22,4 +22,4 @@ sStaMetrics:
   sta_mac: sMacAddr
   channel_number: uint8_t
   measurement_to_report_delta_msec: uint32_t
-  uplink_rssi_dbm_enc: uint8_t
+  uplink_rcpi_dbm_enc: uint8_t

@@ -36,15 +36,15 @@ class tlvSteeringPolicy : public BaseClass
 
         enum eSteeringPolicy: uint8_t {
             AGENT_INITIATED_STEERING_DISALLOWED = 0x0,
-            AGENT_INITIATED_RSSI_BASED_STEERING_MANDATED = 0x1,
-            AGENT_INITIATED_RSSI_BASED_STEERING_ALLOWED = 0x2,
+            AGENT_INITIATED_RCPI_BASED_STEERING_MANDATED = 0x1,
+            AGENT_INITIATED_RCPI_BASED_STEERING_ALLOWED = 0x2,
         };
         
         typedef struct sRadioApControlPolicy {
             sMacAddr radio_ap_mac;
             eSteeringPolicy steering_policy;
             uint8_t channel_utilization_threshold;
-            uint8_t rssi_steering_threshold;
+            uint8_t rcpi_steering_threshold;
             void struct_swap(){
                 radio_ap_mac.struct_swap();
                 tlvf_swap(8*sizeof(eSteeringPolicy), reinterpret_cast<uint8_t*>(&steering_policy));

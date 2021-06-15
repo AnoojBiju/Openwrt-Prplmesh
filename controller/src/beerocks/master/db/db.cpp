@@ -4175,7 +4175,7 @@ bool db::is_bml_listener_exist()
 //
 
 bool db::set_node_beacon_measurement(const std::string &sta_mac, const std::string &ap_mac,
-                                     int8_t rcpi, uint8_t rsni)
+                                     uint8_t rcpi, uint8_t rsni)
 {
     auto sta = get_node(sta_mac);
     if (sta == nullptr) {
@@ -4187,12 +4187,12 @@ bool db::set_node_beacon_measurement(const std::string &sta_mac, const std::stri
 }
 
 bool db::get_node_beacon_measurement(const std::string &sta_mac, const std::string &ap_mac,
-                                     int8_t &rcpi, uint8_t &rsni)
+                                     uint8_t &rcpi, uint8_t &rsni)
 {
     auto sta = get_node(sta_mac);
     if (sta == nullptr) {
         LOG(WARNING) << __FUNCTION__ << " - node " << sta_mac << " does not exist!";
-        rcpi = beerocks::RSSI_INVALID;
+        rcpi = beerocks::RCPI_INVALID;
         rsni = 0;
         return false;
     }

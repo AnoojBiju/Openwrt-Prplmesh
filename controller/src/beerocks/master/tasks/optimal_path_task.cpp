@@ -37,7 +37,7 @@ using namespace son;
 * example), missed the probe or due to the AP bad reception.
 * There is a high probability to get responsiveness less than 100% and therefore, the
 * threshold was changed to 50% as part of demo optimizations.
-* This hardcoded threshold is temporary and shall be revised in the future. 
+* This hardcoded threshold is temporary and shall be revised in the future.
 * update: increasing to 80% since in bandsteering scenario there are only 2 radios
 * and 50% means optimal path always will fail to find an additional candidate.
 */
@@ -551,14 +551,17 @@ void optimal_path_task::work()
                 auto hostap_bw = database.get_node_bw(hostap);
 
                 int8_t dl_rssi;
-                uint8_t dl_snr;
+                uint8_t dl_rcpi, dl_snr;
+
                 if (!estimate_dl_rssi) {
-                    if (!database.get_node_beacon_measurement(sta_mac, hostap, dl_rssi, dl_snr)) {
+                    if (!database.get_node_beacon_measurement(sta_mac, hostap, dl_rcpi, dl_snr)) {
                         TASK_LOG(ERROR)
                             << "get_node_beacon_measurement() failed! sta_mac: " << sta_mac
                             << ", hostap: " << hostap;
                         continue;
                     }
+                    dl_rssi = network_utils::convert_rssi_from_rcpi(dl_rcpi);
+
                     TASK_LOG(DEBUG) << "bssid " << hostap << " dl_rssi: " << int(dl_rssi)
                                     << ", dl_snr:" << int(dl_snr);
                 } else {
@@ -635,15 +638,19 @@ void optimal_path_task::work()
                         << " [Mbps]");
             } else {
                 all_hostaps_below_cutoff = false;
+
                 int8_t dl_rssi;
-                uint8_t dl_snr;
+                uint8_t dl_rcpi, dl_snr;
+
                 if (!estimate_dl_rssi) {
-                    if (!database.get_node_beacon_measurement(sta_mac, hostap, dl_rssi, dl_snr)) {
+                    if (!database.get_node_beacon_measurement(sta_mac, hostap, dl_rcpi, dl_snr)) {
                         TASK_LOG(ERROR)
                             << "get_node_beacon_measurement() failed! sta_mac: " << sta_mac
                             << ", hostap: " << hostap;
                         continue;
                     }
+                    dl_rssi = network_utils::convert_rssi_from_rcpi(dl_rcpi);
+
                     TASK_LOG(DEBUG) << "bssid " << hostap << " dl_rssi: " << int(dl_rssi)
                                     << ", dl_snr:" << int(dl_snr);
                 } else {
