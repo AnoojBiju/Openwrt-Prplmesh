@@ -77,7 +77,11 @@ public:
     static void traffic_seperation_configuration_clear();
 
 private:
-    enum ePortMode { UNTAGGED_PORT, TAGGED_PORT_PRIMARY_UNTAGGED, TAGGED_PORT_PRIMARY_TAGGED };
+    enum class ePortMode {
+        UNTAGGED_PORT,
+        TAGGED_PORT_PRIMARY_UNTAGGED,
+        TAGGED_PORT_PRIMARY_TAGGED
+    };
 
     struct sBridgeVlanInfo {
         explicit sBridgeVlanInfo(const std::string &iface_name_,

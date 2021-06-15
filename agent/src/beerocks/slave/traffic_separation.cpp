@@ -67,18 +67,20 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
     // The Bridge, the WAN ports and the LAN ports should all have "Tagged Port" policy.
     // Update the Bridge Policy
     bool is_bridge = true;
-    set_vlan_policy(db->bridge.iface_name, TAGGED_PORT_PRIMARY_UNTAGGED, is_bridge);
+    set_vlan_policy(db->bridge.iface_name, ePortMode::TAGGED_PORT_PRIMARY_UNTAGGED, is_bridge);
 
     // Since we already set the bridge, and there are no more bridge interfaces, the 'bridge_iface'
     // is set to 'false' from now on.
     is_bridge = false;
 
     // Update WAN and LAN Ports.
-    if (!db->device_conf.local_gw) {
-        set_vlan_policy(db->ethernet.wan.iface_name, TAGGED_PORT_PRIMARY_UNTAGGED, is_bridge);
+    if (!db->device_conf.local_gw && !db->ethernet.wan.iface_name.empty()) {
+        set_vlan_policy(db->ethernet.wan.iface_name, ePortMode::TAGGED_PORT_PRIMARY_UNTAGGED,
+                        is_bridge);
     }
     for (const auto &lan_iface_info : db->ethernet.lan) {
-        set_vlan_policy(lan_iface_info.iface_name, TAGGED_PORT_PRIMARY_UNTAGGED, is_bridge);
+        set_vlan_policy(lan_iface_info.iface_name, ePortMode::TAGGED_PORT_PRIMARY_UNTAGGED,
+                        is_bridge);
     }
 
     // Wireless Backhaul
@@ -91,9 +93,10 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
             return;
         }
         if (db->backhaul.bssid_multi_ap_profile > 1) {
-            set_vlan_policy(radio->back.iface_name, TAGGED_PORT_PRIMARY_TAGGED, is_bridge);
+            set_vlan_policy(radio->back.iface_name, ePortMode::TAGGED_PORT_PRIMARY_TAGGED,
+                            is_bridge);
         } else {
-            set_vlan_policy(radio->back.iface_name, UNTAGGED_PORT, is_bridge);
+            set_vlan_policy(radio->back.iface_name, ePortMode::UNTAGGED_PORT, is_bridge);
         }
     }
 
@@ -137,7 +140,7 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
                 continue;
             }
             auto vid_to_set = ssid_vlan_pair_iter->second;
-            set_vlan_policy(bss_iface, UNTAGGED_PORT, is_bridge, vid_to_set);
+            set_vlan_policy(bss_iface, ePortMode::UNTAGGED_PORT, is_bridge, vid_to_set);
         }
         // bBSS
         else if (!bss.fronthaul_bss && bss.backhaul_bss) {
@@ -155,11 +158,12 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
             for (const auto &bss_iface_netdev : bss_iface_netdevs) {
                 // Profile-2 Backhaul BSS
                 if (bss.backhaul_bss_disallow_profile1_agent_association) {
-                    set_vlan_policy(bss_iface_netdev, TAGGED_PORT_PRIMARY_UNTAGGED, is_bridge);
+                    set_vlan_policy(bss_iface_netdev, ePortMode::TAGGED_PORT_PRIMARY_UNTAGGED,
+                                    is_bridge);
                 }
                 // Profile-1 Backhual BSS
                 else {
-                    set_vlan_policy(bss_iface_netdev, UNTAGGED_PORT, is_bridge,
+                    set_vlan_policy(bss_iface_netdev, ePortMode::UNTAGGED_PORT, is_bridge,
                                     db->traffic_separation.primary_vlan_id);
                 }
             }
@@ -178,14 +182,14 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
                 continue;
             }
 
-            set_vlan_policy(bss_iface, UNTAGGED_PORT, is_bridge,
+            set_vlan_policy(bss_iface, ePortMode::UNTAGGED_PORT, is_bridge,
                             db->traffic_separation.primary_vlan_id);
 
             auto bss_iface_netdevs =
                 network_utils::get_bss_ifaces(bss_iface, db->bridge.iface_name);
 
             for (const auto &bss_iface_netdev : bss_iface_netdevs) {
-                set_vlan_policy(bss_iface_netdev, UNTAGGED_PORT, is_bridge,
+                set_vlan_policy(bss_iface_netdev, ePortMode::UNTAGGED_PORT, is_bridge,
                                 db->traffic_separation.primary_vlan_id);
             }
         }
@@ -305,8 +309,9 @@ void TrafficSeparation::set_vlan_policy(const std::string &iface, ePortMode port
 
     del = false;
 
-    if (port_mode == TAGGED_PORT_PRIMARY_UNTAGGED || port_mode == TAGGED_PORT_PRIMARY_TAGGED) {
-        if (port_mode == TAGGED_PORT_PRIMARY_UNTAGGED) {
+    if (port_mode == ePortMode::TAGGED_PORT_PRIMARY_UNTAGGED ||
+        port_mode == ePortMode::TAGGED_PORT_PRIMARY_TAGGED) {
+        if (port_mode == ePortMode::TAGGED_PORT_PRIMARY_UNTAGGED) {
             // Set the new Primary VLAN with "PVID" and "Egress Untagged" policy.
             pvid     = true;
             untagged = true;
