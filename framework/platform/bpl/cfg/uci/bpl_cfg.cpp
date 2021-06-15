@@ -617,7 +617,7 @@ static bool bpl_cfg_get_bss_configuration(const std::string &section_name,
     };
 
     auto get_authentication_type = [&](const std::string &encryption) {
-        if ("none" == encryption) {
+        if ("none" == encryption || encryption.empty()) {
             return WSC::eWscAuth::WSC_AUTH_OPEN;
         } else if (starts_with("psk2", encryption)) {
             return WSC::eWscAuth::WSC_AUTH_WPA2PSK;
@@ -629,7 +629,7 @@ static bool bpl_cfg_get_bss_configuration(const std::string &section_name,
     configuration.authentication_type = get_authentication_type(options["encryption"]);
 
     auto get_encryption_type = [&](const std::string &encryption) {
-        if ("none" == encryption) {
+        if ("none" == encryption || encryption.empty()) {
             return WSC::eWscEncr::WSC_ENCR_NONE;
         } else if (contains("+tkip", encryption)) {
             return WSC::eWscEncr::WSC_ENCR_TKIP;
@@ -665,6 +665,16 @@ bool bpl_cfg_get_wireless_settings(std::list<son::wireless_utils::sBssInfoConf> 
             continue;
         }
 
+        std::string hidden;
+        uci_get_option(package_name, section_type, section_name, "hidden", hidden);
+        // the hidden option might not exist, in which case we treat
+        // it as if it was 0 (i.e. we don't skip the section).
+
+        if (hidden == "1") {
+            LOG(INFO) << "Skipping configuration for section with 'hidden=1':" << section_name;
+            continue;
+        }
+
         // Silently ignore sections that do not configure a fronthaul interface
         if (mode != "ap") {
             continue;
@@ -673,6 +683,14 @@ bool bpl_cfg_get_wireless_settings(std::list<son::wireless_utils::sBssInfoConf> 
         son::wireless_utils::sBssInfoConf configuration;
         if (!bpl_cfg_get_bss_configuration(section_name, configuration)) {
             LOG(DEBUG) << "Failed to get SSID and WiFi credentials from section " << section_name;
+            continue;
+        }
+
+        if (configuration.authentication_type == WSC::eWscAuth::WSC_AUTH_INVALID ||
+            configuration.encryption_type == WSC::eWscEncr::WSC_ENCR_INVALID) {
+            LOG(INFO) << "Skipping configuration for section with invalid authentication or "
+                         "encryption type: "
+                      << section_name;
             continue;
         }
 
@@ -694,7 +712,7 @@ bool bpl_cfg_get_wireless_settings(std::list<son::wireless_utils::sBssInfoConf> 
             continue;
         }
 
-        // The mode used by hostapd (11b, 11g, 11n, 11ac, 11ax) is governed by several parameters in
+        // The mode used by upstream hostapd (11b, 11g, 11n, 11ac, 11ax) is governed by several parameters in
         // the configuration file. However, as explained in the comment below from hostapd.conf, the
         // hw_mode parameter is sufficient to determine the band.
         //
@@ -704,13 +722,16 @@ bool bpl_cfg_get_wireless_settings(std::list<son::wireless_utils::sBssInfoConf> 
         // # needs to be set to hw_mode=a. For IEEE 802.11ax (HE) on 6 GHz this needs
         // # to be set to hw_mode=a.
         //
-        // Note that this will need to be revisited for 6GHz operation, which we don't support
-        // at the moment.
-        if (hwmode.empty() || (hwmode == "11b") || (hwmode == "11g")) {
+        // Note that this will need to be revisited for 6GHz operation, which we don't support at
+        // the moment.
+        //
+        // For MaxLinear's devices, by default '11bgnax' is used for 2.4Ghz bands, and '11anacax' is
+        // used for 5Ghz bands (see 'files/scripts/lib/netifd/wireless/mac80211.sh' in the swpal package).
+        if (hwmode.empty() || (hwmode == "11b") || (hwmode == "11g") || hwmode == "11bgnax") {
             configuration.operating_class.splice(
                 configuration.operating_class.end(),
                 son::wireless_utils::string_to_wsc_oper_class("24g"));
-        } else if (hwmode == "11a") {
+        } else if (hwmode == "11a" || hwmode == "11anacax") {
             configuration.operating_class.splice(
                 configuration.operating_class.end(),
                 son::wireless_utils::string_to_wsc_oper_class("5g"));
