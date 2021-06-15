@@ -431,7 +431,7 @@ sBeaconResponse11k:
   rep_mode: uint8_t # '0x00' - report ok, '0x01' - late, '0x02' - incapable, '0x04' - refused
   phy_type: uint8_t # integer 0-127 (bits 0-6 of "frame info")
   frame_type: uint8_t # (bool) '0' - beacon/probe response frame, '1' - pilot frame (bits 7 of "frame info")
-  rcpi: int8_t # received channel power
+  rcpi: uint8_t # received channel power
   rsni: uint8_t # received signal to noise
   ant_id: uint8_t # number for the antennas used for this measurement
   duration: uint16_t # measurement duration, expressed in units of TUs [=1024usec]
@@ -965,7 +965,7 @@ sBssidInfo:
       and the time at which this report was sent
   downlink_estimated_mac_data_rate_mbps: uint32_t
   uplink_estimated_mac_data_rate_mbps: uint32_t
-  sta_measured_uplink_rssi_dbm_enc: uint8_t
+  sta_measured_uplink_rcpi_dbm_enc: uint8_t
 
 eClientSelectedBands:
   _type: enum

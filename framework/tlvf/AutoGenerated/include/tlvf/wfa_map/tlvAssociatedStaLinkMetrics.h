@@ -42,7 +42,7 @@ class tlvAssociatedStaLinkMetrics : public BaseClass
             uint32_t earliest_measurement_delta;
             uint32_t downlink_estimated_mac_data_rate_mbps;
             uint32_t uplink_estimated_mac_data_rate_mbps;
-            uint8_t sta_measured_uplink_rssi_dbm_enc;
+            uint8_t sta_measured_uplink_rcpi_dbm_enc;
             void struct_swap(){
                 bssid.struct_swap();
                 tlvf_swap(32, reinterpret_cast<uint8_t*>(&earliest_measurement_delta));

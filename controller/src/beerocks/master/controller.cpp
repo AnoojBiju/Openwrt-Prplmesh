@@ -1624,7 +1624,7 @@ bool Controller::handle_tlv_associated_sta_link_metrics(const std::string &src_m
         if (!database.dm_set_sta_link_metrics(sta_link_metric->sta_mac(),
                                               bssid_info.downlink_estimated_mac_data_rate_mbps,
                                               bssid_info.uplink_estimated_mac_data_rate_mbps,
-                                              bssid_info.sta_measured_uplink_rssi_dbm_enc)) {
+                                              bssid_info.sta_measured_uplink_rcpi_dbm_enc)) {
             LOG(ERROR) << "Failed to set link metrics for STA:" << sta_link_metric->sta_mac();
             ret_val = false;
         }

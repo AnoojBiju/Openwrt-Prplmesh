@@ -217,7 +217,7 @@ struct SBeaconResponse11k {
     uint8_t phy_type; // integer 0-127 (bits 0-6 of "frame info")
     uint8_t
         frame_type; // (bool) '0' - beacon/probe response frame, '1' - pilot frame (bits 7 of "frame info")
-    int8_t rcpi;         // received channel power
+    uint8_t rcpi;        // received channel power (convertable to rssi)
     uint8_t rsni;        // received signal to noise
     uint8_t ant_id;      // number for the antennas used for this measurement
     uint16_t duration;   // measurement duration, expressed in units of TUs [=1024usec]

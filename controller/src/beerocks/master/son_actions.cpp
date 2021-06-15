@@ -397,7 +397,7 @@ bool son_actions::validate_beacon_measurement_report(beerocks_message::sBeaconRe
 {
     return (report.rep_mode == 0) &&
            //      (report.rsni                                  >  0          ) &&
-           (report.rcpi < 0) &&
+           (report.rcpi <= RCPI_MAX) &&
            //      (report.start_time                            >  0          ) &&
            //      (report.duration                              >  0          ) &&
            (report.channel > 0) && (tlvf::mac_to_string(report.sta_mac) == sta_mac) &&
