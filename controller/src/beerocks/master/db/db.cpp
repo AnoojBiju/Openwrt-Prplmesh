@@ -2187,15 +2187,9 @@ std::unordered_map<int8_t, sVapElement> &db::get_hostap_vap_list(const sMacAddr 
     return n->hostap->vaps_info;
 }
 
-bool db::remove_vap(const sMacAddr &radio_mac, int vap_id)
+bool db::remove_vap(sAgent::sRadio &radio, int vap_id)
 {
-    auto radio = get_radio_by_uid(radio_mac);
-    if (!radio) {
-        LOG(ERROR) << "Failed to get radio node, mac: " << radio_mac;
-        return false;
-    }
-
-    auto vap_list = get_hostap_vap_list(radio_mac);
+    auto vap_list = get_hostap_vap_list(radio.radio_uid);
     auto vap      = vap_list.find(vap_id);
 
     if (vap == vap_list.end()) {
@@ -2203,7 +2197,7 @@ bool db::remove_vap(const sMacAddr &radio_mac, int vap_id)
         return false;
     }
 
-    auto radio_path = radio->dm_path;
+    auto radio_path = radio.dm_path;
     if (!radio_path.empty()) {
         /*
             Prepare path to the BSS instance.

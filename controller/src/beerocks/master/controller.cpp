@@ -2649,8 +2649,6 @@ bool Controller::handle_cmdu_control_message(
             son_actions::handle_dead_node(client, true, database, cmdu_tx, tasks);
         }
 
-        database.remove_vap(tlvf::mac_from_string(hostap_mac), vap_id);
-
         // Update BSSes in the sAgent
         auto radio =
             database.get_radio(tlvf::mac_from_string(src_mac), tlvf::mac_from_string(hostap_mac));
@@ -2658,6 +2656,9 @@ bool Controller::handle_cmdu_control_message(
             LOG(ERROR) << "No radio found for radio_uid " << hostap_mac << " on " << src_mac;
             break;
         }
+
+        database.remove_vap(*radio, vap_id);
+
         if (radio->bsses.erase(disabled_bssid) != 1) {
             LOG(ERROR) << "No BSS " << disabled_bssid << " could be erased on " << hostap_mac;
         }

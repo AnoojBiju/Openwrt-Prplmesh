@@ -203,7 +203,7 @@ bool topology_task::handle_topology_response(const std::string &src_mac,
                 }
 
                 // Remove the vap from DB
-                database.remove_vap(radio->radio_uid, bss->vap_id);
+                database.remove_vap(*radio, bss->vap_id);
             }
         }
     }
