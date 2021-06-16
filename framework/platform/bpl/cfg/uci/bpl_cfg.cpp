@@ -650,6 +650,11 @@ bool bpl_cfg_get_wireless_settings(std::list<son::wireless_utils::sBssInfoConf> 
             continue;
         }
 
+        // Silently ignore sections that do not configure an AP.
+        if (mode != "ap") {
+            continue;
+        }
+
         std::string hidden;
         uci_get_option(package_name, section_type, section_name, "hidden", hidden);
         // the hidden option might not exist, in which case we treat
@@ -665,8 +670,13 @@ bool bpl_cfg_get_wireless_settings(std::list<son::wireless_utils::sBssInfoConf> 
             continue;
         }
 
-        // Silently ignore sections that do not configure a fronthaul interface
-        if (mode != "ap") {
+        std::string ssid;
+        uci_get_option(package_name, section_type, section_name, "ssid", ssid);
+        // the SSID might not be set, in which case we treat
+        // it as if it was an empty string (i.e. we *do* skip the section).
+        if (ssid.empty()) {
+            LOG(INFO) << "Skipping configuration for section with unset or empty SSID: "
+                      << section_name;
             continue;
         }
 
