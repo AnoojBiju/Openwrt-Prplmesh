@@ -106,8 +106,7 @@ std::pair<std::string, int> db::get_dm_index_from_path(const std::string &dm_pat
 
 // static - end
 
-std::shared_ptr<prplmesh::controller::db::sAgent::sRadio> db::get_radio(const sMacAddr &al_mac,
-                                                                        const sMacAddr &radio_uid)
+std::shared_ptr<sAgent::sRadio> db::get_radio(const sMacAddr &al_mac, const sMacAddr &radio_uid)
 {
     auto agent = m_agents.get(al_mac);
     if (!agent) {
@@ -356,7 +355,8 @@ bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac,
                    << " not found.";
         return false;
     }
-    agent->radios.add(mac);
+
+    auto radio = agent->radios.add(mac);
 
     auto data_model_path =
         dm_add_radio_element(tlvf::mac_to_string(mac), tlvf::mac_to_string(parent_mac));
@@ -367,6 +367,7 @@ bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac,
     }
 
     set_node_data_model_path(mac, data_model_path);
+    radio->dm_path = data_model_path;
 
     return true;
 }
@@ -870,6 +871,12 @@ std::unordered_map<sMacAddr, son::node::ap_metrics_data> &db::get_ap_metric_data
 
 bool db::set_hostap_active(const sMacAddr &mac, bool active)
 {
+    auto radio = get_radio_by_uid(mac);
+    if (!radio) {
+        LOG(WARNING) << "radio " << mac << " not found";
+        return false;
+    }
+
     auto n = get_node(mac);
     if (!n) {
         LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
@@ -882,7 +889,7 @@ bool db::set_hostap_active(const sMacAddr &mac, bool active)
 
     // Enabled variable is a part of Radio data element and
     // need to get path like Controller.Device.{i}.Radio.{i}. for setting Enabled variable
-    auto radio_enable_path = n->dm_path;
+    auto radio_enable_path = radio->dm_path;
 
     if (radio_enable_path.empty()) {
         return true;
@@ -1247,17 +1254,17 @@ std::list<sMacAddr> db::get_1905_1_neighbors(const sMacAddr &al_mac)
 
 bool db::set_ap_vht_capabilities(wfa_map::tlvApVhtCapabilities &vht_caps_tlv)
 {
-    auto radio_node = get_node(vht_caps_tlv.radio_uid());
+    auto radio      = get_radio_by_uid(vht_caps_tlv.radio_uid());
     auto flags1     = vht_caps_tlv.flags1();
     auto flags2     = vht_caps_tlv.flags2();
     bool return_val = true;
 
-    if (!radio_node) {
-        LOG(ERROR) << "Failed to get radio node with mac: " << vht_caps_tlv.radio_uid();
+    if (!radio) {
+        LOG(ERROR) << "Failed to get radio with mac: " << vht_caps_tlv.radio_uid();
         return false;
     }
 
-    auto path_to_obj = radio_node->dm_path;
+    auto path_to_obj = radio->dm_path;
     if (path_to_obj.empty()) {
         return true;
     }
@@ -1336,15 +1343,15 @@ bool db::dm_add_ap_operating_classes(const std::string &radio_mac, uint8_t max_t
                                      uint8_t op_class,
                                      const std::vector<uint8_t> &non_operable_channels)
 {
-    auto radio_node   = get_node(radio_mac);
+    auto radio        = get_radio_by_uid(tlvf::mac_from_string(radio_mac));
     bool return_value = true;
 
-    if (!radio_node) {
+    if (!radio) {
         LOG(ERROR) << "Failed to get radio with mac: " << radio_mac;
         return false;
     }
 
-    std::string path_to_obj = radio_node->dm_path;
+    std::string path_to_obj = radio->dm_path;
     if (path_to_obj.empty()) {
         return true;
     }
@@ -1387,14 +1394,14 @@ bool db::dm_add_ap_operating_classes(const std::string &radio_mac, uint8_t max_t
 
 bool db::set_ap_he_capabilities(wfa_map::tlvApHeCapabilities &he_caps_tlv)
 {
-    auto radio_node = get_node(he_caps_tlv.radio_uid());
+    auto radio = get_radio_by_uid(he_caps_tlv.radio_uid());
 
-    if (!radio_node) {
-        LOG(ERROR) << "Fail get radio node, mac:" << he_caps_tlv.radio_uid();
+    if (!radio) {
+        LOG(ERROR) << "Fail get radio, mac:" << he_caps_tlv.radio_uid();
         return false;
     }
 
-    auto path_to_obj = radio_node->dm_path;
+    auto path_to_obj = radio->dm_path;
     auto flags1      = he_caps_tlv.flags1();
     auto flags2      = he_caps_tlv.flags2();
     bool return_val  = true;
@@ -2188,8 +2195,8 @@ std::unordered_map<int8_t, sVapElement> &db::get_hostap_vap_list(const sMacAddr 
 bool db::remove_vap(const sMacAddr &radio_mac, int vap_id)
 {
 
-    auto radio_node = get_node(radio_mac);
-    if (!radio_node) {
+    auto radio = get_radio_by_uid(radio_mac);
+    if (!radio) {
         LOG(ERROR) << "Failed to get radio node, mac: " << radio_mac;
         return false;
     }
@@ -2202,7 +2209,7 @@ bool db::remove_vap(const sMacAddr &radio_mac, int vap_id)
         return false;
     }
 
-    auto radio_path = radio_node->dm_path;
+    auto radio_path = radio->dm_path;
     if (radio_path.empty()) {
         return true;
     }
@@ -2848,7 +2855,7 @@ bool db::get_hostap_is_acs_enabled(const sMacAddr &mac)
 //
 bool db::set_channel_scan_is_enabled(const sMacAddr &mac, bool enable)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto radio = get_hostap(mac);
     if (!radio) {
         LOG(ERROR) << "unable to get radio " << mac;
         return false;
@@ -2860,7 +2867,7 @@ bool db::set_channel_scan_is_enabled(const sMacAddr &mac, bool enable)
 
 bool db::get_channel_scan_is_enabled(const sMacAddr &mac)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto radio = get_hostap(mac);
     if (!radio) {
         LOG(ERROR) << "unable to get radio " << mac;
         return false;
@@ -2871,7 +2878,7 @@ bool db::get_channel_scan_is_enabled(const sMacAddr &mac)
 
 bool db::set_channel_scan_interval_sec(const sMacAddr &mac, int interval_sec)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto radio = get_hostap(mac);
     if (!radio) {
         LOG(ERROR) << "unable to get radio " << mac;
         return false;
@@ -2883,7 +2890,7 @@ bool db::set_channel_scan_interval_sec(const sMacAddr &mac, int interval_sec)
 
 int db::get_channel_scan_interval_sec(const sMacAddr &mac)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto radio = get_hostap(mac);
     if (!radio) {
         LOG(ERROR) << "unable to get radio " << mac;
         return false;
@@ -2894,7 +2901,7 @@ int db::get_channel_scan_interval_sec(const sMacAddr &mac)
 
 bool db::set_channel_scan_is_pending(const sMacAddr &mac, bool scan_is_pending)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto radio = get_hostap(mac);
     if (!radio) {
         LOG(ERROR) << "Failed to get radio " << mac;
         return false;
@@ -2907,7 +2914,7 @@ bool db::set_channel_scan_is_pending(const sMacAddr &mac, bool scan_is_pending)
 
 bool db::set_channel_scan_in_progress(const sMacAddr &mac, bool scan_in_progress, bool single_scan)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto radio = get_hostap(mac);
     if (!radio) {
         LOG(ERROR) << "unable to get radio " << mac;
         return false;
@@ -2923,7 +2930,7 @@ bool db::set_channel_scan_in_progress(const sMacAddr &mac, bool scan_in_progress
 
 bool db::get_channel_scan_in_progress(const sMacAddr &mac, bool single_scan)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto radio = get_hostap(mac);
     if (!radio) {
         LOG(ERROR) << "unable to get radio " << mac;
         return false;
@@ -2940,7 +2947,7 @@ bool db::set_channel_scan_results_status(const sMacAddr &mac,
                                          beerocks::eChannelScanStatusCode error_code,
                                          bool single_scan)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto radio = get_hostap(mac);
     if (!radio) {
         LOG(ERROR) << "unable to get radio " << mac;
         return false;
@@ -2958,7 +2965,7 @@ bool db::set_channel_scan_results_status(const sMacAddr &mac,
 beerocks::eChannelScanStatusCode db::get_channel_scan_results_status(const sMacAddr &mac,
                                                                      bool single_scan)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto radio = get_hostap(mac);
     if (!radio) {
         LOG(ERROR) << "unable to get radio " << mac;
         return beerocks::eChannelScanStatusCode::INTERNAL_FAILURE;
@@ -2971,7 +2978,7 @@ beerocks::eChannelScanStatusCode db::get_channel_scan_results_status(const sMacA
 bool db::set_channel_scan_dwell_time_msec(const sMacAddr &mac, int dwell_time_msec,
                                           bool single_scan)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto radio = get_hostap(mac);
     if (!radio) {
         LOG(ERROR) << "unable to get radio " << mac;
         return false;
@@ -2994,7 +3001,7 @@ bool db::set_channel_scan_dwell_time_msec(const sMacAddr &mac, int dwell_time_ms
 
 int db::get_channel_scan_dwell_time_msec(const sMacAddr &mac, bool single_scan)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto radio = get_hostap(mac);
     if (!radio) {
         LOG(ERROR) << "unable to get radio " << mac;
         return false;
@@ -3025,7 +3032,7 @@ bool db::is_channel_scan_pool_supported(const sMacAddr &mac,
 bool db::set_channel_scan_pool(const sMacAddr &mac, const std::unordered_set<uint8_t> &channel_pool,
                                bool single_scan)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto radio = get_hostap(mac);
     if (!radio) {
         LOG(ERROR) << "unable to get radio " << mac;
         return false;
@@ -3049,7 +3056,7 @@ const std::unordered_set<uint8_t> &db::get_channel_scan_pool(const sMacAddr &mac
 {
     static std::unordered_set<uint8_t> empty;
 
-    auto radio = get_radio_by_uid(mac);
+    auto radio = get_hostap(mac);
     if (!radio) {
         LOG(ERROR) << "unable to get radio " << mac;
         return empty;
@@ -3060,7 +3067,7 @@ const std::unordered_set<uint8_t> &db::get_channel_scan_pool(const sMacAddr &mac
 
 bool db::is_channel_in_pool(const sMacAddr &mac, uint8_t channel, bool single_scan)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto radio = get_hostap(mac);
     if (!radio) {
         LOG(ERROR) << "unable to get radio " << mac;
         return false;
@@ -3073,7 +3080,7 @@ bool db::is_channel_in_pool(const sMacAddr &mac, uint8_t channel, bool single_sc
 
 bool db::clear_channel_scan_results(const sMacAddr &mac, bool single_scan)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto radio = get_hostap(mac);
     if (!radio) {
         LOG(ERROR) << "unable to get radio " << mac;
         return false;
@@ -3087,7 +3094,7 @@ bool db::clear_channel_scan_results(const sMacAddr &mac, bool single_scan)
 bool db::add_channel_scan_results(const sMacAddr &mac, const sChannelScanResults &scan_result,
                                   bool single_scan)
 {
-    auto radio = get_radio_by_uid(mac);
+    auto radio = get_hostap(mac);
     if (!radio) {
         LOG(ERROR) << "unable to get radio " << mac;
         return false;
@@ -3104,7 +3111,7 @@ const std::list<sChannelScanResults> &db::get_channel_scan_results(const sMacAdd
 {
     static std::list<sChannelScanResults> empty;
 
-    auto radio = get_radio_by_uid(mac);
+    auto radio = get_hostap(mac);
     if (!radio) {
         LOG(ERROR) << "unable to get radio " << mac;
         return empty;
@@ -3165,7 +3172,7 @@ bool db::add_channel_report(const sMacAddr &RUID, const uint8_t &operating_class
                             const std::vector<wfa_map::cNeighbors> &neighbors, uint8_t avg_noise,
                             uint8_t avg_utilization, bool override_existing_data)
 {
-    auto radio = get_radio_by_uid(RUID);
+    auto radio = get_hostap(RUID);
     if (!radio) {
         LOG(ERROR) << "unable to get radio " << RUID;
         return false;
@@ -4299,6 +4306,13 @@ bool db::set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApS
         LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
         return false;
     }
+
+    auto radio = get_radio_by_uid(mac);
+    if (!radio) {
+        LOG(WARNING) << "radio " << mac << " not found";
+        return false;
+    }
+
     if (params == nullptr) { // clear stats
         n->hostap->stats_info = std::make_shared<node::radio::ap_stats_params>();
     } else {
@@ -4318,7 +4332,7 @@ bool db::set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApS
         p->stats_delta_ms               = params->stats_delta_ms;
         p->timestamp                    = std::chrono::steady_clock::now();
 
-        auto radio_path = n->dm_path;
+        auto radio_path = radio->dm_path;
 
         if (radio_path.empty()) {
             return true;
@@ -5329,7 +5343,7 @@ std::shared_ptr<node> db::get_node_verify_type(const sMacAddr &mac, beerocks::eT
     return node;
 }
 
-std::shared_ptr<node::radio> db::get_radio_by_uid(const sMacAddr &radio_uid)
+std::shared_ptr<node::radio> db::get_hostap(const sMacAddr &radio_uid)
 {
     auto n = get_node(radio_uid);
     beerocks::eType t;
@@ -5343,6 +5357,19 @@ std::shared_ptr<node::radio> db::get_radio_by_uid(const sMacAddr &radio_uid)
     }
 
     return n->hostap;
+}
+
+std::shared_ptr<sAgent::sRadio> db::get_radio_by_uid(const sMacAddr &radio_uid)
+{
+    for (const auto &agent : m_agents) {
+        auto radio = agent.second->radios.get(radio_uid);
+        if (radio) {
+            return radio;
+        }
+    }
+
+    LOG(ERROR) << "radio " << radio_uid << " not found";
+    return {};
 }
 
 std::set<std::shared_ptr<node>> db::get_node_subtree(std::shared_ptr<node> n)
@@ -5841,13 +5868,13 @@ uint64_t db::get_client_remaining_sec(const std::pair<std::string, ValuesMap> &c
 
 bool db::clear_ap_capabilities(const sMacAddr &radio_mac)
 {
-    auto radio_node = get_node(radio_mac);
-    if (!radio_node) {
+    auto radio = get_radio_by_uid(radio_mac);
+    if (!radio) {
         LOG(WARNING) << " - node " << radio_mac << " does not exist!";
         return false;
     }
 
-    std::string path_to_obj = radio_node->dm_path;
+    std::string path_to_obj = radio->dm_path;
     if (path_to_obj.empty()) {
         return true;
     }
@@ -5870,15 +5897,15 @@ bool db::clear_ap_capabilities(const sMacAddr &radio_mac)
 bool db::set_ap_ht_capabilities(const sMacAddr &radio_mac,
                                 const wfa_map::tlvApHtCapabilities::sFlags &flags)
 {
-    auto radio_node = get_node(radio_mac);
+    auto radio      = get_radio_by_uid(radio_mac);
     bool return_val = true;
 
-    if (!radio_node) {
-        LOG(ERROR) << "Failed to get radio node with mac: " << radio_mac;
+    if (!radio) {
+        LOG(ERROR) << "Failed to get radio with mac: " << radio_mac;
         return false;
     }
 
-    std::string path_to_obj = radio_node->dm_path;
+    std::string path_to_obj = radio->dm_path;
     if (path_to_obj.empty()) {
         return true;
     }
@@ -6075,13 +6102,13 @@ std::string db::dm_add_device_element(const sMacAddr &mac)
 bool db::add_current_op_class(const sMacAddr &radio_mac, uint8_t op_class, uint8_t op_channel,
                               int8_t tx_power)
 {
-    auto radio_node = get_node(radio_mac);
-    if (!radio_node) {
-        LOG(ERROR) << "Failed to get radio node for mac: " << radio_mac;
+    auto radio = get_radio_by_uid(radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "Failed to get radio for mac: " << radio_mac;
         return false;
     }
 
-    auto radio_path = radio_node->dm_path;
+    auto radio_path = radio->dm_path;
     if (radio_path.empty()) {
         return true;
     }
@@ -6124,13 +6151,13 @@ bool db::add_current_op_class(const sMacAddr &radio_mac, uint8_t op_class, uint8
 
 bool db::remove_current_op_classes(const sMacAddr &radio_mac)
 {
-    auto radio_node = get_node(radio_mac);
-    if (!radio_node) {
-        LOG(ERROR) << "Failed to get radio node for mac: " << radio_mac;
+    auto radio = get_radio_by_uid(radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "Failed to get radio for mac: " << radio_mac;
         return false;
     }
 
-    auto radio_path = radio_node->dm_path;
+    auto radio_path = radio->dm_path;
     if (radio_path.empty()) {
         return true;
     }
@@ -6150,15 +6177,15 @@ bool db::remove_current_op_classes(const sMacAddr &radio_mac)
 bool db::remove_hostap_supported_operating_classes(const sMacAddr &radio_mac)
 {
     auto supported_channels = get_hostap_supported_channels(radio_mac);
-    auto radio_node         = get_node(radio_mac);
+    auto radio              = get_radio_by_uid(radio_mac);
 
     // Remove from data model
-    if (!radio_node) {
-        LOG(ERROR) << "Failed to get radio node with mac: " << radio_mac;
+    if (!radio) {
+        LOG(ERROR) << "Failed to get radio with mac: " << radio_mac;
         return false;
     }
 
-    auto radio_path = radio_node->dm_path;
+    auto radio_path = radio->dm_path;
     if (radio_path.empty()) {
         return true;
     }
@@ -6209,13 +6236,13 @@ bool db::set_radio_utilization(const sMacAddr &bssid, uint8_t utilization)
 
 bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, const std::string &ssid)
 {
-    auto radio_node = get_node(radio_mac);
-    if (!radio_node) {
-        LOG(ERROR) << "Failed to get Radio node with mac: " << radio_mac;
+    auto radio = get_radio_by_uid(radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "Failed to get radio with mac: " << radio_mac;
         return false;
     }
 
-    auto radio_path = radio_node->dm_path;
+    auto radio_path = radio->dm_path;
     if (radio_path.empty()) {
         return true;
     }
@@ -6286,13 +6313,13 @@ bool db::set_radio_metrics(const sMacAddr &radio_mac, uint8_t noise, uint8_t tra
                            uint8_t receive_self, uint8_t receive_other)
 {
 
-    auto radio_node = get_node(radio_mac);
-    if (!radio_node) {
-        LOG(ERROR) << "Failed to get radio node for mac: " << radio_mac;
+    auto radio = get_radio_by_uid(radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "Failed to get radio for mac: " << radio_mac;
         return false;
     }
 
-    auto radio_path = radio_node->dm_path;
+    auto radio_path = radio->dm_path;
     if (radio_path.empty()) {
         return true;
     }
