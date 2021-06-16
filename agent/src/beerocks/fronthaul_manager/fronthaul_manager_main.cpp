@@ -237,7 +237,7 @@ int main(int argc, char *argv[])
 
     // Kill running fronthaul and write pid file
     std::string base_fronthaul_name = std::string(BEEROCKS_FRONTHAUL) + "_" + fronthaul_iface;
-    beerocks::os_utils::kill_pid(beerocks_slave_conf.temp_path, base_fronthaul_name);
+    beerocks::os_utils::kill_pid(beerocks_slave_conf.temp_path + "pid/", base_fronthaul_name);
 
     // Remove any residual fronthaul files not cleared by previous instance
     remove_residual_fronthaul_files(beerocks_slave_conf.temp_path, base_fronthaul_name);

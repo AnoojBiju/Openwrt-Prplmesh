@@ -3669,12 +3669,6 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
             db->ethernet.wan.mac = tlvf::mac_from_string(iface_mac);
         }
 
-        // Reset the traffic separation configuration as they will be reconfigured on
-        // autoconfiguration.
-        db->traffic_separation.primary_vlan_id = 0;
-        db->traffic_separation.secondaries_vlans_ids.clear();
-        db->traffic_separation.ssid_vid_mapping.clear();
-
         // Clear the channel_list
         // When FCC/ETSI is set, the prplmesh is not restarted, but the salve is.
         // Must clear the map to prevent residues of previous country configuration.
@@ -4357,7 +4351,7 @@ void slave_thread::fronthaul_stop()
     }
 
     // Kill Fronthaul pid
-    os_utils::kill_pid(config.temp_path,
+    os_utils::kill_pid(config.temp_path + "pid/",
                        std::string(BEEROCKS_FRONTHAUL) + "_" + config.hostap_iface);
 }
 
