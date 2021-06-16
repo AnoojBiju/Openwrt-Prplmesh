@@ -202,8 +202,7 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
 
     std::list<sBridgeVlanInfo> bridge_vlan_interfaces;
     for (const auto &iface : linux_ifaces) {
-        auto char_pos = iface.find(bridge_vlan_base_str);
-        if (char_pos == std::string::npos) {
+        if (iface.compare(0, bridge_vlan_base_str.size(), bridge_vlan_base_str)) {
             continue;
         }
 
