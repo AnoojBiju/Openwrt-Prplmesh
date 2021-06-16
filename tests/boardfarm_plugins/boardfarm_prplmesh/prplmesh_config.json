@@ -116,5 +116,33 @@
                 "station_ip_wifi": "192.168.2.4"
             }
         ]
+    },
+    "turris-rdkb": {
+        "name": "agent-turris-rdkb",
+        "board_type": "RDKB",
+        "role": "agent",
+        "docker_network": "prplMesh-net-turris-omnia-1",
+        "conn_cmd": "not used",
+        "delay": "30",
+        "iface_to_device": "to-dut",
+        "control_ip": "192.168.200.140",
+        "devices": [
+            {
+                "name": "lan",
+                "type": "prplmesh_compose",
+                "role": "controller",
+                "docker_network": "prplMesh-net-turris-omnia-1",
+                "conn_cmd": ""
+            },
+            {
+                "name": "wifi",
+                "type": "RDKB_STA",
+                "iface": "wlp4s0",
+                "driver": "nl80211,wext",
+                "connection_type": "local_cmd",
+                "conn_cmd": "bash",
+                "color": "yellow"
+            }
+        ]
     }
 }
