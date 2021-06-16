@@ -2189,7 +2189,6 @@ std::unordered_map<int8_t, sVapElement> &db::get_hostap_vap_list(const sMacAddr 
 
 bool db::remove_vap(const sMacAddr &radio_mac, int vap_id)
 {
-
     auto radio = get_radio_by_uid(radio_mac);
     if (!radio) {
         LOG(ERROR) << "Failed to get radio node, mac: " << radio_mac;
@@ -2205,26 +2204,24 @@ bool db::remove_vap(const sMacAddr &radio_mac, int vap_id)
     }
 
     auto radio_path = radio->dm_path;
-    if (radio_path.empty()) {
-        return true;
-    }
+    if (!radio_path.empty()) {
+        /*
+            Prepare path to the BSS instance.
+            Example: Controller.Network.Device.1.Radio.1.BSS.
+        */
+        auto bss_path = radio_path + ".BSS.";
 
-    /*
-        Prepare path to the BSS instance.
-        Example: Controller.Network.Device.1.Radio.1.BSS.
-    */
-    auto bss_path = radio_path + ".BSS.";
+        auto bss_index = m_ambiorix_datamodel->get_instance_index(bss_path + "[BSSID == '%s'].",
+                                                                  vap->second.mac);
+        if (!bss_index) {
+            LOG(ERROR) << "Failed to get BSS instance index.";
+            return false;
+        }
 
-    auto bss_index =
-        m_ambiorix_datamodel->get_instance_index(bss_path + "[BSSID == '%s'].", vap->second.mac);
-    if (!bss_index) {
-        LOG(ERROR) << "Failed to get BSS instance index.";
-        return false;
-    }
-
-    if (!m_ambiorix_datamodel->remove_instance(bss_path, bss_index)) {
-        LOG(ERROR) << "Failed to remove " << bss_path << bss_index << " instance.";
-        return false;
+        if (!m_ambiorix_datamodel->remove_instance(bss_path, bss_index)) {
+            LOG(ERROR) << "Failed to remove " << bss_path << bss_index << " instance.";
+            return false;
+        }
     }
 
     if (!vap_list.erase(vap_id)) {
