@@ -45,6 +45,8 @@ public:
         /** Radio UID. */
         const sMacAddr radio_uid;
 
+        std::string dm_path; /**< data model path */
+
         struct sBss {
             sBss()             = delete;
             sBss(const sBss &) = delete;
