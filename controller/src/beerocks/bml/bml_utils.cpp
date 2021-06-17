@@ -126,7 +126,6 @@ int bml_utils_node_to_string(const struct BML_NODE *node, char *buffer, int buff
                    << ", CAC Completed: "
                    << std::to_string(node->data.gw_ire.radio[i].cac_completed)
                    << ", AP Active: " << (node->data.gw_ire.radio[i].ap_active ? "true" : "false")
-                   << ", Driver Version: " << node->data.gw_ire.radio[i].driver_version
                    << std::endl;
 
                 int vap_length = sizeof(node->data.gw_ire.radio[i].vap) /
