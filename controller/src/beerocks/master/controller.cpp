@@ -813,7 +813,7 @@ bool Controller::autoconfig_wsc_add_m2(WSC::m1 &m1,
     // public_key is set in autoconfig_wsc_calculate_keys()
     // connection_type and configuration_methods have default values
     // TODO the following should be taken from the database
-    m2_cfg.manufacturer        = "Intel";
+    m2_cfg.manufacturer        = "prplMesh";
     m2_cfg.model_name          = "Ubuntu";
     m2_cfg.model_number        = "18.04";
     m2_cfg.serial_number       = "prpl12345";
@@ -2193,8 +2193,8 @@ bool Controller::handle_intel_slave_join(
         database.set_node_ipv4(backhaul_mac, bridge_ipv4);
         database.set_node_ipv4(bridge_mac_str, bridge_ipv4);
 
-        database.set_node_manufacturer(backhaul_mac, "Intel");
-        database.set_agent_manufacturer(*agent, "Intel");
+        database.set_node_manufacturer(backhaul_mac, "prplMesh");
+        database.set_agent_manufacturer(*agent, "prplMesh");
 
         database.set_node_type(backhaul_mac, beerocks::TYPE_IRE_BACKHAUL);
 
@@ -2210,7 +2210,7 @@ bool Controller::handle_intel_slave_join(
         database.set_node_state(eth_switch_mac, beerocks::STATE_CONNECTED);
         database.set_node_name(eth_switch_mac, slave_name + "_ETH");
         database.set_node_ipv4(eth_switch_mac, bridge_ipv4);
-        database.set_node_manufacturer(eth_switch_mac, "Intel");
+        database.set_node_manufacturer(eth_switch_mac, "prplMesh");
 
         //run locating task on ire
         if (!database.is_node_wireless(backhaul_mac)) {
