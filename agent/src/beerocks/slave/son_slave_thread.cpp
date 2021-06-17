@@ -6024,3 +6024,119 @@ void slave_thread::save_cac_capabilities_params_to_db()
         }
     }
 }
+
+std::map<slave_thread::sChannelPreference, std::set<uint8_t>>
+slave_thread::get_channel_preferences_from_channels_list()
+{
+    std::map<sChannelPreference, std::set<uint8_t>> preferences;
+
+    auto db    = AgentDB::get();
+    auto radio = db->radio(m_fronthaul_iface);
+    if (!radio) {
+        return {};
+    }
+
+    for (const auto &oper_class : wireless_utils::operating_classes_list) {
+        auto oper_class_num             = oper_class.first;
+        const auto &oper_class_channels = oper_class.second.channels;
+        auto oper_class_bw              = oper_class.second.band;
+
+        for (auto channel_of_oper_class : oper_class_channels) {
+
+            // operating classes 128,129,130 use center channel **unlike the other classes**,
+            // so convert channel and bandwidth to center channel.
+            // For more info, refer to Table E-4 in the 802.11 specification.
+            std::vector<uint8_t> beacon_channels;
+            if (oper_class_num == 128 || oper_class_num == 129 || oper_class_num == 130) {
+                beacon_channels = wireless_utils::center_channel_5g_to_beacon_channels(
+                    channel_of_oper_class, oper_class_bw);
+            } else {
+                beacon_channels.push_back(channel_of_oper_class);
+            }
+
+            for (const auto beacon_channel : beacon_channels) {
+
+                // Channel is not supported.
+                auto it_ch = radio->channels_list.find(beacon_channel);
+                if (it_ch == radio->channels_list.end()) {
+
+                    sChannelPreference pref(
+                        oper_class_num,
+                        wfa_map::cPreferenceOperatingClasses::ePreference::NON_OPERABLE,
+                        wfa_map::cPreferenceOperatingClasses::eReasonCode::UNSPECIFIED);
+                    preferences[pref].insert(channel_of_oper_class);
+                    break;
+                }
+
+                // Bandwidth of a channel is not supported.
+                auto &supported_channel_info = it_ch->second;
+                auto &supported_bw_list      = supported_channel_info.supported_bw_list;
+                auto it_bw =
+                    std::find_if(supported_bw_list.begin(), supported_bw_list.end(),
+                                 [&](const beerocks_message::sSupportedBandwidth &bw_info) {
+                                     return bw_info.bandwidth == oper_class_bw;
+                                 });
+                if (it_bw == supported_bw_list.end()) {
+                    sChannelPreference pref(
+                        oper_class_num,
+                        wfa_map::cPreferenceOperatingClasses::ePreference::NON_OPERABLE,
+                        wfa_map::cPreferenceOperatingClasses::eReasonCode::UNSPECIFIED);
+                    preferences[pref].insert(channel_of_oper_class);
+                    break;
+                }
+
+                // Channel DFS state is "Unavailable".
+                auto overlapping_beacon_channels =
+                    son::wireless_utils::get_overlapping_beacon_channels(beacon_channel,
+                                                                         oper_class_bw);
+
+                auto preference_size = preferences.size();
+                for (const auto overlap_ch : overlapping_beacon_channels) {
+                    it_ch = radio->channels_list.find(overlap_ch);
+                    if (it_ch == radio->channels_list.end()) {
+                        LOG(ERROR) << "Overlap channel " << overlap_ch << " is not supported";
+                        sChannelPreference pref(
+                            oper_class_num,
+                            wfa_map::cPreferenceOperatingClasses::ePreference::NON_OPERABLE,
+                            wfa_map::cPreferenceOperatingClasses::eReasonCode::UNSPECIFIED);
+                        preferences[pref].insert(channel_of_oper_class);
+                        break;
+                    }
+
+                    auto &overlap_channel_info = it_ch->second;
+
+                    if (overlap_channel_info.dfs_state ==
+                        beerocks_message::eDfsState::UNAVAILABLE) {
+                        sChannelPreference pref(
+                            oper_class_num,
+                            wfa_map::cPreferenceOperatingClasses::ePreference::NON_OPERABLE,
+                            wfa_map::cPreferenceOperatingClasses::eReasonCode::
+                                OPERATION_DISALLOWED_DUE_TO_RADAR_DETECTION_ON_A_DFS_CHANNEL);
+                        preferences[pref].insert(channel_of_oper_class);
+                        break;
+                    }
+                }
+
+                // If Unavailable channel has been inserted, skip to next channel and not add valid
+                // preference (code below).
+                if (preference_size != preferences.size()) {
+                    continue;
+                }
+
+                /**
+                 * For now do not insert the real channel preference. It will be uncomment in
+                 * a separated Merge Request after testing it. PPM-655.
+                 */
+
+                // // Channel is supported and have valid preference.
+                // sChannelPreference pref(
+                //     oper_class_num,
+                //     static_cast<wfa_map::cPreferenceOperatingClasses::ePreference>(
+                //         it_bw->multiap_preference),
+                //     wfa_map::cPreferenceOperatingClasses::eReasonCode::UNSPECIFIED);
+                // preferences[pref].insert(channel_of_oper_class);
+            }
+        }
+    }
+    return preferences;
+}

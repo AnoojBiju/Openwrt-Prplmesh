@@ -21,6 +21,7 @@
 #include <tlvf/WSC/m1.h>
 #include <tlvf/WSC/m2.h>
 #include <tlvf/ieee_1905_1/tlvWsc.h>
+#include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvProfile2ErrorCode.h>
 
 // Forward decleration
@@ -267,6 +268,54 @@ private:
      * @brief save cac capabilities in the agent DB
      */
     void save_cac_capabilities_params_to_db();
+
+    struct sChannelPreference {
+        sChannelPreference(uint8_t oper_class,
+                           wfa_map::cPreferenceOperatingClasses::ePreference preference,
+                           wfa_map::cPreferenceOperatingClasses::eReasonCode reason_code)
+            : operating_class(oper_class)
+        {
+            flags.reason_code = reason_code;
+            flags.preference  = preference;
+        }
+        sChannelPreference(uint8_t _operating_class,
+                           wfa_map::cPreferenceOperatingClasses::sFlags _flags)
+            : operating_class(_operating_class), flags(_flags)
+        {
+        }
+
+        uint8_t operating_class;
+        wfa_map::cPreferenceOperatingClasses::sFlags flags;
+
+        bool operator==(const sChannelPreference &rhs) const
+        {
+            return operating_class == rhs.operating_class &&
+                   flags.preference == rhs.flags.preference &&
+                   flags.reason_code == rhs.flags.reason_code;
+        }
+
+        bool operator<(const sChannelPreference &rhs) const
+        {
+            if (operating_class != rhs.operating_class) {
+                return operating_class < rhs.operating_class;
+            }
+            if (flags.preference != rhs.flags.preference) {
+                return flags.preference < rhs.flags.preference;
+            }
+            if (flags.reason_code != rhs.flags.reason_code) {
+                return flags.reason_code < rhs.flags.reason_code;
+            }
+            return false;
+        }
+    };
+
+    /**
+     * @brief Get a std::map of channels preferences organized in a way it will be easy to fill
+     * WFA Channel Preference Report.
+     *
+     * @return std::map of channels preferences.
+     */
+    std::map<sChannelPreference, std::set<uint8_t>> get_channel_preferences_from_channels_list();
 };
 
 } // namespace son
