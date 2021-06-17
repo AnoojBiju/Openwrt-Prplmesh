@@ -5463,24 +5463,24 @@ bool slave_thread::handle_channel_preference_query(Socket *sd, ieee1905_1::CmduM
     return message_com::send_cmdu(ap_manager_socket, cmdu_tx);
 }
 
-/**
- * @brief Get the channel preference
- *
- * @pre The channel operating class and the preference operating class have to match.
- * @param channel channel to check
- * @param preference preference
- * @return NON_OPERABLE if channel is restricted, channel preference otherwise
- */
-static uint8_t get_channel_preference(const beerocks::message::sWifiChannel channel,
-                                      const son::wireless_utils::sChannelPreference &preference)
+wfa_map::cPreferenceOperatingClasses::ePreference
+slave_thread::get_channel_preference(beerocks::message::sWifiChannel channel,
+                                     const sChannelPreference &preference,
+                                     const std::set<uint8_t> &preference_channels_list)
 {
+    // According to Table 23 in the MultiAP Specification, an empty channel list field
+    // indicates that the indicated preference applies to all channels in the operating class.
+    if (preference_channels_list.empty()) {
+        return wfa_map::cPreferenceOperatingClasses::ePreference(preference.flags.preference);
+    }
+
     uint8_t center_channel = 0;
     auto bw                = static_cast<beerocks::eWiFiBandwidth>(channel.channel_bandwidth);
     auto operating_class   = wireless_utils::get_operating_class_by_channel(channel);
 
-    LOG_IF(operating_class != preference.oper_class, FATAL)
+    LOG_IF(operating_class != preference.operating_class, FATAL)
         << "Invalid channel operating class " << int(operating_class)
-        << ", preference operating class is " << int(preference.oper_class);
+        << ", preference operating class is " << int(preference.operating_class);
 
     // operating classes 128,129,130 use center channel **unlike the other classes**,
     // so convert channel and bandwidth to center channel.
@@ -5489,22 +5489,17 @@ static uint8_t get_channel_preference(const beerocks::message::sWifiChannel chan
         center_channel = wireless_utils::get_5g_center_channel(channel.channel, bw);
     }
 
-    // According to Table 23 in the MultiAP Specification, an empty channel list field
-    // indicates that the indicated preference applies to all channels in the operating class.
-    if (preference.channels.empty()) {
-        return preference.preference;
-    }
     // explicitely restrict non-operable channels
     auto channel_to_check =
         (operating_class == 128 || operating_class == 129 || operating_class == 130)
             ? center_channel
             : channel.channel;
-    for (const auto &ch : preference.channels) {
-        if (channel_to_check == ch.channel) {
-            return preference.preference;
+    for (const auto ch : preference_channels_list) {
+        if (channel_to_check == ch) {
+            return wfa_map::cPreferenceOperatingClasses::ePreference(preference.flags.preference);
         }
     }
-    // default to the highest preference
+    // Default to the highest preference
     return wfa_map::cPreferenceOperatingClasses::ePreference::PREFERRED14;
 }
 

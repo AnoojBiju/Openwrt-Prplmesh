@@ -315,6 +315,20 @@ private:
      * @return std::map of channels preferences.
      */
     std::map<sChannelPreference, std::set<uint8_t>> get_channel_preferences_from_channels_list();
+
+    /**
+     * @brief Get the channel preference.
+     *
+     * @pre The channel operating class and the preference operating class have to match.
+     * @param channel A channel to check.
+     * @param preference The preference of the channel.
+     * @param preference_channels_list The preference channels list given by the Controller.
+     * @return NON_OPERABLE if channel is restricted, channel preference otherwise.
+     */
+    wfa_map::cPreferenceOperatingClasses::ePreference
+    get_channel_preference(beerocks::message::sWifiChannel channel,
+                           const sChannelPreference &preference,
+                           const std::set<uint8_t> &preference_channels_list);
 };
 
 } // namespace son
