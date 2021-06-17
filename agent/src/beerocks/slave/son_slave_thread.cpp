@@ -5509,38 +5509,47 @@ beerocks::message::sWifiChannel slave_thread::channel_selection_select_channel()
     auto radio = db->radio(m_fronthaul_iface);
     if (!radio) {
         LOG(DEBUG) << "Radio of interface " << m_fronthaul_iface << " does not exist on the db";
-        return beerocks::message::sWifiChannel();
+        return {};
     }
 
-    for (const auto &preference : channel_preferences) {
-        // Skip non-operable operating classes
-        if (preference.channels.empty()) {
+    for (const auto &preference : m_controller_channel_preferences) {
+        auto &preference_info         = preference.first;
+        auto &preference_channel_list = preference.second;
+
+        if (preference_channel_list.empty()) {
             continue;
         }
-        for (const auto &channel : radio->front.preferred_channels) {
-            auto operating_class = wireless_utils::get_operating_class_by_channel(channel);
+        for (const auto &channel_info_pair : radio->channels_list) {
+            auto channel       = channel_info_pair.first;
+            auto &channel_info = channel_info_pair.second;
+            for (auto &bw_info : channel_info.supported_bw_list) {
 
-            // Skip DFS channels
-            if (channel.is_dfs_channel) {
-                LOG(DEBUG) << "Skip DFS channel " << int(channel.channel) << " operating class "
-                           << int(operating_class);
-                continue;
+                beerocks::message::sWifiChannel wifi_channel(channel, bw_info.bandwidth);
+                auto operating_class = wireless_utils::get_operating_class_by_channel(wifi_channel);
+
+                // Skip DFS channels
+                if (channel_info.dfs_state != beerocks_message::eDfsState::NOT_DFS) {
+                    LOG(DEBUG) << "Skip DFS channel " << channel << ", operating class "
+                               << operating_class;
+                    continue;
+                }
+                // Skip channels from other operating classes.
+                if (operating_class != preference_info.operating_class) {
+                    continue;
+                }
+                // Skip restricted channels
+                if (get_channel_preference(wifi_channel, preference_info,
+                                           preference_channel_list) ==
+                    wfa_map::cPreferenceOperatingClasses::ePreference::NON_OPERABLE) {
+                    LOG(DEBUG) << "Skip restricted channel " << channel << ", operating class "
+                               << operating_class;
+                    continue;
+                }
+                // If we got this far, we found a candidate channel, so switch to it
+                LOG(DEBUG) << "Selected channel " << channel << ", operating class "
+                           << operating_class;
+                return wifi_channel;
             }
-            // skip channels from other operating classes
-            if (operating_class != preference.oper_class) {
-                continue;
-            }
-            // Skip restricted channels
-            if (get_channel_preference(channel, preference) ==
-                wfa_map::cPreferenceOperatingClasses::ePreference::NON_OPERABLE) {
-                LOG(DEBUG) << "Skip restricted channel " << int(channel.channel)
-                           << " operating class " << int(operating_class);
-                continue;
-            }
-            // If we got this far, we found a candidate channel, so switch to it
-            LOG(DEBUG) << "Selected channel " << int(channel.channel) << " operating class "
-                       << int(operating_class);
-            return channel;
         }
     }
 
