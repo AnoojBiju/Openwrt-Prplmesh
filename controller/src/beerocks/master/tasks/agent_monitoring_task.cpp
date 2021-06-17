@@ -13,7 +13,8 @@
 #include <bpl/bpl_cfg.h>
 #include <easylogging++.h>
 #include <tlvf/ieee_1905_1/tlvDeviceInformation.h>
-#include <tlvf/wfa_map/tlvApOperationalBSS.h>
+#include <tlvf/wfa_map/tlvAssociatedClients.h>
+#include <tlvf/wfa_map/tlvClientAssociationEvent.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
 #include <tlvf/wfa_map/tlvProfile2Default802dotQSettings.h>
 #include <tlvf/wfa_map/tlvProfile2TrafficSeparationPolicy.h>
@@ -91,17 +92,23 @@ bool agent_monitoring_task::start_agent_monitoring(const sMacAddr &src_mac,
         return false;
     }
 
-    const auto &al_mac    = tlvDeviceInformation->mac();
-    auto tlvApInformation = cmdu_rx.getClass<wfa_map::tlvApOperationalBSS>();
-    if (!tlvApInformation) {
+    const auto &al_mac = tlvDeviceInformation->mac();
+    auto ap_op_bss_tlv = cmdu_rx.getClass<wfa_map::tlvApOperationalBSS>();
+    if (!ap_op_bss_tlv) {
         LOG(ERROR) << "ieee1905_1::tlvApOperationalBSS not found";
         return false;
     }
 
-    for (uint8_t i = 0; i < tlvApInformation->radio_list_length(); i++) {
-        auto radio_entry   = std::get<1>(tlvApInformation->radio_list(i));
+    for (uint8_t i = 0; i < ap_op_bss_tlv->radio_list_length(); i++) {
+        auto radio_entry   = std::get<1>(ap_op_bss_tlv->radio_list(i));
         auto ruid          = radio_entry.radio_uid();
         auto bsses_from_m2 = m_bss_configured[ruid];
+
+        if (radio_entry.radio_bss_list_length() != bsses_from_m2.size()) {
+
+            // Not all BSSes from M2 configured by Agents radio
+            return false;
+        }
 
         for (uint8_t j = 0; j < radio_entry.radio_bss_list_length(); j++) {
             auto bss_entry = std::get<1>(radio_entry.radio_bss_list(j));
@@ -138,6 +145,23 @@ bool agent_monitoring_task::start_agent_monitoring(const sMacAddr &src_mac,
             }
         }
     }
+
+    // Delete radio entry detected as operational Agent from m_bss_configured.
+    for (uint8_t i = 0; i < ap_op_bss_tlv->radio_list_length(); i++) {
+        auto radio_entry = std::get<1>(ap_op_bss_tlv->radio_list(i));
+        m_bss_configured.erase(radio_entry.radio_uid());
+    }
+
+    if (!database.dm_check_objects_limit(m_agents[src_mac], MAX_EVENT_HISTORY_SIZE)) {
+        return false;
+    }
+    auto agent_connected_event_path = dm_add_agent_connected_event(src_mac, ap_op_bss_tlv, cmdu_rx);
+
+    if (agent_connected_event_path.empty() && NBAPI_ON) {
+        LOG(ERROR) << "Failed to add AgentConnectedEvent";
+        return false;
+    }
+    m_agents[src_mac].push(agent_connected_event_path);
     return true;
 }
 
@@ -304,4 +328,50 @@ bool agent_monitoring_task::add_traffic_policy_tlv(db &database, ieee1905_1::Cmd
         }
     }
     return true;
+}
+
+std::string agent_monitoring_task::dm_add_agent_connected_event(
+    const sMacAddr &agent_mac, std::shared_ptr<wfa_map::tlvApOperationalBSS> &ap_op_bss_tlv,
+    ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto ambiorix_dm = database.get_ambiorix_obj();
+
+    if (!ambiorix_dm) {
+        LOG(ERROR) << "Failed to get Ambiorix datamodel";
+        return {};
+    }
+
+    std::string agent_connected_event_path = "Controller.AgentConnectedEvent.AgentConnected";
+    std::string agent_connected_path       = ambiorix_dm->add_instance(agent_connected_event_path);
+
+    if (agent_connected_path.empty() && NBAPI_ON) {
+        LOG(ERROR) << "Failed to add " << agent_connected_event_path << ", mac: " << agent_mac;
+        return {};
+    }
+
+    ambiorix_dm->set(agent_connected_path, "ID", tlvf::mac_to_string(agent_mac));
+    ambiorix_dm->set_current_time(agent_connected_path);
+    for (int i = 0; i < ap_op_bss_tlv->radio_list_length(); i++) {
+        auto radio      = std::get<1>(ap_op_bss_tlv->radio_list(i));
+        auto radio_path = ambiorix_dm->add_instance(agent_connected_path + ".Radio");
+
+        if (radio_path.empty() && NBAPI_ON) {
+            LOG(ERROR) << "Failed to add " << agent_connected_path
+                       << ".Radio, mac: " << radio.radio_uid();
+            return agent_connected_path;
+        }
+        ambiorix_dm->set(radio_path, "MACAddress", tlvf::mac_to_string(radio.radio_uid()));
+        for (int j = 0; j < radio.radio_bss_list_length(); j++) {
+            auto bss      = std::get<1>(radio.radio_bss_list(j));
+            auto bss_path = ambiorix_dm->add_instance(radio_path + ".BSS");
+
+            if (bss_path.empty() && NBAPI_ON) {
+                LOG(ERROR) << "Failed to add " << radio_path << ".BSS BSSID: " << bss.radio_bssid();
+                return agent_connected_path;
+            }
+            ambiorix_dm->set(bss_path, "BSSID", tlvf::mac_to_string(bss.radio_bssid()));
+            ambiorix_dm->set(bss_path, "SSID", bss.ssid_str());
+        }
+    }
+    return agent_connected_path;
 }
