@@ -290,10 +290,19 @@ bool sta_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
         LOG(DEBUG) << get_iface_name() << " - Connected: bssid = " << connection_status.bssid
                    << ", freq = " << connection_status.freq;
 
+        // Add sACTION_BACKHAUL_CONNECTED_NOTIFICATION which contain the Multi-AP profile, and the
+        // Primary VLAN ID. Since this is not implemented on this flavour of BWL, leave it empty.
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_BACKHAUL_CONNECTED_NOTIFICATION));
+        auto msg      = reinterpret_cast<sACTION_BACKHAUL_CONNECTED_NOTIFICATION *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        memset(msg_buff.get(), 0, sizeof(sACTION_BACKHAUL_CONNECTED_NOTIFICATION));
+
         update_status(connection_status);
 
         // Forward the event
-        event_queue_push(event);
+        event_queue_push(event, msg_buff);
 
     } break;
 
