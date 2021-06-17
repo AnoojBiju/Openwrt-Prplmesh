@@ -5557,10 +5557,8 @@ bool slave_thread::channel_selection_current_channel_restricted()
         return false;
     }
 
-    beerocks::message::sWifiChannel channel;
-    channel.channel_bandwidth = radio->bandwidth;
-    channel.channel           = radio->channel;
-    auto operating_class      = wireless_utils::get_operating_class_by_channel(channel);
+    beerocks::message::sWifiChannel channel(radio->channel, radio->bandwidth);
+    auto operating_class = wireless_utils::get_operating_class_by_channel(channel);
 
     if (operating_class == 0) {
         LOG(ERROR) << "Unknown operating class for bandwidth= " << channel.channel_bandwidth
@@ -5571,19 +5569,21 @@ bool slave_thread::channel_selection_current_channel_restricted()
 
     LOG(DEBUG) << "Current channel " << int(channel.channel) << " bw "
                << int(channel.channel_bandwidth) << " oper_class " << int(operating_class);
-    for (const auto &preference : channel_preferences) {
+    for (const auto &preference : m_controller_channel_preferences) {
         // for now we handle only non-operable preference
         // TODO - handle as part of https://github.com/prplfoundation/prplMesh/issues/725
-        if (preference.preference !=
+        auto &preference_info         = preference.first;
+        auto &preference_channel_list = preference.second;
+        if (preference_info.flags.preference !=
             wfa_map::cPreferenceOperatingClasses::ePreference::NON_OPERABLE) {
             LOG(WARNING) << "Ignoring operable channels preference";
             continue;
         }
-        // skip channels from other operating classes
-        if (operating_class != preference.oper_class) {
+        // Skip channels from other operating classes.
+        if (operating_class != preference_info.operating_class) {
             continue;
         }
-        if (get_channel_preference(channel, preference) ==
+        if (get_channel_preference(channel, preference_info, preference_channel_list) ==
             wfa_map::cPreferenceOperatingClasses::ePreference::NON_OPERABLE) {
             LOG(INFO) << "Current channel " << int(channel.channel)
                       << " restricted, channel switch required";
