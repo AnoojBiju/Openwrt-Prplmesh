@@ -15,6 +15,7 @@
 
 #include <tlvf/WSC/m1.h>
 #include <tlvf/wfa_map/tlvApOperationalBSS.h>
+#include <tlvf/wfa_map/tlvAssociatedClients.h>
 
 namespace son {
 class agent_monitoring_task : public task {
@@ -119,6 +120,19 @@ private:
     dm_add_agent_connected_event(const sMacAddr &device_mac,
                                  std::shared_ptr<wfa_map::tlvApOperationalBSS> &ap_op_bss_tlv,
                                  ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Search for appropriate BSS from bss list of tlvAssociatedClients,
+     * for each STA from its list of clients create NBAPI
+     * STA object and attach this object to AgentConnected.
+     *
+     * @param obj_path Path to object to which STA will be attached.
+     * @param bssid ​BSSID to search in the list.
+     * @param assoc_client_tlv tlvAssociatedClients.
+    ​ */
+    void dm_add_sta_to_agent_connected_event(
+        const std::string &obj_path, const sMacAddr &bssid,
+        std::shared_ptr<wfa_map::tlvAssociatedClients> &assoc_client_tlv);
 };
 
 } // namespace son

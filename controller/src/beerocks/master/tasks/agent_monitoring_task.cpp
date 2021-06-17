@@ -13,7 +13,6 @@
 #include <bpl/bpl_cfg.h>
 #include <easylogging++.h>
 #include <tlvf/ieee_1905_1/tlvDeviceInformation.h>
-#include <tlvf/wfa_map/tlvAssociatedClients.h>
 #include <tlvf/wfa_map/tlvClientAssociationEvent.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
 #include <tlvf/wfa_map/tlvProfile2Default802dotQSettings.h>
@@ -330,6 +329,38 @@ bool agent_monitoring_task::add_traffic_policy_tlv(db &database, ieee1905_1::Cmd
     return true;
 }
 
+void agent_monitoring_task::dm_add_sta_to_agent_connected_event(
+    const std::string &obj_path, const sMacAddr &bssid,
+    std::shared_ptr<wfa_map::tlvAssociatedClients> &assoc_client_tlv)
+{
+    auto ambiorix_dm = database.get_ambiorix_obj();
+
+    if (!ambiorix_dm) {
+        LOG(ERROR) << "Failed to get Ambiorix datamodel";
+        return;
+    }
+    for (int i = 0; i < assoc_client_tlv->bss_list_length(); i++) {
+        auto bss = std::get<1>(assoc_client_tlv->bss_list(i));
+
+        if (bssid == bss.bssid()) {
+            for (int j = 0; j < bss.clients_associated_list_length(); i++) {
+                auto sta      = std::get<1>(bss.clients_associated_list(i));
+                auto sta_path = ambiorix_dm->add_instance(obj_path + ".STA");
+
+                if (sta_path.empty() && NBAPI_ON) {
+                    LOG(ERROR) << "Failed to add " << obj_path << ".STA, mac: " << sta.mac();
+                    return;
+                }
+                ambiorix_dm->set_current_time(sta_path);
+                ambiorix_dm->set(sta_path, "MACAddress", tlvf::mac_to_string(sta.mac()));
+                ambiorix_dm->set(sta_path, "TimeSinceLastAssocSec",
+                                 sta.time_since_last_association_sec());
+            }
+            return;
+        }
+    }
+}
+
 std::string agent_monitoring_task::dm_add_agent_connected_event(
     const sMacAddr &agent_mac, std::shared_ptr<wfa_map::tlvApOperationalBSS> &ap_op_bss_tlv,
     ieee1905_1::CmduMessageRx &cmdu_rx)
@@ -339,6 +370,12 @@ std::string agent_monitoring_task::dm_add_agent_connected_event(
     if (!ambiorix_dm) {
         LOG(ERROR) << "Failed to get Ambiorix datamodel";
         return {};
+    }
+
+    auto tlv_assoc_client = cmdu_rx.getClass<wfa_map::tlvAssociatedClients>();
+
+    if (!tlv_assoc_client) {
+        LOG(ERROR) << "getClass tlvAssociatedClients failed";
     }
 
     std::string agent_connected_event_path = "Controller.AgentConnectedEvent.AgentConnected";
@@ -371,6 +408,9 @@ std::string agent_monitoring_task::dm_add_agent_connected_event(
             }
             ambiorix_dm->set(bss_path, "BSSID", tlvf::mac_to_string(bss.radio_bssid()));
             ambiorix_dm->set(bss_path, "SSID", bss.ssid_str());
+            if (tlv_assoc_client) {
+                dm_add_sta_to_agent_connected_event(bss_path, bss.radio_bssid(), tlv_assoc_client);
+            }
         }
     }
     return agent_connected_path;
