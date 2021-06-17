@@ -384,11 +384,6 @@ public:
     virtual bool set_tx_power_limit(int tx_pow_limit) = 0;
 
     /**
-     * @brief Returns a string representation of the WLAN driver version.
-     */
-    virtual std::string get_radio_driver_version() = 0;
-
-    /**
      * @brief Set/Get enable vap beacon transmittion.
      * 
      * @return true on success or false on error.

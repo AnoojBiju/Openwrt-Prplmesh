@@ -2242,8 +2242,6 @@ bool ap_wlan_hal_dwpal::start_wps_pbc()
     return true;
 }
 
-std::string ap_wlan_hal_dwpal::get_radio_driver_version() { return std::string("NA"); }
-
 static bool is_acs_completed_scan(char *buffer, int bufLen)
 {
     size_t numOfValidArgs[3]      = {0};
