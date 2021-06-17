@@ -2738,19 +2738,6 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         }
         message_com::send_cmdu(backhaul_manager_socket, cmdu_tx);
 
-        auto db    = AgentDB::get();
-        auto radio = db->radio(m_fronthaul_iface);
-        if (!radio) {
-            LOG(DEBUG) << "Radio of interface " << m_fronthaul_iface << " does not exist on the db";
-            return false;
-        }
-
-        // Create Channel preference report
-        auto tuple_preferred_channels = response->preferred_channels(0);
-        radio->front.preferred_channels.resize(response->preferred_channels_size());
-        std::copy_n(&std::get<1>(tuple_preferred_channels), response->preferred_channels_size(),
-                    radio->front.preferred_channels.begin());
-
         // build channel preference report
         auto cmdu_tx_header = cmdu_tx.create(
             beerocks_header->id(), ieee1905_1::eMessageType::CHANNEL_PREFERENCE_REPORT_MESSAGE);
@@ -2760,7 +2747,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             return false;
         }
 
-        auto preferences = wireless_utils::get_channel_preferences(radio->front.preferred_channels);
+        auto preferences = get_channel_preferences_from_channels_list();
 
         auto channel_preference_tlv = cmdu_tx.addClass<wfa_map::tlvChannelPreference>();
         if (!channel_preference_tlv) {
@@ -2768,9 +2755,14 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             return false;
         }
 
+        auto db    = AgentDB::get();
+        auto radio = db->radio(m_fronthaul_iface);
+        if (!radio) {
+            return false;
+        }
         channel_preference_tlv->radio_uid() = radio->front.iface_mac;
 
-        for (auto preference : preferences) {
+        for (const auto &preference : preferences) {
             // Create operating class object
             auto op_class_channels = channel_preference_tlv->create_operating_classes_list();
             if (!op_class_channels) {
@@ -2782,22 +2774,22 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             // on the first channel on the list and sFlags itself.
             // See: https://github.com/prplfoundation/prplMesh/issues/8
 
-            op_class_channels->operating_class() = preference.oper_class;
-            if (!op_class_channels->alloc_channel_list(preference.channels.size())) {
+            auto &operating_class_info           = preference.first;
+            auto &operating_class_channels_list  = preference.second;
+            op_class_channels->operating_class() = operating_class_info.operating_class;
+            if (!op_class_channels->alloc_channel_list(operating_class_channels_list.size())) {
                 LOG(ERROR) << "alloc_channel_list() has failed!";
                 return false;
             }
 
             uint8_t idx = 0;
-            for (auto wifi_channel : preference.channels) {
-                *op_class_channels->channel_list(idx) = wifi_channel.channel;
+            for (auto channel : operating_class_channels_list) {
+                *op_class_channels->channel_list(idx) = channel;
                 idx++;
             }
 
             // Update channel list flags
-            op_class_channels->flags().preference = preference.preference;
-            op_class_channels->flags().reason_code =
-                (wfa_map::cPreferenceOperatingClasses::eReasonCode)preference.reason;
+            op_class_channels->flags() = operating_class_info.flags;
 
             // Push operating class object to the list of operating class objects
             if (!channel_preference_tlv->add_operating_classes_list(op_class_channels)) {
