@@ -183,8 +183,6 @@ private:
     int slave_resets_counter = 0;
 
     sSlaveBackhaulParams backhaul_params;
-    std::vector<wireless_utils::sChannelPreference> channel_preferences;
-
     SocketClient *platform_manager_socket = nullptr;
     SocketClient *backhaul_manager_socket = nullptr;
     SocketClient *master_socket           = nullptr;
@@ -229,7 +227,7 @@ private:
     bool handle_monitor_ap_metrics_response(Socket &sd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_channel_preference_query(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_channel_selection_request(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool channel_selection_get_channel_preference(ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool get_controller_channel_preference(ieee1905_1::CmduMessageRx &cmdu_rx);
     bool channel_selection_get_transmit_power_limit(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                     int &power_limit);
     bool channel_selection_current_channel_restricted();
@@ -308,6 +306,7 @@ private:
             return false;
         }
     };
+    std::map<sChannelPreference, std::set<uint8_t>> m_controller_channel_preferences;
 
     /**
      * @brief Get a std::map of channels preferences organized in a way it will be easy to fill

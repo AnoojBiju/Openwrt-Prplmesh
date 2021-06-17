@@ -5600,9 +5600,9 @@ bool slave_thread::channel_selection_current_channel_restricted()
     return false;
 }
 
-bool slave_thread::channel_selection_get_channel_preference(ieee1905_1::CmduMessageRx &cmdu_rx)
+bool slave_thread::get_controller_channel_preference(ieee1905_1::CmduMessageRx &cmdu_rx)
 {
-    channel_preferences.clear();
+    m_controller_channel_preferences.clear();
     auto db    = AgentDB::get();
     auto radio = db->radio(m_fronthaul_iface);
     if (!radio) {
@@ -5631,21 +5631,25 @@ bool slave_thread::channel_selection_get_channel_preference(ieee1905_1::CmduMess
             }
             auto &op_class_channels = std::get<1>(operating_class_tuple);
             auto operating_class    = op_class_channels.operating_class();
+
+            auto channel_preference =
+                sChannelPreference(op_class_channels.operating_class(), op_class_channels.flags());
+
             const auto &op_class_chan_set =
                 wireless_utils::operating_class_to_channel_set(operating_class);
-            ss << "operating class=" << int(operating_class);
+            ss << "operating class=" << operating_class;
 
-            const auto &flags        = op_class_channels.flags();
-            auto preference          = flags.preference;
-            auto reason_code         = flags.reason_code;
             auto channel_list_length = op_class_channels.channel_list_length();
-            ss << ", preference=" << int(preference) << ", reason=" << int(reason_code);
+
+            ss << ", preference=" << channel_preference.flags.preference
+               << ", reason=" << channel_preference.flags.reason_code;
             ss << ", channel_list={";
             if (channel_list_length == 0) {
                 ss << "}";
             }
 
-            std::vector<beerocks::message::sWifiChannel> channels_list;
+            auto &channels_set = m_controller_channel_preferences[channel_preference];
+
             for (int ch_idx = 0; ch_idx < channel_list_length; ch_idx++) {
                 auto channel = op_class_channels.channel_list(ch_idx);
                 if (!channel) {
@@ -5655,8 +5659,8 @@ bool slave_thread::channel_selection_get_channel_preference(ieee1905_1::CmduMess
 
                 // Check if channel is valid for operating class
                 if (op_class_chan_set.find(*channel) == op_class_chan_set.end()) {
-                    LOG(ERROR) << "Channel " << +*channel << " invalid for operating class "
-                               << +operating_class;
+                    LOG(ERROR) << "Channel " << *channel << " invalid for operating class "
+                               << operating_class;
                     return false;
                 }
 
@@ -5665,17 +5669,9 @@ bool slave_thread::channel_selection_get_channel_preference(ieee1905_1::CmduMess
                 // add comma if not last channel in the list, else close list by add curl brackets
                 ss << (((ch_idx + 1) != channel_list_length) ? "," : "}");
 
-                beerocks::message::sWifiChannel wifi_channel;
-                wifi_channel.channel = *channel;
-                channels_list.push_back(wifi_channel);
+                channels_set.insert(*channel);
             }
             LOG(DEBUG) << ss.str();
-            wireless_utils::sChannelPreference pref;
-            pref.oper_class = operating_class;
-            pref.preference = preference;
-            pref.reason     = uint8_t(reason_code);
-            pref.channels   = channels_list;
-            channel_preferences.push_back(pref);
         }
     }
 
@@ -5725,7 +5721,7 @@ bool slave_thread::handle_channel_selection_request(Socket *sd, ieee1905_1::Cmdu
     auto response_code = wfa_map::tlvChannelSelectionResponse::eResponseCode::ACCEPT;
     beerocks::message::sWifiChannel channel_to_switch;
     bool switch_required = false;
-    if (channel_selection_get_channel_preference(cmdu_rx)) {
+    if (get_controller_channel_preference(cmdu_rx)) {
         // Only restricted channels are be included in channel selection request.
         if (channel_selection_current_channel_restricted()) {
             channel_to_switch = channel_selection_select_channel();
