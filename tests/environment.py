@@ -877,7 +877,7 @@ class ALEntityPrplWrt(ALEntity):
             "grep log_files_path {}".format(self.config_file_name))
         self.log_folder = re.search(r'log_files_path=(?P<log_path>[a-zA-Z0-9_\/]+)',
                                     log_folder_raw).group('log_path')
-        ucc_socket = UCCSocket(str(self.device.control_ip), int(ucc_port))
+        ucc_socket = UCCSocket(str(self.device.control_ip), int(ucc_port), timeout=60)
         mac = ucc_socket.dev_get_parameter('ALid')
 
         super().__init__(mac, ucc_socket, installdir, is_controller)
