@@ -293,6 +293,17 @@ public:
      */
     std::shared_ptr<sAgent::sRadio> get_radio(const sMacAddr &al_mac, const sMacAddr &radio_uid);
 
+    /**
+     * @brief Get radio with a specific Radio Unique Identifier (Radio UID)
+     *
+     * Searches all sAgent objects for sRadio object with the given Radio UID.
+     * If no radio with the given UID found, nullptr is returned and an error is logged.
+     *
+     * @param radio_uid Radio UID of the radio.
+     * @return The sRadio object, or nullptr if it doesn't exist.
+     */
+    std::shared_ptr<sAgent::sRadio> get_radio_by_uid(const sMacAddr &radio_uid);
+
     //logger
     void set_log_level_state(const beerocks::eLogLevel &log_level, const bool &new_state);
 
@@ -923,9 +934,6 @@ public:
                                         const std::set<std::string> &dfs_reentry_clients);
     std::set<std::string> get_hostap_dfs_reentry_clients(const sMacAddr &mac);
     bool clear_hostap_dfs_reentry_clients(const sMacAddr &mac);
-
-    bool set_hostap_is_acs_enabled(const sMacAddr &al_mac, const sMacAddr &mac, bool enable);
-    bool get_hostap_is_acs_enabled(const sMacAddr &mac);
 
     //
     // Channel Scan
@@ -1810,7 +1818,6 @@ private:
      */
     std::shared_ptr<node> get_node_verify_type(const sMacAddr &mac, beerocks::eType type);
     std::shared_ptr<node::radio> get_hostap(const sMacAddr &radio_uid);
-    std::shared_ptr<sAgent::sRadio> get_radio_by_uid(const sMacAddr &radio_uid);
     int get_node_hierarchy(std::shared_ptr<node> n);
     std::set<std::shared_ptr<node>> get_node_subtree(std::shared_ptr<node> n);
     void adjust_subtree_hierarchy(std::shared_ptr<node> n);

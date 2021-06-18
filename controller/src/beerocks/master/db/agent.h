@@ -47,6 +47,8 @@ public:
 
         std::string dm_path; /**< data model path */
 
+        bool is_acs_enabled = false;
+
         struct sBss {
             sBss()             = delete;
             sBss(const sBss &) = delete;
