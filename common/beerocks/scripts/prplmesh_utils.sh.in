@@ -182,7 +182,6 @@ prplmesh_watchdog() {
 roll_logs_function()
 {
     ROLL_PROGRESS_DIR="roll_in_progress.lock"
-    BACKUP_NAME=beerocks_logs_$(date "+%Y%m%d_%H%M%S").tar.gz
 
     # Switch into the beerocks logs folder
     cd @BEEROCKS_LOG_FILES_PATH@ || exit
@@ -194,39 +193,10 @@ roll_logs_function()
         exit 0
     fi
 
-    logFiles=$(find ./*.*.log)
-    logFilesCountPreRoll=$(find ./*.*.log | wc -l)
-
     # Send USR1 signals to the beerocks processes to trigger log rolling
     killall_program beerocks_controller USR1
     killall_program beerocks_agent USR1
     killall_program beerocks_fronthaul USR1
-
-    # Wait for all the modules to create a new file
-    rollTimeout=0
-    while true; do
-        logFilesCountPostRoll=$(find ./*.*.log | wc -l)
-
-        # All modules rolled
-        if [ "$logFilesCountPostRoll" -ge $((logFilesCountPreRoll * 2)) ]; then
-            break
-        fi
-
-        # Timeout after 5 seconds
-        if [ $rollTimeout -ge 5 ]; then
-            break
-        fi
-
-        rollTimeout=$((rollTimeout + 1))
-        sleep 1
-    done
-
-    # Pack and remove the log files
-    tar czf "$BACKUP_NAME" "$logFiles"
-    rm "$logFiles"
-
-    # Keep last 3 archives
-    rm "$(find -t ./*.tar.gz | awk 'NR>3')" > /dev/null 2>&1
 
     # Cleanup
     rm -r $ROLL_PROGRESS_DIR
