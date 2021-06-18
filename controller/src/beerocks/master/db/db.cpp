@@ -2820,36 +2820,6 @@ bool db::clear_hostap_dfs_reentry_clients(const sMacAddr &mac)
     return true;
 }
 
-bool db::set_hostap_is_acs_enabled(const sMacAddr &al_mac, const sMacAddr &mac, bool enable)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(ERROR) << "node not found.... ";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(ERROR) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return false;
-    }
-    LOG(DEBUG) << __FUNCTION__ << ", enable = " << int(enable);
-    n->hostap->is_acs_enabled = enable;
-    return true;
-}
-
-bool db::get_hostap_is_acs_enabled(const sMacAddr &mac)
-{
-    auto n = get_node(mac);
-
-    if (!n) {
-        LOG(ERROR) << "node not found.... ";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(ERROR) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return false;
-    }
-    LOG(DEBUG) << __FUNCTION__ << "n->hostap->is_acs_enabled = " << int(n->hostap->is_acs_enabled);
-    return n->hostap->is_acs_enabled;
-}
-
 //
 // Channel Scan
 //

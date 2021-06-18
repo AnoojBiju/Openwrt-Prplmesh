@@ -368,7 +368,14 @@ void channel_selection_task::work()
         channel_switch_required = false;
         get_hostap_params();
 
-        if (!database.get_hostap_is_acs_enabled(radio_mac)) {
+        auto radio = database.get_radio_by_uid(radio_mac);
+        if (!radio) {
+            TASK_LOG(ERROR) << "radio " << radio_mac << " not found";
+            FSM_MOVE_STATE(GOTO_IDLE);
+            break;
+        }
+
+        if (!radio->is_acs_enabled) {
             if (wireless_utils::is_dfs_channel(hostap_params.channel)) {
                 TASK_LOG(INFO) << "not waiting for CAC completed on static DFS channel "
                                   "configuration, setting CAC completed flag to true";
@@ -694,7 +701,14 @@ void channel_selection_task::work()
             tasks.add_task(new_task);
         }
 
-        if (!database.get_hostap_is_acs_enabled(radio_mac)) {
+        auto radio = database.get_radio_by_uid(radio_mac);
+        if (!radio) {
+            TASK_LOG(ERROR) << "radio " << radio_mac << " not found";
+            FSM_MOVE_STATE(GOTO_IDLE);
+            break;
+        }
+
+        if (!radio->is_acs_enabled) {
             FSM_MOVE_STATE(GOTO_IDLE);
             break;
         }
@@ -822,7 +836,14 @@ void channel_selection_task::work()
         tasks.push_event(database.get_bml_task_id(), bml_task::CSA_NOTIFICATION_EVENT_AVAILABLE,
                          &csa_notification_event);
 
-        if (!database.get_hostap_is_acs_enabled(radio_mac)) {
+        auto radio = database.get_radio_by_uid(radio_mac);
+        if (!radio) {
+            TASK_LOG(ERROR) << "radio " << radio_mac << " not found";
+            FSM_MOVE_STATE(GOTO_IDLE);
+            break;
+        }
+
+        if (!radio->is_acs_enabled) {
             TASK_LOG(DEBUG) << " vht_center_frequency";
             FSM_MOVE_STATE(GOTO_IDLE);
             break;
