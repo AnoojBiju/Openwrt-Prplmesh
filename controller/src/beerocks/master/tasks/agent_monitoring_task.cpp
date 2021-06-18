@@ -12,6 +12,7 @@
 
 #include <bpl/bpl_cfg.h>
 #include <easylogging++.h>
+#include <tlvf/ieee_1905_1/tlv1905NeighborDevice.h>
 #include <tlvf/ieee_1905_1/tlvDeviceInformation.h>
 #include <tlvf/wfa_map/tlvClientAssociationEvent.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
@@ -161,6 +162,11 @@ bool agent_monitoring_task::start_agent_monitoring(const sMacAddr &src_mac,
         return false;
     }
     m_agents[src_mac].push(agent_connected_event_path);
+
+    if (!dm_add_neighbor_to_agent_connected_event(agent_connected_event_path, cmdu_rx)) {
+        LOG(ERROR) << "Failed to add " << agent_connected_event_path << ".Neighbor";
+        return false;
+    }
     return true;
 }
 
@@ -375,7 +381,7 @@ std::string agent_monitoring_task::dm_add_agent_connected_event(
     auto tlv_assoc_client = cmdu_rx.getClass<wfa_map::tlvAssociatedClients>();
 
     if (!tlv_assoc_client) {
-        LOG(ERROR) << "getClass tlvAssociatedClients failed";
+        LOG(DEBUG) << "getClass tlvAssociatedClients failed";
     }
 
     std::string agent_connected_event_path = "Controller.AgentConnectedEvent.AgentConnected";
@@ -414,4 +420,46 @@ std::string agent_monitoring_task::dm_add_agent_connected_event(
         }
     }
     return agent_connected_path;
+}
+
+bool agent_monitoring_task::dm_add_neighbor_to_agent_connected_event(
+    const std::string &event_path, ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto ambiorix_dm = database.get_ambiorix_obj();
+
+    if (!ambiorix_dm) {
+        LOG(ERROR) << "Failed to get Ambiorix datamodel";
+        return {};
+    }
+
+    auto tlv1905NeighborDeviceList = cmdu_rx.getClassList<ieee1905_1::tlv1905NeighborDevice>();
+    for (const auto &tlv1905NeighborDevice : tlv1905NeighborDeviceList) {
+        if (!tlv1905NeighborDevice) {
+            LOG(ERROR) << "getClassList<ieee1905_1::tlv1905NeighborDevice> failed";
+            return false;
+        }
+        auto device_count = tlv1905NeighborDevice->mac_al_1905_device_length() /
+                            sizeof(ieee1905_1::tlv1905NeighborDevice::sMacAl1905Device);
+        for (size_t i = 0; i < device_count; i++) {
+            const auto neighbor_al_mac_tuple = tlv1905NeighborDevice->mac_al_1905_device(i);
+
+            if (!std::get<0>(neighbor_al_mac_tuple)) {
+                LOG(ERROR) << "Feiled to get al_mac element.";
+                return false;
+            }
+
+            auto &neighbor_mac = std::get<1>(neighbor_al_mac_tuple).mac;
+            auto neighbor_path = ambiorix_dm->add_instance(event_path + ".Neighbor");
+
+            if (neighbor_path.empty() && NBAPI_ON) {
+                LOG(ERROR) << "Failed to add " << event_path << ".Neighbor";
+                return false;
+            }
+            if (!ambiorix_dm->set(neighbor_path, "ID", tlvf::mac_to_string(neighbor_mac))) {
+                LOG(ERROR) << "Failed to set ID for : " << neighbor_path;
+                return false;
+            }
+        }
+    }
+    return true;
 }

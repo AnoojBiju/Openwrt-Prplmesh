@@ -133,6 +133,17 @@ private:
     void dm_add_sta_to_agent_connected_event(
         const std::string &obj_path, const sMacAddr &bssid,
         std::shared_ptr<wfa_map::tlvAssociatedClients> &assoc_client_tlv);
+
+    /**
+     * @brief Add Neighbor of AgentConnected event to NBAPI data model.
+     * Ex. Controller.AgentConnectedEvent.AgentConnected.1.Neighbor.3
+     * 
+     * @param event_path Path to AgentConnected event to which neighbor will be added.
+     * @param cmdu_rx Topology Response message.
+     * @return True on success, false otherwise.
+     */
+    bool dm_add_neighbor_to_agent_connected_event(const std::string &event_path,
+                                                  ieee1905_1::CmduMessageRx &cmdu_rx);
 };
 
 } // namespace son
