@@ -1086,7 +1086,8 @@ class RadioHostapd(Radio):
         self.iface_name = iface_name
         self.agent = agent
 
-        ip_raw = self.agent.command("ip", "link", "list", "dev", self.iface_name)
+        ip_raw = self.agent.command("/sbin/ip", "link", "list", "dev", self.iface_name)
+
         mac = re.search(r"link/ether (([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})",
                         ip_raw).group(1)
         self.log_folder = agent.log_folder
@@ -1110,7 +1111,7 @@ class RadioHostapd(Radio):
         debug("vap candidates : " + " * ".join(vap_candidates))
 
         for vap_iface in vap_candidates:
-            iwinfo_output = self.agent.command('iw', 'dev', vap_iface, 'info')
+            iwinfo_output = self.agent.command('/usr/sbin/iw', 'dev', vap_iface, 'info')
 
             if re.search('dummy_ssid', iwinfo_output):
                 # On MaxLinear devices (e.g. Netgear RAX40) wlan0 and wlan2 are dummy interfaces.
