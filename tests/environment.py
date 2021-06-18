@@ -1105,7 +1105,14 @@ class RadioHostapd(Radio):
 
         self.vaps = []
 
-        output = self.agent.command('sh', '-c', f'iwinfo | grep ^{iface_name} | cut -d " " -f 1')
+        output = self.agent.command('sh', '-c', f'/sbin/ip a | grep "{iface_name}"')
+        output = re.findall(r"wlan[0-9]+[^\s]+", output)
+        result = ""
+        for i in output:
+            output = str(i)[:-1]
+            result += f"{output}\n"
+
+        output = result
         vap_candidates = output.split()
 
         debug("vap candidates : " + " * ".join(vap_candidates))
@@ -1214,7 +1221,7 @@ class VirtualAPHostapd(VirtualAP):
         output = self.radio.agent.command(
             'sh',
             '-c',
-            f'ip link list | grep -B1 "{bssid}"')
+            f'/sbin/ip link list | grep -B1 "{bssid}"')
         assert output, f'No interface found with the bssid {bssid}'
         return output.split(':')[1].strip()
 
