@@ -2268,9 +2268,6 @@ void ApManager::handle_hostapd_attached()
 
     string_utils::copy_string(notification->params().iface_name,
                               ap_wlan_hal->get_iface_name().c_str(), message::IFACE_NAME_LENGTH);
-    string_utils::copy_string(notification->params().driver_version,
-                              ap_wlan_hal->get_radio_driver_version().c_str(),
-                              message::WIFI_DRIVER_VER_LENGTH);
 
     notification->params().iface_type    = uint8_t(ap_wlan_hal->get_iface_type());
     notification->params().iface_mac     = tlvf::mac_from_string(ap_wlan_hal->get_radio_mac());
