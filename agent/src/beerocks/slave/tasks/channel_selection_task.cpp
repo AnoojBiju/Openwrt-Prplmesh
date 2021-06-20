@@ -1148,31 +1148,12 @@ ChannelSelectionTask::select_best_usable_channel(const std::string &front_radio_
             bool update_best_channel = false;
 
             auto filter_channel_bw_with_unavailable_overlapping_channel = [&]() {
-                auto channel_it = son::wireless_utils::channels_table_5g.find(channel);
-                if (channel_it == son::wireless_utils::channels_table_5g.end()) {
-                    LOG(ERROR) << "Radio supports channel which is not on the channel table! ch="
-                               << int(channel);
-                    return false;
-                }
-
-                auto &channel_bw_info_map = channel_it->second;
-                auto bw_it                = channel_bw_info_map.find(supported_bw.bandwidth);
-                if (bw_it == channel_bw_info_map.end()) {
-                    LOG(ERROR) << "Radio supports channel which is not on the channel table!"
-                               << "ch =" << int(channel) << ", bw="
-                               << utils::convert_bandwidth_to_int(supported_bw.bandwidth);
-                    return false;
-                }
-
-                auto channel_range_min = bw_it->second.overlap_beacon_channels_range.first;
-                auto channel_range_max = bw_it->second.overlap_beacon_channels_range.second;
-
-                constexpr uint8_t channels_distance_5g = 4;
+                auto overlapping_beacon_channels =
+                    son::wireless_utils::get_overlapping_beacon_channels(channel,
+                                                                         supported_bw.bandwidth);
 
                 // Ignore if one of beacon channels is unavailable.
-                for (uint8_t overlap_ch = channel_range_min; overlap_ch <= channel_range_max;
-                     overlap_ch += channels_distance_5g) {
-
+                for (const auto overlap_ch : overlapping_beacon_channels) {
                     auto overlap_channel_info_it = radio->channels_list.find(overlap_ch);
                     if (overlap_channel_info_it == radio->channels_list.end()) {
                         LOG(ERROR)
