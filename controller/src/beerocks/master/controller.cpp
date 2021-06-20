@@ -2758,11 +2758,8 @@ bool Controller::handle_cmdu_control_message(
 
         auto new_event =
             CHANNEL_SELECTION_ALLOCATE_EVENT(channel_selection_task::sAcsResponse_event);
-        new_event->hostap_mac         = tlvf::mac_from_string(hostap_mac);
-        new_event->cs_params          = notification->cs_params();
-        auto tuple_preferred_channels = notification->preferred_channels(0);
-        std::copy_n(&std::get<1>(tuple_preferred_channels), notification->preferred_channels_size(),
-                    new_event->supported_channels);
+        new_event->hostap_mac = tlvf::mac_from_string(hostap_mac);
+        new_event->cs_params  = notification->cs_params();
         tasks.push_event(database.get_channel_selection_task_id(),
                          (int)channel_selection_task::eEvent::ACS_RESPONSE_EVENT,
                          (void *)new_event);

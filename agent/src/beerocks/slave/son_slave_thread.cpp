@@ -2149,16 +2149,6 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             return false;
         }
         notification_out->cs_params() = notification_in->cs_params();
-        if (notification_out->alloc_preferred_channels(
-                notification_in->preferred_channels_size())) {
-            LOG(ERROR) << "Failed to allocate preferred_channels!";
-            return false;
-        }
-        auto tuple_in_preferred_channels  = notification_in->preferred_channels(0);
-        auto tuple_out_preferred_channels = notification_out->preferred_channels(0);
-        std::copy_n(&std::get<1>(tuple_in_preferred_channels),
-                    notification_out->preferred_channels_size(),
-                    &std::get<1>(tuple_out_preferred_channels));
         send_cmdu_to_controller(cmdu_tx);
         send_operating_channel_report();
         break;
