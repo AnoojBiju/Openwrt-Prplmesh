@@ -5567,7 +5567,9 @@ bool slave_thread::channel_selection_current_channel_restricted()
     }
 
     LOG(DEBUG) << "Current channel " << int(channel.channel) << " bw "
-               << int(channel.channel_bandwidth) << " oper_class " << int(operating_class);
+               << beerocks::utils::convert_bandwidth_to_int(
+                      beerocks::eWiFiBandwidth(channel.channel_bandwidth))
+               << " oper_class " << int(operating_class);
     for (const auto &preference : m_controller_channel_preferences) {
         // for now we handle only non-operable preference
         // TODO - handle as part of https://github.com/prplfoundation/prplMesh/issues/725
@@ -5721,8 +5723,9 @@ bool slave_thread::handle_channel_selection_request(Socket *sd, ieee1905_1::Cmdu
             channel_to_switch = channel_selection_select_channel();
             if (channel_to_switch.channel != 0) {
                 switch_required = true;
-                LOG(INFO) << "Switch to channel " << +channel_to_switch.channel << " bw "
-                          << +channel_to_switch.channel_bandwidth;
+                LOG(INFO) << "Switch to channel " << channel_to_switch.channel << ", bw "
+                          << beerocks::utils::convert_bandwidth_to_int(
+                                 beerocks::eWiFiBandwidth(channel_to_switch.channel_bandwidth));
             } else {
                 LOG(INFO) << "Decline channel selection request " << radio->front.iface_mac;
                 response_code = wfa_map::tlvChannelSelectionResponse::eResponseCode::
