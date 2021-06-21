@@ -892,12 +892,6 @@ bool ap_wlan_hal_nl80211::wds_set_mode(WDSMode mode)
     return true;
 }
 
-bool ap_wlan_hal_nl80211::wds_add_sta(const std::string &mac)
-{
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
-    return true;
-}
-
 bool ap_wlan_hal_nl80211::failsafe_channel_set(int chan, int bw, int vht_center_frequency)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";

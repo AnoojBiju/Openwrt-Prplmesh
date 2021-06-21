@@ -276,15 +276,6 @@ public:
     virtual bool wds_set_mode(WDSMode mode) = 0;
 
     /**
-     * @brief Add a STA to the WDS list.
-     * 
-     * @param [in] mac The MAC address of the STA.
-     *
-     * @return true on success or false on error.
-     */
-    virtual bool wds_add_sta(const std::string &mac) = 0;
-
-    /**
      * @brief Set failsafe channel.
      * 
      * @param [in] chan Channel number.

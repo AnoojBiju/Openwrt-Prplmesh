@@ -1673,14 +1673,6 @@ bool ap_wlan_hal_dwpal::wds_set_mode(WDSMode mode)
     return true;
 }
 
-bool ap_wlan_hal_dwpal::wds_add_sta(const std::string &mac)
-{
-    std::string cmd = "iwpriv " + get_radio_info().iface_name + " sAddFourAddrSta " + mac;
-
-    beerocks::os_utils::system_call(cmd);
-    return true;
-}
-
 bool ap_wlan_hal_dwpal::failsafe_channel_set(int chan, int bw, int vht_center_frequency)
 {
     // Channel number of the new channel or ‘0’ to trigger low level channel selection algorithm.
