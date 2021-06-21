@@ -298,10 +298,9 @@ bool db::add_node_wireless_bh(const sMacAddr &mac, const sMacAddr &parent_mac)
     return true;
 }
 
-bool db::add_node_wired_bh(const sMacAddr &mac, const sMacAddr &parent_mac,
-                           const sMacAddr &radio_identifier)
+bool db::add_node_wired_bh(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
-    if (!add_node(mac, parent_mac, beerocks::TYPE_ETH_SWITCH, radio_identifier)) {
+    if (!add_node(mac, parent_mac, beerocks::TYPE_ETH_SWITCH)) {
         LOG(ERROR) << "Failed to add wired_bh node, mac: " << mac;
         return false;
     }
