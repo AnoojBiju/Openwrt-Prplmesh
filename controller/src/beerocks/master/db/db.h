@@ -202,6 +202,7 @@ public:
     } sAssociatedStaTrafficStats;
 
     beerocks::mac_map<sAgent> m_agents;
+    beerocks::mac_map<sStation> m_stations;
 
     db(sDbMasterConfig &config_, beerocks::logging &logger_, const std::string &local_bridge_mac,
        std::shared_ptr<beerocks::nbapi::Ambiorix> ambiorix_object)
