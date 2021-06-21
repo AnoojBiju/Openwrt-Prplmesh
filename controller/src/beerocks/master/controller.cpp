@@ -2225,7 +2225,7 @@ bool Controller::handle_intel_slave_join(
         }
         database.clear_hostap_stats_info(bridge_mac, radio_mac);
     } else {
-        database.add_node_radio(radio_mac, bridge_mac, tlvf::mac_from_string(radio_identifier));
+        database.add_node_radio(radio_mac, bridge_mac);
     }
 
     auto radio = database.get_radio(bridge_mac, radio_mac);
@@ -2536,8 +2536,7 @@ bool Controller::handle_non_intel_slave_join(
         }
         database.clear_hostap_stats_info(bridge_mac, radio_mac);
     } else {
-        // TODO Intel Slave Join has separate radio MAC and UID; we use radio_mac for both.
-        database.add_node_radio(radio_mac, bridge_mac, radio_mac);
+        database.add_node_radio(radio_mac, bridge_mac);
     }
 
     // TODO Assume no backhaul manager
