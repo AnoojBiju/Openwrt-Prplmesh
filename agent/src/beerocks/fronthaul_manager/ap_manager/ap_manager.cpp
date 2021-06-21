@@ -1019,16 +1019,6 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         // }
         break;
     }
-    case beerocks_message::ACTION_APMANAGER_HOSTAP_ADD_4ADDR_STA_UPDATE: {
-        auto update =
-            beerocks_header
-                ->addClass<beerocks_message::cACTION_APMANAGER_HOSTAP_ADD_4ADDR_STA_UPDATE>();
-        if (update == nullptr) {
-            LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_ADD_4ADDR_STA_UPDATE failed";
-            return;
-        }
-        break;
-    }
     case beerocks_message::ACTION_APMANAGER_CLIENT_DISCONNECT_REQUEST: {
         auto request =
             beerocks_header

@@ -134,10 +134,6 @@ cACTION_APMANAGER_HOSTAP_DFS_CHANNEL_AVAILABLE_NOTIFICATION:
   _type: class
   params: sDfsChannelAvailable
 
-cACTION_APMANAGER_HOSTAP_ADD_4ADDR_STA_UPDATE:
-  _type: class
-  mac: sMacAddr
-
 cACTION_APMANAGER_HOSTAP_SET_NEIGHBOR_11K_REQUEST:
   _type: class
   params: sNeighborSetParams11k
