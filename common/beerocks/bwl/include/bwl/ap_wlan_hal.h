@@ -267,15 +267,6 @@ public:
     virtual bool set_antenna_mode(AntMode mode) = 0;
 
     /**
-     * @brief Set the WDS (4 address) mode for the Radio.
-     * 
-     * @param [in] mode WDS mode.
-     *
-     * @return true on success or false on error.
-     */
-    virtual bool wds_set_mode(WDSMode mode) = 0;
-
-    /**
      * @brief Set failsafe channel.
      * 
      * @param [in] chan Channel number.

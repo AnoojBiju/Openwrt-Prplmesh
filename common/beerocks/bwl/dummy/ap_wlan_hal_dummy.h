@@ -66,7 +66,6 @@ public:
     virtual bool cancel_cac(int chan, beerocks::eWiFiBandwidth bw, int vht_center_frequency,
                             int secondary_chan) override;
     virtual bool set_antenna_mode(AntMode mode) override;
-    virtual bool wds_set_mode(WDSMode mode) override;
     virtual bool failsafe_channel_set(int chan, int bw, int vht_center_frequency) override;
     virtual bool failsafe_channel_get(int &chan, int &bw) override;
     virtual bool is_zwdfs_supported() override;

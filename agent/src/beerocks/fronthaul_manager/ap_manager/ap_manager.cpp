@@ -379,11 +379,6 @@ bool ApManager::create_ap_wlan_hal()
 
     LOG_IF(!ap_wlan_hal, FATAL) << "Failed creating HAL instance!";
 
-    if (!ap_wlan_hal->wds_set_mode(bwl::ap_wlan_hal::WDSMode::Dynamic)) {
-        LOG(ERROR) << "Failed enabling WDS Dynamic mode!";
-        return false;
-    }
-
     return true;
 }
 

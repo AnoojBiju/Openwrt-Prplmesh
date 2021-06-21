@@ -1664,15 +1664,6 @@ bool ap_wlan_hal_dwpal::set_antenna_mode(AntMode mode)
     return true;
 }
 
-bool ap_wlan_hal_dwpal::wds_set_mode(WDSMode mode)
-{
-    std::string cmd =
-        "iwpriv " + get_radio_info().iface_name + " sFourAddrMode " + std::to_string(int(mode));
-
-    beerocks::os_utils::system_call(cmd);
-    return true;
-}
-
 bool ap_wlan_hal_dwpal::failsafe_channel_set(int chan, int bw, int vht_center_frequency)
 {
     // Channel number of the new channel or ‘0’ to trigger low level channel selection algorithm.
