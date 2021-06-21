@@ -286,11 +286,6 @@ public:
     std::chrono::system_clock::time_point client_parameters_last_edit =
         std::chrono::system_clock::time_point::min();
 
-    // The selected bands that the client should be steered to.
-    // Default value is PARAMETER_NOT_CONFIGURED - which means no limitation on bands.
-    // Possible values are bitwise options of eClientSelectedBands.
-    int8_t client_selected_bands = beerocks::PARAMETER_NOT_CONFIGURED;
-
     // The unfriendly status indicates how we interact with the client.
     // If the unfriendly status is not configured, the client is assumed friendly unless proven otherwise.
     // The friendliness status affects how we handle the aging mechanism.

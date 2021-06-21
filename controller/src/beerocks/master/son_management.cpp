@@ -2116,7 +2116,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         // Set selected_bands if requested.
         if (request->client_config().selected_bands != PARAMETER_NOT_CONFIGURED) {
             auto selected_bands = eClientSelectedBands(request->client_config().selected_bands);
-            if (!database.set_client_selected_bands(client_mac, selected_bands, false)) {
+            if (!database.set_client_selected_bands(*client, selected_bands, false)) {
                 LOG(ERROR) << " Failed to set selected-bands to " << selected_bands
                            << " for client " << client_mac;
                 send_response(false);
@@ -2195,7 +2195,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         response->client().initial_radio = client->initial_radio;
         // Selected bands
         response->client().selected_bands =
-            static_cast<eClientSelectedBands>(database.get_client_selected_bands(client_mac));
+            static_cast<eClientSelectedBands>(client->selected_bands);
         // Timelife Delay in minutes
         response->client().time_life_delay_minutes =
             static_cast<int>(client->time_life_delay_minutes.count());

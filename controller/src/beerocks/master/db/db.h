@@ -1319,21 +1319,13 @@ public:
     /**
      * @brief Set the client's selected-bands.
      *
-     * @param mac MAC address of a client.
+     * @param client sStation object representing a client.
      * @param selected_bands Client selected band/bands. Possible values are bitwise options of eClientSelectedBands.
      * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
      * @return true on success, otherwise false.
      */
-    bool set_client_selected_bands(const sMacAddr &mac, int8_t selected_bands,
+    bool set_client_selected_bands(sStation &client, int8_t selected_bands,
                                    bool save_to_persistent_db = true);
-
-    /**
-     * @brief Get the client's selected-bands.
-     *
-     * @param mac MAC address of a client.
-     * @return Selected band/bands. Possible values are bitwise options of eClientSelectedBands.
-     */
-    int8_t get_client_selected_bands(const sMacAddr &mac);
 
     /**
      * @brief Set the client's unfriendly status.

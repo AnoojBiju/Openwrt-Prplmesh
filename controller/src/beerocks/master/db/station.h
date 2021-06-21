@@ -55,6 +55,11 @@ public:
 
     // If enabled, the client will be steered to the initial radio it connected to - save at initial_radio.
     son::eTriStateBool stay_on_initial_radio = son::eTriStateBool::NOT_CONFIGURED;
+
+    // The selected bands that the client should be steered to.
+    // Default value is PARAMETER_NOT_CONFIGURED - which means no limitation on bands.
+    // Possible values are bitwise options of eClientSelectedBands.
+    int8_t selected_bands = beerocks::PARAMETER_NOT_CONFIGURED;
 };
 
 } // namespace db

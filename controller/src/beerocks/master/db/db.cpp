@@ -3445,9 +3445,10 @@ bool db::set_client_initial_radio(sStation &client, const sMacAddr &initial_radi
     return true;
 }
 
-bool db::set_client_selected_bands(const sMacAddr &mac, int8_t selected_bands,
+bool db::set_client_selected_bands(sStation &client, int8_t selected_bands,
                                    bool save_to_persistent_db)
 {
+    auto mac  = client.mac;
     auto node = get_node_verify_type(mac, beerocks::TYPE_CLIENT);
     if (!node) {
         LOG(ERROR) << "client node not found for mac " << mac;
@@ -3478,21 +3479,10 @@ bool db::set_client_selected_bands(const sMacAddr &mac, int8_t selected_bands,
         }
     }
 
-    node->client_selected_bands       = selected_bands;
+    client.selected_bands             = selected_bands;
     node->client_parameters_last_edit = timestamp;
 
     return true;
-}
-
-int8_t db::get_client_selected_bands(const sMacAddr &mac)
-{
-    auto node = get_node_verify_type(mac, beerocks::TYPE_CLIENT);
-    if (!node) {
-        LOG(ERROR) << "client node not found for mac " << mac;
-        return PARAMETER_NOT_CONFIGURED;
-    }
-
-    return node->client_selected_bands;
 }
 
 bool db::set_client_is_unfriendly(const sMacAddr &mac, bool client_is_unfriendly,
@@ -3563,7 +3553,7 @@ bool db::clear_client_persistent_db(const sMacAddr &mac)
     client->time_life_delay_minutes   = std::chrono::minutes(PARAMETER_NOT_CONFIGURED);
     client->stay_on_initial_radio     = eTriStateBool::NOT_CONFIGURED;
     client->initial_radio             = network_utils::ZERO_MAC;
-    node->client_selected_bands       = PARAMETER_NOT_CONFIGURED;
+    client->selected_bands            = PARAMETER_NOT_CONFIGURED;
     node->client_is_unfriendly        = eTriStateBool::NOT_CONFIGURED;
 
     // if persistent db is enabled
@@ -3584,10 +3574,15 @@ bool db::clear_client_persistent_db(const sMacAddr &mac)
     return true;
 }
 
-bool db::is_hostap_on_client_selected_bands(const sMacAddr &client, const sMacAddr &hostap)
+bool db::is_hostap_on_client_selected_bands(const sMacAddr &client_mac, const sMacAddr &hostap)
 {
-    auto hostap_band    = wireless_utils::which_freq(get_node_channel(tlvf::mac_to_string(hostap)));
-    auto selected_bands = get_client_selected_bands(client);
+    auto hostap_band = wireless_utils::which_freq(get_node_channel(tlvf::mac_to_string(hostap)));
+    auto client      = get_station(client_mac);
+    if (!client) {
+        LOG(WARNING) << "client " << client_mac << " not found";
+        return false;
+    }
+    auto selected_bands = client->selected_bands;
 
     if (selected_bands == PARAMETER_NOT_CONFIGURED) {
         LOG(WARNING) << "the frequency type that's used by the client is not supported";
@@ -3657,10 +3652,10 @@ bool db::update_client_persistent_db(const sMacAddr &mac)
         }
     }
 
-    if (node->client_selected_bands != PARAMETER_NOT_CONFIGURED) {
-        LOG(DEBUG) << "Setting client selected-bands in persistent-db to "
-                   << node->client_selected_bands << " for " << mac;
-        values_map[SELECTED_BANDS_STR] = std::to_string(node->client_selected_bands);
+    if (client->selected_bands != PARAMETER_NOT_CONFIGURED) {
+        LOG(DEBUG) << "Setting client selected-bands in persistent-db to " << client->selected_bands
+                   << " for " << mac;
+        values_map[SELECTED_BANDS_STR] = std::to_string(client->selected_bands);
     }
 
     if (node->client_is_unfriendly != eTriStateBool::NOT_CONFIGURED) {
@@ -5362,9 +5357,8 @@ bool db::set_node_params_from_map(const sMacAddr &mac, const ValuesMap &values_m
             LOG(DEBUG) << "Received client_initial_radio=" << param.second << " for " << mac;
             initial_radio = tlvf::mac_from_string(param.second);
         } else if (param.first == SELECTED_BANDS_STR) {
-            LOG(DEBUG) << "Setting node client_selected_bands to " << param.second << " for "
-                       << mac;
-            node->client_selected_bands = string_utils::stoi(param.second);
+            LOG(DEBUG) << "Setting client selected_bands to " << param.second << " for " << mac;
+            client->selected_bands = string_utils::stoi(param.second);
         } else if (param.first == IS_UNFRIENDLY_STR) {
             LOG(DEBUG) << "Setting node client_is_unfriendly to " << param.second << " for " << mac;
             node->client_is_unfriendly =
