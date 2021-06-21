@@ -10,6 +10,7 @@
 #define STATION_H
 
 #include <bcl/beerocks_defines.h>
+#include <bcl/network/network_utils.h>
 #include <chrono>
 #include <string>
 #include <tlvf/common/sMacAddr.h>
@@ -47,6 +48,8 @@ public:
     // Optional - if configured the client has its own configured timelife delay.
     std::chrono::minutes time_life_delay_minutes =
         std::chrono::minutes(beerocks::PARAMETER_NOT_CONFIGURED);
+
+    sMacAddr initial_radio = beerocks::net::network_utils::ZERO_MAC;
 };
 
 } // namespace db

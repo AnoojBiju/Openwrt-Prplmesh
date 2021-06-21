@@ -241,7 +241,7 @@ void optimal_path_task::work()
         auto client = tlvf::mac_from_string(sta_mac);
         if (database.get_client_stay_on_initial_radio(client) == eTriStateBool::TRUE) {
             TASK_LOG(INFO) << "Client stay on initial radio enabled";
-            auto client_initial_radio = database.get_client_initial_radio(client);
+            auto client_initial_radio = station->initial_radio;
 
             if (client_initial_radio == tlvf::mac_from_string(current_hostap)) {
                 TASK_LOG(INFO) << "Client is already on initial radio " << client_initial_radio;
@@ -1019,7 +1019,7 @@ void optimal_path_task::work()
         auto client = tlvf::mac_from_string(sta_mac);
         if (database.get_client_stay_on_initial_radio(client) == eTriStateBool::TRUE) {
             TASK_LOG(INFO) << "Client stay on initial radio enabled";
-            auto client_initial_radio = database.get_client_initial_radio(client);
+            auto client_initial_radio = station->initial_radio;
 
             if (client_initial_radio == tlvf::mac_from_string(current_hostap)) {
                 TASK_LOG(INFO) << "Client is already on initial radio " << client_initial_radio;

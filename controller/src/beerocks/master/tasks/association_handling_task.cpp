@@ -379,11 +379,11 @@ void association_handling_task::finalize_new_connection()
             // not override the existing configuration.
             auto client_mac = tlvf::mac_from_string(sta_mac);
             if ((database.get_client_stay_on_initial_radio(client_mac) == eTriStateBool::TRUE) &&
-                (database.get_client_initial_radio(client_mac) == network_utils::ZERO_MAC)) {
+                (client->initial_radio == network_utils::ZERO_MAC)) {
                 auto bssid            = database.get_node_parent(sta_mac);
                 auto parent_radio_mac = database.get_node_parent_radio(bssid);
                 // If stay_on_initial_radio is enabled and initial_radio is not set yet, set to parent radio mac (not bssid)
-                if (!database.set_client_initial_radio(client_mac,
+                if (!database.set_client_initial_radio(*client,
                                                        tlvf::mac_from_string(parent_radio_mac),
                                                        database.config.persistent_db)) {
                     LOG(WARNING) << "Failed to set client " << client_mac << "  initial radio to "

@@ -1308,21 +1308,13 @@ public:
     /**
      * @brief Set the client's initial-radio.
      *
-     * @param mac MAC address of a client.
+     * @param client sStation object representing a client.
      * @param initial_radio_mac The MAC address of the radio that the client has initially connected to.
      * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
      * @return true on success, otherwise false.
      */
-    bool set_client_initial_radio(const sMacAddr &mac, const sMacAddr &initial_radio_mac,
+    bool set_client_initial_radio(sStation &client, const sMacAddr &initial_radio_mac,
                                   bool save_to_persistent_db = true);
-
-    /**
-     * @brief Get the client's initial-radio.
-     *
-     * @param mac MAC address of a client.
-     * @return MAC adddress of the radio that the client has initially connected to.
-     */
-    sMacAddr get_client_initial_radio(const sMacAddr &mac);
 
     /**
      * @brief Set the client's selected-bands.
