@@ -2075,6 +2075,13 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             }
         }
 
+        // Get sStation object
+        auto client = database.get_station(client_mac);
+        if (!client) {
+            LOG(ERROR) << "client " << client_mac << " not found";
+            break;
+        }
+
         // Set stay_on_initial_radio if requested.
         if (request->client_config().stay_on_initial_radio != PARAMETER_NOT_CONFIGURED) {
             auto stay_on_initial_radio =
@@ -2122,7 +2129,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         if (request->client_config().time_life_delay_minutes != PARAMETER_NOT_CONFIGURED) {
             auto time_life_delay_minutes =
                 std::chrono::minutes(request->client_config().time_life_delay_minutes);
-            if (!database.set_client_time_life_delay(client_mac, time_life_delay_minutes, false)) {
+            if (!database.set_client_time_life_delay(*client, time_life_delay_minutes, false)) {
                 LOG(ERROR) << " Failed to set max-time-life for client " << client_mac;
                 send_response(false);
                 break;
@@ -2161,7 +2168,8 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         }
 
         auto client_mac = request->sta_mac();
-        if (!database.has_node(client_mac)) {
+        auto client     = database.get_station(client_mac);
+        if (!database.has_node(client_mac) || !client) {
             LOG(DEBUG) << "Requested client " << client_mac << " is not listed in the DB";
             response->result() = 1; //Fail.
             controller_ctx->send_cmdu(sd, cmdu_tx);
@@ -2192,7 +2200,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             static_cast<eClientSelectedBands>(database.get_client_selected_bands(client_mac));
         // Timelife Delay in minutes
         response->client().time_life_delay_minutes =
-            static_cast<int>(database.get_client_time_life_delay(client_mac).count());
+            static_cast<int>(client->time_life_delay_minutes.count());
 
         // Currently not supported in DB
         // Stay on selected device

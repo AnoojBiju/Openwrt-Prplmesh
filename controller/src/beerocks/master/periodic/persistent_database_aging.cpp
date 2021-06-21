@@ -28,6 +28,12 @@ void persistent_database_aging_operation::periodic_operation_function()
     std::copy_if(
         clients.begin(), clients.end(), std::back_inserter(aged_clients),
         [&](const sMacAddr &client_mac) {
+            auto client = m_database.get_station(client_mac);
+            if (!client) {
+                OPERATION_LOG(ERROR) << "client " << client_mac << " not found";
+                return false;
+            }
+
             // Client timelife delay
             // If a client has a predetermined timelife delay use that.
             // Otherwise use the Max timelife delay/unfriendly_device_max_timelife_delay_sec according
@@ -40,7 +46,8 @@ void persistent_database_aging_operation::periodic_operation_function()
                 (m_database.get_client_is_unfriendly(client_mac) == eTriStateBool::TRUE)
                     ? unfriendly_device_max_timelife_delay_sec
                     : max_timelife_delay_sec;
-            std::chrono::minutes temp_timelife = m_database.get_client_time_life_delay(client_mac);
+
+            std::chrono::minutes temp_timelife = client->time_life_delay_minutes;
 
             if ((temp_timelife == std::chrono::minutes::zero())) {
                 return false;

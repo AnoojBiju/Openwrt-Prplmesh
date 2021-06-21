@@ -286,10 +286,6 @@ public:
     std::chrono::system_clock::time_point client_parameters_last_edit =
         std::chrono::system_clock::time_point::min();
 
-    // Optional - if configured the client has its own configured timelife delay.
-    std::chrono::minutes client_time_life_delay_minutes =
-        std::chrono::minutes(beerocks::PARAMETER_NOT_CONFIGURED);
-
     // If enabled, the client will be steered to the initial radio it connected to - save at client_initial_radio.
     eTriStateBool client_stay_on_initial_radio = eTriStateBool::NOT_CONFIGURED;
 

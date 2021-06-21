@@ -1282,17 +1282,9 @@ public:
      * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
      * @return true on success, otherwise false.
      */
-    bool set_client_time_life_delay(const sMacAddr &mac,
+    bool set_client_time_life_delay(sStation &client,
                                     const std::chrono::minutes &time_life_delay_minutes,
                                     bool save_to_persistent_db = true);
-
-    /**
-     * @brief Get the client's time-life delay.
-     *
-     * @param mac MAC address of a client.
-     * @return Client time-life delay, value of 0 means not-configured.
-     */
-    std::chrono::minutes get_client_time_life_delay(const sMacAddr &mac);
 
     /**
      * @brief Set the client's stay-on-initial-radio.

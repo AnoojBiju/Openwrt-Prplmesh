@@ -9,6 +9,8 @@
 #ifndef STATION_H
 #define STATION_H
 
+#include <bcl/beerocks_defines.h>
+#include <chrono>
 #include <string>
 #include <tlvf/common/sMacAddr.h>
 
@@ -41,6 +43,10 @@ public:
     uint16_t cross_tx_phy_rate_100kb   = 0;
     double cross_estimated_rx_phy_rate = 0.0;
     double cross_estimated_tx_phy_rate = 0.0;
+
+    // Optional - if configured the client has its own configured timelife delay.
+    std::chrono::minutes time_life_delay_minutes =
+        std::chrono::minutes(beerocks::PARAMETER_NOT_CONFIGURED);
 };
 
 } // namespace db
