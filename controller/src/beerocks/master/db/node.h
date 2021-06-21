@@ -275,21 +275,6 @@ public:
     beerocks::eIfaceType iface_type = beerocks::IFACE_TYPE_ETHERNET;
     std::chrono::steady_clock::time_point last_seen;
 
-    /*
-     * Persistent configurations - start
-     * Client persistent configuration aging is refreshed on persistent configurations set
-     * persistent configuration of aged clients removed from the persistent-db and cleared in the runtime-db
-     */
-
-    // Indicates when client parameters were last updated (even if not updated yet to persistent-db)
-    // minimal value is used as invalid value.
-    std::chrono::system_clock::time_point client_parameters_last_edit =
-        std::chrono::system_clock::time_point::min();
-
-    /*
-     * Persistent configurations - end
-     */
-
     /**
      * @brief Returns active interface mac addresses via loop through interface objects.
      *

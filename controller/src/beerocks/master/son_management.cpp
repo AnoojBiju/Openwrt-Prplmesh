@@ -2176,7 +2176,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         }
 
         // A configured client must have a valid timestamp configured
-        auto client_timestamp = database.get_client_parameters_last_edit(client_mac);
+        auto client_timestamp = client->parameters_last_edit;
         if (client_timestamp == std::chrono::system_clock::time_point::min()) {
             LOG(DEBUG) << "Requested client " << client_mac
                        << " doesn't have a valid timestamp listed in the DB";

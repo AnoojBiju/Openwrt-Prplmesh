@@ -47,6 +47,17 @@ public:
     double cross_estimated_rx_phy_rate = 0.0;
     double cross_estimated_tx_phy_rate = 0.0;
 
+    /*
+     * Persistent configurations - start
+     * Client persistent configuration aging is refreshed on persistent configurations set
+     * persistent configuration of aged clients removed from the persistent-db and cleared in the runtime-db
+     */
+
+    // Indicates when client parameters were last updated (even if not updated yet to persistent-db)
+    // minimal value is used as invalid value.
+    std::chrono::system_clock::time_point parameters_last_edit =
+        std::chrono::system_clock::time_point::min();
+
     // Optional - if configured the client has its own configured timelife delay.
     std::chrono::minutes time_life_delay_minutes =
         std::chrono::minutes(beerocks::PARAMETER_NOT_CONFIGURED);
@@ -65,6 +76,10 @@ public:
     // If the unfriendly status is not configured, the client is assumed friendly unless proven otherwise.
     // The friendliness status affects how we handle the aging mechanism.
     son::eTriStateBool is_unfriendly = son::eTriStateBool::NOT_CONFIGURED;
+
+    /*
+     * Persistent configurations - end
+     */
 };
 
 } // namespace db

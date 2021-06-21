@@ -57,8 +57,7 @@ void persistent_database_aging_operation::periodic_operation_function()
             }
 
             // Calculate client expiry due time
-            auto parameters_last_edit = m_database.get_client_parameters_last_edit(client_mac);
-            auto expiry_due           = parameters_last_edit + timelife_delay_seconds;
+            auto expiry_due = client->parameters_last_edit + timelife_delay_seconds;
 
             // If the expiry due is less then the last aging check, the client is considered aged.
             return expiry_due < last_aging_check;
