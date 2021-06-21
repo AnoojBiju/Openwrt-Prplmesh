@@ -72,7 +72,6 @@ public:
     virtual bool wds_set_mode(WDSMode mode) override;
     virtual bool wds_add_sta(const std::string &mac) override;
     virtual bool wds_del_sta(const std::string &mac) override;
-    virtual bool wds_clear_list() override;
     virtual bool failsafe_channel_set(int chan, int bw, int vht_center_frequency) override;
     virtual bool failsafe_channel_get(int &chan, int &bw) override;
     virtual bool is_zwdfs_supported() override;

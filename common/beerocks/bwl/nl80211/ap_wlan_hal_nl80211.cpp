@@ -904,12 +904,6 @@ bool ap_wlan_hal_nl80211::wds_del_sta(const std::string &mac)
     return true;
 }
 
-bool ap_wlan_hal_nl80211::wds_clear_list()
-{
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
-    return true;
-}
-
 bool ap_wlan_hal_nl80211::failsafe_channel_set(int chan, int bw, int vht_center_frequency)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";

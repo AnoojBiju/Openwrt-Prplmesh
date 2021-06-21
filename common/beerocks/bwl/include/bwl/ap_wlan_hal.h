@@ -294,13 +294,6 @@ public:
     virtual bool wds_del_sta(const std::string &mac) = 0;
 
     /**
-     * @brief Clear the WDS list.
-     * 
-     * @return true on success or false on error.
-     */
-    virtual bool wds_clear_list() = 0;
-
-    /**
      * @brief Set failsafe channel.
      * 
      * @param [in] chan Channel number.

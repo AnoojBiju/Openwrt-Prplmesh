@@ -1689,18 +1689,6 @@ bool ap_wlan_hal_dwpal::wds_del_sta(const std::string &mac)
     return true;
 }
 
-bool ap_wlan_hal_dwpal::wds_clear_list()
-{
-
-    // Line extracted from beerocks_utils.sh script
-    std::string cmd = "iwpriv " + get_radio_info().iface_name +
-                      " gFourAddrStas | while read -r line; do iwpriv " +
-                      get_radio_info().iface_name + " sDelFourAddrSta \"$line\"; done";
-
-    beerocks::os_utils::system_call(cmd);
-    return true;
-}
-
 bool ap_wlan_hal_dwpal::failsafe_channel_set(int chan, int bw, int vht_center_frequency)
 {
     // Channel number of the new channel or ‘0’ to trigger low level channel selection algorithm.
