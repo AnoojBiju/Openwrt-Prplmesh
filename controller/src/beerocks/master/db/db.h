@@ -338,9 +338,7 @@ public:
     */
     std::string dm_add_radio_element(const std::string &radio_mac, const std::string &device_mac);
 
-    bool
-    add_node_gateway(const sMacAddr &mac,
-                     const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
+    bool add_node_gateway(const sMacAddr &mac);
     bool add_node_ire(const sMacAddr &mac,
                       const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,
                       const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);

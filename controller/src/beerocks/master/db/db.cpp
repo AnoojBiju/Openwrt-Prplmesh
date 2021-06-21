@@ -237,9 +237,9 @@ std::string db::get_node_data_model_path(const std::string &mac)
     return n->dm_path;
 }
 
-bool db::add_node_gateway(const sMacAddr &mac, const sMacAddr &radio_identifier)
+bool db::add_node_gateway(const sMacAddr &mac)
 {
-    if (!add_node(mac, network_utils::ZERO_MAC, beerocks::TYPE_GW, radio_identifier)) {
+    if (!add_node(mac, network_utils::ZERO_MAC, beerocks::TYPE_GW)) {
         LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
         return false;
     }
