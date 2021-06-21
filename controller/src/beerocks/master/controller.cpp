@@ -1947,6 +1947,12 @@ bool Controller::handle_intel_slave_join(
         return false;
     }
 
+    // mark slave as prplMesh
+    // This is redundent for the normal initilization flow, but is needed for the renew flow
+    LOG(DEBUG) << "prplMesh agent: received cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION from "
+               << src_mac;
+    database.set_prplmesh(tlvf::mac_from_string(src_mac));
+
     std::string slave_version =
         std::string(notification->slave_version(beerocks::message::VERSION_LENGTH));
     sMacAddr radio_mac = notification->hostap().iface_mac;

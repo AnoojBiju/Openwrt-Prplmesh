@@ -1354,7 +1354,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             return;
         }
 
-        ret = son_actions::send_ap_config_renew_msg(cmdu_tx, database, request->al_mac());
+        ret = son_actions::send_ap_config_renew_msg(cmdu_tx, database);
         if (!ret) {
             LOG(ERROR) << "Failed son_actions::send_ap_config_renew_msg ! ";
         }
