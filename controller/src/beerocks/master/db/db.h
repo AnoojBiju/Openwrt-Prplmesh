@@ -350,8 +350,7 @@ public:
                         const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,
                         const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
     bool add_node_client(const sMacAddr &mac,
-                         const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,
-                         const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
+                         const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
 
     bool remove_node(const sMacAddr &mac);
 

@@ -369,10 +369,9 @@ bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac,
     return true;
 }
 
-bool db::add_node_client(const sMacAddr &mac, const sMacAddr &parent_mac,
-                         const sMacAddr &radio_identifier)
+bool db::add_node_client(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
-    if (!add_node(mac, parent_mac, beerocks::TYPE_CLIENT, radio_identifier)) {
+    if (!add_node(mac, parent_mac, beerocks::TYPE_CLIENT)) {
         LOG(ERROR) << "Failed to add client node, mac: " << mac;
         return false;
     }
