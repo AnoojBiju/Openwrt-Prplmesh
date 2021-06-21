@@ -15,6 +15,8 @@
 #include <string>
 #include <tlvf/common/sMacAddr.h>
 
+#include "node.h"
+
 namespace prplmesh {
 namespace controller {
 namespace db {
@@ -50,6 +52,9 @@ public:
         std::chrono::minutes(beerocks::PARAMETER_NOT_CONFIGURED);
 
     sMacAddr initial_radio = beerocks::net::network_utils::ZERO_MAC;
+
+    // If enabled, the client will be steered to the initial radio it connected to - save at initial_radio.
+    son::eTriStateBool stay_on_initial_radio = son::eTriStateBool::NOT_CONFIGURED;
 };
 
 } // namespace db

@@ -3332,18 +3332,13 @@ bool db::set_client_time_life_delay(sStation &client,
     return true;
 }
 
-bool db::set_client_stay_on_initial_radio(const sMacAddr &mac, bool stay_on_initial_radio,
+bool db::set_client_stay_on_initial_radio(sStation &client, bool stay_on_initial_radio,
                                           bool save_to_persistent_db)
 {
+    auto mac  = client.mac;
     auto node = get_node_verify_type(mac, beerocks::TYPE_CLIENT);
     if (!node) {
         LOG(ERROR) << "client node not found for mac " << mac;
-        return false;
-    }
-
-    auto client = get_station(mac);
-    if (!client) {
-        LOG(ERROR) << "client " << mac << " not found";
         return false;
     }
 
@@ -3386,33 +3381,22 @@ bool db::set_client_stay_on_initial_radio(const sMacAddr &mac, bool stay_on_init
         }
     }
 
-    node->client_stay_on_initial_radio =
+    client.stay_on_initial_radio =
         (stay_on_initial_radio) ? eTriStateBool::TRUE : eTriStateBool::FALSE;
     // clear initial-radio data on disabling of stay_on_initial_radio
     if (!stay_on_initial_radio) {
         LOG(DEBUG) << "Clearing initial_radio in runtime DB";
-        client->initial_radio = network_utils::ZERO_MAC;
+        client.initial_radio = network_utils::ZERO_MAC;
         // if enabling stay-on-initial-radio and client is already connected, update the initial_radio as well
     } else if (is_client_connected) {
         auto bssid            = node->parent_mac;
         auto parent_radio_mac = get_node_parent_radio(bssid);
-        client->initial_radio = tlvf::mac_from_string(parent_radio_mac);
-        LOG(DEBUG) << "Setting client " << mac << " initial-radio to " << client->initial_radio;
+        client.initial_radio  = tlvf::mac_from_string(parent_radio_mac);
+        LOG(DEBUG) << "Setting client " << mac << " initial-radio to " << client.initial_radio;
     }
     node->client_parameters_last_edit = timestamp;
 
     return true;
-}
-
-eTriStateBool db::get_client_stay_on_initial_radio(const sMacAddr &mac)
-{
-    auto node = get_node_verify_type(mac, beerocks::TYPE_CLIENT);
-    if (!node) {
-        LOG(ERROR) << "Client node not found for mac " << mac;
-        return eTriStateBool::NOT_CONFIGURED;
-    }
-
-    return node->client_stay_on_initial_radio;
 }
 
 bool db::set_client_initial_radio(sStation &client, const sMacAddr &initial_radio_mac,
@@ -3433,7 +3417,7 @@ bool db::set_client_initial_radio(sStation &client, const sMacAddr &initial_radi
     // This means:
     // 1. We do not update the timestamp when we update only the initial_radio.
     // 2. We only set the initial_radio if the stay_on_initial_radio is set.
-    if (node->client_stay_on_initial_radio == eTriStateBool::NOT_CONFIGURED) {
+    if (client.stay_on_initial_radio == eTriStateBool::NOT_CONFIGURED) {
         LOG(ERROR) << "Configuring initial-radio to " << initial_radio_mac
                    << " aborted: stay-on-initial-radio is not configured yet";
         return false;
@@ -3575,12 +3559,12 @@ bool db::clear_client_persistent_db(const sMacAddr &mac)
 
     LOG(DEBUG) << "setting client " << mac << " runtime info to default values";
 
-    node->client_parameters_last_edit  = std::chrono::system_clock::time_point::min();
-    client->time_life_delay_minutes    = std::chrono::minutes(PARAMETER_NOT_CONFIGURED);
-    node->client_stay_on_initial_radio = eTriStateBool::NOT_CONFIGURED;
-    client->initial_radio              = network_utils::ZERO_MAC;
-    node->client_selected_bands        = PARAMETER_NOT_CONFIGURED;
-    node->client_is_unfriendly         = eTriStateBool::NOT_CONFIGURED;
+    node->client_parameters_last_edit = std::chrono::system_clock::time_point::min();
+    client->time_life_delay_minutes   = std::chrono::minutes(PARAMETER_NOT_CONFIGURED);
+    client->stay_on_initial_radio     = eTriStateBool::NOT_CONFIGURED;
+    client->initial_radio             = network_utils::ZERO_MAC;
+    node->client_selected_bands       = PARAMETER_NOT_CONFIGURED;
+    node->client_is_unfriendly        = eTriStateBool::NOT_CONFIGURED;
 
     // if persistent db is enabled
     if (config.persistent_db) {
@@ -3660,8 +3644,8 @@ bool db::update_client_persistent_db(const sMacAddr &mac)
         values_map[TIMELIFE_DELAY_STR] = std::to_string(client->time_life_delay_minutes.count());
     }
 
-    if (node->client_stay_on_initial_radio != eTriStateBool::NOT_CONFIGURED) {
-        auto enable = (node->client_stay_on_initial_radio == eTriStateBool::TRUE);
+    if (client->stay_on_initial_radio != eTriStateBool::NOT_CONFIGURED) {
+        auto enable = (client->stay_on_initial_radio == eTriStateBool::TRUE);
         LOG(DEBUG) << "Setting client stay-on-initial-radio in persistent-db to " << enable
                    << " for " << mac;
         values_map[INITIAL_RADIO_ENABLE_STR] = std::to_string(enable);
@@ -5370,9 +5354,9 @@ bool db::set_node_params_from_map(const sMacAddr &mac, const ValuesMap &values_m
             client->time_life_delay_minutes =
                 std::chrono::minutes(string_utils::stoi(param.second));
         } else if (param.first == INITIAL_RADIO_ENABLE_STR) {
-            LOG(DEBUG) << "Setting node client_stay_on_initial_radio to " << param.second << " for "
+            LOG(DEBUG) << "Setting client stay_on_initial_radio to " << param.second << " for "
                        << mac;
-            node->client_stay_on_initial_radio =
+            client->stay_on_initial_radio =
                 (param.second == "1") ? eTriStateBool::TRUE : eTriStateBool::FALSE;
         } else if (param.first == INITIAL_RADIO_STR) {
             LOG(DEBUG) << "Received client_initial_radio=" << param.second << " for " << mac;
@@ -5391,9 +5375,9 @@ bool db::set_node_params_from_map(const sMacAddr &mac, const ValuesMap &values_m
     }
 
     // After configuring the values we can determine if the client_initial_radio should be set as well.
-    // Since its value is only relevant if client_stay_on_initial_radio is set.
+    // Since its value is only relevant if stay_on_initial_radio is set.
     // clear initial-radio data on disabling of stay_on_initial_radio.
-    if (node->client_stay_on_initial_radio != eTriStateBool::TRUE) {
+    if (client->stay_on_initial_radio != eTriStateBool::TRUE) {
         LOG_IF((initial_radio != network_utils::ZERO_MAC), WARNING)
             << "ignoring initial-radio=" << initial_radio
             << " since stay-on-initial-radio is not enabled";

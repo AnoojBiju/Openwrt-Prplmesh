@@ -286,9 +286,6 @@ public:
     std::chrono::system_clock::time_point client_parameters_last_edit =
         std::chrono::system_clock::time_point::min();
 
-    // If enabled, the client will be steered to the initial radio it connected to - save at client_initial_radio.
-    eTriStateBool client_stay_on_initial_radio = eTriStateBool::NOT_CONFIGURED;
-
     // The selected bands that the client should be steered to.
     // Default value is PARAMETER_NOT_CONFIGURED - which means no limitation on bands.
     // Possible values are bitwise options of eClientSelectedBands.

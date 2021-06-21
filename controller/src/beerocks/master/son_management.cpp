@@ -2087,8 +2087,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             auto stay_on_initial_radio =
                 (eTriStateBool(request->client_config().stay_on_initial_radio) ==
                  eTriStateBool::TRUE);
-            if (!database.set_client_stay_on_initial_radio(client_mac, stay_on_initial_radio,
-                                                           false)) {
+            if (!database.set_client_stay_on_initial_radio(*client, stay_on_initial_radio, false)) {
                 LOG(ERROR) << " Failed to set stay-on-initial-radio to " << stay_on_initial_radio
                            << " for client " << client_mac;
                 send_response(false);
@@ -2191,8 +2190,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         // Timestamp
         response->client().timestamp_sec = client_timestamp.time_since_epoch().count();
         // Stay on initial radio
-        response->client().stay_on_initial_radio =
-            int(database.get_client_stay_on_initial_radio(client_mac));
+        response->client().stay_on_initial_radio = int(client->stay_on_initial_radio);
         // Initial radio
         response->client().initial_radio = client->initial_radio;
         // Selected bands

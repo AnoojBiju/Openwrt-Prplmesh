@@ -1289,12 +1289,12 @@ public:
     /**
      * @brief Set the client's stay-on-initial-radio.
      *
-     * @param mac MAC address of a client.
+     * @param client sStation object representing a client.
      * @param stay_on_initial_radio Enable client stay on the radio it initially connected to.
      * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
      * @return true on success, otherwise false.
      */
-    bool set_client_stay_on_initial_radio(const sMacAddr &mac, bool stay_on_initial_radio,
+    bool set_client_stay_on_initial_radio(sStation &client, bool stay_on_initial_radio,
                                           bool save_to_persistent_db = true);
 
     /**
