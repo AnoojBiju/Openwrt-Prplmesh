@@ -22,16 +22,6 @@ class ap_wlan_hal : public virtual base_wlan_hal {
 
     // Public definitions
 public:
-    /**
-     * Supported 4 address (WDS) modes
-     */
-    enum class WDSMode {
-        Disabled = 0, /* < 4 address mode not supported */
-        Static   = 1, /* < Single MAC */
-        Dynamic  = 2, /* < Automatic learning */
-        List     = 3  /* < Manually managed list of MACs */
-    };
-
     enum class Event {
         Invalid = 0,
 
