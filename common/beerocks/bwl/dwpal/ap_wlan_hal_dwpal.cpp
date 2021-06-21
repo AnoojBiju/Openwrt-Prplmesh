@@ -1643,27 +1643,6 @@ bool ap_wlan_hal_dwpal::cancel_cac(int chan, beerocks::eWiFiBandwidth bw, int vh
     return true;
 }
 
-bool ap_wlan_hal_dwpal::set_antenna_mode(AntMode mode)
-{
-    std::string cmd = "iwpriv " + get_radio_info().iface_name + " sCoCPower 0 ";
-
-    switch (mode) {
-    case AntMode::ANT_2X2: {
-        cmd += "2 2";
-    } break;
-    case AntMode::ANT_4X4: {
-        cmd += "4 4";
-    } break;
-    default: {
-        LOG(ERROR) << "Invalid antenna mode: " << int(mode);
-        return false;
-    }
-    }
-
-    beerocks::os_utils::system_call(cmd);
-    return true;
-}
-
 bool ap_wlan_hal_dwpal::failsafe_channel_set(int chan, int bw, int vht_center_frequency)
 {
     // Channel number of the new channel or ‘0’ to trigger low level channel selection algorithm.

@@ -284,8 +284,6 @@ bool ap_wlan_hal_dummy::cancel_cac(int chan, beerocks::eWiFiBandwidth bw, int vh
     return set_channel(chan, bw, vht_center_frequency);
 }
 
-bool ap_wlan_hal_dummy::set_antenna_mode(AntMode mode) { return true; }
-
 bool ap_wlan_hal_dummy::failsafe_channel_set(int chan, int bw, int vht_center_frequency)
 {
     return true;

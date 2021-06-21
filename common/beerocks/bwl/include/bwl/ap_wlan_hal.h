@@ -248,15 +248,6 @@ public:
                             int secondary_channel_offset) = 0;
 
     /**
-     * @brief Update the Radio antenna configuration.
-     * 
-     * @param [in] mode Radio antenna configuration.
-     *
-     * @return true on success or false on error.
-     */
-    virtual bool set_antenna_mode(AntMode mode) = 0;
-
-    /**
      * @brief Set failsafe channel.
      * 
      * @param [in] chan Channel number.
