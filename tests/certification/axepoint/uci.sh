@@ -9,13 +9,30 @@ uci batch << 'EOF'
 set wireless.radio0.htmode='HT20'
 set wireless.radio2.htmode='HT20'
 
-# needed for R2 certification
+################ needed for R2 certification #################
 # Enable action/managment frames hostapd notifiecations
-set wireless.radio0.notify_action_frame='1' 
-set wireless.radio2.notify_action_frame='1' 
+set wireless.radio0.notify_action_frame='1'
+set wireless.radio2.notify_action_frame='1'
 
+# set protected managment frames capability (pmf) to optional for wireless interfaces (supplicants)
+set wireless.default_radio26.pmf='1'
+set wireless.default_radio58.pmf='1'
+
+# MXL hostapd patch to enable hairpin mode to enable traffic on the same interface.
+set wireless.default_radio42.enable_hairpin='1'
+set wireless.default_radio43.enable_hairpin='1'
+set wireless.default_radio44.enable_hairpin='1'
+set wireless.default_radio45.enable_hairpin='1'
+set wireless.default_radio10.enable_hairpin='1'
+set wireless.default_radio11.enable_hairpin='1'
+set wireless.default_radio12.enable_hairpin='1'
+set wireless.default_radio13.enable_hairpin='1'
+##############################################################
+
+# radios are disabled by default in prplwrt
 set wireless.radio0.disabled=0
 set wireless.radio2.disabled=0
+
 
 EOF
 
