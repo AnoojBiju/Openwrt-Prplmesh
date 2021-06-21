@@ -262,10 +262,9 @@ bool db::add_node_gateway(const sMacAddr &mac)
     return true;
 }
 
-bool db::add_node_ire(const sMacAddr &mac, const sMacAddr &parent_mac,
-                      const sMacAddr &radio_identifier)
+bool db::add_node_ire(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
-    if (!add_node(mac, parent_mac, beerocks::TYPE_IRE, radio_identifier)) {
+    if (!add_node(mac, parent_mac, beerocks::TYPE_IRE)) {
         LOG(ERROR) << "Failed to add ire node, mac: " << mac;
         return false;
     }
