@@ -3485,14 +3485,10 @@ bool db::set_client_selected_bands(sStation &client, int8_t selected_bands,
     return true;
 }
 
-bool db::set_client_is_unfriendly(const sMacAddr &mac, bool client_is_unfriendly,
+bool db::set_client_is_unfriendly(sStation &client, bool client_is_unfriendly,
                                   bool save_to_persistent_db)
 {
-    auto node = get_node_verify_type(mac, beerocks::TYPE_CLIENT);
-    if (!node) {
-        LOG(ERROR) << "client node not found for mac " << mac;
-        return false;
-    }
+    auto mac = client.mac;
 
     LOG(DEBUG) << "Setting client " << mac << " client_is_unfriendly = " << client_is_unfriendly;
 
@@ -3516,21 +3512,9 @@ bool db::set_client_is_unfriendly(const sMacAddr &mac, bool client_is_unfriendly
         }
     }
 
-    node->client_is_unfriendly = client_is_unfriendly ? eTriStateBool::TRUE : eTriStateBool::FALSE;
+    client.is_unfriendly = client_is_unfriendly ? eTriStateBool::TRUE : eTriStateBool::FALSE;
 
     return true;
-}
-
-eTriStateBool db::get_client_is_unfriendly(const sMacAddr &mac)
-{
-    auto node = get_node_verify_type(mac, beerocks::TYPE_CLIENT);
-    if (!node) {
-        LOG(ERROR) << "client node not found for mac " << mac;
-        // Clients are assumed friendly unless proven otherwise
-        return eTriStateBool::NOT_CONFIGURED;
-    }
-
-    return node->client_is_unfriendly;
 }
 
 bool db::clear_client_persistent_db(const sMacAddr &mac)
@@ -3554,7 +3538,7 @@ bool db::clear_client_persistent_db(const sMacAddr &mac)
     client->stay_on_initial_radio     = eTriStateBool::NOT_CONFIGURED;
     client->initial_radio             = network_utils::ZERO_MAC;
     client->selected_bands            = PARAMETER_NOT_CONFIGURED;
-    node->client_is_unfriendly        = eTriStateBool::NOT_CONFIGURED;
+    client->is_unfriendly             = eTriStateBool::NOT_CONFIGURED;
 
     // if persistent db is enabled
     if (config.persistent_db) {
@@ -3658,8 +3642,8 @@ bool db::update_client_persistent_db(const sMacAddr &mac)
         values_map[SELECTED_BANDS_STR] = std::to_string(client->selected_bands);
     }
 
-    if (node->client_is_unfriendly != eTriStateBool::NOT_CONFIGURED) {
-        auto is_unfriendly = (node->client_is_unfriendly == eTriStateBool::TRUE);
+    if (client->is_unfriendly != eTriStateBool::NOT_CONFIGURED) {
+        auto is_unfriendly = (client->is_unfriendly == eTriStateBool::TRUE);
         LOG(DEBUG) << "Setting client is-unfriendly in persistent-db to " << is_unfriendly
                    << " for " << mac;
         values_map[IS_UNFRIENDLY_STR] = std::to_string(is_unfriendly);
@@ -5360,8 +5344,8 @@ bool db::set_node_params_from_map(const sMacAddr &mac, const ValuesMap &values_m
             LOG(DEBUG) << "Setting client selected_bands to " << param.second << " for " << mac;
             client->selected_bands = string_utils::stoi(param.second);
         } else if (param.first == IS_UNFRIENDLY_STR) {
-            LOG(DEBUG) << "Setting node client_is_unfriendly to " << param.second << " for " << mac;
-            node->client_is_unfriendly =
+            LOG(DEBUG) << "Setting client is_unfriendly to " << param.second << " for " << mac;
+            client->is_unfriendly =
                 (param.second == std::to_string(true)) ? eTriStateBool::TRUE : eTriStateBool::FALSE;
         } else {
             LOG(WARNING) << "Unknown parameter, skipping: " << param.first << " for " << mac;
@@ -5480,10 +5464,9 @@ sMacAddr db::get_candidate_client_for_removal(sMacAddr client_to_skip)
             // Max client timelife delay
             // This is ditermined according to the friendliness status of the client.
             // If a client is unfriendly we can
-            auto selected_max_timelife_delay_sec =
-                (client->client_is_unfriendly == eTriStateBool::TRUE)
-                    ? unfriendly_device_max_timelife_delay_sec
-                    : max_timelife_delay_sec;
+            auto selected_max_timelife_delay_sec = (station->is_unfriendly == eTriStateBool::TRUE)
+                                                       ? unfriendly_device_max_timelife_delay_sec
+                                                       : max_timelife_delay_sec;
 
             // Client timelife delay
             auto timelife_delay_sec = (station->time_life_delay_minutes !=

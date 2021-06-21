@@ -77,6 +77,12 @@ void client_steering_task::work()
     }
 
     case FINALIZE: {
+        auto client = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
+        if (!client) {
+            TASK_LOG(ERROR) << "client " << m_sta_mac << " not found";
+            finish();
+            break;
+        }
 
         if (!m_steering_success && m_disassoc_imminent) {
             TASK_LOG(DEBUG) << "steering failed for " << m_sta_mac << " from " << m_original_bssid
@@ -109,7 +115,7 @@ void client_steering_task::work()
             // Set is-unfriendly flag only if client exists in the persistent DB.
             auto client_mac = tlvf::mac_from_string(m_sta_mac);
             if (m_database.is_client_in_persistent_db(client_mac)) {
-                m_database.set_client_is_unfriendly(client_mac, !m_steering_success);
+                m_database.set_client_is_unfriendly(*client, !m_steering_success);
             }
         }
 

@@ -60,6 +60,11 @@ public:
     // Default value is PARAMETER_NOT_CONFIGURED - which means no limitation on bands.
     // Possible values are bitwise options of eClientSelectedBands.
     int8_t selected_bands = beerocks::PARAMETER_NOT_CONFIGURED;
+
+    // The unfriendly status indicates how we interact with the client.
+    // If the unfriendly status is not configured, the client is assumed friendly unless proven otherwise.
+    // The friendliness status affects how we handle the aging mechanism.
+    son::eTriStateBool is_unfriendly = son::eTriStateBool::NOT_CONFIGURED;
 };
 
 } // namespace db

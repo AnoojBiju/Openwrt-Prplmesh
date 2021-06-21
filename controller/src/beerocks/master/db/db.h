@@ -1330,21 +1330,13 @@ public:
     /**
      * @brief Set the client's unfriendly status.
      *
-     * @param mac MAC address of a client.
+     * @param client sStation object representing a client.
      * @param is_unfriendly Whether a client is unfriendly or not.
      * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
      * @return true on success, otherwise false.
      */
-    bool set_client_is_unfriendly(const sMacAddr &mac, bool is_unfriendly,
+    bool set_client_is_unfriendly(sStation &client, bool is_unfriendly,
                                   bool save_to_persistent_db = true);
-
-    /**
-     * @brief Get the client's unfriendly status.
-     *
-     * @param mac MAC address of a client.
-     * @return Whather a client is unfriendly or not.
-     */
-    eTriStateBool get_client_is_unfriendly(const sMacAddr &mac);
 
     /**
      * @brief Check if the radio's band is on one of the selected bands.

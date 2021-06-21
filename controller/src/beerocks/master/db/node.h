@@ -286,11 +286,6 @@ public:
     std::chrono::system_clock::time_point client_parameters_last_edit =
         std::chrono::system_clock::time_point::min();
 
-    // The unfriendly status indicates how we interact with the client.
-    // If the unfriendly status is not configured, the client is assumed friendly unless proven otherwise.
-    // The friendliness status affects how we handle the aging mechanism.
-    eTriStateBool client_is_unfriendly = eTriStateBool::NOT_CONFIGURED;
-
     /*
      * Persistent configurations - end
      */

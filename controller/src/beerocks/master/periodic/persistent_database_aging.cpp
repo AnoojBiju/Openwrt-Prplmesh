@@ -42,10 +42,10 @@ void persistent_database_aging_operation::periodic_operation_function()
                 std::chrono::seconds(m_database.config.max_timelife_delay_minutes * 60);
             const auto unfriendly_device_max_timelife_delay_sec = std::chrono::seconds(
                 m_database.config.unfriendly_device_max_timelife_delay_minutes * 60);
-            auto timelife_delay_seconds =
-                (m_database.get_client_is_unfriendly(client_mac) == eTriStateBool::TRUE)
-                    ? unfriendly_device_max_timelife_delay_sec
-                    : max_timelife_delay_sec;
+
+            auto timelife_delay_seconds = (client->is_unfriendly == eTriStateBool::TRUE)
+                                              ? unfriendly_device_max_timelife_delay_sec
+                                              : max_timelife_delay_sec;
 
             std::chrono::minutes temp_timelife = client->time_life_delay_minutes;
 
