@@ -65,7 +65,6 @@ extern "C" {
 #define BML_NODE_STATE_UNKNOWN 3
 
 /* BML Wi-Fi Definitions */
-#define BML_WLAN_DRIVER_VERSION_LEN (32 + 4) /* Maximal string length (32) + null termination */
 #define BML_SSID_MAX_LENGTH                                                                        \
     (32 + 1 + 3) /* maximum SSID string length, including null termination */
 #define BML_PASS_MAX_LENGTH                                                                        \
@@ -249,9 +248,6 @@ struct BML_NODE {
 
                 /* channel_ext_above_secondary. */
                 uint8_t channel_ext_above_secondary;
-
-                /* Radio driver version */
-                char driver_version[BML_WLAN_DRIVER_VERSION_LEN];
 
                 /* Radio identifier */
                 uint8_t radio_identifier[BML_MAC_ADDR_LEN];

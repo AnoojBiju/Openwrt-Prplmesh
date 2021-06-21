@@ -2506,36 +2506,6 @@ bool db::set_node_backhaul_iface_type(const std::string &mac, beerocks::eIfaceTy
     return true;
 }
 
-bool db::set_hostap_driver_version(const sMacAddr &al_mac, const sMacAddr &mac,
-                                   const std::string &version)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return false;
-    }
-
-    n->hostap->driver_version = version;
-    return true;
-}
-
-std::string db::get_hostap_driver_version(const sMacAddr &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return "INVALID";
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return "INVALID";
-    }
-
-    return n->hostap->driver_version;
-}
-
 beerocks::eIfaceType db::get_node_backhaul_iface_type(const std::string &mac)
 {
     auto n = get_node(mac);

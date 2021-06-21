@@ -2264,8 +2264,6 @@ bool Controller::handle_intel_slave_join(
                                                       : beerocks::IFACE_TYPE_BRIDGE);
     database.set_hostap_iface_name(bridge_mac, radio_mac, notification->hostap().iface_name);
     database.set_hostap_iface_type(bridge_mac, radio_mac, hostap_iface_type);
-    database.set_hostap_driver_version(bridge_mac, radio_mac,
-                                       notification->hostap().driver_version);
 
     database.set_hostap_ant_num(radio_mac, (beerocks::eWiFiAntNum)notification->hostap().ant_num);
     database.set_hostap_ant_gain(bridge_mac, radio_mac, notification->hostap().ant_gain);
@@ -2553,7 +2551,6 @@ bool Controller::handle_non_intel_slave_join(
     database.set_node_state(tlvf::mac_to_string(radio_mac), beerocks::STATE_CONNECTED);
     database.set_node_backhaul_iface_type(tlvf::mac_to_string(radio_mac),
                                           beerocks::IFACE_TYPE_BRIDGE);
-    // TODO driver_version will not be set
     database.set_hostap_iface_name(bridge_mac, radio_mac, "N/A");
     database.set_hostap_iface_type(bridge_mac, radio_mac, beerocks::IFACE_TYPE_WIFI_UNSPECIFIED);
 

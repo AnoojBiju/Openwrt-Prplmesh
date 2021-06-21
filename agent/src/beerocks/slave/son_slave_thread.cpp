@@ -1907,9 +1907,6 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         std::copy_n(notification->params().vht_mcs_set, beerocks::message::VHT_MCS_SET_SIZE,
                     radio->vht_mcs_set.begin());
 
-        std::copy_n(notification->params().driver_version,
-                    beerocks::message::WIFI_DRIVER_VER_LENGTH, radio->driver_version);
-
         save_channel_params_to_db(notification->cs_params());
 
         radio->front.zwdfs                 = notification->params().zwdfs;
@@ -4223,9 +4220,6 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
                 notification->hostap().vht_capability = radio->vht_capability;
                 std::copy_n(radio->vht_mcs_set.begin(), beerocks::message::VHT_MCS_SET_SIZE,
                             notification->hostap().vht_mcs_set);
-                string_utils::copy_string(notification->hostap().driver_version,
-                                          radio->driver_version,
-                                          beerocks::message::WIFI_DRIVER_VER_LENGTH);
 
                 notification->hostap().ant_gain = config.hostap_ant_gain;
 

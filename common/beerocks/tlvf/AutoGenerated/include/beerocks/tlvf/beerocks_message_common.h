@@ -343,7 +343,6 @@ typedef struct sNodeHostap {
     uint8_t vht_supported;
     uint32_t vht_capability;
     uint8_t vht_mcs_set[beerocks::message::VHT_MCS_SET_SIZE];
-    char driver_version[beerocks::message::WIFI_DRIVER_VER_LENGTH];
     //Boolean. When set to 'true', the radio can be used only for zwdfs purpose.
     uint8_t zwdfs;
     //Boolean
