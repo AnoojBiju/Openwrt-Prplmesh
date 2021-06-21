@@ -341,10 +341,8 @@ public:
     bool add_node_gateway(const sMacAddr &mac);
     bool add_node_ire(const sMacAddr &mac,
                       const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
-    bool
-    add_node_wireless_bh(const sMacAddr &mac,
-                         const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,
-                         const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
+    bool add_node_wireless_bh(const sMacAddr &mac,
+                              const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
     bool
     add_node_wired_bh(const sMacAddr &mac,
                       const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,

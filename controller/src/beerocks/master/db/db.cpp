@@ -287,10 +287,9 @@ bool db::add_node_ire(const sMacAddr &mac, const sMacAddr &parent_mac)
     return true;
 }
 
-bool db::add_node_wireless_bh(const sMacAddr &mac, const sMacAddr &parent_mac,
-                              const sMacAddr &radio_identifier)
+bool db::add_node_wireless_bh(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
-    if (!add_node(mac, parent_mac, beerocks::TYPE_IRE_BACKHAUL, radio_identifier)) {
+    if (!add_node(mac, parent_mac, beerocks::TYPE_IRE_BACKHAUL)) {
         LOG(ERROR) << "Failed to add wireless_bh node, mac: " << mac;
         return false;
     }
