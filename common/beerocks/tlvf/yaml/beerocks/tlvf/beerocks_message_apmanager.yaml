@@ -1,11 +1,12 @@
 #
 ---
-_include: { 
-  beerocks/tlvf/beerocks_message_common.h,
-  classes/ChannelList.h,
-  structs/sCacStartedNotificationParams.h,
-  tlvf/WSC/WSC_Attributes.h 
-}
+_include:
+  {
+    beerocks/tlvf/beerocks_message_common.h,
+    classes/ChannelList.h,
+    structs/sCacStartedNotificationParams.h,
+    tlvf/WSC/WSC_Attributes.h,
+  }
 
 _namespace: beerocks_message
 _multi_class: True
@@ -137,10 +138,6 @@ cACTION_APMANAGER_HOSTAP_ADD_4ADDR_STA_UPDATE:
   _type: class
   mac: sMacAddr
 
-cACTION_APMANAGER_HOSTAP_DEL_4ADDR_STA_UPDATE:
-  _type: class
-  mac: sMacAddr
-
 cACTION_APMANAGER_HOSTAP_SET_NEIGHBOR_11K_REQUEST:
   _type: class
   params: sNeighborSetParams11k
@@ -170,7 +167,7 @@ cACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION:
   bssid: sMacAddr
   capabilities: beerocks::message::sRadioCapabilities
   vap_id: int8_t
-  multi_ap_profile: 
+  multi_ap_profile:
     _type: uint8_t
     _comment: |
       0 - Not Multi-AP station

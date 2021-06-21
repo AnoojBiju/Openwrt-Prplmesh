@@ -549,27 +549,6 @@ class cACTION_APMANAGER_HOSTAP_ADD_4ADDR_STA_UPDATE : public BaseClass
         sMacAddr* m_mac = nullptr;
 };
 
-class cACTION_APMANAGER_HOSTAP_DEL_4ADDR_STA_UPDATE : public BaseClass
-{
-    public:
-        cACTION_APMANAGER_HOSTAP_DEL_4ADDR_STA_UPDATE(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cACTION_APMANAGER_HOSTAP_DEL_4ADDR_STA_UPDATE(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cACTION_APMANAGER_HOSTAP_DEL_4ADDR_STA_UPDATE();
-
-        static eActionOp_APMANAGER get_action_op(){
-            return (eActionOp_APMANAGER)(ACTION_APMANAGER_HOSTAP_DEL_4ADDR_STA_UPDATE);
-        }
-        sMacAddr& mac();
-        void class_swap() override;
-        bool finalize() override;
-        static size_t get_initial_size();
-
-    private:
-        bool init();
-        eActionOp_APMANAGER* m_action_op = nullptr;
-        sMacAddr* m_mac = nullptr;
-};
-
 class cACTION_APMANAGER_HOSTAP_SET_NEIGHBOR_11K_REQUEST : public BaseClass
 {
     public:
