@@ -57,8 +57,16 @@ for tempdir in tmp/work/*/*/temp tmp/work/*/*/*/temp tmp/work/*/*/*/*/temp; do
     fi
 done
 
-cp tmp/deploy/images/turris/rdk-generic-broadband-image-turris.{manifest,wic.gz} /artifacts
-cp tmp/deploy/ipk/armv7ahf-neon/prplmesh* /artifacts
+IMAGES_DIR="tmp/deploy/images/turris"
+DESTINATION_DIR="/artifacts"
+RDKB_ROOTFS=$(basename "$(readlink -f ${IMAGES_DIR}/rdk-generic-broadband-image-turris.tar.gz)")
+RDKB_DTB=$(basename "$(find ${IMAGES_DIR} -name 'armada*omnia.dtb')")
+
+cp "${IMAGES_DIR}/rdk-generic-broadband-image-turris.manifest" "${DESTINATION_DIR}"
+cp "${IMAGES_DIR}/zImage" "${DESTINATION_DIR}"
+cp "${IMAGES_DIR}/${RDKB_ROOTFS}" "${DESTINATION_DIR}"
+cp "${IMAGES_DIR}/${RDKB_DTB}" "${DESTINATION_DIR}"
+cp tmp/deploy/ipk/armv7ahf-neon/prplmesh* "${DESTINATION_DIR}"
 
 
 exit $res
