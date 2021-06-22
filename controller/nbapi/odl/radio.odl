@@ -18,38 +18,31 @@
 
         %read-only string ID = "00:00:00:00:00:00";
         bool Enabled = false;
-
+        
         %read-only uint32 Noise = 0 {
             on action validate call check_range [0, 220];
         }
-
         %read-only uint32 Utilization = 0 {
             on action validate call check_range [0, 255];
         }
-
         %read-only uint32 Transmit = 0 {
             on action validate call check_range [0, 255];
         }
-
         %read-only uint32 ReceiveSelf = 0 {
             on action validate call check_range [0, 255];
         }
-
         %read-only uint32 ReceiveOther = 0 {
             on action validate call check_range [0, 255];
         }
 
         object CurrentOperatingClasses [] {
             %read-only datetime TimeStamp = "2020-08-31T11:22:39Z";
-
             %read-only uint32 Class = 0 {
                 on action validate call check_range [0, 255];
             }
-
             %read-only uint32 Channel = 0 {
                 on action validate call check_range [0, 255];
             }
-
             %read-only int32 TxPower = 0 {
                 on action validate call check_range [-128, 127];
             }
