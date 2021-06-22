@@ -1876,9 +1876,16 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
                 controller_ctx->send_cmdu(sd, cmdu_tx);
             };
 
-        // If there was an error before, send the results with a failed status
-        if (op_error_code != eChannelScanOperationCode::SUCCESS ||
-            result_status != eChannelScanStatusCode::SUCCESS) {
+        /**
+         * If there was an error before, send the results with a failed status
+         * No need to print errors on the following conditions
+         * eChannelScanOperationCode::SCAN_IN_PROGRESS,
+         * eChannelScanStatusCode::RESULTS_EMPTY
+         */
+        if ((op_error_code != eChannelScanOperationCode::SUCCESS &&
+             op_error_code != eChannelScanOperationCode::SCAN_IN_PROGRESS) ||
+            (result_status != eChannelScanStatusCode::SUCCESS &&
+             result_status != eChannelScanStatusCode::RESULTS_EMPTY)) {
             LOG(ERROR) << "Something went wrong, sending CMDU with error code: ["
                        << (int)op_error_code << "] & result status [" << (int)result_status << "].";
             auto response = gen_new_results_response();
