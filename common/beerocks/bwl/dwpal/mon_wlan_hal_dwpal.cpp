@@ -673,7 +673,7 @@ bool mon_wlan_hal_dwpal::update_stations_stats(const std::string &vap_iface_name
     std::string cmd = "GET_STA_MEASUREMENTS " + vap_iface_name + " " + sta_mac;
 
     if (!dwpal_send_cmd(cmd, reply)) {
-        LOG(ERROR) << __func__ << " failed";
+        LOG(ERROR) << "cmd: " << cmd << " failed";
         return false;
     }
 
