@@ -1489,7 +1489,7 @@ bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
 
         // Check if current Channel_Scan_Dump_Result is part of the dump sequence.
         if (m_nl_seq != nlh->nlmsg_seq) {
-            LOG(ERROR) << "channel scan results dump received with unexpected seq number";
+            //LOG(ERROR) << "channel scan results dump received with unexpected seq number";
             return false;
         }
 
