@@ -2058,10 +2058,16 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         bssid->ssid          = vap_info.ssid;
         bssid->fronthaul_bss = vap_info.fronthaul_vap;
         bssid->backhaul_bss  = vap_info.backhaul_vap;
+        if (vap_info.backhaul_vap) {
+            bssid->backhaul_bss_disallow_profile1_agent_association =
+                vap_info.profile1_backhaul_sta_association_disallowed;
+            bssid->backhaul_bss_disallow_profile2_agent_association =
+                vap_info.profile2_backhaul_sta_association_disallowed;
+        }
 
         auto notification_out = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_HOSTAP_AP_ENABLED_NOTIFICATION>(cmdu_tx);
-        if (notification_out == nullptr) {
+        if (!notification_out) {
             LOG(ERROR) << "Failed building message!";
             return false;
         }
