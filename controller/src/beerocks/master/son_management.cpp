@@ -2137,7 +2137,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
 
         //if persistent_db is enabled, call the "update_client_persistent_db"
         if (database.config.persistent_db) {
-            if (!database.update_client_persistent_db(client_mac)) {
+            if (!database.update_client_persistent_db(*client)) {
                 LOG(ERROR)
                     << "Information is saved to runtime-DB but failed to set to persistent DB";
                 send_response(false);

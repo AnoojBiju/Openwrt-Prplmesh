@@ -1350,10 +1350,10 @@ public:
     /**
      * @brief Update client's persistent information with the runtime information.
      *
-     * @param mac MAC address of a client.
+     * @param client sStation object representing a client.
      * @return true on success, otherwise false.
      */
-    bool update_client_persistent_db(const sMacAddr &mac);
+    bool update_client_persistent_db(sStation &client);
 
     /**
      * @brief Load all clients from persistent db.

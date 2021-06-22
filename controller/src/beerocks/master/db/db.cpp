@@ -3561,7 +3561,7 @@ bool db::is_hostap_on_client_selected_bands(const sMacAddr &client_mac, const sM
     }
 }
 
-bool db::update_client_persistent_db(const sMacAddr &mac)
+bool db::update_client_persistent_db(sStation &client)
 {
     // if persistent db is disabled
     if (!config.persistent_db) {
@@ -3569,21 +3569,11 @@ bool db::update_client_persistent_db(const sMacAddr &mac)
         return false;
     }
 
-    auto node = get_node_verify_type(mac, beerocks::TYPE_CLIENT);
-    if (!node) {
-        LOG(ERROR) << "Client node not found for mac " << mac;
-        return false;
-    }
-
-    auto client = get_station(mac);
-    if (!client) {
-        LOG(ERROR) << "client " << mac << " not found";
-        return false;
-    }
+    auto mac = client.mac;
 
     // any persistent parameter update also sets the last-edit timestamp
     // if it is with default value - no other persistent configuration was performed
-    if (client->parameters_last_edit == std::chrono::system_clock::time_point::min()) {
+    if (client.parameters_last_edit == std::chrono::system_clock::time_point::min()) {
         LOG(DEBUG) << "Persistent client parameters are empty for " << mac
                    << ", no need to update persistent-db";
         return true;
@@ -3592,35 +3582,35 @@ bool db::update_client_persistent_db(const sMacAddr &mac)
     ValuesMap values_map;
 
     // fill values map of client persistent params
-    values_map[TIMESTAMP_STR] = timestamp_to_string_seconds(client->parameters_last_edit);
+    values_map[TIMESTAMP_STR] = timestamp_to_string_seconds(client.parameters_last_edit);
 
-    if (client->time_life_delay_minutes != std::chrono::minutes(PARAMETER_NOT_CONFIGURED)) {
+    if (client.time_life_delay_minutes != std::chrono::minutes(PARAMETER_NOT_CONFIGURED)) {
         LOG(DEBUG) << "Setting client time-life-delay in persistent-db to "
-                   << client->time_life_delay_minutes.count() << " for " << mac;
-        values_map[TIMELIFE_DELAY_STR] = std::to_string(client->time_life_delay_minutes.count());
+                   << client.time_life_delay_minutes.count() << " for " << mac;
+        values_map[TIMELIFE_DELAY_STR] = std::to_string(client.time_life_delay_minutes.count());
     }
 
-    if (client->stay_on_initial_radio != eTriStateBool::NOT_CONFIGURED) {
-        auto enable = (client->stay_on_initial_radio == eTriStateBool::TRUE);
+    if (client.stay_on_initial_radio != eTriStateBool::NOT_CONFIGURED) {
+        auto enable = (client.stay_on_initial_radio == eTriStateBool::TRUE);
         LOG(DEBUG) << "Setting client stay-on-initial-radio in persistent-db to " << enable
                    << " for " << mac;
         values_map[INITIAL_RADIO_ENABLE_STR] = std::to_string(enable);
         // initial radio should be configured only if the stay_on_initial_radio is set
-        if (client->initial_radio != network_utils::ZERO_MAC) {
+        if (client.initial_radio != network_utils::ZERO_MAC) {
             LOG(DEBUG) << "Setting client initial-radio in persistent-db to "
-                       << client->initial_radio << " for " << mac;
-            values_map[INITIAL_RADIO_STR] = tlvf::mac_to_string(client->initial_radio);
+                       << client.initial_radio << " for " << mac;
+            values_map[INITIAL_RADIO_STR] = tlvf::mac_to_string(client.initial_radio);
         }
     }
 
-    if (client->selected_bands != PARAMETER_NOT_CONFIGURED) {
-        LOG(DEBUG) << "Setting client selected-bands in persistent-db to " << client->selected_bands
+    if (client.selected_bands != PARAMETER_NOT_CONFIGURED) {
+        LOG(DEBUG) << "Setting client selected-bands in persistent-db to " << client.selected_bands
                    << " for " << mac;
-        values_map[SELECTED_BANDS_STR] = std::to_string(client->selected_bands);
+        values_map[SELECTED_BANDS_STR] = std::to_string(client.selected_bands);
     }
 
-    if (client->is_unfriendly != eTriStateBool::NOT_CONFIGURED) {
-        auto is_unfriendly = (client->is_unfriendly == eTriStateBool::TRUE);
+    if (client.is_unfriendly != eTriStateBool::NOT_CONFIGURED) {
+        auto is_unfriendly = (client.is_unfriendly == eTriStateBool::TRUE);
         LOG(DEBUG) << "Setting client is-unfriendly in persistent-db to " << is_unfriendly
                    << " for " << mac;
         values_map[IS_UNFRIENDLY_STR] = std::to_string(is_unfriendly);
