@@ -1832,7 +1832,11 @@ int bml_internal::get_dcs_scan_results(const sMacAddr &mac, BML_NEIGHBOR_AP *res
                << "results status: " << int(result_status) << ", "
                << "results opt code: " << int(iRet) << "].";
     if (iRet != int(eChannelScanOperationCode::SUCCESS)) {
-        LOG(ERROR) << "Results returned with error code:" << iRet << ". Aborting!";
+        if (iRet == int(eChannelScanOperationCode::SCAN_IN_PROGRESS)) {
+            LOG(DEBUG) << "Scan already in progress";
+        } else {
+            LOG(ERROR) << "Results returned with error code:" << iRet << ". Aborting!";
+        }
         return iRet;
     }
 
