@@ -9,6 +9,7 @@ from enum import Enum
 import json
 import iperf3
 import os
+import shlex
 import platform
 import re
 import subprocess
@@ -172,7 +173,9 @@ class ALEntity:
 
     def get_memory_usage(self):
         cmd_output = self.command(
-            'awk', '/MemTotal/ || /MemFree/ || /Buffers/ || /^Cached/ {print $2}', '/proc/meminfo')
+            'sh',
+            '-c',
+            "awk '/MemTotal/ || /MemFree/ || /Buffers/ || /^Cached/ {print $2}' /proc/meminfo")
         tot_m, free_m, buff, cached = map(int, cmd_output.split())
 
         return MemoryStat(tot_m, free_m, buff, cached, tot_m - free_m - buff - cached)
@@ -547,6 +550,9 @@ class ALEntityDocker(ALEntity):
 
     def command(self, *command: str) -> str:
         '''Execute `command` in docker container and return its output.'''
+
+        command_str = " ".join(command)
+        debug(f"--- Executing command: {command_str}")
         return subprocess.check_output(("docker", "exec", self.name) + command).decode()
 
     def wait_for_log(self, regex: str, start_line: int, timeout: float,
@@ -870,11 +876,11 @@ class ALEntityPrplWrt(ALEntity):
         else:
             self.config_file_name = '/opt/prplmesh/config/beerocks_agent.conf'
 
-        ucc_port_raw = self.command("grep \"ucc_listener_port\" {}".format(self.config_file_name))
+        ucc_port_raw = self.command("grep", "ucc_listener_port", self.config_file_name)
         ucc_port = int(re.search(r'ucc_listener_port=(?P<port>[0-9]+)',
                                  ucc_port_raw).group('port'))
         log_folder_raw = self.command(
-            "grep log_files_path {}".format(self.config_file_name))
+            "grep", "log_files_path", self.config_file_name)
         self.log_folder = re.search(r'log_files_path=(?P<log_path>[a-zA-Z0-9_\/]+)',
                                     log_folder_raw).group('log_path')
         ucc_socket = UCCSocket(str(self.device.control_ip), int(ucc_port))
@@ -892,9 +898,7 @@ class ALEntityPrplWrt(ALEntity):
     def command(self, *command: str) -> str:
         """Execute `command` in device and return its output."""
 
-        command_str = " ".join(command)
-        debug("--- Executing command: {}".format(command_str))
-
+        command_str = shlex.join(command)
         return subprocess.check_output(["ssh", self.device.control_ip, command_str]).decode()
 
     def wait_for_log(self, regex: str, start_line: int, timeout: float,
@@ -920,7 +924,7 @@ class RadioHostapd(Radio):
         self.iface_name = iface_name
         self.agent = agent
 
-        ip_raw = self.agent.command("ip link list dev {}".format(self.iface_name))
+        ip_raw = self.agent.command("ip", "link", "list", "dev", self.iface_name)
         mac = re.search(r"link/ether (([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})",
                         ip_raw).group(1)
         self.log_folder = agent.log_folder
@@ -938,13 +942,13 @@ class RadioHostapd(Radio):
 
         self.vaps = []
 
-        output = self.agent.command(f'iwinfo | grep ^{iface_name} | cut -d " " -f 1')
+        output = self.agent.command('sh', '-c', f'iwinfo | grep ^{iface_name} | cut -d " " -f 1')
         vap_candidates = output.split()
 
         debug("vap candidates : " + " * ".join(vap_candidates))
 
         for vap_iface in vap_candidates:
-            iwinfo_output = self.agent.command(f'iw dev {vap_iface} info')
+            iwinfo_output = self.agent.command('iw', 'dev', vap_iface, 'info')
 
             if re.search('dummy_ssid', iwinfo_output):
                 # On MaxLinear devices (e.g. Netgear RAX40) wlan0 and wlan2 are dummy interfaces.
@@ -982,28 +986,25 @@ class RadioHostapd(Radio):
 
     def get_mac(self, iface: str) -> str:
         """Return mac of specified iface"""
-        command = "ip link show {}".format(iface)
         regex = "link/ether (?P<mac>([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})"
 
-        output = self.agent.command(command)
+        output = self.agent.command("ip", "link", "show", f"{iface}")
         match = re.search(regex, output)
         return match.group('mac')
 
     def get_current_channel(self) -> ChannelInfo:
-        command = "iw dev {} info".format(self.iface_name)
         regex = r"channel (?P<channel>[0-9]+) [^\r\n]*width[^\r\n]* (?P<width>[0-9]+) " + \
             r"MHz[^\r\n]*center1[^\r\n]* (?P<center>[0-9]+) MHz"
 
-        output = self.agent.command(command)
+        output = self.agent.command("iw", "dev", f"{self.iface_name}", "info")
         match = re.search(regex, output)
         return ChannelInfo(int(match.group('channel')), int(match.group('width')),
                            int(match.group('center')))
 
     def get_power_limit(self) -> int:
-        command = "iw dev {} info".format(self.iface_name)
         regex = r"txpower (?P<power_limit>[0-9]*)(\.0+)? dBm"
 
-        output = self.agent.command(command)
+        output = self.agent.command("iw", "dev", f"{self.iface_name}", "info")
         match = re.search(regex, output)
         return int(match.group('power_limit'))
 
@@ -1017,13 +1018,12 @@ class VirtualAPHostapd(VirtualAP):
 
     def get_ssid(self) -> str:
         """Get current SSID of attached radio. Return string."""
-        command = "iw dev {} info".format(self.iface)
         # We are looking for SSID definition
         # ssid Multi-AP-24G-1
         # type AP
         regex = r"addr ..:..:..:..:..:..\n\t(ssid (?P<ssid>.*)\n\t)?type AP\n\t"
 
-        output = self.radio.agent.command(command)
+        output = self.radio.agent.command("iw", "dev", f"{self.iface}", "info")
         match = re.search(regex, output)
 
         ssid = match.group('ssid')
@@ -1032,21 +1032,23 @@ class VirtualAPHostapd(VirtualAP):
     def get_psk(self) -> str:
         """Get SSIDs personal key set during last autoconfiguration. Return string"""
         ssid = self.get_ssid()
-        command = 'grep "Autoconfiguration for ssid: {}" "{}/beerocks_agent_{}.log" | tail -n 1' \
-            .format(ssid, self.radio.log_folder, self.radio.iface_name)
+        command = (f'grep "Autoconfiguration for ssid: {ssid}"'
+                   ' "{self.radio.log_folder}/beerocks_agent_{self.radio.iface_name}.log"'
+                   ' | tail -n 1')
+
         # We looking for key, which was set during last autoconfiguration. E.g of such string:
         # network_key: maprocks2 fronthaul:
         regex = "network_key: (?P<psk>.*) fronthaul"
 
-        output = self.radio.agent.command(command)
+        output = self.radio.agent.command('sh', '-c', command)
         match = re.search(regex, output)
         return match.group('psk')
 
     def get_iface(self, bssid: str) -> str:
-        command = "ip link list | grep -B1 \"{}\"".format(bssid)
         regex = "[0-9]{1,4}: (?P<iface_name>wlan[0-9.]{1,4}): <"
 
-        output = self.radio.agent.command(command)
+        output = self.radio.agent.command(
+            'sh', '-c', f'ip link list | grep -B1 "{bssid}"')
         match = re.search(regex, output)
         return match.group('iface_name')
 
@@ -1061,10 +1063,10 @@ class VirtualAPHostapd(VirtualAP):
         return True
 
     def get_bss_type(self) -> int:
-        command = f"hostapd_cli -i {self.iface} get_mesh_mode {self.iface}"
         regex = r"mesh_mode\=\w+ \((?P<bss_type>\d?)\)"
 
-        output = self.radio.agent.command(command)
+        output = self.radio.agent.command(
+            "hostapd_cli", "-i", f"{self.iface}", "get_mesh_mode", f"{self.iface}")
         match = re.search(regex, output)
 
         return self.bss_from_bits_intel(match.group('bss_type'))
