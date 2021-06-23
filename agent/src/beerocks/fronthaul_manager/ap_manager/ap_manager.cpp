@@ -379,11 +379,6 @@ bool ApManager::create_ap_wlan_hal()
 
     LOG_IF(!ap_wlan_hal, FATAL) << "Failed creating HAL instance!";
 
-    if (!ap_wlan_hal->wds_set_mode(bwl::ap_wlan_hal::WDSMode::Dynamic)) {
-        LOG(ERROR) << "Failed enabling WDS Dynamic mode!";
-        return false;
-    }
-
     return true;
 }
 
@@ -1017,32 +1012,6 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         // if (!ap_man_hal.neighbor_remove(request->params)){
         //     LOG(ERROR) << "Failed to set neighbor!";
         // }
-        break;
-    }
-    case beerocks_message::ACTION_APMANAGER_HOSTAP_ADD_4ADDR_STA_UPDATE: {
-        auto update =
-            beerocks_header
-                ->addClass<beerocks_message::cACTION_APMANAGER_HOSTAP_ADD_4ADDR_STA_UPDATE>();
-        if (update == nullptr) {
-            LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_ADD_4ADDR_STA_UPDATE failed";
-            return;
-        }
-        std::string mac = tlvf::mac_to_string(update->mac());
-        LOG(DEBUG) << "add 4addr sta update for mac=" << mac;
-        ap_wlan_hal->wds_add_sta(mac);
-        break;
-    }
-    case beerocks_message::ACTION_APMANAGER_HOSTAP_DEL_4ADDR_STA_UPDATE: {
-        auto update =
-            beerocks_header
-                ->addClass<beerocks_message::cACTION_APMANAGER_HOSTAP_DEL_4ADDR_STA_UPDATE>();
-        if (update == nullptr) {
-            LOG(ERROR) << "addClass cACTION_APMANAGER_HOSTAP_DEL_4ADDR_STA_UPDATE failed";
-            return;
-        }
-        std::string mac = tlvf::mac_to_string(update->mac());
-        LOG(DEBUG) << "del 4addr sta update for mac=" << mac;
-        ap_wlan_hal->wds_del_sta(mac);
         break;
     }
     case beerocks_message::ACTION_APMANAGER_CLIENT_DISCONNECT_REQUEST: {

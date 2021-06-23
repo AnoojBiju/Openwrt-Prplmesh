@@ -22,16 +22,6 @@ class ap_wlan_hal : public virtual base_wlan_hal {
 
     // Public definitions
 public:
-    /**
-     * Supported 4 address (WDS) modes
-     */
-    enum class WDSMode {
-        Disabled = 0, /* < 4 address mode not supported */
-        Static   = 1, /* < Single MAC */
-        Dynamic  = 2, /* < Automatic learning */
-        List     = 3  /* < Manually managed list of MACs */
-    };
-
     enum class Event {
         Invalid = 0,
 
@@ -256,49 +246,6 @@ public:
      */
     virtual bool cancel_cac(int chan, beerocks::eWiFiBandwidth bw, int vht_center_frequency,
                             int secondary_channel_offset) = 0;
-
-    /**
-     * @brief Update the Radio antenna configuration.
-     * 
-     * @param [in] mode Radio antenna configuration.
-     *
-     * @return true on success or false on error.
-     */
-    virtual bool set_antenna_mode(AntMode mode) = 0;
-
-    /**
-     * @brief Set the WDS (4 address) mode for the Radio.
-     * 
-     * @param [in] mode WDS mode.
-     *
-     * @return true on success or false on error.
-     */
-    virtual bool wds_set_mode(WDSMode mode) = 0;
-
-    /**
-     * @brief Add a STA to the WDS list.
-     * 
-     * @param [in] mac The MAC address of the STA.
-     *
-     * @return true on success or false on error.
-     */
-    virtual bool wds_add_sta(const std::string &mac) = 0;
-
-    /**
-     * @brief Delete a STA from the WDS list.
-     * 
-     * @param [in] mac The MAC address of the STA.
-     *
-     * @return true on success or false on error.
-     */
-    virtual bool wds_del_sta(const std::string &mac) = 0;
-
-    /**
-     * @brief Clear the WDS list.
-     * 
-     * @return true on success or false on error.
-     */
-    virtual bool wds_clear_list() = 0;
 
     /**
      * @brief Set failsafe channel.
