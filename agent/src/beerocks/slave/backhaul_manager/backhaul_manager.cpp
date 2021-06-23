@@ -627,7 +627,6 @@ bool BackhaulManager::finalize_slaves_connect_state(bool fConnected,
 
             notification->params().gw_ipv4 =
                 beerocks::net::network_utils::ipv4_from_string(bridge_info.ip_gw);
-            notification->params().gw_bridge_mac = tlvf::mac_from_string(bssid_bridge_mac);
             notification->params().bridge_ipv4 =
                 beerocks::net::network_utils::ipv4_from_string(bridge_info.ip);
             notification->params().backhaul_mac = tlvf::mac_from_string(iface_info.mac);
