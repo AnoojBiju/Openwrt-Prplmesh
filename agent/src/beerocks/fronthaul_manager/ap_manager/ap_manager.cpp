@@ -884,7 +884,11 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         // Set transmit power
         if (request->tx_limit_valid()) {
             ap_wlan_hal->set_tx_power_limit(request->tx_limit());
-            if (ap_wlan_hal->get_radio_info().channel == request->cs_params().channel) {
+            LOG(INFO) << "Current channel: " << ap_wlan_hal->get_radio_info().channel
+                      << " Current BW: " << ap_wlan_hal->get_radio_info().bandwidth;
+            if (ap_wlan_hal->get_radio_info().channel == request->cs_params().channel &&
+                utils::convert_bandwidth_to_enum(ap_wlan_hal->get_radio_info().bandwidth) ==
+                    request->cs_params().bandwidth) {
                 LOG(DEBUG) << "Setting tx power without channel switch, send CSA notification";
                 auto notification = message_com::create_vs_message<
                     beerocks_message::cACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION>(cmdu_tx);
