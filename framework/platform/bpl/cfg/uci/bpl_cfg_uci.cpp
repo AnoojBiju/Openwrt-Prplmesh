@@ -109,6 +109,7 @@ int cfg_uci_get_wireless_from_ifname(enum paramType type, const char *interface_
             if (o->type != UCI_TYPE_STRING)
                 continue;
 
+            // TODO: wireless.ifname is missing for Non-Intel Platforms (PPM-1458).
             if (strncmp(n->name, "ifname", MAX_UCI_BUF_LEN))
                 continue;
 
@@ -127,7 +128,6 @@ int cfg_uci_get_wireless_from_ifname(enum paramType type, const char *interface_
 
     //if interface not found in wireless
     if (!is_section_found) {
-        ERROR("%s, interface(%s) not found", __FUNCTION__, interface_name);
         uci_free_context(ctx);
         return RETURN_ERR;
     }
