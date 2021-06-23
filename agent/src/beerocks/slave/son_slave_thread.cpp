@@ -5791,9 +5791,10 @@ bool slave_thread::handle_channel_selection_request(Socket *sd, ieee1905_1::Cmdu
 
     // If only tx power limit change is required, set channel to current
     request_out->cs_params().channel = switch_required ? channel_to_switch.channel : radio->channel;
-    request_out->cs_params().bandwidth = channel_to_switch.channel_bandwidth;
-    request_out->tx_limit()            = power_limit;
-    request_out->tx_limit_valid()      = power_limit_received;
+    request_out->cs_params().bandwidth =
+        switch_required ? channel_to_switch.channel_bandwidth : uint8_t(radio->bandwidth);
+    request_out->tx_limit()       = power_limit;
+    request_out->tx_limit_valid() = power_limit_received;
 
     ///////////////////////////////////////////////////////////////////
     // TODO https://github.com/prplfoundation/prplMesh/issues/797
