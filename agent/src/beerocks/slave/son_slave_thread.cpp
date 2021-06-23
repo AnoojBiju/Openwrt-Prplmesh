@@ -4970,17 +4970,32 @@ bool slave_thread::handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMess
             // Multi-AP standard requires to tear down any misconfigured BSS.
             config.bss_type = WSC::eWscVendorExtSubelementBssType::TEARDOWN;
 
-        } else if (bBSS && !bBSS_p1_disallowed && !bBSS_p2_disallowed &&
-                   db->traffic_separation.secondary_vlans_ids.size() > 0) {
+        } else if (db->controller_info.profile_support !=
+                       wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
+                   bBSS && !bBSS_p1_disallowed && !bBSS_p2_disallowed) {
+
             LOG(WARNING) << "Controller configured Backhaul BSS for combined Profile1 and "
                          << "Profile2, but it is not supported!";
-            bss_errors.push_back(
-                {wfa_map::tlvProfile2ErrorCode::eReasonCode::
-                     TRAFFIC_SEPARATION_ON_COMBINED_PROFILE1_BACKHAUL_AND_PROFILE2_BACKHAUL_UNSUPPORTED,
-                 config.bssid});
+            // bss_errors.push_back(
+            //     {wfa_map::tlvProfile2ErrorCode::eReasonCode::
+            //          TRAFFIC_SEPARATION_ON_COMBINED_PROFILE1_BACKHAUL_AND_PROFILE2_BACKHAUL_UNSUPPORTED,
+            //      config.bssid});
 
-            // Multi-AP standard requires to tear down any misconfigured BSS.
-            config.bss_type = WSC::eWscVendorExtSubelementBssType::TEARDOWN;
+            // // Multi-AP standard requires to tear down any misconfigured BSS.
+            // config.bss_type = WSC::eWscVendorExtSubelementBssType::TEARDOWN;
+
+            /**
+             * We currently do not support bBSS with both profile 1/2 disallow
+             * flags set to false (Combined Profile bBSS mode).
+             * When we are configured in a way we don't support, we should tear down the BSS, and
+             * send an error response on that BSS.
+             * Currently R2 certified controllers (Mediatek/Marvel) have a bug (PPM-1389) that ends
+             * up sending M2 with both profile 1/2 disallow flags set to false although we report 
+             * combined_profile1_and_profile2 = 0 in ap_radio_advanced_capabilities_tlv.
+             * To deal with it, temporarily comment the lines above and allow the BSS to be
+             * configured successfully until PPM-1389 is resolved.
+             */
+            LOG(DEBUG) << "Currently ignore bad configuration";
         }
 
         LOG(DEBUG) << m2.manufacturer() << " config data:" << std::endl
