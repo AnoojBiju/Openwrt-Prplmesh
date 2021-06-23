@@ -40,6 +40,33 @@ private:
     ieee1905_1::CmduMessageTx &cmdu_tx;
     task_pool &tasks;
 
+    struct sBssStats {
+        uint32_t unicast_bytes_sent;
+        uint32_t unicast_bytes_received;
+        uint32_t broadcast_bytes_sent;
+        uint32_t broadcast_bytes_received;
+        uint32_t multicast_bytes_sent;
+        uint32_t multicast_bytes_received;
+    };
+
+    struct sRadioStats {
+        uint8_t utilization;
+        uint8_t transmit;
+        uint8_t receive_self;
+        uint8_t receive_other;
+        uint8_t noise;
+    };
+
+    /**
+    * key = BSSID, value = latest BSS statistics
+    */
+    beerocks::mac_map<sBssStats> m_bss_stats;
+
+    /**
+    * key = RUID, value = latest Radio statistics
+    */
+    beerocks::mac_map<sRadioStats> m_radio_stats;
+
     bool m_ap_autoconfig_renew_sent = false;
 
     /**
@@ -120,6 +147,19 @@ private:
     dm_add_agent_connected_event(const sMacAddr &device_mac,
                                  std::shared_ptr<wfa_map::tlvApOperationalBSS> &ap_op_bss_tlv,
                                  ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Store in 'bss_stats' last received BSS statistics.
+     * @param cmdu_rx The AP Metrics Response message.
+     */
+    void save_bss_statistics(ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Store in 'radio_stats' last received radio statistics.
+     * @param src_mac Source mac.
+     * @param cmdu_rx The AP Metrics Response message.
+     */
+    void save_radio_statistics(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
      * @brief Search for appropriate BSS from bss list of tlvAssociatedClients,

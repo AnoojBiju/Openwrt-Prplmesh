@@ -14,9 +14,12 @@
 #include <easylogging++.h>
 #include <tlvf/ieee_1905_1/tlv1905NeighborDevice.h>
 #include <tlvf/ieee_1905_1/tlvDeviceInformation.h>
+#include <tlvf/wfa_map/tlvApExtendedMetrics.h>
+#include <tlvf/wfa_map/tlvApOperationalBSS.h>
 #include <tlvf/wfa_map/tlvClientAssociationEvent.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
 #include <tlvf/wfa_map/tlvProfile2Default802dotQSettings.h>
+#include <tlvf/wfa_map/tlvProfile2RadioMetrics.h>
 #include <tlvf/wfa_map/tlvProfile2TrafficSeparationPolicy.h>
 
 using namespace beerocks;
@@ -74,6 +77,11 @@ bool agent_monitoring_task::handle_ieee1905_1_msg(const sMacAddr &src_mac,
     }
     case ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE: {
         start_agent_monitoring(src_mac, cmdu_rx);
+        break;
+    }
+    case ieee1905_1::eMessageType::AP_METRICS_RESPONSE_MESSAGE: {
+        save_bss_statistics(cmdu_rx);
+        save_radio_statistics(src_mac, cmdu_rx);
         break;
     }
     default: {
@@ -462,4 +470,46 @@ bool agent_monitoring_task::dm_add_neighbor_to_agent_connected_event(
         }
     }
     return true;
+}
+
+void agent_monitoring_task::save_bss_statistics(ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    for (auto ap_extended_metric_tlv : cmdu_rx.getClassList<wfa_map::tlvApExtendedMetrics>()) {
+        auto bss_stats = std::make_shared<sBssStats>();
+
+        bss_stats->broadcast_bytes_sent     = ap_extended_metric_tlv->unicast_bytes_sent();
+        bss_stats->broadcast_bytes_received = ap_extended_metric_tlv->unicast_bytes_received();
+        bss_stats->multicast_bytes_sent     = ap_extended_metric_tlv->multicast_bytes_sent();
+        bss_stats->multicast_bytes_received = ap_extended_metric_tlv->multicast_bytes_received();
+        bss_stats->unicast_bytes_sent       = ap_extended_metric_tlv->broadcast_bytes_sent();
+        bss_stats->unicast_bytes_received   = ap_extended_metric_tlv->broadcast_bytes_received();
+        m_bss_stats[ap_extended_metric_tlv->bssid()] = bss_stats;
+    }
+}
+
+void agent_monitoring_task::save_radio_statistics(const sMacAddr &src_mac,
+                                                  ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto radio_metrics_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2RadioMetrics>();
+    auto agent             = database.m_agents.get(src_mac);
+
+    if (!agent) {
+        LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
+        return;
+    }
+    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
+        !radio_metrics_tlv) {
+        LOG(ERROR) << "Profile2 Radio Metrics tlv is not supplied for Agent " << src_mac
+                   << " with profile enum " << agent->profile;
+        return;
+    }
+
+    auto radio_stats = std::make_shared<sRadioStats>();
+
+    radio_stats->noise                            = radio_metrics_tlv->noise();
+    radio_stats->transmit                         = radio_metrics_tlv->transmit();
+    radio_stats->receive_self                     = radio_metrics_tlv->receive_self();
+    radio_stats->receive_other                    = radio_metrics_tlv->receive_other();
+    radio_stats->utilization                      = 0; // TO DO: PPM-1136
+    m_radio_stats[radio_metrics_tlv->radio_uid()] = radio_stats;
 }
