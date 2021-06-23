@@ -1949,10 +1949,7 @@ bool Controller::handle_intel_slave_join(
 
     std::string slave_version =
         std::string(notification->slave_version(beerocks::message::VERSION_LENGTH));
-    sMacAddr radio_mac = notification->hostap().iface_mac;
-    std::string gw_ipv4 =
-        beerocks::net::network_utils::ipv4_to_string(notification->backhaul_params().gw_ipv4);
-    std::string gw_bridge_mac = tlvf::mac_to_string(notification->backhaul_params().gw_bridge_mac);
+    sMacAddr radio_mac        = notification->hostap().iface_mac;
     sMacAddr parent_bssid_mac = notification->backhaul_params().backhaul_bssid;
     std::string backhaul_mac  = tlvf::mac_to_string(notification->backhaul_params().backhaul_mac);
     std::string backhaul_ipv4 =
@@ -1985,8 +1982,6 @@ bool Controller::handle_intel_slave_join(
 
     LOG(INFO) << "IRE Slave joined" << std::endl
               << "    slave_version=" << slave_version << std::endl
-              << "    gw_ipv4=" << gw_ipv4 << std::endl
-              << "    gw_bridge_mac=" << gw_bridge_mac << std::endl
               << "    slave_name=" << slave_name << std::endl
               << "    parent_bssid_mac=" << parent_bssid_mac << std::endl
               << "    backhaul_mac=" << backhaul_mac << std::endl
