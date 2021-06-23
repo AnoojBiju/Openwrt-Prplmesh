@@ -34,6 +34,7 @@ public:
 
 protected:
     void work() override;
+    virtual void handle_event(int event_type, void *obj) override;
 
 private:
     db &database;
@@ -74,6 +75,11 @@ private:
      * NBAPI object.
      */
     std::unordered_map<sMacAddr, std::queue<std::string>> m_agents;
+
+    /**
+     * @brief Queue with paths to NBAPI AgentConnectedEvent objects.
+     */
+    std::queue<std::string> m_disconnected;
 
     /**
      * @brief Map with key=ruid and value BSSes that were configured
@@ -184,6 +190,23 @@ private:
      */
     bool dm_add_neighbor_to_agent_connected_event(const std::string &event_path,
                                                   ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Adds NBAPI AgentDisconnectedEvent object, all its sub-objects and set values
+     * for it's parameters parameters.
+     * @param src_mac MAC address of agent.
+     * @return True on success, false otherwise.
+     */
+    bool dm_add_agent_disconnected_event(const sMacAddr &agent_mac);
+
+    /**
+     * @brief Set values for parameters of NBAPI AgentDisconnected, adds its sub-objects.
+     * @param agent_discon_path Path to NBAPI AgentDisconnectedEvent object.
+     * @param src_mac MAC address of agent.
+     * @return True on success, false otherwise.
+     */
+    bool dm_set_agent_disconnected_event_params(const std::string &agent_discon_path,
+                                                const sMacAddr &agent_mac);
 };
 
 } // namespace son

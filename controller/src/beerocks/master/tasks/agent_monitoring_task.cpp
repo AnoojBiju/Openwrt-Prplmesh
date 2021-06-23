@@ -91,6 +91,24 @@ bool agent_monitoring_task::handle_ieee1905_1_msg(const sMacAddr &src_mac,
     return true;
 }
 
+void agent_monitoring_task::handle_event(int event_type, void *obj)
+{
+    switch (event_type) {
+    case (STATE_DISCONNECTED): {
+        std::string agent_mac = *static_cast<std::string *>(obj);
+
+        if (agent_mac.empty()) {
+            LOG(ERROR) << "Empty agent mac";
+            return;
+        }
+        dm_add_agent_disconnected_event(tlvf::mac_from_string(agent_mac));
+        break;
+    }
+    default:
+        break;
+    }
+}
+
 bool agent_monitoring_task::start_agent_monitoring(const sMacAddr &src_mac,
                                                    ieee1905_1::CmduMessageRx &cmdu_rx)
 {
@@ -160,8 +178,12 @@ bool agent_monitoring_task::start_agent_monitoring(const sMacAddr &src_mac,
         m_bss_configured.erase(radio_entry.radio_uid());
     }
 
-    if (!database.dm_check_objects_limit(m_agents[src_mac], MAX_EVENT_HISTORY_SIZE)) {
-        return false;
+    if (m_agents.count(src_mac)) {
+        dm_add_agent_disconnected_event(src_mac); // Agent reconnecting.
+
+        if (!database.dm_check_objects_limit(m_agents[src_mac], MAX_EVENT_HISTORY_SIZE)) {
+            return false;
+        }
     }
     auto agent_connected_event_path = dm_add_agent_connected_event(src_mac, ap_op_bss_tlv, cmdu_rx);
 
@@ -174,6 +196,9 @@ bool agent_monitoring_task::start_agent_monitoring(const sMacAddr &src_mac,
     if (!dm_add_neighbor_to_agent_connected_event(agent_connected_event_path, cmdu_rx)) {
         LOG(ERROR) << "Failed to add " << agent_connected_event_path << ".Neighbor";
         return false;
+    }
+    if (database.get_agent_monitoring_task_id() == db::TASK_ID_NOT_FOUND) {
+        database.assign_agent_monitoring_task_id(id);
     }
     return true;
 }
@@ -512,4 +537,140 @@ void agent_monitoring_task::save_radio_statistics(const sMacAddr &src_mac,
     radio_stats->receive_other                    = radio_metrics_tlv->receive_other();
     radio_stats->utilization                      = 0; // TO DO: PPM-1136
     m_radio_stats[radio_metrics_tlv->radio_uid()] = radio_stats;
+}
+
+bool agent_monitoring_task::dm_add_agent_disconnected_event(const sMacAddr &agent_mac)
+{
+    if (!database.dm_check_objects_limit(m_disconnected, MAX_EVENT_HISTORY_SIZE)) {
+        LOG(ERROR) << "Failed to remove overflow AgentDisconnectedEvent objects.";
+        return false;
+    }
+
+    auto ambiorix_dm = database.get_ambiorix_obj();
+
+    if (!ambiorix_dm) {
+        LOG(ERROR) << "ambiorix_dm is nullptr";
+        return false;
+    }
+
+    std::string agent_discon_event_path = "Controller.AgentDisconnectedEvent.AgentDisconnected";
+    std::string agent_discon_path       = ambiorix_dm->add_instance(agent_discon_event_path);
+
+    if (agent_discon_path.empty()) {
+        LOG(ERROR) << "Failed to add " << agent_discon_event_path << " for mac: " << agent_mac;
+        return false;
+    }
+    m_disconnected.push(agent_discon_path);
+    if (!ambiorix_dm->set(agent_discon_path, "ID", tlvf::mac_to_string(agent_mac))) {
+        LOG(ERROR) << "Failed to set " << agent_discon_path << "ID";
+        return false;
+    }
+    if (!dm_set_agent_disconnected_event_params(agent_discon_path, agent_mac)) {
+        return false;
+    }
+    return true;
+}
+
+bool agent_monitoring_task::dm_set_agent_disconnected_event_params(
+    const std::string &agent_discon_path, const sMacAddr &agent_mac)
+{
+    bool ok          = true;
+    auto ambiorix_dm = database.get_ambiorix_obj();
+
+    if (!ambiorix_dm) {
+        LOG(ERROR) << "ambiorix_dm is nullptr";
+        return false;
+    }
+
+    auto agent = database.m_agents.get(agent_mac);
+
+    if (!agent) {
+        LOG(ERROR) << "Agent with mac is not found in database mac=" << agent_mac;
+        return false;
+    }
+    for (const auto &radio : agent->radios) {
+
+        auto radio_path = ambiorix_dm->add_instance(agent_discon_path + ".Radio");
+
+        if (radio_path.empty() && NBAPI_ON) {
+            LOG(ERROR) << "Failed to add " << agent_discon_path + ".Radio"
+                       << ". MAC: " << radio.first;
+            return false;
+        }
+        ok &= ambiorix_dm->set(radio_path, "MACAddress", tlvf::mac_to_string(radio.first));
+        auto radio_stats = m_radio_stats.get(radio.first);
+
+        if (radio_stats) {
+            ok &= ambiorix_dm->set(radio_path, "Utilization", radio_stats->utilization);
+            ok &= ambiorix_dm->set(radio_path, "Transmit", radio_stats->transmit);
+            ok &= ambiorix_dm->set(radio_path, "ReceiveSelf", radio_stats->receive_self);
+            ok &= ambiorix_dm->set(radio_path, "ReceiveOther", radio_stats->receive_other);
+            ok &= ambiorix_dm->set(radio_path, "Noise", radio_stats->noise);
+            if (!ok) {
+                LOG(ERROR) << "Failed to set parameter for " << radio_path;
+                return false;
+            }
+        }
+        for (const auto &bss : radio.second->bsses) {
+
+            auto bss_path = ambiorix_dm->add_instance(radio_path + ".BSS");
+
+            if (bss_path.empty() && NBAPI_ON) {
+                LOG(ERROR) << "Failed to add " << radio_path + ".BSS"
+                           << ". BSSID: " << bss.first;
+                return false;
+            }
+            ok &= ambiorix_dm->set(bss_path, "BSSID", tlvf::mac_to_string(bss.first));
+            auto bss_stats = m_bss_stats.get(bss.first);
+
+            if (bss_stats) {
+                ok &= ambiorix_dm->set(bss_path, "UnicastBytesSent", bss_stats->unicast_bytes_sent);
+                ok &= ambiorix_dm->set(bss_path, "UnicastBytesReceived",
+                                       bss_stats->unicast_bytes_received);
+                ok &= ambiorix_dm->set(bss_path, "MulticastBytesSent",
+                                       bss_stats->multicast_bytes_sent);
+                ok &= ambiorix_dm->set(bss_path, "MulticastBytesReceived",
+                                       bss_stats->multicast_bytes_received);
+                ok &= ambiorix_dm->set(bss_path, "BroadcastBytesSent",
+                                       bss_stats->broadcast_bytes_sent);
+                ok &= ambiorix_dm->set(bss_path, "BroadcastBytesReceived",
+                                       bss_stats->broadcast_bytes_received);
+                if (!ok) {
+                    LOG(ERROR) << "Failed to set parameter for " << bss_path;
+                    return false;
+                }
+            }
+            for (const auto &sta : bss.second->connected_stations) {
+
+                auto sta_path = ambiorix_dm->add_instance(bss_path + ".STA");
+
+                if (sta_path.empty() && NBAPI_ON) {
+                    LOG(ERROR) << "Failed to add " << bss_path + ".STA"
+                               << ". MAC: " << sta.first;
+                    return false;
+                }
+                if (!ambiorix_dm->set(sta_path, "MACAddress", tlvf::mac_to_string(sta.first))) {
+                    LOG(ERROR) << "Failed to set MACAddress for " << sta_path;
+                    return false;
+                }
+            }
+        }
+    }
+
+    auto neighbors = database.get_1905_1_neighbors(agent_mac);
+
+    for (const auto &neighbor : neighbors) {
+        auto neighbor_path = ambiorix_dm->add_instance(agent_discon_path + ".Neighbor");
+
+        if (neighbor_path.empty() && NBAPI_ON) {
+            LOG(ERROR) << "Failed to add " << agent_discon_path + ".Neighbor"
+                       << ". MAC: " << neighbor;
+            return false;
+        }
+        ok &= ambiorix_dm->set(neighbor_path, "ID", tlvf::mac_to_string(neighbor));
+    }
+    if (!ok) {
+        LOG(ERROR) << "Failed to set some of parameter for " << agent_discon_path;
+    }
+    return ok;
 }
