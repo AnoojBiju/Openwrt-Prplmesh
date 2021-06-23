@@ -150,7 +150,7 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
                              << "backhaul_bss_disallow_profile1_agent_association = "
                                 "backhaul_bss_disallow_profile2_agent_association = "
                              << bss.backhaul_bss_disallow_profile1_agent_association;
-                return;
+                continue;
             }
             auto bss_iface_netdevs =
                 network_utils::get_bss_ifaces(bss_iface, db->bridge.iface_name);
