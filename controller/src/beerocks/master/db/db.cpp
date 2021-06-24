@@ -5241,6 +5241,17 @@ std::shared_ptr<sAgent::sRadio> db::get_radio_by_uid(const sMacAddr &radio_uid)
     return {};
 }
 
+std::shared_ptr<sStation> db::get_station(const sMacAddr &mac)
+{
+    auto station = m_stations.get(mac);
+    if (!station) {
+        LOG(WARNING) << "station " << mac << " not found";
+        return {};
+    }
+
+    return station;
+}
+
 std::set<std::shared_ptr<node>> db::get_node_subtree(std::shared_ptr<node> n)
 {
     std::set<std::shared_ptr<node>> subtree;
