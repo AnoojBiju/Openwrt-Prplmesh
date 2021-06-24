@@ -237,9 +237,9 @@ std::string db::get_node_data_model_path(const std::string &mac)
     return n->dm_path;
 }
 
-bool db::add_node_gateway(const sMacAddr &mac, const sMacAddr &radio_identifier)
+bool db::add_node_gateway(const sMacAddr &mac)
 {
-    if (!add_node(mac, network_utils::ZERO_MAC, beerocks::TYPE_GW, radio_identifier)) {
+    if (!add_node(mac, network_utils::ZERO_MAC, beerocks::TYPE_GW)) {
         LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
         return false;
     }
@@ -262,10 +262,9 @@ bool db::add_node_gateway(const sMacAddr &mac, const sMacAddr &radio_identifier)
     return true;
 }
 
-bool db::add_node_ire(const sMacAddr &mac, const sMacAddr &parent_mac,
-                      const sMacAddr &radio_identifier)
+bool db::add_node_ire(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
-    if (!add_node(mac, parent_mac, beerocks::TYPE_IRE, radio_identifier)) {
+    if (!add_node(mac, parent_mac, beerocks::TYPE_IRE)) {
         LOG(ERROR) << "Failed to add ire node, mac: " << mac;
         return false;
     }
@@ -288,10 +287,9 @@ bool db::add_node_ire(const sMacAddr &mac, const sMacAddr &parent_mac,
     return true;
 }
 
-bool db::add_node_wireless_bh(const sMacAddr &mac, const sMacAddr &parent_mac,
-                              const sMacAddr &radio_identifier)
+bool db::add_node_wireless_bh(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
-    if (!add_node(mac, parent_mac, beerocks::TYPE_IRE_BACKHAUL, radio_identifier)) {
+    if (!add_node(mac, parent_mac, beerocks::TYPE_IRE_BACKHAUL)) {
         LOG(ERROR) << "Failed to add wireless_bh node, mac: " << mac;
         return false;
     }
@@ -300,10 +298,9 @@ bool db::add_node_wireless_bh(const sMacAddr &mac, const sMacAddr &parent_mac,
     return true;
 }
 
-bool db::add_node_wired_bh(const sMacAddr &mac, const sMacAddr &parent_mac,
-                           const sMacAddr &radio_identifier)
+bool db::add_node_wired_bh(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
-    if (!add_node(mac, parent_mac, beerocks::TYPE_ETH_SWITCH, radio_identifier)) {
+    if (!add_node(mac, parent_mac, beerocks::TYPE_ETH_SWITCH)) {
         LOG(ERROR) << "Failed to add wired_bh node, mac: " << mac;
         return false;
     }
@@ -372,10 +369,9 @@ bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac,
     return true;
 }
 
-bool db::add_node_client(const sMacAddr &mac, const sMacAddr &parent_mac,
-                         const sMacAddr &radio_identifier)
+bool db::add_node_client(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
-    if (!add_node(mac, parent_mac, beerocks::TYPE_CLIENT, radio_identifier)) {
+    if (!add_node(mac, parent_mac, beerocks::TYPE_CLIENT)) {
         LOG(ERROR) << "Failed to add client node, mac: " << mac;
         return false;
     }
