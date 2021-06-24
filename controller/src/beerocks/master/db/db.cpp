@@ -338,10 +338,9 @@ std::string db::dm_add_radio_element(const std::string &radio_mac, const std::st
     return radio_instance;
 }
 
-bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac,
-                        const sMacAddr &radio_identifier)
+bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
-    if (!add_node(mac, parent_mac, beerocks::TYPE_SLAVE, radio_identifier)) {
+    if (!add_node(mac, parent_mac, beerocks::TYPE_SLAVE, mac)) {
         LOG(ERROR) << "Failed to add radio node, mac: " << mac;
         return false;
     }

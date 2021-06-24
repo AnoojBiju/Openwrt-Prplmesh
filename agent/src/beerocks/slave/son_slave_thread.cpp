@@ -4128,8 +4128,6 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
             // Platform Configuration
             notification->low_pass_filter_on()   = config.backhaul_wireless_iface_filter_low;
             notification->enable_repeater_mode() = config.enable_repeater_mode;
-            notification->radio_identifier()     = radio->front.iface_mac;
-            tlvf::mac_from_string(config.radio_identifier);
 
             // Backhaul Params
             notification->backhaul_params().gw_ipv4 =

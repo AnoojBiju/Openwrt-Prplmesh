@@ -1963,9 +1963,8 @@ bool Controller::handle_intel_slave_join(
     std::string bridge_mac_str = tlvf::mac_to_string(bridge_mac);
     std::string bridge_ipv4 =
         beerocks::net::network_utils::ipv4_to_string(notification->backhaul_params().bridge_ipv4);
-    bool backhaul_manager        = (bool)notification->backhaul_params().is_backhaul_manager;
-    std::string radio_identifier = tlvf::mac_to_string(notification->radio_identifier());
-    bool acs_enabled             = (notification->wlan_settings().channel == 0);
+    bool backhaul_manager = (bool)notification->backhaul_params().is_backhaul_manager;
+    bool acs_enabled      = (notification->wlan_settings().channel == 0);
 
     std::string gw_name;
     if (is_gw_slave) {
@@ -1992,7 +1991,6 @@ bool Controller::handle_intel_slave_join(
               << "    backhaul_type=" << beerocks::utils::get_iface_type_string(backhaul_iface_type)
               << std::endl
               << "    low_pass_filter_on = " << int(notification->low_pass_filter_on()) << std::endl
-              << "    radio_identifier = " << radio_identifier << std::endl
               << "    radio_mac = " << radio_mac << std::endl
               << "    channel = " << int(notification->wlan_settings().channel) << std::endl
               << "    is_gw_slave = " << int(is_gw_slave) << std::endl;
@@ -2225,7 +2223,7 @@ bool Controller::handle_intel_slave_join(
         }
         database.clear_hostap_stats_info(bridge_mac, radio_mac);
     } else {
-        database.add_node_radio(radio_mac, bridge_mac, tlvf::mac_from_string(radio_identifier));
+        database.add_node_radio(radio_mac, bridge_mac);
     }
 
     auto radio = database.get_radio(bridge_mac, radio_mac);
@@ -2536,8 +2534,7 @@ bool Controller::handle_non_intel_slave_join(
         }
         database.clear_hostap_stats_info(bridge_mac, radio_mac);
     } else {
-        // TODO Intel Slave Join has separate radio MAC and UID; we use radio_mac for both.
-        database.add_node_radio(radio_mac, bridge_mac, radio_mac);
+        database.add_node_radio(radio_mac, bridge_mac);
     }
 
     // TODO Assume no backhaul manager

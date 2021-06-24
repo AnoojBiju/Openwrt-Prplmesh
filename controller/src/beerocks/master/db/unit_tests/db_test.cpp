@@ -35,7 +35,6 @@ constexpr auto g_zero_mac                   = "00:00:00:00:00:00";
 constexpr auto g_bridge_mac                 = "46:55:66:77:00:00";
 constexpr auto g_radio_mac_1                = "46:55:66:77:00:21";
 constexpr auto g_radio_mac_2                = "46:55:66:77:00:22";
-constexpr auto g_radio_identifier           = "46:55:66:77:00:02";
 constexpr auto g_client_mac                 = "46:55:66:77:00:31";
 constexpr auto g_vap_id_1                   = 1;
 constexpr auto g_bssid_1                    = "46:55:66:77:00:03";
@@ -115,8 +114,7 @@ protected:
 
         //prepare scenario
         EXPECT_TRUE(m_db->add_node_radio(tlvf::mac_from_string(g_radio_mac_1),
-                                         tlvf::mac_from_string(g_bridge_mac),
-                                         tlvf::mac_from_string(g_radio_mac_1)));
+                                         tlvf::mac_from_string(g_bridge_mac)));
         EXPECT_TRUE(m_db->has_node(tlvf::mac_from_string(g_radio_mac_1)));
         EXPECT_EQ(std::string(g_device_path) + ".1.Radio.1",
                   m_db->get_node_data_model_path(g_radio_mac_1));
@@ -191,8 +189,7 @@ TEST_F(DbTest, test_add_node_radio)
 
     //add radio node
     EXPECT_TRUE(m_db->add_node_radio(tlvf::mac_from_string(g_radio_mac_1),
-                                     tlvf::mac_from_string(g_bridge_mac),
-                                     tlvf::mac_from_string(g_radio_identifier)));
+                                     tlvf::mac_from_string(g_bridge_mac)));
 
     //radio node and path must exist
     EXPECT_TRUE(m_db->has_node(tlvf::mac_from_string(g_radio_mac_1)));
@@ -223,8 +220,7 @@ TEST_F(DbTest, test_add_vap)
 
     //prepare scenario
     EXPECT_TRUE(m_db->add_node_radio(tlvf::mac_from_string(g_radio_mac_1),
-                                     tlvf::mac_from_string(g_bridge_mac),
-                                     tlvf::mac_from_string(g_radio_identifier)));
+                                     tlvf::mac_from_string(g_bridge_mac)));
     EXPECT_TRUE(m_db->has_node(tlvf::mac_from_string(g_radio_mac_1)));
     EXPECT_EQ(std::string(radio_path) + ".1", m_db->get_node_data_model_path(g_radio_mac_1));
 
@@ -299,11 +295,9 @@ TEST_F(DbTest, test_set_ap_ht_capabilities)
 
     //prepare scenario
     EXPECT_TRUE(m_db->add_node_radio(tlvf::mac_from_string(g_radio_mac_1),
-                                     tlvf::mac_from_string(g_bridge_mac),
-                                     tlvf::mac_from_string(g_radio_identifier)));
+                                     tlvf::mac_from_string(g_bridge_mac)));
     EXPECT_TRUE(m_db->add_node_radio(tlvf::mac_from_string(g_radio_mac_2),
-                                     tlvf::mac_from_string(g_bridge_mac),
-                                     tlvf::mac_from_string(g_radio_identifier)));
+                                     tlvf::mac_from_string(g_bridge_mac)));
     EXPECT_TRUE(m_db->has_node(tlvf::mac_from_string(g_radio_mac_1)));
     EXPECT_EQ(std::string(g_device_path) + ".1.Radio.1",
               m_db->get_node_data_model_path(g_radio_mac_1));
@@ -375,8 +369,7 @@ TEST_F(DbTest, test_add_hostap_supported_operating_class)
 
     //prepare scenario
     EXPECT_TRUE(m_db->add_node_radio(tlvf::mac_from_string(g_radio_mac_1),
-                                     tlvf::mac_from_string(g_bridge_mac),
-                                     tlvf::mac_from_string(g_radio_identifier)));
+                                     tlvf::mac_from_string(g_bridge_mac)));
     EXPECT_TRUE(m_db->has_node(tlvf::mac_from_string(g_radio_mac_1)));
     EXPECT_EQ(std::string(g_device_path) + ".1.Radio.1",
               m_db->get_node_data_model_path(g_radio_mac_1));
@@ -430,8 +423,7 @@ TEST_F(DbTest, test_set_ap_he_capabilities)
 
     //prepare scenario
     EXPECT_TRUE(m_db->add_node_radio(tlvf::mac_from_string(g_radio_mac_1),
-                                     tlvf::mac_from_string(g_bridge_mac),
-                                     tlvf::mac_from_string(g_radio_identifier)));
+                                     tlvf::mac_from_string(g_bridge_mac)));
     EXPECT_TRUE(m_db->has_node(tlvf::mac_from_string(g_radio_mac_1)));
     EXPECT_EQ(std::string(g_device_path) + ".1.Radio.1",
               m_db->get_node_data_model_path(g_radio_mac_1));
@@ -518,8 +510,7 @@ TEST_F(DbTest, test_add_current_op_class)
 
     //prepare scenario
     EXPECT_TRUE(m_db->add_node_radio(tlvf::mac_from_string(g_radio_mac_1),
-                                     tlvf::mac_from_string(g_bridge_mac),
-                                     tlvf::mac_from_string(g_radio_identifier)));
+                                     tlvf::mac_from_string(g_bridge_mac)));
     EXPECT_TRUE(m_db->has_node(tlvf::mac_from_string(g_radio_mac_1)));
     EXPECT_EQ(std::string(g_device_path) + ".1.Radio.1",
               m_db->get_node_data_model_path(g_radio_mac_1));
@@ -623,8 +614,7 @@ TEST_F(DbTest, test_set_vap_stats_info)
 
     //prepare scenario
     EXPECT_TRUE(m_db->add_node_radio(tlvf::mac_from_string(g_radio_mac_1),
-                                     tlvf::mac_from_string(g_bridge_mac),
-                                     tlvf::mac_from_string(g_radio_identifier)));
+                                     tlvf::mac_from_string(g_bridge_mac)));
     EXPECT_TRUE(m_db->has_node(tlvf::mac_from_string(g_radio_mac_1)));
     EXPECT_EQ(std::string(radio_path) + ".1", m_db->get_node_data_model_path(g_radio_mac_1));
 
