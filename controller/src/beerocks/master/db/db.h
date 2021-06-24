@@ -305,6 +305,17 @@ public:
      */
     std::shared_ptr<sAgent::sRadio> get_radio_by_uid(const sMacAddr &radio_uid);
 
+    /**
+     * @brief Get station with a specific MAC address.
+     *
+     * Searches all sStation object to find one with the given MAC address.
+     * If no station with the given MAC was found, nullptr is returned and an error is logged.
+     *
+     * @param mac MAC address of the station.
+     * @return The sStation object, or nullptr if it doesn't exist.
+     */
+    std::shared_ptr<sStation> get_station(const sMacAddr &mac);
+
     //logger
     void set_log_level_state(const beerocks::eLogLevel &log_level, const bool &new_state);
 
