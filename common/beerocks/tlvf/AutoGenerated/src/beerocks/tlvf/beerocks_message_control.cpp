@@ -196,10 +196,6 @@ uint8_t& cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION::enable_repeater_mode() {
     return (uint8_t&)(*m_enable_repeater_mode);
 }
 
-sMacAddr& cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION::radio_identifier() {
-    return (sMacAddr&)(*m_radio_identifier);
-}
-
 uint8_t& cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION::is_slave_reconf() {
     return (uint8_t&)(*m_is_slave_reconf);
 }
@@ -212,7 +208,6 @@ void cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION::class_swap()
     m_backhaul_params->struct_swap();
     m_hostap->struct_swap();
     m_cs_params->struct_swap();
-    m_radio_identifier->struct_swap();
 }
 
 bool cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION::finalize()
@@ -253,7 +248,6 @@ size_t cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION::get_initial_size()
     class_size += sizeof(sApChannelSwitch); // cs_params
     class_size += sizeof(uint8_t); // low_pass_filter_on
     class_size += sizeof(uint8_t); // enable_repeater_mode
-    class_size += sizeof(sMacAddr); // radio_identifier
     class_size += sizeof(uint8_t); // is_slave_reconf
     return class_size;
 }
@@ -310,12 +304,6 @@ bool cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_radio_identifier = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(sMacAddr))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";
-        return false;
-    }
-    if (!m_parse__) { m_radio_identifier->struct_init(); }
     m_is_slave_reconf = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
