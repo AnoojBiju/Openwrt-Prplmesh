@@ -944,11 +944,9 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const std::string &src_m
     LOG(DEBUG) << "   device " << m1->manufacturer() << " " << m1->model_name() << " "
                << m1->device_name() << " " << m1->serial_number();
 
-    auto agent = database.m_agents.get(al_mac);
-    if (!agent) {
-        LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
-        return false;
-    }
+    // If the agent already exists, return the old one
+    auto agent   = database.m_agents.add(al_mac);
+    agent->state = beerocks::STATE_DISCONNECTED;
 
     // Profile-2 Multi AP profile is added for higher than Profile-1 agents.
     if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
