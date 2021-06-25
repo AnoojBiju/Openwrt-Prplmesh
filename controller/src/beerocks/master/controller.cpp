@@ -42,21 +42,15 @@
 #include <beerocks/tlvf/beerocks_message_1905_vs.h>
 #include <beerocks/tlvf/beerocks_message_control.h>
 
-#include <tlvf/ieee_1905_1/eMediaType.h>
 #include <tlvf/ieee_1905_1/eMessageType.h>
-#include <tlvf/ieee_1905_1/eTlvType.h>
-#include <tlvf/ieee_1905_1/s802_11SpecificInformation.h>
 #include <tlvf/ieee_1905_1/tlvAlMacAddress.h>
 #include <tlvf/ieee_1905_1/tlvAutoconfigFreqBand.h>
 #include <tlvf/ieee_1905_1/tlvEndOfMessage.h>
-#include <tlvf/ieee_1905_1/tlvMacAddress.h>
-#include <tlvf/ieee_1905_1/tlvReceiverLinkMetric.h>
 #include <tlvf/ieee_1905_1/tlvSearchedRole.h>
 #include <tlvf/ieee_1905_1/tlvSupportedFreqBand.h>
 #include <tlvf/ieee_1905_1/tlvSupportedRole.h>
 #include <tlvf/wfa_map/tlvApExtendedMetrics.h>
 #include <tlvf/wfa_map/tlvApMetrics.h>
-#include <tlvf/wfa_map/tlvApOperationalBSS.h>
 #include <tlvf/wfa_map/tlvApRadioIdentifier.h>
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
@@ -68,7 +62,6 @@
 #include <tlvf/wfa_map/tlvClientInfo.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
-#include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
 #include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>
 #include <tlvf/wfa_map/tlvProfile2MultiApProfile.h>
@@ -78,7 +71,6 @@
 #include <tlvf/wfa_map/tlvSteeringBTMReport.h>
 #include <tlvf/wfa_map/tlvSupportedService.h>
 #include <tlvf/wfa_map/tlvTimestamp.h>
-#include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
 #include <tlvf/wfa_map/tlvTunnelledData.h>
 #include <tlvf/wfa_map/tlvTunnelledProtocolType.h>
 #include <tlvf/wfa_map/tlvTunnelledSourceInfo.h>

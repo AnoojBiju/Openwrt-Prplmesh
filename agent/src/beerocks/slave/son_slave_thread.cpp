@@ -28,14 +28,9 @@
 #include <mapf/common/utils.h>
 #include <tlvf/WSC/AttrList.h>
 #include <tlvf/ieee_1905_1/tlvAlMacAddress.h>
-#include <tlvf/ieee_1905_1/tlvLinkMetricQuery.h>
-#include <tlvf/ieee_1905_1/tlvMacAddress.h>
 #include <tlvf/ieee_1905_1/tlvSupportedFreqBand.h>
 #include <tlvf/ieee_1905_1/tlvSupportedRole.h>
-#include <tlvf/wfa_map/tlvApMetricQuery.h>
-#include <tlvf/wfa_map/tlvApRadioBasicCapabilities.h>
 #include <tlvf/wfa_map/tlvApRadioIdentifier.h>
-#include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
 #include <tlvf/wfa_map/tlvBeaconMetricsResponse.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
