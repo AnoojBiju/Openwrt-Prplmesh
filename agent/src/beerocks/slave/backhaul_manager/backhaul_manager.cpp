@@ -40,9 +40,6 @@
 #include <bpl/bpl_cfg.h>
 #include <bpl/bpl_err.h>
 
-// SPEED values
-#include <linux/ethtool.h>
-
 #include <net/if.h> // if_nametoindex
 
 namespace beerocks {
