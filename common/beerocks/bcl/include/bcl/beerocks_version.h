@@ -10,7 +10,6 @@
 #define _BEEROCKS_VERSION_H_
 
 #include "beerocks_defines.h"
-#include <map>
 #include <tuple>
 
 namespace beerocks {

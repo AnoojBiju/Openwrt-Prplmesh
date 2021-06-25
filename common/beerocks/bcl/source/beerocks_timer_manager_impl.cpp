@@ -9,8 +9,6 @@
 #include <bcl/beerocks_timer_manager_impl.h>
 #include <bcl/network/timer_impl.h>
 
-#include <deque>
-
 #include <easylogging++.h>
 
 namespace beerocks {

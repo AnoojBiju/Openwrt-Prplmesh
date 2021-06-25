@@ -17,8 +17,6 @@
 #include <bcl/network/buffer_impl.h>
 #include <bcl/network/sockets.h>
 
-#include <unordered_map>
-
 namespace beerocks {
 
 class UccServerImpl : public UccServer {

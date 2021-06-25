@@ -17,7 +17,6 @@
 
 #include <climits>
 #include <cstdlib>
-#include <set>
 
 using namespace son;
 
