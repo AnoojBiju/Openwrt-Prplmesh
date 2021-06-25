@@ -1020,7 +1020,7 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const std::string &src_m
     auto beerocks_header = beerocks::message_com::parse_intel_vs_message(cmdu_rx);
     if (beerocks_header) {
         LOG(INFO) << "Intel radio agent join (al_mac=" << al_mac << " ruid=" << ruid;
-        if (!handle_intel_slave_join(src_mac, radio_basic_caps, *beerocks_header, cmdu_tx)) {
+        if (!handle_intel_slave_join(src_mac, radio_basic_caps, *beerocks_header, cmdu_tx, agent)) {
             LOG(ERROR) << "Intel radio agent join failed (al_mac=" << al_mac << " ruid=" << ruid
                        << ")";
             return false;
@@ -1030,7 +1030,7 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const std::string &src_m
         // Multi-AP Agent doesn't say anything about the bridge, so we have to rely on Intel Slave Join for that.
         // We'll use AL-MAC as the bridge
         // TODO convert source address into AL-MAC address
-        if (!handle_non_intel_slave_join(src_mac, radio_basic_caps, *m1, al_mac, ruid, cmdu_tx)) {
+        if (!handle_non_intel_slave_join(src_mac, radio_basic_caps, *m1, agent, ruid, cmdu_tx)) {
             LOG(ERROR) << "Non-Intel radio agent join failed (al_mac=" << al_mac << " ruid=" << ruid
                        << ")";
             return false;
@@ -1998,7 +1998,8 @@ bool Controller::handle_cmdu_1905_beacon_response(const std::string &src_mac,
 
 bool Controller::handle_intel_slave_join(
     const std::string &src_mac, std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps,
-    beerocks::beerocks_header &beerocks_header, ieee1905_1::CmduMessageTx &cmdu_tx)
+    beerocks::beerocks_header &beerocks_header, ieee1905_1::CmduMessageTx &cmdu_tx,
+    std::shared_ptr<sAgent> &agent)
 {
     // Prepare outcoming response vs tlv
     auto join_response =
@@ -2039,7 +2040,7 @@ bool Controller::handle_intel_slave_join(
     bool is_gw_slave           = (backhaul_iface_type == beerocks::IFACE_TYPE_GW_BRIDGE);
     beerocks::eType ire_type   = is_gw_slave ? beerocks::TYPE_GW : beerocks::TYPE_IRE;
     int backhaul_channel       = notification->backhaul_params().backhaul_channel;
-    sMacAddr bridge_mac        = notification->backhaul_params().bridge_mac;
+    sMacAddr bridge_mac        = agent->al_mac;
     std::string bridge_mac_str = tlvf::mac_to_string(bridge_mac);
     std::string bridge_ipv4 =
         beerocks::net::network_utils::ipv4_to_string(notification->backhaul_params().bridge_ipv4);
@@ -2162,16 +2163,9 @@ bool Controller::handle_intel_slave_join(
                << ire_type;
     if (is_gw_slave) {
         database.add_node_gateway(bridge_mac);
+        agent->is_gateway = true;
     } else {
         database.add_node_ire(bridge_mac, tlvf::mac_from_string(backhaul_mac));
-    }
-
-    // Workaround
-    // add_node_ire/gateway may fail if MAC address already exists in data model
-    auto agent = database.m_agents.get(bridge_mac);
-    if (!agent) {
-        LOG(ERROR) << "Could not get agent on bridge: " << bridge_mac;
-        return false;
     }
 
     database.set_node_state(bridge_mac_str, beerocks::STATE_CONNECTED);
@@ -2200,7 +2194,7 @@ bool Controller::handle_intel_slave_join(
         database.set_node_name(bridge_mac_str, slave_name);
 
         //TODO slave should include eth switch mac in the message
-        auto eth_sw_mac_binary = notification->backhaul_params().bridge_mac;
+        auto eth_sw_mac_binary = bridge_mac;
         ++eth_sw_mac_binary.oct[5];
 
         std::string eth_switch_mac = tlvf::mac_to_string(eth_sw_mac_binary);
@@ -2544,14 +2538,15 @@ bool Controller::autoconfig_wsc_parse_radio_caps(
 
 bool Controller::handle_non_intel_slave_join(
     const std::string &src_mac, std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps,
-    const WSC::m1 &m1, const sMacAddr &bridge_mac, const sMacAddr &radio_mac,
+    const WSC::m1 &m1, std::shared_ptr<sAgent> &agent, const sMacAddr &radio_mac,
     ieee1905_1::CmduMessageTx &cmdu_tx)
 {
 
     // Multi-AP Agent doesn't say anything about the backhaul, so simulate ethernet backhaul to satisfy
     // network map. MAC address is the bridge MAC with the last octet incremented by 1.
     // The mac address for the backhaul is the same since it is ethernet backhaul.
-    sMacAddr mac = bridge_mac;
+    sMacAddr bridge_mac = agent->al_mac;
+    sMacAddr mac        = bridge_mac;
     mac.oct[5]++;
     std::string backhaul_mac = tlvf::mac_to_string(mac);
     mac.oct[5]++;
@@ -2603,14 +2598,6 @@ bool Controller::handle_non_intel_slave_join(
                << ire_type;
 
     database.add_node_ire(bridge_mac, tlvf::mac_from_string(backhaul_mac));
-
-    // Workaround
-    // add_node_ire may fail if MAC address already exists in data model
-    auto agent = database.m_agents.get(bridge_mac);
-    if (!agent) {
-        LOG(ERROR) << "Could not get agent on bridge: " << bridge_mac;
-        return false;
-    }
 
     agent->state = beerocks::STATE_CONNECTED;
     database.set_node_state(bridge_mac_str, beerocks::STATE_CONNECTED);
