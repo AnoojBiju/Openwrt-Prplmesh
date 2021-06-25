@@ -948,6 +948,8 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const std::string &src_m
     auto agent   = database.m_agents.add(al_mac);
     agent->state = beerocks::STATE_DISCONNECTED;
 
+    database.set_agent_manufacturer(*agent, "prplMesh");
+
     // Profile-2 Multi AP profile is added for higher than Profile-1 agents.
     if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
         !handle_tlv_profile2_ap_capability(agent, cmdu_rx)) {
@@ -2185,8 +2187,7 @@ bool Controller::handle_intel_slave_join(
         database.set_node_ipv4(backhaul_mac, bridge_ipv4);
         database.set_node_ipv4(bridge_mac_str, bridge_ipv4);
 
-        database.set_node_manufacturer(backhaul_mac, "prplMesh");
-        database.set_agent_manufacturer(*agent, "prplMesh");
+        database.set_node_manufacturer(backhaul_mac, agent->manufacturer);
 
         database.set_node_type(backhaul_mac, beerocks::TYPE_IRE_BACKHAUL);
 
@@ -2202,7 +2203,7 @@ bool Controller::handle_intel_slave_join(
         database.set_node_state(eth_switch_mac, beerocks::STATE_CONNECTED);
         database.set_node_name(eth_switch_mac, slave_name + "_ETH");
         database.set_node_ipv4(eth_switch_mac, bridge_ipv4);
-        database.set_node_manufacturer(eth_switch_mac, "prplMesh");
+        database.set_node_manufacturer(eth_switch_mac, agent->manufacturer);
 
         //run locating task on ire
         if (!database.is_node_wireless(backhaul_mac)) {
@@ -2551,9 +2552,8 @@ bool Controller::handle_non_intel_slave_join(
     std::string backhaul_mac = tlvf::mac_to_string(mac);
     mac.oct[5]++;
     std::string eth_switch_mac = tlvf::mac_to_string(mac);
-    auto manufacturer          = m1.manufacturer();
     LOG(INFO) << "IRE generic Slave joined" << std::endl
-              << "    manufacturer=" << manufacturer << std::endl
+              << "    manufacturer=" << agent->manufacturer << std::endl
               << "    al_mac=" << bridge_mac << std::endl
               << "    eth_switch_mac=" << eth_switch_mac << std::endl
               << "    backhaul_mac=" << backhaul_mac << std::endl
@@ -2603,15 +2603,14 @@ bool Controller::handle_non_intel_slave_join(
     database.set_node_state(bridge_mac_str, beerocks::STATE_CONNECTED);
     database.set_node_backhaul_iface_type(backhaul_mac, beerocks::eIfaceType::IFACE_TYPE_ETHERNET);
     database.set_node_backhaul_iface_type(bridge_mac_str, beerocks::IFACE_TYPE_BRIDGE);
-    database.set_node_manufacturer(backhaul_mac, manufacturer);
-    database.set_agent_manufacturer(*agent, manufacturer);
+    database.set_node_manufacturer(backhaul_mac, agent->manufacturer);
     database.set_node_type(backhaul_mac, beerocks::TYPE_IRE_BACKHAUL);
-    database.set_node_name(backhaul_mac, manufacturer + "_BH");
-    database.set_node_name(bridge_mac_str, manufacturer);
+    database.set_node_name(backhaul_mac, agent->manufacturer + "_BH");
+    database.set_node_name(bridge_mac_str, agent->manufacturer);
     database.add_node_wired_bh(tlvf::mac_from_string(eth_switch_mac), bridge_mac);
     database.set_node_state(eth_switch_mac, beerocks::STATE_CONNECTED);
-    database.set_node_name(eth_switch_mac, manufacturer + "_ETH");
-    database.set_node_manufacturer(eth_switch_mac, eth_switch_mac);
+    database.set_node_name(eth_switch_mac, agent->manufacturer + "_ETH");
+    database.set_node_manufacturer(eth_switch_mac, agent->manufacturer);
 
     // Update existing node, or add a new one
     if (database.has_node(radio_mac)) {
