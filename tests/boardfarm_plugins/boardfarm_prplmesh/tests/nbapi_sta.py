@@ -38,6 +38,10 @@ class NbapiSta(PrplMeshBaseTest):
         controller.nbapi_command("Controller.Network", "AccessPointCommit")
 
         time.sleep(5)
+
+        time_before_sta_connect = datetime.now()
+        time_before_sta_connect = pytz.utc.localize(time_before_sta_connect)
+
         sta1.wifi_connect(vap1)
 
         agent.radios[1].send_bwl_event(
@@ -107,16 +111,21 @@ class NbapiSta(PrplMeshBaseTest):
                     self.get_nbapi_vht_capabilities(sta.path)
 
                     time_sta = dateutil.parser.isoparse(time_stamp)
-                    # TO DO: PPM-1230
-                    if time_sta <= time_before_query:
-                        debug('Fail. Sta time group was collected earlier '
-                              'than AP Metrics Query was sent.')
+
+                    # Verify Station connection time
+                    if time_sta <= time_before_sta_connect:
+                        self.fail('Fail. Sta connection time earlier '
+                                  'than test triggering.')
+
+                    # TODO: AP Metrics Query does not update timestamp value.
+                    # This check does not fully validate update time of AP Metric Query.
                     if time_before_query + timedelta(seconds=10) <= time_sta:
                         self.fail('Fail. Sta time group was collected '
                                   'more than 10s after AP Metrics Query was send.')
                     print(
                         f'Sta group was collected at: [{time_sta}], '
-                        f'time before query: {time_before_query}')
+                        f'time before query: [{time_before_query}],'
+                        f'time before connection: {time_before_sta_connect}')
 
                     check_time_format = re.match(
                         r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+(Z|[-+]\d{2}:\d{2})',
