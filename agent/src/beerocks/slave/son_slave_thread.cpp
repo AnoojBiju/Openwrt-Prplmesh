@@ -4151,7 +4151,6 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
                 backhaul_params.backhaul_is_wireless;
 
             if (!db->bridge.iface_name.empty()) {
-                notification->backhaul_params().bridge_mac = db->bridge.mac;
                 notification->backhaul_params().bridge_ipv4 =
                     network_utils::ipv4_from_string(backhaul_params.bridge_ipv4);
                 notification->backhaul_params().backhaul_ipv4 =
