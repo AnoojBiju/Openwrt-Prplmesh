@@ -2236,7 +2236,7 @@ bool db::remove_vap(const sMacAddr &radio_mac, int vap_id)
 }
 
 bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bssid,
-                 const std::string &ssid, bool backhual)
+                 const std::string &ssid, bool backhaul)
 {
     if (!has_node(tlvf::mac_from_string(bssid)) &&
         !add_virtual_node(tlvf::mac_from_string(bssid), tlvf::mac_from_string(radio_mac))) {
@@ -2246,7 +2246,7 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
     auto &vaps_info                = get_hostap_vap_list(tlvf::mac_from_string(radio_mac));
     vaps_info[vap_id].mac          = bssid;
     vaps_info[vap_id].ssid         = ssid;
-    vaps_info[vap_id].backhaul_vap = backhual;
+    vaps_info[vap_id].backhaul_vap = backhaul;
 
     return dm_set_radio_bss(tlvf::mac_from_string(radio_mac), tlvf::mac_from_string(bssid), ssid);
 }

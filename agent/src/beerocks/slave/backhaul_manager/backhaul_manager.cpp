@@ -1293,8 +1293,8 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
 
                 /**
                  * This code was disabled as part of the effort to pass certification flow
-                 * (PR #1469), and broke wireless backhual flow.
-                 * If a connected backhual interface has been discovered, the backhaul fsm was set
+                 * (PR #1469), and broke wireless backhaul flow.
+                 * If a connected backhaul interface has been discovered, the backhaul fsm was set
                  * to MASTER_DISCOVERY state, otherwise to INITIATE_SCAN.
                  */
 

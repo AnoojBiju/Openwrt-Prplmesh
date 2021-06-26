@@ -847,7 +847,7 @@ public:
     std::set<std::string> get_hostap_vaps_bssids(const std::string &mac);
     bool remove_vap(const sMacAddr &mac, int vap_id);
     bool add_vap(const std::string &radio_mac, int vap_id, const std::string &bssid,
-                 const std::string &ssid, bool backhual);
+                 const std::string &ssid, bool backhaul);
 
     /** Update VAP information
      *
