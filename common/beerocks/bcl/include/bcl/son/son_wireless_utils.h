@@ -17,7 +17,6 @@
 #include <tlvf/WSC/eWscVendorExt.h>
 
 #include <deque>
-#include <iostream>
 #include <list>
 #include <map>
 #include <set>

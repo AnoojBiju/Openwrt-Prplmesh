@@ -93,8 +93,6 @@
 #include <tlvf/wfa_map/tlvTunnelledProtocolType.h>
 #include <tlvf/wfa_map/tlvTunnelledSourceInfo.h>
 
-#include <iostream>
-
 using namespace ieee1905_1;
 
 int CmduMessageRx::getNextTlvType() const

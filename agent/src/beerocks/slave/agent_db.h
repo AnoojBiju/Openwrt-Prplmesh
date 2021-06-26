@@ -17,7 +17,6 @@
 #include <beerocks/tlvf/enums/eDfsState.h>
 #include <beerocks/tlvf/structs/sSupportedBandwidth.h>
 #include <bwl/sta_wlan_hal.h>
-#include <iostream>
 #include <memory>
 #include <mutex>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
