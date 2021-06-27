@@ -193,7 +193,21 @@
   variables:
     EASYMESH_REVISION: "R2"
   before_script:
-    - tools/deploy_firmware.py --device "$RUN_ON_DEVICE"  --target-name "$RUN_ON_DEVICE" --image "$AXEPOINT_FULLIMAGE"
+    - |
+      case "$RUN_ON_DEVICE" in
+          axepoint)
+              IMAGE_NAME="$AXEPOINT_FULLIMAGE"
+          ;;
+          nec-wx3000hp)
+              IMAGE_NAME="$NEC_WX3000HP_FULLIMAGE"
+          ;;
+          turris-omnia)
+              IMAGE_NAME="$TURRIS_OMNIA_FULLIMAGE"
+          ;;
+          *)
+              IMAGE_NAME=''
+          ;;
+      esac
+      tools/deploy_firmware.py --device "$RUN_ON_DEVICE"  --target-name "$RUN_ON_DEVICE" --image "$IMAGE_NAME"
     - tools/setup_uci.sh --target-type "$RUN_ON_DEVICE" --target-name "$RUN_ON_DEVICE"
     - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE build/$RUN_ON_DEVICE/prplmesh.ipk
-
