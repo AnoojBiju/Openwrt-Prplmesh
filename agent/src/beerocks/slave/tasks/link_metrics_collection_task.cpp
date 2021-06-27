@@ -13,6 +13,7 @@
 #include "../helpers/link_metrics/ieee802_11_link_metrics_collector.h"
 #include "../helpers/link_metrics/ieee802_3_link_metrics_collector.h"
 #include "../helpers/media_type.h"
+#include "../traffic_separation.h"
 
 #include <beerocks/tlvf/beerocks_message_backhaul.h>
 
@@ -27,7 +28,9 @@
 #include <tlvf/wfa_map/tlvBeaconMetricsQuery.h>
 #include <tlvf/wfa_map/tlvChannelScanReportingPolicy.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
+#include <tlvf/wfa_map/tlvProfile2Default802dotQSettings.h>
 #include <tlvf/wfa_map/tlvProfile2RadioMetrics.h>
+#include <tlvf/wfa_map/tlvProfile2TrafficSeparationPolicy.h>
 #include <tlvf/wfa_map/tlvProfile2UnsuccessfulAssociationPolicy.h>
 #include <tlvf/wfa_map/tlvStaMacAddressType.h>
 #include <tlvf/wfa_map/tlvSteeringPolicy.h>
@@ -632,6 +635,8 @@ void LinkMetricsCollectionTask::handle_multi_ap_policy_config_request(
     auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Received MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE, mid=" << std::hex << mid;
 
+    std::unordered_set<sMacAddr> msg_forwarded_to_son_slave;
+
     auto steering_policy_tlv = cmdu_rx.getClass<wfa_map::tlvSteeringPolicy>();
     if (steering_policy_tlv) {
         // For the time being, agent doesn't do steering so steering policy is ignored.
@@ -669,7 +674,12 @@ void LinkMetricsCollectionTask::handle_multi_ap_policy_config_request(
                      * Send message to fronthaul instead of slave
                      */
                     LOG(ERROR) << "Failed to forward message to fronthaul " << radio->radio_mac;
+                } else {
+                    LOG(DEBUG) << "Forwarding MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE to son_slave "
+                               << radio->hostap_iface;
+                    msg_forwarded_to_son_slave.insert(metrics_reporting_conf.radio_uid);
                 }
+
             } else {
                 LOG(INFO) << "Radio Unique Identifier " << metrics_reporting_conf.radio_uid
                           << " not found";
@@ -696,6 +706,41 @@ void LinkMetricsCollectionTask::handle_multi_ap_policy_config_request(
         db->channel_scan_policy.report_indepent_scans_policy =
             (channel_scan_reporing_policy->report_independent_channel_scans() ==
              channel_scan_reporing_policy->REPORT_INDEPENDENT_CHANNEL_SCANS);
+    }
+
+    /** 
+     * Currently the traffic separation is handled on the son_slave. So if this traffic TLVs,
+     * exists in the CMDU, and the message has not been forwarded to on of the son_slaves, then
+     * forward it here.
+    **/
+    auto tlvProfile2Default802dotQSettings =
+        cmdu_rx.getClass<wfa_map::tlvProfile2Default802dotQSettings>();
+    auto tlvProfile2TrafficSeparationPolicy =
+        cmdu_rx.getClass<wfa_map::tlvProfile2TrafficSeparationPolicy>();
+
+    if (tlvProfile2Default802dotQSettings || tlvProfile2TrafficSeparationPolicy) {
+        net::TrafficSeparation::traffic_seperation_configuration_clear();
+        for (auto radio : db->get_radios_list()) {
+            if (!radio) {
+                continue;
+            }
+            // If we sent this already to this son_slave, skip.
+            if (msg_forwarded_to_son_slave.find(radio->front.iface_mac) !=
+                msg_forwarded_to_son_slave.end()) {
+                continue;
+            }
+            auto radio_info = m_btl_ctx.get_radio(radio->front.iface_mac);
+            if (!radio_info) {
+                LOG(ERROR) << "Radio info of " << radio->front.iface_name << " not found!";
+                return;
+            }
+            LOG(DEBUG) << "Forwarding MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE to son_slave "
+                       << radio_info->hostap_iface;
+            if (!m_btl_ctx.forward_cmdu_to_uds(radio_info->slave, 0, db->bridge.mac, src_mac,
+                                               cmdu_rx)) {
+                LOG(ERROR) << "Failed to forward message to fronthaul " << radio_info->hostap_iface;
+            }
+        }
     }
 
     // send ACK_MESSAGE back to the controller

@@ -57,6 +57,10 @@
 #include <tlvf/wfa_map/tlvSteeringRequest.h>
 #include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
 
+#include "gate/1905_beacon_query_to_vs.h"
+#include "gate/vs_beacon_response_to_1905.h"
+#include "traffic_separation.h"
+
 // BPL Error Codes
 #include <bpl/bpl_cfg.h>
 #include <bpl/bpl_err.h>
@@ -1158,7 +1162,7 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
 
             // Already sent join_master request, mark as reconfiguration
             if (slave_state >= STATE_WAIT_FOR_JOINED_RESPONSE && slave_state <= STATE_OPERATIONAL)
-                is_backhual_reconf = true;
+                is_backhaul_reconf = true;
 
             is_backhaul_manager = (bool)notification->params().is_backhaul_manager;
             LOG_IF(is_backhaul_manager, DEBUG) << "Selected as backhaul manager";
@@ -1250,8 +1254,9 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST: {
+        LOG(DEBUG) << "received ACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST";
         LOG(DEBUG) << "Apply_traffic_separation";
-        // TODO: TrafficSeparation::apply_traffic_separation();
+        TrafficSeparation::apply_traffic_separation();
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE: {
@@ -2053,10 +2058,16 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         bssid->ssid          = vap_info.ssid;
         bssid->fronthaul_bss = vap_info.fronthaul_vap;
         bssid->backhaul_bss  = vap_info.backhaul_vap;
+        if (vap_info.backhaul_vap) {
+            bssid->backhaul_bss_disallow_profile1_agent_association =
+                vap_info.profile1_backhaul_sta_association_disallowed;
+            bssid->backhaul_bss_disallow_profile2_agent_association =
+                vap_info.profile2_backhaul_sta_association_disallowed;
+        }
 
         auto notification_out = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_HOSTAP_AP_ENABLED_NOTIFICATION>(cmdu_tx);
-        if (notification_out == nullptr) {
+        if (!notification_out) {
             LOG(ERROR) << "Failed building message!";
             return false;
         }
@@ -2083,25 +2094,38 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             return false;
         }
         for (uint8_t vap_idx = 0; vap_idx < eBeeRocksIfaceIds::IFACE_TOTAL_VAPS; vap_idx++) {
-            radio->front.bssids[vap_idx].mac  = notification_in->params().vaps[vap_idx].mac;
-            radio->front.bssids[vap_idx].ssid = notification_in->params().vaps[vap_idx].ssid;
-            radio->front.bssids[vap_idx].fronthaul_bss =
-                notification_in->params().vaps[vap_idx].fronthaul_vap;
-            radio->front.bssids[vap_idx].backhaul_bss =
-                notification_in->params().vaps[vap_idx].backhaul_vap;
-            radio->front.bssids[vap_idx].backhaul_bss_disallow_profile1_agent_association =
+            auto &bss         = radio->front.bssids[vap_idx];
+            bss.mac           = notification_in->params().vaps[vap_idx].mac;
+            bss.ssid          = notification_in->params().vaps[vap_idx].ssid;
+            bss.fronthaul_bss = notification_in->params().vaps[vap_idx].fronthaul_vap;
+            bss.backhaul_bss  = notification_in->params().vaps[vap_idx].backhaul_vap;
+            bss.backhaul_bss_disallow_profile1_agent_association =
                 notification_in->params()
                     .vaps[vap_idx]
                     .profile1_backhaul_sta_association_disallowed;
-            radio->front.bssids[vap_idx].backhaul_bss_disallow_profile2_agent_association =
+            bss.backhaul_bss_disallow_profile2_agent_association =
                 notification_in->params()
                     .vaps[vap_idx]
                     .profile2_backhaul_sta_association_disallowed;
+
+            if (notification_in->params().vaps[vap_idx].mac != network_utils::ZERO_MAC) {
+                LOG(DEBUG) << "BSS " << bss.mac << ", ssid:" << bss.ssid
+                           << ", fBSS: " << bss.fronthaul_bss << ", bBSS: " << bss.backhaul_bss
+                           << ", p1_dis: " << bss.backhaul_bss_disallow_profile1_agent_association
+                           << ", p2_dis: " << bss.backhaul_bss_disallow_profile2_agent_association;
+            }
         }
+
+        LOG(DEBUG) << "Apply_traffic_separation";
+        TrafficSeparation::apply_traffic_separation(m_fronthaul_iface);
+
+        // When the AP-Manager sends VAPS_LIST_UPDATE_NOTIFICATION the autoconfiguration is
+        // is completed
+        m_autoconfiguration_completed = true;
 
         auto notification_out = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION>(cmdu_tx);
-        if (notification_out == nullptr) {
+        if (!notification_out) {
             LOG(ERROR) << "Failed building message!";
             return false;
         }
@@ -3666,6 +3690,10 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
             db->ethernet.wan.mac = tlvf::mac_from_string(iface_mac);
         }
 
+        // Reset the traffic separation configuration as they will be reconfigured on
+        // autoconfiguration.
+        TrafficSeparation::traffic_seperation_configuration_clear();
+
         // Clear the channel_list
         // When FCC/ETSI is set, the prplmesh is not restarted, but the salve is.
         // Must clear the map to prevent residues of previous country configuration.
@@ -3676,6 +3704,8 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
             return false;
         }
         radio->channels_list.clear();
+
+        m_autoconfiguration_completed = false;
 
         slave_state = STATE_CONNECT_TO_PLATFORM_MANAGER;
         break;
@@ -4118,8 +4148,8 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
                 return false;
             }
 
-            notification->is_slave_reconf() = is_backhual_reconf;
-            is_backhual_reconf              = false;
+            notification->is_slave_reconf() = is_backhaul_reconf;
+            is_backhaul_reconf              = false;
 
             // Version
             string_utils::copy_string(notification->slave_version(message::VERSION_LENGTH),
@@ -4696,20 +4726,14 @@ bool slave_thread::handle_profile2_default_802dotq_settings_tlv(ieee1905_1::Cmdu
         LOG(ERROR) << "Failed building message!";
         return false;
     }
-
     auto dot1q_settings = cmdu_rx.getClass<wfa_map::tlvProfile2Default802dotQSettings>();
     // tlvProfile2Default802dotQSettings is not mandatory.
     if (!dot1q_settings) {
-        // If no primary VLAN has been configured, set it to zero.
-        db->traffic_separation.primary_vlan_id = 0;
-        db->traffic_separation.default_pcp     = 0;
-
-        pvid_set_request->primary_vlan_id() = 0;
-        // TODO: Remove VLAN filtering from the bridge.
+        LOG(INFO) << "No tlvProfile2Default802dotQSettings";
         return true;
     }
 
-    LOG(DEBUG) << "Primary VLAN ID:" << dot1q_settings->primary_vlan_id()
+    LOG(DEBUG) << "Primary VLAN ID: " << dot1q_settings->primary_vlan_id()
                << ", PCP: " << dot1q_settings->default_pcp();
 
     db->traffic_separation.primary_vlan_id = dot1q_settings->primary_vlan_id();
@@ -4720,15 +4744,6 @@ bool slave_thread::handle_profile2_default_802dotq_settings_tlv(ieee1905_1::Cmdu
     // Send ACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST.
     message_com::send_cmdu(ap_manager_socket, cmdu_tx);
 
-    // TODO:
-    // - Configure L2 to bridge filtering with Primary VLAN ID
-    // - Create VLAN to the bridge
-    // - On repeater/extender add to bSTA interfaces the primary VLAN ID
-    //   (not pvid and tagged mode):
-    if (!db->device_conf.local_gw) {
-        // TODO
-    }
-
     return true;
 }
 
@@ -4738,46 +4753,40 @@ bool slave_thread::handle_profile2_traffic_separation_policy_tlv(
     auto traffic_seperation_policy =
         cmdu_rx.getClass<wfa_map::tlvProfile2TrafficSeparationPolicy>();
 
+    if (!traffic_seperation_policy) {
+        LOG(ERROR) << "tlvProfile2TrafficSeparationPolicy not found!";
+        return false;
+    }
+
     auto db = AgentDB::get();
-    // tlvProfile2TrafficSeparationPolicy is not mandatory.
-    if (traffic_seperation_policy) {
-        std::unordered_map<std::string, uint16_t> tmp_ssid_vid_mapping;
-        for (int i = 0; i < traffic_seperation_policy->ssids_vlan_id_list_length(); i++) {
-            auto ssid_vid_tuple = traffic_seperation_policy->ssids_vlan_id_list(i);
-            if (!std::get<0>(ssid_vid_tuple)) {
-                LOG(ERROR) << "Failed to get ssid_vid mapping, idx=" << i;
-                return false;
-            }
-            auto &ssid_vid_mapping = std::get<1>(ssid_vid_tuple);
 
-            tmp_ssid_vid_mapping[ssid_vid_mapping.ssid_name_str()] = ssid_vid_mapping.vlan_id();
-            LOG(DEBUG) << "SSID: " << ssid_vid_mapping.ssid_name_str()
-                       << ", VID: " << ssid_vid_mapping.vlan_id();
+    std::unordered_map<std::string, uint16_t> tmp_ssid_vid_mapping;
+    for (int i = 0; i < traffic_seperation_policy->ssids_vlan_id_list_length(); i++) {
+        auto ssid_vid_tuple = traffic_seperation_policy->ssids_vlan_id_list(i);
+        if (!std::get<0>(ssid_vid_tuple)) {
+            LOG(ERROR) << "Failed to get ssid_vid mapping, idx=" << i;
+            return false;
         }
+        auto &ssid_vid_mapping = std::get<1>(ssid_vid_tuple);
 
-        // Overwriting the whole container instead of pushing one by one, since we need to remove
-        // old configuration from previous configurations messages.
-        db->traffic_separation.ssid_vid_mapping = tmp_ssid_vid_mapping;
+        tmp_ssid_vid_mapping[ssid_vid_mapping.ssid_name_str()] = ssid_vid_mapping.vlan_id();
+        LOG(DEBUG) << "SSID: " << ssid_vid_mapping.ssid_name_str()
+                   << ", VID: " << ssid_vid_mapping.vlan_id();
+    }
 
-        // Fill secondaries VLANs IDs to the database.
-        for (const auto &ssid_vid_pair : db->traffic_separation.ssid_vid_mapping) {
-            auto vlan_id = ssid_vid_pair.second;
-            if (vlan_id != db->traffic_separation.primary_vlan_id) {
-                db->traffic_separation.secondaries_vlans_ids.insert(vlan_id);
-            }
-        }
+    // Overwriting the whole container instead of pushing one by one, since we need to remove
+    // old configuration from previous configurations messages.
+    db->traffic_separation.ssid_vid_mapping = tmp_ssid_vid_mapping;
 
-        // TODO:
-        // - Add Bridge VLAN to each secondary VLAN ID.
-        // - Add the Secondary VLAN ID to the bridge (not pvid and tagged mode).
-        // - On repeater/extender
-        //   1. Add to bSTA interfaces the secondary VLAN ID (not pvid and tagged mode)
-        //   2. Add to the backhaul wire interface the secondary VLAN ID (not pvid and tagged mode).
-        if (!db->device_conf.local_gw) {
-            // TODO
+    // Fill secondary VLANs IDs to the database.
+    for (const auto &ssid_vid_pair : db->traffic_separation.ssid_vid_mapping) {
+        auto vlan_id = ssid_vid_pair.second;
+        if (vlan_id != db->traffic_separation.primary_vlan_id) {
+            db->traffic_separation.secondary_vlans_ids.insert(vlan_id);
         }
     }
 
+    // Erase excessive secondary VIDs.
     if (db->traffic_separation.ssid_vid_mapping.size() >
         db->traffic_separation.max_number_of_vlans_ids) {
 
@@ -4854,17 +4863,6 @@ bool slave_thread::handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMess
         return false;
     }
 
-    if (!handle_profile2_default_802dotq_settings_tlv(cmdu_rx)) {
-        LOG(ERROR) << "handle_profile2_default_802dotq_settings_tlv has failed!";
-        return false;
-    }
-
-    std::unordered_set<std::string> misconfigured_ssids;
-    if (!handle_profile2_traffic_separation_policy_tlv(cmdu_rx, misconfigured_ssids)) {
-        LOG(ERROR) << "handle_profile2_traffic_separation_policy_tlv has failed!";
-        return false;
-    }
-
     auto db = AgentDB::get();
 
     auto radio = db->radio(m_fronthaul_iface);
@@ -4877,6 +4875,20 @@ bool slave_thread::handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMess
         LOG(DEBUG) << "Message should be handled by another son_slave - ruid "
                    << radio->front.iface_mac << " != " << ruid->radio_uid();
         return true;
+    }
+
+    if (!handle_profile2_default_802dotq_settings_tlv(cmdu_rx)) {
+        LOG(ERROR) << "handle_profile2_default_802dotq_settings_tlv has failed!";
+        return false;
+    }
+
+    std::unordered_set<std::string> misconfigured_ssids;
+    // tlvProfile2TrafficSeparationPolicy is not mandatory.
+    if (!cmdu_rx.getClass<wfa_map::tlvProfile2TrafficSeparationPolicy>()) {
+        LOG(INFO) << "tlvProfile2TrafficSeparationPolicy not found";
+    } else if (!handle_profile2_traffic_separation_policy_tlv(cmdu_rx, misconfigured_ssids)) {
+        LOG(ERROR) << "handle_profile2_traffic_separation_policy_tlv has failed!";
+        return false;
     }
 
     std::deque<std::pair<wfa_map::tlvProfile2ErrorCode::eReasonCode, sMacAddr>> bss_errors;
@@ -4898,6 +4910,29 @@ bool slave_thread::handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMess
             LOG(ERROR) << "Invalid config data, skip it";
             continue;
         }
+
+        bool bSTA = bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::BACKHAUL_STA);
+        bool fBSS = bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::FRONTHAUL_BSS);
+        bool bBSS = bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::BACKHAUL_BSS);
+        bool bBSS_p1_disallowed =
+            bool(config.bss_type &
+                 WSC::eWscVendorExtSubelementBssType::PROFILE1_BACKHAUL_STA_ASSOCIATION_DISALLOWED);
+        bool bBSS_p2_disallowed =
+            bool(config.bss_type &
+                 WSC::eWscVendorExtSubelementBssType::PROFILE2_BACKHAUL_STA_ASSOCIATION_DISALLOWED);
+        bool teardown = bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::TEARDOWN);
+
+        LOG(INFO) << "BSS configuration - ";
+        LOG(INFO) << "bssid: " << config.bssid;
+        LOG(INFO) << "ssid: " << config.ssid;
+        LOG(INFO) << "fBSS: " << fBSS;
+        LOG(INFO) << "bBSS: " << bBSS;
+        LOG(INFO) << "Teardown: " << teardown;
+        if (bBSS) {
+            LOG(INFO) << "profile1_backhaul_sta_association_disallowed: " << bBSS_p1_disallowed;
+            LOG(INFO) << "profile2_backhaul_sta_association_disallowed: " << bBSS_p2_disallowed;
+        }
+
         // TODO - revisit this in the future
         // In practice, some controllers simply send an empty config data when asked for tear down,
         // so tear down the radio if the SSID is empty.
@@ -4908,13 +4943,13 @@ bool slave_thread::handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMess
         }
 
         LOG(INFO) << "bss_type: " << std::hex << int(config.bss_type);
-        if (config.bss_type & WSC::eWscVendorExtSubelementBssType::TEARDOWN) {
+        if (teardown) {
             LOG(INFO) << "Teardown bit set, tear down radio";
             configs.clear();
             break;
         }
         // BACKHAUL_STA bit is not expected to be set
-        if (config.bss_type & WSC::eWscVendorExtSubelementBssType::BACKHAUL_STA) {
+        if (bSTA) {
             LOG(WARNING) << "Unexpected backhaul STA bit";
         }
 
@@ -4925,9 +4960,7 @@ bool slave_thread::handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMess
 
             // Multi-AP standard requires to tear down any misconfigured BSS.
             config.bss_type = WSC::eWscVendorExtSubelementBssType::TEARDOWN;
-        } else if (config.bss_type & WSC::eWscVendorExtSubelementBssType::FRONTHAUL_BSS &&
-                   config.bss_type & WSC::eWscVendorExtSubelementBssType::BACKHAUL_BSS &&
-                   !radio->front.hybrid_mode_supported) {
+        } else if (fBSS && bBSS && !radio->front.hybrid_mode_supported) {
             LOG(WARNING) << "Controller configured hybrid mode, but it is not supported!";
             bss_errors.push_back(
                 {wfa_map::tlvProfile2ErrorCode::eReasonCode::
@@ -4937,21 +4970,32 @@ bool slave_thread::handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMess
             // Multi-AP standard requires to tear down any misconfigured BSS.
             config.bss_type = WSC::eWscVendorExtSubelementBssType::TEARDOWN;
 
-        } else if (config.bss_type & WSC::eWscVendorExtSubelementBssType::BACKHAUL_BSS &&
-                   !(config.bss_type & WSC::eWscVendorExtSubelementBssType::
-                                           PROFILE1_BACKHAUL_STA_ASSOCIATION_DISALLOWED) &&
-                   !(config.bss_type & WSC::eWscVendorExtSubelementBssType::
-                                           PROFILE2_BACKHAUL_STA_ASSOCIATION_DISALLOWED) &&
-                   db->traffic_separation.secondaries_vlans_ids.size() > 0) {
+        } else if (db->controller_info.profile_support !=
+                       wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
+                   bBSS && !bBSS_p1_disallowed && !bBSS_p2_disallowed) {
+
             LOG(WARNING) << "Controller configured Backhaul BSS for combined Profile1 and "
                          << "Profile2, but it is not supported!";
-            bss_errors.push_back(
-                {wfa_map::tlvProfile2ErrorCode::eReasonCode::
-                     TRAFFIC_SEPARATION_ON_COMBINED_PROFILE1_BACKHAUL_AND_PROFILE2_BACKHAUL_UNSUPPORTED,
-                 config.bssid});
+            // bss_errors.push_back(
+            //     {wfa_map::tlvProfile2ErrorCode::eReasonCode::
+            //          TRAFFIC_SEPARATION_ON_COMBINED_PROFILE1_BACKHAUL_AND_PROFILE2_BACKHAUL_UNSUPPORTED,
+            //      config.bssid});
 
-            // Multi-AP standard requires to tear down any misconfigured BSS.
-            config.bss_type = WSC::eWscVendorExtSubelementBssType::TEARDOWN;
+            // // Multi-AP standard requires to tear down any misconfigured BSS.
+            // config.bss_type = WSC::eWscVendorExtSubelementBssType::TEARDOWN;
+
+            /**
+             * We currently do not support bBSS with both profile 1/2 disallow
+             * flags set to false (Combined Profile bBSS mode).
+             * When we are configured in a way we don't support, we should tear down the BSS, and
+             * send an error response on that BSS.
+             * Currently R2 certified controllers (Mediatek/Marvel) have a bug (PPM-1389) that ends
+             * up sending M2 with both profile 1/2 disallow flags set to false although we report 
+             * combined_profile1_and_profile2 = 0 in ap_radio_advanced_capabilities_tlv.
+             * To deal with it, temporarily comment the lines above and allow the BSS to be
+             * configured successfully until PPM-1389 is resolved.
+             */
+            LOG(DEBUG) << "Currently ignore bad configuration";
         }
 
         LOG(DEBUG) << m2.manufacturer() << " config data:" << std::endl
@@ -5170,6 +5214,29 @@ bool slave_thread::handle_multi_ap_policy_config_request(Socket *sd,
     auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Received MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE, mid=" << std::hex << int(mid);
 
+    if (!handle_profile2_default_802dotq_settings_tlv(cmdu_rx)) {
+        LOG(ERROR) << "handle_profile2_default_802dotq_settings_tlv has failed!";
+        return false;
+    }
+
+    std::unordered_set<std::string> misconfigured_ssids;
+    auto db = AgentDB::get();
+    // tlvProfile2TrafficSeparationPolicy is not mandatory. But if it does not exist, need to clear
+    // traffic separation settings.
+    if (!cmdu_rx.getClass<wfa_map::tlvProfile2TrafficSeparationPolicy>()) {
+        LOG(INFO) << "tlvProfile2TrafficSeparationPolicy not found";
+        db->traffic_separation.ssid_vid_mapping.clear();
+    } else if (!handle_profile2_traffic_separation_policy_tlv(cmdu_rx, misconfigured_ssids)) {
+        LOG(ERROR) << "handle_profile2_traffic_separation_policy_tlv has failed!";
+        return false;
+    }
+
+    if (db->traffic_separation.ssid_vid_mapping.empty()) {
+        // If SSID VID map is empty, need to clear traffic separation policy.
+        db->traffic_separation.primary_vlan_id = 0;
+        db->traffic_separation.default_pcp     = 0;
+    }
+
     /**
      * The slave in turn, forwards the request message again "as is" to the monitor thread.
      */
@@ -5185,17 +5252,6 @@ bool slave_thread::handle_multi_ap_policy_config_request(Socket *sd,
         return false;
     }
 
-    if (!handle_profile2_default_802dotq_settings_tlv(cmdu_rx)) {
-        LOG(ERROR) << "handle_profile2_default_802dotq_settings_tlv has failed!";
-        return false;
-    }
-
-    std::unordered_set<std::string> misconfigured_ssids;
-    if (!handle_profile2_traffic_separation_policy_tlv(cmdu_rx, misconfigured_ssids)) {
-        LOG(ERROR) << "handle_profile2_traffic_separation_policy_tlv has failed!";
-        return false;
-    }
-
     std::deque<std::pair<wfa_map::tlvProfile2ErrorCode::eReasonCode, sMacAddr>> bss_errors;
     if (!misconfigured_ssids.empty()) {
         bss_errors.push_back({wfa_map::tlvProfile2ErrorCode::eReasonCode::
@@ -5205,6 +5261,15 @@ bool slave_thread::handle_multi_ap_policy_config_request(Socket *sd,
 
     if (bss_errors.size()) {
         send_error_response(bss_errors);
+        return false;
+    }
+
+    if (m_autoconfiguration_completed) {
+        LOG(DEBUG) << "Apply_traffic_separation";
+        TrafficSeparation::apply_traffic_separation(m_fronthaul_iface);
+    } else {
+        LOG(WARNING) << "autoconfiguration procedure is not completed yet, traffic separation "
+                     << "policy cannot be applied";
     }
 
     return true;

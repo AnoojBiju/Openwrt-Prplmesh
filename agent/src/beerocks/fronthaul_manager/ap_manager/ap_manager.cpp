@@ -2373,13 +2373,18 @@ bool ApManager::handle_ap_enabled(int vap_id)
     const auto vap_info = vap_iter->second;
 
     LOG(INFO) << "vap_id = " << int(vap_id) << ", bssid = " << vap_info.mac
-              << ", ssid = " << vap_info.ssid
-              << ", fronthaul = " << beerocks::string_utils::bool_str(vap_info.fronthaul)
-              << ", backhaul = " << beerocks::string_utils::bool_str(vap_info.backhaul);
+              << ", ssid = " << vap_info.ssid << ", fronthaul = " << vap_info.fronthaul
+              << ", backhaul = " << vap_info.backhaul;
+
+    if (vap_info.backhaul) {
+        LOG(DEBUG) << "disallow_profile1=" << vap_info.profile1_backhaul_sta_association_disallowed
+                   << ", disallow_profile2="
+                   << vap_info.profile2_backhaul_sta_association_disallowed;
+    }
 
     auto notification = message_com::create_vs_message<
         beerocks_message::cACTION_APMANAGER_HOSTAP_AP_ENABLED_NOTIFICATION>(cmdu_tx);
-    if (notification == nullptr) {
+    if (!notification) {
         LOG(ERROR) << "Failed building cACTION_APMANAGER_HOSTAP_AP_ENABLED_NOTIFICATION message!";
         return false;
     }
@@ -2390,7 +2395,13 @@ bool ApManager::handle_ap_enabled(int vap_id)
     notification->vap_info().mac = tlvf::mac_from_string(vap_info.mac);
     string_utils::copy_string(notification->vap_info().ssid, vap_info.ssid.c_str(),
                               beerocks::message::WIFI_SSID_MAX_LENGTH);
-    notification->vap_info().backhaul_vap = vap_info.backhaul;
+    notification->vap_info().fronthaul_vap = vap_info.fronthaul;
+    notification->vap_info().backhaul_vap  = vap_info.backhaul;
+
+    notification->vap_info().profile1_backhaul_sta_association_disallowed =
+        vap_info.profile1_backhaul_sta_association_disallowed;
+    notification->vap_info().profile2_backhaul_sta_association_disallowed =
+        vap_info.profile2_backhaul_sta_association_disallowed;
 
     send_cmdu(cmdu_tx);
 

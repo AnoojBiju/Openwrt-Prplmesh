@@ -317,7 +317,7 @@ public:
         std::unordered_map<std::string, uint16_t> ssid_vid_mapping;
         uint16_t primary_vlan_id;
         uint8_t default_pcp;
-        std::unordered_set<uint16_t> secondaries_vlans_ids;
+        std::unordered_set<uint16_t> secondary_vlans_ids;
     } traffic_separation;
 
     struct {

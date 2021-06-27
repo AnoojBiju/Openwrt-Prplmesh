@@ -119,8 +119,8 @@ private:
     static bool reconf_dhcp(std::list<sBridgeVlanInfo> &vlans_of_bridge);
 
     /**
-     * @brief Send DHCP request on each VLAN of the bridge and assing the responsed IP to the VLAN
-     * interface.
+     * @brief Send DHCP request on each VLAN of the bridge and assigning the responded IP to the
+     * VLAN interface.
      * 
      * @details This function should be used only on the Repeater.
      * 
