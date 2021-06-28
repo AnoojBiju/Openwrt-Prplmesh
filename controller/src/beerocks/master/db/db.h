@@ -2090,8 +2090,6 @@ private:
 
     std::unordered_map<std::string, std::shared_ptr<node>> nodes[beerocks::HIERARCHY_MAX];
 
-    std::queue<std::string> disconnected_slave_mac_queue;
-
     /**
     *  @brief This variable indicates that data is awaiting to be commited over to the persistentDB.
     */
