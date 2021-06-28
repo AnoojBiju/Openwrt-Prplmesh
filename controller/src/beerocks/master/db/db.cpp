@@ -399,11 +399,6 @@ bool db::add_node_client(const sMacAddr &mac, const sMacAddr &parent_mac)
 
 bool db::remove_node(const sMacAddr &mac)
 {
-    if (m_agents.erase(mac) != 1) {
-        LOG(ERROR) << "remove_node: no agent with mac " << mac << " found";
-        // Since the code paths leading up to this are a bit iffy, don't return false in this case.
-    }
-
     int i;
     for (i = 0; i < HIERARCHY_MAX; i++) {
         auto it = nodes[i].find(tlvf::mac_to_string(mac));
