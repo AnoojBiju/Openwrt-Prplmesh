@@ -4644,16 +4644,6 @@ int db::get_measurement_delay(const std::string &mac)
     return n->measurement_delay;
 }
 
-std::chrono::steady_clock::time_point db::get_measurement_sent_timestamp(const std::string &mac)
-{
-    std::shared_ptr<node> n = get_node(mac);
-    if (!n) {
-        return std::chrono::steady_clock::time_point();
-    }
-    //LOG(DEBUG) << "get_measurement_dry_run: mac " << mac << " n->measurement_dry_run" ;
-    return n->measurement_sent_timestamp;
-}
-
 bool db::set_measurement_sent_timestamp(const std::string &mac)
 {
     std::shared_ptr<node> n = get_node(mac);

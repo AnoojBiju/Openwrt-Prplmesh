@@ -1488,7 +1488,6 @@ public:
     bool set_measurement_delay(const std::string &mac, int measurement_delay);
     int get_measurement_delay(const std::string &mac);
 
-    std::chrono::steady_clock::time_point get_measurement_sent_timestamp(const std::string &mac);
     bool set_measurement_sent_timestamp(const std::string &mac);
 
     int get_measurement_recv_delta(const std::string &mac);
