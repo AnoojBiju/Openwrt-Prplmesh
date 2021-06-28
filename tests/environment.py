@@ -889,11 +889,23 @@ class ALEntityPrplWrt(ALEntity):
         super().__init__(mac, ucc_socket, installdir, is_controller)
 
         program = "controller" if is_controller else "agent"
+
         self.logfilenames = ["{}/beerocks_{}.log".format(self.log_folder, program)]
 
-        # We always have two radios, wlan0 and wlan2
-        RadioHostapd(self, "wlan0")
-        RadioHostapd(self, "wlan2")
+        radios = nbapi_ubus_command(self, 'network.wireless', 'status')
+        for radio_name, radio in radios.items():
+            for intf in radio['interfaces']:
+                if intf['config']['mode'] == 'ap':
+                    assert 'ifname' in intf, f'ifname not found in {radio_name}'
+                    status_output = self.command('hostapd_cli', '-i', intf['ifname'], 'status')
+                    bss = [line for line in status_output.splitlines()
+                           if line.startswith('bss[0]=')]
+                    assert bss, f'BSS not found in {radio_name}'
+                    assert len(bss) == 1, f'More than one main BSS found in {radio_name}'
+                    main_intf = bss[0].split('=')[1]
+                    RadioHostapd(self, main_intf)
+                    break
+        assert len(self.radios), f'No radios found on {self.name}'
 
     def command(self, *command: str) -> str:
         """Execute `command` in device and return its output."""
@@ -1045,12 +1057,12 @@ class VirtualAPHostapd(VirtualAP):
         return match.group('psk')
 
     def get_iface(self, bssid: str) -> str:
-        regex = "[0-9]{1,4}: (?P<iface_name>wlan[0-9.]{1,4}): <"
-
         output = self.radio.agent.command(
-            'sh', '-c', f'ip link list | grep -B1 "{bssid}"')
-        match = re.search(regex, output)
-        return match.group('iface_name')
+            'sh',
+            '-c',
+            f'ip link list | grep -B1 "{bssid}"')
+        assert output, f'No interface found with the bssid {bssid}'
+        return output.split(':')[1].strip()
 
     def associate(self, sta: Station) -> bool:
         ''' Associate "sta" with this VAP '''
