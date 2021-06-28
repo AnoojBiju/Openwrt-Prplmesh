@@ -140,14 +140,13 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
         """ Check prplMesh status. Return True if operational."""
         self.sendline("/etc/init.d/prplmesh status")
         self.expect(
-            ["(?P<main_agent>OK) Main agent.+"
-             "(?P<wlan0>OK) wlan0.+"
-             "(?P<wlan2>OK) wlan2", pexpect.TIMEOUT],
+            ["OK Main agent.+"
+             "OK {}.+"
+             "OK {}".format(
+                 self.agent_entity.radios[0].iface_name,
+                 self.agent_entity.radios[1].iface_name), pexpect.TIMEOUT],
             timeout=5)
-        if self.match is not pexpect.TIMEOUT:
-            return True
-        else:
-            return False
+        return self.match is not pexpect.TIMEOUT
 
     def isalive(self):
         """Check if device is alive.
