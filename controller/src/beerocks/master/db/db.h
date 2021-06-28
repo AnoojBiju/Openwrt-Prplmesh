@@ -1848,7 +1848,6 @@ private:
                   const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
     std::shared_ptr<node> get_node(const std::string &key); //key can be <mac> or <al_mac>_<ruid>
     std::shared_ptr<node> get_node(const sMacAddr &mac);
-    std::shared_ptr<node> get_node(const sMacAddr &al_mac, const sMacAddr &ruid);
 
     /**
      * @brief Returns the node object after verifing node type.

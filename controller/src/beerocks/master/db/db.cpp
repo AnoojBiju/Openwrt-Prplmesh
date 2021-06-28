@@ -5197,15 +5197,6 @@ std::shared_ptr<node> db::get_node(const sMacAddr &mac)
     return get_node(key);
 }
 
-std::shared_ptr<node> db::get_node(const sMacAddr &al_mac, const sMacAddr &ruid)
-{
-    std::string key = std::string();
-    if (al_mac != network_utils::ZERO_MAC && ruid != network_utils::ZERO_MAC)
-        key = tlvf::mac_to_string(al_mac) + tlvf::mac_to_string(ruid);
-
-    return get_node(key);
-}
-
 std::shared_ptr<node> db::get_node_verify_type(const sMacAddr &mac, beerocks::eType type)
 {
     auto node = get_node(mac);
