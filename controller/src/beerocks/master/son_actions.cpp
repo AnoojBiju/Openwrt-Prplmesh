@@ -22,6 +22,9 @@
 #include <easylogging++.h>
 
 #include <beerocks/tlvf/beerocks_message_cli.h>
+#include <tlvf/ieee_1905_1/tlvAlMacAddress.h>
+#include <tlvf/ieee_1905_1/tlvSupportedFreqBand.h>
+#include <tlvf/ieee_1905_1/tlvSupportedRole.h>
 #include <tlvf/wfa_map/tlvClientAssociationControlRequest.h>
 #include <tlvf/wfa_map/tlvProfile2MultiApProfile.h>
 
