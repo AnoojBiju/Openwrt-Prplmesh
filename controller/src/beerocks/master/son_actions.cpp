@@ -12,8 +12,6 @@
 #include "tasks/association_handling_task.h"
 #include "tasks/bml_task.h"
 #include "tasks/client_steering_task.h"
-#include "tasks/ire_network_optimization_task.h"
-#include "tasks/optimal_path_task.h"
 
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
