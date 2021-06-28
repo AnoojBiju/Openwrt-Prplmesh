@@ -15,6 +15,7 @@
 #include "tasks/bml_task.h"
 #include "tasks/channel_selection_task.h"
 #include "tasks/client_steering_task.h"
+#include "tasks/dhcp_task.h"
 #include "tasks/load_balancer_task.h"
 #include "tasks/optimal_path_task.h"
 #include "tasks/statistics_polling_task.h"
@@ -27,7 +28,6 @@
 #include "tasks/client_locating_task.h"
 #include "tasks/dynamic_channel_selection_r2_task.h"
 #include "tasks/dynamic_channel_selection_task.h"
-#include "tasks/ire_network_optimization_task.h"
 #include "tasks/network_health_check_task.h"
 
 #include <bcl/beerocks_backport.h>
@@ -52,6 +52,7 @@
 #include <tlvf/wfa_map/tlvApExtendedMetrics.h>
 #include <tlvf/wfa_map/tlvApMetrics.h>
 #include <tlvf/wfa_map/tlvApRadioIdentifier.h>
+#include <tlvf/wfa_map/tlvApVhtCapabilities.h>
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringResponse.h>
