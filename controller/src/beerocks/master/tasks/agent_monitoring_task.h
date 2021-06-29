@@ -38,6 +38,8 @@ private:
     ieee1905_1::CmduMessageTx &cmdu_tx;
     task_pool &tasks;
 
+    bool m_ap_autoconfig_renew_sent = false;
+
     /**
      * @brief Map with key=ruid and value BSSes that were configured
      * for radio with ruid (key) in M2.

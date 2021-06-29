@@ -7,8 +7,6 @@ from .prplmesh_base_test import PrplMeshBaseTest
 from boardfarm.exceptions import SkipTest
 import environment
 
-import time
-
 
 class ApConfigBSSTeardownCli(PrplMeshBaseTest):
     """Check SSID is still available after being torn down
@@ -41,8 +39,11 @@ class ApConfigBSSTeardownCli(PrplMeshBaseTest):
                                                 "fronthaul"))
         controller.beerocks_cli_command('bml_update_wifi_credentials {}'.format(agent.mac))
 
-        # Wait a bit for the renew to complete
-        time.sleep(3)
+        # Wait until the connection map is updated:
+        self.check_log(controller,
+                       rf"Setting node '{agent.radios[0].mac}' as active", timeout=10)
+        self.check_log(controller,
+                       rf"Setting node '{agent.radios[1].mac}' as active", timeout=10)
 
         radio_0_vap_0 = agent.radios[0].get_vap(ssid)
         if not radio_0_vap_0:
@@ -67,10 +68,17 @@ class ApConfigBSSTeardownCli(PrplMeshBaseTest):
             if vap_ssid != 'N/A':
                 self.fail(f'Wrong SSID: {vap_ssid} instead torn down')
 
+        self.checkpoint()
+
         controller.beerocks_cli_command('bml_clear_wifi_credentials {}'.format(agent.mac))
         controller.beerocks_cli_command('bml_update_wifi_credentials {}'.format(agent.mac))
 
-        time.sleep(3)
+        # Wait until the connection map is updated:
+        self.check_log(controller,
+                       rf"Setting node '{agent.radios[0].mac}' as active", timeout=10)
+        self.check_log(controller,
+                       rf"Setting node '{agent.radios[1].mac}' as active", timeout=10)
+
         self.check_log(agent.radios[0], r".* tear down radio")
         conn_map = controller.get_conn_map()
         repeater1 = conn_map[agent.mac]
