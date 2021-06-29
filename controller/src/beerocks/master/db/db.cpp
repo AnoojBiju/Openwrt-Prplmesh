@@ -4257,12 +4257,6 @@ bool db::set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApS
         p->total_client_rx_load_percent = params->client_rx_load_percent;
         p->stats_delta_ms               = params->stats_delta_ms;
         p->timestamp                    = std::chrono::steady_clock::now();
-
-        auto radio_path = radio->dm_path;
-
-        if (radio_path.empty()) {
-            return true;
-        }
     }
 
     return true;
