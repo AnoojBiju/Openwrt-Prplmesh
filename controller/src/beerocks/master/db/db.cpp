@@ -6900,3 +6900,16 @@ bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
 
     return ret_val;
 }
+
+uint64_t db::recalculate_attr_to_byte_units(
+    wfa_map::tlvProfile2ApCapability::eByteCounterUnits byte_counter_units, uint64_t bytes)
+{
+    if (byte_counter_units == wfa_map::tlvProfile2ApCapability::eByteCounterUnits::KIBIBYTES) {
+        bytes = bytes * 1000;
+    } else if (byte_counter_units ==
+               wfa_map::tlvProfile2ApCapability::eByteCounterUnits::MEBIBYTES) {
+        bytes = bytes * 1000 * 1000;
+    }
+
+    return bytes;
+}

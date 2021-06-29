@@ -1618,6 +1618,19 @@ public:
      */
     bool update_master_configuration(const sDbNbapiConfig &nbapi_config);
 
+    /**
+     * @brief Recalculate single value of attribute to Byte units according to its unit.
+     *
+     * If attribute unit is BYTES, method changes nothing.
+     * According to attributes unit type, method recalculates bytes and assign on it again.
+     *
+     * @param[in] byte_counter_units attribute unit
+     * @param[in] bytes Number of bytes to recalculate
+     * @return Recalculate value of the bytes
+     */
+    uint64_t recalculate_attr_to_byte_units(
+        wfa_map::tlvProfile2ApCapability::eByteCounterUnits byte_counter_units, uint64_t bytes);
+
     //
     // tasks
     //

@@ -1560,23 +1560,19 @@ bool Controller::handle_cmdu_1905_ap_metric_response(const std::string &src_mac,
         }
     }
 
-    for (auto ap_extended_metric_tlv : cmdu_rx.getClassList<wfa_map::tlvApExtendedMetrics>()) {
-
-        ret_val &= database.set_vap_stats_info(ap_extended_metric_tlv->bssid(),
-                                               ap_extended_metric_tlv->unicast_bytes_sent(),
-                                               ap_extended_metric_tlv->unicast_bytes_received(),
-                                               ap_extended_metric_tlv->multicast_bytes_sent(),
-                                               ap_extended_metric_tlv->multicast_bytes_received(),
-                                               ap_extended_metric_tlv->broadcast_bytes_sent(),
-                                               ap_extended_metric_tlv->broadcast_bytes_received());
-    }
-
     for (auto radio_tlv : cmdu_rx.getClassList<wfa_map::tlvProfile2RadioMetrics>()) {
         ret_val &= database.set_radio_metrics(radio_tlv->radio_uid(), radio_tlv->noise(),
                                               radio_tlv->transmit(), radio_tlv->receive_self(),
                                               radio_tlv->receive_other());
     }
 
+    auto agent = database.m_agents.get(tlvf::mac_from_string(src_mac));
+    if (!agent) {
+        LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
+        return false;
+    }
+
+    ret_val &= handle_tlv_ap_extended_metrics(agent, cmdu_rx);
     ret_val &= handle_tlv_associated_sta_link_metrics(src_mac, cmdu_rx);
     ret_val &= handle_tlv_associated_sta_extended_link_metrics(src_mac, cmdu_rx);
     ret_val &= handle_tlv_associated_sta_traffic_stats(src_mac, cmdu_rx);
@@ -1623,6 +1619,33 @@ bool Controller::handle_cmdu_1905_associated_sta_link_metrics_response_message(
     handle_tlv_associated_sta_link_metrics(src_mac, cmdu_rx);
     handle_tlv_associated_sta_extended_link_metrics(src_mac, cmdu_rx);
     return true;
+}
+
+bool Controller::handle_tlv_ap_extended_metrics(std::shared_ptr<sAgent> agent,
+                                                ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    bool ret_val = true;
+
+    for (auto ap_extended_metric_tlv : cmdu_rx.getClassList<wfa_map::tlvApExtendedMetrics>()) {
+
+        // Recalculate counters according to Agent Byte Units.
+        ret_val &= database.set_vap_stats_info(
+            ap_extended_metric_tlv->bssid(),
+            database.recalculate_attr_to_byte_units(agent->byte_counter_units,
+                                                    ap_extended_metric_tlv->unicast_bytes_sent()),
+            database.recalculate_attr_to_byte_units(
+                agent->byte_counter_units, ap_extended_metric_tlv->unicast_bytes_received()),
+            database.recalculate_attr_to_byte_units(agent->byte_counter_units,
+                                                    ap_extended_metric_tlv->multicast_bytes_sent()),
+            database.recalculate_attr_to_byte_units(
+                agent->byte_counter_units, ap_extended_metric_tlv->multicast_bytes_received()),
+            database.recalculate_attr_to_byte_units(agent->byte_counter_units,
+                                                    ap_extended_metric_tlv->broadcast_bytes_sent()),
+            database.recalculate_attr_to_byte_units(
+                agent->byte_counter_units, ap_extended_metric_tlv->broadcast_bytes_received()));
+    }
+
+    return ret_val;
 }
 
 bool Controller::handle_tlv_associated_sta_link_metrics(const std::string &src_mac,
@@ -1700,11 +1723,24 @@ bool Controller::handle_tlv_associated_sta_traffic_stats(const std::string &src_
 {
     bool ret_val = true;
 
+    auto agent = database.m_agents.get(tlvf::mac_from_string(src_mac));
+
+    if (!agent) {
+        LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
+        return false;
+    }
+
     for (auto &sta_traffic_stat : cmdu_rx.getClassList<wfa_map::tlvAssociatedStaTrafficStats>()) {
 
         db::sAssociatedStaTrafficStats stats;
-        stats.m_byte_received        = sta_traffic_stat->byte_recived();
-        stats.m_byte_sent            = sta_traffic_stat->byte_sent();
+
+        // Recalculate counters according to Agent Byte Units.
+        stats.m_byte_received = database.recalculate_attr_to_byte_units(
+            agent->byte_counter_units, sta_traffic_stat->byte_recived());
+
+        stats.m_byte_sent = database.recalculate_attr_to_byte_units(agent->byte_counter_units,
+                                                                    sta_traffic_stat->byte_sent());
+
         stats.m_packets_received     = sta_traffic_stat->packets_recived();
         stats.m_packets_sent         = sta_traffic_stat->packets_sent();
         stats.m_retransmission_count = sta_traffic_stat->retransmission_count();
