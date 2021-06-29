@@ -1722,6 +1722,7 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const std::string &src_ma
 {
     auto mid = cmdu_rx.getMessageId();
     LOG(INFO) << "Received AP_CAPABILITY_REPORT_MESSAGE, mid=" << std::dec << int(mid);
+
     auto channel_scan_capabilities_tlv = cmdu_rx.getClass<wfa_map::tlvChannelScanCapabilities>();
     if (!channel_scan_capabilities_tlv) {
         LOG(ERROR) << "addClass wfa_map::channel_scan_capabilities_tlv failed";
@@ -1746,9 +1747,12 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const std::string &src_ma
         auto &radio_capabilities_entry = std::get<1>(radio_capabilities_tuple);
         auto &ruid                     = radio_capabilities_entry.radio_uid();
         LOG(DEBUG) << "ruid=" << ruid;
-        // Remove all previously set Capailities of radio from data model
+
+        // Remove all previously set Capabilities of radio from data model
         database.clear_ap_capabilities(ruid);
+
         if (!database.fill_radio_channel_scan_capabilites(ruid, radio_capabilities_entry)) {
+
             // We want to save the channel-scan-capabilities for the radios we can
             LOG(ERROR) << "Failed to save radio channel-scan-capabilities for radio=" << ruid;
             all_radio_capabilities_saved_successfully = false;
@@ -1760,7 +1764,7 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const std::string &src_ma
         return false;
     }
     if (!handle_tlv_ap_he_capabilities(cmdu_rx)) {
-        LOG(ERROR) << "Couldn't handle TLV AP HEcapabilities";
+        LOG(ERROR) << "Couldn't handle TLV AP HE Capabilities";
         return false;
     }
     if (!handle_tlv_ap_vht_capabilities(cmdu_rx)) {
