@@ -1354,7 +1354,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             return;
         }
 
-        ret = son_actions::send_ap_config_renew_msg(cmdu_tx, database, request->al_mac());
+        ret = son_actions::send_ap_config_renew_msg(cmdu_tx, database);
         if (!ret) {
             LOG(ERROR) << "Failed son_actions::send_ap_config_renew_msg ! ";
         }
@@ -1876,9 +1876,16 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
                 controller_ctx->send_cmdu(sd, cmdu_tx);
             };
 
-        // If there was an error before, send the results with a failed status
-        if (op_error_code != eChannelScanOperationCode::SUCCESS ||
-            result_status != eChannelScanStatusCode::SUCCESS) {
+        /**
+         * If there was an error before, send the results with a failed status
+         * No need to print errors on the following conditions
+         * eChannelScanOperationCode::SCAN_IN_PROGRESS,
+         * eChannelScanStatusCode::RESULTS_EMPTY
+         */
+        if ((op_error_code != eChannelScanOperationCode::SUCCESS &&
+             op_error_code != eChannelScanOperationCode::SCAN_IN_PROGRESS) ||
+            (result_status != eChannelScanStatusCode::SUCCESS &&
+             result_status != eChannelScanStatusCode::RESULTS_EMPTY)) {
             LOG(ERROR) << "Something went wrong, sending CMDU with error code: ["
                        << (int)op_error_code << "] & result status [" << (int)result_status << "].";
             auto response = gen_new_results_response();
@@ -1954,7 +1961,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         auto single_scan_in_progress =
             database.get_channel_scan_in_progress(request->scan_params().radio_mac, true);
         if (single_scan_in_progress) {
-            LOG(ERROR) << "Single scan is still running!";
+            LOG(DEBUG) << "Single scan is still running!";
             response->op_error_code() = uint8_t(eChannelScanOperationCode::SCAN_IN_PROGRESS);
             controller_ctx->send_cmdu(sd, cmdu_tx);
             break;

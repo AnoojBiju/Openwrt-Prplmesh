@@ -880,36 +880,6 @@ bool ap_wlan_hal_nl80211::cancel_cac(int chan, beerocks::eWiFiBandwidth bw,
     return false;
 }
 
-bool ap_wlan_hal_nl80211::set_antenna_mode(AntMode mode)
-{
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
-    return true;
-}
-
-bool ap_wlan_hal_nl80211::wds_set_mode(WDSMode mode)
-{
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
-    return true;
-}
-
-bool ap_wlan_hal_nl80211::wds_add_sta(const std::string &mac)
-{
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
-    return true;
-}
-
-bool ap_wlan_hal_nl80211::wds_del_sta(const std::string &mac)
-{
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
-    return true;
-}
-
-bool ap_wlan_hal_nl80211::wds_clear_list()
-{
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
-    return true;
-}
-
 bool ap_wlan_hal_nl80211::failsafe_channel_set(int chan, int bw, int vht_center_frequency)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";

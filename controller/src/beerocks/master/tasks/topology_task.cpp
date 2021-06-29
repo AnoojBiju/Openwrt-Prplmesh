@@ -284,6 +284,9 @@ bool topology_task::handle_topology_response(const std::string &src_mac,
                 {reported_neighbor_mac, std::chrono::steady_clock::now()});
             son_actions::send_cmdu_to_agent(tlvf::mac_to_string(reported_neighbor_mac), cmdu_tx,
                                             database);
+            // Send an AP-AutoConfiguration Renew message to notify the neighbor
+            // that an AP-AutoConfiguration WSC message should be sent.
+            son_actions::send_ap_config_renew_msg(cmdu_tx, database);
         }
     }
 
