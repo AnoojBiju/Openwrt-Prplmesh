@@ -70,6 +70,7 @@
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
+#include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 #include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>
 #include <tlvf/wfa_map/tlvProfile2MultiApProfile.h>
 #include <tlvf/wfa_map/tlvProfile2RadioMetrics.h>
@@ -950,6 +951,19 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const std::string &src_m
     LOG(DEBUG) << "   device " << m1->manufacturer() << " " << m1->model_name() << " "
                << m1->device_name() << " " << m1->serial_number();
 
+    auto agent = database.m_agents.get(al_mac);
+    if (!agent) {
+        LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
+        return false;
+    }
+
+    // Profile-2 Multi AP profile is added for higher than Profile-1 agents.
+    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
+        !handle_tlv_profile2_ap_capability(agent, cmdu_rx)) {
+        LOG(ERROR) << "Profile2 AP Capability is not supplied for Agent " << al_mac
+                   << " with profile enum " << agent->profile;
+    }
+
     //TODO autoconfig process the rest of the class
     //TODO autoconfig Keep intel agent support only as intel enhancements
     /**
@@ -1547,6 +1561,7 @@ bool Controller::handle_cmdu_1905_ap_metric_response(const std::string &src_mac,
     }
 
     for (auto ap_extended_metric_tlv : cmdu_rx.getClassList<wfa_map::tlvApExtendedMetrics>()) {
+
         ret_val &= database.set_vap_stats_info(ap_extended_metric_tlv->bssid(),
                                                ap_extended_metric_tlv->unicast_bytes_sent(),
                                                ap_extended_metric_tlv->unicast_bytes_received(),
@@ -1771,6 +1786,20 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const std::string &src_ma
         LOG(ERROR) << "Couldn't handle TLV AP VHTCapabilities";
         return false;
     }
+
+    auto agent = database.m_agents.get(tlvf::mac_from_string(src_mac));
+    if (!agent) {
+        LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
+        return false;
+    }
+
+    // Profile-2 Multi AP profile is added for higher than Profile-1 agents.
+    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
+        !handle_tlv_profile2_ap_capability(agent, cmdu_rx)) {
+        LOG(ERROR) << "Profile2 AP Capability is not supplied for Agent " << src_mac
+                   << " with profile enum " << agent->profile;
+    }
+
     return all_radio_capabilities_saved_successfully;
 }
 
@@ -3807,6 +3836,23 @@ bool Controller::trigger_scan(
     new_event.radio_mac                                                  = radio_mac;
     tasks.push_event(database.get_dynamic_channel_selection_r2_task_id(),
                      dynamic_channel_selection_r2_task::eEvent::TRIGGER_SINGLE_SCAN, &new_event);
+    return true;
+}
+
+bool Controller::handle_tlv_profile2_ap_capability(std::shared_ptr<sAgent> agent,
+                                                   ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto profile2_ap_capability_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2ApCapability>();
+    if (!profile2_ap_capability_tlv) {
+        LOG(DEBUG) << "getClass wfa_map::tlvProfile2ApCapability has failed";
+        return false;
+    }
+
+    agent->byte_counter_units = static_cast<wfa_map::tlvProfile2ApCapability::eByteCounterUnits>(
+        profile2_ap_capability_tlv->capabilities_bit_field().byte_counter_units);
+
+    agent->max_total_number_of_vids = profile2_ap_capability_tlv->max_total_number_of_vids();
+
     return true;
 }
 
