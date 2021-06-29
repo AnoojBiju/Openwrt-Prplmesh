@@ -174,9 +174,8 @@ amxd_status_t access_point_commit(amxd_object_t *object, amxd_function_t *func, 
     ieee1905_1::CmduMessageTx cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer));
     auto connected_ires = g_database->get_all_connected_ires();
 
-    for (const auto &agent_mac : connected_ires) {
-        if (!son_actions::send_ap_config_renew_msg(cmdu_tx, *g_database,
-                                                   tlvf::mac_from_string(agent_mac))) {
+    if (!connected_ires.empty()) {
+        if (!son_actions::send_ap_config_renew_msg(cmdu_tx, *g_database)) {
             LOG(ERROR) << "Failed son_actions::send_ap_config_renew_msg ! ";
         }
     }

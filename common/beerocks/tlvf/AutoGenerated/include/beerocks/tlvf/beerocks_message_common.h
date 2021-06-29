@@ -1204,7 +1204,7 @@ typedef struct sTriggerChannelScanParams {
     uint32_t dwell_time_ms;
     //size of provided channel_pool
     uint8_t channel_pool_size;
-    //pool of channels to be scaned
+    //pool of channels to be scanned
     uint8_t channel_pool[beerocks::message::SUPPORTED_CHANNELS_LENGTH];
     void struct_swap(){
         radio_mac.struct_swap();

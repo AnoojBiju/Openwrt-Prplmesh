@@ -673,7 +673,7 @@ bool mon_wlan_hal_dwpal::update_stations_stats(const std::string &vap_iface_name
     std::string cmd = "GET_STA_MEASUREMENTS " + vap_iface_name + " " + sta_mac;
 
     if (!dwpal_send_cmd(cmd, reply)) {
-        LOG(ERROR) << __func__ << " failed";
+        LOG(ERROR) << "cmd: " << cmd << " failed";
         return false;
     }
 
@@ -1489,7 +1489,7 @@ bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
 
         // Check if current Channel_Scan_Dump_Result is part of the dump sequence.
         if (m_nl_seq != nlh->nlmsg_seq) {
-            LOG(ERROR) << "channel scan results dump received with unexpected seq number";
+            //LOG(ERROR) << "channel scan results dump received with unexpected seq number";
             return false;
         }
 
