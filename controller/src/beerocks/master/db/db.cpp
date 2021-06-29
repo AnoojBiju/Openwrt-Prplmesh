@@ -4415,24 +4415,9 @@ bool db::set_vap_stats_info(const sMacAddr &bssid, uint32_t uc_tx_bytes, uint32_
     }
 
     bool ret_val = true;
-    /*
-        Set value for UnicastBytesSent variable
-        Example: Controller.Network.Device.1.Radio.1.BSS.1.UnicastBytesSent
-    */
-    if (!m_ambiorix_datamodel->set(bss_path, "UnicastBytesSent", uc_tx_bytes)) {
-        LOG(ERROR) << "Failed to set " << bss_path << ".UnicastBytesSent";
-        ret_val &= false;
-    }
 
-    /*
-        Set value for UnicastBytesReceived variable
-        Example: Controller.Network.Device.1.Radio.1.BSS.1.UnicastBytesReceived
-    */
-    if (!m_ambiorix_datamodel->set(bss_path, "UnicastBytesReceived", uc_rx_bytes)) {
-        LOG(ERROR) << "Failed to set " << bss_path << ".UnicastBytesReceived";
-        ret_val &= false;
-    }
-
+    ret_val &= m_ambiorix_datamodel->set(bss_path, "UnicastBytesSent", uc_tx_bytes);
+    ret_val &= m_ambiorix_datamodel->set(bss_path, "UnicastBytesReceived", uc_rx_bytes);
     ret_val &= m_ambiorix_datamodel->set(bss_path, "MulticastBytesSent", mc_tx_bytes);
     ret_val &= m_ambiorix_datamodel->set(bss_path, "MulticastBytesReceived", mc_rx_bytes);
     ret_val &= m_ambiorix_datamodel->set(bss_path, "BroadcastBytesSent", bc_tx_bytes);
