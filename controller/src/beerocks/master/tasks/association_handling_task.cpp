@@ -13,7 +13,6 @@
 
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
-#include <bcl/network/socket.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <easylogging++.h>
 

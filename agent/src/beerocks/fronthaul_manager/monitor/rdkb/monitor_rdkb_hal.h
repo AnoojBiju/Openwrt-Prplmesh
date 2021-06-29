@@ -13,7 +13,6 @@
 
 #include <bcl/beerocks_cmdu_client.h>
 #include <bcl/beerocks_message_structs.h>
-#include <bcl/network/socket.h>
 
 #include <tlvf/CmduMessageTx.h>
 
