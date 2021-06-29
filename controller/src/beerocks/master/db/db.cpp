@@ -118,6 +118,21 @@ std::shared_ptr<Agent::sRadio> db::get_radio(const sMacAddr &al_mac, const sMacA
     return radio;
 }
 
+std::shared_ptr<Agent::sRadio> db::get_radio_by_bssid(const sMacAddr &bssid)
+{
+    for (const auto &agent : m_agents) {
+        for (const auto &radio : agent.second->radios) {
+            auto bss = radio.second->bsses.get(bssid);
+            if (bss) {
+                return radio.second;
+            }
+        }
+    }
+
+    LOG(ERROR) << "Radio with BSSID " << bssid << " not found";
+    return {};
+}
+
 void db::set_log_level_state(const beerocks::eLogLevel &log_level, const bool &new_state)
 {
     logger.set_log_level_state(log_level, new_state);
