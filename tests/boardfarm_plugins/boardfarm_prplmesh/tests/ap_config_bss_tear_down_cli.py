@@ -70,7 +70,7 @@ class ApConfigBSSTeardownCli(PrplMeshBaseTest):
         controller.beerocks_cli_command('bml_clear_wifi_credentials {}'.format(agent.mac))
         controller.beerocks_cli_command('bml_update_wifi_credentials {}'.format(agent.mac))
 
-        time.sleep(3)
+        time.sleep(15)
         self.check_log(agent.radios[0], r".* tear down radio")
         conn_map = controller.get_conn_map()
         repeater1 = conn_map[agent.mac]
