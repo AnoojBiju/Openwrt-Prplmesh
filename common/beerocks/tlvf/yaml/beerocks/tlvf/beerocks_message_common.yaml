@@ -825,7 +825,7 @@ sTriggerChannelScanParams:
   channel_pool:
     _type: uint8_t
     _length: ["beerocks::message::SUPPORTED_CHANNELS_LENGTH"]
-    _comment: pool of channels to be scaned
+    _comment: pool of channels to be scanned
 
 sChannelScanRequestParams:
   _type: struct
