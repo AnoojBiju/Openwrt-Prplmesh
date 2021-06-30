@@ -9,12 +9,23 @@ import argparse
 import shutil
 from typing import List
 
+from enum import Enum
+
 import pexpect
 import pexpect.fdpexpect
 import pexpect.pxssh
 import serial
 import re
 
+
+class ShellType(Enum):
+    """ ShellType enum contains 3 types of the possible shell on the device:
+
+        UBOOT, PRPLWRT, RDKB
+    """
+    UBOOT = 1
+    PRPLWRT = 2
+    RDKB = 3
 
 class PrplwrtDevice:
     """Represents a prplWrt device.
