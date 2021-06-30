@@ -549,11 +549,9 @@ int main(int argc, char *argv[])
     son::Controller controller(master_db, std::move(broker_client_factory), std::move(ucc_server),
                                std::move(cmdu_server), timer_manager, event_loop);
 
-    if (!amb_dm_obj->set("Controller.Network", "TimeStamp",
-                         amb_dm_obj->get_datamodel_time_format())) {
-        LOG(ERROR) << "Failed to set Controller.Network.TimeStamp.";
+    if (!amb_dm_obj->set_current_time("Controller.Network")) {
         return false;
-    }
+    };
 
     LOG_IF(!controller.start(), FATAL) << "Unable to start controller!";
 
