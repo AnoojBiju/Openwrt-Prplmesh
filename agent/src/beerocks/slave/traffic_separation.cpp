@@ -64,6 +64,7 @@ void TrafficSeparation::apply_traffic_separation(const std::string &radio_iface)
         return;
     }
 
+    LOG(DEBUG) << "Apply_traffic_separation";
     // The Bridge, the WAN ports and the LAN ports should all have "Tagged Port" policy.
     // Update the Bridge Policy
     bool is_bridge = true;

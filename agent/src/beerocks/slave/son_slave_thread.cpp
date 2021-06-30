@@ -1255,7 +1255,6 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
     }
     case beerocks_message::ACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST: {
         LOG(DEBUG) << "received ACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST";
-        LOG(DEBUG) << "Apply_traffic_separation";
         TrafficSeparation::apply_traffic_separation();
         break;
     }
@@ -2116,7 +2115,6 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
             }
         }
 
-        LOG(DEBUG) << "Apply_traffic_separation";
         TrafficSeparation::apply_traffic_separation(m_fronthaul_iface);
 
         // When the AP-Manager sends VAPS_LIST_UPDATE_NOTIFICATION the autoconfiguration is
@@ -5293,7 +5291,6 @@ bool slave_thread::handle_multi_ap_policy_config_request(Socket *sd,
     }
 
     if (m_autoconfiguration_completed) {
-        LOG(DEBUG) << "Apply_traffic_separation";
         TrafficSeparation::apply_traffic_separation(m_fronthaul_iface);
     } else {
         LOG(WARNING) << "autoconfiguration procedure is not completed yet, traffic separation "
