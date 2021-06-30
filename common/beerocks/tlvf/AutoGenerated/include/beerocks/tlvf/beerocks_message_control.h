@@ -323,27 +323,6 @@ class cACTION_CONTROL_HOSTAP_CSA_NOTIFICATION : public BaseClass
         sApChannelSwitch* m_cs_params = nullptr;
 };
 
-class cACTION_CONTROL_HOSTAP_ACS_ERROR_NOTIFICATION : public BaseClass
-{
-    public:
-        cACTION_CONTROL_HOSTAP_ACS_ERROR_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cACTION_CONTROL_HOSTAP_ACS_ERROR_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cACTION_CONTROL_HOSTAP_ACS_ERROR_NOTIFICATION();
-
-        static eActionOp_CONTROL get_action_op(){
-            return (eActionOp_CONTROL)(ACTION_CONTROL_HOSTAP_ACS_ERROR_NOTIFICATION);
-        }
-        sApChannelSwitch& cs_params();
-        void class_swap() override;
-        bool finalize() override;
-        static size_t get_initial_size();
-
-    private:
-        bool init();
-        eActionOp_CONTROL* m_action_op = nullptr;
-        sApChannelSwitch* m_cs_params = nullptr;
-};
-
 class cACTION_CONTROL_HOSTAP_ACS_NOTIFICATION : public BaseClass
 {
     public:
