@@ -27,6 +27,79 @@ class ShellType(Enum):
     PRPLWRT = 2
     RDKB = 3
 
+
+def check_serial_type(serial_name: str, baudrate: int, prompt_regexp: str) -> str:
+    """ Checks type of the serial terminal.
+
+    Parameters
+    ----------
+    serial_name: str
+        Name of the serial device.
+
+    baudrate: int, optional
+        Serial baud rate.
+
+    prompt_regexp: str
+        Regular expression with shell prompt.
+
+    Returns
+    -------
+    int
+        Enum for rdkb, prplwrt or uboot shell otherwise raise exception.
+
+    Raises
+    -------
+    ValueError
+        If the connecting to the serial device failed.
+    """
+
+    serial_path = f"/dev/{serial_name}"
+    if not os.path.exists(serial_path):
+        raise ValueError(f"The serial device {serial_path} does not exist!\n"
+                         + "Please make sure you have an appropriate udev rule for it.")
+    UBOOT_PROMPT = "=>"
+    OSTYPE_RE = r"NAME=[^\s]*"
+
+    with serial.Serial(serial_path, baudrate) as ser:
+        shell = pexpect.fdpexpect.fdspawn(ser, logfile=sys.stdout.buffer, timeout=20)
+        if not shell.isalive():
+            raise ValueError("Unable to connect to the serial device!")
+
+            shell.sendline("")
+            shell.expect([UBOOT_PROMPT, pexpect.TIMEOUT])
+            if shell.match is not pexpect.TIMEOUT:
+                return ShellType.UBOOT
+
+        shell.expect([prompt_regexp, pexpect.TIMEOUT])
+        shell.sendline("")
+        shell.sendline("cat /etc/os-release")
+
+        os_name = ""
+
+        # Read 25 lines from terminal for getting OS Type
+        read_lines = 25
+
+        while read_lines != 0:
+            try:
+                read_lines = read_lines - 1
+                tmp = shell.readline()
+                os_name = re.findall(OSTYPE_RE, tmp.decode("utf-8"))
+                if os_name:
+                    break
+            except pexpect.TIMEOUT:
+                continue
+
+        for i in os_name:
+            os_name = str(i)
+
+        if re.findall(r"OpenWrt", os_name):
+            return ShellType.PRPLWRT
+        elif re.findall(r"RDK", os_name):
+            return ShellType.RDKB
+        else:
+            raise ValueError("Unknown device type!")
+
+
 class PrplwrtDevice:
     """Represents a prplWrt device.
 
@@ -317,8 +390,6 @@ class TurrisRdkb(PrplwrtDevice):
     """The time (in seconds) the device needs to initialize when it boots
     for the first time after flashing a new image."""
 
-    shell_type = {"uboot": "uboot", "prplwrt": "prplwrt", "rdkb": "rdkb"}
-
     TURRIS_DTB = "armada-385-turris-omnia.dtb"
     """ Device Tree Blob (Flat Device Tree) for Turris Omnia.
     The DTB is a database that represents the hardware components on a given board. """
@@ -359,59 +430,13 @@ class TurrisRdkb(PrplwrtDevice):
         """The directory where artifacts are stored. It's expected to contain the
         image, kernel, dtb files."""
 
-    def check_serial_type(self):
-        """ Checks type of the serial terminal.
-
-            Returns type: rdkb, prplwrt, uboot otherwise raise exception.
-        """
-        serial_path = f"/dev/{self.name}"
-        if not os.path.exists(serial_path):
-            raise ValueError(f"The serial device {serial_path} does not exist!\n"
-                             + "Please make sure you have an appropriate udev rule for it.")
-
-        UBOOT = "=>"
-        OSTYPE_RE = r"NAME=[^\s]*"
-
-        with serial.Serial(serial_path, self.BAUDRATE) as ser:
-            shell = pexpect.fdpexpect.fdspawn(ser, logfile=sys.stdout.buffer, timeout=20)
-            if not shell.isalive():
-                raise ValueError("Unable to connect to the serial device!")
-
-            shell.sendline("")
-            shell.expect([UBOOT, pexpect.TIMEOUT])
-            if shell.match is not pexpect.TIMEOUT:
-                return self.shell_type["uboot"]
-
-            shell.expect([self.PROMPT_RE, pexpect.TIMEOUT])
-            shell.sendline("")
-            shell.sendline("cat /etc/os-release")
-            os_name = ""
-
-            while True:
-                try:
-                    tmp = shell.readline()
-                    os_name = re.findall(OSTYPE_RE, tmp.decode("utf-8"))
-                    if os_name:
-                        break
-                except pexpect.TIMEOUT:
-                    continue
-
-            for i in os_name:
-                os_name = str(i)
-
-            openwrt = re.findall(r"OpenWrt", os_name)
-            if openwrt:
-                return self.shell_type["prplwrt"]
-            else:
-                return self.shell_type["rdkb"]
-
-    def reset_board(self, serial_type: str):
-        """Reset Turris Omnia board.
+    def reset_board(self, serial_type: ShellType):
+        """Reset board.
 
         Parameters
         -----------
-            serial_type: str
-                Type of the serial connection( uboot, rdkb, prplwrt)
+        serial_type: int
+            Type of the serial connection as enum ShellType(uboot, rdkb, prplwrt)
         """
         serial_path = f"/dev/{self.name}"
         if not os.path.exists(serial_path):
@@ -425,10 +450,10 @@ class TurrisRdkb(PrplwrtDevice):
             if not shell.isalive():
                 raise ValueError("Unable to connect to the serial device!")
 
-            if serial_type == self.shell_type["uboot"]:
+            if serial_type == ShellType.UBOOT:
                 shell.sendline("reset")
-            elif serial_type == self.shell_type["prplwrt"] or \
-                    serial_type == self.shell_type["rdkb"]:
+            elif serial_type == ShellType.PRPLWRT or \
+                    serial_type == ShellType.RDKB:
                 shell.sendline("reboot")
 
     def check_images_on_board(self):
@@ -580,7 +605,7 @@ class TurrisRdkb(PrplwrtDevice):
         """Launch RDKB on Turris Omnia.
         """
 
-        self.reset_board(self.check_serial_type())
+        self.reset_board(check_serial_type(self.name, self.BAUDRATE, self.PROMPT_RE))
 
         serial_path = f"/dev/{self.name}"
         if not os.path.exists(serial_path):
@@ -687,8 +712,8 @@ class TurrisRdkb(PrplwrtDevice):
             Returns True if upgrade required otherwise False.
         """
 
-        serial_type = self.check_serial_type()
-        if serial_type == self.shell_type["uboot"]:
+        serial_type = check_serial_type(self.name, self.BAUDRATE, self.PROMPT_RE)
+        if serial_type == ShellType.UBOOT:
             self.reset_board(serial_type)
             time.sleep(30)  # Waiting when prplWrt will operational
 
@@ -698,8 +723,8 @@ class TurrisRdkb(PrplwrtDevice):
         print(f"Current RDKB version is: {current_version} \nNew RDKB version is: {new_version}")
 
         will_upgrade = new_version > current_version
-        if will_upgrade and serial_type == self.shell_type["rdkb"]:
-            self.reset_board(self.check_serial_type())
+        if will_upgrade and serial_type == ShellType.RDKB:
+            self.reset_board(check_serial_type(self.name, self.BAUDRATE, self.PROMPT_RE))
             time.sleep(50)  # Waiting when RDKB shoutdown and prplWrt bring up
 
         return will_upgrade
