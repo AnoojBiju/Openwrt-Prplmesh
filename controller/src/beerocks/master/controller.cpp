@@ -3081,8 +3081,8 @@ bool Controller::handle_cmdu_control_message(
         }
         std::string client_mac = tlvf::mac_to_string(notification->mac());
 
-        LOG(INFO) << "ACTION_CONTROL_CLIENT_NO_RESPONSE_NOTIFICATION, client_mac=" << client_mac
-                  << " hostap mac=" << hostap_mac;
+        LOG(DEBUG) << "ACTION_CONTROL_CLIENT_NO_RESPONSE_NOTIFICATION, client_mac=" << client_mac
+                   << " hostap mac=" << hostap_mac;
 
         if (database.get_node_type(client_mac) == beerocks::TYPE_IRE_BACKHAUL) {
             LOG(INFO) << "IRE CLIENT_NO_RESPONSE_NOTIFICATION, client_mac=" << client_mac
