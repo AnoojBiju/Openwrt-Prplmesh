@@ -6905,10 +6905,10 @@ uint64_t db::recalculate_attr_to_byte_units(
     wfa_map::tlvProfile2ApCapability::eByteCounterUnits byte_counter_units, uint64_t bytes)
 {
     if (byte_counter_units == wfa_map::tlvProfile2ApCapability::eByteCounterUnits::KIBIBYTES) {
-        bytes = bytes * 1000;
+        bytes = bytes * 1024;
     } else if (byte_counter_units ==
                wfa_map::tlvProfile2ApCapability::eByteCounterUnits::MEBIBYTES) {
-        bytes = bytes * 1000 * 1000;
+        bytes = bytes * 1024 * 1024;
     }
 
     return bytes;
