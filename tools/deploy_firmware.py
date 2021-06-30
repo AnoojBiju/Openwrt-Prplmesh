@@ -100,6 +100,33 @@ def check_serial_type(serial_name: str, baudrate: int, prompt_regexp: str) -> st
             raise ValueError("Unknown device type!")
 
 
+def check_uboot_var(shell, variable: str, expectation: str):
+    """ Check content of the UBoot variable.
+
+    Parameters
+    ----------
+    shell : pexpect.fdpexpect.fdspawn
+        Shell file descriptor.
+
+    variable : str
+        The number of seconds to wait between attempts.
+
+    expectation: str
+        Expected content of the variable.
+
+    Raises
+    -------
+    ValueError
+        If the getting content of the variable failed.
+    """
+
+    shell.sendline(f"printenv {variable}")
+    shell.expect([expectation, pexpect.TIMEOUT])
+    time.sleep(0.2)  # Sleep introduced because printing env variables takes time
+    if shell.match == pexpect.TIMEOUT:
+        raise ValueError(f"Failed to get {variable} variable.")
+
+
 class PrplwrtDevice:
     """Represents a prplWrt device.
 
@@ -617,20 +644,13 @@ class TurrisRdkb(PrplwrtDevice):
             if not shell.isalive():
                 raise ValueError("Unable to connect to the serial device.")
 
-            def check_uboot_var(variable: str, expectation: str):
-                shell.sendline(f"printenv {variable}")
-                shell.expect([expectation, pexpect.TIMEOUT])
-                time.sleep(0.2)  # Sleep introduced because printing env variables takes time
-                if shell.match == pexpect.TIMEOUT:
-                    raise ValueError(f"Failed to get {variable} variable.")
-
             shell.expect("Hit any key to stop autoboot")
             shell.sendline("")
             shell.expect("=>")
 
-            check_uboot_var("yocto_bootargs", "yocto_bootargs=earlyprintk")
-            check_uboot_var("yocto_mmcboot", "yocto_mmcboot=run")
-            check_uboot_var("yocto_mmcload", "yocto_mmcload=setenv")
+            check_uboot_var(shell, "yocto_bootargs", "yocto_bootargs=earlyprintk")
+            check_uboot_var(shell, "yocto_mmcboot", "yocto_mmcboot=run")
+            check_uboot_var(shell, "yocto_mmcload", "yocto_mmcload=setenv")
 
             shell.sendline("run yocto_mmcboot")
             time.sleep(30)  # Sleep introduced because RDKB start-up takes time
