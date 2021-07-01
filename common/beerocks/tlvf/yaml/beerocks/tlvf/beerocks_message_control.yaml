@@ -86,12 +86,6 @@ cACTION_CONTROL_HOSTAP_CSA_NOTIFICATION:
 cACTION_CONTROL_HOSTAP_ACS_NOTIFICATION:
   _type: class
   cs_params: sApChannelSwitch
-  preferred_channels_size:
-    _type: uint8_t
-    _length_var: True
-  preferred_channels:
-    _type: beerocks::message::sWifiChannel
-    _length: [preferred_channels_size]
 
 cACTION_CONTROL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION:
   _type: class
