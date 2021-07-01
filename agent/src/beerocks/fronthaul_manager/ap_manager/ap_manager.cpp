@@ -19,6 +19,7 @@
 #include <beerocks/tlvf/beerocks_message.h>
 #include <beerocks/tlvf/beerocks_message_apmanager.h>
 
+#include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvProfile2ReasonCode.h>
 #include <tlvf/wfa_map/tlvProfile2StatusCode.h>
 #include <tlvf/wfa_map/tlvStaMacAddressType.h>
@@ -1642,16 +1643,6 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
                 LOG(ERROR) << "Failed building message!";
                 return false;
             }
-            if (!notification->alloc_preferred_channels(
-                    ap_wlan_hal->get_radio_info().preferred_channels.size())) {
-                LOG(ERROR) << "Failed to allocate preferred_channels ["
-                           << int(ap_wlan_hal->get_radio_info().preferred_channels.size()) << "]!";
-                return false;
-            }
-            auto tuple_preferred_channels = notification->preferred_channels(0);
-            std::copy_n(ap_wlan_hal->get_radio_info().preferred_channels.begin(),
-                        notification->preferred_channels_size(),
-                        &std::get<1>(tuple_preferred_channels));
             fill_cs_params(notification->cs_params());
             acs_completed_vap_update = true;
         } else {

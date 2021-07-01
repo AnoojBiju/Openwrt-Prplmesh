@@ -15,7 +15,6 @@
 #include <tlvf/WSC/eWscAuth.h>
 #include <tlvf/WSC/eWscEncr.h>
 #include <tlvf/WSC/eWscVendorExt.h>
-#include <tlvf/wfa_map/tlvChannelPreference.h>
 
 #include <deque>
 #include <iostream>
@@ -114,13 +113,6 @@ public:
         double bit_rate_max_mbps;
     } sPhyRateBitRateEntry;
 
-    typedef struct {
-        uint8_t oper_class = 0;
-        uint8_t preference = wfa_map::cPreferenceOperatingClasses::ePreference::NON_OPERABLE;
-        uint8_t reason     = wfa_map::cPreferenceOperatingClasses::eReasonCode::UNSPECIFIED;
-        std::vector<beerocks::message::sWifiChannel> channels;
-    } sChannelPreference;
-
     static sPhyUlParams
     estimate_ul_params(int ul_rssi, uint16_t sta_phy_tx_rate_100kb,
                        const beerocks::message::sRadioCapabilities *capabilities,
@@ -172,8 +164,6 @@ public:
     static std::list<uint8_t> string_to_wsc_oper_class(const std::string &operating_class);
     static uint8_t get_5g_center_channel(uint8_t channel, beerocks::eWiFiBandwidth bandwidth);
     static uint8_t get_operating_class_by_channel(const beerocks::message::sWifiChannel &channel);
-    static std::list<sChannelPreference>
-    get_channel_preferences(const std::deque<beerocks::message::sWifiChannel> &supported_channels);
 
     /**
     * @brief Match channel number in the given operating class.

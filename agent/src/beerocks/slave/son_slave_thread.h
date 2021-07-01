@@ -21,6 +21,7 @@
 #include <tlvf/WSC/m1.h>
 #include <tlvf/WSC/m2.h>
 #include <tlvf/ieee_1905_1/tlvWsc.h>
+#include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvProfile2ErrorCode.h>
 
 // Forward decleration
@@ -184,8 +185,6 @@ private:
     int slave_resets_counter = 0;
 
     sSlaveBackhaulParams backhaul_params;
-    std::vector<wireless_utils::sChannelPreference> channel_preferences;
-
     SocketClient *platform_manager_socket = nullptr;
     SocketClient *backhaul_manager_socket = nullptr;
     SocketClient *master_socket           = nullptr;
@@ -230,7 +229,7 @@ private:
     bool handle_monitor_ap_metrics_response(Socket &sd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_channel_preference_query(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_channel_selection_request(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool channel_selection_get_channel_preference(ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool get_controller_channel_preference(ieee1905_1::CmduMessageRx &cmdu_rx);
     bool channel_selection_get_transmit_power_limit(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                     int &power_limit);
     bool channel_selection_current_channel_restricted();
@@ -269,6 +268,69 @@ private:
      * @brief save cac capabilities in the agent DB
      */
     void save_cac_capabilities_params_to_db();
+
+    struct sChannelPreference {
+        sChannelPreference(uint8_t oper_class,
+                           wfa_map::cPreferenceOperatingClasses::ePreference preference,
+                           wfa_map::cPreferenceOperatingClasses::eReasonCode reason_code)
+            : operating_class(oper_class)
+        {
+            flags.reason_code = reason_code;
+            flags.preference  = preference;
+        }
+        sChannelPreference(uint8_t _operating_class,
+                           wfa_map::cPreferenceOperatingClasses::sFlags _flags)
+            : operating_class(_operating_class), flags(_flags)
+        {
+        }
+
+        uint8_t operating_class;
+        wfa_map::cPreferenceOperatingClasses::sFlags flags;
+
+        bool operator==(const sChannelPreference &rhs) const
+        {
+            return operating_class == rhs.operating_class &&
+                   flags.preference == rhs.flags.preference &&
+                   flags.reason_code == rhs.flags.reason_code;
+        }
+
+        bool operator<(const sChannelPreference &rhs) const
+        {
+            if (operating_class != rhs.operating_class) {
+                return operating_class < rhs.operating_class;
+            }
+            if (flags.preference != rhs.flags.preference) {
+                return flags.preference < rhs.flags.preference;
+            }
+            if (flags.reason_code != rhs.flags.reason_code) {
+                return flags.reason_code < rhs.flags.reason_code;
+            }
+            return false;
+        }
+    };
+    std::map<sChannelPreference, std::set<uint8_t>> m_controller_channel_preferences;
+
+    /**
+     * @brief Get a std::map of channels preferences organized in a way it will be easy to fill
+     * WFA Channel Preference Report.
+     *
+     * @return std::map of channels preferences.
+     */
+    std::map<sChannelPreference, std::set<uint8_t>> get_channel_preferences_from_channels_list();
+
+    /**
+     * @brief Get the channel preference.
+     *
+     * @pre The channel operating class and the preference operating class have to match.
+     * @param channel A channel to check.
+     * @param preference The preference of the channel.
+     * @param preference_channels_list The preference channels list given by the Controller.
+     * @return NON_OPERABLE if channel is restricted, channel preference otherwise.
+     */
+    wfa_map::cPreferenceOperatingClasses::ePreference
+    get_channel_preference(beerocks::message::sWifiChannel channel,
+                           const sChannelPreference &preference,
+                           const std::set<uint8_t> &preference_channels_list);
 };
 
 } // namespace son

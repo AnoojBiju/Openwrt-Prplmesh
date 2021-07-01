@@ -824,39 +824,6 @@ std::vector<uint8_t> wireless_utils::calc_5g_20MHz_subband_channels(
     return channels;
 }
 
-/**
- * @brief get temporary non operable channels list for all supported operating classes
- *
- * @param supported_channels list of supported channels
- * @return list of temporary non operable channels with <oper_class, preference, reason,
- *         list of channels> as value
- */
-std::list<wireless_utils::sChannelPreference> wireless_utils::get_channel_preferences(
-    const std::deque<beerocks::message::sWifiChannel> &supported_channels)
-{
-    std::list<sChannelPreference> preferences;
-
-    for (const auto &oper_class : operating_classes_list) {
-        std::vector<beerocks::message::sWifiChannel> radar_affected_channels;
-        for (const auto supported_channel : supported_channels) {
-            if (has_operating_class_channel(
-                    oper_class.second, supported_channel.channel,
-                    beerocks::eWiFiBandwidth(supported_channel.channel_bandwidth)) &&
-                supported_channel.radar_affected) {
-                radar_affected_channels.push_back(supported_channel);
-            }
-        }
-        sChannelPreference pref;
-        pref.reason = wfa_map::cPreferenceOperatingClasses::eReasonCode::
-            OPERATION_DISALLOWED_DUE_TO_RADAR_DETECTION_ON_A_DFS_CHANNEL;
-        if (!radar_affected_channels.empty()) {
-            preferences.push_back(pref);
-        }
-    }
-
-    return preferences;
-}
-
 uint8_t wireless_utils::get_5g_center_channel(uint8_t channel, beerocks::eWiFiBandwidth bandwidth)
 {
     auto channel_it = channels_table_5g.find(channel);
