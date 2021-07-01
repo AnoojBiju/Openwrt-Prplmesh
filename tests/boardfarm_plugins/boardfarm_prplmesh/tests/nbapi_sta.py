@@ -117,9 +117,9 @@ class NbapiSta(PrplMeshBaseTest):
                         self.fail('Fail. Sta connection time earlier '
                                   'than test triggering.')
 
-                    # TODO: AP Metrics Query does not update timestamp value.
-                    # This check does not fully validate update time of AP Metric Query.
-                    if time_before_query + timedelta(seconds=10) <= time_sta:
+                    # AP Metrics Query updates STA timestamp.
+                    # Time between query and STA should be close.
+                    if time_before_query + timedelta(seconds=2) <= time_sta:
                         self.fail('Fail. Sta time group was collected '
                                   'more than 10s after AP Metrics Query was send.')
                     print(

@@ -33,13 +33,16 @@ class NbapiBSS(PrplMeshBaseTest):
             raise SkipTest(ae)
 
         self.dev.DUT.wired_sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
-        time_bss_appear = datetime.now()
-        time_bss_appear = pytz.utc.localize(time_bss_appear)
+        time_before_bss_appear = datetime.now()
+        time_before_bss_appear = pytz.utc.localize(time_before_bss_appear)
         self.configure_ssids(["NbapiBSS"])
 
         topology = self.get_topology()
         for device in topology.values():
             print(device)
+
+        time_before_query = datetime.now()
+        time_before_query = pytz.utc.localize(time_before_query)
 
         debug("Send AP Metrics Query message to agent 1")
         self.send_and_check_policy_config_metric_reporting(controller, agent, True, False)
@@ -74,9 +77,16 @@ class NbapiBSS(PrplMeshBaseTest):
                 bss.path, "EstServiceParametersVO")
 
             time_nbapi = dateutil.parser.isoparse(time_stamp)
-            assert time_nbapi - timedelta(seconds=3) <= time_bss_appear and\
-                time_bss_appear <= time_nbapi + timedelta(seconds=3), \
-                f"TimeStamp out of timeframe. Expect: +-3s {time_bss_appear}, actual: {time_nbapi}."
+
+            # Verify BSS connection time
+            if time_nbapi <= time_before_bss_appear:
+                self.fail('Fail. BSS appears {time_before_bss_appear} earlier '
+                          'than test triggering: {time_nbapi}.')
+
+            assert time_nbapi - timedelta(seconds=3) <= time_before_query and\
+                time_before_query <= time_nbapi + timedelta(seconds=3), \
+                f"TimeStamp out of timeframe." \
+                f"Expect: +-3s {time_before_query}, actual: {time_nbapi}."
 
             expected_time_format = r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+(Z|[-+]\d{2}:\d{2})'
 
