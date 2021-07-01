@@ -845,7 +845,7 @@ public:
                              const std::unordered_map<int8_t, sVapElement> &vap_list);
     std::unordered_map<int8_t, sVapElement> &get_hostap_vap_list(const sMacAddr &mac);
     std::set<std::string> get_hostap_vaps_bssids(const std::string &mac);
-    bool remove_vap(const sMacAddr &mac, int vap_id);
+    bool remove_vap(sAgent::sRadio &radio, int vap_id);
     bool add_vap(const std::string &radio_mac, int vap_id, const std::string &bssid,
                  const std::string &ssid, bool backhaul);
 
