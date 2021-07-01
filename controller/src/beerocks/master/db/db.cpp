@@ -4443,6 +4443,9 @@ bool db::set_vap_stats_info(const sMacAddr &bssid, uint32_t uc_tx_bytes, uint32_
     ret_val &= m_ambiorix_datamodel->set(bss_path, "MulticastBytesReceived", mc_rx_bytes);
     ret_val &= m_ambiorix_datamodel->set(bss_path, "BroadcastBytesSent", bc_tx_bytes);
     ret_val &= m_ambiorix_datamodel->set(bss_path, "BroadcastBytesReceived", bc_rx_bytes);
+
+    m_ambiorix_datamodel->set_current_time(bss_path);
+
     return ret_val;
 }
 
@@ -6765,6 +6768,9 @@ bool db::dm_set_sta_traffic_stats(const sMacAddr &sta_mac, sAssociatedStaTraffic
                    << ".ErrorsReceived: " << stats.m_rx_packets_error;
         return false;
     }
+
+    m_ambiorix_datamodel->set_current_time(path_to_sta);
+
     return true;
 }
 

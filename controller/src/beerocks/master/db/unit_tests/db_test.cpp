@@ -588,6 +588,8 @@ TEST_F(DbTestRadio1Sta1, test_set_node_stats_info)
                                  Matcher<const uint32_t &>(stats.m_rx_packets_error)))
         .WillOnce(Return(true));
 
+    EXPECT_CALL(*m_ambiorix, set_current_time(g_sta_path_1)).WillOnce(Return(true));
+
     EXPECT_TRUE(
         m_db->dm_set_sta_extended_link_metrics(tlvf::mac_from_string(g_client_mac), metrics));
     EXPECT_TRUE(m_db->dm_set_sta_traffic_stats(tlvf::mac_from_string(g_client_mac), stats));
@@ -650,6 +652,8 @@ TEST_F(DbTest, test_set_vap_stats_info)
     EXPECT_CALL(*m_ambiorix, set(std::string(g_radio_1_bss_path_1) + '.', "BroadcastBytesReceived",
                                  Matcher<const uint32_t &>(6U)))
         .WillOnce(Return(true));
+
+    EXPECT_CALL(*m_ambiorix, set_current_time(_)).WillOnce(Return(true));
 
     //execute test
     EXPECT_TRUE(m_db->set_vap_stats_info(tlvf::mac_from_string(g_bssid_1), 1, 2, 3, 4, 5, 6));
