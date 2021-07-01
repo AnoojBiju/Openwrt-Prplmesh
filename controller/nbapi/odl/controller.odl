@@ -138,6 +138,43 @@
         object Notification {
 
         }
+
+        %persistent %read-only object SteerEvent[] {
+            counted with NumberSteerEvents;
+            %persistent %read-only string DeviceId = "00:00:00:00:00:00";
+            %persistent %read-only string TimeStamp = "2020-08-31T11:22:39Z";
+            %persistent %read-only string SteeredFrom = "00:00:00:00:00:00";
+            %persistent %read-only string Result {
+                default "Unknown";
+                on action validate call check_enum [
+                    "Unknown",
+                    "Success",
+                    "Fail"
+                ];
+            }
+            %persistent %read-only string SteeredTo = "00:00:00:00:00:00";
+            %persistent %read-only int32 TimeTaken;
+            %persistent %read-only int32 NewLinkRate;
+            %persistent %read-only string SteeringType {
+                default "Unknown";
+                on action validate call check_enum [
+                    "BTM",
+                    "Blacklist",
+                    "Unknown"
+                ];
+            }
+            %persistent %read-only string SteeringOrigin {
+                default "Unknown";
+                on action validate call check_enum [
+                    "Unknown",
+                    "NBAPI",
+                    "CLI",
+                    "Controller",
+                    "Agent",
+                    "Station"
+                ];
+            }
+        }
     }
 }
 
