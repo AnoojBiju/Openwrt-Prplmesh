@@ -776,11 +776,8 @@ void LinkMetricsCollectionTask::handle_multi_ap_policy_config_request(
     }
 }
 
-uint32_t LinkMetricsCollectionTask::recalculate_byte_units(uint32_t &bytes)
+uint32_t LinkMetricsCollectionTask::recalculate_byte_units(uint32_t bytes)
 {
-    if (bytes == 0) {
-        return bytes;
-    }
     const auto &byte_counter_units = AgentDB::get()->device_conf.byte_counter_units;
     if (byte_counter_units == wfa_map::tlvProfile2ApCapability::eByteCounterUnits::KIBIBYTES) {
         bytes = bytes / 1024;
@@ -798,8 +795,8 @@ void LinkMetricsCollectionTask::recalculate_byte_units(ieee1905_1::CmduMessageRx
             LOG(ERROR) << "Failed to get class list for tlvAssociatedStaTrafficStats";
             continue;
         }
-        recalculate_byte_units(sta_traffic->byte_sent());
-        recalculate_byte_units(sta_traffic->byte_recived());
+        sta_traffic->byte_sent()    = recalculate_byte_units(sta_traffic->byte_sent());
+        sta_traffic->byte_recived() = recalculate_byte_units(sta_traffic->byte_recived());
     }
 
     for (auto &extended_metric : cmdu_rx.getClassList<wfa_map::tlvApExtendedMetrics>()) {
@@ -807,12 +804,18 @@ void LinkMetricsCollectionTask::recalculate_byte_units(ieee1905_1::CmduMessageRx
             LOG(ERROR) << "Failed to get class list for tlvApExtendedMetrics";
             continue;
         }
-        recalculate_byte_units(extended_metric->broadcast_bytes_sent());
-        recalculate_byte_units(extended_metric->broadcast_bytes_received());
-        recalculate_byte_units(extended_metric->multicast_bytes_sent());
-        recalculate_byte_units(extended_metric->multicast_bytes_received());
-        recalculate_byte_units(extended_metric->unicast_bytes_sent());
-        recalculate_byte_units(extended_metric->unicast_bytes_received());
+        extended_metric->broadcast_bytes_sent() =
+            recalculate_byte_units(extended_metric->broadcast_bytes_sent());
+        extended_metric->broadcast_bytes_received() =
+            recalculate_byte_units(extended_metric->broadcast_bytes_received());
+        extended_metric->multicast_bytes_sent() =
+            recalculate_byte_units(extended_metric->multicast_bytes_sent());
+        extended_metric->multicast_bytes_received() =
+            recalculate_byte_units(extended_metric->multicast_bytes_received());
+        extended_metric->unicast_bytes_sent() =
+            recalculate_byte_units(extended_metric->unicast_bytes_sent());
+        extended_metric->unicast_bytes_received() =
+            recalculate_byte_units(extended_metric->unicast_bytes_received());
     }
 }
 
