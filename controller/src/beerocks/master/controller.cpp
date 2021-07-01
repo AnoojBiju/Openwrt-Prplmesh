@@ -519,7 +519,7 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const std::string &sr
         return false;
     }
 
-    auto al_mac = tlvf::mac_to_string((const unsigned char *)tlvAlMacAddress->mac().oct);
+    auto al_mac = tlvAlMacAddress->mac();
     LOG(DEBUG) << "mac=" << al_mac;
 
     LOG(DEBUG) << "searched_role=" << int(tlvSearchedRole->value());
@@ -615,9 +615,11 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const std::string &sr
     // Add MultiAp Profile TLV only if the agent added it to the seach message.
     // Although R2 is profile1 competible, we found out that some certified agent
     // fail to parse the response in case the TLV is present.
-    if (cmdu_rx.getClass<wfa_map::tlvProfile2MultiApProfile>()) {
-        auto tlvProfile2MultiApProfile = cmdu_tx.addClass<wfa_map::tlvProfile2MultiApProfile>();
-        if (!tlvProfile2MultiApProfile) {
+    auto tlvProfile2MultiApProfileAgent = cmdu_rx.getClass<wfa_map::tlvProfile2MultiApProfile>();
+    if (tlvProfile2MultiApProfileAgent) {
+        auto tlvProfile2MultiApProfileController =
+            cmdu_tx.addClass<wfa_map::tlvProfile2MultiApProfile>();
+        if (!tlvProfile2MultiApProfileController) {
             LOG(ERROR) << "addClass wfa_map::tlvProfile2MultiApProfile failed";
             return false;
         }
@@ -648,6 +650,18 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const std::string &sr
         LOG(DEBUG) << "Not prplMesh agent " << src_mac;
     }
     LOG(DEBUG) << "sending autoconfig response message";
+
+    if (tlvProfile2MultiApProfileAgent) {
+
+        database.add_node_ire(al_mac);
+        auto agent = database.m_agents.get(al_mac);
+
+        if (agent) {
+            agent->profile = tlvProfile2MultiApProfileAgent->profile();
+            LOG(DEBUG) << "Agent profile is updated with enum " << agent->profile;
+        }
+    }
+
     return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 }
 
