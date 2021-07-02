@@ -20,7 +20,6 @@
 #include <beerocks/tlvf/beerocks_message_apmanager.h>
 
 #include <list>
-#include <set>
 
 namespace son {
 class ApManager {

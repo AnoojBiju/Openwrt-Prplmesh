@@ -19,7 +19,6 @@
 #include <bcl/network/network_utils.h>
 
 #include <list>
-#include <unordered_map>
 
 namespace beerocks {
 class cli_bml : public cli {

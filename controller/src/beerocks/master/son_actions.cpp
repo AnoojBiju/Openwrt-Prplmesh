@@ -12,8 +12,6 @@
 #include "tasks/association_handling_task.h"
 #include "tasks/bml_task.h"
 #include "tasks/client_steering_task.h"
-#include "tasks/ire_network_optimization_task.h"
-#include "tasks/optimal_path_task.h"
 
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
@@ -22,6 +20,9 @@
 #include <easylogging++.h>
 
 #include <beerocks/tlvf/beerocks_message_cli.h>
+#include <tlvf/ieee_1905_1/tlvAlMacAddress.h>
+#include <tlvf/ieee_1905_1/tlvSupportedFreqBand.h>
+#include <tlvf/ieee_1905_1/tlvSupportedRole.h>
 #include <tlvf/wfa_map/tlvClientAssociationControlRequest.h>
 #include <tlvf/wfa_map/tlvProfile2MultiApProfile.h>
 

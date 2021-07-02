@@ -18,8 +18,6 @@
 #include "../../internal/bml_internal.h"
 #include "../bml_rdkb_defs.h"
 
-#include <list>
-#include <map>
 #include <mutex>
 
 class bml_rdkb_internal : public bml_internal {

@@ -10,7 +10,6 @@
 #define _TASK_POOL_INTERFACE_H_
 
 #include <memory>
-#include <vector>
 
 namespace beerocks {
 

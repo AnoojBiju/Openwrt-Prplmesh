@@ -6,7 +6,6 @@
  * See LICENSE file for more details.
  */
 
-#include <list>
 #include <mapf/common/encryption.h>
 #include <mapf/common/logger.h>
 

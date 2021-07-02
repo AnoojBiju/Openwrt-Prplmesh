@@ -9,10 +9,10 @@
 #include "agent_monitoring_task.h"
 #include "../db/db_algo.h"
 #include "../son_actions.h"
-#include "bml_task.h"
 
 #include <bpl/bpl_cfg.h>
 #include <easylogging++.h>
+#include <tlvf/ieee_1905_1/tlvDeviceInformation.h>
 #include <tlvf/wfa_map/tlvApOperationalBSS.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
 #include <tlvf/wfa_map/tlvProfile2Default802dotQSettings.h>

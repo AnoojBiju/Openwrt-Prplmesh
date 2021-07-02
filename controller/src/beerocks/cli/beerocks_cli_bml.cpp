@@ -15,8 +15,6 @@
 #include <bcl/son/son_wireless_utils.h>
 #include <easylogging++.h>
 
-#include <unordered_map>
-
 using namespace beerocks;
 using namespace net;
 

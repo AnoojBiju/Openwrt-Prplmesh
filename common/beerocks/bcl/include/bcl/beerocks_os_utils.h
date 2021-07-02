@@ -46,8 +46,6 @@
 #define UTILS_SLEEP_MSEC(msec) usleep(msec * 1000)
 #endif
 
-#include <map>
-#include <set>
 #include <string>
 
 namespace beerocks {

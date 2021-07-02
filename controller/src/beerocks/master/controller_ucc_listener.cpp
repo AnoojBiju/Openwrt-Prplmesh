@@ -8,7 +8,6 @@
 
 #include "controller_ucc_listener.h"
 #include "son_actions.h"
-#include <unordered_set>
 
 #include <tlvf/wfa_map/tlvProfile2Default802dotQSettings.h>
 #include <tlvf/wfa_map/tlvProfile2TrafficSeparationPolicy.h>

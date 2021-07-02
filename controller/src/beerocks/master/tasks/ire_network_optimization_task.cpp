@@ -8,16 +8,11 @@
 
 #include "ire_network_optimization_task.h"
 #include "../db/db_algo.h"
-#include "../son_actions.h"
 
-#include <bcl/beerocks_utils.h>
-#include <bcl/network/network_utils.h>
-#include <bcl/network/socket.h>
 #include <easylogging++.h>
 
 #include <climits>
 #include <cstdlib>
-#include <set>
 
 using namespace son;
 

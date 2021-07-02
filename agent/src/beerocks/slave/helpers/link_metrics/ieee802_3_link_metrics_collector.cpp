@@ -12,9 +12,6 @@
 
 #include <easylogging++.h>
 
-// SPEED values
-#include <linux/ethtool.h>
-
 namespace beerocks {
 
 bool ieee802_3_link_metrics_collector::get_link_metrics(

@@ -32,16 +32,12 @@
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringRequest.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringResponse.h>
-#include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
 #include <tlvf/wfa_map/tlvProfile2AssociationStatusNotification.h>
 
 // BPL Error Codes
 #include <bpl/bpl_cfg.h>
 #include <bpl/bpl_err.h>
-
-// SPEED values
-#include <linux/ethtool.h>
 
 #include <net/if.h> // if_nametoindex
 

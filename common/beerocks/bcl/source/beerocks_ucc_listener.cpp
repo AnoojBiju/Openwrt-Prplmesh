@@ -18,13 +18,6 @@
 #include <bcl/beerocks_string_utils.h>
 #include <bcl/network/network_utils.h>
 
-#include <tlvf/ieee_1905_1/tlvReceiverLinkMetric.h>
-#include <tlvf/ieee_1905_1/tlvTransmitterLinkMetric.h>
-#include <tlvf/wfa_map/eTlvTypeMap.h>
-#include <tlvf/wfa_map/tlvApMetrics.h>
-#include <tlvf/wfa_map/tlvChannelPreference.h>
-#include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
-
 #include <algorithm>
 #include <easylogging++.h>
 #include <iomanip>

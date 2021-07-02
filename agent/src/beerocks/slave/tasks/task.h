@@ -10,7 +10,6 @@
 #define _TASK_H_
 
 #include "task_pool_interface.h"
-#include <bcl/network/socket.h>
 #include <beerocks/tlvf/beerocks_header.h>
 #include <chrono>
 #include <tlvf/CmduMessageRx.h>
