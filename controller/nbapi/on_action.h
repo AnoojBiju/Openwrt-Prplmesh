@@ -27,9 +27,6 @@
 
 #include "ambiorix_impl.h"
 
-#include <chrono>
-#include <ctime>
-
 #include "../src/beerocks/master/db/db.h"
 #include "../src/beerocks/master/son_actions.h"
 
