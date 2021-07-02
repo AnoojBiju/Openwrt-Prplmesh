@@ -15,6 +15,8 @@
 #include <string>
 #include <tlvf/common/sMacAddr.h>
 #include <tlvf/tlvftypes.h>
+#include <tlvf/wfa_map/tlvProfile2ApCapability.h>
+#include <tlvf/wfa_map/tlvProfile2MultiApProfile.h>
 
 // Forward declaration of son::node
 namespace son {
@@ -36,6 +38,37 @@ public:
 
     /** AL-MAC address of the agent. */
     const sMacAddr al_mac;
+
+    /**
+     * @brief Agents supported profile information.
+     *
+     * Default is MULTIAP_PROFILE_1.
+     *
+     * This parameter is reported with Profile-2 Multi AP Profile TLV.
+     */
+    wfa_map::tlvProfile2MultiApProfile::eMultiApProfile profile =
+        wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1;
+
+    /**
+     * @brief Byte counters unit types related TLVs.
+     *
+     * Multi-AP Agent onboards to a Controller created with Profile-1 settings and
+     * byte counters unit is set to BYTES.
+     *
+     * This affects counters in AP Extended Metrics and Associated STA Traffic Stats TLV.
+     *
+     * This parameter is reported with Profile-2 AP Capability TLV.
+     */
+    wfa_map::tlvProfile2ApCapability::eByteCounterUnits byte_counter_units =
+        wfa_map::tlvProfile2ApCapability::eByteCounterUnits::BYTES;
+
+    /**
+     * @brief Max Total Number of unique VLAN identifiers the Multi-AP Agent supports.
+     *
+     * This parameter is reported with Profile-2 AP Capability TLV.
+     * For Profile-1, it is initialized as zero due to not supporting the TLV.
+     */
+    uint8_t max_total_number_of_vids = 0;
 
     struct sRadio {
         sRadio()               = delete;

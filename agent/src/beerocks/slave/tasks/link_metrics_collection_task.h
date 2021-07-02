@@ -166,11 +166,11 @@ private:
      * support Byte units. The monitor produces the value in Byte units so it need to be recalculated
      * according to the controller expectation.
      *
-     * @param[in/out] bytes Number of bytes to recalculate
+     * @param[in] bytes Number of bytes to recalculate
      * 
-     * @return Recalculate value of the bytes
+     * @return Recalculated value of the bytes
      */
-    uint32_t recalculate_byte_units(uint32_t &bytes);
+    uint32_t recalculate_byte_units(uint32_t bytes);
 
     /**
      * @brief Recalculate all byte units of TLVs to support R2 spec
