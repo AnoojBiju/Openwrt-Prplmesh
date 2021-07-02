@@ -10,11 +10,12 @@
 
 #include <bcl/beerocks_string_utils.h>
 
-#include <sys/ioctl.h>
 #include <iostream>
 #include <iterator>
 #include <map>
 #include <sstream>
+#include <sys/ioctl.h>
+#include <unistd.h>
 
 using namespace beerocks;
 
