@@ -4257,12 +4257,6 @@ bool db::set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApS
         p->total_client_rx_load_percent = params->client_rx_load_percent;
         p->stats_delta_ms               = params->stats_delta_ms;
         p->timestamp                    = std::chrono::steady_clock::now();
-
-        auto radio_path = radio->dm_path;
-
-        if (radio_path.empty()) {
-            return true;
-        }
     }
 
     return true;
@@ -4421,24 +4415,9 @@ bool db::set_vap_stats_info(const sMacAddr &bssid, uint32_t uc_tx_bytes, uint32_
     }
 
     bool ret_val = true;
-    /*
-        Set value for UnicastBytesSent variable
-        Example: Controller.Network.Device.1.Radio.1.BSS.1.UnicastBytesSent
-    */
-    if (!m_ambiorix_datamodel->set(bss_path, "UnicastBytesSent", uc_tx_bytes)) {
-        LOG(ERROR) << "Failed to set " << bss_path << ".UnicastBytesSent";
-        ret_val &= false;
-    }
 
-    /*
-        Set value for UnicastBytesReceived variable
-        Example: Controller.Network.Device.1.Radio.1.BSS.1.UnicastBytesReceived
-    */
-    if (!m_ambiorix_datamodel->set(bss_path, "UnicastBytesReceived", uc_rx_bytes)) {
-        LOG(ERROR) << "Failed to set " << bss_path << ".UnicastBytesReceived";
-        ret_val &= false;
-    }
-
+    ret_val &= m_ambiorix_datamodel->set(bss_path, "UnicastBytesSent", uc_tx_bytes);
+    ret_val &= m_ambiorix_datamodel->set(bss_path, "UnicastBytesReceived", uc_rx_bytes);
     ret_val &= m_ambiorix_datamodel->set(bss_path, "MulticastBytesSent", mc_tx_bytes);
     ret_val &= m_ambiorix_datamodel->set(bss_path, "MulticastBytesReceived", mc_rx_bytes);
     ret_val &= m_ambiorix_datamodel->set(bss_path, "BroadcastBytesSent", bc_tx_bytes);
@@ -6899,4 +6878,17 @@ bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
         beerocks::bpl::cfg_set_steering_disassoc_timer_msec(config.steering_disassoc_timer_msec);
 
     return ret_val;
+}
+
+uint64_t db::recalculate_attr_to_byte_units(
+    wfa_map::tlvProfile2ApCapability::eByteCounterUnits byte_counter_units, uint64_t bytes)
+{
+    if (byte_counter_units == wfa_map::tlvProfile2ApCapability::eByteCounterUnits::KIBIBYTES) {
+        bytes = bytes * 1024;
+    } else if (byte_counter_units ==
+               wfa_map::tlvProfile2ApCapability::eByteCounterUnits::MEBIBYTES) {
+        bytes = bytes * 1024 * 1024;
+    }
+
+    return bytes;
 }

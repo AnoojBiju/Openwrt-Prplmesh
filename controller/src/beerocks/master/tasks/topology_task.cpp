@@ -341,6 +341,18 @@ bool topology_task::handle_topology_response(const std::string &src_mac,
         }
     }
 
+    auto agent = database.m_agents.get(al_mac);
+    if (!agent) {
+        LOG(WARNING) << "Agent with mac is not found in database mac=" << al_mac;
+        return false;
+    }
+
+    // Update Profile Information in Agent.
+    auto tlvProfile2MultiApProfile = cmdu_rx.getClass<wfa_map::tlvProfile2MultiApProfile>();
+    if (tlvProfile2MultiApProfile) {
+        agent->profile = tlvProfile2MultiApProfile->profile();
+    }
+
     return true;
 }
 
