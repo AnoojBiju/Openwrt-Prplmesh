@@ -6,8 +6,6 @@
  * See LICENSE file for more details.
  */
 
-#include <mapf/common/utils.h>
-
 #include "ieee1905_transport.h"
 
 #include <arpa/inet.h>
