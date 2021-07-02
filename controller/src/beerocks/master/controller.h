@@ -24,7 +24,6 @@
 #include <bcl/beerocks_timer_manager.h>
 #include <bcl/beerocks_ucc_server.h>
 #include <bcl/network/file_descriptor.h>
-#include <bcl/network/network_utils.h>
 #include <btl/broker_client_factory.h>
 
 #include <mapf/common/encryption.h>

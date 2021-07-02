@@ -11,7 +11,6 @@
 #include "../../son_actions.h"
 #include "rdkb/bml_rdkb_defs.h"
 
-#include <bcl/network/network_utils.h>
 #include <bcl/network/sockets.h>
 #include <easylogging++.h>
 

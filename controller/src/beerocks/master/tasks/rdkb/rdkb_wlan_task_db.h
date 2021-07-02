@@ -7,7 +7,6 @@
  */
 
 #include <bcl/beerocks_string_utils.h>
-#include <bcl/network/network_utils.h>
 #include <beerocks/tlvf/beerocks_message_common.h>
 #include <memory>
 #include <unordered_map>
