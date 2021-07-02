@@ -750,7 +750,6 @@ typedef struct sLinkMeasurementsResponse11k {
 
 typedef struct sBackhaulParams {
     beerocks::net::sIpv4Addr gw_ipv4;
-    sMacAddr gw_bridge_mac;
     sMacAddr controller_bridge_mac;
     sMacAddr bridge_mac;
     beerocks::net::sIpv4Addr bridge_ipv4;
@@ -765,7 +764,6 @@ typedef struct sBackhaulParams {
     beerocks::net::sScanResult backhaul_scan_measurement_list[beerocks::message::BACKHAUL_SCAN_MEASUREMENT_MAX_LENGTH];
     void struct_swap(){
         gw_ipv4.struct_swap();
-        gw_bridge_mac.struct_swap();
         controller_bridge_mac.struct_swap();
         bridge_mac.struct_swap();
         bridge_ipv4.struct_swap();
@@ -778,7 +776,6 @@ typedef struct sBackhaulParams {
     }
     void struct_init(){
         gw_ipv4.struct_init();
-        gw_bridge_mac.struct_init();
         controller_bridge_mac.struct_init();
         bridge_mac.struct_init();
         bridge_ipv4.struct_init();

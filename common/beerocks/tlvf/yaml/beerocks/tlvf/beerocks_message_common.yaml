@@ -550,7 +550,6 @@ sLinkMeasurementsResponse11k:
 sBackhaulParams:
   _type: struct
   gw_ipv4: beerocks::net::sIpv4Addr
-  gw_bridge_mac: sMacAddr
   controller_bridge_mac: sMacAddr
   bridge_mac: sMacAddr
   bridge_ipv4: beerocks::net::sIpv4Addr
