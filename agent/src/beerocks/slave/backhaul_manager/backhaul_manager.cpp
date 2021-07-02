@@ -2243,6 +2243,10 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
         // TODO: Need to unite WAIT_WPS and WIRELESS_ASSOCIATE_4ADDR_WAIT handling
         if (FSM_IS_IN_STATE(WAIT_WPS) || FSM_IS_IN_STATE(WIRELESS_ASSOCIATE_4ADDR_WAIT)) {
             auto msg = static_cast<bwl::sACTION_BACKHAUL_CONNECTED_NOTIFICATION *>(data);
+            if (!msg) {
+                LOG(ERROR) << "ACTION_BACKHAUL_CONNECTED_NOTIFICATION not found on Connected event";
+                return false;
+            }
             LOG(INFO) << "Multi-AP-Profile: " << msg->multi_ap_profile
                       << ", Multi-AP Primary VLAN ID: " << msg->multi_ap_primary_vlan_id;
 
