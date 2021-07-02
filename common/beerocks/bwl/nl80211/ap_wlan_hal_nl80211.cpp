@@ -9,7 +9,6 @@
 #include "ap_wlan_hal_nl80211.h"
 #include <bcl/beerocks_os_utils.h>
 #include <bcl/beerocks_utils.h>
-#include <bcl/beerocks_version.h>
 #include <bcl/network/network_utils.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <cmath>
