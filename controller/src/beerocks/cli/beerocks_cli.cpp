@@ -10,6 +10,7 @@
 
 #include <bcl/beerocks_string_utils.h>
 
+#include <sys/ioctl.h>
 #include <iostream>
 #include <iterator>
 #include <map>

@@ -17,7 +17,6 @@
 #include <linux/rtnetlink.h> // Netlink
 #include <net/if.h>          // IFF_*, ifreq
 #include <netinet/in.h>      // IPPROTO_IP
-#include <sys/ioctl.h>       // SIOCGIFFLAGS
 #include <unistd.h>          // close
 
 using namespace beerocks::net;

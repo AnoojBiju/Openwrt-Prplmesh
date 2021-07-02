@@ -27,7 +27,6 @@ typedef unsigned __int64 ssize_t;
 #include <netdb.h>
 #include <netinet/in.h>
 #include <string.h>
-#include <sys/ioctl.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <unistd.h>
