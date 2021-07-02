@@ -10,7 +10,9 @@
 #define _BEEROCKS_CONFIG_FILE_H_
 
 #include "beerocks_defines.h"
-#include "beerocks_string_utils.h"
+
+#include <string>
+#include <vector>
 
 namespace beerocks {
 
