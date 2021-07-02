@@ -8,7 +8,6 @@
 
 #include "monitor.h"
 
-#include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
 #include <bcl/network/sockets.h>
 #include <bcl/transaction.h>
