@@ -361,7 +361,7 @@ private:
     const int MAX_WIRELESS_ASSOCIATE_TIMEOUT_SECONDS  = 10;
     const int MAX_WIRELESS_ASSOCIATE_3ADDR_ATTEMPTS   = 2;
     const int POLL_TIMER_TIMEOUT_MS                   = 1000;
-    const int WIRELESS_WAIT_FOR_RECONNECT_TIMEOUT     = 2;
+    const int WIRELESS_WAIT_FOR_RECONNECT_TIMEOUT     = 30;
     const int RSSI_POLL_INTERVAL_MS                   = 1000;
     const int STATE_WAIT_ENABLE_TIMEOUT_SECONDS       = 600;
     const int STATE_WAIT_WPS_TIMEOUT_SECONDS          = 600;
