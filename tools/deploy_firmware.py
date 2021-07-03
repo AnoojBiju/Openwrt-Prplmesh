@@ -10,6 +10,7 @@ import shutil
 from typing import List
 
 from enum import Enum
+from pathlib import Path
 
 import pexpect
 import pexpect.fdpexpect
@@ -707,10 +708,11 @@ class TurrisRdkb(PrplwrtDevice):
         IMAGE_DATE_RE = r"0*[1-9]\d{4,}"
         """ Retrieve RDKB rootfs build date."""
 
-        stream = os.popen(f"ls {self.artifacts_dir}")
-        artifacts = stream.read()
-
-        image = str(re.findall(IMAGE_NAME_RE, artifacts))
+        image = ""
+        for artifact in Path(self.artifacts_dir.iterdir()):
+            image = str(re.findall(IMAGE_NAME_RE, str(artifact)))
+            if image:
+                break
 
         date_list = re.findall(IMAGE_DATE_RE, image)
 
@@ -751,10 +753,12 @@ class TurrisRdkb(PrplwrtDevice):
 
             return version
 
-    def needs_upgrade(self):
+    def needs_upgrade(self) -> bool:
         """ Check do we need upgrade board or not.
 
-            Returns True if upgrade required otherwise False.
+            Returns
+            -----------
+                True if upgrade required otherwise False.
         """
 
         def is_prplwrt_ready() -> bool:
