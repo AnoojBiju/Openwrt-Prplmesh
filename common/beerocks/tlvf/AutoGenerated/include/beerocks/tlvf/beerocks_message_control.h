@@ -136,27 +136,6 @@ class cACTION_CONTROL_SLAVE_JOINED_RESPONSE : public BaseClass
         sSonConfig* m_config = nullptr;
 };
 
-class cACTION_CONTROL_SON_CONFIG_UPDATE : public BaseClass
-{
-    public:
-        cACTION_CONTROL_SON_CONFIG_UPDATE(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cACTION_CONTROL_SON_CONFIG_UPDATE(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cACTION_CONTROL_SON_CONFIG_UPDATE();
-
-        static eActionOp_CONTROL get_action_op(){
-            return (eActionOp_CONTROL)(ACTION_CONTROL_SON_CONFIG_UPDATE);
-        }
-        sSonConfig& config();
-        void class_swap() override;
-        bool finalize() override;
-        static size_t get_initial_size();
-
-    private:
-        bool init();
-        eActionOp_CONTROL* m_action_op = nullptr;
-        sSonConfig* m_config = nullptr;
-};
-
 class cACTION_CONTROL_ARP_QUERY_REQUEST : public BaseClass
 {
     public:
