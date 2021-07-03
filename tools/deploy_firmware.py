@@ -127,6 +127,36 @@ def check_uboot_var(shell, variable: str, expectation: str):
         raise ValueError(f"Failed to get {variable} variable.")
 
 
+def serial_cmd_err(shell, cmd_prompt: str, command: str):
+    """ Execute command via serial port and check error code.
+
+    Parameters
+    ----------
+    shell : int
+        Shell file descriptor.
+
+    cmd_prompt :
+        Serial prompt.
+
+    command : str
+        Command which should be executed.
+
+    Raises
+    -------
+    ValueError
+        If command prompt not found or failed to execute command.
+    """
+    shell.sendline("")
+    shell.expect([cmd_prompt, pexpect.TIMEOUT])
+    if shell.match == pexpect.TIMEOUT:
+        raise ValueError("Failed to get serial prompt!")
+
+    shell.sendline(f"{command};echo err_code $?")
+    shell.expect(["err_code 0", pexpect.TIMEOUT])
+    if shell.match == pexpect.TIMEOUT:
+        raise ValueError(f"Failed to execute {command}!")
+
+
 class PrplwrtDevice:
     """Represents a prplWrt device.
 
@@ -546,34 +576,23 @@ class TurrisRdkb(PrplwrtDevice):
                 raise ValueError("Unable to connect to the serial device.")
 
             def mount_mmc(partition: str):
-                shell.sendline(f"mount /dev/{partition} /mnt")
-                shell.sendline("echo $?")
-                shell.expect(["0", pexpect.TIMEOUT])
-                if shell.match == pexpect.TIMEOUT:
-                    raise ValueError(f"Failed to mount /dev/{partition} to /mnt.")
-
-                time.sleep(5)  # Sleep introduced because monting takes time
+                serial_cmd_err(shell, self.PROMPT_RE, f"mount /dev/{partition} /mnt")
+                shell.sendline("mount")
+                shell.expect(f"/dev/{partition} on /mnt")
 
             def umount_mmc():
-                shell.sendline("umount /mnt")
-                shell.sendline("echo $?")
-                shell.expect(["0", pexpect.TIMEOUT])
-                if shell.match == pexpect.TIMEOUT:
-                    raise ValueError("Failed to umount /mnt.")
-
-                time.sleep(5)  # Sleep introduced because unmonting takes time
+                serial_cmd_err(shell, self.PROMPT_RE, "umount /mnt")
+                shell.send("du -sh /mnt")
+                shell.expect("0")
 
             def copy_to_mmc(src: str, dst: str):
-                shell.sendline(f"cp -v {src} {dst}")
-                shell.sendline("echo $?")
-                shell.expect(["0", pexpect.TIMEOUT])
-                if shell.match == pexpect.TIMEOUT:
+                try:
+                    serial_cmd_err(shell, self.PROMPT_RE, f"cp -v {src} {dst}")
+                except ValueError:
                     umount_mmc()
-                    raise ValueError(f"Failed to copy {src} to {dst}.")
 
             def check_partition(partition: str):
-                shell.sendline(f"find /dev/ -name {partition}")
-                time.sleep(2)
+                shell.sendline(f"find /dev/ -maxdepth 1 -name {partition}")
                 shell.expect([f"/dev/{partition}", pexpect.TIMEOUT])
                 if shell.match == pexpect.TIMEOUT:
                     raise ValueError(
@@ -608,20 +627,11 @@ class TurrisRdkb(PrplwrtDevice):
 
             shell.sendline("")
 
-            shell.sendline("rm -rf /mnt/*")
-            shell.sendline("echo $?")
-            shell.expect(["0", pexpect.TIMEOUT])
-            if shell.match == pexpect.TIMEOUT:
-                raise ValueError("Failed to remove old rootfs.")
+            serial_cmd_err(shell, self.PROMPT_RE, "rm -rf /mnt/*")
+            shell.send("du -sh /mnt")
+            shell.expect("0")
 
-            time.sleep(5)  # Sleep introduced because removing old RDKB rootfs takes time
-            shell.sendline("")
-
-            shell.sendline(f"tar -xzvf /tmp/{self.rdkbfs} -C /mnt/")
-            shell.sendline("echo $?")
-            shell.expect(["0", pexpect.TIMEOUT])
-            if shell.match == pexpect.TIMEOUT:
-                raise ValueError("Failed to install RDKB rootfs.")
+            serial_cmd_err(shell, self.PROMPT_RE, f"tar -xzvf /tmp/{self.rdkbfs} -C /mnt/")
 
             time.sleep(40)  # Sleep introduced because installation new RDKB rootfs takes time
             shell.sendline("")
