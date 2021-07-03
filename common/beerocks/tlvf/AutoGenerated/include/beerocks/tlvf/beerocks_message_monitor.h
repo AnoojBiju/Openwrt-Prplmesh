@@ -190,31 +190,6 @@ class cACTION_MONITOR_CLIENT_RX_RSSI_MEASUREMENT_REQUEST : public BaseClass
         sNodeRssiMeasurementRequest* m_params = nullptr;
 };
 
-class cACTION_MONITOR_CLIENT_DISCONNECT_REQUEST : public BaseClass
-{
-    public:
-        cACTION_MONITOR_CLIENT_DISCONNECT_REQUEST(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cACTION_MONITOR_CLIENT_DISCONNECT_REQUEST(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cACTION_MONITOR_CLIENT_DISCONNECT_REQUEST();
-
-        static eActionOp_MONITOR get_action_op(){
-            return (eActionOp_MONITOR)(ACTION_MONITOR_CLIENT_DISCONNECT_REQUEST);
-        }
-        sMacAddr& mac();
-        beerocks::net::sIpv4Addr& ipv4();
-        uint8_t& channel();
-        void class_swap() override;
-        bool finalize() override;
-        static size_t get_initial_size();
-
-    private:
-        bool init();
-        eActionOp_MONITOR* m_action_op = nullptr;
-        sMacAddr* m_mac = nullptr;
-        beerocks::net::sIpv4Addr* m_ipv4 = nullptr;
-        uint8_t* m_channel = nullptr;
-};
-
 class cACTION_MONITOR_CLIENT_RX_RSSI_MEASUREMENT_NOTIFICATION : public BaseClass
 {
     public:
