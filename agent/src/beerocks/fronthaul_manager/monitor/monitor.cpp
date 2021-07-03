@@ -20,6 +20,7 @@
 
 #include <tlvf/tlvftypes.h>
 #include <tlvf/wfa_map/tlvApMetricQuery.h>
+#include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
 
 #include <cmath>
 #include <vector>

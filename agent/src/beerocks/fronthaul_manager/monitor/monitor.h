@@ -23,8 +23,6 @@
 #include <bcl/network/file_descriptor.h>
 #include <beerocks/tlvf/beerocks_message_monitor.h>
 
-#include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
-
 // Monitor HAL
 #include <bwl/mon_wlan_hal.h>
 
