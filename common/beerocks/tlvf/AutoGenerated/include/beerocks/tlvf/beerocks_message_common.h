@@ -788,17 +788,6 @@ typedef struct sBackhaulParams {
     }
 } __attribute__((packed)) sBackhaulParams;
 
-typedef struct sBackhaulRoam {
-    sMacAddr bssid;
-    uint8_t channel;
-    void struct_swap(){
-        bssid.struct_swap();
-    }
-    void struct_init(){
-        bssid.struct_init();
-    }
-} __attribute__((packed)) sBackhaulRoam;
-
 typedef struct sBackhaulRssi {
     int8_t rssi;
     void struct_swap(){
