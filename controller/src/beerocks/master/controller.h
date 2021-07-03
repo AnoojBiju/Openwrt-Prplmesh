@@ -12,9 +12,7 @@
 #include "controller_ucc_listener.h"
 #include "db/db.h"
 #include "periodic/periodic_operation_pool.h"
-#include "tasks/dhcp_task.h"
 #include "tasks/link_metrics_task.h"
-#include "tasks/optimal_path_task.h"
 #include "tasks/task_pool.h"
 
 #include "../../../common/beerocks/bwl/include/bwl/base_wlan_hal.h"
@@ -35,7 +33,6 @@
 #include <tlvf/WSC/m2.h>
 #include <tlvf/ieee_1905_1/tlvWsc.h>
 #include <tlvf/wfa_map/tlvApRadioBasicCapabilities.h>
-#include <tlvf/wfa_map/tlvApVhtCapabilities.h>
 
 #include <cstddef>
 #include <ctime>

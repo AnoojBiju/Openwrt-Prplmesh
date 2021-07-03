@@ -16,7 +16,6 @@
 #include <iomanip>
 #include <sstream>
 #include <string>
-#include <vector>
 
 #include <mapf/common/logger.h>
 

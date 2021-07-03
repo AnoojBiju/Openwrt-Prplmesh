@@ -14,7 +14,6 @@
 
 #include <beerocks/tlvf/beerocks_message.h>
 #include <beerocks/tlvf/beerocks_message_bml.h>
-#include <tlvf/ieee_1905_1/tlvEndOfMessage.h>
 
 #include <bml_defs.h>
 

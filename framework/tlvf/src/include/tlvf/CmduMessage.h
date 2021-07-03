@@ -14,7 +14,6 @@
 #include <tlvf/ieee_1905_1/cCmduHeader.h>
 #include <tlvf/ieee_1905_1/eTlvType.h>
 #include <tlvf/tlvflogging.h>
-#include <vector>
 
 namespace ieee1905_1 {
 

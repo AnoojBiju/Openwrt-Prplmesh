@@ -9,7 +9,6 @@
 #ifndef _TASK_MESSAGES_H_
 #define _TASK_MESSAGES_H_
 
-#include <bcl/network/socket.h>
 #include <beerocks/tlvf/beerocks_message_backhaul.h>
 #include <tlvf/CmduMessageTx.h>
 
