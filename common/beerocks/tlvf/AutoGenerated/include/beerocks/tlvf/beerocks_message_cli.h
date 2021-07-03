@@ -48,27 +48,6 @@ class cACTION_CLI_ENABLE_DIAGNOSTICS_MEASUREMENTS : public BaseClass
         int8_t* m_isEnable = nullptr;
 };
 
-class cACTION_CLI_ENABLE_LOAD_BALANCER : public BaseClass
-{
-    public:
-        cACTION_CLI_ENABLE_LOAD_BALANCER(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cACTION_CLI_ENABLE_LOAD_BALANCER(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cACTION_CLI_ENABLE_LOAD_BALANCER();
-
-        static eActionOp_CLI get_action_op(){
-            return (eActionOp_CLI)(ACTION_CLI_ENABLE_LOAD_BALANCER);
-        }
-        int8_t& isEnable();
-        void class_swap() override;
-        bool finalize() override;
-        static size_t get_initial_size();
-
-    private:
-        bool init();
-        eActionOp_CLI* m_action_op = nullptr;
-        int8_t* m_isEnable = nullptr;
-};
-
 class cACTION_CLI_ENABLE_DEBUG : public BaseClass
 {
     public:

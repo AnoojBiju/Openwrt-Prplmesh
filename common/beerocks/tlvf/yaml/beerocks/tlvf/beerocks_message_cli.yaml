@@ -20,10 +20,6 @@ cACTION_CLI_ENABLE_DIAGNOSTICS_MEASUREMENTS:
   _type: class
   isEnable: int8_t
 
-cACTION_CLI_ENABLE_LOAD_BALANCER:
-  _type: class
-  isEnable: int8_t
-
 cACTION_CLI_ENABLE_DEBUG:
   _type: class
   isEnable: int8_t
