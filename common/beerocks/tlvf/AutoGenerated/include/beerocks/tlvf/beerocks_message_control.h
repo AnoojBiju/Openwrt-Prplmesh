@@ -218,27 +218,6 @@ class cACTION_CONTROL_BACKHAUL_RESET : public BaseClass
         eActionOp_CONTROL* m_action_op = nullptr;
 };
 
-class cACTION_CONTROL_BACKHAUL_ROAM_REQUEST : public BaseClass
-{
-    public:
-        cACTION_CONTROL_BACKHAUL_ROAM_REQUEST(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cACTION_CONTROL_BACKHAUL_ROAM_REQUEST(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cACTION_CONTROL_BACKHAUL_ROAM_REQUEST();
-
-        static eActionOp_CONTROL get_action_op(){
-            return (eActionOp_CONTROL)(ACTION_CONTROL_BACKHAUL_ROAM_REQUEST);
-        }
-        sBackhaulRoam& params();
-        void class_swap() override;
-        bool finalize() override;
-        static size_t get_initial_size();
-
-    private:
-        bool init();
-        eActionOp_CONTROL* m_action_op = nullptr;
-        sBackhaulRoam* m_params = nullptr;
-};
-
 class cACTION_CONTROL_CHANGE_MODULE_LOGGING_LEVEL : public BaseClass
 {
     public:
