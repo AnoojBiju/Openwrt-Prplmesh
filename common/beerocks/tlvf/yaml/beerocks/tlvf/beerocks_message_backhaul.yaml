@@ -71,10 +71,6 @@ cACTION_BACKHAUL_ROAM_REQUEST:
   _type: class
   params: sBackhaulRoam
 
-cACTION_BACKHAUL_ROAM_RESPONSE:
-  _type: class
-  connected: uint8_t
-
 cACTION_BACKHAUL_RESET:
   _type: class
 
