@@ -224,27 +224,6 @@ class cACTION_BACKHAUL_ENABLE_APS_REQUEST : public BaseClass
         uint8_t* m_center_channel = nullptr;
 };
 
-class cACTION_BACKHAUL_ROAM_REQUEST : public BaseClass
-{
-    public:
-        cACTION_BACKHAUL_ROAM_REQUEST(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cACTION_BACKHAUL_ROAM_REQUEST(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cACTION_BACKHAUL_ROAM_REQUEST();
-
-        static eActionOp_BACKHAUL get_action_op(){
-            return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_ROAM_REQUEST);
-        }
-        sBackhaulRoam& params();
-        void class_swap() override;
-        bool finalize() override;
-        static size_t get_initial_size();
-
-    private:
-        bool init();
-        eActionOp_BACKHAUL* m_action_op = nullptr;
-        sBackhaulRoam* m_params = nullptr;
-};
-
 class cACTION_BACKHAUL_RESET : public BaseClass
 {
     public:
