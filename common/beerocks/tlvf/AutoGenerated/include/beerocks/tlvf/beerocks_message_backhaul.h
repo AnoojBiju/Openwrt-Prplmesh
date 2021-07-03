@@ -285,27 +285,6 @@ class cACTION_BACKHAUL_RESET : public BaseClass
         eActionOp_BACKHAUL* m_action_op = nullptr;
 };
 
-class cACTION_BACKHAUL_4ADDR_CONNECTED : public BaseClass
-{
-    public:
-        cACTION_BACKHAUL_4ADDR_CONNECTED(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cACTION_BACKHAUL_4ADDR_CONNECTED(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cACTION_BACKHAUL_4ADDR_CONNECTED();
-
-        static eActionOp_BACKHAUL get_action_op(){
-            return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_4ADDR_CONNECTED);
-        }
-        sMacAddr& mac();
-        void class_swap() override;
-        bool finalize() override;
-        static size_t get_initial_size();
-
-    private:
-        bool init();
-        eActionOp_BACKHAUL* m_action_op = nullptr;
-        sMacAddr* m_mac = nullptr;
-};
-
 class cACTION_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION : public BaseClass
 {
     public:
