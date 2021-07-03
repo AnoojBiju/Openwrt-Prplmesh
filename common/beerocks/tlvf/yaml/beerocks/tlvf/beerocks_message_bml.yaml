@@ -453,9 +453,6 @@ cACTION_BML_CHANNEL_SCAN_GET_RESULTS_RESPONSE:
     _type: sChannelScanResults
     _length: [results_size]
 
-cACTION_BML_CHANNEL_SCAN_DUMP_RESULTS_REQUEST:
-  _type: class
-
 cACTION_BML_WIFI_CREDENTIALS_UPDATE_REQUEST:
   _type: class
   al_mac: sMacAddr
