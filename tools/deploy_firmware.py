@@ -734,7 +734,10 @@ class TurrisRdkb(PrplwrtDevice):
             shell.login(self.name, self.username)
 
             shell.sendline(f"mount /dev/{self.ROOTFS_PARTITION} /mnt")
-            time.sleep(5)  # Sleep introduced because mount takes time
+            shell.prompt()
+            shell.sendline("mount")
+            shell.expect(f"/dev/{self.ROOTFS_PARTITION} on /mnt")
+
             shell.sendline(f"cat {RDKB_VERSION_PATH}")
             shell.expect([f"cat {RDKB_VERSION_PATH}", pexpect.TIMEOUT])
             shell.prompt()
