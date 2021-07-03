@@ -709,15 +709,6 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         new_event.sd = sd;
         tasks.push_event(database.get_bml_task_id(), bml_task::REGISTER_TO_NW_MAP_UPDATES,
                          &new_event);
-
-        auto response = message_com::create_vs_message<
-            beerocks_message::cACTION_BML_REGISTER_TO_NW_MAP_UPDATES_RESPONSE>(cmdu_tx);
-        if (response == nullptr) {
-            LOG(ERROR) << "create ACTION_BML_REGISTER_TO_NW_MAP_UPDATES_RESPONSE failed";
-            break;
-        }
-
-        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_UNREGISTER_FROM_NW_MAP_UPDATES_REQUEST: {
