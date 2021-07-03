@@ -249,27 +249,6 @@ class cACTION_CLI_DUMP_NODE_INFO : public BaseClass
         sMacAddr* m_mac = nullptr;
 };
 
-class cACTION_CLI_BACKHAUL_SCAN_RESULTS : public BaseClass
-{
-    public:
-        cACTION_CLI_BACKHAUL_SCAN_RESULTS(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cACTION_CLI_BACKHAUL_SCAN_RESULTS(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cACTION_CLI_BACKHAUL_SCAN_RESULTS();
-
-        static eActionOp_CLI get_action_op(){
-            return (eActionOp_CLI)(ACTION_CLI_BACKHAUL_SCAN_RESULTS);
-        }
-        sMacAddr& mac();
-        void class_swap() override;
-        bool finalize() override;
-        static size_t get_initial_size();
-
-    private:
-        bool init();
-        eActionOp_CLI* m_action_op = nullptr;
-        sMacAddr* m_mac = nullptr;
-};
-
 class cACTION_CLI_BACKHAUL_ROAM_REQUEST : public BaseClass
 {
     public:

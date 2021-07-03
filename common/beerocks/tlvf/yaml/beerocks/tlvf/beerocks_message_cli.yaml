@@ -65,10 +65,6 @@ cACTION_CLI_DUMP_NODE_INFO:
   _type: class
   mac: sMacAddr
 
-cACTION_CLI_BACKHAUL_SCAN_RESULTS:
-  _type: class
-  mac: sMacAddr
-
 cACTION_CLI_BACKHAUL_ROAM_REQUEST:
   _type: class
   slave_mac: sMacAddr
