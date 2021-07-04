@@ -119,97 +119,27 @@ static void copy_vaps_info(std::shared_ptr<bwl::ap_wlan_hal> &ap_wlan_hal,
     }
 }
 
-// This function is temporary until PPM-655 is merged
-static void unify_channels_list(
-    const std::vector<beerocks::message::sWifiChannel> &supported,
-    const std::vector<beerocks::message::sWifiChannel> &preferred,
-    std::shared_ptr<beerocks_message::cACTION_APMANAGER_CHANNELS_LIST_RESPONSE> response)
+static void build_channels_list(ieee1905_1::CmduMessageTx &cmdu_tx,
+                                const std::unordered_map<uint8_t, bwl::sChannelInfo> &channels_list,
+                                std::shared_ptr<beerocks_message::cChannelList> &channel_list_class)
 {
-    struct sChannelInfo {
-        int8_t tx_power_dbm;
-        beerocks_message::eDfsState dfs_state;
-
-        // Key: eWiFiBandwidth, Value: Rank
-        std::map<beerocks::eWiFiBandwidth, int32_t> bw_info_list;
-    };
-
-    // Create a helper container to help unifying both supported and preferred channels lists,
-    // and copy the unified list into the tlv message.
-    // Key = channel
-    std::map<uint8_t, sChannelInfo> channels_list;
-
-    auto dfs_state_converter = [&](const beerocks::message::sWifiChannel &wifi_ch) {
-        if (!wifi_ch.is_dfs_channel) {
-            return beerocks_message::eDfsState::NOT_DFS;
-        }
-
-        switch (wifi_ch.dfs_state) {
-        case beerocks::eDfsState::USABLE: {
-            return beerocks_message::eDfsState::USABLE;
-        }
-        case beerocks::eDfsState::UNAVAILABLE: {
-            return beerocks_message::eDfsState::UNAVAILABLE;
-        }
-        case beerocks::eDfsState::AVAILABLE: {
-            return beerocks_message::eDfsState::AVAILABLE;
-        }
-        default: {
-            break;
-        }
-        }
-
-        return beerocks_message::eDfsState::NOT_DFS;
-    };
-
-    // Copy information (dfs_state, tx_power and supported bandwidths) from supported channels list
-    // to the helper unified list container, and initialize the rank field to -1.
-    for (const auto &schannel : supported) {
-        if (schannel.channel == 0) {
-            continue;
-        }
-        channels_list[schannel.channel].dfs_state    = dfs_state_converter(schannel);
-        channels_list[schannel.channel].tx_power_dbm = schannel.tx_pow;
-
-        // Initialize 'rank' to '-1' (Undefined).
-        channels_list[schannel.channel]
-            .bw_info_list[beerocks::eWiFiBandwidth(schannel.channel_bandwidth)] = -1;
-    }
-
     // Rank container for multiap preference calculation.
     // Key - rank average, value - rank average elements
     std::map<int32_t, std::set<int32_t>> ranks;
 
-    // Copy the Rank from the preferred channels list to the helper unified list container and also
-    // to a helper container "ranks" that will be used to convert the rank to multi-ap preference.
-    for (const auto &pchannel : preferred) {
-        if (pchannel.channel == 0) {
-            continue;
-        }
-        auto channel_it = channels_list.find(pchannel.channel);
-        if (channel_it == channels_list.end()) {
-            LOG(FATAL) << "ACS reported channel not supported by the radio: "
-                       << int(pchannel.channel);
-            continue;
-        }
-        auto &channel_info = channel_it->second;
+    // Copy the Rank from the channels list to a helper container "ranks" that will be used to
+    // convert the rank to multi-ap preference.
+    for (const auto &channel_element : channels_list) {
+        const auto &channel_info = channel_element.second;
+        for (const auto &bw_info : channel_info.bw_info_list) {
+            auto rank = bw_info.second;
+            if (rank == -1) {
+                continue;
+            }
 
-        auto bw_it =
-            channel_info.bw_info_list.find(beerocks::eWiFiBandwidth(pchannel.channel_bandwidth));
-        if (bw_it == channel_info.bw_info_list.end()) {
-            LOG(FATAL) << "ACS reported bw not supported by the radio, channel="
-                       << int(pchannel.channel) << ", bw="
-                       << beerocks::utils::convert_bandwidth_to_int(
-                              beerocks::eWiFiBandwidth(pchannel.channel_bandwidth));
-            continue;
+            // Copy rank to helper container that will help to convert the rank to multi-ap preference
+            ranks[rank].insert(rank);
         }
-        bw_it->second = pchannel.rank;
-
-        if (pchannel.rank == -1) {
-            continue;
-        }
-
-        // Copy rank to helper container that will help to convert the rank to multi-ap preference
-        ranks[pchannel.rank].insert(pchannel.rank);
     }
 
     // Multi-AP allows only 15 options of preference whereas the ranking from the ACS-Report has
@@ -260,19 +190,34 @@ static void unify_channels_list(
         }
     }
 
-    // Fill the unified channels list on the CMDU using the helper container.
-    LOG(DEBUG) << "Unified Channels list: ";
-    auto channel_list = response->create_channel_list();
+    // Fill the channels list on the CMDU using the helper container.
+    LOG(DEBUG) << "Channels list: ";
     for (const auto &channel_info_pair : channels_list) {
-        auto channel_info_tlv = channel_list->create_channels_list();
+        auto channel_info_tlv = channel_list_class->create_channels_list();
         if (!channel_info_tlv) {
             LOG(ERROR) << "Failed to allocate cChannel!";
             return;
         }
-        auto &channel_info                 = channel_info_pair.second;
+        const auto &channel_info           = channel_info_pair.second;
         channel_info_tlv->beacon_channel() = channel_info_pair.first;
         channel_info_tlv->tx_power_dbm()   = channel_info.tx_power_dbm;
-        channel_info_tlv->dfs_state()      = channel_info.dfs_state;
+        channel_info_tlv->dfs_state()      = [](const beerocks::eDfsState bwl_dfs_state) {
+            switch (bwl_dfs_state) {
+            case beerocks::eDfsState::USABLE: {
+                return beerocks_message::eDfsState::USABLE;
+            }
+            case beerocks::eDfsState::UNAVAILABLE: {
+                return beerocks_message::eDfsState::UNAVAILABLE;
+            }
+            case beerocks::eDfsState::AVAILABLE: {
+                return beerocks_message::eDfsState::AVAILABLE;
+            }
+            default: {
+                break;
+            }
+            }
+            return beerocks_message::eDfsState::NOT_DFS;
+        }(channel_info.dfs_state);
 
         if (!channel_info_tlv->alloc_supported_bandwidths(
                 channel_info_pair.second.bw_info_list.size())) {
@@ -287,14 +232,14 @@ static void unify_channels_list(
             supported_bw_info_tlv.rank      = bw_it->second;
 
             auto print_channel_info = [&]() {
-                auto dfs_state_to_string = [&]() {
-                    if (channel_info.dfs_state == beerocks_message::eDfsState::NOT_DFS) {
+                auto dfs_state_to_string = [](beerocks_message::eDfsState dfs_state) {
+                    if (dfs_state == beerocks_message::eDfsState::NOT_DFS) {
                         return "NOT_DFS";
-                    } else if (channel_info.dfs_state == beerocks_message::eDfsState::AVAILABLE) {
+                    } else if (dfs_state == beerocks_message::eDfsState::AVAILABLE) {
                         return "AVAILABLE";
-                    } else if (channel_info.dfs_state == beerocks_message::eDfsState::USABLE) {
+                    } else if (dfs_state == beerocks_message::eDfsState::USABLE) {
                         return "USABLE";
-                    } else if (channel_info.dfs_state == beerocks_message::eDfsState::UNAVAILABLE) {
+                    } else if (dfs_state == beerocks_message::eDfsState::UNAVAILABLE) {
                         return "UNAVAILABLE";
                     }
                     return "Unknown_State";
@@ -305,7 +250,7 @@ static void unify_channels_list(
                                   beerocks::eWiFiBandwidth(bw_it->first))
                            << ", rank=" << supported_bw_info_tlv.rank << ", multiap_preference="
                            << int(supported_bw_info_tlv.multiap_preference)
-                           << ", dfs_state=" << dfs_state_to_string();
+                           << ", dfs_state=" << dfs_state_to_string(channel_info_tlv->dfs_state());
             };
 
             // If channel & bw has undefined rank (-1), set the channel preference to
@@ -335,9 +280,8 @@ static void unify_channels_list(
             print_channel_info();
         }
 
-        channel_list->add_channels_list(channel_info_tlv);
+        channel_list_class->add_channels_list(channel_info_tlv);
     }
-    response->add_channel_list(channel_list);
 }
 
 //////////////////////////////////////////////////////////////////////////////
