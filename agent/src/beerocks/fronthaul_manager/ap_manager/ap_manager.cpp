@@ -2194,23 +2194,10 @@ void ApManager::handle_hostapd_attached()
 
     notification->params().hybrid_mode_supported = ap_wlan_hal->hybrid_mode_supported();
 
-    // Copy the channels supported by the AP
-    if (!notification->alloc_preferred_channels(
-            ap_wlan_hal->get_radio_info().preferred_channels.size())) {
-        LOG(ERROR) << "Failed to allocate preferred_channels!";
-        return;
-    }
-    auto tuple_preferred_channels = notification->preferred_channels(0);
-    std::copy_n(ap_wlan_hal->get_radio_info().preferred_channels.begin(),
-                notification->preferred_channels_size(), &std::get<1>(tuple_preferred_channels));
-    if (!notification->alloc_supported_channels(
-            ap_wlan_hal->get_radio_info().supported_channels.size())) {
-        LOG(ERROR) << "Failed to allocate supported_channels!";
-        return;
-    }
-    auto tuple_supported_channels = notification->supported_channels(0);
-    std::copy_n(ap_wlan_hal->get_radio_info().supported_channels.begin(),
-                notification->supported_channels_size(), &std::get<1>(tuple_supported_channels));
+    auto channel_list_class = notification->create_channel_list();
+    build_channels_list(cmdu_tx, ap_wlan_hal->get_radio_info().channels_list, channel_list_class);
+    notification->add_channel_list(channel_list_class);
+
     LOG(INFO) << "send ACTION_APMANAGER_JOINED_NOTIFICATION";
     LOG(INFO) << " iface = " << ap_wlan_hal->get_iface_name();
     LOG(INFO) << " mac = " << ap_wlan_hal->get_radio_mac();
