@@ -2227,8 +2227,6 @@ void ApManager::handle_hostapd_attached()
 
             usleep(ACS_READ_SLEEP_USC);
         }
-    } else {
-        ap_wlan_hal->read_preferred_channels();
     }
 
     auto notification =

@@ -304,8 +304,6 @@ bool ap_wlan_hal_dummy::restricted_channels_get(char *channel_list) { return fal
 
 bool ap_wlan_hal_dummy::read_acs_report() { return true; }
 
-bool ap_wlan_hal_dummy::read_preferred_channels() { return true; }
-
 bool ap_wlan_hal_dummy::set_tx_power_limit(int tx_pow_limit)
 {
     LOG(TRACE) << " setting power limit: " << tx_pow_limit << " dBm";

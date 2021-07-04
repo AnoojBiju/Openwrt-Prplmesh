@@ -967,26 +967,6 @@ bool ap_wlan_hal_nl80211::read_acs_report()
     // The channel selection will instead be done by making the agent send channel scan reports to
     // the controller and the controller will take a decision based on the report (as part of
     // EasyMesh R2).
-
-    return true;
-}
-
-bool ap_wlan_hal_nl80211::read_preferred_channels()
-{
-    LOG(TRACE) << __func__ << " for interface: " << get_radio_info().iface_name;
-
-    // Clear the supported channels vector
-    m_radio_info.preferred_channels.clear();
-
-    // Copy the list of supported channels into the list of preferred channels.
-    // The list of preferred channels must be a subset of the supported channels or otherwise the
-    // AP manager will complain and crash.
-    // The list of supported channels must have been obtained prior to calling this method. This is
-    // not a problem since we do it at least in state nl80211_fsm_state::GetRadioInfo, on event
-    // nl80211_fsm_event::Attach
-    m_radio_info.preferred_channels.insert(m_radio_info.preferred_channels.begin(),
-                                           m_radio_info.supported_channels.begin(),
-                                           m_radio_info.supported_channels.end());
     return true;
 }
 

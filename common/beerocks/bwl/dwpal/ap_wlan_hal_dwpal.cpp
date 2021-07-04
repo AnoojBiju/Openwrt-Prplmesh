@@ -1958,25 +1958,6 @@ bool ap_wlan_hal_dwpal::read_acs_report()
     return true;
 }
 
-bool ap_wlan_hal_dwpal::read_preferred_channels()
-{
-    LOG(TRACE) << __func__ << " for interface: " << get_radio_info().iface_name;
-
-    // Clear the supported channels vector
-    m_radio_info.preferred_channels.clear();
-
-    // Copy the list of supported channels into the list of preferred channels.
-    // The list of preferred channels must be a subset of the supported channels or otherwise the
-    // AP manager will complain and crash.
-    // The list of supported channels must have been obtained prior to calling this method. This is
-    // not a problem since we do it at least in state nl80211_fsm_state::GetRadioInfo, on event
-    // dwpal_fsm_event::Attach
-    m_radio_info.preferred_channels.insert(m_radio_info.preferred_channels.begin(),
-                                           m_radio_info.supported_channels.begin(),
-                                           m_radio_info.supported_channels.end());
-    return true;
-}
-
 bool ap_wlan_hal_dwpal::set_tx_power_limit(int tx_pow_limit)
 {
     return m_nl80211_client->set_tx_power_limit(m_radio_info.iface_name, tx_pow_limit);
