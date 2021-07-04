@@ -1093,20 +1093,20 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
     }
     case beerocks_message::ACTION_APMANAGER_CHANNELS_LIST_REQUEST: {
 
-        // Read preferred Channels (From ACS Report)
-        if (!ap_wlan_hal->read_acs_report()) {
-            LOG(ERROR) << "Failed to read acs report";
-            return;
-        }
-
         // Read supported_channels (From Netlink HW Features)
-        // Refreshing the radio info updates the supported_channels list
+        // Refreshing the radio info updates the DFS State of each channel on the channels list.
         if (!ap_wlan_hal->refresh_radio_info()) {
             LOG(ERROR) << "Failed to refresh_radio_info";
             return;
         }
 
-        auto response = message_com::create_vs_message<
+        // Update channels ranking (From ACS Report)
+        if (!ap_wlan_hal->read_acs_report()) {
+            LOG(ERROR) << "Failed to read acs report";
+            return;
+        }
+
+        auto response = beerocks::message_com::create_vs_message<
             beerocks_message::cACTION_APMANAGER_CHANNELS_LIST_RESPONSE>(cmdu_tx,
                                                                         beerocks_header->id());
         if (!response) {
@@ -1114,30 +1114,12 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
 
-        // Copy preferred_channels
-        if (!response->alloc_preferred_channels(
-                ap_wlan_hal->get_radio_info().preferred_channels.size())) {
-            LOG(ERROR) << "Failed to allocate preferred_channels ["
-                       << int(ap_wlan_hal->get_radio_info().preferred_channels.size()) << "]!";
-            return;
-        }
-        auto tuple_preferred_channels = response->preferred_channels(0);
-        std::copy_n(ap_wlan_hal->get_radio_info().preferred_channels.begin(),
-                    response->preferred_channels_size(), &std::get<1>(tuple_preferred_channels));
+        auto channel_list_class = response->create_channel_list();
 
-        // Copy supported channels
-        if (!response->alloc_supported_channels(
-                ap_wlan_hal->get_radio_info().supported_channels.size())) {
-            LOG(ERROR) << "Failed to allocate supported_channels!";
-            return;
-        }
-        auto tuple_supported_channels = response->supported_channels(0);
-        std::copy_n(ap_wlan_hal->get_radio_info().supported_channels.begin(),
-                    response->supported_channels_size(), &std::get<1>(tuple_supported_channels));
+        build_channels_list(cmdu_tx, ap_wlan_hal->get_radio_info().channels_list,
+                            channel_list_class);
 
-        // Create unified channels list and add it to the message.
-        unify_channels_list(ap_wlan_hal->get_radio_info().supported_channels,
-                            ap_wlan_hal->get_radio_info().preferred_channels, response);
+        response->add_channel_list(channel_list_class);
 
         send_cmdu(cmdu_tx);
         break;
