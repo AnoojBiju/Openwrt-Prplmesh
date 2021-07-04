@@ -968,7 +968,7 @@ bool ap_wlan_hal_nl80211::read_acs_report()
     // the controller and the controller will take a decision based on the report (as part of
     // EasyMesh R2).
 
-    return read_preferred_channels();
+    return true;
 }
 
 bool ap_wlan_hal_nl80211::read_preferred_channels()

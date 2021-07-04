@@ -1904,8 +1904,6 @@ bool ap_wlan_hal_dwpal::read_acs_report()
     }
     LOG(DEBUG) << "GET_ACS_REPORT reply:";
 
-    m_radio_info.preferred_channels.resize(reply.size());
-
     uint32_t ch_idx = 0;
     for (auto &line : reply) {
 
@@ -1915,7 +1913,7 @@ bool ap_wlan_hal_dwpal::read_acs_report()
             LOG(ERROR) << "Failed reading Channel parameter!";
             return false;
         }
-        m_radio_info.preferred_channels[ch_idx].channel = tmp_int;
+        auto &channel_info = m_radio_info.channels_list[tmp_int];
         oss << "Ch=" << tmp_int;
 
         // BW
@@ -1923,22 +1921,22 @@ bool ap_wlan_hal_dwpal::read_acs_report()
             LOG(ERROR) << "Failed reading BW parameter!";
             return false;
         }
-        m_radio_info.preferred_channels[ch_idx].channel_bandwidth =
-            beerocks::utils::convert_bandwidth_to_enum(tmp_int);
         oss << ", BW=" << tmp_int;
+        auto bw = beerocks::utils::convert_bandwidth_to_enum(tmp_int);
 
         // DFS
         if (!read_param("DFS", line, tmp_int)) {
             LOG(ERROR) << "Failed reading DFS parameter!";
             return false;
         }
-        m_radio_info.preferred_channels[ch_idx].is_dfs_channel = tmp_int;
         oss << ", DFS=" << tmp_int;
 
         // Rank - May not appear in older Hostapd
         if (read_param("rank", line, tmp_int)) {
-            m_radio_info.preferred_channels[ch_idx].rank = tmp_int;
+            channel_info.bw_info_list[bw] = tmp_int;
             oss << ", rank=" << tmp_int;
+        } else {
+            channel_info.bw_info_list[bw] = -1;
         }
 
         LOG(DEBUG) << oss.str();
@@ -1952,8 +1950,8 @@ bool ap_wlan_hal_dwpal::read_acs_report()
     m_radio_info.is_5ghz = false;
 
     // Check if channel is 5GHz
-    if (son::wireless_utils::which_freq(m_radio_info.preferred_channels.front().channel) ==
-        beerocks::eFreqType::FREQ_5G) {
+    auto ch = m_radio_info.channels_list.begin()->first;
+    if (son::wireless_utils::which_freq(ch) == beerocks::eFreqType::FREQ_5G) {
         m_radio_info.is_5ghz = true;
     }
 
