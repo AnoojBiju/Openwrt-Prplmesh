@@ -92,7 +92,6 @@ public:
         beerocks::BEACON_MEAS_UNSUPPORTED;
     bool supports_11v            = true;
     int failed_11v_request_count = 0;
-    bool operational_state       = false;
 
     std::chrono::steady_clock::time_point last_state_change;
 

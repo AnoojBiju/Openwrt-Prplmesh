@@ -4151,7 +4151,6 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
                 backhaul_params.backhaul_is_wireless;
 
             if (!db->bridge.iface_name.empty()) {
-                notification->backhaul_params().bridge_mac = db->bridge.mac;
                 notification->backhaul_params().bridge_ipv4 =
                     network_utils::ipv4_from_string(backhaul_params.bridge_ipv4);
                 notification->backhaul_params().backhaul_ipv4 =
@@ -5965,7 +5964,7 @@ bool slave_thread::autoconfig_wsc_add_m1()
         WSC::eWscAuth(WSC::eWscAuth::WSC_AUTH_OPEN | WSC::eWscAuth::WSC_AUTH_WPA2PSK |
                       WSC::eWscAuth::WSC_AUTH_SAE);
     cfg.encr_type_flags     = uint16_t(WSC::eWscEncr::WSC_ENCR_AES);
-    cfg.manufacturer        = "Intel";
+    cfg.manufacturer        = "prplMesh";
     cfg.model_name          = "Ubuntu";
     cfg.model_number        = "18.04";
     cfg.serial_number       = "prpl12345";

@@ -237,54 +237,54 @@ std::string db::get_node_data_model_path(const std::string &mac)
     return n->dm_path;
 }
 
-bool db::add_node_gateway(const sMacAddr &mac)
+std::shared_ptr<sAgent> db::add_node_gateway(const sMacAddr &mac)
 {
+    auto agent = m_agents.add(mac);
+
     if (!add_node(mac, network_utils::ZERO_MAC, beerocks::TYPE_GW)) {
         LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
-        return false;
+        return agent;
     }
 
-    m_agents.add(mac);
+    agent->is_gateway = true;
 
     auto data_model_path = dm_add_device_element(mac);
     if (data_model_path.empty()) {
         LOG(ERROR) << "Failed to add device element for the gateway, mac: " << mac;
-        return false;
+        return agent;
     }
 
     set_node_data_model_path(mac, data_model_path);
 
     if (!dm_set_device_multi_ap_capabilities(tlvf::mac_to_string(mac))) {
         LOG(ERROR) << "Failed to set multi ap capabilities";
-        return {};
     }
 
-    return true;
+    return agent;
 }
 
-bool db::add_node_ire(const sMacAddr &mac, const sMacAddr &parent_mac)
+std::shared_ptr<sAgent> db::add_node_ire(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
+    auto agent = m_agents.add(mac);
+
     if (!add_node(mac, parent_mac, beerocks::TYPE_IRE)) {
         LOG(ERROR) << "Failed to add ire node, mac: " << mac;
-        return false;
+        return agent;
     }
-
-    m_agents.add(mac);
 
     auto data_model_path = dm_add_device_element(mac);
     if (data_model_path.empty()) {
         LOG(ERROR) << "Failed to add device element for the ire, mac: " << mac;
-        return false;
+        return agent;
     }
 
     set_node_data_model_path(mac, data_model_path);
 
     if (!dm_set_device_multi_ap_capabilities(tlvf::mac_to_string(mac))) {
         LOG(ERROR) << "Failed to set multi ap capabilities";
-        return {};
     }
 
-    return true;
+    return agent;
 }
 
 bool db::add_node_wireless_bh(const sMacAddr &mac, const sMacAddr &parent_mac)
@@ -399,11 +399,6 @@ bool db::add_node_client(const sMacAddr &mac, const sMacAddr &parent_mac)
 
 bool db::remove_node(const sMacAddr &mac)
 {
-    if (m_agents.erase(mac) != 1) {
-        LOG(ERROR) << "remove_node: no agent with mac " << mac << " found";
-        // Since the code paths leading up to this are a bit iffy, don't return false in this case.
-    }
-
     int i;
     for (i = 0; i < HIERARCHY_MAX; i++) {
         auto it = nodes[i].find(tlvf::mac_to_string(mac));
@@ -505,6 +500,13 @@ bool db::set_node_manufacturer(const std::string &mac, const std::string &manufa
         return false;
     }
     n->manufacturer = manufacturer;
+    return true;
+}
+
+bool db::set_agent_manufacturer(prplmesh::controller::db::sAgent &agent,
+                                const std::string &manufacturer)
+{
+    agent.manufacturer = manufacturer;
     return true;
 }
 
@@ -737,39 +739,6 @@ beerocks::eNodeState db::get_node_state(const std::string &mac)
         return beerocks::STATE_MAX;
     }
     return n->state;
-}
-
-bool db::set_node_operational_state(const std::string &bridge_mac, bool operational)
-{
-    auto n = get_node(bridge_mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << bridge_mac << " does not exist!";
-        return false;
-    }
-
-    if (n->get_type() != beerocks::TYPE_GW && n->get_type() != beerocks::TYPE_IRE) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << bridge_mac << " is not bridge type ";
-        return false;
-    }
-
-    n->operational_state = operational;
-    return true;
-}
-
-int8_t db::get_node_operational_state(const std::string &bridge_mac)
-{
-    auto n = get_node(bridge_mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << bridge_mac << " does not exist!";
-        return -1;
-    }
-
-    if (n->get_type() != beerocks::TYPE_GW && n->get_type() != beerocks::TYPE_IRE) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << bridge_mac << " is not bridge type";
-        return -1;
-    }
-
-    return n->operational_state;
 }
 
 std::chrono::steady_clock::time_point db::get_last_state_change(const std::string &mac)
@@ -1035,13 +1004,10 @@ std::set<std::string> db::get_active_hostaps()
 std::set<std::string> db::get_all_connected_ires()
 {
     std::set<std::string> ret;
-    for (auto node_map : nodes) {
-        for (auto kv : node_map) {
-            if (((kv.second->get_type() == beerocks::TYPE_IRE) &&
-                 (kv.second->state == beerocks::STATE_CONNECTED)) ||
-                (kv.second->get_type() == beerocks::TYPE_GW)) {
-                ret.insert(kv.first);
-            }
+    for (const auto &agent_map_element : m_agents) {
+        auto &agent = agent_map_element.second;
+        if (agent->state == beerocks::STATE_CONNECTED) {
+            ret.insert(tlvf::mac_to_string(agent->al_mac));
         }
     }
     return ret;
@@ -1064,17 +1030,17 @@ std::set<std::string> db::get_nodes_from_hierarchy(int hierarchy, int type)
 
     return result;
 }
-std::string db::get_gw_mac()
+
+std::shared_ptr<sAgent> db::get_gw()
 {
-    auto gw_container = get_nodes_from_hierarchy(0, beerocks::TYPE_GW);
-    if (gw_container.empty()) {
-        LOG(ERROR) << "can't get GW node!";
-        return std::string();
+    for (const auto &agent : m_agents) {
+        if (agent.second->is_gateway) {
+            return agent.second;
+        }
     }
 
-    auto gw_mac = *gw_container.begin();
-    LOG(DEBUG) << "gw_mac = " << gw_mac;
-    return gw_mac;
+    LOG(ERROR) << "Gateway not found";
+    return {};
 }
 
 std::set<std::string> db::get_node_subtree(const std::string &mac)

@@ -82,12 +82,12 @@ bool son_actions::add_node_to_default_location(db &database, std::string client_
 {
     std::string gw_lan_switch;
 
-    auto gw_container = database.get_nodes_from_hierarchy(0, beerocks::TYPE_GW);
-    if (gw_container.empty()) {
+    auto gw = database.get_gw();
+    if (!gw) {
         LOG(WARNING)
             << "add_node_to_default_location - can't get GW node, adding to default location...";
     } else {
-        auto gw_mac          = *gw_container.begin();
+        auto gw_mac          = tlvf::mac_to_string(gw->al_mac);
         auto gw_lan_switches = database.get_node_children(gw_mac, beerocks::TYPE_ETH_SWITCH);
         if (gw_lan_switches.empty()) {
             LOG(ERROR) << "add_node_to_default_location - GW has no LAN SWITCH node!";
@@ -312,15 +312,6 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
 
         // close slave socket
         if (mac_type == beerocks::TYPE_SLAVE) {
-            auto slave_parent = database.get_node_parent(mac);
-            LOG(DEBUG) << "slave_parent: " << slave_parent
-                       << " slave_parent_type=" << int(database.get_node_type(slave_parent));
-            if (database.get_node_type(slave_parent) == beerocks::TYPE_GW) {
-                // set platform bridges as non operational
-                LOG(DEBUG) << "setting platform with bridge mac " << slave_parent
-                           << " as non operational";
-                database.set_node_operational_state(slave_parent, false);
-            }
             database.set_node_state(mac, beerocks::STATE_DISCONNECTED);
             set_hostap_active(database, tasks, mac, false);
         }
@@ -337,8 +328,13 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
                     // set all platform bridges as non operational
                     LOG(DEBUG) << "setting platform with bridge mac " << node_mac
                                << " as non operational";
-                    database.set_node_operational_state(node_mac, false);
 
+                    auto agent = database.m_agents.get(tlvf::mac_from_string(node_mac));
+                    if (!agent) {
+                        LOG(ERROR) << "agent " << node_mac << " not found";
+                        return;
+                    }
+                    agent->state = STATE_DISCONNECTED;
                 } else if (database.get_node_type(node_mac) == beerocks::TYPE_IRE_BACKHAUL ||
                            database.get_node_type(node_mac) == beerocks::TYPE_CLIENT) {
                     // kill old roaming task
