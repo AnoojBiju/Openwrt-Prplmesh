@@ -365,52 +365,44 @@ bool base_wlan_hal_dummy::refresh_radio_info()
     m_radio_info.max_bandwidth = beerocks::eWiFiBandwidth::BANDWIDTH_40;
     m_radio_info.radio_enabled = true;
 
-    m_radio_info.supported_channels.clear();
     if (get_iface_name() == "wlan2") {
         m_radio_info.is_5ghz        = true;
         m_radio_info.frequency_band = beerocks::eFreqType::FREQ_5G;
         for (uint16_t ch = 36; ch <= 64; ch += 4) {
-            for (uint16_t step = 0; step < 3; step++) {
-                beerocks::message::sWifiChannel supported_channel;
-                supported_channel.channel = ch;
-                supported_channel.channel_bandwidth =
-                    beerocks::utils::convert_bandwidth_to_enum(20 + step * 20);
-                supported_channel.bss_overlap    = 10 + step * 10;
-                supported_channel.is_dfs_channel = (ch > 48) ? 1 : 0;
-                m_radio_info.supported_channels.push_back(supported_channel);
-            }
+            auto &channel_info = m_radio_info.channels_list[ch];
+            channel_info.dfs_state =
+                (ch > 48) ? beerocks::eDfsState::AVAILABLE : beerocks::eDfsState::DFS_STATE_MAX;
+            // Set all ranking to highest rank (1)
+            channel_info.bw_info_list[beerocks::eWiFiBandwidth::BANDWIDTH_20]  = 1;
+            channel_info.bw_info_list[beerocks::eWiFiBandwidth::BANDWIDTH_40]  = 1;
+            channel_info.bw_info_list[beerocks::eWiFiBandwidth::BANDWIDTH_80]  = 1;
+            channel_info.bw_info_list[beerocks::eWiFiBandwidth::BANDWIDTH_160] = 1;
         }
         for (uint16_t ch = 100; ch <= 144; ch += 4) {
-            for (uint16_t step = 0; step < 3; step++) {
-                beerocks::message::sWifiChannel supported_channel;
-                supported_channel.channel = ch;
-                supported_channel.channel_bandwidth =
-                    beerocks::utils::convert_bandwidth_to_enum(20 + step * 20);
-                supported_channel.bss_overlap    = 10 + step * 10;
-                supported_channel.is_dfs_channel = 1;
-                m_radio_info.supported_channels.push_back(supported_channel);
-            }
+            auto &channel_info     = m_radio_info.channels_list[ch];
+            channel_info.dfs_state = beerocks::eDfsState::AVAILABLE;
+            // Set all ranking to highest rank (1)
+            channel_info.bw_info_list[beerocks::eWiFiBandwidth::BANDWIDTH_20]  = 1;
+            channel_info.bw_info_list[beerocks::eWiFiBandwidth::BANDWIDTH_40]  = 1;
+            channel_info.bw_info_list[beerocks::eWiFiBandwidth::BANDWIDTH_80]  = 1;
+            channel_info.bw_info_list[beerocks::eWiFiBandwidth::BANDWIDTH_160] = 1;
         }
         for (uint16_t ch = 149; ch <= 165; ch += 4) {
-            for (uint16_t step = 0; step < 3; step++) {
-                beerocks::message::sWifiChannel supported_channel;
-                supported_channel.channel = ch;
-                supported_channel.channel_bandwidth =
-                    beerocks::utils::convert_bandwidth_to_enum(20 + step * 20);
-                supported_channel.bss_overlap    = 10 + step * 10;
-                supported_channel.is_dfs_channel = 0;
-                m_radio_info.supported_channels.push_back(supported_channel);
-            }
+            auto &channel_info     = m_radio_info.channels_list[ch];
+            channel_info.dfs_state = beerocks::eDfsState::DFS_STATE_MAX;
+            // Set all ranking to highest rank (1)
+            channel_info.bw_info_list[beerocks::eWiFiBandwidth::BANDWIDTH_20]  = 1;
+            channel_info.bw_info_list[beerocks::eWiFiBandwidth::BANDWIDTH_40]  = 1;
+            channel_info.bw_info_list[beerocks::eWiFiBandwidth::BANDWIDTH_80]  = 1;
+            channel_info.bw_info_list[beerocks::eWiFiBandwidth::BANDWIDTH_160] = 1;
         }
     } else {
         m_radio_info.frequency_band = beerocks::eFreqType::FREQ_24G;
         for (uint16_t ch = 1; ch <= 11; ch++) {
-            beerocks::message::sWifiChannel supported_channel;
-            supported_channel.channel           = ch;
-            supported_channel.channel_bandwidth = beerocks::utils::convert_bandwidth_to_enum(20);
-            supported_channel.bss_overlap       = 10;
-            supported_channel.is_dfs_channel    = 0;
-            m_radio_info.supported_channels.push_back(supported_channel);
+            auto &channel_info     = m_radio_info.channels_list[ch];
+            channel_info.dfs_state = beerocks::eDfsState::DFS_STATE_MAX;
+            // Set all ranking to highest rank (1)
+            channel_info.bw_info_list[beerocks::eWiFiBandwidth::BANDWIDTH_20] = 1;
         }
     }
 

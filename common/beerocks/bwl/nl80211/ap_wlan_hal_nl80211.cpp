@@ -248,17 +248,17 @@ bool ap_wlan_hal_nl80211::refresh_radio_info()
         m_radio_info.vht_capability = band_info.vht_capability;
         m_radio_info.vht_mcs_set.assign(band_info.vht_mcs_set, sizeof(band_info.vht_mcs_set));
 
-        m_radio_info.supported_channels.clear();
         for (auto const &pair : band_info.supported_channels) {
-            auto &channel_info = pair.second;
-            for (auto bw : channel_info.supported_bandwidths) {
-                beerocks::message::sWifiChannel channel;
-                channel.channel           = channel_info.number;
-                channel.channel_bandwidth = bw;
-                channel.tx_pow            = channel_info.tx_power;
-                channel.is_dfs_channel    = channel_info.is_dfs;
-                channel.dfs_state         = channel_info.dfs_state;
-                m_radio_info.supported_channels.push_back(channel);
+            auto &supported_channel_info = pair.second;
+            auto &channel_info        = m_radio_info.channels_list[supported_channel_info.number];
+            channel_info.tx_power_dbm = supported_channel_info.tx_power;
+            channel_info.dfs_state    = supported_channel_info.is_dfs
+                                         ? supported_channel_info.dfs_state
+                                         : beerocks::eDfsState::DFS_STATE_MAX;
+
+            for (auto bw : supported_channel_info.supported_bandwidths) {
+                // Since bwl nl8011 does not support ranking, set all ranking to highest rank (1).
+                channel_info.bw_info_list[bw] = 1;
             }
         }
 
