@@ -20,10 +20,6 @@ cACTION_CLI_ENABLE_DIAGNOSTICS_MEASUREMENTS:
   _type: class
   isEnable: int8_t
 
-cACTION_CLI_ENABLE_LOAD_BALANCER:
-  _type: class
-  isEnable: int8_t
-
 cACTION_CLI_ENABLE_DEBUG:
   _type: class
   isEnable: int8_t
@@ -66,10 +62,6 @@ cACTION_CLI_IRE_NETWORK_OPTIMIZATION_TASK:
   _type: class
 
 cACTION_CLI_DUMP_NODE_INFO:
-  _type: class
-  mac: sMacAddr
-
-cACTION_CLI_BACKHAUL_SCAN_RESULTS:
   _type: class
   mac: sMacAddr
 

@@ -71,16 +71,8 @@ cACTION_BACKHAUL_ROAM_REQUEST:
   _type: class
   params: sBackhaulRoam
 
-cACTION_BACKHAUL_ROAM_RESPONSE:
-  _type: class
-  connected: uint8_t
-
 cACTION_BACKHAUL_RESET:
   _type: class
-
-cACTION_BACKHAUL_4ADDR_CONNECTED:
-  _type: class
-  mac: sMacAddr
 
 cACTION_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION:
   _type: class
