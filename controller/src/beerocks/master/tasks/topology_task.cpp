@@ -401,11 +401,6 @@ bool topology_task::handle_topology_notification(const std::string &src_mac,
         return son_actions::send_topology_query_msg(src_mac, cmdu_tx, database);
     }
 
-    if (!database.is_prplmesh(tlvf::mac_from_string(src_mac))) {
-        LOG(DEBUG) << "Non-prplMesh agent, skipping VS parsing";
-        return true;
-    }
-
     std::shared_ptr<beerocks_message::tlvVsClientAssociationEvent> vs_tlv = nullptr;
     auto beerocks_header = beerocks::message_com::parse_intel_vs_message(cmdu_rx);
     if (beerocks_header) {
