@@ -1684,8 +1684,14 @@ bool Controller::handle_tlv_associated_sta_extended_link_metrics(const std::stri
 
     for (auto &sta_extended_link_metric :
          cmdu_rx.getClassList<wfa_map::tlvAssociatedStaExtendedLinkMetrics>()) {
-        auto metrics_list = sta_extended_link_metric->metrics_list(0);
 
+        if (sta_extended_link_metric->metrics_list_length() == 0) {
+            LOG(INFO) << "No metrics provided for the station "
+                      << sta_extended_link_metric->associated_sta();
+            continue;
+        }
+
+        auto metrics_list = sta_extended_link_metric->metrics_list(0);
         if (!std::get<0>(metrics_list)) {
             LOG(ERROR) << "Failed to get metrics info list.";
             continue;
