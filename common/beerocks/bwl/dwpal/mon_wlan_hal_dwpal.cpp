@@ -1027,7 +1027,6 @@ bool mon_wlan_hal_dwpal::generate_connected_clients_events(
             is_finished_all_clients = true;
             m_queried_first         = false;
             m_prev_client_mac       = beerocks::net::network_utils::ZERO_MAC;
-            m_completed_vaps.clear();
             m_handled_clients.clear();
 
             return true;
@@ -1122,8 +1121,7 @@ bool mon_wlan_hal_dwpal::generate_connected_clients_events(
 
         m_queried_first   = false;
         m_prev_client_mac = beerocks::net::network_utils::ZERO_MAC;
-        m_handled_clients.clear();
-
+        // the clients list is relevant as long as we are in the generation process (even if that client moved to another VAP)
         // set next vap to be handled
         m_vap_id_in_progress = get_next_unhandled_vap(m_radio_info.available_vaps);
 
@@ -1133,8 +1131,7 @@ bool mon_wlan_hal_dwpal::generate_connected_clients_events(
     LOG(DEBUG) << "Finished to generate connected clients events for all vaps";
     // if reached this point it means we finished quering all VAPs
     m_vap_id_in_progress = INVALID_VAP_ID;
-    m_completed_vaps.clear();
-    m_prev_client_mac = beerocks::net::network_utils::ZERO_MAC;
+    m_prev_client_mac    = beerocks::net::network_utils::ZERO_MAC;
     m_handled_clients.clear();
     m_queried_first = false;
 
@@ -1342,9 +1339,12 @@ bool mon_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std
         msg->vap_id = beerocks::utils::get_ids_from_iface_string(VAP).vap_id;
         msg->mac    = tlvf::mac_from_string(MACAddress);
 
-        // To prevent duplication of generation of connected event for clients,
-        // need to add associated clients to the "handled_clients" set
-        m_handled_clients.insert(msg->mac);
+        // No need to store clients forever - may cause very big memory usage
+        if (m_completed_vaps.find(msg->vap_id) != m_completed_vaps.end()) {
+            // To prevent duplication of generation of connected event for clients,
+            // need to add associated clients to the "handled_clients" set
+            m_handled_clients.insert(msg->mac);
+        }
 
         event_queue_push(Event::STA_Connected, msg_buff); // send message to the AP manager
 
