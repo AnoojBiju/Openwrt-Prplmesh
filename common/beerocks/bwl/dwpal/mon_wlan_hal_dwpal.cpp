@@ -429,6 +429,18 @@ static void parse_info_elements(unsigned char *ie, int ielen, sChannelScanResult
             get_vht_oper(data, results);
         } break;
 
+        case ie_type::TYPE_EXTENISON: {
+            if (length == 0) {
+                LOG(ERROR) << "TYPE_EXTENISON doesn't match min and max length criteria";
+                break;
+            }
+            if (data[0] == ie_id_extension_values::TYPE_EXT_HE_CAPABILITIES) {
+                get_he_capabilities(data, length, results);
+            } else if (data[0] == ie_id_extension_values::TYPE_EXT_HE_OPERATION) {
+                get_he_operation(data, length, results);
+            }
+        } break;
+
         default: {
             // Ignoring received element as it is unhandled
             // LOG(DEBUG) << "Unhandled element received: " << int(key);
