@@ -5859,6 +5859,23 @@ std::string db::dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client
     return sta_instance;
 }
 
+std::string db::dm_add_steer_event()
+{
+    if (!dm_check_objects_limit(m_steer_events, MAX_EVENT_HISTORY_SIZE)) {
+        LOG(ERROR) << "Failed to remove Exceeding SteerEvent objects.";
+        return {};
+    }
+
+    std::string event_path = m_ambiorix_datamodel->add_instance("Controller.SteerEvent");
+
+    if (event_path.empty() && NBAPI_ON) {
+        LOG(ERROR) << "Failed to add instance Controller.SteerEvent";
+        return {};
+    }
+    m_steer_events.push(event_path);
+    return event_path;
+}
+
 std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac)
 {
     std::string path_association_event =
@@ -6330,6 +6347,8 @@ bool db::dm_add_interface_element(const sMacAddr &device_mac, const sMacAddr &in
     }
     return true;
 }
+
+std::shared_ptr<beerocks::nbapi::Ambiorix> db::get_ambiorix_obj() { return m_ambiorix_datamodel; }
 
 bool db::remove_interface(const sMacAddr &device_mac, const sMacAddr &interface_mac)
 {

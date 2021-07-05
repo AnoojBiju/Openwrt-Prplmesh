@@ -29,11 +29,12 @@
 #include <vector>
 
 #ifdef ENABLE_NBAPI
+#define NBAPI_ON 1
 #include "ambiorix_impl.h"
 
 #else
 #include "ambiorix_dummy.h"
-
+#define NBAPI_ON 0
 #endif // ENABLE_NBAPI
 
 using namespace beerocks_message;
@@ -569,6 +570,13 @@ public:
                                   const std::string &name);
 
     /**
+     * @brief Returns ambiorix object. 
+     * 
+     * @return Instance of AmbiorixImpl class, or AmbiorixDummy (if dummy mode enabled).
+     */
+    std::shared_ptr<beerocks::nbapi::Ambiorix> get_ambiorix_obj();
+
+    /**
      * @brief Removes the interface of given MAC of Interface Class and Device's Data Model.
      *
      * Searches index of m_interfaces vector and removes it.
@@ -648,6 +656,14 @@ public:
                             const uint8_t &channel, const uint8_t noise, const uint8_t utilization,
                             const std::vector<wfa_map::cNeighbors> &neighbors,
                             const std::string &ISO_8601_timestamp);
+
+    /**
+     * @brief Adds NBAPI SteerEvent object.
+     * Data model path example: "Controller.SteerEvent.42"
+     * 
+     * @return Path to object on success, empty sring otherwise.
+     */
+    std::string dm_add_steer_event();
 
     /**
      * @brief Adds or updates instance of Neighbor inside Interface object.
@@ -2196,6 +2212,11 @@ private:
      * @brief Maximum amount of events registered on the system bus NBAPI
      */
     const uint8_t MAX_EVENT_HISTORY_SIZE = 24;
+
+    /*
+    *  The queue with paths of NBAPI SteerEvent NBAPI objects.
+    */
+    std::queue<std::string> m_steer_events;
 
     /**
      * @brief The queue with paths of NBAPI disassociation events.

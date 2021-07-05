@@ -98,6 +98,10 @@ void client_steering_task::work()
             }
         }
 
+        if (!dm_set_steer_event_params(m_database.dm_add_steer_event())) {
+            LOG(ERROR) << "Failed to set parameters of Controller.SteerEvent";
+        }
+
         print_steering_info();
 
         if (m_database.config.persistent_db) {
@@ -373,6 +377,56 @@ void client_steering_task::handle_task_end()
         m_database.update_node_11v_responsiveness(m_sta_mac, false);
     }
     m_database.set_node_handoff_flag(m_sta_mac, false);
+}
+
+bool client_steering_task::dm_set_steer_event_params(const std::string &event_path)
+{
+    if (event_path.empty()) {
+        return false;
+    }
+
+    auto ambiorix_dm = m_database.get_ambiorix_obj();
+
+    if (!ambiorix_dm) {
+        LOG(ERROR) << "Failed to get Controller Data Model object.";
+        return false;
+    }
+    ambiorix_dm->set(event_path, "DeviceId", m_sta_mac);
+    ambiorix_dm->set(event_path, "SteeredFrom", m_original_bssid);
+    ambiorix_dm->set_current_time(event_path);
+    if (m_steering_success) {
+        ambiorix_dm->set(event_path, "Result", std::string("Success"));
+        ambiorix_dm->set(event_path, "SteeredTo", m_target_bssid);
+
+        int8_t rx_rssi = 0, rx_packets = 0;
+
+        if (!m_database.get_node_cross_rx_rssi(m_sta_mac, m_target_bssid, rx_rssi, rx_packets)) {
+            TASK_LOG(ERROR) << "can't get cross_rx_rssi for bssi =" << m_target_bssid;
+        }
+        ambiorix_dm->set(event_path, "NewLinkRate", rx_rssi);
+    } else {
+        ambiorix_dm->set(event_path, "Result", std::string("Fail"));
+    }
+
+    std::string steer_origin = "Unknown";
+
+    // For the time being, Agent doesn't do steering, skip setting Agent steer origin.
+    if (m_triggered_by.find("CLI") != std::string::npos) {
+        steer_origin = "CLI";
+    }
+    if (m_triggered_by.find("NBAPI") != std::string::npos) {
+        steer_origin = "NBAPI";
+    }
+    if (m_triggered_by.find("optimal_path_task") != std::string::npos ||
+        m_triggered_by.find("DFS Rentry") != std::string::npos) {
+        steer_origin = "Controller";
+
+        // Steering type is always BTM if the controller initiated
+        // the steering, and unknown otherwise.
+        ambiorix_dm->set(event_path, "SteeringType", std::string("BTM"));
+    }
+    ambiorix_dm->set(event_path, "SteeringOrigin", steer_origin);
+    return true;
 }
 
 bool client_steering_task::handle_ieee1905_1_msg(const sMacAddr &src_mac,

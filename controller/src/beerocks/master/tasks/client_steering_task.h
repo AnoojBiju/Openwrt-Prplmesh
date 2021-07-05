@@ -44,6 +44,13 @@ private:
     void steer_sta();
     void print_steering_info();
 
+    /** @brief Set values for parameters of NBAPI SteerEvent object.
+     * 
+     * @param event_path Path to NBAPI SteerEvent object.
+     * @return True on success, false otherwise.
+     */
+    bool dm_set_steer_event_params(const std::string &event_path);
+
     db &m_database;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
     task_pool &m_tasks;
@@ -58,6 +65,7 @@ private:
     const int m_disassoc_timer_ms;
     bool m_btm_report_received = false;
     bool m_steer_restricted    = false;
+
     /**
      * @brief A flag to determine if a steer was actually performed or not since in case 
      * that the client decided to move on its own to the target BSSID, we would not want
