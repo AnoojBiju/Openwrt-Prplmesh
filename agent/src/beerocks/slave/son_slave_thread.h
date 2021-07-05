@@ -64,7 +64,7 @@ public:
         std::string backhaul_iface;
         std::string backhaul_mac;
         std::string backhaul_ipv4;
-        std::string backhaul_bssid;
+        sMacAddr backhaul_bssid;
         uint32_t backhaul_freq;
         uint8_t backhaul_channel;
         uint8_t backhaul_is_wireless;
