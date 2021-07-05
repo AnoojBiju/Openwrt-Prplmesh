@@ -441,20 +441,31 @@ bool Monitor::monitor_fsm()
 
         // Long running operations prevent the event loop from doing anything else (i.e.: the
         // event loop is not able to react to any incoming request in the meantime).
-        // Therefore, limit the maximum amount of time for an iteration to 50% of the FSM poll time,
-        // instead of letting it run non-stop for what could be quite a long time.
+        // Therefore, limit the maximum amount of time that the following method can run,
+        // instead of letting it run non-stop for what could be quite a long time if there
+        // are many clients already connected.
         auto max_iteration_timeout = std::chrono::steady_clock::now() + fsm_timer_period / 2;
 
-        if (m_generate_connected_clients_events) {
+        if (m_generate_connected_clients_events &&
+            (m_next_generate_connected_events_time < std::chrono::steady_clock::now())) {
             bool is_finished_all_clients = false;
-            // Reset the flag if finished to generate all clients' events
+            // If there is not enough time to generate all events, the method will be called in the
+            // next FSM iteration, and so on until all connected clients are eventually reported.
+            auto max_generate_timeout =
+                (std::chrono::steady_clock::now() +
+                 std::chrono::milliseconds(GENERATE_CONNECTED_EVENTS_WORK_TIME_LIMIT_MSEC));
+            max_generate_timeout = std::min(max_generate_timeout, max_iteration_timeout);
             // If there is not enough time to generate all events, the method will be called in the
             // next FSM iteration, and so on until all connected clients are eventually reported.
             if (!mon_wlan_hal->generate_connected_clients_events(is_finished_all_clients,
-                                                                 max_iteration_timeout)) {
+                                                                 max_generate_timeout)) {
                 LOG(ERROR) << "Failed to generate connected clients events";
                 return false;
             }
+            m_next_generate_connected_events_time =
+                std::chrono::steady_clock::now() +
+                std::chrono::milliseconds(GENERATE_CONNECTED_EVENTS_DELAY_MSEC);
+            // Reset the flag if finished to generate all clients' events
             m_generate_connected_clients_events = !is_finished_all_clients;
         }
 
@@ -1325,8 +1336,8 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
             beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE>(
             cmdu_tx, beerocks_header->id());
         if (!response_out) {
-            LOG(ERROR)
-                << "Failed building cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE message!";
+            LOG(ERROR) << "Failed building cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE "
+                          "message!";
             return;
         }
 
@@ -1350,8 +1361,8 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
             beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE>(
             cmdu_tx, beerocks_header->id());
         if (!response_out) {
-            LOG(ERROR)
-                << "Failed building cACTION_MONITOR_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE message!";
+            LOG(ERROR) << "Failed building cACTION_MONITOR_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE "
+                          "message!";
             return;
         }
 
@@ -1610,8 +1621,8 @@ bool Monitor::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
                 auto response = message_com::create_vs_message<
                     beerocks_message::cACTION_MONITOR_CLIENT_BEACON_11K_RESPONSE>(cmdu_tx, id);
                 if (response == nullptr) {
-                    LOG(ERROR)
-                        << "Failed building cACTION_MONITOR_CLIENT_BEACON_11K_RESPONSE message!";
+                    LOG(ERROR) << "Failed building cACTION_MONITOR_CLIENT_BEACON_11K_RESPONSE "
+                                  "message!";
                     break;
                 }
 
@@ -1704,8 +1715,8 @@ bool Monitor::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
             auto response = message_com::create_vs_message<
                 beerocks_message::cACTION_MONITOR_HOSTAP_AP_DISABLED_NOTIFICATION>(cmdu_tx);
             if (response == nullptr) {
-                LOG(ERROR)
-                    << "Failed building cACTION_MONITOR_HOSTAP_AP_DISABLED_NOTIFICATION message!";
+                LOG(ERROR) << "Failed building cACTION_MONITOR_HOSTAP_AP_DISABLED_NOTIFICATION "
+                              "message!";
                 break;
             }
 
