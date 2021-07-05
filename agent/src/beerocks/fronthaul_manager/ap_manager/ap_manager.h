@@ -164,7 +164,11 @@ private:
 
     bool acs_completed_vap_update = false;
 
-    bool m_generate_connected_clients_events = false;
+    const uint8_t GENERATE_CONNECTED_EVENTS_WORK_TIME_LIMIT_MSEC = 50;
+    const uint8_t GENERATE_CONNECTED_EVENTS_DELAY_MSEC           = 100;
+    bool m_generate_connected_clients_events                     = false;
+    std::chrono::steady_clock::time_point m_next_generate_connected_events_time =
+        std::chrono::steady_clock::time_point::min();
 
     /**
      * Factory to create CMDU client instances connected to CMDU server running in slave.
