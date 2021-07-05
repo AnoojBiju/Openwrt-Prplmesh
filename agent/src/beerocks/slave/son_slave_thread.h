@@ -62,7 +62,7 @@ public:
         std::string gw_bridge_mac;
         std::string bridge_ipv4;
         std::string backhaul_iface;
-        std::string backhaul_mac;
+        sMacAddr backhaul_mac;
         std::string backhaul_ipv4;
         sMacAddr backhaul_bssid;
         uint32_t backhaul_freq;

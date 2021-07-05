@@ -1168,7 +1168,7 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
                 tlvf::mac_to_string(notification->params().gw_bridge_mac);
             backhaul_params.bridge_ipv4 =
                 network_utils::ipv4_to_string(notification->params().bridge_ipv4);
-            backhaul_params.backhaul_mac = tlvf::mac_to_string(notification->params().backhaul_mac);
+            backhaul_params.backhaul_mac = notification->params().backhaul_mac;
             backhaul_params.backhaul_ipv4 =
                 network_utils::ipv4_to_string(notification->params().backhaul_ipv4);
             backhaul_params.backhaul_bssid = notification->params().backhaul_bssid;
@@ -3968,7 +3968,7 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
             backhaul_params.gw_bridge_mac  = bridge_info.mac;
             backhaul_params.bridge_ipv4    = bridge_info.ip;
             backhaul_params.backhaul_iface = db->bridge.iface_name;
-            backhaul_params.backhaul_mac   = bridge_info.mac;
+            backhaul_params.backhaul_mac   = tlvf::mac_from_string(bridge_info.mac);
             backhaul_params.backhaul_ipv4  = bridge_info.ip;
             backhaul_params.backhaul_bssid = network_utils::ZERO_MAC;
             // backhaul_params.backhaul_freq           = 0; // HACK temp disabled because of a bug on endian converter
@@ -4140,8 +4140,7 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
             notification->backhaul_params().is_backhaul_manager = is_backhaul_manager;
             notification->backhaul_params().backhaul_iface_type =
                 backhaul_params.backhaul_iface_type;
-            notification->backhaul_params().backhaul_mac =
-                tlvf::mac_from_string(backhaul_params.backhaul_mac);
+            notification->backhaul_params().backhaul_mac     = backhaul_params.backhaul_mac;
             notification->backhaul_params().backhaul_channel = backhaul_params.backhaul_channel;
             notification->backhaul_params().backhaul_bssid   = backhaul_params.backhaul_bssid;
             notification->backhaul_params().backhaul_is_wireless =
