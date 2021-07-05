@@ -42,12 +42,19 @@ enum ie_type : uint8_t {
     TYPE_EXTENDED_SUPPORTED_RATES = 50,
     TYPE_HT_OPERATION             = 61,
     TYPE_VHT_OPERATION            = 192,
-    TYPE_VENDOR                   = 221
+    TYPE_VENDOR                   = 221,
+    TYPE_EXTENISON                = 255
 };
+/* Element ID Extension (EID 255) values */
+enum ie_id_extension_values : uint8_t { TYPE_EXT_HE_CAPABILITIES = 35, TYPE_EXT_HE_OPERATION = 36 };
 
-#define WLAN_CAPABILITY_ESS (1 << 0)
-#define WLAN_CAPABILITY_IBSS (1 << 1)
-#define WLAN_CAPABILITY_PRIVACY (1 << 4)
+#ifndef BIT
+// BIT(0) -> 0x1, BIT(1) -> 0x10, BIT(2) -> 0x100, etc.
+#define BIT(x) (1ULL << (x))
+#endif
+#define WLAN_CAPABILITY_ESS BIT(0)
+#define WLAN_CAPABILITY_IBSS BIT(1)
+#define WLAN_CAPABILITY_PRIVACY BIT(4)
 #define GET_OP_CLASS(channel) ((channel < 14) ? 4 : 5)
 
 //////////////////////////////////////////////////////////////////////////////
