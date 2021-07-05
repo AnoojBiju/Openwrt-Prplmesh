@@ -9,7 +9,7 @@ import pexpect
 
 from boardfarm.devices.debian_wifi import DebianWifi
 from boardfarm.devices import connection_decider
-from environment import VirtualAPHostapd, _device_reset_console
+from environment import VirtualAPHostapd, _device_reset_console, _iperf_throughput
 
 
 class PrplMeshStation(DebianWifi):
@@ -124,3 +124,12 @@ class PrplMeshStation(DebianWifi):
         # type managed
         self.expect("addr (?P<mac>..:..:..:..:..:..)\r\n\t(type|ssid)")
         return self.match.group('mac')
+
+    def iperf_throughput(self, to_dut: bool, duration: int = 5, protocol: str = 'tcp',
+                         omit: int = 2, num_streams: int = 5,
+                         print_output: bool = False) -> float:
+        server_hostname = self.station_ip_wifi
+        self.station_command('iperf3', '--daemon', '-s', '-B', server_hostname, '-J', '-1')
+        return _iperf_throughput(server_hostname, to_dut, duration,
+                                 protocol, omit,
+                                 num_streams, print_output)
