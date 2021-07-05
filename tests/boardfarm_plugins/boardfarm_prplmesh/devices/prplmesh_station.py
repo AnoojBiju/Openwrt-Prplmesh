@@ -9,7 +9,7 @@ import pexpect
 
 from boardfarm.devices.debian_wifi import DebianWifi
 from boardfarm.devices import connection_decider
-from environment import VirtualAPHostapd
+from environment import VirtualAPHostapd, _device_reset_console
 
 
 class PrplMeshStation(DebianWifi):
@@ -55,6 +55,14 @@ class PrplMeshStation(DebianWifi):
         self.wifi_disconnect(None)
         # Turn on and off wlan iface just in case
         self.disable_and_enable_wifi()
+
+    def station_command(self, *command: str) -> bytes:
+        """Execute `command` in device and return its output."""
+        _device_reset_console(self)
+
+        self.sendline(" ".join(command))
+        self.expect(self.prompt, timeout=10)
+        return self.before
 
     def wifi_connect(self, vap: VirtualAPHostapd,
                      vap_passphrase: str = 'prplmesh_pass') -> bool:
