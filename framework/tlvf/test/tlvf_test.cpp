@@ -486,7 +486,7 @@ int test_all()
     uint8_t keywrapkey[16];
     WSC::m2::config cfg;
     cfg.msg_type            = WSC::eWscMessageType::WSC_MSG_TYPE_M2;
-    cfg.manufacturer        = "Intel";
+    cfg.manufacturer        = "prplMesh";
     cfg.model_name          = "Ubuntu";
     cfg.model_number        = "18.04";
     cfg.serial_number       = "prpl12345";

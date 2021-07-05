@@ -70,6 +70,12 @@ public:
      */
     uint8_t max_total_number_of_vids = 0;
 
+    bool is_gateway = false;
+
+    std::string manufacturer;
+
+    beerocks::eNodeState state = beerocks::STATE_CONNECTED;
+
     struct sRadio {
         sRadio()               = delete;
         sRadio(const sRadio &) = delete;

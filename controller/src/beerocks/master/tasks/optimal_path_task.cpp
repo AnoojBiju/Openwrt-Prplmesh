@@ -133,9 +133,6 @@ void optimal_path_task::work()
         current_hostap      = database.get_node_parent_radio(current_hostap_vap);
         current_hostap_ssid = database.get_hostap_ssid(tlvf::mac_from_string(current_hostap_vap));
 
-        auto gw_br_node = database.get_nodes(beerocks::TYPE_GW);
-        auto gw_slaves  = database.get_node_children(*gw_br_node.begin(), beerocks::TYPE_SLAVE);
-
         sta_support_11k = database.settings_client_11k_roaming() &&
                           (database.get_node_beacon_measurement_support_level(sta_mac) !=
                            BEACON_MEAS_UNSUPPORTED);

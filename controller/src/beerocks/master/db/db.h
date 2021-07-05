@@ -330,22 +330,42 @@ public:
                             std::pair<uint16_t, uint16_t> &results);
 
     /**
-    * @brief add instance of data element 'radio'
-    *
-    * @param mac address of radio
-    * @param mac address of device
-    * @return data model path if radio instance was successfully added, empty string otherwise
-    */
+     * @brief add instance of data element 'radio'
+     *
+     * @param mac address of radio
+     * @param mac address of device
+     * @return data model path if radio instance was successfully added, empty string otherwise
+     */
     std::string dm_add_radio_element(const std::string &radio_mac, const std::string &device_mac);
 
-    bool add_node_gateway(const sMacAddr &mac);
-    bool add_node_ire(const sMacAddr &mac,
-                      const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
+    /**
+     * @brief add gateway node and sAgent object
+     *
+     * Adds a gateway node and an sAgent object if they don't exist.
+     *
+     * @param mac AL MAC of the gateway.
+     *
+     * @return the existing sAgent if it was already there or the newly added sAgent otherwise.
+     */
+    std::shared_ptr<sAgent> add_node_gateway(const sMacAddr &mac);
+
+    /**
+     * @brief add IRE node and sAgent object
+     *
+     * Adds an IRE node and an sAgent object if they don't exist.
+     *
+     * @param mac AL MAC of the gateway.
+     * @param parent_mac MAC address of the parent node in the legacy node structure.
+     *
+     * @return the existing sAgent if it was already there or the newly added sAgent otherwise.
+     */
+    std::shared_ptr<sAgent>
+    add_node_ire(const sMacAddr &mac,
+                 const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
     bool add_node_wireless_bh(const sMacAddr &mac,
                               const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
     bool add_node_wired_bh(const sMacAddr &mac,
                            const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
-
     bool add_node_radio(const sMacAddr &mac,
                         const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
     bool add_node_client(const sMacAddr &mac,
@@ -373,6 +393,8 @@ public:
     std::string get_node_ipv4(const std::string &mac);
 
     bool set_node_manufacturer(const std::string &mac, const std::string &manufacturer);
+    bool set_agent_manufacturer(prplmesh::controller::db::sAgent &agent,
+                                const std::string &manufacturer);
 
     int get_node_channel(const std::string &mac);
 
@@ -391,9 +413,6 @@ public:
 
     bool set_node_state(const std::string &mac, beerocks::eNodeState state);
     beerocks::eNodeState get_node_state(const std::string &mac);
-
-    bool set_node_operational_state(const std::string &bridge_mac, bool operational);
-    int8_t get_node_operational_state(const std::string &bridge_mac);
 
     std::chrono::steady_clock::time_point get_last_state_change(const std::string &mac);
 
@@ -707,7 +726,7 @@ public:
     std::set<std::string> get_active_hostaps();
     std::set<std::string> get_all_connected_ires();
     std::set<std::string> get_nodes_from_hierarchy(int hierarchy, int type = -1);
-    std::string get_gw_mac();
+    std::shared_ptr<sAgent> get_gw();
     std::set<std::string> get_node_subtree(const std::string &mac);
     std::string get_node_parent(const std::string &mac);
 

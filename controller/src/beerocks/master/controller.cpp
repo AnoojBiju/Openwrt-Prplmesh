@@ -813,7 +813,7 @@ bool Controller::autoconfig_wsc_add_m2(WSC::m1 &m1,
     // public_key is set in autoconfig_wsc_calculate_keys()
     // connection_type and configuration_methods have default values
     // TODO the following should be taken from the database
-    m2_cfg.manufacturer        = "Intel";
+    m2_cfg.manufacturer        = "prplMesh";
     m2_cfg.model_name          = "Ubuntu";
     m2_cfg.model_number        = "18.04";
     m2_cfg.serial_number       = "prpl12345";
@@ -944,11 +944,11 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const std::string &src_m
     LOG(DEBUG) << "   device " << m1->manufacturer() << " " << m1->model_name() << " "
                << m1->device_name() << " " << m1->serial_number();
 
-    auto agent = database.m_agents.get(al_mac);
-    if (!agent) {
-        LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
-        return false;
-    }
+    // If the agent already exists, return the old one
+    auto agent   = database.m_agents.add(al_mac);
+    agent->state = beerocks::STATE_DISCONNECTED;
+
+    database.set_agent_manufacturer(*agent, "prplMesh");
 
     // Profile-2 Multi AP profile is added for higher than Profile-1 agents.
     if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
@@ -1022,7 +1022,7 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const std::string &src_m
     auto beerocks_header = beerocks::message_com::parse_intel_vs_message(cmdu_rx);
     if (beerocks_header) {
         LOG(INFO) << "Intel radio agent join (al_mac=" << al_mac << " ruid=" << ruid;
-        if (!handle_intel_slave_join(src_mac, radio_basic_caps, *beerocks_header, cmdu_tx)) {
+        if (!handle_intel_slave_join(src_mac, radio_basic_caps, *beerocks_header, cmdu_tx, agent)) {
             LOG(ERROR) << "Intel radio agent join failed (al_mac=" << al_mac << " ruid=" << ruid
                        << ")";
             return false;
@@ -1032,7 +1032,7 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const std::string &src_m
         // Multi-AP Agent doesn't say anything about the bridge, so we have to rely on Intel Slave Join for that.
         // We'll use AL-MAC as the bridge
         // TODO convert source address into AL-MAC address
-        if (!handle_non_intel_slave_join(src_mac, radio_basic_caps, *m1, al_mac, ruid, cmdu_tx)) {
+        if (!handle_non_intel_slave_join(src_mac, radio_basic_caps, *m1, agent, ruid, cmdu_tx)) {
             LOG(ERROR) << "Non-Intel radio agent join failed (al_mac=" << al_mac << " ruid=" << ruid
                        << ")";
             return false;
@@ -2000,7 +2000,8 @@ bool Controller::handle_cmdu_1905_beacon_response(const std::string &src_mac,
 
 bool Controller::handle_intel_slave_join(
     const std::string &src_mac, std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps,
-    beerocks::beerocks_header &beerocks_header, ieee1905_1::CmduMessageTx &cmdu_tx)
+    beerocks::beerocks_header &beerocks_header, ieee1905_1::CmduMessageTx &cmdu_tx,
+    std::shared_ptr<sAgent> &agent)
 {
     // Prepare outcoming response vs tlv
     auto join_response =
@@ -2041,7 +2042,7 @@ bool Controller::handle_intel_slave_join(
     bool is_gw_slave           = (backhaul_iface_type == beerocks::IFACE_TYPE_GW_BRIDGE);
     beerocks::eType ire_type   = is_gw_slave ? beerocks::TYPE_GW : beerocks::TYPE_IRE;
     int backhaul_channel       = notification->backhaul_params().backhaul_channel;
-    sMacAddr bridge_mac        = notification->backhaul_params().bridge_mac;
+    sMacAddr bridge_mac        = agent->al_mac;
     std::string bridge_mac_str = tlvf::mac_to_string(bridge_mac);
     std::string bridge_ipv4 =
         beerocks::net::network_utils::ipv4_to_string(notification->backhaul_params().bridge_ipv4);
@@ -2118,13 +2119,13 @@ bool Controller::handle_intel_slave_join(
             * we assume it is connected to the GW's LAN switch
             */
             LOG(DEBUG) << "connected to the GW's LAN switch ";
-            auto gw_container = database.get_nodes_from_hierarchy(0, beerocks::TYPE_GW);
-            if (gw_container.empty()) {
+            auto gw = database.get_gw();
+            if (!gw) {
                 LOG(ERROR) << "can't get GW node!";
                 return false;
             }
 
-            auto gw_mac          = *gw_container.begin();
+            auto gw_mac          = tlvf::mac_to_string(gw->al_mac);
             auto gw_lan_switches = database.get_node_children(gw_mac, beerocks::TYPE_ETH_SWITCH);
 
             if (gw_lan_switches.empty()) {
@@ -2164,11 +2165,13 @@ bool Controller::handle_intel_slave_join(
                << ire_type;
     if (is_gw_slave) {
         database.add_node_gateway(bridge_mac);
+        agent->is_gateway = true;
     } else {
         database.add_node_ire(bridge_mac, tlvf::mac_from_string(backhaul_mac));
     }
 
     database.set_node_state(bridge_mac_str, beerocks::STATE_CONNECTED);
+    agent->state = beerocks::STATE_CONNECTED;
 
     /*
     * Set IRE backhaul manager slave
@@ -2183,8 +2186,8 @@ bool Controller::handle_intel_slave_join(
 
         database.set_node_ipv4(backhaul_mac, bridge_ipv4);
         database.set_node_ipv4(bridge_mac_str, bridge_ipv4);
-        database.set_node_manufacturer(backhaul_mac, "Intel");
-        database.set_node_manufacturer(bridge_mac_str, "Intel");
+
+        database.set_node_manufacturer(backhaul_mac, agent->manufacturer);
 
         database.set_node_type(backhaul_mac, beerocks::TYPE_IRE_BACKHAUL);
 
@@ -2192,7 +2195,7 @@ bool Controller::handle_intel_slave_join(
         database.set_node_name(bridge_mac_str, slave_name);
 
         //TODO slave should include eth switch mac in the message
-        auto eth_sw_mac_binary = notification->backhaul_params().bridge_mac;
+        auto eth_sw_mac_binary = bridge_mac;
         ++eth_sw_mac_binary.oct[5];
 
         std::string eth_switch_mac = tlvf::mac_to_string(eth_sw_mac_binary);
@@ -2200,7 +2203,7 @@ bool Controller::handle_intel_slave_join(
         database.set_node_state(eth_switch_mac, beerocks::STATE_CONNECTED);
         database.set_node_name(eth_switch_mac, slave_name + "_ETH");
         database.set_node_ipv4(eth_switch_mac, bridge_ipv4);
-        database.set_node_manufacturer(eth_switch_mac, "Intel");
+        database.set_node_manufacturer(eth_switch_mac, agent->manufacturer);
 
         //run locating task on ire
         if (!database.is_node_wireless(backhaul_mac)) {
@@ -2536,34 +2539,34 @@ bool Controller::autoconfig_wsc_parse_radio_caps(
 
 bool Controller::handle_non_intel_slave_join(
     const std::string &src_mac, std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps,
-    const WSC::m1 &m1, const sMacAddr &bridge_mac, const sMacAddr &radio_mac,
+    const WSC::m1 &m1, std::shared_ptr<sAgent> &agent, const sMacAddr &radio_mac,
     ieee1905_1::CmduMessageTx &cmdu_tx)
 {
 
     // Multi-AP Agent doesn't say anything about the backhaul, so simulate ethernet backhaul to satisfy
     // network map. MAC address is the bridge MAC with the last octet incremented by 1.
     // The mac address for the backhaul is the same since it is ethernet backhaul.
-    sMacAddr mac = bridge_mac;
+    sMacAddr bridge_mac = agent->al_mac;
+    sMacAddr mac        = bridge_mac;
     mac.oct[5]++;
     std::string backhaul_mac = tlvf::mac_to_string(mac);
     mac.oct[5]++;
     std::string eth_switch_mac = tlvf::mac_to_string(mac);
-    auto manufacturer          = m1.manufacturer();
     LOG(INFO) << "IRE generic Slave joined" << std::endl
-              << "    manufacturer=" << manufacturer << std::endl
+              << "    manufacturer=" << agent->manufacturer << std::endl
               << "    al_mac=" << bridge_mac << std::endl
               << "    eth_switch_mac=" << eth_switch_mac << std::endl
               << "    backhaul_mac=" << backhaul_mac << std::endl
               << "    radio_identifier = " << radio_mac << std::endl;
 
     LOG(DEBUG) << "simulate backhaul connected to the GW's LAN switch ";
-    auto gw_container = database.get_nodes_from_hierarchy(0, beerocks::TYPE_GW);
-    if (gw_container.empty()) {
+    auto gw = database.get_gw();
+    if (!gw) {
         LOG(ERROR) << "can't get GW node!";
         return false;
     }
 
-    auto gw_mac          = *gw_container.begin();
+    auto gw_mac          = tlvf::mac_to_string(gw->al_mac);
     auto gw_lan_switches = database.get_node_children(gw_mac, beerocks::TYPE_ETH_SWITCH);
 
     if (gw_lan_switches.empty()) {
@@ -2595,18 +2598,19 @@ bool Controller::handle_non_intel_slave_join(
                << ire_type;
 
     database.add_node_ire(bridge_mac, tlvf::mac_from_string(backhaul_mac));
+
+    agent->state = beerocks::STATE_CONNECTED;
     database.set_node_state(bridge_mac_str, beerocks::STATE_CONNECTED);
     database.set_node_backhaul_iface_type(backhaul_mac, beerocks::eIfaceType::IFACE_TYPE_ETHERNET);
     database.set_node_backhaul_iface_type(bridge_mac_str, beerocks::IFACE_TYPE_BRIDGE);
-    database.set_node_manufacturer(backhaul_mac, manufacturer);
-    database.set_node_manufacturer(bridge_mac_str, manufacturer);
+    database.set_node_manufacturer(backhaul_mac, agent->manufacturer);
     database.set_node_type(backhaul_mac, beerocks::TYPE_IRE_BACKHAUL);
-    database.set_node_name(backhaul_mac, manufacturer + "_BH");
-    database.set_node_name(bridge_mac_str, manufacturer);
+    database.set_node_name(backhaul_mac, agent->manufacturer + "_BH");
+    database.set_node_name(bridge_mac_str, agent->manufacturer);
     database.add_node_wired_bh(tlvf::mac_from_string(eth_switch_mac), bridge_mac);
     database.set_node_state(eth_switch_mac, beerocks::STATE_CONNECTED);
-    database.set_node_name(eth_switch_mac, manufacturer + "_ETH");
-    database.set_node_manufacturer(eth_switch_mac, eth_switch_mac);
+    database.set_node_name(eth_switch_mac, agent->manufacturer + "_ETH");
+    database.set_node_manufacturer(eth_switch_mac, agent->manufacturer);
 
     // Update existing node, or add a new one
     if (database.has_node(radio_mac)) {

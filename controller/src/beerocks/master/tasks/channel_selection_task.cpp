@@ -1699,13 +1699,18 @@ bool channel_selection_task::acs_result_match()
 
 uint8_t channel_selection_task::get_gw_slave_5g_channel()
 {
-    auto gw_mac    = database.get_gw_mac();
-    auto gw_slaves = database.get_node_children(gw_mac, beerocks::TYPE_SLAVE);
-    for (auto &gw_slave : gw_slaves) {
-        if (database.is_node_5ghz(gw_slave)) {
-            return database.get_node_channel(gw_slave);
+    auto gw = database.get_gw();
+    if (!gw) {
+        return 0;
+    }
+
+    for (const auto &radio : gw->radios) {
+        std::string radio_mac = tlvf::mac_to_string(radio.first);
+        if (database.is_node_5ghz(radio_mac)) {
+            return database.get_node_channel(radio_mac);
         }
     }
+
     return 0;
 }
 

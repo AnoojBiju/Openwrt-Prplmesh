@@ -552,7 +552,6 @@ sBackhaulParams:
   gw_ipv4: beerocks::net::sIpv4Addr
   gw_bridge_mac: sMacAddr
   controller_bridge_mac: sMacAddr
-  bridge_mac: sMacAddr
   bridge_ipv4: beerocks::net::sIpv4Addr
   backhaul_mac: sMacAddr
   backhaul_ipv4: beerocks::net::sIpv4Addr
