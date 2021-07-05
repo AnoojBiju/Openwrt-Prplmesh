@@ -631,9 +631,8 @@ bool BackhaulManager::finalize_slaves_connect_state(bool fConnected,
                 beerocks::net::network_utils::ipv4_from_string(iface_info.ip);
 
             if (db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wired) {
-                notification->params().backhaul_bssid =
-                    tlvf::mac_from_string(beerocks::net::network_utils::ZERO_MAC_STRING);
-                notification->params().backhaul_iface_type  = IFACE_TYPE_ETHERNET;
+                notification->params().backhaul_bssid      = beerocks::net::network_utils::ZERO_MAC;
+                notification->params().backhaul_iface_type = IFACE_TYPE_ETHERNET;
                 notification->params().backhaul_is_wireless = 0;
                 for (auto soc : slaves_sockets) {
 
