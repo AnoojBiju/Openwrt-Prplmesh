@@ -551,10 +551,9 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
             return false;
         }
 
-        std::string client_mac = tlvf::mac_to_string(request_in->params().mac);
-        std::string client_bridge_4addr_mac =
-            tlvf::mac_to_string(request_in->params().bridge_4addr_mac);
-        std::string client_ip = network_utils::ipv4_to_string(request_in->params().ipv4);
+        sMacAddr client_mac              = request_in->params().mac;
+        sMacAddr client_bridge_4addr_mac = request_in->params().bridge_4addr_mac;
+        std::string client_ip            = network_utils::ipv4_to_string(request_in->params().ipv4);
 
         LOG(DEBUG) << "START_MONITORING_REQUEST: mac=" << client_mac << " ip=" << client_ip
                    << " bridge_4addr_mac=" << client_bridge_4addr_mac;
@@ -730,8 +729,7 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
                 LOG(ERROR) << "addClass cACTION_CONTROL_BACKHAUL_ROAM_REQUEST failed";
                 return false;
             }
-            auto bssid = tlvf::mac_to_string(request_in->params().bssid);
-            LOG(DEBUG) << "reconfigure wpa_supplicant to bssid " << bssid
+            LOG(DEBUG) << "reconfigure wpa_supplicant to bssid " << request_in->params().bssid
                        << " channel=" << int(request_in->params().channel);
 
             auto request_out =
@@ -1760,8 +1758,8 @@ bool slave_thread::handle_cmdu_platform_manager_message(
 
         if (notification->op() == beerocks_message::eDHCPOp_Add ||
             notification->op() == beerocks_message::eDHCPOp_Old) {
-            std::string client_mac = tlvf::mac_to_string(notification->mac());
-            std::string client_ip  = network_utils::ipv4_to_string(notification->ipv4());
+            sMacAddr client_mac   = notification->mac();
+            std::string client_ip = network_utils::ipv4_to_string(notification->ipv4());
 
             LOG(DEBUG) << "ACTION_DHCP_LEASE_ADDED_NOTIFICATION mac " << client_mac
                        << " ip = " << client_ip << " name="
