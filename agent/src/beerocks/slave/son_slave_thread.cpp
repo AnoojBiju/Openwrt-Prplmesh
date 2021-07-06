@@ -482,18 +482,6 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
         message_com::send_cmdu(platform_manager_socket, cmdu_tx);
         break;
     }
-    case beerocks_message::ACTION_CONTROL_SON_CONFIG_UPDATE: {
-        LOG(DEBUG) << "received ACTION_CONTROL_SON_CONFIG_UPDATE";
-        auto update =
-            beerocks_header->addClass<beerocks_message::cACTION_CONTROL_SON_CONFIG_UPDATE>();
-        if (update == nullptr) {
-            LOG(ERROR) << "addClass cACTION_CONTROL_SON_CONFIG_UPDATE failed";
-            return false;
-        }
-        son_config = update->config();
-        log_son_config();
-        break;
-    }
     case beerocks_message::ACTION_CONTROL_HOSTAP_SET_RESTRICTED_FAILSAFE_CHANNEL_REQUEST: {
         LOG(DEBUG) << "received ACTION_CONTROL_HOSTAP_SET_RESTRICTED_FAILSAFE_CHANNEL_REQUEST";
 
