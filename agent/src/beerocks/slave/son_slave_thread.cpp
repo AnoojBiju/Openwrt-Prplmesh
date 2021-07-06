@@ -709,32 +709,6 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
         }
         break;
     }
-    case beerocks_message::ACTION_CONTROL_BACKHAUL_ROAM_REQUEST: {
-        LOG(TRACE) << "received ACTION_CONTROL_BACKHAUL_ROAM_REQUEST";
-        if (is_backhaul_manager && backhaul_params.backhaul_is_wireless) {
-            auto request_in =
-                beerocks_header
-                    ->addClass<beerocks_message::cACTION_CONTROL_BACKHAUL_ROAM_REQUEST>();
-            if (request_in == nullptr) {
-                LOG(ERROR) << "addClass cACTION_CONTROL_BACKHAUL_ROAM_REQUEST failed";
-                return false;
-            }
-            auto bssid = tlvf::mac_to_string(request_in->params().bssid);
-            LOG(DEBUG) << "reconfigure wpa_supplicant to bssid " << bssid
-                       << " channel=" << int(request_in->params().channel);
-
-            auto request_out =
-                message_com::create_vs_message<beerocks_message::cACTION_BACKHAUL_ROAM_REQUEST>(
-                    cmdu_tx, beerocks_header->id());
-            if (request_out == nullptr) {
-                LOG(ERROR) << "Failed building message!";
-                return false;
-            }
-            request_out->params() = request_in->params();
-            message_com::send_cmdu(backhaul_manager_socket, cmdu_tx);
-        }
-        break;
-    }
     case beerocks_message::ACTION_CONTROL_BACKHAUL_RESET: {
         LOG(TRACE) << "received ACTION_CONTROL_BACKHAUL_RESET";
         auto request =
