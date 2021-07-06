@@ -883,10 +883,6 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
         }
         break;
     }
-    case beerocks_message::ACTION_CONTROL_HOSTAP_DISABLED_BY_MASTER: {
-        LOG(DEBUG) << "ACTION_CONTROL_HOSTAP_DISABLED_BY_MASTER, marking slave as operational!";
-        break;
-    }
     case beerocks_message::ACTION_CONTROL_STEERING_CLIENT_SET_GROUP_REQUEST: {
         LOG(TRACE) << "ACTION_CONTROL_STEERING_CLIENT_SET_GROUP_REQUEST";
         auto update =
