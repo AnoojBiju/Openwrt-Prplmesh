@@ -582,7 +582,6 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
             LOG(ERROR) << "addClass ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST failed";
             return false;
         }
-        auto hostap_mac = tlvf::mac_to_string(request_in->params().mac);
         bool forbackhaul =
             (is_backhaul_manager && backhaul_params.backhaul_is_wireless) ? true : false;
 
