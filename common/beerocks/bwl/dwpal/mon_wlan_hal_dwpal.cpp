@@ -42,12 +42,19 @@ enum ie_type : uint8_t {
     TYPE_EXTENDED_SUPPORTED_RATES = 50,
     TYPE_HT_OPERATION             = 61,
     TYPE_VHT_OPERATION            = 192,
-    TYPE_VENDOR                   = 221
+    TYPE_VENDOR                   = 221,
+    TYPE_EXTENISON                = 255
 };
+/* Element ID Extension (EID 255) values */
+enum ie_id_extension_values : uint8_t { TYPE_EXT_HE_CAPABILITIES = 35, TYPE_EXT_HE_OPERATION = 36 };
 
-#define WLAN_CAPABILITY_ESS (1 << 0)
-#define WLAN_CAPABILITY_IBSS (1 << 1)
-#define WLAN_CAPABILITY_PRIVACY (1 << 4)
+#ifndef BIT
+// BIT(0) -> 0x1, BIT(1) -> 0x10, BIT(2) -> 0x100, etc.
+#define BIT(x) (1ULL << (x))
+#endif
+#define WLAN_CAPABILITY_ESS BIT(0)
+#define WLAN_CAPABILITY_IBSS BIT(1)
+#define WLAN_CAPABILITY_PRIVACY BIT(4)
 #define GET_OP_CLASS(channel) ((channel < 14) ? 4 : 5)
 
 //////////////////////////////////////////////////////////////////////////////
@@ -264,6 +271,83 @@ static void get_supprates(const uint8_t *data, uint8_t len, sChannelScanResults 
     }
 }
 
+// Allow parsing for the neighbor's HE capabilities information
+static void get_he_capabilities(const uint8_t *data, uint8_t len, sChannelScanResults &results)
+{
+    if (len <= 7) {
+        LOG(ERROR) << "Length of he capabilities elem is " << len << " <= 7";
+        return;
+    }
+    /**
+     * [0] = elem_id ; [1-6] = MAC capab ; [7-17] = PHY capab
+	 * PHY_capab[0] = 1 BIT resv + 7 BITs for Supported Channel Width Set
+     */
+
+    // TODO Add wifi capabilities to ChannelScanResults
+
+    results.supported_standards.push_back(eChannelScanResultStandards::eStandard_802_11ax);
+    results.operating_standards = eChannelScanResultStandards::eStandard_802_11ax;
+}
+
+// Allow parsing for the neighbor's HE operation information
+static void get_he_operation(const uint8_t *data, uint8_t len, sChannelScanResults &results)
+{
+    if (len <= 4) {
+        LOG(ERROR) << "Length of he operation elem is " << len << " <= 4";
+        return;
+    }
+
+    /**
+     * [0] = elem_id ; [1-3] = HE Oper Params ; [4-4] = BSS color; [5-6] = MCS NSS; [7-9] VHT oper info;
+	 * HE_Oper_Params.bits[14] = VHT Oper Info Present boolean
+     */
+    if (results.operating_frequency_band !=
+            eChannelScanResultOperatingFrequencyBand::eOperating_Freq_Band_5GHz ||
+        !(data[2] & BIT(6))) {
+        LOG(ERROR) << "Unable to parse the HE operation element";
+        return;
+    }
+
+    if (len <= 9) {
+        LOG(INFO) << "VHT oper info present bit is on, by len is " << len;
+    }
+
+    int center_freq_seg0 = data[7];
+    int center_freq_seg1 = data[8];
+    switch (center_freq_seg0) {
+    // Set to 1 for 80 MHz, 160 MHz or 80+80 MHz BSS bandwidth
+    case 1: {
+        if (center_freq_seg1) {
+            if (abs(center_freq_seg1 - center_freq_seg0) == 16) {
+                results.operating_channel_bandwidth =
+                    eChannelScanResultChannelBandwidth::eChannel_Bandwidth_160MHz;
+            } else {
+                results.operating_channel_bandwidth =
+                    eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80_80;
+            }
+        } else {
+            results.operating_channel_bandwidth =
+                eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80MHz;
+        }
+    } break;
+    case 2: {
+        results.operating_channel_bandwidth =
+            eChannelScanResultChannelBandwidth::eChannel_Bandwidth_160MHz;
+    } break;
+    case 3: {
+        results.operating_channel_bandwidth =
+            eChannelScanResultChannelBandwidth::eChannel_Bandwidth_80_80;
+    } break;
+    default: {
+        if (center_freq_seg0) {
+            LOG(ERROR) << "illegal, values in the range 4 to 255 are reserved.";
+        }
+    } break;
+    }
+    results.supported_standards.push_back(eChannelScanResultStandards::eStandard_802_11ax);
+    results.operating_standards = eChannelScanResultStandards::eStandard_802_11ax;
+}
+
 static void parse_info_elements(unsigned char *ie, int ielen, sChannelScanResults &results)
 {
     if (!ie) {
@@ -343,6 +427,18 @@ static void parse_info_elements(unsigned char *ie, int ielen, sChannelScanResult
                 break;
             }
             get_vht_oper(data, results);
+        } break;
+
+        case ie_type::TYPE_EXTENISON: {
+            if (length == 0) {
+                LOG(ERROR) << "TYPE_EXTENISON doesn't match min and max length criteria";
+                break;
+            }
+            if (data[0] == ie_id_extension_values::TYPE_EXT_HE_CAPABILITIES) {
+                get_he_capabilities(data, length, results);
+            } else if (data[0] == ie_id_extension_values::TYPE_EXT_HE_OPERATION) {
+                get_he_operation(data, length, results);
+            }
         } break;
 
         default: {
