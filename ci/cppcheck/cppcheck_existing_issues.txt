@@ -121,7 +121,6 @@ controller/src/beerocks/master/tasks/optimal_path_task.cpp: style: Local variabl
 controller/src/beerocks/master/tasks/optimal_path_task.cpp: style: The scope of the variable 'dl_rcpi' can be reduced. [variableScope]                uint8_t dl_rcpi, dl_snr;
 controller/src/beerocks/master/tasks/optimal_path_task.cpp: style: The scope of the variable 'dl_snr' can be reduced. [variableScope]                uint8_t dl_rcpi, dl_snr;
 controller/src/beerocks/master/tasks/optimal_path_task.cpp: style: The scope of the variable 'found_band_match' can be reduced. [variableScope]        bool found_band_match;
-controller/src/beerocks/master/tasks/optimal_path_task.cpp: style: Variable 'parent_mac' is assigned a value that is never used. [unreadVariable]    std::string parent_mac = database.get_node_parent(node_mac);
 controller/src/beerocks/master/tasks/rdkb/rdkb_wlan_task.cpp: style: C-style pointer casting [cstyleCast]            auto event_obj         = (steering_client_disconnect_request_event *)obj;
 controller/src/beerocks/master/tasks/rdkb/rdkb_wlan_task.cpp: style: C-style pointer casting [cstyleCast]            auto event_obj = (listener_general_register_unregister_event *)obj;
 controller/src/beerocks/master/tasks/rdkb/rdkb_wlan_task.cpp: style: C-style pointer casting [cstyleCast]            auto event_obj = (steering_rssi_measurement_request_event *)obj;
