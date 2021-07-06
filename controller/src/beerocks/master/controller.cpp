@@ -3518,23 +3518,19 @@ bool Controller::handle_cmdu_control_message(
                 << std::endl
                 << "rcpi: " << (int)response->params().rcpi << std::endl
                 << "rsni: " << (int)response->params().rsni << std::endl
-                << "bssid: " << response->params().bssid
+                << "bssid: " << response->params().bssid << std::endl
+                << "dialog token: " << response->params().dialog_token
             //<< std::endl << "ant_id: "               << (int)response->params.ant_id
             //<< std::endl << "tsf: "                  << (int)response->params.parent_tsf
             //<< std::endl << "new_ch_width: "                         << (int)response->params.new_ch_width
             //<< std::endl << "new_ch_center_freq_seg_0: "             << (int)response->params.new_ch_center_freq_seg_0
             //<< std::endl << "new_ch_center_freq_seg_1: "             << (int)response->params.new_ch_center_freq_seg_1
         );
-        uint8_t support_level = beerocks::BEACON_MEAS_BSSID_SUPPORTED;
-
-        if (response->params().rsni) {
-            //on nexus 5x devices rsni always 0, and they are not supports measurement by ssid (special handling)
-            support_level |= beerocks::BEACON_MEAS_SSID_SUPPORTED;
+        if (son_actions::validate_beacon_measurement_report(
+                response->params(), tlvf::mac_to_string(response->params().sta_mac),
+                tlvf::mac_to_string(response->params().bssid))) {
+            database.dm_add_sta_beacon_measurement(response->params());
         }
-        database.set_node_beacon_measurement_support_level(
-            tlvf::mac_to_string(response->params().sta_mac),
-            beerocks::eBeaconMeasurementSupportLevel(support_level));
-        database.dm_add_sta_beacon_measurement(response->params());
         break;
     }
     case beerocks_message::ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_CMD_RESPONSE: {
