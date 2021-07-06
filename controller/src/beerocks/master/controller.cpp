@@ -3465,6 +3465,16 @@ bool Controller::handle_cmdu_control_message(
             //<< std::endl << "new_ch_center_freq_seg_0: "             << (int)response->params.new_ch_center_freq_seg_0
             //<< std::endl << "new_ch_center_freq_seg_1: "             << (int)response->params.new_ch_center_freq_seg_1
         );
+        uint8_t support_level = beerocks::BEACON_MEAS_BSSID_SUPPORTED;
+
+        if (response->params().rsni) {
+            //on nexus 5x devices rsni always 0, and they are not supports measurement by ssid (special handling)
+            support_level |= beerocks::BEACON_MEAS_SSID_SUPPORTED;
+        }
+        database.set_node_beacon_measurement_support_level(
+            tlvf::mac_to_string(response->params().sta_mac),
+            beerocks::eBeaconMeasurementSupportLevel(support_level));
+        database.dm_add_sta_beacon_measurement(response->params());
         break;
     }
     case beerocks_message::ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_CMD_RESPONSE: {

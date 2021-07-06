@@ -339,6 +339,14 @@ public:
     std::string dm_add_radio_element(const std::string &radio_mac, const std::string &device_mac);
 
     /**
+    * @brief Add instance of data element 'MeasurementReport'.
+    *
+    * @param beacon_response Measurement Report elements.
+    * @return True on success, false otherwise.
+    */
+    bool dm_add_sta_beacon_measurement(const beerocks_message::sBeaconResponse11k &beacon_response);
+
+    /**
      * @brief add gateway node and sAgent object
      *
      * Adds a gateway node and an sAgent object if they don't exist.
@@ -362,6 +370,7 @@ public:
     std::shared_ptr<sAgent>
     add_node_ire(const sMacAddr &mac,
                  const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
+
     bool add_node_wireless_bh(const sMacAddr &mac,
                               const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
     bool add_node_wired_bh(const sMacAddr &mac,
@@ -2168,6 +2177,12 @@ private:
      * @brief The queue with paths of NBAPI ScanResults.
      */
     std::queue<std::string> m_scan_results;
+
+    /*
+    * key = Client mac.
+    * value = Latest dialog token from sta beacon measurement.
+    */
+    std::unordered_map<sMacAddr, uint8_t> m_dialog_tokens;
 };
 
 } // namespace son

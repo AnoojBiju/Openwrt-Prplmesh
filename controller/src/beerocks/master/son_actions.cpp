@@ -392,9 +392,13 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
 bool son_actions::validate_beacon_measurement_report(beerocks_message::sBeaconResponse11k report,
                                                      std::string sta_mac, std::string bssid)
 {
+    if (report.rcpi > RCPI_MAX) {
+        LOG(WARNING) << "RCPI Measurement is in reserved value range rcpi=" << report.rcpi;
+    }
+
     return (report.rep_mode == 0) &&
            //      (report.rsni                                  >  0          ) &&
-           (report.rcpi <= RCPI_MAX) &&
+           (report.rcpi != RCPI_INVALID) &&
            //      (report.start_time                            >  0          ) &&
            //      (report.duration                              >  0          ) &&
            (report.channel > 0) && (tlvf::mac_to_string(report.sta_mac) == sta_mac) &&

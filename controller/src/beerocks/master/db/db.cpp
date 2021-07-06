@@ -338,6 +338,51 @@ std::string db::dm_add_radio_element(const std::string &radio_mac, const std::st
     return radio_instance;
 }
 
+bool db::dm_add_sta_beacon_measurement(const beerocks_message::sBeaconResponse11k &beacon)
+{
+    auto sta_node = get_node(beacon.sta_mac);
+
+    if (!sta_node || sta_node->get_type() != TYPE_CLIENT) {
+        LOG(ERROR) << "Failed to get station node with mac: " << beacon.sta_mac;
+        return false;
+    }
+
+    std::string sta_path = sta_node->dm_path;
+
+    if (sta_path.empty()) {
+        return true;
+    }
+
+    if (m_dialog_tokens[beacon.sta_mac] != beacon.dialog_token) {
+        m_ambiorix_datamodel->remove_all_instances(sta_path + ".MeasurementReport");
+    }
+    m_dialog_tokens[beacon.sta_mac] = beacon.dialog_token;
+
+    std::string measurement_inst =
+        m_ambiorix_datamodel->add_instance(sta_path + ".MeasurementReport");
+
+    if (measurement_inst.empty()) {
+        LOG(ERROR) << "Failed to add: " << sta_path;
+        return false;
+    }
+
+    bool ret_val = true;
+
+    ret_val &=
+        m_ambiorix_datamodel->set(measurement_inst, "MeasurementToken", beacon.measurement_token);
+    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "RCPI", beacon.rcpi);
+    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "RSNI", beacon.rsni);
+    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "Channel", beacon.channel);
+    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "OpClass", beacon.op_class);
+    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "DialogToken", beacon.dialog_token);
+    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "RepMode", beacon.rep_mode);
+    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "PhyType", beacon.phy_type);
+    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "AntId", beacon.ant_id);
+    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "Duration", beacon.duration);
+    ret_val &= m_ambiorix_datamodel->set(measurement_inst, "StartTime", beacon.start_time);
+    return ret_val;
+}
+
 bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
     if (!add_node(mac, parent_mac, beerocks::TYPE_SLAVE, mac)) {
