@@ -50,6 +50,7 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
         self.connection_type = config.get("connection_type", None)
         self.conn_cmd = config.get("conn_cmd", None)
         self.control_ip = config.get("control_ip", None)
+        self.host_ip_to_device = config.get("host_ip_to_device", None)
         self.username = config.get("username", "root")
         self.host_iface_to_device = config.get("iface_to_device")
         if not self.host_iface_to_device:
@@ -101,8 +102,16 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
         # We need to add the interface to the actual device to the
         # docker bridge the docker controller is in, to allow them to
         # communicate:
+        bridge_interface = _get_bridge_interface(self.unique_id)
+
         self.add_host_iface_to_bridge(self.host_iface_to_device,
-                                      _get_bridge_interface(self.unique_id))
+                                      bridge_interface)
+
+        # The IPv4 on the actual device interface needs to be added to
+        # the bridged interface
+        if self.host_ip_to_device:
+            ip, prefixlen = self.host_ip_to_device.split('/')
+            self.set_boardfarm_iface_ip(bridge_interface, ip, prefixlen)
 
         # Remove the logs to make sure we only get the ones from the
         # next prplMesh start:
@@ -197,8 +206,16 @@ class PrplMeshPrplWRT(OpenWrtRouter, PrplMeshBase):
 
     def set_iface_ip(self, iface: str, ip: IPv4Address, prefixlen: int) -> bool:
         """Set interface IPv4 address."""
-        self.sendline("ip a add {}/{} dev {}".format(ip, prefixlen, iface))
+        cmd = f"ip a add {ip}/{prefixlen} dev {iface}"
+
+        self.command(cmd)
         self.expect(self.prompt, timeout=10)
+
+    def set_boardfarm_iface_ip(self, iface: str,
+                               ip: IPv4Address, prefixlen: int) -> bool:
+        """Set boardfarm interface IPv4 address."""
+        ip_args = (["a", "add", f"{ip}/{prefixlen}", "dev", iface])
+        self._run_shell_cmd("ip", ip_args)
 
     def prplmesh_start_mode(self, mode: str = "agent"):
         """Start prplMesh in certification_mode and wait for it to initialize.

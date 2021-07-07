@@ -46,6 +46,7 @@ Setup properties:
 	If you need more than one you can either modify the source code (the change is trivial)
 	or connect all your devices via an intermediate switch.
 * **control_ip**: IP address of the connected prplMesh device on control network. This is used to connect to the device using SSH.
+* **host_ip_to_device**: IP address of the boardfarm host device. This is used so the bridge can communicate with other network to ensure wlan/wan requests don't get mixed.
 
 Device properties:
 ------------------
@@ -57,3 +58,6 @@ Device properties:
   If none specified, warning is issued by boardfarm and "ser2net" is used.
   On agents (both real and dummy): not used and not required.
 * **color**: color of console output for given device.
+* **station_ip**: IP address of the connected device on control network. This is used to connect to the device using SSH.
+* **station_pw**: Device password for a ssh connection
+* **station_ip_wifi**: IP address of the connected wifi device network. This is used to bind test data traffic.
