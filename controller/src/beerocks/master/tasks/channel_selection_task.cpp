@@ -1730,20 +1730,6 @@ void channel_selection_task::align_channel_to_80Mhz()
     }
 }
 
-void channel_selection_task::send_ap_disabled_notification()
-{
-    auto agent_mac = database.get_node_parent_ire(tlvf::mac_to_string(radio_mac));
-    auto request =
-        message_com::create_vs_message<beerocks_message::cACTION_CONTROL_HOSTAP_DISABLED_BY_MASTER>(
-            cmdu_tx);
-    if (request == nullptr) {
-        LOG(ERROR) << "Failed building message!";
-        return;
-    }
-    TASK_LOG(DEBUG) << "send ACTION_CONTROL_HOSTAP_DISABLED_BY_MASTER to mac " << radio_mac;
-    son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, tlvf::mac_to_string(radio_mac));
-}
-
 void channel_selection_task::cs_wait_for_event(eEvent cs_event)
 {
     cs_waiting_for_event = cs_event;
