@@ -380,6 +380,7 @@ enum class eChannelScanResultStandards : uint8_t {
     eStandard_802_11g  = 0x3,
     eStandard_802_11n  = 0x4,
     eStandard_802_11ac = 0x5,
+    eStandard_802_11ax = 0x6,
 };
 
 enum class eChannelScanResultChannelBandwidth : uint8_t {
