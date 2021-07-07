@@ -9,6 +9,7 @@
 #include "ieee1905_transport.h"
 
 #include <arpa/inet.h>
+#include <bpl/bpl_cfg.h>
 #include <iomanip>
 #include <linux/filter.h>
 #include <net/if.h>
@@ -184,16 +185,24 @@ bool Ieee1905Transport::attach_interface_socket_filter(NetworkInterface &interfa
 {
     int fd = interface.fd->getSocketFd();
 
-    // 1st step is to put the interface in promiscuous mode.
-    // promiscuous mode is required since we expect to receive packets destined to
-    // the AL MAC address (which is different the the interfaces HW address)
-    struct packet_mreq mr = {0};
-    mr.mr_ifindex         = if_nametoindex(interface.ifname.c_str());
-    mr.mr_type            = PACKET_MR_PROMISC;
-    if (setsockopt(fd, SOL_PACKET, PACKET_ADD_MEMBERSHIP, &mr, sizeof(mr)) == -1) {
-        MAPF_ERR("cannot put interface in promiscuous mode for FD ("
-                 << fd << "), error: \"" << strerror(errno) << "\" (" << errno << ").");
-        return false;
+    auto management_mode = bpl::cfg_get_management_mode();
+    LOG_IF((management_mode < 0), ERROR) << "Failed to get management mode";
+
+    // For non-EasyMesh mode the promiscuous should not be set since it may propogate control messages
+    // to outside of the device and may affect some applications behavior (e.g. DNAT).
+    if (management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
+
+        // 1st step is to put the interface in promiscuous mode.
+        // promiscuous mode is required since we expect to receive packets destined to
+        // the AL MAC address (which is different than the interfaces HW address)
+        struct packet_mreq mr = {0};
+        mr.mr_ifindex         = if_nametoindex(interface.ifname.c_str());
+        mr.mr_type            = PACKET_MR_PROMISC;
+        if (setsockopt(fd, SOL_PACKET, PACKET_ADD_MEMBERSHIP, &mr, sizeof(mr)) == -1) {
+            MAPF_ERR("Interface cannot be put in promiscuous mode for FD ("
+                     << fd << "), error: \"" << strerror(errno) << "\" (" << errno << ").");
+            return false;
+        }
     }
 
     // This BPF is designed to accepts the following packets:
