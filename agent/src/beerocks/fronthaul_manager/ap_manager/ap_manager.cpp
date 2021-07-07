@@ -52,25 +52,6 @@ constexpr auto fsm_timer_period = std::chrono::milliseconds(1000);
 /////////////////////////// Local Module Functions ///////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-static std::string
-get_radio_channels_string(const std::vector<beerocks::message::sWifiChannel> &channels)
-{
-    std::ostringstream os;
-    for (auto val : channels) {
-        if (val.channel > 0) {
-            os << " ch = " << int(val.channel) << " | dfs = " << int(val.tx_pow) << " | bw = "
-               << int(beerocks::utils::convert_bandwidth_to_int(
-                      beerocks::eWiFiBandwidth(val.channel_bandwidth)))
-               << " | tx_pow = " << int(val.is_dfs_channel) << " | noise = " << int(val.noise)
-               << " [dbm]"
-               << " | bss_overlap = " << int(val.bss_overlap) << " | rank = " << val.rank
-               << std::endl;
-        }
-    }
-
-    return os.str();
-}
-
 static void copy_vaps_info(std::shared_ptr<bwl::ap_wlan_hal> &ap_wlan_hal,
                            beerocks_message::sVapInfo vaps[])
 {
@@ -2213,10 +2194,6 @@ void ApManager::handle_hostapd_attached()
     LOG(INFO) << " vht_supported = " << ap_wlan_hal->get_radio_info().vht_supported;
     LOG(INFO) << " vht_capability = " << std::hex << ap_wlan_hal->get_radio_info().vht_capability;
     LOG(INFO) << " zwdfs = " << m_ap_support_zwdfs;
-    LOG(INFO) << " preferred_channels = " << std::endl
-              << get_radio_channels_string(ap_wlan_hal->get_radio_info().preferred_channels);
-    LOG(INFO) << " supported_channels = " << std::endl
-              << get_radio_channels_string(ap_wlan_hal->get_radio_info().supported_channels);
 
     // Send CMDU
     send_cmdu(cmdu_tx);
