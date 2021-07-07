@@ -6062,7 +6062,7 @@ slave_thread::get_channel_preferences_from_channels_list()
 
         for (auto channel_of_oper_class : oper_class_channels) {
 
-            // operating classes 128,129,130 use center channel **unlike the other classes**,
+            // Operating classes 128,129,130 use center channel **unlike the other classes**,
             // so convert channel and bandwidth to center channel.
             // For more info, refer to Table E-4 in the 802.11 specification.
             std::vector<uint8_t> beacon_channels;
@@ -6104,42 +6104,49 @@ slave_thread::get_channel_preferences_from_channels_list()
                     break;
                 }
 
-                // Channel DFS state is "Unavailable".
-                auto overlapping_beacon_channels =
-                    son::wireless_utils::get_overlapping_beacon_channels(beacon_channel,
-                                                                         oper_class_bw);
+                // The rest of the checks are relevant only for 5 GHz band.
+                if (son::wireless_utils::channels_table_5g.find(beacon_channel) !=
+                    son::wireless_utils::channels_table_5g.end()) {
 
-                auto preference_size = preferences.size();
-                for (const auto overlap_ch : overlapping_beacon_channels) {
-                    it_ch = radio->channels_list.find(overlap_ch);
-                    if (it_ch == radio->channels_list.end()) {
-                        LOG(ERROR) << "Overlap channel " << overlap_ch << " is not supported";
-                        sChannelPreference pref(
-                            oper_class_num,
-                            wfa_map::cPreferenceOperatingClasses::ePreference::NON_OPERABLE,
-                            wfa_map::cPreferenceOperatingClasses::eReasonCode::UNSPECIFIED);
-                        preferences[pref].insert(channel_of_oper_class);
-                        break;
+                    // Channel DFS state is "Unavailable".
+                    auto overlapping_beacon_channels =
+                        son::wireless_utils::get_overlapping_beacon_channels(beacon_channel,
+                                                                             oper_class_bw);
+
+                    auto preference_size = preferences.size();
+                    for (const auto overlap_ch : overlapping_beacon_channels) {
+                        it_ch = radio->channels_list.find(overlap_ch);
+                        if (it_ch == radio->channels_list.end()) {
+                            LOG(ERROR) << "Overlap channel " << overlap_ch << " is not supported";
+                            sChannelPreference pref(
+                                oper_class_num,
+                                wfa_map::cPreferenceOperatingClasses::ePreference::NON_OPERABLE,
+                                wfa_map::cPreferenceOperatingClasses::eReasonCode::UNSPECIFIED);
+                            preferences[pref].insert(channel_of_oper_class);
+                            break;
+                        }
+
+                        auto &overlap_channel_info = it_ch->second;
+
+                        if (overlap_channel_info.dfs_state ==
+                            beerocks_message::eDfsState::UNAVAILABLE) {
+                            sChannelPreference pref(
+                                oper_class_num,
+                                wfa_map::cPreferenceOperatingClasses::ePreference::NON_OPERABLE,
+                                wfa_map::cPreferenceOperatingClasses::eReasonCode::
+                                    OPERATION_DISALLOWED_DUE_TO_RADAR_DETECTION_ON_A_DFS_CHANNEL);
+                            preferences[pref].insert(channel_of_oper_class);
+                            break;
+                        }
                     }
 
-                    auto &overlap_channel_info = it_ch->second;
-
-                    if (overlap_channel_info.dfs_state ==
-                        beerocks_message::eDfsState::UNAVAILABLE) {
-                        sChannelPreference pref(
-                            oper_class_num,
-                            wfa_map::cPreferenceOperatingClasses::ePreference::NON_OPERABLE,
-                            wfa_map::cPreferenceOperatingClasses::eReasonCode::
-                                OPERATION_DISALLOWED_DUE_TO_RADAR_DETECTION_ON_A_DFS_CHANNEL);
-                        preferences[pref].insert(channel_of_oper_class);
+                    // If an unavailable channel has been inserted, skip to the next channel and not
+                    // add a valid preference (code below). This is because the checks above are
+                    // done in internal for-loop in which the break calls inside it, breaks the
+                    // internal loop.
+                    if (preference_size != preferences.size()) {
                         break;
                     }
-                }
-
-                // If Unavailable channel has been inserted, skip to next channel and not add valid
-                // preference (code below).
-                if (preference_size != preferences.size()) {
-                    continue;
                 }
 
                 /**
