@@ -328,6 +328,16 @@ private:
                                            ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
+     * @brief Handles Tlv of Profile-2 CAC Status Report (tlvProfile2CacStatusReport).
+     *
+     * @param radio radio db shared object.
+     * @param cmdu_rx Received CMDU as CAC Status Report message.
+     * @return True on success, false otherwise.
+    */
+    bool handle_tlv_profile2_cac_status_report(std::shared_ptr<sAgent::sRadio> radio,
+                                               ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
      * Buffer to hold CMDU to be transmitted.
      */
     uint8_t m_tx_buffer[beerocks::message::MESSAGE_BUFFER_LENGTH];

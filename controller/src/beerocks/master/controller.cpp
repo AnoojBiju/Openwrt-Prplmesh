@@ -65,6 +65,7 @@
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
+#include <tlvf/wfa_map/tlvProfile2CacStatusReport.h>
 #include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>
 #include <tlvf/wfa_map/tlvProfile2MultiApProfile.h>
 #include <tlvf/wfa_map/tlvProfile2RadioMetrics.h>
@@ -1072,6 +1073,13 @@ bool Controller::handle_cmdu_1905_channel_preference_report(const std::string &s
         return false;
     }
 
+    const auto &radio_uid = channel_preference_tlv_rx->radio_uid();
+    auto radio            = database.get_radio_by_uid(radio_uid);
+    if (!radio) {
+        LOG(ERROR) << "Failed to get Radio Object with uid: " << radio_uid;
+        return false;
+    }
+
     // read all operating class list
     auto operating_classes_list_length = channel_preference_tlv_rx->operating_classes_list_length();
 
@@ -1178,6 +1186,18 @@ bool Controller::handle_cmdu_1905_channel_preference_report(const std::string &s
         // This TLV contains radio restriction in channel selection that must be considered
         // in channel selection request message. Since this is a dummy message, this TLV is
         // ignored. Full implemtation will be as part of channel selection task.
+    }
+
+    auto agent = database.m_agents.get(tlvf::mac_from_string(src_mac));
+    if (!agent) {
+        LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
+        return false;
+    }
+
+    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
+        !handle_tlv_profile2_cac_status_report(radio, cmdu_rx)) {
+        LOG(ERROR) << "Profile2 CAC Status Report is not supplied for Agent " << src_mac
+                   << " with profile enum " << agent->profile;
     }
 
     cert_cmdu_tx.finalize();
@@ -3902,6 +3922,36 @@ bool Controller::handle_tlv_profile2_ap_capability(std::shared_ptr<sAgent> agent
 
     agent->max_total_number_of_vids = profile2_ap_capability_tlv->max_total_number_of_vids();
 
+    return true;
+}
+
+bool Controller::handle_tlv_profile2_cac_status_report(std::shared_ptr<sAgent::sRadio> radio,
+                                                       ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+
+    // TODO: Full implementation of CAC Status Report NBAPI (PPM-1496)
+    // CAC Report is stored only in datamodels, not in database.
+    auto cac_status_report_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2CacStatusReport>();
+    if (!cac_status_report_tlv) {
+        LOG(DEBUG) << "getClass wfa_map::tlvProfile2CacStatusReport has failed";
+        return false;
+    }
+
+    LOG(DEBUG) << "Profile-2 CAC Status Report is received";
+
+    database.dm_clear_cac_status_report(radio);
+
+    for (size_t i = 0; i < cac_status_report_tlv->number_of_available_channels(); i++) {
+
+        if (!std::get<0>(cac_status_report_tlv->available_channels(i))) {
+            LOG(ERROR) << "Invalid available channel in tlvProfile2CacStatusReport";
+            continue;
+        }
+
+        const auto &available_channel = std::get<1>(cac_status_report_tlv->available_channels(i));
+        database.dm_add_cac_status_available_channel(radio, available_channel.operating_class,
+                                                     available_channel.channel);
+    }
     return true;
 }
 
