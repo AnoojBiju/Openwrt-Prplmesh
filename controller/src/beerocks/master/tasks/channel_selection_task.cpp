@@ -1567,22 +1567,6 @@ bool channel_selection_task::get_overlapping_channels_for_24G(uint8_t channel)
     return true;
 }
 
-bool channel_selection_task::find_all_scan_hostap(const std::string &hostap_parent_mac)
-{
-    auto slaves = database.get_node_children(hostap_parent_mac, beerocks::TYPE_SLAVE);
-    for (auto &slave : slaves) {
-        if (backhaul_scan_measurement_list.find(slave) != backhaul_scan_measurement_list.end()) {
-            TASK_LOG(DEBUG) << "slave = " << slave << " hostap_parent_mac = " << hostap_parent_mac
-                            << "return true";
-            for (auto &temp : backhaul_scan_measurement_list) {
-                TASK_LOG(DEBUG) << "backhaul_scan_measurement_list.first = " << temp.first;
-            }
-            return true;
-        }
-    }
-    return false;
-}
-
 bool channel_selection_task::fill_restricted_channels_from_ccl_busy_bands(uint8_t *channel_list)
 {
     int channel_step = CHANNEL_20MHZ_STEP;
