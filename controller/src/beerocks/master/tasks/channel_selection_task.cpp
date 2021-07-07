@@ -1583,28 +1583,6 @@ bool channel_selection_task::find_all_scan_hostap(const std::string &hostap_pare
     return false;
 }
 
-bool channel_selection_task::get_backhaul_manager_slave(std::string &backhaul_manager_slave_mac)
-{
-    if (database.is_hostap_backhaul_manager(radio_mac)) {
-        TASK_LOG(INFO) << " is backhaul_manager_slave! , radio = " << radio_mac;
-        backhaul_manager_slave_mac = tlvf::mac_to_string(radio_mac);
-        return true;
-    }
-
-    auto siblings = database.get_node_siblings(tlvf::mac_to_string(radio_mac));
-    for (auto &sibling : siblings) {
-        if (database.is_hostap_backhaul_manager(tlvf::mac_from_string(sibling))) {
-            TASK_LOG(INFO) << " backhaul_manager_slave joined , sibling = " << radio_mac;
-            backhaul_manager_slave_mac = sibling;
-            return true;
-        }
-    }
-
-    //backhaul_manager_slave did not joined yet
-    backhaul_manager_slave_mac.clear();
-    return false;
-}
-
 bool channel_selection_task::fill_restricted_channels_from_ccl_busy_bands(uint8_t *channel_list)
 {
     int channel_step = CHANNEL_20MHZ_STEP;

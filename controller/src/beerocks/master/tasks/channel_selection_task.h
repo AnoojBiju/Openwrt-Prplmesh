@@ -147,7 +147,6 @@ private:
     bool fill_restricted_channels_from_ccl_and_supported(uint8_t *channel_list);
     bool get_overlapping_channels_for_24G(uint8_t channel);
     bool find_all_scan_hostap(const std::string &hostap_parent_mac);
-    bool get_backhaul_manager_slave(std::string &backhaul_manager_slave_mac);
     bool acs_result_match();
     uint8_t get_gw_slave_5g_channel();
     void align_channel_to_80Mhz();
