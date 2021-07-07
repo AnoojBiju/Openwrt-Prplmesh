@@ -470,25 +470,6 @@ class cACTION_CONTROL_HOSTAP_UPDATE_STOP_ON_FAILURE_ATTEMPTS_REQUEST : public Ba
         uint32_t* m_attempts = nullptr;
 };
 
-class cACTION_CONTROL_HOSTAP_DISABLED_BY_MASTER : public BaseClass
-{
-    public:
-        cACTION_CONTROL_HOSTAP_DISABLED_BY_MASTER(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cACTION_CONTROL_HOSTAP_DISABLED_BY_MASTER(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cACTION_CONTROL_HOSTAP_DISABLED_BY_MASTER();
-
-        static eActionOp_CONTROL get_action_op(){
-            return (eActionOp_CONTROL)(ACTION_CONTROL_HOSTAP_DISABLED_BY_MASTER);
-        }
-        void class_swap() override;
-        bool finalize() override;
-        static size_t get_initial_size();
-
-    private:
-        bool init();
-        eActionOp_CONTROL* m_action_op = nullptr;
-};
-
 class cACTION_CONTROL_HOSTAP_STATS_MEASUREMENT_REQUEST : public BaseClass
 {
     public:

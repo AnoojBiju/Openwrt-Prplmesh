@@ -153,7 +153,6 @@ private:
     uint8_t get_gw_slave_5g_channel();
     void align_channel_to_80Mhz();
     void clear_events();
-    void send_ap_disabled_notification();
     void cs_wait_for_event(eEvent cs_event);
     void wait_for_cac_completed(uint8_t channel, uint8_t bandwidth);
 
