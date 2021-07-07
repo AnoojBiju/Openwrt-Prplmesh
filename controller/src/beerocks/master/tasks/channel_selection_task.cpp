@@ -1614,30 +1614,6 @@ bool channel_selection_task::fill_restricted_channels_from_ccl_busy_bands(uint8_
     return true;
 }
 
-bool channel_selection_task::acs_result_match()
-{
-    TASK_LOG(DEBUG) << "*****************acs_result_match**************************** :";
-    auto channel                     = channel_switch_request.channel;
-    auto freq                        = wireless_utils::channel_to_freq(channel);
-    auto vht_center_frequency        = channel_switch_request.vht_center_frequency;
-    auto channel_ext_above_secondary = (freq < vht_center_frequency) ? true : false;
-    TASK_LOG(DEBUG) << "channel_ext_above_secondary  = " << int(channel_ext_above_secondary)
-                    << " csa_event->cs_params.channel = " << int(csa_event->cs_params.channel)
-                    << " channel_switch_request.channel = " << int(channel_switch_request.channel);
-    int channel_step = CHANNEL_20MHZ_STEP;
-    if (channel_ext_above_secondary) {
-        if ((csa_event->cs_params.channel - channel_switch_request.channel) <= channel_step) {
-            return true;
-        }
-        return false;
-    } else {
-        if ((channel_switch_request.channel - csa_event->cs_params.channel) <= channel_step) {
-            return true;
-        }
-        return false;
-    }
-}
-
 uint8_t channel_selection_task::get_gw_slave_5g_channel()
 {
     auto gw = database.get_gw();

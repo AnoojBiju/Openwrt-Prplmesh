@@ -146,7 +146,6 @@ private:
     bool ccl_fill_channel_switch_request_with_least_used_channel();
     bool fill_restricted_channels_from_ccl_and_supported(uint8_t *channel_list);
     bool get_overlapping_channels_for_24G(uint8_t channel);
-    bool acs_result_match();
     uint8_t get_gw_slave_5g_channel();
     void align_channel_to_80Mhz();
     void clear_events();
