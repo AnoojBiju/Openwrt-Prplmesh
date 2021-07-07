@@ -182,7 +182,11 @@ private:
     std::chrono::steady_clock::time_point m_sta_stats_polling_start_timestamp;
     bool m_sta_stats_polling_completed = true;
 
-    bool m_generate_connected_clients_events = false;
+    const uint8_t GENERATE_CONNECTED_EVENTS_WORK_TIME_LIMIT_MSEC = 50;
+    const uint8_t GENERATE_CONNECTED_EVENTS_DELAY_MSEC           = 100;
+    bool m_generate_connected_clients_events                     = false;
+    std::chrono::steady_clock::time_point m_next_generate_connected_events_time =
+        std::chrono::steady_clock::time_point::min();
 
     void handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx);
     void handle_cmdu_ieee1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx);
