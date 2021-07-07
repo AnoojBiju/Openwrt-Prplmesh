@@ -131,7 +131,7 @@ struct sChannelInfo {
     int8_t tx_power_dbm;
     beerocks::eDfsState dfs_state;
     // Key: eWiFiBandwidth, Value: Rank
-    std::unordered_map<beerocks::eWiFiBandwidth, int32_t, std::hash<int>> bw_info_list;
+    std::map<beerocks::eWiFiBandwidth, int32_t> bw_info_list;
 };
 
 struct RadioInfo {
@@ -162,7 +162,7 @@ struct RadioInfo {
         vht_mcs_set; /**< 32-byte attribute containing the MCS set as defined in 802.11ac */
     ChanSwReason last_csa_sw_reason = ChanSwReason::Unknown;
     // Key = channel
-    std::unordered_map<uint8_t, sChannelInfo> channels_list;
+    std::map<uint8_t, sChannelInfo> channels_list;
     std::unordered_map<int, VAPElement> available_vaps; // key = vap_id
 };
 

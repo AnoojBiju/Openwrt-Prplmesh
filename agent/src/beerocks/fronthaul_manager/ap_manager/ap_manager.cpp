@@ -101,7 +101,7 @@ static void copy_vaps_info(std::shared_ptr<bwl::ap_wlan_hal> &ap_wlan_hal,
 }
 
 static void build_channels_list(ieee1905_1::CmduMessageTx &cmdu_tx,
-                                const std::unordered_map<uint8_t, bwl::sChannelInfo> &channels_list,
+                                const std::map<uint8_t, bwl::sChannelInfo> &channels_list,
                                 std::shared_ptr<beerocks_message::cChannelList> &channel_list_class)
 {
     // Rank container for multiap preference calculation.
