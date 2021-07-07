@@ -1583,29 +1583,6 @@ bool channel_selection_task::find_all_scan_hostap(const std::string &hostap_pare
     return false;
 }
 
-void channel_selection_task::send_backhaul_reset()
-{
-    TASK_LOG(DEBUG) << "*****************send_backhaul_reset**************************** :";
-    auto hostap_parent_mac = database.get_node_parent(tlvf::mac_to_string(radio_mac));
-    std::string backhaul_manager_slave_mac;
-    TASK_LOG(DEBUG) << "insert ire_mac_should_reset to hostap_parent_mac = " << hostap_parent_mac
-                    << " radio_mac = " << radio_mac;
-    if (get_backhaul_manager_slave(backhaul_manager_slave_mac)) {
-        auto agent_mac = database.get_node_parent_ire(backhaul_manager_slave_mac);
-
-        auto request =
-            message_com::create_vs_message<beerocks_message::cACTION_CONTROL_BACKHAUL_RESET>(
-                cmdu_tx);
-        if (request == nullptr) {
-            LOG(ERROR) << "Failed building message!";
-            return;
-        }
-        son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, backhaul_manager_slave_mac);
-    } else {
-        TASK_LOG(INFO) << " hostap_backhaul manager, not joined yet, radio = " << radio_mac;
-    }
-}
-
 bool channel_selection_task::get_backhaul_manager_slave(std::string &backhaul_manager_slave_mac)
 {
     if (database.is_hostap_backhaul_manager(radio_mac)) {
