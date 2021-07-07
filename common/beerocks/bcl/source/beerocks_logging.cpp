@@ -76,7 +76,7 @@ public:
                 process_dir_str.erase(process_dir_str.rfind("/"));
 
                 std::string fullPathCmd(process_dir_str +
-                                        std::string("/beerocks_utils.sh roll_logs&"));
+                                        std::string("/../scripts/prplmesh_utils.sh roll_logs&"));
 
                 if (system(fullPathCmd.c_str()) != 0) {
                     std::cout << "System returned non-zero" << std::endl;
