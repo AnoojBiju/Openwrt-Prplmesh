@@ -33,9 +33,6 @@ std::ostream &operator<<(std::ostream &o, const eTaskEvent &task_event)
     case eTaskEvent::SWITCH_CHANNEL_REPORT:
         o << "SWITCH_CHANNEL_REPORT";
         break;
-    case eTaskEvent::CHANNEL_LIST_READY:
-        o << "CHANNEL_LIST_READY";
-        break;
     }
     return o;
 }
