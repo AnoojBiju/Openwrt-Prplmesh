@@ -649,23 +649,33 @@ bool ApManager::ap_manager_fsm(bool &continue_processing)
                 now + std::chrono::seconds(HEARTBEAT_NOTIFICATION_DELAY_SEC);
         }
 
-        if (m_generate_connected_clients_events) {
-            // Long running operations prevent the event loop from doing anything else (i.e.: the
-            // event loop is not able to react to any incoming request in the meantime).
-            // Therefore, limit the maximum amount of time that the following method can run to 50%
-            // of the FSM poll time, instead of letting it run non-stop for what could be quite a
-            // long time if there are many clients already connected.
+        // Long running operations prevent the event loop from doing anything else (i.e.: the
+        // event loop is not able to react to any incoming request in the meantime).
+        // Therefore, limit the maximum amount of time that the following method can run,
+        // instead of letting it run non-stop for what could be quite a long time if there
+        // are many clients already connected.
+        auto max_iteration_timeout = std::chrono::steady_clock::now() + fsm_timer_period / 2;
+
+        if (m_generate_connected_clients_events &&
+            (m_next_generate_connected_events_time < std::chrono::steady_clock::now())) {
+            bool is_finished_all_clients = false;
             // If there is not enough time to generate all events, the method will be called in the
             // next FSM iteration, and so on until all connected clients are eventually reported.
-            auto max_iteration_timeout = std::chrono::steady_clock::now() + fsm_timer_period / 2;
-
-            bool is_finished_all_clients = false;
-            // Reset the flag if finished to generate all clients' events
+            auto max_generate_timeout =
+                (std::chrono::steady_clock::now() +
+                 std::chrono::milliseconds(GENERATE_CONNECTED_EVENTS_WORK_TIME_LIMIT_MSEC));
+            max_generate_timeout = std::min(max_generate_timeout, max_iteration_timeout);
+            // If there is not enough time to generate all events, the method will be called in the
+            // next FSM iteration, and so on until all connected clients are eventually reported.
             if (!ap_wlan_hal->generate_connected_clients_events(is_finished_all_clients,
-                                                                max_iteration_timeout)) {
+                                                                max_generate_timeout)) {
                 LOG(ERROR) << "Failed to generate connected clients events";
                 return false;
             }
+            m_next_generate_connected_events_time =
+                std::chrono::steady_clock::now() +
+                std::chrono::milliseconds(GENERATE_CONNECTED_EVENTS_DELAY_MSEC);
+            // Reset the flag if finished to generate all clients' events
             m_generate_connected_clients_events = !is_finished_all_clients;
         }
 
