@@ -1049,20 +1049,6 @@ bool Controller::handle_cmdu_1905_channel_preference_report(const std::string &s
     auto mid = cmdu_rx.getMessageId();
     LOG(INFO) << "Received CHANNEL_PREFERENCE_REPORT_MESSAGE, mid=" << std::dec << int(mid);
 
-    // TODO In production mode (not certification), we need to store the channel preference
-    // report in the DB which will in turn be used by the channel selection task.
-    if (!database.setting_certification_mode())
-        return true;
-
-    // TODO: in actual channel selection task, it is important to validate that rx mid is identical
-    // to the mid sent in channel preference request message
-
-    // build channel request message
-    if (!cert_cmdu_tx.create(0, ieee1905_1::eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE)) {
-        LOG(ERROR) << "cmdu creation of type CHANNEL_SELECTION_REQUEST_MESSAGE, has failed";
-        return false;
-    }
-
     // Define ruid list in order to create only one reply of tlvChannelPreference per ruid
     std::list<sMacAddr> ruid_list;
     // parse all tlvs in cmdu
@@ -1077,6 +1063,56 @@ bool Controller::handle_cmdu_1905_channel_preference_report(const std::string &s
     auto radio            = database.get_radio_by_uid(radio_uid);
     if (!radio) {
         LOG(ERROR) << "Failed to get Radio Object with uid: " << radio_uid;
+        return false;
+    }
+
+    auto agent = database.m_agents.get(tlvf::mac_from_string(src_mac));
+    if (!agent) {
+        LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
+        return false;
+    }
+
+    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
+        !handle_tlv_profile2_cac_status_report(radio, cmdu_rx)) {
+        LOG(ERROR) << "Profile2 CAC Status Report is not supplied for Agent " << src_mac
+                   << " with profile enum " << agent->profile;
+    }
+
+    // parse radio operation restriction tlv
+    auto radio_operation_restriction_tlv_rx =
+        cmdu_rx.getClass<wfa_map::tlvRadioOperationRestriction>();
+    if (radio_operation_restriction_tlv_rx) {
+        LOG(DEBUG) << "Found tlvRadioOperationRestriction";
+        // TODO: continute to parse this tlv
+        // This TLV contains radio restriction in channel selection that must be considered
+        // in channel selection request message. Since this is a dummy message, this TLV is
+        // ignored. Full implemtation will be as part of channel selection task.
+    }
+
+    // Build ACK message CMDU
+    auto cmdu_tx_header = cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE);
+    if (!cmdu_tx_header) {
+        LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
+        return false;
+    }
+    LOG(DEBUG) << "sending ACK message back to agent";
+    son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
+
+    // TODO In production mode (not certification), we need to store the channel preference (PPM-201)
+    // report in the DB which will in turn be used by the channel selection task.
+    // The plan is to create a real (and new) channel selection task that will properly handle all
+    // the channel selection flows of the standard.
+    // For now, "cert_cmdu_tx" is filled with dummy data based on the received preference report,
+    // and not send it. When the UCC tells us to sends it, we have a ready cmdu and we send it.
+    if (!database.setting_certification_mode())
+        return true;
+
+    // TODO: in actual channel selection task, it is important to validate that rx mid is identical
+    // to the mid sent in channel preference request message
+
+    // build channel request message
+    if (!cert_cmdu_tx.create(0, ieee1905_1::eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE)) {
+        LOG(ERROR) << "cmdu creation of type CHANNEL_SELECTION_REQUEST_MESSAGE, has failed";
         return false;
     }
 
@@ -1177,39 +1213,7 @@ bool Controller::handle_cmdu_1905_channel_preference_report(const std::string &s
         LOG(DEBUG) << ss.str();
     }
 
-    // parse radio operation restriction tlv
-    auto radio_operation_restriction_tlv_rx =
-        cmdu_rx.getClass<wfa_map::tlvRadioOperationRestriction>();
-    if (radio_operation_restriction_tlv_rx) {
-        LOG(DEBUG) << "Found tlvRadioOperationRestriction";
-        // TODO: continute to parse this tlv
-        // This TLV contains radio restriction in channel selection that must be considered
-        // in channel selection request message. Since this is a dummy message, this TLV is
-        // ignored. Full implemtation will be as part of channel selection task.
-    }
-
-    auto agent = database.m_agents.get(tlvf::mac_from_string(src_mac));
-    if (!agent) {
-        LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
-        return false;
-    }
-
-    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
-        !handle_tlv_profile2_cac_status_report(radio, cmdu_rx)) {
-        LOG(ERROR) << "Profile2 CAC Status Report is not supplied for Agent " << src_mac
-                   << " with profile enum " << agent->profile;
-    }
-
     cert_cmdu_tx.finalize();
-
-    // build ACK message CMDU
-    auto cmdu_tx_header = cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE);
-    if (!cmdu_tx_header) {
-        LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
-        return false;
-    }
-    LOG(DEBUG) << "sending ACK message back to agent";
-    son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 
     return true; // cert_cmdu_tx will be sent when triggered to by the UCC application
 }
