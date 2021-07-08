@@ -58,8 +58,6 @@ public:
     } sSlaveConfig;
 
     typedef struct {
-        std::string gw_ipv4;
-        std::string gw_bridge_mac;
         std::string bridge_ipv4;
         std::string backhaul_iface;
         std::string backhaul_mac;
