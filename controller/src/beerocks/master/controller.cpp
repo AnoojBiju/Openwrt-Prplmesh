@@ -1573,6 +1573,18 @@ bool Controller::handle_cmdu_1905_ap_metric_response(const sMacAddr &src_mac,
             LOG(WARNING) << "Include bit for the Estimated Service Parameters AC = BE should "
                             "always be 1";
         }
+        if (ap_metric_tlv->estimated_service_parameters().include_ac_bk) {
+            set_esp("EstServiceParametersBK", reporting_agent_bssid,
+                    ap_metric_tlv->estimated_service_info_field(3));
+        }
+        if (ap_metric_tlv->estimated_service_parameters().include_ac_vo) {
+            set_esp("EstServiceParametersVO", reporting_agent_bssid,
+                    ap_metric_tlv->estimated_service_info_field(6));
+        }
+        if (ap_metric_tlv->estimated_service_parameters().include_ac_vi) {
+            set_esp("EstServiceParametersVI", reporting_agent_bssid,
+                    ap_metric_tlv->estimated_service_info_field(9));
+        }
     }
 
     for (auto radio_tlv : cmdu_rx.getClassList<wfa_map::tlvProfile2RadioMetrics>()) {
