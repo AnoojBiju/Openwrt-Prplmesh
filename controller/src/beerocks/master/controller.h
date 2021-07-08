@@ -320,8 +320,8 @@ private:
     /**
      * @brief Handles Tlv of Profile-2 AP Capability (tlvProfile2ApCapability).
      *
-     * @param agent agent shared object.
-     * @param cmdu_rx  AP Capability Report message.
+     * @param agent agent db shared object.
+     * @param cmdu_rx Received CMDU as AP Capability Report message.
      * @return True on success, false otherwise.
     */
     bool handle_tlv_profile2_ap_capability(std::shared_ptr<sAgent> agent,

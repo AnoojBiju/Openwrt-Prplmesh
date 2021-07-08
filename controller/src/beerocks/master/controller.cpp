@@ -3926,6 +3926,9 @@ bool Controller::handle_tlv_profile2_ap_capability(std::shared_ptr<sAgent> agent
 
     agent->max_total_number_of_vids = profile2_ap_capability_tlv->max_total_number_of_vids();
 
+    LOG(DEBUG) << "Profile-2 AP Capability is received, agent bytecounters enum="
+               << agent->byte_counter_units;
+
     return true;
 }
 
