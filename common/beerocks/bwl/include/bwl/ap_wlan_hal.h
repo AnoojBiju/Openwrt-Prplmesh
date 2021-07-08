@@ -314,14 +314,6 @@ public:
     virtual bool read_acs_report() = 0;
 
     /**
-     * @brief Read the supported channls from the hardware.
-     * On successful completion the information can be retrieved.
-     *
-     * @return true on success or false on error.
-     */
-    virtual bool read_preferred_channels() = 0;
-
-    /**
      * @brief Set Transmit Power Limit 
      *
      * @param [in] tx_pow_limit Transmit Power Limit in dBm.

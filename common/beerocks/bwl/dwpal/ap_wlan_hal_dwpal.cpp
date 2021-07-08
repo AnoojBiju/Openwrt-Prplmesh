@@ -906,17 +906,22 @@ bool ap_wlan_hal_dwpal::refresh_radio_info()
         m_radio_info.vht_capability = band_info.vht_capability;
         m_radio_info.vht_mcs_set.assign(band_info.vht_mcs_set, sizeof(band_info.vht_mcs_set));
 
-        m_radio_info.supported_channels.clear();
         for (auto const &pair : band_info.supported_channels) {
-            auto &channel_info = pair.second;
-            for (auto bw : channel_info.supported_bandwidths) {
-                beerocks::message::sWifiChannel channel;
-                channel.channel           = channel_info.number;
-                channel.channel_bandwidth = bw;
-                channel.tx_pow            = channel_info.tx_power;
-                channel.is_dfs_channel    = channel_info.is_dfs;
-                channel.dfs_state         = channel_info.dfs_state;
-                m_radio_info.supported_channels.push_back(channel);
+            auto &supported_channel_info = pair.second;
+            auto &channel_info        = m_radio_info.channels_list[supported_channel_info.number];
+            channel_info.tx_power_dbm = supported_channel_info.tx_power;
+            channel_info.dfs_state    = supported_channel_info.is_dfs
+                                         ? supported_channel_info.dfs_state
+                                         : beerocks::eDfsState::DFS_STATE_MAX;
+
+            for (auto bw : supported_channel_info.supported_bandwidths) {
+                // If rank does not exist, set it to -1. It will be set by "read_acs_report()".
+                // This means it will update the rank only on the initial referesh_radio_info,
+                // afterwards only the the acs report reading function will update the ranking.
+                auto bw_rank_iter = channel_info.bw_info_list.find(bw);
+                if (bw_rank_iter == channel_info.bw_info_list.end()) {
+                    channel_info.bw_info_list[bw] = -1;
+                }
             }
         }
 
@@ -1899,8 +1904,6 @@ bool ap_wlan_hal_dwpal::read_acs_report()
     }
     LOG(DEBUG) << "GET_ACS_REPORT reply:";
 
-    m_radio_info.preferred_channels.resize(reply.size());
-
     uint32_t ch_idx = 0;
     for (auto &line : reply) {
 
@@ -1910,7 +1913,7 @@ bool ap_wlan_hal_dwpal::read_acs_report()
             LOG(ERROR) << "Failed reading Channel parameter!";
             return false;
         }
-        m_radio_info.preferred_channels[ch_idx].channel = tmp_int;
+        auto &channel_info = m_radio_info.channels_list[tmp_int];
         oss << "Ch=" << tmp_int;
 
         // BW
@@ -1918,22 +1921,22 @@ bool ap_wlan_hal_dwpal::read_acs_report()
             LOG(ERROR) << "Failed reading BW parameter!";
             return false;
         }
-        m_radio_info.preferred_channels[ch_idx].channel_bandwidth =
-            beerocks::utils::convert_bandwidth_to_enum(tmp_int);
         oss << ", BW=" << tmp_int;
+        auto bw = beerocks::utils::convert_bandwidth_to_enum(tmp_int);
 
         // DFS
         if (!read_param("DFS", line, tmp_int)) {
             LOG(ERROR) << "Failed reading DFS parameter!";
             return false;
         }
-        m_radio_info.preferred_channels[ch_idx].is_dfs_channel = tmp_int;
         oss << ", DFS=" << tmp_int;
 
         // Rank - May not appear in older Hostapd
         if (read_param("rank", line, tmp_int)) {
-            m_radio_info.preferred_channels[ch_idx].rank = tmp_int;
+            channel_info.bw_info_list[bw] = tmp_int;
             oss << ", rank=" << tmp_int;
+        } else {
+            channel_info.bw_info_list[bw] = -1;
         }
 
         LOG(DEBUG) << oss.str();
@@ -1947,30 +1950,11 @@ bool ap_wlan_hal_dwpal::read_acs_report()
     m_radio_info.is_5ghz = false;
 
     // Check if channel is 5GHz
-    if (son::wireless_utils::which_freq(m_radio_info.preferred_channels.front().channel) ==
-        beerocks::eFreqType::FREQ_5G) {
+    auto ch = m_radio_info.channels_list.begin()->first;
+    if (son::wireless_utils::which_freq(ch) == beerocks::eFreqType::FREQ_5G) {
         m_radio_info.is_5ghz = true;
     }
 
-    return true;
-}
-
-bool ap_wlan_hal_dwpal::read_preferred_channels()
-{
-    LOG(TRACE) << __func__ << " for interface: " << get_radio_info().iface_name;
-
-    // Clear the supported channels vector
-    m_radio_info.preferred_channels.clear();
-
-    // Copy the list of supported channels into the list of preferred channels.
-    // The list of preferred channels must be a subset of the supported channels or otherwise the
-    // AP manager will complain and crash.
-    // The list of supported channels must have been obtained prior to calling this method. This is
-    // not a problem since we do it at least in state nl80211_fsm_state::GetRadioInfo, on event
-    // dwpal_fsm_event::Attach
-    m_radio_info.preferred_channels.insert(m_radio_info.preferred_channels.begin(),
-                                           m_radio_info.supported_channels.begin(),
-                                           m_radio_info.supported_channels.end());
     return true;
 }
 

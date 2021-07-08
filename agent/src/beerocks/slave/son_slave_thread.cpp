@@ -1908,39 +1908,11 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         radio->front.hybrid_mode_supported = notification->params().hybrid_mode_supported;
         LOG(DEBUG) << "ZWDFS AP: " << radio->front.zwdfs;
 
-        auto tuple_preferred_channels = notification->preferred_channels(0);
-        if (!std::get<0>(tuple_preferred_channels)) {
-            LOG(ERROR) << "getting preferred channels has failed!";
-            return false;
-        }
-
-        radio->front.preferred_channels.resize(notification->preferred_channels_size());
-        std::copy_n(&std::get<1>(tuple_preferred_channels), notification->preferred_channels_size(),
-                    radio->front.preferred_channels.begin());
-
-        auto tuple_supported_channels = notification->supported_channels(0);
-        if (!std::get<0>(tuple_supported_channels)) {
-            LOG(ERROR) << "getting supported channels has failed!";
-            return false;
-        }
-        radio->front.supported_channels.clear();
-        radio->front.supported_channels.insert(
-            radio->front.supported_channels.begin(), &std::get<1>(tuple_supported_channels),
-            &std::get<1>(tuple_supported_channels) + notification->supported_channels_size());
+        fill_channel_list_to_agent_db(notification->channel_list());
 
         // cac
         save_cac_capabilities_params_to_db();
 
-        // Temporarily send a request to fill the channels list. This will be removed on another MR,
-        // which will send the channels list in this (ap joined) message.
-        auto request = message_com::create_vs_message<
-            beerocks_message::cACTION_APMANAGER_CHANNELS_LIST_REQUEST>(cmdu_tx);
-
-        if (!request) {
-            LOG(ERROR) << "Failed building message ACTION_APMANAGER_CHANNELS_LIST_REQUEST!";
-            return false;
-        }
-        message_com::send_cmdu(ap_manager_socket, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_APMANAGER_HOSTAP_SET_RESTRICTED_FAILSAFE_CHANNEL_RESPONSE: {
