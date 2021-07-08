@@ -1160,9 +1160,6 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
 
             auto db = AgentDB::get();
 
-            backhaul_params.gw_ipv4 = network_utils::ipv4_to_string(notification->params().gw_ipv4);
-            backhaul_params.gw_bridge_mac =
-                tlvf::mac_to_string(notification->params().gw_bridge_mac);
             backhaul_params.bridge_ipv4 =
                 network_utils::ipv4_to_string(notification->params().bridge_ipv4);
             backhaul_params.backhaul_mac = tlvf::mac_to_string(notification->params().backhaul_mac);
@@ -3934,8 +3931,6 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
             network_utils::iface_info bridge_info;
             network_utils::get_iface_info(bridge_info, db->bridge.iface_name);
 
-            backhaul_params.gw_ipv4        = bridge_info.ip;
-            backhaul_params.gw_bridge_mac  = bridge_info.mac;
             backhaul_params.bridge_ipv4    = bridge_info.ip;
             backhaul_params.backhaul_iface = db->bridge.iface_name;
             backhaul_params.backhaul_mac   = bridge_info.mac;
@@ -3951,8 +3946,6 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
         }
 
         LOG(INFO) << "Backhaul Params Info:";
-        LOG(INFO) << "gw_ipv4=" << backhaul_params.gw_ipv4;
-        LOG(INFO) << "gw_bridge_mac=" << backhaul_params.gw_bridge_mac;
         LOG(INFO) << "controller_bridge_mac=" << db->controller_info.bridge_mac;
         LOG(INFO) << "prplmesh_controller=" << db->controller_info.prplmesh_controller;
         LOG(INFO) << "bridge_mac=" << db->bridge.mac;
@@ -4103,10 +4096,6 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
             notification->enable_repeater_mode() = config.enable_repeater_mode;
 
             // Backhaul Params
-            notification->backhaul_params().gw_ipv4 =
-                network_utils::ipv4_from_string(backhaul_params.gw_ipv4);
-            notification->backhaul_params().gw_bridge_mac =
-                tlvf::mac_from_string(backhaul_params.gw_bridge_mac);
             notification->backhaul_params().is_backhaul_manager = is_backhaul_manager;
             notification->backhaul_params().backhaul_iface_type =
                 backhaul_params.backhaul_iface_type;
