@@ -82,6 +82,8 @@ public:
         bool &is_finished_all_clients,
         const std::chrono::steady_clock::time_point max_iteration_timeout =
             std::chrono::steady_clock::time_point::max()) = 0;
+
+    virtual bool set_estimated_service_parameters(uint8_t *esp_info_field) = 0;
 };
 
 // mon HAL factory types
