@@ -231,6 +231,76 @@ sApChannelSwitch& cACTION_APMANAGER_JOINED_NOTIFICATION::cs_params() {
     return (sApChannelSwitch&)(*m_cs_params);
 }
 
+bool cACTION_APMANAGER_JOINED_NOTIFICATION::isPostInitSucceeded() {
+    if (!m_channel_list_init) {
+        TLVF_LOG(ERROR) << "channel_list is not initialized";
+        return false;
+    }
+    return true; 
+}
+
+std::shared_ptr<cChannelList> cACTION_APMANAGER_JOINED_NOTIFICATION::create_channel_list() {
+    if (m_lock_order_counter__ > 0) {
+        TLVF_LOG(ERROR) << "Out of order allocation for variable length list channel_list, abort!";
+        return nullptr;
+    }
+    size_t len = cChannelList::get_initial_size();
+    if (m_lock_allocation__) {
+        TLVF_LOG(ERROR) << "Can't create new element before adding the previous one";
+        return nullptr;
+    }
+    if (getBuffRemainingBytes() < len) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer";
+        return nullptr;
+    }
+    m_lock_order_counter__ = 0;
+    m_lock_allocation__ = true;
+    uint8_t *src = (uint8_t *)m_channel_list;
+    if (!m_parse__) {
+        uint8_t *dst = src + len;
+        size_t move_length = getBuffRemainingBytes(src) - len;
+        std::copy_n(src, move_length, dst);
+    }
+    m_preferred_channels_size = (uint8_t *)((uint8_t *)(m_preferred_channels_size) + len);
+    m_preferred_channels = (beerocks::message::sWifiChannel *)((uint8_t *)(m_preferred_channels) + len);
+    m_supported_channels_size = (uint8_t *)((uint8_t *)(m_supported_channels_size) + len);
+    m_supported_channels = (beerocks::message::sWifiChannel *)((uint8_t *)(m_supported_channels) + len);
+    return std::make_shared<cChannelList>(src, getBuffRemainingBytes(src), m_parse__);
+}
+
+bool cACTION_APMANAGER_JOINED_NOTIFICATION::add_channel_list(std::shared_ptr<cChannelList> ptr) {
+    if (ptr == nullptr) {
+        TLVF_LOG(ERROR) << "Received entry is nullptr";
+        return false;
+    }
+    if (m_lock_allocation__ == false) {
+        TLVF_LOG(ERROR) << "No call to create_channel_list was called before add_channel_list";
+        return false;
+    }
+    uint8_t *src = (uint8_t *)m_channel_list;
+    if (ptr->getStartBuffPtr() != src) {
+        TLVF_LOG(ERROR) << "Received entry pointer is different than expected (expecting the same pointer returned from add method)";
+        return false;
+    }
+    if (ptr->getLen() > getBuffRemainingBytes(ptr->getStartBuffPtr())) {;
+        TLVF_LOG(ERROR) << "Not enough available space on buffer";
+        return false;
+    }
+    m_channel_list_init = true;
+    size_t len = ptr->getLen();
+    m_preferred_channels_size = (uint8_t *)((uint8_t *)(m_preferred_channels_size) + len - ptr->get_initial_size());
+    m_preferred_channels = (beerocks::message::sWifiChannel *)((uint8_t *)(m_preferred_channels) + len - ptr->get_initial_size());
+    m_supported_channels_size = (uint8_t *)((uint8_t *)(m_supported_channels_size) + len - ptr->get_initial_size());
+    m_supported_channels = (beerocks::message::sWifiChannel *)((uint8_t *)(m_supported_channels) + len - ptr->get_initial_size());
+    m_channel_list_ptr = ptr;
+    if (!buffPtrIncrementSafe(len)) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
+        return false;
+    }
+    m_lock_allocation__ = false;
+    return true;
+}
+
 uint8_t& cACTION_APMANAGER_JOINED_NOTIFICATION::preferred_channels_size() {
     return (uint8_t&)(*m_preferred_channels_size);
 }
@@ -245,7 +315,7 @@ std::tuple<bool, beerocks::message::sWifiChannel&> cACTION_APMANAGER_JOINED_NOTI
 }
 
 bool cACTION_APMANAGER_JOINED_NOTIFICATION::alloc_preferred_channels(size_t count) {
-    if (m_lock_order_counter__ > 0) {;
+    if (m_lock_order_counter__ > 1) {;
         TLVF_LOG(ERROR) << "Out of order allocation for variable length list preferred_channels, abort!";
         return false;
     }
@@ -254,7 +324,7 @@ bool cACTION_APMANAGER_JOINED_NOTIFICATION::alloc_preferred_channels(size_t coun
         TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
         return false;
     }
-    m_lock_order_counter__ = 0;
+    m_lock_order_counter__ = 1;
     uint8_t *src = (uint8_t *)&m_preferred_channels[*m_preferred_channels_size];
     uint8_t *dst = src + len;
     if (!m_parse__) {
@@ -289,7 +359,7 @@ std::tuple<bool, beerocks::message::sWifiChannel&> cACTION_APMANAGER_JOINED_NOTI
 }
 
 bool cACTION_APMANAGER_JOINED_NOTIFICATION::alloc_supported_channels(size_t count) {
-    if (m_lock_order_counter__ > 1) {;
+    if (m_lock_order_counter__ > 2) {;
         TLVF_LOG(ERROR) << "Out of order allocation for variable length list supported_channels, abort!";
         return false;
     }
@@ -298,7 +368,7 @@ bool cACTION_APMANAGER_JOINED_NOTIFICATION::alloc_supported_channels(size_t coun
         TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
         return false;
     }
-    m_lock_order_counter__ = 1;
+    m_lock_order_counter__ = 2;
     uint8_t *src = (uint8_t *)&m_supported_channels[*m_supported_channels_size];
     uint8_t *dst = src + len;
     if (!m_parse__) {
@@ -322,6 +392,7 @@ void cACTION_APMANAGER_JOINED_NOTIFICATION::class_swap()
     tlvf_swap(8*sizeof(eActionOp_APMANAGER), reinterpret_cast<uint8_t*>(m_action_op));
     m_params->struct_swap();
     m_cs_params->struct_swap();
+    if (m_channel_list_ptr) { m_channel_list_ptr->class_swap(); }
     for (size_t i = 0; i < m_preferred_channels_idx__; i++){
         m_preferred_channels[i].struct_swap();
     }
@@ -385,6 +456,20 @@ bool cACTION_APMANAGER_JOINED_NOTIFICATION::init()
         return false;
     }
     if (!m_parse__) { m_cs_params->struct_init(); }
+    m_channel_list = reinterpret_cast<cChannelList*>(m_buff_ptr__);
+    if (m_parse__) {
+        auto channel_list = create_channel_list();
+        if (!channel_list) {
+            TLVF_LOG(ERROR) << "create_channel_list() failed";
+            return false;
+        }
+        if (!add_channel_list(channel_list)) {
+            TLVF_LOG(ERROR) << "add_channel_list() failed";
+            return false;
+        }
+        // swap back since channel_list will be swapped as part of the whole class swap
+        channel_list->class_swap();
+    }
     m_preferred_channels_size = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!m_parse__) *m_preferred_channels_size = 0;
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {

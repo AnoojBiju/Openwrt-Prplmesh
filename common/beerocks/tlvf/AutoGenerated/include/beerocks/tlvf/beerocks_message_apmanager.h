@@ -92,6 +92,10 @@ class cACTION_APMANAGER_JOINED_NOTIFICATION : public BaseClass
         }
         sNodeHostap& params();
         sApChannelSwitch& cs_params();
+        bool isPostInitSucceeded() override;
+        std::shared_ptr<cChannelList> create_channel_list();
+        bool add_channel_list(std::shared_ptr<cChannelList> ptr);
+        std::shared_ptr<cChannelList> channel_list() { return m_channel_list_ptr; }
         uint8_t& preferred_channels_size();
         std::tuple<bool, beerocks::message::sWifiChannel&> preferred_channels(size_t idx);
         bool alloc_preferred_channels(size_t count = 1);
@@ -107,10 +111,14 @@ class cACTION_APMANAGER_JOINED_NOTIFICATION : public BaseClass
         eActionOp_APMANAGER* m_action_op = nullptr;
         sNodeHostap* m_params = nullptr;
         sApChannelSwitch* m_cs_params = nullptr;
+        cChannelList *m_channel_list = nullptr;
+        std::shared_ptr<cChannelList> m_channel_list_ptr = nullptr;
+        bool m_channel_list_init = false;
+        bool m_lock_allocation__ = false;
+        int m_lock_order_counter__ = 0;
         uint8_t* m_preferred_channels_size = nullptr;
         beerocks::message::sWifiChannel* m_preferred_channels = nullptr;
         size_t m_preferred_channels_idx__ = 0;
-        int m_lock_order_counter__ = 0;
         uint8_t* m_supported_channels_size = nullptr;
         beerocks::message::sWifiChannel* m_supported_channels = nullptr;
         size_t m_supported_channels_idx__ = 0;
