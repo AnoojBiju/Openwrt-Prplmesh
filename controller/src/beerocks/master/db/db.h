@@ -1659,6 +1659,31 @@ public:
     uint64_t recalculate_attr_to_byte_units(
         wfa_map::tlvProfile2ApCapability::eByteCounterUnits byte_counter_units, uint64_t bytes);
 
+    /**
+     * @brief Clears CAC Status Report data model.
+     *
+     * Remove all indexes in AvailableChannels and updates timestamp.
+     *
+     * Data model path : "Controller.Network.Device.{i}.Radio.{i}.CACStatus" defined in radio.odl
+     *
+     * @param[in] radio radio db object
+     * @return true on success, otherwise false.
+     */
+    bool dm_clear_cac_status_report(std::shared_ptr<sAgent::sRadio> radio);
+
+    /**
+     * @brief Adds instance for CACStatus.AvailableChannels and fullfills it.
+     *
+     * Data model path : "Controller.Network.Device.{i}.Radio.{i}.CACStatus.AvailableChannels.{i}"
+     *
+     * @param[in] radio radio db object
+     * @param[in] operating_class operating class
+     * @param[in] channel channel number
+     * @return true on success, otherwise false.
+     */
+    bool dm_add_cac_status_available_channel(std::shared_ptr<sAgent::sRadio> radio,
+                                             uint8_t operating_class, uint8_t channel);
+
     //
     // tasks
     //

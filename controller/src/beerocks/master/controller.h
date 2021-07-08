@@ -320,12 +320,22 @@ private:
     /**
      * @brief Handles Tlv of Profile-2 AP Capability (tlvProfile2ApCapability).
      *
-     * @param agent agent shared object.
-     * @param cmdu_rx  AP Capability Report message.
+     * @param agent agent db shared object.
+     * @param cmdu_rx Received CMDU as AP Capability Report message.
      * @return True on success, false otherwise.
     */
     bool handle_tlv_profile2_ap_capability(std::shared_ptr<sAgent> agent,
                                            ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Handles Tlv of Profile-2 CAC Status Report (tlvProfile2CacStatusReport).
+     *
+     * @param radio radio db shared object.
+     * @param cmdu_rx Received CMDU as CAC Status Report message.
+     * @return True on success, false otherwise.
+    */
+    bool handle_tlv_profile2_cac_status_report(std::shared_ptr<sAgent::sRadio> radio,
+                                               ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
      * Buffer to hold CMDU to be transmitted.
