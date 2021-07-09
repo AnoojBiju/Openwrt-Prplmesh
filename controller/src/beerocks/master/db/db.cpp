@@ -6903,3 +6903,41 @@ uint64_t db::recalculate_attr_to_byte_units(
 
     return bytes;
 }
+
+bool db::dm_clear_cac_status_report(std::shared_ptr<sAgent::sRadio> radio)
+{
+    if (radio->dm_path.empty()) {
+        return true;
+    }
+
+    auto available_channel_list = radio->dm_path + ".CACStatus.AvailableChannels";
+    if (!m_ambiorix_datamodel->remove_all_instances(available_channel_list)) {
+        LOG(ERROR) << "Failed to remove all instances for: " << available_channel_list;
+        return false;
+    }
+
+    m_ambiorix_datamodel->set_current_time(radio->dm_path + ".CACStatus");
+    return true;
+}
+
+bool db::dm_add_cac_status_available_channel(std::shared_ptr<sAgent::sRadio> radio,
+                                             uint8_t operating_class, uint8_t channel)
+{
+    if (radio->dm_path.empty()) {
+        return true;
+    }
+
+    bool ret_val                = true;
+    auto available_channel_list = radio->dm_path + ".CACStatus.AvailableChannels";
+
+    auto available_channel = m_ambiorix_datamodel->add_instance(available_channel_list);
+    if (available_channel.empty()) {
+        LOG(ERROR) << "Failed to add instance to " << available_channel_list;
+        return false;
+    }
+
+    ret_val &= m_ambiorix_datamodel->set(available_channel, "OperatingClass", operating_class);
+    ret_val &= m_ambiorix_datamodel->set(available_channel, "Channel", channel);
+    ret_val &= m_ambiorix_datamodel->set_current_time(radio->dm_path + ".CACStatus");
+    return ret_val;
+}

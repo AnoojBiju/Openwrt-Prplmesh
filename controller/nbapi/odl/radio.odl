@@ -55,7 +55,7 @@
             }
             counted with NumberOfCurrOpClass;
         }
-        
+
         %template %instance bool ScanTrigger(
             %in %mandatory string channels_list,
             %in %mandatory uint32 channels_num
@@ -73,6 +73,23 @@
 
         %read-only object ScanResult [] {
             counted with ScanResultNumberOfEntries;
+        }
+
+        %read-only object CACStatus {
+            %read-only datetime TimeStamp = "2020-08-31T11:22:39Z";
+
+            %read-only object AvailableChannels [] {
+
+                %read-only uint32 OperatingClass = 0 {
+                    on action validate call check_range [0, 255];
+                }
+
+                %read-only uint32 Channel = 0 {
+                    on action validate call check_range [0, 255];
+                }
+
+                counted with NumberOfAvailableChannels;
+            }
         }
     }
 }
