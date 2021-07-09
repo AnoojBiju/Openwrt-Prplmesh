@@ -390,7 +390,7 @@ bool Controller::handle_cmdu(int fd, uint32_t iface_index, const sMacAddr &dst_m
             son_management::handle_bml_message(fd, beerocks_header, cmdu_tx, database, tasks);
         } break;
         case beerocks_message::ACTION_CONTROL: {
-            handle_cmdu_control_message(tlvf::mac_to_string(src_mac), beerocks_header);
+            handle_cmdu_control_message(src_mac, beerocks_header);
         } break;
         default: {
             LOG(ERROR) << "Unknown message, action: " << int(beerocks_header->action());
@@ -2712,7 +2712,7 @@ bool Controller::handle_non_intel_slave_join(
 }
 
 bool Controller::handle_cmdu_control_message(
-    const std::string &src_mac, std::shared_ptr<beerocks::beerocks_header> beerocks_header)
+    const sMacAddr &src_mac, std::shared_ptr<beerocks::beerocks_header> beerocks_header)
 {
     std::string hostap_mac = tlvf::mac_to_string(beerocks_header->actionhdr()->radio_mac());
 
@@ -2782,8 +2782,7 @@ bool Controller::handle_cmdu_control_message(
         }
 
         // Update BSSes in the sAgent
-        auto radio =
-            database.get_radio(tlvf::mac_from_string(src_mac), tlvf::mac_from_string(hostap_mac));
+        auto radio = database.get_radio(src_mac, tlvf::mac_from_string(hostap_mac));
         if (!radio) {
             LOG(ERROR) << "No radio found for radio_uid " << hostap_mac << " on " << src_mac;
             break;
@@ -2819,8 +2818,7 @@ bool Controller::handle_cmdu_control_message(
                          notification->vap_info().backhaul_vap);
 
         // Update BSSes in the sAgent
-        auto radio =
-            database.get_radio(tlvf::mac_from_string(src_mac), tlvf::mac_from_string(hostap_mac));
+        auto radio = database.get_radio(src_mac, tlvf::mac_from_string(hostap_mac));
         if (!radio) {
             LOG(ERROR) << "No radio found for radio_uid " << hostap_mac << " on " << src_mac;
             break;
@@ -2896,8 +2894,7 @@ bool Controller::handle_cmdu_control_message(
         }
 
         // Update BSSes in the sAgent
-        auto radio =
-            database.get_radio(tlvf::mac_from_string(src_mac), tlvf::mac_from_string(hostap_mac));
+        auto radio = database.get_radio(src_mac, tlvf::mac_from_string(hostap_mac));
         if (!radio) {
             LOG(ERROR) << "No radio found for radio_uid " << hostap_mac << " on " << src_mac;
             break;
