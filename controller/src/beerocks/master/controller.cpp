@@ -2717,7 +2717,7 @@ bool Controller::handle_cmdu_control_message(
     std::string hostap_mac = tlvf::mac_to_string(beerocks_header->actionhdr()->radio_mac());
 
     // Sanity tests
-    if (hostap_mac.empty()) {
+    if (hostap_mac == beerocks::net::network_utils::ZERO_MAC_STRING) {
         LOG(ERROR) << "CMDU received with id=" << int(beerocks_header->id())
                    << " op=" << int(beerocks_header->action_op()) << " with empty mac!";
         return false;
