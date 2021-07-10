@@ -549,9 +549,9 @@ void optimal_path_task::work()
                 auto hostap_bw = database.get_node_bw(hostap);
 
                 int8_t dl_rssi;
-                uint8_t dl_rcpi, dl_snr;
 
                 if (!estimate_dl_rssi) {
+                    uint8_t dl_rcpi, dl_snr;
                     if (!database.get_node_beacon_measurement(sta_mac, hostap, dl_rcpi, dl_snr)) {
                         TASK_LOG(ERROR)
                             << "get_node_beacon_measurement() failed! sta_mac: " << sta_mac
@@ -638,9 +638,9 @@ void optimal_path_task::work()
                 all_hostaps_below_cutoff = false;
 
                 int8_t dl_rssi;
-                uint8_t dl_rcpi, dl_snr;
 
                 if (!estimate_dl_rssi) {
+                    uint8_t dl_rcpi, dl_snr;
                     if (!database.get_node_beacon_measurement(sta_mac, hostap, dl_rcpi, dl_snr)) {
                         TASK_LOG(ERROR)
                             << "get_node_beacon_measurement() failed! sta_mac: " << sta_mac
@@ -774,12 +774,11 @@ void optimal_path_task::work()
                             std::inserter(ires_outside_subtree, ires_outside_subtree.end()));
         ires_outside_subtree.erase(sta_mac);
         auto channel = database.get_node_channel(sta_mac);
-        bool found_band_match;
 
         //searching for sub band hostap /backhaul(client) measurement match for each ire
         for (auto &ire : ires_outside_subtree) {
-            found_band_match = false;
-            auto ire_hostaps = database.get_node_children(ire, beerocks::TYPE_SLAVE);
+            bool found_band_match = false;
+            auto ire_hostaps      = database.get_node_children(ire, beerocks::TYPE_SLAVE);
             std::string hostap_backhaul_manager;
             std::string hostap_backhaul;
             if (sta_bridge == ire) {
