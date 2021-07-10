@@ -56,8 +56,8 @@ void LinkMetricsTask::work()
             return;
         }
 
-        for (const auto &slave : database.get_all_connected_ires()) {
-            son_actions::send_cmdu_to_agent(slave, cmdu_tx, database);
+        for (const auto &agent : database.get_all_connected_agents()) {
+            son_actions::send_cmdu_to_agent(tlvf::mac_to_string(agent->al_mac), cmdu_tx, database);
         }
         last_query_request = std::chrono::steady_clock::now();
     }

@@ -182,20 +182,25 @@ void optimal_path_task::work()
         }
 
         // build pending mac list //
-        auto ires    = database.get_all_connected_ires();
+        auto agents  = database.get_all_connected_agents();
         auto subtree = database.get_node_subtree(sta_mac);
 
-        std::set<std::string> ires_outside_subtree;
-        // insert all ires that outside the subtree to "ires_outside_subtree" , because it is impossible to move ire to a child ire. station doesn't has subtree.
-        std::set_difference(ires.begin(), ires.end(), subtree.begin(), subtree.end(),
-                            std::inserter(ires_outside_subtree, ires_outside_subtree.end()));
-        ires_outside_subtree.erase(sta_mac);
+        std::vector<std::shared_ptr<sAgent>> agents_outside_subtree;
+
+        // insert all ires that outside the subtree to "agents_outside_subtree",
+        // because it is impossible to move ire to a child ire. station doesn't has subtree.
+        std::copy_if(agents.begin(), agents.end(), std::back_inserter(agents_outside_subtree),
+                     [&](std::shared_ptr<sAgent> agent) {
+                         return (subtree.find(tlvf::mac_to_string(agent->al_mac)) == subtree.end());
+                     });
+
         potential_11k_aps.clear();
 
-        for (const auto &ire : ires_outside_subtree) {
-            auto ire_hostaps = database.get_node_children(ire, beerocks::TYPE_SLAVE);
-            for (const auto &hostap : ire_hostaps) {
+        for (const auto &agent : agents_outside_subtree) {
+            for (const auto &radio_map_element : agent->radios) {
                 int8_t rx_rssi, dummy;
+                auto radio       = radio_map_element.second;
+                auto hostap      = tlvf::mac_to_string(radio->radio_uid);
                 bool sta_is_5ghz = database.is_node_5ghz(sta_mac);
                 database.get_node_cross_rx_rssi(sta_mac, current_hostap, rx_rssi, dummy);
                 if ((!database.is_hostap_active(tlvf::mac_from_string(hostap))) ||
@@ -770,27 +775,32 @@ void optimal_path_task::work()
             break;
         }
         //build pending mac list //
-        auto ires    = database.get_all_connected_ires();
+        auto agents  = database.get_all_connected_agents();
         auto subtree = database.get_node_subtree(sta_mac);
 
-        std::set<std::string> ires_outside_subtree;
-        // insert all ires that outside the subtree to "ires_outside_subtree" , because it is impossible to move ire to a child ire. station doesn't has subtree.
-        std::set_difference(ires.begin(), ires.end(), subtree.begin(), subtree.end(),
-                            std::inserter(ires_outside_subtree, ires_outside_subtree.end()));
-        ires_outside_subtree.erase(sta_mac);
+        std::vector<std::shared_ptr<sAgent>> agents_outside_subtree;
+
+        // insert all ires that outside the subtree to "agents_outside_subtree",
+        // because it is impossible to move ire to a child ire. station doesn't has subtree.
+        std::copy_if(agents.begin(), agents.end(), std::back_inserter(agents_outside_subtree),
+                     [&](std::shared_ptr<sAgent> agent) {
+                         return (subtree.find(tlvf::mac_to_string(agent->al_mac)) == subtree.end());
+                     });
+
         auto channel = database.get_node_channel(sta_mac);
 
         //searching for sub band hostap /backhaul(client) measurement match for each ire
-        for (auto &ire : ires_outside_subtree) {
+        for (auto &agent : agents_outside_subtree) {
             bool found_band_match = false;
-            auto ire_hostaps      = database.get_node_children(ire, beerocks::TYPE_SLAVE);
             std::string hostap_backhaul_manager;
             std::string hostap_backhaul;
-            if (sta_bridge == ire) {
+            if (tlvf::mac_from_string(sta_bridge) == agent->al_mac) {
                 continue;
             }
             //searching for hostap 5Ghz Low/High direct match ,2.4Ghz auto picked when sta is 2.4
-            for (auto &hostap : ire_hostaps) {
+            for (const auto &radio_map_element : agent->radios) {
+                auto radio      = radio_map_element.second;
+                auto hostap     = tlvf::mac_to_string(radio->radio_uid);
                 hostap_backhaul = database.get_node_parent_backhaul(hostap);
                 hostap_backhaul_manager =
                     database.is_hostap_backhaul_manager(tlvf::mac_from_string(hostap))
@@ -834,7 +844,9 @@ void optimal_path_task::work()
             }
             //when there is no 5Ghz hostap and backhaul Low/High match searching for
             if (!found_band_match) {
-                for (auto hostap : ire_hostaps) {
+                for (const auto &radio_map_element : agent->radios) {
+                    auto radio  = radio_map_element.second;
+                    auto hostap = tlvf::mac_to_string(radio->radio_uid);
                     if (hostap == current_hostap || database.is_ap_out_of_band(hostap, sta_mac) ||
                         (!database.is_hostap_active(tlvf::mac_from_string(hostap)))) {
                         continue;
