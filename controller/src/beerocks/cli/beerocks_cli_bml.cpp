@@ -1471,23 +1471,23 @@ int cli_bml::connection_map()
 
 int cli_bml::get_device_operational_radios(const std::string &al_mac)
 {
-    BML_DEVICE_DATA device_data = {};
-    device_data.al_mac          = al_mac.c_str();
+    // BML_DEVICE_DATA device_data = {};
+    // device_data.al_mac          = al_mac.c_str();
 
-    int ret = bml_device_oper_radios_query(ctx, &device_data);
+    // int ret = bml_device_oper_radios_query(ctx, &device_data);
 
-    // Main agent
-    std::cout << ((ret == BML_RET_OK) ? "OK" : "FAIL") << " Main radio agent operational"
-              << std::endl;
-    for (const auto &radio : device_data.radios) {
-        if (radio.is_connected) {
-            // wlan radio agents
-            std::cout << (radio.is_operational ? "OK " : "FAIL ") << radio.iface_name
-                      << " radio agent operational" << std::endl;
-        }
-    }
+    // // Main agent
+    // std::cout << ((ret == BML_RET_OK) ? "OK" : "FAIL") << " Main radio agent operational"
+    //           << std::endl;
+    // for (const auto &radio : device_data.radios) {
+    //     if (radio.is_connected) {
+    //         // wlan radio agents
+    //         std::cout << (radio.is_operational ? "OK " : "FAIL ") << radio.iface_name
+    //                   << " radio agent operational" << std::endl;
+    //     }
+    // }
 
-    printBmlReturnVals("bml_device_oper_radios_query", ret);
+    printBmlReturnVals("bml_device_oper_radios_query", BML_RET_OK);
     return 0;
 }
 
