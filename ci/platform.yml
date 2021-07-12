@@ -26,6 +26,7 @@ stages:
   - certification-axepoint-bhwifi
   - certification-axepoint-controller
   - certification-R2-nec-wx3000hp
+  - certification-R2-axepoint
   - upload
   - release
 
@@ -37,6 +38,7 @@ include:
   - local: "/ci/certification/axepoint-bhwifi.yml"
   - local: "/ci/certification/axepoint-controller.yml"
   - local: "/ci/certification/R2/nec-wx3000hp.yml"
+  - local: "/ci/certification/R2/axepoint.yml"
 
 build-for-rdkb-turris-omnia:
   extends: .build-for-rdkb
