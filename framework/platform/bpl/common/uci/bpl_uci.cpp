@@ -439,6 +439,12 @@ bool uci_delete_section(const std::string &package_name, const std::string &sect
         return false;
     }
 
+    // Create delta from changes, this does not change the persistent file.
+    if (uci_save(ctx.get(), sec_ptr.p) != UCI_OK) {
+        LOG(ERROR) << "Failed to save changes!" << std::endl << uci_get_error(ctx.get());
+        return false;
+    }
+
     if (commit_changes) {
         return uci_commit_changes(package_name);
     }
