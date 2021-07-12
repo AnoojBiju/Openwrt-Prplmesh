@@ -526,6 +526,19 @@ bool cfg_get_clients_persistent_db_max_size(int &max_size)
     return true;
 }
 
+bool cfg_get_steer_history_persistent_db_max_size(size_t &max_size)
+{
+    int max_size_val = -1;
+
+    if (cfg_get_param_int("steer_history_db_max_size", max_size_val) == RETURN_ERR) {
+        MAPF_ERR("Failed to read steer-history-persistent-db-max-size parameter - setting default "
+                 "value");
+        max_size_val = DEFAULT_STEER_HISTORY_PERSISTENT_DB_MAX_SIZE;
+    }
+    max_size = max_size_val;
+    return true;
+}
+
 bool cfg_get_max_timelife_delay_minutes(int &max_timelife_delay_minutes)
 {
     int val = -1;
