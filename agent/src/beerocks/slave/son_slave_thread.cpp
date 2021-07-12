@@ -5666,12 +5666,12 @@ bool slave_thread::get_controller_channel_preference(ieee1905_1::CmduMessageRx &
 
             const auto &op_class_chan_set =
                 wireless_utils::operating_class_to_channel_set(operating_class);
-            ss << "operating class=" << operating_class;
+            ss << "operating class=" << +operating_class;
 
             auto channel_list_length = op_class_channels.channel_list_length();
 
-            ss << ", preference=" << channel_preference.flags.preference
-               << ", reason=" << channel_preference.flags.reason_code;
+            ss << ", preference=" << +channel_preference.flags.preference
+               << ", reason=" << +channel_preference.flags.reason_code;
             ss << ", channel_list={";
             if (channel_list_length == 0) {
                 ss << "}";
@@ -5693,7 +5693,7 @@ bool slave_thread::get_controller_channel_preference(ieee1905_1::CmduMessageRx &
                     return false;
                 }
 
-                ss << int(*channel);
+                ss << +(*channel);
 
                 // add comma if not last channel in the list, else close list by add curl brackets
                 ss << (((ch_idx + 1) != channel_list_length) ? "," : "}");
