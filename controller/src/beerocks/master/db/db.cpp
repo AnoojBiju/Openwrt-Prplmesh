@@ -3299,7 +3299,7 @@ bool db::add_client_to_persistent_db(const sMacAddr &mac, const ValuesMap &param
         // for removal.
         if (!remove_candidate_client(mac)) {
             LOG(ERROR) << "failed to remove next-to-be-aged client entry " << db_entry
-                       << "from persistent db (due to full persistent db)";
+                       << " from persistent db (due to full persistent db)";
             return false;
         }
     }
@@ -5608,7 +5608,7 @@ bool db::remove_candidate_client(sMacAddr client_to_skip)
 {
 
     // find cadidate client to be removed
-    sMacAddr client_to_remove = get_candidate_client_for_removal(client_to_skip);
+    const sMacAddr &client_to_remove = get_candidate_client_for_removal(client_to_skip);
     if (client_to_remove == network_utils::ZERO_MAC) {
         LOG(ERROR) << "failed to find client to be removed, number of persistent db clients is "
                    << m_persistent_db_clients_count;
