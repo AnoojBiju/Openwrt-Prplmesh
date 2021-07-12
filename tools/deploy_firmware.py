@@ -441,9 +441,6 @@ class TurrisRdkb(PrplwrtDevice):
     is needed (see `artifacts_dir`).
     """
 
-    serial_prompt = "_pexpect_prompt_ "
-    """For serial connections we will set this prompt to make it easier to "expect" it."""
-
     BAUDRATE = 115200
     """The baudrate of the serial connection to the device."""
 
@@ -650,7 +647,12 @@ class TurrisRdkb(PrplwrtDevice):
             umount_mmc()
 
     def load_rdkb(self):
-        """Launch RDKB on Turris Omnia.
+        """ Launch RDKB on Turris Omnia.
+
+            Raises
+            -----------
+            ValueError
+                If serial does not exist or unable to connect.
         """
 
         self.reset_board(check_serial_type(self.name, self.BAUDRATE, self.PROMPT_RE))
@@ -694,7 +696,7 @@ class TurrisRdkb(PrplwrtDevice):
 
         self.load_rdkb()
 
-    def read_rdkb_rootfs_version(self):
+    def read_rdkb_rootfs_version(self) -> str:
         """ Read new image version.
 
             Returns
@@ -722,8 +724,18 @@ class TurrisRdkb(PrplwrtDevice):
 
         return date
 
-    def read_remote_rdkb_version(self):
-        """Read current RDKB rootfs version.
+    def read_remote_rdkb_version(self) -> str:
+        """ Read current RDKB rootfs version.
+
+            Returns
+            -----------
+            str
+                RDKB rootfs version.
+
+            Raises
+            -----------
+            ValueError
+                If version of rootfs not found.
         """
 
         RDKB_VERSION_PATH = "/mnt/etc/version"
@@ -757,11 +769,17 @@ class TurrisRdkb(PrplwrtDevice):
             return version
 
     def needs_upgrade(self) -> bool:
-        """ Check do we need upgrade board or not.
+        """ Check if we need to upgrade the board or not.
 
             Returns
             -----------
+            bool
                 True if upgrade required otherwise False.
+
+            Raises
+            -----------
+            ValueError
+                If failed to get serial connection or prplwrt is not ready for use
         """
 
         def is_prplwrt_ready() -> bool:
