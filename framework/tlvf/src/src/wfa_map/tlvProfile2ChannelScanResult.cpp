@@ -10,6 +10,8 @@
  * See LICENSE file for more details.
  */
 
+// clang-format off
+
 #include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>
 #include <tlvf/tlvflogging.h>
 
@@ -450,6 +452,7 @@ bool cNeighbors::alloc_ssid(size_t count) {
     m_channel_bw_length = (uint8_t *)((uint8_t *)(m_channel_bw_length) + len);
     m_channels_bw_list = (char *)((uint8_t *)(m_channels_bw_list) + len);
     m_bss_load_element_present = (eBssLoadElementPresent *)((uint8_t *)(m_bss_load_element_present) + len);
+    m_bss_load_element = (sBssLoadElement *)((uint8_t *)(m_bss_load_element) + len);
     m_ssid_idx__ += count;
     *m_ssid_length += count;
     if (!buffPtrIncrementSafe(len)) {
@@ -513,6 +516,7 @@ bool cNeighbors::alloc_channels_bw_list(size_t count) {
         std::copy_n(src, move_length, dst);
     }
     m_bss_load_element_present = (eBssLoadElementPresent *)((uint8_t *)(m_bss_load_element_present) + len);
+    m_bss_load_element = (sBssLoadElement *)((uint8_t *)(m_bss_load_element) + len);
     m_channels_bw_list_idx__ += count;
     *m_channel_bw_length += count;
     if (!buffPtrIncrementSafe(len)) {
@@ -526,10 +530,60 @@ cNeighbors::eBssLoadElementPresent& cNeighbors::bss_load_element_present() {
     return (eBssLoadElementPresent&)(*m_bss_load_element_present);
 }
 
+std::tuple<bool, cNeighbors::sBssLoadElement&> cNeighbors::bss_load_element(size_t idx) {
+    bool ret_success = ( (m_bss_load_element_idx__ > 0) && (m_bss_load_element_idx__ > idx) );
+    ret_success &= (*m_bss_load_element_present == eBssLoadElementPresent::FIELD_PRESENT);
+    size_t ret_idx = ret_success ? idx : 0;
+    if (!ret_success) {
+        TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
+    }
+    return std::forward_as_tuple(ret_success, m_bss_load_element[ret_idx]);
+}
+
+bool cNeighbors::alloc_bss_load_element(size_t count) {
+    if (m_lock_order_counter__ > 2) {;
+        TLVF_LOG(ERROR) << "Out of order allocation for variable length list bss_load_element, abort!";
+        return false;
+    }
+    if (*m_bss_load_element_present != eBssLoadElementPresent::FIELD_PRESENT) {
+        TLVF_LOG(ERROR) << "Can't allocate bss_load_element - condition" << 
+                            "[*m_bss_load_element_present != eBssLoadElementPresent::FIELD_PRESENT] not met";
+        return false;
+    }
+    size_t len = sizeof(sBssLoadElement) * count;
+    if(getBuffRemainingBytes() < len )  {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
+        return false;
+    }
+    if (m_bss_load_element_idx__ + count > 1 )  {
+        TLVF_LOG(ERROR) << "Can't allocate " << count << " elements (max length is " << 1 << " current length is " << m_bss_load_element_idx__ << ")";
+        return false;
+    }
+    m_lock_order_counter__ = 2;
+    uint8_t *src = (uint8_t *)&m_bss_load_element[m_bss_load_element_idx__];
+    uint8_t *dst = src + len;
+    if (!m_parse__) {
+        size_t move_length = getBuffRemainingBytes(src) - len;
+        std::copy_n(src, move_length, dst);
+    }
+    m_bss_load_element_idx__ += count;
+    if (!buffPtrIncrementSafe(len)) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
+        return false;
+    }
+    if (!m_parse__) { 
+        for (size_t i = m_bss_load_element_idx__ - count; i < m_bss_load_element_idx__; i++) { m_bss_load_element[i].struct_init(); }
+    }
+    return true;
+}
+
 void cNeighbors::class_swap()
 {
     m_bssid->struct_swap();
     tlvf_swap(8*sizeof(eBssLoadElementPresent), reinterpret_cast<uint8_t*>(m_bss_load_element_present));
+    for (size_t i = 0; i < m_bss_load_element_idx__; i++){
+        m_bss_load_element[i].struct_swap();
+    }
 }
 
 bool cNeighbors::finalize()
@@ -567,6 +621,7 @@ size_t cNeighbors::get_initial_size()
     class_size += sizeof(uint8_t); // signal_strength
     class_size += sizeof(uint8_t); // channel_bw_length
     class_size += sizeof(eBssLoadElementPresent); // bss_load_element_present
+    class_size += sizeof(uint8_t); // bss_load_element_length
     return class_size;
 }
 
@@ -618,8 +673,14 @@ bool cNeighbors::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(eBssLoadElementPresent) << ") Failed!";
         return false;
     }
+    m_bss_load_element = reinterpret_cast<sBssLoadElement*>(m_buff_ptr__);
+    m_bss_load_element_idx__ = 0;
+    if (m_parse__ && *m_bss_load_element_present == eBssLoadElementPresent::FIELD_PRESENT) {
+        if (!alloc_bss_load_element(1)) {
+            LOG(ERROR) << "Failed allocating bss_load_element while parsing!";
+            return false;
+        }
+    }
     if (m_parse__) { class_swap(); }
     return true;
 }
-
-
