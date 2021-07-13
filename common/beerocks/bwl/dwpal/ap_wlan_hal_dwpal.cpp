@@ -524,7 +524,7 @@ load_hostapd_config(const std::string &radio_iface_name, std::string &fname,
             continue;
         }
         if (!load_hostapd_config_file(try_fname, hostapd_config_head, hostapd_config_vaps)) {
-            LOG(ERROR) << "Failed to load hostapd cofig file: " << try_fname;
+            LOG(ERROR) << "Failed to load hostapd config file: " << try_fname;
             continue;
         }
         // See if it's the right one
