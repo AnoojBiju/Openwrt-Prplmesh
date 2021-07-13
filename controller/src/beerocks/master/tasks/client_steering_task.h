@@ -51,6 +51,16 @@ private:
      */
     bool dm_set_steer_event_params(const std::string &event_path);
 
+    /** @brief Save data about client steet event to persistent db.
+     * 
+     * @param time_stamp Time when data was collected.
+     * @param steer_origin Steer origin.
+     * @param steer_type Steering type.
+     */
+    void add_steer_history_to_persistent_db(const std::string &time_stamp,
+                                            const std::string &steer_origin,
+                                            const std::string &steer_type);
+
     db &m_database;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
     task_pool &m_tasks;
