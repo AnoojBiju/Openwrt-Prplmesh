@@ -3899,7 +3899,7 @@ bool Controller::handle_cmdu_control_message(
 
 bool Controller::start_client_steering(const std::string &sta_mac, const std::string &target_bssid)
 {
-    std::string triggered_by{" On-Demand "};
+    std::string triggered_by{"NBAPI"};
     bool disassoc_imminent = false;
 
     LOG(DEBUG) << "NBAPI client steer request for " << sta_mac << " to hostap: " << target_bssid;
