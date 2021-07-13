@@ -271,7 +271,8 @@ class PrplwrtDevice:
         """
         for _ in range(attempts):
             try:
-                with pexpect.pxssh.pxssh() as shell:
+                with pexpect.pxssh.pxssh(options={"StrictHostKeyChecking": "no",
+                                                  "UserKnownHostsFile": "/dev/null"}) as shell:
                     shell.login(self.name, self.username, login_timeout=5)
                     return True
             except (pexpect.pxssh.ExceptionPxssh, pexpect.exceptions.EOF):
@@ -552,13 +553,13 @@ class TurrisRdkb(PrplwrtDevice):
 
         print(f"Copying '{self.rdkbfs}'\n'{self.kernel}'\n'{self.TURRIS_DTB}'\n to the target")
         try:
-            subprocess.check_output(["scp",
+            subprocess.check_output(["scp", "-o StrictHostKeyChecking=no",
                                      f"{self.artifacts_dir}/{self.rdkbfs}",
                                      f"{self.username}@{self.name}:/tmp/{self.rdkbfs}"])
-            subprocess.check_output(["scp",
+            subprocess.check_output(["scp", "-o StrictHostKeyChecking=no",
                                      f"{self.artifacts_dir}/{self.kernel}",
                                      f"{self.username}@{self.name}:/tmp/{self.kernel}"])
-            subprocess.check_output(["scp",
+            subprocess.check_output(["scp", "-o StrictHostKeyChecking=no",
                                      f"{self.artifacts_dir}/{self.TURRIS_DTB}",
                                      f"{self.username}@{self.name}:/tmp/{self.TURRIS_DTB}"])
         except subprocess.CalledProcessError as exc:
@@ -742,7 +743,8 @@ class TurrisRdkb(PrplwrtDevice):
         IMAGE_DATE_RE = r"0*[1-9]\d{4,}"
         """ Retrieve RDKB rootfs build date."""
 
-        with pexpect.pxssh.pxssh() as shell:
+        with pexpect.pxssh.pxssh(options={"StrictHostKeyChecking": "no",
+                                          "UserKnownHostsFile": "/dev/null"}) as shell:
             shell.login(self.name, self.username)
 
             shell.sendline(f"mount /dev/{self.ROOTFS_PARTITION} /mnt")
