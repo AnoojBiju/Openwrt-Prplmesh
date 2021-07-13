@@ -640,7 +640,7 @@ class TurrisRdkb(PrplwrtDevice):
             shell.sendline("du -sh /mnt")
             shell.expect("0")
 
-            serial_cmd_err(shell, self.PROMPT_RE, f"tar -xzvf /tmp/{self.rdkbfs} -C /mnt/")
+            serial_cmd_err(shell, self.PROMPT_RE, f"tar -xzf /tmp/{self.rdkbfs} -C /mnt/")
 
             time.sleep(40)  # Sleep introduced because installation new RDKB rootfs takes time
             shell.sendline("")
@@ -712,7 +712,7 @@ class TurrisRdkb(PrplwrtDevice):
         """ Retrieve RDKB rootfs build date."""
 
         image = ""
-        for artifact in Path(self.artifacts_dir.iterdir()):
+        for artifact in Path(f"{self.artifacts_dir}").iterdir():
             image = str(re.findall(IMAGE_NAME_RE, str(artifact)))
             if image:
                 break
@@ -804,7 +804,7 @@ class TurrisRdkb(PrplwrtDevice):
                 shell.sendline("")
             return True
 
-        serial_type = check_serial_type()
+        serial_type = check_serial_type(self.name, self.BAUDRATE, self.PROMPT_RE)
         if serial_type == ShellType.UBOOT:
             self.reset_board(serial_type)
             if not is_prplwrt_ready():
@@ -817,7 +817,7 @@ class TurrisRdkb(PrplwrtDevice):
 
         will_upgrade = new_version > current_version
         if will_upgrade and serial_type == ShellType.RDKB:
-            self.reset_board(check_serial_type())
+            self.reset_board(check_serial_type(self.name, self.BAUDRATE, self.PROMPT_RE))
             if not is_prplwrt_ready():
                 raise ValueError("Failed to get ready prplwrt serial.")
 
