@@ -1293,6 +1293,13 @@ public:
     bool add_steer_event_to_persistent_db(const ValuesMap &params = {});
 
     /**
+     * @brief Get from persistent db all steer history event and register them on a system bus.
+     *
+     * @return True on success, otherwise false.
+     */
+    bool restore_steer_history();
+
+    /**
      * @brief Get the client's parameters last edit time.
      *
      * @param mac MAC address of a client.

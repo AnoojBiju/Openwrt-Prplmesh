@@ -190,6 +190,11 @@ bool Controller::start()
         } else {
             LOG(DEBUG) << "load clients from persistent db finished successfully";
         }
+        if (!database.restore_steer_history()) {
+            LOG(WARNING) << "Failed to load steer history from persistent db or no entries found.";
+        } else {
+            LOG(DEBUG) << "Load steer history from persistent db finished successfully";
+        }
 
         if (operations.is_operation_alive(database.get_persistent_db_aging_operation_id())) {
             LOG(DEBUG) << "persistent DB aging operation already running";

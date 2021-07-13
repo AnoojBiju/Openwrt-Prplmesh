@@ -3253,6 +3253,42 @@ bool db::add_steer_event_to_persistent_db(const ValuesMap &params)
     return true;
 }
 
+bool db::restore_steer_history()
+{
+    std::unordered_map<std::string, son::db::ValuesMap> steer_history;
+    bool ret = true;
+
+    if (!bpl::db_get_entries_by_type("steer_history", steer_history)) {
+        LOG(WARNING) << "Failed to get steer_history entries from persistent db "
+                     << "or no entries registered.";
+        return false;
+    }
+    if (steer_history.empty()) {
+        return true;
+    }
+    for (auto entry : steer_history) {
+
+        auto obj_path = dm_add_steer_event();
+
+        if (obj_path.empty()) {
+            LOG(ERROR) << "Failed to add SteerEvent object.";
+            return false;
+        }
+        m_steer_history.push(entry.first);
+        ret &= m_ambiorix_datamodel->set(obj_path, "DeviceId", entry.second["device_id"]);
+        ret &= m_ambiorix_datamodel->set(obj_path, "SteeredFrom", entry.second["steered_from"]);
+        ret &= m_ambiorix_datamodel->set(obj_path, "SteeredTo", entry.second["steered_to"]);
+        ret &= m_ambiorix_datamodel->set(obj_path, "Result", entry.second["result"]);
+        ret &= m_ambiorix_datamodel->set(obj_path, "TimeStamp", entry.second["time_stamp"]);
+        ret &= m_ambiorix_datamodel->set(obj_path, "SteeringType", entry.second["steering_type"]);
+        ret &=
+            m_ambiorix_datamodel->set(obj_path, "SteeringOrigin", entry.second["steering_origin"]);
+        ret &=
+            m_ambiorix_datamodel->set(obj_path, "TimeTaken", std::stoi(entry.second["time_taken"]));
+    }
+    return ret;
+}
+
 bool db::add_client_to_persistent_db(const sMacAddr &mac, const ValuesMap &params)
 {
     // if persistent db is disabled
