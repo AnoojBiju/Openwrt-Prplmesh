@@ -174,7 +174,7 @@ static void get_vht_mcs_capabilities(int16_t *VHT_MCS, std::string &vht_cap_str,
         }
 
         // if supported_bw_bits=0 max bw is 80 Mhz, else max bw is 160 Mhz
-        sta_caps.vht_bw               = (BANDWIDTH_80 + (supported_bw_bits > 0 ? 1 : 0));
+        sta_caps.vht_bw               = (beerocks::BANDWIDTH_80 + (supported_bw_bits > 0 ? 1 : 0));
         sta_caps.vht_low_bw_short_gi  = (vht_cap >> 5) & 0x01; // 80 Mhz
         sta_caps.vht_high_bw_short_gi = (vht_cap >> 6) & 0x01; // 160 Mhz
 

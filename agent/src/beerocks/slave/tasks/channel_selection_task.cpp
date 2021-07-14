@@ -497,9 +497,6 @@ void ChannelSelectionTask::handle_vs_channels_list_response(
     auto sender_iface_name = socket_to_front_iface_name(fd);
     LOG(TRACE) << "received ACTION_APMANAGER_CHANNELS_LIST_RESPONSE from " << sender_iface_name;
 
-    // report to other tasks that the channel list is ready
-    m_btl_ctx.m_task_pool.send_event(eTaskEvent::CHANNEL_LIST_READY);
-
     if (m_zwdfs_state == eZwdfsState::WAIT_FOR_CHANNELS_LIST) {
         ZWDFS_FSM_MOVE_STATE(eZwdfsState::CHOOSE_NEXT_BEST_CHANNEL);
     }

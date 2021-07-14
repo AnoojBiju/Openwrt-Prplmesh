@@ -207,9 +207,6 @@ public:
             sMacAddr iface_mac;
             eWiFiBandwidth max_supported_bw;
 
-            std::deque<beerocks::message::sWifiChannel> preferred_channels;
-            std::vector<beerocks::message::sWifiChannel> supported_channels;
-
             // When set, radio can only be used for ZWDFS purpose.
             bool zwdfs;
             bool hybrid_mode_supported;
