@@ -551,10 +551,9 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
             return false;
         }
 
-        std::string client_mac = tlvf::mac_to_string(request_in->params().mac);
-        std::string client_bridge_4addr_mac =
-            tlvf::mac_to_string(request_in->params().bridge_4addr_mac);
-        std::string client_ip = network_utils::ipv4_to_string(request_in->params().ipv4);
+        sMacAddr client_mac              = request_in->params().mac;
+        sMacAddr client_bridge_4addr_mac = request_in->params().bridge_4addr_mac;
+        std::string client_ip            = network_utils::ipv4_to_string(request_in->params().ipv4);
 
         LOG(DEBUG) << "START_MONITORING_REQUEST: mac=" << client_mac << " ip=" << client_ip
                    << " bridge_4addr_mac=" << client_bridge_4addr_mac;
@@ -582,7 +581,6 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
             LOG(ERROR) << "addClass ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST failed";
             return false;
         }
-        auto hostap_mac = tlvf::mac_to_string(request_in->params().mac);
         bool forbackhaul =
             (is_backhaul_manager && backhaul_params.backhaul_is_wireless) ? true : false;
 
@@ -731,8 +729,7 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
                 LOG(ERROR) << "addClass cACTION_CONTROL_BACKHAUL_ROAM_REQUEST failed";
                 return false;
             }
-            auto bssid = tlvf::mac_to_string(request_in->params().bssid);
-            LOG(DEBUG) << "reconfigure wpa_supplicant to bssid " << bssid
+            LOG(DEBUG) << "reconfigure wpa_supplicant to bssid " << request_in->params().bssid
                        << " channel=" << int(request_in->params().channel);
 
             auto request_out =
@@ -1162,11 +1159,10 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
 
             backhaul_params.bridge_ipv4 =
                 network_utils::ipv4_to_string(notification->params().bridge_ipv4);
-            backhaul_params.backhaul_mac = tlvf::mac_to_string(notification->params().backhaul_mac);
+            backhaul_params.backhaul_mac = notification->params().backhaul_mac;
             backhaul_params.backhaul_ipv4 =
                 network_utils::ipv4_to_string(notification->params().backhaul_ipv4);
-            backhaul_params.backhaul_bssid =
-                tlvf::mac_to_string(notification->params().backhaul_bssid);
+            backhaul_params.backhaul_bssid = notification->params().backhaul_bssid;
             // backhaul_params.backhaul_freq        = notification->params.backhaul_freq; // HACK temp disabled because of a bug on endian converter
             backhaul_params.backhaul_channel     = notification->params().backhaul_channel;
             backhaul_params.backhaul_is_wireless = notification->params().backhaul_is_wireless;
@@ -1755,8 +1751,8 @@ bool slave_thread::handle_cmdu_platform_manager_message(
 
         if (notification->op() == beerocks_message::eDHCPOp_Add ||
             notification->op() == beerocks_message::eDHCPOp_Old) {
-            std::string client_mac = tlvf::mac_to_string(notification->mac());
-            std::string client_ip  = network_utils::ipv4_to_string(notification->ipv4());
+            sMacAddr client_mac   = notification->mac();
+            std::string client_ip = network_utils::ipv4_to_string(notification->ipv4());
 
             LOG(DEBUG) << "ACTION_DHCP_LEASE_ADDED_NOTIFICATION mac " << client_mac
                        << " ip = " << client_ip << " name="
@@ -3933,9 +3929,9 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
 
             backhaul_params.bridge_ipv4    = bridge_info.ip;
             backhaul_params.backhaul_iface = db->bridge.iface_name;
-            backhaul_params.backhaul_mac   = bridge_info.mac;
+            backhaul_params.backhaul_mac   = tlvf::mac_from_string(bridge_info.mac);
             backhaul_params.backhaul_ipv4  = bridge_info.ip;
-            backhaul_params.backhaul_bssid = network_utils::ZERO_MAC_STRING;
+            backhaul_params.backhaul_bssid = network_utils::ZERO_MAC;
             // backhaul_params.backhaul_freq           = 0; // HACK temp disabled because of a bug on endian converter
             backhaul_params.backhaul_channel     = 0;
             backhaul_params.backhaul_is_wireless = 0;
@@ -4099,11 +4095,9 @@ bool slave_thread::slave_fsm(bool &call_slave_select)
             notification->backhaul_params().is_backhaul_manager = is_backhaul_manager;
             notification->backhaul_params().backhaul_iface_type =
                 backhaul_params.backhaul_iface_type;
-            notification->backhaul_params().backhaul_mac =
-                tlvf::mac_from_string(backhaul_params.backhaul_mac);
+            notification->backhaul_params().backhaul_mac     = backhaul_params.backhaul_mac;
             notification->backhaul_params().backhaul_channel = backhaul_params.backhaul_channel;
-            notification->backhaul_params().backhaul_bssid =
-                tlvf::mac_from_string(backhaul_params.backhaul_bssid);
+            notification->backhaul_params().backhaul_bssid   = backhaul_params.backhaul_bssid;
             notification->backhaul_params().backhaul_is_wireless =
                 backhaul_params.backhaul_is_wireless;
 
