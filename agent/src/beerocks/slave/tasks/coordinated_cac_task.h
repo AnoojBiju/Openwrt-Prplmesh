@@ -28,7 +28,6 @@ namespace coordinated_cac {
 /////////
 enum class fsm_state {
     IDLE,
-    WAIT_FOR_CHANNEL_LIST_READY,
     WAIT_FOR_SWITCH_CHANNEL_REPORT,
     WAIT_FOR_SWITCH_BACK_TO_ORIGINAL_CHANNEL_REPORT,
     WAIT_FOR_CAC_TERMINATION,
@@ -38,7 +37,6 @@ enum class fsm_event {
     CAC_REQUEST,
     CAC_TERMINATION_REQUEST,
     CAC_TERMINATION_RESPONSE,
-    CHANNEL_LIST_READY,
     SWITCH_CHANNEL_REPORT,
     SWITCH_CHANNEL_DURATION_TIME,
     PERIODIC,
@@ -71,7 +69,6 @@ private:
     bool send_cac_request(beerocks::AgentDB::sRadio *db_radio);
     void reset();
     bool is_timeout_waiting_for_switch_channel_report();
-    bool is_timeout_waiting_for_channel_list();
     bool is_timeout_waiting_for_cac_termination();
 
 private:
@@ -105,14 +102,6 @@ private:
 
     // the point in time we we started waiting for cac termination
     std::chrono::time_point<std::chrono::steady_clock> m_terminate_cac_start_time_point;
-
-    // max time to wait for channel list
-    static constexpr std::chrono::seconds DEFAULT_MAX_WAIT_FOR_CHANNEL_LIST{3};
-    std::chrono::seconds m_max_wait_for_channel_list =
-        std::chrono::seconds(DEFAULT_MAX_WAIT_FOR_CHANNEL_LIST);
-
-    // the point in time we we started waiting for channel list
-    std::chrono::time_point<std::chrono::steady_clock> m_channel_list_start_time_point;
 };
 
 //////////

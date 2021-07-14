@@ -169,26 +169,20 @@ beerocks::eWiFiBandwidth utils::convert_bandwidth_to_enum(int bandwidth_int)
 
 int utils::convert_bandwidth_to_int(beerocks::eWiFiBandwidth bandwidth)
 {
-    int bandwidth_int;
     switch (bandwidth) {
     case beerocks::BANDWIDTH_20:
-        bandwidth_int = 20;
-        break;
+        return 20;
     case beerocks::BANDWIDTH_40:
-        bandwidth_int = 40;
-        break;
+        return 40;
     case beerocks::BANDWIDTH_80:
-        bandwidth_int = 80;
-        break;
+        return 80;
     case beerocks::BANDWIDTH_80_80:
     case beerocks::BANDWIDTH_160:
-        bandwidth_int = 160;
-        break;
+        return 160;
     default:
-        bandwidth_int = 80;
-        break;
+        LOG(ERROR) << "Failed to convert eWiFiBandwidth: " << bandwidth << " to integer";
+        return bandwidth;
     }
-    return bandwidth_int;
 }
 
 std::string utils::convert_channel_ext_above_to_string(bool channel_ext_above_secondary,

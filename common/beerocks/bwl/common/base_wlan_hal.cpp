@@ -31,9 +31,6 @@ base_wlan_hal::base_wlan_hal(HALType type, std::string iface_name, IfaceType ifa
     if ((m_fd_int_events = eventfd(0, EFD_SEMAPHORE)) < 0) {
         LOG(FATAL) << "Failed creating eventfd: " << strerror(errno);
     }
-
-    // Initialize complex containers of the radio_info structure
-    m_radio_info.preferred_channels.resize(128 /* TODO: Get real value */);
 }
 
 base_wlan_hal::~base_wlan_hal()

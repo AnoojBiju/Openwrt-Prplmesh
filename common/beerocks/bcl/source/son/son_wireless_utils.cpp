@@ -1102,6 +1102,7 @@ wireless_utils::center_channel_5g_to_beacon_channels(uint8_t center_channel,
         beacon_channels.reserve(2);
         break;
     case beerocks::BANDWIDTH_80:
+    case beerocks::BANDWIDTH_80_80:
         beacon_channel = center_channel - 6;
         beacon_channels.reserve(4);
         break;
@@ -1110,7 +1111,8 @@ wireless_utils::center_channel_5g_to_beacon_channels(uint8_t center_channel,
         beacon_channels.reserve(8);
         break;
     default: {
-        LOG(DEBUG) << "Invalid BW: " << bw << ", center_channel=" << center_channel;
+        LOG(DEBUG) << "Invalid BW: " << beerocks::utils::convert_bandwidth_to_int(bw)
+                   << ", center_channel=" << center_channel;
         return {};
     }
     }

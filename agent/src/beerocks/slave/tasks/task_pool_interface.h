@@ -25,7 +25,6 @@ enum class eTaskEvent {
     SWITCH_CHANNEL_DURATION_TIME,      // 3
     SWITCH_CHANNEL_REQUEST,            // 4
     SWITCH_CHANNEL_REPORT,             // 5
-    CHANNEL_LIST_READY,                // 6
 };
 
 std::ostream &operator<<(std::ostream &o, const eTaskEvent &task_event);

@@ -25,9 +25,6 @@ std::ostream &operator<<(std::ostream &out, const fsm_state &value)
     case fsm_state::IDLE:
         out << "IDLE";
         break;
-    case fsm_state::WAIT_FOR_CHANNEL_LIST_READY:
-        out << "WAIT_FOR_CHANNEL_LIST_READY";
-        break;
     case fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT:
         out << "WAIT_FOR_SWITCH_CHANNEL_REPORT";
         break;
@@ -55,9 +52,6 @@ std::ostream &operator<<(std::ostream &out, const fsm_event &value)
         break;
     case fsm_event::CAC_TERMINATION_RESPONSE:
         out << "CAC_TERMINATION_RESPONSE";
-        break;
-    case fsm_event::CHANNEL_LIST_READY:
-        out << "CHANNEL_LIST_READY";
         break;
     case fsm_event::SWITCH_CHANNEL_REPORT:
         out << "SWITCH_CHANNEL_REPORT";
@@ -97,7 +91,6 @@ void CacFsm::reset()
     m_original_secondary_channel_offset = 0;
 
     m_max_wait_for_switch_channel = DEFAULT_MAX_WAIT_FOR_SWITCH_CHANNEL;
-    m_max_wait_for_channel_list   = DEFAULT_MAX_WAIT_FOR_CHANNEL_LIST;
 }
 
 void CacFsm::config_fsm()
@@ -117,7 +110,6 @@ void CacFsm::config_fsm()
         .on(fsm_event::CAC_REQUEST,
             {
                 fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT,
-                fsm_state::WAIT_FOR_CHANNEL_LIST_READY,
                 fsm_state::ERROR,
             },
             [&](TTransition &transition, const void *args) -> bool {
@@ -175,34 +167,6 @@ void CacFsm::config_fsm()
 
                 m_ifname = radio->front.iface_name;
 
-                // This is a w/a until PPM-655 will be implemented.
-                if (radio->channels_list.empty()) {
-                    // since the channel list is empty
-                    // we send a request for populating it
-                    auto request = message_com::create_vs_message<
-                        beerocks_message::cACTION_BACKHAUL_CHANNELS_LIST_REQUEST>(m_cmdu_tx);
-                    if (!request) {
-                        LOG(ERROR) << "Failed to build channel-list-request message.";
-                        transition.change_destination(fsm_state::ERROR);
-                        return true;
-                    }
-
-                    auto fronthaul_sd = m_backhaul_manager.front_iface_name_to_socket(m_ifname);
-                    if (fronthaul_sd == beerocks::net::FileDescriptor::invalid_descriptor) {
-                        LOG(DEBUG) << "Failed to find fronthaul socket for interface: " << m_ifname;
-                        transition.change_destination(fsm_state::ERROR);
-                        return true;
-                    }
-
-                    m_backhaul_manager.send_cmdu(fronthaul_sd, m_cmdu_tx);
-
-                    // start the time count
-                    m_channel_list_start_time_point = std::chrono::steady_clock::now();
-
-                    transition.change_destination(fsm_state::WAIT_FOR_CHANNEL_LIST_READY);
-                    return true;
-                }
-
                 if (!send_cac_request(radio)) {
                     transition.change_destination(fsm_state::ERROR);
                     return true;
@@ -215,52 +179,7 @@ void CacFsm::config_fsm()
         // it is ok to receive this event, we just stay in the same state
         .on(fsm_event::PERIODIC, fsm_state::IDLE)
 
-        // it is ok to receive this event, we just stay in the same state
-        .on(fsm_event::CHANNEL_LIST_READY, fsm_state::IDLE)
-
         // nothing to terminate
-        .on(fsm_event::CAC_TERMINATION_REQUEST, fsm_state::IDLE)
-
-        /////////////////////////////////////////
-        ////// WAIT_FOR_CHANNEL_LIST_READY //////
-        /////////////////////////////////////////
-        .state(fsm_state::WAIT_FOR_CHANNEL_LIST_READY)
-
-        .on(fsm_event::CHANNEL_LIST_READY,
-            {fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT, fsm_state::ERROR},
-            [&](TTransition &transition, const void *args) -> bool {
-                auto db = AgentDB::get();
-                auto radio =
-                    db->get_radio_by_mac(m_cac_request_radio.radio_uid, AgentDB::eMacType::RADIO);
-
-                if (!radio) {
-                    LOG(ERROR) << "Failed to find database record for interface: " << m_ifname;
-                    transition.change_destination(fsm_state::ERROR);
-                    return true;
-                }
-
-                if (!send_cac_request(radio)) {
-                    transition.change_destination(fsm_state::ERROR);
-                    return true;
-                }
-
-                // moving to next state: WAIT_FOR_SWITCH_CHANNEL_REPORT
-                return true;
-            })
-
-        .on(fsm_event::PERIODIC, {fsm_state::WAIT_FOR_CHANNEL_LIST_READY, fsm_state::ERROR},
-            [&](TTransition &transition, const void *args) -> bool {
-                if (is_timeout_waiting_for_channel_list()) {
-                    LOG(ERROR) << "Timeout occurred waiting for channel list.";
-                    transition.change_destination(fsm_state::ERROR);
-                    return true;
-                }
-                // returning false means "stay in the same state"
-                return false;
-            })
-
-        // while waiting for channel list we were requested to terminate
-        // the cac. we simply switch to IDLE.
         .on(fsm_event::CAC_TERMINATION_REQUEST, fsm_state::IDLE)
 
         /////////////////////////////////////////
@@ -431,8 +350,6 @@ void CacFsm::config_fsm()
                 return true;
             })
 
-        .on(fsm_event::CHANNEL_LIST_READY, fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT)
-
         //////////////////////////////////////////
         //// WAIT_FOR_SWITCH_BACK_TO_ORIGINAL_CHANNEL_REPORT ///
         //////////////////////////////////////////
@@ -470,8 +387,6 @@ void CacFsm::config_fsm()
                 return false;
             })
 
-        .on(fsm_event::CHANNEL_LIST_READY,
-            fsm_state::WAIT_FOR_SWITCH_BACK_TO_ORIGINAL_CHANNEL_REPORT)
         .on(fsm_event::CAC_TERMINATION_REQUEST,
             fsm_state::WAIT_FOR_SWITCH_BACK_TO_ORIGINAL_CHANNEL_REPORT)
 
@@ -514,7 +429,6 @@ void CacFsm::config_fsm()
 
         // for now - just going back to idle
         .on(fsm_event::PERIODIC, fsm_state::IDLE)
-        .on(fsm_event::CHANNEL_LIST_READY, fsm_state::ERROR)
         .on(fsm_event::CAC_TERMINATION_REQUEST, fsm_state::ERROR);
 
     start();
@@ -619,13 +533,6 @@ bool CacFsm::is_timeout_waiting_for_switch_channel_report()
            m_max_wait_for_switch_channel;
 }
 
-bool CacFsm::is_timeout_waiting_for_channel_list()
-{
-    // check channel list timeout
-    return (std::chrono::steady_clock::now() - m_channel_list_start_time_point) >
-           m_max_wait_for_channel_list;
-}
-
 bool CacFsm::is_timeout_waiting_for_cac_termination()
 {
     // check cac termination timeout
@@ -646,9 +553,8 @@ CoordinatedCacTask::CoordinatedCacTask(TaskPoolInterface &task_pool,
 
 std::vector<eTaskEvent> CoordinatedCacTask::get_task_event_list() const
 {
-    return {eTaskEvent::SWITCH_CHANNEL_DURATION_TIME, eTaskEvent::CHANNEL_LIST_READY,
-            eTaskEvent::SWITCH_CHANNEL_REPORT, eTaskEvent::CAC_STARTED_NOTIFICATION,
-            eTaskEvent::CAC_COMPLETED_NOTIFICATION};
+    return {eTaskEvent::SWITCH_CHANNEL_DURATION_TIME, eTaskEvent::SWITCH_CHANNEL_REPORT,
+            eTaskEvent::CAC_STARTED_NOTIFICATION, eTaskEvent::CAC_COMPLETED_NOTIFICATION};
 }
 
 void CoordinatedCacTask::work()
@@ -675,10 +581,6 @@ void CoordinatedCacTask::handle_event(eTaskEvent event, std::shared_ptr<void> ev
         }
         m_fsm.fire(fsm_event::SWITCH_CHANNEL_DURATION_TIME,
                    reinterpret_cast<const void *>(&switch_channel_duration_time));
-    } break;
-
-    case eTaskEvent::CHANNEL_LIST_READY: {
-        m_fsm.fire(fsm_event::CHANNEL_LIST_READY);
     } break;
 
     case eTaskEvent::SWITCH_CHANNEL_REPORT: {

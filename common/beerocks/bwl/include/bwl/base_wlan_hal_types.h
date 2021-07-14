@@ -43,8 +43,6 @@ enum class HALState {
 
 enum class AntMode { Invalid = 0, ANT_1X1, ANT_2X2, ANT_3X3, ANT_4X4 };
 
-enum class WiFiChanBW { Invalid = 0, BW_20 = 20, BW_40 = 40, BW_80 = 80 };
-
 struct VAPElement {
     /**
      * Basic Service Set (i.e.: VAP name, e.g.: wlan0.0, wlan0.1, wlan0.2, ...).
@@ -133,7 +131,7 @@ struct sChannelInfo {
     int8_t tx_power_dbm;
     beerocks::eDfsState dfs_state;
     // Key: eWiFiBandwidth, Value: Rank
-    std::unordered_map<beerocks::eWiFiBandwidth, int32_t, std::hash<int>> bw_info_list;
+    std::map<beerocks::eWiFiBandwidth, int32_t> bw_info_list;
 };
 
 struct RadioInfo {
@@ -164,9 +162,7 @@ struct RadioInfo {
         vht_mcs_set; /**< 32-byte attribute containing the MCS set as defined in 802.11ac */
     ChanSwReason last_csa_sw_reason = ChanSwReason::Unknown;
     // Key = channel
-    std::unordered_map<uint8_t, sChannelInfo> channels_list;
-    std::vector<beerocks::message::sWifiChannel> preferred_channels;
-    std::vector<beerocks::message::sWifiChannel> supported_channels;
+    std::map<uint8_t, sChannelInfo> channels_list;
     std::unordered_map<int, VAPElement> available_vaps; // key = vap_id
 };
 
@@ -203,16 +199,6 @@ typedef struct {
 } sACTION_BACKHAUL_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE;
 
 //ap_wlan_hal
-
-enum eWiFiBandwidth : uint8_t {
-    BANDWIDTH_UNKNOWN = 0,
-    BANDWIDTH_20,
-    BANDWIDTH_40,
-    BANDWIDTH_80,
-    BANDWIDTH_80_80,
-    BANDWIDTH_160,
-    BANDWIDTH_MAX,
-};
 
 enum eWiFiStandard : uint8_t {
     STANDARD_NONE = 0x00,
@@ -365,9 +351,6 @@ typedef struct {
 // but since it is represented as hex here. we need two hex characters per byte + a terminating \0.
 #define ASSOCIATION_FRAME_SIZE (2 * beerocks::message::ASSOCIATION_MAX_LENGTH + 1)
 #define MAC_ADDR_SIZE 18
-#define MAX_SUPPORTED_20M_CHANNELS beerocks::message::SUPPORTED_CHANNELS_LENGTH
-#define MAX_SUPPORTED_CHANNELS                                                                     \
-    (MAX_SUPPORTED_20M_CHANNELS * 4) //max 64 channels, each with BW 20/40/80/160
 
 /**
  * @brief Supported 802.11 management frame types.
