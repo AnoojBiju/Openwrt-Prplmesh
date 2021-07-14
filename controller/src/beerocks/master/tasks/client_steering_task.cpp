@@ -367,6 +367,7 @@ void client_steering_task::handle_event(int event_type, void *obj)
         }
     } else if (event_type == BTM_REPORT_RECEIVED) {
         m_btm_report_received = true;
+        m_status_code         = *(uint8_t *)obj;
     }
 }
 
@@ -393,6 +394,8 @@ bool client_steering_task::dm_set_steer_event_params(const std::string &event_pa
     }
     ambiorix_dm->set(event_path, "DeviceId", m_sta_mac);
     ambiorix_dm->set(event_path, "SteeredFrom", m_original_bssid);
+    ambiorix_dm->set(event_path, "StatusCode", m_status_code);
+    m_database.dm_set_status(event_path, m_status_code);
     ambiorix_dm->set_current_time(event_path);
     if (m_steering_success) {
         ambiorix_dm->set(event_path, "Result", std::string("Success"));

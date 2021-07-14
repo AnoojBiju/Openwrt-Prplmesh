@@ -657,6 +657,13 @@ public:
                             const std::vector<wfa_map::cNeighbors> &neighbors,
                             const std::string &ISO_8601_timestamp);
 
+    /** @brief Set 'Status' parameter of NBAPI 'SteerEvent' object.
+     * 
+     * @param event_path Path to NBAPI 'SteerEvent' object.
+     * @param status_code Status code of client steering.
+     */
+    void dm_set_status(const std::string &event_path, const uint8_t status_code);
+
     /**
      * @brief Adds NBAPI SteerEvent object.
      * Data model path example: "Controller.SteerEvent.42"

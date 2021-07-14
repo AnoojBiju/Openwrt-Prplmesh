@@ -60,6 +60,7 @@ private:
     std::string m_steering_type;
     std::string m_ssid_name;
     std::string m_original_bssid;
+    uint8_t m_status_code;
     bool m_steering_success  = false;
     bool m_disassoc_imminent = true;
     const int m_disassoc_timer_ms;

@@ -5859,6 +5859,26 @@ std::string db::dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client
     return sta_instance;
 }
 
+void db::dm_set_status(const std::string &event_path, const uint8_t status_code)
+{
+    uint8_t max_status_code = 9;
+    std::string m_status_code_vals[max_status_code]{
+        "Accept",
+        "Unspecified reject reason",
+        "Insufficient Beacon or Probe Response frames received",
+        "Insufficient available capacity from all candidates",
+        "BSS termination undesired",
+        "BSS termination delay requested",
+        "STA BSS Transition Candidate List provided",
+        "No suitable BSS transition candidates",
+        "Reject—Leaving ESS"};
+
+    // By default status is in datamodel is 'Unknown'
+    if (status_code < max_status_code) {
+        m_ambiorix_datamodel->set(event_path, "Status", m_status_code_vals[status_code]);
+    }
+}
+
 std::string db::dm_add_steer_event()
 {
     if (!dm_check_objects_limit(m_steer_events, MAX_EVENT_HISTORY_SIZE)) {
