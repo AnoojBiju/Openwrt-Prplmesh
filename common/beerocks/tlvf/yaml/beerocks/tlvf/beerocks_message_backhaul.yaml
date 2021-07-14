@@ -67,10 +67,6 @@ cACTION_BACKHAUL_ENABLE_APS_REQUEST:
   bandwidth: beerocks::eWiFiBandwidth
   center_channel: uint8_t
 
-cACTION_BACKHAUL_ROAM_REQUEST:
-  _type: class
-  params: sBackhaulRoam
-
 cACTION_BACKHAUL_RESET:
   _type: class
 
