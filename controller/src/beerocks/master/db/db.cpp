@@ -107,6 +107,18 @@ std::pair<std::string, int> db::get_dm_index_from_path(const std::string &dm_pat
 
 // static - end
 
+std::shared_ptr<Agent> db::get_agent_by_radio_uid(const sMacAddr &radio_uid)
+{
+    for (const auto &agent_map_element : m_agents) {
+        const auto &agent = agent_map_element.second;
+        if (agent->radios.find(radio_uid) != agent->radios.end()) {
+            return agent;
+        }
+    }
+    LOG(ERROR) << "No agent containing radio " << radio_uid << " found";
+    return {};
+}
+
 std::shared_ptr<Agent::sRadio> db::get_radio(const sMacAddr &al_mac, const sMacAddr &radio_uid)
 {
     auto agent = m_agents.get(al_mac);

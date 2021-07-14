@@ -296,6 +296,16 @@ public:
     void dm_uint64_param_one_up(const std::string &obj_path, const char *param_name);
 
     /**
+     * @brief Get agent containing a specific radio
+     *
+     * If no radio with the given radio_uid exists, an error is logged (and nullptr returned).
+     *
+     * @param radio_uid Radio UID of the radio.
+     * @return The Agent object, or nullptr if it doesn't exist.
+     */
+    std::shared_ptr<Agent> get_agent_by_radio_uid(const sMacAddr &radio_uid);
+
+    /**
      * @brief Get radio on a specific agent
      *
      * If no agent with the given al_mac exists, an error is logged (and nullptr returned). If no
