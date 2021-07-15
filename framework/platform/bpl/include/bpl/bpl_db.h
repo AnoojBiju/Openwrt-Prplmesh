@@ -10,7 +10,6 @@
 #define _BPL_DB_H_
 
 #include "bpl.h"
-#include "bpl_err.h"
 #include <stdint.h>
 #include <string>
 #include <unordered_map>
