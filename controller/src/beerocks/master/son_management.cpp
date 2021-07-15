@@ -2064,7 +2064,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         // If client doesn't have node in runtime DB - add node to runtime DB.
         if (!database.has_node(client_mac)) {
             LOG(DEBUG) << "Setting a client which doesn't exist in DB, adding client to DB";
-            if (!database.add_node_client(client_mac)) {
+            if (!database.add_node_station(client_mac)) {
                 LOG(ERROR) << "Failed to add client node for client " << client_mac;
                 send_response(false);
                 break;

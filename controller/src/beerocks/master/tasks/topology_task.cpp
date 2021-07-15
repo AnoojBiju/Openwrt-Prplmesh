@@ -438,7 +438,7 @@ bool topology_task::handle_topology_notification(const std::string &src_mac,
 
     if (client_connected) {
         //add or update node parent
-        database.add_node_client(client_mac, bssid);
+        database.add_node_station(client_mac, bssid);
 
         LOG(INFO) << "client connected, mac=" << client_mac_str << ", bssid=" << bssid_str;
 

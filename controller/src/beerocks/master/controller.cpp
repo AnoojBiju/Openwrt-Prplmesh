@@ -3226,7 +3226,7 @@ bool Controller::handle_cmdu_control_message(
 
         if (!database.has_node(tlvf::mac_from_string(client_mac))) {
             LOG(DEBUG) << "client mac not in DB, add temp node " << client_mac;
-            database.add_node_client(tlvf::mac_from_string(client_mac));
+            database.add_node_station(tlvf::mac_from_string(client_mac));
             database.update_node_last_seen(client_mac);
         }
 
