@@ -1792,30 +1792,6 @@ bool BackhaulManager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo> 
         }
         break;
     }
-    case beerocks_message::ACTION_BACKHAUL_ROAM_REQUEST: {
-        auto request = beerocks_header->addClass<beerocks_message::cACTION_BACKHAUL_ROAM_REQUEST>();
-        if (!request) {
-            LOG(ERROR) << "addClass ACTION_BACKHAUL_ROAM_REQUEST failed";
-            return false;
-        }
-        roam_selected_bssid_channel = request->params().channel;
-        roam_selected_bssid         = tlvf::mac_to_string(request->params().bssid);
-        roam_flag                   = true;
-        LOG(DEBUG) << "ACTION_BACKHAUL_ROAM_REQUEST to bssid=" << roam_selected_bssid
-                   << " on channel=" << int(roam_selected_bssid_channel);
-
-        /*
-        * NOTE: Why moving to RESTART state? It causing BACKHAUL DISCONNECTED to the son slaves,
-        * which in the past (when we had TCP socket to the controller instead of the bus)
-        * disconnected the socket, but now when we have bus it is not happening anyway.
-        * Another thing it is causing is to re-scan the for networks. Is it really necessary?
-        * Can we just move immediately to WIRELESS_ASSOCIATE_4ADDR, and then when successfully
-        * connected, notify the agent about the ne bssid?
-        */
-        FSM_MOVE_STATE(RESTART);
-        break;
-    }
-
     case beerocks_message::ACTION_BACKHAUL_UPDATE_STOP_ON_FAILURE_ATTEMPTS_REQUEST: {
         LOG(DEBUG) << "ACTION_BACKHAUL_UPDATE_STOP_ON_FAILURE_ATTEMPTS_REQUEST received from iface "
                    << soc->sta_iface;
