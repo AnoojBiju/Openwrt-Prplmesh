@@ -12,6 +12,7 @@
 #include "bml_task.h"
 
 #include <beerocks/tlvf/beerocks_message_1905_vs.h>
+#include <ctime>
 #include <easylogging++.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringRequest.h>
 #include <tlvf/wfa_map/tlvClientAssociationControlRequest.h>
@@ -352,8 +353,15 @@ void client_steering_task::handle_event(int event_type, void *obj)
             TASK_LOG(ERROR) << "sta " << m_sta_mac << " steered to bssid " << connected_bssid
                             << " ,target bssid was " << m_target_bssid;
         }
+        if (m_disassoc_ts.time_since_epoch().count() &&
+            m_disassoc_ts < std::chrono::steady_clock::now()) {
+            m_duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - m_disassoc_ts);
+            m_disassoc_ts = {};
+        }
     } else if (event_type == STA_DISCONNECTED) {
         TASK_LOG(DEBUG) << "sta " << m_sta_mac << " disconnected due to steering request";
+        m_disassoc_ts = std::chrono::steady_clock::now();
     } else if (event_type == BSS_TM_REQUEST_REJECTED) {
         TASK_LOG(DEBUG) << "sta " << m_sta_mac << " rejected BSS_TM request";
         if (m_disassoc_imminent) {
@@ -400,6 +408,7 @@ bool client_steering_task::dm_set_steer_event_params(const std::string &event_pa
     if (m_steering_success) {
         ambiorix_dm->set(event_path, "Result", std::string("Success"));
         ambiorix_dm->set(event_path, "SteeredTo", m_target_bssid);
+        ambiorix_dm->set(event_path, "TimeTaken", m_duration.count());
 
         int8_t rx_rssi = 0, rx_packets = 0;
 
@@ -413,7 +422,12 @@ bool client_steering_task::dm_set_steer_event_params(const std::string &event_pa
 
     std::string steer_origin = "Unknown";
 
-    // For the time being, Agent doesn't do steering, skip setting Agent steer origin.
+    // For the time being, Agent doesn't steer, skip setting Agent steer origin.
+    if (m_duration / std::chrono::seconds(1) < 10) {
+        // If the duration is smaller than some compile-time defined threshold,
+        // e.g. 10s, it is considered a steering event originated by the station
+        steer_origin = "Station";
+    }
     if (m_triggered_by.find("CLI") != std::string::npos) {
         steer_origin = "CLI";
     }

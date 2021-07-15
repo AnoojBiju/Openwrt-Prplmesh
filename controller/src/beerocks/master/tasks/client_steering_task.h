@@ -68,6 +68,18 @@ private:
     bool m_steer_restricted    = false;
 
     /**
+     * @brief The timestamp when a STA disconnected.
+     */
+    std::chrono::steady_clock::time_point m_disassoc_ts;
+
+    /**
+     * @brief The duration between STA disassociation and association event.
+     * If timestamp for disassociation event (m_disassoc_ts) was not set
+     * m_duration is set to zero.
+     */
+    std::chrono::milliseconds m_duration = {};
+
+    /**
      * @brief A flag to determine if a steer was actually performed or not since in case 
      * that the client decided to move on its own to the target BSSID, we would not want
      * to flag it as non-responsive or consider the flow as failed.
