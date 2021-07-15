@@ -18,36 +18,37 @@ FROM ubuntu:18.04
 # fakeroot is used by Ambiorix - though this requirement will be removed in the next release
 RUN apt-get update \
     && apt-get -y install --no-install-recommends \
-        build-essential \
-        chrpath \
-        cpio \
-        debianutils \
-        diffstat \
-        fakeroot \
-        file \
-        gawk \
-        gcc-multilib \
-        git-core \
-        gnupg \
-        iputils-ping \
-        less \
-        locales \
-        pylint3 \
-        python \
-        python-yaml \
-        python3 \
-        python3-git \
-        python3-jinja2 \
-        python3-pexpect \
-        python3-pip \
-        python3-yaml \
-        rsync \
-        socat \
-        texinfo \
-        unzip \
-        vim \
-        wget \
-        xz-utils \
+    build-essential \
+    chrpath \
+    cpio \
+    debianutils \
+    diffstat \
+    fakeroot \
+    file \
+    gawk \
+    gcc-multilib \
+    git-core \
+    gnupg \
+    iputils-ping \
+    less \
+    locales \
+    pylint3 \
+    python \
+    python-yaml \
+    python3 \
+    python3-git \
+    python3-jinja2 \
+    python3-pexpect \
+    python3-pip \
+    python3-yaml \
+    rsync \
+    socat \
+    texinfo \
+    unzip \
+    vim \
+    wget \
+    xz-utils \
+    openssh-client \
     && rm -rf /var/lib/apt/lists/* \
     # Ubuntu has a repo package, but it's too old
     && wget -O /usr/bin/repo https://storage.googleapis.com/git-repo-downloads/repo \
@@ -77,7 +78,7 @@ ENV GIT_ASKPASS=/usr/bin/git-askpass
 ARG RDK_GIT_USER
 ARG RDK_GIT_TOKEN
 RUN git config --global \
-        "url.https://$RDK_GIT_USER@code.rdkcentral.com/.insteadOf" https://code.rdkcentral.com/ \
+    "url.https://$RDK_GIT_USER@code.rdkcentral.com/.insteadOf" https://code.rdkcentral.com/ \
     && git config --global user.email "prplmesh@prplfoundation.org" \
     && git config --global user.name "prplMesh RDK-B Build Bot" \
     && mkdir /home/rdk/rdk-b /home/rdk/cache
@@ -85,14 +86,14 @@ WORKDIR /home/rdk/rdk-b
 
 RUN printf '\033[1;35m%s Cloning RDK-B\n\033[0m' "$(date --iso-8601=seconds --universal)" \
     && yes | repo init -u https://code.rdkcentral.com/r/manifests \
-        -m rdkb-turris-extsrc.xml -b rdkb-2021q1-dunfell \
+    -m rdkb-turris-extsrc.xml -b rdkb-2021q2-dunfell \
     && repo sync
 
 # Fix a bug in "current" turris setup with meta-rdk-ext
 # curl pulls in openssl-1.0.2o; openssl on turris is fixed up to use ocf-linux instead of
 # cryptodev-linux, so we need to do the same for openssl-1.0.2o
 RUN cp meta-turris/recipes-connectivity/openssl/openssl_%.bbappend \
-       meta-turris/recipes-connectivity/openssl/openssl-1.0.2o_%.bbappend
+    meta-turris/recipes-connectivity/openssl/openssl-1.0.2o_%.bbappend
 
 ADD get-git-hash.sh /bin/
 
