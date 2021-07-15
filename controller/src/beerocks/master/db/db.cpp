@@ -287,10 +287,10 @@ std::shared_ptr<sAgent> db::add_node_ire(const sMacAddr &mac, const sMacAddr &pa
     return agent;
 }
 
-bool db::add_node_wireless_bh(const sMacAddr &mac, const sMacAddr &parent_mac)
+bool db::add_node_wireless_backhaul(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
     if (!add_node(mac, parent_mac, beerocks::TYPE_IRE_BACKHAUL)) {
-        LOG(ERROR) << "Failed to add wireless_bh node, mac: " << mac;
+        LOG(ERROR) << "Failed to add wireless_backhaul node, mac: " << mac;
         return false;
     }
 
