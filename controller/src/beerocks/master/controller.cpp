@@ -398,7 +398,7 @@ bool Controller::handle_cmdu(int fd, uint32_t iface_index, const sMacAddr &dst_m
         }
     } else {
         LOG(DEBUG) << "received 1905.1 cmdu message";
-        handle_cmdu_1905_1_message(tlvf::mac_to_string(src_mac), cmdu_rx);
+        handle_cmdu_1905_1_message(src_mac, cmdu_rx);
         tasks.handle_ieee1905_1_msg(tlvf::mac_to_string(src_mac), cmdu_rx);
     }
 
@@ -435,7 +435,7 @@ bool Controller::handle_cmdu_from_broker(uint32_t iface_index, const sMacAddr &d
                        src_mac, cmdu_rx);
 }
 
-bool Controller::handle_cmdu_1905_1_message(const std::string &src_mac,
+bool Controller::handle_cmdu_1905_1_message(const sMacAddr &src_mac,
                                             ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     switch (cmdu_rx.getMessageType()) {
@@ -484,7 +484,7 @@ bool Controller::handle_cmdu_1905_1_message(const std::string &src_mac,
     return true;
 }
 
-bool Controller::handle_cmdu_1905_autoconfiguration_search(const std::string &src_mac,
+bool Controller::handle_cmdu_1905_autoconfiguration_search(const sMacAddr &src_mac,
                                                            ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     LOG(DEBUG) << "Received AP_AUTOCONFIGURATION_SEARCH_MESSAGE";
@@ -631,7 +631,7 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const std::string &sr
         // mark slave as prplMesh
         LOG(DEBUG) << "prplMesh agent: received ACTION_CONTROL_SLAVE_HANDSHAKE_REQUEST from "
                    << src_mac;
-        database.set_prplmesh(tlvf::mac_from_string(src_mac));
+        database.set_prplmesh(src_mac);
         // response with handshake response to mark the controller as prplmesh
         auto response = beerocks::message_com::add_vs_tlv<
             beerocks_message::cACTION_CONTROL_SLAVE_HANDSHAKE_RESPONSE>(cmdu_tx);
@@ -658,7 +658,7 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const std::string &sr
         }
     }
 
-    return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
+    return son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
 }
 
 /**
@@ -921,7 +921,7 @@ bool Controller::autoconfig_wsc_add_m2(WSC::m1 &m1,
  * @return true on success
  * @return false on failure
  */
-bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const std::string &src_mac,
+bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
                                                         ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     LOG(DEBUG) << "Received AP_AUTOCONFIGURATION_WSC_MESSAGE";
@@ -1044,7 +1044,7 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const std::string &src_m
     return true;
 }
 
-bool Controller::handle_cmdu_1905_channel_preference_report(const std::string &src_mac,
+bool Controller::handle_cmdu_1905_channel_preference_report(const sMacAddr &src_mac,
                                                             ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto mid = cmdu_rx.getMessageId();
@@ -1067,7 +1067,7 @@ bool Controller::handle_cmdu_1905_channel_preference_report(const std::string &s
         return false;
     }
 
-    auto agent = database.m_agents.get(tlvf::mac_from_string(src_mac));
+    auto agent = database.m_agents.get(src_mac);
     if (!agent) {
         LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
         return false;
@@ -1097,7 +1097,7 @@ bool Controller::handle_cmdu_1905_channel_preference_report(const std::string &s
         return false;
     }
     LOG(DEBUG) << "sending ACK message back to agent";
-    son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
+    son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
 
     // TODO In production mode (not certification), we need to store the channel preference (PPM-201)
     // report in the DB which will in turn be used by the channel selection task.
@@ -1219,7 +1219,7 @@ bool Controller::handle_cmdu_1905_channel_preference_report(const std::string &s
     return true; // cert_cmdu_tx will be sent when triggered to by the UCC application
 }
 
-bool Controller::handle_cmdu_1905_ack_message(const std::string &src_mac,
+bool Controller::handle_cmdu_1905_ack_message(const sMacAddr &src_mac,
                                               ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto mid = cmdu_rx.getMessageId();
@@ -1242,7 +1242,7 @@ bool Controller::handle_cmdu_1905_ack_message(const std::string &src_mac,
     return true;
 }
 
-bool Controller::handle_cmdu_1905_steering_completed_message(const std::string &src_mac,
+bool Controller::handle_cmdu_1905_steering_completed_message(const sMacAddr &src_mac,
                                                              ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto mid = cmdu_rx.getMessageId();
@@ -1255,11 +1255,11 @@ bool Controller::handle_cmdu_1905_steering_completed_message(const std::string &
         return false;
     }
     LOG(DEBUG) << "sending ACK message back to agent, mid=" << std::hex << int(mid);
-    return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
+    return son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
 }
 
 bool Controller::handle_cmdu_1905_client_capability_report_message(
-    const std::string &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
+    const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto mid                          = cmdu_rx.getMessageId();
     auto client_capability_report_tlv = cmdu_rx.getClass<wfa_map::tlvClientCapabilityReport>();
@@ -1296,7 +1296,7 @@ bool Controller::handle_cmdu_1905_client_capability_report_message(
 }
 
 bool Controller::handle_cmdu_1905_client_steering_btm_report_message(
-    const std::string &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
+    const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto mid = cmdu_rx.getMessageId();
     LOG(INFO) << "Received CLIENT_STEERING_BTM_REPORT_MESSAGE, mid=" << std::hex << int(mid);
@@ -1315,7 +1315,7 @@ bool Controller::handle_cmdu_1905_client_steering_btm_report_message(
         return false;
     }
     LOG(DEBUG) << "sending ACK message back to agent";
-    son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
+    son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
 
     std::string client_mac = tlvf::mac_to_string(steering_btm_report->sta_mac());
     uint8_t status_code    = steering_btm_report->btm_status_code();
@@ -1340,7 +1340,7 @@ bool Controller::handle_cmdu_1905_client_steering_btm_report_message(
     return true;
 }
 
-bool Controller::handle_cmdu_1905_channel_selection_response(const std::string &src_mac,
+bool Controller::handle_cmdu_1905_channel_selection_response(const sMacAddr &src_mac,
                                                              ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto mid = cmdu_rx.getMessageId();
@@ -1382,7 +1382,7 @@ bool Controller::handle_cmdu_1905_channel_selection_response(const std::string &
     return true;
 }
 
-bool Controller::handle_cmdu_1905_channel_scan_report(const std::string &src_mac,
+bool Controller::handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
                                                       ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto current_message_mid = cmdu_rx.getMessageId();
@@ -1467,7 +1467,7 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const std::string &src_mac
 
     // Zero Error Code TLVs in this ACK message
     LOG(DEBUG) << "Sending ACK message to the originator, mid=" << std::hex << current_message_mid;
-    if (!send_cmdu_to_broker(cmdu_tx, tlvf::mac_from_string(src_mac),
+    if (!send_cmdu_to_broker(cmdu_tx, src_mac,
                              tlvf::mac_from_string(database.get_local_bridge_mac()))) {
         LOG(ERROR) << "Failed to send ACK_MESSAGE back to agent";
         return false;
@@ -1481,7 +1481,7 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const std::string &src_mac
      * For prplmesh agents need to check the report_done flag inside tlvChannelScanReportDone
      */
     bool report_done = true;
-    if (database.is_prplmesh(tlvf::mac_from_string(src_mac))) {
+    if (database.is_prplmesh(src_mac)) {
         /**
          * For prplmesh agents, we wish to support de-fragmentation of channel scan results across
          * multiple report CMDUs when the size of the results exceeds the max TX buffer size.
@@ -1507,7 +1507,7 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const std::string &src_mac
         dynamic_channel_selection_r2_task::sScanReportEvent new_event = {};
 
         new_event.mid       = report_mid;
-        new_event.agent_mac = tlvf::mac_from_string(src_mac);
+        new_event.agent_mac = src_mac;
         tasks.push_event(database.get_dynamic_channel_selection_r2_task_id(),
                          dynamic_channel_selection_r2_task::eEvent::RECEIVED_CHANNEL_SCAN_REPORT,
                          &new_event);
@@ -1518,7 +1518,7 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const std::string &src_mac
     return true;
 }
 
-bool Controller::handle_cmdu_1905_ap_metric_response(const std::string &src_mac,
+bool Controller::handle_cmdu_1905_ap_metric_response(const sMacAddr &src_mac,
                                                      ieee1905_1::CmduMessageRx &cmdu_rx)
 {
 
@@ -1584,7 +1584,7 @@ bool Controller::handle_cmdu_1905_ap_metric_response(const std::string &src_mac,
                                               radio_tlv->receive_other());
     }
 
-    auto agent = database.m_agents.get(tlvf::mac_from_string(src_mac));
+    auto agent = database.m_agents.get(src_mac);
     if (!agent) {
         LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
         return false;
@@ -1630,7 +1630,7 @@ bool Controller::handle_tlv_ap_he_capabilities(ieee1905_1::CmduMessageRx &cmdu_r
 }
 
 bool Controller::handle_cmdu_1905_associated_sta_link_metrics_response_message(
-    const std::string &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
+    const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Received ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE, mid=" << std::hex << mid;
@@ -1666,7 +1666,7 @@ bool Controller::handle_tlv_ap_extended_metrics(std::shared_ptr<sAgent> agent,
     return ret_val;
 }
 
-bool Controller::handle_tlv_associated_sta_link_metrics(const std::string &src_mac,
+bool Controller::handle_tlv_associated_sta_link_metrics(const sMacAddr &src_mac,
                                                         ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     bool ret_val = true;
@@ -1702,7 +1702,7 @@ bool Controller::handle_tlv_associated_sta_link_metrics(const std::string &src_m
     return ret_val;
 }
 
-bool Controller::handle_tlv_associated_sta_extended_link_metrics(const std::string &src_mac,
+bool Controller::handle_tlv_associated_sta_extended_link_metrics(const sMacAddr &src_mac,
                                                                  ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     bool ret_val = true;
@@ -1742,12 +1742,12 @@ bool Controller::handle_tlv_associated_sta_extended_link_metrics(const std::stri
     return ret_val;
 }
 
-bool Controller::handle_tlv_associated_sta_traffic_stats(const std::string &src_mac,
+bool Controller::handle_tlv_associated_sta_traffic_stats(const sMacAddr &src_mac,
                                                          ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     bool ret_val = true;
 
-    auto agent = database.m_agents.get(tlvf::mac_from_string(src_mac));
+    auto agent = database.m_agents.get(src_mac);
 
     if (!agent) {
         LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
@@ -1792,7 +1792,7 @@ bool Controller::handle_tlv_ap_vht_capabilities(ieee1905_1::CmduMessageRx &cmdu_
     return ret_val;
 }
 
-bool Controller::handle_cmdu_1905_ap_capability_report(const std::string &src_mac,
+bool Controller::handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
                                                        ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto mid = cmdu_rx.getMessageId();
@@ -1847,7 +1847,7 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const std::string &src_ma
         return false;
     }
 
-    auto agent = database.m_agents.get(tlvf::mac_from_string(src_mac));
+    auto agent = database.m_agents.get(src_mac);
     if (!agent) {
         LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
         return false;
@@ -1863,7 +1863,7 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const std::string &src_ma
     return all_radio_capabilities_saved_successfully;
 }
 
-bool Controller::handle_cmdu_1905_operating_channel_report(const std::string &src_mac,
+bool Controller::handle_cmdu_1905_operating_channel_report(const sMacAddr &src_mac,
                                                            ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto mid = cmdu_rx.getMessageId();
@@ -1909,10 +1909,10 @@ bool Controller::handle_cmdu_1905_operating_channel_report(const std::string &sr
         return false;
     }
 
-    return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
+    return son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
 }
 
-bool Controller::handle_cmdu_1905_higher_layer_data_message(const std::string &src_mac,
+bool Controller::handle_cmdu_1905_higher_layer_data_message(const sMacAddr &src_mac,
                                                             ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     const auto mid = cmdu_rx.getMessageId();
@@ -1936,10 +1936,10 @@ bool Controller::handle_cmdu_1905_higher_layer_data_message(const std::string &s
         return false;
     }
     LOG(DEBUG) << "sending ACK message to the agent, mid=" << std::hex << int(mid);
-    return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
+    return son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
 }
 
-bool Controller::handle_cmdu_1905_backhaul_sta_steering_response(const std::string &src_mac,
+bool Controller::handle_cmdu_1905_backhaul_sta_steering_response(const sMacAddr &src_mac,
                                                                  ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto mid = cmdu_rx.getMessageId();
@@ -1974,10 +1974,10 @@ bool Controller::handle_cmdu_1905_backhaul_sta_steering_response(const std::stri
 
     LOG(DEBUG) << "sending ACK message to the agent, mid=" << std::hex << mid;
 
-    return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
+    return son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
 }
 
-bool Controller::handle_cmdu_1905_tunnelled_message(const std::string &src_mac,
+bool Controller::handle_cmdu_1905_tunnelled_message(const sMacAddr &src_mac,
                                                     ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto mid = cmdu_rx.getMessageId();
@@ -2012,14 +2012,14 @@ bool Controller::handle_cmdu_1905_tunnelled_message(const std::string &src_mac,
     return true;
 }
 
-bool Controller::handle_cmdu_1905_failed_connection_message(const std::string &src_mac,
+bool Controller::handle_cmdu_1905_failed_connection_message(const sMacAddr &src_mac,
                                                             ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     LOG(DEBUG) << "Received Failed Connection Message for STA";
     return true;
 }
 
-bool Controller::handle_cmdu_1905_beacon_response(const std::string &src_mac,
+bool Controller::handle_cmdu_1905_beacon_response(const sMacAddr &src_mac,
                                                   ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     // here we need to extract and keep the data received from the STA
@@ -2030,7 +2030,7 @@ bool Controller::handle_cmdu_1905_beacon_response(const std::string &src_mac,
 }
 
 bool Controller::handle_intel_slave_join(
-    const std::string &src_mac, std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps,
+    const sMacAddr &src_mac, std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps,
     beerocks::beerocks_header &beerocks_header, ieee1905_1::CmduMessageTx &cmdu_tx,
     std::shared_ptr<sAgent> &agent)
 {
@@ -2059,7 +2059,7 @@ bool Controller::handle_intel_slave_join(
     // This is redundent for the normal initilization flow, but is needed for the renew flow
     LOG(DEBUG) << "prplMesh agent: received cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION from "
                << src_mac;
-    database.set_prplmesh(tlvf::mac_from_string(src_mac));
+    database.set_prplmesh(src_mac);
 
     std::string slave_version =
         std::string(notification->slave_version(beerocks::message::VERSION_LENGTH));
@@ -2124,7 +2124,8 @@ bool Controller::handle_intel_slave_join(
                            << (int)(database.has_node(parent_bssid_mac));
 
                 join_response->err_code() = beerocks::JOIN_RESP_REJECT;
-                return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
+                return son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx,
+                                                       database);
             }
         }
 
@@ -2432,7 +2433,7 @@ bool Controller::handle_intel_slave_join(
         join_response->config().ire_rssi_report_rate_sec = database.config.ire_rssi_report_rate_sec;
 
         LOG(DEBUG) << "send SLAVE_JOINED_RESPONSE";
-        son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
+        son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
     }
 
     // calling this function to update arp monitor with new ip addr (bridge ip), which is diffrent from the ip received from, dhcp on the backhaul
@@ -2569,7 +2570,7 @@ bool Controller::autoconfig_wsc_parse_radio_caps(
 }
 
 bool Controller::handle_non_intel_slave_join(
-    const std::string &src_mac, std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps,
+    const sMacAddr &src_mac, std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps,
     const WSC::m1 &m1, std::shared_ptr<sAgent> &agent, const sMacAddr &radio_mac,
     ieee1905_1::CmduMessageTx &cmdu_tx)
 {
@@ -2693,7 +2694,7 @@ bool Controller::handle_non_intel_slave_join(
     LOG(DEBUG) << "BML, sending IRE connect CONNECTION_CHANGE for mac " << bml_new_event.mac;
 
     LOG(DEBUG) << "send AP_AUTOCONFIG_WSC M2";
-    return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
+    return son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
 }
 
 bool Controller::handle_cmdu_control_message(
