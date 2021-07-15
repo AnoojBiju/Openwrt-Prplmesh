@@ -26,11 +26,6 @@
 #include <amxo/amxo_save.h>
 
 #include "ambiorix_impl.h"
-#include <easylogging++.h>
-
-#include <chrono>
-#include <ctime>
-#include <easylogging++.h>
 
 #include "../src/beerocks/master/db/db.h"
 #include "../src/beerocks/master/son_actions.h"

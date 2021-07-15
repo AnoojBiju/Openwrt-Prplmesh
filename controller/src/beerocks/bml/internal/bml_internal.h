@@ -12,7 +12,6 @@
 #include <bcl/beerocks_config_file.h>
 #include <bcl/beerocks_promise.h>
 #include <bcl/beerocks_socket_thread.h>
-#include <bcl/network/network_utils.h>
 #include <bcl/son/son_wireless_utils.h>
 
 #include <beerocks/tlvf/beerocks_message_common.h>

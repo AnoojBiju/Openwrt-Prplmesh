@@ -19,11 +19,8 @@
 
 #include <tlvf/wfa_map/tlvApHeCapabilities.h>
 #include <tlvf/wfa_map/tlvApHtCapabilities.h>
-#include <tlvf/wfa_map/tlvApRadioBasicCapabilities.h>
 #include <tlvf/wfa_map/tlvApVhtCapabilities.h>
 #include <tlvf/wfa_map/tlvAssociatedStaExtendedLinkMetrics.h>
-#include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
-#include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>
 
 #include <algorithm>
 #include <mutex>

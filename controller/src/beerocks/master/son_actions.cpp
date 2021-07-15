@@ -13,7 +13,6 @@
 #include "tasks/bml_task.h"
 #include "tasks/client_steering_task.h"
 
-#include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
 #include <bcl/network/sockets.h>
 #include <bcl/son/son_wireless_utils.h>

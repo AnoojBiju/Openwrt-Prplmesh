@@ -6,7 +6,6 @@
  * See LICENSE file for more details.
  */
 
-#include <bcl/beerocks_utils.h>
 #include <bcl/beerocks_version.h>
 
 #include <cstdio>

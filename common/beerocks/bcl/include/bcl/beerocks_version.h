@@ -11,6 +11,8 @@
 
 #include "beerocks_defines.h"
 
+#include <string>
+
 namespace beerocks {
 
 // This will default the version to 0.0.0 if not supplied by the Makefile. This will never

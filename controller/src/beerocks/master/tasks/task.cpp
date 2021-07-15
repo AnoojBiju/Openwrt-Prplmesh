@@ -8,7 +8,6 @@
 
 #include "task.h"
 
-#include <bcl/beerocks_utils.h>
 #include <easylogging++.h>
 
 using namespace beerocks;

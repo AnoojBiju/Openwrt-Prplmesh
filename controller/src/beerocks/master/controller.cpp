@@ -31,6 +31,7 @@
 #include "tasks/network_health_check_task.h"
 
 #include <bcl/beerocks_backport.h>
+#include <bcl/beerocks_utils.h>
 #include <bcl/beerocks_version.h>
 #include <bcl/network/sockets.h>
 #include <bcl/son/son_wireless_utils.h>

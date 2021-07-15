@@ -9,7 +9,6 @@
 #include "cac_status_database.h"
 #include "agent_db.h"
 #include "cac_capabilities_database.h"
-#include <bcl/beerocks_utils.h>
 
 namespace beerocks {
 

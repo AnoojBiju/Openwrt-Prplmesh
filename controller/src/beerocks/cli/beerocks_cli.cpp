@@ -14,6 +14,8 @@
 #include <iterator>
 #include <map>
 #include <sstream>
+#include <sys/ioctl.h>
+#include <unistd.h>
 
 using namespace beerocks;
 

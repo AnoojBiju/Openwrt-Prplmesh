@@ -10,7 +10,6 @@
 #define AMBIORIX_H
 
 #include <easylogging++.h>
-#include <mapf/common/utils.h>
 
 namespace beerocks {
 namespace nbapi {

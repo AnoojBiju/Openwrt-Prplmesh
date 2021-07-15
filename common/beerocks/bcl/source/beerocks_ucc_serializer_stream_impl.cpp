@@ -8,7 +8,6 @@
 
 #include <bcl/beerocks_ucc_serializer_stream_impl.h>
 
-#include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
 
 namespace beerocks {

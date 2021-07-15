@@ -16,7 +16,6 @@
 #include <tlvf/ieee_1905_1/eMediaType.h>
 #include <tlvf/wfa_map/tlvApMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
-#include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
 
 #include "bcl/network/network_utils.h"
 

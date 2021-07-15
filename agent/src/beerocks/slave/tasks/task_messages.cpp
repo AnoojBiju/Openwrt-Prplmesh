@@ -7,7 +7,6 @@
  */
 
 #include "task_messages.h"
-#include <bcl/son/son_wireless_utils.h>
 #include <beerocks/tlvf/beerocks_message.h>
 
 namespace beerocks {

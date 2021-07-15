@@ -14,7 +14,6 @@
 
 #include "net_struct.h"
 #include <cstdint>
-#include <easylogging++.h>
 #include <list>
 #include <string>
 #include <vector>

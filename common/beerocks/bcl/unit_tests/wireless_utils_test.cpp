@@ -6,7 +6,6 @@
  * See LICENSE file for more details.
  */
 
-#include <bcl/beerocks_utils.h>
 #include <bcl/son/son_wireless_utils.h>
 
 #include <gtest/gtest.h>

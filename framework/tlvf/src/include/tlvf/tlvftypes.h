@@ -9,8 +9,6 @@
 #ifndef _TLVF_TYPES_H_
 #define _TLVF_TYPES_H_
 
-#include <easylogging++.h>
-#include <iomanip>
 #include <sstream>
 #include <tlvf/CmduMessageTx.h>
 #include <tlvf/common/sMacAddr.h>
