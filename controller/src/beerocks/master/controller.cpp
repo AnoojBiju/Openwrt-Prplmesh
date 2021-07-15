@@ -2714,10 +2714,11 @@ bool Controller::handle_non_intel_slave_join(
 bool Controller::handle_cmdu_control_message(
     const sMacAddr &src_mac, std::shared_ptr<beerocks::beerocks_header> beerocks_header)
 {
-    std::string hostap_mac = tlvf::mac_to_string(beerocks_header->actionhdr()->radio_mac());
+    sMacAddr radio_mac        = beerocks_header->actionhdr()->radio_mac();
+    std::string radio_mac_str = tlvf::mac_to_string(radio_mac);
 
     // Sanity tests
-    if (hostap_mac == beerocks::net::network_utils::ZERO_MAC_STRING) {
+    if (radio_mac == beerocks::net::network_utils::ZERO_MAC) {
         LOG(ERROR) << "CMDU received with id=" << int(beerocks_header->id())
                    << " op=" << int(beerocks_header->action_op()) << " with empty mac!";
         return false;
@@ -2728,15 +2729,15 @@ bool Controller::handle_cmdu_control_message(
     }
 
     //Update all (Slaves) last seen timestamp
-    if (database.get_node_type(hostap_mac) == beerocks::TYPE_SLAVE) {
-        database.update_node_last_seen(hostap_mac);
+    if (database.get_node_type(radio_mac_str) == beerocks::TYPE_SLAVE) {
+        database.update_node_last_seen(radio_mac_str);
     }
 
     switch (beerocks_header->action_op()) {
     case beerocks_message::ACTION_CONTROL_HOSTAP_SET_RESTRICTED_FAILSAFE_CHANNEL_RESPONSE: {
         LOG(DEBUG)
             << "received ACTION_CONTROL_HOSTAP_SET_RESTRICTED_FAILSAFE_CHANNEL_RESPONSE from "
-            << hostap_mac;
+            << radio_mac;
         auto response = beerocks_header->addClass<
             beerocks_message::cACTION_CONTROL_HOSTAP_SET_RESTRICTED_FAILSAFE_CHANNEL_RESPONSE>();
 
@@ -2765,11 +2766,10 @@ bool Controller::handle_cmdu_control_message(
         }
 
         int vap_id = notification->vap_id();
-        LOG(INFO) << "received ACTION_CONTROL_HOSTAP_AP_DISABLED_NOTIFICATION from " << hostap_mac
+        LOG(INFO) << "received ACTION_CONTROL_HOSTAP_AP_DISABLED_NOTIFICATION from " << radio_mac
                   << " vap_id=" << vap_id;
 
-        const auto disabled_bssid =
-            database.get_hostap_vap_mac(tlvf::mac_from_string(hostap_mac), vap_id);
+        const auto disabled_bssid = database.get_hostap_vap_mac(radio_mac, vap_id);
         if (disabled_bssid == beerocks::net::network_utils::ZERO_MAC) {
             LOG(INFO) << "AP Disabled on unknown vap, vap_id=" << vap_id;
             break;
@@ -2782,16 +2782,16 @@ bool Controller::handle_cmdu_control_message(
         }
 
         // Update BSSes in the sAgent
-        auto radio = database.get_radio(src_mac, tlvf::mac_from_string(hostap_mac));
+        auto radio = database.get_radio(src_mac, radio_mac);
         if (!radio) {
-            LOG(ERROR) << "No radio found for radio_uid " << hostap_mac << " on " << src_mac;
+            LOG(ERROR) << "No radio found for radio_uid " << radio_mac << " on " << src_mac;
             break;
         }
 
         database.remove_vap(*radio, vap_id);
 
         if (radio->bsses.erase(disabled_bssid) != 1) {
-            LOG(ERROR) << "No BSS " << disabled_bssid << " could be erased on " << hostap_mac;
+            LOG(ERROR) << "No BSS " << disabled_bssid << " could be erased on " << radio_mac;
         }
 
         break;
@@ -2807,20 +2807,19 @@ bool Controller::handle_cmdu_control_message(
         }
 
         int vap_id = notification->vap_id();
-        LOG(INFO) << "received ACTION_CONTROL_HOSTAP_AP_ENABLED_NOTIFICATION from " << hostap_mac
+        LOG(INFO) << "received ACTION_CONTROL_HOSTAP_AP_ENABLED_NOTIFICATION from " << radio_mac
                   << " vap_id=" << vap_id;
 
-        std::string radio_mac = hostap_mac;
-        auto bssid            = notification->vap_info().mac;
-        auto ssid             = std::string((char *)notification->vap_info().ssid);
+        auto bssid = notification->vap_info().mac;
+        auto ssid  = std::string((char *)notification->vap_info().ssid);
 
-        database.add_vap(radio_mac, vap_id, tlvf::mac_to_string(bssid), ssid,
+        database.add_vap(radio_mac_str, vap_id, tlvf::mac_to_string(bssid), ssid,
                          notification->vap_info().backhaul_vap);
 
         // Update BSSes in the sAgent
-        auto radio = database.get_radio(src_mac, tlvf::mac_from_string(hostap_mac));
+        auto radio = database.get_radio(src_mac, radio_mac);
         if (!radio) {
-            LOG(ERROR) << "No radio found for radio_uid " << hostap_mac << " on " << src_mac;
+            LOG(ERROR) << "No radio found for radio_uid " << radio_mac << " on " << src_mac;
             break;
         }
 
@@ -2832,23 +2831,23 @@ bool Controller::handle_cmdu_control_message(
 
         // update bml listeners
         bml_task::connection_change_event new_event;
-        new_event.mac = database.get_node_parent_ire(radio_mac);
+        new_event.mac = database.get_node_parent_ire(radio_mac_str);
         tasks.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE, &new_event);
         LOG(DEBUG) << "BML, sending IRE connect CONNECTION_CHANGE for mac " << new_event.mac;
 
         break;
     }
     case beerocks_message::ACTION_CONTROL_HOSTAP_CSA_ERROR_NOTIFICATION: {
-        std::string backhaul_mac = database.get_node_parent(hostap_mac);
+        std::string backhaul_mac = database.get_node_parent(radio_mac_str);
 
-        LOG(ERROR) << "Hostap CSA ERROR for IRE " << backhaul_mac << " hostap mac=" << hostap_mac;
+        LOG(ERROR) << "Hostap CSA ERROR for IRE " << backhaul_mac << " hostap mac=" << radio_mac;
 
         // TODO handle CSA error
-        son_actions::set_hostap_active(database, tasks, hostap_mac, false);
+        son_actions::set_hostap_active(database, tasks, radio_mac_str, false);
         break;
     }
     case beerocks_message::ACTION_CONTROL_HOSTAP_CSA_NOTIFICATION: {
-        LOG(DEBUG) << "ACTION_CONTROL_HOSTAP_CSA_NOTIFICATION from " << hostap_mac;
+        LOG(DEBUG) << "ACTION_CONTROL_HOSTAP_CSA_NOTIFICATION from " << radio_mac;
 
         auto notification =
             beerocks_header->addClass<beerocks_message::cACTION_CONTROL_HOSTAP_CSA_NOTIFICATION>();
@@ -2857,7 +2856,7 @@ bool Controller::handle_cmdu_control_message(
             return false;
         }
 
-        LOG(DEBUG) << "CS_task,sending CSA_EVENT for mac " << hostap_mac;
+        LOG(DEBUG) << "CS_task,sending CSA_EVENT for mac " << radio_mac;
         auto new_event = CHANNEL_SELECTION_ALLOCATE_EVENT(channel_selection_task::sCsa_event);
         new_event->hostap_mac = beerocks_header->actionhdr()->radio_mac();
         new_event->cs_params  = notification->cs_params();
@@ -2866,7 +2865,7 @@ bool Controller::handle_cmdu_control_message(
         break;
     }
     case beerocks_message::ACTION_CONTROL_HOSTAP_ACS_NOTIFICATION: {
-        LOG(DEBUG) << "ACTION_CONTROL_HOSTAP_ACS_NOTIFICATION from " << hostap_mac;
+        LOG(DEBUG) << "ACTION_CONTROL_HOSTAP_ACS_NOTIFICATION from " << radio_mac;
 
         auto notification =
             beerocks_header->addClass<beerocks_message::cACTION_CONTROL_HOSTAP_ACS_NOTIFICATION>();
@@ -2874,11 +2873,11 @@ bool Controller::handle_cmdu_control_message(
             LOG(ERROR) << "addClass cACTION_CONTROL_HOSTAP_ACS_NOTIFICATION failed";
             return false;
         }
-        LOG(DEBUG) << "CS_task,sending ACS_RESPONSE_EVENT for mac " << hostap_mac;
+        LOG(DEBUG) << "CS_task,sending ACS_RESPONSE_EVENT for mac " << radio_mac;
 
         auto new_event =
             CHANNEL_SELECTION_ALLOCATE_EVENT(channel_selection_task::sAcsResponse_event);
-        new_event->hostap_mac = tlvf::mac_from_string(hostap_mac);
+        new_event->hostap_mac = radio_mac;
         new_event->cs_params  = notification->cs_params();
         tasks.push_event(database.get_channel_selection_task_id(),
                          (int)channel_selection_task::eEvent::ACS_RESPONSE_EVENT,
@@ -2894,9 +2893,9 @@ bool Controller::handle_cmdu_control_message(
         }
 
         // Update BSSes in the sAgent
-        auto radio = database.get_radio(src_mac, tlvf::mac_from_string(hostap_mac));
+        auto radio = database.get_radio(src_mac, radio_mac);
         if (!radio) {
-            LOG(ERROR) << "No radio found for radio_uid " << hostap_mac << " on " << src_mac;
+            LOG(ERROR) << "No radio found for radio_uid " << radio_mac << " on " << src_mac;
             break;
         }
         radio->bsses.clear();
@@ -2921,25 +2920,22 @@ bool Controller::handle_cmdu_control_message(
             }
         }
 
-        LOG(INFO) << "sACTION_CONTROL_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION from slave "
-                  << hostap_mac << std::endl
+        LOG(INFO) << "sACTION_CONTROL_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION from slave " << radio_mac
+                  << std::endl
                   << "vaps_list:" << std::endl
                   << vaps_list;
 
-        std::string radio_mac = hostap_mac;
-
         for (auto vap : vaps_info) {
             if (!database.has_node(tlvf::mac_from_string(vap.second.mac))) {
-                database.add_virtual_node(tlvf::mac_from_string(vap.second.mac),
-                                          tlvf::mac_from_string(radio_mac));
+                database.add_virtual_node(tlvf::mac_from_string(vap.second.mac), radio_mac);
             }
         }
 
-        database.set_hostap_vap_list(tlvf::mac_from_string(radio_mac), vaps_info);
+        database.set_hostap_vap_list(radio_mac, vaps_info);
 
         // update bml listeners
         bml_task::connection_change_event new_event;
-        new_event.mac = database.get_node_parent_ire(radio_mac);
+        new_event.mac = database.get_node_parent_ire(radio_mac_str);
         tasks.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE, &new_event);
         LOG(DEBUG) << "BML, sending IRE connect CONNECTION_CHANGE for mac " << new_event.mac;
 
@@ -2958,7 +2954,7 @@ bool Controller::handle_cmdu_control_message(
         std::string client_mac = tlvf::mac_to_string(notification->params().mac);
         std::string client_ipv4 =
             beerocks::net::network_utils::ipv4_to_string(notification->params().ipv4);
-        LOG(DEBUG) << "received arp monitor notification from slave mac " << hostap_mac << ":"
+        LOG(DEBUG) << "received arp monitor notification from slave mac " << radio_mac << ":"
                    << std::endl
                    << "   client_mac=" << client_mac << std::endl
                    << "   client_ipv4=" << client_ipv4 << std::endl
@@ -3048,10 +3044,10 @@ bool Controller::handle_cmdu_control_message(
              (notification->params().source == beerocks::ARP_SRC_WIRELESS_FRONT))) {
             LOG(DEBUG) << "run_client_locating_task client_mac = " << client_mac;
 
-            auto eth_switches = database.get_node_siblings(hostap_mac, beerocks::TYPE_ETH_SWITCH);
+            auto eth_switches =
+                database.get_node_siblings(radio_mac_str, beerocks::TYPE_ETH_SWITCH);
             if (eth_switches.size() != 1) {
-                LOG(ERROR) << "SLAVE " << hostap_mac
-                           << " does not have an Ethernet switch sibling!";
+                LOG(ERROR) << "SLAVE " << radio_mac << " does not have an Ethernet switch sibling!";
                 break;
             }
 
@@ -3093,7 +3089,7 @@ bool Controller::handle_cmdu_control_message(
         }
 
         std::string client_mac = tlvf::mac_to_string(notification->params().result.mac);
-        std::string ap_mac     = hostap_mac;
+        std::string ap_mac     = radio_mac_str;
 
         auto client = database.get_station(tlvf::mac_from_string(client_mac));
         if (!client) {
@@ -3166,15 +3162,14 @@ bool Controller::handle_cmdu_control_message(
         }
 
         std::string client_parent_mac = database.get_node_parent(client_mac);
-        sMacAddr bssid = database.get_hostap_vap_mac(tlvf::mac_from_string(hostap_mac),
-                                                     notification->params().vap_id);
+        sMacAddr bssid = database.get_hostap_vap_mac(radio_mac, notification->params().vap_id);
         bool is_parent = (tlvf::mac_from_string(client_parent_mac) == bssid);
 
         int rx_rssi = int(notification->params().rx_rssi);
 
         LOG_CLI(DEBUG,
                 "measurement change notification: "
-                    << client_mac << " (sta) <-> (ap) " << hostap_mac << " rx_rssi=" << rx_rssi
+                    << client_mac << " (sta) <-> (ap) " << radio_mac << " rx_rssi=" << rx_rssi
                     << " phy_rate_100kb (RX|TX)=" << int(notification->params().rx_phy_rate_100kb)
                     << " | " << int(notification->params().tx_phy_rate_100kb));
 
@@ -3182,7 +3177,8 @@ bool Controller::handle_cmdu_control_message(
             (database.get_node_state(client_mac) == beerocks::STATE_CONNECTED) &&
             (!database.get_node_handoff_flag(client_mac)) && is_parent) {
 
-            database.set_node_cross_rx_rssi(client_mac, hostap_mac, notification->params().rx_rssi,
+            database.set_node_cross_rx_rssi(client_mac, radio_mac_str,
+                                            notification->params().rx_rssi,
                                             notification->params().rx_packets);
             client->cross_tx_phy_rate_100kb = notification->params().tx_phy_rate_100kb;
             client->cross_rx_phy_rate_100kb = notification->params().rx_phy_rate_100kb;
@@ -3212,13 +3208,13 @@ bool Controller::handle_cmdu_control_message(
         std::string client_mac = tlvf::mac_to_string(notification->mac());
 
         LOG(DEBUG) << "ACTION_CONTROL_CLIENT_NO_RESPONSE_NOTIFICATION, client_mac=" << client_mac
-                   << " hostap mac=" << hostap_mac;
+                   << " hostap mac=" << radio_mac;
 
         if (database.get_node_type(client_mac) == beerocks::TYPE_IRE_BACKHAUL) {
             LOG(INFO) << "IRE CLIENT_NO_RESPONSE_NOTIFICATION, client_mac=" << client_mac
-                      << " hostap mac=" << hostap_mac
+                      << " hostap mac=" << radio_mac
                       << " closing socket and marking as disconnected";
-            bool reported_by_parent = hostap_mac == database.get_node_parent(client_mac);
+            bool reported_by_parent = radio_mac_str == database.get_node_parent(client_mac);
             son_actions::handle_dead_node(client_mac, reported_by_parent, database, cmdu_tx, tasks);
         }
         break;
@@ -3320,11 +3316,11 @@ bool Controller::handle_cmdu_control_message(
             return false;
         }
         LOG(DEBUG) << "received ACTION_CONTROL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION hostap_mac="
-                   << hostap_mac;
+                   << radio_mac;
 
         auto new_event =
             CHANNEL_SELECTION_ALLOCATE_EVENT(channel_selection_task::sCacCompleted_event);
-        new_event->hostap_mac = tlvf::mac_from_string(hostap_mac);
+        new_event->hostap_mac = radio_mac;
         new_event->params     = notification->params();
         tasks.push_event(database.get_channel_selection_task_id(),
                          (int)channel_selection_task::eEvent::CAC_COMPLETED_EVENT,
@@ -3334,10 +3330,10 @@ bool Controller::handle_cmdu_control_message(
             (notification->params().frequency < notification->params().center_frequency1) ? true
                                                                                           : false;
         if (!database.set_node_channel_bw(
-                tlvf::mac_from_string(hostap_mac), notification->params().channel,
+                radio_mac, notification->params().channel,
                 beerocks::eWiFiBandwidth(notification->params().bandwidth), channel_ext_above,
                 channel_ext_above, notification->params().center_frequency1)) {
-            LOG(ERROR) << "set node channel bw failed, mac=" << hostap_mac;
+            LOG(ERROR) << "set node channel bw failed, mac=" << radio_mac;
         }
 
         break;
@@ -3352,11 +3348,11 @@ bool Controller::handle_cmdu_control_message(
         }
         LOG(DEBUG)
             << "received ACTION_CONTROL_HOSTAP_DFS_CHANNEL_AVAILABLE_NOTIFICATION hostap_mac="
-            << hostap_mac;
+            << radio_mac;
 
         auto new_event =
             CHANNEL_SELECTION_ALLOCATE_EVENT(channel_selection_task::sDfsChannelAvailable_event);
-        new_event->hostap_mac = tlvf::mac_from_string(hostap_mac);
+        new_event->hostap_mac = radio_mac;
         new_event->params     = notification->params();
         tasks.push_event(database.get_channel_selection_task_id(),
                          (int)channel_selection_task::eEvent::DFS_CHANNEL_AVAILABLE_EVENT,
@@ -3385,7 +3381,7 @@ bool Controller::handle_cmdu_control_message(
                 LOG(ERROR) << "sta " << client_mac << " is not in DB!";
                 continue;
             } else if (database.get_node_state(client_mac) != beerocks::STATE_CONNECTED) {
-                LOG(DEBUG) << "sta " << client_mac << " is not connected to hostap " << hostap_mac
+                LOG(DEBUG) << "sta " << client_mac << " is not connected to hostap " << radio_mac
                            << ", update is invalid!";
                 continue;
             }
@@ -3404,11 +3400,11 @@ bool Controller::handle_cmdu_control_message(
             return false;
         }
         auto &ap_stats = std::get<1>(ap_stats_tuple);
-        database.set_hostap_stats_info(tlvf::mac_from_string(hostap_mac), &ap_stats);
+        database.set_hostap_stats_info(radio_mac, &ap_stats);
         break;
     }
     case beerocks_message::ACTION_CONTROL_HOSTAP_LOAD_MEASUREMENT_NOTIFICATION: {
-        auto ire_mac      = database.get_node_parent_ire(hostap_mac);
+        auto ire_mac      = database.get_node_parent_ire(radio_mac_str);
         auto notification = beerocks_header->addClass<
             beerocks_message::cACTION_CONTROL_HOSTAP_LOAD_MEASUREMENT_NOTIFICATION>();
         if (!notification) {
@@ -3419,7 +3415,7 @@ bool Controller::handle_cmdu_control_message(
         int client_load_percent = notification->params().client_tx_load_percent +
                                   notification->params().client_rx_load_percent;
 
-        LOG(DEBUG) << "load notification from hostap " << hostap_mac << " ire mac=" << ire_mac
+        LOG(DEBUG) << "load notification from hostap " << radio_mac << " ire mac=" << ire_mac
                    << " active_client_count=" << active_client_count
                    << " client_load=" << client_load_percent;
 
@@ -3429,8 +3425,7 @@ bool Controller::handle_cmdu_control_message(
         if (active_client_count > database.config.monitor_min_active_clients &&
             client_load_percent >
                 database.config.monitor_total_ch_load_notification_hi_th_percent &&
-            database.settings_load_balancing() &&
-            database.is_hostap_active(tlvf::mac_from_string(hostap_mac)) &&
+            database.settings_load_balancing() && database.is_hostap_active(radio_mac) &&
             database.get_node_state(ire_mac) == beerocks::STATE_CONNECTED &&
             database.get_node_type(ire_mac) != beerocks::TYPE_CLIENT) {
             /*
@@ -3544,10 +3539,10 @@ bool Controller::handle_cmdu_control_message(
         std::string client_mac = tlvf::mac_to_string(response->mac());
         int channel            = database.get_node_channel(client_mac);
         LOG(DEBUG) << "ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_CMD_RESPONSE client_mac="
-                   << client_mac << " received from hostap " << hostap_mac
+                   << client_mac << " received from hostap " << radio_mac
                    << " channel=" << int(channel) << " ïd = " << int(beerocks_header->id());
         //calculating response delay for associate client ap and cross ap's
-        database.set_measurement_recv_delta(hostap_mac);
+        database.set_measurement_recv_delta(radio_mac_str);
         break;
     }
     case beerocks_message::ACTION_CONTROL_CLIENT_NO_ACTIVITY_NOTIFICATION: {
@@ -3587,13 +3582,12 @@ bool Controller::handle_cmdu_control_message(
         }
 
         database.set_hostap_activity_mode(
-            tlvf::mac_from_string(hostap_mac),
-            beerocks::eApActiveMode(notification->params().ap_activity_mode));
+            radio_mac, beerocks::eApActiveMode(notification->params().ap_activity_mode));
         if (notification->params().ap_activity_mode == beerocks::AP_IDLE_MODE) {
-            LOG(DEBUG) << "CS_task,sending AP_ACTIVITY_IDLE_EVENT for mac " << hostap_mac;
+            LOG(DEBUG) << "CS_task,sending AP_ACTIVITY_IDLE_EVENT for mac " << radio_mac;
             auto new_event =
                 CHANNEL_SELECTION_ALLOCATE_EVENT(channel_selection_task::sApActivityIdle_event);
-            new_event->hostap_mac = tlvf::mac_from_string(hostap_mac);
+            new_event->hostap_mac = radio_mac;
             tasks.push_event(database.get_channel_selection_task_id(),
                              (int)channel_selection_task::eEvent::AP_ACTIVITY_IDLE_EVENT,
                              (void *)new_event);
@@ -3738,7 +3732,7 @@ bool Controller::handle_cmdu_control_message(
         break;
     }
     case beerocks_message::ACTION_CONTROL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE: {
-        LOG(TRACE) << "ACTION_CONTROL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE for mac " << hostap_mac;
+        LOG(TRACE) << "ACTION_CONTROL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE for mac " << radio_mac;
         auto response =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_CONTROL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE>();
@@ -3746,7 +3740,6 @@ bool Controller::handle_cmdu_control_message(
             LOG(ERROR) << "addClass cACTION_CONTROL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE failed";
             return false;
         }
-        auto radio_mac = tlvf::mac_from_string(hostap_mac);
 
         if (!response->success()) {
             LOG(ERROR) << "Failed to trigger scan on radio (" << radio_mac
@@ -3769,7 +3762,7 @@ bool Controller::handle_cmdu_control_message(
         break;
     }
     case beerocks_message::ACTION_CONTROL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION: {
-        LOG(TRACE) << "DCS_task, sending SCAN_TRIGGERED for mac " << hostap_mac;
+        LOG(TRACE) << "DCS_task, sending SCAN_TRIGGERED for mac " << radio_mac;
         auto notification =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_CONTROL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION>();
@@ -3777,9 +3770,6 @@ bool Controller::handle_cmdu_control_message(
             LOG(ERROR) << "addClass cACTION_CONTROL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION failed";
             return false;
         }
-
-        //get the mac from hostap_mac
-        auto radio_mac = tlvf::mac_from_string(hostap_mac);
 
         dynamic_channel_selection_task::sScanEvent new_event;
         new_event.radio_mac = radio_mac;
@@ -3794,7 +3784,7 @@ bool Controller::handle_cmdu_control_message(
         break;
     }
     case beerocks_message::ACTION_CONTROL_CHANNEL_SCAN_RESULTS_NOTIFICATION: {
-        LOG(TRACE) << "ACTION_CONTROL_CHANNEL_SCAN_RESULTS_NOTIFICATION for mac " << hostap_mac;
+        LOG(TRACE) << "ACTION_CONTROL_CHANNEL_SCAN_RESULTS_NOTIFICATION for mac " << radio_mac;
         auto notification =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_CONTROL_CHANNEL_SCAN_RESULTS_NOTIFICATION>();
@@ -3804,9 +3794,6 @@ bool Controller::handle_cmdu_control_message(
         }
 
         LOG(DEBUG) << "Scan results " << (notification->is_dump() == 1 ? "dump." : "are ready.");
-
-        //get the mac from hostap_mac
-        auto radio_mac = tlvf::mac_from_string(hostap_mac);
 
         //send results to dcs task if no scan is in progress for both the
         //single scan (mac, single_scan = true) and the continuous scan (mac, single_scan = false)
@@ -3831,13 +3818,13 @@ bool Controller::handle_cmdu_control_message(
 
         } else {
             LOG(DEBUG) << "received scan results while the scan is in progress, ignoring."
-                       << " hostap_mac=" << hostap_mac;
+                       << " hostap_mac=" << radio_mac;
         }
 
         break;
     }
     case beerocks_message::ACTION_CONTROL_CHANNEL_SCAN_FINISHED_NOTIFICATION: {
-        LOG(DEBUG) << "DCS_task, sending SCAN_FINISHED for mac " << hostap_mac;
+        LOG(DEBUG) << "DCS_task, sending SCAN_FINISHED for mac " << radio_mac;
         auto notification =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_CONTROL_CHANNEL_SCAN_FINISHED_NOTIFICATION>();
@@ -3845,9 +3832,6 @@ bool Controller::handle_cmdu_control_message(
             LOG(ERROR) << "addClass cACTION_CONTROL_CHANNEL_SCAN_FINISHED_NOTIFICATION failed";
             return false;
         }
-
-        //get the mac from hostap_mac
-        auto radio_mac = tlvf::mac_from_string(hostap_mac);
 
         dynamic_channel_selection_task::sScanEvent new_event;
         new_event.radio_mac = radio_mac;
@@ -3858,7 +3842,7 @@ bool Controller::handle_cmdu_control_message(
         break;
     }
     case beerocks_message::ACTION_CONTROL_CHANNEL_SCAN_ABORT_NOTIFICATION: {
-        LOG(DEBUG) << "DCS_task, sending SCAN_ABORTED for mac " << hostap_mac;
+        LOG(DEBUG) << "DCS_task, sending SCAN_ABORTED for mac " << radio_mac;
         auto notification =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_CONTROL_CHANNEL_SCAN_ABORT_NOTIFICATION>();
@@ -3866,9 +3850,6 @@ bool Controller::handle_cmdu_control_message(
             LOG(ERROR) << "addClass cACTION_CONTROL_CHANNEL_SCAN_ABORT_NOTIFICATION failed";
             return false;
         }
-
-        //get the mac from hostap_mac
-        auto radio_mac = tlvf::mac_from_string(hostap_mac);
 
         dynamic_channel_selection_task::sScanEvent new_event;
         new_event.radio_mac = radio_mac;
@@ -3891,7 +3872,7 @@ bool Controller::handle_cmdu_control_message(
     // If this is a response message to a task (header->id() == task id), send it to it directly - cmdu_rx is owned by the task
     // e.g. only the task may call addClass
     if (beerocks_header->id()) {
-        tasks.response_received(hostap_mac, beerocks_header);
+        tasks.response_received(radio_mac_str, beerocks_header);
         return true;
     }
 
