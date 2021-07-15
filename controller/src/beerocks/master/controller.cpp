@@ -2154,7 +2154,8 @@ bool Controller::handle_intel_slave_join(
             //add a placeholder
             LOG(DEBUG) << "add a placeholder backhaul_mac = " << backhaul_mac
                        << ", parent_bssid_mac = " << parent_bssid_mac;
-            database.add_node_wireless_bh(tlvf::mac_from_string(backhaul_mac), parent_bssid_mac);
+            database.add_node_wireless_backhaul(tlvf::mac_from_string(backhaul_mac),
+                                                parent_bssid_mac);
         } else if (database.get_node_state(backhaul_mac) != beerocks::STATE_CONNECTED) {
             /* if the backhaul node doesn't exist, or is not already marked as connected,
             * we assume it is connected to the GW's LAN switch
@@ -2179,8 +2180,8 @@ bool Controller::handle_intel_slave_join(
             LOG(DEBUG) << "add a placeholder backhaul_mac = " << backhaul_mac
                        << " gw_lan_switch = " << gw_lan_switch
                        << " TYPE_IRE_BACKHAUL , STATE_CONNECTED";
-            database.add_node_wireless_bh(tlvf::mac_from_string(backhaul_mac),
-                                          tlvf::mac_from_string(gw_lan_switch));
+            database.add_node_wireless_backhaul(tlvf::mac_from_string(backhaul_mac),
+                                                tlvf::mac_from_string(gw_lan_switch));
             database.set_node_state(backhaul_mac, beerocks::STATE_CONNECTED);
         }
     } else {
@@ -2617,8 +2618,8 @@ bool Controller::handle_non_intel_slave_join(
 
     LOG(DEBUG) << "add a placeholder backhaul_mac = " << backhaul_mac
                << " gw_lan_switch = " << gw_lan_switch << " TYPE_IRE_BACKHAUL , STATE_CONNECTED";
-    database.add_node_wireless_bh(tlvf::mac_from_string(backhaul_mac),
-                                  tlvf::mac_from_string(gw_lan_switch));
+    database.add_node_wireless_backhaul(tlvf::mac_from_string(backhaul_mac),
+                                        tlvf::mac_from_string(gw_lan_switch));
     database.set_node_state(backhaul_mac, beerocks::STATE_CONNECTED);
 
     // TODO bridge handling.

@@ -135,8 +135,8 @@ void client_locating_task::work()
                         // update node
                         if (database.get_node_type(client_mac) == beerocks::TYPE_IRE) {
                             auto ire_backhaul = database.get_node_parent_backhaul(client_mac);
-                            database.add_node_wireless_bh(tlvf::mac_from_string(ire_backhaul),
-                                                          tlvf::mac_from_string(eth_sw_mac));
+                            database.add_node_wireless_backhaul(tlvf::mac_from_string(ire_backhaul),
+                                                                tlvf::mac_from_string(eth_sw_mac));
                             database.add_node_ire(tlvf::mac_from_string(client_mac),
                                                   tlvf::mac_from_string(ire_backhaul));
                         } else {
