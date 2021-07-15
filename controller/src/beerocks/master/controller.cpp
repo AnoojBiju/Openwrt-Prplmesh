@@ -2241,7 +2241,7 @@ bool Controller::handle_intel_slave_join(
         ++eth_sw_mac_binary.oct[5];
 
         std::string eth_switch_mac = tlvf::mac_to_string(eth_sw_mac_binary);
-        database.add_node_wired_bh(tlvf::mac_from_string(eth_switch_mac), bridge_mac);
+        database.add_node_wired_backhaul(tlvf::mac_from_string(eth_switch_mac), bridge_mac);
         database.set_node_state(eth_switch_mac, beerocks::STATE_CONNECTED);
         database.set_node_name(eth_switch_mac, slave_name + "_ETH");
         database.set_node_ipv4(eth_switch_mac, bridge_ipv4);
@@ -2647,7 +2647,7 @@ bool Controller::handle_non_intel_slave_join(
     database.set_node_type(backhaul_mac, beerocks::TYPE_IRE_BACKHAUL);
     database.set_node_name(backhaul_mac, agent->manufacturer + "_BH");
     database.set_node_name(bridge_mac_str, agent->manufacturer);
-    database.add_node_wired_bh(tlvf::mac_from_string(eth_switch_mac), bridge_mac);
+    database.add_node_wired_backhaul(tlvf::mac_from_string(eth_switch_mac), bridge_mac);
     database.set_node_state(eth_switch_mac, beerocks::STATE_CONNECTED);
     database.set_node_name(eth_switch_mac, agent->manufacturer + "_ETH");
     database.set_node_manufacturer(eth_switch_mac, agent->manufacturer);
