@@ -298,10 +298,10 @@ bool db::add_node_wireless_backhaul(const sMacAddr &mac, const sMacAddr &parent_
     return true;
 }
 
-bool db::add_node_wired_bh(const sMacAddr &mac, const sMacAddr &parent_mac)
+bool db::add_node_wired_backhaul(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
     if (!add_node(mac, parent_mac, beerocks::TYPE_ETH_SWITCH)) {
-        LOG(ERROR) << "Failed to add wired_bh node, mac: " << mac;
+        LOG(ERROR) << "Failed to add wired_backhaul node, mac: " << mac;
         return false;
     }
 
