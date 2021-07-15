@@ -477,7 +477,7 @@ class TurrisRdkb(PrplwrtDevice):
         rdkbfs: str
             The name of the rdkbfs tarball that can be used to upgrade the device.
         kernel: str
-            The username of the kernel binary that can be used to upgrade kernel on device.
+            The name of the kernel binary that can be used to upgrade kernel on device.
         username: str, optional
             The username to use when connecting to the device over SSH.
         """
@@ -497,7 +497,7 @@ class TurrisRdkb(PrplwrtDevice):
 
         Parameters
         -----------
-        serial_type: int
+        serial_type: ShellType
             Type of the serial connection as enum ShellType(uboot, rdkb, prplwrt)
         """
         serial_path = f"/dev/{self.name}"
@@ -578,7 +578,7 @@ class TurrisRdkb(PrplwrtDevice):
                              + "Please make sure you have an appropriate udev rule for it.")
 
         with serial.Serial(serial_path, self.BAUDRATE) as ser:
-            shell = pexpect.fdpexpect.fdspawn(ser, logfile=sys.stdout.buffer, timeout=20)
+            shell = pexpect.fdpexpect.fdspawn(ser, logfile=sys.stdout.buffer, timeout=40)
             if not shell.isalive():
                 raise ValueError("Unable to connect to the serial device.")
 
@@ -597,6 +597,7 @@ class TurrisRdkb(PrplwrtDevice):
                     serial_cmd_err(shell, self.PROMPT_RE, f"cp -v {src} {dst}")
                 except ValueError:
                     umount_mmc()
+                    raise
 
             def check_partition(partition: str):
                 shell.sendline("")
@@ -642,7 +643,6 @@ class TurrisRdkb(PrplwrtDevice):
 
             serial_cmd_err(shell, self.PROMPT_RE, f"tar -xzf /tmp/{self.rdkbfs} -C /mnt/")
 
-            time.sleep(40)  # Sleep introduced because installation new RDKB rootfs takes time
             shell.sendline("")
 
             umount_mmc()
@@ -710,19 +710,19 @@ class TurrisRdkb(PrplwrtDevice):
                 String with image build date otherwise empty string.
         """
 
-        IMAGE_NAME_RE = r"rdkb[^\s]+[\d*]+[^\s]\.rootfs\.tar\.gz"
+        image_name_re = r"rdkb[^\s]+[\d*]+[^\s]\.rootfs\.tar\.gz"
         """ Find correct RDKB rootfs file."""
 
-        IMAGE_DATE_RE = r"0*[1-9]\d{4,}"
+        image_date_re = r"0*[1-9]\d{4,}"
         """ Retrieve RDKB rootfs build date."""
 
         image = ""
-        for artifact in Path(f"{self.artifacts_dir}").iterdir():
-            image = str(re.findall(IMAGE_NAME_RE, str(artifact)))
+        for artifact in Path(self.artifacts_dir).iterdir():
+            image = re.findall(image_name_re, str(artifact))
             if image:
                 break
 
-        date_list = re.findall(IMAGE_DATE_RE, image)
+        date_list = re.findall(image_date_re, str(image))
 
         date = ""
         for i in date_list:
@@ -798,7 +798,7 @@ class TurrisRdkb(PrplwrtDevice):
                                  + "Please make sure you have an appropriate udev rule for it.")
 
             with serial.Serial(serial_path, self.BAUDRATE) as ser:
-                shell = pexpect.fdpexpect.fdspawn(ser, logfile=sys.stdout.buffer, timeout=50)
+                shell = pexpect.fdpexpect.fdspawn(ser, logfile=sys.stdout.buffer, timeout=60)
                 if not shell.isalive():
                     raise ValueError("Unable to connect to the serial device.")
 
@@ -851,8 +851,7 @@ def main():
         '-o',
         '--os-type',
         help="Type of the operating system: rdkb or prplWrt.",
-        default="prplwrt",
-        required=True)
+        default="prplwrt")
 
     parser.add_argument(
         '-k',
