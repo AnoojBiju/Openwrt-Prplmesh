@@ -140,8 +140,8 @@ void client_locating_task::work()
                             database.add_node_ire(tlvf::mac_from_string(client_mac),
                                                   tlvf::mac_from_string(ire_backhaul));
                         } else {
-                            database.add_node_client(tlvf::mac_from_string(client_mac),
-                                                     tlvf::mac_from_string(eth_sw_mac));
+                            database.add_node_station(tlvf::mac_from_string(client_mac),
+                                                      tlvf::mac_from_string(eth_sw_mac));
                             database.set_node_state(client_mac, beerocks::STATE_CONNECTED);
                         }
 

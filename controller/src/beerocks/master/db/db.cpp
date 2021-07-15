@@ -413,7 +413,7 @@ bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac)
     return true;
 }
 
-bool db::add_node_client(const sMacAddr &mac, const sMacAddr &parent_mac)
+bool db::add_node_station(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
     if (!add_node(mac, parent_mac, beerocks::TYPE_CLIENT)) {
         LOG(ERROR) << "Failed to add client node, mac: " << mac;
@@ -5697,7 +5697,7 @@ void db::add_node_from_data(const std::string &client_entry, const ValuesMap &va
     auto client_mac = client_db_entry_to_mac(client_entry);
 
     // Add client node with defaults and in default location
-    if (!add_node_client(client_mac)) {
+    if (!add_node_station(client_mac)) {
         LOG(ERROR) << "Failed to add client node for client_entry " << client_entry;
         result.first = 1;
         return;
