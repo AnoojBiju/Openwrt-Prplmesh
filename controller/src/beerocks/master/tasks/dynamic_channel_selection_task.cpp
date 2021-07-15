@@ -9,7 +9,6 @@
 #include "dynamic_channel_selection_task.h"
 #include "../son_actions.h"
 #include <bcl/beerocks_defines.h>
-#include <bcl/network/network_utils.h>
 #include <easylogging++.h>
 
 #define SCAN_TRIGGERED_WAIT_TIME_MSEC 20000     //20 Sec

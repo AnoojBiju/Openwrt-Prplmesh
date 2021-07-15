@@ -12,7 +12,6 @@
 #include "controller.h"
 
 #include <bcl/beerocks_message_structs.h>
-#include <bcl/beerocks_utils.h>
 
 #define CLI_LOG(a) LOG(a)
 

@@ -8,6 +8,7 @@
 
 #include "ire_network_optimization_task.h"
 #include "../db/db_algo.h"
+#include "optimal_path_task.h"
 
 #include <easylogging++.h>
 

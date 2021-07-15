@@ -7,6 +7,7 @@
  */
 
 #include <climits>
+#include <iomanip>
 #include <linux/if_ether.h>
 #include <tlvf/tlvftypes.h>
 

@@ -7,7 +7,6 @@
  */
 
 #include "persistent_database_aging.h"
-#include <bcl/beerocks_utils.h>
 #include <easylogging++.h>
 #define OPERATION_LOG(a) (LOG(a) << "operation " << operation_name << " id " << id << ": ")
 

@@ -12,8 +12,6 @@
 #include <tlvf/WSC/AttrList.h>
 #include <tlvf/tlvflogging.h>
 
-#include <iomanip>
-
 namespace WSC {
 
 class configData : public AttrList {

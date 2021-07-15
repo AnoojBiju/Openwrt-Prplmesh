@@ -17,6 +17,7 @@
 #include "tasks/dynamic_channel_selection_task.h"
 #include "tasks/ire_network_optimization_task.h"
 #include "tasks/load_balancer_task.h"
+#include "tasks/optimal_path_task.h"
 
 #include <beerocks/tlvf/beerocks_message_1905_vs.h>
 #include <beerocks/tlvf/beerocks_message_bml.h>

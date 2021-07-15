@@ -11,7 +11,6 @@
 #include "../son_actions.h"
 #include "bml_task.h"
 
-#include <bcl/network/network_utils.h>
 #include <beerocks/tlvf/beerocks_message_1905_vs.h>
 #include <easylogging++.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringRequest.h>

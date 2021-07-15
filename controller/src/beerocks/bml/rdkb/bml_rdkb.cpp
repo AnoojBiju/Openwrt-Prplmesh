@@ -10,7 +10,6 @@
 #include "../bml.h"
 #include "internal/bml_rdkb_internal.h"
 
-#include <bcl/network/network_utils.h>
 #include <easylogging++.h>
 
 using namespace beerocks::net;

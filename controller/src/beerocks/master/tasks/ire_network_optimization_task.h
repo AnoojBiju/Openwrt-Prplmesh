@@ -10,7 +10,6 @@
 #define _IRE_NETWORK_OPTIMIZATION_TASK_H_
 
 #include "../db/db.h"
-#include "optimal_path_task.h"
 #include "task.h"
 #include "task_pool.h"
 

@@ -8,8 +8,6 @@
 
 #include "ieee1905_transport_broker.h"
 
-#include <bcl/beerocks_utils.h>
-
 #include <beerocks/tlvf/beerocks_message.h>
 #include <tlvf/ieee_1905_1/tlvVendorSpecific.h>
 

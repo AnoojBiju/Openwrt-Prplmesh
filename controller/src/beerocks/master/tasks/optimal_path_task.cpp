@@ -10,6 +10,7 @@
 #include "../db/db_algo.h"
 #include "../son_actions.h"
 
+#include <bcl/beerocks_utils.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <easylogging++.h>
 

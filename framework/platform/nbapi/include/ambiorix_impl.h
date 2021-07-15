@@ -12,7 +12,6 @@
 // prplmesh
 #include <bcl/beerocks_event_loop.h>
 #include <easylogging++.h>
-#include <mapf/common/utils.h>
 
 // Ambiorix
 #include <amxc/amxc.h>

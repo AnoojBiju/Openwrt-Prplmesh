@@ -10,7 +10,9 @@
 #include "../son_actions.h"
 #include "bml_task.h"
 #include "ire_network_optimization_task.h"
+#include "optimal_path_task.h"
 
+#include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <easylogging++.h>

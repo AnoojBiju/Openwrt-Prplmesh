@@ -9,7 +9,6 @@
 #ifndef __AGENT_UCC_LISTENER_H__
 #define __AGENT_UCC_LISTENER_H__
 
-#include <bcl/beerocks_config_file.h>
 #include <bcl/beerocks_ucc_listener.h>
 #include <beerocks/tlvf/beerocks_message.h>
 

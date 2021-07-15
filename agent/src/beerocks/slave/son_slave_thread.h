@@ -12,7 +12,6 @@
 #include <bcl/beerocks_backport.h>
 #include <bcl/beerocks_logging.h>
 #include <bcl/beerocks_socket_thread.h>
-#include <bcl/son/son_wireless_utils.h>
 
 #include <beerocks/tlvf/beerocks_header.h>
 

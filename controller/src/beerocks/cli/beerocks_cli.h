@@ -9,11 +9,8 @@
 #ifndef _BEEROCKS_CLI_H
 #define _BEEROCKS_CLI_H
 
-#include <fstream>
 #include <map>
-#include <stdio.h>
-
-#include <beerocks/tlvf/beerocks_message.h>
+#include <vector>
 
 #define ARGSNUM 10
 

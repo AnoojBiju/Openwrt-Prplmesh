@@ -16,6 +16,7 @@
 #include "rdkb/bml_rdkb.h"
 #endif
 
+#include <bcl/beerocks_defines.h>
 #include <bcl/network/network_utils.h>
 
 #include <list>

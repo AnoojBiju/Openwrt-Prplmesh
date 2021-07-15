@@ -1,7 +1,6 @@
 #include "bpl_uci.h"
 
 #include <mapf/common/logger.h>
-#include <mapf/common/utils.h>
 
 extern "C" {
 #include <uci.h>

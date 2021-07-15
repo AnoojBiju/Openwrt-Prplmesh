@@ -11,7 +11,6 @@
 #include "../db/network_map.h"
 #include "bml_defs.h"
 
-#include <bcl/network/network_utils.h>
 #include <bcl/network/sockets.h>
 #include <easylogging++.h>
 
