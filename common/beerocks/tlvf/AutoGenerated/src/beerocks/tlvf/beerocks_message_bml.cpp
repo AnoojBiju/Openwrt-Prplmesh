@@ -808,64 +808,6 @@ bool cACTION_BML_REGISTER_TO_NW_MAP_UPDATES_REQUEST::init()
     return true;
 }
 
-cACTION_BML_REGISTER_TO_NW_MAP_UPDATES_RESPONSE::cACTION_BML_REGISTER_TO_NW_MAP_UPDATES_RESPONSE(uint8_t* buff, size_t buff_len, bool parse) :
-    BaseClass(buff, buff_len, parse) {
-    m_init_succeeded = init();
-}
-cACTION_BML_REGISTER_TO_NW_MAP_UPDATES_RESPONSE::cACTION_BML_REGISTER_TO_NW_MAP_UPDATES_RESPONSE(std::shared_ptr<BaseClass> base, bool parse) :
-BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
-    m_init_succeeded = init();
-}
-cACTION_BML_REGISTER_TO_NW_MAP_UPDATES_RESPONSE::~cACTION_BML_REGISTER_TO_NW_MAP_UPDATES_RESPONSE() {
-}
-void cACTION_BML_REGISTER_TO_NW_MAP_UPDATES_RESPONSE::class_swap()
-{
-    tlvf_swap(8*sizeof(eActionOp_BML), reinterpret_cast<uint8_t*>(m_action_op));
-}
-
-bool cACTION_BML_REGISTER_TO_NW_MAP_UPDATES_RESPONSE::finalize()
-{
-    if (m_parse__) {
-        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
-        return true;
-    }
-    if (m_finalized__) {
-        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
-        return true;
-    }
-    if (!isPostInitSucceeded()) {
-        TLVF_LOG(ERROR) << "post init check failed";
-        return false;
-    }
-    if (m_inner__) {
-        if (!m_inner__->finalize()) {
-            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
-            return false;
-        }
-        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
-        m_buff_ptr__ -= tailroom;
-    }
-    class_swap();
-    m_finalized__ = true;
-    return true;
-}
-
-size_t cACTION_BML_REGISTER_TO_NW_MAP_UPDATES_RESPONSE::get_initial_size()
-{
-    size_t class_size = 0;
-    return class_size;
-}
-
-bool cACTION_BML_REGISTER_TO_NW_MAP_UPDATES_RESPONSE::init()
-{
-    if (getBuffRemainingBytes() < get_initial_size()) {
-        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
-        return false;
-    }
-    if (m_parse__) { class_swap(); }
-    return true;
-}
-
 cACTION_BML_UNREGISTER_FROM_NW_MAP_UPDATES_REQUEST::cACTION_BML_UNREGISTER_FROM_NW_MAP_UPDATES_REQUEST(uint8_t* buff, size_t buff_len, bool parse) :
     BaseClass(buff, buff_len, parse) {
     m_init_succeeded = init();
@@ -915,64 +857,6 @@ size_t cACTION_BML_UNREGISTER_FROM_NW_MAP_UPDATES_REQUEST::get_initial_size()
 }
 
 bool cACTION_BML_UNREGISTER_FROM_NW_MAP_UPDATES_REQUEST::init()
-{
-    if (getBuffRemainingBytes() < get_initial_size()) {
-        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
-        return false;
-    }
-    if (m_parse__) { class_swap(); }
-    return true;
-}
-
-cACTION_BML_UNREGISTER_FROM_NW_MAP_UPDATES_RESPONSE::cACTION_BML_UNREGISTER_FROM_NW_MAP_UPDATES_RESPONSE(uint8_t* buff, size_t buff_len, bool parse) :
-    BaseClass(buff, buff_len, parse) {
-    m_init_succeeded = init();
-}
-cACTION_BML_UNREGISTER_FROM_NW_MAP_UPDATES_RESPONSE::cACTION_BML_UNREGISTER_FROM_NW_MAP_UPDATES_RESPONSE(std::shared_ptr<BaseClass> base, bool parse) :
-BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
-    m_init_succeeded = init();
-}
-cACTION_BML_UNREGISTER_FROM_NW_MAP_UPDATES_RESPONSE::~cACTION_BML_UNREGISTER_FROM_NW_MAP_UPDATES_RESPONSE() {
-}
-void cACTION_BML_UNREGISTER_FROM_NW_MAP_UPDATES_RESPONSE::class_swap()
-{
-    tlvf_swap(8*sizeof(eActionOp_BML), reinterpret_cast<uint8_t*>(m_action_op));
-}
-
-bool cACTION_BML_UNREGISTER_FROM_NW_MAP_UPDATES_RESPONSE::finalize()
-{
-    if (m_parse__) {
-        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
-        return true;
-    }
-    if (m_finalized__) {
-        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
-        return true;
-    }
-    if (!isPostInitSucceeded()) {
-        TLVF_LOG(ERROR) << "post init check failed";
-        return false;
-    }
-    if (m_inner__) {
-        if (!m_inner__->finalize()) {
-            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
-            return false;
-        }
-        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
-        m_buff_ptr__ -= tailroom;
-    }
-    class_swap();
-    m_finalized__ = true;
-    return true;
-}
-
-size_t cACTION_BML_UNREGISTER_FROM_NW_MAP_UPDATES_RESPONSE::get_initial_size()
-{
-    size_t class_size = 0;
-    return class_size;
-}
-
-bool cACTION_BML_UNREGISTER_FROM_NW_MAP_UPDATES_RESPONSE::init()
 {
     if (getBuffRemainingBytes() < get_initial_size()) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
@@ -1156,64 +1040,6 @@ bool cACTION_BML_REGISTER_TO_EVENTS_UPDATES_REQUEST::init()
     return true;
 }
 
-cACTION_BML_REGISTER_TO_EVENTS_UPDATES_RESPONSE::cACTION_BML_REGISTER_TO_EVENTS_UPDATES_RESPONSE(uint8_t* buff, size_t buff_len, bool parse) :
-    BaseClass(buff, buff_len, parse) {
-    m_init_succeeded = init();
-}
-cACTION_BML_REGISTER_TO_EVENTS_UPDATES_RESPONSE::cACTION_BML_REGISTER_TO_EVENTS_UPDATES_RESPONSE(std::shared_ptr<BaseClass> base, bool parse) :
-BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
-    m_init_succeeded = init();
-}
-cACTION_BML_REGISTER_TO_EVENTS_UPDATES_RESPONSE::~cACTION_BML_REGISTER_TO_EVENTS_UPDATES_RESPONSE() {
-}
-void cACTION_BML_REGISTER_TO_EVENTS_UPDATES_RESPONSE::class_swap()
-{
-    tlvf_swap(8*sizeof(eActionOp_BML), reinterpret_cast<uint8_t*>(m_action_op));
-}
-
-bool cACTION_BML_REGISTER_TO_EVENTS_UPDATES_RESPONSE::finalize()
-{
-    if (m_parse__) {
-        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
-        return true;
-    }
-    if (m_finalized__) {
-        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
-        return true;
-    }
-    if (!isPostInitSucceeded()) {
-        TLVF_LOG(ERROR) << "post init check failed";
-        return false;
-    }
-    if (m_inner__) {
-        if (!m_inner__->finalize()) {
-            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
-            return false;
-        }
-        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
-        m_buff_ptr__ -= tailroom;
-    }
-    class_swap();
-    m_finalized__ = true;
-    return true;
-}
-
-size_t cACTION_BML_REGISTER_TO_EVENTS_UPDATES_RESPONSE::get_initial_size()
-{
-    size_t class_size = 0;
-    return class_size;
-}
-
-bool cACTION_BML_REGISTER_TO_EVENTS_UPDATES_RESPONSE::init()
-{
-    if (getBuffRemainingBytes() < get_initial_size()) {
-        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
-        return false;
-    }
-    if (m_parse__) { class_swap(); }
-    return true;
-}
-
 cACTION_BML_UNREGISTER_FROM_EVENTS_UPDATES_REQUEST::cACTION_BML_UNREGISTER_FROM_EVENTS_UPDATES_REQUEST(uint8_t* buff, size_t buff_len, bool parse) :
     BaseClass(buff, buff_len, parse) {
     m_init_succeeded = init();
@@ -1263,64 +1089,6 @@ size_t cACTION_BML_UNREGISTER_FROM_EVENTS_UPDATES_REQUEST::get_initial_size()
 }
 
 bool cACTION_BML_UNREGISTER_FROM_EVENTS_UPDATES_REQUEST::init()
-{
-    if (getBuffRemainingBytes() < get_initial_size()) {
-        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
-        return false;
-    }
-    if (m_parse__) { class_swap(); }
-    return true;
-}
-
-cACTION_BML_UNREGISTER_FROM_EVENTS_UPDATES_RESPONSE::cACTION_BML_UNREGISTER_FROM_EVENTS_UPDATES_RESPONSE(uint8_t* buff, size_t buff_len, bool parse) :
-    BaseClass(buff, buff_len, parse) {
-    m_init_succeeded = init();
-}
-cACTION_BML_UNREGISTER_FROM_EVENTS_UPDATES_RESPONSE::cACTION_BML_UNREGISTER_FROM_EVENTS_UPDATES_RESPONSE(std::shared_ptr<BaseClass> base, bool parse) :
-BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
-    m_init_succeeded = init();
-}
-cACTION_BML_UNREGISTER_FROM_EVENTS_UPDATES_RESPONSE::~cACTION_BML_UNREGISTER_FROM_EVENTS_UPDATES_RESPONSE() {
-}
-void cACTION_BML_UNREGISTER_FROM_EVENTS_UPDATES_RESPONSE::class_swap()
-{
-    tlvf_swap(8*sizeof(eActionOp_BML), reinterpret_cast<uint8_t*>(m_action_op));
-}
-
-bool cACTION_BML_UNREGISTER_FROM_EVENTS_UPDATES_RESPONSE::finalize()
-{
-    if (m_parse__) {
-        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
-        return true;
-    }
-    if (m_finalized__) {
-        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
-        return true;
-    }
-    if (!isPostInitSucceeded()) {
-        TLVF_LOG(ERROR) << "post init check failed";
-        return false;
-    }
-    if (m_inner__) {
-        if (!m_inner__->finalize()) {
-            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
-            return false;
-        }
-        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
-        m_buff_ptr__ -= tailroom;
-    }
-    class_swap();
-    m_finalized__ = true;
-    return true;
-}
-
-size_t cACTION_BML_UNREGISTER_FROM_EVENTS_UPDATES_RESPONSE::get_initial_size()
-{
-    size_t class_size = 0;
-    return class_size;
-}
-
-bool cACTION_BML_UNREGISTER_FROM_EVENTS_UPDATES_RESPONSE::init()
 {
     if (getBuffRemainingBytes() < get_initial_size()) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
@@ -1388,64 +1156,6 @@ bool cACTION_BML_REGISTER_TO_STATS_UPDATES_REQUEST::init()
     return true;
 }
 
-cACTION_BML_REGISTER_TO_STATS_UPDATES_RESPONSE::cACTION_BML_REGISTER_TO_STATS_UPDATES_RESPONSE(uint8_t* buff, size_t buff_len, bool parse) :
-    BaseClass(buff, buff_len, parse) {
-    m_init_succeeded = init();
-}
-cACTION_BML_REGISTER_TO_STATS_UPDATES_RESPONSE::cACTION_BML_REGISTER_TO_STATS_UPDATES_RESPONSE(std::shared_ptr<BaseClass> base, bool parse) :
-BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
-    m_init_succeeded = init();
-}
-cACTION_BML_REGISTER_TO_STATS_UPDATES_RESPONSE::~cACTION_BML_REGISTER_TO_STATS_UPDATES_RESPONSE() {
-}
-void cACTION_BML_REGISTER_TO_STATS_UPDATES_RESPONSE::class_swap()
-{
-    tlvf_swap(8*sizeof(eActionOp_BML), reinterpret_cast<uint8_t*>(m_action_op));
-}
-
-bool cACTION_BML_REGISTER_TO_STATS_UPDATES_RESPONSE::finalize()
-{
-    if (m_parse__) {
-        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
-        return true;
-    }
-    if (m_finalized__) {
-        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
-        return true;
-    }
-    if (!isPostInitSucceeded()) {
-        TLVF_LOG(ERROR) << "post init check failed";
-        return false;
-    }
-    if (m_inner__) {
-        if (!m_inner__->finalize()) {
-            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
-            return false;
-        }
-        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
-        m_buff_ptr__ -= tailroom;
-    }
-    class_swap();
-    m_finalized__ = true;
-    return true;
-}
-
-size_t cACTION_BML_REGISTER_TO_STATS_UPDATES_RESPONSE::get_initial_size()
-{
-    size_t class_size = 0;
-    return class_size;
-}
-
-bool cACTION_BML_REGISTER_TO_STATS_UPDATES_RESPONSE::init()
-{
-    if (getBuffRemainingBytes() < get_initial_size()) {
-        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
-        return false;
-    }
-    if (m_parse__) { class_swap(); }
-    return true;
-}
-
 cACTION_BML_UNREGISTER_FROM_STATS_UPDATES_REQUEST::cACTION_BML_UNREGISTER_FROM_STATS_UPDATES_REQUEST(uint8_t* buff, size_t buff_len, bool parse) :
     BaseClass(buff, buff_len, parse) {
     m_init_succeeded = init();
@@ -1495,64 +1205,6 @@ size_t cACTION_BML_UNREGISTER_FROM_STATS_UPDATES_REQUEST::get_initial_size()
 }
 
 bool cACTION_BML_UNREGISTER_FROM_STATS_UPDATES_REQUEST::init()
-{
-    if (getBuffRemainingBytes() < get_initial_size()) {
-        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
-        return false;
-    }
-    if (m_parse__) { class_swap(); }
-    return true;
-}
-
-cACTION_BML_UNREGISTER_FROM_STATS_UPDATES_RESPONSE::cACTION_BML_UNREGISTER_FROM_STATS_UPDATES_RESPONSE(uint8_t* buff, size_t buff_len, bool parse) :
-    BaseClass(buff, buff_len, parse) {
-    m_init_succeeded = init();
-}
-cACTION_BML_UNREGISTER_FROM_STATS_UPDATES_RESPONSE::cACTION_BML_UNREGISTER_FROM_STATS_UPDATES_RESPONSE(std::shared_ptr<BaseClass> base, bool parse) :
-BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
-    m_init_succeeded = init();
-}
-cACTION_BML_UNREGISTER_FROM_STATS_UPDATES_RESPONSE::~cACTION_BML_UNREGISTER_FROM_STATS_UPDATES_RESPONSE() {
-}
-void cACTION_BML_UNREGISTER_FROM_STATS_UPDATES_RESPONSE::class_swap()
-{
-    tlvf_swap(8*sizeof(eActionOp_BML), reinterpret_cast<uint8_t*>(m_action_op));
-}
-
-bool cACTION_BML_UNREGISTER_FROM_STATS_UPDATES_RESPONSE::finalize()
-{
-    if (m_parse__) {
-        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
-        return true;
-    }
-    if (m_finalized__) {
-        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
-        return true;
-    }
-    if (!isPostInitSucceeded()) {
-        TLVF_LOG(ERROR) << "post init check failed";
-        return false;
-    }
-    if (m_inner__) {
-        if (!m_inner__->finalize()) {
-            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
-            return false;
-        }
-        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
-        m_buff_ptr__ -= tailroom;
-    }
-    class_swap();
-    m_finalized__ = true;
-    return true;
-}
-
-size_t cACTION_BML_UNREGISTER_FROM_STATS_UPDATES_RESPONSE::get_initial_size()
-{
-    size_t class_size = 0;
-    return class_size;
-}
-
-bool cACTION_BML_UNREGISTER_FROM_STATS_UPDATES_RESPONSE::init()
 {
     if (getBuffRemainingBytes() < get_initial_size()) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
@@ -7166,64 +6818,6 @@ bool cACTION_BML_CHANNEL_SCAN_GET_RESULTS_RESPONSE::init()
     m_results_idx__ = results_size;
     if (!buffPtrIncrementSafe(sizeof(sChannelScanResults) * (results_size))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sChannelScanResults) * (results_size) << ") Failed!";
-        return false;
-    }
-    if (m_parse__) { class_swap(); }
-    return true;
-}
-
-cACTION_BML_CHANNEL_SCAN_DUMP_RESULTS_REQUEST::cACTION_BML_CHANNEL_SCAN_DUMP_RESULTS_REQUEST(uint8_t* buff, size_t buff_len, bool parse) :
-    BaseClass(buff, buff_len, parse) {
-    m_init_succeeded = init();
-}
-cACTION_BML_CHANNEL_SCAN_DUMP_RESULTS_REQUEST::cACTION_BML_CHANNEL_SCAN_DUMP_RESULTS_REQUEST(std::shared_ptr<BaseClass> base, bool parse) :
-BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
-    m_init_succeeded = init();
-}
-cACTION_BML_CHANNEL_SCAN_DUMP_RESULTS_REQUEST::~cACTION_BML_CHANNEL_SCAN_DUMP_RESULTS_REQUEST() {
-}
-void cACTION_BML_CHANNEL_SCAN_DUMP_RESULTS_REQUEST::class_swap()
-{
-    tlvf_swap(8*sizeof(eActionOp_BML), reinterpret_cast<uint8_t*>(m_action_op));
-}
-
-bool cACTION_BML_CHANNEL_SCAN_DUMP_RESULTS_REQUEST::finalize()
-{
-    if (m_parse__) {
-        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
-        return true;
-    }
-    if (m_finalized__) {
-        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
-        return true;
-    }
-    if (!isPostInitSucceeded()) {
-        TLVF_LOG(ERROR) << "post init check failed";
-        return false;
-    }
-    if (m_inner__) {
-        if (!m_inner__->finalize()) {
-            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
-            return false;
-        }
-        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
-        m_buff_ptr__ -= tailroom;
-    }
-    class_swap();
-    m_finalized__ = true;
-    return true;
-}
-
-size_t cACTION_BML_CHANNEL_SCAN_DUMP_RESULTS_REQUEST::get_initial_size()
-{
-    size_t class_size = 0;
-    return class_size;
-}
-
-bool cACTION_BML_CHANNEL_SCAN_DUMP_RESULTS_REQUEST::init()
-{
-    if (getBuffRemainingBytes() < get_initial_size()) {
-        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
         return false;
     }
     if (m_parse__) { class_swap(); }
