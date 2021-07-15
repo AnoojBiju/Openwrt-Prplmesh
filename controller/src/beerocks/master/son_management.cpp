@@ -691,8 +691,6 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         new_event.sd = sd;
         tasks.push_event(database.get_bml_task_id(), bml_task::REGISTER_TO_TOPOLOGY_UPDATES,
                          &new_event);
-
-        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_UNREGISTER_TOPOLOGY_QUERY: {
@@ -710,15 +708,6 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         new_event.sd = sd;
         tasks.push_event(database.get_bml_task_id(), bml_task::REGISTER_TO_NW_MAP_UPDATES,
                          &new_event);
-
-        auto response = message_com::create_vs_message<
-            beerocks_message::cACTION_BML_REGISTER_TO_NW_MAP_UPDATES_RESPONSE>(cmdu_tx);
-        if (response == nullptr) {
-            LOG(ERROR) << "create ACTION_BML_REGISTER_TO_NW_MAP_UPDATES_RESPONSE failed";
-            break;
-        }
-
-        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_UNREGISTER_FROM_NW_MAP_UPDATES_REQUEST: {
@@ -728,15 +717,6 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         new_event.sd = sd;
         tasks.push_event(database.get_bml_task_id(), bml_task::UNREGISTER_TO_NW_MAP_UPDATES,
                          &new_event);
-
-        auto response = message_com::create_vs_message<
-            beerocks_message::cACTION_BML_UNREGISTER_FROM_NW_MAP_UPDATES_RESPONSE>(cmdu_tx);
-        if (response == nullptr) {
-            LOG(ERROR) << "create ACTION_BML_UNREGISTER_FROM_NW_MAP_UPDATES_RESPONSE failed";
-            break;
-        }
-
-        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_NW_MAP_REQUEST: {
@@ -750,15 +730,6 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         new_event.sd = sd;
         tasks.push_event(database.get_bml_task_id(), bml_task::REGISTER_TO_STATS_UPDATES,
                          &new_event);
-
-        auto response = message_com::create_vs_message<
-            beerocks_message::cACTION_BML_REGISTER_TO_STATS_UPDATES_RESPONSE>(cmdu_tx);
-        if (response == nullptr) {
-            LOG(ERROR) << "addClass cACTION_BML_REGISTER_TO_STATS_UPDATES_RESPONSE failed";
-            break;
-        }
-
-        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_UNREGISTER_FROM_STATS_UPDATES_REQUEST: {
@@ -767,15 +738,6 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         new_event.sd = sd;
         tasks.push_event(database.get_bml_task_id(), bml_task::UNREGISTER_TO_STATS_UPDATES,
                          &new_event);
-
-        auto response = message_com::create_vs_message<
-            beerocks_message::cACTION_BML_UNREGISTER_FROM_STATS_UPDATES_RESPONSE>(cmdu_tx);
-        if (response == nullptr) {
-            LOG(ERROR) << "addClass ACTION_BML_UNREGISTER_FROM_STATS_UPDATES_RESPONSE failed";
-            break;
-        }
-
-        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_REGISTER_TO_EVENTS_UPDATES_REQUEST: {
@@ -784,15 +746,6 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         new_event.sd = sd;
         tasks.push_event(database.get_bml_task_id(), bml_task::REGISTER_TO_EVENTS_UPDATES,
                          &new_event);
-
-        auto response = message_com::create_vs_message<
-            beerocks_message::cACTION_BML_REGISTER_TO_EVENTS_UPDATES_RESPONSE>(cmdu_tx);
-        if (response == nullptr) {
-            LOG(ERROR) << "addClass ACTION_BML_REGISTER_TO_EVENTS_UPDATES_RESPONSE failed";
-            break;
-        }
-
-        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_UNREGISTER_FROM_EVENTS_UPDATES_REQUEST: {
@@ -801,15 +754,6 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         new_event.sd = sd;
         tasks.push_event(database.get_bml_task_id(), bml_task::UNREGISTER_TO_EVENTS_UPDATES,
                          &new_event);
-
-        auto response = message_com::create_vs_message<
-            beerocks_message::cACTION_BML_UNREGISTER_FROM_EVENTS_UPDATES_RESPONSE>(cmdu_tx);
-        if (response == nullptr) {
-            LOG(ERROR) << "addClass ACTION_BML_UNREGISTER_FROM_EVENTS_UPDATES_RESPONSE failed";
-            break;
-        }
-
-        controller_ctx->send_cmdu(sd, cmdu_tx);
     } break;
 
     case beerocks_message::ACTION_BML_SET_CLIENT_ROAMING_REQUEST: {
@@ -877,7 +821,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         auto response = message_com::create_vs_message<
             beerocks_message::cACTION_BML_GET_LEGACY_CLIENT_ROAMING_RESPONSE>(cmdu_tx);
         if (response == nullptr) {
-            LOG(ERROR) << "addClass ACTION_BML_UNREGISTER_FROM_EVENTS_UPDATES_RESPONSE failed";
+            LOG(ERROR) << "addClass ACTION_BML_GET_LEGACY_CLIENT_ROAMING_RESPONSE failed";
             break;
         }
         response->isEnable() = (database.settings_legacy_client_roaming());
@@ -2018,10 +1962,6 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
                          (void *)&new_event);
         response->op_error_code() = uint8_t(eChannelScanOperationCode::SUCCESS);
         controller_ctx->send_cmdu(sd, cmdu_tx);
-        break;
-    }
-    case beerocks_message::ACTION_BML_CHANNEL_SCAN_DUMP_RESULTS_REQUEST: {
-        LOG(TRACE) << "ACTION_BML_CHANNEL_SCAN_DUMP_RESULTS_REQUEST";
         break;
     }
     case beerocks_message::ACTION_BML_CLIENT_GET_CLIENT_LIST_REQUEST: {
