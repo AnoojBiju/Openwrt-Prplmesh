@@ -53,7 +53,18 @@ void load_balancer_task::work()
 
         state = REQUEST_LOAD_MEASUREMENTS;
 
-        hostaps = database.get_node_children(ire_mac, beerocks::TYPE_SLAVE);
+        auto agent = database.m_agents.get(tlvf::mac_from_string(ire_mac));
+        if (!agent) {
+            LOG(ERROR) << "Agent " << ire_mac << " not found";
+            finish();
+            return;
+        }
+
+        m_radios.clear();
+        for (auto r : agent->radios) {
+            m_radios.insert({r.first, r.second});
+        }
+
         break;
     }
     case REQUEST_LOAD_MEASUREMENTS: {
@@ -66,14 +77,20 @@ void load_balancer_task::work()
             return;
         }
 
-        for (auto hostap : hostaps) {
+        for (auto r : m_radios) {
+            auto radio = r.second.lock();
+            if (!radio) {
+                continue;
+            }
+            auto hostap = tlvf::mac_to_string(radio->radio_uid);
+
             if (database.get_hostap_stats_info_timestamp(tlvf::mac_from_string(hostap)) <=
                 start_timestamp) {
                 /*
                  * if the load info is not up-to-date, request a new report
                  */
-                TASK_LOG(DEBUG) << "load info outdated, requestsing load measurement from hostap "
-                                << hostap;
+                TASK_LOG(DEBUG) << "load info outdated, requestsing load measurement from radio "
+                                << radio->radio_uid;
                 son_actions::send_cmdu_to_agent(database.get_node_parent_ire(hostap), cmdu_tx,
                                                 database, hostap);
                 add_pending_mac(hostap,
@@ -95,47 +112,80 @@ void load_balancer_task::work()
         /*
              * first we need to find the most loaded hostap to perform balancing on
              */
-        std::string most_loaded_hostap;
-        int max_load = 0;
+        auto most_loaded_radio_it = std::max_element(
+            m_radios.begin(), m_radios.end(),
+            [&](decltype(m_radios)::value_type &r1, decltype(m_radios)::value_type &r2) {
+                auto radio1 = r1.second.lock();
+                auto radio2 = r2.second.lock();
 
-        for (auto hostap : hostaps) {
-            int hostap_channel_load =
-                database.get_hostap_channel_load_percent(tlvf::mac_from_string(hostap));
-            if (hostap_channel_load > max_load) {
-                most_loaded_hostap = hostap;
-                max_load           = hostap_channel_load;
-            } else if (hostap_channel_load == max_load) {
-                if (database.get_node_children(hostap).size() >
-                    database.get_node_children(most_loaded_hostap).size()) {
-                    /*
-                         * TODO might need different sta count criteria for 2.4ghz and 5ghz hostaps
-                         */
-                    most_loaded_hostap = hostap;
+                // treat no longer existing radios as less loaded than any existing ones
+                if (!radio2) {
+                    // if radio1 exists, radio1 > radio2
+                    // if radio1 does not exist, radio = radio2
+                    // in any case, radio1 is never less loaded than radio2
+                    return false;
                 }
-            }
+                if (!radio1) {
+                    // radio2 exists, but radio1 doesn't, so radio1 < radio2
+                    return true;
+                }
+
+                auto load1 = database.get_hostap_channel_load_percent(radio1->radio_uid);
+                auto load2 = database.get_hostap_channel_load_percent(radio2->radio_uid);
+                if (load1 != load2) {
+                    return load1 < load2;
+                }
+
+                auto radio1_str = tlvf::mac_to_string(radio1->radio_uid);
+                auto radio2_str = tlvf::mac_to_string(radio2->radio_uid);
+                if (database.get_node_children(radio1_str).size() <
+                    database.get_node_children(radio2_str).size()) {
+                    return true;
+                }
+
+                /*
+                 * TODO might need different sta count criteria for 2.4ghz and 5ghz hostaps
+                 */
+                return false;
+            });
+
+        if (most_loaded_radio_it == m_radios.end()) {
+            TASK_LOG(ERROR) << "most_loaded_radio_it == m_radios.end()";
+            finish();
+            return;
         }
+
+        std::shared_ptr<sAgent::sRadio> most_loaded_radio = most_loaded_radio_it->second.lock();
+
+        if (!most_loaded_radio) {
+            TASK_LOG(ERROR) << "most loaded radio does not exist";
+            finish();
+            return;
+        }
+
+        std::string most_loaded_hostap = tlvf::mac_to_string(most_loaded_radio->radio_uid);
 
         /*
              * now that the hostap was found we need to find its least efficient sta in case of a 5ghz ap
              * or the most efficient sta in case of a 2.4ghz ap
              */
-        auto most_loaded_radio_mac = tlvf::mac_from_string(most_loaded_hostap);
-
         bool current_ap_is_5ghz = database.is_node_5ghz(most_loaded_hostap);
         int ap_total_duration_ms =
-            database.get_hostap_stats_measurement_duration(most_loaded_radio_mac);
+            database.get_hostap_stats_measurement_duration(most_loaded_radio->radio_uid);
         int ap_sta_load_percent =
-            database.get_hostap_total_client_tx_load_percent(most_loaded_radio_mac) +
-            database.get_hostap_total_client_rx_load_percent(most_loaded_radio_mac);
-        int ap_tx_bytes = database.get_hostap_total_sta_tx_bytes(most_loaded_radio_mac);
-        int ap_rx_bytes = database.get_hostap_total_sta_rx_bytes(most_loaded_radio_mac);
+            database.get_hostap_total_client_tx_load_percent(most_loaded_radio->radio_uid) +
+            database.get_hostap_total_client_rx_load_percent(most_loaded_radio->radio_uid);
+        int ap_tx_bytes = database.get_hostap_total_sta_tx_bytes(most_loaded_radio->radio_uid);
+        int ap_rx_bytes = database.get_hostap_total_sta_rx_bytes(most_loaded_radio->radio_uid);
 
         ASSERT_NONZERO(ap_tx_bytes);
         ASSERT_NONZERO(ap_rx_bytes);
 
-        LOG_CLI(DEBUG, "most loaded hostap is "
-                           << most_loaded_hostap << " with " << max_load << " percent channel load"
-                           << std::endl
+        int max_load = database.get_hostap_channel_load_percent(most_loaded_radio->radio_uid);
+
+        LOG_CLI(DEBUG, "most loaded radio is "
+                           << most_loaded_radio->radio_uid << " with " << max_load
+                           << " percent channel load" << std::endl
                            << "ap_total_duration_ms=" << ap_total_duration_ms
                            << " ap_sta_load_percent=" << ap_sta_load_percent << std::endl
                            << "ap_tx_bytes=" << ap_tx_bytes << " ap_rx_bytes=" << ap_rx_bytes);
@@ -220,8 +270,8 @@ void load_balancer_task::work()
 
         if (!chosen_client.empty()) {
             LOG_CLI(DEBUG,
-                    "chosen client on hostap "
-                        << most_loaded_hostap << " is " << chosen_client << std::endl
+                    "chosen client on radio "
+                        << most_loaded_radio->radio_uid << " is " << chosen_client << std::endl
                         << "chosen_client_efficiency_ratio=" << chosen_client_efficiency_ratio
                         << " chosen_client_airtime_percentage=" << chosen_client_airtime_percentage
                         << std::endl
@@ -276,7 +326,7 @@ void load_balancer_task::work()
 //int extra_available_bytes = 0;
 //int extra_available_bytes_per_second = 0;
 #endif
-        hostaps.erase(most_loaded_hostap);
+        m_radios.erase(most_loaded_radio->radio_uid);
         /*
              * now we check how each of the other hostaps' throughput would be affected
              * by transferring the STA to them
@@ -293,7 +343,14 @@ void load_balancer_task::work()
         auto sta_capabilities          = database.get_station_current_capabilities(chosen_client);
         uint16_t sta_phy_tx_rate_100kb = database.get_node_rx_phy_rate_100kb(chosen_client);
 
-        for (auto hostap : hostaps) {
+        for (auto r : m_radios) {
+            auto radio = r.second.lock();
+            if (!radio) {
+                continue;
+            }
+
+            auto hostap = tlvf::mac_to_string(radio->radio_uid);
+
             son::wireless_utils::sPhyApParams hostap_params;
 
             hostap_params.is_5ghz = database.is_node_5ghz(hostap);
@@ -315,7 +372,7 @@ void load_balancer_task::work()
             //int estimated_ul_rssi, hostap_dl_rssi = beerocks::RSSI_INVALID;
             int8_t rx_rssi, rx_packets;
             if (database.get_node_cross_rx_rssi(sta_mac, chosen_hostap, rx_rssi, rx_packets)) {
-                LOG(ERROR) << "can't get cross_rx_rssi for hostap " << chosen_hostap;
+                LOG(ERROR) << "can't get cross_rx_rssi for radio " << chosen_hostap;
                 continue;
             }
 
@@ -349,10 +406,11 @@ void load_balancer_task::work()
             int predicted_chosen_client_bitrate =
                 normalized_chosen_client_bytes / hostap_duration_ms;
 
-            LOG_CLI(DEBUG, "load_balancer_task: "
-                               << std::endl
-                               << "   predicted bitrate for sta " << chosen_client << " on hostap "
-                               << hostap << " is " << predicted_chosen_client_bitrate << " b/s");
+            LOG_CLI(DEBUG, "load_balancer_task: " << std::endl
+                                                  << "   predicted bitrate for sta "
+                                                  << chosen_client << " on radio "
+                                                  << radio->radio_uid << " is "
+                                                  << predicted_chosen_client_bitrate << " b/s");
             //int free_hostap_airtime_ms = hostap_duration_ms * float(100 - database.get_hostap_channel_load_percent(hostap)) / 100;
 
             if (predicted_chosen_client_bitrate > chosen_hostap_predicted_bitrate) {
@@ -444,7 +502,7 @@ void load_balancer_task::work()
         }
 
         if (!chosen_hostap.empty()) {
-            TASK_LOG(DEBUG) << "chosen hostap for sta " << chosen_client << " is " << chosen_hostap
+            TASK_LOG(DEBUG) << "chosen radio for sta " << chosen_client << " is " << chosen_hostap
                             << " providing a total gain of "
                             << chosen_hostap_bytes_per_second_gained << "Bps";
 
@@ -452,7 +510,7 @@ void load_balancer_task::work()
 
             LOG_CLI(DEBUG, "load_balancer_task: "
                                << std::endl
-                               << "    chosen hostap for sta " << chosen_client << " is "
+                               << "    chosen radio for sta " << chosen_client << " is "
                                << chosen_hostap << std::endl
                                << "    providing an estimated bitrate of "
                                << chosen_hostap_predicted_bitrate << "Bps" << std::endl
@@ -471,9 +529,9 @@ void load_balancer_task::work()
             //int steering_task_id = son_actions::steer_sta(database, tasks, chosen_client, chosen_hostap);
             sta_mac = chosen_client;
         } else {
-            TASK_LOG(DEBUG) << "couldn't find a better hostap for sta " << chosen_client;
+            TASK_LOG(DEBUG) << "couldn't find a better radio for sta " << chosen_client;
             LOG_CLI(DEBUG, "load_balancer_task: " << std::endl
-                                                  << "   couldn't find a better hostap for sta "
+                                                  << "   couldn't find a better radio for sta "
                                                   << chosen_client << std::endl);
         }
         finish();
@@ -491,7 +549,7 @@ void load_balancer_task::handle_responses_timeout(
     for (auto entry : timed_out_macs) {
         std::string mac = entry.first;
         TASK_LOG(DEBUG) << "response from " << mac << " timed out, removing from list";
-        hostaps.erase(mac);
+        m_radios.erase(tlvf::mac_from_string(mac));
     }
 }
 
