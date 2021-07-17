@@ -2304,8 +2304,6 @@ bool Controller::handle_intel_slave_join(
 
     bool local_master = (bool)notification->platform_settings().local_master;
     if (local_master) {
-        database.set_local_slave_mac(tlvf::mac_to_string(radio_mac));
-        LOG(DEBUG) << "local_slave_mac = " << radio_mac;
 #ifdef BEEROCKS_RDKB
         LOG(DEBUG) << "platform rdkb_extensions_enabled="
                    << int(notification->platform_settings().rdkb_extensions_enabled);

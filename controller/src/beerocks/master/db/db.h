@@ -392,9 +392,6 @@ public:
     bool set_node_type(const std::string &mac, beerocks::eType type);
     beerocks::eType get_node_type(const std::string &mac);
 
-    bool set_local_slave_mac(const std::string &mac);
-    std::string get_local_slave_mac();
-
     bool set_node_ipv4(const std::string &mac, const std::string &ipv4 = std::string());
     std::string get_node_ipv4(const std::string &mac);
 
@@ -1839,8 +1836,6 @@ public:
     sDbMasterConfig &config;
 
 private:
-    std::string local_slave_mac;
-
     /**
      * @brief Adds node to the database.
      *

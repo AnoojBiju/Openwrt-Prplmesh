@@ -508,17 +508,6 @@ beerocks::eType db::get_node_type(const std::string &mac)
     return n->get_type();
 }
 
-bool db::set_local_slave_mac(const std::string &mac)
-{
-    if (!local_slave_mac.empty()) {
-        LOG(WARNING) << "local_slave_mac != empty";
-    }
-    local_slave_mac = mac;
-    return true;
-}
-
-std::string db::get_local_slave_mac() { return local_slave_mac; }
-
 bool db::set_node_ipv4(const std::string &mac, const std::string &ipv4)
 {
     auto n = get_node(mac);
