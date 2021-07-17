@@ -733,7 +733,6 @@ public:
     std::set<std::string> get_node_subtree(const std::string &mac);
     std::string get_node_parent(const std::string &mac);
 
-    std::string get_node_parent_hostap(const std::string &mac);
     std::string get_node_previous_parent(const std::string &mac);
     std::string get_node_parent_ire(const std::string &mac);
     std::string get_node_parent_backhaul(const std::string &mac);

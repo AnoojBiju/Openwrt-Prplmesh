@@ -1102,17 +1102,6 @@ std::string db::get_node_parent(const std::string &mac)
     return n->parent_mac;
 }
 
-std::string db::get_node_parent_hostap(const std::string &mac)
-{
-    std::string parent_backhaul = get_node_parent_backhaul(mac);
-    if (is_node_wireless(parent_backhaul)) {
-        return get_node_parent(parent_backhaul);
-    } else {
-        LOG(DEBUG) << "node " << parent_backhaul << " is not connected wirelessly";
-        return std::string();
-    }
-}
-
 std::string db::get_node_parent_backhaul(const std::string &mac)
 {
     auto n = get_node(mac);
