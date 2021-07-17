@@ -1456,7 +1456,6 @@ public:
     bool is_commit_to_persistent_db_required();
 
     int get_hostap_stats_measurement_duration(const sMacAddr &mac);
-    std::chrono::steady_clock::time_point get_node_stats_info_timestamp(const std::string &mac);
     std::chrono::steady_clock::time_point get_hostap_stats_info_timestamp(const sMacAddr &mac);
 
     uint32_t get_node_rx_bytes(const std::string &mac);
