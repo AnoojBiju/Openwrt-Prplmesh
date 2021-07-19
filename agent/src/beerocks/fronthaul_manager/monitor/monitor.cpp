@@ -644,7 +644,7 @@ bool Monitor::create_ap_metrics_response(uint16_t mid, const std::vector<sMacAdd
         }
 
         auto radio_node = mon_db.get_radio_node();
-        if (!mon_stats.add_ap_metrics(cmdu_tx, *vap_node, *radio_node)) {
+        if (!mon_stats.add_ap_metrics(cmdu_tx, *vap_node, *radio_node, mon_wlan_hal)) {
             return false;
         }
 

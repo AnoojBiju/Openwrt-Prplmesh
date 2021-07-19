@@ -1518,6 +1518,22 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
     return true;
 }
 
+void Controller::set_esp(const std::string &param_name, const sMacAddr &reporting_agent_bssid,
+                         uint8_t *est_service_info_field)
+{
+    union {
+        uint8_t bytes[4];
+        uint32_t value;
+    } estimated_service_param = {0};
+
+    estimated_service_param.bytes[0] = est_service_info_field[0];
+    estimated_service_param.bytes[1] = est_service_info_field[1];
+    estimated_service_param.bytes[2] = est_service_info_field[2];
+    (estimated_service_param.bytes[2]);
+    database.set_estimated_service_param(reporting_agent_bssid, param_name,
+                                         estimated_service_param.value);
+}
+
 bool Controller::handle_cmdu_1905_ap_metric_response(const sMacAddr &src_mac,
                                                      ieee1905_1::CmduMessageRx &cmdu_rx)
 {
@@ -1551,30 +1567,23 @@ bool Controller::handle_cmdu_1905_ap_metric_response(const sMacAddr &src_mac,
         }
 
         if (ap_metric_tlv->estimated_service_parameters().include_ac_be) {
-            union {
-                char bytes[4];
-                uint32_t value;
-            } estimated_service_parameters = {0};
-
-            estimated_service_parameters.bytes[1] = *ap_metric_tlv->estimated_service_info_field(0);
-            estimated_service_parameters.bytes[2] = *ap_metric_tlv->estimated_service_info_field(1);
-            estimated_service_parameters.bytes[3] = *ap_metric_tlv->estimated_service_info_field(2);
-            if (!database.set_estimated_service_parameters_be(
-                    reporting_agent_bssid, ntohl(estimated_service_parameters.value))) {
-                LOG(ERROR) << "Failed to set estimated service parameters be for bssid: "
-                           << reporting_agent_bssid;
-                ret_val = false;
-                continue;
-            }
+            set_esp("EstServiceParametersBE", reporting_agent_bssid,
+                    ap_metric_tlv->estimated_service_info_field());
         } else {
             LOG(WARNING) << "Include bit for the Estimated Service Parameters AC = BE should "
                             "always be 1";
-            if (!database.set_estimated_service_parameters_be(reporting_agent_bssid, 0)) {
-                LOG(ERROR) << "Failed to set estimated service parameters be for bssid: "
-                           << reporting_agent_bssid;
-                ret_val = false;
-                continue;
-            }
+        }
+        if (ap_metric_tlv->estimated_service_parameters().include_ac_bk) {
+            set_esp("EstServiceParametersBK", reporting_agent_bssid,
+                    ap_metric_tlv->estimated_service_info_field(3));
+        }
+        if (ap_metric_tlv->estimated_service_parameters().include_ac_vo) {
+            set_esp("EstServiceParametersVO", reporting_agent_bssid,
+                    ap_metric_tlv->estimated_service_info_field(6));
+        }
+        if (ap_metric_tlv->estimated_service_parameters().include_ac_vi) {
+            set_esp("EstServiceParametersVI", reporting_agent_bssid,
+                    ap_metric_tlv->estimated_service_info_field(9));
         }
     }
 

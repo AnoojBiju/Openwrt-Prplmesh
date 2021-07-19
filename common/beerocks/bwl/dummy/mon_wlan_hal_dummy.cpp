@@ -423,6 +423,15 @@ bool mon_wlan_hal_dummy::set(const std::string &param, const std::string &value,
     return true;
 }
 
+bool mon_wlan_hal_dummy::set_estimated_service_parameters(uint8_t *esp_info_field)
+{
+    std::fill_n(&esp_info_field[0], 1, 1); // be
+    std::fill_n(&esp_info_field[3], 1, 0); // bk
+    std::fill_n(&esp_info_field[6], 1, 3); // vo
+    std::fill_n(&esp_info_field[9], 1, 2); // vi
+    return true;
+}
+
 } // namespace dummy
 
 std::shared_ptr<mon_wlan_hal> mon_wlan_hal_create(const std::string &iface_name,

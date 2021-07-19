@@ -114,10 +114,10 @@ class NbapiBSS(PrplMeshBaseTest):
             vo = getattr(ap_metrics, 'ap_metrics_est_param_vo', 0)
             vi = getattr(ap_metrics, 'ap_metrics_est_param_vi', 0)
 
-            be = int(be.replace(':', ''), 16)
-            # bk = int(bk.replace(':', ''), 16)
-            # vo = int(vo.replace(':', ''), 16)
-            # vi = int(vi.replace(':', ''), 16)
+            be = int(be[:2], 10)
+            bk = int(bk[:2], 10)
+            vo = int(vo[:2], 10)
+            vi = int(vi[:2], 10)
 
             assert bin(be) == bin(est_service_params_be), \
                 f"Wrong value for EstServiceParametersBE [{est_service_params_be}] expect [{be}]"

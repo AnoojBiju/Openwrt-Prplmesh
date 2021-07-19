@@ -334,6 +334,17 @@ private:
     */
     bool handle_tlv_profile2_cac_status_report(std::shared_ptr<sAgent::sRadio> radio,
                                                ieee1905_1::CmduMessageRx &cmdu_rx);
+    /**
+     * @brief Extracts ESP value from est_service_info_field and set it to specified
+     * with @param_name NBAPI EstServiceParameter.
+     * 
+     * @param param_name Name of NBAPI EstServiceParameter parameter to be set.
+     * @param reporting_agent_bssid BSSID of BSS for wich parameter will be set.
+     * @param est_service_info_field Array with ESP values.
+     * 
+    */
+    void set_esp(const std::string &param_name, const sMacAddr &reporting_agent_bssid,
+                 uint8_t *est_service_info_field);
 
     /**
      * Buffer to hold CMDU to be transmitted.

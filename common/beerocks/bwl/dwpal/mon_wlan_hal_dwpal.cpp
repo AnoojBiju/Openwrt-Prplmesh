@@ -1659,6 +1659,12 @@ bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
     return true;
 }
 
+bool mon_wlan_hal_dwpal::set_estimated_service_parameters(uint8_t *esp_info_field)
+{
+    // TO DO: Implement with PPM-1499
+    return true;
+}
+
 } // namespace dwpal
 
 std::shared_ptr<mon_wlan_hal> mon_wlan_hal_create(const std::string &iface_name,
