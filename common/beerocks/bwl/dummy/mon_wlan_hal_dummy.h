@@ -59,6 +59,8 @@ public:
             std::chrono::steady_clock::time_point::max()) override;
 
     virtual bool channel_scan_abort() override;
+    virtual bool set_estimated_service_parameters(uint8_t *esp_info_field) override;
+
     // Protected methods:
 protected:
     virtual bool process_dummy_event(parsed_obj_map_t &parsed_obj) override;

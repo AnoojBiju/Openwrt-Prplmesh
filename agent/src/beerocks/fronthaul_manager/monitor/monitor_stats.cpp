@@ -440,7 +440,8 @@ void monitor_stats::process()
 
 bool monitor_stats::add_ap_metrics(ieee1905_1::CmduMessageTx &cmdu_tx,
                                    const monitor_vap_node &vap_node,
-                                   const monitor_radio_node &radio_node) const
+                                   const monitor_radio_node &radio_node,
+                                   std::shared_ptr<bwl::mon_wlan_hal> &mon_wlan_hal) const
 {
     auto ap_metrics_response_tlv = cmdu_tx.addClass<wfa_map::tlvApMetrics>();
 
@@ -453,19 +454,22 @@ bool monitor_stats::add_ap_metrics(ieee1905_1::CmduMessageTx &cmdu_tx,
     auto channel_utilization = radio_node.get_channel_utilization();
     auto sta_count           = vap_node.sta_get_count();
 
-    ap_metrics_response_tlv->bssid()                               = bssid;
-    ap_metrics_response_tlv->channel_utilization()                 = channel_utilization;
-    ap_metrics_response_tlv->number_of_stas_currently_associated() = sta_count;
-    //TODO: fill ap_metrics_response_tlv->estimated_service_parameters() with correct value
+    ap_metrics_response_tlv->bssid()                                      = bssid;
+    ap_metrics_response_tlv->channel_utilization()                        = channel_utilization;
+    ap_metrics_response_tlv->number_of_stas_currently_associated()        = sta_count;
+    ap_metrics_response_tlv->estimated_service_parameters().include_ac_bk = 1;
     ap_metrics_response_tlv->estimated_service_parameters().include_ac_be = 1;
+    ap_metrics_response_tlv->estimated_service_parameters().include_ac_vo = 1;
+    ap_metrics_response_tlv->estimated_service_parameters().include_ac_vi = 1;
 
-    if (!ap_metrics_response_tlv->alloc_estimated_service_info_field(3)) {
+    if (!ap_metrics_response_tlv->alloc_estimated_service_info_field(12)) {
         LOG(ERROR)
             << "Couldn't allocate ap_metrics_response_tlv->alloc_estimated_service_info_field";
         return false;
     }
-    std::fill_n(ap_metrics_response_tlv->estimated_service_info_field(), 3, 0);
-
+    std::fill_n(ap_metrics_response_tlv->estimated_service_info_field(), 12, 0);
+    mon_wlan_hal->set_estimated_service_parameters(
+        ap_metrics_response_tlv->estimated_service_info_field());
     return true;
 }
 

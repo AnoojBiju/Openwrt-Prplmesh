@@ -6313,22 +6313,18 @@ std::string db::dm_get_path_to_bss(const sMacAddr &bssid)
 std::string db::dm_get_path_to_bss(const sMacAddr &bssid) { return "dummy!"; }
 #endif
 
-bool db::set_estimated_service_parameters_be(const sMacAddr &bssid,
-                                             uint32_t estimated_service_parameters_be)
+bool db::set_estimated_service_param(const sMacAddr &bssid, const std::string &param_name,
+                                     uint32_t esp_value)
 {
     std::string path_to_bss = dm_get_path_to_bss(bssid);
     if (path_to_bss.empty()) {
         LOG(ERROR) << "Failed get path to bss with mac: " << bssid;
         return false;
     }
-
-    if (!m_ambiorix_datamodel->set(path_to_bss, "EstServiceParametersBE",
-                                   estimated_service_parameters_be)) {
-        LOG(ERROR) << "Failed to set " << path_to_bss
-                   << ".EstServiceParametersBE: " << estimated_service_parameters_be;
+    if (!m_ambiorix_datamodel->set(path_to_bss, param_name, esp_value)) {
+        LOG(ERROR) << "Failed to set " << path_to_bss << param_name << ": " << esp_value;
         return false;
     }
-
     return true;
 }
 

@@ -1622,16 +1622,17 @@ public:
                            uint8_t receive_self, uint8_t receive_other);
 
     /**
-     * @brief Set estimated service parameters BE in Controller Data Model.
-     *
+     * @brief Set estimated service parameters in Controller Data Model.
+     * 
      * Data model path example: "Controller.Network.Device.1.Radio.1.BSS.1.EstServiceParametersBE"
-     *
+     * 
      * @param[in] bssid BSSID.
-     * @param[in] estimated_service_parameters_be Estimated service parameters BE value.
-     * @return true on success, otherwise false.
+     * @param[in] param_name Estimated service parameters name.
+     * @param[in] esp_vslue Estimated service parameters value.
+     * @return True on success, otherwise false.
      */
-    bool set_estimated_service_parameters_be(const sMacAddr &bssid,
-                                             uint32_t estimated_service_parameters_be);
+    bool set_estimated_service_param(const sMacAddr &bssid, const std::string &param_name,
+                                     uint32_t esp_value);
 
     /**
      * @brief Updates master configuration if a setting is changed through NBAPI.
