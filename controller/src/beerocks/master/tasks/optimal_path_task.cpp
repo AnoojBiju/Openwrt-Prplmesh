@@ -1905,9 +1905,8 @@ double optimal_path_task::calculate_weighted_phy_rate(const std::string &client_
 double optimal_path_task::calculate_weighted_phy_rate(const std::string &node_mac, int &hops)
 {
     double node_phy_rate;
-    bool wireless_link     = false;
-    std::string parent_mac = database.get_node_parent(node_mac);
-    auto if_type           = database.get_node_backhaul_iface_type(node_mac);
+    bool wireless_link = false;
+    auto if_type       = database.get_node_backhaul_iface_type(node_mac);
     //TASK_LOG(DEBUG) << "calculate_weighted_phy_rate() node_mac=" << node_mac << " if_type=" << int(if_type);
     if (if_type == beerocks::IFACE_TYPE_GW_BRIDGE) {
         node_phy_rate = (1e+5 * double(beerocks::BRIDGE_RATE_100KB));
