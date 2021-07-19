@@ -153,59 +153,58 @@ private:
     bool handle_cmdu_from_broker(uint32_t iface_index, const sMacAddr &dst_mac,
                                  const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
 
-    bool handle_cmdu_1905_1_message(const std::string &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_cmdu_1905_1_message(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_cmdu_control_message(const std::string &src_mac,
                                      std::shared_ptr<beerocks::beerocks_header> beerocks_header);
     void handle_cmdu_control_ieee1905_1_message(const std::string &src_mac,
                                                 ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_intel_slave_join(const std::string &src_mac,
+    bool handle_intel_slave_join(const sMacAddr &src_mac,
                                  std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps,
                                  beerocks::beerocks_header &beerocks_header,
                                  ieee1905_1::CmduMessageTx &cmdu_tx,
                                  std::shared_ptr<sAgent> &agent);
     bool
-    handle_non_intel_slave_join(const std::string &src_mac,
+    handle_non_intel_slave_join(const sMacAddr &src_mac,
                                 std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps,
                                 const WSC::m1 &m1, std::shared_ptr<sAgent> &agent,
                                 const sMacAddr &radio_mac, ieee1905_1::CmduMessageTx &cmdu_tx);
 
     // 1905 messages handlers
-    bool handle_cmdu_1905_autoconfiguration_search(const std::string &src_mac,
+    bool handle_cmdu_1905_autoconfiguration_search(const sMacAddr &src_mac,
                                                    ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_cmdu_1905_autoconfiguration_WSC(const std::string &src_mac,
+    bool handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
                                                 ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_cmdu_1905_ap_metric_response(const std::string &src_mac,
+    bool handle_cmdu_1905_ap_metric_response(const sMacAddr &src_mac,
                                              ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_cmdu_1905_ap_capability_report(const std::string &src_mac,
+    bool handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
                                                ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_cmdu_1905_channel_preference_report(const std::string &src_mac,
+    bool handle_cmdu_1905_channel_preference_report(const sMacAddr &src_mac,
                                                     ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_cmdu_1905_channel_selection_response(const std::string &src_mac,
+    bool handle_cmdu_1905_channel_selection_response(const sMacAddr &src_mac,
                                                      ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_cmdu_1905_channel_scan_report(const std::string &src_mac,
+    bool handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
                                               ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_cmdu_1905_operating_channel_report(const std::string &src_mac,
+    bool handle_cmdu_1905_operating_channel_report(const sMacAddr &src_mac,
                                                    ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_cmdu_1905_ack_message(const std::string &src_mac,
-                                      ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_cmdu_1905_higher_layer_data_message(const std::string &src_mac,
+    bool handle_cmdu_1905_ack_message(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_cmdu_1905_higher_layer_data_message(const sMacAddr &src_mac,
                                                     ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_cmdu_1905_steering_completed_message(const std::string &src_mac,
+    bool handle_cmdu_1905_steering_completed_message(const sMacAddr &src_mac,
                                                      ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_cmdu_1905_client_steering_btm_report_message(const std::string &src_mac,
+    bool handle_cmdu_1905_client_steering_btm_report_message(const sMacAddr &src_mac,
                                                              ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_cmdu_1905_client_capability_report_message(const std::string &src_mac,
+    bool handle_cmdu_1905_client_capability_report_message(const sMacAddr &src_mac,
                                                            ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_cmdu_1905_beacon_response(const std::string &src_mac,
+    bool handle_cmdu_1905_beacon_response(const sMacAddr &src_mac,
                                           ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_cmdu_1905_backhaul_sta_steering_response(const std::string &src_mac,
+    bool handle_cmdu_1905_backhaul_sta_steering_response(const sMacAddr &src_mac,
                                                          ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_cmdu_1905_tunnelled_message(const std::string &src_mac,
+    bool handle_cmdu_1905_tunnelled_message(const sMacAddr &src_mac,
                                             ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_cmdu_1905_failed_connection_message(const std::string &src_mac,
+    bool handle_cmdu_1905_failed_connection_message(const sMacAddr &src_mac,
                                                     ieee1905_1::CmduMessageRx &cmdu_rx);
     bool handle_cmdu_1905_associated_sta_link_metrics_response_message(
-        const std::string &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
+        const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
     bool autoconfig_wsc_parse_radio_caps(
         const sMacAddr &radio_mac,
         std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps);
@@ -293,7 +292,7 @@ private:
      * @param cmdu_rx  AP Metrics Response or Associated STA Link Metrics Response message.
      * @return True on success, false otherwise.
     */
-    bool handle_tlv_associated_sta_link_metrics(const std::string &src_mac,
+    bool handle_tlv_associated_sta_link_metrics(const sMacAddr &src_mac,
                                                 ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
@@ -303,7 +302,7 @@ private:
      * @param cmdu_rx  AP Metrics Response or Associated STA Link Metrics Response message.
      * @return True on success, false otherwise.
     */
-    bool handle_tlv_associated_sta_extended_link_metrics(const std::string &src_mac,
+    bool handle_tlv_associated_sta_extended_link_metrics(const sMacAddr &src_mac,
                                                          ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
@@ -313,7 +312,7 @@ private:
      * @param cmdu_rx  AP Metrics Response message.
      * @return True on success, false otherwise.
     */
-    bool handle_tlv_associated_sta_traffic_stats(const std::string &src_mac,
+    bool handle_tlv_associated_sta_traffic_stats(const sMacAddr &src_mac,
                                                  ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
