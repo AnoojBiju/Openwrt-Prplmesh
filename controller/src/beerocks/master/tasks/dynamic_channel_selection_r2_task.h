@@ -189,15 +189,6 @@ private:
     bool trigger_pending_scan_requests();
 
     /**
-     * @brief Check if a scan was triggered for a given radio
-     * 
-     * @param radio_mac MAC address of the radio 
-     * @param is_single_scan boolean value that represents the type of the scan
-     * @return true if scan is triggered, false otherwise.
-     */
-    bool is_scan_triggered_for_radio(const sMacAddr &radio_mac, bool is_single_scan);
-
-    /**
      * @brief Handle scan request events.
      * Add a radio scan request in the event to pending scan requests.
      * 
