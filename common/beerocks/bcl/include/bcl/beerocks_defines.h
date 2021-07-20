@@ -13,20 +13,20 @@
 #include <cstdint>
 #include <stdint.h>
 
-namespace beerocks {
+constexpr char BEEROCKS_CONTROLLER[] = "beerocks_controller";
+constexpr char BEEROCKS_AGENT[]      = "beerocks_agent";
+constexpr char BEEROCKS_BACKHAUL[]   = "beerocks_backhaul";
+constexpr char BEEROCKS_FRONTHAUL[]  = "beerocks_fronthaul";
+constexpr char BEEROCKS_AP_MANAGER[] = "beerocks_ap_manager";
+constexpr char BEEROCKS_MONITOR[]    = "beerocks_monitor";
+constexpr char BEEROCKS_CLI[]        = "beerocks_cli";
 
-#define BEEROCKS_CONTROLLER "beerocks_controller"
-#define BEEROCKS_AGENT "beerocks_agent"
-#define BEEROCKS_FRONTHAUL "beerocks_fronthaul"
-#define BEEROCKS_AP_MANAGER "beerocks_ap_manager"
-#define BEEROCKS_MONITOR "beerocks_monitor"
-#define BEEROCKS_CLI "beerocks_cli"
-
-#define BEEROCKS_BROKER_UDS "uds_broker"
-#define BEEROCKS_SLAVE_UDS "uds_slave"
-#define BEEROCKS_MASTER_UDS "uds_master"
-#define BEEROCKS_PLAT_MGR_UDS "uds_platform_manager"
-#define BEEROCKS_BACKHAUL_MGR_UDS "uds_backhaul_manager"
+constexpr char BEEROCKS_BROKER_UDS[]     = "uds_broker";
+constexpr char BEEROCKS_AGENT_UDS[]      = "uds_agent";
+constexpr char BEEROCKS_FRONTHAUL_UDS[]  = "uds_fronthaul";
+constexpr char BEEROCKS_CONTROLLER_UDS[] = "uds_controller";
+constexpr char BEEROCKS_PLATFORM_UDS[]   = "uds_platform";
+constexpr char BEEROCKS_BACKHAUL_UDS[]   = "uds_backhaul";
 
 // configuration files path
 #ifdef BEEROCKS_RDKB
@@ -43,6 +43,7 @@ namespace beerocks {
 // clang-format on
 #endif
 
+namespace beerocks {
 namespace ieee1905_1_consts {
 static constexpr int DISCOVERY_NOTIFICATION_TIMEOUT_SEC = 60;
 }

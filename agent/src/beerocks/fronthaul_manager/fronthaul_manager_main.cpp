@@ -259,13 +259,12 @@ int main(int argc, char *argv[])
     LOG_IF(!timer_manager, FATAL) << "Unable to create timer manager!";
 
     // Get Agent UDS file
-    std::string fronthaul_uds_path =
-        beerocks_slave_conf.temp_path + std::string(BEEROCKS_SLAVE_UDS) + "_" + fronthaul_iface;
+    std::string agent_uds_path = beerocks_slave_conf.temp_path + std::string(BEEROCKS_AGENT_UDS);
 
     // Create CMDU client factory to create CMDU clients connected to CMDU server running in
     // slave when requested
     std::shared_ptr<beerocks::CmduClientFactory> slave_cmdu_client_factory =
-        std::move(beerocks::create_cmdu_client_factory(fronthaul_uds_path, event_loop));
+        std::move(beerocks::create_cmdu_client_factory(agent_uds_path, event_loop));
     LOG_IF(!slave_cmdu_client_factory, FATAL) << "Unable to create CMDU client factory!";
 
     // Create ap_manager

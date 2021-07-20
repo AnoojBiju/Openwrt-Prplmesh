@@ -37,8 +37,8 @@ static std::shared_ptr<EventLoop> create_event_loop()
 static std::shared_ptr<broker::BrokerServer>
 create_broker_server(std::shared_ptr<EventLoop> event_loop)
 {
-    // UDS path for broker server socker;
-    constexpr const char *broker_uds_path = TMP_PATH "/" BEEROCKS_BROKER_UDS;
+    // UDS path for broker server socket;
+    std::string broker_uds_path = std::string(TMP_PATH) + "/" + BEEROCKS_BROKER_UDS;
 
     // Number of concurrent connections on the server socket
     constexpr int listen_buffer_size = 10;

@@ -304,7 +304,7 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
                               const std::unordered_map<int, std::string> &interfaces_map, int argc,
                               char *argv[])
 {
-    std::string base_agent_name = std::string(BEEROCKS_AGENT);
+    std::string base_agent_name(BEEROCKS_BACKHAUL);
 
     // Init logger
     auto agent_logger = init_logger(base_agent_name, beerocks_slave_conf.sLog, argc, argv);
@@ -314,7 +314,7 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     g_loggers.push_back(agent_logger);
 
     // Write pid file
-    beerocks::os_utils::write_pid_file(beerocks_slave_conf.temp_path, base_agent_name);
+    beerocks::os_utils::write_pid_file(beerocks_slave_conf.temp_path, BEEROCKS_AGENT);
     std::string pid_file_path =
         beerocks_slave_conf.temp_path + "pid/" + base_agent_name; // for file touching
 
@@ -339,7 +339,7 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
 
     // Create UDS address where the server socket will listen for incoming connection requests.
     std::string platform_manager_uds_path =
-        beerocks_slave_conf.temp_path + "/" + std::string(BEEROCKS_PLAT_MGR_UDS);
+        beerocks_slave_conf.temp_path + std::string(BEEROCKS_PLATFORM_UDS);
     auto platform_manager_uds_address =
         beerocks::net::UdsAddress::create_instance(platform_manager_uds_path);
     LOG_IF(!platform_manager_uds_address, FATAL)
@@ -402,7 +402,7 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
 
     // Create UDS address where the server socket will listen for incoming connection requests.
     std::string backhaul_manager_uds_path =
-        beerocks_slave_conf.temp_path + "/" + std::string(BEEROCKS_BACKHAUL_MGR_UDS);
+        beerocks_slave_conf.temp_path + std::string(BEEROCKS_BACKHAUL_UDS);
     auto backhaul_manager_uds_address =
         beerocks::net::UdsAddress::create_instance(backhaul_manager_uds_path);
     LOG_IF(!backhaul_manager_uds_address, FATAL)
