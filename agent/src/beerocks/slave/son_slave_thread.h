@@ -38,22 +38,31 @@ namespace son {
 class slave_thread : public beerocks::socket_thread {
 
 public:
-    typedef struct {
-        // from slave config file //
+    struct sAgentConfig {
+        // Common configuration from Agent configuration file.
         std::string temp_path;
         std::string vendor;
         std::string model;
         uint16_t ucc_listener_port;
         std::string bridge_iface;
         int stop_on_failure_attempts;
-        bool enable_repeater_mode;
-        std::string backhaul_wireless_iface;
-        bool backhaul_wireless_iface_filter_low;
         std::string backhaul_preferred_bssid;
-        std::string hostap_iface;
-        beerocks::eIfaceType hostap_iface_type;
-        int hostap_ant_gain;
-    } sSlaveConfig;
+
+        // Radio configuration
+        struct sRadioConfig {
+            std::string backhaul_wireless_iface;
+            int hostap_ant_gain;
+            bool enable_repeater_mode;
+            beerocks::eIfaceType hostap_iface_type;
+
+            // This parameter does not exist on the configuration file.
+            // Need to check if it still needded. Meanwhile keep it. PPM-1550.
+            bool backhaul_wireless_iface_filter_low;
+        };
+
+        // key: fronthaul interface name
+        std::unordered_map<std::string, sRadioConfig> radios;
+    };
 
     typedef struct {
         std::string bridge_ipv4;
