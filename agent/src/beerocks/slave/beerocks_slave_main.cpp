@@ -303,19 +303,17 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
                               const std::unordered_map<int, std::string> &interfaces_map, int argc,
                               char *argv[])
 {
-    std::string base_agent_name = std::string(BEEROCKS_AGENT);
-
     // Init logger
-    auto agent_logger = init_logger(base_agent_name, beerocks_slave_conf.sLog, argc, argv);
+    auto agent_logger = init_logger(BEEROCKS_BACKHAUL, beerocks_slave_conf.sLog, argc, argv);
     if (!agent_logger) {
         return 1;
     }
     g_loggers.push_back(agent_logger);
 
     // Write pid file
-    beerocks::os_utils::write_pid_file(beerocks_slave_conf.temp_path, base_agent_name);
+    beerocks::os_utils::write_pid_file(beerocks_slave_conf.temp_path, BEEROCKS_AGENT);
     std::string pid_file_path =
-        beerocks_slave_conf.temp_path + "pid/" + base_agent_name; // for file touching
+        beerocks_slave_conf.temp_path + "pid/" + BEEROCKS_AGENT; // for file touching
 
     std::set<std::string> slave_ap_ifaces;
     for (auto &elm : interfaces_map) {
@@ -338,7 +336,7 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
 
     // Create UDS address where the server socket will listen for incoming connection requests.
     std::string platform_manager_uds_path =
-        beerocks_slave_conf.temp_path + "/" + std::string(BEEROCKS_PLAT_MGR_UDS);
+        beerocks_slave_conf.temp_path + std::string(BEEROCKS_PLATFORM_UDS);
     auto platform_manager_uds_address =
         beerocks::net::UdsAddress::create_instance(platform_manager_uds_path);
     LOG_IF(!platform_manager_uds_address, FATAL)
@@ -401,7 +399,7 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
 
     // Create UDS address where the server socket will listen for incoming connection requests.
     std::string backhaul_manager_uds_path =
-        beerocks_slave_conf.temp_path + "/" + std::string(BEEROCKS_BACKHAUL_MGR_UDS);
+        beerocks_slave_conf.temp_path + std::string(BEEROCKS_BACKHAUL_UDS);
     auto backhaul_manager_uds_address =
         beerocks::net::UdsAddress::create_instance(backhaul_manager_uds_path);
     LOG_IF(!backhaul_manager_uds_address, FATAL)

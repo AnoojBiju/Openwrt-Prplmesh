@@ -74,14 +74,12 @@ using namespace beerocks;
 using namespace net;
 using namespace son;
 
-slave_thread::slave_thread(sSlaveConfig conf, beerocks::logging &logger_)
-    : socket_thread(conf.temp_path + std::string(BEEROCKS_SLAVE_UDS) + +"_" + conf.hostap_iface),
-      config(conf), logger(logger_)
+slave_thread::slave_thread(sAgentConfig conf, beerocks::logging &logger_)
+    : socket_thread(conf.temp_path + std::string(BEEROCKS_AGENT_UDS)), config(conf), logger(logger_)
 {
-    thread_name = "son_slave_" + conf.hostap_iface;
-    slave_uds   = conf.temp_path + std::string(BEEROCKS_SLAVE_UDS) + "_" + conf.hostap_iface;
-    backhaul_manager_uds    = conf.temp_path + std::string(BEEROCKS_BACKHAUL_MGR_UDS);
-    platform_manager_uds    = conf.temp_path + std::string(BEEROCKS_PLAT_MGR_UDS);
+    thread_name          = BEEROCKS_AGENT;
+    backhaul_manager_uds = conf.temp_path + std::string(BEEROCKS_BACKHAUL_UDS);
+    platform_manager_uds = conf.temp_path + std::string(BEEROCKS_PLATFORM_UDS);
     backhaul_manager_socket = nullptr;
     master_socket           = nullptr;
     monitor_socket          = nullptr;
