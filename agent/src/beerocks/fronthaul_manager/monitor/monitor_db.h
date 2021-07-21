@@ -89,6 +89,9 @@ public:
     uint32_t get_rx_packets() const;
     void reset_poll_data();
 
+    void set_measure_sta_enable(bool en) { m_measure_sta_enable = en; }
+    bool get_measure_sta_enable() { return m_measure_sta_enable; }
+
     friend std::ostream &operator<<(std::ostream &os, const monitor_sta_node &sta_node);
     friend std::ostream &operator<<(std::ostream &os, const monitor_sta_node *sta_node);
 
@@ -143,6 +146,7 @@ private:
     std::chrono::steady_clock::time_point last_change_time;
     std::chrono::steady_clock::time_point arp_time = std::chrono::steady_clock::now();
     SStaStats m_sta_stats;
+    bool m_measure_sta_enable = false;
 };
 
 ////////////////////////////////////////////
