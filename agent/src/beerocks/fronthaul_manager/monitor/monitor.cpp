@@ -151,6 +151,16 @@ bool Monitor::start()
 
     transaction.commit();
 
+    bpl::eClientsMeasurementMode clients_measuremet_mode;
+    if (!beerocks::bpl::cfg_get_clients_measurement_mode(clients_measuremet_mode)) {
+        LOG(WARNING) << "Failed to read clients measurement mode - using defaule value: enable "
+                        "measurements for all clients";
+        clients_measuremet_mode = bpl::eClientsMeasurementMode::ENABLE_ALL;
+    }
+
+    mon_db.set_clients_measuremet_mode(
+        (monitor_db::eClientsMeasurementMode)clients_measuremet_mode);
+
     LOG(DEBUG) << "started";
 
     return true;
