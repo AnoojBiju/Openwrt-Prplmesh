@@ -20,19 +20,16 @@ enable_system_hang_test=0 # 0 - disabled
 backhaul_preferred_bssid=
 
 [agent0]
-radio_identifier=00:00:00:00:00:00
 hostap_iface_type=WIFI_INTEL
 hostap_ant_gain=0
 enable_repeater_mode=@BEEROCKS_REPEATER_MODE@
 
 [agent1]
-radio_identifier=00:00:00:00:00:02
 hostap_iface_type=WIFI_INTEL
 hostap_ant_gain=0
 enable_repeater_mode=0
 
 [agent2]
-radio_identifier=00:00:00:00:00:02
 hostap_iface_type=WIFI_INTEL
 hostap_ant_gain=0
 enable_repeater_mode=0

@@ -176,7 +176,6 @@ static void fill_son_slave_config(const beerocks::config_file::sConfigSlave &bee
         (!beerocks_slave_conf.hostap_ant_gain[slave_num].empty())
             ? beerocks::string_utils::stoi(beerocks_slave_conf.hostap_ant_gain[slave_num])
             : 0;
-    son_slave_conf.radio_identifier = beerocks_slave_conf.radio_identifier[slave_num];
     son_slave_conf.backhaul_wireless_iface =
         get_sta_iface_from_hostap_iface(son_slave_conf.hostap_iface);
     son_slave_conf.backhaul_wireless_iface_filter_low =
