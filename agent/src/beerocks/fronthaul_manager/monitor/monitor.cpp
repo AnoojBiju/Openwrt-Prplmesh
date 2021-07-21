@@ -1877,10 +1877,16 @@ bool Monitor::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
         sta_node->set_ipv4(sta_ipv4);
         sta_node->set_bridge_4addr_mac(set_bridge_4addr_mac);
 
+        sta_node->set_measure_sta_enable((mon_db.get_clients_measuremet_mode() ==
+                                          monitor_db::eClientsMeasurementMode::ENABLE_ALL));
+
 #ifdef BEEROCKS_RDKB
         //clean rdkb monitor data if already in database.
         auto client = mon_rdkb_hal.conf_get_client(sta_mac);
         if (client) {
+            // override sta_node measurements configuration
+            sta_node->set_measure_sta_enable((mon_db.get_clients_measuremet_mode() !=
+                                              monitor_db::eClientsMeasurementMode::DISABLE_ALL));
             client->setStartTime(std::chrono::steady_clock::now());
             client->setLastSampleTime(std::chrono::steady_clock::now());
             client->setAccumulatedPackets(0);
