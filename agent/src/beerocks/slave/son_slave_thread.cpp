@@ -30,6 +30,7 @@
 #include <tlvf/ieee_1905_1/tlvAlMacAddress.h>
 #include <tlvf/ieee_1905_1/tlvSupportedFreqBand.h>
 #include <tlvf/ieee_1905_1/tlvSupportedRole.h>
+#include <tlvf/wfa_map/tlvApMetricQuery.h>
 #include <tlvf/wfa_map/tlvApRadioIdentifier.h>
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
 #include <tlvf/wfa_map/tlvBeaconMetricsResponse.h>
@@ -4841,7 +4842,9 @@ bool slave_thread::send_error_response(
         profile2_error_code_tlv->reason_code() = reason;
         profile2_error_code_tlv->bssid()       = bssid;
 
-        send_cmdu_to_controller(cmdu_tx);
+        // This is not relevant from which "radio" the error will be sent from, so choose the first.
+        const auto &fronthaul_iface = m_radio_managers.begin()->first;
+        send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
     }
     return true;
 }
@@ -4881,16 +4884,10 @@ bool slave_thread::handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMess
 
     auto db = AgentDB::get();
 
-    auto radio = db->radio(m_fronthaul_iface);
+    auto radio = db->get_radio_by_mac(ruid->radio_uid(), AgentDB::eMacType::RADIO);
     if (!radio) {
-        LOG(DEBUG) << "Radio of interface " << m_fronthaul_iface << " does not exist on the db";
+        LOG(ERROR) << "Failed to find ruid " << ruid->radio_uid() << " in the Agent";
         return false;
-    }
-    // Check if the message is for this radio agent by comparing the ruid
-    if (radio->front.iface_mac != ruid->radio_uid()) {
-        LOG(DEBUG) << "Message should be handled by another son_slave - ruid "
-                   << radio->front.iface_mac << " != " << ruid->radio_uid();
-        return true;
     }
 
     if (!handle_profile2_default_802dotq_settings_tlv(cmdu_rx)) {
@@ -4915,10 +4912,10 @@ bool slave_thread::handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMess
         uint8_t authkey[32];
         uint8_t keywrapkey[16];
         LOG(DEBUG) << "M2 Parse: calculate keys";
-        if (!autoconfig_wsc_calculate_keys(m2, authkey, keywrapkey))
+        if (!autoconfig_wsc_calculate_keys(radio->front.iface_name, m2, authkey, keywrapkey))
             return false;
 
-        if (!autoconfig_wsc_authenticate(m2, authkey))
+        if (!autoconfig_wsc_authenticate(radio->front.iface_name, m2, authkey))
             return false;
 
         WSC::configData::config config;
@@ -5057,13 +5054,14 @@ bool slave_thread::handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMess
     // All EasyMesh VAPs will be stored in the platform DB.
     // All other VAPs are manual, AKA should not be modified by prplMesh
     ////////////////////////////////////////////////////////////////////
+    auto &radio_manager = m_radio_managers[radio->front.iface_name];
     if (db->device_conf.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
-        message_com::send_cmdu(ap_manager_socket, cmdu_tx);
+        message_com::send_cmdu(radio_manager.ap_manager_socket, cmdu_tx);
     } else {
         LOG(WARNING) << "non-EasyMesh mode - skip updating VAP credentials";
     }
 
-    if (slave_state != STATE_WAIT_FOR_JOINED_RESPONSE) {
+    if (radio_manager.slave_state != STATE_WAIT_FOR_JOINED_RESPONSE) {
         LOG(ERROR) << "slave_state != STATE_WAIT_FOR_JOINED_RESPONSE";
         return false;
     }
@@ -5071,13 +5069,13 @@ bool slave_thread::handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMess
     auto beerocks_header = message_com::parse_intel_vs_message(cmdu_rx);
     if (beerocks_header) {
         LOG(INFO) << "Intel controller join response";
-        if (!parse_intel_join_response(sd, *beerocks_header)) {
+        if (!parse_intel_join_response(sd, *beerocks_header, radio->front.iface_name)) {
             LOG(ERROR) << "Parse join response failed";
             return false;
         }
     } else {
         LOG(INFO) << "Non-Intel controller join response";
-        if (!parse_non_intel_join_response(sd)) {
+        if (!parse_non_intel_join_response(sd, radio->front.iface_name)) {
             LOG(ERROR) << "Parse join response failed";
             return false;
         }
@@ -5339,7 +5337,14 @@ bool slave_thread::handle_client_association_request(Socket *sd, ieee1905_1::Cmd
         request_out->validity_period_sec() = association_control_request_tlv->validity_period_sec();
     }
 
-    message_com::send_cmdu(ap_manager_socket, cmdu_tx);
+    auto db    = AgentDB::get();
+    auto radio = db->get_radio_by_mac(bssid, AgentDB::eMacType::BSSID);
+    if (!radio) {
+        return false;
+    }
+    auto &radio_manager = m_radio_managers[radio->front.iface_name];
+
+    message_com::send_cmdu(radio_manager.ap_manager_socket, cmdu_tx);
 
     if (!cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE)) {
         LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
@@ -5347,7 +5352,7 @@ bool slave_thread::handle_client_association_request(Socket *sd, ieee1905_1::Cmd
     }
 
     LOG(DEBUG) << "sending ACK message back to controller";
-    return send_cmdu_to_controller(cmdu_tx);
+    return send_cmdu_to_controller(radio->front.iface_name, cmdu_tx);
 }
 
 bool slave_thread::handle_1905_higher_layer_data_message(Socket &sd,
@@ -5452,7 +5457,17 @@ bool slave_thread::handle_client_steering_request(Socket *sd, ieee1905_1::CmduMe
             request_out->params().target.reason = -1; // Mark that reason is not added
         }
 
-        message_com::send_cmdu(ap_manager_socket, cmdu_tx);
+        auto db = AgentDB::get();
+        auto radio =
+            db->get_radio_by_mac(request_out->params().cur_bssid, AgentDB::eMacType::BSSID);
+        if (!radio) {
+            LOG(ERROR) << "Radio with BSSID " << request_out->params().cur_bssid
+                       << " as requested on steering request, not found ";
+            return false;
+        }
+
+        message_com::send_cmdu(m_radio_managers[radio->front.iface_name].ap_manager_socket,
+                               cmdu_tx);
         return true;
     } else {
 
@@ -5508,16 +5523,37 @@ bool slave_thread::handle_beacon_metrics_query(Socket *sd, ieee1905_1::CmduMessa
         return false;
     }
 
-    message_com::send_cmdu(monitor_socket, cmdu_tx);
+    auto db    = AgentDB::get();
+    auto radio = db->get_radio_by_mac(request_out->params().bssid, AgentDB::eMacType::BSSID);
+    if (!radio) {
+        LOG(ERROR) << "Radio with BSSID " << request_out->params().bssid
+                   << " as requested on beacon metrics query, not found ";
+        return false;
+    }
 
+    message_com::send_cmdu(m_radio_managers[radio->front.iface_name].monitor_socket, cmdu_tx);
     return true;
 }
 
 bool slave_thread::handle_ap_metrics_query(Socket &sd, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     uint16_t length = message_com::get_uds_header(cmdu_rx)->length;
+
+    // Extract the first bssid on the query to find out on which fronthaul the request has been
+    // sent to.
+    auto tlvApMetricQuery = cmdu_rx.getClass<wfa_map::tlvApMetricQuery>();
+    auto &bssid           = std::get<1>(tlvApMetricQuery->bssid_list(0));
+    auto db               = AgentDB::get();
+    auto radio            = db->get_radio_by_mac(bssid, AgentDB::eMacType::BSSID);
+    if (!radio) {
+        LOG(ERROR) << "Radio with BSSID " << bssid
+                   << " as requested on ap metrics query, not found ";
+        return false;
+    }
+
     cmdu_rx.swap(); // swap back before forwarding
-    if (!message_com::forward_cmdu_to_uds(monitor_socket, cmdu_rx, length)) {
+    if (!message_com::forward_cmdu_to_uds(m_radio_managers[radio->front.iface_name].monitor_socket,
+                                          cmdu_rx, length)) {
         LOG(ERROR) << "Failed sending AP_METRICS_QUERY_MESSAGE message to monitor_socket";
         return false;
     }
