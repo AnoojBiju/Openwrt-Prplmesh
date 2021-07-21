@@ -24,6 +24,20 @@ namespace bpl {
 /******************************* Definitions ********************************/
 /****************************************************************************/
 
+/**
+ * @brief The possible clients measurement modes are:
+ * disable_all - No client is measured (there are some use-cases where prplmesh doesn't manage the clients in the platform)
+ * enable_all - The default configuration. All connected clients are measured.
+ * only_clients_selected_for_steering - Only clients that are selected for steering (by sending
+ * the ACTION_MONITOR_STEERING_CLIENT_SET_REQUEST to the monitor) will be measured. This mode is useful for systems with 
+ * many clients where only several are configured for steering - so no need to monitor the rest of clients.
+ */
+enum class eClientsMeasurementMode : uint8_t {
+    DISABLE_ALL = 0,
+    ENABLE_ALL,
+    ONLY_CLIENTS_SELECTED_FOR_STEERING
+};
+
 /* Wi-Fi Settings */
 #define BPL_DEV_INFO_LEN (32 + 4) /* Device information string length */
 #define BPL_SSID_LEN (32 + 1)     /* Maximal length of Wi-Fi SSID */
@@ -679,6 +693,14 @@ bool cfg_get_steering_disassoc_timer_msec(std::chrono::milliseconds &steering_di
  * @return true on success, otherwise false
  */
 bool cfg_set_steering_disassoc_timer_msec(std::chrono::milliseconds &steering_disassoc_timer_msec);
+
+/**
+ * @brief Reads Clients stats/measurements mode.
+ *
+ * @param[out] clients_measurement_mode Clients measurements mode. @see eClientsMeasurementMode.
+ * @return true on success, otherwise false
+ */
+bool cfg_get_clients_measurement_mode(eClientsMeasurementMode &clients_measurement_mode);
 
 } // namespace bpl
 } // namespace beerocks
