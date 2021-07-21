@@ -173,8 +173,6 @@ bool config_file::read_slave_config_file(const std::string &config_file_path, sC
         if (slave_num > 0)
             mandatory_slave = 0;
         tConfig slave_conf_args = {
-            std::make_tuple("radio_identifier=", &conf.radio_identifier[slave_num],
-                            mandatory_slave),
             std::make_tuple("enable_repeater_mode=", &conf.enable_repeater_mode[slave_num],
                             mandatory_slave),
             std::make_tuple("hostap_iface_type=", &conf.hostap_iface_type[slave_num],
