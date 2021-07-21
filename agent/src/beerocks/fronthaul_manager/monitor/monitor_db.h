@@ -412,6 +412,13 @@ private:
 ////////////////////////////////////////////
 class monitor_db {
 public:
+    enum class eClientsMeasurementMode : uint8_t {
+        // equivalent to bpl::eClientsMeasurementMode
+        DISABLE_ALL = 0,
+        ENABLE_ALL,
+        ONLY_CLIENTS_SELECTED_FOR_STEERING
+    };
+
     monitor_db();
     ~monitor_db();
 
@@ -474,6 +481,12 @@ public:
     std::chrono::steady_clock::time_point get_ap_poll_next_time();
     void set_ap_poll_next_time(std::chrono::steady_clock::time_point pt, bool reset_poll = false);
 
+    void set_clients_measuremet_mode(eClientsMeasurementMode mode)
+    {
+        m_clients_measurement_mode = mode;
+    }
+    eClientsMeasurementMode get_clients_measuremet_mode() { return m_clients_measurement_mode; }
+
     const int MONITOR_LAST_CHANGE_TIMEOUT_MSEC   = 30000;
     const int MONITOR_DB_POLLING_RATE_MSEC       = 250;
     const int MONITOR_DB_MEASUREMENT_WINDOW_MSEC = (4 * MONITOR_DB_POLLING_RATE_MSEC);
@@ -501,6 +514,13 @@ private:
 
     int arp_burst_pkt_num = 0;
     int arp_burst_delay   = 0;
+
+    /**
+     * The mode is read once from BPL as part of the monitor start and used to determine if
+     * measurements for clients are: disable, enabled or enabled-only-for-selected-clients.
+     * The default value is set to ENABLE_ALL.
+    */
+    eClientsMeasurementMode m_clients_measurement_mode = eClientsMeasurementMode::ENABLE_ALL;
 };
 
 } // namespace son
