@@ -1132,6 +1132,19 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
                 return;
             }
             LOG(DEBUG) << "client: " << sta_mac << " configuration was removed";
+
+            // For ONLY_CLIENTS_SELECTED_FOR_STEERING mode, need to updated the client's measure-sta-enable flag
+            // if it  already connected. For not connected clients the flag will be determined as
+            // part of the STA_Connected event handling.
+            if (mon_db.get_clients_measuremet_mode() ==
+                monitor_db::eClientsMeasurementMode::ONLY_CLIENTS_SELECTED_FOR_STEERING) {
+                auto sta_node = mon_db.sta_find(sta_mac);
+                if (sta_node) {
+                    sta_node->set_measure_sta_enable(false);
+                    LOG(DEBUG) << "Set sta measurements mode to false for sta_mac=" << sta_mac;
+                }
+            }
+
             send_steering_return_status(
                 beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_RESPONSE, OPERATION_SUCCESS);
             break;
@@ -1164,6 +1177,18 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
         client->setSnrLowXing(request->params().config.snrLowXing);
         client->setSnrInactXing(request->params().config.snrInactXing);
         client->setVapIndex(vap_id);
+
+        // For ONLY_CLIENTS_SELECTED_FOR_STEERING mode, need to updated the client's measure-sta-enable flag
+        // if it  already connected. For not connected clients the flag will be determined as
+        // part of the STA_Connected event handling.
+        if (mon_db.get_clients_measuremet_mode() ==
+            monitor_db::eClientsMeasurementMode::ONLY_CLIENTS_SELECTED_FOR_STEERING) {
+            auto sta_node = mon_db.sta_find(sta_mac);
+            if (sta_node) {
+                sta_node->set_measure_sta_enable(true);
+                LOG(DEBUG) << "Set sta measurements mode to true for sta_mac=" << sta_mac;
+            }
+        }
 
         send_steering_return_status(beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_RESPONSE,
                                     OPERATION_SUCCESS);
