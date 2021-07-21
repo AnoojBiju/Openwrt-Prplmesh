@@ -5360,32 +5360,38 @@ bool slave_thread::handle_1905_higher_layer_data_message(Socket &sd,
 {
     // Only one son_slave should return ACK for higher layer data message, therefore ignore
     // this message on non backhaul manager son_slaves.
-    if (!is_backhaul_manager) {
-        return true;
+    for (auto &radio_manager_map_element : m_radio_managers) {
+        const auto &fronthaul_iface = radio_manager_map_element.first;
+        auto &radio_manager         = radio_manager_map_element.second;
+        if (!radio_manager.is_backhaul_manager && radio_manager.backhaul_manager_socket == &sd) {
+            return true;
+        }
+
+        const auto mid = cmdu_rx.getMessageId();
+        LOG(DEBUG) << "Received HIGHER_LAYER_DATA_MESSAGE , mid=" << std::hex << int(mid);
+
+        auto tlvHigherLayerData = cmdu_rx.getClass<wfa_map::tlvHigherLayerData>();
+        if (!tlvHigherLayerData) {
+            LOG(ERROR) << "addClass wfa_map::tlvHigherLayerData failed";
+            return false;
+        }
+
+        const auto protocol       = tlvHigherLayerData->protocol();
+        const auto payload_length = tlvHigherLayerData->payload_length();
+        LOG(DEBUG) << "Protocol: " << std::hex << int(protocol);
+        LOG(DEBUG) << "Payload-Length: " << std::hex << int(payload_length);
+
+        // Build ACK message CMDU
+        auto cmdu_tx_header = cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE);
+        if (!cmdu_tx_header) {
+            LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
+            return false;
+        }
+        LOG(DEBUG) << "Sending ACK message to the originator, mid=" << std::hex << int(mid);
+
+        return send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
     }
-
-    const auto mid = cmdu_rx.getMessageId();
-    LOG(DEBUG) << "Received HIGHER_LAYER_DATA_MESSAGE , mid=" << std::hex << int(mid);
-
-    auto tlvHigherLayerData = cmdu_rx.getClass<wfa_map::tlvHigherLayerData>();
-    if (!tlvHigherLayerData) {
-        LOG(ERROR) << "addClass wfa_map::tlvHigherLayerData failed";
-        return false;
-    }
-
-    const auto protocol       = tlvHigherLayerData->protocol();
-    const auto payload_length = tlvHigherLayerData->payload_length();
-    LOG(DEBUG) << "Protocol: " << std::hex << int(protocol);
-    LOG(DEBUG) << "Payload-Length: " << std::hex << int(payload_length);
-
-    // Build ACK message CMDU
-    auto cmdu_tx_header = cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE);
-    if (!cmdu_tx_header) {
-        LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
-        return false;
-    }
-    LOG(DEBUG) << "Sending ACK message to the originator, mid=" << std::hex << int(mid);
-    return send_cmdu_to_controller(cmdu_tx);
+    return false;
 }
 
 bool slave_thread::handle_ack_message(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
@@ -5490,18 +5496,29 @@ bool slave_thread::handle_client_steering_request(Socket *sd, ieee1905_1::CmduMe
         }
 
         LOG(DEBUG) << "sending ACK message back to controller";
-        send_cmdu_to_controller(cmdu_tx);
+        // Only one son_slave should return ACK for higher layer data message, therefore ignore
+        // this message on non backhaul manager son_slaves.
+        for (auto &radio_manager_map_element : m_radio_managers) {
+            const auto &fronthaul_iface = radio_manager_map_element.first;
+            auto &radio_manager         = radio_manager_map_element.second;
+            if (!radio_manager.is_backhaul_manager && radio_manager.backhaul_manager_socket == sd) {
+                return true;
+            }
+            send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
 
-        // build and send steering completed message
-        cmdu_tx_header = cmdu_tx.create(0, ieee1905_1::eMessageType::STEERING_COMPLETED_MESSAGE);
+            // build and send steering completed message
+            cmdu_tx_header =
+                cmdu_tx.create(0, ieee1905_1::eMessageType::STEERING_COMPLETED_MESSAGE);
 
-        if (!cmdu_tx_header) {
-            LOG(ERROR) << "cmdu creation of type STEERING_COMPLETED_MESSAGE, has failed";
-            return false;
+            if (!cmdu_tx_header) {
+                LOG(ERROR) << "cmdu creation of type STEERING_COMPLETED_MESSAGE, has failed";
+                return false;
+            }
+            LOG(DEBUG) << "sending STEERING_COMPLETED_MESSAGE back to controller";
+            return send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
         }
-        LOG(DEBUG) << "sending STEERING_COMPLETED_MESSAGE back to controller";
-        return send_cmdu_to_controller(cmdu_tx);
     }
+    return false;
 }
 
 bool slave_thread::handle_beacon_metrics_query(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
