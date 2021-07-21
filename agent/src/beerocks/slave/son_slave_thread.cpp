@@ -4732,12 +4732,6 @@ bool slave_thread::handle_profile2_default_802dotq_settings_tlv(ieee1905_1::Cmdu
 {
     auto db = AgentDB::get();
 
-    auto pvid_set_request = message_com::create_vs_message<
-        beerocks_message::cACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST>(cmdu_tx);
-    if (!pvid_set_request) {
-        LOG(ERROR) << "Failed building message!";
-        return false;
-    }
     auto dot1q_settings = cmdu_rx.getClass<wfa_map::tlvProfile2Default802dotQSettings>();
     // tlvProfile2Default802dotQSettings is not mandatory.
     if (!dot1q_settings) {
@@ -4751,10 +4745,20 @@ bool slave_thread::handle_profile2_default_802dotq_settings_tlv(ieee1905_1::Cmdu
     db->traffic_separation.primary_vlan_id = dot1q_settings->primary_vlan_id();
     db->traffic_separation.default_pcp     = dot1q_settings->default_pcp();
 
-    pvid_set_request->primary_vlan_id() = dot1q_settings->primary_vlan_id();
+    for (auto &radio_manager_map_element : m_radio_managers) {
+        auto &radio_manager   = radio_manager_map_element.second;
+        auto pvid_set_request = message_com::create_vs_message<
+            beerocks_message::cACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST>(cmdu_tx);
+        if (!pvid_set_request) {
+            LOG(ERROR) << "Failed building message!";
+            return false;
+        }
 
-    // Send ACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST.
-    message_com::send_cmdu(ap_manager_socket, cmdu_tx);
+        pvid_set_request->primary_vlan_id() = dot1q_settings->primary_vlan_id();
+
+        // Send ACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST.
+        message_com::send_cmdu(radio_manager.ap_manager_socket, cmdu_tx);
+    }
 
     return true;
 }
@@ -5221,7 +5225,6 @@ bool slave_thread::parse_non_intel_join_response(Socket *sd, const std::string &
 bool slave_thread::handle_multi_ap_policy_config_request(Socket *sd,
                                                          ieee1905_1::CmduMessageRx &cmdu_rx)
 {
-
     /**
      * The Multi-AP Policy Config Request message is sent by the controller and received by the
      * backhaul manager.
@@ -5254,21 +5257,6 @@ bool slave_thread::handle_multi_ap_policy_config_request(Socket *sd,
         db->traffic_separation.default_pcp     = 0;
     }
 
-    /**
-     * The slave in turn, forwards the request message again "as is" to the monitor thread.
-     */
-    if (!monitor_socket) {
-        LOG(ERROR) << "monitor_socket is null";
-        return false;
-    }
-
-    uint16_t length = message_com::get_uds_header(cmdu_rx)->length;
-    cmdu_rx.swap(); // swap back before forwarding
-    if (!message_com::forward_cmdu_to_uds(monitor_socket, cmdu_rx, length)) {
-        LOG(ERROR) << "Failed to forward message to monitor";
-        return false;
-    }
-
     std::deque<std::pair<wfa_map::tlvProfile2ErrorCode::eReasonCode, sMacAddr>> bss_errors;
     if (!misconfigured_ssids.empty()) {
         bss_errors.push_back({wfa_map::tlvProfile2ErrorCode::eReasonCode::
@@ -5281,11 +5269,31 @@ bool slave_thread::handle_multi_ap_policy_config_request(Socket *sd,
         return false;
     }
 
-    if (m_autoconfiguration_completed) {
-        TrafficSeparation::apply_traffic_separation(m_fronthaul_iface);
-    } else {
-        LOG(WARNING) << "autoconfiguration procedure is not completed yet, traffic separation "
-                     << "policy cannot be applied";
+    for (auto &radio_manager_map_element : m_radio_managers) {
+        const auto &fronthaul_iface = radio_manager_map_element.first;
+        auto &radio_manager         = radio_manager_map_element.second;
+
+        /**
+         * The slave in turn, forwards the request message again "as is" to the monitor thread.
+         */
+        if (!radio_manager.monitor_socket) {
+            LOG(ERROR) << "monitor_socket is null";
+            return false;
+        }
+
+        uint16_t length = message_com::get_uds_header(cmdu_rx)->length;
+        cmdu_rx.swap(); // swap back before forwarding
+        if (!message_com::forward_cmdu_to_uds(radio_manager.monitor_socket, cmdu_rx, length)) {
+            LOG(ERROR) << "Failed to forward message to monitor";
+            return false;
+        }
+
+        if (radio_manager.autoconfiguration_completed) {
+            TrafficSeparation::apply_traffic_separation(fronthaul_iface);
+        } else {
+            LOG(WARNING) << "autoconfiguration procedure is not completed yet, traffic separation "
+                         << "policy cannot be applied";
+        }
     }
 
     return true;
