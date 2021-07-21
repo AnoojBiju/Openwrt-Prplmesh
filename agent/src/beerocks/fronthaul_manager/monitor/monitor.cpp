@@ -488,8 +488,15 @@ bool Monitor::monitor_fsm()
                 std::chrono::steady_clock::now() +
                 std::chrono::milliseconds(mon_db.MONITOR_DB_POLLING_RATE_MSEC));
 
-            // Update the statistics
-            update_sta_stats(max_iteration_timeout);
+            // If clients measurement mode is disabled - no need to call update_sta_stats.
+            // The differentiation between measure all clients and only specific clients is done
+            // as internally in the update_sta_stats.
+            if (mon_db.get_clients_measuremet_mode() !=
+                monitor_db::eClientsMeasurementMode::DISABLE_ALL) {
+                // Update the statistics
+                update_sta_stats(max_iteration_timeout);
+            }
+
             // NOTE: Radio & VAP statistics are updated only on last poll cycle
             if (mon_db.is_last_poll())
                 update_ap_stats();
