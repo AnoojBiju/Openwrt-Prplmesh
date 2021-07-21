@@ -5605,7 +5605,18 @@ bool slave_thread::handle_channel_preference_query(Socket *sd, ieee1905_1::CmduM
         LOG(ERROR) << "Failed building message ACTION_APMANAGER_CHANNELS_LIST_REQUEST!";
         return false;
     }
-    return message_com::send_cmdu(ap_manager_socket, cmdu_tx);
+
+    // Since this message is not filtered on the backhaul manager and being forward to all
+    // son_slaves and the message doesn't contain any information on the destined radio, we must
+    // understand from which socket the message has arrived and forward it to the correlating
+    // ap_manager socket.
+    for (auto &radio_manager_map_element : m_radio_managers) {
+        auto &radio_manager = radio_manager_map_element.second;
+        if (sd == radio_manager.backhaul_manager_socket) {
+            return message_com::send_cmdu(radio_manager.ap_manager_socket, cmdu_tx);
+        }
+    }
+    return false;
 }
 
 wfa_map::cPreferenceOperatingClasses::ePreference
@@ -5862,23 +5873,37 @@ bool slave_thread::handle_channel_selection_request(Socket *sd, ieee1905_1::Cmdu
     const auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Received CHANNEL_SELECTION_REQUEST_MESSAGE, mid=" << std::dec << int(mid);
 
+    // Since this message is not filtered on the backhaul manager and being forward to all
+    // son_slaves and the message doesn't contain any information on the destined radio, we must
+    // understand from which socket the message has arrived and forward it to the correlating
+    // ap_manager socket.
+    std::string fronthaul_iface;
+    for (auto &radio_manager_map_element : m_radio_managers) {
+        fronthaul_iface     = radio_manager_map_element.first;
+        auto &radio_manager = radio_manager_map_element.second;
+        if (sd == radio_manager.backhaul_manager_socket) {
+            break;
+        }
+    }
+
     auto db    = AgentDB::get();
-    auto radio = db->radio(m_fronthaul_iface);
+    auto radio = db->radio(fronthaul_iface);
     if (!radio) {
-        LOG(DEBUG) << "Radio of interface " << m_fronthaul_iface << " does not exist on the db";
+        LOG(DEBUG) << "Radio of interface " << fronthaul_iface << " does not exist on the db";
         return false;
     }
 
-    int power_limit           = 0;
-    bool power_limit_received = channel_selection_get_transmit_power_limit(cmdu_rx, power_limit);
+    int power_limit = 0;
+    bool power_limit_received =
+        channel_selection_get_transmit_power_limit(fronthaul_iface, cmdu_rx, power_limit);
 
     auto response_code = wfa_map::tlvChannelSelectionResponse::eResponseCode::ACCEPT;
     beerocks::message::sWifiChannel channel_to_switch;
     bool switch_required = false;
-    if (get_controller_channel_preference(cmdu_rx)) {
+    if (get_controller_channel_preference(fronthaul_iface, cmdu_rx)) {
         // Only restricted channels are be included in channel selection request.
-        if (channel_selection_current_channel_restricted()) {
-            channel_to_switch = channel_selection_select_channel();
+        if (channel_selection_current_channel_restricted(fronthaul_iface)) {
+            channel_to_switch = channel_selection_select_channel(fronthaul_iface);
             if (channel_to_switch.channel != 0) {
                 switch_required = true;
                 LOG(INFO) << "Switch to channel " << channel_to_switch.channel << ", bw "
@@ -5910,7 +5935,8 @@ bool slave_thread::handle_channel_selection_request(Socket *sd, ieee1905_1::Cmdu
 
     channel_selection_response_tlv->radio_uid()     = radio->front.iface_mac;
     channel_selection_response_tlv->response_code() = response_code;
-    if (!message_com::send_cmdu(backhaul_manager_socket, cmdu_tx)) {
+    // Send ack back to the sender.
+    if (!message_com::send_cmdu(sd, cmdu_tx)) {
         LOG(ERROR) << "failed to send CHANNEL_SELECTION_RESPONSE_MESSAGE";
         return false;
     }
@@ -5925,7 +5951,7 @@ bool slave_thread::handle_channel_selection_request(Socket *sd, ieee1905_1::Cmdu
     // we need to explicitly send the event.
     if (!switch_required && !power_limit_received) {
         LOG(DEBUG) << "Channel switch not required, sending operating channel report";
-        send_operating_channel_report();
+        send_operating_channel_report(fronthaul_iface);
         return true;
     }
 
@@ -5954,7 +5980,7 @@ bool slave_thread::handle_channel_selection_request(Socket *sd, ieee1905_1::Cmdu
     //
     ////////////////////////////////////////////////////////////////////
     if (db->device_conf.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
-        message_com::send_cmdu(ap_manager_socket, cmdu_tx);
+        message_com::send_cmdu(m_radio_managers[fronthaul_iface].ap_manager_socket, cmdu_tx);
     } else {
         LOG(WARNING) << "non-EasyMesh mode - skip channel switch";
     }
