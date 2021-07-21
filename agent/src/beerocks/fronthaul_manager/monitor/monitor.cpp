@@ -728,6 +728,13 @@ bool Monitor::update_sta_stats(const std::chrono::steady_clock::time_point &time
             continue;
         }
 
+        // If clients-measurement-mode is disabled or if it is set to selected-clients-only,
+        // the measure_sta_enable flag might be disabled for the clients.
+        // If it is disabled - skip the client.
+        if (!sta_node->get_measure_sta_enable()) {
+            continue;
+        }
+
         auto vap_node   = mon_db.vap_get_by_id(sta_node->get_vap_id());
         auto &sta_stats = sta_node->get_stats();
 
