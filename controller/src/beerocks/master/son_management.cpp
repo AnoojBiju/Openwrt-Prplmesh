@@ -579,8 +579,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
              * start load balancing
              */
         if (database.is_hostap_active(tlvf::mac_from_string(hostap_mac)) &&
-            database.get_node_state(ire_mac) == beerocks::STATE_CONNECTED &&
-            database.get_node_type(ire_mac) != beerocks::TYPE_CLIENT) {
+            database.get_node_state(ire_mac) == beerocks::STATE_CONNECTED) {
             /*
                  * when a notification arrives, it means a large change in rx_rssi occurred (above the defined thershold)
                  * therefore, we need to create a load balancing task to optimize the network
