@@ -96,6 +96,9 @@ private:
 
     bool m_supports_11v            = true;
     int m_failed_11v_request_count = 0;
+
+    bool m_handoff     = false;
+    bool m_ire_handoff = false;
 };
 
 } // namespace db

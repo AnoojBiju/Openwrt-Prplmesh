@@ -456,7 +456,7 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
         database.dm_clear_sta_stats(tlvf::mac_from_string(client_mac_str));
 
         if (!(database.get_node_type(client_mac_str) == beerocks::TYPE_IRE_BACKHAUL &&
-              database.get_node_handoff_flag(client_mac_str))) {
+              database.get_node_handoff_flag(*client))) {
             // The node is not an IRE in handoff
             database.set_node_type(client_mac_str, beerocks::TYPE_CLIENT);
         }

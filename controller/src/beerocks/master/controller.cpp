@@ -3234,7 +3234,7 @@ bool Controller::handle_cmdu_control_message(
 
         if ((database.get_node_type(client_mac) == beerocks::TYPE_CLIENT) &&
             (database.get_node_state(client_mac) == beerocks::STATE_CONNECTED) &&
-            (!database.get_node_handoff_flag(client_mac)) && is_parent) {
+            (!database.get_node_handoff_flag(*client)) && is_parent) {
 
             database.set_node_cross_rx_rssi(client_mac, radio_mac_str,
                                             notification->params().rx_rssi,
@@ -3539,7 +3539,7 @@ bool Controller::handle_cmdu_control_message(
                                 tasks.add_task(new_task);
                             }
                         } else {
-                            database.set_node_handoff_flag(sta, false);
+                            database.set_node_handoff_flag(*station, false);
                         }
                     }
                 }

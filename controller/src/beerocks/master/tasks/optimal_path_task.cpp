@@ -114,7 +114,7 @@ void optimal_path_task::work()
             return;
         }
 
-        if (database.get_node_handoff_flag(sta_mac)) {
+        if (database.get_node_handoff_flag(*station)) {
             LOG_CLI(DEBUG, sta_mac << " is already in handoff, killing task");
             finish();
             return;

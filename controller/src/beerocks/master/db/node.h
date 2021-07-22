@@ -79,7 +79,6 @@ public:
     bool channel_ext_above_secondary   = true;
 
     beerocks::eNodeState state = beerocks::STATE_DISCONNECTED;
-    bool handoff               = false;
 
     bool supports_5ghz            = true;
     int failed_5ghz_steer_attemps = 0;
@@ -115,8 +114,6 @@ public:
         std::chrono::steady_clock::time_point timestamp = std::chrono::steady_clock::now();
     };
     std::shared_ptr<sta_stats_params> stats_info;
-
-    bool ire_handoff = false;
 
     class radio {
     public:
