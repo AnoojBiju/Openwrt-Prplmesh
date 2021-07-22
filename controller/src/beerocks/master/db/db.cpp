@@ -818,27 +818,6 @@ bool db::get_node_handoff_flag(const std::string &mac)
     }
 }
 
-bool db::set_node_confined_flag(const std::string &mac, bool flag)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    }
-    n->confined = flag;
-    return true;
-}
-
-bool db::get_node_confined_flag(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    }
-    return n->confined;
-}
-
 bool db::update_node_last_seen(const std::string &mac)
 {
     auto n = get_node(mac);

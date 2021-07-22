@@ -80,7 +80,6 @@ public:
 
     beerocks::eNodeState state = beerocks::STATE_DISCONNECTED;
     bool handoff               = false;
-    bool confined              = false;
 
     bool supports_5ghz            = true;
     int failed_5ghz_steer_attemps = 0;

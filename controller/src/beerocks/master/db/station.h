@@ -37,6 +37,8 @@ public:
 
     bool supports_11v            = true;
     int failed_11v_request_count = 0;
+
+    bool confined = false;
 };
 
 } // namespace db

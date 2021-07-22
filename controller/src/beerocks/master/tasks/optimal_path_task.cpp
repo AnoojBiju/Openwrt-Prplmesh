@@ -63,6 +63,13 @@ void optimal_path_task::work()
 {
     bool task_enabled = true;
 
+    auto station = database.get_station(tlvf::mac_from_string(sta_mac));
+    if (!station) {
+        TASK_LOG(ERROR) << "station " << sta_mac << " not found";
+        finish();
+        return;
+    }
+
     if ((database.get_node_type(sta_mac) == beerocks::TYPE_CLIENT) &&
         (!database.settings_client_band_steering()) &&
         (!database.settings_client_optimal_path_roaming()) &&
@@ -84,7 +91,7 @@ void optimal_path_task::work()
             LOG_CLI(DEBUG, sta_mac << " IRE roaming disabled, killing task");
             task_enabled = false;
         }
-    } else if (database.get_node_confined_flag(sta_mac)) {
+    } else if (station->confined) {
         LOG_CLI(DEBUG, sta_mac << " is confined to current AP, killing task");
         task_enabled = false;
     }
@@ -95,13 +102,6 @@ void optimal_path_task::work()
 
     switch (state) {
     case START: {
-
-        auto station = database.get_station(tlvf::mac_from_string(sta_mac));
-        if (!station) {
-            TASK_LOG(ERROR) << "station " << sta_mac << " not found";
-            finish();
-            break;
-        }
 
         current_hostap_vap = database.get_node_parent(sta_mac);
         // Steering allowed on all vaps unless load_steer_on_vaps list is defined

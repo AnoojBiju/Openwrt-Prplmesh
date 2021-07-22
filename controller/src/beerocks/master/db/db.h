@@ -457,9 +457,6 @@ public:
     bool set_node_handoff_flag(const std::string &mac, bool handoff);
     bool get_node_handoff_flag(const std::string &mac);
 
-    bool set_node_confined_flag(const std::string &mac, bool flag);
-    bool get_node_confined_flag(const std::string &mac);
-
     bool update_node_last_seen(const std::string &mac);
 
     std::chrono::steady_clock::time_point get_node_last_seen(const std::string &mac);

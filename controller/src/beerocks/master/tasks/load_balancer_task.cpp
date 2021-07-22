@@ -474,8 +474,14 @@ void load_balancer_task::work()
                                "    providing a total gain of " << chosen_hostap_bytes_per_second_gained << "Bps" << std::endl <<
                                "    --> steering " << chosen_client << " to " << chosen_hostap << " confine=" << (confine?"yes":"no") << std::endl);
                                */
+            auto client = database.get_station(tlvf::mac_from_string(chosen_client));
+            if (!client) {
+                TASK_LOG(ERROR) << "client " << chosen_client << " not found";
+                finish();
+                return;
+            }
 
-            database.set_node_confined_flag(chosen_client, confine);
+            client->confined = confine;
             //TODO use steering_task_id
             //int steering_task_id = son_actions::steer_sta(database, tasks, chosen_client, chosen_hostap);
             sta_mac = chosen_client;
