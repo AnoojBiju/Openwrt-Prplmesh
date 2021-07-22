@@ -4837,27 +4837,6 @@ uint16_t db::get_hostap_vht_center_frequency(const sMacAddr &mac)
 // tasks
 //
 
-bool db::assign_roaming_task_id(const std::string &mac, int new_task_id)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    }
-    n->roaming_task_id = new_task_id;
-    return true;
-}
-
-int db::get_roaming_task_id(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return -1;
-    }
-    return n->roaming_task_id;
-}
-
 bool db::assign_load_balancer_task_id(const std::string &mac, int new_task_id)
 {
     auto n = get_node(mac);
