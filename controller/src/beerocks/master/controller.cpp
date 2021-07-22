@@ -3464,9 +3464,9 @@ bool Controller::handle_cmdu_control_message(
                         continue;
                     }
 
-                    if (database.get_node_confined_flag(sta)) {
+                    if (station->confined) {
                         LOG(DEBUG) << "removing confined flag from sta " << sta;
-                        database.set_node_confined_flag(sta, false);
+                        station->confined = false;
                         /*
                             * launch optimal path task
                             */
