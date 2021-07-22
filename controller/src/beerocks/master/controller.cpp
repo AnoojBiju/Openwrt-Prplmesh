@@ -3104,7 +3104,14 @@ bool Controller::handle_cmdu_control_message(
             }
 
             std::string eth_switch = *(eth_switches.begin());
-            int prev_task_id = database.get_client_locating_task_id(client_mac, true /*reachable*/);
+
+            auto client = database.get_station(tlvf::mac_from_string(client_mac));
+            if (!client) {
+                LOG(ERROR) << "client " << client_mac << " not found";
+                break;
+            }
+
+            int prev_task_id = client->get_client_locating_task_id(true /*reachable*/);
 
             if (tasks.is_task_running(prev_task_id)) {
                 LOG(DEBUG) << "client locating task already running for " << client_mac;
@@ -3327,7 +3334,12 @@ bool Controller::handle_cmdu_control_message(
 
         } else {
             LOG(DEBUG) << "run_client_locating_task client_mac = " << client_mac;
-            int prev_task_id = database.get_client_locating_task_id(client_mac, true);
+            auto client = database.get_station(tlvf::mac_from_string(client_mac));
+            if (!client) {
+                LOG(ERROR) << "client " << client_mac << " not found";
+                break;
+            }
+            int prev_task_id = client->get_client_locating_task_id(true);
             if (tasks.is_task_running(prev_task_id)) {
                 LOG(DEBUG) << "client locating task already running for " << client_mac;
             } else {

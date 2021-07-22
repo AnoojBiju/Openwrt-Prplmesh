@@ -80,6 +80,13 @@ public:
     /*
      * Persistent configurations - end
      */
+
+    void assign_client_locating_task_id(int new_task_id, bool new_connection);
+    int get_client_locating_task_id(bool new_connection);
+
+private:
+    int m_client_locating_task_id_new_connection   = -1;
+    int m_client_locating_task_id_exist_connection = -1;
 };
 
 } // namespace db

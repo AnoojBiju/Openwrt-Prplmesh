@@ -4716,35 +4716,6 @@ int db::get_load_balancer_task_id(const std::string &mac)
     return n->load_balancer_task_id;
 }
 
-bool db::assign_client_locating_task_id(const std::string &mac, int new_task_id,
-                                        bool new_connection)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    }
-    if (new_connection) {
-        n->client_locating_task_id_new_connection = new_task_id;
-    } else {
-        n->client_locating_task_id_exist_connection = new_task_id;
-    }
-    return true;
-}
-
-int db::get_client_locating_task_id(const std::string &mac, bool new_connection)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return -1;
-    }
-    if (new_connection) {
-        return n->client_locating_task_id_new_connection;
-    }
-    return n->client_locating_task_id_exist_connection;
-}
-
 bool db::assign_channel_selection_task_id(int new_task_id)
 {
     channel_selection_task_id = new_task_id;

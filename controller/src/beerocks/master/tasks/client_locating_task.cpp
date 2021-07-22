@@ -30,6 +30,13 @@ client_locating_task::client_locating_task(db &database_, ieee1905_1::CmduMessag
 
 void client_locating_task::work()
 {
+    auto client = database.get_station(tlvf::mac_from_string(client_mac));
+    if (!client) {
+        TASK_LOG(ERROR) << "client " << client_mac << " not found";
+        finish();
+        return;
+    }
+
     if (database.get_node_type(client_mac) == beerocks::TYPE_IRE) {
         auto ire_backhaul = database.get_node_parent_backhaul(client_mac);
         if (database.is_node_wireless(ire_backhaul)) {
@@ -54,9 +61,9 @@ void client_locating_task::work()
             TASK_LOG(DEBUG) << "not handeling IRE backhaul type -> finish task";
             finish();
         } else {
-            int prev_task_id = database.get_client_locating_task_id(client_mac, new_connection);
+            int prev_task_id = client->get_client_locating_task_id(new_connection);
             tasks.kill_task(prev_task_id);
-            database.assign_client_locating_task_id(client_mac, id, new_connection);
+            client->assign_client_locating_task_id(id, new_connection);
             TASK_LOG(DEBUG) << "new task initiate with new_connection "
                             << std::string(new_connection ? "on" : "off");
 

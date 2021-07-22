@@ -1719,10 +1719,6 @@ public:
     bool assign_load_balancer_task_id(const std::string &mac, int new_task_id);
     int get_load_balancer_task_id(const std::string &mac);
 
-    bool assign_client_locating_task_id(const std::string &mac, int new_task_id,
-                                        bool new_connection);
-    int get_client_locating_task_id(const std::string &mac, bool new_connection);
-
     bool assign_network_optimization_task_id(int new_task_id);
     int get_network_optimization_task_id();
 
