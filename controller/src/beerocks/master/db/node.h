@@ -95,7 +95,6 @@ public:
 
     std::chrono::steady_clock::time_point last_state_change;
 
-    int steering_task_id                         = -1;
     int roaming_task_id                          = -1;
     int load_balancer_task_id                    = -1;
     int client_locating_task_id_new_connection   = -1;
