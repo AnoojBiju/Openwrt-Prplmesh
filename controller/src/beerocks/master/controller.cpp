@@ -1331,7 +1331,7 @@ bool Controller::handle_cmdu_1905_client_steering_btm_report_message(
 
     int steering_task_id = client->steering_task_id;
     tasks.push_event(steering_task_id, client_steering_task::BTM_REPORT_RECEIVED);
-    database.update_node_11v_responsiveness(client_mac, true);
+    database.update_node_11v_responsiveness(*client, true);
 
     if (status_code != 0) {
         LOG(DEBUG) << "sta " << client_mac << " rejected BSS steer request";

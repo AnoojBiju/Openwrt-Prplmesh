@@ -32,6 +32,9 @@ public:
     int steering_task_id             = -1;
     int roaming_task_id              = -1;
     int load_balancer_task_id        = -1;
+
+    bool supports_11v            = true;
+    int failed_11v_request_count = 0;
 };
 
 } // namespace db

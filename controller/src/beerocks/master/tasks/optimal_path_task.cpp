@@ -1396,8 +1396,15 @@ void optimal_path_task::work()
         state                = WAIT_FOR_HANDOVER;
         int steering_task_id = 0;
 
+        auto client = database.get_station(tlvf::mac_from_string(sta_mac));
+        if (!client) {
+            TASK_LOG(ERROR) << "client " << sta_mac << " not found";
+            finish();
+            return;
+        }
+
         std::string method = " 11v (BTM) ";
-        if (!database.get_node_11v_capability(sta_mac)) {
+        if (!client->supports_11v) {
             method = std::string(" Legacy ");
         }
 
@@ -1405,7 +1412,7 @@ void optimal_path_task::work()
             chosen_method.append(" [forced steering] ");
         }
 
-        if (database.get_node_11v_capability(sta_mac) && !is_force_steer) {
+        if (client->supports_11v && !is_force_steer) {
             if (sticky_roaming_rssi <= database.config.roaming_sticky_client_rssi_threshold) {
                 TASK_LOG(DEBUG) << "optimal_path_task: steering with disassociate imminent, sta "
                                 << sta_mac << " steer from BSSID " << current_hostap_vap

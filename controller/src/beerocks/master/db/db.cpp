@@ -2120,35 +2120,19 @@ bool db::can_start_client_steering(const std::string &sta_mac, const std::string
     return true;
 }
 
-bool db::update_node_11v_responsiveness(const std::string &mac, bool success)
+void db::update_node_11v_responsiveness(sStation &client, bool success)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        return false;
-    }
-
     if (success) {
-        LOG(DEBUG) << "updating node " << mac << " as supporting 11v";
-        n->failed_11v_request_count = 0;
-        n->supports_11v             = true;
+        LOG(DEBUG) << "updating node " << client.mac << " as supporting 11v";
+        client.failed_11v_request_count = 0;
+        client.supports_11v             = true;
     } else {
-        if (++n->failed_11v_request_count >= config.roaming_11v_failed_attemps_threshold) {
-            LOG(DEBUG) << "node " << mac
+        if (++client.failed_11v_request_count >= config.roaming_11v_failed_attemps_threshold) {
+            LOG(DEBUG) << "node " << client.mac
                        << " exceeded maximum 11v failed attempts, updating as not supporting 11v";
-            n->supports_11v = false;
+            client.supports_11v = false;
         }
     }
-
-    return true;
-}
-
-bool db::get_node_11v_capability(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return false;
-    }
-    return n->supports_11v;
 }
 
 bool db::set_hostap_vap_list(const sMacAddr &mac,
