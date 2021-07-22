@@ -69,7 +69,7 @@ bool agent_monitoring_task::handle_ieee1905_1_msg(const sMacAddr &src_mac,
             LOG(INFO) << "Not a valid M1 - Ignoring WSC CMDU";
             return false;
         }
-        return start_task(tlvf::mac_to_string(src_mac), m1, cmdu_rx);
+        return start_task(src_mac, m1, cmdu_rx);
     }
     case ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE: {
         start_agent_monitoring(src_mac, cmdu_rx);
@@ -141,7 +141,7 @@ bool agent_monitoring_task::start_agent_monitoring(const sMacAddr &src_mac,
     return true;
 }
 
-bool agent_monitoring_task::start_task(const std::string &src_mac, std::shared_ptr<WSC::m1> m1,
+bool agent_monitoring_task::start_task(const sMacAddr &src_mac, std::shared_ptr<WSC::m1> m1,
                                        ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     if (!send_tlv_metric_reporting_policy(src_mac, m1, cmdu_rx, cmdu_tx)) {
@@ -153,14 +153,14 @@ bool agent_monitoring_task::start_task(const std::string &src_mac, std::shared_p
     if (!database.setting_certification_mode()) {
         // trigger Topology query
         LOG(TRACE) << "Sending Topology Query to " << src_mac;
-        son_actions::send_topology_query_msg(src_mac, cmdu_tx, database);
+        son_actions::send_topology_query_msg(tlvf::mac_to_string(src_mac), cmdu_tx, database);
 
         // trigger channel selection
         if (!cmdu_tx.create(0, ieee1905_1::eMessageType::CHANNEL_PREFERENCE_QUERY_MESSAGE)) {
             LOG(ERROR) << "Failed building message!";
             return false;
         }
-        son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
+        son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
     }
     if (!database.setting_certification_mode()) {
         // trigger AP capability query
@@ -168,12 +168,12 @@ bool agent_monitoring_task::start_task(const std::string &src_mac, std::shared_p
             LOG(ERROR) << "Failed building message!";
             return false;
         }
-        son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
+        son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
     }
     return true;
 }
 
-bool agent_monitoring_task::send_tlv_metric_reporting_policy(const std::string &dst_mac,
+bool agent_monitoring_task::send_tlv_metric_reporting_policy(const sMacAddr &dst_mac,
                                                              std::shared_ptr<WSC::m1> m1,
                                                              ieee1905_1::CmduMessageRx &cmdu_rx,
                                                              ieee1905_1::CmduMessageTx &cmdu_tx)
@@ -245,17 +245,17 @@ bool agent_monitoring_task::send_tlv_metric_reporting_policy(const std::string &
     reporting_conf.sta_metrics_reporting_rcpi_hysteresis_margin_override = 0;
     reporting_conf.ap_channel_utilization_reporting_threshold            = 0;
 
-    return son_actions::send_cmdu_to_agent(dst_mac, cmdu_tx, database);
+    return son_actions::send_cmdu_to_agent(tlvf::mac_to_string(dst_mac), cmdu_tx, database);
 }
 
 bool agent_monitoring_task::send_tlv_empty_channel_selection_request(
-    const std::string &dst_mac, ieee1905_1::CmduMessageTx &cmdu_tx)
+    const sMacAddr &dst_mac, ieee1905_1::CmduMessageTx &cmdu_tx)
 {
     if (!cmdu_tx.create(0, ieee1905_1::eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE)) {
         LOG(ERROR) << "Failed building CHANNEL_SELECTION_REQUEST_MESSAGE ! ";
         return false;
     }
-    return son_actions::send_cmdu_to_agent(dst_mac, cmdu_tx, database);
+    return son_actions::send_cmdu_to_agent(tlvf::mac_to_string(dst_mac), cmdu_tx, database);
 }
 
 bool agent_monitoring_task::add_profile_2default_802q_settings_tlv(
