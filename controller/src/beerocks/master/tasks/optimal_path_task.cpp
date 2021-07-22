@@ -503,6 +503,7 @@ void optimal_path_task::work()
         int8_t current_hostap_rx_rssi, dummy_rx_packets;
         bool force_signal_strength_decision = false;
         bool current_below_cutoff           = false;
+
         if (!database.get_node_cross_rx_rssi(sta_mac, current_hostap, current_hostap_rx_rssi,
                                              dummy_rx_packets)) {
             TASK_LOG(ERROR) << "can't get cross_rx_rssi for hostap " << current_hostap;
@@ -576,8 +577,7 @@ void optimal_path_task::work()
                         continue;
                     }
 
-                    uint16_t sta_phy_tx_rate_100kb =
-                        database.get_node_cross_rx_phy_rate_100kb(sta_mac);
+                    uint16_t sta_phy_tx_rate_100kb = station->cross_rx_phy_rate_100kb;
                     TASK_LOG(DEBUG) << "sta_phy_tx_rate_100kb=" << int(sta_phy_tx_rate_100kb);
 
                     auto radio_mac = tlvf::mac_from_string(hostap);
@@ -665,8 +665,7 @@ void optimal_path_task::work()
                         continue;
                     }
 
-                    uint16_t sta_phy_tx_rate_100kb =
-                        database.get_node_cross_rx_phy_rate_100kb(sta_mac);
+                    uint16_t sta_phy_tx_rate_100kb = station->cross_rx_phy_rate_100kb;
                     TASK_LOG(DEBUG) << "sta_phy_tx_rate_100kb=" << int(sta_phy_tx_rate_100kb);
 
                     auto radio_mac = tlvf::mac_from_string(hostap);
@@ -930,7 +929,7 @@ void optimal_path_task::work()
         TASK_LOG(DEBUG) << "calculating estimate hostap dl rssi/rate for sta " << sta_mac;
 
         //get sta parameters
-        uint16_t sta_phy_tx_rate_100kb = database.get_node_cross_rx_phy_rate_100kb(sta_mac);
+        uint16_t sta_phy_tx_rate_100kb = station->cross_rx_phy_rate_100kb;
         TASK_LOG(DEBUG) << "sta_phy_tx_rate_100kb=" << int(sta_phy_tx_rate_100kb);
         //build candidate hostap list
         std::vector<std::pair<std::string, bool>> hostap_candidates;
