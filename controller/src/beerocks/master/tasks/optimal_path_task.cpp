@@ -601,9 +601,8 @@ void optimal_path_task::work()
                 }
                 hostap_phy_rate = son::wireless_utils::estimate_ap_tx_phy_rate(
                     dl_rssi, sta_capabilities, hostap_bw, hostap_is_5ghz);
-                database.set_node_cross_estimated_tx_phy_rate(sta_mac,
-                                                              hostap_phy_rate); // save to DB
-                double weighted_phy_rate = calculate_weighted_phy_rate(*station);
+                station->cross_estimated_tx_phy_rate = hostap_phy_rate; // save to DB
+                double weighted_phy_rate             = calculate_weighted_phy_rate(*station);
                 if (hostap == current_hostap) {
                     weighted_phy_rate *=
                         (100.0 + roaming_hysteresis_percent_bonus) / 100.0; //adds stability
@@ -1251,7 +1250,7 @@ void optimal_path_task::work()
                 hostap_phy_rate = son::wireless_utils::estimate_ap_tx_phy_rate(
                     estimated_dl_rssi, sta_capabilities, hostap_params.bw, hostap_params.is_5ghz);
 
-                database.set_node_cross_estimated_tx_phy_rate(sta_mac, hostap_phy_rate);
+                station->cross_estimated_tx_phy_rate = hostap_phy_rate;
 
                 // 4. Calculate weighed PHY RATE
                 double weighted_phy_rate = calculate_weighted_phy_rate(*station);
@@ -1901,7 +1900,7 @@ double optimal_path_task::calculate_weighted_phy_rate(const sStation &client)
         //TODO FIXME --> get ethernet speed
         return (1e+5 * double(beerocks::BRIDGE_RATE_100KB));
     } else {
-        return database.get_node_cross_estimated_tx_phy_rate(tlvf::mac_to_string(client.mac));
+        return client.cross_estimated_tx_phy_rate;
     }
 }
 

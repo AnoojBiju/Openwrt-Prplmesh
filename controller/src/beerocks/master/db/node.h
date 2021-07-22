@@ -116,9 +116,6 @@ public:
     };
     std::shared_ptr<sta_stats_params> stats_info;
 
-    double cross_estimated_rx_phy_rate = 0.0;
-    double cross_estimated_tx_phy_rate = 0.0;
-
     class radio {
     public:
         bool active              = false;

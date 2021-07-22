@@ -4122,25 +4122,6 @@ bool db::clear_node_cross_rssi(const std::string &sta_mac)
     return true;
 }
 
-bool db::set_node_cross_estimated_tx_phy_rate(const std::string &mac, double phy_rate)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return false;
-    }
-    n->cross_estimated_tx_phy_rate = phy_rate;
-    return true;
-}
-
-double db::get_node_cross_estimated_tx_phy_rate(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return -1;
-    }
-    return n->cross_estimated_tx_phy_rate;
-}
-
 bool db::set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApStatsParams *params)
 {
     auto n = get_node(mac);
