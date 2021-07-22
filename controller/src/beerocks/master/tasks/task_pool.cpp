@@ -131,8 +131,7 @@ void task_pool::run_tasks(int max_exec_duration_ms)
     m_exec_iteration_start_time = std::chrono::steady_clock::time_point::max();
 }
 
-void task_pool::handle_ieee1905_1_msg(const std::string &src_mac,
-                                      ieee1905_1::CmduMessageRx &cmdu_rx)
+void task_pool::handle_ieee1905_1_msg(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     if (cmdu_rx.getMessageType() == ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE) {
         LOG(DEBUG) << "Message with mid: " << cmdu_rx.getMessageId()

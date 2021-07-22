@@ -23,7 +23,7 @@ class topology_task : public task {
 public:
     topology_task(db &database_, ieee1905_1::CmduMessageTx &cmdu_tx_, task_pool &tasks_);
     virtual ~topology_task() {}
-    bool handle_ieee1905_1_msg(const std::string &src_mac,
+    bool handle_ieee1905_1_msg(const sMacAddr &src_mac,
                                ieee1905_1::CmduMessageRx &cmdu_rx) override;
 
 protected:

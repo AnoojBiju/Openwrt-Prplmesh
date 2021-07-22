@@ -41,8 +41,7 @@ public:
      * @param cmdu_rx CMDU object containing the received message to be handled.
      * @return True if the message has been handled, otherwise false.
      */
-    virtual bool handle_ieee1905_1_msg(const std::string &src_mac,
-                                       ieee1905_1::CmduMessageRx &cmdu_rx)
+    virtual bool handle_ieee1905_1_msg(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
     {
         return false;
     }

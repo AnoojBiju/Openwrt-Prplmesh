@@ -53,7 +53,7 @@ void agent_monitoring_task::work()
     }
 }
 
-bool agent_monitoring_task::handle_ieee1905_1_msg(const std::string &src_mac,
+bool agent_monitoring_task::handle_ieee1905_1_msg(const sMacAddr &src_mac,
                                                   ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     switch (cmdu_rx.getMessageType()) {
@@ -69,10 +69,10 @@ bool agent_monitoring_task::handle_ieee1905_1_msg(const std::string &src_mac,
             LOG(INFO) << "Not a valid M1 - Ignoring WSC CMDU";
             return false;
         }
-        return start_task(src_mac, m1, cmdu_rx);
+        return start_task(tlvf::mac_to_string(src_mac), m1, cmdu_rx);
     }
     case ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE: {
-        start_agent_monitoring(src_mac, cmdu_rx);
+        start_agent_monitoring(tlvf::mac_to_string(src_mac), cmdu_rx);
         break;
     }
     default: {

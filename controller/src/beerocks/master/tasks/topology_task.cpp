@@ -38,16 +38,16 @@ topology_task::topology_task(db &database_, ieee1905_1::CmduMessageTx &cmdu_tx_,
 
 void topology_task::work() {}
 
-bool topology_task::handle_ieee1905_1_msg(const std::string &src_mac,
+bool topology_task::handle_ieee1905_1_msg(const sMacAddr &src_mac,
                                           ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     switch (cmdu_rx.getMessageType()) {
     case ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE: {
-        handle_topology_response(src_mac, cmdu_rx);
+        handle_topology_response(tlvf::mac_to_string(src_mac), cmdu_rx);
         break;
     }
     case ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE: {
-        handle_topology_notification(src_mac, cmdu_rx);
+        handle_topology_notification(tlvf::mac_to_string(src_mac), cmdu_rx);
         break;
     }
     default: {

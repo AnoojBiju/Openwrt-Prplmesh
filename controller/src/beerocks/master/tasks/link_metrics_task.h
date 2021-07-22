@@ -20,7 +20,7 @@ public:
                     ieee1905_1::CmduMessageTx &cert_cmdu_tx_, task_pool &tasks_);
     virtual ~LinkMetricsTask() {}
 
-    bool handle_ieee1905_1_msg(const std::string &src_mac,
+    bool handle_ieee1905_1_msg(const sMacAddr &src_mac,
                                ieee1905_1::CmduMessageRx &cmdu_rx) override;
 
     /**

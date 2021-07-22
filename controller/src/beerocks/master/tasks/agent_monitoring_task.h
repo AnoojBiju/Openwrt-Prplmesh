@@ -21,7 +21,7 @@ class agent_monitoring_task : public task {
 public:
     agent_monitoring_task(db &database_, ieee1905_1::CmduMessageTx &cmdu_tx_, task_pool &tasks_,
                           const std::string &task_name_ = std::string("agent_monitoring"));
-    bool handle_ieee1905_1_msg(const std::string &src_mac,
+    bool handle_ieee1905_1_msg(const sMacAddr &src_mac,
                                ieee1905_1::CmduMessageRx &cmdu_rx) override;
 
     static bool add_profile_2default_802q_settings_tlv(db &database,
