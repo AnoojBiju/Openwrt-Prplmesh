@@ -35,7 +35,7 @@ public:
      * @param cmdu_rx Received CMDU to be handled.
      * @return true on success and false otherwise.
      */
-    bool handle_cmdu_1905_link_metric_response(const std::string &src_mac,
+    bool handle_cmdu_1905_link_metric_response(const sMacAddr &src_mac,
                                                ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**

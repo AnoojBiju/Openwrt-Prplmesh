@@ -69,7 +69,7 @@ bool LinkMetricsTask::handle_ieee1905_1_msg(const sMacAddr &src_mac,
 {
     switch (cmdu_rx.getMessageType()) {
     case ieee1905_1::eMessageType::LINK_METRIC_RESPONSE_MESSAGE: {
-        handle_cmdu_1905_link_metric_response(tlvf::mac_to_string(src_mac), cmdu_rx);
+        handle_cmdu_1905_link_metric_response(src_mac, cmdu_rx);
         break;
     }
     default: {
@@ -79,7 +79,7 @@ bool LinkMetricsTask::handle_ieee1905_1_msg(const sMacAddr &src_mac,
     return true;
 }
 
-bool LinkMetricsTask::handle_cmdu_1905_link_metric_response(const std::string &src_mac,
+bool LinkMetricsTask::handle_cmdu_1905_link_metric_response(const sMacAddr &src_mac,
                                                             ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto mid = cmdu_rx.getMessageId();
