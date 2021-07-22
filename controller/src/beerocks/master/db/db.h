@@ -1430,12 +1430,6 @@ public:
     bool get_node_cross_rx_rssi(const std::string &sta_mac, const std::string &ap_mac, int8_t &rssi,
                                 int8_t &rx_packets);
 
-    bool set_node_cross_rx_phy_rate_100kb(const std::string &mac, uint16_t rx_phy_rate_100kb);
-    bool set_node_cross_tx_phy_rate_100kb(const std::string &mac, uint16_t tx_phy_rate_100kb);
-
-    uint16_t get_node_cross_rx_phy_rate_100kb(const std::string &mac);
-    uint16_t get_node_cross_tx_phy_rate_100kb(const std::string &mac);
-
     bool clear_node_cross_rssi(const std::string &sta_mac);
 
     bool set_node_cross_estimated_tx_phy_rate(const std::string &mac, double phy_rate);

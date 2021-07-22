@@ -42,6 +42,9 @@ public:
 
     bool handoff     = false;
     bool ire_handoff = false;
+
+    uint16_t cross_rx_phy_rate_100kb = 0;
+    uint16_t cross_tx_phy_rate_100kb = 0;
 };
 
 } // namespace db
