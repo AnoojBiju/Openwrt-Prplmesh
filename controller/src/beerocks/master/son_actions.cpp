@@ -294,7 +294,7 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
             database.set_node_ipv4(mac);
 
             // Notify steering task, if any, of disconnect.
-            int steering_task = database.get_steering_task_id(mac);
+            int steering_task = station->steering_task_id;
             if (tasks.is_task_running(steering_task))
                 tasks.push_event(steering_task, client_steering_task::STA_DISCONNECTED);
 

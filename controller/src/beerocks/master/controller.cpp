@@ -1323,7 +1323,13 @@ bool Controller::handle_cmdu_1905_client_steering_btm_report_message(
     LOG(DEBUG) << "BTM_REPORT from source bssid " << steering_btm_report->bssid()
                << " for client_mac=" << client_mac << " status_code=" << (int)status_code;
 
-    int steering_task_id = database.get_steering_task_id(client_mac);
+    auto client = database.get_station(tlvf::mac_from_string(client_mac));
+    if (!client) {
+        LOG(ERROR) << "sta " << client_mac << " not found";
+        return false;
+    }
+
+    int steering_task_id = client->steering_task_id;
     tasks.push_event(steering_task_id, client_steering_task::BTM_REPORT_RECEIVED);
     database.update_node_11v_responsiveness(client_mac, true);
 
