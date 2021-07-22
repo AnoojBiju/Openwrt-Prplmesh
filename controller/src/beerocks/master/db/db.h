@@ -1433,9 +1433,6 @@ public:
 
     bool clear_node_cross_rssi(const std::string &sta_mac);
 
-    bool set_node_cross_estimated_tx_phy_rate(const std::string &mac, double phy_rate);
-    double get_node_cross_estimated_tx_phy_rate(const std::string &mac);
-
     bool set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApStatsParams *params);
     void clear_hostap_stats_info(const sMacAddr &al_mac, const sMacAddr &mac);
 
