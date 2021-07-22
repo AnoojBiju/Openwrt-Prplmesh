@@ -52,7 +52,7 @@ private:
      * @param src_mac MAC address of agent.
      * @param cmdu_rx is a Topology Response message.
      */
-    bool start_agent_monitoring(const std::string &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool start_agent_monitoring(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
     * @brief Sends topology query, policy configuration,

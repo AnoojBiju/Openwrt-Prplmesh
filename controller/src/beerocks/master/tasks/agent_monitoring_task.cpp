@@ -72,7 +72,7 @@ bool agent_monitoring_task::handle_ieee1905_1_msg(const sMacAddr &src_mac,
         return start_task(tlvf::mac_to_string(src_mac), m1, cmdu_rx);
     }
     case ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE: {
-        start_agent_monitoring(tlvf::mac_to_string(src_mac), cmdu_rx);
+        start_agent_monitoring(src_mac, cmdu_rx);
         break;
     }
     default: {
@@ -82,7 +82,7 @@ bool agent_monitoring_task::handle_ieee1905_1_msg(const sMacAddr &src_mac,
     return true;
 }
 
-bool agent_monitoring_task::start_agent_monitoring(const std::string &src_mac,
+bool agent_monitoring_task::start_agent_monitoring(const sMacAddr &src_mac,
                                                    ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto tlvDeviceInformation = cmdu_rx.getClass<ieee1905_1::tlvDeviceInformation>();
