@@ -67,7 +67,6 @@ public:
     std::string radio_identifier;
 
     std::string ipv4;
-    std::string ipv6;
     std::string manufacturer;
     int channel = 0;
     std::string name;
