@@ -361,6 +361,11 @@ void association_handling_task::handle_response(std::string mac,
 
 void association_handling_task::finalize_new_connection()
 {
+    auto client = database.get_station(tlvf::mac_from_string(sta_mac));
+    if (!client) {
+        LOG(WARNING) << "Client " << sta_mac << " does not exist";
+        return;
+    }
 
     /*
      * see if special handling is required if client just came back from a handover
@@ -395,7 +400,7 @@ void association_handling_task::finalize_new_connection()
         /* 
          * kill existing roaming task 
          */
-        int prev_roaming_task = database.get_roaming_task_id(sta_mac);
+        int prev_roaming_task = client->roaming_task_id;
         LOG(DEBUG) << "kill prev_roaming_task " << prev_roaming_task;
         tasks.kill_task(prev_roaming_task);
 

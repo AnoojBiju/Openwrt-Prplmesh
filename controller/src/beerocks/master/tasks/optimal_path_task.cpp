@@ -96,6 +96,13 @@ void optimal_path_task::work()
     switch (state) {
     case START: {
 
+        auto station = database.get_station(tlvf::mac_from_string(sta_mac));
+        if (!station) {
+            TASK_LOG(ERROR) << "station " << sta_mac << " not found";
+            finish();
+            break;
+        }
+
         current_hostap_vap = database.get_node_parent(sta_mac);
         // Steering allowed on all vaps unless load_steer_on_vaps list is defined
         // on the platform , in that case verify that vap is on that list
@@ -115,9 +122,9 @@ void optimal_path_task::work()
 
         measurement_request = {};
 
-        int prev_task_id = database.get_roaming_task_id(sta_mac);
+        int prev_task_id = station->roaming_task_id;
         tasks.kill_task(prev_task_id);
-        database.assign_roaming_task_id(sta_mac, id);
+        station->roaming_task_id = id;
 
         if (database.get_node_type(sta_mac) == beerocks::TYPE_CLIENT) {
             started_as_client = true;
