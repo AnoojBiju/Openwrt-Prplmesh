@@ -3422,6 +3422,12 @@ bool Controller::handle_cmdu_control_message(
                    << " active_client_count=" << active_client_count
                    << " client_load=" << client_load_percent;
 
+        auto agent = database.m_agents.get(tlvf::mac_from_string(ire_mac));
+        if (!agent) {
+            LOG(ERROR) << "agent " << ire_mac << " does not exist";
+            return false;
+        }
+
         /*
             * start load balancing
             */
@@ -3437,8 +3443,7 @@ bool Controller::handle_cmdu_control_message(
                 * therefore, we need to create a load balancing task to optimize the network
                 */
             LOG(DEBUG) << "high load conditions, starting load balancer for ire " << ire_mac;
-            int prev_task_id = database.get_load_balancer_task_id(ire_mac);
-            if (tasks.is_task_running(prev_task_id)) {
+            if (tasks.is_task_running(agent->load_balancer_task_id)) {
                 LOG(DEBUG) << "load balancer task already running for " << ire_mac;
             } else {
                 auto new_task = std::make_shared<load_balancer_task>(

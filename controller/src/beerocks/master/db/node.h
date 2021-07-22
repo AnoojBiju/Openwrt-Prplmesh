@@ -95,7 +95,6 @@ public:
 
     std::chrono::steady_clock::time_point last_state_change;
 
-    int load_balancer_task_id                    = -1;
     int client_locating_task_id_new_connection   = -1;
     int client_locating_task_id_exist_connection = -1;
     int dynamic_channel_selection_task_id        = -1;
