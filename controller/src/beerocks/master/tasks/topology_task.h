@@ -37,7 +37,7 @@ private:
     * @param[in] src_mac MAC address of the message sender.
     * @return True if message, was successfully processed, false otherwise.
     */
-    bool handle_topology_response(const std::string &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_topology_response(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
     * @brief Handles 1905 Topology Notification message.

@@ -43,7 +43,7 @@ bool topology_task::handle_ieee1905_1_msg(const sMacAddr &src_mac,
 {
     switch (cmdu_rx.getMessageType()) {
     case ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE: {
-        handle_topology_response(tlvf::mac_to_string(src_mac), cmdu_rx);
+        handle_topology_response(src_mac, cmdu_rx);
         break;
     }
     case ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE: {
@@ -57,7 +57,7 @@ bool topology_task::handle_ieee1905_1_msg(const sMacAddr &src_mac,
     return true;
 }
 
-bool topology_task::handle_topology_response(const std::string &src_mac,
+bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                                              ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto mid = cmdu_rx.getMessageId();
@@ -167,8 +167,7 @@ bool topology_task::handle_topology_response(const std::string &src_mac,
                 continue;
             }
             // Update BSSes in the sAgent
-            auto radio =
-                database.get_radio(tlvf::mac_from_string(src_mac), radio_entry.radio_uid());
+            auto radio = database.get_radio(src_mac, radio_entry.radio_uid());
             if (!radio) {
                 LOG(WARNING) << "OperationalBSS on unknown radio  " << radio_entry.radio_uid()
                              << " on " << src_mac;
@@ -224,7 +223,7 @@ bool topology_task::handle_topology_response(const std::string &src_mac,
     // this node. This promise that the reported al_mac will get the Topology Discovery messages
     // from its neighbors and add them to the report.
     bool check_dead_neighbors =
-        (database.get_last_state_change(src_mac) +
+        (database.get_last_state_change(tlvf::mac_to_string(src_mac)) +
              std::chrono::seconds(beerocks::ieee1905_1_consts::DISCOVERY_NOTIFICATION_TIMEOUT_SEC +
                                   5) <
          std::chrono::steady_clock::now());
@@ -321,7 +320,7 @@ bool topology_task::handle_topology_response(const std::string &src_mac,
     }
 
     if (check_dead_neighbors) {
-        handle_dead_neighbors(src_mac, al_mac, reported_neighbor_al_macs);
+        handle_dead_neighbors(tlvf::mac_to_string(src_mac), al_mac, reported_neighbor_al_macs);
     }
 
     // Update active neighbors mac list of the interface node
