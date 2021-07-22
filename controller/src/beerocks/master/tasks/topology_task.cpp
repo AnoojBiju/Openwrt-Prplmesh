@@ -320,7 +320,7 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
     }
 
     if (check_dead_neighbors) {
-        handle_dead_neighbors(tlvf::mac_to_string(src_mac), al_mac, reported_neighbor_al_macs);
+        handle_dead_neighbors(src_mac, al_mac, reported_neighbor_al_macs);
     }
 
     // Update active neighbors mac list of the interface node
@@ -355,7 +355,7 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
     return true;
 }
 
-void topology_task::handle_dead_neighbors(const std::string &src_mac, const sMacAddr &al_mac,
+void topology_task::handle_dead_neighbors(const sMacAddr &src_mac, const sMacAddr &al_mac,
                                           std::unordered_set<sMacAddr> reported_neighbor_al_macs)
 {
     LOG(TRACE) << "Checking if one of " << src_mac << " neighbors is no longer connected";
@@ -383,7 +383,7 @@ void topology_task::handle_dead_neighbors(const std::string &src_mac, const sMac
         // al_mac of the reporter. If they are not equal then it means than the neighbor is
         // currently under another node.
         auto current_parent_al_mac = database.get_node_parent_ire(backhhaul_mac);
-        if (current_parent_al_mac != src_mac) {
+        if (tlvf::mac_from_string(current_parent_al_mac) != src_mac) {
             continue;
         }
 

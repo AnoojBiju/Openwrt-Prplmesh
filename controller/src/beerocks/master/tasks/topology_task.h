@@ -55,7 +55,7 @@ private:
      * @param al_mac Al mac from Device Information TLV.
      * @param reported_neighbor_al_macs Set of Al macs from reported neighbors.
      */
-    void handle_dead_neighbors(const std::string &src_mac, const sMacAddr &al_mac,
+    void handle_dead_neighbors(const sMacAddr &src_mac, const sMacAddr &al_mac,
                                std::unordered_set<sMacAddr> reported_neighbor_al_macs);
 
     db &database;
