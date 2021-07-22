@@ -1317,13 +1317,13 @@ bool Controller::handle_cmdu_1905_client_steering_btm_report_message(
     LOG(DEBUG) << "sending ACK message back to agent";
     son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
 
-    std::string client_mac = tlvf::mac_to_string(steering_btm_report->sta_mac());
-    uint8_t status_code    = steering_btm_report->btm_status_code();
+    sMacAddr client_mac = steering_btm_report->sta_mac();
+    uint8_t status_code = steering_btm_report->btm_status_code();
 
     LOG(DEBUG) << "BTM_REPORT from source bssid " << steering_btm_report->bssid()
                << " for client_mac=" << client_mac << " status_code=" << (int)status_code;
 
-    auto client = database.get_station(tlvf::mac_from_string(client_mac));
+    auto client = database.get_station(client_mac);
     if (!client) {
         LOG(ERROR) << "sta " << client_mac << " not found";
         return false;
