@@ -3434,8 +3434,7 @@ bool Controller::handle_cmdu_control_message(
             client_load_percent >
                 database.config.monitor_total_ch_load_notification_hi_th_percent &&
             database.settings_load_balancing() && database.is_hostap_active(radio_mac) &&
-            database.get_node_state(ire_mac) == beerocks::STATE_CONNECTED &&
-            database.get_node_type(ire_mac) != beerocks::TYPE_CLIENT) {
+            database.get_node_state(ire_mac) == beerocks::STATE_CONNECTED) {
             /*
                 * when a notification arrives, it means a large change in rx_rssi occurred (above the defined thershold)
                 * therefore, we need to create a load balancing task to optimize the network
