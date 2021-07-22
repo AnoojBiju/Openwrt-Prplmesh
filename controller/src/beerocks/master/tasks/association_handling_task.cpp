@@ -407,8 +407,7 @@ void association_handling_task::finalize_new_connection()
         /*
          * kill load balancer
          */
-        int prev_load_balancer_task = database.get_load_balancer_task_id(sta_mac);
-        tasks.kill_task(prev_load_balancer_task);
+        tasks.kill_task(client->load_balancer_task_id);
 
         database.set_node_handoff_flag(sta_mac, false);
     }
