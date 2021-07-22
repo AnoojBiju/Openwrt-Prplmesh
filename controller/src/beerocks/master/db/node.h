@@ -85,8 +85,6 @@ public:
 
     bool supports_24ghz            = true;
     int failed_24ghz_steer_attemps = 0;
-    beerocks::eBeaconMeasurementSupportLevel supports_beacon_measurement =
-        beerocks::BEACON_MEAS_UNSUPPORTED;
 
     std::chrono::steady_clock::time_point last_state_change;
 

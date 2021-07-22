@@ -725,27 +725,12 @@ bool db::fill_radio_channel_scan_capabilites(
     return true;
 }
 
-bool db::set_node_beacon_measurement_support_level(
-    const std::string &mac, beerocks::eBeaconMeasurementSupportLevel support_beacon_measurement)
+void db::set_node_beacon_measurement_support_level(
+    sStation &station, beerocks::eBeaconMeasurementSupportLevel support_beacon_measurement)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        return false;
+    if (!station.supports_beacon_measurement) { // sticky
+        station.supports_beacon_measurement = support_beacon_measurement;
     }
-    if (!n->supports_beacon_measurement) { // sticky
-        n->supports_beacon_measurement = support_beacon_measurement;
-    }
-    return true;
-}
-
-beerocks::eBeaconMeasurementSupportLevel
-db::get_node_beacon_measurement_support_level(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return beerocks::BEACON_MEAS_UNSUPPORTED;
-    }
-    return n->supports_beacon_measurement;
 }
 
 bool db::set_node_name(const std::string &mac, std::string name)

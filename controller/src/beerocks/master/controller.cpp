@@ -3535,9 +3535,15 @@ bool Controller::handle_cmdu_control_message(
             //on nexus 5x devices rsni always 0, and they are not supports measurement by ssid (special handling)
             support_level |= beerocks::BEACON_MEAS_SSID_SUPPORTED;
         }
+
+        auto station = database.get_station(response->params().sta_mac);
+        if (!station) {
+            LOG(ERROR) << "station " << response->params().sta_mac << " not found";
+            break;
+        }
+
         database.set_node_beacon_measurement_support_level(
-            tlvf::mac_to_string(response->params().sta_mac),
-            beerocks::eBeaconMeasurementSupportLevel(support_level));
+            *station, beerocks::eBeaconMeasurementSupportLevel(support_level));
         database.dm_add_sta_beacon_measurement(response->params());
         break;
     }

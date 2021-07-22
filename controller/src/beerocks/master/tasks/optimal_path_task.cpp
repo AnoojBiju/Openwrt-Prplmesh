@@ -142,19 +142,16 @@ void optimal_path_task::work()
         current_hostap_ssid = database.get_hostap_ssid(tlvf::mac_from_string(current_hostap_vap));
 
         sta_support_11k = database.settings_client_11k_roaming() &&
-                          (database.get_node_beacon_measurement_support_level(sta_mac) !=
-                           BEACON_MEAS_UNSUPPORTED);
+                          (station->supports_beacon_measurement != BEACON_MEAS_UNSUPPORTED);
 
         //// only for debug ////
         TASK_LOG(DEBUG) << "sta_support_11k=" << int(sta_support_11k);
         TASK_LOG(DEBUG) << "sta_support_beacon_measurement="
-                        << int(database.get_node_beacon_measurement_support_level(sta_mac))
-                        << ", sta_mac=" << sta_mac;
+                        << int(station->supports_beacon_measurement) << ", sta_mac=" << sta_mac;
         if (!database.settings_client_11k_roaming()) {
             TASK_LOG(DEBUG) << "settings_client_11k_roaming is not enabled!";
         }
-        if (database.get_node_beacon_measurement_support_level(sta_mac) ==
-            BEACON_MEAS_UNSUPPORTED) {
+        if (station->supports_beacon_measurement == BEACON_MEAS_UNSUPPORTED) {
             TASK_LOG(DEBUG) << "station " << sta_mac << " doesn't support beacon measurement!";
         }
         //////////////////////

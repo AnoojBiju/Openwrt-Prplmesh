@@ -441,11 +441,8 @@ public:
     bool set_node_vap_id(const std::string &mac, int8_t vap_id);
     int8_t get_node_vap_id(const std::string &mac);
 
-    bool set_node_beacon_measurement_support_level(
-        const std::string &mac,
-        beerocks::eBeaconMeasurementSupportLevel support_beacon_measurement);
-    beerocks::eBeaconMeasurementSupportLevel
-    get_node_beacon_measurement_support_level(const std::string &mac);
+    void set_node_beacon_measurement_support_level(
+        sStation &station, beerocks::eBeaconMeasurementSupportLevel support_beacon_measurement);
 
     bool set_node_name(const std::string &mac, std::string name);
 

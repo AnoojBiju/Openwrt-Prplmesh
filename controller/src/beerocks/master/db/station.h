@@ -47,6 +47,9 @@ public:
     uint16_t cross_tx_phy_rate_100kb   = 0;
     double cross_estimated_rx_phy_rate = 0.0;
     double cross_estimated_tx_phy_rate = 0.0;
+
+    beerocks::eBeaconMeasurementSupportLevel supports_beacon_measurement =
+        beerocks::BEACON_MEAS_UNSUPPORTED;
 };
 
 } // namespace db

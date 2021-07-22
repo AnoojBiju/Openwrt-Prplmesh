@@ -284,9 +284,14 @@ void association_handling_task::handle_response(std::string mac,
             break;
         }
 
+        auto station = database.get_station(tlvf::mac_from_string(sta_mac));
+        if (!station) {
+            TASK_LOG(ERROR) << "station " << sta_mac << " not found";
+            break;
+        }
+
         if (database.settings_client_11k_roaming() &&
-            (database.get_node_beacon_measurement_support_level(sta_mac) ==
-             beerocks::BEACON_MEAS_UNSUPPORTED) &&
+            (station->supports_beacon_measurement == beerocks::BEACON_MEAS_UNSUPPORTED) &&
             (database.get_node_type(sta_mac) == beerocks::TYPE_CLIENT)) {
 
             state        = CHECK_11K_BEACON_MEASURE_CAP;
@@ -452,7 +457,14 @@ void association_handling_task::handle_responses_timeout(
             TASK_LOG(DEBUG) << "state CHECK_11K_BEACON_MEASURE_CAP reached maximum attempts="
                             << attempts << " setting sta " << sta_mac
                             << " as beacon measurement unsupported ";
-            database.set_node_beacon_measurement_support_level(sta_mac,
+
+            auto station = database.get_station(tlvf::mac_from_string(sta_mac));
+            if (!station) {
+                TASK_LOG(ERROR) << "station " << sta_mac << " not found";
+                break;
+            }
+
+            database.set_node_beacon_measurement_support_level(*station,
                                                                beerocks::BEACON_MEAS_UNSUPPORTED);
             state = REQUEST_RSSI_MEASUREMENT_WAIT;
         }
