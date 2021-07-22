@@ -305,7 +305,7 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
                 LOG(DEBUG) << "handoff_flag == false, mac " << mac;
 
                 // If we're not in the middle of steering, kill roaming task
-                int prev_task_id = database.get_roaming_task_id(mac);
+                int prev_task_id = station->roaming_task_id;
                 if (tasks.is_task_running(prev_task_id)) {
                     tasks.kill_task(prev_task_id);
                 }
@@ -345,8 +345,15 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
                     agent->state = STATE_DISCONNECTED;
                 } else if (database.get_node_type(node_mac) == beerocks::TYPE_IRE_BACKHAUL ||
                            database.get_node_type(node_mac) == beerocks::TYPE_CLIENT) {
+
+                    auto station = database.get_station(tlvf::mac_from_string(node_mac));
+                    if (!station) {
+                        LOG(ERROR) << "station " << node_mac << " not found";
+                        return;
+                    }
+
                     // kill old roaming task
-                    int prev_task_id = database.get_roaming_task_id(node_mac);
+                    int prev_task_id = station->roaming_task_id;
                     if (tasks.is_task_running(prev_task_id)) {
                         tasks.kill_task(prev_task_id);
                     }
