@@ -47,7 +47,7 @@ bool topology_task::handle_ieee1905_1_msg(const sMacAddr &src_mac,
         break;
     }
     case ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE: {
-        handle_topology_notification(tlvf::mac_to_string(src_mac), cmdu_rx);
+        handle_topology_notification(src_mac, cmdu_rx);
         break;
     }
     default: {
@@ -394,7 +394,7 @@ void topology_task::handle_dead_neighbors(const std::string &src_mac, const sMac
     }
 }
 
-bool topology_task::handle_topology_notification(const std::string &src_mac,
+bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
                                                  ieee1905_1::CmduMessageRx &cmdu_rx)
 {
 
@@ -410,7 +410,8 @@ bool topology_task::handle_topology_notification(const std::string &src_mac,
     if (!client_association_event_tlv) {
         LOG(INFO) << "wfa_map::tlvClientAssociationEvent not found, sending TOPOLOGY_QUERY_MESSAGE";
 
-        return son_actions::send_topology_query_msg(src_mac, cmdu_tx, database);
+        return son_actions::send_topology_query_msg(tlvf::mac_to_string(src_mac), cmdu_tx,
+                                                    database);
     }
 
     std::shared_ptr<beerocks_message::tlvVsClientAssociationEvent> vs_tlv = nullptr;
