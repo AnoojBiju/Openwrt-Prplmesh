@@ -46,14 +46,22 @@ void association_handling_task::work()
             finish();
             return;
         }
+
+        auto station = database.get_station(tlvf::mac_from_string(sta_mac));
+        if (!station) {
+            TASK_LOG(DEBUG) << "client " << sta_mac << " is not found";
+            finish();
+            return;
+        }
+
         // If this task already has been created by another event, let it finish and finish the new
         // instance of it.
-        int prev_task_id = database.get_association_handling_task_id(sta_mac);
+        int prev_task_id = station->association_handling_task_id;
         if (tasks.is_task_running(prev_task_id)) {
             finish();
             return;
         }
-        database.assign_association_handling_task_id(sta_mac, id);
+        station->association_handling_task_id = id;
 
         original_parent_mac = database.get_node_parent(sta_mac);
 

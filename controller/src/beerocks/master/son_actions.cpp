@@ -268,8 +268,13 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
 
     if ((mac_type == beerocks::TYPE_IRE_BACKHAUL || mac_type == beerocks::TYPE_CLIENT) &&
         database.is_node_wireless(mac)) {
+        auto station = database.get_station(tlvf::mac_from_string(mac));
+        if (!station) {
+            LOG(ERROR) << "Station " << mac << " not found";
+            return;
+        }
         // If there is running association handleing task already, terminate it.
-        int prev_task_id = database.get_association_handling_task_id(mac);
+        int prev_task_id = station->association_handling_task_id;
         if (tasks.is_task_running(prev_task_id)) {
             tasks.kill_task(prev_task_id);
         }
@@ -278,6 +283,12 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
     if (reported_by_parent) {
         if (mac_type == beerocks::TYPE_IRE_BACKHAUL || mac_type == beerocks::TYPE_CLIENT) {
             database.set_node_state(mac, beerocks::STATE_DISCONNECTED);
+
+            auto station = database.get_station(tlvf::mac_from_string(mac));
+            if (!station) {
+                LOG(ERROR) << "Station " << mac << " not found";
+                return;
+            }
 
             // Clear node ipv4
             database.set_node_ipv4(mac);
@@ -302,7 +313,7 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
             }
 
             // If there is an instance of association handling task, kill it
-            int association_handling_task_id = database.get_association_handling_task_id(mac);
+            int association_handling_task_id = station->association_handling_task_id;
             if (tasks.is_task_running(association_handling_task_id)) {
                 tasks.kill_task(association_handling_task_id);
             }
