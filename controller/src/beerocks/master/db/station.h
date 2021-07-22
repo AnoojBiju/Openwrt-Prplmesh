@@ -39,6 +39,9 @@ public:
     int failed_11v_request_count = 0;
 
     bool confined = false;
+
+    bool handoff     = false;
+    bool ire_handoff = false;
 };
 
 } // namespace db

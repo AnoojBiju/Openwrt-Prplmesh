@@ -370,7 +370,7 @@ void association_handling_task::finalize_new_connection()
     /*
      * see if special handling is required if client just came back from a handover
      */
-    if (!database.get_node_handoff_flag(sta_mac)) {
+    if (!database.get_node_handoff_flag(*client)) {
         if (database.get_node_type(sta_mac) == beerocks::TYPE_CLIENT) {
             // The client's stay-on-initial-radio can be enabled prior to the client connection.
             // If this is the case, when the client connects the initial-radio should be configured (if not already configured)
@@ -409,7 +409,7 @@ void association_handling_task::finalize_new_connection()
          */
         tasks.kill_task(client->load_balancer_task_id);
 
-        database.set_node_handoff_flag(sta_mac, false);
+        database.set_node_handoff_flag(*client, false);
     }
 }
 void association_handling_task::handle_responses_timeout(

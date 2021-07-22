@@ -79,7 +79,6 @@ public:
     bool channel_ext_above_secondary   = true;
 
     beerocks::eNodeState state = beerocks::STATE_DISCONNECTED;
-    bool handoff               = false;
 
     bool supports_5ghz            = true;
     int failed_5ghz_steer_attemps = 0;
@@ -123,8 +122,6 @@ public:
     uint16_t cross_tx_phy_rate_100kb   = 0;
     double cross_estimated_rx_phy_rate = 0.0;
     double cross_estimated_tx_phy_rate = 0.0;
-
-    bool ire_handoff = false;
 
     class radio {
     public:

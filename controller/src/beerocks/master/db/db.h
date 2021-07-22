@@ -454,8 +454,8 @@ public:
 
     std::chrono::steady_clock::time_point get_last_state_change(const std::string &mac);
 
-    bool set_node_handoff_flag(const std::string &mac, bool handoff);
-    bool get_node_handoff_flag(const std::string &mac);
+    bool set_node_handoff_flag(sStation &station, bool handoff);
+    bool get_node_handoff_flag(const sStation &station);
 
     bool update_node_last_seen(const std::string &mac);
 

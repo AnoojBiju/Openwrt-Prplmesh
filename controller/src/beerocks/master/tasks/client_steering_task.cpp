@@ -119,8 +119,13 @@ void client_steering_task::work()
 
 void client_steering_task::steer_sta()
 {
+    auto client = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
+    if (!client) {
+        LOG(ERROR) << "client " << m_sta_mac << " not found";
+    }
+
     if (m_database.get_node_type(m_sta_mac) != beerocks::TYPE_IRE_BACKHAUL) {
-        if (!m_database.set_node_handoff_flag(m_sta_mac, true)) {
+        if (!m_database.set_node_handoff_flag(*client, true)) {
             LOG(ERROR) << "can't set handoff flag for " << m_sta_mac;
         }
     }
@@ -384,7 +389,7 @@ void client_steering_task::handle_task_end()
         TASK_LOG(DEBUG) << "client didn't respond to 11v request, updating responsiveness";
         m_database.update_node_11v_responsiveness(*client, false);
     }
-    m_database.set_node_handoff_flag(m_sta_mac, false);
+    m_database.set_node_handoff_flag(*client, false);
 }
 
 bool client_steering_task::handle_ieee1905_1_msg(const sMacAddr &src_mac,

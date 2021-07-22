@@ -789,32 +789,32 @@ std::chrono::steady_clock::time_point db::get_last_state_change(const std::strin
     return n->last_state_change;
 }
 
-bool db::set_node_handoff_flag(const std::string &mac, bool handoff)
+bool db::set_node_handoff_flag(sStation &station, bool handoff)
 {
-    auto n = get_node(mac);
+    auto n = get_node(station.mac);
     if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        LOG(WARNING) << __FUNCTION__ << " - node " << station.mac << " does not exist!";
         return false;
     }
-    n->handoff = handoff;
+    station.handoff = handoff;
     if (n->get_type() == beerocks::TYPE_IRE_BACKHAUL) {
-        n->ire_handoff = handoff;
+        station.ire_handoff = handoff;
     }
     return true;
 }
 
-bool db::get_node_handoff_flag(const std::string &mac)
+bool db::get_node_handoff_flag(const sStation &station)
 {
-    auto n = get_node(mac);
+    auto n = get_node(station.mac);
     if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        LOG(WARNING) << __FUNCTION__ << " - node " << station.mac << " does not exist!";
         return false;
     }
 
     if (n->get_type() == beerocks::TYPE_IRE_BACKHAUL) {
-        return n->ire_handoff;
+        return station.ire_handoff;
     } else {
-        return n->handoff;
+        return station.handoff;
     }
 }
 
