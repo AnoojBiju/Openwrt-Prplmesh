@@ -9,6 +9,7 @@
 #ifndef STATION_H
 #define STATION_H
 
+#include <string>
 #include <tlvf/common/sMacAddr.h>
 
 namespace prplmesh {
@@ -27,6 +28,8 @@ public:
     explicit sStation(const sMacAddr &mac_) : mac(mac_) {}
 
     const sMacAddr mac;
+
+    std::string ipv6;
 
     int association_handling_task_id = -1;
     int steering_task_id             = -1;

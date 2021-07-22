@@ -6738,13 +6738,14 @@ bool db::set_sta_dhcp_v6_lease(const sMacAddr &sta_mac, const std::string &host_
                                const std::string &ipv6_address)
 {
     auto sta_node = get_node(sta_mac);
+    auto station  = get_station(sta_mac);
 
-    if (!sta_node || sta_node->get_type() != TYPE_CLIENT) {
+    if (!sta_node || sta_node->get_type() != TYPE_CLIENT || !station) {
         return false;
     }
 
     // Update node attributes.
-    sta_node->ipv6 = ipv6_address;
+    station->ipv6  = ipv6_address;
     sta_node->name = host_name;
 
     // Update datamodel attributes.
