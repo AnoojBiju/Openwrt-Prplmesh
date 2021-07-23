@@ -603,7 +603,7 @@ void optimal_path_task::work()
                     dl_rssi, sta_capabilities, hostap_bw, hostap_is_5ghz);
                 database.set_node_cross_estimated_tx_phy_rate(sta_mac,
                                                               hostap_phy_rate); // save to DB
-                double weighted_phy_rate = calculate_weighted_phy_rate(sta_mac);
+                double weighted_phy_rate = calculate_weighted_phy_rate(*station);
                 if (hostap == current_hostap) {
                     weighted_phy_rate *=
                         (100.0 + roaming_hysteresis_percent_bonus) / 100.0; //adds stability
@@ -1248,7 +1248,7 @@ void optimal_path_task::work()
                 database.set_node_cross_estimated_tx_phy_rate(sta_mac, hostap_phy_rate);
 
                 // 4. Calculate weighed PHY RATE
-                double weighted_phy_rate = calculate_weighted_phy_rate(sta_mac);
+                double weighted_phy_rate = calculate_weighted_phy_rate(*station);
 
                 if (hostap == current_hostap) {
                     weighted_phy_rate *=
@@ -1880,24 +1880,15 @@ bool optimal_path_task::get_station_default_capabilities(
     }
 }
 
-double optimal_path_task::calculate_weighted_phy_rate(const std::string &client_mac)
+double optimal_path_task::calculate_weighted_phy_rate(const sStation &client)
 {
-    auto type    = database.get_node_type(client_mac);
-    auto if_type = database.get_node_backhaul_iface_type(client_mac);
+    auto if_type = database.get_node_backhaul_iface_type(tlvf::mac_to_string(client.mac));
 
-    if ((type == beerocks::TYPE_GW) || (type == beerocks::TYPE_SLAVE)) {
-        TASK_LOG(DEBUG) << "Can't run calculate_weighted_phy_rate() on none client node!";
-        return 0;
+    if (if_type == beerocks::IFACE_TYPE_ETHERNET) {
+        //TODO FIXME --> get ethernet speed
+        return (1e+5 * double(beerocks::BRIDGE_RATE_100KB));
     } else {
-        double phy_rate_to_node;
-        if (if_type == beerocks::IFACE_TYPE_ETHERNET) {
-            //TODO FIXME --> get ethernet speed
-            phy_rate_to_node = (1e+5 * double(beerocks::BRIDGE_RATE_100KB));
-        } else {
-            phy_rate_to_node = database.get_node_cross_estimated_tx_phy_rate(client_mac);
-        }
-
-        return phy_rate_to_node;
+        return database.get_node_cross_estimated_tx_phy_rate(tlvf::mac_to_string(client.mac));
     }
 }
 
