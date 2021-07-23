@@ -116,8 +116,6 @@ public:
     };
     std::shared_ptr<sta_stats_params> stats_info;
 
-    uint16_t max_supported_phy_rate_100kb = 0;
-
     uint16_t cross_rx_phy_rate_100kb   = 0;
     uint16_t cross_tx_phy_rate_100kb   = 0;
     double cross_estimated_rx_phy_rate = 0.0;
