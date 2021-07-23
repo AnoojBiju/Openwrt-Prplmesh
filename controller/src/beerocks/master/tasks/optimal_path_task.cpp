@@ -1902,44 +1902,6 @@ double optimal_path_task::calculate_weighted_phy_rate(const std::string &client_
     }
 }
 
-double optimal_path_task::calculate_weighted_phy_rate(const std::string &node_mac, int &hops)
-{
-    double node_phy_rate;
-    bool wireless_link = false;
-    auto if_type       = database.get_node_backhaul_iface_type(node_mac);
-    //TASK_LOG(DEBUG) << "calculate_weighted_phy_rate() node_mac=" << node_mac << " if_type=" << int(if_type);
-    if (if_type == beerocks::IFACE_TYPE_GW_BRIDGE) {
-        node_phy_rate = (1e+5 * double(beerocks::BRIDGE_RATE_100KB));
-        return node_phy_rate;
-    } else if (if_type == beerocks::IFACE_TYPE_BRIDGE) {
-        node_phy_rate = (1e+5 * double(beerocks::BRIDGE_RATE_100KB));
-    } else if (if_type == beerocks::IFACE_TYPE_ETHERNET) {
-        //TODO FIXME --> get ethernet speed
-        node_phy_rate = (1e+5 * double(beerocks::BRIDGE_RATE_100KB));
-    } else {
-        node_phy_rate = 1e+5 * double(database.get_node_tx_phy_rate_100kb(node_mac));
-        wireless_link = true;
-    }
-
-    if (wireless_link) {
-        ++hops;
-    }
-
-    // TEMP FIX FOR DEMO: do not calculate weighted phy rate
-    //TODO: fix this
-    return node_phy_rate;
-
-    /* TEMP: to be reenabled aftere move to WAV backhaul
-    //TASK_LOG(DEBUG) << "calculate_weighted_phy_rate() node_phy_rate=" << node_phy_rate << " hops=" << hops;
-    double next_phy_rate = calculate_weighted_phy_rate(parent_mac, hops);
-    if( (node_phy_rate < next_phy_rate) && wireless_link) { //return the weaker link
-        return node_phy_rate;
-    } else {
-        return next_phy_rate;
-    }
-    */
-}
-
 bool optimal_path_task::is_hostap_on_cs_process(const std::string &hostap_mac)
 {
     if (database.get_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac)) ||
