@@ -508,17 +508,6 @@ beerocks::eType db::get_node_type(const std::string &mac)
     return n->get_type();
 }
 
-bool db::set_local_slave_mac(const std::string &mac)
-{
-    if (!local_slave_mac.empty()) {
-        LOG(WARNING) << "local_slave_mac != empty";
-    }
-    local_slave_mac = mac;
-    return true;
-}
-
-std::string db::get_local_slave_mac() { return local_slave_mac; }
-
 bool db::set_node_ipv4(const std::string &mac, const std::string &ipv4)
 {
     auto n = get_node(mac);
@@ -1111,17 +1100,6 @@ std::string db::get_node_parent(const std::string &mac)
         return std::string();
     }
     return n->parent_mac;
-}
-
-std::string db::get_node_parent_hostap(const std::string &mac)
-{
-    std::string parent_backhaul = get_node_parent_backhaul(mac);
-    if (is_node_wireless(parent_backhaul)) {
-        return get_node_parent(parent_backhaul);
-    } else {
-        LOG(DEBUG) << "node " << parent_backhaul << " is not connected wirelessly";
-        return std::string();
-    }
 }
 
 std::string db::get_node_parent_backhaul(const std::string &mac)
@@ -4465,15 +4443,6 @@ int db::get_hostap_stats_measurement_duration(const sMacAddr &mac)
     return n->hostap->stats_info->stats_delta_ms;
 }
 
-std::chrono::steady_clock::time_point db::get_node_stats_info_timestamp(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return std::chrono::steady_clock::time_point();
-    }
-    return n->stats_info->timestamp;
-}
-
 std::chrono::steady_clock::time_point db::get_hostap_stats_info_timestamp(const sMacAddr &mac)
 {
     auto n = get_node(mac);
@@ -4673,16 +4642,6 @@ int db::get_measurement_delay(const std::string &mac)
     }
     //LOG(DEBUG) << "get_measurement_delay: mac " << mac << " n->measurement_delay = " << int(n->measurement_delay);
     return n->measurement_delay;
-}
-
-std::chrono::steady_clock::time_point db::get_measurement_sent_timestamp(const std::string &mac)
-{
-    std::shared_ptr<node> n = get_node(mac);
-    if (!n) {
-        return std::chrono::steady_clock::time_point();
-    }
-    //LOG(DEBUG) << "get_measurement_dry_run: mac " << mac << " n->measurement_dry_run" ;
-    return n->measurement_sent_timestamp;
 }
 
 bool db::set_measurement_sent_timestamp(const std::string &mac)
@@ -5235,15 +5194,6 @@ std::shared_ptr<node> db::get_node(const std::string &key)
 std::shared_ptr<node> db::get_node(const sMacAddr &mac)
 {
     std::string key = mac == network_utils::ZERO_MAC ? std::string() : tlvf::mac_to_string(mac);
-    return get_node(key);
-}
-
-std::shared_ptr<node> db::get_node(const sMacAddr &al_mac, const sMacAddr &ruid)
-{
-    std::string key = std::string();
-    if (al_mac != network_utils::ZERO_MAC && ruid != network_utils::ZERO_MAC)
-        key = tlvf::mac_to_string(al_mac) + tlvf::mac_to_string(ruid);
-
     return get_node(key);
 }
 

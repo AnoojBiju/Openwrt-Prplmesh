@@ -392,9 +392,6 @@ public:
     bool set_node_type(const std::string &mac, beerocks::eType type);
     beerocks::eType get_node_type(const std::string &mac);
 
-    bool set_local_slave_mac(const std::string &mac);
-    std::string get_local_slave_mac();
-
     bool set_node_ipv4(const std::string &mac, const std::string &ipv4 = std::string());
     std::string get_node_ipv4(const std::string &mac);
 
@@ -736,7 +733,6 @@ public:
     std::set<std::string> get_node_subtree(const std::string &mac);
     std::string get_node_parent(const std::string &mac);
 
-    std::string get_node_parent_hostap(const std::string &mac);
     std::string get_node_previous_parent(const std::string &mac);
     std::string get_node_parent_ire(const std::string &mac);
     std::string get_node_parent_backhaul(const std::string &mac);
@@ -1460,7 +1456,6 @@ public:
     bool is_commit_to_persistent_db_required();
 
     int get_hostap_stats_measurement_duration(const sMacAddr &mac);
-    std::chrono::steady_clock::time_point get_node_stats_info_timestamp(const std::string &mac);
     std::chrono::steady_clock::time_point get_hostap_stats_info_timestamp(const sMacAddr &mac);
 
     uint32_t get_node_rx_bytes(const std::string &mac);
@@ -1493,7 +1488,6 @@ public:
     bool set_measurement_delay(const std::string &mac, int measurement_delay);
     int get_measurement_delay(const std::string &mac);
 
-    std::chrono::steady_clock::time_point get_measurement_sent_timestamp(const std::string &mac);
     bool set_measurement_sent_timestamp(const std::string &mac);
 
     int get_measurement_recv_delta(const std::string &mac);
@@ -1839,8 +1833,6 @@ public:
     sDbMasterConfig &config;
 
 private:
-    std::string local_slave_mac;
-
     /**
      * @brief Adds node to the database.
      *
@@ -1856,7 +1848,6 @@ private:
                   const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
     std::shared_ptr<node> get_node(const std::string &key); //key can be <mac> or <al_mac>_<ruid>
     std::shared_ptr<node> get_node(const sMacAddr &mac);
-    std::shared_ptr<node> get_node(const sMacAddr &al_mac, const sMacAddr &ruid);
 
     /**
      * @brief Returns the node object after verifing node type.
@@ -2097,8 +2088,6 @@ private:
     std::mutex db_mutex;
 
     std::unordered_map<std::string, std::shared_ptr<node>> nodes[beerocks::HIERARCHY_MAX];
-
-    std::queue<std::string> disconnected_slave_mac_queue;
 
     /**
     *  @brief This variable indicates that data is awaiting to be commited over to the persistentDB.
