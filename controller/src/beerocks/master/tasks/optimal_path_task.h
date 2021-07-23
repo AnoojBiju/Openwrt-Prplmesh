@@ -62,7 +62,6 @@ private:
 
     double calculate_weighted_phy_rate(const std::string &client_mac,
                                        const std::string &hostap_mac);
-    double calculate_weighted_phy_rate(const std::string &hostap_mac, int &hops);
     bool is_hostap_on_cs_process(const std::string &hostap_mac);
 
     template <typename C>
