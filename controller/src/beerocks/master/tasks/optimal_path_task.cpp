@@ -596,7 +596,7 @@ void optimal_path_task::work()
                     dl_rssi, sta_capabilities, hostap_bw, hostap_is_5ghz);
                 database.set_node_cross_estimated_tx_phy_rate(sta_mac,
                                                               hostap_phy_rate); // save to DB
-                double weighted_phy_rate = calculate_weighted_phy_rate(sta_mac, hostap);
+                double weighted_phy_rate = calculate_weighted_phy_rate(sta_mac);
                 if (hostap == current_hostap) {
                     weighted_phy_rate *=
                         (100.0 + roaming_hysteresis_percent_bonus) / 100.0; //adds stability
@@ -1241,7 +1241,7 @@ void optimal_path_task::work()
                 database.set_node_cross_estimated_tx_phy_rate(sta_mac, hostap_phy_rate);
 
                 // 4. Calculate weighed PHY RATE
-                double weighted_phy_rate = calculate_weighted_phy_rate(sta_mac, hostap);
+                double weighted_phy_rate = calculate_weighted_phy_rate(sta_mac);
 
                 if (hostap == current_hostap) {
                     weighted_phy_rate *=
@@ -1873,8 +1873,7 @@ bool optimal_path_task::get_station_default_capabilities(
     }
 }
 
-double optimal_path_task::calculate_weighted_phy_rate(const std::string &client_mac,
-                                                      const std::string &hostap_mac)
+double optimal_path_task::calculate_weighted_phy_rate(const std::string &client_mac)
 {
     auto type    = database.get_node_type(client_mac);
     auto if_type = database.get_node_backhaul_iface_type(client_mac);
