@@ -1893,9 +1893,6 @@ double optimal_path_task::calculate_weighted_phy_rate(const std::string &client_
     auto type    = database.get_node_type(client_mac);
     auto if_type = database.get_node_backhaul_iface_type(client_mac);
 
-    // TASK_LOG(DEBUG) << "calculate_weighted_phy_rate | STA " << client_mac << " | type=" << int(type)
-    //                << " backhaul_iface_type:" << if_type;
-
     if ((type == beerocks::TYPE_GW) || (type == beerocks::TYPE_SLAVE)) {
         TASK_LOG(DEBUG) << "Can't run calculate_weighted_phy_rate() on none client node!";
         return 0;
@@ -1907,9 +1904,6 @@ double optimal_path_task::calculate_weighted_phy_rate(const std::string &client_
         } else {
             phy_rate_to_node = database.get_node_cross_estimated_tx_phy_rate(client_mac);
         }
-
-        // TASK_LOG(DEBUG) << "calculate_weighted_phy_rate | Calculated weighted phy rate:"
-        //                << int(phy_rate_to_node / 1e+6) << " Mbps";
 
         return phy_rate_to_node;
     }
