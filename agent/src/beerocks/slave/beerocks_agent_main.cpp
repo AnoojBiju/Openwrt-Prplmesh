@@ -155,38 +155,45 @@ static std::string get_sta_iface_from_hostap_iface(const std::string &hostap_ifa
 }
 
 static void fill_son_slave_config(const beerocks::config_file::sConfigSlave &beerocks_slave_conf,
-                                  son::slave_thread::sSlaveConfig &son_slave_conf,
-                                  const std::string &hostap_iface, int slave_num)
+                                  son::slave_thread::sAgentConfig &agent_conf,
+                                  const std::unordered_map<int, std::string> &interfaces_map)
 {
-    son_slave_conf.temp_path = beerocks_slave_conf.temp_path;
-    son_slave_conf.vendor    = beerocks_slave_conf.vendor;
-    son_slave_conf.model     = beerocks_slave_conf.model;
-    son_slave_conf.ucc_listener_port =
+    agent_conf.temp_path = beerocks_slave_conf.temp_path;
+    agent_conf.vendor    = beerocks_slave_conf.vendor;
+    agent_conf.model     = beerocks_slave_conf.model;
+    agent_conf.ucc_listener_port =
         (!beerocks_slave_conf.ucc_listener_port.empty())
             ? beerocks::string_utils::stoi(beerocks_slave_conf.ucc_listener_port)
             : static_cast<uint16_t>(beerocks::eGlobals::UCC_LISTENER_PORT);
-    son_slave_conf.bridge_iface             = beerocks_slave_conf.bridge_iface;
-    son_slave_conf.backhaul_preferred_bssid = beerocks_slave_conf.backhaul_preferred_bssid;
-    son_slave_conf.enable_repeater_mode =
-        beerocks_slave_conf.enable_repeater_mode[slave_num] == "1";
-    son_slave_conf.hostap_iface_type = beerocks::utils::get_iface_type_from_string(
-        beerocks_slave_conf.hostap_iface_type[slave_num]);
-    son_slave_conf.hostap_iface = hostap_iface;
-    son_slave_conf.hostap_ant_gain =
-        (!beerocks_slave_conf.hostap_ant_gain[slave_num].empty())
-            ? beerocks::string_utils::stoi(beerocks_slave_conf.hostap_ant_gain[slave_num])
-            : 0;
-    son_slave_conf.radio_identifier = beerocks_slave_conf.radio_identifier[slave_num];
-    son_slave_conf.backhaul_wireless_iface =
-        get_sta_iface_from_hostap_iface(son_slave_conf.hostap_iface);
-    son_slave_conf.backhaul_wireless_iface_filter_low =
-        (!beerocks_slave_conf.sta_iface_filter_low[slave_num].empty())
-            ? beerocks::string_utils::stoi(beerocks_slave_conf.sta_iface_filter_low[slave_num])
-            : 0;
+    agent_conf.bridge_iface             = beerocks_slave_conf.bridge_iface;
+    agent_conf.backhaul_preferred_bssid = beerocks_slave_conf.backhaul_preferred_bssid;
 
     // disable stopping on failure initially. Later on, it will be read from BPL as part of
     // cACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE
-    son_slave_conf.stop_on_failure_attempts = 0;
+    agent_conf.stop_on_failure_attempts = 0;
+
+    for (const auto &iface_element : interfaces_map) {
+        auto fronthaul_num    = iface_element.first;
+        auto &fronthaul_iface = iface_element.second;
+
+        // Fill configuration
+        agent_conf.radios[fronthaul_iface].enable_repeater_mode =
+            beerocks_slave_conf.enable_repeater_mode[fronthaul_num] == "1";
+        agent_conf.radios[fronthaul_iface].hostap_iface_type =
+            beerocks::utils::get_iface_type_from_string(
+                beerocks_slave_conf.hostap_iface_type[fronthaul_num]);
+        agent_conf.radios[fronthaul_iface].hostap_ant_gain =
+            (!beerocks_slave_conf.hostap_ant_gain[fronthaul_num].empty())
+                ? beerocks::string_utils::stoi(beerocks_slave_conf.hostap_ant_gain[fronthaul_num])
+                : 0;
+        agent_conf.radios[fronthaul_iface].backhaul_wireless_iface =
+            get_sta_iface_from_hostap_iface(fronthaul_iface);
+        agent_conf.radios[fronthaul_iface].backhaul_wireless_iface_filter_low =
+            (!beerocks_slave_conf.sta_iface_filter_low[fronthaul_num].empty())
+                ? beerocks::string_utils::stoi(
+                      beerocks_slave_conf.sta_iface_filter_low[fronthaul_num])
+                : 0;
+    }
 }
 
 static std::shared_ptr<beerocks::logging>
@@ -264,29 +271,24 @@ static int system_hang_test(const beerocks::config_file::sConfigSlave &beerocks_
 }
 
 static std::shared_ptr<son::slave_thread>
-start_son_slave_thread(int slave_num,
-                       const beerocks::config_file::sConfigSlave &beerocks_slave_conf,
-                       const std::string &fronthaul_iface, int argc, char *argv[])
+start_agent_thread(const std::unordered_map<int, std::string> &interfaces_map,
+                   const beerocks::config_file::sConfigSlave &beerocks_slave_conf, int argc,
+                   char *argv[])
 {
-    std::string base_slave_name = std::string(BEEROCKS_AGENT) + "_" + fronthaul_iface;
+    std::string base_agent_name(BEEROCKS_AGENT);
 
     // Init logger
     auto logger =
-        init_logger(base_slave_name, beerocks_slave_conf.sLog, argc, argv, base_slave_name);
+        init_logger(base_agent_name, beerocks_slave_conf.sLog, argc, argv, base_agent_name);
     if (!logger) {
         return nullptr;
     }
     g_loggers.push_back(logger);
 
-    // Fill configuration
-    son::slave_thread::sSlaveConfig son_slave_conf;
-    fill_son_slave_config(beerocks_slave_conf, son_slave_conf, fronthaul_iface, slave_num);
+    son::slave_thread::sAgentConfig agent_conf;
+    fill_son_slave_config(beerocks_slave_conf, agent_conf, interfaces_map);
 
-    // Disable stopping on failure initially. Later on, it will be read from BPL as part of
-    // cACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE
-    son_slave_conf.stop_on_failure_attempts = 0;
-
-    auto son_slave = std::make_shared<son::slave_thread>(son_slave_conf, *logger);
+    auto son_slave = std::make_shared<son::slave_thread>(agent_conf, *logger);
     if (!son_slave) {
         CLOG(ERROR, logger->get_logger_id()) << "son::slave_thread allocating has failed!";
         return nullptr;
@@ -304,7 +306,7 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
                               const std::unordered_map<int, std::string> &interfaces_map, int argc,
                               char *argv[])
 {
-    std::string base_agent_name = std::string(BEEROCKS_AGENT);
+    std::string base_agent_name(BEEROCKS_BACKHAUL);
 
     // Init logger
     auto agent_logger = init_logger(base_agent_name, beerocks_slave_conf.sLog, argc, argv);
@@ -314,7 +316,7 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     g_loggers.push_back(agent_logger);
 
     // Write pid file
-    beerocks::os_utils::write_pid_file(beerocks_slave_conf.temp_path, base_agent_name);
+    beerocks::os_utils::write_pid_file(beerocks_slave_conf.temp_path, BEEROCKS_AGENT);
     std::string pid_file_path =
         beerocks_slave_conf.temp_path + "pid/" + base_agent_name; // for file touching
 
@@ -339,7 +341,7 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
 
     // Create UDS address where the server socket will listen for incoming connection requests.
     std::string platform_manager_uds_path =
-        beerocks_slave_conf.temp_path + "/" + std::string(BEEROCKS_PLAT_MGR_UDS);
+        beerocks_slave_conf.temp_path + std::string(BEEROCKS_PLATFORM_UDS);
     auto platform_manager_uds_address =
         beerocks::net::UdsAddress::create_instance(platform_manager_uds_path);
     LOG_IF(!platform_manager_uds_address, FATAL)
@@ -402,7 +404,7 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
 
     // Create UDS address where the server socket will listen for incoming connection requests.
     std::string backhaul_manager_uds_path =
-        beerocks_slave_conf.temp_path + "/" + std::string(BEEROCKS_BACKHAUL_MGR_UDS);
+        beerocks_slave_conf.temp_path + std::string(BEEROCKS_BACKHAUL_UDS);
     auto backhaul_manager_uds_address =
         beerocks::net::UdsAddress::create_instance(backhaul_manager_uds_path);
     LOG_IF(!backhaul_manager_uds_address, FATAL)
@@ -452,18 +454,10 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     // Start backhaul manager
     LOG_IF(!backhaul_manager.start(), FATAL) << "Unable to start backhaul manager!";
 
-    std::vector<std::shared_ptr<son::slave_thread>> son_slaves;
-    for (const auto &iface_element : interfaces_map) {
-        auto son_slave_num    = iface_element.first;
-        auto &fronthaul_iface = iface_element.second;
-        LOG(DEBUG) << "Running son_slave_" << fronthaul_iface;
-        auto son_slave =
-            start_son_slave_thread(son_slave_num, beerocks_slave_conf, fronthaul_iface, argc, argv);
-        if (!son_slave) {
-            LOG(ERROR) << "Failed to start son_slave_" << fronthaul_iface;
-            return 1;
-        }
-        son_slaves.push_back(son_slave);
+    auto agent = start_agent_thread(interfaces_map, beerocks_slave_conf, argc, argv);
+    if (!agent) {
+        LOG(ERROR) << "Failed to start Agent thread";
+        return 1;
     }
 
     auto touch_time_stamp_timeout = std::chrono::steady_clock::now();
@@ -482,14 +476,7 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
         }
 
         // Check if all son_slave are still running and break on error.
-        auto should_break = false;
-        for (const auto &son_slave : son_slaves) {
-            should_break = !son_slave->is_running();
-            if (should_break) {
-                break;
-            }
-        }
-        if (should_break) {
+        if (!agent->is_running()) {
             break;
         }
 
@@ -500,9 +487,7 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
         }
     }
 
-    for (const auto &son_slave : son_slaves) {
-        son_slave->stop();
-    }
+    agent->stop();
 
     LOG(DEBUG) << "backhaul_manager.stop()";
     backhaul_manager.stop();

@@ -305,7 +305,7 @@ bool bml_internal::connect_to_master()
 
     // Open a UDS connection with the master
     if (!(m_sockMaster =
-              new SocketClient(m_sConfig.temp_path + std::string(BEEROCKS_MASTER_UDS)))) {
+              new SocketClient(m_sConfig.temp_path + std::string(BEEROCKS_CONTROLLER_UDS)))) {
 
         LOG(ERROR) << "Failed creating UDS socket!";
         return (false);
@@ -333,7 +333,7 @@ bool bml_internal::connect_to_platform()
 
     // Open a UDS connection with the platform manager
     if (!(m_sockPlatform =
-              new SocketClient(m_sConfig.temp_path + std::string(BEEROCKS_PLAT_MGR_UDS)))) {
+              new SocketClient(m_sConfig.temp_path + std::string(BEEROCKS_PLATFORM_UDS)))) {
 
         LOG(ERROR) << "Failed creating UDS socket!";
         return (false);

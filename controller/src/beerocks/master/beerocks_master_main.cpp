@@ -459,8 +459,9 @@ int main(int argc, char *argv[])
     LOG_IF(!timer_manager, FATAL) << "Unable to create timer manager!";
 
     // Create UDS address where the server socket will listen for incoming connection requests.
-    std::string uds_path = beerocks_slave_conf.temp_path + "/" + std::string(BEEROCKS_MASTER_UDS);
-    auto uds_address     = beerocks::net::UdsAddress::create_instance(uds_path);
+    std::string uds_path =
+        beerocks_slave_conf.temp_path + "/" + std::string(BEEROCKS_CONTROLLER_UDS);
+    auto uds_address = beerocks::net::UdsAddress::create_instance(uds_path);
     LOG_IF(!uds_address, FATAL) << "Unable to create UDS server address!";
 
     // Create server to exchange CMDU messages with clients connected through a UDS socket

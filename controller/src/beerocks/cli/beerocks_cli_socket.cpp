@@ -65,7 +65,7 @@ bool cli_socket::connect()
         LOG(INFO) << "connecting to proxy socket at " << proxy_ip;
         master_socket = new SocketClient(proxy_ip, beerocks::CLI_PROXY_TCP_PORT, 2000);
     } else {
-        std::string master_uds = temp_path + std::string(BEEROCKS_MASTER_UDS);
+        std::string master_uds = temp_path + std::string(BEEROCKS_CONTROLLER_UDS);
         master_socket          = new SocketClient(master_uds);
     }
     err = master_socket->getError();
