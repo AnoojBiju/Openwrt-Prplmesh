@@ -166,7 +166,7 @@ main() {
 VERBOSE=false
 IMAGE_ONLY=false
 OPENWRT_REPOSITORY='https://gitlab.com/prpl-foundation/prplwrt/prplwrt.git'
-OPENWRT_VERSION='9f9419604ac36bb3cdfdd67e053d050ef8ed5a54'
+OPENWRT_VERSION='0be485236ca9fd7a8bb6727c6c628f5830d23075'
 PRPLMESH_VARIANT="-nl80211"
 DOCKER_TARGET_STAGE="prplmesh-builder"
 
