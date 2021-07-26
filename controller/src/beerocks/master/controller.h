@@ -247,24 +247,6 @@ private:
                                        uint8_t authkey[32], uint8_t keywrapkey[16]);
 
     /**
-     * @brief Sends 'CHANNEL_SELECTION_REQUEST_MESSAGE' without any TLVs included,
-     * to get Operating Channel Report back from agents.
-     *
-     * If a Channel Selection Request message contains zero Channel Preference TLVs,
-     * it is indicating the highest preference for all channels and operating classes supported
-     * by all of the Multi-AP Agent’s radios.
-     *
-     * Operating Channel Report should be sent back from the Agent after this empty message.
-     * That way operating classes are registered to data model.
-     *
-     * @param dst_mac Destination MAC address.
-     * @param cmdu_tx CMDU to be transmitted.
-     * @return True on success, false otherwise.
-    */
-    bool send_tlv_empty_channel_selection_request(const std::string &dst_mac,
-                                                  ieee1905_1::CmduMessageTx &cmdu_tx);
-
-    /**
      * @brief Handles Tlv of AP Extended Metrics (tlvApExtendedMetrics).
      *
      * @param agent agent shared object.
