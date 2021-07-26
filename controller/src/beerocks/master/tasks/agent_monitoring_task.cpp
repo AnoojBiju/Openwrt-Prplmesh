@@ -185,7 +185,7 @@ bool agent_monitoring_task::send_tlv_metric_reporting_policy(const sMacAddr &dst
     }
 
     auto ruid                  = radio_basic_caps->radio_uid();
-    auto al_mac                = tlvf::mac_to_string(m1->mac_addr());
+    auto al_mac                = m1->mac_addr();
     const auto &bss_info_confs = database.get_bss_info_configuration(m1->mac_addr());
     uint8_t num_bsss           = 0;
 
