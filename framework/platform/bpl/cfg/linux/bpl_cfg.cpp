@@ -760,5 +760,13 @@ bool cfg_set_steering_disassoc_timer_msec(std::chrono::milliseconds &steering_di
     return true;
 }
 
+bool cfg_get_clients_measurement_mode(eClientsMeasurementMode &clients_measurement_mode)
+{
+    // Measure all clients
+    clients_measurement_mode = eClientsMeasurementMode::ENABLE_ALL;
+
+    return true;
+}
+
 } // namespace bpl
 } // namespace beerocks

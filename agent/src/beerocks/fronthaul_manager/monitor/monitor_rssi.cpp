@@ -195,6 +195,13 @@ void monitor_rssi::process()
         auto sta_mac  = it->first;
         auto sta_node = it->second;
 
+        // If clients-measurement-mode is disabled or if it is set to selected-clients-only,
+        // the measure_sta_enable flag might be disabled for the clients.
+        // If it is disabled - skip the client.
+        if (!sta_node->get_measure_sta_enable()) {
+            continue;
+        }
+
         auto sta_vap_id = sta_node->get_vap_id();
         auto arp_state  = sta_node->get_arp_state();
         auto &sta_stats = sta_node->get_stats();
