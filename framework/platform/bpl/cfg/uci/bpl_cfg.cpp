@@ -927,5 +927,28 @@ bool cfg_set_steering_disassoc_timer_msec(std::chrono::milliseconds &steering_di
     return cfg_set_prplmesh_config(option, value);
 }
 
+bool cfg_get_clients_measurement_mode(eClientsMeasurementMode &clients_measurement_mode)
+{
+    int val = -1;
+    if (cfg_get_prplmesh_param_int_default("clients_measurement_mode", &val,
+                                           int(eClientsMeasurementMode::ENABLE_ALL)) ==
+        RETURN_ERR) {
+        LOG(ERROR) << "Failed to read clients_measurement_mode parameter - setting "
+                      "default value: ENABLE_ALL";
+        clients_measurement_mode = eClientsMeasurementMode::ENABLE_ALL;
+        return true;
+    }
+
+    if (val > int(eClientsMeasurementMode::ONLY_CLIENTS_SELECTED_FOR_STEERING)) {
+        LOG(WARNING) << "clients_measurement_mode is set to invalid value - setting "
+                        "default value: ENABLE_ALL";
+        clients_measurement_mode = eClientsMeasurementMode::ENABLE_ALL;
+    } else {
+        clients_measurement_mode = eClientsMeasurementMode(val);
+    }
+
+    return true;
+}
+
 } // namespace bpl
 } // namespace beerocks

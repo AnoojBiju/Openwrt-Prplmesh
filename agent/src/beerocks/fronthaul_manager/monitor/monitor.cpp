@@ -151,6 +151,16 @@ bool Monitor::start()
 
     transaction.commit();
 
+    bpl::eClientsMeasurementMode clients_measuremet_mode;
+    if (!beerocks::bpl::cfg_get_clients_measurement_mode(clients_measuremet_mode)) {
+        LOG(WARNING) << "Failed to read clients measurement mode - using defaule value: enable "
+                        "measurements for all clients";
+        clients_measuremet_mode = bpl::eClientsMeasurementMode::ENABLE_ALL;
+    }
+
+    mon_db.set_clients_measuremet_mode(
+        (monitor_db::eClientsMeasurementMode)clients_measuremet_mode);
+
     LOG(DEBUG) << "started";
 
     return true;
@@ -478,8 +488,15 @@ bool Monitor::monitor_fsm()
                 std::chrono::steady_clock::now() +
                 std::chrono::milliseconds(mon_db.MONITOR_DB_POLLING_RATE_MSEC));
 
-            // Update the statistics
-            update_sta_stats(max_iteration_timeout);
+            // If clients measurement mode is disabled - no need to call update_sta_stats.
+            // The differentiation between measure all clients and only specific clients is done
+            // as internally in the update_sta_stats.
+            if (mon_db.get_clients_measuremet_mode() !=
+                monitor_db::eClientsMeasurementMode::DISABLE_ALL) {
+                // Update the statistics
+                update_sta_stats(max_iteration_timeout);
+            }
+
             // NOTE: Radio & VAP statistics are updated only on last poll cycle
             if (mon_db.is_last_poll())
                 update_ap_stats();
@@ -708,6 +725,13 @@ bool Monitor::update_sta_stats(const std::chrono::steady_clock::time_point &time
 
         if (sta_node == nullptr) {
             LOG(WARNING) << "Invalid node pointer for STA = " << sta_mac;
+            continue;
+        }
+
+        // If clients-measurement-mode is disabled or if it is set to selected-clients-only,
+        // the measure_sta_enable flag might be disabled for the clients.
+        // If it is disabled - skip the client.
+        if (!sta_node->get_measure_sta_enable()) {
             continue;
         }
 
@@ -1115,6 +1139,19 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
                 return;
             }
             LOG(DEBUG) << "client: " << sta_mac << " configuration was removed";
+
+            // For ONLY_CLIENTS_SELECTED_FOR_STEERING mode, need to updated the client's measure-sta-enable flag
+            // if it  already connected. For not connected clients the flag will be determined as
+            // part of the STA_Connected event handling.
+            if (mon_db.get_clients_measuremet_mode() ==
+                monitor_db::eClientsMeasurementMode::ONLY_CLIENTS_SELECTED_FOR_STEERING) {
+                auto sta_node = mon_db.sta_find(sta_mac);
+                if (sta_node) {
+                    sta_node->set_measure_sta_enable(false);
+                    LOG(DEBUG) << "Set sta measurements mode to false for sta_mac=" << sta_mac;
+                }
+            }
+
             send_steering_return_status(
                 beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_RESPONSE, OPERATION_SUCCESS);
             break;
@@ -1147,6 +1184,18 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
         client->setSnrLowXing(request->params().config.snrLowXing);
         client->setSnrInactXing(request->params().config.snrInactXing);
         client->setVapIndex(vap_id);
+
+        // For ONLY_CLIENTS_SELECTED_FOR_STEERING mode, need to updated the client's measure-sta-enable flag
+        // if it  already connected. For not connected clients the flag will be determined as
+        // part of the STA_Connected event handling.
+        if (mon_db.get_clients_measuremet_mode() ==
+            monitor_db::eClientsMeasurementMode::ONLY_CLIENTS_SELECTED_FOR_STEERING) {
+            auto sta_node = mon_db.sta_find(sta_mac);
+            if (sta_node) {
+                sta_node->set_measure_sta_enable(true);
+                LOG(DEBUG) << "Set sta measurements mode to true for sta_mac=" << sta_mac;
+            }
+        }
 
         send_steering_return_status(beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_RESPONSE,
                                     OPERATION_SUCCESS);
@@ -1860,10 +1909,16 @@ bool Monitor::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
         sta_node->set_ipv4(sta_ipv4);
         sta_node->set_bridge_4addr_mac(set_bridge_4addr_mac);
 
+        sta_node->set_measure_sta_enable((mon_db.get_clients_measuremet_mode() ==
+                                          monitor_db::eClientsMeasurementMode::ENABLE_ALL));
+
 #ifdef BEEROCKS_RDKB
         //clean rdkb monitor data if already in database.
         auto client = mon_rdkb_hal.conf_get_client(sta_mac);
         if (client) {
+            // override sta_node measurements configuration
+            sta_node->set_measure_sta_enable((mon_db.get_clients_measuremet_mode() !=
+                                              monitor_db::eClientsMeasurementMode::DISABLE_ALL));
             client->setStartTime(std::chrono::steady_clock::now());
             client->setLastSampleTime(std::chrono::steady_clock::now());
             client->setAccumulatedPackets(0);
