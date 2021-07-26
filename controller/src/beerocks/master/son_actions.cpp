@@ -448,8 +448,14 @@ bool son_actions::send_cmdu_to_agent(const std::string &dest_mac,
                                      ieee1905_1::CmduMessageTx &cmdu_tx, db &database,
                                      const std::string &radio_mac)
 {
+    return send_cmdu_to_agent(tlvf::mac_from_string(dest_mac), cmdu_tx, database, radio_mac);
+}
+
+bool son_actions::send_cmdu_to_agent(const sMacAddr &dest_mac, ieee1905_1::CmduMessageTx &cmdu_tx,
+                                     db &database, const std::string &radio_mac)
+{
     if (cmdu_tx.getMessageType() == ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE) {
-        if (!database.is_prplmesh(tlvf::mac_from_string(dest_mac))) {
+        if (!database.is_prplmesh(dest_mac)) {
             // skip non-prplmesh agents
             return false;
         }
@@ -470,8 +476,7 @@ bool son_actions::send_cmdu_to_agent(const std::string &dest_mac,
     }
 
     return controller_ctx->send_cmdu_to_broker(
-        cmdu_tx, tlvf::mac_from_string(dest_mac),
-        tlvf::mac_from_string(database.get_local_bridge_mac()));
+        cmdu_tx, dest_mac, tlvf::mac_from_string(database.get_local_bridge_mac()));
 }
 
 bool son_actions::send_ap_config_renew_msg(ieee1905_1::CmduMessageTx &cmdu_tx, db &database)
