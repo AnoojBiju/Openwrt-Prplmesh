@@ -155,8 +155,9 @@ static bool fill_platform_settings(
     LOG(DEBUG) << "band_enabled=" << params.enabled;
     LOG(DEBUG) << "channel=" << params.channel;
     LOG(DEBUG) << "sub_band_dfs=" << params.sub_band_dfs;
-    LOG(DEBUG) << "country-code=" << db->device_conf.country_code[0]
-               << db->device_conf.country_code[1];
+    LOG(DEBUG) << "country-code="
+               << (!db_country_code_empty ? std::string(&db->device_conf.country_code[0], 2)
+                                          : "(not set)");
 
     // initialize wlan params cache
     //erase interface cache from map if exists
