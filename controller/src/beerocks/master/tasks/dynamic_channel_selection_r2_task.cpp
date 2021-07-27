@@ -473,42 +473,6 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
     return true;
 }
 
-bool dynamic_channel_selection_r2_task::is_scan_triggered_for_radio(const sMacAddr &radio_mac,
-                                                                    bool is_single_scan)
-{
-    // Get parent agent mac from radio mac
-    auto radio_mac_str = tlvf::mac_to_string(radio_mac);
-    auto ire           = database.get_node_parent_ire(radio_mac_str);
-    if (ire.empty()) {
-        LOG(ERROR) << "Failed to get node_parent_ire!";
-        return false;
-    }
-
-    // If agent not exist - return false
-    auto ire_mac      = tlvf::mac_from_string(ire);
-    const auto &agent = m_agents_status_map.find(ire_mac);
-    if (agent == m_agents_status_map.cend()) {
-        return false;
-    }
-
-    if (is_single_scan) {
-        // If a single scan request for this radio exists and not in pending state - return true
-        const auto &radio_single_scan_request = agent->second.single_radio_scans.find(radio_mac);
-        if (radio_single_scan_request != agent->second.single_radio_scans.cend()) {
-            return (radio_single_scan_request->second.status != eRadioScanStatus::PENDING);
-        }
-    } else {
-        // If a continuous scan request for this radio exists and not in pending state - return true
-        const auto &radio_continuous_scan_request =
-            agent->second.continuous_radio_scans.find(radio_mac);
-        if (radio_continuous_scan_request != agent->second.continuous_radio_scans.cend()) {
-            return (radio_continuous_scan_request->second.status != eRadioScanStatus::PENDING);
-        }
-    }
-
-    return false;
-}
-
 bool dynamic_channel_selection_r2_task::handle_single_scan_request_event(
     const sSingleScanRequestEvent &scan_request_event)
 {
