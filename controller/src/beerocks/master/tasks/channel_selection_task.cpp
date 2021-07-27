@@ -1567,67 +1567,6 @@ bool channel_selection_task::get_overlapping_channels_for_24G(uint8_t channel)
     return true;
 }
 
-bool channel_selection_task::find_all_scan_hostap(const std::string &hostap_parent_mac)
-{
-    auto slaves = database.get_node_children(hostap_parent_mac, beerocks::TYPE_SLAVE);
-    for (auto &slave : slaves) {
-        if (backhaul_scan_measurement_list.find(slave) != backhaul_scan_measurement_list.end()) {
-            TASK_LOG(DEBUG) << "slave = " << slave << " hostap_parent_mac = " << hostap_parent_mac
-                            << "return true";
-            for (auto &temp : backhaul_scan_measurement_list) {
-                TASK_LOG(DEBUG) << "backhaul_scan_measurement_list.first = " << temp.first;
-            }
-            return true;
-        }
-    }
-    return false;
-}
-
-void channel_selection_task::send_backhaul_reset()
-{
-    TASK_LOG(DEBUG) << "*****************send_backhaul_reset**************************** :";
-    auto hostap_parent_mac = database.get_node_parent(tlvf::mac_to_string(radio_mac));
-    std::string backhaul_manager_slave_mac;
-    TASK_LOG(DEBUG) << "insert ire_mac_should_reset to hostap_parent_mac = " << hostap_parent_mac
-                    << " radio_mac = " << radio_mac;
-    if (get_backhaul_manager_slave(backhaul_manager_slave_mac)) {
-        auto agent_mac = database.get_node_parent_ire(backhaul_manager_slave_mac);
-
-        auto request =
-            message_com::create_vs_message<beerocks_message::cACTION_CONTROL_BACKHAUL_RESET>(
-                cmdu_tx);
-        if (request == nullptr) {
-            LOG(ERROR) << "Failed building message!";
-            return;
-        }
-        son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, backhaul_manager_slave_mac);
-    } else {
-        TASK_LOG(INFO) << " hostap_backhaul manager, not joined yet, radio = " << radio_mac;
-    }
-}
-
-bool channel_selection_task::get_backhaul_manager_slave(std::string &backhaul_manager_slave_mac)
-{
-    if (database.is_hostap_backhaul_manager(radio_mac)) {
-        TASK_LOG(INFO) << " is backhaul_manager_slave! , radio = " << radio_mac;
-        backhaul_manager_slave_mac = tlvf::mac_to_string(radio_mac);
-        return true;
-    }
-
-    auto siblings = database.get_node_siblings(tlvf::mac_to_string(radio_mac));
-    for (auto &sibling : siblings) {
-        if (database.is_hostap_backhaul_manager(tlvf::mac_from_string(sibling))) {
-            TASK_LOG(INFO) << " backhaul_manager_slave joined , sibling = " << radio_mac;
-            backhaul_manager_slave_mac = sibling;
-            return true;
-        }
-    }
-
-    //backhaul_manager_slave did not joined yet
-    backhaul_manager_slave_mac.clear();
-    return false;
-}
-
 bool channel_selection_task::fill_restricted_channels_from_ccl_busy_bands(uint8_t *channel_list)
 {
     int channel_step = CHANNEL_20MHZ_STEP;
@@ -1673,30 +1612,6 @@ bool channel_selection_task::fill_restricted_channels_from_ccl_busy_bands(uint8_
                         << " disallow = " << int(it->second.disallow);
     }
     return true;
-}
-
-bool channel_selection_task::acs_result_match()
-{
-    TASK_LOG(DEBUG) << "*****************acs_result_match**************************** :";
-    auto channel                     = channel_switch_request.channel;
-    auto freq                        = wireless_utils::channel_to_freq(channel);
-    auto vht_center_frequency        = channel_switch_request.vht_center_frequency;
-    auto channel_ext_above_secondary = (freq < vht_center_frequency) ? true : false;
-    TASK_LOG(DEBUG) << "channel_ext_above_secondary  = " << int(channel_ext_above_secondary)
-                    << " csa_event->cs_params.channel = " << int(csa_event->cs_params.channel)
-                    << " channel_switch_request.channel = " << int(channel_switch_request.channel);
-    int channel_step = CHANNEL_20MHZ_STEP;
-    if (channel_ext_above_secondary) {
-        if ((csa_event->cs_params.channel - channel_switch_request.channel) <= channel_step) {
-            return true;
-        }
-        return false;
-    } else {
-        if ((channel_switch_request.channel - csa_event->cs_params.channel) <= channel_step) {
-            return true;
-        }
-        return false;
-    }
 }
 
 uint8_t channel_selection_task::get_gw_slave_5g_channel()

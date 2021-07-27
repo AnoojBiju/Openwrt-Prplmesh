@@ -1805,11 +1805,6 @@ bool BackhaulManager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo> 
         configuration_stop_on_failure_attempts = request_in->attempts();
         break;
     }
-    case beerocks_message::ACTION_BACKHAUL_RESET: {
-        LOG(DEBUG) << "ACTION_CONTROL_BACKHAUL_RESET";
-        FSM_MOVE_STATE(RESTART);
-        break;
-    }
     case beerocks_message::ACTION_BACKHAUL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST: {
         LOG(DEBUG) << "ACTION_BACKHAUL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST";
 

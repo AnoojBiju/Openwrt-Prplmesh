@@ -67,9 +67,6 @@ cACTION_BACKHAUL_ENABLE_APS_REQUEST:
   bandwidth: beerocks::eWiFiBandwidth
   center_channel: uint8_t
 
-cACTION_BACKHAUL_RESET:
-  _type: class
-
 cACTION_BACKHAUL_DL_RSSI_REPORT_NOTIFICATION:
   _type: class
   params: sBackhaulRssi

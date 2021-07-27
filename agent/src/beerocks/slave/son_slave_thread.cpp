@@ -708,17 +708,6 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
         }
         break;
     }
-    case beerocks_message::ACTION_CONTROL_BACKHAUL_RESET: {
-        LOG(TRACE) << "received ACTION_CONTROL_BACKHAUL_RESET";
-        auto request =
-            message_com::create_vs_message<beerocks_message::cACTION_BACKHAUL_RESET>(cmdu_tx);
-        if (request == nullptr) {
-            LOG(ERROR) << "Failed building message!";
-            return false;
-        }
-        message_com::send_cmdu(backhaul_manager_socket, cmdu_tx);
-        break;
-    }
     case beerocks_message::ACTION_CONTROL_HOSTAP_STATS_MEASUREMENT_REQUEST: {
         if (monitor_socket) {
             // LOG(TRACE) << "received ACTION_CONTROL_HOSTAP_STATS_MEASUREMENT_REQUEST"; // floods the log
