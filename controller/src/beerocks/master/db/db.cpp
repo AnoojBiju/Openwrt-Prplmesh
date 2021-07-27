@@ -5270,7 +5270,7 @@ bool db::is_prplmesh(const sMacAddr &mac)
 
 void db::set_prplmesh(const sMacAddr &mac)
 {
-    auto local_bridge_mac = tlvf::mac_from_string(get_local_bridge_mac());
+    auto local_bridge_mac = get_local_bridge_mac();
     if (!get_node(mac)) {
         if (local_bridge_mac == mac) {
             add_node_gateway(mac);

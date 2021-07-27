@@ -89,7 +89,7 @@ bool controller_ucc_listener::handle_dev_get_param(
     auto parameter = params["parameter"];
     std::transform(parameter.begin(), parameter.end(), parameter.begin(), ::tolower);
     if (parameter == "alid") {
-        value = m_database.get_local_bridge_mac();
+        value = tlvf::mac_to_string(m_database.get_local_bridge_mac());
         return true;
     } else if (parameter == "macaddr" || parameter == "bssid") {
         if (params.find("ruid") == params.end()) {

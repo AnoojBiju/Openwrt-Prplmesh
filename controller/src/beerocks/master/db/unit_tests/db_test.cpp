@@ -64,7 +64,8 @@ protected:
         beerocks::logging logger("logger", beerocks_master_conf.sLog);
         logger.set_log_level_state(beerocks::LOG_LEVEL_ERROR, true);
 
-        m_db = std::make_shared<son::db>(master_conf, logger, g_bridge_mac, m_ambiorix);
+        m_db = std::make_shared<son::db>(master_conf, logger, tlvf::mac_from_string(g_bridge_mac),
+                                         m_ambiorix);
 
         ASSERT_TRUE(m_db != nullptr);
 

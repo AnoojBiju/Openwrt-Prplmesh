@@ -504,7 +504,7 @@ int main(int argc, char *argv[])
         return false;
     }
 
-    son::db master_db(master_conf, logger, bridge_info.mac, amb_dm_obj);
+    son::db master_db(master_conf, logger, tlvf::mac_from_string(bridge_info.mac), amb_dm_obj);
 
 #ifdef ENABLE_NBAPI
     prplmesh::controller::actions::g_database   = &master_db;

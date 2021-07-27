@@ -421,7 +421,7 @@ bool Controller::handle_cmdu_from_broker(uint32_t iface_index, const sMacAddr &d
 
     // Filter out messages that are not addressed to the controller
     if (tlvf::mac_to_string(dst_mac) != beerocks::net::network_utils::MULTICAST_1905_MAC_ADDR &&
-        tlvf::mac_to_string(dst_mac) != database.get_local_bridge_mac()) {
+        dst_mac != database.get_local_bridge_mac()) {
         return false;
     }
 
@@ -1480,8 +1480,7 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
 
     // Zero Error Code TLVs in this ACK message
     LOG(DEBUG) << "Sending ACK message to the originator, mid=" << std::hex << current_message_mid;
-    if (!send_cmdu_to_broker(cmdu_tx, src_mac,
-                             tlvf::mac_from_string(database.get_local_bridge_mac()))) {
+    if (!send_cmdu_to_broker(cmdu_tx, src_mac, database.get_local_bridge_mac())) {
         LOG(ERROR) << "Failed to send ACK_MESSAGE back to agent";
         return false;
     }
