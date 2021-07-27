@@ -383,6 +383,7 @@ bool Monitor::monitor_fsm()
                 LOG(ERROR) << "Failed building message!";
                 return false;
             }
+            request->set_iface_name(monitor_iface);
             send_cmdu(cmdu_tx);
 
             // On init - set the flag to generate pre-existing client STA_Connected to true
