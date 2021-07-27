@@ -711,11 +711,9 @@ bool dynamic_channel_selection_r2_task::handle_scan_report_event(
 
 bool dynamic_channel_selection_r2_task::send_scan_request_to_agent(const sMacAddr &agent_mac)
 {
-    auto agent_mac_str = tlvf::mac_to_string(agent_mac);
-
     // Send CMDU to agent
-    LOG(INFO) << "Send CHANNEL_SCAN_REQUEST_MESSAGE to agent: " << agent_mac_str;
-    if (!son_actions::send_cmdu_to_agent(agent_mac_str, cmdu_tx, database)) {
+    LOG(INFO) << "Send CHANNEL_SCAN_REQUEST_MESSAGE to agent: " << agent_mac;
+    if (!son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database)) {
         LOG(ERROR) << "Failed sending message!";
         return false;
     }

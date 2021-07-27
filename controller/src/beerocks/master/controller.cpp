@@ -665,7 +665,7 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const sMacAddr &src_m
         LOG(DEBUG) << "Agent profile is updated with enum " << agent->profile;
     }
 
-    return son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
+    return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 }
 
 /**
@@ -1104,7 +1104,7 @@ bool Controller::handle_cmdu_1905_channel_preference_report(const sMacAddr &src_
         return false;
     }
     LOG(DEBUG) << "sending ACK message back to agent";
-    son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
+    son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 
     // TODO In production mode (not certification), we need to store the channel preference (PPM-201)
     // report in the DB which will in turn be used by the channel selection task.
@@ -1262,7 +1262,7 @@ bool Controller::handle_cmdu_1905_steering_completed_message(const sMacAddr &src
         return false;
     }
     LOG(DEBUG) << "sending ACK message back to agent, mid=" << std::hex << int(mid);
-    return son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
+    return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 }
 
 bool Controller::handle_cmdu_1905_client_capability_report_message(
@@ -1322,7 +1322,7 @@ bool Controller::handle_cmdu_1905_client_steering_btm_report_message(
         return false;
     }
     LOG(DEBUG) << "sending ACK message back to agent";
-    son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
+    son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 
     std::string client_mac = tlvf::mac_to_string(steering_btm_report->sta_mac());
     uint8_t status_code    = steering_btm_report->btm_status_code();
@@ -1931,7 +1931,7 @@ bool Controller::handle_cmdu_1905_operating_channel_report(const sMacAddr &src_m
         return false;
     }
 
-    return son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
+    return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 }
 
 bool Controller::handle_cmdu_1905_higher_layer_data_message(const sMacAddr &src_mac,
@@ -1958,7 +1958,7 @@ bool Controller::handle_cmdu_1905_higher_layer_data_message(const sMacAddr &src_
         return false;
     }
     LOG(DEBUG) << "sending ACK message to the agent, mid=" << std::hex << int(mid);
-    return son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
+    return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 }
 
 bool Controller::handle_cmdu_1905_backhaul_sta_steering_response(const sMacAddr &src_mac,
@@ -1996,7 +1996,7 @@ bool Controller::handle_cmdu_1905_backhaul_sta_steering_response(const sMacAddr 
 
     LOG(DEBUG) << "sending ACK message to the agent, mid=" << std::hex << mid;
 
-    return son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
+    return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 }
 
 bool Controller::handle_cmdu_1905_tunnelled_message(const sMacAddr &src_mac,
@@ -2146,8 +2146,7 @@ bool Controller::handle_intel_slave_join(
                            << (int)(database.has_node(parent_bssid_mac));
 
                 join_response->err_code() = beerocks::JOIN_RESP_REJECT;
-                return son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx,
-                                                       database);
+                return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
             }
         }
 
@@ -2455,7 +2454,7 @@ bool Controller::handle_intel_slave_join(
         join_response->config().ire_rssi_report_rate_sec = database.config.ire_rssi_report_rate_sec;
 
         LOG(DEBUG) << "send SLAVE_JOINED_RESPONSE";
-        son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
+        son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
     }
 
     // calling this function to update arp monitor with new ip addr (bridge ip), which is diffrent from the ip received from, dhcp on the backhaul
@@ -2716,7 +2715,7 @@ bool Controller::handle_non_intel_slave_join(
     LOG(DEBUG) << "BML, sending IRE connect CONNECTION_CHANGE for mac " << bml_new_event.mac;
 
     LOG(DEBUG) << "send AP_AUTOCONFIG_WSC M2";
-    return son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
+    return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 }
 
 bool Controller::handle_cmdu_control_message(

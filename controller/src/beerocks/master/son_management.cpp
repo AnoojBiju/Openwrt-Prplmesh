@@ -188,8 +188,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
                     auto state = database.get_node_state(tlvf::mac_to_string(radio->radio_uid));
 
                     if (state != beerocks::STATE_DISCONNECTED) {
-                        son_actions::send_cmdu_to_agent(tlvf::mac_to_string(agent->al_mac), cmdu_tx,
-                                                        database,
+                        son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database,
                                                         tlvf::mac_to_string(radio->radio_uid));
                     }
                 }
