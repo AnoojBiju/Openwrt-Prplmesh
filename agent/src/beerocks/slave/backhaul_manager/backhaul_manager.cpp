@@ -539,29 +539,18 @@ bool BackhaulManager::handle_cmdu_from_broker(uint32_t iface_index, const sMacAd
     // to a speficic slave. In this case the cmdu is forward only
     // to this slave. when dest_slave is left as invalid_descriptor
     // the cmdu is forwarded to all slaves
-    int dest_slave = beerocks::net::FileDescriptor::invalid_descriptor;
-    if (handle_1905_1_message(cmdu_rx, iface_index, dst_mac, src_mac, dest_slave)) {
+    if (handle_1905_1_message(cmdu_rx, iface_index, dst_mac, src_mac)) {
         //function returns true if message doesn't need to be forwarded
         return true;
     }
 
     ////////// If got here, message needs to be forwarded //////////
 
-    // Message from controller (bus) to agent (uds)
-    // Send the data (uds_header + cmdu) how it is on UDS, without changing it
-
-    if (dest_slave != beerocks::net::FileDescriptor::invalid_descriptor) {
-        // Forward only to the desired destination
-        if (!forward_cmdu_to_uds(dest_slave, iface_index, dst_mac, src_mac, cmdu_rx)) {
-            LOG(ERROR) << "forward_cmdu_to_uds() failed - fd=" << dest_slave;
-        }
-    } else {
-        // Forward cmdu to all slaves how it is on UDS, without changing it
-        for (auto soc_iter : slaves_sockets) {
-            if (!forward_cmdu_to_uds(soc_iter->slave, iface_index, dst_mac, src_mac, cmdu_rx)) {
-                LOG(ERROR) << "forward_cmdu_to_uds() failed - fd=" << soc_iter->slave;
-            }
-        }
+    // Forward cmdu to the agent on the first "son_slave" socket only, since only one thread is
+    // actually exist.
+    auto soc_iter = *slaves_sockets.begin();
+    if (!forward_cmdu_to_uds(soc_iter->slave, iface_index, dst_mac, src_mac, cmdu_rx)) {
+        LOG(ERROR) << "forward_cmdu_to_uds() failed - fd=" << soc_iter->slave;
     }
 
     return true;
@@ -2025,7 +2014,7 @@ bool BackhaulManager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo> 
 
 bool BackhaulManager::handle_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx,
                                             uint32_t iface_index, const sMacAddr &dst_mac,
-                                            const sMacAddr &src_mac, int &forward_to)
+                                            const sMacAddr &src_mac)
 {
     /*
      * return values:
