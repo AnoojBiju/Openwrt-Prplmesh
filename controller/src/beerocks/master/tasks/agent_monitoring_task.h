@@ -21,7 +21,7 @@ class agent_monitoring_task : public task {
 public:
     agent_monitoring_task(db &database_, ieee1905_1::CmduMessageTx &cmdu_tx_, task_pool &tasks_,
                           const std::string &task_name_ = std::string("agent_monitoring"));
-    bool handle_ieee1905_1_msg(const std::string &src_mac,
+    bool handle_ieee1905_1_msg(const sMacAddr &src_mac,
                                ieee1905_1::CmduMessageRx &cmdu_rx) override;
 
     static bool add_profile_2default_802q_settings_tlv(db &database,
@@ -52,7 +52,7 @@ private:
      * @param src_mac MAC address of agent.
      * @param cmdu_rx is a Topology Response message.
      */
-    bool start_agent_monitoring(const std::string &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool start_agent_monitoring(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
     * @brief Sends topology query, policy configuration,
@@ -62,7 +62,7 @@ private:
     * @param m1 M1 message.
     * @param cmdu_rx AP Autoconfiguration WSC message.
     */
-    bool start_task(const std::string &src_mac, std::shared_ptr<WSC::m1> m1,
+    bool start_task(const sMacAddr &src_mac, std::shared_ptr<WSC::m1> m1,
                     ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
@@ -80,7 +80,7 @@ private:
      * @param cmdu_tx CMDU to be transmitted.
      * @return True on success, false otherwise.
     */
-    bool send_tlv_empty_channel_selection_request(const std::string &dst_mac,
+    bool send_tlv_empty_channel_selection_request(const sMacAddr &dst_mac,
                                                   ieee1905_1::CmduMessageTx &cmdu_tx);
 
     /**
@@ -92,7 +92,7 @@ private:
      * @param cmdu_tx CMDU to be transmitted.
      * @return True on success, false otherwise.
     */
-    bool send_tlv_metric_reporting_policy(const std::string &dst_mac, std::shared_ptr<WSC::m1> m1,
+    bool send_tlv_metric_reporting_policy(const sMacAddr &dst_mac, std::shared_ptr<WSC::m1> m1,
                                           ieee1905_1::CmduMessageRx &cmdu_rx,
                                           ieee1905_1::CmduMessageTx &cmdu_tx);
 };

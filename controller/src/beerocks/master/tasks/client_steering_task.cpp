@@ -368,7 +368,7 @@ void client_steering_task::handle_task_end()
     m_database.set_node_handoff_flag(m_sta_mac, false);
 }
 
-bool client_steering_task::handle_ieee1905_1_msg(const std::string &src_mac,
+bool client_steering_task::handle_ieee1905_1_msg(const sMacAddr &src_mac,
                                                  ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     return false;

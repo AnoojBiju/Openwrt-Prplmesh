@@ -23,7 +23,7 @@ class topology_task : public task {
 public:
     topology_task(db &database_, ieee1905_1::CmduMessageTx &cmdu_tx_, task_pool &tasks_);
     virtual ~topology_task() {}
-    bool handle_ieee1905_1_msg(const std::string &src_mac,
+    bool handle_ieee1905_1_msg(const sMacAddr &src_mac,
                                ieee1905_1::CmduMessageRx &cmdu_rx) override;
 
 protected:
@@ -37,7 +37,7 @@ private:
     * @param[in] src_mac MAC address of the message sender.
     * @return True if message, was successfully processed, false otherwise.
     */
-    bool handle_topology_response(const std::string &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_topology_response(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
     * @brief Handles 1905 Topology Notification message.
@@ -46,8 +46,7 @@ private:
     * @param[in] src_mac MAC address of the message sender.
     * @return True if message, was successfully processed, false otherwise.
     */
-    bool handle_topology_notification(const std::string &src_mac,
-                                      ieee1905_1::CmduMessageRx &cmdu_rx);
+    bool handle_topology_notification(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
      * Remove not reported neighbors.
@@ -56,7 +55,7 @@ private:
      * @param al_mac Al mac from Device Information TLV.
      * @param reported_neighbor_al_macs Set of Al macs from reported neighbors.
      */
-    void handle_dead_neighbors(const std::string &src_mac, const sMacAddr &al_mac,
+    void handle_dead_neighbors(const sMacAddr &src_mac, const sMacAddr &al_mac,
                                std::unordered_set<sMacAddr> reported_neighbor_al_macs);
 
     db &database;

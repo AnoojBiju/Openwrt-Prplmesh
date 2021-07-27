@@ -23,7 +23,7 @@ public:
                       const std::string &sta_mac_, int starting_delay_ms_ = 0,
                       const std::string &task_name_ = std::string("optimal_path"));
     virtual ~optimal_path_task() {}
-    bool handle_ieee1905_1_msg(const std::string &src_mac,
+    bool handle_ieee1905_1_msg(const sMacAddr &src_mac,
                                ieee1905_1::CmduMessageRx &cmdu_rx) override;
 
     /////////////// FOR DEBUG ONLY ////////////////

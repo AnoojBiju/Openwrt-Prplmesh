@@ -18,7 +18,7 @@ public:
     load_balancer_task(db &database_, ieee1905_1::CmduMessageTx &cmdu_tx_, task_pool &tasks_,
                        std::string ire_mac_, std::string task_name_ = std::string("load_balancer"));
     virtual ~load_balancer_task() {}
-    bool handle_ieee1905_1_msg(const std::string &src_mac,
+    bool handle_ieee1905_1_msg(const sMacAddr &src_mac,
                                ieee1905_1::CmduMessageRx &cmdu_rx) override;
 
 protected:

@@ -24,7 +24,7 @@ public:
                          std::string task_name_  = std::string("client_locating"));
 
     virtual ~client_locating_task() {}
-    bool handle_ieee1905_1_msg(const std::string &src_mac,
+    bool handle_ieee1905_1_msg(const sMacAddr &src_mac,
                                ieee1905_1::CmduMessageRx &cmdu_rx) override;
 
 protected:
