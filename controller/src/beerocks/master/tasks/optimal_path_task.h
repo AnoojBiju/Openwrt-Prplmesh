@@ -43,7 +43,7 @@ protected:
 
 private:
     bool check_if_sta_can_steer_to_ap(const std::string &ap);
-    void send_rssi_measurement_request(const std::string &agent_mac, const std::string &client_mac,
+    void send_rssi_measurement_request(const sMacAddr &agent_mac, const std::string &client_mac,
                                        int channel, const std::string &hostap, int id);
     bool assert_original_parent();
     bool calculate_measurement_delay(const std::set<std::string> &temp_cross_hostaps,

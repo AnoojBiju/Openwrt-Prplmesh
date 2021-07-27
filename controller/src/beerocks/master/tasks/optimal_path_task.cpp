@@ -1484,7 +1484,7 @@ bool optimal_path_task::check_if_sta_can_steer_to_ap(const std::string &ap_mac)
     return true;
 }
 
-void optimal_path_task::send_rssi_measurement_request(const std::string &agent_mac,
+void optimal_path_task::send_rssi_measurement_request(const sMacAddr &agent_mac,
                                                       const std::string &client_mac, int channel,
                                                       const std::string &hostap, int id)
 {
@@ -1559,7 +1559,7 @@ void optimal_path_task::handle_response(std::string mac,
                            << " channel=" << channel);
 
         for (auto &hostap : hostaps) {
-            auto agent_mac = tlvf::mac_to_string(database.get_node_parent_ire(hostap));
+            auto agent_mac = database.get_node_parent_ire(hostap);
             send_rssi_measurement_request(agent_mac, client_mac, channel, hostap, id);
         }
 
