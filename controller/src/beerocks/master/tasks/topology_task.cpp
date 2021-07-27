@@ -408,8 +408,7 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
     if (!client_association_event_tlv) {
         LOG(INFO) << "wfa_map::tlvClientAssociationEvent not found, sending TOPOLOGY_QUERY_MESSAGE";
 
-        return son_actions::send_topology_query_msg(tlvf::mac_to_string(src_mac), cmdu_tx,
-                                                    database);
+        return son_actions::send_topology_query_msg(src_mac, cmdu_tx, database);
     }
 
     std::shared_ptr<beerocks_message::tlvVsClientAssociationEvent> vs_tlv = nullptr;

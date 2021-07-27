@@ -520,7 +520,7 @@ bool son_actions::send_ap_config_renew_msg(ieee1905_1::CmduMessageTx &cmdu_tx, d
                                            database);
 }
 
-bool son_actions::send_topology_query_msg(const std::string &dest_mac,
+bool son_actions::send_topology_query_msg(const sMacAddr &dest_mac,
                                           ieee1905_1::CmduMessageTx &cmdu_tx, db &database)
 {
     if (!cmdu_tx.create(0, ieee1905_1::eMessageType::TOPOLOGY_QUERY_MESSAGE)) {

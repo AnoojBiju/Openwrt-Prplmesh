@@ -182,7 +182,7 @@ bool agent_monitoring_task::start_task(const sMacAddr &src_mac, std::shared_ptr<
     if (!database.setting_certification_mode()) {
         // trigger Topology query
         LOG(TRACE) << "Sending Topology Query to " << src_mac;
-        son_actions::send_topology_query_msg(tlvf::mac_to_string(src_mac), cmdu_tx, database);
+        son_actions::send_topology_query_msg(src_mac, cmdu_tx, database);
 
         // trigger channel selection
         if (!cmdu_tx.create(0, ieee1905_1::eMessageType::CHANNEL_PREFERENCE_QUERY_MESSAGE)) {
