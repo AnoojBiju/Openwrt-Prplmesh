@@ -9,6 +9,8 @@
 #include "dynamic_channel_selection_task.h"
 #include "../son_actions.h"
 #include <bcl/beerocks_defines.h>
+#include <bcl/network/network_utils.h>
+
 #include <easylogging++.h>
 
 #define SCAN_TRIGGERED_WAIT_TIME_MSEC 20000     //20 Sec
@@ -43,7 +45,7 @@ beerocks::eChannelScanStatusCode dynamic_channel_selection_task::dcs_request_sca
     // get the parent node to send the CMDU to the agent
     auto radio_mac_str = tlvf::mac_to_string(m_radio_mac);
     auto ire           = database.get_node_parent_ire(radio_mac_str);
-    if (ire.empty()) {
+    if (ire == beerocks::net::network_utils::ZERO_MAC) {
         LOG(ERROR) << "Failed to get node_parent_ire!";
         return beerocks::eChannelScanStatusCode::INTERNAL_FAILURE;
     }
@@ -91,7 +93,7 @@ beerocks::eChannelScanStatusCode dynamic_channel_selection_task::dcs_request_sca
     // get the parent node to send the CMDU to the agent
     auto radio_mac_str = tlvf::mac_to_string(m_radio_mac);
     auto ire           = database.get_node_parent_ire(radio_mac_str);
-    if (ire.empty()) {
+    if (ire == beerocks::net::network_utils::ZERO_MAC) {
         LOG(ERROR) << "Failed to get node_parent_ire!";
         return beerocks::eChannelScanStatusCode::INTERNAL_FAILURE;
     }

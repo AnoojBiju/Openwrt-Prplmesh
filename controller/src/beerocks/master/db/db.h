@@ -790,7 +790,7 @@ public:
     std::string get_node_parent(const std::string &mac);
 
     std::string get_node_previous_parent(const std::string &mac);
-    std::string get_node_parent_ire(const std::string &mac);
+    sMacAddr get_node_parent_ire(const std::string &mac);
     std::string get_node_parent_backhaul(const std::string &mac);
     std::set<std::string> get_node_siblings(const std::string &mac, int type = beerocks::TYPE_ANY);
     std::set<std::string> get_node_children(const std::string &mac, int type = beerocks::TYPE_ANY,

@@ -236,8 +236,10 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
     }
 
     tlvf::mac_from_string(node->mac, n->mac); // if IRE->bridge, else if STA->sta mac
-    tlvf::mac_from_string(node->parent_bridge,
-                          database.get_node_parent_ire(n->mac)); // remote bridge
+
+    // remote bridge
+    tlvf::mac_to_array(database.get_node_parent_ire(n->mac), node->parent_bridge);
+
     if (n_type == beerocks::TYPE_CLIENT) {
         tlvf::mac_from_string(node->parent_bssid, n->parent_mac); // remote radio(ap)
         node->rx_rssi = database.get_load_rx_rssi(n->mac);

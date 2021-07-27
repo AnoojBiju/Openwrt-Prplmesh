@@ -8,6 +8,7 @@
 
 #include "dynamic_channel_selection_r2_task.h"
 #include "../son_actions.h"
+#include <bcl/network/network_utils.h>
 #include <beerocks/tlvf/beerocks_message_1905_vs.h>
 #include <easylogging++.h>
 
@@ -257,7 +258,7 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
                 // Get parent agent mac from radio mac
                 auto radio_mac_str = tlvf::mac_to_string(radio_mac);
                 auto ire           = database.get_node_parent_ire(radio_mac_str);
-                if (ire.empty()) {
+                if (ire == beerocks::net::network_utils::ZERO_MAC) {
                     LOG(ERROR) << "Failed to get node_parent_ire!";
                     return false;
                 }
@@ -479,14 +480,13 @@ bool dynamic_channel_selection_r2_task::is_scan_triggered_for_radio(const sMacAd
     // Get parent agent mac from radio mac
     auto radio_mac_str = tlvf::mac_to_string(radio_mac);
     auto ire           = database.get_node_parent_ire(radio_mac_str);
-    if (ire.empty()) {
+    if (ire == beerocks::net::network_utils::ZERO_MAC) {
         LOG(ERROR) << "Failed to get node_parent_ire!";
         return false;
     }
 
     // If agent not exist - return false
-    auto ire_mac      = tlvf::mac_from_string(ire);
-    const auto &agent = m_agents_status_map.find(ire_mac);
+    const auto &agent = m_agents_status_map.find(ire);
     if (agent == m_agents_status_map.cend()) {
         return false;
     }
@@ -517,15 +517,14 @@ bool dynamic_channel_selection_r2_task::handle_single_scan_request_event(
 
     // Get parent agent mac from radio mac
     auto radio_mac_str = tlvf::mac_to_string(radio_mac);
-    auto ire           = database.get_node_parent_ire(radio_mac_str);
-    if (ire.empty()) {
+    auto ire_mac       = database.get_node_parent_ire(radio_mac_str);
+    if (ire_mac == beerocks::net::network_utils::ZERO_MAC) {
         LOG(ERROR) << "Failed to get node_parent_ire!";
         return false;
     }
 
     // Add agent to the container if it doesn't exist yet
-    auto ire_mac = tlvf::mac_from_string(ire);
-    auto agent   = m_agents_status_map.find(ire_mac);
+    auto agent = m_agents_status_map.find(ire_mac);
     if (agent == m_agents_status_map.end()) {
         // Add agent to the queue
         m_agents_status_map[ire_mac] = sAgentScanStatus();
@@ -533,9 +532,8 @@ bool dynamic_channel_selection_r2_task::handle_single_scan_request_event(
 
     auto agent_it = m_agents_status_map.find(ire_mac);
     if (agent_it != m_agents_status_map.end()) {
-        auto agent_mac      = tlvf::mac_from_string(ire);
-        const auto &scan_it = m_agents_status_map[agent_mac].single_radio_scans.find(radio_mac);
-        if (scan_it != m_agents_status_map[agent_mac].single_radio_scans.cend()) {
+        const auto &scan_it = m_agents_status_map[ire_mac].single_radio_scans.find(radio_mac);
+        if (scan_it != m_agents_status_map[ire_mac].single_radio_scans.cend()) {
             return false;
         }
     }
@@ -567,13 +565,11 @@ bool dynamic_channel_selection_r2_task::handle_continuous_scan_request_event(
 
     // Get parent agent mac from radio mac
     auto radio_mac_str = tlvf::mac_to_string(radio_mac);
-    auto ire           = database.get_node_parent_ire(radio_mac_str);
-    if (ire.empty()) {
+    auto agent_mac     = database.get_node_parent_ire(radio_mac_str);
+    if (agent_mac == beerocks::net::network_utils::ZERO_MAC) {
         LOG(ERROR) << "Failed to get node_parent_ire!";
         return false;
     }
-
-    auto agent_mac = tlvf::mac_from_string(ire);
 
     // If received "enable" add the continuous radio request (and the agent that manages it if it doesn't exist yet).
     // If received "disable" and the radio is in the agent's status map and not in progress, remove it. If after

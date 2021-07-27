@@ -383,7 +383,7 @@ void topology_task::handle_dead_neighbors(const sMacAddr &src_mac, const sMacAdd
         // al_mac of the reporter. If they are not equal then it means than the neighbor is
         // currently under another node.
         auto current_parent_al_mac = database.get_node_parent_ire(backhhaul_mac);
-        if (tlvf::mac_from_string(current_parent_al_mac) != src_mac) {
+        if (current_parent_al_mac != src_mac) {
             continue;
         }
 

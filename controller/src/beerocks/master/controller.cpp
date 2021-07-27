@@ -2839,7 +2839,7 @@ bool Controller::handle_cmdu_control_message(
 
         // update bml listeners
         bml_task::connection_change_event new_event;
-        new_event.mac = database.get_node_parent_ire(radio_mac_str);
+        new_event.mac = tlvf::mac_to_string(database.get_node_parent_ire(radio_mac_str));
         tasks.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE, &new_event);
         LOG(DEBUG) << "BML, sending IRE connect CONNECTION_CHANGE for mac " << new_event.mac;
 
@@ -2943,7 +2943,7 @@ bool Controller::handle_cmdu_control_message(
 
         // update bml listeners
         bml_task::connection_change_event new_event;
-        new_event.mac = database.get_node_parent_ire(radio_mac_str);
+        new_event.mac = tlvf::mac_to_string(database.get_node_parent_ire(radio_mac_str));
         tasks.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE, &new_event);
         LOG(DEBUG) << "BML, sending IRE connect CONNECTION_CHANGE for mac " << new_event.mac;
 
@@ -3412,7 +3412,7 @@ bool Controller::handle_cmdu_control_message(
         break;
     }
     case beerocks_message::ACTION_CONTROL_HOSTAP_LOAD_MEASUREMENT_NOTIFICATION: {
-        auto ire_mac      = database.get_node_parent_ire(radio_mac_str);
+        auto ire_mac      = tlvf::mac_to_string(database.get_node_parent_ire(radio_mac_str));
         auto notification = beerocks_header->addClass<
             beerocks_message::cACTION_CONTROL_HOSTAP_LOAD_MEASUREMENT_NOTIFICATION>();
         if (!notification) {

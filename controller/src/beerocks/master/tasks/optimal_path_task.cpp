@@ -333,7 +333,7 @@ void optimal_path_task::work()
         measurement_request.rand_ival = beerocks::BEACON_MEASURE_DEFAULT_RANDOMIZATION_INTERVAL;
         measurement_request.duration  = beerocks::BEACON_MEASURE_DEFAULT_ACTIVE_DURATION;
         measurement_request.sta_mac   = tlvf::mac_from_string(sta_mac);
-        current_agent_mac             = database.get_node_parent_ire(current_hostap);
+        current_agent_mac = tlvf::mac_to_string(database.get_node_parent_ire(current_hostap));
 
         iterator_element_counter = 1; // initialize counter value
         state                    = REQUEST_11K_MEASUREMENTS_BY_BSSID;
@@ -1559,7 +1559,7 @@ void optimal_path_task::handle_response(std::string mac,
                            << " channel=" << channel);
 
         for (auto &hostap : hostaps) {
-            auto agent_mac = database.get_node_parent_ire(hostap);
+            auto agent_mac = tlvf::mac_to_string(database.get_node_parent_ire(hostap));
             send_rssi_measurement_request(agent_mac, client_mac, channel, hostap, id);
         }
 
