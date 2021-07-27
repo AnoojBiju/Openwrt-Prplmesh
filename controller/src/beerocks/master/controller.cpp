@@ -3277,7 +3277,7 @@ bool Controller::handle_cmdu_control_message(
                          << " is connected wirelessly, Sending IP addr notification to radio="
                          << client_radio;
 
-            auto agent_mac = database.get_node_parent(client_radio);
+            auto agent_mac = tlvf::mac_from_string(database.get_node_parent(client_radio));
             son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, client_radio);
 
         } else {

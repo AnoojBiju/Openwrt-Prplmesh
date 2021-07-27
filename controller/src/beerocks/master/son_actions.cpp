@@ -444,13 +444,6 @@ bool son_actions::has_matching_operating_class(
     return false;
 }
 
-bool son_actions::send_cmdu_to_agent(const std::string &dest_mac,
-                                     ieee1905_1::CmduMessageTx &cmdu_tx, db &database,
-                                     const std::string &radio_mac)
-{
-    return send_cmdu_to_agent(tlvf::mac_from_string(dest_mac), cmdu_tx, database, radio_mac);
-}
-
 bool son_actions::send_cmdu_to_agent(const sMacAddr &dest_mac, ieee1905_1::CmduMessageTx &cmdu_tx,
                                      db &database, const std::string &radio_mac)
 {
@@ -516,8 +509,8 @@ bool son_actions::send_ap_config_renew_msg(ieee1905_1::CmduMessageTx &cmdu_tx, d
     tlvSupportedFreqBand->value() = ieee1905_1::tlvSupportedFreqBand::eValue(0);
 
     LOG(INFO) << "Send AP_AUTOCONFIGURATION_RENEW_MESSAGE";
-    return son_actions::send_cmdu_to_agent(network_utils::MULTICAST_1905_MAC_ADDR, cmdu_tx,
-                                           database);
+    return son_actions::send_cmdu_to_agent(
+        tlvf::mac_from_string(network_utils::MULTICAST_1905_MAC_ADDR), cmdu_tx, database);
 }
 
 bool son_actions::send_topology_query_msg(const sMacAddr &dest_mac,
