@@ -104,7 +104,7 @@ private:
         potential_11k_aps; // key = ap_mac, value = is_valid_measurement
     std::unordered_map<std::string, bool>::iterator potential_ap_iter =
         std::unordered_map<std::string, bool>::iterator();
-    std::string current_agent_mac;
+    sMacAddr current_agent_mac;
     uint8_t valid_beacon_measurement_report_count  = 0;
     uint8_t beacon_measurement_request_cycle_count = 0;
     uint8_t iterator_element_counter               = 0;
