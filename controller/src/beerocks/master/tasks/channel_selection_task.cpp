@@ -1722,7 +1722,7 @@ void channel_selection_task::run_optimal_path_for_connected_clients()
     }
 }
 
-bool channel_selection_task::handle_ieee1905_1_msg(const std::string &src_mac,
+bool channel_selection_task::handle_ieee1905_1_msg(const sMacAddr &src_mac,
                                                    ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     return false;

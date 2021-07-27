@@ -38,7 +38,7 @@ topology_task::topology_task(db &database_, ieee1905_1::CmduMessageTx &cmdu_tx_,
 
 void topology_task::work() {}
 
-bool topology_task::handle_ieee1905_1_msg(const std::string &src_mac,
+bool topology_task::handle_ieee1905_1_msg(const sMacAddr &src_mac,
                                           ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     switch (cmdu_rx.getMessageType()) {
@@ -57,7 +57,7 @@ bool topology_task::handle_ieee1905_1_msg(const std::string &src_mac,
     return true;
 }
 
-bool topology_task::handle_topology_response(const std::string &src_mac,
+bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                                              ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto mid = cmdu_rx.getMessageId();
@@ -167,8 +167,7 @@ bool topology_task::handle_topology_response(const std::string &src_mac,
                 continue;
             }
             // Update BSSes in the sAgent
-            auto radio =
-                database.get_radio(tlvf::mac_from_string(src_mac), radio_entry.radio_uid());
+            auto radio = database.get_radio(src_mac, radio_entry.radio_uid());
             if (!radio) {
                 LOG(WARNING) << "OperationalBSS on unknown radio  " << radio_entry.radio_uid()
                              << " on " << src_mac;
@@ -224,7 +223,7 @@ bool topology_task::handle_topology_response(const std::string &src_mac,
     // this node. This promise that the reported al_mac will get the Topology Discovery messages
     // from its neighbors and add them to the report.
     bool check_dead_neighbors =
-        (database.get_last_state_change(src_mac) +
+        (database.get_last_state_change(tlvf::mac_to_string(src_mac)) +
              std::chrono::seconds(beerocks::ieee1905_1_consts::DISCOVERY_NOTIFICATION_TIMEOUT_SEC +
                                   5) <
          std::chrono::steady_clock::now());
@@ -356,7 +355,7 @@ bool topology_task::handle_topology_response(const std::string &src_mac,
     return true;
 }
 
-void topology_task::handle_dead_neighbors(const std::string &src_mac, const sMacAddr &al_mac,
+void topology_task::handle_dead_neighbors(const sMacAddr &src_mac, const sMacAddr &al_mac,
                                           std::unordered_set<sMacAddr> reported_neighbor_al_macs)
 {
     LOG(TRACE) << "Checking if one of " << src_mac << " neighbors is no longer connected";
@@ -384,7 +383,7 @@ void topology_task::handle_dead_neighbors(const std::string &src_mac, const sMac
         // al_mac of the reporter. If they are not equal then it means than the neighbor is
         // currently under another node.
         auto current_parent_al_mac = database.get_node_parent_ire(backhhaul_mac);
-        if (current_parent_al_mac != src_mac) {
+        if (tlvf::mac_from_string(current_parent_al_mac) != src_mac) {
             continue;
         }
 
@@ -394,7 +393,7 @@ void topology_task::handle_dead_neighbors(const std::string &src_mac, const sMac
     }
 }
 
-bool topology_task::handle_topology_notification(const std::string &src_mac,
+bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
                                                  ieee1905_1::CmduMessageRx &cmdu_rx)
 {
 
@@ -410,7 +409,8 @@ bool topology_task::handle_topology_notification(const std::string &src_mac,
     if (!client_association_event_tlv) {
         LOG(INFO) << "wfa_map::tlvClientAssociationEvent not found, sending TOPOLOGY_QUERY_MESSAGE";
 
-        return son_actions::send_topology_query_msg(src_mac, cmdu_tx, database);
+        return son_actions::send_topology_query_msg(tlvf::mac_to_string(src_mac), cmdu_tx,
+                                                    database);
     }
 
     std::shared_ptr<beerocks_message::tlvVsClientAssociationEvent> vs_tlv = nullptr;

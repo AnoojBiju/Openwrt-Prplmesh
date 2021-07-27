@@ -28,7 +28,7 @@ public:
     dynamic_channel_selection_task(db &database, ieee1905_1::CmduMessageTx &cmdu_tx_,
                                    task_pool &tasks_, sMacAddr radio_mac_);
     virtual ~dynamic_channel_selection_task() { finish_scan(); }
-    bool handle_ieee1905_1_msg(const std::string &src_mac,
+    bool handle_ieee1905_1_msg(const sMacAddr &src_mac,
                                ieee1905_1::CmduMessageRx &cmdu_rx) override;
 
     struct sScanEvent {

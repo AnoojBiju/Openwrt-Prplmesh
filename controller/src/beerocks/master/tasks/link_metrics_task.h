@@ -20,7 +20,7 @@ public:
                     ieee1905_1::CmduMessageTx &cert_cmdu_tx_, task_pool &tasks_);
     virtual ~LinkMetricsTask() {}
 
-    bool handle_ieee1905_1_msg(const std::string &src_mac,
+    bool handle_ieee1905_1_msg(const sMacAddr &src_mac,
                                ieee1905_1::CmduMessageRx &cmdu_rx) override;
 
     /**
@@ -35,7 +35,7 @@ public:
      * @param cmdu_rx Received CMDU to be handled.
      * @return true on success and false otherwise.
      */
-    bool handle_cmdu_1905_link_metric_response(const std::string &src_mac,
+    bool handle_cmdu_1905_link_metric_response(const sMacAddr &src_mac,
                                                ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
