@@ -60,7 +60,6 @@ std::string int_to_hex_string(const unsigned int integer, const uint8_t number_o
     // for example: int_to_hex_string(255, 4) -> "00ff"
     //              int_to_hex_string(255, 1) -> "ff"
 
-    std::string return_string;
     std::stringstream ss_hex_string;
 
     // convert to hex
