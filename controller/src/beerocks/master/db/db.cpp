@@ -287,21 +287,24 @@ std::shared_ptr<sAgent> db::add_node_ire(const sMacAddr &mac, const sMacAddr &pa
     return agent;
 }
 
-bool db::add_node_wireless_bh(const sMacAddr &mac, const sMacAddr &parent_mac)
+std::shared_ptr<sStation> db::add_node_wireless_backhaul(const sMacAddr &mac,
+                                                         const sMacAddr &parent_mac)
 {
+    auto station = m_stations.add(mac);
+
     if (!add_node(mac, parent_mac, beerocks::TYPE_IRE_BACKHAUL)) {
-        LOG(ERROR) << "Failed to add wireless_bh node, mac: " << mac;
-        return false;
+        LOG(ERROR) << "Failed to add wireless_backhaul node, mac: " << mac;
+        return station;
     }
 
     // TODO: Add instance for Radio.BackhaulSta element from the Data Elements
-    return true;
+    return station;
 }
 
-bool db::add_node_wired_bh(const sMacAddr &mac, const sMacAddr &parent_mac)
+bool db::add_node_wired_backhaul(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
     if (!add_node(mac, parent_mac, beerocks::TYPE_ETH_SWITCH)) {
-        LOG(ERROR) << "Failed to add wired_bh node, mac: " << mac;
+        LOG(ERROR) << "Failed to add wired_backhaul node, mac: " << mac;
         return false;
     }
 
@@ -413,16 +416,18 @@ bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac)
     return true;
 }
 
-bool db::add_node_client(const sMacAddr &mac, const sMacAddr &parent_mac)
+std::shared_ptr<sStation> db::add_node_station(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
+    auto station = m_stations.add(mac);
+
     if (!add_node(mac, parent_mac, beerocks::TYPE_CLIENT)) {
         LOG(ERROR) << "Failed to add client node, mac: " << mac;
-        return false;
+        return station;
     }
 
     if (parent_mac == network_utils::ZERO_MAC && config.persistent_db) {
         LOG(DEBUG) << "Skip data model insertion for not-yet-connected persistent clients";
-        return true;
+        return station;
     }
 
     // Add STA to the controller data model via m_ambiorix_datamodel
@@ -430,7 +435,7 @@ bool db::add_node_client(const sMacAddr &mac, const sMacAddr &parent_mac)
     auto data_model_path = dm_add_sta_element(parent_mac, mac);
     if (data_model_path.empty()) {
         LOG(ERROR) << "Failed to add client instance, mac: " << mac;
-        return false;
+        return station;
     }
     // Add the MAC to the association event */
     if (dm_add_association_event(parent_mac, mac).empty()) {
@@ -439,7 +444,7 @@ bool db::add_node_client(const sMacAddr &mac, const sMacAddr &parent_mac)
 
     set_node_data_model_path(mac, data_model_path);
 
-    return true;
+    return station;
 }
 
 bool db::remove_node(const sMacAddr &mac)
@@ -5241,6 +5246,17 @@ std::shared_ptr<sAgent::sRadio> db::get_radio_by_uid(const sMacAddr &radio_uid)
     return {};
 }
 
+std::shared_ptr<sStation> db::get_station(const sMacAddr &mac)
+{
+    auto station = m_stations.get(mac);
+    if (!station) {
+        LOG(WARNING) << "station " << mac << " not found";
+        return {};
+    }
+
+    return station;
+}
+
 std::set<std::shared_ptr<node>> db::get_node_subtree(std::shared_ptr<node> n)
 {
     std::set<std::shared_ptr<node>> subtree;
@@ -5686,7 +5702,7 @@ void db::add_node_from_data(const std::string &client_entry, const ValuesMap &va
     auto client_mac = client_db_entry_to_mac(client_entry);
 
     // Add client node with defaults and in default location
-    if (!add_node_client(client_mac)) {
+    if (!add_node_station(client_mac)) {
         LOG(ERROR) << "Failed to add client node for client_entry " << client_entry;
         result.first = 1;
         return;
