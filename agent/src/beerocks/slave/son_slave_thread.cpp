@@ -373,28 +373,6 @@ bool slave_thread::handle_cmdu_control_ieee1905_1_message(Socket *sd,
 {
     auto cmdu_message_type = cmdu_rx.getMessageType();
 
-    if (master_socket == nullptr) {
-        LOG(WARNING) << "master_socket == nullptr";
-        return true;
-    } else if (master_socket != sd) {
-        LOG(DEBUG) << "Unknown socket, cmdu message type: " << int(cmdu_message_type); //TODO:
-    }
-
-    if (slave_state == STATE_STOPPED) {
-        LOG(WARNING) << "slave_state == STATE_STOPPED";
-        return true;
-    }
-    auto db    = AgentDB::get();
-    auto radio = db->radio(m_fronthaul_iface);
-    if (!radio) {
-        return false;
-    }
-
-    // ZWDFS Radio should ignore messages from the Controller
-    if (radio->front.zwdfs) {
-        return true;
-    }
-
     switch (cmdu_message_type) {
     case ieee1905_1::eMessageType::ACK_MESSAGE:
         return handle_ack_message(sd, cmdu_rx);
@@ -471,37 +449,32 @@ bool slave_thread::handle_cmdu_monitor_ieee1905_1_message(const std::string &fro
 bool slave_thread::handle_cmdu_control_message(Socket *sd,
                                                std::shared_ptr<beerocks_header> beerocks_header)
 {
-    // LOG(DEBUG) << "handle_cmdu_control_message(), INTEL_VS: action=" + std::to_string(beerocks_header->action()) + ", action_op=" + std::to_string(beerocks_header->action_op());
-    // LOG(DEBUG) << "received radio_mac=" << beerocks_header->radio_mac() << ", local radio_mac=" << hostap_params.iface_mac;
-
-    // Scope this code block to prevent shadowing of "db" and "radio" variables internally on the
-    // switch case.
-    {
-        auto db    = AgentDB::get();
-        auto radio = db->radio(m_fronthaul_iface);
-        if (!radio) {
-            LOG(DEBUG) << "Radio of interface " << m_fronthaul_iface << " does not exist on the db";
-            return false;
-        }
-
-        // to me or not to me, this is the question...
-        if (beerocks_header->actionhdr()->radio_mac() != radio->front.iface_mac) {
-            return true;
-        }
-    }
-
     if (beerocks_header->actionhdr()->direction() == beerocks::BEEROCKS_DIRECTION_CONTROLLER) {
         return true;
     }
 
-    if (master_socket == nullptr) {
-        // LOG(WARNING) << "master_socket == nullptr";
-        return true;
-    } else if (master_socket != sd) {
-        LOG(WARNING) << "Unknown socket, ACTION_CONTROL action_op: "
-                     << int(beerocks_header->action_op());
-        return true;
+    // Scope this code block to prevent shadowing of "db" and "radio" variables internally on the
+    // switch case.
+    std::string fronthaul_iface;
+    {
+        auto db    = AgentDB::get();
+        auto radio = db->get_radio_by_mac(beerocks_header->actionhdr()->radio_mac(),
+                                          AgentDB::eMacType::RADIO);
+        if (!radio) {
+            LOG(DEBUG) << "Radio " << beerocks_header->actionhdr()->radio_mac()
+                       << " does not exist on the db";
+            return false;
+        }
+
+        fronthaul_iface = radio->front.iface_name;
+
+        // ZWDFS Radio should ignore messages from the Controller
+        if (radio->front.zwdfs) {
+            return true;
+        }
     }
+
+    auto &radio_manager = m_radio_managers[fronthaul_iface];
 
     if (radio_manager.slave_state == STATE_STOPPED) {
         return true;
