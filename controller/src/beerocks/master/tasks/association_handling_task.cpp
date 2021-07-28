@@ -46,14 +46,22 @@ void association_handling_task::work()
             finish();
             return;
         }
+
+        auto station = database.get_station(tlvf::mac_from_string(sta_mac));
+        if (!station) {
+            TASK_LOG(DEBUG) << "client " << sta_mac << " is not found";
+            finish();
+            return;
+        }
+
         // If this task already has been created by another event, let it finish and finish the new
         // instance of it.
-        int prev_task_id = database.get_association_handling_task_id(sta_mac);
+        int prev_task_id = station->association_handling_task_id;
         if (tasks.is_task_running(prev_task_id)) {
             finish();
             return;
         }
-        database.assign_association_handling_task_id(sta_mac, id);
+        station->association_handling_task_id = id;
 
         original_parent_mac = database.get_node_parent(sta_mac);
 
@@ -353,6 +361,11 @@ void association_handling_task::handle_response(std::string mac,
 
 void association_handling_task::finalize_new_connection()
 {
+    auto client = database.get_station(tlvf::mac_from_string(sta_mac));
+    if (!client) {
+        LOG(WARNING) << "Client " << sta_mac << " does not exist";
+        return;
+    }
 
     /*
      * see if special handling is required if client just came back from a handover
@@ -387,15 +400,14 @@ void association_handling_task::finalize_new_connection()
         /* 
          * kill existing roaming task 
          */
-        int prev_roaming_task = database.get_roaming_task_id(sta_mac);
+        int prev_roaming_task = client->roaming_task_id;
         LOG(DEBUG) << "kill prev_roaming_task " << prev_roaming_task;
         tasks.kill_task(prev_roaming_task);
 
         /*
          * kill load balancer
          */
-        int prev_load_balancer_task = database.get_load_balancer_task_id(sta_mac);
-        tasks.kill_task(prev_load_balancer_task);
+        tasks.kill_task(client->load_balancer_task_id);
 
         database.set_node_handoff_flag(sta_mac, false);
     }

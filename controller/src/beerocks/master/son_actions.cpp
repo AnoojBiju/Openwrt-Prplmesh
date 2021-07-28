@@ -96,8 +96,8 @@ bool son_actions::add_node_to_default_location(db &database, std::string client_
     }
 
     //LOG(DEBUG) << "adding node " << client_mac << " to db, after getting ARP_MONITOR_NOTIFICATION from source " << int(notification->params.source);
-    if (!database.add_node_client(tlvf::mac_from_string(client_mac),
-                                  tlvf::mac_from_string(gw_lan_switch))) {
+    if (!database.add_node_station(tlvf::mac_from_string(client_mac),
+                                   tlvf::mac_from_string(gw_lan_switch))) {
         LOG(ERROR) << "add_node_to_default_location - add_node failed";
         return false;
     }
@@ -260,7 +260,6 @@ void son_actions::send_cli_debug_message(db &database, ieee1905_1::CmduMessageTx
 void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db &database,
                                    ieee1905_1::CmduMessageTx &cmdu_tx, task_pool &tasks)
 {
-    int prev_task_id;
     beerocks::eType mac_type = database.get_node_type(mac);
     auto node_state          = database.get_node_state(mac);
 
@@ -269,8 +268,13 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
 
     if ((mac_type == beerocks::TYPE_IRE_BACKHAUL || mac_type == beerocks::TYPE_CLIENT) &&
         database.is_node_wireless(mac)) {
+        auto station = database.get_station(tlvf::mac_from_string(mac));
+        if (!station) {
+            LOG(ERROR) << "Station " << mac << " not found";
+            return;
+        }
         // If there is running association handleing task already, terminate it.
-        int prev_task_id = database.get_association_handling_task_id(mac);
+        int prev_task_id = station->association_handling_task_id;
         if (tasks.is_task_running(prev_task_id)) {
             tasks.kill_task(prev_task_id);
         }
@@ -280,11 +284,17 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
         if (mac_type == beerocks::TYPE_IRE_BACKHAUL || mac_type == beerocks::TYPE_CLIENT) {
             database.set_node_state(mac, beerocks::STATE_DISCONNECTED);
 
+            auto station = database.get_station(tlvf::mac_from_string(mac));
+            if (!station) {
+                LOG(ERROR) << "Station " << mac << " not found";
+                return;
+            }
+
             // Clear node ipv4
             database.set_node_ipv4(mac);
 
             // Notify steering task, if any, of disconnect.
-            int steering_task = database.get_steering_task_id(mac);
+            int steering_task = station->steering_task_id;
             if (tasks.is_task_running(steering_task))
                 tasks.push_event(steering_task, client_steering_task::STA_DISCONNECTED);
 
@@ -296,14 +306,14 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
                 LOG(DEBUG) << "handoff_flag == false, mac " << mac;
 
                 // If we're not in the middle of steering, kill roaming task
-                prev_task_id = database.get_roaming_task_id(mac);
+                int prev_task_id = station->roaming_task_id;
                 if (tasks.is_task_running(prev_task_id)) {
                     tasks.kill_task(prev_task_id);
                 }
             }
 
             // If there is an instance of association handling task, kill it
-            int association_handling_task_id = database.get_association_handling_task_id(mac);
+            int association_handling_task_id = station->association_handling_task_id;
             if (tasks.is_task_running(association_handling_task_id)) {
                 tasks.kill_task(association_handling_task_id);
             }
@@ -336,8 +346,15 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
                     agent->state = STATE_DISCONNECTED;
                 } else if (database.get_node_type(node_mac) == beerocks::TYPE_IRE_BACKHAUL ||
                            database.get_node_type(node_mac) == beerocks::TYPE_CLIENT) {
+
+                    auto station = database.get_station(tlvf::mac_from_string(node_mac));
+                    if (!station) {
+                        LOG(ERROR) << "station " << node_mac << " not found";
+                        return;
+                    }
+
                     // kill old roaming task
-                    prev_task_id = database.get_roaming_task_id(node_mac);
+                    int prev_task_id = station->roaming_task_id;
                     if (tasks.is_task_running(prev_task_id)) {
                         tasks.kill_task(prev_task_id);
                     }

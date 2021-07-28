@@ -11,6 +11,7 @@
 
 #include "agent.h"
 #include "node.h"
+#include "station.h"
 
 #include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_logging.h>
@@ -36,7 +37,9 @@
 #endif // ENABLE_NBAPI
 
 using namespace beerocks_message;
-using sAgent = prplmesh::controller::db::sAgent;
+
+using sAgent  = prplmesh::controller::db::sAgent;
+using Station = prplmesh::controller::db::Station;
 
 namespace son {
 
@@ -199,6 +202,7 @@ public:
     } sAssociatedStaTrafficStats;
 
     beerocks::mac_map<sAgent> m_agents;
+    beerocks::mac_map<Station> m_stations;
 
     db(sDbMasterConfig &config_, beerocks::logging &logger_, const std::string &local_bridge_mac,
        std::shared_ptr<beerocks::nbapi::Ambiorix> ambiorix_object)
@@ -301,6 +305,17 @@ public:
      */
     std::shared_ptr<sAgent::sRadio> get_radio_by_uid(const sMacAddr &radio_uid);
 
+    /**
+     * @brief Get station with a specific MAC address.
+     *
+     * Searches all Station object to find one with the given MAC address.
+     * If no station with the given MAC was found, nullptr is returned and an error is logged.
+     *
+     * @param mac MAC address of the station.
+     * @return The Station object, or nullptr if it doesn't exist.
+     */
+    std::shared_ptr<Station> get_station(const sMacAddr &mac);
+
     //logger
     void set_log_level_state(const beerocks::eLogLevel &log_level, const bool &new_state);
 
@@ -344,38 +359,58 @@ public:
     bool dm_add_sta_beacon_measurement(const beerocks_message::sBeaconResponse11k &beacon_response);
 
     /**
-     * @brief add gateway node and sAgent object
+     * @brief add gateway node and sAgent object.
      *
      * Adds a gateway node and an sAgent object if they don't exist.
      *
      * @param mac AL MAC of the gateway.
-     *
      * @return the existing sAgent if it was already there or the newly added sAgent otherwise.
      */
     std::shared_ptr<sAgent> add_node_gateway(const sMacAddr &mac);
 
     /**
-     * @brief add IRE node and sAgent object
+     * @brief add IRE node and sAgent object.
      *
      * Adds an IRE node and an sAgent object if they don't exist.
      *
      * @param mac AL MAC of the gateway.
      * @param parent_mac MAC address of the parent node in the legacy node structure.
-     *
      * @return the existing sAgent if it was already there or the newly added sAgent otherwise.
      */
     std::shared_ptr<sAgent>
     add_node_ire(const sMacAddr &mac,
                  const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
 
-    bool add_node_wireless_bh(const sMacAddr &mac,
-                              const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
-    bool add_node_wired_bh(const sMacAddr &mac,
-                           const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
+    /**
+     * @brief add wireless backhaul node and Station object.
+     *
+     * Adds a wireless backhaul node and a Station object if they don't exist.
+     *
+     * @param mac MAC address of the wireless backhaul station.
+     * @param parent_mac MAC address of the parent node in the legacy node structure.
+     * @return the existing Station if it was already there or the newly added Station otherwise.
+     */
+    std::shared_ptr<Station>
+    add_node_wireless_backhaul(const sMacAddr &mac,
+                               const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
+    bool
+    add_node_wired_backhaul(const sMacAddr &mac,
+                            const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
     bool add_node_radio(const sMacAddr &mac,
                         const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
-    bool add_node_client(const sMacAddr &mac,
-                         const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
+
+    /**
+     * @brief add client node and Station object.
+     *
+     * Adds a station node and a Station object if they don't exist.
+     *
+     * @param mac MAC address of the client.
+     * @param parent_mac MAC address of the parent node in the legacy node structure.
+     * @return the existing Station if it was already there or the newly added Station otherwise.
+     */
+    std::shared_ptr<Station>
+    add_node_station(const sMacAddr &mac,
+                     const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
 
     bool remove_node(const sMacAddr &mac);
 
@@ -1679,18 +1714,6 @@ public:
     //
     // tasks
     //
-    bool assign_association_handling_task_id(const std::string &mac, int new_task_id);
-    int get_association_handling_task_id(const std::string &mac);
-
-    bool assign_steering_task_id(const std::string &mac, int new_task_id);
-    int get_steering_task_id(const std::string &mac);
-
-    bool assign_roaming_task_id(const std::string &mac, int new_task_id);
-    int get_roaming_task_id(const std::string &mac);
-
-    bool assign_load_balancer_task_id(const std::string &mac, int new_task_id);
-    int get_load_balancer_task_id(const std::string &mac);
-
     bool assign_client_locating_task_id(const std::string &mac, int new_task_id,
                                         bool new_connection);
     int get_client_locating_task_id(const std::string &mac, bool new_connection);

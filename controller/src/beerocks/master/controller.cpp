@@ -1323,7 +1323,13 @@ bool Controller::handle_cmdu_1905_client_steering_btm_report_message(
     LOG(DEBUG) << "BTM_REPORT from source bssid " << steering_btm_report->bssid()
                << " for client_mac=" << client_mac << " status_code=" << (int)status_code;
 
-    int steering_task_id = database.get_steering_task_id(client_mac);
+    auto client = database.get_station(tlvf::mac_from_string(client_mac));
+    if (!client) {
+        LOG(ERROR) << "sta " << client_mac << " not found";
+        return false;
+    }
+
+    int steering_task_id = client->steering_task_id;
     tasks.push_event(steering_task_id, client_steering_task::BTM_REPORT_RECEIVED);
     database.update_node_11v_responsiveness(client_mac, true);
 
@@ -1331,8 +1337,7 @@ bool Controller::handle_cmdu_1905_client_steering_btm_report_message(
         LOG(DEBUG) << "sta " << client_mac << " rejected BSS steer request";
         LOG(DEBUG) << "killing roaming task";
 
-        int prev_roaming_task = database.get_roaming_task_id(client_mac);
-        tasks.kill_task(prev_roaming_task);
+        tasks.kill_task(client->roaming_task_id);
 
         tasks.push_event(steering_task_id, client_steering_task::BSS_TM_REQUEST_REJECTED);
     }
@@ -2154,7 +2159,8 @@ bool Controller::handle_intel_slave_join(
             //add a placeholder
             LOG(DEBUG) << "add a placeholder backhaul_mac = " << backhaul_mac
                        << ", parent_bssid_mac = " << parent_bssid_mac;
-            database.add_node_wireless_bh(tlvf::mac_from_string(backhaul_mac), parent_bssid_mac);
+            database.add_node_wireless_backhaul(tlvf::mac_from_string(backhaul_mac),
+                                                parent_bssid_mac);
         } else if (database.get_node_state(backhaul_mac) != beerocks::STATE_CONNECTED) {
             /* if the backhaul node doesn't exist, or is not already marked as connected,
             * we assume it is connected to the GW's LAN switch
@@ -2179,8 +2185,8 @@ bool Controller::handle_intel_slave_join(
             LOG(DEBUG) << "add a placeholder backhaul_mac = " << backhaul_mac
                        << " gw_lan_switch = " << gw_lan_switch
                        << " TYPE_IRE_BACKHAUL , STATE_CONNECTED";
-            database.add_node_wireless_bh(tlvf::mac_from_string(backhaul_mac),
-                                          tlvf::mac_from_string(gw_lan_switch));
+            database.add_node_wireless_backhaul(tlvf::mac_from_string(backhaul_mac),
+                                                tlvf::mac_from_string(gw_lan_switch));
             database.set_node_state(backhaul_mac, beerocks::STATE_CONNECTED);
         }
     } else {
@@ -2240,7 +2246,7 @@ bool Controller::handle_intel_slave_join(
         ++eth_sw_mac_binary.oct[5];
 
         std::string eth_switch_mac = tlvf::mac_to_string(eth_sw_mac_binary);
-        database.add_node_wired_bh(tlvf::mac_from_string(eth_switch_mac), bridge_mac);
+        database.add_node_wired_backhaul(tlvf::mac_from_string(eth_switch_mac), bridge_mac);
         database.set_node_state(eth_switch_mac, beerocks::STATE_CONNECTED);
         database.set_node_name(eth_switch_mac, slave_name + "_ETH");
         database.set_node_ipv4(eth_switch_mac, bridge_ipv4);
@@ -2617,8 +2623,8 @@ bool Controller::handle_non_intel_slave_join(
 
     LOG(DEBUG) << "add a placeholder backhaul_mac = " << backhaul_mac
                << " gw_lan_switch = " << gw_lan_switch << " TYPE_IRE_BACKHAUL , STATE_CONNECTED";
-    database.add_node_wireless_bh(tlvf::mac_from_string(backhaul_mac),
-                                  tlvf::mac_from_string(gw_lan_switch));
+    database.add_node_wireless_backhaul(tlvf::mac_from_string(backhaul_mac),
+                                        tlvf::mac_from_string(gw_lan_switch));
     database.set_node_state(backhaul_mac, beerocks::STATE_CONNECTED);
 
     // TODO bridge handling.
@@ -2646,7 +2652,7 @@ bool Controller::handle_non_intel_slave_join(
     database.set_node_type(backhaul_mac, beerocks::TYPE_IRE_BACKHAUL);
     database.set_node_name(backhaul_mac, agent->manufacturer + "_BH");
     database.set_node_name(bridge_mac_str, agent->manufacturer);
-    database.add_node_wired_bh(tlvf::mac_from_string(eth_switch_mac), bridge_mac);
+    database.add_node_wired_backhaul(tlvf::mac_from_string(eth_switch_mac), bridge_mac);
     database.set_node_state(eth_switch_mac, beerocks::STATE_CONNECTED);
     database.set_node_name(eth_switch_mac, agent->manufacturer + "_ETH");
     database.set_node_manufacturer(eth_switch_mac, agent->manufacturer);
@@ -3148,7 +3154,14 @@ bool Controller::handle_cmdu_control_message(
             LOG(ERROR) << "addClass ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_NOTIFICATION failed";
             return false;
         }
-        std::string client_mac        = tlvf::mac_to_string(notification->params().result.mac);
+        std::string client_mac = tlvf::mac_to_string(notification->params().result.mac);
+
+        auto client = database.get_station(tlvf::mac_from_string(client_mac));
+        if (!client) {
+            LOG(ERROR) << "client " << client_mac << " not found";
+            return false;
+        }
+
         std::string client_parent_mac = database.get_node_parent(client_mac);
         sMacAddr bssid = database.get_hostap_vap_mac(tlvf::mac_from_string(hostap_mac),
                                                      notification->params().vap_id);
@@ -3177,8 +3190,7 @@ bool Controller::handle_cmdu_control_message(
                 * when a notification arrives, it means a large change in rx_rssi occurred (above the defined thershold)
                 * therefore, we need to create an optimal path task to relocate the node if needed
                 */
-            int prev_task_id = database.get_roaming_task_id(client_mac);
-            if (tasks.is_task_running(prev_task_id)) {
+            if (tasks.is_task_running(client->roaming_task_id)) {
                 LOG(DEBUG) << "roaming task already running for " << client_mac;
             } else {
                 auto new_task = std::make_shared<optimal_path_task>(database, cmdu_tx, tasks,
@@ -3226,7 +3238,7 @@ bool Controller::handle_cmdu_control_message(
 
         if (!database.has_node(tlvf::mac_from_string(client_mac))) {
             LOG(DEBUG) << "client mac not in DB, add temp node " << client_mac;
-            database.add_node_client(tlvf::mac_from_string(client_mac));
+            database.add_node_station(tlvf::mac_from_string(client_mac));
             database.update_node_last_seen(client_mac);
         }
 
@@ -3410,6 +3422,12 @@ bool Controller::handle_cmdu_control_message(
                    << " active_client_count=" << active_client_count
                    << " client_load=" << client_load_percent;
 
+        auto agent = database.m_agents.get(tlvf::mac_from_string(ire_mac));
+        if (!agent) {
+            LOG(ERROR) << "agent " << ire_mac << " does not exist";
+            return false;
+        }
+
         /*
             * start load balancing
             */
@@ -3425,8 +3443,7 @@ bool Controller::handle_cmdu_control_message(
                 * therefore, we need to create a load balancing task to optimize the network
                 */
             LOG(DEBUG) << "high load conditions, starting load balancer for ire " << ire_mac;
-            int prev_task_id = database.get_load_balancer_task_id(ire_mac);
-            if (tasks.is_task_running(prev_task_id)) {
+            if (tasks.is_task_running(agent->load_balancer_task_id)) {
                 LOG(DEBUG) << "load balancer task already running for " << ire_mac;
             } else {
                 auto new_task = std::make_shared<load_balancer_task>(
@@ -3446,6 +3463,12 @@ bool Controller::handle_cmdu_control_message(
             for (auto &hostap : hostaps) {
                 auto stations = database.get_node_children(hostap);
                 for (auto sta : stations) {
+                    auto station = database.get_station(tlvf::mac_from_string(sta));
+                    if (!station) {
+                        LOG(ERROR) << "station " << sta << " not found";
+                        continue;
+                    }
+
                     if (database.get_node_confined_flag(sta)) {
                         LOG(DEBUG) << "removing confined flag from sta " << sta;
                         database.set_node_confined_flag(sta, false);
@@ -3453,8 +3476,7 @@ bool Controller::handle_cmdu_control_message(
                             * launch optimal path task
                             */
                         if (database.get_node_state(sta) == beerocks::STATE_CONNECTED) {
-                            int prev_task_id = database.get_roaming_task_id(sta);
-                            if (tasks.is_task_running(prev_task_id)) {
+                            if (tasks.is_task_running(station->roaming_task_id)) {
                                 LOG(DEBUG) << "roaming task already running for " << sta;
                             } else {
                                 auto new_task = std::make_shared<optimal_path_task>(
@@ -3542,8 +3564,14 @@ bool Controller::handle_cmdu_control_message(
         }
         std::string client_mac = tlvf::mac_to_string(notification->mac());
         LOG(INFO) << "CLIENT NO ACTIVITY MSG RX'ed for client" << client_mac;
-        int prev_task_id = database.get_roaming_task_id(client_mac);
-        if (tasks.is_task_running(prev_task_id)) {
+
+        auto client = database.get_station(tlvf::mac_from_string(client_mac));
+        if (!client) {
+            LOG(ERROR) << "Client " << client_mac << " not found";
+            return false;
+        }
+
+        if (tasks.is_task_running(client->roaming_task_id)) {
             LOG(DEBUG) << "roaming task already running for " << client_mac;
         } else {
             LOG(INFO) << "Starting optimal path for client" << client_mac;
