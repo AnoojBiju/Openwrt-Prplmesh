@@ -105,6 +105,7 @@ utils::sIfaceVapIds utils::get_ids_from_iface_string(const std::string &iface)
         int8_t vap_id = string_utils::stoi(iface_num_vec[1]);
         if ((vap_id < beerocks::IFACE_VAP_ID_MIN) || (vap_id > beerocks::IFACE_VAP_ID_MAX)) {
             LOG(DEBUG) << "Invalid VAP id " << vap_id << " for interface " << iface;
+            ids.vap_id = beerocks::IFACE_ID_INVALID;
             return ids;
         }
         ids.vap_id = vap_id;
