@@ -311,6 +311,16 @@ bool slave_thread::work()
 
 bool slave_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
+    // Find for each radio sockets the message has received.
+    std::string fronthaul_iface;
+    for (auto &radio_manager_map_element : m_radio_managers) {
+        auto &radio_manager = radio_manager_map_element.second;
+        if (sd == radio_manager.backhaul_manager_socket || sd == radio_manager.ap_manager_socket ||
+            sd == radio_manager.monitor_socket || sd == radio_manager.platform_manager_socket) {
+            fronthaul_iface = radio_manager_map_element.first;
+        }
+    }
+
     if (cmdu_rx.getMessageType() == ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE) {
 
         auto beerocks_header = message_com::parse_intel_vs_message(cmdu_rx);
@@ -325,28 +335,29 @@ bool slave_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
             return handle_cmdu_control_message(sd, beerocks_header);
         } break;
         case beerocks_message::ACTION_BACKHAUL: {
-            return handle_cmdu_backhaul_manager_message(sd, beerocks_header);
+            return handle_cmdu_backhaul_manager_message(fronthaul_iface, sd, beerocks_header);
         } break;
         case beerocks_message::ACTION_PLATFORM: {
-            return handle_cmdu_platform_manager_message(sd, beerocks_header);
+            return handle_cmdu_platform_manager_message(fronthaul_iface, sd, beerocks_header);
         } break;
         case beerocks_message::ACTION_APMANAGER: {
-            return handle_cmdu_ap_manager_message(sd, beerocks_header);
+            return handle_cmdu_ap_manager_message(fronthaul_iface, sd, beerocks_header);
         } break;
         case beerocks_message::ACTION_MONITOR: {
-            return handle_cmdu_monitor_message(sd, beerocks_header);
+            return handle_cmdu_monitor_message(fronthaul_iface, sd, beerocks_header);
         } break;
         default: {
             LOG(ERROR) << "Unknown message, action: " << int(beerocks_header->action());
         }
         }
-    } else if (sd == ap_manager_socket) {
+    } else if (!fronthaul_iface.empty() &&
+               sd == m_radio_managers[fronthaul_iface].ap_manager_socket) {
         // Handle IEEE 1905.1 messages from the AP Manager
-        return handle_cmdu_ap_manager_ieee1905_1_message(*sd, cmdu_rx);
-    } else if (sd == monitor_socket) {
+        return handle_cmdu_ap_manager_ieee1905_1_message(fronthaul_iface, *sd, cmdu_rx);
+    } else if (!fronthaul_iface.empty() && sd == m_radio_managers[fronthaul_iface].monitor_socket) {
         // Handle IEEE 1905.1 messages from the Monitor
-        return handle_cmdu_monitor_ieee1905_1_message(*sd, cmdu_rx);
-    } else { // IEEE 1905.1 message
+        return handle_cmdu_monitor_ieee1905_1_message(fronthaul_iface, *sd, cmdu_rx);
+    } else {
         // Handle IEEE 1905.1 messages from the Controller
         return handle_cmdu_control_ieee1905_1_message(sd, cmdu_rx);
     }
