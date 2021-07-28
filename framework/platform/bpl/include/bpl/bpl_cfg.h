@@ -710,6 +710,16 @@ bool cfg_set_steering_disassoc_timer_msec(std::chrono::milliseconds &steering_di
  */
 bool cfg_get_clients_measurement_mode(eClientsMeasurementMode &clients_measurement_mode);
 
+/**
+ * @brief Get radio's monitored BSSIDs by radio's interface.
+ * 
+ * @param [in] iface Radio interface name.
+ * @param [out] monitored_BSSs Set of BSSIDs to monitor.
+ * @return true on success, otherwise false.
+ */
+bool bpl_cfg_get_monitored_BSSs_by_radio_iface(const std::string &iface,
+                                               std::set<std::string> &monitored_BSSs);
+
 } // namespace bpl
 } // namespace beerocks
 

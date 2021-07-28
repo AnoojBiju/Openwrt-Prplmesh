@@ -956,5 +956,42 @@ bool cfg_get_clients_measurement_mode(eClientsMeasurementMode &clients_measureme
     return true;
 }
 
+bool bpl_cfg_get_monitored_BSSs_by_radio_iface(const std::string &iface,
+                                               std::set<std::string> &monitored_BSSs)
+{
+    // To get the correct VAP list for a given interface name, we first need to get all the
+    // avaliable ifaces in relation to their sections.
+    // Key: Section, Value: Radio iface
+    std::unordered_map<std::string, std::string> radio_ifaces;
+    if (cfg_get_prplmesh_hostapd_ifaces(radio_ifaces) == RETURN_ERR) {
+        LOG(ERROR) << "Failed to get avaliable interfaces!";
+        return false;
+    }
+    // Iterate over the interface names to find the matching section
+    const auto &it = std::find_if(radio_ifaces.begin(), radio_ifaces.end(),
+                                  [&iface](std::pair<std::string, std::string> const &item) {
+                                      return (item.second == iface);
+                                  });
+    if (it == radio_ifaces.end()) {
+        LOG(ERROR) << "Failed to find matching iface " << iface;
+        return false;
+    }
+    // Once the correct section is found we can get the monitored_bsss option.
+    const std::string package_name = "prplmesh";
+    const std::string section_type = "wifi-device";
+    const std::string option_name  = "hostap_iface_monitor_vaps";
+    std::string monitored_bsss;
+    if (!uci_get_option(package_name, section_type, (*it).first, option_name, monitored_bsss)) {
+        LOG(DEBUG) << "Failed to get 'hostap_iface_monitor_vaps' from section " << (*it).first;
+        return true;
+    }
+    // the monitored_bsss option is a list seperated by the ',' delimiter
+    auto monitored_BSSs_vec = beerocks::string_utils::str_split(monitored_bsss, ',');
+    monitored_BSSs =
+        std::move(std::set<std::string>(monitored_BSSs_vec.begin(), monitored_BSSs_vec.end()));
+    return true;
+    // break monitor vaps to vector
+}
+
 } // namespace bpl
 } // namespace beerocks
