@@ -30,6 +30,7 @@
 #include <tlvf/ieee_1905_1/tlvAlMacAddress.h>
 #include <tlvf/ieee_1905_1/tlvSupportedFreqBand.h>
 #include <tlvf/ieee_1905_1/tlvSupportedRole.h>
+#include <tlvf/wfa_map/tlvApMetricQuery.h>
 #include <tlvf/wfa_map/tlvApRadioIdentifier.h>
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
 #include <tlvf/wfa_map/tlvBeaconMetricsResponse.h>
@@ -4825,7 +4826,20 @@ bool slave_thread::send_error_response(
  */
 bool slave_thread::handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
-    LOG(DEBUG) << "Received AP_AUTOCONFIGURATION_WSC_MESSAGE";
+    auto ruid = cmdu_rx.getClass<wfa_map::tlvApRadioIdentifier>();
+    if (!ruid) {
+        LOG(ERROR) << "getClass<wfa_map::tlvApRadioIdentifier> failed";
+        return false;
+    }
+
+    auto db = AgentDB::get();
+
+    auto radio = db->get_radio_by_mac(ruid->radio_uid(), AgentDB::eMacType::RADIO);
+    if (!radio) {
+        LOG(ERROR) << "Failed to find ruid " << ruid->radio_uid() << " in the Agent";
+        return false;
+    }
+    LOG(DEBUG) << "Received AP_AUTOCONFIGURATION_WSC_MESSAGE for iface " << radio->front.iface_name;
 
     std::list<WSC::m2> m2_list;
     for (auto tlv : cmdu_rx.getClassList<ieee1905_1::tlvWsc>()) {
@@ -4839,26 +4853,6 @@ bool slave_thread::handle_autoconfiguration_wsc(Socket *sd, ieee1905_1::CmduMess
     if (m2_list.empty()) {
         LOG(ERROR) << "No M2s present";
         return false;
-    }
-
-    auto ruid = cmdu_rx.getClass<wfa_map::tlvApRadioIdentifier>();
-    if (!ruid) {
-        LOG(ERROR) << "getClass<wfa_map::tlvApRadioIdentifier> failed";
-        return false;
-    }
-
-    auto db = AgentDB::get();
-
-    auto radio = db->radio(m_fronthaul_iface);
-    if (!radio) {
-        LOG(DEBUG) << "Radio of interface " << m_fronthaul_iface << " does not exist on the db";
-        return false;
-    }
-    // Check if the message is for this radio agent by comparing the ruid
-    if (radio->front.iface_mac != ruid->radio_uid()) {
-        LOG(DEBUG) << "Message should be handled by another son_slave - ruid "
-                   << radio->front.iface_mac << " != " << ruid->radio_uid();
-        return true;
     }
 
     if (!handle_profile2_default_802dotq_settings_tlv(cmdu_rx)) {
@@ -5308,7 +5302,15 @@ bool slave_thread::handle_client_association_request(Socket *sd, ieee1905_1::Cmd
         request_out->validity_period_sec() = association_control_request_tlv->validity_period_sec();
     }
 
-    message_com::send_cmdu(ap_manager_socket, cmdu_tx);
+    auto db    = AgentDB::get();
+    auto radio = db->get_radio_by_mac(bssid, AgentDB::eMacType::BSSID);
+    if (!radio) {
+        LOG(ERROR) << "BSSID " << bssid << " was not found in any of the Agent radios";
+        return false;
+    }
+    auto &radio_manager = m_radio_managers[radio->front.iface_name];
+
+    message_com::send_cmdu(radio_manager.ap_manager_socket, cmdu_tx);
 
     if (!cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE)) {
         LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
@@ -5316,18 +5318,12 @@ bool slave_thread::handle_client_association_request(Socket *sd, ieee1905_1::Cmd
     }
 
     LOG(DEBUG) << "sending ACK message back to controller";
-    return send_cmdu_to_controller(cmdu_tx);
+    return send_cmdu_to_controller(radio->front.iface_name, cmdu_tx);
 }
 
 bool slave_thread::handle_1905_higher_layer_data_message(Socket &sd,
                                                          ieee1905_1::CmduMessageRx &cmdu_rx)
 {
-    // Only one son_slave should return ACK for higher layer data message, therefore ignore
-    // this message on non backhaul manager son_slaves.
-    if (!is_backhaul_manager) {
-        return true;
-    }
-
     const auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Received HIGHER_LAYER_DATA_MESSAGE , mid=" << std::hex << int(mid);
 
@@ -5421,7 +5417,17 @@ bool slave_thread::handle_client_steering_request(Socket *sd, ieee1905_1::CmduMe
             request_out->params().target.reason = -1; // Mark that reason is not added
         }
 
-        message_com::send_cmdu(ap_manager_socket, cmdu_tx);
+        auto db = AgentDB::get();
+        auto radio =
+            db->get_radio_by_mac(request_out->params().cur_bssid, AgentDB::eMacType::BSSID);
+        if (!radio) {
+            LOG(ERROR) << "Radio with BSSID " << request_out->params().cur_bssid
+                       << " as requested on steering request, not found ";
+            return false;
+        }
+
+        message_com::send_cmdu(m_radio_managers[radio->front.iface_name].ap_manager_socket,
+                               cmdu_tx);
         return true;
     } else {
 
@@ -5477,19 +5483,57 @@ bool slave_thread::handle_beacon_metrics_query(Socket *sd, ieee1905_1::CmduMessa
         return false;
     }
 
-    message_com::send_cmdu(monitor_socket, cmdu_tx);
+    auto db    = AgentDB::get();
+    auto radio = db->get_radio_by_mac(request_out->params().sta_mac, AgentDB::eMacType::CLIENT);
+    if (!radio) {
+        LOG(ERROR) << "Radio with connected sta_mac " << request_out->params().sta_mac
+                   << " as requested on beacon metrics query, not found ";
+        return false;
+    }
 
+    message_com::send_cmdu(m_radio_managers[radio->front.iface_name].monitor_socket, cmdu_tx);
     return true;
 }
 
 bool slave_thread::handle_ap_metrics_query(Socket &sd, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     uint16_t length = message_com::get_uds_header(cmdu_rx)->length;
-    cmdu_rx.swap(); // swap back before forwarding
-    if (!message_com::forward_cmdu_to_uds(monitor_socket, cmdu_rx, length)) {
-        LOG(ERROR) << "Failed sending AP_METRICS_QUERY_MESSAGE message to monitor_socket";
-        return false;
+
+    // Extract the first bssid on the query to find out on which fronthaul the request has been
+    // sent to. This code is temporary and eventually will be merged with the handler in the
+    // LinkMetricsCollectionTask and move there. PPM-352.
+    auto tlvApMetricQuery = cmdu_rx.getClass<wfa_map::tlvApMetricQuery>();
+
+    // List of radio interface names to forward the message.
+    std::unordered_set<std::string> radios_to_forward;
+    for (auto i = 0; i < tlvApMetricQuery->bssid_list_length(); i++) {
+        auto bssid_tuple = tlvApMetricQuery->bssid_list(0);
+        if (!std::get<0>(bssid_tuple)) {
+            LOG(ERROR) << "Failed to get bssid from tlvApMetricQuery";
+        }
+        // Check only the first bssid since link_metrics_collection_task is splitting the message
+        // in a way that each of the splitted messages will have only BSSs of a single radio.
+        auto &bssid = std::get<1>(tlvApMetricQuery->bssid_list(0));
+        auto db     = AgentDB::get();
+        auto radio  = db->get_radio_by_mac(bssid, AgentDB::eMacType::BSSID);
+        if (!radio) {
+            LOG(ERROR) << "Radio with BSSID " << bssid
+                       << " as requested on ap metrics query, not found ";
+            return false;
+        }
+        radios_to_forward.insert(radio->front.iface_name);
     }
+
+    cmdu_rx.swap(); // swap back before forwarding
+    std::for_each(
+        radios_to_forward.begin(), radios_to_forward.end(), [&](const std::string &radio_iface) {
+            if (!message_com::forward_cmdu_to_uds(m_radio_managers[radio_iface].monitor_socket,
+                                                  cmdu_rx, length)) {
+                LOG(ERROR) << "Failed sending AP_METRICS_QUERY_MESSAGE message to monitor_socket "
+                           << radio_iface;
+            }
+        });
+
     return true;
 }
 
