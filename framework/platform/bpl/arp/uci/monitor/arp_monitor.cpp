@@ -404,7 +404,6 @@ bool arp_monitor::process_mon(BPL_ARP_MON_ENTRY &sArpMonData)
         }
 
         // IP address
-        std::string ipv4_str;
         if (tb[NDA_DST]) {
             std::copy_n((uint8_t *)RTA_DATA(tb[NDA_DST]), BPL_ARP_MON_IP_LEN, sArpMonData.ip);
         }
