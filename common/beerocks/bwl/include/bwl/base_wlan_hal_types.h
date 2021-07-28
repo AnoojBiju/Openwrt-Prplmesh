@@ -354,6 +354,8 @@ typedef struct {
 // but since it is represented as hex here. we need two hex characters per byte + a terminating \0.
 #define ASSOCIATION_FRAME_SIZE (2 * beerocks::message::ASSOCIATION_MAX_LENGTH + 1)
 #define MAC_ADDR_SIZE 18
+constexpr size_t MAX_TEMP_BUFFER_SIZE = 64;
+constexpr char BSS_IFNAME_PREFIX[]    = "wlan";
 
 /**
  * @brief Supported 802.11 management frame types.

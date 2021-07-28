@@ -1242,6 +1242,38 @@ bool mon_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std
 
     auto event = dwpal_to_bwl_event(opcode);
 
+    // If there is monitored BSSs list, monitor all BSSs
+    if (!m_hal_conf.monitored_BSSs.empty()) {
+        if (event == Event::STA_Connected || event == Event::STA_Disconnected ||
+            event == Event::AP_Disabled || event == Event::AP_Enabled) {
+
+            std::string tmp_buffer(buffer, MAX_TEMP_BUFFER_SIZE);
+            auto BSS_str_begin = tmp_buffer.find(BSS_IFNAME_PREFIX);
+            if (BSS_str_begin == std::string::npos) {
+                LOG(ERROR) << "No valid BSS information was found";
+                return false;
+            }
+            auto BSS_str_end = tmp_buffer.find(" ", BSS_str_begin);
+            if (BSS_str_end == std::string::npos) {
+                LOG(ERROR) << "No valid BSS information was found";
+                return false;
+            }
+            auto BSS_str   = std::string(tmp_buffer, BSS_str_begin, BSS_str_end - BSS_str_begin);
+            auto iface_ids = beerocks::utils::get_ids_from_iface_string(BSS_str);
+            if (iface_ids.vap_id == beerocks::IFACE_ID_INVALID) {
+                LOG(DEBUG) << "Event received on invalid BSS ifname, should not process the event!";
+                return true;
+            }
+
+            // Check if the event's BSSID is present in the monitored BSSIDs list.
+            if (m_hal_conf.monitored_BSSs.find(BSS_str) == m_hal_conf.monitored_BSSs.end()) {
+                // Log print commented as to not flood the logs
+                //LOG(DEBUG) << "Event received on BSS " << BSS_str << " that is not on monitored BSSs list, ignoring";
+                return true;
+            }
+        }
+    }
+
     // Handle the event
     switch (event) {
     case Event::RRM_Beacon_Response: {
