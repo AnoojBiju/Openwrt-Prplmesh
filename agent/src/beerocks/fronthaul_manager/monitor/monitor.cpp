@@ -1415,8 +1415,8 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
 
-        bool result = mon_wlan_hal->channel_scan_dump_results();
-        LOG_IF(!result, ERROR) << "channel_scan_dump_results Failed";
+        bool result = mon_wlan_hal->channel_scan_dump_cached_results();
+        LOG_IF(!result, ERROR) << "channel_scan_dump_cached_results Failed";
 
         response_out->success() = (result) ? 1 : 0;
         send_cmdu(cmdu_tx);

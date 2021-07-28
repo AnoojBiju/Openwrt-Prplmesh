@@ -1072,6 +1072,17 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
     return true;
 }
 
+bool mon_wlan_hal_dwpal::channel_scan_dump_cached_results()
+{
+    // We do not trigger the channel scan during the Dump Cached Result request flow (AKA Zero
+    // Dwell time). Because of this, we need to manually reset the flags used by the HAL API.
+    // Noramlly these flags are reset during the SCAN TRIGGERED event handling of the scan.
+
+    m_nl_seq                        = 0;
+    m_scan_was_triggered_internally = true;
+    return channel_scan_dump_results();
+}
+
 bool mon_wlan_hal_dwpal::channel_scan_dump_results()
 {
     if (!dwpal_nl_cmd_scan_dump()) {
@@ -1080,8 +1091,13 @@ bool mon_wlan_hal_dwpal::channel_scan_dump_results()
     }
     // If scan dump succeeded need to manually send the finished event
     LOG(DEBUG) << "Scan sequence: " << (int)m_nl_seq << " finished, sending Finish notification.";
-    event_queue_push(Event::Channel_Scan_Finished);
 
+    //reset scan indicators for next scan
+    m_nl_seq                        = 0;
+    m_scan_dump_in_progress         = false;
+    m_scan_was_triggered_internally = false;
+
+    event_queue_push(Event::Channel_Scan_Finished);
     return true;
 }
 
@@ -1585,7 +1601,7 @@ bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
 
         // Check if current Channel_Scan_Dump_Result is part of the dump sequence.
         if (m_nl_seq != nlh->nlmsg_seq) {
-            //LOG(ERROR) << "channel scan results dump received with unexpected seq number";
+            LOG(ERROR) << "channel scan results dump received with unexpected seq number";
             return false;
         }
 
