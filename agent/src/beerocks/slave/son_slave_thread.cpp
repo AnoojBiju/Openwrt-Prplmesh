@@ -4649,14 +4649,6 @@ bool slave_thread::handle_autoconfiguration_renew(Socket *sd, ieee1905_1::CmduMe
 {
     LOG(INFO) << "received autoconfig renew message";
 
-    // Load Agent DB & radio
-    auto db    = AgentDB::get();
-    auto radio = db->radio(m_fronthaul_iface);
-    if (!radio) {
-        LOG(DEBUG) << "Radio of iface " << m_fronthaul_iface << " does not exist on the db";
-        return false;
-    }
-
     auto tlvAlMac = cmdu_rx.getClass<ieee1905_1::tlvAlMacAddress>();
     if (!tlvAlMac) {
         LOG(ERROR) << "tlvAlMac missing - ignoring autconfig renew message";
@@ -4665,6 +4657,7 @@ bool slave_thread::handle_autoconfiguration_renew(Socket *sd, ieee1905_1::CmduMe
 
     const auto &src_mac = tlvAlMac->mac();
     LOG(DEBUG) << "AP-Autoconfiguration Renew Message from Controller " << src_mac;
+    auto db = AgentDB::get();
     if (src_mac != db->controller_info.bridge_mac) {
         LOG(ERROR) << "Ignoring AP-Autoconfiguration Renew Message from an unknown controller";
         return false;
@@ -4682,32 +4675,24 @@ bool slave_thread::handle_autoconfiguration_renew(Socket *sd, ieee1905_1::CmduMe
         return false;
     }
 
+    // Not reading tlvSupportedFreqBand since the Multi-AP Specification Version 2.0 section 7.1
+    // defines that should reply with AP-Autoconfiguration WSC message "for each of its radios,
+    // irrespective of the value specified in the SupportedFreqBand TLV.
     auto tlvSupportedFreqBand = cmdu_rx.getClass<ieee1905_1::tlvSupportedFreqBand>();
     if (!tlvSupportedFreqBand) {
         LOG(ERROR) << "tlvSupportedFreqBand missing - ignoring autoconfig renew message";
         return false;
     }
 
-    std::string band_name;
-    switch (tlvSupportedFreqBand->value()) {
-    case ieee1905_1::tlvSupportedFreqBand::BAND_2_4G:
-        band_name = "2.4GHz";
-        break;
-    case ieee1905_1::tlvSupportedFreqBand::BAND_5G:
-        band_name = "5GHz";
-        break;
-    case ieee1905_1::tlvSupportedFreqBand::BAND_60G:
-        LOG(ERROR) << "Received AP-Autoconfiguration Renew Message for 60GHz band, unsupported";
-        return false;
-    default:
-        LOG(ERROR) << "invalid tlvSupportedFreqBand value";
-        return false;
-    }
-    LOG(INFO) << "Received AP-Autoconfiguration Renew Message for " << band_name << " band";
+    for (const auto radio : db->get_radios_list()) {
+        if (!radio) {
+            return false;
+        }
+        auto &radio_manager = m_radio_managers[radio->front.iface_name];
 
-    // Continue on to STATE_JOIN_MASTER
-    LOG(TRACE) << "goto STATE_JOIN_MASTER";
-    slave_state = STATE_JOIN_MASTER;
+        LOG(TRACE) << "goto STATE_JOIN_MASTER";
+        radio_manager.slave_state = STATE_JOIN_MASTER;
+    }
     return true;
 }
 
