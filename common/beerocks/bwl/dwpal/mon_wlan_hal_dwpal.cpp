@@ -988,51 +988,38 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
 {
     LOG(DEBUG) << "Channel scan trigger received on interface=" << m_radio_info.iface_name;
 
-    //build scan parameters
+    //build background scan parameters
     ScanParams channel_scan_params = {0};
-    sScanCfgParams org_fg, new_fg;   //foreground scan param
-    sScanCfgParamsBG org_bg, new_bg; //background scan param
-    size_t bg_size = ScanCfgParams_size_invalid, fg_size = ScanCfgParams_size_invalid;
+    sScanCfgParamsBG params_bg; //background scan param
+    size_t bg_size = ScanCfgParams_size_invalid;
 
-    // get original scan params
-    if (!dwpal_get_scan_params_fg(org_fg, fg_size) || !dwpal_get_scan_params_bg(org_bg, bg_size)) {
+    // get original background scan params
+    if (!dwpal_get_scan_params_bg(params_bg, bg_size)) {
         LOG(ERROR) << "Failed getting original scan parameters";
         return false;
     }
 
-    // prepare new scan params with changed dwell time
-    new_fg                    = org_fg;
-    new_bg                    = org_bg;
-    new_fg.passive_dwell_time = dwell_time_msec;
-    new_fg.active_dwell_time  = dwell_time_msec;
-    new_bg.passive_dwell_time = dwell_time_msec;
-    new_bg.active_dwell_time  = dwell_time_msec;
-
-    // set new scan params & get newly set values for validation
-    if (!dwpal_set_scan_params_fg(new_fg, fg_size) || !dwpal_set_scan_params_bg(new_bg, bg_size)) {
-        LOG(ERROR) << "Failed setting new values, restoring original scan parameters";
-        dwpal_set_scan_params_fg(org_fg, fg_size);
-        dwpal_set_scan_params_bg(org_bg, bg_size);
-        return false;
+    if (dwell_time_msec <= (int)params_bg.window_slice) {
+        LOG(DEBUG) << "dwell_time_msec=" << dwell_time_msec
+                   << " <= window_slice=" << params_bg.window_slice;
+        dwell_time_msec = params_bg.window_slice + 1;
     }
 
-    if (!dwpal_get_scan_params_fg(new_fg, fg_size) || !dwpal_get_scan_params_bg(new_bg, bg_size) ||
-        (new_fg.active_dwell_time != dwell_time_msec) ||
-        (new_fg.passive_dwell_time != dwell_time_msec) ||
-        (new_bg.active_dwell_time != dwell_time_msec) ||
-        (new_bg.passive_dwell_time != dwell_time_msec)) {
-        LOG(ERROR) << "Validation failed, restoring original scan parameters";
-        dwpal_set_scan_params_fg(org_fg, fg_size);
-        dwpal_set_scan_params_bg(org_bg, bg_size);
-        return false;
+    if (params_bg.active_dwell_time != dwell_time_msec ||
+        params_bg.passive_dwell_time != dwell_time_msec) {
+        params_bg.active_dwell_time  = dwell_time_msec;
+        params_bg.passive_dwell_time = dwell_time_msec;
+        LOG(DEBUG) << "Setting NEW scan params, dwell=" << dwell_time_msec;
+        if (!dwpal_set_scan_params_bg(params_bg, bg_size)) {
+            LOG(ERROR) << "Failed setting new scan parameters";
+            return false;
+        }
     }
 
     // get frequencies from channel pool and set in scan_params
     if (!dwpal_get_channel_scan_freq(channel_pool, m_radio_info.channel, m_radio_info.iface_name,
                                      channel_scan_params)) {
-        LOG(ERROR) << "Failed getting frequencies, restoring original scan parameters";
-        dwpal_set_scan_params_fg(org_fg, fg_size);
-        dwpal_set_scan_params_bg(org_bg, bg_size);
+        LOG(ERROR) << "Failed getting frequencies";
         return false;
     }
 
@@ -1044,30 +1031,10 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
                                                  (char *)m_radio_info.iface_name.c_str(), &cmd_res,
                                                  &channel_scan_params);
     if (ret != DWPAL_SUCCESS && cmd_res != 0) {
-        LOG(ERROR) << " scan trigger failed! Abort scan, restoring original scan parameters";
-        dwpal_set_scan_params_fg(org_fg, fg_size);
-        dwpal_set_scan_params_bg(org_bg, bg_size);
+        LOG(ERROR) << " scan trigger failed! Abort scan";
         return false;
     }
     m_scan_was_triggered_internally = true;
-
-    // restoring channel scan params with original dwell time.
-    // dwpal_driver_nl_scan_trigger() API doesn't include dwell time parameter
-    // so we have to change and restore driver scan parameters on the fly.
-    // no reason to check since we restore the original params here anyway
-    // and the next validation will validate the change.
-    dwpal_set_scan_params_fg(org_fg, fg_size);
-    dwpal_set_scan_params_bg(org_bg, bg_size);
-
-    // validate if "set" function to original values worked
-    if (!dwpal_get_scan_params_fg(new_fg, fg_size) || !dwpal_get_scan_params_bg(new_bg, bg_size) ||
-        (new_fg.active_dwell_time != org_fg.active_dwell_time) ||
-        (new_fg.passive_dwell_time != org_fg.passive_dwell_time) ||
-        (new_bg.active_dwell_time != org_bg.active_dwell_time) ||
-        (new_bg.passive_dwell_time != org_bg.passive_dwell_time)) {
-        LOG(ERROR) << "Validation failed, original scan parameters were not restored";
-        return false;
-    }
 
     return true;
 }
