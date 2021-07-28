@@ -297,8 +297,8 @@ std::shared_ptr<sAgent> db::add_node_ire(const sMacAddr &mac, const sMacAddr &pa
     return agent;
 }
 
-std::shared_ptr<sStation> db::add_node_wireless_backhaul(const sMacAddr &mac,
-                                                         const sMacAddr &parent_mac)
+std::shared_ptr<Station> db::add_node_wireless_backhaul(const sMacAddr &mac,
+                                                        const sMacAddr &parent_mac)
 {
     auto station = m_stations.add(mac);
 
@@ -428,7 +428,7 @@ bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac)
     return true;
 }
 
-std::shared_ptr<sStation> db::add_node_station(const sMacAddr &mac, const sMacAddr &parent_mac)
+std::shared_ptr<Station> db::add_node_station(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
     auto station = m_stations.add(mac);
 
@@ -3294,7 +3294,7 @@ bool db::add_client_to_persistent_db(const sMacAddr &mac, const ValuesMap &param
     return true;
 }
 
-bool db::set_client_time_life_delay(sStation &client,
+bool db::set_client_time_life_delay(Station &client,
                                     const std::chrono::minutes &time_life_delay_minutes,
                                     bool save_to_persistent_db)
 {
@@ -3328,7 +3328,7 @@ bool db::set_client_time_life_delay(sStation &client,
     return true;
 }
 
-bool db::set_client_stay_on_initial_radio(sStation &client, bool stay_on_initial_radio,
+bool db::set_client_stay_on_initial_radio(Station &client, bool stay_on_initial_radio,
                                           bool save_to_persistent_db)
 {
     auto mac  = client.mac;
@@ -3395,7 +3395,7 @@ bool db::set_client_stay_on_initial_radio(sStation &client, bool stay_on_initial
     return true;
 }
 
-bool db::set_client_initial_radio(sStation &client, const sMacAddr &initial_radio_mac,
+bool db::set_client_initial_radio(Station &client, const sMacAddr &initial_radio_mac,
                                   bool save_to_persistent_db)
 {
     auto mac  = client.mac;
@@ -3441,7 +3441,7 @@ bool db::set_client_initial_radio(sStation &client, const sMacAddr &initial_radi
     return true;
 }
 
-bool db::set_client_selected_bands(sStation &client, int8_t selected_bands,
+bool db::set_client_selected_bands(Station &client, int8_t selected_bands,
                                    bool save_to_persistent_db)
 {
     auto mac  = client.mac;
@@ -3481,7 +3481,7 @@ bool db::set_client_selected_bands(sStation &client, int8_t selected_bands,
     return true;
 }
 
-bool db::set_client_is_unfriendly(sStation &client, bool client_is_unfriendly,
+bool db::set_client_is_unfriendly(Station &client, bool client_is_unfriendly,
                                   bool save_to_persistent_db)
 {
     auto mac = client.mac;
@@ -3574,7 +3574,7 @@ bool db::is_hostap_on_client_selected_bands(const sMacAddr &client_mac, const sM
     }
 }
 
-bool db::update_client_persistent_db(sStation &client)
+bool db::update_client_persistent_db(Station &client)
 {
     // if persistent db is disabled
     if (!config.persistent_db) {
@@ -5047,7 +5047,7 @@ std::shared_ptr<sAgent::sRadio> db::get_radio_by_uid(const sMacAddr &radio_uid)
     return {};
 }
 
-std::shared_ptr<sStation> db::get_station(const sMacAddr &mac)
+std::shared_ptr<Station> db::get_station(const sMacAddr &mac)
 {
     auto station = m_stations.get(mac);
     if (!station) {

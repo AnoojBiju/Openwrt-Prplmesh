@@ -1890,7 +1890,7 @@ bool optimal_path_task::get_station_default_capabilities(
     }
 }
 
-double optimal_path_task::calculate_weighted_phy_rate(const sStation &client)
+double optimal_path_task::calculate_weighted_phy_rate(const Station &client)
 {
     auto if_type = database.get_node_backhaul_iface_type(tlvf::mac_to_string(client.mac));
 
