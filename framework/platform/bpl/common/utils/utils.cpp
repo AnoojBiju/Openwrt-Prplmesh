@@ -25,17 +25,17 @@ namespace utils {
 
 static const std::string WHITESPACE_CHARS(" \t\n\r\f\v");
 
-void ltrim(std::string &str, std::string additional_chars)
+void ltrim(std::string &str, const std::string &additional_chars)
 {
     str.erase(0, str.find_first_not_of(WHITESPACE_CHARS + additional_chars));
 }
 
-void rtrim(std::string &str, std::string additional_chars)
+void rtrim(std::string &str, const std::string &additional_chars)
 {
     str.erase(str.find_last_not_of(WHITESPACE_CHARS + additional_chars) + 1);
 }
 
-void trim(std::string &str, std::string additional_chars)
+void trim(std::string &str, const std::string &additional_chars)
 {
     ltrim(str, additional_chars);
     rtrim(str, additional_chars);
