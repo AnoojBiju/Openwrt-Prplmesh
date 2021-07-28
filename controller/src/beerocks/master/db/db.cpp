@@ -287,8 +287,8 @@ std::shared_ptr<sAgent> db::add_node_ire(const sMacAddr &mac, const sMacAddr &pa
     return agent;
 }
 
-std::shared_ptr<sStation> db::add_node_wireless_backhaul(const sMacAddr &mac,
-                                                         const sMacAddr &parent_mac)
+std::shared_ptr<Station> db::add_node_wireless_backhaul(const sMacAddr &mac,
+                                                        const sMacAddr &parent_mac)
 {
     auto station = m_stations.add(mac);
 
@@ -416,7 +416,7 @@ bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac)
     return true;
 }
 
-std::shared_ptr<sStation> db::add_node_station(const sMacAddr &mac, const sMacAddr &parent_mac)
+std::shared_ptr<Station> db::add_node_station(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
     auto station = m_stations.add(mac);
 
@@ -5162,7 +5162,7 @@ std::shared_ptr<sAgent::sRadio> db::get_radio_by_uid(const sMacAddr &radio_uid)
     return {};
 }
 
-std::shared_ptr<sStation> db::get_station(const sMacAddr &mac)
+std::shared_ptr<Station> db::get_station(const sMacAddr &mac)
 {
     auto station = m_stations.get(mac);
     if (!station) {

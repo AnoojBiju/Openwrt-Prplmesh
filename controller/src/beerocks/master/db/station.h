@@ -20,11 +20,11 @@ namespace db {
  *
  * Struct representing a station. It can be a client or a backhaul station.
  */
-struct sStation {
+class Station {
 public:
-    sStation()                 = delete;
-    sStation(const sStation &) = delete;
-    explicit sStation(const sMacAddr &mac_) : mac(mac_) {}
+    Station()                = delete;
+    Station(const Station &) = delete;
+    explicit Station(const sMacAddr &mac_) : mac(mac_) {}
 
     const sMacAddr mac;
 
