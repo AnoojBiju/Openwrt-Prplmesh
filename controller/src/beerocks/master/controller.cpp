@@ -2154,7 +2154,8 @@ bool Controller::handle_intel_slave_join(
             //add a placeholder
             LOG(DEBUG) << "add a placeholder backhaul_mac = " << backhaul_mac
                        << ", parent_bssid_mac = " << parent_bssid_mac;
-            database.add_node_wireless_bh(tlvf::mac_from_string(backhaul_mac), parent_bssid_mac);
+            database.add_node_wireless_backhaul(tlvf::mac_from_string(backhaul_mac),
+                                                parent_bssid_mac);
         } else if (database.get_node_state(backhaul_mac) != beerocks::STATE_CONNECTED) {
             /* if the backhaul node doesn't exist, or is not already marked as connected,
             * we assume it is connected to the GW's LAN switch
@@ -2179,8 +2180,8 @@ bool Controller::handle_intel_slave_join(
             LOG(DEBUG) << "add a placeholder backhaul_mac = " << backhaul_mac
                        << " gw_lan_switch = " << gw_lan_switch
                        << " TYPE_IRE_BACKHAUL , STATE_CONNECTED";
-            database.add_node_wireless_bh(tlvf::mac_from_string(backhaul_mac),
-                                          tlvf::mac_from_string(gw_lan_switch));
+            database.add_node_wireless_backhaul(tlvf::mac_from_string(backhaul_mac),
+                                                tlvf::mac_from_string(gw_lan_switch));
             database.set_node_state(backhaul_mac, beerocks::STATE_CONNECTED);
         }
     } else {
@@ -2240,7 +2241,7 @@ bool Controller::handle_intel_slave_join(
         ++eth_sw_mac_binary.oct[5];
 
         std::string eth_switch_mac = tlvf::mac_to_string(eth_sw_mac_binary);
-        database.add_node_wired_bh(tlvf::mac_from_string(eth_switch_mac), bridge_mac);
+        database.add_node_wired_backhaul(tlvf::mac_from_string(eth_switch_mac), bridge_mac);
         database.set_node_state(eth_switch_mac, beerocks::STATE_CONNECTED);
         database.set_node_name(eth_switch_mac, slave_name + "_ETH");
         database.set_node_ipv4(eth_switch_mac, bridge_ipv4);
@@ -2617,8 +2618,8 @@ bool Controller::handle_non_intel_slave_join(
 
     LOG(DEBUG) << "add a placeholder backhaul_mac = " << backhaul_mac
                << " gw_lan_switch = " << gw_lan_switch << " TYPE_IRE_BACKHAUL , STATE_CONNECTED";
-    database.add_node_wireless_bh(tlvf::mac_from_string(backhaul_mac),
-                                  tlvf::mac_from_string(gw_lan_switch));
+    database.add_node_wireless_backhaul(tlvf::mac_from_string(backhaul_mac),
+                                        tlvf::mac_from_string(gw_lan_switch));
     database.set_node_state(backhaul_mac, beerocks::STATE_CONNECTED);
 
     // TODO bridge handling.
@@ -2646,7 +2647,7 @@ bool Controller::handle_non_intel_slave_join(
     database.set_node_type(backhaul_mac, beerocks::TYPE_IRE_BACKHAUL);
     database.set_node_name(backhaul_mac, agent->manufacturer + "_BH");
     database.set_node_name(bridge_mac_str, agent->manufacturer);
-    database.add_node_wired_bh(tlvf::mac_from_string(eth_switch_mac), bridge_mac);
+    database.add_node_wired_backhaul(tlvf::mac_from_string(eth_switch_mac), bridge_mac);
     database.set_node_state(eth_switch_mac, beerocks::STATE_CONNECTED);
     database.set_node_name(eth_switch_mac, agent->manufacturer + "_ETH");
     database.set_node_manufacturer(eth_switch_mac, agent->manufacturer);
@@ -3226,7 +3227,7 @@ bool Controller::handle_cmdu_control_message(
 
         if (!database.has_node(tlvf::mac_from_string(client_mac))) {
             LOG(DEBUG) << "client mac not in DB, add temp node " << client_mac;
-            database.add_node_client(tlvf::mac_from_string(client_mac));
+            database.add_node_station(tlvf::mac_from_string(client_mac));
             database.update_node_last_seen(client_mac);
         }
 

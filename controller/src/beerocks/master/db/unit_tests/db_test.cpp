@@ -130,7 +130,7 @@ protected:
         // Load base settings with Radio added.
         DbTestRadio1::SetUp();
 
-        //expectations for add_node_client
+        //expectations for add_node_station
         EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_client_mac)).WillRepeatedly(Return(0));
         EXPECT_CALL(*m_ambiorix, add_instance(std::string(g_radio_1_bss_path_1) + ".STA"))
             .WillOnce(Return(std::string(g_radio_1_bss_path_1) + ".STA.1"));
@@ -158,8 +158,8 @@ protected:
             .WillOnce(Return(true));
 
         //prepare scenario
-        EXPECT_TRUE(m_db->add_node_client(tlvf::mac_from_string(g_client_mac),
-                                          tlvf::mac_from_string(g_radio_mac_1)));
+        EXPECT_TRUE(m_db->add_node_station(tlvf::mac_from_string(g_client_mac),
+                                           tlvf::mac_from_string(g_radio_mac_1)));
         EXPECT_TRUE(m_db->has_node(tlvf::mac_from_string(g_client_mac)));
         EXPECT_EQ(std::string(g_radio_1_bss_path_1) + ".STA.1",
                   m_db->get_node_data_model_path(g_client_mac));
@@ -789,7 +789,7 @@ TEST_F(DbTestRadio1Sta1, test_set_sta_link_metrics)
 TEST_F(DbTestRadio1Sta1, test_add_sta_twice_with_same_mac)
 {
 
-    //expectations for add_node_client second time
+    //expectations for add_node_station second time
     EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1), "MACAddress",
                                  Matcher<const std::string &>(g_client_mac)))
         .WillOnce(Return(true));
@@ -811,8 +811,8 @@ TEST_F(DbTestRadio1Sta1, test_add_sta_twice_with_same_mac)
     EXPECT_CALL(*m_ambiorix, set_current_time(std::string(g_assoc_event_path_1)))
         .WillRepeatedly(Return(true));
     //prepare scenario
-    EXPECT_TRUE(m_db->add_node_client(tlvf::mac_from_string(g_client_mac),
-                                      tlvf::mac_from_string(g_radio_mac_1)));
+    EXPECT_TRUE(m_db->add_node_station(tlvf::mac_from_string(g_client_mac),
+                                       tlvf::mac_from_string(g_radio_mac_1)));
     EXPECT_TRUE(m_db->has_node(tlvf::mac_from_string(g_client_mac)));
     EXPECT_EQ(std::string(g_radio_1_bss_path_1) + ".STA.1",
               m_db->get_node_data_model_path(g_client_mac));
@@ -821,7 +821,7 @@ TEST_F(DbTestRadio1Sta1, test_add_sta_twice_with_same_mac)
 TEST_F(DbTestRadio1Sta1, test_remove_sta)
 {
 
-    //expectations for add_node_client second time
+    //expectations for add_node_station second time
     EXPECT_CALL(*m_ambiorix, remove_instance(std::string(g_radio_1_bss_path_1) + ".STA", 1))
         .WillRepeatedly(Return(true));
 
