@@ -299,6 +299,11 @@ bool ApManager::create_ap_wlan_hal()
         return false;
     }
 
+    if (!beerocks::bpl::bpl_cfg_get_monitored_BSSs_by_radio_iface(m_iface,
+                                                                  hal_conf.monitored_BSSs)) {
+        LOG(DEBUG) << "Failed to get radio-monitored-BSSs for interface " << m_iface;
+    }
+
     // Create a new AP HAL instance
     ap_wlan_hal = bwl::ap_wlan_hal_create(m_iface, hal_conf,
                                           std::bind(&ApManager::hal_event_handler, this, _1));

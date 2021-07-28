@@ -171,6 +171,7 @@ struct RadioInfo {
 struct hal_conf_t {
     bool ap_acs_enabled = false;
     std::string wpa_ctrl_path;
+    std::set<std::string> monitored_BSSs;
 };
 
 //sta_wlan_hal
