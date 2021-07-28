@@ -4810,7 +4810,9 @@ bool slave_thread::send_error_response(
         profile2_error_code_tlv->reason_code() = reason;
         profile2_error_code_tlv->bssid()       = bssid;
 
-        send_cmdu_to_controller(cmdu_tx);
+        // This is not relevant from which "radio" the error will be sent from, so choose the first.
+        const auto &fronthaul_iface = m_radio_managers.begin()->first;
+        send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
     }
     return true;
 }
@@ -5345,7 +5347,9 @@ bool slave_thread::handle_1905_higher_layer_data_message(Socket &sd,
         return false;
     }
     LOG(DEBUG) << "Sending ACK message to the originator, mid=" << std::hex << int(mid);
-    return send_cmdu_to_controller(cmdu_tx);
+
+    const auto &fronthaul_iface = m_radio_managers.begin()->first;
+    return send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
 }
 
 bool slave_thread::handle_ack_message(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
@@ -5450,7 +5454,8 @@ bool slave_thread::handle_client_steering_request(Socket *sd, ieee1905_1::CmduMe
         }
 
         LOG(DEBUG) << "sending ACK message back to controller";
-        send_cmdu_to_controller(cmdu_tx);
+        const auto &fronthaul_iface = m_radio_managers.begin()->first;
+        send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
 
         // build and send steering completed message
         cmdu_tx_header = cmdu_tx.create(0, ieee1905_1::eMessageType::STEERING_COMPLETED_MESSAGE);
@@ -5460,7 +5465,7 @@ bool slave_thread::handle_client_steering_request(Socket *sd, ieee1905_1::CmduMe
             return false;
         }
         LOG(DEBUG) << "sending STEERING_COMPLETED_MESSAGE back to controller";
-        return send_cmdu_to_controller(cmdu_tx);
+        return send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
     }
 }
 
