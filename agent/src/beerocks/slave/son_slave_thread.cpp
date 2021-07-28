@@ -1818,32 +1818,26 @@ bool slave_thread::handle_cmdu_platform_manager_message(
 bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_iface, Socket *sd,
                                                   std::shared_ptr<beerocks_header> beerocks_header)
 {
-    if (ap_manager_socket != sd &&
-        beerocks_header->action_op() != beerocks_message::ACTION_APMANAGER_UP_NOTIFICATION) {
-        LOG(ERROR) << "Unknown socket, ACTION_APMANAGER action_op: "
-                   << int(beerocks_header->action_op())
-                   << ", ap_manager_socket=" << intptr_t(ap_manager_socket)
-                   << ", incoming sd=" << intptr_t(sd);
-        return true;
-    } else if (beerocks_header->action_op() ==
-               beerocks_message::ACTION_APMANAGER_HEARTBEAT_NOTIFICATION) {
-        ap_manager_last_seen       = std::chrono::steady_clock::now();
-        ap_manager_retries_counter = 0;
-        return true;
-    }
-
-    switch (beerocks_header->action_op()) {
-    case beerocks_message::ACTION_APMANAGER_UP_NOTIFICATION: {
-        LOG(INFO) << "received ACTION_APMANAGER_UP_NOTIFICATION from sd=" << intptr_t(sd);
-        if (ap_manager_socket) {
-            LOG(ERROR) << "AP manager opened new socket altough there is already open socket to it";
-            remove_socket(ap_manager_socket);
-            delete ap_manager_socket;
-            ap_manager_socket = nullptr;
+    if (beerocks_header->action_op() == beerocks_message::ACTION_APMANAGER_UP_NOTIFICATION) {
+        auto notification =
+            beerocks_header->addClass<beerocks_message::cACTION_APMANAGER_UP_NOTIFICATION>();
+        if (!notification) {
+            LOG(ERROR) << "addClass cACTION_APMANAGER_JOINED_NOTIFICATION failed";
+            return false;
         }
 
-        ap_manager_socket = sd;
-        add_socket(ap_manager_socket);
+        auto &radio_manager = m_radio_managers[notification->iface_name()];
+        LOG(INFO) << "received ACTION_APMANAGER_UP_NOTIFICATION from fronthaul "
+                  << notification->iface_name();
+        if (radio_manager.ap_manager_socket) {
+            LOG(ERROR) << "AP manager opened new socket altough there is already open socket to it";
+            remove_socket(radio_manager.ap_manager_socket);
+            delete radio_manager.ap_manager_socket;
+            radio_manager.ap_manager_socket = nullptr;
+        }
+
+        radio_manager.ap_manager_socket = sd;
+        add_socket(radio_manager.ap_manager_socket);
 
         auto config_msg =
             message_com::create_vs_message<beerocks_message::cACTION_APMANAGER_CONFIGURE>(cmdu_tx);
@@ -1854,12 +1848,26 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
 
         auto db = AgentDB::get();
         config_msg->channel() =
-            db->device_conf.front_radio.config[config.hostap_iface].configured_channel;
+            db->device_conf.front_radio.config[fronthaul_iface].configured_channel;
 
-        message_com::send_cmdu(ap_manager_socket, cmdu_tx);
-
-        break;
+        return message_com::send_cmdu(radio_manager.ap_manager_socket, cmdu_tx);
     }
+
+    if (fronthaul_iface.empty()) {
+        LOG(ERROR) << "Received message from unknown socket, fronthaul_iface is empty. action_op: "
+                   << beerocks_header->action_op();
+        return true;
+    }
+
+    auto &radio_manager = m_radio_managers[fronthaul_iface];
+
+    if (beerocks_header->action_op() == beerocks_message::ACTION_APMANAGER_HEARTBEAT_NOTIFICATION) {
+        radio_manager.ap_manager_last_seen       = std::chrono::steady_clock::now();
+        radio_manager.ap_manager_retries_counter = 0;
+        return true;
+    }
+
+    switch (beerocks_header->action_op()) {
     case beerocks_message::ACTION_APMANAGER_JOINED_NOTIFICATION: {
         LOG(INFO) << "received ACTION_APMANAGER_JOINED_NOTIFICATION " << fronthaul_iface;
         auto notification =
@@ -2900,44 +2908,58 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
 bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_iface, Socket *sd,
                                                std::shared_ptr<beerocks_header> beerocks_header)
 {
-    if (monitor_socket == nullptr) {
+    if (beerocks_header->action_op() == beerocks_message::ACTION_MONITOR_JOINED_NOTIFICATION) {
+        auto notification =
+            beerocks_header->addClass<beerocks_message::cACTION_MONITOR_JOINED_NOTIFICATION>();
+        if (!notification) {
+            LOG(ERROR) << "addClass cACTION_APMANAGER_JOINED_NOTIFICATION failed";
+            return false;
+        }
+        LOG(DEBUG) << "Received ACTION_MONITOR_JOINED_NOTIFICATION " << notification->iface_name();
+        auto &radio_manager = m_radio_managers[notification->iface_name()];
+        if (radio_manager.monitor_socket) {
+            LOG(ERROR) << "Monitor opened a new socket altough there is already open socket to it";
+            remove_socket(radio_manager.monitor_socket);
+            delete radio_manager.monitor_socket;
+            radio_manager.monitor_socket = nullptr;
+        }
+
+        radio_manager.monitor_socket = sd;
+
+        if (radio_manager.slave_state != STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED) {
+            LOG(WARNING) << "ACTION_MONITOR_JOINED_NOTIFICATION, but slave_state != "
+                            "STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED";
+        }
+        return true;
+    }
+
+    if (fronthaul_iface.empty()) {
+        LOG(ERROR) << "Received message from unknown socket, fronthaul_iface is empty. action_op: "
+                   << beerocks_header->action_op() << ", incoming sd=" << intptr_t(sd);
+        return true;
+    }
+    auto &radio_manager = m_radio_managers[fronthaul_iface];
+    if (!radio_manager.monitor_socket) {
         if (beerocks_header->action_op() != beerocks_message::ACTION_MONITOR_JOINED_NOTIFICATION) {
             LOG(ERROR) << "Not MONITOR_JOINED_NOTIFICATION, action_op: "
                        << int(beerocks_header->action_op());
             return true;
         }
-    } else if (monitor_socket != sd) {
+    } else if (radio_manager.monitor_socket != sd) {
         LOG(WARNING) << "Unknown socket, ACTION_MONITOR action_op: "
                      << int(beerocks_header->action_op());
         return true;
     } else if (beerocks_header->action_op() ==
                beerocks_message::ACTION_MONITOR_HEARTBEAT_NOTIFICATION) {
-        monitor_last_seen       = std::chrono::steady_clock::now();
-        monitor_retries_counter = 0;
+        radio_manager.monitor_last_seen       = std::chrono::steady_clock::now();
+        radio_manager.monitor_retries_counter = 0;
         return true;
-    } else if (master_socket == nullptr) {
+    } else if (radio_manager.master_socket == nullptr) {
         LOG(WARNING) << "master_socket == nullptr, MONITOR action_op: "
                      << int(beerocks_header->action_op());
     }
 
     switch (beerocks_header->action_op()) {
-    case beerocks_message::ACTION_MONITOR_JOINED_NOTIFICATION: {
-        LOG(DEBUG) << "Received ACTION_MONITOR_JOINED_NOTIFICATION";
-        if (slave_state != STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED) {
-            LOG(WARNING) << "ACTION_MONITOR_JOINED_NOTIFICATION, but slave_state != "
-                            "STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED";
-        }
-
-        if (monitor_socket) {
-            LOG(ERROR) << "Monitor opened a new socket altough there is already open socket to it";
-            remove_socket(monitor_socket);
-            delete monitor_socket;
-            monitor_socket = nullptr;
-        }
-
-        monitor_socket = sd;
-        break;
-    }
     case beerocks_message::ACTION_MONITOR_HOSTAP_AP_DISABLED_NOTIFICATION: {
         auto response_in =
             beerocks_header
