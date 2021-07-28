@@ -4700,12 +4700,6 @@ bool slave_thread::handle_profile2_default_802dotq_settings_tlv(ieee1905_1::Cmdu
 {
     auto db = AgentDB::get();
 
-    auto pvid_set_request = message_com::create_vs_message<
-        beerocks_message::cACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST>(cmdu_tx);
-    if (!pvid_set_request) {
-        LOG(ERROR) << "Failed building message!";
-        return false;
-    }
     auto dot1q_settings = cmdu_rx.getClass<wfa_map::tlvProfile2Default802dotQSettings>();
     // tlvProfile2Default802dotQSettings is not mandatory.
     if (!dot1q_settings) {
@@ -4719,10 +4713,20 @@ bool slave_thread::handle_profile2_default_802dotq_settings_tlv(ieee1905_1::Cmdu
     db->traffic_separation.primary_vlan_id = dot1q_settings->primary_vlan_id();
     db->traffic_separation.default_pcp     = dot1q_settings->default_pcp();
 
-    pvid_set_request->primary_vlan_id() = dot1q_settings->primary_vlan_id();
+    for (auto &radio_manager_map_element : m_radio_managers) {
+        auto &radio_manager   = radio_manager_map_element.second;
+        auto pvid_set_request = message_com::create_vs_message<
+            beerocks_message::cACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST>(cmdu_tx);
+        if (!pvid_set_request) {
+            LOG(ERROR) << "Failed building message!";
+            return false;
+        }
 
-    // Send ACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST.
-    message_com::send_cmdu(ap_manager_socket, cmdu_tx);
+        pvid_set_request->primary_vlan_id() = dot1q_settings->primary_vlan_id();
+
+        // Send ACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST.
+        message_com::send_cmdu(radio_manager.ap_manager_socket, cmdu_tx);
+    }
 
     return true;
 }
@@ -5190,7 +5194,6 @@ bool slave_thread::parse_non_intel_join_response(const std::string &fronthaul_if
 bool slave_thread::handle_multi_ap_policy_config_request(Socket *sd,
                                                          ieee1905_1::CmduMessageRx &cmdu_rx)
 {
-
     /**
      * The Multi-AP Policy Config Request message is sent by the controller and received by the
      * backhaul manager.
@@ -5223,21 +5226,6 @@ bool slave_thread::handle_multi_ap_policy_config_request(Socket *sd,
         db->traffic_separation.default_pcp     = 0;
     }
 
-    /**
-     * The slave in turn, forwards the request message again "as is" to the monitor thread.
-     */
-    if (!monitor_socket) {
-        LOG(ERROR) << "monitor_socket is null";
-        return false;
-    }
-
-    uint16_t length = message_com::get_uds_header(cmdu_rx)->length;
-    cmdu_rx.swap(); // swap back before forwarding
-    if (!message_com::forward_cmdu_to_uds(monitor_socket, cmdu_rx, length)) {
-        LOG(ERROR) << "Failed to forward message to monitor";
-        return false;
-    }
-
     std::deque<std::pair<wfa_map::tlvProfile2ErrorCode::eReasonCode, sMacAddr>> bss_errors;
     if (!misconfigured_ssids.empty()) {
         bss_errors.push_back({wfa_map::tlvProfile2ErrorCode::eReasonCode::
@@ -5250,11 +5238,31 @@ bool slave_thread::handle_multi_ap_policy_config_request(Socket *sd,
         return false;
     }
 
-    if (m_autoconfiguration_completed) {
-        TrafficSeparation::apply_traffic_separation(m_fronthaul_iface);
-    } else {
-        LOG(WARNING) << "autoconfiguration procedure is not completed yet, traffic separation "
-                     << "policy cannot be applied";
+    cmdu_rx.swap(); // swap back before forwarding
+    for (auto &radio_manager_map_element : m_radio_managers) {
+        const auto &fronthaul_iface = radio_manager_map_element.first;
+        auto &radio_manager         = radio_manager_map_element.second;
+
+        /**
+         * The slave in turn, forwards the request message again "as is" to the monitor thread.
+         */
+        if (!radio_manager.monitor_socket) {
+            LOG(ERROR) << "monitor_socket is null";
+            return false;
+        }
+
+        uint16_t length = message_com::get_uds_header(cmdu_rx)->length;
+        if (!message_com::forward_cmdu_to_uds(radio_manager.monitor_socket, cmdu_rx, length)) {
+            LOG(ERROR) << "Failed to forward message to monitor";
+            return false;
+        }
+
+        if (radio_manager.autoconfiguration_completed) {
+            TrafficSeparation::apply_traffic_separation(fronthaul_iface);
+        } else {
+            LOG(WARNING) << "autoconfiguration procedure is not completed yet, traffic separation "
+                         << "policy cannot be applied";
+        }
     }
 
     return true;
@@ -5506,15 +5514,19 @@ bool slave_thread::handle_channel_preference_query(Socket *sd, ieee1905_1::CmduM
     const auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Received CHANNEL_PREFERENCE_QUERY_MESSAGE, mid=" << std::dec << int(mid);
 
-    auto request_out =
-        message_com::create_vs_message<beerocks_message::cACTION_APMANAGER_CHANNELS_LIST_REQUEST>(
-            cmdu_tx, mid);
+    for (auto &radio_manager_map_element : m_radio_managers) {
+        auto request_out = message_com::create_vs_message<
+            beerocks_message::cACTION_APMANAGER_CHANNELS_LIST_REQUEST>(cmdu_tx, mid);
 
-    if (!request_out) {
-        LOG(ERROR) << "Failed building message ACTION_APMANAGER_CHANNELS_LIST_REQUEST!";
-        return false;
+        if (!request_out) {
+            LOG(ERROR) << "Failed building message ACTION_APMANAGER_CHANNELS_LIST_REQUEST!";
+            return false;
+        }
+
+        auto &radio_manager = radio_manager_map_element.second;
+        message_com::send_cmdu(radio_manager.ap_manager_socket, cmdu_tx);
     }
-    return message_com::send_cmdu(ap_manager_socket, cmdu_tx);
+    return true;
 }
 
 wfa_map::cPreferenceOperatingClasses::ePreference
@@ -5771,101 +5783,110 @@ bool slave_thread::handle_channel_selection_request(Socket *sd, ieee1905_1::Cmdu
     const auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Received CHANNEL_SELECTION_REQUEST_MESSAGE, mid=" << std::dec << int(mid);
 
-    auto db    = AgentDB::get();
-    auto radio = db->radio(m_fronthaul_iface);
-    if (!radio) {
-        LOG(DEBUG) << "Radio of interface " << m_fronthaul_iface << " does not exist on the db";
-        return false;
-    }
+    std::string fronthaul_iface;
+    for (auto &radio_manager_map_element : m_radio_managers) {
+        fronthaul_iface     = radio_manager_map_element.first;
+        auto &radio_manager = radio_manager_map_element.second;
 
-    int power_limit           = 0;
-    bool power_limit_received = channel_selection_get_transmit_power_limit(cmdu_rx, power_limit);
-
-    auto response_code = wfa_map::tlvChannelSelectionResponse::eResponseCode::ACCEPT;
-    beerocks::message::sWifiChannel channel_to_switch;
-    bool switch_required = false;
-    if (get_controller_channel_preference(cmdu_rx)) {
-        // Only restricted channels are be included in channel selection request.
-        if (channel_selection_current_channel_restricted()) {
-            channel_to_switch = channel_selection_select_channel();
-            if (channel_to_switch.channel != 0) {
-                switch_required = true;
-                LOG(INFO) << "Switch to channel " << channel_to_switch.channel << ", bw "
-                          << beerocks::utils::convert_bandwidth_to_int(
-                                 beerocks::eWiFiBandwidth(channel_to_switch.channel_bandwidth));
-            } else {
-                LOG(INFO) << "Decline channel selection request " << radio->front.iface_mac;
-                response_code = wfa_map::tlvChannelSelectionResponse::eResponseCode::
-                    DECLINE_VIOLATES_MOST_RECENTLY_REPORTED_PREFERENCES;
-            }
+        auto db    = AgentDB::get();
+        auto radio = db->radio(fronthaul_iface);
+        if (!radio) {
+            return false;
         }
-    } else {
-        LOG(ERROR) << "Failed to update channel preference";
-        response_code = wfa_map::tlvChannelSelectionResponse::eResponseCode::
-            DECLINE_VIOLATES_MOST_RECENTLY_REPORTED_PREFERENCES;
-    }
 
-    // build and send channel response message
-    if (!cmdu_tx.create(mid, ieee1905_1::eMessageType::CHANNEL_SELECTION_RESPONSE_MESSAGE)) {
-        LOG(ERROR) << "cmdu creation of type CHANNEL_SELECTION_RESPONSE_MESSAGE, has failed";
-        return false;
-    }
+        int power_limit = 0;
+        bool power_limit_received =
+            channel_selection_get_transmit_power_limit(fronthaul_iface, cmdu_rx, power_limit);
 
-    auto channel_selection_response_tlv = cmdu_tx.addClass<wfa_map::tlvChannelSelectionResponse>();
-    if (!channel_selection_response_tlv) {
-        LOG(ERROR) << "addClass ieee1905_1::tlvChannelSelectionResponse has failed";
-        return false;
-    }
+        auto response_code = wfa_map::tlvChannelSelectionResponse::eResponseCode::ACCEPT;
+        beerocks::message::sWifiChannel channel_to_switch;
+        bool switch_required = false;
+        if (get_controller_channel_preference(fronthaul_iface, cmdu_rx)) {
+            // Only restricted channels are be included in channel selection request.
+            if (channel_selection_current_channel_restricted(fronthaul_iface)) {
+                channel_to_switch = channel_selection_select_channel(fronthaul_iface);
+                if (channel_to_switch.channel != 0) {
+                    switch_required = true;
+                    LOG(INFO) << "Switch to channel " << channel_to_switch.channel << ", bw "
+                              << beerocks::utils::convert_bandwidth_to_int(
+                                     beerocks::eWiFiBandwidth(channel_to_switch.channel_bandwidth));
+                } else {
+                    LOG(INFO) << "Decline channel selection request " << radio->front.iface_mac;
+                    response_code = wfa_map::tlvChannelSelectionResponse::eResponseCode::
+                        DECLINE_VIOLATES_MOST_RECENTLY_REPORTED_PREFERENCES;
+                }
+            }
+        } else {
+            LOG(ERROR) << "Failed to update channel preference";
+            response_code = wfa_map::tlvChannelSelectionResponse::eResponseCode::
+                DECLINE_VIOLATES_MOST_RECENTLY_REPORTED_PREFERENCES;
+        }
 
-    channel_selection_response_tlv->radio_uid()     = radio->front.iface_mac;
-    channel_selection_response_tlv->response_code() = response_code;
-    if (!message_com::send_cmdu(backhaul_manager_socket, cmdu_tx)) {
-        LOG(ERROR) << "failed to send CHANNEL_SELECTION_RESPONSE_MESSAGE";
-        return false;
-    }
+        // build and send channel response message
+        if (!cmdu_tx.create(mid, ieee1905_1::eMessageType::CHANNEL_SELECTION_RESPONSE_MESSAGE)) {
+            LOG(ERROR) << "cmdu creation of type CHANNEL_SELECTION_RESPONSE_MESSAGE, has failed";
+            return false;
+        }
 
-    // Normally, when a channel switch is required, a CSA notification
-    // will be received with the new channel setting which is when
-    // the agent will send the operating channel report.
-    // In case of only a tx power limit change, there will still be
-    // a CSA notification which will hold the new power limit and also
-    // trigger sending the operating channel report.
-    // If neither channel switch nor power limit change is required,
-    // we need to explicitly send the event.
-    if (!switch_required && !power_limit_received) {
-        LOG(DEBUG) << "Channel switch not required, sending operating channel report";
-        send_operating_channel_report();
-        return true;
-    }
+        auto channel_selection_response_tlv =
+            cmdu_tx.addClass<wfa_map::tlvChannelSelectionResponse>();
+        if (!channel_selection_response_tlv) {
+            LOG(ERROR) << "addClass ieee1905_1::tlvChannelSelectionResponse has failed";
+            return false;
+        }
 
-    auto request_out = message_com::create_vs_message<
-        beerocks_message::cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START>(cmdu_tx, mid);
-    if (!request_out) {
-        LOG(ERROR) << "Failed building message!";
-        return false;
-    }
+        channel_selection_response_tlv->radio_uid()     = radio->front.iface_mac;
+        channel_selection_response_tlv->response_code() = response_code;
+        // Send ack back to the sender.
+        if (!message_com::send_cmdu(sd, cmdu_tx)) {
+            LOG(ERROR) << "failed to send CHANNEL_SELECTION_RESPONSE_MESSAGE";
+            return false;
+        }
 
-    LOG(DEBUG) << "send ACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START";
+        // Normally, when a channel switch is required, a CSA notification
+        // will be received with the new channel setting which is when
+        // the agent will send the operating channel report.
+        // In case of only a tx power limit change, there will still be
+        // a CSA notification which will hold the new power limit and also
+        // trigger sending the operating channel report.
+        // If neither channel switch nor power limit change is required,
+        // we need to explicitly send the event.
+        if (!switch_required && !power_limit_received) {
+            LOG(DEBUG) << "Channel switch not required, sending operating channel report";
+            send_operating_channel_report(fronthaul_iface);
+            continue;
+        }
 
-    // If only tx power limit change is required, set channel to current
-    request_out->cs_params().channel = switch_required ? channel_to_switch.channel : radio->channel;
-    request_out->cs_params().bandwidth =
-        switch_required ? channel_to_switch.channel_bandwidth : uint8_t(radio->bandwidth);
-    request_out->tx_limit()       = power_limit;
-    request_out->tx_limit_valid() = power_limit_received;
+        auto request_out = message_com::create_vs_message<
+            beerocks_message::cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START>(cmdu_tx, mid);
+        if (!request_out) {
+            LOG(ERROR) << "Failed building message!";
+            return false;
+        }
 
-    ///////////////////////////////////////////////////////////////////
-    // TODO https://github.com/prplfoundation/prplMesh/issues/797
-    //
-    // Short term solution
-    // In non-EasyMesh mode, never modify hostapd configuration
-    // and in this case don't switch channel
-    //
-    ////////////////////////////////////////////////////////////////////
-    if (db->device_conf.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
-        message_com::send_cmdu(ap_manager_socket, cmdu_tx);
-    } else {
-        LOG(WARNING) << "non-EasyMesh mode - skip channel switch";
+        LOG(DEBUG) << "send ACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START";
+
+        // If only tx power limit change is required, set channel to current
+        request_out->cs_params().channel =
+            switch_required ? channel_to_switch.channel : radio->channel;
+        request_out->cs_params().bandwidth =
+            switch_required ? channel_to_switch.channel_bandwidth : uint8_t(radio->bandwidth);
+        request_out->tx_limit()       = power_limit;
+        request_out->tx_limit_valid() = power_limit_received;
+
+        ///////////////////////////////////////////////////////////////////
+        // TODO https://github.com/prplfoundation/prplMesh/issues/797
+        //
+        // Short term solution
+        // In non-EasyMesh mode, never modify hostapd configuration
+        // and in this case don't switch channel
+        //
+        ////////////////////////////////////////////////////////////////////
+        if (db->device_conf.management_mode != BPL_MGMT_MODE_NOT_MULTIAP) {
+            message_com::send_cmdu(radio_manager.ap_manager_socket, cmdu_tx);
+        } else {
+            LOG(WARNING) << "non-EasyMesh mode - skip channel switch";
+        }
     }
 
     return true;
