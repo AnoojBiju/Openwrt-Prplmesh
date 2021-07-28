@@ -32,6 +32,8 @@ args+=("sah")
 
 if [ -n "$MMX_ENABLE" ] ; then
     args+=("mmx")
+else
+    args+=("webui")
 fi
 
 ./scripts/gen_config.py "${args[@]}"
