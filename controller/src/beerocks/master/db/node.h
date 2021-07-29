@@ -67,7 +67,6 @@ public:
     std::string radio_identifier;
 
     std::string ipv4;
-    std::string ipv6;
     std::string manufacturer;
     int channel = 0;
     std::string name;
@@ -80,25 +79,15 @@ public:
     bool channel_ext_above_secondary   = true;
 
     beerocks::eNodeState state = beerocks::STATE_DISCONNECTED;
-    bool handoff               = false;
-    bool confined              = false;
 
     bool supports_5ghz            = true;
     int failed_5ghz_steer_attemps = 0;
 
     bool supports_24ghz            = true;
     int failed_24ghz_steer_attemps = 0;
-    beerocks::eBeaconMeasurementSupportLevel supports_beacon_measurement =
-        beerocks::BEACON_MEAS_UNSUPPORTED;
-    bool supports_11v            = true;
-    int failed_11v_request_count = 0;
 
     std::chrono::steady_clock::time_point last_state_change;
 
-    int association_handling_task_id             = -1;
-    int steering_task_id                         = -1;
-    int roaming_task_id                          = -1;
-    int load_balancer_task_id                    = -1;
     int client_locating_task_id_new_connection   = -1;
     int client_locating_task_id_exist_connection = -1;
     int dynamic_channel_selection_task_id        = -1;
@@ -124,15 +113,6 @@ public:
         std::chrono::steady_clock::time_point timestamp = std::chrono::steady_clock::now();
     };
     std::shared_ptr<sta_stats_params> stats_info;
-
-    uint16_t max_supported_phy_rate_100kb = 0;
-
-    uint16_t cross_rx_phy_rate_100kb   = 0;
-    uint16_t cross_tx_phy_rate_100kb   = 0;
-    double cross_estimated_rx_phy_rate = 0.0;
-    double cross_estimated_tx_phy_rate = 0.0;
-
-    bool ire_handoff = false;
 
     class radio {
     public:

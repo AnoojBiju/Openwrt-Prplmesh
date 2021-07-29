@@ -76,6 +76,8 @@ public:
 
     beerocks::eNodeState state = beerocks::STATE_CONNECTED;
 
+    int load_balancer_task_id = -1;
+
     struct sRadio {
         sRadio()               = delete;
         sRadio(const sRadio &) = delete;

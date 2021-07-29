@@ -441,11 +441,8 @@ public:
     bool set_node_vap_id(const std::string &mac, int8_t vap_id);
     int8_t get_node_vap_id(const std::string &mac);
 
-    bool set_node_beacon_measurement_support_level(
-        const std::string &mac,
-        beerocks::eBeaconMeasurementSupportLevel support_beacon_measurement);
-    beerocks::eBeaconMeasurementSupportLevel
-    get_node_beacon_measurement_support_level(const std::string &mac);
+    void set_node_beacon_measurement_support_level(
+        sStation &station, beerocks::eBeaconMeasurementSupportLevel support_beacon_measurement);
 
     bool set_node_name(const std::string &mac, std::string name);
 
@@ -454,11 +451,8 @@ public:
 
     std::chrono::steady_clock::time_point get_last_state_change(const std::string &mac);
 
-    bool set_node_handoff_flag(const std::string &mac, bool handoff);
-    bool get_node_handoff_flag(const std::string &mac);
-
-    bool set_node_confined_flag(const std::string &mac, bool flag);
-    bool get_node_confined_flag(const std::string &mac);
+    bool set_node_handoff_flag(sStation &station, bool handoff);
+    bool get_node_handoff_flag(const sStation &station);
 
     bool update_node_last_seen(const std::string &mac);
 
@@ -886,8 +880,7 @@ public:
      */
     bool can_start_client_steering(const std::string &sta_mac, const std::string &bssid);
 
-    bool update_node_11v_responsiveness(const std::string &mac, bool success);
-    bool get_node_11v_capability(const std::string &mac);
+    void update_node_11v_responsiveness(sStation &client, bool success);
 
     bool set_hostap_iface_name(const sMacAddr &al_mac, const sMacAddr &mac,
                                const std::string &iface_name);
@@ -1434,16 +1427,7 @@ public:
     bool get_node_cross_rx_rssi(const std::string &sta_mac, const std::string &ap_mac, int8_t &rssi,
                                 int8_t &rx_packets);
 
-    bool set_node_cross_rx_phy_rate_100kb(const std::string &mac, uint16_t rx_phy_rate_100kb);
-    bool set_node_cross_tx_phy_rate_100kb(const std::string &mac, uint16_t tx_phy_rate_100kb);
-
-    uint16_t get_node_cross_rx_phy_rate_100kb(const std::string &mac);
-    uint16_t get_node_cross_tx_phy_rate_100kb(const std::string &mac);
-
     bool clear_node_cross_rssi(const std::string &sta_mac);
-
-    bool set_node_cross_estimated_tx_phy_rate(const std::string &mac, double phy_rate);
-    double get_node_cross_estimated_tx_phy_rate(const std::string &mac);
 
     bool set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApStatsParams *params);
     void clear_hostap_stats_info(const sMacAddr &al_mac, const sMacAddr &mac);
@@ -1714,18 +1698,6 @@ public:
     //
     // tasks
     //
-    bool assign_association_handling_task_id(const std::string &mac, int new_task_id);
-    int get_association_handling_task_id(const std::string &mac);
-
-    bool assign_steering_task_id(const std::string &mac, int new_task_id);
-    int get_steering_task_id(const std::string &mac);
-
-    bool assign_roaming_task_id(const std::string &mac, int new_task_id);
-    int get_roaming_task_id(const std::string &mac);
-
-    bool assign_load_balancer_task_id(const std::string &mac, int new_task_id);
-    int get_load_balancer_task_id(const std::string &mac);
-
     bool assign_client_locating_task_id(const std::string &mac, int new_task_id,
                                         bool new_connection);
     int get_client_locating_task_id(const std::string &mac, bool new_connection);

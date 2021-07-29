@@ -46,14 +46,22 @@ void association_handling_task::work()
             finish();
             return;
         }
+
+        auto station = database.get_station(tlvf::mac_from_string(sta_mac));
+        if (!station) {
+            TASK_LOG(DEBUG) << "client " << sta_mac << " is not found";
+            finish();
+            return;
+        }
+
         // If this task already has been created by another event, let it finish and finish the new
         // instance of it.
-        int prev_task_id = database.get_association_handling_task_id(sta_mac);
+        int prev_task_id = station->association_handling_task_id;
         if (tasks.is_task_running(prev_task_id)) {
             finish();
             return;
         }
-        database.assign_association_handling_task_id(sta_mac, id);
+        station->association_handling_task_id = id;
 
         original_parent_mac = database.get_node_parent(sta_mac);
 
@@ -276,9 +284,14 @@ void association_handling_task::handle_response(std::string mac,
             break;
         }
 
+        auto station = database.get_station(tlvf::mac_from_string(sta_mac));
+        if (!station) {
+            TASK_LOG(ERROR) << "station " << sta_mac << " not found";
+            break;
+        }
+
         if (database.settings_client_11k_roaming() &&
-            (database.get_node_beacon_measurement_support_level(sta_mac) ==
-             beerocks::BEACON_MEAS_UNSUPPORTED) &&
+            (station->supports_beacon_measurement == beerocks::BEACON_MEAS_UNSUPPORTED) &&
             (database.get_node_type(sta_mac) == beerocks::TYPE_CLIENT)) {
 
             state        = CHECK_11K_BEACON_MEASURE_CAP;
@@ -353,11 +366,16 @@ void association_handling_task::handle_response(std::string mac,
 
 void association_handling_task::finalize_new_connection()
 {
+    auto client = database.get_station(tlvf::mac_from_string(sta_mac));
+    if (!client) {
+        LOG(WARNING) << "Client " << sta_mac << " does not exist";
+        return;
+    }
 
     /*
      * see if special handling is required if client just came back from a handover
      */
-    if (!database.get_node_handoff_flag(sta_mac)) {
+    if (!database.get_node_handoff_flag(*client)) {
         if (database.get_node_type(sta_mac) == beerocks::TYPE_CLIENT) {
             // The client's stay-on-initial-radio can be enabled prior to the client connection.
             // If this is the case, when the client connects the initial-radio should be configured (if not already configured)
@@ -387,17 +405,16 @@ void association_handling_task::finalize_new_connection()
         /* 
          * kill existing roaming task 
          */
-        int prev_roaming_task = database.get_roaming_task_id(sta_mac);
+        int prev_roaming_task = client->roaming_task_id;
         LOG(DEBUG) << "kill prev_roaming_task " << prev_roaming_task;
         tasks.kill_task(prev_roaming_task);
 
         /*
          * kill load balancer
          */
-        int prev_load_balancer_task = database.get_load_balancer_task_id(sta_mac);
-        tasks.kill_task(prev_load_balancer_task);
+        tasks.kill_task(client->load_balancer_task_id);
 
-        database.set_node_handoff_flag(sta_mac, false);
+        database.set_node_handoff_flag(*client, false);
     }
 }
 void association_handling_task::handle_responses_timeout(
@@ -440,7 +457,14 @@ void association_handling_task::handle_responses_timeout(
             TASK_LOG(DEBUG) << "state CHECK_11K_BEACON_MEASURE_CAP reached maximum attempts="
                             << attempts << " setting sta " << sta_mac
                             << " as beacon measurement unsupported ";
-            database.set_node_beacon_measurement_support_level(sta_mac,
+
+            auto station = database.get_station(tlvf::mac_from_string(sta_mac));
+            if (!station) {
+                TASK_LOG(ERROR) << "station " << sta_mac << " not found";
+                break;
+            }
+
+            database.set_node_beacon_measurement_support_level(*station,
                                                                beerocks::BEACON_MEAS_UNSUPPORTED);
             state = REQUEST_RSSI_MEASUREMENT_WAIT;
         }

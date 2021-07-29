@@ -725,27 +725,12 @@ bool db::fill_radio_channel_scan_capabilites(
     return true;
 }
 
-bool db::set_node_beacon_measurement_support_level(
-    const std::string &mac, beerocks::eBeaconMeasurementSupportLevel support_beacon_measurement)
+void db::set_node_beacon_measurement_support_level(
+    sStation &station, beerocks::eBeaconMeasurementSupportLevel support_beacon_measurement)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        return false;
+    if (!station.supports_beacon_measurement) { // sticky
+        station.supports_beacon_measurement = support_beacon_measurement;
     }
-    if (!n->supports_beacon_measurement) { // sticky
-        n->supports_beacon_measurement = support_beacon_measurement;
-    }
-    return true;
-}
-
-beerocks::eBeaconMeasurementSupportLevel
-db::get_node_beacon_measurement_support_level(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return beerocks::BEACON_MEAS_UNSUPPORTED;
-    }
-    return n->supports_beacon_measurement;
 }
 
 bool db::set_node_name(const std::string &mac, std::string name)
@@ -789,54 +774,33 @@ std::chrono::steady_clock::time_point db::get_last_state_change(const std::strin
     return n->last_state_change;
 }
 
-bool db::set_node_handoff_flag(const std::string &mac, bool handoff)
+bool db::set_node_handoff_flag(sStation &station, bool handoff)
 {
-    auto n = get_node(mac);
+    auto n = get_node(station.mac);
     if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        LOG(WARNING) << __FUNCTION__ << " - node " << station.mac << " does not exist!";
         return false;
     }
-    n->handoff = handoff;
+    station.handoff = handoff;
     if (n->get_type() == beerocks::TYPE_IRE_BACKHAUL) {
-        n->ire_handoff = handoff;
+        station.ire_handoff = handoff;
     }
     return true;
 }
 
-bool db::get_node_handoff_flag(const std::string &mac)
+bool db::get_node_handoff_flag(const sStation &station)
 {
-    auto n = get_node(mac);
+    auto n = get_node(station.mac);
     if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        LOG(WARNING) << __FUNCTION__ << " - node " << station.mac << " does not exist!";
         return false;
     }
 
     if (n->get_type() == beerocks::TYPE_IRE_BACKHAUL) {
-        return n->ire_handoff;
+        return station.ire_handoff;
     } else {
-        return n->handoff;
+        return station.handoff;
     }
-}
-
-bool db::set_node_confined_flag(const std::string &mac, bool flag)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    }
-    n->confined = flag;
-    return true;
-}
-
-bool db::get_node_confined_flag(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    }
-    return n->confined;
 }
 
 bool db::update_node_last_seen(const std::string &mac)
@@ -2120,35 +2084,19 @@ bool db::can_start_client_steering(const std::string &sta_mac, const std::string
     return true;
 }
 
-bool db::update_node_11v_responsiveness(const std::string &mac, bool success)
+void db::update_node_11v_responsiveness(sStation &client, bool success)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        return false;
-    }
-
     if (success) {
-        LOG(DEBUG) << "updating node " << mac << " as supporting 11v";
-        n->failed_11v_request_count = 0;
-        n->supports_11v             = true;
+        LOG(DEBUG) << "updating node " << client.mac << " as supporting 11v";
+        client.failed_11v_request_count = 0;
+        client.supports_11v             = true;
     } else {
-        if (++n->failed_11v_request_count >= config.roaming_11v_failed_attemps_threshold) {
-            LOG(DEBUG) << "node " << mac
+        if (++client.failed_11v_request_count >= config.roaming_11v_failed_attemps_threshold) {
+            LOG(DEBUG) << "node " << client.mac
                        << " exceeded maximum 11v failed attempts, updating as not supporting 11v";
-            n->supports_11v = false;
+            client.supports_11v = false;
         }
     }
-
-    return true;
-}
-
-bool db::get_node_11v_capability(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return false;
-    }
-    return n->supports_11v;
 }
 
 bool db::set_hostap_vap_list(const sMacAddr &mac,
@@ -4149,44 +4097,6 @@ bool db::get_node_cross_rx_rssi(const std::string &sta_mac, const std::string &a
     return sta->get_cross_rx_rssi(ap_mac, rssi, rx_packets);
 }
 
-bool db::set_node_cross_rx_phy_rate_100kb(const std::string &mac, uint16_t rx_phy_rate_100kb)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return false;
-    }
-    n->cross_rx_phy_rate_100kb = rx_phy_rate_100kb;
-    return true;
-}
-
-bool db::set_node_cross_tx_phy_rate_100kb(const std::string &mac, uint16_t tx_phy_rate_100kb)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return false;
-    }
-    n->cross_tx_phy_rate_100kb = tx_phy_rate_100kb;
-    return true;
-}
-
-uint16_t db::get_node_cross_rx_phy_rate_100kb(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return -1;
-    }
-    return n->cross_rx_phy_rate_100kb;
-}
-
-uint16_t db::get_node_cross_tx_phy_rate_100kb(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return -1;
-    }
-    return n->cross_tx_phy_rate_100kb;
-}
-
 bool db::clear_node_cross_rssi(const std::string &sta_mac)
 {
     auto sta = get_node(sta_mac);
@@ -4195,25 +4105,6 @@ bool db::clear_node_cross_rssi(const std::string &sta_mac)
     }
     sta->clear_cross_rssi();
     return true;
-}
-
-bool db::set_node_cross_estimated_tx_phy_rate(const std::string &mac, double phy_rate)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return false;
-    }
-    n->cross_estimated_tx_phy_rate = phy_rate;
-    return true;
-}
-
-double db::get_node_cross_estimated_tx_phy_rate(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return -1;
-    }
-    return n->cross_estimated_tx_phy_rate;
 }
 
 bool db::set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApStatsParams *params)
@@ -4836,90 +4727,6 @@ uint16_t db::get_hostap_vht_center_frequency(const sMacAddr &mac)
 //
 // tasks
 //
-
-bool db::assign_association_handling_task_id(const std::string &mac, int new_task_id)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    }
-    n->association_handling_task_id = new_task_id;
-    return true;
-}
-
-int db::get_association_handling_task_id(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return -1;
-    }
-    return n->association_handling_task_id;
-}
-
-bool db::assign_steering_task_id(const std::string &mac, int new_task_id)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    }
-    n->steering_task_id = new_task_id;
-    return true;
-}
-
-int db::get_steering_task_id(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return -1;
-    }
-    return n->steering_task_id;
-}
-
-bool db::assign_roaming_task_id(const std::string &mac, int new_task_id)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    }
-    n->roaming_task_id = new_task_id;
-    return true;
-}
-
-int db::get_roaming_task_id(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return -1;
-    }
-    return n->roaming_task_id;
-}
-
-bool db::assign_load_balancer_task_id(const std::string &mac, int new_task_id)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    }
-    n->load_balancer_task_id = new_task_id;
-    return true;
-}
-
-int db::get_load_balancer_task_id(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return -1;
-    }
-    return n->load_balancer_task_id;
-}
 
 bool db::assign_client_locating_task_id(const std::string &mac, int new_task_id,
                                         bool new_connection)
@@ -6801,13 +6608,14 @@ bool db::set_sta_dhcp_v6_lease(const sMacAddr &sta_mac, const std::string &host_
                                const std::string &ipv6_address)
 {
     auto sta_node = get_node(sta_mac);
+    auto station  = get_station(sta_mac);
 
-    if (!sta_node || sta_node->get_type() != TYPE_CLIENT) {
+    if (!sta_node || sta_node->get_type() != TYPE_CLIENT || !station) {
         return false;
     }
 
     // Update node attributes.
-    sta_node->ipv6 = ipv6_address;
+    station->ipv6  = ipv6_address;
     sta_node->name = host_name;
 
     // Update datamodel attributes.

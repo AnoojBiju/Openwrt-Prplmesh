@@ -1317,22 +1317,27 @@ bool Controller::handle_cmdu_1905_client_steering_btm_report_message(
     LOG(DEBUG) << "sending ACK message back to agent";
     son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
 
-    std::string client_mac = tlvf::mac_to_string(steering_btm_report->sta_mac());
-    uint8_t status_code    = steering_btm_report->btm_status_code();
+    sMacAddr client_mac = steering_btm_report->sta_mac();
+    uint8_t status_code = steering_btm_report->btm_status_code();
 
     LOG(DEBUG) << "BTM_REPORT from source bssid " << steering_btm_report->bssid()
                << " for client_mac=" << client_mac << " status_code=" << (int)status_code;
 
-    int steering_task_id = database.get_steering_task_id(client_mac);
+    auto client = database.get_station(client_mac);
+    if (!client) {
+        LOG(ERROR) << "sta " << client_mac << " not found";
+        return false;
+    }
+
+    int steering_task_id = client->steering_task_id;
     tasks.push_event(steering_task_id, client_steering_task::BTM_REPORT_RECEIVED);
-    database.update_node_11v_responsiveness(client_mac, true);
+    database.update_node_11v_responsiveness(*client, true);
 
     if (status_code != 0) {
         LOG(DEBUG) << "sta " << client_mac << " rejected BSS steer request";
         LOG(DEBUG) << "killing roaming task";
 
-        int prev_roaming_task = database.get_roaming_task_id(client_mac);
-        tasks.kill_task(prev_roaming_task);
+        tasks.kill_task(client->roaming_task_id);
 
         tasks.push_event(steering_task_id, client_steering_task::BSS_TM_REQUEST_REJECTED);
     }
@@ -3091,7 +3096,14 @@ bool Controller::handle_cmdu_control_message(
 
         std::string client_mac = tlvf::mac_to_string(notification->params().result.mac);
         std::string ap_mac     = hostap_mac;
-        bool is_parent         = (tlvf::mac_from_string(database.get_node_parent(client_mac)) ==
+
+        auto client = database.get_station(tlvf::mac_from_string(client_mac));
+        if (!client) {
+            LOG(ERROR) << "client " << client_mac << " not found";
+            return false;
+        }
+
+        bool is_parent = (tlvf::mac_from_string(database.get_node_parent(client_mac)) ==
                           database.get_hostap_vap_mac(tlvf::mac_from_string(ap_mac),
                                                       notification->params().vap_id));
 
@@ -3123,10 +3135,8 @@ bool Controller::handle_cmdu_control_message(
             LOG(ERROR) << "update rssi measurement failed";
         }
         if (is_parent) {
-            database.set_node_cross_tx_phy_rate_100kb(client_mac,
-                                                      notification->params().tx_phy_rate_100kb);
-            database.set_node_cross_rx_phy_rate_100kb(client_mac,
-                                                      notification->params().rx_phy_rate_100kb);
+            client->cross_tx_phy_rate_100kb = notification->params().tx_phy_rate_100kb;
+            client->cross_rx_phy_rate_100kb = notification->params().rx_phy_rate_100kb;
         }
 #ifdef BEEROCKS_RDKB
         if (database.settings_rdkb_extensions() &&
@@ -3149,7 +3159,14 @@ bool Controller::handle_cmdu_control_message(
             LOG(ERROR) << "addClass ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_NOTIFICATION failed";
             return false;
         }
-        std::string client_mac        = tlvf::mac_to_string(notification->params().result.mac);
+        std::string client_mac = tlvf::mac_to_string(notification->params().result.mac);
+
+        auto client = database.get_station(tlvf::mac_from_string(client_mac));
+        if (!client) {
+            LOG(ERROR) << "client " << client_mac << " not found";
+            return false;
+        }
+
         std::string client_parent_mac = database.get_node_parent(client_mac);
         sMacAddr bssid = database.get_hostap_vap_mac(tlvf::mac_from_string(hostap_mac),
                                                      notification->params().vap_id);
@@ -3165,21 +3182,18 @@ bool Controller::handle_cmdu_control_message(
 
         if ((database.get_node_type(client_mac) == beerocks::TYPE_CLIENT) &&
             (database.get_node_state(client_mac) == beerocks::STATE_CONNECTED) &&
-            (!database.get_node_handoff_flag(client_mac)) && is_parent) {
+            (!database.get_node_handoff_flag(*client)) && is_parent) {
 
             database.set_node_cross_rx_rssi(client_mac, hostap_mac, notification->params().rx_rssi,
                                             notification->params().rx_packets);
-            database.set_node_cross_tx_phy_rate_100kb(client_mac,
-                                                      notification->params().tx_phy_rate_100kb);
-            database.set_node_cross_rx_phy_rate_100kb(client_mac,
-                                                      notification->params().rx_phy_rate_100kb);
+            client->cross_tx_phy_rate_100kb = notification->params().tx_phy_rate_100kb;
+            client->cross_rx_phy_rate_100kb = notification->params().rx_phy_rate_100kb;
 
             /*
                 * when a notification arrives, it means a large change in rx_rssi occurred (above the defined thershold)
                 * therefore, we need to create an optimal path task to relocate the node if needed
                 */
-            int prev_task_id = database.get_roaming_task_id(client_mac);
-            if (tasks.is_task_running(prev_task_id)) {
+            if (tasks.is_task_running(client->roaming_task_id)) {
                 LOG(DEBUG) << "roaming task already running for " << client_mac;
             } else {
                 auto new_task = std::make_shared<optimal_path_task>(database, cmdu_tx, tasks,
@@ -3411,6 +3425,12 @@ bool Controller::handle_cmdu_control_message(
                    << " active_client_count=" << active_client_count
                    << " client_load=" << client_load_percent;
 
+        auto agent = database.m_agents.get(tlvf::mac_from_string(ire_mac));
+        if (!agent) {
+            LOG(ERROR) << "agent " << ire_mac << " does not exist";
+            return false;
+        }
+
         /*
             * start load balancing
             */
@@ -3426,8 +3446,7 @@ bool Controller::handle_cmdu_control_message(
                 * therefore, we need to create a load balancing task to optimize the network
                 */
             LOG(DEBUG) << "high load conditions, starting load balancer for ire " << ire_mac;
-            int prev_task_id = database.get_load_balancer_task_id(ire_mac);
-            if (tasks.is_task_running(prev_task_id)) {
+            if (tasks.is_task_running(agent->load_balancer_task_id)) {
                 LOG(DEBUG) << "load balancer task already running for " << ire_mac;
             } else {
                 auto new_task = std::make_shared<load_balancer_task>(
@@ -3447,15 +3466,20 @@ bool Controller::handle_cmdu_control_message(
             for (auto &hostap : hostaps) {
                 auto stations = database.get_node_children(hostap);
                 for (auto sta : stations) {
-                    if (database.get_node_confined_flag(sta)) {
+                    auto station = database.get_station(tlvf::mac_from_string(sta));
+                    if (!station) {
+                        LOG(ERROR) << "station " << sta << " not found";
+                        continue;
+                    }
+
+                    if (station->confined) {
                         LOG(DEBUG) << "removing confined flag from sta " << sta;
-                        database.set_node_confined_flag(sta, false);
+                        station->confined = false;
                         /*
                             * launch optimal path task
                             */
                         if (database.get_node_state(sta) == beerocks::STATE_CONNECTED) {
-                            int prev_task_id = database.get_roaming_task_id(sta);
-                            if (tasks.is_task_running(prev_task_id)) {
+                            if (tasks.is_task_running(station->roaming_task_id)) {
                                 LOG(DEBUG) << "roaming task already running for " << sta;
                             } else {
                                 auto new_task = std::make_shared<optimal_path_task>(
@@ -3464,7 +3488,7 @@ bool Controller::handle_cmdu_control_message(
                                 tasks.add_task(new_task);
                             }
                         } else {
-                            database.set_node_handoff_flag(sta, false);
+                            database.set_node_handoff_flag(*station, false);
                         }
                     }
                 }
@@ -3511,9 +3535,15 @@ bool Controller::handle_cmdu_control_message(
             //on nexus 5x devices rsni always 0, and they are not supports measurement by ssid (special handling)
             support_level |= beerocks::BEACON_MEAS_SSID_SUPPORTED;
         }
+
+        auto station = database.get_station(response->params().sta_mac);
+        if (!station) {
+            LOG(ERROR) << "station " << response->params().sta_mac << " not found";
+            break;
+        }
+
         database.set_node_beacon_measurement_support_level(
-            tlvf::mac_to_string(response->params().sta_mac),
-            beerocks::eBeaconMeasurementSupportLevel(support_level));
+            *station, beerocks::eBeaconMeasurementSupportLevel(support_level));
         database.dm_add_sta_beacon_measurement(response->params());
         break;
     }
@@ -3543,8 +3573,14 @@ bool Controller::handle_cmdu_control_message(
         }
         std::string client_mac = tlvf::mac_to_string(notification->mac());
         LOG(INFO) << "CLIENT NO ACTIVITY MSG RX'ed for client" << client_mac;
-        int prev_task_id = database.get_roaming_task_id(client_mac);
-        if (tasks.is_task_running(prev_task_id)) {
+
+        auto client = database.get_station(tlvf::mac_from_string(client_mac));
+        if (!client) {
+            LOG(ERROR) << "Client " << client_mac << " not found";
+            return false;
+        }
+
+        if (tasks.is_task_running(client->roaming_task_id)) {
             LOG(DEBUG) << "roaming task already running for " << client_mac;
         } else {
             LOG(INFO) << "Starting optimal path for client" << client_mac;

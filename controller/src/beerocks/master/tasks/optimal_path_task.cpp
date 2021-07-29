@@ -63,6 +63,13 @@ void optimal_path_task::work()
 {
     bool task_enabled = true;
 
+    auto station = database.get_station(tlvf::mac_from_string(sta_mac));
+    if (!station) {
+        TASK_LOG(ERROR) << "station " << sta_mac << " not found";
+        finish();
+        return;
+    }
+
     if ((database.get_node_type(sta_mac) == beerocks::TYPE_CLIENT) &&
         (!database.settings_client_band_steering()) &&
         (!database.settings_client_optimal_path_roaming()) &&
@@ -84,7 +91,7 @@ void optimal_path_task::work()
             LOG_CLI(DEBUG, sta_mac << " IRE roaming disabled, killing task");
             task_enabled = false;
         }
-    } else if (database.get_node_confined_flag(sta_mac)) {
+    } else if (station->confined) {
         LOG_CLI(DEBUG, sta_mac << " is confined to current AP, killing task");
         task_enabled = false;
     }
@@ -107,7 +114,7 @@ void optimal_path_task::work()
             return;
         }
 
-        if (database.get_node_handoff_flag(sta_mac)) {
+        if (database.get_node_handoff_flag(*station)) {
             LOG_CLI(DEBUG, sta_mac << " is already in handoff, killing task");
             finish();
             return;
@@ -115,9 +122,9 @@ void optimal_path_task::work()
 
         measurement_request = {};
 
-        int prev_task_id = database.get_roaming_task_id(sta_mac);
+        int prev_task_id = station->roaming_task_id;
         tasks.kill_task(prev_task_id);
-        database.assign_roaming_task_id(sta_mac, id);
+        station->roaming_task_id = id;
 
         if (database.get_node_type(sta_mac) == beerocks::TYPE_CLIENT) {
             started_as_client = true;
@@ -135,19 +142,16 @@ void optimal_path_task::work()
         current_hostap_ssid = database.get_hostap_ssid(tlvf::mac_from_string(current_hostap_vap));
 
         sta_support_11k = database.settings_client_11k_roaming() &&
-                          (database.get_node_beacon_measurement_support_level(sta_mac) !=
-                           BEACON_MEAS_UNSUPPORTED);
+                          (station->supports_beacon_measurement != BEACON_MEAS_UNSUPPORTED);
 
         //// only for debug ////
         TASK_LOG(DEBUG) << "sta_support_11k=" << int(sta_support_11k);
         TASK_LOG(DEBUG) << "sta_support_beacon_measurement="
-                        << int(database.get_node_beacon_measurement_support_level(sta_mac))
-                        << ", sta_mac=" << sta_mac;
+                        << int(station->supports_beacon_measurement) << ", sta_mac=" << sta_mac;
         if (!database.settings_client_11k_roaming()) {
             TASK_LOG(DEBUG) << "settings_client_11k_roaming is not enabled!";
         }
-        if (database.get_node_beacon_measurement_support_level(sta_mac) ==
-            BEACON_MEAS_UNSUPPORTED) {
+        if (station->supports_beacon_measurement == BEACON_MEAS_UNSUPPORTED) {
             TASK_LOG(DEBUG) << "station " << sta_mac << " doesn't support beacon measurement!";
         }
         //////////////////////
@@ -496,6 +500,7 @@ void optimal_path_task::work()
         int8_t current_hostap_rx_rssi, dummy_rx_packets;
         bool force_signal_strength_decision = false;
         bool current_below_cutoff           = false;
+
         if (!database.get_node_cross_rx_rssi(sta_mac, current_hostap, current_hostap_rx_rssi,
                                              dummy_rx_packets)) {
             TASK_LOG(ERROR) << "can't get cross_rx_rssi for hostap " << current_hostap;
@@ -549,9 +554,9 @@ void optimal_path_task::work()
                 auto hostap_bw = database.get_node_bw(hostap);
 
                 int8_t dl_rssi;
-                uint8_t dl_rcpi, dl_snr;
 
                 if (!estimate_dl_rssi) {
+                    uint8_t dl_rcpi, dl_snr;
                     if (!database.get_node_beacon_measurement(sta_mac, hostap, dl_rcpi, dl_snr)) {
                         TASK_LOG(ERROR)
                             << "get_node_beacon_measurement() failed! sta_mac: " << sta_mac
@@ -569,8 +574,7 @@ void optimal_path_task::work()
                         continue;
                     }
 
-                    uint16_t sta_phy_tx_rate_100kb =
-                        database.get_node_cross_rx_phy_rate_100kb(sta_mac);
+                    uint16_t sta_phy_tx_rate_100kb = station->cross_rx_phy_rate_100kb;
                     TASK_LOG(DEBUG) << "sta_phy_tx_rate_100kb=" << int(sta_phy_tx_rate_100kb);
 
                     auto radio_mac = tlvf::mac_from_string(hostap);
@@ -594,9 +598,8 @@ void optimal_path_task::work()
                 }
                 hostap_phy_rate = son::wireless_utils::estimate_ap_tx_phy_rate(
                     dl_rssi, sta_capabilities, hostap_bw, hostap_is_5ghz);
-                database.set_node_cross_estimated_tx_phy_rate(sta_mac,
-                                                              hostap_phy_rate); // save to DB
-                double weighted_phy_rate = calculate_weighted_phy_rate(sta_mac, hostap);
+                station->cross_estimated_tx_phy_rate = hostap_phy_rate; // save to DB
+                double weighted_phy_rate             = calculate_weighted_phy_rate(*station);
                 if (hostap == current_hostap) {
                     weighted_phy_rate *=
                         (100.0 + roaming_hysteresis_percent_bonus) / 100.0; //adds stability
@@ -638,9 +641,9 @@ void optimal_path_task::work()
                 all_hostaps_below_cutoff = false;
 
                 int8_t dl_rssi;
-                uint8_t dl_rcpi, dl_snr;
 
                 if (!estimate_dl_rssi) {
+                    uint8_t dl_rcpi, dl_snr;
                     if (!database.get_node_beacon_measurement(sta_mac, hostap, dl_rcpi, dl_snr)) {
                         TASK_LOG(ERROR)
                             << "get_node_beacon_measurement() failed! sta_mac: " << sta_mac
@@ -658,8 +661,7 @@ void optimal_path_task::work()
                         continue;
                     }
 
-                    uint16_t sta_phy_tx_rate_100kb =
-                        database.get_node_cross_rx_phy_rate_100kb(sta_mac);
+                    uint16_t sta_phy_tx_rate_100kb = station->cross_rx_phy_rate_100kb;
                     TASK_LOG(DEBUG) << "sta_phy_tx_rate_100kb=" << int(sta_phy_tx_rate_100kb);
 
                     auto radio_mac = tlvf::mac_from_string(hostap);
@@ -774,12 +776,11 @@ void optimal_path_task::work()
                             std::inserter(ires_outside_subtree, ires_outside_subtree.end()));
         ires_outside_subtree.erase(sta_mac);
         auto channel = database.get_node_channel(sta_mac);
-        bool found_band_match;
 
         //searching for sub band hostap /backhaul(client) measurement match for each ire
         for (auto &ire : ires_outside_subtree) {
-            found_band_match = false;
-            auto ire_hostaps = database.get_node_children(ire, beerocks::TYPE_SLAVE);
+            bool found_band_match = false;
+            auto ire_hostaps      = database.get_node_children(ire, beerocks::TYPE_SLAVE);
             std::string hostap_backhaul_manager;
             std::string hostap_backhaul;
             if (sta_bridge == ire) {
@@ -923,8 +924,15 @@ void optimal_path_task::work()
 
         TASK_LOG(DEBUG) << "calculating estimate hostap dl rssi/rate for sta " << sta_mac;
 
+        auto station = database.get_station(tlvf::mac_from_string(sta_mac));
+        if (!station) {
+            TASK_LOG(ERROR) << "station " << sta_mac << " not found";
+            finish();
+            break;
+        }
+
         //get sta parameters
-        uint16_t sta_phy_tx_rate_100kb = database.get_node_cross_rx_phy_rate_100kb(sta_mac);
+        uint16_t sta_phy_tx_rate_100kb = station->cross_rx_phy_rate_100kb;
         TASK_LOG(DEBUG) << "sta_phy_tx_rate_100kb=" << int(sta_phy_tx_rate_100kb);
         //build candidate hostap list
         std::vector<std::pair<std::string, bool>> hostap_candidates;
@@ -1239,10 +1247,10 @@ void optimal_path_task::work()
                 hostap_phy_rate = son::wireless_utils::estimate_ap_tx_phy_rate(
                     estimated_dl_rssi, sta_capabilities, hostap_params.bw, hostap_params.is_5ghz);
 
-                database.set_node_cross_estimated_tx_phy_rate(sta_mac, hostap_phy_rate);
+                station->cross_estimated_tx_phy_rate = hostap_phy_rate;
 
                 // 4. Calculate weighed PHY RATE
-                double weighted_phy_rate = calculate_weighted_phy_rate(sta_mac, hostap);
+                double weighted_phy_rate = calculate_weighted_phy_rate(*station);
 
                 if (hostap == current_hostap) {
                     weighted_phy_rate *=
@@ -1389,8 +1397,15 @@ void optimal_path_task::work()
         state                = WAIT_FOR_HANDOVER;
         int steering_task_id = 0;
 
+        auto client = database.get_station(tlvf::mac_from_string(sta_mac));
+        if (!client) {
+            TASK_LOG(ERROR) << "client " << sta_mac << " not found";
+            finish();
+            return;
+        }
+
         std::string method = " 11v (BTM) ";
-        if (!database.get_node_11v_capability(sta_mac)) {
+        if (!client->supports_11v) {
             method = std::string(" Legacy ");
         }
 
@@ -1398,7 +1413,7 @@ void optimal_path_task::work()
             chosen_method.append(" [forced steering] ");
         }
 
-        if (database.get_node_11v_capability(sta_mac) && !is_force_steer) {
+        if (client->supports_11v && !is_force_steer) {
             if (sticky_roaming_rssi <= database.config.roaming_sticky_client_rssi_threshold) {
                 TASK_LOG(DEBUG) << "optimal_path_task: steering with disassociate imminent, sta "
                                 << sta_mac << " steer from BSSID " << current_hostap_vap
@@ -1874,70 +1889,16 @@ bool optimal_path_task::get_station_default_capabilities(
     }
 }
 
-double optimal_path_task::calculate_weighted_phy_rate(const std::string &client_mac,
-                                                      const std::string &hostap_mac)
+double optimal_path_task::calculate_weighted_phy_rate(const sStation &client)
 {
-    auto type    = database.get_node_type(client_mac);
-    auto if_type = database.get_node_backhaul_iface_type(client_mac);
+    auto if_type = database.get_node_backhaul_iface_type(tlvf::mac_to_string(client.mac));
 
-    // TASK_LOG(DEBUG) << "calculate_weighted_phy_rate | STA " << client_mac << " | type=" << int(type)
-    //                << " backhaul_iface_type:" << if_type;
-
-    if ((type == beerocks::TYPE_GW) || (type == beerocks::TYPE_SLAVE)) {
-        TASK_LOG(DEBUG) << "Can't run calculate_weighted_phy_rate() on none client node!";
-        return 0;
-    } else {
-        double phy_rate_to_node;
-        if (if_type == beerocks::IFACE_TYPE_ETHERNET) {
-            //TODO FIXME --> get ethernet speed
-            phy_rate_to_node = (1e+5 * double(beerocks::BRIDGE_RATE_100KB));
-        } else {
-            phy_rate_to_node = database.get_node_cross_estimated_tx_phy_rate(client_mac);
-        }
-
-        // TASK_LOG(DEBUG) << "calculate_weighted_phy_rate | Calculated weighted phy rate:"
-        //                << int(phy_rate_to_node / 1e+6) << " Mbps";
-
-        return phy_rate_to_node;
-    }
-}
-
-double optimal_path_task::calculate_weighted_phy_rate(const std::string &node_mac, int &hops)
-{
-    double node_phy_rate;
-    bool wireless_link = false;
-    auto if_type       = database.get_node_backhaul_iface_type(node_mac);
-    //TASK_LOG(DEBUG) << "calculate_weighted_phy_rate() node_mac=" << node_mac << " if_type=" << int(if_type);
-    if (if_type == beerocks::IFACE_TYPE_GW_BRIDGE) {
-        node_phy_rate = (1e+5 * double(beerocks::BRIDGE_RATE_100KB));
-        return node_phy_rate;
-    } else if (if_type == beerocks::IFACE_TYPE_BRIDGE) {
-        node_phy_rate = (1e+5 * double(beerocks::BRIDGE_RATE_100KB));
-    } else if (if_type == beerocks::IFACE_TYPE_ETHERNET) {
+    if (if_type == beerocks::IFACE_TYPE_ETHERNET) {
         //TODO FIXME --> get ethernet speed
-        node_phy_rate = (1e+5 * double(beerocks::BRIDGE_RATE_100KB));
+        return (1e+5 * double(beerocks::BRIDGE_RATE_100KB));
     } else {
-        node_phy_rate = 1e+5 * double(database.get_node_tx_phy_rate_100kb(node_mac));
-        wireless_link = true;
+        return client.cross_estimated_tx_phy_rate;
     }
-
-    if (wireless_link) {
-        ++hops;
-    }
-
-    // TEMP FIX FOR DEMO: do not calculate weighted phy rate
-    //TODO: fix this
-    return node_phy_rate;
-
-    /* TEMP: to be reenabled aftere move to WAV backhaul
-    //TASK_LOG(DEBUG) << "calculate_weighted_phy_rate() node_phy_rate=" << node_phy_rate << " hops=" << hops;
-    double next_phy_rate = calculate_weighted_phy_rate(parent_mac, hops);
-    if( (node_phy_rate < next_phy_rate) && wireless_link) { //return the weaker link
-        return node_phy_rate;
-    } else {
-        return next_phy_rate;
-    }
-    */
 }
 
 bool optimal_path_task::is_hostap_on_cs_process(const std::string &hostap_mac)

@@ -43,13 +43,16 @@ void load_balancer_task::work()
 
     switch (state) {
     case START: {
-        int prev_task_id = database.get_load_balancer_task_id(ire_mac);
-        tasks.kill_task(prev_task_id);
-        if (!database.assign_load_balancer_task_id(ire_mac, id)) {
-            TASK_LOG(ERROR) << "can't assign this task to node " << ire_mac;
+        auto agent = database.m_agents.get(tlvf::mac_from_string(ire_mac));
+        if (!agent) {
+            TASK_LOG(ERROR) << "Agent " << ire_mac << " not found";
             finish();
             return;
         }
+
+        int prev_task_id = agent->load_balancer_task_id;
+        tasks.kill_task(prev_task_id);
+        agent->load_balancer_task_id = id;
 
         state = REQUEST_LOAD_MEASUREMENTS;
 
@@ -235,7 +238,13 @@ void load_balancer_task::work()
             /*
                  * assign task to chosen client as well
                  */
-            database.assign_load_balancer_task_id(chosen_client, id);
+            auto client = database.get_station(tlvf::mac_from_string(chosen_client));
+            if (!client) {
+                TASK_LOG(ERROR) << "client " << chosen_client << " not found";
+                finish();
+                return;
+            }
+            client->load_balancer_task_id = id;
         } else {
             TASK_LOG(ERROR) << "chosen client is empty! finishing task";
 
@@ -465,8 +474,14 @@ void load_balancer_task::work()
                                "    providing a total gain of " << chosen_hostap_bytes_per_second_gained << "Bps" << std::endl <<
                                "    --> steering " << chosen_client << " to " << chosen_hostap << " confine=" << (confine?"yes":"no") << std::endl);
                                */
+            auto client = database.get_station(tlvf::mac_from_string(chosen_client));
+            if (!client) {
+                TASK_LOG(ERROR) << "client " << chosen_client << " not found";
+                finish();
+                return;
+            }
 
-            database.set_node_confined_flag(chosen_client, confine);
+            client->confined = confine;
             //TODO use steering_task_id
             //int steering_task_id = son_actions::steer_sta(database, tasks, chosen_client, chosen_hostap);
             sta_mac = chosen_client;

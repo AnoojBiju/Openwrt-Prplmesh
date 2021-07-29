@@ -438,7 +438,7 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
 
     if (client_connected) {
         //add or update node parent
-        database.add_node_station(client_mac, bssid);
+        auto client = database.add_node_station(client_mac, bssid);
 
         LOG(INFO) << "client connected, mac=" << client_mac_str << ", bssid=" << bssid_str;
 
@@ -454,7 +454,7 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
         database.dm_clear_sta_stats(tlvf::mac_from_string(client_mac_str));
 
         if (!(database.get_node_type(client_mac_str) == beerocks::TYPE_IRE_BACKHAUL &&
-              database.get_node_handoff_flag(client_mac_str))) {
+              database.get_node_handoff_flag(*client))) {
             // The node is not an IRE in handoff
             database.set_node_type(client_mac_str, beerocks::TYPE_CLIENT);
         }
@@ -468,8 +468,7 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
         }
 
         // Notify existing steering task of completed connection
-        int prev_steering_task = database.get_steering_task_id(client_mac_str);
-        tasks.push_event(prev_steering_task, client_steering_task::STA_CONNECTED);
+        tasks.push_event(client->steering_task_id, client_steering_task::STA_CONNECTED);
 
         int dhcp_task = database.get_dhcp_task_id();
         tasks.push_event(dhcp_task, DhcpTask::STA_CONNECTED);

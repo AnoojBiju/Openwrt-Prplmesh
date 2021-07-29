@@ -531,10 +531,17 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
         std::string client_mac = tlvf::mac_to_string(request->client_mac());
+
+        auto client = database.get_station(tlvf::mac_from_string(client_mac));
+        if (!client) {
+            LOG(ERROR) << "client " << client_mac << " not found";
+            isOK = false;
+            break;
+        }
+
         if (database.get_node_state(client_mac) == beerocks::STATE_CONNECTED) {
 
-            int prev_task_id = database.get_roaming_task_id(client_mac);
-            if (tasks.is_task_running(prev_task_id)) {
+            if (tasks.is_task_running(client->roaming_task_id)) {
                 LOG(TRACE) << "CLI roaming task already running for " << client_mac;
             } else {
 
@@ -568,18 +575,23 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
         std::string ire_mac    = database.get_node_parent_ire(hostap_mac);
         LOG(TRACE) << "CLI load notification from hostap " << hostap_mac << " ire mac=" << ire_mac;
 
+        auto agent = database.m_agents.get(tlvf::mac_from_string(ire_mac));
+        if (!agent) {
+            LOG(ERROR) << "Agent " << ire_mac << " not found";
+            isOK = false;
+            break;
+        }
+
         /*
              * start load balancing
              */
         if (database.is_hostap_active(tlvf::mac_from_string(hostap_mac)) &&
-            database.get_node_state(ire_mac) == beerocks::STATE_CONNECTED &&
-            database.get_node_type(ire_mac) != beerocks::TYPE_CLIENT) {
+            database.get_node_state(ire_mac) == beerocks::STATE_CONNECTED) {
             /*
                  * when a notification arrives, it means a large change in rx_rssi occurred (above the defined thershold)
                  * therefore, we need to create a load balancing task to optimize the network
                  */
-            int prev_task_id = database.get_load_balancer_task_id(ire_mac);
-            if (tasks.is_task_running(prev_task_id)) {
+            if (tasks.is_task_running(agent->load_balancer_task_id)) {
                 LOG(TRACE) << "CLI load balancer task already running for " << ire_mac;
             } else {
                 auto new_task = std::make_shared<load_balancer_task>(database, cmdu_tx, tasks,
