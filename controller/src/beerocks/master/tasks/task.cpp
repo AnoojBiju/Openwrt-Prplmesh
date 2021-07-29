@@ -15,7 +15,7 @@ using namespace son;
 
 int task::latest_id = 1; //can't be 0 since messages without a task id use 0 for that field
 
-task::task(std::string task_name_, std::string node_mac)
+task::task(const std::string &task_name_, const std::string &node_mac)
     : task_name(task_name_), assigned_node(node_mac), id(latest_id++),
       start_timestamp(std::chrono::steady_clock::now())
 {

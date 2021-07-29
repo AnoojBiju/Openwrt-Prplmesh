@@ -30,8 +30,8 @@ using namespace son;
 
 association_handling_task::association_handling_task(db &database_,
                                                      ieee1905_1::CmduMessageTx &cmdu_tx_,
-                                                     task_pool &tasks_, std::string sta_mac_,
-                                                     std::string task_name_)
+                                                     task_pool &tasks_, const std::string &sta_mac_,
+                                                     const std::string &task_name_)
     : task(task_name_), database(database_), cmdu_tx(cmdu_tx_), tasks(tasks_), sta_mac(sta_mac_)
 {
 }
