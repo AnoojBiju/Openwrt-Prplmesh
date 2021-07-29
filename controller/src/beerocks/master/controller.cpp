@@ -70,8 +70,11 @@
 #include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>
 #include <tlvf/wfa_map/tlvProfile2MultiApProfile.h>
 #include <tlvf/wfa_map/tlvProfile2RadioMetrics.h>
+#include <tlvf/wfa_map/tlvProfile2ReasonCode.h>
+#include <tlvf/wfa_map/tlvProfile2StatusCode.h>
 #include <tlvf/wfa_map/tlvRadioOperationRestriction.h>
 #include <tlvf/wfa_map/tlvSearchedService.h>
+#include <tlvf/wfa_map/tlvStaMacAddressType.h>
 #include <tlvf/wfa_map/tlvSteeringBTMReport.h>
 #include <tlvf/wfa_map/tlvSupportedService.h>
 #include <tlvf/wfa_map/tlvTimestamp.h>
@@ -2037,6 +2040,49 @@ bool Controller::handle_cmdu_1905_failed_connection_message(const sMacAddr &src_
                                                             ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     LOG(DEBUG) << "Received Failed Connection Message for STA";
+
+    auto sta_mac_tlv = cmdu_rx.getClass<wfa_map::tlvStaMacAddressType>();
+
+    if (!sta_mac_tlv) {
+        LOG(ERROR) << "Failed to get tlvStaMacAddressType!";
+        return false;
+    }
+
+    auto status_code              = 0x0001; // Set default to Unspecified failure.
+    auto profile2_status_code_tlv = cmdu_tx.getClass<wfa_map::tlvProfile2StatusCode>();
+    auto agent                    = database.m_agents.get(src_mac);
+
+    if (!agent) {
+        LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
+        return false;
+    }
+    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
+        !profile2_status_code_tlv) {
+        LOG(ERROR) << "Profile2 Status Code tlv is not supplied for Agent " << src_mac
+                   << " with profile enum " << agent->profile;
+    }
+    if (profile2_status_code_tlv) {
+        status_code = profile2_status_code_tlv->status_code();
+    }
+
+    auto reason_code              = wfa_map::tlvProfile2ReasonCode::UNSPECIFIED_REASON;
+    auto profile2_reason_code_tlv = cmdu_tx.getClass<wfa_map::tlvProfile2ReasonCode>();
+
+    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
+        !profile2_reason_code_tlv) {
+        LOG(ERROR) << "Profile2 Reason Code tlv is not supplied for Agent " << src_mac
+                   << " with profile enum " << agent->profile;
+    }
+    if (profile2_reason_code_tlv) {
+        reason_code = profile2_reason_code_tlv->reason_code();
+    }
+    if (status_code != 0) {
+        if (!database.dm_add_failed_connection_event(sta_mac_tlv->sta_mac(), status_code,
+                                                     reason_code)) {
+            LOG(ERROR) << "Failed to add FailedConnectionEvent.";
+            return false;
+        }
+    }
     return true;
 }
 

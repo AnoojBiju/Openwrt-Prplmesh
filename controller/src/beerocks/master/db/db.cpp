@@ -5788,6 +5788,27 @@ std::string db::dm_add_steer_event()
     return event_path;
 }
 
+bool db::dm_add_failed_connection_event(const sMacAddr &sta_mac, const uint16_t reason_code,
+                                        const uint16_t status_code)
+{
+    std::string event_path =
+        "Controller.Notification.FailedConnectionEvent.FailedConnectionEventData";
+
+    event_path = m_ambiorix_datamodel->add_instance(event_path);
+
+    if (event_path.empty() && NBAPI_ON) {
+        return false;
+    }
+
+    bool ret_val = true;
+
+    ret_val &= m_ambiorix_datamodel->set_current_time(event_path);
+    ret_val &= m_ambiorix_datamodel->set(event_path, "MACAddress", tlvf::mac_to_string(sta_mac));
+    ret_val &= m_ambiorix_datamodel->set(event_path, "StatusCode", status_code);
+    ret_val &= m_ambiorix_datamodel->set(event_path, "ReasonCode", reason_code);
+    return ret_val;
+}
+
 std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac)
 {
     std::string path_association_event =
