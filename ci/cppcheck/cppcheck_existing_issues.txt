@@ -72,8 +72,6 @@ controller/src/beerocks/master/db/network_map.cpp: style: Variable 'size' is ass
 controller/src/beerocks/master/db/network_map.cpp: style: Variable 'size' is assigned a value that is never used. [unreadVariable]    event->data = GET_MESSAGE_POINTER(BML_EVENT_CSA_NOTIFICATION, response->buffer(0), size);
 controller/src/beerocks/master/son_actions.cpp: performance: Function parameter 'bssid' should be passed by const reference. [passedByValue]                                                     std::string sta_mac, std::string bssid)
 controller/src/beerocks/master/son_actions.cpp: performance: Function parameter 'sta_mac' should be passed by const reference. [passedByValue]                                                     std::string sta_mac, std::string bssid)
-controller/src/beerocks/master/son_actions.cpp: style: Local variable 'prev_task_id' shadows outer variable [shadowVariable]        int prev_task_id = database.get_association_handling_task_id(mac);
-controller/src/beerocks/master/son_actions.cpp: style: The scope of the variable 'prev_task_id' can be reduced. [variableScope]    int prev_task_id;
 controller/src/beerocks/master/son_management.cpp: style: Variable 'op_error_code' is assigned a value that is never used. [unreadVariable]            op_error_code = eChannelScanOperationCode::SCAN_IN_PROGRESS;
 controller/src/beerocks/master/son_management.cpp: style: Variable 'op_error_code' is assigned a value that is never used. [unreadVariable]        auto op_error_code = eChannelScanOperationCode::SUCCESS;
 controller/src/beerocks/master/son_management.cpp: style: Variable 'result_status' is assigned a value that is never used. [unreadVariable]            result_status = last_scan_success;
@@ -118,9 +116,6 @@ controller/src/beerocks/master/tasks/network_health_check_task.cpp: style: Redun
 controller/src/beerocks/master/tasks/optimal_path_task.cpp: performance: Prefer prefix ++/-- operators for non-primitive types. [postfixOperator]                    potential_ap_iter++;
 controller/src/beerocks/master/tasks/optimal_path_task.cpp: performance: Prefer prefix ++/-- operators for non-primitive types. [postfixOperator]                potential_ap_iter++;
 controller/src/beerocks/master/tasks/optimal_path_task.cpp: style: Local variable 'it' shadows outer variable [shadowVariable]        for (auto it : hostap_candidates) {
-controller/src/beerocks/master/tasks/optimal_path_task.cpp: style: The scope of the variable 'dl_rcpi' can be reduced. [variableScope]                uint8_t dl_rcpi, dl_snr;
-controller/src/beerocks/master/tasks/optimal_path_task.cpp: style: The scope of the variable 'dl_snr' can be reduced. [variableScope]                uint8_t dl_rcpi, dl_snr;
-controller/src/beerocks/master/tasks/optimal_path_task.cpp: style: The scope of the variable 'found_band_match' can be reduced. [variableScope]        bool found_band_match;
 controller/src/beerocks/master/tasks/rdkb/rdkb_wlan_task.cpp: style: C-style pointer casting [cstyleCast]            auto event_obj         = (steering_client_disconnect_request_event *)obj;
 controller/src/beerocks/master/tasks/rdkb/rdkb_wlan_task.cpp: style: C-style pointer casting [cstyleCast]            auto event_obj = (listener_general_register_unregister_event *)obj;
 controller/src/beerocks/master/tasks/rdkb/rdkb_wlan_task.cpp: style: C-style pointer casting [cstyleCast]            auto event_obj = (steering_rssi_measurement_request_event *)obj;

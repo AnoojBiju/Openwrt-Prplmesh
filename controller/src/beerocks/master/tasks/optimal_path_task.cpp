@@ -549,9 +549,9 @@ void optimal_path_task::work()
                 auto hostap_bw = database.get_node_bw(hostap);
 
                 int8_t dl_rssi;
-                uint8_t dl_rcpi, dl_snr;
 
                 if (!estimate_dl_rssi) {
+                    uint8_t dl_rcpi, dl_snr;
                     if (!database.get_node_beacon_measurement(sta_mac, hostap, dl_rcpi, dl_snr)) {
                         TASK_LOG(ERROR)
                             << "get_node_beacon_measurement() failed! sta_mac: " << sta_mac
@@ -596,7 +596,7 @@ void optimal_path_task::work()
                     dl_rssi, sta_capabilities, hostap_bw, hostap_is_5ghz);
                 database.set_node_cross_estimated_tx_phy_rate(sta_mac,
                                                               hostap_phy_rate); // save to DB
-                double weighted_phy_rate = calculate_weighted_phy_rate(sta_mac, hostap);
+                double weighted_phy_rate = calculate_weighted_phy_rate(sta_mac);
                 if (hostap == current_hostap) {
                     weighted_phy_rate *=
                         (100.0 + roaming_hysteresis_percent_bonus) / 100.0; //adds stability
@@ -638,9 +638,9 @@ void optimal_path_task::work()
                 all_hostaps_below_cutoff = false;
 
                 int8_t dl_rssi;
-                uint8_t dl_rcpi, dl_snr;
 
                 if (!estimate_dl_rssi) {
+                    uint8_t dl_rcpi, dl_snr;
                     if (!database.get_node_beacon_measurement(sta_mac, hostap, dl_rcpi, dl_snr)) {
                         TASK_LOG(ERROR)
                             << "get_node_beacon_measurement() failed! sta_mac: " << sta_mac
@@ -774,12 +774,11 @@ void optimal_path_task::work()
                             std::inserter(ires_outside_subtree, ires_outside_subtree.end()));
         ires_outside_subtree.erase(sta_mac);
         auto channel = database.get_node_channel(sta_mac);
-        bool found_band_match;
 
         //searching for sub band hostap /backhaul(client) measurement match for each ire
         for (auto &ire : ires_outside_subtree) {
-            found_band_match = false;
-            auto ire_hostaps = database.get_node_children(ire, beerocks::TYPE_SLAVE);
+            bool found_band_match = false;
+            auto ire_hostaps      = database.get_node_children(ire, beerocks::TYPE_SLAVE);
             std::string hostap_backhaul_manager;
             std::string hostap_backhaul;
             if (sta_bridge == ire) {
@@ -1242,7 +1241,7 @@ void optimal_path_task::work()
                 database.set_node_cross_estimated_tx_phy_rate(sta_mac, hostap_phy_rate);
 
                 // 4. Calculate weighed PHY RATE
-                double weighted_phy_rate = calculate_weighted_phy_rate(sta_mac, hostap);
+                double weighted_phy_rate = calculate_weighted_phy_rate(sta_mac);
 
                 if (hostap == current_hostap) {
                     weighted_phy_rate *=
@@ -1874,14 +1873,10 @@ bool optimal_path_task::get_station_default_capabilities(
     }
 }
 
-double optimal_path_task::calculate_weighted_phy_rate(const std::string &client_mac,
-                                                      const std::string &hostap_mac)
+double optimal_path_task::calculate_weighted_phy_rate(const std::string &client_mac)
 {
     auto type    = database.get_node_type(client_mac);
     auto if_type = database.get_node_backhaul_iface_type(client_mac);
-
-    // TASK_LOG(DEBUG) << "calculate_weighted_phy_rate | STA " << client_mac << " | type=" << int(type)
-    //                << " backhaul_iface_type:" << if_type;
 
     if ((type == beerocks::TYPE_GW) || (type == beerocks::TYPE_SLAVE)) {
         TASK_LOG(DEBUG) << "Can't run calculate_weighted_phy_rate() on none client node!";
@@ -1895,49 +1890,8 @@ double optimal_path_task::calculate_weighted_phy_rate(const std::string &client_
             phy_rate_to_node = database.get_node_cross_estimated_tx_phy_rate(client_mac);
         }
 
-        // TASK_LOG(DEBUG) << "calculate_weighted_phy_rate | Calculated weighted phy rate:"
-        //                << int(phy_rate_to_node / 1e+6) << " Mbps";
-
         return phy_rate_to_node;
     }
-}
-
-double optimal_path_task::calculate_weighted_phy_rate(const std::string &node_mac, int &hops)
-{
-    double node_phy_rate;
-    bool wireless_link = false;
-    auto if_type       = database.get_node_backhaul_iface_type(node_mac);
-    //TASK_LOG(DEBUG) << "calculate_weighted_phy_rate() node_mac=" << node_mac << " if_type=" << int(if_type);
-    if (if_type == beerocks::IFACE_TYPE_GW_BRIDGE) {
-        node_phy_rate = (1e+5 * double(beerocks::BRIDGE_RATE_100KB));
-        return node_phy_rate;
-    } else if (if_type == beerocks::IFACE_TYPE_BRIDGE) {
-        node_phy_rate = (1e+5 * double(beerocks::BRIDGE_RATE_100KB));
-    } else if (if_type == beerocks::IFACE_TYPE_ETHERNET) {
-        //TODO FIXME --> get ethernet speed
-        node_phy_rate = (1e+5 * double(beerocks::BRIDGE_RATE_100KB));
-    } else {
-        node_phy_rate = 1e+5 * double(database.get_node_tx_phy_rate_100kb(node_mac));
-        wireless_link = true;
-    }
-
-    if (wireless_link) {
-        ++hops;
-    }
-
-    // TEMP FIX FOR DEMO: do not calculate weighted phy rate
-    //TODO: fix this
-    return node_phy_rate;
-
-    /* TEMP: to be reenabled aftere move to WAV backhaul
-    //TASK_LOG(DEBUG) << "calculate_weighted_phy_rate() node_phy_rate=" << node_phy_rate << " hops=" << hops;
-    double next_phy_rate = calculate_weighted_phy_rate(parent_mac, hops);
-    if( (node_phy_rate < next_phy_rate) && wireless_link) { //return the weaker link
-        return node_phy_rate;
-    } else {
-        return next_phy_rate;
-    }
-    */
 }
 
 bool optimal_path_task::is_hostap_on_cs_process(const std::string &hostap_mac)
