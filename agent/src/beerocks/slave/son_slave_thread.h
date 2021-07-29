@@ -137,7 +137,7 @@ private:
     bool handle_cmdu_monitor_ieee1905_1_message(const std::string &fronthaul_iface, Socket &sd,
                                                 ieee1905_1::CmduMessageRx &cmdu_rx);
 
-    bool slave_fsm(const std::string &fronthaul_iface, bool &call_slave_select);
+    bool slave_fsm(const std::string &fronthaul_iface);
     void slave_reset(const std::string &fronthaul_iface);
     void stop_slave_thread();
     void backhaul_manager_stop(const std::string &fronthaul_iface);
@@ -208,8 +208,49 @@ private:
         size_t m1_auth_buf_len = 0;
     };
 
-    // Key: fronthaul iface name
-    std::map<std::string, sManagedRadio> m_radio_managers;
+    class cRadioManagers {
+        // Regular interfaces list.
+        // Key: fronthaul iface name
+        std::map<std::string, sManagedRadio> m_radio_managers;
+        std::unique_ptr<std::pair<std::string, sManagedRadio>> m_zwdfs_radio_manager;
+
+        sManagedRadio &get_radio_context(const std::string &fronthaul_iface)
+        {
+            return m_zwdfs_radio_manager && m_zwdfs_radio_manager->first == fronthaul_iface
+                       ? m_zwdfs_radio_manager->second
+                       : m_radio_managers[fronthaul_iface];
+        }
+
+    public:
+        sManagedRadio &operator[](const std::string &fronthaul_iface)
+        {
+            return get_radio_context(fronthaul_iface);
+        }
+
+        std::map<std::string, sManagedRadio> &get() { return m_radio_managers; }
+        std::unique_ptr<std::pair<std::string, sManagedRadio>> &get_zwdfs()
+        {
+            return m_zwdfs_radio_manager;
+        }
+
+        void set_zwdfs(std::map<std::string, sManagedRadio>::iterator &it)
+        {
+            m_zwdfs_radio_manager  = std::make_unique<std::pair<std::string, sManagedRadio>>();
+            *m_zwdfs_radio_manager = std::move(*it);
+            m_radio_managers.erase(it);
+        }
+
+        const std::string &get_controller_socket_iface()
+        {
+            for (auto &radio : get()) {
+                if (radio.second.master_socket) {
+                    return radio.first;
+                }
+            }
+            return m_radio_managers.begin()->first;
+        }
+    } m_radio_managers;
+
     /**
      * @brief check if there was an error in the constructor
      *

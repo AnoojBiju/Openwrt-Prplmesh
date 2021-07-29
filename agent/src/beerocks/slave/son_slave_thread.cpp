@@ -69,8 +69,6 @@
 /////////////////////////////// Implementation ///////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-#define SLAVE_STATE_CONTINUE() call_slave_select = false
-
 using namespace beerocks;
 using namespace net;
 using namespace son;
@@ -151,9 +149,14 @@ bool slave_thread::init()
 void slave_thread::stop_slave_thread()
 {
     LOG(DEBUG) << "stop_slave_thread()";
-    for (auto &radio_manager_map_element : m_radio_managers) {
+    for (auto &radio_manager_map_element : m_radio_managers.get()) {
         const auto &fronthaul_iface = radio_manager_map_element.first;
         slave_reset(fronthaul_iface);
+    }
+
+    const auto &zwdfs_radio_manager = m_radio_managers.get_zwdfs();
+    if (zwdfs_radio_manager) {
+        slave_reset(zwdfs_radio_manager->first);
     }
     should_stop = true;
 }
@@ -237,10 +240,9 @@ void slave_thread::on_thread_stop() { stop_slave_thread(); }
 
 bool slave_thread::socket_disconnected(Socket *sd)
 {
-    for (auto &radio_manager_map_element : m_radio_managers) {
 
-        const auto &fronthaul_iface = radio_manager_map_element.first;
-        auto &radio_manager         = radio_manager_map_element.second;
+    auto handle_disconnect = [&](const std::string &fronthaul_iface) {
+        auto &radio_manager = m_radio_managers[fronthaul_iface];
 
         if (radio_manager.configuration_in_progress) {
             LOG(DEBUG) << "configuration is in progress, ignoring";
@@ -268,8 +270,22 @@ bool slave_thread::socket_disconnected(Socket *sd)
             slave_reset(fronthaul_iface);
             return false;
         }
+        return true;
+    };
+
+    for (auto &radio_manager_map_element : m_radio_managers.get()) {
+        const auto &fronthaul_iface = radio_manager_map_element.first;
+        if (!handle_disconnect(fronthaul_iface)) {
+            return false;
+        }
     }
 
+    const auto &zwdfs_radio_manager = m_radio_managers.get_zwdfs();
+    if (zwdfs_radio_manager) {
+        if (!handle_disconnect(zwdfs_radio_manager->first)) {
+            return false;
+        }
+    }
     return true;
 }
 
@@ -286,25 +302,36 @@ bool slave_thread::work()
         m_logger_configured = true;
     }
 
-    for (auto &radio_manager_map_element : m_radio_managers) {
-        const auto &fronthaul_iface = radio_manager_map_element.first;
-
-        bool call_slave_select = true;
-
+    auto radio_fsm = [&](const std::string &fronthaul_iface) {
         if (!monitor_heartbeat_check(fronthaul_iface) ||
             !ap_manager_heartbeat_check(fronthaul_iface)) {
             slave_reset(fronthaul_iface);
         }
 
-        if (!slave_fsm(fronthaul_iface, call_slave_select)) {
+        if (!slave_fsm(fronthaul_iface)) {
             return false;
         }
 
-        if (call_slave_select) {
-            if (!socket_thread::work()) {
-                return false;
-            }
+        return true;
+    };
+
+    for (auto &radio_manager_map_element : m_radio_managers.get()) {
+        const auto &fronthaul_iface = radio_manager_map_element.first;
+        if (!radio_fsm(fronthaul_iface)) {
+            return false;
         }
+    }
+
+    // zwdfs radio
+    const auto &zwdfs_radio_manager = m_radio_managers.get_zwdfs();
+    if (zwdfs_radio_manager) {
+        if (!radio_fsm(zwdfs_radio_manager->first)) {
+            return false;
+        }
+    }
+
+    if (!socket_thread::work()) {
+        return false;
     }
 
     return true;
@@ -314,7 +341,7 @@ bool slave_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     // Find for each radio sockets the message has received.
     std::string fronthaul_iface;
-    for (auto &radio_manager_map_element : m_radio_managers) {
+    for (auto &radio_manager_map_element : m_radio_managers.get()) {
         auto &radio_manager = radio_manager_map_element.second;
         if (sd == radio_manager.backhaul_manager_socket || sd == radio_manager.ap_manager_socket ||
             sd == radio_manager.monitor_socket || sd == radio_manager.platform_manager_socket) {
@@ -323,6 +350,11 @@ bool slave_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
     }
 
     if (cmdu_rx.getMessageType() == ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE) {
+
+        const auto &zwdfs_radio_manager = m_radio_managers.get_zwdfs();
+        if (fronthaul_iface.empty() && zwdfs_radio_manager) {
+            fronthaul_iface = zwdfs_radio_manager->first;
+        }
 
         auto beerocks_header = message_com::parse_intel_vs_message(cmdu_rx);
 
@@ -1450,6 +1482,24 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
 
     case beerocks_message::ACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST: {
         LOG(TRACE) << "Received ACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST";
+
+        if (!m_radio_managers.get_zwdfs()) {
+            LOG(ERROR) << "ZWDFS radio context is not initialized";
+            auto response = message_com::create_vs_message<
+                beerocks_message::cACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE>(
+                cmdu_tx);
+
+            if (!response) {
+                LOG(ERROR) << "Failed building "
+                              "cACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_RESPONSE "
+                              "message!";
+                return false;
+            }
+
+            // Return the response through the first radio context.
+            message_com::send_cmdu(m_radio_managers.get().begin()->second.backhaul_manager_socket,
+                                   cmdu_tx);
+        }
         auto request_in = beerocks_header->addClass<
             beerocks_message::cACTION_BACKHAUL_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST>();
         if (!request_in) {
@@ -1472,7 +1522,7 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         request_out->bandwidth()        = request_in->bandwidth();
         request_out->ant_switch_on()    = request_in->ant_switch_on();
         request_out->center_frequency() = request_in->center_frequency();
-        message_com::send_cmdu(radio_manager.ap_manager_socket, cmdu_tx);
+        message_com::send_cmdu(m_radio_managers.get_zwdfs()->second.ap_manager_socket, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_RADIO_DISABLE_REQUEST: {
@@ -1911,6 +1961,15 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         // cac
         save_cac_capabilities_params_to_db(fronthaul_iface);
 
+        if (radio->front.zwdfs) {
+            auto &radio_managers = m_radio_managers.get();
+            auto radio_ctx_iter  = radio_managers.find(fronthaul_iface);
+
+            // If getting here, it must be the code below must be the last in this function, so the
+            // deleted radio context will not be accessed.
+            m_radio_managers.set_zwdfs(radio_ctx_iter);
+            return true;
+        }
         break;
     }
     case beerocks_message::ACTION_APMANAGER_HOSTAP_SET_RESTRICTED_FAILSAFE_CHANNEL_RESPONSE: {
@@ -3589,7 +3648,7 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
     return true;
 }
 
-bool slave_thread::slave_fsm(const std::string &fronthaul_iface, bool &call_slave_select)
+bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
 {
     auto &radio_manager = m_radio_managers[fronthaul_iface];
     bool slave_ok       = true;
@@ -3825,7 +3884,10 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface, bool &call_slav
         }
         auto db    = AgentDB::get();
         auto radio = db->radio(fronthaul_iface);
-        if (radio && radio->front.zwdfs && radio_manager.ap_manager_socket) {
+
+        const auto &zwdfs_radio_manager = m_radio_managers.get_zwdfs();
+        if (radio && radio->front.zwdfs && zwdfs_radio_manager &&
+            zwdfs_radio_manager->second.ap_manager_socket) {
             auto request = message_com::create_vs_message<
                 beerocks_message::cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED>(cmdu_tx);
 
@@ -3996,8 +4058,6 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface, bool &call_slav
 
         LOG(TRACE) << "goto STATE_JOIN_MASTER";
         radio_manager.slave_state = STATE_JOIN_MASTER;
-
-        SLAVE_STATE_CONTINUE();
         break;
     }
     case STATE_WAIT_BEFORE_JOIN_MASTER: {
@@ -4714,7 +4774,7 @@ bool slave_thread::handle_profile2_default_802dotq_settings_tlv(ieee1905_1::Cmdu
     db->traffic_separation.primary_vlan_id = dot1q_settings->primary_vlan_id();
     db->traffic_separation.default_pcp     = dot1q_settings->default_pcp();
 
-    for (auto &radio_manager_map_element : m_radio_managers) {
+    for (auto &radio_manager_map_element : m_radio_managers.get()) {
         auto &radio_manager   = radio_manager_map_element.second;
         auto pvid_set_request = message_com::create_vs_message<
             beerocks_message::cACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST>(cmdu_tx);
@@ -4811,7 +4871,7 @@ bool slave_thread::send_error_response(
         profile2_error_code_tlv->bssid()       = bssid;
 
         // This is not relevant from which "radio" the error will be sent from, so choose the first.
-        const auto &fronthaul_iface = m_radio_managers.begin()->first;
+        const auto &fronthaul_iface = m_radio_managers.get_controller_socket_iface();
         send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
     }
     return true;
@@ -5235,7 +5295,7 @@ bool slave_thread::handle_multi_ap_policy_config_request(Socket *sd,
     }
 
     cmdu_rx.swap(); // swap back before forwarding
-    for (auto &radio_manager_map_element : m_radio_managers) {
+    for (auto &radio_manager_map_element : m_radio_managers.get()) {
         const auto &fronthaul_iface = radio_manager_map_element.first;
         auto &radio_manager         = radio_manager_map_element.second;
 
@@ -5348,7 +5408,7 @@ bool slave_thread::handle_1905_higher_layer_data_message(Socket &sd,
     }
     LOG(DEBUG) << "Sending ACK message to the originator, mid=" << std::hex << int(mid);
 
-    const auto &fronthaul_iface = m_radio_managers.begin()->first;
+    const auto &fronthaul_iface = m_radio_managers.get_controller_socket_iface();
     return send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
 }
 
@@ -5454,7 +5514,7 @@ bool slave_thread::handle_client_steering_request(Socket *sd, ieee1905_1::CmduMe
         }
 
         LOG(DEBUG) << "sending ACK message back to controller";
-        const auto &fronthaul_iface = m_radio_managers.begin()->first;
+        const auto &fronthaul_iface = m_radio_managers.get_controller_socket_iface();
         send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
 
         // build and send steering completed message
@@ -5563,7 +5623,7 @@ bool slave_thread::handle_channel_preference_query(Socket *sd, ieee1905_1::CmduM
     const auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Received CHANNEL_PREFERENCE_QUERY_MESSAGE, mid=" << std::dec << int(mid);
 
-    for (auto &radio_manager_map_element : m_radio_managers) {
+    for (auto &radio_manager_map_element : m_radio_managers.get()) {
         auto request_out = message_com::create_vs_message<
             beerocks_message::cACTION_APMANAGER_CHANNELS_LIST_REQUEST>(cmdu_tx, mid);
 
@@ -5833,7 +5893,7 @@ bool slave_thread::handle_channel_selection_request(Socket *sd, ieee1905_1::Cmdu
     LOG(DEBUG) << "Received CHANNEL_SELECTION_REQUEST_MESSAGE, mid=" << std::dec << int(mid);
 
     std::string fronthaul_iface;
-    for (auto &radio_manager_map_element : m_radio_managers) {
+    for (auto &radio_manager_map_element : m_radio_managers.get()) {
         fronthaul_iface     = radio_manager_map_element.first;
         auto &radio_manager = radio_manager_map_element.second;
 
