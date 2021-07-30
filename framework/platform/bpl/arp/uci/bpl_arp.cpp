@@ -8,7 +8,6 @@
 
 #include "../../common/utils/utils.h"
 #include <bpl/bpl_arp.h>
-#include <bpl/bpl_err.h>
 
 #include <mapf/common/utils.h>
 
