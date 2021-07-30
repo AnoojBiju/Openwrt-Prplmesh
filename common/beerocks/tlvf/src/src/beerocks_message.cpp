@@ -107,12 +107,12 @@ std::string message_com::print_cmdu_types(ieee1905_1::CmduMessageRx &cmdu_rx, sC
     info = "cmdu_type=" + std::to_string(int(message_type));
     if (message_type == ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE) {
         auto tlv_header = cmdu_rx.getClass<ieee1905_1::tlvVendorSpecific>();
-        if (!intel_oui(tlv_header))
-            return std::string();
         if (!tlv_header) {
             LOG(ERROR) << "addClass<tlvVendorSpecific> failed!";
             return info;
         }
+        if (!intel_oui(tlv_header))
+            return std::string();
         auto hdr = std::make_shared<beerocks_header>(tlv_header->payload(),
                                                      tlv_header->payload_length(), true);
         if (!hdr) {
