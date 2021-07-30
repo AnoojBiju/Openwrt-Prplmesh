@@ -260,7 +260,6 @@ void son_actions::send_cli_debug_message(db &database, ieee1905_1::CmduMessageTx
 void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db &database,
                                    ieee1905_1::CmduMessageTx &cmdu_tx, task_pool &tasks)
 {
-    int prev_task_id;
     beerocks::eType mac_type = database.get_node_type(mac);
     auto node_state          = database.get_node_state(mac);
 
@@ -296,7 +295,7 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
                 LOG(DEBUG) << "handoff_flag == false, mac " << mac;
 
                 // If we're not in the middle of steering, kill roaming task
-                prev_task_id = database.get_roaming_task_id(mac);
+                int prev_task_id = database.get_roaming_task_id(mac);
                 if (tasks.is_task_running(prev_task_id)) {
                     tasks.kill_task(prev_task_id);
                 }
@@ -337,7 +336,7 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
                 } else if (database.get_node_type(node_mac) == beerocks::TYPE_IRE_BACKHAUL ||
                            database.get_node_type(node_mac) == beerocks::TYPE_CLIENT) {
                     // kill old roaming task
-                    prev_task_id = database.get_roaming_task_id(node_mac);
+                    int prev_task_id = database.get_roaming_task_id(node_mac);
                     if (tasks.is_task_running(prev_task_id)) {
                         tasks.kill_task(prev_task_id);
                     }
