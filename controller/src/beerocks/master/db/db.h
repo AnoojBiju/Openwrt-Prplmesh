@@ -1711,6 +1711,15 @@ public:
     bool dm_add_cac_status_available_channel(std::shared_ptr<sAgent::sRadio> radio,
                                              uint8_t operating_class, uint8_t channel);
 
+    /**
+     * @brief Removes excessive NBAPI objects from system bus, if amount of them succeed the limit.
+     *
+     * @param paths Queue with paths to NBAPI objects of particular type.
+     * @param limit The maximum allowed amount of those objects.
+     * @return True on success, false otherwise.
+     */
+    bool dm_check_objects_limit(std::queue<std::string> &paths, uint8_t limit);
+
     //
     // tasks
     //
@@ -2089,14 +2098,6 @@ private:
      * @return true on success, false otherwise.
      */
     bool set_node_data_model_path(const sMacAddr &mac, const std::string &data_model_path);
-
-    /**
-     * @brief Removes excessive NBAPI objects from system bus, if amount of them succeed the limit.
-     *
-     * @param paths Queue with paths to NBAPI objects of particular type.
-     * @param limit The maximum allowed amount of those objects.
-     */
-    void check_history_limit(std::queue<std::string> &paths, uint8_t limit);
 
     int network_optimization_task_id           = -1;
     int channel_selection_task_id              = -1;
