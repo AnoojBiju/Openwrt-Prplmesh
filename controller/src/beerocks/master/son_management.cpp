@@ -531,10 +531,17 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
         std::string client_mac = tlvf::mac_to_string(request->client_mac());
+
+        auto client = database.get_station(tlvf::mac_from_string(client_mac));
+        if (!client) {
+            LOG(ERROR) << "client " << client_mac << " not found";
+            isOK = false;
+            break;
+        }
+
         if (database.get_node_state(client_mac) == beerocks::STATE_CONNECTED) {
 
-            int prev_task_id = database.get_roaming_task_id(client_mac);
-            if (tasks.is_task_running(prev_task_id)) {
+            if (tasks.is_task_running(client->roaming_task_id)) {
                 LOG(TRACE) << "CLI roaming task already running for " << client_mac;
             } else {
 

@@ -27,6 +27,10 @@ public:
     explicit sStation(const sMacAddr &mac_) : mac(mac_) {}
 
     const sMacAddr mac;
+
+    int association_handling_task_id = -1;
+    int steering_task_id             = -1;
+    int roaming_task_id              = -1;
 };
 
 } // namespace db

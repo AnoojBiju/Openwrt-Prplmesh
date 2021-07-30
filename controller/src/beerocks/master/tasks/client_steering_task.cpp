@@ -40,9 +40,16 @@ void client_steering_task::work()
 {
     switch (m_state) {
     case STEER: {
-        int prev_task_id = m_database.get_steering_task_id(m_sta_mac);
+        auto station = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
+        if (!station) {
+            LOG(ERROR) << "Station " << m_sta_mac << " not found";
+            finish();
+            break;
+        }
+
+        int prev_task_id = station->steering_task_id;
         m_tasks.kill_task(prev_task_id);
-        m_database.assign_steering_task_id(m_sta_mac, id);
+        station->steering_task_id = id;
 
         m_original_bssid = m_database.get_node_parent(m_sta_mac);
         m_ssid_name      = m_database.get_hostap_ssid(tlvf::mac_from_string(m_original_bssid));
