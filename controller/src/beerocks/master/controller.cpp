@@ -950,7 +950,7 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
     auto agent   = database.m_agents.add(al_mac);
     agent->state = beerocks::STATE_DISCONNECTED;
 
-    database.set_agent_manufacturer(*agent, "prplMesh");
+    database.set_agent_manufacturer(*agent, m1->manufacturer());
 
     // Profile-2 Multi AP profile is added for higher than Profile-1 agents.
     if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
