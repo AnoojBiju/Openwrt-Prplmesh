@@ -1714,15 +1714,6 @@ public:
     //
     // tasks
     //
-    bool assign_association_handling_task_id(const std::string &mac, int new_task_id);
-    int get_association_handling_task_id(const std::string &mac);
-
-    bool assign_steering_task_id(const std::string &mac, int new_task_id);
-    int get_steering_task_id(const std::string &mac);
-
-    bool assign_roaming_task_id(const std::string &mac, int new_task_id);
-    int get_roaming_task_id(const std::string &mac);
-
     bool assign_load_balancer_task_id(const std::string &mac, int new_task_id);
     int get_load_balancer_task_id(const std::string &mac);
 
