@@ -110,8 +110,6 @@ framework/external/easylogging/easylogging++.cc: information: This file is not a
 framework/platform/bpl/arp/uci/bpl_arp.cpp: style: C-style pointer casting [cstyleCast]    arp_monitor *pArpMon = (arp_monitor *)ctx;
 framework/platform/bpl/arp/uci/monitor/arp_monitor.cpp: style: The scope of the variable 'type' can be reduced. [variableScope]        unsigned short type;
 framework/platform/bpl/cfg/linux/bpl_cfg.cpp: style: Parameter 'parameters' can be declared with const [constParameter]static bool cfg_set_params(std::unordered_map<std::string, std::string> &parameters)
-framework/platform/bpl/cfg/uci/bpl_cfg.cpp: style: The scope of the variable 'retVal' can be reduced. [variableScope]    int retVal = 0;
-framework/platform/bpl/cfg/uci/bpl_cfg.cpp: style: Variable 'retVal' is assigned a value that is never used. [unreadVariable]    int retVal = 0;
 framework/platform/bpl/db/linux/bpl_db.cpp: style: Parameter 'nested_params' can be declared with const [constParameter]    std::unordered_map<std::string, std::unordered_map<std::string, std::string>> &nested_params)
 framework/platform/bpl/db/linux/bpl_db.cpp: style: Parameter 'params' can be declared with const [constParameter]                  std::unordered_map<std::string, std::string> &params)
 framework/platform/bpl/dhcp/uci/bpl_dhcp.cpp: style: struct member 'dhcp_event_request::data' is never used. [unusedStructMember]    char data[];
