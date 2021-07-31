@@ -132,7 +132,7 @@ private:
     void queue_pop_event();
     int queue_pending_event_count();
     void queue_clear();
-    void queue_clear_mac(std::string mac);
+    void queue_clear_mac(const std::string &mac);
 
     bool is_2G_channel(int channel);
     void get_hostap_params();

@@ -1055,7 +1055,7 @@ void channel_selection_task::queue_clear()
     }
 }
 
-void channel_selection_task::queue_clear_mac(std::string mac)
+void channel_selection_task::queue_clear_mac(const std::string &mac)
 {
     TASK_LOG(DEBUG) << "queue_clear_mac(), mac = " << mac;
     for (auto it = event_queue.begin(); it != event_queue.end(); it++) {

@@ -72,7 +72,6 @@ controller/src/beerocks/master/tasks/bml_task.cpp: style: C-style pointer castin
 controller/src/beerocks/master/tasks/bml_task.cpp: style: C-style pointer casting [cstyleCast]            auto event_obj = (listener_general_register_unregister_event *)obj;
 controller/src/beerocks/master/tasks/bml_task.cpp: style: C-style pointer casting [cstyleCast]            auto event_obj = (stats_info_available_event *)obj;
 controller/src/beerocks/master/tasks/bml_task.cpp: style: Local variable 'idx' shadows outer variable [shadowVariable]            int idx = 0;
-controller/src/beerocks/master/tasks/channel_selection_task.cpp: performance: Function parameter 'mac' should be passed by const reference. [passedByValue]void channel_selection_task::queue_clear_mac(std::string mac)
 controller/src/beerocks/master/tasks/channel_selection_task.cpp: performance: Function parameter 'set_reentry_client' should be passed by const reference. [passedByValue]                 [&](std::string set_reentry_client) {
 controller/src/beerocks/master/tasks/channel_selection_task.cpp: style: C-style pointer casting [cstyleCast]                    (sDfsReEntrySampleSteeredClients_event *)event_obj;
 controller/src/beerocks/master/tasks/channel_selection_task.cpp: style: C-style pointer casting [cstyleCast]                    cac_completed_event = (sCacCompleted_event *)event_obj;
