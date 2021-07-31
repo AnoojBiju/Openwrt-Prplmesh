@@ -65,7 +65,7 @@ public:
         } gw_ire;
     };
 
-    explicit cli_bml(std::string beerocks_conf_path_);
+    explicit cli_bml(const std::string &beerocks_conf_path_);
     virtual ~cli_bml();
 
     bool connect() override;
@@ -170,7 +170,7 @@ private:
     int get_wifi_credentials(int vap_id = 0);
     int set_onboarding_state(int enable);
     int get_onboarding_state();
-    int wps_onboarding(const std::string iface = std::string());
+    int wps_onboarding(const std::string &iface = std::string());
 
     int get_bml_version();
     int get_master_slave_versions();

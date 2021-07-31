@@ -121,7 +121,7 @@ static std::string node_type_to_conn_map_string(uint8_t type)
 
 static void bml_utils_dump_conn_map(
     std::unordered_multimap<std::string, std::shared_ptr<cli_bml::conn_map_node_t>> &conn_map_nodes,
-    const std::string &parent_bssid, const std::string ind, std::stringstream &ss)
+    const std::string &parent_bssid, const std::string &ind, std::stringstream &ss)
 {
     std::string ind_str = ind;
 
@@ -289,7 +289,7 @@ static void steering_client_set_string_to_struct(const std::string &str_config,
 
 SocketClient *cli_bml::m_analyzer_socket = nullptr;
 
-cli_bml::cli_bml(std::string beerocks_conf_path_)
+cli_bml::cli_bml(const std::string &beerocks_conf_path_)
 {
     cli_bml::setFunctionsMapAndArray();
     beerocks_conf_path = beerocks_conf_path_;
@@ -1605,7 +1605,7 @@ int cli_bml::get_onboarding_state()
     return 0;
 }
 
-int cli_bml::wps_onboarding(std::string iface)
+int cli_bml::wps_onboarding(const std::string &iface)
 {
     int ret = bml_wps_onboarding(ctx, iface.c_str());
     printBmlReturnVals("bml_wps_onboarding", ret);

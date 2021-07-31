@@ -39,17 +39,10 @@ controller/src/beerocks/bml/rdkb/internal/bml_rdkb_internal.cpp: style: C-style 
 controller/src/beerocks/bml/rdkb/internal/bml_rdkb_internal.cpp: style: Variable 'iRet' is reassigned a value before the old one has been used. [redundantAssignment]    iRet = prmRdkbWlan.get_value();
 controller/src/beerocks/bml/rdkb/internal/bml_rdkb_internal.h: style: The function 'process_cmdu_header' overrides a function in a base class but is not marked with a 'override' specifier. [missingOverride]    virtual int process_cmdu_header(std::shared_ptr<beerocks::beerocks_header> beerocks_header);
 controller/src/beerocks/cli/beerocks_cli.cpp: performance: Prefer prefix ++/-- operators for non-primitive types. [postfixOperator]         it++) {
-controller/src/beerocks/cli/beerocks_cli_bml.cpp: performance: Function parameter 'beerocks_conf_path_' should be passed by const reference. [passedByValue]cli_bml::cli_bml(std::string beerocks_conf_path_)
-controller/src/beerocks/cli/beerocks_cli_bml.cpp: performance: Function parameter 'ind' should be passed by const reference. [passedByValue]    const std::string &parent_bssid, const std::string ind, std::stringstream &ss)
-controller/src/beerocks/cli/beerocks_cli_bml.h: performance: Function parameter 'iface' should be passed by const reference. [passedByValue]    int wps_onboarding(const std::string iface = std::string());
-controller/src/beerocks/cli/beerocks_cli_main.cpp: performance: Function parameter 'temp_path' should be passed by const reference. [passedByValue]static void cli_tcp_proxy(std::string temp_path)
 controller/src/beerocks/cli/beerocks_cli_main.cpp: style: Redundant initialization for 'cli_ptr'. The initialized value is overwritten before it is read. [redundantInitialization]    beerocks::cli *cli_ptr = &cli_soc;
 controller/src/beerocks/cli/beerocks_cli_main.cpp: style: Variable 'cli_ptr' is assigned a value that is never used. [unreadVariable]    beerocks::cli *cli_ptr = &cli_soc;
 controller/src/beerocks/cli/beerocks_cli_main.cpp: style: Variable 'pos' is assigned a value that is never used. [unreadVariable]        } else if ((pos = token->find("!")) != std::string::npos) {
-controller/src/beerocks/cli/beerocks_cli_proxy.cpp: performance: Function parameter 'master_uds_' should be passed by const reference. [passedByValue]cli_proxy::cli_proxy(std::string master_uds_) : socket_thread()
 controller/src/beerocks/cli/beerocks_cli_socket.cpp: performance: Function parameter 'mode' should be passed by const reference. [passedByValue]                                      uint16_t repeats, int16_t op_class, std::string mode)
-controller/src/beerocks/cli/beerocks_cli_socket.cpp: performance: Function parameter 'proxy_ip_' should be passed by const reference. [passedByValue]cli_socket::cli_socket(std::string temp_path_, std::string proxy_ip_)
-controller/src/beerocks/cli/beerocks_cli_socket.cpp: performance: Function parameter 'temp_path_' should be passed by const reference. [passedByValue]cli_socket::cli_socket(std::string temp_path_, std::string proxy_ip_)
 controller/src/beerocks/master/beerocks_master_main.cpp: style: Variable 'bridge_iface' can be declared with const [constVariable]    auto &bridge_iface = beerocks_slave_conf.bridge_iface;
 controller/src/beerocks/master/controller_ucc_listener.cpp: style: Variable 'bit_5_str' can be declared with const [constVariable]    auto &bit_5_str = confs[7];
 controller/src/beerocks/master/controller_ucc_listener.cpp: style: Variable 'bit_6_str' can be declared with const [constVariable]    auto &bit_6_str = confs[6];
