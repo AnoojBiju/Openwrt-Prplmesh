@@ -1081,10 +1081,7 @@ bool channel_selection_task::reentry_steered_client_check()
             TASK_LOG(DEBUG) << "no client connected to reentry hostap ";
             return true;
         }
-        for_each(begin(set_reentry_clients), end(set_reentry_clients),
-                 [&](std::string set_reentry_client) {
-                     //LOG(DEBUG) << "set_reentry_client connected = " << set_reentry_client;
-                 });
+
         //inject the event back to the end of the queue
         //TASK_LOG(DEBUG) << "radio_mac - " << radio_mac << " sta's are still connected injecting sta sample event ";
         auto new_event = CHANNEL_SELECTION_ALLOCATE_EVENT(sDfsReEntrySampleSteeredClients_event);
