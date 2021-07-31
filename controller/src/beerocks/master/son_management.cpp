@@ -208,8 +208,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
         std::string hostap_mac = tlvf::mac_to_string(cli_request->hostap_mac());
         LOG(DEBUG) << "CLI client allow request for " << client_mac << " to " << hostap_mac;
 
-        auto current_ap_mac = database.get_node_parent(client_mac);
-        auto agent_mac      = database.get_node_parent_ire(hostap_mac);
+        auto agent_mac = database.get_node_parent_ire(hostap_mac);
         if (!cmdu_tx.create(0,
                             ieee1905_1::eMessageType::CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE)) {
             LOG(ERROR)
@@ -290,8 +289,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
         std::string hostap_mac = tlvf::mac_to_string(cli_request->hostap_mac());
         LOG(DEBUG) << "CLI client disallow request for " << client_mac << " to " << hostap_mac;
 
-        auto agent_mac      = database.get_node_parent_ire(hostap_mac);
-        auto current_ap_mac = database.get_node_parent(client_mac);
+        auto agent_mac = database.get_node_parent_ire(hostap_mac);
         if (!cmdu_tx.create(0,
                             ieee1905_1::eMessageType::CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE)) {
             LOG(ERROR)
