@@ -90,7 +90,7 @@ bool mac_from_string(uint8_t *buf, const std::string &mac)
 
 sMacAddr mac_from_string(const std::string &mac)
 {
-    sMacAddr ret;
+    sMacAddr ret = {};
 
     mac_from_string(ret.oct, mac);
 
