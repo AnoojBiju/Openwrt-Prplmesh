@@ -102,7 +102,6 @@ controller/src/beerocks/master/tasks/rdkb/rdkb_wlan_task.cpp: style: C-style poi
 controller/src/beerocks/master/tasks/rdkb/rdkb_wlan_task.cpp: style: C-style pointer casting [cstyleCast]            auto event_obj = (steering_rssi_measurement_request_event *)obj;
 controller/src/beerocks/master/tasks/rdkb/rdkb_wlan_task.cpp: style: C-style pointer casting [cstyleCast]        auto event_obj = (steering_slave_join_event *)obj;
 controller/src/beerocks/master/tasks/rdkb/rdkb_wlan_task.cpp: style: Local variable 'update' shadows outer variable [shadowVariable]            auto update = message_com::create_vs_message<
-controller/src/beerocks/master/tasks/rdkb/rdkb_wlan_task.cpp: style: The scope of the variable 'listener_exist' can be reduced. [variableScope]    bool listener_exist;
 controller/src/beerocks/master/tasks/rdkb/rdkb_wlan_task.cpp: style: Variable '(*it).events_updates' is assigned a value that is never used. [unreadVariable]                (*it).events_updates = update_enable;
 controller/src/beerocks/master/tasks/rdkb/rdkb_wlan_task_db.cpp: style: Parameter 'bssid' can be declared with const [constParameter]int32_t rdkb_wlan_task_db::get_group_index(const std::string &client_mac, std::string &bssid)
 controller/src/beerocks/master/tasks/task.cpp: performance: Function parameter 'mac' should be passed by const reference. [passedByValue]void task::add_pending_mac(std::string mac, beerocks_message::eActionOp_CONTROL action_op)
