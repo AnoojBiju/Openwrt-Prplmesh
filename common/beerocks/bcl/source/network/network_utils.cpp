@@ -133,6 +133,8 @@ sIpv4Addr network_utils::ipv4_from_string(const std::string &ip)
 
     ipv4_from_string(ret.oct, ip);
 
+    // cppcheck 2.4 reports `ret` as an uninitialized value
+    // cppcheck-suppress uninitvar
     return ret;
 }
 
