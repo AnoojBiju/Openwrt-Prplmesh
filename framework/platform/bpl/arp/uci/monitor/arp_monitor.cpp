@@ -208,7 +208,7 @@ arp_monitor::arp_monitor() : m_fdMonSocket(-1), m_fdArpSocket(-1), m_pNlSocket(n
 
 arp_monitor::~arp_monitor() {}
 
-int arp_monitor::start(std::string strIface)
+int arp_monitor::start(const std::string &strIface)
 {
     // Stop the monitor (if running)
     stop();
