@@ -1780,10 +1780,10 @@ bool db::set_hostap_ant_num(const sMacAddr &mac, beerocks::eWiFiAntNum ant_num)
     auto n = get_node(mac);
     if (!n) {
         LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return -1;
+        return false;
     } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
         LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return -1;
+        return false;
     }
     n->capabilities.ant_num = ant_num;
     return true;
@@ -4793,10 +4793,10 @@ bool db::get_hostap_channel_ext_above_primary(const sMacAddr &hostap_mac)
     auto n = get_node(hostap_mac);
     if (!n) {
         LOG(WARNING) << __FUNCTION__ << " - node " << hostap_mac << " does not exist!";
-        return -1;
+        return false;
     } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
         LOG(WARNING) << __FUNCTION__ << "node " << hostap_mac << " is not a valid hostap!";
-        return -1;
+        return false;
     }
     return n->hostap->channel_ext_above_primary;
 }
