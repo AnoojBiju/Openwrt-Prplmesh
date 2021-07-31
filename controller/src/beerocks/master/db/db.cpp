@@ -4086,10 +4086,9 @@ int db::get_bml_socket_at(int idx)
 
 bool db::is_bml_listener_exist()
 {
-    bool listener_exist;
     for (const auto &listener : bml_listeners_sockets) {
-        listener_exist = listener.map_updates || listener.stats_updates ||
-                         listener.events_updates || listener.topology_updates;
+        bool listener_exist = listener.map_updates || listener.stats_updates ||
+                              listener.events_updates || listener.topology_updates;
         if (listener_exist) {
             return true;
         }
