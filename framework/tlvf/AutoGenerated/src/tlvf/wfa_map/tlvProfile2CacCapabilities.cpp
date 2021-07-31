@@ -192,7 +192,7 @@ bool tlvProfile2CacCapabilities::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
-    m_country_code = (uint8_t*)m_buff_ptr__;
+    m_country_code = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t) * (2))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (2) << ") Failed!";
         return false;
@@ -208,7 +208,7 @@ bool tlvProfile2CacCapabilities::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_cac_radios = (cCacCapabilitiesRadio*)m_buff_ptr__;
+    m_cac_radios = reinterpret_cast<cCacCapabilitiesRadio*>(m_buff_ptr__);
     uint8_t number_of_cac_radios = *m_number_of_cac_radios;
     m_cac_radios_idx__ = 0;
     for (size_t i = 0; i < number_of_cac_radios; i++) {
@@ -382,7 +382,7 @@ bool cCacCapabilitiesRadio::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_cac_types = (cCacTypes*)m_buff_ptr__;
+    m_cac_types = reinterpret_cast<cCacTypes*>(m_buff_ptr__);
     uint8_t number_of_cac_type_supported = *m_number_of_cac_type_supported;
     m_cac_types_idx__ = 0;
     for (size_t i = 0; i < number_of_cac_type_supported; i++) {
@@ -564,7 +564,7 @@ bool cCacTypes::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(eCacMethod) << ") Failed!";
         return false;
     }
-    m_duration = (uint8_t*)m_buff_ptr__;
+    m_duration = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t) * (3))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (3) << ") Failed!";
         return false;
@@ -575,7 +575,7 @@ bool cCacTypes::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_operating_classes = (cCacCapabilitiesOperatingClasses*)m_buff_ptr__;
+    m_operating_classes = reinterpret_cast<cCacCapabilitiesOperatingClasses*>(m_buff_ptr__);
     uint8_t number_of_operating_classes = *m_number_of_operating_classes;
     m_operating_classes_idx__ = 0;
     for (size_t i = 0; i < number_of_operating_classes; i++) {
@@ -715,7 +715,7 @@ bool cCacCapabilitiesOperatingClasses::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_channels = (uint8_t*)m_buff_ptr__;
+    m_channels = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     uint8_t number_of_channels = *m_number_of_channels;
     m_channels_idx__ = number_of_channels;
     if (!buffPtrIncrementSafe(sizeof(uint8_t) * (number_of_channels))) {

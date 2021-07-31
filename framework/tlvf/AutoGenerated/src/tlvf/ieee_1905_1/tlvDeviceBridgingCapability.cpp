@@ -178,7 +178,7 @@ bool tlvDeviceBridgingCapability::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_bridging_tuples_list = (cMacList*)m_buff_ptr__;
+    m_bridging_tuples_list = reinterpret_cast<cMacList*>(m_buff_ptr__);
     uint8_t bridging_tuples_list_length = *m_bridging_tuples_list_length;
     m_bridging_tuples_list_idx__ = 0;
     for (size_t i = 0; i < bridging_tuples_list_length; i++) {
@@ -309,7 +309,7 @@ bool cMacList::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_mac_list = (sMacAddr*)m_buff_ptr__;
+    m_mac_list = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
     uint8_t mac_list_length = *m_mac_list_length;
     m_mac_list_idx__ = mac_list_length;
     if (!buffPtrIncrementSafe(sizeof(sMacAddr) * (mac_list_length))) {

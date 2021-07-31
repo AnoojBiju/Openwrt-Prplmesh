@@ -188,7 +188,7 @@ bool tlvApMetrics::init()
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(sEstimatedService); }
     if (!m_parse__) { m_estimated_service_parameters->struct_init(); }
-    m_estimated_service_info_field = (uint8_t*)m_buff_ptr__;
+    m_estimated_service_info_field = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (m_length && m_parse__) {
         size_t len = *m_length;
         tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));

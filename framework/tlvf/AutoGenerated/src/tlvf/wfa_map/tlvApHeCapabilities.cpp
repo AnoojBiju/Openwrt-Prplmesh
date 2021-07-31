@@ -179,7 +179,7 @@ bool tlvApHeCapabilities::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_supported_he_mcs = (uint8_t*)m_buff_ptr__;
+    m_supported_he_mcs = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     uint8_t supported_he_mcs_length = *m_supported_he_mcs_length;
     m_supported_he_mcs_idx__ = supported_he_mcs_length;
     if (!buffPtrIncrementSafe(sizeof(uint8_t) * (supported_he_mcs_length))) {

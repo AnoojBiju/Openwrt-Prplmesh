@@ -134,7 +134,7 @@ bool cACTION_APMANAGER_UP_NOTIFICATION::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_iface_name = (char*)m_buff_ptr__;
+    m_iface_name = reinterpret_cast<char*>(m_buff_ptr__);
     uint8_t iface_name_length = *m_iface_name_length;
     m_iface_name_idx__ = iface_name_length;
     if (!buffPtrIncrementSafe(sizeof(char) * (iface_name_length))) {
@@ -2182,7 +2182,7 @@ bool cACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_association_frame = (uint8_t*)m_buff_ptr__;
+    m_association_frame = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (m_parse__) {
         size_t len = getBuffRemainingBytes();
         m_association_frame_idx__ = len/sizeof(uint8_t);
@@ -3460,7 +3460,7 @@ bool cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_wifi_credentials = (WSC::cConfigData*)m_buff_ptr__;
+    m_wifi_credentials = reinterpret_cast<WSC::cConfigData*>(m_buff_ptr__);
     uint8_t wifi_credentials_size = *m_wifi_credentials_size;
     m_wifi_credentials_idx__ = 0;
     for (size_t i = 0; i < wifi_credentials_size; i++) {

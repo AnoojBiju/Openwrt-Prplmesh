@@ -146,7 +146,7 @@ bool tlvProfile2CacTermination::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_cac_radios = (sCacTerminationRadio*)m_buff_ptr__;
+    m_cac_radios = reinterpret_cast<sCacTerminationRadio*>(m_buff_ptr__);
     uint8_t number_of_cac_radios = *m_number_of_cac_radios;
     m_cac_radios_idx__ = number_of_cac_radios;
     if (!buffPtrIncrementSafe(sizeof(sCacTerminationRadio) * (number_of_cac_radios))) {

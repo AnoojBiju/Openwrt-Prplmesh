@@ -320,7 +320,7 @@ bool cACTION_BML_NW_MAP_RESPONSE::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
         return false;
     }
-    m_buffer = (char*)m_buff_ptr__;
+    m_buffer = reinterpret_cast<char*>(m_buff_ptr__);
     uint32_t buffer_size = *m_buffer_size;
     if (m_parse__) {  tlvf_swap(32, reinterpret_cast<uint8_t*>(&buffer_size)); }
     m_buffer_idx__ = buffer_size;
@@ -463,7 +463,7 @@ bool cACTION_BML_NW_MAP_UPDATE::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
         return false;
     }
-    m_buffer = (char*)m_buff_ptr__;
+    m_buffer = reinterpret_cast<char*>(m_buff_ptr__);
     uint32_t buffer_size = *m_buffer_size;
     if (m_parse__) {  tlvf_swap(32, reinterpret_cast<uint8_t*>(&buffer_size)); }
     m_buffer_idx__ = buffer_size;
@@ -606,7 +606,7 @@ bool cACTION_BML_STATS_UPDATE::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
         return false;
     }
-    m_buffer = (char*)m_buff_ptr__;
+    m_buffer = reinterpret_cast<char*>(m_buff_ptr__);
     uint32_t buffer_size = *m_buffer_size;
     if (m_parse__) {  tlvf_swap(32, reinterpret_cast<uint8_t*>(&buffer_size)); }
     m_buffer_idx__ = buffer_size;
@@ -738,7 +738,7 @@ bool cACTION_BML_EVENTS_UPDATE::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
         return false;
     }
-    m_buffer = (char*)m_buff_ptr__;
+    m_buffer = reinterpret_cast<char*>(m_buff_ptr__);
     uint32_t buffer_size = *m_buffer_size;
     if (m_parse__) {  tlvf_swap(32, reinterpret_cast<uint8_t*>(&buffer_size)); }
     m_buffer_idx__ = buffer_size;
@@ -3532,7 +3532,7 @@ bool cACTION_BML_WIFI_CREDENTIALS_SET_REQUEST::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_ssid = (char*)m_buff_ptr__;
+    m_ssid = reinterpret_cast<char*>(m_buff_ptr__);
     uint8_t ssid_size = *m_ssid_size;
     m_ssid_idx__ = ssid_size;
     if (!buffPtrIncrementSafe(sizeof(char) * (ssid_size))) {
@@ -3545,7 +3545,7 @@ bool cACTION_BML_WIFI_CREDENTIALS_SET_REQUEST::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_network_key = (char*)m_buff_ptr__;
+    m_network_key = reinterpret_cast<char*>(m_buff_ptr__);
     uint8_t network_key_size = *m_network_key_size;
     m_network_key_idx__ = network_key_size;
     if (!buffPtrIncrementSafe(sizeof(char) * (network_key_size))) {
@@ -3558,7 +3558,7 @@ bool cACTION_BML_WIFI_CREDENTIALS_SET_REQUEST::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_operating_classes = (uint8_t*)m_buff_ptr__;
+    m_operating_classes = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     uint8_t operating_classes_size = *m_operating_classes_size;
     m_operating_classes_idx__ = operating_classes_size;
     if (!buffPtrIncrementSafe(sizeof(uint8_t) * (operating_classes_size))) {
@@ -4286,7 +4286,7 @@ bool cACTION_BML_SET_VAP_LIST_CREDENTIALS_REQUEST::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_vap_list = (sConfigVapInfo*)m_buff_ptr__;
+    m_vap_list = reinterpret_cast<sConfigVapInfo*>(m_buff_ptr__);
     uint8_t vap_list_size = *m_vap_list_size;
     m_vap_list_idx__ = vap_list_size;
     if (!buffPtrIncrementSafe(sizeof(sConfigVapInfo) * (vap_list_size))) {
@@ -4483,7 +4483,7 @@ bool cACTION_BML_GET_VAP_LIST_CREDENTIALS_RESPONSE::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_vap_list = (sConfigVapInfo*)m_buff_ptr__;
+    m_vap_list = reinterpret_cast<sConfigVapInfo*>(m_buff_ptr__);
     uint8_t vap_list_size = *m_vap_list_size;
     m_vap_list_idx__ = vap_list_size;
     if (!buffPtrIncrementSafe(sizeof(sConfigVapInfo) * (vap_list_size))) {
@@ -5522,7 +5522,7 @@ bool cACTION_BML_STEERING_EVENTS_UPDATE::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
         return false;
     }
-    m_buffer = (char*)m_buff_ptr__;
+    m_buffer = reinterpret_cast<char*>(m_buff_ptr__);
     uint32_t buffer_size = *m_buffer_size;
     if (m_parse__) {  tlvf_swap(32, reinterpret_cast<uint8_t*>(&buffer_size)); }
     m_buffer_idx__ = buffer_size;
@@ -6813,7 +6813,7 @@ bool cACTION_BML_CHANNEL_SCAN_GET_RESULTS_RESPONSE::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_results = (sChannelScanResults*)m_buff_ptr__;
+    m_results = reinterpret_cast<sChannelScanResults*>(m_buff_ptr__);
     uint8_t results_size = *m_results_size;
     m_results_idx__ = results_size;
     if (!buffPtrIncrementSafe(sizeof(sChannelScanResults) * (results_size))) {
@@ -7277,7 +7277,7 @@ bool cACTION_BML_CLIENT_GET_CLIENT_LIST_RESPONSE::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
         return false;
     }
-    m_client_list = (sMacAddr*)m_buff_ptr__;
+    m_client_list = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
     uint32_t client_list_size = *m_client_list_size;
     if (m_parse__) {  tlvf_swap(32, reinterpret_cast<uint8_t*>(&client_list_size)); }
     m_client_list_idx__ = client_list_size;

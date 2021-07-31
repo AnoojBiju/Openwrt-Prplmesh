@@ -318,7 +318,7 @@ bool tlvProfile2ChannelScanResult::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_timestamp = (char*)m_buff_ptr__;
+    m_timestamp = reinterpret_cast<char*>(m_buff_ptr__);
     uint8_t timestamp_length = *m_timestamp_length;
     m_timestamp_idx__ = timestamp_length;
     if (!buffPtrIncrementSafe(sizeof(char) * (timestamp_length))) {
@@ -344,7 +344,7 @@ bool tlvProfile2ChannelScanResult::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint16_t); }
-    m_neighbors_list = (cNeighbors*)m_buff_ptr__;
+    m_neighbors_list = reinterpret_cast<cNeighbors*>(m_buff_ptr__);
     uint16_t neighbors_list_length = *m_neighbors_list_length;
     if (m_parse__) {  tlvf_swap(16, reinterpret_cast<uint8_t*>(&neighbors_list_length)); }
     m_neighbors_list_idx__ = 0;
@@ -588,7 +588,7 @@ bool cNeighbors::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_ssid = (char*)m_buff_ptr__;
+    m_ssid = reinterpret_cast<char*>(m_buff_ptr__);
     uint8_t ssid_length = *m_ssid_length;
     m_ssid_idx__ = ssid_length;
     if (!buffPtrIncrementSafe(sizeof(char) * (ssid_length))) {
@@ -606,7 +606,7 @@ bool cNeighbors::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_channels_bw_list = (char*)m_buff_ptr__;
+    m_channels_bw_list = reinterpret_cast<char*>(m_buff_ptr__);
     uint8_t channel_bw_length = *m_channel_bw_length;
     m_channels_bw_list_idx__ = channel_bw_length;
     if (!buffPtrIncrementSafe(sizeof(char) * (channel_bw_length))) {

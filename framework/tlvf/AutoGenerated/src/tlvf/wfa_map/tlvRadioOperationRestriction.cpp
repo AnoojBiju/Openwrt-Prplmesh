@@ -191,7 +191,7 @@ bool tlvRadioOperationRestriction::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_operating_classes_list = (cRestrictedOperatingClasses*)m_buff_ptr__;
+    m_operating_classes_list = reinterpret_cast<cRestrictedOperatingClasses*>(m_buff_ptr__);
     uint8_t operating_classes_list_length = *m_operating_classes_list_length;
     m_operating_classes_list_idx__ = 0;
     for (size_t i = 0; i < operating_classes_list_length; i++) {
@@ -332,7 +332,7 @@ bool cRestrictedOperatingClasses::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_channel_list = (sChannelInfo*)m_buff_ptr__;
+    m_channel_list = reinterpret_cast<sChannelInfo*>(m_buff_ptr__);
     uint8_t channel_list_length = *m_channel_list_length;
     m_channel_list_idx__ = channel_list_length;
     if (!buffPtrIncrementSafe(sizeof(sChannelInfo) * (channel_list_length))) {

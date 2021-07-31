@@ -184,7 +184,7 @@ bool tlvClientAssociationControlRequest::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_sta_list = (sMacAddr*)m_buff_ptr__;
+    m_sta_list = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
     uint8_t sta_list_length = *m_sta_list_length;
     m_sta_list_idx__ = sta_list_length;
     if (!buffPtrIncrementSafe(sizeof(sMacAddr) * (sta_list_length))) {

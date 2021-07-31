@@ -140,7 +140,7 @@ bool tlvSearchedService::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_searched_service_list = (eSearchedService*)m_buff_ptr__;
+    m_searched_service_list = reinterpret_cast<eSearchedService*>(m_buff_ptr__);
     uint8_t searched_service_list_length = *m_searched_service_list_length;
     m_searched_service_list_idx__ = searched_service_list_length;
     if (!buffPtrIncrementSafe(sizeof(eSearchedService) * (searched_service_list_length))) {

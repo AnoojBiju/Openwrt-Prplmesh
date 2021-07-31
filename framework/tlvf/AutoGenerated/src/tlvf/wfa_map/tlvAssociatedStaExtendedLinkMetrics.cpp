@@ -159,7 +159,7 @@ bool tlvAssociatedStaExtendedLinkMetrics::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_metrics_list = (sMetrics*)m_buff_ptr__;
+    m_metrics_list = reinterpret_cast<sMetrics*>(m_buff_ptr__);
     uint8_t metrics_list_length = *m_metrics_list_length;
     m_metrics_list_idx__ = metrics_list_length;
     if (!buffPtrIncrementSafe(sizeof(sMetrics) * (metrics_list_length))) {

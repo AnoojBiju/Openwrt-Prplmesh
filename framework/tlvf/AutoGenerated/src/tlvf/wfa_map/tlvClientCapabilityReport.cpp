@@ -151,7 +151,7 @@ bool tlvClientCapabilityReport::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(eResultCode); }
-    m_association_frame = (uint8_t*)m_buff_ptr__;
+    m_association_frame = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (m_length && m_parse__) {
         size_t len = *m_length;
         tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));

@@ -176,7 +176,7 @@ bool tlvBeaconMetricsResponse::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_measurement_report_list = (uint8_t*)m_buff_ptr__;
+    m_measurement_report_list = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     uint8_t measurement_report_list_length = *m_measurement_report_list_length;
     m_measurement_report_list_idx__ = measurement_report_list_length;
     if (!buffPtrIncrementSafe(sizeof(uint8_t) * (measurement_report_list_length))) {

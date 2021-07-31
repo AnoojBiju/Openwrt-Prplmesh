@@ -1251,7 +1251,7 @@ bool cACTION_MONITOR_CLIENT_ASSOCIATED_STA_LINK_METRIC_RESPONSE::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_bssid_info_list = (sBssidInfo*)m_buff_ptr__;
+    m_bssid_info_list = reinterpret_cast<sBssidInfo*>(m_buff_ptr__);
     uint8_t bssid_info_list_length = *m_bssid_info_list_length;
     m_bssid_info_list_idx__ = bssid_info_list_length;
     if (!buffPtrIncrementSafe(sizeof(sBssidInfo) * (bssid_info_list_length))) {
@@ -1484,7 +1484,7 @@ bool cACTION_MONITOR_HOSTAP_STATS_MEASUREMENT_RESPONSE::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_ap_stats = (sApStatsParams*)m_buff_ptr__;
+    m_ap_stats = reinterpret_cast<sApStatsParams*>(m_buff_ptr__);
     uint8_t ap_stats_size = *m_ap_stats_size;
     m_ap_stats_idx__ = ap_stats_size;
     if (!buffPtrIncrementSafe(sizeof(sApStatsParams) * (ap_stats_size))) {
@@ -1497,7 +1497,7 @@ bool cACTION_MONITOR_HOSTAP_STATS_MEASUREMENT_RESPONSE::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_sta_stats = (sStaStatsParams*)m_buff_ptr__;
+    m_sta_stats = reinterpret_cast<sStaStatsParams*>(m_buff_ptr__);
     uint8_t sta_stats_size = *m_sta_stats_size;
     m_sta_stats_idx__ = sta_stats_size;
     if (!buffPtrIncrementSafe(sizeof(sStaStatsParams) * (sta_stats_size))) {

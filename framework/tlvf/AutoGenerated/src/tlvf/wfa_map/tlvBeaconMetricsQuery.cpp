@@ -358,7 +358,7 @@ bool tlvBeaconMetricsQuery::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_ssid = (char*)m_buff_ptr__;
+    m_ssid = reinterpret_cast<char*>(m_buff_ptr__);
     uint8_t ssid_length = *m_ssid_length;
     m_ssid_idx__ = ssid_length;
     if (!buffPtrIncrementSafe(sizeof(char) * (ssid_length))) {
@@ -372,7 +372,7 @@ bool tlvBeaconMetricsQuery::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_ap_channel_reports_list = (cApChannelReports*)m_buff_ptr__;
+    m_ap_channel_reports_list = reinterpret_cast<cApChannelReports*>(m_buff_ptr__);
     uint8_t ap_channel_reports_list_length = *m_ap_channel_reports_list_length;
     m_ap_channel_reports_list_idx__ = 0;
     for (size_t i = 0; i < ap_channel_reports_list_length; i++) {
@@ -395,7 +395,7 @@ bool tlvBeaconMetricsQuery::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_elemnt_id_list = (uint8_t*)m_buff_ptr__;
+    m_elemnt_id_list = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     uint8_t elemnt_id_list_length = *m_elemnt_id_list_length;
     m_elemnt_id_list_idx__ = elemnt_id_list_length;
     if (!buffPtrIncrementSafe(sizeof(uint8_t) * (elemnt_id_list_length))) {
@@ -523,7 +523,7 @@ bool cApChannelReports::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_ap_channel_report_list = (uint8_t*)m_buff_ptr__;
+    m_ap_channel_report_list = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     uint8_t ap_channel_report_list_length = *m_ap_channel_report_list_length;
     m_ap_channel_report_list_idx__ = ap_channel_report_list_length;
     if (!buffPtrIncrementSafe(sizeof(uint8_t) * (ap_channel_report_list_length))) {

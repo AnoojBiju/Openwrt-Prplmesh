@@ -146,7 +146,7 @@ bool tlvProfile2AssociationStatusNotification::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_bssid_status_list = (sBssidStatus*)m_buff_ptr__;
+    m_bssid_status_list = reinterpret_cast<sBssidStatus*>(m_buff_ptr__);
     uint8_t bssid_status_list_length = *m_bssid_status_list_length;
     m_bssid_status_list_idx__ = bssid_status_list_length;
     if (!buffPtrIncrementSafe(sizeof(sBssidStatus) * (bssid_status_list_length))) {
