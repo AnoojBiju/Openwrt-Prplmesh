@@ -22,6 +22,7 @@ run_cppcheck() {
              --error-exitcode=1 \
              --enable=warning,style,information \
              -i"$rootdir/framework/platform/nbapi/unit_tests" \
+             -i"$rootdir/framework/external" \
              -i"$rootdir/common/beerocks/bwl/unit_tests" \
              -i"$rootdir/common/beerocks/bcl/unit_tests" \
              -i"$rootdir/controller/src/beerocks/master/db/unit_tests" \
