@@ -78,33 +78,23 @@ MAP-4.2.4_BH24G_FH24G:nec-wx3000hp:
       when: on_success
     - when: manual
       allow_failure: true
-
-MAP-4.2.4_BH5GL_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.4_BH5GL_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.2.4_BH5GL_FH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.4_BH5GL_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
+      
 MAP-4.2.4_BH5GL_FH5GH:nec-wx3000hp:
   extends: .certification:nec-wx3000hp
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.4_BH5GL_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+MAP-4.2.4_BH5GH_FH5GH:nec-wx3000hp:
+  extends: .certification:nec-wx3000hp
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.4_BH5GH_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -118,27 +108,7 @@ MAP-4.3.2_ETH_FH24G:nec-wx3000hp:
       when: on_success
     - when: manual
       allow_failure: true
-
-MAP-4.3.2_ETH_FH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.2_ETH_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.2_ETH_FH5GH:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.2_ETH_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
+      
 MAP-4.3.2_BHWIFI_FH24G:nec-wx3000hp:
   extends: .certification:nec-wx3000hp
   rules:
@@ -188,23 +158,23 @@ MAP-4.3.3_BH24G_FH24G:nec-wx3000hp:
       when: on_success
     - when: manual
       allow_failure: true
-
-MAP-4.3.3_BH5GL_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.3_BH5GL_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
+      
 MAP-4.3.3_BH5GL_FH5GH:nec-wx3000hp:
   extends: .certification:nec-wx3000hp
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.3_BH5GL_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+MAP-4.3.3_BH5GH_FH5GH:nec-wx3000hp:
+  extends: .certification:nec-wx3000hp
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.3_BH5GH_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -308,17 +278,7 @@ MAP-4.7.10_BH24G_FH24G:nec-wx3000hp:
       when: on_success
     - when: manual
       allow_failure: true
-
-MAP-4.7.10_BH5GL_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.10_BH5GL_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
+      
 MAP-4.7.10_BH5GL_FH5GL:nec-wx3000hp:
   extends: .certification:nec-wx3000hp
   rules:
@@ -349,16 +309,16 @@ MAP-4.8.1_ETH_FH5GL:nec-wx3000hp:
     - when: manual
       allow_failure: true
 
-MAP-4.8.1_BH24G_FH24G:nec-wx3000hp:
+MAP-4.8.1_ETH_FH5GH:nec-wx3000hp:
   extends: .certification:nec-wx3000hp
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.1_BH24G_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.1_ETH_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
-
+      
 MAP-4.8.1_BH5GL_FH24G:nec-wx3000hp:
   extends: .certification:nec-wx3000hp
   rules:
@@ -385,6 +345,16 @@ MAP-4.8.1_BH5GL_FH5GH:nec-wx3000hp:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.1_BH5GL_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+MAP-4.8.1_BH5GH_FH5GH:nec-wx3000hp:
+  extends: .certification:nec-wx3000hp
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.1_BH5GH_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -439,6 +409,16 @@ MAP-4.13.1_ETH_FH5GL:nec-wx3000hp:
     - when: manual
       allow_failure: true
 
+MAP-4.13.1_ETH_FH5GH:nec-wx3000hp:
+  extends: .certification:nec-wx3000hp
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.1_ETH_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
 MAP-4.13.1_BH24G_FH24G:nec-wx3000hp:
   extends: .certification:nec-wx3000hp
   rules:
@@ -448,23 +428,33 @@ MAP-4.13.1_BH24G_FH24G:nec-wx3000hp:
       when: on_success
     - when: manual
       allow_failure: true
-
-MAP-4.13.1_BH5GL_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.1_BH5GL_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
+      
 MAP-4.13.1_BH5GL_FH5GH:nec-wx3000hp:
   extends: .certification:nec-wx3000hp
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.1_BH5GL_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+MAP-4.13.1_BH24G_FH5GH:nec-wx3000hp:
+  extends: .certification:nec-wx3000hp
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.1_BH24G_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+MAP-4.13.1_BH5GH_FH5GH:nec-wx3000hp:
+  extends: .certification:nec-wx3000hp
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.1_BH5GH_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -478,7 +468,7 @@ MAP-4.13.2_ETH_FH5GL:nec-wx3000hp:
       when: on_success
     - when: manual
       allow_failure: true
-
+      
 MAP-4.13.2_BH24G_FH24G:nec-wx3000hp:
   extends: .certification:nec-wx3000hp
   rules:
@@ -508,7 +498,7 @@ MAP-4.13.2_BH5GL_FH5GH:nec-wx3000hp:
       when: on_success
     - when: manual
       allow_failure: true
-
+      
 MAP-4.13.3_ETH_FH5GL:nec-wx3000hp:
   extends: .certification:nec-wx3000hp
   rules:
@@ -518,7 +508,7 @@ MAP-4.13.3_ETH_FH5GL:nec-wx3000hp:
       when: on_success
     - when: manual
       allow_failure: true
-
+      
 MAP-4.13.3_BH24G_FH24G:nec-wx3000hp:
   extends: .certification:nec-wx3000hp
   rules:
@@ -548,7 +538,7 @@ MAP-4.13.3_BH5GL_FH5GH:nec-wx3000hp:
       when: on_success
     - when: manual
       allow_failure: true
-
+      
 MAP-4.13.4_BH24G_FH24G:nec-wx3000hp:
   extends: .certification:nec-wx3000hp
   rules:
@@ -558,23 +548,33 @@ MAP-4.13.4_BH24G_FH24G:nec-wx3000hp:
       when: on_success
     - when: manual
       allow_failure: true
-
-MAP-4.13.4_BH5GL_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.4_BH5GL_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
+      
 MAP-4.13.4_BH5GL_FH5GH:nec-wx3000hp:
   extends: .certification:nec-wx3000hp
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.4_BH5GL_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+MAP-4.13.4_BH5GH_FH24G:nec-wx3000hp:
+  extends: .certification:nec-wx3000hp
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.4_BH5GH_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+MAP-4.13.4_BH5GH_FH5GH:nec-wx3000hp:
+  extends: .certification:nec-wx3000hp
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.4_BH5GH_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -608,17 +608,7 @@ MAP-4.13.11_ETH_FH5GH:nec-wx3000hp:
       when: on_success
     - when: manual
       allow_failure: true
-
-MAP-4.13.11_BH24G_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.11_BH24G_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
+      
 MAP-4.13.11_BH5GL_FH24G:nec-wx3000hp:
   extends: .certification:nec-wx3000hp
   rules:
@@ -628,23 +618,23 @@ MAP-4.13.11_BH5GL_FH24G:nec-wx3000hp:
       when: on_success
     - when: manual
       allow_failure: true
-
-MAP-4.13.11_BH5GL_FH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.11_BH5GL_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
+      
 MAP-4.13.11_BH5GL_FH5GH:nec-wx3000hp:
   extends: .certification:nec-wx3000hp
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.11_BH5GL_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+MAP-4.13.11_BH5GH_FH5GH:nec-wx3000hp:
+  extends: .certification:nec-wx3000hp
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.11_BH5GH_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -698,23 +688,23 @@ MAP-4.14.1_BH5GL_FH24G:nec-wx3000hp:
       when: on_success
     - when: manual
       allow_failure: true
-
-MAP-4.14.1_BH5GL_FH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.1_BH5GL_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
+      
 MAP-4.14.1_BH5GL_FH5GH:nec-wx3000hp:
   extends: .certification:nec-wx3000hp
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.1_BH5GL_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+MAP-4.14.1_BH5GH_FH5GH:nec-wx3000hp:
+  extends: .certification:nec-wx3000hp
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.1_BH5GH_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -728,27 +718,7 @@ MAP-4.14.2_ETH_FH24G:nec-wx3000hp:
       when: on_success
     - when: manual
       allow_failure: true
-
-MAP-4.14.2_ETH_FH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_ETH_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.2_ETH_FH5GH:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_ETH_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
+      
 MAP-4.14.2_BH24G_FH24G:nec-wx3000hp:
   extends: .certification:nec-wx3000hp
   rules:
@@ -758,17 +728,7 @@ MAP-4.14.2_BH24G_FH24G:nec-wx3000hp:
       when: on_success
     - when: manual
       allow_failure: true
-
-MAP-4.14.2_BH5GL_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_BH5GL_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
+      
 MAP-4.14.2_BH5GL_FH5GL:nec-wx3000hp:
   extends: .certification:nec-wx3000hp
   rules:
@@ -778,17 +738,7 @@ MAP-4.14.2_BH5GL_FH5GL:nec-wx3000hp:
       when: on_success
     - when: manual
       allow_failure: true
-
-MAP-4.14.2_BH5GL_FH5GH:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_BH5GL_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
+      
 MAP-4.16.1_ETH_FH5GL:nec-wx3000hp:
   extends: .certification:nec-wx3000hp
   rules:
@@ -819,812 +769,12 @@ MAP-4.16.1_BH5GL_FH5GH:nec-wx3000hp:
     - when: manual
       allow_failure: true
 
-MAP-4.2.1:nec-wx3000hp:
+MAP-4.16.1_BH5GH_FH5GH:nec-wx3000hp:
   extends: .certification:nec-wx3000hp
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.1:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.2.2_BH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.2_BH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.2.2_BH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.2_BH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.2.4_ETH_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.4_ETH_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.2.4_ETH_FH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.4_ETH_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.2.4_ETH_FH5GH:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.4_ETH_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.2.4_BH24G_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.4_BH24G_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.2.4_BH5GL_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.4_BH5GL_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.2.4_BH5GL_FH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.4_BH5GL_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.2.4_BH5GL_FH5GH:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.4_BH5GL_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.2_ETH_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.2_ETH_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.2_ETH_FH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.2_ETH_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.2_ETH_FH5GH:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.2_ETH_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.2_BHWIFI_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.2_BHWIFI_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.2_BHWIFI_FH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.2_BHWIFI_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.2_BHWIFI_FH5GH:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.2_BHWIFI_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.3_ETH_FH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.3_ETH_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.3_BH24G_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.3_BH24G_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.3_BH5GL_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.3_BH5GL_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.3_BH5GL_FH5GH:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.3_BH5GL_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.4_ETH_FH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.4_ETH_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.4_BH24G_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.4_BH24G_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.4_BH5GL_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.4_BH5GL_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.4_BH5GL_FH5GH:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.4_BH5GL_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.6.1_ETH:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.6.1_ETH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.6.1_BHWIFI:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.6.1_BHWIFI:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.7.10_ETH_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.10_ETH_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.7.10_ETH_FH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.10_ETH_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.7.10_ETH_FH5GH:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.10_ETH_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.7.10_BH24G_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.10_BH24G_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.7.10_BH5GL_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.10_BH5GL_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.7.10_BH5GL_FH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.10_BH5GL_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.7.10_BH5GL_FH5GH:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.10_BH5GL_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.8.1_ETH_FH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.1_ETH_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.8.1_BH24G_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.1_BH24G_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.8.1_BH5GL_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.1_BH5GL_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.8.1_BH5GL_FH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.1_BH5GL_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.8.1_BH5GL_FH5GH:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.1_BH5GL_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.8.6_ETH_FH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.6_ETH_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.8.6_BH24G_FH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.6_BH24G_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.8.6_BH5GL_FH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.6_BH5GL_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.8.6_BH5GH_FH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.6_BH5GH_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.1_ETH_FH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.1_ETH_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.1_BH24G_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.1_BH24G_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.1_BH5GL_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.1_BH5GL_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.1_BH5GL_FH5GH:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.1_BH5GL_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.2_ETH_FH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.2_ETH_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.2_BH24G_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.2_BH24G_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.2_BH5GL_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.2_BH5GL_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.2_BH5GL_FH5GH:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.2_BH5GL_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.3_ETH_FH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.3_ETH_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.3_BH24G_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.3_BH24G_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.3_BH5GL_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.3_BH5GL_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.3_BH5GL_FH5GH:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.3_BH5GL_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.4_BH24G_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.4_BH24G_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.4_BH5GL_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.4_BH5GL_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.4_BH5GL_FH5GH:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.4_BH5GL_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.11_ETH_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.11_ETH_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.11_ETH_FH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.11_ETH_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.11_ETH_FH5GH:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.11_ETH_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.11_BH24G_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.11_BH24G_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.11_BH5GL_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.11_BH5GL_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.11_BH5GL_FH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.11_BH5GL_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.11_BH5GL_FH5GH:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.11_BH5GL_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.1_ETH_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.1_ETH_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.1_ETH_FH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.1_ETH_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.1_ETH_FH5GH:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.1_ETH_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.1_BH24G_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.1_BH24G_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.1_BH5GL_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.1_BH5GL_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.1_BH5GL_FH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.1_BH5GL_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.1_BH5GL_FH5GH:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.1_BH5GL_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.2_ETH_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_ETH_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.2_ETH_FH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_ETH_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.2_ETH_FH5GH:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_ETH_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.2_BH24G_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_BH24G_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.2_BH5GL_FH24G:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_BH5GL_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.2_BH5GL_FH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_BH5GL_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.2_BH5GL_FH5GH:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_BH5GL_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.16.1_ETH_FH5GL:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.16.1_ETH_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.16.1_ETH_FH5GH:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.16.1_ETH_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.16.1_BH5GL_FH5GH:nec-wx3000hp:
-  extends: .certification:nec-wx3000hp
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.16.1_BH5GL_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.16.1_BH5GH_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -1649,12 +799,32 @@ MAP-5.13.1_ETH_FH24G:nec-wx3000hp:
     - when: manual
       allow_failure: true
 
+MAP-5.13.1_ETH_FH5GH:nec-wx3000hp:
+  extends: .certification:nec-wx3000hp
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-5.13.1_ETH_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
 MAP-5.13.2_ETH_FH24G:nec-wx3000hp:
   extends: .certification:nec-wx3000hp
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-5.13.2_ETH_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+MAP-5.13.2_ETH_FH5GH:nec-wx3000hp:
+  extends: .certification:nec-wx3000hp
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-5.13.2_ETH_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -1669,12 +839,32 @@ MAP-5.14.1_ETH_FH24G:nec-wx3000hp:
     - when: manual
       allow_failure: true
 
+MAP-5.14.1_ETH_FH5GH:nec-wx3000hp:
+  extends: .certification:nec-wx3000hp
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-5.14.1_ETH_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
 MAP-5.14.2_ETH_FH24G:nec-wx3000hp:
   extends: .certification:nec-wx3000hp
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-5.14.2_ETH_FH24G:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+MAP-5.14.2_ETH_FH5GH:nec-wx3000hp:
+  extends: .certification:nec-wx3000hp
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-5.14.2_ETH_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -1689,3 +879,12 @@ MAP-5.16.1_ETH_FH5GL:nec-wx3000hp:
     - when: manual
       allow_failure: true
 
+MAP-5.16.1_ETH_FH5GH:nec-wx3000hp:
+  extends: .certification:nec-wx3000hp
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-5.16.1_ETH_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
