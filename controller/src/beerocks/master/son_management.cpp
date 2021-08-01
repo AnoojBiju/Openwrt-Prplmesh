@@ -1785,7 +1785,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         // Get scan statuses
         auto scan_in_progress = database.get_channel_scan_in_progress(radio_mac, is_single_scan);
         if (scan_in_progress) {
-            LOG(ERROR) << "Scan is still running!";
+            LOG(DEBUG) << "Can't get scan results, scan is not finished!";
             op_error_code = eChannelScanOperationCode::SCAN_IN_PROGRESS;
         }
 
