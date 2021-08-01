@@ -154,12 +154,14 @@ struct RadioInfo {
         beerocks::eWiFiBandwidth::BANDWIDTH_UNKNOWN; /**< Maximum supported bandwidth */
     bool ht_supported      = false;                  /**< Is HT supported flag */
     uint16_t ht_capability = 0;                      /**< HT capabilities */
-    std::basic_string<uint8_t>
-        ht_mcs_set; /**< 16-byte attribute containing the MCS set as defined in 802.11n */
+
+    /**< 16-byte attribute containing the MCS set as defined in 802.11n */
+    std::array<uint8_t, beerocks::message::HT_MCS_SET_SIZE> ht_mcs_set;
     bool vht_supported      = false; /**< Is VHT supported flag */
     uint32_t vht_capability = 0;     /**< VHT capabilities */
-    std::basic_string<uint8_t>
-        vht_mcs_set; /**< 32-byte attribute containing the MCS set as defined in 802.11ac */
+
+    /**< 32-byte attribute containing the MCS set as defined in 802.11ac */
+    std::array<uint8_t, beerocks::message::VHT_MCS_SET_SIZE> vht_mcs_set;
     ChanSwReason last_csa_sw_reason = ChanSwReason::Unknown;
     // Key = channel
     std::map<uint8_t, sChannelInfo> channels_list;
