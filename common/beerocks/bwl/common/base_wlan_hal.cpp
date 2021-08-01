@@ -188,4 +188,13 @@ void base_wlan_hal::calc_curr_traffic(uint64_t val, uint64_t &total, uint32_t &c
     total = val;
 }
 
+bool base_wlan_hal::is_BSS_monitored(const std::string &bssid)
+{
+    if (m_hal_conf.monitored_BSSs.empty()) {
+        // Monitor all BSSs
+        return true;
+    }
+    return (m_hal_conf.monitored_BSSs.find(bssid) != m_hal_conf.monitored_BSSs.end());
+}
+
 } // namespace bwl
