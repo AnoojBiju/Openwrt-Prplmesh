@@ -10,7 +10,7 @@
     - axepoint
 
 MAP-4.2.1:R2:axepoint:
-  extends: .certification:axepoint_r2_r2
+  extends: .certification:axepoint_r2
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
@@ -79,26 +79,6 @@ MAP-4.2.4_BH24G_FH24G:R2:axepoint:
     - when: manual
       allow_failure: true
 
-MAP-4.2.4_BH5GL_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.4_BH5GL_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.2.4_BH5GL_FH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.4_BH5GL_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
 MAP-4.2.4_BH5GL_FH5GH:R2:axepoint:
   extends: .certification:axepoint_r2
   rules:
@@ -109,32 +89,22 @@ MAP-4.2.4_BH5GL_FH5GH:R2:axepoint:
     - when: manual
       allow_failure: true
 
+MAP-4.2.4_BH5GH_FH5GH:R2:axepoint:
+  extends: .certification:axepoint_r2
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.4_BH5GH_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+      
 MAP-4.3.2_ETH_FH24G:R2:axepoint:
   extends: .certification:axepoint_r2
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.2_ETH_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.2_ETH_FH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.2_ETH_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.2_ETH_FH5GH:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.2_ETH_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -189,22 +159,22 @@ MAP-4.3.3_BH24G_FH24G:R2:axepoint:
     - when: manual
       allow_failure: true
 
-MAP-4.3.3_BH5GL_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.3_BH5GL_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
 MAP-4.3.3_BH5GL_FH5GH:R2:axepoint:
   extends: .certification:axepoint_r2
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.3_BH5GL_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+      
+MAP-4.3.3_BH5GH_FH5GH:R2:axepoint:
+  extends: .certification:axepoint_r2
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.3_BH5GH_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -309,16 +279,6 @@ MAP-4.7.10_BH24G_FH24G:R2:axepoint:
     - when: manual
       allow_failure: true
 
-MAP-4.7.10_BH5GL_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.10_BH5GL_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
 MAP-4.7.10_BH5GL_FH5GL:R2:axepoint:
   extends: .certification:axepoint_r2
   rules:
@@ -349,12 +309,12 @@ MAP-4.8.1_ETH_FH5GL:R2:axepoint:
     - when: manual
       allow_failure: true
 
-MAP-4.8.1_BH24G_FH24G:R2:axepoint:
+MAP-4.8.1_ETH_FH5GH:R2:axepoint:
   extends: .certification:axepoint_r2
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.1_BH24G_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.1_ETH_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -368,7 +328,7 @@ MAP-4.8.1_BH5GL_FH24G:R2:axepoint:
       when: on_success
     - when: manual
       allow_failure: true
-
+      
 MAP-4.8.1_BH5GL_FH5GL:R2:axepoint:
   extends: .certification:axepoint_r2
   rules:
@@ -389,6 +349,16 @@ MAP-4.8.1_BH5GL_FH5GH:R2:axepoint:
     - when: manual
       allow_failure: true
 
+MAP-4.8.1_BH5GH_FH5GH:R2:axepoint:
+  extends: .certification:axepoint_r2
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.1_BH5GH_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+      
 MAP-4.8.6_ETH_FH5GL:R2:axepoint:
   extends: .certification:axepoint_r2
   rules:
@@ -439,22 +409,22 @@ MAP-4.13.1_ETH_FH5GL:R2:axepoint:
     - when: manual
       allow_failure: true
 
+MAP-4.13.1_ETH_FH5GH:R2:axepoint:
+  extends: .certification:axepoint_r2
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.1_ETH_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
 MAP-4.13.1_BH24G_FH24G:R2:axepoint:
   extends: .certification:axepoint_r2
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.1_BH24G_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.1_BH5GL_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.1_BH5GL_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -469,6 +439,26 @@ MAP-4.13.1_BH5GL_FH5GH:R2:axepoint:
     - when: manual
       allow_failure: true
 
+MAP-4.13.1_BH24G_FH5GH:R2:axepoint:
+  extends: .certification:axepoint_r2
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.1_BH24G_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+MAP-4.13.1_BH5GH_FH5GH:R2:axepoint:
+  extends: .certification:axepoint_r2
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.1_BH5GH_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
 MAP-4.13.2_ETH_FH5GL:R2:axepoint:
   extends: .certification:axepoint_r2
   rules:
@@ -478,7 +468,7 @@ MAP-4.13.2_ETH_FH5GL:R2:axepoint:
       when: on_success
     - when: manual
       allow_failure: true
-
+      
 MAP-4.13.2_BH24G_FH24G:R2:axepoint:
   extends: .certification:axepoint_r2
   rules:
@@ -518,7 +508,6 @@ MAP-4.13.3_ETH_FH5GL:R2:axepoint:
       when: on_success
     - when: manual
       allow_failure: true
-
 MAP-4.13.3_BH24G_FH24G:R2:axepoint:
   extends: .certification:axepoint_r2
   rules:
@@ -548,7 +537,7 @@ MAP-4.13.3_BH5GL_FH5GH:R2:axepoint:
       when: on_success
     - when: manual
       allow_failure: true
-
+      
 MAP-4.13.4_BH24G_FH24G:R2:axepoint:
   extends: .certification:axepoint_r2
   rules:
@@ -559,22 +548,32 @@ MAP-4.13.4_BH24G_FH24G:R2:axepoint:
     - when: manual
       allow_failure: true
 
-MAP-4.13.4_BH5GL_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.4_BH5GL_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
 MAP-4.13.4_BH5GL_FH5GH:R2:axepoint:
   extends: .certification:axepoint_r2
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.4_BH5GL_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+      
+MAP-4.13.4_BH5GH_FH24G:R2:axepoint:
+  extends: .certification:axepoint_r2
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.4_BH5GH_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+MAP-4.13.4_BH5GH_FH5GH:R2:axepoint:
+  extends: .certification:axepoint_r2
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.4_BH5GH_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -609,16 +608,6 @@ MAP-4.13.11_ETH_FH5GH:R2:axepoint:
     - when: manual
       allow_failure: true
 
-MAP-4.13.11_BH24G_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.11_BH24G_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
 MAP-4.13.11_BH5GL_FH24G:R2:axepoint:
   extends: .certification:axepoint_r2
   rules:
@@ -629,22 +618,22 @@ MAP-4.13.11_BH5GL_FH24G:R2:axepoint:
     - when: manual
       allow_failure: true
 
-MAP-4.13.11_BH5GL_FH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.11_BH5GL_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
 MAP-4.13.11_BH5GL_FH5GH:R2:axepoint:
   extends: .certification:axepoint_r2
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.11_BH5GL_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+      
+MAP-4.13.11_BH5GH_FH5GH:R2:axepoint:
+  extends: .certification:axepoint_r2
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.11_BH5GH_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -698,17 +687,6 @@ MAP-4.14.1_BH5GL_FH24G:R2:axepoint:
       when: on_success
     - when: manual
       allow_failure: true
-
-MAP-4.14.1_BH5GL_FH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.1_BH5GL_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
 MAP-4.14.1_BH5GL_FH5GH:R2:axepoint:
   extends: .certification:axepoint_r2
   rules:
@@ -719,32 +697,21 @@ MAP-4.14.1_BH5GL_FH5GH:R2:axepoint:
     - when: manual
       allow_failure: true
 
+MAP-4.14.1_BH5GH_FH5GH:R2:axepoint:
+  extends: .certification:axepoint_r2
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.1_BH5GH_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
 MAP-4.14.2_ETH_FH24G:R2:axepoint:
   extends: .certification:axepoint_r2
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_ETH_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.2_ETH_FH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_ETH_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.2_ETH_FH5GH:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_ETH_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -759,32 +726,12 @@ MAP-4.14.2_BH24G_FH24G:R2:axepoint:
     - when: manual
       allow_failure: true
 
-MAP-4.14.2_BH5GL_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_BH5GL_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
 MAP-4.14.2_BH5GL_FH5GL:R2:axepoint:
   extends: .certification:axepoint_r2
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_BH5GL_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.2_BH5GL_FH5GH:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_BH5GL_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -818,813 +765,13 @@ MAP-4.16.1_BH5GL_FH5GH:R2:axepoint:
       when: on_success
     - when: manual
       allow_failure: true
-
-MAP-4.2.1:R2:axepoint:
+      
+MAP-4.16.1_BH5GH_FH5GH:R2:axepoint:
   extends: .certification:axepoint_r2
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.1:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.2.2_BH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.2_BH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.2.2_BH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.2_BH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.2.4_ETH_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.4_ETH_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.2.4_ETH_FH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.4_ETH_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.2.4_ETH_FH5GH:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.4_ETH_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.2.4_BH24G_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.4_BH24G_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.2.4_BH5GL_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.4_BH5GL_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.2.4_BH5GL_FH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.4_BH5GL_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.2.4_BH5GL_FH5GH:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.4_BH5GL_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.2_ETH_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.2_ETH_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.2_ETH_FH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.2_ETH_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.2_ETH_FH5GH:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.2_ETH_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.2_BHWIFI_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.2_BHWIFI_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.2_BHWIFI_FH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.2_BHWIFI_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.2_BHWIFI_FH5GH:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.2_BHWIFI_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.3_ETH_FH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.3_ETH_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.3_BH24G_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.3_BH24G_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.3_BH5GL_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.3_BH5GL_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.3_BH5GL_FH5GH:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.3_BH5GL_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.4_ETH_FH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.4_ETH_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.4_BH24G_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.4_BH24G_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.4_BH5GL_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.4_BH5GL_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.3.4_BH5GL_FH5GH:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.4_BH5GL_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.6.1_ETH:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.6.1_ETH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.6.1_BHWIFI:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.6.1_BHWIFI:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.7.10_ETH_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.10_ETH_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.7.10_ETH_FH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.10_ETH_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.7.10_ETH_FH5GH:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.10_ETH_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.7.10_BH24G_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.10_BH24G_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.7.10_BH5GL_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.10_BH5GL_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.7.10_BH5GL_FH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.10_BH5GL_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.7.10_BH5GL_FH5GH:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.10_BH5GL_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.8.1_ETH_FH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.1_ETH_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.8.1_BH24G_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.1_BH24G_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.8.1_BH5GL_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.1_BH5GL_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.8.1_BH5GL_FH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.1_BH5GL_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.8.1_BH5GL_FH5GH:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.1_BH5GL_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.8.6_ETH_FH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.6_ETH_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.8.6_BH24G_FH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.6_BH24G_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.8.6_BH5GL_FH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.6_BH5GL_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.8.6_BH5GH_FH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.6_BH5GH_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.1_ETH_FH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.1_ETH_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.1_BH24G_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.1_BH24G_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.1_BH5GL_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.1_BH5GL_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.1_BH5GL_FH5GH:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.1_BH5GL_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.2_ETH_FH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.2_ETH_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.2_BH24G_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.2_BH24G_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.2_BH5GL_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.2_BH5GL_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.2_BH5GL_FH5GH:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.2_BH5GL_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.3_ETH_FH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.3_ETH_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.3_BH24G_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.3_BH24G_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.3_BH5GL_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.3_BH5GL_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.3_BH5GL_FH5GH:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.3_BH5GL_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.4_BH24G_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.4_BH24G_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.4_BH5GL_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.4_BH5GL_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.4_BH5GL_FH5GH:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.4_BH5GL_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.11_ETH_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.11_ETH_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.11_ETH_FH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.11_ETH_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.11_ETH_FH5GH:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.11_ETH_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.11_BH24G_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.11_BH24G_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.11_BH5GL_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.11_BH5GL_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.11_BH5GL_FH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.11_BH5GL_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.13.11_BH5GL_FH5GH:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.11_BH5GL_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.1_ETH_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.1_ETH_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.1_ETH_FH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.1_ETH_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.1_ETH_FH5GH:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.1_ETH_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.1_BH24G_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.1_BH24G_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.1_BH5GL_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.1_BH5GL_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.1_BH5GL_FH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.1_BH5GL_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.1_BH5GL_FH5GH:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.1_BH5GL_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.2_ETH_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_ETH_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.2_ETH_FH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_ETH_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.2_ETH_FH5GH:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_ETH_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.2_BH24G_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_BH24G_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.2_BH5GL_FH24G:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_BH5GL_FH24G:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.2_BH5GL_FH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_BH5GL_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.14.2_BH5GL_FH5GH:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_BH5GL_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.16.1_ETH_FH5GL:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.16.1_ETH_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.16.1_ETH_FH5GH:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.16.1_ETH_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-MAP-4.16.1_BH5GL_FH5GH:R2:axepoint:
-  extends: .certification:axepoint_r2
-  rules:
-    # If the last commit description contains the test name and we're not on master, run it.
-    # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.16.1_BH5GL_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.16.1_BH5GH_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -1648,6 +795,16 @@ MAP-5.13.1_ETH_FH24G:R2:axepoint:
       when: on_success
     - when: manual
       allow_failure: true
+      
+MAP-5.13.1_ETH_FH5GH:R2:axepoint:
+  extends: .certification:axepoint_r2
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-5.13.1_ETH_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
 
 MAP-5.13.2_ETH_FH24G:R2:axepoint:
   extends: .certification:axepoint_r2
@@ -1658,7 +815,16 @@ MAP-5.13.2_ETH_FH24G:R2:axepoint:
       when: on_success
     - when: manual
       allow_failure: true
-
+      
+MAP-5.13.2_ETH_FH5GH:R2:axepoint:
+  extends: .certification:axepoint_r2
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-5.13.2_ETH_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
 MAP-5.14.1_ETH_FH24G:R2:axepoint:
   extends: .certification:axepoint_r2
   rules:
@@ -1669,6 +835,15 @@ MAP-5.14.1_ETH_FH24G:R2:axepoint:
     - when: manual
       allow_failure: true
 
+MAP-5.14.1_ETH_FH5GH:R2:axepoint:
+  extends: .certification:axepoint_r2
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-5.14.1_ETH_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
 MAP-5.14.2_ETH_FH24G:R2:axepoint:
   extends: .certification:axepoint_r2
   rules:
@@ -1679,12 +854,31 @@ MAP-5.14.2_ETH_FH24G:R2:axepoint:
     - when: manual
       allow_failure: true
 
+MAP-5.14.2_ETH_FH5GH:R2:axepoint:
+  extends: .certification:axepoint_r2
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-5.14.2_ETH_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
 MAP-5.16.1_ETH_FH5GL:R2:axepoint:
   extends: .certification:axepoint_r2
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-5.16.1_ETH_FH5GL:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+MAP-5.16.1_ETH_FH5GH:R2:axepoint:
+  extends: .certification:axepoint_r2
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-5.16.1_ETH_FH5GH:axepoint.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
