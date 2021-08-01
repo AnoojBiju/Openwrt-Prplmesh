@@ -364,6 +364,8 @@ static void event_configuration_changed(const char *const sig_name, const amxc_v
         amxd_object_get_int32_t(configuration, "SteeringCurrentBonus", nullptr);
     nbapi_config.steering_disassoc_timer_msec = std::chrono::milliseconds{
         amxd_object_get_int32_t(configuration, "SteeringDisassociationTimer", nullptr)};
+    nbapi_config.link_metrics_request_interval_seconds = std::chrono::seconds{
+        amxd_object_get_int32_t(configuration, "LinkMetricsRequestInterval", nullptr)};
 
     if (!g_database->update_master_configuration(nbapi_config)) {
         LOG(ERROR) << "Failed update master configuration from NBAPI.";

@@ -189,6 +189,7 @@ public:
         bool client_optimal_path_roaming;
         int roaming_hysteresis_percent_bonus;
         std::chrono::milliseconds steering_disassoc_timer_msec;
+        std::chrono::seconds link_metrics_request_interval_seconds;
     } sDbNbapiConfig;
 
     typedef struct {
@@ -1652,9 +1653,9 @@ public:
 
     /**
      * @brief Set estimated service parameters in Controller Data Model.
-     * 
+     *
      * Data model path example: "Controller.Network.Device.1.Radio.1.BSS.1.EstServiceParametersBE"
-     * 
+     *
      * @param[in] bssid BSSID.
      * @param[in] param_name Estimated service parameters name.
      * @param[in] esp_vslue Estimated service parameters value.
