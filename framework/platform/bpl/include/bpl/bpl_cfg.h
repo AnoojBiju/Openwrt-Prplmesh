@@ -29,7 +29,7 @@ namespace bpl {
  * disable_all - No client is measured (there are some use-cases where prplmesh doesn't manage the clients in the platform)
  * enable_all - The default configuration. All connected clients are measured.
  * only_clients_selected_for_steering - Only clients that are selected for steering (by sending
- * the ACTION_MONITOR_STEERING_CLIENT_SET_REQUEST to the monitor) will be measured. This mode is useful for systems with 
+ * the ACTION_MONITOR_STEERING_CLIENT_SET_REQUEST to the monitor) will be measured. This mode is useful for systems with
  * many clients where only several are configured for steering - so no need to monitor the rest of clients.
  */
 enum class eClientsMeasurementMode : uint8_t {
@@ -619,6 +619,14 @@ bool bpl_cfg_get_wifi_credentials(const std::string &iface,
  * @return true on success, otherwise false
  */
 bool cfg_get_link_metrics_request_interval(std::chrono::seconds &link_metrics_request_interval_sec);
+
+/**
+ * @brief Sets link metrics request interval configuration for periodic requests from agents.
+ *
+ * @param [in] link_metrics_request_interval_sec Interval for periodic link metrics request to set.
+ * @return true on success, otherwise false
+ */
+bool cfg_set_link_metrics_request_interval(std::chrono::seconds &link_metrics_request_interval_sec);
 
 /**
  * @brief Reads lan interfaces names from bridge configuration.
