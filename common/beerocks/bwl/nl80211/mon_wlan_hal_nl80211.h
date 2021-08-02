@@ -43,6 +43,7 @@ public:
     virtual bool channel_scan_trigger(int dwell_time_msec,
                                       const std::vector<unsigned int> &channel_pool) override;
     virtual bool channel_scan_dump_results() override;
+    virtual bool channel_scan_dump_cached_results() override;
 
     /**
      * @brief Adds a new timer with given schedule.
