@@ -24,7 +24,8 @@ namespace son {
 class task {
 
 public:
-    task(std::string task_name_ = std::string(""), std::string node_mac = std::string());
+    task(const std::string &task_name_ = std::string(),
+         const std::string &node_mac   = std::string());
     virtual ~task() {}
     void execute();
     void response_received(std::string mac,

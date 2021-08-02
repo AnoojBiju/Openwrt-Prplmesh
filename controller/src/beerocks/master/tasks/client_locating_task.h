@@ -18,10 +18,11 @@
 namespace son {
 class client_locating_task : public task {
 public:
-    client_locating_task(db &database_, ieee1905_1::CmduMessageTx &cmdu_tx_, task_pool &tasks_,
-                         std::string client_mac_, bool new_connection_, int starting_delay_ms_ = 0,
-                         std::string eth_switch_ = beerocks::net::network_utils::ZERO_MAC_STRING,
-                         std::string task_name_  = std::string("client_locating"));
+    client_locating_task(
+        db &database_, ieee1905_1::CmduMessageTx &cmdu_tx_, task_pool &tasks_,
+        const std::string &client_mac_, bool new_connection_, int starting_delay_ms_ = 0,
+        const std::string &eth_switch_ = beerocks::net::network_utils::ZERO_MAC_STRING,
+        const std::string &task_name_  = std::string("client_locating"));
 
     virtual ~client_locating_task() {}
     bool handle_ieee1905_1_msg(const sMacAddr &src_mac,

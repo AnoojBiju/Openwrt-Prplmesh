@@ -18,9 +18,10 @@ using namespace net;
 using namespace son;
 
 client_locating_task::client_locating_task(db &database_, ieee1905_1::CmduMessageTx &cmdu_tx_,
-                                           task_pool &tasks_, std::string client_mac_,
+                                           task_pool &tasks_, const std::string &client_mac_,
                                            bool new_connection_, int starting_delay_ms_,
-                                           std::string eth_switch_, std::string task_name_)
+                                           const std::string &eth_switch_,
+                                           const std::string &task_name_)
     : task(task_name_), database(database_), cmdu_tx(cmdu_tx_), tasks(tasks_),
       client_mac(client_mac_), new_connection(new_connection_),
       starting_delay_ms(starting_delay_ms_), eth_switch(eth_switch_)

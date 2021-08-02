@@ -515,7 +515,7 @@ void SocketSelect::removeSocket(Socket *s)
                 break;
             }
         }
-        std::vector<Socket *>::iterator it;
+
         if (i < m_socketVec.size()) {
             m_socketVec.erase(m_socketVec.begin() + i);
         }

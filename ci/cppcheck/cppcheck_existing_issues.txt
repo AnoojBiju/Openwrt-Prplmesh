@@ -9,7 +9,6 @@ common/beerocks/bcl/source/network/network_utils.cpp: style: Condition '!up' is 
 common/beerocks/bcl/source/network/network_utils.cpp: style: Local variable 'ecmd' shadows outer variable [shadowVariable]            struct ethtool_cmd ecmd;
 common/beerocks/bcl/source/network/network_utils.cpp: style: The scope of the variable 'rtInfo_ret' can be reduced. [variableScope]    int rtInfo_ret;
 common/beerocks/bcl/source/network/socket.cpp: style: The scope of the variable 'i' can be reduced. [variableScope]    unsigned i;
-common/beerocks/bcl/source/network/socket.cpp: style: Unused variable: it [unusedVariable]        std::vector<Socket *>::iterator it;
 common/beerocks/bcl/source/son/son_wireless_utils.cpp: style: Condition 'prev_bw<=bw' is always true [knownConditionTrueFalse]    } else if (prev_bw <= bw) {
 common/beerocks/bcl/source/son/son_wireless_utils.cpp: style: The scope of the variable 'diff_temp' can be reduced. [variableScope]    uint16_t diff_temp;
 common/beerocks/bcl/source/son/son_wireless_utils.cpp: style: The scope of the variable 'rate_temp' can be reduced. [variableScope]    uint16_t rate_temp;
@@ -76,8 +75,6 @@ controller/src/beerocks/master/son_management.cpp: style: Variable 'op_error_cod
 controller/src/beerocks/master/son_management.cpp: style: Variable 'op_error_code' is assigned a value that is never used. [unreadVariable]        auto op_error_code = eChannelScanOperationCode::SUCCESS;
 controller/src/beerocks/master/son_management.cpp: style: Variable 'result_status' is assigned a value that is never used. [unreadVariable]            result_status = last_scan_success;
 controller/src/beerocks/master/son_management.cpp: style: Variable 'result_status' is assigned a value that is never used. [unreadVariable]        auto result_status = eChannelScanStatusCode::SUCCESS;
-controller/src/beerocks/master/tasks/association_handling_task.cpp: performance: Function parameter 'sta_mac_' should be passed by const reference. [passedByValue]                                                     task_pool &tasks_, std::string sta_mac_,
-controller/src/beerocks/master/tasks/association_handling_task.cpp: performance: Function parameter 'task_name_' should be passed by const reference. [passedByValue]                                                     std::string task_name_)
 controller/src/beerocks/master/tasks/bml_task.cpp: style: C-style pointer casting [cstyleCast]            auto event_obj = (connection_change_event *)obj;
 controller/src/beerocks/master/tasks/bml_task.cpp: style: C-style pointer casting [cstyleCast]            auto event_obj = (listener_general_register_unregister_event *)obj;
 controller/src/beerocks/master/tasks/bml_task.cpp: style: C-style pointer casting [cstyleCast]            auto event_obj = (stats_info_available_event *)obj;
@@ -102,16 +99,9 @@ controller/src/beerocks/master/tasks/channel_selection_task.cpp: style: C-style 
 controller/src/beerocks/master/tasks/channel_selection_task.cpp: style: C-style pointer casting [cstyleCast]    auto event_hostap_mac = tlvf::mac_to_string(((sMacAddr *)obj)->oct);
 controller/src/beerocks/master/tasks/channel_selection_task.cpp: style: C-style pointer casting [cstyleCast]    auto new_event             = CHANNEL_SELECTION_ALLOCATE_EVENT(sDfsCacPendinghostap_event);
 controller/src/beerocks/master/tasks/channel_selection_task.cpp: style: The scope of the variable 'channel_80Mhz_step' can be reduced. [variableScope]    auto channel_80Mhz_step = CHANNEL_80MHZ_STEP;
-controller/src/beerocks/master/tasks/client_locating_task.cpp: performance: Function parameter 'client_mac_' should be passed by const reference. [passedByValue]                                           task_pool &tasks_, std::string client_mac_,
-controller/src/beerocks/master/tasks/client_locating_task.cpp: performance: Function parameter 'eth_switch_' should be passed by const reference. [passedByValue]                                           std::string eth_switch_, std::string task_name_)
-controller/src/beerocks/master/tasks/client_locating_task.cpp: performance: Function parameter 'task_name_' should be passed by const reference. [passedByValue]                                           std::string eth_switch_, std::string task_name_)
 controller/src/beerocks/master/tasks/dynamic_channel_selection_task.cpp: style: Redundant initialization for 'ret'. The initialized value is overwritten before it is read. [redundantInitialization]        auto ret = beerocks::eChannelScanStatusCode::SUCCESS;
-controller/src/beerocks/master/tasks/ire_network_optimization_task.cpp: performance: Function parameter 'task_name_' should be passed by const reference. [passedByValue]                                                             std::string task_name_)
-controller/src/beerocks/master/tasks/load_balancer_task.cpp: performance: Function parameter 'ire_mac_' should be passed by const reference. [passedByValue]                                       task_pool &tasks_, std::string ire_mac_,
-controller/src/beerocks/master/tasks/load_balancer_task.cpp: performance: Function parameter 'task_name_' should be passed by const reference. [passedByValue]                                       std::string task_name_)
 controller/src/beerocks/master/tasks/load_balancer_task.cpp: style: The scope of the variable 'chosen_hostap_bytes_per_second_gained' can be reduced. [variableScope]        int chosen_hostap_bytes_per_second_gained = INT32_MIN;
 controller/src/beerocks/master/tasks/load_balancer_task.cpp: style: Variable 'client_efficiency_ratio' is reassigned a value before the old one has been used. [redundantAssignment]                client_efficiency_ratio =
-controller/src/beerocks/master/tasks/network_health_check_task.cpp: performance: Function parameter 'task_name_' should be passed by const reference. [passedByValue]                                                     std::string task_name_)
 controller/src/beerocks/master/tasks/network_health_check_task.cpp: style: Redundant checking of STL container element existence before removing it. [redundantIfRemove]            if (suspected_dis_clients.find(pending_node) != suspected_dis_clients.end()) {
 controller/src/beerocks/master/tasks/optimal_path_task.cpp: performance: Prefer prefix ++/-- operators for non-primitive types. [postfixOperator]                    potential_ap_iter++;
 controller/src/beerocks/master/tasks/optimal_path_task.cpp: performance: Prefer prefix ++/-- operators for non-primitive types. [postfixOperator]                potential_ap_iter++;
@@ -125,20 +115,13 @@ controller/src/beerocks/master/tasks/rdkb/rdkb_wlan_task.cpp: style: The scope o
 controller/src/beerocks/master/tasks/rdkb/rdkb_wlan_task.cpp: style: Variable '(*it).events_updates' is assigned a value that is never used. [unreadVariable]                (*it).events_updates = update_enable;
 controller/src/beerocks/master/tasks/rdkb/rdkb_wlan_task_db.cpp: style: Parameter 'bssid' can be declared with const [constParameter]int32_t rdkb_wlan_task_db::get_group_index(const std::string &client_mac, std::string &bssid)
 controller/src/beerocks/master/tasks/task.cpp: performance: Function parameter 'mac' should be passed by const reference. [passedByValue]void task::add_pending_mac(std::string mac, beerocks_message::eActionOp_CONTROL action_op)
-controller/src/beerocks/master/tasks/task.cpp: performance: Function parameter 'node_mac' should be passed by const reference. [passedByValue]task::task(std::string task_name_, std::string node_mac)
-controller/src/beerocks/master/tasks/task.cpp: performance: Function parameter 'task_name_' should be passed by const reference. [passedByValue]task::task(std::string task_name_, std::string node_mac)
 framework/external/easylogging/easylogging++.cc: information: This file is not analyzed. Cppcheck failed to extract a valid configuration. Use -v for more details. [noValidConfiguration]
 framework/platform/bpl/arp/uci/bpl_arp.cpp: style: C-style pointer casting [cstyleCast]    arp_monitor *pArpMon = (arp_monitor *)ctx;
 framework/platform/bpl/arp/uci/monitor/arp_monitor.cpp: performance: Function parameter 'strIface' should be passed by const reference. [passedByValue]int arp_monitor::start(std::string strIface)
 framework/platform/bpl/arp/uci/monitor/arp_monitor.cpp: style: The scope of the variable 'type' can be reduced. [variableScope]        unsigned short type;
-framework/platform/bpl/arp/uci/monitor/arp_monitor.cpp: style: Unused variable: ipv4_str [unusedVariable]        std::string ipv4_str;
 framework/platform/bpl/cfg/linux/bpl_cfg.cpp: style: Parameter 'parameters' can be declared with const [constParameter]static bool cfg_set_params(std::unordered_map<std::string, std::string> &parameters)
 framework/platform/bpl/cfg/uci/bpl_cfg.cpp: style: The scope of the variable 'retVal' can be reduced. [variableScope]    int retVal = 0;
 framework/platform/bpl/cfg/uci/bpl_cfg.cpp: style: Variable 'retVal' is assigned a value that is never used. [unreadVariable]    int retVal = 0;
-framework/platform/bpl/common/utils/utils.cpp: performance: Function parameter 'additional_chars' should be passed by const reference. [passedByValue]void ltrim(std::string &str, std::string additional_chars)
-framework/platform/bpl/common/utils/utils.cpp: performance: Function parameter 'additional_chars' should be passed by const reference. [passedByValue]void rtrim(std::string &str, std::string additional_chars)
-framework/platform/bpl/common/utils/utils.cpp: performance: Function parameter 'additional_chars' should be passed by const reference. [passedByValue]void trim(std::string &str, std::string additional_chars)
-framework/platform/bpl/common/utils/utils.cpp: style: Unused variable: return_string [unusedVariable]    std::string return_string;
 framework/platform/bpl/db/linux/bpl_db.cpp: style: Parameter 'nested_params' can be declared with const [constParameter]    std::unordered_map<std::string, std::unordered_map<std::string, std::string>> &nested_params)
 framework/platform/bpl/db/linux/bpl_db.cpp: style: Parameter 'params' can be declared with const [constParameter]                  std::unordered_map<std::string, std::string> &params)
 framework/platform/bpl/dhcp/uci/bpl_dhcp.cpp: style: struct member 'dhcp_event_request::data' is never used. [unusedStructMember]    char data[];

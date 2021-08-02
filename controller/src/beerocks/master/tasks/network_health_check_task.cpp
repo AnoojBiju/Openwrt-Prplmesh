@@ -19,7 +19,7 @@ using namespace son;
 network_health_check_task::network_health_check_task(db &database_,
                                                      ieee1905_1::CmduMessageTx &cmdu_tx_,
                                                      task_pool &tasks_, int starting_delay_ms_,
-                                                     std::string task_name_)
+                                                     const std::string &task_name_)
     : task(task_name_), database(database_), cmdu_tx(cmdu_tx_), tasks(tasks_),
       starting_delay_ms(starting_delay_ms_)
 {

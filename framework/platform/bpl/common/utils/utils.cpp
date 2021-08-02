@@ -25,17 +25,17 @@ namespace utils {
 
 static const std::string WHITESPACE_CHARS(" \t\n\r\f\v");
 
-void ltrim(std::string &str, std::string additional_chars)
+void ltrim(std::string &str, const std::string &additional_chars)
 {
     str.erase(0, str.find_first_not_of(WHITESPACE_CHARS + additional_chars));
 }
 
-void rtrim(std::string &str, std::string additional_chars)
+void rtrim(std::string &str, const std::string &additional_chars)
 {
     str.erase(str.find_last_not_of(WHITESPACE_CHARS + additional_chars) + 1);
 }
 
-void trim(std::string &str, std::string additional_chars)
+void trim(std::string &str, const std::string &additional_chars)
 {
     ltrim(str, additional_chars);
     rtrim(str, additional_chars);
@@ -60,7 +60,6 @@ std::string int_to_hex_string(const unsigned int integer, const uint8_t number_o
     // for example: int_to_hex_string(255, 4) -> "00ff"
     //              int_to_hex_string(255, 1) -> "ff"
 
-    std::string return_string;
     std::stringstream ss_hex_string;
 
     // convert to hex
