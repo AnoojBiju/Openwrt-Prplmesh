@@ -16,7 +16,8 @@ namespace son {
 class load_balancer_task : public task {
 public:
     load_balancer_task(db &database_, ieee1905_1::CmduMessageTx &cmdu_tx_, task_pool &tasks_,
-                       std::string ire_mac_, std::string task_name_ = std::string("load_balancer"));
+                       const std::string &ire_mac_,
+                       const std::string &task_name_ = std::string("load_balancer"));
     virtual ~load_balancer_task() {}
     bool handle_ieee1905_1_msg(const sMacAddr &src_mac,
                                ieee1905_1::CmduMessageRx &cmdu_rx) override;

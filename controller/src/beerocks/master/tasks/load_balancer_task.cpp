@@ -24,8 +24,8 @@ using namespace son;
     }
 
 load_balancer_task::load_balancer_task(db &database_, ieee1905_1::CmduMessageTx &cmdu_tx_,
-                                       task_pool &tasks_, std::string ire_mac_,
-                                       std::string task_name_)
+                                       task_pool &tasks_, const std::string &ire_mac_,
+                                       const std::string &task_name_)
     : task(task_name_), database(database_), cmdu_tx(cmdu_tx_), tasks(tasks_), ire_mac(ire_mac_)
 {
     set_task_timeout(25000);

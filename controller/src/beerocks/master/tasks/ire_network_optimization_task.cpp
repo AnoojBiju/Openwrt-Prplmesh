@@ -20,7 +20,7 @@ using namespace son;
 ire_network_optimization_task::ire_network_optimization_task(db &database_,
                                                              ieee1905_1::CmduMessageTx &cmdu_tx_,
                                                              task_pool &tasks_,
-                                                             std::string task_name_)
+                                                             const std::string &task_name_)
     : task(task_name_), database(database_), cmdu_tx(cmdu_tx_), tasks(tasks_)
 {
 }

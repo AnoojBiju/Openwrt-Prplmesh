@@ -17,8 +17,8 @@ namespace son {
 class association_handling_task : public task {
 public:
     association_handling_task(db &database_, ieee1905_1::CmduMessageTx &cmdu_tx_, task_pool &tasks_,
-                              std::string sta_mac_,
-                              std::string task_name_ = std::string("association_handling"));
+                              const std::string &sta_mac_,
+                              const std::string &task_name_ = std::string("association_handling"));
     virtual ~association_handling_task() {}
 
 protected:

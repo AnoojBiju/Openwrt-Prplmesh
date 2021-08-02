@@ -18,9 +18,9 @@
 namespace son {
 class ire_network_optimization_task : public task {
 public:
-    ire_network_optimization_task(db &database_, ieee1905_1::CmduMessageTx &cmdu_tx_,
-                                  task_pool &tasks_,
-                                  std::string task_name_ = std::string("ire_network_optimization"));
+    ire_network_optimization_task(
+        db &database_, ieee1905_1::CmduMessageTx &cmdu_tx_, task_pool &tasks_,
+        const std::string &task_name_ = std::string("ire_network_optimization"));
     virtual ~ire_network_optimization_task() {}
 
 protected:
