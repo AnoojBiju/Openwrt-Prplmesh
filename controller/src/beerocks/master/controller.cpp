@@ -475,6 +475,12 @@ bool Controller::handle_cmdu_1905_1_message(const sMacAddr &src_mac,
         return handle_cmdu_1905_failed_connection_message(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE:
         return handle_cmdu_1905_associated_sta_link_metrics_response_message(src_mac, cmdu_rx);
+
+    // Empty cases are used to prevent error logs. Below message types are proccessed within tasks.
+    case ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE:
+    case ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE:
+    case ieee1905_1::eMessageType::LINK_METRIC_RESPONSE_MESSAGE:
+        return true;
     default:
         break;
     }
