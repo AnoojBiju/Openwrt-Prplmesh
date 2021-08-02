@@ -17,6 +17,10 @@
 
 #include "node.h"
 
+namespace son {
+class db;
+}
+
 namespace prplmesh {
 namespace controller {
 namespace db {
@@ -83,6 +87,8 @@ public:
 
     void assign_client_locating_task_id(int new_task_id, bool new_connection);
     int get_client_locating_task_id(bool new_connection);
+
+    friend class ::son::db;
 
 private:
     int m_client_locating_task_id_new_connection   = -1;
