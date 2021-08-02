@@ -428,8 +428,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
 
             auto event  = (BML_EVENT *)response->buffer(0);
             event->type = BML_EVENT_TYPE_STEERING;
-            auto size   = sizeof(BML_EVENT);
-            event->data = GET_MESSAGE_POINTER(BML_EVENT_STEERING, response->buffer(0), size);
+            event->data = response->buffer(sizeof(BML_EVENT));
 
             auto steering_event_client_activity_availble  = (BML_EVENT_STEERING *)event->data;
             steering_event_client_activity_availble->type = BML_STEERING_EVENT_CLIENT_ACTIVITY;
@@ -483,8 +482,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
 
             auto event  = (BML_EVENT *)response->buffer(0);
             event->type = BML_EVENT_TYPE_STEERING;
-            auto size   = sizeof(BML_EVENT);
-            event->data = GET_MESSAGE_POINTER(BML_EVENT_STEERING, response->buffer(0), size);
+            event->data = response->buffer(sizeof(BML_EVENT));
 
             auto steering_event_snr_xing_availble  = (BML_EVENT_STEERING *)event->data;
             steering_event_snr_xing_availble->type = BML_STEERING_EVENT_SNR_XING;
@@ -543,8 +541,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
 
             auto event  = (BML_EVENT *)response->buffer(0);
             event->type = BML_EVENT_TYPE_STEERING;
-            auto size   = sizeof(BML_EVENT);
-            event->data = GET_MESSAGE_POINTER(BML_EVENT_STEERING, response->buffer(0), size);
+            event->data = response->buffer(sizeof(BML_EVENT));
 
             auto steering_event_snr_availble  = (BML_EVENT_STEERING *)event->data;
             steering_event_snr_availble->type = BML_STEERING_EVENT_SNR;
@@ -596,8 +593,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
 
             auto event  = (BML_EVENT *)response->buffer(0);
             event->type = BML_EVENT_TYPE_STEERING;
-            auto size   = sizeof(BML_EVENT);
-            event->data = GET_MESSAGE_POINTER(BML_EVENT_STEERING, response->buffer(0), size);
+            event->data = response->buffer(sizeof(BML_EVENT));
 
             auto steering_event_probe_req_availble  = (BML_EVENT_STEERING *)event->data;
             steering_event_probe_req_availble->type = BML_STEERING_EVENT_PROBE_REQ;
@@ -652,8 +648,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
 
             auto event  = (BML_EVENT *)response->buffer(0);
             event->type = BML_EVENT_TYPE_STEERING;
-            auto size   = sizeof(BML_EVENT);
-            event->data = GET_MESSAGE_POINTER(BML_EVENT_STEERING, response->buffer(0), size);
+            event->data = response->buffer(sizeof(BML_EVENT));
 
             auto steering_event_auth_fail_availble  = (BML_EVENT_STEERING *)event->data;
             steering_event_auth_fail_availble->type = BML_STEERING_EVENT_AUTH_FAIL;
@@ -713,8 +708,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
 
             auto event  = (BML_EVENT *)response->buffer(0);
             event->type = BML_EVENT_TYPE_STEERING;
-            auto size   = sizeof(BML_EVENT);
-            event->data = GET_MESSAGE_POINTER(BML_EVENT_STEERING, response->buffer(0), size);
+            event->data = response->buffer(sizeof(BML_EVENT));
 
             auto connect_event                = (BML_EVENT_STEERING *)event->data;
             connect_event->type               = BML_STEERING_EVENT_CLIENT_CONNECT;
@@ -789,8 +783,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
 
             auto event  = (BML_EVENT *)response->buffer(0);
             event->type = BML_EVENT_TYPE_STEERING;
-            auto size   = sizeof(BML_EVENT);
-            event->data = GET_MESSAGE_POINTER(BML_EVENT_STEERING, response->buffer(0), size);
+            event->data = response->buffer(sizeof(BML_EVENT));
 
             auto steering_event_client_disconnect_availble  = (BML_EVENT_STEERING *)event->data;
             steering_event_client_disconnect_availble->type = BML_STEERING_EVENT_CLIENT_DISCONNECT;
