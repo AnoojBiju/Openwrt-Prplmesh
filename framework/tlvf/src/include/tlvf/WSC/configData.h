@@ -10,6 +10,9 @@
 #define _TLVF_WSC_CONFIGDATA_H_
 
 #include <tlvf/WSC/AttrList.h>
+#include <tlvf/WSC/eWscAuth.h>
+#include <tlvf/WSC/eWscEncr.h>
+#include <tlvf/WSC/eWscVendorExt.h>
 #include <tlvf/tlvflogging.h>
 
 namespace WSC {
@@ -18,12 +21,12 @@ class configData : public AttrList {
 
 public:
     struct config {
-        std::string ssid = "";
-        eWscAuth auth_type;
-        eWscEncr encr_type;
+        std::string ssid        = "";
+        eWscAuth auth_type      = eWscAuth::WSC_AUTH_INVALID;
+        eWscEncr encr_type      = eWscEncr::WSC_ENCR_INVALID;
         std::string network_key = "";
         sMacAddr bssid          = {};
-        uint8_t bss_type;
+        uint8_t bss_type        = eWscVendorExtSubelementBssType::TEARDOWN;
     };
 
     configData(uint8_t *buff, size_t buff_len, bool parse) : AttrList(buff, buff_len, parse) {}
