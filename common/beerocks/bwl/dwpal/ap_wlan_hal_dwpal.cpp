@@ -900,10 +900,12 @@ bool ap_wlan_hal_dwpal::refresh_radio_info()
         m_radio_info.max_bandwidth = band_info.get_max_bandwidth();
         m_radio_info.ht_supported  = band_info.ht_supported;
         m_radio_info.ht_capability = band_info.ht_capability;
-        m_radio_info.ht_mcs_set.assign(band_info.ht_mcs_set, sizeof(band_info.ht_mcs_set));
+        std::copy_n(band_info.ht_mcs_set, m_radio_info.ht_mcs_set.size(),
+                    m_radio_info.ht_mcs_set.begin());
         m_radio_info.vht_supported  = band_info.vht_supported;
         m_radio_info.vht_capability = band_info.vht_capability;
-        m_radio_info.vht_mcs_set.assign(band_info.vht_mcs_set, sizeof(band_info.vht_mcs_set));
+        std::copy_n(band_info.vht_mcs_set, m_radio_info.vht_mcs_set.size(),
+                    m_radio_info.vht_mcs_set.begin());
 
         for (auto const &pair : band_info.supported_channels) {
             auto &supported_channel_info = pair.second;

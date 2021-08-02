@@ -49,7 +49,7 @@ bool CmduPeer::send_cmdu(beerocks::net::Socket::Connection &connection,
     }
 
     // Send data
-    return connection.send(buffer);
+    return connection.send(buffer) > 0;
 }
 
 bool CmduPeer::forward_cmdu(beerocks::net::Socket::Connection &connection, uint32_t iface_index,
