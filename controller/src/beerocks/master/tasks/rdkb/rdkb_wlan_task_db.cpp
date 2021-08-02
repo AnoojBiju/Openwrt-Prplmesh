@@ -153,7 +153,7 @@ rdkb_wlan_task_db::get_client_config_list(const std::string &bssid)
     return result;
 }
 
-int32_t rdkb_wlan_task_db::get_group_index(const std::string &client_mac, std::string &bssid)
+int32_t rdkb_wlan_task_db::get_group_index(const std::string &client_mac, const std::string &bssid)
 {
     //notification common data: group index
     for (auto group_entry : steering_group_list) {
