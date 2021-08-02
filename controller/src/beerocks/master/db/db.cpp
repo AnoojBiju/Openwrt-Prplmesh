@@ -5066,6 +5066,12 @@ void db::clear_default_8021q_settings(const sMacAddr &al_mac)
 void db::disable_periodic_link_metrics_requests()
 {
     config.link_metrics_request_interval_seconds = std::chrono::seconds::zero();
+
+    beerocks::bpl::cfg_set_link_metrics_request_interval(
+        config.link_metrics_request_interval_seconds);
+
+    m_ambiorix_datamodel->set("Controller.Configuration", "LinkMetricsRequestInterval",
+                              config.link_metrics_request_interval_seconds.count());
 }
 
 bool db::dm_set_sta_link_metrics(const sMacAddr &sta_mac, uint32_t downlink_est_mac_data_rate,
@@ -6778,6 +6784,8 @@ bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
     config.load_client_optimal_path_roaming = nbapi_config.client_optimal_path_roaming;
     config.roaming_hysteresis_percent_bonus = nbapi_config.roaming_hysteresis_percent_bonus;
     config.steering_disassoc_timer_msec     = nbapi_config.steering_disassoc_timer_msec;
+    config.link_metrics_request_interval_seconds =
+        nbapi_config.link_metrics_request_interval_seconds;
 
     // Update persistent configuration.
     ret_val &= beerocks::bpl::cfg_set_band_steering(config.load_client_band_steering);
@@ -6786,6 +6794,8 @@ bool db::update_master_configuration(const sDbNbapiConfig &nbapi_config)
         config.roaming_hysteresis_percent_bonus);
     ret_val &=
         beerocks::bpl::cfg_set_steering_disassoc_timer_msec(config.steering_disassoc_timer_msec);
+    ret_val &= beerocks::bpl::cfg_set_link_metrics_request_interval(
+        config.link_metrics_request_interval_seconds);
 
     return ret_val;
 }
