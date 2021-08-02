@@ -1217,10 +1217,16 @@ static bool set_vap_multiap_mode(std::vector<std::string> &vap_hostapd_config, b
         // The number of new virtual net decives is determined by "num_vrt_bkh_netdevs" parameter,
         // and need to be set to one less than "max_num_sta" if was set on bAP interface (see
         // explanation below), since the main interface is used for 3 address stations.
-        hostapd_config_set_value(vap_hostapd_config, "num_vrt_bkh_netdevs", "2");
+        hostapd_config_set_value(vap_hostapd_config, "num_vrt_bkh_netdevs", 2);
 
         // Clear old configuration.
         hostapd_config_set_value(vap_hostapd_config, "max_num_sta", "");
+
+        // By setting the hairpin mode to 1, it is expected that only the real netdev that is
+        // configured to 3addr mode, will use this configuration whereas the virtual netdevs will
+        // have default system configuration (It does not happens though, but for now we can live
+        // with it until it will be fixed in the driver).
+        hostapd_config_set_value(vap_hostapd_config, "enable_hairpin", 1);
     } else {
         mesh_mode.assign(backhaul ? "bAP" : "fAP");
         // Setting max_num_sta to an bAP interface defines number of repeaters that can
@@ -1247,10 +1253,13 @@ static bool set_vap_multiap_mode(std::vector<std::string> &vap_hostapd_config, b
                                  disallow_profile1 ? "1" : "0");
         hostapd_config_set_value(vap_hostapd_config, "multi_ap_profile2_disallow",
                                  disallow_profile2 ? "1" : "0");
-    } else {
+        hostapd_config_set_value(vap_hostapd_config, "enable_hairpin", 0);
+
+    } else { // fBSS configurations
         // Clear old configuration.
         hostapd_config_set_value(vap_hostapd_config, "multi_ap_profile1_disallow", "");
         hostapd_config_set_value(vap_hostapd_config, "multi_ap_profile2_disallow", "");
+        hostapd_config_set_value(vap_hostapd_config, "enable_hairpin", 1);
     }
 
     // Configuration for fBSS that will be used for WPS.
