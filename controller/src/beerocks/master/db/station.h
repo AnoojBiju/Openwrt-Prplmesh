@@ -93,6 +93,9 @@ public:
 private:
     int m_client_locating_task_id_new_connection   = -1;
     int m_client_locating_task_id_exist_connection = -1;
+
+    bool m_supports_11v            = true;
+    int m_failed_11v_request_count = 0;
 };
 
 } // namespace db

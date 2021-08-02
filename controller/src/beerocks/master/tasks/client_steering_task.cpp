@@ -333,9 +333,15 @@ void client_steering_task::print_steering_info()
         timestamp = temp;
     }
 
+    auto client = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
+    if (!client) {
+        LOG(ERROR) << "Client " << m_sta_mac << " is not found";
+        return;
+    }
+
     if (m_steering_type.empty()) {
         m_steering_type = std::string(" 11v (BTM) ");
-        if (!m_database.get_node_11v_capability(m_sta_mac)) {
+        if (!m_database.get_node_11v_capability(*client)) {
             m_steering_type = std::string(" Legacy ");
         }
     }
@@ -387,9 +393,15 @@ void client_steering_task::handle_event(int event_type, void *obj)
 
 void client_steering_task::handle_task_end()
 {
+    auto client = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
+    if (!client) {
+        LOG(ERROR) << "Client " << m_sta_mac << " is not found";
+        return;
+    }
+
     if (m_steer_try_performed && !m_btm_report_received) {
         TASK_LOG(DEBUG) << "client didn't respond to 11v request, updating responsiveness";
-        m_database.update_node_11v_responsiveness(m_sta_mac, false);
+        m_database.update_node_11v_responsiveness(*client, false);
     }
     m_database.set_node_handoff_flag(m_sta_mac, false);
 }

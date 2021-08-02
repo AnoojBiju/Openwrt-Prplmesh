@@ -918,8 +918,8 @@ public:
      */
     bool can_start_client_steering(const std::string &sta_mac, const std::string &bssid);
 
-    bool update_node_11v_responsiveness(const std::string &mac, bool success);
-    bool get_node_11v_capability(const std::string &mac);
+    void update_node_11v_responsiveness(Station &station, bool success);
+    bool get_node_11v_capability(const Station &mac);
 
     bool set_hostap_iface_name(const sMacAddr &al_mac, const sMacAddr &mac,
                                const std::string &iface_name);

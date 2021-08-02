@@ -1406,7 +1406,7 @@ void optimal_path_task::work()
         int steering_task_id = 0;
 
         std::string method = " 11v (BTM) ";
-        if (!database.get_node_11v_capability(sta_mac)) {
+        if (!database.get_node_11v_capability(*station)) {
             method = std::string(" Legacy ");
         }
 
@@ -1414,7 +1414,7 @@ void optimal_path_task::work()
             chosen_method.append(" [forced steering] ");
         }
         chosen_method.append(" [optimal_path_task] ");
-        if (database.get_node_11v_capability(sta_mac) && !is_force_steer) {
+        if (database.get_node_11v_capability(*station) && !is_force_steer) {
             if (sticky_roaming_rssi <= database.config.roaming_sticky_client_rssi_threshold) {
                 TASK_LOG(DEBUG) << "optimal_path_task: steering with disassociate imminent, sta "
                                 << sta_mac << " steer from BSSID " << current_hostap_vap
