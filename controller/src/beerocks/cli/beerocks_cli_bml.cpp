@@ -1357,13 +1357,12 @@ int cli_bml::client_set_client_caller(int numOfArgs)
      *  time_life_delay_minutes=<time_life_delay_minutes>
     ]*/
     std::string::size_type pos;
-    std::string sta_mac(network_utils::WILD_MAC_STRING);
     int8_t selected_bands           = BML_PARAMETER_NOT_CONFIGURED;
     int8_t stay_on_initial_radio    = BML_PARAMETER_NOT_CONFIGURED;
     int32_t time_life_delay_minutes = BML_PARAMETER_NOT_CONFIGURED;
 
     if (numOfArgs > 1) {
-        sta_mac = args.stringArgs[0];
+        std::string sta_mac = args.stringArgs[0];
         for (int i = 1; i < numOfArgs; i++) { //first optional arg
             if ((pos = args.stringArgs[i].find("selected_bands=")) != std::string::npos) {
                 selected_bands = beerocks::string_utils::stoi(
