@@ -1403,7 +1403,7 @@ void optimal_path_task::work()
         if (is_force_steer) {
             chosen_method.append(" [forced steering] ");
         }
-
+        chosen_method.append(" [optimal_path_task] ");
         if (database.get_node_11v_capability(sta_mac) && !is_force_steer) {
             if (sticky_roaming_rssi <= database.config.roaming_sticky_client_rssi_threshold) {
                 TASK_LOG(DEBUG) << "optimal_path_task: steering with disassociate imminent, sta "

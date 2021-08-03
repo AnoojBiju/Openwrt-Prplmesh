@@ -12,6 +12,7 @@
 #include "bml_task.h"
 
 #include <beerocks/tlvf/beerocks_message_1905_vs.h>
+#include <ctime>
 #include <easylogging++.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringRequest.h>
 #include <tlvf/wfa_map/tlvClientAssociationControlRequest.h>
@@ -96,6 +97,10 @@ void client_steering_task::work()
                                    "steering attempt";
                 m_database.update_node_failed_24ghz_steer_attempt(m_sta_mac);
             }
+        }
+
+        if (!dm_set_steer_event_params(m_database.dm_add_steer_event())) {
+            LOG(ERROR) << "Failed to set parameters of Controller.SteerEvent";
         }
 
         print_steering_info();
@@ -348,8 +353,15 @@ void client_steering_task::handle_event(int event_type, void *obj)
             TASK_LOG(ERROR) << "sta " << m_sta_mac << " steered to bssid " << connected_bssid
                             << " ,target bssid was " << m_target_bssid;
         }
+        if (m_disassoc_ts.time_since_epoch().count() &&
+            m_disassoc_ts < std::chrono::steady_clock::now()) {
+            m_duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - m_disassoc_ts);
+            m_disassoc_ts = {};
+        }
     } else if (event_type == STA_DISCONNECTED) {
         TASK_LOG(DEBUG) << "sta " << m_sta_mac << " disconnected due to steering request";
+        m_disassoc_ts = std::chrono::steady_clock::now();
     } else if (event_type == BSS_TM_REQUEST_REJECTED) {
         TASK_LOG(DEBUG) << "sta " << m_sta_mac << " rejected BSS_TM request";
         if (m_disassoc_imminent) {
@@ -363,6 +375,7 @@ void client_steering_task::handle_event(int event_type, void *obj)
         }
     } else if (event_type == BTM_REPORT_RECEIVED) {
         m_btm_report_received = true;
+        m_status_code         = *(uint8_t *)obj;
     }
 }
 
@@ -373,6 +386,64 @@ void client_steering_task::handle_task_end()
         m_database.update_node_11v_responsiveness(m_sta_mac, false);
     }
     m_database.set_node_handoff_flag(m_sta_mac, false);
+}
+
+bool client_steering_task::dm_set_steer_event_params(const std::string &event_path)
+{
+    if (event_path.empty()) {
+        return false;
+    }
+
+    auto ambiorix_dm = m_database.get_ambiorix_obj();
+
+    if (!ambiorix_dm) {
+        LOG(ERROR) << "Failed to get Controller Data Model object.";
+        return false;
+    }
+    ambiorix_dm->set(event_path, "DeviceId", m_sta_mac);
+    ambiorix_dm->set(event_path, "SteeredFrom", m_original_bssid);
+    ambiorix_dm->set(event_path, "StatusCode", m_status_code);
+    m_database.dm_set_status(event_path, m_status_code);
+    ambiorix_dm->set_current_time(event_path);
+    if (m_steering_success) {
+        ambiorix_dm->set(event_path, "Result", std::string("Success"));
+        ambiorix_dm->set(event_path, "SteeredTo", m_target_bssid);
+        ambiorix_dm->set(event_path, "TimeTaken", m_duration.count());
+
+        int8_t rx_rssi = 0, rx_packets = 0;
+
+        if (!m_database.get_node_cross_rx_rssi(m_sta_mac, m_target_bssid, rx_rssi, rx_packets)) {
+            TASK_LOG(ERROR) << "can't get cross_rx_rssi for bssi =" << m_target_bssid;
+        }
+        ambiorix_dm->set(event_path, "NewLinkRate", rx_rssi);
+    } else {
+        ambiorix_dm->set(event_path, "Result", std::string("Fail"));
+    }
+
+    std::string steer_origin = "Unknown";
+
+    // For the time being, Agent doesn't steer, skip setting Agent steer origin.
+    if (m_duration / std::chrono::seconds(1) < 10) {
+        // If the duration is smaller than some compile-time defined threshold,
+        // e.g. 10s, it is considered a steering event originated by the station
+        steer_origin = "Station";
+    }
+    if (m_triggered_by.find("CLI") != std::string::npos) {
+        steer_origin = "CLI";
+    }
+    if (m_triggered_by.find("NBAPI") != std::string::npos) {
+        steer_origin = "NBAPI";
+    }
+    if (m_triggered_by.find("optimal_path_task") != std::string::npos ||
+        m_triggered_by.find("DFS Rentry") != std::string::npos) {
+        steer_origin = "Controller";
+
+        // Steering type is always BTM if the controller initiated
+        // the steering, and unknown otherwise.
+        ambiorix_dm->set(event_path, "SteeringType", std::string("BTM"));
+    }
+    ambiorix_dm->set(event_path, "SteeringOrigin", steer_origin);
+    return true;
 }
 
 bool client_steering_task::handle_ieee1905_1_msg(const sMacAddr &src_mac,

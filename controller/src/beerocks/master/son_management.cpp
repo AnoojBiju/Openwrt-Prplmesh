@@ -614,7 +614,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
         }
         std::string slave_mac  = tlvf::mac_to_string(request->slave_mac());
         std::string hostap_mac = tlvf::mac_to_string(request->bssid());
-        std::string triggered_by{" On-Demand backhaul [imminent] "};
+        std::string triggered_by{" On-Demand backhaul [imminent] CLI "};
         //TODO: we are passing true for imminent by default
         //extend ACTION_CLI_BACKHAUL_ROAM_REQUEST to have imminent variable
         uint8_t disassoc_imminent = uint8_t(1);
@@ -634,7 +634,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
         }
         std::string client_mac = tlvf::mac_to_string(request->client_mac());
         std::string hostap_mac = tlvf::mac_to_string(request->bssid());
-        std::string triggered_by{" On-Demand "};
+        std::string triggered_by{" On-Demand CLI"};
         uint8_t disassoc_imminent = request->disassoc_timer_ms() ? uint8_t(1) : uint8_t(0);
         LOG(DEBUG) << "CLI steer sta request for " << client_mac << " to hostap: " << hostap_mac
                    << " disassoc_imminent=" << int(disassoc_imminent)

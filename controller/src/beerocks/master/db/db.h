@@ -29,11 +29,12 @@
 #include <vector>
 
 #ifdef ENABLE_NBAPI
+#define NBAPI_ON 1
 #include "ambiorix_impl.h"
 
 #else
 #include "ambiorix_dummy.h"
-
+#define NBAPI_ON 0
 #endif // ENABLE_NBAPI
 
 using namespace beerocks_message;
@@ -570,6 +571,13 @@ public:
                                   const std::string &name);
 
     /**
+     * @brief Returns ambiorix object. 
+     * 
+     * @return Instance of AmbiorixImpl class, or AmbiorixDummy (if dummy mode enabled).
+     */
+    std::shared_ptr<beerocks::nbapi::Ambiorix> get_ambiorix_obj();
+
+    /**
      * @brief Removes the interface of given MAC of Interface Class and Device's Data Model.
      *
      * Searches index of m_interfaces vector and removes it.
@@ -649,6 +657,21 @@ public:
                             const uint8_t &channel, const uint8_t noise, const uint8_t utilization,
                             const std::vector<wfa_map::cNeighbors> &neighbors,
                             const std::string &ISO_8601_timestamp);
+
+    /** @brief Set 'Status' parameter of NBAPI 'SteerEvent' object.
+     * 
+     * @param event_path Path to NBAPI 'SteerEvent' object.
+     * @param status_code Status code of client steering.
+     */
+    void dm_set_status(const std::string &event_path, const uint8_t status_code);
+
+    /**
+     * @brief Adds NBAPI SteerEvent object.
+     * Data model path example: "Controller.SteerEvent.42"
+     * 
+     * @return Path to object on success, empty sring otherwise.
+     */
+    std::string dm_add_steer_event();
 
     /**
      * @brief Adds or updates instance of Neighbor inside Interface object.
@@ -1712,6 +1735,15 @@ public:
     bool dm_add_cac_status_available_channel(std::shared_ptr<sAgent::sRadio> radio,
                                              uint8_t operating_class, uint8_t channel);
 
+    /**
+     * @brief Removes excessive NBAPI objects from system bus, if amount of them succeed the limit.
+     *
+     * @param paths Queue with paths to NBAPI objects of particular type.
+     * @param limit The maximum allowed amount of those objects.
+     * @return True on success, false otherwise.
+     */
+    bool dm_check_objects_limit(std::queue<std::string> &paths, uint8_t limit);
+
     //
     // tasks
     //
@@ -2091,14 +2123,6 @@ private:
      */
     bool set_node_data_model_path(const sMacAddr &mac, const std::string &data_model_path);
 
-    /**
-     * @brief Removes excessive NBAPI objects from system bus, if amount of them succeed the limit.
-     *
-     * @param paths Queue with paths to NBAPI objects of particular type.
-     * @param limit The maximum allowed amount of those objects.
-     */
-    void check_history_limit(std::queue<std::string> &paths, uint8_t limit);
-
     int network_optimization_task_id           = -1;
     int channel_selection_task_id              = -1;
     int dynamic_channel_selection_r2_task_id   = -1;
@@ -2196,6 +2220,11 @@ private:
      * @brief Maximum amount of events registered on the system bus NBAPI
      */
     const uint8_t MAX_EVENT_HISTORY_SIZE = 24;
+
+    /*
+    *  The queue with paths of NBAPI SteerEvent NBAPI objects.
+    */
+    std::queue<std::string> m_steer_events;
 
     /**
      * @brief The queue with paths of NBAPI disassociation events.

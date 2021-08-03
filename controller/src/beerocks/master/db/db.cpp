@@ -3188,7 +3188,9 @@ bool db::dm_add_scan_result(const sMacAddr &ruid, const uint8_t &operating_class
                             const std::vector<wfa_map::cNeighbors> &neighbors,
                             const std::string &ISO_8601_timestamp)
 {
-    check_history_limit(m_scan_results, MAX_SCAN_RESULT_HISTORY_SIZE);
+    if (!dm_check_objects_limit(m_scan_results, MAX_SCAN_RESULT_HISTORY_SIZE)) {
+        return false;
+    }
 
     std::string radio_path = get_node_data_model_path(ruid);
 
@@ -4261,17 +4263,19 @@ void db::clear_hostap_stats_info(const sMacAddr &al_mac, const sMacAddr &mac)
     set_hostap_stats_info(mac, nullptr);
 }
 
-void db::check_history_limit(std::queue<std::string> &paths, uint8_t limit)
+bool db::dm_check_objects_limit(std::queue<std::string> &paths, uint8_t limit)
 {
     while (limit <= paths.size()) {
         std::string obj_path = paths.front();
-        auto index           = get_dm_index_from_path(obj_path);
+        auto path            = get_dm_index_from_path(obj_path);
 
-        if (!m_ambiorix_datamodel->remove_instance(obj_path, index.second)) {
+        if (!m_ambiorix_datamodel->remove_instance(path.first, path.second)) {
             LOG(ERROR) << "Failed to remove " << obj_path;
+            return false;
         }
         paths.pop();
     }
+    return true;
 }
 
 bool db::notify_disconnection(const std::string &client_mac)
@@ -4284,7 +4288,9 @@ bool db::notify_disconnection(const std::string &client_mac)
     std::string path_to_disassoc_event_data =
         "Controller.Notification.DisassociationEvent.DisassociationEventData";
 
-    check_history_limit(m_disassoc_events, MAX_EVENT_HISTORY_SIZE);
+    if (!dm_check_objects_limit(m_disassoc_events, MAX_EVENT_HISTORY_SIZE)) {
+        return false;
+    }
 
     std::string path_to_eventdata = m_ambiorix_datamodel->add_instance(path_to_disassoc_event_data);
 
@@ -5859,12 +5865,51 @@ std::string db::dm_add_sta_element(const sMacAddr &bssid, const sMacAddr &client
     return sta_instance;
 }
 
+void db::dm_set_status(const std::string &event_path, const uint8_t status_code)
+{
+    uint8_t max_status_code = 9;
+    std::string m_status_code_vals[max_status_code]{
+        "Accept",
+        "Unspecified reject reason",
+        "Insufficient Beacon or Probe Response frames received",
+        "Insufficient available capacity from all candidates",
+        "BSS termination undesired",
+        "BSS termination delay requested",
+        "STA BSS Transition Candidate List provided",
+        "No suitable BSS transition candidates",
+        "Reject—Leaving ESS"};
+
+    // By default status is in datamodel is 'Unknown'
+    if (status_code < max_status_code) {
+        m_ambiorix_datamodel->set(event_path, "Status", m_status_code_vals[status_code]);
+    }
+}
+
+std::string db::dm_add_steer_event()
+{
+    if (!dm_check_objects_limit(m_steer_events, MAX_EVENT_HISTORY_SIZE)) {
+        LOG(ERROR) << "Failed to remove Exceeding SteerEvent objects.";
+        return {};
+    }
+
+    std::string event_path = m_ambiorix_datamodel->add_instance("Controller.SteerEvent");
+
+    if (event_path.empty() && NBAPI_ON) {
+        LOG(ERROR) << "Failed to add instance Controller.SteerEvent";
+        return {};
+    }
+    m_steer_events.push(event_path);
+    return event_path;
+}
+
 std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac)
 {
     std::string path_association_event =
         "Controller.Notification.AssociationEvent.AssociationEventData";
 
-    check_history_limit(m_assoc_events, MAX_EVENT_HISTORY_SIZE);
+    if (!dm_check_objects_limit(m_assoc_events, MAX_EVENT_HISTORY_SIZE)) {
+        return {};
+    }
 
     path_association_event = m_ambiorix_datamodel->add_instance(path_association_event);
 
@@ -6328,6 +6373,8 @@ bool db::dm_add_interface_element(const sMacAddr &device_mac, const sMacAddr &in
     }
     return true;
 }
+
+std::shared_ptr<beerocks::nbapi::Ambiorix> db::get_ambiorix_obj() { return m_ambiorix_datamodel; }
 
 bool db::remove_interface(const sMacAddr &device_mac, const sMacAddr &interface_mac)
 {
