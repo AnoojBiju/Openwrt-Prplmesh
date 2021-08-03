@@ -16,7 +16,7 @@ RUN apt-get update \
 
 # Install docker and docker-compose from docker.com repositories
 RUN curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
-RUN add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
+RUN add-apt-repository "deb [arch=$(dpkg --print-architecture)] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
 RUN apt-get update \
     && apt-get install -y \
        containerd.io \
@@ -51,3 +51,4 @@ RUN apt-get update \
        wireshark-common \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
