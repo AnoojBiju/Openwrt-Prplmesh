@@ -372,6 +372,8 @@ bool db::dm_add_sta_beacon_measurement(const beerocks_message::sBeaconResponse11
     bool ret_val = true;
 
     ret_val &=
+        m_ambiorix_datamodel->set(measurement_inst, "BSSID", tlvf::mac_to_string(beacon.bssid));
+    ret_val &=
         m_ambiorix_datamodel->set(measurement_inst, "MeasurementToken", beacon.measurement_token);
     ret_val &= m_ambiorix_datamodel->set(measurement_inst, "RCPI", beacon.rcpi);
     ret_val &= m_ambiorix_datamodel->set(measurement_inst, "RSNI", beacon.rsni);
