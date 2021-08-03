@@ -399,7 +399,7 @@ static void cli_interactive(std::string path, std::string tmp_path, std::string 
 #endif
 }
 
-static void cli_tcp_proxy(std::string temp_path)
+static void cli_tcp_proxy(const std::string &temp_path)
 {
     std::string master_uds = temp_path + std::string(BEEROCKS_MASTER_UDS);
     beerocks::cli_proxy cli_proxy_thread(master_uds);

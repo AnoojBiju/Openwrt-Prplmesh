@@ -405,7 +405,8 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
 }
 
 bool son_actions::validate_beacon_measurement_report(beerocks_message::sBeaconResponse11k report,
-                                                     std::string sta_mac, std::string bssid)
+                                                     const std::string &sta_mac,
+                                                     const std::string &bssid)
 {
     if (report.rcpi > RCPI_MAX) {
         LOG(WARNING) << "RCPI Measurement is in reserved value range rcpi=" << report.rcpi;

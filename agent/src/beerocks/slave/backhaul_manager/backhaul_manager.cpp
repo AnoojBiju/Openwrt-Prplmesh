@@ -263,10 +263,10 @@ bool BackhaulManager::stop()
     bool ok = true;
 
     while (slaves_sockets.size() > 0) {
-        auto soc          = slaves_sockets.back();
-        std::string iface = soc->sta_iface;
-        LOG(DEBUG) << "Closing interface " << iface << " sockets";
+        auto soc = slaves_sockets.back();
         if (soc) {
+            LOG(DEBUG) << "Closing interface " << soc->sta_iface << " sockets";
+
             if (soc->slave != beerocks::net::FileDescriptor::invalid_descriptor) {
                 m_cmdu_server->disconnect(soc->slave);
             }
