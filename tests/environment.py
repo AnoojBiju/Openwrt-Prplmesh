@@ -549,12 +549,13 @@ class ALEntityDocker(ALEntity):
         return logfilename
 
     def iperf_throughput(self, to_dut: bool, duration: int = 5, protocol: str = 'tcp',
-                         omit: int = 2, num_streams: int = 5,
+                         bitrate: int = 0, omit: int = 2, num_streams: int = 5,
                          print_output: bool = False) -> float:
         server_hostname = self.get_iface_ip()
         self.command('iperf3', '--daemon', '-s', '-B', server_hostname, '-J', '-1')
-        return _iperf_throughput(server_hostname, to_dut, duration, protocol,
-                                 omit, num_streams, print_output)
+        return _iperf_throughput(server_hostname, to_dut, duration,
+                                 protocol, omit, bitrate,
+                                 num_streams, print_output)
 
     def command(self, *command: str) -> str:
         '''Execute `command` in docker container and return its output.'''
@@ -767,7 +768,7 @@ def _docker_inspect_network_json(unique_id: str):
 
 
 def _iperf_throughput(server_hostname: str, to_dut: bool, duration: int = 5,
-                      protocol: str = 'tcp', omit: int = 2,
+                      protocol: str = 'tcp', omit: int = 2, bitrate: int = 0,
                       num_streams: int = 5, print_output: bool = False) -> float:
     '''Connects boardfarm as client to previously started server
      on the server_hostname address
@@ -788,6 +789,9 @@ def _iperf_throughput(server_hostname: str, to_dut: bool, duration: int = 5,
 
         omit: int = 2
             Seconds to be removed from a test result
+
+        bitrate: int = 0
+            bitrate
 
         num_streams: int = 5
             Parallel streams

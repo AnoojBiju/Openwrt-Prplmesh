@@ -124,10 +124,10 @@ class PrplMeshStation(DebianWifi):
         return self.match.group('mac')
 
     def iperf_throughput(self, to_dut: bool, duration: int = 5, protocol: str = 'tcp',
-                         omit: int = 2, num_streams: int = 5,
+                         bitrate: int = 0, omit: int = 2, num_streams: int = 5,
                          print_output: bool = False) -> float:
         server_hostname = self.station_ip_wifi
         self.station_command('iperf3', '--daemon', '-s', '-B', server_hostname, '-J', '-1')
         return _iperf_throughput(server_hostname, to_dut, duration,
-                                 protocol, omit,
+                                 protocol, omit, bitrate,
                                  num_streams, print_output)
