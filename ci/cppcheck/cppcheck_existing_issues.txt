@@ -28,9 +28,6 @@ controller/src/beerocks/master/son_management.cpp: style: Variable 'op_error_cod
 controller/src/beerocks/master/son_management.cpp: style: Variable 'result_status' is assigned a value that is never used. [unreadVariable]            result_status = last_scan_success;
 controller/src/beerocks/master/son_management.cpp: style: Variable 'result_status' is assigned a value that is never used. [unreadVariable]        auto result_status = eChannelScanStatusCode::SUCCESS;
 controller/src/beerocks/master/tasks/bml_task.cpp: style: Local variable 'idx' shadows outer variable [shadowVariable]            int idx = 0;
-controller/src/beerocks/master/tasks/channel_selection_task.cpp: style: C-style pointer casting [cstyleCast]            auto new_event        = CHANNEL_SELECTION_ALLOCATE_EVENT(sDfsCacPendinghostap_event);
-controller/src/beerocks/master/tasks/channel_selection_task.cpp: style: C-style pointer casting [cstyleCast]        auto new_event = CHANNEL_SELECTION_ALLOCATE_EVENT(sDfsReEntrySampleSteeredClients_event);
-controller/src/beerocks/master/tasks/channel_selection_task.cpp: style: C-style pointer casting [cstyleCast]    auto new_event             = CHANNEL_SELECTION_ALLOCATE_EVENT(sDfsCacPendinghostap_event);
 controller/src/beerocks/master/tasks/channel_selection_task.cpp: style: The scope of the variable 'channel_80Mhz_step' can be reduced. [variableScope]    auto channel_80Mhz_step = CHANNEL_80MHZ_STEP;
 controller/src/beerocks/master/tasks/dynamic_channel_selection_task.cpp: style: Redundant initialization for 'ret'. The initialized value is overwritten before it is read. [redundantInitialization]        auto ret = beerocks::eChannelScanStatusCode::SUCCESS;
 controller/src/beerocks/master/tasks/load_balancer_task.cpp: style: The scope of the variable 'chosen_hostap_bytes_per_second_gained' can be reduced. [variableScope]        int chosen_hostap_bytes_per_second_gained = INT32_MIN;

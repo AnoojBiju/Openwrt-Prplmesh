@@ -21,7 +21,6 @@
 #define GENERATE_ENUM(ENUM) ENUM,
 #define GENERATE_STRING(STRING) #STRING,
 
-#define CHANNEL_SELECTION_ALLOCATE_EVENT(s_event) ((s_event *)(new uint8_t[sizeof(s_event)]))
 #define CHANNEL_20MHZ_STEP 4
 #define CHANNEL_80MHZ_STEP 12
 
