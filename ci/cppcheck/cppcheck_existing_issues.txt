@@ -60,9 +60,7 @@ controller/src/beerocks/master/tasks/channel_selection_task.cpp: style: C-style 
 controller/src/beerocks/master/tasks/channel_selection_task.cpp: style: C-style pointer casting [cstyleCast]                restricted_channel_response_event = (sRestrictedChannelResponse_event *)obj;
 controller/src/beerocks/master/tasks/channel_selection_task.cpp: style: C-style pointer casting [cstyleCast]                slave_joined_event = (sSlaveJoined_event *)event_obj;
 controller/src/beerocks/master/tasks/channel_selection_task.cpp: style: C-style pointer casting [cstyleCast]            auto new_event        = CHANNEL_SELECTION_ALLOCATE_EVENT(sDfsCacPendinghostap_event);
-controller/src/beerocks/master/tasks/channel_selection_task.cpp: style: C-style pointer casting [cstyleCast]        auto event_mac = tlvf::mac_to_string((((sMacAddr *)(it->second))->oct));
 controller/src/beerocks/master/tasks/channel_selection_task.cpp: style: C-style pointer casting [cstyleCast]        auto new_event = CHANNEL_SELECTION_ALLOCATE_EVENT(sDfsReEntrySampleSteeredClients_event);
-controller/src/beerocks/master/tasks/channel_selection_task.cpp: style: C-style pointer casting [cstyleCast]    auto event_hostap_mac = tlvf::mac_to_string(((sMacAddr *)obj)->oct);
 controller/src/beerocks/master/tasks/channel_selection_task.cpp: style: C-style pointer casting [cstyleCast]    auto new_event             = CHANNEL_SELECTION_ALLOCATE_EVENT(sDfsCacPendinghostap_event);
 controller/src/beerocks/master/tasks/channel_selection_task.cpp: style: The scope of the variable 'channel_80Mhz_step' can be reduced. [variableScope]    auto channel_80Mhz_step = CHANNEL_80MHZ_STEP;
 controller/src/beerocks/master/tasks/dynamic_channel_selection_task.cpp: style: Redundant initialization for 'ret'. The initialized value is overwritten before it is read. [redundantInitialization]        auto ret = beerocks::eChannelScanStatusCode::SUCCESS;

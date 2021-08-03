@@ -91,8 +91,8 @@ void channel_selection_task::handle_event(int event_type, void *obj)
         TASK_LOG(ERROR) << "obj == nullptr";
         return;
     }
-    auto event_hostap_mac = tlvf::mac_to_string(((sMacAddr *)obj)->oct);
-    if (radio_mac == tlvf::mac_from_string(event_hostap_mac)) {
+    sMacAddr event_hostap_mac = *reinterpret_cast<sMacAddr *>(obj);
+    if (radio_mac == event_hostap_mac) {
         bool handle_event = false;
         switch (eEvent(event_type)) {
         case eEvent::ACS_RESPONSE_EVENT: {
@@ -131,7 +131,7 @@ void channel_selection_task::handle_event(int event_type, void *obj)
         case eEvent::SLAVE_JOINED_EVENT: {
             TASK_LOG(WARNING) << "slave rejoined, event: " << EVENT_STR(eEvent(event_type))
                               << " in state: " << FSM_CURR_STATE_STR;
-            queue_clear_mac(event_hostap_mac);
+            queue_clear_mac(tlvf::mac_to_string(event_hostap_mac));
             queue_push_event(eEvent(event_type), (uint8_t *)obj);
             break;
         }
@@ -1059,8 +1059,8 @@ void channel_selection_task::queue_clear_mac(const std::string &mac)
 {
     TASK_LOG(DEBUG) << "queue_clear_mac(), mac = " << mac;
     for (auto it = event_queue.begin(); it != event_queue.end(); it++) {
-        auto event_mac = tlvf::mac_to_string((((sMacAddr *)(it->second))->oct));
-        if (event_mac == mac) {
+        auto event_mac = *reinterpret_cast<sMacAddr *>(it->second);
+        if (event_mac == tlvf::mac_from_string(mac)) {
             TASK_LOG(DEBUG) << "DELETED_EVENT";
             it->first = eEvent::DELETED_EVENT;
         }
