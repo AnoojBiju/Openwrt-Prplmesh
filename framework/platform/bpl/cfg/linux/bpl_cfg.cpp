@@ -664,6 +664,11 @@ bool cfg_get_link_metrics_request_interval(std::chrono::seconds &link_metrics_re
     return true;
 }
 
+bool cfg_set_link_metrics_request_interval(std::chrono::seconds &link_metrics_request_interval_sec)
+{
+    return true;
+}
+
 bool bpl_cfg_set_wifi_credentials(const std::string &iface,
                                   const son::wireless_utils::sBssInfoConf &configuration)
 {

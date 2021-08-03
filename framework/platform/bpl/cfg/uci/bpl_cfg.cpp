@@ -596,6 +596,14 @@ bool cfg_get_link_metrics_request_interval(std::chrono::seconds &link_metrics_re
     return true;
 }
 
+bool cfg_set_link_metrics_request_interval(std::chrono::seconds &link_metrics_request_interval_sec)
+{
+    std::string option = "link_metrics_request_interval_sec";
+    std::string value  = std::to_string(link_metrics_request_interval_sec.count());
+
+    return cfg_set_prplmesh_config(option, value);
+}
+
 static bool bpl_cfg_get_bss_configuration(const std::string &section_name,
                                           son::wireless_utils::sBssInfoConf &configuration)
 {

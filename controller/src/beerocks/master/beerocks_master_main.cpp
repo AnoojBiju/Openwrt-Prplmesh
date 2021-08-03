@@ -352,6 +352,9 @@ fill_nbapi_config_from_master_conf(std::shared_ptr<beerocks::nbapi::Ambiorix> am
     ret_val &= ambiorix_datamodel->set("Controller.Configuration", "SteeringDisassociationTimer",
                                        master_conf.steering_disassoc_timer_msec.count());
 
+    ret_val &= ambiorix_datamodel->set("Controller.Configuration", "LinkMetricsRequestInterval",
+                                       master_conf.link_metrics_request_interval_seconds.count());
+
     return ret_val;
 }
 
