@@ -67,7 +67,6 @@ public:
     std::string radio_identifier;
 
     std::string ipv4;
-    std::string ipv6;
     std::string manufacturer;
     int channel = 0;
     std::string name;
@@ -81,7 +80,6 @@ public:
 
     beerocks::eNodeState state = beerocks::STATE_DISCONNECTED;
     bool handoff               = false;
-    bool confined              = false;
 
     bool supports_5ghz            = true;
     int failed_5ghz_steer_attemps = 0;
@@ -121,11 +119,6 @@ public:
         std::chrono::steady_clock::time_point timestamp = std::chrono::steady_clock::now();
     };
     std::shared_ptr<sta_stats_params> stats_info;
-
-    uint16_t cross_rx_phy_rate_100kb   = 0;
-    uint16_t cross_tx_phy_rate_100kb   = 0;
-    double cross_estimated_rx_phy_rate = 0.0;
-    double cross_estimated_tx_phy_rate = 0.0;
 
     bool ire_handoff = false;
 

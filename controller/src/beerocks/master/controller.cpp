@@ -3097,7 +3097,14 @@ bool Controller::handle_cmdu_control_message(
 
         std::string client_mac = tlvf::mac_to_string(notification->params().result.mac);
         std::string ap_mac     = hostap_mac;
-        bool is_parent         = (tlvf::mac_from_string(database.get_node_parent(client_mac)) ==
+
+        auto client = database.get_station(tlvf::mac_from_string(client_mac));
+        if (!client) {
+            LOG(ERROR) << "client " << client_mac << " not found";
+            return false;
+        }
+
+        bool is_parent = (tlvf::mac_from_string(database.get_node_parent(client_mac)) ==
                           database.get_hostap_vap_mac(tlvf::mac_from_string(ap_mac),
                                                       notification->params().vap_id));
 
@@ -3129,10 +3136,8 @@ bool Controller::handle_cmdu_control_message(
             LOG(ERROR) << "update rssi measurement failed";
         }
         if (is_parent) {
-            database.set_node_cross_tx_phy_rate_100kb(client_mac,
-                                                      notification->params().tx_phy_rate_100kb);
-            database.set_node_cross_rx_phy_rate_100kb(client_mac,
-                                                      notification->params().rx_phy_rate_100kb);
+            client->cross_tx_phy_rate_100kb = notification->params().tx_phy_rate_100kb;
+            client->cross_rx_phy_rate_100kb = notification->params().rx_phy_rate_100kb;
         }
 #ifdef BEEROCKS_RDKB
         if (database.settings_rdkb_extensions() &&
@@ -3182,10 +3187,8 @@ bool Controller::handle_cmdu_control_message(
 
             database.set_node_cross_rx_rssi(client_mac, hostap_mac, notification->params().rx_rssi,
                                             notification->params().rx_packets);
-            database.set_node_cross_tx_phy_rate_100kb(client_mac,
-                                                      notification->params().tx_phy_rate_100kb);
-            database.set_node_cross_rx_phy_rate_100kb(client_mac,
-                                                      notification->params().rx_phy_rate_100kb);
+            client->cross_tx_phy_rate_100kb = notification->params().tx_phy_rate_100kb;
+            client->cross_rx_phy_rate_100kb = notification->params().rx_phy_rate_100kb;
 
             /*
                 * when a notification arrives, it means a large change in rx_rssi occurred (above the defined thershold)
@@ -3465,9 +3468,9 @@ bool Controller::handle_cmdu_control_message(
                         continue;
                     }
 
-                    if (database.get_node_confined_flag(sta)) {
+                    if (station->confined) {
                         LOG(DEBUG) << "removing confined flag from sta " << sta;
-                        database.set_node_confined_flag(sta, false);
+                        station->confined = false;
                         /*
                             * launch optimal path task
                             */

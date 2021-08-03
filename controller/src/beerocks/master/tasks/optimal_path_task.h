@@ -60,7 +60,7 @@ private:
     bool get_station_default_capabilities(bool is_bandtype_5ghz,
                                           beerocks::message::sRadioCapabilities &default_sta_cap);
 
-    double calculate_weighted_phy_rate(const std::string &client_mac);
+    double calculate_weighted_phy_rate(const sStation &client);
     bool is_hostap_on_cs_process(const std::string &hostap_mac);
 
     template <typename C>
