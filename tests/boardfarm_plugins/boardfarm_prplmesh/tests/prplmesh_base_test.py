@@ -527,14 +527,15 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
             New password.
         '''
         controller = self.dev.lan.controller_entity
-
         ap_security_path = self.configure_ssid(ssid, "Fronthaul") + ".Security"
+        time.sleep(3)
         controller.nbapi_set_parameters(ap_security_path,
                                         {"ModeEnabled": "WPA2-Personal"})
         controller.nbapi_set_parameters(ap_security_path,
                                         {"KeyPassphrase": vap_passphrase})
 
         controller.nbapi_command("Device.WiFi.DataElements.Network", "AccessPointCommit")
+        time.sleep(5)
         return vap_passphrase
 
     def configure_ssid(self, ssid: str, multi_ap_mode: str = "Fronthaul",

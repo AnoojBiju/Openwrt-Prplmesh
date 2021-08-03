@@ -30,7 +30,6 @@ class MaximumThroughputTcp(PrplMeshBaseTest):
             thread_1 = threading.Thread(target=self.get_cpe_resources,
                                         args=[agent, cpu_info, test_location, stop_event])
             thread_1.start()
-
             # Preconditions TODO
             # - 2.4GHz band
             #     ->Channel - 6
@@ -42,7 +41,6 @@ class MaximumThroughputTcp(PrplMeshBaseTest):
             #     -> Channel bandwidth - 80MHz
 
             self.configure_passphrase()
-
             # Establish the connection and allow STA to associate with the DUT. 2.4
             # Check if the STA is connected to the right BSSID using the right capabilites
 
@@ -50,7 +48,6 @@ class MaximumThroughputTcp(PrplMeshBaseTest):
 
             if not result:
                 self.fail(f'Connection status: {result}')
-
             # Measure the STA downlink TCP throughput using a test time
             # of 120 seconds and repeat the 3 times.
             # duration=120, num_streams=10)
