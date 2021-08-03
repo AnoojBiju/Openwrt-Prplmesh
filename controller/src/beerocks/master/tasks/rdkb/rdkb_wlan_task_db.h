@@ -147,7 +147,7 @@ public:
         return steering_group_list;
     }
 
-    int32_t get_group_index(const std::string &client_mac, std::string &bssid);
+    int32_t get_group_index(const std::string &client_mac, const std::string &bssid);
 
     void print_db();
 };

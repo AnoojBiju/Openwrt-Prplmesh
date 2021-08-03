@@ -16,7 +16,7 @@
 
 using namespace beerocks;
 
-cli_proxy::cli_proxy(std::string master_uds_) : socket_thread()
+cli_proxy::cli_proxy(const std::string &master_uds_) : socket_thread()
 {
     thread_name = "cli_proxy";
     master_uds  = master_uds_;

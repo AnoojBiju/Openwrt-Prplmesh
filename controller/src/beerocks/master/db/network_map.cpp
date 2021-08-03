@@ -455,7 +455,7 @@ void network_map::send_bml_nodes_statistics_message_to_listeners(
                     LOG(ERROR) << "n == nullptr";
                     continue;
                 }
-                if (n != nullptr && n->state == beerocks::STATE_CONNECTED) {
+                if (n->state == beerocks::STATE_CONNECTED) {
                     get_next_node =
                         fill_and_send(size, size_left, node_len, reserved_size, data_start);
                     if (get_next_node == 0) {

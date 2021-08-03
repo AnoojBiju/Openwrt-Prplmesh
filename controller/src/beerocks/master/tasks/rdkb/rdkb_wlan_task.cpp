@@ -840,10 +840,9 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
 
 bool rdkb_wlan_task::is_bml_rdkb_wlan_listener_exist()
 {
-    bool listener_exist;
     for (auto it = bml_rdkb_wlan_listeners_sockets.begin();
          it < bml_rdkb_wlan_listeners_sockets.end(); it++) {
-        listener_exist = (*it).events_updates;
+        bool listener_exist = (*it).events_updates;
         if (listener_exist) {
             return true;
         }

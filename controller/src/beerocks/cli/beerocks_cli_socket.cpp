@@ -24,7 +24,7 @@ using namespace beerocks::net;
 
 namespace beerocks {
 
-cli_socket::cli_socket(std::string temp_path_, std::string proxy_ip_)
+cli_socket::cli_socket(const std::string &temp_path_, const std::string &proxy_ip_)
 {
     master_socket = nullptr;
     cli_socket::setFunctionsMapAndArray();

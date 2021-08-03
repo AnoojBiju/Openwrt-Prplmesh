@@ -278,8 +278,6 @@ int cfg_get_wifi_params(const char iface[BPL_IFNAME_LEN], struct BPL_WLAN_PARAMS
 
 int cfg_get_backhaul_params(int *max_vaps, int *network_enabled, int *preferred_radio_band)
 {
-    int retVal = 0;
-
     if (max_vaps) {
         //get max_vaps
     }
@@ -291,7 +289,7 @@ int cfg_get_backhaul_params(int *max_vaps, int *network_enabled, int *preferred_
     if (preferred_radio_band) {
         char backhaul_band[BPL_BACKHAUL_BAND_LEN] = {0};
         //get preferred_radio_band
-        retVal = cfg_get_prplmesh_param("backhaul_band", backhaul_band, BPL_BACKHAUL_BAND_LEN);
+        int retVal = cfg_get_prplmesh_param("backhaul_band", backhaul_band, BPL_BACKHAUL_BAND_LEN);
         if (retVal == RETURN_ERR) {
             MAPF_ERR("cfg_get_backhaul_params: Failed to read backhaul_band parameter\n");
             return RETURN_ERR;

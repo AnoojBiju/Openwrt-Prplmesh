@@ -47,7 +47,8 @@ public:
     static void handle_dead_node(std::string mac, bool reported_by_parent, db &database,
                                  ieee1905_1::CmduMessageTx &cmdu_tx, task_pool &tasks);
     static bool validate_beacon_measurement_report(beerocks_message::sBeaconResponse11k report,
-                                                   std::string sta_mac, std::string bssid);
+                                                   const std::string &sta_mac,
+                                                   const std::string &bssid);
     static bool has_matching_operating_class(wfa_map::tlvApRadioBasicCapabilities &radio_basic_caps,
                                              const wireless_utils::sBssInfoConf &bss_info_conf);
     static bool send_cmdu_to_agent(const std::string &dest_mac, ieee1905_1::CmduMessageTx &cmdu_tx,
