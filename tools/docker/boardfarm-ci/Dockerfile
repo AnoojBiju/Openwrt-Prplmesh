@@ -38,7 +38,6 @@ RUN git clone https://github.com/mattsm/boardfarm.git \
 COPY requirements.txt /app/requirements.txt
 WORKDIR app
 RUN pip3 install -r requirements.txt
-RUN pip3 install -Iv iperf3==0.1.11
 
 # Installation of Debian dependencies needed by the tests
 RUN apt-get update \
