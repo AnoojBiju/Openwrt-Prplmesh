@@ -1330,7 +1330,8 @@ bool Controller::handle_cmdu_1905_client_steering_btm_report_message(
     }
 
     int steering_task_id = client->steering_task_id;
-    tasks.push_event(steering_task_id, client_steering_task::BTM_REPORT_RECEIVED);
+    tasks.push_event(steering_task_id, client_steering_task::BTM_REPORT_RECEIVED,
+                     (void *)&status_code);
     database.update_node_11v_responsiveness(client_mac, true);
 
     if (status_code != 0) {
@@ -3899,7 +3900,7 @@ bool Controller::handle_cmdu_control_message(
 
 bool Controller::start_client_steering(const std::string &sta_mac, const std::string &target_bssid)
 {
-    std::string triggered_by{" On-Demand "};
+    std::string triggered_by{"NBAPI"};
     bool disassoc_imminent = false;
 
     LOG(DEBUG) << "NBAPI client steer request for " << sta_mac << " to hostap: " << target_bssid;

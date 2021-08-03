@@ -44,6 +44,13 @@ private:
     void steer_sta();
     void print_steering_info();
 
+    /** @brief Set values for parameters of NBAPI SteerEvent object.
+     * 
+     * @param event_path Path to NBAPI SteerEvent object.
+     * @return True on success, false otherwise.
+     */
+    bool dm_set_steer_event_params(const std::string &event_path);
+
     db &m_database;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
     task_pool &m_tasks;
@@ -53,11 +60,25 @@ private:
     std::string m_steering_type;
     std::string m_ssid_name;
     std::string m_original_bssid;
+    uint8_t m_status_code;
     bool m_steering_success  = false;
     bool m_disassoc_imminent = true;
     const int m_disassoc_timer_ms;
     bool m_btm_report_received = false;
     bool m_steer_restricted    = false;
+
+    /**
+     * @brief The timestamp when a STA disconnected.
+     */
+    std::chrono::steady_clock::time_point m_disassoc_ts;
+
+    /**
+     * @brief The duration between STA disassociation and association event.
+     * If timestamp for disassociation event (m_disassoc_ts) was not set
+     * m_duration is set to zero.
+     */
+    std::chrono::milliseconds m_duration = {};
+
     /**
      * @brief A flag to determine if a steer was actually performed or not since in case 
      * that the client decided to move on its own to the target BSSID, we would not want
