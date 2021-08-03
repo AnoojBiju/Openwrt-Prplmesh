@@ -72,7 +72,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
 
     case STEERING_EVENT_REGISTER: {
         if (obj) {
-            auto event_obj = (listener_general_register_unregister_event *)obj;
+            auto event_obj = static_cast<listener_general_register_unregister_event *>(obj);
             TASK_LOG(DEBUG) << "STEERING_EVENT_REGISTER event was received";
             add_bml_rdkb_wlan_socket(event_obj->sd);
             if (!set_bml_rdkb_wlan_events_update_enable(event_obj->sd, true)) {
@@ -86,7 +86,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
     }
     case STEERING_EVENT_UNREGISTER: {
         if (obj) {
-            auto event_obj = (listener_general_register_unregister_event *)obj;
+            auto event_obj = static_cast<listener_general_register_unregister_event *>(obj);
             TASK_LOG(DEBUG) << "UNREGISTER_TO_MONITOR_EVENT_UPDATES event was received";
 
             if (!set_bml_rdkb_wlan_events_update_enable(event_obj->sd, false)) {
@@ -103,7 +103,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
     }
     case STEERING_SET_GROUP_REQUEST: {
         if (obj) {
-            auto event_obj = (rdkb_wlan_task::steering_set_group_request_event *)obj;
+            auto event_obj = static_cast<rdkb_wlan_task::steering_set_group_request_event *>(obj);
             TASK_LOG(INFO) << "STEERING_SET_GROUP_REQUEST event was received - remove - "
                            << int(event_obj->remove) << "group_index "
                            << int(event_obj->steeringGroupIndex);
@@ -167,7 +167,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
     }
     case STEERING_SET_GROUP_RESPONSE: {
         if (obj) {
-            auto event_obj = (rdkb_wlan_task::steering_set_group_response_event *)obj;
+            auto event_obj = static_cast<rdkb_wlan_task::steering_set_group_response_event *>(obj);
             TASK_LOG(INFO) << "STEERING_SET_GROUP_RESPONSE event was received";
             auto res = check_for_pending_events(event_type);
             if (!res.first && !res.second) {
@@ -189,7 +189,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
     }
     case STEERING_CLIENT_SET_REQUEST: {
         if (obj) {
-            auto event_obj  = (rdkb_wlan_task::steering_client_set_request_event *)obj;
+            auto event_obj  = static_cast<rdkb_wlan_task::steering_client_set_request_event *>(obj);
             auto client_mac = tlvf::mac_to_string(event_obj->client_mac);
             TASK_LOG(INFO) << "STEERING_CLIENT_SET_REQUEST event was received for client_mac "
                            << client_mac << " bssid " << event_obj->bssid;
@@ -243,7 +243,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
     }
     case STEERING_CLIENT_SET_RESPONSE: {
         if (obj) {
-            auto event_obj = (rdkb_wlan_task::steering_client_set_response_event *)obj;
+            auto event_obj = static_cast<rdkb_wlan_task::steering_client_set_response_event *>(obj);
             TASK_LOG(INFO) << "STEERING_CLIENT_SET_RESPONSE event was received";
             auto res = check_for_pending_events(event_type);
             if (!res.first && !res.second) {
@@ -264,7 +264,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
     }
     case STEERING_CLIENT_DISCONNECT_REQUEST: {
         if (obj) {
-            auto event_obj         = (steering_client_disconnect_request_event *)obj;
+            auto event_obj         = static_cast<steering_client_disconnect_request_event *>(obj);
             std::string client_mac = tlvf::mac_to_string(event_obj->client_mac);
             TASK_LOG(INFO) << "STEERING_CLIENT_DISCONNECT_REQUEST received for " << client_mac;
             son_actions::disconnect_client(database, cmdu_tx, client_mac, event_obj->bssid,
@@ -276,7 +276,8 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
     }
     case STEERING_CLIENT_DISCONNECT_RESPONSE: {
         if (obj) {
-            auto event_obj = (rdkb_wlan_task::steering_client_disconnect_response_event *)obj;
+            auto event_obj =
+                static_cast<rdkb_wlan_task::steering_client_disconnect_response_event *>(obj);
             TASK_LOG(INFO) << "STEERING_CLIENT_DISCONNECT_RESPONSE event was received";
             auto res = check_for_pending_events(event_type);
             if (!res.first && !res.second) {
@@ -298,7 +299,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
     }
     case STEERING_RSSI_MEASUREMENT_REQUEST: {
         if (obj) {
-            auto event_obj = (steering_rssi_measurement_request_event *)obj;
+            auto event_obj = static_cast<steering_rssi_measurement_request_event *>(obj);
             TASK_LOG(INFO) << "STEERING_RSSI_MEASUREMENT_REQUEST event was received for client_mac "
                            << event_obj->params.mac;
 
@@ -376,7 +377,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
     }
     case STEERING_REMOVE_SOCKET: {
         if (obj) {
-            auto event_obj = (listener_general_register_unregister_event *)obj;
+            auto event_obj = static_cast<listener_general_register_unregister_event *>(obj);
             if (is_bml_rdkb_wlan_listener_socket(event_obj->sd)) {
                 TASK_LOG(DEBUG) << "STEERING_REMOVE_SOCKET event was received";
 
@@ -396,7 +397,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
     //events
     case STEERING_EVENT_CLIENT_ACTIVITY_AVAILABLE: {
         if (obj) {
-            auto event_obj   = (beerocks_message::sSteeringEvActivity *)obj;
+            auto event_obj   = static_cast<beerocks_message::sSteeringEvActivity *>(obj);
             auto client_mac  = tlvf::mac_to_string(event_obj->client_mac);
             auto bssid       = tlvf::mac_to_string(event_obj->bssid);
             auto group_index = rdkb_db.get_group_index(client_mac, bssid);
@@ -450,7 +451,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
     }
     case STEERING_EVENT_SNR_XING_AVAILABLE: {
         if (obj) {
-            auto event_obj   = (beerocks_message::sSteeringEvSnrXing *)obj;
+            auto event_obj   = static_cast<beerocks_message::sSteeringEvSnrXing *>(obj);
             auto client_mac  = tlvf::mac_to_string(event_obj->client_mac);
             auto bssid       = tlvf::mac_to_string(event_obj->bssid);
             auto group_index = rdkb_db.get_group_index(client_mac, bssid);
@@ -509,7 +510,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
     }
     case STEERING_EVENT_SNR_AVAILABLE: {
         if (obj) {
-            auto event_obj   = (beerocks_message::sSteeringEvSnr *)obj;
+            auto event_obj   = static_cast<beerocks_message::sSteeringEvSnr *>(obj);
             auto client_mac  = tlvf::mac_to_string(event_obj->client_mac);
             auto bssid       = tlvf::mac_to_string(event_obj->bssid);
             auto group_index = rdkb_db.get_group_index(client_mac, bssid);
@@ -561,7 +562,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
     }
     case STEERING_EVENT_PROBE_REQ_AVAILABLE: {
         if (obj) {
-            auto event_obj   = (beerocks_message::sSteeringEvProbeReq *)obj;
+            auto event_obj   = static_cast<beerocks_message::sSteeringEvProbeReq *>(obj);
             auto client_mac  = tlvf::mac_to_string(event_obj->client_mac);
             auto bssid       = tlvf::mac_to_string(event_obj->bssid);
             auto group_index = rdkb_db.get_group_index(client_mac, bssid);
@@ -616,7 +617,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
     }
     case STEERING_EVENT_AUTH_FAIL_AVAILABLE: {
         if (obj) {
-            auto event_obj   = (beerocks_message::sSteeringEvAuthFail *)obj;
+            auto event_obj   = static_cast<beerocks_message::sSteeringEvAuthFail *>(obj);
             auto client_mac  = tlvf::mac_to_string(event_obj->client_mac);
             auto bssid       = tlvf::mac_to_string(event_obj->bssid);
             auto group_index = rdkb_db.get_group_index(client_mac, bssid);
@@ -673,7 +674,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
     case STEERING_EVENT_CLIENT_CONNECT_AVAILABLE: {
 
         if (obj) {
-            auto event_obj   = (bwl::sClientAssociationParams *)obj;
+            auto event_obj   = static_cast<bwl::sClientAssociationParams *>(obj);
             auto client_mac  = tlvf::mac_to_string(event_obj->mac);
             auto bssid       = tlvf::mac_to_string(event_obj->bssid);
             auto group_index = rdkb_db.get_group_index(client_mac, bssid);
@@ -748,7 +749,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
     }
     case STEERING_EVENT_CLIENT_DISCONNECT_AVAILABLE: {
         if (obj) {
-            auto event_obj   = (beerocks_message::sSteeringEvDisconnect *)obj;
+            auto event_obj   = static_cast<beerocks_message::sSteeringEvDisconnect *>(obj);
             auto client_mac  = tlvf::mac_to_string(event_obj->client_mac);
             auto bssid       = tlvf::mac_to_string(event_obj->bssid);
             auto group_index = rdkb_db.get_group_index(client_mac, bssid);
@@ -814,7 +815,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
         }
 
         TASK_LOG(INFO) << "STEERING_SLAVE_JOIN event was received";
-        auto event_obj = (steering_slave_join_event *)obj;
+        auto event_obj = static_cast<steering_slave_join_event *>(obj);
         if (rdkb_db.get_steering_group_list().empty()) {
             TASK_LOG(INFO) << "no configuration to re-send to agent, radio_mac -"
                            << event_obj->radio_mac;
