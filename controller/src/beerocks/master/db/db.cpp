@@ -4728,16 +4728,6 @@ bool db::get_hostap_channel_ext_above_primary(const sMacAddr &hostap_mac)
     return n->hostap->channel_ext_above_primary;
 }
 
-int db::get_node_bw_int(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return 0;
-    }
-    return get_node_bw_int(n);
-}
-
 std::string db::get_node_key(const std::string &al_mac, const std::string &ruid)
 {
 
@@ -5273,23 +5263,6 @@ bool db::get_next_node(std::shared_ptr<node> &n)
         db_it = nodes[current_hierarchy].begin();
     }
     return last;
-}
-
-int db::get_node_bw_int(std::shared_ptr<node> &n)
-{
-    int bw;
-    switch (n->bandwidth) {
-    case beerocks::BANDWIDTH_20:
-        bw = 20;
-        break;
-    case beerocks::BANDWIDTH_40:
-        bw = 40;
-        break;
-    default:
-        bw = 80;
-        break;
-    }
-    return bw;
 }
 
 void db::set_vap_list(std::shared_ptr<db::vaps_list_t> vaps_list) { m_vap_list = vaps_list; }

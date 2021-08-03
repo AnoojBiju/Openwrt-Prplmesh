@@ -48,7 +48,6 @@ controller/src/beerocks/master/controller_ucc_listener.cpp: style: Variable 'bit
 controller/src/beerocks/master/controller_ucc_listener.cpp: style: Variable 'bit_6_str' can be declared with const [constVariable]    auto &bit_6_str = confs[6];
 controller/src/beerocks/master/controller_ucc_listener.cpp: style: Variable 'operating_class_str' can be declared with const [constVariable]    auto &operating_class_str = confs[1];
 controller/src/beerocks/master/db/db.cpp: performance: Function parameter 'name' should be passed by const reference. [passedByValue]bool db::set_node_name(const std::string &mac, std::string name)
-controller/src/beerocks/master/db/db.cpp: style: Parameter 'n' can be declared with const [constParameter]int db::get_node_bw_int(std::shared_ptr<node> &n)
 controller/src/beerocks/master/db/db.cpp: style: Variable '(*it).events_updates' is assigned a value that is never used. [unreadVariable]                (*it).events_updates = update_enable;
 controller/src/beerocks/master/db/db.cpp: style: Variable '(*it).map_updates' is assigned a value that is never used. [unreadVariable]                (*it).map_updates = update_enable;
 controller/src/beerocks/master/db/db.cpp: style: Variable '(*it).stats_updates' is assigned a value that is never used. [unreadVariable]                (*it).stats_updates = update_enable;
