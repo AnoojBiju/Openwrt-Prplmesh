@@ -63,6 +63,13 @@ void optimal_path_task::work()
 {
     bool task_enabled = true;
 
+    auto station = database.get_station(tlvf::mac_from_string(sta_mac));
+    if (!station) {
+        TASK_LOG(ERROR) << "station " << sta_mac << " not found";
+        finish();
+        return;
+    }
+
     if ((database.get_node_type(sta_mac) == beerocks::TYPE_CLIENT) &&
         (!database.settings_client_band_steering()) &&
         (!database.settings_client_optimal_path_roaming()) &&
@@ -84,7 +91,7 @@ void optimal_path_task::work()
             LOG_CLI(DEBUG, sta_mac << " IRE roaming disabled, killing task");
             task_enabled = false;
         }
-    } else if (database.get_node_confined_flag(sta_mac)) {
+    } else if (station->confined) {
         LOG_CLI(DEBUG, sta_mac << " is confined to current AP, killing task");
         task_enabled = false;
     }
@@ -95,13 +102,6 @@ void optimal_path_task::work()
 
     switch (state) {
     case START: {
-
-        auto station = database.get_station(tlvf::mac_from_string(sta_mac));
-        if (!station) {
-            TASK_LOG(ERROR) << "station " << sta_mac << " not found";
-            finish();
-            break;
-        }
 
         current_hostap_vap = database.get_node_parent(sta_mac);
         // Steering allowed on all vaps unless load_steer_on_vaps list is defined
@@ -503,6 +503,7 @@ void optimal_path_task::work()
         int8_t current_hostap_rx_rssi, dummy_rx_packets;
         bool force_signal_strength_decision = false;
         bool current_below_cutoff           = false;
+
         if (!database.get_node_cross_rx_rssi(sta_mac, current_hostap, current_hostap_rx_rssi,
                                              dummy_rx_packets)) {
             TASK_LOG(ERROR) << "can't get cross_rx_rssi for hostap " << current_hostap;
@@ -576,8 +577,7 @@ void optimal_path_task::work()
                         continue;
                     }
 
-                    uint16_t sta_phy_tx_rate_100kb =
-                        database.get_node_cross_rx_phy_rate_100kb(sta_mac);
+                    uint16_t sta_phy_tx_rate_100kb = station->cross_rx_phy_rate_100kb;
                     TASK_LOG(DEBUG) << "sta_phy_tx_rate_100kb=" << int(sta_phy_tx_rate_100kb);
 
                     auto radio_mac = tlvf::mac_from_string(hostap);
@@ -601,9 +601,8 @@ void optimal_path_task::work()
                 }
                 hostap_phy_rate = son::wireless_utils::estimate_ap_tx_phy_rate(
                     dl_rssi, sta_capabilities, hostap_bw, hostap_is_5ghz);
-                database.set_node_cross_estimated_tx_phy_rate(sta_mac,
-                                                              hostap_phy_rate); // save to DB
-                double weighted_phy_rate = calculate_weighted_phy_rate(sta_mac);
+                station->cross_estimated_tx_phy_rate = hostap_phy_rate; // save to DB
+                double weighted_phy_rate             = calculate_weighted_phy_rate(*station);
                 if (hostap == current_hostap) {
                     weighted_phy_rate *=
                         (100.0 + roaming_hysteresis_percent_bonus) / 100.0; //adds stability
@@ -665,8 +664,7 @@ void optimal_path_task::work()
                         continue;
                     }
 
-                    uint16_t sta_phy_tx_rate_100kb =
-                        database.get_node_cross_rx_phy_rate_100kb(sta_mac);
+                    uint16_t sta_phy_tx_rate_100kb = station->cross_rx_phy_rate_100kb;
                     TASK_LOG(DEBUG) << "sta_phy_tx_rate_100kb=" << int(sta_phy_tx_rate_100kb);
 
                     auto radio_mac = tlvf::mac_from_string(hostap);
@@ -930,7 +928,7 @@ void optimal_path_task::work()
         TASK_LOG(DEBUG) << "calculating estimate hostap dl rssi/rate for sta " << sta_mac;
 
         //get sta parameters
-        uint16_t sta_phy_tx_rate_100kb = database.get_node_cross_rx_phy_rate_100kb(sta_mac);
+        uint16_t sta_phy_tx_rate_100kb = station->cross_rx_phy_rate_100kb;
         TASK_LOG(DEBUG) << "sta_phy_tx_rate_100kb=" << int(sta_phy_tx_rate_100kb);
         //build candidate hostap list
         std::vector<std::pair<std::string, bool>> hostap_candidates;
@@ -1245,10 +1243,10 @@ void optimal_path_task::work()
                 hostap_phy_rate = son::wireless_utils::estimate_ap_tx_phy_rate(
                     estimated_dl_rssi, sta_capabilities, hostap_params.bw, hostap_params.is_5ghz);
 
-                database.set_node_cross_estimated_tx_phy_rate(sta_mac, hostap_phy_rate);
+                station->cross_estimated_tx_phy_rate = hostap_phy_rate;
 
                 // 4. Calculate weighed PHY RATE
-                double weighted_phy_rate = calculate_weighted_phy_rate(sta_mac);
+                double weighted_phy_rate = calculate_weighted_phy_rate(*station);
 
                 if (hostap == current_hostap) {
                     weighted_phy_rate *=
@@ -1880,24 +1878,15 @@ bool optimal_path_task::get_station_default_capabilities(
     }
 }
 
-double optimal_path_task::calculate_weighted_phy_rate(const std::string &client_mac)
+double optimal_path_task::calculate_weighted_phy_rate(const sStation &client)
 {
-    auto type    = database.get_node_type(client_mac);
-    auto if_type = database.get_node_backhaul_iface_type(client_mac);
+    auto if_type = database.get_node_backhaul_iface_type(tlvf::mac_to_string(client.mac));
 
-    if ((type == beerocks::TYPE_GW) || (type == beerocks::TYPE_SLAVE)) {
-        TASK_LOG(DEBUG) << "Can't run calculate_weighted_phy_rate() on none client node!";
-        return 0;
+    if (if_type == beerocks::IFACE_TYPE_ETHERNET) {
+        //TODO FIXME --> get ethernet speed
+        return (1e+5 * double(beerocks::BRIDGE_RATE_100KB));
     } else {
-        double phy_rate_to_node;
-        if (if_type == beerocks::IFACE_TYPE_ETHERNET) {
-            //TODO FIXME --> get ethernet speed
-            phy_rate_to_node = (1e+5 * double(beerocks::BRIDGE_RATE_100KB));
-        } else {
-            phy_rate_to_node = database.get_node_cross_estimated_tx_phy_rate(client_mac);
-        }
-
-        return phy_rate_to_node;
+        return client.cross_estimated_tx_phy_rate;
     }
 }
 

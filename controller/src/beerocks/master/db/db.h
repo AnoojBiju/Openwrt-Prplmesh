@@ -459,9 +459,6 @@ public:
     bool set_node_handoff_flag(const std::string &mac, bool handoff);
     bool get_node_handoff_flag(const std::string &mac);
 
-    bool set_node_confined_flag(const std::string &mac, bool flag);
-    bool get_node_confined_flag(const std::string &mac);
-
     bool update_node_last_seen(const std::string &mac);
 
     std::chrono::steady_clock::time_point get_node_last_seen(const std::string &mac);
@@ -1458,16 +1455,7 @@ public:
     bool get_node_cross_rx_rssi(const std::string &sta_mac, const std::string &ap_mac, int8_t &rssi,
                                 int8_t &rx_packets);
 
-    bool set_node_cross_rx_phy_rate_100kb(const std::string &mac, uint16_t rx_phy_rate_100kb);
-    bool set_node_cross_tx_phy_rate_100kb(const std::string &mac, uint16_t tx_phy_rate_100kb);
-
-    uint16_t get_node_cross_rx_phy_rate_100kb(const std::string &mac);
-    uint16_t get_node_cross_tx_phy_rate_100kb(const std::string &mac);
-
     bool clear_node_cross_rssi(const std::string &sta_mac);
-
-    bool set_node_cross_estimated_tx_phy_rate(const std::string &mac, double phy_rate);
-    double get_node_cross_estimated_tx_phy_rate(const std::string &mac);
 
     bool set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApStatsParams *params);
     void clear_hostap_stats_info(const sMacAddr &al_mac, const sMacAddr &mac);

@@ -818,27 +818,6 @@ bool db::get_node_handoff_flag(const std::string &mac)
     }
 }
 
-bool db::set_node_confined_flag(const std::string &mac, bool flag)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    }
-    n->confined = flag;
-    return true;
-}
-
-bool db::get_node_confined_flag(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    }
-    return n->confined;
-}
-
 bool db::update_node_last_seen(const std::string &mac)
 {
     auto n = get_node(mac);
@@ -4150,44 +4129,6 @@ bool db::get_node_cross_rx_rssi(const std::string &sta_mac, const std::string &a
     return sta->get_cross_rx_rssi(ap_mac, rssi, rx_packets);
 }
 
-bool db::set_node_cross_rx_phy_rate_100kb(const std::string &mac, uint16_t rx_phy_rate_100kb)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return false;
-    }
-    n->cross_rx_phy_rate_100kb = rx_phy_rate_100kb;
-    return true;
-}
-
-bool db::set_node_cross_tx_phy_rate_100kb(const std::string &mac, uint16_t tx_phy_rate_100kb)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return false;
-    }
-    n->cross_tx_phy_rate_100kb = tx_phy_rate_100kb;
-    return true;
-}
-
-uint16_t db::get_node_cross_rx_phy_rate_100kb(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return -1;
-    }
-    return n->cross_rx_phy_rate_100kb;
-}
-
-uint16_t db::get_node_cross_tx_phy_rate_100kb(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return -1;
-    }
-    return n->cross_tx_phy_rate_100kb;
-}
-
 bool db::clear_node_cross_rssi(const std::string &sta_mac)
 {
     auto sta = get_node(sta_mac);
@@ -4196,25 +4137,6 @@ bool db::clear_node_cross_rssi(const std::string &sta_mac)
     }
     sta->clear_cross_rssi();
     return true;
-}
-
-bool db::set_node_cross_estimated_tx_phy_rate(const std::string &mac, double phy_rate)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return false;
-    }
-    n->cross_estimated_tx_phy_rate = phy_rate;
-    return true;
-}
-
-double db::get_node_cross_estimated_tx_phy_rate(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return -1;
-    }
-    return n->cross_estimated_tx_phy_rate;
 }
 
 bool db::set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApStatsParams *params)
@@ -6790,13 +6712,14 @@ bool db::set_sta_dhcp_v6_lease(const sMacAddr &sta_mac, const std::string &host_
                                const std::string &ipv6_address)
 {
     auto sta_node = get_node(sta_mac);
+    auto station  = get_station(sta_mac);
 
-    if (!sta_node || sta_node->get_type() != TYPE_CLIENT) {
+    if (!sta_node || sta_node->get_type() != TYPE_CLIENT || !station) {
         return false;
     }
 
     // Update node attributes.
-    sta_node->ipv6 = ipv6_address;
+    station->ipv6  = ipv6_address;
     sta_node->name = host_name;
 
     // Update datamodel attributes.
