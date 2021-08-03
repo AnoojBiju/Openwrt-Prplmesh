@@ -29,8 +29,8 @@ class PrplMeshStation(DebianWifi):
         self.station_ip_wifi = config.get("station_ip_wifi", None)
 
         ipaddr = config.get("station_ip", None)
-        remote_pw = config.get("station_pw", None)
-        username = config.get("username", "root")
+        station_username = config.get("station_username", "root")
+        station_pw = config.get("station_pw", None)
 
         if not ipaddr:
             self.connection = connection_decider.connection(device=self,
@@ -42,8 +42,8 @@ class PrplMeshStation(DebianWifi):
 
         super().__init__(*args, **kwargs,
                          ipaddr=ipaddr,
-                         username=username,
-                         password=remote_pw)
+                         username=station_username,
+                         password=station_pw)
 
         self.iface_dut = self.iface_wifi = self.kwargs.get(
             'iface', 'wlan0')
