@@ -98,21 +98,19 @@ class PrplMeshStation(DebianWifi):
         for _ in range(5):
             self.wifi_connect(vap)
             self.expect(pexpect.TIMEOUT, timeout=10)
-            verify_connect = self.wifi_connectivity_verify()
+            verify_connect = self.wifi_connectivity_verify(vap)
             if verify_connect:
                 break
             else:
                 self.wifi_disconnect(None)
         return verify_connect
 
-    def wifi_connectivity_verify(self):
+    def wifi_connectivity_verify(self, vap):
         """Verify that wifi is connected. Return bool"""
         self.sendline("iw %s link" % self.iface_wifi)
-        matched = self.expect(["Connected", "Not connected", pexpect.TIMEOUT])
-        if matched == 0:
-            return True
-        else:
-            return False
+        matched = self.expect([f"Connected to {vap.bssid}",
+                               "Not connected", pexpect.TIMEOUT])
+        return matched == 0
 
     def get_mac(self) -> str:
         """Get MAC of STA iface"""
