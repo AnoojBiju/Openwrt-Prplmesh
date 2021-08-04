@@ -810,7 +810,7 @@ std::vector<uint8_t> wireless_utils::calc_5g_20MHz_subband_channels(
         std::vector<uint8_t> current_channels = get_5g_20MHz_channels(bw, vht_center_frequency);
         std::set_difference(prev_channels.begin(), prev_channels.end(), current_channels.begin(),
                             current_channels.end(), std::inserter(channels, channels.end()));
-    } else if (prev_bw <= bw) {
+    } else {
         channels = get_5g_20MHz_channels(prev_bw, prev_vht_center_frequency);
     }
     LOG(DEBUG) << "prev_bw:" << beerocks::utils::convert_bandwidth_to_int(prev_bw)

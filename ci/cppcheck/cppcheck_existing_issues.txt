@@ -8,7 +8,6 @@ common/beerocks/bcl/source/network/network_utils.cpp: style: Condition '!up' is 
 common/beerocks/bcl/source/network/network_utils.cpp: style: Local variable 'ecmd' shadows outer variable [shadowVariable]            struct ethtool_cmd ecmd;
 common/beerocks/bcl/source/network/network_utils.cpp: style: The scope of the variable 'rtInfo_ret' can be reduced. [variableScope]    int rtInfo_ret;
 common/beerocks/bcl/source/network/socket.cpp: style: The scope of the variable 'i' can be reduced. [variableScope]    unsigned i;
-common/beerocks/bcl/source/son/son_wireless_utils.cpp: style: Condition 'prev_bw<=bw' is always true [knownConditionTrueFalse]    } else if (prev_bw <= bw) {
 common/beerocks/bcl/source/son/son_wireless_utils.cpp: style: The scope of the variable 'diff_temp' can be reduced. [variableScope]    uint16_t diff_temp;
 common/beerocks/bcl/source/son/son_wireless_utils.cpp: style: The scope of the variable 'rate_temp' can be reduced. [variableScope]    uint16_t rate_temp;
 common/beerocks/bwl/dummy/ap_wlan_hal_dummy.cpp: style: struct member 'DUMMY_acs_report_get::BW' is never used. [unusedStructMember]    int BW;
