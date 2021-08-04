@@ -567,16 +567,16 @@ TEST_F(DbTestRadio1Sta1, test_set_node_stats_info)
                                  Matcher<const uint32_t &>(metrics.utilization_transmit)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1), "BytesSent",
-                                 Matcher<const uint32_t &>(stats.m_byte_sent)))
+                                 Matcher<const uint64_t &>(stats.m_byte_sent)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1), "BytesReceived",
-                                 Matcher<const uint32_t &>(stats.m_byte_received)))
+                                 Matcher<const uint64_t &>(stats.m_byte_received)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1), "PacketsSent",
-                                 Matcher<const uint32_t &>(stats.m_packets_sent)))
+                                 Matcher<const uint64_t &>(stats.m_packets_sent)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1), "PacketsReceived",
-                                 Matcher<const uint32_t &>(stats.m_packets_received)))
+                                 Matcher<const uint64_t &>(stats.m_packets_received)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1), "RetransCount",
                                  Matcher<const uint32_t &>(stats.m_retransmission_count)))
@@ -634,23 +634,23 @@ TEST_F(DbTest, test_set_vap_stats_info)
     //expectations for set_vap_stats_info
     EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_bssid_1)).WillRepeatedly(Return(1));
     EXPECT_CALL(*m_ambiorix, set(std::string(g_radio_1_bss_path_1) + '.', "UnicastBytesSent",
-                                 Matcher<const uint32_t &>(1U)))
+                                 Matcher<const uint64_t &>(1U)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(std::string(g_radio_1_bss_path_1) + '.', "UnicastBytesReceived",
-                                 Matcher<const uint32_t &>(2U)))
+                                 Matcher<const uint64_t &>(2U)))
         .WillOnce(Return(true));
 
     EXPECT_CALL(*m_ambiorix, set(std::string(g_radio_1_bss_path_1) + '.', "MulticastBytesSent",
-                                 Matcher<const uint32_t &>(3U)))
+                                 Matcher<const uint64_t &>(3U)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(std::string(g_radio_1_bss_path_1) + '.', "MulticastBytesReceived",
-                                 Matcher<const uint32_t &>(4U)))
+                                 Matcher<const uint64_t &>(4U)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(std::string(g_radio_1_bss_path_1) + '.', "BroadcastBytesSent",
-                                 Matcher<const uint32_t &>(5U)))
+                                 Matcher<const uint64_t &>(5U)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(std::string(g_radio_1_bss_path_1) + '.', "BroadcastBytesReceived",
-                                 Matcher<const uint32_t &>(6U)))
+                                 Matcher<const uint64_t &>(6U)))
         .WillOnce(Return(true));
 
     EXPECT_CALL(*m_ambiorix, set_current_time(_)).WillOnce(Return(true));

@@ -44,10 +44,10 @@
             on action read call action_read_last_change;
         }
 
-        uint32 BytesSent = 0;
-        uint32 BytesReceived = 0;
-        %read-only uint32 PacketsSent = 0;
-        %read-only uint32 PacketsReceived = 0;
+        %read-only uint64 BytesSent = 0;
+        %read-only uint64 BytesReceived = 0;
+        %read-only uint64 PacketsSent = 0;
+        %read-only uint64 PacketsReceived = 0;
         %read-only uint32 ErrorsSent = 0;
         %read-only uint32 ErrorsReceived = 0;
         %read-only uint32 RetransCount = 0;
