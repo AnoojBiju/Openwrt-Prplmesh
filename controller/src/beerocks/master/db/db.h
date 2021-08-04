@@ -1916,7 +1916,6 @@ private:
                                                       std::string parent_mac = std::string());
 
     void rewind();
-    bool get_next_node(std::shared_ptr<node> &n, int &hierarchy);
     bool get_next_node(std::shared_ptr<node> &n);
 
     /**

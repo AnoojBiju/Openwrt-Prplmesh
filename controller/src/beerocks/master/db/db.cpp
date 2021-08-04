@@ -5224,27 +5224,6 @@ void db::rewind()
     db_it             = nodes[current_hierarchy].begin();
 }
 
-bool db::get_next_node(std::shared_ptr<node> &n, int &hierarchy)
-{
-    bool last = false;
-
-    if (db_it != nodes[current_hierarchy].end()) {
-        n         = db_it->second;
-        hierarchy = current_hierarchy;
-        ++db_it;
-    }
-
-    if (db_it == nodes[current_hierarchy].end()) {
-        current_hierarchy++;
-        if (current_hierarchy >= HIERARCHY_MAX) {
-            current_hierarchy = 0;
-            last              = true;
-        }
-        db_it = nodes[current_hierarchy].begin();
-    }
-    return last;
-}
-
 bool db::get_next_node(std::shared_ptr<node> &n)
 {
     bool last = false;
