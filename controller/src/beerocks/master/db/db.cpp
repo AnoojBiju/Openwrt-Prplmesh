@@ -748,7 +748,7 @@ db::get_node_beacon_measurement_support_level(const std::string &mac)
     return n->supports_beacon_measurement;
 }
 
-bool db::set_node_name(const std::string &mac, std::string name)
+bool db::set_node_name(const std::string &mac, const std::string &name)
 {
     auto n = get_node(mac);
     if (!n) {
