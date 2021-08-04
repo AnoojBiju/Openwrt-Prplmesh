@@ -2583,7 +2583,7 @@ int bml_internal::clear_wifi_credentials(const sMacAddr &al_mac)
 
     clear_request->al_mac() = al_mac;
 
-    LOG(TRACE) << "Sending clear message to master for AL-MAC: " << tlvf::mac_to_string(al_mac);
+    LOG(TRACE) << "Sending clear message to master for AL-MAC: " << al_mac;
 
     if (!message_com::send_cmdu(m_sockMaster, cmdu_tx)) {
         LOG(ERROR) << "Failed sending clear message!";
@@ -2645,7 +2645,7 @@ int bml_internal::update_wifi_credentials(const sMacAddr &al_mac)
 
     update_request->al_mac() = al_mac;
 
-    LOG(TRACE) << "Sending update message to master for AL-MAC: " << tlvf::mac_to_string(al_mac);
+    LOG(TRACE) << "Sending update message to master for AL-MAC: " << al_mac;
 
     if (!message_com::send_cmdu(m_sockMaster, cmdu_tx)) {
         LOG(ERROR) << "Failed sending update message!";

@@ -1289,8 +1289,8 @@ bool Controller::handle_cmdu_1905_client_capability_report_message(
     //log the details so it can be checked in the test_flows
     LOG(INFO) << "Received CLIENT_CAPABILITY_REPORT_MESSAGE, mid=" << std::hex << int(mid)
               << ", Result Code= " << result_code
-              << ", client MAC= " << tlvf::mac_to_string(client_info_tlv->client_mac())
-              << ", BSSID= " << tlvf::mac_to_string(client_info_tlv->bssid());
+              << ", client MAC= " << client_info_tlv->client_mac()
+              << ", BSSID= " << client_info_tlv->bssid();
 
     LOG_IF(client_capability_report_tlv->result_code() ==
                wfa_map::tlvClientCapabilityReport::SUCCESS,

@@ -1248,8 +1248,8 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             wifi_credentials.operating_class.push_back(operating_classes[i]);
         }
 
-        LOG(DEBUG) << "Add wifi credentials to the database for AL-MAC: "
-                   << tlvf::mac_to_string(request->al_mac());
+        LOG(DEBUG) << "Add wifi credentials to the database for AL-MAC: " << request->al_mac();
+
         database.add_bss_info_configuration(request->al_mac(), wifi_credentials);
 
         auto response = message_com::create_vs_message<
