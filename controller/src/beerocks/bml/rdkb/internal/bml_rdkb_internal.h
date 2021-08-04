@@ -88,7 +88,8 @@ public:
 
 protected:
     virtual bool handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx) override;
-    virtual int process_cmdu_header(std::shared_ptr<beerocks::beerocks_header> beerocks_header);
+    virtual int
+    process_cmdu_header(std::shared_ptr<beerocks::beerocks_header> beerocks_header) override;
 
 private:
     bool handle_steering_event_update(uint8_t *data_buffer);

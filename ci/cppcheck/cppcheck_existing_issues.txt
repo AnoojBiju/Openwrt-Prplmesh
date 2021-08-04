@@ -37,7 +37,6 @@ controller/src/beerocks/bml/bml_utils.cpp: style: C-style pointer casting [cstyl
 controller/src/beerocks/bml/rdkb/bml_rdkb.cpp: style: C-style pointer casting [cstyleCast]    bml_rdkb_internal *pBML = (bml_rdkb_internal *)ctx;
 controller/src/beerocks/bml/rdkb/internal/bml_rdkb_internal.cpp: style: C-style pointer casting [cstyleCast]        event->data = GET_MESSAGE_POINTER(BML_EVENT_STEERING, data_buffer, size);
 controller/src/beerocks/bml/rdkb/internal/bml_rdkb_internal.cpp: style: Variable 'iRet' is reassigned a value before the old one has been used. [redundantAssignment]    iRet = prmRdkbWlan.get_value();
-controller/src/beerocks/bml/rdkb/internal/bml_rdkb_internal.h: style: The function 'process_cmdu_header' overrides a function in a base class but is not marked with a 'override' specifier. [missingOverride]    virtual int process_cmdu_header(std::shared_ptr<beerocks::beerocks_header> beerocks_header);
 controller/src/beerocks/cli/beerocks_cli.cpp: performance: Prefer prefix ++/-- operators for non-primitive types. [postfixOperator]         it++) {
 controller/src/beerocks/cli/beerocks_cli_main.cpp: style: Redundant initialization for 'cli_ptr'. The initialized value is overwritten before it is read. [redundantInitialization]    beerocks::cli *cli_ptr = &cli_soc;
 controller/src/beerocks/cli/beerocks_cli_main.cpp: style: Variable 'cli_ptr' is assigned a value that is never used. [unreadVariable]    beerocks::cli *cli_ptr = &cli_soc;
