@@ -89,7 +89,7 @@ cppcheck:
     # useful improvements (the versions from regular distros get old
     # too quickly) and to be able to update builders without having to
     # solve newly reported cppcheck issues at the same time.
-    - tools/docker/static-analysis/cppcheck.sh common framework controller
+    - tools/docker/static-analysis/cppcheck.sh .
   artifacts:
     paths:
       - cppcheck_results.txt
