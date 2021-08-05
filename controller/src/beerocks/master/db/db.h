@@ -87,10 +87,6 @@ public:
     typedef struct {
         std::string vendor;
         std::string model;
-        std::string gw_ip;
-        std::string gw_netmask;
-        std::string ire_ip_range_low;
-        std::string ire_ip_range_high;
         std::string load_steer_on_vaps;
         std::vector<uint8_t> global_restricted_channels;
         int ucc_listener_port;
