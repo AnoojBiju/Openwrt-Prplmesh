@@ -154,7 +154,7 @@ private:
                                  const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
 
     bool handle_cmdu_1905_1_message(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
-    bool handle_cmdu_control_message(const std::string &src_mac,
+    bool handle_cmdu_control_message(const sMacAddr &src_mac,
                                      std::shared_ptr<beerocks::beerocks_header> beerocks_header);
     void handle_cmdu_control_ieee1905_1_message(const std::string &src_mac,
                                                 ieee1905_1::CmduMessageRx &cmdu_rx);
