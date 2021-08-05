@@ -1586,10 +1586,8 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             return;
         }
 
-        std::string al_mac   = tlvf::mac_to_string(bml_request->al_mac());
-        std::string ruid_mac = tlvf::mac_to_string(bml_request->ruid());
-        std::string key      = database.get_node_key(al_mac, ruid_mac);
-        auto agent_mac       = database.get_node_parent_ire(key);
+        auto al_mac   = bml_request->al_mac();
+        auto ruid_mac = bml_request->ruid();
 
         LOG(INFO) << "ACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST "
                   << ", al_mac=" << al_mac << ", ruid=" << ruid_mac;
@@ -1602,7 +1600,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             return;
         }
 
-        son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database);
+        son_actions::send_cmdu_to_agent(al_mac, cmdu_tx, database);
         break;
     }
     case beerocks_message::ACTION_BML_CHANNEL_SCAN_SET_CONTINUOUS_PARAMS_REQUEST: {
