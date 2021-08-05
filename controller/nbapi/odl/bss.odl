@@ -26,17 +26,17 @@
 
         %read-only datetime TimeStamp = "2020-08-31T11:22:39Z";
 
-        %read-only uint32 UnicastBytesSent = 0;
+        %read-only uint64 UnicastBytesSent = 0;
 
-        %read-only uint32 UnicastBytesReceived = 0;
+        %read-only uint64 UnicastBytesReceived = 0;
 
-        %read-only uint32 MulticastBytesSent = 0;
+        %read-only uint64 MulticastBytesSent = 0;
 
-        %read-only uint32 MulticastBytesReceived = 0;
+        %read-only uint64 MulticastBytesReceived = 0;
 
-        %read-only uint32 BroadcastBytesSent = 0;
+        %read-only uint64 BroadcastBytesSent = 0;
 
-        %read-only uint32 BroadcastBytesReceived = 0;
+        %read-only uint64 BroadcastBytesReceived = 0;
 
         %read-only uint32 EstServiceParametersBE = 0 {
             on action validate call check_range [0, 16777215];

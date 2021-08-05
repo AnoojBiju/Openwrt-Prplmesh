@@ -4323,9 +4323,9 @@ bool db::set_node_stats_info(const sMacAddr &mac, const beerocks_message::sStaSt
 
 void db::clear_node_stats_info(const sMacAddr &mac) { set_node_stats_info(mac, nullptr); }
 
-bool db::set_vap_stats_info(const sMacAddr &bssid, uint32_t uc_tx_bytes, uint32_t uc_rx_bytes,
-                            uint32_t mc_tx_bytes, uint32_t mc_rx_bytes, uint32_t bc_tx_bytes,
-                            uint32_t bc_rx_bytes)
+bool db::set_vap_stats_info(const sMacAddr &bssid, uint64_t uc_tx_bytes, uint64_t uc_rx_bytes,
+                            uint64_t mc_tx_bytes, uint64_t mc_rx_bytes, uint64_t bc_tx_bytes,
+                            uint64_t bc_rx_bytes)
 {
     /*
         Prepare path with correct BSS instance.

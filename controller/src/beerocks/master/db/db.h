@@ -194,10 +194,10 @@ public:
     } sDbNbapiConfig;
 
     typedef struct {
-        uint32_t m_byte_sent            = 0;
-        uint32_t m_byte_received        = 0;
-        uint32_t m_packets_sent         = 0;
-        uint32_t m_packets_received     = 0;
+        uint64_t m_byte_sent            = 0;
+        uint64_t m_byte_received        = 0;
+        uint64_t m_packets_sent         = 0;
+        uint64_t m_packets_received     = 0;
         uint32_t m_tx_packets_error     = 0;
         uint32_t m_rx_packets_error     = 0;
         uint32_t m_retransmission_count = 0;
@@ -568,8 +568,8 @@ public:
                                   const std::string &name);
 
     /**
-     * @brief Returns ambiorix object. 
-     * 
+     * @brief Returns ambiorix object.
+     *
      * @return Instance of AmbiorixImpl class, or AmbiorixDummy (if dummy mode enabled).
      */
     std::shared_ptr<beerocks::nbapi::Ambiorix> get_ambiorix_obj();
@@ -656,7 +656,7 @@ public:
                             const std::string &ISO_8601_timestamp);
 
     /** @brief Set 'Status' parameter of NBAPI 'SteerEvent' object.
-     * 
+     *
      * @param event_path Path to NBAPI 'SteerEvent' object.
      * @param status_code Status code of client steering.
      */
@@ -665,7 +665,7 @@ public:
     /**
      * @brief Adds NBAPI SteerEvent object.
      * Data model path example: "Controller.SteerEvent.42"
-     * 
+     *
      * @return Path to object on success, empty sring otherwise.
      */
     std::string dm_add_steer_event();
@@ -1495,9 +1495,9 @@ public:
      * @param[in] bc_rx_bytes broadcast received bytes
      * @return true on success, otherwise false.
      */
-    bool set_vap_stats_info(const sMacAddr &bssid, uint32_t uc_tx_bytes, uint32_t uc_rx_bytes,
-                            uint32_t mc_tx_bytes, uint32_t mc_rx_bytes, uint32_t bc_tx_bytes,
-                            uint32_t bc_rx_bytes);
+    bool set_vap_stats_info(const sMacAddr &bssid, uint64_t uc_tx_bytes, uint64_t uc_rx_bytes,
+                            uint64_t mc_tx_bytes, uint64_t mc_rx_bytes, uint64_t bc_tx_bytes,
+                            uint64_t bc_rx_bytes);
 
     bool commit_persistent_db_changes();
     bool is_commit_to_persistent_db_required();
