@@ -293,7 +293,7 @@ controller_ucc_listener::parse_bss_info(const std::string &bss_info_str,
     bss_info_conf = {};
 
     // Operating class
-    auto &operating_class_str = confs[1];
+    const auto &operating_class_str = confs[1];
     if (operating_class_str == "8x") {
         bss_info_conf.operating_class = {81, 83, 84};
     } else if (operating_class_str == "11x") {
@@ -350,7 +350,7 @@ controller_ucc_listener::parse_bss_info(const std::string &bss_info_str,
     }
 
     // Bit 6 of Multi-AP IE's extention attribute, aka "Backhaul BSS"
-    auto &bit_6_str = confs[6];
+    const auto &bit_6_str = confs[6];
     if (bit_6_str != "0" && bit_6_str != "1") {
         err_string = "invalid bit 6 of Multi-AP IE's extention attribute";
         return std::string();
@@ -360,7 +360,7 @@ controller_ucc_listener::parse_bss_info(const std::string &bss_info_str,
     }
 
     // Bit 5 of Multi-AP IE's extention attribute, aka "Fronthaul BSS"
-    auto &bit_5_str = confs[7];
+    const auto &bit_5_str = confs[7];
     if (bit_5_str != "0" && bit_5_str != "1") {
         err_string = "invalid bit 5 of Multi-AP IE's extention attribute";
         return std::string();

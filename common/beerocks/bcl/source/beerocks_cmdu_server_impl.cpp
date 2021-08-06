@@ -92,7 +92,7 @@ bool CmduServerImpl::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
         return false;
     }
 
-    auto &context = it->second;
+    const auto &context = it->second;
 
     return m_peer.send_cmdu(*context.connection, cmdu_tx);
 }

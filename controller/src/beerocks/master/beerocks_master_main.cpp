@@ -471,7 +471,7 @@ int main(int argc, char *argv[])
     LOG_IF(!cmdu_server, FATAL) << "Unable to create CMDU server!";
 
     beerocks::net::network_utils::iface_info bridge_info;
-    auto &bridge_iface = beerocks_slave_conf.bridge_iface;
+    const auto &bridge_iface = beerocks_slave_conf.bridge_iface;
     if (beerocks::net::network_utils::get_iface_info(bridge_info, bridge_iface) != 0) {
         LOG(ERROR) << "Failed reading addresses from the bridge!";
         return 0;
