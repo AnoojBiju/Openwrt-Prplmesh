@@ -392,7 +392,7 @@ void optimal_path_task::work()
                         LOG(ERROR) << "Failed to get vap for client beacon request, skipping "
                                       "measurement for "
                                    << ap_mac;
-                        iterator_element_counter++;
+                        ++iterator_element_counter;
                         ++potential_ap_iter;
                         continue;
                     }
@@ -438,14 +438,14 @@ void optimal_path_task::work()
 
                     set_responses_timeout(BEACON_MEASUREMENT_REQUEST_TIMEOUT_MSEC);
 
-                    iterator_element_counter++;
-                    potential_ap_iter++;
+                    ++iterator_element_counter;
+                    ++potential_ap_iter;
 
                     break; // break do while loop to enter the state again after reponse received
                 }
 
-                iterator_element_counter++;
-                potential_ap_iter++;
+                ++iterator_element_counter;
+                ++potential_ap_iter;
 
             } while (potential_ap_iter != potential_11k_aps.end());
         }
