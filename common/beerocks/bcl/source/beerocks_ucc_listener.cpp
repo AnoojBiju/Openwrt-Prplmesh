@@ -455,8 +455,8 @@ void beerocks_ucc_listener::handle_wfa_ca_command(int fd, const std::string &com
         return;
     }
 
-    auto &command_type_str = *cmd_tokens_vec.begin();
-    auto command_type      = wfa_ca_command_from_string(command_type_str);
+    const auto &command_type_str = *cmd_tokens_vec.begin();
+    auto command_type            = wfa_ca_command_from_string(command_type_str);
 
     switch (command_type) {
     case eWfaCaCommand::CA_GET_VERSION: {

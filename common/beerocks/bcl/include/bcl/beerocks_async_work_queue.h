@@ -47,7 +47,7 @@ private:
 
         explicit Task(std::function<R()> func) : task(func) {}
 
-        void execute() { task(); }
+        void execute() override { task(); }
     };
 
     beerocks::thread_safe_queue<std::unique_ptr<BasicTask>> queue;

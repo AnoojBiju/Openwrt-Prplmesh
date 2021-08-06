@@ -651,7 +651,6 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
     }
 
     //Send response message
-    auto response_action_op = beerocks_message::ACTION_CLI_RESPONSE_INT;
     auto response =
         message_com::create_vs_message<beerocks_message::cACTION_CLI_RESPONSE_INT>(cmdu_tx);
     if (response == nullptr) {
@@ -660,9 +659,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
     }
     response->isOK()         = isOK;
     response->currentValue() = currentValue;
-    if (response_action_op == beerocks_message::ACTION_CLI_RESPONSE_INT) {
-        controller_ctx->send_cmdu(sd, cmdu_tx);
-    }
+    controller_ctx->send_cmdu(sd, cmdu_tx);
 }
 
 void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header> beerocks_header,

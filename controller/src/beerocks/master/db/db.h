@@ -449,7 +449,7 @@ public:
     beerocks::eBeaconMeasurementSupportLevel
     get_node_beacon_measurement_support_level(const std::string &mac);
 
-    bool set_node_name(const std::string &mac, std::string name);
+    bool set_node_name(const std::string &mac, const std::string &name);
 
     bool set_node_state(const std::string &mac, beerocks::eNodeState state);
     beerocks::eNodeState get_node_state(const std::string &mac);
@@ -1547,7 +1547,6 @@ public:
                              bool channel_ext_above_secondary, int8_t channel_ext_above_primary,
                              uint16_t vht_center_frequency);
     beerocks::eWiFiBandwidth get_node_bw(const std::string &mac);
-    int get_node_bw_int(const std::string &mac);
     bool get_hostap_channel_ext_above_primary(const sMacAddr &hostap_mac);
     bool get_node_channel_ext_above_secondary(const std::string &mac);
     uint16_t get_hostap_vht_center_frequency(const sMacAddr &mac);
@@ -1915,10 +1914,8 @@ private:
                                                       int type               = beerocks::TYPE_ANY,
                                                       int state              = beerocks::STATE_ANY,
                                                       std::string parent_mac = std::string());
-    int get_node_bw_int(std::shared_ptr<node> &n);
 
     void rewind();
-    bool get_next_node(std::shared_ptr<node> &n, int &hierarchy);
     bool get_next_node(std::shared_ptr<node> &n);
 
     /**
