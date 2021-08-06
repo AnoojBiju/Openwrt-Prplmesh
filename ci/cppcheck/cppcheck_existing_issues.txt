@@ -3,7 +3,6 @@ common/beerocks/bcl/include/bcl/beerocks_logging.h: style: Class 'logging' has a
 common/beerocks/bcl/source/beerocks_logging.cpp: style: The class 'NetLogger' does not have a constructor although it has private member variables. [noConstructor]class NetLogger : public el::LogDispatchCallback {
 common/beerocks/bcl/source/network/network_utils.cpp: style: Condition '!up' is always true [knownConditionTrueFalse]    while (!up) {
 common/beerocks/bcl/source/network/network_utils.cpp: style: Local variable 'ecmd' shadows outer variable [shadowVariable]            struct ethtool_cmd ecmd;
-common/beerocks/bcl/source/network/network_utils.cpp: style: The scope of the variable 'rtInfo_ret' can be reduced. [variableScope]    int rtInfo_ret;
 common/beerocks/bcl/source/network/socket.cpp: style: The scope of the variable 'i' can be reduced. [variableScope]    unsigned i;
 common/beerocks/bcl/source/son/son_wireless_utils.cpp: style: The scope of the variable 'diff_temp' can be reduced. [variableScope]    uint16_t diff_temp;
 common/beerocks/bcl/source/son/son_wireless_utils.cpp: style: The scope of the variable 'rate_temp' can be reduced. [variableScope]    uint16_t rate_temp;

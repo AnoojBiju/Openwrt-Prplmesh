@@ -1016,7 +1016,6 @@ std::vector<network_utils::ip_info> network_utils::get_ip_list()
     /* Parse and print the response */
     uint32_t ip_uint;
     network_utils::ip_info gw_ip_info;
-    int rtInfo_ret;
     auto rtInfo = std::make_shared<route_info>();
     if (!rtInfo) {
         delete[] msgBuf;
@@ -1027,7 +1026,7 @@ std::vector<network_utils::ip_info> network_utils::get_ip_list()
     }
     for (; NLMSG_OK(nlMsg, uint32_t(len)); nlMsg = NLMSG_NEXT(nlMsg, len)) {
         memset(rtInfo.get(), 0, sizeof(struct route_info));
-        rtInfo_ret = parseRoutes(nlMsg, rtInfo);
+        int rtInfo_ret = parseRoutes(nlMsg, rtInfo);
         if (rtInfo_ret == 1) { // GW address
             gw_ip_info.gw    = network_utils::ipv4_to_string(rtInfo->gateWay.s_addr);
             gw_ip_info.iface = std::string(rtInfo->ifName);
