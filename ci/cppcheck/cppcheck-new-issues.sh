@@ -25,7 +25,7 @@ do
     if ! grep -q -F "$i" "$rootdir"/ci/cppcheck/cppcheck_existing_issues.txt ; then
         status=1
         err "New issue:"
-        "$i"
+        info "$i"
     fi
 done
 

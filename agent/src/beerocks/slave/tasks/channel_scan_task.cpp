@@ -198,7 +198,7 @@ void ChannelScanTask::work()
                 for (const auto &op_cls : current_radio_scan->operating_classes) {
                     for (const auto &channel_elem : op_cls.channel_list) {
                         const uint8_t channel_num = channel_elem.channel_number;
-                        const auto &cached_result_iter =
+                        const auto cached_result_iter =
                             current_radio_scan->cached_results.find(channel_num);
                         if (cached_result_iter == current_radio_scan->cached_results.end()) {
                             // If a requested channel is not present in the cached results we can assume the channel did not contain results.
