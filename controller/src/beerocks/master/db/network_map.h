@@ -18,10 +18,10 @@ public:
                                              ieee1905_1::CmduMessageTx &cmdu_tx, uint16_t id);
 
     static std::ptrdiff_t fill_bml_node_data(db &database, std::shared_ptr<node> n,
-                                             uint8_t *tx_buffer, std::ptrdiff_t &buffer_size,
+                                             uint8_t *tx_buffer, const std::ptrdiff_t &buffer_size,
                                              bool force_client_disconnect = false);
     static std::ptrdiff_t fill_bml_node_data(db &database, std::string node_mac, uint8_t *tx_buffer,
-                                             std::ptrdiff_t &buffer_size,
+                                             const std::ptrdiff_t &buffer_size,
                                              bool force_client_disconnect);
 
     static void

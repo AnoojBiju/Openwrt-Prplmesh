@@ -23,7 +23,6 @@ controller/src/beerocks/cli/beerocks_cli_socket.cpp: performance: Function param
 controller/src/beerocks/master/db/db.cpp: style: Variable '(*it).events_updates' is assigned a value that is never used. [unreadVariable]                (*it).events_updates = update_enable;
 controller/src/beerocks/master/db/db.cpp: style: Variable '(*it).map_updates' is assigned a value that is never used. [unreadVariable]                (*it).map_updates = update_enable;
 controller/src/beerocks/master/db/db.cpp: style: Variable '(*it).stats_updates' is assigned a value that is never used. [unreadVariable]                (*it).stats_updates = update_enable;
-controller/src/beerocks/master/db/network_map.cpp: style: Parameter 'buffer_size' can be declared with const [constParameter]                                               uint8_t *tx_buffer, std::ptrdiff_t &buffer_size,
 controller/src/beerocks/master/son_management.cpp: style: Variable 'op_error_code' is assigned a value that is never used. [unreadVariable]            op_error_code = eChannelScanOperationCode::SCAN_IN_PROGRESS;
 controller/src/beerocks/master/son_management.cpp: style: Variable 'op_error_code' is assigned a value that is never used. [unreadVariable]        auto op_error_code = eChannelScanOperationCode::SUCCESS;
 controller/src/beerocks/master/son_management.cpp: style: Variable 'result_status' is assigned a value that is never used. [unreadVariable]            result_status = last_scan_success;
