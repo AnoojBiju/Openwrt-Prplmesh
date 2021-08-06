@@ -49,7 +49,6 @@ controller/src/beerocks/master/tasks/optimal_path_task.cpp: performance: Prefer 
 controller/src/beerocks/master/tasks/optimal_path_task.cpp: style: Local variable 'it' shadows outer variable [shadowVariable]        for (auto it : hostap_candidates) {
 controller/src/beerocks/master/tasks/rdkb/rdkb_wlan_task.cpp: style: Local variable 'update' shadows outer variable [shadowVariable]            auto update = message_com::create_vs_message<
 controller/src/beerocks/master/tasks/rdkb/rdkb_wlan_task.cpp: style: Variable '(*it).events_updates' is assigned a value that is never used. [unreadVariable]                (*it).events_updates = update_enable;
-controller/src/beerocks/master/tasks/task.cpp: performance: Function parameter 'mac' should be passed by const reference. [passedByValue]void task::add_pending_mac(std::string mac, beerocks_message::eActionOp_CONTROL action_op)
 framework/platform/bpl/arp/uci/monitor/arp_monitor.cpp: style: The scope of the variable 'type' can be reduced. [variableScope]        unsigned short type;
 framework/platform/bpl/cfg/linux/bpl_cfg.cpp: style: Parameter 'parameters' can be declared with const [constParameter]static bool cfg_set_params(std::unordered_map<std::string, std::string> &parameters)
 framework/platform/bpl/db/linux/bpl_db.cpp: style: Parameter 'nested_params' can be declared with const [constParameter]    std::unordered_map<std::string, std::unordered_map<std::string, std::string>> &nested_params)

@@ -58,7 +58,7 @@ public:
 protected:
     void add_pending_macs(std::set<std::string> macs,
                           beerocks_message::eActionOp_CONTROL action_op);
-    void add_pending_mac(std::string mac, beerocks_message::eActionOp_CONTROL action_op);
+    void add_pending_mac(const std::string &mac, beerocks_message::eActionOp_CONTROL action_op);
     void clear_pending_macs();
     void wait_for(int ms);
     void set_task_timeout(int ms);
