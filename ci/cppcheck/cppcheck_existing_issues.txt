@@ -42,7 +42,6 @@ controller/src/beerocks/master/tasks/rdkb/rdkb_wlan_task.cpp: style: Variable '(
 framework/platform/bpl/arp/uci/monitor/arp_monitor.cpp: style: The scope of the variable 'type' can be reduced. [variableScope]        unsigned short type;
 framework/platform/bpl/db/linux/bpl_db.cpp: style: Parameter 'nested_params' can be declared with const [constParameter]    std::unordered_map<std::string, std::unordered_map<std::string, std::string>> &nested_params)
 framework/platform/bpl/db/linux/bpl_db.cpp: style: Parameter 'params' can be declared with const [constParameter]                  std::unordered_map<std::string, std::string> &params)
-framework/platform/bpl/dhcp/uci/bpl_dhcp.cpp: style: struct member 'dhcp_event_request::data' is never used. [unusedStructMember]    char data[];
 framework/platform/bpl/test/bpl_test.cpp: portability: fflush() called on input stream 'stdin' may result in undefined behaviour on non-linux systems. [fflushOnInputStream]            fflush(stdin);
 framework/platform/bpl/test/bpl_test.cpp: portability: fflush() called on input stream 'stdin' may result in undefined behaviour on non-linux systems. [fflushOnInputStream]        fflush(stdin);
 framework/tlvf/test/tlvf_test.cpp: style: Local variable 'cmplx' shadows outer variable [shadowVariable]            auto cmplx = std::get<1>(tlv4->complex_list(0));
