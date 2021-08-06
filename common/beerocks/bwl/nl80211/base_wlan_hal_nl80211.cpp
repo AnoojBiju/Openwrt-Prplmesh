@@ -648,8 +648,13 @@ bool base_wlan_hal_nl80211::refresh_radio_info()
     } else {
 
         // Unavailable
-        m_radio_info.ant_num  = 0;
-        m_radio_info.tx_power = 0;
+        m_radio_info.ant_num = 0;
+
+        uint32_t tx_power = 0;
+        if (!m_nl80211_client->get_tx_power_limit_dbm(get_iface_name(), tx_power)) {
+            LOG(ERROR) << "Failed to get tx power for interface " << get_iface_name();
+        }
+        m_radio_info.tx_power = tx_power;
 
         // 0 = 20 or 40 MHz operating Channel width
         // 1 = 80 MHz channel width
