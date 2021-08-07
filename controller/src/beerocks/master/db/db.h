@@ -694,7 +694,7 @@ public:
      * @return true on success, false otherwise.
      */
     bool dm_add_interface_neighbor(
-        std::shared_ptr<prplmesh::controller::db::Interface> &interface,
+        const std::shared_ptr<prplmesh::controller::db::Interface> &interface,
         std::shared_ptr<prplmesh::controller::db::Interface::sNeighbor> &neighbor);
 
     /**
