@@ -4008,29 +4008,6 @@ bool db::is_bml_listener_exist()
 // Measurements
 //
 
-bool db::set_node_cross_rx_rssi(const std::string &sta_mac, const std::string &ap_mac, int8_t rssi,
-                                int8_t rx_packets)
-{
-    auto sta = get_station(tlvf::mac_from_string(sta_mac));
-    if (sta == nullptr) {
-        return false;
-    }
-    sta->set_cross_rx_rssi(ap_mac, rssi, rx_packets);
-    return true;
-}
-
-bool db::get_node_cross_rx_rssi(const std::string &sta_mac, const std::string &ap_mac, int8_t &rssi,
-                                int8_t &rx_packets)
-{
-    auto sta = get_station(tlvf::mac_from_string(sta_mac));
-    if (sta == nullptr) {
-        rssi       = beerocks::RSSI_INVALID;
-        rx_packets = 0;
-        return false;
-    }
-    return sta->get_cross_rx_rssi(ap_mac, rssi, rx_packets);
-}
-
 bool db::clear_node_cross_rssi(const std::string &sta_mac)
 {
     auto sta = get_station(tlvf::mac_from_string(sta_mac));

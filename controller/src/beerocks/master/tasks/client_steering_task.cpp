@@ -435,7 +435,13 @@ bool client_steering_task::dm_set_steer_event_params(const std::string &event_pa
 
         int8_t rx_rssi = 0, rx_packets = 0;
 
-        if (!m_database.get_node_cross_rx_rssi(m_sta_mac, m_target_bssid, rx_rssi, rx_packets)) {
+        auto station = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
+        if (!station) {
+            LOG(ERROR) << "Station " << m_sta_mac << " not found";
+            return false;
+        }
+
+        if (!station->get_cross_rx_rssi(m_target_bssid, rx_rssi, rx_packets)) {
             TASK_LOG(ERROR) << "can't get cross_rx_rssi for bssi =" << m_target_bssid;
         }
         ambiorix_dm->set(event_path, "NewLinkRate", rx_rssi);

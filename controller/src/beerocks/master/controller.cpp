@@ -3182,11 +3182,11 @@ bool Controller::handle_cmdu_control_message(
             LOG(DEBUG) << "update rssi measurement BH manager from ap_mac = " << priv_ap_mac
                        << " to = " << ap_mac;
         }
-        if (ap_mac.empty() ||
-            !database.set_node_cross_rx_rssi(client_mac, ap_mac, notification->params().rx_rssi,
-                                             notification->params().rx_packets)) {
+        if (ap_mac.empty()) {
             LOG(ERROR) << "update rssi measurement failed";
         }
+        client->set_cross_rx_rssi(ap_mac, notification->params().rx_rssi,
+                                  notification->params().rx_packets);
         if (is_parent) {
             client->cross_tx_phy_rate_100kb = notification->params().tx_phy_rate_100kb;
             client->cross_rx_phy_rate_100kb = notification->params().rx_phy_rate_100kb;
@@ -3236,9 +3236,8 @@ bool Controller::handle_cmdu_control_message(
             (database.get_node_state(client_mac) == beerocks::STATE_CONNECTED) &&
             (!database.get_node_handoff_flag(*client)) && is_parent) {
 
-            database.set_node_cross_rx_rssi(client_mac, radio_mac_str,
-                                            notification->params().rx_rssi,
-                                            notification->params().rx_packets);
+            client->set_cross_rx_rssi(radio_mac_str, notification->params().rx_rssi,
+                                      notification->params().rx_packets);
             client->cross_tx_phy_rate_100kb = notification->params().tx_phy_rate_100kb;
             client->cross_rx_phy_rate_100kb = notification->params().rx_phy_rate_100kb;
 
