@@ -565,7 +565,7 @@ void optimal_path_task::work()
 
                 if (!estimate_dl_rssi) {
                     uint8_t dl_rcpi, dl_snr;
-                    if (!database.get_node_beacon_measurement(sta_mac, hostap, dl_rcpi, dl_snr)) {
+                    if (!station->get_beacon_measurement(hostap, dl_rcpi, dl_snr)) {
                         TASK_LOG(ERROR)
                             << "get_node_beacon_measurement() failed! sta_mac: " << sta_mac
                             << ", hostap: " << hostap;
@@ -652,7 +652,7 @@ void optimal_path_task::work()
 
                 if (!estimate_dl_rssi) {
                     uint8_t dl_rcpi, dl_snr;
-                    if (!database.get_node_beacon_measurement(sta_mac, hostap, dl_rcpi, dl_snr)) {
+                    if (!station->get_beacon_measurement(hostap, dl_rcpi, dl_snr)) {
                         TASK_LOG(ERROR)
                             << "get_node_beacon_measurement() failed! sta_mac: " << sta_mac
                             << ", hostap: " << hostap;
@@ -1587,9 +1587,15 @@ void optimal_path_task::handle_response(std::string mac,
         }
 
         if (son_actions::validate_beacon_measurement_report(response->params(), sta_mac, bssid)) {
+            auto station = database.get_station(tlvf::mac_from_string(sta_mac));
+            if (!station) {
+                TASK_LOG(ERROR) << "station " << sta_mac << " not found";
+                break;
+            }
+
             potential_11k_aps[radio_mac] = true;
-            database.set_node_beacon_measurement(sta_mac, radio_mac, response->params().rcpi,
-                                                 response->params().rsni);
+            station->set_beacon_measurement(radio_mac, response->params().rcpi,
+                                            response->params().rsni);
             valid_beacon_measurement_report_count++;
             TASK_LOG(INFO) << "beacon measurement response on bssid " << bssid << " is valid!";
             if (valid_beacon_measurement_report_count == potential_11k_aps.size()) {

@@ -4008,31 +4008,6 @@ bool db::is_bml_listener_exist()
 // Measurements
 //
 
-bool db::set_node_beacon_measurement(const std::string &sta_mac, const std::string &ap_mac,
-                                     uint8_t rcpi, uint8_t rsni)
-{
-    auto sta = get_station(tlvf::mac_from_string(sta_mac));
-    if (sta == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << " - station " << sta_mac << " does not exist!";
-        return false;
-    }
-    sta->set_beacon_measurement(ap_mac, rcpi, rsni);
-    return true;
-}
-
-bool db::get_node_beacon_measurement(const std::string &sta_mac, const std::string &ap_mac,
-                                     uint8_t &rcpi, uint8_t &rsni)
-{
-    auto sta = get_station(tlvf::mac_from_string(sta_mac));
-    if (sta == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << " - station " << sta_mac << " does not exist!";
-        rcpi = beerocks::RCPI_INVALID;
-        rsni = 0;
-        return false;
-    }
-    return sta->get_beacon_measurement(ap_mac, rcpi, rsni);
-}
-
 bool db::set_node_cross_rx_rssi(const std::string &sta_mac, const std::string &ap_mac, int8_t rssi,
                                 int8_t rx_packets)
 {
