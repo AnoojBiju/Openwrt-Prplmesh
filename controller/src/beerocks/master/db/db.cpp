@@ -4011,9 +4011,9 @@ bool db::is_bml_listener_exist()
 bool db::set_node_beacon_measurement(const std::string &sta_mac, const std::string &ap_mac,
                                      uint8_t rcpi, uint8_t rsni)
 {
-    auto sta = get_node(sta_mac);
+    auto sta = get_station(tlvf::mac_from_string(sta_mac));
     if (sta == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << sta_mac << " does not exist!";
+        LOG(WARNING) << __FUNCTION__ << " - station " << sta_mac << " does not exist!";
         return false;
     }
     sta->set_beacon_measurement(ap_mac, rcpi, rsni);
@@ -4023,9 +4023,9 @@ bool db::set_node_beacon_measurement(const std::string &sta_mac, const std::stri
 bool db::get_node_beacon_measurement(const std::string &sta_mac, const std::string &ap_mac,
                                      uint8_t &rcpi, uint8_t &rsni)
 {
-    auto sta = get_node(sta_mac);
+    auto sta = get_station(tlvf::mac_from_string(sta_mac));
     if (sta == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << sta_mac << " does not exist!";
+        LOG(WARNING) << __FUNCTION__ << " - station " << sta_mac << " does not exist!";
         rcpi = beerocks::RCPI_INVALID;
         rsni = 0;
         return false;
@@ -4036,7 +4036,7 @@ bool db::get_node_beacon_measurement(const std::string &sta_mac, const std::stri
 bool db::set_node_cross_rx_rssi(const std::string &sta_mac, const std::string &ap_mac, int8_t rssi,
                                 int8_t rx_packets)
 {
-    auto sta = get_node(sta_mac);
+    auto sta = get_station(tlvf::mac_from_string(sta_mac));
     if (sta == nullptr) {
         return false;
     }
@@ -4047,7 +4047,7 @@ bool db::set_node_cross_rx_rssi(const std::string &sta_mac, const std::string &a
 bool db::get_node_cross_rx_rssi(const std::string &sta_mac, const std::string &ap_mac, int8_t &rssi,
                                 int8_t &rx_packets)
 {
-    auto sta = get_node(sta_mac);
+    auto sta = get_station(tlvf::mac_from_string(sta_mac));
     if (sta == nullptr) {
         rssi       = beerocks::RSSI_INVALID;
         rx_packets = 0;
@@ -4058,7 +4058,7 @@ bool db::get_node_cross_rx_rssi(const std::string &sta_mac, const std::string &a
 
 bool db::clear_node_cross_rssi(const std::string &sta_mac)
 {
-    auto sta = get_node(sta_mac);
+    auto sta = get_station(tlvf::mac_from_string(sta_mac));
     if (sta == nullptr) {
         return false;
     }

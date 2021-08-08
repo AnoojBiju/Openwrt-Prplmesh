@@ -42,67 +42,6 @@ std::ostream &operator<<(std::ostream &os, eTriStateBool value)
 
 } // namespace son
 
-bool node::get_beacon_measurement(const std::string &ap_mac_, uint8_t &rcpi, uint8_t &rsni)
-{
-    auto it = beacon_measurements.find(ap_mac_);
-    if (it == beacon_measurements.end()) {
-        LOG(ERROR) << "ap_mac " << ap_mac_ << " does not exist!";
-        rcpi = beerocks::RCPI_INVALID;
-        rsni = 0;
-        return false;
-    }
-    rcpi = it->second->rcpi;
-    rsni = it->second->rsni;
-    return true;
-}
-
-void node::set_beacon_measurement(const std::string &ap_mac_, uint8_t rcpi, uint8_t rsni)
-{
-    auto it = beacon_measurements.find(ap_mac_);
-    if (it == beacon_measurements.end()) {
-        std::shared_ptr<beacon_measurement> m =
-            std::make_shared<beacon_measurement>(ap_mac_, rcpi, rsni);
-        beacon_measurements.insert(std::make_pair(ap_mac_, m));
-    } else {
-        it->second->rcpi      = rcpi;
-        it->second->rsni      = rsni;
-        it->second->timestamp = std::chrono::steady_clock::now();
-    }
-}
-
-bool node::get_cross_rx_rssi(const std::string &ap_mac_, int8_t &rssi, int8_t &packets)
-{
-    auto it = cross_rx_rssi.find(ap_mac_);
-    if (it == cross_rx_rssi.end()) {
-        rssi    = beerocks::RSSI_INVALID;
-        packets = -1;
-        return false;
-    }
-    rssi    = it->second->rssi;
-    packets = it->second->packets;
-    return true;
-}
-
-void node::set_cross_rx_rssi(const std::string &ap_mac_, int8_t rssi, int8_t packets)
-{
-    auto it = cross_rx_rssi.find(ap_mac_);
-    if (it == cross_rx_rssi.end()) {
-        std::shared_ptr<rssi_measurement> m =
-            std::make_shared<rssi_measurement>(ap_mac_, rssi, packets);
-        cross_rx_rssi.insert(std::make_pair(ap_mac_, m));
-    } else {
-        it->second->rssi      = rssi;
-        it->second->timestamp = std::chrono::steady_clock::now();
-        it->second->packets   = packets;
-    }
-}
-
-void node::clear_cross_rssi()
-{
-    cross_rx_rssi.clear();
-    beacon_measurements.clear();
-}
-
 void node::clear_node_stats_info() { stats_info = std::make_shared<sta_stats_params>(); }
 
 beerocks::eType node::get_type() { return type; }

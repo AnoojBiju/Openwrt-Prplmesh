@@ -49,11 +49,6 @@ std::ostream &operator<<(std::ostream &os, eTriStateBool value);
 class node {
 public:
     node(beerocks::eType type_, const std::string &mac_);
-    bool get_beacon_measurement(const std::string &ap_mac_, uint8_t &rcpi, uint8_t &rsni);
-    void set_beacon_measurement(const std::string &ap_mac_, uint8_t rcpi, uint8_t rsni);
-    bool get_cross_rx_rssi(const std::string &ap_mac_, int8_t &rssi, int8_t &rx_packets);
-    void set_cross_rx_rssi(const std::string &ap_mac_, int8_t rssi, int8_t rx_packets);
-    void clear_cross_rssi();
     void clear_node_stats_info();
 
     beerocks::eType get_type();
@@ -323,39 +318,7 @@ public:
     add_neighbor(const sMacAddr &interface_mac, const sMacAddr &neighbor_mac, bool flag_ieee1905);
 
 private:
-    class rssi_measurement {
-    public:
-        rssi_measurement(const std::string &ap_mac_, int8_t rssi_, int8_t packets_)
-            : ap_mac(ap_mac_)
-        {
-            rssi      = rssi_;
-            packets   = packets_;
-            timestamp = std::chrono::steady_clock::now();
-        }
-        const std::string ap_mac;
-        int8_t rssi = beerocks::RSSI_INVALID;
-        int8_t packets;
-        std::chrono::steady_clock::time_point timestamp;
-    };
-
-    class beacon_measurement {
-    public:
-        beacon_measurement(const std::string &ap_mac_, uint8_t rcpi_, uint8_t rsni_)
-            : ap_mac(ap_mac_)
-        {
-            rcpi      = rcpi_; // received channel power indication (convertable to rssi)
-            rsni      = rsni_; // received signal noise indication (SNR)
-            timestamp = std::chrono::steady_clock::now();
-        }
-        const std::string ap_mac;
-        uint8_t rcpi = beerocks::RCPI_INVALID;
-        uint8_t rsni = 0;
-        std::chrono::steady_clock::time_point timestamp;
-    };
-
     beerocks::eType type;
-    std::unordered_map<std::string, std::shared_ptr<beacon_measurement>> beacon_measurements;
-    std::unordered_map<std::string, std::shared_ptr<rssi_measurement>> cross_rx_rssi;
 
     /**
      * @brief Interfaces configured on this node.
