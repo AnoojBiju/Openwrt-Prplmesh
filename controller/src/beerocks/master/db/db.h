@@ -1416,8 +1416,6 @@ public:
     // Measurements
     //
 
-    bool clear_node_cross_rssi(const std::string &sta_mac);
-
     bool set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApStatsParams *params);
     void clear_hostap_stats_info(const sMacAddr &al_mac, const sMacAddr &mac);
 

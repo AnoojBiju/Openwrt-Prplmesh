@@ -452,7 +452,7 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
         // Note: The Database node stats and the Datamodels' stats are not the same.
         // Therefore, client information in data model and in node DB might differ.
         database.clear_node_stats_info(client_mac);
-        database.clear_node_cross_rssi(client_mac_str);
+        client->clear_cross_rssi();
         database.dm_clear_sta_stats(tlvf::mac_from_string(client_mac_str));
 
         if (!(database.get_node_type(client_mac_str) == beerocks::TYPE_IRE_BACKHAUL &&

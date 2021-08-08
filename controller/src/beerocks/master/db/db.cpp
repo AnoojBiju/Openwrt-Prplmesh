@@ -4008,16 +4008,6 @@ bool db::is_bml_listener_exist()
 // Measurements
 //
 
-bool db::clear_node_cross_rssi(const std::string &sta_mac)
-{
-    auto sta = get_station(tlvf::mac_from_string(sta_mac));
-    if (sta == nullptr) {
-        return false;
-    }
-    sta->clear_cross_rssi();
-    return true;
-}
-
 bool db::set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApStatsParams *params)
 {
     auto n = get_node(mac);
