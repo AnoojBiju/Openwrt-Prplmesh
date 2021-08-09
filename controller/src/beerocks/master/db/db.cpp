@@ -6776,3 +6776,16 @@ bool db::dm_add_cac_status_available_channel(std::shared_ptr<sAgent::sRadio> rad
     ret_val &= m_ambiorix_datamodel->set_current_time(radio->dm_path + ".CACStatus");
     return ret_val;
 }
+
+bool db::dm_update_collection_intervals(std::chrono::milliseconds interval)
+{
+    auto ret_val = true;
+
+    auto agents = get_all_connected_agents();
+    for (auto agent : agents) {
+        ret_val &= m_ambiorix_datamodel->set(agent->dm_path, "CollectionInterval",
+                                             (uint32_t)interval.count());
+    }
+
+    return ret_val;
+}

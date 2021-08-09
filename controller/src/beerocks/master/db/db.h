@@ -1731,6 +1731,17 @@ public:
      */
     bool dm_check_objects_limit(std::queue<std::string> &paths, uint8_t limit);
 
+    /**
+     * @brief Updates CollectionInterval of the all Devices (Agents).
+     *
+     * The interval between the collection of consecutive measurements of the most frequently
+     * updated Data Element from this device (milliseconds).
+     *
+     * @param interval interval in milliseconds
+     * @return True on success, false otherwise.
+     */
+    bool dm_update_collection_intervals(std::chrono::milliseconds interval);
+
     //
     // tasks
     //
