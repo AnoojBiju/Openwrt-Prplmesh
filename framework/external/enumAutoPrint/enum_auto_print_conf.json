@@ -1,5 +1,5 @@
 {
-    "workspaceRoot": "../",
+    "workspaceRoot": "../../../",
     "spaces_in_tab:": 4,
     "test_mode_remove_out_files": false,
     "test_mode_override_files": true,
@@ -9,7 +9,10 @@
     "redirect_stdout_to_log_file": true,
     "excluded_files": [
         "${testWorkspaceRoot}/subfolder/test.h",
-        "${workspaceRoot}/excluded_file.h",
-        "${workspaceRoot}/excluded_folder/"
+        "${workspaceRoot}/build/",
+        "${workspaceRoot}/framework/external/",
+        "${workspaceRoot}/common/",
+        "${workspaceRoot}/agent/",
+        "${workspaceRoot}/controller/"
     ]
 }
