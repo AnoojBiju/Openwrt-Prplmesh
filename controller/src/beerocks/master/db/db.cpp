@@ -261,6 +261,10 @@ std::shared_ptr<sAgent> db::add_node_gateway(const sMacAddr &mac)
         LOG(ERROR) << "Failed to set multi ap capabilities";
     }
 
+    if (!dm_update_collection_intervals(config.link_metrics_request_interval_seconds)) {
+        LOG(ERROR) << "Failed to set collection intervals";
+    }
+
     return agent;
 }
 
@@ -284,6 +288,10 @@ std::shared_ptr<sAgent> db::add_node_ire(const sMacAddr &mac, const sMacAddr &pa
 
     if (!dm_set_device_multi_ap_capabilities(tlvf::mac_to_string(mac))) {
         LOG(ERROR) << "Failed to set multi ap capabilities";
+    }
+
+    if (!dm_update_collection_intervals(config.link_metrics_request_interval_seconds)) {
+        LOG(ERROR) << "Failed to set collection intervals";
     }
 
     return agent;
