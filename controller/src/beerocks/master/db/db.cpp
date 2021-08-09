@@ -255,6 +255,7 @@ std::shared_ptr<sAgent> db::add_node_gateway(const sMacAddr &mac)
     }
 
     set_node_data_model_path(mac, data_model_path);
+    agent->dm_path = data_model_path;
 
     if (!dm_set_device_multi_ap_capabilities(tlvf::mac_to_string(mac))) {
         LOG(ERROR) << "Failed to set multi ap capabilities";
@@ -279,6 +280,7 @@ std::shared_ptr<sAgent> db::add_node_ire(const sMacAddr &mac, const sMacAddr &pa
     }
 
     set_node_data_model_path(mac, data_model_path);
+    agent->dm_path = data_model_path;
 
     if (!dm_set_device_multi_ap_capabilities(tlvf::mac_to_string(mac))) {
         LOG(ERROR) << "Failed to set multi ap capabilities";

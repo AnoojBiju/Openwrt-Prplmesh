@@ -39,6 +39,8 @@ public:
     /** AL-MAC address of the agent. */
     const sMacAddr al_mac;
 
+    std::string dm_path; /**< data model path */
+
     /**
      * @brief Agents supported profile information.
      *
