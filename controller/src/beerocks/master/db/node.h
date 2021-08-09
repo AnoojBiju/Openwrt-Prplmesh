@@ -271,7 +271,6 @@ public:
     };
 
     bool is_prplmesh                = false;
-    beerocks::eBandType band_type   = beerocks::eBandType::INVALID_BAND;
     beerocks::eIfaceType iface_type = beerocks::IFACE_TYPE_ETHERNET;
     std::chrono::steady_clock::time_point last_seen;
 
