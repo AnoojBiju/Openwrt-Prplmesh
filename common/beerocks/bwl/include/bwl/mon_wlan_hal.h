@@ -57,6 +57,7 @@ public:
     virtual bool channel_scan_trigger(int dwell_time_msec,
                                       const std::vector<unsigned int> &channel_pool)     = 0;
     virtual bool channel_scan_dump_results()                                             = 0;
+    virtual bool channel_scan_dump_cached_results()                                      = 0;
     /**
      * @brief Abort the in-progress channel scan for the interface
      *

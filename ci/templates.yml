@@ -120,6 +120,7 @@
   stage: test
   before_script:
     - ci/git-clean-reset.sh ~/easymesh_cert "$(<"ci/easymesh_cert_version")"
+    - ~/easymesh_cert/utils/power_cycle/power_cycle.py --force
   script:
     - export TESTS_TO_RUN="$(cat .tests-to-run)"
     - export DEVICE_UNDER_TEST="$(cat .device-under-test)"
@@ -157,9 +158,6 @@
   variables:
     GIT_CLONE_PATH: "/builds/prpl-foundation/prplmesh/prplMesh/"
     EASYMESH_REVISION: "R1"
-  before_script:
-    - ci/git-clean-reset.sh ~/easymesh_cert "$(<"ci/easymesh_cert_version")"
-    - ~/easymesh_cert/utils/power_cycle/power_cycle.py --force
   after_script:
     - ci/certification/R1_marvell_station.sh
 
