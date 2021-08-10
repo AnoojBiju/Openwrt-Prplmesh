@@ -146,7 +146,7 @@ bool tlvPushButtonEventNotification::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_media_type_list = (sMediaType*)m_buff_ptr__;
+    m_media_type_list = reinterpret_cast<sMediaType*>(m_buff_ptr__);
     uint8_t media_type_list_length = *m_media_type_list_length;
     m_media_type_list_idx__ = media_type_list_length;
     if (!buffPtrIncrementSafe(sizeof(sMediaType) * (media_type_list_length))) {

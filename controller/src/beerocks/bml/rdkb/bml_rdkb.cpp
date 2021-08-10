@@ -66,7 +66,7 @@ int bml_rdkb_disconnect(BML_CTX ctx)
     LOG(DEBUG) << "bml_rdkb_disconnect entry";
     if (!ctx)
         return (-BML_RET_INVALID_ARGS);
-    bml_rdkb_internal *pBML = (bml_rdkb_internal *)ctx;
+    bml_rdkb_internal *pBML = static_cast<bml_rdkb_internal *>(ctx);
 
     // Stop the BML thread (and wait for it to stop...)
     pBML->stop(true);
@@ -86,7 +86,7 @@ int bml_rdkb_steering_set_group(BML_CTX ctx, uint32_t steeringGroupIndex,
     if (!ctx)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_rdkb_internal *pBML = (bml_rdkb_internal *)ctx;
+    bml_rdkb_internal *pBML = static_cast<bml_rdkb_internal *>(ctx);
 
     return (pBML->steering_set_group(steeringGroupIndex, cfg_2, cfg_5));
 }
@@ -99,7 +99,7 @@ int bml_rdkb_steering_client_set(BML_CTX ctx, uint32_t steeringGroupIndex, const
     if (!ctx || !client_mac)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_rdkb_internal *pBML = (bml_rdkb_internal *)ctx;
+    bml_rdkb_internal *pBML = static_cast<bml_rdkb_internal *>(ctx);
 
     return (pBML->steering_client_set(steeringGroupIndex, bssid, client_mac, config));
 }
@@ -111,7 +111,7 @@ int bml_rdkb_steering_event_register(BML_CTX ctx, BML_EVENT_CB pCB)
     if (!ctx)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_rdkb_internal *pBML = (bml_rdkb_internal *)ctx;
+    bml_rdkb_internal *pBML = static_cast<bml_rdkb_internal *>(ctx);
 
     return (pBML->steering_event_register(pCB));
 }
@@ -124,7 +124,7 @@ int bml_rdkb_steering_client_measure(BML_CTX ctx, unsigned int steeringGroupInde
     if (!ctx)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_rdkb_internal *pBML = (bml_rdkb_internal *)ctx;
+    bml_rdkb_internal *pBML = static_cast<bml_rdkb_internal *>(ctx);
 
     return (pBML->steering_client_measure(steeringGroupIndex, bssid, client_mac));
 }
@@ -137,7 +137,7 @@ int bml_rdkb_steering_client_disconnect(BML_CTX ctx, unsigned int steeringGroupI
     // Validate input parameters
     if (!ctx)
         return (-BML_RET_INVALID_ARGS);
-    bml_rdkb_internal *pBML = (bml_rdkb_internal *)ctx;
+    bml_rdkb_internal *pBML = static_cast<bml_rdkb_internal *>(ctx);
 
     return (pBML->steering_client_disconnect(steeringGroupIndex, bssid, client_mac, type, reason));
 }

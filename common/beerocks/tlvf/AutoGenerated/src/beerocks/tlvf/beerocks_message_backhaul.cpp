@@ -130,13 +130,13 @@ bool cACTION_BACKHAUL_REGISTER_REQUEST::init()
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
         return false;
     }
-    m_sta_iface = (char*)m_buff_ptr__;
+    m_sta_iface = reinterpret_cast<char*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(char) * (beerocks::message::IFACE_NAME_LENGTH))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (beerocks::message::IFACE_NAME_LENGTH) << ") Failed!";
         return false;
     }
     m_sta_iface_idx__  = beerocks::message::IFACE_NAME_LENGTH;
-    m_hostap_iface = (char*)m_buff_ptr__;
+    m_hostap_iface = reinterpret_cast<char*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(char) * (beerocks::message::IFACE_NAME_LENGTH))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (beerocks::message::IFACE_NAME_LENGTH) << ") Failed!";
         return false;
@@ -483,25 +483,25 @@ bool cACTION_BACKHAUL_ENABLE::init()
         return false;
     }
     if (!m_parse__) { m_iface_mac->struct_init(); }
-    m_wire_iface = (char*)m_buff_ptr__;
+    m_wire_iface = reinterpret_cast<char*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(char) * (beerocks::message::IFACE_NAME_LENGTH))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (beerocks::message::IFACE_NAME_LENGTH) << ") Failed!";
         return false;
     }
     m_wire_iface_idx__  = beerocks::message::IFACE_NAME_LENGTH;
-    m_sta_iface = (char*)m_buff_ptr__;
+    m_sta_iface = reinterpret_cast<char*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(char) * (beerocks::message::IFACE_NAME_LENGTH))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (beerocks::message::IFACE_NAME_LENGTH) << ") Failed!";
         return false;
     }
     m_sta_iface_idx__  = beerocks::message::IFACE_NAME_LENGTH;
-    m_ssid = (char*)m_buff_ptr__;
+    m_ssid = reinterpret_cast<char*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(char) * (beerocks::message::WIFI_SSID_MAX_LENGTH))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (beerocks::message::WIFI_SSID_MAX_LENGTH) << ") Failed!";
         return false;
     }
     m_ssid_idx__  = beerocks::message::WIFI_SSID_MAX_LENGTH;
-    m_pass = (char*)m_buff_ptr__;
+    m_pass = reinterpret_cast<char*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(char) * (beerocks::message::WIFI_PASS_MAX_LENGTH))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (beerocks::message::WIFI_PASS_MAX_LENGTH) << ") Failed!";
         return false;
@@ -1326,7 +1326,7 @@ bool cACTION_BACKHAUL_ASSOCIATED_STA_LINK_METRICS_RESPONSE::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_bssid_info_list = (sBssidInfo*)m_buff_ptr__;
+    m_bssid_info_list = reinterpret_cast<sBssidInfo*>(m_buff_ptr__);
     uint8_t bssid_info_list_length = *m_bssid_info_list_length;
     m_bssid_info_list_idx__ = bssid_info_list_length;
     if (!buffPtrIncrementSafe(sizeof(sBssidInfo) * (bssid_info_list_length))) {
@@ -1615,7 +1615,7 @@ bool cACTION_BACKHAUL_ZWDFS_RADIO_DETECTED::init()
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
         return false;
     }
-    m_front_iface_name = (char*)m_buff_ptr__;
+    m_front_iface_name = reinterpret_cast<char*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(char) * (beerocks::message::IFACE_NAME_LENGTH))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (beerocks::message::IFACE_NAME_LENGTH) << ") Failed!";
         return false;

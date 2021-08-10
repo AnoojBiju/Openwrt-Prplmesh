@@ -74,7 +74,7 @@ void bml_task::handle_event(int event_type, void *obj)
     switch (event_type) {
     case CONNECTION_CHANGE: {
         if (obj) {
-            auto event_obj = (connection_change_event *)obj;
+            auto event_obj = static_cast<connection_change_event *>(obj);
             TASK_LOG(DEBUG) << "connection change event, mac=" << event_obj->mac;
 
             if (event_obj->mac.empty()) {
@@ -88,7 +88,7 @@ void bml_task::handle_event(int event_type, void *obj)
     case STATS_INFO_AVAILABLE: {
         //TASK_LOG(DEBUG) << "stats info available event";
         if (obj) {
-            auto event_obj = (stats_info_available_event *)obj;
+            auto event_obj = static_cast<stats_info_available_event *>(obj);
 
             int idx = 0;
             std::vector<int> stats_updates_listeners;
@@ -109,7 +109,7 @@ void bml_task::handle_event(int event_type, void *obj)
     }
     case BSS_TM_REQ_EVENT_AVAILABLE: {
         if (obj) {
-            auto event_obj = (bml_task::bss_tm_req_available_event *)obj;
+            auto event_obj = static_cast<bml_task::bss_tm_req_available_event *>(obj);
 
             if (!events_updates_listeners.empty()) {
                 network_map::send_bml_bss_tm_req_message_to_listeners(
@@ -121,7 +121,7 @@ void bml_task::handle_event(int event_type, void *obj)
     }
     case BH_ROAM_REQ_EVENT_AVAILABLE: {
         if (obj) {
-            auto event_obj = (bml_task::bh_roam_req_available_event *)obj;
+            auto event_obj = static_cast<bml_task::bh_roam_req_available_event *>(obj);
 
             if (!events_updates_listeners.empty()) {
                 network_map::send_bml_bh_roam_req_message_to_listeners(
@@ -133,7 +133,7 @@ void bml_task::handle_event(int event_type, void *obj)
     }
     case CLIENT_ALLOW_REQ_EVENT_AVAILABLE: {
         if (obj) {
-            auto event_obj = (bml_task::client_allow_req_available_event *)obj;
+            auto event_obj = static_cast<bml_task::client_allow_req_available_event *>(obj);
 
             if (!events_updates_listeners.empty()) {
                 network_map::send_bml_client_allow_req_message_to_listeners(
@@ -145,7 +145,7 @@ void bml_task::handle_event(int event_type, void *obj)
     }
     case CLIENT_DISALLOW_REQ_EVENT_AVAILABLE: {
         if (obj) {
-            auto event_obj = (bml_task::client_disallow_req_available_event *)obj;
+            auto event_obj = static_cast<bml_task::client_disallow_req_available_event *>(obj);
 
             if (!events_updates_listeners.empty()) {
                 network_map::send_bml_client_disallow_req_message_to_listeners(
@@ -157,7 +157,7 @@ void bml_task::handle_event(int event_type, void *obj)
     }
     case ACS_START_EVENT_AVAILABLE: {
         if (obj) {
-            auto event_obj = (bml_task::acs_start_event *)obj;
+            auto event_obj = static_cast<bml_task::acs_start_event *>(obj);
 
             if (!events_updates_listeners.empty()) {
                 network_map::send_bml_acs_start_message_to_listeners(
@@ -168,7 +168,7 @@ void bml_task::handle_event(int event_type, void *obj)
     }
     case CSA_NOTIFICATION_EVENT_AVAILABLE: {
         if (obj) {
-            auto event_obj = (bml_task::csa_notification_event *)obj;
+            auto event_obj = static_cast<bml_task::csa_notification_event *>(obj);
 
             if (!events_updates_listeners.empty()) {
                 network_map::send_bml_csa_notification_message_to_listeners(
@@ -183,7 +183,7 @@ void bml_task::handle_event(int event_type, void *obj)
     }
     case CAC_STATUS_CHANGED_NOTIFICATION_EVENT_AVAILABLE: {
         if (obj) {
-            auto event_obj = (bml_task::cac_status_changed_notification_event *)obj;
+            auto event_obj = static_cast<bml_task::cac_status_changed_notification_event *>(obj);
 
             if (!events_updates_listeners.empty()) {
                 network_map::send_bml_cac_status_changed_notification_message_to_listeners(
@@ -199,7 +199,7 @@ void bml_task::handle_event(int event_type, void *obj)
         if (!obj) {
             break;
         }
-        auto event_obj = reinterpret_cast<listener_general_register_unregister_event *>(obj);
+        auto event_obj = static_cast<listener_general_register_unregister_event *>(obj);
         TASK_LOG(DEBUG) << "REGISTER_TO_TOPOLOGY_UPDATES event was received";
         database.add_bml_socket(event_obj->sd);
         if (!database.set_bml_topology_update_enable(event_obj->sd, true)) {
@@ -212,7 +212,7 @@ void bml_task::handle_event(int event_type, void *obj)
         if (!obj) {
             break;
         }
-        auto event_obj = reinterpret_cast<listener_general_register_unregister_event *>(obj);
+        auto event_obj = static_cast<listener_general_register_unregister_event *>(obj);
         TASK_LOG(DEBUG) << "UNREGISTER_TO_TOPOLOGY_UPDATES event was received";
 
         if (!database.set_bml_topology_update_enable(event_obj->sd, false)) {
@@ -225,7 +225,7 @@ void bml_task::handle_event(int event_type, void *obj)
     }
     case REGISTER_TO_NW_MAP_UPDATES: {
         if (obj) {
-            auto event_obj = (listener_general_register_unregister_event *)obj;
+            auto event_obj = static_cast<listener_general_register_unregister_event *>(obj);
             TASK_LOG(DEBUG) << "REGISTER_TO_NW_MAP_UPDATES event was received";
             database.add_bml_socket(event_obj->sd);
             if (!database.set_bml_nw_map_update_enable(event_obj->sd, true)) {
@@ -237,7 +237,7 @@ void bml_task::handle_event(int event_type, void *obj)
     }
     case UNREGISTER_TO_NW_MAP_UPDATES: {
         if (obj) {
-            auto event_obj = (listener_general_register_unregister_event *)obj;
+            auto event_obj = static_cast<listener_general_register_unregister_event *>(obj);
             TASK_LOG(DEBUG) << "UNREGISTER_TO_NW_MAP_UPDATES event was received";
 
             if (!database.set_bml_nw_map_update_enable(event_obj->sd, false)) {
@@ -251,7 +251,7 @@ void bml_task::handle_event(int event_type, void *obj)
     }
     case REGISTER_TO_STATS_UPDATES: {
         if (obj) {
-            auto event_obj = (listener_general_register_unregister_event *)obj;
+            auto event_obj = static_cast<listener_general_register_unregister_event *>(obj);
             TASK_LOG(DEBUG) << "REGISTER_TO_STATS_UPDATES event was received";
             database.add_bml_socket(event_obj->sd);
             if (!database.set_bml_stats_update_enable(event_obj->sd, true)) {
@@ -263,7 +263,7 @@ void bml_task::handle_event(int event_type, void *obj)
     }
     case UNREGISTER_TO_STATS_UPDATES: {
         if (obj) {
-            auto event_obj = (listener_general_register_unregister_event *)obj;
+            auto event_obj = static_cast<listener_general_register_unregister_event *>(obj);
             TASK_LOG(DEBUG) << "UNREGISTER_TO_STATS_UPDATES event was received";
 
             if (!database.set_bml_stats_update_enable(event_obj->sd, false)) {
@@ -277,7 +277,7 @@ void bml_task::handle_event(int event_type, void *obj)
     }
     case REGISTER_TO_EVENTS_UPDATES: {
         if (obj) {
-            auto event_obj = (listener_general_register_unregister_event *)obj;
+            auto event_obj = static_cast<listener_general_register_unregister_event *>(obj);
             TASK_LOG(DEBUG) << "REGISTER_TO_EVENTS_UPDATES event was received";
             database.add_bml_socket(event_obj->sd);
             if (!database.set_bml_events_update_enable(event_obj->sd, true)) {
@@ -289,7 +289,7 @@ void bml_task::handle_event(int event_type, void *obj)
     }
     case UNREGISTER_TO_EVENTS_UPDATES: {
         if (obj) {
-            auto event_obj = (listener_general_register_unregister_event *)obj;
+            auto event_obj = static_cast<listener_general_register_unregister_event *>(obj);
             TASK_LOG(DEBUG) << "UNREGISTER_TO_EVENTS_UPDATES event was received";
 
             if (!database.set_bml_events_update_enable(event_obj->sd, false)) {
@@ -305,7 +305,7 @@ void bml_task::handle_event(int event_type, void *obj)
         if (!obj) {
             break;
         }
-        auto event_obj = reinterpret_cast<topology_response_update_event *>(obj);
+        auto event_obj = static_cast<topology_response_update_event *>(obj);
         TASK_LOG(DEBUG) << "TOPOLOGY_RESPONSE_UPDATE event was received";
         int sd_idx = 0;
         std::vector<int> topology_response_updates_listeners;

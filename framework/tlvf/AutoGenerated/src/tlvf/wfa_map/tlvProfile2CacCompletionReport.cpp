@@ -178,7 +178,7 @@ bool tlvProfile2CacCompletionReport::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_cac_radios = (cCacCompletionReportRadio*)m_buff_ptr__;
+    m_cac_radios = reinterpret_cast<cCacCompletionReportRadio*>(m_buff_ptr__);
     uint8_t number_of_cac_radios = *m_number_of_cac_radios;
     m_cac_radios_idx__ = 0;
     for (size_t i = 0; i < number_of_cac_radios; i++) {
@@ -352,7 +352,7 @@ bool cCacCompletionReportRadio::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_detected_pairs = (sCacDetectedPair*)m_buff_ptr__;
+    m_detected_pairs = reinterpret_cast<sCacDetectedPair*>(m_buff_ptr__);
     uint8_t number_of_detected_pairs = *m_number_of_detected_pairs;
     m_detected_pairs_idx__ = number_of_detected_pairs;
     if (!buffPtrIncrementSafe(sizeof(sCacDetectedPair) * (number_of_detected_pairs))) {

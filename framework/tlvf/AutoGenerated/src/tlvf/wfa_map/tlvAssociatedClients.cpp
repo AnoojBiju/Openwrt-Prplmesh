@@ -178,7 +178,7 @@ bool tlvAssociatedClients::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_bss_list = (cBssInfo*)m_buff_ptr__;
+    m_bss_list = reinterpret_cast<cBssInfo*>(m_buff_ptr__);
     uint8_t bss_list_length = *m_bss_list_length;
     m_bss_list_idx__ = 0;
     for (size_t i = 0; i < bss_list_length; i++) {
@@ -354,7 +354,7 @@ bool cBssInfo::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
-    m_clients_associated_list = (cClientInfo*)m_buff_ptr__;
+    m_clients_associated_list = reinterpret_cast<cClientInfo*>(m_buff_ptr__);
     uint16_t clients_associated_list_length = *m_clients_associated_list_length;
     if (m_parse__) {  tlvf_swap(16, reinterpret_cast<uint8_t*>(&clients_associated_list_length)); }
     m_clients_associated_list_idx__ = 0;

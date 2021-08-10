@@ -140,7 +140,7 @@ bool tlvSupportedService::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_supported_service_list = (eSupportedService*)m_buff_ptr__;
+    m_supported_service_list = reinterpret_cast<eSupportedService*>(m_buff_ptr__);
     uint8_t supported_service_list_length = *m_supported_service_list_length;
     m_supported_service_list_idx__ = supported_service_list_length;
     if (!buffPtrIncrementSafe(sizeof(eSupportedService) * (supported_service_list_length))) {

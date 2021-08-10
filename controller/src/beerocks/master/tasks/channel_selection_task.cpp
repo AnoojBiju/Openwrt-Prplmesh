@@ -91,14 +91,14 @@ void channel_selection_task::handle_event(int event_type, void *obj)
         TASK_LOG(ERROR) << "obj == nullptr";
         return;
     }
-    auto event_hostap_mac = tlvf::mac_to_string(((sMacAddr *)obj)->oct);
-    if (radio_mac == tlvf::mac_from_string(event_hostap_mac)) {
+    sMacAddr event_hostap_mac = *static_cast<sMacAddr *>(obj);
+    if (radio_mac == event_hostap_mac) {
         bool handle_event = false;
         switch (eEvent(event_type)) {
         case eEvent::ACS_RESPONSE_EVENT: {
             if (FSM_IS_IN_STATE(WAIT_FOR_ACS_RESPONSE)) {
                 handle_event       = true;
-                acs_response_event = (sAcsResponse_event *)obj;
+                acs_response_event = static_cast<sAcsResponse_event *>(obj);
                 FSM_MOVE_STATE(ON_ACS_RESPONSE);
             }
             break;
@@ -106,24 +106,26 @@ void channel_selection_task::handle_event(int event_type, void *obj)
         case eEvent::CSA_EVENT: {
             if (FSM_IS_IN_STATE(WAIT_FOR_CSA_NOTIFICATION)) {
                 handle_event = true;
-                csa_event    = (sCsa_event *)obj;
+                csa_event    = static_cast<sCsa_event *>(obj);
                 FSM_MOVE_STATE(ON_CSA_NOTIFICATION);
             } else {
                 TASK_LOG(DEBUG) << " event: " << EVENT_STR(eEvent(event_type))
                                 << " in state: " << FSM_CURR_STATE_STR;
-                queue_push_event(eEvent(event_type), (uint8_t *)obj);
+                queue_push_event(eEvent(event_type), static_cast<uint8_t *>(obj));
             }
             break;
         }
         case eEvent::RESTRICTED_CHANNEL_RESPONSE_EVENT: {
             if (FSM_IS_IN_STATE(WAIT_FOR_RESTRICTED_CHANNEL_RESPONSE) ||
                 FSM_IS_IN_STATE(WAIT_FOR_FAIL_SAFE_CHANNEL_RESPONSE)) {
-                handle_event                      = true;
-                restricted_channel_response_event = (sRestrictedChannelResponse_event *)obj;
+                handle_event = true;
+                restricted_channel_response_event =
+                    static_cast<sRestrictedChannelResponse_event *>(obj);
                 FSM_MOVE_STATE(ON_RESTRICTED_FAIL_SAFE_CHANNEL_RESPONSE);
             } else if (FSM_IS_IN_STATE(WAIT_FOR_CLEAR_RESTRICTED_CHANNEL_RESPONSE)) {
-                handle_event                      = true;
-                restricted_channel_response_event = (sRestrictedChannelResponse_event *)obj;
+                handle_event = true;
+                restricted_channel_response_event =
+                    static_cast<sRestrictedChannelResponse_event *>(obj);
                 FSM_MOVE_STATE(ACTIVATE_SLAVE);
             }
             break;
@@ -131,42 +133,42 @@ void channel_selection_task::handle_event(int event_type, void *obj)
         case eEvent::SLAVE_JOINED_EVENT: {
             TASK_LOG(WARNING) << "slave rejoined, event: " << EVENT_STR(eEvent(event_type))
                               << " in state: " << FSM_CURR_STATE_STR;
-            queue_clear_mac(event_hostap_mac);
-            queue_push_event(eEvent(event_type), (uint8_t *)obj);
+            queue_clear_mac(tlvf::mac_to_string(event_hostap_mac));
+            queue_push_event(eEvent(event_type), static_cast<uint8_t *>(obj));
             break;
         }
         case eEvent::AP_ACTIVITY_IDLE_EVENT: {
             TASK_LOG(DEBUG) << " event: " << EVENT_STR(eEvent(event_type))
                             << " in state: " << FSM_CURR_STATE_STR;
-            queue_push_event(eEvent(event_type), (uint8_t *)obj);
+            queue_push_event(eEvent(event_type), static_cast<uint8_t *>(obj));
             break;
         }
         case eEvent::DFS_CHANNEL_AVAILABLE_EVENT: {
             TASK_LOG(DEBUG) << " event: " << EVENT_STR(eEvent(event_type))
                             << " in state: " << FSM_CURR_STATE_STR;
-            queue_push_event(eEvent(event_type), (uint8_t *)obj);
+            queue_push_event(eEvent(event_type), static_cast<uint8_t *>(obj));
             break;
         }
         case eEvent::DFS_REENTRY_PENDING_STEERED_CLIENT: {
             // TASK_LOG(DEBUG) << " event: " << EVENT_STR(eEvent(event_type)) << " in state: " << FSM_CURR_STATE_STR;
-            queue_push_event(eEvent(event_type), (uint8_t *)obj);
+            queue_push_event(eEvent(event_type), static_cast<uint8_t *>(obj));
             break;
         }
         case eEvent::DFS_CAC_PENDING_HOSTAP_EVENT: {
             // TASK_LOG(DEBUG) << " event: " << EVENT_STR(eEvent(event_type)) << " in state: " << FSM_CURR_STATE_STR;
-            queue_push_event(eEvent(event_type), (uint8_t *)obj);
+            queue_push_event(eEvent(event_type), static_cast<uint8_t *>(obj));
             break;
         }
         case eEvent::CAC_COMPLETED_EVENT: {
             TASK_LOG(DEBUG) << " event: " << EVENT_STR(eEvent(event_type))
                             << " in state: " << FSM_CURR_STATE_STR;
-            queue_push_event(eEvent(event_type), (uint8_t *)obj);
+            queue_push_event(eEvent(event_type), static_cast<uint8_t *>(obj));
             break;
         }
         case eEvent::CONFIGURED_RESTRICTED_CHANNELS_EVENT: {
             TASK_LOG(DEBUG) << " event: " << EVENT_STR(eEvent(event_type))
                             << " in state: " << FSM_CURR_STATE_STR;
-            queue_push_event(eEvent(event_type), (uint8_t *)obj);
+            queue_push_event(eEvent(event_type), static_cast<uint8_t *>(obj));
             break;
         }
         default: {
@@ -228,17 +230,18 @@ void channel_selection_task::work()
             event_handle_in_progress = true;
             switch (event_type) {
             case eEvent::SLAVE_JOINED_EVENT: {
-                slave_joined_event = (sSlaveJoined_event *)event_obj;
+                slave_joined_event = reinterpret_cast<sSlaveJoined_event *>(event_obj);
                 FSM_MOVE_STATE(ON_SLAVE_JOINED);
                 break;
             }
             case eEvent::CSA_EVENT: {
-                csa_event = (sCsa_event *)event_obj;
+                csa_event = reinterpret_cast<sCsa_event *>(event_obj);
                 FSM_MOVE_STATE(ON_CSA_UNEXPECTED_NOTIFICATION);
                 break;
             }
             case eEvent::HOSTAP_CHANNEL_REQUEST_EVENT: {
-                hostap_channel_request_event = (sHostapChannelRequest_event *)event_obj;
+                hostap_channel_request_event =
+                    reinterpret_cast<sHostapChannelRequest_event *>(event_obj);
                 FSM_MOVE_STATE(ON_HOSTAP_CHANNEL_REQUEST);
                 break;
             }
@@ -248,13 +251,13 @@ void channel_selection_task::work()
                 break;
             }
             case eEvent::AP_ACTIVITY_IDLE_EVENT: {
-                ap_activity_idle = (sApActivityIdle_event *)event_obj;
+                ap_activity_idle = reinterpret_cast<sApActivityIdle_event *>(event_obj);
                 FSM_MOVE_STATE(GOTO_IDLE);
                 break;
             }
             case eEvent::DFS_REENTRY_PENDING_STEERED_CLIENT: {
                 dfs_reentry_pending_steered_clients =
-                    (sDfsReEntrySampleSteeredClients_event *)event_obj;
+                    reinterpret_cast<sDfsReEntrySampleSteeredClients_event *>(event_obj);
                 if (reentry_steered_client_check()) {
                     TASK_LOG(DEBUG) << "condition true radio mac = " << radio_mac;
                     FSM_MOVE_STATE(SEND_ACS);
@@ -271,7 +274,7 @@ void channel_selection_task::work()
                 break;
             }
             case eEvent::DFS_CAC_PENDING_HOSTAP_EVENT: {
-                dfs_cac_pending_hostap = (sDfsCacPendinghostap_event *)event_obj;
+                dfs_cac_pending_hostap = reinterpret_cast<sDfsCacPendinghostap_event *>(event_obj);
                 auto cac_pending       = cac_pending_hostap_check();
                 if (dfs_cac_pending_hostap->timeout_expired) {
                     TASK_LOG(DEBUG) << "handle_dead_node, radio mac = " << radio_mac;
@@ -288,7 +291,7 @@ void channel_selection_task::work()
 
             case eEvent::CAC_COMPLETED_EVENT: {
                 if (!hostaps_cac_pending.empty()) {
-                    cac_completed_event = (sCacCompleted_event *)event_obj;
+                    cac_completed_event = reinterpret_cast<sCacCompleted_event *>(event_obj);
                     TASK_LOG(DEBUG) << "CAC_COMPLETED_EVENT for radio mac = " << radio_mac;
                     FSM_MOVE_STATE(ON_CAC_COMPLETED_NOTIFICATION);
                     break;
@@ -299,13 +302,14 @@ void channel_selection_task::work()
                 break;
             }
             case eEvent::DFS_CHANNEL_AVAILABLE_EVENT: {
-                dfs_channel_available = (sDfsChannelAvailable_event *)event_obj;
+                dfs_channel_available = reinterpret_cast<sDfsChannelAvailable_event *>(event_obj);
                 TASK_LOG(DEBUG) << "DFS_CHANNEL_AVAILABLE_EVENT for radio mac = " << radio_mac;
                 FSM_MOVE_STATE(ON_DFS_CHANNEL_AVAILABLE);
                 break;
             }
             case eEvent::CONFIGURED_RESTRICTED_CHANNELS_EVENT: {
-                configured_restricted_channels = (sConfiguredRestrictedChannels_event *)event_obj;
+                configured_restricted_channels =
+                    reinterpret_cast<sConfiguredRestrictedChannels_event *>(event_obj);
                 TASK_LOG(DEBUG) << "CONFIGURED_RESTRICTED_CHANNELS_EVENT for radio mac = "
                                 << radio_mac;
                 FSM_MOVE_STATE(ON_CONFIGURED_RESTRICTED_CHANNELS);
@@ -1059,8 +1063,8 @@ void channel_selection_task::queue_clear_mac(const std::string &mac)
 {
     TASK_LOG(DEBUG) << "queue_clear_mac(), mac = " << mac;
     for (auto it = event_queue.begin(); it != event_queue.end(); it++) {
-        auto event_mac = tlvf::mac_to_string((((sMacAddr *)(it->second))->oct));
-        if (event_mac == mac) {
+        auto event_mac = *reinterpret_cast<sMacAddr *>(it->second);
+        if (event_mac == tlvf::mac_from_string(mac)) {
             TASK_LOG(DEBUG) << "DELETED_EVENT";
             it->first = eEvent::DELETED_EVENT;
         }

@@ -114,7 +114,7 @@ bool cWscAttrKeyWrapAuthenticator::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
-    m_data = (uint8_t*)m_buff_ptr__;
+    m_data = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t) * (WSC_KEY_WRAP_AUTH_LENGTH))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (WSC_KEY_WRAP_AUTH_LENGTH) << ") Failed!";
         return false;
@@ -288,7 +288,7 @@ bool cWscAttrVendorExtension::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_vendor_data = (uint8_t*)m_buff_ptr__;
+    m_vendor_data = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (m_length && m_parse__) {
         size_t len = *m_length;
         tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));
@@ -548,7 +548,7 @@ bool cConfigData::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
-    m_ssid = (char*)m_buff_ptr__;
+    m_ssid = reinterpret_cast<char*>(m_buff_ptr__);
     uint16_t ssid_length = *m_ssid_length;
     if (m_parse__) {  tlvf_swap(16, reinterpret_cast<uint8_t*>(&ssid_length)); }
     m_ssid_idx__ = ssid_length;
@@ -580,7 +580,7 @@ bool cConfigData::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
-    m_network_key = (char*)m_buff_ptr__;
+    m_network_key = reinterpret_cast<char*>(m_buff_ptr__);
     uint16_t network_key_length = *m_network_key_length;
     if (m_parse__) {  tlvf_swap(16, reinterpret_cast<uint8_t*>(&network_key_length)); }
     m_network_key_idx__ = network_key_length;
@@ -764,7 +764,7 @@ bool cWscAttrEncryptedSettings::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
-    m_iv = (char*)m_buff_ptr__;
+    m_iv = reinterpret_cast<char*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(char) * (WSC_ENCRYPTED_SETTINGS_IV_LENGTH))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (WSC_ENCRYPTED_SETTINGS_IV_LENGTH) << ") Failed!";
         return false;
@@ -773,7 +773,7 @@ bool cWscAttrEncryptedSettings::init()
     if (!m_parse__) {
         if (m_length) { (*m_length) += (sizeof(char) * WSC_ENCRYPTED_SETTINGS_IV_LENGTH); }
     }
-    m_encrypted_settings = (char*)m_buff_ptr__;
+    m_encrypted_settings = reinterpret_cast<char*>(m_buff_ptr__);
     if (m_length && m_parse__) {
         size_t len = *m_length;
         tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));
@@ -1081,7 +1081,7 @@ bool cWscAttrEnrolleeNonce::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
-    m_nonce = (uint8_t*)m_buff_ptr__;
+    m_nonce = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t) * (WSC_NONCE_LENGTH))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (WSC_NONCE_LENGTH) << ") Failed!";
         return false;
@@ -1193,7 +1193,7 @@ bool cWscAttrPublicKey::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
-    m_public_key = (uint8_t*)m_buff_ptr__;
+    m_public_key = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t) * (WSC_PUBLIC_KEY_LENGTH))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (WSC_PUBLIC_KEY_LENGTH) << ") Failed!";
         return false;
@@ -1717,7 +1717,7 @@ bool cWscAttrManufacturer::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
-    m_manufacturer = (char*)m_buff_ptr__;
+    m_manufacturer = reinterpret_cast<char*>(m_buff_ptr__);
     if (m_length && m_parse__) {
         size_t len = *m_length;
         tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));
@@ -1864,7 +1864,7 @@ bool cWscAttrModelName::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
-    m_model = (char*)m_buff_ptr__;
+    m_model = reinterpret_cast<char*>(m_buff_ptr__);
     if (m_length && m_parse__) {
         size_t len = *m_length;
         tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));
@@ -2011,7 +2011,7 @@ bool cWscAttrModelNumber::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
-    m_model_number = (char*)m_buff_ptr__;
+    m_model_number = reinterpret_cast<char*>(m_buff_ptr__);
     if (m_length && m_parse__) {
         size_t len = *m_length;
         tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));
@@ -2158,7 +2158,7 @@ bool cWscAttrSerialNumber::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
-    m_serial_number = (char*)m_buff_ptr__;
+    m_serial_number = reinterpret_cast<char*>(m_buff_ptr__);
     if (m_length && m_parse__) {
         size_t len = *m_length;
         tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));
@@ -2425,7 +2425,7 @@ bool cWscAttrDeviceName::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
-    m_device_name = (char*)m_buff_ptr__;
+    m_device_name = reinterpret_cast<char*>(m_buff_ptr__);
     if (m_length && m_parse__) {
         size_t len = *m_length;
         tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));
@@ -3107,7 +3107,7 @@ bool cWscAttrUuidE::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
-    m_data = (uint8_t*)m_buff_ptr__;
+    m_data = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t) * (WSC_UUID_LENGTH))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (WSC_UUID_LENGTH) << ") Failed!";
         return false;
@@ -3313,7 +3313,7 @@ bool cWscAttrUuidR::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
-    m_data = (uint8_t*)m_buff_ptr__;
+    m_data = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t) * (WSC_UUID_LENGTH))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (WSC_UUID_LENGTH) << ") Failed!";
         return false;
@@ -3425,7 +3425,7 @@ bool cWscAttrAuthenticator::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
-    m_data = (uint8_t*)m_buff_ptr__;
+    m_data = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t) * (WSC_AUTHENTICATOR_LENGTH))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (WSC_AUTHENTICATOR_LENGTH) << ") Failed!";
         return false;
@@ -3537,7 +3537,7 @@ bool cWscAttrRegistrarNonce::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
-    m_nonce = (uint8_t*)m_buff_ptr__;
+    m_nonce = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t) * (WSC_NONCE_LENGTH))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (WSC_NONCE_LENGTH) << ") Failed!";
         return false;
@@ -3682,7 +3682,7 @@ bool cWscAttrSsid::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
-    m_ssid = (char*)m_buff_ptr__;
+    m_ssid = reinterpret_cast<char*>(m_buff_ptr__);
     if (m_length && m_parse__) {
         size_t len = *m_length;
         tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));
@@ -4019,7 +4019,7 @@ bool cWscAttrNetworkKey::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint16_t) << ") Failed!";
         return false;
     }
-    m_key = (char*)m_buff_ptr__;
+    m_key = reinterpret_cast<char*>(m_buff_ptr__);
     if (m_length && m_parse__) {
         size_t len = *m_length;
         tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));

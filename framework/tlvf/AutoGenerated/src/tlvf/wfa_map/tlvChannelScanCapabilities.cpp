@@ -178,7 +178,7 @@ bool tlvChannelScanCapabilities::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_radio_list = (cRadiosWithScanCapabilities*)m_buff_ptr__;
+    m_radio_list = reinterpret_cast<cRadiosWithScanCapabilities*>(m_buff_ptr__);
     uint8_t radio_list_length = *m_radio_list_length;
     m_radio_list_idx__ = 0;
     for (size_t i = 0; i < radio_list_length; i++) {
@@ -376,7 +376,7 @@ bool cRadiosWithScanCapabilities::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_operating_classes_list = (cOperatingClasses*)m_buff_ptr__;
+    m_operating_classes_list = reinterpret_cast<cOperatingClasses*>(m_buff_ptr__);
     uint8_t operating_classes_list_length = *m_operating_classes_list_length;
     m_operating_classes_list_idx__ = 0;
     for (size_t i = 0; i < operating_classes_list_length; i++) {
@@ -517,7 +517,7 @@ bool cOperatingClasses::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_channel_list = (uint8_t*)m_buff_ptr__;
+    m_channel_list = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     uint8_t channel_list_length = *m_channel_list_length;
     m_channel_list_idx__ = channel_list_length;
     if (!buffPtrIncrementSafe(sizeof(uint8_t) * (channel_list_length))) {

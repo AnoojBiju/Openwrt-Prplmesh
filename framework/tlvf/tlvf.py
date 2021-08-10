@@ -963,7 +963,8 @@ class TlvF:
             lines_cpp = []
 
             # add default value to init func
-            lines_cpp.append("m_%s = (%s*)m_%s__;" % (param_name, param_type, self.MEMBER_BUFF_PTR))
+            lines_cpp.append("m_%s = reinterpret_cast<%s*>(m_%s__);" %
+                             (param_name, param_type, self.MEMBER_BUFF_PTR))
             if is_dynamic_len:
                 if obj_meta.is_tlv_class:
                     lines_cpp.append("if (m_length && m_%s__) {" % self.MEMBER_PARSE)

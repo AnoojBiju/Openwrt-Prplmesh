@@ -96,7 +96,7 @@ int bml_disconnect(BML_CTX ctx)
 {
     if (!ctx)
         return (-BML_RET_INVALID_ARGS);
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
 
     // Stop the BML thread (and wait for it to stop...)
     pBML->stop(true);
@@ -112,7 +112,7 @@ int bml_onboard_status(BML_CTX ctx)
 {
     if (!ctx)
         return (-1);
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
 
     return (pBML->is_onboarding() ? 1 : 0);
 }
@@ -121,7 +121,7 @@ int bml_local_master_enabled(BML_CTX ctx)
 {
     if (!ctx)
         return (-1);
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
 
     return (pBML->is_local_master() ? 1 : 0);
 }
@@ -130,7 +130,7 @@ void *bml_get_user_data(BML_CTX ctx)
 {
     if (!ctx)
         return (NULL);
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
 
     return (pBML->get_user_data());
 }
@@ -140,7 +140,7 @@ int bml_set_vap_list_credentials(BML_CTX ctx, BML_VAP_INFO *vap_list, const uint
     // Validate input parameters
     if (!ctx || !vap_list)
         return (-BML_RET_INVALID_ARGS);
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
 
     return (pBML->bml_set_vap_list_credentials(vap_list, vaps_num));
 }
@@ -149,7 +149,7 @@ int bml_get_vap_list_credentials(BML_CTX ctx, BML_VAP_INFO *vap_list, uint8_t *v
 {
     if (!ctx || !vap_list || !vaps_num)
         return (-BML_RET_INVALID_ARGS);
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
 
     return (pBML->bml_get_vap_list_credentials(vap_list, *vaps_num));
 }
@@ -158,7 +158,7 @@ int bml_ping(BML_CTX ctx)
 {
     if (!ctx)
         return (-BML_RET_INVALID_ARGS);
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
 
     return (pBML->ping());
 }
@@ -167,7 +167,7 @@ int bml_nw_map_register_query_cb(BML_CTX ctx, BML_NW_MAP_QUERY_CB cb)
 {
     if (!ctx)
         return (-BML_RET_INVALID_ARGS);
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
 
     pBML->register_nw_map_query_cb(cb);
 
@@ -178,7 +178,7 @@ int bml_nw_map_register_update_cb(BML_CTX ctx, BML_NW_MAP_QUERY_CB cb)
 {
     if (!ctx)
         return (-BML_RET_INVALID_ARGS);
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
 
     pBML->register_nw_map_update_cb(cb);
 
@@ -189,7 +189,7 @@ int bml_nw_map_query(BML_CTX ctx)
 {
     if (!ctx)
         return (-BML_RET_INVALID_ARGS);
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
 
     return (pBML->nw_map_query());
 }
@@ -198,7 +198,7 @@ int bml_device_oper_radios_query(BML_CTX ctx, struct BML_DEVICE_DATA *device_dat
 {
     if (!ctx)
         return (-BML_RET_INVALID_ARGS);
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
 
     return (pBML->device_oper_radios_query(device_data));
 }
@@ -207,7 +207,7 @@ int bml_stat_register_cb(BML_CTX ctx, BML_STATS_UPDATE_CB cb)
 {
     if (!ctx)
         return (-BML_RET_INVALID_ARGS);
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
 
     return pBML->register_stats_cb(cb);
 }
@@ -216,7 +216,7 @@ int bml_event_register_cb(BML_CTX ctx, BML_EVENT_CB cb)
 {
     if (!ctx)
         return (-BML_RET_INVALID_ARGS);
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
 
     return pBML->register_event_cb(cb);
 }
@@ -266,7 +266,7 @@ int bml_set_wifi_credentials(BML_CTX ctx, const char *al_mac, const char *ssid,
     wifi_credentials.backhaul =
         (bss_type_str == "backhaul" || bss_type_str == "fronthaul-backhaul");
 
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
 
     return (pBML->set_wifi_credentials(al_mac_addr, wifi_credentials));
 }
@@ -278,7 +278,7 @@ int bml_clear_wifi_credentials(BML_CTX ctx, const char *al_mac)
         return (-BML_RET_INVALID_ARGS);
 
     auto al_mac_addr   = tlvf::mac_from_string(al_mac);
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
 
     return (pBML->clear_wifi_credentials(al_mac_addr));
 }
@@ -289,7 +289,7 @@ int bml_update_wifi_credentials(BML_CTX ctx, const char *al_mac)
         return (-BML_RET_INVALID_ARGS);
 
     auto al_mac_addr   = tlvf::mac_from_string(al_mac);
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
 
     return (pBML->update_wifi_credentials(al_mac_addr));
 }
@@ -300,28 +300,28 @@ int bml_get_wifi_credentials(BML_CTX ctx, int vap_id, char *ssid, char *pass, in
     if (!ctx || !ssid || !sec)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
 
     return (pBML->get_wifi_credentials(vap_id, ssid, pass, sec));
 }
 
 int bml_get_onboarding_state(BML_CTX ctx, int *enable)
 {
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
 
     return pBML->get_onboarding_state(enable);
 }
 
 int bml_set_onboarding_state(BML_CTX ctx, int enable)
 {
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
 
     return pBML->set_onboarding_state(enable);
 }
 
 int bml_wps_onboarding(BML_CTX ctx, const char *iface)
 {
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
 
     return pBML->bml_wps_onboarding(iface);
 }
@@ -332,7 +332,7 @@ int bml_get_administrator_credentials(BML_CTX ctx, char *user_password)
     if (!ctx || !user_password)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
 
     return (pBML->get_administrator_credentials(user_password));
 }
@@ -343,7 +343,7 @@ int bml_set_client_roaming(BML_CTX ctx, int enable)
     if (!ctx)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
     // Set the client roaming configuration
     // TODO: Propogate error code from bml_internal...
     return (pBML->set_client_roaming(enable));
@@ -355,7 +355,7 @@ int bml_get_client_roaming(BML_CTX ctx, int *res)
     if (!ctx || !res)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
     return (pBML->get_client_roaming(*res));
 }
 
@@ -365,7 +365,7 @@ int bml_set_legacy_client_roaming(BML_CTX ctx, int enable)
     if (!ctx)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
     // Set the client roaming configuration
     // TODO: Propogate error code from bml_internal...
     return (pBML->set_legacy_client_roaming(enable));
@@ -377,7 +377,7 @@ int bml_get_legacy_client_roaming(BML_CTX ctx, int *res)
     if (!ctx || !res)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
     return (pBML->get_legacy_client_roaming(*res));
 }
 
@@ -387,7 +387,7 @@ int bml_set_client_roaming_prefer_signal_strength(BML_CTX ctx, int enable)
     if (!ctx)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
     // Set the client roaming configuration
     // TODO: Propogate error code from bml_internal...
     return (pBML->set_client_roaming_prefer_signal_strength(enable));
@@ -399,7 +399,7 @@ int bml_get_client_roaming_prefer_signal_strength(BML_CTX ctx, int *res)
     if (!ctx || !res)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
     return (pBML->get_client_roaming_prefer_signal_strength(*res));
 }
 
@@ -409,7 +409,7 @@ int bml_set_client_band_steering(BML_CTX ctx, int enable)
     if (!ctx)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
     return (pBML->set_client_band_steering(enable));
 }
 
@@ -419,7 +419,7 @@ int bml_get_client_band_steering(BML_CTX ctx, int *res)
     if (!ctx || !res)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
     return (pBML->get_client_band_steering(*res));
 }
 
@@ -429,7 +429,7 @@ int bml_set_ire_roaming(BML_CTX ctx, int enable)
     if (!ctx)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
     return (pBML->set_ire_roaming(enable));
 }
 
@@ -439,7 +439,7 @@ int bml_get_ire_roaming(BML_CTX ctx, int *res)
     if (!ctx || !res)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
     return (pBML->get_ire_roaming(*res));
 }
 
@@ -449,7 +449,7 @@ int bml_set_load_balancer(BML_CTX ctx, int enable)
     if (!ctx)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
     return (pBML->set_load_balancer(enable));
 }
 
@@ -459,7 +459,7 @@ int bml_get_load_balancer(BML_CTX ctx, int *res)
     if (!ctx || !res)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
     return (pBML->get_load_balancer(*res));
 }
 
@@ -469,7 +469,7 @@ int bml_set_service_fairness(BML_CTX ctx, int enable)
     if (!ctx)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
     return (pBML->set_service_fairness(enable));
 }
 
@@ -479,7 +479,7 @@ int bml_get_service_fairness(BML_CTX ctx, int *res)
     if (!ctx || !res)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
     return (pBML->get_service_fairness(*res));
 }
 
@@ -489,7 +489,7 @@ int bml_set_dfs_reentry(BML_CTX ctx, int enable)
     if (!ctx)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
     return (pBML->set_dfs_reentry(enable));
 }
 
@@ -499,7 +499,7 @@ int bml_get_dfs_reentry(BML_CTX ctx, int *res)
     if (!ctx || !res)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
     return (pBML->get_dfs_reentry(*res));
 }
 
@@ -509,7 +509,7 @@ int bml_set_certification_mode(BML_CTX ctx, int enable)
     if (!ctx)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
     return (pBML->set_certification_mode(enable));
 }
 
@@ -519,7 +519,7 @@ int bml_get_certification_mode(BML_CTX ctx, int *res)
     if (!ctx || !res)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
     return (pBML->get_certification_mode(*res));
 }
 
@@ -530,7 +530,7 @@ int bml_set_log_level(BML_CTX ctx, const char *module_name, const char *log_leve
     if (!ctx || !module_name || !log_level || !mac)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
     return (pBML->set_log_level(module_name, log_level, on, mac));
 }
 
@@ -540,7 +540,7 @@ int bml_get_master_slave_versions(BML_CTX ctx, char *master_version, char *slave
     if (!ctx || !master_version || !slave_version)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
     if (pBML->is_local_master()) {
         beerocks::string_utils::copy_string(master_version, bml_get_bml_version(), BML_VERSION_LEN);
         beerocks::string_utils::copy_string(slave_version, bml_get_bml_version(), BML_VERSION_LEN);
@@ -561,7 +561,7 @@ int bml_set_global_restricted_channels(BML_CTX ctx, const uint8_t *restricted_ch
     if (!ctx || !restricted_channels || !size)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
     LOG(WARNING) << "bml_set_global_restricted_channels entry";
 
     return (pBML->set_restricted_channels(restricted_channels, network_utils::ZERO_MAC_STRING, 1,
@@ -574,7 +574,7 @@ int bml_get_global_restricted_channels(BML_CTX ctx, uint8_t *restricted_channels
     if (!ctx || !restricted_channels)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
 
     return (pBML->get_restricted_channels(restricted_channels, network_utils::ZERO_MAC_STRING, 1));
 }
@@ -586,7 +586,7 @@ int bml_set_slave_restricted_channels(BML_CTX ctx, const uint8_t *restricted_cha
     if (!ctx || !restricted_channels || !mac || !size)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
     LOG(WARNING) << "bml_set_slave_restricted_channels entry";
 
     std::string temp_mac(mac);
@@ -600,7 +600,7 @@ int bml_get_slave_restricted_channels(BML_CTX ctx, uint8_t *restricted_channels,
     if (!ctx || !restricted_channels || !mac)
         return (-BML_RET_INVALID_ARGS);
 
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
 
     return (pBML->get_restricted_channels(restricted_channels, mac, 0));
 }
@@ -612,7 +612,7 @@ int bml_trigger_topology_discovery(BML_CTX ctx, const char *al_mac)
         return (-BML_RET_INVALID_ARGS);
     }
 
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
 
     return (pBML->trigger_topology_discovery_query(al_mac));
 }
@@ -624,7 +624,7 @@ int bml_channel_selection(BML_CTX ctx, const char *al_mac, const char *ruid)
         return (-BML_RET_INVALID_ARGS);
     }
 
-    bml_internal *pBML = (bml_internal *)ctx;
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
 
     return (pBML->channel_selection(al_mac, ruid));
 }

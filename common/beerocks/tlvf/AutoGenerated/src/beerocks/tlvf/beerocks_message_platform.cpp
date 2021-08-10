@@ -165,7 +165,7 @@ bool cACTION_PLATFORM_SON_SLAVE_REGISTER_REQUEST::init()
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
         return false;
     }
-    m_iface_name = (char*)m_buff_ptr__;
+    m_iface_name = reinterpret_cast<char*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(char) * (beerocks::message::IFACE_NAME_LENGTH))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (beerocks::message::IFACE_NAME_LENGTH) << ") Failed!";
         return false;
@@ -512,7 +512,7 @@ bool cACTION_PLATFORM_DHCP_MONITOR_NOTIFICATION::init()
         return false;
     }
     if (!m_parse__) { m_ipv4->struct_init(); }
-    m_hostname = (char*)m_buff_ptr__;
+    m_hostname = reinterpret_cast<char*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(char) * (beerocks::message::NODE_NAME_LENGTH))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (beerocks::message::NODE_NAME_LENGTH) << ") Failed!";
         return false;
@@ -1012,7 +1012,7 @@ bool cACTION_PLATFORM_WPS_ONBOARDING_REQUEST::init()
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
         return false;
     }
-    m_iface_name = (char*)m_buff_ptr__;
+    m_iface_name = reinterpret_cast<char*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(char) * (beerocks::message::IFACE_NAME_LENGTH))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (beerocks::message::IFACE_NAME_LENGTH) << ") Failed!";
         return false;
@@ -1750,7 +1750,7 @@ bool cACTION_PLATFORM_ERROR_NOTIFICATION::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
         return false;
     }
-    m_data = (char*)m_buff_ptr__;
+    m_data = reinterpret_cast<char*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(char) * (256))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (256) << ") Failed!";
         return false;

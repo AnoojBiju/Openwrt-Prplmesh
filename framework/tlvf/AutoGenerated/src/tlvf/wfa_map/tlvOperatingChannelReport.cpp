@@ -165,7 +165,7 @@ bool tlvOperatingChannelReport::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_operating_classes_list = (sOperatingClasses*)m_buff_ptr__;
+    m_operating_classes_list = reinterpret_cast<sOperatingClasses*>(m_buff_ptr__);
     uint8_t operating_classes_list_length = *m_operating_classes_list_length;
     m_operating_classes_list_idx__ = operating_classes_list_length;
     if (!buffPtrIncrementSafe(sizeof(sOperatingClasses) * (operating_classes_list_length))) {

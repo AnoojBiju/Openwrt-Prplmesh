@@ -178,7 +178,7 @@ bool tlvProfile2TrafficSeparationPolicy::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_ssids_vlan_id_list = (cSsidVlanId*)m_buff_ptr__;
+    m_ssids_vlan_id_list = reinterpret_cast<cSsidVlanId*>(m_buff_ptr__);
     uint8_t ssids_vlan_id_list_length = *m_ssids_vlan_id_list_length;
     m_ssids_vlan_id_list_idx__ = 0;
     for (size_t i = 0; i < ssids_vlan_id_list_length; i++) {
@@ -329,7 +329,7 @@ bool cSsidVlanId::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_ssid_name = (char*)m_buff_ptr__;
+    m_ssid_name = reinterpret_cast<char*>(m_buff_ptr__);
     uint8_t ssid_name_length = *m_ssid_name_length;
     m_ssid_name_idx__ = ssid_name_length;
     if (!buffPtrIncrementSafe(sizeof(char) * (ssid_name_length))) {

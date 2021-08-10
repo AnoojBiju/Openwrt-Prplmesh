@@ -178,7 +178,7 @@ bool tlvApOperationalBSS::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_radio_list = (cRadioInfo*)m_buff_ptr__;
+    m_radio_list = reinterpret_cast<cRadioInfo*>(m_buff_ptr__);
     uint8_t radio_list_length = *m_radio_list_length;
     m_radio_list_idx__ = 0;
     for (size_t i = 0; i < radio_list_length; i++) {
@@ -353,7 +353,7 @@ bool cRadioInfo::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_radio_bss_list = (cRadioBssInfo*)m_buff_ptr__;
+    m_radio_bss_list = reinterpret_cast<cRadioBssInfo*>(m_buff_ptr__);
     uint8_t radio_bss_list_length = *m_radio_bss_list_length;
     m_radio_bss_list_idx__ = 0;
     for (size_t i = 0; i < radio_bss_list_length; i++) {
@@ -502,7 +502,7 @@ bool cRadioBssInfo::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_ssid = (char*)m_buff_ptr__;
+    m_ssid = reinterpret_cast<char*>(m_buff_ptr__);
     uint8_t ssid_length = *m_ssid_length;
     m_ssid_idx__ = ssid_length;
     if (!buffPtrIncrementSafe(sizeof(char) * (ssid_length))) {
