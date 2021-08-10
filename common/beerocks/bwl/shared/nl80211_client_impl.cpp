@@ -757,6 +757,47 @@ bool nl80211_client_impl::set_tx_power_limit(const std::string &interface_name, 
         [&](struct nl_msg *msg) {});
 }
 
+bool nl80211_client_impl::get_tx_power_limit_dbm(const std::string &interface_name, uint32_t &limit)
+{
+    if (!m_socket) {
+        LOG(ERROR) << "Socket is NULL!";
+        return false;
+    }
+
+    // Get the interface index for given interface name
+    int iface_index = if_nametoindex(interface_name.c_str());
+    if (0 == iface_index) {
+        LOG(ERROR) << "Failed to read the index of interface '" << interface_name
+                   << "': " << strerror(errno);
+
+        return false;
+    }
+
+    return m_socket.get()->send_receive_msg(
+        NL80211_CMD_GET_INTERFACE, 0,
+        [&](struct nl_msg *msg) -> bool {
+            nla_put_u32(msg, NL80211_ATTR_IFINDEX, iface_index);
+            return true;
+        },
+        [&](struct nl_msg *msg) {
+            struct nlattr *tb[NL80211_ATTR_MAX + 1];
+            struct genlmsghdr *gnlh = (struct genlmsghdr *)nlmsg_data(nlmsg_hdr(msg));
+
+            // Parse the netlink message
+            if (nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0), genlmsg_attrlen(gnlh, 0),
+                          NULL)) {
+                LOG(ERROR) << "Failed to parse netlink message!";
+                return;
+            }
+
+            if (!tb[NL80211_ATTR_WIPHY_TX_POWER_LEVEL]) {
+                LOG(WARNING) << "Failed to get tx power!";
+                return;
+            }
+            limit = nla_get_u32(tb[NL80211_ATTR_WIPHY_TX_POWER_LEVEL]) * 0.01; // mBm to dBm
+        });
+}
+
 bool nl80211_client_impl::channel_scan_abort(const std::string &interface_name)
 {
     if (!m_socket) {
