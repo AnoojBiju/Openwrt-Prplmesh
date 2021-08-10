@@ -45,6 +45,24 @@ enum class Type {
     InterfaceConfigurationRequestMessage = 5,
     AlMacAddressConfigurationMessage     = 6
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *Type_str(Type enum_value) {
+    switch (enum_value) {
+    case Type::Invalid:                              return "Type::Invalid";
+    case Type::CmduRxMessage:                        return "Type::CmduRxMessage";
+    case Type::CmduTxMessage:                        return "Type::CmduTxMessage";
+    case Type::SubscribeMessage:                     return "Type::SubscribeMessage";
+    case Type::CmduTxConfirmationMessage:            return "Type::CmduTxConfirmationMessage";
+    case Type::InterfaceConfigurationRequestMessage: return "Type::InterfaceConfigurationRequestMessage";
+    case Type::AlMacAddressConfigurationMessage:     return "Type::AlMacAddressConfigurationMessage";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, Type value) { return out << Type_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 class Message {
 public:
@@ -159,6 +177,21 @@ public:
         IF_TYPE_LOCAL_BUS,
         IF_TYPE_TUNNEL,
     };
+    // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+    // clang-format off
+    static const char *InterfaceType_str(InterfaceType enum_value) {
+        switch (enum_value) {
+        case IF_TYPE_NONE:      return "IF_TYPE_NONE";
+        case IF_TYPE_NET:       return "IF_TYPE_NET";
+        case IF_TYPE_LOCAL_BUS: return "IF_TYPE_LOCAL_BUS";
+        case IF_TYPE_TUNNEL:    return "IF_TYPE_TUNNEL";
+        }
+        static std::string out_str = std::to_string(int(enum_value));
+        return out_str.c_str();
+    }
+    friend inline std::ostream &operator<<(std::ostream &out, InterfaceType value) { return out << InterfaceType_str(value); }
+    // clang-format on
+    // Enum AutoPrint generated code snippet end
 
     struct Metadata {
         uint8_t version       = kVersion;
@@ -271,6 +304,20 @@ public:
         SUBSCRIBE   = 1,
         UNSUBSCRIBE = 2,
     };
+    // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+    // clang-format off
+    static const char *ReqType_str(ReqType enum_value) {
+        switch (enum_value) {
+        case ReqType::INVALID:     return "ReqType::INVALID";
+        case ReqType::SUBSCRIBE:   return "ReqType::SUBSCRIBE";
+        case ReqType::UNSUBSCRIBE: return "ReqType::UNSUBSCRIBE";
+        }
+        static std::string out_str = std::to_string(int(enum_value));
+        return out_str.c_str();
+    }
+    friend inline std::ostream &operator<<(std::ostream &out, ReqType value) { return out << ReqType_str(value); }
+    // clang-format on
+    // Enum AutoPrint generated code snippet end
 
     /**
      * Message type to subscribe/unsubscribe

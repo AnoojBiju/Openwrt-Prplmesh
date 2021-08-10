@@ -69,6 +69,57 @@ enum class eErrorCode {
     /* 38 */ WATCHDOG_PROCESS_ZOMBIE,
     /* 39 */ LAST,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eErrorCode_str(eErrorCode enum_value) {
+    switch (enum_value) {
+    case eErrorCode::NONE:                                           return "eErrorCode::NONE";
+    case eErrorCode::UNKNOWN:                                        return "eErrorCode::UNKNOWN";
+    case eErrorCode::OPERATION_NOT_SUPPORTED:                        return "eErrorCode::OPERATION_NOT_SUPPORTED";
+    case eErrorCode::BH_READING_DATA_FROM_THE_BRIDGE:                return "eErrorCode::BH_READING_DATA_FROM_THE_BRIDGE";
+    case eErrorCode::BH_TIMEOUT_ATTACHING_TO_WPA_SUPPLICANT:         return "eErrorCode::BH_TIMEOUT_ATTACHING_TO_WPA_SUPPLICANT";
+    case eErrorCode::BH_SCAN_FAILED_TO_INITIATE_SCAN:                return "eErrorCode::BH_SCAN_FAILED_TO_INITIATE_SCAN";
+    case eErrorCode::BH_SCAN_TIMEOUT:                                return "eErrorCode::BH_SCAN_TIMEOUT";
+    case eErrorCode::BH_SCAN_EXCEEDED_MAXIMUM_FAILED_SCAN_ATTEMPTS:  return "eErrorCode::BH_SCAN_EXCEEDED_MAXIMUM_FAILED_SCAN_ATTEMPTS";
+    case eErrorCode::BH_CONNECTING_TO_MASTER:                        return "eErrorCode::BH_CONNECTING_TO_MASTER";
+    case eErrorCode::BH_ASSOCIATE_4ADDR_TIMEOUT:                     return "eErrorCode::BH_ASSOCIATE_4ADDR_TIMEOUT";
+    case eErrorCode::BH_ASSOCIATE_4ADDR_FAILURE:                     return "eErrorCode::BH_ASSOCIATE_4ADDR_FAILURE";
+    case eErrorCode::BH_ROAMING:                                     return "eErrorCode::BH_ROAMING";
+    case eErrorCode::BH_DISCONNECTED:                                return "eErrorCode::BH_DISCONNECTED";
+    case eErrorCode::BH_WPA_SUPPLICANT_TERMINATED:                   return "eErrorCode::BH_WPA_SUPPLICANT_TERMINATED";
+    case eErrorCode::BH_SLAVE_SOCKET_DISCONNECTED:                   return "eErrorCode::BH_SLAVE_SOCKET_DISCONNECTED";
+    case eErrorCode::BH_STOPPED:                                     return "eErrorCode::BH_STOPPED";
+    case eErrorCode::SLAVE_CONNECTING_TO_BACKHAUL_MANAGER:           return "eErrorCode::SLAVE_CONNECTING_TO_BACKHAUL_MANAGER";
+    case eErrorCode::SLAVE_INVALID_MASTER_SOCKET:                    return "eErrorCode::SLAVE_INVALID_MASTER_SOCKET";
+    case eErrorCode::SLAVE_FAILED_CONNECT_TO_PLATFORM_MANAGER:       return "eErrorCode::SLAVE_FAILED_CONNECT_TO_PLATFORM_MANAGER";
+    case eErrorCode::SLAVE_PLATFORM_MANAGER_REGISTER_TIMEOUT:        return "eErrorCode::SLAVE_PLATFORM_MANAGER_REGISTER_TIMEOUT";
+    case eErrorCode::SLAVE_SLAVE_BACKHAUL_MANAGER_DISCONNECTED:      return "eErrorCode::SLAVE_SLAVE_BACKHAUL_MANAGER_DISCONNECTED";
+    case eErrorCode::SLAVE_STOPPED:                                  return "eErrorCode::SLAVE_STOPPED";
+    case eErrorCode::AP_MANAGER_START:                               return "eErrorCode::AP_MANAGER_START";
+    case eErrorCode::AP_MANAGER_DISCONNECTED:                        return "eErrorCode::AP_MANAGER_DISCONNECTED";
+    case eErrorCode::AP_MANAGER_HOSTAP_DISABLED:                     return "eErrorCode::AP_MANAGER_HOSTAP_DISABLED";
+    case eErrorCode::AP_MANAGER_ATTACH_FAIL:                         return "eErrorCode::AP_MANAGER_ATTACH_FAIL";
+    case eErrorCode::AP_MANAGER_SUDDEN_DETACH:                       return "eErrorCode::AP_MANAGER_SUDDEN_DETACH";
+    case eErrorCode::AP_MANAGER_HAL_DISCONNECTED:                    return "eErrorCode::AP_MANAGER_HAL_DISCONNECTED";
+    case eErrorCode::AP_MANAGER_CAC_TIMEOUT:                         return "eErrorCode::AP_MANAGER_CAC_TIMEOUT";
+    case eErrorCode::MONITOR_DISCONNECTED:                           return "eErrorCode::MONITOR_DISCONNECTED";
+    case eErrorCode::MONITOR_HOSTAP_DISABLED:                        return "eErrorCode::MONITOR_HOSTAP_DISABLED";
+    case eErrorCode::MONITOR_ATTACH_FAIL:                            return "eErrorCode::MONITOR_ATTACH_FAIL";
+    case eErrorCode::MONITOR_SUDDEN_DETACH:                          return "eErrorCode::MONITOR_SUDDEN_DETACH";
+    case eErrorCode::MONITOR_HAL_DISCONNECTED:                       return "eErrorCode::MONITOR_HAL_DISCONNECTED";
+    case eErrorCode::MONITOR_REPORT_PROCESS_FAIL:                    return "eErrorCode::MONITOR_REPORT_PROCESS_FAIL";
+    case eErrorCode::CONFIG_PLATFORM_REPORTED_INVALID_CONFIGURATION: return "eErrorCode::CONFIG_PLATFORM_REPORTED_INVALID_CONFIGURATION";
+    case eErrorCode::CONFIG_NO_VALID_BACKHAUL_INTERFACE:             return "eErrorCode::CONFIG_NO_VALID_BACKHAUL_INTERFACE";
+    case eErrorCode::WATCHDOG_PROCESS_STUCK:                         return "eErrorCode::WATCHDOG_PROCESS_STUCK";
+    case eErrorCode::WATCHDOG_PROCESS_ZOMBIE:                        return "eErrorCode::WATCHDOG_PROCESS_ZOMBIE";
+    case eErrorCode::LAST:                                           return "eErrorCode::LAST";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eErrorCode value) { return out << eErrorCode_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 } // namespace bpl
 } // namespace beerocks

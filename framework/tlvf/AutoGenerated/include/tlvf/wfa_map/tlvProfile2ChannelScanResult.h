@@ -24,6 +24,7 @@
 #include "tlvf/common/sMacAddr.h"
 #include <tuple>
 #include <vector>
+#include <ostream>
 
 namespace wfa_map {
 
@@ -45,11 +46,42 @@ class tlvProfile2ChannelScanResult : public BaseClass
             SCAN_ABORTED = 0x5,
             FRESH_SCAN_NOT_SUPPORTED_RADIO_ONLY_SUPPORTS_ON_BOOT_SCANS = 0x6,
         };
+        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+        // clang-format off
+        static const char *eScanStatus_str(eScanStatus enum_value) {
+            switch (enum_value) {
+            case SUCCESS:                                                              return "SUCCESS";
+            case SCAN_NOT_SUPPORTED_ON_THIS_OPERATING_CLASS_AND_CHANNEL_ON_THIS_RADIO: return "SCAN_NOT_SUPPORTED_ON_THIS_OPERATING_CLASS_AND_CHANNEL_ON_THIS_RADIO";
+            case REQUEST_TOO_SOON_AFTER_LAST_SCAN:                                     return "REQUEST_TOO_SOON_AFTER_LAST_SCAN";
+            case RADIO_TOO_BUSY_TO_PERFORM_SCAN:                                       return "RADIO_TOO_BUSY_TO_PERFORM_SCAN";
+            case SCAN_NOT_COMPLETED:                                                   return "SCAN_NOT_COMPLETED";
+            case SCAN_ABORTED:                                                         return "SCAN_ABORTED";
+            case FRESH_SCAN_NOT_SUPPORTED_RADIO_ONLY_SUPPORTS_ON_BOOT_SCANS:           return "FRESH_SCAN_NOT_SUPPORTED_RADIO_ONLY_SUPPORTS_ON_BOOT_SCANS";
+            }
+            static std::string out_str = std::to_string(int(enum_value));
+            return out_str.c_str();
+        }
+        friend inline std::ostream &operator<<(std::ostream &out, eScanStatus value) { return out << eScanStatus_str(value); }
+        // clang-format on
+        // Enum AutoPrint generated code snippet end
         
         enum eScanType: uint8_t {
             SCAN_WAS_ACTIVE_SCAN = 0x80,
             SCAN_WAS_PASSIVE_SCAN = 0x0,
         };
+        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+        // clang-format off
+        static const char *eScanType_str(eScanType enum_value) {
+            switch (enum_value) {
+            case SCAN_WAS_ACTIVE_SCAN:  return "SCAN_WAS_ACTIVE_SCAN";
+            case SCAN_WAS_PASSIVE_SCAN: return "SCAN_WAS_PASSIVE_SCAN";
+            }
+            static std::string out_str = std::to_string(int(enum_value));
+            return out_str.c_str();
+        }
+        friend inline std::ostream &operator<<(std::ostream &out, eScanType value) { return out << eScanType_str(value); }
+        // clang-format on
+        // Enum AutoPrint generated code snippet end
         
         const eTlvTypeMap& type();
         const uint16_t& length();
@@ -116,6 +148,19 @@ class cNeighbors : public BaseClass
             FIELD_PRESENT = 0x80,
             FIELD_NOT_PRESENT = 0x0,
         };
+        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+        // clang-format off
+        static const char *eBssLoadElementPresent_str(eBssLoadElementPresent enum_value) {
+            switch (enum_value) {
+            case FIELD_PRESENT:     return "FIELD_PRESENT";
+            case FIELD_NOT_PRESENT: return "FIELD_NOT_PRESENT";
+            }
+            static std::string out_str = std::to_string(int(enum_value));
+            return out_str.c_str();
+        }
+        friend inline std::ostream &operator<<(std::ostream &out, eBssLoadElementPresent value) { return out << eBssLoadElementPresent_str(value); }
+        // clang-format on
+        // Enum AutoPrint generated code snippet end
         
         sMacAddr& bssid();
         uint8_t& ssid_length();

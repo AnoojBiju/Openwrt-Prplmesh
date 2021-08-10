@@ -22,6 +22,7 @@
 #include <tlvf/ClassList.h>
 #include "tlvf/wfa_map/eTlvTypeMap.h"
 #include <tuple>
+#include <ostream>
 
 namespace wfa_map {
 
@@ -37,6 +38,19 @@ class tlvSupportedService : public BaseClass
             MULTI_AP_CONTROLLER = 0x0,
             MULTI_AP_AGENT = 0x1,
         };
+        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+        // clang-format off
+        static const char *eSupportedService_str(eSupportedService enum_value) {
+            switch (enum_value) {
+            case MULTI_AP_CONTROLLER: return "MULTI_AP_CONTROLLER";
+            case MULTI_AP_AGENT:      return "MULTI_AP_AGENT";
+            }
+            static std::string out_str = std::to_string(int(enum_value));
+            return out_str.c_str();
+        }
+        friend inline std::ostream &operator<<(std::ostream &out, eSupportedService value) { return out << eSupportedService_str(value); }
+        // clang-format on
+        // Enum AutoPrint generated code snippet end
         
         const eTlvTypeMap& type();
         const uint16_t& length();

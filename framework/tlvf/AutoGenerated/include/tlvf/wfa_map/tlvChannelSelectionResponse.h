@@ -22,6 +22,7 @@
 #include <tlvf/ClassList.h>
 #include "tlvf/wfa_map/eTlvTypeMap.h"
 #include "tlvf/common/sMacAddr.h"
+#include <ostream>
 
 namespace wfa_map {
 
@@ -39,6 +40,21 @@ class tlvChannelSelectionResponse : public BaseClass
             DECLINE_VIOLATES_MOST_RECENTLY_REPORTED_PREFERENCES = 0x2,
             DECLINE_PREVENT_OPERATION_OF_BACKHAUL_LINK = 0x3,
         };
+        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+        // clang-format off
+        static const char *eResponseCode_str(eResponseCode enum_value) {
+            switch (enum_value) {
+            case ACCEPT:                                              return "ACCEPT";
+            case DECLINE_VIOLATES_CURRENT_PREFERENCES:                return "DECLINE_VIOLATES_CURRENT_PREFERENCES";
+            case DECLINE_VIOLATES_MOST_RECENTLY_REPORTED_PREFERENCES: return "DECLINE_VIOLATES_MOST_RECENTLY_REPORTED_PREFERENCES";
+            case DECLINE_PREVENT_OPERATION_OF_BACKHAUL_LINK:          return "DECLINE_PREVENT_OPERATION_OF_BACKHAUL_LINK";
+            }
+            static std::string out_str = std::to_string(int(enum_value));
+            return out_str.c_str();
+        }
+        friend inline std::ostream &operator<<(std::ostream &out, eResponseCode value) { return out << eResponseCode_str(value); }
+        // clang-format on
+        // Enum AutoPrint generated code snippet end
         
         const eTlvTypeMap& type();
         const uint16_t& length();

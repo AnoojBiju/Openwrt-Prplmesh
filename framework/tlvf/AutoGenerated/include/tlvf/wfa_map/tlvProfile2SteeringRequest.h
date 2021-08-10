@@ -24,6 +24,7 @@
 #include "tlvf/common/sMacAddr.h"
 #include <tuple>
 #include <asm/byteorder.h>
+#include <ostream>
 
 namespace wfa_map {
 
@@ -60,6 +61,19 @@ class tlvProfile2SteeringRequest : public BaseClass
             REQUEST_IS_A_STEERING_OPPORTUNITY = 0x0,
             REQUEST_IS_A_STEERING_MANDATE_TO_TRIGGER_STEERING = 0x1,
         };
+        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+        // clang-format off
+        static const char *eRequestMode_str(eRequestMode enum_value) {
+            switch (enum_value) {
+            case REQUEST_IS_A_STEERING_OPPORTUNITY:                 return "REQUEST_IS_A_STEERING_OPPORTUNITY";
+            case REQUEST_IS_A_STEERING_MANDATE_TO_TRIGGER_STEERING: return "REQUEST_IS_A_STEERING_MANDATE_TO_TRIGGER_STEERING";
+            }
+            static std::string out_str = std::to_string(int(enum_value));
+            return out_str.c_str();
+        }
+        friend inline std::ostream &operator<<(std::ostream &out, eRequestMode value) { return out << eRequestMode_str(value); }
+        // clang-format on
+        // Enum AutoPrint generated code snippet end
         
         typedef struct sTargetBssidInfo {
             //Wildcard BSSID is represented by FF:FF:FF:FF:FF:FF.

@@ -16,6 +16,7 @@
 #include <cstddef>
 #include <stdint.h>
 #include <tlvf/swap.h>
+#include <ostream>
 #include <string.h>
 #include <memory>
 #include <tlvf/BaseClass.h>
@@ -36,6 +37,21 @@ enum eCacMethod: uint8_t {
     MIMO_DIMENSION_REDUCED = 0x2,
     TIME_SLICED = 0x3,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eCacMethod_str(eCacMethod enum_value) {
+    switch (enum_value) {
+    case CONTINUOUS_CAC:                      return "CONTINUOUS_CAC";
+    case CONTINUOUS_CAC_WITH_DEDICATED_RADIO: return "CONTINUOUS_CAC_WITH_DEDICATED_RADIO";
+    case MIMO_DIMENSION_REDUCED:              return "MIMO_DIMENSION_REDUCED";
+    case TIME_SLICED:                         return "TIME_SLICED";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eCacMethod value) { return out << eCacMethod_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 
 class tlvProfile2CacCapabilities : public BaseClass

@@ -11,10 +11,12 @@
 
 #ifdef BEEROCKS_OPENWRT
 
+#include <ostream>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
 
 #ifdef BEEROCKS_UGW
 #define restrict __restrict
@@ -44,6 +46,19 @@
 #define MAX_UCI_BUF_LEN 64
 
 enum paramType { TYPE_RADIO = 0, TYPE_VAP };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *paramType_str(paramType enum_value) {
+    switch (enum_value) {
+    case TYPE_RADIO: return "TYPE_RADIO";
+    case TYPE_VAP:   return "TYPE_VAP";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, paramType value) { return out << paramType_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 #elif BEEROCKS_RDKB
 
