@@ -116,6 +116,15 @@ public:
     virtual bool set_tx_power_limit(const std::string &interface_name, uint32_t limit) override;
 
     /**
+     * @brief Get the tx power limit
+     *
+     * @param[in] interface_name radio interface name.
+     * @param[out] limit tx power limit in dBm.
+     * @return true success and false otherwise
+     */
+    bool get_tx_power_limit_dbm(const std::string &interface_name, uint32_t &limit) override;
+
+    /**
      * @brief Abort the in-progress channel scan for the interface
      *
      * @param[in] interface_name radio interface name.

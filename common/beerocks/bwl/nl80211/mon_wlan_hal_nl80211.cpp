@@ -407,6 +407,12 @@ bool mon_wlan_hal_nl80211::channel_scan_trigger(int dwell_time_msec,
     return false;
 }
 
+bool mon_wlan_hal_nl80211::channel_scan_dump_cached_results()
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    return false;
+}
+
 bool mon_wlan_hal_nl80211::channel_scan_dump_results()
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
