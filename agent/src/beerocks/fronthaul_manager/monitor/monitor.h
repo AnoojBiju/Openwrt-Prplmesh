@@ -17,7 +17,7 @@
 #include "monitor_stats.h"
 
 #include <bcl/beerocks_cmdu_client_factory.h>
-#include <bcl/beerocks_event_loop.h>
+#include <bcl/beerocks_eventloop_thread.h>
 #include <bcl/beerocks_logging.h>
 #include <bcl/beerocks_timer_manager.h>
 #include <bcl/network/file_descriptor.h>
@@ -27,27 +27,22 @@
 #include <bwl/mon_wlan_hal.h>
 
 namespace son {
-class Monitor {
+class Monitor : public beerocks::EventLoopThread {
 public:
     Monitor(const std::string &monitor_iface_,
-            beerocks::config_file::sConfigSlave &beerocks_slave_conf_, beerocks::logging &logger_,
-            std::shared_ptr<beerocks::CmduClientFactory> slave_cmdu_client_factory,
-            std::shared_ptr<beerocks::TimerManager> timer_manager,
-            std::shared_ptr<beerocks::EventLoop> event_loop);
+            beerocks::config_file::sConfigSlave &beerocks_slave_conf_, beerocks::logging &logger_);
 
     /**
-     * @brief Starts monitor.
+     * @brief Initialize monitor.
      *
      * @return true on success and false otherwise.
      */
-    bool start();
+    virtual bool init() override;
 
     /**
      * @brief Stops monitor.
-     *
-     * @return true on success and false otherwise.
      */
-    bool stop();
+    virtual void on_thread_stop() override;
 
 private:
     /**
@@ -201,11 +196,6 @@ private:
      * Timer manager to help using application timers.
      */
     std::shared_ptr<beerocks::TimerManager> m_timer_manager;
-
-    /**
-     * Application event loop used by the process to wait for I/O events.
-     */
-    std::shared_ptr<beerocks::EventLoop> m_event_loop;
 
     /**
      * File descriptor of the timer to run the Finite State Machine.

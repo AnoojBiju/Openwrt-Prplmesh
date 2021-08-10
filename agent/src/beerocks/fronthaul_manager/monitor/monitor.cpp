@@ -8,6 +8,9 @@
 
 #include "monitor.h"
 
+#include <bcl/beerocks_cmdu_client_factory_factory.h>
+#include <bcl/beerocks_timer_factory_impl.h>
+#include <bcl/beerocks_timer_manager_impl.h>
 #include <bcl/network/network_utils.h>
 #include <bcl/network/sockets.h>
 #include <bcl/transaction.h>
@@ -47,22 +50,30 @@ constexpr auto fsm_timer_period = std::chrono::milliseconds(250);
 
 Monitor::Monitor(const std::string &monitor_iface_,
                  beerocks::config_file::sConfigSlave &beerocks_slave_conf_,
-                 beerocks::logging &logger_,
-                 std::shared_ptr<beerocks::CmduClientFactory> slave_cmdu_client_factory,
-                 std::shared_ptr<beerocks::TimerManager> timer_manager,
-                 std::shared_ptr<beerocks::EventLoop> event_loop)
-    : monitor_iface(monitor_iface_), beerocks_slave_conf(beerocks_slave_conf_),
+                 beerocks::logging &logger_)
+    : EventLoopThread(), monitor_iface(monitor_iface_), beerocks_slave_conf(beerocks_slave_conf_),
       bridge_iface(beerocks_slave_conf.bridge_iface), cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer)),
       logger(logger_), mon_rssi(cmdu_tx),
 #ifdef BEEROCKS_RDKB
       mon_rdkb_hal(cmdu_tx),
 #endif
-      mon_stats(cmdu_tx), m_slave_cmdu_client_factory(slave_cmdu_client_factory),
-      m_timer_manager(timer_manager), m_event_loop(event_loop)
+      mon_stats(cmdu_tx)
 {
-    LOG_IF(!m_slave_cmdu_client_factory, FATAL) << "CMDU client factory is a null pointer!";
-    LOG_IF(!m_timer_manager, FATAL) << "Timer manager is a null pointer!";
-    LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
+    // Get Agent UDS file
+    std::string fronthaul_uds_path =
+        beerocks_slave_conf.temp_path + std::string(BEEROCKS_SLAVE_UDS) + "_" + monitor_iface;
+
+    m_slave_cmdu_client_factory =
+        std::move(beerocks::create_cmdu_client_factory(fronthaul_uds_path, m_event_loop));
+    LOG_IF(!m_slave_cmdu_client_factory, FATAL) << "Unable to create CMDU client factory!";
+
+    // Create timer factory to create instances of timers.
+    auto timer_factory = std::make_shared<beerocks::TimerFactoryImpl>();
+    LOG_IF(!timer_factory, FATAL) << "Unable to create timer factory!";
+
+    // Create timer manager to help using application timers.
+    m_timer_manager = std::make_shared<beerocks::TimerManagerImpl>(timer_factory, m_event_loop);
+    LOG_IF(!m_timer_manager, FATAL) << "Unable to create timer manager!";
 
     /**
      * Get the MAC address of the radio interface that this monitor instance operates on.
@@ -86,7 +97,7 @@ bool Monitor::send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx)
     return m_slave_client->send_cmdu(cmdu_tx);
 }
 
-bool Monitor::start()
+bool Monitor::init()
 {
     if (m_slave_client) {
         LOG(ERROR) << "Monitor is already started";
@@ -171,17 +182,14 @@ bool Monitor::start()
     return true;
 }
 
-// The name of this method is temporary and will be renamed at the end of PPM-967.
-bool Monitor::stop()
+void Monitor::on_thread_stop()
 {
-    bool ok = true;
-
     if (m_slave_client) {
         m_slave_client.reset();
     }
 
     if (!m_timer_manager->remove_timer(m_fsm_timer)) {
-        ok = false;
+        LOG(ERROR) << "Failed to remove timer";
     }
 
     if (mon_wlan_hal) {
@@ -213,7 +221,7 @@ bool Monitor::stop()
 
     LOG(DEBUG) << "stopped";
 
-    return ok;
+    return;
 }
 
 bool Monitor::monitor_fsm()
