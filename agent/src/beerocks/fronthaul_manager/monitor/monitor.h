@@ -150,6 +150,7 @@ private:
     int m_mon_hal_nl_events = beerocks::net::FileDescriptor::invalid_descriptor;
 
     beerocks::logging &logger;
+    bool m_logger_configured = false;
 
     typedef struct {
         std::string sta_mac;

@@ -226,6 +226,12 @@ void Monitor::on_thread_stop()
 
 bool Monitor::monitor_fsm()
 {
+    if (!m_logger_configured) {
+        logger.set_thread_name(thread_name);
+        logger.attach_current_thread_to_logger_id();
+        m_logger_configured = true;
+    }
+
     if (!m_slave_client) {
         LOG(ERROR) << "Not connected to slave!";
         return false;
