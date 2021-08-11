@@ -190,18 +190,18 @@ void slave_thread::slave_reset(const std::string &fronthaul_iface)
         radio_manager.stopped = true;
     }
 
-    if (radio_manager.stopped && radio_manager.slave_state != STATE_INIT) {
+    if (radio_manager.stopped && m_agent_state != STATE_INIT) {
         platform_notify_error(beerocks::bpl::eErrorCode::SLAVE_STOPPED, "");
         LOG(DEBUG) << "goto STATE_STOPPED";
-        radio_manager.slave_state = STATE_STOPPED;
+        m_agent_state = STATE_STOPPED;
     } else if (radio_manager.is_backhaul_disconnected) {
-        radio_manager.slave_state_timer =
+        m_agent_state_timer_sec =
             std::chrono::steady_clock::now() + std::chrono::seconds(SLAVE_INIT_DELAY_SEC);
         LOG(DEBUG) << "goto STATE_WAIT_BEFORE_INIT";
-        radio_manager.slave_state = STATE_WAIT_BEFORE_INIT;
+        m_agent_state = STATE_WAIT_BEFORE_INIT;
     } else {
         LOG(DEBUG) << "goto STATE_INIT";
-        radio_manager.slave_state = STATE_INIT;
+        m_agent_state = STATE_INIT;
     }
 
     radio_manager.is_slave_reset = true;
@@ -533,7 +533,7 @@ bool slave_thread::work()
         m_logger_configured = true;
     }
 
-    auto radio_fsm = [&](const std::string &fronthaul_iface) {
+    auto radio_fsm = [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
         if (!monitor_heartbeat_check(fronthaul_iface) ||
             !ap_manager_heartbeat_check(fronthaul_iface)) {
             slave_reset(fronthaul_iface);
@@ -546,17 +546,13 @@ bool slave_thread::work()
         return true;
     };
 
-    for (auto &radio_manager_map_element : m_radio_managers.get()) {
-        const auto &fronthaul_iface = radio_manager_map_element.first;
-        if (!radio_fsm(fronthaul_iface)) {
+    // If the common state reached to state STATE_RADIO_SPECIFIC_FSM, then the radio fsm will run.
+    if (m_agent_state != eSlaveState::STATE_RADIO_SPECIFIC_FSM) {
+        if (!agent_fsm()) {
             return false;
         }
-    }
-
-    // zwdfs radio
-    const auto &zwdfs_radio_manager = m_radio_managers.get_zwdfs();
-    if (zwdfs_radio_manager) {
-        if (!radio_fsm(zwdfs_radio_manager->first)) {
+    } else {
+        if (!m_radio_managers.do_on_each_radio_manager(radio_fsm)) {
             return false;
         }
     }
@@ -3884,17 +3880,13 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
     return true;
 }
 
-bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
+bool slave_thread::agent_fsm()
 {
-    auto &radio_manager = m_radio_managers[fronthaul_iface];
-    bool slave_ok       = true;
-
-    switch (radio_manager.slave_state) {
+    switch (m_agent_state) {
     case STATE_WAIT_BEFORE_INIT: {
-        if (std::chrono::steady_clock::now() > radio_manager.slave_state_timer) {
-            radio_manager.is_backhaul_disconnected = false;
+        if (std::chrono::steady_clock::now() > m_agent_state_timer_sec) {
             LOG(TRACE) << "goto STATE_INIT";
-            radio_manager.slave_state = STATE_INIT;
+            m_agent_state = STATE_INIT;
         }
         break;
     }
@@ -3925,8 +3917,12 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
             if (!network_utils::linux_iface_get_mac(db->ethernet.wan.iface_name, iface_mac)) {
                 LOG(ERROR) << "Failed reading wan mac address! iface="
                            << db->ethernet.wan.iface_name;
-                radio_manager.stop_on_failure_attempts--;
-                slave_reset(fronthaul_iface);
+                m_radio_managers.do_on_each_radio_manager(
+                    [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
+                        radio_manager.stop_on_failure_attempts--;
+                        slave_reset(fronthaul_iface);
+                        return true;
+                    });
             }
 
             // Update wan parameters on AgentDB.
@@ -3941,84 +3937,93 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
         // When FCC/ETSI is set, the prplmesh is not restarted, but the salve is.
         // Must clear the map to prevent residues of previous country configuration.
         // This is needed since the map is not cleared when read.
-        auto radio = db->radio(fronthaul_iface);
-        if (!radio) {
-            return false;
+        m_radio_managers.do_on_each_radio_manager(
+            [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
+                auto radio = db->radio(fronthaul_iface);
+                if (!radio) {
+                    return false;
+                }
+                radio->channels_list.clear();
+                return true;
+            });
+
+        m_agent_state = STATE_LOAD_PLATFORM_CONFIGURATION;
+        break;
+    }
+    case STATE_LOAD_PLATFORM_CONFIGURATION: {
+        LOG(DEBUG) << "STATE_LOAD_CONFIGURATION";
+        if (!read_platform_configuration()) {
+            LOG(DEBUG) << "Read platform configuration failed";
         }
-        radio->channels_list.clear();
-
-        radio_manager.autoconfiguration_completed = false;
-
-        radio_manager.slave_state = STATE_CONNECT_TO_PLATFORM_MANAGER;
+        m_agent_state = STATE_CONNECT_TO_PLATFORM_MANAGER;
         break;
     }
     case STATE_CONNECT_TO_PLATFORM_MANAGER: {
-        LOG(DEBUG) << "STATE_CONNECT_TO_PLATFORM_MANAGER " << fronthaul_iface;
-        radio_manager.platform_manager_socket = new SocketClient(platform_manager_uds);
-        LOG(DEBUG) << "new platform socket, sd=" << intptr_t(radio_manager.platform_manager_socket)
-                   << " fd=" << radio_manager.platform_manager_socket->getSocketFd();
-        std::string err = radio_manager.platform_manager_socket->getError();
+        LOG(DEBUG) << "STATE_CONNECT_TO_PLATFORM_MANAGER";
+        m_platform_manager_socket = new SocketClient(platform_manager_uds);
+        LOG(DEBUG) << "new platform socket, sd=" << intptr_t(m_platform_manager_socket)
+                   << " fd=" << m_platform_manager_socket->getSocketFd();
+        std::string err = m_platform_manager_socket->getError();
         if (!err.empty()) {
-            delete radio_manager.platform_manager_socket;
-            radio_manager.platform_manager_socket = nullptr;
+            delete m_platform_manager_socket;
+            m_platform_manager_socket = nullptr;
 
             LOG(WARNING) << "Unable to connect to Platform Manager: " << err;
-            if (++radio_manager.connect_platform_retry_counter >=
-                CONNECT_PLATFORM_RETRY_COUNT_MAX) {
-                LOG(ERROR) << "Failed connecting to Platform Manager! Resetting...";
-                platform_notify_error(
-                    fronthaul_iface, bpl::eErrorCode::SLAVE_FAILED_CONNECT_TO_PLATFORM_MANAGER, "");
-                radio_manager.stop_on_failure_attempts--;
-                slave_reset(fronthaul_iface);
-                radio_manager.connect_platform_retry_counter = 0;
-            } else {
-                LOG(INFO) << "Retrying in " << CONNECT_PLATFORM_RETRY_SLEEP << " milliseconds...";
-                UTILS_SLEEP_MSEC(CONNECT_PLATFORM_RETRY_SLEEP);
-                break;
-            }
-
-        } else {
-            add_socket(radio_manager.platform_manager_socket);
-
-            // CMDU Message
-            auto request = message_com::create_vs_message<
-                beerocks_message::cACTION_PLATFORM_SON_SLAVE_REGISTER_REQUEST>(cmdu_tx);
-
-            if (request == nullptr) {
-                LOG(ERROR) << "Failed building message!";
-                return false;
-            }
-
-            string_utils::copy_string(request->iface_name(message::IFACE_NAME_LENGTH),
-                                      fronthaul_iface.c_str(), message::IFACE_NAME_LENGTH);
-            message_com::send_cmdu(radio_manager.platform_manager_socket, cmdu_tx);
-
-            LOG(TRACE) << "send ACTION_PLATFORM_SON_SLAVE_REGISTER_REQUEST " << fronthaul_iface;
-            LOG(TRACE) << "goto STATE_WAIT_FOR_PLATFORM_MANAGER_REGISTER_RESPONSE "
-                       << fronthaul_iface;
-            radio_manager.slave_state_timer =
-                std::chrono::steady_clock::now() +
-                std::chrono::seconds(WAIT_FOR_PLATFORM_MANAGER_REGISTER_RESPONSE_TIMEOUT_SEC);
-            radio_manager.slave_state = STATE_WAIT_FOR_PLATFORM_MANAGER_REGISTER_RESPONSE;
+            LOG(INFO) << "Retrying in " << CONNECT_PLATFORM_RETRY_SLEEP_MS << " milliseconds";
+            UTILS_SLEEP_MSEC(CONNECT_PLATFORM_RETRY_SLEEP_MS);
+            break;
         }
-        break;
-    }
-    case STATE_WAIT_FOR_PLATFORM_MANAGER_CREDENTIALS_UPDATE_RESPONSE: {
+
+        add_socket(m_platform_manager_socket);
+
+        // CMDU Message
+        auto request = message_com::create_vs_message<
+            beerocks_message::cACTION_PLATFORM_SON_SLAVE_REGISTER_REQUEST>(cmdu_tx);
+
+        if (!request) {
+            LOG(ERROR) << "Failed building message!";
+            return false;
+        }
+        message_com::send_cmdu(m_platform_manager_socket, cmdu_tx);
+
+        LOG(TRACE) << "send ACTION_PLATFORM_SON_SLAVE_REGISTER_REQUEST";
+        LOG(TRACE) << "goto STATE_WAIT_FOR_PLATFORM_MANAGER_REGISTER_RESPONSE";
+        m_agent_state_timer_sec =
+            std::chrono::steady_clock::now() +
+            std::chrono::seconds(WAIT_FOR_PLATFORM_MANAGER_REGISTER_RESPONSE_TIMEOUT_SEC);
+        m_agent_state = STATE_WAIT_FOR_PLATFORM_MANAGER_REGISTER_RESPONSE;
         break;
     }
     case STATE_WAIT_FOR_PLATFORM_MANAGER_REGISTER_RESPONSE: {
-        if (std::chrono::steady_clock::now() > radio_manager.slave_state_timer) {
-            LOG(ERROR) << "STATE_WAIT_FOR_PLATFORM_MANAGER_REGISTER_RESPONSE timeout! "
-                       << fronthaul_iface;
-            platform_notify_error(fronthaul_iface,
-                                  bpl::eErrorCode::SLAVE_PLATFORM_MANAGER_REGISTER_TIMEOUT, "");
-            radio_manager.stop_on_failure_attempts--;
-            slave_reset(fronthaul_iface);
+        if (std::chrono::steady_clock::now() > m_agent_state_timer_sec) {
+            LOG(ERROR) << "STATE_WAIT_FOR_PLATFORM_MANAGER_REGISTER_RESPONSE timeout!";
+            platform_notify_error(bpl::eErrorCode::SLAVE_PLATFORM_MANAGER_REGISTER_TIMEOUT, "");
+            m_radio_managers.do_on_each_radio_manager(
+                [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
+                    radio_manager.stop_on_failure_attempts--;
+                    slave_reset(fronthaul_iface);
+                    return true;
+                });
         }
         break;
     }
+    default: {
+        LOG(ERROR) << "Unknown state!";
+        break;
+    }
+    }
+    return true;
+}
+
+bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
+{
+    auto &radio_manager = m_radio_managers[fronthaul_iface];
+
+    switch (radio_manager.slave_state) {
     case STATE_CONNECT_TO_BACKHAUL_MANAGER: {
-        if (radio_manager.backhaul_manager_socket == nullptr) {
+        radio_manager.is_backhaul_disconnected = false;
+
+        if (!radio_manager.backhaul_manager_socket) {
             LOG(DEBUG) << "create backhaul_manager_socket";
             radio_manager.backhaul_manager_socket = new SocketClient(backhaul_manager_uds);
             std::string err = radio_manager.backhaul_manager_socket->getError();
@@ -4309,6 +4314,7 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
     }
     case STATE_JOIN_MASTER: {
 
+        radio_manager.autoconfiguration_completed = false;
         if (radio_manager.master_socket == nullptr) {
             LOG(ERROR) << "master_socket == nullptr";
             platform_notify_error(bpl::eErrorCode::SLAVE_INVALID_MASTER_SOCKET,
@@ -4573,7 +4579,7 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
     }
     }
 
-    return slave_ok;
+    return true;
 }
 
 void slave_thread::backhaul_manager_stop(const std::string &fronthaul_iface)

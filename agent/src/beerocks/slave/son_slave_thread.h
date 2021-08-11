@@ -170,8 +170,7 @@ private:
     const int MONITOR_HEARTBEAT_RETRIES                               = 10;
     const int AP_MANAGER_HEARTBEAT_TIMEOUT_SEC                        = 10;
     const int AP_MANAGER_HEARTBEAT_RETRIES                            = 10;
-    const int CONNECT_PLATFORM_RETRY_SLEEP                            = 1000;
-    const int CONNECT_PLATFORM_RETRY_COUNT_MAX                        = 5;
+    const int CONNECT_PLATFORM_RETRY_SLEEP_MS                         = 1000;
 
     std::string backhaul_manager_uds;
     std::string platform_manager_uds;
@@ -186,14 +185,13 @@ private:
     struct sManagedRadio {
         beerocks_message::sSonConfig son_config;
         int stop_on_failure_attempts;
-        int connect_platform_retry_counter = 0;
-        bool stopped                       = false;
-        bool is_backhaul_disconnected      = false;
-        bool is_slave_reset                = false;
-        bool is_backhaul_reconf            = false;
-        bool detach_on_conf_change         = false;
-        bool configuration_in_progress     = false;
-        bool is_backhaul_manager           = false;
+        bool stopped                   = false;
+        bool is_backhaul_disconnected  = false;
+        bool is_slave_reset            = false;
+        bool is_backhaul_reconf        = false;
+        bool detach_on_conf_change     = false;
+        bool configuration_in_progress = false;
+        bool is_backhaul_manager       = false;
         bool autoconfiguration_completed;
         //slave FSM //
         eSlaveState slave_state;
