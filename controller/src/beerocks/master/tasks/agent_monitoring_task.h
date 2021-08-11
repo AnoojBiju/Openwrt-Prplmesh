@@ -14,6 +14,8 @@
 #include "task_pool.h"
 
 #include <tlvf/WSC/m1.h>
+#include <tlvf/wfa_map/tlvApOperationalBSS.h>
+#include <tlvf/wfa_map/tlvAssociatedClients.h>
 
 namespace son {
 class agent_monitoring_task : public task {
@@ -41,10 +43,21 @@ private:
     bool m_ap_autoconfig_renew_sent = false;
 
     /**
+     * @brief Key = Agents mac, value = list with paths to AgentConnectedEvent
+     * NBAPI object.
+     */
+    std::unordered_map<sMacAddr, std::queue<std::string>> m_agents;
+
+    /**
      * @brief Map with key=ruid and value BSSes that were configured
      * for radio with ruid (key) in M2.
      */
     std::unordered_map<sMacAddr, std::list<wireless_utils::sBssInfoConf>> m_bss_configured;
+
+    /*
+    * The maximum amount of NBAPI AgentConnected (Disconnected) events per one Agent.
+    */
+    const uint8_t MAX_EVENT_HISTORY_SIZE = 7;
 
     /**
      * @brief Recive Topology Response message, checks that Agent configured BSSes
@@ -95,6 +108,42 @@ private:
     bool send_tlv_metric_reporting_policy(const sMacAddr &dst_mac, std::shared_ptr<WSC::m1> m1,
                                           ieee1905_1::CmduMessageRx &cmdu_rx,
                                           ieee1905_1::CmduMessageTx &cmdu_tx);
+
+    /**
+     * @brief Add NBAPI AgentConnected event and its sub-objects: Radios, BSSes, STAs to data model.
+     *
+     * @param device_mac Mac address of Agent for which AgentConnected event will be created.
+     * @param ap_op_bss_tlv AP Operational BSS TLV.
+     ​* @return Path to NBAPI AgentConnected object, empty string otherwise.
+    ​ */
+    std::string
+    dm_add_agent_connected_event(const sMacAddr &device_mac,
+                                 std::shared_ptr<wfa_map::tlvApOperationalBSS> &ap_op_bss_tlv,
+                                 ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Search for appropriate BSS from bss list of tlvAssociatedClients,
+     * for each STA from its list of clients create NBAPI
+     * STA object and attach this object to AgentConnected.
+     *
+     * @param obj_path Path to object to which STA will be attached.
+     * @param bssid ​BSSID to search in the list.
+     * @param assoc_client_tlv tlvAssociatedClients.
+    ​ */
+    void dm_add_sta_to_agent_connected_event(
+        const std::string &obj_path, const sMacAddr &bssid,
+        std::shared_ptr<wfa_map::tlvAssociatedClients> &assoc_client_tlv);
+
+    /**
+     * @brief Add Neighbor of AgentConnected event to NBAPI data model.
+     * Ex. Controller.AgentConnectedEvent.AgentConnected.1.Neighbor.3
+     * 
+     * @param event_path Path to AgentConnected event to which neighbor will be added.
+     * @param cmdu_rx Topology Response message.
+     * @return True on success, false otherwise.
+     */
+    bool dm_add_neighbor_to_agent_connected_event(const std::string &event_path,
+                                                  ieee1905_1::CmduMessageRx &cmdu_rx);
 };
 
 } // namespace son

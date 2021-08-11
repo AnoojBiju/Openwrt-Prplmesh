@@ -138,10 +138,6 @@
             );
         }
 
-        object Notification {
-
-        }
-
         %persistent %read-only object SteerEvent[] {
             counted with NumberSteerEvents;
             %persistent %read-only string DeviceId = "00:00:00:00:00:00";
@@ -180,6 +176,8 @@
                 ];
             }
         }
+        %read-only object Notification;
+        %read-only object AgentConnectedEvent[];
     }
 }
 
@@ -197,3 +195,4 @@ include "sta.odl";
 include "association_event.odl";
 include "disassociation_event.odl";
 include "access_point.odl";
+include "agent_connected_event.odl";
