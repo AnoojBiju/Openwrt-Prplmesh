@@ -255,9 +255,14 @@ std::shared_ptr<sAgent> db::add_node_gateway(const sMacAddr &mac)
     }
 
     set_node_data_model_path(mac, data_model_path);
+    agent->dm_path = data_model_path;
 
     if (!dm_set_device_multi_ap_capabilities(tlvf::mac_to_string(mac))) {
         LOG(ERROR) << "Failed to set multi ap capabilities";
+    }
+
+    if (!dm_update_collection_intervals(config.link_metrics_request_interval_seconds)) {
+        LOG(ERROR) << "Failed to set collection intervals";
     }
 
     return agent;
@@ -279,9 +284,14 @@ std::shared_ptr<sAgent> db::add_node_ire(const sMacAddr &mac, const sMacAddr &pa
     }
 
     set_node_data_model_path(mac, data_model_path);
+    agent->dm_path = data_model_path;
 
     if (!dm_set_device_multi_ap_capabilities(tlvf::mac_to_string(mac))) {
         LOG(ERROR) << "Failed to set multi ap capabilities";
+    }
+
+    if (!dm_update_collection_intervals(config.link_metrics_request_interval_seconds)) {
+        LOG(ERROR) << "Failed to set collection intervals";
     }
 
     return agent;
@@ -6772,5 +6782,18 @@ bool db::dm_add_cac_status_available_channel(std::shared_ptr<sAgent::sRadio> rad
     ret_val &= m_ambiorix_datamodel->set(available_channel, "OperatingClass", operating_class);
     ret_val &= m_ambiorix_datamodel->set(available_channel, "Channel", channel);
     ret_val &= m_ambiorix_datamodel->set_current_time(radio->dm_path + ".CACStatus");
+    return ret_val;
+}
+
+bool db::dm_update_collection_intervals(std::chrono::milliseconds interval)
+{
+    auto ret_val = true;
+
+    auto agents = get_all_connected_agents();
+    for (auto agent : agents) {
+        ret_val &= m_ambiorix_datamodel->set(agent->dm_path, "CollectionInterval",
+                                             (uint32_t)interval.count());
+    }
+
     return ret_val;
 }
