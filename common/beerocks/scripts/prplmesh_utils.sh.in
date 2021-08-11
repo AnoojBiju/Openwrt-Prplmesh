@@ -264,11 +264,11 @@ execute_beerocks_command() {
 # line ($) or blank character ([[:blank:]])
 main_agent_operational() {
     pgrep -fx "$PRPLMESH_DIR/bin/beerocks_agent($|[[:blank:]])" > /dev/null 2>&1 || return 1
-    grep -q ' --> OPERATIONAL' "$1/beerocks_agent@BEEROCKS_LOG_FILES_SUFFIX@"
+    grep -q ' --> OPERATIONAL' "$1/beerocks_backhaul@BEEROCKS_LOG_FILES_SUFFIX@"
 }
 
 radio_agent_operational() {
-    grep -q 'goto STATE_OPERATIONAL' "$1/beerocks_agent_$2@BEEROCKS_LOG_FILES_SUFFIX@"
+    grep -q "goto STATE_OPERATIONAL $2" "$1/beerocks_agent@BEEROCKS_LOG_FILES_SUFFIX@"
 }
 
 report() {
@@ -336,18 +336,13 @@ status_function() {
         error=0
         report "Main agent operational" main_agent_operational $LOGS_PATH
         # For each existing slave log file, check if they are OPERATIONAL:
-        radio_logfile_found=0
-        for radio_log in "$LOGS_PATH"/beerocks_agent_*@BEEROCKS_LOG_FILES_SUFFIX@ ; do
-            # skip files that aren't symlinks (and skip the literal glob if there is no matching file):
-            [ -L "$radio_log" ] || continue
-            radio_logfile_found=1
-            radio="$(printf '%s' "$radio_log" | sed -n -e 's#.*/beerocks_agent_\(.*\)@BEEROCKS_LOG_FILES_SUFFIX@#\1#p')"
+        main_agent_log="$LOGS_PATH/beerocks_backhaul@BEEROCKS_LOG_FILES_SUFFIX@"
+        # skip files that aren't symlinks (and skip the literal glob if there is no matching file):
+        [ -L "$main_agent_log" ] || return
+        radios=$(grep 'fronthaul_iface=' "$main_agent_log"  | cut -d "=" -f2)
+        for radio in $radios ; do
             report "$radio radio agent operational" radio_agent_operational "$LOGS_PATH" "$radio"
         done
-        if [ "$radio_logfile_found" = 0 ] ; then
-            err "No slave log file found! Cannot check if the slaves are operational."
-            error=1
-        fi
 
         exit $error
     fi

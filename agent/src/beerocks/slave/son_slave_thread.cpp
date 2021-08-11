@@ -4313,7 +4313,7 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
         auto db                                = AgentDB::get();
         radio_manager.stop_on_failure_attempts = db->device_conf.stop_on_failure_attempts;
 
-        LOG(TRACE) << "goto STATE_OPERATIONAL";
+        LOG(TRACE) << "goto STATE_OPERATIONAL " << fronthaul_iface;
         radio_manager.slave_state = STATE_OPERATIONAL;
         break;
     }
