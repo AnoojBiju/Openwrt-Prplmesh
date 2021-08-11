@@ -181,14 +181,16 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
             }
             request->attempts() = cli_request->attempts();
 
-            auto ires = database.get_all_connected_ires();
-            for (auto ire : ires) {
-                auto slaves = database.get_node_children(ire, beerocks::TYPE_SLAVE);
-                for (const auto &slave : slaves) {
-                    auto agent_mac = database.get_node_parent_ire(slave);
-                    if (database.get_node_state(slave) != beerocks::STATE_DISCONNECTED) {
-                        const auto parent_radio = database.get_node_parent_radio(slave);
-                        son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, parent_radio);
+            for (const auto &agent : database.get_all_connected_agents()) {
+                for (const auto &radio_map_elemet : agent->radios) {
+
+                    auto radio = radio_map_elemet.second;
+                    auto state = database.get_node_state(tlvf::mac_to_string(radio->radio_uid));
+
+                    if (state != beerocks::STATE_DISCONNECTED) {
+                        son_actions::send_cmdu_to_agent(tlvf::mac_to_string(agent->al_mac), cmdu_tx,
+                                                        database,
+                                                        tlvf::mac_to_string(radio->radio_uid));
                     }
                 }
             }

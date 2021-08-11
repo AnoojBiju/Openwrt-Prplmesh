@@ -1021,13 +1021,14 @@ std::set<std::string> db::get_active_hostaps()
     return ret;
 }
 
-std::set<std::string> db::get_all_connected_ires()
+std::vector<std::shared_ptr<sAgent>> db::get_all_connected_agents()
 {
-    std::set<std::string> ret;
+    std::vector<std::shared_ptr<sAgent>> ret;
+
     for (const auto &agent_map_element : m_agents) {
         auto &agent = agent_map_element.second;
         if (agent->state == beerocks::STATE_CONNECTED) {
-            ret.insert(tlvf::mac_to_string(agent->al_mac));
+            ret.push_back(agent);
         }
     }
     return ret;

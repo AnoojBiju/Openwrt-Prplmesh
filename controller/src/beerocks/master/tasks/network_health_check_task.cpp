@@ -41,11 +41,12 @@ void network_health_check_task::work()
         break;
     }
     case IRE_HEALTH_CHECK: {
-        auto ires = database.get_all_connected_ires();
-        for (auto &ire : ires) {
-            if (database.get_node_type(ire) == beerocks::TYPE_GW) {
+        auto agents = database.get_all_connected_agents();
+        for (auto &agent : agents) {
+            if (agent->is_gateway) {
                 continue;
             }
+            auto ire                     = tlvf::mac_to_string(agent->al_mac);
             auto backhaul_manager_hostap = database.get_hostap_backhaul_manager(ire);
             if (backhaul_manager_hostap.empty()) {
                 TASK_LOG(DEBUG) << "backhaul_manager_hostap.empty()!";
