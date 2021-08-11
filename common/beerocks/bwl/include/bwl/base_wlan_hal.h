@@ -230,6 +230,15 @@ protected:
 
     void calc_curr_traffic(uint64_t val, uint64_t &total, uint32_t &curr);
 
+    /**
+     * @brief Check if a given BSS is monitored or not.
+     * If the hal_conf's monitored BSSIDs list is empty all BSSs are considered as "monitored".
+     * 
+     * @param bssid BSSID interface name.
+     * @return True if the VAP should be monitored, false otherwise.
+     */
+    bool is_BSS_monitored(const std::string &bssid);
+
     /*!
      * set a parameter in the interface
      *
