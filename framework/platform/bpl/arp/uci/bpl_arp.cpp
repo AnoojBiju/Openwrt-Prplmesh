@@ -66,7 +66,7 @@ int arp_mon_stop(BPL_ARP_MON_CTX ctx)
         return -1;
     }
 
-    arp_monitor *pArpMon = (arp_monitor *)ctx;
+    arp_monitor *pArpMon = static_cast<arp_monitor *>(ctx);
 
     // Stop the monitor
     pArpMon->stop();
@@ -85,7 +85,7 @@ int arp_mon_get_fd(BPL_ARP_MON_CTX ctx)
         return -1;
     }
 
-    arp_monitor *pArpMon = (arp_monitor *)ctx;
+    arp_monitor *pArpMon = static_cast<arp_monitor *>(ctx);
 
     return pArpMon->get_mon_fd();
 }
@@ -97,7 +97,7 @@ int arp_mon_get_raw_arp_fd(BPL_ARP_MON_CTX ctx)
         return -1;
     }
 
-    arp_monitor *pArpMon = (arp_monitor *)ctx;
+    arp_monitor *pArpMon = static_cast<arp_monitor *>(ctx);
 
     return pArpMon->get_arp_fd();
 }
@@ -110,7 +110,7 @@ int arp_mon_process(BPL_ARP_MON_CTX ctx, struct BPL_ARP_MON_ENTRY *entry)
         return -1;
     }
 
-    arp_monitor *pArpMon = (arp_monitor *)ctx;
+    arp_monitor *pArpMon = static_cast<arp_monitor *>(ctx);
     if (pArpMon->process_mon(*entry) == false)
         return -1;
 
@@ -125,7 +125,7 @@ int arp_mon_process_raw_arp(BPL_ARP_MON_CTX ctx, struct BPL_ARP_MON_ENTRY *entry
         return -1;
     }
 
-    arp_monitor *pArpMon = (arp_monitor *)ctx;
+    arp_monitor *pArpMon = static_cast<arp_monitor *>(ctx);
     return (pArpMon->process_arp(*entry));
 }
 
@@ -138,7 +138,7 @@ int arp_mon_probe(BPL_ARP_MON_CTX ctx, const uint8_t mac[BPL_ARP_MON_MAC_LEN],
         return -1;
     }
 
-    arp_monitor *pArpMon = (arp_monitor *)ctx;
+    arp_monitor *pArpMon = static_cast<arp_monitor *>(ctx);
     return (pArpMon->probe(mac, ip, task_id) ? 0 : -1);
 }
 
@@ -151,7 +151,7 @@ int arp_mon_get_mac_for_ip(BPL_ARP_MON_CTX ctx, const uint8_t ip[BPL_ARP_MON_IP_
         return -1;
     }
 
-    arp_monitor *pArpMon = (arp_monitor *)ctx;
+    arp_monitor *pArpMon = static_cast<arp_monitor *>(ctx);
 
     return (pArpMon->get_mac_for_ip(ip, mac) ? 0 : -1);
 }
@@ -165,7 +165,7 @@ int arp_mon_get_ip_for_mac(BPL_ARP_MON_CTX ctx, const uint8_t mac[BPL_ARP_MON_MA
         return -1;
     }
 
-    arp_monitor *pArpMon = (arp_monitor *)ctx;
+    arp_monitor *pArpMon = static_cast<arp_monitor *>(ctx);
 
     return (pArpMon->get_ip_for_mac(mac, ip) ? 0 : -1);
 }

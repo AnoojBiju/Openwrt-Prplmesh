@@ -330,21 +330,21 @@ int bml_utils_event_to_string(const struct BML_EVENT *event, char *buffer, int b
     switch (event->type) {
     case BML_EVENT_TYPE_BSS_TM_REQ: {
         ss << "BML_EVENT_TYPE_BSS_TM_REQ";
-        auto event_data = (BML_EVENT_BSS_TM_REQ *)(event->data);
+        auto event_data = static_cast<BML_EVENT_BSS_TM_REQ *>(event->data);
         ss << ", target bssid: " << tlvf::mac_to_string(event_data->target_bssid) << ", "
            << "disassoc imminent: " << std::to_string(event_data->disassoc_imminent) << std::endl;
         break;
     }
     case BML_EVENT_TYPE_BH_ROAM_REQ: {
         ss << "BML_EVENT_TYPE_BH_ROAM_REQ";
-        auto event_data = (BML_EVENT_BH_ROAM_REQ *)(event->data);
+        auto event_data = static_cast<BML_EVENT_BH_ROAM_REQ *>(event->data);
         ss << ", bssid: " << tlvf::mac_to_string(event_data->bssid) << ", "
            << "channel: " << std::to_string(event_data->channel) << std::endl;
         break;
     }
     case BML_EVENT_TYPE_CLIENT_ALLOW_REQ: {
         ss << "BML_EVENT_TYPE_CLIENT_ALLOW_REQ";
-        auto event_data = (BML_EVENT_CLIENT_ALLOW_REQ *)(event->data);
+        auto event_data = static_cast<BML_EVENT_CLIENT_ALLOW_REQ *>(event->data);
         ss << ", hostap_mac: " << tlvf::mac_to_string(event_data->hostap_mac) << ", "
            << "sta_mac: " << tlvf::mac_to_string(event_data->sta_mac) << ", "
            << "ip: " << network_utils::ipv4_to_string(event_data->ip) << std::endl;
@@ -352,20 +352,20 @@ int bml_utils_event_to_string(const struct BML_EVENT *event, char *buffer, int b
     }
     case BML_EVENT_TYPE_CLIENT_DISALLOW_REQ: {
         ss << "BML_EVENT_TYPE_CLIENT_DISALLOW_REQ";
-        auto event_data = (BML_EVENT_CLIENT_ALLOW_REQ *)(event->data);
+        auto event_data = static_cast<BML_EVENT_CLIENT_ALLOW_REQ *>(event->data);
         ss << ", hostap_mac: " << tlvf::mac_to_string(event_data->hostap_mac)
            << ", sta_mac: " << tlvf::mac_to_string(event_data->sta_mac) << std::endl;
         break;
     }
     case BML_EVENT_TYPE_ACS_START: {
         ss << "BML_EVENT_TYPE_ACS_START";
-        auto event_data = (BML_EVENT_ACS_START *)(event->data);
+        auto event_data = static_cast<BML_EVENT_ACS_START *>(event->data);
         ss << ", hostap_mac: " << tlvf::mac_to_string(event_data->hostap_mac) << std::endl;
         break;
     }
     case BML_EVENT_TYPE_CSA_NOTIFICATION: {
         ss << "BML_EVENT_TYPE_CSA_NOTIFICATION";
-        auto event_data = (BML_EVENT_CSA_NOTIFICATION *)(event->data);
+        auto event_data = static_cast<BML_EVENT_CSA_NOTIFICATION *>(event->data);
         ss << ", hostap_mac: " << tlvf::mac_to_string(event_data->hostap_mac)
            << ", bandwidth: " << std::to_string(event_data->bandwidth)
            << ", channel: " << std::to_string(event_data->channel)
@@ -377,14 +377,14 @@ int bml_utils_event_to_string(const struct BML_EVENT *event, char *buffer, int b
     }
     case BML_EVENT_TYPE_CAC_STATUS_CHANGED_NOTIFICATION: {
         ss << "BML_EVENT_TYPE_CAC_STATUS_CHANGED_NOTIFICATION";
-        auto event_data = (BML_EVENT_CAC_STATUS_CHANGED_NOTIFICATION *)(event->data);
+        auto event_data = static_cast<BML_EVENT_CAC_STATUS_CHANGED_NOTIFICATION *>(event->data);
         ss << ", hostap_mac: " << tlvf::mac_to_string(event_data->hostap_mac)
            << ", cac_completed: " << std::to_string(event_data->cac_completed) << std::endl;
         break;
     }
 #ifdef BEEROCKS_RDKB
     case BML_EVENT_TYPE_STEERING: {
-        auto event_data = (BML_EVENT_STEERING *)(event->data);
+        auto event_data = static_cast<BML_EVENT_STEERING *>(event->data);
         switch (event_data->type) {
         case BML_STEERING_EVENT_PROBE_REQ: {
             ss << "BML_STEERING_EVENT_PROBE_REQ";

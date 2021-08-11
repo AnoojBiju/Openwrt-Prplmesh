@@ -159,7 +159,7 @@ bool tlvTimestamp::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_timestamp = (char*)m_buff_ptr__;
+    m_timestamp = reinterpret_cast<char*>(m_buff_ptr__);
     uint8_t timestamp_length = *m_timestamp_length;
     m_timestamp_idx__ = timestamp_length;
     if (!buffPtrIncrementSafe(sizeof(char) * (timestamp_length))) {

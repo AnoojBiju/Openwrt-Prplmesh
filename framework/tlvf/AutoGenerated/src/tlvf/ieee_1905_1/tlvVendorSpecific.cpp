@@ -152,7 +152,7 @@ bool tlvVendorSpecific::init()
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(sVendorOUI); }
     if (!m_parse__) { m_vendor_oui->struct_init(); }
-    m_payload = (uint8_t*)m_buff_ptr__;
+    m_payload = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (m_length && m_parse__) {
         size_t len = *m_length;
         tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));

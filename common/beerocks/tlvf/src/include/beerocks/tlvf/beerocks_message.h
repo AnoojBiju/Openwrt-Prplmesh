@@ -19,10 +19,6 @@
 
 #include <type_traits>
 
-#define GET_MESSAGE_POINTER(MSG, TX_B, SIZE_VAR)                                                   \
-    (MSG *)(TX_B + SIZE_VAR);                                                                      \
-    SIZE_VAR += sizeof(MSG);
-
 namespace beerocks {
 
 class message_com {

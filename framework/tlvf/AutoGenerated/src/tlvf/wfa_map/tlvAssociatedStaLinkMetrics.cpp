@@ -159,7 +159,7 @@ bool tlvAssociatedStaLinkMetrics::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_bssid_info_list = (sBssidInfo*)m_buff_ptr__;
+    m_bssid_info_list = reinterpret_cast<sBssidInfo*>(m_buff_ptr__);
     uint8_t bssid_info_list_length = *m_bssid_info_list_length;
     m_bssid_info_list_idx__ = bssid_info_list_length;
     if (!buffPtrIncrementSafe(sizeof(sBssidInfo) * (bssid_info_list_length))) {

@@ -418,7 +418,7 @@ bool cACTION_CLI_RESPONSE_STR::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
         return false;
     }
-    m_buffer = (char*)m_buff_ptr__;
+    m_buffer = reinterpret_cast<char*>(m_buff_ptr__);
     uint32_t buffer_size = *m_buffer_size;
     if (m_parse__) {  tlvf_swap(32, reinterpret_cast<uint8_t*>(&buffer_size)); }
     m_buffer_idx__ = buffer_size;
@@ -1361,7 +1361,7 @@ bool cACTION_CLI_CLIENT_BEACON_11K_REQUEST::init()
         return false;
     }
     if (!m_parse__) { m_bssid->struct_init(); }
-    m_ssid = (uint8_t*)m_buff_ptr__;
+    m_ssid = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t) * (beerocks::message::WIFI_SSID_MAX_LENGTH))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (beerocks::message::WIFI_SSID_MAX_LENGTH) << ") Failed!";
         return false;

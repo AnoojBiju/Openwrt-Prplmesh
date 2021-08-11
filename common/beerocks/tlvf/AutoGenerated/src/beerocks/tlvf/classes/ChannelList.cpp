@@ -152,7 +152,7 @@ bool cChannelList::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_channels_list = (cChannel*)m_buff_ptr__;
+    m_channels_list = reinterpret_cast<cChannel*>(m_buff_ptr__);
     uint8_t channels_list_length = *m_channels_list_length;
     m_channels_list_idx__ = 0;
     for (size_t i = 0; i < channels_list_length; i++) {
@@ -308,7 +308,7 @@ bool cChannel::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_supported_bandwidths = (sSupportedBandwidth*)m_buff_ptr__;
+    m_supported_bandwidths = reinterpret_cast<sSupportedBandwidth*>(m_buff_ptr__);
     uint8_t supported_bandwidths_length = *m_supported_bandwidths_length;
     m_supported_bandwidths_idx__ = supported_bandwidths_length;
     if (!buffPtrIncrementSafe(sizeof(sSupportedBandwidth) * (supported_bandwidths_length))) {

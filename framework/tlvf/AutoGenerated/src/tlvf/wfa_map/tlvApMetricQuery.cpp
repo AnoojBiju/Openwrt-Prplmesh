@@ -146,7 +146,7 @@ bool tlvApMetricQuery::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_bssid_list = (sMacAddr*)m_buff_ptr__;
+    m_bssid_list = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
     uint8_t bssid_list_length = *m_bssid_list_length;
     m_bssid_list_idx__ = bssid_list_length;
     if (!buffPtrIncrementSafe(sizeof(sMacAddr) * (bssid_list_length))) {

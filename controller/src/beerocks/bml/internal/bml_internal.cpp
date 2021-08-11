@@ -442,35 +442,15 @@ bool bml_internal::handle_event_update(uint8_t *data_buffer)
     BML_EVENT *event = (BML_EVENT *)data_buffer;
     event->ctx       = this;
 
-    auto size = sizeof(BML_EVENT);
     switch (event->type) {
-    case BML_EVENT_TYPE_BSS_TM_REQ: {
-        event->data = GET_MESSAGE_POINTER(BML_EVENT_BSS_TM_REQ, data_buffer, size);
-        break;
-    }
-    case BML_EVENT_TYPE_BH_ROAM_REQ: {
-        event->data = GET_MESSAGE_POINTER(BML_EVENT_BH_ROAM_REQ, data_buffer, size);
-        break;
-    }
-    case BML_EVENT_TYPE_CLIENT_ALLOW_REQ: {
-        event->data = GET_MESSAGE_POINTER(BML_EVENT_CLIENT_ALLOW_REQ, data_buffer, size);
-        break;
-    }
-    case BML_EVENT_TYPE_CLIENT_DISALLOW_REQ: {
-        event->data = GET_MESSAGE_POINTER(BML_EVENT_CLIENT_DISALLOW_REQ, data_buffer, size);
-        break;
-    }
-    case BML_EVENT_TYPE_ACS_START: {
-        event->data = GET_MESSAGE_POINTER(BML_EVENT_ACS_START, data_buffer, size);
-        break;
-    }
-    case BML_EVENT_TYPE_CSA_NOTIFICATION: {
-        event->data = GET_MESSAGE_POINTER(BML_EVENT_CSA_NOTIFICATION, data_buffer, size);
-        break;
-    }
+    case BML_EVENT_TYPE_BSS_TM_REQ:
+    case BML_EVENT_TYPE_BH_ROAM_REQ:
+    case BML_EVENT_TYPE_CLIENT_ALLOW_REQ:
+    case BML_EVENT_TYPE_CLIENT_DISALLOW_REQ:
+    case BML_EVENT_TYPE_ACS_START:
+    case BML_EVENT_TYPE_CSA_NOTIFICATION:
     case BML_EVENT_TYPE_CAC_STATUS_CHANGED_NOTIFICATION: {
-        event->data =
-            GET_MESSAGE_POINTER(BML_EVENT_CAC_STATUS_CHANGED_NOTIFICATION, data_buffer, size);
+        event->data = data_buffer + sizeof(BML_EVENT);
         break;
     }
     case BML_EVENT_TYPE_BEACON_MEASUREMENT: {

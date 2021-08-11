@@ -546,7 +546,7 @@ bool tlvTestVarList::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_simple_list = (uint16_t*)m_buff_ptr__;
+    m_simple_list = reinterpret_cast<uint16_t*>(m_buff_ptr__);
     uint8_t simple_list_length = *m_simple_list_length;
     m_simple_list_idx__ = simple_list_length;
     if (!buffPtrIncrementSafe(sizeof(uint16_t) * (simple_list_length))) {
@@ -559,7 +559,7 @@ bool tlvTestVarList::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_test_string = (char*)m_buff_ptr__;
+    m_test_string = reinterpret_cast<char*>(m_buff_ptr__);
     uint8_t test_string_length = *m_test_string_length;
     m_test_string_idx__ = test_string_length;
     if (!buffPtrIncrementSafe(sizeof(char) * (test_string_length))) {
@@ -572,7 +572,7 @@ bool tlvTestVarList::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_complex_list = (cInner*)m_buff_ptr__;
+    m_complex_list = reinterpret_cast<cInner*>(m_buff_ptr__);
     uint8_t complex_list_length = *m_complex_list_length;
     m_complex_list_idx__ = 0;
     for (size_t i = 0; i < complex_list_length; i++) {
@@ -622,7 +622,7 @@ bool tlvTestVarList::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint32_t); }
-    m_unknown_length_list = (cInner*)m_buff_ptr__;
+    m_unknown_length_list = reinterpret_cast<cInner*>(m_buff_ptr__);
     if (m_length && m_parse__) {
         size_t len = *m_length;
         tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));
@@ -855,7 +855,7 @@ bool cInner::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_list = (uint8_t*)m_buff_ptr__;
+    m_list = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     uint8_t list_length = *m_list_length;
     m_list_idx__ = list_length;
     if (!buffPtrIncrementSafe(sizeof(uint8_t) * (list_length))) {
@@ -868,7 +868,7 @@ bool cInner::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint32_t); }
-    m_unknown_length_list_inner = (char*)m_buff_ptr__;
+    m_unknown_length_list_inner = reinterpret_cast<char*>(m_buff_ptr__);
     if (m_length && m_parse__) {
         size_t len = *m_length;
         tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));

@@ -246,7 +246,7 @@ bool tlvProfile2CacStatusReport::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_available_channels = (sAvailableChannels*)m_buff_ptr__;
+    m_available_channels = reinterpret_cast<sAvailableChannels*>(m_buff_ptr__);
     uint8_t number_of_available_channels = *m_number_of_available_channels;
     m_available_channels_idx__ = number_of_available_channels;
     if (!buffPtrIncrementSafe(sizeof(sAvailableChannels) * (number_of_available_channels))) {
@@ -260,7 +260,7 @@ bool tlvProfile2CacStatusReport::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_detected_pairs = (sDetectedPairs*)m_buff_ptr__;
+    m_detected_pairs = reinterpret_cast<sDetectedPairs*>(m_buff_ptr__);
     uint8_t number_of_detected_pairs = *m_number_of_detected_pairs;
     m_detected_pairs_idx__ = number_of_detected_pairs;
     if (!buffPtrIncrementSafe(sizeof(sDetectedPairs) * (number_of_detected_pairs))) {
@@ -274,7 +274,7 @@ bool tlvProfile2CacStatusReport::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_active_cac_pairs = (sActiveCacPairs*)m_buff_ptr__;
+    m_active_cac_pairs = reinterpret_cast<sActiveCacPairs*>(m_buff_ptr__);
     uint8_t number_of_active_cac_pairs = *m_number_of_active_cac_pairs;
     m_active_cac_pairs_idx__ = number_of_active_cac_pairs;
     if (!buffPtrIncrementSafe(sizeof(sActiveCacPairs) * (number_of_active_cac_pairs))) {

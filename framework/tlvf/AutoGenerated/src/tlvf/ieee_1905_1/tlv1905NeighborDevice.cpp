@@ -146,7 +146,7 @@ bool tlv1905NeighborDevice::init()
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(sMacAddr); }
     if (!m_parse__) { m_mac_local_iface->struct_init(); }
-    m_mac_al_1905_device = (sMacAl1905Device*)m_buff_ptr__;
+    m_mac_al_1905_device = reinterpret_cast<sMacAl1905Device*>(m_buff_ptr__);
     if (m_length && m_parse__) {
         size_t len = *m_length;
         tlvf_swap(16, reinterpret_cast<uint8_t*>(&len));

@@ -191,7 +191,7 @@ bool tlvDeviceInformation::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_local_interface_list = (cLocalInterfaceInfo*)m_buff_ptr__;
+    m_local_interface_list = reinterpret_cast<cLocalInterfaceInfo*>(m_buff_ptr__);
     uint8_t local_interface_list_length = *m_local_interface_list_length;
     m_local_interface_list_idx__ = 0;
     for (size_t i = 0; i < local_interface_list_length; i++) {
@@ -351,7 +351,7 @@ bool cLocalInterfaceInfo::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_media_info = (uint8_t*)m_buff_ptr__;
+    m_media_info = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     uint8_t media_info_length = *m_media_info_length;
     m_media_info_idx__ = media_info_length;
     if (!buffPtrIncrementSafe(sizeof(uint8_t) * (media_info_length))) {

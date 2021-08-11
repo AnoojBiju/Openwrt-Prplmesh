@@ -255,7 +255,7 @@ bool tlvVsChannelScanRequestExtension::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_scan_requests_list = (sScanRequestExtension*)m_buff_ptr__;
+    m_scan_requests_list = reinterpret_cast<sScanRequestExtension*>(m_buff_ptr__);
     uint8_t scan_requests_list_length = *m_scan_requests_list_length;
     m_scan_requests_list_idx__ = scan_requests_list_length;
     if (!buffPtrIncrementSafe(sizeof(sScanRequestExtension) * (scan_requests_list_length))) {

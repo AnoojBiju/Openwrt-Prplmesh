@@ -246,7 +246,7 @@ bool tlvSteeringPolicy::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_local_steering_disallowed_sta_list = (sMacAddr*)m_buff_ptr__;
+    m_local_steering_disallowed_sta_list = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
     uint8_t local_steering_disallowed_sta_list_length = *m_local_steering_disallowed_sta_list_length;
     m_local_steering_disallowed_sta_list_idx__ = local_steering_disallowed_sta_list_length;
     if (!buffPtrIncrementSafe(sizeof(sMacAddr) * (local_steering_disallowed_sta_list_length))) {
@@ -260,7 +260,7 @@ bool tlvSteeringPolicy::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_btm_steering_disallowed_sta_list = (sMacAddr*)m_buff_ptr__;
+    m_btm_steering_disallowed_sta_list = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
     uint8_t btm_steering_disallowed_sta_list_length = *m_btm_steering_disallowed_sta_list_length;
     m_btm_steering_disallowed_sta_list_idx__ = btm_steering_disallowed_sta_list_length;
     if (!buffPtrIncrementSafe(sizeof(sMacAddr) * (btm_steering_disallowed_sta_list_length))) {
@@ -274,7 +274,7 @@ bool tlvSteeringPolicy::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_radio_ap_control_policy_list = (sRadioApControlPolicy*)m_buff_ptr__;
+    m_radio_ap_control_policy_list = reinterpret_cast<sRadioApControlPolicy*>(m_buff_ptr__);
     uint8_t radio_ap_control_policy_list_length = *m_radio_ap_control_policy_list_length;
     m_radio_ap_control_policy_list_idx__ = radio_ap_control_policy_list_length;
     if (!buffPtrIncrementSafe(sizeof(sRadioApControlPolicy) * (radio_ap_control_policy_list_length))) {

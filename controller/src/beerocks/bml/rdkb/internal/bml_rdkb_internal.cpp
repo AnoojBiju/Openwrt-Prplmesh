@@ -337,10 +337,9 @@ bool bml_rdkb_internal::handle_steering_event_update(uint8_t *data_buffer)
         return (false);
     }
 
-    auto size = sizeof(BML_EVENT);
     switch (event->type) {
     case BML_EVENT_TYPE_STEERING: {
-        event->data = GET_MESSAGE_POINTER(BML_EVENT_STEERING, data_buffer, size);
+        event->data = data_buffer + sizeof(BML_EVENT);
         break;
     }
     default: {

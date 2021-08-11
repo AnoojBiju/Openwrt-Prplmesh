@@ -258,7 +258,7 @@ bool cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION::init()
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
         return false;
     }
-    m_slave_version = (char*)m_buff_ptr__;
+    m_slave_version = reinterpret_cast<char*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(char) * (beerocks::message::VERSION_LENGTH))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (beerocks::message::VERSION_LENGTH) << ") Failed!";
         return false;
@@ -406,7 +406,7 @@ bool cACTION_CONTROL_SLAVE_JOINED_RESPONSE::init()
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
         return false;
     }
-    m_master_version = (char*)m_buff_ptr__;
+    m_master_version = reinterpret_cast<char*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(char) * (beerocks::message::VERSION_LENGTH))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (beerocks::message::VERSION_LENGTH) << ") Failed!";
         return false;
@@ -1556,7 +1556,7 @@ bool cACTION_CONTROL_HOSTAP_STATS_MEASUREMENT_RESPONSE::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_ap_stats = (sApStatsParams*)m_buff_ptr__;
+    m_ap_stats = reinterpret_cast<sApStatsParams*>(m_buff_ptr__);
     uint8_t ap_stats_size = *m_ap_stats_size;
     m_ap_stats_idx__ = ap_stats_size;
     if (!buffPtrIncrementSafe(sizeof(sApStatsParams) * (ap_stats_size))) {
@@ -1569,7 +1569,7 @@ bool cACTION_CONTROL_HOSTAP_STATS_MEASUREMENT_RESPONSE::init()
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    m_sta_stats = (sStaStatsParams*)m_buff_ptr__;
+    m_sta_stats = reinterpret_cast<sStaStatsParams*>(m_buff_ptr__);
     uint8_t sta_stats_size = *m_sta_stats_size;
     m_sta_stats_idx__ = sta_stats_size;
     if (!buffPtrIncrementSafe(sizeof(sStaStatsParams) * (sta_stats_size))) {
@@ -3066,7 +3066,7 @@ bool cACTION_CONTROL_CLIENT_DHCP_COMPLETE_NOTIFICATION::init()
         return false;
     }
     if (!m_parse__) { m_ipv4->struct_init(); }
-    m_name = (char*)m_buff_ptr__;
+    m_name = reinterpret_cast<char*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(char) * (beerocks::message::NODE_NAME_LENGTH))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (beerocks::message::NODE_NAME_LENGTH) << ") Failed!";
         return false;

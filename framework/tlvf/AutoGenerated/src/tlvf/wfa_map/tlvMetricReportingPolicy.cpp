@@ -157,7 +157,7 @@ bool tlvMetricReportingPolicy::init()
         return false;
     }
     if(m_length && !m_parse__){ (*m_length) += sizeof(uint8_t); }
-    m_metrics_reporting_conf_list = (sMetricsReportingConf*)m_buff_ptr__;
+    m_metrics_reporting_conf_list = reinterpret_cast<sMetricsReportingConf*>(m_buff_ptr__);
     uint8_t metrics_reporting_conf_list_length = *m_metrics_reporting_conf_list_length;
     m_metrics_reporting_conf_list_idx__ = metrics_reporting_conf_list_length;
     if (!buffPtrIncrementSafe(sizeof(sMetricsReportingConf) * (metrics_reporting_conf_list_length))) {
