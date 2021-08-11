@@ -17,7 +17,7 @@
 #include <bcl/beerocks_cmdu_server.h>
 #include <bcl/beerocks_config_file.h>
 #include <bcl/beerocks_defines.h>
-#include <bcl/beerocks_event_loop.h>
+#include <bcl/beerocks_eventloop_thread.h>
 #include <bcl/beerocks_timer_manager.h>
 #include <bcl/beerocks_ucc_server.h>
 #include <bcl/network/file_descriptor.h>
@@ -45,7 +45,7 @@ enum class eErrorCode;
 
 class ChannelSelectionTask;
 
-class BackhaulManager {
+class BackhaulManager : public EventLoopThread {
 
 public:
     BackhaulManager(
@@ -54,24 +54,20 @@ public:
         std::unique_ptr<beerocks::btl::BrokerClientFactory> broker_client_factory,
         std::unique_ptr<beerocks::CmduClientFactory> platform_manager_cmdu_client_factory,
         std::unique_ptr<beerocks::UccServer> ucc_server,
-        std::unique_ptr<beerocks::CmduServer> cmdu_server,
-        std::shared_ptr<beerocks::TimerManager> timer_manager,
-        std::shared_ptr<beerocks::EventLoop> event_loop);
+        std::unique_ptr<beerocks::CmduServer> cmdu_server);
     ~BackhaulManager();
 
     /**
-     * @brief Starts backhaul manager.
+     * @brief Initialize backhaul manager.
      *
      * @return true on success and false otherwise.
      */
-    bool start();
+    virtual bool init() override;
 
     /**
      * @brief Stops backhaul manager.
-     *
-     * @return true on success and false otherwise.
      */
-    bool stop();
+    virtual void on_thread_stop() override;
 
     /**
      * @brief Sends given CMDU message through the specified socket connection.
@@ -329,6 +325,11 @@ private:
      */
     std::unique_ptr<CmduClient> m_platform_manager_client;
 
+    /**
+     * Timer manager to help using application timers.
+     */
+    std::shared_ptr<beerocks::TimerManager> m_timer_manager;
+
     net::network_utils::iface_info bridge_info;
 
     int configuration_stop_on_failure_attempts;
@@ -541,16 +542,6 @@ private:
      * CMDU server to exchange CMDU messages with clients through socket connections.
      */
     std::unique_ptr<beerocks::CmduServer> m_cmdu_server;
-
-    /**
-     * Timer manager to help using application timers.
-     */
-    std::shared_ptr<beerocks::TimerManager> m_timer_manager;
-
-    /**
-     * Application event loop used by the process to wait for I/O events.
-     */
-    std::shared_ptr<EventLoop> m_event_loop;
 
     /**
      * File descriptor of the timer to run internal tasks periodically.

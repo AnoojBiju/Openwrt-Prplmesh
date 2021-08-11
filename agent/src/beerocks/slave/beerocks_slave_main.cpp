@@ -446,7 +446,7 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     beerocks::BackhaulManager backhaul_manager(
         beerocks_slave_conf, slave_ap_ifaces, slave_sta_ifaces, stop_on_failure_attempts,
         std::move(broker_client_factory), std::move(platform_manager_cmdu_client_factory),
-        std::move(ucc_server), std::move(backhaul_manager_cmdu_server), timer_manager, event_loop);
+        std::move(ucc_server), std::move(backhaul_manager_cmdu_server));
 
     // Start backhaul manager
     LOG_IF(!backhaul_manager.start(), FATAL) << "Unable to start backhaul manager!";
