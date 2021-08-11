@@ -420,7 +420,7 @@ bool Controller::handle_cmdu_from_broker(uint32_t iface_index, const sMacAddr &d
     }
 
     // Filter out messages that are not addressed to the controller
-    if (tlvf::mac_to_string(dst_mac) != beerocks::net::network_utils::MULTICAST_1905_MAC_ADDR &&
+    if (dst_mac != beerocks::net::network_utils::MULTICAST_1905_MAC_ADDR &&
         dst_mac != database.get_local_bridge_mac()) {
         return false;
     }

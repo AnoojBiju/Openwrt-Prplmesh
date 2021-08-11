@@ -514,7 +514,7 @@ bool BackhaulManager::handle_cmdu_from_broker(uint32_t iface_index, const sMacAd
     auto db = AgentDB::get();
 
     // Filter messages which are not destined to this agent
-    if (tlvf::mac_to_string(dst_mac) != beerocks::net::network_utils::MULTICAST_1905_MAC_ADDR &&
+    if (dst_mac != beerocks::net::network_utils::MULTICAST_1905_MAC_ADDR &&
         dst_mac != db->bridge.mac) {
         LOG(DEBUG) << "handle_cmdu() - dropping msg, dst_mac=" << dst_mac
                    << ", local_bridge_mac=" << db->bridge.mac;
