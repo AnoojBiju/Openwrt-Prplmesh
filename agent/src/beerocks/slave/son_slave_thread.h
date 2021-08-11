@@ -79,12 +79,19 @@ public:
     } sSlaveBackhaulParams;
 
     enum eSlaveState {
+        // General
         STATE_WAIT_BEFORE_INIT = 0,
         STATE_INIT,
+        STATE_LOAD_PLATFORM_CONFIGURATION,
         STATE_CONNECT_TO_PLATFORM_MANAGER,
-        STATE_WAIT_FOR_PLATFORM_MANAGER_ONBOARD_QUERY_RESPONSE,
         STATE_WAIT_FOR_PLATFORM_MANAGER_REGISTER_RESPONSE,
-        STATE_WAIT_FOR_PLATFORM_MANAGER_CREDENTIALS_UPDATE_RESPONSE,
+        STATE_STOPPED,
+
+        // This state is the last common state. It means the from now each radio will have a state
+        // of its own, specified under "Radio Specific" down below.
+        STATE_RADIO_SPECIFIC_FSM,
+
+        // Radio Specific
         STATE_CONNECT_TO_BACKHAUL_MANAGER,
         STATE_WAIT_RETRY_CONNECT_TO_BACKHAUL_MANAGER,
         STATE_WAIT_FOR_BACKHAUL_MANAGER_REGISTER_RESPONSE,
@@ -103,7 +110,6 @@ public:
         STATE_OPERATIONAL,
         STATE_VERSION_MISMATCH,
         STATE_SSID_MISMATCH,
-        STATE_STOPPED,
     };
 
     slave_thread(sAgentConfig conf, beerocks::logging &logger_);
@@ -138,6 +144,7 @@ private:
                                                 ieee1905_1::CmduMessageRx &cmdu_rx);
 
     bool slave_fsm(const std::string &fronthaul_iface);
+    bool agent_fsm();
     void slave_reset(const std::string &fronthaul_iface);
     void stop_slave_thread();
     void backhaul_manager_stop(const std::string &fronthaul_iface);
@@ -170,6 +177,11 @@ private:
 
     std::string backhaul_manager_uds;
     std::string platform_manager_uds;
+
+    // Global FSM members:
+    eSlaveState m_agent_state;
+    std::chrono::steady_clock::time_point m_agent_state_timer_sec =
+        std::chrono::steady_clock::time_point::min();
 
     struct sManagedRadio {
         beerocks_message::sSonConfig son_config;
