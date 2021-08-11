@@ -335,10 +335,11 @@ bool PlatformManager::check_wlan_params_changed()
             LOG(ERROR) << "invalid map - pointer to NULL";
             return false;
         }
+        auto &iface              = elm.first;
         bool wlan_params_changed = false;
         bpl::BPL_WLAN_PARAMS params;
-        if (bpl::cfg_get_wifi_params(elm.first.c_str(), &params) < 0) {
-            LOG(ERROR) << "Failed reading '" << elm.first << "' parameters!";
+        if (bpl::cfg_get_wifi_params(iface.c_str(), &params) < 0) {
+            LOG(ERROR) << "Failed reading '" << iface << "' parameters!";
             return false;
         }
 
@@ -357,11 +358,11 @@ bool PlatformManager::check_wlan_params_changed()
             any_slave_changed = true;
             auto notification = message_com::create_vs_message<
                 beerocks_message::cACTION_PLATFORM_WLAN_PARAMS_CHANGED_NOTIFICATION>(m_cmdu_tx);
-            if (notification == nullptr) {
+            if (!notification) {
                 LOG(ERROR) << "Failed building message!";
                 return false;
             }
-
+            notification->set_iface_name(iface);
             notification->wlan_settings().band_enabled = elm.second->band_enabled;
             notification->wlan_settings().channel      = elm.second->channel;
 
