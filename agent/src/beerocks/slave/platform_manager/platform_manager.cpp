@@ -134,9 +134,9 @@ PlatformManager::~PlatformManager() { m_cmdu_server->clear_handlers(); }
 
 bool PlatformManager::start()
 {
-    // In case of error in one of the steps of this method, we have to undo all the previous steps
-    // (like when rolling back a database transaction, where either all steps get executed or none
-    // of them gets executed)
+    // In case of error in one of the steps of this method, we have to undo all the previous
+    // steps (like when rolling back a database transaction, where either all steps get executed
+    // or none of them gets executed)
     beerocks::Transaction transaction;
 
     // Create a timer to periodically check if WLAN parameters have changed
@@ -251,39 +251,15 @@ bool PlatformManager::stop()
     return result;
 }
 
-void PlatformManager::add_slave_socket(int fd, const std::string &iface_name)
+bool PlatformManager::send_cmdu_to_agent_safe(ieee1905_1::CmduMessageTx &cmdu_tx)
 {
     // Lock the slaves socket map
     std::unique_lock<std::mutex> lock(m_mtxSlaves);
-
-    m_mapSlaves[fd] = iface_name;
-}
-
-void PlatformManager::del_slave_socket(int fd)
-{
-    // Lock the slaves socket map
-    std::unique_lock<std::mutex> lock(m_mtxSlaves);
-
-    // Remove the socket from the connections map
-    m_mapSlaves.erase(fd);
-
-    // Also check if that was the backhaul manager
-    if (m_backhaul_manager_socket == fd) {
-        m_backhaul_manager_socket = beerocks::net::FileDescriptor::invalid_descriptor;
-    }
-}
-
-bool PlatformManager::send_cmdu_safe(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
-{
-    // Lock the slaves socket map
-    std::unique_lock<std::mutex> lock(m_mtxSlaves);
-
-    if (m_mapSlaves.find(fd) == m_mapSlaves.end()) {
-        LOG(ERROR) << "Attempted send to invalid socket slave: " << fd;
+    if (m_agent_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
+        LOG(ERROR) << "Agent fd is invalid";
         return false;
     }
-
-    return send_cmdu(fd, cmdu_tx);
+    return send_cmdu(m_agent_fd, cmdu_tx);
 }
 
 bool PlatformManager::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
@@ -291,35 +267,11 @@ bool PlatformManager::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
     return m_cmdu_server->send_cmdu(fd, cmdu_tx);
 }
 
-int PlatformManager::get_slave_socket_from_hostap_iface_name(const std::string &iface)
-{
-    auto it_slave = std::find_if(
-        m_mapSlaves.begin(), m_mapSlaves.end(),
-        [&iface](const std::pair<int, std::string> &slave) { return iface == slave.second; });
-
-    if (it_slave != m_mapSlaves.end()) {
-        return it_slave->first;
-    }
-
-    return beerocks::net::FileDescriptor::invalid_descriptor;
-}
-
-int PlatformManager::get_backhaul_socket()
+int PlatformManager::get_agent_socket()
 {
     // Lock the slaves socket map
     std::unique_lock<std::mutex> lock(m_mtxSlaves);
-
-    // If a slave containing the backhaul manager registered, return its socket.
-    // If not, return the first socket from the connection map
-    int fd = beerocks::net::FileDescriptor::invalid_descriptor;
-
-    if (beerocks::net::FileDescriptor::invalid_descriptor != m_backhaul_manager_socket) {
-        fd = m_backhaul_manager_socket;
-    } else if (!m_mapSlaves.empty()) {
-        fd = m_mapSlaves.begin()->first;
-    }
-
-    return fd;
+    return m_agent_fd;
 }
 
 void PlatformManager::load_iface_params(const std::string &strIface, beerocks::eArpSource eType)
@@ -372,12 +324,7 @@ void PlatformManager::send_dhcp_notification(const std::string &op, const std::s
     dhcp_notif->ipv4() = beerocks::net::network_utils::ipv4_from_string(ip);
     string_utils::copy_string(dhcp_notif->hostname(0), hostname.c_str(), message::NODE_NAME_LENGTH);
 
-    // Get a slave socket
-    int fd = get_backhaul_socket();
-
-    if (beerocks::net::FileDescriptor::invalid_descriptor != fd) {
-        send_cmdu(fd, m_cmdu_tx);
-    }
+    send_cmdu_to_agent_safe(m_cmdu_tx);
 }
 
 bool PlatformManager::check_wlan_params_changed()
@@ -418,15 +365,9 @@ bool PlatformManager::check_wlan_params_changed()
             notification->wlan_settings().band_enabled = elm.second->band_enabled;
             notification->wlan_settings().channel      = elm.second->channel;
 
-            int fd = get_slave_socket_from_hostap_iface_name(elm.first);
-            if (beerocks::net::FileDescriptor::invalid_descriptor == fd) {
-                LOG(ERROR) << "failed to get slave socket from iface=" << elm.first;
-                continue;
-            }
-
-            send_cmdu_safe(fd, m_cmdu_tx);
+            send_cmdu_to_agent_safe(m_cmdu_tx);
             LOG(DEBUG) << "wlan_params_changed - cmdu msg sent, iface=" << elm.first
-                       << " cmdu msg sent, fd=" << fd;
+                       << " cmdu msg sent";
         }
     }
     return any_slave_changed;
@@ -436,23 +377,18 @@ void PlatformManager::handle_connected(int fd) { LOG(INFO) << "UDS socket connec
 
 void PlatformManager::handle_disconnected(int fd)
 {
-    auto it = m_mapSlaves.find(fd);
-    if (it == m_mapSlaves.end()) {
-        if (fd == m_backhaul_manager_socket) {
-            LOG(INFO) << "Bachaul manager socket disconnected! fd = " << fd;
-        } else {
-            LOG(INFO) << "Non slave socket disconnected! fd = " << fd;
-        }
+    std::unique_lock<std::mutex> lock(m_mtxSlaves);
+    if (m_agent_fd == fd) {
+        LOG(INFO) << "Agent socket disconnected! fd = " << fd;
+        m_agent_fd = beerocks::net::FileDescriptor::invalid_descriptor;
+        bpl_iface_wlan_params_map.clear();
+    } else if (m_backhaul_manager_socket == fd) {
+        LOG(INFO) << "Backhaul manager socket disconnected! fd = " << fd;
+        m_backhaul_manager_socket = beerocks::net::FileDescriptor::invalid_descriptor;
+    } else {
+        LOG(ERROR) << "Unkown socket disconnected! fd = " << fd;
         return;
     }
-
-    std::string iface_name = m_mapSlaves[fd];
-    LOG(DEBUG) << "Slave socket disconnected, iface = " << iface_name << ", fd = " << fd;
-
-    // we should have only one per fd
-    bpl_iface_wlan_params_map.erase(iface_name);
-
-    del_slave_socket(fd);
 }
 
 bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
@@ -474,19 +410,25 @@ bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
         auto request =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_PLATFORM_SON_SLAVE_REGISTER_REQUEST>();
-        if (request == nullptr) {
+        if (!request) {
             LOG(ERROR) << "addClass cACTION_PLATFORM_SON_SLAVE_REGISTER_REQUEST failed";
             return false;
         }
 
-        add_slave_socket(fd, strIfaceName);
+        // Lock the Agent socket mutex to be able to work in parallel with the work queue.
+        {
+            std::unique_lock<std::mutex> lock(m_mtxSlaves);
+            m_agent_fd = fd;
+        }
 
+        // Response message
         if (!message_com::create_vs_message<
                 beerocks_message::cACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE>(m_cmdu_tx)) {
             LOG(ERROR) << "Failed building message!";
             return false;
         }
-        send_cmdu_safe(fd, m_cmdu_tx);
+        send_cmdu_to_agent_safe(m_cmdu_tx);
+
     } break;
 
     case beerocks_message::ACTION_PLATFORM_CHANGE_MODULE_LOGGING_LEVEL: {
@@ -569,11 +511,11 @@ bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
         // Sent with unsafe because BML is reachable only on platform thread
         send_cmdu(fd, m_cmdu_tx);
 
-        //clear the pwd in the memory
+        // clear the pwd in the memory
         memset(&pass, 0, sizeof(pass));
 
-        // deepcode ignore CopyPasteError: <memset might be optimized and compiler might not set it
-        // 0 if its not used after memset>
+        // deepcode ignore CopyPasteError: <memset might be optimized and compiler might not set
+        // it 0 if its not used after memset>
         *(volatile char *)pass = *(volatile char *)pass;
 
     } break;
@@ -684,7 +626,7 @@ bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
             break;
         }
 
-        //TODO use vap_id, for now assume vap_id == MAIN_VAP
+        // TODO use vap_id, for now assume vap_id == MAIN_VAP
         LOG(TRACE) << "ACTION_PLATFORM_WIFI_CREDENTIALS_GET_REQUEST, vap_id="
                    << int(request->vap_id());
 
@@ -732,11 +674,11 @@ bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
             string_utils::copy_string(msg_ssid, ssid, message::WIFI_SSID_MAX_LENGTH);
             string_utils::copy_string(msg_pass, pass, message::WIFI_PASS_MAX_LENGTH);
 
-            //clear the pwd in the memory
+            // clear the pwd in the memory
             memset(&pass, 0, sizeof(pass));
 
-            // deepcode ignore CopyPasteError: <memset might be optimized and compiler might not set
-            // it 0 if its not used after memset>
+            // deepcode ignore CopyPasteError: <memset might be optimized and compiler might not
+            // set it 0 if its not used after memset>
             *(volatile char *)pass = *(volatile char *)pass;
 
             return true;
@@ -883,17 +825,6 @@ bool PlatformManager::handle_arp_monitor()
         return false;
     }
 
-    int fd = get_slave_socket_from_hostap_iface_name(iface_name);
-
-    // Use the Backhaul Manager Slave as the default destination
-    if (beerocks::net::FileDescriptor::invalid_descriptor == fd) {
-        fd = get_backhaul_socket();
-        if (beerocks::net::FileDescriptor::invalid_descriptor == fd) {
-            LOG(WARNING) << "Failed obtaining slave socket";
-            return false;
-        }
-    }
-
     auto it_iface = m_mapIfaces.find(iface_name);
     if (it_iface != m_mapIfaces.end()) {
         auto &pIfaceParams         = it_iface->second;
@@ -956,8 +887,8 @@ bool PlatformManager::handle_arp_monitor()
     }
 
     // Send the message to the slave
-    if ((beerocks::net::FileDescriptor::invalid_descriptor != fd) && fSendNotif) {
-        send_cmdu_safe(fd, m_cmdu_tx);
+    if (fSendNotif) {
+        send_cmdu_to_agent_safe(m_cmdu_tx);
     }
 
     return (true);
@@ -1041,15 +972,9 @@ bool PlatformManager::handle_arp_raw()
         LOG(WARNING) << "MAC " << arp_resp->params().mac
                      << " was NOT found in the ARP entries list...";
     }
-
-    // Get a slave socket
-    int fd = get_backhaul_socket();
-
-    if (beerocks::net::FileDescriptor::invalid_descriptor != fd) {
-        LOG(TRACE) << "ACTION_PLATFORM_ARP_QUERY_RESPONSE mac=" << arp_resp->params().mac
-                   << " task_id=" << task_id;
-        send_cmdu_safe(fd, m_cmdu_tx);
-    }
+    LOG(TRACE) << "ACTION_PLATFORM_ARP_QUERY_RESPONSE mac=" << arp_resp->params().mac
+               << " task_id=" << task_id;
+    send_cmdu_to_agent_safe(m_cmdu_tx);
 
     return (true);
 }
