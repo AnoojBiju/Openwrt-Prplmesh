@@ -1080,8 +1080,17 @@ bool base_wlan_hal_dwpal::refresh_vaps_info(int id)
     if (id > beerocks::IFACE_RADIO_ID)
         return refresh_vap_info(id);
 
-    for (int vap_id = beerocks::IFACE_VAP_ID_MIN; vap_id <= beerocks::IFACE_VAP_ID_MAX; vap_id++) {
-        refresh_vap_info(vap_id);
+    if (m_hal_conf.monitored_BSSs.empty()) {
+        // If there are no monitored BSSs, default to using the VAP RANGE
+        for (int vap_id = beerocks::IFACE_VAP_ID_MIN; vap_id <= beerocks::IFACE_VAP_ID_MAX;
+             vap_id++) {
+            refresh_vap_info(vap_id);
+        }
+    } else {
+        for (const auto &monitored_bss : m_hal_conf.monitored_BSSs) {
+            uint8_t vap_id = beerocks::utils::get_ids_from_iface_string(monitored_bss).vap_id;
+            refresh_vap_info(vap_id);
+        }
     }
 
     return true;

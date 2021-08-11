@@ -139,6 +139,11 @@ bool Monitor::start()
         return false;
     }
 
+    if (!beerocks::bpl::bpl_cfg_get_monitored_BSSs_by_radio_iface(monitor_iface,
+                                                                  hal_conf.monitored_BSSs)) {
+        LOG(DEBUG) << "Failed to get radio-monitored-BSSs for interface " << monitor_iface;
+    }
+
     using namespace std::placeholders; // for `_1`
     mon_wlan_hal = bwl::mon_wlan_hal_create(
         monitor_iface, std::bind(&Monitor::hal_event_handler, this, _1), hal_conf);

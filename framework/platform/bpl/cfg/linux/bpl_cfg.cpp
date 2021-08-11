@@ -773,5 +773,11 @@ bool cfg_get_clients_measurement_mode(eClientsMeasurementMode &clients_measureme
     return true;
 }
 
+bool bpl_cfg_get_monitored_BSSs_by_radio_iface(const std::string &iface,
+                                               std::set<std::string> &monitored_BSSs)
+{
+    return true;
+}
+
 } // namespace bpl
 } // namespace beerocks
