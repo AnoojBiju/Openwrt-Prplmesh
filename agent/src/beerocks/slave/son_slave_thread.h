@@ -261,6 +261,29 @@ private:
             }
             return m_radio_managers.begin()->first;
         }
+
+        /**
+         * @brief Preform an operation in context of each radio.
+         *
+         * @param operation An operation function that receives as input arguments the radio
+         * manager context and its fronthaul interface name.
+         * @return true if the operation succeeds in all radios, otherwise false.
+         */
+        bool do_on_each_radio_manager(
+            std::function<bool(sManagedRadio &radio_manager, const std::string &fronthaul_iface)>
+                operation)
+        {
+            auto success = true;
+            for (auto &radio : get()) {
+                success &= operation(radio.second, radio.first);
+            }
+            auto &zwdfs_radio = get_zwdfs();
+            if (!zwdfs_radio) {
+                return success;
+            }
+            success &= operation(zwdfs_radio->second, zwdfs_radio->first);
+            return success;
+        };
     } m_radio_managers;
 
     /**
