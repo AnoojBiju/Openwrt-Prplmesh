@@ -655,13 +655,14 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const sMacAddr &src_m
 
     if (tlvProfile2MultiApProfileAgent) {
 
-        database.add_node_ire(al_mac);
-        auto agent = database.m_agents.get(al_mac);
-
-        if (agent) {
-            agent->profile = tlvProfile2MultiApProfileAgent->profile();
-            LOG(DEBUG) << "Agent profile is updated with enum " << agent->profile;
+        auto agent = database.add_node_ire(al_mac);
+        if (!agent) {
+            LOG(ERROR) << "Failed adding agent: " << al_mac;
+            return false;
         }
+
+        agent->profile = tlvProfile2MultiApProfileAgent->profile();
+        LOG(DEBUG) << "Agent profile is updated with enum " << agent->profile;
     }
 
     return son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
