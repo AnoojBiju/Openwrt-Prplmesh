@@ -371,6 +371,11 @@ static void event_configuration_changed(const char *const sig_name, const amxc_v
         LOG(ERROR) << "Failed update master configuration from NBAPI.";
     }
 
+    if (!g_database->dm_update_collection_intervals(
+            nbapi_config.link_metrics_request_interval_seconds)) {
+        LOG(ERROR) << "Failed update collection intervals of all agents.";
+    }
+
     // TODO Save persistent settings with amxo_parser_save() (PPM-1419)
 }
 

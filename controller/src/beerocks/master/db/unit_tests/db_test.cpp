@@ -85,6 +85,9 @@ protected:
                     set(g_device_path_multiapcaps, "UnassociatedSTALinkMetricsCurrentlyOff",
                         Matcher<const bool &>(false)))
             .WillOnce(Return(true));
+        EXPECT_CALL(*m_ambiorix, set(std::string(g_device_path) + ".1", "CollectionInterval",
+                                     Matcher<const uint32_t &>(_)))
+            .WillOnce(Return(true));
 
         m_db->set_prplmesh(tlvf::mac_from_string(g_bridge_mac));
         EXPECT_EQ(std::string(g_device_path) + ".1", m_db->get_node_data_model_path(g_bridge_mac));
