@@ -2271,17 +2271,18 @@ bool Controller::handle_intel_slave_join(
         //Run the client locating tasks for the previously located wired IRE. If cascaded IREs are connected with wire
         //the slave_join notification for the 2nd level IRE can come before 1st level IRE, causing the 2nd
         //level IRE to be placed at the same level as the 1st IRE in the DB
-        auto ires = database.get_all_connected_ires();
-        for (auto ire : ires) {
-            if (ire == bridge_mac_str || database.get_node_type(ire) == beerocks::TYPE_GW) {
-                LOG(INFO) << "client_locating_task is not run again for this ire: " << ire;
+        auto agents = database.get_all_connected_agents();
+        for (const auto &a : agents) {
+            if (a->al_mac == bridge_mac || a->is_gateway) {
+                LOG(INFO) << "client_locating_task is not run again for this ire: " << a->al_mac;
                 continue;
             }
-            auto ire_backhaul_mac = database.get_node_parent_backhaul(ire);
+            auto ire_backhaul_mac =
+                database.get_node_parent_backhaul(tlvf::mac_to_string(a->al_mac));
             if (!database.is_node_wireless(ire_backhaul_mac)) {
-                LOG(DEBUG) << "run_client_locating_task client_mac = " << ire;
-                auto new_task = std::make_shared<client_locating_task>(database, cmdu_tx, tasks,
-                                                                       ire, true, 2000);
+                LOG(DEBUG) << "run_client_locating_task client_mac = " << a->al_mac;
+                auto new_task = std::make_shared<client_locating_task>(
+                    database, cmdu_tx, tasks, tlvf::mac_to_string(a->al_mac), true, 2000);
                 tasks.add_task(new_task);
             }
         }

@@ -68,10 +68,12 @@ void client_locating_task::work()
     } break;
 
     case SEND_ARP_QUERIES: {
-        auto ires        = database.get_all_connected_ires();
+        auto agents      = database.get_all_connected_agents();
         pending_ires_num = 0;
 
-        for (auto &ire : ires) {
+        for (auto &agent : agents) {
+            auto ire = tlvf::mac_to_string(agent->al_mac);
+
             auto request =
                 message_com::create_vs_message<beerocks_message::cACTION_CONTROL_ARP_QUERY_REQUEST>(
                     cmdu_tx, id);

@@ -783,7 +783,7 @@ public:
     int get_node_hierarchy(const std::string &mac);
     std::set<std::string> get_nodes(int type = -1);
     std::set<std::string> get_active_hostaps();
-    std::set<std::string> get_all_connected_ires();
+    std::vector<std::shared_ptr<sAgent>> get_all_connected_agents();
     std::set<std::string> get_nodes_from_hierarchy(int hierarchy, int type = -1);
     std::shared_ptr<sAgent> get_gw();
     std::set<std::string> get_node_subtree(const std::string &mac);
