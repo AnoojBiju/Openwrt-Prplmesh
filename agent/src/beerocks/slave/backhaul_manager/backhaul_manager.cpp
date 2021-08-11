@@ -18,6 +18,8 @@
 #include "../tasks/switch_channel_task.h"
 #include "../tasks/topology_task.h"
 
+#include <bcl/beerocks_timer_factory_impl.h>
+#include <bcl/beerocks_timer_manager_impl.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <bcl/transaction.h>
@@ -93,23 +95,26 @@ BackhaulManager::BackhaulManager(
     std::unique_ptr<beerocks::btl::BrokerClientFactory> broker_client_factory,
     std::unique_ptr<beerocks::CmduClientFactory> platform_manager_cmdu_client_factory,
     std::unique_ptr<beerocks::UccServer> ucc_server,
-    std::unique_ptr<beerocks::CmduServer> cmdu_server,
-    std::shared_ptr<beerocks::TimerManager> timer_manager,
-    std::shared_ptr<beerocks::EventLoop> event_loop)
+    std::unique_ptr<beerocks::CmduServer> cmdu_server)
     : cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer)),
       cert_cmdu_tx(m_cert_tx_buffer, sizeof(m_cert_tx_buffer)), slave_ap_ifaces(slave_ap_ifaces_),
       slave_sta_ifaces(slave_sta_ifaces_), config_const_bh_slave(config.const_backhaul_slave),
       m_broker_client_factory(std::move(broker_client_factory)),
       m_platform_manager_cmdu_client_factory(std::move(platform_manager_cmdu_client_factory)),
-      m_ucc_server(std::move(ucc_server)), m_cmdu_server(std::move(cmdu_server)),
-      m_timer_manager(timer_manager), m_event_loop(event_loop)
+      m_ucc_server(std::move(ucc_server)), m_cmdu_server(std::move(cmdu_server))
 {
     LOG_IF(!m_broker_client_factory, FATAL) << "Broker client factory is a null pointer!";
     LOG_IF(!m_platform_manager_cmdu_client_factory, FATAL)
         << "CMDU client factory is a null pointer!";
     LOG_IF(!m_cmdu_server, FATAL) << "CMDU server is a null pointer!";
-    LOG_IF(!m_timer_manager, FATAL) << "Timer manager is a null pointer!";
-    LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
+
+    // Create timer factory to create instances of timers.
+    auto timer_factory = std::make_shared<beerocks::TimerFactoryImpl>();
+    LOG_IF(!timer_factory, FATAL) << "Unable to create timer factory!";
+
+    // Create timer manager to help using application timers.
+    m_timer_manager = std::make_shared<beerocks::TimerManagerImpl>(timer_factory, m_event_loop);
+    LOG_IF(!m_timer_manager, FATAL) << "Unable to create timer manager!";
 
     pending_slave_ifaces                   = slave_ap_ifaces_;
     configuration_stop_on_failure_attempts = stop_on_failure_attempts_;
@@ -154,7 +159,7 @@ BackhaulManager::BackhaulManager(
 
 BackhaulManager::~BackhaulManager() { m_cmdu_server->clear_handlers(); }
 
-bool BackhaulManager::start()
+bool BackhaulManager::init()
 {
     // In case of error in one of the steps of this method, we have to undo all the previous steps
     // (like when rolling back a database transaction, where either all steps get executed or none
@@ -258,10 +263,8 @@ bool BackhaulManager::start()
     return true;
 }
 
-bool BackhaulManager::stop()
+void BackhaulManager::on_thread_stop()
 {
-    bool ok = true;
-
     while (slaves_sockets.size() > 0) {
         auto soc = slaves_sockets.back();
         if (soc) {
@@ -295,16 +298,16 @@ bool BackhaulManager::stop()
     }
 
     if (!m_timer_manager->remove_timer(m_fsm_timer)) {
-        ok = false;
+        LOG(ERROR) << "Failed to remove fsm timer";
     }
 
     if (!m_timer_manager->remove_timer(m_tasks_timer)) {
-        ok = false;
+        LOG(ERROR) << "Failed to remove tasks timer";
     }
 
     LOG(DEBUG) << "stopped";
 
-    return ok;
+    return;
 }
 
 void BackhaulManager::handle_connected(int fd)
