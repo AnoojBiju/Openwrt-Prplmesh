@@ -166,8 +166,8 @@ private:
         std::chrono::steady_clock::time_point last_seen;
     };
 
-    // Connected slaves map (socket file descriptor/interface name)
-    std::unordered_map<int, std::string> m_mapSlaves; // value=iface_name
+    // Connected Agent file descriptor
+    int m_agent_fd = beerocks::net::FileDescriptor::invalid_descriptor;
     std::mutex m_mtxSlaves;
 
     // Interfaces
