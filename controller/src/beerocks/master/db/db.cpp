@@ -184,8 +184,7 @@ bool db::add_virtual_node(const sMacAddr &mac, const sMacAddr &real_node_mac)
     return true;
 }
 
-bool db::add_node(const sMacAddr &mac, const sMacAddr &parent_mac, beerocks::eType type,
-                  const sMacAddr &radio_identifier)
+bool db::add_node(const sMacAddr &mac, const sMacAddr &parent_mac, beerocks::eType type)
 {
     if (mac == network_utils::ZERO_MAC) {
         LOG(ERROR) << "can't insert node with empty mac";
@@ -223,22 +222,8 @@ bool db::add_node(const sMacAddr &mac, const sMacAddr &parent_mac, beerocks::eTy
         n             = std::make_shared<node>(type, tlvf::mac_to_string(mac));
         n->parent_mac = tlvf::mac_to_string(parent_mac);
     }
-    n->radio_identifier = tlvf::mac_to_string(radio_identifier);
-    n->hierarchy        = new_hierarchy;
+    n->hierarchy = new_hierarchy;
     nodes[new_hierarchy].insert(std::make_pair(tlvf::mac_to_string(mac), n));
-
-    if (radio_identifier != network_utils::ZERO_MAC) {
-        std::string ruid_key = get_node_key(tlvf::mac_to_string(parent_mac), n->radio_identifier);
-        if (ruid_key.empty()) {
-            LOG(ERROR) << "can't insert node with empty RUID";
-            return false;
-        }
-        // if already exists set instead of insert
-        if (get_node(ruid_key)) {
-            nodes[new_hierarchy].erase(ruid_key);
-        }
-        nodes[new_hierarchy].insert(std::make_pair(ruid_key, n));
-    }
 
     return true;
 }
@@ -437,7 +422,7 @@ bool db::dm_add_sta_beacon_measurement(const beerocks_message::sBeaconResponse11
 
 bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
-    if (!add_node(mac, parent_mac, beerocks::TYPE_SLAVE, mac)) {
+    if (!add_node(mac, parent_mac, beerocks::TYPE_SLAVE)) {
         LOG(ERROR) << "Failed to add radio node, mac: " << mac;
         return false;
     }
@@ -499,27 +484,12 @@ bool db::remove_node(const sMacAddr &mac)
     for (i = 0; i < HIERARCHY_MAX; i++) {
         auto it = nodes[i].find(tlvf::mac_to_string(mac));
         if (it != nodes[i].end()) {
-            std::string ruid_key =
-                get_node_key(it->second->parent_mac, it->second->radio_identifier);
-            std::string node_mac = it->second->mac;
-
             if (last_accessed_node_mac == tlvf::mac_to_string(mac)) {
                 last_accessed_node_mac = std::string();
                 last_accessed_node     = nullptr;
             }
 
-            // map may include 2 keys to same node - if so remove other key-node pair from map
-            // if removed by mac
-            if (tlvf::mac_to_string(mac) == node_mac) {
-                it = nodes[i].erase(it);
-                // if ruid_key exists for this node
-                if (!ruid_key.empty()) {
-                    nodes[i].erase(ruid_key);
-                }
-                // if removed by ruid_key
-            } else if (tlvf::mac_to_string(mac) == ruid_key) {
-                nodes[i].erase(node_mac);
-            }
+            it = nodes[i].erase(it);
 
             auto index = m_ambiorix_datamodel->get_instance_index("Network.Device.[ID == '%s'].",
                                                                   tlvf::mac_to_string(mac));
@@ -4646,16 +4616,6 @@ bool db::get_hostap_channel_ext_above_primary(const sMacAddr &hostap_mac)
         return false;
     }
     return n->hostap->channel_ext_above_primary;
-}
-
-std::string db::get_node_key(const std::string &al_mac, const std::string &ruid)
-{
-
-    if (al_mac.empty() || ruid.empty()) {
-        return std::string();
-    }
-
-    return al_mac + "_" + ruid;
 }
 
 uint16_t db::get_hostap_vht_center_frequency(const sMacAddr &mac)

@@ -850,7 +850,6 @@ public:
     std::set<std::string> get_node_children(const std::string &mac, int type = beerocks::TYPE_ANY,
                                             int state = beerocks::STATE_ANY);
     std::list<sMacAddr> get_1905_1_neighbors(const sMacAddr &al_mac);
-    std::string get_node_key(const std::string &al_mac, const std::string &ruid);
 
     //
     // Capabilities
@@ -1963,13 +1962,11 @@ private:
      * @param mac MAC address of the node.
      * @param parent_mac
      * @param type The type of node used for node-type verification.
-     * @param radio_identifier
      * @return std::shared_ptr<node> pointer to the node on success, nullptr otherwise.
      */
     bool add_node(const sMacAddr &mac,
-                  const sMacAddr &parent_mac       = beerocks::net::network_utils::ZERO_MAC,
-                  beerocks::eType type             = beerocks::TYPE_CLIENT,
-                  const sMacAddr &radio_identifier = beerocks::net::network_utils::ZERO_MAC);
+                  const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC,
+                  beerocks::eType type       = beerocks::TYPE_CLIENT);
     std::shared_ptr<node> get_node(const std::string &key); //key can be <mac> or <al_mac>_<ruid>
     std::shared_ptr<node> get_node(const sMacAddr &mac);
 
