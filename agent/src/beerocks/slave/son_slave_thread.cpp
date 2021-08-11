@@ -91,7 +91,6 @@ slave_thread::slave_thread(sAgentConfig conf, beerocks::logging &logger_)
         radio_manager.master_socket           = nullptr;
         radio_manager.monitor_socket          = nullptr;
         radio_manager.ap_manager_socket       = nullptr;
-        radio_manager.platform_manager_socket = nullptr;
 
         // Set configuration on Agent database.
         auto db = AgentDB::get();
@@ -170,7 +169,7 @@ void slave_thread::slave_reset(const std::string &fronthaul_iface)
     if (!radio_manager.detach_on_conf_change) {
         backhaul_manager_stop(fronthaul_iface);
     }
-    platform_manager_stop(fronthaul_iface);
+    platform_manager_stop();
     hostap_services_off();
     fronthaul_stop(fronthaul_iface);
     radio_manager.is_backhaul_manager   = false;
@@ -192,7 +191,7 @@ void slave_thread::slave_reset(const std::string &fronthaul_iface)
     }
 
     if (radio_manager.stopped && radio_manager.slave_state != STATE_INIT) {
-        platform_notify_error(fronthaul_iface, beerocks::bpl::eErrorCode::SLAVE_STOPPED, "");
+        platform_notify_error(beerocks::bpl::eErrorCode::SLAVE_STOPPED, "");
         LOG(DEBUG) << "goto STATE_STOPPED";
         radio_manager.slave_state = STATE_STOPPED;
     } else if (radio_manager.is_backhaul_disconnected) {
@@ -209,12 +208,10 @@ void slave_thread::slave_reset(const std::string &fronthaul_iface)
     LOG(DEBUG) << "slave_reset() #" << radio_manager.slave_resets_counter << " - done";
 }
 
-void slave_thread::platform_notify_error(const std::string &fronthaul_iface,
-                                         beerocks::bpl::eErrorCode code,
+void slave_thread::platform_notify_error(beerocks::bpl::eErrorCode code,
                                          const std::string &error_data)
 {
-    const auto &radio_manager = m_radio_managers[fronthaul_iface];
-    if (radio_manager.platform_manager_socket == nullptr) {
+    if (!m_platform_manager_socket) {
         LOG(ERROR) << "Invalid Platform Manager socket!";
         return;
     }
@@ -233,7 +230,7 @@ void slave_thread::platform_notify_error(const std::string &fronthaul_iface,
                               message::PLATFORM_ERROR_DATA_SIZE);
 
     // Send the message
-    message_com::send_cmdu(radio_manager.platform_manager_socket, cmdu_tx);
+    message_com::send_cmdu(m_platform_manager_socket, cmdu_tx);
 }
 
 void slave_thread::on_thread_stop() { stop_slave_thread(); }
@@ -256,11 +253,10 @@ bool slave_thread::socket_disconnected(Socket *sd)
 
         if (sd == radio_manager.backhaul_manager_socket) {
             LOG(DEBUG) << "backhaul manager & master socket disconnected! - slave_reset()";
-            platform_notify_error(fronthaul_iface,
-                                  bpl::eErrorCode::SLAVE_SLAVE_BACKHAUL_MANAGER_DISCONNECTED, "");
+            platform_notify_error(bpl::eErrorCode::SLAVE_SLAVE_BACKHAUL_MANAGER_DISCONNECTED, "");
             slave_reset(fronthaul_iface);
             return false;
-        } else if (sd == radio_manager.platform_manager_socket) {
+        } else if (sd == m_platform_manager_socket) {
             LOG(DEBUG) << "platform_manager disconnected! - slave_reset()";
             slave_reset(fronthaul_iface);
             return false;
@@ -344,7 +340,7 @@ bool slave_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
     for (auto &radio_manager_map_element : m_radio_managers.get()) {
         auto &radio_manager = radio_manager_map_element.second;
         if (sd == radio_manager.backhaul_manager_socket || sd == radio_manager.ap_manager_socket ||
-            sd == radio_manager.monitor_socket || sd == radio_manager.platform_manager_socket) {
+            sd == radio_manager.monitor_socket) {
             fronthaul_iface = radio_manager_map_element.first;
         }
     }
@@ -371,7 +367,7 @@ bool slave_thread::handle_cmdu(Socket *sd, ieee1905_1::CmduMessageRx &cmdu_rx)
             return handle_cmdu_backhaul_manager_message(fronthaul_iface, sd, beerocks_header);
         } break;
         case beerocks_message::ACTION_PLATFORM: {
-            return handle_cmdu_platform_manager_message(fronthaul_iface, sd, beerocks_header);
+            return handle_cmdu_platform_manager_message(sd, beerocks_header);
         } break;
         case beerocks_message::ACTION_APMANAGER: {
             return handle_cmdu_ap_manager_message(fronthaul_iface, sd, beerocks_header);
@@ -531,7 +527,7 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
         }
         // notify platform manager
         request_out->params() = request_in->params();
-        message_com::send_cmdu(radio_manager.platform_manager_socket, cmdu_tx);
+        message_com::send_cmdu(m_platform_manager_socket, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_CONTROL_HOSTAP_SET_RESTRICTED_FAILSAFE_CHANNEL_REQUEST: {
@@ -756,7 +752,7 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
                 return false;
             }
             request_out->params() = request_in->params();
-            message_com::send_cmdu(radio_manager.platform_manager_socket, cmdu_tx);
+            message_com::send_cmdu(m_platform_manager_socket, cmdu_tx);
         }
         break;
     }
@@ -1690,16 +1686,9 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
 }
 
 bool slave_thread::handle_cmdu_platform_manager_message(
-    const std::string &fronthaul_iface, Socket *sd,
-    std::shared_ptr<beerocks_header> beerocks_header)
+    Socket *sd, std::shared_ptr<beerocks_header> beerocks_header)
 {
-    if (fronthaul_iface.empty()) {
-        LOG(ERROR) << "Received message from unknown socket, fronthaul_iface is empty. action_op: "
-                   << beerocks_header->action_op();
-        return true;
-    }
-    auto &radio_manager = m_radio_managers[fronthaul_iface];
-    if (radio_manager.platform_manager_socket != sd) {
+    if (m_platform_manager_socket != sd) {
         LOG(ERROR) << "Unknown socket, ACTION_PLATFORM_MANAGER action_op: "
                    << int(beerocks_header->action_op());
         return true;
@@ -1707,24 +1696,14 @@ bool slave_thread::handle_cmdu_platform_manager_message(
 
     switch (beerocks_header->action_op()) {
     case beerocks_message::ACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE: {
-        LOG(TRACE) << "ACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE " << fronthaul_iface;
-        if (radio_manager.slave_state == STATE_WAIT_FOR_PLATFORM_MANAGER_REGISTER_RESPONSE) {
+        LOG(TRACE) << "ACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE";
+        if (m_agent_state == STATE_WAIT_FOR_PLATFORM_MANAGER_REGISTER_RESPONSE) {
             auto response =
                 beerocks_header
                     ->addClass<beerocks_message::cACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE>();
-            if (response == nullptr) {
+            if (!response) {
                 LOG(ERROR) << "addClass cACTION_PLATFORM_SON_SLAVE_REGISTER_RESPONSE failed";
                 return false;
-            }
-            // Configuration is invalid
-            if (response->valid() == 0) {
-                LOG(ERROR) << "response->valid == 0";
-                platform_notify_error(
-                    fronthaul_iface,
-                    bpl::eErrorCode::CONFIG_PLATFORM_REPORTED_INVALID_CONFIGURATION, "");
-                radio_manager.stop_on_failure_attempts--;
-                slave_reset(fronthaul_iface);
-                return true;
             }
 
             /**
@@ -1739,10 +1718,21 @@ bool slave_thread::handle_cmdu_platform_manager_message(
                 db->ethernet.wan.mac = network_utils::ZERO_MAC;
             }
 
-            radio_manager.stop_on_failure_attempts = db->device_conf.stop_on_failure_attempts;
+            auto radio_operation = [&](sManagedRadio &radio_manager,
+                                       const std::string &fronthaul_iface) -> bool {
+                radio_manager.stop_on_failure_attempts = db->device_conf.stop_on_failure_attempts;
 
-            LOG(TRACE) << "goto STATE_CONNECT_TO_BACKHAUL_MANAGER " << fronthaul_iface;
-            radio_manager.slave_state = STATE_CONNECT_TO_BACKHAUL_MANAGER;
+                // TODO: When unifying the backhaul manager socket, change the state move from radio
+                // specific to global. PPM-349.
+                LOG(TRACE) << "goto STATE_CONNECT_TO_BACKHAUL_MANAGER " << fronthaul_iface;
+                radio_manager.slave_state = STATE_CONNECT_TO_BACKHAUL_MANAGER;
+                return true;
+            };
+            m_radio_managers.do_on_each_radio_manager(radio_operation);
+
+            // TODO: When unifying the backhaul manager socket, change the state move from radio
+            // specific to global. PPM-349.
+            m_agent_state = STATE_RADIO_SPECIFIC_FSM;
         } else {
             LOG(ERROR) << "slave_state != STATE_WAIT_FOR_PLATFORM_MANAGER_REGISTER_RESPONSE";
         }
@@ -1750,25 +1740,27 @@ bool slave_thread::handle_cmdu_platform_manager_message(
     }
     case beerocks_message::ACTION_PLATFORM_ARP_MONITOR_NOTIFICATION: {
         // LOG(TRACE) << "ACTION_PLATFORM_ARP_MONITOR_NOTIFICATION";
-        if (radio_manager.master_socket) {
-            auto notification_in =
-                beerocks_header
-                    ->addClass<beerocks_message::cACTION_PLATFORM_ARP_MONITOR_NOTIFICATION>();
-            if (notification_in == nullptr) {
-                LOG(ERROR) << "addClass cACTION_PLATFORM_ARP_MONITOR_NOTIFICATION failed";
-                return false;
-            }
-
-            auto notification_out = message_com::create_vs_message<
-                beerocks_message::cACTION_CONTROL_CLIENT_ARP_MONITOR_NOTIFICATION>(cmdu_tx);
-            if (notification_out == nullptr) {
-                LOG(ERROR) << "Failed building message!";
-                return false;
-            }
-
-            notification_out->params() = notification_in->params();
-            send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
+        const auto &fronthaul_iface = m_radio_managers.get_controller_socket_iface();
+        if (!m_radio_managers[fronthaul_iface].master_socket) {
+            return true;
         }
+        auto notification_in =
+            beerocks_header
+                ->addClass<beerocks_message::cACTION_PLATFORM_ARP_MONITOR_NOTIFICATION>();
+        if (notification_in == nullptr) {
+            LOG(ERROR) << "addClass cACTION_PLATFORM_ARP_MONITOR_NOTIFICATION failed";
+            return false;
+        }
+
+        auto notification_out = message_com::create_vs_message<
+            beerocks_message::cACTION_CONTROL_CLIENT_ARP_MONITOR_NOTIFICATION>(cmdu_tx);
+        if (notification_out == nullptr) {
+            LOG(ERROR) << "Failed building message!";
+            return false;
+        }
+
+        notification_out->params() = notification_in->params();
+        send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
         break;
     }
     case beerocks_message::ACTION_PLATFORM_WLAN_PARAMS_CHANGED_NOTIFICATION: {
@@ -1777,10 +1769,12 @@ bool slave_thread::handle_cmdu_platform_manager_message(
         auto notification =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_PLATFORM_WLAN_PARAMS_CHANGED_NOTIFICATION>();
-        if (notification == nullptr) {
+        if (!notification) {
             LOG(ERROR) << "addClass cACTION_PLATFORM_WLAN_PARAMS_CHANGED_NOTIFICATION failed";
             return false;
         }
+
+        auto fronthaul_iface = notification->iface_name();
 
         // slave only reacts to band_enabled change
         auto db = AgentDB::get();
@@ -1810,21 +1804,23 @@ bool slave_thread::handle_cmdu_platform_manager_message(
                        << std::string(notification->hostname(message::NODE_NAME_LENGTH));
 
             // notify master
-            if (radio_manager.master_socket) {
-                auto master_notification = message_com::create_vs_message<
-                    beerocks_message::cACTION_CONTROL_CLIENT_DHCP_COMPLETE_NOTIFICATION>(cmdu_tx);
-                if (master_notification == nullptr) {
-                    LOG(ERROR) << "Failed building message!";
-                    return false;
-                }
-
-                master_notification->mac()  = notification->mac();
-                master_notification->ipv4() = notification->ipv4();
-                string_utils::copy_string(master_notification->name(message::NODE_NAME_LENGTH),
-                                          notification->hostname(message::NODE_NAME_LENGTH),
-                                          message::NODE_NAME_LENGTH);
-                send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
+            const auto &fronthaul_iface = m_radio_managers.get_controller_socket_iface();
+            if (!m_radio_managers[fronthaul_iface].master_socket) {
+                return true;
             }
+            auto master_notification = message_com::create_vs_message<
+                beerocks_message::cACTION_CONTROL_CLIENT_DHCP_COMPLETE_NOTIFICATION>(cmdu_tx);
+            if (!master_notification) {
+                LOG(ERROR) << "Failed building message!";
+                return false;
+            }
+
+            master_notification->mac()  = notification->mac();
+            master_notification->ipv4() = notification->ipv4();
+            string_utils::copy_string(master_notification->name(message::NODE_NAME_LENGTH),
+                                      notification->hostname(message::NODE_NAME_LENGTH),
+                                      message::NODE_NAME_LENGTH);
+            send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
 
         } else {
             LOG(DEBUG) << "ACTION_PLATFORM_DHCP_MONITOR_NOTIFICATION op " << notification->op()
@@ -1835,25 +1831,27 @@ bool slave_thread::handle_cmdu_platform_manager_message(
     }
     case beerocks_message::ACTION_PLATFORM_ARP_QUERY_RESPONSE: {
         LOG(TRACE) << "ACTION_PLATFORM_ARP_QUERY_RESPONSE";
-        if (radio_manager.master_socket) {
-            auto response =
-                beerocks_header->addClass<beerocks_message::cACTION_PLATFORM_ARP_QUERY_RESPONSE>();
-            if (response == nullptr) {
-                LOG(ERROR) << "addClass cACTION_PLATFORM_ARP_QUERY_RESPONSE failed";
-                return false;
-            }
-
-            auto response_out = message_com::create_vs_message<
-                beerocks_message::cACTION_CONTROL_ARP_QUERY_RESPONSE>(cmdu_tx,
-                                                                      beerocks_header->id());
-            if (response_out == nullptr) {
-                LOG(ERROR) << "Failed building message!";
-                return false;
-            }
-
-            response_out->params() = response->params();
-            send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
+        const auto &fronthaul_iface = m_radio_managers.get_controller_socket_iface();
+        if (!m_radio_managers[fronthaul_iface].master_socket) {
+            return true;
         }
+        auto response =
+            beerocks_header->addClass<beerocks_message::cACTION_PLATFORM_ARP_QUERY_RESPONSE>();
+        if (!response) {
+            LOG(ERROR) << "addClass cACTION_PLATFORM_ARP_QUERY_RESPONSE failed";
+            return false;
+        }
+
+        auto response_out =
+            message_com::create_vs_message<beerocks_message::cACTION_CONTROL_ARP_QUERY_RESPONSE>(
+                cmdu_tx, beerocks_header->id());
+        if (response_out == nullptr) {
+            LOG(ERROR) << "Failed building message!";
+            return false;
+        }
+
+        response_out->params() = response->params();
+        send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
         break;
     }
 
@@ -3672,10 +3670,13 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
         std::string iface_mac;
         if (!network_utils::linux_iface_get_mac(db->bridge.iface_name, iface_mac)) {
             LOG(ERROR) << "Failed reading addresses from the bridge!";
-            platform_notify_error(fronthaul_iface, bpl::eErrorCode::BH_READING_DATA_FROM_THE_BRIDGE,
-                                  "");
-            radio_manager.stop_on_failure_attempts--;
-            slave_reset(fronthaul_iface);
+            platform_notify_error(bpl::eErrorCode::BH_READING_DATA_FROM_THE_BRIDGE, "");
+            m_radio_managers.do_on_each_radio_manager(
+                [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) {
+                    radio_manager.stop_on_failure_attempts--;
+                    slave_reset(fronthaul_iface);
+                    return true;
+                });
             break;
         }
 
@@ -3789,9 +3790,9 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
             if (!err.empty()) {
                 LOG(ERROR) << "backhaul_manager_socket: " << err;
                 backhaul_manager_stop(fronthaul_iface);
-                platform_notify_error(
-                    fronthaul_iface, bpl::eErrorCode::SLAVE_CONNECTING_TO_BACKHAUL_MANAGER,
-                    "iface=" + config.radios[fronthaul_iface].backhaul_wireless_iface);
+                platform_notify_error(bpl::eErrorCode::SLAVE_CONNECTING_TO_BACKHAUL_MANAGER,
+                                      "iface=" +
+                                          config.radios[fronthaul_iface].backhaul_wireless_iface);
                 radio_manager.stop_on_failure_attempts--;
                 slave_reset(fronthaul_iface);
                 break;
@@ -3923,8 +3924,7 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
         if (db->ethernet.wan.iface_name.empty() &&
             config.radios[fronthaul_iface].backhaul_wireless_iface.empty()) {
             LOG(DEBUG) << "No valid backhaul iface!";
-            platform_notify_error(fronthaul_iface,
-                                  bpl::eErrorCode::CONFIG_NO_VALID_BACKHAUL_INTERFACE, "");
+            platform_notify_error(bpl::eErrorCode::CONFIG_NO_VALID_BACKHAUL_INTERFACE, "");
             error = true;
         }
 
@@ -4056,7 +4056,7 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
             notification->is_backhaul_manager() =
                 radio_manager
                     .is_backhaul_manager; //redundant for now but might be needed in the future
-            message_com::send_cmdu(radio_manager.platform_manager_socket, cmdu_tx);
+            message_com::send_cmdu(m_platform_manager_socket, cmdu_tx);
         }
 
         LOG(TRACE) << "goto STATE_JOIN_MASTER";
@@ -4076,7 +4076,7 @@ bool slave_thread::slave_fsm(const std::string &fronthaul_iface)
 
         if (radio_manager.master_socket == nullptr) {
             LOG(ERROR) << "master_socket == nullptr";
-            platform_notify_error(fronthaul_iface, bpl::eErrorCode::SLAVE_INVALID_MASTER_SOCKET,
+            platform_notify_error(bpl::eErrorCode::SLAVE_INVALID_MASTER_SOCKET,
                                   "Invalid master socket");
             radio_manager.stop_on_failure_attempts--;
             slave_reset(fronthaul_iface);
@@ -4353,14 +4353,13 @@ void slave_thread::backhaul_manager_stop(const std::string &fronthaul_iface)
     radio_manager.master_socket           = nullptr;
 }
 
-void slave_thread::platform_manager_stop(const std::string &fronthaul_iface)
+void slave_thread::platform_manager_stop()
 {
-    auto &radio_manager = m_radio_managers[fronthaul_iface];
-    if (radio_manager.platform_manager_socket) {
+    if (m_platform_manager_socket) {
         LOG(DEBUG) << "removing platform_manager_socket";
-        remove_socket(radio_manager.platform_manager_socket);
-        delete radio_manager.platform_manager_socket;
-        radio_manager.platform_manager_socket = nullptr;
+        remove_socket(m_platform_manager_socket);
+        delete m_platform_manager_socket;
+        m_platform_manager_socket = nullptr;
     }
 }
 
@@ -5211,7 +5210,7 @@ bool slave_thread::parse_intel_join_response(const std::string &fronthaul_iface,
                                   sizeof(beerocks_message::sVersions::master_version));
         string_utils::copy_string(notification->versions().slave_version, BEEROCKS_VERSION,
                                   sizeof(beerocks_message::sVersions::slave_version));
-        message_com::send_cmdu(radio_manager.platform_manager_socket, cmdu_tx);
+        message_com::send_cmdu(m_platform_manager_socket, cmdu_tx);
         LOG(DEBUG) << "send ACTION_PLATFORM_MASTER_SLAVE_VERSIONS_NOTIFICATION " << fronthaul_iface;
 
         radio_manager.son_config = joined_response->config();
@@ -5249,7 +5248,7 @@ bool slave_thread::parse_non_intel_join_response(const std::string &fronthaul_if
     //                                  sizeof(beerocks_message::sVersions::master_version));
     //        string_utils::copy_string(notification->versions().slave_version, BEEROCKS_VERSION,
     //                                  sizeof(beerocks_message::sVersions::slave_version));
-    //        message_com::send_cmdu(platform_manager_socket, cmdu_tx);
+    //        message_com::send_cmdu(m_platform_manager_socket, cmdu_tx);
     //        LOG(DEBUG) << "send ACTION_PLATFORM_MASTER_SLAVE_VERSIONS_NOTIFICATION";
 
     // TODO set son_config

@@ -131,8 +131,7 @@ private:
         const std::string &fronthaul_iface, Socket *sd,
         std::shared_ptr<beerocks::beerocks_header> beerocks_header);
     bool handle_cmdu_platform_manager_message(
-        const std::string &fronthaul_iface, Socket *sd,
-        std::shared_ptr<beerocks::beerocks_header> beerocks_header);
+        Socket *sd, std::shared_ptr<beerocks::beerocks_header> beerocks_header);
     bool handle_cmdu_ap_manager_message(const std::string &fronthaul_iface, Socket *sd,
                                         std::shared_ptr<beerocks::beerocks_header> beerocks_header);
     bool handle_cmdu_monitor_message(const std::string &fronthaul_iface, Socket *sd,
@@ -148,14 +147,13 @@ private:
     void slave_reset(const std::string &fronthaul_iface);
     void stop_slave_thread();
     void backhaul_manager_stop(const std::string &fronthaul_iface);
-    void platform_manager_stop(const std::string &fronthaul_iface);
+    void platform_manager_stop();
     void hostap_services_off();
     bool hostap_services_on();
     void fronthaul_start(const std::string &fronthaul_iface);
     void fronthaul_stop(const std::string &fronthaul_iface);
     void log_son_config(const std::string &fronthaul_iface);
-    void platform_notify_error(const std::string &fronthaul_iface, beerocks::bpl::eErrorCode code,
-                               const std::string &error_data);
+    void platform_notify_error(beerocks::bpl::eErrorCode code, const std::string &error_data);
     bool monitor_heartbeat_check(const std::string &fronthaul_iface);
     bool ap_manager_heartbeat_check(const std::string &fronthaul_iface);
     bool send_cmdu_to_controller(const std::string &fronthaul_iface,
@@ -177,6 +175,8 @@ private:
 
     std::string backhaul_manager_uds;
     std::string platform_manager_uds;
+
+    SocketClient *m_platform_manager_socket = nullptr;
 
     // Global FSM members:
     eSlaveState m_agent_state;
@@ -201,7 +201,6 @@ private:
         int slave_resets_counter = 0;
 
         sSlaveBackhaulParams backhaul_params;
-        SocketClient *platform_manager_socket = nullptr;
         SocketClient *backhaul_manager_socket = nullptr;
         SocketClient *master_socket           = nullptr;
 
