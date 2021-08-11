@@ -208,6 +208,241 @@ void slave_thread::slave_reset(const std::string &fronthaul_iface)
     LOG(DEBUG) << "slave_reset() #" << radio_manager.slave_resets_counter << " - done";
 }
 
+bool slave_thread::read_platform_configuration()
+{
+    auto db = AgentDB::get();
+
+    char security_type[beerocks::message::WIFI_SECURITY_TYPE_MAX_LENGTH];
+    if (bpl::cfg_get_beerocks_credentials(BPL_RADIO_FRONT, db->device_conf.front_radio.ssid,
+                                          db->device_conf.front_radio.pass, security_type) < 0) {
+        LOG(ERROR) << "Failed reading front Wi-Fi credentials!";
+        return false;
+    }
+
+    const auto platform_to_bwl_security = [](const std::string &sec) -> bwl::WiFiSec {
+        if (!sec.compare("None")) {
+            return bwl::WiFiSec::None;
+        } else if (!sec.compare("WEP-64")) {
+            return bwl::WiFiSec::WEP_64;
+        } else if (!sec.compare("WEP-128")) {
+            return bwl::WiFiSec::WEP_128;
+        } else if (!sec.compare("WPA-Personal")) {
+            return bwl::WiFiSec::WPA_PSK;
+        } else if (!sec.compare("WPA2-Personal")) {
+            return bwl::WiFiSec::WPA2_PSK;
+        } else if (!sec.compare("WPA-WPA2-Personal")) {
+            return bwl::WiFiSec::WPA_WPA2_PSK;
+        } else {
+            return bwl::WiFiSec::Invalid;
+        }
+    };
+
+    db->device_conf.front_radio.security_type = platform_to_bwl_security(security_type);
+
+    LOG(DEBUG) << "Front Credentials:"
+               << " ssid=" << db->device_conf.front_radio.ssid
+               << " sec=" << db->device_conf.front_radio.security_type << " pass=***";
+
+    char ssid[beerocks::message::WIFI_SSID_MAX_LENGTH];
+    char pass[beerocks::message::WIFI_PASS_MAX_LENGTH];
+    if (bpl::cfg_get_beerocks_credentials(BPL_RADIO_BACK, ssid, pass, security_type) < 0) {
+        LOG(ERROR) << "Failed reading Wi-Fi back credentials!";
+        return false;
+    }
+    db->device_conf.back_radio.ssid = std::string(ssid, beerocks::message::WIFI_SSID_MAX_LENGTH);
+    db->device_conf.back_radio.pass = std::string(pass, beerocks::message::WIFI_PASS_MAX_LENGTH);
+    db->device_conf.back_radio.security_type = platform_to_bwl_security(security_type);
+
+    int mem_only_psk = bpl::cfg_get_security_policy();
+    if (mem_only_psk < 0) {
+        LOG(ERROR) << "Failed reading Wi-Fi security policy!";
+        return false;
+    }
+
+    db->device_conf.back_radio.mem_only_psk = bool(mem_only_psk);
+
+    LOG(DEBUG) << "Back Credentials:"
+               << " ssid=" << db->device_conf.back_radio.ssid
+               << " sec=" << db->device_conf.back_radio.security_type
+               << " mem_only_psk=" << db->device_conf.back_radio.mem_only_psk << " pass=***";
+
+    for (const auto &radio_manager : m_radio_managers.get()) {
+        const auto &fronthaul_iface = radio_manager.first;
+        bpl::BPL_WLAN_PARAMS params;
+        if (bpl::cfg_get_wifi_params(fronthaul_iface.c_str(), &params) < 0) {
+            LOG(ERROR) << "Failed reading '" << fronthaul_iface << "' parameters!";
+            return false;
+        }
+
+        db->device_conf.front_radio.config[fronthaul_iface].band_enabled       = params.enabled;
+        db->device_conf.front_radio.config[fronthaul_iface].configured_channel = params.channel;
+        db->device_conf.front_radio.config[fronthaul_iface].sub_band_dfs = params.sub_band_dfs;
+
+        CountryCode current_country;
+        current_country[0] = params.country_code[0];
+        current_country[1] = params.country_code[1];
+
+        bool db_country_code_empty =
+            (db->device_conf.country_code[0] == 0) && (db->device_conf.country_code[1] == 0);
+
+        if (current_country != db->device_conf.country_code && !db_country_code_empty) {
+            LOG(ERROR) << "strangely enough this agent exists in more than one country: "
+                       << current_country[0] << current_country[1] << " and "
+                       << db->device_conf.country_code[0] << db->device_conf.country_code[1];
+        }
+        // take the latest
+        db->device_conf.country_code = current_country;
+
+        LOG(DEBUG) << "wlan settings " << fronthaul_iface << ":";
+        LOG(DEBUG) << "band_enabled=" << params.enabled;
+        LOG(DEBUG) << "channel=" << params.channel;
+        LOG(DEBUG) << "sub_band_dfs=" << params.sub_band_dfs;
+        LOG(DEBUG) << "country-code="
+                   << (!db_country_code_empty ? std::string(&db->device_conf.country_code[0], 2)
+                                              : "(not set)");
+
+        LOG(DEBUG) << "iface=" << fronthaul_iface << " added to wlan params change check";
+    }
+
+    const int back_vaps_buff_len =
+        BPL_BACK_VAPS_GROUPS * BPL_BACK_VAPS_IN_GROUP * BPL_MAC_ADDR_OCTETS_LEN;
+    char back_vaps[back_vaps_buff_len];
+
+    int temp_int;
+
+    if ((temp_int = bpl::cfg_get_rdkb_extensions()) < 0) {
+        LOG(ERROR) << "Failed reading 'rdkb_extensions'";
+        return false;
+    }
+    db->device_conf.rdkb_extensions_enabled = static_cast<bool>(temp_int);
+
+    if (!bpl::cfg_get_band_steering(db->device_conf.client_band_steering_enabled)) {
+        LOG(DEBUG) << "Failed to read cfg_get_band_steering, setting to default value: "
+                   << beerocks::bpl::DEFAULT_BAND_STEERING;
+
+        db->device_conf.client_band_steering_enabled = beerocks::bpl::DEFAULT_BAND_STEERING;
+    }
+
+    if (!beerocks::bpl::cfg_get_client_roaming(
+            db->device_conf.client_optimal_path_roaming_enabled)) {
+        LOG(DEBUG) << "Failed to read cfg_get_client_roaming, setting to default value: "
+                   << beerocks::bpl::DEFAULT_CLIENT_ROAMING;
+
+        db->device_conf.client_optimal_path_roaming_enabled = beerocks::bpl::DEFAULT_CLIENT_ROAMING;
+    }
+
+    if ((temp_int = bpl::cfg_is_master()) < 0) {
+        LOG(ERROR) << "Failed reading 'local_controller'";
+        return false;
+    }
+    db->device_conf.local_controller = temp_int;
+    if ((temp_int = bpl::cfg_get_management_mode()) < 0) {
+        LOG(ERROR) << "Failed reading 'management_mode'";
+        return false;
+    }
+    db->device_conf.management_mode = temp_int;
+    if ((temp_int = bpl::cfg_get_operating_mode()) < 0) {
+        LOG(ERROR) << "Failed reading 'operating_mode'";
+        return false;
+    }
+    db->device_conf.operating_mode = uint8_t(temp_int);
+
+    if ((temp_int = bpl::cfg_get_certification_mode()) < 0) {
+        LOG(ERROR) << "Failed reading 'certification_mode'";
+        return false;
+    }
+    db->device_conf.certification_mode = temp_int;
+
+    if ((temp_int = bpl::cfg_get_stop_on_failure_attempts()) < 0) {
+        LOG(ERROR) << "Failed reading 'stop_on_failure_attempts'";
+        return false;
+    }
+    db->device_conf.stop_on_failure_attempts = temp_int;
+
+    int backhaul_max_vaps;
+    int backhaul_network_enabled;
+    int backhaul_preferred_radio_band;
+    if (bpl::cfg_get_backhaul_params(&backhaul_max_vaps, &backhaul_network_enabled,
+                                     &backhaul_preferred_radio_band) < 0) {
+        LOG(ERROR) << "Failed reading 'backhaul_max_vaps, backhaul_network_enabled, "
+                      "backhaul_preferred_radio_band'!";
+    }
+    db->device_conf.back_radio.backhaul_max_vaps = static_cast<uint8_t>(backhaul_max_vaps);
+    db->device_conf.back_radio.backhaul_network_enabled =
+        static_cast<bool>(backhaul_network_enabled);
+
+    const auto bpl_band_to_freq_type = [](int bpl_band) -> beerocks::eFreqType {
+        if (bpl_band == BPL_RADIO_BAND_2G) {
+            return beerocks::eFreqType::FREQ_24G;
+        } else if (bpl_band == BPL_RADIO_BAND_5G) {
+            return beerocks::eFreqType::FREQ_5G;
+        } else if (bpl_band == BPL_RADIO_BAND_AUTO) {
+            return beerocks::eFreqType::FREQ_AUTO;
+        } else {
+            return beerocks::eFreqType::FREQ_UNKNOWN;
+        }
+    };
+    db->device_conf.back_radio.backhaul_preferred_radio_band =
+        bpl_band_to_freq_type(backhaul_preferred_radio_band);
+
+    if (bpl::cfg_get_backhaul_vaps(back_vaps, back_vaps_buff_len) < 0) {
+        LOG(ERROR) << "Failed reading beerocks backhaul_vaps parameters!";
+        return false;
+    }
+
+    if (!bpl::cfg_get_zwdfs_enable(db->device_conf.zwdfs_enable)) {
+        LOG(WARNING) << "cfg_get_zwdfs_enable() failed!, using default configuration, zwdfs is "
+                     << (db->device_conf.zwdfs_enable ? std::string("enabled.")
+                                                      : std::string("disabled."));
+    }
+
+    if (!bpl::cfg_get_best_channel_rank_threshold(db->device_conf.best_channel_rank_threshold)) {
+        LOG(WARNING) << "cfg_get_best_channel_rank_threshold() failed!"
+                     << " using default configuration ";
+    }
+
+    // Set local_gw flag
+    db->device_conf.local_gw = (db->device_conf.operating_mode == BPL_OPER_MODE_GATEWAY ||
+                                db->device_conf.operating_mode == BPL_OPER_MODE_GATEWAY_WISP);
+
+    db->device_conf.client_optimal_path_roaming_prefer_signal_strength_enabled =
+        0; // TODO add platform DB flag
+    db->device_conf.client_11k_roaming_enabled =
+        (db->device_conf.client_optimal_path_roaming_enabled ||
+         db->device_conf.client_band_steering_enabled);
+
+    db->device_conf.load_balancing_enabled   = 0; // for v1.3 TODO read from CAL DB
+    db->device_conf.service_fairness_enabled = 0; // for v1.3 TODO read from CAL DB
+
+    std::vector<std::string> lan_iface_list;
+    if (beerocks::bpl::bpl_get_lan_interfaces(lan_iface_list)) {
+
+        db->ethernet.lan.clear();
+
+        std::string iface_mac;
+        for (const auto &lan_iface : lan_iface_list) {
+
+            if (beerocks::net::network_utils::linux_iface_get_mac(lan_iface, iface_mac)) {
+                db->ethernet.lan.emplace_back(lan_iface, tlvf::mac_from_string(iface_mac));
+            }
+        }
+    }
+    LOG(DEBUG) << "client_band_steering_enabled: " << db->device_conf.client_band_steering_enabled;
+    LOG(DEBUG) << "client_optimal_path_roaming_enabled: "
+               << db->device_conf.client_optimal_path_roaming_enabled;
+    LOG(DEBUG) << "client_optimal_path_roaming_prefer_signal_strength_enabled: "
+               << db->device_conf.client_optimal_path_roaming_prefer_signal_strength_enabled;
+    LOG(DEBUG) << "local_gw: " << db->device_conf.local_gw;
+    LOG(DEBUG) << "local_controller: " << db->device_conf.local_controller;
+    LOG(DEBUG) << "backhaul_preferred_radio_band: "
+               << db->device_conf.back_radio.backhaul_preferred_radio_band;
+    LOG(DEBUG) << "rdkb_extensions: " << db->device_conf.rdkb_extensions_enabled;
+    LOG(DEBUG) << "zwdfs_enable: " << db->device_conf.zwdfs_enable;
+    LOG(DEBUG) << "best_channel_rank_threshold: " << db->device_conf.best_channel_rank_threshold;
+
+    return true;
+}
+
 void slave_thread::platform_notify_error(beerocks::bpl::eErrorCode code,
                                          const std::string &error_data)
 {

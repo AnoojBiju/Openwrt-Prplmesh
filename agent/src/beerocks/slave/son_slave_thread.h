@@ -341,6 +341,8 @@ private:
         const std::deque<std::pair<wfa_map::tlvProfile2ErrorCode::eReasonCode, sMacAddr>>
             &bss_errors);
 
+    bool read_platform_configuration();
+
     /**
      * @brief Save channel list into AgentDB from beerocks_message::cChannelList class.
      *
