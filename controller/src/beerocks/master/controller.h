@@ -162,11 +162,11 @@ private:
                                  std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps,
                                  beerocks::beerocks_header &beerocks_header,
                                  ieee1905_1::CmduMessageTx &cmdu_tx,
-                                 std::shared_ptr<sAgent> &agent);
+                                 const std::shared_ptr<sAgent> &agent);
     bool
     handle_non_intel_slave_join(const sMacAddr &src_mac,
                                 std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps,
-                                const WSC::m1 &m1, std::shared_ptr<sAgent> &agent,
+                                const WSC::m1 &m1, const std::shared_ptr<sAgent> &agent,
                                 const sMacAddr &radio_mac, ieee1905_1::CmduMessageTx &cmdu_tx);
 
     // 1905 messages handlers

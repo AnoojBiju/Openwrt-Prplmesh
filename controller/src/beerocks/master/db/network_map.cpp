@@ -153,7 +153,8 @@ void network_map::send_bml_network_map_message(db &database, int fd,
 }
 
 std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::string node_mac,
-                                               uint8_t *tx_buffer, std::ptrdiff_t &buffer_size,
+                                               uint8_t *tx_buffer,
+                                               const std::ptrdiff_t &buffer_size,
                                                bool force_client_disconnect)
 {
     auto n = database.get_node(node_mac);
@@ -166,7 +167,8 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::string node_ma
 }
 
 std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<node> n,
-                                               uint8_t *tx_buffer, std::ptrdiff_t &buffer_size,
+                                               uint8_t *tx_buffer,
+                                               const std::ptrdiff_t &buffer_size,
                                                bool force_client_disconnect)
 {
     auto node = (BML_NODE *)tx_buffer;

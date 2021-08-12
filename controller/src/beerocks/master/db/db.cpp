@@ -6418,7 +6418,7 @@ bool db::add_neighbor(const sMacAddr &device_mac, const sMacAddr &interface_mac,
 }
 
 bool db::dm_add_interface_neighbor(
-    std::shared_ptr<prplmesh::controller::db::Interface> &interface,
+    const std::shared_ptr<prplmesh::controller::db::Interface> &interface,
     std::shared_ptr<prplmesh::controller::db::Interface::sNeighbor> &neighbor)
 {
 

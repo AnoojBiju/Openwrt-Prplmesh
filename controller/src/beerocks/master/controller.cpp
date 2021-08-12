@@ -2054,7 +2054,7 @@ bool Controller::handle_cmdu_1905_beacon_response(const sMacAddr &src_mac,
 bool Controller::handle_intel_slave_join(
     const sMacAddr &src_mac, std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps,
     beerocks::beerocks_header &beerocks_header, ieee1905_1::CmduMessageTx &cmdu_tx,
-    std::shared_ptr<sAgent> &agent)
+    const std::shared_ptr<sAgent> &agent)
 {
     // Prepare outcoming response vs tlv
     auto join_response =
@@ -2593,7 +2593,7 @@ bool Controller::autoconfig_wsc_parse_radio_caps(
 
 bool Controller::handle_non_intel_slave_join(
     const sMacAddr &src_mac, std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps,
-    const WSC::m1 &m1, std::shared_ptr<sAgent> &agent, const sMacAddr &radio_mac,
+    const WSC::m1 &m1, const std::shared_ptr<sAgent> &agent, const sMacAddr &radio_mac,
     ieee1905_1::CmduMessageTx &cmdu_tx)
 {
 

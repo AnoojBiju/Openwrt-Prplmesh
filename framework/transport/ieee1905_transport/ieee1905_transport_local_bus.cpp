@@ -59,7 +59,7 @@ void Ieee1905Transport::handle_broker_cmdu_tx_message(CmduTxMessage &msg)
     if (packet.ether_type == ETH_P_1905_1) {
         mapf_assert(packet.payload.iov_len >= sizeof(Ieee1905CmduHeader));
 
-        Ieee1905CmduHeader *ch = (Ieee1905CmduHeader *)packet.payload.iov_base;
+        Ieee1905CmduHeader *ch = static_cast<Ieee1905CmduHeader *>(packet.payload.iov_base);
 
         // update messageId field (a.k.a "MID") unless is was pre-set by the originator
         if (!msg.metadata()->preset_message_id) {

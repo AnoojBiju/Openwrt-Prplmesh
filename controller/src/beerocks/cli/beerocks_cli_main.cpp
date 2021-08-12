@@ -193,7 +193,7 @@ static int cli_non_interactive(std::string path, std::string tmp_path, std::stri
     int status_code = 0;
     beerocks::cli_socket cli_soc(tmp_path, ip);
     beerocks::cli_bml cli_bml(path);
-    beerocks::cli *cli_ptr = &cli_soc;
+    beerocks::cli *cli_ptr;
     std::string bml_prefix(BML_PREFIX);
 
     if (command_string.compare(0, bml_prefix.size(), bml_prefix)) { // Socket
@@ -278,7 +278,7 @@ static void cli_interactive(std::string path, std::string tmp_path, std::string 
     }
 
     beerocks::cli_socket cli_soc(tmp_path, ip);
-    beerocks::cli *cli_ptr = &cli_soc;
+    beerocks::cli *cli_ptr;
     if (is_onboarding == 0) {
         if (!cli_soc.connect()) {
             std::cout << "cli_socket: Can't connect to master." << std::endl;

@@ -117,7 +117,7 @@ bool cli::parsedCommandArgumentsLinux(std::string line)
 
     int i = 0;
     for (std::vector<std::string>::iterator it = commandTokens.begin(); it != commandTokens.end();
-         it++) {
+         ++it) {
         if (it == commandTokens.begin())
             continue;
         if (late_processing) {

@@ -176,7 +176,7 @@ void task::add_pending_macs(std::set<std::string> macs,
     waiting               = true;
 }
 
-void task::add_pending_mac(std::string mac, beerocks_message::eActionOp_CONTROL action_op)
+void task::add_pending_mac(const std::string &mac, beerocks_message::eActionOp_CONTROL action_op)
 {
     pending_macs.insert({mac, action_op});
     waiting_for_responses = true;
