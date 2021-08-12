@@ -623,17 +623,36 @@ bool ChannelScanTask::trigger_radio_scan(const std::string &radio_iface,
     std::unordered_set<uint8_t> channels_to_be_scanned;
     std::for_each(
         radio_scan_info->operating_classes.begin(), radio_scan_info->operating_classes.end(),
-        [&channels_to_be_scanned, this](sOperatingClass &operating_class) {
+        [&channels_to_be_scanned, &radio, this](sOperatingClass &operating_class) {
             for (auto &channel_element : operating_class.channel_list) {
                 // Scan only the channels without an error status
                 if (channel_element.scan_status == eScanStatus::SUCCESS) {
+                    std::unordered_set<uint8_t> temp_20MHz_channels;
                     if (!get_20MHz_channels(channel_element.channel_number, operating_class.bw,
-                                            channels_to_be_scanned)) {
+                                            temp_20MHz_channels)) {
                         channel_element.scan_status = eScanStatus::
                             SCAN_NOT_SUPPORTED_ON_THIS_OPERATING_CLASS_AND_CHANNEL_ON_THIS_RADIO;
                         m_previous_scans.at(operating_class.operating_class)
                             .erase(channel_element.channel_number);
                     }
+                    std::for_each(
+                        temp_20MHz_channels.begin(), temp_20MHz_channels.end(),
+                        [&channels_to_be_scanned, &channel_element, &radio, &operating_class,
+                         this](const uint8_t &channel_number) {
+                            if (radio->channels_list.find(channel_number) ==
+                                radio->channels_list.end()) {
+                                LOG(DEBUG) << "Cannot find channel #" << channel_number
+                                           << " in radio's supported channels list";
+                                // If channel is not on the radio's list of supported channels set the channel element's scan status to
+                                //SCAN_NOT_SUPPORTED_ON_THIS_OPERATING_CLASS_AND_CHANNEL_ON_THIS_RADIO and remove from previous scans record
+                                channel_element.scan_status = eScanStatus::
+                                    SCAN_NOT_SUPPORTED_ON_THIS_OPERATING_CLASS_AND_CHANNEL_ON_THIS_RADIO;
+                                m_previous_scans.at(operating_class.operating_class)
+                                    .erase(channel_element.channel_number);
+                            } else {
+                                channels_to_be_scanned.insert(channel_number);
+                            }
+                        });
                 }
             }
         });
