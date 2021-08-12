@@ -43,7 +43,7 @@ protected:
 
 private:
     bool check_if_sta_can_steer_to_ap(const std::string &ap);
-    void send_rssi_measurement_request(const std::string &agent_mac, const std::string &client_mac,
+    void send_rssi_measurement_request(const sMacAddr &agent_mac, const std::string &client_mac,
                                        int channel, const std::string &hostap, int id);
     bool assert_original_parent();
     bool calculate_measurement_delay(const std::set<std::string> &temp_cross_hostaps,
@@ -104,7 +104,7 @@ private:
         potential_11k_aps; // key = ap_mac, value = is_valid_measurement
     std::unordered_map<std::string, bool>::iterator potential_ap_iter =
         std::unordered_map<std::string, bool>::iterator();
-    std::string current_agent_mac;
+    sMacAddr current_agent_mac;
     uint8_t valid_beacon_measurement_report_count  = 0;
     uint8_t beacon_measurement_request_cycle_count = 0;
     uint8_t iterator_element_counter               = 0;

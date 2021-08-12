@@ -1111,17 +1111,17 @@ std::string db::get_node_parent_backhaul(const std::string &mac)
     if (n->get_type() == beerocks::TYPE_IRE) {
         ire = mac;
     } else {
-        ire = get_node_parent_ire(mac);
+        ire = tlvf::mac_to_string(get_node_parent_ire(mac));
     }
 
     return get_node_parent(ire);
 }
 
-std::string db::get_node_parent_ire(const std::string &mac)
+sMacAddr db::get_node_parent_ire(const std::string &mac)
 {
     auto n = get_node(mac);
     if (!n || n->get_type() == beerocks::TYPE_GW) {
-        return std::string();
+        return network_utils::ZERO_MAC;
     }
 
     std::shared_ptr<node> p;
@@ -1129,12 +1129,12 @@ std::string db::get_node_parent_ire(const std::string &mac)
         p = get_node(n->parent_mac);
         if (!p) {
             LOG(DEBUG) << "node " << mac << " has no valid parent IRE";
-            return std::string();
+            return network_utils::ZERO_MAC;
         }
         n = p;
     } while (p->get_type() != beerocks::TYPE_IRE && p->get_type() != beerocks::TYPE_GW);
 
-    return p->mac;
+    return tlvf::mac_from_string(p->mac);
 }
 
 std::string db::get_node_previous_parent(const std::string &mac)
@@ -1209,15 +1209,15 @@ std::list<sMacAddr> db::get_1905_1_neighbors(const sMacAddr &al_mac)
     // According to IEEE 1905.1 a neighbor is defined as a first circle only, so we need to filter
     // out the childrens from second circle and above.
     for (const auto &al_mac_iter : all_al_macs) {
-        if (get_node_parent_ire(al_mac_iter) == al_mac_str) {
+        if (get_node_parent_ire(al_mac_iter) == al_mac) {
             neighbors_al_macs.push_back(tlvf::mac_from_string(al_mac_iter));
         }
     }
 
     // Add the parent bridge as well to the neighbors list
     auto parent_bridge = get_node_parent_ire(tlvf::mac_to_string(al_mac));
-    if (!parent_bridge.empty()) {
-        neighbors_al_macs.push_back(tlvf::mac_from_string(parent_bridge));
+    if (parent_bridge != network_utils::ZERO_MAC) {
+        neighbors_al_macs.push_back(parent_bridge);
     }
 
     // Add siblings Nodes
@@ -5280,7 +5280,7 @@ bool db::is_prplmesh(const sMacAddr &mac)
 
 void db::set_prplmesh(const sMacAddr &mac)
 {
-    auto local_bridge_mac = tlvf::mac_from_string(get_local_bridge_mac());
+    auto local_bridge_mac = get_local_bridge_mac();
     if (!get_node(mac)) {
         if (local_bridge_mac == mac) {
             add_node_gateway(mac);

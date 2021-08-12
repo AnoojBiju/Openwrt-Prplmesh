@@ -161,7 +161,7 @@ void client_steering_task::steer_sta()
     std::get<1>(sta_list_unblock) = tlvf::mac_from_string(m_sta_mac);
 
     auto agent_mac = m_database.get_node_parent_ire(radio_mac);
-    if (agent_mac.empty()) {
+    if (agent_mac == network_utils::ZERO_MAC) {
         LOG(ERROR) << "parent ire for radio_mac=" << radio_mac
                    << " not found, exiting steering task";
         return;

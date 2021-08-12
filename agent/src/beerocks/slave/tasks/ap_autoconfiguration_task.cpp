@@ -305,17 +305,15 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_search_message(
     create_autoconfig_search();
     if (db->controller_info.profile_support ==
         wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1) {
-        return m_btl_ctx.send_cmdu_to_broker(
-            m_cmdu_tx, tlvf::mac_from_string(network_utils::MULTICAST_1905_MAC_ADDR),
-            db->bridge.mac);
+        return m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, network_utils::MULTICAST_1905_MAC_ADDR,
+                                             db->bridge.mac);
     } else if (db->controller_info.profile_support ==
                wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::PRPLMESH_PROFILE_UNKNOWN) {
         // If we still not know what profile the controller support send 2 autoconfig search messages:
         // one witout the MultiAp profile TLV and one with it.
         // We do this since we came across certified agents that don't respond to a search message that contain
         // the newly added TLV. So to make sure we will get a response send both options.
-        m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx,
-                                      tlvf::mac_from_string(network_utils::MULTICAST_1905_MAC_ADDR),
+        m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, network_utils::MULTICAST_1905_MAC_ADDR,
                                       db->bridge.mac);
         create_autoconfig_search();
     }
@@ -328,8 +326,8 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_search_message(
     LOG(DEBUG) << "sending autoconfig search message, bridge_mac=" << db->bridge.mac
                << " with Profile TLV";
 
-    return m_btl_ctx.send_cmdu_to_broker(
-        m_cmdu_tx, tlvf::mac_from_string(network_utils::MULTICAST_1905_MAC_ADDR), db->bridge.mac);
+    return m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, network_utils::MULTICAST_1905_MAC_ADDR,
+                                         db->bridge.mac);
 }
 
 void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(
