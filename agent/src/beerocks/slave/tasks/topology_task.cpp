@@ -207,8 +207,7 @@ void TopologyTask::handle_topology_discovery(ieee1905_1::CmduMessageRx &cmdu_rx,
             return;
         }
         tlvAlMacAddress->mac() = db->bridge.mac;
-        m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx,
-                                      tlvf::mac_from_string(network_utils::MULTICAST_1905_MAC_ADDR),
+        m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, network_utils::MULTICAST_1905_MAC_ADDR,
                                       db->bridge.mac);
     }
 }
@@ -359,8 +358,7 @@ void TopologyTask::send_topology_discovery()
 
         LOG(DEBUG) << "send_1905_topology_discovery_message, bridge_mac=" << db->bridge.mac
                    << ", iface=" << iface_name;
-        m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx,
-                                      tlvf::mac_from_string(network_utils::MULTICAST_1905_MAC_ADDR),
+        m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, network_utils::MULTICAST_1905_MAC_ADDR,
                                       db->bridge.mac, iface_name);
     }
 }
@@ -381,8 +379,8 @@ void TopologyTask::send_topology_notification()
     }
     tlvAlMacAddress->mac() = db->bridge.mac;
 
-    m_btl_ctx.send_cmdu_to_broker(
-        m_cmdu_tx, tlvf::mac_from_string(network_utils::MULTICAST_1905_MAC_ADDR), db->bridge.mac);
+    m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, network_utils::MULTICAST_1905_MAC_ADDR,
+                                  db->bridge.mac);
 }
 
 bool TopologyTask::add_device_information_tlv()

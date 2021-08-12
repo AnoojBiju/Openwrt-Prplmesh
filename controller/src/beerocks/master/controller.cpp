@@ -420,8 +420,8 @@ bool Controller::handle_cmdu_from_broker(uint32_t iface_index, const sMacAddr &d
     }
 
     // Filter out messages that are not addressed to the controller
-    if (tlvf::mac_to_string(dst_mac) != beerocks::net::network_utils::MULTICAST_1905_MAC_ADDR &&
-        tlvf::mac_to_string(dst_mac) != database.get_local_bridge_mac()) {
+    if (dst_mac != beerocks::net::network_utils::MULTICAST_1905_MAC_ADDR &&
+        dst_mac != database.get_local_bridge_mac()) {
         return false;
     }
 
@@ -665,7 +665,7 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const sMacAddr &src_m
         LOG(DEBUG) << "Agent profile is updated with enum " << agent->profile;
     }
 
-    return son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
+    return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 }
 
 /**
@@ -1104,7 +1104,7 @@ bool Controller::handle_cmdu_1905_channel_preference_report(const sMacAddr &src_
         return false;
     }
     LOG(DEBUG) << "sending ACK message back to agent";
-    son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
+    son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 
     // TODO In production mode (not certification), we need to store the channel preference (PPM-201)
     // report in the DB which will in turn be used by the channel selection task.
@@ -1262,7 +1262,7 @@ bool Controller::handle_cmdu_1905_steering_completed_message(const sMacAddr &src
         return false;
     }
     LOG(DEBUG) << "sending ACK message back to agent, mid=" << std::hex << int(mid);
-    return son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
+    return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 }
 
 bool Controller::handle_cmdu_1905_client_capability_report_message(
@@ -1322,7 +1322,7 @@ bool Controller::handle_cmdu_1905_client_steering_btm_report_message(
         return false;
     }
     LOG(DEBUG) << "sending ACK message back to agent";
-    son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
+    son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 
     std::string client_mac = tlvf::mac_to_string(steering_btm_report->sta_mac());
     uint8_t status_code    = steering_btm_report->btm_status_code();
@@ -1480,8 +1480,7 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
 
     // Zero Error Code TLVs in this ACK message
     LOG(DEBUG) << "Sending ACK message to the originator, mid=" << std::hex << current_message_mid;
-    if (!send_cmdu_to_broker(cmdu_tx, src_mac,
-                             tlvf::mac_from_string(database.get_local_bridge_mac()))) {
+    if (!send_cmdu_to_broker(cmdu_tx, src_mac, database.get_local_bridge_mac())) {
         LOG(ERROR) << "Failed to send ACK_MESSAGE back to agent";
         return false;
     }
@@ -1931,7 +1930,7 @@ bool Controller::handle_cmdu_1905_operating_channel_report(const sMacAddr &src_m
         return false;
     }
 
-    return son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
+    return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 }
 
 bool Controller::handle_cmdu_1905_higher_layer_data_message(const sMacAddr &src_mac,
@@ -1958,7 +1957,7 @@ bool Controller::handle_cmdu_1905_higher_layer_data_message(const sMacAddr &src_
         return false;
     }
     LOG(DEBUG) << "sending ACK message to the agent, mid=" << std::hex << int(mid);
-    return son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
+    return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 }
 
 bool Controller::handle_cmdu_1905_backhaul_sta_steering_response(const sMacAddr &src_mac,
@@ -1996,7 +1995,7 @@ bool Controller::handle_cmdu_1905_backhaul_sta_steering_response(const sMacAddr 
 
     LOG(DEBUG) << "sending ACK message to the agent, mid=" << std::hex << mid;
 
-    return son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
+    return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 }
 
 bool Controller::handle_cmdu_1905_tunnelled_message(const sMacAddr &src_mac,
@@ -2146,8 +2145,7 @@ bool Controller::handle_intel_slave_join(
                            << (int)(database.has_node(parent_bssid_mac));
 
                 join_response->err_code() = beerocks::JOIN_RESP_REJECT;
-                return son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx,
-                                                       database);
+                return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
             }
         }
 
@@ -2455,7 +2453,7 @@ bool Controller::handle_intel_slave_join(
         join_response->config().ire_rssi_report_rate_sec = database.config.ire_rssi_report_rate_sec;
 
         LOG(DEBUG) << "send SLAVE_JOINED_RESPONSE";
-        son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
+        son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
     }
 
     // calling this function to update arp monitor with new ip addr (bridge ip), which is diffrent from the ip received from, dhcp on the backhaul
@@ -2716,7 +2714,7 @@ bool Controller::handle_non_intel_slave_join(
     LOG(DEBUG) << "BML, sending IRE connect CONNECTION_CHANGE for mac " << bml_new_event.mac;
 
     LOG(DEBUG) << "send AP_AUTOCONFIG_WSC M2";
-    return son_actions::send_cmdu_to_agent(tlvf::mac_to_string(src_mac), cmdu_tx, database);
+    return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
 }
 
 bool Controller::handle_cmdu_control_message(
@@ -2839,7 +2837,7 @@ bool Controller::handle_cmdu_control_message(
 
         // update bml listeners
         bml_task::connection_change_event new_event;
-        new_event.mac = database.get_node_parent_ire(radio_mac_str);
+        new_event.mac = tlvf::mac_to_string(database.get_node_parent_ire(radio_mac_str));
         tasks.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE, &new_event);
         LOG(DEBUG) << "BML, sending IRE connect CONNECTION_CHANGE for mac " << new_event.mac;
 
@@ -2943,7 +2941,7 @@ bool Controller::handle_cmdu_control_message(
 
         // update bml listeners
         bml_task::connection_change_event new_event;
-        new_event.mac = database.get_node_parent_ire(radio_mac_str);
+        new_event.mac = tlvf::mac_to_string(database.get_node_parent_ire(radio_mac_str));
         tasks.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE, &new_event);
         LOG(DEBUG) << "BML, sending IRE connect CONNECTION_CHANGE for mac " << new_event.mac;
 
@@ -3278,7 +3276,7 @@ bool Controller::handle_cmdu_control_message(
                          << " is connected wirelessly, Sending IP addr notification to radio="
                          << client_radio;
 
-            auto agent_mac = database.get_node_parent(client_radio);
+            auto agent_mac = tlvf::mac_from_string(database.get_node_parent(client_radio));
             son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, client_radio);
 
         } else {
@@ -3412,7 +3410,7 @@ bool Controller::handle_cmdu_control_message(
         break;
     }
     case beerocks_message::ACTION_CONTROL_HOSTAP_LOAD_MEASUREMENT_NOTIFICATION: {
-        auto ire_mac      = database.get_node_parent_ire(radio_mac_str);
+        auto ire_mac      = tlvf::mac_to_string(database.get_node_parent_ire(radio_mac_str));
         auto notification = beerocks_header->addClass<
             beerocks_message::cACTION_CONTROL_HOSTAP_LOAD_MEASUREMENT_NOTIFICATION>();
         if (!notification) {
@@ -3434,8 +3432,7 @@ bool Controller::handle_cmdu_control_message(
             client_load_percent >
                 database.config.monitor_total_ch_load_notification_hi_th_percent &&
             database.settings_load_balancing() && database.is_hostap_active(radio_mac) &&
-            database.get_node_state(ire_mac) == beerocks::STATE_CONNECTED &&
-            database.get_node_type(ire_mac) != beerocks::TYPE_CLIENT) {
+            database.get_node_state(ire_mac) == beerocks::STATE_CONNECTED) {
             /*
                 * when a notification arrives, it means a large change in rx_rssi occurred (above the defined thershold)
                 * therefore, we need to create a load balancing task to optimize the network

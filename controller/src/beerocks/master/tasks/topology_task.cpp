@@ -281,8 +281,7 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
             // Topology Query from different devices to the same new node.
             recently_reported_neighbors.insert(
                 {reported_neighbor_mac, std::chrono::steady_clock::now()});
-            son_actions::send_cmdu_to_agent(tlvf::mac_to_string(reported_neighbor_mac), cmdu_tx,
-                                            database);
+            son_actions::send_cmdu_to_agent(reported_neighbor_mac, cmdu_tx, database);
             // Send an AP-AutoConfiguration Renew message to notify the neighbor
             // that an AP-AutoConfiguration WSC message should be sent.
             son_actions::send_ap_config_renew_msg(cmdu_tx, database);
@@ -383,7 +382,7 @@ void topology_task::handle_dead_neighbors(const sMacAddr &src_mac, const sMacAdd
         // al_mac of the reporter. If they are not equal then it means than the neighbor is
         // currently under another node.
         auto current_parent_al_mac = database.get_node_parent_ire(backhhaul_mac);
-        if (tlvf::mac_from_string(current_parent_al_mac) != src_mac) {
+        if (current_parent_al_mac != src_mac) {
             continue;
         }
 
@@ -409,8 +408,7 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
     if (!client_association_event_tlv) {
         LOG(INFO) << "wfa_map::tlvClientAssociationEvent not found, sending TOPOLOGY_QUERY_MESSAGE";
 
-        return son_actions::send_topology_query_msg(tlvf::mac_to_string(src_mac), cmdu_tx,
-                                                    database);
+        return son_actions::send_topology_query_msg(src_mac, cmdu_tx, database);
     }
 
     std::shared_ptr<beerocks_message::tlvVsClientAssociationEvent> vs_tlv = nullptr;

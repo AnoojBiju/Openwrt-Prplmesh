@@ -188,8 +188,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
                     auto state = database.get_node_state(tlvf::mac_to_string(radio->radio_uid));
 
                     if (state != beerocks::STATE_DISCONNECTED) {
-                        son_actions::send_cmdu_to_agent(tlvf::mac_to_string(agent->al_mac), cmdu_tx,
-                                                        database,
+                        son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database,
                                                         tlvf::mac_to_string(radio->radio_uid));
                     }
                 }
@@ -572,7 +571,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
         std::string hostap_mac = tlvf::mac_to_string(request->ap_mac());
-        std::string ire_mac    = database.get_node_parent_ire(hostap_mac);
+        std::string ire_mac    = tlvf::mac_to_string(database.get_node_parent_ire(hostap_mac));
         LOG(TRACE) << "CLI load notification from hostap " << hostap_mac << " ire mac=" << ire_mac;
 
         /*
@@ -1551,14 +1550,14 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         auto bml_request =
             beerocks_header->addClass<beerocks_message::cACTION_BML_TRIGGER_TOPOLOGY_QUERY>();
 
-        auto al_mac = tlvf::mac_to_string(bml_request->al_mac());
+        auto al_mac = bml_request->al_mac();
 
         LOG(INFO) << "ACTION_BML_TRIGGER_TOPOLOGY_QUERY al_mac:" << al_mac;
 
         // In case bridge is not yet connected (bus not active) query will not
         // be sent to a local agent, sending empty bml response instead.
         if ((database.get_local_bridge_mac() == al_mac) &&
-            (database.get_node_state(al_mac) != beerocks::STATE_CONNECTED)) {
+            (database.get_node_state(tlvf::mac_to_string(al_mac)) != beerocks::STATE_CONNECTED)) {
             LOG(WARNING) << "Bridge is not connected yet, TOPOLOGY_QUERY_MESSAGE will not be sent";
             auto response =
                 message_com::create_vs_message<beerocks_message::cACTION_BML_TOPOLOGY_RESPONSE>(

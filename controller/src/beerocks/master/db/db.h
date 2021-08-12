@@ -206,7 +206,7 @@ public:
     beerocks::mac_map<sAgent> m_agents;
     beerocks::mac_map<sStation> m_stations;
 
-    db(sDbMasterConfig &config_, beerocks::logging &logger_, const std::string &local_bridge_mac,
+    db(sDbMasterConfig &config_, beerocks::logging &logger_, const sMacAddr &local_bridge_mac,
        std::shared_ptr<beerocks::nbapi::Ambiorix> ambiorix_object)
 
         : config(config_), logger(logger_), m_local_bridge_mac(local_bridge_mac),
@@ -790,7 +790,7 @@ public:
     std::string get_node_parent(const std::string &mac);
 
     std::string get_node_previous_parent(const std::string &mac);
-    std::string get_node_parent_ire(const std::string &mac);
+    sMacAddr get_node_parent_ire(const std::string &mac);
     std::string get_node_parent_backhaul(const std::string &mac);
     std::set<std::string> get_node_siblings(const std::string &mac, int type = beerocks::TYPE_ANY);
     std::set<std::string> get_node_children(const std::string &mac, int type = beerocks::TYPE_ANY,
@@ -1882,7 +1882,7 @@ public:
     void set_controller_ctx(Controller *ctx) { m_controller_ctx = ctx; }
     Controller *get_controller_ctx() { return m_controller_ctx; }
 
-    const std::string &get_local_bridge_mac() { return m_local_bridge_mac; }
+    const sMacAddr &get_local_bridge_mac() { return m_local_bridge_mac; }
 
     //
     // vars
@@ -2197,7 +2197,7 @@ private:
         default_8021q_settings; // key=al_mac
 
     Controller *m_controller_ctx = nullptr;
-    const std::string m_local_bridge_mac;
+    const sMacAddr m_local_bridge_mac;
 
     int m_persistent_db_clients_count = 0;
 

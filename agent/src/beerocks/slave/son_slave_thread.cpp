@@ -4372,7 +4372,7 @@ bool slave_thread::send_cmdu_to_controller(ieee1905_1::CmduMessageTx &cmdu_tx)
 
     auto dst_addr =
         cmdu_tx.getMessageType() == ieee1905_1::eMessageType::TOPOLOGY_NOTIFICATION_MESSAGE
-            ? network_utils::MULTICAST_1905_MAC_ADDR
+            ? tlvf::mac_to_string(network_utils::MULTICAST_1905_MAC_ADDR)
             : tlvf::mac_to_string(db->controller_info.bridge_mac);
 
     return message_com::send_cmdu(master_socket, cmdu_tx, dst_addr,
