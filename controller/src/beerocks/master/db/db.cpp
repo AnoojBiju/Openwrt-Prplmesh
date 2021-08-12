@@ -5851,7 +5851,7 @@ std::string db::dm_add_device_element(const sMacAddr &mac)
     }
 
     if (!m_ambiorix_datamodel->set(device_path, "ID", tlvf::mac_to_string(mac))) {
-        LOG(ERROR) << "Failed to set " << device_path << ".ID: " << tlvf::mac_to_string(mac);
+        LOG(ERROR) << "Failed to set " << device_path << ".ID: " << mac;
         return {};
     }
 
