@@ -117,7 +117,7 @@ static bool cfg_get_params(std::unordered_map<std::string, std::string> &paramet
  * @param[in] parameters Parameters to write to configuration file.
  * @return true on success and false otherwise.
  */
-static bool cfg_set_params(std::unordered_map<std::string, std::string> &parameters)
+static bool cfg_set_params(const std::unordered_map<std::string, std::string> &parameters)
 {
     std::string file_name;
     if (!cfg_get_file_name(file_name)) {

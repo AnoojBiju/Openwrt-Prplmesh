@@ -35,12 +35,6 @@ static const struct blobmsg_policy dhcp_event_policy[] = {
     [DHCP_EVENT_IP]       = {.name = "ip", .type = BLOBMSG_TYPE_STRING},
     [DHCP_EVENT_HOSTNAME] = {.name = "hostname", .type = BLOBMSG_TYPE_STRING}};
 
-struct dhcp_event_request {
-    struct ubus_request_data req;
-    struct uloop_timeout timeout;
-    char data[];
-};
-
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////// Local Module Functions ///////////////////////////
 //////////////////////////////////////////////////////////////////////////////
