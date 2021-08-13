@@ -6,14 +6,6 @@ variables:
 default:
   interruptible: true
 
-workflow:
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web"'
-    # Cfr. Workflows/MergeRequest-Pipelines.gitlab-ci.yml template
-    - if: $CI_MERGE_REQUEST_IID
-    - if: $CI_COMMIT_TAG
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-
 stages:
   - containers
   - build
