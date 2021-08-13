@@ -24,6 +24,7 @@ stages:
 
 include:
   - local: "/ci/templates.yml"
+  - template: Security/SAST.gitlab-ci.yml
 
 .rules-for-expensive-job: &expensive-job
   - if: '$CI_PIPELINE_SOURCE == "schedule"'
