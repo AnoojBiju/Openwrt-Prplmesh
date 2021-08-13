@@ -349,8 +349,8 @@ void agent_monitoring_task::dm_add_sta_to_agent_connected_event(
         auto bss = std::get<1>(assoc_client_tlv->bss_list(i));
 
         if (bssid == bss.bssid()) {
-            for (int j = 0; j < bss.clients_associated_list_length(); i++) {
-                auto sta      = std::get<1>(bss.clients_associated_list(i));
+            for (int j = 0; j < bss.clients_associated_list_length(); j++) {
+                auto sta      = std::get<1>(bss.clients_associated_list(j));
                 auto sta_path = ambiorix_dm->add_instance(obj_path + ".STA");
 
                 if (sta_path.empty() && NBAPI_ON) {
