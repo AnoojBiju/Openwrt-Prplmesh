@@ -3294,27 +3294,10 @@ bool db::add_client_to_persistent_db(const sMacAddr &mac, const ValuesMap &param
     return true;
 }
 
-std::chrono::system_clock::time_point db::get_client_parameters_last_edit(const sMacAddr &mac)
-{
-    auto node = get_node_verify_type(mac, beerocks::TYPE_CLIENT);
-    if (!node) {
-        LOG(ERROR) << "client node not found for mac " << mac;
-        return std::chrono::system_clock::time_point::min();
-    }
-
-    return node->client_parameters_last_edit;
-}
-
-bool db::set_client_time_life_delay(const sMacAddr &mac,
+bool db::set_client_time_life_delay(sStation &client,
                                     const std::chrono::minutes &time_life_delay_minutes,
                                     bool save_to_persistent_db)
 {
-    auto node = get_node_verify_type(mac, beerocks::TYPE_CLIENT);
-    if (!node) {
-        LOG(ERROR) << "client node not found for mac " << mac;
-        return false;
-    }
-
     LOG(DEBUG) << "time_life_delay_minutes = " << time_life_delay_minutes.count();
 
     auto timestamp = std::chrono::system_clock::now();
@@ -3331,33 +3314,24 @@ bool db::set_client_time_life_delay(const sMacAddr &mac,
             values_map[TIMELIFE_DELAY_STR] = std::to_string(time_life_delay_minutes.count());
 
             // update the persistent db
-            if (!update_client_entry_in_persistent_db(mac, values_map)) {
-                LOG(ERROR) << "failed to update client entry in persistent-db to for " << mac;
+            if (!update_client_entry_in_persistent_db(client.mac, values_map)) {
+                LOG(ERROR) << "failed to update client entry in persistent-db to for "
+                           << client.mac;
                 return false;
             }
         }
     }
 
-    node->client_time_life_delay_minutes = time_life_delay_minutes;
-    node->client_parameters_last_edit    = timestamp;
+    client.time_life_delay_minutes = time_life_delay_minutes;
+    client.parameters_last_edit    = timestamp;
 
     return true;
 }
 
-std::chrono::minutes db::get_client_time_life_delay(const sMacAddr &mac)
-{
-    auto node = get_node_verify_type(mac, beerocks::TYPE_CLIENT);
-    if (!node) {
-        LOG(ERROR) << "client node not found for mac " << mac;
-        return std::chrono::minutes::zero();
-    }
-
-    return node->client_time_life_delay_minutes;
-}
-
-bool db::set_client_stay_on_initial_radio(const sMacAddr &mac, bool stay_on_initial_radio,
+bool db::set_client_stay_on_initial_radio(sStation &client, bool stay_on_initial_radio,
                                           bool save_to_persistent_db)
 {
+    auto mac  = client.mac;
     auto node = get_node_verify_type(mac, beerocks::TYPE_CLIENT);
     if (!node) {
         LOG(ERROR) << "client node not found for mac " << mac;
@@ -3403,39 +3377,28 @@ bool db::set_client_stay_on_initial_radio(const sMacAddr &mac, bool stay_on_init
         }
     }
 
-    node->client_stay_on_initial_radio =
+    client.stay_on_initial_radio =
         (stay_on_initial_radio) ? eTriStateBool::TRUE : eTriStateBool::FALSE;
     // clear initial-radio data on disabling of stay_on_initial_radio
     if (!stay_on_initial_radio) {
         LOG(DEBUG) << "Clearing initial_radio in runtime DB";
-        node->client_initial_radio = network_utils::ZERO_MAC;
+        client.initial_radio = network_utils::ZERO_MAC;
         // if enabling stay-on-initial-radio and client is already connected, update the initial_radio as well
     } else if (is_client_connected) {
-        auto bssid                 = node->parent_mac;
-        auto parent_radio_mac      = get_node_parent_radio(bssid);
-        node->client_initial_radio = tlvf::mac_from_string(parent_radio_mac);
-        LOG(DEBUG) << "Setting client " << mac << " initial-radio to "
-                   << node->client_initial_radio;
+        auto bssid            = node->parent_mac;
+        auto parent_radio_mac = get_node_parent_radio(bssid);
+        client.initial_radio  = tlvf::mac_from_string(parent_radio_mac);
+        LOG(DEBUG) << "Setting client " << mac << " initial-radio to " << client.initial_radio;
     }
-    node->client_parameters_last_edit = timestamp;
+    client.parameters_last_edit = timestamp;
 
     return true;
 }
 
-eTriStateBool db::get_client_stay_on_initial_radio(const sMacAddr &mac)
-{
-    auto node = get_node_verify_type(mac, beerocks::TYPE_CLIENT);
-    if (!node) {
-        LOG(ERROR) << "Client node not found for mac " << mac;
-        return eTriStateBool::NOT_CONFIGURED;
-    }
-
-    return node->client_stay_on_initial_radio;
-}
-
-bool db::set_client_initial_radio(const sMacAddr &mac, const sMacAddr &initial_radio_mac,
+bool db::set_client_initial_radio(sStation &client, const sMacAddr &initial_radio_mac,
                                   bool save_to_persistent_db)
 {
+    auto mac  = client.mac;
     auto node = get_node_verify_type(mac, beerocks::TYPE_CLIENT);
     if (!node) {
         LOG(ERROR) << "Client node not found for mac " << mac;
@@ -3450,7 +3413,7 @@ bool db::set_client_initial_radio(const sMacAddr &mac, const sMacAddr &initial_r
     // This means:
     // 1. We do not update the timestamp when we update only the initial_radio.
     // 2. We only set the initial_radio if the stay_on_initial_radio is set.
-    if (node->client_stay_on_initial_radio == eTriStateBool::NOT_CONFIGURED) {
+    if (client.stay_on_initial_radio == eTriStateBool::NOT_CONFIGURED) {
         LOG(ERROR) << "Configuring initial-radio to " << initial_radio_mac
                    << " aborted: stay-on-initial-radio is not configured yet";
         return false;
@@ -3473,25 +3436,15 @@ bool db::set_client_initial_radio(const sMacAddr &mac, const sMacAddr &initial_r
         }
     }
 
-    node->client_initial_radio = initial_radio_mac;
+    client.initial_radio = initial_radio_mac;
 
     return true;
 }
 
-sMacAddr db::get_client_initial_radio(const sMacAddr &mac)
-{
-    auto node = get_node_verify_type(mac, beerocks::TYPE_CLIENT);
-    if (!node) {
-        LOG(ERROR) << "client node not found for mac " << mac;
-        return network_utils::ZERO_MAC;
-    }
-
-    return node->client_initial_radio;
-}
-
-bool db::set_client_selected_bands(const sMacAddr &mac, int8_t selected_bands,
+bool db::set_client_selected_bands(sStation &client, int8_t selected_bands,
                                    bool save_to_persistent_db)
 {
+    auto mac  = client.mac;
     auto node = get_node_verify_type(mac, beerocks::TYPE_CLIENT);
     if (!node) {
         LOG(ERROR) << "client node not found for mac " << mac;
@@ -3522,31 +3475,16 @@ bool db::set_client_selected_bands(const sMacAddr &mac, int8_t selected_bands,
         }
     }
 
-    node->client_selected_bands       = selected_bands;
-    node->client_parameters_last_edit = timestamp;
+    client.selected_bands       = selected_bands;
+    client.parameters_last_edit = timestamp;
 
     return true;
 }
 
-int8_t db::get_client_selected_bands(const sMacAddr &mac)
-{
-    auto node = get_node_verify_type(mac, beerocks::TYPE_CLIENT);
-    if (!node) {
-        LOG(ERROR) << "client node not found for mac " << mac;
-        return PARAMETER_NOT_CONFIGURED;
-    }
-
-    return node->client_selected_bands;
-}
-
-bool db::set_client_is_unfriendly(const sMacAddr &mac, bool client_is_unfriendly,
+bool db::set_client_is_unfriendly(sStation &client, bool client_is_unfriendly,
                                   bool save_to_persistent_db)
 {
-    auto node = get_node_verify_type(mac, beerocks::TYPE_CLIENT);
-    if (!node) {
-        LOG(ERROR) << "client node not found for mac " << mac;
-        return false;
-    }
+    auto mac = client.mac;
 
     LOG(DEBUG) << "Setting client " << mac << " client_is_unfriendly = " << client_is_unfriendly;
 
@@ -3570,39 +3508,27 @@ bool db::set_client_is_unfriendly(const sMacAddr &mac, bool client_is_unfriendly
         }
     }
 
-    node->client_is_unfriendly = client_is_unfriendly ? eTriStateBool::TRUE : eTriStateBool::FALSE;
+    client.is_unfriendly = client_is_unfriendly ? eTriStateBool::TRUE : eTriStateBool::FALSE;
 
     return true;
 }
 
-eTriStateBool db::get_client_is_unfriendly(const sMacAddr &mac)
-{
-    auto node = get_node_verify_type(mac, beerocks::TYPE_CLIENT);
-    if (!node) {
-        LOG(ERROR) << "client node not found for mac " << mac;
-        // Clients are assumed friendly unless proven otherwise
-        return eTriStateBool::NOT_CONFIGURED;
-    }
-
-    return node->client_is_unfriendly;
-}
-
 bool db::clear_client_persistent_db(const sMacAddr &mac)
 {
-    auto node = get_node_verify_type(mac, beerocks::TYPE_CLIENT);
-    if (!node) {
-        LOG(ERROR) << "client node not found for mac " << mac;
+    auto client = get_station(mac);
+    if (!client) {
+        LOG(ERROR) << "client " << mac << " not found";
         return false;
     }
 
     LOG(DEBUG) << "setting client " << mac << " runtime info to default values";
 
-    node->client_parameters_last_edit    = std::chrono::system_clock::time_point::min();
-    node->client_time_life_delay_minutes = std::chrono::minutes(PARAMETER_NOT_CONFIGURED);
-    node->client_stay_on_initial_radio   = eTriStateBool::NOT_CONFIGURED;
-    node->client_initial_radio           = network_utils::ZERO_MAC;
-    node->client_selected_bands          = PARAMETER_NOT_CONFIGURED;
-    node->client_is_unfriendly           = eTriStateBool::NOT_CONFIGURED;
+    client->parameters_last_edit    = std::chrono::system_clock::time_point::min();
+    client->time_life_delay_minutes = std::chrono::minutes(PARAMETER_NOT_CONFIGURED);
+    client->stay_on_initial_radio   = eTriStateBool::NOT_CONFIGURED;
+    client->initial_radio           = network_utils::ZERO_MAC;
+    client->selected_bands          = PARAMETER_NOT_CONFIGURED;
+    client->is_unfriendly           = eTriStateBool::NOT_CONFIGURED;
 
     // if persistent db is enabled
     if (config.persistent_db) {
@@ -3622,10 +3548,15 @@ bool db::clear_client_persistent_db(const sMacAddr &mac)
     return true;
 }
 
-bool db::is_hostap_on_client_selected_bands(const sMacAddr &client, const sMacAddr &hostap)
+bool db::is_hostap_on_client_selected_bands(const sMacAddr &client_mac, const sMacAddr &hostap)
 {
-    auto hostap_band    = wireless_utils::which_freq(get_node_channel(tlvf::mac_to_string(hostap)));
-    auto selected_bands = get_client_selected_bands(client);
+    auto hostap_band = wireless_utils::which_freq(get_node_channel(tlvf::mac_to_string(hostap)));
+    auto client      = get_station(client_mac);
+    if (!client) {
+        LOG(WARNING) << "client " << client_mac << " not found";
+        return false;
+    }
+    auto selected_bands = client->selected_bands;
 
     if (selected_bands == PARAMETER_NOT_CONFIGURED) {
         LOG(WARNING) << "the frequency type that's used by the client is not supported";
@@ -3643,7 +3574,7 @@ bool db::is_hostap_on_client_selected_bands(const sMacAddr &client, const sMacAd
     }
 }
 
-bool db::update_client_persistent_db(const sMacAddr &mac)
+bool db::update_client_persistent_db(sStation &client)
 {
     // if persistent db is disabled
     if (!config.persistent_db) {
@@ -3651,15 +3582,11 @@ bool db::update_client_persistent_db(const sMacAddr &mac)
         return false;
     }
 
-    auto node = get_node_verify_type(mac, beerocks::TYPE_CLIENT);
-    if (!node) {
-        LOG(ERROR) << "Client node not found for mac " << mac;
-        return false;
-    }
+    auto mac = client.mac;
 
     // any persistent parameter update also sets the last-edit timestamp
     // if it is with default value - no other persistent configuration was performed
-    if (node->client_parameters_last_edit == std::chrono::system_clock::time_point::min()) {
+    if (client.parameters_last_edit == std::chrono::system_clock::time_point::min()) {
         LOG(DEBUG) << "Persistent client parameters are empty for " << mac
                    << ", no need to update persistent-db";
         return true;
@@ -3668,36 +3595,35 @@ bool db::update_client_persistent_db(const sMacAddr &mac)
     ValuesMap values_map;
 
     // fill values map of client persistent params
-    values_map[TIMESTAMP_STR] = timestamp_to_string_seconds(node->client_parameters_last_edit);
+    values_map[TIMESTAMP_STR] = timestamp_to_string_seconds(client.parameters_last_edit);
 
-    if (node->client_time_life_delay_minutes != std::chrono::minutes(PARAMETER_NOT_CONFIGURED)) {
+    if (client.time_life_delay_minutes != std::chrono::minutes(PARAMETER_NOT_CONFIGURED)) {
         LOG(DEBUG) << "Setting client time-life-delay in persistent-db to "
-                   << node->client_time_life_delay_minutes.count() << " for " << mac;
-        values_map[TIMELIFE_DELAY_STR] =
-            std::to_string(node->client_time_life_delay_minutes.count());
+                   << client.time_life_delay_minutes.count() << " for " << mac;
+        values_map[TIMELIFE_DELAY_STR] = std::to_string(client.time_life_delay_minutes.count());
     }
 
-    if (node->client_stay_on_initial_radio != eTriStateBool::NOT_CONFIGURED) {
-        auto enable = (node->client_stay_on_initial_radio == eTriStateBool::TRUE);
+    if (client.stay_on_initial_radio != eTriStateBool::NOT_CONFIGURED) {
+        auto enable = (client.stay_on_initial_radio == eTriStateBool::TRUE);
         LOG(DEBUG) << "Setting client stay-on-initial-radio in persistent-db to " << enable
                    << " for " << mac;
         values_map[INITIAL_RADIO_ENABLE_STR] = std::to_string(enable);
         // initial radio should be configured only if the stay_on_initial_radio is set
-        if (node->client_initial_radio != network_utils::ZERO_MAC) {
+        if (client.initial_radio != network_utils::ZERO_MAC) {
             LOG(DEBUG) << "Setting client initial-radio in persistent-db to "
-                       << node->client_initial_radio << " for " << mac;
-            values_map[INITIAL_RADIO_STR] = tlvf::mac_to_string(node->client_initial_radio);
+                       << client.initial_radio << " for " << mac;
+            values_map[INITIAL_RADIO_STR] = tlvf::mac_to_string(client.initial_radio);
         }
     }
 
-    if (node->client_selected_bands != PARAMETER_NOT_CONFIGURED) {
-        LOG(DEBUG) << "Setting client selected-bands in persistent-db to "
-                   << node->client_selected_bands << " for " << mac;
-        values_map[SELECTED_BANDS_STR] = std::to_string(node->client_selected_bands);
+    if (client.selected_bands != PARAMETER_NOT_CONFIGURED) {
+        LOG(DEBUG) << "Setting client selected-bands in persistent-db to " << client.selected_bands
+                   << " for " << mac;
+        values_map[SELECTED_BANDS_STR] = std::to_string(client.selected_bands);
     }
 
-    if (node->client_is_unfriendly != eTriStateBool::NOT_CONFIGURED) {
-        auto is_unfriendly = (node->client_is_unfriendly == eTriStateBool::TRUE);
+    if (client.is_unfriendly != eTriStateBool::NOT_CONFIGURED) {
+        auto is_unfriendly = (client.is_unfriendly == eTriStateBool::TRUE);
         LOG(DEBUG) << "Setting client is-unfriendly in persistent-db to " << is_unfriendly
                    << " for " << mac;
         values_map[IS_UNFRIENDLY_STR] = std::to_string(is_unfriendly);
@@ -3875,10 +3801,12 @@ std::deque<sMacAddr> db::get_clients_with_persistent_data_configured()
     std::deque<sMacAddr> configured_clients;
     for (auto node_map : nodes) {
         for (auto kv : node_map) {
-            if ((kv.second->get_type() == eType::TYPE_CLIENT) && (kv.second->mac == kv.first) &&
-                (kv.second->client_parameters_last_edit !=
-                 std::chrono::system_clock::time_point::min())) {
-                configured_clients.push_back(tlvf::mac_from_string(kv.first));
+            if ((kv.second->get_type() == eType::TYPE_CLIENT) && (kv.second->mac == kv.first)) {
+                auto client = get_station(tlvf::mac_from_string(kv.second->mac));
+                if (client &&
+                    client->parameters_last_edit != std::chrono::system_clock::time_point::min()) {
+                    configured_clients.push_back(client->mac);
+                }
             }
         }
     }
@@ -5319,34 +5247,38 @@ bool db::set_node_params_from_map(const sMacAddr &mac, const ValuesMap &values_m
         return false;
     }
 
+    auto client = get_station(mac);
+    if (!client) {
+        LOG(WARNING) << "client " << mac << " not found";
+        return false;
+    }
+
     auto initial_radio = network_utils::ZERO_MAC;
 
     for (const auto &param : values_map) {
         if (param.first == TIMESTAMP_STR) {
-            LOG(DEBUG) << "Setting node client_parameters_last_edit to " << param.second << " for "
+            LOG(DEBUG) << "Setting client parameters_last_edit to " << param.second << " for "
                        << mac;
-            node->client_parameters_last_edit =
-                timestamp_from_seconds(string_utils::stoi(param.second));
+            client->parameters_last_edit = timestamp_from_seconds(string_utils::stoi(param.second));
         } else if (param.first == TIMELIFE_DELAY_STR) {
             LOG(DEBUG) << "Setting node client_time_life_delay_sec to " << param.second << " for "
                        << mac;
-            node->client_time_life_delay_minutes =
+            client->time_life_delay_minutes =
                 std::chrono::minutes(string_utils::stoi(param.second));
         } else if (param.first == INITIAL_RADIO_ENABLE_STR) {
-            LOG(DEBUG) << "Setting node client_stay_on_initial_radio to " << param.second << " for "
+            LOG(DEBUG) << "Setting client stay_on_initial_radio to " << param.second << " for "
                        << mac;
-            node->client_stay_on_initial_radio =
+            client->stay_on_initial_radio =
                 (param.second == "1") ? eTriStateBool::TRUE : eTriStateBool::FALSE;
         } else if (param.first == INITIAL_RADIO_STR) {
             LOG(DEBUG) << "Received client_initial_radio=" << param.second << " for " << mac;
             initial_radio = tlvf::mac_from_string(param.second);
         } else if (param.first == SELECTED_BANDS_STR) {
-            LOG(DEBUG) << "Setting node client_selected_bands to " << param.second << " for "
-                       << mac;
-            node->client_selected_bands = string_utils::stoi(param.second);
+            LOG(DEBUG) << "Setting client selected_bands to " << param.second << " for " << mac;
+            client->selected_bands = string_utils::stoi(param.second);
         } else if (param.first == IS_UNFRIENDLY_STR) {
-            LOG(DEBUG) << "Setting node client_is_unfriendly to " << param.second << " for " << mac;
-            node->client_is_unfriendly =
+            LOG(DEBUG) << "Setting client is_unfriendly to " << param.second << " for " << mac;
+            client->is_unfriendly =
                 (param.second == std::to_string(true)) ? eTriStateBool::TRUE : eTriStateBool::FALSE;
         } else {
             LOG(WARNING) << "Unknown parameter, skipping: " << param.first << " for " << mac;
@@ -5354,24 +5286,23 @@ bool db::set_node_params_from_map(const sMacAddr &mac, const ValuesMap &values_m
     }
 
     // After configuring the values we can determine if the client_initial_radio should be set as well.
-    // Since its value is only relevant if client_stay_on_initial_radio is set.
+    // Since its value is only relevant if stay_on_initial_radio is set.
     // clear initial-radio data on disabling of stay_on_initial_radio.
-    if (node->client_stay_on_initial_radio != eTriStateBool::TRUE) {
+    if (client->stay_on_initial_radio != eTriStateBool::TRUE) {
         LOG_IF((initial_radio != network_utils::ZERO_MAC), WARNING)
             << "ignoring initial-radio=" << initial_radio
             << " since stay-on-initial-radio is not enabled";
-        node->client_initial_radio = network_utils::ZERO_MAC;
+        client->initial_radio = network_utils::ZERO_MAC;
     } else if (initial_radio != network_utils::ZERO_MAC) {
         // If stay-on-initial-radio is set to enable and initial_radio is provided.
-        node->client_initial_radio = initial_radio;
+        client->initial_radio = initial_radio;
     } else if (node->state == STATE_CONNECTED) {
         // If stay-on-initial-radio is enabled and initial_radio is not set and client is already connected:
         // Set the initial_radio from parent radio mac (not bssid).
-        auto bssid                 = node->parent_mac;
-        auto parent_radio_mac      = get_node_parent_radio(bssid);
-        node->client_initial_radio = tlvf::mac_from_string(parent_radio_mac);
-        LOG(DEBUG) << "Setting client " << mac << " initial-radio to "
-                   << node->client_initial_radio;
+        auto bssid            = node->parent_mac;
+        auto parent_radio_mac = get_node_parent_radio(bssid);
+        client->initial_radio = tlvf::mac_from_string(parent_radio_mac);
+        LOG(DEBUG) << "Setting client " << mac << " initial-radio to " << client->initial_radio;
     }
 
     return true;
@@ -5445,6 +5376,12 @@ sMacAddr db::get_candidate_client_for_removal(sMacAddr client_to_skip)
             }
             const auto client_mac = tlvf::mac_from_string(key_value.first);
 
+            auto station = get_station(client_mac);
+            if (!station) {
+                LOG(WARNING) << "client " << client_mac << " not found";
+                continue;
+            }
+
             // skip client if matches the provided client to skip
             if (client_mac == client_to_skip) {
                 continue;
@@ -5452,42 +5389,39 @@ sMacAddr db::get_candidate_client_for_removal(sMacAddr client_to_skip)
             //TODO: improvement - stop search if "already-aged" candidate is found (don't-care of connectivity status)
 
             // Skip clients which have no persistent information.
-            if (client->client_parameters_last_edit ==
-                std::chrono::system_clock::time_point::min()) {
+            if (station->parameters_last_edit == std::chrono::system_clock::time_point::min()) {
                 continue;
             }
 
             // Max client timelife delay
             // This is ditermined according to the friendliness status of the client.
             // If a client is unfriendly we can
-            auto selected_max_timelife_delay_sec =
-                (client->client_is_unfriendly == eTriStateBool::TRUE)
-                    ? unfriendly_device_max_timelife_delay_sec
-                    : max_timelife_delay_sec;
+            auto selected_max_timelife_delay_sec = (station->is_unfriendly == eTriStateBool::TRUE)
+                                                       ? unfriendly_device_max_timelife_delay_sec
+                                                       : max_timelife_delay_sec;
 
             // Client timelife delay
-            auto timelife_delay_sec =
-                (client->client_time_life_delay_minutes !=
-                 std::chrono::seconds(beerocks::PARAMETER_NOT_CONFIGURED))
-                    ? std::chrono::seconds(client->client_time_life_delay_minutes)
-                    : selected_max_timelife_delay_sec;
+            auto timelife_delay_sec = (station->time_life_delay_minutes !=
+                                       std::chrono::seconds(beerocks::PARAMETER_NOT_CONFIGURED))
+                                          ? std::chrono::seconds(station->time_life_delay_minutes)
+                                          : selected_max_timelife_delay_sec;
 
             // Calculate client expiry due time.
             // In case both clients are non-aging - both time-life will be 0 - so only the
             // last-edit-time will affect the candidate selected.
             auto current_client_expiry_due_time =
-                client->client_parameters_last_edit + timelife_delay_sec;
+                station->parameters_last_edit + timelife_delay_sec;
 
             // Preferring non-aging clients over aging ones (even if disconnected).
             // If client is non-aging and candidate is aging - skip it
             if (is_aging_candidate_available &&
-                client->client_time_life_delay_minutes == std::chrono::seconds::zero()) {
+                station->time_life_delay_minutes == std::chrono::seconds::zero()) {
                 continue;
             }
 
             // Previous candidate is not aging and current client is aging - replace candidate
             if (!is_aging_candidate_available &&
-                (client->client_time_life_delay_minutes > std::chrono::seconds::zero())) {
+                (station->time_life_delay_minutes > std::chrono::seconds::zero())) {
                 // Update candidate
                 candidate_client_to_be_removed = client_mac;
                 // Set the candidate client expiry due time for later comparison

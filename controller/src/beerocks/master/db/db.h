@@ -1263,14 +1263,6 @@ public:
     bool add_client_to_persistent_db(const sMacAddr &mac, const ValuesMap &params = {});
 
     /**
-     * @brief Get the client's parameters last edit time.
-     *
-     * @param mac MAC address of a client.
-     * @return Client persistent data last edit time (even if edit was done only to runtime-dbb and not saved to persistent db), or time_point::min() if not-configured or failure.
-     */
-    std::chrono::system_clock::time_point get_client_parameters_last_edit(const sMacAddr &mac);
-
-    /**
      * @brief Set the client's time-life delay.
      *
      * @param mac MAC address of a client.
@@ -1278,27 +1270,19 @@ public:
      * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
      * @return true on success, otherwise false.
      */
-    bool set_client_time_life_delay(const sMacAddr &mac,
+    bool set_client_time_life_delay(sStation &client,
                                     const std::chrono::minutes &time_life_delay_minutes,
                                     bool save_to_persistent_db = true);
 
     /**
-     * @brief Get the client's time-life delay.
-     *
-     * @param mac MAC address of a client.
-     * @return Client time-life delay, value of 0 means not-configured.
-     */
-    std::chrono::minutes get_client_time_life_delay(const sMacAddr &mac);
-
-    /**
      * @brief Set the client's stay-on-initial-radio.
      *
-     * @param mac MAC address of a client.
+     * @param client sStation object representing a client.
      * @param stay_on_initial_radio Enable client stay on the radio it initially connected to.
      * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
      * @return true on success, otherwise false.
      */
-    bool set_client_stay_on_initial_radio(const sMacAddr &mac, bool stay_on_initial_radio,
+    bool set_client_stay_on_initial_radio(sStation &client, bool stay_on_initial_radio,
                                           bool save_to_persistent_db = true);
 
     /**
@@ -1312,59 +1296,35 @@ public:
     /**
      * @brief Set the client's initial-radio.
      *
-     * @param mac MAC address of a client.
+     * @param client sStation object representing a client.
      * @param initial_radio_mac The MAC address of the radio that the client has initially connected to.
      * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
      * @return true on success, otherwise false.
      */
-    bool set_client_initial_radio(const sMacAddr &mac, const sMacAddr &initial_radio_mac,
+    bool set_client_initial_radio(sStation &client, const sMacAddr &initial_radio_mac,
                                   bool save_to_persistent_db = true);
-
-    /**
-     * @brief Get the client's initial-radio.
-     *
-     * @param mac MAC address of a client.
-     * @return MAC adddress of the radio that the client has initially connected to.
-     */
-    sMacAddr get_client_initial_radio(const sMacAddr &mac);
 
     /**
      * @brief Set the client's selected-bands.
      *
-     * @param mac MAC address of a client.
+     * @param client sStation object representing a client.
      * @param selected_bands Client selected band/bands. Possible values are bitwise options of eClientSelectedBands.
      * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
      * @return true on success, otherwise false.
      */
-    bool set_client_selected_bands(const sMacAddr &mac, int8_t selected_bands,
+    bool set_client_selected_bands(sStation &client, int8_t selected_bands,
                                    bool save_to_persistent_db = true);
-
-    /**
-     * @brief Get the client's selected-bands.
-     *
-     * @param mac MAC address of a client.
-     * @return Selected band/bands. Possible values are bitwise options of eClientSelectedBands.
-     */
-    int8_t get_client_selected_bands(const sMacAddr &mac);
 
     /**
      * @brief Set the client's unfriendly status.
      *
-     * @param mac MAC address of a client.
+     * @param client sStation object representing a client.
      * @param is_unfriendly Whether a client is unfriendly or not.
      * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
      * @return true on success, otherwise false.
      */
-    bool set_client_is_unfriendly(const sMacAddr &mac, bool is_unfriendly,
+    bool set_client_is_unfriendly(sStation &client, bool is_unfriendly,
                                   bool save_to_persistent_db = true);
-
-    /**
-     * @brief Get the client's unfriendly status.
-     *
-     * @param mac MAC address of a client.
-     * @return Whather a client is unfriendly or not.
-     */
-    eTriStateBool get_client_is_unfriendly(const sMacAddr &mac);
 
     /**
      * @brief Check if the radio's band is on one of the selected bands.
@@ -1386,10 +1346,10 @@ public:
     /**
      * @brief Update client's persistent information with the runtime information.
      *
-     * @param mac MAC address of a client.
+     * @param client sStation object representing a client.
      * @return true on success, otherwise false.
      */
-    bool update_client_persistent_db(const sMacAddr &mac);
+    bool update_client_persistent_db(sStation &client);
 
     /**
      * @brief Load all clients from persistent db.

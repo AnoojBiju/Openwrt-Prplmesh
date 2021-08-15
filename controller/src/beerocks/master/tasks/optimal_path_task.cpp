@@ -244,9 +244,9 @@ void optimal_path_task::work()
 
         // Check client's steering persistant database for any band/radio/device restrictions
         auto client = tlvf::mac_from_string(sta_mac);
-        if (database.get_client_stay_on_initial_radio(client) == eTriStateBool::TRUE) {
+        if (station->stay_on_initial_radio == eTriStateBool::TRUE) {
             TASK_LOG(INFO) << "Client stay on initial radio enabled";
-            auto client_initial_radio = database.get_client_initial_radio(client);
+            auto client_initial_radio = station->initial_radio;
 
             if (client_initial_radio == tlvf::mac_from_string(current_hostap)) {
                 TASK_LOG(INFO) << "Client is already on initial radio " << client_initial_radio;
@@ -271,7 +271,7 @@ void optimal_path_task::work()
                               << " is not on the candidate ap list, continue as usual.";
         }
 
-        auto selected_bands = database.get_client_selected_bands(client);
+        auto selected_bands = station->selected_bands;
         if ((selected_bands != PARAMETER_NOT_CONFIGURED) &&
             (selected_bands != eClientSelectedBands::eSelectedBands_Disabled)) {
             TASK_LOG(INFO) << "Client stay on selected bands enabled";
@@ -279,7 +279,7 @@ void optimal_path_task::work()
                     client, tlvf::mac_from_string(current_hostap))) {
                 TASK_LOG(INFO) << "Current radio " << current_hostap
                                << " is not on one of client's selected bands "
-                               << int(database.get_client_selected_bands(client));
+                               << int(station->selected_bands);
                 // Try to find radio with selected bands first on local device (same device the client
                 // is currently connected on) and force steer the client to that radio.
                 auto current_hostap_siblings = database.get_node_siblings(current_hostap);
@@ -301,8 +301,8 @@ void optimal_path_task::work()
                     break;
                 }
                 TASK_LOG(WARNING) << "Couldnt find local radio on selected bands "
-                                  << int(database.get_client_selected_bands(client))
-                                  << " with same client's ssid " << current_hostap_ssid;
+                                  << int(station->selected_bands) << " with same client's ssid "
+                                  << current_hostap_ssid;
             }
             // In case client is already connected to one of the selected bands
             // continue with optimal path task but remove all non selected band hostaps
@@ -1029,9 +1029,9 @@ void optimal_path_task::work()
         // TODO: Need to create preliminary state that prepares candidate radio list
         // regardless of client's 11k support #PPM-102.
         auto client = tlvf::mac_from_string(sta_mac);
-        if (database.get_client_stay_on_initial_radio(client) == eTriStateBool::TRUE) {
+        if (station->stay_on_initial_radio == eTriStateBool::TRUE) {
             TASK_LOG(INFO) << "Client stay on initial radio enabled";
-            auto client_initial_radio = database.get_client_initial_radio(client);
+            auto client_initial_radio = station->initial_radio;
 
             if (client_initial_radio == tlvf::mac_from_string(current_hostap)) {
                 TASK_LOG(INFO) << "Client is already on initial radio " << client_initial_radio;
@@ -1060,7 +1060,7 @@ void optimal_path_task::work()
                               << " is not on the candidate ap list, continue as usual.";
         }
 
-        auto selected_bands = database.get_client_selected_bands(client);
+        auto selected_bands = station->selected_bands;
         if ((selected_bands != PARAMETER_NOT_CONFIGURED) &&
             (selected_bands != eClientSelectedBands::eSelectedBands_Disabled)) {
             TASK_LOG(INFO) << "Client stay on selected bands enabled";
@@ -1068,7 +1068,7 @@ void optimal_path_task::work()
                     client, tlvf::mac_from_string(current_hostap))) {
                 TASK_LOG(INFO) << "Current radio " << current_hostap
                                << " is not on one of client's selected bands "
-                               << int(database.get_client_selected_bands(client));
+                               << int(station->selected_bands);
                 // Try to find radio with selected bands first on local device (same device the client
                 // is currently connected on) and force steer the client to that radio.
                 auto current_hostap_siblings = database.get_node_siblings(current_hostap);
@@ -1091,8 +1091,8 @@ void optimal_path_task::work()
                     break;
                 }
                 TASK_LOG(WARNING) << "Couldnt find local radio on selected bands "
-                                  << int(database.get_client_selected_bands(client))
-                                  << " with same client's ssid " << current_hostap_ssid;
+                                  << int(station->selected_bands) << " with same client's ssid "
+                                  << current_hostap_ssid;
             }
             // In case client is already connected to one of the selected bands
             // continue with optimal path task but remove all non selected band hostaps
@@ -1916,10 +1916,16 @@ bool optimal_path_task::is_hostap_on_cs_process(const std::string &hostap_mac)
 
 template <typename C>
 void optimal_path_task::remove_all_client_non_selected_band_radios(C &radios,
-                                                                   const sMacAddr &client)
+                                                                   const sMacAddr &client_mac)
 {
     if (radios.empty()) {
         TASK_LOG(ERROR) << "Candidate list is empty, nothing to remove";
+        return;
+    }
+
+    auto client = database.get_station(client_mac);
+    if (!client) {
+        TASK_LOG(ERROR) << "Client " << client_mac << " not found";
         return;
     }
 
@@ -1927,11 +1933,11 @@ void optimal_path_task::remove_all_client_non_selected_band_radios(C &radios,
     // with optimal path task
     auto it = radios.begin();
     while (it != radios.end()) {
-        if (!database.is_hostap_on_client_selected_bands(client,
+        if (!database.is_hostap_on_client_selected_bands(client_mac,
                                                          tlvf::mac_from_string(it->first))) {
             TASK_LOG(INFO) << "Remove candidate " << it->first
                            << " since its not on one of client's selected bands "
-                           << int(database.get_client_selected_bands(client));
+                           << int(client->selected_bands);
             it = radios.erase(it);
         } else {
             ++it;

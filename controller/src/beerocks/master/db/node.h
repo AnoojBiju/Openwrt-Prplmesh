@@ -274,41 +274,6 @@ public:
     beerocks::eIfaceType iface_type = beerocks::IFACE_TYPE_ETHERNET;
     std::chrono::steady_clock::time_point last_seen;
 
-    /*
-     * Persistent configurations - start
-     * Client persistent configuration aging is refreshed on persistent configurations set
-     * persistent configuration of aged clients removed from the persistent-db and cleared in the runtime-db
-     */
-
-    // Indicates when client parameters were last updated (even if not updated yet to persistent-db)
-    // minimal value is used as invalid value.
-    std::chrono::system_clock::time_point client_parameters_last_edit =
-        std::chrono::system_clock::time_point::min();
-
-    // Optional - if configured the client has its own configured timelife delay.
-    std::chrono::minutes client_time_life_delay_minutes =
-        std::chrono::minutes(beerocks::PARAMETER_NOT_CONFIGURED);
-
-    // If enabled, the client will be steered to the initial radio it connected to - save at client_initial_radio.
-    eTriStateBool client_stay_on_initial_radio = eTriStateBool::NOT_CONFIGURED;
-
-    // The client_initial_radio mac must be set, default value is network_utils::ZERO_MAC.
-    sMacAddr client_initial_radio;
-
-    // The selected bands that the client should be steered to.
-    // Default value is PARAMETER_NOT_CONFIGURED - which means no limitation on bands.
-    // Possible values are bitwise options of eClientSelectedBands.
-    int8_t client_selected_bands = beerocks::PARAMETER_NOT_CONFIGURED;
-
-    // The unfriendly status indicates how we interact with the client.
-    // If the unfriendly status is not configured, the client is assumed friendly unless proven otherwise.
-    // The friendliness status affects how we handle the aging mechanism.
-    eTriStateBool client_is_unfriendly = eTriStateBool::NOT_CONFIGURED;
-
-    /*
-     * Persistent configurations - end
-     */
-
     /**
      * @brief Returns active interface mac addresses via loop through interface objects.
      *
