@@ -385,16 +385,15 @@ void association_handling_task::finalize_new_connection()
             // to allow the functionality of stay-on-initial-radio.
             // Note: The initial-radio is persistent configuration and if is already set, the client-connection flow should
             // not override the existing configuration.
-            auto client_mac = tlvf::mac_from_string(sta_mac);
-            if ((database.get_client_stay_on_initial_radio(client_mac) == eTriStateBool::TRUE) &&
-                (database.get_client_initial_radio(client_mac) == network_utils::ZERO_MAC)) {
+            if ((client->stay_on_initial_radio == eTriStateBool::TRUE) &&
+                (client->initial_radio == network_utils::ZERO_MAC)) {
                 auto bssid            = database.get_node_parent(sta_mac);
                 auto parent_radio_mac = database.get_node_parent_radio(bssid);
                 // If stay_on_initial_radio is enabled and initial_radio is not set yet, set to parent radio mac (not bssid)
-                if (!database.set_client_initial_radio(client_mac,
+                if (!database.set_client_initial_radio(*client,
                                                        tlvf::mac_from_string(parent_radio_mac),
                                                        database.config.persistent_db)) {
-                    LOG(WARNING) << "Failed to set client " << client_mac << "  initial radio to "
+                    LOG(WARNING) << "Failed to set client " << client->mac << "  initial radio to "
                                  << parent_radio_mac;
                 }
             }

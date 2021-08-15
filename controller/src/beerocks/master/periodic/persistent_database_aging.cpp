@@ -28,6 +28,12 @@ void persistent_database_aging_operation::periodic_operation_function()
     std::copy_if(
         clients.begin(), clients.end(), std::back_inserter(aged_clients),
         [&](const sMacAddr &client_mac) {
+            auto client = m_database.get_station(client_mac);
+            if (!client) {
+                OPERATION_LOG(ERROR) << "client " << client_mac << " not found";
+                return false;
+            }
+
             // Client timelife delay
             // If a client has a predetermined timelife delay use that.
             // Otherwise use the Max timelife delay/unfriendly_device_max_timelife_delay_sec according
@@ -36,11 +42,12 @@ void persistent_database_aging_operation::periodic_operation_function()
                 std::chrono::seconds(m_database.config.max_timelife_delay_minutes * 60);
             const auto unfriendly_device_max_timelife_delay_sec = std::chrono::seconds(
                 m_database.config.unfriendly_device_max_timelife_delay_minutes * 60);
-            auto timelife_delay_seconds =
-                (m_database.get_client_is_unfriendly(client_mac) == eTriStateBool::TRUE)
-                    ? unfriendly_device_max_timelife_delay_sec
-                    : max_timelife_delay_sec;
-            std::chrono::minutes temp_timelife = m_database.get_client_time_life_delay(client_mac);
+
+            auto timelife_delay_seconds = (client->is_unfriendly == eTriStateBool::TRUE)
+                                              ? unfriendly_device_max_timelife_delay_sec
+                                              : max_timelife_delay_sec;
+
+            std::chrono::minutes temp_timelife = client->time_life_delay_minutes;
 
             if ((temp_timelife == std::chrono::minutes::zero())) {
                 return false;
@@ -50,8 +57,7 @@ void persistent_database_aging_operation::periodic_operation_function()
             }
 
             // Calculate client expiry due time
-            auto parameters_last_edit = m_database.get_client_parameters_last_edit(client_mac);
-            auto expiry_due           = parameters_last_edit + timelife_delay_seconds;
+            auto expiry_due = client->parameters_last_edit + timelife_delay_seconds;
 
             // If the expiry due is less then the last aging check, the client is considered aged.
             return expiry_due < last_aging_check;
