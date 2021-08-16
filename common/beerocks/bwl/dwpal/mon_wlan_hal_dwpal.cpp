@@ -1522,7 +1522,7 @@ bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
 {
     struct nlmsghdr *nlh    = nlmsg_hdr(msg);
     struct genlmsghdr *gnlh = (genlmsghdr *)nlmsg_data(nlh);
-    std::string iface_name;
+    std::string iface_name  = std::string();
 
     struct nlattr *tb[NL80211_ATTR_MAX + 1];
     nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0), genlmsg_attrlen(gnlh, 0), NULL);
@@ -1533,9 +1533,13 @@ bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
     }
 
     auto event = dwpal_nl_to_bwl_event(gnlh->cmd);
+    LOG(DEBUG) << "Received DWPAL event #" << (int)event << " on iface " << iface_name
+               << " (index #" << (int)index << "), we are proccessing events on iface "
+               << m_radio_info.iface_name;
 
     switch (event) {
     case Event::Channel_Scan_Triggered: {
+        LOG(DEBUG) << "Received Channel_Scan_Triggered";
         if (m_radio_info.iface_name != iface_name) {
             // ifname doesn't match current interface
             // meaning the event was received for a diffrent channel
@@ -1553,6 +1557,7 @@ bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
         break;
     }
     case Event::Channel_Scan_Dump_Result: {
+        LOG(DEBUG) << "Received Channel_Scan_Dump_Result";
         if (m_radio_info.iface_name != iface_name) {
             // ifname doesn't match current interface
             // meaning the event was received for a diffrent channel
@@ -1620,6 +1625,7 @@ bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
         break;
     }
     case Event::Channel_Scan_Aborted: {
+        LOG(DEBUG) << "Received Channel_Scan_Aborted";
 
         if (m_radio_info.iface_name != iface_name) {
             // ifname doesn't match current interface
@@ -1640,6 +1646,7 @@ bool mon_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)
         break;
     }
     case Event::Channel_Scan_Finished: {
+        LOG(DEBUG) << "Received Channel_Scan_Finished";
         if (!m_scan_was_triggered_internally) {
             // Scan was not triggered internally, no need to handle the event
             return true;
