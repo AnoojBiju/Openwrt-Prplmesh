@@ -196,3 +196,4 @@ include "association_event.odl";
 include "disassociation_event.odl";
 include "access_point.odl";
 include "agent_connected_event.odl";
+include "failed_connection_event.odl";
