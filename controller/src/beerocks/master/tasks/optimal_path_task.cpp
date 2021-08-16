@@ -114,7 +114,7 @@ void optimal_path_task::work()
             return;
         }
 
-        if (database.get_node_handoff_flag(sta_mac)) {
+        if (database.get_node_handoff_flag(*station)) {
             LOG_CLI(DEBUG, sta_mac << " is already in handoff, killing task");
             finish();
             return;
@@ -202,7 +202,7 @@ void optimal_path_task::work()
                 auto radio       = radio_map_element.second;
                 auto hostap      = tlvf::mac_to_string(radio->radio_uid);
                 bool sta_is_5ghz = database.is_node_5ghz(sta_mac);
-                database.get_node_cross_rx_rssi(sta_mac, current_hostap, rx_rssi, dummy);
+                station->get_cross_rx_rssi(current_hostap, rx_rssi, dummy);
                 if ((!database.is_hostap_active(tlvf::mac_from_string(hostap))) ||
                     (!check_if_sta_can_steer_to_ap(hostap)) ||
                     (database.settings_client_optimal_path_roaming_prefer_signal_strength() &&
@@ -509,8 +509,7 @@ void optimal_path_task::work()
         bool force_signal_strength_decision = false;
         bool current_below_cutoff           = false;
 
-        if (!database.get_node_cross_rx_rssi(sta_mac, current_hostap, current_hostap_rx_rssi,
-                                             dummy_rx_packets)) {
+        if (!station->get_cross_rx_rssi(current_hostap, current_hostap_rx_rssi, dummy_rx_packets)) {
             TASK_LOG(ERROR) << "can't get cross_rx_rssi for hostap " << current_hostap;
         } else if (current_hostap_rx_rssi <= database.config.roaming_rssi_cutoff_db) {
             force_signal_strength_decision = true;
@@ -565,7 +564,7 @@ void optimal_path_task::work()
 
                 if (!estimate_dl_rssi) {
                     uint8_t dl_rcpi, dl_snr;
-                    if (!database.get_node_beacon_measurement(sta_mac, hostap, dl_rcpi, dl_snr)) {
+                    if (!station->get_beacon_measurement(hostap, dl_rcpi, dl_snr)) {
                         TASK_LOG(ERROR)
                             << "get_node_beacon_measurement() failed! sta_mac: " << sta_mac
                             << ", hostap: " << hostap;
@@ -577,7 +576,7 @@ void optimal_path_task::work()
                                     << ", dl_snr:" << int(dl_snr);
                 } else {
                     int8_t rx_rssi, rx_packets;
-                    if (!database.get_node_cross_rx_rssi(sta_mac, hostap, rx_rssi, rx_packets)) {
+                    if (!station->get_cross_rx_rssi(hostap, rx_rssi, rx_packets)) {
                         TASK_LOG(ERROR) << "can't get cross_rx_rssi for hostap " << hostap;
                         continue;
                     }
@@ -652,7 +651,7 @@ void optimal_path_task::work()
 
                 if (!estimate_dl_rssi) {
                     uint8_t dl_rcpi, dl_snr;
-                    if (!database.get_node_beacon_measurement(sta_mac, hostap, dl_rcpi, dl_snr)) {
+                    if (!station->get_beacon_measurement(hostap, dl_rcpi, dl_snr)) {
                         TASK_LOG(ERROR)
                             << "get_node_beacon_measurement() failed! sta_mac: " << sta_mac
                             << ", hostap: " << hostap;
@@ -664,7 +663,7 @@ void optimal_path_task::work()
                                     << ", dl_snr:" << int(dl_snr);
                 } else {
                     int8_t rx_rssi, rx_packets;
-                    if (!database.get_node_cross_rx_rssi(sta_mac, hostap, rx_rssi, rx_packets)) {
+                    if (!station->get_cross_rx_rssi(hostap, rx_rssi, rx_packets)) {
                         TASK_LOG(ERROR) << "can't get cross_rx_rssi for hostap " << hostap;
                         continue;
                     }
@@ -1181,7 +1180,7 @@ void optimal_path_task::work()
 
             if (!hostap_sibling) {
                 int8_t rx_rssi, rx_packets;
-                if (!database.get_node_cross_rx_rssi(sta_mac, hostap, rx_rssi, rx_packets)) {
+                if (!station->get_cross_rx_rssi(hostap, rx_rssi, rx_packets)) {
                     TASK_LOG(ERROR) << "can't get cross_rx_rssi for hostap " << hostap;
                     continue;
                 } else {
@@ -1406,7 +1405,7 @@ void optimal_path_task::work()
         int steering_task_id = 0;
 
         std::string method = " 11v (BTM) ";
-        if (!database.get_node_11v_capability(sta_mac)) {
+        if (!database.get_node_11v_capability(*station)) {
             method = std::string(" Legacy ");
         }
 
@@ -1414,7 +1413,7 @@ void optimal_path_task::work()
             chosen_method.append(" [forced steering] ");
         }
         chosen_method.append(" [optimal_path_task] ");
-        if (database.get_node_11v_capability(sta_mac) && !is_force_steer) {
+        if (database.get_node_11v_capability(*station) && !is_force_steer) {
             if (sticky_roaming_rssi <= database.config.roaming_sticky_client_rssi_threshold) {
                 TASK_LOG(DEBUG) << "optimal_path_task: steering with disassociate imminent, sta "
                                 << sta_mac << " steer from BSSID " << current_hostap_vap
@@ -1587,9 +1586,15 @@ void optimal_path_task::handle_response(std::string mac,
         }
 
         if (son_actions::validate_beacon_measurement_report(response->params(), sta_mac, bssid)) {
+            auto station = database.get_station(tlvf::mac_from_string(sta_mac));
+            if (!station) {
+                TASK_LOG(ERROR) << "station " << sta_mac << " not found";
+                break;
+            }
+
             potential_11k_aps[radio_mac] = true;
-            database.set_node_beacon_measurement(sta_mac, radio_mac, response->params().rcpi,
-                                                 response->params().rsni);
+            station->set_beacon_measurement(radio_mac, response->params().rcpi,
+                                            response->params().rsni);
             valid_beacon_measurement_report_count++;
             TASK_LOG(INFO) << "beacon measurement response on bssid " << bssid << " is valid!";
             if (valid_beacon_measurement_report_count == potential_11k_aps.size()) {
@@ -1660,6 +1665,13 @@ bool optimal_path_task::is_measurement_valid(const std::set<std::string> &temp_c
                         << " delta_burst_delay = " << int(delta_burst);
         return false;
     }
+
+    auto station = database.get_station(tlvf::mac_from_string(sta_mac));
+    if (!station) {
+        TASK_LOG(ERROR) << "Station " << sta_mac << " not found";
+        return false;
+    }
+
     //iterating on cross hostap to check if all measurement succeed (all IRE captured at list 1)
     int8_t rx_rssi, rx_packets;
     for (auto &hostap : temp_cross_hostaps) {
@@ -1668,8 +1680,7 @@ bool optimal_path_task::is_measurement_valid(const std::set<std::string> &temp_c
             database.is_node_5ghz(sta_mac)) {
             hostap_tmp = database.get_5ghz_sibling_hostap(hostap);
         }
-        if (hostap_tmp.empty() ||
-            !database.get_node_cross_rx_rssi(sta_mac, hostap_tmp, rx_rssi, rx_packets)) {
+        if (hostap_tmp.empty() || !station->get_cross_rx_rssi(hostap_tmp, rx_rssi, rx_packets)) {
             TASK_LOG(ERROR) << "can't get cross_rx_rssi for hostap =" << hostap_tmp;
             return false;
         } else if (rx_packets <= -1) {
@@ -1688,6 +1699,12 @@ bool optimal_path_task::all_measurement_succeed(const std::set<std::string> &tem
                                                 const std::string &current_hostap,
                                                 const std::string &sta_mac)
 {
+    auto station = database.get_station(tlvf::mac_from_string(sta_mac));
+    if (!station) {
+        TASK_LOG(ERROR) << "Station " << sta_mac << " not found";
+        return false;
+    }
+
     //iterating on cross hostap to check if all measurement succeed (all IRE captured at list 1)
     int8_t rx_rssi, rx_packets;
     bool all_hostapd_got_packets = false;
@@ -1697,8 +1714,7 @@ bool optimal_path_task::all_measurement_succeed(const std::set<std::string> &tem
             database.is_node_5ghz(sta_mac)) {
             hostap_tmp = database.get_5ghz_sibling_hostap(hostap);
         }
-        if (hostap_tmp.empty() ||
-            !database.get_node_cross_rx_rssi(sta_mac, hostap_tmp, rx_rssi, rx_packets)) {
+        if (hostap_tmp.empty() || !station->get_cross_rx_rssi(hostap_tmp, rx_rssi, rx_packets)) {
             TASK_LOG(ERROR) << "can't get cross_rx_rssi for hostap =" << hostap_tmp;
             all_hostapd_got_packets = false;
             break;
@@ -1890,7 +1906,7 @@ bool optimal_path_task::get_station_default_capabilities(
     }
 }
 
-double optimal_path_task::calculate_weighted_phy_rate(const sStation &client)
+double optimal_path_task::calculate_weighted_phy_rate(const Station &client)
 {
     auto if_type = database.get_node_backhaul_iface_type(tlvf::mac_to_string(client.mac));
 

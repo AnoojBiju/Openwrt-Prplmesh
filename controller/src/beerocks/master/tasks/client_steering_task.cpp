@@ -130,8 +130,13 @@ void client_steering_task::work()
 
 void client_steering_task::steer_sta()
 {
+    auto client = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
+    if (!client) {
+        LOG(ERROR) << "client " << m_sta_mac << " not found";
+    }
+
     if (m_database.get_node_type(m_sta_mac) != beerocks::TYPE_IRE_BACKHAUL) {
-        if (!m_database.set_node_handoff_flag(m_sta_mac, true)) {
+        if (!m_database.set_node_handoff_flag(*client, true)) {
             LOG(ERROR) << "can't set handoff flag for " << m_sta_mac;
         }
     }
@@ -333,9 +338,15 @@ void client_steering_task::print_steering_info()
         timestamp = temp;
     }
 
+    auto client = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
+    if (!client) {
+        LOG(ERROR) << "Client " << m_sta_mac << " is not found";
+        return;
+    }
+
     if (m_steering_type.empty()) {
         m_steering_type = std::string(" 11v (BTM) ");
-        if (!m_database.get_node_11v_capability(m_sta_mac)) {
+        if (!m_database.get_node_11v_capability(*client)) {
             m_steering_type = std::string(" Legacy ");
         }
     }
@@ -387,11 +398,17 @@ void client_steering_task::handle_event(int event_type, void *obj)
 
 void client_steering_task::handle_task_end()
 {
+    auto client = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
+    if (!client) {
+        LOG(ERROR) << "Client " << m_sta_mac << " is not found";
+        return;
+    }
+
     if (m_steer_try_performed && !m_btm_report_received) {
         TASK_LOG(DEBUG) << "client didn't respond to 11v request, updating responsiveness";
-        m_database.update_node_11v_responsiveness(m_sta_mac, false);
+        m_database.update_node_11v_responsiveness(*client, false);
     }
-    m_database.set_node_handoff_flag(m_sta_mac, false);
+    m_database.set_node_handoff_flag(*client, false);
 }
 
 bool client_steering_task::dm_set_steer_event_params(const std::string &event_path)
@@ -418,7 +435,13 @@ bool client_steering_task::dm_set_steer_event_params(const std::string &event_pa
 
         int8_t rx_rssi = 0, rx_packets = 0;
 
-        if (!m_database.get_node_cross_rx_rssi(m_sta_mac, m_target_bssid, rx_rssi, rx_packets)) {
+        auto station = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
+        if (!station) {
+            LOG(ERROR) << "Station " << m_sta_mac << " not found";
+            return false;
+        }
+
+        if (!station->get_cross_rx_rssi(m_target_bssid, rx_rssi, rx_packets)) {
             TASK_LOG(ERROR) << "can't get cross_rx_rssi for bssi =" << m_target_bssid;
         }
         ambiorix_dm->set(event_path, "NewLinkRate", rx_rssi);

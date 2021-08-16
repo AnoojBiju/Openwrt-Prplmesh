@@ -39,8 +39,8 @@
 
 using namespace beerocks_message;
 
-using sAgent   = prplmesh::controller::db::sAgent;
-using sStation = prplmesh::controller::db::sStation;
+using sAgent  = prplmesh::controller::db::sAgent;
+using Station = prplmesh::controller::db::Station;
 
 namespace son {
 
@@ -200,7 +200,7 @@ public:
     } sAssociatedStaTrafficStats;
 
     beerocks::mac_map<sAgent> m_agents;
-    beerocks::mac_map<sStation> m_stations;
+    beerocks::mac_map<Station> m_stations;
 
     db(sDbMasterConfig &config_, beerocks::logging &logger_, const sMacAddr &local_bridge_mac,
        std::shared_ptr<beerocks::nbapi::Ambiorix> ambiorix_object)
@@ -306,13 +306,13 @@ public:
     /**
      * @brief Get station with a specific MAC address.
      *
-     * Searches all sStation object to find one with the given MAC address.
+     * Searches all Station object to find one with the given MAC address.
      * If no station with the given MAC was found, nullptr is returned and an error is logged.
      *
      * @param mac MAC address of the station.
-     * @return The sStation object, or nullptr if it doesn't exist.
+     * @return The Station object, or nullptr if it doesn't exist.
      */
-    std::shared_ptr<sStation> get_station(const sMacAddr &mac);
+    std::shared_ptr<Station> get_station(const sMacAddr &mac);
 
     //logger
     void set_log_level_state(const beerocks::eLogLevel &log_level, const bool &new_state);
@@ -380,15 +380,15 @@ public:
                  const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
 
     /**
-     * @brief add wireless backhaul node and sStation object.
+     * @brief add wireless backhaul node and Station object.
      *
-     * Adds a wireless backhaul node and a sStation object if they don't exist.
+     * Adds a wireless backhaul node and a Station object if they don't exist.
      *
      * @param mac MAC address of the wireless backhaul station.
      * @param parent_mac MAC address of the parent node in the legacy node structure.
-     * @return the existing sStation if it was already there or the newly added sStation otherwise.
+     * @return the existing Station if it was already there or the newly added Station otherwise.
      */
-    std::shared_ptr<sStation>
+    std::shared_ptr<Station>
     add_node_wireless_backhaul(const sMacAddr &mac,
                                const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
     bool
@@ -398,15 +398,15 @@ public:
                         const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
 
     /**
-     * @brief add client node and sStation object.
+     * @brief add client node and Station object.
      *
-     * Adds a station node and a sStation object if they don't exist.
+     * Adds a station node and a Station object if they don't exist.
      *
      * @param mac MAC address of the client.
      * @param parent_mac MAC address of the parent node in the legacy node structure.
-     * @return the existing sStation if it was already there or the newly added sStation otherwise.
+     * @return the existing Station if it was already there or the newly added Station otherwise.
      */
-    std::shared_ptr<sStation>
+    std::shared_ptr<Station>
     add_node_station(const sMacAddr &mac,
                      const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
 
@@ -452,8 +452,8 @@ public:
 
     std::chrono::steady_clock::time_point get_last_state_change(const std::string &mac);
 
-    bool set_node_handoff_flag(const std::string &mac, bool handoff);
-    bool get_node_handoff_flag(const std::string &mac);
+    bool set_node_handoff_flag(Station &station, bool handoff);
+    bool get_node_handoff_flag(const Station &station);
 
     bool update_node_last_seen(const std::string &mac);
 
@@ -918,8 +918,8 @@ public:
      */
     bool can_start_client_steering(const std::string &sta_mac, const std::string &bssid);
 
-    bool update_node_11v_responsiveness(const std::string &mac, bool success);
-    bool get_node_11v_capability(const std::string &mac);
+    void update_node_11v_responsiveness(Station &station, bool success);
+    bool get_node_11v_capability(const Station &mac);
 
     bool set_hostap_iface_name(const sMacAddr &al_mac, const sMacAddr &mac,
                                const std::string &iface_name);
@@ -1285,19 +1285,19 @@ public:
      * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
      * @return true on success, otherwise false.
      */
-    bool set_client_time_life_delay(sStation &client,
+    bool set_client_time_life_delay(Station &client,
                                     const std::chrono::minutes &time_life_delay_minutes,
                                     bool save_to_persistent_db = true);
 
     /**
      * @brief Set the client's stay-on-initial-radio.
      *
-     * @param client sStation object representing a client.
+     * @param client Station object representing a client.
      * @param stay_on_initial_radio Enable client stay on the radio it initially connected to.
      * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
      * @return true on success, otherwise false.
      */
-    bool set_client_stay_on_initial_radio(sStation &client, bool stay_on_initial_radio,
+    bool set_client_stay_on_initial_radio(Station &client, bool stay_on_initial_radio,
                                           bool save_to_persistent_db = true);
 
     /**
@@ -1311,34 +1311,34 @@ public:
     /**
      * @brief Set the client's initial-radio.
      *
-     * @param client sStation object representing a client.
+     * @param client Station object representing a client.
      * @param initial_radio_mac The MAC address of the radio that the client has initially connected to.
      * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
      * @return true on success, otherwise false.
      */
-    bool set_client_initial_radio(sStation &client, const sMacAddr &initial_radio_mac,
+    bool set_client_initial_radio(Station &client, const sMacAddr &initial_radio_mac,
                                   bool save_to_persistent_db = true);
 
     /**
      * @brief Set the client's selected-bands.
      *
-     * @param client sStation object representing a client.
+     * @param client Station object representing a client.
      * @param selected_bands Client selected band/bands. Possible values are bitwise options of eClientSelectedBands.
      * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
      * @return true on success, otherwise false.
      */
-    bool set_client_selected_bands(sStation &client, int8_t selected_bands,
+    bool set_client_selected_bands(Station &client, int8_t selected_bands,
                                    bool save_to_persistent_db = true);
 
     /**
      * @brief Set the client's unfriendly status.
      *
-     * @param client sStation object representing a client.
+     * @param client Station object representing a client.
      * @param is_unfriendly Whether a client is unfriendly or not.
      * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
      * @return true on success, otherwise false.
      */
-    bool set_client_is_unfriendly(sStation &client, bool is_unfriendly,
+    bool set_client_is_unfriendly(Station &client, bool is_unfriendly,
                                   bool save_to_persistent_db = true);
 
     /**
@@ -1361,10 +1361,10 @@ public:
     /**
      * @brief Update client's persistent information with the runtime information.
      *
-     * @param client sStation object representing a client.
+     * @param client Station object representing a client.
      * @return true on success, otherwise false.
      */
-    bool update_client_persistent_db(sStation &client);
+    bool update_client_persistent_db(Station &client);
 
     /**
      * @brief Load all clients from persistent db.
@@ -1415,18 +1415,6 @@ public:
     //
     // Measurements
     //
-
-    bool set_node_beacon_measurement(const std::string &sta_mac, const std::string &ap_mac,
-                                     uint8_t rcpi, uint8_t rsni);
-    bool get_node_beacon_measurement(const std::string &sta_mac, const std::string &ap_mac,
-                                     uint8_t &rcpi, uint8_t &rsni);
-
-    bool set_node_cross_rx_rssi(const std::string &sta_mac, const std::string &ap_mac, int8_t rssi,
-                                int8_t rx_packets);
-    bool get_node_cross_rx_rssi(const std::string &sta_mac, const std::string &ap_mac, int8_t &rssi,
-                                int8_t &rx_packets);
-
-    bool clear_node_cross_rssi(const std::string &sta_mac);
 
     bool set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApStatsParams *params);
     void clear_hostap_stats_info(const sMacAddr &al_mac, const sMacAddr &mac);
@@ -1718,10 +1706,6 @@ public:
     //
     bool assign_load_balancer_task_id(const std::string &mac, int new_task_id);
     int get_load_balancer_task_id(const std::string &mac);
-
-    bool assign_client_locating_task_id(const std::string &mac, int new_task_id,
-                                        bool new_connection);
-    int get_client_locating_task_id(const std::string &mac, bool new_connection);
 
     bool assign_network_optimization_task_id(int new_task_id);
     int get_network_optimization_task_id();

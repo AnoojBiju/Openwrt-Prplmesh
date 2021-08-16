@@ -311,10 +311,17 @@ void load_balancer_task::work()
             hostap_params.ant_gain = database.get_hostap_ant_gain(radio_mac);
             hostap_params.tx_power = database.get_hostap_tx_power(radio_mac);
 
+            auto station = database.get_station(tlvf::mac_from_string(sta_mac));
+            if (!station) {
+                TASK_LOG(ERROR) << "station " << sta_mac << " not found";
+                finish();
+                return;
+            }
+
             int ul_rssi;
             //int estimated_ul_rssi, hostap_dl_rssi = beerocks::RSSI_INVALID;
             int8_t rx_rssi, rx_packets;
-            if (database.get_node_cross_rx_rssi(sta_mac, chosen_hostap, rx_rssi, rx_packets)) {
+            if (station->get_cross_rx_rssi(chosen_hostap, rx_rssi, rx_packets)) {
                 LOG(ERROR) << "can't get cross_rx_rssi for hostap " << chosen_hostap;
                 continue;
             }
