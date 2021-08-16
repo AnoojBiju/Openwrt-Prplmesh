@@ -94,6 +94,8 @@ sMacAddr mac_from_string(const std::string &mac)
 
     mac_from_string(ret.oct, mac);
 
+    // cppcheck 2.4 reports `ret` as an uninitialized value
+    // cppcheck-suppress uninitvar
     return ret;
 }
 

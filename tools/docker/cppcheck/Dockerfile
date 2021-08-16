@@ -16,7 +16,7 @@ ARG PACKAGES_FOR_RUN="\
     bash \
     git"
 
-ARG CPPCHECK_VERSION=1.89
+ARG CPPCHECK_VERSION=2.5
 
 RUN apt-get update && \
     apt-get install -y $PACKAGES_FOR_BUILD && \
