@@ -117,8 +117,6 @@ private:
     beerocks::config_file::sConfigSlave &beerocks_slave_conf;
     std::string bridge_iface;
 
-    uint32_t thread_last_error_code = 0;
-
     /**
      * Buffer to hold CMDU to be transmitted.
      */

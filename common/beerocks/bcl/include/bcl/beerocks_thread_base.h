@@ -26,11 +26,8 @@ public:
     bool is_running() { return worker_is_running; }
     std::string get_name() { return thread_name; }
 
-    int get_thread_last_error_code() { return thread_last_error_code; }
-
 protected:
     std::string thread_name;
-    uint32_t thread_last_error_code = 0;
     bool should_stop;
 
     virtual bool init() = 0;

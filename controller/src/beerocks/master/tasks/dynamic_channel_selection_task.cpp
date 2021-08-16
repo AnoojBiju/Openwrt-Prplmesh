@@ -152,7 +152,7 @@ void dynamic_channel_selection_task::work()
         // When a scan is requested, check the Dwell time parameter,
         // Normally send a "trigger scan" request.
         // but on a dwell time = 0 scenario, sent a "scan dump" request
-        auto ret = beerocks::eChannelScanStatusCode::SUCCESS;
+        beerocks::eChannelScanStatusCode ret;
         if (database.get_channel_scan_dwell_time_msec(m_radio_mac, m_single_scan) != 0) {
             // Send the "trigger scan" request and continue on to WAIT_FOR_SCAN_TRIGGERED
             if ((ret = dcs_request_scan_trigger()) != beerocks::eChannelScanStatusCode::SUCCESS) {

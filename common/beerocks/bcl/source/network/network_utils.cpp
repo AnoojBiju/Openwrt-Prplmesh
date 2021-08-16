@@ -129,7 +129,7 @@ std::string network_utils::ipv4_to_string(uint32_t ip)
 
 sIpv4Addr network_utils::ipv4_from_string(const std::string &ip)
 {
-    sIpv4Addr ret;
+    sIpv4Addr ret = {};
 
     ipv4_from_string(ret.oct, ip);
 
