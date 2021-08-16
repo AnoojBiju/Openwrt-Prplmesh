@@ -987,10 +987,10 @@ bool bpl_cfg_get_monitored_BSSs_by_radio_iface(const std::string &iface,
         return false;
     }
     // Iterate over the interface names to find the matching section
-    const auto &it = std::find_if(radio_ifaces.begin(), radio_ifaces.end(),
-                                  [&iface](std::pair<std::string, std::string> const &item) {
-                                      return (item.second == iface);
-                                  });
+    const auto it = std::find_if(radio_ifaces.begin(), radio_ifaces.end(),
+                                 [&iface](std::pair<std::string, std::string> const &item) {
+                                     return (item.second == iface);
+                                 });
     if (it == radio_ifaces.end()) {
         LOG(ERROR) << "Failed to find matching iface " << iface;
         return false;
