@@ -14,6 +14,7 @@
 #include "tasks/agent_monitoring_task.h"
 #include "tasks/bml_task.h"
 #include "tasks/channel_selection_task.h"
+#include "tasks/client_association_task.h"
 #include "tasks/client_steering_task.h"
 #include "tasks/dhcp_task.h"
 #include "tasks/load_balancer_task.h"
@@ -137,6 +138,10 @@ Controller::Controller(db &database_,
 
     LOG_IF(!tasks.add_task(std::make_shared<topology_task>(database, cmdu_tx, tasks)), FATAL)
         << "Failed adding topology task!";
+
+    LOG_IF(!tasks.add_task(std::make_shared<client_association_task>(database, cmdu_tx, tasks)),
+           FATAL)
+        << "Failed adding client association task!";
 
     LOG_IF(!tasks.add_task(std::make_shared<agent_monitoring_task>(database, cmdu_tx, tasks)),
            FATAL)
