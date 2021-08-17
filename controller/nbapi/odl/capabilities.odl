@@ -26,7 +26,7 @@
                 on action validate call check_range [0, 255];
             }
             %read-only int32 MaxTxPower = 0 {
-                on action validate call check_range [-127, 128];
+                on action validate call check_range [-127, 127];
             }
 
             %read-only object NonOperable [] {

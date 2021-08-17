@@ -8,6 +8,7 @@
 
 #include "db.h"
 
+#include "../tasks/agent_monitoring_task.h"
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/sockets.h>
 #include <bcl/son/son_wireless_utils.h>
@@ -4675,6 +4676,14 @@ bool db::assign_rdkb_wlan_task_id(int new_task_id)
 }
 
 int db::get_rdkb_wlan_task_id() { return rdkb_wlan_task_id; }
+
+bool db::assign_agent_monitoring_task_id(int new_task_id)
+{
+    agent_monitoring_task_id = new_task_id;
+    return true;
+}
+
+int db::get_agent_monitoring_task_id() { return agent_monitoring_task_id; }
 
 bool db::assign_dynamic_channel_selection_task_id(const sMacAddr &mac, int new_task_id)
 {

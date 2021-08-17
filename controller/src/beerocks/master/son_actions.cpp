@@ -9,6 +9,7 @@
 #include "son_actions.h"
 
 #include "db/db_algo.h"
+#include "tasks/agent_monitoring_task.h"
 #include "tasks/association_handling_task.h"
 #include "tasks/bml_task.h"
 #include "tasks/client_steering_task.h"
@@ -328,10 +329,12 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
          * set all nodes in the subtree as disconnected
          */
         if (mac_type != beerocks::TYPE_CLIENT) {
-
-            auto nodes = database.get_node_subtree(mac);
+            int agent_monitoring_task_id = database.get_agent_monitoring_task_id();
+            auto nodes                   = database.get_node_subtree(mac);
             for (auto &node_mac : nodes) {
                 if (database.get_node_type(node_mac) == beerocks::TYPE_IRE) {
+                    std::string ire_mac = node_mac;
+                    tasks.push_event(agent_monitoring_task_id, STATE_DISCONNECTED, &ire_mac);
                     // get in here when handling dead node on IRE backhaul
                     // set all platform bridges as non operational
                     LOG(DEBUG) << "setting platform with bridge mac " << node_mac
@@ -365,6 +368,7 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
 
                 if (database.get_node_type(node_mac) == beerocks::TYPE_IRE ||
                     database.get_node_type(node_mac) == beerocks::TYPE_CLIENT) {
+                    tasks.push_event(agent_monitoring_task_id, STATE_DISCONNECTED, &mac);
                     bml_task::connection_change_event new_event;
                     new_event.mac = node_mac;
                     tasks.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE,

@@ -19,22 +19,33 @@
 
         %read-only object OpClassScan [] {
             counted with OpClassScanNumberOfEntries;
-            %read-only uint8 OperatingClass = 0;
-
+            %read-only uint32 OperatingClass = 0 {
+                on action validate call check_range [0, 255];
+            }
             %read-only object ChannelScan [] {
                 counted with ChannelScanNumberOfEntries;
                 %read-only string TimeStamp = "2020-08-31T11:22:39Z";
-                %read-only uint8 Channel = 0;
-                %read-only uint8 Utilization = 0;
-                %read-only uint8 Noise = 0;
+                %read-only uint32 Channel = 0 {
+                    on action validate call check_range [0, 255];
+                }
+                %read-only uint32 Utilization = 0 {
+                    on action validate call check_range [0, 255];
+                }
+                %read-only uint32 Noise = 0 {
+                    on action validate call check_range [0, 255];
+                }
 
                 %read-only object NeighborBSS [] {
                     counted with NeighborBSSNumberOfEntries;
                     %read-only string BSSID = "00:00:00:00:00:00";
                     %read-only string SSID = "";
-                    %read-only uint8 SignalStrength = 0;
+                    %read-only uint32 SignalStrength = 0 {
+                        on action validate call check_range [0, 255];
+                    }
                     %read-only string ChannelBandwidth = "0";
-                    %read-only uint8 ChannelUtilization = 0;
+                    %read-only uint32 ChannelUtilization = 0 {
+                        on action validate call check_range [0, 255];
+                    }
                     %read-only uint16 StationCount = 0;
                 }
             }

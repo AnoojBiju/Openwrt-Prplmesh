@@ -178,6 +178,7 @@
         }
         %read-only object Notification;
         %read-only object AgentConnectedEvent[];
+        %read-only object AgentDisconnectedEvent[];
     }
 }
 
@@ -197,3 +198,4 @@ include "disassociation_event.odl";
 include "access_point.odl";
 include "agent_connected_event.odl";
 include "failed_connection_event.odl";
+include "agent_disconnected_event.odl";
