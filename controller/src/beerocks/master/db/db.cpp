@@ -3226,6 +3226,69 @@ bool db::is_client_in_persistent_db(const sMacAddr &mac)
     return bpl::db_has_entry(type_to_string(beerocks::eType::TYPE_CLIENT), client_db_entry);
 }
 
+bool db::add_steer_event_to_persistent_db(const ValuesMap &params)
+{
+    if (!config.persistent_db) {
+        return true;
+    }
+    while (config.steer_history_persistent_db_max_size <= m_steer_history.size()) {
+        if (!bpl::db_remove_entry("steer_history", m_steer_history.front())) {
+            LOG(ERROR) << "Failed to remove entry " << m_steer_history.front()
+                       << " from persistent db";
+            return false;
+        }
+        LOG(DEBUG) << "Removed steer event entry " << m_steer_history.front()
+                   << " from persistent db, total steer history entries in persisttent-db: "
+                   << m_steer_history.size();
+        m_steer_history.pop();
+    }
+
+    std::string entry_name = "attempt" + std::to_string(m_steer_history.size() + 1);
+
+    if (!bpl::db_add_entry("steer_history", entry_name, params)) {
+        LOG(ERROR) << "Failed to add steer history entry " << entry_name << " to persistent db";
+        return false;
+    }
+    m_steer_history.push(entry_name);
+    return true;
+}
+
+bool db::restore_steer_history()
+{
+    std::unordered_map<std::string, son::db::ValuesMap> steer_history;
+    bool ret = true;
+
+    if (!bpl::db_get_entries_by_type("steer_history", steer_history)) {
+        LOG(WARNING) << "Failed to get steer_history entries from persistent db "
+                     << "or no entries registered.";
+        return false;
+    }
+    if (steer_history.empty()) {
+        return true;
+    }
+    for (auto entry : steer_history) {
+
+        auto obj_path = dm_add_steer_event();
+
+        if (obj_path.empty()) {
+            LOG(ERROR) << "Failed to add SteerEvent object.";
+            return false;
+        }
+        m_steer_history.push(entry.first);
+        ret &= m_ambiorix_datamodel->set(obj_path, "DeviceId", entry.second["device_id"]);
+        ret &= m_ambiorix_datamodel->set(obj_path, "SteeredFrom", entry.second["steered_from"]);
+        ret &= m_ambiorix_datamodel->set(obj_path, "SteeredTo", entry.second["steered_to"]);
+        ret &= m_ambiorix_datamodel->set(obj_path, "Result", entry.second["result"]);
+        ret &= m_ambiorix_datamodel->set(obj_path, "TimeStamp", entry.second["time_stamp"]);
+        ret &= m_ambiorix_datamodel->set(obj_path, "SteeringType", entry.second["steering_type"]);
+        ret &=
+            m_ambiorix_datamodel->set(obj_path, "SteeringOrigin", entry.second["steering_origin"]);
+        ret &=
+            m_ambiorix_datamodel->set(obj_path, "TimeTaken", std::stoi(entry.second["time_taken"]));
+    }
+    return ret;
+}
+
 bool db::add_client_to_persistent_db(const sMacAddr &mac, const ValuesMap &params)
 {
     // if persistent db is disabled

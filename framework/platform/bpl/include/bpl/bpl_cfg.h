@@ -121,6 +121,10 @@ constexpr unsigned int DEFAULT_COMMIT_CHANGES_INTERVAL_VALUE_SEC = 10;
 // this is configurable to enable flexibility and support for low-memory platforms
 // by default, the number of clients's configuration to be cached is limited to 256
 constexpr int DEFAULT_CLIENTS_PERSISTENT_DB_MAX_SIZE = 256;
+// the DB of client's steer history is limited in size to prevent high memory consumption
+// this is configurable to enable flexibility and support for low-memory platforms
+// by default, the number of steer history entries is limited to 24
+constexpr int DEFAULT_STEER_HISTORY_PERSISTENT_DB_MAX_SIZE = 24;
 // the persistent data of clients has aging limit
 // by default, the limit is 365 days scaled to minutes, but it is configurable via the UCI
 constexpr int DEFAULT_MAX_TIMELIFE_DELAY_MINUTES = 365 * 24 * 60;
@@ -547,6 +551,14 @@ bool cfg_get_persistent_db_commit_changes_interval(unsigned int &interval_sec);
  * @return true on success, otherwise false.
  */
 bool cfg_get_clients_persistent_db_max_size(int &max_size);
+
+/**
+ * @brief Returns the max number of steer history entries in the persistent DB.
+ *
+ * @param [out] max_size Max number of steer history entries the persistent-db supports.
+ * @return true on success, otherwise false.
+ */
+bool cfg_get_steer_history_persistent_db_max_size(size_t &max_size);
 
 /**
  * @brief Returns the max time-life delay of clients (used for aging of client's persistent data).

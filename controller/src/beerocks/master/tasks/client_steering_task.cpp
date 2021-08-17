@@ -370,6 +370,9 @@ void client_steering_task::handle_event(int event_type, void *obj)
             TASK_LOG(ERROR) << "sta " << m_sta_mac << " steered to bssid " << connected_bssid
                             << " ,target bssid was " << m_target_bssid;
         }
+
+        // If time for STA disassociation was set then calculate
+        // duration between STA disconnected and connected
         if (m_disassoc_ts.time_since_epoch().count() &&
             m_disassoc_ts < std::chrono::steady_clock::now()) {
             m_duration = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -425,12 +428,12 @@ bool client_steering_task::dm_set_steer_event_params(const std::string &event_pa
     }
     ambiorix_dm->set(event_path, "DeviceId", m_sta_mac);
     ambiorix_dm->set(event_path, "SteeredFrom", m_original_bssid);
+    ambiorix_dm->set(event_path, "SteeredTo", m_target_bssid);
     ambiorix_dm->set(event_path, "StatusCode", m_status_code);
     m_database.dm_set_status(event_path, m_status_code);
     ambiorix_dm->set_current_time(event_path);
     if (m_steering_success) {
         ambiorix_dm->set(event_path, "Result", std::string("Success"));
-        ambiorix_dm->set(event_path, "SteeredTo", m_target_bssid);
         ambiorix_dm->set(event_path, "TimeTaken", m_duration.count());
 
         int8_t rx_rssi = 0, rx_packets = 0;
@@ -450,9 +453,10 @@ bool client_steering_task::dm_set_steer_event_params(const std::string &event_pa
     }
 
     std::string steer_origin = "Unknown";
+    std::string steer_type   = "Unknown";
 
     // For the time being, Agent doesn't steer, skip setting Agent steer origin.
-    if (m_duration / std::chrono::seconds(1) < 10) {
+    if (std::chrono::duration_cast<std::chrono::seconds>(m_duration).count() < 10) {
         // If the duration is smaller than some compile-time defined threshold,
         // e.g. 10s, it is considered a steering event originated by the station
         steer_origin = "Station";
@@ -470,9 +474,37 @@ bool client_steering_task::dm_set_steer_event_params(const std::string &event_pa
         // Steering type is always BTM if the controller initiated
         // the steering, and unknown otherwise.
         ambiorix_dm->set(event_path, "SteeringType", std::string("BTM"));
+        steer_type = "BTM";
     }
     ambiorix_dm->set(event_path, "SteeringOrigin", steer_origin);
+    if (m_database.config.persistent_db) {
+        add_steer_history_to_persistent_db(ambiorix_dm->get_datamodel_time_format(), steer_origin,
+                                           steer_type);
+    }
     return true;
+}
+
+void client_steering_task::add_steer_history_to_persistent_db(const std::string &time_stamp,
+                                                              const std::string &steer_origin,
+                                                              const std::string &steer_type)
+{
+    db::ValuesMap values_map;
+
+    values_map["device_id"]       = m_sta_mac;
+    values_map["steered_from"]    = m_original_bssid;
+    values_map["time_stamp"]      = time_stamp;
+    values_map["steered_to"]      = m_target_bssid;
+    values_map["time_taken"]      = "0";
+    values_map["steering_type"]   = steer_type;
+    values_map["steering_origin"] = steer_origin;
+    values_map["result"]          = "Fail";
+    if (m_steering_success) {
+        values_map["result"]     = "Success";
+        values_map["time_taken"] = std::to_string(m_duration.count());
+    }
+    if (!m_database.add_steer_event_to_persistent_db(values_map)) {
+        LOG(ERROR) << "Failed to save steer_history to persistent db.";
+    }
 }
 
 bool client_steering_task::handle_ieee1905_1_msg(const sMacAddr &src_mac,

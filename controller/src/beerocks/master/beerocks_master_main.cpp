@@ -248,6 +248,14 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
         master_conf.clients_persistent_db_max_size =
             beerocks::bpl::DEFAULT_CLIENTS_PERSISTENT_DB_MAX_SIZE;
     }
+    if (!beerocks::bpl::cfg_get_steer_history_persistent_db_max_size(
+            master_conf.steer_history_persistent_db_max_size)) {
+        LOG(DEBUG) << "Failed to read max number of steer history in persistent db, setting to "
+                      "default value: "
+                   << beerocks::bpl::DEFAULT_STEER_HISTORY_PERSISTENT_DB_MAX_SIZE;
+        master_conf.steer_history_persistent_db_max_size =
+            beerocks::bpl::DEFAULT_STEER_HISTORY_PERSISTENT_DB_MAX_SIZE;
+    }
     if (!beerocks::bpl::cfg_get_max_timelife_delay_minutes(
             master_conf.max_timelife_delay_minutes)) {
         LOG(DEBUG)
