@@ -54,6 +54,9 @@ private:
      * @return True if message was successfully sent, false otherwise.
      */
     bool send_sta_capability_query(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    bool handle_cmdu_1905_client_capability_report_message(const sMacAddr &src_mac,
+                                                           ieee1905_1::CmduMessageRx &cmdu_rx);
 };
 
 } // namespace son
