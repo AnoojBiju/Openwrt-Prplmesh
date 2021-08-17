@@ -1342,7 +1342,7 @@ bool Controller::handle_cmdu_1905_client_steering_btm_report_message(
     int steering_task_id = client->steering_task_id;
     tasks.push_event(steering_task_id, client_steering_task::BTM_REPORT_RECEIVED,
                      (void *)&status_code);
-    database.update_node_11v_responsiveness(client_mac, true);
+    database.update_node_11v_responsiveness(*client, true);
 
     if (status_code != 0) {
         LOG(DEBUG) << "sta " << client_mac << " rejected BSS steer request";
@@ -3104,7 +3104,14 @@ bool Controller::handle_cmdu_control_message(
             }
 
             std::string eth_switch = *(eth_switches.begin());
-            int prev_task_id = database.get_client_locating_task_id(client_mac, true /*reachable*/);
+
+            auto client = database.get_station(tlvf::mac_from_string(client_mac));
+            if (!client) {
+                LOG(ERROR) << "client " << client_mac << " not found";
+                break;
+            }
+
+            int prev_task_id = client->get_client_locating_task_id(true /*reachable*/);
 
             if (tasks.is_task_running(prev_task_id)) {
                 LOG(DEBUG) << "client locating task already running for " << client_mac;
@@ -3175,11 +3182,11 @@ bool Controller::handle_cmdu_control_message(
             LOG(DEBUG) << "update rssi measurement BH manager from ap_mac = " << priv_ap_mac
                        << " to = " << ap_mac;
         }
-        if (ap_mac.empty() ||
-            !database.set_node_cross_rx_rssi(client_mac, ap_mac, notification->params().rx_rssi,
-                                             notification->params().rx_packets)) {
+        if (ap_mac.empty()) {
             LOG(ERROR) << "update rssi measurement failed";
         }
+        client->set_cross_rx_rssi(ap_mac, notification->params().rx_rssi,
+                                  notification->params().rx_packets);
         if (is_parent) {
             client->cross_tx_phy_rate_100kb = notification->params().tx_phy_rate_100kb;
             client->cross_rx_phy_rate_100kb = notification->params().rx_phy_rate_100kb;
@@ -3227,11 +3234,10 @@ bool Controller::handle_cmdu_control_message(
 
         if ((database.get_node_type(client_mac) == beerocks::TYPE_CLIENT) &&
             (database.get_node_state(client_mac) == beerocks::STATE_CONNECTED) &&
-            (!database.get_node_handoff_flag(client_mac)) && is_parent) {
+            (!database.get_node_handoff_flag(*client)) && is_parent) {
 
-            database.set_node_cross_rx_rssi(client_mac, radio_mac_str,
-                                            notification->params().rx_rssi,
-                                            notification->params().rx_packets);
+            client->set_cross_rx_rssi(radio_mac_str, notification->params().rx_rssi,
+                                      notification->params().rx_packets);
             client->cross_tx_phy_rate_100kb = notification->params().tx_phy_rate_100kb;
             client->cross_rx_phy_rate_100kb = notification->params().rx_phy_rate_100kb;
 
@@ -3327,7 +3333,12 @@ bool Controller::handle_cmdu_control_message(
 
         } else {
             LOG(DEBUG) << "run_client_locating_task client_mac = " << client_mac;
-            int prev_task_id = database.get_client_locating_task_id(client_mac, true);
+            auto client = database.get_station(tlvf::mac_from_string(client_mac));
+            if (!client) {
+                LOG(ERROR) << "client " << client_mac << " not found";
+                break;
+            }
+            int prev_task_id = client->get_client_locating_task_id(true);
             if (tasks.is_task_running(prev_task_id)) {
                 LOG(DEBUG) << "client locating task already running for " << client_mac;
             } else {
@@ -3527,7 +3538,7 @@ bool Controller::handle_cmdu_control_message(
                                 tasks.add_task(new_task);
                             }
                         } else {
-                            database.set_node_handoff_flag(sta, false);
+                            database.set_node_handoff_flag(*station, false);
                         }
                     }
                 }

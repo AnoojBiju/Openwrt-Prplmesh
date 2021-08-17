@@ -2073,7 +2073,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             }
         }
 
-        // Get sStation object
+        // Get Station object
         auto client = database.get_station(client_mac);
         if (!client) {
             LOG(ERROR) << "client " << client_mac << " not found";

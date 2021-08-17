@@ -1,6 +1,6 @@
 @startuml
 
-class sStation {
+class Station {
   sMacAddr mac
   ipv4
   ipv6
@@ -45,11 +45,11 @@ class db {
 }
 
 db *-- sAgent
-db *-- sStation
+db *-- Station
 sAgent *-- sRadio
 sAgent *-- sInterface
 sRadio *-- sBss
-sStation "0..1" --o sRadio :  backhaul STA
-sStation "*" -- "0..1" sBss
+Station "0..1" --o sRadio :  backhaul STA
+Station "*" -- "0..1" sBss
 
 @enduml

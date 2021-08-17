@@ -49,11 +49,6 @@ std::ostream &operator<<(std::ostream &os, eTriStateBool value);
 class node {
 public:
     node(beerocks::eType type_, const std::string &mac_);
-    bool get_beacon_measurement(const std::string &ap_mac_, uint8_t &rcpi, uint8_t &rsni);
-    void set_beacon_measurement(const std::string &ap_mac_, uint8_t rcpi, uint8_t rsni);
-    bool get_cross_rx_rssi(const std::string &ap_mac_, int8_t &rssi, int8_t &rx_packets);
-    void set_cross_rx_rssi(const std::string &ap_mac_, int8_t rssi, int8_t rx_packets);
-    void clear_cross_rssi();
     void clear_node_stats_info();
 
     beerocks::eType get_type();
@@ -79,7 +74,6 @@ public:
     bool channel_ext_above_secondary   = true;
 
     beerocks::eNodeState state = beerocks::STATE_DISCONNECTED;
-    bool handoff               = false;
 
     bool supports_5ghz            = true;
     int failed_5ghz_steer_attemps = 0;
@@ -88,15 +82,11 @@ public:
     int failed_24ghz_steer_attemps = 0;
     beerocks::eBeaconMeasurementSupportLevel supports_beacon_measurement =
         beerocks::BEACON_MEAS_UNSUPPORTED;
-    bool supports_11v            = true;
-    int failed_11v_request_count = 0;
 
     std::chrono::steady_clock::time_point last_state_change;
 
-    int load_balancer_task_id                    = -1;
-    int client_locating_task_id_new_connection   = -1;
-    int client_locating_task_id_exist_connection = -1;
-    int dynamic_channel_selection_task_id        = -1;
+    int load_balancer_task_id             = -1;
+    int dynamic_channel_selection_task_id = -1;
 
     std::chrono::steady_clock::time_point measurement_sent_timestamp;
     int measurement_recv_delta  = 0;
@@ -119,8 +109,6 @@ public:
         std::chrono::steady_clock::time_point timestamp = std::chrono::steady_clock::now();
     };
     std::shared_ptr<sta_stats_params> stats_info;
-
-    bool ire_handoff = false;
 
     class radio {
     public:
@@ -330,39 +318,7 @@ public:
     add_neighbor(const sMacAddr &interface_mac, const sMacAddr &neighbor_mac, bool flag_ieee1905);
 
 private:
-    class rssi_measurement {
-    public:
-        rssi_measurement(const std::string &ap_mac_, int8_t rssi_, int8_t packets_)
-            : ap_mac(ap_mac_)
-        {
-            rssi      = rssi_;
-            packets   = packets_;
-            timestamp = std::chrono::steady_clock::now();
-        }
-        const std::string ap_mac;
-        int8_t rssi = beerocks::RSSI_INVALID;
-        int8_t packets;
-        std::chrono::steady_clock::time_point timestamp;
-    };
-
-    class beacon_measurement {
-    public:
-        beacon_measurement(const std::string &ap_mac_, uint8_t rcpi_, uint8_t rsni_)
-            : ap_mac(ap_mac_)
-        {
-            rcpi      = rcpi_; // received channel power indication (convertable to rssi)
-            rsni      = rsni_; // received signal noise indication (SNR)
-            timestamp = std::chrono::steady_clock::now();
-        }
-        const std::string ap_mac;
-        uint8_t rcpi = beerocks::RCPI_INVALID;
-        uint8_t rsni = 0;
-        std::chrono::steady_clock::time_point timestamp;
-    };
-
     beerocks::eType type;
-    std::unordered_map<std::string, std::shared_ptr<beacon_measurement>> beacon_measurements;
-    std::unordered_map<std::string, std::shared_ptr<rssi_measurement>> cross_rx_rssi;
 
     /**
      * @brief Interfaces configured on this node.

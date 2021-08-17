@@ -12,10 +12,16 @@
 #include <bcl/beerocks_defines.h>
 #include <bcl/network/network_utils.h>
 #include <chrono>
+#include <memory>
 #include <string>
 #include <tlvf/common/sMacAddr.h>
+#include <unordered_map>
 
 #include "node.h"
+
+namespace son {
+class db;
+}
 
 namespace prplmesh {
 namespace controller {
@@ -26,11 +32,11 @@ namespace db {
  *
  * Struct representing a station. It can be a client or a backhaul station.
  */
-struct sStation {
+class Station {
 public:
-    sStation()                 = delete;
-    sStation(const sStation &) = delete;
-    explicit sStation(const sMacAddr &mac_) : mac(mac_) {}
+    Station()                = delete;
+    Station(const Station &) = delete;
+    explicit Station(const sMacAddr &mac_) : mac(mac_) {}
 
     const sMacAddr mac;
 
@@ -80,6 +86,33 @@ public:
     /*
      * Persistent configurations - end
      */
+
+    void assign_client_locating_task_id(int new_task_id, bool new_connection);
+    int get_client_locating_task_id(bool new_connection);
+
+    bool get_beacon_measurement(const std::string &ap_mac_, uint8_t &rcpi, uint8_t &rsni);
+    void set_beacon_measurement(const std::string &ap_mac_, uint8_t rcpi, uint8_t rsni);
+    bool get_cross_rx_rssi(const std::string &ap_mac_, int8_t &rssi, int8_t &rx_packets);
+    void set_cross_rx_rssi(const std::string &ap_mac_, int8_t rssi, int8_t rx_packets);
+    void clear_cross_rssi();
+
+    friend class ::son::db;
+
+private:
+    int m_client_locating_task_id_new_connection   = -1;
+    int m_client_locating_task_id_exist_connection = -1;
+
+    bool m_supports_11v            = true;
+    int m_failed_11v_request_count = 0;
+
+    bool m_handoff     = false;
+    bool m_ire_handoff = false;
+
+    class beacon_measurement;
+    std::unordered_map<std::string, std::shared_ptr<beacon_measurement>> m_beacon_measurements;
+
+    class rssi_measurement;
+    std::unordered_map<std::string, std::shared_ptr<rssi_measurement>> m_cross_rx_rssi;
 };
 
 } // namespace db
