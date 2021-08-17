@@ -154,7 +154,7 @@
             %persistent %read-only uint16 StatusCode;
             %persistent %read-only string Status = "Unknown";
             %persistent %read-only string SteeredTo = "00:00:00:00:00:00";
-            %persistent %read-only int32 TimeTaken;
+            %persistent %read-only int64 TimeTaken;
             %persistent %read-only int32 NewLinkRate;
             %persistent %read-only string SteeringType {
                 default "Unknown";

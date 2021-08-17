@@ -428,12 +428,12 @@ bool client_steering_task::dm_set_steer_event_params(const std::string &event_pa
     }
     ambiorix_dm->set(event_path, "DeviceId", m_sta_mac);
     ambiorix_dm->set(event_path, "SteeredFrom", m_original_bssid);
+    ambiorix_dm->set(event_path, "SteeredTo", m_target_bssid);
     ambiorix_dm->set(event_path, "StatusCode", m_status_code);
     m_database.dm_set_status(event_path, m_status_code);
     ambiorix_dm->set_current_time(event_path);
     if (m_steering_success) {
         ambiorix_dm->set(event_path, "Result", std::string("Success"));
-        ambiorix_dm->set(event_path, "SteeredTo", m_target_bssid);
         ambiorix_dm->set(event_path, "TimeTaken", m_duration.count());
 
         int8_t rx_rssi = 0, rx_packets = 0;
