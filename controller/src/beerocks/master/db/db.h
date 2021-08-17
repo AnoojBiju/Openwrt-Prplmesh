@@ -20,6 +20,8 @@
 
 #include <tlvf/wfa_map/tlvApHeCapabilities.h>
 #include <tlvf/wfa_map/tlvApHtCapabilities.h>
+#include <tlvf/wfa_map/tlvApOperationalBSS.h>
+#include <tlvf/wfa_map/tlvApRadioBasicCapabilities.h>
 #include <tlvf/wfa_map/tlvApVhtCapabilities.h>
 #include <tlvf/wfa_map/tlvAssociatedStaExtendedLinkMetrics.h>
 
@@ -226,6 +228,9 @@ public:
     ~db(){};
 
     //static
+
+    static const int8_t TASK_ID_NOT_FOUND = -1;
+
     /**
      * @brief Get string representation of node type.
      *
@@ -1734,6 +1739,9 @@ public:
     bool assign_dhcp_task_id(int new_task_id);
     int get_dhcp_task_id();
 
+    bool assign_agent_monitoring_task_id(int new_task_id);
+    int get_agent_monitoring_task_id();
+
     void lock();
     void unlock();
 
@@ -2083,6 +2091,7 @@ private:
     int persistent_db_aging_operation_id       = -1;
     int persistent_db_data_commit_operation_id = -1;
     int dhcp_task_id                           = -1;
+    int agent_monitoring_task_id               = -1;
 
     std::shared_ptr<node> last_accessed_node;
     std::string last_accessed_node_mac;

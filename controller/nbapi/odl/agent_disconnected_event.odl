@@ -1,0 +1,59 @@
+
+/* SPDX-License-Identifier: BSD-2-Clause-Patent
+ *
+ * SPDX-FileCopyrightText: 2021 the prplMesh contributors (see AUTHORS.md)
+ *
+ * This code is subject to the terms of the BSD+Patent license.
+ * See LICENSE file for more details.
+ */
+
+%define {
+    select Controller.AgentDisconnectedEvent {
+        %read-only object AgentDisconnected [] {
+            counted with NumberOfAgentDisconnected;
+            %read-only string ID = "00:00:00:00:00:00";
+
+            %read-only object Radio [] {
+                counted with NumberOfRadios;
+                %read-only string MACAddress = "00:00:00:00:00:00";
+                %read-only uint32 Utilization = 0 {
+                    on action validate call check_range [0, 255];
+                }
+                %read-only uint32 Transmit = 0 {
+                    on action validate call check_range [0, 255];
+                }
+                %read-only uint32 ReceiveSelf = 0 {
+                    on action validate call check_range [0, 255];
+                }
+                %read-only uint32 ReceiveOther = 0 {
+                    on action validate call check_range [0, 255];
+                }
+                %read-only uint32 Noise = 0 {
+                    on action validate call check_range [0, 220];
+                }
+
+                %read-only object BSS [] {
+                    counted with NumberOfBSS;
+                    %read-only string BSSID = "00:00:00:00:00:00";
+                    %read-only string SSID = "0";
+                    %read-only uint32 UnicastBytesSent = 0;
+                    %read-only uint32 UnicastBytesReceived = 0;
+                    %read-only uint32 MulticastBytesSent = 0;
+                    %read-only uint32 MulticastBytesReceived = 0;
+                    %read-only uint32 BroadcastBytesSent = 0;
+                    %read-only uint32 BroadcastBytesReceived = 0;
+
+                    %read-only object STA [] {
+                        counted with NumberOfSTA;
+                        %read-only string MACAddress = "00:00:00:00:00:00";
+                        %read-only datetime TimeStamp = "2020-08-31T11:22:39Z";
+                    }
+                }
+            }
+            %read-only object Neighbor [] {
+                counted with NumberOfNeighbors;
+                %read-only string ID = "00:00:00:00:00:00";
+            }
+        }
+    }
+}

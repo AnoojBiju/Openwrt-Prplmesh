@@ -34,11 +34,39 @@ public:
 
 protected:
     void work() override;
+    virtual void handle_event(int event_type, void *obj) override;
 
 private:
     db &database;
     ieee1905_1::CmduMessageTx &cmdu_tx;
     task_pool &tasks;
+
+    struct sBssStats {
+        uint32_t unicast_bytes_sent;
+        uint32_t unicast_bytes_received;
+        uint32_t broadcast_bytes_sent;
+        uint32_t broadcast_bytes_received;
+        uint32_t multicast_bytes_sent;
+        uint32_t multicast_bytes_received;
+    };
+
+    struct sRadioStats {
+        uint8_t utilization;
+        uint8_t transmit;
+        uint8_t receive_self;
+        uint8_t receive_other;
+        uint8_t noise;
+    };
+
+    /**
+    * key = BSSID, value = latest BSS statistics
+    */
+    beerocks::mac_map<sBssStats> m_bss_stats;
+
+    /**
+    * key = RUID, value = latest Radio statistics
+    */
+    beerocks::mac_map<sRadioStats> m_radio_stats;
 
     bool m_ap_autoconfig_renew_sent = false;
 
@@ -47,6 +75,11 @@ private:
      * NBAPI object.
      */
     std::unordered_map<sMacAddr, std::queue<std::string>> m_agents;
+
+    /**
+     * @brief Queue with paths to NBAPI AgentConnectedEvent objects.
+     */
+    std::queue<std::string> m_disconnected;
 
     /**
      * @brief Map with key=ruid and value BSSes that were configured
@@ -122,6 +155,19 @@ private:
                                  ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
+     * @brief Store in 'bss_stats' last received BSS statistics.
+     * @param cmdu_rx The AP Metrics Response message.
+     */
+    void save_bss_statistics(ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Store in 'radio_stats' last received radio statistics.
+     * @param src_mac Source mac.
+     * @param cmdu_rx The AP Metrics Response message.
+     */
+    void save_radio_statistics(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
      * @brief Search for appropriate BSS from bss list of tlvAssociatedClients,
      * for each STA from its list of clients create NBAPI
      * STA object and attach this object to AgentConnected.
@@ -144,6 +190,23 @@ private:
      */
     bool dm_add_neighbor_to_agent_connected_event(const std::string &event_path,
                                                   ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Adds NBAPI AgentDisconnectedEvent object, all its sub-objects and set values
+     * for it's parameters parameters.
+     * @param src_mac MAC address of agent.
+     * @return True on success, false otherwise.
+     */
+    bool dm_add_agent_disconnected_event(const sMacAddr &agent_mac);
+
+    /**
+     * @brief Set values for parameters of NBAPI AgentDisconnected, adds its sub-objects.
+     * @param agent_discon_path Path to NBAPI AgentDisconnectedEvent object.
+     * @param src_mac MAC address of agent.
+     * @return True on success, false otherwise.
+     */
+    bool dm_set_agent_disconnected_event_params(const std::string &agent_discon_path,
+                                                const sMacAddr &agent_mac);
 };
 
 } // namespace son
