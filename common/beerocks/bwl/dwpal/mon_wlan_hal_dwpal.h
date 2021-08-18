@@ -47,7 +47,7 @@ public:
     virtual bool channel_scan_dump_cached_results() override;
 
     /**
-     * @brief Adds a new timer with given schedule.
+     * @brief Generates connected events for already connected clients.
      *
      * @see mon_wlan_hal::generate_connected_clients_events
      */

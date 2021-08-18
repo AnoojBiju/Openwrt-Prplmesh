@@ -77,7 +77,7 @@ public:
     virtual bool get_vap_enable(const std::string &iface_name, bool &enable) override;
 
     /**
-     * @brief Adds a new timer with given schedule.
+     * @brief Generates connected events for already connected clients.
      *
      * @see ap_wlan_hal::generate_connected_clients_events
      */
