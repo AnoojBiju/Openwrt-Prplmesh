@@ -1423,6 +1423,9 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
     case beerocks_message::
         ACTION_APMANAGER_HOSTAP_GENERATE_CLIENT_ASSOCIATION_NOTIFICATIONS_REQUEST: {
         m_generate_connected_clients_events = true;
+        if (!ap_wlan_hal->pre_generate_connected_clients_events()) {
+            LOG(WARNING) << "Failed to prepare for generate of clients connected events";
+        }
         break;
     }
     case beerocks_message::ACTION_APMANAGER_HOSTAP_ZWDFS_ANT_CHANNEL_SWITCH_REQUEST: {
