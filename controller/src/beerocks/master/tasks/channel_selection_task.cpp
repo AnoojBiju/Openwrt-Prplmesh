@@ -970,7 +970,7 @@ void channel_selection_task::work()
         FSM_MOVE_STATE(GOTO_IDLE);
 
         //inject event for sample client on reentry hostap after steering them to 2.4G hostap
-        auto new_event = CHANNEL_SELECTION_ALLOCATE_EVENT(sDfsReEntrySampleSteeredClients_event);
+        auto new_event             = new sDfsReEntrySampleSteeredClients_event;
         new_event->hostap_mac      = radio_mac;
         new_event->timestamp       = std::chrono::steady_clock::now();
         new_event->timeout_expired = false;
@@ -1088,7 +1088,7 @@ bool channel_selection_task::reentry_steered_client_check()
 
         //inject the event back to the end of the queue
         //TASK_LOG(DEBUG) << "radio_mac - " << radio_mac << " sta's are still connected injecting sta sample event ";
-        auto new_event = CHANNEL_SELECTION_ALLOCATE_EVENT(sDfsReEntrySampleSteeredClients_event);
+        auto new_event             = new sDfsReEntrySampleSteeredClients_event;
         new_event->hostap_mac      = radio_mac;
         new_event->timestamp       = dfs_reentry_pending_steered_clients->timestamp;
         new_event->timeout_expired = false;
@@ -1124,8 +1124,8 @@ bool channel_selection_task::cac_pending_hostap_check()
         } else {
             //inject again the event to check for cac completed.
             //TASK_LOG(DEBUG) << "radio_mac - " << radio_mac << " inject cac sample event";
-            auto new_event        = CHANNEL_SELECTION_ALLOCATE_EVENT(sDfsCacPendinghostap_event);
-            new_event->hostap_mac = radio_mac;
+            auto new_event             = new sDfsCacPendinghostap_event;
+            new_event->hostap_mac      = radio_mac;
             new_event->timeout_expired = false;
             //TASK_LOG(DEBUG) << "radio_mac - " << radio_mac << " timeout_expired = " << int(new_event->timeout_expired);
             tasks.push_event(database.get_channel_selection_task_id(),
@@ -1674,7 +1674,7 @@ void channel_selection_task::wait_for_cac_completed(uint8_t channel, uint8_t ban
 
     //inject event to check for cac completed.
     TASK_LOG(DEBUG) << "radio_mac - " << radio_mac << " inject cac sample event";
-    auto new_event             = CHANNEL_SELECTION_ALLOCATE_EVENT(sDfsCacPendinghostap_event);
+    auto new_event             = new sDfsCacPendinghostap_event;
     new_event->hostap_mac      = radio_mac;
     new_event->timeout_expired = false;
     TASK_LOG(DEBUG) << "radio_mac - " << radio_mac

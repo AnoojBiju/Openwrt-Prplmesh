@@ -1124,8 +1124,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         }
 
         //send restricted channel event to channel selection task
-        auto new_event = CHANNEL_SELECTION_ALLOCATE_EVENT(
-            channel_selection_task::sConfiguredRestrictedChannels_event);
+        auto new_event        = new channel_selection_task::sConfiguredRestrictedChannels_event;
         new_event->hostap_mac = request->params().hostap_mac;
         std::copy_n(request->params().restricted_channels, sizeof(new_event->restricted_channels),
                     new_event->restricted_channels);

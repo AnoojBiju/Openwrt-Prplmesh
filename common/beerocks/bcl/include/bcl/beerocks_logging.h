@@ -18,14 +18,6 @@
 #include "beerocks_string_utils.h"
 
 namespace beerocks {
-#define CONSOLE_MSG(a)                                                                             \
-    do {                                                                                           \
-        std::cout << a << "\r\n" << std::flush;                                                    \
-    } while (0)
-#define CONSOLE_MSG_INPLACE(a)                                                                     \
-    do {                                                                                           \
-        std::cout << "\r" << a << std::flush;                                                      \
-    } while (0)
 
 class log_levels {
 public:
