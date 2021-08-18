@@ -390,7 +390,7 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     LOG_IF(std::end(beerocks_slave_conf.sta_iface) ==
                std::find_if(std::begin(beerocks_slave_conf.sta_iface),
                             std::end(beerocks_slave_conf.sta_iface),
-                            [&](std::string &s) { return !s.empty(); }),
+                            [&](const std::string &s) { return !s.empty(); }),
            WARNING)
         << "No slave sta ifaces!";
     for (int slave_num = 0; slave_num < beerocks::IRE_MAX_SLAVES; slave_num++) {

@@ -2301,8 +2301,8 @@ bool db::is_vap_on_steer_list(const sMacAddr &bssid)
         return false;
     }
 
-    vap_name         = utils::get_iface_string_from_iface_vap_ids(vap_name, vap_id);
-    auto &steer_vaps = config.load_steer_on_vaps;
+    vap_name               = utils::get_iface_string_from_iface_vap_ids(vap_name, vap_id);
+    const auto &steer_vaps = config.load_steer_on_vaps;
     if (steer_vaps.find(vap_name) == std::string::npos) {
         return false;
     }

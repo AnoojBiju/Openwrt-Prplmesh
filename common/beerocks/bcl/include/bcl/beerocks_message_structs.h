@@ -125,18 +125,6 @@ typedef struct sWifiChannel {
 
 //////////////////// tlvf includes - END/////////////////////////////
 
-#define MACRO_IS_ENABLE                                                                            \
-    uint8_t isEnable;                                                                              \
-    uint8_t reserved1;                                                                             \
-    uint8_t reserved2;                                                                             \
-    uint8_t reserved3;
-
-#define MACRO_CLI_IS_ENABLE                                                                        \
-    int8_t isEnable;                                                                               \
-    uint8_t reserved1;                                                                             \
-    uint8_t reserved2;                                                                             \
-    uint8_t reserved3;
-
 } // namespace message
 } // namespace beerocks
 

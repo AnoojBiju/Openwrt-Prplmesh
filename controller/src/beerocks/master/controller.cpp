@@ -2521,8 +2521,7 @@ bool Controller::handle_intel_slave_join(
     if (!notification->is_slave_reconf()) {
         //sending event to CS task
         LOG(DEBUG) << "CS_task,sending SLAVE_JOINED_EVENT for mac " << radio_mac;
-        auto cs_new_event =
-            CHANNEL_SELECTION_ALLOCATE_EVENT(channel_selection_task::sSlaveJoined_event);
+        auto cs_new_event                  = new channel_selection_task::sSlaveJoined_event;
         cs_new_event->backhaul_is_wireless = beerocks::utils::is_node_wireless(backhaul_iface_type);
         cs_new_event->backhaul_channel     = backhaul_channel;
         cs_new_event->channel              = notification->cs_params().channel;
@@ -2803,8 +2802,7 @@ bool Controller::handle_cmdu_control_message(
             return false;
         }
 
-        auto new_event = CHANNEL_SELECTION_ALLOCATE_EVENT(
-            channel_selection_task::sRestrictedChannelResponse_event);
+        auto new_event        = new channel_selection_task::sRestrictedChannelResponse_event;
         new_event->hostap_mac = beerocks_header->actionhdr()->radio_mac();
         new_event->success    = response->success();
         tasks.push_event(database.get_channel_selection_task_id(),
@@ -2914,7 +2912,7 @@ bool Controller::handle_cmdu_control_message(
         }
 
         LOG(DEBUG) << "CS_task,sending CSA_EVENT for mac " << radio_mac;
-        auto new_event = CHANNEL_SELECTION_ALLOCATE_EVENT(channel_selection_task::sCsa_event);
+        auto new_event        = new channel_selection_task::sCsa_event;
         new_event->hostap_mac = beerocks_header->actionhdr()->radio_mac();
         new_event->cs_params  = notification->cs_params();
         tasks.push_event(database.get_channel_selection_task_id(),
@@ -2932,8 +2930,7 @@ bool Controller::handle_cmdu_control_message(
         }
         LOG(DEBUG) << "CS_task,sending ACS_RESPONSE_EVENT for mac " << radio_mac;
 
-        auto new_event =
-            CHANNEL_SELECTION_ALLOCATE_EVENT(channel_selection_task::sAcsResponse_event);
+        auto new_event        = new channel_selection_task::sAcsResponse_event;
         new_event->hostap_mac = radio_mac;
         new_event->cs_params  = notification->cs_params();
         tasks.push_event(database.get_channel_selection_task_id(),
@@ -3386,8 +3383,7 @@ bool Controller::handle_cmdu_control_message(
         LOG(DEBUG) << "received ACTION_CONTROL_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION hostap_mac="
                    << radio_mac;
 
-        auto new_event =
-            CHANNEL_SELECTION_ALLOCATE_EVENT(channel_selection_task::sCacCompleted_event);
+        auto new_event        = new channel_selection_task::sCacCompleted_event;
         new_event->hostap_mac = radio_mac;
         new_event->params     = notification->params();
         tasks.push_event(database.get_channel_selection_task_id(),
@@ -3418,8 +3414,7 @@ bool Controller::handle_cmdu_control_message(
             << "received ACTION_CONTROL_HOSTAP_DFS_CHANNEL_AVAILABLE_NOTIFICATION hostap_mac="
             << radio_mac;
 
-        auto new_event =
-            CHANNEL_SELECTION_ALLOCATE_EVENT(channel_selection_task::sDfsChannelAvailable_event);
+        auto new_event        = new channel_selection_task::sDfsChannelAvailable_event;
         new_event->hostap_mac = radio_mac;
         new_event->params     = notification->params();
         tasks.push_event(database.get_channel_selection_task_id(),
@@ -3648,8 +3643,7 @@ bool Controller::handle_cmdu_control_message(
             radio_mac, beerocks::eApActiveMode(notification->params().ap_activity_mode));
         if (notification->params().ap_activity_mode == beerocks::AP_IDLE_MODE) {
             LOG(DEBUG) << "CS_task,sending AP_ACTIVITY_IDLE_EVENT for mac " << radio_mac;
-            auto new_event =
-                CHANNEL_SELECTION_ALLOCATE_EVENT(channel_selection_task::sApActivityIdle_event);
+            auto new_event        = new channel_selection_task::sApActivityIdle_event;
             new_event->hostap_mac = radio_mac;
             tasks.push_event(database.get_channel_selection_task_id(),
                              (int)channel_selection_task::eEvent::AP_ACTIVITY_IDLE_EVENT,

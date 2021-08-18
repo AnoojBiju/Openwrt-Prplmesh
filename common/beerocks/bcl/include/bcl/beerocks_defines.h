@@ -131,19 +131,6 @@ enum eBeeRocksEntities : uint8_t {
     BEEROCKS_ENTITY_PLATFORM_MANAGER = 6,
 };
 
-enum eBeeRocksResult : uint32_t {
-    BEEROCKS_RESULT_OK                  = 0u,
-    BEEROCKS_RESULT_OIC_ERROR           = 1u,
-    BEEROCKS_RESULT_GENERAL_FAILURE     = 2u,
-    BEEROCKS_RESULT_INVALID_PARAMETER   = 3u,
-    BEEROCKS_RESULT_NOT_PRESENT         = 4u,
-    BEEROCKS_RESULT_NOT_IMPLEMENTED     = 5u,
-    BEEROCKS_RESULT_INTERNAL_ERROR      = 6u,
-    BEEROCKS_RESULT_NOT_INITIALIZED     = 7u,
-    BEEROCKS_RESULT_SOCKET_FAILURE      = 8u,
-    BEEROCKS_RESULT_ALREADY_INITIALIZED = 9u,
-};
-
 enum eBeeRocksIfaceIds {
     IFACE_ID_INVALID = -2,
     IFACE_RADIO_ID   = -1,
@@ -165,16 +152,6 @@ enum eOperatingMode : int8_t {
     OPER_MODE_WDS_EXTENDER = 2,
     OPER_MODE_WDS_REPEATER = 3,
     OPER_MODE_L2NAT_CLIENT = 4,
-};
-
-enum eCastMode {
-    UNICAST   = 0,
-    MULTICAST = 1,
-};
-
-enum eControlRouterTransport {
-    TRANSPORT_TCP = 0,
-    TRANSPORT_TCP_SSL,
 };
 
 enum eProtocolPorts {
@@ -368,18 +345,6 @@ enum eIfaceType : uint8_t {
 #define IFACE_TYPE_STR_BRIDGE "BRIDGE"
 #define IFACE_TYPE_STR_GW_BRIDGE "GW_BRIDGE"
 
-enum ePlatform : uint8_t {
-    PLATFORM_UNSUPPORTED = 0,
-    PLATFORM_GRX_350,
-    PLATFORM_IRE_220,
-    PLATFORM_LINUX,
-};
-
-#define PLATFORM_STR_UNSUPPORTED "UNSUPPORTED"
-#define PLATFORM_STR_GRX_350 "GRX_350"
-#define PLATFORM_STR_IRE_220 "IRE_220"
-#define PLATFORM_STR_LINUX "LINUX"
-
 enum eNodeState : uint8_t {
     STATE_DISCONNECTED = 0,
     STATE_CONNECTING,
@@ -451,12 +416,6 @@ enum eRadioBandCapability {
     HIGH_SUBBAND_ONLY,
     BOTH_SUBBAND,
     SUBBAND_CAPABILITY_UNKNOWN,
-};
-
-enum eBandType {
-    DUAL_BAND = 0,
-    TRI_BAND,
-    INVALID_BAND,
 };
 
 enum eSlaveJoinResponseErrCode {
