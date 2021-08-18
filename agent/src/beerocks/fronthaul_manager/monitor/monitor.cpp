@@ -387,6 +387,9 @@ bool Monitor::monitor_fsm()
 
             // On init - set the flag to generate pre-existing client STA_Connected to true
             m_generate_connected_clients_events = true;
+            if (!mon_wlan_hal->pre_generate_connected_clients_events()) {
+                LOG(WARNING) << "Failed to prepare for generate of clients connected events";
+            }
 
             // start local monitors //
             LOG(TRACE) << "mon_stats.start()";
