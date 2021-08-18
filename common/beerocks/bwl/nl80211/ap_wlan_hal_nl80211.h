@@ -86,6 +86,13 @@ public:
         const std::chrono::steady_clock::time_point max_iteration_timeout =
             std::chrono::steady_clock::time_point::max()) override;
 
+    /**
+     * @brief Clear progress of generate-connected-clients-events.
+     * 
+     * @see ap_wlan_hal::pre_generate_connected_clients_events
+     */
+    virtual bool pre_generate_connected_clients_events() override;
+
     virtual bool start_wps_pbc() override;
     virtual bool set_mbo_assoc_disallow(const std::string &bssid, bool enable) override;
     virtual bool set_radio_mbo_assoc_disallow(bool enable) override;

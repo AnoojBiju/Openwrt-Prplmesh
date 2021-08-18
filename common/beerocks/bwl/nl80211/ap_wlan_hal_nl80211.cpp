@@ -1014,6 +1014,13 @@ bool ap_wlan_hal_nl80211::generate_connected_clients_events(
     return true;
 }
 
+bool ap_wlan_hal_nl80211::pre_generate_connected_clients_events()
+{
+
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return true;
+}
+
 bool ap_wlan_hal_nl80211::start_wps_pbc()
 {
     LOG(DEBUG) << "Start WPS PBC on interface " << m_radio_info.iface_name;
