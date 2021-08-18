@@ -18,15 +18,6 @@ set wireless.radio2.notify_action_frame='1'
 set wireless.default_radio26.pmf='1'
 set wireless.default_radio58.pmf='1'
 
-# MXL hostapd patch to enable hairpin mode to enable traffic on the same interface.
-set wireless.default_radio42.enable_hairpin='1'
-set wireless.default_radio43.enable_hairpin='1'
-set wireless.default_radio44.enable_hairpin='1'
-set wireless.default_radio45.enable_hairpin='1'
-set wireless.default_radio10.enable_hairpin='1'
-set wireless.default_radio11.enable_hairpin='1'
-set wireless.default_radio12.enable_hairpin='1'
-set wireless.default_radio13.enable_hairpin='1'
 ##############################################################
 
 # radios are disabled by default in prplwrt
@@ -47,7 +38,7 @@ uci commit
 uci batch << 'EOF'
 set system.@system[0].log_file='/var/log/syslog.txt'
 set system.@system[0].log_buffer_size='4096'
-set system.@system[0].log_size=''
+set system.@system[0].log_size='4096'
 set system.@system[0].log_remote='0'
 
 EOF
