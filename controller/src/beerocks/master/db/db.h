@@ -143,6 +143,7 @@ public:
         int failed_roaming_counter_threshold;
         int roaming_sticky_client_rssi_threshold;
         int clients_persistent_db_max_size;
+        size_t steer_history_persistent_db_max_size;
         int max_timelife_delay_minutes;
         int unfriendly_device_max_timelife_delay_minutes;
         unsigned int persistent_db_commit_changes_interval_seconds;
@@ -1283,6 +1284,30 @@ public:
     bool add_client_to_persistent_db(const sMacAddr &mac, const ValuesMap &params = {});
 
     /**
+     * @brief Adds a client to the persistent db, if already exists, remove old entry and add a new one.
+     *
+     * @param mac MAC address of a client.
+     * @param params An unordered map of key-value of client parameters and their values.
+     * @return True on success, otherwise false.
+     */
+    bool add_steer_event_to_persistent_db(const ValuesMap &params = {});
+
+    /**
+     * @brief Get from persistent db all steer history event and register them on a system bus.
+     *
+     * @return True on success, otherwise false.
+     */
+    bool restore_steer_history();
+
+    /**
+     * @brief Get the client's parameters last edit time.
+     *
+     * @param mac MAC address of a client.
+     * @return Client persistent data last edit time (even if edit was done only to runtime-dbb and not saved to persistent db), or time_point::min() if not-configured or failure.
+     */
+    std::chrono::system_clock::time_point get_client_parameters_last_edit(const sMacAddr &mac);
+
+    /**
      * @brief Set the client's time-life delay.
      *
      * @param mac MAC address of a client.
@@ -2164,6 +2189,12 @@ private:
     const sMacAddr m_local_bridge_mac;
 
     int m_persistent_db_clients_count = 0;
+
+    /**
+     * @brief Queue with name of clients steer
+     * history entries in persistent database.
+     */
+    std::queue<std::string> m_steer_history;
 
     std::shared_ptr<beerocks::nbapi::Ambiorix> m_ambiorix_datamodel;
 
