@@ -121,12 +121,12 @@ uci commit
 
 # System log is currently saved at the end of each test using logread
 # which has circular buffer. As a result data could get lost.
-# Save system (hostap/driver) logs to file and increace buffer size
+# Save system (hostap/driver) logs to file and increase buffer size
 
 uci batch << 'EOF'
 set system.@system[0].log_file='/var/log/syslog.txt'
 set system.@system[0].log_buffer_size='4096'
-set system.@system[0].log_size=''
+set system.@system[0].log_size='4096'
 set system.@system[0].log_remote='0'
 
 EOF

@@ -48,12 +48,13 @@ if (TARGET_PLATFORM STREQUAL "openwrt")
         include_directories(${PLATFORM_INCLUDE_DIR})
 
         # libbridge-ugw
-        find_path(LIBBRIDGE_INCLUDE_DIR NAMES "libbridge-ugw.h")
-        if (LIBBRIDGE_INCLUDE_DIR)
-            include_directories(${LIBBRIDGE_INCLUDE_DIR})
+        find_path(LIBBRIDGE_UGW_INCLUDE_DIR NAMES "libbridge-ugw.h")
+        if (LIBBRIDGE_UGW_INCLUDE_DIR)
+            include_directories(${LIBBRIDGE_UGW_INCLUDE_DIR})
             find_library(bridge-ugw NAMES libbridge-ugw.a)
             add_definitions(-DLIB_BRIDGE_UGW)
         else()
+            # for compatibility with the old libbridge-ugw, previously called "libbridge":
             file(GLOB LIBBRIDGE_SEARCH_PATHS "${PLATFORM_BUILD_DIR}/linux-intel_*/bridge-utils*/libbridge")
             find_path(LIBBRIDGE_INCLUDE_DIR NAMES "libbridge.h" PATHS "${LIBBRIDGE_SEARCH_PATHS}" NO_CMAKE_FIND_ROOT_PATH)
             include_directories(${LIBBRIDGE_INCLUDE_DIR})
