@@ -432,6 +432,17 @@ bool mon_wlan_hal_nl80211::generate_connected_clients_events(
     return true;
 }
 
+bool mon_wlan_hal_nl80211::pre_generate_connected_clients_events()
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+
+    // TODO: implement the API (PPM-1152)
+    // currently returning true even though not implemented in order not to break
+    // the flow if this HAL is used by any flow, since the API return value is checked by
+    // a common flow in the monitor.
+    return true;
+}
+
 bool mon_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
 {
     // Filter out empty events

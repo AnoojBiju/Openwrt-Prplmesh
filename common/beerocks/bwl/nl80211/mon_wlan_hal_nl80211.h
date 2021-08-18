@@ -55,6 +55,13 @@ public:
         const std::chrono::steady_clock::time_point max_iteration_timeout =
             std::chrono::steady_clock::time_point::max()) override;
 
+    /**
+     * @brief Clear progress of generate-connected-clients-events.
+     * 
+     * @see mon_wlan_hal::pre_generate_connected_clients_events
+     */
+    virtual bool pre_generate_connected_clients_events() override;
+
     virtual bool channel_scan_abort() override;
     virtual bool set_estimated_service_parameters(uint8_t *esp_info_field) override;
 

@@ -84,6 +84,18 @@ public:
         const std::chrono::steady_clock::time_point max_iteration_timeout =
             std::chrono::steady_clock::time_point::max()) = 0;
 
+    /**
+     * @brief The generate connected clients events can be called several times by an agent (after
+     * the agent re-establishes connection to a controller). To support this we need to be able to clear
+     * the "progress" of the client's events generation before calling the generate_connected_clients_events
+     * API repetitively.
+     *  The API resets the lists of "handled_clients" and "completed_vaps" that manage the already handled clients and VAPs.
+     * 
+     * @return true 
+     * @return false 
+     */
+    virtual bool pre_generate_connected_clients_events() = 0;
+
     virtual bool set_estimated_service_parameters(uint8_t *esp_info_field) = 0;
 };
 
