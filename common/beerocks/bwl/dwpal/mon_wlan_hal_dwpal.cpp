@@ -1035,6 +1035,7 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
         return false;
     }
     m_scan_was_triggered_internally = true;
+    LOG(DEBUG) << "Scan trigger request sent";
 
     return true;
 }
