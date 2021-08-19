@@ -315,7 +315,8 @@ bool base_wlan_hal_dwpal::fsm_setup()
 
                 // Get the nl event interface file descriptor
                 if (m_dwpal_nl_ctx) {
-                    if (dwpal_driver_nl_fd_get(m_dwpal_nl_ctx, &m_fd_nl_events, &m_fd_nl_cmd_get)) {
+                    if (dwpal_driver_nl_fd_get(m_dwpal_nl_ctx, &m_fd_nl_events, &m_fd_nl_cmd_get) !=
+                        DWPAL_SUCCESS) {
                         LOG(ERROR) << "getting nl fd failed for: " << m_radio_info.iface_name
                                    << ", disabling netlink for this platform";
                         m_dwpal_nl_ctx = nullptr;

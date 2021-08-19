@@ -45,18 +45,18 @@ struct sScanCfgParams {
  * @param window_slice_overlap overlapping of slices, the slices meant to cover full beacon interval time, to catch all networks, so we this is the time we of beacon interval 2 slices will be on. 
  */
 struct sScanCfgParamsBG_legacy {
-    int passive_dwell_time;
-    int active_dwell_time;
-    int num_probe_reqs;
-    int probe_reqs_interval;
-    int num_chans_in_chunk;
-    int break_time;
-    int break_time_busy;
+    int passive_dwell_time  = 0;
+    int active_dwell_time   = 0;
+    int num_probe_reqs      = 0;
+    int probe_reqs_interval = 0;
+    int num_chans_in_chunk  = 0;
+    int break_time          = 0;
+    int break_time_busy     = 0;
 };
 struct sScanCfgParamsBG : sScanCfgParamsBG_legacy {
-    unsigned int window_slice;
-    unsigned int window_slice_overlap;
-    unsigned int cts_to_self_duration;
+    unsigned int window_slice         = 0;
+    unsigned int window_slice_overlap = 0;
+    unsigned int cts_to_self_duration = 0;
 };
 
 constexpr size_t ScanCfgParams_size         = sizeof(sScanCfgParams);

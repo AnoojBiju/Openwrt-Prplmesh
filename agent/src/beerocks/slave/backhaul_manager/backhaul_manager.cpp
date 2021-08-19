@@ -657,7 +657,6 @@ bool BackhaulManager::finalize_slaves_connect_state(bool fConnected,
                 // Find the slave handling the wireless interface
                 for (auto soc : slaves_sockets) {
                     if (soc->sta_iface == db->backhaul.selected_iface_name) {
-
                         // Mark the slave as the backhaul manager
                         soc->slave_is_backhaul_manager = true;
                         backhaul_manager_exist         = true;
@@ -670,26 +669,28 @@ bool BackhaulManager::finalize_slaves_connect_state(bool fConnected,
                         notification->params().backhaul_iface_type  = IFACE_TYPE_WIFI_INTEL;
                         notification->params().backhaul_is_wireless = 1;
                     } else {
+                        LOG(INFO) << "Slave iface " << soc->sta_iface << " is not backhaul.";
                         // HACK - needs to be controlled from slave
 
                         // Mark the slave as non backhaul manager
                         soc->slave_is_backhaul_manager = false;
                         // detach from unused stations
-                        if (soc->sta_wlan_hal) {
-                            soc->sta_wlan_hal.reset();
-                        }
-                        if (soc->sta_hal_ext_events !=
-                            beerocks::net::FileDescriptor::invalid_descriptor) {
-                            m_event_loop->remove_handlers(soc->sta_hal_ext_events);
-                            soc->sta_hal_ext_events =
-                                beerocks::net::FileDescriptor::invalid_descriptor;
-                        }
-                        if (soc->sta_hal_int_events !=
-                            beerocks::net::FileDescriptor::invalid_descriptor) {
-                            m_event_loop->remove_handlers(soc->sta_hal_int_events);
-                            soc->sta_hal_int_events =
-                                beerocks::net::FileDescriptor::invalid_descriptor;
-                        }
+                        // if (soc->sta_wlan_hal) {
+                        //     LOG(INFO) << "Detach non backhaul STA iface";
+                        //     soc->sta_wlan_hal.reset();
+                        // }
+                        // if (soc->sta_hal_ext_events !=
+                        //     beerocks::net::FileDescriptor::invalid_descriptor) {
+                        //     m_event_loop->remove_handlers(soc->sta_hal_ext_events);
+                        //     soc->sta_hal_ext_events =
+                        //         beerocks::net::FileDescriptor::invalid_descriptor;
+                        // }
+                        // if (soc->sta_hal_int_events !=
+                        //     beerocks::net::FileDescriptor::invalid_descriptor) {
+                        //     m_event_loop->remove_handlers(soc->sta_hal_int_events);
+                        //     soc->sta_hal_int_events =
+                        //         beerocks::net::FileDescriptor::invalid_descriptor;
+                        // }
                     }
                 }
             }
