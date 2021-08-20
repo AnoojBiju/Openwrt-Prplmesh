@@ -14,7 +14,7 @@
 }
 
 %define {
-    select Controller.Network.Device.Radio.Capabilities {
+    select Device.WiFi.DataElements.Network.Device.Radio.Capabilities {
 
         /**
         ** Need to add here HTCapabilities, VHTCapabilities, HECapabilities

@@ -8,7 +8,7 @@
  */
 
 %define {
-    select Controller.AgentConnectedEvent {
+    select Device.WiFi.DataElements.AgentConnectedEvent {
         %read-only object AgentConnected [] {
             counted with NumberOfAgentConnected;
             %read-only string ID = "00:00:00:00:00:00";

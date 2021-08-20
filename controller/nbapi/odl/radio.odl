@@ -14,11 +14,11 @@
 }
 
 %define {
-    select Controller.Network.Device.Radio {
+    select Device.WiFi.DataElements.Network.Device.Radio {
 
         %read-only string ID = "00:00:00:00:00:00";
         bool Enabled = false;
-        
+
         %read-only uint32 Noise = 0 {
             on action validate call check_range [0, 220];
         }

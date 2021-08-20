@@ -159,7 +159,7 @@ class ALEntity:
     def nbapi_get_data_model(self):
         '''Get entire data model tree.'''
 
-        data_model = self.nbapi_command("Controller.Network", "_get", {"depth": "10"})
+        data_model = self.nbapi_command("Device.WiFi.DataElements.Network", "_get", {"depth": "10"})
         return data_model
 
     def nbapi_get_list_instances(self, path: str) -> List[str]:

@@ -371,7 +371,7 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         ht_cap_path: str
             Path to HT Capabilties object.
             Example:
-            "Controller.Notification.AssociationEvent.AssociationEventData.8"
+            "Device.WiFi.DataElements.Notification.AssociationEvent.AssociationEventData.8"
 
         Returns
         -------
@@ -397,7 +397,7 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         vht_cap_path: str
             Path to VHT Capabilties object.
             Example:
-            "Controller.Notification.AssociationEvent.AssociationEventData.9"
+            "Device.WiFi.DataElements.Notification.AssociationEvent.AssociationEventData.9"
 
         Returns
         -------
@@ -432,7 +432,7 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         data_model = controller.nbapi_get_data_model()
         map_devices = {}
 
-        device_regex = r'^Controller\.Network\.Device\.\d+\.$'
+        device_regex = r'^Device\.WiFi\.DataElements\.Network\.Device\.\d+\.$'
 
         devices = [obj_path for obj_path in data_model if re.search(
             device_regex, obj_path)]
@@ -476,7 +476,8 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
                         map_client = map_vap.add_client(data_model[client]["MACAddress"])
                         map_client.path = client[:-1]
 
-                interface_regex = rf'^Controller\.Network\.Device\.{device_indx}\.Interface\.\d+\.$'
+                interface_regex = r'^Device\.WiFi\.DataElements\.Network' + \
+                    rf'\.Device\.{device_indx}\.Interface\.\d+\.$'
 
                 interfaces = [obj_path for obj_path in data_model if re.search(
                     interface_regex, obj_path)]
@@ -501,10 +502,11 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
     def configure_ssids_clear(self):
         '''Clear the SSID configuration.
 
-        Removes all Controller.Network.AccessPoint instances in the northbound API.
+        Removes all Device.WiFi.DataElements.Network.AccessPoint instances in the northbound API.
         '''
         controller = self.dev.lan.controller_entity
-        access_points = controller.nbapi_get_list_instances('Controller.Network.AccessPoint')
+        access_points = controller.nbapi_get_list_instances(
+            'Device.WiFi.DataElements.Network.AccessPoint')
         for access_point_path in access_points:
             controller.nbapi_command(access_point_path, '_del', {})
 
@@ -532,15 +534,15 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         controller.nbapi_set_parameters(ap_security_path,
                                         {"KeyPassphrase": vap_passphrase})
 
-        controller.nbapi_command("Controller.Network", "AccessPointCommit")
+        controller.nbapi_command("Device.WiFi.DataElements.Network", "AccessPointCommit")
         return vap_passphrase
 
     def configure_ssid(self, ssid: str, multi_ap_mode: str = "Fronthaul",
                        bands: Dict = None) -> str:
         '''Configure an SSID.
 
-        Adds a Controller.Network.AccessPoint instance and configures it with the given SSID,
-        bands and multi AP mode.
+        Adds a Device.WiFi.DataElements.Network.AccessPoint instance and configures it with
+        the given SSID, bands and multi AP mode.
         If parameter 'bands' was not passed the SSID will be enabled on all bands.
         If one of the band was not specified its value will be set to false.
         The value of 'multi_ap_mode' can be one of "Fronthaul","Backhaul","Fronthaul+Backhaul".
@@ -554,7 +556,7 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         Returns
         -------
         str
-            Path to the Controller.Network.AccessPoint instance.
+            Path to the Device.WiFi.DataElements.Network.AccessPoint instance.
         '''
         if not bands:
             bands = {"Band5GH": True, "Band6G":  True, "Band5GL": True, "Band2_4G": True}
@@ -568,8 +570,9 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
             "Band2_4G": bands.get("Band2_4G", False),
             "SSID": ssid,
         }}
-        new_inst = controller.nbapi_command("Controller.Network.AccessPoint", "_add", params)
-        return "Controller.Network.AccessPoint." + new_inst["name"]
+        new_inst = controller.nbapi_command(
+            "Device.WiFi.DataElements.Network.AccessPoint", "_add", params)
+        return "Device.WiFi.DataElements.Network.AccessPoint." + new_inst["name"]
 
     def configure_ssids(self, ssids: [str], clear_old: bool = True):
         '''Configure SSIDs on all agents.
@@ -600,7 +603,8 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         for ssid in ssids:
             self.configure_ssid(ssid)
 
-        self.dev.lan.controller_entity.nbapi_command("Controller.Network", "AccessPointCommit")
+        self.dev.lan.controller_entity.nbapi_command(
+            "Device.WiFi.DataElements.Network", "AccessPointCommit")
         # TODO check that renew was sent to all agents
         # TODO check that all agents have been configured with the SSIDs
         time.sleep(5)  # Temporary until above TODOs are fixed

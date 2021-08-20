@@ -7,7 +7,7 @@
  */
 
 %define {
-    select Controller.Network.AccessPoint {
+    select Device.WiFi.DataElements.Network.AccessPoint {
         string SSID = "prplMesh";
         object Security {
             /*
@@ -41,10 +41,10 @@
 
 %populate {
     on event "dm:object-changed" call event_rm_params
-        filter 'object matches "Controller\.Network\.AccessPoint\.[0-9]*\.Security\." &&
+        filter 'object matches "Device\.WiFi\.DataElements\.Network\.AccessPoint\.[0-9]*\.Security\." &&
                 parameters.ModeEnabled.from == "WPA2-Personal"';
 
     on event "dm:object-changed" call event_add_hidden_params
-        filter 'object matches "Controller\.Network\.AccessPoint\.[0-9]*\.Security\." &&
+        filter 'object matches "Device\.WiFi\.DataElements\.Network\.AccessPoint\.[0-9]*\.Security\." &&
                 parameters.ModeEnabled.to == "WPA2-Personal"';
 }

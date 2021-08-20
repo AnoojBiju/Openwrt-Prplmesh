@@ -278,8 +278,8 @@ public:
      * @brief Get index and instance path from full data model path. Simplifies ambiorix/nbapi calls.
      *
      * Data model levels are noted with '.', so method splits according to last dot.
-     * Example: DM Path: Controller.Network.Device.2.Interface.3
-     * Returns: <instance, index> <Controller.Network.Device.2.Interface, 3>
+     * Example: DM Path: Device.WiFi.DataElements.Network.Device.2.Interface.3
+     * Returns: <instance, index> <Device.WiFi.DataElements.Network.Device.2.Interface, 3>
      *
      * @param dm_path Full data model path.
      * @return std::pair <std::string instance path, int index>
@@ -421,7 +421,7 @@ public:
     /**
      * @brief Removes optional subobjects: HTCapabilities, VHTCapabilities,
      * HECapabilities for Capabilities data model.
-     * Example of path to object: "Controller.Network.Device.1.Radio.1.Capabilities".
+     * Example of path to object: "Device.WiFi.DataElements.Network.Device.1.Radio.1.Capabilities".
      *
      * @param radio_mac Radio mac for finding path to appropriate 'Capabilities' data element.
      * @return True if subobject was successfuly removed, false otherwise.
@@ -493,8 +493,8 @@ public:
     std::unordered_map<sMacAddr, son::node::ap_metrics_data> &get_ap_metric_data_map();
 
     /**
-     * @brief Add Current Operating Class to the Controller Data model.
-     *        Data model path example: "Controller.Network.Device.1.Radio.1.CurrentOperatingClasses".
+     * @brief Add Current Operating Class to the Device.WiFi.DataElements Data model.
+     *        Data model path example: "Device.WiFi.DataElements.Network.Device.1.Radio.1.CurrentOperatingClasses".
      *
      * @param[in] radio_mac MAC address for Radio which reporting Operating Class.
      * @param[in] op_class Current operating class.
@@ -516,7 +516,7 @@ public:
     /**
      * @brief Removes all instances of hostap supported operating classes
 	 * from the Data Model and database.
-     * Path example: Controller.Network.Device.1.Radio.1.Capabilities.OperatingClasses
+     * Path example: Device.WiFi.DataElements.Network.Device.1.Radio.1.Capabilities.OperatingClasses
      *
      * @param radio_mac MAC address for Radio which reporting Operating Class
      * @return true on success, false otherwise.
@@ -527,7 +527,7 @@ public:
      * @brief Adds Interface Object and updates Interface Data Model Object.
      *
      * If instance with @a interface_mac exists, updates it, otherwise add it.
-     * Path example: Controller.Network.Device.1.Interface.1
+     * Path example: Device.WiFi.DataElements.Network.Device.1.Interface.1
      *
      * @param device_mac device MAC address for node matching
      * @param interface_mac interface mac address
@@ -555,7 +555,7 @@ public:
      * @brief Adds interface instances to Device's Data Model.
      *
      * If instance with @a interface_mac exists, updates it, otherwise add it.
-     * Path example: Controller.Network.Device.1.Interface.1
+     * Path example: Device.WiFi.DataElements.Network.Device.1.Interface.1
      *
      * @param device_mac device MAC address for node matching
      * @param interface_mac interface mac address
@@ -591,9 +591,9 @@ public:
     /**
      * @brief Removes the interface of given MAC from Device's Data Model.
      *
-     * Searches index of Controller.Network.Device.{i}.Interface.{i} according
+     * Searches index of Device.WiFi.DataElements.Network.Device.{i}.Interface.{i} according
      * to MACAddress attribute and removes it.
-     * Path example: Controller.Network.Device.1.Interface.1.MACAddress
+     * Path example: Device.WiFi.DataElements.Network.Device.1.Interface.1.MACAddress
      *
      * @param device_mac device MAC address for node matching
      * @param interface_mac interface mac to be deleted
@@ -615,7 +615,7 @@ public:
     /**
      * @brief Updates Tx Parameters of the Interface Stats.
      *
-     * Path: Controller.Network.Device.{i}.Interface.{i}.Stats
+     * Path: Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Stats
      *
      * @param device_mac device MAC address for node matching
      * @param interface_mac Interface MAC address of the device
@@ -629,7 +629,7 @@ public:
     /**
      * @brief Updates Rx Parameters of the Interface Stats.
      *
-     * Path: Controller.Network.Device.{i}.Interface.{i}.Stats
+     * Path: Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Stats
      *
      * @param device_mac device MAC address for node matching
      * @param interface_mac Interface MAC address of the device
@@ -666,16 +666,16 @@ public:
 
     /**
      * @brief Adds NBAPI SteerEvent object.
-     * Data model path example: "Controller.SteerEvent.42"
+     * Data model path example: "Device.WiFi.DataElements.SteerEvent.42"
      *
-     * @return Path to object on success, empty sring otherwise.
+     * @return Path to object on success, empty string otherwise.
      */
     std::string dm_add_steer_event();
 
     /**
      * @brief Adds or updates instance of Neighbor inside Interface object.
      *
-     * Path: Controller.Network.Device.{i}.Interface.{i}.Neighbor.{i}
+     * Path: Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Neighbor.{i}
      *
      * @param device_mac device MAC address for node matching
      * @param interface_mac Interface MAC address of the device
@@ -689,7 +689,7 @@ public:
     /**
      * @brief Adds or updates instance of Neighbor inside Interface Data Model.
      *
-     * Path: Controller.Network.Device.{i}.Interface.{i}.Neighbor.{i}
+     * Path: Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Neighbor.{i}
      *
      * @param interface Interface object that Neighbor relates to
      * @param neighbor Neighbor object is used to create/update data model of neighbor
@@ -702,7 +702,7 @@ public:
     /**
      * @brief Remove instance of Neighbors inside Interface Data Model.
      *
-     * Path: Controller.Network.Device.{i}.Interface.{i}.Neighbor.{i}
+     * Path: Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Neighbor.{i}
      *
      * @param dm_path datamodel path of neighbor
      * @return true on success, false otherwise.
@@ -712,7 +712,7 @@ public:
     /**
      * @brief Sets Extended Link Metrics for corresponding STA.
      *
-     * Path: Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}
+     * Path: Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}
      *
      * @param sta_mac sta MAC address for node matching
      * @param metrics extended metrics of associated sta
@@ -725,7 +725,7 @@ public:
     /**
      * @brief Sets Traffic Stats for corresponding STA.
      *
-     * Path: Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}
+     * Path: Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}
      *
      * @param sta_mac sta MAC address for node matching
      * @param stats stats of associated sta traffic
@@ -736,7 +736,7 @@ public:
     /**
      * @brief Clears all stats for corresponding STA.
      *
-     * Path: Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}
+     * Path: Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}
      *
      * @param sta_mac sta MAC address for node matching
      * @return true on success, false otherwise.
@@ -746,7 +746,7 @@ public:
     /**
      * @brief Remove STA from datamodel with given MAC Address.
      *
-     * Path: Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}
+     * Path: Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}
      *
      * @param sta_mac sta MAC address for node matching
      * @return true on success, false otherwise.
@@ -756,9 +756,9 @@ public:
     /**
      * @brief Adds FailedConnectionEventData NBAPI object each time
      * when station failed to associate. Set values for parameters of this object.
-     * 
+     *
      * Data model path example:
-     * "Controller.Notification.FailedConnectionEvent.FailedConnectionEventData"
+     * "Device.WiFi.DataElements.Notification.FailedConnectionEvent.FailedConnectionEventData"
      *
      * @param sta_mac Client mac address.
      * @param reason_code Reason code of clients failed association.
@@ -771,7 +771,7 @@ public:
     /**
      * @brief Set STA DHCPv4 lease information for both node and datamodel.
      *
-     * Path: Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}
+     * Path: Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}
      *
      * @param sta_mac sta MAC address for node matching
      * @param host_name sta host name
@@ -784,7 +784,7 @@ public:
     /**
      * @brief Set STA DHCPv6 lease information for both node and datamodel.
      *
-     * Path: Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}
+     * Path: Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}
      *
      * @param sta_mac sta MAC address for node matching
      * @param host_name sta host name
@@ -823,7 +823,7 @@ public:
      * @brief Add optional sub-object of AP HE Capabilities data element,
      * set values for its parameters.
      * Example of full path to object:
-     * "Controller.Netwok.Device.1.Radio.1.Capabilities.HECapabilities"
+     * "Device.WiFi.DataElements.Netwok.Device.1.Radio.1.Capabilities.HECapabilities"
      *
      * @param he_caps_tlv TLV with AP HE Capabilities included in
      * 'AP Capability Report' message
@@ -833,9 +833,9 @@ public:
     bool set_ap_he_capabilities(wfa_map::tlvApHeCapabilities &he_caps_tlv);
 
     /**
-     * @brief add 'HTCapabilities' data element, set values to its parametrs.
+     * @brief add 'HTCapabilities' data element, set values to its parameters.
      * Example of full path to object:
-     * "Controller.Netwok.Device.1.Radio.1.Capabilities.HTCapabilities"
+     * "Device.WiFi.DataElements.Netwok.Device.1.Radio.1.Capabilities.HTCapabilities"
      *
      * @param radio_mac mac address of radio
      * @param flags structure with AP HT Capabilities
@@ -845,9 +845,9 @@ public:
                                 const wfa_map::tlvApHtCapabilities::sFlags &flags);
 
     /**
-     * @brief Add 'VHTCapabilities' data element, set values to its parametrs.
+     * @brief Add 'VHTCapabilities' data element, set values to its parameters.
      * Example of full path to object:
-     * "Controller.Netwok.Device.1.Radio.1.Capabilities.VHTCapabilities"
+     * "Device.WiFi.DataElements.Netwok.Device.1.Radio.1.Capabilities.VHTCapabilities"
      *
      * @param vht_caps_tlv TLV with AP VHT Capabilities included in
      * 'AP Capability Report' message.
@@ -860,9 +860,9 @@ public:
      * @brief Set values for estimated MAC data rate downlink and uplink
      * for STA.EstMACDataRateDownlink and STA.EstMACDataRateUplink data elements.
      * Example of full path to data element:
-     * 'Controller.Network.Device.1.Radio.2.BSS.3.STA.4.EstMACDataRateUplink'.
+     * 'Device.WiFi.DataElements.Network.Device.1.Radio.2.BSS.3.STA.4.EstMACDataRateUplink'.
      * Set value for station SignalStrength data element.
-     * 'Controller.Network.Device.1.Radio.2.BSS.1.STA.4.SignalStrength'.
+     * 'Device.WiFi.DataElements.Network.Device.1.Radio.2.BSS.1.STA.4.SignalStrength'.
      *
      * @param sta_mac Station MAC address.
      * @param downlink_est_mac_data_rate Estimated MAC Data Rate in downlink (in Mb/s).
@@ -1624,9 +1624,9 @@ public:
     void disable_periodic_link_metrics_requests();
 
     /**
-     * @brief Set radio utilization value in Controller Data Model.
+     * @brief Set radio utilization value in Device.WiFi.DataElements Data Model.
      *
-     * Data model path example: "Controller.Network.Device.1.Radio.1.Utilization"
+     * Data model path example: "Device.WiFi.DataElements.Network.Device.1.Radio.1.Utilization"
      *
      * @param[in] bssid BSSID for specific radio.
      * @param[in] utilization Radio utilization value.
@@ -1635,10 +1635,10 @@ public:
     bool set_radio_utilization(const sMacAddr &bssid, uint8_t utilization);
 
     /**
-     * @brief Set radio metrics values in Controller Data Model.
+     * @brief Set radio metrics values in Device.WiFi.DataElements Data Model.
      *
      * Objects are Noise, Transmit, ReceiveSelf and ReceiveOther.
-     * Data model path example: "Controller.Network.Device.1.Radio.1.Noise"
+     * Data model path example: "Device.WiFi.DataElements.Network.Device.1.Radio.1.Noise"
      *
      * @param[in] uid uid for specific radio.
      * @param[in] noise Noise value [0, 220].
@@ -1651,9 +1651,9 @@ public:
                            uint8_t receive_self, uint8_t receive_other);
 
     /**
-     * @brief Set estimated service parameters in Controller Data Model.
+     * @brief Set estimated service parameters in Device.WiFi.DataElements Data Model.
      *
-     * Data model path example: "Controller.Network.Device.1.Radio.1.BSS.1.EstServiceParametersBE"
+     * Data model path example: "Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.1.EstServiceParametersBE"
      *
      * @param[in] bssid BSSID.
      * @param[in] param_name Estimated service parameters name.
@@ -1666,7 +1666,7 @@ public:
     /**
      * @brief Updates master configuration if a setting is changed through NBAPI.
      *
-     * Data model path : "Controller.Configuration" defined in controller.odl
+     * Data model path : "Device.WiFi.DataElements.Configuration" defined in controller.odl
      *
      * @param nbapi_config Settings read from datamodel with change action.
      * @return true on success, otherwise false.
@@ -1691,7 +1691,7 @@ public:
      *
      * Remove all indexes in AvailableChannels and updates timestamp.
      *
-     * Data model path : "Controller.Network.Device.{i}.Radio.{i}.CACStatus" defined in radio.odl
+     * Data model path : "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.CACStatus" defined in radio.odl
      *
      * @param[in] radio radio db object
      * @return true on success, otherwise false.
@@ -1701,7 +1701,7 @@ public:
     /**
      * @brief Adds instance for CACStatus.AvailableChannels and fullfills it.
      *
-     * Data model path : "Controller.Network.Device.{i}.Radio.{i}.CACStatus.AvailableChannels.{i}"
+     * Data model path : "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.CACStatus.AvailableChannels.{i}"
      *
      * @param[in] radio radio db object
      * @param[in] operating_class operating class
@@ -1986,11 +1986,11 @@ private:
      * @brief Add station 'HECapabilities' data element, set values to its parameters.
      *
      * Example of full path to object:
-     * "Controller.Netwok.Device.1.Radio.1.Capabilities.BSS.1.STA.1.HECapabilities".
+     * "Device.WiFi.DataElements.Netwok.Device.1.Radio.1.Capabilities.BSS.1.STA.1.HECapabilities".
      *
      * @param path_to_sta Path to station.
      * Example of full path to station:
-     * "Controller.Netwok.Device.1.Radio.1.Capabilities.BSS.1.STA.1.
+     * "Device.WiFi.DataElements.Netwok.Device.1.Radio.1.Capabilities.BSS.1.STA.1.
      * @param sta_cap Structure with station HE Capabilities.
      * @return True on success, false otherwise.
      */
@@ -2001,11 +2001,11 @@ private:
      * @brief Add station 'HTCapabilities' data element, set values to its parameters.
      *
      * Example of full path to object:
-     * "Controller.Netwok.Device.1.Radio.1.Capabilities.BSS.1.STA.1.HTCapabilities".
+     * "Device.WiFi.DataElements.Netwok.Device.1.Radio.1.Capabilities.BSS.1.STA.1.HTCapabilities".
      *
      * @param path_to_sta Path to station.
      * Example of full path to station:
-     * "Controller.Netwok.Device.1.Radio.1.Capabilities.BSS.1.STA.1.
+     * "Device.WiFi.DataElements.Netwok.Device.1.Radio.1.Capabilities.BSS.1.STA.1.
      * @param sta_cap Structure with station HT Capabilities.
      * @return True on success, false otherwise.
      */
@@ -2016,11 +2016,11 @@ private:
      * @brief Add station 'VHTCapabilities' data element, set values to its parameters.
      *
      * Example of full path to VHTCapabilities object:
-     * "Controller.Netwok.Device.1.Radio.1.Capabilities.BSS.1.STA.1.VHTCapabilities".
+     * "Device.WiFi.DataElements.Netwok.Device.1.Radio.1.Capabilities.BSS.1.STA.1.VHTCapabilities".
      *
      * @param path_to_sta Path to station.
      * Example of full path to the station:
-     * "Controller.Netwok.Device.1.Radio.1.Capabilities.BSS.1.STA.1."
+     * "Device.WiFi.DataElements.Netwok.Device.1.Radio.1.Capabilities.BSS.1.STA.1."
      * @param sta_cap Structure with station capabilities.
      * @return True on success, false otherwise.
      */
@@ -2030,7 +2030,7 @@ private:
     /**
      * @brief Adds STA instance to the datamodel.
      *
-     * Data model path example: "Controller.Network.Device.1.Radio.1.BSS.2.STA.3"
+     * Data model path example: "Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.2.STA.3"
      *
      * @param bssid BSS mac address.
      * @param client_mac Client mac address.
@@ -2043,7 +2043,7 @@ private:
      *
      * This object describes an event generated when a STA associates to a BSS.
      * Example of full path to object:
-     * 'Controller.Notification.AssociationEvent.AssociationEventData.1'.
+     * 'Device.WiFi.DataElements.Notification.AssociationEvent.AssociationEventData.1'.
      *
      * @param bssid BSS mac address.
      * @param client_mac Client mac address.
@@ -2054,7 +2054,7 @@ private:
     /**
      * @brief Prepares path to the BSS data element with correct index (i).
      *
-     * Data model path example: "Controller.Network.Device.1.Radio.1.BSS.2."
+     * Data model path example: "Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.2."
      *
      * @param bssid BSSID.
      * @return Path to bss, empty string otherwise.
@@ -2064,7 +2064,7 @@ private:
     /**
      * @brief Set clients (device) multi ap capabilities
      *
-     * Data model path example: "Controller.Network.Device.1.MultiAPCapabilities.{capabilities}"
+     * Data model path example: "Device.WiFi.DataElements.Network.Device.1.MultiAPCapabilities.{capabilities}"
      *
      * @param device_mac mac address of device
      * @return True on success, false otherwise.
@@ -2074,7 +2074,7 @@ private:
     /**
      * @brief Add instance of 'OperatingClasses' data element, set values for its parameters.
      *
-     * Data model path example: "Controller.Network.Device.1.Radio.1.Capabilities.OperatingClasses.1."
+     * Data model path example: "Device.WiFi.DataElements.Network.Device.1.Radio.1.Capabilities.OperatingClasses.1."
      *
      * @param radio_mac mac address of radio which reporting operating class.
      * @param max_tx_power max transmit power.
@@ -2089,7 +2089,7 @@ private:
     /**
      * @brief Add or update instance of "BSS" data element, set values for its parameters.
      *
-     * Example: "Controller.Network.Device.1.Radio.1.BSS.1"
+     * Example: "Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.1"
      *
      * @param radio_mac mac address of radio on which BSSID exists.
      * @param bssid BSSID of the BSS.

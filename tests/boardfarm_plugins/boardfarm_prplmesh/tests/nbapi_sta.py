@@ -19,7 +19,7 @@ import re
 class NbapiSta(PrplMeshBaseTest):
     '''
     This test checks various parameters of NBAPI sta object.
-    Path to this object: Controller.Network.Device.Radio.BSS.STA
+    Path to this object: Device.WiFi.DataElements.Network.Device.Radio.BSS.STA
     '''
 
     def runTest(self):
@@ -35,7 +35,7 @@ class NbapiSta(PrplMeshBaseTest):
         self.configure_ssids_clear()
         self.configure_ssid("ImSSID24G", "Fronthaul", {"Band2_4G": True})
         self.configure_ssid("ImSSID5GH", "Fronthaul", {"Band5GH": True})
-        controller.nbapi_command("Controller.Network", "AccessPointCommit")
+        controller.nbapi_command("Device.WiFi.DataElements.Network", "AccessPointCommit")
 
         time.sleep(5)
 

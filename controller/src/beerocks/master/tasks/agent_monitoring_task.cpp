@@ -417,8 +417,9 @@ std::string agent_monitoring_task::dm_add_agent_connected_event(
         LOG(DEBUG) << "getClass tlvAssociatedClients failed";
     }
 
-    std::string agent_connected_event_path = "Controller.AgentConnectedEvent.AgentConnected";
-    std::string agent_connected_path       = ambiorix_dm->add_instance(agent_connected_event_path);
+    std::string agent_connected_event_path =
+        "Device.WiFi.DataElements.AgentConnectedEvent.AgentConnected";
+    std::string agent_connected_path = ambiorix_dm->add_instance(agent_connected_event_path);
 
     if (agent_connected_path.empty() && NBAPI_ON) {
         LOG(ERROR) << "Failed to add " << agent_connected_event_path << ", mac: " << agent_mac;
@@ -477,7 +478,7 @@ bool agent_monitoring_task::dm_add_neighbor_to_agent_connected_event(
             const auto neighbor_al_mac_tuple = tlv1905NeighborDevice->mac_al_1905_device(i);
 
             if (!std::get<0>(neighbor_al_mac_tuple)) {
-                LOG(ERROR) << "Feiled to get al_mac element.";
+                LOG(ERROR) << "Failed to get al_mac element.";
                 return false;
             }
 
@@ -555,8 +556,9 @@ bool agent_monitoring_task::dm_add_agent_disconnected_event(const sMacAddr &agen
         return false;
     }
 
-    std::string agent_discon_event_path = "Controller.AgentDisconnectedEvent.AgentDisconnected";
-    std::string agent_discon_path       = ambiorix_dm->add_instance(agent_discon_event_path);
+    std::string agent_discon_event_path =
+        "Device.WiFi.DataElements.AgentDisconnectedEvent.AgentDisconnected";
+    std::string agent_discon_path = ambiorix_dm->add_instance(agent_discon_event_path);
 
     if (agent_discon_path.empty()) {
         LOG(ERROR) << "Failed to add " << agent_discon_event_path << " for mac: " << agent_mac;

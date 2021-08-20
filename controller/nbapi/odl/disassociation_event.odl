@@ -14,7 +14,7 @@
 }
 
 %define {
-    select Controller.Notification  {
+    select Device.WiFi.DataElements.Notification  {
         // The events generated when a STA disassociates from a BSS.
         object DisassociationEvent {
             object DisassociationEventData[] {
