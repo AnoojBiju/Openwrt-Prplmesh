@@ -275,7 +275,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                        << radio_mac;
             auto agent_mac = database.get_node_parent_ire(radio_mac);
             if (!son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, radio_mac)) {
-                send_bml_response(int(STEERING_SET_GROUP_RESPONSE), event_obj->sd,
+                send_bml_response(int(STEERING_CLIENT_SET_RESPONSE), event_obj->sd,
                                   -BML_RET_CMDU_FAIL);
                 break;
             }
