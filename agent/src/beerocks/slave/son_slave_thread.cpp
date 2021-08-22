@@ -870,7 +870,6 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
         break;
     }
     case beerocks_message::ACTION_CONTROL_STEERING_CLIENT_SET_REQUEST: {
-        LOG(TRACE) << "ACTION_CONTROL_STEERING_CLIENT_SET_REQUEST";
         auto update =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_CONTROL_STEERING_CLIENT_SET_REQUEST>();
@@ -878,6 +877,8 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
             LOG(ERROR) << "addClass failed";
             return false;
         }
+        LOG(TRACE) << "ACTION_CONTROL_STEERING_CLIENT_SET_REQUEST for BSSID "
+                   << update->params().bssid;
 
         // send to Monitor
         auto notification_mon_out = message_com::create_vs_message<
@@ -905,8 +906,6 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
 
         notification_ap_out->params() = update->params();
 
-        message_com::send_cmdu(ap_manager_socket, cmdu_tx);
-
         LOG(DEBUG) << std::endl
                    << "remove = " << notification_ap_out->params().remove << std::endl
                    << "steeringGroupIndex = " << notification_ap_out->params().steeringGroupIndex
@@ -929,6 +928,8 @@ bool slave_thread::handle_cmdu_control_message(Socket *sd,
                    << std::endl
                    << "config.authRejectReason = "
                    << notification_ap_out->params().config.authRejectReason << std::endl;
+
+        message_com::send_cmdu(ap_manager_socket, cmdu_tx);
 
         break;
     }
@@ -2618,6 +2619,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(Socket *sd,
         break;
     }
     case beerocks_message::ACTION_APMANAGER_STEERING_CLIENT_SET_RESPONSE: {
+        LOG(DEBUG) << "ACTION_APMANAGER_STEERING_CLIENT_SET_RESPONSE";
         auto notification_in =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_APMANAGER_STEERING_CLIENT_SET_RESPONSE>();
@@ -3306,6 +3308,7 @@ bool slave_thread::handle_cmdu_monitor_message(Socket *sd,
         break;
     }
     case beerocks_message::ACTION_MONITOR_STEERING_CLIENT_SET_RESPONSE: {
+        LOG(DEBUG) << "ACTION_MONITOR_STEERING_CLIENT_SET_RESPONSE";
         auto notification_in =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_MONITOR_STEERING_CLIENT_SET_RESPONSE>();

@@ -77,7 +77,8 @@ int bml_rdkb_internal::steering_set_group(uint32_t steeringGroupIndex,
 
     if (!prmRdkbWlan.wait_for(iOpTimeout)) {
         LOG(WARNING) << "Timeout while waiting for configuration get response...";
-        iRet = -BML_RET_TIMEOUT;
+        m_prmRdkbWlan = nullptr;
+        return (-BML_RET_TIMEOUT);
     }
 
     // Get response
@@ -89,6 +90,7 @@ int bml_rdkb_internal::steering_set_group(uint32_t steeringGroupIndex,
         LOG(ERROR) << "Configuration get failed!";
     }
 
+    LOG(DEBUG) << "bml_rdkb_internal::steering_set_group - exit, ret=" << iRet;
     return (iRet);
 }
 
@@ -141,8 +143,9 @@ int bml_rdkb_internal::steering_client_set(uint32_t steeringGroupIndex, const BM
     int iRet = BML_RET_OK;
 
     if (!prmRdkbWlan.wait_for(iOpTimeout)) {
-        LOG(WARNING) << "Timeout while waiting for configuration get response...";
-        iRet = -BML_RET_TIMEOUT;
+        LOG(ERROR) << "Timeout while waiting for configuration get response... exit!";
+        m_prmRdkbWlan = nullptr;
+        return (-BML_RET_TIMEOUT);
     }
 
     // Get response
@@ -154,6 +157,7 @@ int bml_rdkb_internal::steering_client_set(uint32_t steeringGroupIndex, const BM
         LOG(ERROR) << "Configuration get failed!";
     }
 
+    LOG(DEBUG) << "bml_rdkb_internal::steering_client_set - exit, ret=" << iRet;
     return (iRet);
 }
 
@@ -208,7 +212,8 @@ int bml_rdkb_internal::steering_event_register(BML_EVENT_CB pCB)
 
     if (!prmRdkbWlan.wait_for(iOpTimeout)) {
         LOG(WARNING) << "Timeout while waiting for configuration get response...";
-        iRet = -BML_RET_TIMEOUT;
+        m_prmRdkbWlan = nullptr;
+        return (-BML_RET_TIMEOUT);
     }
 
     // Get response
@@ -257,7 +262,8 @@ int bml_rdkb_internal::steering_client_measure(uint32_t steeringGroupIndex,
 
     if (!prmRdkbWlan.wait_for(iOpTimeout)) {
         LOG(WARNING) << "Timeout while waiting for configuration get response...";
-        iRet = -BML_RET_TIMEOUT;
+        m_prmRdkbWlan = nullptr;
+        return (-BML_RET_TIMEOUT);
     }
 
     // Get response
@@ -309,7 +315,8 @@ int bml_rdkb_internal::steering_client_disconnect(uint32_t steeringGroupIndex,
 
     if (!prmRdkbWlan.wait_for(iOpTimeout)) {
         LOG(WARNING) << "Timeout while waiting for configuration get response...";
-        iRet = -BML_RET_TIMEOUT;
+        m_prmRdkbWlan = nullptr;
+        return (-BML_RET_TIMEOUT);
     }
 
     // Get response
@@ -398,6 +405,7 @@ int bml_rdkb_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beer
             handle_steering_event_update((uint8_t *)buffer);
         } break;
         case beerocks_message::ACTION_BML_STEERING_SET_GROUP_RESPONSE: {
+            LOG(DEBUG) << "Received ACTION_BML_STEERING_SET_GROUP_RESPONSE response";
             auto response =
                 beerocks_header
                     ->addClass<beerocks_message::cACTION_BML_STEERING_SET_GROUP_RESPONSE>();
@@ -416,6 +424,7 @@ int bml_rdkb_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beer
             }
         } break;
         case beerocks_message::ACTION_BML_STEERING_CLIENT_SET_RESPONSE: {
+            LOG(DEBUG) << "Received ACTION_BML_STEERING_CLIENT_SET_RESPONSE response";
             auto response =
                 beerocks_header
                     ->addClass<beerocks_message::cACTION_BML_STEERING_CLIENT_SET_RESPONSE>();

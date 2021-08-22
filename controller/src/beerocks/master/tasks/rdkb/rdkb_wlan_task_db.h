@@ -112,6 +112,8 @@ class rdkb_wlan_task_db {
 
         std::shared_ptr<beerocks_message::sSteeringApConfig>
         get_ap_config(const std::string &bssid);
+        bool get_client_config(const std::string &mac, const std::string &bssid,
+                               std::shared_ptr<beerocks_message::sSteeringClientConfig> &config);
         bool set_client_config(const std::string &mac, const std::string &bssid,
                                const beerocks_message::sSteeringClientConfig &config);
         bool clear_client_config(const std::string &mac, const std::string &bssid);
@@ -124,6 +126,10 @@ class rdkb_wlan_task_db {
     std::unordered_map<int, std::shared_ptr<steering_group_config>> steering_group_list;
 
 public:
+    bool get_client_config(const std::string &mac, const std::string &bssid,
+                           const int steering_group_index,
+                           std::shared_ptr<beerocks_message::sSteeringClientConfig> &config);
+
     bool set_client_config(const std::string &mac, const std::string &bssid,
                            int steering_group_index,
                            const beerocks_message::sSteeringClientConfig &config);
