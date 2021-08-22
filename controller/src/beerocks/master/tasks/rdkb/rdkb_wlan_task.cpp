@@ -105,7 +105,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
         if (obj) {
             auto event_obj = static_cast<rdkb_wlan_task::steering_set_group_request_event *>(obj);
             TASK_LOG(INFO) << "STEERING_SET_GROUP_REQUEST event was received - remove - "
-                           << int(event_obj->remove) << "group_index "
+                           << int(event_obj->remove) << ", group_index "
                            << int(event_obj->steeringGroupIndex);
 
             if (!event_obj->remove) {
@@ -130,7 +130,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                 break;
             }
 
-            rdkb_db.print_db();
+            //rdkb_db.print_db();
 
             //send new VS message to each slave with his specific data.
             auto radios = database.get_active_hostaps();
@@ -168,7 +168,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
     case STEERING_SET_GROUP_RESPONSE: {
         if (obj) {
             auto event_obj = static_cast<rdkb_wlan_task::steering_set_group_response_event *>(obj);
-            TASK_LOG(INFO) << "STEERING_SET_GROUP_RESPONSE event was received";
+            TASK_LOG(DEBUG) << "STEERING_SET_GROUP_RESPONSE event was received";
             auto res = check_for_pending_events(event_type);
             if (!res.first && !res.second) {
                 TASK_LOG(ERROR) << "unexpected event STEERING_SET_GROUP_RESPONSE ";
@@ -177,12 +177,14 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                 TASK_LOG(ERROR) << "timeout for STEERING_SET_GROUP_RESPONSE  event";
                 send_bml_response(event_type, res.second, -BML_RET_TIMEOUT);
             } else if (res.first && !res.second) {
-                TASK_LOG(INFO) << "waiting to another STEERING_SET_GROUP_RESPONSE event";
+                TASK_LOG(DEBUG) << "waiting to another STEERING_SET_GROUP_RESPONSE event";
                 break;
             } else if (event_obj->ret_code < 0) {
+                TASK_LOG(ERROR) << "STEERING_SET_GROUP_RESPONSE event failed";
                 send_bml_response(event_type, res.second, -BML_RET_OP_FAILED);
                 break;
             }
+            TASK_LOG(DEBUG) << "Sending STEERING_SET_GROUP_RESPONSE event to BML";
             send_bml_response(event_type, res.second);
         }
         break;
@@ -196,7 +198,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
 
             auto radio_mac = database.get_node_parent_radio(event_obj->bssid);
             if (radio_mac.empty()) {
-                TASK_LOG(INFO) << "Couldn't find radio with bssid " << event_obj->bssid;
+                TASK_LOG(ERROR) << "Couldn't find radio with bssid " << event_obj->bssid;
                 send_bml_response(int(STEERING_CLIENT_SET_RESPONSE), event_obj->sd,
                                   -BML_RET_OP_FAILED);
                 break;
@@ -257,7 +259,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                                                     event_obj->steeringGroupIndex)
                       : rdkb_db.set_client_config(client_mac, event_obj->bssid,
                                                   event_obj->steeringGroupIndex, event_obj->config);
-            rdkb_db.print_db();
+            //rdkb_db.print_db();
             if (!res) {
                 TASK_LOG(ERROR) << "STEERING_CLIENT_SET_REQUEST db configuration failed";
                 send_bml_response(int(STEERING_CLIENT_SET_RESPONSE), event_obj->sd,
@@ -286,20 +288,25 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
     case STEERING_CLIENT_SET_RESPONSE: {
         if (obj) {
             auto event_obj = static_cast<rdkb_wlan_task::steering_client_set_response_event *>(obj);
-            TASK_LOG(INFO) << "STEERING_CLIENT_SET_RESPONSE event was received";
+            TASK_LOG(DEBUG) << "STEERING_CLIENT_SET_RESPONSE event was received";
             auto res = check_for_pending_events(event_type);
+            TASK_LOG(DEBUG) << "res.first=" << res.first << ", res.second=" << res.second;
             if (!res.first && !res.second) {
                 TASK_LOG(ERROR) << "unexpected event STEERING_CLIENT_SET_RESPONSE ";
                 break;
             } else if (!res.first && res.second) {
+                TASK_LOG(ERROR) << "timeout for STEERING_CLIENT_SET_RESPONSE  event";
                 send_bml_response(event_type, res.second, -BML_RET_TIMEOUT);
             } else if (res.first && !res.second) {
-                TASK_LOG(ERROR) << "not suppose to happen for STEERING_CLIENT_SET_RESPONSE event!!";
+                TASK_LOG(DEBUG) << "waiting to another STEERING_CLIENT_SET_RESPONSE event";
                 break;
             } else if (event_obj->ret_code < 0) {
+                TASK_LOG(ERROR) << "STEERING_CLIENT_SET_RESPONSE failed with ret_code="
+                                << event_obj->ret_code;
                 send_bml_response(event_type, res.second, -BML_RET_OP_FAILED);
                 break;
             }
+            TASK_LOG(DEBUG) << "Sending STEERING_CLIENT_SET_RESPONSE event to BML";
             send_bml_response(event_type, res.second);
         }
         break;
@@ -379,7 +386,7 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
             auto bssid             = std::string(event_obj->bssid);
             auto group_index       = rdkb_db.get_group_index(client_mac, bssid);
             if (group_index == -1) {
-                TASK_LOG(DEBUG) << "event for un-configured client mac - " << client_mac
+                TASK_LOG(ERROR) << "event for un-configured client mac - " << client_mac
                                 << " ignored";
                 send_bml_response(int(STEERING_RSSI_MEASUREMENT_RESPONSE), event_obj->sd,
                                   -BML_RET_CLIENT_NOT_CONFIGURED);
@@ -444,15 +451,16 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
             auto bssid       = tlvf::mac_to_string(event_obj->bssid);
             auto group_index = rdkb_db.get_group_index(client_mac, bssid);
             TASK_LOG(INFO) << "STEERING_EVENT_CLIENT_ACTIVITY_AVAILABLE client_mac = " << client_mac
-                           << " bssid = " << bssid << " group index " << int(group_index);
+                           << " active=" << event_obj->active << " bssid = " << bssid
+                           << " group index " << int(group_index);
 
             if (events_updates_listeners.empty()) {
-                TASK_LOG(DEBUG) << "STEERING_EVENT_CLIENT_ACTIVITY_AVAILABLE no listener ignoring";
+                TASK_LOG(ERROR) << "STEERING_EVENT_CLIENT_ACTIVITY_AVAILABLE no listener ignoring";
                 break;
             }
 
             if (group_index == -1) {
-                TASK_LOG(DEBUG) << "event for un-configured client mac - " << client_mac
+                TASK_LOG(ERROR) << "event for un-configured client mac - " << client_mac
                                 << " ignored";
                 break;
             }
@@ -501,12 +509,12 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                            << " bssid = " << bssid << " group index " << int(group_index);
 
             if (events_updates_listeners.empty()) {
-                TASK_LOG(DEBUG) << "STEERING_EVENT_SNR_XING_AVAILABLE no listener ignoring";
+                TASK_LOG(ERROR) << "STEERING_EVENT_SNR_XING_AVAILABLE no listener ignoring";
                 break;
             }
 
             if (group_index == -1) {
-                TASK_LOG(DEBUG) << "event for un-configured client mac - " << client_mac
+                TASK_LOG(ERROR) << "event for un-configured client mac - " << client_mac
                                 << " ignored";
                 break;
             }
@@ -560,12 +568,12 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                            << " bssid = " << bssid << " group index " << int(group_index);
 
             if (events_updates_listeners.empty()) {
-                TASK_LOG(DEBUG) << "STEERING_EVENT_SNR_AVAILABLE no listener ignoring";
+                TASK_LOG(ERROR) << "STEERING_EVENT_SNR_AVAILABLE no listener ignoring";
                 break;
             }
 
             if (group_index == -1) {
-                TASK_LOG(DEBUG) << "event for un-configured client mac - " << client_mac
+                TASK_LOG(ERROR) << "event for un-configured client mac - " << client_mac
                                 << " ignored";
                 break;
             }
@@ -612,12 +620,12 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                            << " bssid = " << bssid << " group index " << int(group_index);
 
             if (events_updates_listeners.empty()) {
-                TASK_LOG(DEBUG) << "STEERING_EVENT_PROBE_REQ_AVAILABLE no listener ignoring";
+                TASK_LOG(ERROR) << "STEERING_EVENT_PROBE_REQ_AVAILABLE no listener ignoring";
                 break;
             }
 
             if (group_index == -1) {
-                TASK_LOG(DEBUG) << "event for un-configured client mac - " << client_mac
+                TASK_LOG(ERROR) << "event for un-configured client mac - " << client_mac
                                 << " ignored";
                 break;
             }
@@ -724,12 +732,12 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                            << " bssid = " << bssid << " group index " << int(group_index);
 
             if (events_updates_listeners.empty()) {
-                TASK_LOG(DEBUG) << "STEERING_EVENT_CLIENT_CONNECT_AVAILABLE no listener ignoring";
+                TASK_LOG(ERROR) << "STEERING_EVENT_CLIENT_CONNECT_AVAILABLE no listener ignoring";
                 break;
             }
 
             if (group_index == -1) {
-                TASK_LOG(DEBUG) << "event for un-configured client mac - " << client_mac
+                TASK_LOG(ERROR) << "event for un-configured client mac - " << client_mac
                                 << " ignored";
                 break;
             }
@@ -801,13 +809,13 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                            << int(event_obj->source) << " type " << int(event_obj->type);
 
             if (events_updates_listeners.empty()) {
-                TASK_LOG(DEBUG)
+                TASK_LOG(ERROR)
                     << "STEERING_EVENT_CLIENT_DISCONNECT_AVAILABLE no listener ignoring";
                 break;
             }
 
             if (group_index == -1) {
-                TASK_LOG(DEBUG) << "event for un-configured client mac - " << client_mac
+                TASK_LOG(ERROR) << "event for un-configured client mac - " << client_mac
                                 << " ignored";
                 break;
             }
@@ -1095,7 +1103,7 @@ void rdkb_wlan_task::send_bml_response(int event, int sd, int32_t ret)
             LOG(ERROR) << "Failed building ACTION_BML_STEERING_SET_GROUP_RESPONSE message!";
             break;
         }
-        LOG(DEBUG) << "sent ACTION_BML_STEERING_SET_GROUP_RESPONSE message!" << int(ret);
+        LOG(DEBUG) << "sent ACTION_BML_STEERING_SET_GROUP_RESPONSE message, ret=" << int(ret);
         response->error_code() = ret;
 
         //send response to bml
@@ -1107,10 +1115,10 @@ void rdkb_wlan_task::send_bml_response(int event, int sd, int32_t ret)
             beerocks_message::cACTION_BML_STEERING_CLIENT_SET_RESPONSE>(cmdu_tx);
 
         if (response == nullptr) {
-            LOG(ERROR) << "Failed building ACTION_BML_STEERING_SET_GROUP_RESPONSE message!";
+            LOG(ERROR) << "Failed building ACTION_BML_STEERING_CLIENT_SET_RESPONSE message!";
             break;
         }
-
+        LOG(DEBUG) << "sent ACTION_BML_STEERING_CLIENT_SET_RESPONSE message, ret=" << int(ret);
         response->error_code() = ret;
 
         //send response to bml
