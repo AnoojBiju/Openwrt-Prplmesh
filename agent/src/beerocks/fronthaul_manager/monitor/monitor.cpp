@@ -1128,7 +1128,8 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         ap->setInactCheckIntervalSec(request->params().cfg.inactCheckIntervalSec);
         ap->setInactCheckThresholdSec(request->params().cfg.inactCheckThresholdSec);
-        ap->setInactCheckThresholdPackets(0); //TODO: set when cmdu has this param.
+        //TODO: set ThresholdPackets when cmdu has this param, meanwhile set the threshold as packet per sec
+        ap->setInactCheckThresholdPackets(ap->getInactCheckThresholdSec());
 
         //send success status
         send_steering_return_status(
