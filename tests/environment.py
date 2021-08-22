@@ -528,7 +528,7 @@ class ALEntityDocker(ALEntity):
         mac = ucc_socket.dev_get_parameter('ALid')
 
         super().__init__(mac, ucc_socket, installdir, is_controller)
-        program = "controller" if is_controller else "agent"
+        program = "controller" if is_controller else "backhaul"
         self.logfilenames = [self.logfilename(program)]
 
         # We always have two radios, wlan0 and wlan2
@@ -640,8 +640,10 @@ class RadioDocker(Radio):
         mac = re.search(r"link/ether (([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})",
                         ip_output).group(1)
         super().__init__(agent, mac)
-        programs = (f"{prog}_{iface_name}" for prog in ("agent", "ap_manager"))
-        self.logfilenames = [self.agent.logfilename(program) for program in programs]
+        self.logfilenames = [
+            self.agent.logfilename(f"agent"),
+            self.agent.logfilename(f"ap_manager_{iface_name}"),
+        ]
 
     def wait_for_log(self, regex: str, start_line: int, timeout: float,
                      fail_on_mismatch: bool = True) -> bool:
@@ -899,7 +901,7 @@ class ALEntityPrplWrt(ALEntity):
 
         super().__init__(mac, ucc_socket, installdir, is_controller)
 
-        program = "controller" if is_controller else "agent"
+        program = "controller" if is_controller else "backhaul"
 
         self.logfilenames = ["{}/beerocks_{}.log".format(self.log_folder, program)]
 
@@ -954,7 +956,7 @@ class RadioHostapd(Radio):
         super().__init__(agent, mac)
 
         self.logfilenames = [
-            "{}/beerocks_agent_{}.log".format(self.log_folder, self.iface_name),
+            "{}/beerocks_agent.log".format(self.log_folder),
             "{}/beerocks_ap_manager_{}.log".format(self.log_folder, self.iface_name)
         ]
 
@@ -1053,7 +1055,7 @@ class VirtualAPHostapd(VirtualAP):
         """Get SSIDs personal key set during last autoconfiguration. Return string"""
         ssid = self.get_ssid()
         command = (f'grep "Autoconfiguration for ssid: {ssid}"'
-                   ' "{self.radio.log_folder}/beerocks_agent_{self.radio.iface_name}.log"'
+                   ' "{self.radio.log_folder}/beerocks_agent.log"'
                    ' | tail -n 1')
 
         # We looking for key, which was set during last autoconfiguration. E.g of such string:

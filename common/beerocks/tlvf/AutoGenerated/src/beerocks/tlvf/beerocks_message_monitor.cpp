@@ -93,6 +93,64 @@ BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
 }
 cACTION_MONITOR_JOINED_NOTIFICATION::~cACTION_MONITOR_JOINED_NOTIFICATION() {
 }
+uint8_t& cACTION_MONITOR_JOINED_NOTIFICATION::iface_name_length() {
+    return (uint8_t&)(*m_iface_name_length);
+}
+
+std::string cACTION_MONITOR_JOINED_NOTIFICATION::iface_name_str() {
+    char *iface_name_ = iface_name();
+    if (!iface_name_) { return std::string(); }
+    return std::string(iface_name_, m_iface_name_idx__);
+}
+
+char* cACTION_MONITOR_JOINED_NOTIFICATION::iface_name(size_t length) {
+    if( (m_iface_name_idx__ == 0) || (m_iface_name_idx__ < length) ) {
+        TLVF_LOG(ERROR) << "iface_name length is smaller than requested length";
+        return nullptr;
+    }
+    return ((char*)m_iface_name);
+}
+
+bool cACTION_MONITOR_JOINED_NOTIFICATION::set_iface_name(const std::string& str) { return set_iface_name(str.c_str(), str.size()); }
+bool cACTION_MONITOR_JOINED_NOTIFICATION::set_iface_name(const char str[], size_t size) {
+    if (str == nullptr) {
+        TLVF_LOG(WARNING) << "set_iface_name received a null pointer.";
+        return false;
+    }
+    if (m_iface_name_idx__ != 0) {
+        TLVF_LOG(ERROR) << "set_iface_name was already allocated!";
+        return false;
+    }
+    if (!alloc_iface_name(size)) { return false; }
+    std::copy(str, str + size, m_iface_name);
+    return true;
+}
+bool cACTION_MONITOR_JOINED_NOTIFICATION::alloc_iface_name(size_t count) {
+    if (m_lock_order_counter__ > 0) {;
+        TLVF_LOG(ERROR) << "Out of order allocation for variable length list iface_name, abort!";
+        return false;
+    }
+    size_t len = sizeof(char) * count;
+    if(getBuffRemainingBytes() < len )  {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
+        return false;
+    }
+    m_lock_order_counter__ = 0;
+    uint8_t *src = (uint8_t *)&m_iface_name[*m_iface_name_length];
+    uint8_t *dst = src + len;
+    if (!m_parse__) {
+        size_t move_length = getBuffRemainingBytes(src) - len;
+        std::copy_n(src, move_length, dst);
+    }
+    m_iface_name_idx__ += count;
+    *m_iface_name_length += count;
+    if (!buffPtrIncrementSafe(len)) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
+        return false;
+    }
+    return true;
+}
+
 void cACTION_MONITOR_JOINED_NOTIFICATION::class_swap()
 {
     tlvf_swap(8*sizeof(eActionOp_MONITOR), reinterpret_cast<uint8_t*>(m_action_op));
@@ -128,6 +186,7 @@ bool cACTION_MONITOR_JOINED_NOTIFICATION::finalize()
 size_t cACTION_MONITOR_JOINED_NOTIFICATION::get_initial_size()
 {
     size_t class_size = 0;
+    class_size += sizeof(uint8_t); // iface_name_length
     return class_size;
 }
 
@@ -135,6 +194,19 @@ bool cACTION_MONITOR_JOINED_NOTIFICATION::init()
 {
     if (getBuffRemainingBytes() < get_initial_size()) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_iface_name_length = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!m_parse__) *m_iface_name_length = 0;
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+        return false;
+    }
+    m_iface_name = reinterpret_cast<char*>(m_buff_ptr__);
+    uint8_t iface_name_length = *m_iface_name_length;
+    m_iface_name_idx__ = iface_name_length;
+    if (!buffPtrIncrementSafe(sizeof(char) * (iface_name_length))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(char) * (iface_name_length) << ") Failed!";
         return false;
     }
     if (m_parse__) { class_swap(); }

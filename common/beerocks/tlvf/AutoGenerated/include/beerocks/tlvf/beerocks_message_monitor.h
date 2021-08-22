@@ -57,6 +57,12 @@ class cACTION_MONITOR_JOINED_NOTIFICATION : public BaseClass
         static eActionOp_MONITOR get_action_op(){
             return (eActionOp_MONITOR)(ACTION_MONITOR_JOINED_NOTIFICATION);
         }
+        uint8_t& iface_name_length();
+        std::string iface_name_str();
+        char* iface_name(size_t length = 0);
+        bool set_iface_name(const std::string& str);
+        bool set_iface_name(const char buffer[], size_t size);
+        bool alloc_iface_name(size_t count = 1);
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -64,6 +70,10 @@ class cACTION_MONITOR_JOINED_NOTIFICATION : public BaseClass
     private:
         bool init();
         eActionOp_MONITOR* m_action_op = nullptr;
+        uint8_t* m_iface_name_length = nullptr;
+        char* m_iface_name = nullptr;
+        size_t m_iface_name_idx__ = 0;
+        int m_lock_order_counter__ = 0;
 };
 
 class cACTION_MONITOR_SON_CONFIG_UPDATE : public BaseClass

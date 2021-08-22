@@ -234,7 +234,7 @@ private:
     bool handle_slave_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
                                      const sMacAddr &dst_mac, const sMacAddr &src_mac);
     bool handle_1905_1_message(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
-                               const sMacAddr &dst_mac, const sMacAddr &src_mac, int &forward_to);
+                               const sMacAddr &dst_mac, const sMacAddr &src_mac);
     // 1905 messages handlers
     bool handle_slave_failed_connection_message(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                 const sMacAddr &src_mac);
