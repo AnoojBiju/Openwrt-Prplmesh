@@ -37,10 +37,9 @@ class ClientAssociation(PrplMeshBaseTest):
         debug("Confirming topology query was received")
         self.check_log(agent, r"TOPOLOGY_QUERY_MESSAGE")
 
-        debug("Send client association control message")
+        debug("Send client association control message on BSSID %s" % agent.radios[0].vaps[0].bssid)
         controller.dev_send_1905(agent.mac, 0x8016,
-                                       tlv(0x9D, 0x0010,
-                                           "{%s 0x00 0x001E 0x01 {0x000000110022}}" % agent.radios[0].mac))  # noqa E501
+            tlv(0x9D, 0x0010, "{%s 0x00 0x001E 0x01 {0x000000110022}}" % agent.radios[0].vaps[0].bssid))  # noqa E501
 
         debug("Confirming client association control message has been received on agent")
         # check that both radio agents received it,in the future we'll add a check to verify which
