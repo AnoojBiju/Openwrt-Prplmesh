@@ -209,12 +209,54 @@ void rdkb_wlan_task::handle_event(int event_type, void *obj)
                                   -BML_RET_CMDU_FAIL);
                 break;
             }
-            auto res =
-                event_obj->remove
-                    ? rdkb_db.clear_client_config(client_mac, event_obj->bssid,
-                                                  event_obj->steeringGroupIndex)
-                    : rdkb_db.set_client_config(client_mac, event_obj->bssid,
-                                                event_obj->steeringGroupIndex, event_obj->config);
+            // Check if configurations has changed and only then continue, else return OK
+            auto configs_are_equal =
+                [](const beerocks_message::sSteeringClientConfig &config1,
+                   const beerocks_message::sSteeringClientConfig &config2) -> bool {
+                return ((config1.snrProbeHWM == config2.snrProbeHWM) &&
+                        (config1.snrProbeLWM == config2.snrProbeLWM) &&
+                        (config1.snrAuthHWM == config2.snrAuthHWM) &&
+                        (config1.snrAuthLWM == config2.snrAuthLWM) &&
+                        (config1.snrInactXing == config2.snrInactXing) &&
+                        (config1.snrHighXing == config2.snrHighXing) &&
+                        (config1.snrLowXing == config2.snrLowXing) &&
+                        (config1.authRejectReason == config2.authRejectReason));
+            };
+
+            // if trying to remove a non-existing client
+            // or if the client configuration is the same as already configured,
+            // no need to do anything - return success immediately
+            std::shared_ptr<beerocks_message::sSteeringClientConfig> existing_config = nullptr;
+            auto res = rdkb_db.get_client_config(client_mac, event_obj->bssid,
+                                                 event_obj->steeringGroupIndex, existing_config);
+            bool update_db_and_agent_is_needed = true;
+            if (!res && event_obj->remove) {
+                // client config doesn't exists in DB and and asked to be removed
+                LOG(DEBUG) << "No need to remove from DB and update agent - client doesn't exist "
+                              "in config";
+                update_db_and_agent_is_needed = false;
+            } else if (res && !event_obj->remove) {
+                // client config exists in DB and asked to be added
+                // Check if configuration has changed
+                if (configs_are_equal(*existing_config, event_obj->config)) {
+                    LOG(DEBUG) << "No need to update DB and agent - client configuration is same "
+                                  "as existing configuration";
+                    update_db_and_agent_is_needed = false;
+                }
+            }
+
+            if (!update_db_and_agent_is_needed) {
+                TASK_LOG(DEBUG) << "Sending STEERING_CLIENT_SET_RESPONSE event to BML";
+                send_bml_response(STEERING_CLIENT_SET_RESPONSE, event_obj->sd);
+                break;
+            }
+
+            // set or remove the client config
+            res = event_obj->remove
+                      ? rdkb_db.clear_client_config(client_mac, event_obj->bssid,
+                                                    event_obj->steeringGroupIndex)
+                      : rdkb_db.set_client_config(client_mac, event_obj->bssid,
+                                                  event_obj->steeringGroupIndex, event_obj->config);
             rdkb_db.print_db();
             if (!res) {
                 TASK_LOG(ERROR) << "STEERING_CLIENT_SET_REQUEST db configuration failed";
