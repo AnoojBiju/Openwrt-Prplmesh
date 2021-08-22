@@ -1376,7 +1376,8 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         }
 
         auto vap_name = it->second.bss;
-
+        LOG(DEBUG) << "Got ACTION_APMANAGER_STEERING_CLIENT_SET_REQUEST for BSSID=" << bssid
+                   << " VAP=" << vap_name;
         if (!request->params().remove && (request->params().config.snrProbeHWM > 0)) {
             if (!ap_wlan_hal->sta_softblock_add(
                     vap_name, tlvf::mac_to_string(request->params().client_mac),
