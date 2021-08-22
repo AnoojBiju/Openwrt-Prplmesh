@@ -470,7 +470,10 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
         }
 
         // Notify existing steering task of completed connection
-        tasks.push_event(client->steering_task_id, client_steering_task::STA_CONNECTED);
+        // Check if task is running before pushing the event
+        if (tasks.is_task_running(client->steering_task_id)) {
+            tasks.push_event(client->steering_task_id, client_steering_task::STA_CONNECTED);
+        }
 
         int dhcp_task = database.get_dhcp_task_id();
         tasks.push_event(dhcp_task, DhcpTask::STA_CONNECTED);
