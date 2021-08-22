@@ -7,6 +7,7 @@ from .prplmesh_base_test import PrplMeshBaseTest
 from boardfarm.exceptions import SkipTest
 from capi import tlv
 from opts import debug
+import time
 
 
 class HigherLayerDataPayloadTrigger(PrplMeshBaseTest):
@@ -36,32 +37,14 @@ class HigherLayerDataPayloadTrigger(PrplMeshBaseTest):
         debug(
             "Confirming higher layer data message was received in one of the agent's radios")
 
-        received_in_radio0, _, _ = self.check_log(
-            agent.radios[0],
-            r"HIGHER_LAYER_DATA_MESSAGE",
-            fail_on_mismatch=False)
-        received_in_radio1, _, _ = self.check_log(
-            agent.radios[1],
-            r"HIGHER_LAYER_DATA_MESSAGE",
-            fail_on_mismatch=False)
-
-        number_of_receiving_radios = int(received_in_radio0) + int(
-            received_in_radio1)
-        if (number_of_receiving_radios != 1):
-            self.fail(
-                f"higher layer data message was received and acknowledged by "
-                f"{number_of_receiving_radios} agent's radios, "
-                f"expected exactly 1")
-
-        received_agent_radio = (
-            agent.radios[0] if received_in_radio0
-            else agent.radios[1])
+        self.check_log(agent.radios[0], r"HIGHER_LAYER_DATA_MESSAGE", fail_on_mismatch=False)
 
         debug("Confirming matching protocol and payload length")
-        self.check_log(received_agent_radio, r"Protocol: 0")
-        self.check_log(received_agent_radio, r"Payload-Length: 0x4b0")
+        self.check_log(agent.radios[0], r"Protocol: 0")
+        self.check_log(agent.radios[0], r"Payload-Length: 0x4b0")
 
         debug("Confirming ACK message was received in the controller")
+        time.sleep(1)
 
         self.check_cmdu_type_single("ACK", 0x8000, agent.mac,
                                     controller.mac, mid)

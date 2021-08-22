@@ -60,11 +60,10 @@ Monitor::Monitor(const std::string &monitor_iface_,
       mon_stats(cmdu_tx)
 {
     // Get Agent UDS file
-    std::string fronthaul_uds_path =
-        beerocks_slave_conf.temp_path + std::string(BEEROCKS_SLAVE_UDS) + "_" + monitor_iface;
+    std::string agent_uds_path = beerocks_slave_conf.temp_path + std::string(BEEROCKS_AGENT_UDS);
 
     m_slave_cmdu_client_factory =
-        std::move(beerocks::create_cmdu_client_factory(fronthaul_uds_path, m_event_loop));
+        std::move(beerocks::create_cmdu_client_factory(agent_uds_path, m_event_loop));
     LOG_IF(!m_slave_cmdu_client_factory, FATAL) << "Unable to create CMDU client factory!";
 
     // Create timer factory to create instances of timers.
@@ -384,6 +383,7 @@ bool Monitor::monitor_fsm()
                 LOG(ERROR) << "Failed building message!";
                 return false;
             }
+            request->set_iface_name(monitor_iface);
             send_cmdu(cmdu_tx);
 
             // On init - set the flag to generate pre-existing client STA_Connected to true
