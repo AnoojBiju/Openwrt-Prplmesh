@@ -23,6 +23,7 @@
 #include "tlvf/ieee_1905_1/eTlvType.h"
 #include "tlvf/common/sMacAddr.h"
 #include <tuple>
+#include <ostream>
 #include "tlvf/ieee_1905_1/eMediaType.h"
 
 namespace ieee1905_1 {
@@ -39,6 +40,19 @@ class tlvTransmitterLinkMetric : public BaseClass
             LINK_DOES_NOT_INCLUDE_BRIDGE = 0x0,
             LINK_DOES_INCLUDE_ONE_OR_MORE_BRIDGE = 0x1,
         };
+        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+        // clang-format off
+        static const char *eIEEE802_1BridgeFlag_str(eIEEE802_1BridgeFlag enum_value) {
+            switch (enum_value) {
+            case LINK_DOES_NOT_INCLUDE_BRIDGE:         return "LINK_DOES_NOT_INCLUDE_BRIDGE";
+            case LINK_DOES_INCLUDE_ONE_OR_MORE_BRIDGE: return "LINK_DOES_INCLUDE_ONE_OR_MORE_BRIDGE";
+            }
+            static std::string out_str = std::to_string(int(enum_value));
+            return out_str.c_str();
+        }
+        friend inline std::ostream &operator<<(std::ostream &out, eIEEE802_1BridgeFlag value) { return out << eIEEE802_1BridgeFlag_str(value); }
+        // clang-format on
+        // Enum AutoPrint generated code snippet end
         
         typedef struct sLinkMetricInfo {
             //The underlying network technology

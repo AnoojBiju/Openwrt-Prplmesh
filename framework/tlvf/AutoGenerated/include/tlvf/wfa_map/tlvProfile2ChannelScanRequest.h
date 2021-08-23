@@ -22,6 +22,7 @@
 #include <tlvf/ClassList.h>
 #include <tuple>
 #include <vector>
+#include <ostream>
 #include "tlvf/wfa_map/tlvChannelScanCapabilities.h"
 
 namespace wfa_map {
@@ -39,6 +40,19 @@ class tlvProfile2ChannelScanRequest : public BaseClass
             PERFORM_A_FRESH_SCAN_AND_RETURN_RESULTS = 0x80,
             RETURN_STORED_RESULTS_OF_LAST_SUCCESSFUL_SCAN = 0x0,
         };
+        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+        // clang-format off
+        static const char *ePerformFreshScan_str(ePerformFreshScan enum_value) {
+            switch (enum_value) {
+            case PERFORM_A_FRESH_SCAN_AND_RETURN_RESULTS:       return "PERFORM_A_FRESH_SCAN_AND_RETURN_RESULTS";
+            case RETURN_STORED_RESULTS_OF_LAST_SUCCESSFUL_SCAN: return "RETURN_STORED_RESULTS_OF_LAST_SUCCESSFUL_SCAN";
+            }
+            static std::string out_str = std::to_string(int(enum_value));
+            return out_str.c_str();
+        }
+        friend inline std::ostream &operator<<(std::ostream &out, ePerformFreshScan value) { return out << ePerformFreshScan_str(value); }
+        // clang-format on
+        // Enum AutoPrint generated code snippet end
         
         const eTlvTypeMap& type();
         const uint16_t& length();

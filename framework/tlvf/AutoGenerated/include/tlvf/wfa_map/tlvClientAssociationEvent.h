@@ -22,6 +22,7 @@
 #include <tlvf/ClassList.h>
 #include "tlvf/wfa_map/eTlvTypeMap.h"
 #include "tlvf/common/sMacAddr.h"
+#include <ostream>
 
 namespace wfa_map {
 
@@ -37,6 +38,19 @@ class tlvClientAssociationEvent : public BaseClass
             CLIENT_HAS_JOINED_THE_BSS = 0x80,
             CLIENT_HAS_LEFT_THE_BSS = 0x0,
         };
+        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+        // clang-format off
+        static const char *eAssociationEvent_str(eAssociationEvent enum_value) {
+            switch (enum_value) {
+            case CLIENT_HAS_JOINED_THE_BSS: return "CLIENT_HAS_JOINED_THE_BSS";
+            case CLIENT_HAS_LEFT_THE_BSS:   return "CLIENT_HAS_LEFT_THE_BSS";
+            }
+            static std::string out_str = std::to_string(int(enum_value));
+            return out_str.c_str();
+        }
+        friend inline std::ostream &operator<<(std::ostream &out, eAssociationEvent value) { return out << eAssociationEvent_str(value); }
+        // clang-format on
+        // Enum AutoPrint generated code snippet end
         
         const eTlvTypeMap& type();
         const uint16_t& length();

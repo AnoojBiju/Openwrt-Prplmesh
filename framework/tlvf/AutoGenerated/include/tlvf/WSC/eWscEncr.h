@@ -16,6 +16,7 @@
 #include <cstddef>
 #include <stdint.h>
 #include <tlvf/swap.h>
+#include <ostream>
 
 namespace WSC {
 
@@ -26,6 +27,22 @@ enum class eWscEncr : uint16_t {
     WSC_ENCR_AES = 0x8,
     WSC_ENCR_INVALID = 0xffff,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eWscEncr_str(eWscEncr enum_value) {
+    switch (enum_value) {
+    case eWscEncr::WSC_ENCR_NONE:    return "eWscEncr::WSC_ENCR_NONE";
+    case eWscEncr::WSC_ENCR_WEP:     return "eWscEncr::WSC_ENCR_WEP";
+    case eWscEncr::WSC_ENCR_TKIP:    return "eWscEncr::WSC_ENCR_TKIP";
+    case eWscEncr::WSC_ENCR_AES:     return "eWscEncr::WSC_ENCR_AES";
+    case eWscEncr::WSC_ENCR_INVALID: return "eWscEncr::WSC_ENCR_INVALID";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eWscEncr value) { return out << eWscEncr_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 class eWscEncrValidate {
 public:
     static bool check(uint16_t value) {

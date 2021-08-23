@@ -21,6 +21,7 @@
 #include <tlvf/BaseClass.h>
 #include <tlvf/ClassList.h>
 #include "tlvf/ieee_1905_1/eTlvType.h"
+#include <ostream>
 
 namespace ieee1905_1 {
 
@@ -37,6 +38,20 @@ class tlvAutoconfigFreqBand : public BaseClass
             IEEE_802_11_5_GHZ = 0x1,
             IEEE_802_11_60_GHZ = 0x2,
         };
+        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+        // clang-format off
+        static const char *eValue_str(eValue enum_value) {
+            switch (enum_value) {
+            case IEEE_802_11_2_4_GHZ: return "IEEE_802_11_2_4_GHZ";
+            case IEEE_802_11_5_GHZ:   return "IEEE_802_11_5_GHZ";
+            case IEEE_802_11_60_GHZ:  return "IEEE_802_11_60_GHZ";
+            }
+            static std::string out_str = std::to_string(int(enum_value));
+            return out_str.c_str();
+        }
+        friend inline std::ostream &operator<<(std::ostream &out, eValue value) { return out << eValue_str(value); }
+        // clang-format on
+        // Enum AutoPrint generated code snippet end
         
         const eTlvType& type();
         const uint16_t& length();
