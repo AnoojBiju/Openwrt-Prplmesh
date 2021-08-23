@@ -924,6 +924,121 @@ int _test_conditional_parameters_rx_tx(uint8_t *rx_buffer, size_t rx_size)
     return errors;
 }
 
+/**
+ * @brief Check if \p field matches \p value.
+ *
+ * This is meant to be used to increment an `errors` variable on failure.
+ * @return 0 if \p field matches \p value, 1 otherwise.
+ **/
+template <typename T> int check_field(T field, T value, std::string name)
+{
+    if (field != value) {
+        MAPF_ERR(name + " does not match!");
+        MAPF_ERR(field);
+        MAPF_ERR(value);
+        return 1;
+    }
+    return 0;
+}
+
+int test_channel_scan_results()
+{
+    int errors = 0;
+    MAPF_INFO(__FUNCTION__ << " start");
+
+    // 2 neighbors, the second one doesn't have the bss load elements:
+    MAPF_INFO(__FUNCTION__ << " start with rx_buffer_3");
+    uint8_t rx_buffer[] = {
+        0xa7, 0x00, 0x6f, 0x00, 0x50, 0x43, 0x24, 0x19, 0x30, 0x51, 0x06, 0x00, 0x1f, 0x32, 0x30,
+        0x38, 0x39, 0x2d, 0x30, 0x32, 0x2d, 0x30, 0x31, 0x54, 0x30, 0x30, 0x3a, 0x33, 0x35, 0x3a,
+        0x30, 0x37, 0x2e, 0x30, 0x30, 0x30, 0x30, 0x30, 0x2b, 0x30, 0x30, 0x3a, 0x30, 0x30, 0x0a,
+        0x64, 0x00, 0x02, 0x00, 0x0c, 0x43, 0x48, 0xa0, 0x26, 0x0e, 0x4d, 0x75, 0x6c, 0x74, 0x69,
+        0x2d, 0x41, 0x50, 0x2d, 0x32, 0x34, 0x2d, 0x54, 0x31, 0xe7, 0x05, 0x32, 0x30, 0x4d, 0x48,
+        0x7a, 0x80, 0x06, 0x00, 0x00, 0x00, 0x50, 0x43, 0x24, 0x18, 0xb0, 0x0e, 0x4d, 0x75, 0x6c,
+        0x74, 0x69, 0x2d, 0x41, 0x50, 0x2d, 0x32, 0x34, 0x2d, 0x54, 0x32, 0xe6, 0x05, 0x32, 0x30,
+        0x4d, 0x48, 0x7a, 0x00, 0x00, 0x00, 0x00, 0x64, 0x00};
+    auto tlv_rx = tlvProfile2ChannelScanResult(rx_buffer, sizeof(rx_buffer), true);
+
+    errors += check_field<sMacAddr>(tlv_rx.radio_uid(), tlvf::mac_from_string("00:50:43:24:19:30"),
+                                    "radio_uid");
+    errors += check_field<uint8_t>(tlv_rx.operating_class(), 0x51, "operating_class");
+    errors += check_field<uint8_t>(tlv_rx.channel(), 0x06, "channel");
+    errors += check_field<tlvProfile2ChannelScanResult::eScanStatus>(
+        tlv_rx.success(), tlvProfile2ChannelScanResult::eScanStatus::SUCCESS, "success");
+    errors += check_field<std::string>(tlv_rx.timestamp_str(), "2089-02-01T00:35:07.00000+00:00",
+                                       "timestamp");
+    errors += check_field<uint8_t>(tlv_rx.utilization(), 10, "utilization");
+    errors += check_field<uint8_t>(tlv_rx.noise(), 100, "noise");
+
+    errors += check_field<uint16_t>(tlv_rx.neighbors_list_length(), 2, "neighbors list length");
+    int neigh_num = 0;
+
+    {
+        // Neighbor 0, it has load elements.
+        auto t = tlv_rx.neighbors_list(neigh_num);
+        if (!std::get<0>(t)) {
+            MAPF_ERR("Failed to get neighbor " + neigh_num);
+            errors++;
+        }
+        auto &rx_neigh = std::get<1>(t);
+        errors +=
+            check_field<sMacAddr>(rx_neigh.bssid(), tlvf::mac_from_string("00:0c:43:48:a0:26"),
+                                  "neigh" + std::to_string(neigh_num) + " bssid");
+        errors += check_field<uint8_t>(rx_neigh.ssid_length(), 14,
+                                       "neigh " + std::to_string(neigh_num) + " ssid_length");
+        errors += check_field<std::string>(rx_neigh.ssid_str(), "Multi-AP-24-T1",
+                                           "neigh " + std::to_string(neigh_num) + " ssid");
+        errors += check_field<uint8_t>(rx_neigh.signal_strength(), 231,
+                                       "neigh " + std::to_string(neigh_num) + " signal strength");
+        errors += check_field<std::string>(rx_neigh.channels_bw_list_str(), "20MHz",
+                                           "neigh " + std::to_string(neigh_num) + " bandwidth");
+        errors +=
+            check_field<uint8_t>(rx_neigh.bss_load_element_present(),
+                                 wfa_map::cNeighbors::eBssLoadElementPresent::FIELD_PRESENT,
+                                 "neigh " + std::to_string(neigh_num) + " load element presence");
+        errors +=
+            check_field<uint8_t>(*rx_neigh.channel_utilization(), 6,
+                                 "neigh " + std::to_string(neigh_num) + " channel_utilization");
+        errors += check_field<uint16_t>(*rx_neigh.station_count(), 0,
+                                        "neigh " + std::to_string(neigh_num) + " station_count");
+    }
+
+    ++neigh_num;
+    {
+        // Neighbor 1, it does NOT have load elements.
+        auto t = tlv_rx.neighbors_list(neigh_num);
+        if (!std::get<0>(t)) {
+            MAPF_ERR("Failed to get neighbor " + neigh_num);
+            errors++;
+        }
+        auto &rx_neigh = std::get<1>(t);
+        errors +=
+            check_field<sMacAddr>(rx_neigh.bssid(), tlvf::mac_from_string("00:50:43:24:18:b0"),
+                                  "neigh" + std::to_string(neigh_num) + " bssid");
+        errors += check_field<uint8_t>(rx_neigh.ssid_length(), 14,
+                                       "neigh " + std::to_string(neigh_num) + " ssid_length");
+        errors += check_field<std::string>(rx_neigh.ssid_str(), "Multi-AP-24-T2",
+                                           "neigh " + std::to_string(neigh_num) + " ssid");
+        errors += check_field<uint8_t>(rx_neigh.signal_strength(), 230,
+                                       "neigh " + std::to_string(neigh_num) + " signal strength");
+        errors += check_field<std::string>(rx_neigh.channels_bw_list_str(), "20MHz",
+                                           "neigh " + std::to_string(neigh_num) + " bandwidth");
+        errors +=
+            check_field<uint8_t>(rx_neigh.bss_load_element_present(),
+                                 wfa_map::cNeighbors::eBssLoadElementPresent::FIELD_NOT_PRESENT,
+                                 "neigh " + std::to_string(neigh_num) + " load element presence");
+    }
+
+    errors +=
+        check_field<uint32_t>(tlv_rx.aggregate_scan_duration(), 100, "aggregate scan duration");
+    errors += check_field<uint8_t>(
+        tlv_rx.scan_type(), wfa_map::tlvProfile2ChannelScanResult::eScanType::SCAN_WAS_PASSIVE_SCAN,
+        "scan type");
+
+    MAPF_INFO(__FUNCTION__ << " Finished, errors = " << errors << std::endl);
+    return errors;
+}
+
 int test_conditional_parameters_rx_tx()
 {
     int errors = 0;
@@ -994,6 +1109,7 @@ int main(int argc, char *argv[])
     errors += test_parser();
     errors += test_mac_from_string();
     errors += test_conditional_parameters_rx_tx();
+    errors += test_channel_scan_results();
     MAPF_INFO(__FUNCTION__ << " Finished, errors = " << errors << std::endl);
     return errors;
 }
