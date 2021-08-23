@@ -16,6 +16,7 @@
 #include <cstddef>
 #include <stdint.h>
 #include <tlvf/swap.h>
+#include <ostream>
 
 namespace WSC {
 

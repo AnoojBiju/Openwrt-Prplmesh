@@ -21,6 +21,7 @@
 #include <tlvf/BaseClass.h>
 #include <tlvf/ClassList.h>
 #include "tlvf/wfa_map/eTlvTypeMap.h"
+#include <ostream>
 
 namespace wfa_map {
 
@@ -36,6 +37,19 @@ class tlvChannelScanReportingPolicy : public BaseClass
             REPORT_INDEPENDENT_CHANNEL_SCANS = 0x80,
             DO_NOT_REPORT_INDEPENDENT_CHANNEL_SCANS = 0x0,
         };
+        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+        // clang-format off
+        static const char *eReportIndependentChannelScan_str(eReportIndependentChannelScan enum_value) {
+            switch (enum_value) {
+            case REPORT_INDEPENDENT_CHANNEL_SCANS:        return "REPORT_INDEPENDENT_CHANNEL_SCANS";
+            case DO_NOT_REPORT_INDEPENDENT_CHANNEL_SCANS: return "DO_NOT_REPORT_INDEPENDENT_CHANNEL_SCANS";
+            }
+            static std::string out_str = std::to_string(int(enum_value));
+            return out_str.c_str();
+        }
+        friend inline std::ostream &operator<<(std::ostream &out, eReportIndependentChannelScan value) { return out << eReportIndependentChannelScan_str(value); }
+        // clang-format on
+        // Enum AutoPrint generated code snippet end
         
         const eTlvTypeMap& type();
         const uint16_t& length();

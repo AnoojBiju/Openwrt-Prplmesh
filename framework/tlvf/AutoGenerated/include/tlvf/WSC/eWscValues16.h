@@ -16,6 +16,7 @@
 #include <cstddef>
 #include <stdint.h>
 #include <tlvf/swap.h>
+#include <ostream>
 
 namespace WSC {
 
@@ -25,6 +26,21 @@ enum eWscValues16: uint16_t {
     DEV_PW_PUSHBUTTON = 0x4,
     WSC_CFG_NO_ERROR = 0x0,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eWscValues16_str(eWscValues16 enum_value) {
+    switch (enum_value) {
+    case WSC_CONFIG_VIRT_PUSHBUTTON: return "WSC_CONFIG_VIRT_PUSHBUTTON";
+    case WSC_CONFIG_PHY_PUSHBUTTON:  return "WSC_CONFIG_PHY_PUSHBUTTON";
+    case DEV_PW_PUSHBUTTON:          return "DEV_PW_PUSHBUTTON";
+    case WSC_CFG_NO_ERROR:           return "WSC_CFG_NO_ERROR";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eWscValues16 value) { return out << eWscValues16_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 
 }; // close namespace: WSC

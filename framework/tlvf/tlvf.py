@@ -1769,6 +1769,7 @@ class TlvF:
         self.insertLineH(insert_name, insert_marker, "")
 
     def addEnumCode(self, insert_name, insert_marker, name, enum_storage):
+        self.include_list.append("<ostream>")
         storage_str = "" if enum_storage == None else (": %s" % enum_storage)
         self.insertLineH(insert_name, insert_marker, "%senum %s%s {" % (
             self.getIndentation(0), name, storage_str))
@@ -1780,6 +1781,7 @@ class TlvF:
     def addEnumClassCode(self, insert_name, insert_marker, name, enum_storage):
         if enum_storage == None:
             self.abort("%s.yaml error: enum class type must be specified")
+        self.include_list.append("<ostream>")
         self.insertLineH(insert_name, insert_marker, "%senum class %s : %s {" % (
             self.getIndentation(0), name, enum_storage))
         self.insertLineH(insert_name, insert_marker, "%s%s_%s" %

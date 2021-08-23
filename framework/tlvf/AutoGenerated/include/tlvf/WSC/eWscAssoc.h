@@ -16,6 +16,7 @@
 #include <cstddef>
 #include <stdint.h>
 #include <tlvf/swap.h>
+#include <ostream>
 
 namespace WSC {
 
@@ -23,6 +24,19 @@ enum eWscAssoc: uint16_t {
     WSC_ASSOC_NOT_ASSOC = 0x0,
     WSC_ASSOC_CONN_SUCCESS = 0x1,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eWscAssoc_str(eWscAssoc enum_value) {
+    switch (enum_value) {
+    case WSC_ASSOC_NOT_ASSOC:    return "WSC_ASSOC_NOT_ASSOC";
+    case WSC_ASSOC_CONN_SUCCESS: return "WSC_ASSOC_CONN_SUCCESS";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eWscAssoc value) { return out << eWscAssoc_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 
 }; // close namespace: WSC

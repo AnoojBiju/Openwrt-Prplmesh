@@ -37,6 +37,20 @@ enum class eClientsMeasurementMode : uint8_t {
     ENABLE_ALL,
     ONLY_CLIENTS_SELECTED_FOR_STEERING
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *eClientsMeasurementMode_str(eClientsMeasurementMode enum_value) {
+    switch (enum_value) {
+    case eClientsMeasurementMode::DISABLE_ALL:                        return "eClientsMeasurementMode::DISABLE_ALL";
+    case eClientsMeasurementMode::ENABLE_ALL:                         return "eClientsMeasurementMode::ENABLE_ALL";
+    case eClientsMeasurementMode::ONLY_CLIENTS_SELECTED_FOR_STEERING: return "eClientsMeasurementMode::ONLY_CLIENTS_SELECTED_FOR_STEERING";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, eClientsMeasurementMode value) { return out << eClientsMeasurementMode_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 /* Wi-Fi Settings */
 #define BPL_DEV_INFO_LEN (32 + 4) /* Device information string length */
@@ -189,6 +203,19 @@ struct BPL_WPS_PARAMS {
 };
 
 enum BPL_WPS_TYPE { BPL_WPS_PBC = 0, BPL_WPS_PIN };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *BPL_WPS_TYPE_str(BPL_WPS_TYPE enum_value) {
+    switch (enum_value) {
+    case BPL_WPS_PBC: return "BPL_WPS_PBC";
+    case BPL_WPS_PIN: return "BPL_WPS_PIN";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, BPL_WPS_TYPE value) { return out << BPL_WPS_TYPE_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 /* MNS operation params */
 struct BPL_MNS_PARAMS {
@@ -202,6 +229,18 @@ struct BPL_MNS_PARAMS {
 enum BPL_MNS_OP {
     BPL_MNS_OP_RESET = 0,
 };
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *BPL_MNS_OP_str(BPL_MNS_OP enum_value) {
+    switch (enum_value) {
+    case BPL_MNS_OP_RESET: return "BPL_MNS_OP_RESET";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, BPL_MNS_OP value) { return out << BPL_MNS_OP_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
 
 /* Interface state for the platform*/
 struct BPL_NOTIF_WPS_COMPLETE_NOTIFICATION {

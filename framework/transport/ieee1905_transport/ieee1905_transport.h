@@ -181,6 +181,24 @@ private:
         DUPLICATE_PACKETS,
         DEFRAGMENTATION_FAILURE,
     };
+    // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+    // clang-format off
+    static const char *CounterId_str(CounterId enum_value) {
+        switch (enum_value) {
+        case MESSAGE_ID_WRAPAROUND:       return "MESSAGE_ID_WRAPAROUND";
+        case INCOMMING_NETWORK_PACKETS:   return "INCOMMING_NETWORK_PACKETS";
+        case OUTGOING_NETWORK_PACKETS:    return "OUTGOING_NETWORK_PACKETS";
+        case INCOMMING_LOCAL_BUS_PACKETS: return "INCOMMING_LOCAL_BUS_PACKETS";
+        case OUTGOING_LOCAL_BUS_PACKETS:  return "OUTGOING_LOCAL_BUS_PACKETS";
+        case DUPLICATE_PACKETS:           return "DUPLICATE_PACKETS";
+        case DEFRAGMENTATION_FAILURE:     return "DEFRAGMENTATION_FAILURE";
+        }
+        static std::string out_str = std::to_string(int(enum_value));
+        return out_str.c_str();
+    }
+    friend inline std::ostream &operator<<(std::ostream &out, CounterId value) { return out << CounterId_str(value); }
+    // clang-format on
+    // Enum AutoPrint generated code snippet end
     std::map<CounterId, unsigned long> counters_;
 
     // an internal data structure used for manipulating packets (CMDUs, LLDP, etc.)

@@ -22,6 +22,7 @@
 #include <tlvf/ClassList.h>
 #include "tlvf/wfa_map/eTlvTypeMap.h"
 #include "tlvf/common/sMacAddr.h"
+#include <ostream>
 
 namespace wfa_map {
 
@@ -42,6 +43,24 @@ class tlvErrorCode : public BaseClass
             BACKHAUL_STEERING_REQUEST_REJECTED_TARGET_BSS_SIGNAL_NOT_SUITABLE = 0x5,
             BACKHAUL_STEERING_REQUEST_AUTHENTICATION_OR_ASSOCIATION_REJECTED = 0x6,
         };
+        // Enum AutoPrint generated code snippet begining- DON'T EDIT!
+        // clang-format off
+        static const char *eReasonCode_str(eReasonCode enum_value) {
+            switch (enum_value) {
+            case RESERVED:                                                               return "RESERVED";
+            case STA_ASSOCIATED_WITH_A_BSS_OPERATED_BY_THE_AGENT:                        return "STA_ASSOCIATED_WITH_A_BSS_OPERATED_BY_THE_AGENT";
+            case STA_NOT_ASSOCIATED_WITH_ANY_BSS_OPERATED_BY_THE_AGENT:                  return "STA_NOT_ASSOCIATED_WITH_ANY_BSS_OPERATED_BY_THE_AGENT";
+            case CLIENT_CAPABILITY_REPORT_UNSPECIFIED_FAILURE:                           return "CLIENT_CAPABILITY_REPORT_UNSPECIFIED_FAILURE";
+            case BACKHAUL_STEERING_REQUEST_REJECTED_CANNOT_OPERATE_ON_CHANNEL_SPECIFIED: return "BACKHAUL_STEERING_REQUEST_REJECTED_CANNOT_OPERATE_ON_CHANNEL_SPECIFIED";
+            case BACKHAUL_STEERING_REQUEST_REJECTED_TARGET_BSS_SIGNAL_NOT_SUITABLE:      return "BACKHAUL_STEERING_REQUEST_REJECTED_TARGET_BSS_SIGNAL_NOT_SUITABLE";
+            case BACKHAUL_STEERING_REQUEST_AUTHENTICATION_OR_ASSOCIATION_REJECTED:       return "BACKHAUL_STEERING_REQUEST_AUTHENTICATION_OR_ASSOCIATION_REJECTED";
+            }
+            static std::string out_str = std::to_string(int(enum_value));
+            return out_str.c_str();
+        }
+        friend inline std::ostream &operator<<(std::ostream &out, eReasonCode value) { return out << eReasonCode_str(value); }
+        // clang-format on
+        // Enum AutoPrint generated code snippet end
         
         const eTlvTypeMap& type();
         const uint16_t& length();
