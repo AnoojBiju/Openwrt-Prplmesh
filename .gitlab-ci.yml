@@ -35,9 +35,6 @@ include:
 image-build-builder/alpine:
   extends: .image-build
 
-image-build-builder/ubuntu/xenial:
-  extends: .image-build
-
 image-build-builder/ubuntu/bionic:
   extends: .image-build
 
@@ -187,12 +184,6 @@ build-in-docker-alpine:
   image: $CI_REGISTRY_IMAGE/prplmesh-builder-alpine:$CI_PIPELINE_ID
   rules: *expensive-job
   needs: ["image-build-builder/alpine"]
-
-build-in-docker-ubuntu-xenial:
-  extends: .build-in-docker
-  image: $CI_REGISTRY_IMAGE/prplmesh-builder-ubuntu-xenial:$CI_PIPELINE_ID
-  rules: *expensive-job
-  needs: ["image-build-builder/ubuntu/xenial"]
 
 build-in-docker-static:
   extends: build-in-docker
