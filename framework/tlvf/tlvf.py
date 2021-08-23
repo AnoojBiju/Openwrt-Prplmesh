@@ -188,6 +188,9 @@ class MetaData:
     KEY_LENGTH = "_length"
     KEY_LENGTH_VAR = "_length_var"
     KEY_LENGTH_MAX = "_length_max"
+    KEY_CONDITION = "_condition"
+    CONDITION_NAME = "_field_name"
+    CONDITION_VALUE = "_field_value"
     LENGTH_TYPE_INT = "_int_"
     LENGTH_TYPE_CONST = "_const_"
     LENGTH_TYPE_VAR = "_var_"
@@ -227,6 +230,8 @@ class MetaData:
         self.constractor_h_lines = []
         self.constractor_cpp_lines = []
         self.alloc_list = []
+        self.condition = None
+
         self.fillMetaData(dict)
         self.errorCheck(dict)
         self.children_types = {}
@@ -303,6 +308,13 @@ class MetaData:
                     self.length_max = value
                 elif key == MetaData.KEY_CLASS_CONST:
                     self.class_const = True
+                elif key == MetaData.KEY_CONDITION:
+                    if set(value.keys()) != set([MetaData.CONDITION_NAME
+                                                   , MetaData.CONDITION_VALUE]):
+                        self.error = self.errPrefix() \
+                            + "unknown condition keys: %s, dict: %s" % (key, dict)
+                    else:
+                        self.condition = value
                 else:
                     self.error = self.errPrefix() + "unknown key: %s, dict: %s" % (key, dict)
 
