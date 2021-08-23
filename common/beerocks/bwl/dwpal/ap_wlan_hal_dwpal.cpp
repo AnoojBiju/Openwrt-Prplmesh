@@ -1526,7 +1526,7 @@ bool ap_wlan_hal_dwpal::sta_softblock_add(const std::string &vap_name,
                       " snrProbeLWM=" + std::to_string(probe_snr_threshold_lo) +
                       " snrAuthHWM=" + std::to_string(authetication_snr_threshold_hi) +
                       " snrAuthLWM=" + std::to_string(authetication_snr_threshold_lo);
-
+    LOG(INFO) << cmd;
     // Trigger a measurement
     if (!dwpal_send_cmd(cmd)) {
         LOG(ERROR) << "sta_softblock_add() failed!";
@@ -1541,7 +1541,7 @@ bool ap_wlan_hal_dwpal::sta_softblock_remove(const std::string &vap_name,
 {
     // Build command string
     std::string cmd = "STA_SOFTBLOCK " + vap_name + " " + client_mac + " remove=1";
-
+    LOG(INFO) << cmd;
     // Trigger a measurement
     if (!dwpal_send_cmd(cmd)) {
         LOG(ERROR) << "sta_softblock_remove() failed!";
