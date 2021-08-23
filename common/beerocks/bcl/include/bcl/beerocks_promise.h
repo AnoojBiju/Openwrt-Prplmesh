@@ -69,11 +69,11 @@ public:
             m_signal = 0;
         } else {
             if ((err_wait = pthread_cond_timedwait(&m_cond, &m_mut, &timeout)) != 0) {
-                LOG(ERROR) << "pthread_cond_timedwait failed, error code: " << err;
+                LOG(ERROR) << "pthread_cond_timedwait failed, error code: " << err_wait;
             }
-            err = pthread_mutex_unlock(&m_mut);
-            mapf_assert(err == 0);
         }
+        err = pthread_mutex_unlock(&m_mut);
+        mapf_assert(err == 0);
         if (err_wait)
             return false;
         return true;

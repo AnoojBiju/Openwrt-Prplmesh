@@ -13,6 +13,43 @@
 using namespace beerocks;
 using namespace son;
 
+bool rdkb_wlan_task_db::steering_group_config::get_client_config(
+    const std::string &mac, const std::string &bssid,
+    std::shared_ptr<beerocks_message::sSteeringClientConfig> &config)
+{
+    if (config_2ghz.bssid == bssid) {
+        auto it = config_2ghz.client_config_list.find(mac);
+        if (it == config_2ghz.client_config_list.end()) {
+            return false;
+        }
+        config = it->second->get_client_config();
+    } else if (config_5ghz.bssid == bssid) {
+        auto it = config_5ghz.client_config_list.find(mac);
+        if (it == config_5ghz.client_config_list.end()) {
+            return false;
+        }
+        config = it->second->get_client_config();
+    } else {
+        LOG(ERROR) << "no bssid=" << bssid << " for steering_group_index=" << index;
+        return false;
+    }
+    return true;
+}
+
+bool rdkb_wlan_task_db::get_client_config(
+    const std::string &mac, const std::string &bssid, const int steering_group_index,
+    std::shared_ptr<beerocks_message::sSteeringClientConfig> &config)
+{
+    auto it = steering_group_list.find(steering_group_index);
+    if (it == steering_group_list.end()) {
+        LOG(ERROR) << "can't find steering group " << steering_group_index;
+        return false;
+    }
+
+    auto steering_group = it->second;
+    return steering_group->get_client_config(mac, bssid, config);
+}
+
 bool rdkb_wlan_task_db::steering_group_config::set_client_config(
     const std::string &mac, const std::string &bssid,
     const beerocks_message::sSteeringClientConfig &config)

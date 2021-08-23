@@ -1345,8 +1345,11 @@ bool Controller::handle_cmdu_1905_client_steering_btm_report_message(
     }
 
     int steering_task_id = client->steering_task_id;
-    tasks.push_event(steering_task_id, client_steering_task::BTM_REPORT_RECEIVED,
-                     (void *)&status_code);
+    // Check if task is running before pushing the event
+    if (tasks.is_task_running(steering_task_id)) {
+        tasks.push_event(steering_task_id, client_steering_task::BTM_REPORT_RECEIVED,
+                         (void *)&status_code);
+    }
     database.update_node_11v_responsiveness(*client, true);
 
     if (status_code != 0) {
