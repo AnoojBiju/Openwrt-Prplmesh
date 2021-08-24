@@ -403,7 +403,8 @@ void bml_task::update_bml_nw_map(std::string mac, bool force_client_disconnect)
 
         uint8_t *p = (uint8_t *)response->buffer(0);
 
-        network_map::fill_bml_node_data(database, mac, p, size_left, force_client_disconnect);
+        network_map::fill_bml_node_data(database, tlvf::mac_from_string(mac), p, size_left,
+                                        force_client_disconnect);
 
         network_map::send_bml_event_to_listeners(database, cmdu_tx, nw_map_updates_listeners);
     }

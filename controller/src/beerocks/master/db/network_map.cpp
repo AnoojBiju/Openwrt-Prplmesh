@@ -34,164 +34,161 @@ void network_map::send_bml_network_map_message(db &database, int fd,
         return;
     }
 
-    auto response =
-        message_com::create_vs_message<beerocks_message::cACTION_BML_NW_MAP_RESPONSE>(cmdu_tx, id);
-    if (response == nullptr) {
-        LOG(ERROR) << "Failed building ACTION_BML_NW_MAP_BRIDGE_RESPONSE message!";
-        return;
-    }
-
-    auto beerocks_header = message_com::get_beerocks_header(cmdu_tx);
-
-    if (!beerocks_header) {
-        LOG(ERROR) << "Failed getting beerocks_header!";
-        return;
-    }
-
-    beerocks_header->actionhdr()->last() = 0;
-
     uint8_t *data_start = nullptr;
     // std::ptrdiff_t size=0, size_left=0, node_len=0;
     const size_t gwIreNodeSize  = sizeof(BML_NODE);
     const size_t clientNodeSize = sizeof(BML_NODE) - sizeof(BML_NODE::N_DATA::N_GW_IRE);
 
     std::ptrdiff_t size = 0, size_left = 0, node_len = 0;
-    uint32_t &num_of_nodes = response->node_num();
-    num_of_nodes           = 0;
 
     database.rewind();
-    bool last          = false;
-    bool get_next_node = true;
-    beerocks::eType n_type;
-    std::shared_ptr<node> n;
 
-    // because of virtual nodes (vap nodes) are poiting to the radio node,
-    // we want to save the in a list in order to not count them multiple times as the same mac.
-    std::unordered_set<std::string> ap_list;
+    struct node_to_send {
+        sMacAddr mac;
+        bool is_agent;
+    };
 
-    while (!last || !get_next_node) {
-        if (get_next_node) {
-            n    = nullptr;
-            last = database.get_next_node(n);
+    std::vector<std::vector<node_to_send>> nodes_per_message = {{}};
+
+    for (auto agent_it : database.m_agents) {
+        auto agent = agent_it.second;
+
+        size_left = cmdu_tx.getMessageBuffLength() - size;
+
+        if (agent->state == beerocks::STATE_CONNECTED) {
+            node_len = gwIreNodeSize;
+
+            if (node_len > size_left &&
+                nodes_per_message[nodes_per_message.size() - 1].size() == 0) {
+                LOG(ERROR) << "node size is bigger than buffer size";
+                return;
+            }
+
+            if (node_len > size_left) {
+                nodes_per_message.push_back({});
+                size = 0;
+            }
+
+            nodes_per_message[nodes_per_message.size() - 1].push_back({agent->al_mac, true});
+            size += node_len;
         }
-        // LOG(DEBUG) << "last = " << last << " get_next_node=" << get_next_node;
+    }
 
-        if (n == nullptr) {
-            // LOG(DEBUG) << "n == nullptr";
+    for (auto mac_str : database.get_nodes(beerocks::TYPE_CLIENT)) {
+        auto mac = tlvf::mac_from_string(mac_str);
+        auto n   = database.get_node(mac);
+
+        if (!n) {
             continue;
         }
 
-        // skip virtual vap nodes
-        if (n->get_type() == beerocks::TYPE_SLAVE) {
-            if (ap_list.find(n->mac) == ap_list.end()) {
-                // radio/main vap
-                ap_list.insert(n->mac);
-            } else {
-                // vap node
-                continue;
-            }
-        }
-        size_left = beerocks_header->getMessageBuffLength() - beerocks_header->getMessageLength();
+        size_left = cmdu_tx.getMessageBuffLength() - size;
 
-        // LOG(DEBUG) << "num_of_nodes = " << num_of_nodes << ", size = " << int(size) << ", size_left = " << int(size_left);
+        if (n->state == beerocks::STATE_CONNECTED) {
+            node_len = clientNodeSize;
 
-        n_type = n->get_type();
-        if (n->state == beerocks::STATE_CONNECTED &&
-            (n_type == beerocks::TYPE_CLIENT || n_type == beerocks::TYPE_IRE ||
-             n_type == beerocks::TYPE_GW)) {
-
-            if (n_type == beerocks::TYPE_CLIENT) {
-                node_len = clientNodeSize;
-            } else {
-                node_len = gwIreNodeSize;
-            }
-
-            if (node_len > size_left && num_of_nodes == 0) {
+            if (node_len > size_left &&
+                nodes_per_message[nodes_per_message.size() - 1].size() == 0) {
                 LOG(ERROR) << "node size is bigger than buffer size";
                 return;
-            } else if (node_len > size_left) {
-                controller_ctx->send_cmdu(fd, cmdu_tx);
-
-                get_next_node = false;
-                response =
-                    message_com::create_vs_message<beerocks_message::cACTION_BML_NW_MAP_RESPONSE>(
-                        cmdu_tx, id);
-
-                if (response == nullptr) {
-                    LOG(ERROR) << "Failed building message!";
-                    return;
-                }
-
-                beerocks_header                      = message_com::get_beerocks_header(cmdu_tx);
-                beerocks_header->actionhdr()->last() = 0;
-                num_of_nodes = response->node_num(); // prepare for next message
-                num_of_nodes = 0;
-                data_start   = nullptr;
-                size         = 0;
-            } else {
-                if (!response->alloc_buffer(node_len)) {
-                    LOG(ERROR) << "Failed allocating buffer!";
-                    return;
-                }
-
-                if (data_start == nullptr) {
-                    data_start = (uint8_t *)response->buffer(0);
-                }
-
-                fill_bml_node_data(database, n, data_start + size, size_left);
-
-                num_of_nodes++;
-                size += node_len;
-                get_next_node = true;
             }
+
+            if (node_len > size_left) {
+                nodes_per_message.push_back({});
+                size = 0;
+            }
+
+            nodes_per_message[nodes_per_message.size() - 1].push_back({mac, false});
+            size += node_len;
         }
     }
 
-    beerocks_header->actionhdr()->last() = 1;
-    controller_ctx->send_cmdu(fd, cmdu_tx);
-    //LOG(DEBUG) << "sending message, last=1";
+    for (unsigned i = 0; i < nodes_per_message.size(); ++i) {
+        auto nodes = nodes_per_message[i];
+
+        auto response =
+            message_com::create_vs_message<beerocks_message::cACTION_BML_NW_MAP_RESPONSE>(cmdu_tx,
+                                                                                          id);
+        if (!response) {
+            LOG(ERROR) << "Failed building ACTION_BML_NW_MAP_BRIDGE_RESPONSE message!";
+            return;
+        }
+
+        response->node_num() = nodes.size();
+
+        auto beerocks_header = message_com::get_beerocks_header(cmdu_tx);
+
+        if (!beerocks_header) {
+            LOG(ERROR) << "Failed getting beerocks_header!";
+            return;
+        }
+
+        beerocks_header->actionhdr()->last() = (i == nodes_per_message.size() - 1) ? 1 : 0;
+
+        size = 0;
+
+        for (auto n : nodes) {
+            node_len = n.is_agent ? gwIreNodeSize : clientNodeSize;
+
+            if (!response->alloc_buffer(node_len)) {
+                LOG(ERROR) << "Failed allocating buffer!";
+                return;
+            }
+
+            data_start = (uint8_t *)response->buffer(0);
+            if (n.is_agent) {
+                fill_bml_agent_data(database, n.mac, data_start + size, size_left);
+            } else {
+                fill_bml_client_data(database, n.mac, data_start + size, size_left);
+            }
+            size += node_len;
+        }
+
+        controller_ctx->send_cmdu(fd, cmdu_tx);
+    }
 }
 
-std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::string node_mac,
+std::ptrdiff_t network_map::fill_bml_node_data(db &database, const sMacAddr &node_mac,
                                                uint8_t *tx_buffer,
                                                const std::ptrdiff_t &buffer_size,
                                                bool force_client_disconnect)
+{
+    auto type = database.get_node_type(tlvf::mac_to_string(node_mac));
+    switch (type) {
+    case beerocks::TYPE_GW:
+    case beerocks::TYPE_IRE:
+        return fill_bml_agent_data(database, node_mac, tx_buffer, buffer_size,
+                                   force_client_disconnect);
+    case beerocks::TYPE_CLIENT:
+        return fill_bml_client_data(database, node_mac, tx_buffer, buffer_size,
+                                    force_client_disconnect);
+    default:
+        LOG(ERROR) << "unexpected node type: " << type << ", mac = " << node_mac;
+        return 0;
+    }
+}
+
+std::ptrdiff_t network_map::fill_bml_agent_data(db &database, const sMacAddr &node_mac,
+                                                uint8_t *tx_buffer,
+                                                const std::ptrdiff_t &buffer_size,
+                                                bool force_client_disconnect)
 {
     auto n = database.get_node(node_mac);
-    if (n == nullptr) {
+    if (!n) {
         LOG(ERROR) << "get_node(), node_mac=" << node_mac << " , n == nullptr !!!";
         return 0;
-    } else {
-        return fill_bml_node_data(database, n, tx_buffer, buffer_size, force_client_disconnect);
     }
-}
 
-std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<node> n,
-                                               uint8_t *tx_buffer,
-                                               const std::ptrdiff_t &buffer_size,
-                                               bool force_client_disconnect)
-{
-    auto node = (BML_NODE *)tx_buffer;
-
-    if (n == nullptr) {
-        LOG(ERROR) << " n == nullptr !!!";
+    const auto agent = database.m_agents.get(node_mac);
+    if (!agent) {
+        LOG(ERROR) << "No agent found for node " << n->mac;
         return 0;
     }
 
-    uint8_t node_type;
-    auto n_type = n->get_type();
-    std::ptrdiff_t node_len;
+    auto node = (BML_NODE *)tx_buffer;
 
-    if (n_type == beerocks::TYPE_GW) {
-        node_len  = sizeof(BML_NODE);
-        node_type = BML_NODE_TYPE_GW;
-    } else if (n_type == beerocks::TYPE_IRE) {
-        node_len  = sizeof(BML_NODE);
-        node_type = BML_NODE_TYPE_IRE;
-    } else {
-        node_len  = sizeof(BML_NODE) - sizeof(BML_NODE::N_DATA::N_GW_IRE);
-        node_type = BML_NODE_TYPE_CLIENT;
-    }
+    auto n_type             = n->get_type();
+    std::ptrdiff_t node_len = sizeof(BML_NODE);
 
     if (node_len > buffer_size) {
         //LOG(DEBUG) << "buffer overflow!";
@@ -201,7 +198,7 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
     memset(node, 0, node_len);
 
     // Fill the common fields
-    node->type = node_type;
+    node->type = (n_type == beerocks::TYPE_GW) ? BML_NODE_TYPE_GW : BML_NODE_TYPE_IRE;
 
     if (force_client_disconnect) {
         node->state = BML_NODE_STATE_DISCONNECTED;
@@ -237,108 +234,159 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
         node->channel_ext_above_secondary = n->channel_ext_above_secondary;
     }
 
+    tlvf::mac_from_string(node->mac, n->mac); // bridge mac
+
+    // remote bridge
+    tlvf::mac_to_array(database.get_node_parent_ire(n->mac), node->parent_bridge);
+
+    if (n->parent_mac != std::string()) {
+        auto n_parent = database.get_node(n->parent_mac);
+        if (n_parent) {
+            tlvf::mac_from_string(node->parent_bssid,
+                                  n_parent->parent_mac); // remote radio(ap)
+        }
+    }
+
+    network_utils::ipv4_from_string(node->ip_v4, agent->ipv4);
+    string_utils::copy_string(node->name, agent->name.c_str(), sizeof(node->name));
+
+    tlvf::mac_from_string(node->data.gw_ire.backhaul_mac,
+                          database.get_node_parent_backhaul(n->mac)); // local parent backhaul
+
+    size_t i = 0;
+    for (const auto &radio : agent->radios) {
+        if (i >= beerocks::utils::array_length(node->data.gw_ire.radio)) {
+            LOG(ERROR) << "exceeded size of data.gw_ire.radio[]";
+            break;
+        }
+        tlvf::mac_to_array(radio.first, node->data.gw_ire.radio[i].radio_mac);
+
+        unsigned vap_id = 0;
+        for (const auto &bss : radio.second->bsses) {
+            if (bss.second->vap_id >= 0) {
+                // If vap_id is set, use it. Normally if one BSS has vap_id set, all of them
+                // should have it set. Still, we increment vap_id at the end of the loop so we
+                // can deal with unset vap_id as well.
+                vap_id = bss.second->vap_id;
+            }
+            if (vap_id >= beerocks::utils::array_length(node->data.gw_ire.radio[i].vap)) {
+                LOG(ERROR) << "exceeded size of data.gw_ire.radio[i].vap[] on " << radio.first;
+                break;
+            }
+            tlvf::mac_to_array(bss.first, node->data.gw_ire.radio[i].vap[vap_id].bssid);
+            string_utils::copy_string(node->data.gw_ire.radio[i].vap[vap_id].ssid,
+                                      bss.second->ssid.c_str(),
+                                      sizeof(node->data.gw_ire.radio[i].vap[0].ssid));
+            node->data.gw_ire.radio[i].vap[vap_id].backhaul_vap = bss.second->backhaul;
+            vap_id++;
+        }
+
+        auto c = database.get_node(radio.first);
+        if (!c) {
+            LOG(ERROR) << "No radio node for " << radio.first;
+            continue;
+        }
+
+        auto r = database.get_hostap(radio.first);
+        if (!r) {
+            LOG(ERROR) << "No radio for " << radio.first;
+            continue;
+        }
+
+        if (c->state == beerocks::STATE_CONNECTED) {
+
+            // Copy the interface name
+            string_utils::copy_string(
+                node->data.gw_ire.radio[i].iface_name,
+                database.get_hostap_iface_name(tlvf::mac_from_string(c->mac)).c_str(),
+                BML_NODE_IFACE_NAME_LEN);
+
+            // Radio Vendor
+            switch (database.get_hostap_iface_type(tlvf::mac_from_string(c->mac))) {
+            case beerocks::eIfaceType::IFACE_TYPE_WIFI_INTEL:
+                node->data.gw_ire.radio[i].vendor = BML_WLAN_VENDOR_INTEL;
+                break;
+            default:
+                node->data.gw_ire.radio[i].vendor = BML_WLAN_VENDOR_UNKNOWN;
+            }
+
+            node->data.gw_ire.radio[i].channel                     = !c->channel ? 255 : c->channel;
+            node->data.gw_ire.radio[i].cac_completed               = r->cac_completed;
+            node->data.gw_ire.radio[i].bw                          = c->bandwidth;
+            node->data.gw_ire.radio[i].channel_ext_above_secondary = c->channel_ext_above_secondary;
+            node->data.gw_ire.radio[i].ap_active                   = r->active;
+
+            // Copy the radio identifier string
+            tlvf::mac_from_string(node->data.gw_ire.radio[i].radio_identifier, c->radio_identifier);
+
+            ++i;
+        }
+    }
+
+    return node_len;
+}
+
+std::ptrdiff_t network_map::fill_bml_client_data(db &database, const sMacAddr &node_mac,
+                                                 uint8_t *tx_buffer,
+                                                 const std::ptrdiff_t &buffer_size,
+                                                 bool force_client_disconnect)
+{
+    auto n = database.get_node(node_mac);
+    if (!n) {
+        LOG(ERROR) << "get_node(), node_mac=" << node_mac << " , n == nullptr !!!";
+        return 0;
+    }
+
+    auto node = (BML_NODE *)tx_buffer;
+
+    std::ptrdiff_t node_len = sizeof(BML_NODE) - sizeof(BML_NODE::N_DATA::N_GW_IRE);
+
+    if (node_len > buffer_size) {
+        //LOG(DEBUG) << "buffer overflow!";
+        return 0;
+    }
+
+    memset(node, 0, node_len);
+
+    // Fill the common fields
+    node->type = BML_NODE_TYPE_CLIENT;
+
+    if (force_client_disconnect) {
+        node->state = BML_NODE_STATE_DISCONNECTED;
+    } else {
+        switch (n->state) {
+        case beerocks::STATE_DISCONNECTED:
+            node->state = BML_NODE_STATE_DISCONNECTED;
+            break;
+
+        case beerocks::STATE_CONNECTING:
+            node->state = BML_NODE_STATE_CONNECTING;
+            break;
+
+        case beerocks::STATE_CONNECTED:
+            node->state = BML_NODE_STATE_CONNECTED;
+            break;
+
+        default:
+            node->state = BML_NODE_STATE_UNKNOWN;
+        }
+    }
+
+    node->channel                     = n->channel;
+    node->bw                          = n->bandwidth;
+    node->channel_ext_above_secondary = n->channel_ext_above_secondary;
+
     tlvf::mac_from_string(node->mac, n->mac); // if IRE->bridge, else if STA->sta mac
 
     // remote bridge
     tlvf::mac_to_array(database.get_node_parent_ire(n->mac), node->parent_bridge);
 
-    if (n_type == beerocks::TYPE_CLIENT) {
-        tlvf::mac_from_string(node->parent_bssid, n->parent_mac); // remote radio(ap)
-        node->rx_rssi = database.get_load_rx_rssi(n->mac);
-    } else {
-        if (n->parent_mac != std::string()) {
-            auto n_parent = database.get_node(n->parent_mac);
-            if (n_parent) {
-                tlvf::mac_from_string(node->parent_bssid,
-                                      n_parent->parent_mac); // remote radio(ap)
-            }
-        }
-    }
+    tlvf::mac_from_string(node->parent_bssid, n->parent_mac); // remote radio(ap)
+    node->rx_rssi = database.get_load_rx_rssi(n->mac);
 
     network_utils::ipv4_from_string(node->ip_v4, n->ipv4);
     string_utils::copy_string(node->name, n->name.c_str(), sizeof(node->name));
 
-    // GW/IRE specific parameters
-    if (n_type != beerocks::TYPE_CLIENT) {
-        tlvf::mac_from_string(node->data.gw_ire.backhaul_mac,
-                              database.get_node_parent_backhaul(n->mac)); // local parent backhaul
-        const auto agent = database.m_agents.get(tlvf::mac_from_string(n->mac));
-        if (!agent) {
-            LOG(ERROR) << "No agent found for node " << n->mac;
-            return node_len;
-        }
-        size_t i = 0;
-        for (const auto &radio : agent->radios) {
-            if (i >= beerocks::utils::array_length(node->data.gw_ire.radio)) {
-                LOG(ERROR) << "exceeded size of data.gw_ire.radio[]";
-                break;
-            }
-            tlvf::mac_to_array(radio.first, node->data.gw_ire.radio[i].radio_mac);
-
-            unsigned vap_id = 0;
-            for (const auto &bss : radio.second->bsses) {
-                if (bss.second->vap_id >= 0) {
-                    // If vap_id is set, use it. Normally if one BSS has vap_id set, all of them
-                    // should have it set. Still, we increment vap_id at the end of the loop so we
-                    // can deal with unset vap_id as well.
-                    vap_id = bss.second->vap_id;
-                }
-                if (vap_id >= beerocks::utils::array_length(node->data.gw_ire.radio[i].vap)) {
-                    LOG(ERROR) << "exceeded size of data.gw_ire.radio[i].vap[] on " << radio.first;
-                    break;
-                }
-                tlvf::mac_to_array(bss.first, node->data.gw_ire.radio[i].vap[vap_id].bssid);
-                string_utils::copy_string(node->data.gw_ire.radio[i].vap[vap_id].ssid,
-                                          bss.second->ssid.c_str(),
-                                          sizeof(node->data.gw_ire.radio[i].vap[0].ssid));
-                node->data.gw_ire.radio[i].vap[vap_id].backhaul_vap = bss.second->backhaul;
-                vap_id++;
-            }
-
-            auto c = database.get_node(radio.first);
-            if (!c) {
-                LOG(ERROR) << "No radio node for " << radio.first;
-                continue;
-            }
-
-            auto r = database.get_hostap(radio.first);
-            if (!r) {
-                LOG(ERROR) << "No radio for " << radio.first;
-                continue;
-            }
-
-            if (c->state == beerocks::STATE_CONNECTED) {
-
-                // Copy the interface name
-                string_utils::copy_string(
-                    node->data.gw_ire.radio[i].iface_name,
-                    database.get_hostap_iface_name(tlvf::mac_from_string(c->mac)).c_str(),
-                    BML_NODE_IFACE_NAME_LEN);
-
-                // Radio Vendor
-                switch (database.get_hostap_iface_type(tlvf::mac_from_string(c->mac))) {
-                case beerocks::eIfaceType::IFACE_TYPE_WIFI_INTEL:
-                    node->data.gw_ire.radio[i].vendor = BML_WLAN_VENDOR_INTEL;
-                    break;
-                default:
-                    node->data.gw_ire.radio[i].vendor = BML_WLAN_VENDOR_UNKNOWN;
-                }
-
-                node->data.gw_ire.radio[i].channel       = !c->channel ? 255 : c->channel;
-                node->data.gw_ire.radio[i].cac_completed = r->cac_completed;
-                node->data.gw_ire.radio[i].bw            = c->bandwidth;
-                node->data.gw_ire.radio[i].channel_ext_above_secondary =
-                    c->channel_ext_above_secondary;
-                node->data.gw_ire.radio[i].ap_active = r->active;
-
-                // Copy the radio identifier string
-                tlvf::mac_from_string(node->data.gw_ire.radio[i].radio_identifier,
-                                      c->radio_identifier);
-
-                ++i;
-            }
-        }
-    }
     return node_len;
 }
 
