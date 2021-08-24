@@ -502,12 +502,12 @@ void agent_monitoring_task::save_bss_statistics(ieee1905_1::CmduMessageRx &cmdu_
     for (auto ap_extended_metric_tlv : cmdu_rx.getClassList<wfa_map::tlvApExtendedMetrics>()) {
         auto bss_stats = std::make_shared<sBssStats>();
 
-        bss_stats->broadcast_bytes_sent     = ap_extended_metric_tlv->unicast_bytes_sent();
-        bss_stats->broadcast_bytes_received = ap_extended_metric_tlv->unicast_bytes_received();
+        bss_stats->unicast_bytes_sent       = ap_extended_metric_tlv->unicast_bytes_sent();
+        bss_stats->unicast_bytes_received   = ap_extended_metric_tlv->unicast_bytes_received();
         bss_stats->multicast_bytes_sent     = ap_extended_metric_tlv->multicast_bytes_sent();
         bss_stats->multicast_bytes_received = ap_extended_metric_tlv->multicast_bytes_received();
-        bss_stats->unicast_bytes_sent       = ap_extended_metric_tlv->broadcast_bytes_sent();
-        bss_stats->unicast_bytes_received   = ap_extended_metric_tlv->broadcast_bytes_received();
+        bss_stats->broadcast_bytes_sent     = ap_extended_metric_tlv->broadcast_bytes_sent();
+        bss_stats->broadcast_bytes_received = ap_extended_metric_tlv->broadcast_bytes_received();
         m_bss_stats[ap_extended_metric_tlv->bssid()] = bss_stats;
     }
 }

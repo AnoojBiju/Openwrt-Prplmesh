@@ -44,10 +44,10 @@ private:
     struct sBssStats {
         uint32_t unicast_bytes_sent;
         uint32_t unicast_bytes_received;
-        uint32_t broadcast_bytes_sent;
-        uint32_t broadcast_bytes_received;
         uint32_t multicast_bytes_sent;
         uint32_t multicast_bytes_received;
+        uint32_t broadcast_bytes_sent;
+        uint32_t broadcast_bytes_received;
     };
 
     struct sRadioStats {
