@@ -1671,7 +1671,7 @@ bool Controller::handle_cmdu_1905_associated_sta_link_metrics_response_message(
     return true;
 }
 
-bool Controller::handle_tlv_ap_extended_metrics(std::shared_ptr<sAgent> agent,
+bool Controller::handle_tlv_ap_extended_metrics(std::shared_ptr<Agent> agent,
                                                 ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     bool ret_val = true;
@@ -2107,7 +2107,7 @@ bool Controller::handle_cmdu_1905_beacon_response(const sMacAddr &src_mac,
 bool Controller::handle_intel_slave_join(
     const sMacAddr &src_mac, std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps,
     beerocks::beerocks_header &beerocks_header, ieee1905_1::CmduMessageTx &cmdu_tx,
-    const std::shared_ptr<sAgent> &agent)
+    const std::shared_ptr<Agent> &agent)
 {
     // Prepare outcoming response vs tlv
     auto join_response =
@@ -2644,7 +2644,7 @@ bool Controller::autoconfig_wsc_parse_radio_caps(
 
 bool Controller::handle_non_intel_slave_join(
     const sMacAddr &src_mac, std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps,
-    const WSC::m1 &m1, const std::shared_ptr<sAgent> &agent, const sMacAddr &radio_mac,
+    const WSC::m1 &m1, const std::shared_ptr<Agent> &agent, const sMacAddr &radio_mac,
     ieee1905_1::CmduMessageTx &cmdu_tx)
 {
 
@@ -2839,7 +2839,7 @@ bool Controller::handle_cmdu_control_message(
             son_actions::handle_dead_node(client, true, database, cmdu_tx, tasks);
         }
 
-        // Update BSSes in the sAgent
+        // Update BSSes in the Agent
         auto radio = database.get_radio(src_mac, radio_mac);
         if (!radio) {
             LOG(ERROR) << "No radio found for radio_uid " << radio_mac << " on " << src_mac;
@@ -2874,7 +2874,7 @@ bool Controller::handle_cmdu_control_message(
         database.add_vap(radio_mac_str, vap_id, tlvf::mac_to_string(bssid), ssid,
                          notification->vap_info().backhaul_vap);
 
-        // Update BSSes in the sAgent
+        // Update BSSes in the Agent
         auto radio = database.get_radio(src_mac, radio_mac);
         if (!radio) {
             LOG(ERROR) << "No radio found for radio_uid " << radio_mac << " on " << src_mac;
@@ -2949,7 +2949,7 @@ bool Controller::handle_cmdu_control_message(
             return false;
         }
 
-        // Update BSSes in the sAgent
+        // Update BSSes in the Agent
         auto radio = database.get_radio(src_mac, radio_mac);
         if (!radio) {
             LOG(ERROR) << "No radio found for radio_uid " << radio_mac << " on " << src_mac;
@@ -3982,7 +3982,7 @@ bool Controller::trigger_scan(
     return true;
 }
 
-bool Controller::handle_tlv_profile2_ap_capability(std::shared_ptr<sAgent> agent,
+bool Controller::handle_tlv_profile2_ap_capability(std::shared_ptr<Agent> agent,
                                                    ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto profile2_ap_capability_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2ApCapability>();
@@ -4002,7 +4002,7 @@ bool Controller::handle_tlv_profile2_ap_capability(std::shared_ptr<sAgent> agent
     return true;
 }
 
-bool Controller::handle_tlv_profile2_cac_status_report(std::shared_ptr<sAgent::sRadio> radio,
+bool Controller::handle_tlv_profile2_cac_status_report(std::shared_ptr<Agent::sRadio> radio,
                                                        ieee1905_1::CmduMessageRx &cmdu_rx)
 {
 

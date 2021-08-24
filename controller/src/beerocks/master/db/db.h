@@ -41,7 +41,7 @@
 
 using namespace beerocks_message;
 
-using sAgent  = prplmesh::controller::db::sAgent;
+using Agent   = prplmesh::controller::db::Agent;
 using Station = prplmesh::controller::db::Station;
 
 namespace son {
@@ -202,7 +202,7 @@ public:
         uint32_t m_retransmission_count = 0;
     } sAssociatedStaTrafficStats;
 
-    beerocks::mac_map<sAgent> m_agents;
+    beerocks::mac_map<Agent> m_agents;
     beerocks::mac_map<Station> m_stations;
 
     db(sDbMasterConfig &config_, beerocks::logging &logger_, const sMacAddr &local_bridge_mac,
@@ -296,18 +296,18 @@ public:
      * @param radio_uid Radio UID of the radio.
      * @return The sRadio object, or nullptr if it doesn't exist.
      */
-    std::shared_ptr<sAgent::sRadio> get_radio(const sMacAddr &al_mac, const sMacAddr &radio_uid);
+    std::shared_ptr<Agent::sRadio> get_radio(const sMacAddr &al_mac, const sMacAddr &radio_uid);
 
     /**
      * @brief Get radio with a specific Radio Unique Identifier (Radio UID)
      *
-     * Searches all sAgent objects for sRadio object with the given Radio UID.
+     * Searches all Agent objects for sRadio object with the given Radio UID.
      * If no radio with the given UID found, nullptr is returned and an error is logged.
      *
      * @param radio_uid Radio UID of the radio.
      * @return The sRadio object, or nullptr if it doesn't exist.
      */
-    std::shared_ptr<sAgent::sRadio> get_radio_by_uid(const sMacAddr &radio_uid);
+    std::shared_ptr<Agent::sRadio> get_radio_by_uid(const sMacAddr &radio_uid);
 
     /**
      * @brief Get station with a specific MAC address.
@@ -363,25 +363,25 @@ public:
     bool dm_add_sta_beacon_measurement(const beerocks_message::sBeaconResponse11k &beacon_response);
 
     /**
-     * @brief add gateway node and sAgent object.
+     * @brief add gateway node and Agent object.
      *
-     * Adds a gateway node and an sAgent object if they don't exist.
+     * Adds a gateway node and an Agent object if they don't exist.
      *
      * @param mac AL MAC of the gateway.
-     * @return the existing sAgent if it was already there or the newly added sAgent otherwise.
+     * @return the existing Agent if it was already there or the newly added Agent otherwise.
      */
-    std::shared_ptr<sAgent> add_node_gateway(const sMacAddr &mac);
+    std::shared_ptr<Agent> add_node_gateway(const sMacAddr &mac);
 
     /**
-     * @brief add IRE node and sAgent object.
+     * @brief add IRE node and Agent object.
      *
-     * Adds an IRE node and an sAgent object if they don't exist.
+     * Adds an IRE node and an Agent object if they don't exist.
      *
      * @param mac AL MAC of the gateway.
      * @param parent_mac MAC address of the parent node in the legacy node structure.
-     * @return the existing sAgent if it was already there or the newly added sAgent otherwise.
+     * @return the existing Agent if it was already there or the newly added Agent otherwise.
      */
-    std::shared_ptr<sAgent>
+    std::shared_ptr<Agent>
     add_node_ire(const sMacAddr &mac,
                  const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
 
@@ -435,7 +435,7 @@ public:
     std::string get_node_ipv4(const std::string &mac);
 
     bool set_node_manufacturer(const std::string &mac, const std::string &manufacturer);
-    bool set_agent_manufacturer(prplmesh::controller::db::sAgent &agent,
+    bool set_agent_manufacturer(prplmesh::controller::db::Agent &agent,
                                 const std::string &manufacturer);
 
     int get_node_channel(const std::string &mac);
@@ -800,9 +800,9 @@ public:
     int get_node_hierarchy(const std::string &mac);
     std::set<std::string> get_nodes(int type = -1);
     std::set<std::string> get_active_hostaps();
-    std::vector<std::shared_ptr<sAgent>> get_all_connected_agents();
+    std::vector<std::shared_ptr<Agent>> get_all_connected_agents();
     std::set<std::string> get_nodes_from_hierarchy(int hierarchy, int type = -1);
-    std::shared_ptr<sAgent> get_gw();
+    std::shared_ptr<Agent> get_gw();
     std::set<std::string> get_node_subtree(const std::string &mac);
     std::string get_node_parent(const std::string &mac);
 
@@ -939,7 +939,7 @@ public:
                              const std::unordered_map<int8_t, sVapElement> &vap_list);
     std::unordered_map<int8_t, sVapElement> &get_hostap_vap_list(const sMacAddr &mac);
     std::set<std::string> get_hostap_vaps_bssids(const std::string &mac);
-    bool remove_vap(sAgent::sRadio &radio, int vap_id);
+    bool remove_vap(Agent::sRadio &radio, int vap_id);
     bool add_vap(const std::string &radio_mac, int vap_id, const std::string &bssid,
                  const std::string &ssid, bool backhaul);
 
@@ -1696,7 +1696,7 @@ public:
      * @param[in] radio radio db object
      * @return true on success, otherwise false.
      */
-    bool dm_clear_cac_status_report(std::shared_ptr<sAgent::sRadio> radio);
+    bool dm_clear_cac_status_report(std::shared_ptr<Agent::sRadio> radio);
 
     /**
      * @brief Adds instance for CACStatus.AvailableChannels and fullfills it.
@@ -1708,7 +1708,7 @@ public:
      * @param[in] channel channel number
      * @return true on success, otherwise false.
      */
-    bool dm_add_cac_status_available_channel(std::shared_ptr<sAgent::sRadio> radio,
+    bool dm_add_cac_status_available_channel(std::shared_ptr<Agent::sRadio> radio,
                                              uint8_t operating_class, uint8_t channel);
 
     /**

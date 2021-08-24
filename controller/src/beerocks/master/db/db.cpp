@@ -107,7 +107,7 @@ std::pair<std::string, int> db::get_dm_index_from_path(const std::string &dm_pat
 
 // static - end
 
-std::shared_ptr<sAgent::sRadio> db::get_radio(const sMacAddr &al_mac, const sMacAddr &radio_uid)
+std::shared_ptr<Agent::sRadio> db::get_radio(const sMacAddr &al_mac, const sMacAddr &radio_uid)
 {
     auto agent = m_agents.get(al_mac);
     if (!agent) {
@@ -238,7 +238,7 @@ std::string db::get_node_data_model_path(const std::string &mac)
     return n->dm_path;
 }
 
-std::shared_ptr<sAgent> db::add_node_gateway(const sMacAddr &mac)
+std::shared_ptr<Agent> db::add_node_gateway(const sMacAddr &mac)
 {
     auto agent = m_agents.add(mac);
 
@@ -269,7 +269,7 @@ std::shared_ptr<sAgent> db::add_node_gateway(const sMacAddr &mac)
     return agent;
 }
 
-std::shared_ptr<sAgent> db::add_node_ire(const sMacAddr &mac, const sMacAddr &parent_mac)
+std::shared_ptr<Agent> db::add_node_ire(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
     auto agent = m_agents.add(mac);
 
@@ -556,7 +556,7 @@ bool db::set_node_manufacturer(const std::string &mac, const std::string &manufa
     return true;
 }
 
-bool db::set_agent_manufacturer(prplmesh::controller::db::sAgent &agent,
+bool db::set_agent_manufacturer(prplmesh::controller::db::Agent &agent,
                                 const std::string &manufacturer)
 {
     agent.manufacturer = manufacturer;
@@ -1033,9 +1033,9 @@ std::set<std::string> db::get_active_hostaps()
     return ret;
 }
 
-std::vector<std::shared_ptr<sAgent>> db::get_all_connected_agents()
+std::vector<std::shared_ptr<Agent>> db::get_all_connected_agents()
 {
-    std::vector<std::shared_ptr<sAgent>> ret;
+    std::vector<std::shared_ptr<Agent>> ret;
 
     for (const auto &agent_map_element : m_agents) {
         auto &agent = agent_map_element.second;
@@ -1064,7 +1064,7 @@ std::set<std::string> db::get_nodes_from_hierarchy(int hierarchy, int type)
     return result;
 }
 
-std::shared_ptr<sAgent> db::get_gw()
+std::shared_ptr<Agent> db::get_gw()
 {
     for (const auto &agent : m_agents) {
         if (agent.second->is_gateway) {
@@ -2161,7 +2161,7 @@ std::unordered_map<int8_t, sVapElement> &db::get_hostap_vap_list(const sMacAddr 
     return n->hostap->vaps_info;
 }
 
-bool db::remove_vap(sAgent::sRadio &radio, int vap_id)
+bool db::remove_vap(Agent::sRadio &radio, int vap_id)
 {
     auto vap_list = get_hostap_vap_list(radio.radio_uid);
     auto vap      = vap_list.find(vap_id);
@@ -5007,7 +5007,7 @@ std::shared_ptr<node::radio> db::get_hostap(const sMacAddr &radio_uid)
     return n->hostap;
 }
 
-std::shared_ptr<sAgent::sRadio> db::get_radio_by_uid(const sMacAddr &radio_uid)
+std::shared_ptr<Agent::sRadio> db::get_radio_by_uid(const sMacAddr &radio_uid)
 {
     for (const auto &agent : m_agents) {
         auto radio = agent.second->radios.get(radio_uid);
@@ -6677,7 +6677,7 @@ uint64_t db::recalculate_attr_to_byte_units(
     return bytes;
 }
 
-bool db::dm_clear_cac_status_report(std::shared_ptr<sAgent::sRadio> radio)
+bool db::dm_clear_cac_status_report(std::shared_ptr<Agent::sRadio> radio)
 {
     if (radio->dm_path.empty()) {
         return true;
@@ -6693,7 +6693,7 @@ bool db::dm_clear_cac_status_report(std::shared_ptr<sAgent::sRadio> radio)
     return true;
 }
 
-bool db::dm_add_cac_status_available_channel(std::shared_ptr<sAgent::sRadio> radio,
+bool db::dm_add_cac_status_available_channel(std::shared_ptr<Agent::sRadio> radio,
                                              uint8_t operating_class, uint8_t channel)
 {
     if (radio->dm_path.empty()) {

@@ -167,7 +167,7 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                 LOG(WARNING) << "OperationalBSS on unknown radio " << radio_entry.radio_uid();
                 continue;
             }
-            // Update BSSes in the sAgent
+            // Update BSSes in the Agent
             auto radio = database.get_radio(src_mac, radio_entry.radio_uid());
             if (!radio) {
                 LOG(WARNING) << "OperationalBSS on unknown radio  " << radio_entry.radio_uid()
