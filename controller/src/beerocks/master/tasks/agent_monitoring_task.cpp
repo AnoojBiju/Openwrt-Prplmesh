@@ -522,10 +522,12 @@ void agent_monitoring_task::save_radio_statistics(const sMacAddr &src_mac,
         LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
         return;
     }
-    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
-        !radio_metrics_tlv) {
-        LOG(ERROR) << "Profile2 Radio Metrics tlv is not supplied for Agent " << src_mac
-                   << " with profile enum " << agent->profile;
+    if (!radio_metrics_tlv) {
+        if (agent->profile >
+            wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1) {
+            LOG(ERROR) << "Agent " << src_mac << " has profile " << agent->profile
+                       << ", it should have included Profile2 Radio Metrics!";
+        }
         return;
     }
 
