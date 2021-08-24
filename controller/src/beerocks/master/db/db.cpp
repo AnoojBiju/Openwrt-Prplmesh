@@ -266,6 +266,10 @@ std::shared_ptr<Agent> db::add_node_gateway(const sMacAddr &mac)
         LOG(ERROR) << "Failed to set collection intervals";
     }
 
+    if (!dm_set_agent_oui(agent)) {
+        LOG(ERROR) << "Failed to set Manufacturer OUI";
+    }
+
     return agent;
 }
 
@@ -293,6 +297,10 @@ std::shared_ptr<Agent> db::add_node_ire(const sMacAddr &mac, const sMacAddr &par
 
     if (!dm_update_collection_intervals(config.link_metrics_request_interval_seconds)) {
         LOG(ERROR) << "Failed to set collection intervals";
+    }
+
+    if (!dm_set_agent_oui(agent)) {
+        LOG(ERROR) << "Failed to set Manufacturer OUI";
     }
 
     return agent;
@@ -6726,4 +6734,32 @@ bool db::dm_update_collection_intervals(std::chrono::milliseconds interval)
     }
 
     return ret_val;
+}
+
+bool db::update_last_contact_time(const sMacAddr &agent_mac)
+{
+    auto ret_val = true;
+    auto agent   = m_agents.get(agent_mac);
+    if (!agent) {
+        LOG(WARNING) << "Agent with mac is not found in database mac=" << agent_mac;
+        return false;
+    }
+
+    agent->last_contact_time = std::chrono::system_clock::now();
+    ret_val = m_ambiorix_datamodel->set_current_time(agent->dm_path + ".MultiAPDevice",
+                                                     "LastContactTime");
+    return ret_val;
+}
+
+bool db::dm_set_agent_oui(std::shared_ptr<Agent> agent)
+{
+
+    std::string oui_string = tlvf::int_to_hex_string(agent->al_mac.oct[0], 2) +
+                             tlvf::int_to_hex_string(agent->al_mac.oct[1], 2) +
+                             tlvf::int_to_hex_string(agent->al_mac.oct[2], 2);
+
+    transform(oui_string.begin(), oui_string.end(), oui_string.begin(), ::toupper);
+
+    return m_ambiorix_datamodel->set(agent->dm_path + ".MultiAPDevice", "ManufacturerOUI",
+                                     oui_string);
 }

@@ -1731,6 +1731,26 @@ public:
      */
     bool dm_update_collection_intervals(std::chrono::milliseconds interval);
 
+    /**
+     * @brief Updates last contact time the agent.
+     *
+     * Each time Multi-AP control message is arrived, last contact time is updated.
+     *
+     * @param agent_mac agent AL-MAC address
+     * @return True on success, false otherwise.
+     */
+    bool update_last_contact_time(const sMacAddr &agent_mac);
+
+    /**
+     * @brief Sets agents (Device) datamodel ManufacturerOUI object.
+     *
+     * This OUI is retrieved from agents AL-MAC first three bytes.
+     *
+     * @param agent database object
+     * @return True on success, false otherwise.
+     */
+    bool dm_set_agent_oui(std::shared_ptr<Agent> agent);
+
     //
     // tasks
     //
