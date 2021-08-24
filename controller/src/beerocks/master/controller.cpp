@@ -408,6 +408,8 @@ bool Controller::handle_cmdu(int fd, uint32_t iface_index, const sMacAddr &dst_m
         LOG(DEBUG) << "received 1905.1 cmdu message";
         handle_cmdu_1905_1_message(src_mac, cmdu_rx);
         tasks.handle_ieee1905_1_msg(src_mac, cmdu_rx);
+
+        database.update_last_contact_time(src_mac);
     }
 
     return true;
