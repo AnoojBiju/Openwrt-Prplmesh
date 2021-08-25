@@ -5,24 +5,29 @@
 # See LICENSE file for more details.
 ###############################################################
 
-from enum import Enum
+# Standard imports:
 import json
 import os
-import shlex
 import platform
 import re
+import shlex
 import subprocess
 import time
-import yaml
-import pexpect
-
-from capi import UCCSocket
 from collections import namedtuple
-from connmap import MapDevice
-from opts import opts, debug, err
+from enum import Enum
 from subprocess import PIPE, Popen
 from typing import Dict, Any, List
+
+
+# Third-party imports:
+import pexpect
+import yaml
+
+# Local imports:
 import sniffer
+from capi import UCCSocket
+from connmap import MapDevice
+from opts import opts, debug, err
 
 MemoryStat = namedtuple('MemoryStat', 'total_memory free_memory buffers cached used_memory')
 CpuStat = namedtuple('CpuStat', 'cpu_usage cpu_avg')
