@@ -20,8 +20,8 @@
 #include <bcl/beerocks_eventloop_thread.h>
 #include <bcl/beerocks_timer_manager.h>
 #include <bcl/beerocks_ucc_server.h>
-#include <bcl/network/file_descriptor.h>
 #include <bcl/network/network_utils.h>
+#include <bcl/network/sockets_impl.h>
 #include <btl/broker_client.h>
 #include <btl/broker_client_factory.h>
 #include <bwl/sta_wlan_hal.h>
@@ -48,13 +48,9 @@ class ChannelSelectionTask;
 class BackhaulManager : public EventLoopThread {
 
 public:
-    BackhaulManager(
-        const config_file::sConfigSlave &config, const std::set<std::string> &slave_ap_ifaces_,
-        const std::set<std::string> &slave_sta_ifaces_, int stop_on_failure_attempts_,
-        std::unique_ptr<beerocks::btl::BrokerClientFactory> broker_client_factory,
-        std::unique_ptr<beerocks::CmduClientFactory> platform_manager_cmdu_client_factory,
-        std::unique_ptr<beerocks::UccServer> ucc_server,
-        std::unique_ptr<beerocks::CmduServer> cmdu_server);
+    BackhaulManager(const config_file::sConfigSlave &config,
+                    const std::set<std::string> &slave_ap_ifaces_,
+                    const std::set<std::string> &slave_sta_ifaces_, int stop_on_failure_attempts_);
     ~BackhaulManager();
 
     /**
@@ -537,6 +533,11 @@ private:
      * UCC server to exchange commands and replies with UCC certification application.
      */
     std::unique_ptr<beerocks::UccServer> m_ucc_server;
+
+    /**
+     * CMDU server address used by CmduServer `m_cmdu_server`.
+     */
+    std::shared_ptr<beerocks::net::UdsAddress> m_cmdu_server_uds_address;
 
     /**
      * CMDU server to exchange CMDU messages with clients through socket connections.
