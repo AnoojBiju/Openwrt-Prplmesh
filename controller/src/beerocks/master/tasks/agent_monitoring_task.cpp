@@ -502,12 +502,12 @@ void agent_monitoring_task::save_bss_statistics(ieee1905_1::CmduMessageRx &cmdu_
     for (auto ap_extended_metric_tlv : cmdu_rx.getClassList<wfa_map::tlvApExtendedMetrics>()) {
         auto bss_stats = std::make_shared<sBssStats>();
 
-        bss_stats->broadcast_bytes_sent     = ap_extended_metric_tlv->unicast_bytes_sent();
-        bss_stats->broadcast_bytes_received = ap_extended_metric_tlv->unicast_bytes_received();
+        bss_stats->unicast_bytes_sent       = ap_extended_metric_tlv->unicast_bytes_sent();
+        bss_stats->unicast_bytes_received   = ap_extended_metric_tlv->unicast_bytes_received();
         bss_stats->multicast_bytes_sent     = ap_extended_metric_tlv->multicast_bytes_sent();
         bss_stats->multicast_bytes_received = ap_extended_metric_tlv->multicast_bytes_received();
-        bss_stats->unicast_bytes_sent       = ap_extended_metric_tlv->broadcast_bytes_sent();
-        bss_stats->unicast_bytes_received   = ap_extended_metric_tlv->broadcast_bytes_received();
+        bss_stats->broadcast_bytes_sent     = ap_extended_metric_tlv->broadcast_bytes_sent();
+        bss_stats->broadcast_bytes_received = ap_extended_metric_tlv->broadcast_bytes_received();
         m_bss_stats[ap_extended_metric_tlv->bssid()] = bss_stats;
     }
 }
@@ -522,10 +522,12 @@ void agent_monitoring_task::save_radio_statistics(const sMacAddr &src_mac,
         LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
         return;
     }
-    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
-        !radio_metrics_tlv) {
-        LOG(ERROR) << "Profile2 Radio Metrics tlv is not supplied for Agent " << src_mac
-                   << " with profile enum " << agent->profile;
+    if (!radio_metrics_tlv) {
+        if (agent->profile >
+            wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1) {
+            LOG(ERROR) << "Agent " << src_mac << " has profile " << agent->profile
+                       << ", it should have included Profile2 Radio Metrics!";
+        }
         return;
     }
 
