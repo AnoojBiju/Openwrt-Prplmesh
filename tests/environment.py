@@ -249,6 +249,14 @@ class Radio:
         '''Get the current tx_power information.'''
         raise NotImplementedError("get_power_limit is not implemented in abstract class Radio")
 
+    def disable(self) -> int:
+        '''Disable the radio.'''
+        raise NotImplementedError("Not implemented in abstract class.")
+
+    def enable(self) -> int:
+        '''Enable the radio and wait for it to be ready.'''
+        raise NotImplementedError("Not implemented in abstract class.")
+
     def update_vap_list(self):
         ''' Initialize / update VAP list '''
         pass
@@ -730,6 +738,12 @@ class RadioDocker(Radio):
         power_info = yaml.safe_load(self.read_tmp_file("tx_power"))
         return power_info["tx_power"]
 
+    def disable(self):
+        self.send_bwl_event("EVENT AP-DISABLED {}".format(self.iface_name))
+
+    def enable(self):
+        self.send_bwl_event("EVENT AP-ENABLED {}".format(self.iface_name))
+
 
 class BssType(Enum):
     Disabled = (0, 0)
@@ -1100,6 +1114,12 @@ class RadioHostapd(Radio):
         output = self.agent.command("iw", "dev", f"{self.iface_name}", "info")
         match = re.search(regex, output)
         return int(match.group('power_limit'))
+
+    def disable(self):
+        self.agent.command("hostapd_cli", "-i", self.iface_name, "disable")
+
+    def enable(self):
+        self.agent.command("hostapd_cli", "-i", self.iface_name, "enable")
 
 
 class VirtualAPHostapd(VirtualAP):
