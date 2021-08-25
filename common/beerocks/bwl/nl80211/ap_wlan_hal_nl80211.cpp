@@ -1217,6 +1217,39 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
         event_queue_push(event);
     } break;
 
+    case Event::AP_Disabled: {
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sHOSTAP_DISABLED_NOTIFICATION));
+        auto msg      = reinterpret_cast<sHOSTAP_DISABLED_NOTIFICATION *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        memset(msg_buff.get(), 0, sizeof(sHOSTAP_DISABLED_NOTIFICATION));
+
+        std::string interface = parsed_obj[bwl::EVENT_KEYLESS_PARAM_IFACE];
+        if (interface.empty()) {
+            LOG(ERROR) << "Could not find interface name.";
+            return false;
+        }
+
+        auto iface_ids = beerocks::utils::get_ids_from_iface_string(interface);
+        msg->vap_id    = iface_ids.vap_id;
+
+        event_queue_push(Event::AP_Disabled, msg_buff); // send message to the AP manager
+
+    } break;
+    case Event::AP_Enabled: {
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sHOSTAP_ENABLED_NOTIFICATION));
+        auto msg      = reinterpret_cast<sHOSTAP_ENABLED_NOTIFICATION *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        memset(msg_buff.get(), 0, sizeof(sHOSTAP_ENABLED_NOTIFICATION));
+
+        std::string interface = parsed_obj[bwl::EVENT_KEYLESS_PARAM_IFACE];
+        auto iface_ids        = beerocks::utils::get_ids_from_iface_string(interface);
+        msg->vap_id           = iface_ids.vap_id;
+
+        event_queue_push(Event::AP_Enabled, msg_buff);
+    } break;
+
     // Gracefully ignore unhandled events
     // TODO: Probably should be changed to an error once WAV will stop
     //       sending empty or irrelevant events...

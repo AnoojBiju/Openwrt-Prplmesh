@@ -500,6 +500,50 @@ bool ap_wlan_hal_dummy::process_dummy_event(parsed_obj_map_t &parsed_obj)
         mismatch_psk->sta_mac = tlvf::mac_from_string(tmp_str);
         event_queue_push(Event::AP_Sta_Possible_Psk_Mismatch, mismatch_psk);
     } break;
+
+    case Event::AP_Disabled: {
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sHOSTAP_DISABLED_NOTIFICATION));
+        auto msg      = reinterpret_cast<sHOSTAP_DISABLED_NOTIFICATION *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        memset(msg_buff.get(), 0, sizeof(sHOSTAP_DISABLED_NOTIFICATION));
+
+        std::string interface = parsed_obj[DUMMY_EVENT_KEYLESS_PARAM_IFACE];
+        if (interface.empty()) {
+            LOG(ERROR) << "Could not find interface name.";
+            return false;
+        }
+
+        m_radio_info.radio_state = eRadioState::DISABLED;
+
+        auto iface_ids = beerocks::utils::get_ids_from_iface_string(interface);
+        msg->vap_id    = iface_ids.vap_id;
+
+        event_queue_push(Event::AP_Disabled, msg_buff); // send message to the AP manager
+
+    } break;
+
+    case Event::AP_Enabled: {
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sHOSTAP_ENABLED_NOTIFICATION));
+        auto msg      = reinterpret_cast<sHOSTAP_ENABLED_NOTIFICATION *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        memset(msg_buff.get(), 0, sizeof(sHOSTAP_ENABLED_NOTIFICATION));
+
+        std::string interface = parsed_obj[DUMMY_EVENT_KEYLESS_PARAM_IFACE];
+        if (interface.empty()) {
+            LOG(ERROR) << "Could not find interface name.";
+            return false;
+        }
+
+        m_radio_info.radio_state = eRadioState::ENABLED;
+
+        auto iface_ids = beerocks::utils::get_ids_from_iface_string(interface);
+        msg->vap_id    = iface_ids.vap_id;
+
+        event_queue_push(Event::AP_Enabled, msg_buff);
+    } break;
+
     // Gracefully ignore unhandled events
     default: {
         LOG(DEBUG) << "Unhandled event received: " << opcode;
