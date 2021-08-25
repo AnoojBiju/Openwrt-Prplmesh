@@ -30,6 +30,7 @@ public:
     virtual void set_select_timeout(unsigned msec);
 
     virtual bool init() override;
+    virtual bool thread_init() override { return true; }
     virtual bool work() override;
 
 protected:

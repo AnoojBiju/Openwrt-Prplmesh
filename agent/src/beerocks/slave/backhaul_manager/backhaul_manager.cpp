@@ -201,7 +201,7 @@ BackhaulManager::BackhaulManager(const config_file::sConfigSlave &config,
 
 BackhaulManager::~BackhaulManager() { m_cmdu_server->clear_handlers(); }
 
-bool BackhaulManager::init()
+bool BackhaulManager::thread_init()
 {
     // In case of error in one of the steps of this method, we have to undo all the previous steps
     // (like when rolling back a database transaction, where either all steps get executed or none

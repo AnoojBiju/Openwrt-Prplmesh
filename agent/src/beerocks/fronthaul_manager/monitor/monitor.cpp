@@ -121,7 +121,7 @@ bool Monitor::send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx)
     return m_slave_client->send_cmdu(cmdu_tx);
 }
 
-bool Monitor::init()
+bool Monitor::thread_init()
 {
     if (m_slave_client) {
         LOG(ERROR) << "Monitor is already started";

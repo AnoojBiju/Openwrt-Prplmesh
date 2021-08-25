@@ -32,7 +32,7 @@ public:
     }
 
 protected:
-    virtual bool init() override;
+    virtual bool thread_init() override;
     virtual bool work() override;
     virtual void before_stop() override;
 
