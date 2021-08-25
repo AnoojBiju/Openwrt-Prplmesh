@@ -302,6 +302,9 @@ private:
     std::set<std::string> pending_slave_ifaces;
     std::set<std::string> pending_slave_sta_ifaces;
 
+    const std::string m_beerocks_temp_path;
+    const uint16_t m_ucc_listener_port;
+
 public:
     std::list<std::shared_ptr<sRadioInfo>> slaves_sockets;
     int front_iface_name_to_socket(const std::string &iface_name);
