@@ -15,7 +15,7 @@ import time
 
 class NbapiCapabilities(PrplMeshBaseTest):
     '''
-       Test for NBAPI Controller.Network.Device.Radio.Capabilities object.
+       Test for NBAPI Device.WiFi.DataElements.Network.Device.Radio.Capabilities object.
        Object describes the Wi-Fi capabilities of the radio.
     '''
 

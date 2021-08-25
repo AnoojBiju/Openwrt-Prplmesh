@@ -325,12 +325,13 @@ bool db::add_node_wired_backhaul(const sMacAddr &mac, const sMacAddr &parent_mac
 
 std::string db::dm_add_radio_element(const std::string &radio_mac, const std::string &device_mac)
 {
-    std::string path_to_obj = "Controller.Network.Device.";
+    std::string path_to_obj = "Device.WiFi.DataElements.Network.Device.";
     uint32_t index =
         m_ambiorix_datamodel->get_instance_index(path_to_obj + "[ID == '%s'].", device_mac);
 
     if (!index) {
-        LOG(ERROR) << "Failed to get Controller.Network.Device index for mac: " << device_mac;
+        LOG(ERROR) << "Failed to get Device.WiFi.DataElements.Network.Device index for mac: "
+                   << device_mac;
         return {};
     }
 
@@ -883,7 +884,7 @@ bool db::set_hostap_active(const sMacAddr &mac, bool active)
     n->hostap->active = active;
 
     // Enabled variable is a part of Radio data element and
-    // need to get path like Controller.Device.{i}.Radio.{i}. for setting Enabled variable
+    // need to get path like Device.WiFi.DataElements.Device.{i}.Radio.{i}. for setting Enabled variable
     auto radio_enable_path = radio->dm_path;
 
     if (radio_enable_path.empty()) {
@@ -1683,7 +1684,7 @@ bool db::set_station_capabilities(const std::string &client_mac,
     }
 
     // Prepare path to the STA
-    // Example: Controller.Network.Device.1.Radio.1.BSS.1.STA.1
+    // Example: Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.1.STA.1
     std::string path_to_sta = n->dm_path;
 
     if (path_to_sta.empty()) {
@@ -1709,7 +1710,7 @@ bool db::set_station_capabilities(const std::string &client_mac,
     // TODO: Fill up HE Capabilities for STA, PPM-567
 
     std::string path_to_eventdata =
-        "Controller.Notification.AssociationEvent.AssociationEventData.";
+        "Device.WiFi.DataElements.Notification.AssociationEvent.AssociationEventData.";
     int index = m_assoc_indx[client_mac].back();
 
     if (index) {
@@ -1727,18 +1728,18 @@ bool db::set_station_capabilities(const std::string &client_mac,
     m_ambiorix_datamodel->remove_optional_subobject(path_to_eventdata, "VHTCapabilities");
     // TODO: Remove HECapabilities before setting new one.
 
-    // Fill up HT Capabilities for Controller.Notification.AssociationEvent.AssociationEventData.1
+    // Fill up HT Capabilities for Device.WiFi.DataElements.Notification.AssociationEvent.AssociationEventData.1
     if (sta_cap.ht_bw != 0xFF && !dm_set_sta_ht_capabilities(path_to_eventdata, sta_cap)) {
         LOG(ERROR) << "Failed to set station HT Capabilities into " << path_to_eventdata;
         return false;
     }
-    // Fill up VHT Capabilities for Controller.Notification.AssociationEvent.AssociationEventData.1
+    // Fill up VHT Capabilities for Device.WiFi.DataElements.Notification.AssociationEvent.AssociationEventData.1
     if (sta_cap.vht_bw != 0xFF && !dm_set_sta_vht_capabilities(path_to_eventdata, sta_cap)) {
         LOG(ERROR) << "Failed to set station VHT Capabilities into " << path_to_eventdata;
         return false;
     }
 
-    // TODO: Fill up HE Capabilities for Controller.Notification.AssociationEvent, PPM-567
+    // TODO: Fill up HE Capabilities for Device.WiFi.DataElements.Notification.AssociationEvent, PPM-567
 
     return true;
 }
@@ -1958,7 +1959,7 @@ bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t
             supported_channels.erase(channel);
     }
 
-    // Set values for Controller.Network.Device.Radio.Capabilities.OperatingClasses
+    // Set values for Device.WiFi.DataElements.Network.Device.Radio.Capabilities.OperatingClasses
     dm_add_ap_operating_classes(tlvf::mac_to_string(radio_mac), tx_power, operating_class,
                                 non_operable_channels);
 
@@ -2174,7 +2175,7 @@ bool db::remove_vap(sAgent::sRadio &radio, int vap_id)
     if (!radio_path.empty()) {
         /*
             Prepare path to the BSS instance.
-            Example: Controller.Network.Device.1.Radio.1.BSS.
+            Example: Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.
         */
         auto bss_path = radio_path + ".BSS.";
 
@@ -3096,7 +3097,7 @@ static void dm_add_neighbors(std::shared_ptr<beerocks::nbapi::Ambiorix> m_ambior
                              const std::vector<wfa_map::cNeighbors> &neighbors)
 {
     for (auto neighbor : neighbors) {
-        // Controller.Network.Device.1.Radio.2.ScanResult.3.OpClassScan.4.ChannelScan.5.NeighborBSS
+        // Device.WiFi.DataElements.Network.Device.1.Radio.2.ScanResult.3.OpClassScan.4.ChannelScan.5.NeighborBSS
         auto neighbor_path = m_ambiorix_datamodel->add_instance(channel_path + ".NeighborBSS");
 
         if (neighbor_path.empty()) {
@@ -3118,7 +3119,7 @@ dm_add_channel_scan(std::shared_ptr<beerocks::nbapi::Ambiorix> m_ambiorix_datamo
                     const std::string &class_path, const uint8_t &channel, const uint8_t noise,
                     const uint8_t utilization, const std::string &ISO_8601_timestamp)
 {
-    // Controller.Network.Device.1.Radio.2.ScanResult.3.OpClassScan.4.ChannelScan.5
+    // Device.WiFi.DataElements.Network.Device.1.Radio.2.ScanResult.3.OpClassScan.4.ChannelScan.5
     std::string channel_path;
     uint32_t channel_index = m_ambiorix_datamodel->get_instance_index(
         class_path + ".ChannelScan.[Channel == '%s'].", std::to_string(channel));
@@ -3143,7 +3144,7 @@ static std::string
 dm_add_op_class_scan(std::shared_ptr<beerocks::nbapi::Ambiorix> m_ambiorix_datamodel,
                      const std::string &scan_result_path, const uint8_t &operating_class)
 {
-    // Controller.Network.Device.1.Radio.2.ScanResult.3.OpClassScan.4
+    // Device.WiFi.DataElements.Network.Device.1.Radio.2.ScanResult.3.OpClassScan.4
     std::string class_path;
     uint32_t class_index = m_ambiorix_datamodel->get_instance_index(
         scan_result_path + ".OpClassScan.[OperatingClass == '%s'].",
@@ -3178,7 +3179,7 @@ bool db::dm_add_scan_result(const sMacAddr &ruid, const uint8_t &operating_class
         return true;
     }
 
-    // Controller.Network.Device.1.Radio.2.ScanResult.3
+    // Device.WiFi.DataElements.Network.Device.1.Radio.2.ScanResult.3
     std::string scan_result_path;
     uint32_t scan_result_index = m_ambiorix_datamodel->get_instance_index(
         radio_path + ".ScanResult.[TimeStamp == '%s'].", ISO_8601_timestamp);
@@ -4140,7 +4141,7 @@ bool db::notify_disconnection(const std::string &client_mac)
     }
 
     std::string path_to_disassoc_event_data =
-        "Controller.Notification.DisassociationEvent.DisassociationEventData";
+        "Device.WiFi.DataElements.Notification.DisassociationEvent.DisassociationEventData";
 
     if (!dm_check_objects_limit(m_disassoc_events, MAX_EVENT_HISTORY_SIZE)) {
         return false;
@@ -4260,7 +4261,7 @@ bool db::set_vap_stats_info(const sMacAddr &bssid, uint64_t uc_tx_bytes, uint64_
 {
     /*
         Prepare path with correct BSS instance.
-        Example: Controller.Network.Device.1.Radio.1.BSS.1
+        Example: Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.1
     */
     auto bss_path = dm_get_path_to_bss(bssid);
     if (bss_path.empty()) {
@@ -4899,7 +4900,8 @@ void db::disable_periodic_link_metrics_requests()
     beerocks::bpl::cfg_set_link_metrics_request_interval(
         config.link_metrics_request_interval_seconds);
 
-    m_ambiorix_datamodel->set("Controller.Configuration", "LinkMetricsRequestInterval",
+    m_ambiorix_datamodel->set("Device.WiFi.DataElements.Configuration",
+                              "LinkMetricsRequestInterval",
                               config.link_metrics_request_interval_seconds.count());
 }
 
@@ -5683,10 +5685,11 @@ std::string db::dm_add_steer_event()
         return {};
     }
 
-    std::string event_path = m_ambiorix_datamodel->add_instance("Controller.SteerEvent");
+    std::string event_path =
+        m_ambiorix_datamodel->add_instance("Device.WiFi.DataElements.SteerEvent");
 
     if (event_path.empty() && NBAPI_ON) {
-        LOG(ERROR) << "Failed to add instance Controller.SteerEvent";
+        LOG(ERROR) << "Failed to add instance Device.WiFi.DataElements.SteerEvent";
         return {};
     }
     m_steer_events.push(event_path);
@@ -5697,7 +5700,7 @@ bool db::dm_add_failed_connection_event(const sMacAddr &sta_mac, const uint16_t 
                                         const uint16_t status_code)
 {
     std::string event_path =
-        "Controller.Notification.FailedConnectionEvent.FailedConnectionEventData";
+        "Device.WiFi.DataElements.Notification.FailedConnectionEvent.FailedConnectionEventData";
 
     event_path = m_ambiorix_datamodel->add_instance(event_path);
 
@@ -5717,7 +5720,7 @@ bool db::dm_add_failed_connection_event(const sMacAddr &sta_mac, const uint16_t 
 std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &client_mac)
 {
     std::string path_association_event =
-        "Controller.Notification.AssociationEvent.AssociationEventData";
+        "Device.WiFi.DataElements.Notification.AssociationEvent.AssociationEventData";
 
     if (!dm_check_objects_limit(m_assoc_events, MAX_EVENT_HISTORY_SIZE)) {
         return {};
@@ -5763,14 +5766,15 @@ std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &
 
 std::string db::dm_add_device_element(const sMacAddr &mac)
 {
-    auto index = m_ambiorix_datamodel->get_instance_index("Controller.Network.Device.[ID == '%s'].",
-                                                          tlvf::mac_to_string(mac));
+    auto index = m_ambiorix_datamodel->get_instance_index(
+        "Device.WiFi.DataElements.Network.Device.[ID == '%s'].", tlvf::mac_to_string(mac));
     if (index) {
         LOG(WARNING) << "Device with ID: " << mac << " exists in the data model!";
         return {};
     }
 
-    auto device_path = m_ambiorix_datamodel->add_instance("Controller.Network.Device");
+    auto device_path =
+        m_ambiorix_datamodel->add_instance("Device.WiFi.DataElements.Network.Device");
     if (device_path.empty()) {
         LOG(ERROR) << "Failed to add instance " << device_path << ". Device mac: " << mac;
         return {};
@@ -5799,7 +5803,7 @@ bool db::add_current_op_class(const sMacAddr &radio_mac, uint8_t op_class, uint8
     }
 
     // Prepare path to the CurrentOperatingClasses instance
-    // Data model path example: Controller.Network.Device.1.Radio.1.CurrentOperatingClasses
+    // Data model path example: Device.WiFi.DataElements.Network.Device.1.Radio.1.CurrentOperatingClasses
     auto op_class_path = radio_path + ".CurrentOperatingClasses";
 
     auto op_class_path_instance = m_ambiorix_datamodel->add_instance(op_class_path);
@@ -5811,21 +5815,21 @@ bool db::add_current_op_class(const sMacAddr &radio_mac, uint8_t op_class, uint8
     m_ambiorix_datamodel->set_current_time(op_class_path_instance);
 
     //Set Operating class
-    //Data model path: Controller.Network.Device.1.Radio.1.CurrentOperatingClasses.Class
+    //Data model path: Device.WiFi.DataElements.Network.Device.1.Radio.1.CurrentOperatingClasses.Class
     if (!m_ambiorix_datamodel->set(op_class_path_instance, "Class", op_class)) {
         LOG(ERROR) << "Failed to set " << op_class_path_instance << ".Class: " << op_class;
         return false;
     }
 
     //Set Operating channel
-    //Data model path example: Controller.Network.Device.1.Radio.1.CurrentOperatingClasses.Channel
+    //Data model path example: Device.WiFi.DataElements.Network.Device.1.Radio.1.CurrentOperatingClasses.Channel
     if (!m_ambiorix_datamodel->set(op_class_path_instance, "Channel", op_channel)) {
         LOG(ERROR) << "Failed to set " << op_class_path_instance << ".Channel: " << op_channel;
         return false;
     }
 
     //Set TX power
-    //Data model path example: Controller.Network.Device.1.Radio.1.CurrentOperatingClasses.TxPower
+    //Data model path example: Device.WiFi.DataElements.Network.Device.1.Radio.1.CurrentOperatingClasses.TxPower
     if (!m_ambiorix_datamodel->set(op_class_path_instance, "TxPower", tx_power)) {
         LOG(ERROR) << "Failed to set " << op_class_path_instance << ".TxPower: " << tx_power;
         return false;
@@ -5848,7 +5852,7 @@ bool db::remove_current_op_classes(const sMacAddr &radio_mac)
     }
 
     // Prepare path to the CurrentOperatingClasses instance
-    // Data model path example: Controller.Network.Device.1.Radio.1.CurrentOperatingClasses
+    // Data model path example: Device.WiFi.DataElements.Network.Device.1.Radio.1.CurrentOperatingClasses
     auto op_class_path = radio_path + ".CurrentOperatingClasses";
 
     if (!m_ambiorix_datamodel->remove_all_instances(op_class_path)) {
@@ -5910,7 +5914,7 @@ bool db::set_radio_utilization(const sMacAddr &bssid, uint8_t utilization)
         return true;
     }
 
-    // Path to the object example: Controller.Network.Device.1.Radio.1.Utilization
+    // Path to the object example: Device.WiFi.DataElements.Network.Device.1.Radio.1.Utilization
     if (!m_ambiorix_datamodel->set(radio_path, "Utilization", utilization)) {
         LOG(ERROR) << "Failed to set " << radio_path << ".Utilization: " << utilization;
         return false;
@@ -5934,7 +5938,7 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
 
     /*
         Prepare path to the BSS instance.
-        Example: Controller.Network.Device.1.Radio.1.BSS.
+        Example: Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.
     */
     auto bss_path  = radio_path + ".BSS";
     auto bss_index = m_ambiorix_datamodel->get_instance_index(bss_path + ".[BSSID == '%s'].",
@@ -5954,7 +5958,7 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
 
     /*
         Set value for BSSID variable
-        Example: Controller.Network.Device.1.Radio.1.BSS.1.BSSID
+        Example: Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.1.BSSID
     */
     if (!m_ambiorix_datamodel->set(bss_instance, "BSSID", tlvf::mac_to_string(bssid))) {
         LOG(ERROR) << "Failed to set " << bss_instance << "BSSID: " << bssid;
@@ -5963,7 +5967,7 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
 
     /*
         Set value for SSID variable
-        Example: Controller.Network.Device.1.Radio.1.BSS.1.SSID
+        Example: Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.1.SSID
     */
     if (!m_ambiorix_datamodel->set(bss_instance, "SSID", ssid)) {
         LOG(ERROR) << "Failed to set " << bss_instance << "SSID: " << ssid;
@@ -5972,7 +5976,7 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
 
     /*
         Set value for Enabled variable
-        Example: Controller.Network.Device.1.Radio.1.BSS.1.Enabled
+        Example: Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.1.Enabled
     */
     if (!m_ambiorix_datamodel->set(bss_instance, "Enabled", !ssid.empty())) {
         LOG(ERROR) << "Failed to set " << bss_instance << "Enabled: " << !ssid.empty();
@@ -5983,7 +5987,7 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
         Set value for LastChange variable - it is creation time, when someone will
         try to get data from this parameter action method will calculate time in seconds
         from creation moment.
-        Example: Controller.Network.Device.1.Radio.1.BSS.1.LastChange
+        Example: Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.1.LastChange
     */
     uint64_t creation_time = time(NULL);
     if (!m_ambiorix_datamodel->set(bss_instance, "LastChange", creation_time)) {
@@ -6009,7 +6013,7 @@ bool db::set_radio_metrics(const sMacAddr &radio_mac, uint8_t noise, uint8_t tra
         return true;
     }
 
-    // Data model path example: Controller.Network.Device.1.Radio.1.Noise
+    // Data model path example: Device.WiFi.DataElements.Network.Device.1.Radio.1.Noise
     if (!m_ambiorix_datamodel->set(radio_path, "Noise", noise)) {
         LOG(ERROR) << "Failed to set " << radio_path << ".Noise " << noise;
         return false;
@@ -6148,7 +6152,7 @@ bool db::dm_add_interface_element(const sMacAddr &device_mac, const sMacAddr &in
             return true;
         }
 
-        // Prepare path to the Interface object, like Controller.Network.Device.{i}.Interface
+        // Prepare path to the Interface object, like Device.WiFi.DataElements.Network.Device.{i}.Interface
         auto interface_path = device->dm_path + ".Interface";
 
         auto interface_instance = m_ambiorix_datamodel->add_instance(interface_path);
@@ -6161,24 +6165,24 @@ bool db::dm_add_interface_element(const sMacAddr &device_mac, const sMacAddr &in
         iface->m_dm_path = interface_instance;
     }
 
-    // Prepare path to the Interface object Status, like Controller.Network.Device.{i}.Interface.{i}.Status
+    // Prepare path to the Interface object Status, like Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Status
     if (!m_ambiorix_datamodel->set(iface->m_dm_path, "Status", status)) {
         LOG(ERROR) << "Failed to set " << iface->m_dm_path << ".Status: " << status;
         return false;
     }
-    // Prepare path to the Interface object MACAddress, like Controller.Network.Device.{i}.Interface.{i}.MACAddress
+    // Prepare path to the Interface object MACAddress, like Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.MACAddress
     if (!m_ambiorix_datamodel->set(iface->m_dm_path, "MACAddress",
                                    tlvf::mac_to_string(interface_mac))) {
         LOG(ERROR) << "Failed to set " << iface->m_dm_path << ".MACAddress: " << interface_mac;
         return false;
     }
-    // Prepare path to the Interface object Name, like Controller.Network.Device.{i}.Interface.{i}.Name
+    // Prepare path to the Interface object Name, like Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Name
     if (!m_ambiorix_datamodel->set(iface->m_dm_path, "Name",
                                    (name.empty() ? tlvf::mac_to_string(interface_mac) : name))) {
         LOG(ERROR) << "Failed to set " << iface->m_dm_path << ".Name: " << name;
         return false;
     }
-    // Prepare path to the Interface object MediaType, like Controller.Network.Device.{i}.Interface.{i}.MediaType
+    // Prepare path to the Interface object MediaType, like Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.MediaType
     if (!m_ambiorix_datamodel->set(iface->m_dm_path, "MediaType", media_type)) {
         LOG(ERROR) << "Failed to set " << iface->m_dm_path << ".MediaType: " << media_type;
         return false;
@@ -6264,16 +6268,16 @@ bool db::dm_update_interface_tx_stats(const sMacAddr &device_mac, const sMacAddr
         return true;
     }
 
-    // Prepare path to the Interface object Stats, like Controller.Network.Device.{i}.Interface.{i}.Stats
+    // Prepare path to the Interface object Stats, like Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Stats
     auto stats_path = iface->m_dm_path + ".Stats";
 
-    // Set value for the path as Controller.Network.Device.{i}.Interface.{i}.Stats.PacketsSent
+    // Set value for the path as Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Stats.PacketsSent
     if (!m_ambiorix_datamodel->set(stats_path, "PacketsSent", packets_sent)) {
         LOG(ERROR) << "Failed to set " << stats_path << ".PacketsSent: " << packets_sent;
         return false;
     }
 
-    // Set value for the path as Controller.Network.Device.{i}.Interface.{i}.Stats.ErrorsSent
+    // Set value for the path as Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Stats.ErrorsSent
     if (!m_ambiorix_datamodel->set(stats_path, "ErrorsSent", errors_sent)) {
         LOG(ERROR) << "Failed to set " << stats_path << ".ErrorsSent: " << errors_sent;
         return false;
@@ -6301,16 +6305,16 @@ bool db::dm_update_interface_rx_stats(const sMacAddr &device_mac, const sMacAddr
         return true;
     }
 
-    // Prepare path to the Interface object Stats, like Controller.Network.Device.{i}.Interface.{i}.Stats
+    // Prepare path to the Interface object Stats, like Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Stats
     auto stats_path = iface->m_dm_path + ".Stats";
 
-    // Set value for the path as Controller.Network.Device.{i}.Interface.{i}.Stats.PacketsReceived
+    // Set value for the path as Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Stats.PacketsReceived
     if (!m_ambiorix_datamodel->set(stats_path, "PacketsReceived", packets_received)) {
         LOG(ERROR) << "Failed to set " << stats_path << ".PacketsReceived: " << packets_received;
         return false;
     }
 
-    // Set value for the path as Controller.Network.Device.{i}.Interface.{i}.Stats.ErrorsReceived
+    // Set value for the path as Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Stats.ErrorsReceived
     if (!m_ambiorix_datamodel->set(stats_path, "ErrorsReceived", errors_received)) {
         LOG(ERROR) << "Failed to set " << stats_path << ".ErrorsReceived: " << errors_received;
         return false;
@@ -6366,7 +6370,7 @@ bool db::dm_add_interface_neighbor(
             return true;
         }
 
-        // Set value for the path as Controller.Network.Device.{i}.Interface.{i}.Neighbor.{i}
+        // Set value for the path as Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Neighbor.{i}
         auto neighbor_path = interface->m_dm_path + ".Neighbor";
 
         auto neighbor_instance = m_ambiorix_datamodel->add_instance(neighbor_path);
@@ -6378,13 +6382,13 @@ bool db::dm_add_interface_neighbor(
         neighbor->dm_path = neighbor_instance;
     }
 
-    // Set value for the path as Controller.Network.Device.{i}.Interface.{i}.Neighbor.{i}.ID
+    // Set value for the path as Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Neighbor.{i}.ID
     if (!m_ambiorix_datamodel->set(neighbor->dm_path, "ID", tlvf::mac_to_string(neighbor->mac))) {
         LOG(ERROR) << "Failed to set " << neighbor->dm_path << ".ID: " << neighbor->mac;
         return false;
     }
 
-    // Set value for the path as Controller.Network.Device.{i}.Interface.{i}.Neighbor.{i}.IsIEEE1905
+    // Set value for the path as Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Neighbor.{i}.IsIEEE1905
     if (!m_ambiorix_datamodel->set(neighbor->dm_path, "IsIEEE1905", neighbor->ieee1905_flag)) {
         LOG(ERROR) << "Failed to set " << neighbor->dm_path
                    << ".IsIEEE1905: " << neighbor->ieee1905_flag;
@@ -6426,7 +6430,7 @@ bool db::dm_set_sta_extended_link_metrics(
     }
 
     // Path example to the variable in Data Model
-    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.LastDataDownlinkRate
+    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.LastDataDownlinkRate
     if (!m_ambiorix_datamodel->set(path_to_sta, "LastDataDownlinkRate",
                                    metrics.last_data_down_link_rate)) {
         LOG(ERROR) << "Failed to set " << path_to_sta
@@ -6434,7 +6438,7 @@ bool db::dm_set_sta_extended_link_metrics(
         return false;
     }
 
-    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.LastDataUplinkRate
+    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.LastDataUplinkRate
     if (!m_ambiorix_datamodel->set(path_to_sta, "LastDataUplinkRate",
                                    metrics.last_data_up_link_rate)) {
         LOG(ERROR) << "Failed to set " << path_to_sta
@@ -6442,7 +6446,7 @@ bool db::dm_set_sta_extended_link_metrics(
         return false;
     }
 
-    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.UtilizationReceive
+    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.UtilizationReceive
     if (!m_ambiorix_datamodel->set(path_to_sta, "UtilizationReceive",
                                    metrics.utilization_receive)) {
         LOG(ERROR) << "Failed to set " << path_to_sta
@@ -6450,7 +6454,7 @@ bool db::dm_set_sta_extended_link_metrics(
         return false;
     }
 
-    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.UtilizationTransmit
+    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.UtilizationTransmit
     if (!m_ambiorix_datamodel->set(path_to_sta, "UtilizationTransmit",
                                    metrics.utilization_transmit)) {
         LOG(ERROR) << "Failed to set " << path_to_sta
@@ -6476,47 +6480,47 @@ bool db::dm_set_sta_traffic_stats(const sMacAddr &sta_mac, sAssociatedStaTraffic
     }
 
     // Path example to the variable in Data Model
-    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.BytesSent
+    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.BytesSent
     if (!m_ambiorix_datamodel->set(path_to_sta, "BytesSent", stats.m_byte_sent)) {
         LOG(ERROR) << "Failed to set " << path_to_sta << ".BytesSent: " << stats.m_byte_sent;
         return false;
     }
 
-    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.BytesReceived
+    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.BytesReceived
     if (!m_ambiorix_datamodel->set(path_to_sta, "BytesReceived", stats.m_byte_received)) {
         LOG(ERROR) << "Failed to set " << path_to_sta
                    << ".BytesReceived: " << stats.m_byte_received;
         return false;
     }
 
-    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.PacketsSent
+    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.PacketsSent
     if (!m_ambiorix_datamodel->set(path_to_sta, "PacketsSent", stats.m_packets_sent)) {
         LOG(ERROR) << "Failed to set " << path_to_sta << ".PacketsSent: " << stats.m_packets_sent;
         return false;
     }
 
-    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.PacketsReceived
+    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.PacketsReceived
     if (!m_ambiorix_datamodel->set(path_to_sta, "PacketsReceived", stats.m_packets_received)) {
         LOG(ERROR) << "Failed to set " << path_to_sta
                    << ".PacketsReceived: " << stats.m_packets_received;
         return false;
     }
 
-    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.4.RetransCount
+    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.4.RetransCount
     if (!m_ambiorix_datamodel->set(path_to_sta, "RetransCount", stats.m_retransmission_count)) {
         LOG(ERROR) << "Failed to set " << path_to_sta
                    << ".RetransCount: " << stats.m_retransmission_count;
         return false;
     }
 
-    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.ErrorsSent
+    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.ErrorsSent
     if (!m_ambiorix_datamodel->set(path_to_sta, "ErrorsSent", stats.m_tx_packets_error)) {
         LOG(ERROR) << "Failed to set " << path_to_sta
                    << ".ErrorsSent: " << stats.m_tx_packets_error;
         return false;
     }
 
-    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.ErrorsReceived
+    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.ErrorsReceived
     if (!m_ambiorix_datamodel->set(path_to_sta, "ErrorsReceived", stats.m_rx_packets_error)) {
         LOG(ERROR) << "Failed to set " << path_to_sta
                    << ".ErrorsReceived: " << stats.m_rx_packets_error;
@@ -6584,13 +6588,13 @@ bool db::set_sta_dhcp_v4_lease(const sMacAddr &sta_mac, const std::string &host_
     }
 
     // Path example to the variable in Data Model
-    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.Hostname
+    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.Hostname
     if (!m_ambiorix_datamodel->set(path_to_sta, "Hostname", host_name)) {
         LOG(ERROR) << "Failed to set " << path_to_sta << ".Hostname: " << host_name;
         return false;
     }
 
-    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.IPV4Address
+    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.IPV4Address
     if (!m_ambiorix_datamodel->set(path_to_sta, "IPV4Address", ipv4_address)) {
         LOG(ERROR) << "Failed to set " << path_to_sta << ".IPV4Address: " << ipv4_address;
         return false;
@@ -6621,13 +6625,13 @@ bool db::set_sta_dhcp_v6_lease(const sMacAddr &sta_mac, const std::string &host_
     }
 
     // Path example to the variable in Data Model
-    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.Hostname
+    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.Hostname
     if (!m_ambiorix_datamodel->set(path_to_sta, "Hostname", host_name)) {
         LOG(ERROR) << "Failed to set " << path_to_sta << ".Hostname: " << host_name;
         return false;
     }
 
-    // Controller.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.IPV6Address
+    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.IPV6Address
     if (!m_ambiorix_datamodel->set(path_to_sta, "IPV6Address", ipv6_address)) {
         LOG(ERROR) << "Failed to set " << path_to_sta << ".IPV6Address: " << ipv6_address;
         return false;

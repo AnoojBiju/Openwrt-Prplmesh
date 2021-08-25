@@ -28,7 +28,7 @@ public:
     /**
      * @brief Set the value to the object variable.
      *
-     * @param relative_path Path to the object in datamodel (example: "Controller.Network").
+     * @param relative_path Path to the object in datamodel (example: "Device.WiFi.DataElements.Network").
      * @param parameter The parameter to be set (example: "ID").
      * @param value Value which need to set.
      * @return True on success and false otherwise.
@@ -50,7 +50,7 @@ public:
 
     /* @brief Add instance to the data model object with type list
      *
-     * @param relative_path Path to the object with type list in datamodel (example: "Controller.Network.Device").
+     * @param relative_path Path to the object with type list in datamodel (example: "Device.WiFi.DataElements.Network.Device").
      * @return Path to recently added object on success, empty string otherwise
      */
     virtual std::string add_instance(const std::string &relative_path) = 0;
@@ -58,7 +58,7 @@ public:
     /**
      * @brief Remove instance from the data model object with type list
      *
-     * @param relative_path Path to the object with type list in datamodel (example: "Controller.Network.Device").
+     * @param relative_path Path to the object with type list in datamodel (example: "Device.WiFi.DataElements.Network.Device").
      * @param index Number of instance which should be remove.
      * @return True on success and false otherwise.
      */
@@ -84,7 +84,7 @@ public:
     /**
      * @brief Remove all instances from the data model object which name starts with given relative path
      *
-     * @param relative_path Path to the object with type list in datamodel (example: "Controller.Network.Device").
+     * @param relative_path Path to the object with type list in datamodel (example: "Device.WiFi.DataElements.Network.Device").
      * @return True on success and false otherwise.
      */
     virtual bool remove_all_instances(const std::string &relative_path) = 0;
@@ -95,7 +95,7 @@ public:
      * The subobject must be defined as a mib in the odl file. The name of the mib must be the same as
      * the name of the subobject, and it must contain only a single object definition.
      *
-     * @param path_to_obj path to the object in datamodel (example: "Controller.Network").
+     * @param path_to_obj path to the object in datamodel (example: "Device.WiFi.DataElements.Network").
      * @param subobject_name name of optional subobject to instantiate (example: "HTCapabilities").
      * @return true if subobject successfully added, false otherwise
      */
@@ -108,7 +108,7 @@ public:
      * The subobject must be defined as a mib in the odl file. The name of the mib must be the same as
      * the name of the subobject, and it must contain only a single object definition.
      *
-     * @param path_to_obj path to the object in datamodel (example: "Controller.Network").
+     * @param path_to_obj path to the object in datamodel (example: "Device.WiFi.DataElements.Network").
      * @param subobject_name name of optional subobject to be removed (example: "HTCapabilities").
      * @return true if subobject successfully removed, false otherwise
      */
@@ -116,7 +116,7 @@ public:
                                            const std::string &subobject_name) = 0;
     /**
      * @brief Set current data and time in RFC 3339 format.
-     * 
+     *
      * @param path_to_object Path to NBAPI object which has parameter TimeStamp.
      * @return True if date and time successfully set, false otherwise.
      */

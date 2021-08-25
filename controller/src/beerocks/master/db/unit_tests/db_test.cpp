@@ -28,8 +28,9 @@ using ::testing::StrictMock;
 
 namespace {
 
-constexpr auto g_assoc_event_path = "Controller.Notification.AssociationEvent.AssociationEventData";
-constexpr auto g_device_path      = "Controller.Network.Device";
+constexpr auto g_assoc_event_path =
+    "Device.WiFi.DataElements.Notification.AssociationEvent.AssociationEventData";
+constexpr auto g_device_path                = "Device.WiFi.DataElements.Network.Device";
 constexpr auto g_controller_data_model_path = "config/odl/controller.odl";
 constexpr auto g_zero_mac                   = "00:00:00:00:00:00";
 constexpr auto g_bridge_mac                 = "46:55:66:77:00:00";

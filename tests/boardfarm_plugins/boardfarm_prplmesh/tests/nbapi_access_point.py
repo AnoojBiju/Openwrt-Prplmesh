@@ -82,7 +82,7 @@ class NbapiAccessPoint(PrplMeshBaseTest):
         controller.nbapi_set_parameters(all_bands_security_obj_path,
                                         {"KeyPassphrase": "key_passphrease_value"})
 
-        controller.nbapi_command("Controller.Network", "AccessPointCommit")
+        controller.nbapi_command("Device.WiFi.DataElements.Network", "AccessPointCommit")
         time.sleep(10)
 
         topology = self.get_topology()

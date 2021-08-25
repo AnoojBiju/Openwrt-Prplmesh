@@ -1,5 +1,5 @@
 %populate {
-    object Controller.Network.Device {
+    object Device.WiFi.DataElements.Network.Device {
         instance add() {
             object Radio {
                 instance add() {

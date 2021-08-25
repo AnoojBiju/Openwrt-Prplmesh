@@ -18,7 +18,7 @@ import re
 
 class NbapiDisassociationEvent(PrplMeshBaseTest):
     '''
-    Test for NBAPI Controller.Network.Device.Radio.DisassociationEvent object.
+    Test for NBAPI Device.WiFi.DataElements.Network.Device.Radio.DisassociationEvent object.
     This object describes an event generated when a STA disassociates from a BSS.
     Also, test Network object.
     '''
@@ -63,9 +63,11 @@ class NbapiDisassociationEvent(PrplMeshBaseTest):
             controller, f"client disconnected, client_mac={sta.mac}, bssid={vap.bssid}", timeout=5)
 
         # Test for NBAPI Network.
-        network_time_stamp = controller.nbapi_get_parameter("Controller.Network", "TimeStamp")
-        controller_id = controller.nbapi_get_parameter("Controller.Network", "ControllerID")
-        network_id = controller.nbapi_get_parameter("Controller.Network", "ID")
+        network_time_stamp = controller.nbapi_get_parameter(
+            "Device.WiFi.DataElements.Network", "TimeStamp")
+        controller_id = controller.nbapi_get_parameter(
+            "Device.WiFi.DataElements.Network", "ControllerID")
+        network_id = controller.nbapi_get_parameter("Device.WiFi.DataElements.Network", "ID")
         assert controller_id == controller.mac, \
             "Wrong controller mac: {controller_id}, expected: {controller.mac}."
         assert network_id == controller.mac, \
@@ -76,7 +78,8 @@ class NbapiDisassociationEvent(PrplMeshBaseTest):
             self.fail(f'Fail. Network time stamp has incorrect format: {network_time_stamp}')
 
         # Test for NBAPI DisassociationEventData.
-        disassoc_data_path = "Controller.Notification.DisassociationEvent.DisassociationEventData"
+        disassoc_data_path = "Device.WiFi.DataElements.Notification."\
+            + "DisassociationEvent.DisassociationEventData"
         disassoc_data_paths_list = controller.nbapi_get_list_instances(disassoc_data_path)
         events_count = 0
         for disassoc_data_path in disassoc_data_paths_list:

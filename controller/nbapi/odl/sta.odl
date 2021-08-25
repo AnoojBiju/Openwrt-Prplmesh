@@ -14,7 +14,7 @@
 }
 
 %define {
-    select Controller.Network.Device.Radio.BSS.STA {
+    select Device.WiFi.DataElements.Network.Device.Radio.BSS.STA {
         %read-only string MACAddress = "00:00:00:00:00:00";
         %read-only string TimeStamp = "2020-08-31T11:22:39Z";
 
