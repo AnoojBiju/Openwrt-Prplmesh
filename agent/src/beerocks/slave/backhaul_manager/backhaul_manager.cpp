@@ -575,7 +575,7 @@ bool BackhaulManager::handle_cmdu_from_broker(uint32_t iface_index, const sMacAd
     // the destination slave is used to forward the cmdu
     // only to the desired slave.
     // handle_1905_1_message has the opportunity to set it
-    // to a speficic slave. In this case the cmdu is forward only
+    // to a specific slave. In this case the cmdu is forward only
     // to this slave. when dest_slave is left as invalid_descriptor
     // the cmdu is forwarded to all slaves
     if (handle_1905_1_message(cmdu_rx, iface_index, dst_mac, src_mac)) {
@@ -740,7 +740,7 @@ bool BackhaulManager::finalize_slaves_connect_state(bool fConnected,
             if (!config_const_bh_slave.empty()) {
                 for (auto &soc : slaves_sockets) {
                     if (soc->hostap_iface == config_const_bh_slave) {
-                        LOG(INFO) << "Configured slave sfor constant BH manager was found: "
+                        LOG(INFO) << "Configured slave for constant BH manager was found: "
                                   << config_const_bh_slave;
                         soc->slave_is_backhaul_manager = true;
                         break;

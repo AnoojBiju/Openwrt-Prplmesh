@@ -88,7 +88,7 @@ public:
                              const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
-     * @brief Sends CDMU to transport for dispatching.
+     * @brief Sends CMDU to transport for dispatching.
      *
      * @param cmdu CMDU message to send.
      * @param dst_mac Destination MAC address.
@@ -101,7 +101,7 @@ public:
                              const sMacAddr &src_mac, const std::string &iface_name = "");
 
     /**
-     * @brief Sends ACK CDMU to controller
+     * @brief Sends ACK CMDU to controller
      *
      * @param cmdu CMDU message to send.
      * @param mid The message id to attach to the ACK
@@ -418,7 +418,7 @@ public:
         uint32_t maximum_reporting_rate = 0;
 
         /**
-         * Time point at which failed associatoin was reported for the last time.
+         * Time point at which failed association was reported for the last time.
          */
         std::chrono::steady_clock::time_point last_reporting_time_point =
             std::chrono::steady_clock::time_point::min(); // way in the past
@@ -433,7 +433,7 @@ public:
      * @brief Information gathered about a radio (= slave).
      *
      * Radio information is obtained from messages sent by slave threads and is used to build
-     * the TLVs to include in notification messages or responses to CDMU query messages.
+     * the TLVs to include in notification messages or responses to CMDU query messages.
      */
     struct sRadioInfo {
         int slave = beerocks::net::FileDescriptor::
