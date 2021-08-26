@@ -71,7 +71,7 @@ private:
     /**
      * Map of registered event handlers.
      * Key value is the file descriptor and value is the EventHandlers structure containing the
-     * event handlers to deall with events occurred on that file descriptor.
+     * event handlers to deal with events occurred on that file descriptor.
      */
     std::unordered_map<int, EventHandlers> m_fd_to_event_handlers;
 };
