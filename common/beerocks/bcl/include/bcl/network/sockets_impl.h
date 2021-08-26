@@ -14,6 +14,7 @@
 
 #include <bcl/beerocks_backport.h>
 #include <bcl/beerocks_string_utils.h>
+#include <bcl/network/network_utils.h>
 
 #include <tlvf/common/sMacAddr.h>
 #include <tlvf/tlvftypes.h>
@@ -99,6 +100,7 @@ public:
     {
         m_address.sun_family = AF_UNIX;
         string_utils::copy_string(m_address.sun_path, path.c_str(), sizeof(m_address.sun_path));
+        m_name.assign(path);
     }
 
     std::string path() const { return m_address.sun_path; }
@@ -109,6 +111,7 @@ public:
     }
     const socklen_t &length() const override { return m_length; }
     socklen_t size() const override { return m_size; }
+    const std::string &name() const override { return m_name; }
 
     static std::shared_ptr<UdsAddress> create_instance(const std::string &path)
     {
@@ -135,11 +138,13 @@ private:
 
 class InternetAddress : public Socket::Address {
 public:
-    explicit InternetAddress(uint16_t port = 0, uint32_t address = INADDR_ANY)
+    explicit InternetAddress(uint16_t port = 0, uint32_t address = INADDR_ANY,
+                             const std::string &name = {})
     {
         m_address.sin_family      = AF_INET;
         m_address.sin_addr.s_addr = address;
         m_address.sin_port        = htons(port);
+        m_name                    = name + " (" + net::network_utils::ipv4_to_string(address) + ")";
     }
 
     const struct sockaddr *sockaddr() const override
@@ -151,6 +156,7 @@ public:
 
     uint16_t port() const { return ntohs(m_address.sin_port); }
     uint32_t address() const { return m_address.sin_addr.s_addr; }
+    const std::string &name() const override { return m_name; }
 
 private:
     sockaddr_in m_address  = {};
@@ -166,6 +172,7 @@ public:
         m_address.sll_ifindex = iface_index;
         m_address.sll_halen   = sizeof(sMacAddr);
         tlvf::mac_to_array(mac, m_address.sll_addr);
+        m_name = "iface_idx " + std::to_string(iface_index) + ": " + tlvf::mac_to_string(mac);
     }
 
     const struct sockaddr *sockaddr() const override
@@ -174,6 +181,7 @@ public:
     }
     const socklen_t &length() const override { return m_length; }
     socklen_t size() const override { return m_size; }
+    const std::string &name() const override { return m_name; }
 
 private:
     sockaddr_ll m_address  = {};
@@ -187,6 +195,7 @@ public:
     {
         m_address.nl_family = AF_NETLINK;
         m_address.nl_groups = groups;
+        m_name              = std::string("nl group ") + std::to_string(groups);
     }
 
     const struct sockaddr *sockaddr() const override
@@ -195,6 +204,7 @@ public:
     }
     const socklen_t &length() const override { return m_length; }
     socklen_t size() const override { return m_size; }
+    const std::string &name() const override { return m_name; }
 
 private:
     sockaddr_nl m_address  = {};
@@ -430,6 +440,7 @@ public:
      */
     std::unique_ptr<Socket::Connection> accept(Socket::Address &address) override
     {
+        m_socket->m_name     = address.name() + " server";
         address.length()     = address.size();
         int connected_socket = ::accept(m_socket->fd(), address.sockaddr(), &address.length());
         if (FileDescriptor::invalid_descriptor == connected_socket) {
@@ -492,6 +503,7 @@ public:
      */
     std::unique_ptr<Socket::Connection> connect(const Socket::Address &address) override
     {
+        m_socket->m_name = address.name() + " client";
         if (0 != ::connect(m_socket->fd(), address.sockaddr(), address.length())) {
             LOG(ERROR) << "Unable to connect client socket: " << strerror(errno);
             return nullptr;
@@ -534,6 +546,10 @@ public:
     {
         // Create UDS socket
         auto socket = std::make_shared<UdsSocket>();
+
+        LOG_IF(!socket, FATAL) << "Unable to create UDS socket!";
+
+        socket->m_name = address.name() + " server";
 
         // Create UDS server socket to listen for and accept incoming connections from clients.
         auto server_socket = std::make_unique<ServerSocketImpl<UdsSocket>>(socket);
