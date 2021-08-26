@@ -10,19 +10,15 @@
 #include "platform_manager/platform_manager.h"
 #include "son_slave_thread.h"
 
-#include <bcl/beerocks_cmdu_client_factory_factory.h>
 #include <bcl/beerocks_cmdu_server_factory.h>
 #include <bcl/beerocks_config_file.h>
 #include <bcl/beerocks_event_loop_impl.h>
 #include <bcl/beerocks_logging.h>
 #include <bcl/beerocks_timer_factory_impl.h>
 #include <bcl/beerocks_timer_manager_impl.h>
-#include <bcl/beerocks_ucc_server_factory.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/beerocks_version.h>
 #include <bcl/network/network_utils.h>
-#include <bcl/network/sockets_impl.h>
-#include <btl/broker_client_factory_factory.h>
 #include <mapf/common/utils.h>
 
 #include <easylogging++.h>
@@ -400,54 +396,8 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
         }
     }
 
-    // Create UDS address where the server socket will listen for incoming connection requests.
-    std::string backhaul_manager_uds_path =
-        beerocks_slave_conf.temp_path + std::string(BEEROCKS_BACKHAUL_UDS);
-    auto backhaul_manager_uds_address =
-        beerocks::net::UdsAddress::create_instance(backhaul_manager_uds_path);
-    LOG_IF(!backhaul_manager_uds_address, FATAL)
-        << "Unable to create UDS server address for backhaul manager!";
-
-    // Create server to exchange CMDU messages with clients connected through a UDS socket
-    auto backhaul_manager_cmdu_server =
-        beerocks::CmduServerFactory::create_instance(backhaul_manager_uds_address, event_loop);
-    LOG_IF(!backhaul_manager_cmdu_server, FATAL)
-        << "Unable to create CMDU server for backhaul manager!";
-
-    // UCC server must be created if all the three following conditions are met:
-    // - Device has been configured to work in certification mode
-    // - A valid TCP port has been set
-    // - The controller is not running in this device
-    std::unique_ptr<beerocks::UccServer> ucc_server;
-    bool certification_mode = beerocks::bpl::cfg_get_certification_mode();
-    bool local_controller   = beerocks::bpl::cfg_is_master();
-    uint16_t port           = beerocks::string_utils::stoi(beerocks_slave_conf.ucc_listener_port);
-    if (certification_mode && (port != 0) && (!local_controller)) {
-
-        LOG(INFO) << "Certification mode enabled (listening on port " << port << ")";
-
-        // Create server to exchange UCC commands and replies with clients connected through the socket
-        ucc_server = beerocks::UccServerFactory::create_instance(port, event_loop);
-        LOG_IF(!ucc_server, FATAL) << "Unable to create UCC server!";
-    }
-
-    // Create CMDU client factory to create CMDU clients connected to CMDU server running in
-    // platform manager when requested
-    auto platform_manager_cmdu_client_factory =
-        beerocks::create_cmdu_client_factory(platform_manager_uds_path, event_loop);
-    LOG_IF(!platform_manager_cmdu_client_factory, FATAL) << "Unable to create CMDU client factory!";
-
-    // Create broker client factory to create broker clients when requested
-    std::string broker_uds_path =
-        beerocks_slave_conf.temp_path + "/" + std::string(BEEROCKS_BROKER_UDS);
-    auto broker_client_factory =
-        beerocks::btl::create_broker_client_factory(broker_uds_path, event_loop);
-    LOG_IF(!broker_client_factory, FATAL) << "Unable to create broker client factory!";
-
-    beerocks::BackhaulManager backhaul_manager(
-        beerocks_slave_conf, slave_ap_ifaces, slave_sta_ifaces, stop_on_failure_attempts,
-        std::move(broker_client_factory), std::move(platform_manager_cmdu_client_factory),
-        std::move(ucc_server), std::move(backhaul_manager_cmdu_server));
+    beerocks::BackhaulManager backhaul_manager(beerocks_slave_conf, slave_ap_ifaces,
+                                               slave_sta_ifaces, stop_on_failure_attempts);
 
     // Start backhaul manager
     LOG_IF(!backhaul_manager.start(), FATAL) << "Unable to start backhaul manager!";

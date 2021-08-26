@@ -20,8 +20,8 @@
 #include <bcl/beerocks_eventloop_thread.h>
 #include <bcl/beerocks_timer_manager.h>
 #include <bcl/beerocks_ucc_server.h>
-#include <bcl/network/file_descriptor.h>
 #include <bcl/network/network_utils.h>
+#include <bcl/network/sockets_impl.h>
 #include <btl/broker_client.h>
 #include <btl/broker_client_factory.h>
 #include <bwl/sta_wlan_hal.h>
@@ -48,13 +48,9 @@ class ChannelSelectionTask;
 class BackhaulManager : public EventLoopThread {
 
 public:
-    BackhaulManager(
-        const config_file::sConfigSlave &config, const std::set<std::string> &slave_ap_ifaces_,
-        const std::set<std::string> &slave_sta_ifaces_, int stop_on_failure_attempts_,
-        std::unique_ptr<beerocks::btl::BrokerClientFactory> broker_client_factory,
-        std::unique_ptr<beerocks::CmduClientFactory> platform_manager_cmdu_client_factory,
-        std::unique_ptr<beerocks::UccServer> ucc_server,
-        std::unique_ptr<beerocks::CmduServer> cmdu_server);
+    BackhaulManager(const config_file::sConfigSlave &config,
+                    const std::set<std::string> &slave_ap_ifaces_,
+                    const std::set<std::string> &slave_sta_ifaces_, int stop_on_failure_attempts_);
     ~BackhaulManager();
 
     /**
@@ -92,7 +88,7 @@ public:
                              const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
-     * @brief Sends CDMU to transport for dispatching.
+     * @brief Sends CMDU to transport for dispatching.
      *
      * @param cmdu CMDU message to send.
      * @param dst_mac Destination MAC address.
@@ -105,7 +101,7 @@ public:
                              const sMacAddr &src_mac, const std::string &iface_name = "");
 
     /**
-     * @brief Sends ACK CDMU to controller
+     * @brief Sends ACK CMDU to controller
      *
      * @param cmdu CMDU message to send.
      * @param mid The message id to attach to the ACK
@@ -422,7 +418,7 @@ public:
         uint32_t maximum_reporting_rate = 0;
 
         /**
-         * Time point at which failed associatoin was reported for the last time.
+         * Time point at which failed association was reported for the last time.
          */
         std::chrono::steady_clock::time_point last_reporting_time_point =
             std::chrono::steady_clock::time_point::min(); // way in the past
@@ -437,7 +433,7 @@ public:
      * @brief Information gathered about a radio (= slave).
      *
      * Radio information is obtained from messages sent by slave threads and is used to build
-     * the TLVs to include in notification messages or responses to CDMU query messages.
+     * the TLVs to include in notification messages or responses to CMDU query messages.
      */
     struct sRadioInfo {
         int slave = beerocks::net::FileDescriptor::
@@ -537,6 +533,11 @@ private:
      * UCC server to exchange commands and replies with UCC certification application.
      */
     std::unique_ptr<beerocks::UccServer> m_ucc_server;
+
+    /**
+     * CMDU server address used by CmduServer `m_cmdu_server`.
+     */
+    std::shared_ptr<beerocks::net::UdsAddress> m_cmdu_server_uds_address;
 
     /**
      * CMDU server to exchange CMDU messages with clients through socket connections.
