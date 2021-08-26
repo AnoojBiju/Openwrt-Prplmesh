@@ -27,6 +27,9 @@ CmduServerImpl::CmduServerImpl(std::unique_ptr<beerocks::net::ServerSocket> serv
 
     // Register event handlers for the server socket
     beerocks::EventLoop::EventHandlers handlers{
+        // Handler name
+        .name = m_server_socket->socket()->m_name,
+
         // Accept incoming connections
         .on_read =
             [&](int fd, EventLoop &loop) {
@@ -56,6 +59,7 @@ CmduServerImpl::CmduServerImpl(std::unique_ptr<beerocks::net::ServerSocket> serv
 
 CmduServerImpl::~CmduServerImpl()
 {
+    LOG(DEBUG) << "CmduServerImpl CTOR";
     // Remove all connections and their installed event handlers
     while (m_connections.size() > 0) {
         const auto &it = m_connections.begin();
@@ -137,7 +141,7 @@ bool CmduServerImpl::add_connection(int fd,
 
 bool CmduServerImpl::remove_connection(int fd, bool remove_handlers)
 {
-    // LOG(DEBUG) << "Removing connection, fd = " << fd;
+    LOG(DEBUG) << "Removing connection, fd = " << fd;
 
     // Find context information for given socket connection
     auto it = m_connections.find(fd);

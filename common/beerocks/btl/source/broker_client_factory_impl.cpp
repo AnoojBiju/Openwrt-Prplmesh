@@ -39,8 +39,11 @@ std::unique_ptr<BrokerClient> BrokerClientFactoryImpl::create_instance()
     using UdsClientSocket = beerocks::net::ClientSocketImpl<beerocks::net::UdsSocket>;
     auto client_socket    = std::make_unique<UdsClientSocket>(socket);
 
+    LOG_IF(!client_socket, FATAL) << "Unable to create client_socket!";
+
     // Connect client socket to server socket
     beerocks::net::UdsAddress address(m_uds_path);
+    LOG(DEBUG) << "Connecting to Broker";
     auto connection = client_socket->connect(address);
     if (!connection) {
         LOG(ERROR) << "Unable to connect client socket to '" << address.path() + "'";

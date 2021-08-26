@@ -288,6 +288,7 @@ bool Monitor::monitor_fsm()
             m_mon_hal_ext_events = mon_wlan_hal->get_ext_events_fd();
             if (m_mon_hal_ext_events > 0) {
                 beerocks::EventLoop::EventHandlers ext_events_handlers{
+                    .name = "mon_hal_ext_events",
                     .on_read =
                         [&](int fd, EventLoop &loop) {
                             if (!mon_wlan_hal->process_ext_events()) {
@@ -330,6 +331,7 @@ bool Monitor::monitor_fsm()
             m_mon_hal_int_events = mon_wlan_hal->get_int_events_fd();
             if (m_mon_hal_int_events > 0) {
                 beerocks::EventLoop::EventHandlers int_events_handlers{
+                    .name = "mon_hal_int_events",
                     .on_read =
                         [&](int fd, EventLoop &loop) {
                             if (!mon_wlan_hal->process_int_events()) {
@@ -368,6 +370,7 @@ bool Monitor::monitor_fsm()
             m_mon_hal_nl_events = mon_wlan_hal->get_nl_events_fd();
             if (m_mon_hal_nl_events > 0) {
                 beerocks::EventLoop::EventHandlers nl_events_handlers{
+                    .name = "mon_hal_nl_events",
                     .on_read =
                         [&](int fd, EventLoop &loop) {
                             if (!mon_wlan_hal->process_nl_events()) {
@@ -432,6 +435,7 @@ bool Monitor::monitor_fsm()
             } else {
                 m_arp_fd = mon_rssi.get_arp_socket()->getSocketFd();
                 beerocks::EventLoop::EventHandlers arp_events_handlers{
+                    .name = "mon_arp_events",
                     .on_read =
                         [&](int fd, EventLoop &loop) {
                             mon_rssi.arp_recv();

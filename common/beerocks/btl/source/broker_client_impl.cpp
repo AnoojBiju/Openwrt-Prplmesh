@@ -32,6 +32,7 @@ BrokerClientImpl::BrokerClientImpl(std::unique_ptr<beerocks::net::Socket::Connec
 
     // Register event handlers for the client socket
     beerocks::EventLoop::EventHandlers handlers{
+        .name = "BrokerClient",
         .on_read =
             [&](int fd, EventLoop &loop) {
                 handle_read(fd);

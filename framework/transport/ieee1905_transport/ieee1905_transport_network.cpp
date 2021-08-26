@@ -311,9 +311,18 @@ void Ieee1905Transport::activate_interface(NetworkInterface &interface)
         return;
     }
 
+    std::string socket_name;
+    if (!interface.bridge_name.empty()) {
+        socket_name.assign(interface.bridge_name).append(":");
+    }
+    socket_name.append(interface.ifname).append(" Socket");
+
     // Handle network events, but not for the bridge which is used for sending only.
     if (!interface.is_bridge) {
         EventLoop::EventHandlers handlers = {
+            // Handlers name
+            .name = socket_name,
+
             // Accept incoming connections
             .on_read =
                 [&](int fd, EventLoop &loop) {

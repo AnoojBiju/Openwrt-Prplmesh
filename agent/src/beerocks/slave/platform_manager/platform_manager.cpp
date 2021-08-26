@@ -1042,6 +1042,9 @@ bool PlatformManager::init_arp_monitor()
             }
 
             beerocks::EventLoop::EventHandlers handlers;
+            // Handler name
+            handlers.name = "arp_raw";
+
             // Handle event
             handlers.on_read = [&](int fd, EventLoop &loop) {
                 if (!handle_arp_raw()) {
@@ -1079,6 +1082,9 @@ bool PlatformManager::init_arp_monitor()
             }
 
             beerocks::EventLoop::EventHandlers handlers;
+            // Handler name
+            handlers.name = "arp_monitor";
+
             // Handle event
             handlers.on_read = [&](int fd, EventLoop &loop) {
                 if (!handle_arp_monitor()) {
@@ -1201,6 +1207,9 @@ bool PlatformManager::init_dhcp_monitor()
         }
 
         beerocks::EventLoop::EventHandlers handlers;
+        // Handler name
+        handlers.name = "dhcp_monitor";
+
         // Handle event
         handlers.on_read = [&](int fd, EventLoop &loop) {
             bpl::dhcp_mon_handle_event();
