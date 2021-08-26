@@ -78,7 +78,7 @@ TEST_F(CmduServerImplTest, destructor_should_remove_remaining_connections)
     {
         InSequence sequence;
 
-        EXPECT_CALL(*m_server_socket, socket()).Times(1);
+        EXPECT_CALL(*m_server_socket, socket()).Times(2);
         EXPECT_CALL(*m_socket, fd()).Times(1);
         EXPECT_CALL(*m_event_loop, register_handlers(server_socket_fd, _))
             .WillOnce(DoAll(SaveArg<1>(&server_socket_handlers), Return(true)));
@@ -116,7 +116,7 @@ TEST_F(CmduServerImplTest, receive_cmdu_should_succeed)
     {
         InSequence sequence;
 
-        EXPECT_CALL(*m_server_socket, socket()).Times(1);
+        EXPECT_CALL(*m_server_socket, socket()).Times(2);
         EXPECT_CALL(*m_socket, fd()).Times(1);
         EXPECT_CALL(*m_event_loop, register_handlers(server_socket_fd, _))
             .WillOnce(DoAll(SaveArg<1>(&server_socket_handlers), Return(true)));
@@ -205,7 +205,7 @@ TEST_F(CmduServerImplTest, send_cmdu_should_succeed)
     {
         InSequence sequence;
 
-        EXPECT_CALL(*m_server_socket, socket()).Times(1);
+        EXPECT_CALL(*m_server_socket, socket()).Times(2);
         EXPECT_CALL(*m_socket, fd()).Times(1);
         EXPECT_CALL(*m_event_loop, register_handlers(server_socket_fd, _))
             .WillOnce(DoAll(SaveArg<1>(&server_socket_handlers), Return(true)));
@@ -250,7 +250,7 @@ TEST_F(CmduServerImplTest, send_cmdu_should_fail_with_invalid_cmdu)
     {
         InSequence sequence;
 
-        EXPECT_CALL(*m_server_socket, socket()).Times(1);
+        EXPECT_CALL(*m_server_socket, socket()).Times(2);
         EXPECT_CALL(*m_socket, fd()).Times(1);
         EXPECT_CALL(*m_event_loop, register_handlers(server_socket_fd, _))
             .WillOnce(DoAll(SaveArg<1>(&server_socket_handlers), Return(true)));
@@ -291,7 +291,7 @@ TEST_F(CmduServerImplTest, send_cmdu_should_fail_if_serialize_cmdu_fails)
     {
         InSequence sequence;
 
-        EXPECT_CALL(*m_server_socket, socket()).Times(1);
+        EXPECT_CALL(*m_server_socket, socket()).Times(2);
         EXPECT_CALL(*m_socket, fd()).Times(1);
         EXPECT_CALL(*m_event_loop, register_handlers(server_socket_fd, _))
             .WillOnce(DoAll(SaveArg<1>(&server_socket_handlers), Return(true)));
@@ -337,7 +337,7 @@ TEST_F(CmduServerImplTest, send_cmdu_should_fail_with_disconnected_socket_fd)
     {
         InSequence sequence;
 
-        EXPECT_CALL(*m_server_socket, socket()).Times(1);
+        EXPECT_CALL(*m_server_socket, socket()).Times(2);
         EXPECT_CALL(*m_socket, fd()).Times(1);
         EXPECT_CALL(*m_event_loop, register_handlers(server_socket_fd, _))
             .WillOnce(DoAll(SaveArg<1>(&server_socket_handlers), Return(true)));
@@ -379,7 +379,7 @@ TEST_F(CmduServerImplTest, forward_cmdu_should_succeed)
     {
         InSequence sequence;
 
-        EXPECT_CALL(*m_server_socket, socket()).Times(1);
+        EXPECT_CALL(*m_server_socket, socket()).Times(2);
         EXPECT_CALL(*m_socket, fd()).Times(1);
         EXPECT_CALL(*m_event_loop, register_handlers(server_socket_fd, _))
             .WillOnce(DoAll(SaveArg<1>(&server_socket_handlers), Return(true)));
