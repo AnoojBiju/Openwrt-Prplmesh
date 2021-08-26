@@ -71,8 +71,8 @@ class NbapiScanResult(PrplMeshBaseTest):
         channel = int(ch_scan_tlv.tlv_data[21:23], 16)
         scan_status = int(ch_scan_tlv.tlv_data[24:26], 16)
 
-        # Search for corresponding NBAPI ChannelScan object.
-        # ch is Controller.Network.Device.Radio.ScanResult.OpClassScan.{i}.ChannelScan.{i}
+        # Search for corresponding NBAPI ChannelScan object. ch is
+        # Device.WiFi.DataElements.Network.Device.Radio.ScanResult.OpClassScan.{i}.ChannelScan.{i}
         matching_channel = [ch for ch in nbapi_channel_paths
                             if channel == int(controller.nbapi_get_parameter(ch, "Channel"))]
 
@@ -134,7 +134,7 @@ class NbapiScanResult(PrplMeshBaseTest):
         repeater = topology[agent.mac]
         radio = repeater.radios[agent.radios[0].mac]
 
-        # Exampe of path: Controller.Network.Device.1.Radio.2.ScanResult
+        # Example of path: Device.WiFi.DataElements.Network.Device.1.Radio.2.ScanResult
         nbapi_scans_paths = controller.nbapi_get_list_instances(
             radio.path + ".ScanResult")
 

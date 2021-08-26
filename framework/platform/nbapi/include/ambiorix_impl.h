@@ -118,7 +118,7 @@ public:
 
     /**
      * @brief Set current data and time in RFC 3339 format.
-     * 
+     *
      * @param path_to_object Path to NBAPI object which has parameter TimeStamp.
      * @return True if date and time successfully set, false otherwise.
      */
@@ -138,7 +138,7 @@ private:
     /**
      * @brief Prepare transaction to the ubus
      *
-     * @param relative_path Path to the object in datamodel (ex: "Controller.Network.ID").
+     * @param relative_path Path to the object in datamodel (ex: "Device.WiFi.DataElements.Network.ID").
      * @param transaction Variable for transaction structure which contains fields
      *                    needed for transaction.
      * @return Pointer on the object on success and nullptr otherwise.
@@ -193,7 +193,7 @@ private:
     /**
      * @brief Find object by relative path.
      *
-     * @param relative_path Path to the object in datamodel (ex: "Controller.Network.ID").
+     * @param relative_path Path to the object in datamodel (ex: "Device.WiFi.DataElements.Network.ID").
      * @return Pointer on the object on success and nullptr otherwise.
      */
     amxd_object_t *find_object(const std::string &relative_path);

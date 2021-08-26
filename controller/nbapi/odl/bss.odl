@@ -14,7 +14,7 @@
 }
 
 %define {
-    select Controller.Network.Device.Radio.BSS {
+    select Device.WiFi.DataElements.Network.Device.Radio.BSS {
 
         /* macaddress */
         %read-only string BSSID = "0";

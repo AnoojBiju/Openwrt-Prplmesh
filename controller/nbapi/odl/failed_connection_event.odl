@@ -14,7 +14,7 @@
 }
 
 %define {
-    select Controller.Notification  {
+    select Device.WiFi.DataElements.Notification  {
         object FailedConnectionEvent {
             object FailedConnectionEventData[] {
                 counted with FailedConnectionEventDataNumberOfEntries;

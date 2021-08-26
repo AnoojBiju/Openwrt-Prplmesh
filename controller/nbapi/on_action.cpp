@@ -89,9 +89,9 @@ static bool get_param_bool(amxd_object_t *object, const char *param_name)
 }
 
 /**
-* @brief Overwrite an action 'get' aka 'read' for Controller.Network.AccessPointCommit
+* @brief Overwrite an action 'get' aka 'read' for Device.WiFi.DataElements.Network.AccessPointCommit
 * data element, that when this element is triggered the bss information from
-* Controller.Network.AccessPoint and Controller.Network.AccessPoint.n.Security,
+* Device.WiFi.DataElements.Network.AccessPoint and Device.WiFi.DataElements.Network.AccessPoint.n.Security,
 * where n = element's index, objects will be stored in the sAccessPoint structure.
 */
 amxd_status_t access_point_commit(amxd_object_t *object, amxd_function_t *func, amxc_var_t *args,
@@ -214,7 +214,7 @@ amxd_status_t client_steering(amxd_object_t *object, amxd_function_t *func, amxc
  * @brief Initiate channel scan from NBAPI for given radio and channels.
  *
  * Example of usage:
- * ubus call Controller.Network ScanTrigger
+ * ubus call Device.WiFi.DataElements.Network ScanTrigger
  * '{"channels_list": "36, 44", channels_num: "2"}'
  *
  * When channel list does not contain any channels
@@ -300,9 +300,9 @@ static void add_string_param(const char *param_name, amxd_object_t *param_owner_
 
 /**
  * @brief Removes PreSharedKey, KeyPassphrase, SAEPassphrase parameters
- * from Controller.Network.AccessPoint.*.Security object.
+ * from Device.WiFi.DataElements.Network.AccessPoint.*.Security object.
  * event_rm_params() invokes when value of parameter
- * Controller.Network.AccessPoint.*.Security.ModeEnabled changed
+ * Device.WiFi.DataElements.Network.AccessPoint.*.Security.ModeEnabled changed
  * from "WPA2-Personal" to any of other available values.
  */
 static void event_rm_params(const char *const sig_name, const amxc_var_t *const data,
@@ -311,7 +311,8 @@ static void event_rm_params(const char *const sig_name, const amxc_var_t *const 
     amxd_object_t *security_obj = amxd_dm_signal_get_object(g_data_model, data);
 
     if (!security_obj) {
-        LOG(WARNING) << "Failed to get object Controller.Network.AccessPoint.*.Security";
+        LOG(WARNING)
+            << "Failed to get object Device.WiFi.DataElements.Network.AccessPoint.*.Security";
         return;
     }
     rm_params(security_obj, "PreSharedKey");
@@ -321,9 +322,9 @@ static void event_rm_params(const char *const sig_name, const amxc_var_t *const 
 
 /**
  * @brief Add PreSharedKey, KeyPassphrase, SAEPassphrase parameters
- * to Controller.Network.AccessPoint.*.Security object.
+ * to Device.WiFi.DataElements.Network.AccessPoint.*.Security object.
  * Function invokes when value of parameter
- * Controller.Network.AccessPoint.*.Security.ModeEnabled changed to "WPA2-Personal".
+ * Device.WiFi.DataElements.Network.AccessPoint.*.Security.ModeEnabled changed to "WPA2-Personal".
  */
 static void event_add_hidden_params(const char *const sig_name, const amxc_var_t *const data,
                                     void *const priv)
@@ -331,7 +332,8 @@ static void event_add_hidden_params(const char *const sig_name, const amxc_var_t
     amxd_object_t *security_obj = amxd_dm_signal_get_object(g_data_model, data);
 
     if (!security_obj) {
-        LOG(WARNING) << "Failed to get object Controller.Network.AccessPoint.*.Security";
+        LOG(WARNING)
+            << "Failed to get object Device.WiFi.DataElements.Network.AccessPoint.*.Security";
         return;
     }
     add_string_param("PreSharedKey", security_obj);
@@ -343,7 +345,7 @@ static void event_add_hidden_params(const char *const sig_name, const amxc_var_t
  * @brief Event handler for controller configuration change.
  *
  * event_configuration_changed is invoked when value of parameter
- * in Controller.Configuration object changes with set command.
+ * in Device.WiFi.DataElements.Configuration object changes with set command.
  */
 static void event_configuration_changed(const char *const sig_name, const amxc_var_t *const data,
                                         void *const priv)
@@ -351,7 +353,7 @@ static void event_configuration_changed(const char *const sig_name, const amxc_v
     amxd_object_t *configuration = amxd_dm_signal_get_object(g_data_model, data);
 
     if (!configuration) {
-        LOG(WARNING) << "Failed to get object Controller.Configuration";
+        LOG(WARNING) << "Failed to get object Device.WiFi.DataElements.Configuration";
         return;
     }
 
@@ -400,9 +402,11 @@ std::vector<beerocks::nbapi::sEvents> get_events_list(void)
 std::vector<beerocks::nbapi::sFunctions> get_func_list(void)
 {
     const std::vector<beerocks::nbapi::sFunctions> functions_list = {
-        {"access_point_commit", "Controller.Network.AccessPointCommit", access_point_commit},
-        {"client_steering", "Controller.Network.ClientSteering", client_steering},
-        {"trigger_scan", "Controller.Network.Device.Radio.ScanTrigger", trigger_scan}};
+        {"access_point_commit", "Device.WiFi.DataElements.Network.AccessPointCommit",
+         access_point_commit},
+        {"client_steering", "Device.WiFi.DataElements.Network.ClientSteering", client_steering},
+        {"trigger_scan", "Device.WiFi.DataElements.Network.Device.Radio.ScanTrigger",
+         trigger_scan}};
     return functions_list;
 }
 

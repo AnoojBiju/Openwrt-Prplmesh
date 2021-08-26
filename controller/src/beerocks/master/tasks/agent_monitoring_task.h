@@ -103,7 +103,7 @@ private:
     /**
     * @brief Sends topology query, policy configuration,
     * AP capability query, start dynamic channel selection task.
-    * 
+    *
     * @param mac MAC address of agent.
     * @param m1 M1 message.
     * @param cmdu_rx AP Autoconfiguration WSC message.
@@ -182,8 +182,8 @@ private:
 
     /**
      * @brief Add Neighbor of AgentConnected event to NBAPI data model.
-     * Ex. Controller.AgentConnectedEvent.AgentConnected.1.Neighbor.3
-     * 
+     * Ex. Device.WiFi.DataElements.AgentConnectedEvent.AgentConnected.1.Neighbor.3
+     *
      * @param event_path Path to AgentConnected event to which neighbor will be added.
      * @param cmdu_rx Topology Response message.
      * @return True on success, false otherwise.

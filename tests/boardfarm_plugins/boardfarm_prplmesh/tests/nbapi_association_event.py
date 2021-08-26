@@ -18,7 +18,7 @@ import re
 
 class NbapiAssociationEvent(PrplMeshBaseTest):
     '''
-    Test for NBAPI Controller.Network.Device.Radio.AssociationEvent object.
+    Test for NBAPI Device.WiFi.DataElements.Network.Device.Radio.AssociationEvent object.
     This object describes an event generated when a STA associates to a BSS.
     '''
 
@@ -51,7 +51,8 @@ class NbapiAssociationEvent(PrplMeshBaseTest):
         for device in topology.values():
             print(device)
 
-        association_data_path = "Controller.Notification.AssociationEvent.AssociationEventData"
+        association_data_path = "Device.WiFi.DataElements.Notification."\
+            + "AssociationEvent.AssociationEventData"
         association_data_list = controller.nbapi_get_list_instances(association_data_path)
         event_present = False
         for assoc_data in association_data_list:

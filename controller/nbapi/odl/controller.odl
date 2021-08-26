@@ -89,102 +89,106 @@
 %define {
 
     // Define main data model
-    object Controller {
+    object Device {
+        object WiFi {
+            object DataElements {
 
-        object Configuration {
-            bool BandSteeringEnabled = false;
-            bool ClientSteeringEnabled = false;
-            uint32 SteeringCurrentBonus = 0 {
-                on action validate call check_range [0, 10000];
+                object Configuration {
+                    bool BandSteeringEnabled = false;
+                    bool ClientSteeringEnabled = false;
+                    uint32 SteeringCurrentBonus = 0 {
+                        on action validate call check_range [0, 10000];
+                    }
+                    uint32 SteeringDisassociationTimer = 0;
+
+                    // Link Metric Request Interval in Seconds
+                    uint32 LinkMetricsRequestInterval = 0;
+                }
+
+                // Define controller.Network element
+                object Network {
+
+                    // Define string variable
+                    %read-only string ID = "0";
+
+                    // Define date variable in format YYYY-MM-DDThh:mm:ssZ
+                    %read-only datetime TimeStamp = "2020-08-31T11:22:39Z";
+
+                    %read-only string ControllerID = "0";
+
+                    /*
+                        Network devices list.
+                    */
+                    object Device[] {
+
+                        /*
+                        NumberOfDevices variable calculated by
+                        nubmer of entries in Device list
+                        */
+                        counted with NumberOfDevices;
+                    }
+
+                    object AccessPoint[] {
+                        counted with NumberOfAccessPoints;
+                    }
+
+                    void AccessPointCommit();
+
+                    void ClientSteering(
+                        %in %mandatory string station_mac,
+                        %in %mandatory string target_bssid
+                    );
+                }
+
+                %persistent %read-only object SteerEvent[] {
+                    counted with NumberSteerEvents;
+                    %persistent %read-only string DeviceId = "00:00:00:00:00:00";
+                    %persistent %read-only string TimeStamp = "2020-08-31T11:22:39Z";
+                    %persistent %read-only string SteeredFrom = "00:00:00:00:00:00";
+                    %persistent %read-only string Result {
+                        default "Unknown";
+                        on action validate call check_enum [
+                            "Unknown",
+                            "Success",
+                            "Fail"
+                        ];
+                    }
+                    %persistent %read-only uint16 StatusCode;
+                    %persistent %read-only string Status = "Unknown";
+                    %persistent %read-only string SteeredTo = "00:00:00:00:00:00";
+                    %persistent %read-only int64 TimeTaken;
+                    %persistent %read-only int32 NewLinkRate;
+                    %persistent %read-only string SteeringType {
+                        default "Unknown";
+                        on action validate call check_enum [
+                            "BTM",
+                            "Blacklist",
+                            "Unknown"
+                        ];
+                    }
+                    %persistent %read-only string SteeringOrigin {
+                        default "Unknown";
+                        on action validate call check_enum [
+                            "Unknown",
+                            "NBAPI",
+                            "CLI",
+                            "Controller",
+                            "Agent",
+                            "Station"
+                        ];
+                    }
+                }
+                %read-only object Notification;
+                %read-only object AgentConnectedEvent[];
+                %read-only object AgentDisconnectedEvent[];
             }
-            uint32 SteeringDisassociationTimer = 0;
-
-            // Link Metric Request Interval in Seconds
-            uint32 LinkMetricsRequestInterval = 0;
         }
-
-        // Define controller.Network element
-        object Network {
-
-            // Define string variable
-            %read-only string ID = "0";
-
-            // Define date variable in format YYYY-MM-DDThh:mm:ssZ
-            %read-only datetime TimeStamp = "2020-08-31T11:22:39Z";
-
-            %read-only string ControllerID = "0";
-
-            /*
-                Network devices list.
-            */
-            object Device[] {
-
-                /*
-                   NumberOfDevices variable calculated by
-                   nubmer of entries in Device list
-                */
-                counted with NumberOfDevices;
-            }
-
-            object AccessPoint[] {
-                counted with NumberOfAccessPoints;
-            }
-
-            void AccessPointCommit();
-
-            void ClientSteering(
-                %in %mandatory string station_mac,
-                %in %mandatory string target_bssid
-            );
-        }
-
-        %persistent %read-only object SteerEvent[] {
-            counted with NumberSteerEvents;
-            %persistent %read-only string DeviceId = "00:00:00:00:00:00";
-            %persistent %read-only string TimeStamp = "2020-08-31T11:22:39Z";
-            %persistent %read-only string SteeredFrom = "00:00:00:00:00:00";
-            %persistent %read-only string Result {
-                default "Unknown";
-                on action validate call check_enum [
-                    "Unknown",
-                    "Success",
-                    "Fail"
-                ];
-            }
-            %persistent %read-only uint16 StatusCode;
-            %persistent %read-only string Status = "Unknown";
-            %persistent %read-only string SteeredTo = "00:00:00:00:00:00";
-            %persistent %read-only int64 TimeTaken;
-            %persistent %read-only int32 NewLinkRate;
-            %persistent %read-only string SteeringType {
-                default "Unknown";
-                on action validate call check_enum [
-                    "BTM",
-                    "Blacklist",
-                    "Unknown"
-                ];
-            }
-            %persistent %read-only string SteeringOrigin {
-                default "Unknown";
-                on action validate call check_enum [
-                    "Unknown",
-                    "NBAPI",
-                    "CLI",
-                    "Controller",
-                    "Agent",
-                    "Station"
-                ];
-            }
-        }
-        %read-only object Notification;
-        %read-only object AgentConnectedEvent[];
-        %read-only object AgentDisconnectedEvent[];
     }
 }
 
 %populate {
     on event "dm:object-changed" call event_configuration_changed
-        filter 'object matches "Controller\.Configuration\."';
+        filter 'object matches "Device\.WiFi\.DataElements\.Configuration\."';
 }
 
 include "device.odl";

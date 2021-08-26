@@ -14,7 +14,7 @@
 }
 
 %define {
-    select Controller.Network.Device.Radio.ScanResult {
+    select Device.WiFi.DataElements.Network.Device.Radio.ScanResult {
         %read-only datetime TimeStamp = "2020-08-31T11:22:39Z";
 
         %read-only object OpClassScan [] {

@@ -106,7 +106,7 @@ void client_steering_task::work()
         }
 
         if (!dm_set_steer_event_params(m_database.dm_add_steer_event())) {
-            LOG(ERROR) << "Failed to set parameters of Controller.SteerEvent";
+            LOG(ERROR) << "Failed to set parameters of Device.WiFi.DataElements.SteerEvent";
         }
 
         print_steering_info();
