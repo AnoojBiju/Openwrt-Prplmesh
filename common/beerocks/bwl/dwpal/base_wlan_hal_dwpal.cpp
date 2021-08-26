@@ -915,8 +915,6 @@ bool base_wlan_hal_dwpal::refresh_radio_info()
         return true;
     }
 
-    m_radio_info.radio_enabled = (m_radio_info.radio_state == eRadioState::ENABLED);
-
     if (!m_radio_info.available_vaps.size()) {
         if (!refresh_vaps_info(beerocks::IFACE_RADIO_ID)) {
             return false;

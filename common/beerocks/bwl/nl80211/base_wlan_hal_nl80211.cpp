@@ -696,7 +696,6 @@ bool base_wlan_hal_nl80211::refresh_radio_info()
             m_radio_info.wifi_ctrl_enabled = 2; // Assume Operational
             m_radio_info.tx_enabled        = 1;
         }
-        m_radio_info.radio_enabled = (state == "ENABLED");
 
         m_radio_info.radio_state = radio_state_from_string(state);
 
