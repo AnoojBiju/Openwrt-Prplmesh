@@ -102,7 +102,45 @@ BackhaulManager::BackhaulManager(const config_file::sConfigSlave &config,
       m_ucc_listener_port(string_utils::stoi(config.ucc_listener_port)),
       config_const_bh_slave(config.const_backhaul_slave)
 {
+    pending_slave_ifaces                   = slave_ap_ifaces_;
+    configuration_stop_on_failure_attempts = stop_on_failure_attempts_;
+    stop_on_failure_attempts               = stop_on_failure_attempts_;
+    LOG(DEBUG) << "stop_on_failure_attempts=" << stop_on_failure_attempts;
+    auto db                           = AgentDB::get();
+    db->device_conf.ucc_listener_port = string_utils::stoi(config.ucc_listener_port);
+    db->device_conf.vendor            = config.vendor;
+    db->device_conf.model             = config.model;
 
+    std::string bridge_mac;
+    if (!beerocks::net::network_utils::linux_iface_get_mac(config.bridge_iface, bridge_mac)) {
+        LOG(ERROR) << "Failed getting MAC address for interface: " << config.bridge_iface;
+    } else {
+        db->dm_set_agent_mac(bridge_mac);
+    }
+
+    m_eFSMState = EState::INIT;
+
+    m_task_pool.add_task(std::make_shared<TopologyTask>(*this, cmdu_tx));
+    m_task_pool.add_task(std::make_shared<ApAutoConfigurationTask>(*this, cmdu_tx));
+    m_task_pool.add_task(std::make_shared<ChannelSelectionTask>(*this, cmdu_tx));
+    m_task_pool.add_task(std::make_shared<ChannelScanTask>(*this, cmdu_tx));
+    m_task_pool.add_task(std::make_shared<CapabilityReportingTask>(*this, cmdu_tx));
+    m_task_pool.add_task(std::make_shared<LinkMetricsCollectionTask>(*this, cmdu_tx));
+    m_task_pool.add_task(
+        std::make_shared<switch_channel::SwitchChannelTask>(m_task_pool, *this, cmdu_tx));
+    m_task_pool.add_task(
+        std::make_shared<coordinated_cac::CoordinatedCacTask>(m_task_pool, *this, cmdu_tx));
+}
+
+BackhaulManager::~BackhaulManager()
+{
+    if (m_cmdu_server) {
+        m_cmdu_server->clear_handlers();
+    }
+}
+
+bool BackhaulManager::thread_init()
+{
     // Create UDS address where the server socket will listen for incoming connection requests.
     std::string backhaul_manager_server_uds_path =
         m_beerocks_temp_path + std::string(BEEROCKS_BACKHAUL_UDS);
@@ -115,6 +153,17 @@ BackhaulManager::BackhaulManager(const config_file::sConfigSlave &config,
     m_cmdu_server =
         beerocks::CmduServerFactory::create_instance(m_cmdu_server_uds_address, m_event_loop);
     LOG_IF(!m_cmdu_server, FATAL) << "Unable to create CMDU server for backhaul manager!";
+
+    beerocks::CmduServer::EventHandlers cmdu_server_handlers{
+        .on_client_connected    = [&](int fd) { handle_connected(fd); },
+        .on_client_disconnected = [&](int fd) { handle_disconnected(fd); },
+        .on_cmdu_received =
+            [&](int fd, uint32_t iface_index, const sMacAddr &dst_mac, const sMacAddr &src_mac,
+                ieee1905_1::CmduMessageRx &cmdu_rx) {
+                handle_cmdu(fd, iface_index, dst_mac, src_mac, cmdu_rx);
+            },
+    };
+    m_cmdu_server->set_handlers(cmdu_server_handlers);
 
     // UCC server must be created if all the three following conditions are met:
     // - Device has been configured to work in certification mode
@@ -157,52 +206,6 @@ BackhaulManager::BackhaulManager(const config_file::sConfigSlave &config,
     // Create timer manager to help using application timers.
     m_timer_manager = std::make_shared<beerocks::TimerManagerImpl>(timer_factory, m_event_loop);
     LOG_IF(!m_timer_manager, FATAL) << "Unable to create timer manager!";
-
-    pending_slave_ifaces                   = slave_ap_ifaces_;
-    configuration_stop_on_failure_attempts = stop_on_failure_attempts_;
-    stop_on_failure_attempts               = stop_on_failure_attempts_;
-    LOG(DEBUG) << "stop_on_failure_attempts=" << stop_on_failure_attempts;
-    auto db                           = AgentDB::get();
-    db->device_conf.ucc_listener_port = string_utils::stoi(config.ucc_listener_port);
-    db->device_conf.vendor            = config.vendor;
-    db->device_conf.model             = config.model;
-
-    std::string bridge_mac;
-    if (!beerocks::net::network_utils::linux_iface_get_mac(config.bridge_iface, bridge_mac)) {
-        LOG(ERROR) << "Failed getting MAC address for interface: " << config.bridge_iface;
-    } else {
-        db->dm_set_agent_mac(bridge_mac);
-    }
-
-    m_eFSMState = EState::INIT;
-
-    m_task_pool.add_task(std::make_shared<TopologyTask>(*this, cmdu_tx));
-    m_task_pool.add_task(std::make_shared<ApAutoConfigurationTask>(*this, cmdu_tx));
-    m_task_pool.add_task(std::make_shared<ChannelSelectionTask>(*this, cmdu_tx));
-    m_task_pool.add_task(std::make_shared<ChannelScanTask>(*this, cmdu_tx));
-    m_task_pool.add_task(std::make_shared<CapabilityReportingTask>(*this, cmdu_tx));
-    m_task_pool.add_task(std::make_shared<LinkMetricsCollectionTask>(*this, cmdu_tx));
-    m_task_pool.add_task(
-        std::make_shared<switch_channel::SwitchChannelTask>(m_task_pool, *this, cmdu_tx));
-    m_task_pool.add_task(
-        std::make_shared<coordinated_cac::CoordinatedCacTask>(m_task_pool, *this, cmdu_tx));
-
-    beerocks::CmduServer::EventHandlers handlers{
-        .on_client_connected    = [&](int fd) { handle_connected(fd); },
-        .on_client_disconnected = [&](int fd) { handle_disconnected(fd); },
-        .on_cmdu_received =
-            [&](int fd, uint32_t iface_index, const sMacAddr &dst_mac, const sMacAddr &src_mac,
-                ieee1905_1::CmduMessageRx &cmdu_rx) {
-                handle_cmdu(fd, iface_index, dst_mac, src_mac, cmdu_rx);
-            },
-    };
-    m_cmdu_server->set_handlers(handlers);
-}
-
-BackhaulManager::~BackhaulManager() { m_cmdu_server->clear_handlers(); }
-
-bool BackhaulManager::thread_init()
-{
     // In case of error in one of the steps of this method, we have to undo all the previous steps
     // (like when rolling back a database transaction, where either all steps get executed or none
     // of them gets executed)
@@ -250,21 +253,24 @@ bool BackhaulManager::thread_init()
     }
     transaction.add_rollback_action([&]() { m_broker_client.reset(); });
 
-    beerocks::btl::BrokerClient::EventHandlers handlers;
+    beerocks::btl::BrokerClient::EventHandlers broker_client_handlers;
     // Install a CMDU-received event handler for CMDU messages received from the transport process.
     // These messages are actually been sent by a remote process and the broker server running in
     // the transport process just forwards them to the broker client.
-    handlers.on_cmdu_received = [&](uint32_t iface_index, const sMacAddr &dst_mac,
-                                    const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx) {
+    broker_client_handlers.on_cmdu_received = [&](uint32_t iface_index, const sMacAddr &dst_mac,
+                                                  const sMacAddr &src_mac,
+                                                  ieee1905_1::CmduMessageRx &cmdu_rx) {
         handle_cmdu_from_broker(iface_index, dst_mac, src_mac, cmdu_rx);
     };
 
     // Install a connection-closed event handler.
     // Currently there is no recovery mechanism if connection with broker server gets interrupted
     // (something that happens if the transport process dies). Just log a message and exit
-    handlers.on_connection_closed = [&]() { LOG(FATAL) << "Broker client got disconnected!"; };
+    broker_client_handlers.on_connection_closed = [&]() {
+        LOG(FATAL) << "Broker client got disconnected!";
+    };
 
-    m_broker_client->set_handlers(handlers);
+    m_broker_client->set_handlers(broker_client_handlers);
     transaction.add_rollback_action([&]() { m_broker_client->clear_handlers(); });
 
     // Subscribe for the reception of CMDU messages that this process is interested in

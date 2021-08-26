@@ -59,21 +59,6 @@ Monitor::Monitor(const std::string &monitor_iface_,
 #endif
       mon_stats(cmdu_tx)
 {
-    // Get Agent UDS file
-    std::string agent_uds_path = beerocks_slave_conf.temp_path + std::string(BEEROCKS_AGENT_UDS);
-
-    m_slave_cmdu_client_factory =
-        std::move(beerocks::create_cmdu_client_factory(agent_uds_path, m_event_loop));
-    LOG_IF(!m_slave_cmdu_client_factory, FATAL) << "Unable to create CMDU client factory!";
-
-    // Create timer factory to create instances of timers.
-    auto timer_factory = std::make_shared<beerocks::TimerFactoryImpl>();
-    LOG_IF(!timer_factory, FATAL) << "Unable to create timer factory!";
-
-    // Create timer manager to help using application timers.
-    m_timer_manager = std::make_shared<beerocks::TimerManagerImpl>(timer_factory, m_event_loop);
-    LOG_IF(!m_timer_manager, FATAL) << "Unable to create timer manager!";
-
     /**
      * Get the MAC address of the radio interface that this monitor instance operates on.
      * This MAC address will later on be used to, for example, extract the information in messages
@@ -123,6 +108,21 @@ bool Monitor::send_cmdu(ieee1905_1::CmduMessageTx &cmdu_tx)
 
 bool Monitor::thread_init()
 {
+    // Get Agent UDS file
+    std::string agent_uds_path = beerocks_slave_conf.temp_path + std::string(BEEROCKS_AGENT_UDS);
+
+    m_slave_cmdu_client_factory =
+        std::move(beerocks::create_cmdu_client_factory(agent_uds_path, m_event_loop));
+    LOG_IF(!m_slave_cmdu_client_factory, FATAL) << "Unable to create CMDU client factory!";
+
+    // Create timer factory to create instances of timers.
+    auto timer_factory = std::make_shared<beerocks::TimerFactoryImpl>();
+    LOG_IF(!timer_factory, FATAL) << "Unable to create timer factory!";
+
+    // Create timer manager to help using application timers.
+    m_timer_manager = std::make_shared<beerocks::TimerManagerImpl>(timer_factory, m_event_loop);
+    LOG_IF(!m_timer_manager, FATAL) << "Unable to create timer manager!";
+
     if (m_slave_client) {
         LOG(ERROR) << "Monitor is already started";
         return false;
