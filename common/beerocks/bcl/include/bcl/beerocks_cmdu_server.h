@@ -141,6 +141,20 @@ public:
     virtual bool forward_cmdu(int fd, uint32_t iface_index, const sMacAddr &dst_mac,
                               const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx) = 0;
 
+    /**
+     * @brief Set the client name on EventLoop file descriptor handler.
+     *
+     * At a client connection it is not possible to know who that client is. This function allows
+     * setting the file descriptor name in the EventLoop handlers later on when the client
+     * identified so in case of EventLoop error or a client disconnect event it will be possible
+     * to know on which client the event has occurred.
+     *
+     * @param fd File descriptor of the socket used by the connection.
+     * @param client_name Client name
+     * @return true on success, false otherwise.
+     */
+    virtual bool set_client_name(int fd, const std::string &client_name) = 0;
+
 protected:
     /**
      * @brief Notifies a client-connected event.

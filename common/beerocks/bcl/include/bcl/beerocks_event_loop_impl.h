@@ -50,6 +50,11 @@ public:
     bool remove_handlers(int fd) override;
 
     /**
+     * @see EventLoop::set_handler_name
+     */
+    bool set_handler_name(int fd, const std::string &name) override;
+
+    /**
      * @brief Main event loop method.
      * @see EventLoop::run
      * 

@@ -1714,6 +1714,11 @@ bool BackhaulManager::handle_slave_backhaul_message(std::shared_ptr<sRadioInfo> 
 
         soc->sta_iface.assign(request->sta_iface(message::IFACE_NAME_LENGTH));
         soc->hostap_iface.assign(request->hostap_iface(message::IFACE_NAME_LENGTH));
+
+        auto agent_name = std::move(std::string("agent_").append(soc->hostap_iface));
+        LOG(DEBUG) << "Assigning FD (" << soc->slave << ") to " << agent_name;
+        m_cmdu_server->set_client_name(soc->slave, agent_name);
+
         onboarding = request->onboarding();
 
         // Add the slave socket to the backhaul configuration

@@ -146,6 +146,18 @@ bool EventLoopImpl::remove_handlers(int fd)
     return !error;
 }
 
+bool EventLoopImpl::set_handler_name(int fd, const std::string &name)
+{
+    auto it = m_fd_to_event_handlers.find(fd);
+    if (it == m_fd_to_event_handlers.end()) {
+        LOG(ERROR) << "Unable to find fd " << fd << " in the registered handlers";
+        return false;
+    }
+
+    it->second.name = name;
+    return true;
+}
+
 int EventLoopImpl::run()
 {
     // Poll events

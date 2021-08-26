@@ -124,6 +124,15 @@ public:
      * @return >0 number of events processed during the call to this method.
      */
     virtual int run() = 0;
+
+    /**
+     * @brief Set the handler name on registered @c EventHandlers with @a fd.
+     *
+     * @param fd File Descriptor of EventHandler to name.
+     * @param name Handler name.
+     * @return true on success, otherwise false.
+     */
+    virtual bool set_handler_name(int fd, const std::string &name) = 0;
 };
 
 } // namespace beerocks

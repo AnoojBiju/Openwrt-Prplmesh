@@ -416,6 +416,10 @@ bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
             return false;
         }
 
+        auto agent_name = std::move(std::string("agent socket"));
+        LOG(DEBUG) << "Assigning FD (" << fd << ") to " << agent_name;
+        m_cmdu_server->set_client_name(fd, agent_name);
+
         // Lock the Agent socket mutex to be able to work in parallel with the work queue.
         {
             std::unique_lock<std::mutex> lock(m_mtxSlaves);

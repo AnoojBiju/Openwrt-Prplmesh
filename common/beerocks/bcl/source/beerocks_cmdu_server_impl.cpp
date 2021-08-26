@@ -9,6 +9,7 @@
 #include <bcl/beerocks_cmdu_server_impl.h>
 
 #include <bcl/beerocks_backport.h>
+#include <bcl/beerocks_event_loop_impl.h>
 #include <bcl/network/sockets_impl.h>
 
 #include <easylogging++.h>
@@ -137,6 +138,11 @@ bool CmduServerImpl::add_connection(int fd,
     notify_client_connected(fd);
 
     return true;
+}
+
+bool CmduServerImpl::set_client_name(int fd, const std::string &client_name)
+{
+    return m_event_loop->set_handler_name(fd, client_name);
 }
 
 bool CmduServerImpl::remove_connection(int fd, bool remove_handlers)
