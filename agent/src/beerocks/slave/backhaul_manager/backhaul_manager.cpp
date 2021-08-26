@@ -3117,10 +3117,10 @@ bool BackhaulManager::start_wps_pbc(const sMacAddr &radio_mac)
             return false;
         }
 
-        // This is a temporary solution for axepoint (prplwrt) in order to pass wbh easymesh
-        // certification 4.2.2 test. Remove after PPM-643 is solved.
         // Disable radio interface to make sure its not beaconing along while the supplicant is scanning.
         // Disable rest of radio interfaces to prevent stations from connecting (there is no BH link anyway).
+        // This is a temporary solution for axepoint (prplwrt) in order to pass wbh easymesh
+        // certification tests (Need to be removed once PPM-643 or PPM-1580 are solved)
         for (auto slaves_socket : slaves_sockets) {
             auto msg = message_com::create_vs_message<
                 beerocks_message::cACTION_BACKHAUL_RADIO_DISABLE_REQUEST>(cmdu_tx);
@@ -3134,8 +3134,8 @@ bool BackhaulManager::start_wps_pbc(const sMacAddr &radio_mac)
                 LOG(ERROR) << "Failed to send cACTION_BACKHAUL_RADIO_DISABLE_REQUEST";
                 return false;
             }
+            UTILS_SLEEP_MSEC(3000);
         }
-
         if (!sta_wlan_hal->start_wps_pbc()) {
             LOG(ERROR) << "Failed to start wps";
             return false;
