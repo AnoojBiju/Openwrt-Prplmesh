@@ -68,12 +68,12 @@ void DhcpTask::start_periodic_lease_poll(const std::chrono::milliseconds &delay_
         m_timer_manager->remove_timer(m_periodic_timer);
     }
 
-    m_periodic_timer =
-        m_timer_manager->add_timer(delay_ms, m_database.config.dhcp_monitor_interval_seconds,
-                                   [this](int fd, beerocks::EventLoop &loop) {
-                                       this->handle_timer_timeout();
-                                       return true;
-                                   });
+    m_periodic_timer = m_timer_manager->add_timer("DHCP Periodic", delay_ms,
+                                                  m_database.config.dhcp_monitor_interval_seconds,
+                                                  [this](int fd, beerocks::EventLoop &loop) {
+                                                      this->handle_timer_timeout();
+                                                      return true;
+                                                  });
 }
 
 void DhcpTask::handle_event(int event_type, void *obj)

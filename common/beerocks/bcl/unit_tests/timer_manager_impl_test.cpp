@@ -72,7 +72,7 @@ TEST_F(TimerManagerImplTest, add_timer_should_succeed)
         return true;
     };
 
-    ASSERT_EQ(timer_fd, timer_manager.add_timer(delay, period, handler));
+    ASSERT_EQ(timer_fd, timer_manager.add_timer("test", delay, period, handler));
 
     // Emulate the timer has elapsed
     timer_handlers.on_read(timer_fd, *m_event_loop);
@@ -123,7 +123,7 @@ TEST_F(TimerManagerImplTest, destructor_should_remove_remaining_timers)
     // Add timer but do not explicitly remove it.
     // If timer has not been explicitly removed at the time destructor is executed then destructor
     // has to do it
-    ASSERT_EQ(timer_fd, timer_manager.add_timer(delay, period, handler));
+    ASSERT_EQ(timer_fd, timer_manager.add_timer("test", delay, period, handler));
 
     ASSERT_EQ(0U, count);
 }
@@ -142,7 +142,7 @@ TEST_F(TimerManagerImplTest, example_of_use)
     };
 
     constexpr auto period = std::chrono::milliseconds(1);
-    int timer_fd          = timer_manager.add_timer(period, period, handler);
+    int timer_fd          = timer_manager.add_timer("test", period, period, handler);
     constexpr int expected_timer_fd_after_removing_timer =
         beerocks::net::FileDescriptor::invalid_descriptor;
     ASSERT_NE(timer_fd, expected_timer_fd_after_removing_timer);

@@ -213,7 +213,8 @@ bool BackhaulManager::thread_init()
 
     // Create a timer to run internal tasks periodically
     m_tasks_timer = m_timer_manager->add_timer(
-        tasks_timer_period, tasks_timer_period, [&](int fd, beerocks::EventLoop &loop) {
+        "Agent Tasks", tasks_timer_period, tasks_timer_period,
+        [&](int fd, beerocks::EventLoop &loop) {
             // Allow tasks to execute up to 80% of the timer period
             m_task_pool.run_tasks(int(double(tasks_timer_period.count()) * 0.8));
             return true;
@@ -226,17 +227,18 @@ bool BackhaulManager::thread_init()
     transaction.add_rollback_action([&]() { m_timer_manager->remove_timer(m_tasks_timer); });
 
     // Create a timer to run the FSM periodically
-    m_fsm_timer = m_timer_manager->add_timer(fsm_timer_period, fsm_timer_period,
-                                             [&](int fd, beerocks::EventLoop &loop) {
-                                                 bool continue_processing = false;
-                                                 do {
-                                                     if (!backhaul_fsm_main(continue_processing)) {
-                                                         return false;
-                                                     }
-                                                 } while (continue_processing);
+    m_fsm_timer =
+        m_timer_manager->add_timer("Backhaul Manager FSM", fsm_timer_period, fsm_timer_period,
+                                   [&](int fd, beerocks::EventLoop &loop) {
+                                       bool continue_processing = false;
+                                       do {
+                                           if (!backhaul_fsm_main(continue_processing)) {
+                                               return false;
+                                           }
+                                       } while (continue_processing);
 
-                                                 return true;
-                                             });
+                                       return true;
+                                   });
     if (m_fsm_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
         LOG(ERROR) << "Failed to create the FSM timer";
         return false;
@@ -2985,7 +2987,7 @@ bool BackhaulManager::handle_backhaul_steering_request(ieee1905_1::CmduMessageRx
 
     // Create a timer to check if this Backhaul Steering Request times out.
     m_backhaul_steering_timer = m_timer_manager->add_timer(
-        backhaul_steering_timeout, std::chrono::milliseconds::zero(),
+        "Backhaul Steering Timeout", backhaul_steering_timeout, std::chrono::milliseconds::zero(),
         [&](int fd, beerocks::EventLoop &loop) {
             cancel_backhaul_steering_operation();
 
@@ -3302,6 +3304,7 @@ void BackhaulManager::handle_dev_reset_default(
     }
 
     m_dev_reset_default_timer = m_timer_manager->add_timer(
+        "Dev Reset Default",
         std::chrono::duration_cast<std::chrono::milliseconds>(dev_reset_default_timeout),
         std::chrono::milliseconds::zero(), [&](int fd, beerocks::EventLoop &loop) {
             m_timer_manager->remove_timer(m_dev_reset_default_timer);

@@ -326,7 +326,7 @@ bool ApManager::start()
     beerocks::Transaction transaction;
 
     // Create a timer to run the FSM periodically
-    m_fsm_timer = m_timer_manager->add_timer(fsm_timer_period, fsm_timer_period,
+    m_fsm_timer = m_timer_manager->add_timer("AP Manager FSM", fsm_timer_period, fsm_timer_period,
                                              [&](int fd, beerocks::EventLoop &loop) {
                                                  bool continue_processing = true;
                                                  while (continue_processing) {

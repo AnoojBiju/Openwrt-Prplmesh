@@ -141,8 +141,8 @@ bool PlatformManager::start()
 
     // Create a timer to periodically check if WLAN parameters have changed
     m_check_wlan_params_changed_timer = m_timer_manager->add_timer(
-        check_wlan_params_changed_timer_interval, check_wlan_params_changed_timer_interval,
-        [&](int fd, beerocks::EventLoop &loop) {
+        "Platform Manager Periodic WLAN Check", check_wlan_params_changed_timer_interval,
+        check_wlan_params_changed_timer_interval, [&](int fd, beerocks::EventLoop &loop) {
             check_wlan_params_changed();
             return true;
         });
@@ -1121,8 +1121,8 @@ bool PlatformManager::init_arp_monitor()
 
         // Create a timer to periodically clean old ARP table entries
         m_clean_old_arp_entries_timer = m_timer_manager->add_timer(
-            clean_old_arp_entries_timer_interval, clean_old_arp_entries_timer_interval,
-            [&](int fd, beerocks::EventLoop &loop) {
+            "Clean Old ARP Entries", clean_old_arp_entries_timer_interval,
+            clean_old_arp_entries_timer_interval, [&](int fd, beerocks::EventLoop &loop) {
                 clean_old_arp_entries();
                 return true;
             });

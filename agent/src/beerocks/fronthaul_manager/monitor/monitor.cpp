@@ -135,7 +135,7 @@ bool Monitor::thread_init()
 
     // Create a timer to run the FSM periodically
     m_fsm_timer = m_timer_manager->add_timer(
-        fsm_timer_period, fsm_timer_period,
+        "Monitor FSM", fsm_timer_period, fsm_timer_period,
         [&](int fd, beerocks::EventLoop &loop) { return monitor_fsm(); });
     if (m_fsm_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
         LOG(ERROR) << "Failed to create the FSM timer";

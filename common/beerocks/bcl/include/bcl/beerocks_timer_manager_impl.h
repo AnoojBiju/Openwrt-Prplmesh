@@ -63,7 +63,8 @@ public:
      * - Schedule the timer with given frequency (delay and period).
      * - Add the timer to the list of timers (so it can be automatically removed in destructor).
      */
-    int add_timer(std::chrono::milliseconds delay, std::chrono::milliseconds period,
+    int add_timer(const std::string &timer_name, std::chrono::milliseconds delay,
+                  std::chrono::milliseconds period,
                   const EventLoop::EventHandler &handler) override;
 
     /**
