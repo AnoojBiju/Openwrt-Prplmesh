@@ -34,6 +34,7 @@ constexpr auto g_device_path                = "Device.WiFi.DataElements.Network.
 constexpr auto g_controller_data_model_path = "config/odl/controller.odl";
 constexpr auto g_zero_mac                   = "00:00:00:00:00:00";
 constexpr auto g_bridge_mac                 = "46:55:66:77:00:00";
+constexpr auto g_bridge_oui                 = "465566";
 constexpr auto g_radio_mac_1                = "46:55:66:77:00:21";
 constexpr auto g_radio_mac_2                = "46:55:66:77:00:22";
 constexpr auto g_client_mac                 = "46:55:66:77:00:31";
@@ -91,9 +92,13 @@ protected:
                                      Matcher<const uint32_t &>(_)))
             .WillOnce(Return(true));
 
+        EXPECT_CALL(*m_ambiorix, set(std::string(g_device_path) + ".1.MultiAPDevice",
+                                     "ManufacturerOUI", Matcher<const std::string &>(g_bridge_oui)))
+            .WillOnce(Return(true));
+
         m_db->set_prplmesh(tlvf::mac_from_string(g_bridge_mac));
         EXPECT_EQ(std::string(g_device_path) + ".1", m_db->get_node_data_model_path(g_bridge_mac));
-        EXPECT_CALL(*m_ambiorix, set_current_time(_)).WillRepeatedly(Return(true));
+        EXPECT_CALL(*m_ambiorix, set_current_time(_, _)).WillRepeatedly(Return(true));
     }
 };
 
@@ -142,7 +147,7 @@ protected:
         EXPECT_CALL(*m_ambiorix, set(std::string(g_sta_path_1), "MACAddress",
                                      Matcher<const std::string &>(g_client_mac)))
             .WillOnce(Return(true));
-        EXPECT_CALL(*m_ambiorix, set_current_time(std::string(g_sta_path_1)))
+        EXPECT_CALL(*m_ambiorix, set_current_time(std::string(g_sta_path_1), _))
             .WillOnce(Return(true));
         EXPECT_CALL(*m_ambiorix,
                     set(std::string(g_sta_path_1), "LastConnectTime", Matcher<const uint64_t &>(_)))
@@ -159,7 +164,7 @@ protected:
         EXPECT_CALL(*m_ambiorix, set(std::string(g_assoc_event_path_1), "StatusCode",
                                      Matcher<const uint32_t &>(0U)))
             .WillRepeatedly(Return(true));
-        EXPECT_CALL(*m_ambiorix, set_current_time(std::string(g_assoc_event_path_1)))
+        EXPECT_CALL(*m_ambiorix, set_current_time(std::string(g_assoc_event_path_1), _))
             .WillOnce(Return(true));
 
         //prepare scenario
@@ -246,7 +251,8 @@ TEST_F(DbTest, test_add_vap)
     EXPECT_CALL(*m_ambiorix,
                 set(std::string(bss_path) + ".1", "LastChange", Matcher<const uint64_t &>(_)))
         .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set_current_time(std::string(bss_path) + ".1")).WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set_current_time(std::string(bss_path) + ".1", _))
+        .WillOnce(Return(true));
 
     //add virtual AP to radio
     EXPECT_TRUE(m_db->add_vap(g_radio_mac_1, g_vap_id_1, g_bssid_1, g_ssid_1, false));
@@ -523,7 +529,8 @@ TEST_F(DbTest, test_add_current_op_class)
     //expectations for add_current_op_class
     EXPECT_CALL(*m_ambiorix, add_instance(radio_path_1_operating_classes))
         .WillOnce(Return(radio_path_1_operating_classes + ".1"));
-    EXPECT_CALL(*m_ambiorix, set_current_time(std::string(radio_path_1_operating_classes + ".1")))
+    EXPECT_CALL(*m_ambiorix,
+                set_current_time(std::string(radio_path_1_operating_classes + ".1"), _))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(std::string(radio_path_1_operating_classes) + ".1", "Class",
                                  Matcher<const int32_t &>(0x01)))
@@ -593,7 +600,7 @@ TEST_F(DbTestRadio1Sta1, test_set_node_stats_info)
                                  Matcher<const uint32_t &>(stats.m_rx_packets_error)))
         .WillOnce(Return(true));
 
-    EXPECT_CALL(*m_ambiorix, set_current_time(g_sta_path_1)).WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set_current_time(g_sta_path_1, _)).WillOnce(Return(true));
 
     EXPECT_TRUE(
         m_db->dm_set_sta_extended_link_metrics(tlvf::mac_from_string(g_client_mac), metrics));
@@ -632,7 +639,7 @@ TEST_F(DbTest, test_set_vap_stats_info)
         .WillRepeatedly(Return(true));
     EXPECT_CALL(*m_ambiorix, set(_, _, Matcher<const bool &>(_))).WillRepeatedly(Return(true));
     EXPECT_CALL(*m_ambiorix, set(_, _, Matcher<const uint64_t &>(_))).WillRepeatedly(Return(true));
-    EXPECT_CALL(*m_ambiorix, set_current_time(_)).WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set_current_time(_, _)).WillOnce(Return(true));
     //add virtual AP to radio
     EXPECT_TRUE(m_db->add_vap(g_radio_mac_1, g_vap_id_1, g_bssid_1, g_ssid_1, false));
 
@@ -658,7 +665,7 @@ TEST_F(DbTest, test_set_vap_stats_info)
                                  Matcher<const uint64_t &>(6U)))
         .WillOnce(Return(true));
 
-    EXPECT_CALL(*m_ambiorix, set_current_time(_)).WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set_current_time(_, _)).WillOnce(Return(true));
 
     //execute test
     EXPECT_TRUE(m_db->set_vap_stats_info(tlvf::mac_from_string(g_bssid_1), 1, 2, 3, 4, 5, 6));
@@ -799,7 +806,7 @@ TEST_F(DbTestRadio1Sta1, test_add_sta_twice_with_same_mac)
                                  Matcher<const std::string &>(g_client_mac)))
         .WillOnce(Return(true));
 
-    EXPECT_CALL(*m_ambiorix, set_current_time(std::string(g_sta_path_1))).WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set_current_time(std::string(g_sta_path_1), _)).WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix,
                 set(std::string(g_sta_path_1), "LastConnectTime", Matcher<const uint64_t &>(_)))
         .WillOnce(Return(true));
@@ -813,7 +820,7 @@ TEST_F(DbTestRadio1Sta1, test_add_sta_twice_with_same_mac)
     EXPECT_CALL(*m_ambiorix,
                 set(std::string(g_assoc_event_path_1), "StatusCode", Matcher<const uint32_t &>(0U)))
         .WillRepeatedly(Return(true));
-    EXPECT_CALL(*m_ambiorix, set_current_time(std::string(g_assoc_event_path_1)))
+    EXPECT_CALL(*m_ambiorix, set_current_time(std::string(g_assoc_event_path_1), _))
         .WillRepeatedly(Return(true));
     //prepare scenario
     EXPECT_TRUE(m_db->add_node_station(tlvf::mac_from_string(g_client_mac),
