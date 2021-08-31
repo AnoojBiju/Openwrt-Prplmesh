@@ -14,6 +14,7 @@
 #include <bcl/son/son_wireless_utils.h>
 #include <bpl/bpl_cfg.h>
 #include <bpl/bpl_db.h>
+#include <cmath>
 #include <easylogging++.h>
 
 #include <algorithm>
@@ -373,6 +374,19 @@ std::string db::dm_add_radio_element(const std::string &radio_mac, const std::st
     return radio_instance;
 }
 
+bool db::dm_set_multi_ap_sta_noise_param(Station &station, const uint8_t rcpi, const uint8_t rsni)
+{
+    auto bss = get_bss(station.mac);
+
+    if (!bss) {
+        return true;
+    }
+    uint32_t anpi = rcpi / (1 + std::pow(10, (rsni / 20.0) - 1));
+    m_ambiorix_datamodel->set(station.dm_path + ".MultiApSta", "Noise",
+                              anpi + bss->radio.stats_info->noise);
+    return true;
+}
+
 bool db::dm_add_sta_beacon_measurement(const beerocks_message::sBeaconResponse11k &beacon)
 {
     auto sta = get_station(beacon.sta_mac);
@@ -398,6 +412,7 @@ bool db::dm_add_sta_beacon_measurement(const beerocks_message::sBeaconResponse11
         return false;
     }
 
+    dm_set_multi_ap_sta_noise_param(*sta, beacon.rcpi, beacon.rsni);
     bool ret_val = true;
 
     ret_val &=
@@ -5654,6 +5669,7 @@ bool db::dm_add_sta_element(const sMacAddr &bssid, Station &station)
     }
 
     m_ambiorix_datamodel->set_current_time(station.dm_path);
+    m_ambiorix_datamodel->set_current_time(station.dm_path + ".MultiApSta", "AssociationTime");
 
     uint64_t add_sta_time = time(NULL);
     if (!m_ambiorix_datamodel->set(station.dm_path, "LastConnectTime", add_sta_time)) {
