@@ -1417,6 +1417,39 @@ class TlvF:
             lines_cpp.append("%sreturn true;" % (self.getIndentation(1)))
             lines_cpp.append("}")
             lines_cpp.append("")
+        elif param_meta.condition is not None:
+            # Conditional parameters.
+            # Add allocation method to make room for the
+            # parameter, and move the rest of the buffer:
+            lines_h.append("bool alloc_%s();" % (param_name))
+            lines_cpp.append("bool %s::alloc_%s() {" % (obj_meta.name, param_name))
+
+            # Check if already allocated:
+            lines_cpp.append("%sif (m_%s_allocated) {" % (self.getIndentation(1), param_name))
+            lines_cpp.append('%sLOG(ERROR) << "%s already allocated!";' % (
+                self.getIndentation(2), param_name))
+            lines_cpp.append('%sreturn false;' % self.getIndentation(2))
+            lines_cpp.append('%s}' % self.getIndentation(1))
+
+            lines_cpp.append("%ssize_t len = sizeof(%s);" %
+                             (self.getIndentation(1), param_type))
+            lines_cpp.append("%sif(getBuffRemainingBytes() < len )  {" % (self.getIndentation(1)))
+            lines_cpp.append(
+                '%sTLVF_LOG(ERROR) << "Not enough available space on buffer - can\'t allocate";' % self.getIndentation(2))
+            lines_cpp.append("%sreturn false;" % self.getIndentation(2))
+            lines_cpp.append("%s}" % self.getIndentation(1))
+            lines_cpp.extend(self.addAllocationMarkersAlloc(obj_meta, param_meta,
+                                                            param_length, True))  # Variable length lists support
+            lines_cpp.append("%sif (!buffPtrIncrementSafe(len)) {" % (self.getIndentation(1)))
+            lines_cpp.append("%sLOG(ERROR) << \"buffPtrIncrementSafe(\" << std::dec << len << \") Failed!\";" % (
+                self.getIndentation(2)))
+            lines_cpp.append("%sreturn false;" % (self.getIndentation(2)))
+            lines_cpp.append("%s}" % (self.getIndentation(1)))
+            # mark it as allocated:
+            lines_cpp.append("%sm_%s_allocated = true;" % (self.getIndentation(1), param_name))
+            lines_cpp.append("%sreturn true;" % (self.getIndentation(1)))
+            lines_cpp.append("}")
+            lines_cpp.append("")
         else:  # simple list
             lines_h.append("bool alloc_%s(size_t count = 1);" % (param_name))
             lines_cpp.append("bool %s::alloc_%s(size_t count) {" % (obj_meta.name, param_name))
@@ -1519,6 +1552,9 @@ class TlvF:
                 if param_meta.length_type == MetaData.LENGTH_TYPE_VAR:
                     lines_cpp.append(
                         "%suint8_t *src = (uint8_t *)&m_%s[*m_%s];" % (self.getIndentation(1), param_meta.name, param_length))
+                elif param_meta.condition is not None:
+                    lines_cpp.append("%suint8_t *src = (uint8_t *)m_%s;" %
+                                     (self.getIndentation(1), param_meta.name))
                 else:
                     lines_cpp.append("%suint8_t *src = (uint8_t *)&m_%s[m_%s_idx__];" %
                                      (self.getIndentation(1), param_meta.name, param_meta.name))
