@@ -119,10 +119,12 @@ public:
     /**
      * @brief Set current data and time in RFC 3339 format.
      *
-     * @param path_to_object Path to NBAPI object which has parameter TimeStamp.
+     * @param path_to_object Path to NBAPI object which has parameter object.
+     * @param param parameter name which is default as TimeStamp.
      * @return True if date and time successfully set, false otherwise.
      */
-    bool set_current_time(const std::string &path_to_object) override;
+    bool set_current_time(const std::string &path_to_object,
+                          const std::string &param = "TimeStamp") override;
 
     bool remove_all_instances(const std::string &relative_path) override;
 

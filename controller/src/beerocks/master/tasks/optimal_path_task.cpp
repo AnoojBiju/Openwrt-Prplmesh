@@ -185,12 +185,12 @@ void optimal_path_task::work()
         auto agents  = database.get_all_connected_agents();
         auto subtree = database.get_node_subtree(sta_mac);
 
-        std::vector<std::shared_ptr<sAgent>> agents_outside_subtree;
+        std::vector<std::shared_ptr<Agent>> agents_outside_subtree;
 
         // insert all ires that outside the subtree to "agents_outside_subtree",
         // because it is impossible to move ire to a child ire. station doesn't has subtree.
         std::copy_if(agents.begin(), agents.end(), std::back_inserter(agents_outside_subtree),
-                     [&](std::shared_ptr<sAgent> agent) {
+                     [&](std::shared_ptr<Agent> agent) {
                          return (subtree.find(tlvf::mac_to_string(agent->al_mac)) == subtree.end());
                      });
 
@@ -777,12 +777,12 @@ void optimal_path_task::work()
         auto agents  = database.get_all_connected_agents();
         auto subtree = database.get_node_subtree(sta_mac);
 
-        std::vector<std::shared_ptr<sAgent>> agents_outside_subtree;
+        std::vector<std::shared_ptr<Agent>> agents_outside_subtree;
 
         // insert all ires that outside the subtree to "agents_outside_subtree",
         // because it is impossible to move ire to a child ire. station doesn't has subtree.
         std::copy_if(agents.begin(), agents.end(), std::back_inserter(agents_outside_subtree),
-                     [&](std::shared_ptr<sAgent> agent) {
+                     [&](std::shared_ptr<Agent> agent) {
                          return (subtree.find(tlvf::mac_to_string(agent->al_mac)) == subtree.end());
                      });
 

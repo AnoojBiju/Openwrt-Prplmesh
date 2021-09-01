@@ -162,11 +162,11 @@ private:
                                  std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps,
                                  beerocks::beerocks_header &beerocks_header,
                                  ieee1905_1::CmduMessageTx &cmdu_tx,
-                                 const std::shared_ptr<sAgent> &agent);
+                                 const std::shared_ptr<Agent> &agent);
     bool
     handle_non_intel_slave_join(const sMacAddr &src_mac,
                                 std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps,
-                                const WSC::m1 &m1, const std::shared_ptr<sAgent> &agent,
+                                const WSC::m1 &m1, const std::shared_ptr<Agent> &agent,
                                 const sMacAddr &radio_mac, ieee1905_1::CmduMessageTx &cmdu_tx);
 
     // 1905 messages handlers
@@ -253,7 +253,7 @@ private:
      * @param cmdu_rx  AP Extended Metrics Response message.
      * @return True on success, false otherwise.
     */
-    bool handle_tlv_ap_extended_metrics(std::shared_ptr<sAgent> agent,
+    bool handle_tlv_ap_extended_metrics(std::shared_ptr<Agent> agent,
                                         ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
@@ -293,7 +293,7 @@ private:
      * @param cmdu_rx Received CMDU as AP Capability Report message.
      * @return True on success, false otherwise.
     */
-    bool handle_tlv_profile2_ap_capability(std::shared_ptr<sAgent> agent,
+    bool handle_tlv_profile2_ap_capability(std::shared_ptr<Agent> agent,
                                            ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
@@ -303,16 +303,16 @@ private:
      * @param cmdu_rx Received CMDU as CAC Status Report message.
      * @return True on success, false otherwise.
     */
-    bool handle_tlv_profile2_cac_status_report(std::shared_ptr<sAgent::sRadio> radio,
+    bool handle_tlv_profile2_cac_status_report(std::shared_ptr<Agent::sRadio> radio,
                                                ieee1905_1::CmduMessageRx &cmdu_rx);
     /**
      * @brief Extracts ESP value from est_service_info_field and set it to specified
      * with @param_name NBAPI EstServiceParameter.
-     * 
+     *
      * @param param_name Name of NBAPI EstServiceParameter parameter to be set.
-     * @param reporting_agent_bssid BSSID of BSS for wich parameter will be set.
+     * @param reporting_agent_bssid BSSID of BSS for which parameter will be set.
      * @param est_service_info_field Array with ESP values.
-     * 
+     *
     */
     void set_esp(const std::string &param_name, const sMacAddr &reporting_agent_bssid,
                  uint8_t *est_service_info_field);

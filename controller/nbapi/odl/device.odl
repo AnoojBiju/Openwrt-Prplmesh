@@ -40,6 +40,14 @@
             %read-only bool AgentInitiatedRCPIBasedSteering = false;
         }
 
+        %read-only object MultiAPDevice {
+
+            /* Represented as a six hexadecimal-digit value using all upper-case letters [0-9A-F] {6} */
+            %read-only string ManufacturerOUI;
+            %read-only string LastContactTime = "2020-08-31T11:22:39Z";
+            %read-only string AssocIEEE1905DeviceRef;
+        }
+
         /*
         ** The list of Radio objects.
         */

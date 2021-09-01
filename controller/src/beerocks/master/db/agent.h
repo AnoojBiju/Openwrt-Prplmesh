@@ -21,7 +21,8 @@
 // Forward declaration of son::node
 namespace son {
 class node;
-}
+class db;
+} // namespace son
 
 namespace prplmesh {
 namespace controller {
@@ -30,11 +31,11 @@ namespace db {
 class Station;
 
 /** All information about an agent in the controller database. */
-struct sAgent {
+class Agent {
 public:
-    sAgent()               = delete;
-    sAgent(const sAgent &) = delete;
-    explicit sAgent(const sMacAddr &al_mac_) : al_mac(al_mac_) {}
+    Agent()              = delete;
+    Agent(const Agent &) = delete;
+    explicit Agent(const sMacAddr &al_mac_) : al_mac(al_mac_) {}
 
     /** AL-MAC address of the agent. */
     const sMacAddr al_mac;
@@ -125,6 +126,14 @@ public:
 
     /** Radios reported on this agent. */
     beerocks::mac_map<sRadio> radios;
+
+    friend class ::son::db;
+
+private:
+    /**
+     * @brief The last time that the Agent was contacted via the Multi-AP control protocol.
+     */
+    std::chrono::system_clock::time_point last_contact_time;
 };
 
 } // namespace db

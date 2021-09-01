@@ -117,10 +117,12 @@ public:
     /**
      * @brief Set current data and time in RFC 3339 format.
      *
-     * @param path_to_object Path to NBAPI object which has parameter TimeStamp.
+     * @param path_to_object Path to NBAPI object which has parameter object.
+     * @param param parameter name which is TimeStamp as default.
      * @return True if date and time successfully set, false otherwise.
      */
-    virtual bool set_current_time(const std::string &path_to_object) = 0;
+    virtual bool set_current_time(const std::string &path_to_object,
+                                  const std::string &param = "TimeStamp") = 0;
 };
 
 inline Ambiorix::~Ambiorix() {}

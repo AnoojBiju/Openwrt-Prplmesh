@@ -30,7 +30,7 @@ class sInterface {
   neighbors
 }
 
-class sAgent {
+class Agent {
   sMacAddr al_mac
   string path_to_dm
   bool is_controller
@@ -44,10 +44,10 @@ class db {
   find_bss(bssid)
 }
 
-db *-- sAgent
+db *-- Agent
 db *-- Station
-sAgent *-- sRadio
-sAgent *-- sInterface
+Agent *-- sRadio
+Agent *-- sInterface
 sRadio *-- sBss
 Station "0..1" --o sRadio :  backhaul STA
 Station "*" -- "0..1" sBss
