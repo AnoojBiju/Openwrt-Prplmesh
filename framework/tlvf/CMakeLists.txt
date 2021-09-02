@@ -14,6 +14,11 @@ set(TLVF_COMMAND ${PYTHON_EXECUTABLE} ${PythonTlvf} ${TLVF_DIR}/src ${TLVF_DIR}/
 set(ENUM_AUTO_PRINT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../external/enumAutoPrint)
 set(ENUM_AUTO_PRINT_COMMAND ${ENUM_AUTO_PRINT_DIR}/enum_auto_print.py)
 
+execute_process(
+    COMMAND ${PYTHON_EXECUTABLE} --version
+    COMMAND_ECHO STDOUT
+)
+
 message("-- Running ${TLVF_COMMAND} --print-dependencies...")
 execute_process(
     COMMAND ${TLVF_COMMAND} --print-dependencies
