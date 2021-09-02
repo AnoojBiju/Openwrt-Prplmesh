@@ -423,6 +423,11 @@ bool Monitor::monitor_fsm()
                             return false;
                         },
                 };
+                if (!m_event_loop->register_handlers(m_arp_fd, arp_events_handlers)) {
+                    LOG(WARNING) << "Unable to register handlers for arp monitor, ignore and "
+                                    "continue without it";
+                    mon_rssi.stop();
+                }
             }
 
 #ifdef BEEROCKS_RDKB
