@@ -4754,6 +4754,16 @@ bool slave_thread::handle_autoconfiguration_renew(Socket *sd, ieee1905_1::CmduMe
         }
         auto &radio_manager = m_radio_managers[radio->front.iface_name];
 
+        if (!radio_manager.master_socket) {
+            // TODO: as part of PPM-350, use
+            // ap_autoconfiguration_completed instead of
+            // master_socket. See:
+            // https://gitlab.com/prpl-foundation/prplmesh/prplMesh/-/merge_requests/2629#note_666550951
+            LOG(INFO) << "slave for " << radio->front.iface_name
+                      << " not connected to master yet, ignoring renew.";
+            return true;
+        }
+
         LOG(TRACE) << "goto STATE_JOIN_MASTER";
         radio_manager.slave_state = STATE_JOIN_MASTER;
     }
