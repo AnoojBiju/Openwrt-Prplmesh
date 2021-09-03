@@ -53,11 +53,17 @@ class builder(object):
 # cmake-based builder class
 class cmakebuilder(builder):
     def __init__(self, name, modules_dir, build_dir, install_dir, cmake_verbose=False,
-                 make_verbose=False, cmake_flags=[], generator=None):
+                 make_verbose=False, cmake_flags=[], generator=None, parallel=None):
         self.cmake_verbose = cmake_verbose
         self.make_verbose = make_verbose
         self.cmake_flags = cmake_flags
         self.generator = generator
+        self.parallel = parallel
+
+        if (self.generator is None or self.generator != "Ninja") and self.parallel is None:
+            # Ninja already defaults to "maximum parallelism"
+            logger.info("No --parallel option specified, using ncores + 1")
+            self.parallel = multiprocessing.cpu_count() + 1
 
         super(cmakebuilder, self).__init__(name, modules_dir, build_dir, install_dir)
 
@@ -90,7 +96,7 @@ class cmakebuilder(builder):
         if self.make_verbose:
             cmd.extend(["--", "VERBOSE=1"])
         else:
-            cmd.extend(["--", "-j", str(multiprocessing.cpu_count() + 1)])
+            cmd.extend(["--", "-j", str(self.parallel)])
         logger.info("building & installing {}: {}".format(self.name, " ".join(cmd)))
         subprocess.check_call(cmd, env=self.env)
 
@@ -220,7 +226,7 @@ class mapbuild(object):
                 map_cmake_flags += ["CMAKE_TOOLCHAIN_FILE=external_toolchain.cmake"]
 
         builder = cmakebuilder(".", modules_dir, build_dir, install_dir, args.cmake_verbose,
-                               args.make_verbose, map_cmake_flags, args.generator)
+                               args.make_verbose, map_cmake_flags, args.generator, args.parallel)
 
         self.run_command(builder, commands)
 
@@ -251,6 +257,9 @@ class mapbuild(object):
                             help="make verbosity on (pass VERBOSE=1 to make)")
         parser.add_argument("--generator", "-G",
                             help="Specify a build system generator (cfr. cmake -G)")
+        parser.add_argument("--parallel", "-j",
+                            help=(" The maximum number of concurrent processes to use"
+                                  " when building (cfr. cmake -j)"))
 
         return parser
 

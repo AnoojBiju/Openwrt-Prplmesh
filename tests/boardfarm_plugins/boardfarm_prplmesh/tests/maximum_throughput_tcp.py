@@ -22,10 +22,17 @@ class MaximumThroughputTcp(PrplMeshBaseTest):
         except AttributeError as ae:
             raise SkipTest(ae)
 
+        results_24 = {'downlink_2.4': [0],
+                      'uplink_2.4': [0]}
+
+        results_5 = {'downlink_5': [0],
+                     'uplink_5': [0]}
+
+        cpu_info = []
+        test_location = []
+        test_location.append('pre-conditions')
+
         try:
-            cpu_info = []
-            test_location = []
-            test_location.append('pre-conditions')
             stop_event = threading.Event()
             thread_1 = threading.Thread(target=self.get_cpe_resources,
                                         args=[agent, cpu_info, test_location, stop_event])
@@ -51,11 +58,6 @@ class MaximumThroughputTcp(PrplMeshBaseTest):
             # Measure the STA downlink TCP throughput using a test time
             # of 120 seconds and repeat the 3 times.
             # duration=120, num_streams=10)
-            results_24 = {'downlink_2.4': [],
-                          'uplink_2.4': []}
-
-            results_5 = {'downlink_5': [],
-                         'uplink_5': []}
 
             for iteration in range(1, 4):
                 test_location.append(f'Down 2.4 - {iteration}')
