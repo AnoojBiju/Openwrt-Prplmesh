@@ -50,7 +50,7 @@ public:
     virtual bool channel_scan_dump_cached_results() override;
 
     /**
-     * @brief Adds a new timer with given schedule.
+     * @brief Generates connected events for already connected clients.
      *
      * @see mon_wlan_hal::generate_connected_clients_events
      */
@@ -58,6 +58,13 @@ public:
         bool &is_finished_all_clients,
         const std::chrono::steady_clock::time_point max_iteration_timeout =
             std::chrono::steady_clock::time_point::max()) override;
+
+    /**
+     * @brief Clear progress of generate-connected-clients-events.
+     * 
+     * @see ap_wlan_hal::pre_generate_connected_clients_events
+     */
+    virtual bool pre_generate_connected_clients_events() override;
 
     virtual bool channel_scan_abort() override;
     virtual bool set_estimated_service_parameters(uint8_t *esp_info_field) override;

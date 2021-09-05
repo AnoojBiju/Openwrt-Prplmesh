@@ -2164,6 +2164,18 @@ bool ap_wlan_hal_dwpal::generate_connected_clients_events(
     return true;
 }
 
+bool ap_wlan_hal_dwpal::pre_generate_connected_clients_events()
+{
+
+    m_vap_id_in_progress = INVALID_VAP_ID;
+    m_prev_client_mac    = beerocks::net::network_utils::ZERO_MAC;
+    m_completed_vaps.clear();
+    m_handled_clients.clear();
+    m_queried_first = false;
+
+    return true;
+}
+
 bool ap_wlan_hal_dwpal::start_wps_pbc()
 {
     LOG(DEBUG) << "Start WPS PBC on interface " << m_radio_info.iface_name;

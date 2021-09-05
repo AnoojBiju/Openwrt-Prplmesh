@@ -367,6 +367,18 @@ public:
             std::chrono::steady_clock::time_point::max()) = 0;
 
     /**
+     * @brief The generate connected clients events can be called several times by an agent (after
+     * the agent re-establishes connection to a controller). To support this we need to be able to clear
+     * the "progress" of the client's events generation before calling the generate_connected_clients_events
+     * API repetitively.
+     *  The API resets the lists of "handled_clients" and "completed_vaps" that manage the already handled clients and VAPs.
+     * 
+     * @return true 
+     * @return false 
+     */
+    virtual bool pre_generate_connected_clients_events() = 0;
+
+    /**
      * @brief Start WPS PBC procedure on a given VAP 
      *
      * @param iface_name VAP interface on which to start WPS PBC

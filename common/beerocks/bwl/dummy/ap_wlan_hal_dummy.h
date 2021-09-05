@@ -79,7 +79,7 @@ public:
     virtual bool get_vap_enable(const std::string &iface_name, bool &enable) override;
 
     /**
-     * @brief Adds a new timer with given schedule.
+     * @brief Generates connected events for already connected clients.
      *
      * @see ap_wlan_hal::generate_connected_clients_events
      */
@@ -87,6 +87,13 @@ public:
         bool &is_finished_all_clients,
         const std::chrono::steady_clock::time_point max_iteration_timeout =
             std::chrono::steady_clock::time_point::max()) override;
+
+    /**
+     * @brief Clear progress of generate-connected-clients-events.
+     * 
+     * @see ap_wlan_hal::pre_generate_connected_clients_events
+     */
+    virtual bool pre_generate_connected_clients_events() override;
 
     virtual bool start_wps_pbc() override;
     virtual bool set_mbo_assoc_disallow(const std::string &bssid, bool enable) override;
