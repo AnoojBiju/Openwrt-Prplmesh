@@ -769,12 +769,12 @@ MAP-4.16.1_BH5GL_FH5GH:nec-wx3000hp:
     - when: manual
       allow_failure: true
 
-MAP-4.16.1_BH5GH_FH5GH:nec-wx3000hp:
+MAP-4.16.1_BH24G_FH5GL:nec-wx3000hp:
   extends: .certification:nec-wx3000hp
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.16.1_BH5GH_FH5GH:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.16.1_BH24G_FH5GL:nec-wx3000hp.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
