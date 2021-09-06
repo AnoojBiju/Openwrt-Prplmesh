@@ -188,6 +188,9 @@ class MetaData:
     KEY_LENGTH = "_length"
     KEY_LENGTH_VAR = "_length_var"
     KEY_LENGTH_MAX = "_length_max"
+    KEY_CONDITION = "_condition"
+    CONDITION_NAME = "_field_name"
+    CONDITION_VALUE = "_field_value"
     LENGTH_TYPE_INT = "_int_"
     LENGTH_TYPE_CONST = "_const_"
     LENGTH_TYPE_VAR = "_var_"
@@ -227,6 +230,8 @@ class MetaData:
         self.constractor_h_lines = []
         self.constractor_cpp_lines = []
         self.alloc_list = []
+        self.condition = None
+
         self.fillMetaData(dict)
         self.errorCheck(dict)
         self.children_types = {}
@@ -303,6 +308,13 @@ class MetaData:
                     self.length_max = value
                 elif key == MetaData.KEY_CLASS_CONST:
                     self.class_const = True
+                elif key == MetaData.KEY_CONDITION:
+                    if set(value.keys()) != set([MetaData.CONDITION_NAME
+                                                   , MetaData.CONDITION_VALUE]):
+                        self.error = self.errPrefix() \
+                            + "unknown condition keys: %s, dict: %s" % (key, dict)
+                    else:
+                        self.condition = value
                 else:
                     self.error = self.errPrefix() + "unknown key: %s, dict: %s" % (key, dict)
 
@@ -783,6 +795,9 @@ class TlvF:
         lines_cpp = []
         if param_length_type == None:
             if TypeInfo(param_type).type == TypeInfo.CLASS:
+                if param_meta and param_meta.condition is not None:
+                    self.abort("%s.yaml --> conditional parameters are only supported " +
+                               "for arithmetic types" % self.yaml_fname)
                 lines_h.append("%s *m_%s = nullptr;" % (param_type, param_name))
                 lines_h.append("std::shared_ptr<%s> m_%s_ptr = nullptr;" % (param_type, param_name))
                 self.overrideIsPostInitSucceeded(obj_meta, param_name, lines_h)
@@ -840,6 +855,106 @@ class TlvF:
                 lines_cpp.append("}")
                 self.insertLineCpp(obj_meta.name, self.CODE_CLASS_INIT_FUNC_INSERT, lines_cpp)
                 lines_cpp = []
+
+            elif param_meta and param_meta.condition is not None:
+                # conditional parameters
+
+                # add private pointer
+                lines = ["%s* m_%s = nullptr;" % (param_type, param_name)]
+                lines.append("bool m_%s_allocated = false;" % param_name)
+                self.insertLineH(obj_meta.name, self.CODE_CLASS_PRIVATE_VARS_INSERT, lines)
+
+                lines_cpp = []
+
+                # Init
+                lines_cpp.append("m_%s = reinterpret_cast<%s*>(m_%s__);" %
+                                 (param_name, param_type, self.MEMBER_BUFF_PTR))
+                lines_cpp.append(
+                    "%sif (*m_%s == %s && !buffPtrIncrementSafe(sizeof(%s))) {" % (
+                        self.getIndentation(0),
+                        param_meta.condition[MetaData.CONDITION_NAME],
+                        param_meta.condition[MetaData.CONDITION_VALUE],
+                        param_type))
+                lines_cpp.append("%sLOG(ERROR) << \"buffPtrIncrementSafe(\" << std::dec << sizeof(%s) << \") Failed!\";" % (
+                    self.getIndentation(1),
+                    param_type))
+                lines_cpp.append("%sreturn false;" % (self.getIndentation(1)))
+                lines_cpp.append("%s}" % (self.getIndentation(0)))
+
+                self.insertLineCpp(obj_meta.name, self.CODE_CLASS_INIT_FUNC_INSERT, lines_cpp)
+
+                lines_h = []
+                lines_cpp = []
+
+
+                # Add getters:
+                lines_h.append("%s* %s();" % (param_type, param_name))
+                lines_cpp.append("%s* %s::%s() {" % (param_type_full, obj_meta.name, param_name))
+                lines_cpp.append("%sif (!m_%s || *m_%s != %s) {" % (
+                    self.getIndentation(1),
+                    param_meta.condition[MetaData.CONDITION_NAME],
+                    param_meta.condition[MetaData.CONDITION_NAME],
+                    param_meta.condition[MetaData.CONDITION_VALUE]))
+                lines_cpp.append('%sTLVF_LOG(ERROR) << "%s requested but %s != %s";' % (
+                    self.getIndentation(2),
+                    param_name,
+                    param_meta.condition[MetaData.CONDITION_NAME],
+                    param_meta.condition[MetaData.CONDITION_VALUE]))
+                lines_cpp.append("%sreturn nullptr;" % self.getIndentation(2))
+                lines_cpp.append("%s}" % self.getIndentation(1))
+                lines_cpp.append("%sreturn (%s*)(m_%s);" %
+                                 (self.getIndentation(1), param_type, param_name))
+                lines_cpp.append("}")
+                lines_cpp.append("")
+
+                # Add function to allocate memory
+                self.addClassVarLenMethods(obj_meta, param_type, param_name,
+                                           param_meta, param_length, is_var_len, is_dynamic_len)
+
+                # Add setter:
+                lines_h.append("bool set_%s(const %s %s);" % (
+                    param_name, param_type, param_name))
+                lines_cpp.append(
+                        "bool %s::set_%s(const %s %s) {" % (
+                            obj_meta.name,
+                            param_name,
+                            param_type,
+                            param_name))
+
+                lines_cpp.append("%sif (!m_%s_allocated && !alloc_%s()) {" % (
+                    self.getIndentation(1), param_name, param_name))
+                lines_cpp.append('%sLOG(ERROR) << "Could not allocate %s!";' % (
+                    self.getIndentation(2), param_name))
+                lines_cpp.append('%sreturn false;' % self.getIndentation(2))
+                lines_cpp.append("%s}" % self.getIndentation(1))
+
+                lines_cpp.append("%s*m_%s = %s;" % (
+                    self.getIndentation(1),
+                    param_meta.condition[MetaData.CONDITION_NAME],
+                    param_meta.condition[MetaData.CONDITION_VALUE]))
+                lines_cpp.append("%s*m_%s = %s;" % (self.getIndentation(1), param_name, param_name))
+                lines_cpp.append("%sreturn true;" % self.getIndentation(1))
+                lines_cpp.append("}")
+                lines_cpp.append("")
+
+                self.insertLineH(obj_meta.name, self.CODE_CLASS_PUBLIC_FUNC_INSERT, lines_h)
+                self.insertLineCpp(obj_meta.name, self.CODE_CLASS_PUBLIC_FUNC_INSERT, lines_cpp)
+
+                # Add swap methods:
+                if param_type_info.swap_needed:
+                    swap_func_lines.append("if (*m_%s == %s) {" % (
+                        param_meta.condition[MetaData.CONDITION_NAME],
+                        param_meta.condition[MetaData.CONDITION_VALUE]))
+                    swap_func_lines.append("%s%sm_%s%s;" % (
+                        self.getIndentation(1),
+                        param_type_info.swap_prefix,
+                        param_name,
+                        param_type_info.swap_suffix))
+                    swap_func_lines.append("}")
+
+                lines_h = []
+                lines_cpp = []
+
 
             else:
                 # add private pointer
@@ -942,6 +1057,10 @@ class TlvF:
                         param_type_info.swap_prefix, t_name, param_type_info.swap_suffix))
 
         elif (is_int_len or is_const_len or is_var_len or is_dynamic_len):
+
+            if param_meta and param_meta.condition is not None:
+                self.abort("%s.yaml --> conditional parameters are only supported " +
+                           "for arithmetic types" % self.yaml_fname)
 
             # add private pointer
             self.include_list.append("<tuple>")
@@ -1405,6 +1524,39 @@ class TlvF:
             lines_cpp.append("%sreturn true;" % (self.getIndentation(1)))
             lines_cpp.append("}")
             lines_cpp.append("")
+        elif param_meta.condition is not None:
+            # Conditional parameters.
+            # Add allocation method to make room for the
+            # parameter, and move the rest of the buffer:
+            lines_h.append("bool alloc_%s();" % (param_name))
+            lines_cpp.append("bool %s::alloc_%s() {" % (obj_meta.name, param_name))
+
+            # Check if already allocated:
+            lines_cpp.append("%sif (m_%s_allocated) {" % (self.getIndentation(1), param_name))
+            lines_cpp.append('%sLOG(ERROR) << "%s already allocated!";' % (
+                self.getIndentation(2), param_name))
+            lines_cpp.append('%sreturn false;' % self.getIndentation(2))
+            lines_cpp.append('%s}' % self.getIndentation(1))
+
+            lines_cpp.append("%ssize_t len = sizeof(%s);" %
+                             (self.getIndentation(1), param_type))
+            lines_cpp.append("%sif(getBuffRemainingBytes() < len )  {" % (self.getIndentation(1)))
+            lines_cpp.append(
+                '%sTLVF_LOG(ERROR) << "Not enough available space on buffer - can\'t allocate";' % self.getIndentation(2))
+            lines_cpp.append("%sreturn false;" % self.getIndentation(2))
+            lines_cpp.append("%s}" % self.getIndentation(1))
+            lines_cpp.extend(self.addAllocationMarkersAlloc(obj_meta, param_meta,
+                                                            param_length, True))  # Variable length lists support
+            lines_cpp.append("%sif (!buffPtrIncrementSafe(len)) {" % (self.getIndentation(1)))
+            lines_cpp.append("%sLOG(ERROR) << \"buffPtrIncrementSafe(\" << std::dec << len << \") Failed!\";" % (
+                self.getIndentation(2)))
+            lines_cpp.append("%sreturn false;" % (self.getIndentation(2)))
+            lines_cpp.append("%s}" % (self.getIndentation(1)))
+            # mark it as allocated:
+            lines_cpp.append("%sm_%s_allocated = true;" % (self.getIndentation(1), param_name))
+            lines_cpp.append("%sreturn true;" % (self.getIndentation(1)))
+            lines_cpp.append("}")
+            lines_cpp.append("")
         else:  # simple list
             lines_h.append("bool alloc_%s(size_t count = 1);" % (param_name))
             lines_cpp.append("bool %s::alloc_%s(size_t count) {" % (obj_meta.name, param_name))
@@ -1507,6 +1659,9 @@ class TlvF:
                 if param_meta.length_type == MetaData.LENGTH_TYPE_VAR:
                     lines_cpp.append(
                         "%suint8_t *src = (uint8_t *)&m_%s[*m_%s];" % (self.getIndentation(1), param_meta.name, param_length))
+                elif param_meta.condition is not None:
+                    lines_cpp.append("%suint8_t *src = (uint8_t *)m_%s;" %
+                                     (self.getIndentation(1), param_meta.name))
                 else:
                     lines_cpp.append("%suint8_t *src = (uint8_t *)&m_%s[m_%s_idx__];" %
                                      (self.getIndentation(1), param_meta.name, param_meta.name))
