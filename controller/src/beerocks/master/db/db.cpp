@@ -3100,9 +3100,9 @@ bool db::add_channel_report(const sMacAddr &RUID, const uint8_t &operating_class
     return true;
 }
 
-static void dm_add_neighbors(std::shared_ptr<beerocks::nbapi::Ambiorix> m_ambiorix_datamodel,
-                             const std::string &channel_path,
-                             const std::vector<wfa_map::cNeighbors> &neighbors)
+static void dm_add_bss_neighbors(std::shared_ptr<beerocks::nbapi::Ambiorix> m_ambiorix_datamodel,
+                                 const std::string &channel_path,
+                                 const std::vector<wfa_map::cNeighbors> &neighbors)
 {
     for (auto neighbor : neighbors) {
         // Device.WiFi.DataElements.Network.Device.1.Radio.2.ScanResult.3.OpClassScan.4.ChannelScan.5.NeighborBSS
@@ -3117,8 +3117,11 @@ static void dm_add_neighbors(std::shared_ptr<beerocks::nbapi::Ambiorix> m_ambior
         m_ambiorix_datamodel->set(neighbor_path, "SignalStrength", neighbor.signal_strength());
         m_ambiorix_datamodel->set(neighbor_path, "ChannelBandwidth",
                                   neighbor.channels_bw_list_str());
-        m_ambiorix_datamodel->set(neighbor_path, "ChannelUtilization", 0); // TO DO: PPM-1358
-        m_ambiorix_datamodel->set(neighbor_path, "StationCount", 0);       // TO DO: PPM-1358
+        if (neighbor.bss_load_element_present()) {
+            m_ambiorix_datamodel->set(neighbor_path, "ChannelUtilization",
+                                      neighbor.channel_utilization());
+            m_ambiorix_datamodel->set(neighbor_path, "StationCount", neighbor.station_count());
+        }
     }
 }
 
@@ -3215,7 +3218,7 @@ bool db::dm_add_scan_result(const sMacAddr &ruid, const uint8_t &operating_class
         dm_add_op_class_scan(m_ambiorix_datamodel, scan_result_path, operating_class);
     auto channel_path = dm_add_channel_scan(m_ambiorix_datamodel, op_class_path, channel, noise,
                                             utilization, ISO_8601_timestamp);
-    dm_add_neighbors(m_ambiorix_datamodel, channel_path, neighbors);
+    dm_add_bss_neighbors(m_ambiorix_datamodel, channel_path, neighbors);
     return true;
 }
 
