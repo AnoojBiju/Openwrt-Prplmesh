@@ -183,6 +183,12 @@ class cNeighbors : public BaseClass
         bool set_channels_bw_list(const char buffer[], size_t size);
         bool alloc_channels_bw_list(size_t count = 1);
         eBssLoadElementPresent& bss_load_element_present();
+        bool alloc_channel_utilization();
+        uint8_t* channel_utilization();
+        bool set_channel_utilization(const uint8_t channel_utilization);
+        bool alloc_station_count();
+        uint16_t* station_count();
+        bool set_station_count(const uint16_t station_count);
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -199,6 +205,10 @@ class cNeighbors : public BaseClass
         char* m_channels_bw_list = nullptr;
         size_t m_channels_bw_list_idx__ = 0;
         eBssLoadElementPresent* m_bss_load_element_present = nullptr;
+        uint8_t* m_channel_utilization = nullptr;
+        bool m_channel_utilization_allocated = false;
+        uint16_t* m_station_count = nullptr;
+        bool m_station_count_allocated = false;
 };
 
 }; // close namespace: wfa_map
