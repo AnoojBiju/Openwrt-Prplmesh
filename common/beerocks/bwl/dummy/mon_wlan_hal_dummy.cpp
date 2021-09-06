@@ -177,6 +177,12 @@ bool mon_wlan_hal_dummy::generate_connected_clients_events(
     return true;
 }
 
+bool mon_wlan_hal_dummy::pre_generate_connected_clients_events()
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    return false;
+}
+
 bool mon_wlan_hal_dummy::channel_scan_abort()
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
