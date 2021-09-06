@@ -233,14 +233,10 @@ void association_handling_task::work()
         add_pending_mac(hostap_mac,
                         beerocks_message::ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE);
         set_responses_timeout(3000);
-        state = FINISH;
         break;
     }
 
     case FINISH: {
-
-        TASK_LOG(DEBUG) << "response for beacon/rx_rssi measurement from " << original_parent_mac
-                        << " for sta " << sta_mac << " was received";
         finalize_new_connection();
         finish();
         break;
@@ -298,6 +294,9 @@ void association_handling_task::handle_response(std::string mac,
         break;
     }
     case beerocks_message::ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE: {
+        TASK_LOG(DEBUG) << "response for rx_rssi measurement from " << original_parent_mac
+                        << " for sta " << sta_mac << " was received";
+        state = FINISH;
         break;
     }
     case beerocks_message::ACTION_CONTROL_CLIENT_BEACON_11K_RESPONSE: {
@@ -450,6 +449,7 @@ void association_handling_task::handle_responses_timeout(
             TASK_LOG(ERROR) << "state REQUEST_RSSI_MEASUREMENT reached maximum attempts="
                             << attempts << " aborting task!";
             finalize_new_connection();
+            finish();
         }
         break;
     }
