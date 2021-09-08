@@ -33,12 +33,16 @@ class BeaconReportQuery(PrplMeshBaseTest):
         request += '0x73 0xFF 0xFFFFFFFFFFFF 0x02 0x00 0x01 0x02 0x73 0x24 0x30 0x00'
 
         debug(request)
-        mid = controller.dev_send_1905(agent.mac, 0x8011,
-                                       tlv(0x99, 0x0016,
+        mid = controller.dev_send_1905(agent.mac, self.ieee1905['eMessageType']
+                                       ['BEACON_METRICS_QUERY_MESSAGE'],
+                                       tlv(self.ieee1905['eTlvTypeMap']
+                                           ['TLV_BEACON_METRICS_QUERY'],
                                            "{" + request + "}"))
 
         time.sleep(3)
-        self.check_cmdu_type("ACK", 0x8000, agent.mac, controller.mac, mid)
+        self.check_cmdu_type("ACK",
+                             self.ieee1905['eMessageType']['ACK_MESSAGE'],
+                             agent.mac, controller.mac, mid)
 
         # this line is printed in the monitor log - however currently there is no way to test it -
         # self.check_log(env.agents[0].radios[0].???,

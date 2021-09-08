@@ -46,13 +46,20 @@ class NbapiBSS(PrplMeshBaseTest):
 
         debug("Send AP Metrics Query message to agent 1")
         self.send_and_check_policy_config_metric_reporting(controller, agent, True, False)
-        mid = controller.dev_send_1905(agent.mac, 0x800B,
-                                       tlv(0x93, 0x0007, "0x01 {%s}" % (vap.bssid)))
+        mid = controller.dev_send_1905(agent.mac,
+                                       self.ieee1905['eMessageType']['AP_METRICS_QUERY_MESSAGE'],
+                                       tlv(self.ieee1905['eTlvTypeMap']['TLV_AP_METRIC_QUERY'],
+                                           "0x01 {%s}" % (vap.bssid)))
         time.sleep(1)
-        ap_metric_resp = self.check_cmdu_type_single("AP Metrics Response", 0x800C, agent.mac,
+        ap_metric_resp = self.check_cmdu_type_single("AP Metrics Response",
+                                                     self.ieee1905['eMessageType']
+                                                     ['AP_METRICS_RESPONSE_MESSAGE'], agent.mac,
                                                      controller.mac, mid)
-        ap_metrics = self.check_cmdu_has_tlv_single(ap_metric_resp, 0x94)
-        ap_extended_metrics = self.check_cmdu_has_tlv_single(ap_metric_resp, 0xC7)
+        ap_metrics = self.check_cmdu_has_tlv_single(ap_metric_resp,
+                                                    self.ieee1905['eTlvTypeMap']['TLV_AP_METRIC'])
+        ap_extended_metrics = self.check_cmdu_has_tlv_single(ap_metric_resp,
+                                                             self.ieee1905['eTlvTypeMap']
+                                                             ['TLV_AP_EXTENDED_METRICS'])
 
         repeater = topology[agent.mac]
         radio = repeater.radios[agent.radios[0].mac]

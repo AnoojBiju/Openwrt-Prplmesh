@@ -35,11 +35,14 @@ class ClientCapabilityQueryFailsWithNoSta(PrplMeshBaseTest):
 
         debug("Send client capability query for unconnected STA")
 
-        cap_report_tlv = self.check_cmdu_has_tlv_single(report, 0x91)
+        cap_report_tlv = self.check_cmdu_has_tlv_single(report,
+                                                        self.ieee1905['eTlvTypeMap']
+                                                        ['TLV_CLIENT_CAPABILITY_REPORT'])
         self.safe_check_obj_attribute(cap_report_tlv, 'client_capability_result', '0x00000001',
                                       "Capability query was successful for disconnected STA")
 
-        error_tlv = self.check_cmdu_has_tlv_single(report, 0xa3)
+        error_tlv = self.check_cmdu_has_tlv_single(
+            report, self.ieee1905['eTlvTypeMap']['TLV_ERROR_CODE'])
         self.safe_check_obj_attribute(error_tlv, 'error_code_reason', '0x00000002',
                                       "Wrong error reason code")
         self.safe_check_obj_attribute(error_tlv, 'error_code_mac_addr', sta.mac,

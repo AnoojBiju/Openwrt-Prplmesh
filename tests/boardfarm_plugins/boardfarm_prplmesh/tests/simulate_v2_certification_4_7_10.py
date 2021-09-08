@@ -38,7 +38,8 @@ class V2Certification_4_7_10(CommonFlows):
         self.dev.DUT.wired_sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
 
         # Phase 2 (step 3)
-        mid = controller.dev_send_1905(agent.mac, 0x8001)
+        mid = controller.dev_send_1905(agent.mac,
+                                       self.ieee1905['eMessageType']['AP_CAPABILITY_QUERY_MESSAGE'])
         # wait
         sleep(1)
         # Phase 2 (step 4)
@@ -49,10 +50,15 @@ class V2Certification_4_7_10(CommonFlows):
             one Metric Collection Interval TLV and
             one R2 AP Capability TLV with the Byte Counter Units field set to 0x01.
         '''
-        resp = self.check_cmdu_type_single("AP Capability Report message", 0x8002,
+        resp = self.check_cmdu_type_single("AP Capability Report message",
+                                           self.ieee1905['eMessageType']
+                                           ['AP_CAPABILITY_REPORT_MESSAGE'],
                                            agent.mac, controller.mac, mid)
-        self.check_cmdu_has_tlvs(resp, 0xB4)
-        self.check_cmdu_has_tlvs(resp, 0xC5)
+        self.check_cmdu_has_tlvs(resp,
+                                 self.ieee1905['eTlvTypeMap']['TLV_PROFILE2_AP_CAPABILITY'])
+        self.check_cmdu_has_tlvs(resp,
+                                 self.ieee1905['eTlvTypeMap']
+                                 ['TLV_PROFILE2_METRIC_COLLECTION_INTERVAL'])
 
         # Phase 3
         # Phase 4
@@ -86,12 +92,17 @@ class V2Certification_4_7_10(CommonFlows):
             )
         '''
 
-        metric_reporting_policy_tlv = tlv(0x8A, 0x000D,
+        metric_reporting_policy_tlv = tlv(self.ieee1905['eTlvTypeMap']
+                                          ['TLV_METRIC_REPORTING_POLICY'],
                                           '0x0a 0x01 {} 0x00 0x00 0x00 0x00 0x0f'
                                           .format(agent.radios[0].mac))
-        unsuccessful_association_policy_tlv = tlv(0xC4, 0x0005, '0x01 0x0000003c')
+        unsuccessful_association_policy_tlv = tlv(self.ieee1905['eTlvTypeMap']
+                                                  ['TLV_PROFILE2_UNSUCCESSFUL_ASSOCIATION_POLICY'],
+                                                  '0x01 0x0000003c')
 
-        mid = controller.dev_send_1905(agent.mac, 0x8003,
+        mid = controller.dev_send_1905(agent.mac,
+                                       self.ieee1905['eMessageType']
+                                       ['MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE'],
                                        metric_reporting_policy_tlv,
                                        unsuccessful_association_policy_tlv)
 
@@ -100,7 +111,9 @@ class V2Certification_4_7_10(CommonFlows):
 
         sleep(12)  # TIME_METRICS value in test suite v2.
 
-        response = self.check_cmdu_type_single("AP metrics response", 0x800C,
+        response = self.check_cmdu_type_single("AP metrics response",
+                                               self.ieee1905['eMessageType']
+                                               ['AP_METRICS_RESPONSE_MESSAGE'],
                                                agent.mac, controller.mac)
 
         '''
@@ -115,24 +128,33 @@ class V2Certification_4_7_10(CommonFlows):
         '''
 
         # one Radio Metrics TLV for the fronthaul radio and <-- we check only this at the moment
-        self.check_cmdu_has_tlvs(response, 0xC6)
+        self.check_cmdu_has_tlvs(response,
+                                 self.ieee1905['eTlvTypeMap']['TLV_PROFILE2_RADIO_METRICS'])
 
         # Phase 7
 
         # Phase 8
 
         # prepare tlvs
-        sta_mac_addr_tlv = tlv(0x95, 0x0006, '{}'.format(sta2.mac))
+        sta_mac_addr_tlv = tlv(self.ieee1905['eTlvTypeMap']['TLV_STAMAC_ADDRESS_TYPE'],
+                               '{}'.format(sta2.mac))
         # send
-        mid = controller.dev_send_1905(agent.mac, 0x800D, sta_mac_addr_tlv)
+        mid = controller.dev_send_1905(agent.mac,
+                                       self.ieee1905['eMessageType']
+                                       ['ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE'],
+                                       sta_mac_addr_tlv)
         # wait
         sleep(5)
         # check response
         associated_link_metrics_resp = self.check_cmdu_type_single(
-                                            "associated sta link metrics response", 0x800E,
-                                            agent.mac, controller.mac, mid)
-        self.check_cmdu_has_tlvs(associated_link_metrics_resp, 0xC8)
-        self.check_cmdu_has_tlvs(associated_link_metrics_resp, 0x96)
+            "associated sta link metrics response",
+            self.ieee1905['eMessageType']['ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE'],
+            agent.mac, controller.mac, mid)
+        self.check_cmdu_has_tlvs(associated_link_metrics_resp,
+                                 self.ieee1905['eTlvTypeMap']
+                                 ['TLV_ASSOCIATED_STA_EXTENDED_LINK_METRICS'])
+        self.check_cmdu_has_tlvs(associated_link_metrics_resp,
+                                 self.ieee1905['eTlvTypeMap']['TLV_ASSOCIATED_STA_LINK_METRICS'])
 
         # Phases 9 + 10
         # Disable reporting

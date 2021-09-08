@@ -119,8 +119,10 @@ class NbapiScanResult(PrplMeshBaseTest):
         )
 
         debug("Send Channel Scan Request message")
-        controller.ucc_socket.dev_send_1905(agent.mac, 0x801B,
-                                            tlv(0xA6, 0x001B,
+        controller.ucc_socket.dev_send_1905(agent.mac, self.ieee1905['eMessageType']
+                                            ['CHANNEL_SCAN_REQUEST_MESSAGE'],
+                                            tlv(self.ieee1905['eTlvTypeMap']
+                                                ['TLV_CHANNEL_SCAN_REQUEST'],
                                                 "0x80 0x01 {} {}".format(
                                                     agent.radios[0].mac, channel_scan_request_tlv)))
         time.sleep(5)
@@ -128,7 +130,8 @@ class NbapiScanResult(PrplMeshBaseTest):
             agent, "Sending Channel Scan Report Message", timeout=10)
 
         ch_scan_reports = self.check_cmdu_type(
-            "Channel Scan Report", 0x801C, agent.mac, controller.mac)
+            "Channel Scan Report", self.ieee1905['eMessageType']['CHANNEL_SCAN_REPORT_MESSAGE'],
+            agent.mac, controller.mac)
 
         topology = self.get_topology()
         repeater = topology[agent.mac]
@@ -148,7 +151,9 @@ class NbapiScanResult(PrplMeshBaseTest):
             nbapi_channel_paths = controller.nbapi_get_list_instances(
                 nbapi_scan + ".ChannelScan")
             for report in ch_scan_reports:
-                scan_tlvs = self.check_cmdu_has_tlvs(report, 0xA7)
+                scan_tlvs = self.check_cmdu_has_tlvs(report,
+                                                     self.ieee1905['eTlvTypeMap']
+                                                     ['TLV_CHANNEL_SCAN_RESULT'])
 
                 matching_tlvs = [scan_tlv for scan_tlv in scan_tlvs
                                  if int(scan_tlv.tlv_data[18:20], 16) == int(nbapi_class)]

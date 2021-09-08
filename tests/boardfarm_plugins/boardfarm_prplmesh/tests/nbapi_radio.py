@@ -44,17 +44,29 @@ class NbapiRadio(PrplMeshBaseTest):
         radio = repeater.radios[agent.radios[0].mac]
 
         debug("Send AP Metrics Query message to agent 1")
-        mid = controller.dev_send_1905(agent.mac, 0x800B,
-                                       tlv(0x93, 0x0007, "0x01 {%s}" % (vap.bssid)))
+        mid = controller.dev_send_1905(agent.mac,
+                                       self.ieee1905['eMessageType']['AP_METRICS_QUERY_MESSAGE'],
+                                       tlv(self.ieee1905['eTlvTypeMap']['TLV_AP_METRIC_QUERY'],
+                                           "0x01 {%s}" % (vap.bssid)))
         debug("Send empty Channel Selection Request")
-        controller.dev_send_1905(agent.mac, 0x8006, tlv(0x00, 0x0000, "{}"))
+        controller.dev_send_1905(agent.mac,
+                                 self.ieee1905['eMessageType']['CHANNEL_SELECTION_REQUEST_MESSAGE'],
+                                 tlv(0x00, "{}"))
         time.sleep(2)
-        ap_metric_resp = self.check_cmdu_type_single("AP Metrics Response", 0x800C, agent.mac,
-                                                     controller.mac, mid)
-        op_ch_reports = self.check_cmdu_type("Operating Channel Report", 0x8008, agent.mac,
+        ap_metric_resp = self.check_cmdu_type_single("AP Metrics Response",
+                                                     self.ieee1905['eMessageType']
+                                                     ['AP_METRICS_RESPONSE_MESSAGE'],
+                                                     agent.mac, controller.mac, mid)
+        op_ch_reports = self.check_cmdu_type("Operating Channel Report",
+                                             self.ieee1905['eMessageType']
+                                             ['OPERATING_CHANNEL_REPORT_MESSAGE'], agent.mac,
                                              controller.mac)
-        ap_metrics_tlv = self.check_cmdu_has_tlv_single(ap_metric_resp, 0x94)
-        radio_metrics_tlv = self.check_cmdu_has_tlvs(ap_metric_resp, 0xC6)
+        ap_metrics_tlv = self.check_cmdu_has_tlv_single(ap_metric_resp,
+                                                        self.ieee1905['eTlvTypeMap']
+                                                        ['TLV_AP_METRIC'])
+        radio_metrics_tlv = self.check_cmdu_has_tlvs(ap_metric_resp,
+                                                     self.ieee1905['eTlvTypeMap']
+                                                     ['TLV_PROFILE2_RADIO_METRICS'])
 
         # The tshark version 2.6.20 used in boardfarm doesn't properly parse this TLV.
         assert len(radio_metrics_tlv[0].tlv_data), "tlv_data of Radio Metrics TLV is empty!"
@@ -79,7 +91,9 @@ class NbapiRadio(PrplMeshBaseTest):
             nbapi_class = controller.nbapi_get_parameter(op_class, "Class")
             found = False
             for report in op_ch_reports:
-                op_ch_tlvs = self.check_cmdu_has_tlvs(report, 0x8F)
+                op_ch_tlvs = self.check_cmdu_has_tlvs(report,
+                                                      self.ieee1905['eTlvTypeMap']
+                                                      ['TLV_OPERATING_CHANNEL_REPORT'])
                 for op_ch_tlv in op_ch_tlvs:
                     if op_ch_tlv.operating_channel_radio_id == agent.radios[0].mac:
                         matching_op_class = [op_class for op_class in op_ch_tlv.operating_classes
@@ -92,7 +106,8 @@ class NbapiRadio(PrplMeshBaseTest):
                         found = True
             assert found, f"No operating channel report TLV found for {agent.radios[0].mac}"
 
-        missing_op_class = [op_ch_tlv for op_ch_tlv in [self.check_cmdu_has_tlv_single(report, 0x8F)
-                                                        for report in op_ch_reports]
-                            if op_ch_tlv.operating_channel_radio_id == agent.radios[0].mac]
+        missing_op_class = [op_ch_tlv for op_ch_tlv in [self.check_cmdu_has_tlv_single(
+            report, self.ieee1905['eTlvTypeMap']['TLV_OPERATING_CHANNEL_REPORT'])
+            for report in op_ch_reports]
+            if op_ch_tlv.operating_channel_radio_id == agent.radios[0].mac]
         assert not missing_op_class, f"CurrentOperatingClasses missing value for {missing_op_class}"
