@@ -74,21 +74,29 @@ class ApMetricsResponse(PrplMeshBaseTest):
         debug("Send AP Metrics query message to agent 1 expecting"
               "Traffic Stats for {}".format(sta1.mac))
         self.send_and_check_policy_config_metric_reporting(controller, agent1, True, False)
-        mid = controller.dev_send_1905(agent1.mac, 0x800B,
-                                       tlv(0x93, 0x0007, "0x01 {%s}" % (vap1.bssid)))
+        mid = controller.dev_send_1905(agent1.mac,
+                                       self.ieee1905['eMessageType']['AP_METRICS_QUERY_MESSAGE'],
+                                       tlv(self.ieee1905['eTlvTypeMap']['TLV_AP_METRIC_QUERY'],
+                                           0x0007, "0x01 {%s}" % (vap1.bssid)))
 
         time.sleep(1)
-        response = self.check_cmdu_type_single("AP metrics response", 0x800C, agent1.mac,
+        response = self.check_cmdu_type_single("AP metrics response",
+                                               self.ieee1905['eMessageType']
+                                               ['AP_METRICS_RESPONSE_MESSAGE'],
+                                               agent1.mac,
                                                controller.mac, mid)
         debug("Check AP metrics response has AP metrics")
-        ap_metrics_1 = self.check_cmdu_has_tlv_single(response, 0x94)
+        ap_metrics_1 = self.check_cmdu_has_tlv_single(response,
+                                                      self.ieee1905['eTlvTypeMap']['TLV_AP_METRIC'])
         if ap_metrics_1:
             if ap_metrics_1.ap_metrics_bssid != vap1.bssid:
                 self.fail("AP metrics response with wrong BSSID {} instead of {}".format(
                     ap_metrics_1.ap_metrics_bssid, vap1.bssid))
 
         debug("Check AP metrics response has STA traffic stats")
-        sta_stats_1 = self.check_cmdu_has_tlv_single(response, 0xa2)
+        sta_stats_1 = self.check_cmdu_has_tlv_single(response,
+                                                     self.ieee1905['eTlvTypeMap']
+                                                     ['TLV_ASSOCIATED_STA_TRAFFIC_STATS'])
         if sta_stats_1:
             if sta_stats_1.assoc_sta_traffic_stats_mac_addr != sta1.mac:
                 self.fail("STA traffic stats with wrong MAC {} instead of {}".format(
@@ -97,21 +105,28 @@ class ApMetricsResponse(PrplMeshBaseTest):
         debug("Send AP Metrics query message to agent 2 expecting"
               " STA Metrics for {}".format(sta2.mac))
         self.send_and_check_policy_config_metric_reporting(controller, agent2, False, True)
-        mid = controller.dev_send_1905(agent2.mac, 0x800B,
-                                       tlv(0x93, 0x0007, "0x01 {%s}" % vap2.bssid))
+        mid = controller.dev_send_1905(agent2.mac,
+                                       self.ieee1905['eMessageType']['AP_METRICS_QUERY_MESSAGE'],
+                                       tlv(self.ieee1905['eTlvTypeMap']['TLV_AP_METRIC_QUERY'],
+                                           0x0007, "0x01 {%s}" % vap2.bssid))
 
         time.sleep(1)
-        response = self.check_cmdu_type_single("AP metrics response", 0x800C, agent2.mac,
+        response = self.check_cmdu_type_single("AP metrics response",
+                                               self.ieee1905['eMessageType']
+                                               ['AP_METRICS_RESPONSE_MESSAGE'], agent2.mac,
                                                controller.mac, mid)
         debug("Check AP Metrics Response message has AP Metrics TLV")
-        ap_metrics_2 = self.check_cmdu_has_tlv_single(response, 0x94)
+        ap_metrics_2 = self.check_cmdu_has_tlv_single(response,
+                                                      self.ieee1905['eTlvTypeMap']['TLV_AP_METRIC'])
         if ap_metrics_2:
             if ap_metrics_2.ap_metrics_bssid != vap2.bssid:
                 self.fail("AP metrics response with wrong BSSID {} instead of {}".format(
                     ap_metrics_2.ap_metrics_bssid, vap2.bssid))
 
         debug("Check AP metrics response has STA Link Metrics")
-        sta_metrics_2 = self.check_cmdu_has_tlv_single(response, 0x96)
+        sta_metrics_2 = self.check_cmdu_has_tlv_single(response,
+                                                       self.ieee1905['eTlvTypeMap']
+                                                       ['TLV_ASSOCIATED_STA_LINK_METRICS'])
         if sta_metrics_2:
             if sta_metrics_2.assoc_sta_link_metrics_mac_addr != sta2.mac:
                 self.fail("STA metrics with wrong MAC {} instead of {}".format(

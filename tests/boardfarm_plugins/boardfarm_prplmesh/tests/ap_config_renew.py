@@ -28,10 +28,20 @@ class ApConfigRenew(PrplMeshBaseTest):
             "bss_info1,{} 8x Boardfarm-Tests-24G-1 0x0020 0x0008 maprocks1 0 1,"
             "bss_info2,{} 8x Boardfarm-Tests-24G-2 0x0020 0x0008 maprocks2 1 0"
             .format(mac_repeater1_upper, agent.mac))
-        controller.ucc_socket.dev_send_1905(agent.mac, 0x000A,
-                                            tlv(0x01, 0x0006, "{" + controller.mac + "}"),
-                                            tlv(0x0F, 0x0001, "{0x00}"),
-                                            tlv(0x10, 0x0001, "{0x00}"))
+        controller.dev_send_1905(agent.mac,
+                                 self.ieee1905['eMessageType']
+                                 ['AP_AUTOCONFIGURATION_RENEW_MESSAGE'],
+                                 tlv(self.ieee1905['eTlvType']['TLV_AL_MAC_ADDRESS'],
+                                     0x0006,
+                                     "{" + controller.mac + "}"),
+                                 tlv(self.ieee1905['eTlvType']['TLV_SUPPORTED_ROLE'],
+                                     0x0001,
+                                     "{" + f"""0x{self.ieee1905['tlvSupportedRole']
+                                     ['eValue']['REGISTRAR']:02x}""" + "}"),
+                                 tlv(self.ieee1905['eTlvType']['TLV_SUPPORTED_FREQ_BAND'],
+                                     0x0001,
+                                     "{" + f"""0x{self.ieee1905['tlvSupportedFreqBand']
+                                     ['eValue']['BAND_2_4G']:02x}""" + "}"))
 
         time.sleep(5)
 

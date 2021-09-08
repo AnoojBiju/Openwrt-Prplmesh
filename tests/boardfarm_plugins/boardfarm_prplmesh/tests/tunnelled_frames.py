@@ -94,7 +94,9 @@ class TunnelledFrames(PrplMeshBaseTest):
         # value from the generic "tlv_data" attribute.
 
         debug("Check Tunnelled Message has valid Source Info TLV")
-        tlv_source_info = self.check_cmdu_has_tlv_single(response, 0xc0)
+        tlv_source_info = self.check_cmdu_has_tlv_single(response,
+                                                         self.ieee1905['eTlvTypeMap']
+                                                         ['TLV_TUNNELLED_SOURCE_INFO'])
         if hasattr(tlv_source_info, 'source_info_tunneled_source_mac_address'):
             source_sta_mac = tlv_source_info.source_info_tunneled_source_mac_address
         else:
@@ -106,7 +108,9 @@ class TunnelledFrames(PrplMeshBaseTest):
                 source_sta_mac, sta_mac))
 
         debug("Check Tunnelled Message has valid Type TLV")
-        tlv_type = self.check_cmdu_has_tlv_single(response, 0xc1)
+        tlv_type = self.check_cmdu_has_tlv_single(response,
+                                                  self.ieee1905['eTlvTypeMap']
+                                                  ['TLV_TUNNELLED_PROTOCOL_TYPE'])
         if hasattr(tlv_type, 'tunneled_message_type_tunneled_payload_type'):
             source_payload_type = int(tlv_type.tunneled_message_type_tunneled_payload_type, 16)
         else:

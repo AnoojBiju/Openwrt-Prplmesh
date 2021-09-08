@@ -30,9 +30,10 @@ class HigherLayerDataPayloadTrigger(PrplMeshBaseTest):
         # MCUT sends Higher Layer Data message to CTT Agent1 by providing:
         # Higher layer protocol = "0x00"
         # Higher layer payload = 200 concatenated copies of the ALID of the MCUT (1200 octets)
-        mid = controller.dev_send_1905(agent.mac, 0x8018,
-                                       tlv(0xA0, 0x04b1,
-                                           "{0x00 %s}" % payload))
+        mid = controller.dev_send_1905(agent.mac,
+                                       self.ieee1905['eMessageType']['HIGHER_LAYER_DATA_MESSAGE'],
+                                       tlv(self.ieee1905['eTlvTypeMap']['TLV_HIGHER_LAYER_DATA'],
+                                           0x04b1, "{0x00 %s}" % payload))
 
         debug(
             "Confirming higher layer data message was received in one of the agent's radios")
@@ -46,5 +47,5 @@ class HigherLayerDataPayloadTrigger(PrplMeshBaseTest):
         debug("Confirming ACK message was received in the controller")
         time.sleep(1)
 
-        self.check_cmdu_type_single("ACK", 0x8000, agent.mac,
-                                    controller.mac, mid)
+        self.check_cmdu_type_single("ACK", self.ieee1905['eMessageType']['ACK_MESSAGE'],
+                                    agent.mac, controller.mac, mid)

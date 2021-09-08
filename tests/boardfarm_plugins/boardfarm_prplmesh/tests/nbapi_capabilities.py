@@ -65,7 +65,8 @@ class NbapiCapabilities(PrplMeshBaseTest):
 
         # Send AP capability query as we need TLVs from returning response.
         debug("Send AP capability query to agent")
-        mid = controller.dev_send_1905(agent.mac, 0x8001)
+        mid = controller.dev_send_1905(agent.mac,
+                                       self.ieee1905['eMessageType']['AP_CAPABILITY_QUERY_MESSAGE'])
         time.sleep(1)
 
         debug("Confirming AP capability query has been received on agent")
@@ -73,16 +74,15 @@ class NbapiCapabilities(PrplMeshBaseTest):
         debug("Confirming AP capability report has been received on controller")
         self.check_log(controller, "AP_CAPABILITY_REPORT_MESSAGE")
         ap_cap_report = self.check_cmdu_type(
-            "AP_CAPABILITY_REPORT_MESSAGE", 0x8002, agent.mac, controller.mac, mid)
+            "AP_CAPABILITY_REPORT_MESSAGE",
+            self.ieee1905['eMessageType']['AP_CAPABILITY_REPORT_MESSAGE'],
+            agent.mac, controller.mac, mid)
 
         topology = self.get_topology()
         repeater = topology[agent.mac]
-        AP_Radio_Basic_Capabilities_TLV = 0x85
-        AP_VHT_Capabilities_TLV = 0x87
-        AP_HT_Capabilities_TLV = 0x86
         for ap_cap_report in ap_cap_report:
             for tlv in ap_cap_report.ieee1905_tlvs:
-                if tlv.tlv_type == AP_Radio_Basic_Capabilities_TLV:
+                if tlv.tlv_type == self.ieee1905['eTlvTypeMap']['TLV_AP_RADIO_BASIC_CAPABILITIES']:
                     radio = repeater.radios[tlv.ap_radio_identifier]
                     op_classes_nbapi = controller.nbapi_get_list_instances(
                         radio.path + ".Capabilities.OperatingClasses")
@@ -91,7 +91,7 @@ class NbapiCapabilities(PrplMeshBaseTest):
                             tlv.supported_operating_classes, op_class_nbapi, controller)
                     assert not tlv.supported_operating_classes, \
                         "Not all operating classes was reported in data model."
-                if tlv.tlv_type == AP_HT_Capabilities_TLV:
+                if tlv.tlv_type == self.ieee1905['eTlvTypeMap']['TLV_AP_HT_CAPABILITIES']:
                     radio = repeater.radios[tlv.ap_ht_radio_id]
                     ht_caps = self.get_nbapi_ht_capabilities(radio.path + ".Capabilities")
                     self.assertEqualInt("rx_spatial_streams", ht_caps['rx_ss'] - 1,
@@ -104,7 +104,7 @@ class NbapiCapabilities(PrplMeshBaseTest):
                                         tlv.ap_ht_caps_tree['ieee1905.ap_ht.short_gi_40mhz'])
                     self.assertEqualInt("HT_40_Mhz", ht_caps['ht_40_mhz'],
                                         tlv.ap_ht_caps_tree['ieee1905.ap_ht.ht_support_40mhz'])
-                if tlv.tlv_type == AP_VHT_Capabilities_TLV:
+                if tlv.tlv_type == self.ieee1905['eTlvTypeMap']['TLV_AP_VHT_CAPABILITIES']:
                     radio = repeater.radios[tlv.ap_vht_radio_id]
                     vht_caps = self.get_nbapi_vht_capabilities(radio.path + ".Capabilities")
                     self.assertEqualInt("rx_spatial_streams", vht_caps['rx_ss'] - 1,

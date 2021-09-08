@@ -29,12 +29,20 @@ class NbapiDevice(PrplMeshBaseTest):
         sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
 
         # Send link metric query.
-        mid1 = controller.dev_send_1905(agent.mac, 0x0005, tlv(0x08, 0x0002, "0x00 0x02"))
-        mid2 = controller.dev_send_1905(agent2.mac, 0x0005, tlv(0x08, 0x0002, "0x00 0x02"))
+        mid1 = controller.dev_send_1905(agent.mac,
+                                        self.ieee1905['eMessageType']['LINK_METRIC_QUERY_MESSAGE'],
+                                        tlv(self.ieee1905['eTlvType']['TLV_LINK_METRIC_QUERY'],
+                                            0x0002, "0x00 0x02"))
+        mid2 = controller.dev_send_1905(agent2.mac,
+                                        self.ieee1905['eMessageType']['LINK_METRIC_QUERY_MESSAGE'],
+                                        tlv(self.ieee1905['eTlvType']['TLV_LINK_METRIC_QUERY'],
+                                            0x0002, "0x00 0x02"))
         time.sleep(3)
-        self.check_cmdu_type_single("link metric query controller-agent1", 0x0005,
+        self.check_cmdu_type_single("link metric query controller-agent1",
+                                    self.ieee1905['eMessageType']['LINK_METRIC_QUERY_MESSAGE'],
                                     controller.mac, agent.mac, mid1)
-        self.check_cmdu_type_single("link metric query controller-agent2", 0x0005,
+        self.check_cmdu_type_single("link metric query controller-agent2",
+                                    self.ieee1905['eMessageType']['LINK_METRIC_QUERY_MESSAGE'],
                                     controller.mac, agent2.mac, mid2)
         members_ids = {controller.mac, agent.mac, agent2.mac}
         topology = self.get_topology()

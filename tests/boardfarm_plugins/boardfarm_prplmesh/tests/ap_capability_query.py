@@ -21,7 +21,8 @@ class ApCapabilityQuery(PrplMeshBaseTest):
 
         self.dev.DUT.wired_sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
 
-        controller.dev_send_1905(agent.mac, 0x8001)
+        controller.dev_send_1905(
+            agent.mac, self.ieee1905['eMessageType']['AP_CAPABILITY_QUERY_MESSAGE'])
         time.sleep(1)
 
         debug("Confirming ap capability query has been received on agent")

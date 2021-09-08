@@ -54,7 +54,9 @@ class ClientCapabilityQuerySuccessful(PrplMeshBaseTest):
         try:
             report = self.base_test_client_capability_query(sta)
 
-            cap_report_tlv = self.check_cmdu_has_tlvs(report, 0x91)[0]
+            cap_report_tlv = self.check_cmdu_has_tlvs(report,
+                                                      self.ieee1905['eTlvTypeMap']
+                                                      ['TLV_CLIENT_CAPABILITY_REPORT'])[0]
             self.safe_check_obj_attribute(cap_report_tlv, 'client_capability_result', '0x00000000',
                                           "Capability report result is not successful")
             try:

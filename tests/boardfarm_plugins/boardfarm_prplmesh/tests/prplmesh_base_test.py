@@ -286,25 +286,35 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         except AttributeError as ae:
             raise SkipTest(ae)
 
-        mid = controller.ucc_socket.dev_send_1905(agent.mac, 0x8009, tlv(
-            0x90, 0x000C, '{} {}'.format(agent.radios[0].mac, sta.mac)))
+        mid = controller.ucc_socket.dev_send_1905(
+            agent.mac,
+            self.ieee1905['eMessageType']['CLIENT_CAPABILITY_QUERY_MESSAGE'], tlv(
+                self.ieee1905['eTlvTypeMap']['TLV_CLIENT_INFO'],
+                0x000C, '{} {}'.format(agent.radios[0].mac, sta.mac)))
 
         time.sleep(1)
 
-        query = self.check_cmdu_type_single("client capability query", 0x8009,
-                                            controller.mac, agent.mac, mid)
+        query = self.check_cmdu_type_single(
+            "client capability query",
+            self.ieee1905['eMessageType']['CLIENT_CAPABILITY_QUERY_MESSAGE'],
+            controller.mac, agent.mac, mid)
 
-        query_tlv = self.check_cmdu_has_tlv_single(query, 0x90)
+        query_tlv = self.check_cmdu_has_tlv_single(query,
+                                                   self.ieee1905['eTlvTypeMap']['TLV_CLIENT_INFO'])
         self.safe_check_obj_attribute(query_tlv, 'client_info_mac_addr', sta.mac,
                                       "Wrong mac address in query")
         self.safe_check_obj_attribute(query_tlv, 'client_info_bssid',
                                       agent.radios[0].mac,
                                       "Wrong bssid in query")
 
-        report = self.check_cmdu_type_single("client capability report", 0x800a,
-                                             agent.mac, controller.mac, mid)
+        report = self.check_cmdu_type_single(
+            "client capability report",
+            self.ieee1905['eMessageType']['CLIENT_CAPABILITY_REPORT_MESSAGE'],
+            agent.mac, controller.mac, mid)
 
-        client_info_tlv = self.check_cmdu_has_tlv_single(report, 0x90)
+        client_info_tlv = self.check_cmdu_has_tlv_single(
+            report,
+            self.ieee1905['eTlvTypeMap']['TLV_CLIENT_INFO'])
         self.safe_check_obj_attribute(client_info_tlv, 'client_info_mac_addr', sta.mac,
                                       "Wrong mac address in report")
         self.safe_check_obj_attribute(client_info_tlv, 'client_info_bssid',
@@ -353,7 +363,9 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
 
         def filter_mcast_notifications(mcast) -> bool:
             try:
-                assoc_event_tlv = self.check_cmdu_has_tlv_single(mcast, 0x92)
+                assoc_event_tlv = self.check_cmdu_has_tlv_single(
+                    mcast,
+                    self.ieee1905['eTlvTypeMap']['TLV_CLIENT_ASSOCIATION_EVENT'])
             except ValueError:
                 # Skip notifications that don't have the association event tlv.
                 return False
@@ -379,7 +391,9 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         mid = mcast.ieee1905_mid
         for eth_dst in neighbors:
             ucast = self.check_cmdu_type_single("topology notification",
-                                                0x1, eth_src, eth_dst, mid)
+                                                self.ieee1905['eMessageType']
+                                                ['TOPOLOGY_NOTIFICATION_MESSAGE'],
+                                                eth_src, eth_dst, mid)
             if ucast.ieee1905_relay_indicator:
                 self.fail("Unicast topology notification should not be relayed")
                 return False
@@ -681,10 +695,14 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         metric_reporting_tlv = tlv(0x8a, 2 + 10 * len(radio_policies),
                                    "{0x00 0x%02x %s}" % (len(radio_policies),
                                                          " ".join(radio_policies)))
-        mid = controller.dev_send_1905(agent.mac, 0x8003, metric_reporting_tlv)
+        mid = controller.dev_send_1905(
+            agent.mac,
+            self.ieee1905['eMessageType']['MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE'],
+            metric_reporting_tlv)
         time.sleep(1)
         debug("Confirming multi-ap policy config request was acked by agent")
-        self.check_cmdu_type_single("ACK", 0x8000, agent.mac, controller.mac, mid)
+        self.check_cmdu_type_single("ACK", self.ieee1905['eMessageType']['ACK_MESSAGE'],
+                                    agent.mac, controller.mac, mid)
 
     def device_reset_default(self):
         controller = self.dev.lan.controller_entity

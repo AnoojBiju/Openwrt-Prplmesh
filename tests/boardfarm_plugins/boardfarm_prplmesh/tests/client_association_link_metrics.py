@@ -28,8 +28,12 @@ class ClientAssociationLinkMetrics(PrplMeshBaseTest):
         self.dev.DUT.wired_sniffer.start(self.__class__.__name__ + "-" + self.dev.DUT.name)
         sta_mac = "11:11:33:44:55:66"
         debug("Send link metrics query for unconnected STA")
-        controller.ucc_socket.dev_send_1905(agent.mac, 0x800D,
-                                            tlv(0x95, 0x0006, '{sta_mac}'.format(sta_mac=sta_mac)))
+        controller.ucc_socket.dev_send_1905(agent.mac,
+                                            self.ieee1905['eMessageType']
+                                            ['ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE'],
+                                            tlv(self.ieee1905['eTlvTypeMap']
+                                                ['TLV_STAMAC_ADDRESS_TYPE'],
+                                                0x0006, '{sta_mac}'.format(sta_mac=sta_mac)))
         self.check_log(agent,
                        "client with mac address {sta_mac} not found".format(sta_mac=sta_mac))
         time.sleep(1)
@@ -39,8 +43,10 @@ class ClientAssociationLinkMetrics(PrplMeshBaseTest):
 
         time.sleep(1)
 
-        mid = controller.ucc_socket.dev_send_1905(agent.mac, 0x800D,
-                                                  tlv(0x95, 0x0006,
+        mid = controller.ucc_socket.dev_send_1905(agent.mac, self.ieee1905['eMessageType']
+                                                  ['ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE'],
+                                                  tlv(self.ieee1905['eTlvTypeMap']
+                                                  ['TLV_STAMAC_ADDRESS_TYPE'], 0x0006,
                                                       '{sta_mac}'.format(sta_mac=sta.mac)))
         time.sleep(1)
         self.check_log(agent,

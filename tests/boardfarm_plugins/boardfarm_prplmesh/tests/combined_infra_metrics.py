@@ -72,21 +72,28 @@ class CombinedInfraMetrics(PrplMeshBaseTest):
         debug("Send AP Metrics query message to agent 1 expecting"
               "Traffic Stats for {}".format(sta1.mac))
         self.send_and_check_policy_config_metric_reporting(controller, agent1, True, False)
-        mid = controller.dev_send_1905(agent1.mac, 0x800B,
-                                       tlv(0x93, 0x0007, "0x01 {%s}" % (vap1.bssid)))
+        mid = controller.dev_send_1905(agent1.mac,
+                                       self.ieee1905['eMessageType']['AP_METRICS_QUERY_MESSAGE'],
+                                       tlv(self.ieee1905['eTlvTypeMap']['TLV_AP_METRIC_QUERY'],
+                                           0x0007, "0x01 {%s}" % (vap1.bssid)))
 
         time.sleep(1)
-        response = self.check_cmdu_type_single("AP metrics response", 0x800C, agent1.mac,
+        response = self.check_cmdu_type_single("AP metrics response",
+                                               self.ieee1905['eMessageType']
+                                               ['AP_METRICS_RESPONSE_MESSAGE'], agent1.mac,
                                                controller.mac, mid)
         debug("Check AP metrics response has AP metrics")
-        ap_metrics_1 = self.check_cmdu_has_tlv_single(response, 0x94)
+        ap_metrics_1 = self.check_cmdu_has_tlv_single(response,
+                                                      self.ieee1905['eTlvTypeMap']['TLV_AP_METRIC'])
         if ap_metrics_1:
             if ap_metrics_1.ap_metrics_bssid != vap1.bssid:
                 self.fail("AP metrics response with wrong BSSID {} instead of {}".format(
                     ap_metrics_1.ap_metrics_bssid, vap1.bssid))
 
         debug("Check AP metrics response has STA traffic stats")
-        sta_stats_1 = self.check_cmdu_has_tlv_single(response, 0xa2)
+        sta_stats_1 = self.check_cmdu_has_tlv_single(response,
+                                                     self.ieee1905['eTlvTypeMap']
+                                                     ['TLV_ASSOCIATED_STA_TRAFFIC_STATS'])
         if sta_stats_1:
             if sta_stats_1.assoc_sta_traffic_stats_mac_addr != sta1.mac:
                 self.fail("STA traffic stats with wrong MAC {} instead of {}".format(
@@ -95,21 +102,28 @@ class CombinedInfraMetrics(PrplMeshBaseTest):
         debug("Send AP Metrics query message to agent 2 expecting"
               " STA Metrics for {}".format(sta2.mac))
         self.send_and_check_policy_config_metric_reporting(controller, agent2, False, True)
-        mid = controller.dev_send_1905(agent2.mac, 0x800B,
-                                       tlv(0x93, 0x0007, "0x01 {%s}" % vap2.bssid))
+        mid = controller.dev_send_1905(agent2.mac,
+                                       self.ieee1905['eMessageType']['AP_METRICS_QUERY_MESSAGE'],
+                                       tlv(self.ieee1905['eTlvTypeMap']['TLV_AP_METRIC_QUERY'],
+                                           0x0007, "0x01 {%s}" % vap2.bssid))
 
         time.sleep(1)
-        response = self.check_cmdu_type_single("AP metrics response", 0x800C, agent2.mac,
+        response = self.check_cmdu_type_single("AP metrics response",
+                                               self.ieee1905['eMessageType']
+                                               ['AP_METRICS_RESPONSE_MESSAGE'], agent2.mac,
                                                controller.mac, mid)
         debug("Check AP Metrics Response message has AP Metrics TLV")
-        ap_metrics_2 = self.check_cmdu_has_tlv_single(response, 0x94)
+        ap_metrics_2 = self.check_cmdu_has_tlv_single(response,
+                                                      self.ieee1905['eTlvTypeMap']['TLV_AP_METRIC'])
         if ap_metrics_2:
             if ap_metrics_2.ap_metrics_bssid != vap2.bssid:
                 self.fail("AP metrics response with wrong BSSID {} instead of {}".format(
                     ap_metrics_2.ap_metrics_bssid, vap2.bssid))
 
         debug("Check AP metrics response has STA Link Metrics")
-        sta_metrics_2 = self.check_cmdu_has_tlv_single(response, 0x96)
+        sta_metrics_2 = self.check_cmdu_has_tlv_single(response,
+                                                       self.ieee1905['eTlvTypeMap']
+                                                       ['TLV_ASSOCIATED_STA_LINK_METRICS'])
         if sta_metrics_2:
             if sta_metrics_2.assoc_sta_link_metrics_mac_addr != sta2.mac:
                 self.fail("STA metrics with wrong MAC {} instead of {}".format(
@@ -121,10 +135,14 @@ class CombinedInfraMetrics(PrplMeshBaseTest):
                     sta_metrics_2.bss[0].bssid, vap2.bssid))
 
         debug("Send 1905 Link metric query to agent 1 (neighbor STA)")
-        mid = controller.dev_send_1905(agent1.mac, 0x0005,
-                                       tlv(0x08, 0x0008, "0x01 {%s} 0x02" % sta1.mac))
+        mid = controller.dev_send_1905(agent1.mac,
+                                       self.ieee1905['eMessageType']['LINK_METRIC_QUERY_MESSAGE'],
+                                       tlv(self.ieee1905['eTlvType']['TLV_LINK_METRIC_QUERY'],
+                                           0x0008, "0x01 {%s} 0x02" % sta1.mac))
         time.sleep(1)
-        response = self.check_cmdu_type_single("Link metrics response", 0x0006, agent1.mac,
+        response = self.check_cmdu_type_single("Link metrics response",
+                                               self.ieee1905['eMessageType']
+                                               ['LINK_METRIC_RESPONSE_MESSAGE'], agent1.mac,
                                                controller.mac, mid)
         # We requested specific neighbor, so only one transmitter and receiver link metrics TLV
         time.sleep(1)
@@ -136,12 +154,17 @@ class CombinedInfraMetrics(PrplMeshBaseTest):
 
         # Trigger combined infra metrics
         debug("Send Combined infrastructure metrics message to agent 1")
-        mid = controller.dev_send_1905(agent1.mac, 0x8013)
+        mid = controller.dev_send_1905(agent1.mac,
+                                       self.ieee1905['eMessageType']
+                                       ['COMBINED_INFRASTRUCTURE_METRICS_MESSAGE'])
 
         time.sleep(1)
-        combined_infra_metrics = self.check_cmdu_type_single("Combined infra metrics", 0x8013,
-                                                             controller.mac, agent1.mac,
-                                                             mid)
+        combined_infra_metrics = self.check_cmdu_type_single(
+            "Combined infra metrics",
+            self.ieee1905['eMessageType']
+            ['COMBINED_INFRASTRUCTURE_METRICS_MESSAGE'],
+            controller.mac, agent1.mac,
+            mid)
 
         # Combined infra metrics should *not* contain STA stats/metrics
         expected_tlvs = filter(None, [ap_metrics_1, ap_metrics_2, tx_metrics_1, rx_metrics_1])
@@ -151,7 +174,8 @@ class CombinedInfraMetrics(PrplMeshBaseTest):
         self.check_cmdu_has_tlv_single(response, 10)
         (combined_infra_metrics, expected_tlvs)  # Work around unused variable flake8 check
 
-        self.check_cmdu_type_single("ACK", 0x8000, agent1.mac, controller.mac, mid)
+        self.check_cmdu_type_single("ACK", self.ieee1905['eMessageType']['ACK_MESSAGE'],
+                                    agent1.mac, controller.mac, mid)
 
         sta1.wifi_disconnect(vap1)
         sta2.wifi_disconnect(vap2)

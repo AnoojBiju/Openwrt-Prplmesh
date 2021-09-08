@@ -9,6 +9,7 @@ import time
 from .prplmesh_base_test import PrplMeshBaseTest
 from boardfarm.exceptions import SkipTest
 from capi import tlv
+from environment import ChannelTlvs
 from opts import debug
 
 
@@ -32,8 +33,9 @@ class ChannelSelection(PrplMeshBaseTest):
     def runTest(self):
 
         def check_single_channel_response(self, resp_code) -> None:
-            cs_resp = self.check_cmdu_type_single("channel selection response", 0x8007, agent.mac,
-                                                  controller.mac, cs_req_mid)  # noqa E501
+            cs_resp = self.check_cmdu_type_single("channel selection response",
+            self.ieee1905['eMessageType']['CHANNEL_SELECTION_RESPONSE_MESSAGE'],
+            agent.mac, controller.mac, cs_req_mid)  # noqa E501
             if cs_resp:
                 cs_resp_tlvs = self.check_cmdu_has_tlvs(cs_resp, 0x8e)
                 radio_macs = [radio.mac for radio in agent.radios]
@@ -65,17 +67,21 @@ class ChannelSelection(PrplMeshBaseTest):
         debug("Starting channel wlan0: {}, wlan2: {}".format(orig_chan_0, orig_chan_1))
 
         debug("Send channel preference query")
-        ch_pref_query_mid = controller.dev_send_1905(agent.mac, 0x8004)
+        ch_pref_query_mid = controller.dev_send_1905(agent.mac,
+                                                     self.ieee1905['eMessageType']
+                                                     ['CHANNEL_PREFERENCE_QUERY_MESSAGE'])
         time.sleep(3)
         debug("Confirming channel preference query has been received on agent")
 
         # TODO should be a single response (currently two are sent)
-        self.check_cmdu_type("channel preference response", 0x8005, agent.mac,
-                             controller.mac, ch_pref_query_mid)
+        self.check_cmdu_type("channel preference response",
+                             self.ieee1905['eMessageType']['CHANNEL_PREFERENCE_REPORT_MESSAGE'],
+                             agent.mac, controller.mac, ch_pref_query_mid)
 
         debug("Send empty channel selection request")
         cs_req_mid = controller.dev_send_1905(agent.mac,
-                                              0x8006,
+                                              self.ieee1905['eMessageType']
+                                              ['CHANNEL_SELECTION_REQUEST_MESSAGE'],
                                               tlv(0x00, 0x0000, "{}"))
 
         time.sleep(1)
@@ -90,10 +96,13 @@ class ChannelSelection(PrplMeshBaseTest):
         if cur_chan_1 != orig_chan_1:
             self.fail("Radio 1 channel switched to {}".format(cur_chan_1))
 
-        oper_channel_reports = self.check_cmdu_type("operating channel report", 0x8008,
+        oper_channel_reports = self.check_cmdu_type("operating channel report",
+                                                    self.ieee1905['eMessageType']
+                                                    ['OPERATING_CHANNEL_REPORT_MESSAGE'],
                                                     agent.mac, controller.mac)
         for report in oper_channel_reports:
-            self.check_cmdu_type_single("ACK", 0x8000, controller.mac, agent.mac,
+            self.check_cmdu_type_single("ACK", self.ieee1905['eMessageType']['ACK_MESSAGE'],
+                                        controller.mac, agent.mac,
                                         report.ieee1905_mid)
 
         self.checkpoint()
@@ -105,11 +114,13 @@ class ChannelSelection(PrplMeshBaseTest):
             debug("Send empty channel selection request with changing tx_power_limit")
             cs_req_mid = controller.dev_send_1905(
                 agent.mac,
-                0x8006,
-                tlv(0x8D, 0x0007, '{} 0x{:02x}'.format(agent.radios[0].mac,
-                                                       payload_transmit_power)),
-                tlv(0x8D, 0x0007, '{} 0x{:02x}'.format(agent.radios[1].mac,
-                                                       payload_transmit_power))
+                self.ieee1905['eMessageType']['CHANNEL_SELECTION_REQUEST_MESSAGE'],
+                tlv(self.ieee1905['eTlvTypeMap']['TLV_TRANSMIT_POWER_LIMIT'],
+                    0x0007, '{} 0x{:02x}'.format(agent.radios[0].mac,
+                                                 payload_transmit_power)),
+                tlv(self.ieee1905['eTlvTypeMap']['TLV_TRANSMIT_POWER_LIMIT'],
+                    0x0007, '{} 0x{:02x}'.format(agent.radios[1].mac,
+                                                 payload_transmit_power))
             )
             time.sleep(1)
 
@@ -121,7 +132,10 @@ class ChannelSelection(PrplMeshBaseTest):
                 self.fail("Radio 1 tx_power switched to {}".format(cur_power_1))
 
             # TODO should be a single response (currently two are sent)
-            self.check_cmdu_type("channel selection response", 0x8007, agent.mac,
+            self.check_cmdu_type("channel selection response",
+                                 self.ieee1905['eMessageType']
+                                 ['CHANNEL_SELECTION_RESPONSE_MESSAGE'],
+                                 agent.mac,
                                  controller.mac, cs_req_mid)
 
             cur_chan_0 = agent.radios[0].get_current_channel()
@@ -131,7 +145,9 @@ class ChannelSelection(PrplMeshBaseTest):
             if cur_chan_1 != orig_chan_1:
                 self.fail("Radio 1 channel switched to {}".format(cur_chan_1))
 
-            oper_channel_reports = self.check_cmdu_type("operating channel report", 0x8008,
+            oper_channel_reports = self.check_cmdu_type("operating channel report",
+                                                        self.ieee1905['eMessageType']
+                                                        ['OPERATING_CHANNEL_REPORT_MESSAGE'],
                                                         agent.mac, controller.mac)
             for report in oper_channel_reports:
                 for ocr in report.ieee1905_tlvs:
@@ -142,71 +158,31 @@ class ChannelSelection(PrplMeshBaseTest):
                         self.fail("Unexpected transmit power {} instead of {} for {}".format(
                             ocr.operating_channel_eirp, payload_transmit_power,
                             ocr.operating_channel_radio_id))
-                self.check_cmdu_type_single("ACK", 0x8000, controller.mac, agent.mac,
+                self.check_cmdu_type_single("ACK",
+                                            self.ieee1905['eMessageType']['ACK_MESSAGE'],
+                                            controller.mac, agent.mac,
                                             report.ieee1905_mid)
 
             self.checkpoint()
 
         debug("Send invalid channel selection request to radio 0")
         cs_req_mid = controller.dev_send_1905(
-            agent.mac, 0x8006,
+            agent.mac, self.ieee1905['eMessageType']['CHANNEL_SELECTION_REQUEST_MESSAGE'],
             # Single operating class with a single channel that doesn't exist in it.
-            tlv(0x8B, 0x000B, agent.mac + ' 0x01 {0x52 {0x01 {0x01}} 0x00}'))
+            tlv(self.ieee1905['eTlvTypeMap']['TLV_CHANNEL_PREFERENCE'],
+                0x000B, agent.mac + ' 0x01 {0x52 {0x01 {0x01}} 0x00}'))
         time.sleep(1)
 
-        check_single_channel_response(self, 0x02)
+        check_single_channel_response(self, f"""0x{self.ieee1905['tlvChannelPreference']
+                                     ['ePreference']['PREFERRED2']:02x}""")
 
         self.checkpoint()
 
         # payload_wlan0 - request for change channel on 6
-        payload_wlan0 = (
-            "0x14 "
-            "{0x51 {0x0C {0x01 0x02 0x03 0x04 0x05 0x07 0x08 0x09 0x0A 0x0B 0x0C 0x0D} 0x00}} "
-            "{0x52 {0x00 0x00}} "
-            "{0x53 {0x08 {0x01 0x02 0x03 0x04 0x05 0x07 0x08 0x09} 0x00}} "
-            "{0x54 {0x08 {0x05 0x07 0x08 0x09 0x0A 0x0B 0x0C 0x0D} 0x00}} "
-            "{0x73 {0x00 0x00}} "
-            "{0x74 {0x00 0x00}} "
-            "{0x75 {0x00 0x00}} "
-            "{0x76 {0x00 0x00}} "
-            "{0x77 {0x00 0x00}} "
-            "{0x78 {0x00 0x00}} "
-            "{0x79 {0x00 0x00}} "
-            "{0x7A {0x00 0x00}} "
-            "{0x7B {0x00 0x00}} "
-            "{0x7C {0x00 0x00}} "
-            "{0x7D {0x00 0x00}} "
-            "{0x7E {0x00 0x00}} "
-            "{0x7F {0x00 0x00}} "
-            "{0x80 {0x00 0x00}} "
-            "{0x81 {0x00 0x00}} "
-            "{0x82 {0x00 0x00}} "
-        )
+        payload_wlan0 = ChannelTlvs.CHANNEL_6.value
 
         # payload_wlan2  - request for change channel on 36
-        payload_wlan2 = (
-            "0x14 "
-            "{0x51 {0x00 0x00}} "
-            "{0x52 {0x00 0x00}} "
-            "{0x53 {0x00 0x00}} "
-            "{0x54 {0x00 0x00}} "
-            "{0x73 0x03 {0x28 0x2C 0x30} 0x00} "
-            "{0x74 0x01 {0x2C} 0x00} "
-            "{0x75 {0x00 0x00}} "
-            "{0x76 {0x00 0x00}} "
-            "{0x77 {0x00 0x00}} "
-            "{0x78 {0x00 0x00}} "
-            "{0x79 {0x00 0x00}} "
-            "{0x7A {0x00 0x00}} "
-            "{0x7B {0x00 0x00}} "
-            "{0x7C {0x00 0x00}} "
-            "{0x7D {0x00 0x00}} "
-            "{0x7E {0x00 0x00}} "
-            "{0x7F {0x00 0x00}} "
-            "{0x80 0x05 {0x3A 0x6A 0x7A 0x8A 0x9B} 0x00} "
-            "{0x81 {0x00 0x00}} "
-            "{0x82 {0x00 0x00}}"
-        )
+        payload_wlan2 = ChannelTlvs.CHANNEL_36.value
 
         """
         Step 1: Trigger channel selection to channel 6 and 36. Check that
@@ -222,10 +198,14 @@ class ChannelSelection(PrplMeshBaseTest):
             cs_req_mid = controller.dev_send_1905(
                 agent.mac,
                 0x8006,
-                tlv(0x8B, 0x005F, '{} {}'.format(agent.radios[0].mac, payload_wlan0)),
-                tlv(0x8D, 0x0007, '{} 0x{:2x}'.format(agent.radios[0].mac, tp20dBm)),
-                tlv(0x8B, 0x004C, '{} {}'.format(agent.radios[1].mac, payload_wlan2)),
-                tlv(0x8D, 0x0007, '{} 0x{:2x}'.format(agent.radios[1].mac, tp20dBm))
+                tlv(self.ieee1905['eTlvTypeMap']['TLV_CHANNEL_PREFERENCE'],
+                    0x005F, '{} {}'.format(agent.radios[0].mac, payload_wlan0)),
+                tlv(self.ieee1905['eTlvTypeMap']['TLV_TRANSMIT_POWER_LIMIT'],
+                    0x0007, '{} 0x{:2x}'.format(agent.radios[0].mac, tp20dBm)),
+                tlv(self.ieee1905['eTlvTypeMap']['TLV_CHANNEL_PREFERENCE'],
+                    0x004C, '{} {}'.format(agent.radios[1].mac, payload_wlan2)),
+                tlv(self.ieee1905['eTlvTypeMap']['TLV_TRANSMIT_POWER_LIMIT'],
+                    0x0007, '{} 0x{:2x}'.format(agent.radios[1].mac, tp20dBm))
             )
             time.sleep(1)
 
@@ -249,18 +229,22 @@ class ChannelSelection(PrplMeshBaseTest):
             if cur_chan_channel_1 != 36:
                 self.fail("Radio 1 channel switched to {} instead of 36".format(cur_chan_channel_1))
 
-            oper_channel_reports = self.check_cmdu_type("operating channel report", 0x8008,
+            oper_channel_reports = self.check_cmdu_type("operating channel report",
+                                                        self.ieee1905['eMessageType']
+                                                        ['OPERATING_CHANNEL_REPORT_MESSAGE'],
                                                         agent.mac, controller.mac)
             for report in oper_channel_reports:
                 for ocr in report.ieee1905_tlvs:
-                    if ocr.tlv_type != 0x8F:
+                    if ocr.tlv_type != self.ieee1905['eTlvTypeMap']['TLV_OPERATING_CHANNEL_REPORT']:
                         self.fail("Unexpected TLV in operating channel report: {}".format(ocr))
                         continue
                     if int(ocr.operating_channel_eirp) != tp20dBm:
                         self.fail("Unexpected transmit power {} instead of {} for {}".format(
                             ocr.operating_channel_eirp, payload_transmit_power,
                             ocr.operating_channel_radio_id))
-                self.check_cmdu_type_single("ACK", 0x8000, controller.mac, agent.mac,
+                self.check_cmdu_type_single("ACK",
+                                            self.ieee1905['eMessageType']['ACK_MESSAGE'],
+                                            controller.mac, agent.mac,
                                             report.ieee1905_mid)
 
             self.checkpoint()

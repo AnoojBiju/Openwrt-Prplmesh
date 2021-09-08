@@ -37,13 +37,20 @@ class NbapiAssociationEvent(PrplMeshBaseTest):
 
         sta.wifi_connect(vap1)
         debug("Send Associated STA Link Metrics Query message")
-        mid = controller.ucc_socket.dev_send_1905(agent.mac, 0x800D, tlv(0x95, 0x0006, sta.mac))
+        mid = controller.ucc_socket.dev_send_1905(agent.mac,
+                                                  self.ieee1905['eMessageType']
+                                                  ['ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE'],
+                                                  tlv(self.ieee1905['eTlvTypeMap']
+                                                      ['TLV_STAMAC_ADDRESS_TYPE'],
+                                                      0x0006, sta.mac))
         association_time = datetime.now()
         association_time = pytz.utc.localize(association_time)
         time.sleep(3)
 
         debug("STA sends a valid Association Request frame to MAUT")
-        self.check_cmdu_type_single("Associated STA Link Metrics Response", 0x800E,
+        self.check_cmdu_type_single("Associated STA Link Metrics Response",
+                                    self.ieee1905['eMessageType']
+                                    ['ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE'],
                                     agent.mac, controller.mac, mid)
 
         debug("Topology map after settings:")

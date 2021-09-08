@@ -26,28 +26,35 @@ class CacRequest(PrplMeshBaseTest):
         operating_class = 121
         channel = 104
         cac_request_tlv = tlv(
-            0xAD, 0xA, '0x{:02x} {} 0x{:01x} 0x{:01x} 0x00'
+            self.ieee1905['eTlvTypeMap']['TLV_PROFILE2_CAC_REQUEST'],
+            0xA, '0x{:02x} {} 0x{:01x} 0x{:01x} 0x00'
             .format(number_of_radios, agent.radios[1].mac, operating_class, channel))
 
         print("CAC Request TLV: ", cac_request_tlv)
 
-        req_mid = controller.dev_send_1905(agent.mac, 0x8020, cac_request_tlv)
+        req_mid = controller.dev_send_1905(
+            agent.mac, self.ieee1905['eMessageType']['CAC_REQUEST_MESSAGE'], cac_request_tlv)
         time.sleep(1)
 
-        self.check_cmdu_type_single("ACK", 0x8000, agent.mac, controller.mac, req_mid)
+        self.check_cmdu_type_single("ACK", self.ieee1905['eMessageType']['ACK_MESSAGE'],
+                                    agent.mac, controller.mac, req_mid)
 
         time.sleep(2)
 
         cac_termination_tlv = tlv(
-            0xAE, 0xA, '0x{:02x} {} 0x{:01x} 0x{:01x} 0x00'
+            self.ieee1905['eTlvTypeMap']['TLV_PROFILE2_CAC_TERMINATION'],
+            0xA, '0x{:02x} {} 0x{:01x} 0x{:01x} 0x00'
             .format(number_of_radios, agent.radios[1].mac, operating_class, channel))
 
         print("CAC Termination TLV: ", cac_termination_tlv)
 
-        req_mid = controller.dev_send_1905(agent.mac, 0x8021, cac_termination_tlv)
+        req_mid = controller.dev_send_1905(agent.mac,
+                                           self.ieee1905['eMessageType']['CAC_TERMINATION_MESSAGE'],
+                                           cac_termination_tlv)
         time.sleep(1)
 
-        self.check_cmdu_type_single("ACK", 0x8000, agent.mac, controller.mac, req_mid)
+        self.check_cmdu_type_single("ACK", self.ieee1905['eMessageType']['ACK_MESSAGE'],
+                                    agent.mac, controller.mac, req_mid)
 
         # TODO
         # verify that the agent sends beacons
