@@ -52,7 +52,7 @@ class LinkMetricQuery(PrplMeshBaseTest):
                                                   ['LINK_METRIC_QUERY_MESSAGE'],
                                                   tlv(self.ieee1905['eTlvType']
                                                       ['TLV_LINK_METRIC_QUERY'],
-                                                      0x0002, "0x00 0x02"))
+                                                      "0x00 0x02"))
         time.sleep(1)
 
         query = self.check_cmdu_type_single("link metric query", self.ieee1905['eMessageType']

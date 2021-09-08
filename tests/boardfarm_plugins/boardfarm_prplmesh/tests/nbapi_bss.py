@@ -49,7 +49,7 @@ class NbapiBSS(PrplMeshBaseTest):
         mid = controller.dev_send_1905(agent.mac,
                                        self.ieee1905['eMessageType']['AP_METRICS_QUERY_MESSAGE'],
                                        tlv(self.ieee1905['eTlvTypeMap']['TLV_AP_METRIC_QUERY'],
-                                           0x0007, "0x01 {%s}" % (vap.bssid)))
+                                           "0x01 {%s}" % (vap.bssid)))
         time.sleep(1)
         ap_metric_resp = self.check_cmdu_type_single("AP Metrics Response",
                                                      self.ieee1905['eMessageType']

@@ -33,7 +33,7 @@ class HigherLayerDataPayloadTrigger(PrplMeshBaseTest):
         mid = controller.dev_send_1905(agent.mac,
                                        self.ieee1905['eMessageType']['HIGHER_LAYER_DATA_MESSAGE'],
                                        tlv(self.ieee1905['eTlvTypeMap']['TLV_HIGHER_LAYER_DATA'],
-                                           0x04b1, "{0x00 %s}" % payload))
+                                           "{0x00 %s}" % payload))
 
         debug(
             "Confirming higher layer data message was received in one of the agent's radios")

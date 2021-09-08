@@ -55,14 +55,14 @@ class NbapiSta(PrplMeshBaseTest):
         mid1 = controller.dev_send_1905(agent.mac,
                                         self.ieee1905['eMessageType']['AP_METRICS_QUERY_MESSAGE'],
                                         tlv(self.ieee1905['eTlvTypeMap']['TLV_AP_METRIC_QUERY'],
-                                            0x0007, "0x01 {%s}" % (vap1.bssid)))
+                                            "0x01 {%s}" % (vap1.bssid)))
         debug("Send Associated STA Link Metrics Query message")
         controller.ucc_socket.dev_send_1905(agent.mac,
                                             self.ieee1905['eMessageType']
                                             ['ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE'],
                                             tlv(self.ieee1905['eTlvTypeMap']
                                                 ['TLV_STAMAC_ADDRESS_TYPE'],
-                                                0x0006, sta1.mac))
+                                                sta1.mac))
         time.sleep(5)
 
         ap_metrics_resp = self.check_cmdu_type_single("AP metrics response",

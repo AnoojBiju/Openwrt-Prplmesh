@@ -37,7 +37,7 @@ class BeaconReportQueryAndResponse(PrplMeshBaseTest):
         debug("Send Associated STA Link Metrics Query message")
         mid = controller.ucc_socket.dev_send_1905(
             agent.mac, self.ieee1905['eMessageType']['ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE'],
-            tlv(self.ieee1905['eTlvTypeMap']['TLV_STAMAC_ADDRESS_TYPE'], 0x0006, sta.mac))
+            tlv(self.ieee1905['eTlvTypeMap']['TLV_STAMAC_ADDRESS_TYPE'], sta.mac))
         time.sleep(5)
         debug("STA sends a valid Association Request frame to MAUT")
         self.check_log(agent,
@@ -67,7 +67,7 @@ class BeaconReportQueryAndResponse(PrplMeshBaseTest):
         mid = controller.ucc_socket.dev_send_1905(
             agent.mac, self.ieee1905['eMessageType']['BEACON_METRICS_QUERY_MESSAGE'],
             tlv(self.ieee1905['eTlvTypeMap']['TLV_BEACON_METRICS_QUERY'],
-                0x0015, beacon_query_tlv_val))
+                beacon_query_tlv_val))
 
         # Step 5. Verify that MAUT sends a 1905 ACK to Controller.
         time.sleep(1)

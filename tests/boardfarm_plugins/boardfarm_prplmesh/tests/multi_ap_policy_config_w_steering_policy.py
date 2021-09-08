@@ -34,7 +34,7 @@ class MultiApPolicyConfigWSteeringPolicy(PrplMeshBaseTest):
                                         ['MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE'],
                                         tlv(self.ieee1905['eTlvTypeMap']
                                         ['TLV_STEERING_POLICY'],
-                                        0x000C, "{0x00 0x00 0x01 {%s 0x01 0xFF 0x14}}" % agent.radios[0].mac))  # noqa E501
+                                        "{0x00 0x00 0x01 {%s 0x01 0xFF 0x14}}" % agent.radios[0].mac))  # noqa E501
         time.sleep(1)
         debug("Confirming multi-ap policy config request has been received on agent")
 

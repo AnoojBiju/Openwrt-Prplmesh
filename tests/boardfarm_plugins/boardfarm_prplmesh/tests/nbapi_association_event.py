@@ -42,7 +42,7 @@ class NbapiAssociationEvent(PrplMeshBaseTest):
                                                   ['ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE'],
                                                   tlv(self.ieee1905['eTlvTypeMap']
                                                       ['TLV_STAMAC_ADDRESS_TYPE'],
-                                                      0x0006, sta.mac))
+                                                      sta.mac))
         association_time = datetime.now()
         association_time = pytz.utc.localize(association_time)
         time.sleep(3)

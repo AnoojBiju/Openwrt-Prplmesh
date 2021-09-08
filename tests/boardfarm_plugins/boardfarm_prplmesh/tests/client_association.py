@@ -43,7 +43,7 @@ class ClientAssociation(PrplMeshBaseTest):
                                 ['CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE'],
                                 tlv(self.ieee1905['eTlvTypeMap']
                                 ['TLV_CLIENT_ASSOCIATION_CONTROL_REQUEST'],
-                                0x0010, "{%s 0x00 0x001E 0x01 {0x000000110022}}" % agent.radios[0].vaps[0].bssid))  # noqa E501
+                                "{%s 0x00 0x001E 0x01 {0x000000110022}}" % agent.radios[0].vaps[0].bssid))  # noqa E501
 
         debug("Confirming client association control message has been received on agent")
         # check that both radio agents received it,in the future we'll add a check to verify which

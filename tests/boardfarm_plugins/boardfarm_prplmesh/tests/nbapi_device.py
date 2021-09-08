@@ -32,11 +32,11 @@ class NbapiDevice(PrplMeshBaseTest):
         mid1 = controller.dev_send_1905(agent.mac,
                                         self.ieee1905['eMessageType']['LINK_METRIC_QUERY_MESSAGE'],
                                         tlv(self.ieee1905['eTlvType']['TLV_LINK_METRIC_QUERY'],
-                                            0x0002, "0x00 0x02"))
+                                            "0x00 0x02"))
         mid2 = controller.dev_send_1905(agent2.mac,
                                         self.ieee1905['eMessageType']['LINK_METRIC_QUERY_MESSAGE'],
                                         tlv(self.ieee1905['eTlvType']['TLV_LINK_METRIC_QUERY'],
-                                            0x0002, "0x00 0x02"))
+                                            "0x00 0x02"))
         time.sleep(3)
         self.check_cmdu_type_single("link metric query controller-agent1",
                                     self.ieee1905['eMessageType']['LINK_METRIC_QUERY_MESSAGE'],

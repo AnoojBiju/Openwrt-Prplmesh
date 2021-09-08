@@ -94,11 +94,11 @@ class V2Certification_4_7_10(CommonFlows):
 
         metric_reporting_policy_tlv = tlv(self.ieee1905['eTlvTypeMap']
                                           ['TLV_METRIC_REPORTING_POLICY'],
-                                          0x000D, '0x0a 0x01 {} 0x00 0x00 0x00 0x00 0x0f'
+                                          '0x0a 0x01 {} 0x00 0x00 0x00 0x00 0x0f'
                                           .format(agent.radios[0].mac))
         unsuccessful_association_policy_tlv = tlv(self.ieee1905['eTlvTypeMap']
                                                   ['TLV_PROFILE2_UNSUCCESSFUL_ASSOCIATION_POLICY'],
-                                                  0x0005, '0x01 0x0000003c')
+                                                  '0x01 0x0000003c')
 
         mid = controller.dev_send_1905(agent.mac,
                                        self.ieee1905['eMessageType']
@@ -137,7 +137,7 @@ class V2Certification_4_7_10(CommonFlows):
 
         # prepare tlvs
         sta_mac_addr_tlv = tlv(self.ieee1905['eTlvTypeMap']['TLV_STAMAC_ADDRESS_TYPE'],
-                               0x0006, '{}'.format(sta2.mac))
+                               '{}'.format(sta2.mac))
         # send
         mid = controller.dev_send_1905(agent.mac,
                                        self.ieee1905['eMessageType']

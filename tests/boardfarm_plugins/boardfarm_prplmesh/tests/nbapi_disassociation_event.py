@@ -49,7 +49,7 @@ class NbapiDisassociationEvent(PrplMeshBaseTest):
         mid = controller.dev_send_1905(agent.mac,
                                        self.ieee1905['eMessageType']['AP_METRICS_QUERY_MESSAGE'],
                                        tlv(self.ieee1905['eTlvTypeMap']['TLV_AP_METRIC_QUERY'],
-                                           0x0007, "0x01 {%s}" % (vap.bssid)))
+                                           "0x01 {%s}" % (vap.bssid)))
         time.sleep(2)
         ap_metrics_resp = self.check_cmdu_type_single("AP metrics response",
                                                       self.ieee1905['eMessageType']

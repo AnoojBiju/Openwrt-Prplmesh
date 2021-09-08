@@ -21,7 +21,7 @@ class CAPIReply(Enum):
 class tlv:
     """Representation of an 1905.1 TLV."""
 
-    def __init__(self, type_: int, length: int, value: str):
+    def __init__(self, type_: int, value: str):
         """A TLV has a type, a length and a value.
 
         Parameters

@@ -33,7 +33,7 @@ class ClientAssociationLinkMetrics(PrplMeshBaseTest):
                                             ['ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE'],
                                             tlv(self.ieee1905['eTlvTypeMap']
                                                 ['TLV_STAMAC_ADDRESS_TYPE'],
-                                                0x0006, '{sta_mac}'.format(sta_mac=sta_mac)))
+                                                '{sta_mac}'.format(sta_mac=sta_mac)))
         self.check_log(agent,
                        "client with mac address {sta_mac} not found".format(sta_mac=sta_mac))
         time.sleep(1)
@@ -46,7 +46,7 @@ class ClientAssociationLinkMetrics(PrplMeshBaseTest):
         mid = controller.ucc_socket.dev_send_1905(agent.mac, self.ieee1905['eMessageType']
                                                   ['ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE'],
                                                   tlv(self.ieee1905['eTlvTypeMap']
-                                                  ['TLV_STAMAC_ADDRESS_TYPE'], 0x0006,
+                                                  ['TLV_STAMAC_ADDRESS_TYPE'],
                                                       '{sta_mac}'.format(sta_mac=sta.mac)))
         time.sleep(1)
         self.check_log(agent,

@@ -32,14 +32,11 @@ class ApConfigRenew(PrplMeshBaseTest):
                                  self.ieee1905['eMessageType']
                                  ['AP_AUTOCONFIGURATION_RENEW_MESSAGE'],
                                  tlv(self.ieee1905['eTlvType']['TLV_AL_MAC_ADDRESS'],
-                                     0x0006,
                                      "{" + controller.mac + "}"),
                                  tlv(self.ieee1905['eTlvType']['TLV_SUPPORTED_ROLE'],
-                                     0x0001,
                                      "{" + f"""0x{self.ieee1905['tlvSupportedRole']
                                      ['eValue']['REGISTRAR']:02x}""" + "}"),
                                  tlv(self.ieee1905['eTlvType']['TLV_SUPPORTED_FREQ_BAND'],
-                                     0x0001,
                                      "{" + f"""0x{self.ieee1905['tlvSupportedFreqBand']
                                      ['eValue']['BAND_2_4G']:02x}""" + "}"))
 

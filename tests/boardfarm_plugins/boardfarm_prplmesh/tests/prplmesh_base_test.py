@@ -290,7 +290,7 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
             agent.mac,
             self.ieee1905['eMessageType']['CLIENT_CAPABILITY_QUERY_MESSAGE'], tlv(
                 self.ieee1905['eTlvTypeMap']['TLV_CLIENT_INFO'],
-                0x000C, '{} {}'.format(agent.radios[0].mac, sta.mac)))
+                '{} {}'.format(agent.radios[0].mac, sta.mac)))
 
         time.sleep(1)
 
@@ -692,7 +692,7 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
             reporting_value |= 0x40
         radio_policies = ["{%s 0x00 0x00 0x01 0x%02x}" % (radio.mac, reporting_value)
                           for radio in agent.radios]
-        metric_reporting_tlv = tlv(0x8a, 2 + 10 * len(radio_policies),
+        metric_reporting_tlv = tlv(0x8a,
                                    "{0x00 0x%02x %s}" % (len(radio_policies),
                                                          " ".join(radio_policies)))
         mid = controller.dev_send_1905(

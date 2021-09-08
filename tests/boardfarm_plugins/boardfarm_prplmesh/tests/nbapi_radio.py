@@ -47,11 +47,11 @@ class NbapiRadio(PrplMeshBaseTest):
         mid = controller.dev_send_1905(agent.mac,
                                        self.ieee1905['eMessageType']['AP_METRICS_QUERY_MESSAGE'],
                                        tlv(self.ieee1905['eTlvTypeMap']['TLV_AP_METRIC_QUERY'],
-                                           0x0007, "0x01 {%s}" % (vap.bssid)))
+                                           "0x01 {%s}" % (vap.bssid)))
         debug("Send empty Channel Selection Request")
         controller.dev_send_1905(agent.mac,
                                  self.ieee1905['eMessageType']['CHANNEL_SELECTION_REQUEST_MESSAGE'],
-                                 tlv(0x00, 0x0000, "{}"))
+                                 tlv(0x00, "{}"))
         time.sleep(2)
         ap_metric_resp = self.check_cmdu_type_single("AP Metrics Response",
                                                      self.ieee1905['eMessageType']

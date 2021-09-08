@@ -123,7 +123,7 @@ class NbapiScanResult(PrplMeshBaseTest):
                                             ['CHANNEL_SCAN_REQUEST_MESSAGE'],
                                             tlv(self.ieee1905['eTlvTypeMap']
                                                 ['TLV_CHANNEL_SCAN_REQUEST'],
-                                                0x001B, "0x80 0x01 {} {}".format(
+                                                "0x80 0x01 {} {}".format(
                                                     agent.radios[0].mac, channel_scan_request_tlv)))
         time.sleep(5)
         self.check_log(

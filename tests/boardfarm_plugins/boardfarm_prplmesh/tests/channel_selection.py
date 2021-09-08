@@ -82,7 +82,7 @@ class ChannelSelection(PrplMeshBaseTest):
         cs_req_mid = controller.dev_send_1905(agent.mac,
                                               self.ieee1905['eMessageType']
                                               ['CHANNEL_SELECTION_REQUEST_MESSAGE'],
-                                              tlv(0x00, 0x0000, "{}"))
+                                              tlv(0x00, "{}"))
 
         time.sleep(1)
 
@@ -116,11 +116,11 @@ class ChannelSelection(PrplMeshBaseTest):
                 agent.mac,
                 self.ieee1905['eMessageType']['CHANNEL_SELECTION_REQUEST_MESSAGE'],
                 tlv(self.ieee1905['eTlvTypeMap']['TLV_TRANSMIT_POWER_LIMIT'],
-                    0x0007, '{} 0x{:02x}'.format(agent.radios[0].mac,
-                                                 payload_transmit_power)),
+                    '{} 0x{:02x}'.format(agent.radios[0].mac,
+                                         payload_transmit_power)),
                 tlv(self.ieee1905['eTlvTypeMap']['TLV_TRANSMIT_POWER_LIMIT'],
-                    0x0007, '{} 0x{:02x}'.format(agent.radios[1].mac,
-                                                 payload_transmit_power))
+                    '{} 0x{:02x}'.format(agent.radios[1].mac,
+                                         payload_transmit_power))
             )
             time.sleep(1)
 
@@ -170,7 +170,7 @@ class ChannelSelection(PrplMeshBaseTest):
             agent.mac, self.ieee1905['eMessageType']['CHANNEL_SELECTION_REQUEST_MESSAGE'],
             # Single operating class with a single channel that doesn't exist in it.
             tlv(self.ieee1905['eTlvTypeMap']['TLV_CHANNEL_PREFERENCE'],
-                0x000B, agent.mac + ' 0x01 {0x52 {0x01 {0x01}} 0x00}'))
+                agent.mac + ' 0x01 {0x52 {0x01 {0x01}} 0x00}'))
         time.sleep(1)
 
         check_single_channel_response(self, f"""0x{self.ieee1905['tlvChannelPreference']
@@ -199,13 +199,13 @@ class ChannelSelection(PrplMeshBaseTest):
                 agent.mac,
                 0x8006,
                 tlv(self.ieee1905['eTlvTypeMap']['TLV_CHANNEL_PREFERENCE'],
-                    0x005F, '{} {}'.format(agent.radios[0].mac, payload_wlan0)),
+                    '{} {}'.format(agent.radios[0].mac, payload_wlan0)),
                 tlv(self.ieee1905['eTlvTypeMap']['TLV_TRANSMIT_POWER_LIMIT'],
-                    0x0007, '{} 0x{:2x}'.format(agent.radios[0].mac, tp20dBm)),
+                    '{} 0x{:2x}'.format(agent.radios[0].mac, tp20dBm)),
                 tlv(self.ieee1905['eTlvTypeMap']['TLV_CHANNEL_PREFERENCE'],
-                    0x004C, '{} {}'.format(agent.radios[1].mac, payload_wlan2)),
+                    '{} {}'.format(agent.radios[1].mac, payload_wlan2)),
                 tlv(self.ieee1905['eTlvTypeMap']['TLV_TRANSMIT_POWER_LIMIT'],
-                    0x0007, '{} 0x{:2x}'.format(agent.radios[1].mac, tp20dBm))
+                    '{} 0x{:2x}'.format(agent.radios[1].mac, tp20dBm))
             )
             time.sleep(1)
 

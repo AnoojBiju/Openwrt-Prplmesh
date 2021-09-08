@@ -36,7 +36,7 @@ class BeaconReportQuery(PrplMeshBaseTest):
         mid = controller.dev_send_1905(agent.mac, self.ieee1905['eMessageType']
                                        ['BEACON_METRICS_QUERY_MESSAGE'],
                                        tlv(self.ieee1905['eTlvTypeMap']
-                                           ['TLV_BEACON_METRICS_QUERY'], 0x0016,
+                                           ['TLV_BEACON_METRICS_QUERY'],
                                            "{" + request + "}"))
 
         time.sleep(3)

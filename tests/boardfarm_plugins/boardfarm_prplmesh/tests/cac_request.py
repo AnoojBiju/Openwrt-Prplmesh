@@ -27,7 +27,7 @@ class CacRequest(PrplMeshBaseTest):
         channel = 104
         cac_request_tlv = tlv(
             self.ieee1905['eTlvTypeMap']['TLV_PROFILE2_CAC_REQUEST'],
-            0xA, '0x{:02x} {} 0x{:01x} 0x{:01x} 0x00'
+            '0x{:02x} {} 0x{:01x} 0x{:01x} 0x00'
             .format(number_of_radios, agent.radios[1].mac, operating_class, channel))
 
         print("CAC Request TLV: ", cac_request_tlv)
@@ -43,7 +43,7 @@ class CacRequest(PrplMeshBaseTest):
 
         cac_termination_tlv = tlv(
             self.ieee1905['eTlvTypeMap']['TLV_PROFILE2_CAC_TERMINATION'],
-            0xA, '0x{:02x} {} 0x{:01x} 0x{:01x} 0x00'
+            '0x{:02x} {} 0x{:01x} 0x{:01x} 0x00'
             .format(number_of_radios, agent.radios[1].mac, operating_class, channel))
 
         print("CAC Termination TLV: ", cac_termination_tlv)
