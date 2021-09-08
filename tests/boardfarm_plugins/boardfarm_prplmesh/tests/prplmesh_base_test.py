@@ -11,10 +11,12 @@ from capi import tlv
 from opts import debug
 import connmap
 import environment as env
+import os
 import sniffer
 import subprocess
 import time
 import re
+import yaml
 
 
 class PrplMeshBaseTest(bft_base_test.BftBaseTest):
@@ -22,6 +24,13 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
 
     Contains common methods used by other(derived) prplmesh test cases.
     """
+
+    ieee1905 = {}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.ieee1905:
+            self.get_tvls()
 
     def startMarker(self):
         """Calls method with the same name in base class and then prints current topology.
@@ -50,6 +59,20 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
         except Exception as e:
             debug("Failed to start test:\n{}".format(e))
             raise e
+
+    def get_tvls(self):
+        debug("Getting tlvs from yaml files")
+        path = os.getcwd() + os.sep + os.pardir + '/framework/tlvf/yaml/tlvf'
+        for folder in os.listdir(path):
+            for filename in os.listdir(os.path.join(path, folder)):
+                with open(os.path.join(path, folder, filename)) as safe_file:
+                    mid = yaml.safe_load(safe_file)
+                    namespace = filename[:-5]
+                    if namespace in mid:
+                        for k, v in mid[namespace].items():
+                            mid[k] = v
+                        del mid[namespace]
+                    self.ieee1905[namespace] = mid
 
     def check_log(self, entity_or_radio: Union[env.ALEntity, env.Radio], regex: str,
                   start_line: int = 0, timeout: float = 0.6, fail_on_mismatch: bool = True) -> bool:
